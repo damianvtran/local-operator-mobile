@@ -1,0 +1,19 @@
+{
+	"mobile.chrome.destination.inbox": "Inbox",
+	"mobile.chrome.destination.past": "Past",
+	"mobile.chrome.destination.schedules": "Schedules",
+	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
+	"mobile.chrome.destinations": "Destinations",
+	"mobile.chrome.new_chat": "New chat",
+	"mobile.chrome.close_conversations": "Close conversations",
+	"mobile.chrome.composer.more": "More context",
+	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
+	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
+	"mobile.chrome.home.greeting": "What would you like to work on?",
+	"mobile.chrome.home.connecting": "Connecting to {host}…",
+	"mobile.chrome.home.connect": "Connect a computer",
+	"mobile.chrome.home.sign_in": "Sign in to reconnect",
+	"mobile.chrome.home.saved_draft": "Your draft is saved on this phone and has not been sent.",
+	"mobile.chrome.home.reconnecting": "Reconnecting to {host}…",
+	"mobile.chrome.composer.open_queue": "Open the queue"
+}

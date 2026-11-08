@@ -27,7 +27,7 @@
  *   hands a caller `any`.
  */
 
-import type { z } from "zod";
+import { z } from "zod";
 
 import {
 	type commandOpSchema,
@@ -82,6 +82,11 @@ export interface StartSessionRequest {
 	cwd?: string;
 	provider?: string;
 	model_id?: string;
+	/** A birth reasoning level from the daemon's vocabulary. Sent ONLY when the
+	 *  reader chose one AND the relay advertises `capabilities.session_start.effort`
+	 *  (an older relay refuses it on a keyed start, drops it on an unkeyed one).
+	 *  Absent means the computer's configured default. */
+	effort?: string;
 }
 
 /**
@@ -375,6 +380,9 @@ export interface NotificationSeenRequest {
 		visible_since_ms: number;
 	};
 }
+
+/** Full content digest supplied by the paired notification-sound projection. */
+const SOUND_SHA256_RE = /^[a-f0-9]{64}$/;
 
 export class RelayEndpoints {
 	private readonly http: RelayHttpClient;
@@ -1096,6 +1104,26 @@ export class RelayEndpoints {
 		return { bytes: result.bytes, mimeType: result.mimeType };
 	}
 
+	/**
+	 * One supplement sound's bytes, keyed by the row's own `sounds[].attachment`
+	 * digest — the relay web's `soundUrl` route (`GET /api/sessions/{id}/sound
+	 * ?digest=`). A separate route from `attachment` on purpose: a turn's sound
+	 * (generated, or a file the turn wrote) has no message block to index, so
+	 * `(entry, kind, i)` cannot address it. Fetched as bytes through the same
+	 * authenticated client as every other read, because the player cannot carry
+	 * this client's cookie on a bare URL.
+	 */
+	async supplementSound(
+		sessionId: string,
+		digest: string,
+	): Promise<ImageBytes> {
+		const result = await this.http.bytes({
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/sound${query({ digest })}`,
+		});
+		return { bytes: result.bytes, mimeType: result.mimeType };
+	}
+
 	/** A subagent's full cached detail, including the transcript and todos the
 	 *  aggregate roster strips. */
 	async agentDetail(
@@ -1118,11 +1146,22 @@ export class RelayEndpoints {
 	 * relay can never hand back the PREVIOUS picture under the same address.
 	 * A relay without the route, or an agent whose picture was removed, answers
 	 * 404 — the caller reads the relay's own 404 as "draw the glyph".
+	 *
+	 * `size` (64/128/256) asks for the relay's downscaled square variant instead
+	 * of the 512 px original. Send it ONLY when the relay advertises
+	 * `features.agent_avatar_sizes` (`avatarSizesServed`): the caller picks it
+	 * with `avatarVariant` from the rendered dp x `PixelRatio`, so the picture is
+	 * sharp without shipping ~10x the bytes over the tunnel. Omitted, the request
+	 * is byte-for-byte the one an older relay already understands.
 	 */
-	async agentAvatar(agentId: string, sha256: string): Promise<ImageBytes> {
+	async agentAvatar(
+		agentId: string,
+		sha256: string,
+		size?: number,
+	): Promise<ImageBytes> {
 		const result = await this.http.bytes({
 			method: "GET",
-			path: `/v1/agents/${encodeURIComponent(agentId)}/avatar${query({ v: sha256 })}`,
+			path: `/v1/agents/${encodeURIComponent(agentId)}/avatar${query({ v: sha256, size })}`,
 		});
 		return { bytes: result.bytes, mimeType: result.mimeType };
 	}
@@ -1263,6 +1302,60 @@ export class RelayEndpoints {
 			method: "POST",
 			path: "/api/push/register",
 			body: request,
+		});
+	}
+
+	/** Paired-cookie sound projection; never desktop bearer endpoints. A missing
+	 * route is an older daemon, not permission to build a second preference. */
+	async notificationSounds() {
+		const { text } = await this.http.raw({
+			method: "GET",
+			path: "/api/notification-sounds",
+		});
+		return z
+			.object({
+				selected: z.string(),
+				enabled: z.boolean(),
+				sounds: z
+					.array(
+						z.object({
+							id: z.string(),
+							builtin: z.boolean(),
+							sha256: z.string().regex(SOUND_SHA256_RE).nullable(),
+							push_name: z.string().nullable(),
+							size_bytes: z.number().int().nonnegative().nullable(),
+						}),
+					)
+					.max(256),
+			})
+			.parse(JSON.parse(text));
+	}
+
+	async notificationSoundAudio(id: string, sha: string): Promise<Uint8Array> {
+		const result = await this.http.bytes(
+			{
+				method: "GET",
+				path: `/api/notification-sounds/${encodeURIComponent(id)}/audio?sha=${encodeURIComponent(sha)}`,
+			},
+			2 * 1024 * 1024,
+		);
+		if (result.mimeType?.split(";")[0] !== "audio/wav")
+			throw new Error("Unexpected sound content type");
+		return result.bytes;
+	}
+
+	/** The install id identifies the row; the secret proves custody of THAT
+	 * row. Both stay in headers, never query strings or diagnostic payloads. */
+	async noteNotificationSoundCache(
+		installId: string,
+		deviceKey: string,
+		stems: string[],
+	): Promise<void> {
+		await this.http.raw({
+			method: "PUT",
+			path: "/api/notification-sounds/cached",
+			headers: { "X-Lop-Device": installId, "X-Lop-Device-Key": deviceKey },
+			body: { shas: stems },
 		});
 	}
 

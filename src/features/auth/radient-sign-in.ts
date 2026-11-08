@@ -7,24 +7,14 @@
  * names — browser open / cancelled / callback received / callback failed — plus
  * the one the platform adds:
  *
- * **`unavailable` is not an error state, it is a platform fact.** Radient's
- * only registered redirects are loopback (`http://127.0.0.1:<port>/callback`),
- * so the code arrives through either the browser session's own return value
- * (iOS: `ASWebAuthenticationSession` matches the callback itself) or a listener
- * on the device. Nothing in this build's dependency set binds that listener, so
- * `createDeviceListener()` throws `LoopbackUnavailableError` naming the module —
- * deliberately, so that an Android run fails loudly at sign-in instead of
- * opening a browser sheet whose code can never come back.
- *
- * The screen must therefore render a state that *says which module is missing
- * and offers the route that works today* (a URL and the relay password). A
- * spinner here is the failure mode the whole design exists to prevent: a user
- * who watches a sheet close with nothing happening has no way to tell a slow
- * callback from a platform that cannot deliver one.
+ * iOS binds an ephemeral IPv4 loopback listener before opening the system
+ * browser. ASWebAuthenticationSession does not intercept HTTP callbacks.
+ * Android owns a literal-loopback listener and a real Custom Tab; other native
+ * platforms remain explicitly unavailable rather than opening a dead-end browser.
+
  */
 
 import { Platform } from "react-native";
-
 import {
 	type AuthBrowserSession,
 	type CallbackListener,
@@ -35,6 +25,9 @@ import {
 	type RadientTokens,
 	signInWithRadient,
 } from "@/connection";
+import { debugOAuthProofOrigin } from "@/connection/oauth-proof-override";
+import { t } from "@/i18n";
+import { signInErrorClass } from "./sign-in-diagnostics";
 
 export type SignInState =
 	/** Nothing started. The screen's resting state. */
@@ -53,7 +46,7 @@ export type SignInState =
 	 *  offers the relay-password route instead. */
 	| { kind: "unavailable"; detail: string }
 	/** The exchange failed. `detail` is the app's own sentence, never a status. */
-	| { kind: "failed"; detail: string };
+	| { kind: "failed"; detail: string; errorClass?: string };
 
 export type RadientSignInResult =
 	| { ok: true; tokens: RadientTokens }
@@ -66,13 +59,12 @@ export type RadientSignInResult =
 /**
  * Whether this platform can receive a loopback callback at all.
  *
- * iOS resolves through `ASWebAuthenticationSession`'s own return value and needs
- * no listener; the web target is a dev/QA surface with no browser sheet. Every
- * other platform needs a listener, which is exactly what this build does not
- * ship — so the screen says so before opening anything.
+ * iOS and Android browser adapters own native listeners; web remains a dev/QA
+ * target. Other native platforms have no listener and fail explicitly.
+
  */
 export function needsDeviceListener(): boolean {
-	return Platform.OS !== "ios" && Platform.OS !== "web";
+	return !["ios", "android", "web"].includes(Platform.OS);
 }
 
 /** The sentence the unavailable state shows. It names the module, because the
@@ -94,6 +86,7 @@ const CANCELLED = /cancelled|canceled/i;
 export async function beginRadientSignIn(
 	deps: {
 		onState?: (state: SignInState) => void;
+		signal?: AbortSignal;
 		signIn?: typeof signInWithRadient;
 		browser?: AuthBrowserSession;
 	} = {},
@@ -121,15 +114,27 @@ export async function beginRadientSignIn(
 	const browser = deps.browser ?? (await createSystemBrowserSession());
 	const signIn = deps.signIn ?? signInWithRadient;
 
+	let exchanged = false;
+	const exchanging = () => {
+		if (!exchanged) {
+			exchanged = true;
+			report({ kind: "exchanging" });
+		}
+	};
 	try {
+		const proof = debugOAuthProofOrigin();
 		const tokens = await signIn({
+			authorizeUrl: proof ? `${proof}/authorize` : undefined,
+			tokenUrl: proof ? `${proof}/token` : undefined,
 			browser,
+			signal: deps.signal,
 			listener,
 			// Fires once the URL is built, so the screen can move to "waiting for
 			// your browser" BEFORE the sheet appears rather than after it closes.
 			onAuthorizeUrl: () => report({ kind: "waiting-for-browser" }),
+			onCallbackReceived: exchanging,
 		});
-		report({ kind: "exchanging" });
+		exchanging();
 		return { ok: true, tokens };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
@@ -143,8 +148,8 @@ export async function beginRadientSignIn(
 		}
 		const state: SignInState = {
 			kind: "failed",
-			detail:
-				"We could not finish signing in. Try again, or use an address instead.",
+			errorClass: signInErrorClass(error),
+			detail: t("mobile.signin.failed"),
 		};
 		report(state);
 		return { ok: false, state, retryable: true };

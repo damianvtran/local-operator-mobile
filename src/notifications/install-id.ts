@@ -164,9 +164,21 @@ export async function recordRegistration(
 	deviceKey: string,
 ): Promise<void> {
 	const record = await ensureInstallRecord();
-	await writeInstallRecord({
+	const result = await writeInstallRecord({
 		...record,
 		device_id: deviceId,
 		device_key: deviceKey,
 	});
+	if (result.persistent)
+		for (const listener of registrationListeners) listener();
+}
+
+/** Registration is still owned by S7. Observers prefetch only AFTER its
+ * keystore write succeeds, never from a token/registration request in flight. */
+const registrationListeners = new Set<() => void>();
+export function onPushRegistration(listener: () => void): () => void {
+	registrationListeners.add(listener);
+	return () => {
+		registrationListeners.delete(listener);
+	};
 }

@@ -149,6 +149,13 @@ export interface ScenarioWorld {
 	past?: PastSession[] | FixtureOverride;
 	search?: FixtureOverride;
 	models?: Json[];
+	/** `GET /api/models` → `default` (local-operator v0.101.9): what a start
+	 *  naming no model or effort runs. `undefined` omits the key, as an older
+	 *  daemon does; `null` is a computer that resolved no default. */
+	modelDefault?: Json | null;
+	/** `GET /api/directories`'s body. `undefined` serves the corpus capture
+	 *  (home `~`, no recents, no default), which every existing scenario reads. */
+	directories?: Json;
 	/**
 	 * The projects surface this state pins (S16, the read path).
 	 *
@@ -377,6 +384,13 @@ export function capabilityBlock(
 		 * block exists to prevent. */
 		notifications_seen: 1,
 	};
+	/* The start route accepts `effort` (local-operator v0.101.9) and this mock
+	 *  validates it as the relay does, so it advertises the licence the phone
+	 *  gates the effort picker on. ONLY `effort`: the mock keeps no creation
+	 *  receipts, so it must not claim `durable_idempotency` — a client reading
+	 *  that would send `create_request_id` and get the legacy, non-idempotent
+	 *  create it was promised it would not. */
+	next.session_start = { effort: true };
 	if (override === undefined) return next;
 	const stt = override.capability;
 	if (stt === null) {
@@ -406,6 +420,19 @@ export function rowFrom(
 		conversation_name: projection.conversation_name,
 		cwd: projection.cwd,
 		model_label: projection.model_label,
+		/* THE DAEMON'S NULLS, not absence (`daemon.py` `_merge_summaries`,
+		 *  local-operator v0.101.14+): `effort` is `p.effort or None`, and the
+		 *  agent/avatar pair and `opened_by` are always sent, `null` on an ordinary
+		 *  row. TestFlight 628 shipped because no mock row carried a `null` here,
+		 *  so the one value that failed the list was never exercised. */
+		effort: projection.effort ? projection.effort : null,
+		opened_by: null,
+		agent_id: null,
+		avatar_sha256: null,
+		ended: false,
+		degraded: false,
+		tags: [],
+		primary: null,
 		streaming: projection.streaming,
 		leaving: "",
 		updating: "",
@@ -1255,18 +1282,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 
 	add(
 		"tags",
-		"Conversation tags on the list, the session header and past sessions: rows carrying one, two and three categories, a long name, and an untagged neighbour so 'no tags means no line' is a frame rather than a claim.",
+		"Conversation tags on the list and past sessions: rows carrying one, two and three categories, a long name, and an untagged neighbour so 'no tags means no line' is a frame rather than a claim. The session header's tag line was retired in the 2026-11-04 chrome pass, so this world no longer declares that cell — the session-menu read is `S15/tags-menu`.",
 		/* The READ surfaces share one world so the row, the header, the past list
 		 *  and the menu cannot disagree about an assignment. The sheet's write
 		 *  states below are their own scenarios because they differ in what the
 		 *  relay answers, not in what is assigned. */
-		[
-			"S15/tags",
-			"S15/tags-menu",
-			"S15/tags-sheet",
-			"S5/tags-header",
-			"S10/tags",
-		],
+		["S15/tags", "S15/tags-menu", "S15/tags-sheet", "S10/tags"],
 		() => tagsWorld(),
 	);
 
@@ -3382,6 +3403,60 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		}),
 	);
 
+	/* The ranked catalogue with the v0.101.9 picker fields: a per-row `efforts`
+	 *  ladder in all three readings — a list (the Anthropic rows), `[]` (a model
+	 *  with no effort setting) and an ABSENT key (every other row: the computer
+	 *  does not know the ladder) — and a `default` naming Opus 5 at medium. The
+	 *  ladders are this mock's own claim, not a capture: they exist so the home's
+	 *  three pickers have every state the contract defines to render. */
+	const pickerModels: Json[] = rankedModels.map((row) => {
+		if (!isRecord(row)) return row;
+		if (row.provider === "anthropic")
+			return { ...row, efforts: ["low", "medium", "high", "xhigh", "max"] };
+		if (row.selector === "deepseek/deepseek-v4-flash-0731")
+			return { ...row, efforts: [] };
+		/* Two rows the computer has no credential for: the picker keeps them
+		 *  visible and inert, and without one in the world that state had to be
+		 *  proxied in to be seen at all (UX U6). */
+		if (
+			row.selector === "kimi/k3-256k" ||
+			row.selector === "openai/gpt-6-astra"
+		)
+			return { ...row, connected: false };
+		return row;
+	});
+	add(
+		"home-pickers",
+		"The home's folder, model and effort pickers: a ranked catalogue whose rows carry all three `efforts` readings and two not-connected rows, a computer default of Opus 5 at medium, and a folder answer with a default, recents, home and tmp.",
+		/* NO CELL, for `models-ranked`'s reason below: the pickers are sheets the
+		 *  app opens from the composer strip, and nothing on the wire opens one. The
+		 *  scenario is the world a rendered or manual pass of the pickers runs in. */
+		[],
+		() => ({
+			models: pickerModels,
+			modelDefault: {
+				selector: "anthropic/claude-opus-5",
+				provider: "anthropic",
+				model_id: "claude-opus-5",
+				effort: "medium",
+			},
+			/* A computer default that is also its first recent folder (the dedupe),
+			 *  a recent with a long tail (the name-first row), and home/tmp — the
+			 *  folder sheet's every row kind, which the corpus capture (no default,
+			 *  no recents) cannot show (UX U6). Synthetic paths, not a capture. */
+			directories: {
+				home: "/Users/demo",
+				default: "/Users/demo/code/app",
+				recent: [
+					"/Users/demo/code/app",
+					"/Users/demo/code/a-very-long-project-name-that-keeps-going/service",
+					"/Users/demo/notes",
+				],
+				tmp: "/private/tmp",
+			},
+		}),
+	);
+
 	add(
 		"models-ranked",
 		"The full ranked model catalogue — order is the ranking, never re-sorted.",
@@ -3905,6 +3980,60 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			supplementWorld([
 				{ ...supplementBeat("done_populated"), components: [] },
 			]),
+	);
+
+	/* Highlights deliverables (the highlights contract's row shape, ADDITIVE to
+	   the vendored C0 rows, which predate it and stay byte-exact): two written
+	   sounds in the two-column grid, a written video tile beside the callouts,
+	   and the never-silent withheld line. No capture cell claims it yet
+	   (`shows` is empty) — it exists so a reviewer can reach the state. */
+	add(
+		"supplement-deliverables",
+		"A settled highlight carrying the turn's written deliverables: two sounds in a grid, a video tile, and `2 files not shown: …` (no capture cell yet).",
+		[],
+		() => {
+			const base = supplementBeat("done_populated");
+			return supplementWorld([
+				{
+					...base,
+					components: [],
+					files: [
+						...(Array.isArray(base.files) ? base.files.slice(0, 1) : []),
+						{
+							path: "~/picks/demo.mp4",
+							name: "demo.mp4",
+							kind: "video",
+							size_bytes: 48213,
+							mtime: 0,
+							why: "written",
+							pinned: true,
+						},
+					],
+					files_more: 0,
+					more: [],
+					sounds: [
+						{
+							attachment: "0123456789abcdef0123456789abcdef",
+							mime: "audio/wav",
+							title: "rain-loop.wav",
+							duration_s: 8,
+							path: "~/picks/rain-loop.wav",
+							origin: "file",
+						},
+						{
+							attachment: "fedcba9876543210fedcba9876543210",
+							mime: "audio/wav",
+							title: "Door chime",
+							duration_s: 8,
+						},
+					],
+					withheld: [
+						{ name: "id_rsa", reason: "sensitive" },
+						{ name: "report.pdf", reason: "outside" },
+					],
+				},
+			]);
+		},
 	);
 
 	add(

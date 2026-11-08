@@ -1,0 +1,5 @@
+{
+	"relay.composer.action.stop": "dừng",
+	"relay.composer.action.stopping": "đang dừng",
+	"relay.composer.action.stop_agent": "dừng tác nhân"
+}

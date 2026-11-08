@@ -42,6 +42,11 @@ name: "F-3 own tunnel setup and saved-route restart"
     timeout: 15000
 # Home can render without a route. Check Settings' actual connection status after
 # restore as well, rather than counting a home-only assertion as reconnect proof.
+# Settings lives in the conversations panel's footer since the 2026-11-04
+# chrome pass (the home header keeps ☰, the computer and the bell), so open
+# the panel first.
+- tapOn:
+    id: "home-sidebar"
 - tapOn:
     id: "settings-button"
 - extendedWaitUntil:

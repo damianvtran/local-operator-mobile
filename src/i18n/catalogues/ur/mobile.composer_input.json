@@ -1,0 +1,10 @@
+{
+	"mobile.composer_input.voice.setup_needed": "اپنے کمپیوٹر پر اسپیچ ٹو ٹیکسٹ سیٹ اپ کریں۔",
+	"mobile.composer_input.voice.mic_setup": "آواز سے ان پٹ سیٹ اپ نہیں ہے",
+	"mobile.composer_input.voice.mic_setup_hint": "آواز سے ان پٹ آن کرنے کا طریقہ بتاتا ہے",
+	"mobile.composer_input.voice.discard": "آواز کا ان پٹ مسترد کریں",
+	"mobile.composer_input.voice.finish": "ختم کریں اور تحریر کریں",
+	"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
+	"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
+	"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔"
+}

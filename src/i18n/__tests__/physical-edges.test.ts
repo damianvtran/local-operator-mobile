@@ -199,6 +199,16 @@ const ALLOWLIST: {
 	 * `insets.right` are PHYSICAL: they describe a notch or a rounded corner on a
 	 * specific side of the device. Converting them to start/end would ask the notch
 	 * to move with the language. */
+	/* The DOM stub's `getBoundingClientRect` returns the platform's OWN object
+	 * shape, whose keys are physical by definition: it is standing in for a
+	 * browser API, not laying anything out, and renaming `left` would stop it
+	 * matching what react-dom reads. */
+	{
+		file: "src/testing/dom-shim.ts",
+		token: "left",
+		count: 1,
+		reason: "DOM API shape: getBoundingClientRect's own key, in a test stub",
+	},
 	{
 		file: "src/ui/components/screen.tsx",
 		token: "paddingLeft",
@@ -261,12 +271,6 @@ const ALLOWLIST: {
 	},
 	{
 		file: "src/features/sessions/conversations-drawer.tsx",
-		reason: "holdout: the panel's facing edge while the anchor stays physical",
-		token: "border-r",
-		count: 1,
-	},
-	{
-		file: "src/features/sessions/conversations-drawer.tsx",
 		reason:
 			"holdout: the safe-area inset is spent out of the panel's physical anchor, which does not flip yet",
 		token: "paddingLeft",
@@ -301,6 +305,13 @@ const ALLOWLIST: {
 		count: 1,
 		reason:
 			"the indeterminate sweep's physical-axis animation (documented in the component)",
+	},
+	{
+		file: "src/ui/components/dictation-meter.tsx",
+		token: "translateX",
+		count: 1,
+		reason:
+			"the waveform's roll on its pinned left-to-right time axis (`direction: ltr`, documented in the component)",
 	},
 	{
 		file: "src/features/sessions/conversations-drawer.tsx",

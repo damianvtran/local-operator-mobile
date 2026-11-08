@@ -19,6 +19,7 @@ import {
 } from "@/ui/components/list-row-meta";
 import { listRowStatus } from "@/ui/components/list-row-status";
 import { Shimmer } from "@/ui/components/shimmer";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
@@ -286,7 +287,10 @@ export const ListRow = ({
 			onLongPress={onLongPress}
 		>
 			{({ pressed }) => (
-				<View className={listRowClasses({ selected, pressed })}>
+				<View
+					className={listRowClasses({ selected, pressed })}
+					style={ROW_FLOOR}
+				>
 					{leading === undefined ? (
 						leadingSlotPt === undefined ? (
 							<Indicator attention={attention} />
@@ -324,7 +328,7 @@ export const ListRow = ({
 							{leading}
 						</LeadingWithBadge>
 					)}
-					<View className="flex-1 gap-0.5">
+					<View className="flex-1 gap-1">
 						{/* `flex-wrap` — but only at large text (`wrapMarks`): at 200 % on a
 						 *  320 pt phone the title plus its marks do not fit one line, and a
 						 *  row that cannot wrap pushes a mark past the viewport edge — the
@@ -346,14 +350,19 @@ export const ListRow = ({
 								wrapMarks && "flex-wrap",
 							)}
 						>
-							{/* The title yields first: `flex-1` + truncate, with every
-							 * count beside it `shrink-0`. The shimmer wraps the Text rather
+							{/* The title shares line 1 with the time alone, so it keeps the
+							 * row's width (D-B3). The shimmer wraps the Text rather
 							 * than the slot, because "working" belongs on the name
 							 * (docs/design/components.md § 7) — the spinner in the slot is
-							 * the second channel, not the first. */}
+							 * the second channel, not the first.
+							 *
+							 * `label` (15/1.2/600), not `body-sm font-medium`: the title is the
+							 * thing a reader picks a conversation by, so it takes the kit's
+							 * strongest one-line step, and its 1.2 leading is what lets two lines
+							 * fit the ~56 pt row (design spec 2026-11-06 § 4). */}
 							<Shimmer active={streaming} style={TITLE_BOX}>
 								<Text
-									className={`text-body-sm font-medium ${
+									className={`text-label ${
 										selected
 											? // Selection's non-colour channel, plus the fill.
 												"text-accent-active dark:text-accent-hover"
@@ -367,59 +376,14 @@ export const ListRow = ({
 									{title}
 								</Text>
 							</Shimmer>
-							{/* One word slot. `approval`/`question` are danger; the two
-							 * receipts are muted, because neither is an error. */}
-							{statusWord ? (
-								<Text
-									testID={statusTestID}
-									className={`shrink-0 text-meta ${
-										pending ? "text-danger" : "text-ink-dim"
-									}`}
-								>
-									{statusWord}
-								</Text>
-							) : null}
-							{unread ? (
-								<Text className="shrink-0 text-meta text-accent">new</Text>
-							) : null}
-							{/* The asks count comes FIRST in the count strip (design E2 §2.1): a
-							 *  deadline outranks a progress count, so when the strip is under
-							 *  pressure it is the agents/todos counts that yield, never this one —
-							 *  and no count is ever truncated (a dropped count is ABSENT; a
-							 *  truncated one is a valid-looking lie).
-							 *
-							 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open plus
-							 *  timed-out-and-answerable), so the chip says "asks" while the bar
-							 *  above a composer counts questions. The accessible name uses this
-							 *  surface's word for the set — "not a blocker" — because a queued ask
-							 *  is not a "waiting for you" state: the agent keeps working
-							 *  (design §5's header rule), and a reader who heard "waiting" beside a
-							 *  danger approval would rightly conclude the run was held. */}
-							{askCount > 0 ? (
-								<Text
-									className="shrink-0 text-mono-sm text-ink-dim"
-									testID={askBadgeTestID}
-									accessibilityLabel={`${countLabel(askCount, "ask")}, not a blocker`}
-								>
-									{countLabel(askCount, "ask")}
-								</Text>
-							) : null}
-							{subagentCount > 0 && !progressCountsYield ? (
-								<Text className="shrink-0 text-mono-sm text-ink-dim">
-									{countLabel(subagentCount, "agent")}
-								</Text>
-							) : null}
-							{todoCount > 0 && !progressCountsYield ? (
-								<Text className="shrink-0 text-mono-sm text-ink-dim">
-									{countLabel(todoCount, "todo")}
-								</Text>
-							) : null}
 							{time !== undefined && time !== "" ? (
 								<Text
-									className="ms-auto shrink-0 text-meta text-ink-dim"
+									className="ms-auto shrink-0 text-mono-label text-ink-dim"
 									// The row's accessible name already carries the state; the time is
 									// part of the title line's scan and needs no announcement of its own
-									// (the visible string is what a reader needs).
+									// (the visible string is what a reader needs). `mono-label` so "2w" and
+									// "59 min" share one tabular column at the row's trailing edge, the
+									// same step the section headers use (spec § 4).
 								>
 									{time}
 								</Text>
@@ -458,6 +422,72 @@ export const ListRow = ({
 						 *  The title's row above keeps its own wrap on purpose (design round 2, D13),
 						 *  because there the marks are unshrinkable and a mark pushed past the pane edge
 						 *  is worse than a second line. */}
+						{/* LINE 2 LEADS WITH THE STATE (record §2.5, D-B3). The status word,
+						 *  "new" and the counts used to sit on line 1 beside the title, all
+						 *  `shrink-0`, so the TITLE was the item that yielded — "Ar…" while the
+						 *  metadata kept its full width (TestFlight 365). Line 1 is now title
+						 *  and time only; the state words open line 2, before the folder and
+						 *  model, which already yield (`metaLineFor`). The marks keep their
+						 *  own order and the asks-first rule below. */}
+						{statusWord ||
+						unread ||
+						askCount > 0 ||
+						(!progressCountsYield && (subagentCount > 0 || todoCount > 0)) ? (
+							<View
+								className={cx(
+									"flex-row items-center gap-2",
+									wrapMarks && "flex-wrap",
+								)}
+							>
+								{/* One word slot. `approval`/`question` are danger; the two
+								 * receipts are muted, because neither is an error. */}
+								{statusWord ? (
+									<Text
+										testID={statusTestID}
+										className={`shrink-0 text-meta ${
+											pending ? "text-danger" : "text-ink-dim"
+										}`}
+									>
+										{statusWord}
+									</Text>
+								) : null}
+								{unread ? (
+									<Text className="shrink-0 text-meta text-accent">new</Text>
+								) : null}
+								{/* The asks count comes FIRST in the count strip (design E2 §2.1): a
+								 *  deadline outranks a progress count, so when the strip is under
+								 *  pressure it is the agents/todos counts that yield, never this one —
+								 *  and no count is ever truncated (a dropped count is ABSENT; a
+								 *  truncated one is a valid-looking lie).
+								 *
+								 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open only
+								 *  since local-operator #2388), so the chip says "asks" while the bar
+								 *  above a composer counts questions. The accessible name uses this
+								 *  surface's word for the set — "not a blocker" — because a queued ask
+								 *  is not a "waiting for you" state: the agent keeps working
+								 *  (design §5's header rule), and a reader who heard "waiting" beside a
+								 *  danger approval would rightly conclude the run was held. */}
+								{askCount > 0 ? (
+									<Text
+										className="shrink-0 text-mono-sm text-ink-dim"
+										testID={askBadgeTestID}
+										accessibilityLabel={`${countLabel(askCount, "ask")}, not a blocker`}
+									>
+										{countLabel(askCount, "ask")}
+									</Text>
+								) : null}
+								{subagentCount > 0 && !progressCountsYield ? (
+									<Text className="shrink-0 text-mono-sm text-ink-dim">
+										{countLabel(subagentCount, "agent")}
+									</Text>
+								) : null}
+								{todoCount > 0 && !progressCountsYield ? (
+									<Text className="shrink-0 text-mono-sm text-ink-dim">
+										{countLabel(todoCount, "todo")}
+									</Text>
+								) : null}
+							</View>
+						) : null}
 						{remote !== undefined ? (
 							/* A remote row's device line, in place of the folder/model meta:
 							 * another device's conversation carries no cwd or model on this wire,
@@ -532,6 +562,13 @@ export const ListRow = ({
  * when it DOES share a line with a mark; without it the browser's `min-width: auto` would
  * push the mark off the row instead of wrapping it.
  */
+/** The row's height floor: the platform touch floor, so a one-line row is
+ *  exactly a target (44 iOS / 48 other) and a two-line row is sized by its own
+ *  content (~56 pt). A style, not a class, because `TOUCH_FLOOR` is decided per
+ *  platform at runtime (see `listRowClasses`). Hoisted so every row shares one
+ *  object instead of allocating per render. */
+const ROW_FLOOR = { minHeight: TOUCH_FLOOR } as const;
+
 const TITLE_BOX = {
 	flexBasis: "auto",
 	flexGrow: 1,

@@ -42,6 +42,16 @@ vi.mock("@/connection", async (original) => ({
 		},
 	}),
 }));
+/* `open()` in tunnel-storage ALSO reads `WHEN_UNLOCKED_THIS_DEVICE_ONLY` from the
+ * platform module, and it does so through `@/connection/storage` rather than the
+ * barrel mocked above — main's seam, not the branch's. Stub it too, or the real
+ * `expo-secure-store` loads and Node has neither `__DEV__` nor `ExpoGlobal`.
+ * Everything else in that module stays real: `SecureStorage` and `SECURE_KEYS`
+ * are exactly what this suite is testing. */
+vi.mock("@/connection/storage", async (original) => ({
+	...(await original<object>()),
+	thisDeviceOnlyAccessibility: async () => "synthetic-this-device-only",
+}));
 const tokens = (access = "old"): RadientTokens => ({
 	access,
 	refresh: "rolling",

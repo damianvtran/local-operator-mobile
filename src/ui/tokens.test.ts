@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
 	COLOR_ROLES,
+	isThemeId,
 	PALETTE,
 	resolveColor,
 	resolveTheme,
+	THEMES,
+	themeEntry,
 } from "@/ui/tokens.gen";
 
 /**
@@ -168,5 +171,59 @@ describe("the generated palette", () => {
 				resolveColor("accent", "dark"),
 			),
 		).toBeGreaterThanOrEqual(4.5);
+	});
+});
+
+const COLOUR_VALUE = /^#[0-9a-f]{6}([0-9a-f]{2})?$/;
+
+describe("the shipped theme catalogue", () => {
+	/* `THEMES` is generated from the desktop palettes and admitted by the
+	 * contrast contract's fleet run, so contrast is NOT re-derived here. What is
+	 * pinned is the catalogue's shape on the way into the app: every role
+	 * present, the brand pair present and equal to its own derivation, and an id
+	 * the build does not carry falling back to its slot's default. */
+	it("defines all of this app's roles for every theme", () => {
+		for (const entry of THEMES)
+			for (const role of COLOR_ROLES)
+				expect(entry.colors[role], `${entry.id}.${role}`).toMatch(COLOUR_VALUE);
+	});
+
+	it("ships both brand themes, in the mode their slot expects", () => {
+		expect(themeEntry("localOperatorDark", "dark").id).toBe(
+			"localOperatorDark",
+		);
+		expect(themeEntry("localOperatorLight", "light").id).toBe(
+			"localOperatorLight",
+		);
+		expect(THEMES[0]?.id).toBe("localOperatorDark");
+	});
+
+	it("ships every palette the desktop offers, so the catalogue carries all 59", () => {
+		/* The four contrast-withheld palettes were restored by the bounded ground
+		 * adaptation (D164-1); the operator asked for ALL the themes, so this count
+		 * is the acceptance criterion rather than a coincidence. */
+		expect(THEMES).toHaveLength(59);
+		expect(THEMES.filter((entry) => entry.mode === "dark")).toHaveLength(41);
+		expect(THEMES.filter((entry) => entry.mode === "light")).toHaveLength(18);
+		expect(THEMES.map((entry) => entry.id)).toEqual(
+			expect.arrayContaining([
+				"catppuccinMocha",
+				"tokyoNightStorm",
+				"duskfox",
+				"outrun",
+			]),
+		);
+	});
+
+	it("falls back to the slot's default for an unknown or wrong-mode id", () => {
+		expect(themeEntry("no-such-theme", "dark").id).toBe("localOperatorDark");
+		expect(themeEntry("dracula", "light").id).toBe("localOperatorLight");
+		expect(isThemeId("dracula", "dark")).toBe(true);
+		expect(isThemeId("dracula", "light")).toBe(false);
+	});
+
+	it("keeps ids unique", () => {
+		const ids = THEMES.map((entry) => entry.id);
+		expect(new Set(ids).size).toBe(ids.length);
 	});
 });

@@ -1,0 +1,70 @@
+{
+	"mobile.settings.theme.caption_forced": {
+		"role": "help",
+		"note": "Caption under the mode control while it is forced to one side. {name} is a theme NAME (proper noun, never translated). No final full stop."
+	},
+	"mobile.settings.theme.caption_system": {
+		"role": "help",
+		"note": "Caption under the mode control while it follows the phone. {light} and {dark} are theme NAMES (proper nouns such as \"Dracula\", never translated). Says which theme shows in each phone mode. No final full stop."
+	},
+	"mobile.settings.theme.card_dark": {
+		"role": "button",
+		"note": "Screen-reader name of a theme card that is not selected. {name} is the theme NAME (proper noun, never translated). No final full stop."
+	},
+	"mobile.settings.theme.card_dark_selected": {
+		"role": "button",
+		"note": "Screen-reader name of the SELECTED dark theme card. {name} is the theme NAME (never translated). No final full stop."
+	},
+	"mobile.settings.theme.card_light": {
+		"role": "button",
+		"note": "Screen-reader name of a light theme card that is not selected. {name} is the theme NAME (never translated). No final full stop."
+	},
+	"mobile.settings.theme.card_light_selected": {
+		"role": "button",
+		"note": "Screen-reader name of the SELECTED light theme card. {name} is the theme NAME (never translated). No final full stop."
+	},
+	"mobile.settings.theme.mode_dark": {
+		"role": "button",
+		"note": "Option: always use the dark side (a dark theme). Keep short; it shares a row with two other options."
+	},
+	"mobile.settings.theme.mode_label": {
+		"role": "heading",
+		"note": "Accessible name of the three-way control that chooses whether the app follows the phone's light/dark setting or forces one. No final full stop."
+	},
+	"mobile.settings.theme.mode_light": {
+		"role": "button",
+		"note": "Option: always use the light side (a light theme). Keep short; it shares a row with two other options."
+	},
+	"mobile.settings.theme.mode_system": {
+		"role": "button",
+		"note": "Option: follow the phone's own light/dark setting. Keep short (one word if possible); it shares a row with two other options."
+	},
+	"mobile.settings.theme.no_match": {
+		"role": "status",
+		"note": "Shown in a section when the search matches no theme in it. No final full stop."
+	},
+	"mobile.settings.theme.row_label": {
+		"role": "button",
+		"note": "Screen-reader name of the Settings row that opens the Theme screen; {name} is the theme painting the app now (a proper noun, never translated). No final full stop."
+	},
+	"mobile.settings.theme.search_label": {
+		"role": "help",
+		"note": "Accessible name of the search field that filters the theme list by name. No final full stop."
+	},
+	"mobile.settings.theme.search_placeholder": {
+		"role": "help",
+		"note": "Placeholder inside the same search field. Usually identical to the field's accessible name. No final full stop."
+	},
+	"mobile.settings.theme.section_dark": {
+		"role": "heading",
+		"note": "Section heading over the grid of dark themes. {count} is how many dark themes the section currently lists (after search). Rendered in uppercase in some scripts. No final full stop."
+	},
+	"mobile.settings.theme.section_light": {
+		"role": "heading",
+		"note": "Section heading over the grid of light themes. {count} is how many light themes the section currently lists (after search). No final full stop."
+	},
+	"mobile.settings.theme.title": {
+		"role": "heading",
+		"note": "Title of the Theme screen and the label of the Settings row that opens it. \"Theme\" means a colour scheme for the whole app. No final full stop."
+	}
+}

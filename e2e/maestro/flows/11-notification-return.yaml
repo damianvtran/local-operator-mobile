@@ -36,8 +36,21 @@ name: "Notifications — detail read and dismiss-all return to the list"
     visible:
       id: "home-screen"
     timeout: 15000
+# THE INBOX IS OPENED FROM THE PANEL'S DESTINATIONS STRIP, not the header bell.
+# The bell deliberately yields below a 360 pt viewport and at >= 150 % text
+# (`home.tsx`, pinned by `header-fit.test.ts`), and this emulator is 320 pt wide,
+# so `home-notifications` is not drawn there at all (run 42251159887's failure
+# hierarchy: `home-sidebar`, `computers-button`, no bell). The strip's Inbox slot
+# is the path a reader on that phone takes, and it is drawn on every width, so
+# the flow no longer depends on which device the nightly happens to boot.
 - tapOn:
-    id: "home-notifications"
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "conversations-sidebar"
+    timeout: 10000
+- tapOn:
+    id: "sidebar-notifications"
 - extendedWaitUntil:
     visible:
       id: "notifications-screen"

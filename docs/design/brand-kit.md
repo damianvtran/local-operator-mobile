@@ -415,7 +415,8 @@ place**: the store listing, the launch screen's wordmark, and the first frame of
 onboarding. Those are the three surfaces where the register is a decision rather
 than a working surface. If a later pass wants a display step on an empty state,
 that is a proposal to be judged on a rendered frame — and the type scale survives
-either answer, because a step never encodes a family.
+either answer, because a display step would carry its own `face` and leave
+the existing steps untouched.
 
 ### 3.3 The mobile scale
 

@@ -12,6 +12,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 
+import { DEFAULT_THEME_IDS, THEMES } from "../../src/ui/tokens.gen.ts";
+
 /**
  * What the tokens gave the theme check, and — when it cannot be had — why.
  *
@@ -58,6 +60,74 @@ export function canvasTokenFor(value: unknown): string | null {
  */
 export function canvasComparable(expected: string | null): expected is string {
 	return canvasTokenFor(expected) !== null;
+}
+
+/**
+ * The canvas the APP PAINTS for each mode — the palette the theme system resolves
+ * when the reader has chosen nothing for that slot.
+ *
+ * WHY THIS IS THE EXPECTATION, not `design/tokens/tokens.json` (QA round 1,
+ * Q164-1). The two files describe different things: `tokens.json` is the design
+ * kit's BRAND layer, pinned to a kit slice and reconciled on the kit's release
+ * cadence, while the colours a frame paints are the DESKTOP palettes the phone
+ * ships (`design/themes/`, emitted as `THEMES` by `scripts/build-theme.ts`). They
+ * agree on the light canvas and disagreed on the dark one — the desktop re-lit
+ * its dark ladder on 2026-11-03 and the phone adopted it — so the gate compared
+ * every dark frame against a ground the app no longer paints and reported 636
+ * theme problems over an app that was right.
+ *
+ * The gate exists to prove the app APPLIED the palette it was generated with, so
+ * it has to measure against that palette. `activelyPaintedCanvases` therefore reads
+ * the emitted catalogue, and `design/tokens/tokens.json` is the fallback for a mode
+ * the catalogue does not carry (a catalogue with no default for a slot is a bug
+ * `tokens.gen.ts` itself prevents, but the fallback keeps this module usable with
+ * a two-value token file alone).
+ */
+export function paintedCanvases(): Record<string, { canvas: string | null }> {
+	const out: Record<string, { canvas: string | null }> = {};
+	for (const [mode, id] of Object.entries(DEFAULT_THEME_IDS)) {
+		const entry = THEMES.find((theme) => theme.id === id);
+		out[mode] = { canvas: canvasTokenFor(entry?.colors.canvas) };
+	}
+	return out;
+}
+
+/**
+ * The canvas a frame of `theme` must paint, and which file said so.
+ *
+ * In APP context the order is the decision: painted palette first, kit tokens
+ * second, nothing third. Explicit FIXTURE context uses only its token file; an
+ * app fallback would compare a standalone canary against unrelated colours. `source` is reported rather than inferred, so a reader
+ * of the run can see which file the number came from without reading this
+ * function.
+ */
+/** Capture truth is selected by the caller, never inferred from a filename or
+ * token value. App renders use generated defaults; standalone clean/defect
+ * canaries must use their explicitly supplied fixture tokens (Q164-2). */
+export type CanvasContext = "app" | "fixture";
+export function parseCanvasContext(value: string | undefined): CanvasContext {
+	if (value === undefined || value === "app") return "app";
+	if (value === "fixture") return "fixture";
+	throw new Error(`unknown canvas context: ${value}`);
+}
+
+export function canvasExpectation(
+	theme: string,
+	perTheme: Record<string, { canvas: string | null }> | null,
+	painted: Record<string, { canvas: string | null }> = paintedCanvases(),
+	context: CanvasContext = "app",
+): { canvas: string | null; source: "palette" | "tokens" | "none" } {
+	// Fixture truth never falls back to the unrelated app palette. Missing fixture
+	// tokens stay uncomparable; wrong fixture paint remains a gate failure.
+	if (context === "fixture") {
+		const canvas = perTheme?.[theme]?.canvas ?? null;
+		return { canvas, source: canvas === null ? "none" : "tokens" };
+	}
+	const fromPalette = painted[theme]?.canvas ?? null;
+	if (fromPalette !== null) return { canvas: fromPalette, source: "palette" };
+	const fromTokens = perTheme?.[theme]?.canvas ?? null;
+	if (fromTokens !== null) return { canvas: fromTokens, source: "tokens" };
+	return { canvas: null, source: "none" };
 }
 
 /**

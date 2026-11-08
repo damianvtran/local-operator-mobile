@@ -360,6 +360,26 @@ describe("an error from a real http client still arrives as one typed error", ()
 		expect(Array.from(picture.bytes)).toEqual([0x89, 0x50]);
 	});
 
+	it("adds `size` only when the caller asks for a variant", async () => {
+		const seen: string[] = [];
+		const fetchImpl = (async (url: string) => {
+			seen.push(url);
+			return new Response(new Uint8Array([0x89, 0x50]), {
+				status: 200,
+				headers: { "content-type": "image/png" },
+			});
+		}) as unknown as typeof globalThis.fetch;
+		const client = new RelayEndpoints(
+			new RelayHttpClient({ baseUrl: BASE, auth: () => auth, fetchImpl }),
+		);
+		await client.agentAvatar("researcher", "a".repeat(64), 128);
+		await client.agentAvatar("researcher", "a".repeat(64), undefined);
+		expect(seen).toEqual([
+			`${BASE}/v1/agents/researcher/avatar?v=${"a".repeat(64)}&size=128`,
+			`${BASE}/v1/agents/researcher/avatar?v=${"a".repeat(64)}`,
+		]);
+	});
+
 	it("an unset picture is the relay's own 404", async () => {
 		const fetchImpl = (async () =>
 			new Response(JSON.stringify({ error: "not_found" }), {

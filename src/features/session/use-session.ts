@@ -25,6 +25,7 @@ import {
 	headerHealth,
 	healthLink,
 } from "@/features/session/health";
+import { turnRunning } from "@/features/session/projection";
 import {
 	relaySource,
 	type SessionRelaySource,
@@ -114,6 +115,8 @@ export interface SessionRuntime {
 	loadSupplementDocument: (digest: string) => Promise<string>;
 	/** One recorded callout's bytes, by the row's own index. */
 	loadSupplementFile: (job: string, index: number) => Promise<ImageBytes>;
+	/** One supplement sound's bytes, by its `sounds[].attachment` digest. */
+	loadSupplementSound: (digest: string) => Promise<ImageBytes>;
 	/** `supplement_cancel|restart|steer` over the session command route — the
 	 *  same route every other mutation uses. */
 	supplementCommand: (
@@ -139,7 +142,16 @@ export interface SessionRuntime {
 const OUTAGE_GRACE_MS = 2500;
 
 const isTransient = (error: RelayError): boolean =>
-	error.kind === "transport" || error.kind === "ambiguous-delivery";
+	error.kind === "transport" ||
+	error.kind === "ambiguous-delivery" ||
+	/* The tunnel grant could not be renewed for a reason that clears by itself
+	 * (a control-plane 5xx/408, no answer, a rate limit): `refusal.ts` types it
+	 * `rejected` with the `retry` surface. It is the app's own renewal, not a
+	 * gateway refusal with a sentence to show, and it recurs every ~4 minutes on
+	 * a live route — stopping here left an open conversation behind "Check
+	 * again" after one Radient blip (PR #178 UX round 1, U1). Terminal renewal
+	 * failures (401/402/403/404) map to other surfaces and still stop. */
+	(error.kind === "rejected" && error.surface === "retry");
 
 /** Whether a session id names anything.
  *
@@ -745,6 +757,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		[endpoints, sessionId],
 	);
 
+	const loadSupplementSound = useCallback(
+		(digest: string): Promise<ImageBytes> => {
+			if (endpoints === null) {
+				return Promise.reject(new Error("no relay route"));
+			}
+			return endpoints.supplementSound(sessionId, digest);
+		},
+		[endpoints, sessionId],
+	);
+
 	const supplementCommand = useCallback(
 		async (
 			op: "cancel" | "restart" | "steer",
@@ -800,7 +822,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		),
 		projection,
 		entries,
-		streaming: projection?.streaming === true,
+		/* `turnRunning`, not the raw flag: the composer's op and the header's
+		 *  "Working" must be one reading (see the predicate). `streamingRowId`
+		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
+		streaming: projection !== null && turnRunning(projection),
 		streamingRowId,
 		connection,
 		/** The session stream's own liveness, for the header's status dot
@@ -825,6 +850,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		projectionPid: projection?.pid ?? 0,
 		loadSupplementDocument,
 		loadSupplementFile,
+		loadSupplementSound,
 		supplementCommand,
 		reload,
 	};

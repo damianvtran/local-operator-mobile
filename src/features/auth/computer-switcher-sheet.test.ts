@@ -24,6 +24,9 @@ import { CONTROL, switcherRowIds } from "@/ui/a11y";
 type Props = Record<string, unknown>;
 const host = vi.hoisted(() => ({
 	texts: [] as string[],
+	/* Each rendered string's `ellipsizeMode`, so a test can tell an address title
+	 *  (middle, port kept) from a name (tail). */
+	ellipsis: new Map<string, unknown>(),
 	presses: new Map<string, () => void>(),
 	labels: new Map<string, string>(),
 	probes: new Map<string, Array<(value: unknown) => void>>(),
@@ -57,6 +60,7 @@ vi.mock("react-native", async () => {
 		View: (props: Props) => (props.children ?? null) as React.ReactNode,
 		Text: (props: Props) => {
 			host.texts.push(flatten(props.children));
+			host.ellipsis.set(flatten(props.children), props.ellipsizeMode);
 			return null;
 		},
 		ActivityIndicator: () => null,
@@ -276,7 +280,34 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
+it("keeps Radient rows sign-in protected and never probes them without a grant", async () => {
+	await render();
+	await flush();
+	await render();
+	expect(words()).toContain("Sign-in protected");
+	expect(host.probes.size).toBe(0);
+	expect(host.texts).not.toContain("Asleep");
+	expect(host.texts).not.toContain("Online");
+});
+
 describe("the switcher sheet's health words resolve (B1/D1/Q1/U1)", () => {
+	// Own-address health is still probed; Radient health requires a minted grant.
+	beforeEach(() => {
+		host.saved = host.saved.map(
+			(entry): SavedComputer => ({
+				id: entry.id,
+				name: entry.name,
+				addedAt: entry.addedAt,
+				lastUsedAt: entry.lastUsedAt,
+				hidden: entry.hidden,
+				identity: entry.identity,
+				transport: "custom",
+				allowInsecure: false,
+				baseUrl: `https://${entry.transport === "radient" ? entry.hostname : "fixture.example"}`,
+			}),
+		);
+	});
+
 	it("shows Online and Asleep once the probes answer, after the sheet has re-rendered many times", async () => {
 		await render();
 		await flush();
@@ -392,6 +423,19 @@ describe("Add a computer reaches an add path from every screen (U6, U12)", () =>
 		expect(host.pushed).toEqual([]);
 	});
 
+	it("lists Add a computer as a named row in the body, not a pinned footer", async () => {
+		/* The pinned footer drew a hairline above an outlined full-width button
+		 *  that outweighed the list (operator: "it looks ugly"); the action now sits
+		 *  under the group. Its name is the whole accessible label. */
+		await render();
+		await flush();
+		expect(host.sheet?.footer).toBeUndefined();
+		expect(host.labels.get(CONTROL.switcherAddComputer)).toBe("Add a computer");
+		/* The transport is a word on the row's second line ("Radient ● …"),
+		 *  keyed for translation, not a boxed chip. */
+		expect(words()).toContain("Radient");
+	});
+
 	it("opens the set-up paths over a POPULATED Computers list, and from Settings (U12)", async () => {
 		host.pathname = "/tunnels";
 		await act(async () =>
@@ -440,7 +484,7 @@ describe("reopening after an account switch shows and probes only the new accoun
 		await flush();
 		await render();
 		expect(words()).toContain("Account A computer");
-		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toBeUndefined();
 
 		/* Close, then "Sign in again" as B: the registry and the grant both move. */
 		visible = false;
@@ -458,13 +502,13 @@ describe("reopening after an account switch shows and probes only the new accoun
 		expect(words()).not.toContain("Account A computer");
 		/* Nor a "No computers" answer the read has not given yet. */
 		expect(words()).not.toContain("No computers on this phone yet.");
-		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toBeUndefined();
 		await act(async () => landRead());
 		await flush();
 		await render();
 		expect(words()).not.toContain("Account A computer");
-		/* A's host was probed once, for A's open, and never again. */
-		expect(host.probes.get(`https://${HOST_AWAKE}`)).toHaveLength(1);
+		/* Neither owner-scoped Radient record was probed without a grant. */
+		expect(host.probes.get(`https://${HOST_AWAKE}`)).toBeUndefined();
 	});
 });
 
@@ -589,4 +633,46 @@ it("reveals an existing Settings refusal instead of stacking the same screen", a
 	await act(async () => host.presses.get(switcherRowIds("home").row)?.());
 	expect(host.closed).toBe(1);
 	expect(host.pushed).toEqual([]);
+});
+
+it("names an address-titled row's transport instead of repeating its host, and keeps its port in view (design round 1, D1/D2)", async () => {
+	const own = (id: string, baseUrl: string, name: string): SavedComputer => ({
+		id,
+		transport: "custom",
+		baseUrl,
+		allowInsecure: true,
+		name,
+		addedAt: 1,
+		lastUsedAt: 0,
+		hidden: false,
+		identity: null,
+	});
+	/* Loopback addresses: the shape the add flow titles an unnamed address with. */
+	host.saved = [
+		own("bare", "http://127.0.0.1:18961", "127.0.0.1:18961"),
+		own("named", "http://127.0.0.1:18962", "Home relay"),
+	];
+	await render();
+	await flush();
+	/* Unnamed: the address is the title (once per row render — `texts` collects
+	 *  every render, so count against the named row's title), and line 2 says
+	 *  how it is reached instead of repeating it. */
+	const count = (value: string) =>
+		host.texts.filter((text) => text === value).length;
+	const renders = count("Home relay");
+	expect(renders).toBeGreaterThan(0);
+	expect(count("127.0.0.1:18961")).toBe(renders);
+	expect(count("Your address")).toBe(renders);
+	/* Middle truncation keeps the port, which is what tells two local addresses
+	 *  apart; a real name keeps the default tail truncation. */
+	expect(host.ellipsis.get("127.0.0.1:18961")).toBe("middle");
+	expect(host.ellipsis.get("Home relay")).toBe("tail");
+	/* Named: line 2 still shows the host. */
+	expect(host.texts).toContain("127.0.0.1:18962");
+	/* The spoken label keeps the host even where line 2 does not show it. */
+	expect(host.labels.get(switcherRowIds("bare").row)).toContain(
+		"Your address, 127.0.0.1:18961",
+	);
+	/* D2: no `·` beside the health dot — neither row is connecting. */
+	expect(host.texts).not.toContain("·");
 });

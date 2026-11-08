@@ -1,6 +1,13 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	type ComponentProps,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Platform,
 	Pressable,
@@ -10,13 +17,13 @@ import {
 	useWindowDimensions,
 	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PromptImage } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { useStartup } from "@/features/new-session/use-startup";
-import { blockingPending } from "@/features/session/asks";
-import { composerChipLabels } from "@/features/session/chip-labels";
+import { blockingPending, outstandingAsks } from "@/features/session/asks";
 import {
 	attentionRecord,
 	overlaysBlocked,
@@ -33,6 +40,7 @@ import {
 	ModelSheet,
 } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
+import { PendingEchoRows } from "@/features/session/components/pending-echo-row";
 import {
 	HealthAnnouncer,
 	ResumeBlock,
@@ -45,6 +53,7 @@ import {
 	FindStateMarkers,
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
+import { StatusChips } from "@/features/session/components/status-chips";
 import {
 	StatusTray,
 	type StatusTrayFacts,
@@ -53,15 +62,22 @@ import { SubagentsPanel } from "@/features/session/components/subagents-panel";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
-import { WorkingLine } from "@/features/session/components/working-line";
+import {
+	PinnedWorkingLine,
+	usePhaseElapsed,
+	WorkingLine,
+} from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { compactTitleChars, headerTitleChars } from "@/features/session/header";
 import { headerHealth } from "@/features/session/health";
+import { headerSubtitle } from "@/features/session/health-copy";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
+import { usePendingEchoes } from "@/features/session/pending-echo";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
 import {
 	middleTruncate,
+	pinnedWorkingLine,
 	projectSubagents,
 	projectTodos,
 	workingLine,
@@ -70,7 +86,9 @@ import {
 	type RecoveryFacts,
 	recoveryBudget,
 } from "@/features/session/recovery-budget";
+import { sessionChipLabels } from "@/features/session/session-chips";
 import { sessionFactsFrom } from "@/features/session/state-marker";
+import { createScrollPresence } from "@/features/session/transcript-presence";
 import { useAsksSheet } from "@/features/session/use-asks-sheet";
 import { useCheckpoints } from "@/features/session/use-checkpoints";
 import { useCompletionAck } from "@/features/session/use-completion-ack";
@@ -78,17 +96,10 @@ import { draftSlashQuery, useComposer } from "@/features/session/use-composer";
 import { useFind } from "@/features/session/use-find";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { isRemoteRow } from "@/features/sessions/session-projection";
-import { SessionTagLine } from "@/features/sessions/tag-line";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
-import {
-	CONTROL,
-	EMPTY,
-	ROLE,
-	SCREEN,
-	SURFACE,
-	sessionHeaderTagLineId,
-} from "@/ui/a11y";
+import { elapsedLabel } from "@/lib/format";
+import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import {
 	Chip,
 	EmptyState,
@@ -97,7 +108,7 @@ import {
 	Skeleton,
 } from "@/ui/components";
 import { BackIcon } from "@/ui/components/back-icon";
-import { NavigationMark } from "@/ui/components/navigation-mark";
+import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Sheet } from "@/ui/components/sheet";
 import { useCompactChrome } from "@/ui/layout";
 import {
@@ -114,6 +125,35 @@ import {
 	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
+
+/**
+ * The header's health control with a subtitle that TICKS on the same phase clock
+ * as the working line (`usePhaseElapsed`), so "Working · 12s" up top and `12s` in
+ * the pinned line can never disagree (design D2, UX U1). Before, the header's
+ * elapsed was frozen at the last projection frame while the line counted on.
+ * Its own component so the once-a-second tick re-renders this control only, never
+ * the session screen. `subtitle` takes the formatted elapsed (`null` when the
+ * server has no instant for the phase) and returns the line to show.
+ */
+const TickingSessionHealthControl = ({
+	phase,
+	subtitle,
+	...rest
+}: Omit<ComponentProps<typeof SessionHealthControl>, "subtitle"> & {
+	phase: { activity: string; startedS: number | null } | null;
+	subtitle: ((elapsed: string | null) => string) | undefined;
+}) => {
+	const elapsed = usePhaseElapsed(
+		phase?.activity ?? "",
+		phase?.startedS ?? null,
+	);
+	return (
+		<SessionHealthControl
+			{...rest}
+			subtitle={subtitle?.(elapsed === null ? null : elapsedLabel(elapsed))}
+		/>
+	);
+};
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -197,6 +237,9 @@ export default function Session() {
 		capabilities,
 		editor: provisionalEditor,
 	});
+	/* What the reader just sent and the transcript does not carry yet, resolved by
+	 *  command id against the rows (`pending-echo.ts`). */
+	const pendingEchoes = usePendingEchoes(sessionId, runtime.entries);
 
 	/* The supplement block's host calls: one session-scoped client, built here
 	 *  from the runtime so the list and the block never hold a relay client.
@@ -205,11 +248,13 @@ export default function Session() {
 		() => ({
 			loadDocument: runtime.loadSupplementDocument,
 			loadFile: runtime.loadSupplementFile,
+			loadSound: runtime.loadSupplementSound,
 			command: runtime.supplementCommand,
 		}),
 		[
 			runtime.loadSupplementDocument,
 			runtime.loadSupplementFile,
+			runtime.loadSupplementSound,
 			runtime.supplementCommand,
 		],
 	);
@@ -224,6 +269,11 @@ export default function Session() {
 
 	const [modelsOpen, setModelsOpen] = useState(false);
 	const [effortOpen, setEffortOpen] = useState(false);
+	/* A refused `set_model`/`set_effort` (409 on a session that ended under the
+	 *  sheet, a dropped route) was a silent `void` (review round 1, m1): the
+	 *  chip kept its old value and nothing said why. It rides the composer's
+	 *  own error line, as home's refused abort does; the next pick clears it. */
+	const [chipError, setChipError] = useState<string | null>(null);
 	/** The composer's field, so the asks sheet's auto-open can READ focus at the
 	 *  moment it decides (focus is not React state). */
 	const composerFieldRef = useRef<TextInput | null>(null);
@@ -267,6 +317,17 @@ export default function Session() {
 		() => new Set(runtime.entries.map((entry) => entry.id)),
 		[runtime.entries],
 	);
+
+	/**
+	 * The transcript's scroll signal, owned HERE because its two consumers are
+	 * siblings: the list reports into it and the checkpoint rail subscribes
+	 * (`transcript-presence.ts` explains why it is not a state value — a flip here
+	 * would re-render this whole screen, composer and panels included, twice per
+	 * gesture). Created once per mounted screen and disposed with it, so a
+	 * half-finished linger leaves no timer behind.
+	 */
+	const scrollPresence = useMemo(() => createScrollPresence(), []);
+	useEffect(() => () => scrollPresence.dispose(), [scrollPresence]);
 
 	/** Whether the completion's anchor row bottom is inside the transcript's
 	 *  viewport — measured by `TranscriptList` (the list owns the geometry; this
@@ -323,6 +384,23 @@ export default function Session() {
 	// `null` in, `null` out: the working line exists only while the runtime names an
 	// activity, and a placeholder projection would be this screen inventing one.
 	const working = projection === null ? null : workingLine(projection);
+	/* The phone's working line is PINNED above the dock (see `PinnedWorkingLine`):
+	 *  on a tray layout the inline region is not rendered, and before this the
+	 *  line lived only inside the status sheet — the "no thinking indicator" the
+	 *  operator reported. Memoised on its three wire inputs so the pinned row's
+	 *  props stay referentially stable across the ~10 Hz projection frames. */
+	const pinnedActivity = projection?.activity ?? "";
+	const pinnedStartedS = projection?.activity_started_s ?? null;
+	const pinnedStreaming = projection?.streaming === true;
+	const pinned = useMemo(
+		() =>
+			pinnedWorkingLine({
+				streaming: pinnedStreaming,
+				activity: pinnedActivity,
+				activity_started_s: pinnedStartedS,
+			}),
+		[pinnedStreaming, pinnedActivity, pinnedStartedS],
+	);
 
 	/* What the composer's chips can say, and whether they are still waiting.
 	 *
@@ -342,10 +420,17 @@ export default function Session() {
 					})
 				? ("unreachable" as const)
 				: ("loading" as const);
-	const chipLabels = composerChipLabels({
-		model: projection?.model_label ?? null,
-		effort: projection?.effort ?? null,
+	/* The projection first, the sessions-list row second: an ended or
+	 *  never-started conversation is served a durable fold with no model or
+	 *  effort, while the row still names what it last ran (TestFlight 578;
+	 *  `session-chips.ts` carries the whole rule, including why an ended
+	 *  session's chips are shown but disabled). */
+	const chipLabels = sessionChipLabels({
+		projection,
+		row: listRow ?? null,
+		models: runtime.models,
 		connection: chipConnection,
+		ended: headerHealth(projection, runtime.link) === "ended",
 	});
 
 	/* The strip exists when it has something true to say: a context read, or a
@@ -443,7 +528,9 @@ export default function Session() {
 						// the risk sentence falls back to the working directory, which is the
 						// more useful of the two for "where will this run".
 						computerLabel: "",
-						cwd: projection?.cwd ?? "",
+						/* The row's cwd backs a durable fold's empty one (TestFlight
+						 *  578: the drawer named the folder the screen did not). */
+						cwd: projection?.cwd || listRow?.cwd || "",
 					}),
 		[
 			pending,
@@ -451,6 +538,7 @@ export default function Session() {
 			projection?.ended,
 			projection?.pending_count,
 			projection?.cwd,
+			listRow?.cwd,
 		],
 	);
 
@@ -501,6 +589,12 @@ export default function Session() {
 		compact,
 	);
 	const { effectiveScale } = useTextScale();
+	/* The composer and the chips above it share one fill decision (glass on iOS 26,
+	 *  solid otherwise), so a capsule never reads as glass beside a solid shell. */
+	const chromeGlass = useChromeGlass();
+	/* The composer pays the bottom inset itself (record §2.2); `Screen` pays none
+	 *  on this non-scrolling screen. */
+	const insets = useSafeAreaInsets();
 	/* The secondary region's own scroller, and what it needs to behave: each child's
 	 *  measured height and offset (so the closed region can be cut on a ROW boundary and
 	 *  an opened panel can be scrolled to its header). `null` heights mean "not measured
@@ -662,6 +756,22 @@ export default function Session() {
 	// One notice owner: pending bodies already have a readable floor, whereas
 	// another list viewport cannot fit beside the pinned decision/composer.
 	const transcriptNotice = pendingRecovery ? undefined : connectionBanner;
+	/* The pending rows sit after the last real row, inside the scroller: at the
+	 *  transcript's edge, under the bottom fade like any row, with nothing below
+	 *  them but the pinned working line and the dock. Memoised so the list's
+	 *  footer memo changes only when an echo does, never per streamed frame
+	 *  (`usePendingEchoes` keeps the array stable across frames). */
+	const pendingRows = useMemo(
+		() =>
+			pendingEchoes.length === 0 ? null : (
+				<PendingEchoRows
+					echoes={pendingEchoes}
+					streaming={runtime.streaming}
+					onPutBack={composer.putBack}
+				/>
+			),
+		[pendingEchoes, runtime.streaming, composer.putBack],
+	);
 	const transcript =
 		runtime.content === "disconnected" ? (
 			<ScrollView
@@ -735,6 +845,7 @@ export default function Session() {
 					sessionId={sessionId}
 					entries={runtime.entries}
 					footer={transcriptNotice}
+					pending={pendingRows}
 					streamingRowId={runtime.streamingRowId}
 					loadImage={runtime.loadImage}
 					onOpenAgent={openAgent}
@@ -753,23 +864,35 @@ export default function Session() {
 					}
 					anchorId={attentionRecord(runtime.projection)?.anchor_id ?? null}
 					onAnchorVisible={setCompletionVisible}
+					// The scroll signal the edge fades and the transient rail both read
+					// (design items 8 and 10).
+					presence={scrollPresence}
 					// The find session's two outputs into the list: the wash on the current
 					// hit, and the jump to reveal it (opening a condensed turn on the way
 					// when one hides it).
 					highlightId={find.activeHit?.id ?? null}
 					reveal={find.reveal}
+					/* A first message in flight is not "nothing here": its pending row
+					 *  is in the footer, and the empty state beside it would contradict
+					 *  it (the relay hides its empty state on the same rule). */
 					empty={
-						<EmptyState
-							headline="Nothing here yet."
-							next="Send the first message below."
-							testID={SURFACE.sessionTranscriptEmpty}
-						/>
+						pendingEchoes.length > 0 ? null : (
+							<EmptyState
+								headline="Nothing here yet."
+								next="Send the first message below."
+								testID={SURFACE.sessionTranscriptEmpty}
+							/>
+						)
 					}
 				/>
 				<CheckpointRail
 					manifest={checkpoints.manifest}
 					readFailed={checkpoints.readFailed}
 					loadedIds={loadedIds}
+					// Draws only while the transcript is moving (or held): the
+					// permanent tick column was the operator's "remove the line ticks
+					// along the side".
+					presence={scrollPresence}
 				/>
 			</View>
 		);
@@ -999,8 +1122,10 @@ export default function Session() {
 						onPress={() => router.back()}
 						icon={({ color, size }) => <BackIcon color={color} size={size} />}
 					/>
-					<NavigationMark />
-					{/* The bound agent's picture, LEFT of the conversation name
+					{/* The brand mark LEFT the session header (record §2.3, D-S2): with
+					 *  back, the mark and the avatar there were three leading items in
+					 *  front of a 28 pt title, and the operator called it crunched. The bound
+					 *  agent's picture, LEFT of the conversation name
 					 *  (agent-profile-picture contract) — inline. Stacked it leads the title
 					 *  row instead (`stackedTitleLeading` below), so the picture is a mark of
 					 *  the title's line at every width. Renders nothing without a picture.
@@ -1018,18 +1143,32 @@ export default function Session() {
 			 *  title cannot pull it into the title column (review M2), and stacked
 			 *  it sits on the back row rather than a third one (QA Q2, design D8). */
 			titleNode={
-				<SessionHealthControl
+				<TickingSessionHealthControl
 					health={health}
 					projection={projection}
 					title={headerTitle}
 					compact={compact}
 					stacked={headerStacked}
+					phase={working}
+					subtitle={
+						health === null
+							? undefined
+							: (elapsed) =>
+									headerSubtitle({
+										health,
+										/* The composer's own reading (`turnRunning`), so the
+										 *  header never says Working while a send mints a prompt. */
+										working: runtime.streaming,
+										waiting: pending !== null,
+										elapsed,
+									})
+					}
 					sheetOpen={healthSheetOpen}
 					onSheetOpenChange={setHealthSheetOpen}
 					controlRef={healthControlRef}
 				>
 					{ended ? <ResumeBlock resume={resume} /> : null}
-				</SessionHealthControl>
+				</TickingSessionHealthControl>
 			}
 			stackedActionsBeside
 			/* Stacked, the picture leads the TITLE row instead of the chrome row
@@ -1038,6 +1177,9 @@ export default function Session() {
 			stackedTitleLeading={headerStacked ? agentAvatar : undefined}
 			headerAction={
 				<SessionHeaderActions
+					findInMenu={viewportWidth < FIND_FOLD_WIDTH}
+					onFind={find.open}
+					onTags={tagsAssignable ? () => setTagsOpen(true) : undefined}
 					ended={ended}
 					menuOpen={sessionMenuOpen}
 					onMenuOpenChange={setSessionMenuOpen}
@@ -1063,29 +1205,11 @@ export default function Session() {
 					}
 				/>
 			}
-			/* The conversation's tags, in the header's own column. The line is a
-			 *  disclosure on a LOCAL conversation whose relay advertises the routes
-			 *  (review round 1, U1): the tags are already the subject, so the line is
-			 *  the control that opens their sheet. A remote row (or an older relay)
-			 *  keeps it read-only. The LIST frame carries the pair on every relay that
-			 *  has the field; an older relay defaults to `[]`, which paints no line.
-			 *
-			 *  The disclosure is present even when the assignment is EMPTY (review
-			 *  round 2, U8): gating the whole line on `tags.length` left an untagged
-			 *  local conversation with no visible route at all, and the long-press
-			 *  menu is not a route a reader can see. A read-only line keeps the old
-			 *  rule — badges with no assignment are a blank gap, not a fact. */
-			headerDetail={
-				tagsAssignable || (listRow?.tags?.length ?? 0) > 0 ? (
-					<SessionTagLine
-						tags={listRow?.tags ?? []}
-						testID={sessionHeaderTagLineId(sessionId)}
-						onPress={tagsAssignable ? () => setTagsOpen(true) : undefined}
-						actionTestID={CONTROL.sessionHeaderTagsAction}
-						accessibilityHint="Shows the tag choices for this conversation"
-					/>
-				) : undefined
-			}
+			/* The conversation's tags LEFT the header (record §2.3, D-S1): the tag
+			 *  line was laid out under a title block whose `flex-1` collapsed it to
+			 *  ~0 height, so "Tags ⌄" painted over the title on TestFlight 365. They
+			 *  are a row in the ⋮ menu now (`onTags` above), and stay on the
+			 *  sidebar rows; no `headerDetail` is passed. */
 		>
 			<SessionStateMarkers facts={stateFacts} />
 			<HealthAnnouncer health={health} />
@@ -1101,10 +1225,16 @@ export default function Session() {
 				barVisible={find.barVisible}
 				caveat={runtime.olderThanLoaded}
 			/>
+			{/* PORTRAIT PHONE: no under-header row. Its facts moved where the relay
+			    puts them (record §2.2, D-S3): the state into the header subtitle, the
+			    Tasks/Agents chips above the composer (`StatusChips` below), and the
+			    context % onto the composer's meta line. Short landscape keeps the
+			    one-line tray — its own budgeted layout, outside this pass. */}
 			{tray ? (
 				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
 				 *  row yields (`statusTrayVisible`) — otherwise the pinned Approve/Deny sit
 				 *  under the composer at 135-200 % text. */
+				compact &&
 				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
 					<StatusTray
 						facts={trayFacts}
@@ -1337,12 +1467,47 @@ export default function Session() {
 					    unreachable the bar's data is stale and saying so matters more.
 					    It renders itself away at zero outstanding, so its presence is
 					    the statement. */}
+					{/* THE ABOVE-COMPOSER STACK (record §2.2): the Tasks/Agents chips, then
+					    the ask bar, in ONE slot — `px-2` so their edges align with the
+					    composer's 8 pt margin, `gap-2` between them. The chips ride the ask
+					    bar's existing wrapper rather than a new sibling: the column's
+					    sibling slots are pinned so the composer is never re-parented
+					    (`transcript-footer.test.ts`), and this wrapper is already measured
+					    as the recovery budget's "after" band, so the chips are charged.
+					    Phone portrait only (short landscape keeps its tray, a tablet its
+					    inline panels); a pending card owns this slot while it is up, the
+					    same yield the tray made (UX U12). */}
 					<View
-						className="px-4 pb-1"
+						className="gap-2 px-2 pb-1"
 						onLayout={(event) =>
 							measureRecovery("after", event.nativeEvent.layout.height)
 						}
 					>
+						{/* Not in short landscape (review R1-3): there the one-line status
+						    tray at the top already leads with the activity, and a second
+						    copy here would both repeat it and spend a row of the tightest
+						    layout. The composer's ■ stays the Stop there. */}
+						{tray && !compact ? (
+							<PinnedWorkingLine
+								line={pinned}
+								onStop={composer.stop}
+								stopping={composer.stopping}
+								gapBelow={
+									pendingViewProps === null ||
+									outstandingAsks(projection?.asks).length > 0
+								}
+								testID={SURFACE.sessionWorkingLine}
+							/>
+						) : null}
+						{tray && !compact && pendingViewProps === null ? (
+							<View testID={SURFACE.sessionStatusChips}>
+								<StatusChips
+									facts={trayFacts}
+									glass={chromeGlass}
+									onOpen={() => setStatusSheetOpen(true)}
+								/>
+							</View>
+						) : null}
 						<AskBar
 							asks={projection?.asks}
 							onOpen={asksSheet.open}
@@ -1351,6 +1516,7 @@ export default function Session() {
 					</View>
 
 					<Composer
+						glass={chromeGlass}
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
 						}
@@ -1382,6 +1548,7 @@ export default function Session() {
 						voice={composer.voice}
 						onSend={composer.send}
 						onStop={composer.stop}
+						stopping={composer.stopping}
 						retainedMessage={
 							composer.retained !== null ? COMPOSER_RETAINED : null
 						}
@@ -1390,8 +1557,17 @@ export default function Session() {
 						showResume={aborted}
 						onResume={composer.send}
 						ended={ended}
-						error={pending === null ? composer.error : null}
+						error={pending === null ? (composer.error ?? chipError) : null}
 						queuedCount={projection?.queued_count ?? 0}
+						/* The context % and spend ride the meta line on a phone (D-S3);
+						 *  a tablet keeps its inline status strip, which already shows them. */
+						contextLabel={tray && !compact ? trayFacts.context : null}
+						costLabel={
+							tray && !compact && projection?.cumulative_parent_cost != null
+								? `$${projection.cumulative_parent_cost.toFixed(2)}`
+								: null
+						}
+						bottomInset={insets.bottom}
 						modelChip={chipLabels.model}
 						effortChip={chipLabels.effort}
 						onOpenModels={() => setModelsOpen(true)}
@@ -1422,7 +1598,11 @@ export default function Session() {
 				testID={SURFACE.sessionStatusSheet}
 			>
 				<View className="gap-2 pb-2">
-					{workingLineView}
+					{/* Only in short landscape, the one tray layout without the pinned
+					    line (R1-3): everywhere else the line is pinned above the dock,
+					    and a second spinner would be the two-indicators defect
+					    (components.md § 14). */}
+					{compact ? workingLineView : null}
 					{subagents.total > 0 ? subagentsPanel : null}
 					{todos.empty ? null : todosPanel}
 					{projection?.context_tokens != null ? (
@@ -1442,11 +1622,14 @@ export default function Session() {
 				models={runtime.models}
 				selected={projection?.model_selector ?? ""}
 				onPick={(model) => {
-					void runtime.source.endpoints?.command(sessionId, {
-						op: "set_model",
-						provider: model.provider,
-						model_id: model.model_id,
-					});
+					setChipError(null);
+					void runtime.source.endpoints
+						?.command(sessionId, {
+							op: "set_model",
+							provider: model.provider,
+							model_id: model.model_id,
+						})
+						.catch(() => setChipError("Could not change the model."));
 				}}
 			/>
 
@@ -1456,10 +1639,13 @@ export default function Session() {
 				ladder={effortLadder}
 				selected={projection?.effort ?? ""}
 				onPick={(effort) => {
-					void runtime.source.endpoints?.command(sessionId, {
-						op: "set_effort",
-						effort,
-					});
+					setChipError(null);
+					void runtime.source.endpoints
+						?.command(sessionId, {
+							op: "set_effort",
+							effort,
+						})
+						.catch(() => setChipError("Could not change the effort."));
 				}}
 			/>
 
@@ -1510,5 +1696,9 @@ export default function Session() {
 /**
 /** The composer's own sentence for a retained instruction, kept beside the screen
  *  rather than in `composer.ts` because it is passed in as a prop. */
+/** Below this width the header's find button folds into ⋮ (record §2.3): the
+ *  narrowest phones (320 pt) need its 52 pt for the title. */
+const FIND_FOLD_WIDTH = 360;
+
 const COMPOSER_RETAINED =
 	"An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.";

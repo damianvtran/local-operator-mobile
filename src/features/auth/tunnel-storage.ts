@@ -13,6 +13,7 @@ import {
 	tokensFromOauthSet,
 	tunnelSetFromSession,
 } from "@/connection";
+import { configurePrivateDataKeys } from "@/connection/private-data-key";
 import type { RouteProfile } from "@/connection/profile";
 import {
 	type RadientComputerInput,
@@ -20,6 +21,7 @@ import {
 	SavedComputers,
 } from "@/connection/saved-computers";
 import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
+import { thisDeviceOnlyAccessibility } from "@/connection/storage";
 
 /**
  * Where the app keeps the reader's credentials.
@@ -60,6 +62,12 @@ const savedComputersClearedListeners = new Set<() => void>();
 
 // Lazy callbacks keep platform initialization out of module evaluation and the
 // authorization owner independent of React/coordinator imports.
+configurePrivateDataKeys({
+	read: async () => (await open()).storage.readPrivateDataKey(),
+	write: async (value) => (await open()).storage.writePrivateDataKey(value),
+	clear: async () => (await open()).storage.clearPrivateDataKey(),
+});
+
 configureStartupAuthorizationStorage({
 	read: async () => (await open()).storage.readStartupAuthorization(),
 	write: async (record) =>
@@ -96,7 +104,16 @@ async function open(): Promise<TunnelStorage> {
 		opening = (async () => {
 			const persistent = Platform.OS !== "web";
 			adapter = persistent ? await expoSecureStore() : memorySecureStore();
-			storage = new SecureStorage(adapter);
+			// Private encryption keys must never migrate through a device backup. Set
+			// accessibility explicitly on the existing singleton, not a second keystore.
+			storage = new SecureStorage(
+				adapter,
+				persistent
+					? {
+							keychainAccessible: await thisDeviceOnlyAccessibility(),
+						}
+					: {},
+			);
 			return { storage, adapter, persistent };
 		})();
 		// Concurrent credential/generation reads must share one adapter, including

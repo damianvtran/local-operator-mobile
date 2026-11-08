@@ -39,6 +39,13 @@ export type ButtonProps = {
 	loading?: boolean;
 	disabled?: boolean;
 	accessibilityHint?: string;
+	/** Disclosure state, omitted for ordinary action buttons. */
+	expanded?: boolean;
+	/** Selection state, for a button that is one row of a choice list (the home's
+	 *  options sheet). Announced only — the caller still picks the variant — so a
+	 *  selected row is never told by colour alone (`Chip` does the same). Omitted
+	 *  for ordinary action buttons, which carry no selection. */
+	selected?: boolean;
 	/** Required: a control with no identifier cannot be reached by an E2E flow,
 	 * and a shared default would put the same one on every button of a screen. */
 	testID: string;
@@ -62,6 +69,8 @@ export const Button = ({
 	loading = false,
 	disabled = false,
 	accessibilityHint,
+	expanded,
+	selected,
 	testID,
 }: ButtonProps) => {
 	const iconColor = useTokenColor(
@@ -79,7 +88,12 @@ export const Button = ({
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={label}
 			accessibilityHint={accessibilityHint}
-			accessibilityState={state({ disabled, busy: loading })}
+			accessibilityState={state({
+				disabled,
+				busy: loading,
+				expanded,
+				selected,
+			})}
 			/* `sm` is the one size under the floor, and the floor is now REAL geometry
 			 *  rather than `hitSlop`.
 			 *

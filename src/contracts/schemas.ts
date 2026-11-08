@@ -51,6 +51,7 @@ import type {
 	LibraryTagResponse,
 	LibraryTagsResponse,
 	LinkedSession,
+	ModelDefault,
 	ModelEntry,
 	ModelsResponse,
 	NotificationDetailResponse,
@@ -1070,6 +1071,21 @@ export const sessionSummarySchema = z.looseObject({
 	 */
 	cwd: z.string().default(""),
 	model_label: z.string().default(""),
+	/** The rung the conversation last ran with, read from the journal when no
+	 *  runtime is attached (local-operator 74b53728, v0.101.14). The daemon sends
+	 *  `null` — not absence — for every row with no recorded rung
+	 *  (`daemon.py` `_merge_summaries`: `p.effort or None` / `identity.effort`),
+	 *  and declaring this `.optional()` alone failed the WHOLE list on the first
+	 *  such row (TestFlight 628: drawer stuck on skeletons, bell gone).
+	 *
+	 *  `null` and absence are the same claim here — "no rung known" — so both
+	 *  normalise to `undefined`, the one reading `session-chips.ts` `firstOf`
+	 *  already handles. Never defaulted to `""`: that would claim a rungless
+	 *  model, which is a different (projection-only) answer. */
+	effort: z
+		.string()
+		.nullish()
+		.transform((value) => value ?? undefined),
 	streaming: z.boolean().default(false),
 	needs_attention: z.boolean().default(false),
 	unseen: z.boolean().default(false),
@@ -1224,6 +1240,16 @@ export const sttCapabilitySchema = z.looseObject({
 	reason: z.string().optional(),
 });
 
+/** Every field optional: the app reads `effort` alone today, and a relay that
+ *  publishes the object without one of the receipt fields must not fail the
+ *  whole session list frame. */
+export const sessionStartCapabilitySchema = z.looseObject({
+	version: z.number().int().optional(),
+	durable_idempotency: z.boolean().optional(),
+	receipt_capacity: z.number().int().optional(),
+	effort: z.boolean().optional(),
+});
+
 export const capabilitiesSchema = z.looseObject({
 	features: z.record(z.string(), z.unknown()).optional(),
 	/** Absent means the relay never knew about the key, which reads exactly like
@@ -1236,6 +1262,13 @@ export const capabilitiesSchema = z.looseObject({
 	 *  defaulted: absence is an older relay whose routes do not exist, while a
 	 *  default `{available: true}` would advertise controls that 404. */
 	session_tags: sessionTagsCapabilitySchema.optional(),
+	/** The start route's capability (`docs/design/mobile-start-receipts.md`
+	 *  "Capability"). Optional and never defaulted: absence is a relay that
+	 *  predates the contract. `effort: true` is the ONLY licence to put `effort`
+	 *  in a start body — an older relay refuses it on a keyed start and silently
+	 *  drops it on an unkeyed one, which would start at the configured default
+	 *  while the phone said otherwise. */
+	session_start: sessionStartCapabilitySchema.optional(),
 });
 
 /** The frame-level unread aggregate (push/ack-sync S1, ADR 0006 §1.1).
@@ -1250,8 +1283,14 @@ export const unreadBlockSchema = z.looseObject({
 	count: z.number().int().optional(),
 	/** An equality token, never an order (the daemon's `revision()`, whose three
 	 *  terms move on a publish, a read, and a heal). Validated because the
-	 *  mirror declares it; nothing in the app may sort by it. */
-	revision: z.tuple([z.number(), z.number(), z.number()]),
+	 *  mirror declares it; nothing in the app may sort by it.
+	 *
+	 *  OPTIONAL because the degraded shape omits it: when the listing is degraded
+	 *  or the attention store has no revision, `SessionTable._unread_aggregate`
+	 *  answers `{"degraded": [...]}` alone — no `count`, no `revision`. Requiring
+	 *  it dropped the entire sessions frame exactly when the machine was already
+	 *  struggling (the same class as TestFlight 628's `effort: null`). */
+	revision: z.tuple([z.number(), z.number(), z.number()]).optional(),
 	/** The daemon's own marker for "could not be read" (`["attention"]`). */
 	degraded: z.array(z.string()),
 });
@@ -1284,8 +1323,39 @@ export const notificationsBlockSchema = z.looseObject({
 	high_water: z.number().int().optional(),
 });
 
+/**
+ * The listing's rows, read ONE ROW AT A TIME.
+ *
+ * WHY: a single row the schema refuses used to reject the whole frame, and the
+ * frame is also what carries `capabilities` (the bell's gate) and the inbox
+ * counts — so TestFlight 628's one `effort: null` emptied the drawer AND hid the
+ * bell. The rule this file already applies to additive display metadata
+ * (`transcriptEntryDetailsSchema`: "costs the label, never the session") is
+ * applied one level up: a malformed row costs that row, never the list.
+ *
+ * CONSTRAINTS: each row is still parsed by the full `sessionSummarySchema` —
+ * nothing is coerced, defaulted or invented, and no row that fails is shown.
+ * The envelope (`degraded`, `capabilities`, …) stays strict. The drop is LOGGED
+ * with the failing paths only (never values: a row carries conversation names
+ * and directories), so drift is visible in the device log rather than silent.
+ * Drift is still caught at build time by the `sessionSummary` fixture parses and
+ * by `session-list-wire.test.ts`, which asserts no real-shaped row is dropped.
+ */
+const sessionRowsSchema = z.array(z.unknown()).transform((rows) =>
+	rows.flatMap((row, index) => {
+		const parsed = sessionSummarySchema.safeParse(row);
+		if (parsed.success) return [parsed.data];
+		console.warn(
+			`[contracts] dropped session row ${index}: ${parsed.error.issues
+				.map((issue) => issue.path.map(String).join(".") || "<root>")
+				.join(",")}`,
+		);
+		return [];
+	}),
+);
+
 export const sessionListFrameSchema = z.looseObject({
-	sessions: z.array(sessionSummarySchema),
+	sessions: sessionRowsSchema,
 	/** `[]` when healthy — present on every frame so "nothing to report" is
 	 *  distinguishable from "too old to know". */
 	degraded: z.array(z.string()),
@@ -1510,16 +1580,45 @@ export const modelEntrySchema = z.looseObject({
 	label: z.string().optional(),
 	connected: z.boolean().optional(),
 	aggregated: z.boolean().optional(),
+	/** The row's effort ladder, lowest first (local-operator v0.101.9,
+	 *  `docs/design/mobile-start-receipts.md` "Picking a model and effort"). THREE
+	 *  readings, and they must stay three: a list is the ladder the effort picker
+	 *  offers; `[]` means the model has NO effort setting (offer nothing, send
+	 *  nothing); an ABSENT key means the computer does not know the ladder — an
+	 *  older daemon, or an aggregator id it has not read — so the picker offers the
+	 *  whole vocabulary and the session clamps. Never defaulted: a default `[]`
+	 *  would hide a real control, a default list would invent rungs. */
+	efforts: z.array(z.string()).optional(),
+});
+
+/** What a start that names no `provider`/`model_id`/`effort` runs on this
+ *  computer — the configured model, and its effort clamped to that model's
+ *  ladder (`null` when the model has no ladder). */
+export const modelDefaultSchema = z.looseObject({
+	selector: nonEmpty,
+	provider: z.string(),
+	model_id: z.string(),
+	effort: z.string().nullable(),
 });
 
 export const modelsResponseSchema = z.looseObject({
 	models: z.array(modelEntrySchema),
+	/** The computer's resolved default. `null` means it resolved none (say
+	 *  "unavailable"); an ABSENT key means an older daemon that never published
+	 *  one. Kept as two readings rather than defaulted, because the home chip says
+	 *  different things for them. */
+	default: modelDefaultSchema.nullable().optional(),
 });
 
 export const directoriesSchema = z.looseObject({
 	home: z.string(),
 	recent: z.array(z.string()),
 	tmp: z.string().optional(),
+	/** Where a session starts when the client names no directory, resolved by the
+	 *  computer with the SAME function its start route uses. Optional because a
+	 *  computer older than that field does not publish it — the client then starts
+	 *  in `home`, the one path the spawn gate always admits, rather than guessing. */
+	default: z.string().optional(),
 });
 
 export const healthzResponseSchema = z.looseObject({
@@ -2449,6 +2548,7 @@ export type {
 	LibraryTagResponse,
 	LibraryTagsResponse,
 	LinkedSession,
+	ModelDefault,
 	ModelEntry,
 	ModelsResponse,
 	NotificationDetailResponse,

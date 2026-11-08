@@ -293,6 +293,10 @@ if (manifestOverride === "") {
 		"--scales",
 		"100,200",
 		"--consecutive",
+		// These pages deliberately paint fixture tokens, not the application's
+		// generated palette. Keep that truth boundary explicit (Q164-2).
+		"--canvas-context",
+		"fixture",
 		"--tokens",
 		tokens,
 		...(profileOverride !== "" ? ["--profile", profileOverride] : []),

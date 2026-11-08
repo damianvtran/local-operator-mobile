@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Hosted synthetic fixtures only. Release contains neither these exported
+       controls nor the proof provider. No real OAuth credential is used. -->
+  <application>
+    <activity android:name=".OAuthProofActivity" android:exported="true" />
+    <receiver android:name=".OAuthProofControlReceiver" android:exported="true">
+      <intent-filter><action android:name="dev.localoperator.loopback.PROOF_DESTROY" /></intent-filter>
+    </receiver>
+  </application>
+</manifest>

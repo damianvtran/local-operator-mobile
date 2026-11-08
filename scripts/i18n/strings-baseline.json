@@ -286,12 +286,6 @@
 		},
 		{
 			"file": "src/features/auth/sign-in-panel.tsx",
-			"text": "Finishing sign-in…",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/auth/sign-in-panel.tsx",
 			"text": "Nothing was changed on your account.",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -411,32 +405,8 @@
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
-			"file": "src/features/home/home-splash.tsx",
-			"text": "Connect a computer",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/home/home.tsx",
-			"text": "Choose another folder",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
 			"file": "src/features/home/home.tsx",
 			"text": "Could not start",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/home/home.tsx",
-			"text": "Open conversations",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/home/home.tsx",
-			"text": "Settings",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -923,18 +893,6 @@
 		},
 		{
 			"file": "src/features/session/components/composer.tsx",
-			"text": "Discard",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/composer.tsx",
-			"text": "Discard voice input",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/composer.tsx",
 			"text": "Message",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -1002,12 +960,6 @@
 		{
 			"file": "src/features/session/components/model-sheet.tsx",
 			"text": "no models available",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/session/components/model-sheet.tsx",
-			"text": "not connected",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -1114,29 +1066,11 @@
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
-			"file": "src/features/sessions/conversations-drawer.tsx",
-			"text": "Close conversations",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
 			"file": "src/features/sessions/conversations-pane.tsx",
 			"text": "A session is one conversation with the agent on your machine. Start one and it will appear here.",
 			"owner": "Mobile i18n",
 			"payoff": "Key this literal in the catalogue",
 			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Close conversations",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Library",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
@@ -1147,12 +1081,6 @@
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
 			"text": "Name, id or folder",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "New chat",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -1180,24 +1108,6 @@
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
 			"text": "Open",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Past sessions",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Projects",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Schedules",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -1506,12 +1416,6 @@
 		{
 			"file": "src/features/settings/settings.tsx",
 			"text": "Text size",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Theme",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},

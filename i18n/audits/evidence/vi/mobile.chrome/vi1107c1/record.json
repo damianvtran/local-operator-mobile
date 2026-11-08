@@ -1,0 +1,78 @@
+{
+ "schema": 1,
+ "audit_id": "vi1107c1",
+ "audit_kind": "post-merge independent audit of agent-written translations (round 1)",
+ "locale": "vi",
+ "namespace": "mobile.chrome",
+ "audit_date": "2026-11-07",
+ "audited_revision": "b5a2f4a1b0721a5745e35e498d7d91851a93811c",
+ "core_reference_revision": "0dbe7156be84fecf02564b743113bbc0b918bd3f",
+ "scope": {
+  "source_prs": [
+   "damianvtran/local-operator-mobile#180"
+  ],
+  "keys": [
+   "mobile.chrome.close_conversations"
+  ],
+  "key_count": 1,
+  "derivation": "keys present in en/mobile.chrome.json at the PR merge commit and absent at its first parent; all still on origin/main with unchanged English"
+ },
+ "auditor": {
+  "agent": "reviewer (lopdev team)",
+  "session": "27cb86d0ecef",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "this session's header; no fallback notice appeared",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "identified": false,
+  "note": "agent-written in the source PR; the PR does not name a translator session"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/vi/mobile.chrome.json",
+   "sha256": "6c2d18113a6ac059fbd9acd899f8670b778e549391db2aa993292b6c22a6e41d"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.chrome.json",
+   "sha256": "7b91a909393d20b3ced5ef3825bf0fd5b0f844ee634a6f8abf19f3cb0141b3f7"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.chrome.context.json",
+   "sha256": "ba70cefe7de66b12c4f012daad4e7aa127a34eea6e3de17c9fda832415aeb140"
+  }
+ },
+ "verdict": "passed",
+ "counts": {
+  "BLOCKER": 0,
+  "MAJOR": 0,
+  "MINOR": 0,
+  "NIT": 0
+ },
+ "findings": [],
+ "length_notes": [],
+ "mechanical": {
+  "placeholders_identical": true,
+  "icu_plural_select": "none in scope",
+  "bidi_control_chars": 0,
+  "final_stop_parity": true,
+  "ellipsis_parity": true,
+  "product_name_kept": true,
+  "method": "mech.py over git-archive extracts of origin/main (see audit.log)"
+ },
+ "artifacts": {
+  "report.md": {
+   "sha256": "e4dbad85ae6f3f5ee6b7a357a0aae1560afdbd54fb73b048439187825e9d4b77"
+  },
+  "audit.log": {
+   "sha256": "45d42c53bd763f98ddde62cf525a3fe534a24b1c3bb056e63f7a5474a7acee70",
+   "note": "shared by all 14 bundles of this audit"
+  }
+ },
+ "route_disclosure": "catalogues read via `git archive origin/main` extracts into <scratch>; no working tree, no MT/API/SDK; terminology compared against <core> origin/main catalogues and i18n/glossary.md",
+ "limits": [
+  "no rendered 320 pt capture: this role has no browser tool; length notes are character-count estimates",
+  "generate.ts --check not run (read-only, no worktree); placeholder parity re-derived in mech.py"
+ ]
+}

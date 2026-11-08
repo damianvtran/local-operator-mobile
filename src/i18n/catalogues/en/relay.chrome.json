@@ -2,5 +2,21 @@
 	"relay.chrome.session.subtitle.not_answering": "Not answering",
 	"relay.chrome.session.subtitle.ended": "Ended",
 	"relay.chrome.session.resume": "Resume",
-	"relay.chrome.session.resuming": "Resuming…"
+	"relay.chrome.session.resuming": "Resuming…",
+	"relay.chrome.session.subtitle.working": "Working · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "Working",
+	"relay.chrome.session.subtitle.waiting": "Waiting for you",
+	"relay.chrome.session.subtitle.idle": "Idle",
+	"relay.chrome.session.tray.tasks": "Tasks {done}/{total}",
+	"relay.chrome.session.tray.agents": "Agents {running}/{total}",
+	"relay.chrome.drawer.past": "Past sessions",
+	"relay.chrome.drawer.projects": "Projects",
+	"relay.chrome.drawer.library": "Library",
+	"relay.chrome.drawer.settings": "Settings",
+	"relay.chrome.list.search_open": "Search",
+	"relay.chrome.list.search_label": "Search conversations",
+	"relay.chrome.row.tags": "Tags",
+	"relay.chrome.row.more": "More",
+	"relay.chrome.drawer.open": "Open navigation",
+	"relay.chrome.drawer.close": "Close navigation"
 }

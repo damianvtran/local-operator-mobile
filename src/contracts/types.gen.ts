@@ -493,6 +493,10 @@ export interface SessionSummary {
 	conversation_name: string;
 	cwd: string;
 	model_label: string;
+	/** The rung last run with, from the journal when no runtime is attached
+	 *  (local-operator v0.101.14+). The wire sends `null` for "no rung known";
+	 *  the schema normalises it to absence (see `schemas.ts`). */
+	effort?: string | null;
 	streaming: boolean;
 	needs_attention: boolean;
 	unseen: boolean;
@@ -644,6 +648,15 @@ export interface Capabilities {
 	 * routes cannot be served — never defaulted to available.
 	 */
 	session_tags?: { available: boolean };
+	/** `POST /api/sessions/start`'s capability (local-operator
+	 *  `docs/design/mobile-start-receipts.md`); `effort: true` licenses `effort`
+	 *  in a start body (v0.101.9). Absent = a relay that predates it. */
+	session_start?: {
+		version?: number;
+		durable_idempotency?: boolean;
+		receipt_capacity?: number;
+		effort?: boolean;
+	};
 }
 
 export interface SessionListFrame {
@@ -676,8 +689,9 @@ export interface UnreadBlock {
 	count?: number;
 	/** `AttentionStore.revision()` — an **equality token, never an order**: it
 	 *  moves on a publish, on a read and `supersedes` moves on a heal. A client
-	 *  compares it for change, it does not sort by it. */
-	revision: [number, number, number];
+	 *  compares it for change, it does not sort by it. ABSENT on the degraded
+	 *  shape (`{"degraded": [...]}` alone, `_unread_aggregate`). */
+	revision?: [number, number, number];
 	/** The daemon's own marker for "could not be read" (`["attention"]`). */
 	degraded: string[];
 }
@@ -794,10 +808,22 @@ export interface ModelEntry {
 	label?: string;
 	connected?: boolean;
 	aggregated?: boolean;
+	/** local-operator v0.101.9: the ladder; `[]` = no effort setting; absent = unknown. */
+	efforts?: string[];
+}
+
+/** local-operator v0.101.9: what a start naming no model or effort runs. */
+export interface ModelDefault {
+	selector: string;
+	provider: string;
+	model_id: string;
+	effort: string | null;
 }
 
 export interface ModelsResponse {
 	models: ModelEntry[];
+	/** `null` = the computer resolved no default; absent = an older daemon. */
+	default?: ModelDefault | null;
 }
 
 export interface Directories {

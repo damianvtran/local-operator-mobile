@@ -76,7 +76,26 @@ export type Affordance =
 	 * two page evaluations (down, wait, up), not a pair a cell has to sequence
 	 * itself.
 	 */
-	| { hold: { testID: string; ms: number } };
+	| { hold: { testID: string; ms: number } }
+	/**
+	 * Press `opener` ONLY IF `control` is not on the page, then let the cell press
+	 * `control`.
+	 *
+	 * WHY A CONDITIONAL EXISTS: the app itself chooses the route to some controls
+	 * by viewport, so a cell that must hold on every device has to follow the same
+	 * branch. The session header is the case that forced it (review round 1,
+	 * Q163-1): below 360 pt the find lever folds into the ⋮ menu, so on the 320 pt
+	 * profile the control the cell presses is behind one extra press, and above it
+	 * the lever is on the header where a menu press would only put a sheet OVER
+	 * the thing the next action presses. Neither a bare `click` nor an
+	 * always-open-the-menu pair can express both.
+	 *
+	 * IT DOES NOT WEAKEN THE FAILURE. The answer `skipped` means the opener was not
+	 * needed; the cell's next action is still the named control, so a control that
+	 * really moved still fails by name at that step, and a broken app that hides
+	 * the control behind a route it does not have fails on the opener instead.
+	 */
+	| { clickWhenMissing: { control: string; opener: string } };
 
 /** How long a held press lasts when a cell does not say. React Native's own
  *  `delayLongPress` default, so a bare hold is the gesture the app is built for. */
@@ -110,6 +129,24 @@ export function narrowAffordances(value: unknown): Affordance[] {
 			out.push({ click: row.click });
 			continue;
 		}
+		const whenMissing =
+			typeof row.clickWhenMissing === "object" && row.clickWhenMissing !== null
+				? (row.clickWhenMissing as Record<string, unknown>)
+				: null;
+		if (whenMissing !== null) {
+			if (
+				typeof whenMissing.control === "string" &&
+				typeof whenMissing.opener === "string"
+			) {
+				out.push({
+					clickWhenMissing: {
+						control: whenMissing.control,
+						opener: whenMissing.opener,
+					},
+				});
+			}
+			continue;
+		}
 		const hold =
 			typeof row.hold === "object" && row.hold !== null
 				? (row.hold as Record<string, unknown>)
@@ -135,6 +172,8 @@ export function narrowAffordances(value: unknown): Affordance[] {
 /** A compact label for a log line, a manifest or a failure sentence. */
 export const describeAffordance = (action: Affordance): string => {
 	if ("click" in action) return `click ${action.click}`;
+	if ("clickWhenMissing" in action)
+		return `click ${action.clickWhenMissing.opener} if ${action.clickWhenMissing.control} is missing`;
 	if ("hold" in action) return `hold ${action.hold.testID} ${action.hold.ms}ms`;
 	return `type ${action.type.testID}`;
 };
@@ -348,6 +387,24 @@ export function affordanceScript(action: Affordance): string {
   return reached.verdict;
 })()`;
 	}
+	if ("clickWhenMissing" in action) {
+		/* ONE EVALUATION, so the condition and the press describe the same moment:
+		 *  two calls could interleave with a re-render and press a route the cell no
+		 *  longer needs (or skip one it now does). The presence probe and the press
+		 *  therefore share the page's own DOM read. */
+		return `(async () => {
+  const control = document.querySelector(${selector(action.clickWhenMissing.control)});
+  if (control) return JSON.stringify({ result: "skipped" });
+  const el = document.querySelector(${selector(action.clickWhenMissing.opener)});
+  if (!el) return JSON.stringify({ result: "missing" });
+  if (el.disabled === true || el.getAttribute("aria-disabled") === "true") return JSON.stringify({ result: "inert" });${READER}
+  const reached = await approach();
+  if (reached.stop) return reached.stop;
+  press(el, PRESS);
+  restore(reached.saved);
+  return reached.verdict;
+})()`;
+	}
 	if ("hold" in action) {
 		return `(async () => {
   const el = document.querySelector(${selector(action.hold.testID)});
@@ -445,7 +502,12 @@ export interface AffordanceOutcome {
  * and the audit counts it as a measured replay rather than a gap.
  */
 export const outcomeFailed = (result: string): boolean =>
-	result !== "ok" && result !== "ok-after-scroll";
+	result !== "ok" &&
+	result !== "ok-after-scroll" &&
+	/* `skipped` is a CONDITIONAL OPENER finding its condition already met — the
+	 * control it would have opened a route to was on the page — so it is the same
+	 * kind of answer as `ok`: the cell's route did not need this step. */
+	result !== "skipped";
 
 /**
  * Whether an element with this `data-testid` is in the DOM.
@@ -556,9 +618,16 @@ export async function runAffordances(
 				);
 				break;
 			}
-			/* THREE ANSWERS ARE NOT RETRYABLE. `ok` (and `ok-after-scroll`) is the
-			 *  press landing, `not-a-field` is a DOM fact that cannot change —
-			 *  retrying either would only spend the bound. `missing`, `inert` and
+			/* FOUR ANSWERS ARE NOT RETRYABLE. `ok` (and `ok-after-scroll`) is the
+			 *  press landing, `not-a-field` is a DOM fact that cannot change, and
+			 *  `skipped` is a conditional opener whose control is already on the page
+			 *  (the find lever on every profile wider than 360 pt) — retrying any of
+			 *  them would only spend the bound. `skipped` was missing from this list
+			 *  when `clickWhenMissing` landed (7cb6a5ed, #163), so each wide-profile
+			 *  find cell polled a settled answer for the full 8 s `waitMs`, in the
+			 *  capture AND again in the audit's re-drive: 30 cells x ~8 s x 2 passes
+			 *  ≈ 8 min of the `web-audit` job's wall time, which is what pushed it
+			 *  past its 90-minute bound. `missing`, `inert` and
 			 *  `unreachable` are all "not yet": an element still arriving, a control
 			 *  inert until React has re-rendered with the typed value, and a control
 			 *  covered while a scrim or a sheet is still animating. Every one of them
@@ -567,7 +636,8 @@ export async function runAffordances(
 			if (
 				outcome.result === "ok" ||
 				outcome.result === "ok-after-scroll" ||
-				outcome.result === "not-a-field"
+				outcome.result === "not-a-field" ||
+				outcome.result === "skipped"
 			)
 				break;
 			if (Date.now() >= deadline) break;

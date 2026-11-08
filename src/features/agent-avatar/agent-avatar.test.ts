@@ -6,7 +6,10 @@ import { parsePayload } from "@/contracts";
 import {
 	AVATAR_CACHE_LIMIT,
 	AVATAR_FETCH_CONCURRENCY,
+	AVATAR_VARIANTS,
 	avatarRefOf,
+	avatarSizesServed,
+	avatarVariant,
 	createAvatarCache,
 	paintedPicture,
 } from "@/features/agent-avatar/agent-avatar";
@@ -346,7 +349,9 @@ const PANE_FORWARDS_SURFACE = /surfaceClassName=\{surfaceClassName\}/;
 /* R3-1: the drawer names its panel fill ONCE and hands that same constant to the
  *  pane, so the ring cannot drift off the fill with one edit. */
 const DRAWER_ONE_SURFACE = /const PANEL_SURFACE = "bg-elevated";/;
-const DRAWER_PANEL_USES = /border-r \$\{PANEL_SURFACE\}/;
+/* The panel is BORDERLESS (operator, TestFlight 578): the fill is the ONLY class
+ *  beside `flex-1`, so no edge colour can sneak back in beside the surface. */
+const DRAWER_PANEL_USES = /className=\{`flex-1 \$\{PANEL_SURFACE\}`\}/;
 const DRAWER_NAMES_SURFACE = /surfaceClassName=\{PANEL_SURFACE\}/;
 /* R3: the spinner is sized to the disc, not transformed into it on web — and the
  *  numeric `size` and the iOS paint scale are the two halves of that rule, so BOTH
@@ -381,9 +386,16 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 	});
 
 	it("the header picture sits in the leading cluster, before the title control", () => {
-		const leading = SCREEN.indexOf("<NavigationMark />");
+		/* The back control leads; the brand mark left the session header (record
+		 *  2026-11-04 §2.3, D-S2), so the picture now follows back directly. */
+		const leading = SCREEN.indexOf("testID={CONTROL.sessionBack}");
 		const avatar = SCREEN.indexOf("{headerStacked ? null : agentAvatar}");
-		const title = SCREEN.indexOf("<SessionHealthControl");
+		/* Searched from the back control: the module also declares a ticking
+		 *  wrapper that renders `<SessionHealthControl` above the screen (PR #189),
+		 *  so the first occurrence is not the header's. The order asserted is the
+		 *  header JSX's own. */
+		const title = SCREEN.indexOf("SessionHealthControl", leading);
+		expect(SCREEN).not.toContain("<NavigationMark");
 		expect(leading).toBeGreaterThan(0);
 		expect(avatar).toBeGreaterThan(leading);
 		expect(title).toBeGreaterThan(avatar);
@@ -442,6 +454,7 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		expect(PANE).toMatch(PANE_FORWARDS_SURFACE);
 		expect(DRAWER).toMatch(DRAWER_ONE_SURFACE);
 		expect(DRAWER).toMatch(DRAWER_PANEL_USES);
+		expect(DRAWER).not.toMatch(/border-r\b|border-panel-edge/);
 		expect(DRAWER).toMatch(DRAWER_NAMES_SURFACE);
 		/* And no second literal of it anywhere in the file. */
 		expect(DRAWER.split("bg-elevated").length - 1).toBe(1);
@@ -568,5 +581,67 @@ describe("picture privacy lifecycle wiring", () => {
 	});
 	it("refusal clears pictures too, not only explicit sign-out", () => {
 		expect(provider).toMatch(CLEAR_REFUSAL);
+	});
+});
+
+describe("right-sized variants: requested size >= PixelRatio x dp", () => {
+	it("picks the smallest relay variant covering the slot's physical pixels", () => {
+		/* Every rendered avatar slot on this client, across real phone densities. */
+		for (const dp of [24, 28]) {
+			for (const ratio of [1, 1.5, 2, 2.625, 2.75, 3, 3.5, 4]) {
+				const size = avatarVariant(dp, ratio);
+				const physical = dp * ratio;
+				if (size === undefined) {
+					expect(physical).toBeGreaterThan(AVATAR_VARIANTS.at(-1) ?? 0);
+					continue;
+				}
+				expect(size).toBeGreaterThanOrEqual(physical);
+				// ...and no smaller variant would have covered it (bandwidth).
+				for (const smaller of AVATAR_VARIANTS.filter((v) => v < size)) {
+					expect(smaller).toBeLessThan(physical);
+				}
+			}
+		}
+		expect(avatarVariant(24, 3)).toBe(128);
+		expect(avatarVariant(28, 2)).toBe(64);
+		expect(avatarVariant(64, 4)).toBe(256);
+		expect(avatarVariant(65, 4)).toBeUndefined();
+		expect(avatarVariant(24, Number.NaN)).toBe(64);
+	});
+
+	it("asks only a relay that advertises agent_avatar_sizes", () => {
+		expect(avatarSizesServed({ features: { agent_avatar_sizes: 1 } })).toBe(
+			true,
+		);
+		expect(avatarSizesServed({ features: { agent_avatar_sizes: 0 } })).toBe(
+			false,
+		);
+		expect(avatarSizesServed({ features: {} })).toBe(false);
+		expect(avatarSizesServed({})).toBe(false);
+	});
+
+	it("caches each variant separately, so a 64 px body never fills a 128 px slot", async () => {
+		const cache = createAvatarCache();
+		const load = vi.fn(
+			async (r: { size?: number }) => `data:${r.size ?? "orig"}`,
+		);
+		await cache.get({ ...ref(), size: 64 }, load);
+		await cache.get({ ...ref(), size: 128 }, load);
+		expect(load).toHaveBeenCalledTimes(2);
+		expect(cache.peek({ ...ref(), size: 64 })).toBe("data:64");
+		expect(cache.peek({ ...ref(), size: 128 })).toBe("data:128");
+		expect(cache.peek(ref())).toBeUndefined();
+	});
+
+	it("the view derives the size from PixelRatio x the rendered dp and passes it through", () => {
+		const view = readFileSync(
+			fileURLToPath(new URL("./agent-avatar-view.tsx", import.meta.url)),
+			"utf8",
+		);
+		expect(view).toContain("avatarVariant(dp, PixelRatio.get())");
+		expect(view).toContain("avatarSizesServed(state.capabilities)");
+		expect(view).toContain("target.size,");
+		expect(view).toContain("useAgentAvatarUri(avatarRef, HEADER_AVATAR_PT)");
+		expect(view).toContain("useAgentAvatarUri(avatarRef, ROW_AVATAR_PT)");
 	});
 });

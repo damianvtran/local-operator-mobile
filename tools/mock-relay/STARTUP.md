@@ -71,8 +71,8 @@ or request field is invented to hide that bug.
 Created IDs appear in `/api/sessions`, can be adopted through
 `/api/sessions/<id>/events`, and accept subsequent prompt/steer commands. Creation
 mutates the mock's projections only; no agent process is spawned. Admission
-appends one `user-<command_id>` transcript row, including image references. Image
-bytes are available through the normal `/image?entry=user-<command_id>&i=<index>`
+appends one transcript row under the bare `<command_id>` (the daemon's own row id), including image references. Image
+bytes are available through the normal `/image?entry=<command_id>&i=<index>`
 route; the ledger hashes the canonical request's `data_b64` bytes. The existing
 `no-ack=<ms>`, `no-ack-forever`, and scenario command-window faults now also append
 and record **before** losing/timing out the reply. Thus 504 → same-ID retry 200

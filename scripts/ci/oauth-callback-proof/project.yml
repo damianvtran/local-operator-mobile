@@ -1,0 +1,61 @@
+name: CallbackProof
+options:
+  minimumXcodeGenVersion: 2.46.0
+  deploymentTarget:
+    iOS: "16.4"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGNING_ALLOWED: "YES"
+targets:
+  CallbackProof:
+    type: application
+    platform: iOS
+    sources:
+      # Compile the exact shipping transport; never include the Expo wrapper.
+      - ../../../modules/radient-loopback/ios/LoopbackAuthSession.swift
+      - TCPClosureProbe.swift
+      - main.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.localoperator.oauthproof
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Callback Proof
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+  CallbackProofUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - CallbackProofUITests.swift
+    dependencies:
+      - target: CallbackProof
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.localoperator.oauthproof.uitests
+        TEST_TARGET_NAME: CallbackProof
+    info:
+      path: UITests-Info.plist
+      properties:
+        # The runner's only HTTP target is the fixture's loopback /begin control.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+schemes:
+  CallbackProof:
+    build:
+      targets:
+        CallbackProof: all
+        CallbackProofUITests: [test]
+    test:
+      gatherCoverageData: false
+      targets:
+        - CallbackProofUITests

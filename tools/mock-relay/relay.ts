@@ -89,6 +89,7 @@ import {
 	SSE_KEEPALIVE_S,
 	setCookieHeader,
 	sseFrame,
+	startEffortAdmitted,
 	syntheticSessionId,
 	verifyCookie,
 } from "./wire.ts";
@@ -168,6 +169,36 @@ const UNDECODABLE_MEDIA = Buffer.from("z".repeat(2048));
  * the mock for every other cell, and cached because it is the same bytes for
  * every digest.
  */
+/** Eight seconds of a quiet 440 Hz tone, 8 kHz mono 16-bit PCM: built, not
+ *  vendored, so the mock carries no binary asset for its `/sound` route. Eight,
+ *  not one: a one-second clip ended before a capture could observe a playing
+ *  cell or a second press pausing the first (design round 1, D2's note). */
+const MOCK_WAV: Buffer = (() => {
+	const rate = 8000;
+	const samples = rate * 8;
+	const data = Buffer.alloc(samples * 2);
+	for (let i = 0; i < samples; i += 1) {
+		data.writeInt16LE(
+			Math.round(Math.sin((2 * Math.PI * 440 * i) / rate) * 3000),
+			i * 2,
+		);
+	}
+	const header = Buffer.alloc(44);
+	header.write("RIFF", 0);
+	header.writeUInt32LE(36 + data.length, 4);
+	header.write("WAVEfmt ", 8);
+	header.writeUInt32LE(16, 16);
+	header.writeUInt16LE(1, 20);
+	header.writeUInt16LE(1, 22);
+	header.writeUInt32LE(rate, 24);
+	header.writeUInt32LE(rate * 2, 28);
+	header.writeUInt16LE(2, 32);
+	header.writeUInt16LE(16, 34);
+	header.write("data", 36);
+	header.writeUInt32LE(data.length, 40);
+	return Buffer.concat([header, data]);
+})();
+
 let supplementDocumentCache: string | null = null;
 const supplementDocumentHtml = (): string => {
 	if (supplementDocumentCache === null) {
@@ -213,7 +244,11 @@ const SUPPLEMENT_FILE_MIME: Record<string, string> = {
 	".jpeg": "image/jpeg",
 	".gif": "image/gif",
 	".webp": "image/webp",
+	".mp4": "video/mp4",
 };
+
+/** The contract's attachment digest (`contract.DIGEST_PATTERN`). */
+const DIGEST_RE = /^[a-f0-9]{32}$/;
 
 const UUID_RE =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1017,7 +1052,11 @@ export function createRelay(options: RelayOptions = {}) {
 		projection.transcript = [
 			...(projection.transcript ?? []),
 			{
-				id: `user-${commandId}`,
+				// The bare command id, as the daemon writes it (`tui_handle.py` hands
+				// `message_id=command_id` to the session): the phone's pending row
+				// reconciles on exactly that id, so a `user-` prefix here left every
+				// sent message on screen twice against this mock (PR #191, Q2/U5).
+				id: commandId,
 				kind: "user",
 				text: typeof text === "string" ? text : "",
 				tool_call_id: "",
@@ -1215,22 +1254,26 @@ export function createRelay(options: RelayOptions = {}) {
 		const rows = includePeers ? [...rowsFor(), ...peerRowsFor()] : rowsFor();
 		/* The frame-level `unread` block (S1, ADR 0006 §1.1): `count` is computed
 		 * from the SAME rows this frame carries, so the equality the daemon
-		 * guarantees (count == unseen rows) cannot drift here either. `attention`
-		 * in the listing's own `degraded` means the receipt store could not be
-		 * read — and a store that could not be read is not an empty pile: `count`
-		 * is ABSENT, never 0. */
-		const attentionDegraded = degraded.includes("attention");
-		const unread = {
-			...(attentionDegraded
-				? {}
-				: { count: rows.filter((row) => row.unseen === true).length }),
-			revision: [rows.length, state.seenTokens.size, 0] as [
-				number,
-				number,
-				number,
-			],
-			degraded: attentionDegraded ? ["attention"] : [],
-		};
+		 * guarantees (count == unseen rows) cannot drift here either. A degraded
+		 * listing is not an empty pile: `count` is ABSENT, never 0.
+		 *
+		 * The daemon's DEGRADED SHAPE (`SessionTable._unread_aggregate`): ANY
+		 * listing degradation answers `{"degraded": [...]}` alone — no `count`, no
+		 * `revision` — and only a healthy listing carries the pair. The mock used to
+		 * send a revision on the degraded shape too, which is how a client schema
+		 * that required it passed here and failed against the real daemon. */
+		const unread =
+			degraded.length > 0
+				? { degraded: [...degraded] }
+				: {
+						count: rows.filter((row) => row.unseen === true).length,
+						revision: [rows.length, state.seenTokens.size, 0] as [
+							number,
+							number,
+							number,
+						],
+						degraded: [],
+					};
 		return {
 			sessions: rows,
 			degraded,
@@ -1497,6 +1540,21 @@ export function createRelay(options: RelayOptions = {}) {
 		projection: SessionProjection,
 	): ((tick: number) => StreamFrame | "end" | null) => {
 		const stream = state.world.stream ?? { mode: "idle" };
+		if (stream.mode === "idle") {
+			/* An idle runtime still answers an admission with a frame: the real
+			 * relay pushes the projection that carries the new user row. Without
+			 * it, an idle world never showed a sent message until a reconnect, and
+			 * the phone's pending row never handed over (PR #191, Q2). Only a
+			 * version NEWER than the last one this stream sent is pushed, so a
+			 * quiet session stays quiet. */
+			let sent = projection.version ?? 1;
+			return () => {
+				const current = projection.version ?? 1;
+				if (current <= sent) return null;
+				sent = current;
+				return { event: "projection", data: structuredClone(projection) };
+			};
+		}
 		if (stream.mode !== "streaming") return () => null;
 		const settleAfter = stream.settleAfterTurns ?? 6;
 		const growth = stream.growth === "table" ? tableArrival : null;
@@ -2399,6 +2457,21 @@ export function createRelay(options: RelayOptions = {}) {
 				sendJson(res, 400, errorBody("invalid JSON"));
 				return;
 			}
+			/* `effort` (local-operator v0.101.9): a level from the daemon's vocabulary,
+			 *  case-insensitive; `null` or blank means the configured default, exactly
+			 *  as omitting it. Anything else is refused BEFORE the directory is read,
+			 *  in the relay's order and with its body (`start_effort` in
+			 *  `mobile/start_receipts.py`, the code doubling as the sentence) — a mock
+			 *  that accepted any word would hide a client sending one the relay
+			 *  rejects. */
+			if (!startEffortAdmitted(body.effort)) {
+				sendJson(
+					res,
+					400,
+					errorBody("invalid_start_effort", "invalid_start_effort"),
+				);
+				return;
+			}
 			if (typeof body.cwd === "string" && body.cwd.startsWith("/etc")) {
 				sendFixture(res, "start-bad-cwd");
 				return;
@@ -2568,12 +2641,24 @@ export function createRelay(options: RelayOptions = {}) {
 			return;
 		}
 		if (pathname === "/api/directories" && method === "GET") {
+			/* A scenario's own folder answer, else the corpus capture. */
+			if (world.directories !== undefined) {
+				sendJson(res, 200, world.directories);
+				return;
+			}
 			sendFixture(res, "directories");
 			return;
 		}
 		if (pathname === "/api/models" && method === "GET") {
 			if (Array.isArray(world.models)) {
-				sendJson(res, 200, { models: world.models });
+				sendJson(res, 200, {
+					models: world.models,
+					/* Omitted unless the scenario names one, exactly as an older daemon
+					 *  omits it: absence and `null` are different readings. */
+					...(world.modelDefault !== undefined
+						? { default: world.modelDefault }
+						: {}),
+				});
 				return;
 			}
 			sendFixture(res, "models");
@@ -3420,6 +3505,35 @@ export function createRelay(options: RelayOptions = {}) {
 			 * is no path parameter and there never may be). Both are scoped to the
 			 * session's own projection: a digest no beat references and an index no
 			 * row carries are the route's own refusals. */
+			/* `/sound?digest=` — one supplement sound's bytes, scoped like the
+			 * real route: a digest no beat's `sounds[]` references is a 404, so a
+			 * client cannot use it to read an arbitrary attachment. The bytes are
+			 * one generated second of a quiet tone (`MOCK_WAV`). */
+			if (rest === "/sound" && method === "GET") {
+				const digest = url.searchParams.get("digest") ?? "";
+				if (!DIGEST_RE.test(digest)) {
+					sendJson(res, 400, errorBody("bad digest"));
+					return;
+				}
+				const referenced = Object.values(projection?.supplements ?? {}).some(
+					(beat) =>
+						isRecord(beat) &&
+						(Array.isArray(beat.sounds) ? beat.sounds : []).some(
+							(sound) => isRecord(sound) && sound.attachment === digest,
+						),
+				);
+				if (!referenced) {
+					sendJson(res, 404, errorBody("no such sound"));
+					return;
+				}
+				res.writeHead(200, {
+					"content-type": "audio/wav",
+					"cache-control": "no-store",
+					"content-length": MOCK_WAV.length,
+				});
+				return res.end(MOCK_WAV);
+			}
+
 			if (rest.startsWith("/supplements/") && method === "GET") {
 				if (!projection) {
 					sendJson(res, 404, errorBody("unknown session"));
@@ -3468,7 +3582,11 @@ export function createRelay(options: RelayOptions = {}) {
 					}
 					// Images ride the real PNG; the text classes ride the stand-in
 					// prose. `no-store` is the one cache header the tunnel preserves.
-					const bytes = mime.startsWith("image/") ? TINY_PNG : SUPPLEMENT_TEXT;
+					const bytes = mime.startsWith("image/")
+						? TINY_PNG
+						: mime.startsWith("video/")
+							? TINY_MP4
+							: SUPPLEMENT_TEXT;
 					res.writeHead(200, {
 						"content-type": mime,
 						"cache-control": "no-store",
