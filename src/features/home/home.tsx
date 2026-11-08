@@ -3,6 +3,7 @@ import { Bell, BellDot, Menu } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import {
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
@@ -20,6 +21,7 @@ import {
 	useLocaleFrame,
 } from "@/features/auth/connection-provider";
 import { NOTICE_STACK_STYLE } from "@/features/home/composer-stack";
+import { MENU_BADGE_INSET } from "@/features/home/header-fit";
 import { NO_PRESS, pressAnswered } from "@/features/home/hero-focus";
 import {
 	connectDisabledReason,
@@ -68,11 +70,12 @@ import {
 	pickImageFromLibrary,
 	readWebImageFile,
 } from "@/features/session/attach";
-import type { AttachSource } from "@/features/session/attach-rule";
+import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { Composer } from "@/features/session/components/composer";
 import type { ComposerControls } from "@/features/session/composer";
-import { composerCopy } from "@/features/session/composer";
+import { composerCopy, pasteNothingLine } from "@/features/session/composer";
 import { deviceOnline } from "@/features/session/runtime";
+import { useHomeDictation } from "@/features/session/use-dictation";
 import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
 import {
@@ -94,6 +97,7 @@ import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
+import { cx } from "@/ui/variants";
 
 /**
  * The composer home: `/` since the Part 2 slice, and the default destination
@@ -543,7 +547,7 @@ export default function Home({
 	const inboxCount = inboxBadgeCount(inbox);
 
 	const attach = useCallback(
-		(source: AttachSource) => {
+		(source: AttachSource, via: PasteVia = "sheet") => {
 			void (async () => {
 				setAttaching(true);
 				setComposerError(null);
@@ -559,7 +563,7 @@ export default function Home({
 					} else if (source === "paste") {
 						/* A press with no outcome reads as a broken control — the same rule
 						 *  `attachError` follows in the other direction. */
-						setComposerError(composerCopy().pasteEmpty);
+						setComposerError(pasteNothingLine(via, Platform.OS));
 					}
 				} catch {
 					/* Said, never swallowed — the composer's own error line. */
@@ -697,6 +701,17 @@ export default function Home({
 
 	// The coordinator freezes the submitted bytes; later typing stays editable.
 	const send = startup.send;
+
+	/* The home's mic (TestFlight 578): the same dictation machine as a session's,
+	 *  landing the transcript in this draft. Transcription is the computer's own
+	 *  STT, so it needs only the active relay, not a session. */
+	const voice = useHomeDictation({
+		endpoints: client,
+		capabilities,
+		draft,
+		setDraft,
+		onError: setComposerError,
+	});
 
 	/* A STABLE identity, with the latest coordinator behind it. The drawer carries the
 	 * New-chat intent across the close and acts on it in `onDismiss` — by which time
@@ -900,7 +915,13 @@ export default function Home({
 				onAttach={attach}
 				onPasteFile={pasteFile}
 				attaching={attaching}
-				onSend={send}
+				onSend={() => {
+					/* A send takes the composer: a take still live is dropped and said
+					 *  (design §2.5/U2), the session composer's rule. */
+					voice.cancelForSend();
+					void send();
+				}}
+				voice={voice}
 				onStop={() => {
 					const sid = startup.snapshot.sessionId;
 					const active = relay();
@@ -988,7 +1009,9 @@ export default function Home({
 								<View
 									pointerEvents="none"
 									className="absolute"
-									style={{ top: 2, end: 0 }}
+									/* On the glyph's top-trailing corner, INSIDE the box: at
+									 *  `end: 0` it touched the selector (TestFlight 578). */
+									style={MENU_BADGE_INSET}
 								>
 									<Badge
 										label={countLabel(badgeCount)}
@@ -1002,7 +1025,17 @@ export default function Home({
 					)
 				}
 				headerAction={
-					<View className="min-w-0 flex-1 flex-row items-center gap-1">
+					<View
+						/* `ms-2` (`HEADER_SELECTOR_LEAD_PT`): clear leading room between
+						 *  the ☰ and its count and the selector (operator, TestFlight 578:
+						 *  "there needs to be a bit more padding to the left of the device
+						 *  selector dropdown"). Only beside the ☰ — in the split there is
+						 *  no ☰ and the row's own inset already leads. */
+						className={cx(
+							"min-w-0 flex-1 flex-row items-center gap-1",
+							!split && "ms-2",
+						)}
+					>
 						{/* The computer this will run on, and the switcher's primary entry
 						 *  point. It takes ALL the width the ☰ and the bell leave — about
 						 *  281 pt on a 393 pt phone — so "Mac – Local Operator" reads whole

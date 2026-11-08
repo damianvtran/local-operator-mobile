@@ -3811,7 +3811,7 @@ async function main() {
 			// repeatedly and prove nothing about de-duplication.
 			const lastFrame = framesOf(raw).at(-1);
 			const rows = arr(bag(lastFrame?.data).transcript).filter(
-				(row) => str(bag(row).id) === `user-${commandId}`,
+				(row) => str(bag(row).id) === commandId,
 			);
 			check(
 				"duplicate-delivery: exactly one transcript row carries the command",

@@ -352,11 +352,16 @@ export const CONTROL = {
 	 * check in `a11y.e2e.test.ts` have nothing to agree about. --- */
 	composerSend: "composer-send",
 	composerStop: "composer-stop",
+	/** The pinned working line's Stop: the composer's stop path, a second reach
+	 *  for it that stays put while the composer's disc is Steer (a draft typed). */
+	sessionWorkingStop: "session-working-stop",
 	composerAttach: "composer-attach",
 	composerMic: "composer-mic",
 	/** The recording bar's own cancel: DISCARDS the take and sends no request,
 	 *  unlike the mic, which stops and transcribes. Two outcomes, two controls. */
 	composerDictationCancel: "composer-dictation-cancel",
+	composerDictationFinish: "composer-dictation-finish",
+	composerPasteImage: "composer-paste-image",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
 	composerContext: "composer-context",
@@ -996,6 +1001,13 @@ export const SURFACE = {
 	/** The decorative brand mark beside the header's computer chip: an id so a
 	 *  capture can measure its alignment and its yield at large text. */
 	homeBrandMark: "home-brand-mark",
+	/** The brand mark CENTRED above the splash greeting (operator, TestFlight
+	 *  578): an id so a capture can measure the stack's centre line. */
+	homeHeroMark: "home-hero-mark",
+	/** The composer strip's trailing More slot, which takes the free width as
+	 *  an auto margin (TestFlight 578): an id so a capture can prove the chips
+	 *  pack left of it. */
+	composerStripTrailing: "composer-strip-trailing",
 	sidebar: "conversations-sidebar",
 	/** The deep-link failure's one honest sentence (ADR 0006 § 6.6): the
 	 *  `/conversations` route reads it from a `notice` param and hands it to the
@@ -1082,6 +1094,9 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"command-",
 	/* The session view's own parameterised identifiers, adopted with its block above. */
 	"transcript-row-",
+	/* The pending row for a sent instruction, keyed by its envelope's
+	 *  command_id (`features/session/pending-echo.ts`). */
+	"pending-echo-",
 	"turn-bar-",
 	"quiet-group-",
 	"completion-anchor-",
@@ -1997,6 +2012,12 @@ export const transcriptRowId = (rowId: string): string =>
  *  (`turn-condensing.ts`), so a bar is addressable by the message that started
  *  the turn — the same identity the reader's expansion and the latch use. */
 export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
+
+/** The pending row for an in-flight instruction, keyed by the retry envelope's
+ *  `command_id` — the same id the session's real row will carry, so a flow can
+ *  assert the hand-over from `pending-echo-<id>` to `transcript-row-<id>`. */
+export const pendingEchoId = (commandId: string): string =>
+	`pending-echo-${commandId}`;
 
 /** One quiet group's bar. The key is the group's own `qg:<first row id>`
  *  (`turn-condensing.ts`), so a group is addressable by the receipt that

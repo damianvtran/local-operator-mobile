@@ -278,9 +278,10 @@ export function createStartupEvidence() {
 			}));
 		},
 		image(sessionId: string, entry: string, index: number) {
-			const admission = admissions.get(entry.slice("user-".length));
-			if (admission?.sessionId !== sessionId || !entry.startsWith("user-"))
-				return undefined;
+			// `entry` is the row id, which is the bare command id (see
+			// `appendUserRow` in relay.ts).
+			const admission = admissions.get(entry);
+			if (admission?.sessionId !== sessionId) return undefined;
 			const image = Array.isArray(admission.body.images)
 				? admission.body.images[index]
 				: undefined;

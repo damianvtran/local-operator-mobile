@@ -16,5 +16,17 @@
 	"mobile.session.highlights.sound_refused": "نہیں چلایا جا سکا: {reason}",
 	"mobile.session.highlights.withheld_reasons_join": "{first}، {second}",
 	"mobile.session.subagent_open": "{agent} کھولیں",
-	"mobile.session.subagent_open_short": "کھولیں"
+	"mobile.session.subagent_open_short": "کھولیں",
+	"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
+	"mobile.session.chip.effort_resume_hint": "کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
+	"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
+	"mobile.session.pending_echo.sending": "بھیجا جا رہا ہے…",
+	"mobile.session.pending_echo.sent": "بھیج دیا گیا",
+	"mobile.session.pending_echo.queued_step": "قطار میں — یہ مرحلہ ختم ہونے پر بھیجا جائے گا",
+	"mobile.session.pending_echo.queued_next": "قطار میں — آپ کے اگلے پیغام کے ساتھ بھیجا جائے گا",
+	"mobile.session.pending_echo.images": "{count, plural, one {# تصویر منسلک} other {# تصاویر منسلک}}",
+	"mobile.session.pending_echo.not_sent": "نہیں بھیجا گیا — واپس لانے کے لیے ٹیپ کریں",
+	"mobile.session.pending_echo.not_confirmed": "تصدیق نہیں ہوئی — نیچے دوبارہ کوشش کریں",
+	"mobile.session.pending_echo.earlier_not_sent": "آپ کا پچھلا پیغام نہیں بھیجا گیا ({reason})۔ اسے واپس لانے کے لیے اوپر ٹیپ کریں۔",
+	"mobile.session.pending_echo.earlier_went_through": "آپ کا پچھلا پیغام چلا گیا۔ نیچے والا متن ابھی نہیں بھیجا گیا۔"
 }

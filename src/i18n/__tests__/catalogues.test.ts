@@ -20,6 +20,8 @@ import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
 import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
 import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
 import common from "@/i18n/catalogues/en/mobile.common.json";
+import composerInputContext from "@/i18n/catalogues/en/mobile.composer_input.context.json";
+import composerInput from "@/i18n/catalogues/en/mobile.composer_input.json";
 import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
 import computers from "@/i18n/catalogues/en/mobile.computers.json";
 import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
@@ -44,6 +46,8 @@ import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
 import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
+import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.json";
+import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
 
@@ -54,6 +58,8 @@ const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
  * DATA behind it — that every message parses, that every key has translator
  * context, and that the four namespaces do not quietly collide.
  */
+const JSON_SUFFIX = /\.json$/;
+
 const NAMESPACES = [
 	{
 		name: "mobile.signin",
@@ -72,6 +78,12 @@ const NAMESPACES = [
 		messages: common,
 		context: commonContext,
 		expected: 6,
+	},
+	{
+		name: "mobile.composer_input",
+		messages: composerInput,
+		context: composerInputContext,
+		expected: 8,
 	},
 	{
 		name: "mobile.library",
@@ -120,7 +132,7 @@ const NAMESPACES = [
 		name: "mobile.computers",
 		messages: computers,
 		context: computersContext,
-		expected: 22,
+		expected: 24,
 	},
 	{
 		name: "mobile.notifications",
@@ -132,7 +144,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 18,
+		expected: 30, // +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -144,6 +156,17 @@ const NAMESPACES = [
 		messages: health,
 		context: healthContext,
 		expected: 8,
+	},
+	{
+		/* The relay's Stop words, mirrored key for key from the core
+		 * (`local_operator/i18n/catalogues/<locale>/relay.composer.json` at
+		 * 6fc208f636d) for the pinned working line's Stop — the same verb the relay
+		 * shows, so the two clients cannot name the action two ways. A subset: only
+		 * the three keys this app renders. */
+		name: "relay.composer",
+		messages: relayComposer,
+		context: relayComposerContext,
+		expected: 3,
 	},
 	{
 		/* This app's own chrome for the health surface: the control's labels, the
@@ -224,8 +247,14 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182). */
-		expect(total).toBe(333);
+		/* 299 on main (#180's sidebar footer key) + the pickers' 34 (#182)
+		 *  + the ended-session chip hints' 3 (fix/session-chips-rail)
+		 *  + the switcher's transport words (`mobile.computers.transport.radient`,
+		 *  `mobile.computers.transport.custom`)
+		 *  + the composer's paste chip and voice set-up/recording controls' 8
+		 *  + the working line's three mirrored Stop keys
+		 *  + the pending echo's 9 (`mobile.session.pending_echo.*`). */
+		expect(total).toBe(358);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -238,7 +267,7 @@ describe("the English catalogues", () => {
 			.filter(
 				(name) => name.endsWith(".json") && !name.endsWith(".context.json"),
 			)
-			.map((name) => name.replace(/\.json$/, ""))
+			.map((name) => name.replace(JSON_SUFFIX, ""))
 			.sort();
 		expect(NAMESPACES.map((namespace) => namespace.name).sort()).toEqual(
 			onDisk,
@@ -286,6 +315,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* French spells these the same as English. `Description` is the French
@@ -319,12 +350,16 @@ const IDENTICAL_BY_DESIGN: Readonly<
 	/* Spanish happens to render the placeholder-only template identically —
 	 * `{head} · {label}` has no words of its own — and nothing else. */
 	es: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
 	"zh-CN": {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -332,6 +367,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* ASCII example, not an untranslated value */
@@ -341,6 +378,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* ASCII example, not an untranslated value */
@@ -348,8 +387,13 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
+		/* The 2026-11-07 home-pickers audit (VI-H01, vi1107p1) chose the loanword. */
+		"mobile.home.picker.folder_home":
+			"Vietnamese names the home folder «thư mục home» across mobile and core (session_health.ended_placeholder, relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
 	},
 	hi: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
 		/* ASCII example, not an untranslated value */
@@ -359,6 +403,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
 	},
 	ur: {
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",

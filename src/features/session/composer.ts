@@ -19,7 +19,9 @@
  */
 
 import type { PromptImage } from "@/contracts";
+import type { PasteVia } from "@/features/session/attach-rule";
 import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
+import { t } from "@/i18n";
 import type { ContinuationOp, RelayError } from "@/relay";
 
 /* ------------------------------------------------------------------- copy */
@@ -62,8 +64,8 @@ export const composerCopy = () => ({
 	/** The reuse case: the typed text was NOT sent as a new instruction. */
 	reusedDraftNotice:
 		"An earlier message was still unsent, so it went first. Your new text was not sent — it is below, ready when you are.",
-	retryAckNotice:
-		"Earlier instruction delivered. Your edited draft is ready to send.",
+	/* The delivered-earlier acknowledgement is catalogue copy now:
+	 *  `earlierWentThroughNotice` in `pending-echo.ts` (UX round 1, U2). */
 	/** An ended session is NOT a dead composer: a send REOPENS it (the daemon
 	 *  wakes a host for a prompt with no live entry), so the primary stays
 	 *  enabled. The placeholder and the failure sentence below are the web
@@ -109,6 +111,22 @@ export const composerCopy = () => ({
 	 *  for the denial arm. */
 	pasteEmpty: "No image was pasted. Copy an image, then try again.",
 });
+
+/**
+ * The line for a paste that came back with no image.
+ *
+ * `getImageAsync` answers `null` for an empty clipboard AND for an iOS "Don't
+ * Allow" on the paste prompt, so the sheet's Paste row can only name the outcome
+ * (`pasteEmpty`). The chip is different: it is only offered while `hasImages` is
+ * true, so on iOS an empty answer to a chip press is almost always the DENIAL,
+ * and "Copy an image" sends the reader after something they already did (UX
+ * review round 1, U3). Android has no paste prompt, so a chip miss there is the
+ * image having gone, which `pasteEmpty` already says.
+ */
+export const pasteNothingLine = (via: PasteVia, os: string): string =>
+	via === "offer" && os === "ios"
+		? t("mobile.composer_input.paste.denied")
+		: composerCopy().pasteEmpty;
 
 /* ------------------------------------------------------------------- the op */
 

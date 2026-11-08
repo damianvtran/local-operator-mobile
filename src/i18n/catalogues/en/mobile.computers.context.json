@@ -86,5 +86,13 @@
 	"mobile.computers.connection_response": {
 		"role": "meta",
 		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.transport.radient": {
+		"role": "meta",
+		"note": "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written."
+	},
+	"mobile.computers.transport.custom": {
+		"role": "meta",
+		"note": "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case."
 	}
 }

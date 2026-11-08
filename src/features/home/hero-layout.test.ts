@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	HERO_EDGE,
+	HERO_MARK_SIZE,
 	HERO_OPTICAL_NUDGE,
 	heroHeldInset,
 	heroMeasured,
@@ -70,5 +72,56 @@ describe("hero first frame and focus hold (R4/D4, U1)", () => {
 		const keyboardUp = heroTopInset(300, 34);
 		expect(keyboardUp).toBeLessThan(rest);
 		expect(heroHeldInset(keyboardUp, rest)).toBe(keyboardUp);
+	});
+});
+
+/* TestFlight 578: "make sure the local operator logo is in the center above the
+ * 'what would you like to work on' text, maybe all that text could be just a bit
+ * smaller too". */
+describe("the hero is a centred stack: mark, greeting, rows", () => {
+	const SPLASH = readFileSync(
+		new URL("./home-splash.tsx", import.meta.url),
+		"utf8",
+	).replace(/\s+/g, " ");
+	const splash = SPLASH.slice(SPLASH.indexOf("export const HomeSplash"));
+	const block = splash.slice(splash.indexOf("setBlock("));
+
+	it("paints the mark at 32 pt, no larger than the 128 px asset holds at 3x", () => {
+		/* Equality, not just the ceiling (code review n1): `* 3 <= 128` alone
+		 *  would also pass at 42. */
+		expect(HERO_MARK_SIZE).toBe(32);
+		expect(HERO_MARK_SIZE * 3).toBeLessThanOrEqual(128);
+	});
+
+	it("puts the mark INSIDE the measured block, above the greeting, all centred", () => {
+		const mark = block.indexOf("<NavigationMark size={HERO_MARK_SIZE} />");
+		const greeting = block.indexOf("testID={starting ? SURFACE.homeStarting");
+		expect(mark).toBeGreaterThan(0);
+		expect(greeting).toBeGreaterThan(mark);
+		expect(block.slice(0, mark)).toContain('className="items-center"');
+		expect(block).toContain("testID={SURFACE.homeHeroMark}");
+		/* Design D3: the white disc's edge reads on the light canvas. */
+		expect(block).toContain(
+			'className="mb-4 rounded-full border border-border-control" testID={SURFACE.homeHeroMark}',
+		);
+		expect(block).toContain('"text-center text-ink"');
+	});
+
+	it("steps the greeting one size down the scale, by token", () => {
+		expect(splash).toContain('headline ? "text-title" : "text-heading"');
+		expect(splash).not.toContain("text-display");
+	});
+
+	it("keeps the rows full-width targets, centred on the same line", () => {
+		expect(block).toContain('className="mt-6 gap-2 self-stretch"');
+		expect(SPLASH).toContain(
+			'"-mx-3 min-h-11 flex-row items-center gap-1 rounded-sm px-3", largeText ? "justify-start" : "justify-center",',
+		);
+		expect(SPLASH).toContain(
+			'"min-w-0 flex-shrink text-body", largeText ? "text-start" : "text-center",',
+		);
+		/* Design D1: never a growing label, which would pin the chevron to the
+		 *  row's far edge at every size. */
+		expect(SPLASH).not.toMatch(/min-w-0 flex-1 text-body/);
 	});
 });

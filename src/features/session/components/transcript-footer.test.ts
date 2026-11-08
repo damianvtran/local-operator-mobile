@@ -174,7 +174,12 @@ describe("permanent transcript notice footer", () => {
 	it("accepts no optional footer without introducing a fake row", async () => {
 		await render([], null);
 		expect(props().data).toEqual([]);
-		expect(props().ListFooterComponent.props.children).toBeUndefined();
+		/* The host keeps ONE shape (pending slot, then notice) so the notice is
+		 *  never remounted when a pending row appears (PR #191 review, N1); with
+		 *  neither, both slots are empty — no element, so no fake row. */
+		expect(
+			[props().ListFooterComponent.props.children].flat().filter(Boolean),
+		).toEqual([]);
 		expect(host.mounts).toBe(0);
 	});
 	it.each([true, false])(

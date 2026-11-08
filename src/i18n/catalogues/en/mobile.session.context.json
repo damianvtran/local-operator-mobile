@@ -70,5 +70,53 @@
 	"mobile.session.subagent_open_short": {
 		"role": "button",
 		"note": "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop."
+	},
+	"mobile.session.chip.model_resume_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop."
+	},
+	"mobile.session.chip.effort_resume_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop."
+	},
+	"mobile.session.chip.model_unrecorded_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop."
+	},
+	"mobile.session.pending_echo.sending": {
+		"role": "meta",
+		"note": "Caption under a message the user just sent, before the computer has acknowledged it. Lower case, trailing ellipsis, no full stop; mirrors the desktop relay's pending row. Must not read as an invitation to send again."
+	},
+	"mobile.session.pending_echo.sent": {
+		"role": "meta",
+		"note": "Caption under a just-sent prompt once the computer acknowledged it but before the conversation shows it. One lower-case word, no full stop."
+	},
+	"mobile.session.pending_echo.queued_step": {
+		"role": "meta",
+		"note": "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer."
+	},
+	"mobile.session.pending_echo.queued_next": {
+		"role": "meta",
+		"note": "Caption under a steering message the computer accepted after the turn ended: it will ride along with the next message the user sends. Lower case, em dash, no full stop."
+	},
+	"mobile.session.pending_echo.images": {
+		"role": "meta",
+		"note": "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop."
+	},
+	"mobile.session.pending_echo.not_sent": {
+		"role": "meta",
+		"note": "Caption, in danger colour, under a message the user sent that the computer definitively refused, kept on screen because the user had already typed something new. Tapping the message puts it back in the message box. Lower case, em dash, no full stop; same register as the other pending_echo captions."
+	},
+	"mobile.session.pending_echo.not_confirmed": {
+		"role": "meta",
+		"note": "Caption, in danger colour, under a message whose delivery is uncertain (the computer did not answer); the Retry button below the message box resends it. Lower case, em dash, no full stop."
+	},
+	"mobile.session.pending_echo.earlier_not_sent": {
+		"role": "status",
+		"note": "Error line above the message box when an earlier message was refused while the user was already typing the next one: it must be clear the EARLIER message failed, not the text in the box. {reason} is the relay's own short reason, in English. Points at the kept message above, which puts itself back on a tap."
+	},
+	"mobile.session.pending_echo.earlier_went_through": {
+		"role": "status",
+		"note": "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)."
 	}
 }

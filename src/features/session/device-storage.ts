@@ -33,6 +33,7 @@ import {
 	writeRecoveryDraft,
 } from "./draft-recovery";
 import { nativePrivateStore } from "./native-private-store";
+import { clearPendingEchoes } from "./pending-echo";
 import {
 	awaitPrivateWrites,
 	runPrivateWrite,
@@ -353,6 +354,8 @@ export const clearAuthorizationData = async (): Promise<void> => {
 	withdrawDispatch();
 	await awaitCommandOperations();
 	draftEdits.clear();
+	/* The in-memory pending rows hold what the signed-out user typed. */
+	clearPendingEchoes();
 	const privateKey = (key: string) =>
 		key.startsWith(DRAFT_KEY_PREFIX) ||
 		key.startsWith(DRAFT_RECORD_PREFIX) ||

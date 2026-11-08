@@ -1,0 +1,10 @@
+{
+	"mobile.composer_input.voice.setup_needed": "Hãy thiết lập chuyển giọng nói thành văn bản trên máy tính.",
+	"mobile.composer_input.voice.mic_setup": "Chưa thiết lập nhập bằng giọng nói",
+	"mobile.composer_input.voice.mic_setup_hint": "Giải thích cách bật nhập bằng giọng nói",
+	"mobile.composer_input.voice.discard": "Hủy nhập bằng giọng nói",
+	"mobile.composer_input.voice.finish": "Hoàn tất và chép lời",
+	"mobile.composer_input.paste.image": "Dán hình ảnh",
+	"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
+	"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào kẹp giấy, chọn Dán hình ảnh, rồi chọn “Cho phép dán”."
+}

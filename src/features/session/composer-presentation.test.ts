@@ -12,6 +12,7 @@ import {
 	composerRestInsets,
 	composerShellPadding,
 	composerShellRadius,
+	controlsTrailing,
 	keyboardOverlap,
 	morphPillRadius,
 	seedFor,
@@ -205,5 +206,42 @@ describe("shell glass layer radius", () => {
 		expect(COMPOSER).toContain("top: COMPOSER_GLASS_LAYER_RADIUS");
 		expect(COMPOSER).toContain("bottom: COMPOSER_GLASS_LAYER_RADIUS");
 		expect(COMPOSER).not.toContain("top: presentation.radius");
+	});
+});
+
+describe("the controls row's trailing slot (UX U2 / U7, design D2)", () => {
+	const at = (
+		openForDictationOnly: boolean,
+		recording: boolean,
+		micShown = true,
+	) => controlsTrailing({ openForDictationOnly, recording, micShown });
+
+	it("keeps Stop/Send whenever the card is open for its own reasons", () => {
+		expect(at(false, false)).toBe("actions");
+		expect(at(false, true)).toBe("actions");
+	});
+
+	it("keeps the mic under the finger that opened the card (U2, and D6's failed start)", () => {
+		expect(at(true, false)).toBe("mic");
+	});
+
+	it("puts ✓ there while recording rather than a disabled Send (U7)", () => {
+		expect(at(true, true)).toBe("finish");
+	});
+
+	it("falls back to Stop/Send when no mic renders at all", () => {
+		expect(at(true, false, false)).toBe("actions");
+		expect(at(true, true, false)).toBe("actions");
+	});
+
+	it("moves ✓ rather than copying it: one finish control (D2)", () => {
+		const COMPOSER = read("src/features/session/components/composer.tsx");
+		expect(COMPOSER).toContain(
+			'voice.phase === "recording" && finishOnRow ? dictationFinish : null',
+		);
+		expect(COMPOSER).toContain('dictationControls(trailing !== "finish")');
+		expect(
+			COMPOSER.match(/testID=\{CONTROL\.composerDictationFinish\}/g),
+		).toHaveLength(1);
 	});
 });

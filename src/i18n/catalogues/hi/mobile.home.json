@@ -30,7 +30,7 @@
 	"mobile.home.picker.effort_unsupported": "इस कंप्यूटर का Local Operator प्रयास स्वीकार करने के लिए बहुत पुराना है, इसलिए वह अपना कॉन्फ़िगर किया गया स्तर इस्तेमाल करता है। यहाँ से चुनने के लिए इसे अपडेट करें।",
 	"mobile.home.picker.effort_use_default": "इस कंप्यूटर का स्तर",
 	"mobile.home.picker.folder_home": "होम",
-	"mobile.home.picker.folder_other": "दूसरा पाथ…",
+	"mobile.home.picker.folder_other": "अन्य पाथ…",
 	"mobile.home.picker.folder_outside": "यह कंप्यूटर बातचीत केवल आपके होम फ़ोल्डर या उसके अस्थायी फ़ोल्डर के अंदर शुरू करता है।",
 	"mobile.home.picker.folder_title": "फ़ोल्डर",
 	"mobile.home.picker.folder_tmp": "अस्थायी",

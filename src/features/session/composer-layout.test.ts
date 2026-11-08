@@ -12,6 +12,8 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
+	SESSION_STRIP_SHRINK,
+	sessionEffortMaxWidth,
 } from "./composer-layout";
 import {
 	composerPaintedHeight,
@@ -433,13 +435,239 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		expect(strip).toContain("maxWidth: FOLDER_CHIP_MAX_PT");
 		expect(strip).toContain("folderChipText(folderChip.label, effectiveScale)");
 		expect(strip).toContain("<Folder");
-		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.model");
+		expect(strip.replace(/\s+/g, " ")).toContain(
+			"flexShrink: folderChip ? HOME_STRIP_SHRINK.model",
+		);
 		expect(strip).toContain("flexShrink: HOME_STRIP_SHRINK.effort");
-		// The session strip (no folder) keeps its `flex-1` model slot.
-		expect(strip).toContain('folderChip ? "min-w-0 grow" : "min-w-0 flex-1"');
+	});
+
+	/* Code review M1 / design D2 / round-2 R2-M1: the session strip yields the
+	 *  MODEL first (to its floor), then effort, and never a trailing control. */
+	it("wires the session strip's shrink pair onto the model and effort slots", () => {
+		const effort = COMPOSER.slice(
+			COMPOSER.indexOf("{effortChip ? ("),
+			COMPOSER.indexOf("testID={CONTROL.composerEffortChip}"),
+		).replace(/\s+/g, " ");
+		/* The non-folder (session) branch of the effort slot's style. */
+		const session = effort.slice(effort.indexOf(": {"));
+		expect(session).toContain("minWidth: MODEL_FLOOR_PT");
+		expect(session).toContain("flexShrink: SESSION_STRIP_SHRINK.effort");
+		expect(session).toContain("maxWidth: sessionEffortCap");
+		/* The cap counts exactly the trailing controls the strip renders: More
+		 *  always, the queued chip with a queue, keyboard-dismiss when focused. */
+		const cap = COMPOSER.slice(
+			COMPOSER.indexOf("const sessionEffortCap"),
+			COMPOSER.indexOf("const queuedChip"),
+		).replace(/\s+/g, " ");
+		expect(cap).toContain(
+			"sessionEffortMaxWidth( metaWidth, 1 + (queuedCount > 0 ? 1 : 0) + (keyboardVisible || focused ? 1 : 0), TOUCH_FLOOR, )",
+		);
+		expect(COMPOSER).toContain("{queuedChip}");
+		expect(COMPOSER).toContain("{keyboardVisible || focused ? (");
+		const model = COMPOSER.slice(
+			COMPOSER.indexOf('className="min-w-0 shrink"'),
+			COMPOSER.indexOf("testID={CONTROL.composerModelChip}"),
+		).replace(/\s+/g, " ");
+		expect(model).toContain("minWidth: MODEL_FLOOR_PT");
+		expect(model).toContain('flexBasis: "auto"');
+		expect(model).toContain(": SESSION_STRIP_SHRINK.model");
+		/* R3-M1: effort is RIGID, so on native Yoga (0.86.3, yoga#2006) the model
+		 *  is the only chip that floors; the cap, not a shrink weight, keeps it in. */
+		expect(SESSION_STRIP_SHRINK).toEqual({ model: 1, effort: 0 });
+	});
+
+	/* R3-M1's cap, with the reviewer's numbers from the vendored-Yoga harness. */
+	it("caps effort by the measured strip, its trailing controls and gaps", () => {
+		/* 292 pt (320 / 200 %), focused with a queue: 292 − 44 − 3·44 − 4·4. */
+		expect(sessionEffortMaxWidth(292, 3, 44)).toBe(100);
+		/* QA's web rig: 296 strip, 48 pt floors. */
+		expect(sessionEffortMaxWidth(296, 3, 48)).toBe(92);
+		/* 402 pt / 100 %, at rest: strip 378, More only → Medium (60) is whole. */
+		expect(sessionEffortMaxWidth(378, 1, 44)).toBe(282);
+		expect(sessionEffortMaxWidth(378, 1, 44)).toBeGreaterThan(60);
+		/* Floored: a tiny strip still leaves effort a 44 pt, ellipsized target. */
+		expect(sessionEffortMaxWidth(120, 3, 44)).toBe(MODEL_FLOOR_PT);
+		/* Before the first onLayout: no cap, the first frame is the uncapped one. */
+		expect(sessionEffortMaxWidth(0, 3, 44)).toBeUndefined();
+	});
+
+	/* Round-2 R2-M1's numbers, from the r1 frame `live-int-dark-320-200.png`:
+	 *  the strip row is ~292 pt at 320 pt / 200 %, a `text-mono-sm` glyph is
+	 *  ~13.3 pt, a quiet chip adds ~18 pt of padding + border, and focused with a
+	 *  queue the trailing members are More, the queued chip (bare count at large
+	 *  text, so at its 44 pt floor) and keyboard-dismiss, with `gap-1` between. */
+	const STRIP_320_200 = 292;
+	const GLYPH_200 = 13.3;
+	const CHIP_CHROME = 18;
+	const chipWidth = (label: string, glyph = GLYPH_200) =>
+		label.length * glyph + CHIP_CHROME;
+	/* The session strip's children with their flex weights as composer.tsx
+	 *  writes them: More and keyboard-dismiss are IconButtons (RN default
+	 *  `flexShrink: 0`); the queued chip is `flexShrink: 1` floored at 44 pt. */
+	const sessionStrip = (
+		model: string,
+		effort: string,
+		glyph = GLYPH_200,
+		row = STRIP_320_200,
+	) => [
+		{
+			id: "model",
+			basis: chipWidth(model, glyph),
+			shrink: SESSION_STRIP_SHRINK.model,
+			min: MODEL_FLOOR_PT,
+		},
+		{
+			id: "effort",
+			/* maxWidth clamps the hypothetical size before shrink is shared. */
+			basis: Math.min(
+				chipWidth(effort, glyph),
+				sessionEffortMaxWidth(row, 3, 44) ?? Number.POSITIVE_INFINITY,
+			),
+			shrink: SESSION_STRIP_SHRINK.effort,
+			min: MODEL_FLOOR_PT,
+		},
+		{ id: "more", basis: 44, shrink: 0, min: 44 },
+		{ id: "queued", basis: 44, shrink: 1, min: 44 },
+		{ id: "keyboard", basis: 44, shrink: 0, min: 44 },
+	];
+
+	it("never clips a trailing control at 320 pt / 200 %, focused with a queue", () => {
+		for (const effort of ["Extra high", "minimal", "Очень высокое"]) {
+			const items = sessionStrip("claude-opus-5-5", effort);
+			const sized = resolveShrink(items, STRIP_320_200, COMPOSER_META_GAP_PT);
+			const used =
+				sized.reduce((sum, item) => sum + item.size, 0) +
+				COMPOSER_META_GAP_PT * (items.length - 1);
+			/* Nothing reaches the `overflow-hidden` edge: the keyboard button's
+			 *  trailing edge is inside the row, so More, the queue and it are whole. */
+			expect(used, effort).toBeLessThanOrEqual(STRIP_320_200 + 1e-9);
+			const size = (id: string) =>
+				sized.find((item) => item.id === id)?.size ?? Number.NaN;
+			for (const id of ["more", "queued", "keyboard"]) {
+				expect(size(id), `${effort}: ${id}`).toBe(44);
+			}
+			/* The model went to its floor; effort truncates rather than vanishing. */
+			expect(size("model")).toBe(MODEL_FLOOR_PT);
+			expect(size("effort")).toBeGreaterThanOrEqual(MODEL_FLOOR_PT);
+		}
+		/* Control: rigid effort WITHOUT the cap (round 2, and the first frame
+		 *  before `metaWidth`) overflows by ~51 pt — the clip R2-M1 reported. */
+		const rigid = sessionStrip("claude-opus-5-5", "Extra high").map((item) =>
+			item.id === "effort" ? { ...item, basis: chipWidth("Extra high") } : item,
+		);
+		const rigidUsed =
+			resolveShrink(rigid, STRIP_320_200, COMPOSER_META_GAP_PT).reduce(
+				(sum, item) => sum + item.size,
+				0,
+			) +
+			COMPOSER_META_GAP_PT * 4;
+		expect(rigidUsed - STRIP_320_200).toBeGreaterThan(45);
+	});
+
+	it("keeps an ordinary effort whole and shrinks only the model", () => {
+		/* Ordinary text (~6.65 pt glyphs): whatever the overflow, effort is rigid
+		 *  under a cap it fits, so it never loses a sliver ("Hig…"). */
+		const glyph = GLYPH_200 / 2;
+		const row = 300;
+		const items = sessionStrip(
+			"Claude Opus 5.5 (1M context)",
+			"Extra high",
+			glyph,
+			row,
+		);
+		const sized = resolveShrink(items, row, COMPOSER_META_GAP_PT);
+		const size = (id: string) =>
+			sized.find((item) => item.id === id)?.size ?? Number.NaN;
+		expect(size("effort")).toBe(chipWidth("Extra high", glyph));
+		expect(size("model")).toBeGreaterThanOrEqual(MODEL_FLOOR_PT);
+		expect(size("model")).toBeLessThan(
+			chipWidth("Claude Opus 5.5 (1M context)", glyph),
+		);
+	});
+
+	/* TestFlight 578: "Left justify the effort selector with the other selectors
+	 *  on that row." A growing model slot left effort floating right of a gap on
+	 *  BOTH strips: `[folder][Claude Opus 5.5]      [Medium] ⋯`. */
+	it("packs the chips left on both strips; only More takes the free width", () => {
+		/* Comments stripped: the WHY comments name `grow`/`flex-1` themselves. */
+		const code = COMPOSER.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, "").replace(
+			/\s+/g,
+			" ",
+		);
+		const strip = code.slice(
+			code.indexOf("{folderChip ? ("),
+			code.indexOf("testID={CONTROL.composerContext}"),
+		);
+		const model = strip.slice(
+			strip.indexOf("</View> ) : null}"),
+			strip.indexOf("testID={CONTROL.composerModelChip}"),
+		);
+		expect(model).toContain('className="min-w-0 shrink"');
+		expect(model).toContain('flexBasis: "auto"');
+		expect(model).not.toMatch(/\bgrow\b|flex-1|flexGrow/);
+		const effort = strip.slice(
+			strip.indexOf("{effortChip ? ("),
+			strip.indexOf("testID={CONTROL.composerEffortChip}"),
+		);
+		expect(effort).not.toMatch(/\bgrow\b|flex-1|flexGrow/);
+		/* The ONLY thing that absorbs the free width is More's auto margin. */
+		expect(strip).toContain(
+			'<View className="ms-auto" testID={SURFACE.composerStripTrailing}> <IconButton',
+		);
+		expect(strip.match(/\bgrow\b|flex-1|flexGrow|ms-auto/g)).toEqual([
+			"ms-auto",
+		]);
 	});
 
 	it("offers the folder once: the More sheet no longer repeats it", () => {
 		expect(COMPOSER).not.toContain("folderChip.onPress();");
 	});
 });
+
+/**
+ * CSS/Yoga flexible-length resolution for a SHRINKING row: overflow is shared
+ * by `shrink × basis`, an item that would cross its min-width is frozen there
+ * and the loop re-shares what remains among the rest. Enough to check the
+ * strip's shrink ORDER from its weights; not a renderer.
+ */
+function resolveShrink(
+	items: readonly { id: string; basis: number; shrink: number; min: number }[],
+	row: number,
+	gap: number,
+): { id: string; size: number }[] {
+	const state = items.map((item) => ({
+		...item,
+		size: item.basis,
+		frozen: item.shrink === 0,
+	}));
+	const gaps = gap * (items.length - 1);
+	for (;;) {
+		const open = state.filter((item) => !item.frozen);
+		/* Free space is measured against the frozen items' final sizes and the
+		 *  open items' BASES — each pass re-shares from scratch. */
+		const overflow =
+			state.reduce(
+				(sum, item) => sum + (item.frozen ? item.size : item.basis),
+				0,
+			) +
+			gaps -
+			row;
+		const weight = open.reduce(
+			(sum, item) => sum + item.shrink * item.basis,
+			0,
+		);
+		if (overflow <= 0 || weight === 0) break;
+		let clamped = false;
+		for (const item of open) {
+			const target =
+				item.basis - (overflow * item.shrink * item.basis) / weight;
+			if (target <= item.min) {
+				item.size = item.min;
+				item.frozen = true;
+				clamped = true;
+			} else item.size = target;
+		}
+		if (!clamped) break;
+	}
+	return state.map(({ id, size }) => ({ id, size }));
+}

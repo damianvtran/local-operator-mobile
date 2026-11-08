@@ -100,7 +100,8 @@ export const SIDEBAR_MIN_WIDTH = 240;
  * thumb reach, there is no Escape or system Back, and the drawer has no
  * swipe-to-close. A 28 pt strip was a sub-floor close target (UX round 1 U1,
  * code M1, design D2), so the sliver is sized as a target, not as a visual cue;
- * the panel's own `panel-edge` hairline does the "the page is still there" work.
+ * the scrim's dim and the panel's overlay shadow do the "the page is still there"
+ * work (the panel is borderless since TestFlight 578).
  *
  * `touchFloor` is a parameter rather than an import because this module must not
  * touch `react-native` (see the file header): the caller passes `TOUCH_FLOOR` from

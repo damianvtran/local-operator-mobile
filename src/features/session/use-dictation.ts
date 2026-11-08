@@ -34,9 +34,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Capabilities } from "@/contracts";
 import type { RelayEndpoints } from "@/relay";
-import { micVisible as micGate } from "@/stt/capability";
+import { micVisible as micGate, micSetupNeeded } from "@/stt/capability";
 import { dictate } from "@/stt/dictate";
-import { MAX_RECORDING_MS } from "@/stt/dictation";
+import { joinDraft, MAX_RECORDING_MS } from "@/stt/dictation";
 import { forcedDictation, forcedLevels } from "@/stt/dictation-hook";
 import {
 	type DictationEvent,
@@ -45,13 +45,17 @@ import {
 	dictationStatusLine,
 	IDLE_DICTATION,
 	mayStartDictation,
+	pressRoute,
 	reduceDictation,
 } from "@/stt/dictation-machine";
-import { createMeterStore, type MeterStore } from "@/stt/levels";
+import {
+	createMeterStore,
+	METER_SAMPLE_MS,
+	type MeterStore,
+} from "@/stt/levels";
 import {
 	type ActiveRecording,
 	discardRecording,
-	type MicPermission,
 	readMicPermission,
 	requestMicPermission,
 	startRecording,
@@ -61,25 +65,20 @@ import { STT_COPY } from "@/stt/transcribe";
 
 export type { DictationPhase };
 
-/** How often the meter samples the recorder's level. 8 Hz: fast enough that the
- *  bars track speech, slow enough that the native status reads stay cheap. The
- *  history itself is fixed-length (`stt/levels.ts`). */
-const METER_INTERVAL_MS = 120;
-
-/** The permission refusal copy. `undetermined` is "we could not ask", which is a
- *  different sentence from "you said no". */
-const permissionSentence = (permission: MicPermission): string =>
-	permission === "denied"
-		? "Microphone access is blocked. Allow it in Settings and try again."
-		: "Couldn’t start recording. Check your microphone and try again.";
-
-const MIC_REFUSED =
-	"Couldn’t start recording. Check your microphone and try again.";
+/** How often the meter samples the recorder's level — `stt/levels.ts` owns the
+ *  number, because the waveform rolls each new bar in over exactly this interval. */
+const METER_INTERVAL_MS = METER_SAMPLE_MS;
 
 export interface DictationState {
 	/** Whether to render the mic at all: the relay says voice can run here AND this
 	 *  build can record (see `stt/capability.ts`). */
 	micVisible: boolean;
+	/** Render the mic in its SET-UP state: this build can record but the computer
+	 *  has no speech-to-text configured (`stt/capability.ts` `micSetupNeeded`). A
+	 *  press says where to fix it instead of recording. Separate from `micVisible`
+	 *  because that flag is also the session state marker's claim that voice can
+	 *  RUN here, which the set-up mic must not make. */
+	micSetup: boolean;
 	phase: DictationPhase;
 	/** Whole seconds since the recording started, for the status row. */
 	seconds: number;
@@ -130,6 +129,11 @@ export const useDictation = (input: DictationInput): DictationState => {
 		 * reader does not spell the platform check a second time. */
 		() => micGate(capabilities),
 		[capabilities],
+	);
+
+	const micSetup = useMemo(
+		() => !micVisible && micSetupNeeded(capabilities),
+		[capabilities, micVisible],
 	);
 
 	/* The first-press lag's second half: resolve the audio module while the mic is
@@ -204,6 +208,14 @@ export const useDictation = (input: DictationInput): DictationState => {
 		return transition;
 	}, []);
 
+	/* The mic became usable (speech-to-text was set up on the computer): drop a
+	 * resting "Set up speech-to-text…" line so it does not sit beside a working mic
+	 * until the next press (agent review round 1, M2). The reducer leaves every
+	 * other outcome and any live take alone. */
+	useEffect(() => {
+		if (micVisible) dispatch({ type: "available" });
+	}, [micVisible, dispatch]);
+
 	const stopAndTranscribe = useCallback(async () => {
 		const active = activeRef.current;
 		if (active === null) return;
@@ -276,8 +288,10 @@ export const useDictation = (input: DictationInput): DictationState => {
 		 * hot. The machine has already moved off `starting` if so. */
 		if (snapshotRef.current.phase !== "starting") return;
 		if (permission !== "granted") {
-			dispatch({ type: "mic-refused" });
-			onErrorRef.current(permissionSentence(permission));
+			/* The refusal is the dictation row's outcome line, not the composer's
+			 * error line (D6/U6/Q4, see `DictationOutcome`). `undetermined` is "we
+			 * could not ask", which is a different sentence from "you said no". */
+			dispatch({ type: "mic-refused", blocked: permission === "denied" });
 			return;
 		}
 		/* `permission` is passed so the recorder does not read it from the OS a second
@@ -288,8 +302,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 			return;
 		}
 		if (active === null) {
-			dispatch({ type: "mic-refused" });
-			onErrorRef.current(MIC_REFUSED);
+			dispatch({ type: "mic-refused", blocked: false });
 			return;
 		}
 		activeRef.current = active;
@@ -329,7 +342,15 @@ export const useDictation = (input: DictationInput): DictationState => {
 
 	const press = useCallback(() => {
 		const phase = snapshotRef.current.phase;
-		if (phase === "recording") {
+		/* `pressRoute` owns the order: a live take always finishes, and only a
+		 * resting press on a computer that cannot transcribe is answered with the
+		 * set-up line (and records nothing). */
+		const route = pressRoute({ phase, micSetup });
+		if (route === "setup") {
+			dispatch({ type: "unavailable" });
+			return;
+		}
+		if (route === "finish") {
 			void stopAndTranscribe();
 			return;
 		}
@@ -344,7 +365,15 @@ export const useDictation = (input: DictationInput): DictationState => {
 			return;
 		const { effects } = dispatch({ type: "press", sending });
 		if (effects.includes("open-mic")) void openMic();
-	}, [dispatch, endpoints, micVisible, openMic, sending, stopAndTranscribe]);
+	}, [
+		dispatch,
+		endpoints,
+		micSetup,
+		micVisible,
+		openMic,
+		sending,
+		stopAndTranscribe,
+	]);
 
 	const cancel = useCallback(() => {
 		const { effects } = dispatch({ type: "cancel" });
@@ -391,6 +420,7 @@ export const useDictation = (input: DictationInput): DictationState => {
 
 	return {
 		micVisible,
+		micSetup,
 		phase: forced?.phase ?? snapshot.phase,
 		seconds,
 		status: dictationStatusLine(forced ?? snapshot),
@@ -399,6 +429,51 @@ export const useDictation = (input: DictationInput): DictationState => {
 		cancel,
 		cancelForSend,
 	};
+};
+
+/**
+ * Dictation for the HOME composer (the new-conversation page).
+ *
+ * The operator found no mic there (TestFlight 578): the home passed no `voice`
+ * at all, on the theory that its mic "belonged with the new-chat flow". But
+ * `/api/transcribe` is not session-bound — the computer transcribes with its
+ * own STT configuration and returns text — so the home can run the very same
+ * machine and land the transcript in its draft.
+ *
+ * What differs from the session composer, and why: the session's
+ * `use-composer.ts` records the dictated span so its `prompt` can carry
+ * `input_mode`/`input_path`; the home's start coordinator sends its first prompt
+ * without either field today, so the transcript is appended and nothing else is
+ * noted (an unannotated prompt reads as typed — the pre-existing home behaviour,
+ * not a new claim). The draft is read through a
+ * ref so a transcript landing after more typing joins the CURRENT text, never a
+ * stale render's.
+ */
+export const useHomeDictation = (input: {
+	endpoints: RelayEndpoints | null;
+	capabilities: Capabilities | null | undefined;
+	draft: string;
+	setDraft: (text: string) => void;
+	onError: (sentence: string) => void;
+}): DictationState => {
+	const draftRef = useRef(input.draft);
+	draftRef.current = input.draft;
+	const setDraftRef = useRef(input.setDraft);
+	setDraftRef.current = input.setDraft;
+	return useDictation({
+		endpoints: input.endpoints,
+		capabilities: input.capabilities,
+		/* The home's send is a start that hands off to the session; it never
+		 * holds the composer "sending", and the machine ignores this anyway. */
+		sending: false,
+		onTranscript: (text) => {
+			const previous = draftRef.current;
+			const joined = joinDraft(previous, text);
+			if (text.trim() === "" || joined === previous) return;
+			setDraftRef.current(joined);
+		},
+		onError: input.onError,
+	});
 };
 
 /** Re-exported so a caller (or a test) can read the seed state without the live

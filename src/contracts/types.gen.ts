@@ -493,6 +493,8 @@ export interface SessionSummary {
 	conversation_name: string;
 	cwd: string;
 	model_label: string;
+	/** The rung last run with; not sent by any relay yet (see `schemas.ts`). */
+	effort?: string;
 	streaming: boolean;
 	needs_attention: boolean;
 	unseen: boolean;

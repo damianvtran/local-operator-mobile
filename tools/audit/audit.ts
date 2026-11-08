@@ -93,7 +93,7 @@ import {
 	SUB_RULE_TEXT,
 } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
-import { EXTRACT_PROBE, flattenAxTree } from "./probe.ts";
+import { EXTRACT_PROBE, flattenAxTree, SPACING_REST_PROBE } from "./probe.ts";
 
 /**
  * The checks the runner implements, in rubric order.
@@ -560,6 +560,49 @@ export function auditCellUrl(
 	return cellUrl(origin, record.path, cellQuery(record, seed));
 }
 
+/** How many extractions a cell may take while its spacing keeps moving. */
+export const SPACING_REST_TAKES = 5;
+/** The pause before a retake: longer than the app's longest spacing tween (the
+ *  pinned working line's 180 ms `DOCK_MS`), so one pause lets a tween finish. */
+export const SPACING_REST_POLL_MS = 250;
+
+/**
+ * Extract the page's geometry at REST: bracket each extraction with a spacing
+ * fingerprint (`SPACING_REST_PROBE`) and retake it when the two readings differ,
+ * because a reading that moved across the extraction means a spacing tween was in
+ * flight and the extraction scored a mid-tween value (see the probe for the twelve
+ * #193 FAILs this exists for). Reanimated's web tweens advance once per animation
+ * frame and an extraction spans many frames, so an in-flight tween cannot read
+ * equal on both sides.
+ *
+ * A cell whose spacing never holds still keeps the LAST extraction rather than
+ * failing — the capture's own rule for a state that will not hold still — and says
+ * so through `atRest: false`, so the bound is visible rather than silent. No
+ * threshold moves: a value that is off-scale AT REST still fails U-42.
+ */
+export async function extractAtRest<T>({
+	fingerprint,
+	extract,
+	wait = sleep,
+	takes = SPACING_REST_TAKES,
+	pollMs = SPACING_REST_POLL_MS,
+}: {
+	fingerprint: () => Promise<unknown>;
+	extract: () => Promise<T>;
+	wait?: (ms: number) => Promise<unknown>;
+	takes?: number;
+	pollMs?: number;
+}): Promise<{ reply: T; retakes: number; atRest: boolean }> {
+	for (let take = 1; ; take += 1) {
+		const before = await fingerprint();
+		const reply = await extract();
+		const after = await fingerprint();
+		if (before === after) return { reply, retakes: take - 1, atRest: true };
+		if (take >= takes) return { reply, retakes: take - 1, atRest: false };
+		await wait(pollMs);
+	}
+}
+
 export async function auditCell(
 	page: CdpPage,
 	record: AuditRecord,
@@ -675,7 +718,16 @@ export async function auditCell(
 	// re-drives the same URL the capture used and reads the same fields, so this
 	// is the boundary where the probe's contract is asserted once (below) rather
 	// than at every check.
-	const probeReply = asRecord(await page.evaluate(EXTRACT_PROBE));
+	const rest = await extractAtRest({
+		fingerprint: () => page.evaluate(SPACING_REST_PROBE),
+		extract: () => page.evaluate(EXTRACT_PROBE),
+	});
+	if (!rest.atRest)
+		process.stderr.write(
+			`audit: ${record.screen}/${record.state} ${record.device ?? ""} ${record.theme ?? ""} ${record.scale ?? ""}: ` +
+				`spacing still moving after ${SPACING_REST_TAKES} extractions; scoring the last\n`,
+		);
+	const probeReply = asRecord(rest.reply);
 	if (probeReply === undefined) {
 		throw new Error(
 			`the extraction probe returned no object for ${record.screen}/${record.state}`,

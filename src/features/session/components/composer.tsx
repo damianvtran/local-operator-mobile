@@ -1,6 +1,8 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 
 import {
+	Check,
+	ClipboardPaste,
 	Folder,
 	Keyboard as KeyboardIcon,
 	Mic,
@@ -18,6 +20,7 @@ import {
 	useState,
 } from "react";
 import {
+	ActivityIndicator,
 	Dimensions,
 	Image,
 	Keyboard,
@@ -42,9 +45,11 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import type { PromptImage } from "@/contracts";
+import { useClipboardImageOffer } from "@/features/session/attach-clipboard";
 import {
 	type AttachSource,
 	attachActions,
+	type PasteVia,
 } from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
@@ -65,6 +70,8 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
+	SESSION_STRIP_SHRINK,
+	sessionEffortMaxWidth,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -76,6 +83,7 @@ import {
 	composerRestRow,
 	composerShellPadding,
 	composerShellRadius,
+	controlsTrailing,
 	keyboardOverlap,
 	morphHeight,
 	seedFor,
@@ -116,6 +124,15 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
  *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
  *  machine's own snapshot; the row is one height either way (design §2.5 D3). */
 const rowIsLive = (phase: DictationState["phase"]): boolean => phase !== "idle";
+
+/** Out of the layout and out of sight, still in the accessibility tree: the
+ *  web's `sr-only` box. Used for the recording row's status word (design D3). */
+const VISUALLY_HIDDEN = {
+	position: "absolute",
+	width: 1,
+	height: 1,
+	overflow: "hidden",
+} as const;
 
 /** The row's own border, top and bottom (the `border` utility is 1 px each side).
  *  Named because the row's height is a BORDER box: a `minHeight` of exactly
@@ -228,18 +245,23 @@ export type ComposerProps = {
 	/** The attach sheet's chosen source. The sheet itself is this component's;
 	 *  reading the image is the host's — the composer home and the session view
 	 *  both hand in their own `attach`, and both land on the same strip. */
-	onAttach: (source: AttachSource) => void;
+	onAttach: (source: AttachSource, via?: PasteVia) => void;
 	/** A web paste event's image file. Only the web build can raise the event;
 	 *  the listener that reads it lives here, the read lives with the host. */
 	onPasteFile: (file: File) => void;
 	attaching?: boolean;
-	/** The voice mic's state. `null`/absent means this surface shows no mic — the
-	 *  composer home passes nothing (its mic belongs with the new-chat flow), and a
-	 *  relay without `capabilities.stt` gets `micVisible: false` from the session
-	 *  view. */
+	/** The voice mic's state. `null`/absent means this surface shows no mic. Both
+	 *  hosts pass one now — the session view and the home (TestFlight 578: the
+	 *  new-conversation page had no mic). A relay without `capabilities.stt`
+	 *  gets `micVisible: false`, and a computer that answered "no STT here"
+	 *  gets the set-up mic (`micSetup`) rather than no mic at all. */
 	voice?: DictationState | null;
 	onSend: () => void;
 	onStop: () => void;
+	/** A stop is pending for this turn (`turn-stop.ts`), shared with the pinned
+	 *  working line's `stop`: the ■ dims and reads busy with it, so the two
+	 *  controls never disagree about whether the turn was asked to stop. */
+	stopping?: boolean;
 	/** The retained envelope's message, or `null` when nothing is pending. */
 	retainedMessage: string | null;
 	/** A definitive acknowledgement of an EDITED draft: a success, not a failure. */
@@ -536,6 +558,7 @@ export const Composer = ({
 	voice = null,
 	onSend,
 	onStop,
+	stopping = false,
 	retainedMessage,
 	notice,
 	onRetry,
@@ -592,6 +615,13 @@ export const Composer = ({
 	 *  so flipping it here too would put the clock back on the leading edge. */
 	const rtl = useIsRTL();
 	const dictationLargeText = effectiveScale > LARGE_TEXT_SCALE;
+	/* Whether the mic renders at all: a working mic, or the set-up mic for a
+	 *  computer with no speech-to-text. The width budget, the row reserve and the
+	 *  row itself all read this one value, so they cannot disagree. */
+	const micShown = voice != null && (voice.micVisible || voice.micSetup);
+	/* The ✓ and the transcribing spinner: full ink, so the confirming control is
+	 *  the strongest thing on the recording row's danger wash. */
+	const dictationInk = useTokenColor("ink");
 
 	/* The handler the listener calls, kept in a ref: re-attaching the listener on
 	 * every render (to capture the current closure) is the other way to do this, and
@@ -689,21 +719,48 @@ export const Composer = ({
 			 *
 			 * Two lines past `LARGE_TEXT_SCALE`: on its own full-width line the longest
 			 * outcome copy ("Didn't catch that — try again.", 369 pt at 200 %) fits two,
-			 * where beside the controls it clipped to `Didn't catch that — tr…` (D3). */
+			 * where beside the controls it clipped to `Didn't catch that — tr…` (D3).
+			 *
+			 * A RESTING outcome may also take two lines at 100 %: it has no meter or
+			 * timer beside it, and two `text-body-sm` lines (2 × 20.3) sit inside the
+			 * row's fixed `dictationRowBox`, so the set-up sentence wraps instead of
+			 * ending "…to use vo…" without moving the composer (design D1 / UX U1).
+			 * A resting outcome is not CAPPED at all: at 320 pt / 200 % the set-up
+			 * sentence needs three lines and a two-line cap cut it to "…on your …"
+			 * (design round 2, D5). No take is live then, so the row growing past its
+			 * box moves nothing under a finger mid-recording; the 1/2-line clamp stays
+			 * on the live phases, whose row height is pinned.
+			 *
+			 * While RECORDING the word is visually hidden but stays the live region:
+			 * the red dot and the running timer already say "recording", and the
+			 * waveform the operator asked for gets the word's width back (design D3).
+			 * Clipped to 1 × 1 rather than removed or `opacity: 0`, so it is still in
+			 * the accessibility tree and still announced. Past `LARGE_TEXT_SCALE` the
+			 * word keeps its own line (it never shared the meter's), so it stays. */
 			<Text
 				role={ROLE.status}
 				accessibilityLiveRegion={LIVE_REGION.polite}
-				numberOfLines={dictationLargeText ? 2 : 1}
+				numberOfLines={
+					!rowIsLive(voice.phase) ? undefined : dictationLargeText ? 2 : 1
+				}
 				className={cx(
 					"text-body-sm",
 					rowIsLive(voice.phase) ? "text-danger" : "text-ink-muted",
 				)}
+				style={
+					voice.phase === "recording" && !dictationLargeText
+						? VISUALLY_HIDDEN
+						: undefined
+				}
 				testID={SURFACE.composerDictationStatus}
 			>
 				{voice.status}
 			</Text>
 		);
-	const dictationControls =
+	/* A function of where ✓ goes: on the row, or MOVED to the controls row's
+	 * trailing slot when the card is open only for dictation (`controlsTrailing`,
+	 * UX round 2, U7) — never both, which would be D2's two finish controls. */
+	const dictationControls = (finishOnRow: boolean) =>
 		voice === null ? null : (
 			<>
 				{voice.phase === "recording" ? (
@@ -711,6 +768,26 @@ export const Composer = ({
 						meter={voice.meter}
 						testID={SURFACE.composerDictationMeter}
 					/>
+				) : voice.phase === "transcribing" ? (
+					/* The wait, shown: the computer is transcribing, and a row that
+					 * froze on the last waveform read as hung. Indeterminate because
+					 * `/api/transcribe` reports no progress — only that it settled.
+					 * `flex-1` takes the meter's slot so the row does not reflow. */
+					<View
+						className="flex-1 flex-row items-center"
+						testID={SURFACE.composerDictationMeter}
+					>
+						{/* Hidden from assistive tech: the polite status row beside it already
+						 *  says "Transcribing", and a labelled spinner made VoiceOver say it
+						 *  twice (agent review round 1, N2). */}
+						<ActivityIndicator
+							size="small"
+							color={dictationInk}
+							aria-hidden
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+						/>
+					</View>
 				) : null}
 				{voice.phase === "recording" ? (
 					<Text
@@ -729,28 +806,39 @@ export const Composer = ({
 						{formatDuration(voice.seconds)}
 					</Text>
 				) : null}
-				{/* The reader's own DISCARD: it stops the take and sends no request at all,
-				    which is a different outcome from the mic (stop AND transcribe). Shown
-				    while a dictation is live only — an outcome line has nothing to cancel.
+				{/* The reader's own DISCARD (✕) and FINISH (✓), the pair the operator asked
+				    for (TestFlight 578: "clear cancel and stop/confirm controls"). ✕ stops
+				    the take and sends NO request; ✓ stops AND transcribes — the same
+				    `press` the mic runs while recording, placed where the eye already is.
 
-				    The VISIBLE word is `Discard`, not `Cancel`, for exactly that reason
-				    (design round 1, D6): the mic beside it morphs to a Square that STOPS AND
-				    TRANSCRIBES, and "Cancel" reads as "stop", so the two adjacent controls
-				    promised the same thing while doing different ones. `Discard` names the
-				    throw-away, and it now matches the accessible name. */}
+				    Glyphs, not the earlier `Discard` word: design round 1 (D6) chose the
+				    word because the only neighbour was the mic's Square, and "Cancel" read
+				    as "stop". With ✕ and ✓ side by side the two outcomes are the
+				    conventional opposites, and each control's accessible name still says
+				    exactly what it does. Both are 44 pt targets inside the row's fixed
+				    box, so the composer's geometry does not change. */}
 				{rowIsLive(voice.phase) ? (
-					<Pressable
-						accessibilityRole={ROLE.button}
-						accessibilityLabel="Discard voice input"
+					<IconButton
+						accessibilityLabel={t("mobile.composer_input.voice.discard")}
 						onPress={voice.cancel}
-						style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
-						className="items-center justify-center"
+						icon={({ color, size }) => <X color={color} size={size} />}
 						testID={CONTROL.composerDictationCancel}
-					>
-						<Text className="text-body-sm text-ink-muted">Discard</Text>
-					</Pressable>
+					/>
 				) : null}
+				{voice.phase === "recording" && finishOnRow ? dictationFinish : null}
 			</>
+		);
+
+	/* ✓, wherever `dictationControls` places it. One node so the row's and the
+	 * trailing slot's copies cannot drift (label, ink, testID). */
+	const dictationFinish =
+		voice === null ? null : (
+			<IconButton
+				accessibilityLabel={t("mobile.composer_input.voice.finish")}
+				onPress={voice.press}
+				icon={({ size }) => <Check color={dictationInk} size={size} />}
+				testID={CONTROL.composerDictationFinish}
+			/>
 		);
 
 	/* The compact budget, spent in order of what must never leave the screen: the receipt
@@ -762,6 +850,7 @@ export const Composer = ({
 	const [metaWidth, setMetaWidth] = useState(0);
 	const _window = useWindowDimensions();
 	const [focused, setFocused] = useState(false);
+	const pasteOffer = useClipboardImageOffer(focused);
 	const [keyboardVisible, setKeyboardVisible] = useState(false);
 	const [contextOpen, setContextOpen] = useState(false);
 	const ownField = useRef<TextInput>(null);
@@ -778,7 +867,7 @@ export const Composer = ({
 	const progress = useSharedValue(0);
 	const keyboardOffset = useSharedValue(0);
 	const keyboardDuration = useRef(200);
-	const presentation = composerPresentation({
+	const presentationFacts = {
 		focused,
 		draft,
 		attachments: images.length,
@@ -792,6 +881,21 @@ export const Composer = ({
 		 *  must be computed on the same floor or the radius disagrees with the box
 		 *  (28 announced over a 30 pt paint). */
 		floor: TOUCH_FLOOR,
+	};
+	const presentation = composerPresentation(presentationFacts);
+	/* Open ONLY because of dictation: without the take (or its outcome line) this
+	 *  card would be the collapsed pill, whose trailing slot is the mic. The
+	 *  controls row then keeps the mic in that trailing slot, so the press that
+	 *  expands the card does not slide Send under the finger that just pressed the
+	 *  mic (UX review round 1, U2). Send is disabled in this state anyway: a card
+	 *  with a draft, an attachment or focus is open for its own reasons. */
+	const openForDictationOnly =
+		presentation.expanded &&
+		!composerPresentation({ ...presentationFacts, dictation: false }).expanded;
+	const trailing = controlsTrailing({
+		openForDictationOnly,
+		recording: voice?.phase === "recording",
+		micShown,
 	});
 	/* One keyboard owner. Android's resized window already ends at keyboard top:
 	 * overlap is then zero. iOS follows the native frame/duration, not a second
@@ -843,7 +947,7 @@ export const Composer = ({
 		metaWidth >=
 			80 +
 				5 * TOUCH_FLOOR +
-				(voice?.micVisible ? TOUCH_FLOOR : 0) +
+				(micShown ? TOUCH_FLOOR : 0) +
 				(controls.stopVisible ? TOUCH_FLOOR : 0) +
 				24;
 	/* THE PAINTED BASE, measured. The pill's radius is half the pill the platform
@@ -949,7 +1053,8 @@ export const Composer = ({
 	/* The same condition the row itself renders under, so the reserve and the row cannot
 	 *  disagree. `mb-2` is its bottom margin. */
 	const dictationShowing =
-		voice?.micVisible === true &&
+		voice !== null &&
+		micShown &&
 		(rowIsLive(voice.phase) || voice.status !== "");
 	const DICTATION_ROW_MARGIN_PX = 8;
 	/* The vertical padding the root actually paints: `pt-1 pb-1` in the short-landscape
@@ -1207,6 +1312,15 @@ export const Composer = ({
 	 *  the count and — where the surface can open the queue — the way in; it is
 	 *  never a disabled control. ONE element for both strips (tall and short
 	 *  landscape), so its floor and its width cap are written once. */
+	/* Effort's measured cap on the session strip (R3-M1): rigid, so Yoga only
+	 *  ever floors the model, and capped by what the strip leaves after the
+	 *  model's floor and the trailing controls actually rendered below — More,
+	 *  the queued chip, keyboard-dismiss. Undefined until `metaWidth` arrives. */
+	const sessionEffortCap = sessionEffortMaxWidth(
+		metaWidth,
+		1 + (queuedCount > 0 ? 1 : 0) + (keyboardVisible || focused ? 1 : 0),
+		TOUCH_FLOOR,
+	);
 	const queuedChip =
 		queuedCount > 0 ? (
 			<Pressable
@@ -1266,6 +1380,11 @@ export const Composer = ({
 			 *  at large text; it yields first, then effort, then the model
 			 *  (`HOME_STRIP_SHRINK`, design D2). The session view passes no
 			 *  `folderChip` and its strip is unchanged. */}
+			{/* TODO(native, O1): the home strip puts a min-floored shrinker (folder)
+			 *  FIRST, then more shrinkers — the yoga#2006 shape that broke the
+			 *  session strip on iOS (R3-M1): once folder floors, effort and model
+			 *  are charged against the original free space. Needs a device check;
+			 *  if it overflows, cap like `sessionEffortMaxWidth`. */}
 			{folderChip ? (
 				<View
 					style={{
@@ -1290,18 +1409,26 @@ export const Composer = ({
 				</View>
 			) : null}
 			<View
-				/* Home: the model keeps its natural width and yields LAST. The session
-				 *  strip keeps its `flex-1` slot, byte for byte. */
-				className={folderChip ? "min-w-0 grow" : "min-w-0 flex-1"}
-				style={
-					folderChip
-						? {
-								minWidth: MODEL_FLOOR_PT,
-								flexShrink: HOME_STRIP_SHRINK.model,
-								flexBasis: "auto",
-							}
-						: { minWidth: MODEL_FLOOR_PT }
-				}
+				/* The model keeps its NATURAL width on both strips and never grows
+				 *  (operator, TestFlight 578: "left justify the effort selector with the
+				 *  other selectors on that row"). A growing slot (`grow` on the home,
+				 *  `flex-1` on the session) took all the free width while the chip
+				 *  inside kept its own, so effort floated right behind an empty gap:
+				 *  `[folder][Claude Opus 5.5]      [Medium] ⋯`. The chips now pack
+				 *  left at the row's gap and the free width goes to More's auto margin
+				 *  (`STRIP_TRAILING`, below). Shrink order: the home yields folder →
+				 *  effort → model (`HOME_STRIP_SHRINK`); the session yields the model
+				 *  to its floor; effort is rigid under a measured cap
+				 *  (`SESSION_STRIP_SHRINK`, `sessionEffortMaxWidth`), so the trailing
+				 *  controls never clip — on native Yoga too (R3-M1). */
+				className="min-w-0 shrink"
+				style={{
+					minWidth: MODEL_FLOOR_PT,
+					flexBasis: "auto",
+					flexShrink: folderChip
+						? HOME_STRIP_SHRINK.model
+						: SESSION_STRIP_SHRINK.model,
+				}}
 			>
 				<ComposerChipButton
 					glass={glass}
@@ -1321,7 +1448,11 @@ export const Composer = ({
 									minWidth: MODEL_FLOOR_PT,
 									flexShrink: HOME_STRIP_SHRINK.effort,
 								}
-							: { minWidth: MODEL_FLOOR_PT }
+							: {
+									minWidth: MODEL_FLOOR_PT,
+									flexShrink: SESSION_STRIP_SHRINK.effort,
+									maxWidth: sessionEffortCap,
+								}
 					}
 				>
 					<ComposerChipButton
@@ -1334,16 +1465,26 @@ export const Composer = ({
 					/>
 				</View>
 			) : null}
-			<IconButton
-				accessibilityLabel={
-					queuedCount > 0
-						? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
-						: t("mobile.chrome.composer.more")
-				}
-				onPress={() => setContextOpen(true)}
-				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
-				testID={CONTROL.composerContext}
-			/>
+			{/* STRIP_TRAILING: the free width goes to an AUTO leading margin on More,
+			 *  so the chips pack LEFT and only More (and the queue/keyboard controls
+			 *  after it) sits trailing. A margin, not a spacer element: a spacer is
+			 *  one more child and charged one more `gap-1` (4 pt) in the narrow rows
+			 *  where every point decides whether the model name fits. `ms-auto` is
+			 *  the logical edge, so RTL mirrors it. */}
+			<View className="ms-auto" testID={SURFACE.composerStripTrailing}>
+				<IconButton
+					accessibilityLabel={
+						queuedCount > 0
+							? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+							: t("mobile.chrome.composer.more")
+					}
+					onPress={() => setContextOpen(true)}
+					icon={({ color, size }) => (
+						<MoreHorizontal color={color} size={size} />
+					)}
+					testID={CONTROL.composerContext}
+				/>
+			</View>
 			{queuedChip}
 			{keyboardVisible || focused ? (
 				<IconButton
@@ -1392,23 +1533,60 @@ export const Composer = ({
 	 *  costs the field its width — the field is its own row above — which was the
 	 *  only reason the mic had been exiled to the meta line (design round 1,
 	 *  D1/D2 of the earlier composer). */
-	const mic = voice?.micVisible ? (
-		/* The voice mic: shown only when the relay says voice input can run here
-		 * AND this build can record (`voice.micVisible`). Absence of
-		 * `capabilities.stt` is unavailable, so an older relay never renders it. */
-		<IconButton
-			accessibilityLabel={micLabel(voice.phase)}
-			accessibilityHint={MIC_HINT[voice.phase]}
-			disabled={voice.phase === "transcribing"}
-			onPress={voice.press}
-			icon={({ color, size }) =>
-				voice.phase === "recording" ? (
-					<Square color={color} size={size} />
-				) : (
-					<Mic color={color} size={size} />
-				)
+	/* Hidden while RECORDING: the recording row's ✓ is the one finish control and
+	 *  its ✕ the one discard, so a third control (■ "Stop and transcribe") doing
+	 *  exactly what ✓ does read as a different action (design D2 / UX U4). It
+	 *  returns, dimmed, while transcribing so the slot does not blink twice. */
+	const mic =
+		voice === null || voice.phase === "recording" ? null : voice.micVisible ? (
+			/* The voice mic: the relay says voice input can run here AND this build
+			 * can record (`voice.micVisible`). */
+			<IconButton
+				accessibilityLabel={micLabel(voice.phase)}
+				accessibilityHint={MIC_HINT[voice.phase]}
+				disabled={voice.phase === "transcribing"}
+				onPress={voice.press}
+				icon={({ color, size }) => <Mic color={color} size={size} />}
+				testID={CONTROL.composerMic}
+			/>
+		) : voice.micSetup ? (
+			/* The SET-UP mic: the computer answered that it has no speech-to-text.
+			 * Shown (not hidden) so the reader learns the fix lives on the computer —
+			 * a press puts that sentence on the status row and records nothing. The
+			 * glyph is the same Mic: a struck-through mic reads as "muted", which is
+			 * a different (and wrong) state. */
+			<IconButton
+				accessibilityLabel={t("mobile.composer_input.voice.mic_setup")}
+				accessibilityHint={t("mobile.composer_input.voice.mic_setup_hint")}
+				onPress={voice.press}
+				icon={({ color, size }) => <Mic color={color} size={size} />}
+				testID={CONTROL.composerMic}
+			/>
+		) : null;
+	/* The clipboard-image offer (TestFlight 578: "I can't paste images into the
+	 *  composer"). A native field never hands a pasted image to JS, so while the
+	 *  reader is composing and the clipboard holds one, this chip offers it. It
+	 *  runs `onAttach("paste", "offer")` — the attach sheet's own Paste read — so
+	 *  the iOS paste prompt, a denial (`pasteNothingLine`), a failed read and the strip are one
+	 *  path. It lives on the controls row, which only paints while the field is
+	 *  focused (the expanded card), so it appears without moving the composer. */
+	const pasteChip = pasteOffer.visible ? (
+		<Chip
+			label={t("mobile.composer_input.paste.image")}
+			accessibilityHint={t("mobile.composer_input.paste.image_hint")}
+			leadingIcon={
+				<ClipboardPaste size={ATTACH_GLYPH_PT} color={attachInk} aria-hidden />
 			}
-			testID={CONTROL.composerMic}
+			quiet
+			shrink
+			disabled={attaching}
+			onPress={() => {
+				pasteOffer.consume();
+				/* `"offer"`: an empty answer to THIS press is the iOS denial, not an
+				 *  empty clipboard, and is said as such (`pasteNothingLine`, U3). */
+				onAttach("paste", "offer");
+			}}
+			testID={CONTROL.composerPasteImage}
 		/>
 	) : null;
 	const attach = (
@@ -1441,6 +1619,7 @@ export const Composer = ({
 				<Pressable
 					accessibilityRole={ROLE.button}
 					accessibilityLabel="Stop the running turn"
+					accessibilityState={state({ busy: stopping })}
 					style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
 					onPress={onStop}
 					testID={CONTROL.composerStop}
@@ -1450,7 +1629,10 @@ export const Composer = ({
 					 *  where each 44 pt disc is centred in its 48 pt target (U-42).
 					 *  the bare "■" glyph floated ~30 pt from send and read as decoration.
 					 *  The wash is quiet enough not to compete with the accent send disc. */}
-					<View className={cx(COMPOSER_DISC, "bg-danger-wash")}>
+					<View
+						className={cx(COMPOSER_DISC, "bg-danger-wash")}
+						style={{ opacity: stopping ? 0.6 : 1 }}
+					>
 						<Square size={14} color={dangerInk} fill={dangerInk} aria-hidden />
 					</View>
 				</Pressable>
@@ -1527,7 +1709,9 @@ export const Composer = ({
 			    outcome does not shrink the row below the two-line states — the jump the
 			    design round measured (D1). */
 	const dictationRow =
-		voice?.micVisible && (rowIsLive(voice.phase) || voice.status !== "") ? (
+		voice !== null &&
+		micShown &&
+		(rowIsLive(voice.phase) || voice.status !== "") ? (
 			<View
 				className={cx(
 					"mb-2 rounded-sm border px-3",
@@ -1549,14 +1733,14 @@ export const Composer = ({
 						{dictationStatus}
 						<View className="flex-row items-center gap-2">
 							{dictationDot}
-							{dictationControls}
+							{dictationControls(trailing !== "finish")}
 						</View>
 					</>
 				) : (
 					<>
 						{dictationDot}
 						{dictationStatus}
-						{dictationControls}
+						{dictationControls(trailing !== "finish")}
 					</>
 				)}
 			</View>
@@ -1675,11 +1859,18 @@ export const Composer = ({
 					testID={SURFACE.composerControls}
 				>
 					{attach}
-					{mic}
+					{trailing === "actions" ? mic : null}
+					{pasteChip}
 					{/* Landscape has exactly ONE context affordance, and it is the one
 					 *  in the compact strip: a second More on this row was the same
 					 *  action twice in one 44 pt line (design round 6, D2). */}
-					{actionCluster}
+					{trailing === "actions" ? (
+						actionCluster
+					) : (
+						<View className={COMPOSER_ACTION_CLUSTER}>
+							{trailing === "finish" ? dictationFinish : mic}
+						</View>
+					)}
 					{compactSingle && keyboardVisible ? (
 						<IconButton
 							accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}

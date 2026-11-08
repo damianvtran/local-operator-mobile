@@ -129,10 +129,11 @@ const {
 	createScrollPresence,
 	edgeFadeLevels,
 	edgeFadeStops,
+	RAIL_FAST_PT_PER_MS,
 	RAIL_LINGER_MS,
 	TRANSCRIPT_FADE_PT,
 } = await import("@/features/session/transcript-presence");
-const { CheckpointRail } = await import(
+const { CheckpointRail, RAIL_PEAK_OPACITY } = await import(
 	"@/features/session/components/checkpoint-rail"
 );
 const { TranscriptEdgeFades } = await import(
@@ -222,6 +223,26 @@ describe("the rail's presence signal", () => {
 	beforeEach(() => vi.useFakeTimers());
 	afterEach(() => vi.useRealTimers());
 
+	/** One frame of scroll at `ptPerMs`, the way `onScroll` reports it at
+	 *  `scrollEventThrottle={16}`. Fake timers drive `Date.now`, which is the
+	 *  presence's default clock. */
+	const FRAME_MS = 16;
+	const scrollFrames = (
+		presence: ReturnType<typeof createScrollPresence>,
+		from: number,
+		frames: number,
+		ptPerMs: number,
+	): number => {
+		let y = from;
+		presence.noteMovement(y);
+		for (let frame = 0; frame < frames; frame += 1) {
+			vi.advanceTimersByTime(FRAME_MS);
+			y += ptPerMs * FRAME_MS;
+			presence.noteMovement(y);
+		}
+		return y;
+	};
+
 	it("draws nothing at rest", () => {
 		const presence = createScrollPresence();
 		expect(presence.readVisible()).toBe(false);
@@ -232,12 +253,16 @@ describe("the rail's presence signal", () => {
 		presence.dispose();
 	});
 
-	it("comes up for a reader's drag and goes a linger after it settles", () => {
+	it("lingers about a second (TestFlight 578)", () => {
+		expect(RAIL_LINGER_MS).toBe(1000);
+	});
+
+	it("comes up for a FAST drag and goes a linger after it settles", () => {
 		const presence = createScrollPresence();
 		const seen: boolean[] = [];
 		presence.subscribe((visible) => seen.push(visible));
 		presence.setHeld(true);
-		presence.noteMovement(40);
+		scrollFrames(presence, 0, 3, RAIL_FAST_PT_PER_MS * 2);
 		expect(presence.readVisible()).toBe(true);
 		presence.setHeld(false);
 		vi.advanceTimersByTime(RAIL_LINGER_MS - 1);
@@ -248,34 +273,72 @@ describe("the rail's presence signal", () => {
 		presence.dispose();
 	});
 
+	it("never comes up for a reading-speed drag, however long", () => {
+		/* TestFlight 578: the rail rose for every drag, so ~25 ticks sat over
+		 *  the text through ordinary reading. Below the speed gate it must not. */
+		const presence = createScrollPresence();
+		const seen: boolean[] = [];
+		presence.subscribe((visible) => seen.push(visible));
+		presence.setHeld(true);
+		scrollFrames(presence, 0, 200, RAIL_FAST_PT_PER_MS / 2);
+		presence.setHeld(false);
+		presence.setCoasting(true);
+		scrollFrames(presence, 2000, 50, RAIL_FAST_PT_PER_MS / 4);
+		presence.setCoasting(false);
+		expect(seen).toEqual([]);
+		expect(vi.getTimerCount()).toBe(0);
+		presence.dispose();
+	});
+
+	it("a held thumb alone never summons it", () => {
+		const presence = createScrollPresence();
+		presence.setHeld(true);
+		vi.advanceTimersByTime(RAIL_LINGER_MS * 10);
+		expect(presence.readVisible()).toBe(false);
+		presence.dispose();
+	});
+
+	it("ignores same-millisecond deliveries rather than reading them as infinite speed", () => {
+		const presence = createScrollPresence();
+		presence.setHeld(true);
+		presence.noteMovement(0);
+		presence.noteMovement(500);
+		expect(presence.readVisible()).toBe(false);
+		// The next real interval measures against the FIRST sample: 4 pt in 16 ms.
+		vi.advanceTimersByTime(FRAME_MS);
+		presence.noteMovement(4);
+		expect(presence.readVisible()).toBe(false);
+		presence.dispose();
+	});
+
 	it("never shows for a scroll the app made (the tail pin while a turn streams)", () => {
 		/* Round 1, U3 / m2 / Q4: `pinTail` → `scrollToOffset` reaches `onScroll`
 		 *  like any other offset, once per streamed growth. With no drag and no
 		 *  momentum, none of it is the reader's, so the rail stays down for the
-		 *  whole stream. */
+		 *  whole stream — even when the growth is fast. */
 		const presence = createScrollPresence();
 		const seen: boolean[] = [];
 		presence.subscribe((visible) => seen.push(visible));
 		for (let growth = 1; growth <= 40; growth += 1) {
-			presence.noteMovement(1000 + growth * 18);
-			vi.advanceTimersByTime(100);
+			presence.noteMovement(1000 + growth * 400);
+			vi.advanceTimersByTime(16);
 		}
 		expect(presence.readVisible()).toBe(false);
 		expect(seen).toEqual([]);
 		presence.dispose();
 	});
 
-	it("stays up while a flick coasts, and lingers from the moment it stops", () => {
+	it("stays up while a fast flick coasts, and lingers from the moment it stops", () => {
 		const presence = createScrollPresence();
 		presence.setHeld(true);
-		presence.noteMovement(10);
+		const y = scrollFrames(presence, 0, 2, RAIL_FAST_PT_PER_MS * 3);
 		presence.setHeld(false);
 		presence.setCoasting(true);
+		// 3 s of glide, decelerating well below the gate: a summoned rail holds.
 		for (let step = 1; step <= 30; step += 1) {
-			presence.noteMovement(10 + step * 40);
+			presence.noteMovement(y + step * 4);
 			vi.advanceTimersByTime(100);
 		}
-		// 3 s of glide: longer than a linger, and still up.
 		expect(presence.readVisible()).toBe(true);
 		presence.setCoasting(false);
 		vi.advanceTimersByTime(RAIL_LINGER_MS - 1);
@@ -288,21 +351,15 @@ describe("the rail's presence signal", () => {
 	it("does not restart the linger for a repeated offset", () => {
 		/* Round 1, m3 / Q3 / U8; made honest in round 2, Q10. A stationary list
 		 *  whose scroll view keeps re-delivering the same offset must not hold
-		 *  the rail up. Round 1 guarded that with a last-offset check this test
-		 *  could not reach (a post-release offset was already discarded by the
-		 *  gesture gate, so it passed with the check deleted). The check is gone;
-		 *  what holds the property is the gesture gate, and this is its test:
-		 *  remove `if (!held && !coasting) return` and the re-emits below keep
-		 *  re-arming the linger, so the rail is still up at the first linger's
-		 *  own end. The repeats land INSIDE that linger on purpose. */
+		 *  the rail up: outside a gesture the offset is discarded by the gesture
+		 *  gate, so the re-emits below never re-arm the linger. */
 		const presence = createScrollPresence();
 		presence.setHeld(true);
-		presence.noteMovement(20);
-		presence.noteMovement(20);
+		scrollFrames(presence, 0, 2, RAIL_FAST_PT_PER_MS * 2);
 		presence.setHeld(false);
 		for (let tick = 1; tick <= 4; tick += 1) {
 			vi.advanceTimersByTime((RAIL_LINGER_MS - 100) / 4);
-			presence.noteMovement(20);
+			presence.noteMovement(64);
 		}
 		vi.advanceTimersByTime(100);
 		expect(presence.readVisible()).toBe(false);
@@ -316,6 +373,7 @@ describe("the rail's presence signal", () => {
 		 *  again — the rail is stuck up. */
 		const presence = createScrollPresence();
 		presence.setHeld(true);
+		scrollFrames(presence, 0, 2, RAIL_FAST_PT_PER_MS * 2);
 		presence.setHeld(false);
 		presence.setCoasting(true);
 		// The reader catches the glide; the momentum end never arrives.
@@ -327,9 +385,10 @@ describe("the rail's presence signal", () => {
 		presence.dispose();
 	});
 
-	it("stays up for as long as a thumb holds it", () => {
+	it("once summoned, stays up for as long as a thumb holds it", () => {
 		const presence = createScrollPresence();
 		presence.setHeld(true);
+		scrollFrames(presence, 0, 2, RAIL_FAST_PT_PER_MS * 2);
 		expect(presence.readVisible()).toBe(true);
 		vi.advanceTimersByTime(RAIL_LINGER_MS * 10);
 		expect(presence.readVisible()).toBe(true);
@@ -342,7 +401,9 @@ describe("the rail's presence signal", () => {
 	it("leaves no timer behind when disposed mid-linger", () => {
 		const presence = createScrollPresence();
 		presence.setHeld(true);
+		scrollFrames(presence, 0, 2, RAIL_FAST_PT_PER_MS * 2);
 		presence.setHeld(false);
+		expect(vi.getTimerCount()).toBe(1);
 		presence.dispose();
 		expect(vi.getTimerCount()).toBe(0);
 	});
@@ -369,8 +430,9 @@ describe("the rail draws only while the transcript moves", () => {
 		vi.useRealTimers();
 	});
 
-	it("renders the marks at opacity 0 at rest, and 1 while the list moves", async () => {
-		const presence = createScrollPresence();
+	it("renders the marks at opacity 0 at rest, and the subtle peak while the list moves fast", async () => {
+		let clock = 0;
+		const presence = createScrollPresence(() => clock);
 		await act(async () =>
 			root?.render(
 				createElement(CheckpointRail, {
@@ -383,13 +445,20 @@ describe("the rail draws only while the transcript moves", () => {
 		);
 		// At rest: the drawn column exists but is invisible — no tick in the frame.
 		expect(animated.value?.__getValue()).toBe(0);
-		await act(async () => presence.setHeld(true));
-		// The tween ran on the value the view holds, with no re-render in between.
-		expect(animated.value?.__getValue()).toBe(1);
+		await act(async () => {
+			presence.setHeld(true);
+			presence.noteMovement(0);
+			clock += 16;
+			presence.noteMovement(16 * RAIL_FAST_PT_PER_MS * 2);
+		});
+		// The tween ran on the value the view holds, with no re-render in between,
+		// and it peaks low (TestFlight 578), never at full ink.
+		expect(RAIL_PEAK_OPACITY).toBeLessThan(1);
+		expect(animated.value?.__getValue()).toBe(RAIL_PEAK_OPACITY);
 		presence.dispose();
 	});
 
-	it("keeps the marks permanently visible when no presence is supplied", async () => {
+	it("keeps the marks permanently visible (at the subtle peak) when no presence is supplied", async () => {
 		await act(async () =>
 			root?.render(
 				createElement(CheckpointRail, {
@@ -399,6 +468,6 @@ describe("the rail draws only while the transcript moves", () => {
 				}),
 			),
 		);
-		expect(animated.opacities.at(-1)).toBe(1);
+		expect(animated.opacities.at(-1)).toBe(RAIL_PEAK_OPACITY);
 	});
 });

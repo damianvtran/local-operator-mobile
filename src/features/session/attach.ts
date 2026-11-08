@@ -1,7 +1,10 @@
 import { Platform } from "react-native";
 
 import type { PromptImage } from "@/contracts";
-import { fromDataUrl } from "@/features/session/attach-rule";
+import {
+	fromDataUrl,
+	readClipboardImage,
+} from "@/features/session/attach-rule";
 import { removePickedCacheCopy } from "./picker-cache";
 import { consumePickerAsset, pickerPrivacy } from "./picker-privacy";
 
@@ -157,16 +160,11 @@ export const pasteImage = async (): Promise<PromptImage | null> =>
 	Platform.OS === "web" ? pasteOnWeb() : pasteOnNative();
 
 const pasteOnNative = async (): Promise<PromptImage | null> => {
-	// Imported on call, like the pickers: evaluated only where it exists.
+	// Imported on call, like the pickers: evaluated only where it exists. The
+	// read itself (format, null arms) is `readClipboardImage`'s, shared with the
+	// composer's paste chip and covered by a test that needs no device.
 	const Clipboard = await import("expo-clipboard");
-	// PNG, deliberately: the pasteboard's dominant case is a screenshot, and a
-	// screenshot IS a PNG — asking for PNG re-encodes losslessly, where JPEG
-	// would quantise small text. A pasted photo pays a larger payload here, which
-	// the relay's own refit (contract § 8.10) absorbs on the way to the model.
-	const image = await Clipboard.getImageAsync({ format: "png" });
-	// `data` is a full data URL (`data:image/png;base64,…`), so the existing
-	// splitter reads the type from the header the platform itself wrote.
-	return image === null ? null : fromDataUrl(image.data, "image/png");
+	return readClipboardImage(Clipboard);
 };
 
 const pasteOnWeb = async (): Promise<PromptImage | null> => {

@@ -271,12 +271,6 @@ const ALLOWLIST: {
 	},
 	{
 		file: "src/features/sessions/conversations-drawer.tsx",
-		reason: "holdout: the panel's facing edge while the anchor stays physical",
-		token: "border-r",
-		count: 1,
-	},
-	{
-		file: "src/features/sessions/conversations-drawer.tsx",
 		reason:
 			"holdout: the safe-area inset is spent out of the panel's physical anchor, which does not flip yet",
 		token: "paddingLeft",
@@ -311,6 +305,13 @@ const ALLOWLIST: {
 		count: 1,
 		reason:
 			"the indeterminate sweep's physical-axis animation (documented in the component)",
+	},
+	{
+		file: "src/ui/components/dictation-meter.tsx",
+		token: "translateX",
+		count: 1,
+		reason:
+			"the waveform's roll on its pinned left-to-right time axis (`direction: ltr`, documented in the component)",
 	},
 	{
 		file: "src/features/sessions/conversations-drawer.tsx",

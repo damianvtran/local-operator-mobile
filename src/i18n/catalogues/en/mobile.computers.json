@@ -20,5 +20,7 @@
 	"mobile.computers.retry": "Retry",
 	"mobile.computers.show_details": "Show details",
 	"mobile.computers.hide_details": "Hide details",
-	"mobile.computers.connection_response": "Connection response"
+	"mobile.computers.connection_response": "Connection response",
+	"mobile.computers.transport.radient": "Radient",
+	"mobile.computers.transport.custom": "Your address"
 }

@@ -325,6 +325,8 @@ async function relay(
 		privateHistory?: string;
 		emptyFrame?: boolean;
 		frameTitle?: string;
+		/** The first frame's working label; the seed keeps `streaming: false`. */
+		frameActivity?: string;
 		/** The initial list read fails while the stream stays healthy (R1-1). */
 		sessionsFailure?: boolean;
 		/** What Radient's `GET /v1/tunnels` lists; empty unless a test needs rows. */
@@ -592,6 +594,7 @@ async function relay(
 			).data;
 			if (options.emptyFrame) seed.entries = [];
 			if (options.frameTitle) seed.conversation_name = options.frameTitle;
+			if (options.frameActivity) seed.activity = options.frameActivity;
 			response.writeHead(200, { "content-type": "text/event-stream" });
 			response.write(
 				`event: projection\ndata: ${JSON.stringify({ ...seed, session_id: observedSession })}\n\n`,
@@ -1929,6 +1932,32 @@ describe("session runtime shared-route refusal", () => {
 			expect(wire[0]).toEqual({ method: "POST", path: "/login", status: 303 });
 		},
 	);
+});
+
+describe("session runtime `streaming` is `turnRunning`", () => {
+	it("reads a working label under a lowered `streaming` as a running turn", async () => {
+		/* The hook-level half of the predicate (#190 R1-3): header, composer op and
+		 *  pinned line all read `runtime.streaming`, so the hook must publish
+		 *  `turnRunning`, not the raw wire flag, or a reconcile frame mints a
+		 *  `prompt` into a busy runtime. */
+		const mock = await relay({ frameActivity: "Reading" });
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => sessionReading.projection !== null);
+		expect(sessionReading.projection?.streaming).toBe(false);
+		expect(sessionReading.projection?.activity).toBe("Reading");
+		expect(sessionReading.streaming).toBe(true);
+		// `streamingRowId` stays on the raw flag: no streamed text lands here.
+		expect(sessionReading.streamingRowId).toBeNull();
+	});
 });
 
 describe("a 401 on the session stream alone reaches the header", () => {
