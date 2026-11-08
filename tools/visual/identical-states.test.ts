@@ -312,13 +312,15 @@ describe("findIdenticalFrames", () => {
 });
 
 /**
- * The iphone-15-landscape / 200 % S5 class (nightly 38506995844 for the ten it produced,
+ * The iphone-15-landscape S5 class (nightly 38506995844 for the ten it produced,
  * 42442578427 for `S5/rail-building`): at 844×390 with 200 % text the session chrome fills
- * the viewport, so S5 cells that each reach their own marker are byte-identical. These drive
- * the REAL ledger through the real function, so they fail on a matrix that does not declare
- * the group and on an entry that is wider than the cells observed.
+ * the viewport, so S5 cells that each reach their own marker are byte-identical, and the same
+ * names also collide at 135 % in both themes and 150 % light. These drive the REAL ledger
+ * through the real function, so they fail on a matrix that does not declare the group and on
+ * an entry that omits a cell the run produced. A WIDER entry still passes — the match is
+ * containment — so that is not what these pin.
  */
-const LANDSCAPE_200 = [
+const LANDSCAPE_CLASS = [
 	"S5/populated",
 	"S5/queued",
 	"S5/rail",
@@ -341,9 +343,9 @@ const landscapeGroup = (names: readonly string[]): FrameRecord[] =>
 		});
 	});
 
-describe("S5 at iphone-15-landscape / 200 %", () => {
+describe("S5 at iphone-15-landscape", () => {
 	it("declares every observed cell as a camera limit, not a collapse", () => {
-		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_200));
+		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_CLASS));
 		expect(result.undeclared).toEqual([]);
 		expect(result.collapses).toEqual([]);
 		expect(result.exemptions).toHaveLength(1);
@@ -354,14 +356,16 @@ describe("S5 at iphone-15-landscape / 200 %", () => {
 	});
 
 	it("still exempts the group minus one cell — a subset of the entry", () => {
-		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_200.slice(1)));
+		const result = findIdenticalFrames(
+			landscapeGroup(LANDSCAPE_CLASS.slice(1)),
+		);
 		expect(result.undeclared).toEqual([]);
 		expect(result.exemptions).toHaveLength(1);
 	});
 
 	it("fails the class plus one unlisted cell, and names it", () => {
 		const result = findIdenticalFrames([
-			...landscapeGroup(LANDSCAPE_200),
+			...landscapeGroup(LANDSCAPE_CLASS),
 			...landscapeGroup(["S5/empty"]),
 		]);
 		expect(result.exemptions).toEqual([]);
@@ -465,7 +469,8 @@ describe("S5 rail-building / rail-deep at iphone-15-landscape", () => {
 	it("stays the iphone-se coincidence when the content readings agree too", () => {
 		// The two ledgers are asking different questions: agreeing content is one view
 		// (the iphone-se finding), and only the same bytes with DIFFERENT content is
-		// this entry's camera limit.
+		// this entry's camera limit. The equal digests here are SYNTHETIC — the landscape
+		// run produced different ones at every scale — and exist to drive the branch.
 		const result = findIdenticalFrames(
 			landscapePair("10aec7f1e89a5a52", "c6855d230acb5cd4"),
 		);
@@ -478,8 +483,9 @@ describe("S5 rail-building / rail-deep at iphone-15-landscape", () => {
 		// Why `S5/rail-error` is absent from the reported pair set: its scenario mounts
 		// no history and its manifest carries zero ticks, so it differs from the deep
 		// cell at every combination (2331–29832 differing pixels across the eight, run
-		// 42442578427). If a future head ever makes it identical, this test is what
-		// catches the undeclared declaration the class would then owe.
+		// 42442578427). What this pins is the WIDENING: adding `S5/rail-error` to the
+		// class reds it. A future head that made the two cells identical would NOT be
+		// caught here — the fixture is static — the nightly capture is what reds that.
 		const result = findIdenticalFrames([
 			cell("S5", "rail-error", "87398d8732e2c411", "92eee6d23de02df8", {
 				device: "iphone-15-landscape",

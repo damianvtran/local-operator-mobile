@@ -1319,12 +1319,14 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"content differs (each cell reaches its own marker), which is what makes this a limit of " +
 			"the camera rather than a collapse, and the cells are a CLASS rather than one group: run " +
 			"38506995844 (head 1c18c160) produced one byte-identical group of ten per theme, run " +
-			"42442578427 (head 22546c00) produced pairs from the same names on the same device and " +
-			"scale, and a run is exempted for the subset its own viewport produces. The list still " +
-			"separates at the other scales, measured rather than assumed: at 100 % on this device the " +
-			"run's only byte-identical S5 groups were `S5/degraded` = `S5/health-quiet` and " +
-			"`S5/tables` = `S5/tables-in-view` (other entries' cells, quoted as their one-view " +
-			"coincidences) and `S5/populated` = `S5/voice`, which this entry carries. " +
+			"42442578427 (head 22546c00) produced pairs from the same names across three scales — " +
+			"135 % in both themes, 150 % light, 200 % in both themes — and a run is exempted for the " +
+			"subset its own viewport produces. Where the list separates it does so where only " +
+			"already-declared groups collide, which is what keeps the entry honest at the scales it " +
+			"was not declared for: at 100 % on this device the run's only byte-identical S5 groups " +
+			"were `S5/degraded` = `S5/health-quiet` and `S5/tables` = `S5/tables-in-view` (other " +
+			"entries' cells, quoted as their one-view coincidences) and `S5/populated` = " +
+			"`S5/voice`, which this entry carries. " +
 			"`S5/rail-building` JOINS on that second run: it mounts the same projection and the same " +
 			"100-tick journal as `S5/rail-deep` and differs from it ONLY in the manifest's " +
 			"`index.state` (`building` against `ready`), whose one renderer is the checkpoint rail — " +
@@ -1337,8 +1339,9 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"mounted elements and 14 text nodes against 192 and 13 at 200 %), which is this entry's " +
 			"same-bytes-different-content shape and not the one-view coincidence its iphone-se twin " +
 			"declares. Where the pair DOES differ (10 170 px at 100 % dark, 10 178 light) the " +
-			"difference is the row one virtualization window holds and the other does not — the extra " +
-			"row's bubble outline and text plus a hairline shift of its neighbour — so neither cell " +
+			"difference is the row one virtualization window holds and the other does not — an " +
+			"outline plus a hairline glyph offset in its neighbour, a shift rather than a row the app " +
+			"painted — so neither cell " +
 			"is a duplicate and no state was " +
 			"ignored. THIS ENTRY HIDES A " +
 			"READER-FACING CONDITION: in landscape at 200 % text the fold leaves a single transcript " +
