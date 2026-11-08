@@ -222,15 +222,35 @@ export const accountUnreadSchema = z.looseObject({
 });
 export type AccountUnread = z.infer<typeof accountUnreadSchema>;
 
+/** Only the hub-owned, hash-pinned endpoint route is an avatar identity. */
+export const ENDPOINT_AVATAR_PATH =
+	/^\/v1\/messaging\/endpoints\/([A-Za-z0-9_-]{1,128})\/avatar\?v=([0-9a-f]{16})$/;
+
 /**
- * A person's chief of staff, when the directory publishes one (the CoS
- * directory slice, not on main yet). A malformed agent object costs the person
- * their chief-of-staff row, never their People row.
+ * A person's chief of staff, when the directory publishes one. Malformed photo
+ * enrichment costs only the photo, not the agent row or its owner's People row.
  */
 export const directoryAgentSchema = z.looseObject({
 	endpoint_id: id,
 	name: z.string().max(128),
 	state: z.string().min(1).max(32),
+	// Endpoint-owned enrichment is optional. A corrupt photo must not remove a
+	// valid chief-of-staff row or let it borrow the owner's account identity.
+	avatar: z
+		.object({
+			hash: z.string().regex(/^[0-9a-f]{16}$/),
+			updated_at: z.string().datetime({ offset: true }),
+		})
+		.optional()
+		.catch(undefined),
+	// Preserve invalid-present as null: erasing it to undefined would confuse a
+	// rejected URL with an absent optional URL and admit a metadata-only fetch.
+	avatar_url: z
+		.string()
+		.regex(ENDPOINT_AVATAR_PATH)
+		.nullable()
+		.optional()
+		.catch(null),
 });
 export type DirectoryAgent = z.infer<typeof directoryAgentSchema>;
 
@@ -241,6 +261,44 @@ export const personBridgeStateSchema = z.enum([
 	"none",
 ]);
 
+/**
+ * A person's public presentation, carried on each directory row so a profile
+ * card needs no second read (agent-server `docs/ACCOUNT-PROFILE.md` §7,
+ * `responses.AccountProfileResponse`, read at origin/main d057d57e on
+ * 2026-10-26). The server already cleaned and bounded every value; the bounds
+ * here only keep a misbehaving hub from painting a paragraph into a title.
+ *
+ * DELIBERATELY `z.object`, NOT `looseObject`. The card renders an allow-list,
+ * and stripping unknown keys at the parse makes that structural. The hub sends
+ * `pronouns`, and this app does not show pronouns anywhere (an explicit
+ * product decision): leaving the key out of this schema means no screen can
+ * reach it by accident.
+ *
+ * Every field `.catch`es on its own, so one out-of-bounds value costs that
+ * field, never the person's row. Missing fields stay missing, never `""`, so
+ * absent data renders as absent rather than as an empty line.
+ */
+export const accountProfileSchema = z.object({
+	display_name: z.string().max(256).optional().catch(undefined),
+	title: z.string().max(320).optional().catch(undefined),
+	description: z.string().max(2000).optional().catch(undefined),
+	timezone: z.string().max(64).optional().catch(undefined),
+	avatar: z
+		.looseObject({ hash: z.string().regex(/^[0-9a-f]{16}$/) })
+		.optional()
+		.catch(undefined),
+});
+export type AccountProfile = z.infer<typeof accountProfileSchema>;
+
+/*
+ * The hub's relative, hash-pinned avatar path
+ * (`/v1/accounts/<id>/avatar?v=<16 hex>`). Only the transport-safe id
+ * alphabet is admitted: the path is rebuilt from the parts by the client, and
+ * an escaped slash or dot segment must never widen what the phone requests.
+ */
+export const AVATAR_PATH =
+	/^\/v1\/accounts\/([A-Za-z0-9_-]{1,128})\/avatar\?v=([0-9a-f]{16})$/;
+
 export const directoryMemberSchema = z.looseObject({
 	account_id: id,
 	display_label: z.string(),
@@ -248,6 +306,14 @@ export const directoryMemberSchema = z.looseObject({
 	bridge_enabled: z.boolean(),
 	bridge_state: personBridgeStateSchema,
 	agent: directoryAgentSchema.optional().catch(undefined),
+	/*
+	 * Both OPTIONAL and both `.catch`: a hub older than the profile slice sends
+	 * neither, and a malformed value costs the photo or the card details, never
+	 * the person's row. Participants do not carry these: the conversation
+	 * views whitelist them out server-side, so the directory is the one source.
+	 */
+	profile: accountProfileSchema.optional().catch(undefined),
+	avatar_url: z.string().regex(AVATAR_PATH).optional().catch(undefined),
 });
 export type DirectoryMember = z.infer<typeof directoryMemberSchema>;
 
@@ -266,6 +332,11 @@ function salvageDirectoryMember(row: unknown): DirectoryMember | null {
 	if (typeof accountId !== "string" || accountId.length === 0) return null;
 	const agent = directoryAgentSchema.safeParse(candidate.agent);
 	const state = personBridgeStateSchema.safeParse(candidate.bridge_state);
+	const profile = accountProfileSchema.safeParse(candidate.profile);
+	const avatarUrl = z
+		.string()
+		.regex(AVATAR_PATH)
+		.safeParse(candidate.avatar_url);
 	return {
 		account_id: accountId,
 		display_label:
@@ -279,6 +350,8 @@ function salvageDirectoryMember(row: unknown): DirectoryMember | null {
 		bridge_enabled: candidate.bridge_enabled === true,
 		bridge_state: state.success ? state.data : "none",
 		...(agent.success ? { agent: agent.data } : {}),
+		...(profile.success ? { profile: profile.data } : {}),
+		...(avatarUrl.success ? { avatar_url: avatarUrl.data } : {}),
 	};
 }
 

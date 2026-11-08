@@ -15,6 +15,22 @@ export function registerTeamBridgeRetirement(
 	};
 }
 
+/**
+ * Retire local media authority before any network/device cleanup can await.
+ * The account-keyed provider may remain mounted while durable sign-out is in
+ * progress. Its later React effect/unmount is too late to fence an already
+ * pending endpoint photo; clear bumps the cache epoch synchronously, so that
+ * read resolves without a URI even while push deletion is still outstanding.
+ * This helper owns no credentials and creates no second cache or lifecycle.
+ */
+export async function retireTeamBridgeScope(scope: {
+	avatars: { clear: () => void };
+	pushes: { retire: () => Promise<void> };
+}): Promise<void> {
+	scope.avatars.clear();
+	await scope.pushes.retire();
+}
+
 /** Never hold local sign-out hostage to an unreachable push registry. */
 export async function retireTeamBridgeDevice(): Promise<void> {
 	const run = current;

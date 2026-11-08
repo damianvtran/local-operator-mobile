@@ -104,6 +104,32 @@ push additionally needs an appropriately signed iOS build / Android Firebase
 build configuration and registered device. No feature flag, organization
 membership, consent receipt, deployment or credential was changed by this PR.
 
+## People: photos and profile cards
+
+Display only. The directory (`GET /v1/messaging/directory`) carries each
+member's `profile` and a relative, hash-pinned `avatar_url`
+(agent-server `docs/ACCOUNT-PROFILE.md`). Both are optional, so an older hub
+parses unchanged and the rows keep their initials. Conversation participants
+do not carry them; the directory is the one source.
+
+- **Photos** are read with the Radient bearer from
+  `GET /v1/accounts/{id}/avatar?v=<hash>&size=64|256` (`client.avatarBytes`)
+  and shown from an in-memory `data:` URI. A provider URL is never requested.
+  Rows read 64 px; the card reads 256 px. A 404, a network failure or bytes
+  that do not decode leave the initials in place, and a failure is remembered
+  so a list never re-requests it per render (`src/team-bridge/avatars.ts`).
+- **The cache** is in memory, keyed by account + hash + size, bounded in
+  entries and bytes, and owned by the account-keyed provider: an account
+  change or sign-out drops it and retires reads still in flight.
+- **The profile card** opens from a person's photo, or from a message author's
+  photo or name. It shows the photo, the hub-resolved name, a Person or Agent
+  badge (an agent reads "Aida (Ben)" and names its owner), title, description
+  and the person's local time when their timezone is known and valid. Its
+  Message action uses the existing DM navigation: an existing DM opens,
+  otherwise a draft opens and the DM is created on first send.
+- **Pronouns are not shown.** The hub sends them; the app deliberately strips
+  the field at parse time so no screen can render it.
+
 ## Verification and evidence limits
 
 The implementation has Node unit tests for schemas/client refusal paths,

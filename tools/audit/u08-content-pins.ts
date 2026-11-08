@@ -640,6 +640,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Old head83b6 and this tree still parse the exact 520-row scene and yield
 	 * identical plans in the three states above (same SHA256); Library labels
 	 * do not enter that measured scene. All other pin tables stay unchanged. */
+	/* Recompute from the actual union: endpoint-owned avatar retirement and
+	 * localized profile controls plus current delivery/help/schema/fixtures.
+	 * Neither parent digest proves this merged corpus; runtime pins stay exact. */
 	/* Re-pinned 2026-11-03 for PR #154, deliberately, using --print: only OAuth
 	 * callback transport/state validation and provider cancellation bookkeeping
 	 * changed under src. U-08 measures the long-transcript custom-relay session
@@ -1064,7 +1067,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-printed again for the PR's round-1 remediation, after the LAST `src`
 	 * edit: db90c782's wire-repro citation fix and the session-chips comment
 	 * re-wrap (R1/R4). Source admission only, NOT rendered U-08 evidence. */
-	src: "62a578eb1301c6c110fd0b0ea3e3d4cd8480ce04f30d3b09cb94bf83bec8863e",
+	/* Re-printed 2026-11-08 with --print at the merge of origin/main (437cac5a,
+	 * PR #105 Team Bridge direct hub messaging) into feat/team-bridge-avatars
+	 * (PR #119): both sides' history above stands and the value is this merged
+	 * tree's own — neither parent digest is kept. The endpoint-owned avatar
+	 * profile and photo cache, the localized profile card and the mobile port's
+	 * auth provider all land under `src` beside #105's hub messaging; the app,
+	 * design, public and instrument roots did not move. Source admission only,
+	 * NOT rendered U-08 evidence. */
+	src: "9dc41ef942f04e6b158874470d7d324b9941f3baafc3d647b3ff2d8f36baa891",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

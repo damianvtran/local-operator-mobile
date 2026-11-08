@@ -10,7 +10,7 @@ describe("Team Bridge copy", () => {
 		const keys = Object.keys(CATALOGUES[locale]).filter((k) =>
 			k.startsWith("mobile.team_bridge."),
 		);
-		expect(keys).toHaveLength(93);
+		expect(keys).toHaveLength(104);
 		for (const key of keys)
 			expect(
 				CATALOGUES[locale][key as keyof (typeof CATALOGUES)[typeof locale]],

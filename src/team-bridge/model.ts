@@ -11,6 +11,7 @@
  * conversation is called.
  */
 
+import { t } from "@/i18n";
 import type {
 	Conversation,
 	DirectoryMember,
@@ -366,7 +367,10 @@ export function personReason(state: PersonRowState): string | null {
 export function personLabel(
 	member: Pick<DirectoryMember, "account_id" | "display_label">,
 ): string {
-	return displayLabel(member.display_label, "Former member");
+	return displayLabel(
+		member.display_label,
+		t("mobile.team_bridge.profile.former_member"),
+	);
 }
 
 export type ChiefOfStaff = {
@@ -393,13 +397,17 @@ export function chiefsOfStaff(
 		if (selfAccountId && person.account_id === selfAccountId) continue;
 		const agent = person.agent;
 		if (!agent || agent.state === "disabled") continue;
-		const agentName = agent.name.trim() || "Chief of staff";
+		const agentName =
+			agent.name.trim() || t("mobile.team_bridge.profile.chief");
 		chiefs.push({
 			person,
 			endpointId: agent.endpoint_id,
 			agentName,
 			paused: agent.state === "paused",
-			label: `${agentName} (${personLabel(person)})`,
+			label: t("mobile.team_bridge.profile.name_with_owner", {
+				agent: agentName,
+				owner: personLabel(person),
+			}),
 		});
 	}
 	return chiefs;
@@ -416,11 +424,26 @@ export function senderLabel(
 	const person = people.find((row) => row.account_id === sender.account_id);
 	const personName = person ? personLabel(person) : null;
 	if (sender.kind === "human") {
-		return personName ?? displayLabel(sender.display_label, "Former member");
+		return (
+			personName ??
+			displayLabel(
+				sender.display_label,
+				t("mobile.team_bridge.profile.former_member"),
+			)
+		);
 	}
 	const agentName =
-		person?.agent?.name.trim() || displayLabel(sender.display_label, "Agent");
-	return personName ? `${agentName} (${personName})` : agentName;
+		person?.agent?.name.trim() ||
+		displayLabel(
+			sender.display_label,
+			t("mobile.team_bridge.profile.badge_agent"),
+		);
+	return personName
+		? t("mobile.team_bridge.profile.name_with_owner", {
+				agent: agentName,
+				owner: personName,
+			})
+		: agentName;
 }
 
 /* -------------------------------------------------------------------------- */
