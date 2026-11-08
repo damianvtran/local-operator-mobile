@@ -22,7 +22,11 @@
  * token from expiring mid-request on a slow link.
  */
 
-import { resolveFetch } from "../relay/platform-fetch";
+import {
+	RequestDeadlineError,
+	readWithDeadline,
+	resolveFetch,
+} from "../relay/platform-fetch";
 import {
 	type AuthBrowserSession,
 	type CallbackListener,
@@ -31,10 +35,8 @@ import {
 } from "./loopback";
 import { type CryptoDeps, createPkcePair, randomState } from "./pkce";
 
-/** The port the desktop client uses, and the one a listener-less platform (iOS,
- *  where the browser session captures the callback itself) advertises. The
- *  redirect must carry an explicit port either way: the console's whitelist and
- *  the control plane's `validOAuthRedirect` both require one. */
+/** Desktop/test fallback only. iOS binds an ephemeral device-local port before
+ * constructing the authorization URL; it never assumes HTTP interception. */
 export const CALLBACK_PORT = 54_549;
 
 export const RADIENT_OAUTH = {
@@ -46,6 +48,10 @@ export const RADIENT_OAUTH = {
 	expirySkewMs: 5 * 60 * 1000,
 	/** How long the browser sheet may stay open before the attempt is abandoned. */
 	browserTimeoutMs: 5 * 60 * 1000,
+	/** Total budget for one token/refresh request, headers and body. The relay
+	 *  client's default (`relay/http.ts`), so a slow link fails the same way on
+	 *  either host, and short enough that a stalled sign-in ends in Try again. */
+	requestTimeoutMs: 20_000,
 } as const;
 
 /** What is stored after a successful sign-in. */
@@ -132,6 +138,10 @@ export interface RadientOAuthDeps {
 	/** Overridable so a test can assert the exact URL the console receives. */
 	authorizeUrl?: string;
 	tokenUrl?: string;
+	/** Per-request budget override; `RADIENT_OAUTH.requestTimeoutMs` otherwise. */
+	timeoutMs?: number;
+	/** Aborts the request, e.g. when the sign-in that needs it is superseded. */
+	signal?: AbortSignal;
 }
 
 /** The authorize URL the system browser opens. Exported so the shape is
@@ -216,30 +226,44 @@ async function postJson(
 ): Promise<TokenResponse> {
 	const fetchImpl = resolveFetch(deps.fetchImpl);
 	let response: Response;
+	let body: TokenResponse;
 	try {
-		response = await fetchImpl(url, {
-			method: "POST",
-			headers: {
-				"content-type": "application/json",
-				accept: "application/json",
+		/* Bounded: this is the request the sign-in screen waits on after the browser
+		 * sheet closes, and the renewal every tunnel re-mint waits on. Unbounded, a
+		 * stalled answer held "Signing you in…" for ever (TestFlight 453). A deadline
+		 * is a `network` failure — no answer — so the grant is never judged by it. */
+		({ response, body } = await readWithDeadline(
+			fetchImpl,
+			url,
+			{
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					accept: "application/json",
+				},
+				body: JSON.stringify(payload),
+				...(deps.signal ? { signal: deps.signal } : {}),
 			},
-			body: JSON.stringify(payload),
-		});
-	} catch {
+			deps.timeoutMs ?? RADIENT_OAUTH.requestTimeoutMs,
+			async (answer) => {
+				try {
+					/* A boundary cast onto a type whose every field is `unknown`: it asserts
+					 * only "this is an object", and `tokensFromResponse` narrows each field
+					 * it reads (typeof checks) before using it, so no value is trusted. */
+					return (await answer.json()) as TokenResponse;
+				} catch {
+					return {};
+				}
+			},
+		));
+	} catch (cause) {
 		throw new RadientAuthError(
 			"network",
-			`${what} could not reach Radient`,
+			cause instanceof RequestDeadlineError
+				? `${what} did not answer in time`
+				: `${what} could not reach Radient`,
 			undefined,
 		);
-	}
-	let body: TokenResponse = {};
-	try {
-		/* A boundary cast onto a type whose every field is `unknown`: it asserts only
-		 * "this is an object", and `tokensFromResponse` narrows each field it reads
-		 * (typeof checks) before using it, so no value is trusted by the cast. */
-		body = (await response.json()) as TokenResponse;
-	} catch {
-		body = {};
 	}
 	if (!response.ok) {
 		const errorCode = typeof body.error === "string" ? body.error : "";
@@ -268,6 +292,7 @@ async function postJson(
  */
 export async function signInWithRadient(deps: {
 	browser: AuthBrowserSession;
+	signal?: AbortSignal;
 	/** Required where the platform cannot return a callback URL — i.e. Android. */
 	listener?: CallbackListener;
 	now?: () => number;
@@ -278,44 +303,63 @@ export async function signInWithRadient(deps: {
 	/** Fires once the authorize URL is known, so a UI can show "waiting for your
 	 *  browser" before the sheet appears. */
 	onAuthorizeUrl?: (url: string) => void;
+	/** Native sheet closed with a verified callback; token exchange is still pending. */
+	onCallbackReceived?: () => void;
+	/** The exchange's budget; `RADIENT_OAUTH.requestTimeoutMs` otherwise. */
+	requestTimeoutMs?: number;
 }): Promise<RadientTokens> {
-	const now = deps.now ?? (() => Date.now());
-	const cryptoDeps = deps.crypto ?? {};
-	const state = await randomState(cryptoDeps);
-	const pkce = await createPkcePair(cryptoDeps);
-
-	const redirectUri =
-		deps.listener?.redirectUri ?? loopbackRedirectUri(CALLBACK_PORT);
-	if (!deps.listener && !deps.browser.returnsCallback) {
-		/* The platform can neither bind a listener nor hand back the callback URL, so
-		 * the code would go nowhere. Failing here beats a browser sheet the user
-		 * completes for nothing. */
-		throw new RadientAuthError(
-			"rejected",
-			"this platform cannot capture the OAuth callback: no listener and no browser callback",
-		);
-	}
-
-	const authorizeUrl = authorizationUrl({
-		redirectUri,
-		state,
-		challenge: pkce.challenge,
-		authorizeUrl: deps.authorizeUrl,
-	});
-	deps.onAuthorizeUrl?.(authorizeUrl);
-
-	/* Started BEFORE the browser opens: a fast callback must not be missed because
-	 * nothing was listening yet. */
-	const fromListener = deps.listener ? deps.listener.waitForCode() : null;
+	const cancel = () => {
+		void deps.browser.dismiss().catch(() => undefined);
+	};
+	deps.signal?.addEventListener("abort", cancel);
 	try {
+		if (deps.signal?.aborted)
+			throw new RadientAuthError("rejected", "sign-in was cancelled");
+		const now = deps.now ?? (() => Date.now());
+		const cryptoDeps = deps.crypto ?? {};
+		const state = await randomState(cryptoDeps);
+		const pkce = await createPkcePair(cryptoDeps);
+
+		const redirectUri =
+			deps.listener?.redirectUri ??
+			(await deps.browser.prepareRedirect?.()) ??
+			loopbackRedirectUri(CALLBACK_PORT);
+		if (!deps.listener && !deps.browser.returnsCallback) {
+			/* The platform can neither bind a listener nor hand back the callback URL, so
+			 * the code would go nowhere. Failing here beats a browser sheet the user
+			 * completes for nothing. */
+			throw new RadientAuthError(
+				"rejected",
+				"this platform cannot capture the OAuth callback: no listener and no browser callback",
+			);
+		}
+
+		if (deps.signal?.aborted)
+			throw new RadientAuthError("rejected", "sign-in was cancelled");
+		const authorizeUrl = authorizationUrl({
+			redirectUri,
+			state,
+			challenge: pkce.challenge,
+			authorizeUrl: deps.authorizeUrl,
+		});
+		deps.onAuthorizeUrl?.(authorizeUrl);
+
+		/* Started BEFORE the browser opens: a fast callback must not be missed because
+		 * nothing was listening yet. */
+		const fromListener = deps.listener ? deps.listener.waitForCode() : null;
 		const fromBrowser = await deps.browser.open(authorizeUrl, redirectUri);
+		if (deps.signal?.aborted)
+			throw new RadientAuthError("rejected", "sign-in was cancelled");
 		if (fromBrowser) {
-			/* iOS: the session matched the callback itself. */
-			const result = parseCallbackUrl(fromBrowser, state);
+			/* iOS: the device-local listener completed the system browser session. */
+			const result = parseCallbackUrl(fromBrowser, state, redirectUri);
+			deps.onCallbackReceived?.();
 			return await exchangeCode(result.code, redirectUri, pkce.verifier, {
 				now,
 				fetchImpl: deps.fetchImpl,
 				tokenUrl: deps.tokenUrl,
+				signal: deps.signal,
+				timeoutMs: deps.requestTimeoutMs,
 			});
 		}
 		if (!fromListener) {
@@ -326,12 +370,16 @@ export async function signInWithRadient(deps: {
 		/* Android: the listener collected the code while the tab stayed open, and the
 		 * promise settles once the user returns (or the state check fails). */
 		const result = await fromListener;
+		deps.onCallbackReceived?.();
 		return await exchangeCode(result.code, redirectUri, pkce.verifier, {
 			now,
 			fetchImpl: deps.fetchImpl,
 			tokenUrl: deps.tokenUrl,
+			signal: deps.signal,
+			timeoutMs: deps.requestTimeoutMs,
 		});
 	} finally {
+		deps.signal?.removeEventListener("abort", cancel);
 		/* Every exit path, including cancel and timeout: a listener that outlives the
 		 * flow is an open port on the user's device. */
 		await deps.listener?.close().catch(() => undefined);

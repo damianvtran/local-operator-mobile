@@ -4,7 +4,7 @@ import { Image } from "react-native";
  * keeps the black figure recognizable on both native grounds. It is decorative
  * beside a named destination; duplicating that name would add screen-reader noise.
  * Source and the narrow design-kit exception: docs/design/native-interaction-guidelines.md. */
-export const NavigationMark = ({ size = 28 }: { size?: 28 | 32 }) => (
+export const NavigationMark = ({ size = 28 }: { size?: number }) => (
 	<Image
 		source={require("../../../assets/brand/navigation-mark.png")}
 		style={{ width: size, height: size }}

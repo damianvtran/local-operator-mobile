@@ -131,6 +131,14 @@
 	--preview-text-body-sm-lh: 1.45;
 	--preview-text-body-sm-weight: 400;
 	--preview-text-body-sm-tracking: 0;
+	--preview-text-body-read: 14px;
+	--preview-text-body-read-lh: 1.55;
+	--preview-text-body-read-weight: 400;
+	--preview-text-body-read-tracking: 0;
+	--preview-text-trace: 13px;
+	--preview-text-trace-lh: 1.5;
+	--preview-text-trace-weight: 400;
+	--preview-text-trace-tracking: 0;
 	--preview-text-meta: 12px;
 	--preview-text-meta-lh: 1.4;
 	--preview-text-meta-weight: 500;
@@ -160,6 +168,7 @@
 	--preview-radius-md: 10px;
 	--preview-radius-lg: 14px;
 	--preview-radius-frame: 16px;
+	--preview-radius-composer: 20px;
 	--preview-radius-full: 9999px;
 	--preview-duration-instant: 80ms;
 	--preview-duration-fast: 120ms;

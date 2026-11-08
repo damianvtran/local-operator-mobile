@@ -363,12 +363,12 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 3816 cells: the whole declared cell list (106 cells) x 2 themes x
+ * The `core` tier is 3780 cells: the whole declared cell list (105 cells) x 2 themes x
  * (3 phones x 4 scales + 2 tablets x 3 scales) — 94 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 60 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
  * run needs ~126 minutes. The `core` job's own bound is 175 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 11448 s deadline its plan derives for itself. The
+ * `web-audit-core`), which is above the 11340 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -398,11 +398,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 106 cells x 2 themes x (2 profiles x 3 scales) = 1272 cells, ~45 minutes at
+ * That is 105 cells x 2 themes x (2 profiles x 3 scales) = 1260 cells, ~45 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` stay the
- * local and dispatched samples, so the full 3816-cell `core` matrix and the
- * 13992-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 3780-cell `core` matrix and the
+ * 13860-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -420,7 +420,7 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 1272 cells, +50 % over the two-scale 672, so the per-push capture
+ * both CI profiles is 1260 cells, +50 % over the two-scale 672, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
  * capture 55 / audit 25 / job 85. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
@@ -429,11 +429,11 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * index's five states), the mesh slice's seven cells (the S15 remote rows, the
  * tap-reveal and the move sheet's five states), the checkpoint rail's four more,
  * and the supplement slice's five S5 cells (the Highlights block's states),
- * folded from main: the cell list is 106 and the sample is 1272, both re-derived from
+ * folded from main: the cell list is 105 and the sample is 1260, both re-derived from
  * this head's own `--plan` rather than scaled — and the quiet cause's sheet cell,
  * which no frame carried until review round 4's m3, is the one that moved them
- * (105 -> 106, 1260 -> 1272). Still inside the 65-minute capture bound
- * (1272 cells x 3 s = 63.6 min). A bound that fires every run stops being a signal, so
+ * (105 -> 106, 1260 -> 1260). Still inside the 65-minute capture bound
+ * (1260 cells x 3 s = 63.0 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for. */
@@ -981,20 +981,53 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 * ranking is oldest-first, so the press lands on `tc-conv-03-user` — inside
 	 * a CONDENSED turn, which is what makes the cell exercise the expand-first
 	 * walk (the sheet closes, the turn opens, the transcript scrolls, the wash
-	 * lands, the bar is up). */
+	 * lands, the bar is up).
+	 *
+	 * EVERY find cell opens with the conditional press, because the app folds the
+	 * lever into ⋮ below 360 pt (record §2.3): on `iphone-se` the lever only
+	 * exists after the menu opens, and on every wider profile the menu press would
+	 * drop a sheet OVER the lever the next step has to press. A bare `click` was
+	 * what made 30 cells unready and five find frames byte-identical to the plain
+	 * transcript on the 320 pt profile (review round 1, Q163-1) — the harness was
+	 * pressing a control the fold had moved, and the frame it kept was of the
+	 * state before any find at all. */
 	"S5/find-results": [
+		{
+			clickWhenMissing: {
+				control: CONTROL.sessionFind,
+				opener: CONTROL.sessionMenu,
+			},
+		},
 		{ click: CONTROL.sessionFind },
 		{ type: { testID: CONTROL.findField, text: "retry" } },
 	],
 	"S5/find-related": [
+		{
+			clickWhenMissing: {
+				control: CONTROL.sessionFind,
+				opener: CONTROL.sessionMenu,
+			},
+		},
 		{ click: CONTROL.sessionFind },
 		{ type: { testID: CONTROL.findField, text: "ledgr" } },
 	],
 	"S5/find-empty": [
+		{
+			clickWhenMissing: {
+				control: CONTROL.sessionFind,
+				opener: CONTROL.sessionMenu,
+			},
+		},
 		{ click: CONTROL.sessionFind },
 		{ type: { testID: CONTROL.findField, text: "zebra" } },
 	],
 	"S5/find-hit": [
+		{
+			clickWhenMissing: {
+				control: CONTROL.sessionFind,
+				opener: CONTROL.sessionMenu,
+			},
+		},
 		{ click: CONTROL.sessionFind },
 		{ type: { testID: CONTROL.findField, text: "conversion" } },
 		{ click: findResultId("tc-conv-03-user") },
@@ -1007,6 +1040,12 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 * empty state's excuse, it is the scope every answer on this device is read
 	 * within. */
 	"S5/find-caveat": [
+		{
+			clickWhenMissing: {
+				control: CONTROL.sessionFind,
+				opener: CONTROL.sessionMenu,
+			},
+		},
 		{ click: CONTROL.sessionFind },
 		{ type: { testID: CONTROL.findField, text: "euro" } },
 	],
@@ -1088,6 +1127,14 @@ export const PENDING_CELLS: Record<string, string> = {
 	 * owner text to read. */
 	"S5/scroll":
 		"harness (tools/visual/capture.ts) — driving a scroll position needs a wire action or an app-side id; until then no cell evidences a scrolled transcript",
+	/* RETIRED SURFACE (review round 1, Q163-1): the session header's tag line was
+	 *  removed in the 2026-11-04 chrome pass (decision record §2.3, D-S1 — it
+	 *  painted over the title on TestFlight 365), so the `session/tags-header`
+	 *  marker no longer exists and the `tags` scenario no longer declares the
+	 *  cell. It is GONE from this registry rather than pinned as a skip: a skip
+	 *  still captured the frame, and on iphone-se that frame was byte-identical to
+	 *  `S5/populated` — a retired surface equated with a live one in the
+	 *  identical-state check. */
 };
 
 /**
@@ -1235,13 +1282,16 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"content shape this entry describes.",
 	},
 	{
-		// EXACTLY the ten cells the nightly produced (run 38506995844, head 1c18c160) and no
-		// wider — no union with the iphone-se S5 entry above and no unobserved sibling — so
-		// an eleventh cell joining a byte-identical group still fails as undeclared.
+		// EXACTLY the eleven cells measured rendering identically on this device and scale, and
+		// no wider — no union with the iphone-se S5 entry above and no unobserved sibling — so a
+		// twelfth cell joining a byte-identical group still fails as undeclared. Ten were the
+		// group one nightly produced (run 38506995844, head 1c18c160); the eleventh,
+		// `S5/rail-building`, joined on run 42442578427 (head 22546c00), which failed it against
+		// `S5/rail-deep` as undeclared at five of this device's eight theme/scale combinations.
 		//
 		// WHAT THIS DOES NOT BIND, stated so nobody relies on it: matching is by CELL NAME
 		// ONLY (`matchDeclared` — the class carries no device or scale), so at any OTHER
-		// device or scale a byte-identical group drawn from these ten names is exempted too,
+		// device or scale a byte-identical group drawn from these eleven names is exempted too,
 		// and quoted with the iphone-15-landscape / 200 % reason below. What still catches a
 		// genuine collapse there is the content partition that runs BEFORE this ledger: it
 		// fires only when the cells' content digests also agree. Two of these cells
@@ -1251,6 +1301,7 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"S5/populated",
 			"S5/queued",
 			"S5/rail",
+			"S5/rail-building",
 			"S5/rail-deep",
 			"S5/supplement-empty",
 			"S5/supplement-failed",
@@ -1261,17 +1312,43 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 		],
 		reason:
 			"viewport-filled-by-chrome at iphone-15-landscape / 200 % (844×390, both themes): the " +
-			"session title wraps to two lines (~41 px each), then a search icon and the composer fill " +
-			"the whole viewport, so ZERO transcript rows are visible and the PNG is the same chrome " +
-			"for all ten cells — measured as one byte-identical group per theme. The same ten cells " +
-			"are distinct at 100 %, 135 % and 150 % on this device, where only already-declared " +
-			"groups collide. The content differs (each cell reaches its own marker), which is what " +
-			"makes this a limit of the camera rather than a collapse. THIS ENTRY HIDES A " +
-			"READER-FACING CONDITION: in landscape at 200 % text there is no transcript above the " +
-			"fold at all, which is the same family as D3 in " +
+			"session title, a search icon and the composer take the frame — on the rail pair " +
+			"(measured, run 42442578427) the header, ONE transcript row and the composer, the title " +
+			"ellipsized to one line — so the rows that would distinguish these cells sit outside the " +
+			"window and the PNG is the same chrome for whichever of them it cannot tell apart. The " +
+			"content differs (each cell reaches its own marker), which is what makes this a limit of " +
+			"the camera rather than a collapse, and the cells are a CLASS rather than one group: run " +
+			"38506995844 (head 1c18c160) produced one byte-identical group of ten per theme, run " +
+			"42442578427 (head 22546c00) produced pairs from the same names across three scales — " +
+			"135 % in both themes, 150 % light, 200 % in both themes — and a run is exempted for the " +
+			"subset its own viewport produces. Where the list separates it does so where only " +
+			"already-declared groups collide, which is what keeps the entry honest at the scales it " +
+			"was not declared for: at 100 % on this device the run's only byte-identical S5 groups " +
+			"were `S5/degraded` = `S5/health-quiet` and `S5/tables` = `S5/tables-in-view` (other " +
+			"entries' cells, quoted as their one-view coincidences) and `S5/populated` = " +
+			"`S5/voice`, which this entry carries. " +
+			"`S5/rail-building` JOINS on that second run: it mounts the same projection and the same " +
+			"100-tick journal as `S5/rail-deep` and differs from it ONLY in the manifest's " +
+			"`index.state` (`building` against `ready`), whose one renderer is the checkpoint rail — " +
+			"a transient overlay, aria-hidden with no text, drawn at rest opacity 0 unless the " +
+			"transcript is travelling, measured as ZERO non-background pixels in its 8 pt right-edge " +
+			"column in every rail cell the run captured, both themes, all four scales. At rest " +
+			"therefore NEITHER state paints " +
+			"the thing that tells them apart: the pair's settled bytes agree while its content " +
+			"readings differ (the building cell's virtualization window holds one row more — 199 " +
+			"mounted elements and 14 text nodes against 192 and 13 at 200 %), which is this entry's " +
+			"same-bytes-different-content shape and not the one-view coincidence its iphone-se twin " +
+			"declares. Where the pair DOES differ (10 170 px at 100 % dark, 10 178 light) the " +
+			"difference is the row one virtualization window holds and the other does not — an " +
+			"outline plus a hairline glyph offset in its neighbour, a shift rather than a row the app " +
+			"painted — so neither cell " +
+			"is a duplicate and no state was " +
+			"ignored. THIS ENTRY HIDES A " +
+			"READER-FACING CONDITION: in landscape at 200 % text the fold leaves a single transcript " +
+			"row (measured on the rail pair, run 42442578427), which is the same family as D3 in " +
 			"docs/ux/audits/2026-10-11-full-surface-pass.md (short viewports, text sliced or " +
 			"displaced at the fold), whose product call is deferred. Declaring the cells makes the " +
-			"capture gate stop failing on it; it does NOT fix it, and the entry should be removed " +
+			"capture gate stop failing on them; it does NOT fix it, and the entry should be removed " +
 			"once layout at that viewport keeps a transcript row in view. Deliberately a separate " +
 			"entry from the iphone-se S5 one: that reason makes claims about a 320 px column.",
 	},
@@ -1409,6 +1486,45 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"the pair is the camera-limit exemption above, not this entry: the halves are " +
 			"declared separately because they are different phenomena, and only a run in which " +
 			"the warm-up cell is itself evidential can consult this entry at all.",
+	},
+	{
+		/* Declared on PR #181 (QA round 2, Q-R2-2), after CI's iphone-se capture
+		 * failed this pair at 200 % in both themes (run 42347504435, head 2341e2cb).
+		 *
+		 * WHY IT IS A COINCIDENCE AND NOT A COLLAPSE. The two states differ ONLY in
+		 * the checkpoint rail: the building liveness mark against the deep ticks. Both
+		 * cells load the same projection and the same `deepJournal`. The rail is
+		 * transient by design (`RAIL_LINGER_MS`, item 10): it fades out a moment
+		 * after the list stops moving, and it is `aria-hidden` with no text. So the
+		 * settled frame and the content probe cannot see it in either state. The
+		 * only thing that ever told the two frames apart at se/200 was incidental:
+		 * on the merge base (run 42343773420, e541a904) the building cell's
+		 * virtualization window held one more transcript row
+		 * (`transcript-row-86b56cf5…`) at the faded top edge. The pixel difference
+		 * was one 394×28 px strip under the top fade, and the content digests were
+		 * 0d7188b6d4 / c58e4e4a28. This PR's session composer rests 4 pt shorter
+		 * at 200 %, and the settled scroll offset moved 4241 → 4237 in BOTH cells.
+		 * Now both windows hold that row: same bytes, same content (0d7188b6d4).
+		 * Re-shaping the fixture to split them again would be chasing a
+		 * virtualization edge, not a state difference.
+		 *
+		 * THE STATES ARE STILL ASSERTED, by markers rather than these bytes. Each
+		 * cell reaches its own marker (`session-checkpoint-rail-building` /
+		 * `-rail-deep`, present in the manifests above), and this table is consulted
+		 * only when both cells are evidential. The pair differs at 100 % and 135 %
+		 * on the same device, so neither cell is a duplicate. */
+		cells: ["S5/rail-building", "S5/rail-deep"],
+		reason:
+			"one view, two rail states at iphone-se / 200 %: the checkpoint rail is the only " +
+			"thing that tells `rail-building` from `rail-deep`. It is transient (it fades once " +
+			"the list settles) and aria-hidden with no text, so the settled frame and the " +
+			"content digest are the same transcript in both cells (dark 0666d9744fd77250, " +
+			"light 0a1cf2802e1b0784, content 0d7188b6d4 — run 42347504435). Each cell still " +
+			"reaches its own marker (`session-checkpoint-rail-building` / " +
+			"`session-checkpoint-rail-deep`). The pair differs at 100 % and 135 %, where the " +
+			"virtualization windows differ, so neither declaration can be removed. On the merge " +
+			"base the pair differed only by one faded top-edge row that one window held and " +
+			"the other did not, which was incidental, not the state.",
 	},
 ];
 

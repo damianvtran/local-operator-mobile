@@ -13,8 +13,8 @@ view — what runs, what it needs, and what to do when it goes red.
 |---|---|---|---|
 | `ci.yml` | `pull_request`, push to `main`, weekly, `workflow_dispatch`, `workflow_call` | `changes`, `checks`, `design-kit` | The JavaScript typechecks (both programs), lints, formats and its unit tests pass; the web target bundles. `design-kit` costs a macOS runner plus a `brew install`, so it is path-gated by the same `changes` pattern the native jobs use — it runs on a pull request only when `design/**`, `docs/design/**`, `src/ui/**`, `scripts/**` or the configs changed, and always on `main`, on the weekly sweep and inside a release gate. Green there means the generated styling layer matches `design/tokens/tokens.json`, the contrast contract holds, and every committed asset re-renders (bytes first, pixels second, with the comparison that passed printed). **The preview-sheet step reports `NOT VERIFIED` on a clean runner** — it renders with the shipped typefaces (Figtree, JetBrains Mono), which live in a sibling checkout a runner does not have — and that step is green only because it downgrades its claim to a warning rather than failing. Say "design-kit passed" with that caveat, or run the gate locally where the faces exist. |
 | `android.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `android`, `internal` (main only) | `expo prebuild` produces the Android project from the config, Gradle assembles a debug APK, **the APK's manifest carries the version the ref derives** (`versionName`/`versionCode` read out of the built APK and asserted), **the release variant's merged manifest carries the local-network declarations** (`android:usesCleartextTraffic="true"`, `ACCESS_LOCAL_NETWORK` — asserted on the release manifest because the debug overlays set the cleartext attribute themselves), and the generated project re-generates identically (byte for byte, except that Xcode project files are compared with their object identifiers normalized — see below). On `main`, additionally an AAB/APK whose release certificate is verified **not** to be the debug key, and, when configured, a Play **internal** track upload. |
-| `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator**, and the captured frame **rendered something** — it differs from a pre-install capture of the home screen, and the launch log carries no JavaScript fatal (the check that caught a real crash on a head where the app had no routes). The settle delta between two captures two seconds apart is **reported, not asserted**, in pixel-channel bytes: a byte-identity gate was tried and removed because a working UI with a caret moves (measured, run 36727261140). The version in the built app's `Info.plist` is asserted against the one the ref derived, **the built `Info.plist` carries `NSLocalNetworkUsageDescription` and the ATS local-networking configuration** (`NSAllowsLocalNetworking` plus the private-range `NSExceptionDomains` — which mechanism the OS honours is Apple's ambiguity, ADR 0002 §5), and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
-| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `docs-commands`, `web-audit`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` in its own job (which prints its own assertion count — quote that line, not a number written here) and `pnpm e2e:divergences`; `pnpm e2e:typecheck` in the audit job (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only); the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. **The bounds come from measurements, not from hope**: `pnpm e2e:relay` is the harness's slowest documented command — its own note says the contract plus the canary's mutation self-test is "LOAD-DEPENDENT: 28 minutes measured on this host at load averages 32-46, ~13 minutes on a quiet one" and sizes its default bound at 45 (`--timeout 2700`), and a reviewer's attempt on this host was killed at ~14 minutes inside the mutation group at load 120-226 — so that job gets **45 minutes** and the step 25 — the job's bound covers its parts (install + the contract + the divergence check), not its largest one, and the install prints its own duration so the next person sizing this has a measurement — rather than the 15 minutes it had, which could only ever report a timeout. `pnpm e2e:docs` (every command `docs/e2e/README.md` names, the relay one included) runs only in the nightly `docs-commands` job; on a pull request it would run the relay contract a second time for no extra coverage. The relay job installs explicitly with `--frozen-lockfile`, because the implicit install pnpm 12 performs before a script (`verify-deps-before-run`) was already happening: measured, a "no install" job pulled 631 packages into a tree that had none. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
+| `ios.yml` | `pull_request`, push to `main`, `workflow_dispatch` | `changes`, `ios`, `internal` (main only) | The app builds for the iOS 26 SDK with Xcode 26 on `macos-26`, **launches on a simulator and its process is still running** — `launchctl list` inside the simulator lists the app's `UIKitApplication:<bundle>` job with a pid at t+5s, t+7s and again at least 30 s after launch (the log and summary print the measured elapsed time; under load that probe can follow the t+7s one by a second) — a launchctl read that fails is shown as `unknown`, never `no`, and still fails the job — **no crash report** for its executable was written after launch (one that exists is printed — exception, termination reason, abort message, crashed thread's top frames — and fails the job; `~/Library/Logs/DiagnosticReports`, `/Library/Logs/DiagnosticReports` and the simulator's own log directory are searched, and on the hosted image the reverted-#168 negative control's report landed in the first about 199 s after the launch returned, so a dead app's run waits for it until 300 s after the launch while a live one waits not at all; a dead app with no report gets an inventory of what did land), **the app's own log, stderr and stdout carry no fatal** (`Unhandled JS Exception`, `RCTFatal`, `Terminating app due to uncaught exception`, `libc++abi: terminating`, `EXC_CRASH`, `SIGABRT`; read with a `process ==` predicate so another process cannot fail it). The t+5s frame's difference from the installed home screen is **reported, not asserted**: a dead app has measured 0.14% and 73.81% against it and a live one 73.33% and 73.52%, so it cannot judge a crash and liveness is the verdict. Red runs upload their frames and the app's stdout, stderr and log read too. Liveness is the primary signal because builds 419, 446 and 449 crashed natively at launch and passed the frame-and-JS-fatal version of this gate: their frame was the springboard, 23.05-23.06% different from the old pre-install baseline (it shows the page with the new icon), against 73.63% for a build that rendered; the abort itself reaches only the app's **stderr** (`libc++abi: terminating due to uncaught exception of type facebook::jsi::JSError: [Worklets] …`), which is why stderr is captured; `scripts/ci/ios-launch-gate.ts` does the judging. The settle delta between two captures two seconds apart is **reported, not asserted**, in pixel-channel bytes: a byte-identity gate was tried and removed because a working UI with a caret moves (measured, run 36727261140). The version in the built app's `Info.plist` is asserted against the one the ref derived, **the built `Info.plist` carries `NSLocalNetworkUsageDescription` and the ATS local-networking configuration** (`NSAllowsLocalNetworking` plus the private-range `NSExceptionDomains` — which mechanism the OS honours is Apple's ambiguity, ADR 0002 §5), and the native project re-generates identically. Content is not judged here — a wrong screen renders just as green. On `main`, additionally a signed IPA and, when configured, a TestFlight upload. |
+| `e2e.yml` | `pull_request`, push to `main`, nightly, `workflow_dispatch` | `harness`, `mock-relay-contract`, `docs-commands`, `web-audit` (one leg per `ci`-tier device), `web-audit-verdict`, `maestro-android` | **The harness was present and its suites ran** — the `harness` job FAILS when it is absent rather than skipping, so a green `e2e` cannot mean "the thing did not run". Then: `pnpm e2e:relay` in its own job (which prints its own assertion count — quote that line, not a number written here) and `pnpm e2e:divergences`; `pnpm e2e:typecheck` in the audit job (the only typecheck `tools/**` and `e2e/**` get — `pnpm typecheck` covers the app and `scripts/**` only); the web export driven in headless Chrome into a frame per audit cell with every frame checked against the design kit's rubric, and `pnpm e2e:canary`. That audit is **two jobs, not one**: `web-audit` is a device matrix with one leg per `ci`-tier profile (each leg captures and audits only its own profile, and the flows that are not per-cell — the inbox-return proof with its base export, and the canary — run once, on the `flows` leg), and `web-audit-verdict` folds the legs into a single pass/fail, because a failed matrix child would otherwise read as cancelled rather than red. **Every command goes through the harness's own package scripts**, never a file path, so a rename inside the harness cannot silently disable this workflow. **The bounds come from measurements, not from hope**: `pnpm e2e:relay` is the harness's slowest documented command — its own note says the contract plus the canary's mutation self-test is "LOAD-DEPENDENT: 28 minutes measured on this host at load averages 32-46, ~13 minutes on a quiet one" and sizes its default bound at 45 (`--timeout 2700`), and a reviewer's attempt on this host was killed at ~14 minutes inside the mutation group at load 120-226 — so that job gets **45 minutes** and the step 25 — the job's bound covers its parts (install + the contract + the divergence check), not its largest one, and the install prints its own duration so the next person sizing this has a measurement — rather than the 15 minutes it had, which could only ever report a timeout. `pnpm e2e:docs` (every command `docs/e2e/README.md` names, the relay one included) runs only in the nightly `docs-commands` job; on a pull request it would run the relay contract a second time for no extra coverage. The relay job installs explicitly with `--frozen-lockfile`, because the implicit install pnpm 12 performs before a script (`verify-deps-before-run`) was already happening: measured, a "no install" job pulled 631 packages into a tree that had none. Maestro runs the flow set on an Android 16 emulator — nightly and on demand only, because it is the slowest job here and the harness's own note asks for it that way; it is the one job allowed to be absent from a green PR run. |
 | `release.yml` | tag `v*` (or `workflow_dispatch` with a tag and `dry_run`) | `version`, `credentials`, `gate` (= `ci.yml`), `android`, `ios`, `publish` | The same gate a pull request runs, the platforms named by `RELEASE_PLATFORMS` (default `ios`) built and signed, a GitHub Release carrying their artefacts (APK/AAB and/or IPA), and the matching uploads to the Play internal track and/or TestFlight. |
 
 Native jobs are **skipped, not failed**, on a change that touches only
@@ -213,7 +213,7 @@ Record each dispatch's exact SHA and run URL when comparing baseline and fix.
 The normal `web-audit` job also runs one bounded inbox scenario, using the
 capture job's existing browser, relay, seeded `notifications-populated` fixture,
 phone profile and theme bootstrap. It does not add matrix cells or change U-08
-pins. `audit-frames/inbox-return/{before,after}/` contains `flow.json` and paired
+pins. `audit-frames-iphone-se/inbox-return/{before,after}/` (the web audit's `flows` leg) contains `flow.json` and paired
 settled PNGs for light/dark iPhone 15 at 100% text:
 
 - All → unread update → detail → Back: the actual row loses its unread dot;
@@ -280,7 +280,9 @@ release → Environment secrets) — see "Where they live, and why" below.
 | `APPLE_TEAM_ID` | `ios.yml` `internal`, `release.yml` | Apple team id. Feeds `ios.appleTeamId` through the app config and the export options. |
 | `APPLE_ASC_KEY_ID` | same | App Store Connect API key id. |
 | `APPLE_ASC_ISSUER_ID` | same | App Store Connect issuer id. |
-| `APPLE_ASC_PRIVATE_KEY_BASE64` | same | The `.p8`, base64. Decoded to `APPLE_ASC_PRIVATE_KEY_PATH`. |
+| `APPLE_ASC_PRIVATE_KEY_BASE64` | same | The `.p8`, base64. Authenticates readonly profile download and explicit store uploads, not signing identity. |
+| `APPLE_DIST_CERT_P12_BASE64` | shared `ios-signed-ipa` action | Existing Apple Distribution certificate **and private key**, base64 .p12; imported into an ephemeral keychain. |
+| `APPLE_DIST_CERT_PASSWORD` | same | Password for the .p12. No value is printed. |
 
 The Android rows and the Apple rows are independent: a release needs only the rows
 of the platforms it releases (see "Which platforms a tag releases" below).
@@ -354,17 +356,18 @@ answers). A review-free environment with the same two deployment rules keeps the
 protection against a feature branch reaching the secrets without the second
 prompt, and is the configuration this pipeline expects.
 
-**STATE (2026-10-09): the environment exists; its secrets do not.** `release`
-was created with a **branch** rule `main` and a **tag** rule `v*` (custom branch
-policies enabled, which is what makes a tag rule possible at all), so the jobs
-above can reach it from tags and from `main`. The credentials, however, are
-still **unset** — the repository and environment secret counts are both 0 — so a
-`v*` tag fails at the `credentials` gate today, by design, naming the missing
-names for the **enabled** platforms (the four `APPLE_*` names with
-`RELEASE_PLATFORMS` at its default `ios`; nine only once `android` is enabled).
-Add them as **environment secrets** when the account work resumes (see
-`docs/publishing/submission-runbook.md`), and decide then whether the environment
-requires reviewers (the paragraph above).
+**STATE (2026-11-02): Apple organization and six signing/API environment secrets
+are configured; signed execution remains unproven until its first run.** `release`
+allows **branch** `main` and **tag** `v*`, not PR branches. Keep that policy.
+`RELEASE_PLATFORMS=ios` leaves Google parked. The shared signing action consumes
+the six Apple names above; Android adds its five names only when enabled.
+`IOS_PROFILE_NAME` optionally selects the existing App Store profile (default
+`Local Operator iOS App Store`). `IOS_INTERNAL_UPLOAD` is **unset by default**:
+a merge alone does not sign/upload. Main-only dispatch can request
+`signed_export_only=true` or explicitly `testflight_upload=true`; export-only
+always wins if both are set. A main push uploads only if the repository variable
+`IOS_INTERNAL_UPLOAD` is the exact string `true`. See the [submission runbook](publishing/submission-runbook.md)
+for commands and the separate unsigned, signed-export and upload evidence.
 
 ### What a missing credential means, per platform
 
@@ -376,8 +379,10 @@ One policy, both platforms, decided by a `credentials` job in each workflow:
   decoded and nothing is built, so the unsigned-path failure this replaces (a
   zero-byte keystore decoded from an empty secret, which failed the job on every
   push to `main`) cannot happen.
-- **`ios.yml`** — without the `APPLE_*` variables, the `internal` job is
-  **skipped** the same way, with the same annotation.
+- **`ios.yml`** — default dispatches, PRs and main pushes without upload opt-in
+  skip both credential/signing jobs. Explicit main-only signing checks all six
+  Apple names and **fails** on missing material; it cannot report a successful
+  signed validation when no identity was available.
 - **A tagged release FAILS rather than skipping** a platform it was asked to
   release: `release.yml`'s credential check runs first and names every missing
   variable of each platform in `RELEASE_PLATFORMS`, so the release path is a hard
@@ -700,7 +705,7 @@ What that costs, concretely, and how each spend is gated:
 | `android` (prebuild, debug APK, determinism) | `ubuntu-latest` | the `changes` job: anything that is not `docs/**` or `*.md` |
 | `ios` (prebuild, pods, simulator build, launch, frame) | `macos-26` | the same `changes` job |
 | `internal` (signed AAB/IPA, store uploads) | both | push to `main` only |
-| `web-audit` (frames, rubric, canary) | `ubuntu-latest` | every PR, and it costs no macOS minutes: the harness's Chrome discovery has Linux candidates, which is why it moved off `macos-26` |
+| `web-audit` (frames, rubric, canary) — two legs, one per `ci`-tier device profile — plus `web-audit-verdict` folding them into one check | `ubuntu-latest` | every PR, and it costs no macOS minutes: the harness's Chrome discovery has Linux candidates, which is why it moved off `macos-26`. Split in two because the unsharded job outgrew its bound: measured 2026-11-06, its green run took 79.9 of the 90 minutes and every run after was cancelled at the bound, while each leg now finishes in 40-44 |
 | `mock-relay-contract` (the relay's contract, ~28 min at load 32-46 on the dev host; 45-minute job bound) | `ubuntu-latest` | every PR. Minutes, not macOS minutes; **not** the longest job here — on run 37167390506 it took 7m13s against `web-audit`'s 14m50s and the iOS simulator job's 21m41s. It runs once per push, and `pnpm e2e:docs` — which would run it a second time — is nightly and on demand |
 | Maestro flows | `ubuntu-latest` with KVM | nightly and on demand only |
 
@@ -755,7 +760,71 @@ afternoon.
 | `android` fails at "Assert the native project regenerates identically" | Something edited the generated `android/` tree, or a config plugin is non-deterministic. Fix the plugin: the edit is what `prebuild --clean` discards. The step prints a bounded diff of every differing file, so which of the two it is is a reading rather than a guess. |
 | `android` fails at "Assert the release merged manifest keeps the local-network configuration", or `ios` at "Assert the built Info.plist carries the local-network configuration" | A declaration `app.config.ts` or a config plugin asks for did not reach the product. The step names the field it could not find (`scripts/ci/native-config.ts` prints one line per finding); fix the config or the plugin and re-run — never the generated native file, which the next `prebuild --clean` discards. |
 | `ios` fails on the same gate, and the diff is only identifiers | That is a **pass** unless the diff shows real content: Xcode addresses objects with 24-hex identifiers and Expo's generator mints fresh ones on every run, so `project.pbxproj` is compared with those normalized to `<object-id>` (measured, run 36737644701 — five font references and their Resources group differed in nothing else). A real difference inside the file still fails, and the printed diff shows it with the identifiers already normalized. |
+| `ios` fails "is not running at t+5s" (or t+7s, or ≥30s after launch) | The app's process died after `simctl launch` returned: it crashed. The "Scan the app's own log and output for a fatal" step prints the abort line the app wrote to stderr (for #168's crash, the `libc++abi: terminating …` line naming the exception); the "Surface a crash report the launch wrote" step prints the report's exception, termination reason and crashed thread when one exists, and otherwise lists where reports did land and what the host crash reporter logged. If the liveness message instead lists `UIKitApplication:` jobs and none is the app's, compare their label shape with `isAppJobLabel` in `scripts/ci/ios-launch-gate.ts` before suspecting the app. |
 | `ios` fails to find a simulator | The runner image moved to a newer iPhone than `IOS_SIMULATOR_DEVICE` in `ios.yml`. The job warns and picks the newest available iPhone; change the name in `ios.yml` to silence it. |
-| `ios` fails in `xcodebuild` with a signing error | Only the `internal` job signs. Check `APPLE_TEAM_ID`, and that the App Store Connect key has not been revoked. |
+| iOS signed archive/export fails | Both signed paths share `ios-signed-ipa`. Check the Distribution .p12/private key and password, readonly profile permissions, exact App Store profile, bundle/team and production push entitlement. Never substitute the API .p8 for a signing identity. |
 | `release.yml` stops at "Check the signing and store credentials, by name" | Exactly what it is for: the message lists every missing variable name. Set them, then re-run. |
 | `e2e` jobs are `skipped` | The detector job failed because the audit harness is not on this ref, and the suites behind it were skipped for that reason (`needs`). The detector's annotation names every missing piece, and the workflow conclusion is **failure**, not success — a green `e2e` means the suites ran. |
+
+
+## Targeted native Urdu project-create proof
+
+`e2e.yml` offers `proof_mode = projects-create-ios-proof` (dispatch only, not
+full E2E). It exists because the project-create sheet's Urdu copy
+(right-to-left, native text shaping) had web-export evidence but no native
+frame, and the development host has no simulator.
+
+- **What it does:** downloads an already-built `ios-simulator` artifact (inputs
+  `native_run_id`, `native_artifact_name`, `native_artifact_sha256`), verifies
+  the digest twice, extracts it with `scripts/ci/account-routing-artifact.py`'s
+  safe extractor, boots ONE fresh owned simulator and runs
+  `e2e/maestro/projects-create-proof/` (outside the default `flows/*.yaml`
+  suite): connect, sidebar, Projects list frame, open the sheet, assert the
+  literal Urdu title/status labels/submit, capture light and dark frames
+  (first/settled/lower fields) and a hierarchy dump. It never submits.
+- **Language:** the app takes its language from the relay's config stream, not
+  the device locale, and the stream does not push later changes, so the mock
+  relay starts with `--language ur` before the app connects. A second relay with
+  `en` runs the same walk as a negative control (Urdu title must be absent).
+- **Reachability:** the first dispatch (run 41554295782) failed to connect to
+  `http://127.0.0.1:<port>`: the built app's ATS allows local networking and
+  private CIDRs but not 127/8. Each relay is therefore published under a unique
+  `.local` name with `dns-sd -P` (the mechanism the account-routing iOS proof
+  uses) and admits exactly that origin. No ATS widening or app change. On any
+  Maestro failure the runner captures a simulator screenshot and the native
+  hierarchy before teardown.
+- **Never builds.** A missing, expired or mismatching artifact fails the job.
+  The GitHub token reaches the download step only; the proof process runs with an
+  allowlisted token-free environment and a run-only password (0600 file, masked).
+- **Provenance caveat:** the default artifact (run 41506698136) was built from
+  merge ref `e84f31dc`, whose tree `32e3d23d` equals PR #150 head `91a3cbca`'s
+  tree. Report both facts; never call it literal-head provenance.
+- **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=projects-create-ios-proof`.
+- **Output:** artifact `projects-create-ios-<run id>`: `receipt.json` (incl.
+  cleanup receipt), `commands.json`, command logs, PNG frames, hierarchy dumps.
+  A pass is simulator evidence for those frames only; reviewers must view the PNGs.
+
+## Targeted native theme proof
+
+`e2e.yml` offers `proof_mode = theme-ios-proof` (dispatch only, not full E2E),
+built the same way as the project-create proof above: it downloads an
+already-built `ios-simulator` artifact (the same three inputs, which have no
+useful default here — pass the run that built the branch), verifies its digest,
+boots one fresh owned simulator with the OS on light, and runs
+`e2e/maestro/theme-proof/theme-matrix.yaml` against a mock relay on the `idle`
+scenario.
+
+- **The walk:** the Theme picker in System / Light / Dark, a search for "rose",
+  the selected Dracula card, then for each of twelve themes — `localOperatorDark`,
+  `localOperatorLight`, `dracula`, `obsidian`, `rosePine`, `rosePineDawn`,
+  `highContrastLight` plus the restored `catppuccinMocha`, `tokyoNightStorm`,
+  `duskfox`, `outrun` and `everforestLight`: open the picker, tap that theme's
+  card, assert it is selected, and capture home and the session. Every theme is applied by a card
+  tap, so the frames exercise the real path (picker, store,
+  `Uniwind.updateCSSVariables`, mounted screens).
+- **Inventory:** `scripts/ci/theme-proof-contract.ts` names all 31 frames and the
+  runner refuses an incomplete set; `scripts/ci/theme-proof.test.ts` keeps the
+  flow and that list identical.
+- **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=theme-ios-proof -f native_run_id=<run> -f native_artifact_name=ios-simulator -f native_artifact_sha256=<sha256>`.
+- **Output:** artifact `theme-ios-<run id>`. Simulator evidence for those frames
+  only; reviewers must view the PNGs.

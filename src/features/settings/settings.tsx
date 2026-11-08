@@ -24,6 +24,7 @@ import {
 	useConnectionState,
 } from "@/features/auth/connection-provider";
 import { t } from "@/i18n";
+import type { ThemeMode } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
@@ -43,7 +44,6 @@ import { Segmented } from "@/ui/components/segmented";
 import { LTR_WRITING, TEXT_END_CLASS } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
-import type { ThemePreference } from "@/ui/tokens.gen";
 import { AccountRoutingSection } from "./account-routing-section";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
@@ -54,6 +54,7 @@ import {
 	retryStillOwned,
 	retryTargetMatches,
 } from "./refusal-in-view";
+import { ThemeRow } from "./theme-row";
 import { useRefusalReveal } from "./use-refusal-reveal";
 
 /**
@@ -486,29 +487,34 @@ export default function Settings() {
 				{/* -------------------------------------------------------- appearance */}
 				<View className="gap-3" testID={REGION.settingsAppearance}>
 					<SectionHeader label="Appearance" />
-					<Segmented<ThemePreference>
+					{/* The mode stays here, one tap away, as it was; WHICH palette each
+					 *  side paints is the Theme screen behind the row below (decision
+					 *  record § 5). The Segmented keeps its ids, so the settings flows
+					 *  and proofs that drive it are unchanged. */}
+					<Segmented<ThemeMode>
 						testID={CONTROL.settingsThemeGroup}
-						label="Theme"
+						label={t("mobile.settings.theme.mode_label")}
 						value={theme}
 						onChange={setPreference}
 						options={[
 							{
 								value: "system",
-								label: "System",
+								label: t("mobile.settings.theme.mode_system"),
 								testID: CONTROL.settingsThemeSystem,
 							},
 							{
 								value: "dark",
-								label: "Dark",
+								label: t("mobile.settings.theme.mode_dark"),
 								testID: CONTROL.settingsThemeDark,
 							},
 							{
 								value: "light",
-								label: "Light",
+								label: t("mobile.settings.theme.mode_light"),
 								testID: CONTROL.settingsThemeLight,
 							},
 						]}
 					/>
+					<ThemeRow />
 					<Segmented
 						testID={CONTROL.settingsTextScaleGroup}
 						label="Text size"
@@ -637,11 +643,11 @@ export default function Settings() {
 /** The theme preference, read through the UI store so this screen cannot hold a
  *  second copy of it. */
 function useThemePreference(): {
-	theme: ThemePreference;
-	setPreference: (preference: ThemePreference) => void;
+	theme: ThemeMode;
+	setPreference: (preference: ThemeMode) => void;
 } {
-	const theme = useUiStore((state) => state.themePreference);
-	const setPreference = useUiStore((state) => state.setThemePreference);
+	const theme = useUiStore((state) => state.themeSelection.mode);
+	const setPreference = useUiStore((state) => state.setThemeMode);
 	return { theme, setPreference };
 }
 

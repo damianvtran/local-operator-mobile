@@ -1,7 +1,12 @@
 import { Platform } from "react-native";
 
 import type { PromptImage } from "@/contracts";
-import { fromDataUrl, sniffImageMime } from "@/features/session/attach-rule";
+import {
+	fromDataUrl,
+	readClipboardImage,
+} from "@/features/session/attach-rule";
+import { removePickedCacheCopy } from "./picker-cache";
+import { consumePickerAsset, pickerPrivacy } from "./picker-privacy";
 
 /**
  * The pickers behind the composer's attach sheet, and the one page they all read
@@ -37,11 +42,16 @@ import { fromDataUrl, sniffImageMime } from "@/features/session/attach-rule";
  *  target's build has no photo library, and its sheet offers the file input
  *  instead (`attachActions`), so this resolves to that same chooser. */
 export const pickImageFromLibrary = async (): Promise<PromptImage | null> =>
-	Platform.OS === "web" ? pickOnWeb() : pickFromLibraryNative();
+	Platform.OS === "web"
+		? pickOnWeb()
+		: pickerPrivacy.run(pickFromLibraryNative);
 
-const pickFromLibraryNative = async (): Promise<PromptImage | null> => {
+const pickFromLibraryNative = async (
+	isCurrent: () => boolean,
+): Promise<PromptImage | null> => {
 	// Imported on call: the module is only evaluated on the platform that uses it.
 	const { launchImageLibraryAsync } = await import("expo-image-picker");
+	if (!isCurrent()) throw new Error("the image could not be read");
 	const result = await launchImageLibraryAsync({
 		mediaTypes: ["images"],
 		// The wire needs the bytes, and the picker can hand them over already
@@ -57,15 +67,7 @@ const pickFromLibraryNative = async (): Promise<PromptImage | null> => {
 	// the same fact: there are no bytes to attach. Thrown rather than returned as
 	// `null`, because "the reader chose nothing" and "the bytes are missing" are
 	// different outcomes and only one of them is silent.
-	if (typeof asset?.base64 !== "string" || asset.base64.length === 0) {
-		throw new Error("the image could not be read");
-	}
-	return {
-		data_b64: asset.base64,
-		// NOT `asset.mimeType`: see `sniffImageMime` — the picker's base64 output
-		// is always JPEG, while the reported type is the SOURCE asset's.
-		mime_type: sniffImageMime(asset.base64, asset.mimeType ?? ""),
-	};
+	return consumePickerAsset(asset, removePickedCacheCopy);
 };
 
 /** The document picker path (native) / the browser's file input (web) — the
@@ -158,16 +160,11 @@ export const pasteImage = async (): Promise<PromptImage | null> =>
 	Platform.OS === "web" ? pasteOnWeb() : pasteOnNative();
 
 const pasteOnNative = async (): Promise<PromptImage | null> => {
-	// Imported on call, like the pickers: evaluated only where it exists.
+	// Imported on call, like the pickers: evaluated only where it exists. The
+	// read itself (format, null arms) is `readClipboardImage`'s, shared with the
+	// composer's paste chip and covered by a test that needs no device.
 	const Clipboard = await import("expo-clipboard");
-	// PNG, deliberately: the pasteboard's dominant case is a screenshot, and a
-	// screenshot IS a PNG — asking for PNG re-encodes losslessly, where JPEG
-	// would quantise small text. A pasted photo pays a larger payload here, which
-	// the relay's own refit (contract § 8.10) absorbs on the way to the model.
-	const image = await Clipboard.getImageAsync({ format: "png" });
-	// `data` is a full data URL (`data:image/png;base64,…`), so the existing
-	// splitter reads the type from the header the platform itself wrote.
-	return image === null ? null : fromDataUrl(image.data, "image/png");
+	return readClipboardImage(Clipboard);
 };
 
 const pasteOnWeb = async (): Promise<PromptImage | null> => {

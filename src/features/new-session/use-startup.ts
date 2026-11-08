@@ -13,6 +13,10 @@ import {
 } from "@/connection/startup-authorization";
 import type { PromptImage } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
+import {
+	getDraftRecoveryRevision,
+	subscribeDraftRecovery,
+} from "@/features/session/draft-recovery";
 import type { StartSessionRequest } from "@/relay/endpoints";
 import type {
 	StartupCoordinator,
@@ -50,6 +54,11 @@ export function useStartup(
 		subscribeStartupAuthorization,
 		getStartupAuthorization,
 		getStartupAuthorization,
+	);
+	const recoveryRevision = useSyncExternalStore(
+		subscribeDraftRecovery,
+		getDraftRecoveryRevision,
+		getDraftRecoveryRevision,
 	);
 	const { relay } = useConnection();
 	const client = relay();
@@ -90,6 +99,9 @@ export function useStartup(
 
 	useFocusEffect(
 		useCallback(() => {
+			// A separate readiness notification rechecks an untouched editor without
+			// replacing its ordinary auth generation or resetting in-flight typing.
+			void recoveryRevision;
 			let live = true;
 			let attached: StartupCoordinator | null = null;
 			if (authorization && client) {
@@ -127,7 +139,7 @@ export function useStartup(
 				live = false;
 				attached?.pause();
 			};
-		}, [authorization, client, sessionId]),
+		}, [authorization, client, sessionId, recoveryRevision]),
 	);
 
 	useEffect(() => {

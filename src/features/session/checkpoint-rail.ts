@@ -243,6 +243,70 @@ export const layoutRailMarks = (
 	});
 };
 
+/** The least distance, in points, between two DRAWN marks (TestFlight 578:
+ *  "~25 tall light tick marks stacked down the right edge … too invasive and
+ *  crowded"). It IS the glyph clearance, not merely near it: the thinned set's
+ *  form is re-decided by `GLYPH_CLEARANCE_PT`, so any gap below it would draw a
+ *  merged failure as the same muted dash as its neighbours — the "a failure is
+ *  never hidden" promise `SALIENCE` makes would hold for the mark chosen but
+ *  not for what is painted (review round 1, m2: 30 marks on a 300 pt track
+ *  drew the error compact at 8 pt). Tying the two also thins the rail further. */
+export const RAIL_MIN_GAP_PT = GLYPH_CLEARANCE_PT;
+
+/** Which mark in a merged run speaks for it: a failure outranks an
+ *  interruption outranks the live tail outranks an ordinary turn. A merged run
+ *  must never hide the one mark a reader would scroll to find. */
+const SALIENCE: Record<RailVocabulary, number> = {
+	error: 5,
+	interrupted: 4,
+	open: 3,
+	complete: 2,
+	plain: 1,
+	user: 0,
+};
+
+/**
+ * Thin a laid-out rail so no two drawn marks sit closer than `minGapPt`.
+ *
+ * Greedy and order-preserving: a run starts at a mark, every following mark
+ * within `minGapPt` of the run's START joins it, and the run draws ONE mark —
+ * its most salient member (`SALIENCE`; the first on a tie) — at the run's
+ * start y. Drawing at the start rather than at the winner's own y is what
+ * makes the gap a guarantee: consecutive run starts are ≥ `minGapPt` apart by
+ * construction, whereas winners' own positions can sit a hair apart across a
+ * run boundary. The cost is that a merged mark can sit up to `minGapPt` above
+ * its own seq — sub-row on any real transcript, and the rail is a coarse
+ * where-am-I cue, not an index. The form is re-decided on the thinned set,
+ * with the same clearance rule `layoutRailMarks` uses.
+ */
+export const decimateRailMarks = (
+	placed: readonly PositionedRailMark[],
+	minGapPt: number = RAIL_MIN_GAP_PT,
+): PositionedRailMark[] => {
+	const runs: { yPt: number; mark: RailMark }[] = [];
+	for (const entry of placed) {
+		const run = runs.at(-1);
+		if (run !== undefined && entry.yPt - run.yPt < minGapPt) {
+			if (SALIENCE[entry.mark.vocabulary] > SALIENCE[run.mark.vocabulary])
+				run.mark = entry.mark;
+			continue;
+		}
+		runs.push({ yPt: entry.yPt, mark: entry.mark });
+	}
+	return runs.map((run, index) => {
+		const above = index > 0 ? run.yPt - (runs[index - 1]?.yPt ?? 0) : Infinity;
+		const below =
+			index < runs.length - 1
+				? (runs[index + 1]?.yPt ?? 0) - run.yPt
+				: Infinity;
+		return {
+			mark: run.mark,
+			yPt: run.yPt,
+			form: Math.min(above, below) >= GLYPH_CLEARANCE_PT ? "glyph" : "compact",
+		};
+	});
+};
+
 /**
  * Whether any mark is for a row this device does NOT hold — the rail's
  * beyond-the-window claim, and the one fact a frame of the rail cannot

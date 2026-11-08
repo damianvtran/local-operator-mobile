@@ -1,0 +1,1009 @@
+# The theme proof's one walk (decision record § 7, PR 2 frames): the Theme
+# picker in each mode, a search, the selected card, and home + session in twelve
+# themes. ONE connection, then every theme is applied through the picker the
+# reader uses — a card tap — so the frames prove the real path, not a seeded
+# preference. The search frame is taken with the keyboard up, as a reader sees
+# it; no keyboard key is tapped (iOS key labels are not app ids, and the
+# connect helper documents how fragile they are). Every capture is preceded by an assertion that the state it
+# claims is on screen (the selected card, the screen root), and the runner
+# refuses an incomplete frame set.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow: connect-relay-ios.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-mode-system"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-mode-system"
+      selected: true
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: picker-mode-system
+- tapOn:
+    id: "theme-picker-mode-light"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-mode-light"
+      selected: true
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: picker-mode-light
+- tapOn:
+    id: "theme-picker-mode-dark"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-mode-dark"
+      selected: true
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: picker-mode-dark
+- tapOn:
+    id: "theme-picker-search"
+- inputText: "rose"
+- assertVisible:
+    id: "theme-card-rosePine"
+- assertNotVisible:
+    id: "theme-card-dracula"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: picker-search-rose
+- tapOn:
+    id: "theme-picker-search"
+- eraseText: 10
+- scrollUntilVisible:
+    element:
+      id: "theme-card-dracula"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "theme-card-dracula"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-dracula"
+      selected: true
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: picker-selected-dracula
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-localOperatorDark"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-localOperatorDark"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-localOperatorDark"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-localOperatorDark
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-localOperatorDark
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-localOperatorLight"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-localOperatorLight"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-localOperatorLight"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-localOperatorLight
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-localOperatorLight
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-dracula"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-dracula"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-dracula"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-dracula
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-dracula
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-obsidian"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-obsidian"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-obsidian"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-obsidian
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-obsidian
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-rosePine"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-rosePine"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-rosePine"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-rosePine
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-rosePine
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-rosePineDawn"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-rosePineDawn"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-rosePineDawn"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-rosePineDawn
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-rosePineDawn
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-highContrastLight"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-highContrastLight"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-highContrastLight"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-highContrastLight
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-highContrastLight
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Direct remediation neighbor: catppuccinMocha (native ground adaptation).
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-catppuccinMocha"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-catppuccinMocha"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-catppuccinMocha"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-catppuccinMocha
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-catppuccinMocha
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Direct remediation neighbor: tokyoNightStorm (native ground adaptation).
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-tokyoNightStorm"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-tokyoNightStorm"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-tokyoNightStorm"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-tokyoNightStorm
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-tokyoNightStorm
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Direct remediation neighbor: duskfox (native ground adaptation).
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-duskfox"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-duskfox"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-duskfox"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-duskfox
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-duskfox
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Direct remediation neighbor: outrun (native ground adaptation).
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-outrun"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-outrun"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-outrun"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-outrun
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-outrun
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# Direct remediation neighbor: everforestLight (native ground adaptation).
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-everforestLight"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "theme-card-everforestLight"
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-everforestLight"
+      selected: true
+    timeout: 15000
+- tapOn:
+    id: "theme-picker-back"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-back"
+    direction: UP
+    timeout: 15000
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-everforestLight
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-6714def86197"
+    timeout: 15000
+- tapOn:
+    id: "session-row-6714def86197"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: session-everforestLight
+- tapOn:
+    id: "session-back"
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+
+# A real process restart, not another picker tap. Retain the saved custom route,
+# mode and per-mode slots, then READ the last selected theme before any write.
+# Initial launch above remains the only clearState:true in this walk.
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 78000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: home-persisted-everforestLight
+- tapOn:
+    id: "settings-button"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "settings-theme-row"
+    direction: DOWN
+    timeout: 15000
+- tapOn:
+    id: "settings-theme-row"
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "theme-picker-mode-light"
+      selected: true
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "theme-card-everforestLight"
+    direction: DOWN
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "theme-card-everforestLight"
+      selected: true
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: picker-persisted-everforestLight

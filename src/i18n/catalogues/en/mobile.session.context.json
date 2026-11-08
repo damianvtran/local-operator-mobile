@@ -1,4 +1,12 @@
 {
+	"mobile.session.chip.model_default": {
+		"role": "meta",
+		"note": "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row."
+	},
+	"mobile.session.chip.model_unknown": {
+		"role": "meta",
+		"note": "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name."
+	},
 	"mobile.session.conversation_details": {
 		"role": "heading",
 		"note": "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop."
@@ -6,5 +14,109 @@
 	"mobile.session.status_tray.hint": {
 		"role": "help",
 		"note": "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term."
+	},
+	"mobile.session.highlights.withheld": {
+		"role": "status",
+		"note": "Quiet line under a highlights block naming deliverables that were refused. {count} counts files; {reasons} is one or more of the withheld_* reason phrases, already translated; when several apply the app joins them pairwise with mobile.session.highlights.withheld_reasons_join. No final full stop."
+	},
+	"mobile.session.highlights.withheld_outside": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the file lies outside the folders the app may show. Lower case, no full stop."
+	},
+	"mobile.session.highlights.withheld_sensitive": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the file looks like a credential or secret and is never shown. Lower case, no full stop."
+	},
+	"mobile.session.highlights.withheld_missing": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the named file was deleted or never written. Lower case, no full stop."
+	},
+	"mobile.session.highlights.withheld_too_large": {
+		"role": "meta",
+		"note": "Reason phrase inside mobile.session.highlights.withheld: the file exceeds the preview size limit. Lower case, no full stop."
+	},
+	"mobile.session.highlights.sound_play": {
+		"role": "button",
+		"note": "Accessibility label of a sound cell's play control. {title} is the sound's own name, copied verbatim. No full stop."
+	},
+	"mobile.session.highlights.sound_pause": {
+		"role": "button",
+		"note": "Accessibility label of a sound cell's control while it plays. {title} is the sound's own name. No full stop."
+	},
+	"mobile.session.highlights.sound_untitled": {
+		"role": "meta",
+		"note": "Stand-in name for a sound with no title, used inside the play/pause labels. One noun."
+	},
+	"mobile.session.highlights.video_open": {
+		"role": "button",
+		"note": "Accessibility label of a video tile that starts playback. {name} is the file name, verbatim. No full stop."
+	},
+	"mobile.session.highlights.sounds_more": {
+		"role": "meta",
+		"note": "Line under the sounds grid when the row held back sounds beyond its bound. {count} counts sounds. No final full stop."
+	},
+	"mobile.session.highlights.sound_refused": {
+		"role": "status",
+		"note": "Shown under a sound cell when its bytes could not be fetched. {reason} is the relay's own sentence, passed through untranslated. No final full stop."
+	},
+	"mobile.session.highlights.withheld_reasons_join": {
+		"role": "meta",
+		"note": "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders."
+	},
+	"mobile.session.subagent_open": {
+		"role": "button",
+		"note": "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop."
+	},
+	"mobile.session.subagent_open_short": {
+		"role": "button",
+		"note": "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop."
+	},
+	"mobile.session.chip.model_resume_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop."
+	},
+	"mobile.session.chip.effort_resume_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop."
+	},
+	"mobile.session.chip.model_unrecorded_hint": {
+		"role": "help",
+		"note": "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop."
+	},
+	"mobile.session.pending_echo.sending": {
+		"role": "meta",
+		"note": "Caption under a message the user just sent, before the computer has acknowledged it. Lower case, trailing ellipsis, no full stop; mirrors the desktop relay's pending row. Must not read as an invitation to send again."
+	},
+	"mobile.session.pending_echo.sent": {
+		"role": "meta",
+		"note": "Caption under a just-sent prompt once the computer acknowledged it but before the conversation shows it. One lower-case word, no full stop."
+	},
+	"mobile.session.pending_echo.queued_step": {
+		"role": "meta",
+		"note": "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer."
+	},
+	"mobile.session.pending_echo.queued_next": {
+		"role": "meta",
+		"note": "Caption under a steering message the computer accepted after the turn ended: it will ride along with the next message the user sends. Lower case, em dash, no full stop."
+	},
+	"mobile.session.pending_echo.images": {
+		"role": "meta",
+		"note": "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop."
+	},
+	"mobile.session.pending_echo.not_sent": {
+		"role": "meta",
+		"note": "Caption, in danger colour, under a message the user sent that the computer definitively refused, kept on screen because the user had already typed something new. Tapping the message puts it back in the message box. Lower case, em dash, no full stop; same register as the other pending_echo captions."
+	},
+	"mobile.session.pending_echo.not_confirmed": {
+		"role": "meta",
+		"note": "Caption, in danger colour, under a message whose delivery is uncertain (the computer did not answer); the Retry button below the message box resends it. Lower case, em dash, no full stop."
+	},
+	"mobile.session.pending_echo.earlier_not_sent": {
+		"role": "status",
+		"note": "Error line above the message box when an earlier message was refused while the user was already typing the next one: it must be clear the EARLIER message failed, not the text in the box. {reason} is the relay's own short reason, in English. Points at the kept message above, which puts itself back on a tap."
+	},
+	"mobile.session.pending_echo.earlier_went_through": {
+		"role": "status",
+		"note": "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)."
 	}
 }

@@ -23,7 +23,7 @@
 
 import { relative } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	FIXTURE_ROOT,
 	listFixtureJsonFiles,
@@ -877,30 +877,27 @@ describe("malformed frames are rejected, never coerced", () => {
 			}),
 		],
 		[
-			"a section outside active|previous",
-			"sessionListFrame",
+			/* Per ROW: the list frame drops a row it cannot read rather than failing
+			 *  whole (`sessionRowsSchema`, TestFlight 628), so the row's own schema is
+			 *  where "rejected, never coerced" is asserted. */
+			"a session row whose section is outside active|previous",
+			"sessionSummary",
 			{
-				sessions: [
-					{
-						session_id: "abc",
-						section: "archived",
-						conversation_name: "",
-						cwd: "",
-						model_label: "",
-						streaming: false,
-						needs_attention: false,
-						unseen: false,
-						pending_kind: "",
-						leaving: "",
-						updating: "",
-						subagents_running: null,
-						subagents_queued: null,
-						todos_open: 0,
-						mtime: 1,
-					},
-				],
-				degraded: [],
-				capabilities: {},
+				session_id: "abc",
+				section: "archived",
+				conversation_name: "",
+				cwd: "",
+				model_label: "",
+				streaming: false,
+				needs_attention: false,
+				unseen: false,
+				pending_kind: "",
+				leaving: "",
+				updating: "",
+				subagents_running: null,
+				subagents_queued: null,
+				todos_open: 0,
+				mtime: 1,
 			},
 		],
 		[
@@ -1181,13 +1178,25 @@ describe("the receipts read absence as false and never invent a state", () => {
 	});
 
 	it("rejects a receipt that is not a boolean rather than coercing it", () => {
-		for (const bad of ["true", 1, {}, null]) {
-			const result = safeParsePayload("sessionListFrame", {
-				sessions: [{ ...durableOnlyRow, ended: bad }],
-				degraded: [],
-				capabilities: {},
-			});
-			expect(result.ok, `ended=${JSON.stringify(bad)}`).toBe(false);
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+		try {
+			for (const bad of ["true", 1, {}, null]) {
+				const row = safeParsePayload("sessionSummary", {
+					...durableOnlyRow,
+					ended: bad,
+				});
+				expect(row.ok, `ended=${JSON.stringify(bad)}`).toBe(false);
+				/* The list frame drops that row (TestFlight 628's per-row tolerance):
+				 *  it is never shown with a coerced receipt. */
+				const frame = parsePayload("sessionListFrame", {
+					sessions: [{ ...durableOnlyRow, ended: bad }],
+					degraded: [],
+					capabilities: {},
+				});
+				expect(frame.sessions, `ended=${JSON.stringify(bad)}`).toEqual([]);
+			}
+		} finally {
+			warn.mockRestore();
 		}
 	});
 

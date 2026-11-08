@@ -43,6 +43,7 @@ const writeFixture = (name: string, contents: string): string => {
 
 /** The valid plist, as the built product is expected to carry it. */
 const validPlist = (): Record<string, unknown> => ({
+	ITSAppUsesNonExemptEncryption: false,
 	CFBundleIdentifier: "com.localoperator.mobile",
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
@@ -74,6 +75,16 @@ const validManifest = (): string => `<?xml version="1.0" encoding="utf-8"?>
 `;
 
 describe("checkIosInfoPlist", () => {
+	it.each([undefined, true, "false"])(
+		"rejects a missing or non-boolean compliance flag: %s",
+		(value) => {
+			const plist = validPlist();
+			plist.ITSAppUsesNonExemptEncryption = value;
+			expect(checkIosInfoPlist(plist)).toEqual([
+				expect.objectContaining({ field: "ITSAppUsesNonExemptEncryption" }),
+			]);
+		},
+	);
 	it("passes the configuration the app asks for", () => {
 		expect(checkIosInfoPlist(validPlist())).toEqual([]);
 	});

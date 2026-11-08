@@ -73,8 +73,12 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		if (!fixture) return;
 		const theme = new URLSearchParams(location.search).get("tb-theme");
+		/* Main replaced `setThemePreference` with the selection/mode pair
+		 *  (`state/theme-preference.ts`); `setThemeMode` is its equivalent for the
+		 *  fixture's light/dark override, and a non-default mode is never undone by
+		 *  hydration (`hydrateThemeSelection` only fills the default). */
 		if (theme === "light" || theme === "dark")
-			useUiStore.getState().setThemePreference(theme);
+			useUiStore.getState().setThemeMode(theme);
 	}, [fixture]);
 	const value = useMemo(() => {
 		const accessToken = fixture

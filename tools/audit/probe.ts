@@ -785,6 +785,37 @@ export function u08GeometryProbe(indices: readonly number[]): string {
     u08Geometry: (${U08_GEOMETRY_SOURCE})(${JSON.stringify(indices)}, all, nodes, clipIntersection),`);
 }
 
+/**
+ * A cheap fingerprint of every element's computed spacing — the exact properties
+ * U-42 scores (padding and margin sides, row and column gap) — read in document
+ * order, so two readings are equal only when no spacing moved between them.
+ *
+ * WHY IT EXISTS. A tween that animates a spacing property is, for its duration,
+ * a fractional value no scale contains: #193's iphone-se audit failed twelve S5
+ * streaming/aborted cells on the pinned working line's `margin-bottom`
+ * (`-gap * (1 - progress)`, 180 ms) at -0.3…-3.7 pt, because the mock relay's
+ * first turn frame lands ~700 ms after the stream opens and the re-drive's
+ * extraction caught the dock's open (or close) mid-flight. The rubric scores the
+ * state the screen rests in, and the motion itself is the capture's `f0`/`f250`
+ * frames' business, so `auditCell` brackets the extraction with this reading and
+ * retakes it when the two disagree — the capture's "stamp, then confirm the
+ * readings did not move across the frame" rule, applied to geometry.
+ *
+ * Deliberately NOT part of `EXTRACT_PROBE` (whose bytes the U-08 hash guard
+ * pins as the measuring instrument) and deliberately not reduced motion: the
+ * audit keeps measuring the motion-enabled page the frames were taken of.
+ */
+export const SPACING_REST_PROBE = `(() => {
+  const out = [];
+  for (const el of document.querySelectorAll('body *')) {
+    const s = getComputedStyle(el);
+    out.push(s.paddingTop, s.paddingRight, s.paddingBottom, s.paddingLeft,
+      s.marginTop, s.marginRight, s.marginBottom, s.marginLeft, s.rowGap, s.columnGap);
+  }
+  return out.join('|');
+})();
+`;
+
 /** Interactive roles, per the rubric's U-09: a control with no name is a defect. */
 export const INTERACTIVE_AX_ROLES = new Set([
 	"button",

@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "已收到登录响应。请返回应用。",
+	"mobile.oauth.return": "返回 Local Operator",
+	"mobile.oauth.invalid": "未接受此登录请求。",
+	"mobile.oauth.failed": "无法完成登录。请重试。"
+}

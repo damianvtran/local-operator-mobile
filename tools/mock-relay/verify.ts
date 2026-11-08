@@ -1300,11 +1300,17 @@ async function main() {
 		/* The frame-level `unread` block (S1): `count` equals the number of
 		 * `unseen` rows in the SAME frame — the daemon's own equality test,
 		 * mirrored here so the mock cannot drift from it — and when the listing
-		 * declares `attention` degraded, `count` is ABSENT (never 0). */
+		 * declares ANY degradation, `count` (and `revision`) are ABSENT and the
+		 * block's `degraded` is a copy of the listing's. That is the daemon's rule
+		 * since its review MINOR-2 (`SessionTable._unread_aggregate` seeds from the
+		 * whole `listing_degraded()`, not the attention read alone); this check
+		 * used to encode the attention-only reading, which is how a client schema
+		 * requiring `revision` passed here and failed on a real degraded machine. */
 		const unreadBag = bag(bag(list.json).unread);
-		const attentionDegraded = arr(bag(list.json).degraded)
-			.map((marker) => str(marker))
-			.includes("attention");
+		const listingDegraded = arr(bag(list.json).degraded).map((marker) =>
+			str(marker),
+		);
+		const attentionDegraded = listingDegraded.length > 0;
 		const unseenRows = rows.filter((row) => bag(row).unseen === true).length;
 		check(
 			`scenario '${name}' unread.count equals its unseen rows (S1 equality)`,
@@ -1316,11 +1322,16 @@ async function main() {
 			attentionDegraded ? "absent" : unseenRows,
 		);
 		check(
-			`scenario '${name}' unread.degraded mirrors the attention marker`,
+			`scenario '${name}' unread.degraded mirrors the listing's markers`,
 			arr(unreadBag.degraded)
 				.map((marker) => str(marker))
 				.join(","),
-			attentionDegraded ? "attention" : "",
+			listingDegraded.join(","),
+		);
+		check(
+			`scenario '${name}' unread.revision is absent exactly when the listing is degraded`,
+			unreadBag.revision === undefined ? "absent" : "present",
+			attentionDegraded ? "absent" : "present",
 		);
 		const projectionBag = bag(projection);
 		const note =
@@ -1444,6 +1455,9 @@ async function main() {
 			process.execPath,
 			[
 				join(WORKTREE, "tools", "visual", "capture.ts"),
+				// These standalone fixtures paint kit tokens, not the app's defaults.
+				"--canvas-context",
+				"fixture",
 				"--dir",
 				join(WORKTREE, "e2e", "fixtures", "audit-canary"),
 				"--out",
@@ -1948,6 +1962,9 @@ async function main() {
 				process.execPath,
 				[
 					join(WORKTREE, "tools", "visual", "capture.ts"),
+					// These standalone fixtures paint kit tokens, not the app's defaults.
+					"--canvas-context",
+					"fixture",
 					"--dir",
 					dir,
 					"--out",
@@ -2142,6 +2159,9 @@ async function main() {
 				process.execPath,
 				[
 					join(WORKTREE, "tools", "visual", "capture.ts"),
+					// These standalone fixtures paint kit tokens, not the app's defaults.
+					"--canvas-context",
+					"fixture",
 					"--dir",
 					dir,
 					"--out",
@@ -2996,6 +3016,9 @@ async function main() {
 				process.execPath,
 				[
 					join(WORKTREE, "tools", "visual", "capture.ts"),
+					// These standalone fixtures paint kit tokens, not the app's defaults.
+					"--canvas-context",
+					"fixture",
 					"--dir",
 					join(WORKTREE, "e2e", "fixtures", "audit-canary"),
 					"--out",
@@ -3799,7 +3822,7 @@ async function main() {
 			// repeatedly and prove nothing about de-duplication.
 			const lastFrame = framesOf(raw).at(-1);
 			const rows = arr(bag(lastFrame?.data).transcript).filter(
-				(row) => str(bag(row).id) === `user-${commandId}`,
+				(row) => str(bag(row).id) === commandId,
 			);
 			check(
 				"duplicate-delivery: exactly one transcript row carries the command",

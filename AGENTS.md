@@ -30,6 +30,47 @@ once chosen — do not assume one before it lands.
   or build. Repeat until no blocker/major findings remain and the round was
   taken on the current head. The reviewer must be a different agent from the
   author.
+- **A harness-only delta does not open a numbered round.** Rounds exist to
+  catch defects in what ships; PR #156 ran 40 rounds for a product whose round 3
+  was clean, because every proof-harness push re-staled the head. After a clean
+  code round on head `R`, a delta `R..H` is harness-only when: the base is
+  unchanged (same merge-base), `.github/harness-paths` is unchanged, every
+  changed path matches a `harness:` glob, and no changed path is a `ship:` path
+  or named by one. Paste the harness delta proof
+  (`python scripts/harness_delta_proof.py <R> <H> --base origin/main --repo .`
+  from local-operator: exit 0 harness-only, 1 round required, 2 could not be
+  computed). It is a reachability check that fails closed, not a proof that a
+  change cannot alter behaviour: anything it cannot read or resolve is a round.
+  No script output, no carve-out — a hand-run `git diff`/`git grep` is weaker
+  (blind to `@/` aliases and extensionless imports) and does not qualify. The
+  accumulated delta then gets ONE `### Harness delta check — <R>..<H>` at the
+  merge gate by an independent reviewer, reading for gate weakening (deleted or
+  loosened assertions, skips, widened tolerances, `continue-on-error`, a probe
+  that cannot fail) and for any harness file that runs with release triggers,
+  secrets, signing or publishing; a blocker/major there is fixed like any other.
+  QA is retained. Any failed condition — one product byte, a script `release.yml`
+  runs even though it lives under `scripts/ci/`, a manifest edit, a moved
+  base — is a normal `R..H` round.
+- **Split the harness out when it outgrows the product.** At every review
+  request run the proof with `--split` (or count added lines in
+  `git diff --numstat <merge-base>..<head>` under `harness:` globs vs elsewhere).
+  Harness added lines > product added lines → the harness moves to its own pull
+  request with its own review and negative control; the feature keeps a minimal
+  proof. PR #156 crossed at round 1 (2,787 vs 2,764) and stayed over from round
+  11 (9,780 vs 4,730 at the end).
+- **Measure before you cap; name the invariant.** No new timeout, cap,
+  threshold or retry count without the measured distribution it bounds (n,
+  median, max, source), set above the observed max. Every mechanism or shortcut
+  (cache, reuse, skip, retry, fixture) names the invariant it relies on and the
+  check that proves it; no check, no shortcut. PR #156: a 20 s hierarchy-read cap
+  against measured 66–173 s reads, and candidate-app reuse that assumed a fixed
+  fixture port when the fixture used an ephemeral one (the round-36 blocker).
+- **Converge `main` once, at the merge gate.** Do not merge or rebase `main` into
+  a pull request mid-review: PR #156's 13 merges of `main` each cost a
+  convergence proof and often a round. The exception is a DIRTY pull request
+  whose required run cannot start — a `pull_request` workflow gets no merge ref
+  on a conflicting PR and silently never runs — and there, first dispatch the
+  native proof with `workflow_dispatch` on the branch ref instead.
 - **Visual changes add a design round** (`### Design review — round <N>`,
   `D`-prefixed findings) with rendered screenshots — light and dark, phone size,
   before and after. A green test is not visual evidence.
@@ -80,6 +121,18 @@ This repository is **public**.
   target, so contributors without a Mac or an Android toolchain can still work.
 - **Do not install simulators, emulators, SDKs, or JDKs as a side effect** of a
   script or test. If a task truly needs one, say so in the pull request.
+- **Native evidence has a budget: 3 failed-or-cancelled attempts or 6 h from the
+  first dispatch, whichever comes first.** On PR #156 the median failed hosted
+  native attempt took 70 min and they started a median 118 min apart, so the two
+  limits are the same budget measured two ways; 0 of its 36 failures found a
+  product defect, and 20 of them came after the last product commit. Failures of
+  harness mechanisms you wrote count. When the budget is spent, stop dispatching
+  and escalate to the maintainer with options and their consequences: merge on
+  unit/contract tests plus manual device or TestFlight QA; split the harness out
+  and merge the feature on what passed; drop the row from native acceptance; or
+  extend the budget by a stated amount for a stated reason. No retry and no new
+  mechanism while that is open. A lane that has never once passed on the PR
+  after 3 attempts is a harness problem until shown otherwise.
 
 ## Scratch files and captures
 

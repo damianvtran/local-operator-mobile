@@ -13,27 +13,37 @@ export function scopedStore(
 ): PrivateStore {
 	const suffix = `:authorization:${encodeURIComponent(scope ?? "")}`;
 	return {
-		get: (key) =>
-			scope === null ? Promise.resolve(null) : store.get(key + suffix),
+		get: async (key) => {
+			if (!scopeCurrent(scope)) return null;
+			const value = await store.get(key + suffix);
+			return scopeCurrent(scope) ? value : null;
+		},
 		/* Both this and `deviceStore` register with the barrier: the scoped store is
 		 *  the choke point for per-generation data, the device store for the unscoped
 		 *  draft family, and a caller may hold either. Registration is idempotent. */
 		set: (key, value) =>
-			scope === null
+			!scopeCurrent(scope)
 				? Promise.reject(
-						new Error("no admitted authorization for private storage"),
+						new Error(
+							writers.closed
+								? "private storage is closed while sign-out completes"
+								: "no admitted authorization for private storage",
+						),
 					)
 				: runPrivateWrite(() => store.set(key + suffix, value)),
 		remove: (key) =>
-			scope === null
+			!scopeCurrent(scope)
 				? Promise.resolve()
 				: runPrivateWrite(() => store.remove(key + suffix)),
-		keys: async () =>
-			scope === null
+		keys: async () => {
+			if (!scopeCurrent(scope)) return [];
+			const keys = await store.keys();
+			return !scopeCurrent(scope)
 				? []
-				: (await store.keys())
+				: keys
 						.filter((key) => key.endsWith(suffix))
-						.map((key) => key.slice(0, -suffix.length)),
+						.map((key) => key.slice(0, -suffix.length));
+		},
 	};
 }
 
@@ -50,10 +60,17 @@ export function scopedStore(
  */
 interface WriterBarrier {
 	closed: boolean;
+	/** undefined is for injected standalone stores; production admission always
+	 * supplies the exact generation so stale captured stores cannot repopulate. */
+	scope?: string;
 	tails: Set<Promise<unknown>>;
 }
 
 const writers: WriterBarrier = { closed: false, tails: new Set() };
+const scopeCurrent = (scope: string | null): boolean =>
+	scope !== null &&
+	!writers.closed &&
+	(writers.scope === undefined || writers.scope === scope);
 
 /** Every private write goes through this, so the barrier cannot be bypassed by a
  *  caller that forgot to ask. A closed barrier rejects rather than silently
@@ -86,7 +103,8 @@ export async function awaitPrivateWrites(): Promise<void> {
 
 /** A newly admitted owner may write again. Called from admission, not from a
  *  storage helper, so "open" always means "an authorization is in force". */
-export function reopenPrivateWrites(): void {
+export function reopenPrivateWrites(scope?: string): void {
+	writers.scope = scope;
 	writers.closed = false;
 }
 

@@ -47,31 +47,108 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.close_conversations"
+	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.more"
+	| "mobile.chrome.composer.open_queue"
+	| "mobile.chrome.composer.queued"
+	| "mobile.chrome.destination.inbox"
+	| "mobile.chrome.destination.inbox_count"
+	| "mobile.chrome.destination.past"
+	| "mobile.chrome.destination.schedules"
+	| "mobile.chrome.destinations"
+	| "mobile.chrome.home.connect"
+	| "mobile.chrome.home.connecting"
+	| "mobile.chrome.home.greeting"
+	| "mobile.chrome.home.reconnecting"
+	| "mobile.chrome.home.saved_draft"
+	| "mobile.chrome.home.sign_in"
+	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.paste.denied"
+	| "mobile.composer_input.paste.image"
+	| "mobile.composer_input.paste.image_hint"
+	| "mobile.composer_input.voice.discard"
+	| "mobile.composer_input.voice.finish"
+	| "mobile.composer_input.voice.mic_setup"
+	| "mobile.composer_input.voice.mic_setup_hint"
+	| "mobile.composer_input.voice.setup_needed"
+	| "mobile.computers.account_help"
+	| "mobile.computers.account_mismatch"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
+	| "mobile.computers.billing_help"
 	| "mobile.computers.connecting"
+	| "mobile.computers.connection_response"
+	| "mobile.computers.disabled_help"
+	| "mobile.computers.harness_help"
+	| "mobile.computers.hide_details"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.password_placeholder"
+	| "mobile.computers.protected"
+	| "mobile.computers.retry"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
+	| "mobile.computers.session_error"
+	| "mobile.computers.session_error_help"
+	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
 	| "mobile.computers.switch"
+	| "mobile.computers.transport.custom"
+	| "mobile.computers.transport.radient"
+	| "mobile.home.chip.effort_chosen"
+	| "mobile.home.chip.effort_default"
+	| "mobile.home.chip.effort_default_short"
+	| "mobile.home.chip.effort_default_unnamed"
+	| "mobile.home.chip.model_chosen"
+	| "mobile.home.chip.model_default"
+	| "mobile.home.chip.model_no_default"
+	| "mobile.home.chip.model_no_default_label"
 	| "mobile.home.connect_disabled_reason"
+	| "mobile.home.effort.high"
+	| "mobile.home.effort.low"
+	| "mobile.home.effort.max"
+	| "mobile.home.effort.medium"
+	| "mobile.home.effort.minimal"
+	| "mobile.home.effort.none"
+	| "mobile.home.effort.xhigh"
 	| "mobile.home.folders_read_failed"
+	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
-	| "mobile.home.options.apply"
+	| "mobile.home.models_read_failed"
+	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
-	| "mobile.home.options.title"
+	| "mobile.home.picker.badge_default"
+	| "mobile.home.picker.badge_this_chat"
+	| "mobile.home.picker.effort_none"
+	| "mobile.home.picker.effort_title"
+	| "mobile.home.picker.effort_unknown"
+	| "mobile.home.picker.effort_unsupported"
+	| "mobile.home.picker.effort_use_default"
+	| "mobile.home.picker.folder_home"
+	| "mobile.home.picker.folder_other"
+	| "mobile.home.picker.folder_outside"
+	| "mobile.home.picker.folder_title"
+	| "mobile.home.picker.folder_tmp"
+	| "mobile.home.picker.folder_too_long"
+	| "mobile.home.picker.folder_use_path"
+	| "mobile.home.picker.loading"
+	| "mobile.home.picker.model_empty"
+	| "mobile.home.picker.model_no_match"
+	| "mobile.home.picker.model_search"
+	| "mobile.home.picker.model_title"
+	| "mobile.home.picker.not_connected"
+	| "mobile.home.picker.source_chosen"
+	| "mobile.home.picker.source_default"
 	| "mobile.home.queue.discard"
 	| "mobile.home.queue.restore"
 	| "mobile.home.queue.sheet_title"
@@ -125,6 +202,19 @@ export type CatalogueKey =
 	| "mobile.library.title"
 	| "mobile.notifications.answer"
 	| "mobile.notifications.back"
+	| "mobile.notifications.channel.airy_whistle"
+	| "mobile.notifications.channel.bubble_chord"
+	| "mobile.notifications.channel.bubble_pulse"
+	| "mobile.notifications.channel.description"
+	| "mobile.notifications.channel.felt_marimba"
+	| "mobile.notifications.channel.hum_swell"
+	| "mobile.notifications.channel.signal_handshake"
+	| "mobile.notifications.channel.silent"
+	| "mobile.notifications.channel.soft_pulse"
+	| "mobile.notifications.channel.system"
+	| "mobile.notifications.channel.tape_warble"
+	| "mobile.notifications.channel.task_complete"
+	| "mobile.notifications.channel.two_note_chime"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -137,6 +227,10 @@ export type CatalogueKey =
 	| "mobile.notifications.load_failed"
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.title"
+	| "mobile.oauth.failed"
+	| "mobile.oauth.invalid"
+	| "mobile.oauth.received"
+	| "mobile.oauth.return"
 	| "mobile.projects.delete_body"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
@@ -190,8 +284,36 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
 	| "mobile.schedules.truncated"
+	| "mobile.session.chip.effort_resume_hint"
+	| "mobile.session.chip.model_default"
+	| "mobile.session.chip.model_resume_hint"
+	| "mobile.session.chip.model_unknown"
+	| "mobile.session.chip.model_unrecorded_hint"
 	| "mobile.session.conversation_details"
+	| "mobile.session.highlights.sound_pause"
+	| "mobile.session.highlights.sound_play"
+	| "mobile.session.highlights.sound_refused"
+	| "mobile.session.highlights.sound_untitled"
+	| "mobile.session.highlights.sounds_more"
+	| "mobile.session.highlights.video_open"
+	| "mobile.session.highlights.withheld"
+	| "mobile.session.highlights.withheld_missing"
+	| "mobile.session.highlights.withheld_outside"
+	| "mobile.session.highlights.withheld_reasons_join"
+	| "mobile.session.highlights.withheld_sensitive"
+	| "mobile.session.highlights.withheld_too_large"
+	| "mobile.session.pending_echo.earlier_not_sent"
+	| "mobile.session.pending_echo.earlier_went_through"
+	| "mobile.session.pending_echo.images"
+	| "mobile.session.pending_echo.not_confirmed"
+	| "mobile.session.pending_echo.not_sent"
+	| "mobile.session.pending_echo.queued_next"
+	| "mobile.session.pending_echo.queued_step"
+	| "mobile.session.pending_echo.sending"
+	| "mobile.session.pending_echo.sent"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent_open"
+	| "mobile.session.subagent_open_short"
 	| "mobile.session_health.control_hint"
 	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
@@ -203,6 +325,41 @@ export type CatalogueKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.theme.caption_forced"
+	| "mobile.settings.theme.caption_system"
+	| "mobile.settings.theme.card_dark"
+	| "mobile.settings.theme.card_dark_selected"
+	| "mobile.settings.theme.card_light"
+	| "mobile.settings.theme.card_light_selected"
+	| "mobile.settings.theme.mode_dark"
+	| "mobile.settings.theme.mode_label"
+	| "mobile.settings.theme.mode_light"
+	| "mobile.settings.theme.mode_system"
+	| "mobile.settings.theme.no_match"
+	| "mobile.settings.theme.row_label"
+	| "mobile.settings.theme.search_label"
+	| "mobile.settings.theme.search_placeholder"
+	| "mobile.settings.theme.section_dark"
+	| "mobile.settings.theme.section_light"
+	| "mobile.settings.theme.title"
+	| "mobile.signin.diagnostics"
+	| "mobile.signin.failed"
+	| "mobile.signin.hide_diagnostics"
+	| "mobile.signin.progress"
+	| "mobile.signin.retry"
+	| "mobile.signin.show_diagnostics"
+	| "mobile.signin.stage_browser"
+	| "mobile.signin.stage_cancelled"
+	| "mobile.signin.stage_discovering"
+	| "mobile.signin.stage_exchanging"
+	| "mobile.signin.stage_failed"
+	| "mobile.signin.stage_idle"
+	| "mobile.signin.stage_persisting"
+	| "mobile.signin.stage_retiring"
+	| "mobile.signin.stage_signed_in"
+	| "mobile.signin.stage_starting"
+	| "mobile.signin.stage_unavailable"
+	| "mobile.signin.superseded"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
 	| "mobile.team_bridge.delivery.held"
@@ -307,10 +464,29 @@ export type CatalogueKey =
 	| "mobile.team_bridge.thread.send_retry"
 	| "mobile.team_bridge.title"
 	| "mobile.team_bridge.unread"
+	| "relay.chrome.drawer.close"
+	| "relay.chrome.drawer.library"
+	| "relay.chrome.drawer.open"
+	| "relay.chrome.drawer.past"
+	| "relay.chrome.drawer.projects"
+	| "relay.chrome.drawer.settings"
+	| "relay.chrome.list.search_label"
+	| "relay.chrome.list.search_open"
+	| "relay.chrome.row.more"
+	| "relay.chrome.row.tags"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
+	| "relay.chrome.session.subtitle.idle"
 	| "relay.chrome.session.subtitle.not_answering"
+	| "relay.chrome.session.subtitle.waiting"
+	| "relay.chrome.session.subtitle.working"
+	| "relay.chrome.session.subtitle.working_plain"
+	| "relay.chrome.session.tray.agents"
+	| "relay.chrome.session.tray.tasks"
+	| "relay.composer.action.stop"
+	| "relay.composer.action.stop_agent"
+	| "relay.composer.action.stopping"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
 	| "relay.health.ended_send_failed"
@@ -338,31 +514,100 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.close_conversations"
+	| "mobile.chrome.composer.dismiss_keyboard"
+	| "mobile.chrome.composer.more"
+	| "mobile.chrome.composer.open_queue"
+	| "mobile.chrome.destination.inbox"
+	| "mobile.chrome.destination.past"
+	| "mobile.chrome.destination.schedules"
+	| "mobile.chrome.destinations"
+	| "mobile.chrome.home.connect"
+	| "mobile.chrome.home.greeting"
+	| "mobile.chrome.home.saved_draft"
+	| "mobile.chrome.home.sign_in"
+	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.paste.denied"
+	| "mobile.composer_input.paste.image"
+	| "mobile.composer_input.paste.image_hint"
+	| "mobile.composer_input.voice.discard"
+	| "mobile.composer_input.voice.finish"
+	| "mobile.composer_input.voice.mic_setup"
+	| "mobile.composer_input.voice.mic_setup_hint"
+	| "mobile.composer_input.voice.setup_needed"
+	| "mobile.computers.account_help"
+	| "mobile.computers.account_mismatch"
 	| "mobile.computers.add"
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
+	| "mobile.computers.billing_help"
 	| "mobile.computers.connecting"
+	| "mobile.computers.connection_response"
+	| "mobile.computers.disabled_help"
+	| "mobile.computers.harness_help"
+	| "mobile.computers.hide_details"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.password_placeholder"
+	| "mobile.computers.protected"
+	| "mobile.computers.retry"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
+	| "mobile.computers.session_error"
+	| "mobile.computers.session_error_help"
+	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
 	| "mobile.computers.switch"
+	| "mobile.computers.transport.custom"
+	| "mobile.computers.transport.radient"
+	| "mobile.home.chip.effort_default_short"
+	| "mobile.home.chip.effort_default_unnamed"
+	| "mobile.home.chip.model_no_default"
+	| "mobile.home.chip.model_no_default_label"
 	| "mobile.home.connect_disabled_reason"
+	| "mobile.home.effort.high"
+	| "mobile.home.effort.low"
+	| "mobile.home.effort.max"
+	| "mobile.home.effort.medium"
+	| "mobile.home.effort.minimal"
+	| "mobile.home.effort.none"
+	| "mobile.home.effort.xhigh"
 	| "mobile.home.folders_read_failed"
+	| "mobile.home.folders_read_sign_in"
 	| "mobile.home.greeting"
-	| "mobile.home.options.apply"
+	| "mobile.home.models_read_failed"
+	| "mobile.home.options.default_model"
 	| "mobile.home.options.fixed"
 	| "mobile.home.options.folder"
-	| "mobile.home.options.title"
+	| "mobile.home.picker.badge_default"
+	| "mobile.home.picker.badge_this_chat"
+	| "mobile.home.picker.effort_none"
+	| "mobile.home.picker.effort_title"
+	| "mobile.home.picker.effort_unknown"
+	| "mobile.home.picker.effort_unsupported"
+	| "mobile.home.picker.effort_use_default"
+	| "mobile.home.picker.folder_home"
+	| "mobile.home.picker.folder_other"
+	| "mobile.home.picker.folder_outside"
+	| "mobile.home.picker.folder_title"
+	| "mobile.home.picker.folder_tmp"
+	| "mobile.home.picker.folder_too_long"
+	| "mobile.home.picker.folder_use_path"
+	| "mobile.home.picker.loading"
+	| "mobile.home.picker.model_empty"
+	| "mobile.home.picker.model_no_match"
+	| "mobile.home.picker.model_search"
+	| "mobile.home.picker.model_title"
+	| "mobile.home.picker.not_connected"
+	| "mobile.home.picker.source_chosen"
+	| "mobile.home.picker.source_default"
 	| "mobile.home.queue.discard"
 	| "mobile.home.queue.restore"
 	| "mobile.home.queue.sheet_title"
@@ -414,6 +659,19 @@ export type NoParamKey =
 	| "mobile.library.title"
 	| "mobile.notifications.answer"
 	| "mobile.notifications.back"
+	| "mobile.notifications.channel.airy_whistle"
+	| "mobile.notifications.channel.bubble_chord"
+	| "mobile.notifications.channel.bubble_pulse"
+	| "mobile.notifications.channel.description"
+	| "mobile.notifications.channel.felt_marimba"
+	| "mobile.notifications.channel.hum_swell"
+	| "mobile.notifications.channel.signal_handshake"
+	| "mobile.notifications.channel.silent"
+	| "mobile.notifications.channel.soft_pulse"
+	| "mobile.notifications.channel.system"
+	| "mobile.notifications.channel.tape_warble"
+	| "mobile.notifications.channel.task_complete"
+	| "mobile.notifications.channel.two_note_chime"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -426,6 +684,10 @@ export type NoParamKey =
 	| "mobile.notifications.load_failed"
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.title"
+	| "mobile.oauth.failed"
+	| "mobile.oauth.invalid"
+	| "mobile.oauth.received"
+	| "mobile.oauth.return"
 	| "mobile.projects.draft_kept_note"
 	| "mobile.projects.milestone_slash_note"
 	| "mobile.projects.milestones.none"
@@ -457,8 +719,26 @@ export type NoParamKey =
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
+	| "mobile.session.chip.effort_resume_hint"
+	| "mobile.session.chip.model_default"
+	| "mobile.session.chip.model_resume_hint"
+	| "mobile.session.chip.model_unknown"
+	| "mobile.session.chip.model_unrecorded_hint"
 	| "mobile.session.conversation_details"
+	| "mobile.session.highlights.sound_untitled"
+	| "mobile.session.highlights.withheld_missing"
+	| "mobile.session.highlights.withheld_outside"
+	| "mobile.session.highlights.withheld_sensitive"
+	| "mobile.session.highlights.withheld_too_large"
+	| "mobile.session.pending_echo.earlier_went_through"
+	| "mobile.session.pending_echo.not_confirmed"
+	| "mobile.session.pending_echo.not_sent"
+	| "mobile.session.pending_echo.queued_next"
+	| "mobile.session.pending_echo.queued_step"
+	| "mobile.session.pending_echo.sending"
+	| "mobile.session.pending_echo.sent"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent_open_short"
 	| "mobile.session_health.control_hint"
 	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
@@ -470,6 +750,32 @@ export type NoParamKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.theme.mode_dark"
+	| "mobile.settings.theme.mode_label"
+	| "mobile.settings.theme.mode_light"
+	| "mobile.settings.theme.mode_system"
+	| "mobile.settings.theme.no_match"
+	| "mobile.settings.theme.search_label"
+	| "mobile.settings.theme.search_placeholder"
+	| "mobile.settings.theme.title"
+	| "mobile.signin.diagnostics"
+	| "mobile.signin.failed"
+	| "mobile.signin.hide_diagnostics"
+	| "mobile.signin.progress"
+	| "mobile.signin.retry"
+	| "mobile.signin.show_diagnostics"
+	| "mobile.signin.stage_browser"
+	| "mobile.signin.stage_cancelled"
+	| "mobile.signin.stage_discovering"
+	| "mobile.signin.stage_exchanging"
+	| "mobile.signin.stage_failed"
+	| "mobile.signin.stage_idle"
+	| "mobile.signin.stage_persisting"
+	| "mobile.signin.stage_retiring"
+	| "mobile.signin.stage_signed_in"
+	| "mobile.signin.stage_starting"
+	| "mobile.signin.stage_unavailable"
+	| "mobile.signin.superseded"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
 	| "mobile.team_bridge.delivery.help"
@@ -561,10 +867,26 @@ export type NoParamKey =
 	| "mobile.team_bridge.thread.send_error"
 	| "mobile.team_bridge.thread.send_retry"
 	| "mobile.team_bridge.title"
+	| "relay.chrome.drawer.close"
+	| "relay.chrome.drawer.library"
+	| "relay.chrome.drawer.open"
+	| "relay.chrome.drawer.past"
+	| "relay.chrome.drawer.projects"
+	| "relay.chrome.drawer.settings"
+	| "relay.chrome.list.search_label"
+	| "relay.chrome.list.search_open"
+	| "relay.chrome.row.more"
+	| "relay.chrome.row.tags"
 	| "relay.chrome.session.resume"
 	| "relay.chrome.session.resuming"
 	| "relay.chrome.session.subtitle.ended"
+	| "relay.chrome.session.subtitle.idle"
 	| "relay.chrome.session.subtitle.not_answering"
+	| "relay.chrome.session.subtitle.waiting"
+	| "relay.chrome.session.subtitle.working_plain"
+	| "relay.composer.action.stop"
+	| "relay.composer.action.stop_agent"
+	| "relay.composer.action.stopping"
 	| "relay.health.dropped_detail"
 	| "relay.health.ended_detail"
 	| "relay.health.ended_send_failed"
@@ -595,31 +917,108 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.chrome.close_conversations": NoParams;
+	"mobile.chrome.composer.dismiss_keyboard": NoParams;
+	"mobile.chrome.composer.more": NoParams;
+	"mobile.chrome.composer.open_queue": NoParams;
+	"mobile.chrome.composer.queued": { count: number };
+	"mobile.chrome.destination.inbox": NoParams;
+	"mobile.chrome.destination.inbox_count": { count: number };
+	"mobile.chrome.destination.past": NoParams;
+	"mobile.chrome.destination.schedules": NoParams;
+	"mobile.chrome.destinations": NoParams;
+	"mobile.chrome.home.connect": NoParams;
+	"mobile.chrome.home.connecting": { host: string | number };
+	"mobile.chrome.home.greeting": NoParams;
+	"mobile.chrome.home.reconnecting": { host: string | number };
+	"mobile.chrome.home.saved_draft": NoParams;
+	"mobile.chrome.home.sign_in": NoParams;
+	"mobile.chrome.new_chat": NoParams;
 	"mobile.common.back": NoParams;
 	"mobile.common.cancel": NoParams;
 	"mobile.common.done": NoParams;
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
 	"mobile.common.try_again": NoParams;
+	"mobile.composer_input.paste.denied": NoParams;
+	"mobile.composer_input.paste.image": NoParams;
+	"mobile.composer_input.paste.image_hint": NoParams;
+	"mobile.composer_input.voice.discard": NoParams;
+	"mobile.composer_input.voice.finish": NoParams;
+	"mobile.composer_input.voice.mic_setup": NoParams;
+	"mobile.composer_input.voice.mic_setup_hint": NoParams;
+	"mobile.composer_input.voice.setup_needed": NoParams;
+	"mobile.computers.account_help": NoParams;
+	"mobile.computers.account_mismatch": NoParams;
 	"mobile.computers.add": NoParams;
 	"mobile.computers.added.stays_listed": NoParams;
 	"mobile.computers.badge.active": NoParams;
 	"mobile.computers.badge.connecting": NoParams;
+	"mobile.computers.billing_help": NoParams;
 	"mobile.computers.connecting": NoParams;
+	"mobile.computers.connection_response": NoParams;
+	"mobile.computers.disabled_help": NoParams;
+	"mobile.computers.harness_help": NoParams;
+	"mobile.computers.hide_details": NoParams;
 	"mobile.computers.none_on_phone": NoParams;
 	"mobile.computers.password_placeholder": NoParams;
+	"mobile.computers.protected": NoParams;
+	"mobile.computers.retry": NoParams;
 	"mobile.computers.section.not_connected": NoParams;
 	"mobile.computers.section.on_phone": NoParams;
+	"mobile.computers.session_error": NoParams;
+	"mobile.computers.session_error_help": NoParams;
+	"mobile.computers.show_details": NoParams;
 	"mobile.computers.sign_out": NoParams;
 	"mobile.computers.signing_out": NoParams;
 	"mobile.computers.switch": NoParams;
+	"mobile.computers.transport.custom": NoParams;
+	"mobile.computers.transport.radient": NoParams;
+	"mobile.home.chip.effort_chosen": { effort: string | number };
+	"mobile.home.chip.effort_default": { effort: string | number };
+	"mobile.home.chip.effort_default_short": NoParams;
+	"mobile.home.chip.effort_default_unnamed": NoParams;
+	"mobile.home.chip.model_chosen": { model: string | number };
+	"mobile.home.chip.model_default": { model: string | number };
+	"mobile.home.chip.model_no_default": NoParams;
+	"mobile.home.chip.model_no_default_label": NoParams;
 	"mobile.home.connect_disabled_reason": NoParams;
+	"mobile.home.effort.high": NoParams;
+	"mobile.home.effort.low": NoParams;
+	"mobile.home.effort.max": NoParams;
+	"mobile.home.effort.medium": NoParams;
+	"mobile.home.effort.minimal": NoParams;
+	"mobile.home.effort.none": NoParams;
+	"mobile.home.effort.xhigh": NoParams;
 	"mobile.home.folders_read_failed": NoParams;
+	"mobile.home.folders_read_sign_in": NoParams;
 	"mobile.home.greeting": NoParams;
-	"mobile.home.options.apply": NoParams;
+	"mobile.home.models_read_failed": NoParams;
+	"mobile.home.options.default_model": NoParams;
 	"mobile.home.options.fixed": NoParams;
 	"mobile.home.options.folder": NoParams;
-	"mobile.home.options.title": NoParams;
+	"mobile.home.picker.badge_default": NoParams;
+	"mobile.home.picker.badge_this_chat": NoParams;
+	"mobile.home.picker.effort_none": NoParams;
+	"mobile.home.picker.effort_title": NoParams;
+	"mobile.home.picker.effort_unknown": NoParams;
+	"mobile.home.picker.effort_unsupported": NoParams;
+	"mobile.home.picker.effort_use_default": NoParams;
+	"mobile.home.picker.folder_home": NoParams;
+	"mobile.home.picker.folder_other": NoParams;
+	"mobile.home.picker.folder_outside": NoParams;
+	"mobile.home.picker.folder_title": NoParams;
+	"mobile.home.picker.folder_tmp": NoParams;
+	"mobile.home.picker.folder_too_long": NoParams;
+	"mobile.home.picker.folder_use_path": NoParams;
+	"mobile.home.picker.loading": NoParams;
+	"mobile.home.picker.model_empty": NoParams;
+	"mobile.home.picker.model_no_match": NoParams;
+	"mobile.home.picker.model_search": NoParams;
+	"mobile.home.picker.model_title": NoParams;
+	"mobile.home.picker.not_connected": NoParams;
+	"mobile.home.picker.source_chosen": NoParams;
+	"mobile.home.picker.source_default": NoParams;
 	"mobile.home.queue.discard": NoParams;
 	"mobile.home.queue.restore": NoParams;
 	"mobile.home.queue.sheet_title": NoParams;
@@ -673,6 +1072,19 @@ export type MessageParams = {
 	"mobile.library.title": NoParams;
 	"mobile.notifications.answer": NoParams;
 	"mobile.notifications.back": NoParams;
+	"mobile.notifications.channel.airy_whistle": NoParams;
+	"mobile.notifications.channel.bubble_chord": NoParams;
+	"mobile.notifications.channel.bubble_pulse": NoParams;
+	"mobile.notifications.channel.description": NoParams;
+	"mobile.notifications.channel.felt_marimba": NoParams;
+	"mobile.notifications.channel.hum_swell": NoParams;
+	"mobile.notifications.channel.signal_handshake": NoParams;
+	"mobile.notifications.channel.silent": NoParams;
+	"mobile.notifications.channel.soft_pulse": NoParams;
+	"mobile.notifications.channel.system": NoParams;
+	"mobile.notifications.channel.tape_warble": NoParams;
+	"mobile.notifications.channel.task_complete": NoParams;
+	"mobile.notifications.channel.two_note_chime": NoParams;
 	"mobile.notifications.detail.answer_in_conversation": NoParams;
 	"mobile.notifications.detail.conversation_asks": NoParams;
 	"mobile.notifications.detail.earlier_updates": NoParams;
@@ -685,6 +1097,10 @@ export type MessageParams = {
 	"mobile.notifications.load_failed": NoParams;
 	"mobile.notifications.priority_high": NoParams;
 	"mobile.notifications.title": NoParams;
+	"mobile.oauth.failed": NoParams;
+	"mobile.oauth.invalid": NoParams;
+	"mobile.oauth.received": NoParams;
+	"mobile.oauth.return": NoParams;
 	"mobile.projects.delete_body": { name: string | number };
 	"mobile.projects.draft_kept_note": NoParams;
 	"mobile.projects.milestone_slash_note": NoParams;
@@ -738,8 +1154,36 @@ export type MessageParams = {
 	"mobile.schedules.supervisor.unverifiable": NoParams;
 	"mobile.schedules.tail.failed": { count: number };
 	"mobile.schedules.truncated": { shown: number; total: number; family: string };
+	"mobile.session.chip.effort_resume_hint": NoParams;
+	"mobile.session.chip.model_default": NoParams;
+	"mobile.session.chip.model_resume_hint": NoParams;
+	"mobile.session.chip.model_unknown": NoParams;
+	"mobile.session.chip.model_unrecorded_hint": NoParams;
 	"mobile.session.conversation_details": NoParams;
+	"mobile.session.highlights.sound_pause": { title: string | number };
+	"mobile.session.highlights.sound_play": { title: string | number };
+	"mobile.session.highlights.sound_refused": { reason: string | number };
+	"mobile.session.highlights.sound_untitled": NoParams;
+	"mobile.session.highlights.sounds_more": { count: number };
+	"mobile.session.highlights.video_open": { name: string | number };
+	"mobile.session.highlights.withheld": { reasons: string | number; count: number };
+	"mobile.session.highlights.withheld_missing": NoParams;
+	"mobile.session.highlights.withheld_outside": NoParams;
+	"mobile.session.highlights.withheld_reasons_join": { first: string | number; second: string | number };
+	"mobile.session.highlights.withheld_sensitive": NoParams;
+	"mobile.session.highlights.withheld_too_large": NoParams;
+	"mobile.session.pending_echo.earlier_not_sent": { reason: string | number };
+	"mobile.session.pending_echo.earlier_went_through": NoParams;
+	"mobile.session.pending_echo.images": { count: number };
+	"mobile.session.pending_echo.not_confirmed": NoParams;
+	"mobile.session.pending_echo.not_sent": NoParams;
+	"mobile.session.pending_echo.queued_next": NoParams;
+	"mobile.session.pending_echo.queued_step": NoParams;
+	"mobile.session.pending_echo.sending": NoParams;
+	"mobile.session.pending_echo.sent": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
+	"mobile.session.subagent_open": { agent: string | number };
+	"mobile.session.subagent_open_short": NoParams;
 	"mobile.session_health.control_hint": NoParams;
 	"mobile.session_health.ended_placeholder": NoParams;
 	"mobile.session_health.menu_hint": NoParams;
@@ -751,6 +1195,41 @@ export type MessageParams = {
 	"mobile.session_health.resume_refused": NoParams;
 	"mobile.session_health.resume_refused_title": NoParams;
 	"mobile.session_health.still_reopening": NoParams;
+	"mobile.settings.theme.caption_forced": { name: string | number };
+	"mobile.settings.theme.caption_system": { dark: string | number; light: string | number };
+	"mobile.settings.theme.card_dark": { name: string | number };
+	"mobile.settings.theme.card_dark_selected": { name: string | number };
+	"mobile.settings.theme.card_light": { name: string | number };
+	"mobile.settings.theme.card_light_selected": { name: string | number };
+	"mobile.settings.theme.mode_dark": NoParams;
+	"mobile.settings.theme.mode_label": NoParams;
+	"mobile.settings.theme.mode_light": NoParams;
+	"mobile.settings.theme.mode_system": NoParams;
+	"mobile.settings.theme.no_match": NoParams;
+	"mobile.settings.theme.row_label": { name: string | number };
+	"mobile.settings.theme.search_label": NoParams;
+	"mobile.settings.theme.search_placeholder": NoParams;
+	"mobile.settings.theme.section_dark": { count: string | number };
+	"mobile.settings.theme.section_light": { count: string | number };
+	"mobile.settings.theme.title": NoParams;
+	"mobile.signin.diagnostics": NoParams;
+	"mobile.signin.failed": NoParams;
+	"mobile.signin.hide_diagnostics": NoParams;
+	"mobile.signin.progress": NoParams;
+	"mobile.signin.retry": NoParams;
+	"mobile.signin.show_diagnostics": NoParams;
+	"mobile.signin.stage_browser": NoParams;
+	"mobile.signin.stage_cancelled": NoParams;
+	"mobile.signin.stage_discovering": NoParams;
+	"mobile.signin.stage_exchanging": NoParams;
+	"mobile.signin.stage_failed": NoParams;
+	"mobile.signin.stage_idle": NoParams;
+	"mobile.signin.stage_persisting": NoParams;
+	"mobile.signin.stage_retiring": NoParams;
+	"mobile.signin.stage_signed_in": NoParams;
+	"mobile.signin.stage_starting": NoParams;
+	"mobile.signin.stage_unavailable": NoParams;
+	"mobile.signin.superseded": NoParams;
 	"mobile.team_bridge.back": NoParams;
 	"mobile.team_bridge.conversation": NoParams;
 	"mobile.team_bridge.delivery.held": { recipient: string | number };
@@ -855,10 +1334,29 @@ export type MessageParams = {
 	"mobile.team_bridge.thread.send_retry": NoParams;
 	"mobile.team_bridge.title": NoParams;
 	"mobile.team_bridge.unread": { count: number };
+	"relay.chrome.drawer.close": NoParams;
+	"relay.chrome.drawer.library": NoParams;
+	"relay.chrome.drawer.open": NoParams;
+	"relay.chrome.drawer.past": NoParams;
+	"relay.chrome.drawer.projects": NoParams;
+	"relay.chrome.drawer.settings": NoParams;
+	"relay.chrome.list.search_label": NoParams;
+	"relay.chrome.list.search_open": NoParams;
+	"relay.chrome.row.more": NoParams;
+	"relay.chrome.row.tags": NoParams;
 	"relay.chrome.session.resume": NoParams;
 	"relay.chrome.session.resuming": NoParams;
 	"relay.chrome.session.subtitle.ended": NoParams;
+	"relay.chrome.session.subtitle.idle": NoParams;
 	"relay.chrome.session.subtitle.not_answering": NoParams;
+	"relay.chrome.session.subtitle.waiting": NoParams;
+	"relay.chrome.session.subtitle.working": { elapsed: string | number };
+	"relay.chrome.session.subtitle.working_plain": NoParams;
+	"relay.chrome.session.tray.agents": { running: string | number; total: string | number };
+	"relay.chrome.session.tray.tasks": { done: string | number; total: string | number };
+	"relay.composer.action.stop": NoParams;
+	"relay.composer.action.stop_agent": NoParams;
+	"relay.composer.action.stopping": NoParams;
 	"relay.health.dropped_detail": NoParams;
 	"relay.health.ended_detail": NoParams;
 	"relay.health.ended_send_failed": NoParams;
@@ -902,31 +1400,108 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.chrome.close_conversations": "Close conversations",
+	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
+	"mobile.chrome.composer.more": "More context",
+	"mobile.chrome.composer.open_queue": "Open the queue",
+	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
+	"mobile.chrome.destination.inbox": "Inbox",
+	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
+	"mobile.chrome.destination.past": "Past",
+	"mobile.chrome.destination.schedules": "Schedules",
+	"mobile.chrome.destinations": "Destinations",
+	"mobile.chrome.home.connect": "Connect a computer",
+	"mobile.chrome.home.connecting": "Connecting to {host}…",
+	"mobile.chrome.home.greeting": "What would you like to work on?",
+	"mobile.chrome.home.reconnecting": "Reconnecting to {host}…",
+	"mobile.chrome.home.saved_draft": "Your draft is saved on this phone and has not been sent.",
+	"mobile.chrome.home.sign_in": "Sign in to reconnect",
+	"mobile.chrome.new_chat": "New chat",
 	"mobile.common.back": "Back",
 	"mobile.common.cancel": "Cancel",
 	"mobile.common.done": "Done",
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
 	"mobile.common.try_again": "Try again",
+	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
+	"mobile.composer_input.paste.image": "Paste image",
+	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
+	"mobile.composer_input.voice.discard": "Discard voice input",
+	"mobile.composer_input.voice.finish": "Finish and transcribe",
+	"mobile.composer_input.voice.mic_setup": "Voice input isn’t set up",
+	"mobile.composer_input.voice.mic_setup_hint": "Explains how to turn on voice input",
+	"mobile.composer_input.voice.setup_needed": "Set up speech-to-text on your computer.",
+	"mobile.computers.account_help": "Sign in with the account that owns it. If it was removed, choose another computer.",
+	"mobile.computers.account_mismatch": "This computer belongs to another Radient account, or was removed.",
 	"mobile.computers.add": "Add a computer",
 	"mobile.computers.added.stays_listed": "It stays listed on this phone, so you can switch back from the computer list.",
 	"mobile.computers.badge.active": "active",
 	"mobile.computers.badge.connecting": "connecting",
+	"mobile.computers.billing_help": "In the Radient console, open this tunnel's billing settings and activate remote access.",
 	"mobile.computers.connecting": "Connecting…",
+	"mobile.computers.connection_response": "Connection response",
+	"mobile.computers.disabled_help": "Radient says this tunnel isn't active right now. Check its status in the Radient console.",
+	"mobile.computers.harness_help": "In the Radient console, enable the Local Operator harness for this tunnel.",
+	"mobile.computers.hide_details": "Hide details",
 	"mobile.computers.none_on_phone": "No computers on this phone yet.",
 	"mobile.computers.password_placeholder": "The password from lop mobile",
+	"mobile.computers.protected": "Sign-in protected",
+	"mobile.computers.retry": "Retry",
 	"mobile.computers.section.not_connected": "On your Radient account, not connected",
 	"mobile.computers.section.on_phone": "On this phone",
+	"mobile.computers.session_error": "The app couldn't connect to this computer.",
+	"mobile.computers.session_error_help": "Your computer does not need to be reconfigured. Retry, or show the details for support.",
+	"mobile.computers.show_details": "Show details",
 	"mobile.computers.sign_out": "Sign out",
 	"mobile.computers.signing_out": "Signing out…",
 	"mobile.computers.switch": "Switch computer",
+	"mobile.computers.transport.custom": "Your address",
+	"mobile.computers.transport.radient": "Radient",
+	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
+	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
+	"mobile.home.chip.effort_default_short": "Default effort",
+	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
+	"mobile.home.chip.model_chosen": "Model, {model}, chosen for this conversation",
+	"mobile.home.chip.model_default": "Model, {model}, this computer's default",
+	"mobile.home.chip.model_no_default": "No default",
+	"mobile.home.chip.model_no_default_label": "Model, this computer has no default model. Choose one.",
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
+	"mobile.home.effort.high": "High",
+	"mobile.home.effort.low": "Low",
+	"mobile.home.effort.max": "Max",
+	"mobile.home.effort.medium": "Medium",
+	"mobile.home.effort.minimal": "Minimal",
+	"mobile.home.effort.none": "None",
+	"mobile.home.effort.xhigh": "Extra high",
 	"mobile.home.folders_read_failed": "We couldn't read this computer's folders just now.",
+	"mobile.home.folders_read_sign_in": "This computer asked you to sign in again, so its folders couldn't be read.",
 	"mobile.home.greeting": "What can I help you with today?",
-	"mobile.home.options.apply": "Use these options",
+	"mobile.home.models_read_failed": "We couldn't read this computer's model list just now.",
+	"mobile.home.options.default_model": "Use this computer's default model",
 	"mobile.home.options.fixed": "This conversation's starting options are fixed. Use Conversation details for its live controls.",
 	"mobile.home.options.folder": "Folder on this computer",
-	"mobile.home.options.title": "Conversation options",
+	"mobile.home.picker.badge_default": "Default",
+	"mobile.home.picker.badge_this_chat": "This conversation",
+	"mobile.home.picker.effort_none": "This model has no effort setting.",
+	"mobile.home.picker.effort_title": "Effort",
+	"mobile.home.picker.effort_unknown": "This computer doesn't know this model's levels, so it will use the nearest level the model supports.",
+	"mobile.home.picker.effort_unsupported": "This computer's Local Operator is too old to accept an effort, so it uses its configured level. Update it to choose one here.",
+	"mobile.home.picker.effort_use_default": "This computer's level",
+	"mobile.home.picker.folder_home": "Home",
+	"mobile.home.picker.folder_other": "Other path…",
+	"mobile.home.picker.folder_outside": "This computer starts conversations only inside your home folder or its temporary folder.",
+	"mobile.home.picker.folder_title": "Folder",
+	"mobile.home.picker.folder_tmp": "Temporary",
+	"mobile.home.picker.folder_too_long": "That path is too long.",
+	"mobile.home.picker.folder_use_path": "Use this path",
+	"mobile.home.picker.loading": "Loading…",
+	"mobile.home.picker.model_empty": "No models available",
+	"mobile.home.picker.model_no_match": "No models match",
+	"mobile.home.picker.model_search": "Search models",
+	"mobile.home.picker.model_title": "Model",
+	"mobile.home.picker.not_connected": "not connected",
+	"mobile.home.picker.source_chosen": "Chosen for this conversation",
+	"mobile.home.picker.source_default": "Default from this computer",
 	"mobile.home.queue.discard": "Discard queued messages",
 	"mobile.home.queue.restore": "Move queued messages to draft",
 	"mobile.home.queue.sheet_title": "Queued messages",
@@ -980,6 +1555,19 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.library.title": "Library",
 	"mobile.notifications.answer": "Answer",
 	"mobile.notifications.back": "Back",
+	"mobile.notifications.channel.airy_whistle": "Airy whistle",
+	"mobile.notifications.channel.bubble_chord": "Bubble chord",
+	"mobile.notifications.channel.bubble_pulse": "Bubble pulse",
+	"mobile.notifications.channel.description": "Alerts from Local Operator. Your computer's sound setting picks which of these channels plays.",
+	"mobile.notifications.channel.felt_marimba": "Felt marimba",
+	"mobile.notifications.channel.hum_swell": "Hum swell",
+	"mobile.notifications.channel.signal_handshake": "Signal handshake",
+	"mobile.notifications.channel.silent": "Silent",
+	"mobile.notifications.channel.soft_pulse": "Soft pulse",
+	"mobile.notifications.channel.system": "System sound",
+	"mobile.notifications.channel.tape_warble": "Tape warble",
+	"mobile.notifications.channel.task_complete": "Task complete",
+	"mobile.notifications.channel.two_note_chime": "Two-note chime",
 	"mobile.notifications.detail.answer_in_conversation": "Answer in conversation",
 	"mobile.notifications.detail.conversation_asks": "This conversation's asks",
 	"mobile.notifications.detail.earlier_updates": "Earlier updates",
@@ -992,6 +1580,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.load_failed": "Couldn't load notifications",
 	"mobile.notifications.priority_high": "High",
 	"mobile.notifications.title": "Notifications",
+	"mobile.oauth.failed": "Sign-in could not finish. Try again.",
+	"mobile.oauth.invalid": "This sign-in request was not accepted.",
+	"mobile.oauth.received": "Sign-in response received. Return to the app.",
+	"mobile.oauth.return": "Return to Local Operator",
 	"mobile.projects.delete_body": "Delete {name}? The project row goes for good. Its linked sessions and their transcripts are not touched.",
 	"mobile.projects.draft_kept_note": "Kept from your last visit. Clear the fields to start something new.",
 	"mobile.projects.milestone_slash_note": "Milestone names can't contain a slash. A milestone with one could never be removed.",
@@ -1045,8 +1637,36 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.supervisor.unverifiable": "Nothing supervises the wakes below, so they only fire while their conversation is running.",
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+	"mobile.session.chip.effort_resume_hint": "Resume this session to change the effort",
+	"mobile.session.chip.model_default": "Default",
+	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
+	"mobile.session.chip.model_unknown": "Unknown",
+	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
 	"mobile.session.conversation_details": "Conversation details",
+	"mobile.session.highlights.sound_pause": "Pause {title}",
+	"mobile.session.highlights.sound_play": "Play {title}",
+	"mobile.session.highlights.sound_refused": "Could not play: {reason}",
+	"mobile.session.highlights.sound_untitled": "Sound",
+	"mobile.session.highlights.sounds_more": "{count, plural, one {# more sound} other {# more sounds}}",
+	"mobile.session.highlights.video_open": "Play video {name}",
+	"mobile.session.highlights.withheld": "{count, plural, one {# file not shown} other {# files not shown}}: {reasons}",
+	"mobile.session.highlights.withheld_missing": "file no longer exists",
+	"mobile.session.highlights.withheld_outside": "outside allowed locations",
+	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+	"mobile.session.highlights.withheld_sensitive": "sensitive file",
+	"mobile.session.highlights.withheld_too_large": "too large to preview",
+	"mobile.session.pending_echo.earlier_not_sent": "Your earlier message wasn’t sent ({reason}). Tap it above to put it back.",
+	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet.",
+	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}",
+	"mobile.session.pending_echo.not_confirmed": "not confirmed — retry below",
+	"mobile.session.pending_echo.not_sent": "not sent — tap to put back",
+	"mobile.session.pending_echo.queued_next": "queued — sends with your next message",
+	"mobile.session.pending_echo.queued_step": "queued — sends when this step finishes",
+	"mobile.session.pending_echo.sending": "sending…",
+	"mobile.session.pending_echo.sent": "sent",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
+	"mobile.session.subagent_open": "Open {agent}",
+	"mobile.session.subagent_open_short": "open",
 	"mobile.session_health.control_hint": "Shows what this state means and what a send does now",
 	"mobile.session_health.ended_placeholder": "Send to reopen in your home folder…",
 	"mobile.session_health.menu_hint": "Opens the session menu",
@@ -1058,6 +1678,41 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"mobile.settings.theme.caption_forced": "Always {name}",
+	"mobile.settings.theme.caption_system": "System uses {light} and {dark}",
+	"mobile.settings.theme.card_dark": "{name}, dark theme",
+	"mobile.settings.theme.card_dark_selected": "{name}, dark theme, selected",
+	"mobile.settings.theme.card_light": "{name}, light theme",
+	"mobile.settings.theme.card_light_selected": "{name}, light theme, selected",
+	"mobile.settings.theme.mode_dark": "Dark",
+	"mobile.settings.theme.mode_label": "Theme mode",
+	"mobile.settings.theme.mode_light": "Light",
+	"mobile.settings.theme.mode_system": "System",
+	"mobile.settings.theme.no_match": "No themes match",
+	"mobile.settings.theme.row_label": "Theme, {name}",
+	"mobile.settings.theme.search_label": "Search themes",
+	"mobile.settings.theme.search_placeholder": "Search themes",
+	"mobile.settings.theme.section_dark": "Dark ({count})",
+	"mobile.settings.theme.section_light": "Light ({count})",
+	"mobile.settings.theme.title": "Theme",
+	"mobile.signin.diagnostics": "Sign-in diagnostics",
+	"mobile.signin.failed": "We could not finish signing in.",
+	"mobile.signin.hide_diagnostics": "Hide sign-in details",
+	"mobile.signin.progress": "Signing in…",
+	"mobile.signin.retry": "Retry",
+	"mobile.signin.show_diagnostics": "Show sign-in details",
+	"mobile.signin.stage_browser": "Waiting for your browser",
+	"mobile.signin.stage_cancelled": "Sign-in cancelled",
+	"mobile.signin.stage_discovering": "Finding your computers",
+	"mobile.signin.stage_exchanging": "Finishing browser sign-in",
+	"mobile.signin.stage_failed": "Sign-in failed",
+	"mobile.signin.stage_idle": "Not started",
+	"mobile.signin.stage_persisting": "Saving your sign-in",
+	"mobile.signin.stage_retiring": "Preparing your account",
+	"mobile.signin.stage_signed_in": "Signed in",
+	"mobile.signin.stage_starting": "Starting sign-in",
+	"mobile.signin.stage_unavailable": "Sign-in unavailable",
+	"mobile.signin.superseded": "Another sign-in started.",
 	"mobile.team_bridge.back": "Back",
 	"mobile.team_bridge.conversation": "Conversation",
 	"mobile.team_bridge.delivery.held": "{recipient}: Waiting for delivery.",
@@ -1162,10 +1817,29 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.thread.send_retry": "Retry send",
 	"mobile.team_bridge.title": "Team Bridge",
 	"mobile.team_bridge.unread": "{count, plural, one {# unread} other {# unread}}",
+	"relay.chrome.drawer.close": "Close navigation",
+	"relay.chrome.drawer.library": "Library",
+	"relay.chrome.drawer.open": "Open navigation",
+	"relay.chrome.drawer.past": "Past sessions",
+	"relay.chrome.drawer.projects": "Projects",
+	"relay.chrome.drawer.settings": "Settings",
+	"relay.chrome.list.search_label": "Search conversations",
+	"relay.chrome.list.search_open": "Search",
+	"relay.chrome.row.more": "More",
+	"relay.chrome.row.tags": "Tags",
 	"relay.chrome.session.resume": "Resume",
 	"relay.chrome.session.resuming": "Resuming…",
 	"relay.chrome.session.subtitle.ended": "Ended",
+	"relay.chrome.session.subtitle.idle": "Idle",
 	"relay.chrome.session.subtitle.not_answering": "Not answering",
+	"relay.chrome.session.subtitle.waiting": "Waiting for you",
+	"relay.chrome.session.subtitle.working": "Working · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "Working",
+	"relay.chrome.session.tray.agents": "Agents {running}/{total}",
+	"relay.chrome.session.tray.tasks": "Tasks {done}/{total}",
+	"relay.composer.action.stop": "stop",
+	"relay.composer.action.stop_agent": "stop the agent",
+	"relay.composer.action.stopping": "stopping",
 	"relay.health.dropped_detail": "Your computer can't reach this session right now and keeps trying. Until it does, a send fails straight away and your text stays in the message box.",
 	"relay.health.ended_detail": "History is kept. Send a message or tap Resume to reopen it in your home folder.",
 	"relay.health.ended_send_failed": "This session has ended and couldn't be reopened just now. Try again, or tap “Ended” at the top and choose Resume.",
@@ -1194,31 +1868,108 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
+	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.open_queue": { role: "button", note: "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control." },
+	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
+	"mobile.chrome.destination.inbox_count": { role: "button", note: "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop." },
+	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
+	"mobile.chrome.destination.schedules": { role: "button", note: "Label under the clock icon in the sidebar's destinations strip (~52 pt slot). One short word; opens the list of scheduled wakes and armed monitors." },
+	"mobile.chrome.destinations": { role: "heading", note: "Title of the sheet that lists the sidebar destinations when the text is too large for the icon strip (opened by 'More'). Names a set of places to go, no final full stop." },
+	"mobile.chrome.home.connect": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.connecting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.home.greeting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.home.reconnecting": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.saved_draft": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.home.sign_in": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
+	"mobile.chrome.new_chat": { role: "button", note: "Accessible name of the square-pen button in the sidebar header that starts a new conversation. No final full stop." },
 	"mobile.common.back": { role: "button", note: "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)." },
 	"mobile.common.cancel": { role: "button", note: "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key." },
 	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
+	"mobile.composer_input.paste.denied": { role: "status", note: "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the paperclip (Attach) button, then the Paste image row (use this locale's translation of mobile.composer_input.paste.image), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop." },
+	"mobile.composer_input.paste.image": { role: "button", note: "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop." },
+	"mobile.composer_input.paste.image_hint": { role: "button", note: "Accessibility hint for the Paste image chip. No final full stop." },
+	"mobile.composer_input.voice.discard": { role: "button", note: "Accessible name of the ✕ in the recording row: throws the recording away and sends nothing. Distinct from finishing. No final full stop." },
+	"mobile.composer_input.voice.finish": { role: "button", note: "Accessible name of the ✓ in the recording row: stops recording and transcribes it into the draft. No final full stop." },
+	"mobile.composer_input.voice.mic_setup": { role: "button", note: "Accessible name of the composer's mic when the computer has no speech-to-text configured. Screen readers only; no final full stop." },
+	"mobile.composer_input.voice.mic_setup_hint": { role: "button", note: "Accessibility hint for the mic in its not-set-up state: what a tap does (shows how to turn voice input on). No final full stop." },
+	"mobile.composer_input.voice.setup_needed": { role: "status", note: "Status line under the composer after the reader taps the mic on a computer with no speech-to-text configured. Transcription runs on the computer, so the fix is there, not on the phone. Keep it short: it must fit two lines beside nothing at 320 pt and 200 % text. Full sentence with final full stop." },
+	"mobile.computers.account_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.account_mismatch": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.add": { role: "button", note: "Button that starts setting up another computer. Sentence case, no final full stop." },
 	"mobile.computers.added.stays_listed": { role: "help", note: "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed." },
 	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
 	"mobile.computers.badge.connecting": { role: "status", note: "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge." },
+	"mobile.computers.billing_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.connecting": { role: "status", note: "Inline status beside a computer row while its connection is being made. Keep the ellipsis character; one word plus ellipsis." },
+	"mobile.computers.connection_response": { role: "meta", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.disabled_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.harness_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.hide_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.none_on_phone": { role: "status", note: "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop." },
 	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
+	"mobile.computers.protected": { role: "status", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.retry": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.section.not_connected": { role: "heading", note: "Section header for computers that belong to the reader's Radient account but are not paired on this phone. \"Radient\" is a product name: do not translate." },
 	"mobile.computers.section.on_phone": { role: "heading", note: "Section header for computers already paired on this phone." },
+	"mobile.computers.session_error": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.session_error_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.sign_out": { role: "button", note: "Settings action opening the sign-out confirmation. Sentence case." },
 	"mobile.computers.signing_out": { role: "status", note: "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
+	"mobile.computers.transport.custom": { role: "meta", note: "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case." },
+	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written." },
+	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.effort_default_short": { role: "meta", note: "Visible text of the effort chip when the computer's configured level applies but the app cannot name it (an older Local Operator, or a model other than the default). Says 'effort' so it does not read the same as the model chip's 'Default' beside it. Keep it short: it shares one row with the folder and model chips. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
+	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_chosen": { role: "meta", note: "Spoken label of the model chip when the reader chose a model for this conversation. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_default": { role: "meta", note: "Spoken label of the model chip when the computer's configured default model applies. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_no_default": { role: "meta", note: "Visible text of the model chip when the computer has no default model configured. Very short: it shares a narrow strip. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_no_default_label": { role: "meta", note: "Spoken label of the model chip when the computer has no default model; tapping it opens the model picker. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.connect_disabled_reason": { role: "status", note: "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short." },
+	"mobile.home.effort.high": { role: "meta", note: "Effort level: high. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.low": { role: "meta", note: "Effort level: low. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.max": { role: "meta", note: "Effort level: the most reasoning. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.medium": { role: "meta", note: "Effort level: medium, the usual default. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.minimal": { role: "meta", note: "Effort level: the least reasoning above none. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.none": { role: "meta", note: "Effort level: no extra reasoning. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.effort.xhigh": { role: "meta", note: "Effort level above high and below max. Short. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.folders_read_failed": { role: "status", note: "Failure sentence for the folder read, shared verbatim with the /new screen so one failure has one voice. No placeholder; never append an error code." },
+	"mobile.home.folders_read_sign_in": { role: "status", note: "Failure sentence for the folder read when the computer answered that the credential is no longer accepted. Names the CAUSE so Retry is not offered as the fix; the sign-in surface is one tap away. No placeholder." },
 	"mobile.home.greeting": { role: "heading", note: "The home's first line, verbatim from the desktop app. A sentence, not a question the app answers itself." },
-	"mobile.home.options.apply": { role: "button", note: "Button that applies the starting options. Sentence case, no final full stop." },
-	"mobile.home.options.fixed": { role: "help", note: "Explains why the starting options are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
-	"mobile.home.options.folder": { role: "meta", note: "Label of the folder-path field in the starting-options sheet. The folder lives on the connected computer, not on the phone." },
-	"mobile.home.options.title": { role: "heading", note: "Title of the sheet that edits the starting options of a conversation that has not been sent yet." },
+	"mobile.home.models_read_failed": { role: "status", note: "Failure sentence for the model-catalogue read on the home, shown with a Retry action. Must stay a read failure, never a claim about which model is running — the computer's default is still in effect. No placeholder." },
+	"mobile.home.options.default_model": { role: "button", note: "Row at the top of the model picker, shown only while the computer names no default model: it clears the chosen model, so the start names no model and the computer applies its own configured default. Sentence case, no final full stop." },
+	"mobile.home.options.fixed": { role: "help", note: "Explains why the pickers are read-only once the conversation has started. \"Conversation details\" names another screen in this app: keep it matching that screen's title." },
+	"mobile.home.options.folder": { role: "meta", note: "Label of the field revealed by the folder picker's \"Other path…\" row, for typing a folder path on the connected computer (not on the phone)." },
+	"mobile.home.picker.badge_default": { role: "meta", note: "Small badge on the picker row holding the computer's configured default. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.badge_this_chat": { role: "meta", note: "Small badge on the picker row the reader chose for this conversation, beside the Default badge on another row. Two short words at most. New in the three-pickers change; the non-English text awaits the translation audit. Says 'conversation', the product's word everywhere else (UX U7)." },
+	"mobile.home.picker.effort_none": { role: "help", note: "The selected model has no effort setting, so there is nothing to choose. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_title": { role: "heading", note: "Title of the effort picker sheet: how much reasoning effort the model spends. One word; keep it the same term as the effort levels' family. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_unknown": { role: "help", note: "The computer does not know which effort levels this model supports; every level is offered and the computer uses the nearest one the model supports. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_unsupported": { role: "help", note: "The connected computer runs a Local Operator too old to accept an effort level when starting, so the picker offers nothing. \"Local Operator\" is the product name; do not translate it. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.effort_use_default": { role: "button", note: "First row of the effort picker when the computer's default level for the chosen model is unknown: picking it sends no effort, so the computer applies its configured level. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_home": { role: "meta", note: "Badge on the folder row that is the owner's home folder on the computer. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_other": { role: "button", note: "Secondary row in the folder picker that reveals a field for typing a path no row names. Ends with an ellipsis because it opens more input. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_outside": { role: "status", note: "Why a typed path cannot be used: the computer only starts conversations under the home folder or its temp folder. One sentence. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_title": { role: "heading", note: "Title of the folder picker sheet: where on the connected computer a new conversation starts. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_tmp": { role: "meta", note: "Badge on the folder row that is the computer's temporary (scratch) folder. One short word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_too_long": { role: "status", note: "Why a typed path cannot be used: it is longer than the computer accepts. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.folder_use_path": { role: "button", note: "Button under the typed-path field that starts the conversation in that folder. Sentence case, no final full stop. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.loading": { role: "status", note: "A picker's list is still being read from the computer. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_empty": { role: "status", note: "The computer listed no models at all. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_no_match": { role: "status", note: "The search field matched no model. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_search": { role: "meta", note: "Label of the search field in a long model list. Filters by model name and provider. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.model_title": { role: "heading", note: "Title of the model picker sheet. One word. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.not_connected": { role: "status", note: "Beside a model whose provider is not signed in on the computer, so it cannot be picked. Lower case, short. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.source_chosen": { role: "status", note: "Line under a picker's title once the reader chose a value for this conversation, overriding the computer's default. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.picker.source_default": { role: "status", note: "Line under a picker's title when nothing has been chosen, so the computer's own configured value applies. Same words as the chip's spoken label. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.queue.discard": { role: "button", note: "Button in the queued-messages sheet: deletes the unsent messages. Destructive; keep it clearly distinct from the move-to-draft button." },
 	"mobile.home.queue.restore": { role: "button", note: "Button in the queued-messages sheet: puts the unsent messages back into the composer as a draft. Sentence case, no final full stop." },
 	"mobile.home.queue.sheet_title": { role: "heading", note: "Title of the sheet listing messages that have not left the phone yet. Plural noun phrase; matches the \"View queued messages\" button that opens it." },
@@ -1272,6 +2023,19 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.library.title": { role: "heading", note: "Title of the Library screens (the list and the single-asset view). 'Library' is the name of the feature that catalogues files and images from the user's conversations, not a building or a book collection; no final full stop." },
 	"mobile.notifications.answer": { role: "button", note: "Button on an ask in the inbox list that opens it to be answered. One word, imperative." },
 	"mobile.notifications.back": { role: "button", note: "Accessibility label of the icon-only back button in the inbox header." },
+	"mobile.notifications.channel.airy_whistle": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.bubble_chord": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.bubble_pulse": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.description": { role: "help", note: "Description shared by every Local Operator notification channel, shown under the channel in Android's notification settings. Explains that the computer's setting, not the phone, chooses which channel (sound) an alert uses. Do not imply the phone can change the sound." },
+	"mobile.notifications.channel.felt_marimba": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.hum_swell": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.signal_handshake": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.silent": { role: "meta", note: "Name of the Android notification channel that shows alerts with no sound, used when sound is turned off on the computer. Shown in the system's app notification settings. One or two words." },
+	"mobile.notifications.channel.soft_pulse": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.system": { role: "meta", note: "Name of the Android notification channel that plays the phone's own default notification sound, used when the computer's sound is set to the system sound. Shown in the system's app notification settings. Sentence case, no final full stop." },
+	"mobile.notifications.channel.tape_warble": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.task_complete": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.channel.two_note_chime": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.detail.answer_in_conversation": { role: "button", note: "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop." },
 	"mobile.notifications.detail.conversation_asks": { role: "heading", note: "Section header listing the asks raised in the notification's conversation. \"Ask\" is the product word for a question the agent puts to the reader." },
 	"mobile.notifications.detail.earlier_updates": { role: "heading", note: "Section header listing earlier revisions of the same notification." },
@@ -1284,6 +2048,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.load_failed": { role: "heading", note: "Title of the error alert when the inbox could not be loaded. The relay's own sentence follows as the alert body." },
 	"mobile.notifications.priority_high": { role: "status", note: "Badge on a notification the sender marked high priority. One word." },
 	"mobile.notifications.title": { role: "heading", note: "Title of the notifications inbox screen." },
+	"mobile.oauth.failed": { role: "status", note: "App sign-in failure when Android native transport or browser cannot complete. Cancellation is a separate existing state. No native error/URL/code is shown." },
+	"mobile.oauth.invalid": { role: "status", note: "Generic body for malformed/wrong-state on-device callback request. Never reflect the URL or explain which secret field matched." },
+	"mobile.oauth.received": { role: "status", note: "On-device browser callback page after a validated HTTP callback, BEFORE token exchange. Do not claim the user is signed in. No code, state or identity appears." },
+	"mobile.oauth.return": { role: "button", note: "Link on on-device callback page. Returns to the installed Local Operator app using a package-targeted control URI with no OAuth payload. Keep brand Local Operator." },
 	"mobile.projects.delete_body": { role: "confirm", note: "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone." },
 	"mobile.projects.draft_kept_note": { role: "help", note: "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor." },
 	"mobile.projects.milestone_slash_note": { role: "help", note: "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding." },
@@ -1337,8 +2105,36 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.supervisor.unverifiable": { role: "status", note: "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked." },
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+	"mobile.session.chip.effort_resume_hint": { role: "help", note: "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop." },
+	"mobile.session.chip.model_default": { role: "meta", note: "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row." },
+	"mobile.session.chip.model_resume_hint": { role: "help", note: "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop." },
+	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
+	"mobile.session.chip.model_unrecorded_hint": { role: "help", note: "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop." },
 	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
+	"mobile.session.highlights.sound_pause": { role: "button", note: "Accessibility label of a sound cell's control while it plays. {title} is the sound's own name. No full stop." },
+	"mobile.session.highlights.sound_play": { role: "button", note: "Accessibility label of a sound cell's play control. {title} is the sound's own name, copied verbatim. No full stop." },
+	"mobile.session.highlights.sound_refused": { role: "status", note: "Shown under a sound cell when its bytes could not be fetched. {reason} is the relay's own sentence, passed through untranslated. No final full stop." },
+	"mobile.session.highlights.sound_untitled": { role: "meta", note: "Stand-in name for a sound with no title, used inside the play/pause labels. One noun." },
+	"mobile.session.highlights.sounds_more": { role: "meta", note: "Line under the sounds grid when the row held back sounds beyond its bound. {count} counts sounds. No final full stop." },
+	"mobile.session.highlights.video_open": { role: "button", note: "Accessibility label of a video tile that starts playback. {name} is the file name, verbatim. No full stop." },
+	"mobile.session.highlights.withheld": { role: "status", note: "Quiet line under a highlights block naming deliverables that were refused. {count} counts files; {reasons} is one or more of the withheld_* reason phrases, already translated; when several apply the app joins them pairwise with mobile.session.highlights.withheld_reasons_join. No final full stop." },
+	"mobile.session.highlights.withheld_missing": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the named file was deleted or never written. Lower case, no full stop." },
+	"mobile.session.highlights.withheld_outside": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file lies outside the folders the app may show. Lower case, no full stop." },
+	"mobile.session.highlights.withheld_reasons_join": { role: "meta", note: "Joins two reason phrases (or an already-joined list and one more) inside the withheld line. A bare list separator — use your locale's enumeration comma, never a word for \"and\". Keep both placeholders." },
+	"mobile.session.highlights.withheld_sensitive": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file looks like a credential or secret and is never shown. Lower case, no full stop." },
+	"mobile.session.highlights.withheld_too_large": { role: "meta", note: "Reason phrase inside mobile.session.highlights.withheld: the file exceeds the preview size limit. Lower case, no full stop." },
+	"mobile.session.pending_echo.earlier_not_sent": { role: "status", note: "Error line above the message box when an earlier message was refused while the user was already typing the next one: it must be clear the EARLIER message failed, not the text in the box. {reason} is the relay's own short reason, in English. Points at the kept message above, which puts itself back on a tap." },
+	"mobile.session.pending_echo.earlier_went_through": { role: "status", note: "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)." },
+	"mobile.session.pending_echo.images": { role: "meta", note: "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop." },
+	"mobile.session.pending_echo.not_confirmed": { role: "meta", note: "Caption, in danger colour, under a message whose delivery is uncertain (the computer did not answer); the Retry button below the message box resends it. Lower case, em dash, no full stop." },
+	"mobile.session.pending_echo.not_sent": { role: "meta", note: "Caption, in danger colour, under a message the user sent that the computer definitively refused, kept on screen because the user had already typed something new. Tapping the message puts it back in the message box. Lower case, em dash, no full stop; same register as the other pending_echo captions." },
+	"mobile.session.pending_echo.queued_next": { role: "meta", note: "Caption under a steering message the computer accepted after the turn ended: it will ride along with the next message the user sends. Lower case, em dash, no full stop." },
+	"mobile.session.pending_echo.queued_step": { role: "meta", note: "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer." },
+	"mobile.session.pending_echo.sending": { role: "meta", note: "Caption under a message the user just sent, before the computer has acknowledged it. Lower case, trailing ellipsis, no full stop; mirrors the desktop relay's pending row. Must not read as an invitation to send again." },
+	"mobile.session.pending_echo.sent": { role: "meta", note: "Caption under a just-sent prompt once the computer acknowledged it but before the conversation shows it. One lower-case word, no full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
+	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
+	"mobile.session.subagent_open_short": { role: "button", note: "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop." },
 	"mobile.session_health.control_hint": { role: "help", note: "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer." },
 	"mobile.session_health.ended_placeholder": { role: "help", note: "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder. MEASURED FIT: the field holds ~348 px at 390 pt, and this sentence needs 569.6 px at 200 % text scale at the English length (590.9 px at the French one) — it clips there in both locales, which is an upstream copy-length issue rather than a translation one. French therefore ships the shortest honest form (\"Envoyer rouvre…\") and the destination lives in the health sheet's ended_detail sentence." },
 	"mobile.session_health.menu_hint": { role: "button", note: "Accessibility hint for the same overflow button." },
@@ -1350,6 +2146,41 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.resume_refused": { role: "status", note: "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"." },
 	"mobile.session_health.resume_refused_title": { role: "heading", note: "Title of the sheet's failure notice when Resume did not work." },
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
+	"mobile.settings.theme.caption_forced": { role: "help", note: "Caption under the mode control while it is forced to one side. {name} is a theme NAME (proper noun, never translated). No final full stop." },
+	"mobile.settings.theme.caption_system": { role: "help", note: "Caption under the mode control while it follows the phone. {light} and {dark} are theme NAMES (proper nouns such as \"Dracula\", never translated). Says which theme shows in each phone mode. No final full stop." },
+	"mobile.settings.theme.card_dark": { role: "button", note: "Screen-reader name of a theme card that is not selected. {name} is the theme NAME (proper noun, never translated). No final full stop." },
+	"mobile.settings.theme.card_dark_selected": { role: "button", note: "Screen-reader name of the SELECTED dark theme card. {name} is the theme NAME (never translated). No final full stop." },
+	"mobile.settings.theme.card_light": { role: "button", note: "Screen-reader name of a light theme card that is not selected. {name} is the theme NAME (never translated). No final full stop." },
+	"mobile.settings.theme.card_light_selected": { role: "button", note: "Screen-reader name of the SELECTED light theme card. {name} is the theme NAME (never translated). No final full stop." },
+	"mobile.settings.theme.mode_dark": { role: "button", note: "Option: always use the dark side (a dark theme). Keep short; it shares a row with two other options." },
+	"mobile.settings.theme.mode_label": { role: "heading", note: "Accessible name of the three-way control that chooses whether the app follows the phone's light/dark setting or forces one. No final full stop." },
+	"mobile.settings.theme.mode_light": { role: "button", note: "Option: always use the light side (a light theme). Keep short; it shares a row with two other options." },
+	"mobile.settings.theme.mode_system": { role: "button", note: "Option: follow the phone's own light/dark setting. Keep short (one word if possible); it shares a row with two other options." },
+	"mobile.settings.theme.no_match": { role: "status", note: "Shown in a section when the search matches no theme in it. No final full stop." },
+	"mobile.settings.theme.row_label": { role: "button", note: "Screen-reader name of the Settings row that opens the Theme screen; {name} is the theme painting the app now (a proper noun, never translated). No final full stop." },
+	"mobile.settings.theme.search_label": { role: "help", note: "Accessible name of the search field that filters the theme list by name. No final full stop." },
+	"mobile.settings.theme.search_placeholder": { role: "help", note: "Placeholder inside the same search field. Usually identical to the field's accessible name. No final full stop." },
+	"mobile.settings.theme.section_dark": { role: "heading", note: "Section heading over the grid of dark themes. {count} is how many dark themes the section currently lists (after search). Rendered in uppercase in some scripts. No final full stop." },
+	"mobile.settings.theme.section_light": { role: "heading", note: "Section heading over the grid of light themes. {count} is how many light themes the section currently lists (after search). No final full stop." },
+	"mobile.settings.theme.title": { role: "heading", note: "Title of the Theme screen and the label of the Settings row that opens it. \"Theme\" means a colour scheme for the whole app. No final full stop." },
+	"mobile.signin.diagnostics": { role: "button", note: "Reveal a redacted in-memory log containing stage names and error classes only." },
+	"mobile.signin.failed": { role: "status", note: "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials." },
+	"mobile.signin.hide_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.progress": { role: "status", note: "Visible after the native browser returns, during token exchange and credential persistence." },
+	"mobile.signin.retry": { role: "button", note: "Retry a failed or cancelled sign-in." },
+	"mobile.signin.show_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_browser": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_cancelled": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_discovering": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_exchanging": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_failed": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_idle": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_persisting": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_retiring": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_signed_in": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_starting": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.stage_unavailable": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.superseded": { role: "status", note: "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI." },
 	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.delivery.held": { role: "status", note: "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches." },
@@ -1454,10 +2285,29 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.thread.send_retry": { role: "button", note: "Team Bridge mobile UI: thread / send retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.title": { role: "heading", note: "Team Bridge mobile UI: title. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.unread": { role: "status", note: "Team Bridge mobile UI: unread. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"relay.chrome.drawer.close": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the close control inside the navigation drawer. Escape and a tap outside also close it; this is the visible, labelled path for touch screen-reader users." },
+	"relay.chrome.drawer.library": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the asset library (files the agents produced). Hidden on a relay without the library capability, never shown disabled." },
+	"relay.chrome.drawer.open": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the ☰ button at the start of the conversation list's app bar; it opens the navigation drawer. Read by screen readers only; the glyph is not translated." },
+	"relay.chrome.drawer.past": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the searchable, resumable history of finished sessions. Replaces a footer button that read 'past'." },
+	"relay.chrome.drawer.projects": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the projects sheet (multi-session workstreams with status and milestones)." },
+	"relay.chrome.drawer.settings": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens this computer's account-routing settings." },
+	"relay.chrome.list.search_label": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). aria-label of the conversation search field (its visible placeholder ends in an ellipsis, which does not belong in an accessible name). Matches names, tags and folders." },
+	"relay.chrome.list.search_open": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Accessible name of the ⌕ button; pressing it swaps the title for a search field." },
+	"relay.chrome.row.more": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Label of the second swipe-revealed action; it opens the row's action sheet. A 72 px wide tile under an icon." },
+	"relay.chrome.row.tags": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Opens the sheet that assigns tag categories to this conversation. A trailing value shows the primary tag or relay.chrome.row.tags_none." },
 	"relay.chrome.session.resume": { role: "button", note: "The relay SPA's own Resume label, adopted verbatim so the two clients cannot offer one action two ways. It reopens an ended session in its home folder." },
 	"relay.chrome.session.resuming": { role: "status", note: "The relay SPA's own in-flight label for Resume: the reopen has been asked for and has not answered yet. Ellipsis is meaningful." },
 	"relay.chrome.session.subtitle.ended": { role: "status", note: "The relay SPA's own subtitle word for the GREY status dot: the relay proved the session's process gone (or the row is a history-only rebuild with pid 0). History is kept and the session is resumable, which relay.health.ended_detail explains. Reused here verbatim." },
+	"relay.chrome.session.subtitle.idle": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent is not working and nothing is pending." },
 	"relay.chrome.session.subtitle.not_answering": { role: "status", note: "The relay SPA's own subtitle word for the YELLOW status dot: the session's process is alive but not answering (its runtime is unreachable or its heartbeat and frames have both been quiet past the relay's window). Reused here verbatim so the two clients cannot name one state two ways. Its explanation is relay.health.dropped_detail or relay.health.quiet_detail, depending on which cause won." },
+	"relay.chrome.session.subtitle.waiting": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent is stopped on an approval the operator must give." },
+	"relay.chrome.session.subtitle.working": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line under the conversation title while the agent works. {elapsed} is an ALREADY-FORMATTED compact duration such as '1m36s'; do not reformat it. Keep the middle dot." },
+	"relay.chrome.session.subtitle.working_plain": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Liveness line while the agent works and its start time is unknown." },
+	"relay.chrome.session.tray.agents": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's subagents (helper agents it started); opens their list. {running} of {total} are running now. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical." },
+	"relay.chrome.session.tray.tasks": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.chrome.context.json). Owned relay SPA chrome for the borderless redesign (docs/design/mobile-relay-redesign.md). Pill for the session's task list; opens it. {done} of {total} tasks are finished. Keep the slash form; it is a compact fraction. Native difference: the core writes {x, number}; this runtime has no number argument type, so the placeholders are plain {x}. The values are small integers, so the painted text is identical." },
+	"relay.composer.action.stop": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Stops the agent's running turn. Visible text of the small Stop action on the working line pinned above the composer (44 pt wide at most, so keep it one short word). One lowercase verb, no punctuation. Translator budget: 16 cells (the core's maxCells; the native context schema has no maxCells field, so the number is recorded here)." },
+	"relay.composer.action.stop_agent": { role: "button", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Accessible name of the Stop action on the working line (the row that says what the agent is doing and for how long). Longer than the visible word 'stop' and must CONTAIN the same verb as relay.composer.action.stop so a screen-reader user hears the visible text. 'The agent' is the glossary's agent. Imperative verb phrase, lowercase, no punctuation. Translator budget: 28 cells." },
+	"relay.composer.action.stopping": { role: "status", note: "Mirrored verbatim from the core relay catalogue (local_operator/i18n/catalogues/en/relay.composer.context.json at 6fc208f636d). Accessible name of the same Stop action after the user pressed it and before the turn has ended: it says the stop was accepted and is in progress. Present-progressive participle, lowercase, no punctuation, no ellipsis. Translator budget: 20 cells." },
 	"relay.health.dropped_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the computer cannot reach the session (degraded). True behaviour to keep: a send fails immediately — it does NOT wait or queue — and the typed text is put back in the message box at the bottom of the screen." },
 	"relay.health.ended_detail": { role: "help", note: "Sheet body for the GREY 'Ended' state, under the title 'Ended' and above the Resume button — it must add information, not repeat 'ended'. 'Resume' names that button. 'Home folder' is the user's home directory on the computer: the session comes back there, not in its original project folder." },
 	"relay.health.ended_send_failed": { role: "status", note: "Composer error when sending to an ENDED session failed to reopen it. 'Try again' means sending again. “Ended” (keep the locale's quotation marks) is the status word under the conversation title at the top; tapping it opens the sheet whose button is Resume." },
@@ -1500,31 +2350,108 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.chrome.close_conversations": "Cerrar conversaciones",
+		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
+		"mobile.chrome.composer.more": "Más contexto",
+		"mobile.chrome.composer.open_queue": "Abrir la cola",
+		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
+		"mobile.chrome.destination.inbox": "Bandeja",
+		"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
+		"mobile.chrome.destination.past": "Anteriores",
+		"mobile.chrome.destination.schedules": "Horarios",
+		"mobile.chrome.destinations": "Destinos",
+		"mobile.chrome.home.connect": "Conectar un ordenador",
+		"mobile.chrome.home.connecting": "Conectando con {host}…",
+		"mobile.chrome.home.greeting": "¿En qué te gustaría trabajar?",
+		"mobile.chrome.home.reconnecting": "Reconectando con {host}…",
+		"mobile.chrome.home.saved_draft": "Tu borrador está guardado en este teléfono y no se ha enviado.",
+		"mobile.chrome.home.sign_in": "Inicia sesión para reconectar",
+		"mobile.chrome.new_chat": "Nuevo chat",
 		"mobile.common.back": "Atrás",
 		"mobile.common.cancel": "Cancelar",
 		"mobile.common.done": "Hecho",
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
 		"mobile.common.try_again": "Reintentar",
+		"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar».",
+		"mobile.composer_input.paste.image": "Pegar imagen",
+		"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
+		"mobile.composer_input.voice.discard": "Descartar la entrada de voz",
+		"mobile.composer_input.voice.finish": "Terminar y transcribir",
+		"mobile.composer_input.voice.mic_setup": "La entrada de voz no está configurada",
+		"mobile.composer_input.voice.mic_setup_hint": "Explica cómo activar la entrada de voz",
+		"mobile.composer_input.voice.setup_needed": "Configura la conversión de voz a texto en tu ordenador.",
+		"mobile.computers.account_help": "Inicia sesión con la cuenta propietaria. Si se eliminó, elige otro equipo.",
+		"mobile.computers.account_mismatch": "Este equipo pertenece a otra cuenta de Radient o se ha eliminado.",
 		"mobile.computers.add": "Añadir una máquina",
 		"mobile.computers.added.stays_listed": "No desaparece de este teléfono: puedes volver a esa máquina desde la lista.",
 		"mobile.computers.badge.active": "activa",
 		"mobile.computers.badge.connecting": "conectando",
+		"mobile.computers.billing_help": "En la consola de Radient, abre la facturación de este túnel y activa el acceso remoto.",
 		"mobile.computers.connecting": "Conectando…",
+		"mobile.computers.connection_response": "Respuesta de conexión",
+		"mobile.computers.disabled_help": "Radient indica que este túnel no está activo ahora. Comprueba su estado en la consola de Radient.",
+		"mobile.computers.harness_help": "En la consola de Radient, activa Local Operator para este túnel.",
+		"mobile.computers.hide_details": "Ocultar detalles",
 		"mobile.computers.none_on_phone": "Aún no hay máquinas en este teléfono.",
 		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
+		"mobile.computers.protected": "Protegido con inicio de sesión",
+		"mobile.computers.retry": "Reintentar",
 		"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
 		"mobile.computers.section.on_phone": "En este teléfono",
+		"mobile.computers.session_error": "La app no pudo conectarse a este equipo.",
+		"mobile.computers.session_error_help": "No hace falta reconfigurar el equipo. Reintenta o muestra los detalles para soporte.",
+		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.sign_out": "Cerrar sesión",
 		"mobile.computers.signing_out": "Cerrando sesión…",
 		"mobile.computers.switch": "Cambiar de máquina",
+		"mobile.computers.transport.custom": "Tu dirección",
+		"mobile.computers.transport.radient": "Radient",
+		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
+		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
+		"mobile.home.chip.effort_default_short": "Esfuerzo predeterminado",
+		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
+		"mobile.home.chip.model_chosen": "Modelo, {model}, elegido para esta conversación",
+		"mobile.home.chip.model_default": "Modelo, {model}, predeterminado de esta máquina",
+		"mobile.home.chip.model_no_default": "Sin predeterminado",
+		"mobile.home.chip.model_no_default_label": "Modelo, esta máquina no tiene un modelo predeterminado. Elige uno.",
 		"mobile.home.connect_disabled_reason": "Conecta una máquina para enviar.",
+		"mobile.home.effort.high": "Alto",
+		"mobile.home.effort.low": "Bajo",
+		"mobile.home.effort.max": "Máximo",
+		"mobile.home.effort.medium": "Medio",
+		"mobile.home.effort.minimal": "Mínimo",
+		"mobile.home.effort.none": "Ninguno",
+		"mobile.home.effort.xhigh": "Muy alto",
 		"mobile.home.folders_read_failed": "Ahora mismo no hemos podido leer las carpetas de esta máquina.",
+		"mobile.home.folders_read_sign_in": "Esta máquina ha pedido que vuelvas a iniciar sesión, así que no hemos podido leer sus carpetas.",
 		"mobile.home.greeting": "¿En qué te puedo ayudar hoy?",
-		"mobile.home.options.apply": "Usar estas opciones",
+		"mobile.home.models_read_failed": "Ahora mismo no hemos podido leer la lista de modelos de esta máquina.",
+		"mobile.home.options.default_model": "Usar el modelo predeterminado de esta máquina",
 		"mobile.home.options.fixed": "Las opciones iniciales de esta conversación son fijas. Usa Detalles de la conversación para los controles en vivo.",
 		"mobile.home.options.folder": "Carpeta en esta máquina",
-		"mobile.home.options.title": "Opciones de la conversación",
+		"mobile.home.picker.badge_default": "Predeterminado",
+		"mobile.home.picker.badge_this_chat": "Esta conversación",
+		"mobile.home.picker.effort_none": "Este modelo no tiene ajuste de esfuerzo.",
+		"mobile.home.picker.effort_title": "Esfuerzo",
+		"mobile.home.picker.effort_unknown": "Esta máquina no conoce los niveles de este modelo, así que usará el nivel más cercano que el modelo admita.",
+		"mobile.home.picker.effort_unsupported": "El Local Operator de esta máquina es demasiado antiguo para aceptar un esfuerzo, así que usa su nivel configurado. Actualízalo para elegir uno aquí.",
+		"mobile.home.picker.effort_use_default": "Nivel de esta máquina",
+		"mobile.home.picker.folder_home": "Personal",
+		"mobile.home.picker.folder_other": "Otra ruta…",
+		"mobile.home.picker.folder_outside": "Esta máquina solo inicia conversaciones dentro de tu carpeta personal o de su carpeta temporal.",
+		"mobile.home.picker.folder_title": "Carpeta",
+		"mobile.home.picker.folder_tmp": "Temporal",
+		"mobile.home.picker.folder_too_long": "Esa ruta es demasiado larga.",
+		"mobile.home.picker.folder_use_path": "Usar esta ruta",
+		"mobile.home.picker.loading": "Cargando…",
+		"mobile.home.picker.model_empty": "No hay modelos disponibles",
+		"mobile.home.picker.model_no_match": "Ningún modelo coincide",
+		"mobile.home.picker.model_search": "Buscar modelos",
+		"mobile.home.picker.model_title": "Modelo",
+		"mobile.home.picker.not_connected": "no conectado",
+		"mobile.home.picker.source_chosen": "Elegido para esta conversación",
+		"mobile.home.picker.source_default": "Predeterminado de esta máquina",
 		"mobile.home.queue.discard": "Descartar los mensajes en cola",
 		"mobile.home.queue.restore": "Pasar los mensajes en cola a borrador",
 		"mobile.home.queue.sheet_title": "Mensajes en cola",
@@ -1578,6 +2505,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Biblioteca",
 		"mobile.notifications.answer": "Responder",
 		"mobile.notifications.back": "Atrás",
+		"mobile.notifications.channel.airy_whistle": "Silbido etéreo",
+		"mobile.notifications.channel.bubble_chord": "Acorde de burbujas",
+		"mobile.notifications.channel.bubble_pulse": "Pulso de burbuja",
+		"mobile.notifications.channel.description": "Alertas de Local Operator. La configuración de sonido de tu ordenador elige cuál de estos canales suena.",
+		"mobile.notifications.channel.felt_marimba": "Marimba de fieltro",
+		"mobile.notifications.channel.hum_swell": "Zumbido creciente",
+		"mobile.notifications.channel.signal_handshake": "Saludo de señales",
+		"mobile.notifications.channel.silent": "Silencio",
+		"mobile.notifications.channel.soft_pulse": "Pulso suave",
+		"mobile.notifications.channel.system": "Sonido del sistema",
+		"mobile.notifications.channel.tape_warble": "Cinta ondulante",
+		"mobile.notifications.channel.task_complete": "Tarea completada",
+		"mobile.notifications.channel.two_note_chime": "Campanilla de dos notas",
 		"mobile.notifications.detail.answer_in_conversation": "Responder en la conversación",
 		"mobile.notifications.detail.conversation_asks": "Preguntas de esta conversación",
 		"mobile.notifications.detail.earlier_updates": "Actualizaciones anteriores",
@@ -1590,6 +2530,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "No se pudieron cargar las notificaciones",
 		"mobile.notifications.priority_high": "Alta",
 		"mobile.notifications.title": "Notificaciones",
+		"mobile.oauth.failed": "No se pudo completar el inicio de sesión. Inténtalo de nuevo.",
+		"mobile.oauth.invalid": "No se ha aceptado esta solicitud de inicio de sesión.",
+		"mobile.oauth.received": "Respuesta de inicio de sesión recibida. Vuelve a la aplicación.",
+		"mobile.oauth.return": "Volver a Local Operator",
 		"mobile.projects.delete_body": "¿Eliminar {name}? La fila del proyecto se borra para siempre. Sus sesiones vinculadas y sus transcripciones no se tocan.",
 		"mobile.projects.draft_kept_note": "Se conservó de tu última visita. Vacía los campos para empezar algo nuevo.",
 		"mobile.projects.milestone_slash_note": "Los nombres de hito no pueden contener una barra. Un hito con barra nunca podría quitarse.",
@@ -1643,8 +2587,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Nada supervisa los despertares de abajo, así que solo se disparan mientras su conversación está en marcha.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# fallo} many {# de fallos} other {# fallos}}",
 		"mobile.schedules.truncated": "Mostrando {shown} de {total} conversaciones con {family, select, wakes {despertares} other {monitorizaciones}}.",
+		"mobile.session.chip.effort_resume_hint": "Reanuda esta sesión para cambiar el esfuerzo",
+		"mobile.session.chip.model_default": "Predeterminado",
+		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
+		"mobile.session.chip.model_unknown": "Desconocido",
+		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
 		"mobile.session.conversation_details": "Detalles de la conversación",
+		"mobile.session.highlights.sound_pause": "Pausar {title}",
+		"mobile.session.highlights.sound_play": "Reproducir {title}",
+		"mobile.session.highlights.sound_refused": "No se pudo reproducir: {reason}",
+		"mobile.session.highlights.sound_untitled": "Sonido",
+		"mobile.session.highlights.sounds_more": "{count, plural, one {# sonido más} other {# sonidos más}}",
+		"mobile.session.highlights.video_open": "Reproducir vídeo {name}",
+		"mobile.session.highlights.withheld": "{count, plural, one {# archivo no mostrado} other {# archivos no mostrados}}: {reasons}",
+		"mobile.session.highlights.withheld_missing": "el archivo ya no existe",
+		"mobile.session.highlights.withheld_outside": "fuera de las ubicaciones permitidas",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+		"mobile.session.highlights.withheld_sensitive": "archivo confidencial",
+		"mobile.session.highlights.withheld_too_large": "demasiado grande para previsualizar",
+		"mobile.session.pending_echo.earlier_not_sent": "Tu mensaje anterior no se envió ({reason}). Tócalo arriba para recuperarlo.",
+		"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
+		"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
+		"mobile.session.pending_echo.not_confirmed": "sin confirmar — reintenta abajo",
+		"mobile.session.pending_echo.not_sent": "no enviado — toca para recuperarlo",
+		"mobile.session.pending_echo.queued_next": "en cola — se envía con tu próximo mensaje",
+		"mobile.session.pending_echo.queued_step": "en cola — se envía cuando termine este paso",
+		"mobile.session.pending_echo.sending": "enviando…",
+		"mobile.session.pending_echo.sent": "enviado",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
+		"mobile.session.subagent_open": "Abrir {agent}",
+		"mobile.session.subagent_open_short": "abrir",
 		"mobile.session_health.control_hint": "Muestra qué significa este estado y qué hace un envío ahora",
 		"mobile.session_health.ended_placeholder": "Envía para reabrir…",
 		"mobile.session_health.menu_hint": "Abre el menú de la sesión",
@@ -1656,6 +2628,41 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
 		"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
+		"mobile.settings.theme.caption_forced": "Siempre {name}",
+		"mobile.settings.theme.caption_system": "Sistema usa {light} y {dark}",
+		"mobile.settings.theme.card_dark": "{name}, tema oscuro",
+		"mobile.settings.theme.card_dark_selected": "{name}, tema oscuro, seleccionado",
+		"mobile.settings.theme.card_light": "{name}, tema claro",
+		"mobile.settings.theme.card_light_selected": "{name}, tema claro, seleccionado",
+		"mobile.settings.theme.mode_dark": "Oscuro",
+		"mobile.settings.theme.mode_label": "Modo del tema",
+		"mobile.settings.theme.mode_light": "Claro",
+		"mobile.settings.theme.mode_system": "Sistema",
+		"mobile.settings.theme.no_match": "Ningún tema coincide",
+		"mobile.settings.theme.row_label": "Tema, {name}",
+		"mobile.settings.theme.search_label": "Buscar temas",
+		"mobile.settings.theme.search_placeholder": "Buscar temas",
+		"mobile.settings.theme.section_dark": "Oscuros ({count})",
+		"mobile.settings.theme.section_light": "Claros ({count})",
+		"mobile.settings.theme.title": "Tema",
+		"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
+		"mobile.signin.failed": "No pudimos iniciar sesión.",
+		"mobile.signin.hide_diagnostics": "Ocultar detalles del inicio de sesión",
+		"mobile.signin.progress": "Iniciando sesión…",
+		"mobile.signin.retry": "Reintentar",
+		"mobile.signin.show_diagnostics": "Mostrar detalles del inicio de sesión",
+		"mobile.signin.stage_browser": "Esperando a tu navegador",
+		"mobile.signin.stage_cancelled": "Inicio de sesión cancelado",
+		"mobile.signin.stage_discovering": "Buscando tus equipos",
+		"mobile.signin.stage_exchanging": "Finalizando el inicio de sesión en el navegador",
+		"mobile.signin.stage_failed": "Error al iniciar sesión",
+		"mobile.signin.stage_idle": "Sin iniciar",
+		"mobile.signin.stage_persisting": "Guardando tu inicio de sesión",
+		"mobile.signin.stage_retiring": "Preparando tu cuenta",
+		"mobile.signin.stage_signed_in": "Sesión iniciada",
+		"mobile.signin.stage_starting": "Iniciando sesión",
+		"mobile.signin.stage_unavailable": "Inicio de sesión no disponible",
+		"mobile.signin.superseded": "Se inició otro acceso.",
 		"mobile.team_bridge.back": "Atrás",
 		"mobile.team_bridge.conversation": "Conversación",
 		"mobile.team_bridge.delivery.held": "{recipient}: En espera de entrega.",
@@ -1760,10 +2767,29 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.send_retry": "Reintentar envío",
 		"mobile.team_bridge.title": "Team Bridge",
 		"mobile.team_bridge.unread": "{count, plural, one {# sin leer} other {# sin leer}}",
+		"relay.chrome.drawer.close": "Cerrar el menú de navegación",
+		"relay.chrome.drawer.library": "Biblioteca",
+		"relay.chrome.drawer.open": "Abrir el menú de navegación",
+		"relay.chrome.drawer.past": "Sesiones anteriores",
+		"relay.chrome.drawer.projects": "Proyectos",
+		"relay.chrome.drawer.settings": "Ajustes",
+		"relay.chrome.list.search_label": "Buscar conversaciones",
+		"relay.chrome.list.search_open": "Buscar",
+		"relay.chrome.row.more": "Más",
+		"relay.chrome.row.tags": "Etiquetas",
 		"relay.chrome.session.resume": "Reanudar",
 		"relay.chrome.session.resuming": "Reanudando…",
 		"relay.chrome.session.subtitle.ended": "Finalizada",
+		"relay.chrome.session.subtitle.idle": "Inactiva",
 		"relay.chrome.session.subtitle.not_answering": "No responde",
+		"relay.chrome.session.subtitle.waiting": "Esperándote",
+		"relay.chrome.session.subtitle.working": "Trabajando · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "Trabajando",
+		"relay.chrome.session.tray.agents": "Agentes {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Tareas {done}/{total}",
+		"relay.composer.action.stop": "detener",
+		"relay.composer.action.stop_agent": "detener al agente",
+		"relay.composer.action.stopping": "deteniendo",
 		"relay.health.dropped_detail": "Tu máquina no logra comunicarse con esta sesión ahora mismo y sigue intentándolo. Hasta que lo consiga, cualquier envío falla de inmediato y lo que escribiste se queda en el campo de texto.",
 		"relay.health.ended_detail": "El historial se conserva. Envía un mensaje o toca Reanudar para reabrir la sesión en tu carpeta personal.",
 		"relay.health.ended_send_failed": "Esta sesión finalizó y no se pudo reabrir en este momento. Inténtalo de nuevo o toca “Finalizada” arriba y elige Reanudar.",
@@ -1790,31 +2816,108 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.chrome.close_conversations": "Fermer les conversations",
+		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
+		"mobile.chrome.composer.more": "Plus de contexte",
+		"mobile.chrome.composer.open_queue": "Ouvrir la file",
+		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
+		"mobile.chrome.destination.inbox": "Boîte",
+		"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
+		"mobile.chrome.destination.past": "Passées",
+		"mobile.chrome.destination.schedules": "Plans",
+		"mobile.chrome.destinations": "Destinations",
+		"mobile.chrome.home.connect": "Connecter un ordinateur",
+		"mobile.chrome.home.connecting": "Connexion à {host}…",
+		"mobile.chrome.home.greeting": "Sur quoi souhaitez-vous travailler ?",
+		"mobile.chrome.home.reconnecting": "Reconnexion à {host}…",
+		"mobile.chrome.home.saved_draft": "Votre brouillon est enregistré sur ce téléphone et n’a pas été envoyé.",
+		"mobile.chrome.home.sign_in": "Se connecter pour rétablir la connexion",
+		"mobile.chrome.new_chat": "Nouveau chat",
 		"mobile.common.back": "Retour",
 		"mobile.common.cancel": "Annuler",
 		"mobile.common.done": "Terminé",
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
 		"mobile.common.try_again": "Réessayer",
+		"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez le trombone, puis Coller l’image, et choisissez « Autoriser le collage ».",
+		"mobile.composer_input.paste.image": "Coller l’image",
+		"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
+		"mobile.composer_input.voice.discard": "Supprimer la saisie vocale",
+		"mobile.composer_input.voice.finish": "Terminer et transcrire",
+		"mobile.composer_input.voice.mic_setup": "La saisie vocale n’est pas configurée",
+		"mobile.composer_input.voice.mic_setup_hint": "Explique comment activer la saisie vocale",
+		"mobile.composer_input.voice.setup_needed": "Configurez la reconnaissance vocale sur votre ordinateur.",
+		"mobile.computers.account_help": "Connectez-vous avec le compte propriétaire. S’il a été supprimé, choisissez un autre ordinateur.",
+		"mobile.computers.account_mismatch": "Cet ordinateur appartient à un autre compte Radient ou a été supprimé.",
 		"mobile.computers.add": "Ajouter un ordinateur",
 		"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
 		"mobile.computers.badge.active": "actif",
 		"mobile.computers.badge.connecting": "connexion",
+		"mobile.computers.billing_help": "Dans la console Radient, ouvrez la facturation de ce tunnel et activez l’accès à distance.",
 		"mobile.computers.connecting": "Connexion…",
+		"mobile.computers.connection_response": "Réponse de connexion",
+		"mobile.computers.disabled_help": "Radient indique que ce tunnel n’est pas actif pour le moment. Vérifiez son état dans la console Radient.",
+		"mobile.computers.harness_help": "Dans la console Radient, activez Local Operator pour ce tunnel.",
+		"mobile.computers.hide_details": "Masquer les détails",
 		"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
 		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
+		"mobile.computers.protected": "Protégé par connexion",
+		"mobile.computers.retry": "Réessayer",
 		"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 		"mobile.computers.section.on_phone": "Sur ce téléphone",
+		"mobile.computers.session_error": "L’app n’a pas pu se connecter à cet ordinateur.",
+		"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",
+		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.sign_out": "Se déconnecter",
 		"mobile.computers.signing_out": "Déconnexion en cours…",
 		"mobile.computers.switch": "Changer d’ordinateur",
+		"mobile.computers.transport.custom": "Votre adresse",
+		"mobile.computers.transport.radient": "Radient",
+		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
+		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
+		"mobile.home.chip.effort_default_short": "Effort par défaut",
+		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
+		"mobile.home.chip.model_chosen": "Modèle, {model}, choisi pour cette conversation",
+		"mobile.home.chip.model_default": "Modèle, {model}, par défaut sur cet ordinateur",
+		"mobile.home.chip.model_no_default": "Aucun par défaut",
+		"mobile.home.chip.model_no_default_label": "Modèle, cet ordinateur n’a pas de modèle par défaut. Choisissez-en un.",
 		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
+		"mobile.home.effort.high": "Élevé",
+		"mobile.home.effort.low": "Faible",
+		"mobile.home.effort.max": "Maximal",
+		"mobile.home.effort.medium": "Moyen",
+		"mobile.home.effort.minimal": "Minimal",
+		"mobile.home.effort.none": "Aucun",
+		"mobile.home.effort.xhigh": "Très élevé",
 		"mobile.home.folders_read_failed": "Impossible de lire les dossiers de cet ordinateur pour le moment.",
+		"mobile.home.folders_read_sign_in": "Cet ordinateur vous a demandé de vous reconnecter ; impossible donc de lire ses dossiers.",
 		"mobile.home.greeting": "Comment puis-je vous aider aujourd’hui ?",
-		"mobile.home.options.apply": "Utiliser ces options",
+		"mobile.home.models_read_failed": "Impossible de lire la liste des modèles de cet ordinateur pour le moment.",
+		"mobile.home.options.default_model": "Utiliser le modèle par défaut de cet ordinateur",
 		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder aux commandes de la conversation en cours.",
 		"mobile.home.options.folder": "Dossier sur cet ordinateur",
-		"mobile.home.options.title": "Options de la conversation",
+		"mobile.home.picker.badge_default": "Par défaut",
+		"mobile.home.picker.badge_this_chat": "Cette conversation",
+		"mobile.home.picker.effort_none": "Ce modèle n’a pas de réglage d’effort.",
+		"mobile.home.picker.effort_title": "Effort",
+		"mobile.home.picker.effort_unknown": "Cet ordinateur ne connaît pas les niveaux de ce modèle ; il utilisera donc le niveau le plus proche que le modèle prend en charge.",
+		"mobile.home.picker.effort_unsupported": "Le Local Operator de cet ordinateur est trop ancien pour accepter un niveau d’effort ; il utilise donc son niveau configuré. Mettez-le à jour pour en choisir un ici.",
+		"mobile.home.picker.effort_use_default": "Niveau de cet ordinateur",
+		"mobile.home.picker.folder_home": "Dossier personnel",
+		"mobile.home.picker.folder_other": "Autre chemin…",
+		"mobile.home.picker.folder_outside": "Cet ordinateur ne démarre des conversations que dans votre dossier personnel ou son dossier temporaire.",
+		"mobile.home.picker.folder_title": "Dossier",
+		"mobile.home.picker.folder_tmp": "Temporaire",
+		"mobile.home.picker.folder_too_long": "Ce chemin est trop long.",
+		"mobile.home.picker.folder_use_path": "Utiliser ce chemin",
+		"mobile.home.picker.loading": "Chargement…",
+		"mobile.home.picker.model_empty": "Aucun modèle disponible",
+		"mobile.home.picker.model_no_match": "Aucun modèle ne correspond",
+		"mobile.home.picker.model_search": "Rechercher des modèles",
+		"mobile.home.picker.model_title": "Modèle",
+		"mobile.home.picker.not_connected": "non connecté",
+		"mobile.home.picker.source_chosen": "Choisi pour cette conversation",
+		"mobile.home.picker.source_default": "Par défaut sur cet ordinateur",
 		"mobile.home.queue.discard": "Supprimer les messages en attente",
 		"mobile.home.queue.restore": "Déplacer les messages en attente vers le brouillon",
 		"mobile.home.queue.sheet_title": "Messages en attente",
@@ -1868,6 +2971,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Bibliothèque",
 		"mobile.notifications.answer": "Répondre",
 		"mobile.notifications.back": "Retour",
+		"mobile.notifications.channel.airy_whistle": "Sifflement léger",
+		"mobile.notifications.channel.bubble_chord": "Accord de bulles",
+		"mobile.notifications.channel.bubble_pulse": "Bulle brève",
+		"mobile.notifications.channel.description": "Alertes de Local Operator. Le réglage du son sur votre ordinateur choisit lequel de ces canaux est utilisé.",
+		"mobile.notifications.channel.felt_marimba": "Marimba feutré",
+		"mobile.notifications.channel.hum_swell": "Bourdon montant",
+		"mobile.notifications.channel.signal_handshake": "Poignée de main",
+		"mobile.notifications.channel.silent": "Silencieux",
+		"mobile.notifications.channel.soft_pulse": "Pulsation douce",
+		"mobile.notifications.channel.system": "Son du système",
+		"mobile.notifications.channel.tape_warble": "Bande ondulante",
+		"mobile.notifications.channel.task_complete": "Tâche terminée",
+		"mobile.notifications.channel.two_note_chime": "Carillon à deux notes",
 		"mobile.notifications.detail.answer_in_conversation": "Répondre dans la conversation",
 		"mobile.notifications.detail.conversation_asks": "Questions de cette conversation",
 		"mobile.notifications.detail.earlier_updates": "Mises à jour précédentes",
@@ -1880,6 +2996,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "Impossible de charger les notifications",
 		"mobile.notifications.priority_high": "Élevée",
 		"mobile.notifications.title": "Notifications",
+		"mobile.oauth.failed": "La connexion n’a pas pu aboutir. Réessayez.",
+		"mobile.oauth.invalid": "Cette demande de connexion n’a pas été acceptée.",
+		"mobile.oauth.received": "Réponse de connexion reçue. Revenez à l’application.",
+		"mobile.oauth.return": "Revenir à Local Operator",
 		"mobile.projects.delete_body": "Supprimer {name} ? La ligne du projet sera définitivement supprimée. Ses sessions liées et leurs transcriptions ne seront pas modifiées.",
 		"mobile.projects.draft_kept_note": "Conservé depuis votre dernière visite. Effacez les champs pour repartir de zéro.",
 		"mobile.projects.milestone_slash_note": "Les noms de jalons ne peuvent pas contenir de barre oblique. Un jalon dont le nom en contient une ne pourrait jamais être supprimé.",
@@ -1933,8 +3053,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
 		"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+		"mobile.session.chip.effort_resume_hint": "Reprenez cette session pour changer l’effort",
+		"mobile.session.chip.model_default": "Par défaut",
+		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
+		"mobile.session.chip.model_unknown": "Inconnu",
+		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
 		"mobile.session.conversation_details": "Détails de la conversation",
+		"mobile.session.highlights.sound_pause": "Mettre {title} en pause",
+		"mobile.session.highlights.sound_play": "Lire {title}",
+		"mobile.session.highlights.sound_refused": "Lecture impossible : {reason}",
+		"mobile.session.highlights.sound_untitled": "Son",
+		"mobile.session.highlights.sounds_more": "{count, plural, one {# autre son} other {# autres sons}}",
+		"mobile.session.highlights.video_open": "Lire la vidéo {name}",
+		"mobile.session.highlights.withheld": "{count, plural, one {# fichier non affiché} other {# fichiers non affichés}} : {reasons}",
+		"mobile.session.highlights.withheld_missing": "le fichier n’existe plus",
+		"mobile.session.highlights.withheld_outside": "hors des emplacements autorisés",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+		"mobile.session.highlights.withheld_sensitive": "fichier sensible",
+		"mobile.session.highlights.withheld_too_large": "trop volumineux pour l’aperçu",
+		"mobile.session.pending_echo.earlier_not_sent": "Votre message précédent n’a pas été envoyé ({reason}). Touchez-le ci-dessus pour le récupérer.",
+		"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé.",
+		"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}",
+		"mobile.session.pending_echo.not_confirmed": "non confirmé — réessayez ci-dessous",
+		"mobile.session.pending_echo.not_sent": "non envoyé — touchez pour le récupérer",
+		"mobile.session.pending_echo.queued_next": "en file — part avec votre prochain message",
+		"mobile.session.pending_echo.queued_step": "en file — part à la fin de cette étape",
+		"mobile.session.pending_echo.sending": "envoi…",
+		"mobile.session.pending_echo.sent": "envoyé",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
+		"mobile.session.subagent_open": "Ouvrir {agent}",
+		"mobile.session.subagent_open_short": "ouvrir",
 		"mobile.session_health.control_hint": "Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.",
 		"mobile.session_health.ended_placeholder": "Envoyer rouvre…",
 		"mobile.session_health.menu_hint": "Ouvre le menu de la session",
@@ -1946,6 +3094,41 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
 		"mobile.session_health.resume_refused_title": "Reprise impossible",
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+		"mobile.settings.theme.caption_forced": "Toujours {name}",
+		"mobile.settings.theme.caption_system": "Système utilise {light} et {dark}",
+		"mobile.settings.theme.card_dark": "{name}, thème sombre",
+		"mobile.settings.theme.card_dark_selected": "{name}, thème sombre, sélectionné",
+		"mobile.settings.theme.card_light": "{name}, thème clair",
+		"mobile.settings.theme.card_light_selected": "{name}, thème clair, sélectionné",
+		"mobile.settings.theme.mode_dark": "Sombre",
+		"mobile.settings.theme.mode_label": "Mode du thème",
+		"mobile.settings.theme.mode_light": "Clair",
+		"mobile.settings.theme.mode_system": "Système",
+		"mobile.settings.theme.no_match": "Aucun thème ne correspond",
+		"mobile.settings.theme.row_label": "Thème, {name}",
+		"mobile.settings.theme.search_label": "Rechercher des thèmes",
+		"mobile.settings.theme.search_placeholder": "Rechercher des thèmes",
+		"mobile.settings.theme.section_dark": "Sombres ({count})",
+		"mobile.settings.theme.section_light": "Clairs ({count})",
+		"mobile.settings.theme.title": "Thème",
+		"mobile.signin.diagnostics": "Diagnostic de connexion",
+		"mobile.signin.failed": "Nous n’avons pas pu terminer la connexion.",
+		"mobile.signin.hide_diagnostics": "Masquer les détails de connexion",
+		"mobile.signin.progress": "Connexion en cours…",
+		"mobile.signin.retry": "Réessayer",
+		"mobile.signin.show_diagnostics": "Afficher les détails de connexion",
+		"mobile.signin.stage_browser": "En attente de votre navigateur",
+		"mobile.signin.stage_cancelled": "Connexion annulée",
+		"mobile.signin.stage_discovering": "Recherche de vos ordinateurs",
+		"mobile.signin.stage_exchanging": "Finalisation de la connexion dans le navigateur",
+		"mobile.signin.stage_failed": "Échec de la connexion",
+		"mobile.signin.stage_idle": "Non commencé",
+		"mobile.signin.stage_persisting": "Enregistrement de votre connexion",
+		"mobile.signin.stage_retiring": "Préparation de votre compte",
+		"mobile.signin.stage_signed_in": "Connecté",
+		"mobile.signin.stage_starting": "Connexion en cours",
+		"mobile.signin.stage_unavailable": "Connexion indisponible",
+		"mobile.signin.superseded": "Une autre connexion a démarré.",
 		"mobile.team_bridge.back": "Retour",
 		"mobile.team_bridge.conversation": "Conversation",
 		"mobile.team_bridge.delivery.held": "{recipient} : En attente de livraison.",
@@ -2050,10 +3233,29 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.send_retry": "Réessayer l’envoi",
 		"mobile.team_bridge.title": "Team Bridge",
 		"mobile.team_bridge.unread": "{count, plural, one {# non lu} other {# non lus}}",
+		"relay.chrome.drawer.close": "Fermer la navigation",
+		"relay.chrome.drawer.library": "Bibliothèque",
+		"relay.chrome.drawer.open": "Ouvrir la navigation",
+		"relay.chrome.drawer.past": "Sessions passées",
+		"relay.chrome.drawer.projects": "Projets",
+		"relay.chrome.drawer.settings": "Paramètres",
+		"relay.chrome.list.search_label": "Rechercher une conversation",
+		"relay.chrome.list.search_open": "Rechercher",
+		"relay.chrome.row.more": "Plus",
+		"relay.chrome.row.tags": "Tags",
 		"relay.chrome.session.resume": "Reprendre",
 		"relay.chrome.session.resuming": "Reprise…",
 		"relay.chrome.session.subtitle.ended": "Terminée",
+		"relay.chrome.session.subtitle.idle": "Inactive",
 		"relay.chrome.session.subtitle.not_answering": "Ne répond pas",
+		"relay.chrome.session.subtitle.waiting": "Vous attend",
+		"relay.chrome.session.subtitle.working": "En cours · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "En cours",
+		"relay.chrome.session.tray.agents": "Agents {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Tâches {done}/{total}",
+		"relay.composer.action.stop": "arrêter",
+		"relay.composer.action.stop_agent": "arrêter l’agent",
+		"relay.composer.action.stopping": "arrêt en cours",
 		"relay.health.dropped_detail": "Votre ordinateur n’arrive pas à joindre cette session pour l’instant et continue d’essayer. Tant qu’il n’y parvient pas, un envoi échoue aussitôt et votre texte reste dans la zone de saisie.",
 		"relay.health.ended_detail": "L’historique est conservé. Envoyez un message ou touchez « Reprendre » pour rouvrir la session dans votre dossier personnel.",
 		"relay.health.ended_send_failed": "Cette session est terminée et n’a pas pu être rouverte pour le moment. Réessayez ou touchez « Terminée » en haut, puis choisissez « Reprendre ».",
@@ -2080,31 +3282,108 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.chrome.close_conversations": "बातचीत बंद करें",
+		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
+		"mobile.chrome.composer.more": "अधिक संदर्भ",
+		"mobile.chrome.composer.open_queue": "कतार खोलें",
+		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
+		"mobile.chrome.destination.inbox": "इनबॉक्स",
+		"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
+		"mobile.chrome.destination.past": "पिछले",
+		"mobile.chrome.destination.schedules": "शेड्यूल",
+		"mobile.chrome.destinations": "गंतव्य",
+		"mobile.chrome.home.connect": "कंप्यूटर कनेक्ट करें",
+		"mobile.chrome.home.connecting": "{host} से कनेक्ट हो रहा है…",
+		"mobile.chrome.home.greeting": "आप किस पर काम करना चाहेंगे?",
+		"mobile.chrome.home.reconnecting": "{host} से फिर जुड़ रहा है…",
+		"mobile.chrome.home.saved_draft": "आपका ड्राफ़्ट इस फ़ोन पर सुरक्षित है और भेजा नहीं गया है।",
+		"mobile.chrome.home.sign_in": "फिर से कनेक्ट करने के लिए साइन इन करें",
+		"mobile.chrome.new_chat": "नई चैट",
 		"mobile.common.back": "वापस",
 		"mobile.common.cancel": "रद्द करें",
 		"mobile.common.done": "हो गया",
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
 		"mobile.common.try_again": "फिर से कोशिश करें",
+		"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। पेपरक्लिप पर टैप करें, फिर छवि चिपकाएँ, और अनुमति दें चुनें।",
+		"mobile.composer_input.paste.image": "छवि चिपकाएँ",
+		"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
+		"mobile.composer_input.voice.discard": "वॉइस इनपुट हटाएँ",
+		"mobile.composer_input.voice.finish": "पूरा करें और लिखें",
+		"mobile.composer_input.voice.mic_setup": "वॉइस इनपुट सेट नहीं है",
+		"mobile.composer_input.voice.mic_setup_hint": "वॉइस इनपुट चालू करने का तरीका बताता है",
+		"mobile.composer_input.voice.setup_needed": "अपने कंप्यूटर पर स्पीच-टू-टेक्स्ट सेट करें।",
+		"mobile.computers.account_help": "इसके मालिक के खाते से साइन इन करें। अगर इसे हटा दिया गया है, तो दूसरा कंप्यूटर चुनें।",
+		"mobile.computers.account_mismatch": "यह कंप्यूटर किसी दूसरे Radient खाते का है या हटा दिया गया है।",
 		"mobile.computers.add": "कंप्यूटर जोड़ें",
 		"mobile.computers.added.stays_listed": "यह इस फ़ोन पर सूची में बना रहता है, ताकि आप कंप्यूटर सूची से वापस स्विच कर सकें।",
 		"mobile.computers.badge.active": "सक्रिय",
 		"mobile.computers.badge.connecting": "कनेक्ट हो रहा",
+		"mobile.computers.billing_help": "Radient कंसोल में इस टनल की बिलिंग सेटिंग खोलें और रिमोट ऐक्सेस चालू करें।",
 		"mobile.computers.connecting": "कनेक्ट हो रहा है…",
+		"mobile.computers.connection_response": "कनेक्शन की प्रतिक्रिया",
+		"mobile.computers.disabled_help": "Radient के अनुसार यह टनल अभी सक्रिय नहीं है। Radient कंसोल में इसकी स्थिति देखें।",
+		"mobile.computers.harness_help": "Radient कंसोल में इस टनल के लिए Local Operator चालू करें।",
+		"mobile.computers.hide_details": "विवरण छिपाएँ",
 		"mobile.computers.none_on_phone": "इस फ़ोन पर अभी कोई कंप्यूटर नहीं।",
 		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
+		"mobile.computers.protected": "साइन-इन से सुरक्षित",
+		"mobile.computers.retry": "दोबारा कोशिश करें",
 		"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
 		"mobile.computers.section.on_phone": "इस फ़ोन पर",
+		"mobile.computers.session_error": "ऐप इस कंप्यूटर से कनेक्ट नहीं हो सका।",
+		"mobile.computers.session_error_help": "कंप्यूटर को फिर से कॉन्फ़िगर करने की ज़रूरत नहीं है। दोबारा कोशिश करें या सहायता के लिए विवरण दिखाएँ।",
+		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.sign_out": "साइन आउट करें",
 		"mobile.computers.signing_out": "साइन आउट हो रहा है…",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
+		"mobile.computers.transport.custom": "आपका पता",
+		"mobile.computers.transport.radient": "Radient",
+		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
+		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
+		"mobile.home.chip.effort_default_short": "डिफ़ॉल्ट प्रयास",
+		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
+		"mobile.home.chip.model_chosen": "मॉडल, {model}, इस बातचीत के लिए चुना गया",
+		"mobile.home.chip.model_default": "मॉडल, {model}, इस कंप्यूटर का डिफ़ॉल्ट",
+		"mobile.home.chip.model_no_default": "कोई डिफ़ॉल्ट नहीं",
+		"mobile.home.chip.model_no_default_label": "मॉडल, इस कंप्यूटर पर कोई डिफ़ॉल्ट मॉडल नहीं है। एक चुनें।",
 		"mobile.home.connect_disabled_reason": "भेजने के लिए कंप्यूटर कनेक्ट करें।",
+		"mobile.home.effort.high": "उच्च",
+		"mobile.home.effort.low": "कम",
+		"mobile.home.effort.max": "अधिकतम",
+		"mobile.home.effort.medium": "मध्यम",
+		"mobile.home.effort.minimal": "न्यूनतम",
+		"mobile.home.effort.none": "कोई नहीं",
+		"mobile.home.effort.xhigh": "बहुत उच्च",
 		"mobile.home.folders_read_failed": "हम अभी इस कंप्यूटर के फ़ोल्डर नहीं पढ़ सके।",
+		"mobile.home.folders_read_sign_in": "इस कंप्यूटर ने दोबारा साइन इन करने को कहा है, इसलिए इसके फ़ोल्डर नहीं पढ़े जा सके।",
 		"mobile.home.greeting": "आज मैं आपकी किस बात में मदद करूँ?",
-		"mobile.home.options.apply": "ये विकल्प इस्तेमाल करें",
+		"mobile.home.models_read_failed": "हम अभी इस कंप्यूटर की मॉडल सूची नहीं पढ़ सके।",
+		"mobile.home.options.default_model": "इस कंप्यूटर का डिफ़ॉल्ट मॉडल इस्तेमाल करें",
 		"mobile.home.options.fixed": "इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।",
 		"mobile.home.options.folder": "इस कंप्यूटर पर फ़ोल्डर",
-		"mobile.home.options.title": "बातचीत के विकल्प",
+		"mobile.home.picker.badge_default": "डिफ़ॉल्ट",
+		"mobile.home.picker.badge_this_chat": "यह बातचीत",
+		"mobile.home.picker.effort_none": "इस मॉडल में प्रयास की कोई सेटिंग नहीं है।",
+		"mobile.home.picker.effort_title": "प्रयास",
+		"mobile.home.picker.effort_unknown": "यह कंप्यूटर इस मॉडल के स्तर नहीं जानता, इसलिए वह मॉडल द्वारा समर्थित सबसे नज़दीकी स्तर इस्तेमाल करेगा।",
+		"mobile.home.picker.effort_unsupported": "इस कंप्यूटर का Local Operator प्रयास स्वीकार करने के लिए बहुत पुराना है, इसलिए वह अपना कॉन्फ़िगर किया गया स्तर इस्तेमाल करता है। यहाँ से चुनने के लिए इसे अपडेट करें।",
+		"mobile.home.picker.effort_use_default": "इस कंप्यूटर का स्तर",
+		"mobile.home.picker.folder_home": "होम",
+		"mobile.home.picker.folder_other": "अन्य पाथ…",
+		"mobile.home.picker.folder_outside": "यह कंप्यूटर बातचीत केवल आपके होम फ़ोल्डर या उसके अस्थायी फ़ोल्डर के अंदर शुरू करता है।",
+		"mobile.home.picker.folder_title": "फ़ोल्डर",
+		"mobile.home.picker.folder_tmp": "अस्थायी",
+		"mobile.home.picker.folder_too_long": "यह पाथ बहुत लंबा है।",
+		"mobile.home.picker.folder_use_path": "यह पाथ इस्तेमाल करें",
+		"mobile.home.picker.loading": "लोड हो रहा है…",
+		"mobile.home.picker.model_empty": "कोई मॉडल उपलब्ध नहीं",
+		"mobile.home.picker.model_no_match": "कोई मॉडल मेल नहीं खाता",
+		"mobile.home.picker.model_search": "मॉडल खोजें",
+		"mobile.home.picker.model_title": "मॉडल",
+		"mobile.home.picker.not_connected": "कनेक्ट नहीं",
+		"mobile.home.picker.source_chosen": "इस बातचीत के लिए चुना गया",
+		"mobile.home.picker.source_default": "इस कंप्यूटर का डिफ़ॉल्ट",
 		"mobile.home.queue.discard": "कतार के संदेश हटाएँ",
 		"mobile.home.queue.restore": "कतार के संदेश ड्राफ़्ट में ले जाएँ",
 		"mobile.home.queue.sheet_title": "कतार के संदेश",
@@ -2158,6 +3437,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "लाइब्रेरी",
 		"mobile.notifications.answer": "उत्तर दें",
 		"mobile.notifications.back": "वापस",
+		"mobile.notifications.channel.airy_whistle": "हल्की सीटी",
+		"mobile.notifications.channel.bubble_chord": "बुलबुलों का सुर",
+		"mobile.notifications.channel.bubble_pulse": "बुलबुले की धड़कन",
+		"mobile.notifications.channel.description": "Local Operator के अलर्ट। आपके कंप्यूटर की ध्वनि सेटिंग तय करती है कि इनमें से कौन-सा चैनल बजे।",
+		"mobile.notifications.channel.felt_marimba": "मुलायम मारिम्बा",
+		"mobile.notifications.channel.hum_swell": "उभरती गुनगुनाहट",
+		"mobile.notifications.channel.signal_handshake": "सिग्नल हैंडशेक",
+		"mobile.notifications.channel.silent": "बिना आवाज़",
+		"mobile.notifications.channel.soft_pulse": "कोमल धड़कन",
+		"mobile.notifications.channel.system": "सिस्टम ध्वनि",
+		"mobile.notifications.channel.tape_warble": "लहराती टेप",
+		"mobile.notifications.channel.task_complete": "काम पूरा",
+		"mobile.notifications.channel.two_note_chime": "दो सुरों वाली घंटी",
 		"mobile.notifications.detail.answer_in_conversation": "बातचीत में उत्तर दें",
 		"mobile.notifications.detail.conversation_asks": "इस बातचीत के सवाल",
 		"mobile.notifications.detail.earlier_updates": "पिछले अपडेट",
@@ -2170,6 +3462,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "सूचनाएँ लोड नहीं हो सकीं",
 		"mobile.notifications.priority_high": "उच्च",
 		"mobile.notifications.title": "सूचनाएँ",
+		"mobile.oauth.failed": "साइन-इन पूरा नहीं हो सका। फिर से कोशिश करें।",
+		"mobile.oauth.invalid": "यह साइन-इन अनुरोध स्वीकार नहीं किया गया।",
+		"mobile.oauth.received": "साइन-इन का जवाब मिल गया है। ऐप पर लौटें।",
+		"mobile.oauth.return": "Local Operator पर लौटें",
 		"mobile.projects.delete_body": "{name} मिटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।",
 		"mobile.projects.draft_kept_note": "पिछली बार से सुरक्षित रखा गया। कुछ नया शुरू करने के लिए फ़ील्ड खाली करें।",
 		"mobile.projects.milestone_slash_note": "पड़ाव के नाम में स्लैश नहीं हो सकता। स्लैश वाला पड़ाव कभी हटाया नहीं जा सकेगा।",
@@ -2223,8 +3519,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "इन जागृतियों पर कोई निगरानी नहीं — ये केवल तब जागेंगी जब इनकी बातचीत चल रही हो।",
 		"mobile.schedules.tail.failed": "{count} विफल",
 		"mobile.schedules.truncated": "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।",
+		"mobile.session.chip.effort_resume_hint": "प्रयास बदलने के लिए यह सत्र फिर से शुरू करें",
+		"mobile.session.chip.model_default": "डिफ़ॉल्ट",
+		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
+		"mobile.session.chip.model_unknown": "अज्ञात",
+		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
 		"mobile.session.conversation_details": "बातचीत का विवरण",
+		"mobile.session.highlights.sound_pause": "{title} रोकें",
+		"mobile.session.highlights.sound_play": "{title} चलाएँ",
+		"mobile.session.highlights.sound_refused": "चलाया नहीं जा सका: {reason}",
+		"mobile.session.highlights.sound_untitled": "ध्वनि",
+		"mobile.session.highlights.sounds_more": "{count, plural, one {# और ध्वनि} other {# और ध्वनियाँ}}",
+		"mobile.session.highlights.video_open": "वीडियो {name} चलाएँ",
+		"mobile.session.highlights.withheld": "{count, plural, one {# फ़ाइल नहीं दिखाई गई} other {# फ़ाइलें नहीं दिखाई गईं}}: {reasons}",
+		"mobile.session.highlights.withheld_missing": "फ़ाइल अब मौजूद नहीं है",
+		"mobile.session.highlights.withheld_outside": "अनुमत स्थानों से बाहर",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+		"mobile.session.highlights.withheld_sensitive": "संवेदनशील फ़ाइल",
+		"mobile.session.highlights.withheld_too_large": "पूर्वावलोकन के लिए बहुत बड़ी",
+		"mobile.session.pending_echo.earlier_not_sent": "आपका पिछला संदेश नहीं भेजा गया ({reason})। उसे वापस लाने के लिए ऊपर टैप करें।",
+		"mobile.session.pending_echo.earlier_went_through": "आपका पिछला संदेश भेज दिया गया। नीचे का टेक्स्ट अभी नहीं भेजा गया है।",
+		"mobile.session.pending_echo.images": "{count, plural, one {# छवि संलग्न} other {# छवियाँ संलग्न}}",
+		"mobile.session.pending_echo.not_confirmed": "पुष्टि नहीं हुई — नीचे फिर से कोशिश करें",
+		"mobile.session.pending_echo.not_sent": "नहीं भेजा गया — वापस लाने के लिए टैप करें",
+		"mobile.session.pending_echo.queued_next": "कतार में — आपके अगले संदेश के साथ भेजा जाएगा",
+		"mobile.session.pending_echo.queued_step": "कतार में — यह चरण पूरा होने पर भेजा जाएगा",
+		"mobile.session.pending_echo.sending": "भेजा जा रहा है…",
+		"mobile.session.pending_echo.sent": "भेजा गया",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
+		"mobile.session.subagent_open": "{agent} खोलें",
+		"mobile.session.subagent_open_short": "खोलें",
 		"mobile.session_health.control_hint": "बताता है कि इस स्थिति का अर्थ क्या है और अभी भेजने पर क्या होगा",
 		"mobile.session_health.ended_placeholder": "भेजने पर होम फ़ोल्डर में खुलेगा…",
 		"mobile.session_health.menu_hint": "सत्र मेन्यू खोलता है",
@@ -2236,6 +3560,41 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 		"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
+		"mobile.settings.theme.caption_forced": "हमेशा {name}",
+		"mobile.settings.theme.caption_system": "सिस्टम {light} और {dark} का उपयोग करता है",
+		"mobile.settings.theme.card_dark": "{name}, गहरी थीम",
+		"mobile.settings.theme.card_dark_selected": "{name}, गहरी थीम, चुनी गई",
+		"mobile.settings.theme.card_light": "{name}, हल्की थीम",
+		"mobile.settings.theme.card_light_selected": "{name}, हल्की थीम, चुनी गई",
+		"mobile.settings.theme.mode_dark": "गहरी",
+		"mobile.settings.theme.mode_label": "थीम मोड",
+		"mobile.settings.theme.mode_light": "हल्की",
+		"mobile.settings.theme.mode_system": "सिस्टम",
+		"mobile.settings.theme.no_match": "कोई थीम मेल नहीं खाती",
+		"mobile.settings.theme.row_label": "थीम, {name}",
+		"mobile.settings.theme.search_label": "थीम खोजें",
+		"mobile.settings.theme.search_placeholder": "थीम खोजें",
+		"mobile.settings.theme.section_dark": "गहरी ({count})",
+		"mobile.settings.theme.section_light": "हल्की ({count})",
+		"mobile.settings.theme.title": "थीम",
+		"mobile.signin.diagnostics": "साइन-इन निदान",
+		"mobile.signin.failed": "हम साइन-इन पूरा नहीं कर सके।",
+		"mobile.signin.hide_diagnostics": "साइन-इन का विवरण छिपाएँ",
+		"mobile.signin.progress": "साइन इन हो रहा है…",
+		"mobile.signin.retry": "फिर कोशिश करें",
+		"mobile.signin.show_diagnostics": "साइन-इन का विवरण दिखाएँ",
+		"mobile.signin.stage_browser": "आपके ब्राउज़र की प्रतीक्षा है",
+		"mobile.signin.stage_cancelled": "साइन-इन रद्द हुआ",
+		"mobile.signin.stage_discovering": "आपके कंप्यूटर खोजे जा रहे हैं",
+		"mobile.signin.stage_exchanging": "ब्राउज़र में साइन-इन पूरा हो रहा है",
+		"mobile.signin.stage_failed": "साइन-इन विफल हुआ",
+		"mobile.signin.stage_idle": "शुरू नहीं हुआ",
+		"mobile.signin.stage_persisting": "आपका साइन-इन सहेजा जा रहा है",
+		"mobile.signin.stage_retiring": "आपका खाता तैयार हो रहा है",
+		"mobile.signin.stage_signed_in": "साइन-इन हो गया",
+		"mobile.signin.stage_starting": "साइन-इन शुरू हो रहा है",
+		"mobile.signin.stage_unavailable": "साइन-इन उपलब्ध नहीं है",
+		"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।",
 		"mobile.team_bridge.back": "वापस",
 		"mobile.team_bridge.conversation": "बातचीत",
 		"mobile.team_bridge.delivery.held": "{recipient}: पहुँचाए जाने की प्रतीक्षा में।",
@@ -2340,10 +3699,29 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.send_retry": "भेजने की फिर कोशिश करें",
 		"mobile.team_bridge.title": "Team Bridge",
 		"mobile.team_bridge.unread": "{count, plural, one {# अपठित} other {# अपठित}}",
+		"relay.chrome.drawer.close": "नेविगेशन बंद करें",
+		"relay.chrome.drawer.library": "लाइब्रेरी",
+		"relay.chrome.drawer.open": "नेविगेशन खोलें",
+		"relay.chrome.drawer.past": "पिछले सत्र",
+		"relay.chrome.drawer.projects": "प्रोजेक्ट",
+		"relay.chrome.drawer.settings": "सेटिंग",
+		"relay.chrome.list.search_label": "बातचीत खोजें",
+		"relay.chrome.list.search_open": "खोजें",
+		"relay.chrome.row.more": "और",
+		"relay.chrome.row.tags": "टैग",
 		"relay.chrome.session.resume": "जारी रखें",
 		"relay.chrome.session.resuming": "खुल रहा है…",
 		"relay.chrome.session.subtitle.ended": "समाप्त",
+		"relay.chrome.session.subtitle.idle": "आइडल",
 		"relay.chrome.session.subtitle.not_answering": "उत्तर नहीं दे रहा",
+		"relay.chrome.session.subtitle.waiting": "आपका इंतज़ार है",
+		"relay.chrome.session.subtitle.working": "कार्यरत · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "कार्यरत",
+		"relay.chrome.session.tray.agents": "एजेंट {running}/{total}",
+		"relay.chrome.session.tray.tasks": "कार्य {done}/{total}",
+		"relay.composer.action.stop": "रोकें",
+		"relay.composer.action.stop_agent": "एजेंट को रोकें",
+		"relay.composer.action.stopping": "रोका जा रहा है",
 		"relay.health.dropped_detail": "आपका कंप्यूटर अभी इस सत्र तक नहीं पहुँच पा रहा है और लगातार कोशिश कर रहा है। जब तक वह पहुँच नहीं पाता, संदेश भेजते ही विफल हो जाता है और आपका लिखा हुआ टेक्स्ट इनपुट फ़ील्ड में ही रहता है।",
 		"relay.health.ended_detail": "इतिहास सुरक्षित है। इसे अपने होम फ़ोल्डर में फिर से खोलने के लिए संदेश भेजें या “जारी रखें” दबाएँ।",
 		"relay.health.ended_send_failed": "यह सत्र समाप्त हो चुका है और अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें, या ऊपर “समाप्त” दबाएँ और “जारी रखें” चुनें।",
@@ -2370,31 +3748,108 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.chrome.close_conversations": "Закрыть список бесед",
+		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
+		"mobile.chrome.composer.more": "Дополнительный контекст",
+		"mobile.chrome.composer.open_queue": "Открыть очередь",
+		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
+		"mobile.chrome.destination.inbox": "Входящие",
+		"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
+		"mobile.chrome.destination.past": "Прошлые",
+		"mobile.chrome.destination.schedules": "Расписания",
+		"mobile.chrome.destinations": "Разделы",
+		"mobile.chrome.home.connect": "Подключить компьютер",
+		"mobile.chrome.home.connecting": "Подключение к {host}…",
+		"mobile.chrome.home.greeting": "Над чем вы хотите поработать?",
+		"mobile.chrome.home.reconnecting": "Повторное подключение к {host}…",
+		"mobile.chrome.home.saved_draft": "Черновик сохранён на этом телефоне и не отправлен.",
+		"mobile.chrome.home.sign_in": "Войдите для повторного подключения",
+		"mobile.chrome.new_chat": "Новый чат",
 		"mobile.common.back": "Назад",
 		"mobile.common.cancel": "Отмена",
 		"mobile.common.done": "Готово",
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
 		"mobile.common.try_again": "Повторить",
+		"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку».",
+		"mobile.composer_input.paste.image": "Вставить изображение",
+		"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
+		"mobile.composer_input.voice.discard": "Отменить голосовой ввод",
+		"mobile.composer_input.voice.finish": "Завершить и расшифровать",
+		"mobile.composer_input.voice.mic_setup": "Голосовой ввод не настроен",
+		"mobile.composer_input.voice.mic_setup_hint": "Объясняет, как включить голосовой ввод",
+		"mobile.composer_input.voice.setup_needed": "Настройте распознавание речи на компьютере.",
+		"mobile.computers.account_help": "Войдите в аккаунт владельца. Если компьютер удалён, выберите другой.",
+		"mobile.computers.account_mismatch": "Этот компьютер принадлежит другому аккаунту Radient или был удалён.",
 		"mobile.computers.add": "Добавить компьютер",
 		"mobile.computers.added.stays_listed": "Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров.",
 		"mobile.computers.badge.active": "активен",
 		"mobile.computers.badge.connecting": "подключается",
+		"mobile.computers.billing_help": "В консоли Radient откройте настройки оплаты этого туннеля и включите удалённый доступ.",
 		"mobile.computers.connecting": "Подключение…",
+		"mobile.computers.connection_response": "Ответ подключения",
+		"mobile.computers.disabled_help": "По данным Radient, этот туннель сейчас неактивен. Проверьте его состояние в консоли Radient.",
+		"mobile.computers.harness_help": "В консоли Radient включите Local Operator для этого туннеля.",
+		"mobile.computers.hide_details": "Скрыть сведения",
 		"mobile.computers.none_on_phone": "На этом телефоне пока нет компьютеров.",
 		"mobile.computers.password_placeholder": "Пароль из lop mobile",
+		"mobile.computers.protected": "Защищено входом",
+		"mobile.computers.retry": "Повторить",
 		"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
 		"mobile.computers.section.on_phone": "На этом телефоне",
+		"mobile.computers.session_error": "Приложению не удалось подключиться к этому компьютеру.",
+		"mobile.computers.session_error_help": "Перенастраивать компьютер не нужно. Повторите попытку или откройте сведения для поддержки.",
+		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.sign_out": "Выйти",
 		"mobile.computers.signing_out": "Выход…",
 		"mobile.computers.switch": "Сменить компьютер",
+		"mobile.computers.transport.custom": "Ваш адрес",
+		"mobile.computers.transport.radient": "Radient",
+		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
+		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
+		"mobile.home.chip.effort_default_short": "Усилие по умолчанию",
+		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
+		"mobile.home.chip.model_chosen": "Модель, {model}, выбрана для этой беседы",
+		"mobile.home.chip.model_default": "Модель, {model}, по умолчанию на этом компьютере",
+		"mobile.home.chip.model_no_default": "Не задана",
+		"mobile.home.chip.model_no_default_label": "Модель, на этом компьютере нет модели по умолчанию. Выберите модель.",
 		"mobile.home.connect_disabled_reason": "Подключите компьютер, чтобы отправить.",
+		"mobile.home.effort.high": "Высокое",
+		"mobile.home.effort.low": "Низкое",
+		"mobile.home.effort.max": "Максимальное",
+		"mobile.home.effort.medium": "Среднее",
+		"mobile.home.effort.minimal": "Минимальное",
+		"mobile.home.effort.none": "Нет",
+		"mobile.home.effort.xhigh": "Очень высокое",
 		"mobile.home.folders_read_failed": "Не удалось прочитать папки этого компьютера.",
+		"mobile.home.folders_read_sign_in": "Этот компьютер попросил войти снова, поэтому его папки прочитать не удалось.",
 		"mobile.home.greeting": "Чем помочь сегодня?",
-		"mobile.home.options.apply": "Применить",
+		"mobile.home.models_read_failed": "Не удалось прочитать список моделей этого компьютера.",
+		"mobile.home.options.default_model": "Использовать модель по умолчанию на этом компьютере",
 		"mobile.home.options.fixed": "Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».",
 		"mobile.home.options.folder": "Папка на этом компьютере",
-		"mobile.home.options.title": "Параметры беседы",
+		"mobile.home.picker.badge_default": "По умолчанию",
+		"mobile.home.picker.badge_this_chat": "Эта беседа",
+		"mobile.home.picker.effort_none": "У этой модели нет настройки усилия.",
+		"mobile.home.picker.effort_title": "Усилие",
+		"mobile.home.picker.effort_unknown": "Этот компьютер не знает уровней этой модели, поэтому он использует ближайший уровень, который поддерживает модель.",
+		"mobile.home.picker.effort_unsupported": "Local Operator на этом компьютере слишком старый, чтобы принять уровень усилия, поэтому он использует настроенный уровень. Обновите его, чтобы выбирать здесь.",
+		"mobile.home.picker.effort_use_default": "Уровень этого компьютера",
+		"mobile.home.picker.folder_home": "Домашняя",
+		"mobile.home.picker.folder_other": "Другой путь…",
+		"mobile.home.picker.folder_outside": "Этот компьютер начинает беседы только внутри вашей домашней папки или его временной папки.",
+		"mobile.home.picker.folder_title": "Папка",
+		"mobile.home.picker.folder_tmp": "Временная",
+		"mobile.home.picker.folder_too_long": "Этот путь слишком длинный.",
+		"mobile.home.picker.folder_use_path": "Использовать этот путь",
+		"mobile.home.picker.loading": "Загрузка…",
+		"mobile.home.picker.model_empty": "Нет доступных моделей",
+		"mobile.home.picker.model_no_match": "Нет подходящих моделей",
+		"mobile.home.picker.model_search": "Поиск моделей",
+		"mobile.home.picker.model_title": "Модель",
+		"mobile.home.picker.not_connected": "не подключено",
+		"mobile.home.picker.source_chosen": "Выбрано для этой беседы",
+		"mobile.home.picker.source_default": "По умолчанию на этом компьютере",
 		"mobile.home.queue.discard": "Удалить сообщения из очереди",
 		"mobile.home.queue.restore": "Перенести сообщения в черновик",
 		"mobile.home.queue.sheet_title": "Сообщения в очереди",
@@ -2448,6 +3903,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Библиотека",
 		"mobile.notifications.answer": "Ответить",
 		"mobile.notifications.back": "Назад",
+		"mobile.notifications.channel.airy_whistle": "Лёгкий свист",
+		"mobile.notifications.channel.bubble_chord": "Аккорд пузырьков",
+		"mobile.notifications.channel.bubble_pulse": "Пузырьковый импульс",
+		"mobile.notifications.channel.description": "Оповещения Local Operator. Какой из этих каналов звучит, выбирает настройка звука на вашем компьютере.",
+		"mobile.notifications.channel.felt_marimba": "Войлочная маримба",
+		"mobile.notifications.channel.hum_swell": "Нарастающий гул",
+		"mobile.notifications.channel.signal_handshake": "Обмен сигналами",
+		"mobile.notifications.channel.silent": "Без звука",
+		"mobile.notifications.channel.soft_pulse": "Мягкий импульс",
+		"mobile.notifications.channel.system": "Системный звук",
+		"mobile.notifications.channel.tape_warble": "Плывущая плёнка",
+		"mobile.notifications.channel.task_complete": "Задача выполнена",
+		"mobile.notifications.channel.two_note_chime": "Двухнотный звон",
 		"mobile.notifications.detail.answer_in_conversation": "Ответить в беседе",
 		"mobile.notifications.detail.conversation_asks": "Вопросы этой беседы",
 		"mobile.notifications.detail.earlier_updates": "Прошлые обновления",
@@ -2460,6 +3928,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "Не удалось загрузить уведомления",
 		"mobile.notifications.priority_high": "Важно",
 		"mobile.notifications.title": "Уведомления",
+		"mobile.oauth.failed": "Не удалось завершить вход. Попробуйте ещё раз.",
+		"mobile.oauth.invalid": "Этот запрос на вход не принят.",
+		"mobile.oauth.received": "Ответ для входа получен. Вернитесь в приложение.",
+		"mobile.oauth.return": "Вернуться в Local Operator",
 		"mobile.projects.delete_body": "Удалить «{name}»? Строка проекта исчезнет навсегда. Связанные сессии и их транскрипты не затрагиваются.",
 		"mobile.projects.draft_kept_note": "Сохранено с прошлого раза. Очистите поля, чтобы начать новое.",
 		"mobile.projects.milestone_slash_note": "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить.",
@@ -2513,8 +3985,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "У пробуждений ниже нет супервизора, поэтому они срабатывают, только пока идёт их беседа.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# сбой} few {# сбоя} many {# сбоев} other {# сбоя}}",
 		"mobile.schedules.truncated": "Беседы с {family, select, wakes {пробуждениями} other {мониторами}}: показано {shown} из {total}.",
+		"mobile.session.chip.effort_resume_hint": "Возобновите этот сеанс, чтобы изменить усилие",
+		"mobile.session.chip.model_default": "По умолчанию",
+		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
+		"mobile.session.chip.model_unknown": "Неизвестно",
+		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
 		"mobile.session.conversation_details": "Детали беседы",
+		"mobile.session.highlights.sound_pause": "Приостановить {title}",
+		"mobile.session.highlights.sound_play": "Воспроизвести {title}",
+		"mobile.session.highlights.sound_refused": "Не удалось воспроизвести: {reason}",
+		"mobile.session.highlights.sound_untitled": "Звук",
+		"mobile.session.highlights.sounds_more": "{count, plural, one {Ещё # звук} few {Ещё # звука} many {Ещё # звуков} other {Ещё # звука}}",
+		"mobile.session.highlights.video_open": "Воспроизвести видео {name}",
+		"mobile.session.highlights.withheld": "{count, plural, one {# файл не показан} few {# файла не показаны} many {# файлов не показано} other {# файла не показано}}: {reasons}",
+		"mobile.session.highlights.withheld_missing": "файл больше не существует",
+		"mobile.session.highlights.withheld_outside": "за пределами разрешённых мест",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+		"mobile.session.highlights.withheld_sensitive": "конфиденциальный файл",
+		"mobile.session.highlights.withheld_too_large": "слишком большой для просмотра",
+		"mobile.session.pending_echo.earlier_not_sent": "Предыдущее сообщение не отправлено ({reason}). Нажмите на него выше, чтобы вернуть.",
+		"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен.",
+		"mobile.session.pending_echo.images": "{count, plural, one {# изображение прикреплено} few {# изображения прикреплены} many {# изображений прикреплено} other {# изображения прикреплено}}",
+		"mobile.session.pending_echo.not_confirmed": "не подтверждено — повторите ниже",
+		"mobile.session.pending_echo.not_sent": "не отправлено — нажмите, чтобы вернуть",
+		"mobile.session.pending_echo.queued_next": "в очереди — отправится с вашим следующим сообщением",
+		"mobile.session.pending_echo.queued_step": "в очереди — отправится после этого шага",
+		"mobile.session.pending_echo.sending": "отправка…",
+		"mobile.session.pending_echo.sent": "отправлено",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
+		"mobile.session.subagent_open": "Открыть {agent}",
+		"mobile.session.subagent_open_short": "открыть",
 		"mobile.session_health.control_hint": "Показывает, что означает это состояние и что произойдёт при отправке",
 		"mobile.session_health.ended_placeholder": "Отправка возобновит её…",
 		"mobile.session_health.menu_hint": "Открывает меню сессии",
@@ -2526,6 +4026,41 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
 		"mobile.session_health.resume_refused_title": "Не удалось возобновить",
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
+		"mobile.settings.theme.caption_forced": "Всегда {name}",
+		"mobile.settings.theme.caption_system": "Как в системе: {light} и {dark}",
+		"mobile.settings.theme.card_dark": "{name}, тёмная тема",
+		"mobile.settings.theme.card_dark_selected": "{name}, тёмная тема, выбрана",
+		"mobile.settings.theme.card_light": "{name}, светлая тема",
+		"mobile.settings.theme.card_light_selected": "{name}, светлая тема, выбрана",
+		"mobile.settings.theme.mode_dark": "Тёмная",
+		"mobile.settings.theme.mode_label": "Режим темы",
+		"mobile.settings.theme.mode_light": "Светлая",
+		"mobile.settings.theme.mode_system": "Как в системе",
+		"mobile.settings.theme.no_match": "Подходящих тем нет",
+		"mobile.settings.theme.row_label": "Тема, {name}",
+		"mobile.settings.theme.search_label": "Поиск тем",
+		"mobile.settings.theme.search_placeholder": "Поиск тем",
+		"mobile.settings.theme.section_dark": "Тёмные ({count})",
+		"mobile.settings.theme.section_light": "Светлые ({count})",
+		"mobile.settings.theme.title": "Тема",
+		"mobile.signin.diagnostics": "Диагностика входа",
+		"mobile.signin.failed": "Не удалось завершить вход.",
+		"mobile.signin.hide_diagnostics": "Скрыть сведения о входе",
+		"mobile.signin.progress": "Вход…",
+		"mobile.signin.retry": "Повторить",
+		"mobile.signin.show_diagnostics": "Показать сведения о входе",
+		"mobile.signin.stage_browser": "Ожидание браузера",
+		"mobile.signin.stage_cancelled": "Вход отменён",
+		"mobile.signin.stage_discovering": "Поиск ваших компьютеров",
+		"mobile.signin.stage_exchanging": "Завершение входа через браузер",
+		"mobile.signin.stage_failed": "Не удалось войти",
+		"mobile.signin.stage_idle": "Не начато",
+		"mobile.signin.stage_persisting": "Сохранение входа",
+		"mobile.signin.stage_retiring": "Подготовка учётной записи",
+		"mobile.signin.stage_signed_in": "Вход выполнен",
+		"mobile.signin.stage_starting": "Начало входа",
+		"mobile.signin.stage_unavailable": "Вход недоступен",
+		"mobile.signin.superseded": "Начался другой вход.",
 		"mobile.team_bridge.back": "Назад",
 		"mobile.team_bridge.conversation": "Переписка",
 		"mobile.team_bridge.delivery.held": "{recipient}: Ожидает доставки.",
@@ -2630,10 +4165,29 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.send_retry": "Повторить отправку",
 		"mobile.team_bridge.title": "Team Bridge",
 		"mobile.team_bridge.unread": "{count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанных}}",
+		"relay.chrome.drawer.close": "Закрыть навигацию",
+		"relay.chrome.drawer.library": "Библиотека",
+		"relay.chrome.drawer.open": "Открыть навигацию",
+		"relay.chrome.drawer.past": "Прошлые сессии",
+		"relay.chrome.drawer.projects": "Проекты",
+		"relay.chrome.drawer.settings": "Настройки",
+		"relay.chrome.list.search_label": "Поиск по беседам",
+		"relay.chrome.list.search_open": "Поиск",
+		"relay.chrome.row.more": "Ещё",
+		"relay.chrome.row.tags": "Теги",
 		"relay.chrome.session.resume": "Возобновить",
 		"relay.chrome.session.resuming": "Возобновляем…",
 		"relay.chrome.session.subtitle.ended": "Завершена",
+		"relay.chrome.session.subtitle.idle": "Простой",
 		"relay.chrome.session.subtitle.not_answering": "Не отвечает",
+		"relay.chrome.session.subtitle.waiting": "Ждёт вас",
+		"relay.chrome.session.subtitle.working": "Работает · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "Работает",
+		"relay.chrome.session.tray.agents": "Агенты {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Задачи {done}/{total}",
+		"relay.composer.action.stop": "остановить",
+		"relay.composer.action.stop_agent": "остановить агента",
+		"relay.composer.action.stopping": "останавливаем",
 		"relay.health.dropped_detail": "Компьютер сейчас не может связаться с этой сессией и продолжает попытки. Пока это не удастся, отправка сразу завершается ошибкой, а текст остаётся в поле ввода.",
 		"relay.health.ended_detail": "История сохранена. Отправьте сообщение или нажмите «Возобновить», чтобы снова открыть сессию в вашей домашней папке.",
 		"relay.health.ended_send_failed": "Эта сессия завершена, и открыть её снова пока не удалось. Попробуйте отправить ещё раз или нажмите «Завершена» вверху и выберите «Возобновить».",
@@ -2660,31 +4214,108 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
+		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
+		"mobile.chrome.composer.more": "مزید سیاق",
+		"mobile.chrome.composer.open_queue": "قطار کھولیں",
+		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
+		"mobile.chrome.destination.inbox": "ان باکس",
+		"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
+		"mobile.chrome.destination.past": "گزشتہ",
+		"mobile.chrome.destination.schedules": "شیڈول",
+		"mobile.chrome.destinations": "منزلیں",
+		"mobile.chrome.home.connect": "کمپیوٹر جوڑیں",
+		"mobile.chrome.home.connecting": "{host} سے رابطہ ہو رہا ہے…",
+		"mobile.chrome.home.greeting": "آپ کس چیز پر کام کرنا چاہیں گے؟",
+		"mobile.chrome.home.reconnecting": "{host} سے دوبارہ رابطہ ہو رہا ہے…",
+		"mobile.chrome.home.saved_draft": "آپ کا مسودہ اس فون پر محفوظ ہے اور بھیجا نہیں گیا۔",
+		"mobile.chrome.home.sign_in": "دوبارہ رابطے کے لیے سائن ان کریں",
+		"mobile.chrome.new_chat": "نئی چیٹ",
 		"mobile.common.back": "واپس",
 		"mobile.common.cancel": "منسوخ کریں",
 		"mobile.common.done": "ہو گیا",
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
+		"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔",
+		"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
+		"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
+		"mobile.composer_input.voice.discard": "آواز کا ان پٹ مسترد کریں",
+		"mobile.composer_input.voice.finish": "ختم کریں اور تحریر کریں",
+		"mobile.composer_input.voice.mic_setup": "آواز سے ان پٹ سیٹ اپ نہیں ہے",
+		"mobile.composer_input.voice.mic_setup_hint": "آواز سے ان پٹ آن کرنے کا طریقہ بتاتا ہے",
+		"mobile.composer_input.voice.setup_needed": "اپنے کمپیوٹر پر اسپیچ ٹو ٹیکسٹ سیٹ اپ کریں۔",
+		"mobile.computers.account_help": "مالک کے اکاؤنٹ سے سائن ان کریں۔ اگر اسے ہٹا دیا گیا ہے تو دوسرا کمپیوٹر منتخب کریں۔",
+		"mobile.computers.account_mismatch": "یہ کمپیوٹر کسی دوسرے Radient اکاؤنٹ کا ہے یا ہٹا دیا گیا ہے۔",
 		"mobile.computers.add": "کمپیوٹر شامل کریں",
 		"mobile.computers.added.stays_listed": "پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔",
 		"mobile.computers.badge.active": "فعال",
 		"mobile.computers.badge.connecting": "منسلک ہو رہا",
+		"mobile.computers.billing_help": "Radient کنسول میں اس ٹنل کی بلنگ کی ترتیبات کھولیں اور ریموٹ رسائی فعال کریں۔",
 		"mobile.computers.connecting": "منسلک ہو رہا ہے…",
+		"mobile.computers.connection_response": "کنکشن کا جواب",
+		"mobile.computers.disabled_help": "Radient کے مطابق یہ ٹنل اس وقت فعال نہیں ہے۔ Radient کنسول میں اس کی حالت دیکھیں۔",
+		"mobile.computers.harness_help": "Radient کنسول میں اس ٹنل کے لیے Local Operator فعال کریں۔",
+		"mobile.computers.hide_details": "تفصیلات چھپائیں",
 		"mobile.computers.none_on_phone": "اس فون پر ابھی کوئی کمپیوٹر نہیں۔",
 		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
+		"mobile.computers.protected": "سائن ان سے محفوظ",
+		"mobile.computers.retry": "دوبارہ کوشش کریں",
 		"mobile.computers.section.not_connected": "آپ کے Radient اکاؤنٹ پر، منسلک نہیں",
 		"mobile.computers.section.on_phone": "اس فون پر",
+		"mobile.computers.session_error": "ایپ اس کمپیوٹر سے منسلک نہیں ہو سکی۔",
+		"mobile.computers.session_error_help": "کمپیوٹر کی ترتیب بدلنے کی ضرورت نہیں۔ دوبارہ کوشش کریں یا مدد کے لیے تفصیلات دکھائیں۔",
+		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.sign_out": "سائن آؤٹ کریں",
 		"mobile.computers.signing_out": "سائن آؤٹ ہو رہا ہے…",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
+		"mobile.computers.transport.custom": "آپ کا پتہ",
+		"mobile.computers.transport.radient": "Radient",
+		"mobile.home.chip.effort_chosen": "استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب",
+		"mobile.home.chip.effort_default": "استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ",
+		"mobile.home.chip.effort_default_short": "ڈیفالٹ شدت",
+		"mobile.home.chip.effort_default_unnamed": "استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح",
+		"mobile.home.chip.model_chosen": "ماڈل، {model}، اس گفتگو کے لیے منتخب",
+		"mobile.home.chip.model_default": "ماڈل، {model}، اس کمپیوٹر کا ڈیفالٹ",
+		"mobile.home.chip.model_no_default": "کوئی ڈیفالٹ نہیں",
+		"mobile.home.chip.model_no_default_label": "ماڈل، اس کمپیوٹر پر کوئی ڈیفالٹ ماڈل نہیں۔ ایک منتخب کریں۔",
 		"mobile.home.connect_disabled_reason": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
+		"mobile.home.effort.high": "زیادہ",
+		"mobile.home.effort.low": "کم",
+		"mobile.home.effort.max": "زیادہ سے زیادہ",
+		"mobile.home.effort.medium": "درمیانی",
+		"mobile.home.effort.minimal": "کم سے کم",
+		"mobile.home.effort.none": "کوئی نہیں",
+		"mobile.home.effort.xhigh": "بہت زیادہ",
 		"mobile.home.folders_read_failed": "ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔",
+		"mobile.home.folders_read_sign_in": "اس کمپیوٹر نے دوبارہ سائن اِن کرنے کو کہا ہے، اسی لیے اس کے فولڈرز نہیں پڑھے جا سکے۔",
 		"mobile.home.greeting": "آج میں آپ کی کیا مدد کروں؟",
-		"mobile.home.options.apply": "یہ اختیارات استعمال کریں",
+		"mobile.home.models_read_failed": "ہم ابھی اس کمپیوٹر کی ماڈل فہرست نہیں پڑھ سکے۔",
+		"mobile.home.options.default_model": "اس کمپیوٹر کا ڈیفالٹ ماڈل استعمال کریں",
 		"mobile.home.options.fixed": "اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔",
 		"mobile.home.options.folder": "اس کمپیوٹر پر فولڈر",
-		"mobile.home.options.title": "گفتگو کے اختیارات",
+		"mobile.home.picker.badge_default": "ڈیفالٹ",
+		"mobile.home.picker.badge_this_chat": "یہ گفتگو",
+		"mobile.home.picker.effort_none": "اس ماڈل میں استدلال کی شدت کی کوئی ترتیب نہیں۔",
+		"mobile.home.picker.effort_title": "استدلال کی شدت",
+		"mobile.home.picker.effort_unknown": "یہ کمپیوٹر اس ماڈل کی سطحیں نہیں جانتا، اس لیے یہ ماڈل کی معاونت والی قریب ترین سطح استعمال کرے گا۔",
+		"mobile.home.picker.effort_unsupported": "اس کمپیوٹر کا Local Operator استدلال کی شدت قبول کرنے کے لیے بہت پرانا ہے، اس لیے یہ اپنی ترتیب شدہ سطح استعمال کرتا ہے۔ یہاں سے منتخب کرنے کے لیے اسے اپ ڈیٹ کریں۔",
+		"mobile.home.picker.effort_use_default": "اس کمپیوٹر کی سطح",
+		"mobile.home.picker.folder_home": "ہوم",
+		"mobile.home.picker.folder_other": "دوسرا پاتھ…",
+		"mobile.home.picker.folder_outside": "یہ کمپیوٹر گفتگو صرف آپ کے ہوم فولڈر یا اس کے عارضی فولڈر کے اندر شروع کرتا ہے۔",
+		"mobile.home.picker.folder_title": "فولڈر",
+		"mobile.home.picker.folder_tmp": "عارضی",
+		"mobile.home.picker.folder_too_long": "یہ پاتھ بہت لمبا ہے۔",
+		"mobile.home.picker.folder_use_path": "یہ پاتھ استعمال کریں",
+		"mobile.home.picker.loading": "لوڈ ہو رہا ہے…",
+		"mobile.home.picker.model_empty": "کوئی ماڈل دستیاب نہیں",
+		"mobile.home.picker.model_no_match": "کوئی ماڈل مماثل نہیں",
+		"mobile.home.picker.model_search": "ماڈل تلاش کریں",
+		"mobile.home.picker.model_title": "ماڈل",
+		"mobile.home.picker.not_connected": "منسلک نہیں",
+		"mobile.home.picker.source_chosen": "اس گفتگو کے لیے منتخب",
+		"mobile.home.picker.source_default": "اس کمپیوٹر کا ڈیفالٹ",
 		"mobile.home.queue.discard": "قطار میں لگے پیغامات حذف کریں",
 		"mobile.home.queue.restore": "قطار میں لگے پیغامات مسودے میں منتقل کریں",
 		"mobile.home.queue.sheet_title": "قطار میں لگے پیغامات",
@@ -2738,6 +4369,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "لائبریری",
 		"mobile.notifications.answer": "جواب دیں",
 		"mobile.notifications.back": "واپس",
+		"mobile.notifications.channel.airy_whistle": "ہلکی سیٹی",
+		"mobile.notifications.channel.bubble_chord": "بلبلوں کا سُر",
+		"mobile.notifications.channel.bubble_pulse": "بلبلے کی دھڑکن",
+		"mobile.notifications.channel.description": "Local Operator کے الرٹس۔ آپ کے کمپیوٹر کی آواز کی سیٹنگ طے کرتی ہے کہ ان میں سے کون سا چینل بجے۔",
+		"mobile.notifications.channel.felt_marimba": "نرم ماریمبا",
+		"mobile.notifications.channel.hum_swell": "ابھرتی گنگناہٹ",
+		"mobile.notifications.channel.signal_handshake": "اشاروں کا تبادلہ",
+		"mobile.notifications.channel.silent": "خاموش",
+		"mobile.notifications.channel.soft_pulse": "نرم دھڑکن",
+		"mobile.notifications.channel.system": "سسٹم کی آواز",
+		"mobile.notifications.channel.tape_warble": "لرزتی ٹیپ",
+		"mobile.notifications.channel.task_complete": "کام مکمل",
+		"mobile.notifications.channel.two_note_chime": "دو سُری گھنٹی",
 		"mobile.notifications.detail.answer_in_conversation": "گفتگو میں جواب دیں",
 		"mobile.notifications.detail.conversation_asks": "اس گفتگو کے سوالات",
 		"mobile.notifications.detail.earlier_updates": "پچھلی اپ ڈیٹس",
@@ -2750,6 +4394,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "اطلاعات لوڈ نہیں ہو سکیں",
 		"mobile.notifications.priority_high": "اعلیٰ",
 		"mobile.notifications.title": "اطلاعات",
+		"mobile.oauth.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.oauth.invalid": "یہ سائن اِن درخواست قبول نہیں کی گئی۔",
+		"mobile.oauth.received": "سائن اِن کا جواب موصول ہو گیا ہے۔ ایپ پر واپس جائیں۔",
+		"mobile.oauth.return": "Local Operator پر واپس جائیں",
 		"mobile.projects.delete_body": "کیا پروجیکٹ “{name}” حذف کریں؟ پروجیکٹ کا اندراج ہمیشہ کے لیے ہٹ جائے گا۔ اس سے جڑے سیشنز اور ان کے ٹرانسکرپٹس متاثر نہیں ہوں گے۔",
 		"mobile.projects.draft_kept_note": "آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔",
 		"mobile.projects.milestone_slash_note": "سنگ میل کے نام میں سلیش نہیں ہو سکتا۔ ایسا سنگ میل بعد میں کبھی ہٹایا نہیں جا سکے گا۔",
@@ -2803,8 +4451,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "نیچے دی گئی بیداریوں کی نگرانی کوئی نہیں کرتا، اس لیے یہ صرف تب چلتی ہیں جب ان کی گفتگو چل رہی ہو۔",
 		"mobile.schedules.tail.failed": "{count} ناکام",
 		"mobile.schedules.truncated": "{family, select, wakes {بیداریوں} other {نگرانیوں}} والی کل {total, plural, one {# گفتگو} other {# گفتگوؤں}} میں سے {shown, plural, one {# دکھائی جا رہی ہے} other {# دکھائی جا رہی ہیں}}۔",
+		"mobile.session.chip.effort_resume_hint": "کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
+		"mobile.session.chip.model_default": "ڈیفالٹ",
+		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
+		"mobile.session.chip.model_unknown": "نامعلوم",
+		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
 		"mobile.session.conversation_details": "گفتگو کی تفصیلات",
+		"mobile.session.highlights.sound_pause": "{title} روکیں",
+		"mobile.session.highlights.sound_play": "{title} چلائیں",
+		"mobile.session.highlights.sound_refused": "نہیں چلایا جا سکا: {reason}",
+		"mobile.session.highlights.sound_untitled": "آواز",
+		"mobile.session.highlights.sounds_more": "{count, plural, one {# مزید آواز} other {# مزید آوازیں}}",
+		"mobile.session.highlights.video_open": "ویڈیو {name} چلائیں",
+		"mobile.session.highlights.withheld": "{count, plural, one {# فائل نہیں دکھائی گئی} other {# فائلیں نہیں دکھائی گئیں}}: {reasons}",
+		"mobile.session.highlights.withheld_missing": "فائل اب موجود نہیں",
+		"mobile.session.highlights.withheld_outside": "اجازت یافتہ مقامات سے باہر",
+		"mobile.session.highlights.withheld_reasons_join": "{first}، {second}",
+		"mobile.session.highlights.withheld_sensitive": "حساس فائل",
+		"mobile.session.highlights.withheld_too_large": "پیش نظارہ کے لیے بہت بڑی",
+		"mobile.session.pending_echo.earlier_not_sent": "آپ کا پچھلا پیغام نہیں بھیجا گیا ({reason})۔ اسے واپس لانے کے لیے اوپر ٹیپ کریں۔",
+		"mobile.session.pending_echo.earlier_went_through": "آپ کا پچھلا پیغام چلا گیا۔ نیچے والا متن ابھی نہیں بھیجا گیا۔",
+		"mobile.session.pending_echo.images": "{count, plural, one {# تصویر منسلک} other {# تصاویر منسلک}}",
+		"mobile.session.pending_echo.not_confirmed": "تصدیق نہیں ہوئی — نیچے دوبارہ کوشش کریں",
+		"mobile.session.pending_echo.not_sent": "نہیں بھیجا گیا — واپس لانے کے لیے ٹیپ کریں",
+		"mobile.session.pending_echo.queued_next": "قطار میں — آپ کے اگلے پیغام کے ساتھ بھیجا جائے گا",
+		"mobile.session.pending_echo.queued_step": "قطار میں — یہ مرحلہ ختم ہونے پر بھیجا جائے گا",
+		"mobile.session.pending_echo.sending": "بھیجا جا رہا ہے…",
+		"mobile.session.pending_echo.sent": "بھیج دیا گیا",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
+		"mobile.session.subagent_open": "{agent} کھولیں",
+		"mobile.session.subagent_open_short": "کھولیں",
 		"mobile.session_health.control_hint": "بتاتا ہے کہ اس حالت کا مطلب کیا ہے اور اب بھیجنے پر کیا ہوگا",
 		"mobile.session_health.ended_placeholder": "بھیجنے پر ہوم فولڈر میں کھلے گا…",
 		"mobile.session_health.menu_hint": "سیشن مینو کھولتا ہے",
@@ -2816,6 +4492,41 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
 		"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+		"mobile.settings.theme.caption_forced": "ہمیشہ {name}",
+		"mobile.settings.theme.caption_system": "سسٹم {light} اور {dark} استعمال کرتا ہے",
+		"mobile.settings.theme.card_dark": "{name}، گہرا تھیم",
+		"mobile.settings.theme.card_dark_selected": "{name}، گہرا تھیم، منتخب",
+		"mobile.settings.theme.card_light": "{name}، روشن تھیم",
+		"mobile.settings.theme.card_light_selected": "{name}، روشن تھیم، منتخب",
+		"mobile.settings.theme.mode_dark": "گہرا",
+		"mobile.settings.theme.mode_label": "تھیم موڈ",
+		"mobile.settings.theme.mode_light": "روشن",
+		"mobile.settings.theme.mode_system": "سسٹم",
+		"mobile.settings.theme.no_match": "کوئی تھیم مماثل نہیں",
+		"mobile.settings.theme.row_label": "تھیم، {name}",
+		"mobile.settings.theme.search_label": "تھیمز تلاش کریں",
+		"mobile.settings.theme.search_placeholder": "تھیمز تلاش کریں",
+		"mobile.settings.theme.section_dark": "گہرے ({count})",
+		"mobile.settings.theme.section_light": "روشن ({count})",
+		"mobile.settings.theme.title": "تھیم",
+		"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
+		"mobile.signin.failed": "ہم سائن ان مکمل نہیں کر سکے۔",
+		"mobile.signin.hide_diagnostics": "سائن ان کی تفصیلات چھپائیں",
+		"mobile.signin.progress": "سائن اِن ہو رہا ہے…",
+		"mobile.signin.retry": "دوبارہ کوشش کریں",
+		"mobile.signin.show_diagnostics": "سائن ان کی تفصیلات دکھائیں",
+		"mobile.signin.stage_browser": "آپ کے براؤزر کا انتظار ہے",
+		"mobile.signin.stage_cancelled": "سائن ان منسوخ ہو گیا",
+		"mobile.signin.stage_discovering": "آپ کے کمپیوٹر تلاش ہو رہے ہیں",
+		"mobile.signin.stage_exchanging": "براؤزر میں سائن ان مکمل ہو رہا ہے",
+		"mobile.signin.stage_failed": "سائن ان ناکام ہوا",
+		"mobile.signin.stage_idle": "شروع نہیں ہوا",
+		"mobile.signin.stage_persisting": "آپ کا سائن ان محفوظ ہو رہا ہے",
+		"mobile.signin.stage_retiring": "آپ کا اکاؤنٹ تیار ہو رہا ہے",
+		"mobile.signin.stage_signed_in": "سائن ان ہو گیا",
+		"mobile.signin.stage_starting": "سائن ان شروع ہو رہا ہے",
+		"mobile.signin.stage_unavailable": "سائن ان دستیاب نہیں",
+		"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔",
 		"mobile.team_bridge.back": "واپس",
 		"mobile.team_bridge.conversation": "گفتگو",
 		"mobile.team_bridge.delivery.held": "{recipient}: ترسیل کا انتظار ہے۔",
@@ -2920,10 +4631,29 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.send_retry": "دوبارہ بھیجیں",
 		"mobile.team_bridge.title": "Team Bridge",
 		"mobile.team_bridge.unread": "{count, plural, one {# نا پڑھا گیا پیغام} other {# نا پڑھے گئے پیغامات}}",
+		"relay.chrome.drawer.close": "نیویگیشن بند کریں",
+		"relay.chrome.drawer.library": "لائبریری",
+		"relay.chrome.drawer.open": "نیویگیشن کھولیں",
+		"relay.chrome.drawer.past": "گزشتہ سیشنز",
+		"relay.chrome.drawer.projects": "پروجیکٹس",
+		"relay.chrome.drawer.settings": "ترتیبات",
+		"relay.chrome.list.search_label": "گفتگوئیں تلاش کریں",
+		"relay.chrome.list.search_open": "تلاش",
+		"relay.chrome.row.more": "مزید",
+		"relay.chrome.row.tags": "ٹیگز",
 		"relay.chrome.session.resume": "جاری رکھیں",
 		"relay.chrome.session.resuming": "جاری ہو رہا…",
 		"relay.chrome.session.subtitle.ended": "ختم ہو گیا",
+		"relay.chrome.session.subtitle.idle": "فارغ",
 		"relay.chrome.session.subtitle.not_answering": "جواب نہیں دے رہا",
+		"relay.chrome.session.subtitle.waiting": "آپ کا انتظار",
+		"relay.chrome.session.subtitle.working": "کام جاری · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "کام جاری",
+		"relay.chrome.session.tray.agents": "ایجنٹس {running}/{total}",
+		"relay.chrome.session.tray.tasks": "کام {done}/{total}",
+		"relay.composer.action.stop": "روکیں",
+		"relay.composer.action.stop_agent": "ایجنٹ کو روکیں",
+		"relay.composer.action.stopping": "روکا جا رہا ہے",
 		"relay.health.dropped_detail": "آپ کا کمپیوٹر ابھی اس سیشن تک نہیں پہنچ پا رہا اور مسلسل کوشش کر رہا ہے۔ جب تک یہ پہنچ نہ پائے، بھیجنے پر پیغام فوراً ناکام ہو جاتا ہے اور آپ کا لکھا ہوا متن پیغام کے خانے میں ہی رہتا ہے۔",
 		"relay.health.ended_detail": "تاریخچہ محفوظ ہے۔ اسے اپنے ہوم فولڈر میں دوبارہ کھولنے کے لیے پیغام بھیجیں یا “جاری رکھیں” دبائیں۔",
 		"relay.health.ended_send_failed": "یہ سیشن ختم ہو گیا ہے اور ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں، یا اوپر “ختم ہو گیا” دبائیں اور “جاری رکھیں” منتخب کریں۔",
@@ -2950,31 +4680,108 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
+		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
+		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
+		"mobile.chrome.composer.open_queue": "Mở hàng đợi",
+		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
+		"mobile.chrome.destination.inbox": "Hộp thư",
+		"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
+		"mobile.chrome.destination.past": "Trước",
+		"mobile.chrome.destination.schedules": "Lịch",
+		"mobile.chrome.destinations": "Mục đến",
+		"mobile.chrome.home.connect": "Kết nối máy tính",
+		"mobile.chrome.home.connecting": "Đang kết nối với {host}…",
+		"mobile.chrome.home.greeting": "Bạn muốn làm việc gì?",
+		"mobile.chrome.home.reconnecting": "Đang kết nối lại với {host}…",
+		"mobile.chrome.home.saved_draft": "Bản nháp được lưu trên điện thoại này và chưa được gửi.",
+		"mobile.chrome.home.sign_in": "Đăng nhập để kết nối lại",
+		"mobile.chrome.new_chat": "Cuộc trò chuyện mới",
 		"mobile.common.back": "Quay lại",
 		"mobile.common.cancel": "Hủy",
 		"mobile.common.done": "Xong",
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
 		"mobile.common.try_again": "Thử lại",
+		"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào kẹp giấy, chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
+		"mobile.composer_input.paste.image": "Dán hình ảnh",
+		"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
+		"mobile.composer_input.voice.discard": "Hủy nhập bằng giọng nói",
+		"mobile.composer_input.voice.finish": "Hoàn tất và chép lời",
+		"mobile.composer_input.voice.mic_setup": "Chưa thiết lập nhập bằng giọng nói",
+		"mobile.composer_input.voice.mic_setup_hint": "Giải thích cách bật nhập bằng giọng nói",
+		"mobile.composer_input.voice.setup_needed": "Hãy thiết lập chuyển giọng nói thành văn bản trên máy tính.",
+		"mobile.computers.account_help": "Đăng nhập bằng tài khoản chủ sở hữu. Nếu máy tính đã bị xóa, hãy chọn máy khác.",
+		"mobile.computers.account_mismatch": "Máy tính này thuộc tài khoản Radient khác hoặc đã bị xóa.",
 		"mobile.computers.add": "Thêm máy tính",
 		"mobile.computers.added.stays_listed": "Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.",
 		"mobile.computers.badge.active": "hoạt động",
 		"mobile.computers.badge.connecting": "đang kết nối",
+		"mobile.computers.billing_help": "Trong bảng điều khiển Radient, mở cài đặt thanh toán của đường hầm này và bật truy cập từ xa.",
 		"mobile.computers.connecting": "Đang kết nối…",
+		"mobile.computers.connection_response": "Phản hồi kết nối",
+		"mobile.computers.disabled_help": "Radient cho biết đường hầm này hiện chưa hoạt động. Hãy kiểm tra trạng thái trong bảng điều khiển Radient.",
+		"mobile.computers.harness_help": "Trong bảng điều khiển Radient, bật Local Operator cho đường hầm này.",
+		"mobile.computers.hide_details": "Ẩn chi tiết",
 		"mobile.computers.none_on_phone": "Chưa có máy tính nào trên điện thoại này.",
 		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
+		"mobile.computers.protected": "Được bảo vệ bằng đăng nhập",
+		"mobile.computers.retry": "Thử lại",
 		"mobile.computers.section.not_connected": "Trong tài khoản Radient của bạn, chưa kết nối",
 		"mobile.computers.section.on_phone": "Trên điện thoại này",
+		"mobile.computers.session_error": "Ứng dụng không thể kết nối với máy tính này.",
+		"mobile.computers.session_error_help": "Bạn không cần cấu hình lại máy tính. Hãy thử lại hoặc mở chi tiết để gửi bộ phận hỗ trợ.",
+		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.sign_out": "Đăng xuất",
 		"mobile.computers.signing_out": "Đang đăng xuất…",
 		"mobile.computers.switch": "Chuyển máy tính",
+		"mobile.computers.transport.custom": "Địa chỉ của bạn",
+		"mobile.computers.transport.radient": "Radient",
+		"mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
+		"mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
+		"mobile.home.chip.effort_default_short": "Mức suy luận mặc định",
+		"mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
+		"mobile.home.chip.model_chosen": "Mô hình, {model}, đã chọn cho cuộc trò chuyện này",
+		"mobile.home.chip.model_default": "Mô hình, {model}, mặc định của máy tính này",
+		"mobile.home.chip.model_no_default": "Không có mặc định",
+		"mobile.home.chip.model_no_default_label": "Mô hình, máy tính này không có mô hình mặc định. Hãy chọn một.",
 		"mobile.home.connect_disabled_reason": "Kết nối máy tính để gửi.",
+		"mobile.home.effort.high": "Cao",
+		"mobile.home.effort.low": "Thấp",
+		"mobile.home.effort.max": "Tối đa",
+		"mobile.home.effort.medium": "Trung bình",
+		"mobile.home.effort.minimal": "Tối thiểu",
+		"mobile.home.effort.none": "Không",
+		"mobile.home.effort.xhigh": "Rất cao",
 		"mobile.home.folders_read_failed": "Vừa rồi không đọc được thư mục trên máy tính này.",
+		"mobile.home.folders_read_sign_in": "Máy tính này yêu cầu bạn đăng nhập lại, nên không đọc được thư mục của nó.",
 		"mobile.home.greeting": "Hôm nay tôi có thể giúp gì?",
-		"mobile.home.options.apply": "Dùng các tùy chọn này",
+		"mobile.home.models_read_failed": "Vừa rồi không đọc được danh sách mô hình trên máy tính này.",
+		"mobile.home.options.default_model": "Dùng mô hình mặc định của máy tính này",
 		"mobile.home.options.fixed": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
 		"mobile.home.options.folder": "Thư mục trên máy tính này",
-		"mobile.home.options.title": "Tùy chọn cuộc trò chuyện",
+		"mobile.home.picker.badge_default": "Mặc định",
+		"mobile.home.picker.badge_this_chat": "Cuộc trò chuyện này",
+		"mobile.home.picker.effort_none": "Mô hình này không có cài đặt mức suy luận.",
+		"mobile.home.picker.effort_title": "Mức suy luận",
+		"mobile.home.picker.effort_unknown": "Máy tính này chưa biết các mức của mô hình này, nên sẽ dùng mức gần nhất mà mô hình hỗ trợ.",
+		"mobile.home.picker.effort_unsupported": "Local Operator trên máy tính này quá cũ để nhận mức suy luận, nên nó dùng mức đã cấu hình. Hãy cập nhật để chọn tại đây.",
+		"mobile.home.picker.effort_use_default": "Mức của máy tính này",
+		"mobile.home.picker.folder_home": "Home",
+		"mobile.home.picker.folder_other": "Đường dẫn khác…",
+		"mobile.home.picker.folder_outside": "Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục home của bạn hoặc thư mục tạm của nó.",
+		"mobile.home.picker.folder_title": "Thư mục",
+		"mobile.home.picker.folder_tmp": "Tạm thời",
+		"mobile.home.picker.folder_too_long": "Đường dẫn đó quá dài.",
+		"mobile.home.picker.folder_use_path": "Dùng đường dẫn này",
+		"mobile.home.picker.loading": "Đang tải…",
+		"mobile.home.picker.model_empty": "Không có mô hình nào",
+		"mobile.home.picker.model_no_match": "Không có mô hình phù hợp",
+		"mobile.home.picker.model_search": "Tìm mô hình",
+		"mobile.home.picker.model_title": "Mô hình",
+		"mobile.home.picker.not_connected": "chưa kết nối",
+		"mobile.home.picker.source_chosen": "Đã chọn cho cuộc trò chuyện này",
+		"mobile.home.picker.source_default": "Mặc định của máy tính này",
 		"mobile.home.queue.discard": "Bỏ tin nhắn trong hàng đợi",
 		"mobile.home.queue.restore": "Chuyển tin nhắn trong hàng đợi thành bản nháp",
 		"mobile.home.queue.sheet_title": "Tin nhắn trong hàng đợi",
@@ -3028,6 +4835,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "Thư viện",
 		"mobile.notifications.answer": "Trả lời",
 		"mobile.notifications.back": "Quay lại",
+		"mobile.notifications.channel.airy_whistle": "Tiếng huýt nhẹ",
+		"mobile.notifications.channel.bubble_chord": "Hợp âm bong bóng",
+		"mobile.notifications.channel.bubble_pulse": "Nhịp bong bóng",
+		"mobile.notifications.channel.description": "Cảnh báo từ Local Operator. Cài đặt âm thanh trên máy tính của bạn chọn kênh nào sẽ phát.",
+		"mobile.notifications.channel.felt_marimba": "Marimba êm",
+		"mobile.notifications.channel.hum_swell": "Tiếng ngân tăng dần",
+		"mobile.notifications.channel.signal_handshake": "Bắt tay tín hiệu",
+		"mobile.notifications.channel.silent": "Im lặng",
+		"mobile.notifications.channel.soft_pulse": "Nhịp êm",
+		"mobile.notifications.channel.system": "Âm thanh hệ thống",
+		"mobile.notifications.channel.tape_warble": "Băng rung",
+		"mobile.notifications.channel.task_complete": "Hoàn tất tác vụ",
+		"mobile.notifications.channel.two_note_chime": "Chuông hai nốt",
 		"mobile.notifications.detail.answer_in_conversation": "Trả lời trong cuộc trò chuyện",
 		"mobile.notifications.detail.conversation_asks": "Câu hỏi trong cuộc trò chuyện này",
 		"mobile.notifications.detail.earlier_updates": "Cập nhật trước đó",
@@ -3040,6 +4860,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "Không thể tải thông báo",
 		"mobile.notifications.priority_high": "Cao",
 		"mobile.notifications.title": "Thông báo",
+		"mobile.oauth.failed": "Không thể hoàn tất đăng nhập. Hãy thử lại.",
+		"mobile.oauth.invalid": "Yêu cầu đăng nhập này không được chấp nhận.",
+		"mobile.oauth.received": "Đã nhận phản hồi đăng nhập. Hãy quay lại ứng dụng.",
+		"mobile.oauth.return": "Quay lại Local Operator",
 		"mobile.projects.delete_body": "Xóa {name}? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.",
 		"mobile.projects.draft_kept_note": "Đã giữ lại từ lần trước. Xóa hết các trường để bắt đầu lại.",
 		"mobile.projects.milestone_slash_note": "Tên mốc không được chứa dấu /. Mốc có dấu này sẽ không bao giờ xóa được.",
@@ -3093,8 +4917,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.",
 		"mobile.schedules.tail.failed": "{count} thất bại",
 		"mobile.schedules.truncated": "Đang hiện {shown} trên {total} cuộc trò chuyện có {family, select, wakes {lần thức dậy} other {giám sát}}.",
+		"mobile.session.chip.effort_resume_hint": "Tiếp tục phiên này để đổi mức nỗ lực",
+		"mobile.session.chip.model_default": "Mặc định",
+		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
+		"mobile.session.chip.model_unknown": "Không rõ",
+		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
 		"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
+		"mobile.session.highlights.sound_pause": "Tạm dừng {title}",
+		"mobile.session.highlights.sound_play": "Phát {title}",
+		"mobile.session.highlights.sound_refused": "Không thể phát: {reason}",
+		"mobile.session.highlights.sound_untitled": "Âm thanh",
+		"mobile.session.highlights.sounds_more": "{count, plural, other {Thêm # âm thanh}}",
+		"mobile.session.highlights.video_open": "Phát video {name}",
+		"mobile.session.highlights.withheld": "{count, plural, other {# tệp không được hiển thị}}: {reasons}",
+		"mobile.session.highlights.withheld_missing": "tệp không còn tồn tại",
+		"mobile.session.highlights.withheld_outside": "nằm ngoài vị trí được phép",
+		"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
+		"mobile.session.highlights.withheld_sensitive": "tệp nhạy cảm",
+		"mobile.session.highlights.withheld_too_large": "quá lớn để xem trước",
+		"mobile.session.pending_echo.earlier_not_sent": "Tin nhắn trước của bạn chưa được gửi ({reason}). Chạm vào nó ở trên để đưa lại.",
+		"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
+		"mobile.session.pending_echo.images": "{count, plural, other {đã đính kèm # hình ảnh}}",
+		"mobile.session.pending_echo.not_confirmed": "chưa xác nhận — thử lại bên dưới",
+		"mobile.session.pending_echo.not_sent": "chưa gửi — chạm để đưa lại",
+		"mobile.session.pending_echo.queued_next": "đang chờ — sẽ gửi cùng tin nhắn tiếp theo của bạn",
+		"mobile.session.pending_echo.queued_step": "đang chờ — sẽ gửi khi bước này xong",
+		"mobile.session.pending_echo.sending": "đang gửi…",
+		"mobile.session.pending_echo.sent": "đã gửi",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
+		"mobile.session.subagent_open": "Mở {agent}",
+		"mobile.session.subagent_open_short": "mở",
 		"mobile.session_health.control_hint": "Cho biết trạng thái này nghĩa là gì và lần gửi tiếp theo sẽ ra sao",
 		"mobile.session_health.ended_placeholder": "Gửi để mở lại trong thư mục home…",
 		"mobile.session_health.menu_hint": "Mở menu phiên",
@@ -3106,6 +4958,41 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Vừa rồi không mở lại được phiên này. Hãy thử lại.",
 		"mobile.session_health.resume_refused_title": "Không thể mở lại",
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
+		"mobile.settings.theme.caption_forced": "Luôn dùng {name}",
+		"mobile.settings.theme.caption_system": "Hệ thống dùng {light} và {dark}",
+		"mobile.settings.theme.card_dark": "{name}, giao diện tối",
+		"mobile.settings.theme.card_dark_selected": "{name}, giao diện tối, đã chọn",
+		"mobile.settings.theme.card_light": "{name}, giao diện sáng",
+		"mobile.settings.theme.card_light_selected": "{name}, giao diện sáng, đã chọn",
+		"mobile.settings.theme.mode_dark": "Tối",
+		"mobile.settings.theme.mode_label": "Chế độ chủ đề",
+		"mobile.settings.theme.mode_light": "Sáng",
+		"mobile.settings.theme.mode_system": "Hệ thống",
+		"mobile.settings.theme.no_match": "Không có giao diện phù hợp",
+		"mobile.settings.theme.row_label": "Giao diện, {name}",
+		"mobile.settings.theme.search_label": "Tìm giao diện",
+		"mobile.settings.theme.search_placeholder": "Tìm giao diện",
+		"mobile.settings.theme.section_dark": "Tối ({count})",
+		"mobile.settings.theme.section_light": "Sáng ({count})",
+		"mobile.settings.theme.title": "Giao diện",
+		"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
+		"mobile.signin.failed": "Không thể hoàn tất đăng nhập.",
+		"mobile.signin.hide_diagnostics": "Ẩn chi tiết đăng nhập",
+		"mobile.signin.progress": "Đang đăng nhập…",
+		"mobile.signin.retry": "Thử lại",
+		"mobile.signin.show_diagnostics": "Hiện chi tiết đăng nhập",
+		"mobile.signin.stage_browser": "Đang chờ trình duyệt",
+		"mobile.signin.stage_cancelled": "Đã hủy đăng nhập",
+		"mobile.signin.stage_discovering": "Đang tìm máy tính của bạn",
+		"mobile.signin.stage_exchanging": "Đang hoàn tất đăng nhập qua trình duyệt",
+		"mobile.signin.stage_failed": "Đăng nhập thất bại",
+		"mobile.signin.stage_idle": "Chưa bắt đầu",
+		"mobile.signin.stage_persisting": "Đang lưu thông tin đăng nhập",
+		"mobile.signin.stage_retiring": "Đang chuẩn bị tài khoản",
+		"mobile.signin.stage_signed_in": "Đã đăng nhập",
+		"mobile.signin.stage_starting": "Đang bắt đầu đăng nhập",
+		"mobile.signin.stage_unavailable": "Không thể đăng nhập",
+		"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu.",
 		"mobile.team_bridge.back": "Quay lại",
 		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
 		"mobile.team_bridge.delivery.held": "{recipient}: Đang chờ gửi đến.",
@@ -3210,10 +5097,29 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.send_retry": "Thử gửi lại",
 		"mobile.team_bridge.title": "Team Bridge",
 		"mobile.team_bridge.unread": "{count, plural, other {# chưa đọc}}",
+		"relay.chrome.drawer.close": "Đóng điều hướng",
+		"relay.chrome.drawer.library": "Thư viện",
+		"relay.chrome.drawer.open": "Mở điều hướng",
+		"relay.chrome.drawer.past": "Phiên trước",
+		"relay.chrome.drawer.projects": "Dự án",
+		"relay.chrome.drawer.settings": "Cài đặt",
+		"relay.chrome.list.search_label": "Tìm kiếm cuộc trò chuyện",
+		"relay.chrome.list.search_open": "Tìm kiếm",
+		"relay.chrome.row.more": "Thêm",
+		"relay.chrome.row.tags": "Nhãn",
 		"relay.chrome.session.resume": "Mở lại",
 		"relay.chrome.session.resuming": "Đang mở lại…",
 		"relay.chrome.session.subtitle.ended": "Đã kết thúc",
+		"relay.chrome.session.subtitle.idle": "Rảnh",
 		"relay.chrome.session.subtitle.not_answering": "Không phản hồi",
+		"relay.chrome.session.subtitle.waiting": "Đang chờ bạn",
+		"relay.chrome.session.subtitle.working": "Đang làm việc · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "Đang làm việc",
+		"relay.chrome.session.tray.agents": "Tác nhân {running}/{total}",
+		"relay.chrome.session.tray.tasks": "Tác vụ {done}/{total}",
+		"relay.composer.action.stop": "dừng",
+		"relay.composer.action.stop_agent": "dừng tác nhân",
+		"relay.composer.action.stopping": "đang dừng",
 		"relay.health.dropped_detail": "Máy tính của bạn hiện không kết nối được với phiên này và vẫn đang thử lại. Cho đến khi kết nối được, gửi tin nhắn sẽ thất bại ngay và nội dung đã gõ vẫn còn trong ô nhập.",
 		"relay.health.ended_detail": "Lịch sử đã được lưu. Gửi tin nhắn hoặc chạm Mở lại để khôi phục phiên trong thư mục home của bạn.",
 		"relay.health.ended_send_failed": "Phiên này đã kết thúc và lúc này chưa khôi phục được. Hãy thử gửi lại, hoặc chạm “Đã kết thúc” ở trên cùng rồi chọn Mở lại.",
@@ -3240,31 +5146,108 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.chrome.close_conversations": "关闭对话列表",
+		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
+		"mobile.chrome.composer.more": "更多上下文",
+		"mobile.chrome.composer.open_queue": "打开队列",
+		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
+		"mobile.chrome.destination.inbox": "收件箱",
+		"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
+		"mobile.chrome.destination.past": "历史",
+		"mobile.chrome.destination.schedules": "计划",
+		"mobile.chrome.destinations": "目的地",
+		"mobile.chrome.home.connect": "连接电脑",
+		"mobile.chrome.home.connecting": "正在连接 {host}…",
+		"mobile.chrome.home.greeting": "你想处理什么工作？",
+		"mobile.chrome.home.reconnecting": "正在重新连接 {host}…",
+		"mobile.chrome.home.saved_draft": "草稿已保存在此手机上，尚未发送。",
+		"mobile.chrome.home.sign_in": "登录以重新连接",
+		"mobile.chrome.new_chat": "新聊天",
 		"mobile.common.back": "返回",
 		"mobile.common.cancel": "取消",
 		"mobile.common.done": "完成",
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
 		"mobile.common.try_again": "重试",
+		"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。",
+		"mobile.composer_input.paste.image": "粘贴图片",
+		"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
+		"mobile.composer_input.voice.discard": "放弃语音输入",
+		"mobile.composer_input.voice.finish": "完成并转写",
+		"mobile.composer_input.voice.mic_setup": "语音输入尚未设置",
+		"mobile.composer_input.voice.mic_setup_hint": "说明如何开启语音输入",
+		"mobile.composer_input.voice.setup_needed": "请在电脑上设置语音转文字。",
+		"mobile.computers.account_help": "请使用电脑所有者的账户登录。如果电脑已被移除，请选择其他电脑。",
+		"mobile.computers.account_mismatch": "这台电脑属于另一个 Radient 账户，或已被移除。",
 		"mobile.computers.add": "添加电脑",
 		"mobile.computers.added.stays_listed": "它仍会保留在此手机的列表中，可从电脑列表中切回。",
 		"mobile.computers.badge.active": "使用中",
 		"mobile.computers.badge.connecting": "连接中",
+		"mobile.computers.billing_help": "在 Radient 控制台中打开此隧道的账单设置，并启用远程访问。",
 		"mobile.computers.connecting": "正在连接……",
+		"mobile.computers.connection_response": "连接响应",
+		"mobile.computers.disabled_help": "Radient 显示此隧道当前未处于活动状态。请在 Radient 控制台检查其状态。",
+		"mobile.computers.harness_help": "在 Radient 控制台中为此隧道启用 Local Operator。",
+		"mobile.computers.hide_details": "隐藏详细信息",
 		"mobile.computers.none_on_phone": "此手机尚未添加电脑。",
 		"mobile.computers.password_placeholder": "来自lop mobile的密码",
+		"mobile.computers.protected": "受登录保护",
+		"mobile.computers.retry": "重试",
 		"mobile.computers.section.not_connected": "Radient账户下，未连接",
 		"mobile.computers.section.on_phone": "此手机",
+		"mobile.computers.session_error": "应用无法连接到这台电脑。",
+		"mobile.computers.session_error_help": "无需重新配置电脑。请重试，或显示详细信息以联系支持。",
+		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.sign_out": "退出登录",
 		"mobile.computers.signing_out": "正在退出登录…",
 		"mobile.computers.switch": "切换电脑",
+		"mobile.computers.transport.custom": "你的地址",
+		"mobile.computers.transport.radient": "Radient",
+		"mobile.home.chip.effort_chosen": "推理强度，{effort}，已为此对话选择",
+		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
+		"mobile.home.chip.effort_default_short": "默认推理强度",
+		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
+		"mobile.home.chip.model_chosen": "模型，{model}，已为此对话选择",
+		"mobile.home.chip.model_default": "模型，{model}，此电脑的默认设置",
+		"mobile.home.chip.model_no_default": "无默认",
+		"mobile.home.chip.model_no_default_label": "模型，此电脑没有默认模型。请选择一个。",
 		"mobile.home.connect_disabled_reason": "连接电脑后才能发送。",
+		"mobile.home.effort.high": "高",
+		"mobile.home.effort.low": "低",
+		"mobile.home.effort.max": "最高",
+		"mobile.home.effort.medium": "中",
+		"mobile.home.effort.minimal": "最低",
+		"mobile.home.effort.none": "无",
+		"mobile.home.effort.xhigh": "超高",
 		"mobile.home.folders_read_failed": "刚才无法读取此电脑的文件夹。",
+		"mobile.home.folders_read_sign_in": "此电脑要求重新登录，因此无法读取其文件夹。",
 		"mobile.home.greeting": "今天想让我帮你做点什么？",
-		"mobile.home.options.apply": "使用这些选项",
+		"mobile.home.models_read_failed": "刚才无法读取此电脑的模型列表。",
+		"mobile.home.options.default_model": "使用此电脑的默认模型",
 		"mobile.home.options.fixed": "此对话的起始选项已固定。实时控制项可在“对话详情”中调整。",
 		"mobile.home.options.folder": "此电脑上的文件夹",
-		"mobile.home.options.title": "对话选项",
+		"mobile.home.picker.badge_default": "默认",
+		"mobile.home.picker.badge_this_chat": "此对话",
+		"mobile.home.picker.effort_none": "此模型没有推理强度设置。",
+		"mobile.home.picker.effort_title": "推理强度",
+		"mobile.home.picker.effort_unknown": "此电脑不知道此模型支持的级别，因此会使用模型支持的最接近级别。",
+		"mobile.home.picker.effort_unsupported": "此电脑上的 Local Operator 版本过旧，无法接受推理强度，因此会使用其已配置的级别。更新后即可在此选择。",
+		"mobile.home.picker.effort_use_default": "此电脑的级别",
+		"mobile.home.picker.folder_home": "主目录",
+		"mobile.home.picker.folder_other": "其他路径…",
+		"mobile.home.picker.folder_outside": "此电脑只会在你的主目录或其临时文件夹内开始对话。",
+		"mobile.home.picker.folder_title": "文件夹",
+		"mobile.home.picker.folder_tmp": "临时",
+		"mobile.home.picker.folder_too_long": "该路径太长。",
+		"mobile.home.picker.folder_use_path": "使用此路径",
+		"mobile.home.picker.loading": "正在加载…",
+		"mobile.home.picker.model_empty": "没有可用的模型",
+		"mobile.home.picker.model_no_match": "没有匹配的模型",
+		"mobile.home.picker.model_search": "搜索模型",
+		"mobile.home.picker.model_title": "模型",
+		"mobile.home.picker.not_connected": "未连接",
+		"mobile.home.picker.source_chosen": "已为此对话选择",
+		"mobile.home.picker.source_default": "此电脑的默认设置",
 		"mobile.home.queue.discard": "丢弃排队消息",
 		"mobile.home.queue.restore": "将排队消息移到草稿",
 		"mobile.home.queue.sheet_title": "排队消息",
@@ -3318,6 +5301,19 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.title": "资料库",
 		"mobile.notifications.answer": "回答",
 		"mobile.notifications.back": "返回",
+		"mobile.notifications.channel.airy_whistle": "轻盈口哨",
+		"mobile.notifications.channel.bubble_chord": "气泡和弦",
+		"mobile.notifications.channel.bubble_pulse": "气泡脉冲",
+		"mobile.notifications.channel.description": "来自 Local Operator 的提醒。由你电脑上的声音设置决定使用哪个渠道。",
+		"mobile.notifications.channel.felt_marimba": "毛毡马林巴",
+		"mobile.notifications.channel.hum_swell": "渐强嗡鸣",
+		"mobile.notifications.channel.signal_handshake": "信号握手",
+		"mobile.notifications.channel.silent": "静音",
+		"mobile.notifications.channel.soft_pulse": "轻柔脉冲",
+		"mobile.notifications.channel.system": "系统声音",
+		"mobile.notifications.channel.tape_warble": "磁带颤音",
+		"mobile.notifications.channel.task_complete": "任务完成",
+		"mobile.notifications.channel.two_note_chime": "双音钟声",
 		"mobile.notifications.detail.answer_in_conversation": "在对话中回答",
 		"mobile.notifications.detail.conversation_asks": "此对话的问题",
 		"mobile.notifications.detail.earlier_updates": "较早的更新",
@@ -3330,6 +5326,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.load_failed": "无法加载通知",
 		"mobile.notifications.priority_high": "高",
 		"mobile.notifications.title": "通知",
+		"mobile.oauth.failed": "无法完成登录。请重试。",
+		"mobile.oauth.invalid": "未接受此登录请求。",
+		"mobile.oauth.received": "已收到登录响应。请返回应用。",
+		"mobile.oauth.return": "返回 Local Operator",
 		"mobile.projects.delete_body": "删除“{name}”？该项目将被永久删除。其关联会话和会话记录不受影响。",
 		"mobile.projects.draft_kept_note": "已保留上次填写的内容。清空各字段即可重新开始。",
 		"mobile.projects.milestone_slash_note": "里程碑名称不能包含斜杠。含斜杠的里程碑将无法移除。",
@@ -3383,8 +5383,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "以下唤醒没有监督者，因此仅在其对话运行时触发。",
 		"mobile.schedules.tail.failed": "{count}次失败",
 		"mobile.schedules.truncated": "显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。",
+		"mobile.session.chip.effort_resume_hint": "恢复此会话以更改推理强度",
+		"mobile.session.chip.model_default": "默认",
+		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
+		"mobile.session.chip.model_unknown": "未知",
+		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",
 		"mobile.session.conversation_details": "对话详情",
+		"mobile.session.highlights.sound_pause": "暂停{title}",
+		"mobile.session.highlights.sound_play": "播放{title}",
+		"mobile.session.highlights.sound_refused": "无法播放：{reason}",
+		"mobile.session.highlights.sound_untitled": "声音",
+		"mobile.session.highlights.sounds_more": "{count, plural, other {还有 # 个声音}}",
+		"mobile.session.highlights.video_open": "播放视频{name}",
+		"mobile.session.highlights.withheld": "{count, plural, other {# 个文件未显示}}：{reasons}",
+		"mobile.session.highlights.withheld_missing": "文件已不存在",
+		"mobile.session.highlights.withheld_outside": "不在允许的位置",
+		"mobile.session.highlights.withheld_reasons_join": "{first}、{second}",
+		"mobile.session.highlights.withheld_sensitive": "敏感文件",
+		"mobile.session.highlights.withheld_too_large": "太大，无法预览",
+		"mobile.session.pending_echo.earlier_not_sent": "你之前的消息未发送（{reason}）。轻点上方的消息即可放回。",
+		"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",
+		"mobile.session.pending_echo.images": "{count, plural, other {已附加 # 张图片}}",
+		"mobile.session.pending_echo.not_confirmed": "未确认——请在下方重试",
+		"mobile.session.pending_echo.not_sent": "未发送——轻点放回",
+		"mobile.session.pending_echo.queued_next": "已排队——将随你的下一条消息发送",
+		"mobile.session.pending_echo.queued_step": "已排队——此步骤完成后发送",
+		"mobile.session.pending_echo.sending": "正在发送…",
+		"mobile.session.pending_echo.sent": "已发送",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
+		"mobile.session.subagent_open": "打开{agent}",
+		"mobile.session.subagent_open_short": "打开",
 		"mobile.session_health.control_hint": "说明此状态的含义，以及现在发送会怎样",
 		"mobile.session_health.ended_placeholder": "发送即可重新打开……",
 		"mobile.session_health.menu_hint": "打开会话菜单",
@@ -3396,6 +5424,41 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
 		"mobile.session_health.resume_refused_title": "无法恢复",
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
+		"mobile.settings.theme.caption_forced": "始终使用 {name}",
+		"mobile.settings.theme.caption_system": "跟随系统时使用 {light} 和 {dark}",
+		"mobile.settings.theme.card_dark": "{name}，深色主题",
+		"mobile.settings.theme.card_dark_selected": "{name}，深色主题，已选择",
+		"mobile.settings.theme.card_light": "{name}，浅色主题",
+		"mobile.settings.theme.card_light_selected": "{name}，浅色主题，已选择",
+		"mobile.settings.theme.mode_dark": "深色",
+		"mobile.settings.theme.mode_label": "主题模式",
+		"mobile.settings.theme.mode_light": "浅色",
+		"mobile.settings.theme.mode_system": "跟随系统",
+		"mobile.settings.theme.no_match": "没有匹配的主题",
+		"mobile.settings.theme.row_label": "主题，{name}",
+		"mobile.settings.theme.search_label": "搜索主题",
+		"mobile.settings.theme.search_placeholder": "搜索主题",
+		"mobile.settings.theme.section_dark": "深色（{count}）",
+		"mobile.settings.theme.section_light": "浅色（{count}）",
+		"mobile.settings.theme.title": "主题",
+		"mobile.signin.diagnostics": "登录诊断",
+		"mobile.signin.failed": "无法完成登录。",
+		"mobile.signin.hide_diagnostics": "隐藏登录详情",
+		"mobile.signin.progress": "正在登录…",
+		"mobile.signin.retry": "重试",
+		"mobile.signin.show_diagnostics": "显示登录详情",
+		"mobile.signin.stage_browser": "正在等待浏览器",
+		"mobile.signin.stage_cancelled": "登录已取消",
+		"mobile.signin.stage_discovering": "正在查找你的电脑",
+		"mobile.signin.stage_exchanging": "正在完成浏览器登录",
+		"mobile.signin.stage_failed": "登录失败",
+		"mobile.signin.stage_idle": "尚未开始",
+		"mobile.signin.stage_persisting": "正在保存登录信息",
+		"mobile.signin.stage_retiring": "正在准备账户",
+		"mobile.signin.stage_signed_in": "已登录",
+		"mobile.signin.stage_starting": "正在开始登录",
+		"mobile.signin.stage_unavailable": "无法登录",
+		"mobile.signin.superseded": "另一次登录已开始。",
 		"mobile.team_bridge.back": "返回",
 		"mobile.team_bridge.conversation": "会话",
 		"mobile.team_bridge.delivery.held": "{recipient}：等待送达。",
@@ -3500,10 +5563,29 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.send_retry": "重试发送",
 		"mobile.team_bridge.title": "Team Bridge",
 		"mobile.team_bridge.unread": "{count, plural, other {# 条未读}}",
+		"relay.chrome.drawer.close": "关闭导航",
+		"relay.chrome.drawer.library": "资料库",
+		"relay.chrome.drawer.open": "打开导航",
+		"relay.chrome.drawer.past": "历史会话",
+		"relay.chrome.drawer.projects": "项目",
+		"relay.chrome.drawer.settings": "设置",
+		"relay.chrome.list.search_label": "搜索对话",
+		"relay.chrome.list.search_open": "搜索",
+		"relay.chrome.row.more": "更多",
+		"relay.chrome.row.tags": "标签",
 		"relay.chrome.session.resume": "恢复",
 		"relay.chrome.session.resuming": "正在恢复……",
 		"relay.chrome.session.subtitle.ended": "已结束",
+		"relay.chrome.session.subtitle.idle": "空闲",
 		"relay.chrome.session.subtitle.not_answering": "未响应",
+		"relay.chrome.session.subtitle.waiting": "等待你处理",
+		"relay.chrome.session.subtitle.working": "工作中 · {elapsed}",
+		"relay.chrome.session.subtitle.working_plain": "工作中",
+		"relay.chrome.session.tray.agents": "智能体{running}/{total}",
+		"relay.chrome.session.tray.tasks": "任务{done}/{total}",
+		"relay.composer.action.stop": "停止",
+		"relay.composer.action.stop_agent": "停止智能体",
+		"relay.composer.action.stopping": "正在停止",
 		"relay.health.dropped_detail": "电脑目前无法连接到此会话，正在不断重试。连上之前，发送会立即失败，已输入的文字会保留在输入框中。",
 		"relay.health.ended_detail": "历史记录已保留。发送消息或点击“恢复”，即可在主目录中重新打开。",
 		"relay.health.ended_send_failed": "此会话已结束，刚才未能重新打开。可以重试，或点击顶部的“已结束”，然后选择“恢复”。",

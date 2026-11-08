@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { CheckpointEntry, CheckpointManifest } from "@/contracts";
 import {
 	checkpointVocabulary,
+	decimateRailMarks,
+	GLYPH_CLEARANCE_PT,
 	layoutRailMarks,
 	marksBeyondWindow,
+	RAIL_MIN_GAP_PT,
 	railMarks,
 	railState,
 } from "@/features/session/checkpoint-rail";
@@ -127,6 +130,83 @@ describe("layoutRailMarks", () => {
 		);
 		/* Both marks collapse onto the inset line rather than leaving NaN. */
 		expect(placed.map((entry) => entry.yPt)).toEqual([10, 10]);
+	});
+});
+
+describe("decimateRailMarks (TestFlight 578: too crowded)", () => {
+	const turns = (count: number) =>
+		railMarks(
+			Array.from({ length: count }, (_, index) =>
+				tick({
+					id: `t${index}`,
+					seq: index,
+					kind: index % 2 === 0 ? "user" : "completion",
+					outcome: index % 2 === 0 ? null : "complete",
+				}),
+			),
+		);
+
+	it("never draws two marks closer than the minimum gap", () => {
+		for (const count of [2, 25, 100, 1000]) {
+			const drawn = decimateRailMarks(layoutRailMarks(turns(count), 600));
+			for (let index = 1; index < drawn.length; index += 1)
+				expect(
+					(drawn[index]?.yPt ?? 0) - (drawn[index - 1]?.yPt ?? 0),
+				).toBeGreaterThanOrEqual(RAIL_MIN_GAP_PT);
+			// A 600 pt track cannot hold more than one mark per gap.
+			expect(drawn.length).toBeLessThanOrEqual(
+				Math.floor((600 - 20) / RAIL_MIN_GAP_PT) + 1,
+			);
+		}
+		expect(RAIL_MIN_GAP_PT).toBeGreaterThanOrEqual(8);
+	});
+
+	it("leaves a sparse rail exactly as laid out", () => {
+		const laid = layoutRailMarks(turns(5), 600);
+		expect(decimateRailMarks(laid)).toEqual(laid);
+	});
+
+	it("a merged run keeps its most salient mark — a failure is never hidden", () => {
+		const marks = railMarks([
+			tick({ id: "u1", seq: 0 }),
+			tick({ id: "ok", seq: 1, kind: "completion", outcome: "complete" }),
+			tick({ id: "bad", seq: 2, kind: "completion", outcome: "error" }),
+			tick({ id: "u2", seq: 3 }),
+		]);
+		// 4 marks on a 24 pt track: 10, ~11.3, ~12.7, 14 pt — one run.
+		const drawn = decimateRailMarks(layoutRailMarks(marks, 24));
+		expect(drawn).toHaveLength(1);
+		expect(drawn[0]?.mark.id).toBe("bad");
+		// Drawn at the run's start, which is what makes the gap a guarantee.
+		expect(drawn[0]?.yPt).toBe(10);
+	});
+
+	it("keeps order and re-decides the form on the thinned set", () => {
+		const drawn = decimateRailMarks(layoutRailMarks(turns(1000), 600));
+		const ys = drawn.map((entry) => entry.yPt);
+		expect(ys).toEqual([...ys].sort((a, b) => a - b));
+		// The gap IS the glyph clearance, so every drawn run clears it.
+		expect(drawn.every((entry) => entry.form === "glyph")).toBe(true);
+	});
+
+	it("a merged failure in a dense rail still draws its glyph (review m2)", () => {
+		/* The reviewer's repro: 30 marks on a 300 pt track, an error at 15. At
+		 * an 8 pt gap the error's run drew `compact` — a dash indistinguishable
+		 * from its neighbours. */
+		const marks = railMarks(
+			Array.from({ length: 30 }, (_, index) =>
+				tick({
+					id: `t${index}`,
+					seq: index,
+					kind: "completion",
+					outcome: index === 15 ? "error" : "complete",
+				}),
+			),
+		);
+		const drawn = decimateRailMarks(layoutRailMarks(marks, 300));
+		const error = drawn.find((entry) => entry.mark.id === "t15");
+		expect(error?.form).toBe("glyph");
+		expect(RAIL_MIN_GAP_PT).toBe(GLYPH_CLEARANCE_PT);
 	});
 });
 

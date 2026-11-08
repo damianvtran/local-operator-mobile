@@ -34,6 +34,14 @@ vi.mock("react-native", async () => {
 		),
 	};
 });
+/* The edge fades are a drawing (an Animated opacity over a react-native-svg
+ * gradient); nothing here asserts pixels, and the RN host this file mocks has no
+ * Animated to drive them with. The list's contract with them — that it aims both
+ * bands from the facts it already keeps — is `transcript-scroll-cue.test.ts`'s.
+ */
+vi.mock("@/features/session/components/transcript-edge-fades", () => ({
+	TranscriptEdgeFades: () => null,
+}));
 vi.mock("@/features/session/components/transcript-row", () => ({
 	TranscriptRow: () => null,
 }));
@@ -166,7 +174,12 @@ describe("permanent transcript notice footer", () => {
 	it("accepts no optional footer without introducing a fake row", async () => {
 		await render([], null);
 		expect(props().data).toEqual([]);
-		expect(props().ListFooterComponent.props.children).toBeUndefined();
+		/* The host keeps ONE shape (pending slot, then notice) so the notice is
+		 *  never remounted when a pending row appears (PR #191 review, N1); with
+		 *  neither, both slots are empty — no element, so no fake row. */
+		expect(
+			[props().ListFooterComponent.props.children].flat().filter(Boolean),
+		).toEqual([]);
 		expect(host.mounts).toBe(0);
 	});
 	it.each([true, false])(

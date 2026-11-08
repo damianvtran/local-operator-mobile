@@ -183,6 +183,28 @@ export const errorBody = (
 ): { error: string; code?: string } =>
 	code === undefined ? { error: sentence } : { error: sentence, code };
 
+/** The start route's effort vocabulary (`EFFORT_ORDER` in local-operator's
+ *  `model/effort.py`, v0.101.9). */
+export const START_EFFORTS: readonly string[] = [
+	"none",
+	"minimal",
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+	"max",
+];
+
+/** Whether a start body's `effort` passes the relay's `start_effort`: absent,
+ *  `null` and blank are "no choice"; a string must be a vocabulary word once
+ *  trimmed and lower-cased; any other type is refused. */
+export const startEffortAdmitted = (value: unknown): boolean => {
+	if (value === undefined || value === null) return true;
+	if (typeof value !== "string") return false;
+	const word = value.trim().toLowerCase();
+	return word.length === 0 || START_EFFORTS.includes(word);
+};
+
 /* ---------------------------------------------------------- same origin -- */
 
 /**

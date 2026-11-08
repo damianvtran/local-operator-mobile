@@ -2,5 +2,21 @@
 	"relay.chrome.session.subtitle.not_answering": "未响应",
 	"relay.chrome.session.subtitle.ended": "已结束",
 	"relay.chrome.session.resume": "恢复",
-	"relay.chrome.session.resuming": "正在恢复……"
+	"relay.chrome.session.resuming": "正在恢复……",
+	"relay.chrome.session.subtitle.working": "工作中 · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "工作中",
+	"relay.chrome.session.subtitle.waiting": "等待你处理",
+	"relay.chrome.session.subtitle.idle": "空闲",
+	"relay.chrome.session.tray.tasks": "任务{done}/{total}",
+	"relay.chrome.session.tray.agents": "智能体{running}/{total}",
+	"relay.chrome.drawer.past": "历史会话",
+	"relay.chrome.drawer.projects": "项目",
+	"relay.chrome.drawer.library": "资料库",
+	"relay.chrome.drawer.settings": "设置",
+	"relay.chrome.list.search_open": "搜索",
+	"relay.chrome.list.search_label": "搜索对话",
+	"relay.chrome.row.tags": "标签",
+	"relay.chrome.row.more": "更多",
+	"relay.chrome.drawer.open": "打开导航",
+	"relay.chrome.drawer.close": "关闭导航"
 }

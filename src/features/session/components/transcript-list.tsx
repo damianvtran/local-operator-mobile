@@ -12,6 +12,7 @@ import {
 	type NativeScrollEvent,
 	type NativeSyntheticEvent,
 	View,
+	type ViewStyle,
 } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
@@ -21,11 +22,21 @@ import {
 	SupplementBlock,
 	type SupplementClient,
 } from "@/features/session/components/supplement-block";
+import {
+	TranscriptEdgeFades,
+	type TranscriptEdgeFadesHandle,
+} from "@/features/session/components/transcript-edge-fades";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
+import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
+import {
+	edgeFadeLevels,
+	type ScrollPresence,
+	TRANSCRIPT_FADE_PT,
+} from "@/features/session/transcript-presence";
 import {
 	condensePlan,
 	groupPlan,
@@ -112,6 +123,12 @@ export type TranscriptListProps = {
 	/** Complete status/recovery content after the actual rows. An element, not a
 	 * component factory: changing notice props must not remount the list or input. */
 	footer?: React.ReactElement | null;
+	/** The pending rows for what the reader just sent (`pending-echo.ts`),
+	 *  painted after the last real row and BEFORE the status footer: they are
+	 *  the transcript's next rows, not a notice about it. Separate from `footer`
+	 *  so the footer stays the notice alone, and outside `data` so a send leaves
+	 *  every memoised row untouched. An element so the screen can memoise it. */
+	pending?: React.ReactElement | null;
 	/** The entry id whose BOTTOM the ack gate watches — the completion
 	 *  attention's `anchor_id` (ADR 0006 §3.1). `null` when nothing is being
 	 *  watched. */
@@ -141,6 +158,10 @@ export type TranscriptListProps = {
 	 *  from the screen; absent on a route-less screen, where a beat still
 	 *  renders its files and lines but no frame can fetch. */
 	supplementClient?: SupplementClient;
+	/** The transcript's scroll signal, owned by the screen and shared with the
+	 *  checkpoint rail (`transcript-presence.ts`). Optional: a host with no rail
+	 *  to drive simply keeps its marks static. */
+	presence?: ScrollPresence;
 	testID: string;
 };
 
@@ -152,6 +173,19 @@ const TAIL_BAND_PT = 48;
 /** No turns open — a shared empty so a session-switch reset bails out of a
  *  render instead of committing an equal-but-new set. */
 const NO_TURNS: ReadonlySet<string> = new Set();
+
+/** The list's key function, hoisted: an inline arrow is a NEW prop on every
+ *  render, which is a fresh reason for the virtualiser to re-run its cells. */
+const keyOfItem = (item: TranscriptItem): string => item.id;
+
+/** The transcript's own bottom breathing room: the 16 pt between-sections floor
+ *  PLUS the fade band, so no row's chevron — a collapsed row's, or the last
+ *  row's own disclosure — ever rests inside the bottom fade at rest (design item
+ *  8's acceptance rule). Hoisted for the same reason as the key function: an
+ *  object literal in the JSX is a new style on every render. */
+const CONTENT_CONTAINER_STYLE: ViewStyle = {
+	paddingBottom: TRANSCRIPT_FADE_PT + 16,
+};
 
 /**
  * The capture hook's turn keys: `lo-expand` on the page's query string names
@@ -222,10 +256,12 @@ export const TranscriptList = ({
 	empty,
 	header,
 	footer,
+	pending,
 	anchorId = null,
 	onAnchorVisible,
 	highlightId = null,
 	reveal = null,
+	presence,
 	testID,
 }: TranscriptListProps) => {
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
@@ -260,6 +296,34 @@ export const TranscriptList = ({
 	const restoredFor = useRef<string | null>(null);
 	const [viewportPt, setViewportPt] = useState(0);
 
+	/* ------------------------------------------------------------ row identity --
+	 *
+	 * A frame that did not change a row must not re-render it. The relay re-sends
+	 * the whole window on every frame, so every layer between the wire and here
+	 * rebuilds its objects, and `TranscriptRow`'s memo (its only bail-out inside
+	 * the cell renderer) sees a fresh `entry` for a row that did not change.
+	 * `reuseRows` gives the unchanged rows their previous objects back, and the
+	 * whole ARRAY back when nothing changed at all — which is what lets the
+	 * condense plan, the group plan and the window policy below keep their
+	 * memoised results on a frame that only re-sent the same window.
+	 *
+	 * The previous list is held WITH the session it belongs to: a switch can reuse
+	 * this mounted component (`router.navigate`), and a new conversation's rows are
+	 * not the old one's however coincidentally their ids collide. */
+	const previousRows = useRef<{
+		session: string;
+		rows: readonly TranscriptEntry[];
+	} | null>(null);
+	const stableEntries = useMemo(() => {
+		const previous =
+			previousRows.current?.session === sessionId
+				? previousRows.current.rows
+				: null;
+		const rows = reuseRows(previous, entries);
+		previousRows.current = { session: sessionId, rows };
+		return rows;
+	}, [entries, sessionId]);
+
 	/* ---------------------------------------------------------------- condense --
 	 *
 	 * The plan over the current entries, plus the two facts that are NOT derivable
@@ -292,8 +356,13 @@ export const TranscriptList = ({
 		return new Set([...readerExpanded, ...hookExpanded]);
 	}, [readerExpanded, hookExpanded]);
 	const plan = useMemo(
-		() => condensePlan({ entries, expanded, latch: latchRef.current.latch }),
-		[entries, expanded],
+		() =>
+			condensePlan({
+				entries: stableEntries,
+				expanded,
+				latch: latchRef.current.latch,
+			}),
+		[stableEntries, expanded],
 	);
 	/* Idempotent for a given `entries` (the latch only grows), so a
 	 * double-invoked render computes the same plan. */
@@ -334,6 +403,40 @@ export const TranscriptList = ({
 		});
 	}, []);
 
+	/*
+	 * ONE ROW'S FOLD (`collapsed-row.tsx`), OWNED HERE AND KEYED BY ROW ID.
+	 *
+	 * Kept apart from `readerExpanded` on purpose: that set feeds the condense
+	 * and group plans, and a row fold changes neither — re-planning the whole
+	 * transcript to open one peer message would be the per-frame cost this file
+	 * exists to avoid. Held at list scope rather than in the row because
+	 * windowing unmounts rows: a fold kept in the row's own state came back
+	 * closed after a few screens of scrolling, and the row's height changed under
+	 * the anchors (review round 1, Q5 / U6 / m4). Reset on a session switch with
+	 * the turn folds.
+	 */
+	const [rowOpen, setRowOpen] = useState<ReadonlySet<string>>(NO_TURNS);
+	/* Set by a reader's own expand or collapse, consumed by the content-size
+	 *  change that toggle causes: see `onContentSizeChange`. */
+	const foldResizeRef = useRef(false);
+	/* The resize mark is set ONLY when the open state really changes (round 2,
+	 *  U10 / Q9 / m-r2-1). A press that asks for the state the row already has
+	 *  produces no content-size change to consume it, so the mark would sit armed
+	 *  until the next streamed growth — which it would then misread as the
+	 *  reader's own resize and unpin the tail for. It is set inside the updater
+	 *  because that is the only place the CURRENT set is known; the updater may
+	 *  run twice under StrictMode, which is harmless for an idempotent flag. */
+	const toggleRowOpen = useCallback((id: string, open: boolean) => {
+		setRowOpen((current) => {
+			if (current.has(id) === open) return current;
+			foldResizeRef.current = true;
+			const next = new Set(current);
+			if (open) next.add(id);
+			else next.delete(id);
+			return next;
+		});
+	}, []);
+
 	const policy = useMemo(
 		// The window's unit is what the FlatList MOUNTS, so it counts the plan's
 		// items: a condensed turn mounts its bar, not the work behind it.
@@ -365,12 +468,68 @@ export const TranscriptList = ({
 	 *  mutated in place and cannot be a dependency, so a version is. */
 	const heightsVersionRef = useRef(0);
 	/** The offset table `getItemLayout` answers from, rebuilt when the row list
-	 *  changes identity or a row has been measured since it was built. */
+	 *  changes identity or a row has been measured since it was built. It carries
+	 *  THREE facts from one pass, because they are all functions of the same row
+	 *  list and rebuilding any of them separately would be the same walk again:
+	 *  the prefix-summed offsets, the id→index map, and how many rows before each
+	 *  index are still unmeasured. */
 	const layoutTable = useRef<{
 		rows: unknown;
 		version: number;
 		offsets: number[];
-	}>({ rows: null, version: -1, offsets: [] });
+		index: Map<string, number>;
+		unmeasuredPrefix: number[];
+	}>({
+		rows: null,
+		version: -1,
+		offsets: [],
+		index: new Map(),
+		unmeasuredPrefix: [0],
+	});
+	/**
+	 * The geometry cache, and why the scroll path has to be O(1).
+	 *
+	 * `recompute` runs on EVERY scroll event — roughly every 16 ms while a finger
+	 * is on the glass — and it used to answer "where is the anchor" by walking
+	 * the rows after it. That is O(n) per frame for a question the offset table
+	 * already knows: the anchor's index is a Map lookup, and the mass below it is
+	 * one subtraction of two prefix sums. The unmeasured count is what keeps the
+	 * original rule honest — a row after the anchor that has never laid out leaves
+	 * the distance unknown, and unknown must never read as "visible".
+	 *
+	 * One walk, shared: `getItemLayout` calls this for every row of a batch and
+	 * gets the cache back, and the offset table is invalidated by the measurement
+	 * version (`heightsRef` is mutated in place, so it cannot be a dependency).
+	 */
+	const geometryFor = useCallback(
+		(rows: ArrayLike<TranscriptItem> | null | undefined) => {
+			const cache = layoutTable.current;
+			if (cache.rows !== rows || cache.version !== heightsVersionRef.current) {
+				const count = rows?.length ?? 0;
+				cache.rows = rows;
+				cache.version = heightsVersionRef.current;
+				cache.offsets = rowOffsets(
+					count,
+					(at) => rows?.[at]?.id,
+					heightsRef.current,
+				);
+				const index = new Map<string, number>();
+				const unmeasuredPrefix = new Array<number>(count + 1);
+				unmeasuredPrefix[0] = 0;
+				for (let at = 0; at < count; at += 1) {
+					const id = rows?.[at]?.id;
+					if (id !== undefined && !index.has(id)) index.set(id, at);
+					unmeasuredPrefix[at + 1] =
+						(unmeasuredPrefix[at] ?? 0) +
+						(heightsRef.current.has(id ?? "") ? 0 : 1);
+				}
+				cache.index = index;
+				cache.unmeasuredPrefix = unmeasuredPrefix;
+			}
+			return cache;
+		},
+		[],
+	);
 	/** The last boolean reported upward; only flips are reported. */
 	const lastAnchorVisibleRef = useRef(false);
 	/* Latest props read by `recompute`, which must be stable: a re-created scroll
@@ -406,22 +565,20 @@ export const TranscriptList = ({
 		 * position relative to the content's end is unknown — and unknown must
 		 * never read as "visible" (see `anchorBottomVisible`). */
 		const rows = itemsRef.current;
-		const index = rows.findIndex(
-			(item) => item.kind === "entry" && item.id === anchor,
-		);
-		if (index < 0) {
+		const geometry = geometryFor(rows);
+		const at = geometry.index.get(anchor) ?? -1;
+		if (at < 0) {
 			report(false);
 			return;
 		}
-		let afterHeight: number | null = 0;
-		for (let i = index + 1; i < rows.length; i += 1) {
-			const height = heightsRef.current.get(rows[i]?.id ?? "");
-			if (height === undefined) {
-				afterHeight = null;
-				break;
-			}
-			afterHeight += height;
-		}
+		const count = rows.length;
+		const missing =
+			(geometry.unmeasuredPrefix[count] ?? 0) -
+			(geometry.unmeasuredPrefix[at + 1] ?? 0);
+		const afterHeight =
+			missing > 0
+				? null
+				: (geometry.offsets[count] ?? 0) - (geometry.offsets[at + 1] ?? 0);
 		const facts = factsRef.current;
 		report(
 			anchorBottomVisible({
@@ -431,7 +588,7 @@ export const TranscriptList = ({
 				anchorRendered: heightsRef.current.has(anchor),
 			}),
 		);
-	}, []);
+	}, [geometryFor]);
 
 	/**
 	 * The per-row `onLayout` storm, coalesced to one recompute per frame.
@@ -488,6 +645,48 @@ export const TranscriptList = ({
 		recompute();
 	}, [sessionId, recompute, scrollAnchor]);
 
+	/* A FIND LANDING OPENS THE ROW IT LANDS ON (UX round 1, U2): a hit on line 3
+	 *  of a folded peer message landed on a one-line summary without the word.
+	 *  The landing is RECORDED in the open set, and the set is the only thing
+	 *  the row's `open` reads. Round 1 also OR-ed `id === highlightId` into the
+	 *  render, which made the current hit impossible to close: the reader's tap
+	 *  changed nothing they could see, and — worse — armed the fold-resize mark
+	 *  with no resize to consume it, so the next streamed growth unpinned the
+	 *  tail (round 2, U10 / Q9 / m-r2-1).
+	 *
+	 *  A LAYOUT effect, so the state update re-renders before the browser
+	 *  paints: the hit is open on its first painted frame, as the render-time OR
+	 *  used to guarantee. The session reset is a layout effect for the same
+	 *  reason and is declared FIRST: layout effects run in declaration order,
+	 *  and a landing that arrives with the mount must be recorded after the
+	 *  clear, not wiped by it (the passive session effect above runs after every
+	 *  layout effect, so it must not clear this set). */
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `sessionId` is the TRIGGER for the reset, not a read.
+	useLayoutEffect(() => {
+		setRowOpen(NO_TURNS);
+	}, [sessionId]);
+	/* KEYED ON THE LANDING, NOT THE HIGHLIGHT (round 3, U14 / m-r3-1). A
+	 *  landing is `reveal`'s id AND nonce: the find session bumps the nonce on
+	 *  every landing, including a re-landing on the hit already current. Keyed
+	 *  on `highlightId` alone, a reader who closed the current hit and stepped
+	 *  back onto it (one hit: Next wraps to itself) landed on a closed fold,
+	 *  because the id never changed and the effect never re-ran. The two
+	 *  primitives, not the object: `use-find.ts` re-memoises `reveal` whenever
+	 *  `activeHit` is re-derived from a new frame, and an object key would
+	 *  re-open a fold the reader closed on every streamed frame (U10). */
+	const landingId = reveal?.id ?? null;
+	const landingNonce = reveal?.nonce ?? null;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `landingNonce` is the TRIGGER for a re-landing on the same id, not a read.
+	useLayoutEffect(() => {
+		if (landingId === null) return;
+		setRowOpen((current) => {
+			if (current.has(landingId)) return current;
+			const next = new Set(current);
+			next.add(landingId);
+			return next;
+		});
+	}, [landingId, landingNonce]);
+
 	/* ------------------------------------------------------------ the find jump --
 	 *
 	 * A reveal is TWO steps when the target is inside a condensed turn: open
@@ -533,29 +732,9 @@ export const TranscriptList = ({
 	 * Measurements land in the layout phase, before the next batch of calls, so a
 	 * batch is one walk.
 	 */
-	/** The offset table `getItemLayout` and the scroll anchor both read, from the
-	 *  cache `layoutTable` holds: rebuilt when the row list changes identity or a
-	 *  row has measured since (`heightsVersionRef`), O(1) otherwise. */
-	const offsetsFor = useCallback(
-		(rows: ArrayLike<TranscriptItem> | null | undefined): number[] => {
-			const cache = layoutTable.current;
-			if (cache.rows !== rows || cache.version !== heightsVersionRef.current) {
-				cache.rows = rows;
-				cache.version = heightsVersionRef.current;
-				cache.offsets = rowOffsets(
-					rows?.length ?? 0,
-					(at) => rows?.[at]?.id,
-					heightsRef.current,
-				);
-			}
-			return cache.offsets;
-		},
-		[],
-	);
-
 	const getItemLayout = useCallback(
 		(data: ArrayLike<TranscriptItem> | null | undefined, index: number) => {
-			const offsets = offsetsFor(data);
+			const offsets = geometryFor(data).offsets;
 			// Past the table: the estimate alone, which is what a row beyond the
 			// rendered plan has. `rowLayout` keeps one arithmetic for both answers.
 			if (index >= offsets.length - 1)
@@ -566,7 +745,7 @@ export const TranscriptList = ({
 				index,
 			};
 		},
-		[offsetsFor],
+		[geometryFor],
 	);
 
 	const revealToIndex = useCallback((index: number) => {
@@ -673,7 +852,22 @@ export const TranscriptList = ({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: see the comment above
 	useEffect(() => {
 		recompute();
-	}, [recompute, anchorId, entries]);
+	}, [recompute, anchorId, stableEntries]);
+
+	const fadesRef = useRef<TranscriptEdgeFadesHandle>(null);
+	/** Aim the two edge fades from the facts just recorded — called on every path
+	 *  that moves an edge, and O(1) on each: the levels are three subtractions and
+	 *  the component drops a target that has not changed. */
+	const driveFades = useCallback(() => {
+		const facts = factsRef.current;
+		fadesRef.current?.setLevels(
+			edgeFadeLevels({
+				offsetY: facts.offsetY,
+				contentPt: facts.contentPt,
+				viewportPt: viewportRef.current,
+			}),
+		);
+	}, []);
 
 	const onScroll = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -705,10 +899,37 @@ export const TranscriptList = ({
 				contentPt: contentSize.height,
 				offsetY: contentOffset.y,
 			};
+			/* The transient rail: this handler is the only place that knows the
+			 *  offset moved, and the presence object is what the rail subscribes to
+			 *  (`transcript-presence.ts`) — no state, so no re-render of this list or
+			 *  the screen it lives in. Every offset is reported, the tail pin's
+			 *  included; the presence itself discards the ones no reader gesture
+			 *  made. */
+			presence?.noteMovement(contentOffset.y);
+			driveFades();
 			recompute();
 		},
-		[sessionId, recompute],
+		[driveFades, presence, sessionId, recompute],
 	);
+
+	/* A HELD THUMB KEEPS THE RAIL UP however long the reader holds still — the
+	 *  pointer analogue of a desktop scrollbar's thumb staying under the cursor,
+	 *  and the "or something like that" half of the operator's request. */
+	const onScrollBeginDrag = useCallback(() => {
+		presence?.setHeld(true);
+	}, [presence]);
+	const onScrollEndDrag = useCallback(() => {
+		presence?.setHeld(false);
+	}, [presence]);
+	/* The glide after a flick is still the reader's gesture: the presence counts
+	 *  movement only inside a drag or its momentum, which is what keeps the tail
+	 *  pin's own scrolls from raising the rail (round 1, U3). */
+	const onMomentumScrollBegin = useCallback(() => {
+		presence?.setCoasting(true);
+	}, [presence]);
+	const onMomentumScrollEnd = useCallback(() => {
+		presence?.setCoasting(false);
+	}, [presence]);
 
 	/**
 	 * Pin the list to its end, before the frame is painted.
@@ -744,10 +965,12 @@ export const TranscriptList = ({
 			const changed = Math.abs(height - viewportRef.current) > 0.5;
 			setViewportPt(height);
 			viewportRef.current = height;
+			// The viewport is one of the two facts a fade level is made of.
+			driveFades();
 			recompute();
 			if (changed && viewportRef.current > 0) pinTail();
 		},
-		[recompute, pinTail],
+		[driveFades, recompute, pinTail],
 	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `grouped.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
@@ -756,13 +979,105 @@ export const TranscriptList = ({
 		pinTail();
 	}, [openElsewhere, pinTail, grouped.items.length]);
 
+	/* THE INITIAL JUMP IS SPENT ONCE, AND ONLY ONCE (QA round 3, Q-RF1).
+	 *
+	 * Both VirtualizedLists — react-native-web's vendored copy and
+	 * `@react-native/virtualized-lists` on native, the same guard in each — jump
+	 * to `initialScrollIndex` on the first content-size change that sees it
+	 * `> 0`, and latch only THEN. An index that was `0` at the first layout (a
+	 * conversation that fitted the 844 pt pre-layout estimate's first screenful)
+	 * leaves the latch open; the viewport's real height then shrinks
+	 * `initialNumToRender`, `tailStartIndex` turns positive with no content
+	 * change to consume it, and the NEXT content change — the reader's first
+	 * fold expand, or a streamed row — replays a `scrollToIndex` to the first
+	 * row of the last screenful: on web the offset fell 625 → 496 and the row
+	 * the reader had just tapped slid under the composer, before the
+	 * fold-resize handling below could keep their place. Native has the same
+	 * latent jump; only the trigger's timing differs.
+	 *
+	 * So the index handed to the list is FROZEN at the value it had when the
+	 * list first laid out rows. A frozen `> 0` was consumed by that same event
+	 * (the list latched); a frozen `0` can never become a jump. Frozen rather
+	 * than dropped, because the index also decides which rows the list keeps
+	 * mounted: an index `> 0` drops VirtualizedList's "scroll-to-top" region,
+	 * so a 520-row transcript opened at its tail never holds a screenful of
+	 * its top. A frozen `0` does NOT buy that — `_createRenderMask` keeps the
+	 * top screenful whenever the index is `<= 0`, exactly as an absent index
+	 * would — so a conversation that froze at `0` (it fitted the pre-layout
+	 * estimate) keeps its first `initialNumToRender` rows mounted for the life
+	 * of the mount. That is the accepted cost: those conversations were short
+	 * at first layout, so the retained rows are the ones that were the whole
+	 * conversation then, and the alternative is the replayed jump above.
+	 *
+	 * FROZEN PER SESSION, NOT PER MOUNT (review round 4, M-r4-1). A switch
+	 * reuses this mounted list (`router.navigate`), and the index is a fact
+	 * about the conversation it was measured on. Carried across, a long
+	 * conversation's ~250 lands on a short one's first commit: react-native-web
+	 * then starts the window at its last row (`_initialRenderRegion` clamps the
+	 * index to the item count) and, with the index `> 0` at offset 0, refuses to
+	 * recompute the cells around the viewport — the short conversation's first
+	 * rows never mount. So the frozen value is keyed on the session it was
+	 * frozen for and reads as unfrozen for any other: each conversation
+	 * computes, and freezes, its own. The list's own one-time jump latch is
+	 * per mount and not ours to reset: this key changes which rows the list
+	 * renders, not whether it jumps again. Refs, because the value is
+	 * consumed by the list's next commit, never rendered for its own sake —
+	 * every content change that could replay the jump is caused by a render,
+	 * and that render reads the frozen value. */
+	const frozenInitialIndexRef = useRef<{
+		session: string;
+		index: number;
+	} | null>(null);
+	const liveInitialIndex = tailStartIndex(
+		grouped.items.length,
+		policy.initialNumToRender,
+	);
+	const frozenInitial = frozenInitialIndexRef.current;
+	const initialIndex =
+		frozenInitial?.session === sessionId
+			? frozenInitial.index
+			: liveInitialIndex;
+	/* What THIS commit hands the list, for `onContentSizeChange` to freeze —
+	 *  with the session it was computed for, so a freeze records the pair. */
+	const passedInitialIndexRef = useRef({
+		session: sessionId,
+		index: 0,
+		items: 0,
+	});
+	passedInitialIndexRef.current = {
+		session: sessionId,
+		index: initialIndex,
+		items: grouped.items.length,
+	};
+
 	/* The offset is restored once, after the first content change: before that there
 	 * is nothing to scroll, and a restore that ran into an empty list would silently
 	 * lose the position (F-6.11 — Back preserves scroll). Keyed on the session so a
 	 * session switch restores ITS offset rather than the previous one's. */ const onContentSizeChange =
 		useCallback(
-			(_width: number, height: number) => {
+			(width: number, height: number) => {
+				/* The list's one-time initial jump has now been decided for this
+				 *  event — VirtualizedList runs its guard BEFORE calling this prop,
+				 *  with the same width/height test — so the index it was handed is
+				 *  frozen from here on (see `frozenInitialIndexRef`). Only once rows
+				 *  exist: an empty list's first layout must not spend the tail open on
+				 *  a conversation whose history has not arrived yet. */
+				const passed = passedInitialIndexRef.current;
+				if (
+					frozenInitialIndexRef.current?.session !== passed.session &&
+					width > 0 &&
+					height > 0 &&
+					passed.items > 0
+				) {
+					frozenInitialIndexRef.current = {
+						session: passed.session,
+						index: passed.index,
+					};
+				}
 				factsRef.current = { ...factsRef.current, contentPt: height };
+				// Content is the other fact: a list that grew past its viewport has
+				// edges to fade, and one that shrank under it has none.
+				driveFades();
 				if (restoredFor.current !== sessionId) {
 					restoredFor.current = sessionId;
 					const saved = scrollPlaces.get(sessionId);
@@ -794,6 +1109,27 @@ export const TranscriptList = ({
 						return;
 					}
 				}
+				if (foldResizeRef.current) {
+					/* A READER'S EXPAND IS NOT CONTENT ARRIVING (review round 1, m4 /
+					 *  U4). Opening a fold at the tail grew the content, the tail pin
+					 *  below followed it, and the header the reader just tapped slid
+					 *  up out of view. So the resize a toggle causes keeps the
+					 *  reader's offset: they stay pinned only if they were pinned AND
+					 *  the end is still inside the tail band (a short body), otherwise
+					 *  they have left the tail and streaming no longer drags them. A
+					 *  toggle can only ever take a reader OFF the tail, never on. */
+					foldResizeRef.current = false;
+					const distance =
+						height - factsRef.current.offsetY - viewportRef.current;
+					atTail.current = atTail.current && distance <= TAIL_BAND_PT;
+					scrollPlaces.set(sessionId, {
+						offset: factsRef.current.offsetY,
+						atTail: atTail.current,
+					});
+					if (atTail.current) pinTail();
+					recompute();
+					return;
+				}
 				if (atTail.current) {
 					/* The tail pin, and why it is a CLAMP rather than `scrollToEnd`.
 					 *
@@ -810,7 +1146,7 @@ export const TranscriptList = ({
 				}
 				recompute();
 			},
-			[sessionId, recompute, scrollAnchor, pinTail],
+			[driveFades, sessionId, recompute, scrollAnchor, pinTail],
 		);
 
 	const renderItem = useCallback(
@@ -893,6 +1229,8 @@ export const TranscriptList = ({
 						onOpenAgent={onOpenAgent}
 						onOpenVideo={onOpenVideo}
 						onCancelTurn={onCancelTurn}
+						open={rowOpen.has(item.id)}
+						onToggleOpen={toggleRowOpen}
 					/>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
 					 * (an element carries one testID, so the anchor is its own element —
@@ -919,6 +1257,8 @@ export const TranscriptList = ({
 		},
 		[
 			toggleExpansion,
+			rowOpen,
+			toggleRowOpen,
 			streamingRowId,
 			loadImage,
 			onOpenAgent,
@@ -933,76 +1273,101 @@ export const TranscriptList = ({
 		],
 	);
 
+	/* Hoisted for the same reason as the key function: `ListHeaderComponent` and
+	 *  `ListFooterComponent` are compared by identity, so an inline element (or a
+	 *  fresh fragment) tells the virtualiser its header and footer changed on every
+	 *  streaming frame. */
+	const listHeader = useMemo(
+		() => (
+			<>
+				{/* A session-keyed anchor for the row list itself.
+				 *
+				 * `08-connection-loss-recovery` addresses the transcript by
+				 * `transcript-row-<SESSION_ID>` while it samples across a stream cut, to prove
+				 * the rows survived it — an assertion whose whole point is that a row IS still
+				 * mounted, so it needs a name that is stable across the cut. Individual rows
+				 * are keyed by their own entry id (`transcript-row-<entry.id>`, which is what
+				 * the per-row flows address), so the session-keyed id belongs to the list
+				 * that survives: it is the row CONTAINER, named by the thing that identifies
+				 * the conversation.
+				 *
+				 * Zero-size and hidden from the accessibility tree: it is an anchor, and a
+				 * screen reader should not announce it. */}
+				<View testID={transcriptRowId(sessionId)} aria-hidden />
+				{header}
+			</>
+		),
+		[header, sessionId],
+	);
+	/* One shape whether or not anything is pending, so the notice keeps its
+	 *  child index and is never remounted when the first echo appears. */
+	const listFooter = useMemo(
+		() => (
+			<View>
+				{pending ?? null}
+				{footer}
+			</View>
+		),
+		[pending, footer],
+	);
+
 	return (
-		<FlatList
-			ref={listRef}
-			testID={testID}
-			data={grouped.items}
-			keyExtractor={(item) => item.id}
-			renderItem={renderItem}
-			onLayout={onLayout}
-			onScroll={onScroll}
-			scrollEventThrottle={16}
-			onContentSizeChange={onContentSizeChange}
-			/* The two props that make the FIRST frame the one the reader came for.
-			 *
-			 * `initialScrollIndex` mounts the LAST screenful, and `getItemLayout`
-			 * tells the list where that screenful sits — so the open renders its
-			 * final rows and the tail `onContentSizeChange` clamp is a correction
-			 * rather than the mechanism that gets there. Omitted when this mount is
-			 * headed somewhere else (`openElsewhere`): a restored offset or the
-			 * capture hook's top. There is deliberately no
-			 * `onScrollToIndexFailed` beside them — the list never reports a failed
-			 * jump when it has metrics, so the deep-jump recovery lives in
-			 * `revealToIndex`, which is the only place that knows a target is
-			 * unmeasured. */
-			initialScrollIndex={
-				openElsewhereAtMount
-					? undefined
-					: tailStartIndex(grouped.items.length, policy.initialNumToRender)
-			}
-			getItemLayout={getItemLayout}
-			// Keyboard stays open while scrolling: the reader is scrolling to read the
-			// answer to what they just typed.
-			keyboardShouldPersistTaps="handled"
-			keyboardDismissMode="interactive"
-			ListHeaderComponent={
-				<>
-					{/* A session-keyed anchor for the row list itself.
-					 *
-					 * `08-connection-loss-recovery` addresses the transcript by
-					 * `transcript-row-<SESSION_ID>` while it samples across a stream cut, to prove
-					 * the rows survived it — an assertion whose whole point is that a row IS still
-					 * mounted, so it needs a name that is stable across the cut. Individual rows
-					 * are keyed by their own entry id (`transcript-row-<entry.id>`, which is what
-					 * the per-row flows address), so the session-keyed id belongs to the list
-					 * that survives: it is the row CONTAINER, named by the thing that identifies
-					 * the conversation.
-					 *
-					 * Zero-size and hidden from the accessibility tree: it is an anchor, and a
-					 * screen reader should not announce it. */}
-					<View testID={transcriptRowId(sessionId)} aria-hidden />
-					{header}
-				</>
-			}
-			// A permanent footer host lets recovery grow inside this scroller. It is
-			// not a transcript row/completion anchor; existing tail-vs-away policy
-			// receives the content-size change without forcing a non-tail reader down.
-			ListFooterComponent={<View>{footer}</View>}
-			ListEmptyComponent={empty ?? undefined}
-			// `removeClippedSubviews` is left OFF deliberately: it detaches rows that
-			// scroll out of view, and a detached row loses the open/closed state of its
-			// tool-row disclosure — so a reader who expands a diff, scrolls away and
-			// comes back finds it shut. The window already bounds what is mounted.
-			initialNumToRender={policy.initialNumToRender}
-			maxToRenderPerBatch={policy.maxToRenderPerBatch}
-			windowSize={policy.windowSize}
-			updateCellsBatchingPeriod={40}
-			// 16 pt: the `between-sections` floor. 8 pt was the last prose row's bottom
-			// padding with nothing on the other side of it, so the transcript met the
-			// todos strip with an unmeasured gap — every other band in the column starts
-			// from a 16 pt rail (§3.2 of the design pass).
-			contentContainerStyle={{ paddingBottom: 16 }}
-		/>
+		<View className="flex-1 min-h-0">
+			<FlatList
+				ref={listRef}
+				testID={testID}
+				data={grouped.items}
+				keyExtractor={keyOfItem}
+				renderItem={renderItem}
+				onLayout={onLayout}
+				onScroll={onScroll}
+				onScrollBeginDrag={onScrollBeginDrag}
+				onScrollEndDrag={onScrollEndDrag}
+				onMomentumScrollBegin={onMomentumScrollBegin}
+				onMomentumScrollEnd={onMomentumScrollEnd}
+				scrollEventThrottle={16}
+				onContentSizeChange={onContentSizeChange}
+				/* The two props that make the FIRST frame the one the reader came for.
+				 *
+				 * `initialScrollIndex` mounts the LAST screenful, and `getItemLayout`
+				 * tells the list where that screenful sits — so the open renders its
+				 * final rows and the tail `onContentSizeChange` clamp is a correction
+				 * rather than the mechanism that gets there. Frozen once rows have laid
+				 * out (`frozenInitialIndexRef`, Q-RF1). Omitted when this mount is
+				 * headed somewhere else (`openElsewhere`): a restored offset or the
+				 * capture hook's top. There is deliberately no
+				 * `onScrollToIndexFailed` beside them — the list never reports a failed
+				 * jump when it has metrics, so the deep-jump recovery lives in
+				 * `revealToIndex`, which is the only place that knows a target is
+				 * unmeasured. */
+				initialScrollIndex={openElsewhereAtMount ? undefined : initialIndex}
+				getItemLayout={getItemLayout}
+				// Keyboard stays open while scrolling: the reader is scrolling to read the
+				// answer to what they just typed.
+				keyboardShouldPersistTaps="handled"
+				keyboardDismissMode="interactive"
+				ListHeaderComponent={listHeader}
+				// A permanent footer host lets recovery grow inside this scroller. It is
+				// not a transcript row/completion anchor; existing tail-vs-away policy
+				// receives the content-size change without forcing a non-tail reader down.
+				ListFooterComponent={listFooter}
+				ListEmptyComponent={empty ?? undefined}
+				// `removeClippedSubviews` is left OFF deliberately: it detaches rows that
+				// scroll out of view, and a detached row loses the open/closed state of its
+				// tool-row disclosure — so a reader who expands a diff, scrolls away and
+				// comes back finds it shut. The window already bounds what is mounted.
+				initialNumToRender={policy.initialNumToRender}
+				maxToRenderPerBatch={policy.maxToRenderPerBatch}
+				windowSize={policy.windowSize}
+				updateCellsBatchingPeriod={40}
+				// 16 pt: the `between-sections` floor. 8 pt was the last prose row's bottom
+				// padding with nothing on the other side of it, so the transcript met the
+				// todos strip with an unmeasured gap — every other band in the column starts
+				// from a 16 pt rail (§3.2 of the design pass).
+				contentContainerStyle={CONTENT_CONTAINER_STYLE}
+			/>
+			{/* The two edge fades: a picture of the cut edge, never a control. */}
+			<TranscriptEdgeFades ref={fadesRef} />
+		</View>
 	);
 };

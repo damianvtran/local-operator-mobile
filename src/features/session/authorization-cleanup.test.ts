@@ -14,6 +14,7 @@ import {
 
 afterEach(() => {
 	reopenDispatch();
+	reopenPrivateWrites();
 	vi.unstubAllGlobals();
 });
 describe("explicit private-data retirement", () => {

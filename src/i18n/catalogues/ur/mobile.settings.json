@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "ہمیشہ {name}",
+	"mobile.settings.theme.caption_system": "سسٹم {light} اور {dark} استعمال کرتا ہے",
+	"mobile.settings.theme.card_dark": "{name}، گہرا تھیم",
+	"mobile.settings.theme.card_dark_selected": "{name}، گہرا تھیم، منتخب",
+	"mobile.settings.theme.card_light": "{name}، روشن تھیم",
+	"mobile.settings.theme.card_light_selected": "{name}، روشن تھیم، منتخب",
+	"mobile.settings.theme.mode_dark": "گہرا",
+	"mobile.settings.theme.mode_label": "تھیم موڈ",
+	"mobile.settings.theme.mode_light": "روشن",
+	"mobile.settings.theme.mode_system": "سسٹم",
+	"mobile.settings.theme.no_match": "کوئی تھیم مماثل نہیں",
+	"mobile.settings.theme.row_label": "تھیم، {name}",
+	"mobile.settings.theme.search_label": "تھیمز تلاش کریں",
+	"mobile.settings.theme.search_placeholder": "تھیمز تلاش کریں",
+	"mobile.settings.theme.section_dark": "گہرے ({count})",
+	"mobile.settings.theme.section_light": "روشن ({count})",
+	"mobile.settings.theme.title": "تھیم"
+}

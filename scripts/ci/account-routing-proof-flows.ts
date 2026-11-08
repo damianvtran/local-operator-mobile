@@ -63,6 +63,9 @@ export function connectSettings(helper: string): NativeStep[] {
 		// so it takes the cold budget. Later steps inside the helper stay steady.
 		{ runFlow: helper },
 		wait(SCREEN.home),
+		// Settings is in the conversations panel's footer since the 2026-11-04
+		// chrome pass, so the panel opens first.
+		tap(CONTROL.homeSidebar),
 		tap(CONTROL.settingsButton),
 		wait(SCREEN.settings),
 	];

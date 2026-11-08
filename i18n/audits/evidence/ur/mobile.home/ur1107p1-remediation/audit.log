@@ -1,0 +1,32 @@
+mechanical issues: 0
+visible short strings with len ratio >=1.5 and len>=12:
+  ('mobile.home.chip.effort_default_short', 'es', 14, 23, 1.64, 'Esfuerzo predeterminado')
+  ('mobile.home.chip.effort_default_short', 'vi', 14, 21, 1.5, 'Mức suy luận mặc định')
+  ('mobile.home.chip.model_no_default', 'es', 10, 18, 1.8, 'Sin predeterminado')
+  ('mobile.home.chip.model_no_default', 'fr', 10, 16, 1.6, 'Aucun par défaut')
+  ('mobile.home.chip.model_no_default', 'hi', 10, 17, 1.7, 'कोई डिफ़ॉल्ट नहीं')
+  ('mobile.home.chip.model_no_default', 'ur', 10, 16, 1.6, 'کوئی ڈیفالٹ نہیں')
+  ('mobile.home.chip.model_no_default', 'vi', 10, 17, 1.7, 'Không có mặc định')
+  ('mobile.home.effort.max', 'ru', 3, 12, 4.0, 'Максимальное')
+  ('mobile.home.effort.max', 'ur', 3, 14, 4.67, 'زیادہ سے زیادہ')
+  ('mobile.home.picker.badge_default', 'es', 7, 14, 2.0, 'Predeterminado')
+  ('mobile.home.picker.badge_default', 'ru', 7, 12, 1.71, 'По умолчанию')
+  ('mobile.home.picker.folder_home', 'fr', 4, 17, 4.25, 'Dossier personnel')
+11f65e0cbb229b0c4c11cf07f51c168f170580dd7a30cb3039f63f45c4f17789 src/i18n/catalogues/es/mobile.home.json
+684df29e9bdcb4a36bbe4b88ebdb333cda2e14a7e099abe630bb4cb2c5eb8e35 src/i18n/catalogues/es/mobile.chrome.json
+72637daaec74943764c96a144eb86a2a6faeca562c7c185b33d2fe9ce9cede41 src/i18n/catalogues/fr/mobile.home.json
+e05e71607db911fe77671c73fe8fa443fa7d86f98f4aec79d87f83e10d886592 src/i18n/catalogues/fr/mobile.chrome.json
+373d40d6a4b00a1cc5410784b89e29fd3c9cb9f82653e87c59f7cfcf92cf72b2 src/i18n/catalogues/hi/mobile.home.json
+6c30e16e1a30d3e966d8c2f8afa6bb00e4c25e06b451c93c9864e2ce575c7c84 src/i18n/catalogues/hi/mobile.chrome.json
+2cc979d38a0942b8e68e7299e7b94484e8ae01156a565a979513f550ff843510 src/i18n/catalogues/ru/mobile.home.json
+3a52ae8eb2a84d68e455fff80e38991d60709a82d4bc418d63f99802c3a0f7d3 src/i18n/catalogues/ru/mobile.chrome.json
+9c9b854e9448cfdd1ef68bb0758be28557c7a0c7abfce79064191ccf4fdaad7c src/i18n/catalogues/ur/mobile.home.json
+bf1d07fa805142c3b10a399d609bb0ffd18e62331658713abab5184a4918e112 src/i18n/catalogues/ur/mobile.chrome.json
+48f55488d35e4fe001e6f76a20f70a8706574363bec08366b5d37a42cbc96a1c src/i18n/catalogues/vi/mobile.home.json
+6c2d18113a6ac059fbd9acd899f8670b778e549391db2aa993292b6c22a6e41d src/i18n/catalogues/vi/mobile.chrome.json
+bf92f94ee6474dff4594cb6fde40ab8b771228ebe2cecb4e77e20362d6d2b7fb src/i18n/catalogues/zh-CN/mobile.home.json
+4ec576910081b038a360c939f61594c4eec211eb7c6617e11f5fa6f37dccb983 src/i18n/catalogues/zh-CN/mobile.chrome.json
+12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b src/i18n/catalogues/en/mobile.home.json
+7b91a909393d20b3ced5ef3825bf0fd5b0f844ee634a6f8abf19f3cb0141b3f7 src/i18n/catalogues/en/mobile.chrome.json
+aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047 src/i18n/catalogues/en/mobile.home.context.json
+ba70cefe7de66b12c4f012daad4e7aa127a34eea6e3de17c9fda832415aeb140 src/i18n/catalogues/en/mobile.chrome.context.json

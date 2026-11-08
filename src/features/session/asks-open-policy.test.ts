@@ -183,11 +183,14 @@ describe("state 2 — pending asks on open: opens once", () => {
 		expect(view.see(fresh(PENDING))).toBe(true);
 	});
 
-	it("opens for an ask that is only timed out, because it is still answerable", () => {
+	it("does NOT open for an ask that is only timed out: a lapsed ask is not pending", () => {
+		/* local-operator #2388: the runtime publishes `asks_open: 0` beside a
+		   timed-out row and the desktop never opens for one (D12). Opening a
+		   sheet for it was the phone calling a settled ask pending. */
 		const view = mount();
 		expect(
-			view.see(fresh({ asks: [ask({ status: "timed_out" })], asks_open: 1 })),
-		).toBe(true);
+			view.see(fresh({ asks: [ask({ status: "timed_out" })], asks_open: 0 })),
+		).toBe(false);
 	});
 
 	it("opens ONCE for the view: every later render of the same frame says no", () => {
@@ -1291,6 +1294,22 @@ describe("U4 - a dismissal is forgotten once the queue empties", () => {
 			// hold a dismissal, since nothing is missing from the frame.
 			const rows = [ask({ ask_id: "a1" }), ask({ ask_id: "a2" })];
 			expect(namesEveryOutstandingAsk(rows, 1)).toBe(true);
+		});
+
+		it("reads an older daemon's tally, which still counted timed-out asks, as complete (m1)", () => {
+			// Pre-#2388 `asks_open` counted `timed_out`; the frame names both rows,
+			// so it is whole and must not hold a dismissal forever.
+			const rows = [
+				ask({ ask_id: "a1" }),
+				ask({ ask_id: "t1", status: "timed_out" }),
+			];
+			expect(namesEveryOutstandingAsk(rows, 2)).toBe(true);
+			// A tally beyond open + lapsed is still a clip, and still holds.
+			expect(namesEveryOutstandingAsk(rows, 3)).toBe(false);
+			// Settled rows never pad the count.
+			expect(
+				namesEveryOutstandingAsk([ask({ ask_id: "s", status: "answered" })], 1),
+			).toBe(false);
 		});
 	});
 

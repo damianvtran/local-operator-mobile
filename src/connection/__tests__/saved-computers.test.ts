@@ -633,6 +633,33 @@ describe("a removed Radient computer stays removed (B4)", () => {
 		expect(store.getState().computers.map((c) => c.tunnelId)).toEqual(["t1"]);
 		expect(await registry.hiddenTunnelIds()).toEqual([]);
 	});
+
+	/* PR #184 m2/U3: the cold start reopens the newest `lastUsedAt`, so a Remove on a
+	 *  never-connected computer must not record a use — else remove-then-restore
+	 *  would outrank the computer the reader actually used. */
+	it("records no use for a computer removed and restored without connecting", async () => {
+		const { registry, tick } = fixture();
+		const used = await registry.rememberRadient({
+			tunnelId: "t2",
+			hostname: HOST_B,
+		});
+		await registry.markUsed(used.id);
+		tick();
+		const removed = await registry.hideRadient({
+			tunnelId: "t1",
+			hostname: HOST_A,
+			name: "Studio",
+		});
+		expect(removed.lastUsedAt).toBe(0);
+		const restored = await registry.unhide(removed.id);
+		expect(restored?.lastUsedAt).toBe(0);
+		/* A Remove on a computer that WAS used keeps its real last use. */
+		const reRemoved = await registry.hideRadient({
+			tunnelId: "t2",
+			hostname: HOST_B,
+		});
+		expect(reRemoved.lastUsedAt).toBeGreaterThan(0);
+	});
 });
 
 describe("PR #122 round-1 remediation", () => {

@@ -1,0 +1,111 @@
+{
+ "schema": 1,
+ "audit_id": "es1107p1-remediation",
+ "kind": "implementer remediation receipt (NOT an audit verdict)",
+ "remediates": "i18n/audits/evidence/es/mobile.home/es1107p1/record.json",
+ "locale": "es",
+ "namespace": "mobile.home",
+ "date": "2026-11-07",
+ "base_revision": "b5a2f4a1b0721a5745e35e498d7d91851a93811c",
+ "remediation_commit": "7a899ddf3cae8f2bdad98938772feb3309a6af8d",
+ "remediation_author": {
+  "agent": "coder (lopdev team)",
+  "session": "f76f34aff586",
+  "model": "anthropic/claude-opus-5-5",
+  "independent_from_auditor_session": true
+ },
+ "round1_verdict": "changes_requested",
+ "findings": [
+  {
+   "id": "ES-H01",
+   "severity": "MAJOR",
+   "status": "fixed",
+   "commit": "7a899ddf3cae8f2bdad98938772feb3309a6af8d",
+   "keys": [
+    "mobile.home.chip.effort_default",
+    "mobile.home.chip.effort_default_unnamed",
+    "mobile.home.chip.model_default",
+    "mobile.home.chip.model_no_default_label",
+    "mobile.home.picker.effort_unknown",
+    "mobile.home.picker.effort_unsupported",
+    "mobile.home.picker.effort_use_default",
+    "mobile.home.picker.folder_outside",
+    "mobile.home.picker.source_default"
+   ],
+   "applied": {
+    "mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
+    "mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
+    "mobile.home.chip.model_default": "Modelo, {model}, predeterminado de esta máquina",
+    "mobile.home.chip.model_no_default_label": "Modelo, esta máquina no tiene un modelo predeterminado. Elige uno.",
+    "mobile.home.picker.effort_unknown": "Esta máquina no conoce los niveles de este modelo, así que usará el nivel más cercano que el modelo admita.",
+    "mobile.home.picker.effort_unsupported": "El Local Operator de esta máquina es demasiado antiguo para aceptar un esfuerzo, así que usa su nivel configurado. Actualízalo para elegir uno aquí.",
+    "mobile.home.picker.effort_use_default": "Nivel de esta máquina",
+    "mobile.home.picker.folder_outside": "Esta máquina solo inicia conversaciones dentro de tu carpeta personal o de su carpeta temporal.",
+    "mobile.home.picker.source_default": "Predeterminado de esta máquina"
+   }
+  },
+  {
+   "id": "ES-H02",
+   "severity": "MINOR",
+   "status": "fixed",
+   "commit": "7a899ddf3cae8f2bdad98938772feb3309a6af8d",
+   "keys": [
+    "mobile.home.picker.folder_home"
+   ],
+   "applied": {
+    "mobile.home.picker.folder_home": "Personal"
+   }
+  },
+  {
+   "id": "ES-H03",
+   "severity": "MINOR",
+   "status": "fixed",
+   "commit": "7a899ddf3cae8f2bdad98938772feb3309a6af8d",
+   "keys": [
+    "mobile.home.picker.folder_outside"
+   ],
+   "applied": {
+    "mobile.home.picker.folder_outside": "Esta máquina solo inicia conversaciones dentro de tu carpeta personal o de su carpeta temporal."
+   }
+  }
+ ],
+ "delta": {
+  "changed_keys": [
+   "mobile.home.chip.effort_default",
+   "mobile.home.chip.effort_default_unnamed",
+   "mobile.home.chip.model_default",
+   "mobile.home.chip.model_no_default_label",
+   "mobile.home.picker.effort_unknown",
+   "mobile.home.picker.effort_unsupported",
+   "mobile.home.picker.effort_use_default",
+   "mobile.home.picker.folder_home",
+   "mobile.home.picker.folder_outside",
+   "mobile.home.picker.source_default"
+  ],
+  "changed_beyond_finding_keys": [],
+  "finding_keys_not_changed": [],
+  "method": "each changed key reverted to its base-revision text in the current file bytes; the result's sha256 equals the round-1 record's input_hashes.target.sha256, so exactly these keys changed",
+  "reverted_sha_matches_round1": true
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/es/mobile.home.json",
+   "sha256": "11f65e0cbb229b0c4c11cf07f51c168f170580dd7a30cb3039f63f45c4f17789"
+  },
+  "target_round1": {
+   "path": "src/i18n/catalogues/es/mobile.home.json",
+   "sha256": "ba51a71b7c16c79ceff66c7bf6874e375c5c1ebf99a45096237f4da566b4b36e"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.home.json",
+   "sha256": "12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.home.context.json",
+   "sha256": "aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047"
+  },
+  "source": "mech.py from the auditor scratchpad (27cb86d0ecef) run against the remediation tree; en and context identical to round 1"
+ },
+ "status": "remediated_pending_independent_reaudit",
+ "note": "The repo convention attests a fixed catalogue with an independent round-2 delta re-audit (<id>r2, e.g. es29a3r2). This receipt records what the implementer changed and the post-fix hashes so that re-audit can scope to delta.changed_keys; it does not claim a passing verdict."
+}

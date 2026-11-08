@@ -1,0 +1,9 @@
+# Keyboard up on the same session (the record's "keyboard up (inline meta)"
+# state): the composer drops to r_b = r_t = 20 and the meta folds into the
+# controls row. Continues from session.yaml's end state — no relaunch.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 3000

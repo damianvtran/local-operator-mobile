@@ -1,0 +1,46 @@
+# Targeted proof: the project-create sheet renders in Urdu on a native iOS
+# simulator. Walks to the sheet and NEVER submits (no write reaches the relay).
+appId: ${APP_ID}
+---
+- runFlow: open-sheet.yaml
+# Literal Urdu title: the sheet id alone would also be visible on a silent
+# English fallback, so the translated string is the discriminating assertion.
+- extendedWaitUntil:
+    visible:
+      text: "نیا پروجیکٹ"
+    timeout: 15000
+- takeScreenshot: sheet-first
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: sheet-settled
+- assertVisible:
+    id: "project-create-status-planning"
+    text: "منصوبہ بندی"
+- assertVisible:
+    id: "project-create-status-active"
+    text: "فعال"
+- assertVisible:
+    id: "project-create-status-qa"
+    text: "معیار کی جانچ"
+- assertVisible:
+    id: "project-create-status-validation"
+    text: "توثیق"
+- assertVisible:
+    id: "project-create-status-paused"
+    text: "موقوف"
+- assertVisible:
+    id: "project-create-status-done"
+    text: "مکمل"
+- assertVisible:
+    id: "project-create-status-archived"
+    text: "آرکائیو شدہ"
+- takeScreenshot: sheet-archived
+# Lower fields: scroll to the submit control (the tags help line sits above it).
+- scrollUntilVisible:
+    element:
+      id: "project-create-submit"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    text: "بنائیں"
+- takeScreenshot: sheet-lower

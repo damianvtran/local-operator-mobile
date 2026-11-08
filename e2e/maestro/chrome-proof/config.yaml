@@ -1,0 +1,9 @@
+# Workspace config for the targeted chrome proof ONLY (scripts/ci/chrome-ios-proof.ts).
+#
+# WHY A SEPARATE CONFIG. e2e/maestro/config.yaml globs `flows/*.yaml`, the default
+# Android suite. These flows are iOS-only, dispatch-only and depend on the proof
+# driver's relays and lanes, so they must never join that suite; the driver runs
+# each file by path and this config only keeps a stray `maestro test e2e/maestro`
+# from collecting them.
+flows:
+  - "session.yaml"

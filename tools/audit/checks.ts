@@ -1941,22 +1941,6 @@ export const U42_EXEMPTIONS: Array<{
 			"list; the 892-row ci-tier audit's single largest family (S8 ask/approval/populated-long)",
 	},
 	{
-		path: "button.css-g5y9jx.r-1loqt21>div.css-g5y9jx.min-h-[56px]",
-		value: 10,
-		properties: ["padding-top", "padding-bottom"],
-		reason:
-			"the tall list row's own padding (`ui/variants.ts` `py-2.5`, the 56pt-row variant) — " +
-			"§3.4 flagged-not-absorbed; measured on the sessions list and the home screen",
-	},
-	{
-		path: "div.css-g5y9jx.min-h-[56px]>div.css-g5y9jx.flex-1",
-		value: 2,
-		properties: ["row-gap", "column-gap"],
-		reason:
-			"the same row's two-line inner block (`ui/components/list-row.tsx` `gap-0.5`) — §3.4 " +
-			"flagged-not-absorbed",
-	},
-	{
 		path: "div.css-g5y9jx.items-center>div.css-g5y9jx.w-full>div.css-g5y9jx.flex-row",
 		value: 6,
 		properties: ["row-gap", "column-gap"],

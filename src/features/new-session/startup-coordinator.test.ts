@@ -54,8 +54,10 @@ const setup = (saved: StartupRecord | null = null) => {
 			});
 		},
 	);
+	const checkpoint = vi.fn();
 	const coordinator = new StartupCoordinator("authorization-a/server-a", {
 		store,
+		checkpointDraft: checkpoint,
 		start,
 		send,
 		isCurrent: () => valid,
@@ -64,6 +66,7 @@ const setup = (saved: StartupRecord | null = null) => {
 	});
 	return {
 		coordinator,
+		checkpoint,
 		store,
 		start,
 		send,
@@ -85,6 +88,83 @@ const setup = (saved: StartupRecord | null = null) => {
 
 // Deferred barriers prove ordering without wall-clock sleeps or a fake successful network.
 describe("durable provisional conversation", () => {
+	it("publishes restored text and attachments as one atomic observer state (D1)", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		const seen: Array<{ text: string; images: unknown[] }> = [];
+		x.coordinator.subscribe(() => {
+			const draft = x.coordinator.snapshot().draft;
+			seen.push(structuredClone(draft));
+		});
+		const draft = {
+			text: "restored text",
+			images: [{ data_b64: "aW1hZ2U=", mime_type: "image/png" }],
+		};
+		expect(await x.coordinator.restoreDraft(draft, () => {})).toBe(true);
+		// Persistence may notify again with the SAME complete draft. There must
+		// never be a text-only or attachment-only intermediate observer state.
+		expect(seen.length).toBeGreaterThan(0);
+		for (const snapshot of seen) expect(snapshot).toEqual(draft);
+		expect(new Set(seen.map((snapshot) => JSON.stringify(snapshot))).size).toBe(
+			1,
+		);
+	});
+	it("late optional recovery cannot bypass unreadable ordinary history or an explicit empty edit", async () => {
+		const broken = new StartupCoordinator("synthetic-scope", {
+			store: {
+				load: async () => {
+					throw new Error("corrupt latest");
+				},
+				save: async () => {},
+			},
+			start: async () => ({ session_id: "synthetic-session" }),
+			send: async () => {},
+			isCurrent: () => true,
+			uuid: () => "synthetic-id",
+		});
+		await broken.ready;
+		const mark = vi.fn();
+		expect(
+			await broken.restoreDraft({ text: "old vault bytes", images: [] }, mark),
+		).toBe(false);
+		expect(broken.snapshot().draft.text).toBe("");
+		expect(mark).not.toHaveBeenCalled();
+		const x = setup();
+		await x.coordinator.ready;
+		x.coordinator.edit("", []);
+		expect(
+			await x.coordinator.restoreDraft(
+				{ text: "old vault bytes", images: [] },
+				mark,
+			),
+		).toBe(false);
+		expect(x.coordinator.snapshot().draft.text).toBe("");
+	});
+	it("does not renew recovery retention merely by restoring or configuring a draft", async () => {
+		const x = setup({
+			version: 1,
+			scope: "authorization-a/server-a",
+			phase: "draft",
+			sessionId: null,
+			selection: null,
+			queue: [],
+			draft: { text: "retained", images: [] },
+		});
+		await x.coordinator.ready;
+		expect(x.checkpoint).not.toHaveBeenCalled();
+		await x.coordinator.configure({
+			cwd: "/home/fixture",
+			provider: "p",
+			model_id: "m",
+		});
+		expect(x.checkpoint).not.toHaveBeenCalled();
+		x.coordinator.edit("actual edit", []);
+		expect(x.checkpoint).toHaveBeenCalledWith(
+			{ text: "actual edit", images: [] },
+			null,
+			true,
+		);
+	});
 	it("is editable before configuration and creates only on explicit Send", async () => {
 		const x = setup();
 		await x.coordinator.ready;
@@ -352,6 +432,80 @@ describe("a refused create is recoverable", () => {
 		await x.coordinator.settled();
 		expect(x.coordinator.snapshot().phase).toBe("ready");
 		expect(x.selections.at(-1)).toMatchObject({ cwd: "/tmp/valid" });
+	});
+
+	it("sends the selection exactly as the home built it, adding no model", async () => {
+		/* The home went through a period of naming a model nobody chose, and the
+		 * computer only applies its own configured default when the fields are
+		 * ABSENT — so the absence has to survive the coordinator, not just the
+		 * expression that built the selection. */
+		const x = setup();
+		x.setStart(async () => ({ session_id: "session-a" }));
+		await x.coordinator.ready;
+		await x.coordinator.configure({
+			cwd: "/Users/reader/src/local-operator",
+		});
+		x.coordinator.edit("A", []);
+		await x.coordinator.enqueue();
+		await x.coordinator.settled();
+		expect(x.selections.at(-1)).toStrictEqual({
+			cwd: "/Users/reader/src/local-operator",
+		});
+	});
+
+	it("replays a restored pending send WITHOUT the model the reader never chose (review round 2, R2-3)", async () => {
+		/* The upgrade path: a build that invented `catalogue.models[0]` left a draft
+		 * with a send still queued. `resume()` replays it before any screen effect can
+		 * correct the record, so the strip has to happen where the record is restored. */
+		const before = setup();
+		await before.coordinator.ready;
+		before.coordinator.edit("pending", []);
+		await before.coordinator.enqueue();
+		await before.coordinator.flush();
+		const saved = before.disk();
+		expect(saved?.queue).toHaveLength(1);
+		const reloaded = setup({
+			...(saved as StartupRecord),
+			selection: {
+				cwd: "/Users/reader/src/local-operator",
+				provider: "anthropic",
+				model_id: "claude-haiku-5-5",
+			},
+		});
+		reloaded.setStart(async () => ({ session_id: "session-a" }));
+		await reloaded.coordinator.ready;
+		reloaded.coordinator.resume();
+		await reloaded.coordinator.settled();
+		expect(reloaded.selections).toStrictEqual([
+			{ cwd: "/Users/reader/src/local-operator" },
+		]);
+	});
+
+	it("replays a restored pending send WITHOUT its effort, like its model", async () => {
+		/* An effort was chosen against a ladder and a relay capability this restore
+		 * cannot re-check before `resume()` replays the queue; an effort the relay no
+		 * longer licenses is a refused keyed start. The folder survives. */
+		const before = setup();
+		await before.coordinator.ready;
+		before.coordinator.edit("pending", []);
+		await before.coordinator.enqueue();
+		await before.coordinator.flush();
+		const reloaded = setup({
+			...(before.disk() as StartupRecord),
+			selection: {
+				cwd: "/Users/reader/src/local-operator",
+				provider: "anthropic",
+				model_id: "claude-opus-5-5",
+				effort: "high",
+			},
+		});
+		reloaded.setStart(async () => ({ session_id: "session-a" }));
+		await reloaded.coordinator.ready;
+		reloaded.coordinator.resume();
+		await reloaded.coordinator.settled();
+		expect(reloaded.selections).toStrictEqual([
+			{ cwd: "/Users/reader/src/local-operator" },
+		]);
 	});
 
 	it("restores a persisted refused record instead of discarding its queue", async () => {

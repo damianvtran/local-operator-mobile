@@ -1,0 +1,70 @@
+{
+	"mobile.chrome.destination.inbox": {
+		"role": "button",
+		"note": "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox."
+	},
+	"mobile.chrome.destination.past": {
+		"role": "button",
+		"note": "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list."
+	},
+	"mobile.chrome.destination.schedules": {
+		"role": "button",
+		"note": "Label under the clock icon in the sidebar's destinations strip (~52 pt slot). One short word; opens the list of scheduled wakes and armed monitors."
+	},
+	"mobile.chrome.destination.inbox_count": {
+		"role": "button",
+		"note": "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop."
+	},
+	"mobile.chrome.destinations": {
+		"role": "heading",
+		"note": "Title of the sheet that lists the sidebar destinations when the text is too large for the icon strip (opened by 'More'). Names a set of places to go, no final full stop."
+	},
+	"mobile.chrome.new_chat": {
+		"role": "button",
+		"note": "Accessible name of the square-pen button in the sidebar header that starts a new conversation. No final full stop."
+	},
+	"mobile.chrome.close_conversations": {
+		"role": "button",
+		"note": "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop."
+	},
+	"mobile.chrome.composer.more": {
+		"role": "button",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.composer.dismiss_keyboard": {
+		"role": "button",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.composer.queued": {
+		"role": "button",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.home.greeting": {
+		"role": "status",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.home.connecting": {
+		"role": "status",
+		"note": "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present."
+	},
+	"mobile.chrome.home.connect": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.home.sign_in": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.home.saved_draft": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.home.reconnecting": {
+		"role": "status",
+		"note": "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential."
+	},
+	"mobile.chrome.composer.open_queue": {
+		"role": "button",
+		"note": "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control."
+	}
+}

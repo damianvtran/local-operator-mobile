@@ -27,6 +27,13 @@ export const METER_CEIL_DB = 0;
  *  the level moves, or the composer reflows while the reader is speaking. */
 export const LEVEL_BARS = 16;
 
+/** How often the recorder's level is sampled while a take is live (8 Hz): fast
+ *  enough that the bars track speech, slow enough that the native status reads
+ *  stay cheap. Shared by the sampler (`use-dictation.ts`) and the meter, which
+ *  slides each new bar in over exactly one interval so the waveform ROLLS at the
+ *  display's frame rate instead of stepping at 8 Hz. */
+export const METER_SAMPLE_MS = 120;
+
 /**
  * One metering reading as a `[0, 1]` bar height.
  *
@@ -53,6 +60,57 @@ export function pushLevel(
 ): number[] {
 	if (bars <= 0) return [];
 	return [...history, next].slice(-bars);
+}
+
+/**
+ * The history as exactly `bars` bar heights, oldest first, RIGHT-anchored.
+ *
+ * A fresh take starts at the right edge and scrolls leftward as it fills, so a
+ * history shorter than the row leaves the leading slots at 0 (the meter draws
+ * its floor there) and the newest reading always sits in the last slot — the
+ * slot the eye watches, and the one the rolling animation slides in. A history
+ * LONGER than the row keeps only its newest `bars` readings (decimation by
+ * window: older speech has already scrolled off). Pure, so the mapping the
+ * meter draws is tested rather than read off a frame.
+ */
+export function waveformBars(
+	history: readonly number[],
+	bars: number = LEVEL_BARS,
+): number[] {
+	if (bars <= 0) return [];
+	return Array.from({ length: bars }, (_, index) => {
+		const offset = history.length - bars + index;
+		const level = offset >= 0 ? history[offset] : 0;
+		return level === undefined || !Number.isFinite(level)
+			? 0
+			: Math.min(1, Math.max(0, level));
+	});
+}
+
+/** How many of the newest readings the reduce-motion bar holds its peak over:
+ *  at the hook's 120 ms sampling, four readings is about half a second. */
+export const STATIC_PEAK_WINDOW = 4;
+
+/**
+ * The single level the REDUCE-MOTION meter shows: the peak of the newest
+ * `window` readings.
+ *
+ * Reduce Motion replaces the rolling waveform with one static level bar, and a
+ * bar that tracked every 120 ms reading would still flicker — motion by another
+ * name. Holding the recent peak changes it only as often as the reader's
+ * loudness actually changes, which still answers "is it hearing me" (the
+ * meter's one job) without animating.
+ */
+export function peakLevel(
+	history: readonly number[],
+	window: number = STATIC_PEAK_WINDOW,
+): number {
+	if (window <= 0) return 0;
+	let peak = 0;
+	for (const level of history.slice(-window)) {
+		if (Number.isFinite(level) && level > peak) peak = level;
+	}
+	return Math.min(1, peak);
 }
 
 /**

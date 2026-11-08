@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "Đã nhận phản hồi đăng nhập. Hãy quay lại ứng dụng.",
+	"mobile.oauth.return": "Quay lại Local Operator",
+	"mobile.oauth.invalid": "Yêu cầu đăng nhập này không được chấp nhận.",
+	"mobile.oauth.failed": "Không thể hoàn tất đăng nhập. Hãy thử lại."
+}

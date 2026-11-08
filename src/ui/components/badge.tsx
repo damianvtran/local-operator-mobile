@@ -1,6 +1,7 @@
 import { Text, View } from "react-native";
 
 import {
+	type BadgeAlign,
 	badgeClasses,
 	badgeInkClasses,
 	badgeLineClass,
@@ -46,6 +47,11 @@ export type BadgeProps = {
 	 *  1, so every call site that passes nothing keeps the geometry it was measured
 	 *  with; the count pills that can reach the 300 % step pass their own. */
 	scale?: number;
+	/** Cross-axis placement in the parent (see `BadgeAlign`). `center` for a
+	 *  badge trailing a centred list row; everything else keeps `start`. The
+	 *  bordered family only: the filled `emphasis` count pill keeps its own
+	 *  measured classes. */
+	align?: BadgeAlign;
 };
 
 export const Badge = ({
@@ -57,12 +63,13 @@ export const Badge = ({
 	accessibilityLabel,
 	hidden = false,
 	scale = 1,
+	align = "start",
 }: BadgeProps) => (
 	<View
 		className={`${
 			emphasis
 				? "self-start rounded-full border-0 bg-accent px-2 py-0.5"
-				: badgeClasses(tone)
+				: badgeClasses(tone, align)
 		}${hidden ? " opacity-0" : ""}`}
 		testID={testID}
 		accessible={accessibilityLabel !== undefined}

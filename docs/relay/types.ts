@@ -596,6 +596,9 @@ export interface SessionSummary {
   conversation_name: string;
   cwd: string;
   model_label: string;
+  /** The rung last run with (`daemon.py` `_merge_summaries`, v0.101.14+):
+   *  `null` — not absence — when no rung is known. */
+  effort?: string | null;
   streaming: boolean;
   needs_attention: boolean;
   /** A turn finished while nobody was viewing the session and it has not been
@@ -649,6 +652,9 @@ export interface SessionSummary {
    *  `[]`/`null` — their assignment lives in the other device's store. */
   tags?: TagRef[];
   primary?: string | null;
+  /** Who opened the conversation when an agent did; `null` on every ordinary
+   *  row (`daemon.py` `_merge_summaries`, `row.opened_by`). */
+  opened_by?: Record<string, string | null> | null;
   /* ------------------------------------------------ the remote row's own
    *
    * ABSENT on a local row; present with real values on every remote one
@@ -702,6 +708,16 @@ export interface Capabilities {
   /** The conversation-tag routes. Optional and never defaulted: absence is an
    *  older relay whose `/api/tags` and `/api/sessions/{id}/tags` do not exist. */
   session_tags?: { available: boolean };
+  /** `POST /api/sessions/start`'s capability (local-operator
+   *  `docs/design/mobile-start-receipts.md`). `effort: true` (v0.101.9) is the
+   *  only licence to send `effort` in a start body: an older relay refuses it on
+   *  a keyed start and drops it on an unkeyed one. Absent = predates the contract. */
+  session_start?: {
+    version?: number;
+    durable_idempotency?: boolean;
+    receipt_capacity?: number;
+    effort?: boolean;
+  };
 }
 
 /** The payload of `GET /api/sessions` and of every `sessions` SSE frame —
@@ -748,8 +764,9 @@ export interface UnreadBlock {
   /** Absent when `degraded` is non-empty. Never read absence as `0`. */
   count?: number;
   /** `AttentionStore.revision()` — an EQUALITY token, never an order: compare
-   *  it for change; never sort by it (`daemon.py` `unread_block()`). */
-  revision: [number, number, number];
+   *  it for change; never sort by it (`daemon.py` `unread_block()`). ABSENT,
+   *  with `count`, on the degraded shape `{"degraded": [...]}`. */
+  revision?: [number, number, number];
   /** `["attention"]` when the completion-receipt store could not be read. */
   degraded: string[];
 }
@@ -881,6 +898,20 @@ export interface ModelEntry {
   connected?: boolean;
   /** The provider RESELLS the model rather than serving it. */
   aggregated?: boolean;
+  /** v0.101.9: the effort ladder, lowest first. `[]` = the model has no effort
+   *  setting; ABSENT = the relay does not know the ladder (offer the whole
+   *  vocabulary; the session clamps). Never `null`. */
+  efforts?: string[];
+}
+
+/** v0.101.9: what a start naming no `provider`/`model_id`/`effort` runs. `effort`
+ *  is the configured level clamped to the model's ladder, `null` for a model
+ *  whose ladder is `[]`. */
+export interface ModelDefault {
+  selector: string;
+  provider: string;
+  model_id: string;
+  effort: string | null;
 }
 
 /** `GET /api/directories` (`daemon.py:4350-4359`). `tmp` is the RESOLVED temp

@@ -677,7 +677,11 @@ function radientEntry(
 		account:
 			input.account !== undefined ? input.account : (previous?.account ?? null),
 		addedAt: existing?.addedAt ?? now,
-		lastUsedAt: existing?.lastUsedAt ?? now,
+		/* A Remove on a computer the registry never saw is not a use: stamping `now`
+		 *  made a remove-then-restore outrank the computer the reader actually used
+		 *  (the cold start reopens the newest `lastUsedAt`). `0` is the registry's
+		 *  "never used" — the switcher's `latest()` already reads it as unknown. */
+		lastUsedAt: existing?.lastUsedAt ?? (hidden ? 0 : now),
 		hidden: hidden || (existing?.hidden ?? false),
 		identity: existing?.identity ?? null,
 	};

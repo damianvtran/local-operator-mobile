@@ -68,22 +68,42 @@ const sha256 = (content: string | Uint8Array) =>
 /* --------------------------------------------------------------- the table -- */
 
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-07 for PR #189 (audit fix 2) with --print: `auditCell` now
+	 *  brackets the unchanged `EXTRACT_PROBE` with `SPACING_REST_PROBE` and retakes
+	 *  an extraction a spacing tween moved across. What is measured and every
+	 *  threshold are unchanged; only WHEN the reading is taken moved. */
 	"tools/audit/audit.ts":
-		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
+		"10429edbe5a43c4e214ddfeb6408d88c4c4f9cf8ff80e7ea7d6610e084fe57a0",
+	/* Re-printed 2026-11-07 with --print at the staged sidebar-density tree: the two
+	 * U-42 allowances keyed on the list row's `min-h-[56px]` class were removed with
+	 * that class (the row now pads `py-2`/`gap-1`, both on the 4 pt scale), so they
+	 * matched nothing. No check logic changed. */ /* Re-pinned 2026-11-08 at the merge of origin/main 2c99a014 into PR #105 with
+	 *  `--print`: this file merged both sides' edits, so its digest is neither
+	 *  side's. No check logic, rule id or exemption moved — the sidebar-density
+	 *  allowances above and main's own re-pin both stand. */
+
 	"tools/audit/checks.ts":
-		"d4cb5cbe1005982e0dd717d69de6ae016e40da2e9069ad15ba7ba5d82a94dfb0",
+		"212cbe4655fb457ff008a00df990904cc9d30630d78a5420a911bbe38a8b0e5c",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
 		"d65894ba1fb463eaad8c7e66b4145378f13316d707436d3eec2594cc1224d42a",
+	/* Re-pinned 2026-11-07 for PR #189 (audit fix 2) with --print: one ADDED
+	 *  export, `SPACING_REST_PROBE`; `EXTRACT_PROBE`'s source is byte-unchanged. */
 	"tools/audit/probe.ts":
-		"4ed608393c78474ce7dd152a7c57637fdacb8ec23fbb9b3abfd9879330c0ab66",
+		"ae34fd9cce868b60b385eed2064c07a3e82e2cd421526a7fea1fb81446437728",
 	"tools/audit/u08-fragment-verification.ts":
 		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
 	"tools/audit/u08-geometry-proof.ts":
 		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
+	/* Re-pinned for PR #175: `skipped` is now a terminal affordance answer, so
+	 *  a conditional opener whose control is already on the page stops polling its
+	 *  settled answer for the full `waitMs`. The proof still drives the SAME presses
+	 *  and reads the SAME outcomes — `skipped` was already a pass in both the
+	 *  capture's verdict and `outcomeFailed` — so what changed is how long the
+	 *  instrument waits, not what it measures. Derived with `--print`. */
 	"tools/lib/affordance.ts":
-		"06902d73d4a59043084c223897c45dbc55c6e89014aa57b4204904e4b19e3208",
+		"da7441e18f3878e411b8e5e096f2fe387347dae00272256a64577a4ce96a5de3",
 	"tools/lib/args.ts":
 		"9cc6b888e20f8bebb4d1b5d87db406af45b8385901514c401381da68c2612726",
 	"tools/lib/cdp.ts":
@@ -110,6 +130,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"0d56a3cde84ebb8fdba12aaa2e96bf0435ea100ac4366b426ed842084fd74501",
 	"tools/mock-relay/account-routing.ts":
 		"0baaedd970b4729bf3692cd9b3354666a9c2670e48be5016edd23429e5649163",
+	/* Kept from the branch (restored 2026-11-08 at the merge of origin/main
+	 *  2c99a014): the merged `relay.ts` still loads this module for the
+	 *  `__mock/avatar-capture` control routes the closure test named, and main
+	 *  never had it. The digest is the branch's own, so no re-pin happened —
+	 *  only the table rebuild dropped the row. */
+	"tools/mock-relay/avatar-capture.ts":
+		"81b1b37dac428519520855828e661aa4698855740f79ba24016811ccae9cd998",
 	"tools/mock-relay/faults.ts":
 		"813657253a6dcf107c3b905d8a246b828c7ca8aa29bbc018762bfebd8a528d2b",
 	"tools/mock-relay/fixtures.ts":
@@ -126,27 +153,50 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * browser run can render a non-English catalogue at all. Those are exactly the files
 	 * these pins exist to freeze: the guard is doing its job, not failing. Recomputed with
 	 * `--print`; no other file moved and no U-08 exemption or skipped check is involved. */
-	/* Reviewed selected-response helper in both render drivers’ relay import
-	 * closure. Test cleanup code is not an instrument and is not pinned. */
-	/* Actual standard --print over the complete intent-listed candidate: quiet
-	 * delivery/help/schema and all-eight-locale generated keys move src; native
-	 * formatting moves these two mock instrument bytes. Historical ORIGINAL
-	 * declarations remain unchanged. This identity is not rendered QA evidence. */
-	/* QA delta: fresh mutable barrier-state guard, preserved cancellation fence,
-	 * native-icon SSR adapter and synchronous account/route help identity.
-	 * Import organization also changes instrument bytes. Values below come from
-	 * actual standard --print; tests/pixels and historical declarations are distinct. */
-	"tools/mock-relay/avatar-capture.ts":
-		"81b1b37dac428519520855828e661aa4698855740f79ba24016811ccae9cd998",
+	/* Re-pinned 2026-11-03 for PR #159 (highlights deliverables) with --print: the
+	 * relay gained a digest-scoped `/sound` route and `.mp4` on the supplement file
+	 * route; scenarios gained `supplement-deliverables`. U-08's pinned scene
+	 * (`long-transcript`) builds a byte-identical world on main and on this head
+	 * (JSON SHA256 prefix 967777106c5eff28, 0 supplement beats), so the measured
+	 * input is unchanged. */
+	/* Re-pinned 2026-11-07 for feat/home-pickers with --print from the staged
+	 * tree: the mock relay serves `GET /api/models`'s v0.101.9 `default` when a
+	 * scenario names one (the new `home-pickers` scenario), validates the start
+	 * body's `effort` as the relay does (`startEffortAdmitted`, in `wire.ts`) and
+	 * advertises `session_start: {effort: true}`. No existing scenario's bytes or
+	 * the corpus moved. */
+	/* Re-pinned 2026-11-07 for PR #182's round-1 remediation with --print from
+	 * the staged tree: `GET /api/directories` serves a scenario's own folder
+	 * answer when it names one (`world.directories`), else the corpus capture as
+	 * before. No existing scenario names one, so their bytes are unchanged. */
+	/* Re-pinned 2026-11-07 for PR #191's round-1 remediation with --print from
+	 * the staged tree: an admitted command's user row is written under the bare
+	 * command id, as the daemon writes it, and an IDLE world pushes the
+	 * projection once its version moves past what the stream last sent. No
+	 * streaming or keepalive-only scenario's frames change. */
+	/* Re-pinned 2026-11-07 for fix/session-effort-null with --print from the
+	 * staged tree: the list frame's `unread` block takes the daemon's degraded
+	 * shape (`{degraded}` alone, no revision/count) whenever the listing is
+	 * degraded. Healthy scenarios' frames are unchanged. */ /* Re-pinned 2026-11-08 at the merge of origin/main 2c99a014 into PR #105 with
+	 *  `--print`: the merged relay carries both sides' routes, so its digest is
+	 *  neither side's. The U-08 scene the proof is fed did not move. */
+
 	"tools/mock-relay/relay.ts":
-		"4c031deb02229da44dc55b0d03be9b17614953fc9e643c7bc57e1c2fdbd2ffe8",
+		"4803690ed1fdec4c1ddc551f84d728549bf36906b19ebe0394f329c72cea292b",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
 	 * it. All are content the proof measures, so the pins follow the reviewed
 	 * change; nothing else in the table moved and no exemption was added. */
+	/* Re-pinned 2026-11-07 for PR #182's round-1 remediation with --print: only
+	 * the `home-pickers` world moved (a folder answer with default/recents and two
+	 * not-connected model rows, UX U6); no other scenario's world changed. */
+	/* Re-pinned 2026-11-07 for fix/session-effort-null with --print: `rowFrom`
+	 * emits the daemon's real-shaped nulls (`effort`, `opened_by`, `agent_id`,
+	 * `avatar_sha256`) and the always-present receipts/tags pair. Row DATA only;
+	 * no projection, transcript or layout input moved. */
 	"tools/mock-relay/scenarios.ts":
-		"0be0b00d9451014fd45dc3aa989f3f3882f7e15731d8c77fee6ea60e63529bc3",
+		"8dd72a2a10564687d287adc3c577b6ee8f5d9d79a232abdfc2d766b23b3ce00b",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -156,19 +206,106 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned with the D9 capacity fix (4c67362): the ledger's byte ceiling is a
 	 * guard the driver's own evidence path depends on, so its bytes are pinned like
 	 * the rest of the instrument. Only the constant moved. */
+	/* Re-pinned 2026-11-07 for PR #191's round-1 remediation: the image route
+	 * resolves an entry by the bare command id the row now carries. */
 	"tools/mock-relay/startup.ts":
-		"e51390abdcec9e3e88d674304f1b236bc0b991e12e65f166e8f89567c1bd38ca",
+		"cc51e9866607ea4d97bef75d2179fbed2c65e75389e12d5957b7643db10f98c1",
 	"tools/mock-relay/transcribe.ts":
 		"59d078b6838376b15af5efa7815221684755b917a9992a0e1dac663da1e4c945",
 	"tools/mock-relay/wire.ts":
-		"17d9b8a2c5f66d681d4fa11e12abe242e29d1a21c91ebb279948bb5dd83106e6",
+		"08bf0c314c525ecaaf04f5404bf573ed6335774769b4d36cddb4eb2b93754a00",
+	/* Re-pinned 2026-11-08 for PR #195's round-1 remediation with --print from the
+	 * staged tree: one cell name added to the iphone-15-landscape
+	 * IDENTICAL_FRAME_EXEMPTIONS entry (`S5/rail-building`) and that entry's reason
+	 * rewritten to what nightly 42442578427 measured — the same entry the 2026-11-07
+	 * re-pin above extended on the coincidence side. No rule, probe, matcher or
+	 * plan input moved: the class is imported only by the capture's identity verdict
+	 * (`identical-states.ts`, `matchDeclared`), never by the plan or a readiness
+	 * probe, so no cell and no planned frame changes. */
 	"tools/visual/matrix.ts":
-		"83ed3f7fb2d7f76d0b2149e4349522832873dc3ec1b1534883b02ca365b197b0",
+		"8f7b7edaf54e4a525e38ecd8ee582b0c46cf681f2ee71aea8467f2b736ea8f84",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-07 for PR #187's round-2 remediation, with --print from
+	 * the staged tree. Only `src` moves: a resting voice outcome is no longer
+	 * line-capped, start/permission failures rest on the dictation row, ✓ moves to
+	 * the trailing slot while recording on a dictation-only card, and the paste
+	 * denial copy names the paperclip. Source admission only, NOT a rendered
+	 * geometry proof. */
+	/* Re-pinned 2026-11-07 for PR #187's round-1 remediation, with --print from
+	 * the staged tree. Only `src` moves: the set-up line wraps and is shorter,
+	 * the toolbar mic hides while recording, the mic keeps the trailing slot when
+	 * only dictation opens the card, the recording word is visually hidden, the
+	 * spinner leaves the accessibility tree, the chip's denial copy, and the
+	 * catalogue keys. Source admission only, NOT a rendered geometry proof. */
+	/* Re-pinned 2026-11-07 for the composer paste + voice PR, with --print from
+	 * the staged tree. Only `src` moves: the native paste chip, the set-up mic,
+	 * the home mic, the rolling waveform and the recording row's ✕/✓, plus their
+	 * catalogue keys. `app`, `design/tokens`, fonts, `public`, instrument and
+	 * input pins are untouched. Source admission only, NOT evidence that U-08's
+	 * rendered geometry proof passed. */
+	/* Re-pinned 2026-11-06 for PR #176 review round 4's remediation, with --print
+	 * from the staged tree. Only `src` moves: the frozen initial scroll index is
+	 * keyed on the session it was frozen for (M-r4-1), its comment states what a
+	 * frozen 0 keeps mounted (m-r4-1), and tests. `app`, `design/tokens`, fonts,
+	 * `public`, instrument and input pins are untouched. Source admission only,
+	 * NOT evidence that U-08's rendered geometry proof passed. */
+	/* Re-pinned 2026-11-06 for PR #176 review round 3's remediation, with --print
+	 * from the staged tree. `design/tokens` moves for the `trace` step's
+	 * description only (D13: the tool name no longer uses it). `src` moves for
+	 * the folded row drawn as a quiet line instead of a card (D4), the frozen
+	 * initial scroll index (Q-RF1), the landing keyed on `reveal` (U14) and
+	 * tests. `app`, fonts, `public`, instrument and input pins are untouched.
+	 * Source admission only, NOT evidence that U-08's rendered geometry proof
+	 * passed: it must be re-captured against this tree. */
+	/* Re-pinned 2026-11-06 for PR #176 review round 2's remediation, with --print
+	 * from the staged tree. `design/tokens` moves because the `meta-read` step is
+	 * folded back into `meta` (D9: 12/1.45 vs 12/1.4 was its only difference) and
+	 * the type `$note` is corrected to say a step DOES set its family (D8), with
+	 * the generated preset/preview CSS. `src` moves for the remediation: the tool
+	 * name on the `mono` step, the find landing recorded in a layout effect and
+	 * closable, the resize mark only on a real change, a caught glide ending on a
+	 * new drag, the folded `open` control as a named 48 pt button, the new i18n
+	 * keys, and tests. `app`, fonts, `public`, instrument and input pins are
+	 * untouched. Source admission only, NOT evidence that U-08's rendered
+	 * geometry proof passed: it must be re-captured against this tree. */
+	/* Re-pinned 2026-11-06 for PR #176 review round 1's remediation, with --print.
+	 * `design/tokens` moves for three new type steps (`body-read` 14/1.55,
+	 * `trace` 13/1.5, `meta-read` 12/1.45 — the relay's transcript steps) and
+	 * the generated preset/preview CSS; `src` moves for the remediation itself
+	 * (fade stop order, the sent-message and error folds removed, list-owned fold
+	 * state, gesture-only rail presence, the reuse fix and the type steps
+	 * applied). Fixture bytes, fonts, instrument modules and input pins are
+	 * untouched. As with the round-0 re-pin below, this is source admission, NOT
+	 * evidence that U-08's rendered geometry proof passed: it must be re-captured
+	 * against this tree. */
+	/* Re-pinned 2026-11-06 for the transcript design pass: type parity, collapsing,
+	 * edge fades, the held-scroll rail and row-level memoisation. `src` moves
+	 * because the transcript slice itself changed — the message body steps from
+	 * `body-lg` 17 to `body-sm` 14, peer/sent/notice rows gain a one-line fold, the
+	 * scroller gains two 24 pt gradient bands, the checkpoint rail becomes
+	 * transient, and rows are memoised behind a row-identity pass. `app` moves only
+	 * for the session screen's wiring of the presence object to the list and the
+	 * rail. Fixture bytes, design tokens, instrument modules and input pins are
+	 * untouched and the scene is unchanged, so this is source admission for a
+	 * typography-and-layout change: U-08's rendered geometry proof must be
+	 * RE-CAPTURED against this tree, and this re-pin is NOT evidence that it passed.
+	 * Historical ORIGINAL_* pins are never re-pinned. */
+	/* Reprinted 2026-11-04 for PR #164's theme pipeline and picker: `app`
+	 * gains only the /theme route; `design/tokens` extracts the contrast maths
+	 * and per-palette rules; `src` gains the theme catalogue, preference and
+	 * picker, changes keyboard appearance and passes the selected palette to
+	 * supplement frames. The default dark palette is intentionally re-lit:
+	 * U-08's colour pixels therefore are NOT byte-compatible with the old
+	 * scene, while typography, layout classes, transcript fixture bytes and
+	 * measurement instruments are unchanged. This re-pin admits running the
+	 * geometry instrument against the new scene; it is source admission, NOT
+	 * evidence that the new scene passed or a reuse of old rendered proof.
+	 * Historical ORIGINAL_* pins, instrument and input pins remain untouched. */
+
 	/* Re-pinned 2026-10-26 by this PR, deliberately: the two trees below contain the
 	 * polish work itself (new status-tray module, one-row session chrome, Home splash
 	 * mark and suggestion rows, 22 pt chrome glyphs), so their digests MUST move —
@@ -381,11 +518,79 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * #126's (its two CONTROLS rows), `package.json` is main's `i18n:*` scripts,
 	 * which PR #127 never touched, and `app`, `public` and the proof's fixtures keep
 	 * their digests. */
-	app: "ac18960e1b7055b7922224987139c38e3cd409d5f014af524c76d121d2b75fb5",
+	/* Re-pinned 2026-11-03 for PR #159 with --print: `app` moved only by the
+	 * session screen's one-line `loadSound` client wiring. */
+	/* Re-pinned 2026-11-06 with --print for the home-defaults fix: `app` moves by ONE
+	 * line in `app/(app)/session/[id].tsx` — the session screen's model reading is now
+	 * `reportedModel(projection?.model_label)` instead of a bare nullable string, the
+	 * same values in the same chip. It renders the same two outputs it always did (a
+	 * selector, or the rung-less/unreported `n/a`); only the REASON the home could be
+	 * wrong changes, and U-08's scene is a session transcript with no home surface in
+	 * it. This is source admission for the geometry instrument, NOT fresh rendered
+	 * evidence. */
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main into PR #176
+	 * (transcript pass): the digest covers both lines of history — the transcript
+	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
+	 * home-defaults changes described just above. Neither side's tree shipped alone
+	 * after this merge, so neither side's previous digest is kept. */
+	/* Re-pinned 2026-11-07 for feat/home-chrome with --print from the staged tree:
+	 * `app` (the session screen hands the composer its glass decision) and `src`
+	 * (header chip, home hero, inset notices, composer H5 padding and glass
+	 * wiring) move; tokens, fonts and public do not. */
+	/* Re-pinned 2026-11-07 for fix/smooth-steering with --print from the staged
+	 * tree: `app` moves by one line (the session header's "Working" reads the
+	 * composer's `turnRunning` instead of the working label alone) and `src` by
+	 * the steer/prompt decision, its race reconciliation and the steer failure
+	 * copy. No layout, token or glyph changes; U-08's scene renders the same
+	 * frames for any projection where `streaming` and `activity` agree. Source
+	 * admission, NOT fresh rendered evidence. */
+	/* Re-pinned 2026-11-07 for fix/session-chips-rail with --print from the
+	 * staged tree: the session screen feeds its chips from the list row as well
+	 * as the projection (ended sessions, TestFlight 578); round-1 remediation
+	 * re-printed it again for the chip-command error line. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for feat/thinking-indicator with --print from the
+	 * staged tree: the session screen mounts the pinned working line (spinner,
+	 * activity, clock, Stop) in the dock above the chips on tray layouts and drops
+	 * the duplicate line from the status sheet. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189's round-1 remediation with --print from
+	 * the staged tree: the header subtitle ticks on the shared phase clock, the
+	 * pinned line yields to the short-landscape tray (whose sheet keeps the line),
+	 * and both Stops read one latch. Source admission only, NOT rendered U-08
+	 * evidence. */
+	/* Re-pinned 2026-11-07 for the merge of origin/main (smooth steering) into
+	 * feat/thinking-indicator, with --print from the merged tree: `app` carries
+	 * both sides (the header reads `runtime.streaming` on the ticking subtitle).
+	 * Source admission only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for feat/pending-echo with --print from the staged
+	 * tree: the session screen hands the transcript list its pending-echo rows
+	 * (a new `pending` prop, painted ahead of the unchanged notice footer) and
+	 * drops its empty state while a first message is in flight. Source admission only, NOT
+	 * rendered U-08 evidence. Re-printed with --print for the round-1 remediation:
+	 * the screen hands the rows the composer's put-back, and the hook-call comment
+	 * moves to its own line. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (b5a2f4a1,
+	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
+	 * history above stand, the value is the merged tree's own, and neither
+	 * side's previous digest is kept. Source admission, not rendered evidence. */
+	/* Re-printed 2026-11-07 with --print at the final tree of the TestFlight 578
+	 * merge train (chore/merge-train-578: #183 #186 #188 #185 #187 #189 #191 #192
+	 * merged --no-ff onto origin/main 56303c83). Every PR's history note above
+	 * stands; the value is the train tree's own and no PR's digest is kept. Only
+	 * `app` and `src` move.
+	 * Source admission only, NOT rendered U-08 evidence. */ /* Re-pinned 2026-11-08 at the merge of origin/main 2c99a014 into PR #105 with
+	 * `--print` from the merged tree. `app` and `src` move because the Team Bridge
+	 * surface is new source in both trees (its screens under `app/(app)`, its
+	 * modules under `src/team-bridge` and the auth accessor); the proof's plan,
+	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
+	 * not a measured-pixel change. Neither side's previous digest is kept. */
+
+	app: "9f32ccb59ff78920a76f253f5d2ca670040c9aff5a5ae98811c4305ec0f4e5c1",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
-		"6a00f9f431085fce5af6eb4039906fb2a792fb6f35f775fa422a787bd8bb9c53",
+		"16f424a5d14a2c6f79fdc15f5793fa41d0034ab72ccd298f895b6ef4cf572997",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -438,7 +643,439 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Recompute from the actual union: endpoint-owned avatar retirement and
 	 * localized profile controls plus current delivery/help/schema/fixtures.
 	 * Neither parent digest proves this merged corpus; runtime pins stay exact. */
-	src: "73e6b6b05ae0d1b7d217de0f7441327b9c79361e8cc9180b615e88e3819c811f",
+	/* Re-pinned 2026-11-03 for PR #154, deliberately, using --print: only OAuth
+	 * callback transport/state validation and provider cancellation bookkeeping
+	 * changed under src. U-08 measures the long-transcript custom-relay session
+	 * (u08-geometry-proof.ts RECORD/createRelay), not Radient sign-in. No transcript
+	 * component, layout/style, token, corpus, scene or instrument changed. These
+	 * auth/connection edits therefore do not alter the measured geometry inputs;
+	 * historical ORIGINAL_* identities and every other pin remain unchanged. */
+	/* Re-pinned 2026-11-03 for PR #157 (right-sized agent avatar variants), with
+	 * --print: `src` only. `agentAvatar` gains an optional `size` query, the avatar
+	 * cache key gains the variant, and the hook picks it from dp x PixelRatio when
+	 * the relay advertises `features.agent_avatar_sizes`. The U-08 mock relay
+	 * advertises no such flag and its scene rows carry no agent picture, so the
+	 * measured transcript renders the same; no layout, style, token, corpus,
+	 * scene or instrument file changed, and every other pin is untouched. */
+	/* Re-pinned 2026-11-03 for PR #159 with --print: `src` carries the supplement
+	 * block's sounds/video/withheld rendering, its parser and 12 catalogue keys.
+	 * All of it renders only for a beat carrying sounds, a video file or withheld
+	 * entries, and the U-08 long-transcript scene has zero supplement beats (same
+	 * world hash on main and head), so no measured transcript row changes.
+	 * Converged onto main 24a3d30f (#157 above): recomputed over the combined tree. */
+	/* Re-pinned 2026-11-03 with --print for the real-app sign-in fix: account
+	 * admission, progress/errors/diagnostics and the brand-title lockup. U-08 is
+	 * a custom-relay transcript, not OAuth. Its Screen supplies a custom titleNode
+	 * (session/[id].tsx), so the Local Operator-only default brand title is not
+	 * selected; Heading's new optional metrics callback is undefined there. No
+	 * transcript layout, corpus or instrument changed. This is source-boundary
+	 * judgment, not new rendered U-08 proof; historical identities stay intact. */
+	// Includes the newly tracked sign-in source files (print after staging).
+	/* Round-1 remediation: reprinted after staging all new source files.
+	 * Welcome/re-auth navigation and disclosure copy, plus the explicit brand
+	 * lockup's first-line metrics, do not enter U-08's custom session titleNode.
+	 * Button's optional expanded state is omitted for existing transcript
+	 * controls. No transcript/corpus/instrument change; historical pins retained. */
+	/* Reprinted with --print after the unified error-writer/copy remediation
+	 * and relocation of the HTTP integration test. The healthy custom-relay
+	 * U-08 transcript selects no tunnel-refusal, diagnostic-details or protected
+	 * Radient-row branches. Existing custom-route carriers and transcript geometry
+	 * inputs are unchanged; historical/corpus/instrument pins remain untouched.
+	 * This is source compatibility judgment, not fresh geometry evidence. */
+	/* Reprinted after rebasing Android onto shipped f98eb185 and regenerating
+	 * the merged catalogues. Android adapter selection/return-page messages do
+	 * not enter U-08's healthy custom-relay transcript; no transcript, layout,
+	 * style, token, corpus or instrument input changes. Historical pins retained. */
+	/* Recomputed again for the required DIRTY convergence with Android #155:
+	 * both catalogues are retained; the Android-only adapter path does not
+	 * affect the iOS theme walk. This is the combined source admission hash,
+	 * never either side's stale hash or a claim of rendered equivalence. */
+	/* Recomputed 2026-11-05 after the mechanical merge with main ab7e3fa9 and the
+	 * removal of the out-of-scope native auth-probe layer (saved-route
+	 * diagnostics, transport XCTest carrier, auth-save contract): the theme work
+	 * is the only source delta left on this branch, and main's notification
+	 * settings moved `app.config.ts`. `--print` produced both digests; this is
+	 * source admission for the geometry instrument, not rendered evidence.
+	 *
+	 * Recomputed again for the 2026-11-05 convergence with the merged native
+	 * chrome PR (#163, main a21aa8d2): the composer and session geometry below
+	 * is main's verbatim, the theme work is the only source delta, and the one
+	 * `src` digest at the end of this block is the combined tree. */
+	/* Deliberate --print re-pin (notification sounds, M1, re-printed after
+	 * merging main's Android OAuth change above): the Android
+	 * notification-channel set (src/notifications/native.ts, sound-catalog.ts),
+	 * its unit test, and new mobile.notifications.channel.* catalogue keys. None
+	 * is rendered on the web target: channels are created only on Android, and
+	 * the keys are read only by that call. No transcript/corpus/instrument
+	 * change; historical pins retained. */
+	/* Deliberate --print re-pin (M2): native custom-sound cache, relay routes,
+	 * lifecycle invalidation and tests. The new root hook returns on web before
+	 * IO; its store subscriptions render nothing. Config changedKeys is data
+	 * for that hook, not a transcript rendering change. No tokens, styles,
+	 * transcript components, corpus or instrument changed. Native filesystem
+	 * proof is separate; this retains only the unchanged U08 web geometry. */
+	/* Deliberate re-pin for PR #166 (native session persistence, operator incident
+	 * #389), after review round 1: `src` renews an expiring account token and the
+	 * five-minute tunnel grant in place, and the provider's discovery pass reports
+	 * those outcomes through the connection store. No screen, layout, style, token
+	 * or transcript input is added or renamed, and U-08's healthy custom-relay
+	 * transcript selects none of the renewed branches — this is a source-
+	 * compatibility re-pin, not fresh geometry evidence. `app` untouched;
+	 * historical pins retained. Recomputed with `--print` after the merge with
+	 * main (#162 notification-store changes).
+	 *
+	 * Re-pinned 2026-11-05, still deliberately: the round-6 composer work is inside
+	 * BOTH trees — `src/features/session/components/composer.tsx` (one seed per
+	 * morph state, the radius from the measured pill, the landscape duplicate More
+	 * removed) and `src/ui/a11y.ts` (the retired compact-context identifier). The
+	 * app tree moves with the screen that mounts them. Values are `--print` output
+	 * from the merged head, not hand-written.
+	 *
+	 * Re-pinned 2026-11-05 for round 7, src only: `composer.tsx` lost the
+	 * `!compactSingle` guard on the collapsed seed (a landscape pill now measures
+	 * itself and is floored), the overflow clip follows the animation's own
+	 * progress instead of a timer, and `composer-presentation.ts` gained
+	 * `seedFor` plus a floor-aware presentation. `app` untouched.
+	 *
+	 * Re-pinned 2026-11-05 for the round-4 minors, `src` only: the Appearance mode
+	 * control's accessible name changed in all eight catalogues (`Theme mode`
+	 * instead of repeating the section header) and the generated catalogue moved
+	 * with it. No rendered string, layout or palette changed; frames unaffected.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (the composer shell boundary): `composer.tsx`
+	 * gained one absolutely positioned, `pointerEvents="none"` ring child on the
+	 * composer shell, and `composer-presentation.ts` gained `composerShellRadius` —
+	 * the single helper both the shell and the ring read. The ring is out of flow, so
+	 * no painted box moves: `composerPaintedHeight` is still 56/112 (60/120 on the 48
+	 * floor) and the resting radius is still `morphPillRadius(base)`. This is source
+	 * admission for the geometry instrument, not fresh rendered evidence — the U-08
+	 * frames predate the edge and the rendered re-capture is tracked separately.
+	 * `--print` produced the digest; `app`, `design/fonts`, `design/tokens`, `public`,
+	 * the corpus and the instrument modules are unchanged.
+	 *
+	 * Re-pinned 2026-11-06 again, `src` only (review round 1 remediation of the same
+	 * PR): `a11y.ts` declares `CONTROL.composerShellRing` and `composer.tsx` renders it
+	 * as the ring's `testID`, so the guard that locates the ring can anchor on an id the
+	 * shell never carries; the ring's own comment was also corrected to the mechanism
+	 * the code has (a shell border costs the interior, the radii do not move). A
+	 * `testID` paints nothing and a comment paints nothing — `borderWidth`, the colour,
+	 * the four insets and the radius are byte-identical to the digest above, so no
+	 * pixel of the U-08 scene moves. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (the launch-crash fix, PR #168): exactly two
+	 * files moved. `composer-presentation.ts` gained `"worklet"` as the first
+	 * statement of `morphPillRadius`, `morphHeight` and `composerShellRadius` — the
+	 * three pure helpers `shellMotion`/`ringMotion` call from the UI runtime — plus
+	 * the comments stating why each must stay pure arithmetic; and
+	 * `composer-worklets.test.ts` is new (a static guard over those directives). A
+	 * directive changes which JS context compiles a body, not what the body computes:
+	 * each helper's expression is unchanged (`base / 2`, the clamped lerp, and
+	 * `morphHeight(progress, morphPillRadius(base), 24)`), and the only edit is the
+	 * arrow becoming a block body so the directive can be its first statement. A test
+	 * file is never bundled into the render tree. So no pixel of the U-08 scene moves
+	 * and `composerPaintedHeight` is still 56/112 (60/120 on the 48 floor). This is
+	 * source admission for the geometry instrument, not fresh rendered evidence; the
+	 * native lane (nightly 42156335030) is what proves the directive actually
+	 * prevents the synchronous-call crash. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged.
+	 *
+	 * Re-pinned 2026-11-06, `src` only (review round 1 remediation of the same PR):
+	 * the same two files moved again, and nothing painted. `composer-worklets.test.ts`
+	 * gained a presence assertion ahead of the directive check — `bodyOf` answers `""`
+	 * for a helper it cannot find and `declaresWorklet("")` is false, so deleting
+	 * `composerPresentation` outright used to leave the whole suite green — and both
+	 * that test's comment and the `composerPresentation` doc comment were corrected to
+	 * the real mechanism: it calls `composerOuterGap`, `composerPaintedHeight` and
+	 * `composerShellPadding`, none of which are worklets, so marking it would carry
+	 * three remote functions onto the UI runtime and move the crash one call deeper. An
+	 * assertion and a comment change no executable geometry: the three directives, every
+	 * helper's expression and `composer.tsx` are byte-identical to the digest above, so
+	 * no pixel of the U-08 scene moves. This is source admission for the geometry
+	 * instrument, not fresh rendered evidence. `--print` produced the digest; `app`,
+	 * `design/fonts`, `design/tokens`, `public`, the corpus and the instrument modules
+	 * are unchanged. */
+	/* Re-pinned 2026-11-06 with `--print` for the home-defaults fix, `src` (with
+	 * `app`, above): the composer home no longer takes the model catalogue's first
+	 * entry as a default model, keeps both reads' failures as failures, starts in the
+	 * computer's own default folder and offers its recent directories. The U-08
+	 * scene is the long-transcript custom-relay session — no home surface is
+	 * rendered in it, and the chips' only changed cases ("nothing chosen", "list
+	 * unread") cannot occur there, so this is source admission rather than a claim
+	 * that the measured geometry moved. Historical ORIGINAL_* identities, the
+	 * instrument modules, the corpus and every other pin are untouched. */
+	/* Re-printed 2026-11-06 at the STAGED round-1 remediation tree (the committed pin
+	 * above was captured before the two new `home-defaults` files were tracked, so it
+	 * described no tree that ever shipped — review R1 / QA Q1). What moved: the folder
+	 * read now fills only an unfilled slot, the two reads have their own effects and
+	 * retries, the restored-record supersede no longer waits for a resolved folder, the
+	 * options sheet gained the two "back to the computer's default" rows and per-row
+	 * recent ids, and two catalogue keys were added. `app` is untouched by this round.
+	 * The U-08 scene renders no home surface, so this is still source admission rather
+	 * than a claim that any measured geometry moved. */
+	/* Re-printed 2026-11-06 at the STAGED round-2 remediation tree: the home's folder
+	 * state is tagged per computer (R2-1), the restored-home rewrite waits on "no
+	 * Apply yet in this mount" (R2-2), and the startup coordinator drops a restored
+	 * model before `resume()` can replay it (R2-3). Logic only — no rendered surface,
+	 * copy or catalogue key changed, `app` is untouched, and U-08's scene still renders
+	 * no home surface: source admission, not a claim that measured geometry moved. */
+	/* Re-printed 2026-11-06 at the STAGED design/UX round-1 remediation tree: the
+	 * options sheet's "computer's default model" row stays mounted and is the selected
+	 * row while nothing is chosen (D1/U3), the sheet rows announce selection through a
+	 * new optional `Button` `selected` prop (U5), the chip keeps "Default" when the
+	 * models read failed (D2/U1), and the models Retry shows `loading` (U2). No token,
+	 * catalogue key or `app` change, and U-08's scene still renders no home surface:
+	 * source admission, not a claim that measured geometry moved. */
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main into PR #176
+	 * (transcript pass): the digest covers both lines of history — the transcript
+	 * pass's own moves (pinned in the PR #176 notes earlier in this file) and the
+	 * home-defaults changes described just above. Neither side's tree shipped alone
+	 * after this merge, so neither side's previous digest is kept. */
+	/* Re-printed 2026-11-06 for the U-42/U-01 spacing fix (#163 regressions): the
+	 * composer's disc seams and the sidebar destinations' icon-to-label step move
+	 * from `gap-0.5` (2 pt, off the 4 pt scale) to `gap-1`, the dock's bottom inset
+	 * moves from its margin to a carrier's padding (same painted position), and the
+	 * queued-message chip gains a `TOUCH_FLOOR` height. U-08's scene is the session
+	 * screen, so the composer IS in it: this is source admission only — the 2 pt
+	 * seam shift is not claimed geometry-neutral here; `u08-geometry-proof` measures
+	 * that. No token, catalogue key or `app` change; no other pin moved. */
+	/* Re-printed 2026-11-06 with --print at the staged merge of origin/main (PR #176,
+	 * transcript pass, d5d096f8) into PR #177 (U-42 spacing fix): both notes above stand,
+	 * and the digest covers both lines of history. Neither side's tree ships alone after
+	 * this merge, so neither previous digest is kept. */
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-1 remediation with --print
+	 * from the staged tree: `src` only (resting-row centring, glass layer radius,
+	 * strip capsules, brand mark inside the header chip, hero hold/first frame,
+	 * alert action placement, folder Retry loading and focus); `app` unchanged. */
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-2 remediation with --print
+	 * from the staged tree: `src` only, focus logic with no layout change (the
+	 * splash's mount-seeded focus latch, the native composer guard, Retry focus
+	 * tied to the pressed attempt, a moved import in `variants.ts`); `app`
+	 * unchanged. */
+	/* Re-pinned 2026-11-07 for feat/home-chrome round-3 remediation with --print
+	 * from the staged tree: `src` only (the home's notice stack is a capped
+	 * ScrollView so the composer never moves — Q-R2-1; the hero's centring
+	 * offset is a spacer's height, not a padding — Q-R2-3; one new SURFACE
+	 * id); `app` unchanged. */
+	/* Re-printed 2026-11-06 with --print at PR #178's staged tree (the fix for the
+	 * TestFlight 453 reports, not the 453 build's own tree), including its round-1
+	 * remediation: the Radient token exchange and tunnel discovery gained a request
+	 * deadline that also refuses an already-aborted caller, a route that supersedes
+	 * an in-flight sign-in settles its pending state, a control-plane 5xx on the
+	 * tunnel grant renewal is typed transient (`unavailable`), the conversation
+	 * stream reconnects through that class, and the list stream's restart uses the
+	 * conversation stream's backoff/Retry-After, floored by the curve so a
+	 * `Retry-After: 0` cannot loop (round 2). Connection logic and tests only —
+	 * no rendered surface, copy, catalogue key or `app` change, and U-08's
+	 * transcript scene renders none of it: source admission, not a geometry claim. */
+	/* Re-printed 2026-11-06 with --print at the merge of origin/main (d5d096f8,
+	 * PR #176) into PR #178: neither side's digest describes the merged `src`, so
+	 * both notes above stand and this value is the merged tree's own. Re-printed
+	 * again for round-3 M1: `reconnectDelay` caps at setTimeout's 2^31-1 ms
+	 * ceiling. Logic only; no rendered surface. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (e541a904,
+	 * PR #177) into PR #178: both lines of history, so the value is the merged
+	 * tree's own and neither side's previous digest is kept.
+	 *
+	 * Re-printed 2026-11-07 with --print at the merge of origin/main 56840161
+	 * (`fix/tf-reports`, `docs/ship-vitest-config`) into PR #156: this is the
+	 * harness-split re-print plus main's moves, so neither prior digest is kept.
+	 * The split removed exactly three proof-only instrument modules —
+	 * `src/testing/stage-b-draft-bootstrap.ts`, `stage-b-draft-transport.ts`,
+	 * `stage-b-route-trace.ts` — and their own test
+	 * `src/testing/__tests__/stage-b-draft-bootstrap.test.ts`. Nothing under `app/`,
+	 * `design/`, `public/`, the corpus or the geometry instruments moved, and no file
+	 * the shipping bundle loads was touched: those modules were reached only by the
+	 * native lane's scripts, never by an `src/app` entry or a rendered screen, and a
+	 * test file is never bundled. So no pixel of the U-08 scene moves and the composer
+	 * geometry is byte-identical to main's digest above. This is source admission for
+	 * the geometry instrument, not fresh rendered evidence. --print produced the digest. */
+	/* Re-printed 2026-11-07 with --print at the STAGED sidebar-density tree (design spec
+	 * 2026-11-06 § 4, with review round 1's remediation): the drawer's width rule moves
+	 * to `min(400, vw − TOUCH_FLOOR)` (the page sliver is the platform touch floor), the
+	 * conversation row drops its fixed 56 pt floor for `TOUCH_FLOOR` with `py-2`/`gap-1`
+	 * and a `label` title, and the panel's header/footer tighten (fixed 60 → `py-1`,
+	 * destination slots 52 → `TOUCH_FLOOR`, workspace row above the strip at `gap-2`).
+	 * The drawer's "Close conversations" label moves into the catalogue
+	 * (`mobile.chrome.close_conversations`, all eight locales). U-08's scene is the
+	 * session screen, not the drawer: source admission only, not a claim that measured
+	 * geometry moved. No token or `app` change. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (56840161 PR #178,
+	 * f36e0e32 PR #156) into PR #180 (sidebar density): both lines of history stand, so
+	 * every note above is kept and the value is the merged tree's own; neither side's
+	 * previous digest is kept. Source admission, not a geometry claim. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (f36e0e32:
+	 * PR #178's sign-in/connection timeouts and tunnel-grant retry, PR #156's
+	 * encrypted draft recovery) into feat/home-chrome (PR #181): both lines of
+	 * history above stand, the value is the merged tree's own, and neither side's
+	 * previous digest is kept. */
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main (c14ca1a6,
+	 * PR #181 home chrome: header/hero/alerts/composer, notice stack, glass wiring) into
+	 * PR #180 (sidebar density): both lines of history stand, so every note above is
+	 * kept and the value is the merged tree's own; neither side's previous digest is
+	 * kept. Source admission, not a geometry claim. */
+	/* Re-pinned 2026-11-07 for feat/home-pickers with --print from the staged
+	 * tree. Only `src` moves: the home's three pickers (folder, model, effort)
+	 * replace the options sheet, the strip gains its folder and effort chips, the
+	 * contracts gain the v0.101.9 `default`/`efforts`/`session_start.effort`
+	 * fields, the new i18n keys, and tests. `app`, `design/tokens`, fonts and
+	 * `public` are untouched. Source admission only, NOT evidence that U-08's
+	 * rendered geometry proof passed: it must be re-captured against this tree. */
+	/* Re-pinned 2026-11-07 for PR #182's round-1 remediation with --print from
+	 * the staged tree. Only `src` moves: the folder chip's real name, glyph, cap
+	 * and yield order in the composer strip, centred picker badges, the effort
+	 * rows' dot/checked state, the effort "this computer's level" row, the new
+	 * i18n keys and the catalogue invariants they move, and tests. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
+	 * (bec917d3, PR #180 sidebar density) into feat/home-pickers (PR #182): both
+	 * lines of history above stand, the value is the merged tree's own, and
+	 * neither side's previous digest is kept. Source admission, not a geometry
+	 * claim. */
+	/* Re-pinned 2026-11-07 for feat/startup-restore-computer with --print from the
+	 * staged tree. Only `src` moves: the cold start reopens the last computer used
+	 * (or the only one) through `src/features/auth/cold-start-computer.ts`, wired in
+	 * `connection-provider.tsx`, plus tests. No copy, styling or layout changes;
+	 * `app`, `design/tokens`, fonts and `public` are untouched. Source admission
+	 * only, NOT rendered U-08 evidence.
+	 * Re-pinned again for the round-1 remediation, --print from the staged tree:
+	 * `cold-start-computer.ts` narrows "last" to usable Radient entries and
+	 * `saved-computers.ts` stops stamping a use on a never-used Remove. Logic and
+	 * tests only; no copy, styling or layout. */
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
+	 * (b5a2f4a1, PR #190 smooth steering: steer/prompt decision, race
+	 * reconciliation, steer failure copy) into feat/startup-restore-computer
+	 * (PR #184): both lines of history above stand, the value is the merged
+	 * tree's own, and neither side's previous digest is kept. Source admission,
+	 * not a geometry claim. */
+	/* Re-pinned 2026-11-07 for fix/asks-pending-parity with --print from the
+	 * staged tree. Only `src` moves: the ask bar and sheet title count only
+	 * `open` asks as waiting and draw a lapsed-only queue quietly as "timed out"
+	 * (local-operator #2388's outstanding rule), plus tests.
+	 * Source admission only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for the same PR (#183) with --print from the staged
+	 * tree. Only `src` moves: a timed-out ask is read-only in the asks sheet
+	 * (no Answer/Decline, Dismiss only, `settle` refuses respond/decline) and its
+	 * state line uses the desktop/relay copy (D10), plus tests. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for #183 round-1 remediation with --print from the
+	 * staged tree. Only `src` moves: the sheet's walk advances to the next ask
+	 * with a verb (Dismiss included), timed-out rows and the quiet bar's excerpt
+	 * use muted ink, an older daemon's tally is reconciled, plus tests. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for fix/session-chips-rail with --print from the
+	 * staged tree: `src` moves for the ended-session chip fallback (new
+	 * `session-chips.ts`, the `—` that replaces `n/a`, three i18n keys, an
+	 * optional `SessionSummary.effort`) and the subtler checkpoint rail (speed
+	 * gate, 1 s linger, decimation, hairline marks in an outer gutter). U-08's
+	 * scene is a long transcript whose rail is transient and aria-hidden; this
+	 * is source admission only, NOT rendered U-08 evidence. Round-1 remediation
+	 * re-printed it for the pre-frame disabled chip, the hidden live rungless
+	 * effort chip, the 12 pt rail gap and the 7 pt rail edge. */
+	/* Re-pinned 2026-11-07 for feat/switcher-sheet-style with --print from the
+	 * staged tree. Only `src` moves: the computer switcher sheet restyled as a
+	 * grouped list (rounded rows, trailing check, "Radient · Online" second
+	 * line, add row in the body instead of the pinned footer), the new
+	 * `mobile.computers.transport.radient` key, its catalogues and the catalogue
+	 * invariants it moves, and tests.
+	 * Source admission only, NOT rendered U-08 evidence.
+	 * Re-pinned again the same day with --print for the design round 1
+	 * remediation (D1 address-titled rows: "Your address" line 2, middle-
+	 * truncated title, new `mobile.computers.transport.custom` key; D2 no `·`
+	 * before the health dot). Source admission only. */
+	/* Re-printed 2026-11-07 for feat/home-polish (TestFlight 578 feedback) with
+	 * --print from the staged tree. Only `src` moves: the home hero becomes a
+	 * centred mark + one-step-smaller greeting, the composer strip packs its chips
+	 * left (More takes the free width), the ☰ count moves inside its box with a
+	 * lead before the computer selector, the drawer panel loses its right border,
+	 * and tests. Round-1 remediation re-printed it again: the session strip's
+	 * effort holds, suggestion rows start-align at large text, and the hero mark
+	 * gains a border-control ring. Round-2 remediation (R2-M1) re-printed it once
+	 * more: the session strip's model and effort take a weighted shrink pair
+	 * (SESSION_STRIP_SHRINK) so the trailing controls never clip. Round-3
+	 * remediation (R3-M1) re-printed it again: effort is rigid under a measured
+	 * JS cap (sessionEffortMaxWidth), because native Yoga 0.86.3 mis-resolves the
+	 * weighted pair (yoga#2006). Source admission only, NOT rendered U-08
+	 * evidence. */
+	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
+	 * (b5a2f4a1, PR #190 smooth steering) into feat/composer-paste-voice
+	 * (PR #187, round-2 head 875cebf7): both lines of history stand, the value is
+	 * the merged tree's own, neither side's digest is kept. Source admission, not
+	 * a geometry claim. */
+	/* Re-pinned 2026-11-07 for feat/thinking-indicator with --print from the
+	 * staged tree. Only `src` and `app` move: `PinnedWorkingLine` and the Stop on
+	 * the working line, `pinnedWorkingLine` derivation, the mirrored
+	 * `relay.composer` stop keys (8 locales) and their generated catalogue, one
+	 * control id, and tests. Source admission only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189's round-1 remediation with --print from
+	 * the staged tree: the per-session stop latch (`turn-stop.ts`) shared by the
+	 * composer's ■ and the line's Stop, the shared phase clock, the line's row
+	 * sizing / hitSlop / rest glyph, and tests. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for the merge of origin/main (smooth steering) with
+	 * --print from the merged tree: `turnRunning` beside `pinnedWorkingLine`, both
+	 * sides' composer, runtime and relay changes, and tests. Source admission
+	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189 Q1/U2/D3 with --print from the staged
+	 * tree: `pinnedWorkingLine` gates on `turnRunning` (so a lowered `streaming`
+	 * under a live label keeps the line and its Stop), with its frame test and a
+	 * hook-level `runtime.streaming` assertion. `app` does not move. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for feat/pending-echo with --print from the staged
+	 * tree. Only `app` and `src` move: the pending-echo store, row and tests, the
+	 * composer's `onHeld` paint/unpaint, the send path's `onHeld` hook, the
+	 * transcript list's `pending` slot in its footer host, one
+	 * identifier family and five i18n keys in every shipped locale. Source
+	 * admission only, NOT rendered U-08 evidence. Re-printed with --print for the
+	 * round-1 remediation: failed rows kept in place with put-back, the composer
+	 * hook test, `items-end` on the row's box, the footer host's single shape,
+	 * four more i18n keys per locale and the vi/zh-CN caption fixes. */
+	/* Re-printed 2026-11-07 with --print at the merge of origin/main (b5a2f4a1,
+	 * PR #190 smooth steering) into feat/pending-echo (PR #191): both lines of
+	 * history above stand, the value is the merged tree's own, and neither
+	 * side's previous digest is kept. Source admission, not rendered evidence.
+	 * Re-printed with --print for the round-2 follow-up: the send failure path
+	 * hands back the envelope's body, the row uses ROLE.button, and two tests. */
+	/* Re-pinned 2026-11-07 for fix/i18n-home-audit with --print from the staged
+	 * tree. Only `src` moves, and only translation values: the independent
+	 * post-merge audit's fixes to the es/ru/ur/vi/zh-CN/hi `mobile.home` and ru
+	 * `mobile.chrome` catalogues, the regenerated catalogue projection, and the
+	 * vi «Home» badge's entry in the identical-by-design test allowlist. No key,
+	 * en string, component or token changed. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	/* Re-pinned 2026-11-07 for PR #189's avatar test anchor with --print from the
+	 * staged tree. Only `src` moves, for one test file
+	 * (`agent-avatar.test.ts` searches for the title control from the back
+	 * control). No shipped source changes. Source admission only, NOT rendered
+	 * U-08 evidence. */
+	/* Re-printed 2026-11-07 with --print at the final tree of the TestFlight 578
+	 * merge train (chore/merge-train-578: #183 #186 #188 #185 #187 #189 #191 #192
+	 * merged --no-ff onto origin/main 56303c83). Every PR's history note above
+	 * stands; the value is the train tree's own and no PR's digest is kept. Only
+	 * `app` and `src` move.
+	 * Re-printed again after merging #189's test anchor fix (c8ad2bb2, one
+	 * test file under `src`).
+	 * Re-printed again after merging #189's U-01 audit fix (c73da8fd: the
+	 * Stop's real touch-floor box). Source admission only, NOT rendered U-08
+	 * evidence.
+	 * Re-printed 2026-11-07 for fix/session-effort-null: `src/contracts` reads a
+	 * null `effort` and the degraded unread block, the list frame drops a bad row
+	 * instead of failing whole, and `session-chips.ts` widens its row type.
+	 * Source admission only, NOT rendered U-08 evidence.
+	 * Re-printed again for the PR's round-1 remediation, after the LAST `src`
+	 * edit: db90c782's wire-repro citation fix and the session-chips comment
+	 * re-wrap (R1/R4). Source admission only, NOT rendered U-08 evidence. */
+	/* Re-printed 2026-11-08 with --print at the merge of origin/main (437cac5a,
+	 * PR #105 Team Bridge direct hub messaging) into feat/team-bridge-avatars
+	 * (PR #119): both sides' history above stands and the value is this merged
+	 * tree's own — neither parent digest is kept. The endpoint-owned avatar
+	 * profile and photo cache, the localized profile card and the mobile port's
+	 * auth provider all land under `src` beside #105's hub messaging; the app,
+	 * design, public and instrument roots did not move. Source admission only,
+	 * NOT rendered U-08 evidence. */
+	src: "9dc41ef942f04e6b158874470d7d324b9941f3baafc3d647b3ff2d8f36baa891",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -449,14 +1086,16 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
+	// Deliberate --print re-pin: only the native Info.plist export-compliance
+	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
 	"app.config.ts":
-		"81e92f5315dbc9df56c603c4ac58b54f90f52a64d20f6c0f4f4ab8d3c7cd0332",
+		"09a1ae6b5ebc4967b5d93e34121653ae10a28356378f29f1a0a064631762c52e",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"8ff9b983c45bb3d696d76baeb510731a54ebd6815332f2c05c832025ab221df6",
+		"e7f8eefe80a606d858bc16831c82a95f226fbcef5468d384556cc79f2006ad0a",
 	"pnpm-lock.yaml":
-		"4e09ec8a05cdbd6c27defe1337088fd4fcc08e17ddbfc88da0d693695fe1ce05",
+		"a6680f1b911b580ee77f3ecd9313e83af23a9a94770f80d08b9d148745e45ddb",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };

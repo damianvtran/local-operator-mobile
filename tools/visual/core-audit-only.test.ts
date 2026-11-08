@@ -24,7 +24,13 @@ function selects(guard: string, event: string, mode: string) {
 	return Boolean(
 		runInNewContext(
 			guard,
-			{ github: { event_name: event }, inputs: { proof_mode: mode } },
+			{
+				github: { event_name: event },
+				inputs: { proof_mode: mode },
+				/* `web-audit-verdict` is `<web-audit's guard> && always()`: selection
+				 *  is the question here, and `always()` never deselects a job. */
+				always: () => true,
+			},
 			{ timeout: 100 },
 		),
 	);
@@ -49,6 +55,10 @@ const legacy = {
 		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'account-routing-android-proof'",
 	"account-routing-ios-proof":
 		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'account-routing-ios-proof'",
+	"projects-create-ios-proof":
+		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'projects-create-ios-proof'",
+	"theme-ios-proof":
+		"github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'theme-ios-proof'",
 };
 const validatorSection =
 	workflow
@@ -90,10 +100,38 @@ describe("core-audit-only dispatch isolation", () => {
 		expect(admits("workflow_dispatch", "unknown")).toBe(false);
 	});
 	it("preserves every old job predicate's result for every existing mode and event", () => {
-		expect(
-			[...guards.keys()].filter((name) => name !== "u08-geometry-proof"),
-		).toEqual(Object.keys(legacy));
+		/* Jobs added after this guard was written are excluded by name and asserted
+		 *  on their own below: each fires only on its own manual mode. */
+		const later = [
+			"u08-geometry-proof",
+			"chrome-ios-proof",
+			"web-audit-verdict",
+		];
+		expect([...guards.keys()].filter((name) => !later.includes(name))).toEqual(
+			Object.keys(legacy),
+		);
 		expect(guards.get("u08-geometry-proof")).toBeTruthy();
+		/* The device legs' aggregate is selected exactly when the legs are. */
+		expect(guards.get("web-audit-verdict")).toBe(
+			`${legacy["web-audit"]} && always()`,
+		);
+		for (const event of [
+			"push",
+			"pull_request",
+			"schedule",
+			"workflow_dispatch",
+		])
+			for (const mode of [
+				"",
+				"full",
+				"s15-proof",
+				"core-audit-only",
+				"chrome-ios-proof",
+			])
+				expect(
+					selects(guards.get("chrome-ios-proof") ?? "true", event, mode),
+					`${event}/${mode}/chrome-ios-proof`,
+				).toBe(event === "workflow_dispatch" && mode === "chrome-ios-proof");
 		for (const event of [
 			"push",
 			"pull_request",
@@ -106,6 +144,8 @@ describe("core-audit-only dispatch isolation", () => {
 				"s15-proof",
 				"account-routing-ios-proof",
 				"account-routing-android-proof",
+				"projects-create-ios-proof",
+				"theme-ios-proof",
 			]) {
 				expect(
 					selects(guards.get("u08-geometry-proof") ?? "true", event, mode),
@@ -129,6 +169,9 @@ describe("core-audit-only dispatch isolation", () => {
 			"s15-proof",
 			"account-routing-ios-proof",
 			"account-routing-android-proof",
+			"projects-create-ios-proof",
+			"chrome-ios-proof",
+			"theme-ios-proof",
 		]) {
 			expect(admits("workflow_dispatch", mode)).toBe(true);
 			expect(admits("push", mode)).toBe(false);
@@ -137,7 +180,13 @@ describe("core-audit-only dispatch isolation", () => {
 			expect(
 				admits("workflow_dispatch", "account-routing-ios-proof", stage),
 			).toBe(true);
-			for (const mode of ["full", "s15-proof", "account-routing-android-proof"])
+			for (const mode of [
+				"full",
+				"s15-proof",
+				"account-routing-android-proof",
+				"projects-create-ios-proof",
+				"theme-ios-proof",
+			])
 				expect(admits("workflow_dispatch", mode, stage)).toBe(false);
 		}
 	});
@@ -153,6 +202,7 @@ describe("core-audit-only dispatch isolation", () => {
 			"mock-relay-contract",
 			"docs-commands",
 			"web-audit",
+			"web-audit-verdict",
 			"web-audit-core",
 			"maestro-android",
 		]);

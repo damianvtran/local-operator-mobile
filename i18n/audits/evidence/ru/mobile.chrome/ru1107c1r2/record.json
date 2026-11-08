@@ -1,0 +1,115 @@
+{
+ "schema": 1,
+ "audit_id": "ru1107c1r2",
+ "round": 2,
+ "delta_of": "ru1107c1",
+ "locale": "ru",
+ "namespace": "mobile.chrome",
+ "audit_date": "2026-11-07",
+ "kind": "DELTA re-audit (round 2) after the implementer applied round-1 findings",
+ "project": "damianvtran/local-operator-mobile",
+ "pull_request": "damianvtran/local-operator-mobile#192",
+ "branch": "fix/i18n-home-audit",
+ "audited_revision": "504df8f5fe83bbd972cf214059d76457a845bd85",
+ "base_commit": "b5a2f4a1b0721a5745e35e498d7d91851a93811c",
+ "catalogue_state": "committed at audited_revision; read-only for this auditor",
+ "auditor": {
+  "agent": "reviewer (lopdev team)",
+  "session": "c9f52501c938",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "this session's header; no model-switch/fallback notice appeared",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_of_round1_auditor_session": true,
+  "round1_auditor_session": "27cb86d0ecef",
+  "independent_of_implementer_session": true,
+  "implementer_session": "f76f34aff586"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ru/mobile.chrome.json",
+   "sha256": "3a52ae8eb2a84d68e455fff80e38991d60709a82d4bc418d63f99802c3a0f7d3"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.chrome.json",
+   "sha256": "7b91a909393d20b3ced5ef3825bf0fd5b0f844ee634a6f8abf19f3cb0141b3f7"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.chrome.context.json",
+   "sha256": "ba70cefe7de66b12c4f012daad4e7aa127a34eea6e3de17c9fda832415aeb140"
+  }
+ },
+ "round1_target_sha256": "d85c9af88c5fa5c225ef724d7749903a8f9821deeda84abb1bf78650ae2a2461",
+ "en_and_context_vs_round1": {
+  "en_identical": true,
+  "context_identical": true
+ },
+ "delta_vs_round1": {
+  "target_identical_to_round1": false,
+  "keys_changed": [
+   "mobile.chrome.close_conversations"
+  ],
+  "beyond_finding_keys": [],
+  "finding_keys_not_changed": [],
+  "method": "reverted each changed key to its base-revision text in the head file bytes; the result's sha256 equals round-1 input_hashes.target.sha256, so the changed-key set is exactly these keys and no other key in the file changed",
+  "reverted_sha_matches_r1": true,
+  "no_other_key_changed": true,
+  "remediation_receipt_target_sha_matches_head": true
+ },
+ "verification": [
+  {
+   "id": "RU-C01",
+   "severity": "MINOR",
+   "round1_status": "open",
+   "status": "verified_fixed",
+   "keys": {
+    "mobile.chrome.close_conversations": {
+     "round1_current_equals_base": true,
+     "now": "Закрыть список бесед"
+    }
+   },
+   "judgement": "Verified. «Закрыть список бесед» names what the control dismisses (the sidebar), not the conversations themselves. It parallels core's «Закрыть навигацию» / «Закрыть поиск»."
+  }
+ ],
+ "beyond_findings": [],
+ "new_findings": [],
+ "width": {
+  "rendered": false,
+  "note": "no rendered capture; round-1 length notes stand for a 320 pt check"
+ },
+ "mechanical": {
+  "mech_py": "round-1 auditor's mech.py re-run unmodified at head: mechanical issues: 0",
+  "generate_ts_check": "exit 0 — catalogue.gen.ts is current (333 keys, 17 namespaces)",
+  "check_strings": "exit 0 — 256 finding(s), all baselined; 0 new",
+  "vitest_src_i18n": "6 files, 151/151 passed"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": []
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ru/mobile.chrome/ru1107c1r2/record.json",
+   "sha256": "self (not applicable)",
+   "why_not_hashed": "a file cannot attest its own hash"
+  },
+  {
+   "path": "i18n/audits/evidence/ru/mobile.chrome/ru1107c1r2/report.md",
+   "sha256": "86d104b6100674ccb14a489009e2e55e433daa692c12f4ea77cb030fead01968"
+  },
+  {
+   "path": "i18n/audits/evidence/ru/mobile.chrome/ru1107c1r2/audit.log",
+   "sha256": "24b047870e1045d61326aef469f904a1aa5730c3c15ad7a5263a853689f7c268",
+   "note": "shared verbatim by the seven 1107 r2 bundles"
+  }
+ ],
+ "execution_log": "i18n/audits/evidence/ru/mobile.chrome/ru1107c1r2/audit.log — real stdout of the commands in it",
+ "second_pass": {
+  "independent_second_auditor": "this record (independent of translator, round-1 auditor and implementer)"
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": false,
+  "why": "written with <scratch>/<worktree> placeholders from the start; no machine paths in any artifact"
+ }
+}

@@ -27,9 +27,15 @@ const host = vi.hoisted(() => ({
 	/* What `middleFit` was asked to fit into, and what it painted. */
 	fitted: [] as string[],
 	layoutWidth: 0,
+	/* Each brand mark painted, by the testID of the Pressable it sits in
+	 *  (null = outside every pressable, the dead strip UX U2 measured). */
+	marks: [] as (string | null)[],
 }));
 
 vi.mock("react-native", async () => {
+	const { createContext, createElement } = await import("react");
+	/* The nearest Pressable's testID, so a child can prove it is INSIDE it. */
+	const PressOwner = createContext<string | null>(null);
 	const flatten = (children: unknown): string =>
 		Array.isArray(children)
 			? children.map(flatten).join("")
@@ -62,7 +68,24 @@ vi.mock("react-native", async () => {
 				host.presses.set(props.testID, props.onPress as () => void);
 				host.labels.set(props.testID, String(props.accessibilityLabel));
 			}
-			return (props.children ?? null) as ReactNode;
+			return createElement(
+				PressOwner.Provider,
+				{ value: (props.testID as string | undefined) ?? null },
+				(props.children ?? null) as ReactNode,
+			);
+		},
+		__PressOwner: PressOwner,
+	};
+});
+vi.mock("@/ui/components/navigation-mark", async () => {
+	const { useContext } = await import("react");
+	const rn = (await import("react-native")) as unknown as {
+		__PressOwner: import("react").Context<string | null>;
+	};
+	return {
+		NavigationMark: () => {
+			host.marks.push(useContext(rn.__PressOwner));
+			return null;
 		},
 	};
 });
@@ -145,7 +168,7 @@ vi.mock("@/features/auth/connection-provider", async () => {
 });
 
 const { ComputerSwitcherProvider } = await import("./computer-switcher-sheet");
-const { DrawerComputerRow, HeaderComputerChip } = await import(
+const { DrawerComputerRow, HeaderComputerChip, headerChipFit } = await import(
 	"./computer-entry-points"
 );
 
@@ -245,6 +268,21 @@ describe("the Home header chip", () => {
 		expect(sheetUp()).toBe(true);
 	});
 
+	/* UX U2: the mark beside the chip was a dead 20 pt target. It is now the
+	 *  chip's leading glyph, so its tap IS the chip's tap. */
+	it("paints the brand mark INSIDE the chip's pressable only when asked", async () => {
+		host.marks = [];
+		await mount(createElement(HeaderComputerChip, { testID: CHIP }));
+		expect(host.marks).toEqual([]);
+		await mount(
+			createElement(HeaderComputerChip, { testID: CHIP, brandMark: true }),
+		);
+		expect(host.marks.length).toBeGreaterThan(0);
+		expect(new Set(host.marks)).toEqual(new Set([CHIP]));
+		await press(CHIP);
+		expect(sheetUp()).toBe(true);
+	});
+
 	it("reads 'Choose a computer' with nothing chosen, and still opens the sheet", async () => {
 		await mount(createElement(HeaderComputerChip, { testID: CHIP }));
 		expect(host.texts).toContain("Choose a computer");
@@ -313,7 +351,8 @@ describe("the drawer footer's workspace row", () => {
 /* The header's D24 rules, over the SOURCE (the screen reaches `uniwind` through
  *  `@/ui`, which Node cannot import — `header-fit.test.ts` reasons the same way):
  *  the chip keeps the slot's `min-w-0 flex-1` and its both-axis floor, and the
- *  bell and Settings follow it in the same row. */
+ *  bell follows it in the same row. Settings moved to the sidebar's workspace
+ *  row (decision record 2026-11-04 §2.4), which is what frees the chip's width. */
 describe("the chip in the Home header", () => {
 	const HOME = readFileSync(
 		new URL("../home/home.tsx", import.meta.url),
@@ -323,17 +362,35 @@ describe("the chip in the Home header", () => {
 		new URL("./computer-entry-points.tsx", import.meta.url),
 		"utf8",
 	).replace(/\s+/g, " ");
-	it("sits where the label was, before the bell and Settings", () => {
+	it("sits where the label was, before the bell, with Settings gone from the header", () => {
 		const chip = HOME.indexOf(
-			"<HeaderComputerChip testID={CONTROL.computersButton} />",
+			"<HeaderComputerChip testID={CONTROL.computersButton}",
 		);
 		expect(chip).toBeGreaterThan(0);
 		expect(HOME.indexOf("testID={CONTROL.homeNotifications}")).toBeGreaterThan(
 			chip,
 		);
-		expect(HOME.indexOf("testID={CONTROL.settingsButton}")).toBeGreaterThan(
-			chip,
+		expect(HOME).not.toContain("testID={CONTROL.settingsButton}");
+		/* D-H3 is reversed on the operator's word (build 453: "add the local
+		 *  operator logo to the left of the local operator title"): ONE mark, the
+		 *  existing asset, as the chip's LEADING glyph inside its pressable (UX
+		 *  U2), yielding on the bell's own gate so the chip keeps its floor at
+		 *  320 pt / large text. */
+		expect(HOME).not.toContain("<NavigationMark");
+		expect(HOME.slice(chip, chip + 900)).toContain(
+			"brandMark={viewport.width >= 360 && effectiveScale < 1.5}",
 		);
+		const header = CHIP_SOURCE.slice(
+			CHIP_SOURCE.indexOf("export function HeaderComputerChip"),
+			CHIP_SOURCE.indexOf("export function DrawerComputerRow"),
+		);
+		expect(header.match(/<NavigationMark /g) ?? []).toHaveLength(1);
+		const mark = header.indexOf(
+			"<NavigationMark size={CONTROL_HEIGHTS.icon.icon} />",
+		);
+		expect(mark).toBeGreaterThan(header.indexOf("<Pressable"));
+		expect(mark).toBeLessThan(header.indexOf("<HealthMark"));
+		expect(mark).toBeLessThan(header.indexOf("</Pressable>"));
 		expect(HOME).not.toContain("— choose a computer");
 	});
 	it("keeps the both-axis touch floor and yields width, never the bell", () => {
@@ -342,13 +399,35 @@ describe("the chip in the Home header", () => {
 			CHIP_SOURCE.indexOf("export function DrawerComputerRow"),
 		);
 		expect(header).toContain(
-			'className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full border border-border-control"',
+			/* Spec §1: a 10 pt rounded rectangle with the kit's 12 pt inset, not
+			 *  a capsule whose mark sat 2.5 pt from its edge. */
+			'className="min-w-0 flex-1 flex-row items-center gap-2 rounded-md border border-border-control px-3"',
 		);
 		expect(header).toContain(
 			"style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}",
 		);
 		expect(header).toContain("numberOfLines={1}");
-		expect(header).toContain("middleFit(label, nameWidth, effectiveScale)");
+		/* D-H1: the head of the name survives, not its middle. */
+		expect(header).toContain("headerChipFit(label, nameWidth, effectiveScale)");
+	});
+});
+
+describe("headerChipFit (D-H1)", () => {
+	it("keeps the whole name when it fits, as at 393 pt / 100 %", () => {
+		// 281 pt is the chip's slot on a 393 pt phone (record §2.4) less its mark
+		// and chevron; the record's own example name.
+		expect(headerChipFit("Mac – Local Operator", 220, 1)).toBe(
+			"Mac – Local Operator",
+		);
+	});
+	it("keeps the HEAD and drops the tail when it does not", () => {
+		const fitted = headerChipFit("Mac – Local Operator", 90, 1);
+		expect(fitted.startsWith("Mac")).toBe(true);
+		expect(fitted.endsWith("…")).toBe(true);
+		expect(fitted).not.toContain("Operator");
+	});
+	it("still keeps a host:port's port (the identifying half)", () => {
+		expect(headerChipFit("127.0.0.1:49892", 70, 1)).toContain(":49892");
 	});
 });
 
