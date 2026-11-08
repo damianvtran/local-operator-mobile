@@ -68,8 +68,12 @@ const sha256 = (content: string | Uint8Array) =>
 /* --------------------------------------------------------------- the table -- */
 
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-07 for PR #189 (audit fix 2) with --print: `auditCell` now
+	 *  brackets the unchanged `EXTRACT_PROBE` with `SPACING_REST_PROBE` and retakes
+	 *  an extraction a spacing tween moved across. What is measured and every
+	 *  threshold are unchanged; only WHEN the reading is taken moved. */
 	"tools/audit/audit.ts":
-		"fba140d23f79b9d312c805bb441234f6d7e4dfe159a0ae17b8f265407d246270",
+		"10429edbe5a43c4e214ddfeb6408d88c4c4f9cf8ff80e7ea7d6610e084fe57a0",
 	/* Re-printed 2026-11-07 with --print at the staged sidebar-density tree: the two
 	 * U-42 allowances keyed on the list row's `min-h-[56px]` class were removed with
 	 * that class (the row now pads `py-2`/`gap-1`, both on the 4 pt scale), so they
@@ -80,8 +84,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
 		"d65894ba1fb463eaad8c7e66b4145378f13316d707436d3eec2594cc1224d42a",
+	/* Re-pinned 2026-11-07 for PR #189 (audit fix 2) with --print: one ADDED
+	 *  export, `SPACING_REST_PROBE`; `EXTRACT_PROBE`'s source is byte-unchanged. */
 	"tools/audit/probe.ts":
-		"4ed608393c78474ce7dd152a7c57637fdacb8ec23fbb9b3abfd9879330c0ab66",
+		"ae34fd9cce868b60b385eed2064c07a3e82e2cd421526a7fea1fb81446437728",
 	"tools/audit/u08-fragment-verification.ts":
 		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
 	"tools/audit/u08-geometry-proof.ts":
