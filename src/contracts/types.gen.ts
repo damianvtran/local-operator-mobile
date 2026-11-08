@@ -493,8 +493,10 @@ export interface SessionSummary {
 	conversation_name: string;
 	cwd: string;
 	model_label: string;
-	/** The rung last run with; not sent by any relay yet (see `schemas.ts`). */
-	effort?: string;
+	/** The rung last run with, from the journal when no runtime is attached
+	 *  (local-operator v0.101.14+). The wire sends `null` for "no rung known";
+	 *  the schema normalises it to absence (see `schemas.ts`). */
+	effort?: string | null;
 	streaming: boolean;
 	needs_attention: boolean;
 	unseen: boolean;
@@ -687,8 +689,9 @@ export interface UnreadBlock {
 	count?: number;
 	/** `AttentionStore.revision()` — an **equality token, never an order**: it
 	 *  moves on a publish, on a read and `supersedes` moves on a heal. A client
-	 *  compares it for change, it does not sort by it. */
-	revision: [number, number, number];
+	 *  compares it for change, it does not sort by it. ABSENT on the degraded
+	 *  shape (`{"degraded": [...]}` alone, `_unread_aggregate`). */
+	revision?: [number, number, number];
 	/** The daemon's own marker for "could not be read" (`["attention"]`). */
 	degraded: string[];
 }

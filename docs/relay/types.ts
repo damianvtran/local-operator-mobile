@@ -596,6 +596,9 @@ export interface SessionSummary {
   conversation_name: string;
   cwd: string;
   model_label: string;
+  /** The rung last run with (`daemon.py` `_merge_summaries`, v0.101.14+):
+   *  `null` — not absence — when no rung is known. */
+  effort?: string | null;
   streaming: boolean;
   needs_attention: boolean;
   /** A turn finished while nobody was viewing the session and it has not been
@@ -649,6 +652,9 @@ export interface SessionSummary {
    *  `[]`/`null` — their assignment lives in the other device's store. */
   tags?: TagRef[];
   primary?: string | null;
+  /** Who opened the conversation when an agent did; `null` on every ordinary
+   *  row (`daemon.py` `_merge_summaries`, `row.opened_by`). */
+  opened_by?: Record<string, string | null> | null;
   /* ------------------------------------------------ the remote row's own
    *
    * ABSENT on a local row; present with real values on every remote one
@@ -758,8 +764,9 @@ export interface UnreadBlock {
   /** Absent when `degraded` is non-empty. Never read absence as `0`. */
   count?: number;
   /** `AttentionStore.revision()` — an EQUALITY token, never an order: compare
-   *  it for change; never sort by it (`daemon.py` `unread_block()`). */
-  revision: [number, number, number];
+   *  it for change; never sort by it (`daemon.py` `unread_block()`). ABSENT,
+   *  with `count`, on the degraded shape `{"degraded": [...]}`. */
+  revision?: [number, number, number];
   /** `["attention"]` when the completion-receipt store could not be read. */
   degraded: string[];
 }
