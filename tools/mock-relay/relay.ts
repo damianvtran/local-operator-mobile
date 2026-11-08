@@ -1249,22 +1249,26 @@ export function createRelay(options: RelayOptions = {}) {
 		const rows = includePeers ? [...rowsFor(), ...peerRowsFor()] : rowsFor();
 		/* The frame-level `unread` block (S1, ADR 0006 §1.1): `count` is computed
 		 * from the SAME rows this frame carries, so the equality the daemon
-		 * guarantees (count == unseen rows) cannot drift here either. `attention`
-		 * in the listing's own `degraded` means the receipt store could not be
-		 * read — and a store that could not be read is not an empty pile: `count`
-		 * is ABSENT, never 0. */
-		const attentionDegraded = degraded.includes("attention");
-		const unread = {
-			...(attentionDegraded
-				? {}
-				: { count: rows.filter((row) => row.unseen === true).length }),
-			revision: [rows.length, state.seenTokens.size, 0] as [
-				number,
-				number,
-				number,
-			],
-			degraded: attentionDegraded ? ["attention"] : [],
-		};
+		 * guarantees (count == unseen rows) cannot drift here either. A degraded
+		 * listing is not an empty pile: `count` is ABSENT, never 0.
+		 *
+		 * The daemon's DEGRADED SHAPE (`SessionTable._unread_aggregate`): ANY
+		 * listing degradation answers `{"degraded": [...]}` alone — no `count`, no
+		 * `revision` — and only a healthy listing carries the pair. The mock used to
+		 * send a revision on the degraded shape too, which is how a client schema
+		 * that required it passed here and failed against the real daemon. */
+		const unread =
+			degraded.length > 0
+				? { degraded: [...degraded] }
+				: {
+						count: rows.filter((row) => row.unseen === true).length,
+						revision: [rows.length, state.seenTokens.size, 0] as [
+							number,
+							number,
+							number,
+						],
+						degraded: [],
+					};
 		return {
 			sessions: rows,
 			degraded,

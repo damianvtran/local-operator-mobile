@@ -1071,11 +1071,21 @@ export const sessionSummarySchema = z.looseObject({
 	 */
 	cwd: z.string().default(""),
 	model_label: z.string().default(""),
-	/** The rung the conversation last ran with. NOT SENT by any relay yet: the
-	 *  registry record has no effort field, so an ended session's effort is
-	 *  unknown until local-operator adds it (TestFlight 578). Optional, never
-	 *  defaulted: `""` would claim a rungless model, absence claims nothing. */
-	effort: z.string().optional(),
+	/** The rung the conversation last ran with, read from the journal when no
+	 *  runtime is attached (local-operator 74b53728, v0.101.14). The daemon sends
+	 *  `null` — not absence — for every row with no recorded rung
+	 *  (`daemon.py` `_merge_summaries`: `p.effort or None` / `identity.effort`),
+	 *  and declaring this `.optional()` alone failed the WHOLE list on the first
+	 *  such row (TestFlight 628: drawer stuck on skeletons, bell gone).
+	 *
+	 *  `null` and absence are the same claim here — "no rung known" — so both
+	 *  normalise to `undefined`, the one reading `session-chips.ts` `firstOf`
+	 *  already handles. Never defaulted to `""`: that would claim a rungless
+	 *  model, which is a different (projection-only) answer. */
+	effort: z
+		.string()
+		.nullish()
+		.transform((value) => value ?? undefined),
 	streaming: z.boolean().default(false),
 	needs_attention: z.boolean().default(false),
 	unseen: z.boolean().default(false),
@@ -1273,8 +1283,14 @@ export const unreadBlockSchema = z.looseObject({
 	count: z.number().int().optional(),
 	/** An equality token, never an order (the daemon's `revision()`, whose three
 	 *  terms move on a publish, a read, and a heal). Validated because the
-	 *  mirror declares it; nothing in the app may sort by it. */
-	revision: z.tuple([z.number(), z.number(), z.number()]),
+	 *  mirror declares it; nothing in the app may sort by it.
+	 *
+	 *  OPTIONAL because the degraded shape omits it: when the listing is degraded
+	 *  or the attention store has no revision, `SessionTable._unread_aggregate`
+	 *  answers `{"degraded": [...]}` alone — no `count`, no `revision`. Requiring
+	 *  it dropped the entire sessions frame exactly when the machine was already
+	 *  struggling (the same class as TestFlight 628's `effort: null`). */
+	revision: z.tuple([z.number(), z.number(), z.number()]).optional(),
 	/** The daemon's own marker for "could not be read" (`["attention"]`). */
 	degraded: z.array(z.string()),
 });
@@ -1307,8 +1323,39 @@ export const notificationsBlockSchema = z.looseObject({
 	high_water: z.number().int().optional(),
 });
 
+/**
+ * The listing's rows, read ONE ROW AT A TIME.
+ *
+ * WHY: a single row the schema refuses used to reject the whole frame, and the
+ * frame is also what carries `capabilities` (the bell's gate) and the inbox
+ * counts — so TestFlight 628's one `effort: null` emptied the drawer AND hid the
+ * bell. The rule this file already applies to additive display metadata
+ * (`transcriptEntryDetailsSchema`: "costs the label, never the session") is
+ * applied one level up: a malformed row costs that row, never the list.
+ *
+ * CONSTRAINTS: each row is still parsed by the full `sessionSummarySchema` —
+ * nothing is coerced, defaulted or invented, and no row that fails is shown.
+ * The envelope (`degraded`, `capabilities`, …) stays strict. The drop is LOGGED
+ * with the failing paths only (never values: a row carries conversation names
+ * and directories), so drift is visible in the device log rather than silent.
+ * Drift is still caught at build time by the `sessionSummary` fixture parses and
+ * by `session-list-wire.test.ts`, which asserts no real-shaped row is dropped.
+ */
+const sessionRowsSchema = z.array(z.unknown()).transform((rows) =>
+	rows.flatMap((row, index) => {
+		const parsed = sessionSummarySchema.safeParse(row);
+		if (parsed.success) return [parsed.data];
+		console.warn(
+			`[contracts] dropped session row ${index}: ${parsed.error.issues
+				.map((issue) => issue.path.map(String).join(".") || "<root>")
+				.join(",")}`,
+		);
+		return [];
+	}),
+);
+
 export const sessionListFrameSchema = z.looseObject({
-	sessions: z.array(sessionSummarySchema),
+	sessions: sessionRowsSchema,
 	/** `[]` when healthy — present on every frame so "nothing to report" is
 	 *  distinguishable from "too old to know". */
 	degraded: z.array(z.string()),

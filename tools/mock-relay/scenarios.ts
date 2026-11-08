@@ -420,6 +420,19 @@ export function rowFrom(
 		conversation_name: projection.conversation_name,
 		cwd: projection.cwd,
 		model_label: projection.model_label,
+		/* THE DAEMON'S NULLS, not absence (`daemon.py` `_merge_summaries`,
+		 *  local-operator v0.101.14+): `effort` is `p.effort or None`, and the
+		 *  agent/avatar pair and `opened_by` are always sent, `null` on an ordinary
+		 *  row. TestFlight 628 shipped because no mock row carried a `null` here,
+		 *  so the one value that failed the list was never exercised. */
+		effort: projection.effort ? projection.effort : null,
+		opened_by: null,
+		agent_id: null,
+		avatar_sha256: null,
+		ended: false,
+		degraded: false,
+		tags: [],
+		primary: null,
 		streaming: projection.streaming,
 		leaving: "",
 		updating: "",

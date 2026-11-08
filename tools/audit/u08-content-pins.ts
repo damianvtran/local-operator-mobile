@@ -163,8 +163,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * command id, as the daemon writes it, and an IDLE world pushes the
 	 * projection once its version moves past what the stream last sent. No
 	 * streaming or keepalive-only scenario's frames change. */
+	/* Re-pinned 2026-11-07 for fix/session-effort-null with --print from the
+	 * staged tree: the list frame's `unread` block takes the daemon's degraded
+	 * shape (`{degraded}` alone, no revision/count) whenever the listing is
+	 * degraded. Healthy scenarios' frames are unchanged. */
 	"tools/mock-relay/relay.ts":
-		"7773e46b3725ed525f76ed91e0770ece7dc3864ef51cb0b8a15f514df5b6f1c7",
+		"7be107bec2c8b9e3ddcc84a4f4e9d0d117bc511e504a088fd3ffdfbb132a0503",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -173,8 +177,12 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-11-07 for PR #182's round-1 remediation with --print: only
 	 * the `home-pickers` world moved (a folder answer with default/recents and two
 	 * not-connected model rows, UX U6); no other scenario's world changed. */
+	/* Re-pinned 2026-11-07 for fix/session-effort-null with --print: `rowFrom`
+	 * emits the daemon's real-shaped nulls (`effort`, `opened_by`, `agent_id`,
+	 * `avatar_sha256`) and the always-present receipts/tags pair. Row DATA only;
+	 * no projection, transcript or layout input moved. */
 	"tools/mock-relay/scenarios.ts":
-		"79886e0ee53b525e26c4ccd01e840161ea1d50ba96b9132745071e5cbcf63616",
+		"8dd72a2a10564687d287adc3c577b6ee8f5d9d79a232abdfc2d766b23b3ce00b",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -1003,8 +1011,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * test file under `src`).
 	 * Re-printed again after merging #189's U-01 audit fix (c73da8fd: the
 	 * Stop's real touch-floor box). Source admission only, NOT rendered U-08
-	 * evidence. */
-	src: "fa4334b178af00f1e0d387feff174b5f27010c46b8e0c99cfca6ca5d5e9645d8",
+	 * evidence.
+	 * Re-printed 2026-11-07 for fix/session-effort-null: `src/contracts` reads a
+	 * null `effort` and the degraded unread block, the list frame drops a bad row
+	 * instead of failing whole, and `session-chips.ts` widens its row type.
+	 * Source admission only, NOT rendered U-08 evidence. */
+	src: "bc8012f0ae78bc96821cb1d790de4f229a4c3fb88b6f4bbfe089e0a7825d4d9a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

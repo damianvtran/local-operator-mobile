@@ -14,10 +14,10 @@
  * which outlives the runtime. So the projection is read first (it is the live
  * truth while a runtime is attached) and the row second.
  *
- * EFFORT HAS NO LAST-KNOWN SOURCE YET. Neither the registry record nor the list
- * row carries effort today; `SessionSummary.effort` is read when a relay sends
- * it (optional in the schema), and until then an ended session's effort is
- * genuinely unknown — the chip is HIDDEN rather than shown as a dash, because a
+ * EFFORT'S LAST-KNOWN SOURCE IS THE JOURNAL. Since local-operator v0.101.14 the
+ * list row carries `effort` read from the journal, or `null` when no rung was
+ * recorded (the schema reads that `null` as absence); without one an ended
+ * session's effort is genuinely unknown — the chip is HIDDEN rather than shown as a dash, because a
  * control that names nothing and does nothing is noise on a screen whose only
  * action is Resume.
  *
@@ -72,7 +72,10 @@ export interface SessionChipProjection {
  *  yet (see the header). A REMOTE row's inert defaults (`""`) read as absent. */
 export interface SessionChipRow {
 	model_label: string;
-	effort?: string;
+	/** `null` is the wire's "no rung known" (v0.101.14+); the parsed row carries
+	 *  `undefined` for it, but a wire-typed row may still hold the `null`, and
+	 *  `firstOf` reads both as absence. */
+	effort?: string | null;
 }
 
 /** The first non-empty string, or `""`. */
