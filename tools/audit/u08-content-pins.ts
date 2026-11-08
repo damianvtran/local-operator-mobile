@@ -1075,7 +1075,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * auth provider all land under `src` beside #105's hub messaging; the app,
 	 * design, public and instrument roots did not move. Source admission only,
 	 * NOT rendered U-08 evidence. */
-	src: "9dc41ef942f04e6b158874470d7d324b9941f3baafc3d647b3ff2d8f36baa891",
+	/* Re-pinned 2026-11-08 for the checkpoint rail's component suite:
+	 * `src/features/session/components/checkpoint-rail.test.tsx` is new, so the
+	 * `src` root moves while every other root stands — the guard working on a
+	 * source addition, not a rendering change. No component, token or catalogue
+	 * was touched: the rail's drawing code is byte-identical and the file adds
+	 * only assertions. Recomputed with `--print` AFTER that file landed. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "7cab61c98dadacb6b980036a4b2d8679737fa377290e5746d81f4862aff403d5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
