@@ -6,6 +6,7 @@ import {
 	attachmentLabel,
 	composerControls,
 	composerCopy,
+	composerFeedback,
 	receiptForError,
 } from "@/features/session/composer";
 import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
@@ -18,6 +19,48 @@ import { RelayError } from "@/relay";
  * which command one control sends, why it is disabled, and whether an
  * acknowledgement is allowed to clear the draft in front of the reader.
  */
+
+describe("receipt rendering preserves command certainty", () => {
+	it.each([false, true])(
+		"keeps fresh unsent storage errors visible without an older envelope (ended=%s)",
+		(ended) => {
+			const message = "Not sent. Local preparation failed.";
+			const feedback = composerFeedback({
+				ended,
+				error: message,
+				retainedMessage: null,
+			});
+			expect(feedback.retainedText).toBeNull();
+			expect(feedback.errorText).toBe(message);
+		},
+	);
+
+	it("retains the existing combined ended reopen failure and its action", () => {
+		const feedback = composerFeedback({
+			ended: true,
+			error: composerCopy().endedSendFailed,
+			retainedMessage: composerCopy().retainedError,
+		});
+		expect(feedback.retainedText).toBe(composerCopy().endedSendFailed);
+		expect(feedback.errorText).toBeNull();
+		expect(feedback.retryLabel).toBe(composerCopy().endedRetryLabel);
+	});
+
+	it("keeps a postdispatch uncertain receipt and earlier-instruction recovery", () => {
+		const message = receiptForError(
+			new RelayError("transport", "lost ack"),
+			"steer",
+		).message;
+		const feedback = composerFeedback({
+			ended: false,
+			error: message,
+			retainedMessage: composerCopy().retainedError,
+		});
+		expect(feedback.errorText).toBe(message);
+		expect(feedback.retainedText).toBe(composerCopy().retainedError);
+		expect(feedback.retryLabel).toBe(composerCopy().retryLabel);
+	});
+});
 
 describe("the send/steer morph", () => {
 	it("keeps one control in one place through every state", () => {

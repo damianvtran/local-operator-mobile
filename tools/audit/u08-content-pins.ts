@@ -1098,7 +1098,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #108 CI remediation: branch-local --print from the final source tree;
 	// test contracts only; no shipping source bytes changed.
 	// Source admission only, not fresh rendered or geometry evidence.
-	src: "49e273029a677b66adabb917e8ace39e4a362d9ee14026293b26a30b742ad0e1",
+	/* Re-printed 2026-11-09 for PR #199's U1 remediation: composer retry
+	 * preparation copy and feedback projection retain the original command's
+	 * uncertainty, with active/ended hook regressions and all eight catalogues.
+	 * Only the src root moves; no instrument, fixture or other pin changes.
+	 * Source admission only, NOT rendered U-08 or native storage evidence. */
+	// PR #108 convergence with main 953a00a7: union of the localized notice
+	// and main's two session receipts. Branch-local --print rederives src only;
+	// all other roots, instrument/input/historical pins are retained.
+	src: "da36746e40f182bfb9dd74bf7de4080837e5262a37b2e286265173165e261657",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

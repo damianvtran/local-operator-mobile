@@ -306,6 +306,8 @@ export type CatalogueKey =
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
+	| "mobile.session.composer.not_sent_storage"
+	| "mobile.session.composer.retry_not_sent_storage"
 	| "mobile.session.conversation_details"
 	| "mobile.session.highlights.sound_pause"
 	| "mobile.session.highlights.sound_play"
@@ -767,6 +769,8 @@ export type NoParamKey =
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
+	| "mobile.session.composer.not_sent_storage"
+	| "mobile.session.composer.retry_not_sent_storage"
 	| "mobile.session.conversation_details"
 	| "mobile.session.highlights.sound_untitled"
 	| "mobile.session.highlights.withheld_missing"
@@ -1228,6 +1232,8 @@ export type MessageParams = {
 	"mobile.session.chip.model_resume_hint": NoParams;
 	"mobile.session.chip.model_unknown": NoParams;
 	"mobile.session.chip.model_unrecorded_hint": NoParams;
+	"mobile.session.composer.not_sent_storage": NoParams;
+	"mobile.session.composer.retry_not_sent_storage": NoParams;
 	"mobile.session.conversation_details": NoParams;
 	"mobile.session.highlights.sound_pause": { title: string | number };
 	"mobile.session.highlights.sound_play": { title: string | number };
@@ -1737,6 +1743,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
+	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Check free space on this phone, then try again.",
+	"mobile.session.composer.retry_not_sent_storage": "This retry attempt wasn’t sent. Couldn’t prepare the earlier instruction safely for retry. Check free space on this phone, then retry the earlier instruction. Your current draft hasn’t been sent.",
 	"mobile.session.conversation_details": "Conversation details",
 	"mobile.session.highlights.sound_pause": "Pause {title}",
 	"mobile.session.highlights.sound_play": "Play {title}",
@@ -2231,6 +2239,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.chip.model_resume_hint": { role: "help", note: "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop." },
 	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
 	"mobile.session.chip.model_unrecorded_hint": { role: "help", note: "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop." },
+	"mobile.session.composer.not_sent_storage": { role: "status", note: "Composer error before any HTTP dispatch: local safe-retry preparation failed. The text and image draft has not been consumed. Do not imply uncertain delivery or assert that disk space is the cause; checking free space is one actionable remedy. Never include storage exception text or private paths." },
+	"mobile.session.composer.retry_not_sent_storage": { role: "status", note: "Only the current RETRY ATTEMPT was not dispatched because local safe-retry preparation failed. The original instruction may already have arrived: its separate retained-envelope warning and Retry earlier instruction action stay visible. Never imply the current draft was retried or disk space is the known cause. Never include raw storage errors." },
 	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
 	"mobile.session.highlights.sound_pause": { role: "button", note: "Accessibility label of a sound cell's control while it plays. {title} is the sound's own name. No full stop." },
 	"mobile.session.highlights.sound_play": { role: "button", note: "Accessibility label of a sound cell's play control. {title} is the sound's own name, copied verbatim. No full stop." },
@@ -2739,6 +2749,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
+		"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Comprueba el espacio libre en este teléfono y vuelve a intentarlo.",
+		"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Comprueba el espacio libre de este teléfono y vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
 		"mobile.session.conversation_details": "Detalles de la conversación",
 		"mobile.session.highlights.sound_pause": "Pausar {title}",
 		"mobile.session.highlights.sound_play": "Reproducir {title}",
@@ -3231,6 +3243,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
+		"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Vérifiez l’espace libre sur ce téléphone, puis réessayez.",
+		"mobile.session.composer.retry_not_sent_storage": "Cette tentative de renvoi n’a pas été envoyée. Impossible de préparer en toute sécurité le renvoi de l’instruction précédente. Vérifiez l’espace libre sur ce téléphone, puis réessayez d’envoyer l’instruction précédente. Votre brouillon actuel n’a pas été envoyé.",
 		"mobile.session.conversation_details": "Détails de la conversation",
 		"mobile.session.highlights.sound_pause": "Mettre {title} en pause",
 		"mobile.session.highlights.sound_play": "Lire {title}",
@@ -3723,6 +3737,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
+		"mobile.session.composer.not_sent_storage": "नहीं भेजा गया। दोबारा भेजने के लिए यह संदेश सुरक्षित रूप से सहेजा नहीं जा सका। आपका टेक्स्ट और चित्र यहीं हैं। इस फ़ोन में खाली जगह जाँचें, फिर दोबारा कोशिश करें।",
+		"mobile.session.composer.retry_not_sent_storage": "दोबारा भेजने का यह प्रयास नहीं भेजा गया। पिछले निर्देश को सुरक्षित रूप से दोबारा भेजने की तैयारी नहीं हो सकी। इस फ़ोन में खाली जगह जाँचें, फिर पिछले निर्देश को दोबारा भेजने की कोशिश करें। आपका मौजूदा ड्राफ़्ट नहीं भेजा गया है।",
 		"mobile.session.conversation_details": "बातचीत का विवरण",
 		"mobile.session.highlights.sound_pause": "{title} रोकें",
 		"mobile.session.highlights.sound_play": "{title} चलाएँ",
@@ -4215,6 +4231,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
+		"mobile.session.composer.not_sent_storage": "Не отправлено. Не удалось надёжно сохранить сообщение для повторной отправки. Текст и изображения остались здесь. Проверьте свободное место на телефоне и попробуйте ещё раз.",
+		"mobile.session.composer.retry_not_sent_storage": "Эта попытка повторной отправки не была отправлена. Не удалось безопасно подготовить предыдущее указание к повторной отправке. Проверьте свободное место на этом телефоне, затем повторите отправку предыдущего указания. Текущий черновик не отправлен.",
 		"mobile.session.conversation_details": "Детали беседы",
 		"mobile.session.highlights.sound_pause": "Приостановить {title}",
 		"mobile.session.highlights.sound_play": "Воспроизвести {title}",
@@ -4707,6 +4725,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
+		"mobile.session.composer.not_sent_storage": "نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ اس فون میں خالی جگہ دیکھیں، پھر دوبارہ کوشش کریں۔",
+		"mobile.session.composer.retry_not_sent_storage": "دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ اس فون پر خالی جگہ چیک کریں، پھر پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔",
 		"mobile.session.conversation_details": "گفتگو کی تفصیلات",
 		"mobile.session.highlights.sound_pause": "{title} روکیں",
 		"mobile.session.highlights.sound_play": "{title} چلائیں",
@@ -5199,6 +5219,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
 		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
+		"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy kiểm tra dung lượng trống trên điện thoại này rồi thử lại.",
+		"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy kiểm tra dung lượng trống trên điện thoại này, rồi thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
 		"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
 		"mobile.session.highlights.sound_pause": "Tạm dừng {title}",
 		"mobile.session.highlights.sound_play": "Phát {title}",
@@ -5691,6 +5713,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",
+		"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请检查此手机的可用空间，然后重试。",
+		"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请检查此手机的可用空间，然后重试之前的指令。你当前的草稿尚未发送。",
 		"mobile.session.conversation_details": "对话详情",
 		"mobile.session.highlights.sound_pause": "暂停{title}",
 		"mobile.session.highlights.sound_play": "播放{title}",
