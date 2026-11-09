@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
 import React, { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pinnedWorkingLine } from "@/features/session/projection";
+import { t } from "@/i18n";
+import { decodeFrame } from "@/relay/sse";
+import { createProjectionStore, readEntry } from "@/state/projection-store";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 /**
@@ -26,15 +30,16 @@ const probe = vi.hoisted(() => ({
 	/** The geometry props each Pressable was given, by testID: the touch floor
 	 *  must be the BOX (react-native-web drops `hitSlop` on `Pressable`). */
 	targets: new Map<string, { style?: unknown; hitSlop?: unknown }>(),
+	texts: [] as Array<{
+		children?: React.ReactNode;
+		className?: string;
+		style?: { opacity?: number; position?: string };
+	}>,
 }));
 const DIGIT_SECONDS = /\ds/;
 
 vi.mock("react-native", async () => {
 	const React = await import("react");
-	const host =
-		(tag: string) =>
-		({ children }: { children?: React.ReactNode }) =>
-			React.createElement(tag, null, children ?? null);
 	return {
 		// The status region's accessible name is printed as `<name>` so the
 		// assertions can read what a screen reader hears.
@@ -53,7 +58,14 @@ vi.mock("react-native", async () => {
 				accessibilityRole === "progressbar" ? `<${accessibilityLabel}>` : null,
 				children ?? null,
 			),
-		Text: host("span"),
+		Text: (props: (typeof probe.texts)[number]) => {
+			probe.texts.push(props);
+			return React.createElement(
+				"span",
+				null,
+				props.style?.opacity === 0 ? null : (props.children ?? null),
+			);
+		},
 		Pressable: ({
 			children,
 			onPress,
@@ -152,6 +164,7 @@ beforeEach(() => {
 	probe.bodies = 0;
 	probe.presses.clear();
 	probe.targets.clear();
+	probe.texts = [];
 	probe.deferTweens = false;
 	probe.tweens = [];
 });
@@ -210,7 +223,96 @@ const render = (props: Parameters<typeof PinnedWorkingLine>[0]) =>
 	act(() => root.render(createElement(PinnedWorkingLine, props)));
 const screen = () => textOf(shim.container as Node);
 
+describe("activity wire → projection store → pinned line", () => {
+	it.each([128.4, 0, null])(
+		"preserves the producer intent and phase age %s across reconnect",
+		(age) => {
+			// The fixture documents its synthetic provenance and relay source ref;
+			// don't manufacture a second event shape just for the indicator.
+			const fixture = JSON.parse(
+				readFileSync(
+					new URL(
+						"../../../../fixtures/relay/synthetic/sse-projection-every-entry-kind.json",
+						import.meta.url,
+					),
+					"utf8",
+				),
+			);
+			const store = createProjectionStore();
+			const id = "activity-wire-test";
+			for (const version of [9, 1]) {
+				store.getState().beginStream(id);
+				const decoded = decodeFrame({
+					event: fixture.event,
+					data: JSON.stringify({
+						...fixture.data,
+						version,
+						activity_started_s: age,
+					}),
+					receivedAt: 0,
+				});
+				expect(decoded.kind).toBe("projection");
+				if (decoded.kind !== "projection")
+					throw new Error("fixture did not decode");
+				store.getState().applyFrame(id, decoded.data);
+				const projection = readEntry(store.getState(), id).projection;
+				expect(projection).not.toBeNull();
+				if (projection === null)
+					throw new Error("projection did not reach store");
+				const line = pinnedWorkingLine(projection);
+				expect(line).toEqual({
+					activity: fixture.data.activity,
+					startedS: age,
+				});
+				render({
+					line,
+					onStop: async () => true,
+					gapBelow: false,
+					stopping: false,
+				});
+				expect(screen().replace(/<[^>]*>/g, "")).toContain(
+					fixture.data.activity,
+				);
+				store.getState().endStream(id);
+			}
+		},
+	);
+});
+
 describe("PinnedWorkingLine", () => {
+	it("visibly names a live turn before the relay supplies an intent", () => {
+		render({
+			line: frame(true, "", null),
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+		});
+		// The shim prints accessibility names between angle brackets. Remove
+		// them: an accessible-only fallback still leaves sighted users with Stop.
+		const visible = screen().replace(/<[^>]*>/g, "");
+		expect(visible).toContain(t("relay.chrome.session.subtitle.working_plain"));
+	});
+	it("reserves the clock with real text geometry, not browser-only character units", () => {
+		render({
+			line: frame(true, "Reading exact intent", null),
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+		});
+		expect(
+			probe.texts.some(
+				(text) => text.style?.opacity === 0 && text.children === "59m 59s",
+			),
+		).toBe(true);
+		expect(probe.texts.some((text) => text.className?.includes("ch]"))).toBe(
+			false,
+		);
+		const visible = screen().replace(/<[^>]*>/g, "");
+		expect(visible).toContain("Reading exact intent");
+		expect(visible).not.toContain("Working");
+		expect(visible).not.toContain("59m 59s");
+	});
+
 	it("renders nothing when no turn is alive", () => {
 		render({
 			line: null,

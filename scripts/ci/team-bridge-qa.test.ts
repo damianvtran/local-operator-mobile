@@ -61,3 +61,22 @@ it("keeps fixtures out of every native/release workflow and artifact consumer", 
 	}
 	expect(qa).not.toContain("download-artifact");
 });
+
+const FIXTURE_SELECTOR = /grep -Eq '([^']+)'/;
+
+// Exercise the actual workflow selector rather than maintaining a parallel path
+// allowlist: #106 attachment/source changes must produce the opted-in artifact.
+it("selects attachment PR paths without selecting documentation-only changes", () => {
+	const expression = qa.match(FIXTURE_SELECTOR)?.[1];
+	if (!expression) throw new Error("fixture selector missing");
+	const selected = new RegExp(expression);
+	for (const path of [
+		"src/features/team-bridge/attachment-source.ts",
+		"src/features/team-bridge/attachment-draft.ts",
+		"src/testing/team-bridge-attachment-source.ts",
+		"src/team-bridge/attachments.ts",
+		"src/i18n/catalogues/ur/mobile.team_bridge.json",
+	])
+		expect(selected.test(path), path).toBe(true);
+	expect(selected.test("docs/ci.md")).toBe(false);
+});

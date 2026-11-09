@@ -121,4 +121,21 @@ describe("mounted Team Bridge composer", () => {
 		expect(s.create).not.toHaveBeenCalled();
 		expect(s.send).toHaveBeenCalledTimes(1);
 	});
+	it("sends image-only with an empty body, and keys the retry ref on text AND images", async () => {
+		const s = setup();
+		expect(await s.run("", [])).toBe(false);
+		s.send.mockRejectedValueOnce(new Error("dropped"));
+		await expect(s.run(" ", ["batt_1"])).rejects.toThrow("dropped");
+		expect(s.send).toHaveBeenLastCalledWith(TENANT, s.row.id, "", "ref-first", [
+			"batt_1",
+		]);
+		// Same payload → same idempotency ref (a safe retry).
+		s.send.mockRejectedValueOnce(new Error("dropped"));
+		await expect(s.run("", ["batt_1"])).rejects.toThrow("dropped");
+		expect(s.send.mock.calls[1]?.[3]).toBe("ref-first");
+		// A changed image set is a different message: the hub would refuse the
+		// old ref as `client_ref_conflict`, so a new one is minted.
+		expect(await s.run("", ["batt_1", "batt_2"])).toBe(true);
+		expect(s.send.mock.calls[2]?.[3]).toBe("ref-second");
+	});
 });

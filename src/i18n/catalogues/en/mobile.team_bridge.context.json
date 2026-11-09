@@ -1,4 +1,172 @@
 {
+	"mobile.team_bridge.attachment.add": {
+		"role": "button",
+		"note": "Team Bridge image attachments: add. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.attached_summary": {
+		"role": "status",
+		"note": "Team Bridge image attachments: attached_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.cannot_send": {
+		"role": "status",
+		"note": "Team Bridge image attachments: cannot_send. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals."
+	},
+	"mobile.team_bridge.attachment.chip_label": {
+		"role": "status",
+		"note": "Team Bridge image attachments: chip_label. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.close": {
+		"role": "button",
+		"note": "Team Bridge image attachments: close. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.conversation_gone": {
+		"role": "status",
+		"note": "Team Bridge image attachments: conversation_gone. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals."
+	},
+	"mobile.team_bridge.attachment.expired": {
+		"role": "status",
+		"note": "Team Bridge image attachments: expired. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.expired_unsent": {
+		"role": "status",
+		"note": "Team Bridge image attachments: expired_unsent. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals."
+	},
+	"mobile.team_bridge.attachment.failed": {
+		"role": "status",
+		"note": "Team Bridge image attachments: failed. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.image": {
+		"role": "status",
+		"note": "Team Bridge image attachments: image. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.image_position": {
+		"role": "status",
+		"note": "Team Bridge image attachments: image_position. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.library": {
+		"role": "button",
+		"note": "Team Bridge image attachments: library. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.limit": {
+		"role": "status",
+		"note": "Team Bridge image attachments: limit. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.load_error": {
+		"role": "status",
+		"note": "Team Bridge image attachments: load_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.loading_label": {
+		"role": "status",
+		"note": "Team Bridge image attachments: loading_label. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.next": {
+		"role": "button",
+		"note": "Team Bridge image attachments: next. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.open_hint": {
+		"role": "status",
+		"note": "Team Bridge image attachments: open_hint. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.paste": {
+		"role": "button",
+		"note": "Team Bridge image attachments: paste. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.paste_empty": {
+		"role": "status",
+		"note": "Team Bridge image attachments: paste_empty. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.position": {
+		"role": "status",
+		"note": "Team Bridge image attachments: position. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.prepare_error": {
+		"role": "status",
+		"note": "Team Bridge image attachments: prepare_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.preparing": {
+		"role": "status",
+		"note": "Team Bridge image attachments: preparing. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.previous": {
+		"role": "button",
+		"note": "Team Bridge image attachments: previous. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.quota": {
+		"role": "status",
+		"note": "Team Bridge image attachments: quota. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals."
+	},
+	"mobile.team_bridge.attachment.rate_error": {
+		"role": "status",
+		"note": "Team Bridge image attachments: rate_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.read_error": {
+		"role": "status",
+		"note": "Team Bridge image attachments: read_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.ready": {
+		"role": "status",
+		"note": "Team Bridge image attachments: ready. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.refused": {
+		"role": "status",
+		"note": "Team Bridge image attachments: refused. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals."
+	},
+	"mobile.team_bridge.attachment.remove_blocked": {
+		"role": "status",
+		"note": "Team Bridge image attachments: remove_blocked. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.remove_image": {
+		"role": "button",
+		"note": "Team Bridge image attachments: remove_image. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.retry": {
+		"role": "button",
+		"note": "Team Bridge image attachments: retry. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.retry_blocked": {
+		"role": "status",
+		"note": "Team Bridge image attachments: retry_blocked. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.retry_image": {
+		"role": "button",
+		"note": "Team Bridge image attachments: retry_image. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.retry_summary": {
+		"role": "status",
+		"note": "Team Bridge image attachments: retry_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.unavailable": {
+		"role": "status",
+		"note": "Team Bridge image attachments: unavailable. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.unsendable_summary": {
+		"role": "status",
+		"note": "Team Bridge image attachments: unsendable_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals."
+	},
+	"mobile.team_bridge.attachment.unsupported_content": {
+		"role": "status",
+		"note": "Team Bridge image attachments: unsupported_content. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.upload_error": {
+		"role": "status",
+		"note": "Team Bridge image attachments: upload_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.uploading": {
+		"role": "status",
+		"note": "Team Bridge image attachments: uploading. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.uploading_summary": {
+		"role": "status",
+		"note": "Team Bridge image attachments: uploading_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.viewer": {
+		"role": "status",
+		"note": "Team Bridge image attachments: viewer. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
+	"mobile.team_bridge.attachment.wait_uploads": {
+		"role": "status",
+		"note": "Team Bridge image attachments: wait_uploads. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
+	},
 	"mobile.team_bridge.back": {
 		"role": "button",
 		"note": "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."

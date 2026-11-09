@@ -9,6 +9,59 @@ describe("Team Bridge copy", () => {
 	// Keep the added surface explicit: cardinality alone cannot catch a renamed or
 	// substituted key, and every shipped locale must own this same message set.
 	it.each(SHIPPED_LOCALES)(
+		"owns the attachment key contract in %s",
+		(locale) => {
+			expect(
+				Object.keys(CATALOGUES[locale])
+					.filter((key) => key.startsWith("mobile.team_bridge.attachment."))
+					.sort(),
+			).toEqual([
+				"mobile.team_bridge.attachment.add",
+				"mobile.team_bridge.attachment.attached_summary",
+				"mobile.team_bridge.attachment.cannot_send",
+				"mobile.team_bridge.attachment.chip_label",
+				"mobile.team_bridge.attachment.close",
+				"mobile.team_bridge.attachment.conversation_gone",
+				"mobile.team_bridge.attachment.expired",
+				"mobile.team_bridge.attachment.expired_unsent",
+				"mobile.team_bridge.attachment.failed",
+				"mobile.team_bridge.attachment.image",
+				"mobile.team_bridge.attachment.image_position",
+				"mobile.team_bridge.attachment.library",
+				"mobile.team_bridge.attachment.limit",
+				"mobile.team_bridge.attachment.load_error",
+				"mobile.team_bridge.attachment.loading_label",
+				"mobile.team_bridge.attachment.next",
+				"mobile.team_bridge.attachment.open_hint",
+				"mobile.team_bridge.attachment.paste",
+				"mobile.team_bridge.attachment.paste_empty",
+				"mobile.team_bridge.attachment.position",
+				"mobile.team_bridge.attachment.prepare_error",
+				"mobile.team_bridge.attachment.preparing",
+				"mobile.team_bridge.attachment.previous",
+				"mobile.team_bridge.attachment.quota",
+				"mobile.team_bridge.attachment.rate_error",
+				"mobile.team_bridge.attachment.read_error",
+				"mobile.team_bridge.attachment.ready",
+				"mobile.team_bridge.attachment.refused",
+				"mobile.team_bridge.attachment.remove_blocked",
+				"mobile.team_bridge.attachment.remove_image",
+				"mobile.team_bridge.attachment.retry",
+				"mobile.team_bridge.attachment.retry_blocked",
+				"mobile.team_bridge.attachment.retry_image",
+				"mobile.team_bridge.attachment.retry_summary",
+				"mobile.team_bridge.attachment.unavailable",
+				"mobile.team_bridge.attachment.unsendable_summary",
+				"mobile.team_bridge.attachment.unsupported_content",
+				"mobile.team_bridge.attachment.upload_error",
+				"mobile.team_bridge.attachment.uploading",
+				"mobile.team_bridge.attachment.uploading_summary",
+				"mobile.team_bridge.attachment.viewer",
+				"mobile.team_bridge.attachment.wait_uploads",
+			]);
+		},
+	);
+	it.each(SHIPPED_LOCALES)(
 		"owns the default_on key contract in %s",
 		(locale) => {
 			expect(
@@ -33,8 +86,8 @@ describe("Team Bridge copy", () => {
 		const keys = Object.keys(CATALOGUES[locale]).filter((k) =>
 			k.startsWith("mobile.team_bridge."),
 		);
-		// PR #108: 104 established keys + 9 default_on keys.
-		expect(keys).toHaveLength(113);
+		// Exact merged attachment + consent + established key union.
+		expect(keys).toHaveLength(155);
 		expect(keys.sort()).toEqual(
 			Object.keys(CATALOGUES.en)
 				.filter((key) => key.startsWith("mobile.team_bridge."))
