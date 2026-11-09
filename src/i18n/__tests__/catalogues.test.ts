@@ -98,7 +98,7 @@ const NAMESPACES = [
 		name: "mobile.library",
 		messages: library,
 		context: libraryContext,
-		expected: 31,
+		expected: 32,
 	},
 	{
 		name: "mobile.home",
@@ -195,7 +195,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 17,
+		expected: 18,
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -258,7 +258,9 @@ describe("the English catalogues", () => {
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
 		/* Exact merged catalogue union: main's 538 plus this PR's four
 		 * editor-only clear/dismiss labels and hints. */
-		expect(total).toBe(542);
+		/* Plus two from the header/drawer/secondary-screens polish: the
+		 * Settings "Text size" label and the Library filter sheet's "Source". */
+		expect(total).toBe(544);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

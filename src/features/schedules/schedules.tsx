@@ -41,6 +41,7 @@ import {
 	scheduleWakeRowId,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { EmptyState } from "@/ui/components/empty-state";
 import { RefusalSurface } from "@/ui/components/refusal-surface";
@@ -172,12 +173,9 @@ export default function Schedules() {
 			title="Schedules"
 			testID={SCREEN.schedules}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.schedulesBack}
-					label="Back"
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 		>

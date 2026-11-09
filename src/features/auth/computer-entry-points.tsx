@@ -352,11 +352,14 @@ export function DrawerComputerRow({
 				open({ returnFocusTestID: CONTROL.computersButton });
 			}}
 			testID={testID}
-			/* The same control edge as the chip: one deliberate affordance pair for
-			 *  both entry points, and in the light palette the old `panel-edge` was
-			 *  `hairline` — 1.18:1 on this row's `surface` fill (D8). `border-control`
-			 *  measures 3.65:1 here. */
-			className="w-full flex-row items-center gap-2 rounded-md border border-border-control bg-surface px-3"
+			/* BORDERLESS (visual audit D11, and the standing direction that the
+			 *  sidebar is dense and borderless). The row used to be a bordered,
+			 *  filled chip — a second boxed control stacked on the destinations bar,
+			 *  which is what made the footer read as three bands. The affordance is
+			 *  carried by what a switcher row is everywhere else: the health mark,
+			 *  the name, and the up/down chevrons at the trailing edge. `px-2`
+			 *  aligns the mark with the destination icons below it. */
+			className="w-full flex-row items-center gap-2 rounded-md px-2"
 			style={{ minHeight: TOUCH_FLOOR }}
 		>
 			<HealthMark entry={entry} {...geometry} />

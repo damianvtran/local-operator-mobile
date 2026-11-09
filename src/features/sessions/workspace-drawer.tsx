@@ -110,6 +110,7 @@ export const WorkspaceDrawerProvider = ({
 	);
 	const currentSessionId = SESSION_PATH.exec(pathname)?.[1];
 	const bridge = mode === "team-bridge" && bridgeAdapter;
+	const { effectiveScale } = useTextScale();
 	return (
 		<WorkspaceDrawerContext.Provider
 			value={{
@@ -140,13 +141,37 @@ export const WorkspaceDrawerProvider = ({
 								variant={mode === "agents" ? "primary" : "quiet"}
 								onPress={() => selectMode("agents")}
 							/>
-							<Button
-								testID={CONTROL.workspaceDrawerTeamBridge}
-								label={bridgeAdapter.bridgeBadge.a11yLabel}
-								selected={Boolean(bridge)}
-								variant={bridge ? "primary" : "quiet"}
-								onPress={() => selectMode("team-bridge")}
-							/>
+							{/* LABEL AND COUNT ARE SEPARATE (Bridge UI brief §2). The
+							 *  button's visible text is the stable product name; the
+							 *  adapter's `a11yLabel` — which may carry the count or
+							 *  "unavailable" — is its accessible name only, so the
+							 *  selector never grows an ever-longer label. The count is
+							 *  its own badge and is drawn ONLY for a known, positive
+							 *  number: `null` is unknown and a non-ready state has no
+							 *  count to trust, and neither may paint as a zero. */}
+							<View className="flex-row items-center gap-1">
+								<Button
+									testID={CONTROL.workspaceDrawerTeamBridge}
+									label={t("mobile.team_bridge.title")}
+									accessibilityLabel={bridgeAdapter.bridgeBadge.a11yLabel}
+									selected={Boolean(bridge)}
+									variant={bridge ? "primary" : "quiet"}
+									onPress={() => selectMode("team-bridge")}
+								/>
+								{bridgeAdapter.bridgeBadge.state === "ready" &&
+								bridgeAdapter.bridgeBadge.count !== null &&
+								bridgeAdapter.bridgeBadge.count > 0 ? (
+									<View aria-hidden pointerEvents="none">
+										<Badge
+											label={countLabel(bridgeAdapter.bridgeBadge.count)}
+											tone="warning"
+											emphasis
+											mono
+											scale={effectiveScale}
+										/>
+									</View>
+								) : null}
+							</View>
 						</View>
 					) : undefined
 				}

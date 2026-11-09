@@ -8,6 +8,7 @@
 	"mobile.library.browse.filters_count": "Filtres · {count}",
 	"mobile.library.browse.more_kinds": "Autres types",
 	"mobile.library.browse.no_tags": "Aucune étiquette pour l’instant. Le bibliothécaire les ajoute en organisant les éléments.",
+	"mobile.library.browse.origin": "Origine",
 	"mobile.library.browse.refresh": "Actualiser la bibliothèque",
 	"mobile.library.browse.search_label": "Rechercher dans la bibliothèque",
 	"mobile.library.browse.search_placeholder": "Nom, étiquette ou mots",

@@ -1,4 +1,5 @@
 {
+	"mobile.settings.text_size.label": "Cỡ chữ",
 	"mobile.settings.theme.caption_forced": "Luôn dùng {name}",
 	"mobile.settings.theme.caption_system": "Hệ thống dùng {light} và {dark}",
 	"mobile.settings.theme.card_dark": "{name}, giao diện tối",

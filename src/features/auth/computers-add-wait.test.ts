@@ -66,6 +66,10 @@ vi.mock("expo-router", () => ({
 vi.mock("expo-web-browser", () => ({ openBrowserAsync: async () => ({}) }));
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
 const stub = (name: string) => ({ [name]: () => null });
+/* The header's back control is chrome, not part of the polling contract, and
+ * its chevron reaches `lucide-react-native` (native SVG, Flow source Node cannot
+ * parse) — the same reason the other leaf primitives here are stubs. */
+vi.mock("@/ui/components/back-button", () => stub("BackButton"));
 vi.mock("@/ui/components/badge", () => stub("Badge"));
 vi.mock("@/ui/components/banner", () => stub("Banner"));
 vi.mock("@/ui/components/dialog", () => stub("Dialog"));

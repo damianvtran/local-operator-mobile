@@ -1,4 +1,5 @@
 {
+	"mobile.settings.text_size.label": "Размер текста",
 	"mobile.settings.theme.caption_forced": "Всегда {name}",
 	"mobile.settings.theme.caption_system": "Как в системе: {light} и {dark}",
 	"mobile.settings.theme.card_dark": "{name}, тёмная тема",

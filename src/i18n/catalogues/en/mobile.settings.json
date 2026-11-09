@@ -1,4 +1,5 @@
 {
+	"mobile.settings.text_size.label": "Text size",
 	"mobile.settings.theme.caption_forced": "Always {name}",
 	"mobile.settings.theme.caption_system": "System uses {light} and {dark}",
 	"mobile.settings.theme.card_dark": "{name}, dark theme",

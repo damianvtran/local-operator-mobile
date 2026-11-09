@@ -1,4 +1,5 @@
 {
+	"mobile.settings.text_size.label": "متن کا سائز",
 	"mobile.settings.theme.caption_forced": "ہمیشہ {name}",
 	"mobile.settings.theme.caption_system": "سسٹم {light} اور {dark} استعمال کرتا ہے",
 	"mobile.settings.theme.card_dark": "{name}، گہرا تھیم",

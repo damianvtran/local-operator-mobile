@@ -11,11 +11,10 @@ import {
 	SquarePen,
 	X,
 } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import type { SessionSummary } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
-import { AgentListRow } from "@/features/agent-avatar/agent-avatar-view";
 import { DrawerComputerRow } from "@/features/auth/computer-entry-points";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
@@ -30,27 +29,19 @@ import {
 } from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
-	attentionWord,
 	degradedNote,
 	degradedShortNote,
 	inboxBadgeCount,
 	isRemoteRow,
-	relativeTimeFor,
-	remoteAttention,
-	remoteDeviceLabel,
 	splitSidebarSections,
 	staleNote,
 	staleShortNote,
 	visiblePeers,
 } from "@/features/sessions/session-projection";
-import { SessionTagLine } from "@/features/sessions/tag-line";
-import {
-	canAssignSessionTags,
-	tagAnnouncement,
-} from "@/features/sessions/tags";
+import { SessionRow } from "@/features/sessions/session-row";
+import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { t } from "@/i18n";
-import { homeShortened } from "@/lib/format";
 import { useUiStore } from "@/state/ui-store";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import {
@@ -58,12 +49,8 @@ import {
 	EMPTY,
 	REGION,
 	ROLE,
-	remoteSessionRowId,
 	STATE_MARKER,
 	SURFACE,
-	sessionRowAvatarId,
-	sessionRowId,
-	sessionTagLineId,
 	state,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -195,9 +182,19 @@ export const ConversationsPane = ({
 
 	const sessions = useListState((state) => state.sessions);
 	const degraded = useListState((state) => state.degraded);
-	const frameCount = useListState((state) => state.frameCount);
+	/* NARROW SUBSCRIPTIONS (perf audit P11). `frameCount` and `lastFrameAt`
+	 *  change on EVERY list frame, and subscribing to them re-rendered this
+	 *  whole pane — header, footer, sheets and list shell — per frame for two
+	 *  facts that almost never change: "has any frame arrived" and "how old is
+	 *  the frame we are showing while STALE" (a fresh frame clears `stale`, and
+	 *  `staleNote` answers null without it, so the timestamp is only read while
+	 *  the flag is up). The selectors return exactly those, so zustand's
+	 *  identity check skips the pane on an ordinary frame. */
+	const anyFrame = useListState((state) => state.frameCount > 0);
 	const stale = useListState((state) => state.stale);
-	const lastFrameAt = useListState((state) => state.lastFrameAt);
+	const lastFrameAt = useListState((state) =>
+		state.stale ? state.lastFrameAt : null,
+	);
 	const capabilities = useListState((state) => state.capabilities);
 	/* The inbox's own count, off the list frame (contract §5.4). `null` draws no
 	 * numeral — an older relay's omission is unknown, never a zero. */
@@ -309,8 +306,8 @@ export const ConversationsPane = ({
 	const degradedMessage = degradedNote(degraded);
 	const staleMessage = staleNote({ stale, lastFrameAt });
 	const staleShortMessage = staleShortNote({ stale, lastFrameAt });
-	const waiting = frameCount === 0 && !loadFailed(streamHealth);
-	const hasRoute = sessions.length > 0 || frameCount > 0;
+	const waiting = !anyFrame && !loadFailed(streamHealth);
+	const hasRoute = sessions.length > 0 || anyFrame;
 	/* The header's New chat row yields while the empty state owns the screen
 	 * (design D6): two "New chat" actions inside one 264 pt panel, and the CTA
 	 * at the point of need — the empty state's own action, the one the flows
@@ -361,6 +358,54 @@ export const ConversationsPane = ({
 		}
 		openSession(session);
 	};
+
+	/* STABLE ROW CALLBACKS (perf audit P11). `activate` closes over the router,
+	 *  the current session and `onNavigate`, so it is a new function every
+	 *  render; handed to a row it would defeat `memo(SessionRow)`. The ref holds
+	 *  the latest pair and the two callbacks the rows receive never change
+	 *  identity. Written in an effect-free assignment on purpose: the handlers
+	 *  only run from a press, long after this render committed. */
+	const rowHandlers = useRef({ activate, setMenuTarget, setMoveTarget });
+	rowHandlers.current = { activate, setMenuTarget, setMoveTarget };
+	const onRowActivate = useCallback(
+		(session: SessionSummary) => rowHandlers.current.activate(session),
+		[],
+	);
+	const onRowLongPress = useCallback((session: SessionSummary) => {
+		if (isRemoteRow(session)) rowHandlers.current.setMoveTarget(session);
+		else rowHandlers.current.setMenuTarget(session);
+	}, []);
+	/* Hoisted so the list's cells keep ONE `renderItem` across pane renders;
+	 *  its dependencies are the row props that are not per-session. */
+	const renderItem = useCallback(
+		({ item }: { item: Item }) =>
+			item.kind === "header" ? (
+				<SectionHeader label={item.label} testID={item.testID} />
+			) : (
+				<SessionRow
+					session={item.session}
+					section={item.section}
+					selected={item.session.session_id === currentSessionId}
+					now={now}
+					reserveLeading={anyRowPictured}
+					surfaceClassName={surfaceClassName}
+					homeDirectory={homeDirectory}
+					tagsAssignable={tagsAssignable}
+					onActivate={onRowActivate}
+					onLongPress={onRowLongPress}
+				/>
+			),
+		[
+			anyRowPictured,
+			currentSessionId,
+			homeDirectory,
+			now,
+			onRowActivate,
+			onRowLongPress,
+			surfaceClassName,
+			tagsAssignable,
+		],
+	);
 
 	/* THE FOOTER (record §3): conversations first, everything else in two compact
 	 *  rows. It was five full-width centred buttons plus the computer row — 328 pt
@@ -468,6 +513,15 @@ export const ConversationsPane = ({
 						onNavigate={onNavigate}
 					/>
 				</View>
+				{/* Team Bridge: a hub destination, never a relay capability, so it is
+				 *  not capability-gated. It is ONE CONTROL ON THIS ROW now (visual
+				 *  audit D11): as its own band — a centred label over a two-line
+				 *  caption, ~74 pt — it read as a promotion and cost the list a row
+				 *  and a half. Beside the gear it is a toolbar item like Settings,
+				 *  with its unread count on the icon; and because this row is kept
+				 *  at every text size, it stays reachable where the strip below
+				 *  collapses to "More". */}
+				<TeamBridgeEntry variant="compact" onNavigate={onNavigate} />
 				<IconButton
 					accessibilityLabel={t("relay.chrome.drawer.settings")}
 					onPress={() => go("/settings")}
@@ -475,10 +529,6 @@ export const ConversationsPane = ({
 					testID={CONTROL.settingsButton}
 				/>
 			</View>
-			{/* Team Bridge: a hub destination, never a relay capability, so it is not
-			 *  capability-gated — and it sits ABOVE the strip in both forms, because at
-			 *  large text the "More" row would otherwise be the only way into it. */}
-			<TeamBridgeEntry onNavigate={onNavigate} />
 			{largeText ? (
 				/* ≥ 200 %-class text: one honest row instead of five clipped labels. */
 				<Pressable
@@ -668,7 +718,7 @@ export const ConversationsPane = ({
 				contentContainerClassName="grow px-4"
 				ListFooterComponent={scrollFooter ? footer : null}
 				data={items}
-				keyExtractor={(item) => item.key}
+				keyExtractor={itemKey}
 				refreshControl={
 					<RefreshControl refreshing={busy} onRefresh={onRefresh} />
 				}
@@ -685,103 +735,7 @@ export const ConversationsPane = ({
 						</View>
 					) : null
 				}
-				renderItem={({ item }) => {
-					if (item.kind === "header") {
-						return <SectionHeader label={item.label} testID={item.testID} />;
-					}
-					const session = item.session;
-					/* The row's kind decides the live facts' SOURCE, and the two must not
-					 * be mixed: a local row's `streaming`/`needs_attention`/`degraded` are
-					 * the relay's local vocabulary, while a remote row's are the
-					 * transport's `live_state`/`pending` VERBATIM (`session-projection`
-					 * states the mapping). The boundary's defaults make a remote row READ
-					 * as an idle local one, which is why every live field below is branched
-					 * on the row's kind rather than read through the default. */
-					const remote = isRemoteRow(session);
-					return (
-						<AgentListRow
-							selected={session.session_id === currentSessionId}
-							selectedIndicator
-							avatarRef={avatarRefOf(session)}
-							avatarTestID={sessionRowAvatarId(session.session_id)}
-							reserveLeading={anyRowPictured}
-							surfaceClassName={surfaceClassName}
-							title={session.conversation_name.trim() || "untitled"}
-							cwd={
-								remote
-									? undefined
-									: homeDirectory
-										? homeShortened(session.cwd, homeDirectory)
-										: session.cwd
-							}
-							model={session.model_label}
-							time={
-								item.section === "running"
-									? undefined
-									: (relativeTimeFor(session, now) ?? undefined)
-							}
-							pending={
-								remote
-									? remoteAttention(session) !== null
-									: session.needs_attention
-							}
-							attentionWord={attentionWord(session)}
-							streaming={
-								remote ? session.live_state === "busy" : session.streaming
-							}
-							unread={session.unseen}
-							ended={session.ended === true}
-							degraded={
-								remote
-									? session.live_state === "wedged"
-									: session.degraded === true
-							}
-							subagentCount={session.subagents_running ?? 0}
-							remote={
-								remote
-									? {
-											device: remoteDeviceLabel(session),
-											reachable: session.reachable !== false,
-											indicatorTestID: remoteSessionRowId(session.session_id),
-										}
-									: undefined
-							}
-							onPress={() => activate(session)}
-							onLongPress={() =>
-								remote ? setMoveTarget(session) : setMenuTarget(session)
-							}
-							longPressAccessibilityHint={
-								remote
-									? "Move or copy"
-									: tagsAssignable
-										? "Pin, tag, or open"
-										: "Pin or open"
-							}
-							/* Read-only on a remote row: its tags live in the other device's
-							 *  store, and this phone has no route to write them. Today the relay
-							 *  sends `[]` for one, so the line is absent — the branch exists so a
-							 *  future relay that projects them renders them (the brief's rule)
-							 *  rather than silently dropping a fact. */
-							tagLine={
-								(session.tags?.length ?? 0) > 0 ? (
-									<SessionTagLine
-										tags={session.tags ?? []}
-										testID={sessionTagLineId(session.session_id)}
-										/* The ROW announces its tags as one label; the line
-										 *  itself must not be a second stop (D4/Q2). */
-										announce={false}
-									/>
-								) : undefined
-							}
-							tagAnnouncement={
-								(session.tags?.length ?? 0) > 0
-									? tagAnnouncement(session.tags ?? [])
-									: undefined
-							}
-							testID={sessionRowId(session.session_id)}
-						/>
-					);
-				}}
+				renderItem={renderItem}
 				ListEmptyComponent={
 					/* `flex-1` only while the empty state FITS. The pane's list owns its
 					 *  own box (header, pill, New chat and footer are siblings), and when
@@ -976,6 +930,9 @@ function loadFailed(
 type Item =
 	| { kind: "header"; key: string; label: string; testID?: string }
 	| { kind: "row"; key: string; session: SessionSummary; section: string };
+
+/** Module-level so the list never sees a new extractor (perf audit P11). */
+const itemKey = (item: Item): string => item.key;
 
 /**
  * The flat list the pane renders: section headings and rows, in the relay's own

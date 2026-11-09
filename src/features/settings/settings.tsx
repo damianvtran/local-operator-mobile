@@ -28,6 +28,7 @@ import type { ThemeMode } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
+import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Card } from "@/ui/components/card";
@@ -268,12 +269,9 @@ export default function Settings() {
 			testID={SCREEN.settings}
 			scrollRef={scrollRef}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.settingsBack}
-					label="Back"
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 		>
@@ -445,7 +443,12 @@ export default function Settings() {
 							testID={CONTROL.settingsRefresh}
 							label="Refresh"
 							onPress={() => void refreshComputers()}
-							variant="outline"
+							/* ONE STYLE FOR THE THREE (visual audit D15). Refresh was
+							 *  outlined while its two neighbours were plain text, which
+							 *  ranked a background re-read above "Switch computer" — the
+							 *  action a reader actually comes here for. None of the three
+							 *  is the section's primary action, so all three are quiet. */
+							variant="quiet"
 							size="sm"
 							/* A discovery, not a pick: the same flag the Computers header
 							 *  uses, which also absorbs repeat taps while one is in flight
@@ -491,48 +494,67 @@ export default function Settings() {
 					 *  side paints is the Theme screen behind the row below (decision
 					 *  record § 5). The Segmented keeps its ids, so the settings flows
 					 *  and proofs that drive it are unchanged. */}
-					<Segmented<ThemeMode>
-						testID={CONTROL.settingsThemeGroup}
-						label={t("mobile.settings.theme.mode_label")}
-						value={theme}
-						onChange={setPreference}
-						options={[
-							{
-								value: "system",
-								label: t("mobile.settings.theme.mode_system"),
-								testID: CONTROL.settingsThemeSystem,
-							},
-							{
-								value: "dark",
-								label: t("mobile.settings.theme.mode_dark"),
-								testID: CONTROL.settingsThemeDark,
-							},
-							{
-								value: "light",
-								label: t("mobile.settings.theme.mode_light"),
-								testID: CONTROL.settingsThemeLight,
-							},
-						]}
-					/>
+					{/* VISIBLE LABELS (visual audit D15). Both segmented controls had
+					 *  an accessible name and no visible one, so a sighted reader met
+					 *  "System / Dark / Light" directly above "System / 100% / 150% /
+					 *  200%" and had to infer which was which from the options. The
+					 *  label is the control's own accessible name, drawn — so the two
+					 *  cannot drift (WCAG 2.5.3) — and hidden from assistive tech,
+					 *  which already hears it as the group's name. The theme control
+					 *  says "Theme mode", not "Theme": the row right under it is
+					 *  already labelled "Theme" and opens the palette picker. */}
+					<View className="gap-2">
+						<Text aria-hidden className="text-label text-ink-muted">
+							{t("mobile.settings.theme.mode_label")}
+						</Text>
+						<Segmented<ThemeMode>
+							testID={CONTROL.settingsThemeGroup}
+							label={t("mobile.settings.theme.mode_label")}
+							value={theme}
+							onChange={setPreference}
+							options={[
+								{
+									value: "system",
+									label: t("mobile.settings.theme.mode_system"),
+									testID: CONTROL.settingsThemeSystem,
+								},
+								{
+									value: "dark",
+									label: t("mobile.settings.theme.mode_dark"),
+									testID: CONTROL.settingsThemeDark,
+								},
+								{
+									value: "light",
+									label: t("mobile.settings.theme.mode_light"),
+									testID: CONTROL.settingsThemeLight,
+								},
+							]}
+						/>
+					</View>
 					<ThemeRow />
-					<Segmented
-						testID={CONTROL.settingsTextScaleGroup}
-						label="Text size"
-						value={textScale.preference}
-						onChange={textScale.setPreference}
-						options={TEXT_SCALE_OPTIONS.map((option) => ({
-							value: option.value,
-							label: option.label,
-							testID:
-								option.value === "100"
-									? CONTROL.settingsTextScale100
-									: option.value === "150"
-										? CONTROL.settingsTextScale150
-										: option.value === "200"
-											? CONTROL.settingsTextScale200
-											: CONTROL.settingsTextScaleSystem,
-						}))}
-					/>
+					<View className="gap-2">
+						<Text aria-hidden className="text-label text-ink-muted">
+							{t("mobile.settings.text_size.label")}
+						</Text>
+						<Segmented
+							testID={CONTROL.settingsTextScaleGroup}
+							label={t("mobile.settings.text_size.label")}
+							value={textScale.preference}
+							onChange={textScale.setPreference}
+							options={TEXT_SCALE_OPTIONS.map((option) => ({
+								value: option.value,
+								label: option.label,
+								testID:
+									option.value === "100"
+										? CONTROL.settingsTextScale100
+										: option.value === "150"
+											? CONTROL.settingsTextScale150
+											: option.value === "200"
+												? CONTROL.settingsTextScale200
+												: CONTROL.settingsTextScaleSystem,
+							}))}
+						/>
+					</View>
 					<Text className="text-body-sm text-ink-dim">
 						This phone's own text size is{" "}
 						{Math.round(textScale.platformScale * 100)}%.

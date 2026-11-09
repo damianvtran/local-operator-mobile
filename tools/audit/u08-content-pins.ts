@@ -1171,7 +1171,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #106 + main 8705a953: combined staged source identity only, not new pixels.
 	/* PR #206 merge-gate convergence with main 3e759dac: src re-derived with
 	 * --print over the staged merged tree; identity admission only. */
-	src: "161a358d28b449ed3f964615b58528edf3df603f60f39f5f774640f69f044b9e",
+	src: "3c28376350ed69dfda2ad7decc889e7b65ba79bf23fc2b34a87c82ebd04417cf",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

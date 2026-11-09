@@ -8,6 +8,7 @@
 	"mobile.library.browse.filters_count": "筛选 · {count}",
 	"mobile.library.browse.more_kinds": "更多类型",
 	"mobile.library.browse.no_tags": "暂无标签。Librarian整理资源时会自动添加。",
+	"mobile.library.browse.origin": "来源",
 	"mobile.library.browse.refresh": "刷新资料库",
 	"mobile.library.browse.search_label": "搜索资料库",
 	"mobile.library.browse.search_placeholder": "名称、标签或文字",

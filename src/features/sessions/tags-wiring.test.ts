@@ -20,6 +20,9 @@ const source = (relative: string): string =>
 	readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
 
 const PANE = source("./conversations-pane.tsx");
+/* The row moved out of the pane into its own memoised component (perf audit
+ *  P11); the per-row wiring is asserted where it now lives. */
+const ROW = source("./session-row.tsx");
 const SHEET = source("./tags-sheet.tsx");
 const LINE = source("./tag-line.tsx");
 const PAST = source("../../features/past/past.tsx");
@@ -43,15 +46,16 @@ describe("the conversations pane", () => {
 		 *  row ever reaches `menuTarget`, which is the only place the action is
 		 *  rendered. */
 		expect(PANE).toContain(
-			"remote ? setMoveTarget(session) : setMenuTarget(session)",
+			"if (isRemoteRow(session)) rowHandlers.current.setMoveTarget(session);\n\t\telse rowHandlers.current.setMenuTarget(session);",
 		);
+		expect(ROW).toContain("onLongPress={() => onLongPress(session)}");
 	});
 
 	it("renders a tag line on every row that has one, remote included", () => {
 		/* The line is outside the local/remote branches: a future relay that
 		 *  projects another device's tags renders them read-only here. */
-		expect(PANE).toContain("<SessionTagLine");
-		expect(PANE).toContain("sessionTagLineId(session.session_id)");
+		expect(ROW).toContain("<SessionTagLine");
+		expect(ROW).toContain("sessionTagLineId(session.session_id)");
 	});
 
 	it("keeps the sheet's subject fresh from the list frames", () => {

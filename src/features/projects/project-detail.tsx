@@ -34,6 +34,7 @@ import {
 	SURFACE,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
@@ -303,12 +304,9 @@ export default function ProjectDetail() {
 			title={project === null ? "Project" : projectDisplayName(project)}
 			testID={SCREEN.projectDetail}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.projectDetailBack}
-					label="Back"
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 		>

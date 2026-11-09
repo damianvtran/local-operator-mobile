@@ -26,6 +26,7 @@ import {
 } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
 import { sidebarWidthFor, TOUCH_FLOOR } from "@/ui/layout";
+import { useModalExit } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
@@ -121,12 +122,42 @@ export const ConversationsDrawer = ({
 	const slide = useRef(new Animated.Value(0)).current;
 	const scrimFade = useRef(new Animated.Value(0)).current;
 
-	useEffect(() => {
-		if (!visible) {
+	/* THE EXIT (perf audit P7; rule and limits in `@/ui/modal-exit`): the panel
+	 *  slides back toward the leading edge and the scrim fades, on the native
+	 *  driver, while the `Modal` stays mounted (`exiting`). Skipped — reset, as
+	 *  before — under reduced motion and whenever the close is a hand-off to
+	 *  another modal (the workspace row raising the computer switcher). */
+	const exitMs = effectiveDuration(DURATIONS.fast, reduceMotion);
+	const exiting = useModalExit({
+		visible,
+		reduceMotion,
+		durationMs: exitMs,
+		reset: () => {
 			slide.setValue(0);
 			scrimFade.setValue(0);
-			return;
-		}
+		},
+		animateOut: (done) => {
+			Animated.parallel([
+				Animated.timing(slide, {
+					toValue: 0,
+					duration: exitMs,
+					/* The kit's `in-out` token: there is no "in" curve in the
+					 *  token set and an exit does not earn a new one. */
+					easing: Easing.bezier(...parseCubicBezier(EASINGS["in-out"])),
+					useNativeDriver: true,
+				}),
+				Animated.timing(scrimFade, {
+					toValue: 0,
+					duration: exitMs,
+					useNativeDriver: true,
+				}),
+			]).start(done);
+		},
+	});
+
+	useEffect(() => {
+		/* Closed: `useModalExit` above owns the values (animated or reset). */
+		if (!visible) return;
 		Animated.parallel([
 			Animated.timing(slide, {
 				toValue: 1,
@@ -185,7 +216,7 @@ export const ConversationsDrawer = ({
 		 *  a ~9 ms flicker and no menu). */
 		<ModalScopeContext.Provider value={scope}>
 			<Modal
-				visible={visible && !covered}
+				visible={(visible || exiting) && !covered}
 				transparent
 				animationType="none"
 				onRequestClose={close}

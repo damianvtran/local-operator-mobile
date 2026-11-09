@@ -70,10 +70,7 @@ import {
 	libraryEnabled,
 	MORE_CATEGORIES,
 } from "@/features/library/library-model";
-import {
-	type LibraryUpdate,
-	libraryUpdateState,
-} from "@/features/library/library-updates";
+import { libraryUpdateState } from "@/features/library/library-updates";
 import { useLibraryList } from "@/features/library/use-library-list";
 import { t } from "@/i18n";
 import type { RelayEndpoints } from "@/relay";
@@ -94,13 +91,13 @@ import {
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Alert } from "@/ui/components/alert";
+import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
-import { Segmented } from "@/ui/components/segmented";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
 import { TOUCH_FLOOR } from "@/ui/layout";
@@ -219,12 +216,9 @@ export default function Library() {
 			title={t("mobile.library.title")}
 			testID={SCREEN.library}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.libraryBack}
-					label={t("mobile.common.back")}
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 			headerAction={
@@ -255,31 +249,33 @@ export default function Library() {
 							placeholder={t("mobile.library.browse.search_placeholder")}
 							returnKeyType="search"
 						/>
-						<Segmented
-							label={t("mobile.library.browse.filter_by_kind")}
-							options={segments}
-							value={browse.segment}
-							onChange={changeSegment}
-							testID={CONTROL.libraryMore}
-						/>
+						{/* ONE TYPE ROW THAT SCROLLS (visual audit D17). This was a
+						 *  wrapping segmented control (two rows at 390 pt), then an
+						 *  All/Created/Mentioned row, then Filters and Sort, then a tag
+						 *  row: five bands, and the first asset began half-way down an
+						 *  844 pt screen. The kinds are the filter a reader changes most,
+						 *  so they keep a visible control — one line, scrolling sideways
+						 *  rather than wrapping. Origin and tags are set less often and
+						 *  now live in the Filters sheet, whose chip already counts them
+						 *  (`filterCount`), so an active one is never invisible. */}
 						<ScrollView
 							horizontal
 							showsHorizontalScrollIndicator={false}
 							contentContainerStyle={{ gap: 8 }}
-							testID={REGION.libraryOrigins}
+							accessibilityRole={ROLE.radiogroup}
+							accessibilityLabel={t("mobile.library.browse.filter_by_kind")}
+							/* A chip tap must land while the search field's keyboard is
+							 *  up, rather than only dismissing it. */
+							keyboardShouldPersistTaps="handled"
+							testID={CONTROL.libraryMore}
 						>
-							{LIBRARY_ORIGINS.map((origin) => (
+							{segments.map((segment) => (
 								<Chip
-									key={origin.value}
-									label={origin.label}
-									selected={browse.origin === origin.value}
-									onPress={() =>
-										setBrowse((current) => ({
-											...current,
-											origin: origin.value as LibraryOriginTab,
-										}))
-									}
-									testID={libraryOriginOptionId(origin.value)}
+									key={segment.value}
+									label={segment.label}
+									selected={browse.segment === segment.value}
+									onPress={() => changeSegment(segment.value)}
+									testID={segment.testID}
 								/>
 							))}
 						</ScrollView>
@@ -304,28 +300,6 @@ export default function Library() {
 								onPress={() => setSortOpen(true)}
 								testID={CONTROL.librarySort}
 							/>
-							{vocabulary.length > 0 ? (
-								<ScrollView
-									horizontal
-									showsHorizontalScrollIndicator={false}
-									contentContainerStyle={{ gap: 8 }}
-								>
-									{vocabulary.slice(0, 12).map((tag) => (
-										<Chip
-											key={tag.id}
-											label={`${tag.name} ${tag.count}`}
-											selected={browse.tag === tag.id}
-											onPress={() =>
-												setBrowse((current) => ({
-													...current,
-													tag: current.tag === tag.id ? null : tag.id,
-												}))
-											}
-											testID={libraryTagId(tag.id)}
-										/>
-									))}
-								</ScrollView>
-							) : null}
 						</View>
 					</View>
 
@@ -417,6 +391,8 @@ export default function Library() {
 			<FilterSheet
 				visible={filtersOpen}
 				onClose={() => setFiltersOpen(false)}
+				origin={browse.origin}
+				onOrigin={(origin) => setBrowse((current) => ({ ...current, origin }))}
 				status={browse.status}
 				onStatus={(status) => setBrowse((current) => ({ ...current, status }))}
 				tags={vocabulary}
@@ -525,6 +501,8 @@ function LibraryTile({
 function FilterSheet({
 	visible,
 	onClose,
+	origin,
+	onOrigin,
 	status,
 	onStatus,
 	tags,
@@ -533,6 +511,8 @@ function FilterSheet({
 }: {
 	visible: boolean;
 	onClose: () => void;
+	origin: LibraryOriginTab;
+	onOrigin: (origin: LibraryOriginTab) => void;
 	status: LibraryStatus;
 	onStatus: (status: LibraryStatus) => void;
 	tags: NonNullable<ReturnType<typeof useLibraryList>["page"]>["tags"];
@@ -554,6 +534,28 @@ function FilterSheet({
 			}
 		>
 			<View className="gap-4">
+				{/* Created / Mentioned, moved here from the screen (D17). It keeps
+				 *  its region and option ids, so the flows that drive it only gain
+				 *  the step of opening this sheet. */}
+				<View className="gap-2">
+					<Text className="text-body-sm text-ink-muted">
+						{t("mobile.library.browse.origin")}
+					</Text>
+					<View
+						className="flex-row flex-wrap gap-2"
+						testID={REGION.libraryOrigins}
+					>
+						{LIBRARY_ORIGINS.map((option) => (
+							<Chip
+								key={option.value}
+								label={option.label}
+								selected={origin === option.value}
+								onPress={() => onOrigin(option.value as LibraryOriginTab)}
+								testID={libraryOriginOptionId(option.value)}
+							/>
+						))}
+					</View>
+				</View>
 				<View className="gap-2">
 					<Text className="text-body-sm text-ink-muted">
 						{t("mobile.library.browse.status")}

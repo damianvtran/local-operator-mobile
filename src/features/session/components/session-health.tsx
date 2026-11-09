@@ -132,14 +132,30 @@ export function useResume(sessionId: string, ended: boolean) {
 /** The dot: a small filled circle in the state's tone, decorative only — the
     state WORD beside it (or, while live, the screen-reader word in the
     control's name) carries the state, so colour is never the only signal. */
-function HealthDot({ health }: { health: SessionHealth }) {
+function HealthDot({
+	health,
+	lineBox,
+}: {
+	health: SessionHealth;
+	/** The title's FIRST line box, in pt. The dot is centred in a slot of this
+	 *  height rather than in the row, so when the name wraps to two lines at
+	 *  large text the dot stays beside line one instead of floating between the
+	 *  two (visual audit D2). On a one-line title the slot IS the row's height,
+	 *  so nothing moves there. */
+	lineBox: number;
+}) {
 	const color = useTokenColor(HEALTH_DOT_TONE[health]);
 	return (
 		<View
 			aria-hidden
-			style={{ backgroundColor: color }}
-			className="size-2 shrink-0 rounded-full"
-		/>
+			className="shrink-0 justify-center"
+			style={{ height: lineBox }}
+		>
+			<View
+				style={{ backgroundColor: color }}
+				className="size-2 rounded-full"
+			/>
+		</View>
 	);
 }
 
@@ -182,15 +198,17 @@ export type SessionHealthControlProps = {
 	/** The projection, so the sheet can tell the two yellow causes apart
 	    (`degraded` reads "dropped", a stale heartbeat reads "quiet"). */
 	projection: HealthInput | null;
-	/** The conversation name, already truncated to the header's budget. */
+	/** The conversation name, WHOLE. This control truncates it by layout (a
+	 *  tail ellipsis at the title box's real edge), never by a character count
+	 *  — see `features/session/header.ts` for why the budget was retired. */
 	title: string;
 	/** The short-landscape header's title role. */
 	compact: boolean;
-	/** The stacked header (large text / narrow phone): the name may use two
-	 *  lines there, which `headerTitleChars`' stacked budget assumes. */
+	/** The stacked header (large text / narrow phone): the title has its own
+	 *  row there, so the name may use two full lines before it is cut. */
 	stacked: boolean;
-	/** The subtitle under the title (`headerSubtitle`): "Working · 1m 36s",
-	 *  "Idle", "Waiting for you", or the non-live health word. Always present,
+	/** The subtitle under the title (`headerSubtitle`): "Working", "Idle",
+	 *  "Waiting for you", or the non-live health word. Always present,
 	 *  so the header never resizes when the state changes. */
 	subtitle?: string;
 	sheetOpen: boolean;
@@ -248,6 +266,9 @@ export function SessionHealthControl({
 	const titleClass = compact ? "text-title text-ink" : "text-heading text-ink";
 	const titleLines = stacked ? 2 : 1;
 	const { effectiveScale } = useTextScale();
+	/* The first line's box, for the dot's slot (`HealthDot`). The step is the
+	 *  one `titleClass` draws with, so the two cannot disagree. */
+	const titleLineBox = lineBoxPt(compact ? "title" : "heading", effectiveScale);
 	/* No reading: the plain heading the screen had before the dot, nothing to tap,
 	   nothing announced (review M3 / QA Q3 / UX U5 — the reference renders no
 	   health control while `!projection`). */
@@ -291,7 +312,7 @@ export function SessionHealthControl({
 					ref={controlRef}
 					accessibilityRole={ROLE.button}
 					/* Name, state word, then the subtitle when it says more (live: the
-					 *  word is "Live" and the subtitle "Working · 1m 36s") — the visible
+					 *  word is "Live" and the subtitle "Working") — the visible
 					 *  words in reading order, so label-in-name holds (WCAG 2.5.3). */
 					accessibilityLabel={
 						subtitle !== undefined && subtitle !== "" && subtitle !== label
@@ -312,11 +333,23 @@ export function SessionHealthControl({
 					 *  inline while live, dot-plus-word on a new line otherwise — moved
 					 *  the title 16 pt and changed the header height on every flip,
 					 *  which the `health-drop` world then did dozens of times a minute. */}
-					<View className="min-w-0 flex-row items-center gap-2">
-						<HealthDot health={health} />
+					{/* TRUNCATION IS THE LAYOUT'S (visual audit D2). The name arrives
+					 *  whole and the platform cuts it ONCE, at the tail, where the
+					 *  title box really ends: one line inline, two full lines when
+					 *  the header stacks at large text. The row is top-aligned only
+					 *  when stacked, where a second line can exist and the dot must
+					 *  stay with the first; compact keeps `items-center` so its
+					 *  trailing state word sits on the title's line as before. */}
+					<View
+						className={`min-w-0 flex-row gap-2 ${
+							stacked ? "items-start" : "items-center"
+						}`}
+					>
+						<HealthDot health={health} lineBox={titleLineBox} />
 						<Text
 							className={`min-w-0 flex-1 ${titleClass}`}
 							numberOfLines={titleLines}
+							ellipsizeMode="tail"
 						>
 							{title}
 						</Text>
@@ -344,7 +377,7 @@ export function SessionHealthControl({
 					{compact ? null : (
 						/* THE SUBTITLE (record §2.3): always painted, never only reserved.
 						 *  The live state used to show nothing here; now it says what the
-						 *  agent is doing ("Working · 1m 36s", "Idle", "Waiting for you"),
+						 *  agent is doing ("Working", "Idle", "Waiting for you"),
 						 *  in the relay's own words. The line's box is one `meta` line box
 						 *  at every state, so a flip moves nothing (round 2, D11). */
 						<View
