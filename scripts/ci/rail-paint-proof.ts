@@ -27,11 +27,12 @@
  *
  * THE TWO CLAIMS, AND WHY ONLY ONE OF THEM IS A GATE YET. The capture's latency
  * (how long one `adb exec-out screencap` takes) and its per-state pixel counts
- * have no prior distribution in this repository — no run has ever produced them.
- * Gating a number nobody has measured is how a nightly becomes a coin flip, so
- * this file GATES the two structural claims (the rail paints during a fast
- * fling; `building` and `deep` paint different band content) and only REPORTS
- * latency and counts until two independent runs agree on them.
+ * had no prior distribution in this repository before run 42546977251 — the
+ * first run measured 240 frames over two scenario worlds, so the shape is now
+ * known but still a single sample. Gating a number one run has seen is how a
+ * nightly becomes a coin flip, so this file GATES the two structural claims (the
+ * rail paints during a fast fling; `building` and `deep` paint different band
+ * content) and only REPORTS latency and counts until two independent runs agree.
  *
  * Reading the report: `state.*.up` is the inkiest frame captured while the fling
  * flow was running, `state.*.down` the inkest captured with no gesture at all.
@@ -505,6 +506,17 @@ export function analyseFrames(
 	const buildingDiffersFromDeep = buildingMinusDeep !== 0;
 
 	const latencies = frames.map((frame) => frame.captureMs);
+	/* A NEGATIVE DURATION IS A BROKEN CLOCK, NOT A FAST CAPTURE, and averaging it
+	 * into the distribution is how a 175 ms median silently becomes nonsense. The
+	 * capture script times with `/proc/uptime` precisely because the runner's wall
+	 * clock steps (26 backward steps in 240 frames of run 42546977251); this is the
+	 * check that proves the shortcut held. */
+	const stepped = latencies.filter((ms) => ms < 0);
+	if (stepped.length > 0) {
+		throw new Error(
+			`${stepped.length} frame(s) report a negative capture time (${stepped.slice(0, 5).join(", ")}) — the capture clock stepped; it must be monotonic`,
+		);
+	}
 	return {
 		schema: "rail-paint-proof/1",
 		band,

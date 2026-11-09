@@ -52,10 +52,16 @@ RUNNING_FLAG="$OUT_DIR/capturing"
 SCENARIOS=(checkpoints-deep checkpoints-building)
 
 # A loop whose only stop is a flag file an error path could leave behind must
-# still terminate: at ~0.5 s per capture, 120 frames is ~60 s per scenario against
-# a burst that costs ~9 s (1.5 s settle + ~6 s of swipes + 1.5 s settle), and
-# 120 × ~0.8 MB at 320×640 RGBA is under 100 MB of runner disk.
-MAX_FRAMES_PER_SCENARIO=120
+# A loop whose only stop is a flag file an error path could leave behind must
+# still terminate, and the bound comes from the run that first measured it rather
+# than from a guess (42546977251: 39 KB per frame, ~185 ms per capture, and a
+# fling flow that runs ~22 s). A scenario's phases therefore want ~140 frames at
+# that cadence; 400 is ~2.8x that, which is the headroom a slower runner gets
+# before frames stop being taken, and 400 × 39 KB is ~16 MB per scenario — ~31 MB
+# of artifact for the pair, which is less than the screenshots one Maestro run
+# already uploads. The first version of this bound was 120, and the run showed it
+# binding: the loop ran out during the fling and captured no `post` frame at all.
+MAX_FRAMES_PER_SCENARIO=400
 
 if [[ ! -f "$PASSWORD_FILE" ]]; then
   echo "::error::missing relay password file: $PASSWORD_FILE"
@@ -161,18 +167,40 @@ start_relay() {
 # force when the capture STARTED, and its own wall time. Runs beside the fling
 # flow, so a slow `adb` never delays the gesture it is trying to observe — it only
 # lowers the frame rate, which is exactly the number the report carries.
+# A MONOTONIC millisecond clock, and it is not fussiness. `/proc/uptime` counts
+# seconds since boot with two decimals and cannot step; the runner's wall clock
+# does. Run 42546977251 stepped backwards 26 times in 240 frames (min -740 ms),
+# which produced 27 negative capture durations under the `date +%s%3N` this
+# started with — a distribution that cannot be read. `$(< file)` is a builtin
+# redirect, so no process is forked into the tight loop, and the resolution is the
+# file's centisecond field: 10 ms, which is 6 % of the ~175 ms median capture
+# measured there and far below the ~1200 ms window this number exists to be
+# compared against.
+monotonic_ms() {
+  local up whole frac
+  up="$(< /proc/uptime)"
+  whole=${up%%.*}
+  frac=${up#*.}
+  frac=${frac:0:2}
+  printf '%s%s0' "$whole" "$frac"
+}
+
 capture_loop() {
   local scenario="$1" dir="$2" n=0
   while [[ -f "$RUNNING_FLAG" ]] && (( n < MAX_FRAMES_PER_SCENARIO )); do
     n=$((n + 1))
-    local phase start end path
+    local phase start end at path
     phase="$(cat "$PHASE_FILE" 2>/dev/null || echo pre)"
-    start="$(date +%s%3N)"
+    start="$(monotonic_ms)"
     path="$(printf '%s/%04d-%s.png' "$dir" "$n" "$phase")"
     if adb exec-out screencap -p > "$path" 2>/dev/null && [[ -s "$path" ]]; then
-      end="$(date +%s%3N)"
+      end="$(monotonic_ms)"
+      # `atMs` is wall clock and only orders the phases for a reader of the
+      # manifest; it may step. `captureMs` is the monotonic duration and is the
+      # only timing the report uses.
+      at="$(date +%s%3N)"
       printf '{"type":"frame","state":"%s","phase":"%s","path":"%s","atMs":%s,"captureMs":%s}\n' \
-        "$scenario" "$phase" "$path" "$start" "$((end - start))" >> "$FRAMES_JSONL"
+        "$scenario" "$phase" "$path" "$at" "$((end - start))" >> "$FRAMES_JSONL"
     else
       # A capture that produced nothing is not a frame; leaving an empty file in
       # the set would fail the analyser's size check and hide the real count.

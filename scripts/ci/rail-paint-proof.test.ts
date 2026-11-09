@@ -42,6 +42,7 @@ const SHORT_FILE_REFUSAL = /stub: too short/;
 const TRUNCATION_REFUSAL = /cut:/;
 const COVERAGE_REFUSAL = /must cover both/;
 const GEOMETRY_REFUSAL = /does not match the reported 320x640/;
+const CLOCK_STEP_REFUSAL = /negative capture time/;
 
 /** CRC-32 is written as zero: `decodePng` does not verify it (the file's own
  *  header says why), and a real CRC would only re-detect bytes `inflateSync` and
@@ -451,5 +452,21 @@ describe("analyseFrames", () => {
 				() => small,
 			),
 		).toThrow(GEOMETRY_REFUSAL);
+	});
+
+	it("refuses a negative capture time rather than averaging it in", () => {
+		// The runner's wall clock stepped 26 times in 240 frames of the first run;
+		// the capture script times monotonically because of it, and this is the
+		// check that the shortcut held.
+		const records = [
+			record(DEEP_STATE, "pre", 0, -740),
+			record(BUILDING_STATE, "pre", 1),
+		];
+		expect(() =>
+			analyseFrames(
+				[SCREEN, ...records],
+				capture(records.map((entry) => ({ ...entry, marks: [] }))),
+			),
+		).toThrow(CLOCK_STEP_REFUSAL);
 	});
 });

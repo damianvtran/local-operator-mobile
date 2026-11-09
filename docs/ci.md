@@ -854,9 +854,13 @@ therefore captures it on the emulator, on the APK the job has just built:
 - **The capture:** `adb exec-out screencap -p` in a loop beside the flow, one
   frame at a time, wall time recorded per frame. Maestro's own `takeScreenshot`
   would not do: it is synchronous with the flow that is timing the gesture, so its
-  latency would be the thing under test. The loop is capped at 120 frames per
-  scenario (~60 s at ~0.5 s per capture, ~96 MB) so a flag file left behind by an
-  error path cannot fill the runner.
+  latency would be the thing under test. The loop is capped at 400 frames per
+  scenario, derived from the first run's own measurement (39 KB per frame, ~185 ms
+  per capture, a ~22 s fling flow) rather than guessed — the first version capped
+  at 120 and the run showed it binding: the loop ran out mid-fling and captured no
+  `post` frame. The clock is `/proc/uptime`, not `date`: that same run stepped
+  backwards 26 times in 240 frames (min -740 ms) and produced 27 negative capture
+  durations under the wall clock. Resolution is 10 ms.
 - **The measurement:** `scripts/ci/rail-paint-proof.ts` counts non-background
   pixels in the rail's own column — 7–15 pt in from the right edge, derived from
   the device's `wm size`/`wm density` — for the inkiest frame during the fling and
