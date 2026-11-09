@@ -74,6 +74,7 @@ export interface SessionRuntime {
 	projection: ReturnType<typeof readEntry>["projection"];
 	entries: TranscriptEntry[];
 	loadOlder: () => Promise<void>;
+	reloadHistory: () => Promise<void>;
 	loadingOlder: boolean;
 	historyError: string | null;
 	hasOlder: boolean;
@@ -253,6 +254,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		return () => historyWindow.retire();
 	}, [historyWindow]);
 	const loadOlder = useCallback(() => historyWindow.load(), [historyWindow]);
+	const reloadHistory = useCallback(
+		() => historyWindow.reload(),
+		[historyWindow],
+	);
 	const [commands, setCommands] = useSessionValue<SlashCommand[]>(identity, []);
 	const [models, setModels] = useSessionValue<ModelEntry[]>(identity, []);
 	const [error, setError] = useSessionValue<RelayError | null>(identity, null);
@@ -753,6 +758,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		loading,
 		olderThanLoaded: olderRowClaim,
 		loadOlder,
+		reloadHistory,
 		loadingOlder: historyWindow.loading,
 		historyError: historyWindow.error,
 		hasOlder: historyWindow.hasMore,

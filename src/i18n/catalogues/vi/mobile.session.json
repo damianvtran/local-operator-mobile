@@ -38,5 +38,6 @@
 	"mobile.session.history.stalled": "Lịch sử chưa tải thêm được. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
 	"mobile.session.history.beginning": "Bắt đầu các tin nhắn được lưu giữ",
 	"mobile.session.history.empty": "Không có tin nhắn được lưu giữ",
-	"mobile.session.history.gap": "Một số tin nhắn đã bị bỏ lỡ khi mất kết nối. Hãy mở lại cuộc trò chuyện này để tải lại lịch sử."
+	"mobile.session.history.gap": "Một số tin nhắn đã bị bỏ lỡ khi mất kết nối. Tải lại lịch sử để đến các tin mới nhất, rồi tải các tin cũ hơn để xem những tin còn thiếu.",
+	"mobile.session.history.reload": "Tải lại lịch sử · đến tin mới nhất"
 }

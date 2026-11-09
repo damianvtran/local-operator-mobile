@@ -157,6 +157,10 @@
 	},
 	"mobile.session.history.gap": {
 		"role": "status",
-		"note": "Two capped server tails have no non-opener row in common. Messages may have arrived unseen; existing oldest-cursor paging cannot fill this newer hole. Reopening allocates a new history reader from the newest tail. Not a claim that missed messages were deleted."
+		"note": "A disconnected gap needs an explicit history-reader reset. Explain that it jumps to the latest durable page; loading earlier messages afterwards reaches the missed retained messages. Not automatic gap repair."
+	},
+	"mobile.session.history.reload": {
+		"role": "button",
+		"note": "Explicit reader-only reset to the latest durable history page. Warn that the reading position jumps; draft, attachments, queue and live connection are untouched. Older pages remain available afterwards."
 	}
 }

@@ -161,6 +161,8 @@ export const EMPTY = {
 export const CONTROL = {
 	/** Explicit paging remains reachable without native-only scroll gestures. */
 	transcriptLoadEarlier: "transcript-load-earlier",
+	/** Explicitly rebase only the history reader after a disconnected gap. */
+	transcriptReloadHistory: "transcript-reload-history",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeBack: "team-bridge-back",
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",

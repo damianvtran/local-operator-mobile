@@ -6,6 +6,11 @@ import { historyTopReached } from "./history-scroll";
 import { HistoryWindow } from "./history-window";
 import { type ProjectionOwner, sameProjectionOwner } from "./session-content";
 
+const RELOAD_DECLARATION =
+	/const reloadHistory = useCallback\([\s\S]*?\[historyWindow\],?\s*\);/;
+const NON_READER_MUTATIONS =
+	/reloadToken|privateData|openStream|router|setText|setImages|send|queue/;
+
 const runtime = readFileSync(
 	new URL("./use-session.ts", import.meta.url),
 	"utf8",
@@ -106,9 +111,83 @@ describe("history reader production wiring", () => {
 		expect(create(identity, current, { history: vi.fn() })).not.toBe(first);
 	});
 
+	it("executes the production reader-only reload without recreating the session or mutating composer state", async () => {
+		const create = readerFactory();
+		const identity = owner();
+		const current = { current: identity };
+		const endpoints = {
+			history: vi.fn(async () => ({ entries: [], has_more: false })),
+		};
+		const historyWindow = create(identity, current, endpoints);
+		const composer = {
+			text: "draft",
+			images: ["image"],
+			uuid: "retained",
+			queue: ["queued"],
+		};
+		const before = JSON.stringify(composer);
+		const declaration = runtime.match(RELOAD_DECLARATION)?.[0];
+		expect(declaration).toBeTruthy();
+		const reloadHistory = vm.runInNewContext(`${declaration}\nreloadHistory`, {
+			historyWindow,
+			useCallback: (callback: () => Promise<void>) => callback,
+		});
+		await reloadHistory();
+		expect(create(identity, current, endpoints)).toBe(historyWindow);
+		expect(endpoints.history).toHaveBeenCalledExactlyOnceWith(
+			identity.sessionId,
+			{ before: undefined },
+		);
+		expect(JSON.stringify(composer)).toBe(before);
+		expect(declaration).not.toMatch(NON_READER_MUTATIONS);
+		expect(screen).toContain("reloadHistory={runtime.reloadHistory}");
+		expect(list).toContain("historyGap && reloadHistory ? (");
+		expect(list).toContain("onPress={requestHistoryReload}");
+		expect(list).toContain("testID={CONTROL.transcriptReloadHistory}");
+		expect(list).toContain("webAnchor.current = null;");
+		expect(list).toContain("void reloadHistory().then(pinTail)");
+	});
+
+	it("the explicit list action abandons stale anchors and pins the fresh tail without navigation", async () => {
+		const start = list.indexOf("const requestHistoryReload = useCallback(");
+		const end = list.indexOf("\n\t/* The viewport", start);
+		const webAnchor = { current: { offset: 1200 } as unknown };
+		const atTail = { current: false };
+		const scrollPlaces = new Map([
+			["synthetic-session", { offset: 1200, atTail: false }],
+		]);
+		const setOpenElsewhere = vi.fn();
+		const pinTail = vi.fn();
+		const reloadHistory = vi.fn(async () => {});
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		const action = vm.runInNewContext(
+			`${list.slice(start, end)}\nrequestHistoryReload`,
+			{
+				webAnchor,
+				atTail,
+				scrollPlaces,
+				setOpenElsewhere,
+				pinTail,
+				reloadHistory,
+				sessionId: "synthetic-session",
+				useCallback: (callback: () => void) => callback,
+			},
+		);
+		action();
+		expect(webAnchor.current).toBeNull();
+		expect(atTail.current).toBe(true);
+		expect(setOpenElsewhere).toHaveBeenCalledWith(false);
+		expect(scrollPlaces.has("synthetic-session")).toBe(false);
+		expect(reloadHistory).toHaveBeenCalledOnce();
+		await Promise.resolve();
+		expect(pinTail).toHaveBeenCalledOnce();
+	});
+
 	it("threads the actual runtime action and all states to the list, with explicit accessible fallback", () => {
 		for (const property of [
 			"loadOlder",
+			"reloadHistory",
 			"loadingOlder",
 			"hasOlder",
 			"historyError",

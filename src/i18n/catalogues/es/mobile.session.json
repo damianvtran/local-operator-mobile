@@ -38,5 +38,6 @@
 	"mobile.session.history.stalled": "El historial no avanzó. Vuelve a intentarlo o abre de nuevo esta conversación.",
 	"mobile.session.history.beginning": "Inicio de los mensajes conservados",
 	"mobile.session.history.empty": "No hay mensajes conservados",
-	"mobile.session.history.gap": "Faltan algunos mensajes recibidos durante la desconexión. Abre de nuevo esta conversación para volver a cargar su historial."
+	"mobile.session.history.gap": "Se perdieron algunos mensajes durante la desconexión. Recarga el historial para ir a los más recientes y luego carga los anteriores para recuperar los que faltan.",
+	"mobile.session.history.reload": "Recargar historial · ir al final"
 }

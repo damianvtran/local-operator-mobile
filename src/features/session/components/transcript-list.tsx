@@ -113,6 +113,7 @@ export type TranscriptListProps = {
 	sessionId: string;
 	entries: TranscriptEntry[];
 	loadOlder?: () => Promise<void>;
+	reloadHistory?: () => Promise<void>;
 	loadingOlder?: boolean;
 	hasOlder?: boolean;
 	historyGap?: boolean;
@@ -263,6 +264,7 @@ export const TranscriptList = ({
 	sessionId,
 	entries,
 	loadOlder,
+	reloadHistory,
 	loadingOlder = false,
 	hasOlder = false,
 	historyGap = false,
@@ -1037,6 +1039,16 @@ export const TranscriptList = ({
 			animated: false,
 		});
 	}, []);
+	const requestHistoryReload = useCallback(() => {
+		if (!reloadHistory) return;
+		// This explicit jump abandons the old reading anchor, not the conversation,
+		// composer or stream. Never carry a prepend offset into the fresh tail.
+		webAnchor.current = null;
+		atTail.current = true;
+		setOpenElsewhere(false);
+		scrollPlaces.delete(sessionId);
+		void reloadHistory().then(pinTail);
+	}, [reloadHistory, sessionId, pinTail]);
 	/* The viewport's own height changing is a reason to re-pin, but ONLY while the reader
 	 *  is at the tail. The composer growing (a 7-line draft in short landscape took the
 	 *  transcript from 118 to 66 pt) shrinks this viewport without any content change, and
@@ -1404,6 +1416,14 @@ export const TranscriptList = ({
 								{t("mobile.session.history.gap")}
 							</Text>
 						) : null}
+						{historyGap && reloadHistory ? (
+							<Button
+								label={t("mobile.session.history.reload")}
+								onPress={requestHistoryReload}
+								variant="outline"
+								testID={CONTROL.transcriptReloadHistory}
+							/>
+						) : null}
 						{historyError ? (
 							<Text
 								accessibilityLiveRegion="polite"
@@ -1454,6 +1474,8 @@ export const TranscriptList = ({
 			historyGap,
 			loadingOlder,
 			requestOlder,
+			reloadHistory,
+			requestHistoryReload,
 			entries.length,
 		],
 	);

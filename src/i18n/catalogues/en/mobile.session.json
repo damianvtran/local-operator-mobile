@@ -38,5 +38,6 @@
 	"mobile.session.history.stalled": "History did not advance. Retry or reopen this conversation.",
 	"mobile.session.history.beginning": "Beginning of retained messages",
 	"mobile.session.history.empty": "No retained messages",
-	"mobile.session.history.gap": "Some messages were missed while disconnected. Reopen this conversation to reload its history."
+	"mobile.session.history.gap": "Some messages were missed while disconnected. Reload history to jump to the latest messages, then load earlier messages to reach the missing ones.",
+	"mobile.session.history.reload": "Reload history · jump to latest"
 }

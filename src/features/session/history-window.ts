@@ -175,6 +175,30 @@ export class HistoryWindow {
 		return this.pending;
 	}
 
+	/** Explicitly jump back to the current durable tail. Background refresh must
+	 * keep the reader's pages; only this user action discards its old read domain.
+	 * Advancing the lease fences both success and failure of an old pending page. */
+	reload(): Promise<void> {
+		if (!this.active) return Promise.resolve();
+		this.lease += 1;
+		this.pending = null;
+		this.rows = [];
+		this.cursor = undefined;
+		this.hasMore = true;
+		this.hasGap = false;
+		this.loading = false;
+		this.error = null;
+		this.read = "unknown";
+		this.projection = null;
+		this.detached = [];
+		this.visibleSource = null;
+		this.cursors.clear();
+		this.durableIds.clear();
+		this.liveAt.clear();
+		this.revision = 0;
+		return this.load();
+	}
+
 	activate(): void {
 		this.active = true;
 	}

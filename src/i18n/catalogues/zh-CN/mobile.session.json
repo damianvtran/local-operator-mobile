@@ -38,5 +38,6 @@
 	"mobile.session.history.stalled": "历史记录未向前加载。请重试或重新打开此对话。",
 	"mobile.session.history.beginning": "已保留消息的起点",
 	"mobile.session.history.empty": "没有保留的消息",
-	"mobile.session.history.gap": "断开连接期间错过了部分消息。请重新打开此对话以重新加载历史记录。"
+	"mobile.session.history.gap": "断开连接期间遗漏了部分消息。重新加载历史记录以跳至最新消息，再加载更早的消息以查看遗漏内容。",
+	"mobile.session.history.reload": "重新加载历史记录 · 跳至最新消息"
 }

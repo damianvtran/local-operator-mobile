@@ -845,6 +845,7 @@ export default function Session() {
 					sessionId={sessionId}
 					entries={runtime.entries}
 					loadOlder={runtime.loadOlder}
+					reloadHistory={runtime.reloadHistory}
 					loadingOlder={runtime.loadingOlder}
 					hasOlder={runtime.hasOlder}
 					historyError={runtime.historyError}

@@ -1,14 +1,18 @@
 import { once } from "node:events";
 import { createServer } from "node:http";
 import { expect, it } from "vitest";
-import { parsePayload, type TranscriptEntry } from "@/contracts";
+import {
+	parsePayload,
+	type SessionProjection,
+	type TranscriptEntry,
+} from "@/contracts";
 import { RelayEndpoints, RelayHttpClient } from "@/relay";
 import { HistoryWindow } from "./history-window";
 
 /** Actual fetch → RelayHttpClient → boundary schema → endpoint → pager. This
  * loopback is synthetic wire infrastructure, not a native/rendered-app claim. */
 it("pages authenticated synthetic history through production HTTP and retries refusal/unavailable", async () => {
-	const journal: TranscriptEntry[] = Array.from({ length: 1200 }, (_, at) => ({
+	const journal: TranscriptEntry[] = Array.from({ length: 1500 }, (_, at) => ({
 		id: `message-${at}`,
 		kind: "user",
 		text: "synthetic",
@@ -29,9 +33,12 @@ it("pages authenticated synthetic history through production HTTP and retries re
 	const cursors: Array<string | null> = [];
 	const statuses: number[] = [];
 	let admitted = false;
+	let retainedCount = 1200;
+	const methods: string[] = [];
 	let unavailable = false;
 	const server = createServer((request, response) => {
 		response.setHeader("Content-Type", "application/json");
+		methods.push(request.method ?? "");
 		if (!admitted) {
 			statuses.push(401);
 			response.writeHead(401);
@@ -58,7 +65,7 @@ it("pages authenticated synthetic history through production HTTP and retries re
 		}
 		const end =
 			before === null
-				? journal.length
+				? retainedCount
 				: journal.findIndex((entry) => entry.id === before);
 		const start = Math.max(0, end - Number(url.searchParams.get("limit")));
 		response.end(
@@ -108,7 +115,7 @@ it("pages authenticated synthetic history through production HTTP and retries re
 		await window.load();
 		while (window.hasMore && !window.error) await window.load();
 		expect(window.rows.map((entry) => entry.id)).toEqual(
-			journal.map((entry) => entry.id),
+			journal.slice(0, 1200).map((entry) => entry.id),
 		);
 		expect(window.error).toBeNull();
 		expect(statuses[0]).toBe(401);
@@ -116,11 +123,44 @@ it("pages authenticated synthetic history through production HTTP and retries re
 		expect(cursors[1]).toBe("message-1183");
 		expect(cursors[2]).toBe("message-1183");
 		expect(cursors).toHaveLength(72);
+		// A coalesced reconnect frame is disjoint from the previously read tail.
+		window.accept({
+			transcript: journal.slice(1421),
+		} as SessionProjection);
+		expect(window.hasGap).toBe(true);
+		expect(window.hasMore).toBe(false);
+		const missingBefore = journal.filter(
+			(entry) => !window.rows.some((row) => row.id === entry.id),
+		).length;
+		expect(missingBefore).toBe(221);
+		retainedCount = 1500;
+		await window.reload();
+		expect(cursors.at(-1)).toBeNull();
+		expect(window.visibleRows.at(-1)?.id).toBe("message-1499");
+		while (window.hasMore && !window.error) await window.load();
+		expect(window.rows.map((entry) => entry.id)).toEqual(
+			journal.map((entry) => entry.id),
+		);
+		expect(window.hasGap).toBe(false);
+		expect(window.error).toBeNull();
+		expect(methods.every((method) => method === "GET")).toBe(true);
+		console.log(
+			JSON.stringify({
+				recovery: "explicit-reader-reload",
+				missing_before: missingBefore,
+				rows_after: window.rows.length,
+				missing_after: journal.filter(
+					(entry) => !window.rows.some((row) => row.id === entry.id),
+				).length,
+				latest: window.rows.at(-1)?.id,
+				methods: [...new Set(methods)],
+			}),
+		);
 		console.log(
 			JSON.stringify({
 				rows: window.rows.length,
 				missing: 0,
-				successful_pages: 71,
+				successful_pages: cursors.length - 1,
 				unavailable: 1,
 				refusals: 1,
 				requests: statuses.length,

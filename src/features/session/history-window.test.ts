@@ -126,6 +126,100 @@ describe("screen-owned retained history", () => {
 		).toHaveLength(221);
 	});
 
+	it("explicit reload recovers Q3's 221 missed rows from the latest durable tail", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const fetch = vi.fn((before?: string) => pager(retained, 80)(before));
+		const window = new HistoryWindow(fetch, () => {});
+		window.accept(frame(row("q00000"), ...journal.slice(1121, 1200)));
+		await window.load();
+		window.accept(frame(row("q00000"), ...journal.slice(1421)));
+		while (window.hasMore) await window.load();
+		expect(
+			journal.filter((entry) => !ids(window.rows).includes(entry.id)),
+		).toHaveLength(221);
+		expect(window.hasGap).toBe(true);
+		retained = journal;
+		await window.reload();
+		expect(fetch).toHaveBeenLastCalledWith(undefined);
+		expect(window.cursor).toBe("q01420");
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(-80)));
+		while (window.hasMore && !window.error) await window.load();
+		expect(window.error).toBeNull();
+		expect(ids(window.visibleRows)).toEqual(ids(journal));
+		expect(new Set(ids(window.visibleRows)).size).toBe(1500);
+	});
+
+	it.each(["resolve", "reject"] as const)(
+		"drops old pending %s after explicit reload",
+		async (settlement) => {
+			const old = deferred<HistoryResponse>();
+			const fetch = vi
+				.fn()
+				.mockResolvedValueOnce({ entries: [row("old")], has_more: true })
+				.mockImplementationOnce(() => old.promise)
+				.mockResolvedValueOnce({ entries: [row("fresh")], has_more: true });
+			const window = new HistoryWindow(fetch, () => {});
+			await window.load();
+			const pending = window.load();
+			await Promise.resolve();
+			await window.reload();
+			if (settlement === "resolve")
+				old.resolve({ entries: [row("stale")], has_more: false });
+			else old.reject(new Error("old failure"));
+			await pending;
+			expect(ids(window.rows)).toEqual(["fresh"]);
+			expect(window.cursor).toBe("fresh");
+			expect(window.hasMore).toBe(true);
+			expect(window.error).toBeNull();
+			expect(window.loading).toBe(false);
+		},
+	);
+
+	it("an old completion cannot clear the fresh incarnation's pending/loading state", async () => {
+		const old = deferred<HistoryResponse>();
+		const fresh = deferred<HistoryResponse>();
+		const fetch = vi
+			.fn()
+			.mockImplementationOnce(() => old.promise)
+			.mockImplementationOnce(() => fresh.promise);
+		const window = new HistoryWindow(fetch, () => {});
+		const pending = window.load();
+		await Promise.resolve();
+		const reset = window.reload();
+		await Promise.resolve();
+		old.resolve({ entries: [row("stale")], has_more: false });
+		await pending;
+		expect(window.loading).toBe(true);
+		expect(window.load()).toBe(reset);
+		expect(window.rows).toEqual([]);
+		fresh.resolve({ entries: [row("fresh")], has_more: false });
+		await reset;
+		expect(ids(window.rows)).toEqual(["fresh"]);
+		expect(window.loading).toBe(false);
+	});
+
+	it("reports a fresh reload failure truthfully and retries without the old cursor", async () => {
+		const fetch = vi
+			.fn()
+			.mockResolvedValueOnce({ entries: [row("old")], has_more: false })
+			.mockRejectedValueOnce(new Error("fresh failure"))
+			.mockResolvedValueOnce({ entries: [row("fresh")], has_more: false });
+		const window = new HistoryWindow(fetch, () => {});
+		await window.load();
+		await window.reload();
+		expect(window.read).toBe("failed");
+		expect(window.error).toBe("failed");
+		expect(window.rows).toEqual([]);
+		expect(window.cursor).toBeUndefined();
+		expect(window.hasMore).toBe(true);
+		await window.load();
+		expect(fetch).toHaveBeenLastCalledWith(undefined);
+		expect(ids(window.rows)).toEqual(["fresh"]);
+		expect(window.error).toBeNull();
+	});
+
 	it("does not erase live arrivals when initial history completes later", async () => {
 		const read = deferred<HistoryResponse>();
 		const window = new HistoryWindow(
