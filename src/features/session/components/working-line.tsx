@@ -40,7 +40,7 @@ import { TOUCH_FLOOR } from "@/ui/layout";
  * stays reserved either way, so withholding cannot reflow the label.
  */
 export type WorkingLineProps = {
-	/** The verb the runtime supplied. An empty label means no line at all. */
+	/** The verb the runtime supplied; a live pinned turn may not have one yet. */
 	activity: string;
 	/** Seconds the current phase has been running, or `null` when the server said
 	 *  it has no instant for it. */
@@ -190,8 +190,9 @@ const WorkingLineImpl = ({
 	// is the condition that must always have its Stop in reach (relay parity).
 	if (activity.length === 0 && onStop === undefined) return null;
 	const clock = elapsed === null ? "" : elapsedLabel(elapsed);
-	// Before the daemon names an activity the line still says SOMETHING to a
-	// screen reader (review R1-5): an unnamed progressbar announces nothing.
+	// A live turn can precede its first intent. Use the SAME localized fallback
+	// visibly and accessibly: an accessible-only name leaves sighted users with
+	// a bare Stop, which looks like the activity indicator never arrived.
 	const name =
 		activity.length > 0
 			? activity
@@ -230,13 +231,9 @@ const WorkingLineImpl = ({
 						className="min-w-0 flex-1 font-mono text-mono-sm text-ink-muted"
 						numberOfLines={1}
 					>
-						{activity}
+						{name}
 					</Text>
-					<Text
-						className={`w-[6ch] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
-					>
-						{clock}
-					</Text>
+					<PhaseClock clock={clock} />
 				</View>
 				<WorkingStop onStop={onStop} stopping={stopping} inert={stopInert} />
 			</View>
@@ -262,17 +259,12 @@ const WorkingLineImpl = ({
 				className="min-w-0 flex-1 text-body-sm text-ink-muted"
 				numberOfLines={1}
 			>
-				{activity}
+				{name}
 			</Text>
-			{/* The slot is RESERVED at the widest form the formatter can produce, so a
-			    changing number cannot re-clip the label beside it — an unreserved clock
-			    makes the label jump a few characters at each form change (`59m 59s` →
+			{/* The clock's intrinsic reference reserves space on native as well as web.
+			    A changing number must not re-clip the label (`59m 59s` →
 			    `1h`), which reads as the screen twitching. */}
-			<Text
-				className={`w-[6ch] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
-			>
-				{clock}
-			</Text>
+			<PhaseClock clock={clock} />
 		</View>
 	);
 };
@@ -285,6 +277,32 @@ const WorkingLineImpl = ({
  * screen, the dock or the transcript list.
  */
 export const WorkingLine = memo(WorkingLineImpl);
+
+/** Reserve the formatter's full minute form using real font geometry, not `ch`:
+ * UniWind cannot turn browser character units into a native Yoga width. A hidden
+ * reference keeps null/zero and minute→hour transitions stable without guessing
+ * pixels or disabling font scaling. Longer hour readings reserve their own text;
+ * this is space reservation, never a cap on the elapsed time we show. */
+const PhaseClock = ({ clock }: { clock: string }) => {
+	const reference = elapsedLabel(59 * 60 + 59);
+	const type = `${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`;
+	return (
+		<View className="shrink-0">
+			<Text
+				className={type}
+				style={{ opacity: 0 }}
+				aria-hidden
+				accessibilityElementsHidden
+				importantForAccessibility="no-hide-descendants"
+			>
+				{clock.length > reference.length ? clock : reference}
+			</Text>
+			<Text className={type} style={{ position: "absolute", top: 0, end: 0 }}>
+				{clock}
+			</Text>
+		</View>
+	);
+};
 
 /**
  * The turn's Stop on the line that says the turn is running — the relay's
