@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranscriptEntry } from "@/contracts";
+import { resetLocaleSource, setLocaleSource } from "@/i18n";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 /**
@@ -305,9 +306,22 @@ afterEach(async () => {
 	dom?.dispose();
 	dom = null;
 	vi.unstubAllGlobals();
+	resetLocaleSource();
 });
 
 describe("reasoning and harness metadata", () => {
+	it("localizes the reasoning disclosure's visible and accessible label", async () => {
+		// Exercise the actual row, not only catalogue completeness: a literal at
+		// either label site would silently leave French readers an English control.
+		setLocaleSource(() => "fr");
+		entries = [row("reasoning-fr", { kind: "reasoning", text: HIDDEN })];
+		await render();
+		expect(drawn()).toContain("Réflexion");
+		expect(drawn()).not.toContain("Thinking");
+		expect(drawn()).not.toContain(HIDDEN);
+		await press("Réflexion");
+		expect(drawn()).toContain(HIDDEN);
+	});
 	it("preserves a future event under its actual wire type instead of entry", async () => {
 		entries = [
 			row("future", {

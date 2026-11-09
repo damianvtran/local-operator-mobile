@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { sessionProjectionSchema } from "@/contracts/schemas";
+import { sessionProjectionSchema } from "../../src/contracts/schemas.ts";
 import {
 	activityWaitProjection,
 	chromeProofPlan,
@@ -40,6 +40,8 @@ describe("chrome proof plan (record §7)", () => {
 			const environment = {
 				PATH: "/usr/bin:/bin",
 				HOME: root,
+				// Keep the child synthetic while satisfying the shared ProcessEnv contract.
+				NODE_ENV: "test" as const,
 				RUNNER_TEMP: root,
 				JAVA_HOME: "/synthetic-java",
 				GH_TOKEN: "synthetic-must-not-leak",

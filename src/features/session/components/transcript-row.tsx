@@ -247,11 +247,11 @@ const TranscriptRowImpl = ({
 				<CollapsedRow
 					glyph="◇"
 					glyphClass="text-ink-dim"
-					label="Thinking"
+					label={t("mobile.session.reasoning_disclosure")}
 					// Even the preview is reasoning content: none is painted or
 					// announced until the reader explicitly opens this trace.
 					summary=""
-					accessibilityLabel="Thinking"
+					accessibilityLabel={t("mobile.session.reasoning_disclosure")}
 					{...fold}
 				>
 					<Text className="text-body-read text-ink-muted">{entry.text}</Text>
