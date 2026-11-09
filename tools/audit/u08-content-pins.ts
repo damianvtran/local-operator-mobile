@@ -1126,8 +1126,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Q-tablet: recomputed LAST after the focused Home drawer-ownership fix and
 	 * its regressions. Only LIVE src identity changes; no historical pin, input,
 	 * instrument or activity/native-layout evidence is refreshed by admission. */
+	/* PR #205: --print admits the reviewed activity fallback and intrinsic-clock
+	 * source, including its regressions. This updates source identity only;
+	 * it is not proof of native visibility or compact D3 geometry. Historical,
+	 * instrument and input pins remain unchanged. */
 	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
-	src: "ceb1a960fdb49de206da99edd9c2470958ecc50edb0cf4b9c5e78fe0098ea6bd",
+	/* Recomputed with --print after merging approved #108 (d9073ebc): the
+	 * combined src tree has neither parent's digest. Source admission only;
+	 * historical pixels, native visibility and compact D3 remain unproved. */
+	src: "785d4c22b6fb5baed1785b9d996fb9b29aaece7b61cfd3a33c7d9405569423b1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
