@@ -1135,7 +1135,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * type-only createRoot return-type repair changes this combined live digest.
 	 * Production app/src runtime bytes are unchanged; admission only, not new
 	 * rendered, native or historical evidence. */
-	src: "510d9072878f12c1e40c8d8526bcea0c5336368bbe3ca9079109dd4a749ba502",
+	/* CI-A1: centralize the two existing composer selectors without changing their
+	 * values. Recomputed with --print from staged source; identity, not visual proof. */
+	src: "e2c3aa3bcdad5af9f86be80613b4d0b1a377e385644ecd751b77de7b15f8133a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

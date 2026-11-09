@@ -1168,7 +1168,7 @@ export const Composer = ({
 						Keyboard.dismiss();
 						setFocused(false);
 					}}
-					testID="composer-clear-draft"
+					testID={CONTROL.composerClearDraft}
 				/>
 			) : null}
 			{/* Attachments, above the field: an attachment changes what send means, so it
@@ -1308,7 +1308,7 @@ export const Composer = ({
 							variant="quiet"
 							size="sm"
 							onPress={onDismissError}
-							testID="composer-dismiss-error"
+							testID={CONTROL.composerDismissError}
 						/>
 					) : null}
 				</View>
