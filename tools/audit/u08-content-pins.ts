@@ -1137,7 +1137,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * rendered, native or historical evidence. */
 	/* CI-A1: centralize the two existing composer selectors without changing their
 	 * values. Recomputed with --print from staged source; identity, not visual proof. */
-	src: "e2c3aa3bcdad5af9f86be80613b4d0b1a377e385644ecd751b77de7b15f8133a",
+	/* QA round-2 Q2: the web file picker's input is attached to the document
+	 * (hidden) for the pick and removed on every settle path, plus its lifecycle
+	 * tests. Recomputed with --print from the staged tree; only `src` moved.
+	 * Identity admission only, not rendered or native evidence. */
+	src: "b0f4991c251579ca0086206aff893e9a470a3f0c98cc73b04bea55dfe01e8a4c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
