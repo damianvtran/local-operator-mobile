@@ -1,5 +1,9 @@
 # Mobile components
 
+Native conversation/navigation refinements are governed by
+[native interaction guidelines](native-interaction-guidelines.md), including the
+scoped white-disk identity exception. All other kit rules remain in force.
+
 The primitive spec for the native Local Operator app: anatomy, sizes, states, and
 where each one already exists in the shipped phone web client.
 
@@ -158,18 +162,20 @@ Rules that are easy to get wrong:
 ## 4. Input and Textarea
 
 **Existing implementation:** the composer's field in `components/composer.tsx`
-(`text-[16px]`, `rounded-md`, `border-control`, `bg-elevated`, auto-grow to six
-lines then scroll).
+(`fieldClasses(...)` — `text-body` = 16pt — with auto-grow to six lines then
+scroll). Inside the composer it renders the `integrated` variant: transparent
+fill, `borderWidth: 0` and no horizontal padding of its own, because the shell
+around it paints the surface and its edge (§ 12).
 
 ### Anatomy and sizes
 
 | Slot | Binding |
 |---|---|
 | Height | `min-height` 44 (single-line); the textarea grows |
-| Padding X | 12 |
-| Corner | `radius.sm` (6) — the composer's *container* is `radius.frame` (16); the field inside it is not |
-| Fill | `elevated` inside the composer, `surface` standalone |
-| Border | `border-control` (structural: it is the field's only boundary on a plain ground) |
+| Padding X | 12 from `fieldClasses`; **0 on the integrated field**, whose 12 pt inset is the shell's (§ 12) |
+| Corner | `radius.sm` (6) from `fieldClasses` (`variants.ts:285-286`) on both variants — carried, and *unpainted* inside the composer, where the fill is transparent and the border is zero-width. The composer's own corner is the shell's morph (§ 12), not `radius.frame` |
+| Fill | `surface` standalone; `elevated` as the composer's field, which the `integrated` variant overrides to `transparent` — the shell owns the surface |
+| Border | `border-control` standalone (structural: it is the field's only boundary on a plain ground); zero-width when integrated, where the shell's `border-control` edge is the boundary (§ 12) |
 | Type | **`body` = 16pt, always.** See § 0.1 |
 | Placeholder | `ink-muted`; a placeholder is never the only label |
 | Caret | `accent` |
@@ -178,7 +184,7 @@ lines then scroll).
 
 | State | Binding |
 |---|---|
-| rest | fill `surface`/`elevated`, border `border-control` |
+| rest | fill `surface`, border `border-control` standalone; the integrated field paints neither — the shell's fill and edge are the boundary (§ 12) |
 | focus-visible | the ring at offset **1** |
 | disabled | fill `sunken`, ink `ink-disabled`, border `hairline` |
 | invalid | border `danger`, plus an adjacent message in `body-sm` |
@@ -212,6 +218,20 @@ An in-flow block: a session card, a tool-card, the about panel.
 **Elevation is a background step, never a shadow.** There are exactly two shadows
 in the system and both belong to objects that leave the flow (sheet, dialog).
 A card that needs to stand out takes `elevated`, not a shadow.
+
+**Where a fill step cannot carry the edge, the edge is a pixel.** The ground step
+separates a card only while the two fills read as a boundary; on the near-white
+pairs of the kit they do not. The composer's shell is the measured case:
+`elevated` over `canvas` runs **1.1244–1.2799:1 across all 59 themes**
+(solarizedLight 1.1473, cyberpunk 1.1244, localOperatorDark 1.2051) — a shade,
+not an edge, and a card delimited by one reads as unframed. Its boundary is drawn
+in `border-control`, the token for a field's only boundary on a plain ground,
+which measures **3.132–5.924:1 against `canvas` and 3.380–5.665:1 against
+`elevated`, 0 of 59 themes under 3:1 in either direction**. Three rules hold it:
+one edge in every theme and every state, never a threshold gated on a measured
+ratio (it would flip mid-session when the theme changes); never a shadow, per the
+paragraph above; and never a stronger fill, which would move every other
+`elevated` user. How that pixel is added without moving the box is § 12.
 
 ---
 
@@ -424,7 +444,9 @@ primitive in the app, and the one that carries the most information.
 
 | Slot | Binding |
 |---|---|
-| Field | `elevated` fill, `radius.frame` (16) on the container, `border-control`; **16pt text** |
+| Shell | `elevated` fill, 1px `border-control` edge, corner on the morph (below); **not** `surface`, **not** a shadow. On iOS 26 with Reduce Transparency off the fill is Liquid Glass instead (below) |
+| Shell geometry | at rest **4 + 48 + 4 = 56**, a stadium (R28), on every platform; open **12 + h + 4 + h + 8** on the platform floor `h` (112 on iOS, 120 on the 48 floor), R24 |
+| Field | the `integrated` variant of the textarea (`textarea.tsx:330-336`): transparent fill, `borderWidth: 0`, no horizontal padding of its own. Its radius comes from `fieldClasses` (`rounded-sm`, `variants.ts:285-286`) and is merely unpainted, because a transparent fill with no border has no edge to paint it — the shell owns the outer surface and its corner; **16pt text** |
 | Send / steer | 44 circle, `accent` fill, `on-accent` glyph `↑`, `fab` is 56 where it stands alone |
 | Stop | 44 circle, transparent fill, `danger-border`, `danger` `■` at 13pt |
 | Queued count | `mono-sm` `ink-dim`, left; the count is the only thing on that line that changes |
@@ -433,6 +455,78 @@ primitive in the app, and the one that carries the most information.
 | Attachments | 64 thumbs with a remove control; each image capped at **1568 px** on its long edge before upload |
 | Slash sheet | the same sheet in § 8, filtered as the draft starts with `/` |
 | Leading chip (`leadingChip`, home only) | the folder chip: `homeShortened(target.cwd, home)`, `size="sm"`, tap pushes `/new` |
+
+### The shell's edge, and why it is a child
+
+There is no nested bordered field: the field inside the shell is transparent and
+borderless on purpose, and the shell is the one surface the reader sees. That
+surface cannot be delimited by its fill — `elevated` over `canvas` is
+**1.1244–1.2799:1** in all 59 themes (§ 5), so the boundary is a 1px
+`border-control` edge (3.132–5.924:1 against `canvas`).
+
+It is drawn as a **ring, not as the shell's own border**: an absolutely positioned
+child of the shell, inset on all four sides (`top`/`bottom`, and the logical
+`start`/`end` — never a physical `left`/`right`), `borderWidth: 1`, `pointerEvents="none"`,
+and the radius read from the same function as the shell's (`composerShellRadius`, so
+both corners travel together and a second edge never shows).
+
+The shell's own `borderWidth` is not an option, and what rules it out is the
+interior, not the radius. The shell's height is a border box, so a 1 px border
+takes 1 pt off each edge of the content box and the field inside is squeezed from
+44 to 42 — under the touch floor. Both ends of the morph move with it: 54
+collapsed and 110 expanded instead of 56/112 (the figures measured before H5,
+when the resting pill was 6 + 44 + 6). That is
+*not* what the pins would see, and the radii do not follow it down.
+`composerPaintedHeight` is arithmetic on the same constants a border never
+touches, so the 56/112 assertions stay green with a border on the box; and
+`baseHeight` is `Math.max(seededBase, measured)`, where `seededBase` comes from
+that same helper — a measured 54 loses to the seeded 56, so the resting pill
+stays R28 rather than falling to R27. What a border really costs is the
+interior: the 44 pt field paints 42, and the painted pill stops describing the box
+that holds the content — every measured seed lands 2 pt short of the end it names,
+and above the floor `overflow: hidden` clips the difference. Nothing in the suite
+renders a box, so the guarantee is the construction, not a pin: an absolute child
+contributes nothing to layout, so the heights, radii, the 12 pt side inset, the
+gap above the shell, the 4 pt row seam, the field's own box and every hit target
+are unchanged, and the text keeps its 12 pt inset rather than becoming 13.
+
+`pointerEvents="none"` is required, not stylistic: an earlier absolutely positioned
+layer across this band swallowed every tap on the field (round 4, U1/U2/U3), so the
+ring must never be a hit target. It paints last, above the content it bounds.
+
+### The resting padding is one scale step (H5)
+
+The resting pill was 6 + 44 + 6. 6 pt is off the 4 pt `space.scale`, and the web
+audit's U-42 failed ~612 rows per device on that padding alone. Of the on-scale
+splits that keep the 56 pt pill, **4 + 48 + 4** is the only one whose control row
+stays at or above the touch floor (8 + 40 + 8 puts attach and send in a 40 pt row,
+under both platform floors), and growing the pill to 8 + 44 + 8 = 60 would grow
+the dock on every screen for a spacing rule. So the resting row is
+`COMPOSER_REST_ROW` = 48 on every platform and the padding is `COMPOSER_REST_PAD`
+= 4 (`composer-presentation.ts`). The resting row is **cross-axis centred**
+(`composerFieldRowAlign`; the open card's field row stays bottom-aligned so a
+multi-line draft grows upward), so on iOS the 44 pt discs sit centred in the 48 pt
+row and disc-to-shell is 4 + 2 = 6 pt on both edges (`composerRestInsets`); on the 48 floor
+the pill drops from 60 to 56. The open card was already on-scale and is unchanged.
+
+### Glass (iOS)
+
+The shell and the strip's model/effort chips draw `expo-glass-effect` Liquid
+Glass when the host's `useChromeGlass()` says so (iOS 26, glass API available,
+Reduce Transparency resolved **off**); the home and the session screen each take
+ONE decision and pass it as `glass`. It is **fill only**: the shell's glass is an
+absolutely positioned `ChromeSurface` layer clipped by the shell's own animated
+shape, so the box, radii and every target are identical to the solid frame; the
+strip row becomes a `ChromeGroup` and each chip its own capsule. The solid
+fallback is unchanged (no wrapper on a solid chip, `elevated` on the shell), the
+`border-control` ring stays the rim, and **attach and send stay opaque** in both
+branches so `on-accent` on `accent` never depends on what scrolls behind the
+glass. The shell's glass layer takes a fixed 24 pt radius
+(`COMPOSER_GLASS_LAYER_RADIUS`, the smallest the animated shell ever reaches), so
+the shell's clip is always the only shape. Each strip capsule hugs its chip
+(`alignSelf: flex-start`) and the strip's group merge distance is 0, under its
+4 pt gap, so model and effort read as two capsules, never one fused bar. No web
+frame can show glass (the module renders a plain view there).
 
 ### Home's use of it, and the two additive props
 
@@ -454,7 +548,11 @@ as before.
 
 The composer's foot position is invariant on home too: suggestions and the
 splash sit *above* it, and when the region stops fitting it scrolls
-(`keyboardShouldPersistTaps="handled"`) rather than pushing the field down.
+(`keyboardShouldPersistTaps="handled"`) rather than pushing the field down. The
+folder and model read failures are inset `Alert`s (16 pt inset, radius 10, one
+Retry) stacked above the composer, never a full-bleed Banner: a notice shortens
+the free band and the hero re-centres in what is left, while the composer's box
+is the same with or without it (`home-composer-invariant.test.ts`).
 
 ### The send / steer / stop morph
 

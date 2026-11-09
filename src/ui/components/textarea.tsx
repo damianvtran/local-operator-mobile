@@ -1,11 +1,19 @@
 import { useCallback, useRef, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Platform, Text, TextInput, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
+import { useKeyboardAppearance, useTokenColor } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { type FieldState, fieldClasses, TEXTAREA_MAX_PX } from "@/ui/variants";
+import {
+	type FieldState,
+	fieldBoxHeight,
+	fieldClasses,
+	fieldScrollsWithContent,
+	TEXTAREA_MAX_PX,
+	webFieldOverflow,
+	webFieldResize,
+} from "@/ui/variants";
 
 /**
  * A multi-line field that grows to six lines and then scrolls.
@@ -35,6 +43,8 @@ export type TextareaProps = {
 	 *  of a 390 pt screen and the placeholder already says what the field is. The name
 	 *  is never removed: `accessibilityLabel` below still carries it. */
 	hideLabel?: boolean;
+	/** Composer owns the outer surface; keep the focus/invalid indication here. */
+	integrated?: boolean;
 	/** A HARD pixel ceiling on the field's height, applied on top of `maxLines`. For the
 	 *  short-landscape composer, whose budget is the screen's height and not a line count:
 	 *  past it the field scrolls itself, so the controls beside and below it never leave
@@ -51,6 +61,9 @@ export type TextareaProps = {
 	 *  are equal by construction, whichever way the placeholder wraps. */
 	placeholderMaxLines?: number;
 	onSubmitEditing?: () => void;
+	/** Presentation observers; the same native input survives shell transitions. */
+	onFocus?: () => void;
+	onBlur?: () => void;
 	autoFocus?: boolean;
 	/** A handle to the platform field, for the one caller that must FOCUS it —
 	 *  the home's New chat row, which closes the drawer and puts the caret where
@@ -68,6 +81,40 @@ export type TextareaProps = {
  * text that fills it. Without that, the constants cap the box at ~1.4 lines of
  * 200 % text while the placeholder needs ~2.5, and the frame cuts it mid-word
  * (design round D20; the arithmetic was the defect, not the measurement path). */
+/** The style spread: an `undefined` value must not add a key at all, or a later
+ *  utility would be overridden by an empty object. Both web-only facts live here so
+ *  one call answers "what does the browser need to know about this box?". */
+const webFieldStyle = (
+	platform: string,
+	scrollable: boolean,
+): { overflow?: "hidden"; resize?: "none" } => {
+	const style: { overflow?: "hidden"; resize?: "none" } = {};
+	const overflow = webFieldOverflow(platform, scrollable);
+	if (overflow !== undefined) style.overflow = overflow;
+	const resize = webFieldResize(platform);
+	if (resize !== undefined) style.resize = resize;
+	return style;
+};
+
+/**
+ * What an EMPTY web field needs for its placeholder to ELLIPSIZE rather than wrap
+ * and clip: `rows=1` plus one fixed line-height.
+ *
+ * Chrome does not ellipsize a `<textarea>`'s placeholder on the pseudo-element at
+ * all — `getComputedStyle(el, "::placeholder").textOverflow` stays `clip` no
+ * matter what the stylesheet says, and the round-2 isolation test showed a bare
+ * textarea with `white-space: pre; text-overflow: ellipsis` still cutting the
+ * tail through a glyph. On the ELEMENT it works, but only while the box is one
+ * line: the same declarations with no row constraint wrapped and clipped. Typed
+ * text is untouched — this applies only while `value === ""`, and the field goes
+ * back to its multiline growth the moment a character lands (UX round 2, U9).
+ */
+const webSingleLinePlaceholder = (
+	platform: string,
+	empty: boolean,
+	oneLinePlaceholder: boolean,
+): boolean => platform === "web" && empty && oneLinePlaceholder;
+
 const LINE_PX = 22;
 
 /** The line box of the field's OWN type: `text-body` is 16 pt at 1.5 → 24 pt, and
@@ -102,10 +149,13 @@ export const Textarea = ({
 	invalid = false,
 	disabled = false,
 	hideLabel = false,
+	integrated = false,
 	maxLines = 6,
 	maxHeightPx,
 	placeholderMaxLines,
 	onSubmitEditing,
+	onFocus,
+	onBlur,
 	autoFocus,
 	fieldRef,
 	testID,
@@ -175,11 +225,16 @@ export const Textarea = ({
 			? "invalid"
 			: "rest";
 	const inputRef = useRef<TextInput | null>(null);
+	/* ONE decision, read by two consumers: the native `scrollEnabled` prop and the
+	 *  web `overflow` style. Computing it twice is how a proof can pass while the
+	 *  rendered field still scrolls. */
+	const scrollable = fieldScrollsWithContent(contentFloor, cap);
 	/* The caller's handle wins: it exists so the home can focus the field, and
 	 *  the internal one is never read — only forwarded to the element. */
 	const resolvedRef = fieldRef ?? inputRef;
 	// React Native takes the placeholder as a colour VALUE, not a class.
 	const placeholderColour = useTokenColor("ink-muted");
+	const keyboardAppearance = useKeyboardAppearance();
 
 	const handleContentSize = useCallback(
 		(event: { nativeEvent: { contentSize: { height: number } } }) => {
@@ -240,22 +295,67 @@ export const Textarea = ({
 					</View>
 				) : null}
 				<TextInput
+					onFocus={onFocus}
+					onBlur={onBlur}
 					ref={resolvedRef}
-					className={fieldClasses(fieldState)}
+					keyboardAppearance={keyboardAppearance}
+					className={fieldClasses(fieldState, { inComposer: integrated })}
 					/* One `style`, because a textarea's box IS its visual: the growing height
 					 *  and the platform floor (48 wherever `Platform.OS` is not iOS — the
 					 *  web/audit profile) have to be resolved together (D6). */
 					style={{
-						height: Math.min(
-							Math.max(contentFloor, oneLineBox, placeholderFloor),
+						/* The border is part of the painted box (border-box), so the height
+						 *  the content measured must grow by it or the last line is clipped
+						 *  by 2px — S16/create-filled's 100% frame (U-07). */
+						height: fieldBoxHeight(
+							contentFloor,
+							oneLineBox,
+							placeholderFloor,
 							cap,
 						),
 						minHeight: TOUCH_FLOOR,
+						/* `scrollEnabled` is a NATIVE prop: react-native-web does not turn it
+						 *  into CSS, so `false` left the browser free to paint its own overflow
+						 *  on an empty field at 200 % — the scrollbar and resize glyph the design
+						 *  round kept seeing in real Settings captures while a helper-only test
+						 *  stayed green (final audit, D1). Web says it in CSS terms instead, and
+						 *  only when there is nothing to scroll; content past the cap keeps
+						 *  `auto`, so both platforms agree on WHEN scrolling is allowed. */
+						...webFieldStyle(Platform.OS, scrollable),
+						/* The composer's field paints ITS OWN box, not the box plus its
+						 *  padding: a web `<textarea>` is content-box, so the 44 pt floor plus
+						 *  `py-2` painted 60 and pushed the dock 4 pt past the record's 56/112
+						 *  (measured 2026-11-05). `box-sizing` is the web spelling of RN's own
+						 *  default, so native is unchanged. */
+						...(integrated
+							? {
+									backgroundColor: "transparent",
+									paddingHorizontal: 0,
+									borderWidth: 0,
+									...(Platform.OS === "web" ? { boxSizing: "border-box" } : {}),
+								}
+							: {}),
 					}}
-					multiline
+					/* On WEB, an EMPTY field whose placeholder is capped to one line is an
+					 * `<input>`, not a `<textarea>`: Chrome does not ellipsize a textarea's
+					 * placeholder — `text-overflow: ellipsis` computes fine on the element
+					 * and the tail is still clipped, measured on this build and against a
+					 * bare `<input>` with the identical box, which ellipsizes correctly
+					 * (UX round 2, U9). Multiline resumes the moment a character lands,
+					 * so a typed draft wraps exactly as before, and the single-line
+					 * element also gives Enter the submit semantics the composer already
+					 * handles on web. */
+					multiline={
+						integrated ||
+						!webSingleLinePlaceholder(
+							Platform.OS,
+							value === "",
+							placeholderMaxLines === 1,
+						)
+					}
 					// The transcript scrolls, not the page: the field clips its own
 					// overflow once it hits the cap.
-					scrollEnabled={Math.max(contentFloor, placeholderFloor) > cap}
+					scrollEnabled={scrollable}
 					onContentSizeChange={handleContentSize}
 					accessibilityRole={ROLE.text}
 					accessibilityLabel={label}

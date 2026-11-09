@@ -1,0 +1,125 @@
+# audit.log - delta of libc-fr-r1, locale fr, mobile.library. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/run.sh fr libc-fr-r1, run 2026-10-31T14:28:46Z. Reads of call sites / sibling catalogues (sed/grep/python) are the auditor's own judgments and are not all replayed here.
+
+$ git rev-parse --short HEAD
+4292fa48
+[exit 0]
+
+$ git status --short
+ M src/features/library/library-detail.tsx
+ M src/i18n/catalogue.gen.ts
+ M src/i18n/catalogues/es/mobile.common.json
+?? i18n/audits/evidence/es/mobile.library/libc-es-r2/
+?? i18n/audits/evidence/fr/mobile.library/libc-fr-r2/
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/fr/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/i18n/catalogues/fr/mobile.common.json
+fdf9b359ba106b6ff5093d57b3c983f7a74048e3a50315d73fc1661ea9a5ee75  src/i18n/catalogues/fr/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+b1be5557e25593e2154b3d71be7799a20b2fbdcf73fbd3740cb13fbd116866e1  src/i18n/catalogues/fr/mobile.common.json
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/delta.py fr libc-fr-r1
+round-1 recorded sha256 : e07c70d5566e4af4b1d78e47a5d1411a5f7db64f6948f270fc0d0797c385fe9d
+shipped now sha256      : fdf9b359ba106b6ff5093d57b3c983f7a74048e3a50315d73fc1661ea9a5ee75
+round-1 attests shipped : False
+libc-fr-r1-1 NIT mobile.library.browse.any_tag
+   round-1 current    : Toute étiquette
+   round-1 replacement: Toutes les étiquettes
+   shipped now        : Toutes les étiquettes
+   byte-exact applied : True
+libc-fr-r1-2 NIT mobile.library.browse.no_tags
+   round-1 current    : Aucune étiquette pour l’instant. Le bibliothécaire en ajoute en organisant les éléments.
+   round-1 replacement: Aucune étiquette pour l’instant. Le bibliothécaire les ajoute en organisant les éléments.
+   shipped now        : Aucune étiquette pour l’instant. Le bibliothécaire les ajoute en organisant les éléments.
+   byte-exact applied : True
+keys changed since round 1 (derived): ['mobile.library.browse.any_tag', 'mobile.library.browse.no_tags']
+reconstructed round-1 sha256: e07c70d5566e4af4b1d78e47a5d1411a5f7db64f6948f270fc0d0797c385fe9d
+== recorded round-1 sha256   : True
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/checks.py fr
+en keys 31 sidecar keys 31 sidecar==en True
+fr: keys=31 same_keyset_as_en=True all_values_str=True
+bidi/zero-width chars: 0
+Cf/Cc: []
+NFC-stable: True
+leading/trailing space: []
+U+FFFD / mojibake markers: []
+placeholder/ICU defects: none
+full-stop mismatch (locale stop vs en): none
+ASCII quote/apostrophe in values: none
+new_tag_placeholder 'nom-du-sujet' matches server grammar: True
+common.cancel = 'Annuler' | discard_confirm = 'Abandonner' | equal: False
+common.done = 'Terminé'
+length (chars) of button/chip values (current | en):
+   action.open_chat      22 |   9  Ouvrir la conversation
+   browse.any_tag        21 |   7  Toutes les étiquettes
+   discard_confirm       10 |   7  Abandonner
+   browse.refresh        26 |  15  Actualiser la bibliothèque
+special spaces (NNBSP U+202F / NBSP U+00A0): [('mobile.library.editor.discard_title', ['0x202f'])]
+[exit 0]
+
+### rendered text, real args (limit=12; count=1,2,5), via src/i18n/messages.ts
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libr2/render.ts fr
+action.add_tag               {}           => Ajouter
+action.edit                  {}           => Modifier
+action.open_chat             {}           => Ouvrir la conversation
+browse.any_tag               {}           => Toutes les étiquettes
+browse.filter_by_kind        {}           => Filtrer par type
+browse.filters               {}           => Filtres
+browse.filters_count         {"count":1}  => Filtres · 1
+browse.filters_count         {"count":2}  => Filtres · 2
+browse.filters_count         {"count":5}  => Filtres · 5
+browse.more_kinds            {}           => Autres types
+browse.no_tags               {}           => Aucune étiquette pour l’instant. Le bibliothécaire les ajoute en organisant les éléments.
+browse.refresh               {}           => Actualiser la bibliothèque
+browse.search_label          {}           => Rechercher dans la bibliothèque
+browse.search_placeholder    {}           => Nom, étiquette ou mots
+browse.sort                  {}           => Trier
+browse.status                {}           => État
+browse.tag                   {}           => Étiquette
+detail.message_label         {}           => Message à propos de cet élément
+detail.missing_file          {}           => Ce fichier a été déplacé ou supprimé. Son nom, ses étiquettes et sa description sont toujours là.
+detail.no_source             {}           => Aucune conversation source n’est enregistrée pour cet élément.
+detail.no_tags               {}           => Aucune étiquette pour l’instant. Modifiez les détails pour en ajouter une.
+detail.seen_in               {}           => Vu dans
+editor.description           {}           => Description
+editor.discard_title         {}           => Abandonner les modifications ?
+editor.name                  {}           => Nom
+editor.new_tag               {}           => Nouvelle étiquette
+editor.new_tag_placeholder   {}           => nom-du-sujet
+editor.tag_limit             {"limit":12} => Un élément peut porter au plus 12 étiquettes.
+editor.tags                  {}           => Étiquettes
+editor.title                 {}           => Modifier les détails
+title                        {}           => Bibliothèque
+discard_not_saved            {}           => Les modifications apportées au nom, à la description et aux étiquettes ne seront pas enregistrées.
+discard_confirm              {}           => Abandonner
+-- mobile.common (the six chrome verbs the Library screens render)
+mobile.common.back           {}           => Retour
+mobile.common.cancel         {}           => Annuler
+mobile.common.done           {}           => Terminé
+mobile.common.save           {}           => Enregistrer
+mobile.common.send           {}           => Envoyer
+mobile.common.try_again      {}           => Réessayer
+[exit 0]
+
+$ grep -n mobile.library.discard\|editor.discard_title\|mobile.common.cancel src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+src/features/library/library-detail.tsx:828:								label={t("mobile.common.cancel")}
+src/features/library/library-detail.tsx:919:				title={t("mobile.library.editor.discard_title")}
+src/features/library/library-detail.tsx:920:				body={t("mobile.library.discard_not_saved")}
+src/features/library/library-detail.tsx:921:				confirmLabel={t("mobile.library.discard_confirm")}
+src/ui/components/dialog.tsx:133:							accessibilityLabel={t("mobile.common.cancel")}
+src/ui/components/dialog.tsx:191:										label={t("mobile.common.cancel")}
+[exit 0]
+
+### re-hash at end of run (file must be unchanged)
+
+$ shasum -a 256 src/i18n/catalogues/fr/mobile.library.json
+fdf9b359ba106b6ff5093d57b3c983f7a74048e3a50315d73fc1661ea9a5ee75  src/i18n/catalogues/fr/mobile.library.json
+[exit 0]

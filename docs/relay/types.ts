@@ -473,6 +473,17 @@ export interface SessionProjection {
    *  branch raises it on the *entry* (`daemon.py:2619-2620`), which is what the
    *  summary row reads; the payload mirror follows a dial/reader failure. */
   degraded: boolean;
+  /** The relay's "owner has gone quiet" verdict (local-operator #3008,
+   *  `types.py::SessionProjection.heartbeat_stale`): true when the runtime's
+   *  heartbeat AND its frames are both older than `SESSION_HEALTH_WINDOW_S`
+   *  (45 s); false while either is fresh.
+   *
+   *  ABSENT, not null, when the daemon has nothing to measure — an older
+   *  daemon, or a durable rebuild with no live owner (`daemon.py` pops the key
+   *  for a `None` verdict, so a durable frame stays byte-identical to what it
+   *  was before the field existed). Absence is "not reported": a client paints
+   *  nothing from it, never yellow. */
+  heartbeat_stale?: boolean | null;
   /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
    *  the conversation's opening user message pinned at the head
    *  (`types.py:980`, `projection.py:3127-3153`). Older rows page in from
@@ -585,6 +596,9 @@ export interface SessionSummary {
   conversation_name: string;
   cwd: string;
   model_label: string;
+  /** The rung last run with (`daemon.py` `_merge_summaries`, v0.101.14+):
+   *  `null` — not absence — when no rung is known. */
+  effort?: string | null;
   streaming: boolean;
   needs_attention: boolean;
   /** A turn finished while nobody was viewing the session and it has not been
@@ -638,6 +652,9 @@ export interface SessionSummary {
    *  `[]`/`null` — their assignment lives in the other device's store. */
   tags?: TagRef[];
   primary?: string | null;
+  /** Who opened the conversation when an agent did; `null` on every ordinary
+   *  row (`daemon.py` `_merge_summaries`, `row.opened_by`). */
+  opened_by?: Record<string, string | null> | null;
   /* ------------------------------------------------ the remote row's own
    *
    * ABSENT on a local row; present with real values on every remote one
@@ -666,6 +683,12 @@ export interface SessionSummary {
   placement?: Record<string, unknown> | null;
   origin?: Record<string, unknown> | null;
   last_synced_at?: number | null;
+  /** The bound agent and its stored picture's sha256 (local-operator
+   *  agent-profile-picture contract; `agent.yml` `avatar.sha256`). Additive:
+   *  absent/`null` on older relays, unbound sessions and picture-less agents.
+   *  The bytes are `GET /v1/agents/{agent_id}/avatar?v=<sha>`. */
+  agent_id?: string | null;
+  avatar_sha256?: string | null;
 }
 
 /** Capabilities ride the SAME list frames (`daemon.py:3485-3518`): one answer,
@@ -685,6 +708,16 @@ export interface Capabilities {
   /** The conversation-tag routes. Optional and never defaulted: absence is an
    *  older relay whose `/api/tags` and `/api/sessions/{id}/tags` do not exist. */
   session_tags?: { available: boolean };
+  /** `POST /api/sessions/start`'s capability (local-operator
+   *  `docs/design/mobile-start-receipts.md`). `effort: true` (v0.101.9) is the
+   *  only licence to send `effort` in a start body: an older relay refuses it on
+   *  a keyed start and drops it on an unkeyed one. Absent = predates the contract. */
+  session_start?: {
+    version?: number;
+    durable_idempotency?: boolean;
+    receipt_capacity?: number;
+    effort?: boolean;
+  };
 }
 
 /** The payload of `GET /api/sessions` and of every `sessions` SSE frame —
@@ -703,6 +736,25 @@ export interface SessionListFrame {
    *  relay omits the block, and **absence means "unknown", never 0**. `count`
    *  is absent when `degraded` is non-empty. */
   unread?: UnreadBlock;
+  /** The inbox's own counts (contract §5.4), published on this frame so a phone
+   *  needs no second stream. Absent on an older relay, and **absence means
+   *  unknown, never 0** — the badge then draws no number rather than a zero.
+   *
+   * This block was missing from this file after it shipped on the app's schema
+   * (`src/contracts/schemas.ts`, `sessionListFrameSchema`), which is how the
+   * mock relay came to serve a frame the badge could never read: the designed
+   * count had never rendered in any frame (design review D3). */
+  notifications?: NotificationsBlock;
+}
+
+/** The inbox's counts (`SessionListFrame.notifications`): the badge's number,
+ *  the pinned asks, and the boundary a bounded bulk read is compared against.
+ *  All three ride together because the relay publishes them from one store
+ *  read — a partial block would describe a moment that never existed. */
+export interface NotificationsBlock {
+  unread_count: number;
+  waiting_count: number;
+  high_water: number;
 }
 
 /** The frame-level unread aggregate. `count` is the §1.4 badge number:
@@ -712,8 +764,9 @@ export interface UnreadBlock {
   /** Absent when `degraded` is non-empty. Never read absence as `0`. */
   count?: number;
   /** `AttentionStore.revision()` — an EQUALITY token, never an order: compare
-   *  it for change; never sort by it (`daemon.py` `unread_block()`). */
-  revision: [number, number, number];
+   *  it for change; never sort by it (`daemon.py` `unread_block()`). ABSENT,
+   *  with `count`, on the degraded shape `{"degraded": [...]}`. */
+  revision?: [number, number, number];
   /** `["attention"]` when the completion-receipt store could not be read. */
   degraded: string[];
 }
@@ -845,6 +898,20 @@ export interface ModelEntry {
   connected?: boolean;
   /** The provider RESELLS the model rather than serving it. */
   aggregated?: boolean;
+  /** v0.101.9: the effort ladder, lowest first. `[]` = the model has no effort
+   *  setting; ABSENT = the relay does not know the ladder (offer the whole
+   *  vocabulary; the session clamps). Never `null`. */
+  efforts?: string[];
+}
+
+/** v0.101.9: what a start naming no `provider`/`model_id`/`effort` runs. `effort`
+ *  is the configured level clamped to the model's ladder, `null` for a model
+ *  whose ladder is `[]`. */
+export interface ModelDefault {
+  selector: string;
+  provider: string;
+  model_id: string;
+  effort: string | null;
 }
 
 /** `GET /api/directories` (`daemon.py:4350-4359`). `tmp` is the RESOLVED temp

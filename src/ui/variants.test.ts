@@ -1,13 +1,20 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 import {
+	alertActionClasses,
+	alertActionLayout,
+	alertStacked,
 	avatarClasses,
 	BUTTON_VISUAL_HEIGHT,
 	badgeClasses,
 	buttonClasses,
 	chipClasses,
 	emptyStateClasses,
+	FIELD_BORDER_Y,
+	fieldBoxHeight,
 	fieldClasses,
+	fieldScrollsWithContent,
 	listRowIndicator,
 	segmentedItemClasses,
 	segmentedLabelClasses,
@@ -15,6 +22,7 @@ import {
 	skeletonBarClasses,
 	skeletonClasses,
 	touchFloorFor,
+	webFieldOverflow,
 } from "@/ui/variants";
 
 /**
@@ -285,5 +293,108 @@ describe("skeleton bar classes", () => {
 
 	it("defaults a list placeholder to the full width, once", () => {
 		expect(skeletonBarClasses()).toBe("h-4 w-full rounded-sm");
+	});
+});
+
+describe("quiet chip", () => {
+	/* The composer sits on a tonal ground, so its disclosures are text plus states
+	 * rather than a second fill and border. The change is paint only: a quiet chip
+	 * that lost its 44 pt floor would trade a visual tidy-up for a tooltip-sized
+	 * target — the failure this file exists to prevent. */
+	it("paints nothing at rest but keeps the full touch target", () => {
+		const quiet = chipClasses({}, { quiet: true });
+		expect(quiet).toContain("min-h-11");
+		expect(quiet).toContain("border-transparent");
+		expect(quiet).not.toContain("border-border-control");
+		expect(quiet).not.toContain("bg-surface");
+	});
+
+	it("leaves the default chip unchanged", () => {
+		expect(chipClasses({})).toContain("border-border-control");
+		expect(chipClasses({})).toContain("bg-surface");
+		expect(chipClasses({}, { quiet: true })).not.toBe(chipClasses({}));
+	});
+});
+
+describe("web field overflow", () => {
+	/* The rendered defect the helper exists to prevent: `scrollEnabled={false}` is a
+	 * native-only prop, and react-native-web kept painting an empty field's scrollbar
+	 * and resize handle at 200 % (final audit D1). */
+	it("hides overflow on web only when the field has nothing to scroll", () => {
+		expect(webFieldOverflow("web", false)).toBe("hidden");
+		expect(webFieldOverflow("web", true)).toBeUndefined();
+		expect(webFieldOverflow("ios", false)).toBeUndefined();
+	});
+
+	it("is what the field actually reads", () => {
+		const source = readFileSync(
+			new URL("./components/textarea.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain("webFieldStyle(Platform.OS, scrollable)");
+		expect(source).toContain("webFieldResize(platform)");
+		expect(source).toContain("scrollEnabled={scrollable}");
+	});
+});
+
+/* U-07, S16/create-filled at 100%: "content 88px in a 86px box (overflow-y:
+ * hidden)". The field's style height is a BORDER box, so a height computed from
+ * the content's own measurement clips the last line by the border unless the
+ * border is added back. */
+describe("the field's painted height includes its border", () => {
+	it("turns the capped content measurement into the border box", () => {
+		expect(fieldBoxHeight(88, 40, 0, 88)).toBe(88 + FIELD_BORDER_Y);
+		expect(fieldBoxHeight(60, 40, 0, 88)).toBe(60 + FIELD_BORDER_Y);
+		expect(fieldBoxHeight(20, 40, 50, 88)).toBe(50 + FIELD_BORDER_Y);
+		// The cap itself is a CONTENT budget: the painted box is two pixels taller.
+		expect(fieldBoxHeight(88, 40, 0, 88)).toBeGreaterThan(88);
+	});
+
+	it("keeps the scroll decision on the CONTENT budget, not the painted box", () => {
+		expect(fieldScrollsWithContent(88, 88)).toBe(false);
+		expect(fieldScrollsWithContent(89, 88)).toBe(true);
+	});
+});
+
+/* Design D2 / UX U4: an inset alert's one remedy. */
+describe("alert action placement", () => {
+	it("leaves an alert with no action exactly as it was", () => {
+		expect(alertActionLayout(false, 1)).toBe("none");
+		expect(alertActionLayout(false, 2)).toBe("none");
+		expect(alertActionClasses("none").text).toBe("flex-row items-start gap-2");
+	});
+	it("trails the remedy at normal text, overlapping the alert's padding", () => {
+		expect(alertActionLayout(true, 1)).toBe("trailing");
+		expect(alertActionLayout(true, 1.4)).toBe("trailing");
+		const trailing = alertActionClasses("trailing");
+		/* -my-3 cancels the 12 pt padding: one line is 12 + 20 + 12 + 2 = 46. */
+		expect(trailing.action).toContain("-my-3");
+		expect(trailing.action).toContain("self-center");
+		/* The message centres on the remedy, so one line shares its line. */
+		expect(trailing.text).toContain("self-center");
+		expect(trailing.text).toContain("flex-1");
+	});
+	it("stacks the remedy under the message at large text", () => {
+		expect(alertActionLayout(true, 1.5)).toBe("stacked");
+		expect(alertActionLayout(true, 2)).toBe("stacked");
+		const stacked = alertActionClasses("stacked");
+		/* A column child with flex-1 has no height to share: never here. */
+		expect(stacked.text).not.toContain("flex-1");
+		expect(stacked.action).toContain("self-end");
+		expect(alertStacked.flexDirection).toBe("column");
+	});
+});
+
+describe("badge alignment (design D1)", () => {
+	it("keeps `self-start` for every existing caller", () => {
+		expect(badgeClasses("neutral")).toContain("self-start");
+		expect(badgeClasses("neutral")).not.toContain("self-center");
+	});
+
+	it("centres a badge trailing a centred row instead of pinning it to the top", () => {
+		const centred = badgeClasses("neutral", "center");
+		expect(centred).toContain("self-center");
+		expect(centred).not.toContain("self-start");
+		expect(centred).toContain("bg-accent-muted");
 	});
 });

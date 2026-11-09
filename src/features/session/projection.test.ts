@@ -17,6 +17,7 @@ import {
 	toolDetailBlocks,
 	toolElapsed,
 	toolGlyph,
+	turnRunning,
 	workingLine,
 } from "@/features/session/projection";
 
@@ -257,6 +258,21 @@ describe("the working line", () => {
 				projection({ activity: "thinking", activity_started_s: null }),
 			)?.startedS,
 		).toBeNull();
+	});
+});
+
+describe("whether a turn is running (header, composer op and Stop agree)", () => {
+	it("is false only when neither the stream nor a working label says otherwise", () => {
+		expect(turnRunning(projection())).toBe(false);
+		expect(turnRunning(projection({ streaming: true }))).toBe(true);
+	});
+
+	it("counts a working label with streaming lowered as running (TestFlight 578)", () => {
+		/* The frame that made the header say "Working · 21s" while the composer
+		 * minted a prompt: a reconcile lowered `streaming` and left `activity`. */
+		expect(
+			turnRunning(projection({ streaming: false, activity: "running bash" })),
+		).toBe(true);
 	});
 });
 

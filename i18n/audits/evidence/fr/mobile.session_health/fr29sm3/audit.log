@@ -1,0 +1,107 @@
+French delta audit fr29sm3 — actual execution log
+Date: 2026-10-29
+Repository: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+
+1. Public-copy read route
+
+read_public_copy was attempted on English, context and target catalogue paths.
+Actual result for each: "refused: the workspace is not a git checkout".
+The files were then read through the ordinary workspace file-read route.
+No translation/MT service or back-translation was used.
+
+2. Repository validator
+
+Command:
+cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+npm run -s i18n:check; status=$?; printf 'i18n:check exit=%s\n' "$status"; exit "$status"
+
+Exit: 0
+stdout:
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 34274c2d328d
+i18n:check exit=0
+stderr:
+(node:97690) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+An earlier invocation from /Users/damian failed because the repository root was not supplied ("Missing script: i18n:check"). It is not the validator result above.
+
+3. Input hashes, source, context, and candidate measurements
+
+Command: repository-root Python 3 heredoc using json, hashlib, unicodedata and pathlib. Each catalogue was read as bytes, SHA-256 hashed and JSON decoded. Cells count 2 for East Asian W/F and 1 otherwise; the probe asserted no control or combining characters. U+2026 therefore counts as one cell.
+
+Exit: 0
+stdout:
+en: src/i18n/catalogues/en/mobile.session_health.json
+  sha256=727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f keys=11
+context: src/i18n/catalogues/en/mobile.session_health.context.json
+  sha256=a8a29fe07e15725c434429017552411f9833a6688924c668cdab02289044725a keys=11
+target: src/i18n/catalogues/fr/mobile.session_health.json
+  sha256=f48d24ef269c609e6b65ca5409875280e4ea8c248cd45476577127225a5cbac6 keys=11
+key_parity_en_context_target= True
+english= 'Send to reopen in your home folder…'
+context= Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder.
+current= 'Rouvre dans votre dossier personnel…'
+candidate cells=44 codepoints=44 utf8_bytes=46 within_36=False: Envoyer rouvre dans votre dossier personnel…
+candidate cells=35 codepoints=35 utf8_bytes=37 within_36=True: Envoyer rouvre (dossier personnel)…
+candidate cells=36 codepoints=36 utf8_bytes=38 within_36=True: Rouvre dans votre dossier personnel…
+candidate cells=25 codepoints=25 utf8_bytes=27 within_36=True: Envoyer la rouvre dans ~…
+candidate cells=36 codepoints=36 utf8_bytes=40 within_36=True: Rouvre dans votre dossier d’accueil…
+candidate cells=35 codepoints=35 utf8_bytes=37 within_36=True: Rouvre dans le dossier utilisateur…
+ASSERT current exactly 36 cells, trailing U+2026: PASS
+HEAD=4500723be18a94e53cde39a6f3f9ee1aca92ddb5
+MERGE_HEAD=d5babfa1854416265df06ba9a78609348db7f13d
+ledger_file=absent
+evidence_readme=absent
+audit_ledger_package_script=0
+
+4. Delta and Unicode safety checks
+
+Command: repository-root Python 3 heredoc; `git show :src/i18n/catalogues/fr/mobile.session_health.json` supplied the index version for exact comparison. Separate sha256sum invocation hashed the style guide and glossary.
+
+Exit: 0
+stdout:
+index_to_worktree_changed_keys= ['mobile.session_health.ended_placeholder']
+  Envoyer rouvre dans votre dossier personnel… -> Rouvre dans votre dossier personnel…
+keys_added= []
+keys_dropped= []
+key_order_unchanged= True
+unchanged_values= 10
+icu_arguments= none
+control_or_combining_codepoints= []
+wide_or_fullwidth_codepoints= []
+contains_tilde= False
+b916f3d1c30b0a2e18fc94ca51d130f60e86b3b17b1918aa51f5c5da6d52ec39  /Users/damian/local-operator/i18n/style-guides/fr.md
+ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd  /Users/damian/local-operator/i18n/glossary.md
+
+5. Source files read for language judgement
+
+- src/i18n/catalogues/en/mobile.session_health.json (ended_placeholder: Send to reopen in your home folder…)
+- src/i18n/catalogues/en/mobile.session_health.context.json (role help; 36-cell budget)
+- src/i18n/catalogues/fr/mobile.session_health.json (current target)
+- src/i18n/catalogues/en/relay.health.json and fr/relay.health.json (full ended-detail sentence)
+- src/i18n/catalogues/en/relay.health.context.json (home, not original project folder)
+- /Users/damian/local-operator/i18n/style-guides/fr.md
+- /Users/damian/local-operator/i18n/glossary.md
+- src/features/session/components/composer.tsx lines 887-914 (empty message-field placeholder and placeholderMaxLines={1})
+- prior bundles fr29sh1 and fr29sm2
+
+6. Ledger availability
+
+Repository checks recorded in section 3: i18n/ledger.json absent, local evidence README absent, package scripts matching audit-ledger/ledger-audit = 0. No ledger command or receipt exists in this mobile repository; no ledger write or receipt is claimed. record.json carries an unwritten proposed row.
+
+7. Final artifact verification
+
+Command: repository-root Python 3 parsed record.json, calculated record.md/audit.log SHA-256 values, inserted them into artifacts, asserted a passing 36-cell verdict and note <=280 characters, then re-read all three final files.
+
+record.md and the completed audit.log were hashed after all log writes; those hashes were then inserted into record.json.
+
+Final verification results:
+record.json parses: PASS
+record.md UTF-8 read: PASS
+audit.log UTF-8 read: PASS
+verdict passed / SH-01 resolved: PASS
+ledger note <=280: PASS
+catalogue edits by auditor: NONE (only requested fr29sm3 evidence files written)

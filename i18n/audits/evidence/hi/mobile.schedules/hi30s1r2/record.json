@@ -1,0 +1,251 @@
+{
+ "schema": 1,
+ "audit_id": "hi30s1r2",
+ "audit_kind": "same_history_delta_reaudit",
+ "round": 2,
+ "parent_audit_id": "hi30s1",
+ "locale": "hi",
+ "namespace": "mobile.schedules",
+ "file_group": "B",
+ "audit_date": "2026-10-30",
+ "audited_head_commit": "d4e31b1915b558171ded41501c741568f0854f3f",
+ "audited_revision": "d4e31b1915b558171ded41501c741568f0854f3f",
+ "audited_branch": "feat/i18n-hindi",
+ "audited_worktree": "/Users/damian/workspace/hi-wave",
+ "audited_worktree_note": "The hi catalogue IS committed at this head (unlike round 1, where it was an untracked working-tree directory). This audit wrote only the four r2 evidence directories; no catalogue byte, code byte or git state was changed, and nothing was committed.",
+ "key_count": {
+  "en": 38,
+  "target": 38,
+  "context": 38
+ },
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "4d508455ed51",
+  "job": null,
+  "model": "radient/auto",
+  "actual_model": "radient/auto",
+  "actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra (provider quota) -> kimi/k3.1-pro (provider quota) -> radient/auto (provider quota); every command in this round's audit.log ran under radient/auto. The concrete model behind the provider's `auto` router is not observable from the session, so it is not claimed.",
+  "model_history": [
+   "anthropic/claude-sonnet-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "fallback_applied": true,
+  "fallback_note": "three provider-quota fallbacks occurred before any command of this round ran",
+  "independent_from_translator_session": true,
+  "independence": "Independent auditor identity and a new session (4d508455ed51), not the translator's; this auditor also wrote the round-1 bundles for group B and did not translate. The translator's model is not visible to this auditor, so model diversity is not claimed. No human native-speaker review, no second independent pass and no rendered UI frame are claimed for this delta."
+ },
+ "translator": {
+  "agent": "i18n-translator (hi wave 6)",
+  "session": null,
+  "job": null,
+  "model": "not observed by this auditor",
+  "actual_model_source": "not disclosed to this auditor; the brief guarantees a different agent/session"
+ },
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.schedules.json",
+   "sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+   "sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+  },
+  "target": {
+   "path": "src/i18n/catalogues/hi/mobile.schedules.json",
+   "sha256": "8f2c93a7bd7ffdf75e2909c5399804e5a19a21d30505dc48e89abad1431d34ae"
+  }
+ },
+ "parent_source_unchanged": {
+  "en": true,
+  "context": true
+ },
+ "delta_reconstruction": {
+  "method": "The hi catalogue was an untracked working-tree directory at round 1, so git cannot diff it. The round-1 audited bytes are read from the audited snapshot at /Users/damian/.local-operator/sessions/a98ed4a82f18/scratchpad/hi-audit-b/repo/src/i18n/catalogues/hi, whose sha256 equals the parent record's recorded input_hashes.target.sha256 for all four namespaces; delta_resolve.py compares the four files key by key against this head.",
+  "round1_snapshot_sha256": {
+   "mobile.schedules": "88ac1b6ab0849e1270711d185172fb459a7198ac0521818b5922e0e37d291163",
+   "mobile.projects": "c2e2a90449d9295b1c8f8e15aa869d399ddb4d4e2cd93849c5e0447c8a53be55",
+   "mobile.computers": "0b38dc5d9c5b8eb132ec017d573ac46f4fdb6aa7887e9ce85be786e2a9ffb8a5",
+   "mobile.notifications": "5ae9fea0068c1a150d39be50fb293c48f74989cd410ef4b42de1e9a13085d252"
+  }
+ },
+ "changed_keys": [
+  "mobile.schedules.empty_line.wakes",
+  "mobile.schedules.gone.monitors",
+  "mobile.schedules.parked.wakes",
+  "mobile.schedules.summary.monitors_armed",
+  "mobile.schedules.supervisor.not_running",
+  "mobile.schedules.supervisor.unsupported",
+  "mobile.schedules.truncated"
+ ],
+ "round1_findings": [
+  {
+   "id": "HI-B-1",
+   "severity": "major",
+   "key": "mobile.schedules.truncated",
+   "resolution": "resolved_byte_exact",
+   "expected": "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।",
+   "observed": "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।",
+   "method": "string equality with the parent record's `replacement` (==, not visual)"
+  },
+  {
+   "id": "HI-B-2",
+   "severity": "minor",
+   "key": "mobile.schedules.summary.monitors_armed",
+   "resolution": "resolved_byte_exact",
+   "method": "string equality with the parent record's `replacement`",
+   "expected": "{count} सक्रिय",
+   "observed": "{count} सक्रिय"
+  },
+  {
+   "id": "HI-B-3",
+   "severity": "minor",
+   "key": "mobile.schedules.empty_line.wakes",
+   "resolution": "resolved_byte_exact",
+   "method": "string equality with the parent record's `replacement`",
+   "expected": "कोई जागृति निर्धारित नहीं।",
+   "observed": "कोई जागृति निर्धारित नहीं।"
+  },
+  {
+   "id": "HI-B-4",
+   "severity": "minor",
+   "key": "mobile.schedules.supervisor.not_running + mobile.schedules.supervisor.unsupported",
+   "resolution": "resolved",
+   "method": "fragment check: `नीचे दी गई जागृतियाँ` present, elliptical `नीचे दी जागृतियाँ` absent, in both keys"
+  },
+  {
+   "id": "HI-B-5",
+   "severity": "minor",
+   "key": "mobile.schedules.count.wakes",
+   "resolution": "kept_as_shipped_by_recorded_decision",
+   "method": "shipped arms still `{count, plural, one {# जागृति} other {# जागृतियाँ}}`; CLDR hi selects one for 0; the style guide says the same; now also pinned by runtime.test.ts",
+   "auditor_position": "No objection to the resolution and not re-litigated. The singular zero is Hindi's own treatment and CLDR/core/style-guide agree; recorded as the durable consequence that the zero form is now a test-pinned expectation, so changing it later is a test edit rather than a catalogue-only edit."
+  },
+  {
+   "id": "HI-B-6",
+   "severity": "nit",
+   "key": "mobile.schedules.parked.wakes + mobile.schedules.parked.monitors",
+   "resolution": "resolved",
+   "method": "both siblings now `फिर शुरू …`; `चालू हो जाती` absent"
+  },
+  {
+   "id": "HI-B-7",
+   "severity": "nit",
+   "key": "mobile.schedules.gone.monitors",
+   "resolution": "resolved_byte_exact",
+   "method": "string equality with the parent record's `replacement`",
+   "expected": "अब मौजूद नहीं — इसकी बातचीत इस मशीन पर नहीं रही, इसलिए इसे कोई जाँचता नहीं",
+   "observed": "अब मौजूद नहीं — इसकी बातचीत इस मशीन पर नहीं रही, इसलिए इसे कोई जाँचता नहीं"
+  }
+ ],
+ "mechanical": {
+  "repo_validator": "node scripts/i18n/generate.ts --check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)'",
+  "repo_gate": "node scripts/i18n/check-strings.ts -> exit 0: '284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5'",
+  "affected_tests": "vitest run src/i18n src/features/schedules src/features/projects -> 7 files, 188 tests passed, exit 0",
+  "typecheck": "tsc --noEmit -> exit 0 (the narrowed {total}: number is satisfied at every call site)",
+  "structural_verifier": "delta_verify.py over all 77 group-B keys -> 0 problems, 1 accounted escalation; placeholder name sets identical (4 recorded reorderings, same four as round 1), select arms identical, every plural node carries one+other, key order identical to English, NFC clean, no ZWJ/ZWNJ/bidi controls, no doubled spaces, no precomposed U+0958-U+095F",
+  "negative_controls": "8/8 as expected: unchanged copy passes; dropped placeholder, dropped `one` arm, plural<->select crossing, renamed select arm, ZWJ, precomposed U+095E and a renamed plural placeholder each fail with the expected message",
+  "delta_proof": "key-level comparison against the round-1 snapshot: 10 keys changed across group B, exactly the applied findings' keys; computers and notifications are byte-identical files"
+ },
+ "audit_notes_not_execution_log": "report.md holds judgement and per-finding reasoning; audit.log is the executed transcript (bash -x) and covers all four group-B namespaces, so it is identical in the four delta bundles. Notes never prove execution.",
+ "original_lost_evidence": {
+  "status": "none",
+  "note": "Nothing was lost or replaced; this is an additional delta round beside an intact round-1 bundle."
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/hi/mobile.schedules/hi30s1r2/record.json",
+   "note": "this record; not self-hashed"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.schedules/hi30s1r2/report.md",
+   "sha256": "274111be7d217f197b4406ff8d940098e571c8666e5ce28908e000caff266272",
+   "bytes": 11105
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.schedules/hi30s1r2/audit.log",
+   "sha256": "65183e8f7985e0ac68340299acf55189161d6ca9b1bdae048a96891ad8d2b843",
+   "bytes": 25450
+  }
+ ],
+ "verdict_scope": {
+  "source_freshness": "en and .context.json hashes are identical to the parent record's, so this is a same-source delta: only target bytes moved.",
+  "re_rendered_head_line": {
+   "method": "renderFor('mobile.schedules.truncated', …, 'hi') through src/i18n/runtime.ts (raw tag, so Hindi plural rules)",
+   "wakes_total_42": "जागृतियों वाली कुल 42 बातचीतों में से 10 दिखा रहे हैं।",
+   "monitors_total_42": "मॉनिटरों वाली कुल 42 बातचीतों में से 10 दिखा रहे हैं।",
+   "wakes_total_9": "जागृतियों वाली कुल 9 बातचीतों में से 5 दिखा रहे हैं।",
+   "monitors_total_9": "मॉनिटरों वाली कुल 9 बातचीतों में से 5 दिखा रहे हैं।",
+   "wakes_total_2": "जागृतियों वाली कुल 2 बातचीतों में से 1 दिखा रहे हैं।",
+   "wakes_total_1": "जागृतियों वाली कुल 1 बातचीत में से 0 दिखा रहे हैं।",
+   "round1_at_42": "जागृतियाँ वाली कुल 42 बातचीत में से 10 दिखा रहे हैं।",
+   "why_one_arm": "Intl.PluralRules('hi') selects other for 9 and 42 and one only for 0 and 1, so both requested counts exercise the oblique plural; the one arm renders कुल 1 बातचीत में से, which is the singular direct form में से does not obligue."
+  },
+  "plural_kind_contract": {
+   "escalation": "mobile.schedules.truncated: {total} text -> plural",
+   "generator_rule": "scripts/i18n/generate.ts permits text -> plural/select escalation and refuses every other kind change; node scripts/i18n/generate.ts --check exits 0, which it could not do if the kind change violated the contract.",
+   "generated_type_before": "{ total: string | number; shown: number; family: string }",
+   "generated_type_after": "{ shown: number; total: number; family: string }",
+   "type_consequence": "The strictest-kind rule narrows {total} from `string | number` to `number` for every caller. renderFor now throws RangeError on a string total ('needs a number for \"total\", received \"42\"'), which is what the plural arm needs.",
+   "call_sites": "truncatedClause(family, shown: number, total: number) already declares total as number; both call sites pass wakes.total / monitors.total (numbers); tsc --noEmit exits 0 over the whole app.",
+   "cldr": "Intl.PluralRules('hi').resolvedOptions().pluralCategories -> ['one','other']; every plural node in group B carries both"
+  },
+  "neighbour_regression": {
+   "counters_rendered": [
+    "summary.monitors_armed: 0 सक्रिय / 1 सक्रिय / 2 सक्रिय / 22 सक्रिय",
+    "summary.wakes: 0 निर्धारित / 2 निर्धारित / 22 निर्धारित",
+    "summary.monitors_attention: 9 में से 2 को ध्यान चाहिए",
+    "tail.failed: 1 विफल",
+    "count.monitors: 0 मॉनिटर / 2 मॉनिटर",
+    "empty.title: कुछ भी सक्रिय नहीं",
+    "empty_line.monitors: कोई मॉनिटर सक्रिय नहीं।",
+    "empty_line.wakes: कोई जागृति निर्धारित नहीं।"
+   ],
+   "verdict": "Agrees: same [number][invariant adjective] shape as summary.wakes and tail.failed, and the same word सक्रिय as empty.title and empty_line.monitors. Row state words (बंद / निष्क्रिय / समाप्त / पुराना / प्रतीक्षारत) do not collide.",
+   "considered_not_raised": "सक्रिय is now the antonym of a row's निष्क्रिय (dormant), so a dormant row can sit under a header reading 2 सक्रिय. English ships the same tension ('2 armed' above 'dormant'), and the armed header is the no-attention variant, so this is a property of the source copy rather than a translation defect."
+  },
+  "fit": {
+   "rendered_cells_vs_english": {
+    "truncated_total_42": "hi 34 vs en 42",
+    "truncated_total_9": "hi 32 vs en 40",
+    "summary.monitors_armed": "hi 6 vs en 7",
+    "empty_line.wakes": "hi 16 vs en 19"
+   },
+   "note": "Every changed sentence is narrower than its English source; the template string grew only because plural-node syntax is not visible text.",
+   "measured_by": "scratch cells() over the rendered strings: combining marks (Devanagari matras/nukta) count 0, everything else 1; a comparative check, not a font measurement"
+  }
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "blocker_ids": [],
+  "major_ids": [],
+  "finding_ids": [
+   "HI-B-1",
+   "HI-B-2",
+   "HI-B-3",
+   "HI-B-4",
+   "HI-B-5",
+   "HI-B-6",
+   "HI-B-7"
+  ],
+  "carried_open": [],
+  "reason": "0 BLOCKER, 0 MAJOR. HI-B-1 is resolved byte-exactly (the oblique family noun and the plural counted noun both render at 42 and 9), HI-B-2/3/4/6/7 are applied and read correctly, HI-B-5 is kept as recorded; the kind escalation is within the generator's contract and the narrowed type holds at every call site."
+ },
+ "ledger": {
+  "command": null,
+  "note": "No i18n ledger or audit-ledger command exists at this head (package.json, scripts/i18n/ and docs/i18n.md contain none); docs/i18n.md makes the PR report the artifact of record. The row below is proposed, not written.",
+  "proposed_row": {
+   "locale": "hi",
+   "file_group": "mobile.schedules",
+   "status": "passed",
+   "auditor": "i18n-auditor (lopdev team)",
+   "model": "radient/auto",
+   "source_hash": "8f2c93a7bd7ffdf75e2909c5399804e5a19a21d30505dc48e89abad1431d34ae",
+   "audit_id": "hi30s1r2",
+   "record": "i18n/audits/evidence/hi/mobile.schedules/hi30s1r2/record.json",
+   "note": "hi/mobile.schedules hi30s1r2: 38 keys, HA-B-HI-B-1 resolved byte-exactly, 7/7 findings closed (HI-B-5 kept by decision), 0 open. Record: i18n/audits/evidence/hi/mobile.schedules/hi30s1r2/record.json"
+  }
+ }
+}

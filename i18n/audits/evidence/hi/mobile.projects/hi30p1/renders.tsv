@@ -1,0 +1,99 @@
+pluralCategory(hi,0)	one
+pluralCategory(hi,1)	one
+pluralCategory(hi,2)	other
+pluralCategory(hi,21)	other
+pluralCategory(en,0)	other
+count.wakes[0]	0 जागृति
+count.wakes[1]	1 जागृति
+count.wakes[2]	2 जागृतियाँ
+count.wakes[21]	21 जागृतियाँ
+count.wakes[101]	101 जागृतियाँ
+count.monitors[0]	0 मॉनिटर
+count.monitors[1]	1 मॉनिटर
+count.monitors[2]	2 मॉनिटर
+count.monitors[21]	21 मॉनिटर
+projects.sessions.count[0]	0 सत्र
+projects.sessions.count[1]	1 सत्र
+projects.sessions.count[2]	2 सत्र
+projects.sessions.count[21]	21 सत्र
+show_more.wakes[1]	1 और जागृति दिखाएँ
+show_more.monitors[1]	1 और मॉनिटर दिखाएँ
+show_more.wakes[2]	2 और जागृतियाँ दिखाएँ
+show_more.monitors[2]	2 और मॉनिटर दिखाएँ
+show_more.wakes[21]	21 और जागृतियाँ दिखाएँ
+show_more.monitors[21]	21 और मॉनिटर दिखाएँ
+show_less.wakes	कम जागृतियाँ दिखाएँ
+show_less.monitors	कम मॉनिटर दिखाएँ
+sessions.live[3,1]	3 सत्र · 1 सक्रिय
+sessions.live[0,1]	0 सत्र · 1 सक्रिय
+milestones.count[0,0]	कोई पड़ाव नहीं
+milestones.count[1,3]	3 में से 1 पड़ाव
+milestones.count[0,3]	3 में से 0 पड़ाव
+milestones.count[3,3]	3 में से 3 पड़ाव
+head.next[3 wakes, +4m]	3 जागृतियाँ · अगली बार 4m में
+head.overdue[3 wakes, -2h]	3 जागृतियाँ · 2h विलंबित
+head.next[1 wake, +45s]	1 जागृति · अगली बार 45s में
+head.overdue[1 wake, -1d]	1 जागृति · 25h विलंबित
+head.next[2 monitors, +90m]	2 मॉनिटर · अगली बार 1h में
+parked.wakes	रुका हुआ — अगले टर्न के बाद इसकी जागृतियाँ फिर चालू हो जाती हैं
+parked.monitors	रुका हुआ — बातचीत दोबारा चलने पर इसके मॉनिटर फिर शुरू होते हैं
+due.ahead[+4m]	4m में
+due.overdue[-2h]	2h विलंबित
+truncated[wakes,1,2]	जागृतियाँ वाली कुल 2 बातचीत में से 1 दिखा रहे हैं।
+truncated[wakes,10,42]	जागृतियाँ वाली कुल 42 बातचीत में से 10 दिखा रहे हैं।
+truncated[monitors,1,2]	मॉनिटर वाली कुल 2 बातचीत में से 1 दिखा रहे हैं।
+truncated[monitors,5,9]	मॉनिटर वाली कुल 9 बातचीत में से 5 दिखा रहे हैं।
+header.wakes[3]	Wakes · 3 निर्धारित
+summary.wakes[1]	1 निर्धारित
+summary.wakes[0]	0 निर्धारित
+header.monitors.armed[2]	2 चालू
+summary.monitors.armed[22]	22 चालू
+header.monitors.attention[1,5]	5 में से 1 को ध्यान चाहिए
+delete_body[Ram's laptop]	राम का लैपटॉप हटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।
+delete_body[Mirapur v2]	Mirapur v2 हटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।
+remove_milestone_body[beta]	बीटा रिलीज़ को इस प्रोजेक्ट से हटाएँ? पड़ाव हमेशा के लिए चला जाएगा। प्रोजेक्ट के सत्रों और उसकी प्रगति पंक्ति को छुआ नहीं जाएगा।
+remove_milestone_body[M1, 3.2]	M1, 3.2 को इस प्रोजेक्ट से हटाएँ? पड़ाव हमेशा के लिए चला जाएगा। प्रोजेक्ट के सत्रों और उसकी प्रगति पंक्ति को छुआ नहीं जाएगा।
+write_receipt[project,created]	“beta” प्रोजेक्ट बनाया गया।
+write_receipt[project,completed]	“beta” प्रोजेक्ट पूरा किया गया।
+write_receipt[project,reopened]	“beta” प्रोजेक्ट फिर खोला गया।
+write_receipt[project,added]	“beta” प्रोजेक्ट जोड़ा गया।
+write_receipt[project,updated]	“beta” प्रोजेक्ट अपडेट किया गया।
+write_receipt[project,removed]	“beta” प्रोजेक्ट हटाया गया।
+write_receipt[project,deleted]	“beta” प्रोजेक्ट हटाया गया।
+write_receipt[milestone,created]	“beta” पड़ाव बनाया गया।
+write_receipt[milestone,completed]	“beta” पड़ाव पूरा किया गया।
+write_receipt[milestone,reopened]	“beta” पड़ाव फिर खोला गया।
+write_receipt[milestone,added]	“beta” पड़ाव जोड़ा गया।
+write_receipt[milestone,updated]	“beta” पड़ाव अपडेट किया गया।
+write_receipt[milestone,removed]	“beta” पड़ाव हटाया गया।
+write_receipt[milestone,deleted]	“beta” पड़ाव हटाया गया।
+write_receipt[other,created]	“beta” बनाया गया।
+write_receipt[other,completed]	“beta” पूरा किया गया।
+write_receipt[other,reopened]	“beta” फिर खोला गया।
+write_receipt[other,added]	“beta” जोड़ा गया।
+write_receipt[other,updated]	“beta” अपडेट किया गया।
+write_receipt[other,removed]	“beta” हटाया गया।
+write_receipt[other,deleted]	“beta” हटाया गया।
+write_receipt[project,created,quoted-name]	“"अल्फा" योजना” प्रोजेक्ट बनाया गया।
+stale_badge	प्रगति पुरानी
+session_state.missing	गायब
+project_row_meta[1/3,4sessions,no stale]	3 में से 1 पड़ाव · 4 सत्र
+raw[mobile.schedules.count.wakes][0]	0 जागृति
+raw[mobile.schedules.count.wakes][1]	1 जागृति
+raw[mobile.schedules.count.wakes][2]	2 जागृतियाँ
+raw[mobile.schedules.count.monitors][0]	0 मॉनिटर
+raw[mobile.schedules.count.monitors][1]	1 मॉनिटर
+raw[mobile.schedules.count.monitors][2]	2 मॉनिटर
+raw[mobile.schedules.show_more.wakes][0]	0 और जागृति दिखाएँ
+raw[mobile.schedules.show_more.wakes][1]	1 और जागृति दिखाएँ
+raw[mobile.schedules.show_more.wakes][2]	2 और जागृतियाँ दिखाएँ
+raw[mobile.schedules.show_more.monitors][0]	0 और मॉनिटर दिखाएँ
+raw[mobile.schedules.show_more.monitors][1]	1 और मॉनिटर दिखाएँ
+raw[mobile.schedules.show_more.monitors][2]	2 और मॉनिटर दिखाएँ
+raw[mobile.projects.sessions.count][0]	0 सत्र
+raw[mobile.projects.sessions.count][1]	1 सत्र
+raw[mobile.projects.sessions.count][2]	2 सत्र
+
+--- renderFor() spot check (English vs hi) ---
+en: progress stale
+hi: प्रगति पुरानी

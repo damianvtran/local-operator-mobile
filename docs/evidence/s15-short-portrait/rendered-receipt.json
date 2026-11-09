@@ -1,0 +1,373 @@
+{
+  "source": {
+    "base": "9bc0e961f037fb16973c6a8f076839ca1d7308d9",
+    "files": {
+      "src/ui/size-class.ts": "110af8c2f347281c4d25d591ce60dcf4ff2a9b8d970e2bcad9443b29b530b32e",
+      "src/ui/size-class.test.ts": "4c857e06e7a492cefe32e684cf73aee37e11262cdd9cb6c400e212b705723ae0",
+      "src/features/sessions/conversations-pane.tsx": "c327ac5869adf1255b20834ebb629563dbde22f5e1c1be4c8b0ad55f528b35ad"
+    }
+  },
+  "entrySHA256": "e5bb37000cd591f70edaa789f0694ac65b966966c11d3a855c74255b33588f5b",
+  "fixtureScriptSHA256": "8148fc80fcd1dd2361b88f78380240414dddf51a06ec7f575f196ed3859118c3",
+  "leaseStart": "2026-11-01T20:37:52Z",
+  "closeReceipt": {
+    "at": "2026-11-01T20:44:25.592Z",
+    "closedNormally": true,
+    "errors": [],
+    "ports": [
+      49527,
+      49525,
+      49526
+    ]
+  },
+  "crop": {
+    "cssBounds": [
+      0,
+      16,
+      320,
+      568
+    ],
+    "devicePixelRatio": 2
+  },
+  "actualEnvInsets": "zero native env insets; declared CI vars top20; do not claim pixel-identical Linux CI",
+  "frames": [
+    {
+      "requestedTheme": "dark",
+      "scaleLabel": "100",
+      "actualRootFont": "16px",
+      "actualCanvas": "rgb(34, 32, 28)",
+      "actualColorScheme": "dark",
+      "themeValidated": true,
+      "paneGeometry": {
+        "paneHeight": 568,
+        "paneWidth": 264,
+        "listTop": 120,
+        "listHeight": 448,
+        "listClientHeight": 448,
+        "listScrollHeight": 538,
+        "listScrollTop": 0,
+        "footerTop": 212.8984375,
+        "footerHeight": 445.59375,
+        "rowCount": 1,
+        "visibleRows": 1,
+        "firstRowTop": 153.203125,
+        "firstRowHeight": 59.6953125
+      },
+      "reported": {
+        "theme": "dark",
+        "scale": 1,
+        "reduceMotion": true,
+        "themeSource": "query",
+        "insets": {
+          "top": "20",
+          "bottom": "0",
+          "left": "0",
+          "right": "0"
+        }
+      }
+    },
+    {
+      "requestedTheme": "dark",
+      "scaleLabel": "135",
+      "actualRootFont": "21.6471px",
+      "actualCanvas": "rgb(34, 32, 28)",
+      "actualColorScheme": "dark",
+      "themeValidated": true,
+      "paneGeometry": {
+        "paneHeight": 568,
+        "paneWidth": 264,
+        "listTop": 120,
+        "listHeight": 448,
+        "listClientHeight": 448,
+        "listScrollHeight": 568,
+        "listScrollTop": 0,
+        "footerTop": 230.859375,
+        "footerHeight": 457.453125,
+        "rowCount": 1,
+        "visibleRows": 1,
+        "firstRowTop": 157.8671875,
+        "firstRowHeight": 72.9921875
+      },
+      "reported": {
+        "theme": "dark",
+        "scale": 1.3529411765,
+        "reduceMotion": true,
+        "themeSource": "query",
+        "insets": {
+          "top": "20",
+          "bottom": "0",
+          "left": "0",
+          "right": "0"
+        }
+      }
+    },
+    {
+      "requestedTheme": "dark",
+      "scaleLabel": "200",
+      "actualRootFont": "32px",
+      "actualCanvas": "rgb(34, 32, 28)",
+      "actualColorScheme": "dark",
+      "themeValidated": true,
+      "paneGeometry": {
+        "paneHeight": 568,
+        "paneWidth": 264,
+        "listTop": 120,
+        "listHeight": 448,
+        "listClientHeight": 448,
+        "listScrollHeight": 698,
+        "listScrollTop": 0,
+        "footerTop": 305.3984375,
+        "footerHeight": 512.78125,
+        "rowCount": 1,
+        "visibleRows": 1,
+        "firstRowTop": 166.4140625,
+        "firstRowHeight": 138.984375
+      },
+      "reported": {
+        "theme": "dark",
+        "scale": 2,
+        "reduceMotion": true,
+        "themeSource": "query",
+        "insets": {
+          "top": "20",
+          "bottom": "0",
+          "left": "0",
+          "right": "0"
+        }
+      }
+    },
+    {
+      "requestedTheme": "light",
+      "scaleLabel": "100",
+      "actualRootFont": "16px",
+      "actualCanvas": "rgb(34, 32, 28)",
+      "actualColorScheme": "dark",
+      "themeValidated": false,
+      "paneGeometry": {
+        "paneHeight": 568,
+        "paneWidth": 264,
+        "listTop": 120,
+        "listHeight": 448,
+        "listClientHeight": 448,
+        "listScrollHeight": 538,
+        "listScrollTop": 0,
+        "footerTop": 212.8984375,
+        "footerHeight": 445.59375,
+        "rowCount": 1,
+        "visibleRows": 1,
+        "firstRowTop": 153.203125,
+        "firstRowHeight": 59.6953125
+      },
+      "reported": {
+        "theme": "light",
+        "scale": 1,
+        "reduceMotion": true,
+        "themeSource": "query",
+        "insets": {
+          "top": "20",
+          "bottom": "0",
+          "left": "0",
+          "right": "0"
+        }
+      }
+    },
+    {
+      "requestedTheme": "light",
+      "scaleLabel": "135",
+      "actualRootFont": "21.6471px",
+      "actualCanvas": "rgb(34, 32, 28)",
+      "actualColorScheme": "dark",
+      "themeValidated": false,
+      "paneGeometry": {
+        "paneHeight": 568,
+        "paneWidth": 264,
+        "listTop": 120,
+        "listHeight": 448,
+        "listClientHeight": 448,
+        "listScrollHeight": 568,
+        "listScrollTop": 0,
+        "footerTop": 230.859375,
+        "footerHeight": 457.453125,
+        "rowCount": 1,
+        "visibleRows": 1,
+        "firstRowTop": 157.8671875,
+        "firstRowHeight": 72.9921875
+      },
+      "reported": {
+        "theme": "light",
+        "scale": 1.3529411765,
+        "reduceMotion": true,
+        "themeSource": "query",
+        "insets": {
+          "top": "20",
+          "bottom": "0",
+          "left": "0",
+          "right": "0"
+        }
+      }
+    },
+    {
+      "requestedTheme": "light",
+      "scaleLabel": "200",
+      "actualRootFont": "32px",
+      "actualCanvas": "rgb(34, 32, 28)",
+      "actualColorScheme": "dark",
+      "themeValidated": false,
+      "paneGeometry": {
+        "paneHeight": 568,
+        "paneWidth": 264,
+        "listTop": 120,
+        "listHeight": 448,
+        "listClientHeight": 448,
+        "listScrollHeight": 698,
+        "listScrollTop": 0,
+        "footerTop": 305.3984375,
+        "footerHeight": 512.78125,
+        "rowCount": 1,
+        "visibleRows": 1,
+        "firstRowTop": 166.4140625,
+        "firstRowHeight": 138.984375
+      },
+      "reported": {
+        "theme": "light",
+        "scale": 2,
+        "reduceMotion": true,
+        "themeSource": "query",
+        "insets": {
+          "top": "20",
+          "bottom": "0",
+          "left": "0",
+          "right": "0"
+        }
+      }
+    }
+  ],
+  "dark100ConsecutivePixelsIdentical": true,
+  "directBrowserActions": [
+    "iframe >>> [data-testid=\"session-row-9f2c1a7b0d3e\"] at100/135",
+    "iframe >>> [data-testid=\"session-move-confirm\"] at100/135",
+    "iframe >>> [data-testid=\"sheet-close\"] at100",
+    "iframe >>> [data-testid=\"team-bridge-navigation\"] at100 -> /team-bridge Sign in gate"
+  ],
+  "limitations": [
+    "requested-light scenes actually dark; light design validation incomplete",
+    "no independent native gesture or APNs/FCM received-push proof",
+    "menu/tags not independently exercised during this bounded lease",
+    "no final full CI claim"
+  ],
+  "genuineLightFollowup": {
+    "fixtureScriptSHA256": "e6247377d951023f4b7b7c27fb528e1c3d0a09b3d8b54ed25399b291b525900f",
+    "leaseStart": "2026-11-01T20:51:13Z",
+    "closeReceipt": {
+      "at": "2026-11-01T20:58:12.273Z",
+      "closedNormally": true,
+      "errors": [],
+      "ports": [
+        53345,
+        53343,
+        53344
+      ]
+    },
+    "actions": "DIRECT browser iframe selectors sidebar-close \u2192 settings-button \u2192 settings-theme-light \u2192 settings-back \u2192 home-sidebar in SAME document at each scale; no reload after selecting Light",
+    "rootColorSchemeCaveat": "Root CSS scheme stays OS dark even while actual app paints Light; palette verified by actual canvas rgb242,237,227 and screenshots, not root scheme label",
+    "frames": [
+      {
+        "reported": {
+          "theme": "light",
+          "scale": 1,
+          "reduceMotion": true,
+          "themeSource": "query",
+          "insets": {
+            "top": "20",
+            "bottom": "0",
+            "left": "0",
+            "right": "0"
+          }
+        },
+        "canvasColor": "rgb(242, 237, 227)",
+        "rootFontSize": "16px",
+        "resolvedColorScheme": "dark",
+        "paneGeometry": {
+          "paneHeight": 568,
+          "paneWidth": 264,
+          "listTop": 120,
+          "listHeight": 448,
+          "listClientHeight": 448,
+          "listScrollHeight": 538,
+          "listScrollTop": 0,
+          "footerTop": 212.8984375,
+          "footerHeight": 445.59375,
+          "rowCount": 1,
+          "visibleRows": 1,
+          "firstRowTop": 153.203125,
+          "firstRowHeight": 59.6953125
+        }
+      },
+      {
+        "reported": {
+          "theme": "light",
+          "scale": 1.3529411765,
+          "reduceMotion": true,
+          "themeSource": "query",
+          "insets": {
+            "top": "20",
+            "bottom": "0",
+            "left": "0",
+            "right": "0"
+          }
+        },
+        "canvasColor": "rgb(242, 237, 227)",
+        "rootFontSize": "21.6471px",
+        "resolvedColorScheme": "dark",
+        "paneGeometry": {
+          "paneHeight": 568,
+          "paneWidth": 264,
+          "listTop": 120,
+          "listHeight": 448,
+          "listClientHeight": 448,
+          "listScrollHeight": 568,
+          "listScrollTop": 0,
+          "footerTop": 230.859375,
+          "footerHeight": 457.453125,
+          "rowCount": 1,
+          "visibleRows": 1,
+          "firstRowTop": 157.8671875,
+          "firstRowHeight": 72.9921875
+        }
+      },
+      {
+        "reported": {
+          "theme": "light",
+          "scale": 2,
+          "reduceMotion": true,
+          "themeSource": "query",
+          "insets": {
+            "top": "20",
+            "bottom": "0",
+            "left": "0",
+            "right": "0"
+          }
+        },
+        "canvasColor": "rgb(242, 237, 227)",
+        "rootFontSize": "32px",
+        "resolvedColorScheme": "dark",
+        "paneGeometry": {
+          "paneHeight": 568,
+          "paneWidth": 264,
+          "listTop": 120,
+          "listHeight": 448,
+          "listClientHeight": 448,
+          "listScrollHeight": 698,
+          "listScrollTop": 0,
+          "footerTop": 305.3984375,
+          "footerHeight": 512.78125,
+          "rowCount": 1,
+          "visibleRows": 1,
+          "firstRowTop": 166.4140625,
+          "firstRowHeight": 138.984375
+        }
+      }
+    ],
+    "largeTextConsecutivePixelsIdentical": true
+  }
+}

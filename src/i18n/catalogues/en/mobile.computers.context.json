@@ -1,0 +1,106 @@
+{
+	"mobile.computers.add": {
+		"role": "button",
+		"note": "Button that starts setting up another computer. Sentence case, no final full stop."
+	},
+	"mobile.computers.added.stays_listed": {
+		"role": "help",
+		"note": "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed."
+	},
+	"mobile.computers.badge.active": {
+		"role": "status",
+		"note": "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge."
+	},
+	"mobile.computers.badge.connecting": {
+		"role": "status",
+		"note": "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge."
+	},
+	"mobile.computers.connecting": {
+		"role": "status",
+		"note": "Inline status beside a computer row while its connection is being made. Keep the ellipsis character; one word plus ellipsis."
+	},
+	"mobile.computers.none_on_phone": {
+		"role": "status",
+		"note": "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop."
+	},
+	"mobile.computers.password_placeholder": {
+		"role": "help",
+		"note": "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language."
+	},
+	"mobile.computers.section.not_connected": {
+		"role": "heading",
+		"note": "Section header for computers that belong to the reader's Radient account but are not paired on this phone. \"Radient\" is a product name: do not translate."
+	},
+	"mobile.computers.section.on_phone": {
+		"role": "heading",
+		"note": "Section header for computers already paired on this phone."
+	},
+	"mobile.computers.sign_out": {
+		"role": "button",
+		"note": "Settings action opening the sign-out confirmation. Sentence case."
+	},
+	"mobile.computers.signing_out": {
+		"role": "status",
+		"note": "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis."
+	},
+	"mobile.computers.switch": {
+		"role": "button",
+		"note": "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop."
+	},
+	"mobile.computers.session_error": {
+		"role": "heading",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.session_error_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.account_mismatch": {
+		"role": "heading",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.account_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.billing_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.disabled_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.harness_help": {
+		"role": "help",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.protected": {
+		"role": "status",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.retry": {
+		"role": "button",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.show_details": {
+		"role": "button",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.hide_details": {
+		"role": "button",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.connection_response": {
+		"role": "meta",
+		"note": "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated."
+	},
+	"mobile.computers.transport.radient": {
+		"role": "meta",
+		"note": "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written."
+	},
+	"mobile.computers.transport.custom": {
+		"role": "meta",
+		"note": "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case."
+	}
+}

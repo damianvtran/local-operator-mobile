@@ -1,0 +1,279 @@
+{
+	"schema": 1,
+	"audit_id": "zh29a1r2",
+	"audit_kind": "independent_delta_current_byte_namespace_audit",
+	"locale": "zh-CN",
+	"namespace": "mobile.home",
+	"audit_date": "2026-10-30",
+	"audited_revision": "d3c39d8d2df2bccc78af82df9253776b4c933ad8",
+	"audited_revision_note": "Branch feat/i18n-chinese at d3c39d8d2df2bccc78af82df9253776b4c933ad8. The catalogue is committed; no source or catalogue change was present when this audit began. The target bytes are pinned by input_hashes.target.",
+	"previous_round": {
+		"audit_id": "zh29a1",
+		"record": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/record.json",
+		"report": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1/report.md",
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"findings": {
+			"H-01": "MINOR",
+			"H-02": "MINOR",
+			"H-03": "NIT",
+			"H-04": "NIT",
+			"H-05": "NIT"
+		},
+		"target_sha256": "24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033"
+	},
+	"key_count": {
+		"en": 27,
+		"target": 27,
+		"context": 27
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "2fdd9a1e0a55",
+		"job": "not exposed to this subagent (delegated team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto; each switch a provider-quota HTTP 429 fallback. Two read-only survey calls ran before the first switch; every judgement, measurement and bundle in this audit was produced under radient/auto.",
+		"independent_from_translator_session": true,
+		"independent_from_translator": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is also the translator's served model; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "9b2d25113c21",
+		"label": "zh-delta-second-pass",
+		"agent": "reviewer (lopdev team)",
+		"session": "0a3293bdab48",
+		"selection": "parent model (anthropic/claude-sonnet-5-5 primary)",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "the worker's own report: opened as anthropic/claude-sonnet-5-5 and ran to completion as radient/auto after three quota-driven fallbacks",
+		"scope": "all 41 keys across mobile.account_routing and mobile.home, read without this auditor's findings; independent scans, counts and destination-name check",
+		"independence": "Different agent/session and a separate context; not model-diverse (same served model as this auditor and the translator) — disclosed, not closed.",
+		"verdicts": {
+			"mobile.account_routing": "passed",
+			"mobile.home": "passed (H-02 carried as an open MINOR)"
+		},
+		"agreements": [
+			"H-01 is resolved by the exact round-1 replacement; 请 gone, actionable 可在…中调整, destination name intact",
+			"H-02 is still open: the shipped value is unchanged 审查此仓库 and the zh-CN guide has no repo/仓库 record — independently reached",
+			"AR-01, AR-02 and AR-03 are resolved on the shipped bytes; AR-01 counted as 5 账户 / 0 账号 in the namespace and 42 账户 / 0 账号 across core's 93 files",
+			"conversation_details is byte-identical inside options.fixed: 对话详情 = U+5BF9 U+8BDD U+8BE6 U+60C5",
+			"all mechanical facts: 14/14/14 and 27/27/27 key parity, 41/41 values parse, no placeholders/ICU/markup, no ASCII punctuation or bidi controls, ellipses doubled"
+		],
+		"reconciliations": []
+	},
+	"translator": {
+		"agent": "i18n-translator (as named by the requesting manager)",
+		"session": "not supplied to this auditor",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "as supplied by the requesting manager; not independently observed by this auditor",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.home.json",
+			"sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.home.context.json",
+			"sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/zh-CN/mobile.home.json",
+			"sha256": "af7ff4eb76ddaf5d6af4bfd78ddf6646015c49810b4d7375630de0d577cd9c27",
+			"previous_sha256": "24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033"
+		}
+	},
+	"delta": {
+		"method": "reconstructed the round-1 options.fixed value inside the shipped catalogue and hashed the repository's own serialisation; equality with the round-1 target hash proves options.fixed is the only changed value",
+		"reconstructed_previous_sha256": "24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033",
+		"matches_previous_target": true,
+		"changed_keys": [
+			"mobile.home.options.fixed"
+		],
+		"changed_count": 1,
+		"unchanged_count": 26
+	},
+	"verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [
+			"H-02"
+		]
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [
+			"H-02"
+		],
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [
+			"H-02"
+		],
+		"nit_ids": [
+			"H-03",
+			"H-04",
+			"H-05"
+		],
+		"prior_findings_resolved": [
+			"H-01"
+		],
+		"prior_findings_open": [
+			"H-02"
+		],
+		"prior_findings_not_required": [
+			"H-03",
+			"H-04",
+			"H-05"
+		],
+		"new_findings": [],
+		"verdict_reason": "No BLOCKER and no MAJOR. H-01 is resolved with the exact round-1 replacement and reads naturally; the destination label is byte-identical and the change is width-neutral. H-02 remains open as a MINOR decision-record gap: the shipped value is unchanged 审查此仓库 and the zh-CN guide has no repo/仓库 record. H-03/H-04/H-05 remain optional NITs. All 27 values preserve meaning, polarity and safety."
+	},
+	"findings": [
+		{
+			"id": "H-01",
+			"severity": "MINOR",
+			"status": "resolved",
+			"key": "mobile.home.options.fixed",
+			"round_1": "此对话的起始选项已固定。实时控制项请在“对话详情”中查看。",
+			"shipped": "此对话的起始选项已固定。实时控制项可在“对话详情”中调整。",
+			"check": "exact round-1 suggested replacement; 请 gone; destination 对话详情 (U+5BF9 U+8BDD U+8BE6 U+60C5) present byte-identically inside “”; 29 characters / 58 cells before and after",
+			"note": "Reads naturally and is actionable; no new problem. The quotation marks are balanced and the final full stop is present."
+		},
+		{
+			"id": "H-02",
+			"severity": "MINOR",
+			"status": "open",
+			"key": "mobile.home.suggestion.review_repo",
+			"round_1": "审查此仓库",
+			"shipped": "审查此仓库",
+			"check": "shipped value byte-identical to the round-1 value; core zh-CN guide has no repo/仓库 line (last commit ad1de332210; diff vs origin/main = 0); glossary requires a per-locale kept-English exception to be recorded in that guide",
+			"problem": "The copy is natural, idiomatic Chinese — 仓库 is the settled word for a Git repository and core uses it in prose — but the key's own context note pins 'repo' as developer vocabulary kept as-is, and the required zh-CN per-locale decision was never recorded.",
+			"suggested": "Keep 审查此仓库 and add one line to the core zh-CN guide recording repo → 仓库 as a deliberate per-locale override; if strict fr/es parity is preferred, use 审查此repo instead.",
+			"note": "Decision-record gap, not a comprehension or safety defect; gates nothing. The premise that both round-1 minors were changed is not borne out by the bytes: only options.fixed changed."
+		},
+		{
+			"id": "H-03",
+			"severity": "NIT",
+			"status": "carried_not_required",
+			"key": "mobile.home.suggestion.last_turn",
+			"current": "看看上一轮",
+			"note": "Optional: the wave uses 回合 for 'turn' in mobile.schedules.parked.wakes, while core uses 最后一轮 for this exact collocation. Prior round recorded it as a NIT; unchanged."
+		},
+		{
+			"id": "H-04",
+			"severity": "NIT",
+			"status": "carried_not_required",
+			"key": "mobile.home.startup_queue.blocked",
+			"current": "重试以发送排队消息",
+			"note": "Optional terser form 重试发送排队消息. Prior round recorded it as a NIT; unchanged."
+		},
+		{
+			"id": "H-05",
+			"severity": "NIT",
+			"status": "carried_not_required",
+			"key": "mobile.home.tip.parallel",
+			"current": "要求并行工作以展开多个子智能体",
+			"note": "Optional 分出 for the fan-out reading. Prior round recorded it as a NIT; unchanged."
+		}
+	],
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0, 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)'",
+		"strings_ratchet": "node scripts/i18n/check-strings.ts -> exit 0, '284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161'",
+		"tests": "./node_modules/.bin/vitest run src/features/home/home-copy.test.ts src/i18n/__tests__/catalogues.test.ts src/i18n/__tests__/runtime.test.ts -> 3 files passed, 78 tests passed",
+		"parser": "the app's own parser: 27/27 target values parse, 0 keys with params; en 27/27 parse; key parity 27/27/27 (en / zh-CN / context)",
+		"scoped_checks": "valid JSON; exact key parity; placeholder/ICU/markup parity; bidi and control characters; full-width vs ASCII punctuation; CJK quotation balance; ellipsis U+2026 pairs; 请/您/！ scan; CJK–Latin spacing; character and cell counts",
+		"fit_metric": "Unicode cell arithmetic (CJK and full-width punctuation = 2 cells, typographic quotes = 2, U+2026 = 2), not CoreText. Suggestion chips are ≤ 12 characters against the 24-character source hint and the shipped 14-character zh-CN budget; tips are ≤ 15 characters against 48; options.fixed is 29 characters / 58 cells before and after, a wrapping help line with no maxCells hint.",
+		"no_rendered_frame": "no rendered frame; no pixel-level or clipping claim is made"
+	},
+	"terminal_evidence": {
+		"delta_reconstruction": "current af7ff4eb76ddaf5d6af4bfd78ddf6646015c49810b4d7375630de0d577cd9c27; reconstructed previous 24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033; matches round-1 target true; changed_count 1 (options.fixed), unchanged_count 26",
+		"conversation_details": {
+			"key": "mobile.session.conversation_details",
+			"value": "对话详情",
+			"codepoints": [
+				"U+5BF9",
+				"U+8BDD",
+				"U+8BE6",
+				"U+60C5"
+			],
+			"quoted_substring_in_options_fixed": true,
+			"bare_substring_in_options_fixed": true
+		},
+		"h02_guide_check": {
+			"guide": "/Users/damian/local-operator/i18n/style-guides/zh-CN.md",
+			"last_commit": "ad1de332210 2026-10-10 docs(i18n): add locale style guides and glossary",
+			"diff_vs_origin_main_lines": 0,
+			"repo_or_cangku_line": false
+		},
+		"chip_budget": {
+			"zh_cn_budget_characters": 14,
+			"longest_chip_characters": 12,
+			"longest_tip_characters": 15,
+			"tip_budget_characters": 48
+		}
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/report.md",
+			"sha256": "1c4ba8188c50fba218c92cf8c6583de723b89bf20fda8bacd28799eab8734a48"
+		},
+		{
+			"path": "i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/audit.log",
+			"sha256": "9856e45adb2601d1bc9975ed187b81d36aa5de1ebacd50ed26d1f16f46cdfff2",
+			"state": "actual command output, not notes"
+		}
+	],
+	"ledger": {
+		"recorded": false,
+		"reason": "This repository has no i18n ledger and no audit-ledger command (verified: package.json scripts, scripts/i18n/, docs/i18n.md). docs/i18n.md records the report in the pull request; this bundle is the durable record.",
+		"written": false,
+		"ledger_row_proposed": {
+			"locale": "zh-CN",
+			"namespace": "mobile.home",
+			"source_sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-30",
+				"result": "passed",
+				"findings": 1
+			},
+			"note": "zh-CN mobile.home delta r2 passed: H-01 resolved on shipped d3c39d8; H-02 MINOR still open (no guide record); 0 BLOCKER, 0 MAJOR; i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/record.json; radient/auto fallback run."
+		}
+	},
+	"route_disclosure": {
+		"reads": "ordinary worktree reads (catalogues, context sidecars, this repository's own validator and parser, git show/grep in the local core clone)",
+		"english_context_sidecars": "nested-JSON context sidecars are NOT routable through read_public_copy; read as ordinary worktree files",
+		"credential_shaped_keys": "none in this namespace",
+		"receipts": "no keyed public-copy or credential receipt claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured; no pixel-level or clipping claim is made. Width statements are Unicode cell arithmetic plus the context hints, not CoreText.",
+		"translator_observation": "translator provenance is as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"shipping_state": "zh-CN is in SHIPPED_LOCALES (en, fr, es, zh-CN) at d3c39d8; the per-locale chip budget assertion now covers it and passed."
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output."
+}

@@ -1,0 +1,620 @@
+import { readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+import type { ShippedLocale } from "@/i18n";
+import {
+	CATALOGUES,
+	ENGLISH_CATALOGUE,
+	ENGLISH_CONTEXT,
+	ENGLISH_MESSAGES,
+	parseMessage,
+	renderFor,
+	SHIPPED_LOCALES,
+} from "@/i18n";
+import accountRoutingContext from "@/i18n/catalogues/en/mobile.account_routing.context.json";
+import accountRouting from "@/i18n/catalogues/en/mobile.account_routing.json";
+import agentAvatarContext from "@/i18n/catalogues/en/mobile.agent_avatar.context.json";
+import agentAvatar from "@/i18n/catalogues/en/mobile.agent_avatar.json";
+import chromeContext from "@/i18n/catalogues/en/mobile.chrome.context.json";
+import chrome from "@/i18n/catalogues/en/mobile.chrome.json";
+import commonContext from "@/i18n/catalogues/en/mobile.common.context.json";
+import common from "@/i18n/catalogues/en/mobile.common.json";
+import composerInputContext from "@/i18n/catalogues/en/mobile.composer_input.context.json";
+import composerInput from "@/i18n/catalogues/en/mobile.composer_input.json";
+import computersContext from "@/i18n/catalogues/en/mobile.computers.context.json";
+import computers from "@/i18n/catalogues/en/mobile.computers.json";
+import homeContext from "@/i18n/catalogues/en/mobile.home.context.json";
+import home from "@/i18n/catalogues/en/mobile.home.json";
+import libraryContext from "@/i18n/catalogues/en/mobile.library.context.json";
+import library from "@/i18n/catalogues/en/mobile.library.json";
+import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.context.json";
+import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
+import oauthContext from "@/i18n/catalogues/en/mobile.oauth.context.json";
+import oauth from "@/i18n/catalogues/en/mobile.oauth.json";
+import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
+import projects from "@/i18n/catalogues/en/mobile.projects.json";
+import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
+import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
+import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
+import session from "@/i18n/catalogues/en/mobile.session.json";
+import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.context.json";
+import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
+import settingsContext from "@/i18n/catalogues/en/mobile.settings.context.json";
+import settings from "@/i18n/catalogues/en/mobile.settings.json";
+import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
+import signin from "@/i18n/catalogues/en/mobile.signin.json";
+import teamBridgeContext from "@/i18n/catalogues/en/mobile.team_bridge.context.json";
+import teamBridge from "@/i18n/catalogues/en/mobile.team_bridge.json";
+import relayChromeContext from "@/i18n/catalogues/en/relay.chrome.context.json";
+import relayChrome from "@/i18n/catalogues/en/relay.chrome.json";
+import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.json";
+import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
+import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
+import health from "@/i18n/catalogues/en/relay.health.json";
+
+const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
+
+/**
+ * The catalogues' own invariants. `tsc` proves the key surface; these prove the
+ * DATA behind it — that every message parses, that every key has translator
+ * context, and that the four namespaces do not quietly collide.
+ */
+const JSON_SUFFIX = /\.json$/;
+
+const NAMESPACES = [
+	{
+		name: "mobile.team_bridge",
+		messages: teamBridge,
+		context: teamBridgeContext,
+		// Current union: endpoint-profile keys plus six delivery/help keys.
+		expected: 104,
+	},
+	{
+		name: "mobile.signin",
+		messages: signin,
+		context: signinContext,
+		expected: 18,
+	},
+	{
+		name: "mobile.oauth",
+		messages: oauth,
+		context: oauthContext,
+		expected: 4,
+	},
+	{
+		name: "mobile.common",
+		messages: common,
+		context: commonContext,
+		expected: 6,
+	},
+	{
+		name: "mobile.composer_input",
+		messages: composerInput,
+		context: composerInputContext,
+		expected: 8,
+	},
+	{
+		name: "mobile.library",
+		messages: library,
+		context: libraryContext,
+		expected: 31,
+	},
+	{
+		name: "mobile.home",
+		messages: home,
+		context: homeContext,
+		/* 31 from the round-1 remediation's two options-sheet rows ("back to the
+		 *  computer's default" for the folder and for the model): 29 before them.
+		 *  65 with the three pickers (#182): 32 for the chips' spoken labels, the
+		 *  effort names and the pickers' copy, and 2 from its round-1 remediation
+		 *  ("Default effort" on the chip, "This computer's level" in the sheet). */
+		expected: 65,
+	},
+	{
+		name: "mobile.projects",
+		messages: projects,
+		context: projectsContext,
+		expected: 32,
+	},
+	{
+		name: "mobile.schedules",
+		messages: schedules,
+		context: schedulesContext,
+		expected: 38,
+	},
+	{
+		name: "mobile.account_routing",
+		messages: accountRouting,
+		context: accountRoutingContext,
+		expected: 14,
+	},
+	{
+		/* The agent picture's two strings: the header picture's name and the
+		 *  "change it on the desktop" hint the phone answers a press with. */
+		name: "mobile.agent_avatar",
+		messages: agentAvatar,
+		context: agentAvatarContext,
+		expected: 2,
+	},
+	{
+		name: "mobile.computers",
+		messages: computers,
+		context: computersContext,
+		expected: 26, // main's 24 + the branch's two transport keys
+	},
+	{
+		name: "mobile.notifications",
+		messages: notifications,
+		context: notificationsContext,
+		expected: 27,
+	},
+	{
+		name: "mobile.session",
+		messages: session,
+		context: sessionContext,
+		expected: 30, // +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+	},
+	{
+		/* The relay's own two namespaces, under its own keys. They are here rather
+		 * than renamed into `mobile.*` because the strings are AUDITED SAFETY COPY
+		 * from the web client (`local_operator/i18n/catalogues/en/relay.health.json`
+		 * at 24d328a19a): sharing the key means one state cannot be named two ways,
+		 * and a renamed key would hide that the two clients say the same thing. */
+		name: "relay.health",
+		messages: health,
+		context: healthContext,
+		expected: 8,
+	},
+	{
+		/* The relay's Stop words, mirrored key for key from the core
+		 * (`local_operator/i18n/catalogues/<locale>/relay.composer.json` at
+		 * 6fc208f636d) for the pinned working line's Stop — the same verb the relay
+		 * shows, so the two clients cannot name the action two ways. A subset: only
+		 * the three keys this app renders. */
+		name: "relay.composer",
+		messages: relayComposer,
+		context: relayComposerContext,
+		expected: 3,
+	},
+	{
+		/* This app's own chrome for the health surface: the control's labels, the
+		 *  Resume flow's sentences and the two reopen lines. APP-OWNED, in the
+		 *  `mobile.*` convention #112 established, because a later adoption of the
+		 *  core's locale files must not silently overwrite or orphan them (review
+		 *  round 3 m1 / UX U15 / design D13). */
+		name: "mobile.session_health",
+		messages: sessionHealth,
+		context: sessionHealthContext,
+		expected: 11,
+	},
+	{
+		/* Settings → Appearance and the Theme screen (decision record
+		 *  `mobile-design-direction.md` § 5). Theme NAMES are not keys: they are
+		 *  proper nouns, verbatim in every locale, as on the desktop. */
+		name: "mobile.settings",
+		messages: settings,
+		context: settingsContext,
+		expected: 17,
+	},
+	{
+		/* This app's own short chrome words the relay has no key for: the sidebar
+		 *  destinations' one-word labels, the More sheet's title, and (from the
+		 *  2026-11-05 build389 pass) the composer's context strip plus the home's
+		 *  single presentation story, and (sidebar-density review round 1) the
+		 *  sidebar's "Close conversations" accessible name. */
+		name: "mobile.chrome",
+		messages: chrome,
+		context: chromeContext,
+		expected: 17,
+	},
+	{
+		name: "relay.chrome",
+		messages: relayChrome,
+		context: relayChromeContext,
+		expected: 20,
+	},
+] as const;
+
+describe("the English catalogues", () => {
+	it.each(NAMESPACES)("$name owns its keys and nothing else", (namespace) => {
+		const keys = Object.keys(namespace.messages);
+		expect(keys).toHaveLength(namespace.expected);
+		for (const key of keys) {
+			expect(key.startsWith(`${namespace.name}.`)).toBe(true);
+		}
+	});
+
+	it.each(NAMESPACES)("$name has non-empty source and context", (namespace) => {
+		const messages = namespace.messages as Record<string, string>;
+		const contexts = namespace.context as Record<
+			string,
+			{ role: string; note: string }
+		>;
+		expect(Object.keys(contexts).sort()).toEqual(Object.keys(messages).sort());
+		for (const [key, value] of Object.entries(messages)) {
+			expect(value.trim().length).toBeGreaterThan(0);
+			expect(value).toBe(value.trim());
+			const entry = contexts[key];
+			expect(entry).toBeDefined();
+			expect(ROLES).toContain(entry?.role);
+			expect(entry?.note.trim().length ?? 0).toBeGreaterThan(20);
+		}
+	});
+
+	it.each(NAMESPACES)("$name's messages all parse", (namespace) => {
+		for (const value of Object.values(
+			namespace.messages as Record<string, string>,
+		)) {
+			expect(() => parseMessage(value)).not.toThrow();
+		}
+	});
+
+	it("merges into one map without a duplicate key", () => {
+		const total = NAMESPACES.reduce(
+			(sum, namespace) => sum + Object.keys(namespace.messages).length,
+			0,
+		);
+		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
+		/* 464 on main (the Team Bridge avatar slice's 104 includes the 11 endpoint-owned
+		 *  profile/photo keys) plus this slice's 17 `mobile.projects` keys — the create
+		 *  sheet's fields, validation and the two example placeholders. Counted from the
+		 *  merged catalogue files themselves, not from either branch's number: 481. */
+		expect(total).toBe(481);
+	});
+
+	it("lists every catalogue file this suite checks", () => {
+		/* A namespace added on disk but not above would dodge every invariant here,
+		 * so the directory is the oracle for the list. */
+		const root = fileURLToPath(
+			new URL("../../i18n/catalogues/en", import.meta.url),
+		);
+		const onDisk = readdirSync(root)
+			.filter(
+				(name) => name.endsWith(".json") && !name.endsWith(".context.json"),
+			)
+			.map((name) => name.replace(JSON_SUFFIX, ""))
+			.sort();
+		expect(NAMESPACES.map((namespace) => namespace.name).sort()).toEqual(
+			onDisk,
+		);
+	});
+
+	it("ships no locale the runtime cannot render", () => {
+		/* A translation directory that lands without a passed audit must not become
+		 * renderable — and must not sit there looking shipped either. This compares
+		 * the catalogue DIRECTORY with the runtime's shipped list, so adding `fr/`
+		 * without wiring it is a red test rather than a silent no-op. */
+		const root = fileURLToPath(
+			new URL("../../i18n/catalogues", import.meta.url),
+		);
+		const directories = readdirSync(root, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name)
+			.sort();
+		expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+	});
+});
+
+/**
+ * A SHIPPED LOCALE IS STILL TRANSLATED.
+ *
+ * The gap this closes: every other check in the programme answers "does the key
+ * exist", and a translation REVERTED to its English text — the ordinary way a
+ * value is lost in a rebase or a hand-merge — passes all of them. The key is
+ * present, the message parses, the parameter names still match (English's own
+ * do), and the screen renders a sentence. Nothing says the reader asked for
+ * French and got English back.
+ *
+ * So: no shipped locale may carry a value equal to the English source unless it
+ * is on a short, reasoned allowlist. `CATALOGUES` is read rather than the JSON
+ * files, so the check is against the map the RUNTIME reads — a locale that
+ * exists on disk but is not shipped is somebody's draft, and its own audit is
+ * where that is judged.
+ *
+ * The allowlist is checked in BOTH directions: a newly identical value fails as
+ * untranslated, and an entry that is no longer identical fails as stale, so an
+ * exemption cannot quietly become permanent.
+ */
+const IDENTITY_PROSE = /[\p{L}\p{N}]/u;
+/* These are valid ASCII identifiers and tag examples, not untranslated prose.
+ * List them per locale below so a changed translation is still caught as stale. */
+const PROJECT_NAME_EXAMPLE = {
+	"mobile.projects.create.name_placeholder":
+		"Valid project-name example: the relay accepts ASCII letters, digits, dot, underscore or hyphen and the example preserves that grammar.",
+};
+const PROJECT_TAG_EXAMPLE = {
+	"mobile.projects.create.tags_placeholder":
+		"Valid ASCII tag examples with a comma separator; retaining the examples preserves the form's concrete input guidance.",
+};
+
+const IDENTICAL_BY_DESIGN: Readonly<
+	Record<ShippedLocale, Readonly<Record<string, string>>>
+> = {
+	en: {},
+	fr: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
+		"mobile.team_bridge.profile.badge_agent":
+			"Agent is also the French term for a software agent; this role badge is an idiomatic cognate, not an English fallback.",
+		"mobile.team_bridge.profile.message":
+			"Message is also the French noun for the profile contact action; opening the message composer does not send a message.",
+		"mobile.team_bridge.delivery.recipient":
+			"Agent is also the French noun for the recipient agent; identical spelling is intentional, not an English fallback.",
+		"mobile.team_bridge.conversation":
+			"Conversation is also the French noun for a conversation; the correct isolated heading has identical spelling.",
+		"mobile.team_bridge.thread.message":
+			"Message is also the French noun used for a message input label; identical bytes are idiomatic French.",
+		"mobile.team_bridge.thread.notifications":
+			"Notifications is the French platform label too, matching the existing notifications screen title.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		"mobile.session.highlights.withheld_reasons_join":
+			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_TAG_EXAMPLE,
+		"mobile.projects.create.description":
+			"Description is the same French word for the project description field, not English fallback.",
+		"mobile.projects.status.validation":
+			"Validation is the same French word for the project lifecycle status, not English fallback.",
+		/* French spells these the same as English. `Description` is the French
+		 * word for the same field, not an untranslated value: the asset editor's
+		 * label, sitting beside `Nom` and `Étiquettes` in the same sheet. */
+		"mobile.library.editor.description":
+			"French spells this field the same way — « Description » is the French word for the label, beside « Nom » and « Étiquettes » in the same editor.",
+		/* The three pickers' (#182) two words French spells as English: the effort
+		 *  sheet's title and the lowest-but-one rung. */
+		"mobile.home.picker.effort_title":
+			"French uses the same word — « Effort » is the French noun for the setting, the title of the sheet that picks it.",
+		"mobile.home.effort.minimal":
+			"French spells the adjective the same way — « Minimal » is the French name of the rung, beside « Faible » and « Moyen » on the same ladder.",
+		/* The 2026-11-04 chrome words. The two relay.* values are the core
+		 *  relay's own French catalogue, mirrored; all three are French words. */
+		"relay.chrome.session.tray.agents":
+			"Mirrored from the core relay's French catalogue: « Agents » is the French word, and the count template is unchanged.",
+		"relay.chrome.row.tags":
+			"Mirrored from the core relay's French catalogue, which keeps « Tags » (the app's own tag vocabulary in French).",
+		"mobile.chrome.destinations":
+			"« Destinations » is the French word for the same set of places.",
+		"mobile.notifications.title":
+			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
+		/* French « session » is the same word as English "session": identical
+		 * bytes here are the correct translation, not a value nobody translated. */
+		"mobile.session_health.menu_title":
+			"French spells “session” the same way; equality is correct here, not a fallback.",
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
+	},
+	/* Spanish preserves these placeholder-only templates: names and separators
+	 * have no English prose to translate. Each key remains explicitly listed. */
+	es: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		"mobile.session.highlights.withheld_reasons_join":
+			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
+	},
+	"zh-CN": {
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
+	},
+	ru: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		"mobile.session.highlights.withheld_reasons_join":
+			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
+	},
+	vi: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		"mobile.session.highlights.withheld_reasons_join":
+			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
+		/* The 2026-11-07 home-pickers audit (VI-H01, vi1107p1) chose the loanword. */
+		"mobile.home.picker.folder_home":
+			"Vietnamese names the home folder «thư mục home» across mobile and core (session_health.ended_placeholder, relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
+	},
+	hi: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		"mobile.session.highlights.withheld_reasons_join":
+			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
+	},
+	ur: {
+		"mobile.team_bridge.profile.name_with_owner":
+			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
+		"mobile.team_bridge.title":
+			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.transport.radient":
+			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
+		/* ASCII example, not an untranslated value */
+		"mobile.library.editor.new_tag_placeholder":
+			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
+		"mobile.schedules.head.overdue":
+			"Placeholder-only template, `{head} · {label}` — Urdu carries the separator unchanged; there is no prose to translate.",
+	},
+};
+
+describe("a shipped translation is still translated", () => {
+	const shipped = SHIPPED_LOCALES.filter((locale) => locale !== "en");
+
+	it.each(shipped)("%s: no value falls back to the English text", (locale) => {
+		const catalogue = CATALOGUES[locale] as Readonly<Record<string, string>>;
+		const source = ENGLISH_MESSAGES as Readonly<Record<string, string>>;
+		const identical = Object.keys(source)
+			.filter((key) => catalogue[key] === source[key])
+			.sort();
+		expect(identical).toEqual(
+			Object.keys(IDENTICAL_BY_DESIGN[locale] ?? {}).sort(),
+		);
+	});
+
+	it("keeps exempt profile-name templates free of untranslated prose", () => {
+		const key = "mobile.team_bridge.profile.name_with_owner";
+		for (const locale of shipped) {
+			if (!IDENTICAL_BY_DESIGN[locale]?.[key]) continue;
+			// Empty caller names expose only the template itself. A future English
+			// phrase cannot silently inherit this names-and-punctuation exception.
+			expect(renderFor(key, { agent: "", owner: "" }, locale)).not.toMatch(
+				IDENTITY_PROSE,
+			);
+		}
+	});
+
+	it("gives every allowlisted value its reason", () => {
+		/* The reason is the reviewable part: an entry without one is a blanket
+		 *  exemption, and the point of the list is that each case was judged. */
+		for (const perLocale of Object.values(IDENTICAL_BY_DESIGN)) {
+			for (const [key, reason] of Object.entries(perLocale)) {
+				expect(reason.trim().length).toBeGreaterThan(20);
+				expect(Object.keys(ENGLISH_MESSAGES)).toContain(key);
+			}
+		}
+	});
+});
+
+/**
+ * Russian plural agreement, bound as a test rather than an audit snapshot.
+ *
+ * `Intl.PluralRules("ru")` selects four categories, and the four arms are only
+ * correct if each renders the NUMERAL AND THE NOUN FORM its category demands —
+ * "1 сессия", not "1 сессий". The audit measured this once; this keeps it
+ * measured on every run, because a plural that loses an arm still parses and
+ * still passes a key-parity check.
+ */
+describe("a four-form plural locale agrees with its own rules", () => {
+	const cases: ReadonlyArray<readonly [number, string]> = [
+		[0, "0 пробуждений"],
+		[1, "1 пробуждение"],
+		[2, "2 пробуждения"],
+		[5, "5 пробуждений"],
+		[21, "21 пробуждение"],
+		[1.5, "1.5 пробуждения"],
+	];
+
+	it.each(cases)("renders %s wakes as «%s»", (count, expected) => {
+		expect(renderFor("mobile.schedules.count.wakes", { count }, "ru")).toBe(
+			expected,
+		);
+	});
+
+	it("agrees on a second noun, so this is the rules and not one lucky key", () => {
+		expect(
+			renderFor("mobile.projects.sessions.count", { count: 1 }, "ru"),
+		).toBe("1 сессия");
+		expect(
+			renderFor("mobile.projects.sessions.count", { count: 3 }, "ru"),
+		).toBe("3 сессии");
+		expect(
+			renderFor("mobile.projects.sessions.count", { count: 8 }, "ru"),
+		).toBe("8 сессий");
+	});
+
+	it("keeps Hindi's zero on the one arm, as its own rules and core do", () => {
+		/* Hindi selects `one` for 0 where English selects `other`. Both auditors
+		 * disagreed about whether `0 जागृति` is idiomatic; CLDR, core's committed
+		 * Hindi and the hi style guide all put 0 in `one`, so the shipped
+		 * behaviour is pinned here — a change to the arms cannot land silently. */
+		expect(renderFor("mobile.schedules.count.wakes", { count: 0 }, "hi")).toBe(
+			"0 जागृति",
+		);
+		expect(renderFor("mobile.schedules.count.wakes", { count: 2 }, "hi")).toBe(
+			"2 जागृतियाँ",
+		);
+	});
+
+	it("carries all four arms in the shipped catalogue", () => {
+		/* A dropped `few` or `many` arm would fall back to `other` and still
+		 * render, so the arms are asserted directly rather than inferred from
+		 * output. */
+		const value = (CATALOGUES.ru as Readonly<Record<string, string>>)[
+			"mobile.schedules.count.wakes"
+		];
+		for (const arm of ["one", "few", "many", "other"]) {
+			expect(value).toContain(`${arm} {`);
+		}
+	});
+});
+
+/**
+ * The account-routing seam, bound explicitly.
+ *
+ * That feature module cannot import the runtime: a plain-`node` CI entry pinned by
+ * `account-routing-proof.test.ts` statically imports it, and Node cannot resolve
+ * `src/`'s extensionless imports. It therefore keeps its own English table (the
+ * version this module's own test already asserts) while the catalogue carries the
+ * same messages. THIS test is what makes that duplication safe: if either side
+ * changes alone, the build goes red.
+ */
+describe("the account-routing copy table mirrors its catalogue", () => {
+	it("agrees key for key on source, context and role", async () => {
+		const { ACCOUNT_ROUTING_COPY, ACCOUNT_ROUTING_SOURCE_LOCALE } =
+			await import("@/features/settings/account-routing-copy");
+		expect(ACCOUNT_ROUTING_SOURCE_LOCALE).toBe("en");
+		const keys = Object.keys(ACCOUNT_ROUTING_COPY).sort();
+		expect(keys).toEqual(Object.keys(accountRouting).sort());
+		for (const key of keys) {
+			const entry =
+				ACCOUNT_ROUTING_COPY[key as keyof typeof ACCOUNT_ROUTING_COPY];
+			expect(entry.source).toBe(
+				(ENGLISH_MESSAGES as Record<string, string>)[key],
+			);
+			const context = (
+				ENGLISH_CONTEXT as Record<string, { role: string; note: string }>
+			)[key];
+			expect(entry.context).toBe(context?.note);
+			expect(entry.role).toBe(context?.role);
+		}
+	});
+});

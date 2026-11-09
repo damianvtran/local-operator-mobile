@@ -1,0 +1,101 @@
+# audit.log — hindi wave 6 · namespace mobile.session_health · delta audit hi30a3r2
+# repository /Users/damian/workspace/hi-wave at d4e31b1915b558171ded41501c741568f0854f3f; no tracked file differs from HEAD (`git diff HEAD -- src/ i18n/` empty)
+# round-1 audit hi30a3: /Users/damian/workspace/hi-wave/i18n/audits/evidence/hi/mobile.session_health/hi30a3/
+# every command below ran in this session; the text after each prompt is its captured output
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:41683) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/hi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/hi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/delta_check.py mobile.session_health
+# namespace mobile.session_health  round-1 audit hi30a3  audited revision d4e31b1
+
+## inputs (sha256)
+  en         src/i18n/catalogues/en/mobile.session_health.json  727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f
+  context    src/i18n/catalogues/en/mobile.session_health.context.json  df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310
+  hi (now)   src/i18n/catalogues/hi/mobile.session_health.json  fa12c07183930d0a568448d9bfe3bde8bded43c5b0fcc754726d428446d89f55
+  hi (r1)    src/i18n/catalogues/hi/mobile.session_health.json  4c3c584958e08b5c39d45592f809d4e4d448c46d416764f559e9c4ba12f9c776  (from hi30a3/record.json)
+  source unchanged since round 1: en=True context=True
+  target unchanged since round 1: False
+
+## round-1 findings: byte-exact resolution
+  H-01 MINOR  mobile.session_health.resume_refused
+     prior  : यह सत्र अभी फिर नहीं खोला जा सका। फिर कोशिश करें।
+     asked  : यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।
+     now    : यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।
+     byte-exact to the asked wording: True
+     unchanged from round 1       : False
+
+  H-02 NIT    mobile.session_health.still_reopening
+     prior  : अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।
+     asked  : अभी भी खुल रहा है — यह अभी तक तैयार नहीं हुआ।
+     now    : अभी तक तैयार नहीं हुआ
+     byte-exact to the asked wording: False
+     unchanged from round 1       : False
+
+## structure and predicates on the current bytes
+  [PASS] key set identical — en=11 hi=11
+  [PASS] every key has a context note — ctx=11
+  [INFO] placeholder-bearing messages: 0; plural/select messages: 0
+  [PASS] placeholder surface identical
+  [PASS] ICU arms identical
+  [PASS] NFC
+  [PASS] no ZWJ/ZWNJ/ZWSP
+  [PASS] no bidi controls
+  [PASS] Latin digits only
+  [PASS] no space before punctuation
+  [PASS] U+2026 ellipsis
+  [PASS] danda not ASCII '.'
+  [PASS] curly quotes only
+  [PASS] no तुम/तू
+  [PASS] no double/edge space
+
+## delta diff coverage (old values recovered from the round-1 measurement artifacts)
+  values comparable for this namespace: 13 of 11
+  changed: 4
+   ~ mobile.session_health.still_reopening
+       was: अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।
+       now: अभी तक तैयार नहीं हुआ
+   ~ mobile.session_health.resume_refused
+       was: यह सत्र अभी फिर नहीं खोला जा सका। फिर कोशिश करें।
+       now: यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।
+   ~ mobile.session_health.resume_refused
+       was: यह सत्र अभी फिर नहीं खोला जा सका। फिर कोशिश करें।
+       now: यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।
+   ~ mobile.session_health.still_reopening
+       was: अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।
+       now: अभी तक तैयार नहीं हुआ
+
+## rendered through the repository's own parseMessage/formatMessage
+  every value in this namespace rendered without error in the group pass
+  (render_group_a.mts: 66 values across group A, 0 failures)
+exit=0
+
+$ swift /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/measure.swift   # CoreText CTLineGetTypographicBounds, AppKit system font
+reopening (t=0 notice)	size=12/500	width=223.9pt	cells=33	फिर खुल रहा है — इसमें कुछ सेकंड लग सकते हैं।
+still_reopening (round-1 text)	size=12/500	width=215.0pt	cells=31	अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।
+still_reopening (shipped)	size=12/500	width=110.0pt	cells=15	अभी तक तैयार नहीं हुआ
+still_reopening (this round ask)	size=12/500	width=214.1pt	cells=31	अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।
+still_reopening (round-1 ask)	size=12/500	width=235.5pt	cells=34	अभी भी खुल रहा है — यह अभी तक तैयार नहीं हुआ।
+resume_refused (round-1 text)	size=14/400	width=292.4pt	cells=35	यह सत्र अभी फिर नहीं खोला जा सका। फिर कोशिश करें।
+resume_refused (shipped)	size=14/400	width=317.6pt	cells=38	यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।
+resume_refused_title (unchanged)	size=14/400	width=116.8pt	cells=13	जारी नहीं रखा जा सका
+
+$ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/render_group_a.mts   # group pass; block for this namespace
+## mobile.session_health (11 keys)
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/negative_controls.py   # group-level predicate falsifiability
+  66 keys x 10 predicates on real values: PASS (0 failures)
+  [MISMATCH] mobile.session_health:mobile.session_health.still_reopening
+  mismatches in group A: 1
+RESULT: PASS (10/10 controls fired, 0 false positives)
+exit=0

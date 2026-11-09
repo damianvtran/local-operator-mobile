@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-
 import { useConnection } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
+import { signInPresentation } from "./sign-in-presentation";
 
 /**
  * Radient sign-in as a screen of its own (docs/ux/flows.md § 1; `C5` re-auth).
@@ -24,7 +25,27 @@ import { Screen } from "@/ui/components/screen";
  */
 export default function SignIn() {
 	const router = useRouter();
-	const { signInWithRadient, signInState, busy } = useConnection();
+	const {
+		signInWithRadient,
+		signInState,
+		signInDiagnostics,
+		restoredAccount,
+		busy,
+	} = useConnection();
+	const [initiated, setInitiated] = useState(false);
+	const start = () => {
+		setInitiated(true);
+		void signInWithRadient();
+	};
+	const presentation = signInPresentation({
+		initiated,
+		restoredAccount,
+		busy,
+		state: signInState,
+	});
+	useEffect(() => {
+		if (presentation.navigate) router.replace("/tunnels");
+	}, [presentation.navigate, router]);
 
 	return (
 		<Screen
@@ -50,15 +71,16 @@ export default function SignIn() {
 				</Text>
 
 				<SignInPanel
-					state={signInState}
-					onStart={() => void signInWithRadient()}
+					state={presentation.state}
+					diagnostics={signInDiagnostics}
+					onStart={start}
 					onUseAddress={() => undefined}
 				/>
 
-				{signInState.kind === "idle" ? (
+				{presentation.state.kind === "idle" ? (
 					<Button
 						label="Sign in with Radient"
-						onPress={() => void signInWithRadient()}
+						onPress={start}
 						loading={busy}
 						testID={CONTROL.signInStart}
 					/>

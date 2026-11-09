@@ -1,0 +1,326 @@
+{
+ "schema": 1,
+ "audit_kind": "delta_round2",
+ "audit_id": "hi30a3r2",
+ "locale": "hi",
+ "namespace": "mobile.session_health",
+ "audit_date": "2026-10-30",
+ "wave": "hi wave 6 — damianvtran/local-operator-mobile, branch feat/i18n-hindi, group A, delta after the remediation commit",
+ "audited_revision": "d4e31b1915b558171ded41501c741568f0854f3f",
+ "audited_revision_note": "No tracked file differs from HEAD: `git diff HEAD -- src/ i18n/` is empty. Untracked paths are the audit evidence directories only, and other groups' delta bundles were landing in the same tree while these checks ran.",
+ "delta_of": {
+  "round1_audit_id": "hi30a3",
+  "round1_record": "i18n/audits/evidence/hi/mobile.session_health/hi30a3/record.json",
+  "round1_verdict": "passed",
+  "remediation_commit": "d4e31b1915b558171ded41501c741568f0854f3f",
+  "round1_audited_revision": "647581a4abd5eafce09914b5b1936982749c16c4"
+ },
+ "key_count": {
+  "en": 11,
+  "target": 11,
+  "context": 11
+ },
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "69ed4c2e63b0",
+  "model": "radient/auto",
+  "actual_model": "radient/auto",
+  "model_history": [
+   "anthropic/claude-sonnet-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "actual_model_source": "Session model-switch headers this turn: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each a provider-quota fallback (HTTP 429). Every command recorded in these round-2 bundles ran after the final switch, i.e. on radient/auto.",
+  "independent_from_translator_session": true,
+  "independence": "Different agent, session and context from the translator. This is the round-1 auditor re-reading its own findings, which is what a delta asks for; it is not an independence claim about the remediation. Not model-diverse: radient/auto is the translator's served model too. No human native-speaker review and no rendered frame are claimed."
+ },
+ "translator": {
+  "agent": "i18n-translator (hi wave 6)",
+  "model": "not observed by this auditor",
+  "actual_model_source": "as supplied by the requesting manager",
+  "date": "2026-10-30"
+ },
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.session_health.json",
+   "sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+   "sha256": "df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310"
+  },
+  "hi": {
+   "path": "src/i18n/catalogues/hi/mobile.session_health.json",
+   "sha256": "fa12c07183930d0a568448d9bfe3bde8bded43c5b0fcc754726d428446d89f55"
+  },
+  "hi_round1": {
+   "path": "src/i18n/catalogues/hi/mobile.session_health.json",
+   "sha256": "4c3c584958e08b5c39d45592f809d4e4d448c46d416764f559e9c4ba12f9c776"
+  }
+ },
+ "source_changed_since_round1": false,
+ "target_changed_since_round1": true,
+ "resolution": [
+  {
+   "finding": "H-01",
+   "severity": "MINOR",
+   "key": "mobile.session_health.resume_refused",
+   "round1_current": "यह सत्र अभी फिर नहीं खोला जा सका। फिर कोशिश करें।",
+   "asked": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
+   "shipped": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
+   "byte_exact_to_asked": true,
+   "disposition": "applied byte-exactly; the resume/reopen split survives — see report.md §'The resume/reopen split survives' (the single regression, R2-01, is the H-02 key)"
+  },
+  {
+   "finding": "H-02",
+   "severity": "NIT",
+   "key": "mobile.session_health.still_reopening",
+   "round1_current": "अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।",
+   "asked": "अभी भी खुल रहा है — यह अभी तक तैयार नहीं हुआ।",
+   "shipped": "अभी तक तैयार नहीं हुआ",
+   "byte_exact_to_asked": false,
+   "disposition": "applied only in part; the partial edit is this round's regression (R2-01)"
+  }
+ ],
+ "delta_findings": [],
+ "regressions": [
+  {
+   "id": "R2-01",
+   "severity": "MAJOR",
+   "key": "mobile.session_health.still_reopening",
+   "kind": "omission introduced by the remediation",
+   "english": "Still reopening — it has not come up yet.",
+   "round1_text": "अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।",
+   "asked": "अभी भी खुल रहा है — यह अभी तक तैयार नहीं हुआ।",
+   "shipped": "अभी तक तैयार नहीं हुआ",
+   "problem": "The applied edit kept only the second clause. The shipped string says 'it has not become ready yet' and no longer says the reopen is still in progress, so after the 20 s cap the only notice on the sheet asserts a not-ready state without the pending action the context note requires ('the reader should know it has not silently failed'). It also lost the sentence-final danda that its sibling 'reopening' line carries. The prior text had both clauses; the fix reduced the copy.",
+   "why_major_not_blocker": "nothing false or unsafe is asserted and no placeholder or plural is broken, so this is a meaning-reducing omission rather than a wrong-meaning BLOCKER; it is graded MAJOR because the line no longer does the job its context note assigns it, and because it regressed a value that was closer to correct before the fix.",
+   "replacement": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
+   "replacement_note": "Restores the missing clause with 'अब भी' so the doubled 'अभी' this audit's round-1 NIT was about does not come back; the second independent pass proposed this exact wording and this audit adopts it over its own round-1 version ('अभी भी खुल रहा है — यह अभी तक तैयार नहीं हुआ।').",
+   "evidence": "Rendered through the repository's own formatter: 'अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।' is 214.1 pt at the notice's meta 12/500 token inside the sheet's 288 pt column (320 pt viewport minus px-4) — one line, 73.9 pt spare; the sibling 'reopening' line is 223.9 pt, so the slot already holds that length. No layout reason for the truncation: the notice Text has no numberOfLines clamp (session-health.tsx:500-506)."
+  }
+ ],
+ "mechanical": {
+  "generate": {
+   "command": "node scripts/i18n/generate.ts --check",
+   "exit": 0,
+   "output_tail": "src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)"
+  },
+  "check_strings": {
+   "command": "node scripts/i18n/check-strings.ts",
+   "exit": 0,
+   "output": "check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5"
+  },
+  "render": {
+   "command": "./node_modules/.bin/tsx render_group_a.mts",
+   "exit": 0,
+   "output": "rendered 66 values; failures 0"
+  },
+  "unit_test": {
+   "command": "./node_modules/.bin/vitest run src/features/home/home-copy.test.ts",
+   "exit": 0,
+   "output": "Test Files 1 passed (1); Tests 31 passed (31)"
+  },
+  "negative_controls": {
+   "command": "python3 negative_controls.py",
+   "exit": 0,
+   "output": "10/10 controls fired on their corrupted fixture; 0 false positives on the 66 real values"
+  },
+  "zero_case": {
+   "command": "./node_modules/.bin/tsx zero_case.mts",
+   "exit": 0,
+   "output": "0 जागृति / 1 जागृति / 2 जागृतियाँ / 21 जागृतियाँ; CLDR hi selects 'one' at 0"
+  }
+ },
+ "fit": {
+  "metric": "CoreText advances (CTLineGetTypographicBounds, AppKit system font) at the app's token sizes; round-1 method reproduced exactly on the round-1 strings before anything new was measured",
+  "no_rendered_frame": true,
+  "boxes": {
+   "sheet column": {
+    "width_pt": 288.0,
+    "source": "320 pt viewport minus the sheet's px-4 (session-health.tsx:349)"
+   }
+  },
+  "measurements": [
+   {
+    "label": "reopening (t=0 notice)",
+    "size_weight": "12/500",
+    "width_pt": 223.9,
+    "width_cells": 33,
+    "text": "फिर खुल रहा है — इसमें कुछ सेकंड लग सकते हैं।"
+   },
+   {
+    "label": "still_reopening (round-1 text)",
+    "size_weight": "12/500",
+    "width_pt": 215.0,
+    "width_cells": 31,
+    "text": "अभी भी खुल रहा है — यह अभी तैयार नहीं हुआ।"
+   },
+   {
+    "label": "still_reopening (shipped)",
+    "size_weight": "12/500",
+    "width_pt": 110.0,
+    "width_cells": 15,
+    "text": "अभी तक तैयार नहीं हुआ"
+   },
+   {
+    "label": "still_reopening (this round ask)",
+    "size_weight": "12/500",
+    "width_pt": 214.1,
+    "width_cells": 31,
+    "text": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।"
+   },
+   {
+    "label": "still_reopening (round-1 ask)",
+    "size_weight": "12/500",
+    "width_pt": 235.5,
+    "width_cells": 34,
+    "text": "अभी भी खुल रहा है — यह अभी तक तैयार नहीं हुआ।"
+   },
+   {
+    "label": "resume_refused (round-1 text)",
+    "size_weight": "14/400",
+    "width_pt": 292.4,
+    "width_cells": 35,
+    "text": "यह सत्र अभी फिर नहीं खोला जा सका। फिर कोशिश करें।"
+   },
+   {
+    "label": "resume_refused (shipped)",
+    "size_weight": "14/400",
+    "width_pt": 317.6,
+    "width_cells": 38,
+    "text": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।"
+   },
+   {
+    "label": "resume_refused_title (unchanged)",
+    "size_weight": "14/400",
+    "width_pt": 116.8,
+    "width_cells": 13,
+    "text": "जारी नहीं रखा जा सका"
+   }
+  ]
+ },
+ "second_independent_pass": {
+  "performed": true,
+  "agent": "reviewer subagent (label hi-delta-second-pass), job 1bb9b3e54846",
+  "requested_model": "session model (anthropic/claude-sonnet-5-5)",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "the task tool reported 'model=anthropic/claude-sonnet-5-5' on completion",
+  "scope": "the seven remediated values plus the neighbours a reader meets on the same surfaces, read in five namespaces without seeing this auditor's findings",
+  "effect": "independently found the same MAJOR this audit files as R2-01 (still_reopening drops 'Still reopening' and the closing danda) and proposed the wording this audit now adopts; agreed the resume/reopen split survives and that the five consistency strings agree with their neighbours; graded tip.parallel MAJOR where this audit holds MINOR, and offered replacements that exceed the repository's 48-character tip budget (50 and 59 characters) and, in the longer form, the 270 pt tip box (288.4 pt) — so that disagreement does not change the verdict; graded the bare फिर in the reload pair MINOR where this audit records a NIT; raised the three reopen spellings as a carried NIT, which this audit keeps out of the gates because those strings are unchanged in this delta.",
+  "agreement": "agree on R2-01 (the gating finding) and on all seven resolutions; two severity disagreements and one optional polish, all disclosed in the records."
+ },
+ "cross_namespace_observations": [
+  {
+   "keys": [
+    "mobile.schedules.count.wakes",
+    "mobile.schedules.show_more.wakes"
+   ],
+   "owner": "mobile.schedules audit hi30s1 (a different auditor)",
+   "question": "whether 0 should render the singular ('0 जागृति') or an explicit =0 plural ('0 जागृतियाँ')",
+   "disposition_as_implementer": "kept the singular on CLDR and core grounds; this audit's round-1 MAJOR was recorded as an open decision",
+   "this_round_position": "ACCEPTED, and this audit's round-1 MAJOR is withdrawn",
+   "reasons": [
+    "The binding hi style guide says, under Plurals: 'Categories: one / other — and one covers 0 and 1: \"0 फ़ाइल\" is singular.' The guide states it is binding for translators and the auditor.",
+    "The core glossary's plurals row records hi as 'one/other (0 is one)'.",
+    "Intl.PluralRules('hi').select(0) is 'one' (executed this round), so the shipped one/other message renders '0 जागृति' by CLDR, not by translator choice.",
+    "Core's committed Hindi carries the same one/other arms for the same noun (e.g. tui.schedule.fired '{count, plural, one {# जागृति} other {# जागृतियाँ}}'), so an =0 arm in the mobile catalogue alone would diverge from every core consumer of the same noun.",
+    "An =0 arm would also break arm parity with the English source, which the audit harness and the programme's mechanical contract both assume; that is a supporting reason, not the deciding one.",
+    "My round-1 claim that 'Hindi reads the plural after zero' contradicts the guide's explicit example. The guide wins; the finding was wrong on the evidence, and it is withdrawn rather than merely deferred."
+   ],
+   "what_would_change_it": "a style-guide edit in core changing hi's zero case, which is a programme decision, not a translation defect.",
+   "evidence": "zero_case.mts output in the mobile.home audit.log of this round; core glossary line 121 and hi style guide 'Plurals'."
+  }
+ ],
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 1,
+  "blocker_ids": [],
+  "major_ids": [
+   "R2-01"
+  ],
+  "minor_ids": [],
+  "nit_ids": [],
+  "finding_ids": [
+   "R2-01"
+  ],
+  "reason": "H-01 shipped byte-exactly and the resume/reopen split survives, but the H-02 edit kept only the second clause of 'Still reopening — it has not come up yet.': R2-01, MAJOR, a regression introduced by the fix. The one-clause status also lost its closing danda."
+ },
+ "ledger": {
+  "command": "absent",
+  "note": "No audit-ledger command and no i18n ledger exist in this repository at this head: i18n/ holds audits/ only and scripts/i18n/ has no ledger writer. A ledger-ready row is proposed and explicitly NOT written.",
+  "ledger_row_proposed": {
+   "locale": "hi",
+   "namespace": "mobile.session_health",
+   "status": "changes_requested",
+   "auditor": "i18n-auditor",
+   "model": "radient/auto",
+   "source_hash": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+   "note": "hi wave 6 hi30a3r2 (delta): see i18n/audits/evidence/hi/mobile.session_health/hi30a3r2/record.json",
+   "written": false
+  }
+ },
+ "route": {
+  "evidence_path": "written under this repository's i18n/audits/evidence root (no tracked manifest maps a different root)",
+  "reads": "worktree reads; core's committed bytes via git -C /Users/damian/local-operator show origin/main:<path>; the repository's own validator, renderer and formatter; local CoreText measurement; round-1 values recovered from the round-1 session's measurement artifacts",
+  "writes": "this bundle only; no edit to any catalogue, source or config file; nothing committed or pushed"
+ },
+ "limits": {
+  "native_review": "none performed; this auditor reads Hindi fluently by reasoning, not as a community-verified native reviewer",
+  "rendered_frame": "none captured; no simulator or browser frame was produced",
+  "translator_observation": "the translator's run was not observed by this auditor",
+  "independence": "a delta asks the round-1 auditor to re-read its own findings; this is not an independent audit of the remediation, and the fresh reviewer pass is the only independent opinion this round",
+  "fragment_proof": "for mobile.account_routing.load_error and .rejected, round 1 captured only the flagged fragment, so the fix is proved at the fragment; the sentence prefix is checked against the English source, not diffed",
+  "plural_zero_case": "this group carries no plural message; the zero-count decision belongs to mobile.schedules and is addressed in cross_namespace_observations",
+  "width": "measured advances, never a rendered frame"
+ },
+ "audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output. audit.log holds the commands actually run in this session and their actual output at this head.",
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/hi/mobile.session_health/hi30a3r2/report.md",
+   "note": "this round's report",
+   "sha256": "3871ee15aeef087b486d2d8318cb0ddd286f6c4016354f9ac9f577b81d81a477"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.session_health/hi30a3r2/audit.log",
+   "note": "actual command output, not notes",
+   "sha256": "51d990e6efd1a9004b967d0f31cd9c88831915c39c397b17480251d0aa84be32"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.session_health/hi30a3r2/record.json",
+   "note": "this record; not self-hashed"
+  }
+ ],
+ "round": 2,
+ "parent_audit_id": "hi30a3",
+ "file_group": "A",
+ "audited_head_commit": "d4e31b1915b558171ded41501c741568f0854f3f",
+ "audited_branch": "feat/i18n-hindi",
+ "audited_worktree": "/Users/damian/workspace/hi-wave",
+ "delta_baseline": {
+  "why_a_baseline_is_needed": "The hi catalogue was an untracked working-tree directory at round 1, so git cannot diff the remediation.",
+  "primary": "The five changed strings' exact prior text is recorded in the round-1 bundle's per-finding `current` fields, and is compared byte for byte by delta_check.py.",
+  "secondary": "For 37 of the 66 group-A values the round-1 text also survives verbatim in the round-1 session's measurement artifacts (/Users/damian/.local-operator/sessions/0c3fa150075f/scratchpad/audit/{width2,width,width3,width4}.json); those are re-read and diffed here, and they show exactly the changed set and nothing else.",
+  "file_level": "Namespaces the remediation did not touch are proved unchanged by file sha256 equality with the parent record: mobile.session, relay.chrome, relay.health (and en/context for all six).",
+  "gap": "The remaining values were never captured at round 1; they are covered only by the file-level hashes of the three untouched namespaces, and by the parent record's fragment-level evidence where a finding named them."
+ },
+ "changed_keys": [
+  "mobile.session_health.resume_refused",
+  "mobile.session_health.still_reopening"
+ ],
+ "verdict_scope": {
+  "source_freshness": "en and .context.json hashes are identical to the parent record's, so this is a same-source delta: only target bytes moved.",
+  "checks_run_here": "repository validator, repository renderer over all 66 group-A values, 14 per-value predicates, 10 negative controls, CoreText measurement, the tip-budget unit test, and the core mirror comparison for the relay namespaces.",
+  "not_claimed": [
+   "native-speaker review",
+   "a rendered frame",
+   "an independent audit of the remediation (this is the round-1 auditor's delta)",
+   "the translator's actual model"
+  ]
+ },
+ "original_lost_evidence": {
+  "status": "none",
+  "note": "Nothing was lost or replaced; this is an additional delta round beside an intact round-1 bundle."
+ }
+}

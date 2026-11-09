@@ -4,6 +4,9 @@ import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
 	answeredBySurface,
 	answeredPairs,
+	askActions,
+	askBarLabel,
+	askBarRows,
 	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
@@ -17,13 +20,16 @@ import {
 	hasOtherDoor,
 	headAsk,
 	isAnswerable,
+	isLapsed,
 	isOutstanding,
+	nextActionableAsk,
 	orderedForDisplay,
 	outstandingAsks,
 	outstandingQuestions,
 	questionIsAnswered,
 	questionProgress,
 	questionsWaitingLabel,
+	questionTally,
 	READ_FAILED,
 	REFRESH_FAILED_ROWS_DRAWN,
 	RUNTIME_PREDATES_ASKS,
@@ -102,6 +108,25 @@ describe("askStateLine", () => {
 		expect(line.tone).toBe("wait");
 	});
 
+	it("reports NO deadline when the ask carries none (round 5, m6)", () => {
+		/* `expires_at: 0` is the producer's "nothing set". Rendering it through the
+		 * countdown produced a 1970 sentence and "20752 d ago" in the reel; an
+		 * undated open ask is simply queued. */
+		expect(askStateLine(ask({ expires_at: 0 }), 1_792_926_900_000).text).toBe(
+			"Queued — the agent is continuing",
+		);
+		expect(
+			askStateLine(ask({ expires_at: undefined }), 1_792_926_900_000).text,
+		).toBe("Queued — the agent is continuing");
+		/* And a real deadline still counts down. */
+		expect(
+			askStateLine(
+				ask({ expires_at: 1_792_926_900_000 + 42 * 60_000 }),
+				1_792_926_900_000,
+			).text,
+		).toBe("Queued — the agent is continuing; expires in 42 m");
+	});
+
 	it("says delivering until the runtime has delivered the response rows", () => {
 		expect(
 			askStateLine(ask({ status: "answered", delivered: false }), 1).text,
@@ -111,12 +136,16 @@ describe("askStateLine", () => {
 		).toBe("Answered — the agent was told");
 	});
 
-	it("keeps the timed-out state honest: moved on AND still answerable", () => {
+	it("words a timed-out ask as the desktop and relay do: no late answer offered", () => {
+		/* Byte-identical to the desktop's `ASK_STATUS_COPY.timed_out` and the
+		   relay's `relay.asks.status.timed_out` (D10). */
 		const line = askStateLine(ask({ status: "timed_out" }), 1);
 		expect(line.text).toBe(
-			"Timed out — the agent moved on; you can still answer",
+			"Timed out — the agent goes ahead without your answer",
 		);
-		expect(line.tone).toBe("attention");
+		/* Muted, never the warning ink of an open past-deadline ask (D1). */
+		expect(line.tone).toBe("wait");
+		expect(askToneInk(line.tone)).toBe("text-ink-muted");
 	});
 
 	it("names a dismissal as no reply at all, and an expiry as unfixable", () => {
@@ -219,6 +248,37 @@ describe("orderedForDisplay", () => {
 	});
 });
 
+describe("nextActionableAsk (the walk after a settle, U1)", () => {
+	it("advances a lapsed-only sheet to the next ask that still has Dismiss", () => {
+		const rows = [
+			ask({ ask_id: "t1", status: "timed_out" }),
+			ask({ ask_id: "t2", status: "timed_out" }),
+		];
+		expect(nextActionableAsk(rows, "t1")?.ask_id).toBe("t2");
+		expect(nextActionableAsk(rows, "t2")?.ask_id).toBe("t1");
+	});
+
+	it("walks to the next OPEN ask before any lapsed one", () => {
+		const rows = [
+			ask({ ask_id: "t1", status: "timed_out" }),
+			ask({ ask_id: "o1" }),
+			ask({ ask_id: "o2" }),
+		];
+		expect(nextActionableAsk(rows, "o1")?.ask_id).toBe("o2");
+		expect(nextActionableAsk(rows, "o2")?.ask_id).toBe("o1");
+	});
+
+	it("skips settled rows and collapses when nothing actionable is left", () => {
+		const rows = [
+			ask({ ask_id: "t1", status: "timed_out" }),
+			ask({ ask_id: "a", status: "answered" }),
+			ask({ ask_id: "d", status: "dismissed" }),
+		];
+		expect(nextActionableAsk(rows, "t1")).toBeNull();
+		expect(nextActionableAsk([], "x")).toBeNull();
+	});
+});
+
 describe("headAsk / dockAsk", () => {
 	it("is the OLDEST open ask, not the wire list's first row", () => {
 		const newer = ask({ ask_id: "new", created_at: 900 });
@@ -253,7 +313,12 @@ describe("outstanding / answerable", () => {
 			ask({ ask_id: "d", status: "expired" }),
 			ask({ ask_id: "e", status: "dismissed" }),
 		];
-		expect(outstandingAsks(rows).map((row) => row.ask_id)).toEqual(["a", "b"]);
+		/* `open` only — the runtime's OUTSTANDING_STATUSES since #2388. The
+		   timed-out row stays on the BAR (quietly) but is not waiting. */
+		expect(outstandingAsks(rows).map((row) => row.ask_id)).toEqual(["a"]);
+		expect(askBarRows(rows).map((row) => row.ask_id)).toEqual(["a", "b"]);
+		expect(isOutstanding("timed_out")).toBe(false);
+		expect(isLapsed("timed_out")).toBe(true);
 	});
 
 	it("keeps a withdrawn ask out of the outstanding set — and off the bar", () => {
@@ -267,8 +332,10 @@ describe("outstanding / answerable", () => {
 		expect(dockAsk(rows)).toBeNull();
 	});
 
-	it("treats a timed-out ask as answerable and an answered one as not", () => {
-		expect(isAnswerable("timed_out")).toBe(true);
+	it("treats only an open ask as answerable — timed out and answered are not", () => {
+		expect(isAnswerable("open")).toBe(true);
+		/* D10: the desktop's `canAnswer` and the relay card are `open`-only. */
+		expect(isAnswerable("timed_out")).toBe(false);
 		expect(isAnswerable("answered")).toBe(false);
 		expect(isOutstanding("open")).toBe(true);
 		expect(isOutstanding("late")).toBe(false);
@@ -278,6 +345,38 @@ describe("outstanding / answerable", () => {
 		expect(isOutstanding("withdrawn")).toBe(false);
 	});
 
+	it("gives a timed-out ask no submit path — Dismiss is its only op", () => {
+		/* The sheet's footer draws exactly these AND its `settle` refuses
+		   anything else, so this is the request gate, not just the button's. */
+		expect(askActions("timed_out")).toEqual({
+			respond: false,
+			decline: false,
+			dismiss: true,
+		});
+	});
+
+	it("leaves an open ask's controls unchanged: answer and decline, no dismiss", () => {
+		expect(askActions("open")).toEqual({
+			respond: true,
+			decline: true,
+			dismiss: false,
+		});
+		for (const settled of [
+			"answered",
+			"late",
+			"declined",
+			"dismissed",
+			"withdrawn",
+			"expired",
+		]) {
+			expect(askActions(settled)).toEqual({
+				respond: false,
+				decline: false,
+				dismiss: false,
+			});
+		}
+	});
+
 	it("has no opinion of its own when the field is absent — absence is not empty", () => {
 		expect(outstandingAsks(undefined)).toEqual([]);
 		expect(outstandingAsks(null)).toEqual([]);
@@ -285,7 +384,7 @@ describe("outstanding / answerable", () => {
 });
 
 describe("the bar's question count (the unit split)", () => {
-	it("counts QUESTIONS of the outstanding set, including timers still answerable", () => {
+	it("counts WAITING questions of open asks only; a timed-out ask is lapsed", () => {
 		const single = ask();
 		const rows = [
 			ask({
@@ -295,7 +394,34 @@ describe("the bar's question count (the unit split)", () => {
 			ask({ ask_id: "b", status: "timed_out" }),
 			ask({ ask_id: "c", status: "answered" }),
 		];
-		expect(outstandingQuestions(rows)).toBe(3);
+		expect(outstandingQuestions(rows)).toBe(2);
+		expect(questionTally(rows)).toEqual({ waiting: 2, lapsed: 1 });
+		expect(askBarLabel(rows)).toEqual({
+			text: "2 questions waiting",
+			quiet: false,
+		});
+	});
+
+	it("says a lapsed-only queue TIMED OUT, quietly — never waiting (the Aida repro)", () => {
+		/* The reported state: one day-old timed-out ask, nothing open. The
+		   desktop shows nothing pending; the bar used to say "1 question
+		   waiting" in accent. */
+		const rows = [
+			ask({ ask_id: "t", status: "timed_out" }),
+			ask({ ask_id: "w", status: "withdrawn" }),
+			ask({ ask_id: "x", status: "answered" }),
+		];
+		expect(outstandingQuestions(rows)).toBe(0);
+		expect(askBarLabel(rows)).toEqual({
+			text: "1 question timed out",
+			quiet: true,
+		});
+		expect(dockAsk(rows)?.ask_id).toBe("t");
+	});
+
+	it("has no bar at all when nothing is waiting or lapsed", () => {
+		expect(askBarLabel([ask({ status: "answered" })])).toBeNull();
+		expect(askBarLabel(undefined)).toBeNull();
 	});
 
 	it("labels its unit, singular and plural, so it cannot be read as asks", () => {

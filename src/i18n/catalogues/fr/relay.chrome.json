@@ -1,0 +1,22 @@
+{
+	"relay.chrome.session.subtitle.not_answering": "Ne répond pas",
+	"relay.chrome.session.subtitle.ended": "Terminée",
+	"relay.chrome.session.resume": "Reprendre",
+	"relay.chrome.session.resuming": "Reprise…",
+	"relay.chrome.session.subtitle.working": "En cours · {elapsed}",
+	"relay.chrome.session.subtitle.working_plain": "En cours",
+	"relay.chrome.session.subtitle.waiting": "Vous attend",
+	"relay.chrome.session.subtitle.idle": "Inactive",
+	"relay.chrome.session.tray.tasks": "Tâches {done}/{total}",
+	"relay.chrome.session.tray.agents": "Agents {running}/{total}",
+	"relay.chrome.drawer.past": "Sessions passées",
+	"relay.chrome.drawer.projects": "Projets",
+	"relay.chrome.drawer.library": "Bibliothèque",
+	"relay.chrome.drawer.settings": "Paramètres",
+	"relay.chrome.list.search_open": "Rechercher",
+	"relay.chrome.list.search_label": "Rechercher une conversation",
+	"relay.chrome.row.tags": "Tags",
+	"relay.chrome.row.more": "Plus",
+	"relay.chrome.drawer.open": "Ouvrir la navigation",
+	"relay.chrome.drawer.close": "Fermer la navigation"
+}

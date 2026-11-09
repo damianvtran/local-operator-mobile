@@ -1,0 +1,64 @@
+=== i18n catalogue validator ===
+$ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (116 keys, 7 namespaces)
+(node:20949) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+=== SHA-256 hashes ===
+--- mobile.account_routing ---
+34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03  src/i18n/catalogues/en/mobile.account_routing.json
+2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c  src/i18n/catalogues/en/mobile.account_routing.context.json
+7d028613ba7d0dd60b5925228515b6ecbdcb55c87abd2fda9862d2f8e199bfb1  src/i18n/catalogues/fr/mobile.account_routing.json
+
+--- mobile.computers ---
+356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643  src/i18n/catalogues/en/mobile.computers.json
+3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5  src/i18n/catalogues/en/mobile.computers.context.json
+bd473792092e1fb4ad3c454a2103781870341ebd9e3bd38c6fc0a01531f74ad3  src/i18n/catalogues/fr/mobile.computers.json
+
+--- mobile.notifications ---
+c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064  src/i18n/catalogues/en/mobile.notifications.json
+240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6  src/i18n/catalogues/en/mobile.notifications.context.json
+6db53791415e1d53adb95703be0f1d724d5556cb54880481a9260de8eddf63a8  src/i18n/catalogues/fr/mobile.notifications.json
+
+--- mobile.projects ---
+8218f1fcea96270ce2f9df4431e1eb0c749475305a9656b03d2c34a71c88bb93  src/i18n/catalogues/en/mobile.projects.json
+6a9e4b4c9fd4a45c47825bc341b937c1774930abd42f2210d9bf3526e1d40f97  src/i18n/catalogues/en/mobile.projects.context.json
+cb4cc4d83dccc79172ac275987fc875b15e4a3db7091228c68af8243cbd67892  src/i18n/catalogues/fr/mobile.projects.json
+
+--- mobile.session ---
+fb14b28b23926c7ef552d8db549c87bc4f109e9879688f82c188c5d6a2832529  src/i18n/catalogues/en/mobile.session.json
+96f9e9d06f4a1b00c58d3c84b3b98b82837b4f7e8b30a5bee4f84c4d0bc54d27  src/i18n/catalogues/en/mobile.session.context.json
+2c45d0a0f781b0b67105cd3dc6d51245b2275a80f0a711fa11c64f08e7a57548  src/i18n/catalogues/fr/mobile.session.json
+
+=== JSON validity ===
+mobile.account_routing: valid
+mobile.computers: valid
+mobile.notifications: valid
+mobile.projects: valid
+mobile.session: valid
+
+=== Key parity ===
+mobile.account_routing: en=14 fr=14 ctx=14 key_parity=True ctx_parity=True
+mobile.computers: en=10 fr=10 ctx=10 key_parity=True ctx_parity=True
+mobile.notifications: en=14 fr=14 ctx=14 key_parity=True ctx_parity=True
+mobile.projects: en=15 fr=15 ctx=15 key_parity=True ctx_parity=True
+mobile.session: en=1 fr=1 ctx=1 key_parity=True ctx_parity=True
+
+=== Placeholder parity ===
+mobile.account_routing: all placeholders match
+mobile.computers: all placeholders match
+mobile.notifications: all placeholders match
+mobile.projects: all placeholders match
+mobile.session: all placeholders match
+
+=== French typography check (U+202F before : ; ! ?) ===
+FAIL mobile.computers/mobile.computers.added.stays_listed: U+0020 (SPACE) before ':'
+FAIL mobile.projects/mobile.projects.delete_body: U+0020 (SPACE) before '?'
+FAIL mobile.projects/mobile.projects.project_name_hint: U+0020 (SPACE) before ':'
+FAIL mobile.projects/mobile.projects.remove_milestone_body: U+0020 (SPACE) before '?'
+FAIL mobile.projects/mobile.projects.write_unknown_note: U+0020 (SPACE) before ':'
+
+=== Bidi control character check ===
+No bidi control characters found in any fr catalogue

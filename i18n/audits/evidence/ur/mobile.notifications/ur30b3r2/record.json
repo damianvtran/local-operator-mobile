@@ -1,0 +1,98 @@
+{
+ "schema": 1,
+ "audit_kind": "delta_reaudit_round_2",
+ "audit_id": "ur30b3r2",
+ "supersedes_round_1": "ur30b3",
+ "locale": "ur",
+ "namespace": "mobile.notifications",
+ "audit_date": "2026-10-30",
+ "wave": "ur wave — damianvtran/local-operator-mobile, branch feat/i18n-urdu, group B (schedules/projects/notifications/computers)",
+ "audited_revision": "32c7677 (main) plus the translator's UNCOMMITTED src/i18n/catalogues/ur/ (git status in audit.log)",
+ "key_count": {
+  "en": 14,
+  "target": 14,
+  "context": 14
+ },
+ "keyset_equal": true,
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "b5f20e88b803-r2",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "Session system header names anthropic/claude-sonnet-5-5; no model-switch/fallback header observed in this turn. Fallback: none observed.",
+  "independent_from_translator_session": true,
+  "independence": "Same group-B auditor as round 1 (a delta re-audit by design), not the translator; group A bundles were not read. No human native-speaker review and no rendered device frame claimed; renders go through the app parseMessage/formatMessage only."
+ },
+ "route": "Ordinary worktree file reads and git show origin/main of the core repo. read_public_copy refused for src/i18n/**; context sidecars are nested JSON and not routable. No receipt claimed.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.notifications.json",
+   "sha256": "c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.notifications.context.json",
+   "sha256": "240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6"
+  },
+  "ur": {
+   "path": "src/i18n/catalogues/ur/mobile.notifications.json",
+   "sha256": "100b416e13a6ac4917ddc4dd6183d009156e0b24223d6dcd5d97a069b4d4ecc9"
+  }
+ },
+ "round1_input_hashes_ur": {
+  "path": "src/i18n/catalogues/ur/mobile.notifications.json",
+  "sha256": "100b416e13a6ac4917ddc4dd6183d009156e0b24223d6dcd5d97a069b4d4ecc9"
+ },
+ "en_and_context_unchanged_since_round1": true,
+ "hash_revert_proof": "tools/revert.py reverts each prescribed replacement in the current ur file and recomputes sha256; result equals round-1 input_hashes.ur for every group-B namespace (see audit.log), so no other key changed. mobile.notifications has zero replacements and is sha-identical to round 1.",
+ "redaction_scan": {
+  "markers_found": 0,
+  "scope": "all 12 group-B inputs (ur+en+context x4), audit.log"
+ },
+ "bidi_control_chars_in_target": 0,
+ "mechanical": {
+  "generate_check": "scripts/i18n/generate.ts --check rc 0 (catalogue.gen.ts current, 143 keys, 10 namespaces)",
+  "check_strings": "scripts/i18n/check-strings.ts rc 0 (284 findings all baselined, 0 new)",
+  "scoped_vitest": "catalogues.test.ts + messages.test.ts: 67 pass, 1 fail (ur not yet in SHIPPED_LOCALES; wiring, not copy; same as round 1)",
+  "plural_rules": "Intl.PluralRules(ur): 0 other, 1 one, 2 other, 21 other, 100 other"
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.notifications/ur30b3r2/audit.log",
+   "sha256": "5af66bb432753fcccf9b9122517257de7014380d62d7e1499c374e3580a98de5",
+   "kind": "actual_execution_log (one run of tools/run2.sh, shared verbatim by all four r2 bundles)",
+   "sha256_pre_normalisation": "67e3fb78f26301f3c35a50261760c60d06a3ec183b4f185f3b4609f43c58cf0b",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.notifications/ur30b3r2/report.md",
+   "kind": "audit report (audit notes, not an execution log)",
+   "sha256": "4cdd39ec33eff0199842da4b3c2a9832fe2ebda30983feef1b6bc0134c7050bd"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.notifications/ur30b3r2/tools/",
+   "kind": "scripts actually run: revert.py render2.ts run2.sh scan.py"
+  }
+ ],
+ "delta_verification": [
+  {
+   "id": "N1",
+   "severity": "MINOR",
+   "key": "mobile.notifications.dismiss / detail.nothing_to_dismiss",
+   "applied_text": "(unchanged) ہٹائیں",
+   "result": "NOT_APPLIED_ACCEPTED",
+   "note": "NOT APPLIED by implementer; ACCEPTED: round-1 grading was MINOR allowed variance, not a glossary breach; ur file is sha-identical to round 1 so nothing could have drifted"
+  }
+ ],
+ "open_minors": [],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "N1"
+  ]
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
+ }
+}

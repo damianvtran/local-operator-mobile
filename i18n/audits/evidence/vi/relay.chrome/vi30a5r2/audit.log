@@ -1,0 +1,248 @@
+$ date -u +%FT%TZ
+2026-10-30T12:16:05Z
+$ cd /Users/damian/workspace/vi-wave && git rev-parse --abbrev-ref HEAD && git rev-parse HEAD
+feat/i18n-vietnamese
+fb4d8bcbc50c68301af624407e09b1789896e571
+$ git -C /Users/damian/workspace/vi-wave status --short
+?? i18n/audits/evidence/vi/mobile.account_routing/vi30a4r2/
+?? i18n/audits/evidence/vi/mobile.computers/vi30c1r2/
+?? i18n/audits/evidence/vi/mobile.home/vi30a1r2/
+?? i18n/audits/evidence/vi/mobile.notifications/vi30n1r2/
+?? i18n/audits/evidence/vi/mobile.projects/vi30p1r2/
+?? i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/
+?? i18n/audits/evidence/vi/mobile.session/vi30a2r2/
+?? i18n/audits/evidence/vi/mobile.session_health/vi30a3r2/
+?? i18n/audits/evidence/vi/relay.chrome/vi30a5r2/
+$ shasum -a 256 src/i18n/catalogues/en/relay.chrome.json src/i18n/catalogues/en/relay.chrome.context.json src/i18n/catalogues/vi/relay.chrome.json
+e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1  src/i18n/catalogues/en/relay.chrome.json
+195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b  src/i18n/catalogues/en/relay.chrome.context.json
+ce983a6b24f733722ab74f6dfa5dfb2b575b22a6ccf941c3cd86e773f4aa45d9  src/i18n/catalogues/vi/relay.chrome.json
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 31f2ae46f45d
+
+== harness provenance: the round-1 harness is reused; ONE control re-pointed ==
+$ diff -u <round-1 harness> <delta harness>
+--- /Users/damian/.local-operator/sessions/8bfd6a5224bd/scratchpad/vi-a/audit.mjs	2026-10-30 07:50:45
++++ /Users/damian/.local-operator/sessions/3fd3fed80964/scratchpad/vi-delta-a/audit-delta.mjs	2026-10-30 08:05:51
+@@ -146,12 +146,24 @@
+-  const viaFor = renderFor("mobile.home.greeting", {}, "vi");
+-  console.log(`  renderFor(greeting, {}, "vi") = ${JSON.stringify(viaFor)}`);
+-  console.log(`  English source                 = ${JSON.stringify(he["mobile.home.greeting"])}`);
+-  viaFor === he["mobile.home.greeting"]
+-    ? PASS("unshipped vi tag answers the English source (runtime contract observed)")
++  /* DELTA-A HARNESS CHANGE (read-only copy; the repo is untouched).
++   * Round 1 used the tag "vi" here because vi was NOT YET SHIPPED at 31f2ae4.
++   * At fb4d8bc vi IS shipped (locale.ts moves it into SHIPPED_LOCALES), so the
++   * round-1 control now asks a shipped locale to fall back — a control whose
++   * premise the change removed, not a catalogue defect. Re-pointed at "hi",
++   * still in NOT_YET_SHIPPED_LOCALES, so the fallback contract is still proved
++   * and shipping vi is proved not to break it for the tags that remain. */
++  const viaFor = renderFor("mobile.home.greeting", {}, "hi");
++  console.log(`  renderFor(greeting, {}, "hi") = ${JSON.stringify(viaFor)}`);
++  console.log(`  English source                = ${JSON.stringify(he["mobile.home.greeting"])}`);
++  viaFor === he["mobile.home.greeting"]
++    ? PASS("unshipped hi tag answers the English source (runtime contract observed)")
++  const viaVi = renderFor("mobile.home.greeting", {}, "vi");
++  console.log(`  renderFor(greeting, {}, "vi") = ${JSON.stringify(viaVi)}`);
++  viaVi === read("vi", "mobile.home")["mobile.home.greeting"] && viaVi !== he["mobile.home.greeting"]
++    ? PASS("control: shipped vi resolves the vi catalogue, hi still falls back (control discriminates)")
++    : CFAIL("the fallback control cannot distinguish shipped from unshipped");
+
+$ NS=relay.chrome WIDTH_JSON=/Users/damian/.local-operator/sessions/3fd3fed80964/scratchpad/vi-delta-a/measured-audit.json /Users/damian/workspace/vi-wave/node_modules/.bin/tsx /Users/damian/.local-operator/sessions/3fd3fed80964/scratchpad/vi-delta-a/audit-delta.mjs full
+== 1. MECHANICAL — the repository's own parser, every key ==
+PASS  relay.chrome: key set identical (4)
+PASS  relay.chrome: context sidecar parity (4 notes)
+PASS  relay.chrome.session.resume: placeholder surface (none)
+PASS  relay.chrome.session.resume: code spans / flags byte-identical
+PASS  relay.chrome.session.resuming: placeholder surface (none)
+PASS  relay.chrome.session.resuming: code spans / flags byte-identical
+PASS  relay.chrome.session.subtitle.ended: placeholder surface (none)
+PASS  relay.chrome.session.subtitle.ended: code spans / flags byte-identical
+PASS  relay.chrome.session.subtitle.not_answering: placeholder surface (none)
+PASS  relay.chrome.session.subtitle.not_answering: code spans / flags byte-identical
+
+== 2. UNICODE / TYPOGRAPHY — every vi value in the six namespaces ==
+PASS  relay.chrome.session.subtitle.not_answering: NFC
+PASS  relay.chrome.session.subtitle.not_answering: no combining marks
+PASS  relay.chrome.session.subtitle.not_answering: single spaces
+PASS  relay.chrome.session.subtitle.not_answering: no space before punctuation
+PASS  relay.chrome.session.subtitle.not_answering: no edge whitespace
+PASS  relay.chrome.session.subtitle.not_answering: ellipsis form
+PASS  relay.chrome.session.subtitle.not_answering: apostrophes
+PASS  relay.chrome.session.subtitle.not_answering: no bidi controls
+PASS  relay.chrome.session.subtitle.not_answering: no control characters
+PASS  relay.chrome.session.subtitle.ended: NFC
+PASS  relay.chrome.session.subtitle.ended: no combining marks
+PASS  relay.chrome.session.subtitle.ended: single spaces
+PASS  relay.chrome.session.subtitle.ended: no space before punctuation
+PASS  relay.chrome.session.subtitle.ended: no edge whitespace
+PASS  relay.chrome.session.subtitle.ended: ellipsis form
+PASS  relay.chrome.session.subtitle.ended: apostrophes
+PASS  relay.chrome.session.subtitle.ended: no bidi controls
+PASS  relay.chrome.session.subtitle.ended: no control characters
+PASS  relay.chrome.session.resume: NFC
+PASS  relay.chrome.session.resume: no combining marks
+PASS  relay.chrome.session.resume: single spaces
+PASS  relay.chrome.session.resume: no space before punctuation
+PASS  relay.chrome.session.resume: no edge whitespace
+PASS  relay.chrome.session.resume: ellipsis form
+PASS  relay.chrome.session.resume: apostrophes
+PASS  relay.chrome.session.resume: no bidi controls
+PASS  relay.chrome.session.resume: no control characters
+PASS  relay.chrome.session.resuming: NFC
+PASS  relay.chrome.session.resuming: no combining marks
+PASS  relay.chrome.session.resuming: single spaces
+PASS  relay.chrome.session.resuming: no space before punctuation
+PASS  relay.chrome.session.resuming: no edge whitespace
+PASS  relay.chrome.session.resuming: ellipsis form
+PASS  relay.chrome.session.resuming: apostrophes
+PASS  relay.chrome.session.resuming: no bidi controls
+PASS  relay.chrome.session.resuming: no control characters
+PASS  relay.chrome: typography sweep done (4 values)
+
+== 3. RENDER — actual strings out of the repo renderer ==
+  renderFor(greeting, {}, "hi") = "What can I help you with today?"
+  English source                = "What can I help you with today?"
+PASS  unshipped hi tag answers the English source (runtime contract observed)
+  renderFor(greeting, {}, "vi") = "Hôm nay tôi có thể giúp gì?"
+PASS  control: shipped vi resolves the vi catalogue, hi still falls back (control discriminates)
+  group A, rendered through formatMessage(parseMessage(value), {}, 'vi'):
+
+== 4. PLURAL CATEGORIES + the runtime's plural path ==
+  pluralCategory('vi', n) over 0,1,2,3,5,11,21,101,1.5 -> other
+PASS  vi selects 'other' for every count tested
+  control: pluralCategory('ru', 2) = few
+    mobile.schedules.count.wakes
+      vi [1,2,5,0] -> ["1 lần thức dậy","2 lần thức dậy","5 lần thức dậy","0 lần thức dậy"]
+      ru [1,2,5,0] -> ["1 пробуждение","2 пробуждения","5 пробуждений","0 пробуждений"]
+    mobile.schedules.count.monitors
+      vi [1,2,5,0] -> ["1 giám sát","2 giám sát","5 giám sát","0 giám sát"]
+      ru [1,2,5,0] -> ["1 монитор","2 монитора","5 мониторов","0 мониторов"]
+    mobile.schedules.show_more.wakes
+      vi [1,2,5,0] -> ["Hiện thêm 1 lần thức dậy","Hiện thêm 2 lần thức dậy","Hiện thêm 5 lần thức dậy","Hiện thêm 0 lần thức dậy"]
+      ru [1,2,5,0] -> ["Показать ещё 1 пробуждение","Показать ещё 2 пробуждения","Показать ещё 5 пробуждений","Показать ещё 0 пробуждений"]
+
+== 5. COMPOSITION — the runtime's own splices ==
+  nextDueClause(3, 600s)
+    en: 3 wakes · next in 10m
+    vi: 3 lần thức dậy · sau 10m
+  nextDueClause(3, -600s)
+    en: 3 wakes · 10m overdue
+    vi: 3 lần thức dậy · trễ 10m
+  nextDueClause(1, 5400s)
+    en: 1 wake · next in 1h
+    vi: 1 lần thức dậy · sau 1h
+  nextDueClause(2, -172800s)
+    en: 2 wakes · 2d overdue
+    vi: 2 lần thức dậy · trễ 2d
+  truncatedClause(wakes)
+    en: Showing 3 of 10 conversations with wakes.
+    vi: Đang hiện 3 trên 10 cuộc trò chuyện có lần thức dậy.
+  truncatedClause(monitors)
+    en: Showing 3 of 10 conversations with monitors.
+    vi: Đang hiện 3 trên 10 cuộc trò chuyện có giám sát.
+  group A chip pool, leading tokens (the pool's own rule: no shared leading verb):
+    Xem        Xem lượt gần nhất
+    Thiết      Thiết lập Linear MCP
+    Bật        Bật truy cập điện thoại
+    Rà         Rà soát repo này
+    Tạo        Tạo nhóm tác nhân
+    Đánh       Đánh thức tôi kèm bản tóm tắt
+
+SCOPE NOTE: this run audits relay.chrome only. Sections 4-7 are cross-cutting programme checks; the width findings below concern mobile.home and are NOT findings against relay.chrome.
+
+== 6. WIDTH — CoreText, system font, the app's token sizes ==
+  chip:vi:phone_access       146.0 pt  (box 256 pt)  fits  "Bật truy cập điện thoại"
+  chip:en:phone_access       143.1 pt  (box 256 pt)  fits  "Turn on phone access"
+  chip:vi:team_of_agents     123.9 pt  (box 256 pt)  fits  "Tạo nhóm tác nhân"
+  chip:en:team_of_agents     155.3 pt  (box 256 pt)  fits  "Create a team of agents"
+  chip:vi:last_turn          118.0 pt  (box 256 pt)  fits  "Xem lượt gần nhất"
+  chip:en:last_turn          140.8 pt  (box 256 pt)  fits  "Show me the last turn"
+  chip:vi:linear_mcp         134.1 pt  (box 256 pt)  fits  "Thiết lập Linear MCP"
+  chip:en:linear_mcp         119.8 pt  (box 256 pt)  fits  "Set up Linear MCP"
+  chip:vi:review_repo        108.3 pt  (box 256 pt)  fits  "Rà soát repo này"
+  chip:en:review_repo        106.8 pt  (box 256 pt)  fits  "Review this repo"
+  chip:vi:wake_summary       196.2 pt  (box 256 pt)  fits  "Đánh thức tôi kèm bản tóm tắt"
+  chip:en:wake_summary       165.4 pt  (box 256 pt)  fits  "Wake me with a summary"
+  tip:vi:schedule            210.8 pt  (box 270 pt)  fits  "lên lịch để chạy prompt theo hẹn giờ"
+  tip:en:schedule            238.2 pt  (box 270 pt)  fits  "set a schedule to run a prompt on a timer"
+  tip:vi:parallel            263.7 pt  (box 270 pt)  fits  "yêu cầu chạy song song để tách tác nhân con"
+  tip:en:parallel            240.4 pt  (box 270 pt)  fits  "ask for parallel work to fan out subagents"
+  tip:vi:search              239.9 pt  (box 270 pt)  fits  "tìm lại cuộc trò chuyện cũ để mở lại phiên"
+  tip:en:search              268.9 pt  (box 270 pt)  fits  "search past conversations to reopen a session"
+  greet:vi                   240.2 pt  (box 288 pt)  fits  "Hôm nay tôi có thể giúp gì?"
+  greet:en                   281.9 pt  (box 288 pt)  fits  "What can I help you with today?"
+  one:vi:starting            136.2 pt  (box 288 pt)  fits  "Đang bắt đầu…"
+  one:vi:not_started          86.9 pt  (box 288 pt)  fits  "Chưa bắt đầu"
+  one:vi:unconfirmed         148.6 pt  (box 288 pt)  fits  "Chưa xác nhận bắt đầu"
+  one:vi:blocked             241.5 pt  (box 288 pt)  fits  "Thử lại để gửi tin nhắn trong hàng đợi"
+  one:vi:sending             223.3 pt  (box 288 pt)  fits  "Đang gửi tin nhắn trong hàng đợi…"
+  one:vi:queue_view          183.1 pt  (box 288 pt)  fits  "Xem tin nhắn trong hàng đợi"
+  one:vi:waiting             181.4 pt  (box 288 pt)  fits  "Đang chờ cuộc trò chuyện…"
+  fix:greeting               240.2 pt  (box 270 pt)  fits  "Hôm nay tôi có thể giúp gì?"
+  fix:starting               136.2 pt  (box 270 pt)  fits  "Đang bắt đầu…"
+  fix:tip_parallel           263.7 pt  (box 270 pt)  fits  "yêu cầu chạy song song để tách tác nhân con"
+  fix:tip_search             281.8 pt  (box 270 pt)  OVER by 11.8  "tìm trong các cuộc trò chuyện cũ để mở lại phiên"
+  fix:wake_chip              196.2 pt  (box 256 pt)  fits  "Đánh thức tôi kèm bản tóm tắt"
+  control:tip_over           408.7 pt  (box 288 pt)  OVER by 120.7  "yêu cầu chạy song song để tách ra tác nhân con và nhiều thứ khác nữa"
+PASS  longest vi tip 263.7 pt + icon/gap 18 = 281.7 pt fits the 288 pt row
+PASS  longest vi chip 196.2 pt fits the 256 pt chip box
+PASS  prescribed tip 263.7 pt fits the 270 pt text box
+PASS  prescribed greeting 240.2 pt fits one 288 pt line
+PASS  prescribed wake chip 196.2 pt fits the 256 pt chip box
+PASS  greeting wrap comparison en=281.9 vi=240.2
+PASS  control: over-wide filler 408.7 pt reports OVER
+  character counts (code points) and vi/en ratio:
+    mobile.home.connect_disabled_reason            vi  24  en  27  ratio 0.89
+    mobile.home.folders_read_failed                vi  49  en  50  ratio 0.98
+    mobile.home.greeting                           vi  27  en  31  ratio 0.87
+    mobile.home.options.apply                      vi  21  en  17  ratio 1.24
+    mobile.home.options.fixed                      vi 115  en  95  ratio 1.21
+    mobile.home.options.folder                     vi  25  en  23  ratio 1.09
+    mobile.home.options.title                      vi  24  en  20  ratio 1.20
+    mobile.home.queue.discard                      vi  26  en  23  ratio 1.13
+    mobile.home.queue.restore                      vi  45  en  29  ratio 1.55
+    mobile.home.queue.sheet_title                  vi  23  en  15  ratio 1.53
+    mobile.home.queue.view                         vi  27  en  20  ratio 1.35
+    mobile.home.refused_start_fallback             vi  38  en  43  ratio 0.88
+    mobile.home.starting                           vi  13  en   9  ratio 1.44
+    mobile.home.startup_queue.blocked              vi  38  en  29  ratio 1.31
+    mobile.home.startup_queue.not_started          vi  12  en  11  ratio 1.09
+    mobile.home.startup_queue.sending              vi  33  en  24  ratio 1.38
+    mobile.home.startup_queue.unconfirmed          vi  21  en  19  ratio 1.11
+    mobile.home.suggestion.last_turn               vi  17  en  21  ratio 0.81
+    mobile.home.suggestion.linear_mcp              vi  20  en  17  ratio 1.18
+    mobile.home.suggestion.phone_access            vi  23  en  20  ratio 1.15
+    mobile.home.suggestion.review_repo             vi  16  en  16  ratio 1.00
+    mobile.home.suggestion.team_of_agents          vi  17  en  23  ratio 0.74
+    mobile.home.suggestion.wake_summary            vi  29  en  22  ratio 1.32
+    mobile.home.tip.parallel                       vi  43  en  42  ratio 1.02
+    mobile.home.tip.schedule                       vi  36  en  41  ratio 0.88
+    mobile.home.tip.search                         vi  42  en  45  ratio 0.93
+    mobile.home.transcript.waiting                 vi  25  en  29  ratio 0.86
+PASS  tips within TIP_CHAR_BUDGET 48
+  chips over the ENGLISH 24-char calibration (vi needs a measured budget, not 24): wake_summary=29
+
+== 7. NEGATIVE CONTROLS — each detector must be proved able to fail ==
+PASS  control: a valid plural parses
+PASS  control: a renamed placeholder changes the parameter surface
+PASS  control: a plural with no 'other' arm throws (RangeError: Invalid message "{count, plural, one {# x}}": plural is miss…)
+PASS  control: 'other' is ICU's fallback arm, so an other-only vi message renders under any count
+PASS  control: the double-space detector fires
+PASS  control: the combining-mark detector fires on decomposed text
+PASS  control: NFC equality distinguishes a decomposed string
+PASS  control: an unterminated plural throws at parse
+
+SUMMARY pass=66 findings=0 control_failures=0
+
+$ python3 /Users/damian/.local-operator/sessions/3fd3fed80964/scratchpad/vi-delta-a/core-mirror-check.py origin/main
+core ref           origin/main = c80bad7ab74456929d70896fa3ac39facecfb812
+core local HEAD   9bedda191653659a630d869f7866f6821e0b7ed7
+relay.chrome   en wave  4 core 85 identical  4/ 4 PASS missing=[] diff=[]
+relay.chrome   vi wave  4 core 85 identical  4/ 4 PASS missing=[] diff=[]
+relay.health   en wave  8 core  8 identical  8/ 8 PASS missing=[] diff=[]
+relay.health   vi wave  8 core  8 identical  8/ 8 PASS missing=[] diff=[]
+RESULT all mirrors byte-identical to core origin/main
+
+== end of transcript: vi30a5r2 relay.chrome ==

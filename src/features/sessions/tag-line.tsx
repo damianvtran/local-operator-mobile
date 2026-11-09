@@ -50,7 +50,8 @@ export type SessionTagLineProps = {
 	 * control.
 	 */
 	onPress?: () => void;
-	/** The control id for the interactive form (`CONTROL.sessionHeaderTagsAction`).
+	/** The control id for the interactive form (no caller since the session header
+	 *  moved its tags to the ⋮ menu, 2026-11-04; kept for a disclosure surface).
 	 *  The inner line keeps `testID`, so the capture marker and the flow selector
 	 *  are both addressable without a second paint. */
 	actionTestID?: string;

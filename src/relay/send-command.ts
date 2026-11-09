@@ -49,9 +49,19 @@
  */
 
 import type { InputMode, PromptImage } from "../contracts";
+import {
+	DispatchClosedError,
+	isDispatchWithdrawn,
+	runCommandOperation,
+} from "./command-lifecycle";
 import type { RelayEndpoints } from "./endpoints";
 import { isRelayError, RelayError, transportError } from "./errors";
-import type { ContinuationOp, RetryEnvelopeStore } from "./retry-envelope";
+import {
+	type ContinuationEnvelope,
+	type ContinuationOp,
+	EnvelopeStorageError,
+	type RetryEnvelopeStore,
+} from "./retry-envelope";
 
 export interface SendResult {
 	/** The relay's own sentence: `prompt admitted`, or `already admitted` on a
@@ -61,6 +71,56 @@ export interface SendResult {
 	 *  composer must tell the user, or the new draft vanishes without a word. */
 	reusedPreviousDraft: boolean;
 	commandId: string;
+	/** The op the relay ACKNOWLEDGED, which can differ from the op requested when
+	 *  a refusal was reconciled (`reconciledOp`). The composer reads it to say
+	 *  "queued for the running turn" only for an instruction that really was
+	 *  admitted as a steer. */
+	op: ContinuationOp;
+}
+
+/**
+ * The other op, when a DEFINITIVE refusal says the session's turn state moved
+ * under the send; otherwise `null`.
+ *
+ * WHY THIS EXISTS: the composer picks `prompt` vs `steer` from the projection it
+ * last painted, and the runtime's turn state can flip between that repaint and
+ * the request landing (a turn starting from a wake, a subagent result or a goal
+ * continuation; a turn ending as the reader taps). Both refusals below are
+ * pre-admission (the producer released the identity), so ONE replay under the
+ * SAME `command_id` is safe: it can never run the instruction twice.
+ *
+ *  - `prompt` refused with the runtime's busy sentence (`TurnInFlight`,
+ *    "session is already streaming; use steer() …", a 422 from a TUI-hosted
+ *    owner) → `steer`. This is the daemon's OWN reconciliation rule
+ *    (`attach_client.send_command`: "TurnInFlight or 'already streaming'"), and
+ *    `CommandReservations.reject` documents that a released id "still serves the
+ *    steer retry".
+ *  - `steer` refused with `409 session not connected` → `prompt`. A steer has
+ *    nowhere to go without a live runtime, but a prompt to a durable conversation
+ *    WAKES it (the daemon's cold-prompt path), which is what the reader meant.
+ *
+ * Ambiguous failures (408/502/504, transport) are deliberately NOT reconciled:
+ * the first op may already be admitted, and replaying it as a different op under
+ * the same id is a question only the retry envelope's own replay may ask.
+ */
+export function reconciledOp(
+	op: ContinuationOp,
+	error: RelayError,
+): ContinuationOp | null {
+	const sentence = `${error.serverError ?? ""} ${error.code ?? ""}`;
+	if (
+		op === "prompt" &&
+		error.status === 422 &&
+		/already streaming|turn_in_flight/i.test(sentence)
+	)
+		return "steer";
+	if (
+		op === "steer" &&
+		error.status === 409 &&
+		/session not connected/i.test(sentence)
+	)
+		return "prompt";
+	return null;
 }
 
 export interface SendCommandInput {
@@ -70,11 +130,20 @@ export interface SendCommandInput {
 	op: ContinuationOp;
 	text: string;
 	images?: PromptImage[];
+	/** A durable outbox owns this identity across helper cleanup/expiry. Never
+	 * replace it with holdNew's UUID or displace a different unresolved item. */
+	envelope?: ContinuationEnvelope;
 	/** The silent annotation (design §2.1): `input_mode` and, when a dictation ran,
 	 *  the `input_path` the transcribe response returned. Part of the instruction's
 	 *  identity, so it is stored WITH the envelope and replayed on a retry. */
 	input_mode?: InputMode;
 	input_path?: string;
+	/** Called once the envelope is HELD and before the request goes out — the
+	 *  first moment the `command_id` exists. The composer paints its pending row
+	 *  here (`features/session/pending-echo.ts`), keyed by that id, because the id
+	 *  is also the id the session writes the real row under. A joiner of an
+	 *  already-running send is not called: the first caller painted it. */
+	onHeld?: (envelope: ContinuationEnvelope) => void;
 }
 
 /** One send's outcome as a VALUE rather than a rejection. The promise carrying it
@@ -117,6 +186,7 @@ function registryFor(envelopes: RetryEnvelopeStore): Map<string, InFlightSend> {
  *  same image with its fields in a different order are still one instruction. */
 function payloadKeyOf(input: SendCommandInput): string {
 	return JSON.stringify([
+		input.envelope?.command_id ?? null,
 		input.op,
 		input.text,
 		(input.images ?? []).map((image) => [image.mime_type, image.data_b64]),
@@ -133,7 +203,17 @@ function begin(
 	predecessor: InFlightSend | undefined,
 	payload: string,
 ): InFlightSend {
-	const finished = (async (): Promise<Settled> => {
+	/* The whole hold -> HTTP -> settle lifecycle is the registered operation. Doing
+	 * it here rather than in `runSend` is what makes "through final settle" exact: a
+	 * purge that starts mid-flight waits for the envelope's disposition to be
+	 * written (or deliberately kept as ambiguity), never for a half of it. */
+	/* A closed barrier is a REFUSAL TO START, not a failed send: nothing was put on
+	 * the wire and nothing must be recorded as ambiguity. It therefore joins the
+	 * existing non-rejecting `Settled` channel rather than arriving as a rejected
+	 * operation — a rejected `finished` also made the registry's cleanup chain an
+	 * unhandled rejection (review round 3, R3-1), because `void finished.then(...)`
+	 * has no rejection arm and the failure is already reported through `outcomeOf`. */
+	const lifecycle = async (): Promise<Settled> => {
 		if (predecessor) {
 			const settled = await predecessor.finished;
 			/* A DIFFERENT instruction must not take the single envelope slot while the
@@ -165,7 +245,13 @@ function begin(
 					: transportError(cause, "send command"),
 			};
 		}
-	})();
+	};
+	const finished: Promise<Settled> = isDispatchWithdrawn()
+		? Promise.resolve<Settled>({
+				ok: false,
+				error: new DispatchClosedError(),
+			})
+		: runCommandOperation(lifecycle);
 	const entry: InFlightSend = { payload, finished };
 	registry.set(input.sessionId, entry);
 	void finished.then(() => {
@@ -221,8 +307,10 @@ export async function sendPersistedCommand(
 	const payload = payloadKeyOf(input);
 	if (unresolved && unresolved.payload === payload) {
 		/* The same instruction: join it. The joiner's own bytes ARE what is being
-		 * sent, so `reusedPreviousDraft` stays false — nothing was discarded. */
-		return outcomeOf(await unresolved.finished);
+		 * sent, so `reusedPreviousDraft` stays false — nothing was discarded. The
+		 * wait is registered as an operation, because a purge that starts now still
+		 * has to see this settle before it may delete the envelope. */
+		return outcomeOf(await runCommandOperation(() => unresolved.finished));
 	}
 	return outcomeOf(await begin(input, registry, unresolved, payload).finished);
 }
@@ -230,36 +318,76 @@ export async function sendPersistedCommand(
 /** The one place an envelope is held, sent and settled. */
 async function runSend(input: SendCommandInput): Promise<SendResult> {
 	const { client, envelopes, sessionId } = input;
-	const held = await envelopes.holdNew(
-		sessionId,
-		input.op,
-		input.text,
-		input.images,
-		{ input_mode: input.input_mode, input_path: input.input_path },
-	);
-	const { envelope } = held;
-	try {
-		const ack = await client.command(sessionId, {
-			op: envelope.op,
-			command_id: envelope.command_id,
-			text: envelope.text,
-			...(envelope.images && envelope.images.length > 0
-				? { images: envelope.images }
-				: {}),
+	let held: { envelope: ContinuationEnvelope; reused: boolean };
+	if (input.envelope) {
+		const expected = input.envelope;
+		const existing = await envelopes.peek(sessionId);
+		const expectedPayload = payloadKeyOf({
+			...input,
+			...expected,
+			envelope: expected,
+		});
+		if (
+			expectedPayload !== payloadKeyOf(input) ||
+			(existing &&
+				payloadKeyOf({ ...input, ...existing, envelope: existing }) !==
+					expectedPayload)
+		) {
+			throw new EnvelopeStorageError(
+				"a different unresolved instruction owns this session",
+			);
+		}
+		await envelopes.hold(sessionId, expected);
+		held = { envelope: expected, reused: false };
+	} else {
+		held = await envelopes.holdNew(
+			sessionId,
+			input.op,
+			input.text,
+			input.images,
+			{ input_mode: input.input_mode, input_path: input.input_path },
+		);
+	}
+	let { envelope } = held;
+	/* Paint ONCE, before the first attempt: a reconciled replay re-holds the
+	 * swapped envelope but must not repaint — a second paint would clear text
+	 * typed during the first attempt. The swapped op reaches the row through
+	 * `result.op`. */
+	input.onHeld?.(envelope);
+	const deliver = (sent: ContinuationEnvelope) =>
+		client.command(sessionId, {
+			op: sent.op,
+			command_id: sent.command_id,
+			text: sent.text,
+			...(sent.images && sent.images.length > 0 ? { images: sent.images } : {}),
 			/* From the ENVELOPE, not from `input`: a replayed envelope carries the
 			 * annotation it was retained with, so a retry sends identical bytes. */
-			...(envelope.input_mode !== undefined
-				? { input_mode: envelope.input_mode }
-				: {}),
-			...(envelope.input_path !== undefined
-				? { input_path: envelope.input_path }
-				: {}),
+			...(sent.input_mode !== undefined ? { input_mode: sent.input_mode } : {}),
+			...(sent.input_path !== undefined ? { input_path: sent.input_path } : {}),
 		});
+	try {
+		let ack: Awaited<ReturnType<typeof deliver>>;
+		try {
+			ack = await deliver(envelope);
+		} catch (first) {
+			const alternate = isRelayError(first)
+				? reconciledOp(envelope.op, first)
+				: null;
+			if (alternate === null) throw first;
+			/* ONE replay under the same id with the op the session's real state
+			 * asks for (see `reconciledOp`). The swapped envelope is HELD before the
+			 * round trip, so an ambiguous failure of the replay retains — and a later
+			 * Retry replays — the op that can actually land. */
+			envelope = { ...envelope, op: alternate };
+			await envelopes.hold(sessionId, envelope);
+			ack = await deliver(envelope);
+		}
 		await envelopes.settle(sessionId, { kind: "ack" });
 		return {
 			detail: ack.detail,
 			reusedPreviousDraft: held.reused,
 			commandId: envelope.command_id,
+			op: envelope.op,
 		};
 	} catch (cause) {
 		/* Anything that is not already a classified error is a transport failure:

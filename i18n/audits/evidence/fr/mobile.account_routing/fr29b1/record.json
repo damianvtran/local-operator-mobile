@@ -1,0 +1,56 @@
+{
+	"schema": 1,
+	"audit_id": "fr29b1",
+	"audit_kind": "initial_translation_audit",
+	"locale": "fr",
+	"namespace": "mobile.account_routing",
+	"audit_date": "2026-10-29",
+	"key_count": {
+		"en": 14,
+		"target": 14
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "e4ac0d5aa232",
+		"job": null,
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "session model header: temporary fallback from anthropic/claude-sonnet-5-5 due to provider quota HTTP 429",
+		"independent_from_translator_session": true,
+		"independence": "Independent agent/context from translator session c66311717837 (job fbde6318e480). Different agent, different session. Model diversity: same model family (kimi/k3.1-pro) as translator's fallback — disclosed, not closed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c66311717837",
+		"job": "fbde6318e480",
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "temporary fallback (served model)",
+		"date": "2026-10-29"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "catalogues/en/mobile.account_routing.json",
+			"sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03"
+		},
+		"context": {
+			"path": "catalogues/en/mobile.account_routing.context.json",
+			"sha256": "2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c"
+		},
+		"target": {
+			"path": "catalogues/fr/mobile.account_routing.json",
+			"sha256": "7d028613ba7d0dd60b5925228515b6ecbdcb55c87abd2fda9862d2f8e199bfb1"
+		}
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": []
+	},
+	"artifacts": ["record.json", "report.md", "audit.log"],
+	"route_disclosure": {
+		"read_route": "ordinary mobile git/worktree reads",
+		"english_context_sidecars": "nested-JSON context sidecars NOT routable through read_public_copy",
+		"credential_shaped_keys": "no credential-shaped key applies",
+		"redaction_scan": "14 English source/context inputs scanned by manager with zero redaction-marker hits"
+	},
+	"audit_notes_not_execution_log": "report.md contains per-key reasoning and findings; audit.log captures actual command output for JSON/key/ICU checks and hashes. No native speaker review or rendered-proof claim is made."
+}

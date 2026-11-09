@@ -1,0 +1,151 @@
+/**
+ * Independent auditor tooling (read-only). Renders the two audited keys through
+ * the APP'S OWN runtime (src/i18n/runtime.ts -> renderFor -> messages.ts), with a
+ * resolution hook that only teaches plain Node the app's extensionless relative
+ * imports. No module of the app is modified. No translation/MT service is used.
+ */
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+
+const BASE = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n";
+const { renderFor } = await import(`${BASE}/src/i18n/runtime.ts`);
+const { parseMessage, formatMessage, pluralCategory } = await import(
+	`${BASE}/src/i18n/messages.ts`
+);
+
+const json = (p) => JSON.parse(readFileSync(`${BASE}/${p}`, "utf8"));
+const sha = (p) => createHash("sha256").update(readFileSync(`${BASE}/${p}`)).digest("hex");
+
+const EN_HOME = json("src/i18n/catalogues/en/mobile.home.json");
+const CTX_HOME = json("src/i18n/catalogues/en/mobile.home.context.json");
+const FR_HOME = json("src/i18n/catalogues/fr/mobile.home.json");
+const EN_PROJ = json("src/i18n/catalogues/en/mobile.projects.json");
+const CTX_PROJ = json("src/i18n/catalogues/en/mobile.projects.context.json");
+const FR_PROJ = json("src/i18n/catalogues/fr/mobile.projects.json");
+
+const H = (s) => `\n=== ${s} ===`;
+
+console.log(H("input bytes audited (sha256, current working tree)"));
+for (const p of [
+	"src/i18n/catalogues/en/mobile.home.json",
+	"src/i18n/catalogues/en/mobile.home.context.json",
+	"src/i18n/catalogues/fr/mobile.home.json",
+	"src/i18n/catalogues/en/mobile.projects.json",
+	"src/i18n/catalogues/en/mobile.projects.context.json",
+	"src/i18n/catalogues/fr/mobile.projects.json",
+	"src/i18n/messages.ts",
+	"src/i18n/runtime.ts",
+]) {
+	console.log(`${sha(p)}  ${p}`);
+}
+console.log(`key counts: home en=${Object.keys(EN_HOME).length} ctx=${Object.keys(CTX_HOME).length} fr=${Object.keys(FR_HOME).length}`);
+console.log(`key counts: projects en=${Object.keys(EN_PROJ).length} ctx=${Object.keys(CTX_PROJ).length} fr=${Object.keys(FR_PROJ).length}`);
+
+console.log(H("1. mobile.home.options.fixed — source, context, target"));
+const K1 = "mobile.home.options.fixed";
+console.log(`en  : ${JSON.stringify(EN_HOME[K1])}`);
+console.log(`ctx : ${JSON.stringify(CTX_HOME[K1])}`);
+console.log(`fr  : ${JSON.stringify(FR_HOME[K1])}`);
+console.log(`en  params=${JSON.stringify([...parseMessage(EN_HOME[K1]).params])}`);
+console.log(`fr  params=${JSON.stringify([...parseMessage(FR_HOME[K1]).params])}`);
+const nodeTypes = (s) => parseMessage(s).nodes.map((n) => n.type).join(",");
+console.log(`en  node types: ${nodeTypes(EN_HOME[K1])}`);
+console.log(`fr  node types: ${nodeTypes(FR_HOME[K1])}`);
+console.log(`fr  braces present: ${/[{}\[\]<>]/.test(FR_HOME[K1])} ; backticks: ${FR_HOME[K1].includes("`")} ; double space: ${FR_HOME[K1].includes("  ")}`);
+
+console.log(H("2. options.fixed rendered through t()'s path (renderFor)"));
+console.log(`fr => ${renderFor(K1, {}, "fr")}`);
+console.log(`en => ${renderFor(K1, {}, "en")}`);
+
+console.log(H("3. cross-reference byte check against mobile.session.conversation_details"));
+const EN_SESSION = json("src/i18n/catalogues/en/mobile.session.json");
+const FR_SESSION = json("src/i18n/catalogues/fr/mobile.session.json");
+const lab = (s, sub) => `${sub === undefined ? "MISSING" : s.includes(sub)} (label=${JSON.stringify(sub)})`;
+console.log(`fr label: ${lab(FR_HOME[K1], FR_SESSION["mobile.session.conversation_details"])}`);
+console.log(`en label: ${lab(EN_HOME[K1], EN_SESSION["mobile.session.conversation_details"])}`);
+console.log(`fr render equals raw value: ${renderFor(K1, {}, "fr") === FR_HOME[K1]}`);
+
+console.log(H("4. options.fixed character / typography scan"));
+{
+	const v = FR_HOME[K1];
+	const codes = [...v].map((c) => c.codePointAt(0));
+	const nonAscii = codes.filter((c) => c > 0x7f).map((c) => `U+${c.toString(16).toUpperCase().padStart(4, "0")}`);
+	console.log(`length: ${v.length} UTF-16 units (en ${EN_HOME[K1].length})`);
+	console.log(`non-ASCII: ${nonAscii.join(" ") || "none"}`);
+	console.log(`ASCII apostrophe: ${v.includes("'")} ; ASCII quotes: ${v.includes('"')} ; ASCII "...": ${v.includes("...")}`);
+	console.log(`bidi/control chars: ${codes.filter((c) => (c >= 0x200b && c <= 0x200f) || (c >= 0x202a && c <= 0x202e) || (c >= 0x2066 && c <= 0x2069) || c === 0x061c || c === 0x00a0).map((c) => `U+${c.toString(16).toUpperCase()}`).join(" ") || "none"}`);
+	console.log(`U+202F thin space count: ${codes.filter((c) => c === 0x202f).length}`);
+	console.log(`sentence count: ${v.split(/(?<=\.)\s+/).length}`);
+	console.log(`substring 'commandes en cours' present: ${v.includes("commandes en cours")}`);
+	console.log(`substring 'en direct' present: ${v.includes("en direct")}`);
+}
+
+console.log(H("5. mobile.projects.write_receipt — source, context, target"));
+const K2 = "mobile.projects.write_receipt";
+console.log(`en  : ${JSON.stringify(EN_PROJ[K1 === null ? "" : K2])}`);
+console.log(`ctx : ${JSON.stringify(CTX_PROJ[K2].note)}`);
+console.log(`fr  : ${JSON.stringify(FR_PROJ[K2])}`);
+
+console.log(H("5a. declared arms per locale (from the app's own parser)"));
+const arms = (src) => {
+	const out = [];
+	for (const node of parseMessage(src).nodes) {
+		if (node.type === "select" || node.type === "plural") out.push([node.type, node.name, [...node.options.keys()].sort()]);
+	}
+	return out;
+};
+console.log(`en: ${JSON.stringify(arms(EN_PROJ[K2]))}`);
+console.log(`fr: ${JSON.stringify(arms(FR_PROJ[K2]))}`);
+console.log(`params: en=${JSON.stringify([...parseMessage(EN_PROJ[K2]).params])} fr=${JSON.stringify([...parseMessage(FR_PROJ[K2]).params])}`);
+
+console.log(H("6. all seven codes + other, rendered through renderFor (en / fr)"));
+const CODES = ["created", "completed", "reopened", "added", "updated", "removed", "deleted", "other"];
+const ENGLISH_VERBS = /Created|Completed|Reopened|Added|Updated|Removed|Deleted/;
+for (const code of CODES) {
+	const en = renderFor(K2, { action: code, subject: "payments-migration" }, "en");
+	const fr = renderFor(K2, { action: code, subject: "Projet X" }, "fr");
+	const leak = ENGLISH_VERBS.test(fr);
+	console.log(`${code.padEnd(9)} en=${JSON.stringify(en).padEnd(32)} fr=${JSON.stringify(fr).padEnd(26)} english-verb-in-fr=${leak}`);
+}
+
+console.log(H("7. unknown-code fallback (other) vs known code, both locales"));
+console.log(`fr unknown: ${renderFor(K2, { action: "archived", subject: "Projet X" }, "fr")}`);
+console.log(`en unknown: ${renderFor(K2, { action: "archived", subject: "payments-migration" }, "en")}`);
+
+console.log(H("8. English rendering unchanged vs the pre-change mechanism"));
+/* Before 49f79b3 the message was "{action} {subject}." and the SCREEN passed the
+ * rendered English verb. The old call sites are read from git, not assumed. */
+const OLD_EN = "{action} {subject}.";
+console.log(`en source before: ${JSON.stringify(OLD_EN)}`);
+for (const code of ["created", "completed", "reopened", "added", "updated", "removed", "deleted"]) {
+	const verb = code.charAt(0).toUpperCase() + code.slice(1);
+	const before = formatMessage(parseMessage(OLD_EN), { action: verb, subject: "payments-migration" }, "en");
+	const after = renderFor(K2, { action: code, subject: "payments-migration" }, "en");
+	console.log(`${code.padEnd(9)} before=${JSON.stringify(before).padEnd(32)} after=${JSON.stringify(after).padEnd(32)} identical=${before === after}`);
+}
+
+console.log(H("9. French arms: participle agreement + English-word scan"));
+{
+	const m = FR_PROJ[K2];
+	const inner = m.slice(m.indexOf("select") + 6, m.indexOf("} {subject}"));
+	const pairs = [...inner.matchAll(/(\w+)\s*\{([^}]*)\}/g)].map(([, k, v]) => [k, v]);
+	for (const [k, v] of pairs) {
+		console.log(`${k.padEnd(9)} -> ${JSON.stringify(v).padEnd(18)} ascii-only=${/^[\x20-\x7E]*$/.test(v)} has-accent=${/[éèêàûôîïç]/i.test(v)}`);
+	}
+	console.log(`distinct arms: en=${new Set(pairs.map(([, v]) => v)).size} fr=${new Set(pairs.map(([, v]) => v)).size}`);
+}
+
+console.log(H("10. subject composition — what the screens actually pass"));
+console.log("project-create.tsx:152   writeReceipt(\"created\", answer.project.name)");
+console.log("project-detail.tsx:171   writeReceipt(completing ? \"completed\" : \"reopened\", milestone.name)");
+console.log("project-detail.tsx:227   writeReceipt(editor.editingName === null ? \"added\" : \"updated\", `milestone ${name}`)");
+console.log("project-detail.tsx:249   writeReceipt(\"removed\", `milestone ${name}`)");
+console.log("project-detail.tsx:273   writeReceipt(\"deleted\", project.name)");
+for (const code of ["added", "removed"]) {
+	console.log(`  as rendered on a French screen: ${renderFor(K2, { action: code, subject: "milestone Audit Q4" }, "fr")}`);
+}
+
+console.log(H("11. CLDR plural categories in force"));
+for (const loc of ["en", "fr"]) {
+	console.log(`${loc}: ${JSON.stringify(new Intl.PluralRules(loc).resolvedOptions().pluralCategories)} ; fr(0)=${pluralCategory("fr", 0)} fr(1)=${pluralCategory("fr", 1)} fr(2)=${pluralCategory("fr", 2)}`);
+}

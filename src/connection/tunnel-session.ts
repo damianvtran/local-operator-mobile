@@ -29,7 +29,7 @@
 
 import { z } from "zod";
 import { resolveFetch } from "../relay/platform-fetch";
-import { RADIENT_API_BASE } from "./discovery";
+import { envelopeSchema, RADIENT_API_BASE } from "./discovery";
 import { type CryptoDeps, createPkcePair, randomState } from "./pkce";
 import { RADIENT_COOKIES } from "./profile";
 
@@ -80,12 +80,23 @@ export interface TunnelSession {
 export type TunnelSessionFailure =
 	/** 402: this tunnel's billing is inactive, so no session can be minted. */
 	| "billing"
-	/** 401/403 from the session endpoints: the OAuth token is not accepted. */
+	/** 401: the phone's OAuth token is not accepted. */
 	| "oauth"
+	/** Server-owned refusals have distinct remedies; none imply device pairing. */
+	| "disabled"
+	| "harness"
+	| "account"
+	/** A successful response violated this app's wire contract. */
+	| "contract"
 	/** Any other refusal, carrying the server's sentence. */
 	| "rejected"
 	/** No answer at all. */
 	| "network"
+	/** 5xx/408: the control plane answered but could not serve the request — a
+	 *  deploy, an overloaded edge. Transient by nature, so it is retried like
+	 *  `network`; distinct from it because Radient WAS reached, and copy that says
+	 *  "check this device's connection" would send the reader to the wrong place. */
+	| "unavailable"
 	/** 429: back off, the limiter is per-IP. */
 	| "rate-limited";
 
@@ -117,6 +128,10 @@ export interface TunnelSessionDeps {
 	sleep?: (ms: number) => Promise<void>;
 	/** Jitter source for the backoff. */
 	random?: () => number;
+	/** Cancels the in-flight control-plane call. Set per call by the manager from
+	 *  the request that needs the session: a route switch or a request deadline
+	 *  must not leave a renewal running for a caller that has gone. */
+	signal?: AbortSignal;
 }
 
 function apiUrl(deps: TunnelSessionDeps, path: string): string {
@@ -153,6 +168,7 @@ async function postSession(
 			},
 			body: JSON.stringify(body),
 			credentials: "omit",
+			...(deps.signal ? { signal: deps.signal } : {}),
 		});
 	} catch {
 		throw new TunnelSessionError("network", `${what} could not reach Radient`);
@@ -180,26 +196,53 @@ async function postSession(
 			402,
 		);
 	}
-	if (response.status === 401 || response.status === 403) {
+	if (response.status === 401) {
 		throw new TunnelSessionError(
 			"oauth",
 			`${what} was refused: sign in with Radient again`,
 			response.status,
 		);
 	}
+	if (response.status === 403) {
+		throw new TunnelSessionError("disabled", "tunnel is unavailable", 403);
+	}
+	if (response.status === 404) {
+		const missingHarness =
+			describeEnvelope(parsed)?.includes("harness") === true;
+		throw new TunnelSessionError(
+			missingHarness ? "harness" : "account",
+			"tunnel access was refused",
+			404,
+		);
+	}
 	if (!response.ok) {
 		const detail =
 			describeEnvelope(parsed) ?? `${what} failed (HTTP ${response.status})`;
+		/* A server-side outage is not a refusal. As `rejected` it mapped to the
+		 * `diagnostic` surface, which the live list stream treats as terminal: one
+		 * 5xx on the grant renewal a live route makes every ~4 minutes ended the
+		 * connection for good, with no reconnect on its own (TestFlight 453,
+		 * "disconnects after some time with no reason"). */
+		if (response.status >= 500 || response.status === 408)
+			throw new TunnelSessionError(
+				"unavailable",
+				detail,
+				response.status,
+				retryAfterFrom(response),
+			);
 		throw new TunnelSessionError("rejected", detail, response.status);
 	}
 	return parsed;
 }
 
-/** The control plane's envelope is `{msg, result}`; the sentence a user can read
- *  is `msg`, and it is sometimes the only explanation for a refusal. */
+/** The refusal writer differs from success envelopes. httpErrorResponse in
+ * cmd/server/main.go uses {error}; retain msg/message for older servers. A 404
+ * must use this actual reason, since status alone cannot distinguish a missing
+ * harness from an owner-scoped record that is unavailable. */
 function describeEnvelope(value: unknown): string | null {
 	if (typeof value !== "object" || value === null) return null;
-	const msg = (value as { msg?: unknown }).msg;
+	const body = value as { error?: unknown; msg?: unknown; message?: unknown };
+	const msg = body.error ?? body.msg ?? body.message;
 	return typeof msg === "string" && msg.length > 0 ? msg : null;
 }
 
@@ -255,10 +298,15 @@ export async function mintTunnelSession(
 		input.oauthAccessToken,
 	);
 
-	const code = sessionCodeSchema.safeParse(codeBody);
+	// issueSessionCode uses responses.WriteJSON ({msg,result}); token/refresh
+	// use c.JSON directly. Unwrap this endpoint only, retaining older raw servers.
+	const envelope = envelopeSchema.safeParse(codeBody);
+	const code = sessionCodeSchema.safeParse(
+		envelope.success ? envelope.data.result : codeBody,
+	);
 	if (!code.success) {
 		throw new TunnelSessionError(
-			"rejected",
+			"contract",
 			"Radient returned a session code this app could not read",
 		);
 	}
@@ -277,7 +325,7 @@ export async function mintTunnelSession(
 	const tokens = sessionTokenSchema.safeParse(tokenBody);
 	if (!tokens.success) {
 		throw new TunnelSessionError(
-			"rejected",
+			"contract",
 			"Radient returned session tokens this app could not read",
 		);
 	}
@@ -308,7 +356,7 @@ export async function refreshTunnelSession(
 	const tokens = sessionTokenSchema.safeParse(body);
 	if (!tokens.success) {
 		throw new TunnelSessionError(
-			"rejected",
+			"contract",
 			"Radient returned session tokens this app could not read",
 		);
 	}
@@ -402,8 +450,9 @@ export function needsRemint(
 	return now() - session.mintedAt >= HANDLE_REMINT_AFTER_DAYS * DAY_MS;
 }
 
-/** True when the handle is past its absolute life: only a fresh sign-in plus a
- *  re-mint can help, and the sign-in screen is the correct behaviour. */
+/** True when the handle is past its absolute life. The HANDLE cannot be extended
+ *  or refreshed, so only an authenticated re-mint through the control plane can
+ *  replace it; the owner's Radient login is untouched unless that mint refuses. */
 export function handleExpired(
 	session: TunnelSession,
 	now: () => number = () => Date.now(),
@@ -538,18 +587,24 @@ export class TunnelSessionManager {
 
 	/** Refreshes the grant, single-flight. Concurrent callers await the same
 	 *  request rather than each firing their own. */
-	async refresh(): Promise<TunnelSession> {
+	async refresh(signal?: AbortSignal): Promise<TunnelSession> {
 		const current = this.requireSession();
 		if (this.refreshInFlight) return this.refreshInFlight;
-		this.refreshInFlight = this.track(this.runRefresh(current)).finally(() => {
-			this.refreshInFlight = null;
-		});
+		this.refreshInFlight = this.track(this.runRefresh(current, signal)).finally(
+			() => {
+				this.refreshInFlight = null;
+			},
+		);
 		return this.refreshInFlight;
 	}
 
-	private async runRefresh(current: TunnelSession): Promise<TunnelSession> {
+	private async runRefresh(
+		current: TunnelSession,
+		signal?: AbortSignal,
+	): Promise<TunnelSession> {
+		const deps = signal ? { ...this.deps, signal } : this.deps;
 		try {
-			const refreshed = await refreshTunnelSession(current, this.deps);
+			const refreshed = await refreshTunnelSession(current, deps);
 			/* Compare-and-set: `current` was read before the request went out. If a
 			 * re-mint (or a fresh sign-in) replaced the session while this refresh
 			 * was in flight, adopting the result would resurrect the OLD handle and
@@ -583,16 +638,22 @@ export class TunnelSessionManager {
 	 * session is replaced before the user can meet its expiry, and only a lapsed
 	 * OAuth grant (90 days of no use) reaches the sign-in screen.
 	 */
-	async remint(): Promise<TunnelSession> {
+	async remint(signal?: AbortSignal): Promise<TunnelSession> {
 		const current = this.requireSession();
 		if (this.remintInFlight) return this.remintInFlight;
-		this.remintInFlight = this.track(this.runRemint(current)).finally(() => {
-			this.remintInFlight = null;
-		});
+		this.remintInFlight = this.track(this.runRemint(current, signal)).finally(
+			() => {
+				this.remintInFlight = null;
+			},
+		);
 		return this.remintInFlight;
 	}
 
-	private async runRemint(current: TunnelSession): Promise<TunnelSession> {
+	private async runRemint(
+		current: TunnelSession,
+		signal?: AbortSignal,
+	): Promise<TunnelSession> {
+		const deps = signal ? { ...this.deps, signal } : this.deps;
 		const token = await this.deps.oauthAccessToken();
 		if (!token)
 			throw new TunnelSessionError("oauth", "sign in with Radient again");
@@ -602,7 +663,7 @@ export class TunnelSessionManager {
 				hostname: current.hostname,
 				oauthAccessToken: token,
 			},
-			this.deps,
+			deps,
 		);
 		await this.adopt(minted);
 		return minted;
@@ -616,17 +677,18 @@ export class TunnelSessionManager {
 	 * a grant that is about to expire — which is the shape of the "hard 401 five
 	 * minutes later" failure the ADR warns about.
 	 */
-	async usableSession(): Promise<TunnelSession> {
+	async usableSession(signal?: AbortSignal): Promise<TunnelSession> {
 		let session = this.requireSession();
 		if (handleExpired(session, this.deps.now)) {
-			throw new TunnelSessionError(
-				"oauth",
-				"this tunnel session has expired; sign in with Radient again",
-			);
+			// Expiry ends THIS scoped handle, not the owner's Radient login. Mint
+			// through the authenticated control plane again; it rechecks ownership,
+			// tunnel version and revocation. Never extend/trust the expired handle.
+			session = await this.remint(signal);
 		}
-		if (needsRemint(session, this.deps.now)) session = await this.remint();
+		if (needsRemint(session, this.deps.now))
+			session = await this.remint(signal);
 		if (grantNeedsRefresh(session, this.deps.now))
-			session = await this.refresh();
+			session = await this.refresh(signal);
 		return session;
 	}
 

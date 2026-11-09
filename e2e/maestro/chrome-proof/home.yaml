@@ -1,0 +1,14 @@
+# The home (empty state) on the idle relay: ☰ with its badge, the computer chip,
+# the bell, and the composer at rest. Fresh install state, so this is also the
+# relaunch that dismisses the previous flow's keyboard.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow: connect-relay-ios.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 3000

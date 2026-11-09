@@ -1,0 +1,233 @@
+/**
+ * Delta re-audit render probe for mobile.schedules (es) — round 2.
+ *
+ * Uses the APP'S OWN parser/formatter (src/i18n/messages.ts) — no ICU library,
+ * no translation service. Every number below is produced by this run; nothing
+ * is quoted from the round-1 bundle.
+ *
+ * Read-only against the repository: reads the three catalogue files and the
+ * two runtime modules, writes nothing.
+ */
+import { readFileSync } from "node:fs";
+
+const REPO = "/Users/damian/workspace/es-wave";
+const M = await import(`${REPO}/src/i18n/messages.ts`);
+const CAT = (loc, ns) =>
+	JSON.parse(readFileSync(`${REPO}/src/i18n/catalogues/${loc}/${ns}.json`, "utf8"));
+
+const en = CAT("en", "mobile.schedules");
+const es = CAT("es", "mobile.schedules");
+const ctx = JSON.parse(
+	readFileSync(`${REPO}/src/i18n/catalogues/en/mobile.schedules.context.json`, "utf8"),
+);
+
+const out = [];
+const say = (...a) => { const s = a.join(" "); out.push(s); console.log(s); };
+const H = (t) => { say(""); say("=".repeat(78)); say(t); say("=".repeat(78)); };
+
+H("0. INPUT IDENTITY");
+say("en keys:", Object.keys(en).length, "| es keys:", Object.keys(es).length,
+	"| context entries:", Object.keys(ctx).length);
+
+H("1. KEY PARITY AND ORDER");
+const enKeys = Object.keys(en), esKeys = Object.keys(es);
+const missing = enKeys.filter((k) => !(k in es));
+const extra = esKeys.filter((k) => !(k in en));
+say("missing in es:", missing.length ? missing.join(", ") : "(none)");
+say("extra in es:", extra.length ? extra.join(", ") : "(none)");
+say("same order as en:", JSON.stringify(enKeys) === JSON.stringify(esKeys));
+
+H("2. ICU PARSE (es) + PLACEHOLDER NAME/TYPE PARITY vs en");
+const kindOf = (m) => [...m.params.entries()].map(([n, k]) => `${n}:${k}`).sort().join(",");
+let parseFail = 0, paramMismatch = 0;
+for (const k of enKeys) {
+	let pe, ps;
+	try { pe = M.parseMessage(en[k]); } catch (e) { say(`PARSE-FAIL en ${k}: ${e.message}`); parseFail++; continue; }
+	try { ps = M.parseMessage(es[k]); } catch (e) { say(`PARSE-FAIL es ${k}: ${e.message}`); parseFail++; continue; }
+	const a = kindOf(pe), b = kindOf(ps);
+	if (a !== b) { say(`PARAM-MISMATCH ${k}: en[${a}] es[${b}]`); paramMismatch++; }
+}
+say(`messages parsed: ${enKeys.length}/38 | parse failures: ${parseFail} | param mismatches: ${paramMismatch}`);
+
+H("3. PLURAL ARM STRUCTURE (es) — CLDR categories for es");
+const cldr = new Intl.PluralRules("es").resolvedOptions().pluralCategories;
+say("Intl.PluralRules('es').resolvedOptions().pluralCategories =", JSON.stringify(cldr));
+say("app pluralCategory('es', n) samples:",
+	[0, 1, 2, 1000000, 1500000].map((n) => `${n}=${M.pluralCategory("es", n)}`).join(" "));
+
+/* Walk the parsed tree for plural arms (the parser is the authority, not a regex). */
+const armsOf = (nodes, name) => {
+	const found = [];
+	const walk = (ns) => {
+		for (const n of ns) {
+			if (n.type === "plural" && (name === null || n.name === name)) {
+				found.push({ name: n.name, arms: [...n.options.keys()] });
+			}
+			if (n.type === "plural" || n.type === "select") {
+				for (const [, v] of n.options) walk(v);
+			}
+		}
+	};
+	walk(nodes);
+	return found;
+};
+let armProblems = 0;
+for (const k of enKeys) {
+	const ps = M.parseMessage(es[k]);
+	for (const p of armsOf(ps.nodes, null)) {
+		const need = ["one", "many", "other"];
+		const miss = need.filter((c) => !p.arms.includes(c));
+		const bogus = p.arms.filter((c) => !cldr.includes(c) && !/^=\d+$/.test(c));
+		const status = miss.length === 0 && bogus.length === 0 ? "ok" : "PROBLEM";
+		if (status !== "ok") armProblems++;
+		say(`${status.padEnd(7)} ${k} [${p.name}] arms=${JSON.stringify(p.arms)}` +
+			(miss.length ? ` MISSING=${JSON.stringify(miss)}` : "") +
+			(bogus.length ? ` NOT-ES-CATEGORY=${JSON.stringify(bogus)}` : ""));
+	}
+}
+say(`plural messages with an arm problem: ${armProblems}`);
+
+H("4. {total} RETAINED IN EVERY ARM OF summary.monitors_attention");
+const attention = M.parseMessage(es["mobile.schedules.summary.monitors_attention"]);
+for (const n of attention.nodes) {
+	if (n.type !== "plural") continue;
+	for (const [arm, body] of n.options) {
+		const args = new Set();
+		const walk = (ns) => { for (const x of ns) { if (x.type === "argument") args.add(x.name); if (x.options) for (const [, v] of x.options) walk(v); } };
+		walk(body);
+		say(`arm ${arm.padEnd(6)} text=${JSON.stringify(M.formatMessage(M.parseMessage(
+			`{n, plural, other {${body.map((x) => x.type === "text" ? x.value : x.type === "number" ? "#" : `{${x.name}}`).join("")}}}`),
+			{ n: 0, broken: 0, total: 40 }, "es"))} args=${JSON.stringify([...args].sort())} keepsTotal=${args.has("total")}`);
+	}
+}
+
+H("5. RENDERED — COUNTED NOUNS (0 / 1 / 2 / 1 000 000)");
+const counted = [
+	"mobile.schedules.count.monitors",
+	"mobile.schedules.count.wakes",
+	"mobile.schedules.summary.monitors_armed",
+	"mobile.schedules.summary.wakes",
+	"mobile.schedules.show_more.monitors",
+	"mobile.schedules.show_more.wakes",
+	"mobile.schedules.tail.failed",
+];
+for (const k of counted) {
+	const arg = k.includes("show_more") ? "hidden" : "count";
+	for (const n of [0, 1, 2, 1000000]) {
+		const cat = M.pluralCategory("es", n);
+		const rendered = M.formatMessage(M.parseMessage(es[k]), { [arg]: n }, "es");
+		const english = M.formatMessage(M.parseMessage(en[k]), { [arg]: n }, "en");
+		say(`${k.replace("mobile.schedules.", "").padEnd(24)} ${String(n).padStart(7)} es=${cat.padEnd(5)} | ${rendered.padEnd(42)} | en: ${english}`);
+	}
+}
+
+H("6. RENDERED — summary.monitors_attention AT THE AGREEMENT BOUNDARIES");
+for (const [broken, total] of [[1, 40], [2, 40], [1, 1], [0, 40], [2, 5], [1000000, 40]]) {
+	const cat = M.pluralCategory("es", broken);
+	const rendered = M.formatMessage(M.parseMessage(es["mobile.schedules.summary.monitors_attention"]), { broken, total }, "es");
+	say(`broken=${broken} total=${total} es=${cat.padEnd(5)} | ${rendered}`);
+}
+
+H("7. RENDERED — truncated, BOTH FAMILIES");
+for (const family of ["wakes", "monitors"]) {
+	for (const [shown, total] of [[3, 9], [1, 9], [1, 1], [200, 500]]) {
+		const rendered = M.formatMessage(M.parseMessage(es["mobile.schedules.truncated"]), { shown, total, family }, "es");
+		say(`family=${family.padEnd(8)} ${shown}/${total} | ${rendered}`);
+	}
+}
+
+H("8. COMPOSED SURFACES (the app's own composition functions, re-implemented here)");
+/* nextDueClause: seconds < 0 ? head.overdue : head.next — identical splice to
+ * src/features/schedules/schedules-copy.ts:159-165. */
+const dueLabel = (s) => s < 0
+	? M.formatMessage(M.parseMessage(es["mobile.schedules.due.overdue"]), { label: dur(Math.abs(s)) }, "es")
+	: M.formatMessage(M.parseMessage(es["mobile.schedules.due.ahead"]), { label: dur(s) }, "es");
+const dur = (s) => s >= 86400 ? `${Math.round(s / 86400)}d` : s >= 3600 ? `${Math.round(s / 3600)}h` : s >= 60 ? `${Math.round(s / 60)}m` : `${Math.round(s)}s`;
+const nextDue = (head, seconds) => seconds < 0
+	? M.formatMessage(M.parseMessage(es["mobile.schedules.head.overdue"]), { head, label: dueLabel(seconds) }, "es")
+	: M.formatMessage(M.parseMessage(es["mobile.schedules.head.next"]), { head, label: dueLabel(seconds) }, "es");
+const count = (k, n) => M.formatMessage(M.parseMessage(es[k]), { count: n }, "es");
+for (const [n, secs] of [[1, 240], [2, 240], [1, -7200], [2, -7200], [1, 30]]) {
+	const head = count("mobile.schedules.count.monitors", n);
+	say(`monitor head n=${n} ${secs}s | ${nextDue(head, secs)}`);
+	const whead = count("mobile.schedules.count.wakes", n);
+	say(`wake    head n=${n} ${secs}s | ${nextDue(whead, secs)}`);
+}
+say("");
+say(`header (armed)  count=1 | Monitors · ${count("mobile.schedules.summary.monitors_armed", 1)}`);
+say(`header (armed)  count=5 | Monitors · ${count("mobile.schedules.summary.monitors_armed", 5)}`);
+say(`header (attn)  1 of 40 | Monitors · ${M.formatMessage(M.parseMessage(es["mobile.schedules.summary.monitors_attention"]), { broken: 1, total: 40 }, "es")}`);
+say(`header (armed)  wake 5 | Wakes · ${count("mobile.schedules.summary.wakes", 5)}`);
+say("");
+say(`cadence.left  | ${M.formatMessage(M.parseMessage(es["mobile.schedules.cadence.left"]), { cadence: "cada 1d", remaining: 3 }, "es")}`);
+say(`cadence.spent | ${M.formatMessage(M.parseMessage(es["mobile.schedules.cadence.spent"]), { cadence: "cada 1d" }, "es")}`);
+
+H("9. RENDERED — STATE WORDS AND THE NOUN EACH MODIFIES");
+/* The noun each state word agrees with, read off the code, not guessed:
+ *   state.disabled / dormant / expired  -> monitorStateWord(), MonitorLine slot (the MONITOR)
+ *   state.stale                          -> wakeDueWord(), WakeLine slot (the WAKE)
+ *   state.waiting                        -> monitorSlot(), armed monitor with no due time
+ * src/features/schedules/schedules-copy.ts:363, :428, :448-456 */
+for (const k of ["state.disabled", "state.dormant", "state.expired", "state.stale", "state.waiting"]) {
+	say(`${k.padEnd(15)} -> ${JSON.stringify(es["mobile.schedules." + k])}  (raw, unformatted)`);
+}
+say("");
+const noun = { "state.disabled": "la monitorización", "state.dormant": "la monitorización", "state.expired": "la monitorización", "state.stale": "el despertar", "state.waiting": "la monitorización" };
+for (const [k, n] of Object.entries(noun)) {
+	const w = es["mobile.schedules." + k];
+	say(`${k.padEnd(15)} slot=${JSON.stringify(w).padEnd(16)} with ${n}`);
+}
+
+H("10. RENDERED — SENTENCES (empty / parked / gone / read error)");
+for (const k of ["empty.title", "empty.body", "empty_line.wakes", "empty_line.monitors",
+	"parked.wakes", "parked.monitors", "gone.wakes", "gone.monitors",
+	"read_error.wakes", "read_error.monitors", "read_unreachable",
+	"supervisor.not_running", "supervisor.unsupported", "supervisor.unverifiable",
+	"show_less.wakes", "show_less.monitors"]) {
+	say(`${k.padEnd(24)} | ${es["mobile.schedules." + k]}`);
+}
+
+H("11. MECHANICAL SWEEP");
+const bidi = /[\u202A-\u202E\u2066-\u2069\u200E\u200F]/;
+const leftover = /\b(the|and|with|show|monitors?|wakes?|armed|disabled|expired|stale|waiting|attention|failed|next|overdue|Nothing is)\b/i;
+let bidiHits = 0, leftHits = 0, markupHits = 0, dblSpace = 0, spaceBeforePunct = 0, bang = 0;
+for (const k of esKeys) {
+	const v = es[k];
+	if (bidi.test(v)) { say(`BIDI ${k}`); bidiHits++; }
+	if (/[{}]/.test(v.replace(/\{[^}]+\}/g, "")) && false) {}
+	if (/<\/?[a-z]|<b>|<i>|`/.test(v)) { say(`MARKUP/CODE ${k}: ${v}`); markupHits++; }
+	if (/ {2,}/.test(v)) { say(`DOUBLE-SPACE ${k}`); dblSpace++; }
+	if (/\s[;:?!]/.test(v)) { say(`SPACE-BEFORE-PUNCT ${k}`); spaceBeforePunct++; }
+	if (v.includes("!")) { say(`EXCLAM ${k}`); bang++; }
+	const prose = v.replace(/\{[^{}]*\}/g, " ").replace(/\b(one|many|other|wakes|monitors|plural|select|count|hidden|broken|total|shown|family|duration|label|remaining|head|cadence)\b/g, " ");
+	const m = prose.match(leftover);
+	if (m) { say(`ENGLISH-LEFT? ${k}: word="${m[0]}" | ${v}`); leftHits++; }
+}
+say(`bidi controls: ${bidiHits} | markup/backticks: ${markupHits} | double spaces: ${dblSpace} | space-before-punct: ${spaceBeforePunct} | "!" in copy: ${bang} | English-leftover candidates: ${leftHits}`);
+say("");
+say("em-dash form check (must be ' — ', not '—'):",
+	esKeys.filter((k) => es[k].includes("—")).map((k) => `${k}=${es[k].includes(" — ") ? "ok" : "BAD"}`).join(" "));
+say("final full stops where en has none:",
+	esKeys.filter((k) => en[k].trim().slice(-1) !== "." && es[k].trim().slice(-1) === ".").join(", ") || "(none)");
+say("trailing punctuation parity (en vs es last char) mismatches:",
+	esKeys.filter((k) => en[k].trim().slice(-1) !== es[k].trim().slice(-1)).map((k) => `${k} en=${JSON.stringify(en[k].trim().slice(-1))} es=${JSON.stringify(es[k].trim().slice(-1))}`).join(" | ") || "(none)");
+
+H("12. NEGATIVE CONTROL — the checks above can fail");
+/* 12a: the round-1 attention string must render ungrammatically, proving the
+ *      plural retype is what fixed it (and that this probe notices). */
+const old = "{broken} de {total} requieren atención";
+say(`round-1 string at broken=1 -> ${M.formatMessage(M.parseMessage(old), { broken: 1, total: 40 }, "es")}   (expected ungrammatical)`);
+say(`round-2 string at broken=1 -> ${M.formatMessage(M.parseMessage(es["mobile.schedules.summary.monitors_attention"]), { broken: 1, total: 40 }, "es")}`);
+/* 12b: an arm-checker that cannot fail is not a check — feed it a message with
+ *      the `many` arm removed and confirm it reports the miss. */
+const tampered = "{count, plural, one {# monitorización} other {# monitorizaciones}}";
+const t = M.parseMessage(tampered);
+const tArms = armsOf(t.nodes, null)[0].arms;
+say(`tampered arms=${JSON.stringify(tArms)} -> check says missing=${JSON.stringify(["one","many","other"].filter((c) => !tArms.includes(c)))} (expected ["many"])`);
+say(`tampered at 1000000 -> ${M.formatMessage(t, { count: 1000000 }, "es")}   (expected "1000000 monitorizaciones", i.e. the de-less form the many arm exists to avoid)`);
+/* 12c: placeholder drop must be caught by the param parity check. */
+const dropped = "{broken, plural, one {# requiere atención} many {# requieren atención} other {# requieren atención}}";
+say(`tampered (no {total}) params=${kindOf(M.parseMessage(dropped))} vs source params=${kindOf(M.parseMessage(en["mobile.schedules.summary.monitors_attention"]))} -> would flag: ${kindOf(M.parseMessage(dropped)) !== kindOf(M.parseMessage(en["mobile.schedules.summary.monitors_attention"]))}`);
+
+H("13. RESULT");
+console.log("\n[end of probe]");

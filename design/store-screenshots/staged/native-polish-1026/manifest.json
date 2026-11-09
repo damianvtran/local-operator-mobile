@@ -1,0 +1,665 @@
+{
+ "generated": "2026-10-26",
+ "status": "staged \u2014 pending design/caption/capture-method approval; not the verified set",
+ "visual_source_head": "94b3fc2",
+ "code_head_note": "46bd248 changes only the New-chat callback identity and its tests; no pixel change",
+ "method": "installed-browser fixed-viewport harness (same-origin iframe of the app's own web export) against the mock relay, composed by the existing design/store-screenshots templates; NOT capture-frames.mjs",
+ "counts": {
+  "app-captures": 26,
+  "frames": 26
+ },
+ "app_captures": [
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/01-session-transcript.png",
+   "profile": "iphone-max",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "67ecc1e6c8b99ef4de814ac5fcce2eb8a4a7ddfc31a26bcf374f55450896781c"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/02-session-diff.png",
+   "profile": "iphone-max",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "ff7b000250b8c19e5a6e5036ebcc4a91df18fdcf1c9f2feea0460a0cee6bf570"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/03-approval-card.png",
+   "profile": "iphone-max",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "363db6907a8e08d131b230399851335a94a42b02b2d32a3a2b864e91c5ed54e2"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/04-checkpoint-rail.png",
+   "profile": "iphone-max",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "d3c5e926f4278190cb8d035ebd3258731305c104720407a6c74a8bb5369100ed"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/05-session-search.png",
+   "profile": "iphone-max",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "5e6127ae5c16c9d3790bd8b5b18ecaf62d946982ed9e6579f2083c2d08a36d6f"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/06-sessions-remote.png",
+   "profile": "iphone-max",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "f793541b2b966bcc96ff85184abd0f45158aa5265bc7d1b3214c041f0f25b21c"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/07-move-receipt.png",
+   "profile": "iphone-max",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "fbb791993c49020054fb70dec952f11f8eb5627e00fc6aa2aa98cb0dad91efc9"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/08-new-chat.png",
+   "profile": "iphone-max",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "5ce9f0d849928210251f208578ae6593ffab46fe92adf0958d653c46ed4741c3"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/iphone-max/09-sign-in.png",
+   "profile": "iphone-max",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    1290,
+    2796
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "96a1e07267efbe621bf74c992a2d4f49cb84f7d2de33c64f62a73f794625ad7e"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/01-session-transcript.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "baf8314f62a068241ff7cccde83108d2d555beb781e365b0528fb54e8cfe3d92"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/02-session-diff.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "6d5b539654bee779a3a46b7ddcc37b40b77bb84efd44ba072c036576f075ebfa"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/03-approval-card.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "15a373246887b875eabe5d1133c105be238fe32c83c6546d38e5f8918fba25ed"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/04-checkpoint-rail.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "18bb2b2e4603438001876d9cb81969af343e0e8cc55d05596588344b5c512a0d"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/05-session-search.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "efd5e6e568be1b5c9b0fcc3c61453f1a0f9efe215e0db146d58310ebfffa0392"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/06-sessions-remote.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "645ed50efa43136dc22cf2ff57a1afc211b2086f49381a19f039e5b0307629e9"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/07-move-receipt.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "bbdb6018e189340401e1bcde9e513841bdbf573bd1c93af32db53a31af005500"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/08-new-chat.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "71fb1a0ad23f18f3dcda819cd739b6330ac6668228f10c3202612505295b0f94"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/ipad-13/09-sign-in.png",
+   "profile": "ipad-13",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    2048,
+    2732
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "890de3bde89438d29a15d26d4a5ed4307d6a9079fe9c2a320f9aff187f3c2f13"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/01-session-transcript.png",
+   "profile": "play-phone",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "3f448568d4f2220817bf8eea525c437705ac3dac07d2c4d99ec1b399b08de856"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/02-session-diff.png",
+   "profile": "play-phone",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "f61e0e0d6bbed4371dd889bc98b3e41c85d120f4f4d1c7d56d828bde6aad8292"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/03-approval-card.png",
+   "profile": "play-phone",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "fa703cfe330aca3514817b70620446013f921c9f421d1e6a68d9b065fcb2cc79"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/04-checkpoint-rail.png",
+   "profile": "play-phone",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "352389d36f688ca5ba1a304ebef22f18580692fa3e73cd988439dca32c3bc009"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/05-session-search.png",
+   "profile": "play-phone",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "732a7867962039b48939ef551e663e538faa0f8dc1cf24ad1135499b2e07b45b"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/06-sessions-remote.png",
+   "profile": "play-phone",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "23a5e5db22e83f41daca3fc8590852562b76b79fc08eb99753a5bcb494451dd1"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/07-move-receipt.png",
+   "profile": "play-phone",
+   "status": "recaptured-94b3fc2",
+   "head": "94b3fc2",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "ee363686e58d10cb5e44836703602666937b19227d4e7a96ff5786c34c26250d"
+  },
+  {
+   "path": "staged/native-polish-1026/app-captures/play-phone/08-new-chat.png",
+   "profile": "play-phone",
+   "status": "retained-3b0e048",
+   "head": "3b0e048",
+   "size": [
+    1080,
+    2340
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "21f0804d1c15aadcbacbd871fc59e1013489957023b41c00154fa8fc0dcaa17f"
+  }
+ ],
+ "frames": [
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/01-session-transcript.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "32bf9a7a99fe83f54ca4497e09430e1b8022ecd8efc1324fa44af9fecba7c7c6"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/02-session-diff.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "26e679922afa8c568238246064214ba3ed672ec02a997642b9d45feaab0354ca"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/03-approval-card.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "eed8da1145fa5c2cbfbbd54ae36561fac2d328c967512a102136e6d345c0ec9e"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/04-checkpoint-rail.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "fd71394a942c52bc021e51aafe203c48901cc8f2c0d4533a8b53ab21c209e80a"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/05-session-search.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "7fda196629da8a0d040e2130b2257ccb7736aad4e33deda91bd2874ab4317ef6"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/06-sessions-remote.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "526101006aa0a5eb81a74575096c661593d4b1f76f7df4039c2f2fee59d2ce33"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/07-move-receipt.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "32aa41dfaecd4e9718646c08c9ccd2f88fe32c7d0219496ac90ff093ce14907d"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/08-new-chat.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "3d704c4fa72b311386db5a0b9578c27f858e40dbf4442b766d867a33d9b5b86b"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-iphone-6.9/09-sign-in.png",
+   "surface": "appstore-iphone-6.9",
+   "composed_at": "94b3fc2",
+   "size": [
+    1320,
+    2868
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "28e758cf8bcf510c03317516d4895c747efa91948153f4038ec8c5fe140e353a"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/01-session-transcript.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "6cb6a28fba8739bf15a95850efc66464d2db463e552fa0bf609794de862525f0"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/02-session-diff.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "f2062ec14443cb7cecf59b66b026bdd4e5c27be5a9c5ac3ad54060832303aba1"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/03-approval-card.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "14a42893f8d0b59d9cc28cbbb4a652d8f8d56e9645d413b0b0a17bce0fdbcbf8"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/04-checkpoint-rail.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "a763ea2a5c4721025ec8a1973a0ad489c10917fb7ebe76e0e991fd26e2aa29a9"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/05-session-search.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "f703aa03d100dbd7c239cc18c7e759c1be90440bdb59a14af7d82f7cb65603a1"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/06-sessions-remote.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "b5ef198582f26f6045149b90dc5758725bcb516e699628fbd95cc490a09ff0c1"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/07-move-receipt.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "6baae2b7cb00024cbf62217ea10b0db694267b9715b8e3b65ecc17c3d22f7d2f"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/08-new-chat.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "296ff82be67326f302bda34e67209188e792f1893e0892134d137fd8b84a5c81"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/appstore-ipad-13/09-sign-in.png",
+   "surface": "appstore-ipad-13",
+   "composed_at": "94b3fc2",
+   "size": [
+    2064,
+    2752
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "ff23315dca5b5d536b6a2ddea735cae140ae044db9d1af92e70779a6d84c20cd"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/01-session-transcript.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "680180a3d5e71821f7efd6385aee38a5c63b8c256a83c3022aba5242a54900fa"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/02-session-diff.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "356a5c60507ffd8ec3f5905b3dacdb0800461a65d6d52829c34f2a2a40a3ddb1"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/03-approval-card.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "117651e07baea60e3ba02537cb0cdc00e1db7657496719aab1c7e2041a991b13"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/04-checkpoint-rail.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "0482ab2fdc3f855120a47eab1568d09284338d3f25c1ba617a65853ef6089705"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/05-session-search.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "034fbc194a765347dc8d6a927c11a4fc40c795fa37371a1041a00be9aba203c2"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/06-sessions-remote.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "ae71a242384bc0789d230d1bfdee19063c4a8e656dd04f3b82537535d8eac858"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/07-move-receipt.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "78026d63191c540c15a2e03aa1e0c27e857c1cd333da6110df4b6ac3f59420d4"
+  },
+  {
+   "path": "staged/native-polish-1026/frames/play-phone/08-new-chat.png",
+   "surface": "play-phone",
+   "composed_at": "94b3fc2",
+   "size": [
+    1080,
+    1920
+   ],
+   "mode": "RGB",
+   "alpha": false,
+   "sha256": "6050373c455c727c0ded04f423a0b44610e8e5170da32b1259abef5ea9128216"
+  }
+ ]
+}

@@ -6,6 +6,18 @@
  * keys, not a claim to consume core wire descriptors: account-routing-v1 sends
  * label/help/choice/error TEXT only. Those values must remain backend-owned.
  * No policy choices, defaults or routing decisions belong in this table.
+ *
+ * WHY THIS FILE DOES NOT CALL `t()` WHILE THE OTHER THREE COPY MODULES DO.
+ * `scripts/ci/account-routing-ios-proof.ts` is a plain-`node` entry point — its
+ * command is pinned by `account-routing-proof.test.ts` — and it statically
+ * imports this module. Node's ESM resolver cannot follow the extensionless
+ * relative imports `src/` is written with (bundler resolution), so any import
+ * added here breaks that entry before a single line of it runs. The table
+ * therefore stays local, and `src/i18n/catalogues/en/mobile.account_routing.*`
+ * carries the same messages for the runtime; `catalogues.test.ts` asserts the two
+ * agree key for key, so the duplication is machine-checked rather than a second
+ * source of truth. Once that entry loads through a resolver preload, this module
+ * can call `t()` and the table can go.
  */
 export const ACCOUNT_ROUTING_SOURCE_LOCALE = "en" as const;
 export const ACCOUNT_ROUTING_COPY = {

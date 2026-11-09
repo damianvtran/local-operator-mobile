@@ -1,4 +1,5 @@
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
@@ -6,6 +7,7 @@ import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
+import { signInPresentation } from "./sign-in-presentation";
 
 /**
  * First run (docs/ux/flows.md § 1, F-1).
@@ -29,10 +31,30 @@ import { Screen } from "@/ui/components/screen";
  */
 export default function Welcome() {
 	const router = useRouter();
-	const { signInWithRadient, signInState, busy } = useConnection();
+	const {
+		signInWithRadient,
+		signInState,
+		signInDiagnostics,
+		restoredAccount,
+		busy,
+	} = useConnection();
+	const [initiated, setInitiated] = useState(false);
+	const start = () => {
+		setInitiated(true);
+		void signInWithRadient();
+	};
+	const presentation = signInPresentation({
+		initiated,
+		restoredAccount,
+		busy,
+		state: signInState,
+	});
+	useEffect(() => {
+		if (presentation.navigate) router.replace("/tunnels");
+	}, [presentation.navigate, router]);
 
 	return (
-		<Screen title="Local Operator" testID={SCREEN.welcome}>
+		<Screen brand title="Local Operator" testID={SCREEN.welcome}>
 			<View className="flex-1 justify-center gap-6 pb-12">
 				<View className="items-center gap-4">
 					<Text
@@ -51,18 +73,19 @@ export default function Welcome() {
 				<TeamBridgeEntry />
 
 				<SignInPanel
-					state={signInState}
-					onStart={() => void signInWithRadient()}
+					state={presentation.state}
+					diagnostics={signInDiagnostics}
+					onStart={start}
 					onUseAddress={() => undefined}
 				/>
 
 				{/* The two routes are hidden once the hand-off is running: offering a
 				 * second route mid-flow is how a reader ends up in two of them. */}
-				{signInState.kind === "idle" ? (
+				{presentation.state.kind === "idle" ? (
 					<View className="gap-3">
 						<Button
 							label="Sign in with Radient"
-							onPress={() => void signInWithRadient()}
+							onPress={start}
 							loading={busy}
 							testID={CONTROL.welcomeConnect}
 						/>

@@ -45,7 +45,20 @@ table (`extra="forbid"`), and the machine's builder composes only house sentence
 field table is the contract; a new field is an ADR amendment.**
 
 **2. Who hosts it.** *Decided:* the Radient control plane (agent-server behind `api.radienthq.com`),
-where the connector already authenticates and `account_id` resolves. The design is ingest route →
+where the connector already authenticates and `account_id` resolves. **Where its state lives:** the
+operator's 2026-10-28 decision puts state in **MongoDB Atlas**, the managed database the rest of
+Radient runs on, so the device rows, the delivery record and the per-device grant go there. The
+**durable queue** is this note's own proposal — §3 below still costs "a managed queue" — and no
+Firebase-hosted store is part of any of it: FCM is the Android delivery rail and nothing more (ADR
+§5). **Android background push via FCM requires adding Firebase to a Google Cloud project** — the
+same project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+Blaze plan once it is billed. Radient's prior "does not use Firebase" decision (2026-10-28) therefore
+ruled out Android background push; **the operator resolved that on 2026-10-29 by allowing FCM only on
+the existing Google Cloud project** (ADR 0006 Status, §5), so the transport is decided. **The
+operator steps that decision leaves, and the slices that follow, are in
+[`docs/publishing/push-setup.md`](publishing/push-setup.md)** — the setup path, beside this note's
+operations.
+The design is ingest route →
 durable queue → worker → providers: one route (`POST /v1/tunnels/{id}/push/events`) that validates
 and enqueues, a queue-consuming worker doing all provider traffic — no new public host, no inbound
 path to machines. The standalone alternative (a Cloudflare Worker plus Queue) is **considered and
@@ -185,8 +198,11 @@ key-rejection alert must be seen within the hour.**
 **5. Keys.** The APNs `.p8` and the FCM service account live in the platform's secret store,
 readable only by the worker's runtime identity, with audited break-glass; the app build needs only
 the client config files, so CI holds neither. An APNs `.p8` is **team-scoped by design** — one key
-sends to *any* app in that Apple Developer team — so the only scoping is `apns-topic` fixed to the
-bundle id (ADR §5), and the only real isolation is a separate developer team. The FCM account *is*
+sends to *any* app in that Apple Developer team — so the only *app*-level scoping is `apns-topic`
+fixed to the bundle id (ADR §5), each key is in addition restricted to a single sending environment
+(Sandbox or Production, up to two keys per environment; see
+[`docs/publishing/push-setup.md`](publishing/push-setup.md)), and the only real isolation is a
+separate developer team. The FCM account *is*
 scopeable, to the send role only. *Decided:* yearly rotation (or on suspicion); break-glass held by
 a named platform-team member, named at deploy; the team-wide blast radius stands. Leak radius: key
 *and* device tokens can send pushes that look like the app (phishing); they cannot read state or

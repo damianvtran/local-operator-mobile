@@ -1,0 +1,209 @@
+"""Round-4 auditor checks (read-only). Byte and structure level, independent of
+the Node renderer: this script never renders; it inspects the raw catalogue
+bytes and the app's JSON. No translation service is used anywhere.
+
+Exits non-zero only on an internal error, not on a finding: findings are the
+auditor's to read and judge.
+"""
+import hashlib
+import json
+import re
+import subprocess
+import sys
+
+REPO = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n"
+EN = "src/i18n/catalogues/en/mobile.projects.json"
+CTX = "src/i18n/catalogues/en/mobile.projects.context.json"
+FR = "src/i18n/catalogues/fr/mobile.projects.json"
+KEY = "mobile.projects.write_receipt"
+CODES = ["created", "completed", "reopened", "added", "updated", "removed", "deleted"]
+EN_WORDS = {
+    "created": "Created",
+    "completed": "Completed",
+    "reopened": "Reopened",
+    "added": "Added",
+    "updated": "Updated",
+    "removed": "Removed",
+    "deleted": "Deleted",
+}
+FR_WORDS = {
+    "created": "créé",
+    "completed": "terminé",
+    "reopened": "rouvert",
+    "added": "ajouté",
+    "updated": "mis à jour",
+    "removed": "retiré",
+    "deleted": "supprimé",
+}
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def no_duplicate_keys(pairs):
+    seen = {}
+    for key, value in pairs:
+        if key in seen:
+            raise ValueError(f"duplicate key {key!r}")
+        seen[key] = value
+    return seen
+
+
+def load(path):
+    raw = open(f"{REPO}/{path}", "rb").read()
+    try:
+        data = json.loads(raw.decode("utf-8"), object_pairs_hook=no_duplicate_keys)
+    except ValueError as exc:
+        print(f"{path}: INVALID JSON or duplicate key: {exc!r}")
+        sys.exit(1)
+    print(f"{path}: valid JSON, no duplicate keys, {len(data)} keys, sha256 {sha(raw)}")
+    return data
+
+
+print("=== A. files ===")
+en = load(EN)
+ctx = load(CTX)
+fr = load(FR)
+
+print("\n=== B. key sets ===")
+print(f"en keys {len(en)}, ctx keys {len(ctx)}, fr keys {len(fr)}")
+print(f"en == fr key set: {sorted(en) == sorted(fr)}")
+print(f"en == ctx key set: {sorted(en) == sorted(ctx)}")
+
+
+def old(path):
+    return json.loads(
+        subprocess.run(
+            ["git", "show", f"49f79b3:{path}"],
+            cwd=REPO,
+            capture_output=True,
+            check=True,
+        ).stdout
+    )
+
+
+old_en = old(EN)
+old_fr = old(FR)
+print(f"keys added since 49f79b3: {sorted(set(en) - set(old_en))}")
+print(f"keys dropped since 49f79b3: {sorted(set(old_en) - set(en))}")
+
+print("\n=== C. arm inventory of the audited key (raw text, brace-scanned) ===")
+
+
+def kind_arms(value):
+    """Arms of the ROOT select, by brace depth. The regex-free scan matters: the
+    arm label `milestone` also appears inside the en milestone body as a noun,
+    so a substring count would over-report it."""
+    index = value.index("select,") + len("select,")
+    depth = 1
+    arms = {}
+    i = index
+    while i < len(value):
+        ch = value[i]
+        if ch == "{":
+            depth += 1
+            i += 1
+            continue
+        if ch == "}":
+            depth -= 1
+            i += 1
+            if depth == 0:
+                break
+            continue
+        if depth == 1:
+            match = re.match(r"\s*([A-Za-z][A-Za-z0-9_]*)\s*", value[i:])
+            if match:
+                arm = match.group(1)
+                j = i + match.end()
+                assert value[j] == "{", (arm, value[j:j + 10])
+                inner_depth = 0
+                k = j
+                while k < len(value):
+                    if value[k] == "{":
+                        inner_depth += 1
+                    elif value[k] == "}":
+                        inner_depth -= 1
+                        if inner_depth == 0:
+                            break
+                    k += 1
+                arms[arm] = value[j + 1:k]
+                i = k + 1
+                continue
+        i += 1
+    return arms
+
+
+PAIR = re.compile(r"(created|completed|reopened|added|updated|removed|deleted) \{([^}]*)\}")
+for label, value in (("en", en[KEY]), ("fr", fr[KEY])):
+    arms = kind_arms(value)
+    print(f"{label}: kind arms {sorted(arms)}; each arm body:")
+    for arm in sorted(arms):
+        body = arms[arm]
+        codes = [c for c, _ in PAIR.findall(body)]
+        print(f"  {label}.{arm:9s} action arms {len(codes)} {codes} ; body={body!r}")
+    print(
+        f"{label}: {{subject}} x{value.count('{subject}')}; {{kind, select x{value.count('{kind, select')}; "
+        f"{{action, select x{value.count('{action, select')}; "
+        f"starts {{kind, select: {value.startswith('{kind, select,')}; ends '.}}': {value.endswith('.}}')}"
+    )
+
+print("\n=== D. action arms per locale, byte for byte against the expected words ===")
+for label, value, table in (("en", en[KEY], EN_WORDS), ("fr", fr[KEY], FR_WORDS)):
+    per_code = {}
+    for code, word in PAIR.findall(value):
+        per_code.setdefault(code, set()).add(word)
+    ok = all(per_code.get(code) == {table[code]} for code in CODES)
+    print(f"{label}: every code maps to exactly one expected word: {ok}")
+    for code in CODES:
+        print(f"  {label} {code:9s} -> {sorted(per_code.get(code, []))}")
+
+print("\n=== E. English inner arms vs the pre-change value ===")
+print("old en value:", json.dumps(old_en[KEY], ensure_ascii=True))
+print(f"new en value: {json.dumps(en[KEY], ensure_ascii=True)}")
+old_pairs = PAIR.findall(old_en[KEY])
+new_pairs = PAIR.findall(en[KEY])
+print(f"old action arms: {len(old_pairs)}; new inner action arms: {len(new_pairs)}")
+print(f"the new arm set repeats the old seven verb words exactly: "
+      f"{set(new_pairs) == set(old_pairs)}")
+print("old en message skeleton:", repr(old_en[KEY].split('} ', 1)[1]))
+
+print("\n=== F. typography / hygiene scan of the French value ===")
+fr_value = fr[KEY]
+print(f"non-ASCII code points: {sorted({f'U+{ord(ch):04X}' for ch in fr_value if ord(ch) > 0x7E})}")
+print(f"U+202F count: {fr_value.count(chr(0x202F))}")
+print(f"U+00A0 count: {fr_value.count(chr(0x00A0))}")
+has_apostrophe = "'" in fr_value
+has_quote = chr(34) in fr_value
+print(f"ASCII apostrophe present: {has_apostrophe}")
+print(f"ASCII double quote present: {has_quote}")
+print(f"double space present: {'  ' in fr_value}")
+print(f"tab present: {chr(9) in fr_value}")
+print(f"trailing space present: {fr_value != fr_value.rstrip()}")
+print(
+    "bidi/control present: "
+    + str(
+        any(
+            0x200E <= ord(ch) <= 0x200F
+            or 0x202A <= ord(ch) <= 0x202E
+            or 0x2066 <= ord(ch) <= 0x2069
+            or ord(ch) == 0x061C
+            for ch in fr_value
+        )
+    )
+)
+print(f"contains 'milestone': {'milestone' in fr_value}")
+print(f"occurrences of 'milestone': {fr_value.count('milestone')} (an ICU option label is expected; no rendered branch may contain it)")
+for match in re.finditer("milestone", fr_value):
+    start = max(0, match.start() - 12)
+    print(f"  context: ...{fr_value[start:match.end() + 12]!r}...")
+print(f"contains any English receipt verb: {any(w in fr_value for w in EN_WORDS.values())}")
+
+print("\n=== G. context sidecar of the audited key ===")
+entry = ctx[KEY]
+print(f"role: {entry.get('role')!r}; maxCells: {entry.get('maxCells')!r}; fields: {sorted(entry)}")
+print(f"note names all three parameters: {all(p in entry['note'] for p in ('{action}', '{subject}', '{kind}'))}")
+
+print("\n=== H. contrast: the pre-change French value ===")
+print("old fr value:", json.dumps(old_fr[KEY], ensure_ascii=True))
+print(f"old fr contains 'milestone': {'milestone' in old_fr[KEY]}")

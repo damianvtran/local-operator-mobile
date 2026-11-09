@@ -1,0 +1,86 @@
++ echo '# audit id: ru30a3'
+# audit id: ru30a3
++ echo '# locale: ru   namespace: mobile.session_health   audit date: 2026-10-30'
+# locale: ru   namespace: mobile.session_health   audit date: 2026-10-30
++ echo '# auditor: i18n-auditor (lopdev team), session 68877acd3c8a'
+# auditor: i18n-auditor (lopdev team), session 68877acd3c8a
+++ git -C /Users/damian/workspace/ru-wave rev-parse --abbrev-ref HEAD
+++ git -C /Users/damian/workspace/ru-wave rev-parse HEAD
++ echo '# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5'
+# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5
+++ shasum -a 256 /Users/damian/workspace/ru-wave/src/i18n/catalogues/ru/mobile.session_health.json
+++ cut '-d ' -f1
++ echo '# ru catalogue sha256: 63d0b905ea5b4b07d012f84d66f6ce9b2eeda972c90aa05711a4d7902d1a7195'
+# ru catalogue sha256: 63d0b905ea5b4b07d012f84d66f6ce9b2eeda972c90aa05711a4d7902d1a7195
++ echo '# This file is the captured transcript of the commands below (bash set -x), not a summary.'
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
++ echo
+
++ set -x
++ cd /Users/damian/workspace/ru-wave
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+(node:29054) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs mobile.session_health
+# namespace mobile.session_health  (group A)
+# keys en=11 ru=11 context=11
+# sha256 en=727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f
+# sha256 context=df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310
+# sha256 ru=63d0b905ea5b4b07d012f84d66f6ce9b2eeda972c90aa05711a4d7902d1a7195
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  mobile.session_health.control_hint  en=[]  ru=[]
+  same  mobile.session_health.menu_label  en=[]  ru=[]
+  same  mobile.session_health.menu_hint  en=[]  ru=[]
+  same  mobile.session_health.menu_title  en=[]  ru=[]
+  same  mobile.session_health.reopening  en=[]  ru=[]
+  same  mobile.session_health.still_reopening  en=[]  ru=[]
+  same  mobile.session_health.resume_refused_title  en=[]  ru=[]
+  same  mobile.session_health.resume_refused  en=[]  ru=[]
+  same  mobile.session_health.resume_gone  en=[]  ru=[]
+  same  mobile.session_health.resume_no_route  en=[]  ru=[]
+  same  mobile.session_health.ended_placeholder  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in mobile.session_health: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 111; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  mobile.session_health.control_hint	Показывает, что означает это состояние и что произойдёт при отправке
+  mobile.session_health.menu_label	Действия с сессией
+  mobile.session_health.menu_hint	Открывает меню сессии
+  mobile.session_health.menu_title	Сессия
+  mobile.session_health.reopening	Сессия открывается заново — это может занять несколько секунд.
+  mobile.session_health.still_reopening	Всё ещё открывается — сессия пока не поднялась.
+  mobile.session_health.resume_refused_title	Не удалось возобновить
+  mobile.session_health.resume_refused	Не удалось возобновить эту сессию. Повторите попытку.
+  mobile.session_health.resume_gone	Эта сессия больше не сохранена.
+  mobile.session_health.resume_no_route	Подключитесь к компьютеру, чтобы возобновить эту сессию.
+  mobile.session_health.ended_placeholder	Отправка откроет её в домашней папке…
+
+=== SUMMARY mobile.session_health: 111 checks, 0 failed ===
+(node:29065) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)

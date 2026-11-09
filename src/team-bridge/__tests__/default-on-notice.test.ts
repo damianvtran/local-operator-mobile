@@ -5,8 +5,15 @@ import { describe, expect, it, vi } from "vitest";
 import { DefaultOnNoticeView } from "@/features/team-bridge/default-on-notice";
 import {
 	DEFAULT_ON_NOTICE_COPY,
+	type DefaultOnNoticeCopyKey,
 	defaultOnNoticeCopy,
 } from "@/features/team-bridge/default-on-notice-copy";
+import {
+	CATALOGUES,
+	resetLocaleSource,
+	SHIPPED_LOCALES,
+	setLocaleSource,
+} from "@/i18n";
 import {
 	createHubClient,
 	type HubClient,
@@ -501,6 +508,23 @@ describe("default-on notice view", () => {
 		expect(failed).toContain('data-testid="team-bridge-notice-error"');
 		expect(failed).toContain('data-testid="team-bridge-notice-turn-off"');
 	});
+	it.each(SHIPPED_LOCALES)(
+		"renders %s notice copy from its catalogue, keeping served consent verbatim",
+		(locale) => {
+			setLocaleSource(() => locale);
+			try {
+				for (const key of Object.keys(
+					DEFAULT_ON_NOTICE_COPY,
+				) as DefaultOnNoticeCopyKey[]) {
+					expect(defaultOnNoticeCopy(key)).toBe(CATALOGUES[locale][key]);
+				}
+				const open = rendered({ expanded: true });
+				expect(open).toContain(CONSENT_V2.text);
+			} finally {
+				resetLocaleSource();
+			}
+		},
+	);
 	it("copy table owns namespaced keys with translator context", () => {
 		for (const [key, row] of Object.entries(DEFAULT_ON_NOTICE_COPY)) {
 			expect(key).toMatch(COPY_PREFIX);

@@ -1,0 +1,188 @@
+{
+ "schema": 1,
+ "audit_id": "ur30a1",
+ "locale": "ur",
+ "namespace": "mobile.home",
+ "audit_date": "2026-10-30",
+ "key_count": 27,
+ "programme": "ur catalogues wave — group A (mobile.home, mobile.session, mobile.session_health, mobile.account_routing; relay.chrome + relay.health as mirror verification)",
+ "project": "damianvtran/local-operator-mobile",
+ "branch": "feat/i18n-urdu",
+ "base_commit": "32c7677",
+ "catalogue_state": "the translator's UNCOMMITTED catalogue at src/i18n/catalogues/ur/ (audited as worktree files; this auditor changed nothing)",
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** — not used",
+  "context_sidecar_routability": "not routable: the en *.context.json maps keys to nested {role,note} JSON objects, not message strings",
+  "receipt": null,
+  "honest_note": "no copy-route receipt was obtained or claimed for any input in this bundle"
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "d24b2e163bcd",
+  "model": "radient/auto",
+  "actual_model_source": "session model-switch notices (provider quota fallbacks) in this session's transcript",
+  "model_chain": [
+   "anthropic/claude-sonnet-5-5",
+   "anthropic/claude-opus-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "ur (native-fluent reader; no MT/API service used anywhere in this audit)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ur/mobile.home.json",
+   "sha256": "6181c9bf8198ccc599883578625f7f1293539794021d952f5b761952c5c1e213"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.home.json",
+   "sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.home.context.json",
+   "sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+  }
+ },
+ "findings": [
+  {
+   "id": "ur30a1-M1",
+   "key": "mobile.home.connect_disabled_reason",
+   "severity": "MAJOR",
+   "kind": "grammar/imperative",
+   "current": "بھیجنے کے لیے کمپیوٹر سے منسلک ہوں۔",
+   "replacement": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
+   "why": "‘ہوں’ is ہونا's 1st-person/3rd-plural subjunctive; with no subject in the sentence the reader supplies ‘I’, so the line reads “so that I be connected”, not “Connect …”. Core does use this shape where the subject is present (‘تجاویز آن ہوں’), which is why it looks plausible — but a directive to آپ needs the polite imperative. ‘ہو جائیں’ keeps the intransitive verb core already uses for connection state (‘دوبارہ منسلک ہو رہا ہے…’) and matches Hindi’s shipped imperative (‘कंप्यूटर से कनेक्ट करें’). Shorter alternative if the composer slot is tight: «بھیجنے کے لیے کمپیوٹر جوڑیں۔» (29 cells, core’s pairing verb).",
+   "evidence": "rendered before/after through parseMessage+formatMessage in audit.log; Hindi sibling fr/hi comparison"
+  },
+  {
+   "id": "ur30a1-m1",
+   "key": "mobile.home.tip.parallel",
+   "severity": "MINOR",
+   "kind": "idiom/object marker",
+   "current": "ذیلی ایجنٹس پھیلانے کے لیے متوازی کام مانگیں",
+   "replacement": "ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں",
+   "why": "پھیلانا is transitive; without ‘کو’ the fragment reads like spreading objects rather than the agents fanning out. With ‘کو’ it is 47 characters, one under TIP_CHAR_BUDGET=48.",
+   "evidence": "length measured against TIP_CHAR_BUDGET=48 (home-copy.ts:175)"
+  },
+  {
+   "id": "ur30a1-m2",
+   "key": "mobile.home.suggestion.wake_summary",
+   "severity": "MINOR",
+   "kind": "register",
+   "current": "مجھے خلاصے سمیت جگائیں",
+   "replacement": "مجھے خلاصہ دے کر جگائیں",
+   "why": "‘سمیت’ is officialese/Persianised (core uses it only in technical lists); a chat chip reads better with the everyday construction. Trade-off: 23 characters, 1 over the translator’s own 22 longest — needs the same width check the translator already runs; the current string is acceptable if that budget is tight.",
+   "evidence": "chip lengths measured; Hindi shipped uses ‘सारांश के साथ’"
+  },
+  {
+   "id": "ur30a1-n1",
+   "key": "mobile.home.startup_queue.blocked",
+   "severity": "NIT",
+   "kind": "consistency",
+   "current": "قطار کے پیغامات بھیجنے کے لیے دوبارہ کوشش کریں",
+   "replacement": "(no change proposed)",
+   "why": "‘queued messages’ renders as ‘قطار کے پیغامات’ in the two status rows and ‘قطار میں لگے پیغامات’ in the sheet and its buttons — same noun, two forms, one screen. Both are grammatical and the short form serves the row width; recorded rather than required.",
+   "evidence": "same-screen comparison"
+  },
+  {
+   "id": "ur30a1-n2",
+   "key": "mobile.home.startup_queue.unconfirmed",
+   "severity": "NIT",
+   "kind": "copula",
+   "current": "شروع ہونے کی تصدیق نہیں",
+   "replacement": "شروع ہونے کی تصدیق نہیں ہوئی",
+   "why": "Terse nominal sentence without ہوئی; acceptable as a status label, fuller form reads smoother.",
+   "evidence": "compared with neighbouring not_started label"
+  }
+ ],
+ "findings_summary": {
+  "BLOCKER": 0,
+  "MAJOR": 1,
+  "MINOR": 2,
+  "NIT": 2
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 1,
+  "finding_ids": [
+   "ur30a1-M1",
+   "ur30a1-m1",
+   "ur30a1-m2",
+   "ur30a1-n1",
+   "ur30a1-n2"
+  ]
+ },
+ "redaction_scan": {
+  "markers": 0,
+  "expectation": "0; no masked value was accepted"
+ },
+ "mechanical": {
+  "repo_gate_generate_ts_check": "exit 0 — 'catalogue.gen.ts is current (143 keys, 10 namespaces…)' (the generator parses every locale directory, ur included, with the runtime parser)",
+  "repo_gate_check_strings": "exit 0 — '284 finding(s), all baselined; 0 new; no growth vs 32c7677'",
+  "key_parity": "en=27 ur=27; no key added or dropped",
+  "placeholder_icu_parity": "parseMessage() per key: 0 parameterised keys in this namespace — placeholder/plural/select parity is vacuous here, and the repo generator would have failed on a mismatch",
+  "plural_categories": "Intl.PluralRules('ur') and the app's pluralCategory('ur', n) agree: 0=other 1=one 2=other 21=other; no plural message exists in this namespace",
+  "preserved_tokens": "Latin identifiers checked against the en source (Linear MCP / repo / Local Operator / MCP where present); commands, flags, paths: none in this namespace",
+  "unicode": "no bidi control characters, no Arabic yeh/kaf, no digits, no ASCII '...' or ASCII quotes, ellipsis is U+2026, quotes are “ ” and stops are ۔ (see audit.log)",
+  "render_path_note": "ur is still in NOT_YET_SHIPPED_LOCALES (src/i18n/locale.ts:69), so renderFor(key, args, 'ur') returns the English fallback; the ur text was rendered through formatMessage(parseMessage(ur[key]), args, 'ur') — the exact formatter renderFor delegates to — and that difference is recorded rather than glossed over"
+ },
+ "mirror_verification": null,
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.home/ur30a1/record.json",
+   "sha256": "self (not applicable)",
+   "why_not_hashed": "a file cannot attest its own hash; the record is covered by its siblings’ attestations and by the bundle path in git"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.home/ur30a1/report.md",
+   "sha256": "d73b3350fba8a0abf3896d920b8e62418c04bfe6ddb845dbe71227c3285b29ae"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.home/ur30a1/audit.log",
+   "sha256": "1818bf64d5c80c997aace9d8105f7c29beef42735412c28bff7d05b6c9d28331",
+   "sha256_pre_normalisation": "021e62fbdd5d16b9eba279015612aea37473e5ca65bc0092186bc8ea216b912b",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
+  }
+ ],
+ "execution_log": "i18n/audits/evidence/ur/mobile.home/ur30a1/audit.log — captured stdout/stderr of the commands recorded inside it",
+ "second_pass": {
+  "high_visibility_group": true,
+  "performed": "same-session second read, whole screen top-to-bottom, after the key-by-key pass",
+  "scope": "re-read every ur line of the screen in display order and re-derived what a native would write; looked for register switches between adjacent lines, translation-only phrasing, and safety/polarity",
+  "conclusion": "no additional findings; it re-confirmed the MAJOR item(s) recorded here and changed nothing",
+  "independent_second_auditor": "OUTSTANDING — a second pass by a different auditor session is still required for this high-visibility namespace and is NOT claimed here; this same session cannot manufacture that independence"
+ },
+ "audit_notes_not_execution_log": "the report.md prose (idiom, register, composed-sentence readings) is judgement recorded as notes, not command output; every mechanical claim above is backed by the audit.log lines it names",
+ "ledger_row_draft": {
+  "locale": "ur",
+  "namespace": "mobile.home",
+  "source_sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3",
+  "translator": {
+   "agent": "i18n-translator",
+   "model": "not audited here (translator's own record owns it)"
+  },
+  "auditor": {
+   "agent": "i18n-auditor",
+   "model": "radient/auto",
+   "date": "2026-10-30",
+   "result": "changes_requested",
+   "unresolved_blocker_major": 1
+  },
+  "status": "changes_requested",
+  "note": "Independent ur audit (group A) mobile.home 27 keys: 0 BLOCKER, 1 MAJOR, 2 MINOR, 2 NIT; mechanical gates exit 0; record i18n/audits/evidence/ur/mobile.home/ur30a1/record.json",
+  "applied": false,
+  "why_not_applied": "damianvtran/local-operator-mobile has no i18n/ledger.json and no audit-ledger command; core's i18n/ledger.json covers core namespaces only, and this auditor is read-only on the catalogue. The row is a draft for the implementer to land with the catalogue commit."
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
+ },
+ "superseded_by": {
+  "record": "i18n/audits/evidence/ur/mobile.home/ur30a1r2/record.json",
+  "why": "this is a ROUND-1 record: the hash it attests is the catalogue as audited at round 1, before the implementer applied the findings. The shipped file is attested by the round-2 bundle above. The difference is the remediation, not drift.",
+  "shipped_sha256": "108b20000f9a2036c7e5a00e78692d1c9c1361c53770148f6290f93129c32a07"
+ }
+}

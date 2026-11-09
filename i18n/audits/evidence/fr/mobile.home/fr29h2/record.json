@@ -1,0 +1,171 @@
+{
+	"schema": 1,
+	"audit_id": "fr29h2",
+	"audit_kind": "independent_round2_current_byte_namespace_audit",
+	"locale": "fr",
+	"namespace": "mobile.home",
+	"audit_date": "2026-10-29",
+	"audited_revision": "79b3fad082c0ae850b06a4437006d445bb1c4887",
+	"audited_revision_note": "Worktree /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n, branch head at the time of the audit. The whole i18n/ evidence tree is untracked in this worktree (git status: '?? i18n/'); the audited catalogues themselves are tracked at this revision.",
+	"round": 2,
+	"prior_round": {
+		"audit_id": "fr29a1",
+		"path": "i18n/audits/evidence/fr/mobile.home/fr29a1",
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 5,
+		"read_for": "what round 1 found wrong, not what this round concluded",
+		"carried_forward": [
+			"H-04(2) -> this round's H-01",
+			"N-2 -> H-03",
+			"N-4 -> H-04"
+		]
+	},
+	"key_count": {
+		"en": 27,
+		"target": 27,
+		"context": 27
+	},
+	"auditor": {
+		"agent": "i18n-auditor",
+		"session": "16ebcda69228",
+		"job": "none exposed for this delegation (team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota/429 fallback",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the translator. Not model-diverse from the translator's served model kimi/k3.1-pro for part of the run; disclosed, not closed. No human native-speaker review and no rendered-frame proof are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c66311717837",
+		"job": "not supplied for this round; round 1 recorded fbde6318e480",
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "served via temporary fallback, as supplied by the requesting manager; not independently observed by this auditor",
+		"date": "2026-10-29"
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "de9bf370df7e",
+		"agent": "reviewer (label fr-current-bytes-second-pass)",
+		"pinned_model": "anthropic/claude-opus-5-5",
+		"actual_model": "radient/auto",
+		"actual_model_source": "self-reported in the worker's own report: quota descent anthropic/claude-opus-5-5 -> anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto",
+		"scope": "all 65 keys across mobile.home and mobile.schedules with the composing code, read without the primary auditor's findings",
+		"agreement": "same H-02 wording (suggestion.wake_summary), same 'accès mobile' vs 'téléphone' nit, same U+202F and plural findings; also reached no-BLOCKER independently",
+		"disagreement": "it graded mobile.home.options.fixed MINOR, arguing 'en cours' is this catalogue's rendering of 'live'. I verified that claim and rejected it: mobile.projects.sessions.live is '{base} · {live} en cours' with {live} a positive integer (note: 'Appends the live-session count'), i.e. 'en cours' means 'running/in progress' exactly. Held at MAJOR and recorded the reasoning in the report."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.home.json",
+			"sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.home.context.json",
+			"sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/fr/mobile.home.json",
+			"sha256": "6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d"
+		}
+	},
+	"current_report_verdict": {
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 1,
+		"finding_ids": [
+			"H-01",
+			"H-02",
+			"H-03",
+			"H-04",
+			"H-05",
+			"H-06"
+		],
+		"blocker_ids": [],
+		"major_ids": [
+			"H-01"
+		],
+		"minor_ids": [
+			"H-02"
+		],
+		"nit_ids": [
+			"H-03",
+			"H-04",
+			"H-05",
+			"H-06"
+		],
+		"verdict_reason": "'commandes en cours' renders 'live controls' as a state ('commands in progress'); the label half of round 1's H-04 is verified fixed. Tips, chip register, chip/tip budgets and U+202F are all now correct; the remaining findings are one MINOR and four NIT."
+	},
+	"mechanical": {
+		"repo_validator": "npm run i18n:catalogue:check -> exit 0, 'src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)'",
+		"repo_validator_scope": "key parity and message parse only; it does not compare placeholders between locales, so every key was checked separately",
+		"scoped_checks": "valid JSON, no duplicate keys; 27/27/27; every message parsed with the app's own parseMessage; no placeholders, plurals or selects exist in this namespace; all 27 rendered through src/i18n/runtime.ts renderFor(key, {}, 'fr') and every one returned French; character inventory per key (no ASCII apostrophe/quote/ellipsis, no U+00A0, no bidi controls, U+2019 apostrophes, U+2026 ellipsis); U+202F before the namespace's only '?'",
+		"budgets": "SUGGESTION_CHAR_BUDGET {en:24, fr:31} and TIP_CHAR_BUDGET 48 read from src/features/home/home-copy.ts; chips 22/25/23/21/16/24, tips 44/43/44, none over",
+		"tests": "npx vitest run src/features/home/home-copy.test.ts src/features/schedules/__tests__/schedules-copy.test.ts src/i18n/__tests__ -> 7 files, 159 tests passed"
+	},
+	"executed_render_evidence": {
+		"command": "node <scratch>/audit2.ts, <scratch>/render-prod.ts, <scratch>/chars.ts mobile.home, <scratch>/proposals.ts; full stdout in audit.log",
+		"samples": [
+			"renderFor('mobile.home.options.fixed', {}, 'fr') -> 'Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en cours.'",
+			"renderFor('mobile.home.greeting', {}, 'fr') -> 'Comment puis-je vous aider aujourd’hui ?' with U+202F before ?",
+			"renderFor('mobile.session.conversation_details', {}, 'fr') read for the cross-reference -> 'Détails de la conversation'",
+			"mobile.projects.sessions.live fr = '{base} · {live} en cours' with {live} an integer -> 'en cours' means running"
+		],
+		"proposed_replacements_validated": {
+			"method": "parseMessage on each proposed value, French locale, plus UTF-16 lengths",
+			"result": "all six proposals parse; lengths 132 / 28 / 26 / 29 / 43 / 23",
+			"log": "section 8 of audit.log"
+		}
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/fr/mobile.home/fr29h2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.home/fr29h2/report.md",
+			"sha256": "852333dc2da24cb1fffc230b4d7892aafede928821ca1c449dd6190cad610771"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.home/fr29h2/audit.log",
+			"sha256": "e31e2f7e917b94247fc3ec8567d7e07d8071b56ba4ef5f70f070cb67335f9c05",
+			"state": "actual command output, not notes"
+		}
+	],
+	"ledger": {
+		"recorded": false,
+		"reason": "This mobile repository has no i18n/ledger.json and no audit-ledger command; docs/i18n.md records the report in the pull request. No ledger row or keyed receipt is claimed.",
+		"ledger_row_proposed": {
+			"written": false,
+			"locale": "fr",
+			"file_group": "mobile.home",
+			"status": "changes_requested",
+			"auditor": "i18n-auditor",
+			"model": "radient/auto",
+			"source_hash": "6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d",
+			"note": "R2 independent: 1 MAJOR (options.fixed 'commandes en cours'); 1 MINOR, 4 NIT. Tips/chip budgets, U+202F fixed. See i18n/audits/evidence/fr/mobile.home/fr29h2/record.json",
+			"note_length": 169
+		}
+	},
+	"rendered_artifact": {
+		"captured": false,
+		"reason": "No frame was captured; fit claims are limited to executed character counts against budgets the code asserts, never rendered proof."
+	},
+	"route_disclosure": {
+		"reads": "Ordinary local mobile git/worktree reads only: the catalogue JSON and context sidecars in this worktree, the style guide and glossary in the core repository, the app's own modules and tests.",
+		"english_inputs_scan": "All English source and context inputs were scanned by the requesting manager with zero redaction-marker hits.",
+		"context_sidecar_routing": "English nested-JSON context sidecars are NOT routable through read_public_copy; they were read as ordinary worktree files.",
+		"receipts": "No keyed receipt was obtained anywhere. The one credential-shaped key of this wave, mobile.computers.password_placeholder, was refused by the clean-core route because the mobile path is not committed in core; no receipt exists for that key or for this namespace.",
+		"translation_services": "No translation API, SDK, MT service or back-translation was used to compare or produce anything here."
+	},
+	"audit_notes_not_execution_log": {
+		"notes": "report.md and this record's prose fields are the auditor's judgement, not command output.",
+		"execution_log": "audit.log contains the actual commands and their actual stdout/stderr for this bundle.",
+		"not_observed": "Translator session/model provenance is as supplied by the requesting manager; this auditor did not observe the translator's run.",
+		"rendered_frames": "None captured; no pixel-level claim is made anywhere in this bundle."
+	}
+}

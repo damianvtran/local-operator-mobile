@@ -68,6 +68,7 @@
  *    stale-row rule, exactly as the shared fixture pins it.
  */
 
+import { t } from "@/i18n";
 import type { ThemeName } from "@/ui/tokens.gen";
 import { PALETTE } from "@/ui/tokens.gen";
 
@@ -133,9 +134,42 @@ export type SupplementBeat = {
 	filesMore: number;
 	more: string[];
 	components: SupplementComponent[];
+	/** Generated AND written sounds — always painted outside every disclosure. */
+	sounds: SupplementSound[];
+	/** Sounds the row bound held back (`sounds_more`); 0 when the bound did not bite. */
+	soundsMore: number;
+	/** Deliverables the agent pinned or named that the producer refused. */
+	withheld: SupplementWithheld[];
+	/** Withheld entries beyond the row's ten-name cap (`withheld_more`). */
+	withheldMore: number;
 	error: string;
 	dismissed: boolean;
 };
+
+/**
+ * One sound the row carries (`contract.SupplementSound`). The digest addresses
+ * the relay's `/sound?digest=` route, so a sound without a valid one could be
+ * listed but never played — it is dropped, the rule `componentFrom` states.
+ * `origin: "file"` marks a sound the turn WROTE to disk (highlights
+ * deliverables); a generated sound carries no origin. Both render alike.
+ */
+export type SupplementSound = {
+	attachment: string;
+	mime: string;
+	title: string;
+	/** A hint only: the producer writes 0 when it could not measure. */
+	durationS: number;
+	/** Display path for a written sound (`~/`- or session-relative); "" otherwise. */
+	path: string;
+	origin: string;
+	pinned: boolean;
+};
+
+/** Why a pinned or answer-named deliverable was not shown (the closed set the
+ *  producer writes; an unknown word drops the entry rather than guessing copy). */
+export type WithheldReason = "outside" | "sensitive" | "missing" | "too-large";
+
+export type SupplementWithheld = { name: string; reason: WithheldReason };
 
 /** A finite number from an untyped wire field, or `null`. */
 function finiteNumber(value: unknown): number | null {
@@ -193,6 +227,73 @@ export function componentsFrom(value: unknown): SupplementComponent[] {
 		);
 }
 
+/** One sound, read field-by-field; a malformed entry is dropped, never guessed. */
+function soundFrom(value: unknown): SupplementSound | null {
+	if (!value || typeof value !== "object") return null;
+	const sound = value as Record<string, unknown>;
+	const attachment =
+		typeof sound.attachment === "string" ? sound.attachment : "";
+	if (!isDigest(attachment)) return null;
+	return {
+		attachment,
+		mime: typeof sound.mime === "string" ? sound.mime : "audio/mpeg",
+		title: typeof sound.title === "string" ? sound.title : "",
+		durationS: finiteNumber(sound.duration_s) ?? 0,
+		path: typeof sound.path === "string" ? sound.path : "",
+		origin: typeof sound.origin === "string" ? sound.origin : "",
+		pinned: sound.pinned === true,
+	};
+}
+
+/**
+ * The `sounds[]` array, tolerated malformed as a whole (absent = empty).
+ * NO CAP here, matching the relay web's reader: every sound the row carries
+ * is an artifact in its own right, and the producer's `SOUNDS_MAX` bound is
+ * disclosed through `sounds_more`, never by a reader-side head slice.
+ */
+export function soundsFrom(value: unknown): SupplementSound[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.map(soundFrom)
+		.filter((sound): sound is SupplementSound => sound !== null);
+}
+
+const WITHHELD_REASONS: ReadonlySet<string> = new Set([
+	"outside",
+	"sensitive",
+	"missing",
+	"too-large",
+]);
+
+/** The producer's cap on named withheld entries; the rest is `withheld_more`. */
+export const WITHHELD_MAX = 10;
+
+function withheldFrom(value: unknown): SupplementWithheld | null {
+	if (!value || typeof value !== "object") return null;
+	const entry = value as Record<string, unknown>;
+	const name = typeof entry.name === "string" ? entry.name : "";
+	const reason = typeof entry.reason === "string" ? entry.reason : "";
+	if (!name || !WITHHELD_REASONS.has(reason)) return null;
+	return { name, reason: reason as WithheldReason };
+}
+
+/** The `withheld[]` array: names only (the producer never sends paths), bounded
+ *  at the producer's own cap so a malformed row cannot grow the line. */
+export function withheldListFrom(value: unknown): SupplementWithheld[] {
+	if (!Array.isArray(value)) return [];
+	return value
+		.map(withheldFrom)
+		.filter((entry): entry is SupplementWithheld => entry !== null)
+		.slice(0, WITHHELD_MAX);
+}
+
+/** A non-negative integer count field (`files_more`, `sounds_more`, …), or 0. */
+function countField(value: unknown): number {
+	return typeof value === "number" && Number.isInteger(value) && value >= 0
+		? value
+		: 0;
+}
+
 /** A stored component's digest (`contract.DIGEST_PATTERN`). */
 export const DIGEST_RE = /^[a-f0-9]{32}$/;
 
@@ -213,12 +314,7 @@ export function beatFromWire(value: unknown): SupplementBeat | null {
 	if (!anchor) return null;
 	const state = typeof raw.state === "string" ? raw.state : "";
 	if (!isRowState(state)) return null;
-	const filesMore =
-		typeof raw.files_more === "number" &&
-		Number.isInteger(raw.files_more) &&
-		raw.files_more >= 0
-			? Math.trunc(raw.files_more)
-			: 0;
+	const filesMore = countField(raw.files_more);
 	const more = Array.isArray(raw.more)
 		? raw.more
 				.filter((item): item is string => typeof item === "string")
@@ -238,6 +334,10 @@ export function beatFromWire(value: unknown): SupplementBeat | null {
 		filesMore,
 		more,
 		components: componentsFrom(raw.components),
+		sounds: soundsFrom(raw.sounds),
+		soundsMore: countField(raw.sounds_more),
+		withheld: withheldListFrom(raw.withheld),
+		withheldMore: countField(raw.withheld_more),
 		error:
 			typeof raw.error === "string"
 				? raw.error.slice(0, ERROR_MSG_MAX_CHARS)
@@ -246,16 +346,27 @@ export function beatFromWire(value: unknown): SupplementBeat | null {
 	};
 }
 
+/** No beats: the frozen empty map most frames answer with (see the reader
+ *  below). */
+export const NO_SUPPLEMENTS: Record<string, SupplementBeat> = Object.freeze({});
+
 /**
  * The projection's whole sibling map, read defensively — the ONE reader the
  * session screen calls. Absent or malformed keys drop to nothing rather than a
  * guess, and a beat whose version ties the one held keeps the later read,
  * exactly as every surface's newest-wins rule does.
+ *
+ * An empty answer is `NO_SUPPLEMENTS` — one frozen map, not a fresh `{}` per
+ * frame. Most frames carry no beats, and a new identity for "nothing" re-renders
+ * every consumer that memoises on the map (the session screen's supplement
+ * projection, and through it the transcript list's `renderItem`).
  */
 export function supplementsFromWire(
 	value: unknown,
 ): Record<string, SupplementBeat> {
-	if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
+		return NO_SUPPLEMENTS;
+	}
 	const out: Record<string, SupplementBeat> = {};
 	for (const [anchor, raw] of Object.entries(
 		value as Record<string, unknown>,
@@ -265,7 +376,11 @@ export function supplementsFromWire(
 		const held = out[anchor];
 		if (!held || beat.version >= held.version) out[anchor] = beat;
 	}
-	return out;
+	// An empty map is the COMMON case (most frames carry no beats), and a fresh
+	// `{}` per frame is a new identity for every consumer that memoises on it —
+	// the session screen's supplement map, the list's `renderItem`. One frozen
+	// empty answers the same question with one identity.
+	return Object.keys(out).length === 0 ? NO_SUPPLEMENTS : out;
 }
 
 /**
@@ -372,8 +487,13 @@ export function supplementDisposition(
 	) {
 		return "nothing";
 	}
+	/* Sounds and the withheld notice are content (core `reader_disposition`
+	   counts sounds; the highlights contract adds `withheld`): a row carrying
+	   only a refused pin must still say so rather than render nothing. */
+	const carried =
+		beat.files.length > 0 || beat.sounds.length > 0 || beat.withheld.length > 0;
 	if (state === "done") {
-		return beat.files.length || beat.components.length ? "block" : "nothing";
+		return carried || beat.components.length ? "block" : "nothing";
 	}
 	let line: SupplementDisposition;
 	if (state === "failed") line = "failed_retry";
@@ -386,7 +506,7 @@ export function supplementDisposition(
 	) {
 		line = jobLive ? "preparing" : "cancelled_retry";
 	} else return "nothing";
-	return beat.files.length ? (WITH_FILES[line] ?? line) : line;
+	return carried ? (WITH_FILES[line] ?? line) : line;
 }
 
 /* ---------------------------------------------------------------------------
@@ -571,6 +691,91 @@ export function filesSummaryOf(beat: SupplementBeat): string | null {
 	return shown.length > 0 ? filesSummaryLine(shown) : null;
 }
 
+/* ---------------------------------------------------------------------------
+ * Highlights deliverables: sounds, written videos and the withheld notice
+ * ------------------------------------------------------------------------- */
+
+const WITHHELD_REASON_KEY = {
+	outside: "mobile.session.highlights.withheld_outside",
+	sensitive: "mobile.session.highlights.withheld_sensitive",
+	missing: "mobile.session.highlights.withheld_missing",
+	"too-large": "mobile.session.highlights.withheld_too_large",
+} as const;
+
+/**
+ * The one quiet line naming deliverables the producer refused — "1 file not
+ * shown: outside allowed locations" — or `null` when nothing was withheld.
+ * NEVER SILENT is the contract's rule: a pin the agent asked for and the user
+ * cannot see must be said. The count is the named entries plus
+ * `withheld_more`; the reasons are the DISTINCT ones in first-seen order, so a
+ * line with three refused pins of two kinds stays one short sentence. Names
+ * are deliberately not painted: the line is a notice, not a file list, and the
+ * producer already bounds them to ten.
+ */
+export function withheldText(beat: SupplementBeat): string | null {
+	const count = beat.withheld.length + beat.withheldMore;
+	if (count === 0) return null;
+	const reasons: string[] = [];
+	for (const entry of beat.withheld) {
+		const phrase = t(WITHHELD_REASON_KEY[entry.reason]);
+		if (!reasons.includes(phrase)) reasons.push(phrase);
+	}
+	/* `withheld_more` with no named entry (a truncated, or hand-built, row)
+	   still has a count; "outside" is the producer's default refusal and the
+	   only honest reason left to state when none was named. */
+	if (reasons.length === 0) reasons.push(t(WITHHELD_REASON_KEY.outside));
+	return t("mobile.session.highlights.withheld", {
+		count,
+		reasons: joinReasons(reasons),
+	});
+}
+
+/**
+ * The reasons as a bare list in the reader's locale: folded pairwise through
+ * one catalogue key, so zh-CN gets `、` and ur `، ` without the line growing
+ * an "and". NOT `Intl.ListFormat`: measured on Node's ICU, `type: "unit"`
+ * concatenates zh-CN (`ABC`), space-joins ru (`A B C`) and inserts "et"/"اور"
+ * for fr/ur — so the translator owns the separator instead.
+ */
+function joinReasons(reasons: readonly string[]): string {
+	return reasons.reduce((first, second) =>
+		t("mobile.session.highlights.withheld_reasons_join", { first, second }),
+	);
+}
+
+/** The name a sound is announced and captioned by: its own title, else the
+ *  written file's basename, else the generic noun — never an empty label. */
+export function soundName(sound: SupplementSound): string {
+	const title = displayText(sound.title);
+	if (title) return title;
+	const base = displayText(sound.path).split("/").pop() ?? "";
+	return base || t("mobile.session.highlights.sound_untitled");
+}
+
+/** The play/pause control's accessibility label: the action AND the sound, so
+ *  a screen reader on a grid of fourteen cells hears which one it is on. */
+export function soundControlLabel(
+	sound: SupplementSound,
+	playing: boolean,
+): string {
+	const title = soundName(sound);
+	return playing
+		? t("mobile.session.highlights.sound_pause", { title })
+		: t("mobile.session.highlights.sound_play", { title });
+}
+
+/** Whether a file callout is a video the block renders as a tappable tile:
+ *  the producer's own `kind`, or the suffix when an older row carries none. */
+export function isVideoFile(file: SupplementFile): boolean {
+	return file.kind === "video" || supplementFileClass(file.path) === "video";
+}
+
+/** A video tile's accessibility label: the action and the file's name. */
+export function videoTileLabel(file: SupplementFile): string {
+	const { name, path } = fileRowParts(file);
+	return t("mobile.session.highlights.video_open", { name: name || path });
+}
+
 /** `Source: …` — the block's one caption line (§2.10). */
 export function sourceLine(source: string): string {
 	return `Source: ${displayText(source)}`;
@@ -744,8 +949,14 @@ export type SupplementTheme = {
  * re-renders on a theme change and pushes a fresh message, a live switch is one
  * more push, not a reload.
  */
-export function supplementThemeFor(theme: ThemeName): SupplementTheme {
-	const palette = PALETTE[theme];
+export function supplementThemeFor(
+	theme: ThemeName,
+	/* The ACTIVE palette's colours. Optional so the brand palette stays the
+	 *  default for a caller that has none; the two webviews pass `useTheme().active`
+	 *  so a frame under Dracula is painted in Dracula, not in the brand theme of
+	 *  the same side. */
+	palette: Readonly<Record<string, string>> = PALETTE[theme],
+): SupplementTheme {
 	const vars: Record<string, string> = {};
 	for (const name of THEME_VARIABLE_NAMES) {
 		const role = THEME_ROLE_BY_VARIABLE[name];
@@ -845,7 +1056,7 @@ export function planComponentMounts(
  * v1 has no download path (native's N5 note: "Preview" for text/image; Share is
  * phase 2).
  */
-export type SupplementFileClass = "text" | "image" | "pdf" | "other";
+export type SupplementFileClass = "text" | "image" | "pdf" | "video" | "other";
 
 const TEXT_SUFFIXES = new Set([
 	".txt",
@@ -868,12 +1079,16 @@ const IMAGE_SUFFIXES = new Set([
 	".avif",
 ]);
 
+/** The containers `expo-video` opens on both platforms (mp4/mov/webm/m4v). */
+const VIDEO_SUFFIXES = new Set([".mp4", ".mov", ".webm", ".m4v"]);
+
 export function supplementFileClass(path: string): SupplementFileClass {
 	const dot = path.lastIndexOf(".");
 	const suffix = dot >= 0 ? path.slice(dot).toLowerCase() : "";
 	if (TEXT_SUFFIXES.has(suffix)) return "text";
 	if (IMAGE_SUFFIXES.has(suffix)) return "image";
 	if (suffix === ".pdf") return "pdf";
+	if (VIDEO_SUFFIXES.has(suffix)) return "video";
 	return "other";
 }
 

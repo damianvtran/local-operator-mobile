@@ -16,8 +16,60 @@
  * is copy that sends the reader to a command that will not fix their problem.
  */
 
-import type { ErrorSurface, RelayError } from "@/relay";
+import type { TunnelSessionError } from "@/connection/tunnel-session";
+import { t } from "@/i18n";
+import { type ErrorSurface, RelayError } from "@/relay";
 import type { RefusalKind } from "@/ui/components/refusal-surface";
+
+// Keep the control-plane cause typed through the shared RelayError/store path.
+// A 200/schema failure is not a gateway authorization refusal and must never
+// inherit the generic console/`lop login` remedy. Only server-owned changes do.
+class TunnelConnectionError extends RelayError {
+	readonly refusalKind: RefusalKind;
+	constructor(error: TunnelSessionError) {
+		const kind: RefusalKind =
+			error.failure === "oauth"
+				? "sign-in"
+				: error.failure === "account"
+					? "account-mismatch"
+					: ["billing", "disabled", "harness"].includes(error.failure)
+						? "console"
+						: error.failure === "rate-limited" ||
+								error.failure === "network" ||
+								error.failure === "unavailable"
+							? "retry"
+							: "diagnostic";
+		const detail =
+			error.failure === "billing"
+				? t("mobile.computers.billing_help")
+				: error.failure === "disabled"
+					? t("mobile.computers.disabled_help")
+					: error.failure === "harness"
+						? t("mobile.computers.harness_help")
+						: kind === "diagnostic"
+							? `TunnelSessionError · ${error.failure}`
+							: null;
+		super("rejected", "Tunnel session could not be established", {
+			surface:
+				kind === "account-mismatch"
+					? "diagnostic"
+					: kind === "console"
+						? "console"
+						: kind === "sign-in"
+							? "sign-in"
+							: kind === "retry"
+								? "retry"
+								: "diagnostic",
+			status: error.status,
+			detail: detail ?? undefined,
+			retryAfterMs: error.retryAfterMs,
+		});
+		this.refusalKind = kind;
+	}
+}
+export const tunnelSessionRelayError = (
+	error: TunnelSessionError,
+): RelayError => new TunnelConnectionError(error);
 
 export type RefusalView = {
 	kind: RefusalKind;
@@ -107,6 +159,15 @@ export function refusalFromError(input: {
 	subject: string;
 }): RefusalView | null {
 	if (input.surface === "none") return null;
+	if (input.error instanceof TunnelConnectionError) {
+		return {
+			kind: input.error.refusalKind,
+			subject: input.subject,
+			detail: input.error.detail ?? null,
+			remedy: null,
+			retryAfterMs: input.retryAfterMs,
+		};
+	}
 	return {
 		kind: refineConnectionKind(input.error) ?? KIND[input.surface],
 		subject: input.subject,
@@ -119,7 +180,10 @@ export function refusalFromError(input: {
 		 *  body a tunnel edge happily sends. `displayableMessage` is the accessor that
 		 *  refuses a runtime's own words, an empty body and markup, so the refinement is
 		 *  read from it and the surface cannot be handed markup by either path. */
-		detail: input.detail ?? input.error?.displayableMessage ?? null,
+		detail:
+			input.surface === "diagnostic"
+				? `RelayError · ${input.error?.kind ?? "connection-response"}`
+				: (input.detail ?? input.error?.displayableMessage ?? null),
 		remedy: REMEDY[input.surface] ?? null,
 		retryAfterMs: input.retryAfterMs,
 	};

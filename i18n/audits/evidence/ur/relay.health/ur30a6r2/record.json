@@ -1,0 +1,121 @@
+{
+ "schema": 1,
+ "audit_id": "ur30a6r2",
+ "round": 2,
+ "delta_of": "ur30a6",
+ "locale": "ur",
+ "namespace": "relay.health",
+ "audit_date": "2026-10-30",
+ "key_count": 8,
+ "kind": "DELTA re-audit (round 2) after the implementer applied round-1 findings",
+ "project": "damianvtran/local-operator-mobile",
+ "branch": "feat/i18n-urdu",
+ "base_commit": "32c7677",
+ "catalogue_state": "uncommitted worktree files; read-only for this auditor",
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** — not used",
+  "context_sidecar_routability": "not routable (nested {role,note} objects, not message strings)",
+  "receipt": null,
+  "honest_note": "no copy-route receipt was obtained or claimed"
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "b2d033d640d5",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "this session's header (Model: anthropic/claude-sonnet-5-5); no model-switch/fallback notice appeared in this session, so no fallback is claimed",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_of_round1_auditor_session": false,
+  "round1_auditor_session": "d24b2e163bcd (radient/auto after provider-quota fallbacks) — this is a different session of the same i18n-auditor role; it verifies its own round-1 findings and is NOT the independent second pass requested for high-visibility groups"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/ur/relay.health.json",
+   "sha256": "8588632afd90999a47232def24678eb2db64da3be442f0829012c35182e6aa0e"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/relay.health.json",
+   "sha256": "65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/relay.health.context.json",
+   "sha256": "b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec"
+  }
+ },
+ "round1_target_sha256": "8588632afd90999a47232def24678eb2db64da3be442f0829012c35182e6aa0e",
+ "en_and_context_vs_round1": {
+  "en_identical": true,
+  "context_identical": true
+ },
+ "delta_vs_round1": {
+  "target_identical_to_round1": true,
+  "keys_changed": [],
+  "method": "reverted each prescribed replacement (round-1 fixes.json) to its round-1 text in the current file bytes; the result's sha256 equals round-1 record input_hashes.target.sha256 (reverted_sha_matches_r1=True in audit.log) — so the changed-key set is EXACTLY those keys and no other key in the file changed",
+  "no_other_key_changed": true,
+  "note": "sha256 identical to round 1 — nothing to re-audit; round-1 verdict stands"
+ },
+ "verification": [],
+ "new_findings": [],
+ "not_applied_optional": [],
+ "width": null,
+ "mechanical": {
+  "generate_ts_check": "exit 0 — catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)",
+  "check_strings": "exit 0 — 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6",
+  "bidi_controls": 0,
+  "redaction_markers": 0,
+  "arabic_yeh_kaf": 0,
+  "scope_of_scans": "ur, en and en context of all six group A namespaces plus render.out",
+  "pluralCategory_ur_0_1_2_21": "other,one,other,other (zero selecting other is not re-litigated)",
+  "rendered_through": "formatMessage(parseMessage(text),args,'ur') — ur is still NOT_YET_SHIPPED, so renderFor would return English; disclosed, not glossed"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": []
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/relay.health/ur30a6r2/record.json",
+   "sha256": "self (not applicable)",
+   "why_not_hashed": "a file cannot attest its own hash; the record is covered by its siblings’ attestations and by the bundle path in git"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/relay.health/ur30a6r2/report.md",
+   "sha256": "ccc543070a0e2d153481195079abafdc85b8086af7b76223df62724999e65dcb",
+   "sha256_pre_normalisation": "55552db5427e6e1a9fcd9cca93e58d74d81f619c0c4895888e4fb66b7b2eda28"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/relay.health/ur30a6r2/audit.log",
+   "sha256": "9f5fe7d720b0821b252df47a8553473ee79dc258051cb0839f1b4d300098d3d9",
+   "sha256_pre_normalisation": "d936abb07191f0a9ce1afcb7cb5ec527451b0ef1690ed447efc2b9f0f83315fb",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
+  }
+ ],
+ "execution_log": "i18n/audits/evidence/ur/relay.health/ur30a6r2/audit.log — real stdout/stderr of the commands in it, shared verbatim by the six r2 bundles",
+ "second_pass": {
+  "high_visibility_group": false,
+  "independent_second_auditor": "n/a"
+ },
+ "audit_notes_not_execution_log": "report.md prose is judgement, not command output; mechanical claims are backed by audit.log",
+ "ledger_row_draft": {
+  "locale": "ur",
+  "namespace": "relay.health",
+  "source_sha256": "65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f",
+  "auditor": {
+   "agent": "i18n-auditor",
+   "model": "anthropic/claude-sonnet-5-5",
+   "date": "2026-10-30",
+   "result": "passed",
+   "unresolved_blocker_major": 0
+  },
+  "status": "passed",
+  "note": "ur delta r2 relay.health: round-1 fixes verified byte-exact; 0 BLOCKER/MAJOR; record i18n/audits/evidence/ur/relay.health/ur30a6r2/record.json",
+  "applied": false,
+  "why_not_applied": "mobile repo has no audit-ledger command/ledger.json; read-only auditor; draft for the implementer"
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
+ }
+}

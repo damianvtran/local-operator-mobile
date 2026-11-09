@@ -24,12 +24,17 @@
  */
 
 import { z } from "zod";
-import { resolveFetch } from "../relay/platform-fetch";
+import { readWithDeadline, resolveFetch } from "../relay/platform-fetch";
 
 /* Hoisted: discovery runs on every cold start and after every re-auth. */
+import { debugOAuthProofOrigin } from "./oauth-proof-override";
+
 const TRAILING_SLASHES = /\/+$/;
 
 export const RADIENT_API_BASE = "https://api.radienthq.com";
+
+/** Discovery's total budget, the relay client's default (`relay/http.ts`). */
+export const DISCOVERY_TIMEOUT_MS = 20_000;
 /** The tunnel console, for the billing and revoked-tunnel copy. */
 export const RADIENT_CONSOLE_TUNNELS_URL =
 	"https://console.radienthq.com/dashboard/tunnels";
@@ -192,6 +197,8 @@ export interface DiscoveryDeps {
 	accessToken: () => Promise<string | null> | string | null;
 	fetchImpl?: typeof globalThis.fetch;
 	baseUrl?: string;
+	/** Total budget for the read; `DISCOVERY_TIMEOUT_MS` otherwise. */
+	timeoutMs?: number;
 }
 
 /**
@@ -209,17 +216,43 @@ export async function discoverComputers(
 	if (!token) return { kind: "unauthorized" };
 
 	const fetchImpl = resolveFetch(deps.fetchImpl);
-	const base = (deps.baseUrl ?? RADIENT_API_BASE).replace(TRAILING_SLASHES, "");
+	const base = (
+		deps.baseUrl ??
+		debugOAuthProofOrigin() ??
+		RADIENT_API_BASE
+	).replace(TRAILING_SLASHES, "");
 
+	/* Bounded from dispatch to the parsed body: sign-in waits on this read after
+	 * the browser sheet closes, and React Native's `fetch` never gives up on its
+	 * own — a stalled list held "Signing you in…" for ever (TestFlight 453). A
+	 * deadline is "no answer", so it is `unreachable`, which keeps the grant. */
+	const unreadable = Symbol("unreadable");
 	let response: Response;
+	let body: unknown;
 	try {
-		response = await fetchImpl(`${base}/v1/tunnels`, {
-			method: "GET",
-			headers: { accept: "application/json", authorization: `Bearer ${token}` },
-			/* No cookies: this host is not the tunnel, and the control plane allows any
-			 * origin — nothing here should depend on a jar. */
-			credentials: "omit",
-		});
+		({ response, body } = await readWithDeadline(
+			fetchImpl,
+			`${base}/v1/tunnels`,
+			{
+				method: "GET",
+				headers: {
+					accept: "application/json",
+					authorization: `Bearer ${token}`,
+				},
+				/* No cookies: this host is not the tunnel, and the control plane allows
+				 * any origin — nothing here should depend on a jar. */
+				credentials: "omit",
+			},
+			deps.timeoutMs ?? DISCOVERY_TIMEOUT_MS,
+			async (answer) => {
+				if (answer.status === 401 || answer.status === 403) return unreadable;
+				try {
+					return (await answer.json()) as unknown;
+				} catch {
+					return unreadable;
+				}
+			},
+		));
 	} catch {
 		return {
 			kind: "unreachable",
@@ -230,10 +263,7 @@ export async function discoverComputers(
 	if (response.status === 401 || response.status === 403)
 		return { kind: "unauthorized" };
 
-	let body: unknown;
-	try {
-		body = await response.json();
-	} catch {
+	if (body === unreadable) {
 		return {
 			kind: "rejected",
 			message: "Radient returned a response this app could not read.",

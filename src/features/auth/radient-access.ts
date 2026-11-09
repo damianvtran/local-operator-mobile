@@ -39,10 +39,25 @@ export function createRadientAccess(deps: {
 		rawRefresh = null;
 		deps.publish(tokens);
 	}
-	function persist(tokens: RadientTokens, owned = capture()): Promise<void> {
-		return deps.serialize(async () => {
-			if (owned()) await deps.write(tokens);
+	async function persist(
+		tokens: RadientTokens,
+		owned = capture(),
+	): Promise<boolean> {
+		let persistent = false;
+		await deps.serialize(async () => {
+			if (!owned()) return;
+			const result = await deps.write(tokens);
+			/* An attempted write is not durable replacement: the platform writer
+			 * reports false on unavailable/nonpersistent storage. Only explicit
+			 * success may lift a restart tombstone, and a superseded epoch cannot. */
+			persistent =
+				owned() &&
+				typeof result === "object" &&
+				result !== null &&
+				"persistent" in result &&
+				result.persistent === true;
 		});
+		return persistent;
 	}
 	function retire(clear = deps.clear): Promise<void> {
 		replace(null);

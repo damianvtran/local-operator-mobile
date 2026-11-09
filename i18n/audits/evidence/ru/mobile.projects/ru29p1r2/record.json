@@ -1,0 +1,223 @@
+{
+	"schema": 1,
+	"audit_id": "ru29p1r2",
+	"audit_kind": "same_history_delta_reaudit",
+	"round": 2,
+	"parent_audit_id": "ru29p1",
+	"locale": "ru",
+	"namespace": "mobile.projects",
+	"file_group": "mobile.projects",
+	"audit_date": "2026-10-30",
+	"audited_head_commit": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+	"audited_revision": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+	"audited_branch": "feat/i18n-russian",
+	"audited_worktree": "/Users/damian/workspace/ru-wave",
+	"audited_worktree_note": "ru is committed at this head (git ls-tree -r HEAD -- src/i18n/catalogues/ru lists 10 files, audit.log coda); the worktree is clean for the catalogues and the projection. This audit wrote only its evidence bundle; no catalogue byte was edited and nothing was committed.",
+	"key_count": {
+		"en": 15,
+		"target": 15,
+		"context": 15
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "d598a29e6e64",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 → openai/gpt-6-astra (provider quota) → kimi/k3.1-pro (provider quota) → radient/auto (provider quota); every command in audit.log ran under the final model",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"fallback_disclosed": true,
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the translator; not model-diverse (the translator's supplied model is also radient/auto), disclosed rather than closed. No human native-speaker review and no rendered UI frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": null,
+		"job": null,
+		"model": "radient/auto",
+		"actual_model_source": "supplied by the requesting manager; not independently observed here",
+		"date": "2026-10-30"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/ru/mobile.projects/ru29p1r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.projects/ru29p1r2/report.md",
+			"sha256": "cd2c8405cbfa4486baf692f510b7bd05023e30b92f0ad68099e005c864b36e6e",
+			"bytes": 7361
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.projects/ru29p1r2/audit.log",
+			"sha256": "e75d975a9c567a4d87a2ae450ec080222a01e51790d9e86694c7f3ab7b6151e4",
+			"bytes": 31620
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.projects/ru29p1r2/widths.tsv",
+			"sha256": "e6c14442ce2c7bfca110ee85e52af6fb6e5c5d7e49e81b21fa32715481f03023",
+			"bytes": 2492
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.projects/ru29p1r2/verify.out.json",
+			"sha256": "44fbc169ccd028e9304585a9442aaedbc210f105d19ecf753970eb2c5dad52af",
+			"bytes": 10234
+		}
+	],
+	"ledger": {
+		"command": null,
+		"note": "No i18n ledger or audit-ledger command exists at this head (audit.log); docs/i18n.md makes the PR report the artifact of record. A row is proposed here, not written."
+	},
+	"audit_notes_not_execution_log": "report.md holds judgement and per-key reasoning; audit.log is the executed transcript (bash set -x) and is identical in the four group-B delta bundles because it covers all four namespaces unfiltered. Notes never prove execution.",
+	"rendered_artifact": {
+		"captured": false,
+		"native_review": false,
+		"claim": "No rendered frame and no human native-speaker review. Widths in fit are CoreText font metrics, not pixels."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.projects.json",
+			"sha256": "a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.projects.context.json",
+			"sha256": "5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/ru/mobile.projects.json",
+			"sha256": "fba4cec42e08b363690453ddbe7bf0e93f9b5d3127082c55895351d65e249aa3"
+		}
+	},
+	"delta_scope": {
+		"changed_keys": [
+			"mobile.projects.write_receipt",
+			"mobile.projects.project_name_hint",
+			"mobile.projects.session_state.missing",
+			"mobile.projects.milestone_slash_note"
+		],
+		"changed_arm": "write_receipt kind=milestone action=created only",
+		"proof": "inverting exactly the applied fixes reproduces the round-1 audited bytes: reconstructed sha256 ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b == ru29p1 input_hashes.target.sha256 (scope.py, SCOPE_EXACT in audit.log)",
+		"source_unchanged": "en a598ddc4…6efc09 and context 5481687e…33eed99 are byte-identical to round 1",
+		"target_hashes": {
+			"round1": "ff9d265e5c074d8e05847f95d017981f95399434258a74804b9f09b592022f6b",
+			"shipped": "fba4cec42e08b363690453ddbe7bf0e93f9b5d3127082c55895351d65e249aa3"
+		}
+	},
+	"round1_findings": [
+		{
+			"id": "RU-PRJ-1",
+			"severity": "minor",
+			"disposition": "fixed",
+			"byte_exact": true,
+			"key": "mobile.projects.write_receipt (kind=milestone, action=created)",
+			"shipped": "Создана веха «{subject}».",
+			"evidence": "writeReceipt executed for all 24 leaves: milestone created «Создана веха» is now distinct from added «Добавлена веха» and mirrors the project arm"
+		},
+		{
+			"id": "RU-PRJ-2",
+			"severity": "minor",
+			"disposition": "fixed",
+			"byte_exact": false,
+			"key": "mobile.projects.project_name_hint",
+			"shipped": "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.",
+			"prescribed": "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Пробелы не допускаются; дефис не может быть первым символом.",
+			"deviation": "Three sentences instead of two clauses; the ', и не может' join is gone.",
+			"evidence": "constraint set asserted on the shipped string: 1–64 range, alphabet, no spaces, no leading hyphen — all present, same constraint as en. Fit: no maxChars/maxCells field exists on this key, so no numeric sidecar limit applies; 740.9 pt = 3 lines at 288 pt, the same line count as en (3), fr (3) and es (3); the prescribed wording measured 842.4 pt = 4 lines, so the shipped form fits better. 6 lines at 200 % vs 5 for en; sheet body scrolls, no clamp."
+		},
+		{
+			"id": "RU-PRJ-3",
+			"severity": "nit",
+			"disposition": "fixed",
+			"byte_exact": true,
+			"key": "mobile.projects.session_state.missing",
+			"shipped": "не найдена",
+			"evidence": "linkedSessionState({role:'work',exists:false}) -> «не найдена»"
+		},
+		{
+			"id": "RU-PRJ-4",
+			"severity": "nit",
+			"disposition": "fixed",
+			"byte_exact": true,
+			"key": "mobile.projects.milestone_slash_note",
+			"shipped": "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить.",
+			"evidence": "milestoneSlashNote() executes the prescribed bytes exactly"
+		}
+	],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"finding_ids": [],
+		"carried_open": [],
+		"reason": "0 BLOCKER, 0 MAJOR, 0 MINOR. RU-PRJ-1/3/4 fixed byte-exactly; RU-PRJ-2 fixed with a shorter wording that states the same constraint and fits better than the prescription. Nothing remains open."
+	},
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:catalogue:check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)'",
+		"repo_gate": "npm run -s i18n:check -> exit 0: catalogue check plus 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d'",
+		"repo_validator_scope": "key parity and message parse; it does not compare placeholders or CLDR arms across locales, so the harness below compares every key itself",
+		"gate_test": "vitest run src/i18n/__tests__/catalogues.test.ts -> 39 passed (39). Round 1 reported 1 failed / 37 passed on this file because ru was a directory without being shipped; the flip closed that gate.",
+		"pair_audit": "all four group-B namespaces parsed in en and ru (38/15/14/10 keys); zero missing, zero extra, authoring order identical, zero duplicate keys in the JSON text; paramOrArmProblems: []; every ru plural carries one/few/many/other; select arms identical to en; no bidi/zero-width; «ёлочки» and U+2026 only",
+		"escalations": [
+			"mobile.schedules.cadence.left {remaining}: text->plural",
+			"mobile.schedules.summary.monitors_armed {count}: text->plural",
+			"mobile.schedules.summary.monitors_attention {broken}: text->plural",
+			"mobile.schedules.tail.failed {count}: text->plural",
+			"mobile.projects.milestones.count {completed}: text->plural",
+			"mobile.projects.sessions.live {live}: text->plural"
+		],
+		"escalation_rule": "generate.ts parameter-parity allows a translation to turn a plain-text placeholder into a plural selector; all six were recorded in round 1 and none is new in this delta",
+		"negative_controls": "6/6 as expected (control.txt): the same parser/renderer still shows «остался 1» for the round-1 cadence bytes, «0 активны» for the round-1 armed bytes, and the ', и не может' join for the round-1 hint — and renders the shipped bytes correctly",
+		"plural_string_negative_control": "formatMessage on a plural with a string argument throws RangeError: 'Message \"{n, plural, one {# x} other {# x}}\" needs a number for \"n\", received \"1\"' — the plural selector is still typed as a number"
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage/PluralRules)",
+		"runtime": "src/i18n/runtime.ts (renderFor/t)",
+		"composition": "src/features/schedules/schedules-copy.ts and src/features/projects/projects-copy.ts (the real call sites, imported from the shipped worktree at 2921aea)",
+		"preference": "setLocaleSource(() => 'ru') — the app's own wiring; ru is a SHIPPED locale at this head, so t()/renderFor resolve the Russian catalogue natively (round 1 needed a scratch copy with +\"ru\")",
+		"alias_resolution": "scripts/lib/load-src.ts plus a 5-line '@/…' -> src/… resolve hook in the audit harness; no src/ file was modified",
+		"sha256": {
+			"src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+			"src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+			"src/i18n/catalogue.gen.ts": "3764e868e7cdbe059f0d7665c5fe1830ad48830ee798703701edf1606800bb55",
+			"src/i18n/locale.ts": "9a83212d480017a9a08970b4c33f5eebf327d14e456e9fcc13d4a7146096a010",
+			"src/features/schedules/schedules-copy.ts": "fc3f87acb290fd9737142c09af6761456ecabe23917035636e5ad46f59077b52",
+			"src/features/projects/projects-copy.ts": "24d57749edf9b5705a0456e99e6d11d8c39e985854f56fdd647e79a6c95e36f7"
+		}
+	},
+	"receipts_executed": {
+		"project.created": "Создан проект «payments-migration».",
+		"project.added": "Добавлен проект «payments-migration».",
+		"milestone.created": "Создана веха «payments-migration».",
+		"milestone.added": "Добавлена веха «payments-migration».",
+		"milestone.updated": "Обновлена веха «payments-migration».",
+		"other.created": "Создано «payments-migration».",
+		"unknown_action_fallback": "Обновлён проект «payments-migration».",
+		"scope": "3 kinds x 8 action codes = 24 leaves exercised through writeReceipt(); every leaf carries {subject}"
+	},
+	"fit": {
+		"basis": "AppKit CoreText, .AppleSystemUIFont at text-meta 12/500 (the type step both slots paint), greedy word wrap against 288 pt of content (a 320 pt device less Screen/Sheet px-4 = 32); lines at 200 % are the same wrap with doubled advances. These are font metrics, not pixels.",
+		"hint_shipped_pt": 740.9,
+		"hint_shipped_lines_288": 3,
+		"hint_round1_pt": 723.2,
+		"hint_prescribed_pt": 842.4,
+		"hint_prescribed_lines_288": 4,
+		"en_hint_pt": 594.7,
+		"fr_hint_pt": 698.1,
+		"es_hint_pt": 625.5,
+		"zh_hint_pt": 468.2,
+		"sidecar_limit": "none — no maxChars/maxCells field exists on any entry of this sidecar (the only 'Translator budget' notes in the repository are relay.health's two state words and mobile.session_health.ended_placeholder)",
+		"slot": "project-create.tsx:224, text-meta 12/500 inside the Sheet body's px-4 content = 288 pt at a 320 pt device, inside a ScrollView with no clamp",
+		"result": "3 lines, the same as en/fr/es; nothing clips. The shipped deviation fits better than the prescribed wording (4 lines)."
+	},
+	"regressions_checked": [
+		"sessions.count / milestones.count / sessions.live at 0/1/2/5/21/1.5: identical to the round-1 table",
+		"projectRowMeta, delete/remove confirmations, draft note, stale badge, write_unknown_note untouched (scope hash)",
+		"mobile.notifications and mobile.computers byte-identical to round 1"
+	]
+}

@@ -99,6 +99,25 @@ export const isHubReceipt = (entry: TranscriptEntry): boolean =>
 	(entry.details.direction === "to_child" ||
 		entry.details.direction === "to_parent");
 
+/** A typed Bridge receipt is incoming traffic, never a peer certificate. */
+export const isBridgeReceipt = (entry: TranscriptEntry): boolean =>
+	entry.kind === "notice" &&
+	(entry.custom_type || entry.details.custom_kind) === "team_bridge_message";
+
+/** Only receiver-projected display metadata names an incoming organization member. */
+export function bridgeReceiptLabel(entry: TranscriptEntry): string {
+	const receipt = entry.details.bridge_receipt;
+	if (receipt?.v !== 1) return "Team Bridge";
+	const name = receipt.sender?.name;
+	return typeof name === "string"
+		? [...name]
+				.filter((char) => !isHubIdentityControl(char.codePointAt(0) ?? 0))
+				.join("")
+				.trim()
+				.slice(0, 240) || "Team Bridge"
+		: "Team Bridge";
+}
+
 /** Display identity rejects control/bidi code points, never authored body.
  * Numeric ranges make that boundary explicit without a regex whose embedded
  * control escapes violate the pinned linter's source-safety rule. */
@@ -282,6 +301,55 @@ export const workingLine = (
 	projection: SessionProjection,
 ): { activity: string; startedS: number | null } | null =>
 	projection.activity.length > 0
+		? { activity: projection.activity, startedS: projection.activity_started_s }
+		: null;
+
+/**
+ * Whether a turn is running, for EVERY surface that acts on it: the header's
+ * "Working" rung, the composer's steer/send op and the Stop control.
+ *
+ * ONE predicate because two drifted: the header read `activity` and the
+ * composer read `streaming`, so a frame carrying a working label with
+ * `streaming: false` (a reconcile on attach or at a command boundary can lower
+ * `streaming` without touching `activity`) said "Working" while the composer
+ * minted a `prompt`. A prompt into a busy runtime is not refused quickly: the
+ * serving owner makes it wait out the turn, the daemon answers `504 session did
+ * not answer` after its 15 s ack budget, and the reader saw a failed send for a
+ * session the header said was working (TestFlight 578).
+ *
+ * Either fact counts, deliberately biased toward steer: a steer into an idle
+ * runtime is ADMITTED and drives a turn (measured on the 0.101.12 daemon:
+ * `steering queued`, then a run), whereas a prompt into a busy one hangs. The
+ * relay SPA reads `streaming` alone for the same three surfaces; this is a
+ * superset of it, never a contradiction.
+ */
+export const turnRunning = (
+	projection: Pick<SessionProjection, "streaming" | "activity">,
+): boolean => projection.streaming || projection.activity.length > 0;
+
+/**
+ * The PINNED working line above the dock (the relay's `session-view.tsx` mount of
+ * `WorkingLine` with `stopPid`): present for exactly as long as a turn is alive.
+ *
+ * Gated on `turnRunning`, not on the label alone, because this instance carries
+ * the turn's Stop, and "a turn is alive" is the condition that must always have
+ * its Stop in reach — the relay draws the line before a label exists for that
+ * reason (`working-line.tsx`: `if (!activity && !stopPid) return null`). The
+ * label may therefore be `""` (spinner, clock and Stop, no words); the clock
+ * follows the same `null`-withholds rule as `workingLine`.
+ *
+ * NOT `streaming` alone: a reconcile can lower `streaming` while the label still
+ * reads `Reading`, and in that frame the header says Working and the composer
+ * steers (both read `turnRunning`), so the line and its Stop must show too —
+ * one predicate across header, composer and line, or they disagree on screen.
+ */
+export const pinnedWorkingLine = (
+	projection: Pick<
+		SessionProjection,
+		"streaming" | "activity" | "activity_started_s"
+	>,
+): { activity: string; startedS: number | null } | null =>
+	turnRunning(projection)
 		? { activity: projection.activity, startedS: projection.activity_started_s }
 		: null;
 

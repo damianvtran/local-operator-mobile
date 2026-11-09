@@ -1,0 +1,209 @@
+{
+  "schema": 1,
+  "audit_id": "vi30s1r2",
+  "audit_kind": "same_history_delta_reaudit",
+  "round": 2,
+  "parent_audit_id": "vi30s1",
+  "locale": "vi",
+  "namespace": "mobile.schedules",
+  "file_group": "B",
+  "audit_date": "2026-10-30",
+  "audited_head_commit": "fb4d8bcbc50c68301af624407e09b1789896e571",
+  "audited_revision": "fb4d8bcbc50c68301af624407e09b1789896e571",
+  "audited_branch": "feat/i18n-vietnamese",
+  "audited_worktree": "/Users/damian/workspace/vi-wave",
+  "audited_worktree_note": "vi is COMMITTED at fb4d8bc (unlike round 1, where the catalogue was an untracked working-tree directory), so the audited bytes are identified by both the commit and the sha256. This audit wrote only its four r2 evidence directories; no catalogue byte, code byte or git state was changed, and nothing was committed.",
+  "key_count": {
+    "en": 38,
+    "target": 38,
+    "context": 38
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "bb04cc6cb19a",
+    "job": null,
+    "model": "radient/auto",
+    "actual_model": "radient/auto",
+    "actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra (provider quota) -> kimi/k3.1-pro (provider quota) -> radient/auto (provider quota); every command in this round's audit.log ran under radient/auto. The concrete model behind the provider's `auto` router is not observable from the session, so it is not claimed.",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "fallback_applied": true,
+    "fallback_note": "three provider-quota fallbacks occurred before any command of this round ran",
+    "independent_from_translator_session": true,
+    "independence": "Independent auditor identity, new session (bb04cc6cb19a), not the translator's. The translator's model is not visible to this auditor, so model diversity is not claimed. No human native-speaker review and no rendered UI frame are claimed."
+  },
+  "translator": {
+    "agent": "i18n-translator",
+    "session": null,
+    "job": null,
+    "model": "not observed by this auditor",
+    "actual_model_source": "not disclosed to this auditor; the brief guarantees a different agent/session"
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/report.md",
+      "sha256": "5213a49b0346f37eb0760be058835bfc3669c8f9c1b5bf42d2247a33e95d290c",
+      "bytes": 10555
+    },
+    {
+      "path": "i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/audit.log",
+      "sha256": "e36aab75c02e7068184542a2efcfb6c95df7ce6ff583060b8948be0eb6e79c4f",
+      "bytes": 24871
+    }
+  ],
+  "ledger": {
+    "command": null,
+    "note": "No i18n ledger or audit-ledger command exists at this head (grep for 'ledger' in package.json, scripts/i18n/ and docs/i18n.md returns nothing); docs/i18n.md makes the PR report the artifact of record. The row below is proposed, not written.",
+    "proposed_row": {
+      "locale": "vi",
+      "file_group": "mobile.schedules",
+      "status": "passed",
+      "auditor": "i18n-auditor (lopdev team)",
+      "model": "radient/auto",
+      "source_hash": "69ad8d482ad5a11830a380e1812f9fa04db12d99f92f8a676be616267987e9ec",
+      "audit_id": "vi30s1r2",
+      "record": "i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/record.json",
+      "note": "vi/mobile.schedules vi30s1r2: 38 keys, 3/3 round-1 findings resolved byte-exactly (reconstruction reproduces the r1 hash), 0 open; en/context unchanged, 3 other group-B namespaces byte-identical. Record: i18n/audits/evidence/vi/mobile.schedules/vi30s1r2/record.json"
+    }
+  },
+  "audit_notes_not_execution_log": "report.md holds judgement and reasoning; audit.log is the executed transcript (bash set -x) and covers all four group-B namespaces, so it is identical in the four delta bundles. Notes never prove execution.",
+  "rendered_artifact": {
+    "captured": false,
+    "native_review": false,
+    "claim": "No rendered UI frame and no human native-speaker review. Widths are code points, not pixels."
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.schedules.json",
+      "sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+      "sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/vi/mobile.schedules.json",
+      "sha256": "69ad8d482ad5a11830a380e1812f9fa04db12d99f92f8a676be616267987e9ec"
+    }
+  },
+  "mechanical": {
+    "repo_validator": "node scripts/i18n/generate.ts --check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)'",
+    "repo_gate": "node scripts/i18n/check-strings.ts -> exit 0: '284 finding(s), all baselined; 0 new; no growth vs 31f2ae46f45d'",
+    "affected_tests": "vitest run src/i18n/__tests__ -> 5 files, 99 tests passed, exit 0",
+    "structural_verifier": "verify.mts on the four group-B namespaces at this head: 77 keys, 5 plural nodes, 5 select nodes, 0 problems — placeholder names, select arms and per-arm placeholders identical to English; every plural node exactly ['other'] (vi CLDR categories); key parity and key order; NFC",
+    "typography": "typography.mts over the 77 group-B keys: 0 problems (no double space, no space before punctuation, no ASCII ellipsis, no '!', no straight quotes, NFC, no trailing space); no word reaches 18 characters",
+    "negative_control": "a scratch copy of the vi catalogue with an extra `one` arm on mobile.schedules.count.wakes makes verify.mts FAIL ('plural arms at $/{count,plural}: [one,other] != vi categories [other]', exit 1), so the harness is load-bearing on the file the fix touched",
+    "cldr": "Intl.PluralRules('vi').resolvedOptions().pluralCategories -> ['other']"
+  },
+  "delta_scope": {
+    "changed_keys": [
+      "mobile.schedules.empty.body",
+      "mobile.schedules.head.next",
+      "mobile.schedules.show_less.wakes",
+      "mobile.schedules.show_less.monitors"
+    ],
+    "proof": "reverting exactly those four keys to the round-1 findings' `current` values reproduces the round-1 audited sha256 2981717fd7638c1e7c5c9175bd59b6c742502e24c3c8959920802cfc7b5154f8 byte for byte; the unified diff of the two serialisations shows those four JSON lines and nothing else",
+    "source_unchanged": "en and context byte-identical to round 1",
+    "code_unchanged": "git diff 31f2ae4..fb4d8bc -- src/features/schedules is empty",
+    "render_diff": "39 shared rows compared against vi30s1/renders.tsv: exactly 6 changed, all in this namespace (2 show_less, empty.body, 3 head.next)"
+  },
+  "round1_findings": [
+    {
+      "id": "VI-B-S1",
+      "severity": "minor",
+      "round1_disposition": "open",
+      "resolution_commit": "fb4d8bcbc50c68301af624407e09b1789896e571",
+      "round1_suggestion": "Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy gửi một prompt vào cuộc trò chuyện đúng thời điểm đã hẹn; mỗi giám sát theo dõi một thứ và báo lại những gì thay đổi.",
+      "key": "mobile.schedules.empty.body",
+      "shipped": "Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy gửi một prompt vào cuộc trò chuyện đúng thời điểm đã hẹn; mỗi giám sát theo dõi một thứ và báo lại những gì thay đổi.",
+      "byte_exact": true,
+      "status": "resolved",
+      "evidence": "shipped string equals the round-1 suggested replacement character for character (computed in make_records.py); restoring the round-1 `current` text for all three findings reproduces the round-1 catalogue sha256 exactly (audit.log, 'reconstruction' block)"
+    },
+    {
+      "id": "VI-B-S2",
+      "severity": "nit",
+      "round1_disposition": "open",
+      "resolution_commit": "fb4d8bcbc50c68301af624407e09b1789896e571",
+      "round1_suggestion": "{head} · {label}",
+      "key": "mobile.schedules.head.next",
+      "shipped": "{head} · {label}",
+      "byte_exact": true,
+      "status": "resolved",
+      "evidence": "shipped string equals the round-1 suggested replacement character for character (computed in make_records.py); restoring the round-1 `current` text for all three findings reproduces the round-1 catalogue sha256 exactly (audit.log, 'reconstruction' block)"
+    },
+    {
+      "id": "VI-B-S3",
+      "severity": "nit",
+      "round1_disposition": "open",
+      "resolution_commit": "fb4d8bcbc50c68301af624407e09b1789896e571",
+      "round1_suggestion": "Ẩn bớt lần thức dậy / Ẩn bớt giám sát",
+      "keys": [
+        "mobile.schedules.show_less.wakes",
+        "mobile.schedules.show_less.monitors"
+      ],
+      "shipped": "Ẩn bớt lần thức dậy / Ẩn bớt giám sát",
+      "byte_exact": true,
+      "status": "resolved",
+      "evidence": "shipped string equals the round-1 suggested replacement character for character (computed in make_records.py); restoring the round-1 `current` text for all three findings reproduces the round-1 catalogue sha256 exactly (audit.log, 'reconstruction' block)"
+    }
+  ],
+  "re_rendered_head_line": [
+    {
+      "state": "head.next 3 wakes, +240s",
+      "call": "nextDueClause(wakeCountClause(3), 240)",
+      "rendered": "3 lần thức dậy · sau 4m"
+    },
+    {
+      "state": "head.next 1 wake, +240s",
+      "call": "nextDueClause(wakeCountClause(1), 240)",
+      "rendered": "1 lần thức dậy · sau 4m"
+    },
+    {
+      "state": "head.next 2 wakes, +5400s",
+      "call": "nextDueClause(wakeCountClause(2), 5400)",
+      "rendered": "2 lần thức dậy · sau 1h"
+    },
+    {
+      "state": "head.overdue 3 wakes, -7200s",
+      "call": "nextDueClause(wakeCountClause(3), -7200)",
+      "rendered": "3 lần thức dậy · trễ 2h"
+    },
+    {
+      "state": "head.overdue 1 wake, -60s",
+      "call": "nextDueClause(wakeCountClause(1), -60)",
+      "rendered": "1 lần thức dậy · trễ 60s"
+    }
+  ],
+  "empty_body_width": {
+    "round1_code_points": 204,
+    "round2_code_points": 215,
+    "en_code_points": 181,
+    "ratio_r2_en": 1.19,
+    "ratio_r1_en": 1.13,
+    "delta_cp": 11,
+    "judgement": "the fix costs +11 code points (+5.4%); the target is a wrapping EmptyState body with no numberOfLines clamp and no pinned footer, so the cost is at most one extra wrapped line on an otherwise empty screen, never truncation; code points, not font metrics",
+    "measured_with": "vi-delta/typography.mts and vi-delta/render.mts (audit.log)"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "blocker_ids": [],
+    "major_ids": [],
+    "finding_ids": [
+      "VI-B-S1",
+      "VI-B-S2",
+      "VI-B-S3"
+    ],
+    "carried_open": [],
+    "reason": "0 BLOCKER, 0 MAJOR, 0 MINOR, 0 NIT: all three round-1 findings are resolved byte-exactly and the fix introduced none; validator, gate, affected tests, structural verifier, typography, negative control and the production render all ran clean at fb4d8bc"
+  }
+}

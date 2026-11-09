@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "سائن اِن کا جواب موصول ہو گیا ہے۔ ایپ پر واپس جائیں۔",
+	"mobile.oauth.return": "Local Operator پر واپس جائیں",
+	"mobile.oauth.invalid": "یہ سائن اِن درخواست قبول نہیں کی گئی۔",
+	"mobile.oauth.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔"
+}

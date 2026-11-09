@@ -1,0 +1,278 @@
+{
+	"schema": 1,
+	"audit_id": "ru29s1r2",
+	"audit_kind": "same_history_delta_reaudit",
+	"round": 2,
+	"parent_audit_id": "ru29s1",
+	"locale": "ru",
+	"namespace": "mobile.schedules",
+	"file_group": "mobile.schedules",
+	"audit_date": "2026-10-30",
+	"audited_head_commit": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+	"audited_revision": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+	"audited_branch": "feat/i18n-russian",
+	"audited_worktree": "/Users/damian/workspace/ru-wave",
+	"audited_worktree_note": "ru is committed at this head (git ls-tree -r HEAD -- src/i18n/catalogues/ru lists 10 files, audit.log coda); the worktree is clean for the catalogues and the projection. This audit wrote only its evidence bundle; no catalogue byte was edited and nothing was committed.",
+	"key_count": {
+		"en": 38,
+		"target": 38,
+		"context": 38
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "d598a29e6e64",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 → openai/gpt-6-astra (provider quota) → kimi/k3.1-pro (provider quota) → radient/auto (provider quota); every command in audit.log ran under the final model",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"fallback_disclosed": true,
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the translator; not model-diverse (the translator's supplied model is also radient/auto), disclosed rather than closed. No human native-speaker review and no rendered UI frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": null,
+		"job": null,
+		"model": "radient/auto",
+		"actual_model_source": "supplied by the requesting manager; not independently observed here",
+		"date": "2026-10-30"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/report.md",
+			"sha256": "7c48df4d1fdc77e01b193424e4281ffc5650416ca2e9f705354dd397dc9cace0",
+			"bytes": 11319
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/audit.log",
+			"sha256": "e75d975a9c567a4d87a2ae450ec080222a01e51790d9e86694c7f3ab7b6151e4",
+			"bytes": 31620
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/widths.tsv",
+			"sha256": "e6c14442ce2c7bfca110ee85e52af6fb6e5c5d7e49e81b21fa32715481f03023",
+			"bytes": 2492
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/control.txt",
+			"sha256": "1ece2bf232d74fceec1a59516b88cebcd3c790c8c947156c838a8af0fd79d2cf",
+			"bytes": 908
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/verify.out.json",
+			"sha256": "44fbc169ccd028e9304585a9442aaedbc210f105d19ecf753970eb2c5dad52af",
+			"bytes": 10234
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/verify.mjs.txt",
+			"sha256": "5540db253dd54be12032fe2ca902ff3e921a2d178a69fa8219de46cd91b8119b",
+			"bytes": 12360
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/control.mjs.txt",
+			"sha256": "3de30afbd70fe2ea048c3f8bb0bf418d43535d2db60f0a8f5c828aa4f67d1a9c",
+			"bytes": 2651
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/scope.py.txt",
+			"sha256": "740fc8c7d654a8eadc6d369d51bb4cb1194322d726dafde300ffd4d14826011e",
+			"bytes": 3026
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.schedules/ru29s1r2/measure.swift.txt",
+			"sha256": "342e319c15066d509324cc20cebdfdcca7cc7532c1b166f8cdf23affe7a7a8ea",
+			"bytes": 2942
+		}
+	],
+	"ledger": {
+		"command": null,
+		"note": "No i18n ledger or audit-ledger command exists at this head (audit.log); docs/i18n.md makes the PR report the artifact of record. A row is proposed here, not written."
+	},
+	"audit_notes_not_execution_log": "report.md holds judgement and per-key reasoning; audit.log is the executed transcript (bash set -x) and is identical in the four group-B delta bundles because it covers all four namespaces unfiltered. Notes never prove execution.",
+	"rendered_artifact": {
+		"captured": false,
+		"native_review": false,
+		"claim": "No rendered frame and no human native-speaker review. Widths in fit are CoreText font metrics, not pixels."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.json",
+			"sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+			"sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/ru/mobile.schedules.json",
+			"sha256": "f95a0e2167f0f74bdd46d4479ae53eabb2ffa01b972c97e6e7132ac513c97090"
+		}
+	},
+	"delta_scope": {
+		"changed_keys": [
+			"mobile.schedules.cadence.left",
+			"mobile.schedules.summary.monitors_armed",
+			"mobile.schedules.parked.wakes",
+			"mobile.schedules.parked.monitors"
+		],
+		"proof": "inverting exactly the applied fixes reproduces the round-1 audited bytes: reconstructed sha256 2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508 == ru29s1 input_hashes.target.sha256 (scope.py, SCOPE_EXACT in audit.log)",
+		"source_unchanged": "en 0459a048…c575f and context d3f0d3bb…9aa92 are byte-identical to round 1",
+		"target_hashes": {
+			"round1": "2c56881e8200d365d75d04362fd9cbda46f0b942b9fe6a584a64062234b22508",
+			"shipped": "f95a0e2167f0f74bdd46d4479ae53eabb2ffa01b972c97e6e7132ac513c97090"
+		}
+	},
+	"round1_findings": [
+		{
+			"id": "RU-SCH-1",
+			"severity": "major",
+			"disposition": "fixed",
+			"byte_exact": true,
+			"key": "mobile.schedules.cadence.left",
+			"shipped": "{cadence} · {remaining, plural, one {осталось #} few {осталось #} many {осталось #} other {осталось #}}",
+			"evidence": "shipped bytes == prescribed bytes; formatMessage at 0/1/2/5/11/21/22/101/1.5 reads «раз в 1d · осталось #» in every arm, including the last delivery that used to flip to «остался 1»"
+		},
+		{
+			"id": "RU-SCH-2",
+			"severity": "major",
+			"disposition": "fixed",
+			"byte_exact": true,
+			"key": "mobile.schedules.summary.monitors_armed",
+			"shipped": "{count, plural, one {# активный} few {# активных} many {# активных} other {# активных}}",
+			"renders": {
+				"0": "0 активных",
+				"1": "1 активный",
+				"2": "2 активных",
+				"5": "5 активных",
+				"21": "21 активный",
+				"101": "101 активный",
+				"1.5": "1.5 активных"
+			},
+			"evidence": "monitorSectionSummary([]) -> «0 активных» (the reachable zero round 1 measured); shipped bytes == prescribed bytes"
+		},
+		{
+			"id": "RU-SCH-3",
+			"severity": "minor",
+			"disposition": "fixed",
+			"byte_exact": false,
+			"key": "mobile.schedules.parked.wakes + mobile.schedules.parked.monitors",
+			"shipped": "Приостановлено — пробуждения возобновятся после следующего хода этой беседы / Приостановлено — мониторы возобновятся, когда снова запустится эта беседа",
+			"prescribed": "Приостановлено — пробуждения возобновятся после следующего хода / Приостановлено — мониторы возобновятся, когда эта беседа снова запустится",
+			"deviation": "Both arms name the referent explicitly («этой беседы» / «эта беседа») instead of dropping the possessive / restoring the demonstrative; the monitors arm also moves the subject to the end.",
+			"evidence": "Executed through parkedWakesClause()/parkedMonitorsClause(): no dangling pronoun, genitive government holds («после хода этой беседы»), verb-first monitors clause is idiomatic, meaning matches en. Width 515.6 pt vs 453.9 (round 1) and 436.4 (prescribed); still 2 wrapped lines at 288 pt, entry head unclamped (schedules.tsx:379/:450); 5 lines at 200 % text scale vs 4 for the prescribed wording.",
+			"filed_as": "none — no rule violated, nothing clips; recorded as a benign deviation in report.md"
+		},
+		{
+			"id": "RU-SCH-4",
+			"severity": "nit",
+			"disposition": "not_applied",
+			"byte_exact": false,
+			"key": "mobile.schedules.empty.body",
+			"shipped": "Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; мониторы следят за одним объектом и сообщают об изменениях.",
+			"prescribed": "…мониторы следят за чем-то одним и сообщают об изменениях.",
+			"evidence": "shipped bytes still carry «за одним объектом»; no rejection is recorded in 2921aea. NIT, non-gating, carried open."
+		}
+	],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"finding_ids": [
+			"RU-SCH-4"
+		],
+		"carried_open": [
+			{
+				"id": "RU-SCH-4",
+				"severity": "nit",
+				"status": "not_applied",
+				"note": "«за одним объектом» unchanged; does not gate a pass"
+			}
+		],
+		"reason": "0 BLOCKER, 0 MAJOR. RU-SCH-1 and RU-SCH-2 are fixed byte-exactly and executed at the counts round 1 measured; RU-SCH-3 is fixed with a verified wording deviation; RU-SCH-4 (NIT) is unapplied and carried open, which does not gate."
+	},
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:catalogue:check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)'",
+		"repo_gate": "npm run -s i18n:check -> exit 0: catalogue check plus 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d'",
+		"repo_validator_scope": "key parity and message parse; it does not compare placeholders or CLDR arms across locales, so the harness below compares every key itself",
+		"gate_test": "vitest run src/i18n/__tests__/catalogues.test.ts -> 39 passed (39). Round 1 reported 1 failed / 37 passed on this file because ru was a directory without being shipped; the flip closed that gate.",
+		"pair_audit": "all four group-B namespaces parsed in en and ru (38/15/14/10 keys); zero missing, zero extra, authoring order identical, zero duplicate keys in the JSON text; paramOrArmProblems: []; every ru plural carries one/few/many/other; select arms identical to en; no bidi/zero-width; «ёлочки» and U+2026 only",
+		"escalations": [
+			"mobile.schedules.cadence.left {remaining}: text->plural",
+			"mobile.schedules.summary.monitors_armed {count}: text->plural",
+			"mobile.schedules.summary.monitors_attention {broken}: text->plural",
+			"mobile.schedules.tail.failed {count}: text->plural",
+			"mobile.projects.milestones.count {completed}: text->plural",
+			"mobile.projects.sessions.live {live}: text->plural"
+		],
+		"escalation_rule": "generate.ts parameter-parity allows a translation to turn a plain-text placeholder into a plural selector; all six were recorded in round 1 and none is new in this delta",
+		"negative_controls": "6/6 as expected (control.txt): the same parser/renderer still shows «остался 1» for the round-1 cadence bytes, «0 активны» for the round-1 armed bytes, and the ', и не может' join for the round-1 hint — and renders the shipped bytes correctly",
+		"plural_string_negative_control": "formatMessage on a plural with a string argument throws RangeError: 'Message \"{n, plural, one {# x} other {# x}}\" needs a number for \"n\", received \"1\"' — the plural selector is still typed as a number"
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage/PluralRules)",
+		"runtime": "src/i18n/runtime.ts (renderFor/t)",
+		"composition": "src/features/schedules/schedules-copy.ts and src/features/projects/projects-copy.ts (the real call sites, imported from the shipped worktree at 2921aea)",
+		"preference": "setLocaleSource(() => 'ru') — the app's own wiring; ru is a SHIPPED locale at this head, so t()/renderFor resolve the Russian catalogue natively (round 1 needed a scratch copy with +\"ru\")",
+		"alias_resolution": "scripts/lib/load-src.ts plus a 5-line '@/…' -> src/… resolve hook in the audit harness; no src/ file was modified",
+		"sha256": {
+			"src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+			"src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+			"src/i18n/catalogue.gen.ts": "3764e868e7cdbe059f0d7665c5fe1830ad48830ee798703701edf1606800bb55",
+			"src/i18n/locale.ts": "9a83212d480017a9a08970b4c33f5eebf327d14e456e9fcc13d4a7146096a010",
+			"src/features/schedules/schedules-copy.ts": "fc3f87acb290fd9737142c09af6761456ecabe23917035636e5ad46f59077b52",
+			"src/features/projects/projects-copy.ts": "24d57749edf9b5705a0456e99e6d11d8c39e985854f56fdd647e79a6c95e36f7"
+		}
+	},
+	"renders": {
+		"cadence_left": {
+			"0": "раз в 1d · осталось 0",
+			"1": "раз в 1d · осталось 1",
+			"2": "раз в 1d · осталось 2",
+			"5": "раз в 1d · осталось 5",
+			"21": "раз в 1d · осталось 21",
+			"101": "раз в 1d · осталось 101",
+			"1.5": "раз в 1d · осталось 1.5"
+		},
+		"cadence_left_arms_identical": true,
+		"cadence_left_type": "\"mobile.schedules.cadence.left\": { cadence: string | number; remaining: number }; (catalogue.gen.ts:388)",
+		"monitors_armed": {
+			"0": "0 активных",
+			"1": "1 активный",
+			"2": "2 активных",
+			"5": "5 активных",
+			"21": "21 активный",
+			"101": "101 активный",
+			"1.5": "1.5 активных"
+		},
+		"section_header_zero": "Monitors · 0 активных",
+		"neighbours_unchanged": "count.wakes / count.monitors / show_more.* / tail.failed / summary.monitors_attention re-rendered at 0/1/2/5/21/1.5 and identical to the round-1 table"
+	},
+	"fit": {
+		"basis": "AppKit CoreText, .AppleSystemUIFont at text-meta 12/500 (the type step both slots paint), greedy word wrap against 288 pt of content (a 320 pt device less Screen/Sheet px-4 = 32); lines at 200 % are the same wrap with doubled advances. These are font metrics, not pixels.",
+		"parked_wakes_shipped_pt": 515.6,
+		"parked_wakes_round1_pt": 453.9,
+		"parked_wakes_prescribed_pt": 436.4,
+		"parked_wakes_lines_288": 2,
+		"parked_wakes_lines_200pct": 5,
+		"parked_monitors_shipped_pt": 485.1,
+		"en_parked_wakes_pt": 243.4,
+		"clamp": "the entry head carries no numberOfLines (schedules.tsx:379 and :450); it wraps rather than clipping",
+		"result": "No unbreakable token exceeds its slot; nothing truncates. The SCH-3 deviation costs one extra line at 200 % text scale (5 vs 4) and none at base size."
+	},
+	"regressions_checked": [
+		"every plural in the namespace at 0/1/2/5/21/1.5 against the round-1 table: identical",
+		"composition through the real call sites: nextDueClause/wakeCountClause/monitorCountClause/truncatedClause/parked*/gone*/supervisor leads/empty body",
+		"mobile.notifications and mobile.computers are byte-identical to their round-1 audited bytes"
+	]
+}

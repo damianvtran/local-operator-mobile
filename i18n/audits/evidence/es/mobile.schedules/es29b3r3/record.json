@@ -1,0 +1,344 @@
+{
+	"schema": 1,
+	"audit_id": "es29b3r3",
+	"audit_kind": "independent_verification_round_3",
+	"round": 3,
+	"locale": "es",
+	"namespace": "mobile.schedules",
+	"file_group": "mobile.schedules",
+	"audit_date": "2026-10-30",
+	"audited_head_commit": "bc770cea33d8d4265b1105baad53a5bb5a482ef2",
+	"audited_branch": "feat/i18n-spanish",
+	"audited_worktree": "/Users/damian/workspace/es-wave",
+	"audited_worktree_note": "git status --porcelain showed no modification before the bundle was written, and git diff HEAD -- the audited file is empty: the bytes judged ARE the committed bytes (sha256 verified against `git show HEAD:...`).",
+	"purpose": "Third-round verification of ONE namespace after the implementer shipped round 2's three exact replacements (commits e2e9f30 and bc770ce). Scope is the remediation and its direct neighbours plus a full mechanical re-run; unchanged keys were re-read for collateral damage, not re-litigated.",
+	"baseline_of_this_round": {
+		"previous_audit_id": "es29b3r2",
+		"previous_record": "i18n/audits/evidence/es/mobile.schedules/es29b3r2/record.json",
+		"previous_status": "changes_requested",
+		"previous_unresolved_blocker_major_count": 1,
+		"previous_finding_ids": [
+			"ES-SCH-6",
+			"ES-SCH-7",
+			"ES-SCH-8"
+		],
+		"previous_target_sha256": "cb58766d4f3933e0c2d64012be2e93712d7e49f506e38b6d6806d2228b3b4a83",
+		"previous_target_commit": "f1c782f22a1f4a3f31f025282849cc62ba41b8c6",
+		"previous_bytes_recoverable_from_git": true,
+		"previous_bytes_note": "Unlike round 2's baseline, these bytes ARE in git (f1c782f), so every 'before' value is re-read from git rather than quoted from the previous bundle; the delta and the negative control both use `git show f1c782f:...` (audit.log §6, §8)."
+	},
+	"key_count": {
+		"en": 38,
+		"target": 38,
+		"changed_since_previous_round": 4
+	},
+	"delta_since_previous_round": {
+		"keys": [
+			"mobile.schedules.empty.body",
+			"mobile.schedules.gone.monitors",
+			"mobile.schedules.gone.wakes",
+			"mobile.schedules.state.stale"
+		],
+		"proved_exhaustive": "git diff --unified=0 f1c782f..HEAD -- src/i18n/catalogues/es/mobile.schedules.json shows exactly 4 added / 4 removed lines, and the changed-key set equals the three findings' four keys; no other es catalogue file changed in the delta (git diff --stat f1c782f..bc770ce -- src/i18n/catalogues/ -> one file).",
+		"commits": [
+			"e2e9f30",
+			"bc770ce"
+		]
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "0c96bc62035b",
+		"model": "radient/auto",
+		"actual_model_source": "Session model header at the time of every command in audit.log: radient/auto. Temporary provider-failure fallback chain, all before the first command: anthropic/claude-sonnet-5-5 (provider quota) -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto. No earlier hop's output is used as evidence.",
+		"fallback_disclosed": true,
+		"independent_from_translator_session": true,
+		"independent_from_previous_rounds": true,
+		"independence": "Different session and context from the translator and from the round-1 and round-2 auditors; this round re-derived the expected strings by parsing round 2's report rows and re-read the necessity of each fix from the code (wakeDueWord call site, core es vocabulary) rather than trusting the previous bundle's reasoning. MODEL IDENTITY IS NOT DIVERSE: rounds 1, 2 and 3 all served radient/auto. Session independence only, disclosed, not closed."
+	},
+	"translator": {
+		"agent": "not recorded in this bundle",
+		"model": "not independently observed by this auditor",
+		"note": "This round judges a REMEDIATION wave; the author of the fixes is the manager's record, not this auditor's, and no author note was read as evidence. The original translation wave's author is likewise not asserted here: round 1's bundle is the record for it."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.json",
+			"sha256": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.schedules.context.json",
+			"sha256": "d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/es/mobile.schedules.json",
+			"sha256": "bf8afe000f506431789fb5df4654d700bf5935238eb1ba01f3aa1854936bd826",
+			"commit": "bc770cea33d8d4265b1105baad53a5bb5a482ef2"
+		},
+		"previous_target_sha256": "cb58766d4f3933e0c2d64012be2e93712d7e49f506e38b6d6806d2228b3b4a83"
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage/pluralCategory)",
+		"runtime": "src/i18n/runtime.ts (renderFor; exercised by the repo's own runtime.test.ts)",
+		"projection": "src/i18n/catalogue.gen.ts",
+		"locale_source": "src/i18n/locale.ts (SHIPPED_LOCALES = en, fr, es)",
+		"sha256": {
+			"src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+			"src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+			"src/i18n/catalogue.gen.ts": "d9a72ed53f88a49cbbc855dbeada6d45b709aef9b7a7e878e718d90987a3e9bb",
+			"src/i18n/locale.ts": "72713f50b78bed572acf0f14d3647327fba825e1468f05f80b9c65e85dfdfaee"
+		},
+		"parser_unchanged_since_round_2": true,
+		"note": "messages.ts and runtime.ts carry the same sha256 as round 2 recorded, so the parser that produced round 2's numbers is the one that produced this round's."
+	},
+	"checks_executed": {
+		"repository_validator": {
+			"command": "node scripts/i18n/generate.ts --check",
+			"exit": 0,
+			"output": "src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)"
+		},
+		"strings_validator": {
+			"command": "node scripts/i18n/check-strings.ts",
+			"output": "284 finding(s), all baselined; 0 new; no growth vs c5f491ece9db"
+		},
+		"repo_tests": {
+			"command": "npx vitest run src/i18n/__tests__ src/features/schedules",
+			"result": "6 test files, 152 tests passed"
+		},
+		"key_parity": {
+			"missing_in_target": 0,
+			"extra_in_target": 0,
+			"same_order_as_en": true,
+			"count": "38/38"
+		},
+		"icu_parse": {
+			"messages": 38,
+			"failures": 0
+		},
+		"placeholder_names": {
+			"identical_in": "38/38"
+		},
+		"placeholder_kinds_promoted_text_to_plural": {
+			"keys": [
+				"mobile.schedules.summary.wakes",
+				"mobile.schedules.summary.monitors_armed",
+				"mobile.schedules.summary.monitors_attention",
+				"mobile.schedules.tail.failed"
+			],
+			"disposition": "accepted, unchanged from round 2: generate.ts merges argument kinds across en/es/fr and fails only on a plural/select clash; names are kept; callers pass numbers and the renders prove the plural path formats (1 de 40 requiere atención)."
+		},
+		"plural_arms": {
+			"cldr_categories_es": [
+				"one",
+				"many",
+				"other"
+			],
+			"plural_messages": 8,
+			"arm_problems": 0,
+			"arms_dropped_vs_en": 0,
+			"non_es_category": 0
+		},
+		"total_argument_retention": {
+			"key": "mobile.schedules.summary.monitors_attention",
+			"arms": [
+				"one",
+				"many",
+				"other"
+			],
+			"total_present_in_every_arm": true
+		},
+		"attention_renders": {
+			"broken=1,total=40": "1 de 40 requiere atención",
+			"broken=2,total=40": "2 de 40 requieren atención"
+		},
+		"truncated_both_families": {
+			"wakes": "Mostrando 3 de 9 conversaciones con despertares.",
+			"monitors": "Mostrando 3 de 9 conversaciones con monitorizaciones.",
+			"covers": [
+				"3/9",
+				"1/9",
+				"1/1",
+				"200/500"
+			]
+		},
+		"shipped_projection": {
+			"command": "node e2e.mjs (catalogue.gen.ts)",
+			"namespace_keys_present": "38/38",
+			"projection_bytes_differing_from_file": 0,
+			"renders_served_from_es": "12/12",
+			"fell_back_to_en": 0
+		},
+		"mechanically_clean": [
+			"0 bidi control characters",
+			"0 markup/backtick/code-span differences",
+			"0 double spaces",
+			"0 space-before-punctuation",
+			"0 exclamation marks",
+			"em dash ' — ' with spaces in all 4 values that use one",
+			"rendered terminal punctuation matches en in every key"
+		],
+		"negative_controls": [
+			"the pre-fix catalogue (git show f1c782f) FAILS the byte comparison on all four keys, so the matcher can fail",
+			"the pre-fix gone.monitors contains 'ya no está' twice; the head line once plus 'ya no existe' once",
+			"a message with the many arm removed is caught as missing 'many' and renders '1000000 monitorizaciones'",
+			"an attention message with {total} deleted is caught by the placeholder-name parity check",
+			"the ungrammatical control at broken=1 renders '1 de 40 requieren atención'"
+		]
+	},
+	"findings_disposition": [
+		{
+			"id": "ES-SCH-6",
+			"severity": "major",
+			"key": "mobile.schedules.state.stale",
+			"requested": "obsoleto",
+			"shipped": "obsoleto",
+			"byte_match": true,
+			"status": "closed",
+			"independently_reasoned": "reached only from wakeDueWord (schedules-copy.ts:362-363), so the noun is 'el despertar' (masc); core es tui.review.lane_stale = 'obsoleto'."
+		},
+		{
+			"id": "ES-SCH-7",
+			"severity": "minor",
+			"keys": [
+				"mobile.schedules.gone.monitors",
+				"mobile.schedules.gone.wakes"
+			],
+			"requested": [
+				"Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba",
+				"Ya no está — su conversación ya no existe en esta máquina, así que nada lo dispara"
+			],
+			"shipped": [
+				"Ya no está — su conversación ya no existe en esta máquina, así que nada la comprueba",
+				"Ya no está — su conversación ya no existe en esta máquina, así que nada lo dispara"
+			],
+			"byte_match": true,
+			"status": "closed",
+			"independently_reasoned": "'ya no está' occurs twice in the pre-fix line and once in each shipped line; core's relay.asks.card.gone also phrases an absent conversation as 'ya no existe'."
+		},
+		{
+			"id": "ES-SCH-8",
+			"severity": "nit",
+			"key": "mobile.schedules.empty.body",
+			"requested_tail": "; cada monitorización vigila una cosa y avisa de lo que cambia.",
+			"shipped_full_value": "Pide a un agente en el chat que haga algo de forma regular y aparecerá aquí. Los despertares lanzan un prompt en una conversación a una hora concreta; cada monitorización vigila una cosa y avisa de lo que cambia.",
+			"byte_match": true,
+			"status": "closed",
+			"independently_reasoned": "the prefix before '; ' is byte-identical to f1c782f ('rest of the value unchanged' honoured); the distributive singular now carries the class."
+		}
+	],
+	"new_findings": [],
+	"observations_not_gating": [
+		"truncated at total=1 renders 'Mostrando 1 de 1 conversaciones'; the English source has the same agreement defect ('Showing 1 of 1 conversations') because {total} is a plain placeholder in both locales. A source-side plural on {total} and a caller change, not a translation fix; not raised as a finding.",
+		"head.next ('{head} · próximo {label}') is as compressed as English 'next {label}'; unchanged and accepted in rounds 1 and 2."
+	],
+	"fit": {
+		"declared_budget": "none: this namespace's context sidecar carries no maxCells/maxChars",
+		"char_delta_vs_previous_round": {
+			"state.stale": 0,
+			"gone.monitors": 2,
+			"gone.wakes": 2,
+			"empty.body": -3
+		},
+		"method": "character delta against round 2's measured SF Pro baseline (gone ≈515pt over 2 lines, empty.body ≈1438pt over 6 lines at 100%), not a re-measurement",
+		"not_re_measured_because": "read-only session; harness rules forbid scratch dependency installs (Pillow is not installed for this interpreter)",
+		"clipping": "impossible by construction: numberOfLines appears only on the entry name in schedules.tsx; every string here wraps"
+	},
+	"branch_state_observation": {
+		"is_translation_finding": false,
+		"affects_audit_verdict": false,
+		"gate": "tools/audit/u08-content-pins.test.ts (U-08 content identity)",
+		"command": "npx vitest run tools/audit/u08-content-pins.test.ts",
+		"result": "Test Files 1 failed (1) | Tests 3 failed | 31 passed (34)",
+		"detail": "render-tree src pinned=9bfcc365da9be0eae7fef769dac06cae1bb972b24287b970a24214280316f488 actual=c26144d11656a55cad67ef7019d152d668bad322658ec74081ebcb3a7a916646",
+		"attribution": "the pin equals the src digest at e2e9f30 (the head commit's parent), not at bc770ce; the head commit added 12 lines to src/i18n/__tests__/runtime.test.ts after computing the pin it ships (pin-attrib3.py, audit.log §10)",
+		"impact": "vitest.config.ts includes tools/**/*.test.ts, so `pnpm test` fails on this branch at this head; code review round 1 raised the same gate",
+		"owner_action": "run `node tools/audit/u08-content-pins.ts --print` at the head and commit the resulting src pin; not fixed here because this round is read-only"
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": [],
+		"previous_round_status": "changes_requested",
+		"previous_round_unresolved_blocker_major_count": 1,
+		"scope": "remediation ES-SCH-6/7/8 and its direct neighbours, plus a full mechanical re-run of the 38 keys"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/report.md",
+			"role": "audit report",
+			"sha256": "a4b8d03ad72ea391421f7fa7e8f28d9ef31e11ee4e21ba88522b952000c48a1e"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/audit.log",
+			"role": "execution log (actual command output)",
+			"sha256": "3fc711b325abdcd9f954870fba7ef8b86c9d602fcd96a05474abdb97483d94fb"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/probe.mjs.txt",
+			"role": "mechanical parity/ICU/plural-arm probe executed in audit.log §6",
+			"sha256": "1a4b1e095b55da0551a0b658bd0b9e30e191115b970b4d341393bcb12521f545"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/e2e.mjs.txt",
+			"role": "shipped-projection render executed in audit.log §7",
+			"sha256": "e3d65faab87513ea8497b8faad2e35d418b0a356cf35b7b4d838c45ffea5932b"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/verify_remediation.py.txt",
+			"role": "byte comparison against the round-2 request executed in audit.log §8",
+			"sha256": "6a68ffbbb2fff2c400d5f94778c6c9f11420d7df61beba497912365044770360"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/pin-attrib3.py.txt",
+			"role": "U-08 pin attribution executed in audit.log §10",
+			"sha256": "3007b2847665cca57614fe8f3d06e1a75a4618a7e95353ca098ed22e186a82a3"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/run-all.sh.txt",
+			"role": "the driver that produced audit.log",
+			"sha256": "7ab06dfc29209e3e53b2314b3d825e769d90e0c1e5d75f6574ad3ff9a588ee59"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and this record carry per-key reasoning and findings (notes). audit.log carries actual command output: identity and repository state (1), input hashes (2), the validator (3), the strings validator (4), repo tests (5), the parity/ICU/plural probe (6), the shipped-projection render (7), the defensive control (7b), the byte-for-byte remediation check (8), the no-ledger proof (9), the U-08 branch-state observation with attribution (10) and the read-only confirmation (11). No native-speaker review and no screenshot claim is made.",
+	"ledger": {
+		"recorded": false,
+		"reason": "This mobile repository has no i18n/ledger.json and no audit-ledger command under scripts/i18n/ (audit.log §9: ls exit 1; the declared i18n scripts are only i18n:generate, i18n:catalogue:check, i18n:strings:check, i18n:check). No RFC CLI ledger receipt can be claimed here.",
+		"ledger_row_proposed": {
+			"written": false,
+			"locale": "es",
+			"file_group": "mobile.schedules",
+			"round": 3,
+			"status": "passed",
+			"auditor": "i18n-auditor",
+			"model": "radient/auto",
+			"source_hash": "0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f",
+			"hash_subject": "src/i18n/catalogues/en/mobile.schedules.json (English source, current bytes)",
+			"target_hash": "bf8afe000f506431789fb5df4654d700bf5935238eb1ba01f3aa1854936bd826",
+			"unresolved_blocker_major_count": 0,
+			"note": "R3 passed: ES-SCH-6/7/8 closed byte-identically (obsoleto, 'ya no existe' x2, 'cada monitorización'); 38/38 parity, 8 plurals, 0 blocker/major. Branch red on U-08 pin, not the copy (report §5). Record: i18n/audits/evidence/es/mobile.schedules/es29b3r3/record.json",
+			"note_length": 263,
+			"record_path": "i18n/audits/evidence/es/mobile.schedules/es29b3r3/record.json",
+			"record_tracked": false,
+			"tracked_note": "This bundle is written untracked and left unstaged because the round is read-only; the implementer commits it, at which point the record path in this row becomes tracked."
+		}
+	},
+	"read_only_confirmation": {
+		"source_files_modified": false,
+		"git_state_changed": false,
+		"committed": false,
+		"untracked_files": [
+			"i18n/audits/evidence/es/mobile.schedules/es29b3r3/"
+		],
+		"note": "The bundle was written untracked and left unstaged; git status shows only this evidence directory. The round-1 es29b3 and round-2 es29b3r2 bundles were not touched."
+	},
+	"original_lost_evidence": {
+		"status": "none"
+	},
+	"limitations": [
+		"No native-speaker human review: the judgement is an LLM auditor's, in one session.",
+		"No rendered proof: no simulator, screenshot or browser frame; fit is a character delta on round 2's font-metric baseline.",
+		"Model identity is not diverse from rounds 1 and 2: all three served radient/auto.",
+		"The audit-ledger row could not be written: no ledger file or ledger command exists in this repository; the row is proposed (unwritten) above.",
+		"Round 3 verifies a delta: unchanged keys were re-read for collateral damage, not re-audited from first principles.",
+		"Out of scope by design: hardcoded English 'Monitors ·'/'Wakes ·' prefixes, 'Schedules', 'Back' and 'Try again' in schedules.tsx are not catalogue keys."
+	]
+}

@@ -1,0 +1,73 @@
+// Width measurement for the ru wave audit.
+//
+// Same shape as the zh-CN bundle's measure tool: CoreText with the app's sans
+// stack (Figtree, falling back to the system face), one line per item, reporting
+// the advance in points at the type step the slot actually paints.
+//
+// Input  (stdin): JSON array of {"label":str,"text":str,"size":Double,"weight":Double}
+// Output (stdout): JSON lines {"label","size","chars","utf16","cells","width","font"}
+//
+// "cells" is the terminal-cell proxy the core's maxCells budgets are expressed
+// in: one cell per code point, two for East-Asian WIDE/FULLWIDTH ranges, and
+// U+2026 HORIZONTAL ELLIPSIS counted as 1 (its Unicode East_Asian_Width is
+// Ambiguous, and rich's cell table gives ambiguous characters one cell). The
+// second count, "cellsEllipsisWide", repeats it with the ellipsis at 2 cells —
+// the convention the zh-CN bundle used — so both readings are on the record.
+import Foundation
+import CoreText
+import AppKit
+
+struct Item: Codable { let label: String; let text: String; let size: Double; let weight: Double }
+struct Row: Codable {
+    let label: String; let size: Double; let chars: Int; let utf16: Int
+    let cells: Int; let cellsEllipsisWide: Int; let width: Double; let font: String
+}
+
+let raw = FileHandle.standardInput.readDataToEndOfFile()
+let items = try JSONDecoder().decode([Item].self, from: raw)
+
+func fontAt(_ size: Double, _ weight: Double) -> NSFont {
+    if let f = NSFont(name: "Figtree", size: size) { return f }
+    let w: NSFont.Weight = weight >= 600 ? .semibold : (weight >= 500 ? .medium : .regular)
+    return NSFont.systemFont(ofSize: size, weight: w)
+}
+
+func isWide(_ v: UInt32) -> Bool {
+    (v >= 0x1100 && v <= 0x115F) || (v >= 0x2E80 && v <= 0xA4CF)
+        || (v >= 0xAC00 && v <= 0xD7A3) || (v >= 0xF900 && v <= 0xFAFF)
+        || (v >= 0xFE30 && v <= 0xFE6F) || (v >= 0xFF00 && v <= 0xFF60)
+        || (v >= 0xFFE0 && v <= 0xFFE6) || (v >= 0x20000 && v <= 0x3FFFD)
+}
+
+func cells(_ s: String, ellipsisWide: Bool) -> Int {
+    var n = 0
+    for u in s.unicodeScalars {
+        let v = u.value
+        if isWide(v) { n += 2 }
+        else if v == 0x2026 && ellipsisWide { n += 2 }
+        else { n += 1 }
+    }
+    return n
+}
+
+var rows: [Row] = []
+for it in items {
+    let f = fontAt(it.size, it.weight)
+    let attr = NSAttributedString(string: it.text, attributes: [.font: f])
+    let line = CTLineCreateWithAttributedString(attr as CFAttributedString)
+    let width = CTLineGetTypographicBounds(line, nil, nil, nil)
+    rows.append(Row(
+        label: it.label, size: it.size,
+        chars: it.text.count, utf16: it.text.utf16.count,
+        cells: cells(it.text, ellipsisWide: false),
+        cellsEllipsisWide: cells(it.text, ellipsisWide: true),
+        width: width,
+        font: f.fontName
+    ))
+}
+
+let encoder = JSONEncoder()
+for r in rows {
+    let data = try encoder.encode(r)
+    print(String(data: data, encoding: .utf8)!)
+}

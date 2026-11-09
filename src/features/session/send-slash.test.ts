@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { COMPOSER_COPY } from "@/features/session/composer";
+import { composerCopy } from "@/features/session/composer";
 import { sendSlashCommand } from "@/features/session/send-slash";
 import { slashQuery } from "@/features/session/slash";
 
@@ -135,7 +135,7 @@ describe("a tapped slash command is sent like any other send", () => {
 		expect(sent).toBe(false);
 		// A plain Error is not a RelayError: the product's own sentence, never
 		// `String(exception)` — the rule the typed path applies.
-		expect(e.errors).toEqual([null, COMPOSER_COPY.continuationError]);
+		expect(e.errors).toEqual([null, composerCopy().continuationError]);
 		// No draft write at all, so the field — and the sheet with it — is untouched.
 		expect(e.drafts).toEqual([]);
 		// And the flag is released on the failure path too, or the composer would

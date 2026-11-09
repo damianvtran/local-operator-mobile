@@ -1,0 +1,229 @@
+"""Independent mechanical audit of the French mobile namespaces in scope (round 2).
+
+No translation/MT service is used. This parses, counts and compares the files
+against the English source and prints the evidence; it changes nothing.
+"""
+import hashlib
+import json
+import os
+import re
+import sys
+import unicodedata
+
+BASE = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n"
+NAMESPACES = sys.argv[1:] or ["mobile.computers", "mobile.projects", "mobile.session"]
+
+BIDI = set(range(0x202A, 0x202F)) | set(range(0x2066, 0x206A)) | {0x200E, 0x200F, 0x061C}
+CLDR = {"en": {"one", "other"}, "fr": {"one", "many", "other"}}
+
+
+def sha256(path):
+    with open(path, "rb") as handle:
+        return hashlib.sha256(handle.read()).hexdigest()
+
+
+def load(rel):
+    with open(os.path.join(BASE, rel), encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def match_brace(message, start):
+    """Index of the '}' matching the '{' at `start`."""
+    depth = 0
+    for pos in range(start, len(message)):
+        if message[pos] == "{":
+            depth += 1
+        elif message[pos] == "}":
+            depth -= 1
+            if depth == 0:
+                return pos
+    raise ValueError(f"unbalanced braces: {message!r}")
+
+
+def top_level_commas(body):
+    parts, depth, current = [], 0, ""
+    for char in body:
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+        if char == "," and depth == 0:
+            parts.append(current)
+            current = ""
+        else:
+            current += char
+    parts.append(current)
+    return parts
+
+
+def scan_placeholders(message):
+    """Outermost placeholders: name -> declared kind ('text' | 'plural' | 'select')."""
+    found = {}
+    pos = 0
+    while pos < len(message):
+        if message[pos] == "{":
+            end = match_brace(message, pos)
+            parts = top_level_commas(message[pos + 1 : end])
+            name = parts[0].strip()
+            if re.fullmatch(r"[A-Za-z_]\w*", name):
+                found[name] = parts[1].strip() if len(parts) > 1 else "text"
+            pos = end + 1
+        else:
+            pos += 1
+    return found
+
+
+def all_placeholder_names(message):
+    """Every placeholder name in the message, INCLUDING ones nested in branches."""
+    return set(re.findall(r"\{\s*([A-Za-z_]\w*)", message))
+
+
+def all_placeholder_kinds(message):
+    """Name -> declared kind for a placeholder at ANY nesting depth."""
+    kinds = {}
+    pos = 0
+    while pos < len(message):
+        if message[pos] == "{":
+            end = match_brace(message, pos)
+            parts = top_level_commas(message[pos + 1 : end])
+            name = parts[0].strip()
+            if re.fullmatch(r"[A-Za-z_]\w*", name):
+                kinds.setdefault(name, parts[1].strip() if len(parts) > 1 else "text")
+        pos += 1
+    return kinds
+
+
+def plural_branches(message):
+    """(argument, branch selectors) for every plural argument, outermost-first."""
+    out = []
+    pos = 0
+    while pos < len(message):
+        if message[pos] == "{":
+            end = match_brace(message, pos)
+            parts = top_level_commas(message[pos + 1 : end])
+            name = parts[0].strip()
+            if len(parts) > 2 and parts[1].strip() == "plural":
+                # Walk the remaining fields: at depth 0 each is "selector {body}".
+                selectors, depth, field = set(), 0, ""
+                rest = ",".join(parts[2:])
+                for index, char in enumerate(rest):
+                    if char == "{":
+                        if depth == 0:
+                            token = field.strip().rstrip(",").strip()
+                            if token:
+                                selectors.add(token)
+                            field = ""
+                        depth += 1
+                    elif char == "}":
+                        depth -= 1
+                    elif depth == 0:
+                        field += char
+                out.append((name, selectors))
+            pos = end + 1
+        else:
+            pos += 1
+    return out
+
+
+def typography(message):
+    issues = []
+    for char in message:
+        code = ord(char)
+        if code in BIDI:
+            issues.append(f"bidi U+{code:04X}")
+        if code == 0x27:
+            issues.append("straight apostrophe U+0027")
+        if unicodedata.combining(char):
+            issues.append("combining mark")
+    for match in re.finditer(r"[ \u00A0]([:;!?])", message):
+        space = match.group(0)[0]
+        if space != "\u202f":
+            issues.append(f"U+{ord(space):04X} before {match.group(1)!r} (guide requires U+202F)")
+    return issues
+
+
+TOKENS = ["lop mobile", "Radient", "Local Operator"]
+
+
+def main():
+    print("== inputs (sha256 of the exact bytes audited) ==")
+    for namespace in NAMESPACES:
+        for label, rel in (
+            ("en", f"src/i18n/catalogues/en/{namespace}.json"),
+            ("context", f"src/i18n/catalogues/en/{namespace}.context.json"),
+            ("target", f"src/i18n/catalogues/fr/{namespace}.json"),
+        ):
+            print(f"{namespace:20s} {label:8s} {rel:52s} {sha256(os.path.join(BASE, rel))}")
+
+    overall_ok = True
+    for namespace in NAMESPACES:
+        en = load(f"src/i18n/catalogues/en/{namespace}.json")
+        context = load(f"src/i18n/catalogues/en/{namespace}.context.json")
+        fr = load(f"src/i18n/catalogues/fr/{namespace}.json")
+        print(f"\n== {namespace} ==  en={len(en)} fr={len(fr)} context={len(context)}")
+        for label, ok in (
+            ("key parity en==fr", set(en) == set(fr)),
+            ("context parity en==context", set(en) == set(context)),
+        ):
+            print(f"  [{'PASS' if ok else 'FAIL'}] {label}")
+            overall_ok &= ok
+        print(f"  missing in fr: {sorted(set(en) - set(fr))}")
+        print(f"  extra in fr:   {sorted(set(fr) - set(en))}")
+
+        for key in en:
+            source, target = en[key], fr[key]
+            source_params = scan_placeholders(source)
+            target_params = scan_placeholders(target)
+            source_names = all_placeholder_names(source)
+            target_names = all_placeholder_names(target)
+            name_ok = source_names == target_names
+            kind_ok, kind_note = True, []
+            source_kinds = all_placeholder_kinds(source)
+            target_kinds = all_placeholder_kinds(target)
+            for name, source_kind in source_kinds.items():
+                target_kind = target_kinds.get(name)
+                if source_kind == target_kind:
+                    continue
+                if source_kind == "text" and target_kind in {"plural", "select"}:
+                    kind_note.append(f"{name}: text->{target_kind} (allowed escalation)")
+                    continue
+                kind_ok = False
+            overall_ok &= name_ok and kind_ok
+            print(
+                f"  [{'PASS' if name_ok and kind_ok else 'FAIL'}] {key}: placeholder names"
+                f" en={sorted(source_names)} fr={sorted(target_names)}"
+                f" ; outermost kinds en={source_params} fr={target_params}"
+                f"{' ; ' + '; '.join(kind_note) if kind_note else ''}"
+            )
+            for name, selectors in plural_branches(target):
+                categories = {s for s in selectors if not s.startswith("=")}
+                expected = CLDR["fr"]
+                ok = expected <= categories
+                overall_ok &= ok
+                print(
+                    f"  [{'PASS' if ok else 'FAIL'}] {key}: plural on {name} branches={sorted(selectors)}"
+                    f" missing-categories={sorted(expected - categories)}"
+                )
+            issues = typography(target)
+            if issues:
+                print(f"  [MINOR] {key}: {issues}")
+
+        for token in TOKENS:
+            in_en = sum(token in value for value in en.values())
+            in_fr = sum(token in value for value in fr.values())
+            if in_en or in_fr:
+                ok = in_fr == in_en
+                overall_ok &= ok
+                print(f"  [{'PASS' if ok else 'FAIL'}] token {token!r}: en={in_en} fr={in_fr}")
+
+        print("  lengths (en -> fr, ratio):")
+        for key in en:
+            ratio = len(fr[key]) / max(len(en[key]), 1)
+            print(f"    {key:45s} {len(en[key]):3d} -> {len(fr[key]):3d}  x{ratio:4.2f}")
+
+    print(f"\n== overall mechanical result: {'PASS' if overall_ok else 'FAIL'} ==")
+    return 0 if overall_ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

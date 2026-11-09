@@ -1,0 +1,155 @@
+French final fit verdict fr29sm4 — actual execution log
+Date: 2026-10-29T21:35:25Z (UTC)
+Repository: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+Auditor: agent i18n-auditor (lopdev team), session a731c4942a85, model radient/auto (fallback; primary anthropic/claude-sonnet-5-5 failed on provider quota)
+Scope: ONE French value — mobile.session_health.ended_placeholder — plus the sheet sentence that now carries the destination. Read-only: no catalogue, context or generated file was edited; this bundle is the only thing written.
+
+1. Worktree state at the audited head
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && git rev-parse HEAD && git branch --show-current && git status --porcelain | sed 's/^/porcelain:/' ; echo 'porcelain-lines:' $(git status --porcelain | wc -l)
+c0fe99944cd72cd6e8f993e285e72ef0e9017675
+feat/i18n-mobile-locales
+porcelain:?? i18n/audits/evidence/fr/mobile.session_health/fr29sm4/
+porcelain-lines: 1
+[exit=0]
+
+2. Repository validator
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && npm run -s i18n:check; s=$?; echo "i18n:check exit=$s"
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:57215) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs d5babfa18544
+i18n:check exit=0
+[exit=0]
+
+3. Key parity, placeholders, Unicode safety, cells, input hashes
+
+$ python3 /Users/damian/.local-operator/sessions/a731c4942a85/scratchpad/fr29sm4-mech.py
+key_count en/context/target = 11 11 11
+order_identical_en_target = True
+keys_added_or_dropped = []
+en      = 'Send to reopen in your home folder…' cells= 35
+fr      = 'Envoyer rouvre…' cells= 15
+placeholders_en = False  placeholders_fr = False
+trailing_U+2026 = True  bidi_controls = []
+ascii_apostrophe = False  backtick = False  markup_tag = False
+context_role = help
+en       src/i18n/catalogues/en/mobile.session_health.json  sha256=727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f
+context  src/i18n/catalogues/en/mobile.session_health.context.json  sha256=b6d1cbde0fc8801a27745e16284d2abc593145202eb74b21b44e6216784480c5
+target   src/i18n/catalogues/fr/mobile.session_health.json  sha256=87acf6979fc09af8852dd2f426529fecea6fa9ec0272f5d5c00d04b67c9a6a1c
+candidate cells= 15 utf8= 17  Envoyer rouvre…
+candidate cells= 18 utf8= 20  Envoyer la rouvre…
+candidate cells= 35 utf8= 37  Envoyer rouvre (dossier personnel)…
+candidate cells= 36 utf8= 38  Rouvre dans votre dossier personnel…
+candidate cells= 44 utf8= 46  Envoyer rouvre dans votre dossier personnel…
+candidate cells= 18 utf8= 20  Rouvre la session…
+candidate cells= 21 utf8= 23  Envoyez pour rouvrir…
+candidate cells= 26 utf8= 28  Rouvre dans votre dossier…
+ASSERT current value is 'Envoyer rouvre…': PASS
+[exit=0]
+
+4. Independent text-metric measurement (CoreText, the repo's own Figtree)
+
+$ swift /Users/damian/.local-operator/sessions/a731c4942a85/scratchpad/fr29sm4-measure.swift
+string 16pt 21.6pt 24pt 32pt
+Message…    73.28    98.93   109.92   146.56
+Envoyer rouvre…   117.70   158.89   176.54   235.39
+Envoyer la rouvre…   133.33   179.99   199.99   266.66
+Envoyer rouvre (dossier personnel)…   258.69   349.23   388.03   517.38
+Rouvre dans votre dossier personnel…   269.70   364.09   404.54   539.39
+Envoyer rouvre dans votre dossier personnel…   326.90   441.31   490.34   653.79
+Send to reopen in your home folder…   263.44   355.64   395.16   526.88
+[exit=0]
+Calibration anchor: design/composer.ts:43 records 'Message… measures 73.3 pt at 100 %' for this same field; the probe above returns 73.28 at 16 pt, so font (Figtree) and size (16 px body) are the field's own.
+
+5. Field geometry and scale steps, from the repository (not from a brief)
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && grep -n 'TEXT_SCALE_PERCENTS =' src/ui/text-scale.ts
+35:export const TEXT_SCALE_PERCENTS = [100, 150, 200] as const;
+[exit=0]
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && grep -n 'id: "100"\|id: "135"\|id: "150"\|id: "200"' tools/visual/matrix.ts
+445:	{ id: "100", factor: 1 },
+458:	{ id: "135", factor: 1.3529411765 },
+459:	{ id: "150", factor: 1.5 },
+460:	{ id: "200", factor: 2 },
+[exit=0]
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && grep -n 'content box is 166\|73.3 pt' src/features/session/composer.ts
+38:	 * shortens it ON PURPOSE: the field's content box is 166 pt on the 320 pt phone
+43:	 * `Message…` measures 73.3 pt at 100 % and 146.5 pt at 200 % in that box, so it
+[exit=0]
+
+6. Where the home-folder fact lives now: render path
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && grep -n 'healthDetailKey\|ended_detail' src/features/session/health.ts | head -12
+46: *    sheet's copy (`healthDetailKey`): with the dial down the send meets the
+215:export function healthDetailKey(
+223:	| "relay.health.ended_detail" {
+234:			return "relay.health.ended_detail";
+[exit=0]
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && grep -n 'control_hint\|onSheetOpenChange(true)\|accessibilityHint' src/features/session/components/session-health.tsx | head -12
+283:					accessibilityHint={t("mobile.session_health.control_hint")}
+286:					onPress={() => onSheetOpenChange(true)}
+448:						accessibilityHint={t("mobile.session_health.menu_hint")}
+[exit=0]
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && python3 -c "import json;d=json.load(open('src/i18n/catalogues/fr/relay.health.json'));print('fr relay.health.ended_detail =',d['relay.health.ended_detail']);print('fr control_hint =',json.load(open('src/i18n/catalogues/fr/mobile.session_health.json'))['mobile.session_health.control_hint'])"
+fr relay.health.ended_detail = L’historique est conservé. Envoyez un message ou touchez « Reprendre » pour rouvrir la session dans votre dossier personnel.
+fr control_hint = Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.
+[exit=0]
+
+7. Design round 4: source of the rendered pixel measurements cited here
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && gh pr view 132 --json comments --jq '.comments[].body' | grep -n 'Ended composer field content box\|requires \*\*276.9\|Envoyer rouvre…\|Rouvre la session…\|Envoyez pour rouvrir…\|Rouvre dans votre dossier…' | head -20
+750:- Ended composer field content box: **348 px** at 390 pt, **278 px** at 320 pt.
+751:- `Rouvre dans votre dossier personnel…` (36 cells) requires **276.9 px at 100 %**, **354.4 px at the app's 135 % step**, **388.7 px at 150 %**, **590.9 px at 200 %**.
+767:| `Envoyer rouvre…` | 15 | 120.7 | 256.8 | yes (21 px spare) |
+768:| `Rouvre la session…` | 18 | 138.7 | 295.9 | no |
+769:| `Envoyez pour rouvrir…` | 21 | 160.6 | 342.9 | no |
+770:| `Rouvre dans votre dossier…` | 27 | 200.8 | 429.4 | no |
+776:`Send to reopen in your home folder…` tells the reader that sending is what reopens; `Rouvre dans votre dossier personnel…` says only that the session reopens, leaving the subject implicit. The register itself is right, and I want to be explicit because this is the point I doubted before measuring: `Rouvre` is the same third-person form the app already uses on its own hints (`Ouvre le menu de la session`, `Ouvre la ligne d'activité, les tâches et les sous-agents`), and the French runs 20 `vous` forms against 3 of those constructions across the 143 strings — there is no tu/vous break inside the string. The residual risk is that a bare verb in an empty message box also reads as an instruction to the reader, pointing at an action the field does not offer. D1's remedy closes it for free: `Envoyer rouvre…` restores the action English carries and is the shortest measured fit.
+[exit=0]
+
+8. Programme references and hashes actually read
+
+$ bash -lc shasum -a 256 /Users/damian/local-operator/i18n/style-guides/fr.md /Users/damian/local-operator/i18n/glossary.md
+b916f3d1c30b0a2e18fc94ca51d130f60e86b3b17b1918aa51f5c5da6d52ec39  /Users/damian/local-operator/i18n/style-guides/fr.md
+ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd  /Users/damian/local-operator/i18n/glossary.md
+[exit=0]
+
+9. Ledger: does an audit-ledger command exist to record this?
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && python3 -c "import json;print('package scripts with ledger:',[k for k in json.load(open('package.json'))['scripts'] if 'ledger' in k])"
+package scripts with ledger: []
+[exit=0]
+
+$ bash -lc cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && ls scripts/i18n
+check-strings.test.ts
+check-strings.ts
+generate.ts
+key-shape.test.ts
+key-shape.ts
+ratchet.ts
+scan-strings.ts
+strings-baseline.json
+[exit=0]
+
+$ bash -lc cd /Users/damian/local-operator && python3 -c "import json;d=json.load(open('i18n/ledger.json'));print('core ledger entries:',len(d['entries']));print('rows mentioning health:',[e['namespace'] for e in d['entries'] if 'health' in e['namespace']]);print('mobile.session_health row present:',any(e['namespace']=='mobile.session_health' for e in d['entries']))"
+core ledger entries: 333
+rows mentioning health: []
+mobile.session_health row present: False
+[exit=0]
+
+10. This bundle
+
+$ bash -lc ls -l /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/i18n/audits/evidence/fr/mobile.session_health/fr29sm4
+total 24
+-rw-r--r--@ 1 damian  staff  9956 Oct 29 17:37 audit.log
+[exit=0]
+
+End of log. Notes in record.md are reasoning, not execution evidence; every command above was run in this session.

@@ -1,0 +1,141 @@
+{
+	"schema": 1,
+	"audit_kind": "delta_reaudit_unchanged_bytes_carried_forward",
+	"audit_id": "vi30a4r2",
+	"locale": "vi",
+	"namespace": "mobile.account_routing",
+	"audit_date": "2026-10-30",
+	"wave": "vi wave 5 — damianvtran/local-operator-mobile, branch feat/i18n-vietnamese, delta A",
+	"audited_revision": "fb4d8bcbc50c68301af624407e09b1789896e571",
+	"audited_revision_note": "the vi catalogue is tracked at this revision; target bytes are pinned by input_hashes.vi",
+	"key_count": {
+		"en": 14,
+		"target": 14,
+		"context": 14
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "3fd3fed80964",
+		"job": "none exposed for this delegation (team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback. Every command in these bundles ran after the final switch, i.e. on radient/auto",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the round-1 translator and from the remediation author. Not model-diverse: the served model radient/auto is the translator's served model and the second pass's too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator (vi wave 5)",
+		"model": "not observed by this auditor",
+		"actual_model_source": "as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.json",
+			"sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.account_routing.context.json",
+			"sha256": "2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c"
+		},
+		"vi": {
+			"path": "src/i18n/catalogues/vi/mobile.account_routing.json",
+			"sha256": "1cdcd6db23024beea401b37379fa64b2c7ade44f518036d1370d9160482df0f0"
+		}
+	},
+	"previous_round": {
+		"audit_id": "vi30a4",
+		"audited_revision": "31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b",
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": []
+	},
+	"delta": {
+		"changed_keys": [],
+		"bytes_identical_to_round_1": true,
+		"vi_round1_sha256": "1cdcd6db23024beea401b37379fa64b2c7ade44f518036d1370d9160482df0f0",
+		"vi_now_sha256": "1cdcd6db23024beea401b37379fa64b2c7ade44f518036d1370d9160482df0f0",
+		"note": "no byte of this namespace changed in fb4d8bc. The round-1 audit stands; this delta does not re-read the content and claims no new reading of it."
+	},
+	"round1_disposition": [],
+	"round1_disposition_summary": {
+		"fixed": 0,
+		"rejected": 0,
+		"deferred": 0,
+		"note": "no round-1 finding was raised against this namespace"
+	},
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:check -> exit 0 (see audit.log)",
+		"scoped_checks": "key and context parity, placeholder surface, ICU arms, code spans/flags, NFC, typography — re-run at this head; the per-namespace harness log is in audit.log",
+		"mirrors": "not a mirror namespace"
+	},
+	"findings": [],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [],
+		"nit_ids": [],
+		"finding_ids": [],
+		"basis": "carried forward: round 1 passed this namespace and its bytes are unchanged at this head (sha256 equality), so nothing needed re-auditing and nothing new was read",
+		"reason": "no delta in this namespace"
+	},
+	"ledger": {
+		"command": "absent",
+		"recorded": false,
+		"written": false,
+		"reason": "This repository has no i18n/ledger.json and no audit-ledger command at fb4d8bcbc50c68301af624407e09b1789896e571 (i18n/ holds audits/ only; package.json scripts and scripts/i18n/ carry generate/check only; docs/i18n.md records the report in the pull request). Core's i18n/ledger.json does hold one mobile.* row (zh-CN / mobile.setup, 2026-10-24) with evidence under core's own tree, so a row is possible - but that is an edit in a different repository, outside this read-only delta.",
+		"ledger_row_proposed": {
+			"locale": "vi",
+			"namespace": "mobile.account_routing",
+			"source_sha256": "34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-30",
+				"result": "passed",
+				"findings": 0
+			},
+			"note": "vi delta A mobile.account_routing passed at fb4d8bc: bytes unchanged from round 1 vi30a4 (sha256 1cdcd6db2302), carried forward; evidence i18n/audits/evidence/vi/mobile.account_routing/vi30a4r2/record.json; radient/auto fallback"
+		}
+	},
+	"route": {
+		"evidence_path": "written under this repository's i18n/audits/evidence root; no tracked manifest maps a different root",
+		"reads": "ordinary worktree reads; core's committed bytes read out of git at origin/main (1dad86053fc037b4d7542eb40776c64e54d95d41) via `git show`; the repository's own validator, renderer and test runner; local CoreText measurement",
+		"english_context_sidecars": "nested-JSON context sidecars are not routable through read_public_copy; read as ordinary worktree files",
+		"receipts": "no keyed public-copy receipt is claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured; widths are measured text advances against row boxes, not pixels",
+		"translator_observation": "the translator's run and the remediation author's run were not observed by this auditor",
+		"edits": "nothing under src/ was edited by this audit; only this evidence directory was written",
+		"content": "no content re-reading is claimed for this namespace; the delta is the byte-identity check",
+		"second_pass": "not performed for this namespace; the second pass in this round covered mobile.home only"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output, and audit-original-harness.log holds the round-1 harness's own run at this head.",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/vi/mobile.account_routing/vi30a4r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.account_routing/vi30a4r2/report.md",
+			"sha256": "3f1c9dc53aef0284872cf3acbc9b4aafb431328fb8425665919b2177158c6de2"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.account_routing/vi30a4r2/audit.log",
+			"sha256": "4e32ec1e33840829265d163e2f90819c8645ca2be00899bc9e73f228eae5249f",
+			"note": "actual command output, not notes"
+		}
+	]
+}

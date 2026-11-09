@@ -1,4 +1,4 @@
-import { COMPOSER_COPY } from "@/features/session/composer";
+import { composerCopy } from "@/features/session/composer";
 import { isRelayError, type RelayEndpoints } from "@/relay";
 
 /**
@@ -60,7 +60,7 @@ export const sendSlashCommand = async (
 		effects.setError(
 			isRelayError(failure)
 				? failure.displayableMessage
-				: COMPOSER_COPY.continuationError,
+				: composerCopy().continuationError,
 		);
 		return false;
 	} finally {

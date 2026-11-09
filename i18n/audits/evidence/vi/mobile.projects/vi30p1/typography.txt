@@ -1,0 +1,20 @@
+## typography problems
+(none)
+
+## longest vi strings (plain-text code points)
+mobile.projects.write_receipt	en=307	vi=301	ratio ratio=0.98	{kind, select, project {{action, select, created completed reopened added updated removed deleted other } .} milestone {
+mobile.schedules.empty.body	en=181	vi=204	ratio ratio=1.13	Nhờ tác nhân trong cuộc trò chuyện làm một việc theo định kỳ, việc đó sẽ hiện ở đây. Lần thức dậy đẩy một prompt vào cuộ
+mobile.projects.write_unknown_note	en=112	vi=122	ratio ratio=1.09	Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lạ
+mobile.projects.project_name_hint	en=105	vi=118	ratio ratio=1.12	1-64 ký tự: chữ cái, chữ số, dấu chấm, gạch dưới hoặc gạch nối. Không có dấu cách và không được bắt đầu bằng gạch nối.
+mobile.schedules.supervisor.unsupported	en=108	vi=114	ratio ratio=1.06	Nền tảng này chưa giám sát các lần thức dậy, nên các lần thức dậy bên dưới chỉ chạy khi cuộc trò chuyện đang chạy.
+mobile.schedules.supervisor.not_running	en=83	vi=108	ratio ratio=1.30	Bộ giám sát các lần thức dậy đã được cài nhưng không hoạt động, nên các lần thức dậy bên dưới sẽ không chạy.
+mobile.schedules.supervisor.unverifiable	en=90	vi=107	ratio ratio=1.19	Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.
+mobile.computers.added.stays_listed	en=77	vi=97	ratio ratio=1.26	Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.
+mobile.projects.remove_milestone_body	en=116	vi=87	ratio ratio=0.75	Xóa khỏi dự án này? Mốc sẽ mất hẳn. Các phiên của dự án và dòng tiến độ vẫn giữ nguyên.
+mobile.projects.delete_body	en=98	vi=84	ratio ratio=0.86	Xóa ? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+mobile.schedules.gone.wakes	en=70	vi=81	ratio ratio=1.16	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kích hoạt
+mobile.schedules.gone.monitors	en=71	vi=80	ratio ratio=1.13	Đã mất — cuộc trò chuyện của nó không còn trên máy này nên không còn gì kiểm tra
+
+## ratio mean=1.12 max=2.25
+## words >= 18 chars (overflow risk on narrow rows):
+(none)

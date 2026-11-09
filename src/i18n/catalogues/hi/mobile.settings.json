@@ -1,0 +1,19 @@
+{
+	"mobile.settings.theme.caption_forced": "हमेशा {name}",
+	"mobile.settings.theme.caption_system": "सिस्टम {light} और {dark} का उपयोग करता है",
+	"mobile.settings.theme.card_dark": "{name}, गहरी थीम",
+	"mobile.settings.theme.card_dark_selected": "{name}, गहरी थीम, चुनी गई",
+	"mobile.settings.theme.card_light": "{name}, हल्की थीम",
+	"mobile.settings.theme.card_light_selected": "{name}, हल्की थीम, चुनी गई",
+	"mobile.settings.theme.mode_dark": "गहरी",
+	"mobile.settings.theme.mode_label": "थीम मोड",
+	"mobile.settings.theme.mode_light": "हल्की",
+	"mobile.settings.theme.mode_system": "सिस्टम",
+	"mobile.settings.theme.no_match": "कोई थीम मेल नहीं खाती",
+	"mobile.settings.theme.row_label": "थीम, {name}",
+	"mobile.settings.theme.search_label": "थीम खोजें",
+	"mobile.settings.theme.search_placeholder": "थीम खोजें",
+	"mobile.settings.theme.section_dark": "गहरी ({count})",
+	"mobile.settings.theme.section_light": "हल्की ({count})",
+	"mobile.settings.theme.title": "थीम"
+}

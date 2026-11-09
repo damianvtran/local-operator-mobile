@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
 	COLOR_ROLES,
+	isThemeId,
 	PALETTE,
 	resolveColor,
 	resolveTheme,
+	THEMES,
+	themeEntry,
 } from "@/ui/tokens.gen";
 
 /**
@@ -38,6 +41,62 @@ const contrast = (foreground: string, background: string): number => {
 	const [light, dark] = a > b ? [a, b] : [b, a];
 	return (light + 0.05) / (dark + 0.05);
 };
+
+describe("the navigation control edge", () => {
+	/* The switcher's two entry points both paint `border-control`: the Home chip
+	 * sits on `canvas`, the drawer footer's row on `surface`. This block exists
+	 * because the pair is load-bearing rather than decorative — at 200 % text the
+	 * chip drops its chevron, so this edge is the ONLY thing that says "this opens
+	 * a picker", and in the light palette the role the remediation first used
+	 * (`panel-edge`) is the same string as `hairline` (design round 2, D8). */
+	const NON_TEXT_FLOOR = 3;
+	const grounds = ["canvas", "surface"] as const;
+
+	it("clears the non-text floor on both grounds, in both themes", () => {
+		for (const theme of ["light", "dark"] as const) {
+			for (const ground of grounds) {
+				expect(
+					contrast(
+						resolveColor("border-control", theme),
+						resolveColor(ground, theme),
+					),
+					`border-control on ${ground} (${theme})`,
+				).toBeGreaterThanOrEqual(NON_TEXT_FLOOR);
+			}
+		}
+	});
+
+	it("is a different role from the hairline in the light palette", () => {
+		/* The root cause in one assertion: `panel-edge` and `hairline` share
+		 * `#dad5cb` in light, so adopting the former changed nothing there. */
+		expect(resolveColor("border-control", "light")).not.toBe(
+			resolveColor("hairline", "light"),
+		);
+	});
+
+	it("would fail on a hairline-weight edge (negative control)", () => {
+		/* A floor only means something if the value it replaced fails it. Measured:
+		 * light `panel-edge` 1.25:1 on canvas and 1.34:1 on surface; light `hairline`
+		 * is the same value. Dark `panel-edge` already cleared (3.90:1) — which is
+		 * exactly why D8 was a light-theme finding and why the dark half is asserted
+		 * as unchanged above rather than re-derived. */
+		for (const ground of grounds) {
+			expect(
+				contrast(
+					resolveColor("panel-edge", "light"),
+					resolveColor(ground, "light"),
+				),
+				`panel-edge on ${ground} (light)`,
+			).toBeLessThan(NON_TEXT_FLOOR);
+		}
+		expect(
+			contrast(
+				resolveColor("hairline", "light"),
+				resolveColor("canvas", "light"),
+			),
+		).toBeLessThan(NON_TEXT_FLOOR);
+	});
+});
 
 describe("theme resolution", () => {
 	it("uses the preference whenever it names a theme", () => {
@@ -112,5 +171,59 @@ describe("the generated palette", () => {
 				resolveColor("accent", "dark"),
 			),
 		).toBeGreaterThanOrEqual(4.5);
+	});
+});
+
+const COLOUR_VALUE = /^#[0-9a-f]{6}([0-9a-f]{2})?$/;
+
+describe("the shipped theme catalogue", () => {
+	/* `THEMES` is generated from the desktop palettes and admitted by the
+	 * contrast contract's fleet run, so contrast is NOT re-derived here. What is
+	 * pinned is the catalogue's shape on the way into the app: every role
+	 * present, the brand pair present and equal to its own derivation, and an id
+	 * the build does not carry falling back to its slot's default. */
+	it("defines all of this app's roles for every theme", () => {
+		for (const entry of THEMES)
+			for (const role of COLOR_ROLES)
+				expect(entry.colors[role], `${entry.id}.${role}`).toMatch(COLOUR_VALUE);
+	});
+
+	it("ships both brand themes, in the mode their slot expects", () => {
+		expect(themeEntry("localOperatorDark", "dark").id).toBe(
+			"localOperatorDark",
+		);
+		expect(themeEntry("localOperatorLight", "light").id).toBe(
+			"localOperatorLight",
+		);
+		expect(THEMES[0]?.id).toBe("localOperatorDark");
+	});
+
+	it("ships every palette the desktop offers, so the catalogue carries all 59", () => {
+		/* The four contrast-withheld palettes were restored by the bounded ground
+		 * adaptation (D164-1); the operator asked for ALL the themes, so this count
+		 * is the acceptance criterion rather than a coincidence. */
+		expect(THEMES).toHaveLength(59);
+		expect(THEMES.filter((entry) => entry.mode === "dark")).toHaveLength(41);
+		expect(THEMES.filter((entry) => entry.mode === "light")).toHaveLength(18);
+		expect(THEMES.map((entry) => entry.id)).toEqual(
+			expect.arrayContaining([
+				"catppuccinMocha",
+				"tokyoNightStorm",
+				"duskfox",
+				"outrun",
+			]),
+		);
+	});
+
+	it("falls back to the slot's default for an unknown or wrong-mode id", () => {
+		expect(themeEntry("no-such-theme", "dark").id).toBe("localOperatorDark");
+		expect(themeEntry("dracula", "light").id).toBe("localOperatorLight");
+		expect(isThemeId("dracula", "dark")).toBe(true);
+		expect(isThemeId("dracula", "light")).toBe(false);
+	});
+
+	it("keeps ids unique", () => {
+		const ids = THEMES.map((entry) => entry.id);
+		expect(new Set(ids).size).toBe(ids.length);
 	});
 });

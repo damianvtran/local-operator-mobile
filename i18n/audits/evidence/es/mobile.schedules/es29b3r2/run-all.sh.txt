@@ -1,0 +1,64 @@
+#!/bin/bash
+# Audit run for mobile.schedules (es), delta round 2. Every line below is a
+# command actually executed for this audit and its actual output.
+set -u
+REPO=/Users/damian/workspace/es-wave
+PYBIN="/Users/damian/.local/share/lop/generations/20261028T235058Z-5e7f02ee1b2b/tools/local-operator/bin/python3"
+cd "$REPO" || exit 1
+hr(){ printf '\n\n===== %s =====\n' "$1"; }
+
+hr "IDENTITY — when and where this ran"
+date -u '+%Y-%m-%dT%H:%M:%SZ'
+echo "session: 4018f32a5589 | auditor model (session header, every command below): radient/auto"
+echo "fallback disclosure: session started on anthropic/claude-sonnet-5-5 (quota failure) -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto before the first command"
+echo "repo: $REPO"
+
+hr "1. REPOSITORY STATE (read-only; no worktree change made by this audit)"
+git rev-parse HEAD
+git rev-parse --abbrev-ref HEAD
+git status --porcelain | head -20
+echo "--- tracked es catalogue in HEAD? ---"
+git ls-tree -r --name-only HEAD -- src/i18n/catalogues/es | head -20
+
+hr "2. INPUT IDENTITIES (sha256 of the exact bytes judged)"
+shasum -a 256 src/i18n/catalogues/en/mobile.schedules.json \
+             src/i18n/catalogues/en/mobile.schedules.context.json \
+             src/i18n/catalogues/es/mobile.schedules.json
+echo "--- renderer + projection, for provenance ---"
+shasum -a 256 src/i18n/messages.ts src/i18n/runtime.ts src/i18n/catalogue.gen.ts src/ui/theme.css
+
+hr "3. REPOSITORY VALIDATOR (now parses es, because es is in SHIPPED_LOCALES at this commit)"
+grep -n -A4 "SHIPPED_LOCALES = \[" src/i18n/locale.ts
+node scripts/i18n/generate.ts --check 2>&1 | grep -v "MODULE_TYPELESS\|Reparsing\|eliminate this warning\|trace-warnings"
+echo "exit=${PIPESTATUS[0]}"
+
+hr "4. REPO TESTS for this namespace (independent of my probes)"
+npx vitest run src/i18n/__tests__ src/features/schedules 2>&1 | grep -E "Test Files|^ +Tests|Duration"
+
+hr "5. RENDER PROBE — app parser, key parity, arms, counted nouns, attention, truncated, composition"
+node "$LOCAL_OPERATOR_SCRATCHPAD/es-audit/render.mjs" 2>&1 | grep -v "MODULE_TYPELESS\|Reparsing\|eliminate this warning\|trace-warnings"
+
+hr "6. RENDER PROBE — shipped projection + runtime tests (real path)"
+node "$LOCAL_OPERATOR_SCRATCHPAD/es-audit/e2e.mjs" 2>&1 | grep -v "MODULE_TYPELESS\|Reparsing\|eliminate this warning\|trace-warnings"
+
+hr "7. WIDTH MEASUREMENT — SF Pro at the design kit's sizes (text-meta 12/500, mono-label 11/600, body-sm 14/400)"
+"$PYBIN" "$LOCAL_OPERATOR_SCRATCHPAD/es-audit/measure.py"
+
+hr "8. WIDTH MEASUREMENT — wrap thresholds and the single-token clipping test"
+"$PYBIN" "$LOCAL_OPERATOR_SCRATCHPAD/es-audit/widths2.py" | sed -n '/== armed header/,$p'
+
+hr "9. NO AUDIT-LEDGER COMMAND IN THIS REPOSITORY (the task asked for one; recording the evidence it does not exist)"
+ls i18n/
+echo "--- i18n/ledger.json present? (RFC 6 ledger file) ---"
+ls i18n/ledger.json 2>&1; echo "ls exit=$?"
+echo "--- any 'ledger' write/receipt command under scripts/i18n/? ---"
+grep -rn "ledger" scripts/i18n/*.ts; echo "grep exit=$? (1 = no match: no ledger command)"
+echo "--- declared i18n scripts ---"
+node -e 'const p=require("./package.json");console.log(Object.keys(p.scripts).filter(k=>/i18n/.test(k)).join(" "))'
+
+hr "10. DELTA — what changed between the round-1 audited text and these bytes"
+"$PYBIN" "$LOCAL_OPERATOR_SCRATCHPAD/es-audit/delta.py"
+
+hr "11. READ-ONLY CONFIRMATION — no source file was modified by this audit"
+git status --porcelain -- src/ i18n/ | head -20
+echo "(every entry above is an audit-evidence directory written by this wave's auditor sessions and left UNSTAGED; es29b3r2 is this audit's own. No tracked file was modified.)"

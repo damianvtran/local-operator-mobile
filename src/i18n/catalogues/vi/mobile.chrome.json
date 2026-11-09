@@ -1,0 +1,19 @@
+{
+	"mobile.chrome.destination.inbox": "Hộp thư",
+	"mobile.chrome.destination.past": "Trước",
+	"mobile.chrome.destination.schedules": "Lịch",
+	"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
+	"mobile.chrome.destinations": "Mục đến",
+	"mobile.chrome.new_chat": "Cuộc trò chuyện mới",
+	"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
+	"mobile.chrome.composer.more": "Thêm ngữ cảnh",
+	"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
+	"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
+	"mobile.chrome.home.greeting": "Bạn muốn làm việc gì?",
+	"mobile.chrome.home.connecting": "Đang kết nối với {host}…",
+	"mobile.chrome.home.connect": "Kết nối máy tính",
+	"mobile.chrome.home.sign_in": "Đăng nhập để kết nối lại",
+	"mobile.chrome.home.saved_draft": "Bản nháp được lưu trên điện thoại này và chưa được gửi.",
+	"mobile.chrome.home.reconnecting": "Đang kết nối lại với {host}…",
+	"mobile.chrome.composer.open_queue": "Mở hàng đợi"
+}

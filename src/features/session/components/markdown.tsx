@@ -1,6 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 import * as Clipboard from "expo-clipboard";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Pressable,
 	ScrollView,
@@ -15,11 +15,13 @@ import {
 	parseInline,
 	parseMarkdown,
 	TABLE_CELL_PADDING_X_PT,
+	tableFadeGeometry,
 	tablePricing,
 } from "@/features/session/markdown";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { LTR_TEXT, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
@@ -45,6 +47,15 @@ import { cx } from "@/ui/variants";
  * bubble separates a thing from other things, and the answer is the page.
  */
 
+/** The message body's role: `body-read` 14 pt / 1.55, the relay's own
+ *  `--text-body` step and reading leading (0.875rem at a 16 px root — design
+ *  item 11). It used to be `body-lg` 17 beside a 14 pt tool-trace headline:
+ *  17/14 = 1.21x, where the relay is 14/13 = 1.08x. The operator's report — "the
+ *  normal message text feels a bit large relative to the text from the tool
+ *  traces" — is that ratio; with the trace on `trace` 13 (`tool-row.tsx`) it is
+ *  now the relay's 1.08x (review round 1, m1). */
+const MESSAGE_BODY_CLASS = "text-body-read text-ink";
+
 const spanClass = (span: InlineSpan): string =>
 	cx(
 		span.code && "text-mono-sm text-ink-muted",
@@ -52,21 +63,34 @@ const spanClass = (span: InlineSpan): string =>
 		span.italic && "italic",
 	);
 
-const Inline = ({ text, base }: { text: string; base?: string }) => (
-	<Text className={cx(base ?? "text-body-lg text-ink")}>
-		{parseInline(text).map((span, index) => (
-			<Text
-				// Index keys are correct here: the spans are regenerated from the same
-				// string on every frame, so position IS the identity.
-				key={index}
-				className={spanClass(span)}
-				style={span.italic ? ITALIC : undefined}
-			>
-				{span.text}
-			</Text>
-		))}
-	</Text>
-);
+const Inline = memo(function Inline({
+	text,
+	base,
+}: {
+	text: string;
+	base?: string;
+}) {
+	/* PARSED ONCE PER STRING (design pass item E, cause 2). The parse used to run
+	 *  in the render body, so a panel re-render or a row re-render re-tokenised the
+	 *  same text: on a long answer that is the frame budget spent on work whose
+	 *  input did not change. */
+	const spans = useMemo(() => parseInline(text), [text]);
+	return (
+		<Text className={cx(base ?? MESSAGE_BODY_CLASS)}>
+			{spans.map((span, index) => (
+				<Text
+					// Index keys are correct here: the spans are regenerated from the same
+					// string on every frame, so position IS the identity.
+					key={index}
+					className={spanClass(span)}
+					style={span.italic ? ITALIC : undefined}
+				>
+					{span.text}
+				</Text>
+			))}
+		</Text>
+	);
+});
 
 /** React Native has no `<i>`; the text style is the only italic it has, and it is
  *  declared once so the inline parser's `italic` is not a silent no-op. */
@@ -107,12 +131,19 @@ const TABLE_FADE_PT = 24;
 let fadeSeq = 0;
 
 const TableFade = ({
-	side,
+	edge,
 	colour,
 }: {
-	side: "left" | "right";
+	/** The READING edge the cue sits on: `end` is where the next column would be,
+	 *  `start` is the one the reader has already scrolled past. */
+	edge: "start" | "end";
 	colour: string;
 }) => {
+	const rtl = useIsRTL();
+	/* The gradient below runs `x1 0% -> x2 100%` (physical, left to right), so the
+	 *  reading edge is resolved to a physical side once, in a pure function that a
+	 *  test pins for both directions. */
+	const { side, nearOpacity, farOpacity } = tableFadeGeometry(edge, rtl);
 	const id = useRef("");
 	if (id.current === "") {
 		fadeSeq += 1;
@@ -145,13 +176,13 @@ const TableFade = ({
 								key="near"
 								offset="0"
 								stopColor={colour}
-								stopOpacity={side === "right" ? 0 : 1}
+								stopOpacity={nearOpacity}
 							/>,
 							<Stop
 								key="far"
 								offset="1"
 								stopColor={colour}
-								stopOpacity={side === "right" ? 1 : 0}
+								stopOpacity={farOpacity}
 							/>,
 						]}
 					</LinearGradient>
@@ -197,7 +228,15 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	/** The `lo-md-scroll=bring` viewer has run for this table (it runs once). */
 	const broughtIntoView = useRef(false);
 
-	/* The two booleans §1.6 names. `bleeds`: the priced row is wider than the
+	/* The two booleans §1.6 names, stated in READING order: `moreAhead` is the cue
+	 *  at the reading end, `moreBehind` the one at the reading start. Both are
+	 *  computed from PHYSICAL scroll metrics (`contentOffset.x` is offset from the
+	 *  physical left edge, which is what RN normalizes to), and in an `ltr` layout
+	 *  the two are the identities `showRight = !atEnd` and `showLeft = x > 0` the
+	 *  frames were designed against. Under `rtl` the browser moves the scroll
+	 *  origin, so the pair is a READING-ORDER mapping rather than a measured one —
+	 *  flagged in `docs/i18n.md` as the one table behaviour `ur` must re-measure.
+	 *  `bleeds`: the priced row is wider than the
 	 * column, so the viewport runs to the screen's right edge (the cut edge).
 	 * `scrolls`: it is ALSO wider than the bleeded viewport, i.e. there is
 	 * content the reader cannot reach without scrolling — only then is the fade
@@ -313,6 +352,8 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 
 	const showRight = scrolls && !atEnd;
 	const showLeft = scrolls && scrollX > 0.5;
+	const moreAhead = showRight;
+	const moreBehind = showLeft;
 
 	const cellStyle = (column: number) => {
 		// `box-sizing: border-box` (React Native's own default) means the cell's
@@ -334,7 +375,7 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 			key={column}
 			testID={SURFACE.mdTableCell}
 			style={cellStyle(column)}
-			className={cx("px-3 py-2", column > 0 && "border-l border-hairline")}
+			className={cx("px-3 py-2", column > 0 && "border-s border-hairline")}
 		>
 			<Inline
 				text={cell}
@@ -352,7 +393,7 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 		<View onLayout={onColumnLayout}>
 			<View
 				testID={SURFACE.mdTable}
-				style={bleeds ? { marginRight: -TABLE_RAIL_PT } : undefined}
+				style={bleeds ? { marginEnd: -TABLE_RAIL_PT } : undefined}
 			>
 				{/* The frame: 1pt `border-border-control` (the `control` colour role's utility), because on a phone the grid is what
 			    makes a row-and-column read as rows and columns, and a hairline is
@@ -407,8 +448,8 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 						</View>
 					</ScrollView>
 				</View>
-				{showRight ? <TableFade side="right" colour={canvas} /> : null}
-				{showLeft ? <TableFade side="left" colour={canvas} /> : null}
+				{moreAhead ? <TableFade edge="end" colour={canvas} /> : null}
+				{moreBehind ? <TableFade edge="start" colour={canvas} /> : null}
 			</View>
 		</View>
 	);
@@ -457,7 +498,14 @@ const CodeBlock = ({
 				    reads as different code. The block itself is what scrolls, so the
 				    column never widens (the transcript's own overflow guard). */}
 				<ScrollView horizontal showsHorizontalScrollIndicator={false}>
-					<Text className="px-2 py-1 font-mono text-mono-sm text-ink-muted">
+					<Text
+						className="px-2 py-1 font-mono text-mono-sm text-ink-muted"
+						/* Code keeps its own direction inside an Urdu transcript: the block
+						 *  is the canonical mixed-content case — a bidi algorithm given no
+						 *  hint reorders the punctuation of `git commit -m "…"` and the
+						 *  listing stops being the code the reader must copy. */
+						style={LTR_TEXT}
+					>
 						{copied && language.length === 0 ? "copied\n" : ""}
 						{body}
 					</Text>
@@ -475,8 +523,13 @@ const HEADING_CLASS: Record<number, string> = {
 	3: "text-body-lg font-medium text-ink",
 };
 
-export const Markdown = ({ text }: { text: string }) => {
-	const blocks = parseMarkdown(text);
+export const Markdown = memo(function Markdown({ text }: { text: string }) {
+	/* THE PARSE IS A FUNCTION OF THE TEXT AND NOTHING ELSE (design pass item E,
+	 *  cause 2), so it is memoised on the text alone: a re-render that arrives with
+	 *  the same answer (a panel opening, a scroll-linked parent, the row's own
+	 *  disclosure) re-uses the block list, and a streaming frame re-parses only the
+	 *  row that actually changed. */
+	const blocks = useMemo(() => parseMarkdown(text), [text]);
 	return (
 		/* ONE gap container, and every block carries no outer margin of its own
 		 * (`components.md` §22, "the container owns the gap"). Before this an
@@ -511,7 +564,7 @@ export const Markdown = ({ text }: { text: string }) => {
 							<View key={index} className="gap-1">
 								{block.items.map((item, itemIndex) => (
 									<View key={itemIndex} className="flex-row gap-2">
-										<Text className="text-body-lg text-ink-dim" aria-hidden>
+										<Text className="text-body-read text-ink-dim" aria-hidden>
 											{block.ordered ? `${itemIndex + 1}.` : "•"}
 										</Text>
 										<View className="min-w-0 flex-1">
@@ -523,7 +576,7 @@ export const Markdown = ({ text }: { text: string }) => {
 						);
 					case "quote":
 						return (
-							<View key={index} className="border-l-2 border-hairline pl-2">
+							<View key={index} className="border-s-2 border-hairline ps-2">
 								<Inline text={block.text} base="text-body-sm text-ink-muted" />
 							</View>
 						);
@@ -537,4 +590,4 @@ export const Markdown = ({ text }: { text: string }) => {
 			})}
 		</View>
 	);
-};
+});

@@ -1,0 +1,14 @@
+import hashlib
+p = "src/i18n/catalogues/fr/mobile.home.json"
+cur = open(p, "rb").read()
+new = "aux commandes de la conversation en cours".encode()
+old = "à ses commandes en direct".encode()
+assert cur.count(new) == 1, cur.count(new)
+rev = cur.replace(new, old)
+print("current                             ", hashlib.sha256(cur).hexdigest(), len(cur), "bytes")
+print("round-3 bundle recorded target      ", "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39")
+print("current with the one substring reverted to the round-3 wording")
+print("  replaced:", new.decode(), "->", old.decode())
+print("                                    ", hashlib.sha256(rev).hexdigest(), len(rev), "bytes")
+print("reconstruction matches round 3       ", hashlib.sha256(rev).hexdigest() == "2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39")
+print("occurrences of the new substring     ", cur.count(new))

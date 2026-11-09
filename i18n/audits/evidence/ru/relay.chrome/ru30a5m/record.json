@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "audit_id": "ru30a5m",
+  "audit_kind": "independent_current_byte_namespace_audit",
+  "locale": "ru",
+  "namespace": "relay.chrome",
+  "audit_date": "2026-10-30",
+  "wave": "ru wave 4 — damianvtran/local-operator-mobile, after fr c5f491e, es a57fb8c, zh-CN ba39018",
+  "audited_revision": "ba39018c493dda114d42a6b4d9dfbf337f4110f5",
+  "audited_revision_note": "The ru catalogue is untracked on this branch (?? src/i18n/catalogues/ru/) and src/i18n/catalogue.gen.ts is modified; the hashes below are the bytes that were audited.",
+  "key_count": {
+    "en": 4,
+    "target": 4,
+    "context": 4
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "68877acd3c8a",
+    "model": "radient/auto",
+    "requested_model": "anthropic/claude-sonnet-5-5",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "actual_model_source": "the session's own [model switch] notices: primary anthropic/claude-sonnet-5-5 hit a provider quota and the turn continued on openai/gpt-6-astra, then kimi/k3.1-pro, then radient/auto; every command below ran on radient/auto.",
+    "independent_from_translator": true,
+    "independence": "Different agent (i18n-auditor, never i18n-translator) and a different session from the translator's; the translator's session id was not supplied to this auditor, so independence is asserted by role and by the audit being a separate run, not by a transcript comparison."
+  },
+  "second_independent_pass": {
+    "performed": true,
+    "job": "0e8a65e92a72",
+    "label": "ru-group-a-second-pass",
+    "agent": "reviewer (lopdev team)",
+    "actual_model": "radient/auto",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "actual_model_source": "the delegated job's own report: primary anthropic/claude-sonnet-5-5 hit provider quota, intermediate notices named openai/gpt-6-astra and kimi/k3.1-pro, and the run finished on radient/auto.",
+    "scope": "All 54 group-A keys (mobile.home 27, mobile.session 2, mobile.session_health 11, mobile.account_routing 14), read independently before seeing this auditor's verdict; it was given the style guide, glossary, English sidecars and the app code, and explicitly told not to read this auditor's scratch conclusions.",
+    "verdict_for_this_namespace": "NOT COVERED: the second pass was scoped to the 54 group-A keys and did not read this namespace, so its verdict says nothing about these values; the byte comparison in this record is this auditor's own."
+  },
+  "translator": {
+    "agent": "i18n-translator (as named by the requesting manager)",
+    "session": "not supplied to this auditor",
+    "model": "not disclosed to this auditor",
+    "date": "2026-10-30"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/relay.chrome.json",
+      "sha256": "e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/relay.chrome.context.json",
+      "sha256": "195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/ru/relay.chrome.json",
+      "sha256": "eb9ae1745c59f8247e319f870c05c1bc0548c2f24beabbc7811acac9b95518cd"
+    },
+    "core_mirror_source": {
+      "ref": "origin/main",
+      "path": "local_operator/i18n/catalogues/ru/relay.chrome.json"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/ru/relay.chrome/ru30a5m/audit.log",
+      "sha256": "5467ae9ddca94ce3943d78277fda9dc562f68f76cfe6b6a0addd039ded9aa762",
+      "bytes": 4081
+    },
+    {
+      "path": "i18n/audits/evidence/ru/relay.chrome/ru30a5m/report.md",
+      "sha256": "cb985c33aefed1207b3fd0f47f557f4f4edafe408300527cfd2efec5a2a7311c",
+      "bytes": 1845
+    },
+    {
+      "path": "i18n/audits/evidence/ru/relay.chrome/ru30a5m/verify.mjs.txt",
+      "sha256": "c1c7c93a2d858e3f98e58be9cae190bb4f56c84d538b05b1e3dcb5fcab76f937",
+      "bytes": 11226
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "severity_counts": {
+      "BLOCKER": 0,
+      "MAJOR": 0,
+      "MINOR": 0,
+      "NIT": 0
+    }
+  },
+  "findings": [],
+  "judged_clean": "All 4 mirrored values are byte-identical to core's committed Russian at origin/main (relay.chrome.json, 85 keys), compared value by value with a one-byte-mutation negative control that fires. There is nothing to translate here and nothing to judge about the wording: the verdict is byte parity with the audited core copy, not a re-audit of core's Russian.",
+  "notes": [
+    "The mobile catalogue deliberately mirrors a 4-key subset; the 81 core keys this app does not render are listed as core-only in the log."
+  ],
+  "route": {
+    "engine": "the repository's own renderer: messages.parseMessage + messages.formatMessage + messages.pluralCategory (the same functions renderFor calls)",
+    "render_entry_point": "renderFor(key, args, \"ru\") returns the ENGLISH source at this head, because ru is still in NOT_YET_SHIPPED_LOCALES (proved in audit.log of ru30a1 via appendix-composition.txt); every ru string in these records was therefore rendered by calling formatMessage(parseMessage(<ru value>), args, \"ru\") directly, which is byte-identically what renderFor does once ru ships — proved by rendering all 38 zh-CN mobile.schedules keys through both paths and getting identical output.",
+    "width_engine": "swift + CoreText over the app's sans stack (measure.swift.txt); Figtree absent on this machine, so widths use the system face — the harness reproduces the repo's recorded 189.4 pt Spanish chip measurement, which is why ratios are used for judgement",
+    "machine_translation": "none — no translation or MT service was used to compare or back-translate",
+    "read_only": "the working tree was not edited, staged, committed or pushed; the only writes are these audit bundles under i18n/audits/evidence/ru/"
+  },
+  "ledger": {
+    "command": "absent",
+    "note": "No audit-ledger command and no i18n ledger exist in this repository at this head (i18n/ holds only audits/, and scripts/i18n/ has check-strings, generate, key-shape, ratchet, scan-strings — no ledger writer). The served record is this record.json under i18n/audits/evidence/<locale>/<namespace>/<id>/, matching the fr, es and zh-CN waves' machinery. There is likewise no i18n/audits/evidence/README.md contract in this checkout."
+  },
+  "audit_notes_not_execution_log": "This record and report.md are NOTES. The execution evidence is audit.log in the same directory: a bash set -x transcript of the catalogue validator, verify.mjs for this namespace, and verify.mjs --negative, captured when they ran. widths.tsv / tip-overflow.txt / widths-placeholder.tsv / appendix-composition.txt are measurement and composition artifacts, produced by the harnesses also stored here.",
+  "evidence_limitations": [
+    "Figtree is not installed on this machine, so CoreText widths use the system sans face; absolute points are approximate and the report leans on ratios and on the headroom each row records. The harness reproduces the repository's own recorded 189.4 pt Spanish-chip measurement, which is the calibration check.",
+    "renderFor(key, args, \"ru\") cannot render this catalogue yet — ru is still in NOT_YET_SHIPPED_LOCALES — so renders come from formatMessage(parseMessage(<ru value>), args, \"ru\"), proved byte-equal to renderFor on the 38 zh-CN mobile.schedules keys.",
+    "No rendered frame was captured: this was a copy audit, and the app was not built or driven. A UI reviewer still has to look at the ru strings in a build.",
+    "The 320 pt field width for ended_placeholder is derived from the sidecar's own 390 pt measurement (~348 pt) minus the viewport difference; it is an inference from a recorded measurement, not a direct capture.",
+    "Plural and placeholder machinery was exercised on the whole ru catalogue (11 plural nodes, all carrying one/few/many/other with correct numeral-noun agreement) but this namespace contains none of them."
+  ]
+}

@@ -1,0 +1,236 @@
+{
+ "schema": 1,
+ "audit_id": "libb-hi",
+ "locale": "hi",
+ "namespace": "mobile.library",
+ "audit_date": "2026-10-31",
+ "key_count": 29,
+ "value_count": 29,
+ "kind": "initial independent audit (library extraction wave, Audit B)",
+ "project": "damianvtran/local-operator-mobile",
+ "worktree": "session scratchpad lib-wave, detached at 4fd4ad7c plus the translator's uncommitted extraction and seven locale translations; read-only for this auditor",
+ "base_commit": "4fd4ad7c",
+ "route": {
+  "label": "worktree-file-read (ordinary reads of git working-tree files)",
+  "read_public_copy": "refused for src/i18n/** - not used",
+  "context_sidecar_routability": "not routable: the en mobile.library.context.json maps keys to nested {role,note} objects, not message strings",
+  "receipt": null,
+  "honest_note": "no copy-route receipt obtained or claimed for any input in this bundle"
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "31e9e2398db8",
+  "model": "radient/auto",
+  "actual_model_source": "session model-switch notices (provider-quota fallbacks) in this session's transcript: anthropic/claude-sonnet-5-5 -> anthropic/claude-opus-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto",
+  "model_chain": [
+   "anthropic/claude-sonnet-5-5",
+   "anthropic/claude-opus-5-5",
+   "openai/gpt-6-astra",
+   "kimi/k3.1-pro",
+   "radient/auto"
+  ],
+  "primary_model": "anthropic/claude-sonnet-5-5",
+  "fallback_used": true,
+  "fallback_note": "readings and judgments were formed under anthropic/claude-sonnet-5-5; provider-quota fallbacks then moved the session to radient/auto, under which the bundle was assembled and re-verified (generate.ts --check, renderers and probes re-run)",
+  "independent_from_translator_session": true,
+  "target_locale_native_fluency": "hi (native-fluent reader; no MT or translation service used at any point)"
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/hi/mobile.library.json",
+   "sha256": "50bd54a80febd6ca63e6ceaae9ea1bc6404d83b35e87cfec5e0aeb7607a34a20"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.library.json",
+   "sha256": "eae4550326593bb4da0773ccd5970583acbc7dd846dd3bd47af0c2030b756ad3"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.library.context.json",
+   "sha256": "1c459b0eaa68e314edd5935619480b8f28a5b31d4d52cd9286d7a746e2a31d6c"
+  }
+ },
+ "redaction_scan": {
+  "secret_pattern_matches": 0,
+  "patterns_checked": [
+   "sk-*",
+   "ghp_*",
+   "xox[bap]-",
+   "AKIA*",
+   "Bearer <token>",
+   "password[:=]",
+   "api_key[:=]"
+  ],
+  "files": [
+   "audit.log",
+   "report.md"
+  ],
+  "secret_material_in_bundles": 0,
+  "absolute_scratch_paths_present": true,
+  "note": "audit.log carries this run's real absolute scratch paths (not normalised, not claimed as normalised); publication normalisation, where earlier bundles did it, is for the committer"
+ },
+ "findings": [
+  {
+   "id": "libb-hi-1",
+   "severity": "MAJOR",
+   "key": "mobile.library.editor.description",
+   "current": "वर्णन",
+   "replacement": "विवरण",
+   "why": "Core's committed hi word for a record's description is विवरण (tui.authoring.description_clear_unsupported: 'मौजूदा विवरण'); core's only use of वर्णन is narration (wire.settings.display_narration.label: 'टर्न के दौरान वर्णन'). In this sheet that split is also visible on one screen: the title is 'विवरण संपादित करें' while the field beside नाम would read वर्णन. वर्णन ('narration/portrayal') is a literary label for a file's description field in a form; विवरण is the standard UI term and core's choice. Meaning is not lost by the current word — the defect is cross-surface term divergence, which the brief classes MAJOR.",
+   "verified": "bounded grep over core hi catalogues in audit.log + tools/verify-repl.ts render"
+  },
+  {
+   "id": "libb-hi-2",
+   "severity": "MAJOR",
+   "key": "mobile.library.detail.missing_file",
+   "current": "यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और वर्णन अब भी यहाँ हैं।",
+   "replacement": "यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और विवरण अब भी यहाँ हैं।",
+   "why": "Same root as libb-hi-1: the sentence names the fields the editor labels, so वर्णन must follow the field label विवरण. One word changes; both sentences and both dandas (।) are otherwise correct, and the warning stays a warning (it implies no recovery).",
+   "verified": "tools/verify-repl.ts render in audit.log"
+  },
+  {
+   "id": "libb-hi-3",
+   "severity": "MAJOR",
+   "key": "mobile.library.editor.new_tag_placeholder",
+   "current": "विषय-नाम",
+   "replacement": "topic-name",
+   "why": "Same defect as libb-ur-1: core's server tag grammar ^[a-z0-9][a-z0-9_-]{0,23}$ refuses Devanagari tag names (probe in audit.log: «विषय-नाम» TagRefused, 'topic-name' created), so the example teaches a tag the field cannot save. `mobile.library.editor.new_tag_placeholder` must be added to `IDENTICAL_BY_DESIGN.<locale>` in src/i18n/__tests__/catalogues.test.ts with a reason, because the 'no shipped value equals English' test (catalogues.test.ts:281-286) fails on a value identical to en. A different ASCII example (e.g. `weekly-notes`) needs no allowlist entry. Same defect in ru, vi and zh-CN (probed); not my bundles.",
+   "verified": "tools/tagprobe.py (function gate + real MetadataStore.create_tag) + tools/verify-repl.ts render"
+  },
+  {
+   "id": "libb-hi-4",
+   "severity": "MINOR",
+   "key": "mobile.library.editor.discard_title",
+   "current": "बदलाव छोड़ दें?",
+   "replacement": "बदलाव छोड़ें?",
+   "why": "Core ships this confirmation as «बदलाव छोड़ें?» (tui.authoring.discard, tui.team_authoring.discard). छोड़ दें? is grammatical and polite but adds a 'go ahead and' softener to a destructive title; aligning costs one word and keeps the confirm-dialog wording identical across desktop and phone. Not unsafe — the destructive button is a separate string.",
+   "verified": "bounded grep over core hi catalogues in audit.log + render"
+  },
+  {
+   "id": "libb-hi-5",
+   "severity": "MINOR",
+   "key": "mobile.library.browse.refresh",
+   "current": "लाइब्रेरी रीफ़्रेश करें",
+   "replacement": "लाइब्रेरी ताज़ा करें",
+   "why": "Core hi ships three spellings of this verb — ताज़ा करें (tui.review.hint_refresh), रीफ़्रेश (relay.notifications.error.refresh), रिफ़्रेश (wire.errors.desktop.refresh_requires_live) — so the current value is not a glossary violation; it matches the relay family. Flagging the split for the programme to settle rather than a defect of this string: ताज़ा करें is the Hindi term core uses for a refresh control, रीफ़्रेश the loan the relay uses.",
+   "verified": "bounded grep over core hi catalogues in audit.log"
+  },
+  {
+   "id": "libb-hi-6",
+   "severity": "NIT",
+   "key": "mobile.library.browse.more_kinds",
+   "current": "और प्रकार",
+   "replacement": "अन्य प्रकार",
+   "why": "Sheet title for the kinds that did not fit the segmented control. «और» can be read as the conjunction 'and' (and kinds); «अन्य» is unambiguously 'other/more'. Taste, either is understood.",
+   "verified": "render in audit.log"
+  }
+ ],
+ "mechanical": {
+  "generate_ts_check": "exit 0 - catalogue.gen.ts is current (178 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)",
+  "keyset_equals_en": true,
+  "placeholders_ok": true,
+  "plural_arms": 0,
+  "bidi_controls": 0,
+  "full_stops_ok": true,
+  "nfc_stable": true,
+  "json_valid": true
+ },
+ "plural_cases": {
+  "editor.tag_limit_at": [
+   0,
+   1,
+   2,
+   12,
+   21
+  ],
+  "browse.filters_count_at": [
+   0,
+   1,
+   2,
+   21
+  ],
+  "grammatical_at_all": true,
+  "note": "no ICU arms: the number labels a quantity (a ceiling, a count), so no CLDR arm is selected and the ur 0->other / hi 0->one divergence cannot apply; call sites render only limit=12 and count>0"
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 3,
+  "finding_ids": [
+   "libb-hi-1",
+   "libb-hi-2",
+   "libb-hi-3",
+   "libb-hi-4",
+   "libb-hi-5",
+   "libb-hi-6"
+  ],
+  "blocker_major_ids": [
+   "libb-hi-1",
+   "libb-hi-2",
+   "libb-hi-3"
+  ]
+ },
+ "second_pass": {
+  "high_visibility_group": false,
+  "note": "mobile.library is not an onboarding/errors/settings surface; if the programme treats the Library screens as high-visibility, a second independent pass is still outstanding and is NOT claimed here"
+ },
+ "audit_notes_not_execution_log": "report.md prose is judgement, not command output; every mechanical and render claim is backed by audit.log",
+ "execution_log": "audit.log - real stdout/stderr of tools/run.sh hi: git rev-parse, git status, sha256 of the three inputs, generate.ts --check, tools/checks.py, tools/render.ts, tools/fit.py (rich cell widths), tools/tagprobe.py (core .venv, read-only), a bounded glossary grep over core's committed catalogues, tools/verify-repl.ts",
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/audit.log",
+   "sha256": "9930518fc4faa9ac6c812860646add13aef49920b6a790d39ce200a857d206a3"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/report.md",
+   "sha256": "f751ee4b2196922d03850debcb766ca83cee2ba0a992755ea5ab279a9761dac6"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/tools/run.sh",
+   "sha256": "71ae12ad7e92f3ba1750e8621325bec67aa299a6b1ddba42140675deb3546869"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/tools/render.ts",
+   "sha256": "e41e118b70c9a316f8594976d3896d35caa7d7d10cbea7a635f5e78713bfa1da"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/tools/checks.py",
+   "sha256": "e0c6ac2c4d6b07b4faf3d5f93de044898a96b25578e783f1cfd2d7733c96c465"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/tools/tagprobe.py",
+   "sha256": "c5022ba893909e2370e5947b9875202288ce721f4a8f5bcc1a06ccbffe9b083a"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/tools/verify-repl.ts",
+   "sha256": "93ecc76786953608fd2785d975c7c2b8eec4b50ff578dda1593d1e2ae5696326"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/tools/fit.py",
+   "sha256": "722f1972ccedec75d9f7292ba6aa5a3f12e93148feda37d6a8c0a9e21b495b22"
+  },
+  {
+   "path": "i18n/audits/evidence/hi/mobile.library/libb-hi/record.json",
+   "sha256": "self (not applicable: a file cannot attest its own hash)"
+  }
+ ],
+ "ledger_row_draft": {
+  "locale": "hi",
+  "namespace": "mobile.library",
+  "source_sha256": "eae4550326593bb4da0773ccd5970583acbc7dd846dd3bd47af0c2030b756ad3",
+  "translator": {
+   "agent": "i18n-translator (lopdev lane)",
+   "note": "value supplied by the translator session; this auditor did not translate these strings"
+  },
+  "status": "changes_requested",
+  "note": "Independent audit (hi / mobile.library, 6 keys to work, 3 major, 0 blocker). Record with hashes, model, findings: i18n/audits/evidence/hi/mobile.library/libb-hi/record.json."
+ },
+ "ledger_command": {
+  "exists": false,
+  "checked": [
+   "src/i18n/ scripts in the audited repo (package.json i18n scripts: generate/check/ratchet; no ledger)",
+   "i18n/ in the audited repo: audits/ only, no ledger.json",
+   "core repo scripts/i18n/{check,generate,login}.py and emit.mjs: no ledger subcommand"
+  ],
+  "consequence": "the ledger row is a draft in this record; nobody can honestly claim a ledger write was executed"
+ },
+ "ledger_note_offer": "record at i18n/audits/evidence/hi/mobile.library/libb-hi/record.json; status 'changes_requested', 3 MAJOR, no BLOCKER, verdict agreed with record hashes/identities"
+}

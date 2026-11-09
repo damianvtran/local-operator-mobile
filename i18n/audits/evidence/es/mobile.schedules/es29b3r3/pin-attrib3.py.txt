@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+"""Which committed tree does the U08 `src` pin describe?
+
+Extracts `src` from a revision with one `git archive` (fast), then applies the
+same digest rule as tools/audit/u08-content-pins.ts treeDigest(): sha256 over the
+sorted lines `${sha256(file)}  ${path}\\n`.
+"""
+import hashlib
+import os
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+
+REPO = "/Users/damian/workspace/es-wave"
+PIN = "9bfcc365da9be0eae7f769dac06cae1bb972b24287b970a24214280316f488"  # corrected below from the file
+
+PIN = subprocess.run(["grep", "-o", 'src: "[0-9a-f]*"', f"{REPO}/tools/audit/u08-content-pins.ts"],
+                     capture_output=True, text=True).stdout.strip().split('"')[1]
+
+def digest_for(rev):
+    tmp = tempfile.mkdtemp(dir=os.environ["LOCAL_OPERATOR_SCRATCHPAD"] + "/es29b3r3")
+    try:
+        archive = subprocess.run(["git", "-C", REPO, "archive", rev, "src"],
+                                 capture_output=True, check=True).stdout
+        with open(os.path.join(tmp, "src.tar"), "wb") as fh:
+            fh.write(archive)
+        with tarfile.open(os.path.join(tmp, "src.tar")) as tar:
+            tar.extractall(tmp, filter="data")
+        paths = []
+        for root, _dirs, files in os.walk(os.path.join(tmp, "src")):
+            for name in files:
+                full = os.path.join(root, name)
+                paths.append(os.path.relpath(full, tmp).replace(os.sep, "/"))
+        paths.sort()
+        lines = []
+        for p in paths:
+            with open(os.path.join(tmp, p), "rb") as fh:
+                lines.append(f"{hashlib.sha256(fh.read()).hexdigest()}  {p}\n")
+        return hashlib.sha256("".join(lines).encode()).hexdigest(), len(paths)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+print("pin in the committed file:", PIN)
+revs = subprocess.run(["git", "-C", REPO, "rev-list", "--max-count=8", "HEAD"],
+                      capture_output=True, text=True).stdout.split()
+for rev in revs:
+    short = subprocess.run(["git", "-C", REPO, "rev-parse", "--short", rev],
+                           capture_output=True, text=True).stdout.strip()
+    d, n = digest_for(rev)
+    print(f"{short}  files={n:4d}  {d}  {'<<< MATCHES THE PIN' if d == PIN else ''}")

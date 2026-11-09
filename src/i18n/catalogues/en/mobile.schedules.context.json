@@ -1,0 +1,154 @@
+{
+	"mobile.schedules.cadence.every": {
+		"role": "meta",
+		"note": "Cadence phrase for a repeating schedule. {duration} is a formatted interval such as '1d' or '1h30m'; it is formatting, not prose, and is not translated in this slice."
+	},
+	"mobile.schedules.cadence.left": {
+		"role": "meta",
+		"note": "Cadence with a bounded delivery budget. {cadence} is the already-rendered 'every …' phrase; {remaining} is a positive integer. The middle dot is a separator, keep it."
+	},
+	"mobile.schedules.cadence.once": {
+		"role": "meta",
+		"note": "A schedule that fires once. One lower-case word; it replaces the whole cadence phrase."
+	},
+	"mobile.schedules.cadence.spent": {
+		"role": "meta",
+		"note": "A repeating schedule whose delivery budget is used up. Says 'no deliveries left' rather than '0 left', which would promise a fire that cannot happen."
+	},
+	"mobile.schedules.count.monitors": {
+		"role": "meta",
+		"note": "Monitor count. {count} is a non-negative integer and drives the plural category; # is that number."
+	},
+	"mobile.schedules.count.wakes": {
+		"role": "meta",
+		"note": "Wake count. {count} is a non-negative integer and drives the plural category; # is that number."
+	},
+	"mobile.schedules.due.ahead": {
+		"role": "meta",
+		"note": "A due instant still in the future. {label} is a relative duration such as '4m' or '1h30m' formatted by the client, not translated here."
+	},
+	"mobile.schedules.due.overdue": {
+		"role": "meta",
+		"note": "A due instant already past. {label} is a relative duration such as '2h'. The word 'overdue' is the terminal's own word for this state; do not substitute 'late' or 'missed'."
+	},
+	"mobile.schedules.empty.body": {
+		"role": "help",
+		"note": "The both-families-empty explanation. Two sentences: what to do, then what a wake and a monitor each are. Only shown when BOTH stores read successfully and hold nothing."
+	},
+	"mobile.schedules.empty.title": {
+		"role": "heading",
+		"note": "Empty-state heading. Short, no final full stop; the body sentence follows it."
+	},
+	"mobile.schedules.empty_line.monitors": {
+		"role": "status",
+		"note": "Shown under the monitors header when only the wakes family has content. A sentence with a full stop, unlike the header counters."
+	},
+	"mobile.schedules.empty_line.wakes": {
+		"role": "status",
+		"note": "Shown under the wakes header when only the monitors family has content. A sentence with a full stop, unlike the header counters."
+	},
+	"mobile.schedules.gone.monitors": {
+		"role": "status",
+		"note": "The conversation a monitor belonged to no longer exists on this machine, so nothing checks it. Deliberately distinct from the parked sentence: nothing can resume this."
+	},
+	"mobile.schedules.gone.wakes": {
+		"role": "status",
+		"note": "The conversation a wake belonged to no longer exists on this machine, so nothing fires it. Deliberately distinct from the parked sentence."
+	},
+	"mobile.schedules.head.next": {
+		"role": "meta",
+		"note": "Entry head line: how many schedules, then the soonest future instant. {head} is an already-rendered count phrase; {label} is a relative duration. 'next' is dropped once the instant is overdue."
+	},
+	"mobile.schedules.head.overdue": {
+		"role": "meta",
+		"note": "Entry head line when the soonest instant is already past. {head} is an already-rendered count phrase; {label} is a relative duration ending in the word 'overdue'. No forward-looking word here."
+	},
+	"mobile.schedules.parked.monitors": {
+		"role": "status",
+		"note": "The conversation is stopped, so its monitors pause. Monitors resume when the conversation next RUNS; opening it is not enough."
+	},
+	"mobile.schedules.parked.wakes": {
+		"role": "status",
+		"note": "The conversation is stopped, so its wakes are held. Wakes resume after its NEXT TURN; opening the conversation is not enough. Do not say 'when you open it'."
+	},
+	"mobile.schedules.read_error.monitors": {
+		"role": "status",
+		"note": "The monitor store could not be read. Must name the failed family and must never read like an empty list."
+	},
+	"mobile.schedules.read_error.wakes": {
+		"role": "status",
+		"note": "The wake store could not be read. Must name the failed family and must never read like an empty list."
+	},
+	"mobile.schedules.read_unreachable": {
+		"role": "status",
+		"note": "A read failed with no sentence of its own, i.e. a transport drop. The connection surface owns the cause; this only says the read did not happen."
+	},
+	"mobile.schedules.show_less.monitors": {
+		"role": "button",
+		"note": "Collapse control for the per-entry monitor disclosure. Shown only while expanded."
+	},
+	"mobile.schedules.show_less.wakes": {
+		"role": "button",
+		"note": "Collapse control for the per-entry wake disclosure. Shown only while expanded."
+	},
+	"mobile.schedules.show_more.monitors": {
+		"role": "button",
+		"note": "Expand control for hidden monitor rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more monitor', not 'more monitors'."
+	},
+	"mobile.schedules.show_more.wakes": {
+		"role": "button",
+		"note": "Expand control for hidden wake rows. {hidden} is a positive integer driving the plural category; # is that number. The singular must read 'more wake', not 'more wakes'."
+	},
+	"mobile.schedules.state.disabled": {
+		"role": "status",
+		"note": "The store's state word for a monitor the user turned off, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop, no sentence around it."
+	},
+	"mobile.schedules.state.dormant": {
+		"role": "status",
+		"note": "The store's state word for a monitor whose conversation is not running, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop. It must not be confused with the parked CLAUSE that replaces the whole head line."
+	},
+	"mobile.schedules.state.expired": {
+		"role": "status",
+		"note": "The store's state word for a monitor past its expiry, replacing the due clock in the row's slot. It is the row's STATE, not an instruction: one word, no final full stop."
+	},
+	"mobile.schedules.state.stale": {
+		"role": "status",
+		"note": "One word replacing the due clock when the supervisor has given up on a wake. The terminal's own vocabulary for this state."
+	},
+	"mobile.schedules.state.waiting": {
+		"role": "status",
+		"note": "One word for an armed monitor with no recorded due time. Replaces the slot that would hold a due clock."
+	},
+	"mobile.schedules.summary.monitors_armed": {
+		"role": "heading",
+		"note": "Monitors section header when every monitor is healthy. {count} is the number of monitor rows; no final full stop."
+	},
+	"mobile.schedules.summary.monitors_attention": {
+		"role": "heading",
+		"note": "Monitors section header when at least one monitor needs attention. {broken} need attention out of {total} rows. Used instead of the armed counter so the header cannot contradict a row that reads disabled."
+	},
+	"mobile.schedules.summary.wakes": {
+		"role": "heading",
+		"note": "Wakes section header. {count} counts wake ROWS, not conversations. No final full stop."
+	},
+	"mobile.schedules.supervisor.not_running": {
+		"role": "status",
+		"note": "The supervisor is installed but not running, so nothing will fire. Only shown when the probe could verify the supervisor's state."
+	},
+	"mobile.schedules.supervisor.unsupported": {
+		"role": "status",
+		"note": "This platform has no wake supervisor. Must win over the unverifiable sentence when both apply, because the platform is the real reason."
+	},
+	"mobile.schedules.supervisor.unverifiable": {
+		"role": "status",
+		"note": "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked."
+	},
+	"mobile.schedules.tail.failed": {
+		"role": "status",
+		"note": "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence."
+	},
+	"mobile.schedules.truncated": {
+		"role": "status",
+		"note": "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects."
+	}
+}

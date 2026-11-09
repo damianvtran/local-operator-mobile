@@ -1,0 +1,12 @@
+# The conversations panel, populated, over the home (continues from home.yaml).
+# Waits on `sidebar-past`, which both the before (main) and after builds draw.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "sidebar-past"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 3000

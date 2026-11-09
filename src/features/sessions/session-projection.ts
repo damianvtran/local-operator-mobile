@@ -8,7 +8,11 @@
  * decision that gets changed by accident.
  */
 
-import type { SessionSummary, UnreadBlock } from "@/contracts";
+import type {
+	NotificationsBlock,
+	SessionSummary,
+	UnreadBlock,
+} from "@/contracts";
 
 /**
  * The one state mark a row shows (docs/ux/flows.md § 5 step 2).
@@ -428,4 +432,31 @@ export function visiblePeers(
 		out.push({ deviceId, label: remoteDeviceLabel(session) });
 	}
 	return out;
+}
+
+/**
+ * The inbox badge's number, or `null` when the relay did not say.
+ *
+ * The SAME rule as `unreadBadgeCount`, applied to a different store: the number
+ * is the machine's own read of the inbox (`notifications.unread_count` on the
+ * list frame, contract §5.4), never a count this client derives from the rows it
+ * happens to hold. `null` — an older relay, or a frame that has not carried the
+ * block yet — draws NO number rather than a zero: absence is unknown, and a zero
+ * is a real answer that clears the badge.
+ */
+export function inboxBadgeCount(
+	block: NotificationsBlock | null,
+): number | null {
+	if (block === null) return null;
+	/* ONE FORMULA ON EVERY SURFACE (D16): the badge is the unread updates PLUS the
+	 * unread open asks — a priority ask is exactly what must not be undercounted.
+	 * The core publishes the split (`items.counts`: `waiting_unread_count`), the
+	 * desktop and TUI sum it, and the phone summing only `unread_count` read 6
+	 * where they read 7 (NC7).
+	 *
+	 * UNKNOWN STAYS UNKNOWN: a block the relay could not read arrives as `{}` (or
+	 * with the field absent on an older relay), and the answer is `null` — no
+	 * numeral — never a zero the reader would trust (T6/NC5). */
+	if (block.unread_count === undefined) return null;
+	return block.unread_count + (block.waiting_unread_count ?? 0);
 }

@@ -1,0 +1,206 @@
+### CMD[1-worktree]: git status --short
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+ M .gitignore
+A  i18n/audits/evidence/fr/mobile.account_routing/fr29b1/audit.log
+A  i18n/audits/evidence/fr/mobile.account_routing/fr29b1/record.json
+A  i18n/audits/evidence/fr/mobile.account_routing/fr29b1/report.md
+A  i18n/audits/evidence/fr/mobile.computers/fr29b2/audit.log
+A  i18n/audits/evidence/fr/mobile.computers/fr29b2/record.json
+A  i18n/audits/evidence/fr/mobile.computers/fr29b2/report.md
+A  i18n/audits/evidence/fr/mobile.computers/fr29c2/audit.log
+A  i18n/audits/evidence/fr/mobile.computers/fr29c2/record.json
+A  i18n/audits/evidence/fr/mobile.computers/fr29c2/renderer.ts.txt
+A  i18n/audits/evidence/fr/mobile.computers/fr29c2/report.md
+A  i18n/audits/evidence/fr/mobile.computers/fr29c2/resolver.mjs.txt
+A  i18n/audits/evidence/fr/mobile.computers/fr29c2/scanner.py.txt
+A  i18n/audits/evidence/fr/mobile.home/fr29a1/audit.log
+A  i18n/audits/evidence/fr/mobile.home/fr29a1/record.json
+A  i18n/audits/evidence/fr/mobile.home/fr29a1/report.md
+A  i18n/audits/evidence/fr/mobile.home/fr29h2/audit.log
+A  i18n/audits/evidence/fr/mobile.home/fr29h2/record.json
+A  i18n/audits/evidence/fr/mobile.home/fr29h2/report.md
+A  i18n/audits/evidence/fr/mobile.notifications/fr29b3/audit.log
+A  i18n/audits/evidence/fr/mobile.notifications/fr29b3/record.json
+A  i18n/audits/evidence/fr/mobile.notifications/fr29b3/report.md
+A  i18n/audits/evidence/fr/mobile.projects/fr29b4/audit.log
+A  i18n/audits/evidence/fr/mobile.projects/fr29b4/record.json
+A  i18n/audits/evidence/fr/mobile.projects/fr29b4/report.md
+A  i18n/audits/evidence/fr/mobile.projects/fr29p2/audit.log
+A  i18n/audits/evidence/fr/mobile.projects/fr29p2/record.json
+A  i18n/audits/evidence/fr/mobile.projects/fr29p2/renderer.ts.txt
+A  i18n/audits/evidence/fr/mobile.projects/fr29p2/report.md
+A  i18n/audits/evidence/fr/mobile.projects/fr29p2/resolver.mjs.txt
+A  i18n/audits/evidence/fr/mobile.projects/fr29p2/scanner.py.txt
+A  i18n/audits/evidence/fr/mobile.schedules/fr29a2/audit.log
+A  i18n/audits/evidence/fr/mobile.schedules/fr29a2/record.json
+A  i18n/audits/evidence/fr/mobile.schedules/fr29a2/report.md
+A  i18n/audits/evidence/fr/mobile.schedules/fr29s2/audit.log
+A  i18n/audits/evidence/fr/mobile.schedules/fr29s2/record.json
+A  i18n/audits/evidence/fr/mobile.schedules/fr29s2/report.md
+A  i18n/audits/evidence/fr/mobile.session/fr29b5/audit.log
+A  i18n/audits/evidence/fr/mobile.session/fr29b5/record.json
+A  i18n/audits/evidence/fr/mobile.session/fr29b5/report.md
+A  i18n/audits/evidence/fr/mobile.session/fr29e2/audit.log
+A  i18n/audits/evidence/fr/mobile.session/fr29e2/record.json
+A  i18n/audits/evidence/fr/mobile.session/fr29e2/renderer.ts.txt
+A  i18n/audits/evidence/fr/mobile.session/fr29e2/report.md
+A  i18n/audits/evidence/fr/mobile.session/fr29e2/resolver.mjs.txt
+A  i18n/audits/evidence/fr/mobile.session/fr29e2/scanner.py.txt
+ M src/i18n/catalogue.gen.ts
+ M src/i18n/catalogues/fr/mobile.home.json
+?? i18n/audits/evidence/fr/mobile.home/fr29h3/
+--- stdout/stderr end (exit 0) ---
+
+### CMD[2-head]: git rev-parse HEAD
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+79b3fad082c0ae850b06a4437006d445bb1c4887
+--- stdout/stderr end (exit 0) ---
+
+### CMD[3-branch]: git rev-parse --abbrev-ref HEAD
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+feat/i18n-mobile-locales
+--- stdout/stderr end (exit 0) ---
+
+### CMD[4-diffstat]: git diff --stat
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+ .gitignore                              | 4 ++++
+ src/i18n/catalogue.gen.ts               | 2 +-
+ src/i18n/catalogues/fr/mobile.home.json | 2 +-
+ 3 files changed, 6 insertions(+), 2 deletions(-)
+--- stdout/stderr end (exit 0) ---
+
+### CMD[5-frdiff]: git diff -U0 -- src/i18n/catalogues/fr/mobile.home.json
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+diff --git a/src/i18n/catalogues/fr/mobile.home.json b/src/i18n/catalogues/fr/mobile.home.json
+index 8265dc9..f576bb4 100644
+--- a/src/i18n/catalogues/fr/mobile.home.json
++++ b/src/i18n/catalogues/fr/mobile.home.json
+@@ -6 +6 @@
+-	"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en cours.",
++	"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.",
+--- stdout/stderr end (exit 0) ---
+
+### CMD[6-gendiff]: git diff -U0 -- src/i18n/catalogue.gen.ts
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+diff --git a/src/i18n/catalogue.gen.ts b/src/i18n/catalogue.gen.ts
+index 5a2fe56..5959290 100644
+--- a/src/i18n/catalogue.gen.ts
++++ b/src/i18n/catalogue.gen.ts
+@@ -690 +690 @@ export const LOCALISED_MESSAGES: Readonly<
+-		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en cours.",
++		"mobile.home.options.fixed": "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.",
+--- stdout/stderr end (exit 0) ---
+
+### CMD[7-sha256]: shasum -a 256 src/i18n/catalogues/en/mobile.home.json src/i18n/catalogues/en/mobile.home.context.json src/i18n/catalogues/fr/mobile.home.json src/i18n/catalogues/fr/mobile.session.json src/i18n/catalogues/en/mobile.session.json
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39  src/i18n/catalogues/fr/mobile.home.json
+f57666b0586a9054ee187b880fbe922d81cee07cefc5ce995c6ffe798961ba78  src/i18n/catalogues/fr/mobile.session.json
+8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  src/i18n/catalogues/en/mobile.session.json
+--- stdout/stderr end (exit 0) ---
+
+### CMD[8-validator]: npm run -s i18n:catalogue:check
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+src/i18n/catalogue.gen.ts is current (120 keys, 7 namespaces, argument types from en, fr)
+--- stdout/stderr end (npm exit 0) ---
+
+### CMD[9-delta]: node delta.mjs
+### CWD: /Users/damian/.local-operator/sessions/4191880b0141/scratchpad/fr29h3
+--- stdout/stderr begin ---
+(node:55583) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+== sha256 (current bytes) ==
+en            4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+context       db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+target        2f25ddab1029a5cbd3121b9fc5e42f86fe8360c48b67865c106fb22fb86e8a39  src/i18n/catalogues/fr/mobile.home.json
+targetSession f57666b0586a9054ee187b880fbe922d81cee07cefc5ce995c6ffe798961ba78  src/i18n/catalogues/fr/mobile.session.json
+enSession     8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  src/i18n/catalogues/en/mobile.session.json
+
+== key counts ==
+en       27
+context  27
+fr       27
+
+== source and current target ==
+EN : This conversation's starting options are fixed. Use Conversation details for its live controls.
+FR : Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.
+LEN (UTF-16): 132
+CONTEXT NOTE: Explains why the starting options are read-only once the conversation has started. "Conversation details" names another screen in this app: keep it matching that screen's title.
+CONTEXT ROLE: help
+
+== parser: the app's own parseMessage ==
+PARSE: OK
+PARSED: {"source":"Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.","params":{},"nodes":[{"type":"text","value":"Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct."}]}
+en params: [] | fr params: []
+
+== render (formatMessage, empty params) ==
+rendered : Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct.
+identical to catalogue value: true
+
+== the destination label this key names ==
+fr mobile.session.conversation_details = "Détails de la conversation"
+en mobile.session.conversation_details = "Conversation details"
+label appears byte-exactly in the sentence: true
+window: "ées. Utilisez Détails de la conversation pour ac"
+
+== character inventory ==
+non-ascii: U+00E9 é, U+00E0 à
+bidi controls: none
+ASCII apostrophe: false | ASCII double quote: false | ASCII '...': false
+U+00A0: false | U+202F: false
+U+202F before [;:!?]: false | bare U+0020 before [;:!?]: false
+guillemets: false | em dash: false | semicolon/colon: false
+ends with a full stop: true | sentence count: 2
+
+== round-2 byte reconstruction (single-substring revert) ==
+reverted hash: 6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d
+round-2 recorded target hash: 6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d
+MATCH: true
+occurrences of 'commandes en direct' in file: 1
+byte size now / after revert: 2002 / 2001
+--- stdout/stderr end (exit 0) ---
+
+### CMD[10-render]: node --import ./register.mjs render.mjs
+### CWD: /Users/damian/.local-operator/sessions/4191880b0141/scratchpad/fr29h3
+--- stdout/stderr begin ---
+fr     FR  "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct."
+en     EN  "This conversation's starting options are fixed. Use Conversation details for its live controls."
+null   EN  "This conversation's starting options are fixed. Use Conversation details for its live controls."
+es     EN  "This conversation's starting options are fixed. Use Conversation details for its live controls."
+de     EN  "This conversation's starting options are fixed. Use Conversation details for its live controls."
+fr-CA  FR  "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct."
+FR     FR  "Les options initiales de cette conversation sont figées. Utilisez Détails de la conversation pour accéder à ses commandes en direct."
+(node:55611) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/runtime.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+--- stdout/stderr end (exit 0) ---
+
+### CMD[11-vitest]: npx vitest run src/i18n/__tests__
+### CWD: /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+--- stdout/stderr begin ---
+··········································································
+
+ Test Files  5 passed (5)
+      Tests  74 passed (74)
+   Start at  07:46:55
+   Duration  1.45s (transform 77%, import 14%, tests 8%, worker 1%)
+
+  Transform  transforming modules took 2.69s · 77% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+--- stdout/stderr end (exit 0) ---
+

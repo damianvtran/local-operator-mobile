@@ -1,0 +1,111 @@
+# audit.log - libc-ru-r1 mobile.library. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/run.sh ru, run 2026-10-31T13:47:38Z. Reads of call sites / sibling catalogues (sed/grep/python) are the auditor's own and are not replayed here.
+
+$ git rev-parse --short HEAD
+4fd4ad7c
+[exit 0]
+
+$ git status --short -- src/i18n/catalogues/ru/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+ M src/features/library/library-detail.tsx
+ M src/ui/components/dialog.tsx
+?? src/i18n/catalogues/en/mobile.library.context.json
+?? src/i18n/catalogues/en/mobile.library.json
+?? src/i18n/catalogues/ru/mobile.library.json
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/ru/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/i18n/catalogues/ru/mobile.common.json
+fef91c9fac91a98120f0506824651a4830dd89ee3e26ae935e9fcbee3fa2934e  src/i18n/catalogues/ru/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+cd89f84b4bb9245f70b6324dd1b1958908ea724217f783689e16cbb041ac01bc  src/i18n/catalogues/ru/mobile.common.json
+[exit 0]
+
+$ grep -n mobile.library.discard\|mobile.library.editor.discard_title\|mobile.common.cancel src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+src/features/library/library-detail.tsx:825:								label={t("mobile.common.cancel")}
+src/features/library/library-detail.tsx:916:				title={t("mobile.library.editor.discard_title")}
+src/features/library/library-detail.tsx:917:				body={t("mobile.library.discard_not_saved")}
+src/features/library/library-detail.tsx:918:				confirmLabel={t("mobile.library.discard_confirm")}
+src/ui/components/dialog.tsx:133:							accessibilityLabel={t("mobile.common.cancel")}
+src/ui/components/dialog.tsx:191:										label={t("mobile.common.cancel")}
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/checks.py ru
+en keys 31 sidecar keys 31 sidecar==en True
+ru: keys=31 same_keyset_as_en=True all_values_str=True
+bidi/zero-width chars: 0
+Cf/Cc: []
+NFC-stable: True
+leading/trailing space: []
+U+FFFD / mojibake markers: []
+placeholder/ICU defects: none
+sentence keys (en ends with .): 6
+full-stop mismatch (locale stop vs en): none
+ASCII-quote / ASCII apostrophe in values: none
+special spaces (NNBSP U+202F / NBSP U+00A0): []
+new_tag_placeholder 'topic-name' matches server grammar ^[a-z0-9][a-z0-9_-]{0,23}$ : True
+mid-dot kept in filters_count: True
+discard_confirm != common cancel:
+   common.cancel = 'Отмена' | discard_confirm = 'Отбросить' | equal: False
+   common.save = 'Сохранить'
+length (chars) of button/chip/label values:
+   action.add_tag                 8 chars (en 3)  Добавить
+   action.edit                    8 chars (en 4)  Изменить
+   action.open_chat              14 chars (en 9)  Открыть беседу
+   browse.any_tag                 9 chars (en 7)  Любой тег
+   browse.filters                 7 chars (en 7)  Фильтры
+   browse.more_kinds             11 chars (en 10)  Другие типы
+   browse.sort                   10 chars (en 4)  Сортировка
+   browse.status                  6 chars (en 6)  Статус
+   browse.tag                     3 chars (en 3)  Тег
+   discard_confirm                9 chars (en 7)  Отбросить
+   editor.discard_title          20 chars (en 16)  Отбросить изменения?
+   browse.search_placeholder     23 chars (en 18)  Название, тег или слова
+[exit 0]
+
+### rendered text, real args (limit=12; count=1,2,5), via src/i18n/messages.ts, WITH any prescribed replacement beneath
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/render.ts ru /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/ru.repl.json
+action.add_tag                   {}           => Добавить
+action.edit                      {}           => Изменить
+action.open_chat                 {}           => Открыть беседу
+browse.any_tag                   {}           => Любой тег
+browse.filter_by_kind            {}           => Фильтровать по типу
+browse.filters                   {}           => Фильтры
+browse.filters_count             {"count":1}  => Фильтры · 1
+browse.filters_count             {"count":2}  => Фильтры · 2
+browse.filters_count             {"count":5}  => Фильтры · 5
+browse.more_kinds                {}           => Другие типы
+browse.no_tags                   {}           => Тегов пока нет. Библиотекарь добавляет их, когда упорядочивает ресурсы.
+browse.refresh                   {}           => Обновить библиотеку
+browse.search_label              {}           => Искать в библиотеке
+browse.search_placeholder        {}           => Название, тег или слова
+browse.sort                      {}           => Сортировка
+browse.status                    {}           => Статус
+browse.tag                       {}           => Тег
+detail.message_label             {}           => Сообщение об этом ресурсе
+detail.missing_file              {}           => Файл перемещён или удалён. Его название, теги и описание сохранились.
+detail.no_source                 {}           => Для этого ресурса не записана исходная беседа.
+detail.no_tags                   {}           => Тегов пока нет. Измените сведения, чтобы добавить тег.
+detail.seen_in                   {}           => Встречается в
+editor.description               {}           => Описание
+editor.discard_title             {}           => Отбросить изменения?
+editor.name                      {}           => Название
+editor.new_tag                   {}           => Новый тег
+editor.new_tag_placeholder       {}           => topic-name
+editor.tag_limit                 {"limit":12} => Максимум тегов на ресурс — 12.
+editor.tags                      {}           => Теги
+editor.title                     {}           => Изменить сведения
+title                            {}           => Библиотека
+discard_not_saved                {}           => Название, описание и теги, которые вы изменили, не сохранятся.
+                                 REPLACEMENT  => Изменения названия, описания и тегов не будут сохранены.
+discard_confirm                  {}           => Отбросить
+[exit 0]
+
+### re-hash at end of run (file must be unchanged)
+
+$ shasum -a 256 src/i18n/catalogues/ru/mobile.library.json
+fef91c9fac91a98120f0506824651a4830dd89ee3e26ae935e9fcbee3fa2934e  src/i18n/catalogues/ru/mobile.library.json
+[exit 0]

@@ -1,0 +1,10 @@
+{
+	"mobile.composer_input.voice.setup_needed": "Set up speech-to-text on your computer.",
+	"mobile.composer_input.voice.mic_setup": "Voice input isn’t set up",
+	"mobile.composer_input.voice.mic_setup_hint": "Explains how to turn on voice input",
+	"mobile.composer_input.voice.discard": "Discard voice input",
+	"mobile.composer_input.voice.finish": "Finish and transcribe",
+	"mobile.composer_input.paste.image": "Paste image",
+	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
+	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”."
+}

@@ -1,0 +1,13 @@
+deleteProjectBody('Alpha')	Xóa Alpha? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+deleteProjectBody('ship/v2')	Xóa ship/v2? Dòng dự án sẽ mất hẳn. Các phiên liên kết và bản ghi của chúng vẫn giữ nguyên.
+removeMilestoneBody('beta')	Xóa beta khỏi dự án này? Mốc sẽ mất hẳn. Các phiên của dự án và dòng tiến độ vẫn giữ nguyên.
+removeMilestoneBody('Nguyễn Văn A')	Xóa Nguyễn Văn A khỏi dự án này? Mốc sẽ mất hẳn. Các phiên của dự án và dòng tiến độ vẫn giữ nguyên.
+writeUnknownNote()	Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lại.
+writeReceipt('deleted','Alpha','project')	Đã xóa Alpha.
+writeReceipt('removed','beta','milestone')	Đã xóa mốc beta.
+writeReceipt('created','beta','milestone')	Đã tạo mốc beta.
+writeReceipt('completed','beta','milestone')	Đã hoàn thành mốc beta.
+writeReceipt('reopened','beta','milestone')	Đã mở lại mốc beta.
+writeReceipt('added','beta','milestone')	Đã thêm mốc beta.
+writeReceipt('updated','beta','milestone')	Đã cập nhật mốc beta.
+writeReceipt('other-action','Alpha','other')	Đã cập nhật Alpha.

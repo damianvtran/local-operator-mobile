@@ -1,10 +1,12 @@
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { maxColumnWidth } from "@/ui/column";
+import { BrandTitle } from "@/ui/components/brand-title";
 import { Heading } from "@/ui/components/heading";
 import { headerStacks } from "@/ui/size-class";
+import { lineBoxPt } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 
 /**
@@ -30,6 +32,16 @@ export type ScreenProps = {
 	children: ReactNode;
 	/** Right-aligned header control (a settings affordance, a new-session button). */
 	headerAction?: ReactNode;
+	/** Home identity row spends its width on the host, not redundant chrome. */
+	headerDensity?: "home";
+	/** How many lines the title may take. Defaults to 2 — the header's own
+	 *  allowance since it shipped. A screen that names itself in one word-ish
+	 *  string at large text can ask for 1 instead of changing this for every
+	 *  screen: the inbox did exactly that, and a global clamp altered the S5
+	 *  session title at 200 % (audit U-08 on an untouched screen). */
+	titleLines?: 1 | 2;
+	/** Explicit brand lockup; independent of the title's wording or locale. */
+	brand?: boolean;
 	/** Left-aligned header control (a back affordance). */
 	headerLeading?: ReactNode;
 	/**
@@ -43,8 +55,64 @@ export type ScreenProps = {
 	 * the header already allows (`min-h-14`, never `h-14`).
 	 */
 	headerDetail?: ReactNode;
+	/**
+	 * A replacement for the title's `<Heading>` — used by the session header,
+	 * whose title block is a CONTROL (the status dot + name, a tap opens the
+	 * health sheet). When set, it renders wherever the Heading would, in both the
+	 * stacked and inline branches and with or without `headerDetail`; the caller
+	 * owns the text, the truncation and the press target. Optional and absent on
+	 * every other screen, so those render byte-for-byte as before. The `title`
+	 * string is STILL required alongside it: the stacking trigger
+	 * (`headerStacks`) reads whether a title exists.
+	 */
+	titleNode?: ReactNode;
+	/**
+	 * Stacked only: put `headerAction` on the BACK row, right-aligned, instead of
+	 * on a third row under the title. The session header's cluster is two icon
+	 * controls at most (find, and ⋮ while ended); a third row for them cost
+	 * ~56 pt of a 568 pt phone at 135/200 % and pushed the transcript's first
+	 * rows into each other (`S5/supplement-preparing`, iphone-se — U-08, QA round
+	 * 1 Q2 / design D8), and left ⋮ under the title, away from the edge where it
+	 * sits at every other size. A screen whose cluster can outgrow the back row
+	 * (the sessions list's badges) leaves this off and keeps the wrapping row.
+	 */
+	stackedActionsBeside?: boolean;
+	/**
+	 * Stacked only: a mark that leads the TITLE row, before `titleNode`/the title.
+	 *
+	 * Stacked, the leading cluster moves to its own row above the title, so a
+	 * leading mark that belongs to the NAME — the session header's agent picture is
+	 * the first mark of the title's line at every other size — ended up on the
+	 * chrome row, 30 pt above a title it is read as part of: on a 320 pt phone the
+	 * disc sat between the back control and search while the health dot, the actual
+	 * state marker, was at the far left of the title line (design review round 1,
+	 * D1 — measured: picture x 100–127.5 y 38–65.5, title's first line starting at
+	 * y 70). A mark passed here is drawn inside the title's own row instead, in the
+	 * same order it has inline (picture → dot → name). The caller decides WHICH
+	 * mark moves, because only it knows whether the mark belongs to the title or to
+	 * the chrome (finding D1 scoped this to the stacked branch, and the inline
+	 * cluster is unchanged).
+	 */
+	stackedTitleLeading?: ReactNode;
 	/** Screens that own their own scrolling (the transcript) pass false. */
 	scroll?: boolean;
+	/**
+	 * Who pays the bottom safe-area inset. `"screen"` pads the whole screen by
+	 * `insets.bottom`; `"child"` pads nothing and the screen's bottom-most child
+	 * MUST pay it itself.
+	 *
+	 * Why a choice and not a rule: the composer owns the bottom edge (decision
+	 * record 2026-11-04 §2.2). Its shell fills the band under the home indicator
+	 * and pays the inset as INNER padding (`composerGeometry`), so its surface
+	 * reaches the display corner it is concentric with. A screen-level pad would
+	 * leave a canvas strip under it instead — and before this prop existed,
+	 * `scroll={false}` silently dropped the inset with no child paying it, which
+	 * is how the composer ended up inside the home-indicator band (D-H4).
+	 *
+	 * Defaults keep every existing screen byte-for-byte: `"screen"` with
+	 * `scroll`, `"child"` without it.
+	 */
+	bottomInset?: "screen" | "child";
 	/** `false` leaves the readable-measure cap OFF, for a screen that owns a
 	 *  multi-pane layout: a split screen puts a list and a detail side by side, and
 	 *  a cap on the WHOLE screen squeezes both (measured: a 560 pt column centred in
@@ -66,7 +134,68 @@ export type ScreenProps = {
 	 *  only the step changes, never the preference. Opt-in: every other screen is
 	 *  byte-for-byte unchanged. */
 	compact?: boolean;
+	/** The screen's own ScrollView, for a screen that must bring something into
+	 *  view itself — Settings scrolls a refusal that appeared above the reader's
+	 *  position to where they can read it (PR #122 UX round 3, U16). Optional, and
+	 *  ignored with `scroll={false}`: every other screen is unchanged. */
+	scrollRef?: RefObject<ScrollView | null>;
 	testID?: string;
+};
+
+/**
+ * The stacked header's title row: the title block, led by an optional mark.
+ *
+ * A plain fragment when no mark is passed, so every screen without one renders
+ * exactly as before. With a mark (`ScreenProps.stackedTitleLeading`) the title
+ * block becomes the row's shrinking member, and the mark sits before it in the
+ * same order it has inline — for the session header that is
+ * picture → health dot → name, rather than a picture stranded on the chrome row
+ * (design review round 1, D1).
+ *
+ * THE MARK IS CENTRED ON THE TITLE'S TEXT LINE, not on the block. The block is
+ * the text line PLUS the reserved state line the session header keeps in every
+ * state (so the header never resizes when a word appears), and a block-centred
+ * mark therefore sat 25.75 pt below the first line's ink at 100 % and 16.5 pt at
+ * 200 % (design review rounds 2–3, D8). The mark's box is exactly ONE `display`
+ * line tall and centres the mark inside it, which moves the mark and nothing
+ * else: the title's width is untouched, so the 200 % truncation the design round
+ * accepted stays exactly as it was. (The session header's health dot is NOT moved
+ * by this: it centres on the title block, its own pre-existing rule for every
+ * conversation, so on a two-line title it sits below line 1 — design round 3,
+ * D11, recorded rather than claimed aligned.)
+ *
+ * AN EMPTY MARK COSTS 0 pt (design review round 3, D12). The caller passes an
+ * ELEMENT that may render `null` (the session header's picture before or without
+ * one), so this box exists whenever the prop does and nothing here can tell an
+ * empty one from a pictured one. The 8 pt between mark and title is therefore a
+ * `gap` INSIDE the box, between the mark and a zero-width end item: a gap only
+ * exists between two laid-out items, so it is 8 pt with a picture and nothing
+ * without one. Spacing on the ROW charged 8 pt for an empty box (the no-picture
+ * header was indented 8.0 pt), and padding on the box would too — padding is
+ * the box's own width, drawn whether or not it holds anything.
+ */
+const StackedTitleRow = ({
+	leading,
+	children,
+}: {
+	leading?: ReactNode;
+	children: ReactNode;
+}): ReactNode => {
+	const { effectiveScale } = useTextScale();
+	return leading === undefined ? (
+		children
+	) : (
+		<View className="flex-row items-start">
+			<View
+				className="flex-row items-center gap-2"
+				style={{ height: lineBoxPt("display", effectiveScale) }}
+			>
+				{leading}
+				<View />
+			</View>
+			<View className="min-w-0 flex-1">{children}</View>
+		</View>
+	);
 };
 
 /**
@@ -82,14 +211,22 @@ export type ScreenProps = {
  */
 export const Screen = ({
 	title,
+	brand = false,
 	children,
 	headerAction,
+	headerDensity,
 	headerLeading,
+	titleLines = 2,
 	headerDetail,
+	titleNode,
+	stackedActionsBeside = false,
+	stackedTitleLeading,
 	scroll = true,
+	bottomInset = scroll ? "screen" : "child",
 	capColumn = true,
 	stackBelowWidth,
 	compact = false,
+	scrollRef,
 	testID,
 }: ScreenProps) => {
 	const insets = useSafeAreaInsets();
@@ -131,6 +268,11 @@ export const Screen = ({
 		!compact &&
 		title !== undefined &&
 		headerStacks(effectiveScale, viewport.width, stackBelowWidth);
+	const resolvedTitleNode =
+		titleNode ??
+		(brand ? (
+			<BrandTitle title={title} compact={compact} numberOfLines={titleLines} />
+		) : undefined);
 	return (
 		<View
 			className="flex-1 bg-canvas"
@@ -141,7 +283,7 @@ export const Screen = ({
 				paddingTop: insets.top,
 				paddingLeft: insets.left,
 				paddingRight: insets.right,
-				paddingBottom: scroll ? insets.bottom : 0,
+				paddingBottom: bottomInset === "screen" ? insets.bottom : 0,
 			}}
 			testID={testID}
 		>
@@ -154,7 +296,9 @@ export const Screen = ({
 						? "min-h-14 justify-center gap-2 px-4 py-2"
 						: compact
 							? "min-h-12 flex-row items-center gap-2 px-4"
-							: "min-h-14 flex-row items-center gap-2 px-4 py-2"
+							: headerDensity === "home"
+								? "min-h-14 flex-row items-center gap-1 px-2 py-2"
+								: "min-h-14 flex-row items-center gap-2 px-4 py-2"
 				}
 				style={column}
 			>
@@ -167,65 +311,98 @@ export const Screen = ({
 						 *  own row and may use TWO lines — a cap, not a truncation point, for
 						 *  the longest title in the app ("Your own tunnel" fits in one at 2×
 						 *  on 390 pt and two at 320). */}
-						<View className="flex-row items-center gap-2">{headerLeading}</View>
-						{title !== undefined ? (
-							headerDetail === undefined ? (
-								<Heading
-									level={1}
-									className="text-display text-ink"
-									numberOfLines={2}
-								>
-									{title}
-								</Heading>
-							) : (
-								<View className="gap-1">
-									<Heading
-										level={1}
-										className="text-display text-ink"
-										numberOfLines={2}
-									>
-										{title}
-									</Heading>
-									{headerDetail}
+						<View className="flex-row items-center gap-2">
+							{headerLeading}
+							{stackedActionsBeside ? (
+								<View className="ms-auto flex-row items-center gap-2">
+									{headerAction}
 								</View>
-							)
+							) : null}
+						</View>
+						{title !== undefined ? (
+							<StackedTitleRow leading={stackedTitleLeading}>
+								{headerDetail === undefined ? (
+									(resolvedTitleNode ?? (
+										<Heading
+											level={1}
+											className="text-display text-ink"
+											numberOfLines={titleLines}
+										>
+											{title}
+										</Heading>
+									))
+								) : (
+									<View className="gap-1">
+										{resolvedTitleNode ?? (
+											<Heading
+												level={1}
+												className="text-display text-ink"
+												numberOfLines={titleLines}
+											>
+												{title}
+											</Heading>
+										)}
+										{headerDetail}
+									</View>
+								)}
+							</StackedTitleRow>
 						) : null}
 						{/* `flex-wrap` and not a squeeze: the action cluster can hold a count
 						 *  badge, an icon button and an avatar, and at 200 % on a 320 pt phone
 						 *  the three do not fit on one line — with the default shrink they
 						 *  OVERLAP each other rather than wrapping (`U-08`, measured: the
 						 *  badge landed 8 pt into the search control). */}
-						<View className="flex-row flex-wrap items-center gap-2">
-							{headerAction}
-						</View>
+						{stackedActionsBeside ? null : (
+							<View className="flex-row flex-wrap items-center gap-2">
+								{headerAction}
+							</View>
+						)}
 					</>
 				) : (
 					<>
 						{headerLeading}
 						{title !== undefined ? (
 							headerDetail === undefined ? (
-								<Heading
-									level={1}
-									className={
-										compact
-											? "flex-1 text-title text-ink"
-											: "flex-1 text-display text-ink"
-									}
-									numberOfLines={1}
-								>
-									{title}
-								</Heading>
-							) : (
-								<View className="min-w-0 flex-1 gap-1">
+								(resolvedTitleNode ?? (
 									<Heading
 										level={1}
 										className={
-											compact ? "text-title text-ink" : "text-display text-ink"
+											compact
+												? "flex-1 text-title text-ink"
+												: "flex-1 text-display text-ink"
 										}
 										numberOfLines={1}
 									>
 										{title}
 									</Heading>
+								))
+							) : (
+								<View className="min-w-0 flex-1 gap-1">
+									{/* The title node gets a ROW of its own (D-S1). A caller's
+									 *  title node is `min-w-0 flex-1` because it is written for the
+									 *  header ROW; placed straight into this column, that `flex-1`
+									 *  became a zero flex-basis on the VERTICAL axis, the block was
+									 *  laid out ~0 tall, and its 44 pt control overflowed onto the
+									 *  detail line below (the "Tags" line painted over the session
+									 *  title on TestFlight 365). Inside a row, `flex-1` means width. */}
+									{titleNode !== undefined ? (
+										<View className="min-w-0 flex-row">{titleNode}</View>
+									) : null}
+									{titleNode === undefined
+										? (resolvedTitleNode ?? (
+												<Heading
+													level={1}
+													className={
+														compact
+															? "text-title text-ink"
+															: "text-display text-ink"
+													}
+													numberOfLines={1}
+												>
+													{title}
+												</Heading>
+											))
+										: null}
 									{headerDetail}
 								</View>
 							)
@@ -236,6 +413,7 @@ export const Screen = ({
 			</View>
 			{scroll ? (
 				<ScrollView
+					ref={scrollRef}
 					className="flex-1"
 					// `grow` on the CONTENT container, not the ScrollView: without it a screen
 					// whose only content is an empty state renders it pinned under the header

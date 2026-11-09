@@ -1,0 +1,213 @@
+{
+	"schema": 1,
+	"audit_id": "hi30n1",
+	"audit_kind": "first_pass_independent_audit",
+	"round": 1,
+	"parent_audit_id": null,
+	"locale": "hi",
+	"namespace": "mobile.notifications",
+	"file_group": "B",
+	"audit_date": "2026-10-30",
+	"audited_head_commit": "647581a4abd5eafce09914b5b1936982749c16c4",
+	"audited_revision": "647581a4abd5eafce09914b5b1936982749c16c4",
+	"audited_branch": "feat/i18n-hindi",
+	"audited_worktree": "/Users/damian/workspace/hi-wave",
+	"audited_worktree_note": "The hi catalogue is an UNTRACKED working-tree directory at this HEAD; the audited bytes are identified by the sha256 values in input_hashes, not by a commit. This audit wrote only i18n/audits/evidence/hi/<namespace>/<audit-id>/; no catalogue byte was edited and nothing was committed or pushed.",
+	"key_count": {
+		"en": 14,
+		"target": 14,
+		"context": 14
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "a98ed4a82f18",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra (provider quota) -> kimi/k3.1-pro (provider quota) -> radient/auto (provider quota); every command in audit.log ran under the final model. The second-pass subagent (job 5aa633351b8d) also reported radient/auto.",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"fallback_applied": true,
+		"fallback_note": "the model changed three times during the task; all audit decisions were made under the final model",
+		"independent_from_translator_session": true,
+		"independence": "A different agent and session than the translator; the translator's identity and model were not visible to this auditor, so model diversity is not claimed. No human native-speaker review; the second pass is another LLM agent (job 5aa633351b8d)."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": null,
+		"job": null,
+		"model": "not observed by this auditor",
+		"actual_model_source": "not disclosed to this auditor; the brief guarantees a different agent/session"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.notifications.json",
+			"sha256": "c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.notifications.context.json",
+			"sha256": "240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/hi/mobile.notifications.json",
+			"sha256": "5ae9fea0068c1a150d39be50fb293c48f74989cd410ef4b42de1e9a13085d252"
+		}
+	},
+	"ledger": {
+		"command": null,
+		"note": "No audit-ledger command exists in this repository at this HEAD: scripts/, package.json, docs/i18n.md and i18n/ were scanned and carry no ledger file or writer (docs/i18n.md names the pull request's report as the artifact of record). The RFC's §6 ledger schema describes a FILE, not a command, and that file lives in the core repository for core namespaces. The row below is therefore proposed, not written.",
+		"proposed_row": {
+			"locale": "hi",
+			"file_group": "mobile.notifications",
+			"status": "passed",
+			"auditor": "i18n-auditor (lopdev team)",
+			"model": "radient/auto",
+			"source_hash": "c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064",
+			"audit_id": "hi30n1",
+			"record": "i18n/audits/evidence/hi/mobile.notifications/hi30n1/record.json",
+			"note": "hi/mobile.notifications hi30n1: 14 keys, 0 major, 0 minor, 0 nit; validator, structural verifier and 5/5 negative controls as expected. Record: i18n/audits/evidence/hi/mobile.notifications/hi30n1/record.json"
+		}
+	},
+	"audit_notes_not_execution_log": "report.md holds judgement and per-key reasoning; audit.log is the executed transcript (bash -x) and covers all four group-B namespaces, so it is identical in the four bundles. Notes never prove execution.",
+	"findings": [],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"finding_ids": [],
+		"carried_open": [],
+		"reason": "0 BLOCKER, 0 MAJOR, 0 MINOR. All 14 keys read as native product Hindi."
+	},
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0",
+		"repo_gate": "node scripts/i18n/check-strings.ts -> exit 0 (284 baselined findings, 0 new)",
+		"structural_verifier": "verify_group_b.py: 77 group-B keys, 0 problems; arm sets, placeholder multisets, key order, NFC, controls all clean",
+		"negative_controls": "5/5 as expected (dropped placeholder, dropped plural arm, renamed select arm, ZWJ, decomposed U+0928 U+093C)",
+		"plural_categories": [
+			"one",
+			"other"
+		],
+		"placeholder_order": "4 keys reorder named placeholders for Hindi word order; multisets identical",
+		"encoding": "all values NFC; no bidi/zero-width controls; nukta consistently base+U+093C (24 occurrences, 0 precomposed); key order identical to en",
+		"punctuation": "danda for English full stops, ? preserved, one matching semicolon, no stray ASCII stops",
+		"width": "no group-B string exceeds its English cell width except +1..+3 cells on connecting/waiting/once; sidecars carry no maxCells budget, so this is relative",
+		"artifacts": {
+			"renders-all.tsv": "every group-B key rendered through renderFor() with a full argument bag",
+			"verify.out.txt": "verifier positive run plus the five negative controls"
+		}
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage/Intl.PluralRules)",
+		"runtime": "src/i18n/runtime.ts (renderFor / t)",
+		"composition": "src/features/schedules/schedules-copy.ts and src/features/projects/projects-copy.ts via the tsconfig @/* alias with tsx",
+		"scratch_copy": "session scratchpad copy of the worktree; only source edit is hi moved into SHIPPED_LOCALES; all four hi catalogue files proved byte-identical to the worktree by sha256",
+		"preference": "setLocaleSource(() => 'hi')"
+	},
+	"renders_executed": {
+		"count_wakes_0_1_2_21": [
+			"0 जागृति",
+			"1 जागृति",
+			"2 जागृतियाँ",
+			"21 जागृतियाँ"
+		],
+		"count_monitors_0_1_2_21": [
+			"0 मॉनिटर",
+			"1 मॉनिटर",
+			"2 मॉनिटर",
+			"21 मॉनिटर"
+		],
+		"sessions_count_0_1_2_21": [
+			"0 सत्र",
+			"1 सत्र",
+			"2 सत्र",
+			"21 सत्र"
+		],
+		"head_future_3_wakes": "3 जागृतियाँ · अगली बार 4m में",
+		"head_overdue_3_wakes": "3 जागृतियाँ · 2h विलंबित",
+		"parked_wakes": "रुका हुआ — अगले टर्न के बाद इसकी जागृतियाँ फिर चालू हो जाती हैं",
+		"parked_monitors": "रुका हुआ — बातचीत दोबारा चलने पर इसके मॉनिटर फिर शुरू होते हैं",
+		"truncated_wakes_10_42": "जागृतियाँ वाली कुल 42 बातचीत में से 10 दिखा रहे हैं।",
+		"truncated_replacement_wakes_10_42": "जागृतियों वाली कुल 42 बातचीतों में से 10 दिखा रहे हैं।",
+		"header_wakes_3": "Wakes · 3 निर्धारित",
+		"header_monitors_armed_2": "Monitors · 2 चालू",
+		"header_monitors_attention_1_of_5": "Monitors · 5 में से 1 को ध्यान चाहिए",
+		"delete_body": "राम का लैपटॉप हटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।",
+		"remove_milestone_body": "बीटा रिलीज़ को इस प्रोजेक्ट से हटाएँ? पड़ाव हमेशा के लिए चला जाएगा। प्रोजेक्ट के सत्रों और उसकी प्रगति पंक्ति को छुआ नहीं जाएगा।",
+		"receipt_project_created": "“beta” प्रोजेक्ट बनाया गया।",
+		"receipt_milestone_removed": "“beta” पड़ाव हटाया गया।",
+		"receipt_project_deleted": "“beta” प्रोजेक्ट हटाया गया।"
+	},
+	"glossary": {
+		"source": "i18n/glossary.md §2 plus i18n/style-guides/hi.md, compared with core's committed Hindi at local_operator/i18n/catalogues/hi",
+		"counts": {
+			"पड़ाव (milestone)": "14 in core / 6 in group B",
+			"प्रोजेक्ट (project)": "16 in core / 6 in group B",
+			"सत्र (session)": "135 in core / 4 in group B",
+			"जागृति (wake)": "36 in core / 16 in group B",
+			"मॉनिटर (monitor)": "7 in core / 10 in group B",
+			"हर {duration}": "63 in core / 1 in group B",
+			"एक बार (once)": "13 in core / 1 in group B",
+			"निगरानी (monitoring)": "15 in core / 2 in group B",
+			"शेड्यूल (schedule)": "8 in core / 2 in group B"
+		},
+		"rejected_alternatives": "परियोजना 0, सेशन 0 in both core and the wave"
+	},
+	"second_pass": {
+		"job": "5aa633351b8d",
+		"model": "radient/auto",
+		"scope": "21 high-visibility strings: empty state, error sentences, destructive confirmations, receipt, zero-count line, truncated strip",
+		"agreements": [
+			"HI-B-1",
+			"HI-B-2",
+			"HI-B-3",
+			"HI-B-4",
+			"HI-B-8",
+			"HI-B-9"
+		],
+		"disagreements": "reads '0 जागृति' as correct Hindi (HI-B-5 stays minor) and accepts gone.monitors (HI-B-7 stays a nit); prefers the loan डिलीट किया गया where this audit uses मिटाया गया (HI-B-10)"
+	},
+	"limitations": [
+		"No screenshot or pixel measurement: the audit ran without an app build or simulator, so width is judged from cell counts (combining marks 0, wide glyphs 2) against English. Group-B sidecars carry no maxCells budget, so the check is relative.",
+		"The zero-count reachability argument comes from reading schedules-copy.ts and the zod schema; no relay fixture with an empty schedules array was rendered.",
+		"Hindi morphology judgements (the oblique plural before वाली and में से, the standalone द्वारा दर्ज fragment, singular after zero) are native-reader judgements corroborated by the second pass, not by a reference grammar consulted in this session.",
+		"No translation API, SDK, MT service or back-translation was used anywhere in this audit or the second pass.",
+		"The translator's identity and model were not visible to this auditor; independence is by agent and session, not by model diversity.",
+		"The hardcoded English section headings ('Wakes' / 'Monitors') in schedules.tsx:213-214 and 279-280 are source-side literals, not catalogue copy: they are outside this audit's remit but leave a Hindi reader mixed-script lines such as 'Wakes · 3 निर्धारित'. The Hindi fragments themselves read correctly after an English word."
+	],
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/hi/mobile.notifications/hi30n1/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.notifications/hi30n1/audit.log",
+			"sha256": "0cfd469b1f9359eb96fa90c9ea8b2ea32835a0de3802b142db480632fa5c1e1c",
+			"bytes": 34550
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.notifications/hi30n1/renders.tsv",
+			"sha256": "5b07621f0942793fb0ef6281bfa37d7cad35cf8a15fe1a83e8bbe0e8816e1b60",
+			"bytes": 8130
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.notifications/hi30n1/renders-all.tsv",
+			"sha256": "aced29b41069fc4c08e5250297a7de758feb9c5c23a818a525c9322e912704b2",
+			"bytes": 8955
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.notifications/hi30n1/verify.out.txt",
+			"sha256": "3aaed8a220805a56a42ddcb6eec774d9e59be584476e22af96f58280501a0fd8",
+			"bytes": 2706
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.notifications/hi30n1/report.md",
+			"sha256": "a4b125b1d41629142075f3115efd098739f421ae6631e53594de15467cd8e25f",
+			"bytes": 11993
+		}
+	]
+}

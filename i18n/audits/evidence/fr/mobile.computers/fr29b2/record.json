@@ -1,0 +1,56 @@
+{
+	"schema": 1,
+	"audit_id": "fr29b2",
+	"audit_kind": "initial_translation_audit",
+	"locale": "fr",
+	"namespace": "mobile.computers",
+	"audit_date": "2026-10-29",
+	"key_count": {
+		"en": 10,
+		"target": 10
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "e4ac0d5aa232",
+		"job": null,
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "session model header: temporary fallback from anthropic/claude-sonnet-5-5 due to provider quota HTTP 429",
+		"independent_from_translator_session": true,
+		"independence": "Independent agent/context from translator session c66311717837 (job fbde6318e480). Different agent, different session. Model diversity: same model family (kimi/k3.1-pro) as translator's fallback — disclosed, not closed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": "c66311717837",
+		"job": "fbde6318e480",
+		"model": "kimi/k3.1-pro",
+		"actual_model_source": "temporary fallback (served model)",
+		"date": "2026-10-29"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "catalogues/en/mobile.computers.json",
+			"sha256": "356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643"
+		},
+		"context": {
+			"path": "catalogues/en/mobile.computers.context.json",
+			"sha256": "3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5"
+		},
+		"target": {
+			"path": "catalogues/fr/mobile.computers.json",
+			"sha256": "bd473792092e1fb4ad3c454a2103781870341ebd9e3bd38c6fc0a01531f74ad3"
+		}
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"finding_ids": ["FR-COMP-1"]
+	},
+	"artifacts": ["record.json", "report.md", "audit.log"],
+	"route_disclosure": {
+		"read_route": "ordinary mobile git/worktree reads",
+		"english_context_sidecars": "nested-JSON context sidecars NOT routable through read_public_copy",
+		"credential_shaped_keys": "mobile.computers.password_placeholder is credential-shaped; clean-core sanctioned keyed route was exercised and REFUSED because local_operator/i18n/catalogues/en/mobile.computers.json is not committed in core; NO keyed receipt obtained",
+		"redaction_scan": "14 English source/context inputs scanned by manager with zero redaction-marker hits"
+	},
+	"audit_notes_not_execution_log": "report.md contains per-key reasoning and findings; audit.log captures actual command output for JSON/key/ICU checks and hashes. No native speaker review or rendered-proof claim is made."
+}

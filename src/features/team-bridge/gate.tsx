@@ -3,6 +3,7 @@ import * as WebBrowser from "expo-web-browser";
 import { type ReactNode, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
+import { t } from "@/i18n";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { CONTROL, SURFACE, teamBridgeGateId } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
@@ -12,7 +13,7 @@ export function BridgeBack() {
 	const router = useRouter();
 	return (
 		<Button
-			label="Back"
+			label={t("mobile.team_bridge.back")}
 			variant="quiet"
 			testID={CONTROL.teamBridgeBack}
 			onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
@@ -29,17 +30,17 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 	if (gate === "open") return children;
 	const title =
 		gate === "checking"
-			? "Checking Team Bridge…"
+			? t("mobile.team_bridge.gate.checking")
 			: gate === "signed_out"
-				? "Sign in to Team Bridge"
+				? t("mobile.team_bridge.gate.signed_out")
 				: gate === "update_required"
-					? "Update required"
+					? t("mobile.team_bridge.gate.update_required")
 					: gate === "plan_required"
-						? "Team Bridge requires a Radient Team plan"
-						: "Team Bridge is unavailable";
+						? t("mobile.team_bridge.gate.plan_required")
+						: t("mobile.team_bridge.gate.unavailable");
 	return (
 		<Screen
-			title="Team Bridge"
+			title={t("mobile.team_bridge.title")}
 			headerLeading={<BridgeBack />}
 			testID={teamBridgeGateId(gate)}
 		>
@@ -49,37 +50,35 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 				</Text>
 				{gate === "checking" && (
 					<View
-						accessibilityLabel="Loading Team Bridge"
+						accessibilityLabel={t("mobile.team_bridge.gate.loading")}
 						className="gap-3"
 						testID={SURFACE.teamBridgeGateSkeleton}
 					>
 						<View className="h-6 rounded-sm bg-surface" />
 						<View className="h-6 rounded-sm bg-surface" />
 						<Text className="text-body text-ink-muted">
-							Connecting to Radient. Your computer can stay closed.
+							{t("mobile.team_bridge.gate.connecting")}
 						</Text>
 					</View>
 				)}
 				{gate === "plan_required" && (
 					<>
 						<Text className="text-body text-ink">
-							Communicate with your team members and their agents, and let
-							agents collaborate with other agents in your organization.
+							{t("mobile.team_bridge.gate.plan_description")}
 						</Text>
 						<Text className="text-body text-ink-muted">
-							Channels for your organization · Direct messages · Chiefs of staff
-							· Team notifications
+							{t("mobile.team_bridge.gate.plan_features")}
 						</Text>
 						{/* Store companion-app rules prohibit a native purchase affordance, including an external purchase link. */}
 						{Platform.OS === "web" ? (
 							<Button
-								label="Upgrade to Team"
+								label={t("mobile.team_bridge.gate.upgrade")}
 								testID={CONTROL.teamBridgeUpgrade}
 								onPress={() => {
 									void WebBrowser.openBrowserAsync(
 										"https://console.radienthq.com/dashboard/team",
 									).catch(() =>
-										setError("Could not open the Radient console."),
+										setError(t("mobile.team_bridge.gate.console_error")),
 									);
 								}}
 							/>
@@ -88,7 +87,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 								className="text-body text-ink-muted"
 								testID={SURFACE.teamBridgePlanConsole}
 							>
-								Manage your plan in the Radient console
+								{t("mobile.team_bridge.gate.manage_plan")}
 							</Text>
 						)}
 					</>
@@ -96,16 +95,16 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 				{gate === "signed_out" && (
 					<>
 						<Text className="text-body text-ink-muted">
-							Connect directly to your team, even when your computer is closed.
+							{t("mobile.team_bridge.gate.signed_out_help")}
 						</Text>
 						<Button
-							label="Sign in"
+							label={t("mobile.team_bridge.gate.sign_in")}
 							testID={CONTROL.teamBridgeSignIn}
 							onPress={() => {
 								void connection
 									.signInWithRadient()
 									.catch(() =>
-										setError("Sign-in did not complete. Try again."),
+										setError(t("mobile.team_bridge.gate.sign_in_error")),
 									);
 							}}
 						/>
@@ -113,18 +112,16 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 				)}
 				{gate === "update_required" && (
 					<Text className="text-body text-ink-muted">
-						This version cannot read the Team Bridge service. Update the app to
-						continue.
+						{t("mobile.team_bridge.gate.update_help")}
 					</Text>
 				)}
 				{gate === "unavailable" && (
 					<>
 						<Text className="text-body text-ink-muted">
-							We could not reach Team Bridge. Your conversations have not been
-							changed.
+							{t("mobile.team_bridge.gate.unavailable_help")}
 						</Text>
 						<Button
-							label="Retry"
+							label={t("mobile.team_bridge.retry")}
 							testID={CONTROL.teamBridgeGateRetry}
 							onPress={() => {
 								void actions.checkStatus();

@@ -1,0 +1,188 @@
+{
+  "schema": 1,
+  "audit_id": "fr29sm3",
+  "audit_kind": "independent_delta_reaudit_one_french_value",
+  "locale": "fr",
+  "namespace": "mobile.session_health",
+  "audit_date": "2026-10-29",
+  "audited_revision": "4500723be18a94e53cde39a6f3f9ee1aca92ddb5",
+  "merge_head": "d5babfa1854416265df06ba9a78609348db7f13d",
+  "key_count": {
+    "en": 11,
+    "context": 11,
+    "target": 11
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "e9fc906c0591",
+    "job": "not exposed to this team child; manager owns delegation job",
+    "model": "kimi/k3.1-pro",
+    "actual_model": "kimi/k3.1-pro",
+    "actual_model_source": "Observed harness model-switch notices: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro; fallback reason provider failure: quota. The pinned Sonnet model did not perform this delta audit.",
+    "fallback": {
+      "used": true,
+      "reason": "provider failure: quota",
+      "chain": [
+        "anthropic/claude-sonnet-5-5",
+        "openai/gpt-6-astra",
+        "kimi/k3.1-pro"
+      ]
+    },
+    "independent_from_translator_session": true,
+    "independence": "Different agent and session e9fc906c0591 from translator d6778f2c68ea. Independently judged current bytes against the actual English, context, style guide and glossary; no translation service or back-translation."
+  },
+  "previous_round": {
+    "audit_id": "fr29sm2",
+    "record": "i18n/audits/evidence/fr/mobile.session_health/fr29sm2/record.json",
+    "finding_id": "SH-01",
+    "previous_target_sha256": "eefa0d2bcd0a222910388231a414baf873561c05d6a7211031d68e6a168389da"
+  },
+  "stated_constraints": {
+    "budget_cells": 36,
+    "no_shell_or_technical_tokens": true,
+    "tilde_refusal": "The manager explicitly refused '~' in user-facing mobile copy as developer shorthand; this constraint supersedes the previous audit's shell-token recommendation.",
+    "destination": "The user's home folder on the computer, not the original project folder.",
+    "trailing_ellipsis": "U+2026 required"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.json",
+      "sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+      "sha256": "a8a29fe07e15725c434429017552411f9833a6688924c668cdab02289044725a"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/fr/mobile.session_health.json",
+      "sha256": "f48d24ef269c609e6b65ca5409875280e4ea8c248cd45476577127225a5cbac6"
+    }
+  },
+  "supporting_reference_hashes": {
+    "style_guide": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/fr.md",
+      "sha256": "b916f3d1c30b0a2e18fc94ca51d130f60e86b3b17b1918aa51f5c5da6d52ec39"
+    },
+    "glossary": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd"
+    }
+  },
+  "candidates": [
+    {
+      "sequence": 1,
+      "value": "Envoyer rouvre dans votre dossier personnel…",
+      "cells": 44,
+      "utf8_bytes": 46,
+      "within_budget": false,
+      "result": "rejected: eight cells over the 36-cell budget; initial 'Envoyer rouvre' was also judged clipped in the first audit"
+    },
+    {
+      "sequence": 2,
+      "value": "Envoyer rouvre (dossier personnel)…",
+      "cells": 35,
+      "utf8_bytes": 37,
+      "within_budget": true,
+      "result": "rejected: ownerless detached parenthetical does not grammatically identify the home folder as the reopening destination"
+    },
+    {
+      "sequence": 3,
+      "value": "Rouvre dans votre dossier personnel…",
+      "cells": 36,
+      "utf8_bytes": 38,
+      "within_budget": true,
+      "result": "accepted: grammatical destination, explicit your-home wording, no technical token, and exactly within budget"
+    }
+  ],
+  "superseded_recommendation": {
+    "value": "Envoyer la rouvre dans ~…",
+    "cells": 25,
+    "utf8_bytes": 27,
+    "result": "not eligible under the manager's explicit refusal of shell notation in user-facing mobile copy"
+  },
+  "byte_character_count_method": {
+    "method": "JSON-decode each value; count terminal cells as 2 for East Asian W/F and 1 for other printable characters; assert no combining/control characters. U+2026 counts as one cell. UTF-8 bytes are reported separately and are not the width metric.",
+    "current_cells": 36,
+    "current_unicode_code_points": 36,
+    "current_utf8_bytes": 38,
+    "budget_cells": 36,
+    "within_budget": true
+  },
+  "meaning_and_idiom_check": {
+    "english": "Send to reopen in your home folder…",
+    "current": "Rouvre dans votre dossier personnel…",
+    "english_cells": 35,
+    "english_is_also_subjectless": true,
+    "fragment_acceptable": true,
+    "send_omission_acceptable": true,
+    "reason": "In the empty ended-conversation message box, the source itself uses a compact non-sentence; French 'Rouvre…' is an acceptable compressed placeholder. The action of entering/sending a message is supplied by the field, and the full sentence remains in the health sheet.",
+    "health_sheet_key": "relay.health.ended_detail",
+    "health_sheet_french": "L’historique est conservé. Envoyez un message ou touchez « Reprendre » pour rouvrir la session dans votre dossier personnel.",
+    "home_folder_unambiguous": true,
+    "home_folder_reason": "The grammatical 'dans votre dossier personnel' names a possessive personal destination, uses the exact terminology of the health sheet, and contrasts with the glossary's project/projet terminology. It no longer has the rejected parenthetical's detached personal/project-folder ambiguity.",
+    "meaning_preserved": true
+  },
+  "alternative_search": {
+    "better_plain_french_alternative_found": false,
+    "conclusion": "No concrete alternative is both more idiomatic and compliant with all three constraints. Keeping 'Envoyer' costs cells without improving the field-local meaning; alternatives such as 'dossier d’accueil' or 'dossier utilisateur' are not improvements over the established 'dossier personnel' wording.",
+    "recommended_action": "ship_current"
+  },
+  "mechanical": {
+    "repo_validator": "cd /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n && npm run -s i18n:check -> exit 0; 143 keys, 10 namespaces; 284 baselined string findings, 0 new",
+    "independent_checks": "valid JSON; exact 11/11/11 en/context/target key and order parity; no keys added/dropped; current value has no ICU arguments, markup, bidi controls, combining marks or wide glyphs; U+2026 retained",
+    "delta_against_index": "The Git index still contains round-1 'Envoyer rouvre dans votre dossier personnel…'. Worktree differs only in ended_placeholder; 10 values unchanged, 0 keys added/dropped. Round-2 parenthetical history is pinned by the fr29sm2 input hash, not claimed as the current index delta.",
+    "rendered_fit": "Not captured; exact cell-budget verification only"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "resolved_finding_ids": [
+      "SH-01"
+    ],
+    "verdict_reason": "SH-01 resolved. Current value is exactly 36/36 cells, idiomatic compact French for this field, preserves the your-home destination, and contains no shell/technical token. No better compliant alternative."
+  },
+  "scope_note": "Final narrow delta audit of one French value, not a fresh full namespace audit or a new second independent high-visibility pass. Prior independent passes remain recorded in fr29sh1/fr29sm2.",
+  "route_disclosure": {
+    "read_route": "Ordinary workspace file reads. read_public_copy was attempted first but refused because this staging workspace is not a git checkout; no keyed public-copy receipt is claimed.",
+    "credential_shaped_keys": "None exists in this namespace; no keyed receipt claimed.",
+    "translation_services": "No translation API, SDK, MT service or back-translation used."
+  },
+  "audit_notes_not_execution_log": "record.md contains language reasoning and the verdict. audit.log contains actual validator, file-hash, count, delta and artifact-verification output; notes do not prove execution.",
+  "rendered_artifact": {
+    "captured": false,
+    "native_review": false,
+    "claim": "No rendered frame or human native-speaker review; source and exact cell measurements only."
+  },
+  "ledger": {
+    "recorded": false,
+    "reason": "Read-only delta delegation forbids edits beyond this evidence bundle. The mobile repository has no i18n/ledger.json, no audit-ledger package script, and no local evidence README; docs/i18n.md records the audit in the pull request. No CLI receipt is claimed.",
+    "ledger_row_proposed": {
+      "written": false,
+      "locale": "fr",
+      "file_group": "mobile.session_health",
+      "status": "passed",
+      "auditor": "i18n-auditor",
+      "model": "kimi/k3.1-pro",
+      "source_hash": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+      "hash_subject": "src/i18n/catalogues/en/mobile.session_health.json (English source, current bytes)",
+      "note": "PASS: SH-01 resolved. 'Rouvre dans votre dossier personnel…' = 36/36 cells; home destination clear, no '~'. Record: i18n/audits/evidence/fr/mobile.session_health/fr29sm3/record.json",
+      "note_length": 181,
+      "record_path": "i18n/audits/evidence/fr/mobile.session_health/fr29sm3/record.json"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sm3/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sm3/record.md",
+      "sha256": "e12e3b3fd8f17637d5340d4a583c1538d786f3b9fb2f87a0532d22f536fa1a9c"
+    },
+    {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sm3/audit.log",
+      "sha256": "1bb56d1e433b8e38291f5236dc25d320ec6a242af22e3d8d5424ad7fe24ab101"
+    }
+  ]
+}

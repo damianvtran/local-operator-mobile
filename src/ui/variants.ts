@@ -28,10 +28,11 @@
  * defect rather than a build failure.
  */
 
-/** Join class names, dropping falsy entries. Local by design: `clsx` is not in
- * the shared dependency set, and this is all of it that the app needs. */
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
 
+/** Join class names, dropping falsy entries. Local by design: `clsx` is not in
+ * the shared dependency set, and this is all of it that the app needs. */
 export const cx = (
 	...parts: Array<string | false | null | undefined>
 ): string => parts.filter(Boolean).join(" ");
@@ -207,6 +208,74 @@ export type FieldState = "rest" | "invalid" | "disabled";
  * `body` = 16pt, always: below 16, iOS zooms the page on focus and the layout
  * moves under the reader's thumb (components.md § 0.1, § 4).
  */
+/**
+ * Whether the field scrolls itself, which is a question about its CONTENT only.
+ *
+ * The resting floor is clamped to ONE placeholder line by design (D1/D20), so at
+ * 200 % text the placeholder can be taller than the box. Feeding the placeholder's
+ * height into this decision made the platform paint a scrollbar — and, on the web
+ * build, the scrollbar's own corner glyph — on a field the reader had typed
+ * nothing into, which is the most common state of the composer. A placeholder is
+ * a hint that may be clipped; the reader's own text may not be lost. So the value
+ * content alone decides, and `cap` is the six-line ceiling.
+ */
+/**
+ * What a field tells the WEB about scrolling.
+ *
+ * `scrollEnabled` is native-only: react-native-web ignores it, so a false value
+ * left the browser painting its own scrollbar and resize handle on an empty field
+ * at 200 % (final audit D1 — a helper test was green while the real Settings
+ * capture still showed chrome). Web needs the CSS spelling, and only when there
+ * is nothing to scroll; past the cap it keeps the default `auto`, matching the
+ * native prop.
+ */
+export const webFieldOverflow = (
+	platform: string,
+	scrollable: boolean,
+): "hidden" | undefined =>
+	platform === "web" && !scrollable ? "hidden" : undefined;
+
+/**
+ * The field's HEIGHT is the app's: it grows with the content to a cap and then
+ * scrolls. A user-dragged height is a state the app cannot restore or lay out, so
+ * the web build says `resize: none` on EVERY field — including a scrollable one —
+ * while native keeps its own view behaviour untouched. This is the other half of
+ * D1: `overflow: hidden` removed the scrollbar track, but the browser was still
+ * painting the diagonal resize grip on an empty 200 % field.
+ */
+export const webFieldResize = (platform: string): "none" | undefined =>
+	platform === "web" ? "none" : undefined;
+
+export const fieldScrollsWithContent = (
+	contentFloor: number,
+	cap: number,
+): boolean => contentFloor > cap;
+
+/** The field's border, top and bottom, in CSS pixels: `fieldClasses` draws a 1px
+ *  border, and the box is `border-box`, so a height set from the content's own
+ *  measurement is short by exactly this much unless it is added back. */
+export const FIELD_BORDER_Y = 2;
+
+/**
+ * The painted height of a field, in px.
+ *
+ * `contentFloor`, `oneLineBox` and `placeholderFloor` all describe the CONTENT box
+ * (text + `FIELD_PAD_Y`); `cap` is a content budget (`maxLines × line`). Under
+ * `border-box` the style's height is the border box, so the border must be added or
+ * the field clips its last line by 2px — measured on S16/create-filled at 100%:
+ * "content 88px in a 86px box (overflow-y: hidden)". The composer escapes only
+ * because its own content report happened to come back two pixels larger; the
+ * arithmetic was wrong for every field and visible wherever the report was exact.
+ */
+export const fieldBoxHeight = (
+	contentFloor: number,
+	oneLineBox: number,
+	placeholderFloor: number,
+	cap: number,
+): number =>
+	Math.min(Math.max(contentFloor, oneLineBox, placeholderFloor), cap) +
+	FIELD_BORDER_Y;
+
 export const fieldClasses = (
 	state: FieldState = "rest",
 	options: { inComposer?: boolean } = {},
@@ -223,7 +292,13 @@ export const fieldClasses = (
 			// `danger` and the message sits adjacent in `body-sm`, never colour alone.
 			return cx(base, fill, "border-danger");
 		default:
-			return cx(base, fill, "border-border-control");
+			return cx(
+				base,
+				fill,
+				options.inComposer
+					? "border-transparent web:focus-visible:border-accent"
+					: "border-border-control",
+			);
 	}
 };
 
@@ -272,8 +347,58 @@ const BADGE_TONES: Record<SemanticTone, string> = {
  * turn its border-vs-own-fill pair into a 3:1 requirement it does not meet; a
  * static badge is exempt because it is resolved against the page.
  */
-export const badgeClasses = (tone: SemanticTone = "neutral"): string =>
-	cx("self-start rounded-sm border px-2 py-0.5 text-meta", BADGE_TONES[tone]);
+export const badgeClasses = (
+	tone: SemanticTone = "neutral",
+	align: BadgeAlign = "start",
+): string =>
+	cx(
+		align === "center" ? "self-center" : "self-start",
+		"rounded-sm border px-2 py-0.5 text-meta",
+		BADGE_TONES[tone],
+	);
+
+/**
+ * Where a badge sits on its parent's cross axis.
+ *
+ * `start` is the default every existing caller was measured with: a badge in a
+ * column (a card's header stack, a tag line) hugs its leading edge instead of
+ * stretching to the column's width. A badge at the END of a centred `flex-row`
+ * list row (the home pickers' "Default" / "This conversation") needs `center`:
+ * `self-start` overrides the row's `items-center` and pins the pill to the row's
+ * top edge, 11-13 pt above the label's centre line (design round 1, D1).
+ */
+export type BadgeAlign = "start" | "center";
+
+/**
+ * The badge's LABEL line box, which is the whole of its height above the type.
+ *
+ * WHY IT IS CHOSEN BY SCALE RATHER THAN FIXED. A pinned `leading-4` (16 pt) is
+ * what holds the two variants to one height at 100 %, and it is what every
+ * caller's geometry was measured against — but at 300 % text the digits are 33 px
+ * on that 16 pt line, so the ink ran 3.4 pt above and 1.1 pt below the pill and
+ * the tops of the 9s vanished (design round 9, D25).
+ *
+ * Leaving `leading-none` on everywhere "fixed" 300 % by changing EVERY badge:
+ * the bordered and sans badges fell 22 -> 18 pt, outside components.md § 6's
+ * 20-22, and the mono family landed at 17 pt so the two no longer matched. 672
+ * of 1200 frames moved (round 12, F-1 / D28). So the fixed line box is the
+ * DEFAULT, and the late-bound one is the exception, taken only at the step where
+ * the type actually overruns it.
+ *
+ * 2.3 is measured, not picked. The ink is 6 pt tall at 100 % and 16 pt at 200 %,
+ * both inside the 20 pt pill — but the growth is linear, so it reaches ~18.4 pt
+ * at 2.3x and ~19 pt at 2.35x, where iOS's largest accessibility step (AX3,
+ * about 2.35x) sits: the fixed box overruns from there, and by 2.5x the ink is
+ * as tall as the pill itself. The earlier claim that the box "holds through
+ * 250 %" was wrong at exactly the size the largest Dynamic Type step uses
+ * (QA round 8, Q12). Everything below 2.3x keeps the geometry it was measured
+ * with, which is what F-1/D28 restored. */
+export const BADGE_LINE_FOLLOWS_SCALE = 2.3;
+
+/** The label's line class at a text scale: the fixed box below the step, the
+ *  type's own above it. */
+export const badgeLineClass = (scale: number): string =>
+	scale >= BADGE_LINE_FOLLOWS_SCALE ? "leading-none" : "leading-4";
 
 /** The ink a badge's tone uses. Kept beside the fills so a new tone cannot be
  * added with a half-specified pair. */
@@ -320,15 +445,30 @@ export const skeletonBarClasses = (input?: {
 }): string =>
 	`${input?.barClassName ?? "h-4"} ${input?.widthClassName ?? "w-full"} rounded-sm`;
 
-export const chipClasses = (state: ControlState = {}): string =>
-	cx(
-		"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",
-		state.disabled
-			? "bg-surface border-hairline"
-			: state.selected
-				? "bg-accent-muted border-accent-border"
-				: "bg-surface border-border-control",
-	);
+export const chipClasses = (
+	state: ControlState = {},
+	options: { quiet?: boolean } = {},
+): string =>
+	options.quiet
+		? cx(
+				// Quiet: the shared composer ground is already a surface, so a chip there
+				// is a target with states rather than a second box. The floor stays —
+				// this changes the paint, never the geometry a thumb has to hit.
+				"min-h-11 flex-row items-center gap-1.5 rounded-sm border border-transparent px-2",
+				state.disabled
+					? "bg-transparent"
+					: state.selected
+						? "bg-accent-muted"
+						: "bg-transparent",
+			)
+		: cx(
+				"min-h-11 flex-row items-center gap-1.5 rounded-sm border px-3",
+				state.disabled
+					? "bg-surface border-hairline"
+					: state.selected
+						? "bg-accent-muted border-accent-border"
+						: "bg-surface border-border-control",
+			);
 
 /**
  * The chip label's ink, per § 6: `ink-muted` at rest, `accent-active` (light) /
@@ -360,10 +500,13 @@ export const chipLabelClasses = (state: ControlState = {}): string =>
  */
 export const listRowClasses = (state: ControlState = {}): string =>
 	cx(
-		// 56pt is `tokens.json` size.list.rowMinHeight; `min-h-14` would be the same
-		// number, but the row is specified in pt, so the value is kept literal and
-		// this comment names where it comes from. HAND-WRITTEN like `lg` above.
-		"min-h-[56px] flex-row items-center gap-3 px-4 py-2.5",
+		// No fixed min-height here: the row's floor is the platform `TOUCH_FLOOR`
+		// (44 iOS / 48 other), applied by `ListRow` as a style because it is a
+		// runtime value. The old 56 pt floor plus `py-2.5` made a one-line row 60 pt
+		// and pitched the conversations 60–80 pt apart (design spec 2026-11-06 § 4);
+		// with `py-2` a two-line row lands at ~56 pt by its own content and a
+		// one-line row at the touch floor — both on the space scale.
+		"flex-row items-center gap-3 px-4 py-2",
 		state.selected
 			? // Selection is never colour alone: the caller also renders the title in
 				// the accent role. `row-selected` alone is a 1.0x luminance difference.
@@ -530,6 +673,39 @@ export const alertClasses = (tone: SemanticTone = "info"): string =>
 		ALERT_TONES[tone].ink,
 	);
 
+/**
+ * Where an alert's one action goes, and the classes that put it there.
+ *
+ *  - `none`: no action; the row keeps the classes every existing alert painted.
+ *  - `trailing`: the remedy beside the message (design D2). The action's 44 pt
+ *    box takes `-my-3` so it overlaps the alert's own 12 pt padding instead of
+ *    stretching the alert to 70 pt (one line is 12 + 20 + 12 + 2 = 46, the
+ *    spec's §3 figure), and the text block centres on it so a one-line message
+ *    shares its line with Retry rather than sitting 12 pt above it.
+ *  - `stacked`: at large text the remedy goes UNDER the message (UX U4): beside
+ *    it, a 320 pt phone at 200 % wrapped the sentence into a five-line column
+ *    270 pt tall. The flex direction is a STYLE (`alertStacked`), not a class,
+ *    because `alertClasses` already carries `flex-row` and two direction
+ *    classes on one node resolve by stylesheet order, not by intent.
+ */
+export type AlertActionLayout = "none" | "trailing" | "stacked";
+export const alertActionLayout = (
+	hasAction: boolean,
+	scale: number,
+): AlertActionLayout =>
+	!hasAction ? "none" : scale > LARGE_TEXT_SCALE ? "stacked" : "trailing";
+export const alertActionClasses = (layout: AlertActionLayout) => ({
+	text:
+		layout === "trailing"
+			? "flex-1 flex-row items-start gap-2 self-center"
+			: "flex-row items-start gap-2",
+	action: layout === "stacked" ? "self-end -mb-3" : "self-center -my-3",
+});
+export const alertStacked = {
+	flexDirection: "column",
+	alignItems: "stretch",
+} as const;
+
 export const alertGlyph = (tone: SemanticTone = "info"): string =>
 	ALERT_TONES[tone].glyph;
 
@@ -660,7 +836,9 @@ export const emptyStateClasses =
  * boundary of required content. */
 export const dividerClasses = "h-px w-full bg-hairline";
 
-export type AvatarSize = "sm" | "md";
+/* `lg` is the Team Bridge profile card's photo: 80 pt, drawn from the 256 px
+ * variant so it stays sharp at 3x. Rows keep `sm`/`md`. */
+export type AvatarSize = "sm" | "md" | "lg";
 
 export const AVATAR_SIZES: Record<
 	AvatarSize,
@@ -668,12 +846,15 @@ export const AVATAR_SIZES: Record<
 > = {
 	sm: { box: "h-8 w-8", text: "text-meta", px: 32 },
 	md: { box: "h-11 w-11", text: "text-label", px: 44 },
+	lg: { box: "h-20 w-20", text: "text-title", px: 80 },
 };
 
 /** `radius.full` — an avatar is a circle, and `full` is the kit's token for it. */
 export const avatarClasses = (size: AvatarSize = "md"): string =>
 	cx(
-		"items-center justify-center rounded-full bg-accent-muted",
+		// `overflow-hidden` clips a photo to the circle. No border: a photo is its
+		// own edge, and the desktop dropped avatar borders for the same reason.
+		"items-center justify-center overflow-hidden rounded-full bg-accent-muted",
 		AVATAR_SIZES[size].box,
 	);
 

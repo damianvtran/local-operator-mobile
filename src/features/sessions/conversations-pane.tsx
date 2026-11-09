@@ -1,19 +1,39 @@
 import { useRouter } from "expo-router";
-import { Search, SquarePen, X } from "lucide-react-native";
+import {
+	CalendarClock,
+	ChevronRight,
+	FolderKanban,
+	History,
+	Inbox,
+	Library,
+	Search,
+	Settings,
+	SquarePen,
+	X,
+} from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import type { SessionSummary } from "@/contracts";
+import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
+import { AgentListRow } from "@/features/agent-avatar/agent-avatar-view";
+import { DrawerComputerRow } from "@/features/auth/computer-entry-points";
+import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	useConnection,
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
 import { libraryEnabled } from "@/features/library/library-model";
+import {
+	countLabel,
+	notificationsEnabled,
+} from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
 	attentionWord,
 	degradedNote,
 	degradedShortNote,
+	inboxBadgeCount,
 	isRemoteRow,
 	relativeTimeFor,
 	remoteAttention,
@@ -29,8 +49,8 @@ import {
 	tagAnnouncement,
 } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
+import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
-import { listLabel } from "@/lib/route-label";
 import { useUiStore } from "@/state/ui-store";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import {
@@ -41,18 +61,19 @@ import {
 	remoteSessionRowId,
 	STATE_MARKER,
 	SURFACE,
+	sessionRowAvatarId,
 	sessionRowId,
 	sessionTagLineId,
+	state,
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
 import { ConnectionPill } from "@/ui/components/connection-pill";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
 import { Input } from "@/ui/components/input";
-import { ListRow } from "@/ui/components/list-row";
-import { tailFit } from "@/ui/components/list-row-meta";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
@@ -118,6 +139,42 @@ export type ConversationsPaneProps = {
 	 *  home screen (`directories()` is one read, and two readers of one datum is
 	 *  how two labels drift). */
 	homeDirectory?: string | null;
+	/**
+	 * The surface these rows sit on, handed to `ListRow` so a selected agent's
+	 * badge ring matches what is actually behind the row.
+	 *
+	 * The list does not own its background: the same component renders inside the
+	 * screen (`bg-surface`-free, `bg-elevated`-free — the screen's `bg-canvas`) and
+	 * inside the phone drawer's panel (`bg-elevated`). Only the caller knows which, so a
+	 * hardcoded ring was right in exactly one placement (agent review round 2, R2-2).
+	 * Undefined leaves `ListRow`'s own default (the screen canvas) in place.
+	 */
+	surfaceClassName?: string;
+};
+
+/**
+ * The inbox count pill, on the Inbox destination's icon and on the "More" row.
+ * One component so the two places cannot paint the count two ways; its text
+ * scale is passed through because at 300 % the digits outgrow the fixed 16 pt
+ * line box (D25).
+ */
+const RailCount = ({ count }: { count: number }) => {
+	const { effectiveScale } = useTextScale();
+	return (
+		<View testID={CONTROL.sidebarNotificationsCount}>
+			<Badge
+				/* The app's one cap, as the home bell uses (R7-02/D21). */
+				label={countLabel(count)}
+				scale={effectiveScale}
+				tone="warning"
+				emphasis
+				mono
+				/* The destination's own name carries the count for assistive tech
+				 *  ("Inbox, 3 unread"), so the pill is not announced a second time. */
+				hidden={false}
+			/>
+		</View>
+	);
 };
 
 export const ConversationsPane = ({
@@ -126,13 +183,13 @@ export const ConversationsPane = ({
 	onNewChat,
 	notice,
 	homeDirectory,
+	surfaceClassName,
 }: ConversationsPaneProps) => {
 	const router = useRouter();
 	const { refreshList, relay, busy, streamHealth } = useConnection();
 	const showToast = useUiStore((state) => state.showToast);
 	/* The New chat row's glyph, in the same ink as every other quiet control in
 	 *  the panel — the icon ramp's `ink-muted`, not a decorative accent. */
-	const newChatInk = useTokenColor("ink-muted");
 
 	const sessions = useListState((state) => state.sessions);
 	const degraded = useListState((state) => state.degraded);
@@ -140,9 +197,17 @@ export const ConversationsPane = ({
 	const stale = useListState((state) => state.stale);
 	const lastFrameAt = useListState((state) => state.lastFrameAt);
 	const capabilities = useListState((state) => state.capabilities);
-	const computers = useConnectionState((state) => state.computers);
-	const tunnelId = useConnectionState((state) => state.tunnelId);
+	/* The inbox's own count, off the list frame (contract §5.4). `null` draws no
+	 * numeral — an older relay's omission is unknown, never a zero. */
+	const inboxBlock = useListState((state) => state.notifications);
+	const inboxCount = inboxBadgeCount(inboxBlock);
 	const route = useConnectionState((state) => state.route);
+
+	/* Whether the inbox has a count to show on its destination's icon. `null` is
+	 *  an older relay's omission (unknown), never a zero. */
+	const hasInboxCount = inboxCount !== null && inboxCount > 0;
+	const [destinationsOpen, setDestinationsOpen] = useState(false);
+	const destinationInk = useTokenColor("ink-muted");
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -187,25 +252,27 @@ export const ConversationsPane = ({
 
 	const { effectiveScale } = useTextScale();
 	const largeText = effectiveScale > LARGE_TEXT_SCALE;
-	const scrollFooter = sidebarFooterScrolls(useLayout(), effectiveScale);
+	/* Large text counts here because the routes grow with it: at 200 % on a
+	 *  320 × 568 pane the pinned footer left the list 60 pt and the first session
+	 *  row — the only thing that tells `ended` from `populated` — was entirely
+	 *  below the fold (`S15` refused the capture on 2026-10-27). The number of
+	 *  destinations comes from the relay's own flags, so an older relay with fewer
+	 *  routes keeps the pinned footer it has always had (R7-01). */
+	/* The footer is two compact rows now (record §3), whatever the relay
+	 *  advertises; at large text the strip is ONE "More" row. The floor helper
+	 *  counts destination ROWS, so the pinned footer is charged as the rows it is.
+	 *  Team Bridge adds a third, always-shown row above the strip: a hub
+	 *  destination, not a relay capability, so it is charged unconditionally and its
+	 *  caption (which wraps) is never hidden by a relay that advertises less.
+	 *  Two and three both sit under the helper's five-route threshold, so this
+	 *  documents the merged footer without moving the floor main measured. */
+	const pinnedRoutes = 3;
+	const scrollFooter = sidebarFooterScrolls(useLayout(), {
+		largeText,
+		routes: pinnedRoutes,
+	});
 
-	/* The switcher's painted label. The text box's OWN width is the budget —
-	 *  measured on the line, so it cannot drift from the flex rules — and the
-	 *  fit is the row's meta arithmetic (`tailFit`): whole before the first
-	 *  layout (the common label fits, so the first frame is the settled frame),
-	 *  tail-kept once the box is narrower than the string. Measured motivation
-	 *  (review round 3, D3): at 200 % the drawer's 143 dp box dropped the port
-	 *  of `127.0.0.1:51078` — the only part that differs per session — because
-	 *  react-native-web ignores `ellipsizeMode`, so the painted STRING is the
-	 *  only control over which end survives. The home header paints the same
-	 *  ladder whole at 200 %: its box is wider, and the fit engages only where
-	 *  the box runs out. */
-	const switcherLabel = listLabel(computers, tunnelId, route);
-	const [switcherLabelWidth, setSwitcherLabelWidth] = useState(0);
-	const paintedSwitcherLabel =
-		switcherLabelWidth > 0
-			? tailFit(switcherLabel, switcherLabelWidth, effectiveScale)
-			: switcherLabel;
+	const { open: openComputerSwitcher } = useComputerSwitcher();
 
 	const filtered = useMemo(() => {
 		const needle = query.trim().toLowerCase();
@@ -223,6 +290,19 @@ export const ConversationsPane = ({
 		[filtered, now],
 	);
 	const items = useMemo(() => buildItems(sections), [sections]);
+	/* Does any row in THIS list draw a picture? Then every row reserves the picture's
+	 *  width for its title, so the list's titles share one left edge instead of
+	 *  stepping in and out between pictured and plain rows (design review round 1,
+	 *  D4 / agent review round 1, R2). Decided from the WIRE (`avatar_sha256`), not
+	 *  from which pictures resolved: a row whose digest the relay 404s still reserves,
+	 *  so the column does not move when a picture loads, fails or is removed. */
+	const anyRowPictured = useMemo(
+		() =>
+			items.some(
+				(item) => item.kind === "row" && avatarRefOf(item.session) !== null,
+			),
+		[items],
+	);
 
 	const degradedMessage = degradedNote(degraded);
 	const staleMessage = staleNote({ stale, lastFrameAt });
@@ -277,134 +357,231 @@ export const ConversationsPane = ({
 		openSession(session);
 	};
 
-	/* Keep one navigation tree in both placements: short landscape and compact
-	 * large text give the list room; secondary routes follow its rows. The
-	 * negative margin only cancels the list's px-4, preserving the footer width
-	 * (and its content-driven wrapping) from the pinned portrait layout. */
+	/* THE FOOTER (record §3): conversations first, everything else in two compact
+	 *  rows. It was five full-width centred buttons plus the computer row — 328 pt
+	 *  of an 874 pt panel, leaving ~4.5 conversation rows (D-B1, TestFlight 365).
+	 *
+	 *  The DESTINATIONS STRIP (the touch floor, 44/48 pt; was 52): equal slots, each a
+	 *  20 pt icon over a 12 pt label (≈ 41 pt of content, so the floor holds it) — Inbox (with its count on the icon), Past, Projects,
+	 *  Schedules, Library. Capability-gated slots disappear and the strip re-flows.
+	 *  At large text the labels cannot fit five across, so the strip becomes ONE
+	 *  "More" row that opens a sheet listing the same destinations — a label is
+	 *  never dropped silently.
+	 *
+	 *  The WORKSPACE ROW (44 pt), ABOVE the strip: the computer in use (the ONE
+	 *  switcher — the header's duplicate is gone, D-B2) and the Settings gear, moved
+	 *  from the home header. Total ≈ 44 + 44 + 4 + 12 = 104 pt on iOS, so the strip
+	 *  is a bottom bar rather than a stack of large buttons ("a bunch of large
+	 *  buttons taking up space", the operator, build 453).
+	 *
+	 *  Short landscape still scrolls the footer WITH the list (`scrollFooter`); the
+	 *  negative margin only cancels the list's px-4 there. */
+	const destinations = [
+		...(notificationsEnabled(capabilities)
+			? [
+					{
+						key: "inbox",
+						label: t("mobile.chrome.destination.inbox"),
+						accessibilityLabel: hasInboxCount
+							? t("mobile.chrome.destination.inbox_count", {
+									count: inboxCount ?? 0,
+								})
+							: t("mobile.chrome.destination.inbox"),
+						route: "/notifications",
+						Icon: Inbox,
+						count: hasInboxCount ? inboxCount : null,
+						testID: CONTROL.sidebarNotifications,
+					},
+				]
+			: []),
+		{
+			key: "past",
+			label: t("mobile.chrome.destination.past"),
+			accessibilityLabel: t("relay.chrome.drawer.past"),
+			route: "/past",
+			Icon: History,
+			count: null,
+			testID: CONTROL.sidebarPast,
+		},
+		{
+			key: "projects",
+			label: t("relay.chrome.drawer.projects"),
+			accessibilityLabel: t("relay.chrome.drawer.projects"),
+			route: "/projects",
+			Icon: FolderKanban,
+			count: null,
+			testID: CONTROL.sidebarProjects,
+		},
+		{
+			key: "schedules",
+			label: t("mobile.chrome.destination.schedules"),
+			accessibilityLabel: t("mobile.chrome.destination.schedules"),
+			route: "/schedules",
+			Icon: CalendarClock,
+			count: null,
+			testID: CONTROL.sidebarSchedules,
+		},
+		...(libraryEnabled(capabilities)
+			? [
+					{
+						key: "library",
+						label: t("relay.chrome.drawer.library"),
+						accessibilityLabel: t("relay.chrome.drawer.library"),
+						route: "/library",
+						Icon: Library,
+						count: null,
+						testID: CONTROL.sidebarLibrary,
+					},
+				]
+			: []),
+	] as const;
+	const go = (route: string) => {
+		onNavigate?.();
+		router.push(route as never);
+	};
 	const footer = (
 		<View
-			className="gap-2 border-hairline border-t px-2 pb-2 pt-2"
+			className="gap-2 border-t border-hairline px-2 pt-1 pb-2"
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
+			testID={REGION.sidebarFooter}
 		>
-			<View className="flex-row flex-wrap gap-2">
-				<View className="flex-auto">
-					<Button
-						label="Past sessions"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/past");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarPast}
-					/>
-				</View>
-				<View className="flex-auto">
-					<Button
-						label="Computers"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/tunnels");
-						}}
-						variant="quiet"
-						size="sm"
+			{/* The workspace row sits ABOVE the destinations (design spec 2026-11-06
+			 *  § 4): the destinations are the panel's bottom bar, at the edge the thumb
+			 *  rests on, and the computer chip reads as the context the list above
+			 *  belongs to rather than as a sixth destination.
+			 *
+			 *  `gap-2` (8 pt), not `gap-1`: the Inbox count rides 6 pt ABOVE its icon
+			 *  (`top: -6` below), out of flow, and the slot's content grows to fill
+			 *  it as text scales, so at worst the icon sits flush with the slot's top.
+			 *  With a 4 pt gap the badge crossed the computer chip's outline (0.4 pt
+			 *  at 100 % on iOS, 2 pt at 135 %; design round 1 D1); 8 pt keeps it
+			 *  clear at every scale. `sidebar-footer.test.ts` pins the arithmetic. */}
+			<View className="flex-row items-center gap-1">
+				<View className="min-w-0 flex-1">
+					<DrawerComputerRow
 						testID={CONTROL.sidebarComputers}
+						onNavigate={onNavigate}
 					/>
 				</View>
-			</View>
-			<View className="w-full">
-				<Button
-					label="Projects"
-					onPress={() => {
-						onNavigate?.();
-						router.push("/projects");
-					}}
-					variant="quiet"
-					size="sm"
-					testID={CONTROL.sidebarProjects}
+				<IconButton
+					accessibilityLabel={t("relay.chrome.drawer.settings")}
+					onPress={() => go("/settings")}
+					icon={({ color, size }) => <Settings color={color} size={size} />}
+					testID={CONTROL.settingsButton}
 				/>
 			</View>
-			{/* The fourth route, for the same stated reason as Projects: the
-			 *  machine-wide armed index (S17) is a peer of `past`/`projects` — a
-			 *  view of what is running on the machine, not a row in Settings —
-			 *  and the desktop sidebar carries Schedules as a top-level
-			 *  destination beside them. Full-width beneath the pair, like Projects,
-			 *  so the wrap band stays 2+1+1. */}
-			<View className="w-full">
-				<Button
-					label="Schedules"
-					onPress={() => {
-						onNavigate?.();
-						router.push("/schedules");
-					}}
-					variant="quiet"
-					size="sm"
-					testID={CONTROL.sidebarSchedules}
-				/>
-			</View>
+			{/* Team Bridge: a hub destination, never a relay capability, so it is not
+			 *  capability-gated — and it sits ABOVE the strip in both forms, because at
+			 *  large text the "More" row would otherwise be the only way into it. */}
 			<TeamBridgeEntry onNavigate={onNavigate} />
-			{/* The fifth route, gated on the relay's own capability flag. An older
-			 *  relay omits `features.library`; showing the entry there would offer a
-			 *  control whose screen can only 404, so absence hides it. The gate is the
-			 *  relay's word, never a build-time assumption. */}
-			{libraryEnabled(capabilities) ? (
-				<View className="w-full">
-					<Button
-						label="Library"
-						onPress={() => {
-							onNavigate?.();
-							router.push("/library");
-						}}
-						variant="quiet"
-						size="sm"
-						testID={CONTROL.sidebarLibrary}
-					/>
+			{largeText ? (
+				/* ≥ 200 %-class text: one honest row instead of five clipped labels. */
+				<Pressable
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={t("relay.chrome.row.more")}
+					accessibilityHint={t("mobile.chrome.destinations")}
+					onPress={() => setDestinationsOpen(true)}
+					testID={CONTROL.sidebarMore}
+					className="flex-row items-center gap-3 px-2"
+					style={{ minHeight: TOUCH_FLOOR }}
+				>
+					<Text
+						className="min-w-0 flex-1 text-body-sm text-ink"
+						numberOfLines={1}
+					>
+						{t("relay.chrome.row.more")}
+					</Text>
+					{hasInboxCount ? <RailCount count={inboxCount} /> : null}
+					<ChevronRight size={18} color={destinationInk} aria-hidden />
+				</Pressable>
+			) : (
+				<View className="flex-row" accessibilityRole="toolbar">
+					{destinations.map((item) => (
+						/* `gap-1`: the icon-to-label step is the scale's 4 pt, not
+						 *  `gap-0.5`'s off-scale 2 pt (U-42); the touch-floor slot absorbs it. */
+						<Pressable
+							key={item.key}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={item.accessibilityLabel}
+							onPress={() => go(item.route)}
+							testID={item.testID}
+							className="min-w-0 flex-1 items-center justify-center gap-1"
+							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+						>
+							<View>
+								<item.Icon size={20} color={destinationInk} aria-hidden />
+								{item.count !== null ? (
+									/* The count on the ICON's corner (record §3): out of
+									 *  flow, so it never shifts the label off the slot's
+									 *  centre — the asymmetry D19–D23 spent four rounds on. */
+									<View
+										pointerEvents="none"
+										className="absolute"
+										style={{ top: -6, start: 12 }}
+									>
+										<RailCount count={item.count} />
+									</View>
+								) : null}
+							</View>
+							{/* `meta` (12 pt sans), not the mono label: the mono step's wide
+							 *  advance cut "Projects"/"Schedules" to "Projec…" in a 65 pt slot
+							 *  on the first web capture. */}
+							<Text className="text-meta text-ink-muted" numberOfLines={1}>
+								{item.label}
+							</Text>
+						</Pressable>
+					))}
 				</View>
-			) : null}
+			)}
 		</View>
 	);
 
 	return (
 		<View className="flex-1" style={{ paddingTop: 0 }}>
-			{/* ---- the header row: switcher・search・close (close: drawer only) ---- */}
-			<View className="flex-row items-center gap-1 px-2">
+			{/* ---- the header row (record §2.5): search pill · new chat · close ----
+			 *  The touch floor plus `py-1` (52/56 pt; was a fixed 60): its children are
+			 *  all touch-floor controls, so the extra 8 pt of a fixed 60 was air the
+			 *  list could use (spec 2026-11-06 § 4, "better use of vertical space"). The computer switcher that sat here was the panel's SECOND
+			 *  switcher (D-B2) — the footer's workspace row is the one — and the 56 pt
+			 *  full-bleed "New chat" row below it is now the square-pen button, so the
+			 *  list starts ~112 pt higher. The brand mark left too: the panel is for
+			 *  conversations, and the home already carries the identity. */}
+			<View className="flex-row items-center gap-1 px-2 py-1">
 				<Pressable
 					accessibilityRole={ROLE.button}
-					accessibilityLabel={`${switcherLabel} — choose a computer`}
-					onPress={() => {
-						onNavigate?.();
-						router.push("/tunnels");
-					}}
-					testID={CONTROL.sidebarSwitcher}
-					className="min-w-0 flex-1 justify-center px-2"
-					/* The floor is the PLATFORM's: 44 on iOS, 48 wherever `Platform.OS`
-					 *  is not iOS — the web/audit profile included, which is the build the
-					 *  audit measures (QA round 1 caught the 44 pt `min-h-11` switcher). */
+					accessibilityLabel={t("relay.chrome.list.search_label")}
+					accessibilityState={state({ expanded: searching })}
+					onPress={() => setSearching((value) => !value)}
+					testID={CONTROL.sidebarSearch}
+					className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full bg-elevated px-3"
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
+					<Search size={18} color={destinationInk} aria-hidden />
 					<Text
-						className="text-mono-sm text-ink-muted"
+						className="min-w-0 flex-1 text-body-sm text-ink-dim"
 						numberOfLines={1}
-						ellipsizeMode="tail"
-						/* The painted string is fitted above (`tailFit`); this pair stays as the
-						 *  platform mop-up, as on the row's meta line: on iOS/Android the tail
-						 *  ellipsis is the direction the fitted string already has. */
-						onLayout={(event) =>
-							setSwitcherLabelWidth(event.nativeEvent.layout.width)
-						}
 					>
-						{paintedSwitcherLabel}
+						{t("relay.chrome.list.search_open")}
 					</Text>
 				</Pressable>
-				<IconButton
-					accessibilityLabel="Search conversations"
-					onPress={() => setSearching((value) => !value)}
-					icon={({ color, size }) => <Search color={color} size={size} />}
-					testID={CONTROL.sidebarSearch}
-				/>
+				{/* Hidden while the empty state's own "New chat" is on screen — the
+				 *  same no-duplicate rule the old full-bleed row followed
+				 *  (`noSessionsYet`). */}
+				{noSessionsYet ? null : (
+					<IconButton
+						accessibilityLabel={t("mobile.chrome.new_chat")}
+						onPress={() => {
+							onNavigate?.();
+							onNewChat?.();
+						}}
+						icon={({ color, size }) => <SquarePen color={color} size={size} />}
+						size={22}
+						testID={CONTROL.sidebarNewChat}
+					/>
+				)}
 				{onClose ? (
 					<IconButton
-						accessibilityLabel="Close conversations"
+						accessibilityLabel={t("mobile.chrome.close_conversations")}
 						onPress={onClose}
 						icon={({ color, size }) => <X color={color} size={size} />}
 						testID={CONTROL.sidebarClose}
@@ -434,27 +611,6 @@ export const ConversationsPane = ({
 						testID={CONTROL.sidebarSearchField}
 					/>
 				</View>
-			) : null}
-
-			{/* The panel's own way in: full-bleed, 56 pt, a hairline under it. The
-			 *  home's one staging slot means this never stages a SECOND draft — it
-			 *  closes the panel and hands the composer back (P-4: a control that
-			 *  overwrote typed text would be a data-loss control). */}
-			{!noSessionsYet ? (
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel="New chat"
-					onPress={() => {
-						onNavigate?.();
-						onNewChat?.();
-					}}
-					testID={CONTROL.sidebarNewChat}
-					className="flex-row items-center gap-3 border-hairline border-b px-4"
-					style={{ minHeight: 56 }}
-				>
-					<SquarePen size={20} color={newChatInk} />
-					<Text className="text-body text-ink">New chat</Text>
-				</Pressable>
 			) : null}
 
 			{/* The connection pill belongs ABOVE the list, not inside it: inside,
@@ -538,7 +694,11 @@ export const ConversationsPane = ({
 					 * on the row's kind rather than read through the default. */
 					const remote = isRemoteRow(session);
 					return (
-						<ListRow
+						<AgentListRow
+							avatarRef={avatarRefOf(session)}
+							avatarTestID={sessionRowAvatarId(session.session_id)}
+							reserveLeading={anyRowPictured}
+							surfaceClassName={surfaceClassName}
 							title={session.conversation_name.trim() || "untitled"}
 							cwd={
 								remote
@@ -634,7 +794,10 @@ export const ConversationsPane = ({
 							}}
 							onConnect={() => {
 								onNavigate?.();
-								router.push("/tunnels");
+								// Both name controls choose a computer; management remains in Settings.
+								openComputerSwitcher({
+									returnFocusTestID: CONTROL.computersButton,
+								});
 							}}
 						/>
 					</View>
@@ -718,6 +881,42 @@ export const ConversationsPane = ({
 							if (target) openSession(target);
 						}}
 					/>
+				</View>
+			</Sheet>
+
+			{/* "More" at large text: the same destinations as the strip, as full
+			 *  rows a 200 % label fits in. Closes before navigating, like every row
+			 *  sheet here, so no sheet is left stacked under the next screen. */}
+			<Sheet
+				visible={destinationsOpen}
+				onClose={() => setDestinationsOpen(false)}
+				title={t("mobile.chrome.destinations")}
+				testID={CONTROL.sidebarDestinationsSheet}
+			>
+				<View className="pb-4">
+					{destinations.map((item) => (
+						<Pressable
+							key={item.key}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={item.accessibilityLabel}
+							onPress={() => {
+								setDestinationsOpen(false);
+								go(item.route);
+							}}
+							className="flex-row items-center gap-3 px-4"
+							style={{ minHeight: TOUCH_FLOOR }}
+						>
+							<item.Icon size={20} color={destinationInk} aria-hidden />
+							<Text className="min-w-0 flex-1 text-body text-ink">
+								{item.accessibilityLabel === item.label
+									? item.label
+									: item.key === "inbox"
+										? item.label
+										: item.accessibilityLabel}
+							</Text>
+							{item.count !== null ? <RailCount count={item.count} /> : null}
+						</Pressable>
+					))}
 				</View>
 			</Sheet>
 

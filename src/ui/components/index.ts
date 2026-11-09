@@ -25,6 +25,7 @@ export {
 } from "@/ui/components/adaptive";
 export { Alert } from "@/ui/components/alert";
 export { Avatar, initialsOf } from "@/ui/components/avatar";
+export { BackIcon } from "@/ui/components/back-icon";
 export { Badge } from "@/ui/components/badge";
 export { Banner } from "@/ui/components/banner";
 export { Button } from "@/ui/components/button";

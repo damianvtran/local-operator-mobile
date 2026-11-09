@@ -1,0 +1,286 @@
+# zh-CN group-A audit probe — namespace=mobile.home case=home
+# run at 2026-10-30T06:33:00Z (UTC) by session 6de17b1d6bbd
+# cwd=/Users/damian/workspace/zh-wave
+
+$ git rev-parse --abbrev-ref HEAD HEAD
+feat/i18n-chinese
+a57fb8cbe16101d828b68edd422b56317523ac7d
+
+$ git status --short
+ M src/i18n/catalogue.gen.ts
+?? i18n/audits/evidence/zh-CN/
+?? src/i18n/catalogues/zh-CN/
+
+$ shasum -a 256 src/i18n/catalogues/{en/mobile.home.json,en/mobile.home.context.json,zh-CN/mobile.home.json}
+4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  src/i18n/catalogues/en/mobile.home.json
+db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  src/i18n/catalogues/en/mobile.home.context.json
+24f80843f29ec7687e335f06d412f4add6284f0de837e82e71f741945f5bf033  src/i18n/catalogues/zh-CN/mobile.home.json
+
+$ node scripts/i18n/generate.ts --check 2>&1 | head -1
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr)
+
+$ node scripts/i18n/check-strings.ts 2>&1 | tail -1
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+
+$ python3 /Users/damian/workspace/zh-check.py mobile.home
+namespace=mobile.home en=27 zh=27 context=27
+key_parity=True missing=[] extra=[]
+context_covers_every_key=True
+placeholder_tokens: en=0 zh=0
+placeholder_mismatches=[]
+icu_structs_en=[]
+icu_structures_in_zh=[]
+bidi_or_control_chars=[]
+style_findings=[('mobile.home.options.fixed', 'please-particle', '请')]
+key	chars	cells	value
+mobile.home.connect_disabled_reason	10	20	连接电脑后才能发送。
+mobile.home.folders_read_failed	14	28	刚才无法读取此电脑的文件夹。
+mobile.home.greeting	12	24	今天想让我帮你做点什么？
+mobile.home.options.apply	6	12	使用这些选项
+mobile.home.options.fixed	29	56	此对话的起始选项已固定。实时控制项请在“对话详情”中查看。
+mobile.home.options.folder	8	16	此电脑上的文件夹
+mobile.home.options.title	4	8	对话选项
+mobile.home.queue.discard	6	12	丢弃排队消息
+mobile.home.queue.restore	9	18	将排队消息移到草稿
+mobile.home.queue.sheet_title	4	8	排队消息
+mobile.home.queue.view	6	12	查看排队消息
+mobile.home.refused_start_fallback	11	22	此电脑上没有该文件夹。
+mobile.home.starting	6	12	正在启动……
+mobile.home.startup_queue.blocked	9	18	重试以发送排队消息
+mobile.home.startup_queue.not_started	3	6	未启动
+mobile.home.startup_queue.sending	10	20	正在发送排队消息……
+mobile.home.startup_queue.unconfirmed	5	10	启动未确认
+mobile.home.suggestion.last_turn	5	10	看看上一轮
+mobile.home.suggestion.linear_mcp	12	14	设置Linear MCP
+mobile.home.suggestion.phone_access	6	12	开启手机访问
+mobile.home.suggestion.review_repo	5	10	审查此仓库
+mobile.home.suggestion.team_of_agents	7	14	创建智能体团队
+mobile.home.suggestion.wake_summary	6	12	用摘要唤醒我
+mobile.home.tip.parallel	15	30	要求并行工作以展开多个子智能体
+mobile.home.tip.schedule	13	26	设置定时任务按时运行提示词
+mobile.home.tip.search	13	26	搜索过往对话以重新打开会话
+mobile.home.transcript.waiting	8	16	正在等待对话……
+max_cells=(56, 'mobile.home.options.fixed')
+
+$ node /Users/damian/workspace/zh-audit-parse.mjs mobile.home  (stdout; node's type-stripping warning is on stderr)
+namespace=mobile.home parsed=27/27 keys_with_params=[]
+
+$ node -e '...'  # conversation_details must appear byte-identically in options.fixed
+conversation_details = "对话详情" codepoints: 5bf9 8bdd 8be6 60c5
+options.fixed = "此对话的起始选项已固定。实时控制项请在“对话详情”中查看。"
+byte-identical substring present: true
+delimiting characters: "“对话详情”"
+
+$ grep -rn 'mobile.session.conversation_details' src/features src/i18n --include=*.ts --include=*.tsx | head -3
+src/features/new-session/startup-transcript.tsx:52:							: t("mobile.session.conversation_details")
+src/i18n/catalogue.gen.ts:152:	| "mobile.session.conversation_details"
+src/i18n/catalogue.gen.ts:276:	| "mobile.session.conversation_details"
+
+$ /Users/damian/.local-operator/sessions/6de17b1d6bbd/scratchpad/measure < items-home.json  (CoreText; system font; system font is the app's declared fallback)
+[
+  {
+    "cells" : 10,
+    "chars" : 5,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.last_turn",
+    "size" : 14,
+    "utf16" : 5,
+    "width" : 69.46
+  },
+  {
+    "cells" : 14,
+    "chars" : 12,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.linear_mcp",
+    "size" : 14,
+    "utf16" : 12,
+    "width" : 102
+  },
+  {
+    "cells" : 12,
+    "chars" : 6,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.phone_access",
+    "size" : 14,
+    "utf16" : 6,
+    "width" : 83.35
+  },
+  {
+    "cells" : 10,
+    "chars" : 5,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.review_repo",
+    "size" : 14,
+    "utf16" : 5,
+    "width" : 69.46
+  },
+  {
+    "cells" : 14,
+    "chars" : 7,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.team_of_agents",
+    "size" : 14,
+    "utf16" : 7,
+    "width" : 97.24
+  },
+  {
+    "cells" : 12,
+    "chars" : 6,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.wake_summary",
+    "size" : 14,
+    "utf16" : 6,
+    "width" : 83.35
+  },
+  {
+    "cells" : 23,
+    "chars" : 23,
+    "font" : ".AppleSystemUIFont",
+    "label" : "EN team_of_agents (control)",
+    "size" : 14,
+    "utf16" : 23,
+    "width" : 154.79
+  },
+  {
+    "cells" : 14,
+    "chars" : 7,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.team_of_agents @200%",
+    "size" : 28,
+    "utf16" : 7,
+    "width" : 186.61
+  },
+  {
+    "cells" : 14,
+    "chars" : 12,
+    "font" : ".AppleSystemUIFont",
+    "label" : "suggestion.linear_mcp @200%",
+    "size" : 28,
+    "utf16" : 12,
+    "width" : 193.77
+  },
+  {
+    "cells" : 56,
+    "chars" : 29,
+    "font" : ".AppleSystemUIFont",
+    "label" : "options.fixed (help text, wraps)",
+    "size" : 14,
+    "utf16" : 29,
+    "width" : 387.61
+  },
+  {
+    "cells" : 56,
+    "chars" : 29,
+    "font" : ".AppleSystemUIFont",
+    "label" : "options.fixed suggested",
+    "size" : 14,
+    "utf16" : 29,
+    "width" : 387.61
+  },
+  {
+    "cells" : 24,
+    "chars" : 12,
+    "font" : ".AppleSystemUIFont",
+    "label" : "greeting (title, wraps)",
+    "size" : 20,
+    "utf16" : 12,
+    "width" : 229.85
+  }
+]
+
+$ node /Users/damian/workspace/zh-audit-parse.mjs mobile.home --all  (wave-level plural + quote evidence; keys outside group A)
+namespace=mobile.home parsed=27/27 keys_with_params=[]
+Intl.PluralRules('zh-CN').resolvedOptions().pluralCategories=["other"]
+  select(0) = other
+  select(1) = other
+  select(2) = other
+  select(1.5) = other
+  select(100) = other
+ARMS mobile.projects/mobile.projects.sessions.count en=[one,other] zh=[other]
+ARMS mobile.schedules/mobile.schedules.count.monitors en=[one,other] zh=[other]
+ARMS mobile.schedules/mobile.schedules.count.wakes en=[one,other] zh=[other]
+ARMS mobile.schedules/mobile.schedules.show_more.monitors en=[one,other] zh=[other]
+ARMS mobile.schedules/mobile.schedules.show_more.wakes en=[one,other] zh=[other]
+RENDER mobile.projects.write_receipt -> 已创建项目“发布”。
+RENDER mobile.projects.write_receipt -> 已完成里程碑“审计”。
+RENDER mobile.projects.delete_body -> 删除“示例项目”？项目行将永久移除。其关联会话和会话记录不受影响。
+
+$ node -e '...'  # Intl.PluralRules categories for zh-CN
+categories: ["other"]
+select(0) = other
+select(1) = other
+select(2) = other
+select(1.5) = other
+select(100) = other
+
+# end of probe — exit at 2026-10-30T06:33:06Z
+
+# ---- appended after the independent second pass, to verify its gate and terminology claims ----
+
+$ ./node_modules/.bin/vitest run src/i18n   (tail)
+
+ ❯ src/i18n/__tests__/catalogues.test.ts:187:23
+    185|    .map((entry) => entry.name)
+    186|    .sort();
+    187|   expect(directories).toEqual([...SHIPPED_LOCALES].sort());
+       |                       ^
+    188|  });
+    189| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 87 passed (88)
+   Start at  02:41:10
+   Duration  2.78s (transform 80%, import 11%, tests 7%, worker 2%)
+
+  Transform  transforming modules took 4.43s · 80% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+
+$ git -C /Users/damian/local-operator grep -n "回合" origin/main -- "local_operator/i18n/catalogues/zh-CN/*.json"
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.radient_saver.json:3:  "wire.radient_saver.section.description": "精简智能体每个回合都要重新发送的对话历史。Saver绝不会把你的AI提供商凭据发送给Radient。更改从下一回合起生效。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.radient_saver.json:10:  "wire.radient_saver.notice.unavailable": "Radient Saver暂时不可用，因此本回合将发送完整历史。其余一切照常。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.radient_saver.json:11:  "wire.radient_saver.notice.rejected": "Radient Saver返回的响应未通过安全检查，已丢弃，因此本回合将发送完整历史。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:107:  "wire.settings.classification_waitms.help": "需开启智能提示。一个回合的等待时长；0表示用50毫秒。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:113:  "wire.settings.compaction_auto_continue.help": "回合后压缩成功时，安排一条继续提示词。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:121:  "wire.settings.compaction_mid_turn_enabled.choice.false.description": "仅在回合之间",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:122:  "wire.settings.compaction_mid_turn_enabled.choice.true.description": "在回合中途压缩",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:123:  "wire.settings.compaction_mid_turn_enabled.help": "允许在工具循环的安全边界处压缩，而不仅限回合之间。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:124:  "wire.settings.compaction_mid_turn_enabled.label": "回合中压缩",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:210:  "wire.settings.display_narration.help": "智能体的工具调用运行后，在会话记录中保留其回合中叙述。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:211:  "wire.settings.display_narration.label": "回合中叙述",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:230:  "wire.settings.display_rail.help": "细线标记“回答”：即结束回合的那条消息。回合中叙述不画线。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:252:  "wire.settings.display_turn_answer_rail.help": "在结束回合的回答旁画一条细线（桌面应用）。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:253:  "wire.settings.display_turn_answer_rail.label": "标记回合回答",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:468:  "wire.settings.providers_openrouter_provider_affinity.help": "会复用服务上一回合的主机，让提示词缓存保持温热。关闭时用OpenRouter按价格加权的负载均衡。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:495:  "wire.settings.query_budget.description": "shell查询的时间预算——针对grep/find/du遍历，而非构建或安装：10秒时给出建议，到达预算即停止，让一次搜索不至于在单个回合里耗掉几分钟。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:541:  "wire.settings.runtime_background_on_resume.choice.false.description": "离开会话时停止该回合",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:542:  "wire.settings.runtime_background_on_resume.choice.true.description": "让回合在后台继续运行",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:543:  "wire.settings.runtime_background_on_resume.help": "切换离开某个会话时，让其运行中的回合继续工作。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:702:  "wire.settings.supplements_maxoutputtokens.help": "需开启图表。每次生成器回合的输出预算。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:704:  "wire.settings.supplements_maxturns.help": "需开启图表。每张图表的模型回合数，含一次修复。",
+origin/main:local_operator/i18n/catalogues/zh-CN/wire.settings.json:705:  "wire.settings.supplements_maxturns.label": "↳ 回合数上限",
+
+$ git -C /Users/damian/local-operator grep -n "最后一轮\|轮次\|一轮" origin/main -- "local_operator/i18n/catalogues/zh-CN/*.json" | head -4
+origin/main:local_operator/i18n/catalogues/zh-CN/cli.send_help.json:7:  "cli.send_help.steer": "在轮次中途注入（引导），而非使用默认邮箱",
+origin/main:local_operator/i18n/catalogues/zh-CN/cli.send_help.json:8:  "cli.send_help.wake": "目标空闲时立即触发一轮（仅邮箱模式）"
+origin/main:local_operator/i18n/catalogues/zh-CN/cli.sessions_help.json:7:  "cli.sessions_help.paused": "仅列出最后一轮被停止而非完成或丢失的已存储会话，即主动停止或构建退役（批量恢复路径选择的集合；隐含--all）",
+origin/main:local_operator/i18n/catalogues/zh-CN/cli.sessions_help.json:22:  "cli.sessions_help.reclaim_description": "查找无法通过任何发现记录、查看器、连接或现有配置根目录访问的活动会话运行时，并用SIGTERM请求退出。运行时先完成正在进行的轮次（自身信号排空，以SIGNAL_DRAIN_S为限）；此命令绝不发送SIGKILL。若运行时有记录、有已连接界面、有非自身所有的活动根目录，或在确认窗口内消耗CPU，则拒绝回收。",
+
+$ git grep -n 回合 -- src/i18n/catalogues/zh-CN/*.json
+src/i18n/catalogues/zh-CN/mobile.schedules.json:19:	"mobile.schedules.parked.wakes": "已暂停——下次回合结束后，唤醒会恢复",
+
+# ---- appended: why the two validator scripts were run directly instead of via pnpm ----
+
+$ pnpm i18n:check   (tail)
+✓ Lockfile passes supply-chain policies (verified 27m ago)
+Lockfile is up to date, resolution step is skipped
+Already up to date
+Error:   × installing dependencies
+  ╰─▶ Failed to create directory at "/Users/damian/workspace/zh-wave/
+      node_modules": workspace hoist directory is not a real directory
+

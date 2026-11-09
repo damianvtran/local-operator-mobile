@@ -1,0 +1,181 @@
+// Russian delta-B re-audit harness (round 2) — shipped bytes at 2921aea.
+// Runs the app's own resolver, parser, renderer and the real call-site modules.
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { registerHooks } from "node:module";
+import { pathToFileURL } from "node:url";
+import { execSync } from "node:child_process";
+
+const REPO = "/Users/damian/workspace/ru-wave";
+const { registerSourceResolver } = await import(join(REPO, "scripts/lib/load-src.ts"));
+registerSourceResolver();
+// The app's `@/…` alias (tsconfig paths), which the repo's resolver does not map.
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier.startsWith("@/")) {
+      const base = join(REPO, "src", specifier.slice(2));
+      for (const c of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`]) {
+        if (existsSync(c)) return nextResolve(pathToFileURL(c).href, context);
+      }
+    }
+    return nextResolve(specifier, context);
+  },
+});
+
+const i18n = await import(join(REPO, "src/i18n/index.ts"));
+const { parseMessage, formatMessage, renderFor, setLocaleSource } = i18n;
+// The app's own wiring: the relay's resolved tag is the preference.
+setLocaleSource(() => "ru");
+
+const NSS = ["mobile.schedules", "mobile.projects", "mobile.notifications", "mobile.computers"];
+const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
+const out = { head: execSync(`git -C ${REPO} rev-parse HEAD`, { encoding: "utf8" }).trim(), checks: {}, renders: {}, receipts: {}, composition: {} };
+
+/* ---------- 1. structural parity across the four namespaces ---------- */
+const problems = [];
+const escalations = [];
+const structure = [];
+for (const ns of NSS) {
+  const en = readJson(join(REPO, `src/i18n/catalogues/en/${ns}.json`));
+  const ru = readJson(join(REPO, `src/i18n/catalogues/ru/${ns}.json`));
+  const ctx = readJson(join(REPO, `src/i18n/catalogues/en/${ns}.context.json`));
+  const enKeys = Object.keys(en);
+  const ruKeys = Object.keys(ru);
+  structure.push({
+    ns, en: enKeys.length, ru: ruKeys.length, ctx: Object.keys(ctx).length,
+    missing: enKeys.filter((k) => !(k in ru)),
+    extra: ruKeys.filter((k) => !(k in en)),
+    orderSame: enKeys.join("\u0000") === ruKeys.join("\u0000"),
+    ctxMissing: enKeys.filter((k) => !(k in ctx)),
+    duplicateKeys: (readFileSync(join(REPO, `src/i18n/catalogues/ru/${ns}.json`), "utf8").match(/^\t"[^"]+":/gm) ?? []).length - ruKeys.length,
+  });
+  for (const k of enKeys) {
+    if (!(k in ru)) continue;
+    const pe = parseMessage(en[k]);
+    const pr = parseMessage(ru[k]);
+    const fmt = (m) => [...m.params.entries()].map(([n, kind]) => `${n}:${kind}`).join(",");
+    const ek = fmt(pe), rk = fmt(pr);
+    const shape = (m) => { const r = []; const walk = (nodes) => { for (const n of nodes) { if (n.type === "plural" || n.type === "select") { r.push(`${n.type}:${n.name}:${[...n.options.keys()].join("/")}`); for (const v of n.options.values()) walk(v); } else if (n.type === "number") r.push("hash"); } }; walk(m.nodes); return r; };
+    const es = shape(pe), rs = shape(pr);
+    // A ru plural that en writes as plain text is the sanctioned escalation, and
+    // only for the six keys round 1 recorded; anything else is a real mismatch.
+    const ESCALATED = new Set(["mobile.schedules.cadence.left","mobile.schedules.summary.monitors_armed","mobile.schedules.summary.monitors_attention","mobile.schedules.tail.failed","mobile.projects.milestones.count","mobile.projects.sessions.live"]);
+    const enIsText = [...pe.params.entries()].filter(([, v]) => v === "text").map(([n]) => n);
+    const ruIsPlural = [...pr.params.entries()].filter(([, v]) => v === "plural").map(([n]) => n);
+    for (const n of ruIsPlural) {
+      const enKind = pe.params.get(n);
+      if (enKind === "plural") continue; // both sides plural: same shape
+      if (enKind !== "text") { problems.push({ key: k, kind: "plural-without-en-counterpart", param: n }); continue; }
+      if (!ESCALATED.has(k)) problems.push({ key: k, kind: "unrecorded-escalation", param: n });
+      else escalations.push({ key: k, param: n, note: "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1" });
+    }
+    if (es.filter((x) => x.startsWith("select:")).join() !== rs.filter((x) => x.startsWith("select:")).join())
+      problems.push({ key: k, kind: "select-arms-differ", en: es.filter((x) => x.startsWith("select:")), ru: rs.filter((x) => x.startsWith("select:")) });
+    rs.forEach((s) => {
+      if (s.startsWith("plural:")) {
+        const cats = s.split(":").pop().split("/");
+        if (!cats.includes("other")) problems.push({ key: k, kind: "missing-other", ru: s });
+        if (!["one","few","many","other"].every((c) => cats.includes(c))) problems.push({ key: k, kind: "missing-ru-category", ru: s });
+        if (cats.some((c) => !["one", "few", "many", "other"].includes(c))) problems.push({ key: k, kind: "non-ru-category", ru: s });
+      }
+    });
+  }
+}
+out.checks.structure = structure;
+out.checks.paramOrArmProblems = problems;
+out.checks.sanctionedEscalations = escalations;
+
+/* ---------- 2. technical tokens, quotes, spacing (ru side) ---------- */
+const tokenProblems = [], typography = [];
+for (const ns of NSS) {
+  const en = readJson(join(REPO, `src/i18n/catalogues/en/${ns}.json`));
+  const ru = readJson(join(REPO, `src/i18n/catalogues/ru/${ns}.json`));
+  for (const k of Object.keys(en)) {
+    const t = ru[k]; if (t === undefined) continue;
+    const back = (s) => (s.match(/`[^`]*`/g) ?? []).sort().join("|");
+    if (back(en[k]) !== back(t)) tokenProblems.push({ key: k, kind: "backtick-span", en: back(en[k]), ru: back(t) });
+    const flags = (s) => (s.match(/--[a-z][a-z0-9-]+|\/[\w./-]{2,}|\b[a-z0-9]+(?:_[a-z0-9]+)+\b/g) ?? []).sort().join("|");
+    if (flags(en[k]) !== flags(t)) tokenProblems.push({ key: k, kind: "latin-token", en: flags(en[k]), ru: flags(t) });
+    if (t !== t.trim()) typography.push({ key: k, what: "edge space", t });
+    if (/[\u200e\u200f\u202a-\u202e\u2066-\u2069\u200b\u200c\u200d\ufeff]/.test(t)) typography.push({ key: k, what: "bidi/zero-width", t });
+    if (t.includes("  ")) typography.push({ key: k, what: "double space", t });
+    if (t.includes("...") || t.includes(" .") || t.includes(" ,")) typography.push({ key: k, what: "ascii punctuation", t });
+    if ((t.match(/«/g) ?? []).length !== (t.match(/»/g) ?? []).length) typography.push({ key: k, what: "unbalanced guillemets", t });
+    if ((t.match(/"/g) ?? []).length !== 0) typography.push({ key: k, what: "straight quote", t });
+    const pm = parseMessage(t);
+    const hashInText = []; const walk = (nodes) => { for (const n of nodes) { if (n.type === "text" && n.value.includes("#")) hashInText.push(n.value); if (n.type === "plural" || n.type === "select") for (const v of n.options.values()) walk(v); } };
+    walk(pm.nodes);
+    if (hashInText.length) typography.push({ key: k, what: "literal # outside plural", t: hashInText.join("|") });
+  }
+}
+out.checks.tokenProblems = tokenProblems;
+out.checks.typography = typography;
+
+/* ---------- 3. plural-node typing + negative control ---------- */
+const gen = readFileSync(join(REPO, "src/i18n/catalogue.gen.ts"), "utf8");
+out.checks.cadenceLeftType = gen.split("\n").find((l) => l.trim().startsWith('"mobile.schedules.cadence.left": {'))?.trim();
+out.checks.cadenceLeftParsedParams = [...parseMessage(readJson(join(REPO, "src/i18n/catalogues/ru/mobile.schedules.json"))["mobile.schedules.cadence.left"]).params.entries()];
+out.checks.armedParsedParams = [...parseMessage(readJson(join(REPO, "src/i18n/catalogues/ru/mobile.schedules.json"))["mobile.schedules.summary.monitors_armed"]).params.entries()];
+try { formatMessage(parseMessage("{n, plural, one {# x} other {# x}}"), { n: "1" }, "ru"); out.checks.pluralStringNegativeControl = "NO THROW — bad"; }
+catch (e) { out.checks.pluralStringNegativeControl = `threw ${e.constructor.name}: ${e.message}`; }
+
+/* ---------- 4. renders of the two changed plural keys ---------- */
+const scheduleRu = readJson(join(REPO, "src/i18n/catalogues/ru/mobile.schedules.json"));
+out.renders.cadence_left_bytes = scheduleRu["mobile.schedules.cadence.left"];
+out.renders.monitors_armed_bytes = scheduleRu["mobile.schedules.summary.monitors_armed"];
+const cadence = renderFor("mobile.schedules.cadence.every", { duration: "1d" }, "ru");
+out.renders.cadence_left = {};
+for (const n of [0, 1, 2, 5, 21, 101, 1.5, 11, 22]) out.renders.cadence_left[n] = renderFor("mobile.schedules.cadence.left", { cadence, remaining: n }, "ru");
+out.renders.monitors_armed = {};
+for (const n of [0, 1, 2, 5, 21, 1.5, 11, 22, 101]) out.renders.monitors_armed[n] = renderFor("mobile.schedules.summary.monitors_armed", { count: n }, "ru");
+const armSignatures = [...parseMessage(out.renders.cadence_left_bytes).nodes]
+  .filter((n) => n.type === "plural")
+  .flatMap((n) => [...n.options.values()].map((v) => JSON.stringify(v)));
+out.renders.cadence_left_arm_signatures = armSignatures;
+out.renders.cadence_left_arms_identical = new Set(armSignatures).size === 1;
+const cp = (s) => [...s].map((c) => c.codePointAt(0).toString(16).padStart(4, "0")).join(" ");
+out.renders.cadence_left_codepoints = cp(out.renders.cadence_left_bytes);
+out.renders.armed_codepoints = cp(out.renders.monitors_armed_bytes);
+
+/* ---------- 5. receipt arms from the shipped string ---------- */
+const projects = await import(join(REPO, "src/features/projects/projects-copy.ts"));
+for (const kind of ["project", "milestone", "other"])
+  for (const action of ["created", "completed", "reopened", "added", "updated", "removed", "deleted", "bogus"])
+    out.receipts[`${kind}.${action}`] = projects.writeReceipt(action, "payments-migration", kind);
+out.receipts_bytes = readJson(join(REPO, "src/i18n/catalogues/ru/mobile.projects.json"))["mobile.projects.write_receipt"];
+
+/* ---------- 6. composition from the real call sites ---------- */
+const sched = await import(join(REPO, "src/features/schedules/schedules-copy.ts"));
+out.composition.parked_wakes = sched.parkedWakesClause();
+out.composition.parked_monitors = sched.parkedMonitorsClause();
+out.composition.wakes_1_next = sched.nextDueClause(sched.wakeCountClause(1), 240);
+out.composition.wakes_2_next = sched.nextDueClause(sched.wakeCountClause(2), 240);
+out.composition.wakes_5_next = sched.nextDueClause(sched.wakeCountClause(5), 240);
+out.composition.wakes_21_next = sched.nextDueClause(sched.wakeCountClause(21), 240);
+out.composition.wakes_3_overdue = sched.nextDueClause(sched.wakeCountClause(3), -7200);
+out.composition.monitors_3_next = sched.nextDueClause(sched.monitorCountClause(3), 240);
+out.composition.monitor_summary_empty_family = sched.monitorSectionSummary([]);
+out.composition.monitor_summary_5 = sched.monitorSectionSummary(new Array(5).fill({}));
+out.composition.wake_summary_0 = sched.wakeSectionSummary([]);
+out.composition.empty_body = sched.nothingArmedBody();
+out.composition.truncated = sched.truncatedClause("wakes", 2, 5);
+out.composition.project_name_hint = projects.projectNameHint();
+out.composition.milestone_slash_note = projects.milestoneSlashNote();
+out.composition.linked_session_missing = projects.linkedSessionState({ role: "work", exists: false });
+out.composition.linked_session_stopped = projects.linkedSessionState({ role: "work", exists: true, runtime: { state: "stopped" } });
+out.composition.milestone_count_1of3 = projects.milestoneCountLabel(1, 3);
+out.composition.milestone_count_2of5 = projects.milestoneCountLabel(2, 5);
+out.composition.sessions_5_live_1 = projects.sessionCountLabel(5, 1);
+out.composition.sessions_21_live_21 = projects.sessionCountLabel(21, 21);
+
+/* ---------- 7. English comparands (en catalogue bytes) ---------- */
+const enS = readJson(join(REPO, "src/i18n/catalogues/en/mobile.schedules.json"));
+const enP = readJson(join(REPO, "src/i18n/catalogues/en/mobile.projects.json"));
+out.composition_en = {
+  parked_wakes: enS["mobile.schedules.parked.wakes"],
+  parked_monitors: enS["mobile.schedules.parked.monitors"],
+  project_name_hint: enP["mobile.projects.project_name_hint"],
+  monitors_armed_5: renderFor("mobile.schedules.summary.monitors_armed", { count: 5 }, "en"),
+  cadence_left_1: renderFor("mobile.schedules.cadence.left", { cadence: "every 1d", remaining: 1 }, "en"),
+};
+console.log(JSON.stringify(out, null, 1));

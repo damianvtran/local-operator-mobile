@@ -1,0 +1,118 @@
++ echo '# audit id: ru30a1'
+# audit id: ru30a1
++ echo '# locale: ru   namespace: mobile.home   audit date: 2026-10-30'
+# locale: ru   namespace: mobile.home   audit date: 2026-10-30
++ echo '# auditor: i18n-auditor (lopdev team), session 68877acd3c8a'
+# auditor: i18n-auditor (lopdev team), session 68877acd3c8a
+++ git -C /Users/damian/workspace/ru-wave rev-parse --abbrev-ref HEAD
+++ git -C /Users/damian/workspace/ru-wave rev-parse HEAD
++ echo '# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5'
+# repository: /Users/damian/workspace/ru-wave   branch: feat/i18n-russian   head: ba39018c493dda114d42a6b4d9dfbf337f4110f5
+++ shasum -a 256 /Users/damian/workspace/ru-wave/src/i18n/catalogues/ru/mobile.home.json
+++ cut '-d ' -f1
++ echo '# ru catalogue sha256: 6b1cc7d1c0553ec29f0bfa5c7f521ac5f013b194d9caa51021b0f784bd50c279'
+# ru catalogue sha256: 6b1cc7d1c0553ec29f0bfa5c7f521ac5f013b194d9caa51021b0f784bd50c279
++ echo '# This file is the captured transcript of the commands below (bash set -x), not a summary.'
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
++ echo
+
++ set -x
++ cd /Users/damian/workspace/ru-wave
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+(node:29098) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs mobile.home
+# namespace mobile.home  (group A)
+# keys en=27 ru=27 context=27
+# sha256 en=4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3
+# sha256 context=db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c
+# sha256 ru=6b1cc7d1c0553ec29f0bfa5c7f521ac5f013b194d9caa51021b0f784bd50c279
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  mobile.home.connect_disabled_reason  en=[]  ru=[]
+  same  mobile.home.folders_read_failed  en=[]  ru=[]
+  same  mobile.home.greeting  en=[]  ru=[]
+  same  mobile.home.options.apply  en=[]  ru=[]
+  same  mobile.home.options.fixed  en=[]  ru=[]
+  same  mobile.home.options.folder  en=[]  ru=[]
+  same  mobile.home.options.title  en=[]  ru=[]
+  same  mobile.home.queue.discard  en=[]  ru=[]
+  same  mobile.home.queue.restore  en=[]  ru=[]
+  same  mobile.home.queue.sheet_title  en=[]  ru=[]
+  same  mobile.home.queue.view  en=[]  ru=[]
+  same  mobile.home.refused_start_fallback  en=[]  ru=[]
+  same  mobile.home.starting  en=[]  ru=[]
+  same  mobile.home.startup_queue.blocked  en=[]  ru=[]
+  same  mobile.home.startup_queue.not_started  en=[]  ru=[]
+  same  mobile.home.startup_queue.sending  en=[]  ru=[]
+  same  mobile.home.startup_queue.unconfirmed  en=[]  ru=[]
+  same  mobile.home.suggestion.last_turn  en=[]  ru=[]
+  same  mobile.home.suggestion.linear_mcp  en=[]  ru=[]
+  same  mobile.home.suggestion.phone_access  en=[]  ru=[]
+  same  mobile.home.suggestion.review_repo  en=[]  ru=[]
+  same  mobile.home.suggestion.team_of_agents  en=[]  ru=[]
+  same  mobile.home.suggestion.wake_summary  en=[]  ru=[]
+  same  mobile.home.tip.parallel  en=[]  ru=[]
+  same  mobile.home.tip.schedule  en=[]  ru=[]
+  same  mobile.home.tip.search  en=[]  ru=[]
+  same  mobile.home.transcript.waiting  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in mobile.home: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 274; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  mobile.home.connect_disabled_reason	Подключите компьютер, чтобы отправить.
+  mobile.home.folders_read_failed	Не удалось прочитать папки этого компьютера.
+  mobile.home.greeting	Чем помочь сегодня?
+  mobile.home.options.apply	Применить
+  mobile.home.options.fixed	Стартовые параметры этой беседы зафиксированы. Текущие настройки — в разделе «Детали беседы».
+  mobile.home.options.folder	Папка на этом компьютере
+  mobile.home.options.title	Параметры беседы
+  mobile.home.queue.discard	Удалить сообщения из очереди
+  mobile.home.queue.restore	Перенести сообщения в черновик
+  mobile.home.queue.sheet_title	Сообщения в очереди
+  mobile.home.queue.view	Показать сообщения в очереди
+  mobile.home.refused_start_fallback	Такой папки на этом компьютере нет.
+  mobile.home.starting	Запуск…
+  mobile.home.startup_queue.blocked	Повторите, чтобы отправить сообщения из очереди
+  mobile.home.startup_queue.not_started	Не запущено
+  mobile.home.startup_queue.sending	Отправка сообщений из очереди…
+  mobile.home.startup_queue.unconfirmed	Запуск не подтверждён
+  mobile.home.suggestion.last_turn	Покажите последний ход
+  mobile.home.suggestion.linear_mcp	Настройте Linear MCP
+  mobile.home.suggestion.phone_access	Включите доступ с телефона
+  mobile.home.suggestion.review_repo	Проверьте репозиторий
+  mobile.home.suggestion.team_of_agents	Создайте команду агентов
+  mobile.home.suggestion.wake_summary	Разбудите меня со сводкой
+  mobile.home.tip.parallel	попросите параллельную работу для субагентов
+  mobile.home.tip.schedule	поставьте расписание запуска промпта по таймеру
+  mobile.home.tip.search	поищите прошлые беседы, чтобы открыть сессию
+  mobile.home.transcript.waiting	Ожидание беседы…
+
+=== SUMMARY mobile.home: 274 checks, 0 failed ===
+(node:29109) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/ru-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/ru-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
++ node /Users/damian/.local-operator/sessions/68877acd3c8a/scratchpad/ru-audit-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)

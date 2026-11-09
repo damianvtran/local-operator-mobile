@@ -1,0 +1,188 @@
+$ date -u +%FT%TZ
+2026-10-30T11:50:59Z
+$ cd /Users/damian/workspace/vi-wave && git rev-parse --abbrev-ref HEAD && git rev-parse HEAD
+feat/i18n-vietnamese
+31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b
+$ git status --short src/i18n
+ M src/i18n/catalogue.gen.ts
+?? src/i18n/catalogues/vi/
+$ shasum -a 256 src/i18n/catalogues/{en,vi}/mobile.session.json src/i18n/catalogues/en/mobile.session.context.json
+8539005ad9785ec14504c9f8fba86fcd7587b11185f8f2062da0eff1b1aadda8  src/i18n/catalogues/en/mobile.session.json
+74f5b1adcbba89c3ec1791969370f63263b25106c2999ed9c2d32777dc546457  src/i18n/catalogues/vi/mobile.session.json
+6e8d32e62d787a2c9b3c24cbba85e1bbcfba820b39840d84147afbe1038495b1  src/i18n/catalogues/en/mobile.session.context.json
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
+(node:63947) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/vi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/vi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 31f2ae46f45d
+$ NS=mobile.session WIDTH_JSON=/Users/damian/.local-operator/sessions/8bfd6a5224bd/scratchpad/vi-a/width.json /Users/damian/.local-operator/sessions/8bfd6a5224bd/scratchpad/vi-a/../node_modules/.bin/tsx /Users/damian/.local-operator/sessions/8bfd6a5224bd/scratchpad/vi-a/audit.mjs full
+== 1. MECHANICAL — the repository's own parser, every key ==
+PASS  mobile.session: key set identical (2)
+PASS  mobile.session: context sidecar parity (2 notes)
+PASS  mobile.session.conversation_details: placeholder surface (none)
+PASS  mobile.session.conversation_details: code spans / flags byte-identical
+PASS  mobile.session.status_tray.hint: placeholder surface (none)
+PASS  mobile.session.status_tray.hint: code spans / flags byte-identical
+
+== 2. UNICODE / TYPOGRAPHY — every vi value in the six namespaces ==
+PASS  mobile.session.conversation_details: NFC
+PASS  mobile.session.conversation_details: no combining marks
+PASS  mobile.session.conversation_details: single spaces
+PASS  mobile.session.conversation_details: no space before punctuation
+PASS  mobile.session.conversation_details: no edge whitespace
+PASS  mobile.session.conversation_details: ellipsis form
+PASS  mobile.session.conversation_details: apostrophes
+PASS  mobile.session.conversation_details: no bidi controls
+PASS  mobile.session.conversation_details: no control characters
+PASS  mobile.session.status_tray.hint: NFC
+PASS  mobile.session.status_tray.hint: no combining marks
+PASS  mobile.session.status_tray.hint: single spaces
+PASS  mobile.session.status_tray.hint: no space before punctuation
+PASS  mobile.session.status_tray.hint: no edge whitespace
+PASS  mobile.session.status_tray.hint: ellipsis form
+PASS  mobile.session.status_tray.hint: apostrophes
+PASS  mobile.session.status_tray.hint: no bidi controls
+PASS  mobile.session.status_tray.hint: no control characters
+PASS  mobile.session: typography sweep done (2 values)
+
+== 3. RENDER — actual strings out of the repo renderer ==
+  renderFor(greeting, {}, "vi") = "What can I help you with today?"
+  English source                 = "What can I help you with today?"
+PASS  unshipped vi tag answers the English source (runtime contract observed)
+PASS  mobile.session.conversation_details: renders byte-identical to its source value
+PASS  mobile.session.status_tray.hint: renders byte-identical to its source value
+  group A, rendered through formatMessage(parseMessage(value), {}, 'vi'):
+    mobile.session.conversation_details
+      -> Chi tiết cuộc trò chuyện
+    mobile.session.status_tray.hint
+      -> Mở dòng làm việc, tác vụ và tác nhân con
+
+== 4. PLURAL CATEGORIES + the runtime's plural path ==
+  pluralCategory('vi', n) over 0,1,2,3,5,11,21,101,1.5 -> other
+PASS  vi selects 'other' for every count tested
+  control: pluralCategory('ru', 2) = few
+    mobile.schedules.count.wakes
+      vi [1,2,5,0] -> ["1 lần thức dậy","2 lần thức dậy","5 lần thức dậy","0 lần thức dậy"]
+      ru [1,2,5,0] -> ["1 пробуждение","2 пробуждения","5 пробуждений","0 пробуждений"]
+    mobile.schedules.count.monitors
+      vi [1,2,5,0] -> ["1 giám sát","2 giám sát","5 giám sát","0 giám sát"]
+      ru [1,2,5,0] -> ["1 монитор","2 монитора","5 мониторов","0 мониторов"]
+    mobile.schedules.show_more.wakes
+      vi [1,2,5,0] -> ["Hiện thêm 1 lần thức dậy","Hiện thêm 2 lần thức dậy","Hiện thêm 5 lần thức dậy","Hiện thêm 0 lần thức dậy"]
+      ru [1,2,5,0] -> ["Показать ещё 1 пробуждение","Показать ещё 2 пробуждения","Показать ещё 5 пробуждений","Показать ещё 0 пробуждений"]
+
+== 5. COMPOSITION — the runtime's own splices ==
+  nextDueClause(3, 600s)
+    en: 3 wakes · next in 10m
+    vi: 3 lần thức dậy · lần tới sau 10m
+  nextDueClause(3, -600s)
+    en: 3 wakes · 10m overdue
+    vi: 3 lần thức dậy · trễ 10m
+  nextDueClause(1, 5400s)
+    en: 1 wake · next in 1h
+    vi: 1 lần thức dậy · lần tới sau 1h
+  nextDueClause(2, -172800s)
+    en: 2 wakes · 2d overdue
+    vi: 2 lần thức dậy · trễ 2d
+  truncatedClause(wakes)
+    en: Showing 3 of 10 conversations with wakes.
+    vi: Đang hiện 3 trên 10 cuộc trò chuyện có lần thức dậy.
+  truncatedClause(monitors)
+    en: Showing 3 of 10 conversations with monitors.
+    vi: Đang hiện 3 trên 10 cuộc trò chuyện có giám sát.
+  group A chip pool, leading tokens (the pool's own rule: no shared leading verb):
+    Xem        Xem lượt gần nhất
+    Thiết      Thiết lập Linear MCP
+    Bật        Bật truy cập điện thoại
+    Đánh       Đánh giá repo này
+    Tạo        Tạo nhóm tác nhân
+    Đánh       Đánh thức tôi kèm tóm tắt
+
+SCOPE NOTE: this run audits mobile.session only. Sections 4-7 are cross-cutting programme checks; the width findings below concern mobile.home and are NOT findings against mobile.session.
+
+== 6. WIDTH — CoreText, system font, the app's token sizes ==
+  chip:vi:phone_access       159.5 pt  (box 256 pt)  fits  "Bật truy cập điện thoại"
+  chip:en:phone_access       154.7 pt  (box 256 pt)  fits  "Turn on phone access"
+  chip:vi:team_of_agents     133.4 pt  (box 256 pt)  fits  "Tạo nhóm tác nhân"
+  chip:en:team_of_agents     168.9 pt  (box 256 pt)  fits  "Create a team of agents"
+  chip:vi:last_turn          128.2 pt  (box 256 pt)  fits  "Xem lượt gần nhất"
+  chip:en:last_turn          153.8 pt  (box 256 pt)  fits  "Show me the last turn"
+  chip:vi:linear_mcp         146.0 pt  (box 256 pt)  fits  "Thiết lập Linear MCP"
+  chip:en:linear_mcp         130.1 pt  (box 256 pt)  fits  "Set up Linear MCP"
+  chip:vi:review_repo        127.2 pt  (box 256 pt)  fits  "Đánh giá repo này"
+  chip:en:review_repo        116.3 pt  (box 256 pt)  fits  "Review this repo"
+  chip:vi:wake_summary       182.6 pt  (box 256 pt)  fits  "Đánh thức tôi kèm tóm tắt"
+  chip:en:wake_summary       180.0 pt  (box 256 pt)  fits  "Wake me with a summary"
+  tip:vi:schedule            210.8 pt  (box 270 pt)  fits  "lên lịch để chạy prompt theo hẹn giờ"
+  tip:en:schedule            238.2 pt  (box 270 pt)  fits  "set a schedule to run a prompt on a timer"
+  tip:vi:parallel            278.6 pt  (box 270 pt)  OVER by 8.6  "yêu cầu chạy song song để tách ra tác nhân con"
+  tip:en:parallel            240.4 pt  (box 270 pt)  fits  "ask for parallel work to fan out subagents"
+  tip:vi:search              239.9 pt  (box 270 pt)  fits  "tìm lại cuộc trò chuyện cũ để mở lại phiên"
+  tip:en:search              268.9 pt  (box 270 pt)  fits  "search past conversations to reopen a session"
+  greet:vi                   315.8 pt  (box 288 pt)  OVER by 27.8  "Hôm nay tôi có thể giúp gì cho bạn?"
+  greet:en                   281.9 pt  (box 288 pt)  fits  "What can I help you with today?"
+  one:vi:starting            157.3 pt  (box 288 pt)  fits  "Đang khởi động…"
+  one:vi:not_started          86.9 pt  (box 288 pt)  fits  "Chưa bắt đầu"
+  one:vi:unconfirmed         163.6 pt  (box 288 pt)  fits  "Chưa xác nhận khởi động"
+  one:vi:blocked             241.5 pt  (box 288 pt)  fits  "Thử lại để gửi tin nhắn trong hàng đợi"
+  one:vi:sending             223.3 pt  (box 288 pt)  fits  "Đang gửi tin nhắn trong hàng đợi…"
+  one:vi:queue_view          183.1 pt  (box 288 pt)  fits  "Xem tin nhắn trong hàng đợi"
+  one:vi:waiting             181.4 pt  (box 288 pt)  fits  "Đang chờ cuộc trò chuyện…"
+  fix:greeting               240.2 pt  (box 270 pt)  fits  "Hôm nay tôi có thể giúp gì?"
+  fix:starting               136.2 pt  (box 270 pt)  fits  "Đang bắt đầu…"
+  fix:tip_parallel           263.7 pt  (box 270 pt)  fits  "yêu cầu chạy song song để tách tác nhân con"
+  fix:tip_search             281.8 pt  (box 270 pt)  OVER by 11.8  "tìm trong các cuộc trò chuyện cũ để mở lại phiên"
+  fix:wake_chip              212.8 pt  (box 256 pt)  fits  "Đánh thức tôi kèm bản tóm tắt"
+  control:tip_over           408.7 pt  (box 288 pt)  OVER by 120.7  "yêu cầu chạy song song để tách ra tác nhân con và nhiều thứ khác nữa"
+FINDING  longest vi tip 278.6 pt + icon/gap 18 pt = 296.6 pt against the 288 pt row at 320 pt (text box 270 pt) — 8.6 pt over
+PASS  longest vi chip 182.6 pt fits the 256 pt chip box
+PASS  prescribed tip 263.7 pt fits the 270 pt text box
+PASS  prescribed greeting 240.2 pt fits one 288 pt line
+PASS  prescribed wake chip 212.8 pt fits the 256 pt chip box
+FINDING  vi greeting 315.8 pt wraps at 320 pt where English 281.9 pt holds one line
+PASS  control: over-wide filler 408.7 pt reports OVER
+  character counts (code points) and vi/en ratio:
+    mobile.home.connect_disabled_reason            vi  24  en  27  ratio 0.89
+    mobile.home.folders_read_failed                vi  49  en  50  ratio 0.98
+    mobile.home.greeting                           vi  35  en  31  ratio 1.13
+    mobile.home.options.apply                      vi  21  en  17  ratio 1.24
+    mobile.home.options.fixed                      vi 116  en  95  ratio 1.22
+    mobile.home.options.folder                     vi  25  en  23  ratio 1.09
+    mobile.home.options.title                      vi  24  en  20  ratio 1.20
+    mobile.home.queue.discard                      vi  26  en  23  ratio 1.13
+    mobile.home.queue.restore                      vi  45  en  29  ratio 1.55
+    mobile.home.queue.sheet_title                  vi  23  en  15  ratio 1.53
+    mobile.home.queue.view                         vi  27  en  20  ratio 1.35
+    mobile.home.refused_start_fallback             vi  38  en  43  ratio 0.88
+    mobile.home.starting                           vi  15  en   9  ratio 1.67
+    mobile.home.startup_queue.blocked              vi  38  en  29  ratio 1.31
+    mobile.home.startup_queue.not_started          vi  12  en  11  ratio 1.09
+    mobile.home.startup_queue.sending              vi  33  en  24  ratio 1.38
+    mobile.home.startup_queue.unconfirmed          vi  23  en  19  ratio 1.21
+    mobile.home.suggestion.last_turn               vi  17  en  21  ratio 0.81
+    mobile.home.suggestion.linear_mcp              vi  20  en  17  ratio 1.18
+    mobile.home.suggestion.phone_access            vi  23  en  20  ratio 1.15
+    mobile.home.suggestion.review_repo             vi  17  en  16  ratio 1.06
+    mobile.home.suggestion.team_of_agents          vi  17  en  23  ratio 0.74
+    mobile.home.suggestion.wake_summary            vi  25  en  22  ratio 1.14
+    mobile.home.tip.parallel                       vi  46  en  42  ratio 1.10
+    mobile.home.tip.schedule                       vi  36  en  41  ratio 0.88
+    mobile.home.tip.search                         vi  42  en  45  ratio 0.93
+    mobile.home.transcript.waiting                 vi  25  en  29  ratio 0.86
+PASS  tips within TIP_CHAR_BUDGET 48
+  chips over the ENGLISH 24-char calibration (vi needs a measured budget, not 24): wake_summary=25
+
+== 7. NEGATIVE CONTROLS — each detector must be proved able to fail ==
+PASS  control: a valid plural parses
+PASS  control: a renamed placeholder changes the parameter surface
+PASS  control: a plural with no 'other' arm throws (RangeError: Invalid message "{count, plural, one {# x}}": plural is miss…)
+PASS  control: 'other' is ICU's fallback arm, so an other-only vi message renders under any count
+PASS  control: the double-space detector fires
+PASS  control: the combining-mark detector fires on decomposed text
+PASS  control: NFC equality distinguishes a decomposed string
+PASS  control: an unterminated plural throws at parse
+
+SUMMARY pass=43 findings=2 control_failures=0
+$ exit=0
