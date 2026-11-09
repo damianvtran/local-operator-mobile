@@ -310,7 +310,14 @@ const HINT_NODE_ON_WEB = /nativeID=\{hintId\}/;
 const NOTHING_WITHOUT_PICTURE = /if \(uri === null\) return null;/;
 const BUDGET_CHARGE =
 	/^\s*(?:\{ dot: true, menu: ended, )?avatar: headerAvatarRef !== null/gm;
-const ROW_REF = /<AgentListRow\s+avatarRef=\{avatarRefOf\(session\)\}/;
+/* Match within this component, regardless of prop ordering; never across rows. */
+const ROW_REF =
+	/<AgentListRow\s+(?:(?!\/>)[\s\S])*?avatarRef=\{avatarRefOf\(session\)\}/;
+const AVATAR_LEADING = /leading=\{[\s\S]*?<AgentAvatarImage[\s\S]*?uri=\{uri\}/;
+const CURRENT_CHAT_MARKER =
+	/selected && selectedIndicator \? \([\s\S]*?className="shrink-0"[\s\S]*?<Check color=\{selectionInk\} size=\{18\}/;
+const CURRENT_CHAT_OPT_IN =
+	/selected=\{session.session_id === currentSessionId\}\s+selectedIndicator/;
 /* D1: the picture belongs to the TITLE's line, so stacked it is handed to
  *  `Screen`'s title row and withheld from the chrome cluster. */
 const STACKED_TITLE_PICTURE =
@@ -434,6 +441,26 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 
 	it("the list rows resolve their picture from the row's own fields", () => {
 		expect(PANE).toMatch(ROW_REF);
+		expect(
+			PANE.replace("avatarRef={avatarRefOf(session)}", "avatarRef={null}"),
+		).not.toMatch(ROW_REF);
+		// Avatar resolution alone is insufficient: it must still feed the leading cluster.
+		expect(VIEW).toMatch(AVATAR_LEADING);
+	});
+
+	it("current-chat selection has an opt-in non-colour check without replacing status or counts", () => {
+		expect(ROW).toMatch(CURRENT_CHAT_MARKER);
+		expect(ROW.replace("selected && selectedIndicator", "false")).not.toMatch(
+			CURRENT_CHAT_MARKER,
+		);
+		expect(ROW).toContain("selectedIndicator = false");
+		// aria-hidden is shared by RN and RN-web; native-only alternatives leak
+		// through RN-web's View and produce a developer warning over the UI.
+		expect(ROW).not.toContain("accessibilityElementsHidden");
+		expect(ROW).not.toContain("importantForAccessibility");
+		expect(ROW).toContain("accessibilityState={state({ selected })}");
+		expect(PANE).toMatch(CURRENT_CHAT_OPT_IN);
+		expect(ROW).toMatch(BADGED);
 	});
 
 	it("a pictured row keeps its status: corner badge by default, never replaced", () => {

@@ -6,6 +6,8 @@ import { fieldClasses } from "../variants";
 const source = (path: string) =>
 	readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
+const NATIVE_MENU = /<Menu color=\{ink\} size=\{24\} \/>/;
+
 /** Wiring checks are not visual evidence. They pin the accessible control/asset
  * choices while the rendered baseline/after round judges geometry and hierarchy. */
 describe("native conversation chrome", () => {
@@ -33,17 +35,19 @@ describe("native conversation chrome", () => {
 		);
 	});
 
-	/* 22, not 24 and not the 20 the chrome shipped with: 24 crowded the 44 pt
-	 * target and 20 read light beside it (user feedback on the polish round). The
-	 * ladder in `IconButton` gained 22 as a named step for exactly this, so the
-	 * assertion pins the number the design settled on rather than a range. */
-	/* The home ☰ is a Pressable now (it carries the unread count as a corner
-	 *  badge) and the sidebar's search is a pill; both still paint their glyph at
-	 *  22, asserted below. The IconButton case keeps the session's find lever and
-	 *  the sidebar's new-chat button. */
-	it("keeps the home ☰ and the sidebar's search pill glyphs at their sizes", () => {
+	/* Home and chat intentionally share the native menu affordance now. Pin the
+	 * shared glyph and touch floor, not the removed inline home implementation. */
+	it("shares the 24 pt native menu and preserves its touch target", () => {
 		const home = source("src/features/home/home.tsx");
-		expect(home).toContain("<Menu color={menuInk} size={22} />");
+		const chat = source("app/(app)/session/[id].tsx");
+		const menu = source("src/features/sessions/workspace-drawer.tsx");
+		expect(home).toContain("<WorkspaceDrawerButton />");
+		expect(chat).toContain(
+			"<WorkspaceDrawerButton testID={CONTROL.sessionBack} />",
+		);
+		expect(menu).toMatch(NATIVE_MENU);
+		expect(menu.replace("size={24}", "size={22}")).not.toMatch(NATIVE_MENU);
+		expect(menu).toContain("minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR");
 		const pane = source("src/features/sessions/conversations-pane.tsx");
 		expect(pane).toContain(
 			"<Search size={18} color={destinationInk} aria-hidden />",

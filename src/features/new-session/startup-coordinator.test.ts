@@ -88,6 +88,46 @@ const setup = (saved: StartupRecord | null = null) => {
 
 // Deferred barriers prove ordering without wall-clock sleeps or a fake successful network.
 describe("durable provisional conversation", () => {
+	it("yields first-send focus only after durable admission, without waiting for start", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/synthetic" });
+		x.coordinator.edit("keep my submitted bytes", []);
+		const admitted = vi.fn(() => {
+			expect(x.disk()?.queue[0]?.text).toBe("keep my submitted bytes");
+		});
+		await x.coordinator.enqueue(admitted);
+		expect(admitted).toHaveBeenCalledOnce();
+		await x.entered.promise;
+		// Start is STILL unresolved: the UI has yielded without delaying dispatch.
+		expect(x.coordinator.snapshot().sessionId).toBeNull();
+		x.create.reject(
+			new RelayError("rejected", "Bad folder", {
+				status: 400,
+				detail: "Bad folder",
+			}),
+		);
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().queue[0]?.text).toBe(
+			"keep my submitted bytes",
+		);
+		expect(await x.coordinator.restoreQueueToDraft()).toBe(true);
+		expect(x.coordinator.snapshot().draft.text).toBe("keep my submitted bytes");
+	});
+
+	it("does not yield focus for an empty or storage-rejected send and retains draft bytes", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		const admitted = vi.fn();
+		await x.coordinator.enqueue(admitted);
+		expect(admitted).not.toHaveBeenCalled();
+		x.coordinator.edit("still editable", []);
+		x.store.save.mockRejectedValue(new Error("synthetic full disk"));
+		await x.coordinator.enqueue(admitted);
+		expect(admitted).not.toHaveBeenCalled();
+		expect(x.coordinator.snapshot().draft.text).toBe("still editable");
+		expect(x.start).not.toHaveBeenCalled();
+	});
 	it("publishes restored text and attachments as one atomic observer state (D1)", async () => {
 		const x = setup();
 		await x.coordinator.ready;

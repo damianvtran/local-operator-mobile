@@ -229,6 +229,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
+	 * remediation: shared drawer navigation changes both render trees, including
+	 * the opt-in current-chat check, RN-web-safe aria-hidden and regression tests. This admits the
+	 * geometry instrument to the new source; it is NOT rendered/native proof.
+	 * ORIGINAL_*, instrument, file and input pins remain unchanged. */
 	/* Re-pinned 2026-11-07 for PR #187's round-2 remediation, with --print from
 	 * the staged tree. Only `src` moves: a resting voice outcome is no longer
 	 * line-capped, start/permission failures rest on the dictation row, ✓ moves to
@@ -586,7 +591,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "9f32ccb59ff78920a76f253f5d2ca670040c9aff5a5ae98811c4305ec0f4e5c1",
+	app: "8cb9d4fa71e20233fdbb86b3a3abd4265e8245a63c0440648ac14ea616375b00",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -1106,7 +1111,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * both approved source streams above survive unchanged. Their combined src
 	 * tree has neither parent's digest. This admits source identity only; it
 	 * does not refresh historical U-08 pixels, instrument or input evidence. */
-	src: "b6d902d4a44b881244cc86eb633b96d0c7fadc240fab8015559d1392b1b97e98",
+	/* Convergence with PR #199 preserves both reviewed product sources. Recomputed
+	 * from the combined LIVE tree after the catalogue-count conflict was resolved.
+	 * Admission only: this does not refresh historical render or native evidence. */
+	/* Integration of reviewed PRs #201 and #202 retains both convergence notes
+	 * above. Recompute LIVE src/app only after both histories are merged: source
+	 * admission does not refresh historical pixels or native interaction proof. */
+	src: "5b2f5c859a1348105741fa8420bc04877ec1a9f50ddd2e6315a03b71fec167e9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -57,6 +57,9 @@ export type CatalogueKey =
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
 	| "mobile.chrome.destinations"
+	| "mobile.chrome.drawer.agents"
+	| "mobile.chrome.drawer.open"
+	| "mobile.chrome.drawer.open_count"
 	| "mobile.chrome.home.connect"
 	| "mobile.chrome.home.connecting"
 	| "mobile.chrome.home.greeting"
@@ -541,6 +544,8 @@ export type NoParamKey =
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
 	| "mobile.chrome.destinations"
+	| "mobile.chrome.drawer.agents"
+	| "mobile.chrome.drawer.open"
 	| "mobile.chrome.home.connect"
 	| "mobile.chrome.home.greeting"
 	| "mobile.chrome.home.saved_draft"
@@ -965,6 +970,9 @@ export type MessageParams = {
 	"mobile.chrome.destination.past": NoParams;
 	"mobile.chrome.destination.schedules": NoParams;
 	"mobile.chrome.destinations": NoParams;
+	"mobile.chrome.drawer.agents": NoParams;
+	"mobile.chrome.drawer.open": NoParams;
+	"mobile.chrome.drawer.open_count": { count: number };
 	"mobile.chrome.home.connect": NoParams;
 	"mobile.chrome.home.connecting": { host: string | number };
 	"mobile.chrome.home.greeting": NoParams;
@@ -1467,6 +1475,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.destination.past": "Past",
 	"mobile.chrome.destination.schedules": "Schedules",
 	"mobile.chrome.destinations": "Destinations",
+	"mobile.chrome.drawer.agents": "Agents",
+	"mobile.chrome.drawer.open": "Open conversations",
+	"mobile.chrome.drawer.open_count": "Open conversations, {count, plural, one {# new conversation} other {# new conversations}}",
 	"mobile.chrome.home.connect": "Connect a computer",
 	"mobile.chrome.home.connecting": "Connecting to {host}…",
 	"mobile.chrome.home.greeting": "What would you like to work on?",
@@ -1954,6 +1965,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
 	"mobile.chrome.destination.schedules": { role: "button", note: "Label under the clock icon in the sidebar's destinations strip (~52 pt slot). One short word; opens the list of scheduled wakes and armed monitors." },
 	"mobile.chrome.destinations": { role: "heading", note: "Title of the sheet that lists the sidebar destinations when the text is too large for the icon strip (opened by 'More'). Names a set of places to go, no final full stop." },
+	"mobile.chrome.drawer.agents": { role: "button", note: "Short mode-tab label for conversations with software agents in the shared workspace drawer, contrasted with Team Bridge." },
+	"mobile.chrome.drawer.open": { role: "button", note: "Accessible menu control, shared by home and each chat. Opens the same conversations overlay without navigating." },
+	"mobile.chrome.drawer.open_count": { role: "button", note: "Accessible menu control with the relay unread-conversation count; {count} is a number. Preserve ICU plural arms and placeholder." },
 	"mobile.chrome.home.connect": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
 	"mobile.chrome.home.connecting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.home.greeting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -2455,6 +2469,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Anteriores",
 		"mobile.chrome.destination.schedules": "Horarios",
 		"mobile.chrome.destinations": "Destinos",
+		"mobile.chrome.drawer.agents": "Agentes",
+		"mobile.chrome.drawer.open": "Abrir conversaciones",
+		"mobile.chrome.drawer.open_count": "Abrir conversaciones, {count, plural, one {# conversación nueva} other {# conversaciones nuevas}}",
 		"mobile.chrome.home.connect": "Conectar un ordenador",
 		"mobile.chrome.home.connecting": "Conectando con {host}…",
 		"mobile.chrome.home.greeting": "¿En qué te gustaría trabajar?",
@@ -2940,6 +2957,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Passées",
 		"mobile.chrome.destination.schedules": "Plans",
 		"mobile.chrome.destinations": "Destinations",
+		"mobile.chrome.drawer.agents": "Agents",
+		"mobile.chrome.drawer.open": "Ouvrir les conversations",
+		"mobile.chrome.drawer.open_count": "Ouvrir les conversations, {count, plural, one {# nouvelle conversation} other {# nouvelles conversations}}",
 		"mobile.chrome.home.connect": "Connecter un ordinateur",
 		"mobile.chrome.home.connecting": "Connexion à {host}…",
 		"mobile.chrome.home.greeting": "Sur quoi souhaitez-vous travailler ?",
@@ -3425,6 +3445,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "पिछले",
 		"mobile.chrome.destination.schedules": "शेड्यूल",
 		"mobile.chrome.destinations": "गंतव्य",
+		"mobile.chrome.drawer.agents": "एजेंट",
+		"mobile.chrome.drawer.open": "बातचीत खोलें",
+		"mobile.chrome.drawer.open_count": "बातचीत खोलें, {count, plural, one {# नई बातचीत} other {# नई बातचीत}}",
 		"mobile.chrome.home.connect": "कंप्यूटर कनेक्ट करें",
 		"mobile.chrome.home.connecting": "{host} से कनेक्ट हो रहा है…",
 		"mobile.chrome.home.greeting": "आप किस पर काम करना चाहेंगे?",
@@ -3910,6 +3933,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Прошлые",
 		"mobile.chrome.destination.schedules": "Расписания",
 		"mobile.chrome.destinations": "Разделы",
+		"mobile.chrome.drawer.agents": "Агенты",
+		"mobile.chrome.drawer.open": "Открыть беседы",
+		"mobile.chrome.drawer.open_count": "Открыть беседы, {count, plural, one {# новая беседа} few {# новые беседы} many {# новых бесед} other {# новой беседы}}",
 		"mobile.chrome.home.connect": "Подключить компьютер",
 		"mobile.chrome.home.connecting": "Подключение к {host}…",
 		"mobile.chrome.home.greeting": "Над чем вы хотите поработать?",
@@ -4395,6 +4421,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "گزشتہ",
 		"mobile.chrome.destination.schedules": "شیڈول",
 		"mobile.chrome.destinations": "منزلیں",
+		"mobile.chrome.drawer.agents": "ایجنٹس",
+		"mobile.chrome.drawer.open": "گفتگوئیں کھولیں",
+		"mobile.chrome.drawer.open_count": "گفتگوئیں کھولیں، {count, plural, one {# نئی گفتگو} other {# نئی گفتگوئیں}}",
 		"mobile.chrome.home.connect": "کمپیوٹر جوڑیں",
 		"mobile.chrome.home.connecting": "{host} سے رابطہ ہو رہا ہے…",
 		"mobile.chrome.home.greeting": "آپ کس چیز پر کام کرنا چاہیں گے؟",
@@ -4880,6 +4909,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Trước",
 		"mobile.chrome.destination.schedules": "Lịch",
 		"mobile.chrome.destinations": "Mục đến",
+		"mobile.chrome.drawer.agents": "Tác nhân",
+		"mobile.chrome.drawer.open": "Mở cuộc trò chuyện",
+		"mobile.chrome.drawer.open_count": "Mở cuộc trò chuyện, {count, plural, other {# cuộc trò chuyện mới}}",
 		"mobile.chrome.home.connect": "Kết nối máy tính",
 		"mobile.chrome.home.connecting": "Đang kết nối với {host}…",
 		"mobile.chrome.home.greeting": "Bạn muốn làm việc gì?",
@@ -5365,6 +5397,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "历史",
 		"mobile.chrome.destination.schedules": "计划",
 		"mobile.chrome.destinations": "目的地",
+		"mobile.chrome.drawer.agents": "智能体",
+		"mobile.chrome.drawer.open": "打开对话",
+		"mobile.chrome.drawer.open_count": "打开对话，{count, plural, other {# 个新对话}}",
 		"mobile.chrome.home.connect": "连接电脑",
 		"mobile.chrome.home.connecting": "正在连接 {host}…",
 		"mobile.chrome.home.greeting": "你想处理什么工作？",

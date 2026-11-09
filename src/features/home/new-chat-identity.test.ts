@@ -2,25 +2,21 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-/* Regression guard for the QA MAJOR: `New session` in the drawer did nothing on
- * web once a conversation was active. The drawer keeps the New-chat intent across
- * the close and consumes it in `onDismiss`, and its effect cancels that intent
- * when the `onNewChat` prop's identity changes. Home re-renders for
- * `setPanelOpen(false)` between those two moments, so an inline closure — a fresh
- * function on every render — cancelled the very request the tap had made.
- *
- * This repository's test toolchain has no React renderer, so the identity cannot
- * be rendered here. These assertions pin the mechanical half: the callback is
- * created once by `useCallback`, it reads the coordinator through a ref (so it is
- * stable without being frozen to a stale one), and both hosts receive the same
- * binding. `drawer-focus.test.ts` carries the behavioural half. */
+/* Stable callback identity is still required: shared drawer close re-renders Home.
+ * The phone now consumes a provider-owned intent rather than receiving a second
+ * local callback. Pin both halves, with the mounted consumed-once behaviour in
+ * workspace-drawer.test.tsx and dismissal ordering in drawer-focus.test.ts. */
 
 const home = readFileSync(resolve(import.meta.dirname, "home.tsx"), "utf8");
+
+const GUARDED_INTENT =
+	/if \(consumeNewChatRequest\(newChatRequest\)\) newChat\(\);/;
+const NEW_CHAT_BINDING = /onNewChat=\{newChat\}/g;
 
 const newChatBlock = () => {
 	const start = home.indexOf("const newChat = useCallback(");
 	expect(start).toBeGreaterThan(-1);
-	const end = home.indexOf("}, []);", start);
+	const end = home.indexOf("}, [closeDrawer]);", start);
 	expect(end).toBeGreaterThan(start);
 	return home.slice(start, end);
 };
@@ -39,8 +35,16 @@ describe("home New-chat callback identity", () => {
 		expect(newChatBlock()).toContain(".current()");
 	});
 
-	it("hands the same binding to the docked pane and the phone drawer", () => {
-		const bindings = home.match(/onNewChat=\{newChat\}/g) ?? [];
-		expect(bindings).toHaveLength(2);
+	it("uses the shared controller for open and consumes each phone draft intent once", () => {
+		expect(home).toContain("open: openDrawer");
+		expect(home).toContain("<WorkspaceDrawerButton />");
+		expect(home).not.toContain("setPanelOpen");
+		expect(newChatBlock()).toContain("closeDrawer()");
+		expect(home.match(NEW_CHAT_BINDING)).toHaveLength(1);
+		expect(home).toMatch(GUARDED_INTENT);
+		// An unconditional effect must fail: route focus alone is not a new draft.
+		expect(
+			home.replace("if (consumeNewChatRequest(newChatRequest)) ", ""),
+		).not.toMatch(GUARDED_INTENT);
 	});
 });
