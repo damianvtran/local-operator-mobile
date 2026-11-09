@@ -28,5 +28,8 @@
 	"mobile.session.pending_echo.not_sent": "no enviado — toca para recuperarlo",
 	"mobile.session.pending_echo.not_confirmed": "sin confirmar — reintenta abajo",
 	"mobile.session.pending_echo.earlier_not_sent": "Tu mensaje anterior no se envió ({reason}). Tócalo arriba para recuperarlo.",
-	"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado."
+	"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
+	"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Comprueba el espacio libre en este teléfono y vuelve a intentarlo.",
+	"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Comprueba el espacio libre de este teléfono y vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
+	"mobile.session.reasoning_disclosure": "Razonamiento"
 }

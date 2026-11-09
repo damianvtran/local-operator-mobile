@@ -66,5 +66,17 @@
 	"mobile.chrome.composer.open_queue": {
 		"role": "button",
 		"note": "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control."
+	},
+	"mobile.chrome.drawer.open": {
+		"note": "Accessible menu control, shared by home and each chat. Opens the same conversations overlay without navigating.",
+		"role": "button"
+	},
+	"mobile.chrome.drawer.open_count": {
+		"note": "Accessible menu control with the relay unread-conversation count; {count} is a number. Preserve ICU plural arms and placeholder.",
+		"role": "button"
+	},
+	"mobile.chrome.drawer.agents": {
+		"note": "Short mode-tab label for conversations with software agents in the shared workspace drawer, contrasted with Team Bridge.",
+		"role": "button"
 	}
 }

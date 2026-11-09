@@ -25,12 +25,9 @@ import { ROLE, turnBarId } from "@/ui/a11y";
  * the bar's whole job is that a condensed turn still shows it completed, and a
  * mark that only exists as green would fail the one reader this clause is for.
  *
- * **The boundary is `border-control`, not the hairline.** Same reason as the
- * quiet group's bar (design round 1, D1): a pressable whose card fill and
- * border are its only boundary takes the structural token — `hairline` is
- * "NEVER the sole boundary of anything you can press" (1.25:1 light / 1.46:1
- * dark), while `border-control` measures 3.42:1 light / 3.93:1 dark. The two
- * bars move together so the family resolves in one change.
+ * Like the quiet-group disclosure, this is a compact trace, not a card.
+ * The completion mark, label and caret identify the control without adding
+ * a bordered surface to the conversation. Its touch target stays unchanged.
  */
 export type TurnBarProps = {
 	/** The turn's opening row id — the stable key the latch and the reader's
@@ -72,7 +69,7 @@ export const TurnBar = ({
 				// `numberOfLines`-capped below: a clipped "42s" is a shorter string
 				// that is still a valid duration, which is how a truncated clock
 				// survives review (`components.md` § 7) — the bar wraps instead.
-				className="min-h-12 justify-center rounded-sm border border-border-control bg-surface px-3 py-2"
+				className="min-h-12 justify-center px-3 py-2"
 			>
 				{/* ONE RAIL, AND THE CARET RIDES THE FIRST LINE. The ✓ used to be its own
 				 *  flex column and the caret was centred on the whole row, so once the label

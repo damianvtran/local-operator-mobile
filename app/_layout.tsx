@@ -16,9 +16,11 @@ import {
 } from "@/features/auth/connection-provider";
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
+import { WorkspaceDrawerProvider } from "@/features/sessions/workspace-drawer";
 import { activeDirection, activeLocale } from "@/i18n";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { TeamBridgeProvider } from "@/team-bridge/provider";
+import { TeamBridgeFixturePresentation } from "@/testing/team-bridge-presentation";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
 import { DirectionProvider, DirectionView } from "@/ui/direction";
@@ -59,13 +61,16 @@ export default function RootLayout() {
 								 *  can never show two lists. Inside the providers it reads (the
 								 *  connection, the text scale) and below the router's context. */}
 								<ComputerSwitcherProvider>
-									<Stack screenOptions={{ headerShown: false }} />
+									<WorkspaceDrawerProvider>
+										<Stack screenOptions={{ headerShown: false }} />
+									</WorkspaceDrawerProvider>
 								</ComputerSwitcherProvider>
 								<ToastHost />
 							</TeamBridgeProvider>
 						</DirectionRoot>
 					</TextScaleProvider>
 				</ConnectionProvider>
+				<TeamBridgeFixturePresentation />
 			</ThemeProvider>
 		</SafeAreaProvider>
 	);

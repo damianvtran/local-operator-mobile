@@ -123,7 +123,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/relay.ts":
 		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
-		"dd7312406f3b0fe2a4c47e94fe1d9d49abc414d382b43c3c0ee8fea71517e917",
+		"fdbe2094ec86ca60b9c5e81d1a34927acd4a395cb8b62db736c88ff4209fcb5d",
 	"tools/mock-relay/account-routing-gate.ts":
 		"2388f03adfea61dd69bcf397428fb899ab5d5977f47574727d81087d8d597379",
 	"tools/mock-relay/account-routing-identity.ts":
@@ -232,6 +232,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 // hardened byte reads and exact-lock image-manipulator dependency. Identity only;
 // rendered and real-path evidence is recorded separately, not inferred from hashes.
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
+	 * remediation: shared drawer navigation changes both render trees, including
+	 * the opt-in current-chat check, RN-web-safe aria-hidden and regression tests. This admits the
+	 * geometry instrument to the new source; it is NOT rendered/native proof.
+	 * ORIGINAL_*, instrument, file and input pins remain unchanged. */
 	/* Re-pinned 2026-11-07 for PR #187's round-2 remediation, with --print from
 	 * the staged tree. Only `src` moves: a resting voice outcome is no longer
 	 * line-capped, start/permission failures rest on the dictation row, ✓ moves to
@@ -589,7 +594,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "9f32ccb59ff78920a76f253f5d2ca670040c9aff5a5ae98811c4305ec0f4e5c1",
+	app: "3afe51e7471b46ebb3846469248eb62c20d00a58ca2b0091a9e0273dc3059d6e",
+
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -1096,12 +1102,37 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	// PR #106 CI remediation: branch-local --print from the final source tree;
-	// test contracts plus the viewer overlay
-	// anchors: start/end both zero still span the viewport in LTR and RTL.
-	// No catalogue, pager, arrow, instrument, fixture or historical pin changed.
-	// Source admission only, not fresh rendered or geometry evidence.
-	src: "ff3a1888ee13e7eb0f907916de39479a4bb3a472907234b0812bbb12e75a563d",
+	/* Recomputed with --print after PR #201 Q1's literal-inline fast path and
+	 * allocation regressions. The original capture fixture's AST and unchanged
+	 * component markup remain byte-identical against 64c0d71d. Source admission
+	 * only: no new U-08 pixels, instrument, input or render-file changes. */
+
+	/* Re-printed 2026-11-09 for PR #199's U1 remediation: composer retry
+	 * preparation copy and feedback projection retain the original command's
+	 * uncertainty, with active/ended hook regressions and all eight catalogues.
+	 * Only the src root moves; no instrument, fixture or other pin changes.
+	 * Source admission only, NOT rendered U-08 or native storage evidence. */
+	/* Recomputed with --print at PR #201's merge of origin/main 953a00a7:
+	 * both approved source streams above survive unchanged. Their combined src
+	 * tree has neither parent's digest. This admits source identity only; it
+	 * does not refresh historical U-08 pixels, instrument or input evidence. */
+	/* Convergence with PR #199 preserves both reviewed product sources. Recomputed
+	 * from the combined LIVE tree after the catalogue-count conflict was resolved.
+	 * Admission only: this does not refresh historical render or native evidence. */
+	/* Integration of reviewed PRs #201 and #202 retains both convergence notes
+	 * above. Recompute LIVE src/app only after both histories are merged: source
+	 * admission does not refresh historical pixels or native interaction proof. */
+	/* The bounded trace-display privacy fix imports only reviewed disclosure /
+	 * typed-metadata filtering sources from #200, plus one merged locale key.
+	 * Recomputed LAST after generation; no activity/layout/native-harness claim,
+	 * and no historical instrument, input or original evidence is refreshed. */
+	/* Q-tablet: recomputed LAST after the focused Home drawer-ownership fix and
+	 * its regressions. Only LIVE src identity changes; no historical pin, input,
+	 * instrument or activity/native-layout evidence is refreshed by admission. */
+	// #106 + landed main d9073ebc union and synthetic source adapter: all pin
+	// declarations derived with --print LAST. Source admission only, not refreshed
+	// historical pixels, native picker/EXIF or remote-push evidence.
+	src: "1063034026c03ac97aa57d872fb01678e48f99e78babca1a89579e1fb8043946",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

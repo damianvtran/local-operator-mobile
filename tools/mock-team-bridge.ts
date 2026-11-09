@@ -24,6 +24,7 @@ import {
 	ADA,
 	agentDm,
 	BEN,
+	CONSENT_V2,
 	CY,
 	conversation,
 	deliveryFixtureHistory,
@@ -32,16 +33,19 @@ import {
 	OTHER_TENANT,
 	person,
 	SELF,
+	settings,
 	status,
 	TENANT,
 } from "../src/team-bridge/__tests__/fixtures.ts";
 
+import { fixtureWorld } from "../src/testing/team-bridge-options.ts";
+
 import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
 
-const MOCK_ROUTE = /^\/mock-hub\/([a-z_-]+)\/v1\/messaging(.*)$/;
+const MOCK_ROUTE = /^\/mock-hub\/([a-z0-9_~-]+)\/v1\/messaging(.*)$/;
 /* The profile slice's avatar route sits beside messaging, not under it. */
 const AVATAR_ROUTE =
-	/^\/mock-hub\/([a-z_-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
+	/^\/mock-hub\/([a-z0-9_~-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
 /** Upload/delete (`/conversations/:cid/attachments[/:aid]`) and the byte read
  *  (`/conversations/:cid/messages/:mid/attachments/:aid`). */
 const ATTACHMENT_ROUTE =
@@ -273,85 +277,102 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 		}),
 	];
 	let created = 0;
-	const histories = new Map(
+	const defaultHistories = new Map(
 		conversations.map((c) => [
 			c.id,
 			thread.map((m) => ({ ...structuredClone(m), conversation_id: c.id })),
 		]),
 	);
 	// No bodies, headers or tokens: these counters prove first-send behaviour.
-	type Stored = {
-		conversationId: string;
-		messageId?: string;
-		bytes: Buffer;
-		width: number;
-		height: number;
-		mime: "image/png" | "image/jpeg";
-	};
-	const images = new Map<string, Stored>();
-	const descriptor = (id: string, state?: string) => {
-		const image = images.get(id);
+	// Each synthetic world owns bytes, message bindings and retry attempts. Tokens
+	// alone must not allow another flow/account to fetch or bind a staged upload.
+	const createImageWorld = () => {
+		type Stored = {
+			conversationId: string;
+			messageId?: string;
+			bytes: Buffer;
+			width: number;
+			height: number;
+			mime: "image/png" | "image/jpeg";
+		};
+		const images = new Map<string, Stored>();
+		const descriptor = (id: string, state?: string) => {
+			const image = images.get(id);
+			return {
+				id,
+				mime: image?.mime ?? "image/png",
+				size: image?.bytes.length ?? 0,
+				width: image?.width ?? 1024,
+				height: image?.height ?? 768,
+				sha256: "fixture",
+				state: state ?? "bound",
+				expires_at: at(60 * 24 * 400),
+			};
+		};
+		const seed = (id: string, width: number, height: number, hue: number) => {
+			images.set(id, {
+				conversationId: "bcv_humans",
+				messageId:
+					id === "batt_one"
+						? "bcm_7"
+						: id === "batt_image_only"
+							? "bcm_9"
+							: "bcm_8",
+				bytes: fixturePng(width, height, hue),
+				width,
+				height,
+				mime: "image/png",
+			});
+			return id;
+		};
+		const showcase = () =>
+			[
+				message(7, ADA, at(14), {
+					sender: { account_id: ADA, kind: "human", display_label: "Ada" },
+					body: "Here is the new onboarding screen.",
+					attachments: [descriptor(seed("batt_one", 1024, 768, 0))],
+				}),
+				message(8, ADA, at(15), {
+					sender: { account_id: ADA, kind: "human", display_label: "Ada" },
+					body: "And the four variants we discussed:",
+					attachments: [
+						descriptor(seed("batt_four_a", 800, 800, 10)),
+						descriptor(seed("batt_four_b", 768, 1024, 40)),
+						descriptor(seed("batt_four_c", 1024, 576, 70)),
+						descriptor(seed("batt_four_d", 640, 640, 100)),
+					],
+				}),
+				message(9, SELF, at(16), {
+					sender: { account_id: SELF, kind: "human", display_label: "Sam" },
+					body: "",
+					attachments: [descriptor(seed("batt_image_only", 900, 600, 30))],
+				}),
+				message(10, ADA, at(17), {
+					sender: { account_id: ADA, kind: "human", display_label: "Ada" },
+					body: "Last year's version, for comparison.",
+					attachments: [descriptor("batt_expired", "expired")],
+				}),
+				message(11, BEN, at(18), {
+					sender: { account_id: BEN, kind: "human", display_label: "Ben" },
+					body: "This one is in a state this build does not know.",
+					attachments: [descriptor("batt_unknown", "quarantined")],
+				}),
+			].map((row) => ({ ...row, conversation_id: "bcv_humans" }));
 		return {
-			id,
-			mime: image?.mime ?? "image/png",
-			size: image?.bytes.length ?? 0,
-			width: image?.width ?? 1024,
-			height: image?.height ?? 768,
-			sha256: "fixture",
-			state: state ?? "bound",
-			expires_at: at(60 * 24 * 400),
+			images,
+			descriptor,
+			showcase,
+			histories: new Map(
+				conversations.map((row) => [
+					row.id,
+					structuredClone(defaultHistories.get(row.id) ?? []),
+				]),
+			),
+			uploads: 0,
+			attempts: 0,
 		};
 	};
-	const seed = (id: string, width: number, height: number, hue: number) => {
-		images.set(id, {
-			conversationId: "bcv_humans",
-			messageId:
-				id === "batt_one"
-					? "bcm_7"
-					: id === "batt_image_only"
-						? "bcm_9"
-						: "bcm_8",
-			bytes: fixturePng(width, height, hue),
-			width,
-			height,
-			mime: "image/png",
-		});
-		return id;
-	};
-	const showcase = () =>
-		[
-			message(7, ADA, at(14), {
-				sender: { account_id: ADA, kind: "human", display_label: "Ada" },
-				body: "Here is the new onboarding screen.",
-				attachments: [descriptor(seed("batt_one", 1024, 768, 0))],
-			}),
-			message(8, ADA, at(15), {
-				sender: { account_id: ADA, kind: "human", display_label: "Ada" },
-				body: "And the four variants we discussed:",
-				attachments: [
-					descriptor(seed("batt_four_a", 800, 800, 10)),
-					descriptor(seed("batt_four_b", 768, 1024, 40)),
-					descriptor(seed("batt_four_c", 1024, 576, 70)),
-					descriptor(seed("batt_four_d", 640, 640, 100)),
-				],
-			}),
-			message(9, SELF, at(16), {
-				sender: { account_id: SELF, kind: "human", display_label: "Sam" },
-				body: "",
-				attachments: [descriptor(seed("batt_image_only", 900, 600, 30))],
-			}),
-			message(10, ADA, at(17), {
-				sender: { account_id: ADA, kind: "human", display_label: "Ada" },
-				body: "Last year's version, for comparison.",
-				attachments: [descriptor("batt_expired", "expired")],
-			}),
-			message(11, BEN, at(18), {
-				sender: { account_id: BEN, kind: "human", display_label: "Ben" },
-				body: "This one is in a state this build does not know.",
-				attachments: [descriptor("batt_unknown", "quarantined")],
-			}),
-		].map((row) => ({ ...row, conversation_id: "bcv_humans" }));
-	let uploads = 0;
+	const imageWorlds = new Map<string, ReturnType<typeof createImageWorld>>();
 
 	const requests: Array<{ method: string; path: string }> = [];
 	const handle = async (
@@ -374,6 +395,19 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 				const qaCase = url.searchParams.get("case") ?? "populated";
 				const theme = url.searchParams.get("theme") ?? "light";
 				const requestedWidth = url.searchParams.get("width") ?? "390";
+				const overrides = new URLSearchParams();
+				for (const key of [
+					"flow",
+					"account",
+					"org",
+					"locale",
+					"scale",
+					"source",
+				]) {
+					const value = url.searchParams.get(key);
+					if (value !== null) overrides.set(`tb-${key}`, value);
+				}
+
 				const phoneWidth = ["320", "360", "390", "430", "768"].includes(
 					requestedWidth,
 				)
@@ -389,12 +423,12 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 					: "";
 				res.writeHead(200, { "content-type": "text/html" });
 				res.end(
-					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}${viewerParam}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
+					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}&${overrides.toString()}${viewerParam}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
 const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
- const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),width:Math.round(r.width),height:Math.round(r.height),disabled:e.getAttribute('aria-disabled')==='true'};});
- document.getElementById('geometry').textContent=JSON.stringify({viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
+ const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),x:Math.round(r.x),right:Math.round(r.right),width:Math.round(r.width),height:Math.round(r.height),scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,disabled:e.getAttribute('aria-disabled')==='true'};});
+ document.getElementById('geometry').textContent=JSON.stringify({locale:doc.documentElement.lang,direction:doc.documentElement.dir,noticeBodySize:win.getComputedStyle(doc.querySelector('[data-testid="team-bridge-default-on-notice"] [role="status"] > :last-child')||doc.body).fontSize,viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
 }catch{}},1000);
 </script>`,
 				);
@@ -437,15 +471,34 @@ setInterval(()=>{try{
 			}
 			const match = MOCK_ROUTE.exec(url.pathname);
 			if (match) {
-				const qaCase = match[1];
+				const world = fixtureWorld(match[1] ?? "");
+				const qaCase = world.scenario;
+				const noticeTenant = world.secondOrg ? OTHER_TENANT : TENANT;
 				const path = match[2] ?? "";
 				requests.push({ method: req.method ?? "GET", path });
+				if (
+					qaCase?.startsWith("notice_") &&
+					req.headers.authorization !==
+						`Bearer ${world.token ?? TEAM_BRIDGE_FIXTURE_TOKEN}`
+				) {
+					send(401, { error: "invalid or expired token" });
+					return;
+				}
 				if (qaCase === "loading" && path !== "/status" && path !== "/unread")
 					if (!(await waitForLoading(res))) return;
 				const withImages = (qaCase ?? "").startsWith("attachments");
+				const worldKey = match[1] ?? "";
+				let imageWorld = imageWorlds.get(worldKey);
+				if (!imageWorld) {
+					imageWorld = createImageWorld();
+					imageWorlds.set(worldKey, imageWorld);
+				}
+				const { images, descriptor, showcase } = imageWorld;
+				const histories = withImages ? imageWorld.histories : defaultHistories;
 				if (
 					withImages &&
-					req.headers.authorization !== `Bearer ${TEAM_BRIDGE_FIXTURE_TOKEN}`
+					req.headers.authorization !==
+						`Bearer ${world.token ?? TEAM_BRIDGE_FIXTURE_TOKEN}`
 				) {
 					send(401, { error: "invalid or expired token" });
 					return;
@@ -453,7 +506,7 @@ setInterval(()=>{try{
 				const attachmentRoute = ATTACHMENT_ROUTE.exec(path);
 				if (withImages && attachmentRoute) {
 					const conversationId = path.split("/")[2] ?? "";
-					if (url.searchParams.get("tenant_id") !== TENANT) {
+					if (url.searchParams.get("tenant_id") !== noticeTenant) {
 						send(403, { error: "Wrong organization", code: "not_a_member" });
 						return;
 					}
@@ -467,6 +520,21 @@ setInterval(()=>{try{
 					if (req.method === "POST") {
 						const parts: Buffer[] = [];
 						for await (const part of req) parts.push(part as Buffer);
+						imageWorld.attempts++;
+						if (qaCase === "attachments_upload_unauthorized") {
+							send(401, { error: "Synthetic session retired" });
+							return;
+						}
+						if (
+							qaCase === "attachments_upload_retry" &&
+							imageWorld.attempts === 1
+						) {
+							send(500, {
+								error: "Synthetic upload failed",
+								code: "internal_error",
+							});
+							return;
+						}
 						if (qaCase === "attachments_uploading")
 							if (!(await waitForLoading(res))) return;
 						if (qaCase === "attachments_upload_failed") {
@@ -490,8 +558,8 @@ setInterval(()=>{try{
 							});
 							return;
 						}
-						uploads++;
-						const id = `batt_upload_${uploads}`;
+						imageWorld.uploads++;
+						const id = `batt_upload_${imageWorld.uploads}`;
 						const bytes = Buffer.concat(parts);
 						if (bytes.length > 5242880) {
 							send(413, {
@@ -588,16 +656,19 @@ setInterval(()=>{try{
 										},
 									}
 								: {}),
+							// Notice fixtures model a server-enrolled endpoint. The client must
+							// never create consent or send an enabling PUT merely by mounting.
+							...(qaCase?.startsWith("notice_") ? { consent: CONSENT_V2 } : {}),
 							api_version: qaCase === "update_required" ? "2" : "1",
 							available: qaCase !== "plan_required",
 							tenants: [
 								{
-									tenant_id: TENANT,
+									tenant_id: noticeTenant,
 									tenant_name: "Example Org",
 									eligible: qaCase !== "plan_required",
 								},
 								{
-									tenant_id: OTHER_TENANT,
+									tenant_id: world.secondOrg ? TENANT : OTHER_TENANT,
 									tenant_name: "Research Lab",
 									eligible: qaCase !== "plan_required",
 								},
@@ -612,6 +683,39 @@ setInterval(()=>{try{
 						code: "messaging_unavailable",
 					});
 					return;
+				}
+				if (path === "/settings" && qaCase?.startsWith("notice_")) {
+					if (
+						url.searchParams.get("tenant_id") !== noticeTenant &&
+						req.method === "GET"
+					) {
+						send(403, { error: "Wrong organization", code: "not_a_member" });
+						return;
+					}
+					if (req.method === "GET") {
+						ok(settings(qaCase === "notice_dialog" ? "dialog" : "default_on"));
+						return;
+					}
+					if (req.method === "PUT") {
+						let raw = "";
+						for await (const part of req) raw += part;
+						const body = JSON.parse(raw);
+						if (
+							body.state !== "disabled" ||
+							body.tenant_id !== noticeTenant ||
+							Object.keys(body).length !== 2
+						) {
+							send(400, {
+								error: "Only an explicit scoped opt-out is supported",
+							});
+						} else if (qaCase === "notice_error") {
+							send(500, { error: "Fixture opt-out failed" });
+						} else {
+							if (qaCase === "notice_pending") await waitForLoading(res);
+							ok(settings("default_on", { state: "disabled" }));
+						}
+						return;
+					}
 				}
 				if (path === "/unread") {
 					ok({
@@ -631,7 +735,12 @@ setInterval(()=>{try{
 					ok({
 						members:
 							qaCase === "empty" ||
-							url.searchParams.get("tenant_id") === OTHER_TENANT
+							url.searchParams.get("tenant_id") ===
+								(withImages
+									? world.secondOrg
+										? TENANT
+										: OTHER_TENANT
+									: OTHER_TENANT)
 								? []
 								: people,
 					});
@@ -641,7 +750,12 @@ setInterval(()=>{try{
 					ok({
 						conversations:
 							qaCase === "empty" ||
-							url.searchParams.get("tenant_id") === OTHER_TENANT
+							url.searchParams.get("tenant_id") ===
+								(withImages
+									? world.secondOrg
+										? TENANT
+										: OTHER_TENANT
+									: OTHER_TENANT)
 								? []
 								: conversations,
 						has_more: false,
@@ -704,7 +818,7 @@ setInterval(()=>{try{
 						});
 						return;
 					}
-					if (withImages && body.tenant_id !== TENANT) {
+					if (withImages && body.tenant_id !== noticeTenant) {
 						send(403, { error: "Wrong organization", code: "not_a_member" });
 						return;
 					}
@@ -903,7 +1017,8 @@ setInterval(()=>{try{
 				responses.clear();
 				sockets.clear();
 				handlers.clear();
-				histories.clear();
+				defaultHistories.clear();
+				imageWorlds.clear();
 				conversations.splice(0);
 				people.splice(0);
 				requests.splice(0);

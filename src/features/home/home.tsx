@@ -1,8 +1,9 @@
-import { useRouter } from "expo-router";
-import { Bell, BellDot, Menu } from "lucide-react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { Bell, BellDot } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TextInput } from "react-native";
 import {
+	Keyboard,
 	Platform,
 	Pressable,
 	ScrollView,
@@ -21,7 +22,6 @@ import {
 	useLocaleFrame,
 } from "@/features/auth/connection-provider";
 import { NOTICE_STACK_STYLE } from "@/features/home/composer-stack";
-import { MENU_BADGE_INSET } from "@/features/home/header-fit";
 import { NO_PRESS, pressAnswered } from "@/features/home/hero-focus";
 import {
 	connectDisabledReason,
@@ -58,12 +58,10 @@ import {
 	homeChips,
 	homeFolderChip,
 } from "@/features/home/picker-model";
+import { useHomeDrawer } from "@/features/home/use-home-drawer";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
-import {
-	countLabel,
-	notificationsEnabled,
-} from "@/features/notifications/notifications-model";
+import { notificationsEnabled } from "@/features/notifications/notifications-model";
 import {
 	pasteImage,
 	pickImageFromFiles,
@@ -76,12 +74,12 @@ import type { ComposerControls } from "@/features/session/composer";
 import { composerCopy, pasteNothingLine } from "@/features/session/composer";
 import { deviceOnline } from "@/features/session/runtime";
 import { useHomeDictation } from "@/features/session/use-dictation";
-import { ConversationsDrawer } from "@/features/sessions/conversations-drawer";
 import { ConversationsPane } from "@/features/sessions/conversations-pane";
+import { inboxBadgeCount } from "@/features/sessions/session-projection";
 import {
-	inboxBadgeCount,
-	unreadBadgeCount,
-} from "@/features/sessions/session-projection";
+	useWorkspaceDrawer,
+	WorkspaceDrawerButton,
+} from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import { listLabel } from "@/lib/route-label";
 import type { RelayError } from "@/relay/errors";
@@ -90,7 +88,6 @@ import { CONTROL, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
-import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Screen } from "@/ui/components/screen";
@@ -178,7 +175,6 @@ export default function Home({
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const route = useConnectionState((state) => state.route);
 	const phase = useConnectionState((state) => state.phase);
-	const unread = useListState((state) => state.unread);
 	const inbox = useListState((state) => state.notifications);
 	/* The resolved language, subscribed so a config frame re-renders this screen.
 	 * It is not read here as a string — `t()` resolves the locale itself — but it is
@@ -195,7 +191,9 @@ export default function Home({
 	const effortSupported = capabilities?.session_start?.effort === true;
 	const _showToast = useUiStore((state) => state.showToast);
 
-	const [panelOpen, setPanelOpen] = useState(forcePanelOpen);
+	const workspaceDrawer = useWorkspaceDrawer();
+	const { close: closeDrawer, newChatRequest } = workspaceDrawer;
+	useHomeDrawer(forcePanelOpen, split);
 	/** Which of the three pickers is open — one at a time, each its own sheet. */
 	const [picker, setPicker] = useState<"folder" | "model" | "effort" | null>(
 		null,
@@ -227,6 +225,10 @@ export default function Home({
 	 * leaving Home, and an untagged folder from computer A went into B's start body.
 	 * Read this way, A's values are `null` on B in the switch's own render. */
 	const homeDirectory = heldOn(heldDirectory, tunnelId);
+	const setAgentsPresentation = workspaceDrawer.setAgentsPresentation;
+	useEffect(() => {
+		setAgentsPresentation({ notice, homeDirectory });
+	}, [setAgentsPresentation, notice, homeDirectory]);
 	const folders = heldOn(heldFolders, tunnelId);
 	const readerApplied = heldOn(appliedOn, tunnelId) !== null;
 	/** The folders read's failure, KIND KEPT: the banner names the cause it really
@@ -344,7 +346,6 @@ export default function Home({
 	 *  Reduce Transparency off, and solid everywhere else — the session screen's
 	 *  rule, so a capsule never reads as glass beside a solid shell. */
 	const chromeGlass = useChromeGlass();
-	const menuInk = useTokenColor("ink-muted");
 	/* The folder/model/options controls are the reader's while the request is still
 	 * theirs to change. A `refused` create never happened, so it belongs in that set
 	 * with `draft` — the copy already asks them to check the folder, and QA found the
@@ -356,6 +357,15 @@ export default function Home({
 	/** The composer's field, for the New chat affordance: only the home can
 	 *  focus it, and only after the drawer is gone. */
 	const fieldRef = useRef<TextInput | null>(null);
+	const ownsKeyboard = useRef(false);
+	useFocusEffect(
+		useCallback(() => {
+			ownsKeyboard.current = true;
+			return () => {
+				ownsKeyboard.current = false;
+			};
+		}, []),
+	);
 
 	const client = relay();
 	const routed = route !== null;
@@ -535,13 +545,6 @@ export default function Home({
 		savedTunnel,
 	]);
 
-	/* The header badge reads the machine's own unread count (ADR 0006 §1.4) —
-	 * NOT a local count of rows and not `needs_attention`. `null` means the
-	 * number is not readable (an older relay omits the block; a degraded one
-	 * withholds `count`), and the header then shows no number at all: absence is
-	 * never rendered as 0. The conversations pane's degraded banner is the
-	 * "says so". */
-	const badgeCount = unreadBadgeCount(unread);
 	/* The inbox's own number, from the same frame (contract §5.4). Same absence
 	 * rule: `null` draws no numeral, never a 0 the machine did not send. */
 	const inboxCount = inboxBadgeCount(inbox);
@@ -700,7 +703,23 @@ export default function Home({
 	};
 
 	// The coordinator freezes the submitted bytes; later typing stays editable.
-	const send = startup.send;
+	const send = () => {
+		const firstSend =
+			startup.snapshot.sessionId === null &&
+			startup.snapshot.queue.length === 0;
+		startup.send(
+			firstSend
+				? () => {
+						// Only durable admission yields the keyboard. Rejected taps retain the
+						// focused draft; no timer or animation await delays dispatch. The same
+						// mounted input becomes the conversation composer without autofocus.
+						if (!ownsKeyboard.current) return;
+						fieldRef.current?.blur();
+						Keyboard.dismiss();
+					}
+				: undefined,
+		);
+	};
 
 	/* The home's mic (TestFlight 578): the same dictation machine as a session's,
 	 *  landing the transcript in this draft. Transcription is the computer's own
@@ -713,28 +732,30 @@ export default function Home({
 		onError: setComposerError,
 	});
 
-	/* A STABLE identity, with the latest coordinator behind it. The drawer carries the
-	 * New-chat intent across the close and acts on it in `onDismiss` — by which time
-	 * Home has already re-rendered for `setPanelOpen(false)` — and it drops that
-	 * intent whenever this callback's identity changes. An inline closure is a new
-	 * function on every render, so closing the drawer cancelled the request: the
-	 * sheet went away and the old session (and its coordinator) stayed. `useStartup`
-	 * returns fresh functions per render, so the reference is refreshed on each render
-	 * and the stable callback always calls the current one. */
+	/* Keep the latest coordinator behind a stable callback: a pending drawer
+	 * dismissal must not focus an old draft after Home re-renders. The provider
+	 * consumes each New-chat intent once, including across route remounts. */
 	const newConversationRef = useRef(startup.newConversation);
 	newConversationRef.current = startup.newConversation;
 	const newChat = useCallback(() => {
-		setPanelOpen(false);
+		closeDrawer();
 		void newConversationRef
 			.current()
 			.then(() => requestAnimationFrame(() => fieldRef.current?.focus()))
 			.catch(() => setComposerError("Could not open a new draft safely."));
-	}, []);
+	}, [closeDrawer]);
+
+	const consumeNewChatRequest = workspaceDrawer.consumeNewChatRequest;
+	useFocusEffect(
+		useCallback(() => {
+			if (consumeNewChatRequest(newChatRequest)) newChat();
+		}, [newChatRequest, consumeNewChatRequest, newChat]),
+	);
 
 	const pane = (
 		<ConversationsPane
-			onClose={split ? undefined : () => setPanelOpen(false)}
-			onNavigate={split ? undefined : () => setPanelOpen(false)}
+			onClose={split ? undefined : closeDrawer}
+			onNavigate={split ? undefined : closeDrawer}
 			onNewChat={newChat}
 			notice={notice}
 			homeDirectory={homeDirectory}
@@ -984,46 +1005,7 @@ export default function Home({
 				 *  (the old list screen's rule, kept: a cap on the whole screen squeezed
 				 *  a tablet into a phone layout stretched). */
 				capColumn={!split}
-				headerLeading={
-					split ? undefined : (
-						/* ☰ with the unread count as a CORNER badge on the button itself
-						 *  (record §2.4, D-H2): the red "21" was a sibling of the brand
-						 *  mark, attached to no control. Inside the one 44 pt pressable it
-						 *  reads as "this opens what is new" and adds no width. The brand
-						 *  mark left the header (D-H3): three identity marks on one screen,
-						 *  and its 29 pt were what starved the computer chip (D-H1). */
-						<Pressable
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={
-								badgeCount !== null && badgeCount > 0
-									? `Open conversations, ${badgeCount} new conversation${badgeCount === 1 ? "" : "s"}`
-									: "Open conversations"
-							}
-							onPress={() => setPanelOpen(true)}
-							testID={CONTROL.homeSidebar}
-							className="items-center justify-center"
-							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
-						>
-							<Menu color={menuInk} size={22} />
-							{badgeCount !== null && badgeCount > 0 ? (
-								<View
-									pointerEvents="none"
-									className="absolute"
-									/* On the glyph's top-trailing corner, INSIDE the box: at
-									 *  `end: 0` it touched the selector (TestFlight 578). */
-									style={MENU_BADGE_INSET}
-								>
-									<Badge
-										label={countLabel(badgeCount)}
-										tone="danger"
-										mono
-										scale={effectiveScale}
-									/>
-								</View>
-							) : null}
-						</Pressable>
-					)
-				}
+				headerLeading={split ? undefined : <WorkspaceDrawerButton />}
 				headerAction={
 					<View
 						/* `ms-2` (`HEADER_SELECTOR_LEAD_PT`): clear leading room between
@@ -1204,18 +1186,6 @@ export default function Home({
 			</Sheet>
 
 			<HomeStateMarkers draft={draft} offline={offline || !connected} />
-
-			{/* The drawer exists only where the list is not docked. Both surfaces
-			 *  render the SAME pane; only the wrapper differs. */}
-			{split ? null : (
-				<ConversationsDrawer
-					visible={panelOpen}
-					onClose={() => setPanelOpen(false)}
-					onNewChat={newChat}
-					notice={notice}
-					homeDirectory={homeDirectory}
-				/>
-			)}
 		</>
 	);
 }

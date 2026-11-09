@@ -61,13 +61,33 @@ describe("Team Bridge copy", () => {
 			]);
 		},
 	);
+	it.each(SHIPPED_LOCALES)(
+		"owns the default_on key contract in %s",
+		(locale) => {
+			expect(
+				Object.keys(CATALOGUES[locale])
+					.filter((key) => key.startsWith("mobile.team_bridge.default_on."))
+					.sort(),
+			).toEqual([
+				"mobile.team_bridge.default_on.body",
+				"mobile.team_bridge.default_on.dismiss",
+				"mobile.team_bridge.default_on.dismiss_hint",
+				"mobile.team_bridge.default_on.dismiss_label",
+				"mobile.team_bridge.default_on.hide",
+				"mobile.team_bridge.default_on.read_more",
+				"mobile.team_bridge.default_on.title",
+				"mobile.team_bridge.default_on.turn_off",
+				"mobile.team_bridge.default_on.turn_off_error",
+			]);
+		},
+	);
 
 	it.each(SHIPPED_LOCALES)("covers the entire namespace in %s", (locale) => {
 		const keys = Object.keys(CATALOGUES[locale]).filter((k) =>
 			k.startsWith("mobile.team_bridge."),
 		);
-		// PR #106: 104 established keys + 42 attachment keys.
-		expect(keys).toHaveLength(146);
+		// Exact merged attachment + consent + established key union.
+		expect(keys).toHaveLength(155);
 		expect(keys.sort()).toEqual(
 			Object.keys(CATALOGUES.en)
 				.filter((key) => key.startsWith("mobile.team_bridge."))

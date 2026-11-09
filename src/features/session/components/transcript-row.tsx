@@ -238,6 +238,29 @@ const TranscriptRowImpl = ({
 		);
 	}
 
+	// Reasoning is a first-class producer row, not an unknown participant
+	// named "entry". Preserve the text behind the same disclosure as traces;
+	// it must not compete with the pinned line's in-progress animation.
+	if (kind === "reasoning") {
+		return (
+			<View className="px-4" testID={testID}>
+				<CollapsedRow
+					glyph="◇"
+					glyphClass="text-ink-dim"
+					label={t("mobile.session.reasoning_disclosure")}
+					// Even the preview is reasoning content: none is painted or
+					// announced until the reader explicitly opens this trace.
+					summary=""
+					accessibilityLabel={t("mobile.session.reasoning_disclosure")}
+					{...fold}
+				>
+					<Text className="text-body-read text-ink-muted">{entry.text}</Text>
+				</CollapsedRow>
+				{anchors}
+			</View>
+		);
+	}
+
 	if (kind === "notice" || kind === "compaction") {
 		const severity = entry.details.severity ?? "info";
 		const glyph =
@@ -291,7 +314,9 @@ const TranscriptRowImpl = ({
 	/* A message from another participant — the parent, a child, a peer session.
 	 * Depth is a 2 px left edge and a label, so the row is attributable at a glance
 	 * without a card inside the column. */
-	const label = BLOCK_LABEL[kind] ?? kind;
+	// Forward-compatible events keep their actual wire type instead of the
+	// meaningless "entry" caption; unknown data must stay visible and attributable.
+	const label = kind === "generic" ? entry.kind : (BLOCK_LABEL[kind] ?? kind);
 	const sender = entry.details.sender;
 	const hub = isHubReceipt(entry);
 	const who =

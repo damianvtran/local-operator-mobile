@@ -28,5 +28,8 @@
 	"mobile.session.pending_echo.not_sent": "नहीं भेजा गया — वापस लाने के लिए टैप करें",
 	"mobile.session.pending_echo.not_confirmed": "पुष्टि नहीं हुई — नीचे फिर से कोशिश करें",
 	"mobile.session.pending_echo.earlier_not_sent": "आपका पिछला संदेश नहीं भेजा गया ({reason})। उसे वापस लाने के लिए ऊपर टैप करें।",
-	"mobile.session.pending_echo.earlier_went_through": "आपका पिछला संदेश भेज दिया गया। नीचे का टेक्स्ट अभी नहीं भेजा गया है।"
+	"mobile.session.pending_echo.earlier_went_through": "आपका पिछला संदेश भेज दिया गया। नीचे का टेक्स्ट अभी नहीं भेजा गया है।",
+	"mobile.session.composer.not_sent_storage": "नहीं भेजा गया। दोबारा भेजने के लिए यह संदेश सुरक्षित रूप से सहेजा नहीं जा सका। आपका टेक्स्ट और चित्र यहीं हैं। इस फ़ोन में खाली जगह जाँचें, फिर दोबारा कोशिश करें।",
+	"mobile.session.composer.retry_not_sent_storage": "दोबारा भेजने का यह प्रयास नहीं भेजा गया। पिछले निर्देश को सुरक्षित रूप से दोबारा भेजने की तैयारी नहीं हो सकी। इस फ़ोन में खाली जगह जाँचें, फिर पिछले निर्देश को दोबारा भेजने की कोशिश करें। आपका मौजूदा ड्राफ़्ट नहीं भेजा गया है।",
+	"mobile.session.reasoning_disclosure": "चिंतन"
 }

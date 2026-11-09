@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 146, // 104 established keys + 42 attachment keys (PR #106).
+		expected: 155, // Exact merged Team Bridge key union.
 	},
 	{
 		name: "mobile.signin",
@@ -153,7 +153,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 30, // +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 33, // +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -206,7 +206,7 @@ const NAMESPACES = [
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 17,
+		expected: 20,
 	},
 	{
 		name: "relay.chrome",
@@ -256,12 +256,8 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* 464 on main (the Team Bridge avatar slice's 104 includes the 11 endpoint-owned
-		 *  profile/photo keys) plus this slice's 17 `mobile.projects` keys — the create
-		 *  sheet's fields, validation and the two example placeholders. Counted from the
-		 *  merged catalogue files themselves, not from either branch's number: 481. */
-		// PR #106: 481 established keys + 42 attachment keys.
-		expect(total).toBe(523);
+		// Exact merged catalogue union; verified after generation.
+		expect(total).toBe(538);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -338,6 +334,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Image is the French noun for a picture too; the isolated attachment label is an idiomatic cognate.",
 		"mobile.team_bridge.attachment.chip_label":
 			"French uses Image followed by the image number and a separately localized state; this template contains no English prose.",
+		"mobile.chrome.drawer.agents":
+			"Agents is also the French plural for software agents; the drawer mode names the agent conversations, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.profile.badge_agent":

@@ -10,10 +10,10 @@
  * failure surfaces as a confusing syntax error in the console.
  */
 
-import { createReadStream, existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, realpathSync, statSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
@@ -29,8 +29,8 @@ import type { ReadableStream as NodeReadableStream } from "node:stream/web";
  * relay's own paths at the SAME origin is what fixes it, and it needs no
  * page-side seeding: the app's configured route is simply this origin.
  *
- * A path is proxied when it matches these prefixes exactly; everything else
- * stays a file lookup, so the app's own bundle is never shadowed.
+ * A path is proxied when it matches these prefixes exactly; `/assets/` alone
+ * shares its namespace with compiled files, which take precedence when present.
  */
 export const PROXIED_PREFIXES = [
 	"/api/",
@@ -52,6 +52,8 @@ export function isProxiedPath(pathname: string): boolean {
 			: pathname === prefix || pathname.startsWith(`${prefix}/`),
 	);
 }
+
+const REQUEST_PATH_SEPARATOR = /[?#]/;
 
 const TYPES: Record<string, string> = {
 	".html": "text/html; charset=utf-8",
@@ -109,6 +111,9 @@ export async function serveDir(
 ): Promise<ServedDir> {
 	const root = resolve(rootDir);
 	if (!existsSync(root)) throw new Error(`static root does not exist: ${root}`);
+	const canonicalRoot = realpathSync(root);
+	const isContained = (path: string, directory: string): boolean =>
+		path === directory || path.startsWith(directory + sep);
 	const upstream = proxy === undefined ? null : new URL(proxy).origin;
 
 	const forward = async (
@@ -261,29 +266,83 @@ export async function serveDir(
 			req.url ?? "/",
 			`http://${req.headers.host ?? "127.0.0.1"}`,
 		);
-		if (upstream !== null && isProxiedPath(url.pathname)) {
+		// A limit-one split by this nonempty separator always yields a first string,
+		// even for an empty URL; the assertion changes no request handling at runtime.
+		const rawPathname = (req.url ?? "/").split(
+			REQUEST_PATH_SEPARATOR,
+			1,
+		)[0] as string;
+		// Raw-path validation and local-precedence eligibility are separate:
+		// a raw /assets/ prefix can normalize into a backend route.
+		const validateRawAssetPath =
+			rawPathname.startsWith("/assets/") || url.pathname.startsWith("/assets/");
+		// Unshared backend paths never enter static decoding or file handling.
+		// Raw asset paths still need validation before this routing decision.
+		if (
+			!validateRawAssetPath &&
+			upstream !== null &&
+			isProxiedPath(url.pathname)
+		) {
 			await forward(req, res, url);
 			return;
 		}
 		let pathname: string;
 		try {
-			pathname = decodeURIComponent(url.pathname);
+			// URL removes dot segments, so inspect the original asset path before
+			// normalization can hide an attempted escape from the static root.
+			pathname = decodeURIComponent(
+				validateRawAssetPath ? rawPathname : url.pathname,
+			);
 		} catch {
 			res.writeHead(400, { "content-type": "text/plain" });
 			res.end("bad request");
 			return;
 		}
-		let target = resolve(join(root, normalize(pathname)));
+		let target = resolve(root, `.${pathname}`);
+		// Content type follows the requested filename, not a symlink's storage
+		// name. Canonicalization below is only for containment and file reads.
+		let logicalTarget = target;
 		// Traversal guard: a path that escapes the root is a 404, not a file read.
-		if (target !== root && !target.startsWith(root + sep)) {
+		if (!isContained(target, root)) {
 			res.writeHead(404, { "content-type": "text/plain" });
 			res.end("not found");
 			return;
 		}
-		if (existsSync(target) && statSync(target).isDirectory())
+		// URL normalization decides backend ownership, never the raw prefix.
+		if (
+			upstream !== null &&
+			!url.pathname.startsWith("/assets/") &&
+			isProxiedPath(url.pathname)
+		) {
+			await forward(req, res, url);
+			return;
+		}
+		// Resolve the entire chain, not just the leaf: a symlinked parent can
+		// escape just as easily as a symlinked file. Serve the canonical target.
+		if (existsSync(target)) {
+			target = realpathSync(target);
+			if (!isContained(target, canonicalRoot)) {
+				res.writeHead(404, { "content-type": "text/plain" });
+				res.end("not found");
+				return;
+			}
+		}
+		const isLocalAsset =
+			target.startsWith(join(canonicalRoot, "assets") + sep) &&
+			existsSync(target) &&
+			statSync(target).isFile();
+		if (upstream !== null && isProxiedPath(url.pathname) && !isLocalAsset) {
+			await forward(req, res, url);
+			return;
+		}
+		if (existsSync(target) && statSync(target).isDirectory()) {
 			target = join(target, "index.html");
-		if (!existsSync(target) && extname(pathname) === "")
+			logicalTarget = join(logicalTarget, "index.html");
+		}
+		if (!existsSync(target) && extname(pathname) === "") {
 			target = join(root, "index.html");
+			logicalTarget = target;
+		}
 		if (!existsSync(target) || statSync(target).isDirectory()) {
 			res.writeHead(404, {
 				"content-type": "text/plain",
@@ -292,8 +351,17 @@ export async function serveDir(
 			res.end("not found");
 			return;
 		}
+		// Directory indexes and the SPA fallback are file reads too; neither may
+		// bypass containment via an index.html symlink.
+		target = realpathSync(target);
+		if (!isContained(target, canonicalRoot)) {
+			res.writeHead(404, { "content-type": "text/plain" });
+			res.end("not found");
+			return;
+		}
 		res.writeHead(200, {
-			"content-type": TYPES[extname(target)] ?? "application/octet-stream",
+			"content-type":
+				TYPES[extname(logicalTarget)] ?? "application/octet-stream",
 			// A capture must never render a cached bundle from a previous run.
 			"cache-control": "no-store",
 			"access-control-allow-origin": "*",

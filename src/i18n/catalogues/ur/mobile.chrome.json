@@ -15,5 +15,8 @@
 	"mobile.chrome.home.sign_in": "دوبارہ رابطے کے لیے سائن ان کریں",
 	"mobile.chrome.home.saved_draft": "آپ کا مسودہ اس فون پر محفوظ ہے اور بھیجا نہیں گیا۔",
 	"mobile.chrome.home.reconnecting": "{host} سے دوبارہ رابطہ ہو رہا ہے…",
-	"mobile.chrome.composer.open_queue": "قطار کھولیں"
+	"mobile.chrome.composer.open_queue": "قطار کھولیں",
+	"mobile.chrome.drawer.open": "گفتگوئیں کھولیں",
+	"mobile.chrome.drawer.open_count": "گفتگوئیں کھولیں، {count, plural, one {# نئی گفتگو} other {# نئی گفتگوئیں}}",
+	"mobile.chrome.drawer.agents": "ایجنٹس"
 }

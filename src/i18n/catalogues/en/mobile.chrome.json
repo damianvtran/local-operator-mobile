@@ -15,5 +15,8 @@
 	"mobile.chrome.home.sign_in": "Sign in to reconnect",
 	"mobile.chrome.home.saved_draft": "Your draft is saved on this phone and has not been sent.",
 	"mobile.chrome.home.reconnecting": "Reconnecting to {host}…",
-	"mobile.chrome.composer.open_queue": "Open the queue"
+	"mobile.chrome.composer.open_queue": "Open the queue",
+	"mobile.chrome.drawer.open": "Open conversations",
+	"mobile.chrome.drawer.open_count": "Open conversations, {count, plural, one {# new conversation} other {# new conversations}}",
+	"mobile.chrome.drawer.agents": "Agents"
 }

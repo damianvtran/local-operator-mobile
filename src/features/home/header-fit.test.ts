@@ -134,10 +134,12 @@ describe("the ☰'s count never touches the computer selector (TestFlight 578)",
 	});
 
 	it("wires the inset and the lead into the header, keeping the 44 pt floors", () => {
-		const menu = SOURCE.slice(
-			atId("homeSidebar"),
-			SOURCE.indexOf("</Pressable>", atId("homeSidebar")),
-		);
+		const menu = readFileSync(
+			new URL("../sessions/workspace-drawer.tsx", import.meta.url),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(SOURCE).toContain("<WorkspaceDrawerButton />");
+		expect(menu).toContain("testID = CONTROL.homeSidebar");
 		expect(menu).toContain("style={MENU_BADGE_INSET}");
 		expect(menu).not.toContain("style={{ top: 2, end: 0 }}");
 		expect(menu).toContain("minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR");

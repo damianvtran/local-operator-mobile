@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import { createHubClient } from "@/team-bridge/client";
+import { fixtureIdentity } from "@/testing/team-bridge-options";
 import { TEAM_BRIDGE_FIXTURE_TOKEN } from "@/testing/team-bridge-token";
 import { OTHER_TENANT, TENANT } from "./fixtures";
 
@@ -18,7 +19,10 @@ afterEach(async () => {
 		expect(() => process.kill(pid, 0)).toThrow();
 	}
 });
-async function fixture(variant = "attachments") {
+async function fixture(
+	variant = "attachments",
+	token = TEAM_BRIDGE_FIXTURE_TOKEN,
+) {
 	// Exercise the supported CLI rather than importing Node-only .ts modules
 	// into the app compiler or weakening its module-resolution settings.
 	const child = spawn(
@@ -73,7 +77,7 @@ async function fixture(variant = "attachments") {
 		baseUrl,
 		hub: createHubClient({
 			baseUrl,
-			accessToken: async () => TEAM_BRIDGE_FIXTURE_TOKEN,
+			accessToken: async () => token,
 		}),
 	};
 }
@@ -175,5 +179,91 @@ describe("attachment client over the supported HTTP fixture", () => {
 		await expect(
 			download.hub.attachmentBytes(TENANT, "bcv_humans", "bcm_7", "batt_one"),
 		).rejects.toMatchObject({ kind: "server", status: 500 });
+	});
+	it("isolates synthetic world bytes and bindings while retaining real bearer and tenant checks", async () => {
+		const token = fixtureIdentity("attachment6", "a");
+		const first = await fixture("attachments~attachment6~a~one", token);
+		const hub = first.hub;
+		await hub.listMessages(TENANT, "bcv_humans");
+		const original = await hub.attachmentBytes(
+			TENANT,
+			"bcv_humans",
+			"bcm_7",
+			"batt_one",
+		);
+		const staged = await hub.uploadAttachment(
+			TENANT,
+			"bcv_humans",
+			original.bytes,
+		);
+		const other = createHubClient({
+			baseUrl: first.baseUrl.replace("~a~one", "~b~one"),
+			accessToken: async () => fixtureIdentity("attachment6", "b"),
+		});
+		await expect(
+			other.send(TENANT, "bcv_humans", {
+				body: "",
+				clientRef: "wrong-world",
+				attachmentIds: [staged.id],
+			}),
+		).rejects.toMatchObject({ status: 404 });
+		const wrongIdentity = createHubClient({
+			baseUrl: first.baseUrl,
+			accessToken: async () => fixtureIdentity("attachment6", "b"),
+		});
+		await expect(wrongIdentity.status()).rejects.toMatchObject({ status: 401 });
+		const bound = await hub.send(TENANT, "bcv_humans", {
+			body: "",
+			clientRef: "world-image",
+			attachmentIds: [staged.id],
+		});
+		expect(
+			(await hub.attachmentBytes(TENANT, "bcv_humans", bound.id, staged.id))
+				.bytes,
+		).toEqual(original.bytes);
+		await expect(
+			other.attachmentBytes(TENANT, "bcv_humans", bound.id, staged.id),
+		).rejects.toMatchObject({ status: 404 });
+		const otherOrg = createHubClient({
+			baseUrl: first.baseUrl.replace("~one", "~two"),
+			accessToken: async () => token,
+		});
+		await expect(
+			otherOrg.uploadAttachment(TENANT, "bcv_humans", original.bytes),
+		).rejects.toMatchObject({ status: 403 });
+		const secondOrgImage = await otherOrg.uploadAttachment(
+			OTHER_TENANT,
+			"bcv_humans",
+			original.bytes,
+		);
+		expect(secondOrgImage.state).toBe("staged");
+	});
+
+	it("provides deterministic first-upload 500 then success, and a 401 retirement case", async () => {
+		const token = fixtureIdentity("retry6", "a");
+		const { hub } = await fixture(
+			"attachments_upload_retry~retry6~a~one",
+			token,
+		);
+		await hub.listMessages(TENANT, "bcv_humans");
+		const original = await hub.attachmentBytes(
+			TENANT,
+			"bcv_humans",
+			"bcm_7",
+			"batt_one",
+		);
+		await expect(
+			hub.uploadAttachment(TENANT, "bcv_humans", original.bytes),
+		).rejects.toMatchObject({ status: 500, kind: "server" });
+		expect(
+			(await hub.uploadAttachment(TENANT, "bcv_humans", original.bytes)).state,
+		).toBe("staged");
+		const retired = await fixture(
+			"attachments_upload_unauthorized~retry6~a~one",
+			token,
+		);
+		await expect(
+			retired.hub.uploadAttachment(TENANT, "bcv_humans", original.bytes),
+		).rejects.toMatchObject({ status: 401, kind: "sign_in" });
 	});
 });

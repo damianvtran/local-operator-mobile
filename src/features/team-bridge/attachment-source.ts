@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 
 import { boundToLimits } from "@/team-bridge/attachments";
+import { syntheticAttachmentSource } from "@/testing/team-bridge-attachment-source";
 
 /**
  * Where a Team Bridge image comes from on the device, and how it becomes the
@@ -41,6 +42,8 @@ export interface RawImage {
 
 /** Up to `limit` images from the system photo picker; `[]` when cancelled. */
 export async function pickTeamBridgeImages(limit: number): Promise<RawImage[]> {
+	const synthetic = syntheticAttachmentSource();
+	if (synthetic) return limit > 0 ? [synthetic] : [];
 	const { launchImageLibraryAsync } = await import("expo-image-picker");
 	const result = await launchImageLibraryAsync({
 		mediaTypes: ["images"],
@@ -66,6 +69,8 @@ export async function pickTeamBridgeImages(limit: number): Promise<RawImage[]> {
  * reports only that no image was pasted.
  */
 export async function pasteTeamBridgeImage(): Promise<RawImage | null> {
+	const synthetic = syntheticAttachmentSource();
+	if (synthetic) return synthetic;
 	const Clipboard = await import("expo-clipboard");
 	// PNG: the common pasteboard image is a screenshot, and PNG keeps its text
 	// sharp; `boundToLimits` falls back to JPEG when PNG does not fit.

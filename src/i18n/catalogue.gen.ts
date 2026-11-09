@@ -57,6 +57,9 @@ export type CatalogueKey =
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
 	| "mobile.chrome.destinations"
+	| "mobile.chrome.drawer.agents"
+	| "mobile.chrome.drawer.open"
+	| "mobile.chrome.drawer.open_count"
 	| "mobile.chrome.home.connect"
 	| "mobile.chrome.home.connecting"
 	| "mobile.chrome.home.greeting"
@@ -306,6 +309,8 @@ export type CatalogueKey =
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
+	| "mobile.session.composer.not_sent_storage"
+	| "mobile.session.composer.retry_not_sent_storage"
 	| "mobile.session.conversation_details"
 	| "mobile.session.highlights.sound_pause"
 	| "mobile.session.highlights.sound_play"
@@ -328,6 +333,7 @@ export type CatalogueKey =
 	| "mobile.session.pending_echo.queued_step"
 	| "mobile.session.pending_echo.sending"
 	| "mobile.session.pending_echo.sent"
+	| "mobile.session.reasoning_disclosure"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent_open"
 	| "mobile.session.subagent_open_short"
@@ -421,6 +427,15 @@ export type CatalogueKey =
 	| "mobile.team_bridge.attachment.wait_uploads"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.default_on.body"
+	| "mobile.team_bridge.default_on.dismiss"
+	| "mobile.team_bridge.default_on.dismiss_hint"
+	| "mobile.team_bridge.default_on.dismiss_label"
+	| "mobile.team_bridge.default_on.hide"
+	| "mobile.team_bridge.default_on.read_more"
+	| "mobile.team_bridge.default_on.title"
+	| "mobile.team_bridge.default_on.turn_off"
+	| "mobile.team_bridge.default_on.turn_off_error"
 	| "mobile.team_bridge.delivery.held"
 	| "mobile.team_bridge.delivery.help"
 	| "mobile.team_bridge.delivery.help_action"
@@ -581,6 +596,8 @@ export type NoParamKey =
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
 	| "mobile.chrome.destinations"
+	| "mobile.chrome.drawer.agents"
+	| "mobile.chrome.drawer.open"
 	| "mobile.chrome.home.connect"
 	| "mobile.chrome.home.greeting"
 	| "mobile.chrome.home.saved_draft"
@@ -800,6 +817,8 @@ export type NoParamKey =
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
+	| "mobile.session.composer.not_sent_storage"
+	| "mobile.session.composer.retry_not_sent_storage"
 	| "mobile.session.conversation_details"
 	| "mobile.session.highlights.sound_untitled"
 	| "mobile.session.highlights.withheld_missing"
@@ -813,6 +832,7 @@ export type NoParamKey =
 	| "mobile.session.pending_echo.queued_step"
 	| "mobile.session.pending_echo.sending"
 	| "mobile.session.pending_echo.sent"
+	| "mobile.session.reasoning_disclosure"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent_open_short"
 	| "mobile.session_health.control_hint"
@@ -885,6 +905,15 @@ export type NoParamKey =
 	| "mobile.team_bridge.attachment.wait_uploads"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.default_on.body"
+	| "mobile.team_bridge.default_on.dismiss"
+	| "mobile.team_bridge.default_on.dismiss_hint"
+	| "mobile.team_bridge.default_on.dismiss_label"
+	| "mobile.team_bridge.default_on.hide"
+	| "mobile.team_bridge.default_on.read_more"
+	| "mobile.team_bridge.default_on.title"
+	| "mobile.team_bridge.default_on.turn_off"
+	| "mobile.team_bridge.default_on.turn_off_error"
 	| "mobile.team_bridge.delivery.help"
 	| "mobile.team_bridge.delivery.help_action"
 	| "mobile.team_bridge.delivery.help_title"
@@ -1034,6 +1063,9 @@ export type MessageParams = {
 	"mobile.chrome.destination.past": NoParams;
 	"mobile.chrome.destination.schedules": NoParams;
 	"mobile.chrome.destinations": NoParams;
+	"mobile.chrome.drawer.agents": NoParams;
+	"mobile.chrome.drawer.open": NoParams;
+	"mobile.chrome.drawer.open_count": { count: number };
 	"mobile.chrome.home.connect": NoParams;
 	"mobile.chrome.home.connecting": { host: string | number };
 	"mobile.chrome.home.greeting": NoParams;
@@ -1283,6 +1315,8 @@ export type MessageParams = {
 	"mobile.session.chip.model_resume_hint": NoParams;
 	"mobile.session.chip.model_unknown": NoParams;
 	"mobile.session.chip.model_unrecorded_hint": NoParams;
+	"mobile.session.composer.not_sent_storage": NoParams;
+	"mobile.session.composer.retry_not_sent_storage": NoParams;
 	"mobile.session.conversation_details": NoParams;
 	"mobile.session.highlights.sound_pause": { title: string | number };
 	"mobile.session.highlights.sound_play": { title: string | number };
@@ -1305,6 +1339,7 @@ export type MessageParams = {
 	"mobile.session.pending_echo.queued_step": NoParams;
 	"mobile.session.pending_echo.sending": NoParams;
 	"mobile.session.pending_echo.sent": NoParams;
+	"mobile.session.reasoning_disclosure": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session.subagent_open": { agent: string | number };
 	"mobile.session.subagent_open_short": NoParams;
@@ -1398,6 +1433,15 @@ export type MessageParams = {
 	"mobile.team_bridge.attachment.wait_uploads": NoParams;
 	"mobile.team_bridge.back": NoParams;
 	"mobile.team_bridge.conversation": NoParams;
+	"mobile.team_bridge.default_on.body": NoParams;
+	"mobile.team_bridge.default_on.dismiss": NoParams;
+	"mobile.team_bridge.default_on.dismiss_hint": NoParams;
+	"mobile.team_bridge.default_on.dismiss_label": NoParams;
+	"mobile.team_bridge.default_on.hide": NoParams;
+	"mobile.team_bridge.default_on.read_more": NoParams;
+	"mobile.team_bridge.default_on.title": NoParams;
+	"mobile.team_bridge.default_on.turn_off": NoParams;
+	"mobile.team_bridge.default_on.turn_off_error": NoParams;
 	"mobile.team_bridge.delivery.held": { recipient: string | number };
 	"mobile.team_bridge.delivery.help": NoParams;
 	"mobile.team_bridge.delivery.help_action": NoParams;
@@ -1576,6 +1620,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.destination.past": "Past",
 	"mobile.chrome.destination.schedules": "Schedules",
 	"mobile.chrome.destinations": "Destinations",
+	"mobile.chrome.drawer.agents": "Agents",
+	"mobile.chrome.drawer.open": "Open conversations",
+	"mobile.chrome.drawer.open_count": "Open conversations, {count, plural, one {# new conversation} other {# new conversations}}",
 	"mobile.chrome.home.connect": "Connect a computer",
 	"mobile.chrome.home.connecting": "Connecting to {host}…",
 	"mobile.chrome.home.greeting": "What would you like to work on?",
@@ -1825,6 +1872,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
+	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Check free space on this phone, then try again.",
+	"mobile.session.composer.retry_not_sent_storage": "This retry attempt wasn’t sent. Couldn’t prepare the earlier instruction safely for retry. Check free space on this phone, then retry the earlier instruction. Your current draft hasn’t been sent.",
 	"mobile.session.conversation_details": "Conversation details",
 	"mobile.session.highlights.sound_pause": "Pause {title}",
 	"mobile.session.highlights.sound_play": "Play {title}",
@@ -1847,6 +1896,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.pending_echo.queued_step": "queued — sends when this step finishes",
 	"mobile.session.pending_echo.sending": "sending…",
 	"mobile.session.pending_echo.sent": "sent",
+	"mobile.session.reasoning_disclosure": "Thinking",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
@@ -1940,6 +1990,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.attachment.wait_uploads": "Send is available when the images finish uploading.",
 	"mobile.team_bridge.back": "Back",
 	"mobile.team_bridge.conversation": "Conversation",
+	"mobile.team_bridge.default_on.body": "Your organization’s agents can message your chief of staff. You can turn this off at any time.",
+	"mobile.team_bridge.default_on.dismiss": "Dismiss",
+	"mobile.team_bridge.default_on.dismiss_hint": "Keeps Team Bridge on and does not show this notice again",
+	"mobile.team_bridge.default_on.dismiss_label": "Dismiss Team Bridge notice",
+	"mobile.team_bridge.default_on.hide": "Hide details",
+	"mobile.team_bridge.default_on.read_more": "Read what this means",
+	"mobile.team_bridge.default_on.title": "Team Bridge is on for you",
+	"mobile.team_bridge.default_on.turn_off": "Turn off",
+	"mobile.team_bridge.default_on.turn_off_error": "Team Bridge was not turned off. Check the connection and try again.",
 	"mobile.team_bridge.delivery.held": "{recipient}: Waiting for delivery.",
 	"mobile.team_bridge.delivery.help": "Each recipient’s agent checks messages before accepting them. If a message is not accepted, you can rephrase it and send a new message.",
 	"mobile.team_bridge.delivery.help_action": "About message delivery",
@@ -2103,6 +2162,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
 	"mobile.chrome.destination.schedules": { role: "button", note: "Label under the clock icon in the sidebar's destinations strip (~52 pt slot). One short word; opens the list of scheduled wakes and armed monitors." },
 	"mobile.chrome.destinations": { role: "heading", note: "Title of the sheet that lists the sidebar destinations when the text is too large for the icon strip (opened by 'More'). Names a set of places to go, no final full stop." },
+	"mobile.chrome.drawer.agents": { role: "button", note: "Short mode-tab label for conversations with software agents in the shared workspace drawer, contrasted with Team Bridge." },
+	"mobile.chrome.drawer.open": { role: "button", note: "Accessible menu control, shared by home and each chat. Opens the same conversations overlay without navigating." },
+	"mobile.chrome.drawer.open_count": { role: "button", note: "Accessible menu control with the relay unread-conversation count; {count} is a number. Preserve ICU plural arms and placeholder." },
 	"mobile.chrome.home.connect": { role: "status", note: "Exclusive home recovery story in build389 polish. Draft remains local and unsent; {host} is the known computer label, not a credential." },
 	"mobile.chrome.home.connecting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.home.greeting": { role: "status", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -2352,6 +2414,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.chip.model_resume_hint": { role: "help", note: "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop." },
 	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
 	"mobile.session.chip.model_unrecorded_hint": { role: "help", note: "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop." },
+	"mobile.session.composer.not_sent_storage": { role: "status", note: "Composer error before any HTTP dispatch: local safe-retry preparation failed. The text and image draft has not been consumed. Do not imply uncertain delivery or assert that disk space is the cause; checking free space is one actionable remedy. Never include storage exception text or private paths." },
+	"mobile.session.composer.retry_not_sent_storage": { role: "status", note: "Only the current RETRY ATTEMPT was not dispatched because local safe-retry preparation failed. The original instruction may already have arrived: its separate retained-envelope warning and Retry earlier instruction action stay visible. Never imply the current draft was retried or disk space is the known cause. Never include raw storage errors." },
 	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
 	"mobile.session.highlights.sound_pause": { role: "button", note: "Accessibility label of a sound cell's control while it plays. {title} is the sound's own name. No full stop." },
 	"mobile.session.highlights.sound_play": { role: "button", note: "Accessibility label of a sound cell's play control. {title} is the sound's own name, copied verbatim. No full stop." },
@@ -2374,6 +2438,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.pending_echo.queued_step": { role: "meta", note: "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer." },
 	"mobile.session.pending_echo.sending": { role: "meta", note: "Caption under a message the user just sent, before the computer has acknowledged it. Lower case, trailing ellipsis, no full stop; mirrors the desktop relay's pending row. Must not read as an invitation to send again." },
 	"mobile.session.pending_echo.sent": { role: "meta", note: "Caption under a just-sent prompt once the computer acknowledged it but before the conversation shows it. One lower-case word, no full stop." },
+	"mobile.session.reasoning_disclosure": { role: "button", note: "Disclosure label for an assistant reasoning trace, shared by its visible heading and accessibility label. Names the reasoning content, not a live progress status: the same label remains after the turn ends. No preview of reasoning is shown until explicitly expanded. Short noun phrase, no full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
 	"mobile.session.subagent_open_short": { role: "button", note: "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop." },
@@ -2467,6 +2532,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.attachment.wait_uploads": { role: "status", note: "Team Bridge image attachments: wait_uploads. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.default_on.body": { role: "help", note: "One sentence under the heading. “Chief of staff” is the product term for the person's own agent. Do not imply the person did anything to enable it." },
+	"mobile.team_bridge.default_on.dismiss": { role: "button", note: "Button. Closes the banner for good on this device, leaving Team Bridge on. Not “OK”, which would read as acceptance." },
+	"mobile.team_bridge.default_on.dismiss_hint": { role: "help", note: "Screen-reader hint for Dismiss only; makes explicit that dismissing is not turning off." },
+	"mobile.team_bridge.default_on.dismiss_label": { role: "button", note: "Screen-reader name for the short Dismiss button; identifies the notice being closed, not the Team Bridge setting." },
+	"mobile.team_bridge.default_on.hide": { role: "button", note: "Same button once the consent text is showing; collapses it." },
+	"mobile.team_bridge.default_on.read_more": { role: "button", note: "Button that reveals the full served consent text inline, in place; it does not navigate and does not open a dialog." },
+	"mobile.team_bridge.default_on.title": { role: "heading", note: "Heading of a one-time, dismissible banner at the top of the Team Bridge tab. States a fact about the person's account; not a question and not an invitation to enable anything." },
+	"mobile.team_bridge.default_on.turn_off": { role: "button", note: "Button. One tap opts the person out of agent messages for this organization. Not “Disable”, which sounds like an admin action." },
+	"mobile.team_bridge.default_on.turn_off_error": { role: "status", note: "Shown under the buttons when the turn-off request failed; the setting is unchanged, so never say it is off." },
 	"mobile.team_bridge.delivery.held": { role: "status", note: "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches." },
 	"mobile.team_bridge.delivery.help": { role: "help", note: "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance." },
 	"mobile.team_bridge.delivery.help_action": { role: "button", note: "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance." },
@@ -2644,6 +2718,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Anteriores",
 		"mobile.chrome.destination.schedules": "Horarios",
 		"mobile.chrome.destinations": "Destinos",
+		"mobile.chrome.drawer.agents": "Agentes",
+		"mobile.chrome.drawer.open": "Abrir conversaciones",
+		"mobile.chrome.drawer.open_count": "Abrir conversaciones, {count, plural, one {# conversación nueva} other {# conversaciones nuevas}}",
 		"mobile.chrome.home.connect": "Conectar un ordenador",
 		"mobile.chrome.home.connecting": "Conectando con {host}…",
 		"mobile.chrome.home.greeting": "¿En qué te gustaría trabajar?",
@@ -2893,6 +2970,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
+		"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Comprueba el espacio libre en este teléfono y vuelve a intentarlo.",
+		"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Comprueba el espacio libre de este teléfono y vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
 		"mobile.session.conversation_details": "Detalles de la conversación",
 		"mobile.session.highlights.sound_pause": "Pausar {title}",
 		"mobile.session.highlights.sound_play": "Reproducir {title}",
@@ -2915,6 +2994,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.queued_step": "en cola — se envía cuando termine este paso",
 		"mobile.session.pending_echo.sending": "enviando…",
 		"mobile.session.pending_echo.sent": "enviado",
+		"mobile.session.reasoning_disclosure": "Razonamiento",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 		"mobile.session.subagent_open": "Abrir {agent}",
 		"mobile.session.subagent_open_short": "abrir",
@@ -3008,6 +3088,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.wait_uploads": "Podrás enviar cuando las imágenes terminen de subirse.",
 		"mobile.team_bridge.back": "Atrás",
 		"mobile.team_bridge.conversation": "Conversación",
+		"mobile.team_bridge.default_on.body": "Los agentes de tu organización pueden enviar mensajes a tu jefe de gabinete. Puedes desactivar esta opción en cualquier momento.",
+		"mobile.team_bridge.default_on.dismiss": "Cerrar",
+		"mobile.team_bridge.default_on.dismiss_hint": "Mantiene Team Bridge activado y no vuelve a mostrar este aviso",
+		"mobile.team_bridge.default_on.dismiss_label": "Cerrar el aviso de Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Ocultar detalles",
+		"mobile.team_bridge.default_on.read_more": "Leer qué significa",
+		"mobile.team_bridge.default_on.title": "Team Bridge está activado para ti",
+		"mobile.team_bridge.default_on.turn_off": "Desactivar",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge no se ha desactivado. Comprueba la conexión e inténtalo de nuevo.",
 		"mobile.team_bridge.delivery.held": "{recipient}: En espera de entrega.",
 		"mobile.team_bridge.delivery.help": "El agente de cada destinatario revisa los mensajes antes de aceptarlos. Si un mensaje no se acepta, puedes reformularlo y enviar un mensaje nuevo.",
 		"mobile.team_bridge.delivery.help_action": "Acerca de la entrega de mensajes",
@@ -3169,6 +3258,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Passées",
 		"mobile.chrome.destination.schedules": "Plans",
 		"mobile.chrome.destinations": "Destinations",
+		"mobile.chrome.drawer.agents": "Agents",
+		"mobile.chrome.drawer.open": "Ouvrir les conversations",
+		"mobile.chrome.drawer.open_count": "Ouvrir les conversations, {count, plural, one {# nouvelle conversation} other {# nouvelles conversations}}",
 		"mobile.chrome.home.connect": "Connecter un ordinateur",
 		"mobile.chrome.home.connecting": "Connexion à {host}…",
 		"mobile.chrome.home.greeting": "Sur quoi souhaitez-vous travailler ?",
@@ -3418,6 +3510,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
+		"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Vérifiez l’espace libre sur ce téléphone, puis réessayez.",
+		"mobile.session.composer.retry_not_sent_storage": "Cette tentative de renvoi n’a pas été envoyée. Impossible de préparer en toute sécurité le renvoi de l’instruction précédente. Vérifiez l’espace libre sur ce téléphone, puis réessayez d’envoyer l’instruction précédente. Votre brouillon actuel n’a pas été envoyé.",
 		"mobile.session.conversation_details": "Détails de la conversation",
 		"mobile.session.highlights.sound_pause": "Mettre {title} en pause",
 		"mobile.session.highlights.sound_play": "Lire {title}",
@@ -3440,6 +3534,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.queued_step": "en file — part à la fin de cette étape",
 		"mobile.session.pending_echo.sending": "envoi…",
 		"mobile.session.pending_echo.sent": "envoyé",
+		"mobile.session.reasoning_disclosure": "Réflexion",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 		"mobile.session.subagent_open": "Ouvrir {agent}",
 		"mobile.session.subagent_open_short": "ouvrir",
@@ -3533,6 +3628,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.wait_uploads": "L’envoi sera disponible lorsque les images seront téléversées.",
 		"mobile.team_bridge.back": "Retour",
 		"mobile.team_bridge.conversation": "Conversation",
+		"mobile.team_bridge.default_on.body": "Les agents de votre organisation peuvent envoyer des messages à votre chef de cabinet. Vous pouvez désactiver cette option à tout moment.",
+		"mobile.team_bridge.default_on.dismiss": "Fermer",
+		"mobile.team_bridge.default_on.dismiss_hint": "Laisse Team Bridge activé et ne montre plus cette notification",
+		"mobile.team_bridge.default_on.dismiss_label": "Fermer la notification Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Masquer les détails",
+		"mobile.team_bridge.default_on.read_more": "Lire les détails",
+		"mobile.team_bridge.default_on.title": "Team Bridge est activé pour vous",
+		"mobile.team_bridge.default_on.turn_off": "Désactiver",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge n’a pas été désactivé. Vérifiez la connexion et réessayez.",
 		"mobile.team_bridge.delivery.held": "{recipient} : En attente de livraison.",
 		"mobile.team_bridge.delivery.help": "L’agent de chaque destinataire vérifie les messages avant de les accepter. Si un message n’est pas accepté, vous pouvez le reformuler et envoyer un nouveau message.",
 		"mobile.team_bridge.delivery.help_action": "À propos de la livraison des messages",
@@ -3694,6 +3798,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "पिछले",
 		"mobile.chrome.destination.schedules": "शेड्यूल",
 		"mobile.chrome.destinations": "गंतव्य",
+		"mobile.chrome.drawer.agents": "एजेंट",
+		"mobile.chrome.drawer.open": "बातचीत खोलें",
+		"mobile.chrome.drawer.open_count": "बातचीत खोलें, {count, plural, one {# नई बातचीत} other {# नई बातचीत}}",
 		"mobile.chrome.home.connect": "कंप्यूटर कनेक्ट करें",
 		"mobile.chrome.home.connecting": "{host} से कनेक्ट हो रहा है…",
 		"mobile.chrome.home.greeting": "आप किस पर काम करना चाहेंगे?",
@@ -3943,6 +4050,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
+		"mobile.session.composer.not_sent_storage": "नहीं भेजा गया। दोबारा भेजने के लिए यह संदेश सुरक्षित रूप से सहेजा नहीं जा सका। आपका टेक्स्ट और चित्र यहीं हैं। इस फ़ोन में खाली जगह जाँचें, फिर दोबारा कोशिश करें।",
+		"mobile.session.composer.retry_not_sent_storage": "दोबारा भेजने का यह प्रयास नहीं भेजा गया। पिछले निर्देश को सुरक्षित रूप से दोबारा भेजने की तैयारी नहीं हो सकी। इस फ़ोन में खाली जगह जाँचें, फिर पिछले निर्देश को दोबारा भेजने की कोशिश करें। आपका मौजूदा ड्राफ़्ट नहीं भेजा गया है।",
 		"mobile.session.conversation_details": "बातचीत का विवरण",
 		"mobile.session.highlights.sound_pause": "{title} रोकें",
 		"mobile.session.highlights.sound_play": "{title} चलाएँ",
@@ -3965,6 +4074,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.queued_step": "कतार में — यह चरण पूरा होने पर भेजा जाएगा",
 		"mobile.session.pending_echo.sending": "भेजा जा रहा है…",
 		"mobile.session.pending_echo.sent": "भेजा गया",
+		"mobile.session.reasoning_disclosure": "चिंतन",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 		"mobile.session.subagent_open": "{agent} खोलें",
 		"mobile.session.subagent_open_short": "खोलें",
@@ -4058,6 +4168,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.wait_uploads": "चित्र अपलोड हो जाने पर भेज सकते हैं।",
 		"mobile.team_bridge.back": "वापस",
 		"mobile.team_bridge.conversation": "बातचीत",
+		"mobile.team_bridge.default_on.body": "आपके संगठन के एजेंट आपके चीफ़ ऑफ़ स्टाफ़ को संदेश भेज सकते हैं। आप इसे कभी भी बंद कर सकते हैं।",
+		"mobile.team_bridge.default_on.dismiss": "हटाएँ",
+		"mobile.team_bridge.default_on.dismiss_hint": "Team Bridge चालू रहता है और यह सूचना दोबारा नहीं दिखाई जाती",
+		"mobile.team_bridge.default_on.dismiss_label": "Team Bridge की सूचना हटाएँ",
+		"mobile.team_bridge.default_on.hide": "विवरण छिपाएँ",
+		"mobile.team_bridge.default_on.read_more": "इसका मतलब पढ़ें",
+		"mobile.team_bridge.default_on.title": "आपके लिए Team Bridge चालू है",
+		"mobile.team_bridge.default_on.turn_off": "बंद करें",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge बंद नहीं हुआ। कनेक्शन जाँचें और फिर से कोशिश करें।",
 		"mobile.team_bridge.delivery.held": "{recipient}: पहुँचाए जाने की प्रतीक्षा में।",
 		"mobile.team_bridge.delivery.help": "हर प्राप्तकर्ता का एजेंट संदेश स्वीकार करने से पहले उसकी जाँच करता है। अगर कोई संदेश स्वीकार नहीं होता, तो आप उसे दूसरे शब्दों में लिखकर नया संदेश भेज सकते हैं।",
 		"mobile.team_bridge.delivery.help_action": "संदेश पहुँचाने के बारे में",
@@ -4219,6 +4338,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Прошлые",
 		"mobile.chrome.destination.schedules": "Расписания",
 		"mobile.chrome.destinations": "Разделы",
+		"mobile.chrome.drawer.agents": "Агенты",
+		"mobile.chrome.drawer.open": "Открыть беседы",
+		"mobile.chrome.drawer.open_count": "Открыть беседы, {count, plural, one {# новая беседа} few {# новые беседы} many {# новых бесед} other {# новой беседы}}",
 		"mobile.chrome.home.connect": "Подключить компьютер",
 		"mobile.chrome.home.connecting": "Подключение к {host}…",
 		"mobile.chrome.home.greeting": "Над чем вы хотите поработать?",
@@ -4468,6 +4590,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
+		"mobile.session.composer.not_sent_storage": "Не отправлено. Не удалось надёжно сохранить сообщение для повторной отправки. Текст и изображения остались здесь. Проверьте свободное место на телефоне и попробуйте ещё раз.",
+		"mobile.session.composer.retry_not_sent_storage": "Эта попытка повторной отправки не была отправлена. Не удалось безопасно подготовить предыдущее указание к повторной отправке. Проверьте свободное место на этом телефоне, затем повторите отправку предыдущего указания. Текущий черновик не отправлен.",
 		"mobile.session.conversation_details": "Детали беседы",
 		"mobile.session.highlights.sound_pause": "Приостановить {title}",
 		"mobile.session.highlights.sound_play": "Воспроизвести {title}",
@@ -4490,6 +4614,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.queued_step": "в очереди — отправится после этого шага",
 		"mobile.session.pending_echo.sending": "отправка…",
 		"mobile.session.pending_echo.sent": "отправлено",
+		"mobile.session.reasoning_disclosure": "Размышления",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 		"mobile.session.subagent_open": "Открыть {agent}",
 		"mobile.session.subagent_open_short": "открыть",
@@ -4583,6 +4708,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.wait_uploads": "Отправка станет доступна после загрузки изображений.",
 		"mobile.team_bridge.back": "Назад",
 		"mobile.team_bridge.conversation": "Переписка",
+		"mobile.team_bridge.default_on.body": "Агенты вашей организации могут писать вашему руководителю аппарата. Вы можете отключить это в любой момент.",
+		"mobile.team_bridge.default_on.dismiss": "Закрыть",
+		"mobile.team_bridge.default_on.dismiss_hint": "Оставляет Team Bridge включённым и больше не показывает это уведомление",
+		"mobile.team_bridge.default_on.dismiss_label": "Закрыть уведомление Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Скрыть подробности",
+		"mobile.team_bridge.default_on.read_more": "Узнать подробнее",
+		"mobile.team_bridge.default_on.title": "Team Bridge включён для вас",
+		"mobile.team_bridge.default_on.turn_off": "Отключить",
+		"mobile.team_bridge.default_on.turn_off_error": "Не удалось отключить Team Bridge. Проверьте соединение и повторите попытку.",
 		"mobile.team_bridge.delivery.held": "{recipient}: Ожидает доставки.",
 		"mobile.team_bridge.delivery.help": "Агент каждого получателя проверяет сообщения перед принятием. Если сообщение не принято, вы можете переформулировать его и отправить новое сообщение.",
 		"mobile.team_bridge.delivery.help_action": "О доставке сообщений",
@@ -4744,6 +4878,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "گزشتہ",
 		"mobile.chrome.destination.schedules": "شیڈول",
 		"mobile.chrome.destinations": "منزلیں",
+		"mobile.chrome.drawer.agents": "ایجنٹس",
+		"mobile.chrome.drawer.open": "گفتگوئیں کھولیں",
+		"mobile.chrome.drawer.open_count": "گفتگوئیں کھولیں، {count, plural, one {# نئی گفتگو} other {# نئی گفتگوئیں}}",
 		"mobile.chrome.home.connect": "کمپیوٹر جوڑیں",
 		"mobile.chrome.home.connecting": "{host} سے رابطہ ہو رہا ہے…",
 		"mobile.chrome.home.greeting": "آپ کس چیز پر کام کرنا چاہیں گے؟",
@@ -4993,6 +5130,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
+		"mobile.session.composer.not_sent_storage": "نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ اس فون میں خالی جگہ دیکھیں، پھر دوبارہ کوشش کریں۔",
+		"mobile.session.composer.retry_not_sent_storage": "دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ اس فون پر خالی جگہ چیک کریں، پھر پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔",
 		"mobile.session.conversation_details": "گفتگو کی تفصیلات",
 		"mobile.session.highlights.sound_pause": "{title} روکیں",
 		"mobile.session.highlights.sound_play": "{title} چلائیں",
@@ -5015,6 +5154,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.queued_step": "قطار میں — یہ مرحلہ ختم ہونے پر بھیجا جائے گا",
 		"mobile.session.pending_echo.sending": "بھیجا جا رہا ہے…",
 		"mobile.session.pending_echo.sent": "بھیج دیا گیا",
+		"mobile.session.reasoning_disclosure": "سوچ بچار",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 		"mobile.session.subagent_open": "{agent} کھولیں",
 		"mobile.session.subagent_open_short": "کھولیں",
@@ -5108,6 +5248,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.wait_uploads": "تصاویر اپ لوڈ ہو جانے پر بھیج سکتے ہیں۔",
 		"mobile.team_bridge.back": "واپس",
 		"mobile.team_bridge.conversation": "گفتگو",
+		"mobile.team_bridge.default_on.body": "آپ کی تنظیم کے ایجنٹ آپ کے چیف آف اسٹاف کو پیغامات بھیج سکتے ہیں۔ آپ اسے کسی بھی وقت بند کر سکتے ہیں۔",
+		"mobile.team_bridge.default_on.dismiss": "ہٹائیں",
+		"mobile.team_bridge.default_on.dismiss_hint": "Team Bridge آن رہتا ہے اور یہ اطلاع دوبارہ نہیں دکھائی جاتی",
+		"mobile.team_bridge.default_on.dismiss_label": "Team Bridge کی اطلاع ہٹائیں",
+		"mobile.team_bridge.default_on.hide": "تفصیلات چھپائیں",
+		"mobile.team_bridge.default_on.read_more": "اس کا مطلب پڑھیں",
+		"mobile.team_bridge.default_on.title": "آپ کے لیے Team Bridge آن ہے",
+		"mobile.team_bridge.default_on.turn_off": "بند کریں",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge بند نہیں ہوا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
 		"mobile.team_bridge.delivery.held": "{recipient}: ترسیل کا انتظار ہے۔",
 		"mobile.team_bridge.delivery.help": "ہر وصول کنندہ کا ایجنٹ پیغامات قبول کرنے سے پہلے انہیں جانچتا ہے۔ اگر کوئی پیغام قبول نہ ہو تو آپ اسے دوسرے الفاظ میں لکھ کر نیا پیغام بھیج سکتے ہیں۔",
 		"mobile.team_bridge.delivery.help_action": "پیغامات کی ترسیل کے بارے میں",
@@ -5269,6 +5418,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "Trước",
 		"mobile.chrome.destination.schedules": "Lịch",
 		"mobile.chrome.destinations": "Mục đến",
+		"mobile.chrome.drawer.agents": "Tác nhân",
+		"mobile.chrome.drawer.open": "Mở cuộc trò chuyện",
+		"mobile.chrome.drawer.open_count": "Mở cuộc trò chuyện, {count, plural, other {# cuộc trò chuyện mới}}",
 		"mobile.chrome.home.connect": "Kết nối máy tính",
 		"mobile.chrome.home.connecting": "Đang kết nối với {host}…",
 		"mobile.chrome.home.greeting": "Bạn muốn làm việc gì?",
@@ -5518,6 +5670,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
 		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
+		"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy kiểm tra dung lượng trống trên điện thoại này rồi thử lại.",
+		"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy kiểm tra dung lượng trống trên điện thoại này, rồi thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
 		"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
 		"mobile.session.highlights.sound_pause": "Tạm dừng {title}",
 		"mobile.session.highlights.sound_play": "Phát {title}",
@@ -5540,6 +5694,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.queued_step": "đang chờ — sẽ gửi khi bước này xong",
 		"mobile.session.pending_echo.sending": "đang gửi…",
 		"mobile.session.pending_echo.sent": "đã gửi",
+		"mobile.session.reasoning_disclosure": "Suy nghĩ",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
 		"mobile.session.subagent_open": "Mở {agent}",
 		"mobile.session.subagent_open_short": "mở",
@@ -5633,6 +5788,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.wait_uploads": "Có thể gửi khi các hình ảnh tải lên xong.",
 		"mobile.team_bridge.back": "Quay lại",
 		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
+		"mobile.team_bridge.default_on.body": "Các tác nhân trong tổ chức có thể nhắn tin cho chánh văn phòng của bạn. Bạn có thể tắt tính năng này bất cứ lúc nào.",
+		"mobile.team_bridge.default_on.dismiss": "Đóng",
+		"mobile.team_bridge.default_on.dismiss_hint": "Giữ Team Bridge bật và không hiển thị lại thông báo này",
+		"mobile.team_bridge.default_on.dismiss_label": "Đóng thông báo Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Ẩn chi tiết",
+		"mobile.team_bridge.default_on.read_more": "Tìm hiểu ý nghĩa",
+		"mobile.team_bridge.default_on.title": "Team Bridge đã được bật cho bạn",
+		"mobile.team_bridge.default_on.turn_off": "Tắt",
+		"mobile.team_bridge.default_on.turn_off_error": "Chưa tắt được Team Bridge. Hãy kiểm tra kết nối và thử lại.",
 		"mobile.team_bridge.delivery.held": "{recipient}: Đang chờ gửi đến.",
 		"mobile.team_bridge.delivery.help": "Tác nhân của mỗi người nhận kiểm tra tin nhắn trước khi chấp nhận. Nếu tin nhắn không được chấp nhận, bạn có thể diễn đạt lại và gửi một tin nhắn mới.",
 		"mobile.team_bridge.delivery.help_action": "Về việc gửi tin nhắn",
@@ -5794,6 +5958,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.destination.past": "历史",
 		"mobile.chrome.destination.schedules": "计划",
 		"mobile.chrome.destinations": "目的地",
+		"mobile.chrome.drawer.agents": "智能体",
+		"mobile.chrome.drawer.open": "打开对话",
+		"mobile.chrome.drawer.open_count": "打开对话，{count, plural, other {# 个新对话}}",
 		"mobile.chrome.home.connect": "连接电脑",
 		"mobile.chrome.home.connecting": "正在连接 {host}…",
 		"mobile.chrome.home.greeting": "你想处理什么工作？",
@@ -6043,6 +6210,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",
+		"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请检查此手机的可用空间，然后重试。",
+		"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请检查此手机的可用空间，然后重试之前的指令。你当前的草稿尚未发送。",
 		"mobile.session.conversation_details": "对话详情",
 		"mobile.session.highlights.sound_pause": "暂停{title}",
 		"mobile.session.highlights.sound_play": "播放{title}",
@@ -6065,6 +6234,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.queued_step": "已排队——此步骤完成后发送",
 		"mobile.session.pending_echo.sending": "正在发送…",
 		"mobile.session.pending_echo.sent": "已发送",
+		"mobile.session.reasoning_disclosure": "思考",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 		"mobile.session.subagent_open": "打开{agent}",
 		"mobile.session.subagent_open_short": "打开",
@@ -6158,6 +6328,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.wait_uploads": "图片上传完成后即可发送。",
 		"mobile.team_bridge.back": "返回",
 		"mobile.team_bridge.conversation": "会话",
+		"mobile.team_bridge.default_on.body": "你所在组织的智能体可以向你的幕僚长发送消息。你可以随时关闭此功能。",
+		"mobile.team_bridge.default_on.dismiss": "关闭提示",
+		"mobile.team_bridge.default_on.dismiss_hint": "保持 Team Bridge 开启，不再显示此提示",
+		"mobile.team_bridge.default_on.dismiss_label": "关闭 Team Bridge 提示",
+		"mobile.team_bridge.default_on.hide": "收起详情",
+		"mobile.team_bridge.default_on.read_more": "了解详情",
+		"mobile.team_bridge.default_on.title": "Team Bridge 已为你开启",
+		"mobile.team_bridge.default_on.turn_off": "关闭",
+		"mobile.team_bridge.default_on.turn_off_error": "未能关闭 Team Bridge。请检查连接后重试。",
 		"mobile.team_bridge.delivery.held": "{recipient}：等待送达。",
 		"mobile.team_bridge.delivery.help": "每位收件人的智能体都会在接受消息前进行检查。如果消息未被接受，您可以重新措辞并发送一条新消息。",
 		"mobile.team_bridge.delivery.help_action": "关于消息送达",

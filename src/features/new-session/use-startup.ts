@@ -187,8 +187,8 @@ export function useStartup(
 				typeof images === "function" ? images(current.images) : images,
 			);
 		},
-		send: () => {
-			if (coordinator) void coordinator.enqueue();
+		send: (onAccepted?: () => void) => {
+			if (coordinator) void coordinator.enqueue(onAccepted);
 			else
 				setOpeningError(
 					"Waiting for a safe connection. Your draft is still here.",
