@@ -384,12 +384,7 @@ export const ListRow = ({
 							 * competing with the counts on line two. No duplicated spoken label:
 							 * accessibilityState already announces the current row. */}
 							{selected && selectedIndicator ? (
-								<View
-									className="shrink-0"
-									aria-hidden
-									accessibilityElementsHidden
-									importantForAccessibility="no-hide-descendants"
-								>
+								<View className="shrink-0" aria-hidden>
 									<Check color={selectionInk} size={18} />
 								</View>
 							) : null}

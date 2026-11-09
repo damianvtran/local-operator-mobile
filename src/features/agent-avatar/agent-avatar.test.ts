@@ -454,6 +454,10 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 			CURRENT_CHAT_MARKER,
 		);
 		expect(ROW).toContain("selectedIndicator = false");
+		// aria-hidden is shared by RN and RN-web; native-only alternatives leak
+		// through RN-web's View and produce a developer warning over the UI.
+		expect(ROW).not.toContain("accessibilityElementsHidden");
+		expect(ROW).not.toContain("importantForAccessibility");
 		expect(ROW).toContain("accessibilityState={state({ selected })}");
 		expect(PANE).toMatch(CURRENT_CHAT_OPT_IN);
 		expect(ROW).toMatch(BADGED);

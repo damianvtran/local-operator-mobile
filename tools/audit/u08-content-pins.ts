@@ -231,7 +231,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
 	 * remediation: shared drawer navigation changes both render trees, including
-	 * the opt-in current-chat check and its regression tests. This admits the
+	 * the opt-in current-chat check, RN-web-safe aria-hidden and regression tests. This admits the
 	 * geometry instrument to the new source; it is NOT rendered/native proof.
 	 * ORIGINAL_*, instrument, file and input pins remain unchanged. */
 	/* Re-pinned 2026-11-07 for PR #187's round-2 remediation, with --print from
@@ -1098,7 +1098,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	src: "ebaf74c96be7dd8592c50a164ac2cc8b79263c4c2497bd93e964b77acce81805",
+	src: "5356602e1b76f3e6413ad7260b71e563189aa664e2a959e2f1a62e50c68e4da1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
