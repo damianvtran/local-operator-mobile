@@ -355,10 +355,12 @@ Projects client read (HTTP200/six rows) cannot explain or dismiss that failure.
 
 The repaired source contract uses the registered `projects-populated` fixture,
 actual RelayEndpoints list/create schemas and config stream for `ur`/`ur-PK`.
-Four sheet source-key translations are checked against the pinned #150 catalog
-commit `91a3cbca1a2770e78dc5f216c2335b4b8126fe4d`, not invented UI strings or
-#152's older catalogs. Create is exercised ONLY in the headless synthetic contract;
-the native walk continues to forbid submit.
+Four sheet source-key translations are checked against the #150 catalogues at
+`HEAD`, not invented UI strings or #152's older catalogs. `HEAD` because the
+earlier pin named a commit a rebase force-push later deleted: CI's `git show`
+then failed while any clone still holding the object passed. Create is exercised
+ONLY in the headless synthetic contract; the native walk continues to forbid
+submit.
 
 Maestro owns screenshot containment: flows now use bare names, never sibling
 absolute paths or variables. The generic parsed-flow guard rejects the known bad
