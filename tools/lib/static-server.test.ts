@@ -1,4 +1,10 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { createServer, request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +13,7 @@ import { serveDir } from "./static-server.ts";
 
 describe("static asset and relay precedence", () => {
 	let root: string;
+	let outside: string;
 	let server: Awaited<ReturnType<typeof serveDir>>;
 	let upstream: ReturnType<typeof createServer>;
 	let requests: string[];
@@ -14,6 +21,12 @@ describe("static asset and relay precedence", () => {
 	beforeEach(async () => {
 		root = mkdtempSync(
 			join(process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(), "static-server-"),
+		);
+		outside = mkdtempSync(
+			join(
+				process.env.LOCAL_OPERATOR_SCRATCHPAD ?? tmpdir(),
+				"static-outside-",
+			),
 		);
 		requests = [];
 		upstream = createServer((req, res) => {
@@ -38,6 +51,7 @@ describe("static asset and relay precedence", () => {
 		await server?.close();
 		await new Promise<void>((resolve) => upstream.close(() => resolve()));
 		rmSync(root, { recursive: true, force: true });
+		rmSync(outside, { recursive: true, force: true });
 	});
 
 	function local(path: string, body: string) {
@@ -97,6 +111,34 @@ describe("static asset and relay precedence", () => {
 		expect(requests).toEqual([path]);
 	});
 
+	it.each(["/assets/../api/status", "/assets/%2e%2e/api/status"])(
+		"proxies normalized backend routes despite the raw asset prefix: %s",
+		async (path) => {
+			local("api/status", "must not be served");
+			expect(await get(path)).toEqual({
+				status: 200,
+				body: "relay:/api/status",
+			});
+			expect(requests).toEqual(["/api/status"]);
+		},
+	);
+
+	it.each(["file", "directory"])(
+		"refuses an escaping %s symlink before local precedence or proxy",
+		async (kind) => {
+			mkdirSync(join(root, "assets"));
+			writeFileSync(join(outside, "secret.txt"), "outside secret");
+			const path =
+				kind === "file" ? "/assets/link.txt" : "/assets/link/secret.txt";
+			symlinkSync(
+				kind === "file" ? join(outside, "secret.txt") : outside,
+				join(root, kind === "file" ? "assets/link.txt" : "assets/link"),
+			);
+			expect(await get(path)).toEqual({ status: 404, body: "not found" });
+			expect(requests).toEqual([]);
+		},
+	);
+
 	it.each([
 		"/assets/../../etc/passwd",
 		"/assets/%2e%2e/%2e%2e/etc/passwd",
@@ -104,6 +146,18 @@ describe("static asset and relay precedence", () => {
 	])("refuses traversal without reaching upstream: %s", async (path) => {
 		expect(await get(path)).toEqual({ status: 404, body: "not found" });
 		expect(requests).toEqual([]);
+	});
+
+	it("retains forwarding of double-encoded traversal (pre-existing behavior)", async () => {
+		const path = "/assets/%252e%252e/%252e%252e/etc/passwd";
+		expect(await get(path)).toEqual({ status: 200, body: `relay:${path}` });
+		expect(requests).toEqual([path]);
+	});
+
+	it("does not decode unshared backend paths before forwarding", async () => {
+		const path = "/api/%ZZ";
+		expect(await get(path)).toEqual({ status: 200, body: `relay:${path}` });
+		expect(requests).toEqual([path]);
 	});
 
 	it("rejects malformed asset escapes", async () => {
