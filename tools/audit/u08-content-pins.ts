@@ -1082,7 +1082,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * was touched: the rail's drawing code is byte-identical and the file adds
 	 * only assertions. Recomputed with `--print` AFTER that file landed. Source
 	 * admission only, NOT rendered U-08 evidence. */
-	src: "7cab61c98dadacb6b980036a4b2d8679737fa377290e5746d81f4862aff403d5",
+	/* Re-pinned 2026-11-09 for the project-creation i18n rebase onto main: the
+	 * create sheet, the chip primitive and the catalogue projection all land
+	 * under `src`, so the root moves. Recomputed with `--print` on the REBASED
+	 * tree — neither branch's earlier digest describes this corpus. Source
+	 * admission only, NOT rendered U-08 evidence: no instrument, fixture or
+	 * rendering input changed. */
+	src: "7e253f8f3b2b26d8d39c6096a394d2d3128b49e6b046684c8c27055d51153792",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
