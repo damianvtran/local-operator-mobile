@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 104,
+		expected: 146, // 104 established keys + 42 attachment keys (PR #106).
 	},
 	{
 		name: "mobile.signin",
@@ -260,7 +260,8 @@ describe("the English catalogues", () => {
 		 *  profile/photo keys) plus this slice's 17 `mobile.projects` keys — the create
 		 *  sheet's fields, validation and the two example placeholders. Counted from the
 		 *  merged catalogue files themselves, not from either branch's number: 481. */
-		expect(total).toBe(481);
+		// PR #106: 481 established keys + 42 attachment keys.
+		expect(total).toBe(523);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -333,6 +334,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.team_bridge.attachment.image":
+			"Image is the French noun for a picture too; the isolated attachment label is an idiomatic cognate.",
+		"mobile.team_bridge.attachment.chip_label":
+			"French uses Image followed by the image number and a separately localized state; this template contains no English prose.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.profile.badge_agent":

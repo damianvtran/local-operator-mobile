@@ -1096,7 +1096,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	src: "46d205b355ccf42cf41626e3df8597f4a642b4676a431831e7d559689bfd4e44",
+	// PR #106 CI remediation: branch-local --print from the final source tree;
+	// test contracts plus the viewer overlay
+	// anchors: start/end both zero still span the viewport in LTR and RTL.
+	// No catalogue, pager, arrow, instrument, fixture or historical pin changed.
+	// Source admission only, not fresh rendered or geometry evidence.
+	src: "ff3a1888ee13e7eb0f907916de39479a4bb3a472907234b0812bbb12e75a563d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

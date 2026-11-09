@@ -513,7 +513,7 @@ function ImageViewer({
 					</ScrollView>
 					<View
 						pointerEvents="box-none"
-						className="absolute right-0 left-0 flex-row items-center justify-between px-4"
+						className="absolute start-0 end-0 flex-row items-center justify-between px-4"
 						style={{ top: insets.top + 8 }}
 					>
 						{button(
@@ -534,7 +534,7 @@ function ImageViewer({
 					{many ? (
 						<View
 							pointerEvents="box-none"
-							className="absolute right-0 left-0 flex-row justify-between px-4"
+							className="absolute start-0 end-0 flex-row justify-between px-4"
 							style={{ bottom: insets.bottom + 16 }}
 						>
 							{button(
