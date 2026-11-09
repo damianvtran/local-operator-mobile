@@ -1140,7 +1140,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// rendered frames, native anchor and interaction proof are not refreshed.
 	// PR #207 remediation (gap detection, retry targeting, refresh copy) re-pinned
 	// with --print over the staged tree; same scope as above.
-	src: "770305b4f8d577883d8d45824cd6f35276403945b04d73267d42c115ee5b4230",
+	// Q3: biome reformatted the two synthetic history wire fixtures (whitespace
+	// only, JSON deep-equal before/after); re-pinned with --print, same scope.
+	src: "6f45194f278dd60b9a25cbd9c9d4033c0ea7f49fc443694c48a7ff3d798607c2",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
