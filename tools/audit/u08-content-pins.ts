@@ -1149,7 +1149,6 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * historical pixels, native visibility and compact D3 remain unproved. */
 	// #106 + main 8705a953: combined staged source identity only, not new pixels.
 	src: "4e4c34935595b2cbe9b270083dd27484039708aeb23cb47232c4bbfe907311b8",
-
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
