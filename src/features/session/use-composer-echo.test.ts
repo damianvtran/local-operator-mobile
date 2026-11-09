@@ -19,6 +19,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PromptImage } from "@/contracts";
+import { composerCopy, composerFeedback } from "@/features/session/composer";
 import {
 	clearPendingEchoes,
 	type PendingEcho,
@@ -33,6 +34,12 @@ import {
 import { type RelayEndpoints, RelayError } from "@/relay";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
+const storageFault = vi.hoisted(() => ({
+	failWrite: false,
+	reads: 0,
+	failReadAt: 0,
+}));
+
 vi.mock("@/features/session/envelope-store", async (importOriginal) => {
 	const original =
 		await importOriginal<typeof import("@/features/session/envelope-store")>();
@@ -46,8 +53,22 @@ vi.mock("@/features/session/envelope-store", async (importOriginal) => {
 		envelopeStoreFor: (sessionId: string) => {
 			let store = stores.get(sessionId);
 			if (store === undefined) {
+				const backing = relay.memoryEnvelopeStore();
+				const set = backing.set.bind(backing);
+				const get = backing.get.bind(backing);
+				backing.get = async (key) => {
+					storageFault.reads++;
+					if (storageFault.reads === storageFault.failReadAt)
+						throw new Error("synthetic private read failure");
+					return get(key);
+				};
+				backing.set = async (key, value) => {
+					if (storageFault.failWrite)
+						throw new Error("synthetic private file failure");
+					return set(key, value);
+				};
 				store = new relay.RetryEnvelopeStore({
-					store: relay.memoryEnvelopeStore(),
+					store: backing,
 				});
 				stores.set(sessionId, store);
 			}
@@ -88,10 +109,12 @@ function Host({
 	client,
 	initial,
 	streaming,
+	ended,
 }: {
 	client: RelayEndpoints;
 	initial: string;
 	streaming: boolean;
+	ended: boolean;
 }) {
 	const [draft, setDraft] = useState(initial);
 	const [images, setImages] = useState<PromptImage[]>([]);
@@ -104,7 +127,7 @@ function Host({
 			reason: "ok",
 		},
 		streaming,
-		ended: false,
+		ended,
 		capabilities: null,
 		editor: { draft, images, setDraft, setImages },
 	});
@@ -116,9 +139,10 @@ const mount = async (
 	client: RelayEndpoints,
 	initial: string,
 	streaming = true,
+	ended = false,
 ) => {
 	await act(async () =>
-		root?.render(createElement(Host, { client, initial, streaming })),
+		root?.render(createElement(Host, { client, initial, streaming, ended })),
 	);
 };
 
@@ -133,6 +157,9 @@ const settle = async () => {
 const c = () => composer as ComposerState;
 
 beforeEach(() => {
+	storageFault.failWrite = false;
+	storageFault.reads = 0;
+	storageFault.failReadAt = 0;
 	sessions += 1;
 	SID = `s-composer-echo-${sessions}`;
 	clearPendingEchoes();
@@ -341,3 +368,80 @@ describe("the pending row's box", () => {
 		},
 	);
 });
+
+it("keeps the real hook's text and image draft on a pre-dispatch storage failure", async () => {
+	const { client, open } = handClient();
+	await mount(client, "do not lose my text");
+	const image = { mime_type: "image/png" as const, data_b64: "aGVsbG8=" };
+	await act(async () => c().addImage(image));
+	storageFault.failWrite = true;
+	await act(async () => c().send());
+	await settle();
+	expect(open).toHaveLength(0);
+	expect(c().draft).toBe("do not lose my text");
+	expect(c().images).toEqual([image]);
+	expect(rows).toHaveLength(0);
+	expect(c().error).toContain("Not sent");
+	expect(c().error).not.toContain("synthetic private file failure");
+	expect(c().retained).toBeNull();
+});
+
+it.each([false, true])(
+	"keeps original uncertainty and retry target after preparation fails (ended=%s)",
+	async (ended) => {
+		const { client, open } = handClient();
+		await mount(client, "earlier instruction");
+		const image = { mime_type: "image/png" as const, data_b64: "aGVsbG8=" };
+		await act(async () => c().addImage(image));
+		await act(async () => c().send());
+		await settle();
+		await act(async () =>
+			open[0]?.reject(new RelayError("transport", "lost ack")),
+		);
+		await settle();
+		const held = c().retained;
+		expect(held?.images).toEqual([image]);
+		await act(async () => c().setDraft("next draft"));
+		await act(async () => c().clearImages());
+		const nextImage = { mime_type: "image/png" as const, data_b64: "bmV4dA==" };
+		await act(async () => c().addImage(nextImage));
+		await mount(client, "unused", !ended, ended);
+		// Retry first reads its displayed envelope, then preparation verifies the slot.
+		storageFault.reads = 0;
+		storageFault.failReadAt = 2;
+		await act(async () => c().retry());
+		await settle();
+		expect(open).toHaveLength(1);
+		expect(c().retained).toEqual(held);
+		expect(c().draft).toBe("next draft");
+		expect(c().images).toEqual([nextImage]);
+		const feedback = composerFeedback({
+			ended,
+			error: c().error,
+			retainedMessage:
+				c().retained === null ? null : composerCopy().retainedError,
+		});
+		expect(feedback.retainedText).toContain(
+			"An earlier instruction may have been delivered",
+		);
+		expect(feedback.errorText).toContain("This retry attempt wasn’t sent");
+		expect(feedback.errorText).not.toContain("synthetic private file failure");
+		expect(feedback.retryLabel).toBe("Retry earlier instruction");
+		// Recovering storage does not send anything until an explicit retry. The
+		// retry still targets the original body/ID, not the newer visible draft.
+		storageFault.failReadAt = 0;
+		await settle();
+		expect(open).toHaveLength(1);
+		await act(async () => c().retry());
+		await settle();
+		expect(open).toHaveLength(2);
+		expect(open[1]?.body.command_id).toBe(open[0]?.body.command_id);
+		expect(open[1]?.body.images).toEqual([image]);
+		expect(open[1]?.body.text).toBe("earlier instruction");
+		await act(async () => open[1]?.resolve({ ok: true, detail: "queued" }));
+		await settle();
+		expect(c().draft).toBe("next draft");
+		expect(c().images).toEqual([nextImage]);
+		expect(c().retained).toBeNull();
+	},
+);

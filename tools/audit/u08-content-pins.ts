@@ -1098,7 +1098,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	src: "5356602e1b76f3e6413ad7260b71e563189aa664e2a959e2f1a62e50c68e4da1",
+	/* Re-printed 2026-11-09 for PR #199's U1 remediation: composer retry
+	 * preparation copy and feedback projection retain the original command's
+	 * uncertainty, with active/ended hook regressions and all eight catalogues.
+	 * Only the src root moves; no instrument, fixture or other pin changes.
+	 * Source admission only, NOT rendered U-08 or native storage evidence. */
+	/* Convergence with PR #199 preserves both reviewed product sources. Recomputed
+	 * from the combined LIVE tree after the catalogue-count conflict was resolved.
+	 * Admission only: this does not refresh historical render or native evidence. */
+	src: "0b095ea2b2f136b9bac13a7d350037c97ec71d9a10c4b4ea992504394adf3669",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
