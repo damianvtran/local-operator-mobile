@@ -22,7 +22,9 @@ import {
 	decodePng,
 	type FramePhase,
 	type FrameRecord,
+	formatReport,
 	GATE_THRESHOLD,
+	headMarkRows,
 	MIN_INK_PX,
 	RAIL_COLUMN_PT,
 	RAIL_EDGE_PT,
@@ -42,7 +44,8 @@ const SHORT_FILE_REFUSAL = /stub: too short/;
 const TRUNCATION_REFUSAL = /cut:/;
 const COVERAGE_REFUSAL = /must cover both/;
 const GEOMETRY_REFUSAL = /does not match the reported 320x640/;
-const CLOCK_STEP_REFUSAL = /negative capture time/;
+/** A state that lost its rail-down control: refused, never silently weakened. */
+const CONTROL_REFUSAL = /no pre frame/;
 
 /** CRC-32 is written as zero: `decodePng` does not verify it (the file's own
  *  header says why), and a real CRC would only re-detect bytes `inflateSync` and
@@ -155,6 +158,12 @@ function paeth(a: number, b: number, c: number): number {
 	return pb <= pc ? b : c;
 }
 
+/** A mark in a synthetic frame: `width` pixels wide (default the whole column)
+ *  and `height` rows tall, painted at row `y`. Width is what lets a test paint
+ *  less than a whole dash — the difference claim's floor is about magnitude, so
+ *  a sub-mark difference has to be expressible. */
+type Mark = { y: number; height?: number; width?: number };
+
 /** A frame whose whole surface is `background`, with `marks` painted as
  *  `markWidth × markHeight` blocks at the given pixel rows, right-aligned inside
  *  `band` — the geometry the rail draws in (`end: 0` inside its own column). */
@@ -162,7 +171,7 @@ function frame(
 	width: number,
 	height: number,
 	band: { x0: number; x1: number },
-	marks: ReadonlyArray<{ y: number; height?: number }> = [],
+	marks: readonly Mark[] = [],
 ): Uint8Array {
 	const pixels = new Uint8Array(width * height * 3);
 	for (let i = 0; i < width * height; i += 1) {
@@ -175,7 +184,11 @@ function frame(
 		for (let dy = 0; dy < markHeight; dy += 1) {
 			const y = mark.y + dy;
 			if (y < 0 || y >= height) continue;
-			for (let x = band.x1 - RAIL_COLUMN_PT; x < band.x1; x += 1) {
+			for (
+				let x = band.x1 - (mark.width ?? RAIL_COLUMN_PT);
+				x < band.x1;
+				x += 1
+			) {
 				const index = (y * width + x) * 3;
 				pixels[index] = MARK[0];
 				pixels[index + 1] = MARK[1];
@@ -199,7 +212,7 @@ function capture(
 	frames: ReadonlyArray<{
 		state: string;
 		phase: FramePhase;
-		marks?: ReadonlyArray<{ y: number; height?: number }>;
+		marks?: readonly Mark[];
 		path: string;
 	}>,
 ): (path: string) => Uint8Array {
@@ -233,9 +246,14 @@ function record(
 	};
 }
 
-/** Three marks, well spaced, inside the band's rows. */
+/** Three marks, well spaced, inside the band's rows. The first of them anchors
+ *  the head-mark window, so its row is what the extra-mark fixtures are placed
+ *  against. */
 const THREE_MARKS = [200, 300, 400].map((y) => ({ y }));
-const FOUR_MARKS = [...THREE_MARKS, { y: 100 }];
+/** `building`'s liveness dash: one row inside the head-mark window the first tick
+ *  at row 200 derives (rows 193–199 at scale 1). */
+const HEAD_ROW = 196;
+const THREE_MARKS_PLUS_HEAD_DASH = [...THREE_MARKS, { y: HEAD_ROW }];
 
 describe("decodePng", () => {
 	it("round-trips every scanline filter", () => {
@@ -348,15 +366,36 @@ describe("countBandInk", () => {
 	});
 });
 
+describe("headMarkRows", () => {
+	it("lands on the dash rows the native run measured", () => {
+		// The live anchor is the first tick's row, and the first run's first tick was
+		// row 140 (320×640 @ 160 dpi): the component puts the 6 × 2.5 pt liveness box
+		// `HEAD_Y_PT` (6 pt) down a track whose first seq-placed mark starts at
+		// `RAIL_INSET_PT` (10 pt), so the box spans 4.75–7.25 pt = rows 135–137.
+		// The window must contain them and must not wander down the column.
+		const window = headMarkRows(140, 1);
+		expect(window.y0).toBeLessThanOrEqual(135);
+		expect(window.y1).toBeGreaterThanOrEqual(137);
+		expect(window.y1).toBeLessThan(140);
+	});
+
+	it("scales with the device's density like the band does", () => {
+		// At 2× the same 4.75 pt offset is 9.5 px, so the window cannot be pinned to
+		// one scale: an unscaled constant would land the dash outside its own gate.
+		expect(headMarkRows(280, 2).y0).toBeLessThanOrEqual(270);
+		expect(headMarkRows(280, 2).y1).toBeGreaterThanOrEqual(274);
+	});
+});
+
 describe("analyseFrames", () => {
 	const scenario = (spec: {
-		deepUpMarks: ReadonlyArray<{ y: number; height?: number }>;
-		buildingUpMarks: ReadonlyArray<{ y: number; height?: number }>;
+		deepUpMarks: readonly Mark[];
+		buildingUpMarks: readonly Mark[];
 	}) => {
 		const phases: ReadonlyArray<{
 			state: string;
 			phase: FramePhase;
-			marks?: ReadonlyArray<{ y: number; height?: number }>;
+			marks?: readonly Mark[];
 		}> = [
 			{ state: DEEP_STATE, phase: "pre" },
 			{ state: DEEP_STATE, phase: "fling", marks: spec.deepUpMarks },
@@ -379,15 +418,22 @@ describe("analyseFrames", () => {
 		);
 	};
 
-	it("passes when both states paint and building differs from deep", () => {
+	it("passes when both states paint and building adds the head mark", () => {
 		const report = scenario({
 			deepUpMarks: THREE_MARKS,
-			buildingUpMarks: FOUR_MARKS,
+			buildingUpMarks: THREE_MARKS_PLUS_HEAD_DASH,
 		});
 		expect(report.verdict).toBe("pass");
 		expect(report.claims.railPaints).toBe(true);
 		expect(report.claims.buildingDiffersFromDeep).toBe(true);
 		expect(report.claims.buildingMinusDeep).toBe(RAIL_COLUMN_PT);
+		// The difference is localised, and the report says where it was expected.
+		expect(report.claims.buildingExtra.pixels).toBe(RAIL_COLUMN_PT);
+		expect(report.claims.buildingExtra.rows).toEqual([HEAD_ROW, HEAD_ROW]);
+		expect(report.claims.buildingExtra.firstTickRow).toBe(200);
+		expect(report.claims.buildingExtra.expectedRows).toEqual([193, 199]);
+		expect(report.claims.buildingExtra.localised).toBe(true);
+		expect(report.claims.buildingExtra.missingPixels).toBe(0);
 		expect(report.states[DEEP_STATE]?.inkDelta).toBe(3 * RAIL_COLUMN_PT);
 		expect(report.states[DEEP_STATE]?.down?.counts["8"]).toBe(0);
 		// Reported, never gated: the latency distribution is the run's own.
@@ -396,7 +442,9 @@ describe("analyseFrames", () => {
 			minMs: 480,
 			medianMs: 482,
 			maxMs: 483,
+			excludedFrames: 0,
 		});
+		expect(report.clockSteps).toBeNull();
 	});
 
 	it("fails when the rail never paints during the fling", () => {
@@ -415,6 +463,37 @@ describe("analyseFrames", () => {
 		expect(report.claims.railPaints).toBe(true);
 		expect(report.claims.buildingDiffersFromDeep).toBe(false);
 		expect(report.claims.buildingMinusDeep).toBe(0);
+		expect(report.claims.buildingExtra.pixels).toBe(0);
+		expect(report.claims.buildingExtra.rows).toBeNull();
+		expect(report.verdict).toBe("fail");
+	});
+
+	it("fails when the difference is not the head mark, even at full size", () => {
+		// M1/Q3's residual vacuity: a mark-sized difference anywhere in the column
+		// used to satisfy "building differs from deep". Half a mark on a tick row is
+		// a difference, and it is not the liveness dash.
+		const report = scenario({
+			deepUpMarks: THREE_MARKS,
+			buildingUpMarks: [...THREE_MARKS, { y: 300 + 20 }],
+		});
+		expect(report.claims.buildingMinusDeep).toBe(RAIL_COLUMN_PT);
+		expect(report.claims.buildingExtra.rows).toEqual([320, 320]);
+		expect(report.claims.buildingExtra.expectedRows).toEqual([193, 199]);
+		expect(report.claims.buildingExtra.localised).toBe(false);
+		expect(report.claims.buildingDiffersFromDeep).toBe(false);
+		expect(report.verdict).toBe("fail");
+	});
+
+	it("requires the difference to beat MIN_INK_PX, not just to exist", () => {
+		// Two pixels in the right rows are still not a mark: the same floor claim 1
+		// uses is what makes "differs" mean something.
+		const report = scenario({
+			deepUpMarks: THREE_MARKS,
+			buildingUpMarks: [...THREE_MARKS, { y: HEAD_ROW, width: MIN_INK_PX - 1 }],
+		});
+		expect(report.claims.buildingMinusDeep).toBe(MIN_INK_PX - 1);
+		expect(report.claims.buildingExtra.localised).toBe(true);
+		expect(report.claims.buildingDiffersFromDeep).toBe(false);
 		expect(report.verdict).toBe("fail");
 	});
 
@@ -440,6 +519,23 @@ describe("analyseFrames", () => {
 		);
 	});
 
+	it("refuses a state whose rail-down control is missing", () => {
+		// M2: without its own `pre` frame a state has no control, and comparing
+		// against `inkAt(null) = 0` turns the gate into "≥ 3 px anywhere". Loud, not
+		// lenient — a capture that cannot supply the control has not measured it.
+		const records = [
+			record(DEEP_STATE, "pre", 0),
+			record(DEEP_STATE, "fling", 1),
+			record(BUILDING_STATE, "fling", 2),
+		];
+		expect(() =>
+			analyseFrames(
+				[SCREEN, ...records],
+				capture(records.map((entry) => ({ ...entry, marks: THREE_MARKS }))),
+			),
+		).toThrow(CONTROL_REFUSAL);
+	});
+
 	it("refuses a frame whose size disagrees with the reported geometry", () => {
 		const small = encodePng(10, 10, new Uint8Array(10 * 10 * 3));
 		expect(() =>
@@ -454,19 +550,61 @@ describe("analyseFrames", () => {
 		).toThrow(GEOMETRY_REFUSAL);
 	});
 
-	it("refuses a negative capture time rather than averaging it in", () => {
-		// The runner's wall clock stepped 26 times in 240 frames of the first run;
-		// the capture script times monotonically because of it, and this is the
-		// check that the shortcut held.
+	it("keeps a stepped-clock frame's pixels and drops only its duration", () => {
+		// M4/Q1: the runner's wall clock stepped 26 times in 240 frames of the first
+		// run, and 27 durations came out negative. Those durations are not
+		// measurements; the FRAMES are, and they are what the gated claims read. So
+		// the exclusion is scoped to the latency row and recorded — never a throw,
+		// which made the analyser refuse its own earlier artifact.
 		const records = [
 			record(DEEP_STATE, "pre", 0, -740),
-			record(BUILDING_STATE, "pre", 1),
+			record(DEEP_STATE, "fling", 1),
+			record(BUILDING_STATE, "pre", 2),
+			record(BUILDING_STATE, "fling", 3),
 		];
-		expect(() =>
-			analyseFrames(
-				[SCREEN, ...records],
-				capture(records.map((entry) => ({ ...entry, marks: [] }))),
+		const marks = [[], THREE_MARKS, [], THREE_MARKS_PLUS_HEAD_DASH];
+		const report = analyseFrames(
+			[SCREEN, ...records],
+			capture(
+				records.map((entry, index) => ({
+					...entry,
+					marks: marks[index] ?? [],
+				})),
 			),
-		).toThrow(CLOCK_STEP_REFUSAL);
+		);
+		expect(report.clockSteps).toEqual({ count: 1, sample: [-740] });
+		expect(report.latency?.n).toBe(3);
+		expect(report.latency?.excludedFrames).toBe(1);
+		// The pixel claims are untouched by the exclusion.
+		expect(report.claims.railPaints).toBe(true);
+		expect(report.claims.buildingDiffersFromDeep).toBe(true);
+		expect(report.verdict).toBe("pass");
+	});
+
+	it("reports latency unavailable rather than failing when no duration is usable", () => {
+		// A missing number must never read as a pass: the report says unavailable
+		// and why, and the gated verdict is still decided by the pixels.
+		const records = [
+			record(DEEP_STATE, "pre", 0, -12),
+			record(DEEP_STATE, "fling", 1, -34),
+			record(BUILDING_STATE, "pre", 2, -56),
+			record(BUILDING_STATE, "fling", 3, -78),
+		];
+		const marks = [[], THREE_MARKS, [], THREE_MARKS_PLUS_HEAD_DASH];
+		const report = analyseFrames(
+			[SCREEN, ...records],
+			capture(
+				records.map((entry, index) => ({
+					...entry,
+					marks: marks[index] ?? [],
+				})),
+			),
+		);
+		expect(report.latency).toBeNull();
+		expect(report.clockSteps?.count).toBe(4);
+		expect(report.verdict).toBe("pass");
+		const text = formatReport(report);
+		expect(text).toContain("UNAVAILABLE this run");
+		expect(text).toContain("the capture clock stepped");
 	});
 });

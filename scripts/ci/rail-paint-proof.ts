@@ -31,8 +31,26 @@
  * first run measured 240 frames over two scenario worlds, so the shape is now
  * known but still a single sample. Gating a number one run has seen is how a
  * nightly becomes a coin flip, so this file GATES the two structural claims (the
- * rail paints during a fast fling; `building` and `deep` paint different band
- * content) and only REPORTS latency and counts until two independent runs agree.
+ * rail paints during a fast fling; `building` paints the head mark `deep` does
+ * not) and only REPORTS latency and counts until two independent runs agree.
+ *
+ * THE DIFFERENCE CLAIM IS A CLAIM ABOUT ONE MARK, so it is checked as one. "The
+ * two band contents differ" is satisfied by a single stray pixel anywhere in the
+ * column, which is not a fact about the `building` state; the shape the component
+ * actually adds is a 6 × 2.5 pt liveness dash at the head of the track
+ * (`checkpoint-rail.tsx`), 18 px at 1×. So the claim requires three things: a
+ * difference of at least `MIN_INK_PX` (the same floor claim 1 uses), that
+ * difference being *only* extra ink in `building` localised to the head-mark rows,
+ * and those rows being derived from the first tick's row measured in the same
+ * capture rather than from a device profile (review round 1, M1 and QA Q3).
+ *
+ * THE CLOCK AND THE PIXELS ARE SEPARATE EVIDENCE. A frame whose recorded capture
+ * duration is negative was timed by a clock that stepped, so its duration is not
+ * a measurement — but its PIXELS are unaffected, and the pixel claims are the
+ * gated ones. Negative-duration frames are therefore excluded from the latency
+ * block alone, the exclusion is recorded in the report with the count and the
+ * reason, and a run with no usable duration reports latency as unavailable rather
+ * than failing or printing a number (review round 1, M4).
  *
  * Reading the report: `state.*.up` is the inkiest frame captured while the fling
  * flow was running, `state.*.down` the inkest captured with no gesture at all.
@@ -74,6 +92,29 @@ export const GATE_THRESHOLD = 8;
  *  3 px. So a rail-up frame that does not beat its rail-down frame by 3 px has
  *  not painted one whole mark. */
 export const MIN_INK_PX = 3;
+
+/** The head mark's own geometry, mirrored from `checkpoint-rail.tsx` for the same
+ *  reason the column above is: the analyser runs under bare Node and must not
+ *  import a React Native module to learn four numbers. `HEAD_Y_PT` is the mark's
+ *  centre offset from the track's top and the box is 2.5 pt tall, so it spans
+ *  4.75–7.25 pt; `end: 0` right-aligns it in the column, which the band already
+ *  is. The mirror is checked in `rail-paint-proof.test.ts` against the rows a
+ *  320×640 mdpi AVD yields.
+ *
+ *  `RAIL_INSET_PT` is `checkpoint-rail.ts`'s own export, mirrored for the same
+ *  reason: the first seq-placed mark starts there, so the head mark's rows are
+ *  ANCHORED to the first tick the capture actually paints instead of to the
+ *  transcript's absolute top — which the component does not know and this file
+ *  cannot measure. */
+export const HEAD_Y_PT = 6;
+export const HEAD_MARK_HEIGHT_PT = 2.5;
+export const RAIL_INSET_PT = 10;
+
+/** One row of slack each side of the derived head-mark window. The anchor is a
+ *  measured row and the offset is a fractional layout constant, so the true box
+ *  can land a row either way at a non-integral scale — and a window that excludes
+ *  the mark it expects would red a paint that happened. */
+export const HEAD_ROW_SLACK_PX = 1;
 
 const PNG_SIGNATURE = Uint8Array.from([
 	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -367,6 +408,140 @@ export function countBandInk(
 	return { modal, counts, total: region.length };
 }
 
+export type BandInkMask = {
+	/** Band-relative width, `x1 - x0`. */
+	width: number;
+	/** Band-relative height, `y1 - y0`. */
+	height: number;
+	/** One byte per band pixel: 1 where the pixel is ink at `threshold`, 0 where
+	 *  it is not. Indexed `row * width + col`, both band-relative. */
+	cells: Uint8Array;
+};
+
+/** The same count as `countBandInk`, keeping WHERE the ink is.
+ *
+ * WHY A SECOND PASS RATHER THAN A BIGGER BANDINK. Only the two frames in the
+ * difference claim need their ink located (the arithmetic needs every frame's
+ * counts, and 240 masks of a 4 096-pixel band is memory nothing reads), and the
+ * `modal` is passed in so a mask is measured against exactly the background its
+ * own count was. Two frames measured against two different modals would make a set
+ * difference a statement about backgrounds rather than about paint. */
+export function bandInkMask(
+	png: DecodedPng,
+	band: RailBand,
+	threshold: number,
+	modal: readonly [number, number, number],
+): BandInkMask {
+	const width = band.x1 - band.x0;
+	const height = band.y1 - band.y0;
+	const cells = new Uint8Array(width * height);
+	const { channels, pixels } = png;
+	for (let row = 0; row < height; row += 1) {
+		const y = band.y0 + row;
+		for (let col = 0; col < width; col += 1) {
+			const index = (y * png.width + band.x0 + col) * channels;
+			const r = pixels[index] ?? 0;
+			const g = channels === 1 ? r : (pixels[index + 1] ?? 0);
+			const b = channels === 1 ? r : (pixels[index + 2] ?? 0);
+			const delta = Math.max(
+				Math.abs(r - (modal[0] ?? 0)),
+				Math.abs(g - (modal[1] ?? 0)),
+				Math.abs(b - (modal[2] ?? 0)),
+			);
+			if (delta > threshold) cells[row * width + col] = 1;
+		}
+	}
+	return { width, height, cells };
+}
+
+/** The rows the head mark occupies, in absolute frame rows, from the first
+ *  seq-placed tick's row in the same capture: the dash sits
+ *  `RAIL_INSET_PT - (HEAD_Y_PT ± HEAD_MARK_HEIGHT_PT / 2)` above it. */
+export function headMarkRows(
+	firstTickRow: number,
+	densityScale: number,
+): { y0: number; y1: number } {
+	const dashTopPt = HEAD_Y_PT - HEAD_MARK_HEIGHT_PT / 2;
+	const dashBottomPt = HEAD_Y_PT + HEAD_MARK_HEIGHT_PT / 2;
+	return {
+		y0:
+			Math.floor(firstTickRow - (RAIL_INSET_PT - dashTopPt) * densityScale) -
+			HEAD_ROW_SLACK_PX,
+		y1:
+			Math.ceil(firstTickRow - (RAIL_INSET_PT - dashBottomPt) * densityScale) +
+			HEAD_ROW_SLACK_PX,
+	};
+}
+
+export type HeadMarkCheck = {
+	/** Pixels inked in `building` and not in `deep` — the mark building adds. */
+	pixels: number;
+	/** Their row span, absolute frame rows, or null when there are none. */
+	rows: [number, number] | null;
+	/** The rows the head mark may occupy, from the first tick `deep` paints. */
+	expectedRows: [number, number] | null;
+	/** The first row `deep` inks — the anchor the head mark is placed by. */
+	firstTickRow: number | null;
+	/** Pixels inked in `deep` and not in `building`. Reported, never gated: the
+	 *  two states are separate captures, so a tick row that landed on a different
+	 *  pixel between them is a sampling fact, not a mark that went missing. */
+	missingPixels: number;
+	/** Every extra pixel is inside the head-mark rows. */
+	localised: boolean;
+};
+
+/** Where `building`'s ink is that `deep`'s is not, and whether it is the head
+ *  mark. The gated difference claim reads `localised`; the counts are printed so
+ *  a reader can see how far off a failing run was. */
+export function headMarkCheck(
+	deep: BandInkMask,
+	building: BandInkMask,
+	band: RailBand,
+	densityScale: number,
+): HeadMarkCheck {
+	let pixels = 0;
+	let missingPixels = 0;
+	let firstRow = Number.POSITIVE_INFINITY;
+	let lastRow = -1;
+	let firstTickRow: number | null = null;
+	const rows = Math.min(deep.height, building.height);
+	const cols = Math.min(deep.width, building.width);
+	for (let row = 0; row < rows; row += 1) {
+		for (let col = 0; col < cols; col += 1) {
+			const index = row * deep.width + col;
+			const inDeep = deep.cells[index] === 1;
+			const inBuilding = building.cells[index] === 1;
+			if (inDeep && firstTickRow === null) firstTickRow = band.y0 + row;
+			if (inBuilding && !inDeep) {
+				pixels += 1;
+				const absolute = band.y0 + row;
+				if (absolute < firstRow) firstRow = absolute;
+				if (absolute > lastRow) lastRow = absolute;
+			}
+			if (inDeep && !inBuilding) missingPixels += 1;
+		}
+	}
+	const extraRows: [number, number] | null =
+		pixels === 0 ? null : [firstRow, lastRow];
+	const expected =
+		firstTickRow === null ? null : headMarkRows(firstTickRow, densityScale);
+	const expectedRows: [number, number] | null =
+		expected === null ? null : [expected.y0, expected.y1];
+	const localised =
+		extraRows !== null &&
+		expectedRows !== null &&
+		extraRows[0] >= expectedRows[0] &&
+		extraRows[1] <= expectedRows[1];
+	return {
+		pixels,
+		rows: extraRows,
+		expectedRows,
+		firstTickRow,
+		missingPixels,
+		localised,
+	};
+}
+
 /** One line of the capture script's JSONL: the device geometry, once. */
 export type ScreenRecord = {
 	type: "screen";
@@ -396,9 +571,9 @@ export type CapturedFrame = FrameRecord & BandInk;
 
 export type StateReport = {
 	/** The inkest frame captured DURING the fling. */
-	up: CapturedFrame | null;
+	up: CapturedFrame;
 	/** The inkest frame captured with no gesture — the rail-down control. */
-	down: CapturedFrame | null;
+	down: CapturedFrame;
 	frames: number;
 	/** Gated: the rail painted while flinging. */
 	railPaints: boolean;
@@ -408,28 +583,52 @@ export type StateReport = {
 };
 
 export type RailPaintReport = {
-	schema: "rail-paint-proof/1";
+	schema: "rail-paint-proof/2";
 	band: RailBand | null;
 	geometry: ScreenRecord | null;
-	/** Reported, never gated until two runs agree (see the header). */
-	latency: { n: number; minMs: number; medianMs: number; maxMs: number } | null;
+	/** Reported, never gated until two runs agree (see the header). `null` when
+	 *  no frame in the run carried a usable duration — which is NOT a pass and is
+	 *  said so in the formatted report. */
+	latency: LatencyReport | null;
+	/** The frames whose recorded duration was negative, or `null` when the clock
+	 *  held. Excluded from `latency` only; they stay in every pixel figure. */
+	clockSteps: ClockSteps | null;
 	states: Record<string, StateReport>;
 	claims: {
 		/** Gated: every state paints the rail during a fast fling. */
 		railPaints: boolean;
-		/** Gated: `building` and `deep` do not paint identical band content. */
+		/** Gated: `building` paints the head mark `deep` does not — a difference of
+		 *  at least `MIN_INK_PX`, localised to the head-mark rows. */
 		buildingDiffersFromDeep: boolean;
 		/** Reported: `building`'s up count minus `deep`'s. Positive is what the
 		 *  component's own shape predicts — building draws the same marks plus a
 		 *  liveness dash — but the two states are separate captures, so a larger
 		 *  magnitude means the fixture tick sets differ, not that the mark grew. */
-		buildingMinusDeep: number | null;
+		buildingMinusDeep: number;
+		/** Reported: where the extra ink is, against where the head mark can be. */
+		buildingExtra: HeadMarkCheck;
 	};
 	verdict: "pass" | "fail";
 };
 
-const inkAt = (frame: CapturedFrame | null): number =>
-	frame === null ? 0 : (frame.counts[String(GATE_THRESHOLD)] ?? 0);
+export type LatencyReport = {
+	/** Usable durations only — see `excludedFrames`. */
+	n: number;
+	minMs: number;
+	medianMs: number;
+	maxMs: number;
+	/** Frames dropped from THIS block because their duration was negative. */
+	excludedFrames: number;
+};
+
+export type ClockSteps = {
+	count: number;
+	/** The first few offending durations, so a reader can see the shape of it. */
+	sample: number[];
+};
+
+const inkAt = (frame: CapturedFrame): number =>
+	frame.counts[String(GATE_THRESHOLD)] ?? 0;
 
 /** `building` is the state this comparison is about; `deep` is its control. */
 export const DEEP_STATE = "checkpoints-deep";
@@ -485,6 +684,17 @@ export function analyseFrames(
 		};
 		const up = inkest("fling");
 		const down = inkest("pre");
+		/* BOTH PHASES ARE REQUIRED, AND A MISSING ONE IS NOT A DEGRADED COMPARISON —
+		 * it is no comparison. `inkAt(null)` used to read 0, so a state whose `pre`
+		 * frames were lost gated at "≥ 3 px anywhere in the column" instead of
+		 * "≥ 3 px above its own control", and nothing said so. The capture writes ~10
+		 * `pre` frames per world today; this is the check that keeps that true
+		 * rather than assumed (review round 1, M2). */
+		if (up === null || down === null) {
+			throw new Error(
+				`${state}: no ${up === null ? "fling" : "pre"} frame in ${own.length} captured frame(s) — the rail-up frame and its rail-down control are both required`,
+			);
+		}
 		states[state] = {
 			up,
 			down,
@@ -503,35 +713,69 @@ export function analyseFrames(
 	}
 	const railPaints = Object.values(states).every((state) => state.railPaints);
 	const buildingMinusDeep = inkAt(building.up) - inkAt(deep.up);
-	const buildingDiffersFromDeep = buildingMinusDeep !== 0;
+	/* THE DIFFERENCE HAS TO BE THE MARK, NOT ANY DIFFERENCE AT ALL. A net count
+	 * that is not zero proves the two band contents are not byte-identical; the
+	 * +18 the component's shape predicts is a fact about WHERE those pixels are.
+	 * So the claim reads both the magnitude floor and the localisation, and the
+	 * pair is reported either way — a failing run should say which half failed
+	 * (review round 1, M1; QA Q3). */
+	const maskOf = (frame: CapturedFrame): BandInkMask =>
+		bandInkMask(
+			decodePng(readFrame(frame.path), frame.path),
+			band,
+			GATE_THRESHOLD,
+			frame.modal,
+		);
+	const buildingExtra = headMarkCheck(
+		maskOf(deep.up),
+		maskOf(building.up),
+		band,
+		densityScale,
+	);
+	const buildingDiffersFromDeep =
+		Math.abs(buildingMinusDeep) >= MIN_INK_PX && buildingExtra.localised;
 
-	const latencies = frames.map((frame) => frame.captureMs);
 	/* A NEGATIVE DURATION IS A BROKEN CLOCK, NOT A FAST CAPTURE, and averaging it
 	 * into the distribution is how a 175 ms median silently becomes nonsense. The
 	 * capture script times with `/proc/uptime` precisely because the runner's wall
 	 * clock steps (26 backward steps in 240 frames of run 42546977251); this is the
-	 * check that proves the shortcut held. */
-	const stepped = latencies.filter((ms) => ms < 0);
-	if (stepped.length > 0) {
-		throw new Error(
-			`${stepped.length} frame(s) report a negative capture time (${stepped.slice(0, 5).join(", ")}) — the capture clock stepped; it must be monotonic`,
-		);
-	}
+	 * check that proves the shortcut held.
+	 *
+	 * IT IS A FAULT IN THE TIMING, NOT IN THE FRAMES. The pixels of a frame whose
+	 * duration went negative are exactly as good as any other frame's, and they are
+	 * what the gated claims read — so the exclusion is scoped to the latency block,
+	 * counted in the report with its reason, and it never fails the run. Throwing
+	 * here made the analyser refuse its own prior artifact; reporting "no latency
+	 * this run, the clock stepped" is the honest claim, and printing nothing would
+	 * read as a pass (review round 1, M4; QA Q1). */
+	const durations = frames.map((frame) => frame.captureMs);
+	const stepped = durations.filter((ms) => ms < 0);
+	const usable = durations.filter((ms) => ms >= 0);
 	return {
-		schema: "rail-paint-proof/1",
+		schema: "rail-paint-proof/2",
 		band,
 		geometry,
 		latency:
-			latencies.length === 0
+			usable.length === 0
 				? null
 				: {
-						n: latencies.length,
-						minMs: Math.min(...latencies),
-						medianMs: median(latencies),
-						maxMs: Math.max(...latencies),
+						n: usable.length,
+						minMs: Math.min(...usable),
+						medianMs: median(usable),
+						maxMs: Math.max(...usable),
+						excludedFrames: stepped.length,
 					},
+		clockSteps:
+			stepped.length === 0
+				? null
+				: { count: stepped.length, sample: stepped.slice(0, 5) },
 		states,
-		claims: { railPaints, buildingDiffersFromDeep, buildingMinusDeep },
+		claims: {
+			railPaints,
+			buildingDiffersFromDeep,
+			buildingMinusDeep,
+			buildingExtra,
+		},
 		verdict: railPaints && buildingDiffersFromDeep ? "pass" : "fail",
 	};
 }
@@ -551,19 +795,27 @@ export function formatReport(report: RailPaintReport): string {
 		);
 	}
 	const latency = report.latency;
+	const clock = report.clockSteps;
+	if (clock !== null) {
+		lines.push(
+			`capture clock stepped: ${clock.count} frame(s) excluded from the latency block only (they stay in the pixel analysis) — first ${clock.sample.join(", ")} ms`,
+		);
+	}
 	if (latency !== null) {
 		lines.push(
-			`screencap latency: n=${latency.n} min=${latency.minMs}ms median=${latency.medianMs}ms max=${latency.maxMs}ms`,
+			`screencap latency: n=${latency.n} (excluded ${latency.excludedFrames} stepped) min=${latency.minMs}ms median=${latency.medianMs}ms max=${latency.maxMs}ms`,
+		);
+	} else {
+		// A MISSING NUMBER IS NOT A GOOD NUMBER. Say it unavailable and say why, so
+		// a reader cannot mistake the absence for a pass on the timing claim.
+		lines.push(
+			`screencap latency: UNAVAILABLE this run — no frame carried a usable duration${clock === null ? "" : " (the capture clock stepped)"}; this is no measurement, not a pass`,
 		);
 	}
 	for (const [state, report_] of Object.entries(report.states)) {
 		lines.push(`${state}: ${report_.frames} frames`);
 		for (const phase of ["down", "up"] as const) {
 			const frame = report_[phase];
-			if (frame === null) {
-				lines.push(`  ${phase}: no frame`);
-				continue;
-			}
 			const counts = COUNT_THRESHOLDS.map(
 				(threshold) => `${threshold}:${frame.counts[String(threshold)] ?? 0}`,
 			).join(" ");
@@ -574,8 +826,17 @@ export function formatReport(report: RailPaintReport): string {
 		lines.push(`  ink delta (up - down): ${report_.inkDelta}`);
 	}
 	lines.push(`claim rail-paints-during-fling: ${report.claims.railPaints}`);
+	const extra = report.claims.buildingExtra;
+	const span = (rows: [number, number] | null): string =>
+		rows === null ? "none" : `${rows[0]}..${rows[1]}`;
 	lines.push(
 		`claim building-differs-from-deep: ${report.claims.buildingDiffersFromDeep} (building - deep = ${report.claims.buildingMinusDeep})`,
+	);
+	lines.push(
+		`  building-only ink: ${extra.pixels} px in rows ${span(extra.rows)}; head-mark window rows ${span(extra.expectedRows)} (anchored on the first tick at row ${extra.firstTickRow ?? "none"}); localised: ${extra.localised}`,
+	);
+	lines.push(
+		`  deep-only ink (reported, not gated): ${extra.missingPixels} px`,
 	);
 	lines.push(`verdict: ${report.verdict}`);
 	return lines.join("\n");

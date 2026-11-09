@@ -860,7 +860,11 @@ therefore captures it on the emulator, on the APK the job has just built:
   at 120 and the run showed it binding: the loop ran out mid-fling and captured no
   `post` frame. The clock is `/proc/uptime`, not `date`: that same run stepped
   backwards 26 times in 240 frames (min -740 ms) and produced 27 negative capture
-  durations under the wall clock. Resolution is 10 ms.
+  durations under the wall clock. Resolution is 10 ms. A negative duration is
+  excluded from the latency block alone — the frames themselves still count, since
+  the pixel claims are what is gated — and the report records how many were
+  excluded and why. A run with no usable duration reports latency as
+  **unavailable**, never as a number and never as a pass.
 - **The measurement:** `scripts/ci/rail-paint-proof.ts` counts non-background
   pixels in the rail's own column — 7–15 pt in from the right edge, derived from
   the device's `wm size`/`wm density` — for the inkiest frame during the fling and
@@ -869,11 +873,16 @@ therefore captures it on the emulator, on the APK the job has just built:
   are dropped to keep the 24 pt edge fades out of it. Nothing else in the app
   paints there, so a non-background pixel in the band is a mark.
 - **What is gated, and what is only reported:** the step fails on the two
-  structural claims — the rail paints during a fast fling, and `building` and
-  `deep` paint different band content. It does **not** gate the screencap latency
-  or the pixel counts, which are printed and uploaded until two independent runs
-  agree on them; gating a number nobody has measured is how a nightly becomes a
-  coin flip. `report.json` and the frames are artifact `rail-paint-proof`.
+  structural claims — the rail paints during a fast fling, and `building` paints
+  the head liveness mark that `deep` does not. The second is checked as a claim
+  about one mark rather than "the band contents differ": the difference must be at
+  least `MIN_INK_PX`, must be extra ink in `building` only, and must lie in the
+  head-mark rows, anchored on the first tick row the capture itself paints. A
+  difference anywhere else in the column is not the mark the component adds. It
+  does **not** gate the screencap latency or the pixel counts, which are printed
+  and uploaded until two independent runs agree on them; gating a number nobody
+  has measured is how a nightly becomes a coin flip. `report.json` and the frames
+  are artifact `rail-paint-proof`.
 - **If a capture cannot land inside the window:** the rail is up for
   `RAIL_LINGER_MS` 1000 + `RAIL_FADE_MS` 200 ms after the last gesture, and a
   burst of ten swipes extends that. If the recorded latency ever exceeds it, the
