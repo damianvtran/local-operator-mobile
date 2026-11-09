@@ -593,7 +593,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 
 	// PR #207 remediation: the session screen threads the history retry action
 	// and its failure scope to the list. Staged LIVE source admission only.
-	app: "c4f61556ee3f15acdba472763f8bdd172debb77b6c3ebe72173d0df34f2f9924",
+	// Round 3 adds the gap position prop (`historyGapBefore`); same scope.
+	app: "a96c39e621b973e64016bae925f3f7475697ea81b5b56c9c41026fc6337fae7f",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1142,7 +1143,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// with --print over the staged tree; same scope as above.
 	// Q3: biome reformatted the two synthetic history wire fixtures (whitespace
 	// only, JSON deep-equal before/after); re-pinned with --print, same scope.
-	src: "6f45194f278dd60b9a25cbd9c9d4033c0ea7f49fc443694c48a7ff3d798607c2",
+	// PR #207 round 3 (Q5-Q7, U1/U2, D1-D6): web prepend anchor, gap marker and
+	// newest-edge notice, copy; re-pinned with --print over the staged tree, same
+	// scope (no rendered frame or native proof refreshed).
+	src: "a3969983b062cb86052366d01a5630ce9fa17026b19fdc0f4343556cf91b2aba",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -141,15 +141,15 @@
 	},
 	"mobile.session.history.failed": {
 		"role": "status",
-		"note": "A transcript page failed or the server explicitly said unavailable; existing visible messages remain."
+		"note": "A transcript page failed or the server explicitly said unavailable; existing visible messages remain. Do not repeat the Try again button's label in this text."
 	},
 	"mobile.session.history.refresh_failed": {
 		"role": "status",
-		"note": "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Existing visible messages remain; Try again re-reads the newest page. Must not say EARLIER messages failed."
+		"note": "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Shown at the newest edge with a Try again button; do not repeat that label. Must not say EARLIER messages failed."
 	},
 	"mobile.session.history.stalled": {
 		"role": "status",
-		"note": "The server returned a cursor that did not advance; automatic reads stop, manual retry or reopening is needed."
+		"note": "The server returned a cursor that did not advance; automatic reads stop. Name the button's own action (Try again) or reopening; plain wording, no engineering terms."
 	},
 	"mobile.session.history.beginning": {
 		"role": "status",
@@ -161,10 +161,18 @@
 	},
 	"mobile.session.history.gap": {
 		"role": "status",
-		"note": "A disconnected gap needs an explicit history-reader reset. Explain that it jumps to the latest durable page; loading earlier messages afterwards reaches the missed retained messages. Not automatic gap repair."
+		"note": "Marker shown at the actual hole in the transcript after a disconnected gap. Says messages are missing HERE, that Reload jumps to the latest durable page, that earlier messages are then loaded to reach the missing ones, and that pages the reader loaded are cleared. Not automatic gap repair."
+	},
+	"mobile.session.history.gap_newest": {
+		"role": "status",
+		"note": "Compact notice at the newest edge (under the latest messages) that a gap exists further up; the Reload button sits next to it. Short: the full explanation is on the marker at the hole."
 	},
 	"mobile.session.history.reload": {
 		"role": "button",
-		"note": "Explicit reader-only reset to the latest durable history page. Warn that the reading position jumps; draft, attachments, queue and live connection are untouched. Older pages remain available afterwards."
+		"note": "Button: explicit reader-only reset to the latest durable history page. Says it returns to the latest messages; no middle dot or separator (screen readers read it aloud). Draft, attachments, queue and live connection are untouched."
+	},
+	"mobile.session.history.reload_hint": {
+		"role": "help",
+		"note": "Screen-reader hint for the Reload button: it returns to the latest messages and clears the earlier pages the reader loaded."
 	}
 }

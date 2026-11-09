@@ -41,7 +41,15 @@ export class HistoryWindow {
 	olderState: "unknown" | "more" | "end" = "unknown";
 	hasMore = true;
 	hasGap = false;
+	/** The first row AFTER the newest known hole (entry id), so the list can mark
+	 * the gap where it actually is instead of only above the oldest loaded row
+	 * (PR #207 U2). Only the newest hole is tracked: it is the one a reader at
+	 * the newest edge meets first, and Reload history clears every hole at once. */
+	gapBefore: string | null = null;
 	loading = false;
+	/** Which read is in flight: the list must not claim "Loading earlier
+	 * messages" while a foreground refresh re-reads the NEWEST page (PR #207 D1). */
+	loadingScope: "newest" | "older" | null = null;
 	error: string | null = null;
 	read: "unknown" | "ok" | "failed" = "unknown";
 	/** Which request `error` belongs to, so a retry repeats THAT request: a
@@ -115,7 +123,9 @@ export class HistoryWindow {
 		)
 			? projection.transcript[0]
 			: undefined;
-		if (this.read === "ok" && spine.length > 0)
+		const disjoint =
+			this.read === "ok" &&
+			spine.length > 0 &&
 			this.flagDisjoint(spine, frame, head ? rowIdentity(head) : undefined);
 		this.detached = this.detached.map(
 			(row) =>
@@ -125,9 +135,27 @@ export class HistoryWindow {
 		);
 		this.rows = [
 			...this.detached,
-			...mergeTranscript({ transcript: frame } as SessionProjection, spine)
-				.rows,
+			...(disjoint
+				? this.appendAfterHole(spine, frame)
+				: mergeTranscript({ transcript: frame } as SessionProjection, spine)
+						.rows),
 		];
+	}
+
+	/** A disjoint tail is NEWER than everything held, so it goes after the held
+	 * rows with the hole between them (PR #207 Q7). mergeTranscript cannot be used
+	 * here: once paging has reached the beginning the pinned opener is a held row,
+	 * and the merge would anchor the whole new tail right after it, producing
+	 * `opener, newest…, 1, 2, …`. Rows the reader already holds (that opener)
+	 * keep their held position. */
+	private appendAfterHole(
+		held: TranscriptEntry[],
+		incoming: TranscriptEntry[],
+	): TranscriptEntry[] {
+		const heldIds = new Set(held.map(rowIdentity));
+		const tail = incoming.filter((row) => !heldIds.has(rowIdentity(row)));
+		if (tail[0]) this.gapBefore = tail[0].id;
+		return [...held, ...tail];
 	}
 
 	/** The reader cannot claim continuity between what it holds and a newer tail
@@ -141,7 +169,7 @@ export class HistoryWindow {
 		incoming: TranscriptEntry[],
 		context?: string,
 		heldFilter: (row: TranscriptEntry) => boolean = () => true,
-	): void {
+	): boolean {
 		const previous = new Set(
 			held
 				.filter((row) => rowIdentity(row) !== context && heldFilter(row))
@@ -149,12 +177,12 @@ export class HistoryWindow {
 		);
 		const witness = incoming.filter((row) => rowIdentity(row) !== context);
 		// Without a durable reconnect witness, do not call unseen rows complete.
-		if (
+		const disjoint =
 			previous.size > 0 &&
 			witness.length > 0 &&
-			!witness.some((row) => previous.has(rowIdentity(row)))
-		)
-			this.hasGap = true;
+			!witness.some((row) => previous.has(rowIdentity(row)));
+		if (disjoint) this.hasGap = true;
+		return disjoint;
 	}
 
 	/** Same bootstrap domain as the relay: the projection is a newest render,
@@ -197,6 +225,7 @@ export class HistoryWindow {
 		const lease = this.lease;
 		const started = this.revision;
 		this.loading = true;
+		this.loadingScope = before === undefined ? "newest" : "older";
 		this.error = null;
 		this.errorScope = null;
 		this.changed();
@@ -252,6 +281,7 @@ export class HistoryWindow {
 				const spine = this.rows.filter(
 					(row) => !detachedIds.has(rowIdentity(row)),
 				);
+				let disjoint = false;
 				if (refreshing) {
 					// More than a page appended while backgrounded makes the newest page
 					// disjoint from everything held; merging would silently bridge the
@@ -264,19 +294,21 @@ export class HistoryWindow {
 						opener.transcript[0]
 							? rowIdentity(opener.transcript[0])
 							: undefined;
-					this.flagDisjoint(
+					disjoint = this.flagDisjoint(
 						spine,
 						authoritative,
 						context,
 						journalAddressableRow,
 					);
 				}
-				const joined = refreshing
-					? mergeTranscript(
-							{ transcript: authoritative } as SessionProjection,
-							spine,
-						).rows
-					: [...authoritative, ...held];
+				const joined = disjoint
+					? this.appendAfterHole(spine, authoritative)
+					: refreshing
+						? mergeTranscript(
+								{ transcript: authoritative } as SessionProjection,
+								spine,
+							).rows
+						: [...authoritative, ...held];
 				this.rows = [...this.detached, ...joined];
 				if (before !== undefined) {
 					this.cursor = next ?? before;
@@ -304,6 +336,7 @@ export class HistoryWindow {
 				if (!this.active || lease !== this.lease) return;
 				this.pending = null;
 				this.loading = false;
+				this.loadingScope = null;
 				this.changed();
 			});
 		return this.pending;
@@ -328,7 +361,9 @@ export class HistoryWindow {
 		this.hasMore = true;
 		this.olderState = "unknown";
 		this.hasGap = false;
+		this.gapBefore = null;
 		this.loading = false;
+		this.loadingScope = null;
 		this.error = null;
 		this.errorScope = null;
 		this.read = "unknown";
@@ -354,5 +389,6 @@ export class HistoryWindow {
 		this.lease += 1;
 		this.pending = null;
 		this.loading = false;
+		this.loadingScope = null;
 	}
 }

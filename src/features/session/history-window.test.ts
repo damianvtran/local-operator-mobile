@@ -688,4 +688,72 @@ describe("a reader paged to the beginning never claims it across a hole (PR #207
 		expect(window.error).toBeNull();
 		expect(ids(window.rows)).toEqual(ids(journal.slice(300)));
 	});
+
+	/** Journal positions of the visible rows, for order assertions: QA's
+	 * order.qa.test.ts shape (PR #207 Q7) reads the list exactly as it renders. */
+	const positions = (window: HistoryWindow) =>
+		window.visibleRows.map((entry) => Number(entry.id.slice(1)));
+	const descendingBreaks = (seq: number[]) =>
+		seq.filter((value, at) => at > 0 && value < (seq[at - 1] ?? -1));
+
+	it.each([true, false])(
+		"Q7: a disjoint reconnect tail renders AFTER the held rows, with the hole between them (drained %s)",
+		async (drained) => {
+			const journal = sequence(1500);
+			const fetch = vi.fn((before?: string) =>
+				pager(journal.slice(0, 1200), 80)(before),
+			);
+			const window = new HistoryWindow(fetch, () => {});
+			window.accept(capped(journal, 1200));
+			await window.load();
+			if (drained) while (window.hasMore && !window.error) await window.load();
+			window.accept(capped(journal, 1500));
+			expect(window.hasGap).toBe(true);
+			const seq = positions(window);
+			expect(descendingBreaks(seq)).toEqual([]);
+			expect(seq.slice(-5)).toEqual([1495, 1496, 1497, 1498, 1499]);
+			// The hole sits right before the first row of the new tail.
+			expect(window.gapBefore).toBe("q01421");
+			const at = seq.indexOf(1421);
+			expect(seq[at - 1]).toBe(1199);
+			// Live frames after the gap keep extending the tail in order.
+			window.accept(capped(journal.concat(row("q01500")), 1501));
+			expect(descendingBreaks(positions(window))).toEqual([]);
+			expect(positions(window).at(-1)).toBe(1500);
+			await window.reload();
+			expect(window.gapBefore).toBeNull();
+		},
+	);
+
+	it("Q7: a disjoint newest-page refresh also lands after the held rows and marks the hole", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window } = await readToBeginning(() => retained);
+		retained = journal;
+		await window.load(true);
+		expect(window.hasGap).toBe(true);
+		expect(descendingBreaks(positions(window))).toEqual([]);
+		expect(window.gapBefore).toBe("q01420");
+	});
+
+	it("D1: a newest refresh is not reported as an older load", async () => {
+		const journal = sequence(300);
+		const read = deferred<HistoryResponse>();
+		const fetch = vi.fn((before?: string) =>
+			before === undefined && window.cursor !== undefined
+				? read.promise
+				: pager(journal, 80)(before),
+		);
+		const window = new HistoryWindow(fetch, () => {});
+		await window.load();
+		const refresh = window.load(true);
+		expect(window.loading).toBe(true);
+		expect(window.loadingScope).toBe("newest");
+		read.resolve({ entries: journal.slice(-80), has_more: true });
+		await refresh;
+		expect(window.loadingScope).toBeNull();
+		const older = window.load();
+		expect(window.loadingScope).toBe("older");
+		await older;
+	});
 });

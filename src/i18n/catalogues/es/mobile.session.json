@@ -34,11 +34,13 @@
 	"mobile.session.reasoning_disclosure": "Razonamiento",
 	"mobile.session.history.load": "Cargar mensajes anteriores",
 	"mobile.session.history.loading": "Cargando mensajes anteriores…",
-	"mobile.session.history.failed": "No se pudieron cargar los mensajes anteriores. Vuelve a intentarlo.",
-	"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes. Vuelve a intentarlo.",
-	"mobile.session.history.stalled": "El historial no avanzó. Vuelve a intentarlo o abre de nuevo esta conversación.",
+	"mobile.session.history.failed": "No se pudieron cargar los mensajes anteriores.",
+	"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes.",
+	"mobile.session.history.stalled": "Los mensajes anteriores dejaron de cargarse. Reintenta o abre de nuevo esta conversación.",
 	"mobile.session.history.beginning": "Inicio de los mensajes conservados",
 	"mobile.session.history.empty": "No hay mensajes conservados",
-	"mobile.session.history.gap": "Se perdieron algunos mensajes durante la desconexión. Recarga el historial para ir a los más recientes y luego carga los anteriores para recuperar los que faltan.",
-	"mobile.session.history.reload": "Recargar historial · ir al final"
+	"mobile.session.history.gap": "Aquí faltan mensajes: algunos se perdieron durante la desconexión. Recarga desde los mensajes más recientes y luego carga los anteriores para ver los que faltan. Se borrarán las páginas que cargaste.",
+	"mobile.session.history.gap_newest": "Más arriba faltan mensajes que se perdieron durante la desconexión.",
+	"mobile.session.history.reload": "Recargar desde los mensajes más recientes",
+	"mobile.session.history.reload_hint": "Vuelve a los mensajes más recientes y borra las páginas anteriores que cargaste."
 }

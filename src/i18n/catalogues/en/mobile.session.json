@@ -34,11 +34,13 @@
 	"mobile.session.reasoning_disclosure": "Thinking",
 	"mobile.session.history.load": "Load earlier messages",
 	"mobile.session.history.loading": "Loading earlier messages…",
-	"mobile.session.history.failed": "Earlier messages could not be loaded. Try again.",
-	"mobile.session.history.refresh_failed": "The latest messages could not be loaded. Try again.",
-	"mobile.session.history.stalled": "History did not advance. Retry or reopen this conversation.",
+	"mobile.session.history.failed": "Earlier messages could not be loaded.",
+	"mobile.session.history.refresh_failed": "The latest messages could not be loaded.",
+	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
 	"mobile.session.history.beginning": "Beginning of retained messages",
 	"mobile.session.history.empty": "No retained messages",
-	"mobile.session.history.gap": "Some messages were missed while disconnected. Reload history to jump to the latest messages, then load earlier messages to reach the missing ones.",
-	"mobile.session.history.reload": "Reload history · jump to latest"
+	"mobile.session.history.gap": "Messages are missing here: some were missed while disconnected. Reload from the latest messages, then load earlier messages to reach the missing ones. Pages you loaded will be cleared.",
+	"mobile.session.history.gap_newest": "Some messages above were missed while disconnected.",
+	"mobile.session.history.reload": "Reload from latest messages",
+	"mobile.session.history.reload_hint": "Returns to the latest messages and clears the earlier pages you loaded."
 }

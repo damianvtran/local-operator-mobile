@@ -81,6 +81,8 @@ export interface SessionRuntime {
 	historyError: string | null;
 	hasOlder: boolean;
 	historyGap: boolean;
+	/** Entry id of the first row after the newest hole, where the list marks it. */
+	historyGapBefore: string | null;
 	/** Which read `historyError` belongs to; decides retry target and copy. */
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
@@ -768,10 +770,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		loadOlder,
 		reloadHistory,
 		retryHistory,
-		loadingOlder: historyWindow.loading,
+		// Only an older-page read is "loading earlier": a foreground refresh
+		// re-reads the newest page and must not claim that (PR #207 D1).
+		loadingOlder:
+			historyWindow.loading && historyWindow.loadingScope === "older",
 		historyError: historyWindow.error,
 		hasOlder: historyWindow.hasMore,
 		historyGap: historyWindow.hasGap,
+		historyGapBefore: historyWindow.gapBefore,
 		historyErrorScope: historyWindow.errorScope,
 		// The shared route can be refused by its catalogue stream before this
 		// session's stream reports an error. Publish the same typed failure the

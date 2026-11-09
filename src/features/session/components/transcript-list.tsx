@@ -31,7 +31,10 @@ import {
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
-import { historyTopReached } from "@/features/session/history-scroll";
+import {
+	anchoredScrollTop,
+	historyTopReached,
+} from "@/features/session/history-scroll";
 import { visibleTranscriptEntries } from "@/features/session/projection";
 import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
@@ -122,6 +125,8 @@ export type TranscriptListProps = {
 	loadingOlder?: boolean;
 	hasOlder?: boolean;
 	historyGap?: boolean;
+	/** Entry id of the first row after the newest hole; the gap marker sits there. */
+	historyGapBefore?: string | null;
 	historyError?: string | null;
 	/** The row that carries `transcript-streaming`, or `null` when settled. */
 	streamingRowId: string | null;
@@ -263,6 +268,28 @@ interface ScrollPlace {
 }
 
 const scrollPlaces = new Map<string, ScrollPlace>();
+
+/** A mounted row converts the offset table into content coordinates: its DOM
+ *  position already includes the list header, so nothing has to measure that
+ *  header separately (see `anchoredScrollTop`). Null when no row is mounted. */
+const mountedReference = (
+	rows: ReadonlyMap<string, View>,
+	table: { index: ReadonlyMap<string, number>; offsets: readonly number[] },
+	scroll: HTMLElement,
+): { contentTop: number; offset: number } | null => {
+	const scrollerTop = scroll.getBoundingClientRect().top;
+	for (const [id, mounted] of rows) {
+		const element = mounted as unknown as HTMLElement;
+		const index = table.index.get(id);
+		if (index === undefined || !element.isConnected) continue;
+		return {
+			contentTop:
+				element.getBoundingClientRect().top - scrollerTop + scroll.scrollTop,
+			offset: table.offsets[index] ?? 0,
+		};
+	}
+	return null;
+};
 const HISTORY_ANCHOR = { minIndexForVisible: 1 };
 
 export const TranscriptList = ({
@@ -275,6 +302,7 @@ export const TranscriptList = ({
 	loadingOlder = false,
 	hasOlder = false,
 	historyGap = false,
+	historyGapBefore = null,
 	historyError = null,
 	streamingRowId,
 	loadImage,
@@ -297,19 +325,20 @@ export const TranscriptList = ({
 }: TranscriptListProps) => {
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
 	const webRows = useRef(new Map<string, View>());
+	/* The row the reader was looking at when an older page was requested, held
+	 * by ITEM ID rather than DOM node: react-native-web unmounts that node on the
+	 * prepend (see `anchoredScrollTop`), and a held node then answered
+	 * `isConnected === false` forever, so `scrollTop` never moved (PR #207 Q5/Q6).
+	 * `offset` is the scrollTop this code last set, so `onScroll` can tell its
+	 * own correction from a reader's scroll, which releases the anchor. */
 	const webAnchor = useRef<{
-		node: HTMLElement;
-		top: number;
+		id: string;
+		distance: number;
 		scroll: HTMLElement;
 		offset: number;
 	} | null>(null);
-	const restoreWebAnchor = useCallback(() => {
-		const anchor = webAnchor.current;
-		if (!anchor?.node.isConnected) return;
-		const delta = anchor.node.getBoundingClientRect().top - anchor.top;
-		if (delta !== 0) anchor.scroll.scrollTop += delta;
-		anchor.offset = anchor.scroll.scrollTop;
-	}, []);
+	/** See its assignment below the offset table. */
+	const captureWebAnchor = useRef<(scroll: HTMLElement) => void>(() => {});
 	const requestOlder = useCallback(() => {
 		if (!loadOlder || loadingOlder || !hasOlder) return;
 		// Native ScrollView preserves its visible child. RN-web lacks that prop:
@@ -319,24 +348,12 @@ export const TranscriptList = ({
 			const scroll =
 				listRef.current?.getNativeScrollRef() as unknown as HTMLElement | null;
 			if (scroll?.getBoundingClientRect) {
-				const top = scroll.getBoundingClientRect().top;
-				const nodes = [...webRows.current.values()] as unknown as HTMLElement[];
-				const node = nodes
-					.filter(
-						(node) =>
-							node.isConnected && node.getBoundingClientRect().bottom > top,
-					)
-					.sort(
-						(a, b) =>
-							a.getBoundingClientRect().top - b.getBoundingClientRect().top,
-					)[0];
-				if (node)
-					webAnchor.current = {
-						node,
-						top: node.getBoundingClientRect().top,
-						scroll,
-						offset: scroll.scrollTop,
-					};
+				// Two anchoring mechanisms on one scroller fight: the browser's own
+				// (`overflow-anchor: auto`) moves scrollTop as rows above mount, and
+				// its scroll event reads as a reader's scroll in `onScroll`, which
+				// releases this anchor mid-settle. This list owns prepend anchoring.
+				scroll.style.overflowAnchor = "none";
+				captureWebAnchor.current(scroll);
 			}
 		}
 		atTail.current = false;
@@ -350,6 +367,9 @@ export const TranscriptList = ({
 	const newestFailed = historyError !== null && historyErrorScope === "newest";
 	const canRetry =
 		historyError !== null && (newestFailed ? !!retryHistory : hasOlder);
+	/** The header retries only older pages; a newest failure is retried from
+	 *  the newest edge, where the reader is (PR #207 D1). */
+	const olderRetry = canRetry && !newestFailed;
 	const requestRetry = useCallback(() => {
 		if (loadingOlder) return;
 		if (newestFailed && retryHistory) {
@@ -633,6 +653,79 @@ export const TranscriptList = ({
 	 * over what is RENDERED (see `recompute`), and this is that list. */
 	const itemsRef = useRef<readonly TranscriptItem[]>(grouped.items);
 	itemsRef.current = grouped.items;
+	/* Which row the reader is looking at, captured before an older page is
+	 * requested. Only rows that INTERSECT the viewport count: right after a jump
+	 * to the top (a focus or click scrolling the Load earlier control into view)
+	 * react-native-web has not re-rendered its window yet, the viewport sits over
+	 * a spacer, and the nearest mounted row can be thousands of points below
+	 * (rendered check: the anchor was taken 5893 pt down). In that state the row
+	 * at the viewport's top is located from the offset table instead. Assigned
+	 * every render (it reads this render's table); called through the ref by
+	 * `requestOlder`, which is declared before the table exists. */
+	captureWebAnchor.current = (scroll: HTMLElement) => {
+		const box = scroll.getBoundingClientRect();
+		let first: { id: string; top: number } | null = null;
+		for (const [id, mounted] of webRows.current) {
+			const element = mounted as unknown as HTMLElement;
+			if (!element.isConnected) continue;
+			const rect = element.getBoundingClientRect();
+			if (rect.bottom <= box.top || rect.top >= box.bottom) continue;
+			if (first === null || rect.top < first.top) first = { id, top: rect.top };
+		}
+		if (first === null) {
+			const items = itemsRef.current;
+			const table = geometryFor(items);
+			const reference = mountedReference(webRows.current, table, scroll);
+			if (reference === null) return;
+			for (let at = 0; at < items.length; at += 1) {
+				const contentTop =
+					reference.contentTop + (table.offsets[at] ?? 0) - reference.offset;
+				const height = (table.offsets[at + 1] ?? 0) - (table.offsets[at] ?? 0);
+				const item = items[at];
+				if (item && contentTop + height > scroll.scrollTop) {
+					first = { id: item.id, top: box.top + contentTop - scroll.scrollTop };
+					break;
+				}
+			}
+		}
+		if (first)
+			webAnchor.current = {
+				id: first.id,
+				distance: first.top - box.top,
+				scroll,
+				offset: scroll.scrollTop,
+			};
+	};
+	const restoreWebAnchor = useCallback(() => {
+		const anchor = webAnchor.current;
+		if (!anchor) return;
+		const { scroll } = anchor;
+		const scrollerTop = scroll.getBoundingClientRect().top;
+		const node = webRows.current.get(anchor.id) as unknown as
+			| HTMLElement
+			| undefined;
+		let next: number | null = null;
+		if (node?.isConnected) {
+			next = anchoredScrollTop({
+				kind: "mounted",
+				scrollTop: scroll.scrollTop,
+				rowTop: node.getBoundingClientRect().top,
+				desiredTop: scrollerTop + anchor.distance,
+			});
+		} else {
+			const table = geometryFor(itemsRef.current);
+			const at = table.index.get(anchor.id);
+			if (at === undefined) return;
+			next = anchoredScrollTop({
+				kind: "table",
+				anchorOffset: table.offsets[at] ?? 0,
+				reference: mountedReference(webRows.current, table, scroll),
+				distance: anchor.distance,
+			});
+		}
+		if (Math.abs(next - scroll.scrollTop) >= 1) scroll.scrollTop = next;
+		anchor.offset = scroll.scrollTop;
+	}, [geometryFor]);
 	const viewportRef = useRef(0);
 	// Event snapshots must not be overwritten by onLayout before onScroll gets them.
 	const previousScrollGeometry = useRef({ viewport: 0, content: 0 });
@@ -1272,6 +1365,51 @@ export const TranscriptList = ({
 		restoreWebAnchor();
 	});
 
+	/* WHERE THE HOLE IS (PR #207 U2). After a disjoint reconnect the held rows and
+	 * the new tail sit on either side of rows nobody holds; the marker renders
+	 * INSIDE the measured wrapper of the item that shows the first row after the
+	 * hole (so the offset table includes it), whichever fold currently hides
+	 * that row. It carries the same Reload action as the newest-edge notice. */
+	const gapItemId = useMemo(() => {
+		if (!historyGap || !historyGapBefore) return null;
+		// planRef carries THIS render's plan (assigned above); grouped is its trigger.
+		const target = revealTarget(planRef.current, expanded, historyGapBefore);
+		if (target === null) return null;
+		const item =
+			target.kind === "item"
+				? grouped.items[target.index]
+				: grouped.items.find((candidate) =>
+						target.kind === "turn"
+							? candidate.kind === "bar" && candidate.turnKey === target.turnKey
+							: candidate.kind === "group" &&
+								candidate.groupKey === target.groupKey,
+					);
+		return item?.id ?? null;
+	}, [historyGap, historyGapBefore, grouped, expanded]);
+	const gapMarker = useMemo(
+		() =>
+			gapItemId === null ? null : (
+				<View className="px-4 py-2 gap-2" testID={REGION.transcriptGap}>
+					<Text
+						accessibilityRole="text"
+						className="text-body-sm text-ink-muted"
+					>
+						{t("mobile.session.history.gap")}
+					</Text>
+					{reloadHistory ? (
+						<Button
+							label={t("mobile.session.history.reload")}
+							accessibilityHint={t("mobile.session.history.reload_hint")}
+							onPress={requestHistoryReload}
+							variant="outline"
+							testID={CONTROL.transcriptGapReload}
+						/>
+					) : null}
+				</View>
+			),
+		[gapItemId, reloadHistory, requestHistoryReload],
+	);
+
 	const renderItem = useCallback(
 		({ item }: { item: TranscriptItem }) => {
 			/* The supplement block's seat: under the FINAL answer, inside the row's
@@ -1298,6 +1436,7 @@ export const TranscriptList = ({
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
 				>
+					{item.id === gapItemId ? gapMarker : null}
 					<TurnBar
 						turnKey={item.turnKey}
 						facts={item.facts}
@@ -1318,6 +1457,7 @@ export const TranscriptList = ({
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
 				>
+					{item.id === gapItemId ? gapMarker : null}
 					<QuietGroupBar
 						groupKey={item.groupKey}
 						group={item.group}
@@ -1343,6 +1483,7 @@ export const TranscriptList = ({
 						item.id === highlightId ? "bg-row-selected" : undefined,
 					)}
 				>
+					{item.id === gapItemId ? gapMarker : null}
 					{/*
 					 * The find hit's own edge. The wash alone is `row-selected` on the row's
 					 * ground — a ~1.0x luminance step the kit's own contrast contract calls
@@ -1405,6 +1546,8 @@ export const TranscriptList = ({
 			supplements,
 			projectionPid,
 			supplementClient,
+			gapItemId,
+			gapMarker,
 		],
 	);
 
@@ -1412,6 +1555,63 @@ export const TranscriptList = ({
 	 *  `ListFooterComponent` are compared by identity, so an inline element (or a
 	 *  fresh fragment) tells the virtualiser its header and footer changed on every
 	 *  streaming frame. */
+	/* THE NEWEST EDGE, where a reader of a live conversation actually is (PR #207
+	 * D1/U2): a failed newest-page refresh, and a compact pointer to a gap above
+	 * with the same Reload action as the marker at the hole. Rendered above the
+	 * pending echoes in the footer so it sits directly under the newest rows. */
+	const newestEdgeNotice = useMemo(
+		() =>
+			loadOlder && (newestFailed || historyGap) ? (
+				<View className="px-4 py-2 gap-2" testID={REGION.transcriptNewestEdge}>
+					{newestFailed ? (
+						<>
+							<Text
+								accessibilityLiveRegion="polite"
+								className="text-body-sm text-ink-muted"
+							>
+								{t("mobile.session.history.refresh_failed")}
+							</Text>
+							{canRetry ? (
+								<Button
+									label={t("mobile.common.try_again")}
+									onPress={requestRetry}
+									variant="outline"
+									testID={CONTROL.transcriptRetryLatest}
+								/>
+							) : null}
+						</>
+					) : null}
+					{historyGap ? (
+						<>
+							<Text
+								accessibilityLiveRegion="polite"
+								className="text-body-sm text-ink-muted"
+							>
+								{t("mobile.session.history.gap_newest")}
+							</Text>
+							{reloadHistory ? (
+								<Button
+									label={t("mobile.session.history.reload")}
+									accessibilityHint={t("mobile.session.history.reload_hint")}
+									onPress={requestHistoryReload}
+									variant="outline"
+									testID={CONTROL.transcriptReloadHistory}
+								/>
+							) : null}
+						</>
+					) : null}
+				</View>
+			) : null,
+		[
+			loadOlder,
+			newestFailed,
+			historyGap,
+			canRetry,
+			requestRetry,
+			reloadHistory,
+			requestHistoryReload,
+		],
+	);
 	const listHeader = useMemo(
 		() => (
 			<>
@@ -1430,24 +1630,12 @@ export const TranscriptList = ({
 				 * screen reader should not announce it. */}
 				<View testID={transcriptRowId(sessionId)} aria-hidden />
 				{loadOlder ? (
+					/* The OLDER edge only: load, loading, an older-page failure, and the
+					 * beginning. A newest-page refresh and the disconnected gap are
+					 * reported where the reader is — the newest edge and the hole itself
+					 * (`gapNotice`, `historyGapBefore`; PR #207 D1/U2). */
 					<View className="px-4 py-2 gap-2" testID={REGION.transcriptHistory}>
-						{historyGap ? (
-							<Text
-								accessibilityLiveRegion="polite"
-								className="text-body-sm text-ink-muted"
-							>
-								{t("mobile.session.history.gap")}
-							</Text>
-						) : null}
-						{historyGap && reloadHistory ? (
-							<Button
-								label={t("mobile.session.history.reload")}
-								onPress={requestHistoryReload}
-								variant="outline"
-								testID={CONTROL.transcriptReloadHistory}
-							/>
-						) : null}
-						{historyError ? (
+						{historyError && !newestFailed ? (
 							<Text
 								accessibilityLiveRegion="polite"
 								className="text-body-sm text-ink-muted"
@@ -1455,24 +1643,25 @@ export const TranscriptList = ({
 								{t(
 									historyError === "stalled"
 										? "mobile.session.history.stalled"
-										: newestFailed
-											? "mobile.session.history.refresh_failed"
-											: "mobile.session.history.failed",
+										: "mobile.session.history.failed",
 								)}
 							</Text>
 						) : null}
-						{hasOlder || canRetry ? (
+						{hasOlder || olderRetry ? (
+							/* Deliberately NOT `disabled` while loading (PR #207 U1): a native
+							 * `disabled` blurs the focused control, so keyboard and
+							 * screen-reader readers lost their place on every page. `Button`
+							 * already ignores presses while `loading` and announces busy. */
 							<Button
 								label={t(
 									loadingOlder
 										? "mobile.session.history.loading"
-										: canRetry
+										: olderRetry
 											? "mobile.common.try_again"
 											: "mobile.session.history.load",
 								)}
-								onPress={canRetry ? requestRetry : requestOlder}
+								onPress={olderRetry ? requestRetry : requestOlder}
 								loading={loadingOlder}
-								disabled={loadingOlder}
 								variant="outline"
 								testID={CONTROL.transcriptLoadEarlier}
 							/>
@@ -1499,9 +1688,7 @@ export const TranscriptList = ({
 			historyGap,
 			loadingOlder,
 			requestOlder,
-			reloadHistory,
-			requestHistoryReload,
-			canRetry,
+			olderRetry,
 			newestFailed,
 			requestRetry,
 			entries.length,
@@ -1512,11 +1699,12 @@ export const TranscriptList = ({
 	const listFooter = useMemo(
 		() => (
 			<View>
+				{newestEdgeNotice}
 				{pending ?? null}
 				{footer}
 			</View>
 		),
-		[pending, footer],
+		[newestEdgeNotice, pending, footer],
 	);
 
 	return (

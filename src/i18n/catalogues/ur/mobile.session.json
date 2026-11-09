@@ -34,11 +34,13 @@
 	"mobile.session.reasoning_disclosure": "سوچ بچار",
 	"mobile.session.history.load": "پہلے کے پیغامات لوڈ کریں",
 	"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
-	"mobile.session.history.failed": "پہلے کے پیغامات لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
-	"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
-	"mobile.session.history.stalled": "تاریخ میں مزید پیغامات لوڈ نہیں ہوئے۔ دوبارہ کوشش کریں یا یہ گفتگو دوبارہ کھولیں۔",
+	"mobile.session.history.failed": "پہلے کے پیغامات لوڈ نہیں ہو سکے۔",
+	"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔",
+	"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
 	"mobile.session.history.beginning": "محفوظ پیغامات کی ابتدا",
 	"mobile.session.history.empty": "کوئی محفوظ پیغامات نہیں ہیں",
-	"mobile.session.history.gap": "کنکشن منقطع ہونے کے دوران کچھ پیغامات رہ گئے۔ تازہ ترین پیغامات پر جانے کے لیے تاریخچہ دوبارہ لوڈ کریں، پھر رہ جانے والے پیغامات دیکھنے کے لیے پرانے پیغامات لوڈ کریں۔",
-	"mobile.session.history.reload": "تاریخچہ دوبارہ لوڈ کریں · تازہ ترین پر جائیں"
+	"mobile.session.history.gap": "یہاں پیغامات غائب ہیں: کنکشن منقطع ہونے کے دوران کچھ پیغامات رہ گئے۔ تازہ ترین پیغامات سے تاریخچہ دوبارہ لوڈ کریں، پھر رہ جانے والے پیغامات دیکھنے کے لیے پہلے کے پیغامات لوڈ کریں۔ آپ کے لوڈ کیے گئے صفحات ہٹ جائیں گے۔",
+	"mobile.session.history.gap_newest": "اوپر کچھ پیغامات کنکشن منقطع ہونے کے دوران رہ گئے۔",
+	"mobile.session.history.reload": "تازہ ترین پیغامات سے تاریخچہ دوبارہ لوڈ کریں",
+	"mobile.session.history.reload_hint": "تازہ ترین پیغامات پر واپس لے جاتا ہے اور آپ کے لوڈ کیے گئے پہلے کے صفحات ہٹا دیتا ہے۔"
 }

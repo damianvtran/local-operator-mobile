@@ -1,8 +1,19 @@
 import { readFileSync } from "node:fs";
+import { stripTypeScriptTypes } from "node:module";
 import vm from "node:vm";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { HistoryResponse } from "@/contracts";
-import { historyTopReached } from "./history-scroll";
+import { Button } from "@/ui/components/button";
+import { anchoredScrollTop, historyTopReached } from "./history-scroll";
+
+// Rendering `Button` in Node: the appearance hook reads the native colour
+// scheme, which this Node host does not have (same seam as checkpoint-rail).
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: (role: string) => `token:${role}`,
+}));
+
 import { HistoryWindow } from "./history-window";
 import { type ProjectionOwner, sameProjectionOwner } from "./session-content";
 
@@ -141,7 +152,7 @@ describe("history reader production wiring", () => {
 		expect(JSON.stringify(composer)).toBe(before);
 		expect(declaration).not.toMatch(NON_READER_MUTATIONS);
 		expect(screen).toContain("reloadHistory={runtime.reloadHistory}");
-		expect(list).toContain("historyGap && reloadHistory ? (");
+		expect(list).toContain("reloadHistory ? (");
 		expect(list).toContain("onPress={requestHistoryReload}");
 		expect(list).toContain("testID={CONTROL.transcriptReloadHistory}");
 		expect(list).toContain("webAnchor.current = null;");
@@ -194,11 +205,14 @@ describe("history reader production wiring", () => {
 			"historyGap",
 			"retryHistory",
 			"historyErrorScope",
+			"historyGapBefore",
 		]) {
 			expect(screen).toContain(`${property}={runtime.${property}}`);
 		}
 		expect(list).toContain("testID={CONTROL.transcriptLoadEarlier}");
-		expect(list).toContain("onPress={canRetry ? requestRetry : requestOlder}");
+		expect(list).toContain(
+			"onPress={olderRetry ? requestRetry : requestOlder}",
+		);
 		expect(list).toContain("historyTopReached(");
 		expect(list).not.toContain("onStartReached=");
 		expect(runtime).toContain("return () => historyWindow.retire();");
@@ -285,7 +299,7 @@ describe("history retry targets the read that failed (PR #207 R2)", () => {
 			retrySeam({ historyError: null, historyErrorScope: null, hasOlder: true })
 				.canRetry,
 		).toBe(false);
-		expect(list).toContain("{hasOlder || canRetry ? (");
+		expect(list).toContain("{hasOlder || olderRetry ? (");
 		expect(list).toContain('"mobile.session.history.refresh_failed"');
 	});
 });
@@ -301,5 +315,262 @@ describe("actual top-scroll transitions", () => {
 		expect(historyTopReached(20, -1, true, false)).toBe(true);
 		expect(historyTopReached(0, 0, true, false)).toBe(false);
 		expect(historyTopReached(20, 0, true, true)).toBe(false);
+	});
+});
+
+/** A list seam executed as JavaScript: the production source with its types
+ * stripped, run against controlled DOM-like objects. NOT a rendered browser. */
+const MOUNTED_REFERENCE = /const mountedReference = \([\s\S]*?\n\};/;
+const CAPTURE_WEB_ANCHOR =
+	/captureWebAnchor\.current = \(scroll: HTMLElement\) => \{[\s\S]*?\n\t\};/;
+const runSeam = (source: string, result: string, context: object) =>
+	vm.runInNewContext(`${stripTypeScriptTypes(source)}\n${result}`, {
+		useCallback: (callback: () => void) => callback,
+		...context,
+	});
+const seam = (pattern: RegExp) => {
+	const match = list.match(pattern);
+	if (!match) throw new Error(`list seam changed: ${pattern}`);
+	return match[0];
+};
+
+describe("web prepend keeps the reader's row in place (PR #207 Q5/Q6)", () => {
+	type Fake = {
+		isConnected: boolean;
+		top: number;
+		height: number;
+		getBoundingClientRect(): { top: number; bottom: number };
+	};
+	const element = (top: number, height: number): Fake => ({
+		isConnected: true,
+		top,
+		height,
+		getBoundingClientRect() {
+			return { top: this.top, bottom: this.top + this.height };
+		},
+	});
+	/** QA r3's geometry: scroller at y=64, header 64 px, reader at scrollTop 0
+	 * with old row o0 at the top; a page of 80 rows estimated at 29 px lands. */
+	const prepend = () => {
+		const scroll = {
+			scrollTop: 0,
+			style: {} as Record<string, string>,
+			getBoundingClientRect: () => ({ top: 64, bottom: 724 }),
+		};
+		const webRows = { current: new Map<string, Fake>() };
+		const old = Array.from({ length: 10 }, (_, at) => `o${at}`);
+		for (const [at, id] of old.entries())
+			webRows.current.set(id, element(128 + at * 40, 40));
+		const fresh = Array.from({ length: 80 }, (_, at) => `n${at}`);
+		const itemsRef = { current: old.map((id) => ({ id })) };
+		const geometryFor = (rows: { id: string }[]) => {
+			const index = new Map(rows.map((row, at) => [row.id, at]));
+			const offsets = [0];
+			for (const row of rows)
+				offsets.push(
+					(offsets.at(-1) ?? 0) + (row.id.startsWith("n") ? 29 : 40),
+				);
+			return { index, offsets };
+		};
+		const webAnchor = { current: null as unknown };
+		const shared: {
+			webRows: typeof webRows;
+			webAnchor: typeof webAnchor;
+			itemsRef: typeof itemsRef;
+			geometryFor: typeof geometryFor;
+			mountedReference?: unknown;
+		} = { webRows, webAnchor, itemsRef, geometryFor };
+		const capture = webCapture(shared);
+		const context = {
+			captureWebAnchor: { current: capture },
+			mountedReference: shared.mountedReference,
+			Platform: { OS: "web" },
+			listRef: { current: { getNativeScrollRef: () => scroll } },
+			webRows,
+			webAnchor,
+			atTail: { current: true },
+			loadOlder: vi.fn(async () => {}),
+			loadingOlder: false,
+			hasOlder: true,
+			itemsRef,
+			geometryFor,
+			anchoredScrollTop,
+		};
+		const requestOlder = runSeam(
+			seam(/const requestOlder = useCallback\([\s\S]*?\n\t\}, \[[^\]]*\]\);/),
+			"requestOlder",
+			context,
+		);
+		const restore = runSeam(
+			seam(
+				/const restoreWebAnchor = useCallback\([\s\S]*?\n\t\}, \[[^\]]*\]\);/,
+			),
+			"restoreWebAnchor",
+			context,
+		);
+		requestOlder();
+		// react-native-web keeps the window's INDICES: they now name the new rows,
+		// so o0 unmounts and n0… mount where o0… were (the blank-block state).
+		for (const id of old) {
+			const node = webRows.current.get(id);
+			if (node) node.isConnected = false;
+			webRows.current.delete(id);
+		}
+		for (const [at, id] of fresh.slice(0, 10).entries())
+			webRows.current.set(id, element(128 + at * 29, 29));
+		itemsRef.current = [...fresh, ...old].map((id) => ({ id }));
+		return { scroll, restore, webRows, webAnchor, element };
+	};
+
+	/** The production capture and its table helper, run as JavaScript. */
+	const webCapture = (shared: {
+		webRows: unknown;
+		webAnchor: unknown;
+		itemsRef: unknown;
+		geometryFor: unknown;
+		mountedReference?: unknown;
+	}) => {
+		shared.mountedReference = runSeam(
+			seam(MOUNTED_REFERENCE),
+			"mountedReference",
+			{},
+		);
+		const captureWebAnchor = { current: null as unknown };
+		runSeam(seam(CAPTURE_WEB_ANCHOR), "undefined", {
+			...shared,
+			captureWebAnchor,
+		});
+		return captureWebAnchor.current as (scroll: unknown) => void;
+	};
+
+	it("captures the row at the viewport's top even while the list window lags behind a jump", () => {
+		// A focus/click jumped the scroller to the top; react-native-web has not
+		// re-rendered its window, so the only mounted rows are far below (QA r3
+		// rendered check: the anchor was taken 5893 pt down).
+		const rows = Array.from({ length: 100 }, (_, at) => ({ id: `o${at}` }));
+		const webRows = { current: new Map<string, Fake>() };
+		for (let at = 60; at < 70; at += 1)
+			webRows.current.set(`o${at}`, element(64 + 64 + at * 40, 40));
+		const webAnchor = {
+			current: null as { id: string; distance: number } | null,
+		};
+		const capture = webCapture({
+			webRows,
+			webAnchor,
+			itemsRef: { current: rows },
+			geometryFor: (data: { id: string }[]) => ({
+				index: new Map(data.map((row, at) => [row.id, at])),
+				offsets: Array.from({ length: data.length + 1 }, (_, at) => at * 40),
+			}),
+		});
+		capture({
+			scrollTop: 0,
+			getBoundingClientRect: () => ({ top: 64, bottom: 724 }),
+		});
+		// o0 sits right under the 64 pt header, 64 pt below the scroller's top.
+		expect(webAnchor.current).toMatchObject({ id: "o0", distance: 64 });
+	});
+
+	it("moves scrollTop so the previously top row lands where it was, even though it unmounted", () => {
+		const { scroll, restore, webAnchor } = prepend();
+		restore();
+		// o0's content top = 64 (header) + 80 × 29; kept 64 px below the scroller top.
+		expect(scroll.scrollTop).toBe(80 * 29);
+		expect((webAnchor.current as { offset: number }).offset).toBe(80 * 29);
+	});
+
+	it("then corrects estimate error from the mounted row's real position", () => {
+		const { scroll, restore, webRows, element } = prepend();
+		restore();
+		// The list's window follows the scroll: o0 mounts 6 px lower than estimated.
+		webRows.current.set("o0", element(128 + 6, 40));
+		restore();
+		expect(scroll.scrollTop).toBe(80 * 29 + 6);
+	});
+
+	it("computes both anchor paths from the list's own geometry", () => {
+		expect(
+			anchoredScrollTop({
+				kind: "mounted",
+				scrollTop: 100,
+				rowTop: 300,
+				desiredTop: 128,
+			}),
+		).toBe(272);
+		expect(
+			anchoredScrollTop({
+				kind: "table",
+				anchorOffset: 2320,
+				reference: { contentTop: 64, offset: 0 },
+				distance: 64,
+			}),
+		).toBe(2320);
+		expect(
+			anchoredScrollTop({
+				kind: "table",
+				anchorOffset: 10,
+				reference: null,
+				distance: 64,
+			}),
+		).toBe(0);
+	});
+});
+
+describe("history controls keep focus while loading (PR #207 U1)", () => {
+	it("the Load earlier / Try again control is never natively disabled", () => {
+		const control = seam(
+			/<Button[^<]*?testID=\{CONTROL\.transcriptLoadEarlier\}[^<]*?\/>/,
+		);
+		expect(control).toContain("loading={loadingOlder}");
+		expect(control).not.toMatch(/\bdisabled=/);
+	});
+
+	it("a loading Button stays focusable and ignores presses through its own guard", () => {
+		const onPress = vi.fn();
+		const markup = renderToStaticMarkup(
+			createElement(Button, {
+				label: "Loading earlier messages…",
+				onPress,
+				loading: true,
+				variant: "outline",
+				testID: "transcript-load-earlier",
+			}),
+		);
+		expect(markup).toContain('tabindex="0"');
+		expect(markup).not.toMatch(/\sdisabled(=|\s|>)/);
+		expect(markup).not.toContain('aria-disabled="true"');
+		// The in-flight guard is the Button's own, not a native `disabled`.
+		expect(
+			readFileSync(
+				new URL("../../ui/components/button.tsx", import.meta.url),
+				"utf8",
+			),
+		).toContain("if (loading || disabled) return;");
+	});
+});
+
+describe("the gap is shown where it is and where the reader is (PR #207 U2/D1)", () => {
+	it("marks the hole inside every measured row wrapper and at the newest edge", () => {
+		expect(
+			list.match(/\{item\.id === gapItemId \? gapMarker : null\}/g),
+		).toHaveLength(3);
+		expect(list).toContain("testID={CONTROL.transcriptGapReload}");
+		expect(list).toContain("{newestEdgeNotice}");
+		expect(list).toContain("testID={CONTROL.transcriptReloadHistory}");
+		expect(list).toContain(
+			'accessibilityHint={t("mobile.session.history.reload_hint")}',
+		);
+	});
+
+	it("reports a newest-refresh failure at the newest edge, not in the older header", () => {
+		const header = seam(/const listHeader = useMemo\([\s\S]*?\n\t\);/);
+		expect(header).not.toContain("refresh_failed");
+		expect(header).not.toContain("transcriptReloadHistory");
+		const edge = seam(/const newestEdgeNotice = useMemo\([\s\S]*?\n\t\);/);
+		expect(edge).toContain('"mobile.session.history.refresh_failed"');
+		expect(edge).toContain("testID={CONTROL.transcriptRetryLatest}");
+		expect(runtime).toContain(
+			'historyWindow.loading && historyWindow.loadingScope === "older"',
+		);
 	});
 });

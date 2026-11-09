@@ -34,11 +34,13 @@
 	"mobile.session.reasoning_disclosure": "Suy nghĩ",
 	"mobile.session.history.load": "Tải tin nhắn trước đó",
 	"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
-	"mobile.session.history.failed": "Không tải được tin nhắn trước đó. Hãy thử lại.",
-	"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất. Hãy thử lại.",
-	"mobile.session.history.stalled": "Lịch sử chưa tải thêm được. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
-	"mobile.session.history.beginning": "Bắt đầu các tin nhắn được lưu giữ",
+	"mobile.session.history.failed": "Không tải được tin nhắn trước đó.",
+	"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất.",
+	"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
+	"mobile.session.history.beginning": "Phần đầu của các tin nhắn đã lưu giữ",
 	"mobile.session.history.empty": "Không có tin nhắn được lưu giữ",
-	"mobile.session.history.gap": "Một số tin nhắn đã bị bỏ lỡ khi mất kết nối. Tải lại lịch sử để đến các tin mới nhất, rồi tải các tin cũ hơn để xem những tin còn thiếu.",
-	"mobile.session.history.reload": "Tải lại lịch sử · đến tin mới nhất"
+	"mobile.session.history.gap": "Thiếu tin nhắn ở đây: một số tin đã bị bỏ lỡ khi mất kết nối. Tải lại từ tin nhắn mới nhất, rồi tải các tin trước đó để xem những tin còn thiếu. Các trang bạn đã tải sẽ bị xóa.",
+	"mobile.session.history.gap_newest": "Một số tin nhắn phía trên đã bị bỏ lỡ khi mất kết nối.",
+	"mobile.session.history.reload": "Tải lại từ tin nhắn mới nhất",
+	"mobile.session.history.reload_hint": "Quay về các tin nhắn mới nhất và xóa các trang trước đó bạn đã tải."
 }

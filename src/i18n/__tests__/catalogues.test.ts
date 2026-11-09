@@ -153,7 +153,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 42, // +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 44, // +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -257,7 +257,7 @@ describe("the English catalogues", () => {
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
 		/* Exact union of main and #108 catalogue entries; shared values agree. */
-		expect(total).toBe(505); // 496 established keys plus nine lazy-history keys
+		expect(total).toBe(507); // 496 established keys plus eleven lazy-history keys
 	});
 
 	it("lists every catalogue file this suite checks", () => {

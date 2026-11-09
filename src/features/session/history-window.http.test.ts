@@ -130,6 +130,18 @@ it("pages authenticated synthetic history through production HTTP and retries re
 		} as SessionProjection);
 		expect(window.hasGap).toBe(true);
 		expect(window.hasMore).toBe(false);
+		// PR #207 Q7: the reconnect tail renders after every held row, newest last.
+		const order = window.visibleRows.map((entry) =>
+			Number(entry.id.replace("message-", "")),
+		);
+		expect(
+			order.every(
+				(value, at) =>
+					at === 0 || value > (order[at - 1] ?? Number.POSITIVE_INFINITY),
+			),
+		).toBe(true);
+		expect(window.visibleRows.at(-1)?.id).toBe("message-1499");
+		expect(window.gapBefore).toBe("message-1421");
 		const missingBefore = journal.filter(
 			(entry) => !window.rows.some((row) => row.id === entry.id),
 		).length;

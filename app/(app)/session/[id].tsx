@@ -852,6 +852,7 @@ export default function Session() {
 					hasOlder={runtime.hasOlder}
 					historyError={runtime.historyError}
 					historyGap={runtime.historyGap}
+					historyGapBefore={runtime.historyGapBefore}
 					footer={transcriptNotice}
 					pending={pendingRows}
 					streamingRowId={runtime.streamingRowId}
