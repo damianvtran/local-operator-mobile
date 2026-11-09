@@ -15,7 +15,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import type { SessionSummary } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
-import { DrawerComputerRow } from "@/features/auth/computer-entry-points";
+import {
+	DrawerComputerRow,
+	switcherFocusReturn,
+} from "@/features/auth/computer-entry-points";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	useConnection,
@@ -266,7 +269,8 @@ export const ConversationsPane = ({
 	 *  Two and three both sit under the helper's five-route threshold, so this
 	 *  documents the merged footer without moving the floor main measured. */
 	const pinnedRoutes = 3;
-	const scrollFooter = sidebarFooterScrolls(useLayout(), {
+	const layout = useLayout();
+	const scrollFooter = sidebarFooterScrolls(layout, {
 		largeText,
 		routes: pinnedRoutes,
 	});
@@ -757,7 +761,10 @@ export const ConversationsPane = ({
 								onNavigate?.();
 								// Both name controls choose a computer; management remains in Settings.
 								openComputerSwitcher({
-									returnFocusTestID: CONTROL.computersButton,
+									returnFocusTestID: switcherFocusReturn(
+										layout.split,
+										CONTROL.sessionsConnectAction,
+									),
 								});
 							}}
 						/>

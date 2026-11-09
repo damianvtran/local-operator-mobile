@@ -20,6 +20,9 @@ const host = vi.hoisted(() => ({
 	labels: new Map<string, string>(),
 	presses: new Map<string, () => void>(),
 	sheetVisible: [] as unknown[],
+	/* The focus target the ONE sheet was last handed, and the layout it ran in. */
+	sheetReturnFocus: undefined as unknown,
+	split: false,
 	saved: [] as import("@/connection/saved-computers").SavedComputer[],
 	scale: 1,
 	chevrons: 0,
@@ -117,7 +120,10 @@ vi.mock("expo-router", () => ({
 	useGlobalSearchParams: () => ({}),
 }));
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
-vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 48 }));
+vi.mock("@/ui/layout", () => ({
+	TOUCH_FLOOR: 48,
+	useLayout: () => ({ split: host.split }),
+}));
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: host.scale }),
 }));
@@ -129,6 +135,7 @@ vi.mock("@/ui/components/section-header", () => ({
 vi.mock("@/ui/components/sheet", () => ({
 	Sheet: (props: Props) => {
 		host.sheetVisible.push(props.visible);
+		host.sheetReturnFocus = props.returnFocusTestID;
 		return null;
 	},
 }));
@@ -168,9 +175,12 @@ vi.mock("@/features/auth/connection-provider", async () => {
 });
 
 const { ComputerSwitcherProvider } = await import("./computer-switcher-sheet");
-const { DrawerComputerRow, HeaderComputerChip, headerChipFit } = await import(
-	"./computer-entry-points"
-);
+const {
+	DrawerComputerRow,
+	HeaderComputerChip,
+	headerChipFit,
+	switcherFocusReturn,
+} = await import("./computer-entry-points");
 
 /* Placeholder host only (AGENTS.md: never a real tunnel hostname). */
 const HOST = "0123456789abcdef0123456789abcdef-lop.example.com";
@@ -345,6 +355,43 @@ describe("the drawer footer's workspace row", () => {
 		expect(host.texts).toContain("Choose a computer");
 		await press(ROW);
 		expect(sheetUp()).toBe(true);
+	});
+
+	/* Review round 1, R3: the split layout does not render the header chip
+	 *  (`home.tsx`: `{split ? null : <HeaderComputerChip …`), so naming it as the
+	 *  focus target sent the sheet's close after a node that is not there. */
+	it("returns focus to the header chip on a phone, where the drawer row is gone by then", async () => {
+		host.split = false;
+		await mount(createElement(DrawerComputerRow, { testID: ROW }));
+		await press(ROW);
+		expect(host.sheetReturnFocus).toBe(CHIP);
+	});
+
+	it("returns focus to ITSELF in the split layout, where the chip is not rendered", async () => {
+		host.split = true;
+		try {
+			await mount(createElement(DrawerComputerRow, { testID: ROW }));
+			await press(ROW);
+			expect(host.sheetReturnFocus).toBe(ROW);
+		} finally {
+			host.split = false;
+		}
+	});
+
+	it("the pane's other opener (the no-computer empty state) follows the same rule", () => {
+		expect(switcherFocusReturn(false, "sessions-connect")).toBe(CHIP);
+		expect(switcherFocusReturn(true, "sessions-connect")).toBe(
+			"sessions-connect",
+		);
+		const PANE = readFileSync(
+			new URL("../sessions/conversations-pane.tsx", import.meta.url),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(PANE).toContain(
+			"returnFocusTestID: switcherFocusReturn( layout.split, CONTROL.sessionsConnectAction, )",
+		);
+		/* The stale literal is gone from both pane openers. */
+		expect(PANE).not.toContain("returnFocusTestID: CONTROL.computersButton");
 	});
 });
 

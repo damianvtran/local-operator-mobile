@@ -1,14 +1,21 @@
+import { readFileSync } from "node:fs";
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 import {
+	createTransitionTick,
 	EXIT_FALLBACK_SLACK_MS,
+	exitPointerEvents,
 	shouldAnimateExit,
 	useModalExit,
 } from "@/ui/modal-exit";
 import { closeModal, type ModalHandle, openModal } from "@/ui/modal-stack";
+
+/* The sheet's content root, with the comment that sits between its props. */
+const SHEET_ROOT_INERT =
+	/<DirectionView className="flex-1 justify-end" (?:\/\*.*?\*\/ )?pointerEvents=\{exitPointerEvents\(visible\)\}/;
 
 describe("shouldAnimateExit", () => {
 	it("animates a plain close", () => {
@@ -150,5 +157,86 @@ describe("useModalExit", () => {
 		// The entry owns the values now: the stale exit must not reset them.
 		expect(resets).toBe(before);
 		expect(last()).toBe(false);
+	});
+});
+
+/**
+ * Review round 1, R2: the exit keeps a closed modal MOUNTED, so its content has
+ * to stop taking presses from the commit that closes it — or a fast double-tap
+ * on a drawer destination pushes its route twice.
+ */
+describe("an exiting modal is inert", () => {
+	const source = (relative: string) =>
+		readFileSync(new URL(relative, import.meta.url), "utf8").replace(
+			/\s+/g,
+			" ",
+		);
+
+	it("takes presses while open and none from the close on", () => {
+		expect(exitPointerEvents(true)).toBe("auto");
+		expect(exitPointerEvents(false)).toBe("none");
+	});
+
+	it("the sheet's content root is keyed on the caller's `visible`", () => {
+		const SHEET = source("./components/sheet.tsx");
+		expect(SHEET).toMatch(SHEET_ROOT_INERT);
+		/* Still mounted for the exit — the inertness is what makes that safe. */
+		expect(SHEET).toContain("const shown = (visible || exiting) && !covered;");
+	});
+
+	it("the drawer's content root is keyed on the caller's `visible`", () => {
+		const DRAWER = source("../features/sessions/conversations-drawer.tsx");
+		expect(DRAWER).toContain(
+			'<View className="flex-1" pointerEvents={exitPointerEvents(visible)}>',
+		);
+		expect(DRAWER).toContain("visible={(visible || exiting) && !covered}");
+	});
+});
+
+/** Review round 1, R4: a sheet-to-sheet hand-off is one surface change. */
+describe("createTransitionTick", () => {
+	it("fires once for every edge in one commit, and again in the next", () => {
+		let fired = 0;
+		const resets: Array<() => void> = [];
+		const tick = createTransitionTick(
+			() => {
+				fired += 1;
+			},
+			(reset) => resets.push(reset),
+		);
+		tick(); // sheet A closes…
+		tick(); // …and sheet B opens, in the same flush
+		expect(fired).toBe(1);
+		expect(resets).toHaveLength(1);
+		for (const reset of resets.splice(0)) reset();
+		tick(); // a later, separate transition
+		expect(fired).toBe(2);
+	});
+
+	it("re-arms on a microtask by default", async () => {
+		let fired = 0;
+		const tick = createTransitionTick(() => {
+			fired += 1;
+		});
+		tick();
+		tick();
+		expect(fired).toBe(1);
+		await Promise.resolve();
+		tick();
+		expect(fired).toBe(2);
+	});
+
+	it("every sheet ticks through the ONE shared gate", () => {
+		const SHEET = readFileSync(
+			new URL("./components/sheet.tsx", import.meta.url),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(SHEET).toContain(
+			'const sheetTransitionTick = createTransitionTick(() => haptic("selection"));',
+		);
+		expect(SHEET).toContain(
+			"if (wasVisible.current !== visible) sheetTransitionTick();",
+		);
+		expect(SHEET.match(/haptic\("selection"\)/g)).toHaveLength(1);
 	});
 });

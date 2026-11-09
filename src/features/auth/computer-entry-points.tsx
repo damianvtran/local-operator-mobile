@@ -34,7 +34,7 @@ import {
 	textWidthDp,
 } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
-import { TOUCH_FLOOR } from "@/ui/layout";
+import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_HEIGHTS, TYPE_STEPS } from "@/ui/tokens.gen";
 
@@ -313,6 +313,21 @@ export function HeaderComputerChip({
 }
 
 /**
+ * Where focus goes when the switcher sheet closes, for an opener that lives in
+ * the conversations pane.
+ *
+ * WHY (review round 1, R3). On a phone the pane is a drawer that closes in the
+ * same press, so its opener is unmounted by the time the sheet dismisses and
+ * the Home header chip is the nearest surviving switcher: focus returns there.
+ * In the split layout the pane never leaves and the chip is NOT rendered (one
+ * switcher per screen, visual audit D12) — naming the chip there sent the
+ * sheet's `querySelector` after nothing and left focus on `body`. So split
+ * returns focus to the control that opened the sheet.
+ */
+export const switcherFocusReturn = (split: boolean, openerTestID: string) =>
+	split ? openerTestID : CONTROL.computersButton;
+
+/**
  * The drawer footer's workspace row: `● Mac mini · Online ⇅`.
  *
  * This is the "bottom of the navigation" the operator asked for: the app has no
@@ -338,6 +353,7 @@ export function DrawerComputerRow({
 }) {
 	const entry = useComputerEntry();
 	const { open } = useComputerSwitcher();
+	const { split } = useLayout();
 	const { effectiveScale } = useTextScale();
 	const [nameWidth, setNameWidth] = useState(0);
 	const ink = useTokenColor("ink-dim");
@@ -349,7 +365,7 @@ export function DrawerComputerRow({
 			accessibilityLabel={entry.accessibilityLabel}
 			onPress={() => {
 				onNavigate?.();
-				open({ returnFocusTestID: CONTROL.computersButton });
+				open({ returnFocusTestID: switcherFocusReturn(split, testID) });
 			}}
 			testID={testID}
 			/* BORDERLESS (visual audit D11, and the standing direction that the

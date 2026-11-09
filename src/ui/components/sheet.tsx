@@ -28,7 +28,11 @@ import {
 import { DirectionView } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
 import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
-import { useModalExit } from "@/ui/modal-exit";
+import {
+	createTransitionTick,
+	exitPointerEvents,
+	useModalExit,
+} from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
@@ -75,6 +79,11 @@ const SHEET_BODY_FADE = 24;
  * recomputed id would drop the fill mid-frame.
  */
 let sheetFadeSeq = 0;
+
+/* ONE gate for every sheet in the app, at module scope on purpose: the two
+ *  sheets of a hand-off are different component instances, and only a shared
+ *  gate can see that their edges are one event (`createTransitionTick`). */
+const sheetTransitionTick = createTransitionTick(() => haptic("selection"));
 
 /**
  * A bottom sheet: bottom-anchored, never centred — a centred dialog on a phone is
@@ -198,10 +207,11 @@ export const Sheet = ({
 		},
 	});
 	/* One tick when the sheet arrives and one when it leaves (P16) — on a real
-	 *  transition only, never for a sheet that mounts closed. */
+	 *  transition only, never for a sheet that mounts closed. Through the shared
+	 *  gate, so a sheet handing off to another in one press is ONE tick (R4). */
 	const wasVisible = useRef(visible);
 	useEffect(() => {
-		if (wasVisible.current !== visible) haptic("selection");
+		if (wasVisible.current !== visible) sheetTransitionTick();
 		wasVisible.current = visible;
 	}, [visible]);
 
@@ -413,6 +423,9 @@ export const Sheet = ({
 					 *  its leading/trailing chrome on the English edges. */}
 					<DirectionView
 						className="flex-1 justify-end"
+						/* Inert from the close on: the exit keeps this mounted, and a
+						 *  second tap must not land on a sheet that is leaving (R2). */
+						pointerEvents={exitPointerEvents(visible)}
 						onLayout={(event) =>
 							setColumnHeight(event.nativeEvent.layout.height)
 						}

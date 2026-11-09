@@ -33,6 +33,51 @@ export const shouldAnimateExit = (input: {
 export const EXIT_FALLBACK_SLACK_MS = 120;
 
 /**
+ * What a modal's content root answers to while it is mounted.
+ *
+ * WHY (review round 1, R2). `visible || exiting` keeps the whole `Modal`
+ * mounted for the exit, and before the exit existed a closed modal was gone in
+ * the same commit — a second tap could not land on it. Left pressable, a fast
+ * double-tap on a drawer footer destination ran `router.push` twice (two
+ * Settings screens on the stack), a sheet row could fire its action twice and
+ * the scrim re-called `onClose`. So the content is inert from the commit that
+ * closes it: the exit is something to watch, never something to press. Keyed
+ * on the caller's `visible`, not on `exiting`, so there is no frame between
+ * the close and the hook's state update in which it is still live.
+ */
+export const exitPointerEvents = (visible: boolean): "auto" | "none" =>
+	visible ? "auto" : "none";
+
+/**
+ * At most ONE tick per commit, however many modals change in it.
+ *
+ * WHY (review round 1, R4). Each sheet ticks on its own `visible` edge, so a
+ * hand-off — a menu row closing its sheet and opening the next in one press —
+ * fired two simultaneous ticks for what the reader experiences as one surface
+ * replacing another. Every effect of one commit runs in the same synchronous
+ * flush, so a microtask boundary is exactly "the rest of this commit": the
+ * first edge ticks, the others in the flush are the same event. It does not
+ * depend on which sheet's effect runs first, which a `modalStackDepth()` check
+ * would (registration order follows tree order, not intent).
+ *
+ * @param defer Injected so the unit test owns the boundary.
+ */
+export const createTransitionTick = (
+	fire: () => void,
+	defer: (reset: () => void) => void = queueMicrotask,
+) => {
+	let spent = false;
+	return (): void => {
+		if (spent) return;
+		spent = true;
+		fire();
+		defer(() => {
+			spent = false;
+		});
+	};
+};
+
+/**
  * Keeps a modal mounted for one exit animation after `visible` goes false.
  *
  * WHY (perf audit P7). Sheets and the conversations drawer animated IN on the

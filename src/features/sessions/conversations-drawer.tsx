@@ -26,7 +26,7 @@ import {
 } from "@/ui/components/modal-stack-entry";
 import { useShadow } from "@/ui/elevation";
 import { sidebarWidthFor, TOUCH_FLOOR } from "@/ui/layout";
-import { useModalExit } from "@/ui/modal-exit";
+import { exitPointerEvents, useModalExit } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
@@ -228,7 +228,10 @@ export const ConversationsDrawer = ({
 				// alone does not remove it from keyboard or screen-reader navigation.
 				accessibilityViewIsModal
 			>
-				<View className="flex-1">
+				{/* Inert from the close on: the exit keeps the drawer mounted, and a
+				 *  second tap on a footer destination must not push its route twice
+				 *  (review round 1, R2; the rule is `exitPointerEvents`). */}
+				<View className="flex-1" pointerEvents={exitPointerEvents(visible)}>
 					{/*
 					 * THE HOST KEEPS THE ONE DIM (design round 5, D7/D8/D9).
 					 *
