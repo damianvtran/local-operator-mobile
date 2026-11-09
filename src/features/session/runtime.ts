@@ -50,27 +50,150 @@ export const INITIAL_STREAM_FACTS: StreamFacts = {
 
 /* ------------------------------------------------------------- image loading */
 
+/** The file extension for an attachment's mime type; `img` when the relay
+ *  carried none or one this build does not know. The decoder sniffs the bytes
+ *  (`expo-image` on native), so the extension only has to be stable — it is
+ *  part of the cache file's NAME, which is what a later open looks up. */
+export const imageExtension = (mimeType: string | null): string => {
+	switch ((mimeType ?? "").split(";")[0]?.trim().toLowerCase()) {
+		case "image/png":
+			return "png";
+		case "image/jpeg":
+		case "image/jpg":
+			return "jpg";
+		case "image/gif":
+			return "gif";
+		case "image/webp":
+			return "webp";
+		case "image/heic":
+		case "image/heif":
+			return "heic";
+		default:
+			return "img";
+	}
+};
+
+/** Every extension `loadAttachments` may have cached under, for the lookup
+ *  before the fetch (the name is mime-derived and the mime is only known
+ *  after one). A stat per name on a cold cache, never a network read. */
+const IMAGE_CACHE_EXTENSIONS = [
+	"jpg",
+	"png",
+	"webp",
+	"gif",
+	"heic",
+	"img",
+] as const;
+
+/** A cache file's stem for one attachment. Ids are relay-minted and normally
+ *  filename-safe already; anything else is dropped rather than escaped so a
+ *  hostile or merely odd id can never name a path outside the directory. The
+ *  stem is ids only — no host, URL or credential is in scope here to leak. */
+const imageCacheStem = (
+	sessionId: string,
+	entryId: string,
+	index: number,
+): string =>
+	[sessionId, entryId, String(index)]
+		.map((part) => part.replace(/[^a-zA-Z0-9_-]/g, ""))
+		.join("-");
+
 /**
- * The bytes of one attachment, as a data URI.
+ * Where `loadAttachments` keeps bytes between opens. Injected so the native
+ * arm — a real filesystem on a device — is assertable in Node; the default is
+ * `expo-file-system`'s cache directory.
+ */
+export type ImageFileStore = {
+	/** The URI of a cached file with bytes for this stem, or `null`. */
+	find: (stem: string) => Promise<string | null>;
+	/** Write the bytes and answer the file's URI. */
+	write: (
+		stem: string,
+		extension: string,
+		bytes: Uint8Array,
+	) => Promise<string>;
+};
+
+const expoImageFileStore: ImageFileStore = {
+	find: async (stem) => {
+		const { Directory, File, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.cache, "lo-image");
+		if (!directory.exists) return null;
+		for (const extension of IMAGE_CACHE_EXTENSIONS) {
+			const file = new File(directory, `${stem}.${extension}`);
+			// A zero-byte file is an interrupted write: refetch, never decode it.
+			if (file.exists && file.size > 0) return file.uri;
+		}
+		return null;
+	},
+	write: async (stem, extension, bytes) => {
+		const { Directory, File, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.cache, "lo-image");
+		if (!directory.exists) directory.create({ intermediates: true });
+		const file = new File(directory, `${stem}.${extension}`);
+		// `write` refuses a missing path rather than creating it (the video
+		// cache's own note below).
+		if (!file.exists) file.create({ intermediates: true });
+		file.write(bytes);
+		return file.uri;
+	},
+};
+
+/**
+ * One attachment as a source an image view opens, or `null` when the relay no
+ * longer has it.
+ *
+ * NOT A DATA URI ANY MORE (performance audit P1). This used to base64-encode
+ * the whole attachment on the JS thread with a per-byte string append — 141 ms
+ * blocked for a 3 MB photo measured in Node, slower on Hermes — and hand the
+ * multi-megabyte string across the bridge to core `Image`, for every mount.
+ * It follows `loadVideoSource`'s posture instead: on native the bytes are
+ * written once to a file under the OS cache directory and the view opens the
+ * `file://` URI, so decoding and downsampling happen off the JS thread and a
+ * later open — a remount, a relaunch — finds the file and makes NO request; on
+ * web they become a Blob object URL (`expo-file-system` is not a filesystem
+ * there), which the transcript's image cache holds and revokes.
+ *
+ * THE REQUEST IS STILL THE RELAY CLIENT'S. The bytes come through
+ * `endpoints.image`, i.e. the same authenticated, route-aware transport every
+ * other call uses. Handing a URL plus an `Authorization` header to the image
+ * view would have skipped the encode too, but it would put the credential in a
+ * second HTTP stack with its own disk cache keyed by URL, outside the client's
+ * route admission and redaction. Nothing here sees a token, and the cache
+ * file's name is ids only.
  *
  * The route requires a LIVE generation: a previous conversation's attachment
- * answers `404 no such image`, which is a normal answer for an old transcript and
- * so resolves to `null` rather than throwing — the caller renders "no longer
- * available" for it.
+ * answers `404 no such image`, which is a normal answer for an old transcript
+ * and so resolves to `null` rather than throwing — the caller renders "no
+ * longer available" for it.
  */
 export const loadAttachments = async (
 	endpoints: RelayEndpoints,
 	sessionId: string,
 	entryId: string,
 	index: number,
+	/** Test seam: the platform and the file store. Production passes neither. */
+	env: { platform?: string; files?: ImageFileStore } = {},
 ): Promise<string | null> => {
+	const native = (env.platform ?? Platform.OS) !== "web";
+	const files = env.files ?? expoImageFileStore;
+	const stem = imageCacheStem(sessionId, entryId, index);
 	try {
+		if (native) {
+			const cached = await files.find(stem);
+			if (cached !== null) return cached;
+		}
 		const { bytes, mimeType } = await endpoints.image(
 			sessionId,
 			entryId,
 			index,
 		);
-		return `data:${mimeType};base64,${toBase64(bytes)}`;
+		if (!native) {
+			return URL.createObjectURL(
+				new Blob([bytes as BlobPart], { type: mimeType ?? "image/png" }),
+			);
+		}
+		return await files.write(stem, imageExtension(mimeType), bytes);
 	} catch (error) {
 		/* Only the relay's OWN `no such image` 404 is proof the bytes are gone.
 		 *  The edge and the gateway answer `404` for "not a tunnel" too, and reading
@@ -84,6 +207,10 @@ export const loadAttachments = async (
 
 /**
  * Base64 of a byte array, without `Buffer` (which does not exist on native).
+ *
+ * NOT on the transcript image path any more (`loadAttachments` hands the view a
+ * file or a Blob URL): what is left is small, one-off payloads — an avatar, a
+ * profile picture, a supplement's inline image.
  *
  * Written out rather than encoded with a spreading `String.fromCharCode(...bytes)`,
  * which overflows the call stack on exactly the payload this serves — a phone

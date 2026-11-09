@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Platform, Text, View } from "react-native";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
 import { TranscriptVideo } from "@/features/session/components/transcript-video";
+import { IMAGE_FRAME_HEIGHT_PT } from "@/features/session/image-cache";
 import type { ImageGenView } from "@/features/session/imagegen";
 import {
 	IMAGEGEN_ALREADY_FINISHED_TONE,
@@ -74,10 +75,15 @@ export type ImageGenCardProps = {
 	testID?: string;
 };
 
-/** The frame the image will occupy while it is generated. 64 pt is the kit's
- *  attachment thumbnail height (`components.md` § 12), so the card argues no
- *  new geometry into the transcript. */
-const FRAME_HEIGHT_PX = 64;
+/** The frame the image will occupy while it is generated: the transcript's own
+ *  attachment frame (`IMAGE_FRAME_HEIGHT_PT`, the relay's 160), as a SQUARE —
+ *  the relay's generating tile (`h-40 w-40`) and exactly the box
+ *  `TranscriptImage` reserves before it knows the picture's ratio. So the
+ *  finished image lands in the frame the progress was drawn in and the card's
+ *  height does not change at the moment the work completes. It was a
+ *  full-width 64 pt strip that the 64 pt thumbnail then replaced (visual
+ *  audit D10). */
+const FRAME_SIDE_PT = IMAGE_FRAME_HEIGHT_PT;
 
 /** The moving segment's width, and its sweep. The sweep takes the kit's own
  *  loop role for this element — `motion.looping.loadbar` ({duration: 1100,
@@ -205,7 +211,7 @@ const GeneratingFrame = ({
 	return (
 		<View
 			className="overflow-hidden rounded-sm border border-hairline bg-sunken"
-			style={{ height: FRAME_HEIGHT_PX }}
+			style={{ height: FRAME_SIDE_PT, width: FRAME_SIDE_PT }}
 			// The region a screen reader hears as the live part of the card; the
 			// visible word beside it is the same sentence, so nothing is announce-only.
 			accessibilityRole="progressbar"
@@ -356,14 +362,12 @@ export const ImageGenCard = ({
 	const generatingBody = liveTone && generating;
 
 	return (
-		<View
-			className={cx(
-				"rounded-sm px-2",
-				(phase === "queued" || liveTone) && "bg-elevated",
-				phase === "failed" && !view.alreadyFinished && "bg-danger-wash",
-			)}
-			testID={testID}
-		>
+		/* No state fill, for the tool row's own reason (visual audit D4; see
+		 *  `tool-row.tsx`): this card IS a tool trace, and a queued, live or
+		 *  failed generation painted as a full-width filled card beside
+		 *  borderless siblings. The glyph ink and the shimmering line carry
+		 *  the state. */
+		<View className="rounded-sm px-2" testID={testID}>
 			<View className="min-h-11 flex-row items-center gap-1.5">
 				<Text
 					className={cx(
@@ -428,7 +432,11 @@ export const ImageGenCard = ({
 				</View>
 			) : null}
 			{phase === "done" ? (
-				<View className="flex-row items-center gap-2 pb-1.5 ps-6">
+				/* A COLUMN: picture, then its line. At the old 64 pt the tile sat
+				 *  beside the words "Image ready"; at the relay's 160 pt a row
+				 *  would squeeze that line into what is left of a 390 pt screen
+				 *  and centre it against a picture three lines taller (D10). */
+				<View className="items-start gap-1.5 pb-1.5 ps-6">
 					{/* The finished image through the EXISTING transcript image path:
 					 *  artifact blocks are indexed like images and served by the same
 					 *  route, so the card hands `TranscriptImage` the same two facts
@@ -453,9 +461,7 @@ export const ImageGenCard = ({
 							testID={transcriptVideoId(entryId, videoArtifact.index)}
 						/>
 					) : null}
-					<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
-						{line}
-					</Text>
+					<Text className="text-body-sm text-ink-muted">{line}</Text>
 				</View>
 			) : null}
 			{phase === "failed" ? (

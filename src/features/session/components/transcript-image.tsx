@@ -1,6 +1,13 @@
+import { Image } from "expo-image";
 import { useEffect, useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
+import {
+	aspectRatioOf,
+	type CachedImage,
+	imageFrameSize,
+	transcriptImages,
+} from "@/features/session/image-cache";
 import { Skeleton } from "@/ui/components";
 
 /**
@@ -9,10 +16,26 @@ import { Skeleton } from "@/ui/components";
  * `docs/design/components.md` § 14 is explicit that this is part of the turn and
  * not a `[image attached]` note, and § 14's second rule is why the component owns
  * its own loading and failure states: a flaky fetch must never show a broken glyph
- * or reflow the bubble. So the frame is reserved at the thumbnail's size before
- * the bytes arrive, and a failure renders a labelled placeholder of the SAME size
- * — a placeholder that changed the geometry would move the text below it, which is
+ * or reflow the bubble. So the frame is reserved at the image's HEIGHT before the
+ * bytes arrive, and a failure renders a labelled placeholder of the same height
+ * — a placeholder that changed the height would move the text below it, which is
  * exactly the reflow the rule forbids.
+ *
+ * THE RELAY'S SIZE, NOT A THUMBNAIL (visual audit D10). The frame is 160 pt tall
+ * with the image's own aspect ratio, painted with `contain` — the relay's
+ * `h-40 max-w-full object-contain`. It was a 64 pt square cropped with `cover`,
+ * which showed the middle of a screenshot and none of what was in it. Only the
+ * WIDTH can change when the bytes arrive (square placeholder → the image's own
+ * ratio), and it changes once per image for the life of the app: the ratio is
+ * remembered with the source, so a remount reserves the final frame.
+ *
+ * NO REFETCH, NO SECOND SKELETON (performance audit P1). The transcript is a
+ * virtualised list, so this component mounts again every time its row re-enters
+ * the window. The source lives in `transcriptImages` (`session/image-cache.ts`),
+ * which answers a settled image synchronously: the initial state below IS the
+ * cached image, so a remount's first frame is the picture. The view is
+ * `expo-image`, which decodes and downsamples off the JS thread and keeps the
+ * decoded bitmap in its own memory cache.
  *
  * The bytes come from `GET /api/sessions/{id}/image?entry=&i=`, which requires a
  * LIVE generation: a previous conversation's attachment answers `404 no such
@@ -24,10 +47,13 @@ export type TranscriptImageProps = {
 	entryId: string;
 	/** The image-block index within that entry. */
 	index: number;
-	/** The MIME type the wire reported, used as the decoder hint. */
+	/** The MIME type the wire reported. */
 	mimeType: string;
-	/** Resolves the image's bytes as a data URI, or `null` when the relay no longer
-	 *  has them. Injected so this component never holds a client. */
+	/** Resolves the image as a source the view opens (a cache file on native, a
+	 *  Blob object URL on web), or `null` when the relay no longer has it.
+	 *  Injected so this component never holds a client. Its IDENTITY is the
+	 *  cache's scope (see `image-cache.ts`), so pass the runtime's stable
+	 *  callback, never an inline arrow. */
 	load: (entryId: string, index: number) => Promise<string | null>;
 	/** REQUIRED, like every other primitive's: the frame is one image of one entry,
 	 *  and a generic default (`"transcript-image"`) was a second spelling of an id
@@ -37,9 +63,14 @@ export type TranscriptImageProps = {
 	testID: string;
 };
 
-/** The thumbnail's reserved box. 64 pt is the kit's attachment thumbnail
- *  (`components.md` § 12) and it is fixed so the reservation below is honest. */
-const THUMB_PX = 64;
+/** What the frame shows. `failed` is a transport failure — the same reading for
+ *  the reader as a missing image, but NOT remembered, so the next mount retries. */
+type Shown = { image: CachedImage | undefined; failed: boolean };
+
+/** The loading bar's height class. `h-40` is 40 × the 4 px spacing unit = 160,
+ *  i.e. `IMAGE_FRAME_HEIGHT_PT`; `transcript-image.test.ts` holds the two
+ *  together, since a class string cannot be computed from the constant. */
+const LOADING_BAR_CLASS = "h-40";
 
 export const TranscriptImage = ({
 	entryId,
@@ -47,55 +78,89 @@ export const TranscriptImage = ({
 	load,
 	testID,
 }: TranscriptImageProps) => {
-	const [uri, setUri] = useState<string | null>(null);
-	const [state, setState] = useState<"loading" | "ready" | "missing">(
-		"loading",
-	);
+	/* The lazy initialiser reads the cache, so a remount starts settled. */
+	const [view, setView] = useState<Shown>(() => ({
+		image: transcriptImages.peek(load, entryId, index),
+		failed: false,
+	}));
 
 	useEffect(() => {
 		let cancelled = false;
-		setState("loading");
-		setUri(null);
-		load(entryId, index)
-			.then((dataUri) => {
-				if (cancelled) return;
-				if (dataUri === null) {
-					setState("missing");
-					return;
-				}
-				setUri(dataUri);
-				setState("ready");
+		const known = transcriptImages.peek(load, entryId, index);
+		/* Functional updates that return the SAME object when nothing changed:
+		 * on the ordinary remount the cache already answered in the initialiser,
+		 * and a fresh object here would re-render a row that is already right. */
+		setView((current) =>
+			current.image === known && !current.failed
+				? current
+				: { image: known, failed: false },
+		);
+		if (known !== undefined) return;
+		transcriptImages
+			.load(load, entryId, index)
+			.then((image) => {
+				if (!cancelled) setView({ image, failed: false });
 			})
 			.catch(() => {
 				// A transport failure is the same reading for the reader as a missing
 				// image: the attachment is not showable. Distinguishing them on screen
 				// would ask the reader to care about a difference they cannot act on.
-				if (!cancelled) setState("missing");
+				if (!cancelled) setView({ image: undefined, failed: true });
 			});
 		return () => {
 			cancelled = true;
 		};
 	}, [entryId, index, load]);
 
+	const uri = view.image?.uri ?? null;
+	const missing =
+		view.failed || (view.image !== undefined && view.image.uri === null);
+	const frame = imageFrameSize(view.image?.aspectRatio ?? null);
+
 	return (
 		<View
 			className="overflow-hidden rounded-sm border border-hairline"
-			style={{ width: THUMB_PX, height: THUMB_PX }}
+			/* `maxWidth` is the column's cap: a wide image is letterboxed inside
+			 * the frame (`contain`) instead of pushing the bubble past the edge. */
+			style={{ width: frame.width, height: frame.height, maxWidth: "100%" }}
 			testID={testID}
 		>
-			{state === "ready" && uri !== null ? (
+			{uri !== null && !view.failed ? (
 				<Image
 					source={{ uri }}
-					// `resizeMode` in the STYLE rather than as a prop: the prop form is
-					// deprecated in RN 0.86 and warns per render, and this row can be mounted
-					// dozens of times in one window.
-					style={{ width: THUMB_PX, height: THUMB_PX, resizeMode: "cover" }}
+					style={{ width: "100%", height: "100%" }}
+					contentFit="contain"
+					/* The source is already local (a cache file or a Blob URL), so a
+					 * disk cache would only copy it; `memory` keeps the decoded,
+					 * downsampled bitmap so a remount paints without a decode. */
+					cachePolicy="memory"
+					/* A recycled native view must not show the previous row's image
+					 * while this one decodes. */
+					recyclingKey={`${entryId}:${index}`}
+					/* No cross-fade: a remount's first frame must be the picture, and
+					 * a fade from empty reads as the flash this component removed. */
+					transition={null}
 					accessibilityLabel="Attached image"
+					onLoad={(event) => {
+						const ratio = aspectRatioOf(
+							event.source.width,
+							event.source.height,
+						);
+						if (ratio === null) return;
+						transcriptImages.noteAspectRatio(load, entryId, index, ratio);
+						setView((current) =>
+							current.image === undefined || current.image.aspectRatio === ratio
+								? current
+								: {
+										...current,
+										image: { ...current.image, aspectRatio: ratio },
+									},
+						);
+					}}
+					onError={() => setView({ image: undefined, failed: true })}
 				/>
-			) : state === "loading" ? (
-				<Skeleton lines={1} />
-			) : (
-				<View className="flex-1 items-center justify-center px-1">
+			) : missing ? (
+				<View className="flex-1 items-center justify-center px-2">
 					<Text
 						className="text-center text-meta text-ink-dim"
 						numberOfLines={3}
@@ -103,6 +168,10 @@ export const TranscriptImage = ({
 						Image no longer available.
 					</Text>
 				</View>
+			) : (
+				/* One bar the size of the frame — the relay's filled loading frame —
+				 * rather than a text-line bar at the top of a 160 pt box. */
+				<Skeleton lines={1} barClassName={LOADING_BAR_CLASS} />
 			)}
 		</View>
 	);
