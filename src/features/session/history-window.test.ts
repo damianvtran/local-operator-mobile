@@ -109,6 +109,22 @@ describe("screen-owned retained history", () => {
 		]);
 	});
 
+	it("a flagless frame cannot reconnect an explicitly detached opener before its durable page", async () => {
+		const journal = sequence(300);
+		const reader = new HistoryWindow(pager(journal, 80), () => {});
+		reader.accept(capped(journal, 300));
+		await reader.load();
+		const held = ids(reader.visibleRows);
+		reader.accept(frame(...journal.slice(221)));
+		reader.accept(frame(...journal.slice(221)));
+		expect(ids(reader.visibleRows)).toEqual(held);
+		expect(ids(reader.visibleRows)).not.toContain(journal[0]?.id);
+		while (reader.hasMore && !reader.error) await reader.load();
+		expect(reader.error).toBeNull();
+		expect(ids(reader.visibleRows)).toEqual(ids(journal));
+		expect(reader.olderState).toBe("end");
+	});
+
 	it("a byte-capped pinned opener alone cannot declare the retained beginning", async () => {
 		const reader = new HistoryWindow(
 			async () => ({ entries: [row("opener")], has_more: false }),
@@ -429,6 +445,61 @@ describe("screen-owned retained history", () => {
 			"second",
 			"third",
 		]);
+	});
+
+	/* PR #207 R5-2. A frame can hold no row the newest page shares: Core's
+	 * fold mints reasoning, notices and not-yet-journaled tool calls under
+	 * live-only ids. Those rows are the LIVE turn, so a cold page (history)
+	 * goes before them. An anchorless merge put the turn above its history. */
+	/* One user opener, then answers: a page of 80 user rows would trip the
+	 * legacy "80 rows opening on a user row is a capped render" inference. */
+	const coreJournal = (count: number) =>
+		Array.from({ length: count }, (_, at) =>
+			at === 0
+				? row("m-0")
+				: ({ ...row(`m-${at}`), kind: "assistant" } as TranscriptEntry),
+		);
+
+	it("a cold page sharing no row with a flag-true frame of minted rows lands above them", async () => {
+		const journal = coreJournal(300);
+		const minted = Array.from({ length: 15 }, (_, at) => row(`tc-${at}`));
+		const reader = new HistoryWindow(pager(journal, 80), () => {});
+		reader.accept({
+			...frame(journal[0] as TranscriptEntry, ...minted),
+			transcript_head_pinned: true,
+		});
+		expect(reader.cursor).toBeUndefined();
+		await reader.load(true);
+		expect(ids(reader.visibleRows)).toEqual([
+			...ids(journal.slice(220)),
+			...ids(minted),
+		]);
+	});
+
+	it("a cold page under a flagless minted frame keeps later live rows at the newest edge", async () => {
+		const journal = coreJournal(300);
+		const reasoning = {
+			...row("rz-live"),
+			kind: "reasoning",
+		} as TranscriptEntry;
+		const reader = new HistoryWindow(pager(journal, 80), () => {});
+		reader.accept(frame(reasoning, row("tc-x")));
+		await reader.load(true);
+		expect(ids(reader.visibleRows)).toEqual([
+			...ids(journal.slice(220)),
+			"rz-live",
+			"tc-x",
+		]);
+		// The turn goes on: its rows, final answer included, must arrive below.
+		reader.accept(frame(reasoning, row("tc-x"), row("tc-y"), row("m-300")));
+		expect(ids(reader.visibleRows)).toEqual([
+			...ids(journal.slice(220)),
+			"rz-live",
+			"tc-x",
+			"tc-y",
+			"m-300",
+		]);
+		expect(reader.hasGap).toBe(false);
 	});
 
 	it("an explicit transcript_head_pinned:false frame hides nothing when the page answered first", async () => {

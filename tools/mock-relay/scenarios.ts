@@ -2927,16 +2927,12 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => {
 			const projection = projectionFrom(everyKind, {
 				transcript: longConversation(everyKind),
-				/* SAID, NOT LEFT TO INFERENCE. This frame carries the WHOLE 520-row
-				 * conversation, which no capped relay frame does. The app's history
-				 * pager displays every row of it either way, but a frame silent
-				 * about the flag and longer than the cap is read as an oversized
-				 * render of unknown depth: its cursor starts at the newest window
-				 * and the "older messages" caveat stays up until paging has walked
-				 * back to the first row. The world's claim is "every row is in the
-				 * frame", so it states the fact the wire has a field for, and one
-				 * `before` page settles the beginning (PR #207 CI). */
-				transcript_head_pinned: false,
+				/* This capture world deliberately holds the whole conversation:
+				 * 520 rows is oversized, not a Core-capped opener + tail. Omit the
+				 * flag just as Core does when it is not pinned (PR #207 R5-4).
+				 * The reader only infers a cap from an exactly-80-row frame;
+				 * every one of these rows stays displayed while paging proves
+				 * the journal's beginning. */
 			});
 			return { projections: { [projection.session_id]: projection } };
 		},

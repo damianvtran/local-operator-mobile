@@ -67,6 +67,9 @@ export class HistoryWindow {
 	private lease = 0;
 	private projection: SessionProjection | null = null;
 	private detached: TranscriptEntry[] = [];
+	/** Explicit wire evidence survives a later flagless frame; cap inference
+	 * does not. Only a durable page can reconnect a confirmed detached opener. */
+	private confirmedPinned = false;
 	private visibleSource: TranscriptEntry[] | null = null;
 	private visible: TranscriptEntry[] = [];
 	private cursors = new Set<string>();
@@ -112,10 +115,13 @@ export class HistoryWindow {
 		// A frame that pins no opener retires context an earlier INFERENCE
 		// detached (a flagless 80-row page opening on a user row): the frame
 		// holds that row in place, so it is shown.
-		if (!openerOf) this.detached = [];
+		if (projection.transcript_head_pinned !== undefined)
+			this.confirmedPinned = projection.transcript_head_pinned;
+		if (!openerOf && !this.confirmedPinned) this.detached = [];
 		// HTTP may win the opening race. Classify the pinned opener against
 		// durable identities on that path too, not only when the first page lands.
 		else if (
+			openerOf &&
 			this.read === "ok" &&
 			this.cursor !== undefined &&
 			!this.durableIds.has(rowIdentity(openerOf)) &&
@@ -377,7 +383,16 @@ export class HistoryWindow {
 					: // A cold page landing on rows a frame already supplied is a merge
 						// too: those rows are displayed and keep their positions; the
 						// page must not be stacked above rows older than it.
-						refreshing || (before === undefined && spine.length > 0)
+						// ONLY ON OVERLAP. With no shared row the merge has no anchor and
+						// returns `[...held, ...page]`, which is right for a refresh (the
+						// page is newer) and wrong here: the held rows are the LIVE tail
+						// and the cold page is the history before it, so the turn rendered
+						// above its own history and every later live row kept anchoring
+						// there (PR #207 R5-2). Disjoint cold pages fall through to
+						// insertOlder, which keeps the page first.
+						refreshing ||
+							(before === undefined &&
+								spine.some((row) => pageIds.has(rowIdentity(row))))
 						? mergeTranscript(
 								{ transcript: authoritative } as SessionProjection,
 								spine,
@@ -443,6 +458,7 @@ export class HistoryWindow {
 		this.read = "unknown";
 		this.projection = null;
 		this.detached = [];
+		this.confirmedPinned = false;
 		this.visibleSource = null;
 		this.cursors.clear();
 		this.durableIds.clear();

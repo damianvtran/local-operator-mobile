@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { HistoryResponse } from "@/contracts";
-import { HistoryWindow } from "@/features/session/history-window";
 import { RelayEndpoints, RelayHttpClient } from "@/relay";
-import { loadFixtures } from "./fixtures";
-import { createRelay, DEFAULT_PASSWORD } from "./relay";
-import { buildScenarios } from "./scenarios";
+import { loadFixtures } from "../../../tools/mock-relay/fixtures";
+import { createRelay, DEFAULT_PASSWORD } from "../../../tools/mock-relay/relay";
+import { buildScenarios } from "../../../tools/mock-relay/scenarios";
+import { HistoryWindow } from "./history-window";
 
 /**
  * The app's production history reader against the mock relay's own worlds.
@@ -22,6 +22,13 @@ import { buildScenarios } from "./scenarios";
  * the failing cells open, in both orders the screen can see (frame first, page
  * first, and the frame landing while the page is in flight). It is wire
  * infrastructure, not a rendered-app claim: the capture still owns the pixels.
+ *
+ * WHY IT LIVES UNDER src/, NOT tools/mock-relay/. It imports the production
+ * reader, whose module graph uses the app's `@/` alias and ambient types.
+ * `tools/tsconfig.json` (the E2E "Type-check the harness" gate) declares no
+ * paths and cannot compile that graph (PR #207 R5-1: both web-target legs went
+ * red before any capture). The app config can reach into tools/, as
+ * `connection/__tests__/tunnel-session-http.test.ts` already does.
  */
 const rigs: ReturnType<typeof createRelay>[] = [];
 afterEach(async () => {
@@ -31,7 +38,7 @@ afterEach(async () => {
 const open = async (scenario: string) => {
 	const world = buildScenarios(loadFixtures())[scenario]?.world();
 	const projection = Object.values(world?.projections ?? {})[0];
-	if (projection === undefined)
+	if (world === undefined || projection === undefined)
 		throw new Error(`${scenario} has no projection`);
 	const relay = createRelay({ scenario, quiet: true });
 	rigs.push(relay);
@@ -44,7 +51,10 @@ const open = async (scenario: string) => {
 	});
 	const cookie = login.headers.getSetCookie()[0]?.split(";")[0] ?? "";
 	const endpoints = new RelayEndpoints(
-		new RelayHttpClient({ baseUrl: url, auth: () => ({ cookie }) }),
+		new RelayHttpClient({
+			baseUrl: url,
+			auth: () => ({ cookie, origin: null, credentials: "omit" }),
+		}),
 	);
 	const asked: Array<string | undefined> = [];
 	/** Set to hold the next page until the test releases it (the in-flight race). */

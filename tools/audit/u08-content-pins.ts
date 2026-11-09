@@ -206,8 +206,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* PR #207 CI remediation: long-conversation ids are journal-addressable
 	 * (`m-conv-…`) and `long-transcript` declares `transcript_head_pinned:
 	 * false`. `--print`, staged. */
+	/* PR #207 round 5: omit the false head-pin flag, matching Core's wire.
+	 * Re-derived with --print from the staged tree; no capture assertion moved. */
 	"tools/mock-relay/scenarios.ts":
-		"23a9853fb8111fb44d0db870def98f5278fbef2041f308e1a2e5ac7e479b997a",
+		"cf2d3918ac43b711a31ed96188a695b3082eeaa18c9e5441c6422c5281759573",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -1210,7 +1212,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// page's rows, substitutes live bodies by occurrence, and displays every
 	// row of an accepted frame (only a cap-sized frame's opener detaches); re-pinned with --print over the staged
 	// tree. Source admission only, no rendered or native proof refreshed.
-	src: "9ad24433c06065135cd6f29cd2de6e26fde0a88e9a1e0178d514073d07aede1a",
+	// PR #207 round 5: cold disjoint pages precede live rows, explicit pinned
+	// context survives flagless frames, and HTTP reader-world tests live beside
+	// the app reader. Re-derived with --print, staged; source admission only.
+	src: "01a81cc8a445de49e7f6048d7773021df8ebee91d5a5c69e286099ca4bcef84a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

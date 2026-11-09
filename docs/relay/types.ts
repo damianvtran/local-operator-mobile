@@ -484,6 +484,14 @@ export interface SessionProjection {
    *  was before the field existed). Absence is "not reported": a client paints
    *  nothing from it, never yellow. */
   heartbeat_stale?: boolean | null;
+  /** Core's statement that `transcript[0]` is the conversation's opening user
+   *  message PINNED ahead of a capped tail, so it is detached from the row
+   *  after it (rows between the two page in from `/history`).
+   *
+   *  ABSENT when false: Core emits the key only when it pinned the opener,
+   *  and daemons older than the field never send it. A client must therefore
+   *  read absence as "no statement", not as "not capped". */
+  transcript_head_pinned?: boolean;
   /** The render tail: at most `PROJECTION_TRANSCRIPT_LIMIT = 80` entries, with
    *  the conversation's opening user message pinned at the head
    *  (`types.py:980`, `projection.py:3127-3153`). Older rows page in from
