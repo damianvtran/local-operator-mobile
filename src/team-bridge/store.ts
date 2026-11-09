@@ -23,6 +23,11 @@ export { accountIdFromToken } from "@/connection/radient-identity";
 
 import { createStore } from "zustand/vanilla";
 
+import {
+	type AttachmentLimits,
+	attachmentLimits,
+	clearAttachmentCache,
+} from "@/team-bridge/attachments";
 import { type HubClient, HubError, isHubError } from "@/team-bridge/client";
 import type {
 	Conversation,
@@ -74,6 +79,12 @@ export interface TeamBridgeState {
 	organizations: Organization[];
 	selectedTenantId: string | null;
 	totalUnread: number;
+	/**
+	 * What the composer may attach, from `status.attachments`. `null` until a
+	 * status read says otherwise, and whenever the hub has no attachment store:
+	 * no attach affordance is offered (`attachmentLimits`).
+	 */
+	attachments: AttachmentLimits | null;
 	orgs: Record<string, OrgData>;
 	threads: Record<string, ThreadData>;
 	/** The consent the status read served (eligible callers only). Held for the default-on notice's text. */
@@ -122,6 +133,7 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 	organizations: [],
 	selectedTenantId: null,
 	totalUnread: 0,
+	attachments: null,
 	orgs: {},
 	threads: {},
 	servedConsent: null,
@@ -222,15 +234,26 @@ export function createTeamBridgeStore(deps: {
 	 * stale answer can never overwrite a newer one.
 	 */
 	let generation = 0;
+	// Reset is recoverable within a live provider; retirement is permanent even
+	// if the same account logs in again. Retained closures cannot regain grants.
+	let closed = false;
+	const requireLive = () => {
+		if (closed)
+			throw new HubError({
+				kind: "sign_in",
+				message: "Account scope retired.",
+			});
+	};
 	const inFlight = new Map<string, Promise<void>>();
 	function once(
 		key: string,
 		run: (owned: () => boolean) => Promise<void>,
 	): Promise<void> {
+		if (closed) return Promise.resolve();
 		const existing = inFlight.get(key);
 		if (existing) return existing;
 		const epoch = generation;
-		const next = run(() => epoch === generation).finally(() => {
+		const next = run(() => !closed && epoch === generation).finally(() => {
 			// A retired request must not remove its successor after account change.
 			if (inFlight.get(key) === next) inFlight.delete(key);
 		});
@@ -240,7 +263,7 @@ export function createTeamBridgeStore(deps: {
 
 	/** Entitlement/auth refusals retire every outstanding publication, not just this screen. */
 	function gateFailure(error: unknown): boolean {
-		if (!isHubError(error)) return false;
+		if (closed || !isHubError(error)) return false;
 		if (error.kind === "sign_in") {
 			actions.reset();
 			store.setState({ gate: "signed_out", gateError: error });
@@ -343,6 +366,7 @@ export function createTeamBridgeStore(deps: {
 					selfAccountId: accountIdFromToken(token),
 					organizations,
 					selectedTenantId: selected?.tenantId ?? null,
+					attachments: attachmentLimits(read.status.attachments),
 					servedConsent: read.status.consent ?? null,
 				});
 			});
@@ -394,6 +418,7 @@ export function createTeamBridgeStore(deps: {
 
 		/** Dismiss for good on this device. The notice hides even if the write fails (it returns next launch then). */
 		async dismissDefaultOnNotice(): Promise<void> {
+			if (closed) return;
 			const notice = store.getState().defaultOnNotice;
 			const accountId = store.getState().selfAccountId;
 			if (!notice) return;
@@ -413,6 +438,7 @@ export function createTeamBridgeStore(deps: {
 		 * would be a false "off".
 		 */
 		async turnOffDefaultOn(): Promise<void> {
+			requireLive();
 			const notice = store.getState().defaultOnNotice;
 			const accountId = store.getState().selfAccountId;
 			const client = deps.hub();
@@ -436,7 +462,7 @@ export function createTeamBridgeStore(deps: {
 				});
 				return;
 			}
-			if (epoch !== generation) return;
+			if (closed || epoch !== generation) return;
 			// A PUT belongs to the account/org captured before dispatch, not whichever
 			// notice happens to be visible when it completes after an org switch.
 			if (store.getState().defaultOnNotice === notice) {
@@ -456,6 +482,7 @@ export function createTeamBridgeStore(deps: {
 		},
 
 		selectOrganization(tenantId: string) {
+			if (closed) return;
 			if (!store.getState().organizations.some((o) => o.tenantId === tenantId))
 				return;
 			if (store.getState().selectedTenantId !== tenantId) {
@@ -732,6 +759,7 @@ export function createTeamBridgeStore(deps: {
 		 * Keep the durable cursor server-owned so a failed receipt stays retryable.
 		 */
 		async markRead(tenantId: string, conversationId: string, seq: number) {
+			requireLive();
 			const client = deps.hub();
 			if (!client) return;
 			const epoch = generation;
@@ -750,7 +778,7 @@ export function createTeamBridgeStore(deps: {
 			}
 			try {
 				const answer = await client.markRead(tenantId, conversationId, { seq });
-				if (epoch !== generation) return;
+				if (closed || epoch !== generation) return;
 				reconcileConversation(tenantId, conversationId, (current) => {
 					// Receipts can arrive in reverse order; the server cursor never goes back.
 					if (answer.last_read_seq < current.last_read_seq) return current;
@@ -763,7 +791,7 @@ export function createTeamBridgeStore(deps: {
 					};
 				});
 			} catch (error) {
-				if (epoch !== generation) return;
+				if (closed || epoch !== generation) return;
 				if (gateFailure(error)) return;
 				// Restore only our untouched optimistic row, never a newer receipt/refresh.
 				if (row && optimistic) {
@@ -784,8 +812,61 @@ export function createTeamBridgeStore(deps: {
 			}
 		},
 
+		/**
+		 * Upload through the same account gate as Send, not directly from a chip.
+		 * The client owns the single forced refresh; only its final refusal may
+		 * retire private state, and an old account's refusal cannot retire its
+		 * successor. Successful late uploads are released using the captured
+		 * client/conversation rather than publishing into the new account.
+		 */
+		async uploadAttachment(
+			tenantId: string,
+			conversationId: string,
+			bytes: Uint8Array,
+		) {
+			requireLive();
+			const gate = store.getState().gate;
+			if (gate === "plan_required" || gate === "signed_out")
+				throw new HubError({
+					kind: gate === "plan_required" ? "plan" : "sign_in",
+					message: "Team Bridge is not available for this account.",
+				});
+			const epoch = generation;
+			const client = deps.hub();
+			try {
+				if (!client)
+					throw new HubError({
+						kind: "sign_in",
+						message: "Sign in to Radient.",
+					});
+				const answer = await client.uploadAttachment(
+					tenantId,
+					conversationId,
+					bytes,
+				);
+				if (closed || epoch !== generation) {
+					// A live reset may clean up with its captured client. A retired
+					// provider must not refresh credentials even for a DELETE; staged
+					// expiry is the backstop after its authority has ended.
+					if (!closed)
+						void client
+							.deleteAttachment(tenantId, conversationId, answer.id)
+							.catch(() => undefined);
+					throw new HubError({
+						kind: "sign_in",
+						message: "Account changed while uploading.",
+					});
+				}
+				return answer;
+			} catch (error) {
+				if (!closed && epoch === generation) gateFailure(error);
+				throw error;
+			}
+		},
+
 		/** Change this conversation's notification policy. Throws so the menu can say so. */
 		async setNotify(tenantId: string, conversationId: string, notify: Notify) {
+			requireLive();
 			const gate = store.getState().gate;
 			if (gate === "plan_required" || gate === "signed_out")
 				throw new HubError({
@@ -802,10 +883,10 @@ export function createTeamBridgeStore(deps: {
 					notify,
 				});
 			} catch (error) {
-				if (epoch === generation) gateFailure(error);
+				if (!closed && epoch === generation) gateFailure(error);
 				throw error;
 			}
-			if (epoch !== generation) return;
+			if (closed || epoch !== generation) return;
 			reconcileConversation(tenantId, conversationId, (c) => ({
 				...c,
 				unread_count:
@@ -829,7 +910,9 @@ export function createTeamBridgeStore(deps: {
 			conversationId: string,
 			body: string,
 			clientRef: string,
+			attachmentIds: string[] = [],
 		): Promise<Message> {
+			requireLive();
 			const gate = store.getState().gate;
 			if (gate === "plan_required" || gate === "signed_out")
 				throw new HubError({
@@ -845,12 +928,13 @@ export function createTeamBridgeStore(deps: {
 				message = await client.send(tenantId, conversationId, {
 					clientRef,
 					body,
+					attachmentIds,
 				});
 			} catch (error) {
-				if (epoch === generation) gateFailure(error);
+				if (!closed && epoch === generation) gateFailure(error);
 				throw error;
 			}
-			if (epoch !== generation)
+			if (closed || epoch !== generation)
 				throw new HubError({
 					kind: "sign_in",
 					message: "Account changed while sending.",
@@ -876,6 +960,7 @@ export function createTeamBridgeStore(deps: {
 
 		/** Insert a conversation the reader just created (a first send's DM). */
 		adopt(conversation: Conversation) {
+			if (closed) return;
 			store.setState((s) => {
 				const org = s.orgs[conversation.tenant_id] ?? emptyOrg();
 				const rest = org.conversations.filter((c) => c.id !== conversation.id);
@@ -892,14 +977,27 @@ export function createTeamBridgeStore(deps: {
 		},
 
 		/** Sign-out: nothing of the previous account survives. */
-		reset() {
+		retire() {
+			if (closed) return;
+			closed = true;
 			generation += 1;
 			inFlight.clear();
+			clearAttachmentCache();
+			store.setState(initialTeamBridgeState());
+		},
+
+		reset() {
+			if (closed) return;
+			generation += 1;
+			inFlight.clear();
+			// Sign-out and account change both land here: the previous account's
+			// decoded images must not outlive it in this process.
+			clearAttachmentCache();
 			store.setState(initialTeamBridgeState());
 		},
 	};
 
-	return { store, actions };
+	return { store, actions, isActive: () => !closed };
 }
 
 export type TeamBridgeStore = ReturnType<typeof createTeamBridgeStore>;

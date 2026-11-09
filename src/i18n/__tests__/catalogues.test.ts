@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 113, // 104 established keys + 9 default_on keys (PR #108).
+		expected: 155, // Exact merged Team Bridge key union.
 	},
 	{
 		name: "mobile.signin",
@@ -256,8 +256,8 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* Exact union of main and #108 catalogue entries; shared values agree. */
-		expect(total).toBe(496);
+		// Exact merged catalogue union; verified after generation.
+		expect(total).toBe(538);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -330,6 +330,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.team_bridge.attachment.image":
+			"Image is the French noun for a picture too; the isolated attachment label is an idiomatic cognate.",
+		"mobile.team_bridge.attachment.chip_label":
+			"French uses Image followed by the image number and a separately localized state; this template contains no English prose.",
 		"mobile.chrome.drawer.agents":
 			"Agents is also the French plural for software agents; the drawer mode names the agent conversations, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":

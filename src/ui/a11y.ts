@@ -160,6 +160,7 @@ export const EMPTY = {
  */
 export const CONTROL = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
+	teamBridgeAttach: "team-bridge-attach",
 	teamBridgeBack: "team-bridge-back",
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
 	teamBridgeGateRetry: "team-bridge-gate-retry",
@@ -710,6 +711,8 @@ export const CONTROL = {
  */
 export const SURFACE = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
+	teamBridgeAttachSheet: "team-bridge-attach-sheet",
+	teamBridgeImageViewer: "team-bridge-image-viewer",
 	teamBridgeChannelPreview: "team-bridge-channel-preview",
 	teamBridgeComposer: "team-bridge-composer",
 	teamBridgeConversationsLoading: "team-bridge-conversations-loading",
@@ -1129,6 +1132,15 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	"team-bridge-org-",
 	"team-bridge-message-",
 	"team-bridge-notify-",
+	/* Image attachments: one composer chip per staged image (its remove/retry
+	 *  controls derive from it), one rendered image per message attachment, and
+	 *  the attach sheet's source rows. Keyed by position/attachment id, never by
+	 *  anything about the image itself. */
+	"team-bridge-attachment-chip-",
+	"team-bridge-attachment-",
+	"team-bridge-attach-source-",
+	/* The full-screen image viewer's controls (close, previous, next). */
+	"team-bridge-viewer-",
 	// One "view profile" control per row or message author, keyed by the row's
 	// own hub id (account, endpoint or message) so it is stable across refreshes.
 	"team-bridge-profile-open-",
@@ -2230,5 +2242,13 @@ export const teamBridgeDeliveryHelpId = (message: string): string =>
 	`team-bridge-delivery-help-${encodeURIComponent(message)}`;
 export const teamBridgeNotifyId = (value: string): string =>
 	`team-bridge-notify-${value}`;
+export const teamBridgeAttachmentChipId = (value: string): string =>
+	`team-bridge-attachment-chip-${value}`;
+export const teamBridgeAttachmentId = (value: string): string =>
+	`team-bridge-attachment-${value}`;
+export const teamBridgeAttachSourceId = (value: string): string =>
+	`team-bridge-attach-source-${value}`;
+export const teamBridgeViewerId = (value: string): string =>
+	`team-bridge-viewer-${value}`;
 export const teamBridgeProfileOpenId = (value: string): string =>
 	`team-bridge-profile-open-${value}`;

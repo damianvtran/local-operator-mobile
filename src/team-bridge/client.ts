@@ -55,6 +55,8 @@ import {
 	type Status,
 	settingsSchema,
 	statusSchema,
+	type UploadedAttachment,
+	uploadedAttachmentSchema,
 } from "@/team-bridge/contract";
 
 const TRAILING_SLASHES = /\/+$/;
@@ -144,7 +146,10 @@ export function hubErrorKind(
 	if (status === 403) return "refused";
 	if (status === 404) return "not_found";
 	if (status === 409) return "conflict";
-	if (status === 400 || status === 413 || status === 422) return "invalid";
+	// 415 joins 413/422: the attachment upload's "not PNG/JPEG" refusal is this
+	// client having sent something the hub will not take, not a server fault.
+	if (status === 400 || status === 413 || status === 415 || status === 422)
+		return "invalid";
 	if (status === 429) return "rate_limited";
 	if (status === 503 || code === "messaging_unavailable") return "unavailable";
 	return "server";
@@ -173,6 +178,16 @@ export interface HubClientDeps {
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+/*
+ * Image bytes in either direction. A bounded upload is up to 1 MiB: at 15 s
+ * that needs ~560 kbit/s sustained upstream, which weak cellular does not
+ * give, and every timed-out retry restarts from zero. 60 s keeps a bad link
+ * workable while still ending a hung transfer.
+ */
+const BYTES_TIMEOUT_MS = 60_000;
+/** Hub image contract: other clients may upload images up to 5 MiB even though
+ * this phone emits at most 1 MiB. Bound reads to the protocol, not our upload size. */
+export const ATTACHMENT_DOWNLOAD_MAX_BYTES = 5 * 1024 * 1024;
 
 /*
  * The largest profile photo body this client will read. The hub stores at most
@@ -267,12 +282,12 @@ export function createHubClient(deps: HubClientDeps) {
 		body?: unknown,
 		signal?: AbortSignal,
 		/*
-		 * A non-messaging read on the SAME hub with the SAME bearer: the avatar
-		 * route lives under `/v1/accounts`, and answers with image bytes. Kept on
-		 * this one request path so it inherits the timeout, abort and the single
-		 * 401 refresh instead of growing a second fetch with its own rules.
+		 * Both attachment raw uploads and profile reads use this one bearer,
+		 * timeout/abort and refresh-once path. Only profile reads override the
+		 * messaging root; adding raw bytes must not bypass its retirement fence.
 		 */
-		raw?: { root: string; accept: string },
+		raw?: { bytes?: Uint8Array; accept?: string; root?: string; photo?: true },
+		limitMs: number = timeoutMs,
 	): Promise<Response> {
 		const fetchImpl = resolveFetch(deps.fetchImpl);
 		/*
@@ -285,7 +300,7 @@ export function createHubClient(deps: HubClientDeps) {
 		const timer = setTimeout(() => {
 			timedOut = true;
 			controller.abort();
-		}, timeoutMs);
+		}, limitMs);
 		const forward = () => controller.abort();
 		if (signal?.aborted) controller.abort();
 		else signal?.addEventListener("abort", forward, { once: true });
@@ -297,11 +312,18 @@ export function createHubClient(deps: HubClientDeps) {
 					headers: {
 						accept: raw?.accept ?? "application/json",
 						authorization: `Bearer ${token}`,
-						...(body === undefined
-							? {}
-							: { "content-type": "application/json" }),
+						...(raw && "bytes" in raw
+							? /* The hub sniffs the bytes and ignores this header. */
+								{ "content-type": "application/octet-stream" }
+							: body === undefined
+								? {}
+								: { "content-type": "application/json" }),
 					},
-					...(body === undefined ? {} : { body: JSON.stringify(body) }),
+					...(raw && "bytes" in raw
+						? { body: raw.bytes as unknown as BodyInit }
+						: body === undefined
+							? {}
+							: { body: JSON.stringify(body) }),
 					/* The hub is not a tunnel and owns no cookie the phone should send. */
 					credentials: "omit",
 					signal: controller.signal,
@@ -336,7 +358,8 @@ export function createHubClient(deps: HubClientDeps) {
 		query?: Query;
 		body?: unknown;
 		signal?: AbortSignal;
-		raw?: { root: string; accept: string; photo?: true };
+		raw?: { bytes?: Uint8Array; accept?: string; root?: string; photo?: true };
+		timeoutMs?: number;
 	};
 
 	/** Token, one request, one forced refresh on 401, and the refusal class. */
@@ -382,6 +405,7 @@ export function createHubClient(deps: HubClientDeps) {
 			options.body,
 			options.signal,
 			options.raw,
+			options.timeoutMs,
 		);
 		assertPhotoActive(response);
 		if (response.status === 401) {
@@ -407,6 +431,7 @@ export function createHubClient(deps: HubClientDeps) {
 				options.body,
 				options.signal,
 				options.raw,
+				options.timeoutMs,
 			);
 		}
 		assertPhotoActive(response);
@@ -491,6 +516,36 @@ export function createHubClient(deps: HubClientDeps) {
 		size: 64 | 256,
 		signal?: AbortSignal,
 	): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
+		return readImageBytes(
+			{
+				path:
+					target.kind === "account"
+						? `/accounts/${encodeURIComponent(target.id)}/avatar`
+						: `/endpoints/${encodeURIComponent(target.id)}/avatar`,
+				root: target.kind === "account" ? "/v1" : "/v1/messaging",
+				query: { v: hash, size },
+				maxBytes: AVATAR_MAX_BYTES,
+				limitMs: timeoutMs,
+			},
+			signal,
+		);
+	}
+
+	/** One closed authenticated byte path for avatars and message images. Adding
+	 * attachments must not regress main's cap, full-body deadline or account
+	 * retirement fence. The native non-streaming limitation below applies to
+	 * both: this bounds retained bytes, not the platform's underlying allocation. */
+	async function readImageBytes(
+		target: {
+			path: string;
+			root: string;
+			query: Query;
+			maxBytes: number;
+			limitMs: number;
+			requireDeclaredMime?: boolean;
+		},
+		signal?: AbortSignal,
+	): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
 		/*
 		 * ONE deadline over the headers AND the body. `once()` disarms its
 		 * timer when the headers arrive, which is right for a small JSON
@@ -517,8 +572,11 @@ export function createHubClient(deps: HubClientDeps) {
 			timedOut = true;
 			deadline.abort();
 			void reader?.cancel().catch(() => undefined);
-		}, timeoutMs);
-		const forward = () => deadline.abort();
+		}, target.limitMs);
+		const forward = () => {
+			deadline.abort();
+			void reader?.cancel().catch(() => undefined);
+		};
 		if (signal?.aborted) deadline.abort();
 		else signal?.addEventListener("abort", forward, { once: true });
 		const unreachable = (status: number | null) =>
@@ -539,28 +597,29 @@ export function createHubClient(deps: HubClientDeps) {
 		aborted.catch(() => undefined);
 		let bytes: Uint8Array;
 		let status: number;
+		let servedMime: string | undefined;
 		try {
 			const response = await Promise.race([
-				authorized(
-					"GET",
-					target.kind === "account"
-						? `/accounts/${encodeURIComponent(target.id)}/avatar`
-						: `/endpoints/${encodeURIComponent(target.id)}/avatar`,
-					{
-						query: { v: hash, size },
-						raw: {
-							root: target.kind === "account" ? "/v1" : "/v1/messaging",
-							accept: "image/png, image/jpeg",
-							photo: true,
-						},
-						signal: deadline.signal,
+				authorized("GET", target.path, {
+					query: target.query,
+					raw: {
+						root: target.root,
+						accept: "image/png, image/jpeg",
+						photo: true,
 					},
-				),
+					signal: deadline.signal,
+					timeoutMs: target.limitMs,
+				}),
 				aborted,
 			]);
 			status = response.status;
+			servedMime = response.headers
+				.get("content-type")
+				?.split(";")[0]
+				?.trim()
+				.toLowerCase();
 			const declared = Number(response.headers.get("content-length"));
-			if (Number.isFinite(declared) && declared > AVATAR_MAX_BYTES) {
+			if (Number.isFinite(declared) && declared > target.maxBytes) {
 				cancelPhotoBody(response);
 				throw tooLarge(status);
 			}
@@ -572,7 +631,7 @@ export function createHubClient(deps: HubClientDeps) {
 					const next = await Promise.race([reader.read(), aborted]);
 					if (next.done) break;
 					total += next.value.byteLength;
-					if (total > AVATAR_MAX_BYTES) {
+					if (total > target.maxBytes) {
 						void reader.cancel().catch(() => undefined);
 						throw tooLarge(status);
 					}
@@ -586,9 +645,14 @@ export function createHubClient(deps: HubClientDeps) {
 				}
 			} else {
 				const body = await Promise.race([response.arrayBuffer(), aborted]);
-				if (body.byteLength > AVATAR_MAX_BYTES) throw tooLarge(status);
+				if (body.byteLength > target.maxBytes) throw tooLarge(status);
 				bytes = new Uint8Array(body);
 			}
+			// Reader cancellation may resolve a pending read as EOF before the
+			// abort promise wins its race. Retired content must not escape as a
+			// successfully truncated image just because its prefix sniffs as PNG.
+			if (deadline.signal.aborted)
+				throw deadline.signal.reason ?? unreachable(status);
 		} catch (error) {
 			/* The caller's own abort propagates as itself (an unmounted view).
 			 * The deadline turns a hung read into a retryable state; a refusal
@@ -602,7 +666,7 @@ export function createHubClient(deps: HubClientDeps) {
 			signal?.removeEventListener("abort", forward);
 		}
 		const mime = sniffImageMime(bytes);
-		if (!mime) {
+		if (!mime || (target.requireDeclaredMime && servedMime !== mime)) {
 			throw unreadableAvatar(status);
 		}
 		return { mime, bytes };
@@ -745,7 +809,7 @@ export function createHubClient(deps: HubClientDeps) {
 		send(
 			tenantId: string,
 			conversationId: string,
-			input: { clientRef: string; body: string },
+			input: { clientRef: string; body: string; attachmentIds?: string[] },
 		): Promise<Message> {
 			return request(
 				"POST",
@@ -756,8 +820,89 @@ export function createHubClient(deps: HubClientDeps) {
 						tenant_id: tenantId,
 						client_ref: input.clientRef,
 						body: input.body,
+						/*
+						 * Sent ONLY when non-empty: an older hub decodes this DTO with
+						 * `DisallowUnknownFields`, so a text-only send must stay
+						 * byte-identical to before this field existed.
+						 */
+						...(input.attachmentIds?.length
+							? { attachment_ids: input.attachmentIds }
+							: {}),
 					},
 				},
+			);
+		},
+
+		/**
+		 * Stage one image (`POST /conversations/:cid/attachments`). The body is
+		 * the already-bounded PNG/JPEG bytes, raw: no multipart, no filename (the
+		 * hub never stores one). Staging is idempotent on the hub by content, so
+		 * a retry after a dropped response returns the same id.
+		 */
+		uploadAttachment(
+			tenantId: string,
+			conversationId: string,
+			bytes: Uint8Array,
+			signal?: AbortSignal,
+		): Promise<UploadedAttachment> {
+			return request(
+				"POST",
+				`/conversations/${encodeURIComponent(conversationId)}/attachments`,
+				(v) => uploadedAttachmentSchema.parse(v),
+				{
+					query: { tenant_id: tenantId },
+					raw: { bytes },
+					signal,
+					timeoutMs: BYTES_TIMEOUT_MS,
+				},
+			);
+		},
+
+		/** Drop a staged image the reader removed. Idempotent: gone is success. */
+		async deleteAttachment(
+			tenantId: string,
+			conversationId: string,
+			attachmentId: string,
+		): Promise<void> {
+			try {
+				await request(
+					"DELETE",
+					`/conversations/${encodeURIComponent(conversationId)}/attachments/${encodeURIComponent(attachmentId)}`,
+					null,
+					{ query: { tenant_id: tenantId } },
+				);
+			} catch (error) {
+				if (isHubError(error) && error.kind === "not_found") return;
+				throw error;
+			}
+		},
+
+		/**
+		 * One bound image's bytes, read as the signed-in member with the bearer.
+		 * There is no URL to hand to an image view: the route needs the token, so
+		 * the caller turns these bytes into an in-memory `data:` URI.
+		 *
+		 * FAIL CLOSED on content: the bytes must sniff as PNG or JPEG AND match
+		 * the served `Content-Type`. Anything else (an edge's HTML error page, a
+		 * type this build does not render) is `malformed`, never displayed.
+		 */
+		async attachmentBytes(
+			tenantId: string,
+			conversationId: string,
+			messageId: string,
+			attachmentId: string,
+			signal?: AbortSignal,
+		): Promise<{ mime: "image/png" | "image/jpeg"; bytes: Uint8Array }> {
+			return readImageBytes(
+				{
+					path: `/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
+					root: "/v1/messaging",
+					query: { tenant_id: tenantId },
+					maxBytes: ATTACHMENT_DOWNLOAD_MAX_BYTES,
+					limitMs: deps.timeoutMs ?? BYTES_TIMEOUT_MS,
+					requireDeclaredMime: true,
+				},
+				signal,
 			);
 		},
 

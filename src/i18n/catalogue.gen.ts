@@ -383,6 +383,48 @@ export type CatalogueKey =
 	| "mobile.signin.stage_starting"
 	| "mobile.signin.stage_unavailable"
 	| "mobile.signin.superseded"
+	| "mobile.team_bridge.attachment.add"
+	| "mobile.team_bridge.attachment.attached_summary"
+	| "mobile.team_bridge.attachment.cannot_send"
+	| "mobile.team_bridge.attachment.chip_label"
+	| "mobile.team_bridge.attachment.close"
+	| "mobile.team_bridge.attachment.conversation_gone"
+	| "mobile.team_bridge.attachment.expired"
+	| "mobile.team_bridge.attachment.expired_unsent"
+	| "mobile.team_bridge.attachment.failed"
+	| "mobile.team_bridge.attachment.image"
+	| "mobile.team_bridge.attachment.image_position"
+	| "mobile.team_bridge.attachment.library"
+	| "mobile.team_bridge.attachment.limit"
+	| "mobile.team_bridge.attachment.load_error"
+	| "mobile.team_bridge.attachment.loading_label"
+	| "mobile.team_bridge.attachment.next"
+	| "mobile.team_bridge.attachment.open_hint"
+	| "mobile.team_bridge.attachment.paste"
+	| "mobile.team_bridge.attachment.paste_empty"
+	| "mobile.team_bridge.attachment.position"
+	| "mobile.team_bridge.attachment.prepare_error"
+	| "mobile.team_bridge.attachment.preparing"
+	| "mobile.team_bridge.attachment.previous"
+	| "mobile.team_bridge.attachment.quota"
+	| "mobile.team_bridge.attachment.rate_error"
+	| "mobile.team_bridge.attachment.read_error"
+	| "mobile.team_bridge.attachment.ready"
+	| "mobile.team_bridge.attachment.refused"
+	| "mobile.team_bridge.attachment.remove_blocked"
+	| "mobile.team_bridge.attachment.remove_image"
+	| "mobile.team_bridge.attachment.retry"
+	| "mobile.team_bridge.attachment.retry_blocked"
+	| "mobile.team_bridge.attachment.retry_image"
+	| "mobile.team_bridge.attachment.retry_summary"
+	| "mobile.team_bridge.attachment.unavailable"
+	| "mobile.team_bridge.attachment.unsendable_summary"
+	| "mobile.team_bridge.attachment.unsupported_content"
+	| "mobile.team_bridge.attachment.upload_error"
+	| "mobile.team_bridge.attachment.uploading"
+	| "mobile.team_bridge.attachment.uploading_summary"
+	| "mobile.team_bridge.attachment.viewer"
+	| "mobile.team_bridge.attachment.wait_uploads"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
 	| "mobile.team_bridge.default_on.body"
@@ -830,6 +872,37 @@ export type NoParamKey =
 	| "mobile.signin.stage_starting"
 	| "mobile.signin.stage_unavailable"
 	| "mobile.signin.superseded"
+	| "mobile.team_bridge.attachment.add"
+	| "mobile.team_bridge.attachment.cannot_send"
+	| "mobile.team_bridge.attachment.close"
+	| "mobile.team_bridge.attachment.conversation_gone"
+	| "mobile.team_bridge.attachment.expired"
+	| "mobile.team_bridge.attachment.expired_unsent"
+	| "mobile.team_bridge.attachment.failed"
+	| "mobile.team_bridge.attachment.image"
+	| "mobile.team_bridge.attachment.library"
+	| "mobile.team_bridge.attachment.load_error"
+	| "mobile.team_bridge.attachment.next"
+	| "mobile.team_bridge.attachment.open_hint"
+	| "mobile.team_bridge.attachment.paste"
+	| "mobile.team_bridge.attachment.paste_empty"
+	| "mobile.team_bridge.attachment.prepare_error"
+	| "mobile.team_bridge.attachment.preparing"
+	| "mobile.team_bridge.attachment.previous"
+	| "mobile.team_bridge.attachment.quota"
+	| "mobile.team_bridge.attachment.rate_error"
+	| "mobile.team_bridge.attachment.read_error"
+	| "mobile.team_bridge.attachment.ready"
+	| "mobile.team_bridge.attachment.refused"
+	| "mobile.team_bridge.attachment.remove_blocked"
+	| "mobile.team_bridge.attachment.retry"
+	| "mobile.team_bridge.attachment.retry_blocked"
+	| "mobile.team_bridge.attachment.unavailable"
+	| "mobile.team_bridge.attachment.unsupported_content"
+	| "mobile.team_bridge.attachment.upload_error"
+	| "mobile.team_bridge.attachment.uploading"
+	| "mobile.team_bridge.attachment.viewer"
+	| "mobile.team_bridge.attachment.wait_uploads"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
 	| "mobile.team_bridge.default_on.body"
@@ -1316,6 +1389,48 @@ export type MessageParams = {
 	"mobile.signin.stage_starting": NoParams;
 	"mobile.signin.stage_unavailable": NoParams;
 	"mobile.signin.superseded": NoParams;
+	"mobile.team_bridge.attachment.add": NoParams;
+	"mobile.team_bridge.attachment.attached_summary": { count: number };
+	"mobile.team_bridge.attachment.cannot_send": NoParams;
+	"mobile.team_bridge.attachment.chip_label": { index: string | number; state: string | number };
+	"mobile.team_bridge.attachment.close": NoParams;
+	"mobile.team_bridge.attachment.conversation_gone": NoParams;
+	"mobile.team_bridge.attachment.expired": NoParams;
+	"mobile.team_bridge.attachment.expired_unsent": NoParams;
+	"mobile.team_bridge.attachment.failed": NoParams;
+	"mobile.team_bridge.attachment.image": NoParams;
+	"mobile.team_bridge.attachment.image_position": { count: string | number; index: string | number };
+	"mobile.team_bridge.attachment.library": NoParams;
+	"mobile.team_bridge.attachment.limit": { count: number };
+	"mobile.team_bridge.attachment.load_error": NoParams;
+	"mobile.team_bridge.attachment.loading_label": { label: string | number };
+	"mobile.team_bridge.attachment.next": NoParams;
+	"mobile.team_bridge.attachment.open_hint": NoParams;
+	"mobile.team_bridge.attachment.paste": NoParams;
+	"mobile.team_bridge.attachment.paste_empty": NoParams;
+	"mobile.team_bridge.attachment.position": { count: string | number; index: string | number };
+	"mobile.team_bridge.attachment.prepare_error": NoParams;
+	"mobile.team_bridge.attachment.preparing": NoParams;
+	"mobile.team_bridge.attachment.previous": NoParams;
+	"mobile.team_bridge.attachment.quota": NoParams;
+	"mobile.team_bridge.attachment.rate_error": NoParams;
+	"mobile.team_bridge.attachment.read_error": NoParams;
+	"mobile.team_bridge.attachment.ready": NoParams;
+	"mobile.team_bridge.attachment.refused": NoParams;
+	"mobile.team_bridge.attachment.remove_blocked": NoParams;
+	"mobile.team_bridge.attachment.remove_image": { index: string | number };
+	"mobile.team_bridge.attachment.retry": NoParams;
+	"mobile.team_bridge.attachment.retry_blocked": NoParams;
+	"mobile.team_bridge.attachment.retry_image": { index: string | number };
+	"mobile.team_bridge.attachment.retry_summary": { count: number };
+	"mobile.team_bridge.attachment.unavailable": NoParams;
+	"mobile.team_bridge.attachment.unsendable_summary": { count: number };
+	"mobile.team_bridge.attachment.unsupported_content": NoParams;
+	"mobile.team_bridge.attachment.upload_error": NoParams;
+	"mobile.team_bridge.attachment.uploading": NoParams;
+	"mobile.team_bridge.attachment.uploading_summary": { count: number };
+	"mobile.team_bridge.attachment.viewer": NoParams;
+	"mobile.team_bridge.attachment.wait_uploads": NoParams;
 	"mobile.team_bridge.back": NoParams;
 	"mobile.team_bridge.conversation": NoParams;
 	"mobile.team_bridge.default_on.body": NoParams;
@@ -1831,6 +1946,48 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.signin.stage_starting": "Starting sign-in",
 	"mobile.signin.stage_unavailable": "Sign-in unavailable",
 	"mobile.signin.superseded": "Another sign-in started.",
+	"mobile.team_bridge.attachment.add": "Add image",
+	"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# image attached} other {# images attached}}",
+	"mobile.team_bridge.attachment.cannot_send": "Can't send",
+	"mobile.team_bridge.attachment.chip_label": "Image {index}, {state}",
+	"mobile.team_bridge.attachment.close": "Close image",
+	"mobile.team_bridge.attachment.conversation_gone": "This conversation is no longer available. Remove the image.",
+	"mobile.team_bridge.attachment.expired": "Image expired",
+	"mobile.team_bridge.attachment.expired_unsent": "This image expired before it was sent. Remove it.",
+	"mobile.team_bridge.attachment.failed": "Failed",
+	"mobile.team_bridge.attachment.image": "Image",
+	"mobile.team_bridge.attachment.image_position": "Image {index} of {count}",
+	"mobile.team_bridge.attachment.library": "Photo Library",
+	"mobile.team_bridge.attachment.limit": "{count, plural, one {You can attach up to # image per message.} other {You can attach up to # images per message.}}",
+	"mobile.team_bridge.attachment.load_error": "This image did not load.",
+	"mobile.team_bridge.attachment.loading_label": "{label}, loading",
+	"mobile.team_bridge.attachment.next": "Next image",
+	"mobile.team_bridge.attachment.open_hint": "Opens the image full screen",
+	"mobile.team_bridge.attachment.paste": "Paste image",
+	"mobile.team_bridge.attachment.paste_empty": "No image was pasted.",
+	"mobile.team_bridge.attachment.position": "{index} of {count}",
+	"mobile.team_bridge.attachment.prepare_error": "This image could not be prepared.",
+	"mobile.team_bridge.attachment.preparing": "Preparing…",
+	"mobile.team_bridge.attachment.previous": "Previous image",
+	"mobile.team_bridge.attachment.quota": "You have 8 images waiting to send. Send or remove some, then add this one again.",
+	"mobile.team_bridge.attachment.rate_error": "Too many images at once. Try again shortly.",
+	"mobile.team_bridge.attachment.read_error": "That image could not be read.",
+	"mobile.team_bridge.attachment.ready": "Ready",
+	"mobile.team_bridge.attachment.refused": "Radient cannot accept this image. Remove it.",
+	"mobile.team_bridge.attachment.remove_blocked": "Remove the images that can't be sent to send this message.",
+	"mobile.team_bridge.attachment.remove_image": "Remove image {index}",
+	"mobile.team_bridge.attachment.retry": "Retry",
+	"mobile.team_bridge.attachment.retry_blocked": "Retry or remove the images that didn't upload to send.",
+	"mobile.team_bridge.attachment.retry_image": "Retry image {index}",
+	"mobile.team_bridge.attachment.retry_summary": "{count, plural, one {1 image didn't upload. Retry or remove it.} other {# images didn't upload. Retry or remove them.}}",
+	"mobile.team_bridge.attachment.unavailable": "Image unavailable",
+	"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, one {1 image can't be sent. Remove it to send.} other {# images can't be sent. Remove them to send.}}",
+	"mobile.team_bridge.attachment.unsupported_content": "This message has content this version of the app cannot show.",
+	"mobile.team_bridge.attachment.upload_error": "This image did not upload.",
+	"mobile.team_bridge.attachment.uploading": "Uploading…",
+	"mobile.team_bridge.attachment.uploading_summary": "Uploading {count, plural, one {# image… Send is available when it finishes.} other {# images… Send is available when they finish.}}",
+	"mobile.team_bridge.attachment.viewer": "Image viewer",
+	"mobile.team_bridge.attachment.wait_uploads": "Send is available when the images finish uploading.",
 	"mobile.team_bridge.back": "Back",
 	"mobile.team_bridge.conversation": "Conversation",
 	"mobile.team_bridge.default_on.body": "Your organization’s agents can message your chief of staff. You can turn this off at any time.",
@@ -2331,6 +2488,48 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.signin.stage_starting": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.stage_unavailable": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.superseded": { role: "status", note: "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI." },
+	"mobile.team_bridge.attachment.add": { role: "button", note: "Team Bridge image attachments: add. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.attached_summary": { role: "status", note: "Team Bridge image attachments: attached_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.cannot_send": { role: "status", note: "Team Bridge image attachments: cannot_send. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
+	"mobile.team_bridge.attachment.chip_label": { role: "status", note: "Team Bridge image attachments: chip_label. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.close": { role: "button", note: "Team Bridge image attachments: close. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.conversation_gone": { role: "status", note: "Team Bridge image attachments: conversation_gone. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
+	"mobile.team_bridge.attachment.expired": { role: "status", note: "Team Bridge image attachments: expired. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.expired_unsent": { role: "status", note: "Team Bridge image attachments: expired_unsent. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
+	"mobile.team_bridge.attachment.failed": { role: "status", note: "Team Bridge image attachments: failed. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.image": { role: "status", note: "Team Bridge image attachments: image. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.image_position": { role: "status", note: "Team Bridge image attachments: image_position. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.library": { role: "button", note: "Team Bridge image attachments: library. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.limit": { role: "status", note: "Team Bridge image attachments: limit. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.load_error": { role: "status", note: "Team Bridge image attachments: load_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.loading_label": { role: "status", note: "Team Bridge image attachments: loading_label. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.next": { role: "button", note: "Team Bridge image attachments: next. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.open_hint": { role: "status", note: "Team Bridge image attachments: open_hint. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.paste": { role: "button", note: "Team Bridge image attachments: paste. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.paste_empty": { role: "status", note: "Team Bridge image attachments: paste_empty. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.position": { role: "status", note: "Team Bridge image attachments: position. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.prepare_error": { role: "status", note: "Team Bridge image attachments: prepare_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.preparing": { role: "status", note: "Team Bridge image attachments: preparing. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.previous": { role: "button", note: "Team Bridge image attachments: previous. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.quota": { role: "status", note: "Team Bridge image attachments: quota. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
+	"mobile.team_bridge.attachment.rate_error": { role: "status", note: "Team Bridge image attachments: rate_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.read_error": { role: "status", note: "Team Bridge image attachments: read_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.ready": { role: "status", note: "Team Bridge image attachments: ready. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.refused": { role: "status", note: "Team Bridge image attachments: refused. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
+	"mobile.team_bridge.attachment.remove_blocked": { role: "status", note: "Team Bridge image attachments: remove_blocked. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.remove_image": { role: "button", note: "Team Bridge image attachments: remove_image. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.retry": { role: "button", note: "Team Bridge image attachments: retry. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.retry_blocked": { role: "status", note: "Team Bridge image attachments: retry_blocked. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.retry_image": { role: "button", note: "Team Bridge image attachments: retry_image. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.retry_summary": { role: "status", note: "Team Bridge image attachments: retry_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.unavailable": { role: "status", note: "Team Bridge image attachments: unavailable. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.unsendable_summary": { role: "status", note: "Team Bridge image attachments: unsendable_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
+	"mobile.team_bridge.attachment.unsupported_content": { role: "status", note: "Team Bridge image attachments: unsupported_content. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.upload_error": { role: "status", note: "Team Bridge image attachments: upload_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.uploading": { role: "status", note: "Team Bridge image attachments: uploading. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.uploading_summary": { role: "status", note: "Team Bridge image attachments: uploading_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.viewer": { role: "status", note: "Team Bridge image attachments: viewer. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
+	"mobile.team_bridge.attachment.wait_uploads": { role: "status", note: "Team Bridge image attachments: wait_uploads. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.default_on.body": { role: "help", note: "One sentence under the heading. “Chief of staff” is the product term for the person's own agent. Do not imply the person did anything to enable it." },
@@ -2845,6 +3044,48 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Iniciando sesión",
 		"mobile.signin.stage_unavailable": "Inicio de sesión no disponible",
 		"mobile.signin.superseded": "Se inició otro acceso.",
+		"mobile.team_bridge.attachment.add": "Añadir imagen",
+		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
+		"mobile.team_bridge.attachment.cannot_send": "No se puede enviar",
+		"mobile.team_bridge.attachment.chip_label": "Imagen {index}, {state}",
+		"mobile.team_bridge.attachment.close": "Cerrar imagen",
+		"mobile.team_bridge.attachment.conversation_gone": "Esta conversación ya no está disponible. Quita la imagen.",
+		"mobile.team_bridge.attachment.expired": "Imagen caducada",
+		"mobile.team_bridge.attachment.expired_unsent": "Esta imagen caducó antes de enviarse. Quítala.",
+		"mobile.team_bridge.attachment.failed": "Error",
+		"mobile.team_bridge.attachment.image": "Imagen",
+		"mobile.team_bridge.attachment.image_position": "Imagen {index} de {count}",
+		"mobile.team_bridge.attachment.library": "Fototeca",
+		"mobile.team_bridge.attachment.limit": "{count, plural, one {Puedes adjuntar hasta # imagen por mensaje.} other {Puedes adjuntar hasta # imágenes por mensaje.}}",
+		"mobile.team_bridge.attachment.load_error": "Esta imagen no se ha cargado.",
+		"mobile.team_bridge.attachment.loading_label": "{label}, cargando",
+		"mobile.team_bridge.attachment.next": "Imagen siguiente",
+		"mobile.team_bridge.attachment.open_hint": "Abre la imagen a pantalla completa",
+		"mobile.team_bridge.attachment.paste": "Pegar imagen",
+		"mobile.team_bridge.attachment.paste_empty": "No se ha pegado ninguna imagen.",
+		"mobile.team_bridge.attachment.position": "{index} de {count}",
+		"mobile.team_bridge.attachment.prepare_error": "No se ha podido preparar esta imagen.",
+		"mobile.team_bridge.attachment.preparing": "Preparando…",
+		"mobile.team_bridge.attachment.previous": "Imagen anterior",
+		"mobile.team_bridge.attachment.quota": "Tienes 8 imágenes pendientes de envío. Envía o quita algunas y vuelve a añadir esta.",
+		"mobile.team_bridge.attachment.rate_error": "Demasiadas imágenes a la vez. Inténtalo de nuevo en un momento.",
+		"mobile.team_bridge.attachment.read_error": "No se ha podido leer esa imagen.",
+		"mobile.team_bridge.attachment.ready": "Lista",
+		"mobile.team_bridge.attachment.refused": "Radient no puede aceptar esta imagen. Quítala.",
+		"mobile.team_bridge.attachment.remove_blocked": "Quita las imágenes que no se pueden enviar para enviar este mensaje.",
+		"mobile.team_bridge.attachment.remove_image": "Quitar imagen {index}",
+		"mobile.team_bridge.attachment.retry": "Reintentar",
+		"mobile.team_bridge.attachment.retry_blocked": "Reintenta o quita las imágenes que no se han subido para enviar.",
+		"mobile.team_bridge.attachment.retry_image": "Reintentar imagen {index}",
+		"mobile.team_bridge.attachment.retry_summary": "{count, plural, one {1 imagen no se ha subido. Reinténtalo o quítala.} other {# imágenes no se han subido. Reinténtalo o quítalas.}}",
+		"mobile.team_bridge.attachment.unavailable": "Imagen no disponible",
+		"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, one {1 imagen no se puede enviar. Quítala para enviar.} other {# imágenes no se pueden enviar. Quítalas para enviar.}}",
+		"mobile.team_bridge.attachment.unsupported_content": "Este mensaje tiene contenido que esta versión de la aplicación no puede mostrar.",
+		"mobile.team_bridge.attachment.upload_error": "Esta imagen no se ha subido.",
+		"mobile.team_bridge.attachment.uploading": "Subiendo…",
+		"mobile.team_bridge.attachment.uploading_summary": "Subiendo {count, plural, one {# imagen… Podrás enviar cuando termine.} other {# imágenes… Podrás enviar cuando terminen.}}",
+		"mobile.team_bridge.attachment.viewer": "Visor de imágenes",
+		"mobile.team_bridge.attachment.wait_uploads": "Podrás enviar cuando las imágenes terminen de subirse.",
 		"mobile.team_bridge.back": "Atrás",
 		"mobile.team_bridge.conversation": "Conversación",
 		"mobile.team_bridge.default_on.body": "Los agentes de tu organización pueden enviar mensajes a tu jefe de gabinete. Puedes desactivar esta opción en cualquier momento.",
@@ -3343,6 +3584,48 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Connexion en cours",
 		"mobile.signin.stage_unavailable": "Connexion indisponible",
 		"mobile.signin.superseded": "Une autre connexion a démarré.",
+		"mobile.team_bridge.attachment.add": "Ajouter une image",
+		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# image jointe} other {# images jointes}}",
+		"mobile.team_bridge.attachment.cannot_send": "Envoi impossible",
+		"mobile.team_bridge.attachment.chip_label": "Image {index}, {state}",
+		"mobile.team_bridge.attachment.close": "Fermer l’image",
+		"mobile.team_bridge.attachment.conversation_gone": "Cette conversation n’est plus disponible. Retirez l’image.",
+		"mobile.team_bridge.attachment.expired": "Image expirée",
+		"mobile.team_bridge.attachment.expired_unsent": "Cette image a expiré avant son envoi. Retirez-la.",
+		"mobile.team_bridge.attachment.failed": "Échec",
+		"mobile.team_bridge.attachment.image": "Image",
+		"mobile.team_bridge.attachment.image_position": "Image {index} sur {count}",
+		"mobile.team_bridge.attachment.library": "Photothèque",
+		"mobile.team_bridge.attachment.limit": "{count, plural, one {Vous pouvez joindre jusqu’à # image par message.} other {Vous pouvez joindre jusqu’à # images par message.}}",
+		"mobile.team_bridge.attachment.load_error": "Cette image n’a pas été chargée.",
+		"mobile.team_bridge.attachment.loading_label": "{label}, chargement",
+		"mobile.team_bridge.attachment.next": "Image suivante",
+		"mobile.team_bridge.attachment.open_hint": "Ouvre l’image en plein écran",
+		"mobile.team_bridge.attachment.paste": "Coller une image",
+		"mobile.team_bridge.attachment.paste_empty": "Aucune image n’a été collée.",
+		"mobile.team_bridge.attachment.position": "{index} sur {count}",
+		"mobile.team_bridge.attachment.prepare_error": "Cette image n’a pas pu être préparée.",
+		"mobile.team_bridge.attachment.preparing": "Préparation…",
+		"mobile.team_bridge.attachment.previous": "Image précédente",
+		"mobile.team_bridge.attachment.quota": "Vous avez 8 images en attente d’envoi. Envoyez-en ou retirez-en, puis ajoutez à nouveau celle-ci.",
+		"mobile.team_bridge.attachment.rate_error": "Trop d’images à la fois. Réessayez dans un instant.",
+		"mobile.team_bridge.attachment.read_error": "Cette image n’a pas pu être lue.",
+		"mobile.team_bridge.attachment.ready": "Prête",
+		"mobile.team_bridge.attachment.refused": "Radient ne peut pas accepter cette image. Retirez-la.",
+		"mobile.team_bridge.attachment.remove_blocked": "Retirez les images qui ne peuvent pas être envoyées pour envoyer ce message.",
+		"mobile.team_bridge.attachment.remove_image": "Retirer l’image {index}",
+		"mobile.team_bridge.attachment.retry": "Réessayer",
+		"mobile.team_bridge.attachment.retry_blocked": "Réessayez ou retirez les images non téléversées pour envoyer.",
+		"mobile.team_bridge.attachment.retry_image": "Réessayer l’image {index}",
+		"mobile.team_bridge.attachment.retry_summary": "{count, plural, one {1 image n’a pas été téléversée. Réessayez ou retirez-la.} other {# images n’ont pas été téléversées. Réessayez ou retirez-les.}}",
+		"mobile.team_bridge.attachment.unavailable": "Image indisponible",
+		"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, one {1 image ne peut pas être envoyée. Retirez-la pour envoyer.} other {# images ne peuvent pas être envoyées. Retirez-les pour envoyer.}}",
+		"mobile.team_bridge.attachment.unsupported_content": "Ce message contient des éléments que cette version de l’application ne peut pas afficher.",
+		"mobile.team_bridge.attachment.upload_error": "Cette image n’a pas été téléversée.",
+		"mobile.team_bridge.attachment.uploading": "Téléversement…",
+		"mobile.team_bridge.attachment.uploading_summary": "Téléversement de {count, plural, one {# image… L’envoi sera disponible une fois terminé.} other {# images… L’envoi sera disponible une fois terminé.}}",
+		"mobile.team_bridge.attachment.viewer": "Visionneuse d’images",
+		"mobile.team_bridge.attachment.wait_uploads": "L’envoi sera disponible lorsque les images seront téléversées.",
 		"mobile.team_bridge.back": "Retour",
 		"mobile.team_bridge.conversation": "Conversation",
 		"mobile.team_bridge.default_on.body": "Les agents de votre organisation peuvent envoyer des messages à votre chef de cabinet. Vous pouvez désactiver cette option à tout moment.",
@@ -3841,6 +4124,48 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "साइन-इन शुरू हो रहा है",
 		"mobile.signin.stage_unavailable": "साइन-इन उपलब्ध नहीं है",
 		"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।",
+		"mobile.team_bridge.attachment.add": "चित्र जोड़ें",
+		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# चित्र जोड़ा गया} other {# चित्र जोड़े गए}}",
+		"mobile.team_bridge.attachment.cannot_send": "भेज नहीं सकते",
+		"mobile.team_bridge.attachment.chip_label": "चित्र {index}, {state}",
+		"mobile.team_bridge.attachment.close": "चित्र बंद करें",
+		"mobile.team_bridge.attachment.conversation_gone": "यह बातचीत अब उपलब्ध नहीं है। चित्र हटाएँ।",
+		"mobile.team_bridge.attachment.expired": "चित्र की अवधि समाप्त हो गई",
+		"mobile.team_bridge.attachment.expired_unsent": "भेजे जाने से पहले इस चित्र की अवधि समाप्त हो गई। इसे हटाएँ।",
+		"mobile.team_bridge.attachment.failed": "विफल",
+		"mobile.team_bridge.attachment.image": "चित्र",
+		"mobile.team_bridge.attachment.image_position": "चित्र {index}, कुल {count}",
+		"mobile.team_bridge.attachment.library": "फ़ोटो लाइब्रेरी",
+		"mobile.team_bridge.attachment.limit": "{count, plural, one {आप हर संदेश में अधिकतम # चित्र जोड़ सकते हैं।} other {आप हर संदेश में अधिकतम # चित्र जोड़ सकते हैं।}}",
+		"mobile.team_bridge.attachment.load_error": "यह चित्र लोड नहीं हुआ।",
+		"mobile.team_bridge.attachment.loading_label": "{label}, लोड हो रहा है",
+		"mobile.team_bridge.attachment.next": "अगला चित्र",
+		"mobile.team_bridge.attachment.open_hint": "चित्र को पूर्ण स्क्रीन में खोलता है",
+		"mobile.team_bridge.attachment.paste": "चित्र पेस्ट करें",
+		"mobile.team_bridge.attachment.paste_empty": "कोई चित्र पेस्ट नहीं हुआ।",
+		"mobile.team_bridge.attachment.position": "{index} / {count}",
+		"mobile.team_bridge.attachment.prepare_error": "यह चित्र तैयार नहीं हो सका।",
+		"mobile.team_bridge.attachment.preparing": "तैयार हो रहा है…",
+		"mobile.team_bridge.attachment.previous": "पिछला चित्र",
+		"mobile.team_bridge.attachment.quota": "आपके 8 चित्र भेजे जाने की प्रतीक्षा में हैं। कुछ भेजें या हटाएँ, फिर यह चित्र दोबारा जोड़ें।",
+		"mobile.team_bridge.attachment.rate_error": "एक साथ बहुत सारे चित्र हैं। थोड़ी देर में फिर कोशिश करें।",
+		"mobile.team_bridge.attachment.read_error": "वह चित्र पढ़ा नहीं जा सका।",
+		"mobile.team_bridge.attachment.ready": "तैयार",
+		"mobile.team_bridge.attachment.refused": "Radient यह चित्र स्वीकार नहीं कर सकता। इसे हटाएँ।",
+		"mobile.team_bridge.attachment.remove_blocked": "यह संदेश भेजने के लिए वे चित्र हटाएँ जो भेजे नहीं जा सकते।",
+		"mobile.team_bridge.attachment.remove_image": "चित्र {index} हटाएँ",
+		"mobile.team_bridge.attachment.retry": "फिर कोशिश करें",
+		"mobile.team_bridge.attachment.retry_blocked": "भेजने के लिए अपलोड न हुए चित्रों पर फिर कोशिश करें या उन्हें हटाएँ।",
+		"mobile.team_bridge.attachment.retry_image": "चित्र {index} के लिए फिर कोशिश करें",
+		"mobile.team_bridge.attachment.retry_summary": "{count, plural, one {# चित्र अपलोड नहीं हुआ। फिर कोशिश करें या इसे हटाएँ।} other {# चित्र अपलोड नहीं हुए। फिर कोशिश करें या इन्हें हटाएँ।}}",
+		"mobile.team_bridge.attachment.unavailable": "चित्र उपलब्ध नहीं है",
+		"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, one {# चित्र भेजा नहीं जा सकता। भेजने के लिए इसे हटाएँ।} other {# चित्र भेजे नहीं जा सकते। भेजने के लिए इन्हें हटाएँ।}}",
+		"mobile.team_bridge.attachment.unsupported_content": "इस संदेश में ऐसा कॉन्टेंट है जो ऐप का यह संस्करण नहीं दिखा सकता।",
+		"mobile.team_bridge.attachment.upload_error": "यह चित्र अपलोड नहीं हुआ।",
+		"mobile.team_bridge.attachment.uploading": "अपलोड हो रहा है…",
+		"mobile.team_bridge.attachment.uploading_summary": "{count, plural, one {# चित्र अपलोड हो रहा है… पूरा होने पर भेज सकते हैं।} other {# चित्र अपलोड हो रहे हैं… पूरे होने पर भेज सकते हैं।}}",
+		"mobile.team_bridge.attachment.viewer": "चित्र दर्शक",
+		"mobile.team_bridge.attachment.wait_uploads": "चित्र अपलोड हो जाने पर भेज सकते हैं।",
 		"mobile.team_bridge.back": "वापस",
 		"mobile.team_bridge.conversation": "बातचीत",
 		"mobile.team_bridge.default_on.body": "आपके संगठन के एजेंट आपके चीफ़ ऑफ़ स्टाफ़ को संदेश भेज सकते हैं। आप इसे कभी भी बंद कर सकते हैं।",
@@ -4339,6 +4664,48 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Начало входа",
 		"mobile.signin.stage_unavailable": "Вход недоступен",
 		"mobile.signin.superseded": "Начался другой вход.",
+		"mobile.team_bridge.attachment.add": "Добавить изображение",
+		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {Прикреплено # изображение} few {Прикреплено # изображения} many {Прикреплено # изображений} other {Прикреплено # изображения}}",
+		"mobile.team_bridge.attachment.cannot_send": "Нельзя отправить",
+		"mobile.team_bridge.attachment.chip_label": "Изображение {index}, {state}",
+		"mobile.team_bridge.attachment.close": "Закрыть изображение",
+		"mobile.team_bridge.attachment.conversation_gone": "Этот разговор больше недоступен. Удалите изображение.",
+		"mobile.team_bridge.attachment.expired": "Срок хранения истёк",
+		"mobile.team_bridge.attachment.expired_unsent": "Срок хранения этого изображения истёк до отправки. Удалите его.",
+		"mobile.team_bridge.attachment.failed": "Ошибка",
+		"mobile.team_bridge.attachment.image": "Изображение",
+		"mobile.team_bridge.attachment.image_position": "Изображение {index} из {count}",
+		"mobile.team_bridge.attachment.library": "Фотогалерея",
+		"mobile.team_bridge.attachment.limit": "{count, plural, one {К сообщению можно прикрепить до # изображения.} few {К сообщению можно прикрепить до # изображений.} many {К сообщению можно прикрепить до # изображений.} other {К сообщению можно прикрепить до # изображения.}}",
+		"mobile.team_bridge.attachment.load_error": "Не удалось загрузить это изображение.",
+		"mobile.team_bridge.attachment.loading_label": "{label}, загрузка",
+		"mobile.team_bridge.attachment.next": "Следующее изображение",
+		"mobile.team_bridge.attachment.open_hint": "Открывает изображение на весь экран",
+		"mobile.team_bridge.attachment.paste": "Вставить изображение",
+		"mobile.team_bridge.attachment.paste_empty": "Изображение не вставлено.",
+		"mobile.team_bridge.attachment.position": "{index} из {count}",
+		"mobile.team_bridge.attachment.prepare_error": "Не удалось подготовить это изображение.",
+		"mobile.team_bridge.attachment.preparing": "Подготовка…",
+		"mobile.team_bridge.attachment.previous": "Предыдущее изображение",
+		"mobile.team_bridge.attachment.quota": "У вас 8 изображений, ожидающих отправки. Отправьте или удалите часть, затем добавьте это снова.",
+		"mobile.team_bridge.attachment.rate_error": "Слишком много изображений одновременно. Повторите попытку чуть позже.",
+		"mobile.team_bridge.attachment.read_error": "Не удалось прочитать это изображение.",
+		"mobile.team_bridge.attachment.ready": "Готово",
+		"mobile.team_bridge.attachment.refused": "Radient не может принять это изображение. Удалите его.",
+		"mobile.team_bridge.attachment.remove_blocked": "Удалите изображения, которые нельзя отправить, чтобы отправить сообщение.",
+		"mobile.team_bridge.attachment.remove_image": "Удалить изображение {index}",
+		"mobile.team_bridge.attachment.retry": "Повторить",
+		"mobile.team_bridge.attachment.retry_blocked": "Повторите загрузку или удалите незагруженные изображения для отправки.",
+		"mobile.team_bridge.attachment.retry_image": "Повторить загрузку изображения {index}",
+		"mobile.team_bridge.attachment.retry_summary": "{count, plural, one {Не загрузилось # изображение. Повторите попытку или удалите его.} few {Не загрузились # изображения. Повторите попытку или удалите их.} many {Не загрузились # изображений. Повторите попытку или удалите их.} other {Не загрузилось # изображения. Повторите попытку или удалите его.}}",
+		"mobile.team_bridge.attachment.unavailable": "Изображение недоступно",
+		"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, one {Нельзя отправить # изображение. Удалите его для отправки.} few {Нельзя отправить # изображения. Удалите их для отправки.} many {Нельзя отправить # изображений. Удалите их для отправки.} other {Нельзя отправить # изображения. Удалите его для отправки.}}",
+		"mobile.team_bridge.attachment.unsupported_content": "Это сообщение содержит данные, которые эта версия приложения не может показать.",
+		"mobile.team_bridge.attachment.upload_error": "Это изображение не загрузилось.",
+		"mobile.team_bridge.attachment.uploading": "Загрузка…",
+		"mobile.team_bridge.attachment.uploading_summary": "{count, plural, one {Загружается # изображение… Отправка станет доступна после загрузки.} few {Загружаются # изображения… Отправка станет доступна после загрузки.} many {Загружаются # изображений… Отправка станет доступна после загрузки.} other {Загружается # изображения… Отправка станет доступна после загрузки.}}",
+		"mobile.team_bridge.attachment.viewer": "Просмотр изображений",
+		"mobile.team_bridge.attachment.wait_uploads": "Отправка станет доступна после загрузки изображений.",
 		"mobile.team_bridge.back": "Назад",
 		"mobile.team_bridge.conversation": "Переписка",
 		"mobile.team_bridge.default_on.body": "Агенты вашей организации могут писать вашему руководителю аппарата. Вы можете отключить это в любой момент.",
@@ -4837,6 +5204,48 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "سائن ان شروع ہو رہا ہے",
 		"mobile.signin.stage_unavailable": "سائن ان دستیاب نہیں",
 		"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔",
+		"mobile.team_bridge.attachment.add": "تصویر شامل کریں",
+		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# تصویر شامل کی گئی} other {# تصاویر شامل کی گئیں}}",
+		"mobile.team_bridge.attachment.cannot_send": "بھیج نہیں سکتے",
+		"mobile.team_bridge.attachment.chip_label": "تصویر {index}، {state}",
+		"mobile.team_bridge.attachment.close": "تصویر بند کریں",
+		"mobile.team_bridge.attachment.conversation_gone": "یہ گفتگو اب دستیاب نہیں ہے۔ تصویر ہٹائیں۔",
+		"mobile.team_bridge.attachment.expired": "تصویر کی میعاد ختم ہو گئی",
+		"mobile.team_bridge.attachment.expired_unsent": "بھیجے جانے سے پہلے اس تصویر کی میعاد ختم ہو گئی۔ اسے ہٹائیں۔",
+		"mobile.team_bridge.attachment.failed": "ناکام",
+		"mobile.team_bridge.attachment.image": "تصویر",
+		"mobile.team_bridge.attachment.image_position": "تصویر {index}، کل {count}",
+		"mobile.team_bridge.attachment.library": "فوٹو لائبریری",
+		"mobile.team_bridge.attachment.limit": "{count, plural, one {آپ ہر پیغام میں زیادہ سے زیادہ # تصویر شامل کر سکتے ہیں۔} other {آپ ہر پیغام میں زیادہ سے زیادہ # تصاویر شامل کر سکتے ہیں۔}}",
+		"mobile.team_bridge.attachment.load_error": "یہ تصویر لوڈ نہیں ہوئی۔",
+		"mobile.team_bridge.attachment.loading_label": "{label}، لوڈ ہو رہا ہے",
+		"mobile.team_bridge.attachment.next": "اگلی تصویر",
+		"mobile.team_bridge.attachment.open_hint": "تصویر پوری اسکرین پر کھولتا ہے",
+		"mobile.team_bridge.attachment.paste": "تصویر پیسٹ کریں",
+		"mobile.team_bridge.attachment.paste_empty": "کوئی تصویر پیسٹ نہیں ہوئی۔",
+		"mobile.team_bridge.attachment.position": "{index} / {count}",
+		"mobile.team_bridge.attachment.prepare_error": "یہ تصویر تیار نہیں ہو سکی۔",
+		"mobile.team_bridge.attachment.preparing": "تیار ہو رہا ہے…",
+		"mobile.team_bridge.attachment.previous": "پچھلی تصویر",
+		"mobile.team_bridge.attachment.quota": "آپ کی 8 تصاویر بھیجے جانے کی منتظر ہیں۔ کچھ بھیجیں یا ہٹائیں، پھر یہ تصویر دوبارہ شامل کریں۔",
+		"mobile.team_bridge.attachment.rate_error": "ایک ساتھ بہت سی تصاویر ہیں۔ کچھ دیر میں دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.attachment.read_error": "وہ تصویر پڑھی نہیں جا سکی۔",
+		"mobile.team_bridge.attachment.ready": "تیار",
+		"mobile.team_bridge.attachment.refused": "Radient یہ تصویر قبول نہیں کر سکتا۔ اسے ہٹائیں۔",
+		"mobile.team_bridge.attachment.remove_blocked": "یہ پیغام بھیجنے کے لیے وہ تصاویر ہٹائیں جو بھیجی نہیں جا سکتیں۔",
+		"mobile.team_bridge.attachment.remove_image": "تصویر {index} ہٹائیں",
+		"mobile.team_bridge.attachment.retry": "دوبارہ کوشش کریں",
+		"mobile.team_bridge.attachment.retry_blocked": "بھیجنے کے لیے اپ لوڈ نہ ہونے والی تصاویر پر دوبارہ کوشش کریں یا انہیں ہٹائیں۔",
+		"mobile.team_bridge.attachment.retry_image": "تصویر {index} کے لیے دوبارہ کوشش کریں",
+		"mobile.team_bridge.attachment.retry_summary": "{count, plural, one {# تصویر اپ لوڈ نہیں ہوئی۔ دوبارہ کوشش کریں یا اسے ہٹائیں۔} other {# تصاویر اپ لوڈ نہیں ہوئیں۔ دوبارہ کوشش کریں یا انہیں ہٹائیں۔}}",
+		"mobile.team_bridge.attachment.unavailable": "تصویر دستیاب نہیں",
+		"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, one {# تصویر بھیجی نہیں جا سکتی۔ بھیجنے کے لیے اسے ہٹائیں۔} other {# تصاویر بھیجی نہیں جا سکتیں۔ بھیجنے کے لیے انہیں ہٹائیں۔}}",
+		"mobile.team_bridge.attachment.unsupported_content": "اس پیغام میں ایسا مواد ہے جو ایپ کا یہ ورژن نہیں دکھا سکتا۔",
+		"mobile.team_bridge.attachment.upload_error": "یہ تصویر اپ لوڈ نہیں ہوئی۔",
+		"mobile.team_bridge.attachment.uploading": "اپ لوڈ ہو رہا ہے…",
+		"mobile.team_bridge.attachment.uploading_summary": "{count, plural, one {# تصویر اپ لوڈ ہو رہی ہے… مکمل ہونے پر بھیج سکتے ہیں۔} other {# تصاویر اپ لوڈ ہو رہی ہیں… مکمل ہونے پر بھیج سکتے ہیں۔}}",
+		"mobile.team_bridge.attachment.viewer": "تصویر دیکھنے کا صفحہ",
+		"mobile.team_bridge.attachment.wait_uploads": "تصاویر اپ لوڈ ہو جانے پر بھیج سکتے ہیں۔",
 		"mobile.team_bridge.back": "واپس",
 		"mobile.team_bridge.conversation": "گفتگو",
 		"mobile.team_bridge.default_on.body": "آپ کی تنظیم کے ایجنٹ آپ کے چیف آف اسٹاف کو پیغامات بھیج سکتے ہیں۔ آپ اسے کسی بھی وقت بند کر سکتے ہیں۔",
@@ -5335,6 +5744,48 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "Đang bắt đầu đăng nhập",
 		"mobile.signin.stage_unavailable": "Không thể đăng nhập",
 		"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu.",
+		"mobile.team_bridge.attachment.add": "Thêm hình ảnh",
+		"mobile.team_bridge.attachment.attached_summary": "{count, plural, other {Đã đính kèm # hình ảnh}}",
+		"mobile.team_bridge.attachment.cannot_send": "Không thể gửi",
+		"mobile.team_bridge.attachment.chip_label": "Hình {index}, {state}",
+		"mobile.team_bridge.attachment.close": "Đóng hình ảnh",
+		"mobile.team_bridge.attachment.conversation_gone": "Cuộc trò chuyện này không còn khả dụng. Hãy xóa hình ảnh.",
+		"mobile.team_bridge.attachment.expired": "Hình ảnh đã hết hạn",
+		"mobile.team_bridge.attachment.expired_unsent": "Hình ảnh này đã hết hạn trước khi được gửi. Hãy xóa hình.",
+		"mobile.team_bridge.attachment.failed": "Thất bại",
+		"mobile.team_bridge.attachment.image": "Hình ảnh",
+		"mobile.team_bridge.attachment.image_position": "Hình {index} trên {count}",
+		"mobile.team_bridge.attachment.library": "Thư viện ảnh",
+		"mobile.team_bridge.attachment.limit": "{count, plural, other {Bạn có thể đính kèm tối đa # hình ảnh cho mỗi tin nhắn.}}",
+		"mobile.team_bridge.attachment.load_error": "Không tải được hình ảnh này.",
+		"mobile.team_bridge.attachment.loading_label": "{label}, đang tải",
+		"mobile.team_bridge.attachment.next": "Hình tiếp theo",
+		"mobile.team_bridge.attachment.open_hint": "Mở hình ảnh toàn màn hình",
+		"mobile.team_bridge.attachment.paste": "Dán hình ảnh",
+		"mobile.team_bridge.attachment.paste_empty": "Chưa dán hình ảnh nào.",
+		"mobile.team_bridge.attachment.position": "{index} trên {count}",
+		"mobile.team_bridge.attachment.prepare_error": "Không chuẩn bị được hình ảnh này.",
+		"mobile.team_bridge.attachment.preparing": "Đang chuẩn bị…",
+		"mobile.team_bridge.attachment.previous": "Hình trước",
+		"mobile.team_bridge.attachment.quota": "Bạn có 8 hình ảnh đang chờ gửi. Hãy gửi hoặc xóa bớt rồi thêm lại hình này.",
+		"mobile.team_bridge.attachment.rate_error": "Quá nhiều hình ảnh cùng lúc. Hãy thử lại sau giây lát.",
+		"mobile.team_bridge.attachment.read_error": "Không đọc được hình ảnh đó.",
+		"mobile.team_bridge.attachment.ready": "Sẵn sàng",
+		"mobile.team_bridge.attachment.refused": "Radient không thể nhận hình ảnh này. Hãy xóa hình.",
+		"mobile.team_bridge.attachment.remove_blocked": "Hãy xóa những hình ảnh không thể gửi để gửi tin nhắn này.",
+		"mobile.team_bridge.attachment.remove_image": "Xóa hình {index}",
+		"mobile.team_bridge.attachment.retry": "Thử lại",
+		"mobile.team_bridge.attachment.retry_blocked": "Hãy thử lại hoặc xóa những hình chưa tải lên được để gửi.",
+		"mobile.team_bridge.attachment.retry_image": "Thử lại hình {index}",
+		"mobile.team_bridge.attachment.retry_summary": "{count, plural, other {# hình ảnh chưa tải lên được. Hãy thử lại hoặc xóa.}}",
+		"mobile.team_bridge.attachment.unavailable": "Hình ảnh không khả dụng",
+		"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, other {Không thể gửi # hình ảnh. Hãy xóa để gửi.}}",
+		"mobile.team_bridge.attachment.unsupported_content": "Tin nhắn này có nội dung mà phiên bản ứng dụng này không thể hiển thị.",
+		"mobile.team_bridge.attachment.upload_error": "Không tải lên được hình ảnh này.",
+		"mobile.team_bridge.attachment.uploading": "Đang tải lên…",
+		"mobile.team_bridge.attachment.uploading_summary": "{count, plural, other {Đang tải lên # hình ảnh… Có thể gửi khi tải lên xong.}}",
+		"mobile.team_bridge.attachment.viewer": "Trình xem ảnh",
+		"mobile.team_bridge.attachment.wait_uploads": "Có thể gửi khi các hình ảnh tải lên xong.",
 		"mobile.team_bridge.back": "Quay lại",
 		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
 		"mobile.team_bridge.default_on.body": "Các tác nhân trong tổ chức có thể nhắn tin cho chánh văn phòng của bạn. Bạn có thể tắt tính năng này bất cứ lúc nào.",
@@ -5833,6 +6284,48 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_starting": "正在开始登录",
 		"mobile.signin.stage_unavailable": "无法登录",
 		"mobile.signin.superseded": "另一次登录已开始。",
+		"mobile.team_bridge.attachment.add": "添加图片",
+		"mobile.team_bridge.attachment.attached_summary": "{count, plural, other {已附加 # 张图片}}",
+		"mobile.team_bridge.attachment.cannot_send": "无法发送",
+		"mobile.team_bridge.attachment.chip_label": "图片 {index}，{state}",
+		"mobile.team_bridge.attachment.close": "关闭图片",
+		"mobile.team_bridge.attachment.conversation_gone": "此对话已不可用。请移除图片。",
+		"mobile.team_bridge.attachment.expired": "图片已过期",
+		"mobile.team_bridge.attachment.expired_unsent": "此图片在发送前已过期。请移除。",
+		"mobile.team_bridge.attachment.failed": "失败",
+		"mobile.team_bridge.attachment.image": "图片",
+		"mobile.team_bridge.attachment.image_position": "第 {index} 张图片，共 {count} 张",
+		"mobile.team_bridge.attachment.library": "照片图库",
+		"mobile.team_bridge.attachment.limit": "{count, plural, other {每条消息最多可附加 # 张图片。}}",
+		"mobile.team_bridge.attachment.load_error": "此图片未能加载。",
+		"mobile.team_bridge.attachment.loading_label": "{label}，正在加载",
+		"mobile.team_bridge.attachment.next": "下一张图片",
+		"mobile.team_bridge.attachment.open_hint": "全屏打开图片",
+		"mobile.team_bridge.attachment.paste": "粘贴图片",
+		"mobile.team_bridge.attachment.paste_empty": "未粘贴图片。",
+		"mobile.team_bridge.attachment.position": "{index} / {count}",
+		"mobile.team_bridge.attachment.prepare_error": "未能处理此图片。",
+		"mobile.team_bridge.attachment.preparing": "正在处理…",
+		"mobile.team_bridge.attachment.previous": "上一张图片",
+		"mobile.team_bridge.attachment.quota": "你有 8 张待发送的图片。请先发送或移除一些，再重新添加此图片。",
+		"mobile.team_bridge.attachment.rate_error": "一次上传的图片过多。请稍后重试。",
+		"mobile.team_bridge.attachment.read_error": "未能读取此图片。",
+		"mobile.team_bridge.attachment.ready": "已就绪",
+		"mobile.team_bridge.attachment.refused": "Radient 无法接收此图片。请移除。",
+		"mobile.team_bridge.attachment.remove_blocked": "请移除无法发送的图片，再发送此消息。",
+		"mobile.team_bridge.attachment.remove_image": "移除图片 {index}",
+		"mobile.team_bridge.attachment.retry": "重试",
+		"mobile.team_bridge.attachment.retry_blocked": "请重试或移除未能上传的图片，再发送。",
+		"mobile.team_bridge.attachment.retry_image": "重试图片 {index}",
+		"mobile.team_bridge.attachment.retry_summary": "{count, plural, other {# 张图片未能上传。请重试或移除。}}",
+		"mobile.team_bridge.attachment.unavailable": "图片不可用",
+		"mobile.team_bridge.attachment.unsendable_summary": "{count, plural, other {# 张图片无法发送。请移除后再发送。}}",
+		"mobile.team_bridge.attachment.unsupported_content": "此消息包含此版本应用无法显示的内容。",
+		"mobile.team_bridge.attachment.upload_error": "此图片未能上传。",
+		"mobile.team_bridge.attachment.uploading": "正在上传…",
+		"mobile.team_bridge.attachment.uploading_summary": "{count, plural, other {正在上传 # 张图片… 上传完成后即可发送。}}",
+		"mobile.team_bridge.attachment.viewer": "图片查看器",
+		"mobile.team_bridge.attachment.wait_uploads": "图片上传完成后即可发送。",
 		"mobile.team_bridge.back": "返回",
 		"mobile.team_bridge.conversation": "会话",
 		"mobile.team_bridge.default_on.body": "你所在组织的智能体可以向你的幕僚长发送消息。你可以随时关闭此功能。",
