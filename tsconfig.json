@@ -17,6 +17,10 @@
 		"esModuleInterop": true,
 		"isolatedModules": true,
 		"noEmit": true,
+		// Reader integration tests import the real Node-run mock relay. Its
+		// explicit .ts specifiers are required by Node; noEmit makes accepting
+		// them safe in the app's typecheck too (there is no emitted JS to fix).
+		"allowImportingTsExtensions": true,
 		"paths": {
 			"@/*": ["./src/*"]
 		}

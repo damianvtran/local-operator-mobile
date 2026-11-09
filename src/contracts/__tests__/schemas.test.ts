@@ -1824,3 +1824,26 @@ describe("the queued-ask fields are read by presence, never defaulted", () => {
 		expect(dismiss.op).toBe("ask_dismiss");
 	});
 });
+
+// A pinned opening row is context, not the chronological before-cursor. Preserve
+// Core's existing optional capability so even byte-capped short tails are safe.
+it("preserves the existing transcript_head_pinned signal without inventing it on old frames", () => {
+	for (const value of [true, false]) {
+		expect(
+			parsePayload(
+				"sessionProjection",
+				projectionWith({ transcript_head_pinned: value }),
+			).transcript_head_pinned,
+		).toBe(value);
+	}
+	expect(
+		parsePayload("sessionProjection", projectionWith({}))
+			.transcript_head_pinned,
+	).toBeUndefined();
+	expect(() =>
+		parsePayload(
+			"sessionProjection",
+			projectionWith({ transcript_head_pinned: "yes" }),
+		),
+	).toThrow();
+});

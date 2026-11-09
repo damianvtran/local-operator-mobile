@@ -402,6 +402,8 @@ export interface SessionProjection {
 	 * stale, and never as live either — `pid: 0` still says a disk rebuild.
 	 */
 	heartbeat_stale?: boolean | null;
+	/** Existing Core wire signal: the opening row is detached from this tail. */
+	transcript_head_pinned?: boolean;
 	transcript: TranscriptEntry[];
 	todos: TodoPhase[];
 	subagents: SubagentRow[];
@@ -787,6 +789,8 @@ export interface SessionTagsResponse {
 export interface HistoryResponse {
 	entries: TranscriptEntry[];
 	has_more: boolean;
+	/** Existing relay archive/decode failure; never an empty retained beginning. */
+	unavailable?: string;
 }
 
 export interface SlashCommand {
