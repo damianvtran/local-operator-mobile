@@ -1083,11 +1083,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only assertions. Recomputed with `--print` AFTER that file landed. Source
 	 * admission only, NOT rendered U-08 evidence. */
 	/* Re-pinned 2026-11-09 for the project-creation i18n rebase onto main: the
-	 * create sheet, the chip primitive and the catalogue projection all land
-	 * under `src`, so the root moves. Recomputed with `--print` on the REBASED
-	 * tree — neither branch's earlier digest describes this corpus. Source
-	 * admission only, NOT rendered U-08 evidence: no instrument, fixture or
-	 * rendering input changed. */
+	 * create sheet, the project catalogue projections and the chip primitive all
+	 * land under `src`, so the root moves while every other root in this table
+	 * stands. Recomputed with `--print` on the REBASED tree — neither branch's
+	 * earlier digest describes this corpus. Source admission only, NOT rendered
+	 * U-08 evidence: no instrument, fixture or render-file pin moved and no frame
+	 * was re-captured. The chip is a rendering input that does change — it gains
+	 * an opt-in `labelTypography` prop that swaps the label's type class
+	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
+	 * `ur` for script shaping. This proof does not measure that surface, so the
+	 * re-pin admits the source; it is not evidence about the prose chip. */
 	src: "7e253f8f3b2b26d8d39c6096a394d2d3128b49e6b046684c8c27055d51153792",
 };
 
