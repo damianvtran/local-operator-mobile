@@ -1093,7 +1093,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	src: "4607c4cc7e7697b4357bf3dcae154f0cd2b57309e726c1e05d079cce994fe5d8",
+	/* Recomputed with --print after PR #201 Q1's literal-inline fast path and
+	 * allocation regressions. The original capture fixture's AST and unchanged
+	 * component markup remain byte-identical against 64c0d71d. Source admission
+	 * only: no new U-08 pixels, instrument, input or render-file changes. */
+	src: "a98dd0b1ddd60b5c85c7c0e83b84f5851f2b07155740ca55fae13506115d8865",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

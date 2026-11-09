@@ -31,6 +31,82 @@ const INDEX_PROPERTY = /^\d+$/;
 
 const blocksOf = (text: string) => parseMarkdown(text);
 
+describe("literal inline streaming allocation bound", () => {
+	// Constructor counts, not elapsed time: ordinary prose must allocate no
+	// delimiter maps at any frame length. The positive control makes this fail
+	// if instrumentation stops observing the indexed parser.
+	const measured = (text: string) => {
+		let maps = 0;
+		const NativeMap = globalThis.Map;
+		vi.stubGlobal(
+			"Map",
+			new Proxy(NativeMap, {
+				construct(target, args) {
+					maps += 1;
+					return Reflect.construct(target, args);
+				},
+			}),
+		);
+		try {
+			return { spans: parseInline(text), maps };
+		} finally {
+			vi.stubGlobal("Map", NativeMap);
+		}
+	};
+
+	it("keeps growing prose and structured Unicode output to one span and zero index maps", () => {
+		const shapes = [
+			"The answer streams one ordinary sentence at a time. ",
+			'Status: ready — 東京, café, مرحبا.\n  {"phase": 2, "ok": true}\nLatency (ms): 18.4; Δ: +0.2%; total: €42.\n',
+		];
+		for (const shape of shapes) {
+			for (const repeats of [1, 64, 256]) {
+				const text = shape.repeat(repeats);
+				expect(measured(text)).toEqual({
+					maps: 0,
+					spans: [{ text, code: false, bold: false, italic: false }],
+				});
+			}
+		}
+		expect(measured("")).toEqual({ maps: 0, spans: [] });
+	});
+
+	it("never bypasses possible markup, escapes, URLs or partial streamed openers", () => {
+		for (const suffix of [
+			"`",
+			"*",
+			"_",
+			"~",
+			"[",
+			"<",
+			"\\",
+			"http://",
+			"HTTPS://",
+			"**bold**",
+			"_italic_",
+			"~~strike~~",
+			"`code`",
+			"\\*literal\\*",
+			"[label](https://example.com)",
+			"<mailto:a@example.com>",
+			"https://example.com/path",
+			"prefixhttps://example.com",
+		]) {
+			expect(measured(`A growing answer ${suffix}`).maps).toBeGreaterThan(0);
+		}
+		// Same prefix, later frame: no cached literal decision may hide new markup.
+		expect(parseInline("A growing answer **bold**").at(-1)).toMatchObject({
+			text: "bold",
+			bold: true,
+		});
+		expect(
+			parseInline("A growing answer \\*literal\\*")
+				.map((span) => span.text)
+				.join(""),
+		).toBe("A growing answer *literal*");
+	});
+});
+
 describe("the table block grammar", () => {
 	it("parses a header, a divider and body rows into a table", () => {
 		const blocks = blocksOf(

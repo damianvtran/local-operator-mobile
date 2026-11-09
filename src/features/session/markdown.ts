@@ -57,6 +57,10 @@ const WORD = /\w/;
 const SPACE = /\s/;
 const LINE_BREAK = /[\r\n\u2028\u2029]/;
 const ANGLE_BOUNDARY = /[<>\n]/;
+// Conservative opener superset: even partial/escaped syntax must take the full
+// parser. A negative match proves every character is literal, including Unicode,
+// punctuation and newlines; it does NOT depend on length or prior streamed text.
+const INLINE_CANDIDATE = /[\\`*_~[<]|https?:\/\//i;
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
@@ -530,6 +534,12 @@ function inlinePairs(text: string) {
  * Indexed matching and an explicit frame stack keep work proportional to input
  * plus output, rather than nesting depth or the count of unmatched openers. */
 export const parseInline = (text: string): InlineSpan[] => {
+	// Ordinary streamed prose needs one native scan and one span, not per-byte
+	// delimiter indexes, suffix recognizers and concatenations on every frame.
+	// Keep all possible openers on the indexed path so incomplete syntax can
+	// become markup on a later frame without any stale per-message cache.
+	if (!INLINE_CANDIDATE.test(text))
+		return text ? [{ text, code: false, bold: false, italic: false }] : [];
 	const pairs = inlinePairs(text);
 	const spans: InlineSpan[] = [];
 	type Frame = {
