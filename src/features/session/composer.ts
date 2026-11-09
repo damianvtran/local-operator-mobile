@@ -59,6 +59,7 @@ export const composerCopy = () => ({
 	retainedError:
 		"An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.",
 	retryLabel: "Retry earlier instruction",
+	retryPreparationFailed: t("mobile.session.composer.retry_not_sent_storage"),
 	retryDisabledHint: "Resolve the earlier instruction first.",
 	/** A positive outcome, so it renders in the success roles, never the danger
 	 *  container the failure alert uses (D11). */
@@ -112,6 +113,31 @@ export const composerCopy = () => ({
 	 *  for the denial arm. */
 	pasteEmpty: "No image was pasted. Copy an image, then try again.",
 });
+
+/**
+ * An ended-session reopen error owns the existing combined card, but a local
+ * retry failure says nothing about the original command's delivery. Keep that
+ * uncertainty and its explicit earlier-instruction target visible in both modes.
+ * This projection is shared with real-hook regressions so their assertions cover
+ * the labels the component actually selects, not just the receipt classification.
+ */
+export const composerFeedback = ({
+	ended,
+	error,
+	retainedMessage,
+}: { ended: boolean } & Record<"error" | "retainedMessage", string | null>) => {
+	const reopenFailure =
+		ended &&
+		retainedMessage !== null &&
+		error === composerCopy().endedSendFailed;
+	return {
+		retainedText: reopenFailure ? error : retainedMessage,
+		errorText: reopenFailure ? null : error,
+		retryLabel: reopenFailure
+			? composerCopy().endedRetryLabel
+			: composerCopy().retryLabel,
+	};
+};
 
 /**
  * The line for a paste that came back with no image.

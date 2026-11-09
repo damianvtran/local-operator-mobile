@@ -153,7 +153,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 31, // +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 32, // +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -259,8 +259,8 @@ describe("the English catalogues", () => {
 		/* 464 on main (the Team Bridge avatar slice's 104 includes the 11 endpoint-owned
 		 *  profile/photo keys) plus this slice's 17 `mobile.projects` keys — the create
 		 *  sheet's fields, validation and the two example placeholders. Counted from the
-		 *  merged catalogue files themselves: 481 plus the not-sent storage receipt. */
-		expect(total).toBe(482);
+		 *  merged catalogue files themselves: 481 plus the initial-send and retry-attempt storage receipts. */
+		expect(total).toBe(483);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

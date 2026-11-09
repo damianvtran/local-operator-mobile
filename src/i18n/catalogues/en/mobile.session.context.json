@@ -122,5 +122,9 @@
 	"mobile.session.composer.not_sent_storage": {
 		"role": "status",
 		"note": "Composer error before any HTTP dispatch: local safe-retry preparation failed. The text and image draft has not been consumed. Do not imply uncertain delivery or assert that disk space is the cause; checking free space is one actionable remedy. Never include storage exception text or private paths."
+	},
+	"mobile.session.composer.retry_not_sent_storage": {
+		"role": "status",
+		"note": "Only the current RETRY ATTEMPT was not dispatched because local safe-retry preparation failed. The original instruction may already have arrived: its separate retained-envelope warning and Retry earlier instruction action stay visible. Never imply the current draft was retried or disk space is the known cause. Never include raw storage errors."
 	}
 }

@@ -700,11 +700,15 @@ export const useComposer = (input: {
 							: null,
 					);
 					setError(
-						ended && receipt.kind !== "not-sent"
-							? composerCopy().endedSendFailed
-							: echoed === "kept" && receipt.kind !== "ambiguous"
-								? earlierNotSentMessage(receipt.message)
-								: receipt.message,
+						// Certainty belongs to the original command: a retry that never
+						// dispatched cannot resolve its earlier lost acknowledgement.
+						receipt.kind === "not-sent"
+							? composerCopy().retryPreparationFailed
+							: ended
+								? composerCopy().endedSendFailed
+								: echoed === "kept" && receipt.kind !== "ambiguous"
+									? earlierNotSentMessage(receipt.message)
+									: receipt.message,
 					);
 				} else {
 					setRetained(await envelopeStore.peek(sessionId));
