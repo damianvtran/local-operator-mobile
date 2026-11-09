@@ -54,6 +54,14 @@ describe("build389 persistent field and context", () => {
 	});
 });
 describe("the above-composer stack (relay above-composer.spacing)", () => {
+	it("keeps the pinned spinner and clock in compact mode, without repeating activity in the static tray", () => {
+		const mount = SCREEN.indexOf("<PinnedWorkingLine");
+		expect(SCREEN.slice(mount - 30, mount)).toContain("{tray ? (");
+		const tray = SCREEN.indexOf("<StatusTray");
+		expect(SCREEN.slice(tray, tray + 200)).toContain(
+			"facts={{ ...trayFacts, working: null }}",
+		);
+	});
 	it("is ONE slot: chips then the ask bar, aligned with the composer's 8 pt edge", () => {
 		const at = SCREEN.indexOf("<StatusChips");
 		const slot = SCREEN.slice(SCREEN.lastIndexOf("<View", at - 60), at);

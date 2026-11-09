@@ -1237,7 +1237,8 @@ export default function Session() {
 				compact &&
 				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
 					<StatusTray
-						facts={trayFacts}
+						// Activity has one owner: the dock's spinner/clock below.
+						facts={{ ...trayFacts, working: null }}
 						onOpen={() => setStatusSheetOpen(true)}
 					/>
 				) : null
@@ -1483,11 +1484,11 @@ export default function Session() {
 							measureRecovery("after", event.nativeEvent.layout.height)
 						}
 					>
-						{/* Not in short landscape (review R1-3): there the one-line status
-						    tray at the top already leads with the activity, and a second
-						    copy here would both repeat it and spend a row of the tightest
-						    layout. The composer's ■ stays the Stop there. */}
-						{tray && !compact ? (
+						{/* Keep the aggregate activity at the dock in short landscape too:
+						    the top tray is static text, not the spinner/phase clock.
+						    This measured slot participates in the existing recovery budget,
+						    so keyboard/compact layouts must not silently drop the status. */}
+						{tray ? (
 							<PinnedWorkingLine
 								line={pinned}
 								onStop={composer.stop}
