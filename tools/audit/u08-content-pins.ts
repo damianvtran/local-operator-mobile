@@ -1148,8 +1148,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * combined src tree has neither parent's digest. Source admission only;
 	 * historical pixels, native visibility and compact D3 remain unproved. */
 	// #106 + main 8705a953: combined staged source identity only, not new pixels.
-	// #208 thread title and viewport: source identity only, not new pixels.
-	src: "7225d3a9e469372c6ffc7e1bff91dd1e97ae102ba16c0c466a99c7cde5169840",
+	// #208 thread title, viewport and icon-only Notifications (round 1
+	// remediation): source identity only, not new pixels.
+	src: "577452c11ffb6f864523f329b95f353b11688b5f8f16fa9edf6df662e7192c76",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
