@@ -1,5 +1,5 @@
 import { act, createElement } from "react";
-import { createRoot, type Root } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
@@ -45,7 +45,7 @@ import { useClipboardImageOffer } from "./attach-clipboard";
 import { readClipboardImage } from "./attach-rule";
 
 let offer: { visible: boolean; consume?: () => void };
-let root: Root;
+let root: ReturnType<typeof createRoot>;
 let dom: DomShim;
 function Host() {
 	offer = useClipboardImageOffer(true);

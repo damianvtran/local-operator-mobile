@@ -1131,7 +1131,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * its regressions. Only LIVE src identity changes; no historical pin, input,
 	 * instrument or activity/native-layout evidence is refreshed by admission. */
 	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
-	src: "d78b4b55c25d32214a69400777f972059870b55e9c9ad07db8a17438157df017",
+	/* PR #206 Q1/CI-T1: --print includes tracked test bytes under src, so the
+	 * type-only createRoot return-type repair changes this combined live digest.
+	 * Production app/src runtime bytes are unchanged; admission only, not new
+	 * rendered, native or historical evidence. */
+	src: "510d9072878f12c1e40c8d8526bcea0c5336368bbe3ca9079109dd4a749ba502",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
