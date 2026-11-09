@@ -89,12 +89,50 @@ const sha = (text: string) => createHash("sha256").update(text).digest("hex");
  *
  * Both were DERIVED, not hand-edited: `jobBodySha` below applied to this head's
  * workflow, after proving that same function reproduces the frozen 0604aee9… /
- * eb69e103… pins from 5589d7fb byte for byte. */
+ * eb69e103… pins from 5589d7fb byte for byte.
+ *
+ * Re-derived again for the checkpoint-rail proof (PR #197), the only change since
+ * 9eb6260f that moved a preserved body:
+ *
+ * - `maestro-android` 117fe6a7 → 0c95a5aa: one comment paragraph on the
+ *   emulator `script:` and ONE executable line, `bash
+ *   scripts/ci/rail-android-capture.sh`, after the tag flow. The rail is summoned
+ *   by scroll speed and react-native-web emits no drag or momentum event at all,
+ *   so this emulator is the only surface where the component's appearance is
+ *   observable. The condition, the trigger gating and every other job are
+ *   untouched, and the truth table below still holds — which is the point of the
+ *   pin: the change had to be deliberate and named, not a drift nobody noticed. */
 const CURRENT_PRESERVED_BODY_SHA256: Readonly<Record<string, string>> = {
 	"web-audit":
 		"111655be72c1c6fb7b683b8b0c056d5ff4ed654123c8d38c891e71a6c7bab1a6",
 	"web-audit-core":
 		"25ff0a6f4dbf29ab0a136a3630bc5827e3a0d0cd45739b3c5709c9e98cddbfdd",
+};
+
+/** Bodies accepted at a CURRENT head whose intended drift is NOT the web audit's
+ *  `--no-strict` command, so they cannot live in the table above: that table's
+ *  contract is "`pnpm audit:capture` is the only accepted change", and the test
+ *  below proves it by mutating exactly that token. Each entry carries its own
+ *  probe instead, so the pin is still demonstrated to catch a change rather than
+ *  being a constant nothing reads.
+ *
+ *  `maestro-android` 117fe6a7 → 0c95a5aa (PR #197, the checkpoint-rail proof):
+ *  the emulator `script:` gained one comment paragraph and ONE executable line,
+ *  `bash scripts/ci/rail-android-capture.sh`, after the tag flow. The rail is
+ *  summoned by scroll speed and react-native-web emits no drag or momentum event
+ *  at all, so this emulator is the only surface where the component's appearance
+ *  is observable. SHA derived by the same `jobBodySha`, which still reproduces
+ *  111655be and 25ff0a6f above. */
+const CURRENT_PRESERVED_BODY_WITH_PROBE: Readonly<
+	Record<string, { sha256: string; probe: [string, string] }>
+> = {
+	"maestro-android": {
+		sha256: "0c95a5aa8ee23bad62b77d04d5ff7a0f461339edb57a7aaef44a2260c0153b34",
+		probe: [
+			"bash scripts/ci/run-maestro-tags.sh",
+			"bash scripts/ci/run-maestro-tags.sh --dry",
+		],
+	},
 };
 const jobBodySha = (body: string) =>
 	sha(
@@ -219,6 +257,16 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			expect(changed).not.toBe(body);
 			expect(jobBodySha(changed)).not.toBe(expected);
 		}
+		for (const [name, pinned] of Object.entries(
+			CURRENT_PRESERVED_BODY_WITH_PROBE,
+		)) {
+			const body = jobs(source(".github/workflows/e2e.yml"))[name]?.body;
+			if (!body) throw new Error(`missing ${name} job`);
+			expect(jobBodySha(body)).toBe(pinned.sha256);
+			const changed = body.replace(pinned.probe[0], pinned.probe[1]);
+			expect(changed).not.toBe(body);
+			expect(jobBodySha(changed)).not.toBe(pinned.sha256);
+		}
 	});
 	it("the actual workflow preserves every normal full/S15 job membership and body", () => {
 		const current = jobs(source(".github/workflows/e2e.yml"));
@@ -245,7 +293,9 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			if (!job) throw new Error("missing old job");
 			if (name !== "harness")
 				expect(jobBodySha(job.body)).toBe(
-					CURRENT_PRESERVED_BODY_SHA256[name] ?? old.bodyWithoutConditionSha256,
+					CURRENT_PRESERVED_BODY_SHA256[name] ??
+						CURRENT_PRESERVED_BODY_WITH_PROBE[name]?.sha256 ??
+						old.bodyWithoutConditionSha256,
 				);
 			for (const event of ["pull_request", "push", "schedule", MANUAL])
 				for (const mode of ["", "full", "s15-proof"])
