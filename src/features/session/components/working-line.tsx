@@ -248,7 +248,8 @@ const WorkingLineImpl = ({
 			</View>
 		);
 		/* The counts on their own line under the status, leading edge aligned
-		 *  with the spinner, when the host says one line cannot hold both
+		 *  with the spinner (`countsRowClass`, the edge the idle slot keeps),
+		 *  when the host says one line cannot hold both
 		 *  (`activityCountsStack`): a wrap decided by the host from the window,
 		 *  not by `flex-wrap`, so the row's height is known before it paints
 		 *  and the slot's measured height does not flap between one line and
@@ -257,7 +258,7 @@ const WorkingLineImpl = ({
 			return (
 				<View>
 					{row}
-					<View className="flex-row px-2">{trailing}</View>
+					<View className={countsRowClass(true)}>{trailing}</View>
 				</View>
 			);
 		return row;
@@ -426,6 +427,40 @@ export type PinnedWorkingLineProps = {
 const DOCK_GAP = 8;
 
 /**
+ * The row that holds the counts when they are NOT beside the Stop: their own
+ * line under a running status (stacked), and the idle slot with no turn alive.
+ *
+ * ONE function for both so the counts keep ONE EDGE across a turn's end
+ * (review round 1, m3). Stacked, they sit at the leading edge under the
+ * spinner while a turn runs, and the idle slot used to push them to the
+ * trailing edge — at 320 pt / 200 % text they jumped across the screen the
+ * moment the turn finished. Not stacked, they sit at the trailing edge beside
+ * the Stop while a turn runs, so the idle slot keeps them trailing. Only the
+ * side is promised: the slot still loses the status row's height when the
+ * turn ends, which is the turn ending, not the counts moving.
+ */
+export const countsRowClass = (stacked: boolean): string =>
+	stacked ? "flex-row px-2" : "flex-row items-center justify-end px-2";
+
+/**
+ * The line the slot keeps painting through its CLOSE tween.
+ *
+ * A live line is always the held one. With no turn alive the last line is
+ * held only while the slot is closing with nothing else in it; when the
+ * counts keep the slot open (`counted`), the status row is already off screen
+ * and the hold is dropped at once (review round 1, m2). The slot's close
+ * callback is what used to clear it, and it never ran while counts held the
+ * slot open — so when they later went away (queue drained, list cleared, a
+ * pending card arriving) the 180 ms close repainted the LAST turn's activity,
+ * its clock and an inert Stop.
+ */
+export const heldLine = <T,>(
+	previous: T | null,
+	line: T | null,
+	counted: boolean,
+): T | null => (line !== null ? line : counted ? null : previous);
+
+/**
  * The working line PINNED above the dock (chips, ask bar, composer), outside the
  * transcript list — the relay mounts it as a fixed sibling between the scroller
  * and the above-composer stack for the reason this mirrors: it carries the Stop,
@@ -462,8 +497,8 @@ const PinnedWorkingLineImpl = ({
 	const [settled, setSettled] = useState(false);
 
 	useEffect(() => {
-		if (line !== null) setHeld(line);
-	}, [line]);
+		setHeld((previous) => heldLine(previous, line, counted));
+	}, [line, counted]);
 
 	useEffect(() => {
 		gap.value = gapBelow ? DOCK_GAP : 0;
@@ -493,9 +528,10 @@ const PinnedWorkingLineImpl = ({
 	}));
 
 	if (held === null && !counted) return null;
-	/* No turn alive, counts present: the same slot, the same measured row,
-	 *  holding the counts alone at the line's trailing edge — where they sat a
-	 *  moment ago beside the Stop, so ending a turn does not move them. */
+	/* No turn alive, counts present: the same slot, holding the counts alone
+	 *  on the edge they had while the turn ran (`countsRowClass`) — trailing
+	 *  when they sat beside the Stop, leading when they had their own line —
+	 *  so ending a turn never moves them across the row. */
 	if (line === null && counted)
 		return (
 			<Animated.View
@@ -503,7 +539,7 @@ const PinnedWorkingLineImpl = ({
 				testID={testID}
 			>
 				<View
-					className="flex-row items-center justify-end px-2"
+					className={countsRowClass(trailingStacked)}
 					onLayout={(event) => {
 						rowHeight.value = event.nativeEvent.layout.height;
 					}}

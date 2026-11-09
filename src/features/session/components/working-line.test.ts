@@ -136,9 +136,8 @@ vi.mock("@/lib/format", async (importOriginal) => {
 	};
 });
 
-const { PinnedWorkingLine, usePhaseElapsed } = await import(
-	"@/features/session/components/working-line"
-);
+const { PinnedWorkingLine, countsRowClass, heldLine, usePhaseElapsed } =
+	await import("@/features/session/components/working-line");
 const { STOPPING_BOUND_MS, resetTurnStopForTests, stopTurn, useTurnStopping } =
 	await import("@/features/session/turn-stop");
 const { CONTROL } = await import("@/ui/a11y");
@@ -625,5 +624,97 @@ describe("PinnedWorkingLine memo", () => {
 		act(() => vi.advanceTimersByTime(2000));
 		expect(probe.bodies).toBeGreaterThan(bodiesAfterMount);
 		expect(parentRenders).toBe(parentsAfterMount + 2);
+	});
+
+	/* Review round 1, m1: the screen built `<ActivityCounts/>` inline, a new
+	 *  element per streamed frame, so the memo above never held once any count
+	 *  existed. `memoised` is the screen's `useMemo`; the inline arm is the
+	 *  control that shows this harness can see the regression. */
+	it.each([{ memoised: true }, { memoised: false }])(
+		"holds across parent frames only when the counts element is stable (memoised: $memoised)",
+		({ memoised }) => {
+			const onStop = async () => true;
+			let setTick: (n: number) => void = () => {};
+			const line = { activity: "thinking", startedS: 0 };
+			const Parent = () => {
+				const [, set] = React.useState(0);
+				setTick = set;
+				const stable = React.useMemo(
+					() => createElement("span", null, "[counts]"),
+					[],
+				);
+				return createElement(PinnedWorkingLine, {
+					line,
+					onStop,
+					gapBelow: false,
+					stopping: false,
+					trailing: memoised ? stable : createElement("span", null, "[counts]"),
+				});
+			};
+			act(() => root.render(createElement(Parent)));
+			const bodiesAfterMount = probe.bodies;
+			act(() => setTick(1));
+			act(() => setTick(2));
+			if (memoised) expect(probe.bodies).toBe(bodiesAfterMount);
+			else expect(probe.bodies).toBeGreaterThan(bodiesAfterMount);
+		},
+	);
+});
+
+describe("the counts outliving a turn (review round 1, m2 / m3)", () => {
+	const counts = () => createElement("span", null, "[counts]");
+	const base = { onStop: async () => true, gapBelow: false, stopping: false };
+
+	it("never repaints the last turn's line when the counts later go away", () => {
+		const trailing = counts();
+		render({ ...base, line: frame(true, "Reading", 3), trailing });
+		expect(screen()).toContain("Reading");
+		/* The turn ends; the counts keep the slot open with no status and no Stop. */
+		render({ ...base, line: null, trailing });
+		expect(screen()).toBe("[counts]");
+		/* The counts go (queue drained, list cleared, a pending card arriving).
+		 *  Inside the close tween the slot used to paint `held`: "Reading", its
+		 *  clock and an inert Stop, for 180 ms. */
+		probe.deferTweens = true;
+		probe.presses.clear();
+		render({ ...base, line: null });
+		expect(screen()).toBe("");
+		expect(probe.presses.has(CONTROL.sessionWorkingStop)).toBe(false);
+	});
+
+	it("still holds the line through an ordinary close, with nothing else in the slot", () => {
+		/* The hold m2 removes is only the one behind the counts. */
+		render({ ...base, line: frame(true, "Reading", 3) });
+		probe.deferTweens = true;
+		render({ ...base, line: null });
+		expect(screen()).toContain("Reading");
+	});
+
+	it("derives the held line: live wins, counts drop it, otherwise it stays", () => {
+		const last = { activity: "Reading", startedS: 3 };
+		const next = { activity: "Editing", startedS: 9 };
+		expect(heldLine(last, next, false)).toBe(next);
+		expect(heldLine(last, next, true)).toBe(next);
+		expect(heldLine(last, null, true)).toBeNull();
+		expect(heldLine(last, null, false)).toBe(last);
+		expect(heldLine(null, null, false)).toBeNull();
+	});
+
+	it("keeps the counts on ONE edge between a running turn and idle", () => {
+		/* Stacked: their own line at the leading edge, running or idle. */
+		expect(countsRowClass(true)).not.toMatch(
+			/justify-end|ms-auto|flex-row-reverse/,
+		);
+		/* Beside the Stop while running, so trailing when idle. */
+		expect(countsRowClass(false)).toContain("justify-end");
+		/* Both rows are painted through the one function: the stacked line under
+		 *  a running status, and the idle slot, which follows the same flag. */
+		const source = readFileSync(
+			new URL("./working-line.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain("<View className={countsRowClass(true)}>");
+		expect(source).toContain("className={countsRowClass(trailingStacked)}");
+		expect(source.match(/justify-end/g)).toHaveLength(1);
 	});
 });

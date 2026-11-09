@@ -993,6 +993,25 @@ export default function Session() {
 		],
 	);
 	const openStatusSheet = useCallback(() => setStatusSheetOpen(true), []);
+	/* The counts ELEMENT, memoised like the array it paints (review round 1,
+	 *  m1): `PinnedWorkingLine` and `WorkingLine` are `memo`'d so they skip the
+	 *  ~10 Hz streamed frames, and an element built inline is a new object on
+	 *  every one of those frames — it fails the shallow compare and re-renders
+	 *  both whenever any count exists. */
+	const lineCountsElement = useMemo(
+		() =>
+			lineCounts.length > 0 ? (
+				<ActivityCounts counts={lineCounts} onOpen={openStatusSheet} />
+			) : null,
+		[lineCounts, openStatusSheet],
+	);
+	/* WHERE THE ACTIVITY LINE LIVES: a portrait phone. Short landscape keeps its
+	 *  one-line tray and a tablet its inline panels, and neither has this line —
+	 *  so this ONE flag also tells the composer whether the queued count is
+	 *  already on screen above it or must stay on the card (review round 1, M1:
+	 *  two separately written conditions is how the count went missing on a
+	 *  tablet). */
+	const activityLineHost = tray && !compact;
 
 	const statusStrip =
 		hasStatus && (!compact || projection?.context_tokens != null) ? (
@@ -1552,20 +1571,13 @@ export default function Session() {
 						    owns the slot's attention while it is up, so the tasks/agents
 						    counts yield to it as the capsules did (UX U12); the queue
 						    count does not, because nothing else on the screen shows it. */}
-						{tray && !compact ? (
+						{activityLineHost ? (
 							<PinnedWorkingLine
 								line={pinned}
 								onStop={composer.stop}
 								stopping={composer.stopping}
 								gapBelow={outstandingAsks(projection?.asks).length > 0}
-								trailing={
-									lineCounts.length > 0 ? (
-										<ActivityCounts
-											counts={lineCounts}
-											onOpen={openStatusSheet}
-										/>
-									) : null
-								}
+								trailing={lineCountsElement}
 								trailingStacked={activityCountsStack({
 									width: viewportWidth,
 									scale: effectiveScale,
@@ -1635,6 +1647,7 @@ export default function Session() {
 						ended={ended}
 						error={pending === null ? (composer.error ?? chipError) : null}
 						queuedCount={queuedCount}
+						queueOnCard={!activityLineHost}
 						/* The context % and spend ride the meta line on a phone (D-S3);
 						 *  a tablet keeps its inline status strip, which already shows them. */
 						contextLabel={tray && !compact ? trayFacts.context : null}

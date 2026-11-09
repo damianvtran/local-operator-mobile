@@ -18,15 +18,8 @@ export const COMPOSER_DISC =
 export const COMPOSER_META_ROW =
 	"min-h-11 min-w-0 flex-row items-center gap-1 overflow-hidden";
 
-/** The strip's `gap-1`, in pt, for the glass arithmetic below. */
+/** The chip row's `gap-1`, in pt, for `composerChipPlan`'s arithmetic. */
 export const COMPOSER_META_GAP_PT = 4;
-
-/** The strip's glass merge distance (design D1). iOS fuses glass capsules
- *  closer than their container's spacing; at the group default (8) the model
- *  and effort capsules, 4 pt apart, would paint as ONE bar, while spec §12
- *  asks for per-chip capsules. Zero keeps them separate without widening the
- *  strip's gap — the gap is shared with the solid row, which must not move. */
-export const COMPOSER_META_GLASS_SPACING = 0;
 
 /** The strip chip's glass capsule hugs its chip (design D1): the model slot is
  *  a `flex-1` column whose default `alignItems: stretch` would otherwise draw
@@ -62,57 +55,19 @@ export const folderChipText = (name: string, scale: number): string =>
  * then model (design D2). Flex weights, not a measured ladder: a chip's shrink
  * is weighted by its own width, so a factor of ten between neighbours makes the
  * earlier one give nearly all of the overflow before the next moves, and each
- * still stops at its 44 pt floor. Home only — the session strip (no folder) has
- * its own order, `SESSION_EFFORT_SHRINK`.
+ * still stops at its 44 pt floor. On the card only `folder` and `model` are
+ * read: effort is rigid there and leaves the row by `composerChipPlan`.
  */
 export const HOME_STRIP_SHRINK = { folder: 100, effort: 10, model: 1 } as const;
 
-/**
- * The session strip's shrink pair: the MODEL yields the overflow, down to its
- * `MODEL_FLOOR_PT`; effort is RIGID (`flexShrink: 0`) and is held inside the
- * row by a JS cap instead, `sessionEffortMaxWidth` — so the trailing controls
- * (More, the queued chip, keyboard-dismiss) never reach the row's
- * `overflow-hidden` edge, and effort never loses a sliver ("Hig…") while the
- * model still has width to give (code review M1 / design D2).
- *
- * WHY not shrink weights. `{model: 1000, effort: 1}` is right under CSS §9.7
- * (RN-web, the browser) but not on iOS: RN 0.86.3's vendored Yoga freezes a
- * floored item inside its first distribution pass and still charges later
- * items against the ORIGINAL free space (yoga#2006, fixed upstream in 73bebc0,
- * not vendored). Once the model froze at 44, effort was charged nearly the
- * whole overflow, froze too, free space went ≥ 0, and the second pass gave
- * every child its basis — More, the queue and keyboard-dismiss all landed past
- * the row end (round-3 review R3-M1, reproduced against the vendored engine).
- * With effort rigid the model is the only shrinking chip that can floor, and
- * the bug needs a SECOND shrinker after a floored one to bite.
- */
-export const SESSION_STRIP_SHRINK = { model: 1, effort: 0 } as const;
-
-/**
- * Effort's `maxWidth` on the session strip, from the strip's measured width:
- * what is left after the model's floor, every trailing control that is
- * rendered (each at its `touchFloor`) and the strip's gaps — floored at
- * `MODEL_FLOOR_PT`, below which the chip ellipsizes rather than vanishing.
- *
- * `undefined` before the first `onLayout` (width 0): no cap, so the first frame
- * is exactly the uncapped strip; the cap applies from the measured frame on.
- * `trailing` counts More (always), the queued chip and keyboard-dismiss when
- * shown. The queued chip may render wider than its floor, but it shrinks (to
- * that floor) after effort is capped, so counting its floor is the right bound.
- */
-export const sessionEffortMaxWidth = (
-	stripWidth: number,
-	trailing: number,
-	touchFloor: number,
-): number | undefined => {
-	if (!(stripWidth > 0)) return undefined;
-	/* model + effort + trailing children → (1 + trailing) gaps. */
-	const gaps = COMPOSER_META_GAP_PT * (1 + trailing);
-	return Math.max(
-		MODEL_FLOOR_PT,
-		stripWidth - MODEL_FLOOR_PT - trailing * touchFloor - gaps,
-	);
-};
+/* WHY THE CARD HAS ONE SHRINKER AFTER THE FOLDER, AND NO SHRINK WEIGHTS.
+ * Weighted pairs are right under CSS §9.7 (RN-web) but not on iOS: RN 0.86.3's
+ * vendored Yoga freezes a floored item inside its first distribution pass and
+ * still charges later items against the ORIGINAL free space (yoga#2006, fixed
+ * upstream in 73bebc0, not vendored), which once put More, the queue and
+ * keyboard-dismiss past the row's end (round-3 review R3-M1). The bug needs a
+ * SECOND shrinker after a floored one, so effort and the queued count are
+ * RIGID on the card and are admitted, shortened or dropped by the plan below. */
 
 /** The card's chip zone: everything between attach and the mic/send cluster on
  *  the controls row (visual audit D5). `flex-1 min-w-0` between fixed-width
@@ -123,6 +78,14 @@ export const sessionEffortMaxWidth = (
  *  over the send disc (U-08). */
 export const COMPOSER_CHIP_ZONE =
 	"min-w-0 flex-1 flex-row items-center gap-1 overflow-hidden";
+
+/** The zone's trailing slot: More (or keyboard-dismiss) and, where the card
+ *  carries it, the queued count ahead of it. Its auto margin is the ONLY thing
+ *  in the zone that absorbs free width, so the slot holds the trailing edge
+ *  whether or not effort is on the row and the chips still pack at the
+ *  leading edge (TestFlight 578). Rigid: its members are never the ones cut. */
+export const COMPOSER_CHIP_TRAILING =
+	"ms-auto shrink-0 flex-row items-center gap-1";
 
 /** A `text-mono-sm` glyph's advance, pt at 100 % (12 pt × the 0.6 em advance
  *  of the kit's mono face), and a quiet chip's horizontal padding. An ESTIMATE
@@ -140,6 +103,27 @@ export const chipWidthEstimate = (chars: number, scale: number): number =>
 		Math.ceil(chars * CHIP_CHAR_PT * scale) + CHIP_PAD_PT,
 	);
 
+/** The queued count's horizontal padding (`px-1`) and its widest label, pt. */
+export const QUEUED_CHIP_PAD_PT = 8;
+export const QUEUED_CHIP_MAX_PT = 160;
+
+/** The queued count's estimated width on the card: its floor, or its text at
+ *  the scale, never past the cap the chip itself carries. The same deliberate
+ *  over-estimate as `chipWidthEstimate` (a mono advance for proportional
+ *  text), so the plan reserves at least what the chip paints. */
+export const queuedChipWidthEstimate = (
+	chars: number,
+	scale: number,
+	touchFloor: number,
+): number =>
+	Math.min(
+		QUEUED_CHIP_MAX_PT,
+		Math.max(
+			touchFloor,
+			Math.ceil(chars * CHIP_CHAR_PT * scale) + QUEUED_CHIP_PAD_PT,
+		),
+	);
+
 /**
  * Which chips the card's controls row shows at a given zone width.
  *
@@ -152,6 +136,14 @@ export const chipWidthEstimate = (chars: number, scale: number): number =>
  * `width <= 0` is "not measured yet" and shows everything, because the common
  * case (a 390 pt phone) does fit and hiding chips for one frame would be a
  * flicker on every mount.
+ *
+ * THE QUEUED COUNT, where the host has no activity line to carry it (a tablet,
+ * a narrow short-landscape split — review round 1, M1). It is the one member
+ * of the zone that is NEVER dropped: nothing else on those layouts says a
+ * message is waiting. It is charged before the chips, as its sentence
+ * ("2 queued") while the model still fits beside it and as the bare count
+ * once it would not — so the order of loss is effort, the sentence, the
+ * model, and never the count or More.
  */
 export const composerChipPlan = (input: {
 	/** The chip zone's measured width, pt. */
@@ -166,14 +158,47 @@ export const composerChipPlan = (input: {
 	/** Floor-sized trailing controls inside the zone (More / dismiss). */
 	trailing: number;
 	touchFloor: number;
-}): { model: boolean; effort: boolean } => {
+	/** The queued count, when the card is where it shows: the lengths of its
+	 *  sentence and of the bare number. Omitted or `null`: not on the card. */
+	queued?: { labelChars: number; countChars: number } | null;
+}): {
+	model: boolean;
+	effort: boolean;
+	/** Present only when `queued` was asked for: the form that fits and the
+	 *  width it was charged, which the chip takes as its own cap so an
+	 *  under-estimate ellipsizes inside the zone instead of clipping More. */
+	queued?: { form: "label" | "count"; width: number };
+} => {
+	const queue = input.queued ?? null;
+	const queuedWidth = (chars: number) =>
+		queuedChipWidthEstimate(chars, input.scale, input.touchFloor);
 	if (!(input.width > 0))
-		return { model: true, effort: input.effortChars !== null };
+		return {
+			model: true,
+			effort: input.effortChars !== null,
+			...(queue
+				? {
+						queued: {
+							form: "label" as const,
+							width: queuedWidth(queue.labelChars),
+						},
+					}
+				: {}),
+		};
 	const fixed =
 		input.trailing * input.touchFloor + (input.folder ? MODEL_FLOOR_PT : 0);
 	const children = input.trailing + (input.folder ? 1 : 0);
 	/* `children` siblings before the model → that many gaps once it is shown. */
-	const forModel = input.width - fixed - children * COMPOSER_META_GAP_PT;
+	const free = input.width - fixed - children * COMPOSER_META_GAP_PT;
+	/* The queued count is one more sibling: its width and its own gap. */
+	const beside = (width: number) => free - width - COMPOSER_META_GAP_PT;
+	const queued =
+		queue === null
+			? null
+			: beside(queuedWidth(queue.labelChars)) >= MODEL_FLOOR_PT
+				? { form: "label" as const, width: queuedWidth(queue.labelChars) }
+				: { form: "count" as const, width: queuedWidth(queue.countChars) };
+	const forModel = queued === null ? free : beside(queued.width);
 	const model = forModel >= MODEL_FLOOR_PT;
 	const effort =
 		model &&
@@ -182,5 +207,5 @@ export const composerChipPlan = (input: {
 			chipWidthEstimate(input.modelChars, input.scale) +
 				COMPOSER_META_GAP_PT +
 				chipWidthEstimate(input.effortChars, input.scale);
-	return { model, effort };
+	return { model, effort, ...(queued ? { queued } : {}) };
 };

@@ -145,8 +145,19 @@ describe("phone status surface wiring (D2 final)", () => {
 		);
 		expect(screen).toContain("{tray ? (");
 		// ... on a portrait phone the tray row yields to the header subtitle and the
-		// chips above the composer (record 2026-11-04 §2.2, D-S3); short landscape keeps it.
-		expect(screen).toContain("tray && !compact && pendingViewProps === null");
+		// ONE activity line above the composer (record 2026-11-04 §2.2, D-S3; visual
+		// audit D1 folded the chips' band into that line); short landscape keeps it.
+		// The line's gate is derived from the SAME decision, once, and its complement
+		// is what keeps the queued count on the composer card where there is no line —
+		// two hand-written copies of the condition is how a tablet lost the count.
+		const flat = screen.replace(/\s+/g, " ");
+		expect(flat).toContain("const activityLineHost = tray && !compact;");
+		expect(flat).toContain("{activityLineHost ? ( <PinnedWorkingLine");
+		expect(flat).toContain("queueOnCard={!activityLineHost}");
+		// The pending-card yield the removed `&& pendingViewProps === null` made is
+		// now the counts' own: tasks/agents step aside, the queue count does not.
+		expect(flat).toContain("const pendingShowing = pendingViewProps !== null;");
+		expect(flat).toContain("activityCounts( pendingShowing ? null : {");
 		// ... both panels open the SAME sheet there (not a dead disabled prop) ...
 		expect(screen.match(/statusSheet \? statusSheetOpen/g)?.length).toBe(2);
 		// ... and the old inline stack is not painted beside it.

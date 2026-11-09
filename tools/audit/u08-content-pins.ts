@@ -622,7 +622,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// app tree has neither parent's digest; re-pinned with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof
 	// refreshed.
-	app: "3ef586771bfcb10db94bd541a505b722b9e92d989d3e59a5e09d551a004cff90",
+	// Re-pinned with --print over the staged tree for PR B's round-1
+	// remediation (the session screen memoises the counts element and derives
+	// one activity-line flag). Source admission only.
+	app: "6683caff469f241f87193cc8eee8e9b377e6493e1f457290b10242e3fd104afb",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1041,7 +1044,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * remediation (R3-M1) re-printed it again: effort is rigid under a measured
 	 * JS cap (sessionEffortMaxWidth), because native Yoga 0.86.3 mis-resolves the
 	 * weighted pair (yoga#2006). Source admission only, NOT rendered U-08
-	 * evidence. */
+	 * evidence. (History: that strip is gone. Polish PR B moved the chips onto
+	 * the composer card and removed both names; `composerChipPlan` in
+	 * composer-layout.ts is the rule that replaced them.) */
 	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
 	 * (b5a2f4a1, PR #190 smooth steering) into feat/composer-paste-voice
 	 * (PR #187, round-2 head 875cebf7): both lines of history stand, the value is
@@ -1242,7 +1247,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// --print over the staged merged tree. This DOES change what the session
 	// scenes paint; the digest is source admission only, NOT rendered U-08
 	// evidence — the frames are CI's audit run's.
-	src: "625569b4ff3e11f4f41d073971706d3240c7e00556033b7152a37cb5966d9429",
+	// Re-pinned with --print over the staged tree for PR B's round-1
+	// remediation: the queued count stays on the card where the host has no
+	// activity line, the counts keep one edge and drop the held line, and the
+	// dead strip exports are removed. Source admission only.
+	src: "aac0d6aa333f872239b64e36e28a196bc5a729f53c826dc363bf922281929cc2",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

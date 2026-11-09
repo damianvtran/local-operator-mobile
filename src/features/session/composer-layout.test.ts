@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
 	COMPOSER_ACTION_CLUSTER,
 	COMPOSER_CHIP_CAPSULE_ALIGN,
+	COMPOSER_CHIP_TRAILING,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
 	COMPOSER_META_GAP_PT,
-	COMPOSER_META_GLASS_SPACING,
 	COMPOSER_META_ROW,
 	chipWidthEstimate,
 	composerChipPlan,
@@ -14,8 +14,7 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
-	SESSION_STRIP_SHRINK,
-	sessionEffortMaxWidth,
+	queuedChipWidthEstimate,
 } from "./composer-layout";
 import {
 	composerPaintedHeight,
@@ -54,7 +53,11 @@ describe("build389 persistent field and context", () => {
 		expect(zone).toContain("CONTROL.composerEffortChip");
 		expect(zone).toContain("CONTROL.composerDismissKeyboard");
 		expect(zone).toContain("CONTROL.composerContext");
+		/* The queued count is on the card ONLY where the host says it has no
+		 *  activity line to carry it (review round 1, M1) — never the strip's
+		 *  own shrinking chip, and never unconditionally. */
 		expect(zone).not.toContain("{queuedChip}");
+		expect(zone).toContain("{cardQueuedChip}");
 		/* More still names both, as label/value rows on one edge. */
 		expect(COMPOSER).toContain("testID={CONTROL.composerContextModel}");
 		expect(COMPOSER).toContain("testID={CONTROL.composerContextEffort}");
@@ -80,18 +83,31 @@ describe("the above-composer stack (relay above-composer.spacing)", () => {
 			SCREEN.indexOf("<PinnedWorkingLine"),
 			SCREEN.indexOf("<AskBar"),
 		).replace(/\s+/g, " ");
+		const flat = SCREEN.replace(/\s+/g, " ");
 		/* Portrait phone only, as the capsules were. */
-		expect(SCREEN.replace(/\s+/g, " ")).toContain(
-			"{tray && !compact ? ( <PinnedWorkingLine",
+		expect(flat).toContain("const activityLineHost = tray && !compact;");
+		expect(flat).toContain("{activityLineHost ? ( <PinnedWorkingLine");
+		/* The counts element is memoised (review round 1, m1): built inline it
+		 *  was a new object per streamed frame and defeated the line's memo. */
+		expect(line).toContain("trailing={lineCountsElement}");
+		expect(line).not.toContain("<ActivityCounts");
+		expect(flat).toContain(
+			"const lineCountsElement = useMemo( () => lineCounts.length > 0 ? ( <ActivityCounts counts={lineCounts} onOpen={openStatusSheet} /> ) : null, [lineCounts, openStatusSheet], );",
 		);
-		expect(line).toContain("<ActivityCounts counts={lineCounts}");
-		expect(line).toContain("onOpen={openStatusSheet}");
 		expect(line).toContain("trailingStacked={activityCountsStack({");
 		/* The tasks/agents counts yield to a pending card (UX U12); the queue
 		 *  count is the only place the queue shows, so it does not. */
 		expect(SCREEN.replace(/\s+/g, " ")).toContain(
 			"activityCounts( pendingShowing ? null : {",
 		);
+	});
+	it("keeps the queued count on the card wherever there is no activity line (M1)", () => {
+		/* ONE flag, read twice: the line mounts where it is true and the card
+		 *  carries the count where it is false. Written as two conditions, a
+		 *  tablet (`tray` false) matched neither and the count was on no surface. */
+		const flat = SCREEN.replace(/\s+/g, " ");
+		expect(flat).toContain("queueOnCard={!activityLineHost}");
+		expect(flat.match(/\bactivityLineHost\b/g)).toHaveLength(3);
 	});
 });
 
@@ -159,7 +175,10 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 		).toContain("{restsAsCard ? ( <> {pasteChip} {chipZone}");
 	});
 	it("bounds the queue chip so large text cannot push a control off the card", () => {
-		expect(SRC).toMatch(/maxWidth: 160/);
+		/* The strip's chip keeps the 160 pt cap; the card's takes the width the
+		 *  chip plan charged for it, which is itself capped at 160. */
+		expect(SRC).toContain("maxWidth: planned === null ? 160 : planned.width");
+		expect(queuedChipWidthEstimate(400, 2, 44)).toBe(160);
 	});
 });
 
@@ -435,7 +454,6 @@ describe("strip glass capsules stay per-chip", () => {
 	it("keeps the merge distance under the strip's gap", () => {
 		expect(COMPOSER_META_ROW).toContain("gap-1");
 		expect(COMPOSER_META_GAP_PT).toBe(4);
-		expect(COMPOSER_META_GLASS_SPACING).toBeLessThan(COMPOSER_META_GAP_PT);
 		/* The card's chips sit ON the shell's own surface (D5), so they are not
 		 *  glass capsules of their own and no group merges them. */
 		expect(COMPOSER).not.toContain("<ChromeGroup");
@@ -501,8 +519,115 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		expect(plan).toContain("trailing: moreSlot,");
 		expect(COMPOSER).toContain("{keyboardVisible || focused ? (");
 		/* R3-M1 stands: effort is RIGID, so on native Yoga (0.86.3, yoga#2006)
-		 *  the model is the only session chip that floors. */
-		expect(SESSION_STRIP_SHRINK).toEqual({ model: 1, effort: 0 });
+		 *  the model is the only chip after the folder that floors. The same
+		 *  goes for the card's queued count: rigid, at its planned width. */
+		const effort = COMPOSER.slice(
+			COMPOSER.indexOf("{effortChip && chipPlan.effort ? ("),
+			COMPOSER.indexOf("testID={CONTROL.composerEffortChip}"),
+		);
+		expect(effort).toContain("<View style={{ flexShrink: 0 }}>");
+		expect(COMPOSER).toContain("flexShrink: planned === null ? 1 : 0");
+	});
+
+	/* Review round 1, M1: the count was visible only on the compact strip and
+	 *  on the host's activity line, so a tablet and a narrow short-landscape
+	 *  split — which have neither — showed nothing for a queued message. */
+	describe("the queued count on the card (no activity line above it)", () => {
+		const LABEL = "2 queued";
+		const at = (width: number, scale = 1, extra = {}) =>
+			composerChipPlan({
+				width,
+				scale,
+				modelChars: "claude-opus-5".length,
+				effortChars: "High".length,
+				folder: false,
+				trailing: 1,
+				touchFloor: 44,
+				queued: { labelChars: LABEL.length, countChars: 1 },
+				...extra,
+			});
+		const label = queuedChipWidthEstimate(LABEL.length, 1, 44);
+		const model = chipWidthEstimate("claude-opus-5".length, 1);
+		const effort = chipWidthEstimate("High".length, 1);
+
+		it("wires the plan to the host's flag and paints the planned form", () => {
+			const plan = COMPOSER.slice(
+				COMPOSER.indexOf("const chipPlan = composerChipPlan({"),
+				COMPOSER.indexOf("const chipZone = ("),
+			).replace(/\s+/g, " ");
+			expect(plan).toContain("queueOnCard && queuedCount > 0 ? {");
+			expect(plan).toContain(
+				'dictationLargeText || chipPlan.queued.form === "count",',
+			);
+			/* Off unless the host asks: the home and the portrait phone show the
+			 *  queue elsewhere, and their rows must not change. */
+			expect(COMPOSER).toContain("queueOnCard = false,");
+			expect(at(600, 1, { queued: null })).toEqual({
+				model: true,
+				effort: true,
+			});
+			expect(at(600, 1, { queued: null }).queued).toBeUndefined();
+		});
+
+		it("tablet arm: a wide zone shows the sentence beside model and effort", () => {
+			expect(label).toBe(Math.ceil(8 * 7.2) + 8);
+			/* A 768 pt tablet's zone is several hundred points wide. */
+			expect(at(500)).toEqual({
+				model: true,
+				effort: true,
+				queued: { form: "label", width: label },
+			});
+			/* The count is charged before the chips: effort leaves exactly one
+			 *  point under More + count + model + effort and their three gaps. */
+			const all = 44 + 4 + label + 4 + model + 4 + effort;
+			expect(at(all).effort).toBe(true);
+			expect(at(all - 1)).toEqual({
+				model: true,
+				effort: false,
+				queued: { form: "label", width: label },
+			});
+			/* Unmeasured: everything, as without a queue. */
+			expect(at(0)).toEqual({
+				model: true,
+				effort: true,
+				queued: { form: "label", width: label },
+			});
+		});
+
+		it("compact-not-single arm: a narrow zone keeps the COUNT, whatever else goes", () => {
+			/* The sentence holds while the model still fits at its floor… */
+			const floor = 44 + 4 + label + 4 + 44;
+			expect(at(floor)).toEqual({
+				model: true,
+				effort: false,
+				queued: { form: "label", width: label },
+			});
+			/* …one point under, it becomes the bare number and the model stays… */
+			expect(at(floor - 1)).toEqual({
+				model: true,
+				effort: false,
+				queued: { form: "count", width: 44 },
+			});
+			/* …and when even the model cannot fit, the count is still there. */
+			for (const width of [44 + 4 + 44 + 4 + 43, 92, 60, 1]) {
+				expect(at(width), String(width)).toEqual({
+					model: false,
+					effort: false,
+					queued: { form: "count", width: 44 },
+				});
+			}
+			/* The zone's floor is More + the planned count, so the clip that may
+			 *  cut a chip can never cut either of them. */
+			expect(COMPOSER.replace(/\s+/g, " ")).toContain(
+				"minWidth: TOUCH_FLOOR + (chipPlan.queued ? chipPlan.queued.width + COMPOSER_META_GAP_PT : 0),",
+			);
+		});
+
+		it("charges the number, not the sentence, at large text", () => {
+			/* The composer passes the number's length as the label there. */
+			expect(queuedChipWidthEstimate(1, 2, 44)).toBe(44);
+			expect(queuedChipWidthEstimate(3, 2, 44)).toBe(Math.ceil(3 * 14.4) + 8);
+		});
 	});
 
 	it("drops effort whole before the model's name is cut (D5)", () => {
@@ -537,114 +662,6 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		expect(at(both + 47, 1, { folder: true }).effort).toBe(false);
 		expect(at(both + 48, 1, { folder: true }).effort).toBe(true);
 	});
-	it("caps effort by the measured strip, its trailing controls and gaps", () => {
-		/* 292 pt (320 / 200 %), focused with a queue: 292 − 44 − 3·44 − 4·4. */
-		expect(sessionEffortMaxWidth(292, 3, 44)).toBe(100);
-		/* QA's web rig: 296 strip, 48 pt floors. */
-		expect(sessionEffortMaxWidth(296, 3, 48)).toBe(92);
-		/* 402 pt / 100 %, at rest: strip 378, More only → Medium (60) is whole. */
-		expect(sessionEffortMaxWidth(378, 1, 44)).toBe(282);
-		expect(sessionEffortMaxWidth(378, 1, 44)).toBeGreaterThan(60);
-		/* Floored: a tiny strip still leaves effort a 44 pt, ellipsized target. */
-		expect(sessionEffortMaxWidth(120, 3, 44)).toBe(MODEL_FLOOR_PT);
-		/* Before the first onLayout: no cap, the first frame is the uncapped one. */
-		expect(sessionEffortMaxWidth(0, 3, 44)).toBeUndefined();
-	});
-
-	/* Round-2 R2-M1's numbers, from the r1 frame `live-int-dark-320-200.png`:
-	 *  the strip row is ~292 pt at 320 pt / 200 %, a `text-mono-sm` glyph is
-	 *  ~13.3 pt, a quiet chip adds ~18 pt of padding + border, and focused with a
-	 *  queue the trailing members are More, the queued chip (bare count at large
-	 *  text, so at its 44 pt floor) and keyboard-dismiss, with `gap-1` between. */
-	const STRIP_320_200 = 292;
-	const GLYPH_200 = 13.3;
-	const CHIP_CHROME = 18;
-	const chipWidth = (label: string, glyph = GLYPH_200) =>
-		label.length * glyph + CHIP_CHROME;
-	/* The session strip's children with their flex weights as composer.tsx
-	 *  writes them: More and keyboard-dismiss are IconButtons (RN default
-	 *  `flexShrink: 0`); the queued chip is `flexShrink: 1` floored at 44 pt. */
-	const sessionStrip = (
-		model: string,
-		effort: string,
-		glyph = GLYPH_200,
-		row = STRIP_320_200,
-	) => [
-		{
-			id: "model",
-			basis: chipWidth(model, glyph),
-			shrink: SESSION_STRIP_SHRINK.model,
-			min: MODEL_FLOOR_PT,
-		},
-		{
-			id: "effort",
-			/* maxWidth clamps the hypothetical size before shrink is shared. */
-			basis: Math.min(
-				chipWidth(effort, glyph),
-				sessionEffortMaxWidth(row, 3, 44) ?? Number.POSITIVE_INFINITY,
-			),
-			shrink: SESSION_STRIP_SHRINK.effort,
-			min: MODEL_FLOOR_PT,
-		},
-		{ id: "more", basis: 44, shrink: 0, min: 44 },
-		{ id: "queued", basis: 44, shrink: 1, min: 44 },
-		{ id: "keyboard", basis: 44, shrink: 0, min: 44 },
-	];
-
-	it("never clips a trailing control at 320 pt / 200 %, focused with a queue", () => {
-		for (const effort of ["Extra high", "minimal", "Очень высокое"]) {
-			const items = sessionStrip("claude-opus-5-5", effort);
-			const sized = resolveShrink(items, STRIP_320_200, COMPOSER_META_GAP_PT);
-			const used =
-				sized.reduce((sum, item) => sum + item.size, 0) +
-				COMPOSER_META_GAP_PT * (items.length - 1);
-			/* Nothing reaches the `overflow-hidden` edge: the keyboard button's
-			 *  trailing edge is inside the row, so More, the queue and it are whole. */
-			expect(used, effort).toBeLessThanOrEqual(STRIP_320_200 + 1e-9);
-			const size = (id: string) =>
-				sized.find((item) => item.id === id)?.size ?? Number.NaN;
-			for (const id of ["more", "queued", "keyboard"]) {
-				expect(size(id), `${effort}: ${id}`).toBe(44);
-			}
-			/* The model went to its floor; effort truncates rather than vanishing. */
-			expect(size("model")).toBe(MODEL_FLOOR_PT);
-			expect(size("effort")).toBeGreaterThanOrEqual(MODEL_FLOOR_PT);
-		}
-		/* Control: rigid effort WITHOUT the cap (round 2, and the first frame
-		 *  before `metaWidth`) overflows by ~51 pt — the clip R2-M1 reported. */
-		const rigid = sessionStrip("claude-opus-5-5", "Extra high").map((item) =>
-			item.id === "effort" ? { ...item, basis: chipWidth("Extra high") } : item,
-		);
-		const rigidUsed =
-			resolveShrink(rigid, STRIP_320_200, COMPOSER_META_GAP_PT).reduce(
-				(sum, item) => sum + item.size,
-				0,
-			) +
-			COMPOSER_META_GAP_PT * 4;
-		expect(rigidUsed - STRIP_320_200).toBeGreaterThan(45);
-	});
-
-	it("keeps an ordinary effort whole and shrinks only the model", () => {
-		/* Ordinary text (~6.65 pt glyphs): whatever the overflow, effort is rigid
-		 *  under a cap it fits, so it never loses a sliver ("Hig…"). */
-		const glyph = GLYPH_200 / 2;
-		const row = 300;
-		const items = sessionStrip(
-			"Claude Opus 5.5 (1M context)",
-			"Extra high",
-			glyph,
-			row,
-		);
-		const sized = resolveShrink(items, row, COMPOSER_META_GAP_PT);
-		const size = (id: string) =>
-			sized.find((item) => item.id === id)?.size ?? Number.NaN;
-		expect(size("effort")).toBe(chipWidth("Extra high", glyph));
-		expect(size("model")).toBeGreaterThanOrEqual(MODEL_FLOOR_PT);
-		expect(size("model")).toBeLessThan(
-			chipWidth("Claude Opus 5.5 (1M context)", glyph),
-		);
-	});
-
 	/* TestFlight 578: "Left justify the effort selector with the other selectors
 	 *  on that row." A growing model slot left effort floating right of a gap on
 	 *  BOTH strips: `[folder][Claude Opus 5.5]      [Medium] ⋯`. */
@@ -673,64 +690,17 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 		/* The ONLY thing that absorbs the zone's free width is the trailing
 		 *  slot's auto margin, so More holds one place whatever the chips do. */
 		expect(strip).toContain(
-			'<View className="ms-auto" testID={SURFACE.composerStripTrailing}>',
+			"<View className={COMPOSER_CHIP_TRAILING} testID={SURFACE.composerStripTrailing} >",
 		);
-		expect(strip.match(/\bgrow\b|flex-1|flexGrow|ms-auto/g)).toEqual([
+		expect(COMPOSER_CHIP_TRAILING.match(/\bgrow\b|flex-1|ms-auto/g)).toEqual([
 			"ms-auto",
 		]);
+		expect(strip.match(/\bgrow\b|flex-1|flexGrow|ms-auto/g)).toBeNull();
 	});
 	it("offers the folder once: the More sheet no longer repeats it", () => {
 		expect(COMPOSER).not.toContain("folderChip.onPress();");
 	});
 });
-
-/**
- * CSS/Yoga flexible-length resolution for a SHRINKING row: overflow is shared
- * by `shrink × basis`, an item that would cross its min-width is frozen there
- * and the loop re-shares what remains among the rest. Enough to check the
- * strip's shrink ORDER from its weights; not a renderer.
- */
-function resolveShrink(
-	items: readonly { id: string; basis: number; shrink: number; min: number }[],
-	row: number,
-	gap: number,
-): { id: string; size: number }[] {
-	const state = items.map((item) => ({
-		...item,
-		size: item.basis,
-		frozen: item.shrink === 0,
-	}));
-	const gaps = gap * (items.length - 1);
-	for (;;) {
-		const open = state.filter((item) => !item.frozen);
-		/* Free space is measured against the frozen items' final sizes and the
-		 *  open items' BASES — each pass re-shares from scratch. */
-		const overflow =
-			state.reduce(
-				(sum, item) => sum + (item.frozen ? item.size : item.basis),
-				0,
-			) +
-			gaps -
-			row;
-		const weight = open.reduce(
-			(sum, item) => sum + item.shrink * item.basis,
-			0,
-		);
-		if (overflow <= 0 || weight === 0) break;
-		let clamped = false;
-		for (const item of open) {
-			const target =
-				item.basis - (overflow * item.shrink * item.basis) / weight;
-			if (target <= item.min) {
-				item.size = item.min;
-				item.frozen = true;
-				clamped = true;
-			} else item.size = target;
-		}
-		if (!clamped) break;
-	}
-	return state.map(({ id, size }) => ({ id, size }));
-}
 
 describe("the composer's failure notice is one borderless block (visual audit D6)", () => {
 	const code = stripComments(COMPOSER).replace(/\s+/g, " ");

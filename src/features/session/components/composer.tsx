@@ -65,9 +65,11 @@ import {
 	ATTACH_GLYPH_PT,
 	COMPOSER_ACTION_CLUSTER,
 	COMPOSER_CHIP_CAPSULE_ALIGN,
+	COMPOSER_CHIP_TRAILING,
 	COMPOSER_CHIP_ZONE,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
+	COMPOSER_META_GAP_PT,
 	COMPOSER_META_ROW,
 	composerChipPlan,
 	FOLDER_CHIP_MAX_PT,
@@ -288,6 +290,15 @@ export type ComposerProps = {
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
+	/** The queued count stays VISIBLE on the card's controls row. The session
+	 *  passes this wherever it has no activity line above the composer to carry
+	 *  the count (a tablet, short landscape) — on those layouts nothing else on
+	 *  screen says a message is waiting (review round 1, M1). Off by default:
+	 *  the home states its queue on its own line, and a portrait phone on the
+	 *  activity line, and a second copy on the card would only take the model's
+	 *  width. Short landscape wide enough for the compact strip shows the count
+	 *  there whatever this says. */
+	queueOnCard?: boolean;
 	onOpenQueue?: () => void;
 	onEditingChange?: (editing: boolean) => void;
 	suppressDisabledHint?: boolean;
@@ -493,8 +504,7 @@ const ComposerChipButton = ({
  *  in its solid branch, which would turn today's quiet, fill-less chip into a
  *  box — the fallback must stay byte-for-byte what ships. The capsule's radius
  *  is half the chip's touch-floor height: `radius.full` in spirit, as a number
- *  because the glass view takes its corners as props (`status-chips.tsx` makes
- *  the same call). `min-w-0`/`maxWidth` keep the chip's own shrink rule
+ *  because the glass view takes its corners as props. `min-w-0`/`maxWidth` keep the chip's own shrink rule
  *  working through the extra box, so a long model name still ellipsizes. */
 const stripChipSurface = (glass: boolean, chip: ReactElement) =>
 	glass ? (
@@ -684,6 +694,7 @@ export const Composer = ({
 	ended = false,
 	error,
 	queuedCount,
+	queueOnCard = false,
 	onOpenQueue,
 	onEditingChange,
 	suppressDisabledHint = false,
@@ -1513,13 +1524,19 @@ export const Composer = ({
 	 *  short landscape, whose compact strip has no activity line above it. It
 	 *  opens More, which lists the count and — where the surface can open the
 	 *  queue — the way in; it is never a disabled control. */
-	const queuedChip =
+	const queuedLabel = t("mobile.chrome.composer.queued", {
+		count: queuedCount,
+	});
+	/* `planned` is the card's form of the chip: RIGID, at the width the chip
+	 *  plan charged for it. The compact strip's chip shrinks instead — it is the
+	 *  only shrinker on that row. On the card the model already shrinks to a
+	 *  floor, and a second floored shrinker after it is the yoga#2006 shape
+	 *  that once threw the trailing controls off the row (`composer-layout.ts`). */
+	const queuedChipFor = (bare: boolean, planned: { width: number } | null) =>
 		queuedCount > 0 ? (
 			<Pressable
 				accessibilityRole={ROLE.button}
-				accessibilityLabel={t("mobile.chrome.composer.queued", {
-					count: queuedCount,
-				})}
+				accessibilityLabel={queuedLabel}
 				onPress={() => setContextOpen(true)}
 				/* Bounded width is the point (UX round 5, U2): an unconstrained
 				 *  label at 200 % text pushed the dismiss control past the 390 pt
@@ -1533,19 +1550,18 @@ export const Composer = ({
 					 *  44 pt height hid — and a shorter strip (the spec's 36 pt) must
 					 *  never take the target down with it. */
 					minHeight: TOUCH_FLOOR,
-					maxWidth: 160,
-					flexShrink: 1,
+					maxWidth: planned === null ? 160 : planned.width,
+					flexShrink: planned === null ? 1 : 0,
 				}}
 				className="items-center justify-center px-1"
 				testID={SURFACE.queuedMessageChip}
 			>
 				<Text className="text-meta text-ink-dim" numberOfLines={1}>
-					{dictationLargeText
-						? String(queuedCount)
-						: t("mobile.chrome.composer.queued", { count: queuedCount })}
+					{bare ? String(queuedCount) : queuedLabel}
 				</Text>
 			</Pressable>
 		) : null;
+	const queuedChip = queuedChipFor(dictationLargeText, null);
 
 	/* WHAT FITS ON THE CARD'S CONTROLS ROW (visual audit D5). The zone between
 	 *  attach and the mic/send cluster is measured, and effort leaves the row
@@ -1567,12 +1583,39 @@ export const Composer = ({
 		folder: !!folderChip,
 		trailing: moreSlot,
 		touchFloor: TOUCH_FLOOR,
+		/* Large text shows the bare number in either form (UX round 5, U2), so
+		 *  the sentence is charged at the number's width there. */
+		queued:
+			queueOnCard && queuedCount > 0
+				? {
+						labelChars: dictationLargeText
+							? String(queuedCount).length
+							: queuedLabel.length,
+						countChars: String(queuedCount).length,
+					}
+				: null,
 	});
+	/* The count on the card (review round 1, M1). Before this the chip mounted
+	 *  only on the compact strip and the count otherwise rode the host's
+	 *  activity line — which a tablet and a narrow short-landscape split do not
+	 *  have, so a queued message was announced (More's name) and never shown. */
+	const cardQueuedChip = chipPlan.queued
+		? queuedChipFor(
+				dictationLargeText || chipPlan.queued.form === "count",
+				chipPlan.queued,
+			)
+		: null;
 	const chipZone = (
 		<View
 			className={COMPOSER_CHIP_ZONE}
-			/* Never narrower than its one trailing control (More / dismiss). */
-			style={{ minWidth: TOUCH_FLOOR }}
+			/* Never narrower than what it must always show: its one trailing
+			 *  control (More / dismiss) and, where the card carries it, the queued
+			 *  count beside it — so the zone's clip can cut a chip but never those. */
+			style={{
+				minWidth:
+					TOUCH_FLOOR +
+					(chipPlan.queued ? chipPlan.queued.width + COMPOSER_META_GAP_PT : 0),
+			}}
 			testID={SURFACE.composerMeta}
 			onLayout={(event) =>
 				setChipZoneWidth(Math.floor(event.nativeEvent.layout.width))
@@ -1653,7 +1696,14 @@ export const Composer = ({
 			 *  slot because a second 44 pt control here costs the model its name at
 			 *  390 pt, and a sheet opened over a raised keyboard is the wrong order
 			 *  anyway — More is one blur away. */}
-			<View className="ms-auto" testID={SURFACE.composerStripTrailing}>
+			{/* The queued count rides the SAME trailing slot, ahead of More: one
+			 *  auto margin still absorbs the zone's free width, so neither moves
+			 *  when effort leaves the row. */}
+			<View
+				className={COMPOSER_CHIP_TRAILING}
+				testID={SURFACE.composerStripTrailing}
+			>
+				{cardQueuedChip}
 				{keyboardVisible || focused ? (
 					<IconButton
 						accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
