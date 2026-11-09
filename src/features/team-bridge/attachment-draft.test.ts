@@ -7,6 +7,7 @@ import { TOUCH_TARGET } from "@/ui/tokens.gen";
 
 import {
 	type AttachmentDraft,
+	addDraftImages,
 	CHIP_STRIP_LAYOUT,
 	chipBadgeRects,
 	chipControlRects,
@@ -46,7 +47,118 @@ function setup(
 	return { draft: createAttachmentDraft(deps), deps: base };
 }
 
+describe("deferred picker/paste authority", () => {
+	it.each(["library", "paste"] as const)(
+		"a live %s still prepares and uploads the acquired source",
+		async (source) => {
+			const { draft, deps } = setup();
+			const notice = vi.fn();
+			const release = vi.fn();
+			await addDraftImages(draft, source, {
+				pick: async () => ["raw"],
+				paste: async () => "raw",
+				isCurrent: () => true,
+				release,
+				notice,
+			});
+			await flush();
+			expect(deps.prepare).toHaveBeenCalledExactlyOnceWith("raw");
+			expect(deps.upload).toHaveBeenCalledTimes(1);
+			expect(draft.chips()[0]?.status).toBe("ready");
+			expect(notice).toHaveBeenCalledExactlyOnceWith(null);
+			expect(release).not.toHaveBeenCalled();
+		},
+	);
+	it.each(["library", "paste"] as const)(
+		"releases stale %s after draft replacement without preparing or publishing",
+		async (source) => {
+			const { draft, deps } = setup();
+			let current: AttachmentDraft | null = draft;
+			let finish!: (value: string[]) => void;
+			const pending = new Promise<string[]>((resolve) => {
+				finish = resolve;
+			});
+			const release = vi.fn();
+			const notice = vi.fn();
+			const acquisition = addDraftImages(draft, source, {
+				pick: () => pending,
+				paste: async () => (await pending)[0] ?? null,
+				isCurrent: () => current === draft,
+				release,
+				notice,
+			});
+			draft.dispose();
+			current = setup().draft;
+			finish(source === "library" ? ["picked-1", "picked-2"] : ["pasted"]);
+			await acquisition;
+			expect(release.mock.calls).toEqual(
+				source === "library" ? [["picked-1"], ["picked-2"]] : [["pasted"]],
+			);
+			expect(deps.prepare).not.toHaveBeenCalled();
+			expect(deps.upload).not.toHaveBeenCalled();
+			expect(deps.onChange).not.toHaveBeenCalled();
+			expect(notice).not.toHaveBeenCalled();
+			expect(draft.chips()).toEqual([]);
+		},
+	);
+
+	it.each(["empty", "rejected"] as const)(
+		"does not show a late %s paste notice after disposal",
+		async (result) => {
+			const { draft } = setup();
+			let current = true;
+			let finish!: () => void;
+			const pending = new Promise<void>((resolve) => {
+				finish = resolve;
+			});
+			const notice = vi.fn();
+			const acquisition = addDraftImages(draft, "paste", {
+				pick: async () => [],
+				paste: async () => {
+					await pending;
+					if (result === "rejected") throw new Error("denied");
+					return null;
+				},
+				isCurrent: () => current,
+				release: vi.fn(),
+				notice,
+			});
+			draft.dispose();
+			current = false;
+			finish();
+			await acquisition;
+			expect(notice).not.toHaveBeenCalled();
+		},
+	);
+
+	it("the production screen binds acquisition to its current incarnation AND draft identity", () => {
+		const screen = readFileSync(
+			fileURLToPath(new URL("./thread-screen.tsx", import.meta.url)),
+			"utf8",
+		);
+		expect(screen).toContain(
+			"isCurrent: () => isCurrent() && draftImages.current?.draft === draft",
+		);
+	});
+});
+
 describe("composer attachment chips", () => {
+	it("permanently refuses post-disposal sources, releasing each without publication", async () => {
+		const releaseSource = vi.fn();
+		const { draft, deps } = setup({ releaseSource });
+		draft.dispose();
+		draft.dispose();
+		expect(draft.add(["late-picker", "late-paste"])).toBe(null);
+		draft.retry("chip-1");
+		draft.markExpired();
+		draft.clearSent();
+		await flush();
+		expect(releaseSource.mock.calls).toEqual([["late-picker"], ["late-paste"]]);
+		expect(deps.prepare).not.toHaveBeenCalled();
+		expect(deps.upload).not.toHaveBeenCalled();
+		expect(deps.onChange).not.toHaveBeenCalled();
+		expect(draft.chips()).toEqual([]);
+	});
 	it("prepares, uploads and exposes ids in chip order", async () => {
 		const { draft, deps } = setup();
 		expect(draft.add(["a", "b"])).toBe(null);

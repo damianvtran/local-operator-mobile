@@ -76,12 +76,18 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		// A retiring UI client must never replay its upload (or cleanup) as the
 		// replacement account; token ownership is not a second auth lifecycle.
 		const owner = connection.radientAccountId;
-		const accessToken = fixture
-			? async () => fixture.token
-			: async (options?: { force?: boolean }) => {
-					const token = await access.current(options);
-					return owner && accountIdFromToken(token) === owner ? token : null;
-				};
+		const accessToken = async (options?: {
+			force?: boolean;
+		}): Promise<string | null> => {
+			// Check before the general accessor: even a rejected old request must
+			// not spend the replacement provider's refresh grant (including A→null→A).
+			if (!scope.isActive()) return null;
+			const token = fixture ? fixture.token : await access.current(options);
+			return scope.isActive() &&
+				(fixture || (owner && accountIdFromToken(token) === owner))
+				? token
+				: null;
+		};
 		const hub = createHubClient({
 			accessToken,
 			...(fixture ? { baseUrl: fixture.baseUrl } : {}),
@@ -128,12 +134,13 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 				registeredHub = null;
 			},
 		});
+		const scope = createTeamBridgeStore({
+			hub: () => hub,
+			accessToken,
+			dismissals: deviceNoticeDismissals,
+		});
 		return {
-			...createTeamBridgeStore({
-				hub: () => hub,
-				accessToken,
-				dismissals: deviceNoticeDismissals,
-			}),
+			...scope,
 			hub,
 			// Created with this account-keyed value, so a different account
 			// never reads this cache (`src/team-bridge/avatars.ts`).
@@ -143,17 +150,18 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		};
 	}, [fixture, connection.radientAccountId]);
 	useEffect(() => {
-		const remove = registerTeamBridgeRetirement(() =>
-			retireTeamBridgeScope(value),
-		);
+		const remove = registerTeamBridgeRetirement(() => {
+			value.actions.retire();
+			return retireTeamBridgeScope(value);
+		});
 		return () => {
 			/*
 			 * This provider is keyed by account (`TeamBridgeProvider`), so its
 			 * teardown IS the account boundary, including a direct A→B replacement
-			 * without signed-out. Reset both the decoded cache and store epoch:
+			 * without signed-out. Permanently retire the store and clear decoded media:
 			 * A's late upload refusal must not reset B's module-level image cache.
 			 */
-			value.actions.reset();
+			value.actions.retire();
 			// Account replacement unmounts this provider; drop its photos now
 			// rather than waiting for the collector, and retire reads in flight.
 			value.avatars.clear();

@@ -1136,7 +1136,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// attachment toolbar change the rendered app. Derived with --print after
 	// staging the new regression files (src identity includes tests); proof
 	// instruments, thresholds, corpus and historical ORIGINAL_* remain unchanged.
-	src: "ab9ebcfd48db9b51044a86f53616ea612f658bc259ccb6e80f4b7a49acc73b61",
+	// PR #106 post-disposal remediation: permanent provider/store/draft admission
+	// and stale acquisition release, with focused regressions. Derived by --print
+	// from the staged source; this is admission identity, not rendered/native proof.
+	src: "cf5208a22d19ad83601e38fe369e41687bb657a3819623b7b98bf17232c46cfb",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

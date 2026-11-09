@@ -39,6 +39,7 @@ import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
 import {
+	addDraftImages,
 	createAttachmentDraft,
 	type HeldDraft,
 	sendBlockedReason,
@@ -199,24 +200,17 @@ function ThreadContent({
 		setAttachNotice(null);
 		const draft = images;
 		if (!draft) return;
-		const room = draft.remaining();
-		if (room === 0) {
-			setAttachNotice(draft.limitNotice());
-			return;
-		}
-		try {
-			if (source === "library") {
-				const picked = await pickTeamBridgeImages(room);
-				if (picked.length > 0) setAttachNotice(draft.add(picked));
-			} else {
-				const pasted = await pasteTeamBridgeImage();
-				if (pasted === null)
-					setAttachNotice(t("mobile.team_bridge.attachment.paste_empty"));
-				else setAttachNotice(draft.add([pasted]));
-			}
-		} catch {
-			setAttachNotice(t("mobile.team_bridge.attachment.read_error"));
-		}
+		await addDraftImages(draft, source, {
+			pick: pickTeamBridgeImages,
+			paste: pasteTeamBridgeImage,
+			// A capability/conversation replacement can happen while the screen
+			// remains mounted, so mounted ownership alone is not enough.
+			isCurrent: () => isCurrent() && draftImages.current?.draft === draft,
+			release: (raw) => {
+				void releaseTeamBridgeSource(raw);
+			},
+			notice: setAttachNotice,
+		});
 	};
 	const items = useMemo(
 		() => model.threadItems(thread?.messages ?? [], new Date()),

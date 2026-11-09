@@ -130,6 +130,9 @@ export function createAttachmentDraft(deps: {
 }) {
 	let entries: Entry[] = [];
 	let counter = 0;
+	// Conversation/provider incarnations cannot be reopened by a late picker
+	// or retry closure. Close admission before releasing any existing entries.
+	let disposed = false;
 	let snapshot: DraftChip[] = [];
 	/*
 	 * Ids handed to a send that has not settled. `dispose` (Back while sending)
@@ -140,6 +143,7 @@ export function createAttachmentDraft(deps: {
 	let sending: ReadonlySet<string> = new Set();
 
 	const publish = () => {
+		if (disposed) return;
 		snapshot = entries.map(
 			({ key, status, preview, attachmentId, error, retryable }) => ({
 				retryable,
@@ -173,6 +177,7 @@ export function createAttachmentDraft(deps: {
 	};
 
 	async function run(entry: Entry): Promise<void> {
+		if (disposed || entry.removed) return;
 		try {
 			if (!entry.prepared) {
 				entry.status = "preparing";
@@ -227,6 +232,16 @@ export function createAttachmentDraft(deps: {
 		 * fit under the per-message limit (the rest are still added).
 		 */
 		add(sources: readonly unknown[]): string | null {
+			if (disposed) {
+				for (const raw of sources) {
+					try {
+						deps.releaseSource?.(raw);
+					} catch {
+						/* Match entry cleanup: a failed file release cannot reopen admission. */
+					}
+				}
+				return null;
+			}
 			const room = Math.max(0, deps.maxCount - entries.length);
 			const accepted = sources.slice(0, room);
 			for (const raw of accepted) {
@@ -252,6 +267,7 @@ export function createAttachmentDraft(deps: {
 		limitNotice,
 
 		retry(key: string): void {
+			if (disposed) return;
 			const entry = entries.find((e) => e.key === key);
 			if (entry?.status === "failed" && entry.retryable) void run(entry);
 		},
@@ -275,6 +291,7 @@ export function createAttachmentDraft(deps: {
 		 * the release to call when the send settles, either way.
 		 */
 		beginSend(ids: readonly string[]): () => void {
+			if (disposed) return () => undefined;
 			const fenced = new Set(ids);
 			sending = new Set([...sending, ...fenced]);
 			return () => {
@@ -288,6 +305,7 @@ export function createAttachmentDraft(deps: {
 		 * 404, so every ready chip becomes a final failure the reader removes.
 		 */
 		markExpired(): void {
+			if (disposed) return;
 			for (const entry of entries) {
 				if (entry.status !== "ready") continue;
 				entry.status = "failed";
@@ -302,6 +320,7 @@ export function createAttachmentDraft(deps: {
 		 * chips go WITHOUT a delete (deleting a bound image is refused anyway).
 		 */
 		clearSent(): void {
+			if (disposed) return;
 			for (const entry of entries) entry.removed = true;
 			entries = [];
 			publish();
@@ -309,6 +328,8 @@ export function createAttachmentDraft(deps: {
 
 		/** Leaving the conversation unsent: staged images are released. */
 		dispose(): void {
+			if (disposed) return;
+			disposed = true;
 			for (const entry of entries) {
 				entry.removed = true;
 				release(entry);
@@ -324,6 +345,45 @@ export function createAttachmentDraft(deps: {
 }
 
 export type AttachmentDraft = ReturnType<typeof createAttachmentDraft>;
+
+/**
+ * Acquisition may outlive the screen, its provider, or just its current draft.
+ * Keep this continuation testable without a native picker host; the screen's
+ * current predicate checks BOTH its mounted incarnation and captured draft.
+ */
+export async function addDraftImages<Raw>(
+	draft: AttachmentDraft,
+	source: "library" | "paste",
+	deps: {
+		pick: (limit: number) => Promise<Raw[]>;
+		paste: () => Promise<Raw | null>;
+		isCurrent: () => boolean;
+		release: (raw: Raw) => void;
+		notice: (notice: string | null) => void;
+	},
+): Promise<void> {
+	const room = draft.remaining();
+	if (room === 0) {
+		if (deps.isCurrent()) deps.notice(draft.limitNotice());
+		return;
+	}
+	try {
+		const sources =
+			source === "library"
+				? await deps.pick(room)
+				: await deps.paste().then((raw) => (raw === null ? [] : [raw]));
+		if (!deps.isCurrent()) {
+			for (const raw of sources) deps.release(raw);
+			return;
+		}
+		if (sources.length > 0) deps.notice(draft.add(sources));
+		else if (source === "paste")
+			deps.notice(t("mobile.team_bridge.attachment.paste_empty"));
+	} catch {
+		if (deps.isCurrent())
+			deps.notice(t("mobile.team_bridge.attachment.read_error"));
+	}
+}
 
 /**
  * How the composer explains a failed send that carried images.
