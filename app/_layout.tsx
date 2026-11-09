@@ -19,6 +19,7 @@ import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resol
 import { activeDirection, activeLocale } from "@/i18n";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { TeamBridgeProvider } from "@/team-bridge/provider";
+import { TeamBridgeFixturePresentation } from "@/testing/team-bridge-presentation";
 import { ThemeProvider, useTheme } from "@/ui/appearance";
 import { ToastHost } from "@/ui/components";
 import { DirectionProvider, DirectionView } from "@/ui/direction";
@@ -66,6 +67,7 @@ export default function RootLayout() {
 						</DirectionRoot>
 					</TextScaleProvider>
 				</ConnectionProvider>
+				<TeamBridgeFixturePresentation />
 			</ThemeProvider>
 		</SafeAreaProvider>
 	);

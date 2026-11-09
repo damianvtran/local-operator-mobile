@@ -48,37 +48,45 @@ export function DefaultOnNoticeView({
 						{copy("mobile.team_bridge.default_on.body")}
 					</Text>
 				</View>
+				{/* Bound each action to the card: wrapping the row alone still lets a
+				 * long localized/200% label keep its unbounded intrinsic width. */}
 				<View className="mt-3 flex-row flex-wrap items-center gap-2">
-					<Button
-						label={copy("mobile.team_bridge.default_on.turn_off")}
-						variant="outline"
-						loading={busy}
-						testID={CONTROL.teamBridgeNoticeTurnOff}
-						onPress={onTurnOff}
-					/>
-					<Button
-						label={
-							expanded
-								? copy("mobile.team_bridge.default_on.hide")
-								: copy("mobile.team_bridge.default_on.read_more")
-						}
-						variant="quiet"
-						testID={CONTROL.teamBridgeNoticeRead}
-						onPress={() => setExpanded((open) => !open)}
-					/>
-					<Button
-						label={copy("mobile.team_bridge.default_on.dismiss")}
-						variant="quiet"
-						accessibilityLabel={copy(
-							"mobile.team_bridge.default_on.dismiss_label",
-						)}
-						accessibilityHint={copy(
-							"mobile.team_bridge.default_on.dismiss_hint",
-						)}
-						disabled={busy}
-						testID={CONTROL.teamBridgeNoticeDismiss}
-						onPress={onDismiss}
-					/>
+					<View className="max-w-full shrink">
+						<Button
+							label={copy("mobile.team_bridge.default_on.turn_off")}
+							variant="outline"
+							loading={busy}
+							testID={CONTROL.teamBridgeNoticeTurnOff}
+							onPress={onTurnOff}
+						/>
+					</View>
+					<View className="max-w-full shrink">
+						<Button
+							label={
+								expanded
+									? copy("mobile.team_bridge.default_on.hide")
+									: copy("mobile.team_bridge.default_on.read_more")
+							}
+							variant="quiet"
+							testID={CONTROL.teamBridgeNoticeRead}
+							onPress={() => setExpanded((open) => !open)}
+						/>
+					</View>
+					<View className="max-w-full shrink">
+						<Button
+							label={copy("mobile.team_bridge.default_on.dismiss")}
+							variant="quiet"
+							accessibilityLabel={copy(
+								"mobile.team_bridge.default_on.dismiss_label",
+							)}
+							accessibilityHint={copy(
+								"mobile.team_bridge.default_on.dismiss_hint",
+							)}
+							disabled={busy}
+							testID={CONTROL.teamBridgeNoticeDismiss}
+							onPress={onDismiss}
+						/>
+					</View>
 				</View>
 				{/* Controls precede unbounded served text so opting out stays reachable. */}
 				<View className="mt-3 gap-3">

@@ -277,8 +277,8 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
- const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),width:Math.round(r.width),height:Math.round(r.height),disabled:e.getAttribute('aria-disabled')==='true'};});
- document.getElementById('geometry').textContent=JSON.stringify({viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
+ const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),x:Math.round(r.x),right:Math.round(r.right),width:Math.round(r.width),height:Math.round(r.height),scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,disabled:e.getAttribute('aria-disabled')==='true'};});
+ document.getElementById('geometry').textContent=JSON.stringify({locale:doc.documentElement.lang,direction:doc.documentElement.dir,noticeBodySize:win.getComputedStyle(doc.querySelector('[data-testid="team-bridge-default-on-notice"] [role="status"] > :last-child')||doc.body).fontSize,viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
 }catch{}},1000);
 </script>`,
 				);

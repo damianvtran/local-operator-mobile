@@ -15,12 +15,8 @@ import {
 } from "react";
 import { AppState } from "react-native";
 import { useStore } from "zustand";
-import {
-	configStore,
-	useConnection,
-} from "@/features/auth/connection-provider";
+import { useConnection } from "@/features/auth/connection-provider";
 import { loadNotifications } from "@/notifications/native";
-import { useUiStore } from "@/state/ui-store";
 import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import { deviceNoticeDismissals } from "@/team-bridge/notice-dismissals";
@@ -43,7 +39,6 @@ import {
 	type TeamBridgeStore,
 } from "@/team-bridge/store";
 import { teamBridgeFixture } from "@/testing/team-bridge-fixture";
-import { useTextScale } from "@/ui/text-scale-provider";
 
 const Context = createContext<
 	| (TeamBridgeStore & {
@@ -75,19 +70,6 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	const retirementAccess = useRef(connection.radientRetirementAccessToken);
 	retirementAccess.current = connection.radientRetirementAccessToken;
 	const fixture = useMemo(() => teamBridgeFixture(), []);
-	const { setPreference } = useTextScale();
-	useEffect(() => {
-		if (!fixture) return;
-		// The account provider outlives routes: exercise the same live config,
-		// theme and text-scale consumers as Settings, without a second renderer
-		// or any alternate dismissal/storage writer. The web-only gate above
-		// refuses every override in a normal export or on a native platform.
-		configStore
-			.getState()
-			.applyFrame({ changed_keys: [], language: fixture.locale });
-		setPreference(fixture.scale);
-		useUiStore.getState().setThemeMode(fixture.theme);
-	}, [fixture, setPreference]);
 	const value = useMemo(() => {
 		const accessToken = fixture
 			? async () => fixture.token

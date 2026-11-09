@@ -586,7 +586,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "9f32ccb59ff78920a76f253f5d2ca670040c9aff5a5ae98811c4305ec0f4e5c1",
+	app: "11d9e00d360ac577901ab69dd9fadd23b9e8af6c20a0963de26e7b35ded6fdc8",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -1095,7 +1095,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-pin admits the source; it is not evidence about the prose chip. */
 	// Recomputed with --print for #108 main integration, localized notice and
 	// durable account/org dismissal; source identity is not rendered evidence.
-	src: "2c0f5a7aaf888ca89cb58e8a3cf584dde26c246eec04cad6860bf26d9390aad7",
+	src: "be37405f8b8decd89b5a9cb11e9642dd64621b6d32f6eecd02b2f1bf4f5fb456",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

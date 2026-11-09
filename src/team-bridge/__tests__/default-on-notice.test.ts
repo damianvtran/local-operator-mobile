@@ -467,6 +467,13 @@ function assertFeatureCopy(input: string) {
 }
 
 describe("default-on notice view", () => {
+	it("bounds each action independently so large localized labels can wrap inside the card", () => {
+		// The browser check supplies geometry; this lexical guard protects the
+		// containment contract (the Node View stand-in drops styling props).
+		expect(componentSource.split('className="max-w-full shrink"')).toHaveLength(
+			4,
+		);
+	});
 	const html = rendered();
 	it("names the state, offers Turn off / Read / Dismiss", () => {
 		expect(html).toContain(
