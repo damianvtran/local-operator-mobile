@@ -98,6 +98,7 @@ import { useSessionRuntime } from "@/features/session/use-session";
 import { isRemoteRow } from "@/features/sessions/session-projection";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { elapsedLabel } from "@/lib/format";
 import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import {
@@ -107,7 +108,6 @@ import {
 	Screen,
 	Skeleton,
 } from "@/ui/components";
-import { BackIcon } from "@/ui/components/back-icon";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Sheet } from "@/ui/components/sheet";
 import { useCompactChrome } from "@/ui/layout";
@@ -1116,12 +1116,7 @@ export default function Session() {
 			testID={SCREEN.session}
 			headerLeading={
 				<View className="flex-row items-center gap-1">
-					<IconButton
-						accessibilityLabel="Back to sessions"
-						testID={CONTROL.sessionBack}
-						onPress={() => router.back()}
-						icon={({ color, size }) => <BackIcon color={color} size={size} />}
-					/>
+					<WorkspaceDrawerButton testID={CONTROL.sessionBack} />
 					{/* The brand mark LEFT the session header (record §2.3, D-S2): with
 					 *  back, the mark and the avatar there were three leading items in
 					 *  front of a 28 pt title, and the operator called it crunched. The bound

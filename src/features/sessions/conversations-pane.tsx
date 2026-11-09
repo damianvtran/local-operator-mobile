@@ -124,6 +124,7 @@ export type ConversationsPaneProps = {
 	 *  nothing to close, and a control that cannot work is this repo's oldest
 	 *  anti-pattern. */
 	onClose?: () => void;
+	currentSessionId?: string;
 	/** Called before any navigation (row tap, New chat, the footer's routes). The
 	 *  drawer closes first, so a selection never leaves the panel covering the
 	 *  screen it just opened; the docked pane has nothing to close and passes
@@ -179,6 +180,7 @@ const RailCount = ({ count }: { count: number }) => {
 
 export const ConversationsPane = ({
 	onClose,
+	currentSessionId,
 	onNavigate,
 	onNewChat,
 	notice,
@@ -341,8 +343,11 @@ export const ConversationsPane = ({
 	};
 
 	const openSession = (session: SessionSummary) => {
+		// Selecting the current chat is a dismissal, not a duplicate route that
+		// remounts its input. Other selections switch directly, without Home.
+		if (session.session_id !== currentSessionId)
+			router.navigate(`/session/${session.session_id}`);
 		onNavigate?.();
-		router.push(`/session/${session.session_id}`);
 	};
 
 	/* One tap's meaning, decided by the row's kind: a local row opens its
@@ -695,6 +700,7 @@ export const ConversationsPane = ({
 					const remote = isRemoteRow(session);
 					return (
 						<AgentListRow
+							selected={session.session_id === currentSessionId}
 							avatarRef={avatarRefOf(session)}
 							avatarTestID={sessionRowAvatarId(session.session_id)}
 							reserveLeading={anyRowPictured}

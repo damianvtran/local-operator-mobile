@@ -310,7 +310,7 @@ export class StartupCoordinator {
 			this.kick();
 	}
 
-	async enqueue() {
+	async enqueue(onAccepted?: () => void) {
 		if (this.revoked || this.reservedRevision === this.draftRevision) return;
 		/* Nothing may be added to a queue that cannot drain. An unconfirmed create
 		 * has no session id and no automatic recovery (`retry()` refuses it), so an
@@ -351,6 +351,10 @@ export class StartupCoordinator {
 			this.publish({ draft: { text: "", images: [] } });
 		}
 		this.kick();
+		// Admission is the intentional UI transition, not the tap or a transient
+		// `starting` render (React may batch that render with the start receipt).
+		// Dispatch is already scheduled; a keyboard animation never gates it.
+		onAccepted?.();
 	}
 
 	private allowed(epoch = this.epoch) {

@@ -15,5 +15,8 @@
 	"mobile.chrome.home.sign_in": "Se connecter pour rétablir la connexion",
 	"mobile.chrome.home.saved_draft": "Votre brouillon est enregistré sur ce téléphone et n’a pas été envoyé.",
 	"mobile.chrome.home.reconnecting": "Reconnexion à {host}…",
-	"mobile.chrome.composer.open_queue": "Ouvrir la file"
+	"mobile.chrome.composer.open_queue": "Ouvrir la file",
+	"mobile.chrome.drawer.open": "Ouvrir les conversations",
+	"mobile.chrome.drawer.open_count": "Ouvrir les conversations, {count, plural, one {# nouvelle conversation} other {# nouvelles conversations}}",
+	"mobile.chrome.drawer.agents": "Agents"
 }
