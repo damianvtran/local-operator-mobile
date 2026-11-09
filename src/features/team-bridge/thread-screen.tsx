@@ -35,6 +35,7 @@ import {
 	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
+import { Heading } from "@/ui/components/heading";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
@@ -62,6 +63,7 @@ import {
 	ProfileAuthorPhoto,
 	ProfileSheet,
 } from "./profile-card";
+import { createThreadViewport } from "./thread-viewport";
 
 const single = (value: string | string[] | undefined): string =>
 	typeof value === "string" ? value : "";
@@ -280,7 +282,24 @@ function ThreadContent({
 	}, [focused, active, admitted, conversationId, tenantId, actions]);
 	const visibleSeq = useRef(0);
 	const list = useRef<FlatList<model.ThreadItem>>(null);
-	const followTail = useRef(true);
+	const [positioned, setPositioned] = useState(false);
+	const viewport = useRef<ReturnType<typeof createThreadViewport> | null>(null);
+	if (!viewport.current)
+		viewport.current = createThreadViewport(
+			() => list.current?.scrollToEnd({ animated: false }),
+			() => setPositioned(true),
+		);
+	useEffect(() => {
+		// Empty admitted threads have no message layout event to wait for.
+		if (
+			!conversationId ||
+			(thread?.state === "ready" && thread.messages.length === 0)
+		)
+			viewport.current?.content(0, true);
+	}, [conversationId, thread?.state, thread?.messages.length]);
+	// Loading/empty/error copy remains visible; only unpositioned message rows
+	// are concealed, so a failed initial request never becomes a blank screen.
+	const initialRowsHidden = !positioned && items.length > 0;
 	const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 20 }).current;
 	const markRendered = useCallback(() => {
 		if (
@@ -289,11 +308,21 @@ function ThreadContent({
 			focusNow.current &&
 			activeNow.current &&
 			admitted &&
+			positioned &&
+			!viewport.current?.pending &&
 			conversationId &&
 			visibleSeq.current > 0
 		)
 			void actions.markRead(tenantId, conversationId, visibleSeq.current);
-	}, [focused, active, admitted, conversationId, tenantId, actions]);
+	}, [
+		focused,
+		active,
+		admitted,
+		positioned,
+		conversationId,
+		tenantId,
+		actions,
+	]);
 	const rendered = useRef(markRendered);
 	rendered.current = markRendered;
 	const onViewableItemsChanged = useRef(
@@ -301,7 +330,8 @@ function ThreadContent({
 			const seqs = viewableItems.flatMap((v) =>
 				v.item.type === "message" ? [v.item.message.seq] : [],
 			);
-			visibleSeq.current = Math.max(0, ...seqs);
+			// Unpositioned top rows cannot prove a message was actually read.
+			visibleSeq.current = viewport.current?.pending ? 0 : Math.max(0, ...seqs);
 			rendered.current();
 		},
 	).current;
@@ -498,6 +528,17 @@ function ThreadContent({
 	return (
 		<Screen
 			title={title}
+			titleNode={
+				// Channel identity needs room to wrap without borrowing the display
+				// size used by standalone screens or shrinking accessible text.
+				<Heading
+					level={1}
+					className="min-w-0 flex-1 text-title text-ink"
+					numberOfLines={2}
+				>
+					{title}
+				</Heading>
+			}
 			headerLeading={<BridgeBack />}
 			headerAction={
 				admitted ? (
@@ -604,18 +645,57 @@ function ThreadContent({
 									onViewableItemsChanged={onViewableItemsChanged}
 									viewabilityConfig={viewabilityConfig}
 									ref={list}
-									maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+									// Anchoring helps prepends only AFTER initial-tail authority has
+									// positioned the list; otherwise it can pin the initial top row.
+									maintainVisibleContentPosition={
+										positioned ? { minIndexForVisible: 0 } : undefined
+									}
+									style={{ opacity: initialRowsHidden ? 0 : 1 }}
+									accessibilityElementsHidden={initialRowsHidden}
+									importantForAccessibility={
+										initialRowsHidden ? "no-hide-descendants" : "auto"
+									}
+									onLayout={(event) =>
+										viewport.current?.layout(event.nativeEvent.layout.height)
+									}
+									onScrollBeginDrag={() => viewport.current?.userScroll()}
+									onTouchMove={() => viewport.current?.userScroll()}
+									{...(Platform.OS === "web"
+										? {
+												onWheel: () => viewport.current?.userScroll(),
+												onKeyDown: (event: { key: string }) => {
+													if (
+														[
+															"ArrowUp",
+															"ArrowDown",
+															"PageUp",
+															"PageDown",
+															"Home",
+															"End",
+															" ",
+														].includes(event.key)
+													)
+														viewport.current?.userScroll();
+												},
+											}
+										: {})}
 									onScroll={(event) => {
 										const { contentOffset, layoutMeasurement, contentSize } =
 											event.nativeEvent;
-										followTail.current =
-											contentOffset.y + layoutMeasurement.height >=
-											contentSize.height - 44;
+										viewport.current?.scroll(
+											contentOffset.y,
+											layoutMeasurement.height,
+											contentSize.height,
+										);
 									}}
 									scrollEventThrottle={100}
-									onContentSizeChange={() => {
-										if (followTail.current)
-											list.current?.scrollToEnd({ animated: false });
+									onContentSizeChange={(_width, height) => {
+										viewport.current?.content(
+											height,
+											!conversationId ||
+												!!thread?.messages.length ||
+												thread?.state === "ready",
+										);
 									}}
 									refreshControl={
 										<RefreshControl
@@ -882,6 +962,7 @@ function ThreadContent({
 }
 
 export default function TeamBridgeThreadScreen() {
+	const selfAccountId = useTeamBridgeState((state) => state.selfAccountId);
 	const params = useLocalSearchParams<{
 		tenantId?: string;
 		conversationId?: string;
@@ -911,7 +992,7 @@ export default function TeamBridgeThreadScreen() {
 	return (
 		<BridgeGate>
 			<ThreadContent
-				key={`${tenantId}/${routeId}/${kind}/${accountId}/${ownerAccountId}/${endpointId}`}
+				key={`${selfAccountId}/${tenantId}/${routeId}/${kind}/${accountId}/${ownerAccountId}/${endpointId}`}
 				tenantId={tenantId}
 				routeId={routeId}
 				target={target}
