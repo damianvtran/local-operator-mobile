@@ -978,7 +978,7 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 * message it will land on. "conversion" matches exactly two user messages
 	 * and nothing else (the soft tier's neighbourhood was probed: "euro" would
 	 * also have caught "turn" in every closing answer, two edits away), and the
-	 * ranking is oldest-first, so the press lands on `tc-conv-03-user` — inside
+	 * ranking is oldest-first, so the press lands on `m-conv-03-user` — inside
 	 * a CONDENSED turn, which is what makes the cell exercise the expand-first
 	 * walk (the sheet closes, the turn opens, the transcript scrolls, the wash
 	 * lands, the bar is up).
@@ -1030,7 +1030,7 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 		},
 		{ click: CONTROL.sessionFind },
 		{ type: { testID: CONTROL.findField, text: "conversion" } },
-		{ click: findResultId("tc-conv-03-user") },
+		{ click: findResultId("m-conv-03-user") },
 	],
 	/* The scope line's caveat (design D63-3), on the history-first world (`the
 	 * `long-transcript-history` scenario`): the device holds ONE incomplete
@@ -1220,7 +1220,7 @@ export const IDENTICAL_FRAME_EXEMPTIONS: IdenticalFrameClass[] = [
 			"S5/tables-in-view",
 			"S5/streaming-tables",
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
-			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+			"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-conv-00-user/expanded",
 			"path:/session/6714def86197/warm",
 			"S5/find-hit",
 		],
@@ -1448,7 +1448,7 @@ export const IDENTICAL_FRAME_COINCIDENCES: IdenticalFrameClass[] = [
 			"neither cell is a duplicate of the other and neither declaration can be removed. " +
 			"Every cell still reaches the session screen with its relay-backed session, and at " +
 			"this exact combo both carry the condensed turn bars as visible ids " +
-			"(`session-screen`, `turn-bar-tc-conv-00-user` … in the visible set), which is what " +
+			"(`session-screen`, `turn-bar-m-conv-00-user` … in the visible set), which is what " +
 			"keeps this a composition at that viewport rather than a collapse of either state.",
 	},
 	{

@@ -46,7 +46,7 @@ export const ORIGINAL_NODE_PATH =
 const ORIGINAL_DETAIL = `${ORIGINAL_NODE_PATH} ∩ ${ORIGINAL_NODE_PATH}`;
 // longConversation() in the source-pinned mock generates thirteen turns.
 // Which control contained the historical pair was NOT persisted.
-const FIXTURE_CONTROL = /^turn-bar-tc-conv-(?:0[0-9]|1[0-2])-user$/;
+const FIXTURE_CONTROL = /^turn-bar-m-conv-(?:0[0-9]|1[0-2])-user$/;
 const EXPECTED = "22x18pt overlap (100% of the smaller painted box)";
 const OBSERVER_LINE = /\n\s*state\.onU08Failure\?\.\(a\.index,\s*b\.index\);/;
 /** Refuse instrument drift before launch; the observer is not a policy edit. */

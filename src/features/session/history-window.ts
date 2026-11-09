@@ -28,8 +28,15 @@ export const journalAddressableRow = (row: TranscriptEntry): boolean =>
 /** Core caps a live frame to its first user message plus the newest 79 rows and
  * says so with `transcript_head_pinned`. Older wires lack the flag, so infer the
  * same shape they produced. */
+/** The relay's frame cap: the pinned opener plus the newest 79 rows. */
+const FRAME_CAP = 80;
+/** ONLY A FRAME AT EXACTLY THE CAP CAN BE INFERRED CAPPED. A flagless frame
+ * longer than the cap is not a capped projection at all (a legacy oversized
+ * render, or a relay that sent the whole conversation): reading it as
+ * "opener + 79" held every row ahead of its last 79 back as hidden context,
+ * so a reader handed 520 rows showed 79 of them (PR #207 CI, S5/find-*). */
 const headPinned = (rows: TranscriptEntry[], flag?: boolean): boolean =>
-	flag ?? (rows.length >= 80 && rows[0]?.kind === "user");
+	flag ?? (rows.length === FRAME_CAP && rows[0]?.kind === "user");
 
 /** A screen-owned reader, not a second transcript store. Capped projections are
  * not deletion signals: keep accepted server rows until this reader is retired.
@@ -92,18 +99,29 @@ export class HistoryWindow {
 		}
 		// HTTP may win the opening race. Classify a detached live prefix against
 		// durable identities on that path too, not only when the first page lands.
-		if (this.read === "ok" && this.cursor !== undefined) {
-			const firstDurable = projection.transcript.findIndex((row) =>
-				this.durableIds.has(rowIdentity(row)),
-			);
-			if (firstDurable > 0) {
-				const context = new Map(
-					this.detached.map((row) => [rowIdentity(row), row]),
-				);
-				for (const row of projection.transcript.slice(0, firstDurable))
-					context.set(rowIdentity(row), row);
-				this.detached = [...context.values()];
-			}
+		// INVARIANT: every row of an accepted live frame is displayed. The one
+		// exception is the single pinned opener of a capped frame, which is
+		// context detached from the newest window until paging reaches it. Rows
+		// with live-only ids are merely never cursors; they are never hidden.
+		const openerOf = headPinned(
+			projection.transcript,
+			projection.transcript_head_pinned,
+		)
+			? projection.transcript[0]
+			: undefined;
+		// A frame that pins no opener retires context an earlier INFERENCE
+		// detached (a flagless 80-row page opening on a user row): the frame
+		// holds that row in place, so it is shown.
+		if (!openerOf) this.detached = [];
+		// HTTP may win the opening race. Classify the pinned opener against
+		// durable identities on that path too, not only when the first page lands.
+		else if (
+			this.read === "ok" &&
+			this.cursor !== undefined &&
+			!this.durableIds.has(rowIdentity(openerOf)) &&
+			!this.detached.some((row) => rowIdentity(row) === rowIdentity(openerOf))
+		) {
+			this.detached = [...this.detached, openerOf];
 		}
 		for (const row of projection.transcript) {
 			this.liveAt.set(rowIdentity(row), ++this.revision);
@@ -117,12 +135,7 @@ export class HistoryWindow {
 		// Once paging reaches the true beginning it is no longer detached, but
 		// Core still re-sends it at the head of EVERY capped frame, so a disjoint
 		// reconnect tail would otherwise "overlap" through it alone (PR #207 Q2).
-		const head = headPinned(
-			projection.transcript,
-			projection.transcript_head_pinned,
-		)
-			? projection.transcript[0]
-			: undefined;
+		const head = openerOf;
 		const disjoint =
 			this.read === "ok" &&
 			spine.length > 0 &&
@@ -156,6 +169,28 @@ export class HistoryWindow {
 		const tail = incoming.filter((row) => !heldIds.has(rowIdentity(row)));
 		if (tail[0]) this.gapBefore = tail[0].id;
 		return [...held, ...tail];
+	}
+
+	/** An older page goes immediately BEFORE the row its cursor named, not at the
+	 * head: held rows ahead of the cursor (an oversized frame's older rows,
+	 * preserved compaction turns) are displayed, so prepending would put the
+	 * page above rows that are older than it. Fold-minted rows directly ahead
+	 * of the cursor row belong to it (a reasoning prefix), so the page lands
+	 * above them. A cold page, or a cursor no held row carries, keeps the head. */
+	private insertOlder(
+		page: TranscriptEntry[],
+		held: TranscriptEntry[],
+		before?: string,
+	): TranscriptEntry[] {
+		let at =
+			before === undefined ? 0 : held.findIndex((row) => row.id === before);
+		if (at < 0) at = 0;
+		while (at > 0) {
+			const previous = held[at - 1];
+			if (!previous || journalAddressableRow(previous)) break;
+			at -= 1;
+		}
+		return [...held.slice(0, at), ...page, ...held.slice(at)];
 	}
 
 	/** The reader cannot claim continuity between what it holds and a newer tail
@@ -193,8 +228,15 @@ export class HistoryWindow {
 		// Capped wire projections carry at most opener + 79 tail rows. A
 		// legacy oversized render can also re-inject preserved compaction turns:
 		// those are context too, never the newest tail's chronological cursor.
-		const tail = pinned ? rows.slice(Math.max(1, rows.length - 79)) : rows;
-		if (pinned) this.detached = rows.slice(0, rows.length - tail.length);
+		// The CURSOR still comes from the newest window of an oversized flagless
+		// render: paging back from there is what restores the journal's order.
+		// That choice hides nothing — only the pinned opener is ever detached.
+		const tail = pinned
+			? rows.slice(1)
+			: rows.length > FRAME_CAP && headPinnedFlag === undefined
+				? rows.slice(rows.length - (FRAME_CAP - 1))
+				: rows;
+		if (pinned && rows[0]) this.detached = [rows[0]];
 		const detachedIds = new Set(this.detached.map(rowIdentity));
 		// A no-cursor fallback can repeat the known pinned opener while the
 		// whole tail is minted. It still cannot turn that context into a cursor.
@@ -237,7 +279,16 @@ export class HistoryWindow {
 				const next = page.entries.find(journalAddressableRow)?.id;
 				// Cursor progress is independent of the detached opener in live frames.
 				// A lying/overlapping page must not create an automatic request loop.
+				// A COLD no-cursor page is exempt: there is no cursor to cycle on, its
+				// has_more is not a retained-journal verdict (see the seed below), and
+				// throwing here discarded the page before its rows were held — a
+				// reopened conversation whose frame carries no rows then rendered as
+				// EMPTY although the relay had just served its newest page (PR #207 CI,
+				// S5/find-caveat). Its rows are kept; a page with no addressable row
+				// still fails at the seed below, with the rows on screen.
+				const coldSeed = before === undefined && this.cursor === undefined;
 				if (
+					!coldSeed &&
 					page.has_more &&
 					(!next ||
 						next === before ||
@@ -245,14 +296,24 @@ export class HistoryWindow {
 				) {
 					throw new Error("stalled");
 				}
-				const accepted = new Map(
-					this.rows.map((row) => [rowIdentity(row), row]),
-				);
-				const authoritative = page.entries.map((row) =>
-					(this.liveAt.get(rowIdentity(row)) ?? 0) > started
-						? (accepted.get(rowIdentity(row)) ?? row)
-						: row,
-				);
+				// BY OCCURRENCE, NOT BY IDENTITY ALONE: the n-th page row with an
+				// identity takes the n-th held row with it, the rule mergeTranscript
+				// already applies. A plain identity map kept only the LAST held row,
+				// so when a live frame landed during the read every page row sharing
+				// an identity was rewritten to that one body (PR #207 CI,
+				// S5/rich-rows: five rows became five copies of the last answer).
+				const accepted = new Map<string, TranscriptEntry[]>();
+				for (const row of this.rows) {
+					const slots = accepted.get(rowIdentity(row));
+					if (slots === undefined) accepted.set(rowIdentity(row), [row]);
+					else slots.push(row);
+				}
+				const authoritative = page.entries.map((row) => {
+					const held = accepted.get(rowIdentity(row))?.shift();
+					return (this.liveAt.get(rowIdentity(row)) ?? 0) > started
+						? (held ?? row)
+						: row;
+				});
 				const pageIds = new Set(authoritative.map(rowIdentity));
 				for (const id of pageIds) this.durableIds.add(id);
 				if (this.cursor === undefined && this.rows.length > 0) {
@@ -261,7 +322,17 @@ export class HistoryWindow {
 					const firstShared = this.rows.findIndex((row) =>
 						pageIds.has(rowIdentity(row)),
 					);
-					if (firstShared > 0) this.detached = this.rows.slice(0, firstShared);
+					// Only a capped frame's single opener: every other held row ahead of
+					// the page is a displayed row the page simply does not reach.
+					const frame = this.projection;
+					const opener = this.rows[0];
+					if (
+						firstShared > 0 &&
+						opener &&
+						frame &&
+						headPinned(frame.transcript, frame.transcript_head_pinned)
+					)
+						this.detached = [opener];
 				}
 				if (before !== undefined) {
 					this.detached = this.detached.filter(
@@ -303,12 +374,15 @@ export class HistoryWindow {
 				}
 				const joined = disjoint
 					? this.appendAfterHole(spine, authoritative)
-					: refreshing
+					: // A cold page landing on rows a frame already supplied is a merge
+						// too: those rows are displayed and keep their positions; the
+						// page must not be stacked above rows older than it.
+						refreshing || (before === undefined && spine.length > 0)
 						? mergeTranscript(
 								{ transcript: authoritative } as SessionProjection,
 								spine,
 							).rows
-						: [...authoritative, ...held];
+						: this.insertOlder(authoritative, held, before);
 				this.rows = [...this.detached, ...joined];
 				if (before !== undefined) {
 					this.cursor = next ?? before;

@@ -376,6 +376,142 @@ describe("screen-owned retained history", () => {
 		expect(window.rows[1]?.text).toBe("new live");
 	});
 
+	it("CI S5/find-caveat: a cold no-cursor page with no addressable row keeps its rows instead of rendering empty", async () => {
+		// The reopened shape: the frame carries no rows, the page has them, and
+		// the relay says more exist. Nothing here can be a cursor, so the read
+		// fails — but the rows it returned are the conversation on this device.
+		const page = [row("tc-minted-0"), row("tc-minted-1")];
+		const fetch = vi.fn(async () => ({ entries: page, has_more: true }));
+		const reader = new HistoryWindow(fetch, () => {});
+		reader.accept(frame());
+		await reader.load(true);
+		expect(ids(reader.visibleRows)).toEqual(ids(page));
+		expect(reader.cursor).toBeUndefined();
+		// Never the beginning, and never a silent success: the retry is offered.
+		expect(reader.olderState).toBe("unknown");
+		expect(reader.hasMore).toBe(true);
+		expect(reader.error).toBe("failed");
+		expect(reader.errorScope).toBe("newest");
+	});
+
+	it("CI S5/find-caveat control: a before-page that cannot advance its cursor still stalls", async () => {
+		const fetch = vi
+			.fn()
+			.mockResolvedValueOnce({ entries: [row("a")], has_more: true })
+			.mockResolvedValueOnce({ entries: [row("tc-minted")], has_more: true });
+		const reader = new HistoryWindow(fetch, () => {});
+		await reader.load();
+		await reader.load();
+		expect(reader.error).toBe("stalled");
+		expect(ids(reader.rows)).toEqual(["a"]);
+	});
+
+	it("CI S5/rich-rows: rows sharing an identity keep their own bodies when a frame lands mid-read", async () => {
+		const read = deferred<HistoryResponse>();
+		const reader = new HistoryWindow(
+			() => read.promise,
+			() => {},
+		);
+		const rows = [
+			row("m-1", "first"),
+			row("m-1", "second"),
+			row("m-1", "third"),
+		];
+		const request = reader.load(true);
+		reader.accept(frame(...rows));
+		read.resolve({
+			entries: rows.map((entry) => ({ ...entry })),
+			has_more: false,
+		});
+		await request;
+		expect(reader.visibleRows.map((entry) => entry.text)).toEqual([
+			"first",
+			"second",
+			"third",
+		]);
+	});
+
+	it("an explicit transcript_head_pinned:false frame hides nothing when the page answered first", async () => {
+		const journal = sequence(200);
+		const reader = new HistoryWindow(pager(journal, 80), () => {});
+		await reader.load(true);
+		reader.accept({ ...frame(...journal), transcript_head_pinned: false });
+		expect(ids(reader.visibleRows)).toEqual(ids(journal));
+	});
+
+	/* The mock relay's long conversation AS IT WAS when PR #207's visual gate
+	 * failed: 13 turns of user + 38 tools + answer, every id carrying the
+	 * live-only `tc-` prefix, in one 520-row frame silent about
+	 * `transcript_head_pinned`. No relay sends this, and the reader must still
+	 * hold to its invariant: every row of an accepted frame is displayed, in
+	 * order, whatever its ids are and whichever of HTTP and the stream wins. */
+	const originalLongWorld = () =>
+		Array.from({ length: 13 }, (_, turn) => {
+			const at = String(turn).padStart(2, "0");
+			return [
+				row(`tc-conv-${at}-user`, `prompt ${at}`),
+				...Array.from({ length: 38 }, (_, step) => ({
+					...row(`tc-conv-${at}-tool-${String(step).padStart(2, "0")}`),
+					kind: "tool" as const,
+					tool_call_id: `conv-${turn}-${step}`,
+				})),
+				{ ...row(`tc-conv-${at}-answer`, `answer ${at}`), kind: "assistant" },
+			] as TranscriptEntry[];
+		}).flat();
+
+	for (const order of ["frame first", "page first", "frame mid-read"]) {
+		it(`invariant: a 520-row flagless frame of live-only ids is wholly displayed (${order})`, async () => {
+			const world = originalLongWorld();
+			expect(world).toHaveLength(520);
+			const read = deferred<void>();
+			const serve = pager(world, 80);
+			const reader = new HistoryWindow(
+				async (before) => {
+					if (order === "frame mid-read") await read.promise;
+					return serve(before);
+				},
+				() => {},
+			);
+			if (order === "frame first") reader.accept(frame(...world));
+			const request = reader.load(true);
+			if (order === "frame mid-read") {
+				reader.accept(frame(...world));
+				read.resolve();
+			}
+			await request;
+			reader.accept(frame(...world));
+			// Held, visible and in conversation order: what find searches.
+			expect(reader.visibleRows.map((entry) => entry.id)).toEqual(
+				world.map((entry) => entry.id),
+			);
+			expect(reader.visibleRows.map((entry) => entry.id)).toContain(
+				"tc-conv-03-user",
+			);
+			// Live-only ids are never cursors, so nothing is claimed about older
+			// rows: the caveat stays up and the beginning is not asserted.
+			expect(reader.cursor).toBeUndefined();
+			expect(reader.olderState).toBe("unknown");
+			expect(reader.hasMore).toBe(true);
+		});
+	}
+
+	it("invariant: an oversized flagless frame with journal ids is displayed whole while paging walks back through it", async () => {
+		const journal = sequence(200);
+		for (const pageFirst of [false, true]) {
+			const reader = new HistoryWindow(pager(journal, 80), () => {});
+			if (pageFirst) await reader.load(true);
+			reader.accept(frame(...journal));
+			expect(ids(reader.visibleRows)).toEqual(ids(journal));
+			while (reader.hasMore && !reader.error) {
+				await reader.load();
+				// Every page lands in place: never above rows older than it.
+				expect(ids(reader.visibleRows)).toEqual(ids(journal));
+			}
+			expect(reader.error).toBeNull();
+			expect(reader.olderState).toBe("end");
+		}
+	});
+
 	it("matches durable and live tool aliases once, without timestamp ordering", async () => {
 		const live = {
 			...row("tc-call"),

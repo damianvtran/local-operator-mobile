@@ -567,12 +567,20 @@ function longConversation(
 			"the long-conversation base projection is missing a row to clone",
 		);
 	}
+	/* IDS ARE JOURNAL-ADDRESSABLE (`m-conv-…`), NOT `tc-…`. `tc-` is the prefix the
+	 * relay's live fold mints for a tool row that has no journal id, and the app's
+	 * history pager refuses such a row as a `before` cursor
+	 * (`journalAddressableRow`). These rows were once all named `tc-conv-…`, so a
+	 * conversation served from them had no row a cursor could name: `/history`
+	 * answered `has_more: true` with nothing to page from, and the reader could
+	 * not open it (PR #207 CI, S5/find-caveat). A conversation the relay serves
+	 * from its journal carries journal ids, so this one does. */
 	const out: SessionProjection["transcript"] = [];
 	for (let turn = 0; turn < turns; turn += 1) {
 		const at = String(turn).padStart(2, "0");
 		out.push({
 			...structuredClone(user),
-			id: `tc-conv-${at}-user`,
+			id: `m-conv-${at}-user`,
 			text: PROMPTS[turn % PROMPTS.length] ?? "Continue the sweep.",
 			// The template carries an image reference; the mock has no bytes to
 			// serve for a fabricated row id, and a reference that can never resolve
@@ -585,7 +593,7 @@ function longConversation(
 			const stepId = String(step).padStart(2, "0");
 			out.push({
 				...structuredClone(tool),
-				id: `tc-conv-${at}-tool-${stepId}`,
+				id: `m-conv-${at}-tool-${stepId}`,
 				tool_call_id: `conv-${turn}-${step}`,
 				tool_name: ["bash", "read", "edit", "glob", "grep"][step % 5] ?? "bash",
 				// Settled states only: a condensed turn summarises work that FINISHED,
@@ -603,7 +611,7 @@ function longConversation(
 		}
 		out.push({
 			...structuredClone(answer),
-			id: `tc-conv-${at}-answer`,
+			id: `m-conv-${at}-answer`,
 			text: `Turn ${turn + 1} done: ${ANSWERS[turn % ANSWERS.length] ?? "ledger reconciled."}`,
 		});
 	}
@@ -2903,7 +2911,7 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		[
 			"S5/populated-long",
 			"path:/session/{sessionId}?lo-scroll=top/condensed",
-			"path:/session/{sessionId}?lo-scroll=top&lo-expand=tc-conv-00-user/expanded",
+			"path:/session/{sessionId}?lo-scroll=top&lo-expand=m-conv-00-user/expanded",
 			/* The in-conversation find, on the same 520-row conversation — four
 			 *  states, each reached by pressing the app's own controls (declared in
 			 *  `CELL_OPENERS`: the header lever, typing into the field, one result
@@ -2919,6 +2927,16 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		() => {
 			const projection = projectionFrom(everyKind, {
 				transcript: longConversation(everyKind),
+				/* SAID, NOT LEFT TO INFERENCE. This frame carries the WHOLE 520-row
+				 * conversation, which no capped relay frame does. The app's history
+				 * pager displays every row of it either way, but a frame silent
+				 * about the flag and longer than the cap is read as an oversized
+				 * render of unknown depth: its cursor starts at the newest window
+				 * and the "older messages" caveat stays up until paging has walked
+				 * back to the first row. The world's claim is "every row is in the
+				 * frame", so it states the fact the wire has a field for, and one
+				 * `before` page settles the beginning (PR #207 CI). */
+				transcript_head_pinned: false,
 			});
 			return { projections: { [projection.session_id]: projection } };
 		},

@@ -92,10 +92,16 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  export, `SPACING_REST_PROBE`; `EXTRACT_PROBE`'s source is byte-unchanged. */
 	"tools/audit/probe.ts":
 		"ae34fd9cce868b60b385eed2064c07a3e82e2cd421526a7fea1fb81446437728",
+	/* Re-pinned for PR #207's CI remediation: the long-conversation fixture's
+	 * row ids moved from `tc-conv-…` to `m-conv-…` (`tc-` is the relay's
+	 * live-fold prefix, which the history pager refuses as a cursor), so the
+	 * fixture-control ids this instrument names moved with them. A rename of
+	 * the same rows; what the proof measures is unchanged. `--print`, staged. */
 	"tools/audit/u08-fragment-verification.ts":
-		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
+		"21e0c079b0572599e10bef7f640214835dbe30ee96c0710104e702caad6d8055",
+	// PR #207 CI remediation: same `m-conv-…` fixture-id rename as above.
 	"tools/audit/u08-geometry-proof.ts":
-		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
+		"dac279b1e8d6fbe728d44d96505c9a2c72c192c2be71c950bcffc23ba5ffef49",
 	/* Re-pinned for PR #175: `skipped` is now a terminal affordance answer, so
 	 *  a conditional opener whose control is already on the page stops polling its
 	 *  settled answer for the full `waitMs`. The proof still drives the SAME presses
@@ -181,8 +187,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  `--print`: the merged relay carries both sides' routes, so its digest is
 	 *  neither side's. The U-08 scene the proof is fed did not move. */
 
+	/* PR #207 CI remediation: `/history?before=<oldest row>` answers the empty
+	 * terminal page instead of re-serving the newest one. `--print`, staged. */
 	"tools/mock-relay/relay.ts":
-		"4803690ed1fdec4c1ddc551f84d728549bf36906b19ebe0394f329c72cea292b",
+		"375535169c6988971e31dd5a537d3907da6bbd050714fb8bb713c7b8caf65671",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -195,8 +203,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * emits the daemon's real-shaped nulls (`effort`, `opened_by`, `agent_id`,
 	 * `avatar_sha256`) and the always-present receipts/tags pair. Row DATA only;
 	 * no projection, transcript or layout input moved. */
+	/* PR #207 CI remediation: long-conversation ids are journal-addressable
+	 * (`m-conv-…`) and `long-transcript` declares `transcript_head_pinned:
+	 * false`. `--print`, staged. */
 	"tools/mock-relay/scenarios.ts":
-		"8dd72a2a10564687d287adc3c577b6ee8f5d9d79a232abdfc2d766b23b3ce00b",
+		"23a9853fb8111fb44d0db870def98f5278fbef2041f308e1a2e5ac7e479b997a",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -222,8 +233,9 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * plan input moved: the class is imported only by the capture's identity verdict
 	 * (`identical-states.ts`, `matchDeclared`), never by the plan or a readiness
 	 * probe, so no cell and no planned frame changes. */
+	// PR #207 CI remediation: the `m-conv-…` fixture-id rename, nothing else.
 	"tools/visual/matrix.ts":
-		"8f7b7edaf54e4a525e38ecd8ee582b0c46cf681f2ee71aea8467f2b736ea8f84",
+		"9f753d7aad6b191c8bc59af98e85adac897234a9734f60376b4bf9db3767777e",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -1194,7 +1206,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// src tree has neither parent's digest; re-pinned with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof
 	// refreshed.
-	src: "778b754050de74f487f4f6b17c0c01df24f9a6161fa0510c6e8c0c1ccc868ba0",
+	// PR #207 CI remediation (visual gate): the history reader keeps a cold
+	// page's rows, substitutes live bodies by occurrence, and displays every
+	// row of an accepted frame (only a cap-sized frame's opener detaches); re-pinned with --print over the staged
+	// tree. Source admission only, no rendered or native proof refreshed.
+	src: "9ad24433c06065135cd6f29cd2de6e26fde0a88e9a1e0178d514073d07aede1a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

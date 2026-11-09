@@ -38,7 +38,7 @@ function state(width = 22): AuditState {
 			{
 				index: 0,
 				tag: "button",
-				testId: "turn-bar-tc-conv-00-user",
+				testId: "turn-bar-m-conv-00-user",
 				interactive: true,
 				ownText: "",
 				ancestors: [],
@@ -212,7 +212,7 @@ describe("remote U08 geometry diagnostic contract — no browser", () => {
 		const otherFixtureTurn = state();
 		const observedControl = otherFixtureTurn.nodes[0];
 		if (!observedControl) throw new Error("Missing fixture control");
-		observedControl.testId = "turn-bar-tc-conv-03-user";
+		observedControl.testId = "turn-bar-m-conv-03-user";
 		expect(originalFailure(otherFixtureTurn).pair).toEqual([1, 2]);
 		const wrong = state();
 		for (const n of wrong.nodes.filter((n) => n.tag === "span"))
@@ -221,7 +221,7 @@ describe("remote U08 geometry diagnostic contract — no browser", () => {
 		const control = state();
 		const firstControl = control.nodes[0];
 		if (!firstControl) throw new Error("Missing fixture control");
-		firstControl.testId = "turn-bar-tc-conv-99-user";
+		firstControl.testId = "turn-bar-m-conv-99-user";
 		expect(() => originalFailure(control)).toThrow("pressable scope");
 		expect(() => originalFailure({ ...state(), state: "expanded" })).toThrow(
 			"scene mismatch",
