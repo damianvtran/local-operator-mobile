@@ -15,5 +15,8 @@
 	"mobile.chrome.home.sign_in": "登录以重新连接",
 	"mobile.chrome.home.saved_draft": "草稿已保存在此手机上，尚未发送。",
 	"mobile.chrome.home.reconnecting": "正在重新连接 {host}…",
-	"mobile.chrome.composer.open_queue": "打开队列"
+	"mobile.chrome.composer.open_queue": "打开队列",
+	"mobile.chrome.drawer.open": "打开对话",
+	"mobile.chrome.drawer.open_count": "打开对话，{count, plural, other {# 个新对话}}",
+	"mobile.chrome.drawer.agents": "智能体"
 }

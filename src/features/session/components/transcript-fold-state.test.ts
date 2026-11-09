@@ -5,6 +5,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TranscriptEntry } from "@/contracts";
+import { resetLocaleSource, setLocaleSource } from "@/i18n";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 /**
@@ -305,6 +306,85 @@ afterEach(async () => {
 	dom?.dispose();
 	dom = null;
 	vi.unstubAllGlobals();
+	resetLocaleSource();
+});
+
+describe("reasoning and harness metadata", () => {
+	it("localizes the reasoning disclosure's visible and accessible label", async () => {
+		// Exercise the actual row, not only catalogue completeness: a literal at
+		// either label site would silently leave French readers an English control.
+		setLocaleSource(() => "fr");
+		entries = [row("reasoning-fr", { kind: "reasoning", text: HIDDEN })];
+		await render();
+		expect(drawn()).toContain("Réflexion");
+		expect(drawn()).not.toContain("Thinking");
+		expect(drawn()).not.toContain(HIDDEN);
+		await press("Réflexion");
+		expect(drawn()).toContain(HIDDEN);
+	});
+	it("preserves a future event under its actual wire type instead of entry", async () => {
+		entries = [
+			row("future", {
+				kind: "future_trace",
+				text: `Future event summary\n${HIDDEN}`,
+			}),
+		];
+		await render();
+		expect(drawn()).toContain("future_trace");
+		expect(drawn()).not.toContain(HIDDEN);
+		await press("future_trace: Future event summary");
+		expect(drawn()).toContain(HIDDEN);
+	});
+	it("names reasoning, preserves its expanded text, and never calls it entry", async () => {
+		entries = [
+			row("reasoning", {
+				kind: "reasoning",
+				text: `Checking the result\n${HIDDEN}`,
+			}),
+		];
+		await render();
+		expect(drawn()).toContain("Thinking");
+		expect(drawn()).not.toContain("entry");
+		expect(drawn()).not.toContain(HIDDEN);
+		expect(drawn()).not.toContain("Checking the result");
+		await press("Thinking");
+		expect(drawn()).toContain(HIDDEN);
+		await press("Thinking");
+		entries = [
+			row("reasoning", {
+				kind: "reasoning",
+				text: `Checking the result\n${HIDDEN}\nNew streaming fragment`,
+			}),
+		];
+		await render();
+		expect(drawn()).not.toContain("Checking the result");
+		expect(drawn()).not.toContain("New streaming fragment");
+		await press("Thinking");
+		expect(drawn()).toContain("New streaming fragment");
+		session = "different-reasoning-session";
+		expect(await firstFrame(null)).not.toContain("Checking the result");
+		await render();
+		expect(drawn()).not.toContain(HIDDEN);
+	});
+
+	it("filters typed metadata before planning but retains literal user and peer quotes", async () => {
+		entries = [
+			row("state", {
+				kind: "notice",
+				custom_type: "session_state",
+				text: "private harness metadata",
+			}),
+			row("quote", { kind: "user", text: "[session-state] quoted by me" }),
+			row("peer-quote", {
+				kind: "peer_message",
+				text: "[session-state] quoted by peer",
+			}),
+		];
+		await render();
+		expect(drawn()).not.toContain("private harness metadata");
+		expect(drawn()).toContain("quoted by me");
+		expect(drawn()).toContain("quoted by peer");
+	});
 });
 
 describe("a fold the reader opened", () => {

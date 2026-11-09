@@ -29,6 +29,7 @@ import {
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
+import { visibleTranscriptEntries } from "@/features/session/projection";
 import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
@@ -319,7 +320,7 @@ export const TranscriptList = ({
 			previousRows.current?.session === sessionId
 				? previousRows.current.rows
 				: null;
-		const rows = reuseRows(previous, entries);
+		const rows = reuseRows(previous, visibleTranscriptEntries(entries));
 		previousRows.current = { session: sessionId, rows };
 		return rows;
 	}, [entries, sessionId]);

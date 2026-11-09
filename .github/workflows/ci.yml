@@ -222,6 +222,58 @@ jobs:
           # whichever job produces them; this is the bundle those rounds load.
           retention-days: 30
 
+  # Synthetic QA bundle: never built by workflow_call/release or native jobs.
+  team-bridge-qa:
+    name: Team Bridge QA web artifact (not a release candidate)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    # Reuse checks' established web-build bound, not a new timeout budget.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Select fixture-affecting PRs
+        id: fixture
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          files=$(git diff --name-only "$BASE_SHA...HEAD")
+          if printf '%s\n' "$files" | grep -Eq '^(app/|src/(testing/|team-bridge/|features/team-bridge/|i18n/|ui/)|assets/|scripts/ci/team-bridge-qa|package\.json$|pnpm-lock\.yaml$|app\.config\.ts$|metro\.config\.|babel\.config\.|global\.css$|\.github/workflows/ci\.yml$)'; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: pnpm/action-setup@v6
+        if: steps.fixture.outputs.needed == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.fixture.outputs.needed == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.fixture.outputs.needed == 'true'
+      - name: Export isolated Team Bridge QA target
+        if: steps.fixture.outputs.needed == 'true'
+        env:
+          EXPO_PUBLIC_TEAM_BRIDGE_FIXTURES: "1"
+        run: pnpm export:web --output-dir team-bridge-qa-dist
+      - name: Record compiled checkout and PR identity
+        if: steps.fixture.outputs.needed == 'true'
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git rev-parse HEAD > team-bridge-qa-dist/COMPILED_COMMIT_SHA
+          printf '%s\n' "$PR_HEAD_SHA" > team-bridge-qa-dist/PR_HEAD_SHA
+          cd team-bridge-qa-dist
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        if: steps.fixture.outputs.needed == 'true'
+        with:
+          name: team-bridge-qa-web-export
+          path: team-bridge-qa-dist
+          if-no-files-found: error
+          retention-days: 30
+
   release-staging:
     name: Release artefact staging (a real upload → download → stage round trip)
     # WHY THIS JOB EXISTS, and why it is not a unit test. The release path stages

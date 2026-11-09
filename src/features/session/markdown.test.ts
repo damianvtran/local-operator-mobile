@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
 	hasTableBlock,
+	parseInline,
 	parseMarkdown,
 	splitTableRow,
 	TABLE_MONO_ADVANCE_PT,
@@ -26,7 +27,85 @@ import {
  *    settled text would flicker the reader's answer while it arrives.
  */
 
+const INDEX_PROPERTY = /^\d+$/;
+
 const blocksOf = (text: string) => parseMarkdown(text);
+
+describe("literal inline streaming allocation bound", () => {
+	// Constructor counts, not elapsed time: ordinary prose must allocate no
+	// delimiter maps at any frame length. The positive control makes this fail
+	// if instrumentation stops observing the indexed parser.
+	const measured = (text: string) => {
+		let maps = 0;
+		const NativeMap = globalThis.Map;
+		vi.stubGlobal(
+			"Map",
+			new Proxy(NativeMap, {
+				construct(target, args) {
+					maps += 1;
+					return Reflect.construct(target, args);
+				},
+			}),
+		);
+		try {
+			return { spans: parseInline(text), maps };
+		} finally {
+			vi.stubGlobal("Map", NativeMap);
+		}
+	};
+
+	it("keeps growing prose and structured Unicode output to one span and zero index maps", () => {
+		const shapes = [
+			"The answer streams one ordinary sentence at a time. ",
+			'Status: ready — 東京, café, مرحبا.\n  {"phase": 2, "ok": true}\nLatency (ms): 18.4; Δ: +0.2%; total: €42.\n',
+		];
+		for (const shape of shapes) {
+			for (const repeats of [1, 64, 256]) {
+				const text = shape.repeat(repeats);
+				expect(measured(text)).toEqual({
+					maps: 0,
+					spans: [{ text, code: false, bold: false, italic: false }],
+				});
+			}
+		}
+		expect(measured("")).toEqual({ maps: 0, spans: [] });
+	});
+
+	it("never bypasses possible markup, escapes, URLs or partial streamed openers", () => {
+		for (const suffix of [
+			"`",
+			"*",
+			"_",
+			"~",
+			"[",
+			"<",
+			"\\",
+			"http://",
+			"HTTPS://",
+			"**bold**",
+			"_italic_",
+			"~~strike~~",
+			"`code`",
+			"\\*literal\\*",
+			"[label](https://example.com)",
+			"<mailto:a@example.com>",
+			"https://example.com/path",
+			"prefixhttps://example.com",
+		]) {
+			expect(measured(`A growing answer ${suffix}`).maps).toBeGreaterThan(0);
+		}
+		// Same prefix, later frame: no cached literal decision may hide new markup.
+		expect(parseInline("A growing answer **bold**").at(-1)).toMatchObject({
+			text: "bold",
+			bold: true,
+		});
+		expect(
+			parseInline("A growing answer \\*literal\\*")
+				.map((span) => span.text)
+				.join(""),
+		).toBe("A growing answer *literal*");
+	});
+});
 
 describe("the table block grammar", () => {
 	it("parses a header, a divider and body rows into a table", () => {
@@ -354,6 +433,343 @@ describe("tableFadeGeometry (the scroll-cue fade, both directions)", () => {
 				const g = tableFadeGeometry(edge, rtl);
 				expect(g.side === "right" ? g.farOpacity : g.nearOpacity).toBe(1);
 			}
+		}
+	});
+});
+
+describe("assistant inline links", () => {
+	it.each([
+		"[Reuters](https://www.reuters.com/world/)",
+		"- [Reuters](https://www.reuters.com/world/)",
+	])("renders the reported source %s as a link span", (source) => {
+		const block = parseMarkdown(source)[0];
+		const text =
+			block?.kind === "list"
+				? block.items[0]
+				: block && "text" in block
+					? block.text
+					: "";
+		expect(parseInline(text ?? "")).toEqual([
+			{
+				text: "Reuters",
+				href: "https://www.reuters.com/world/",
+				code: false,
+				bold: false,
+				italic: false,
+			},
+		]);
+	});
+});
+
+describe("finite inline grammar", () => {
+	it.each([
+		[
+			"[article](https://example.com/a_(b))",
+			"article",
+			"https://example.com/a_(b)",
+		],
+		[
+			String.raw`[a\]b](https://example.com/a\(b\))`,
+			"a]b",
+			"https://example.com/a(b)",
+		],
+		['[title](https://example.com "A title")', "title", "https://example.com"],
+		["[angle](<https://example.com/a>)", "angle", "https://example.com/a"],
+		[
+			"<https://example.com/a_(b)>",
+			"https://example.com/a_(b)",
+			"https://example.com/a_(b)",
+		],
+		[
+			"https://example.com/a_(b).",
+			"https://example.com/a_(b)",
+			"https://example.com/a_(b)",
+		],
+		[
+			"<mailto:hello@example.com>",
+			"hello@example.com",
+			"mailto:hello@example.com",
+		],
+	])(
+		"recognizes %s without truncating the destination",
+		(source, label, href) => {
+			expect(parseInline(source)[0]).toMatchObject({ text: label, href });
+		},
+	);
+	it("combines nested emphasis and links in either direction", () => {
+		expect(parseInline("**[Reuters](https://example.com)**")[0]).toMatchObject({
+			text: "Reuters",
+			bold: true,
+			href: "https://example.com",
+		});
+		expect(parseInline("[**Reuters** and *BBC*](https://example.com)")).toEqual(
+			[
+				{
+					text: "Reuters",
+					bold: true,
+					italic: false,
+					code: false,
+					href: "https://example.com",
+				},
+				{
+					text: " and ",
+					bold: false,
+					italic: false,
+					code: false,
+					href: "https://example.com",
+				},
+				{
+					text: "BBC",
+					bold: false,
+					italic: true,
+					code: false,
+					href: "https://example.com",
+				},
+			],
+		);
+		expect(
+			parseInline("***both*** __bold__ _italic_ ~~removed~~").filter((span) =>
+				span.text.trim(),
+			),
+		).toMatchObject([
+			{ text: "both", bold: true, italic: true },
+			{ text: "bold", bold: true },
+			{ text: "italic", italic: true },
+			{ text: "removed", strike: true },
+		]);
+	});
+	it.each([
+		['https://example.com "literal `"', "https://example.com"],
+		["https://example.com/`", "https://example.com/`"],
+		['https://example.com "escaped \\" quote `"', "https://example.com"],
+		['<https://example.com/`> "title `"', "https://example.com/`"],
+	])("keeps destination/title ticks opaque in %s", (destination, href) => {
+		const spans = parseInline(
+			`[one](${destination}) [two](https://example.org) \`code\``,
+		);
+		expect(spans.filter((span) => span.href)).toMatchObject([
+			{ text: "one", href },
+			{ text: "two", href: "https://example.org" },
+		]);
+		expect(spans.at(-1)).toMatchObject({ text: "code", code: true });
+	});
+	it.each([
+		'[broken](https://example.com "unterminated ` [two](https://example.org)',
+		"[broken](https://example.com bad `) [two](https://example.org)",
+	])("does not hide later links after invalid destination %s", (source) => {
+		expect(
+			parseInline(source).filter((span) => span.text === "two"),
+		).toMatchObject([{ text: "two", href: "https://example.org" }]);
+	});
+	it("retains code precedence and later label emphasis around opaque titles", () => {
+		expect(
+			parseInline('`[one](https://example.com "title")`')[0],
+		).toMatchObject({
+			text: '[one](https://example.com "title")',
+			code: true,
+		});
+		expect(
+			parseInline(
+				'[one](https://example.com "literal `") [*two*](https://example.org) `code`',
+			),
+		).toMatchObject([
+			{ text: "one", href: "https://example.com" },
+			{ text: " " },
+			{ text: "two", italic: true, href: "https://example.org" },
+			{ text: " " },
+			{ text: "code", code: true },
+		]);
+	});
+	it.each([
+		"[".repeat(2048),
+		`${"[x](".repeat(512)} bad${")".repeat(512)}`,
+		'[one](https://example.com "literal `") [two](https://example.org) `code` '.repeat(
+			512,
+		),
+		`${'[x](https://example.com "` '.repeat(512)}${")".repeat(512)}`,
+	])("bounds failed delimiter scans by input length ($#)", (source) => {
+		let reads = 0;
+		// A boxed string preserves the public string operations while counting
+		// actual character visits. No machine-load-dependent wall-clock gate.
+		const counted = new Proxy(new String(source), {
+			get(target, property) {
+				if (typeof property === "string" && INDEX_PROPERTY.test(property))
+					reads += 1;
+				const value = Reflect.get(target, property, target);
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		}) as unknown as string;
+		expect(parseInline(counted)).toEqual(parseInline(source));
+		expect(reads).toBeLessThan(source.length * 50);
+	});
+	it("does not repeatedly scan unactivatable URL prefixes inside prose", () => {
+		const source = `a${"https://".repeat(512)}`;
+		let scanned = 0;
+		const original = RegExp.prototype.exec;
+		const spy = vi.spyOn(RegExp.prototype, "exec").mockImplementation(function (
+			this: RegExp,
+			value: string,
+		) {
+			const result = original.call(this, value);
+			if (result?.[0]?.startsWith("https://")) scanned += result[0].length;
+			return result;
+		});
+		try {
+			expect(parseInline(source)).toEqual([
+				{ text: source, code: false, bold: false, italic: false },
+			]);
+			expect(scanned).toBeLessThan(source.length * 2);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+	it("never recounts a shrinking URL's parentheses", () => {
+		const source = `https://example.com/${")".repeat(2048)}`;
+		let rescanned = 0;
+		const original = String.prototype.match;
+		const spy = vi
+			.spyOn(String.prototype, "match")
+			.mockImplementation(function (
+				this: string,
+				pattern: Parameters<typeof original>[0],
+			) {
+				rescanned += this.length;
+				return original.call(this, pattern);
+			});
+		try {
+			const spans = parseInline(source);
+			expect(spans[0]?.href).toBe("https://example.com/");
+			expect(spans.map((span) => span.text).join("")).toBe(source);
+			expect(rescanned).toBeLessThan(source.length * 2);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+	it("retains all content in deeply nested labels without recursive calls", () => {
+		const source = `${"[".repeat(12000)}label${"](https://example.com)".repeat(12000)}`;
+		expect(
+			parseInline(source)
+				.map((span) => span.text)
+				.join(""),
+		).toBe("label");
+	});
+	it.each(["]", "["])(
+		"ignores code %s when balancing link labels",
+		(bracket) => {
+			const spans = parseInline(`[a \`${bracket}\` b](https://example.com)`);
+			expect(spans).toMatchObject([
+				{ text: "a ", href: "https://example.com" },
+				{ text: bracket, code: true, href: "https://example.com" },
+				{ text: " b", href: "https://example.com" },
+			]);
+		},
+	);
+	it.each(["*italic **bold** italic*", "_italic __bold__ italic_"])(
+		"retains nested emphasis in %s",
+		(source) => {
+			expect(parseInline(source)).toMatchObject([
+				{ text: "italic ", italic: true, bold: false },
+				{ text: "bold", italic: true, bold: true },
+				{ text: " italic", italic: true, bold: false },
+			]);
+		},
+	);
+	it("closes nested styled label runs from the inside out", () => {
+		expect(
+			parseInline("[*Reuters **World***](https://example.com)"),
+		).toMatchObject([
+			{
+				text: "Reuters ",
+				italic: true,
+				bold: false,
+				href: "https://example.com",
+			},
+			{ text: "World", italic: true, bold: true, href: "https://example.com" },
+		]);
+	});
+	it.each(["https://label.example", "<https://label.example>"])(
+		"retains the explicit destination when label %s is also URL-shaped",
+		(label) => {
+			expect(
+				parseInline(`[${label}](https://target.example)`)[0],
+			).toMatchObject({
+				text: "https://label.example",
+				href: "https://target.example",
+			});
+		},
+	);
+	it("preserves the existing longer-backtick closer grammar", () => {
+		expect(parseInline("``a ```")).toMatchObject([
+			{ text: "a ", code: true },
+			{ text: "`", code: false },
+		]);
+	});
+	it("leaves code literal, even when it contains links and markup", () => {
+		expect(parseInline("`[Reuters](https://example.com) **bold**`")).toEqual([
+			{
+				text: "[Reuters](https://example.com) **bold**",
+				code: true,
+				bold: false,
+				italic: false,
+			},
+		]);
+		expect(parseInline("``a ` b``")[0]).toMatchObject({
+			text: "a ` b",
+			code: true,
+		});
+	});
+	it.each([
+		"[Reuters]",
+		"[Reuters](https://example.",
+		"[Reuters](https://example.com/a_(b)",
+		"**partial",
+		"*partial",
+		"`partial",
+		"<script>alert(1)</script>",
+		"identifier_name_value",
+	])("keeps incomplete or unsupported source %s", (source) => {
+		expect(
+			parseInline(source)
+				.map((span) => span.text)
+				.join(""),
+		).toBe(source);
+	});
+	it("retains every streaming prefix until the complete link can replace it", () => {
+		const source = "[Reuters](https://www.reuters.com/world/)";
+		for (let length = 0; length < source.length; length += 1)
+			expect(
+				parseInline(source.slice(0, length))
+					.map((span) => span.text)
+					.join(""),
+			).toBe(source.slice(0, length));
+	});
+	it("preserves nested list indentation and mixed markers", () => {
+		expect(parseMarkdown("- top\n  3. nested\n    - deeper")[0]).toEqual({
+			kind: "list",
+			ordered: false,
+			items: ["top", "nested", "deeper"],
+			indents: [0, 2, 4],
+			markers: ["•", "3.", "•"],
+		});
+	});
+});
+
+describe("streamed formatting delimiters", () => {
+	it.each([
+		"**word**",
+		"***word***",
+		"__word__",
+		"~~word~~",
+		"`word`",
+		"``word``",
+	])("does not reinterpret an incomplete opening run in %s", (source) => {
+		for (let length = 0; length < source.length; length += 1) {
+			const prefix = source.slice(0, length);
+			expect(
+				parseInline(prefix)
+					.map((span) => span.text)
+					.join(""),
+			).toBe(prefix);
 		}
 	});
 });

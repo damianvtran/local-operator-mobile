@@ -126,5 +126,9 @@
 	"mobile.session.composer.retry_not_sent_storage": {
 		"role": "status",
 		"note": "Only the current RETRY ATTEMPT was not dispatched because local safe-retry preparation failed. The original instruction may already have arrived: its separate retained-envelope warning and Retry earlier instruction action stay visible. Never imply the current draft was retried or disk space is the known cause. Never include raw storage errors."
+	},
+	"mobile.session.reasoning_disclosure": {
+		"role": "button",
+		"note": "Disclosure label for an assistant reasoning trace, shared by its visible heading and accessibility label. Names the reasoning content, not a live progress status: the same label remains after the turn ends. No preview of reasoning is shown until explicitly expanded. Short noun phrase, no full stop."
 	}
 }

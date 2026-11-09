@@ -2,6 +2,8 @@
 import * as Clipboard from "expo-clipboard";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+	Linking,
+	Platform,
 	Pressable,
 	ScrollView,
 	Text,
@@ -18,6 +20,10 @@ import {
 	tableFadeGeometry,
 	tablePricing,
 } from "@/features/session/markdown";
+import {
+	openMarkdownLink,
+	safeMarkdownHref,
+} from "@/features/session/markdown-links";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -61,6 +67,8 @@ const spanClass = (span: InlineSpan): string =>
 		span.code && "text-mono-sm text-ink-muted",
 		span.bold && "font-medium",
 		span.italic && "italic",
+		span.strike && "line-through",
+		span.href && safeMarkdownHref(span.href) && "text-info underline",
 	);
 
 const Inline = memo(function Inline({
@@ -76,7 +84,11 @@ const Inline = memo(function Inline({
 	 *  input did not change. */
 	const spans = useMemo(() => parseInline(text), [text]);
 	return (
-		<Text className={cx(base ?? MESSAGE_BODY_CLASS)}>
+		<Text
+			selectable
+			className={cx(base ?? MESSAGE_BODY_CLASS)}
+			style={INLINE_WRAP}
+		>
 			{spans.map((span, index) => (
 				<Text
 					// Index keys are correct here: the spans are regenerated from the same
@@ -84,6 +96,25 @@ const Inline = memo(function Inline({
 					key={index}
 					className={spanClass(span)}
 					style={span.italic ? ITALIC : undefined}
+					{...(Platform.OS === "web" && span.href && safeMarkdownHref(span.href)
+						? {
+								href: span.href,
+								hrefAttrs: { target: "_blank", rel: "noopener noreferrer" },
+							}
+						: {})}
+					accessibilityRole={
+						span.href && safeMarkdownHref(span.href) ? "link" : undefined
+					}
+					onPress={
+						span.href && safeMarkdownHref(span.href)
+							? (event) => {
+									// A link tap must not also trigger the transcript row's actions.
+									event.stopPropagation();
+									event.preventDefault();
+									void openMarkdownLink(span.href ?? "", Linking.openURL);
+								}
+							: undefined
+					}
 				>
 					{span.text}
 				</Text>
@@ -95,6 +126,10 @@ const Inline = memo(function Inline({
 /** React Native has no `<i>`; the text style is the only italic it has, and it is
  *  declared once so the inline parser's `italic` is not a silent no-op. */
 const ITALIC: TextStyle = { fontStyle: "italic" };
+// Native Text wraps long runs itself. Web needs anywhere to prevent a URL from
+// widening the column; do not insert zero-width characters into copied text.
+const INLINE_WRAP: TextStyle =
+	Platform.OS === "web" ? ({ overflowWrap: "anywhere" } as TextStyle) : {};
 
 /* ------------------------------------------------------------------- tables */
 
@@ -550,22 +585,26 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
 						);
 					case "heading":
 						return (
-							<Text
+							<Inline
 								key={index}
-								className={cx(
-									HEADING_CLASS[block.level] ?? "text-body-lg text-ink",
-								)}
-							>
-								{block.text}
-							</Text>
+								text={block.text}
+								base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
+							/>
 						);
 					case "list":
 						return (
 							<View key={index} className="gap-1">
 								{block.items.map((item, itemIndex) => (
-									<View key={itemIndex} className="flex-row gap-2">
+									<View
+										key={itemIndex}
+										className="flex-row gap-2"
+										style={{
+											paddingStart: (block.indents?.[itemIndex] ?? 0) * 8,
+										}}
+									>
 										<Text className="text-body-read text-ink-dim" aria-hidden>
-											{block.ordered ? `${itemIndex + 1}.` : "•"}
+											{block.markers?.[itemIndex] ??
+												(block.ordered ? `${itemIndex + 1}.` : "•")}
 										</Text>
 										<View className="min-w-0 flex-1">
 											<Inline text={item} />

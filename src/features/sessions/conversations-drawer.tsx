@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import {
 	Animated,
 	Easing,
@@ -66,6 +66,11 @@ const PANEL_SURFACE = "bg-elevated";
 export type ConversationsDrawerProps = {
 	visible: boolean;
 	onClose: () => void;
+	onNavigate?: () => void;
+	onDismiss?: () => void;
+	currentSessionId?: string;
+	header?: ReactNode;
+	content?: ReactNode;
 	/** The home's staging slot: close, then focus the composer (the home owns
 	 *  the field, so only it can do the second half). */
 	onNewChat?: () => void;
@@ -78,6 +83,11 @@ export type ConversationsDrawerProps = {
 export const ConversationsDrawer = ({
 	visible,
 	onClose,
+	onNavigate,
+	onDismiss,
+	currentSessionId,
+	header,
+	content,
 	onNewChat,
 	notice,
 	homeDirectory,
@@ -179,7 +189,10 @@ export const ConversationsDrawer = ({
 				transparent
 				animationType="none"
 				onRequestClose={close}
-				onDismiss={() => finishDrawerDismiss(newChatIntent, onNewChat)}
+				onDismiss={() => {
+					finishDrawerDismiss(newChatIntent, onNewChat);
+					onDismiss?.();
+				}}
 				// The covered application is inert while the drawer is up: `aria-modal`
 				// alone does not remove it from keyboard or screen-reader navigation.
 				accessibilityViewIsModal
@@ -306,17 +319,21 @@ export const ConversationsDrawer = ({
 							 *  round 2, F1). On native the provider is context-only, so this
 							 *  re-declares the same values rather than computing a second scale. */}
 							<TextScaleProvider>
-								<ConversationsPane
-									onClose={close}
-									onNavigate={close}
-									onNewChat={onNewChat ? newChat : undefined}
-									notice={notice}
-									homeDirectory={homeDirectory}
-									/* The rows are painted on THIS panel's fill, not on the
-									 *  screen's canvas: the corner badge's ring must be the same
-									 *  colour or it reads as a halo (agent review round 2, R2-2). */
-									surfaceClassName={PANEL_SURFACE}
-								/>
+								{header}
+								{content ?? (
+									<ConversationsPane
+										onClose={close}
+										onNavigate={onNavigate ?? close}
+										currentSessionId={currentSessionId}
+										onNewChat={onNewChat ? newChat : undefined}
+										notice={notice}
+										homeDirectory={homeDirectory}
+										/* The rows are painted on THIS panel's fill, not on the
+										 *  screen's canvas: the corner badge's ring must be the same
+										 *  colour or it reads as a halo (agent review round 2, R2-2). */
+										surfaceClassName={PANEL_SURFACE}
+									/>
+								)}
 							</TextScaleProvider>
 						</View>
 					</Animated.View>

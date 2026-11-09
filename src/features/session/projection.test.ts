@@ -18,8 +18,13 @@ import {
 	toolElapsed,
 	toolGlyph,
 	turnRunning,
+	visibleTranscriptEntries,
 	workingLine,
 } from "@/features/session/projection";
+import {
+	groupPlan,
+	type TranscriptItem,
+} from "@/features/session/turn-condensing";
 
 /**
  * The transcript's projection: the derivation each row's treatment depends on.
@@ -213,10 +218,117 @@ describe("a tool row's one line", () => {
 	});
 });
 
+describe("visible transcript provenance", () => {
+	it("excludes injected metadata from group membership and action counts", () => {
+		const rows = [
+			entry({ id: "p1", kind: "peer_message" }),
+			entry({ id: "t1" }),
+			Object.assign(
+				entry({
+					id: "state",
+					kind: "notice",
+					custom_type: "session_state",
+					text: "[session-state]\\n## Interactivity",
+				}),
+				{ attribution: "system" },
+			),
+			entry({ id: "t2" }),
+			entry({ id: "t3", tool_state: "failed" }),
+			entry({ id: "p2", kind: "peer_message" }),
+		];
+		const visible = visibleTranscriptEntries(rows);
+		const items: TranscriptItem[] = visible.map((row) => ({
+			kind: "entry",
+			id: row.id,
+			entry: row,
+		}));
+		const plan = groupPlan({ items, expanded: new Set(), latch: new Map() });
+		expect(plan.groups).toHaveLength(1);
+		expect(plan.groups[0]?.group).toMatchObject({
+			count: 2,
+			actions: 3,
+			failed: 1,
+			rowIds: ["p1", "t1", "t2", "t3", "p2"],
+		});
+		expect(rows[2]).toMatchObject({
+			custom_type: "session_state",
+			attribution: "system",
+		});
+	});
+	it("hides only stamped session state, including the older display metadata", () => {
+		const rows = [
+			entry({
+				id: "injected",
+				kind: "notice",
+				custom_type: "session_state",
+				text: "[session-state]\\n## Interactivity\\nmetadata",
+			}),
+			entry({
+				id: "legacy",
+				kind: "notice",
+				details: { custom_kind: "session_state" },
+				text: "[session-state]\\n## Tools\\nmetadata",
+			}),
+			entry({
+				id: "quote",
+				kind: "user",
+				text: "[session-state]\\nI am quoting this bug",
+			}),
+			entry({
+				id: "peer",
+				kind: "peer_message",
+				text: "[session-state]\\nquoted by a peer",
+			}),
+			entry({
+				id: "warning",
+				kind: "notice",
+				custom_type: "session_incident",
+				text: "Runtime disconnected",
+			}),
+			entry({
+				id: "future",
+				kind: "notice",
+				custom_type: "unknown_metadata",
+				text: "Keep unknown events visible",
+			}),
+		];
+		const before = JSON.stringify(rows);
+		expect(visibleTranscriptEntries(rows).map((row) => row.id)).toEqual([
+			"quote",
+			"peer",
+			"warning",
+			"future",
+		]);
+		expect(JSON.stringify(rows)).toBe(before);
+		const visible = rows.slice(2);
+		expect(visibleTranscriptEntries(visible)).toBe(visible);
+	});
+});
+
 describe("row identity", () => {
+	it.each([
+		["user", "user"],
+		["steer", "steer"],
+		["assistant", "assistant"],
+		["reasoning", "reasoning"],
+		["tool", "tool"],
+		["notice", "notice"],
+		["compaction", "compaction"],
+		["parent_message", "parent"],
+		["subagent_message", "subagent"],
+		["peer_message", "peer"],
+		["ask_response", "ask"],
+		["ask_timeout", "ask"],
+	] as const)(
+		"gives supported wire kind %s its own treatment",
+		(kind, treatment) => {
+			expect(classifyEntry(entry({ kind }))).toBe(treatment);
+		},
+	);
 	it("classifies the wire's kinds and keeps an unknown one visible", () => {
 		expect(classifyEntry(entry({ kind: "user" }))).toBe("user");
 		expect(classifyEntry(entry({ kind: "peer_message" }))).toBe("peer");
+		expect(classifyEntry(entry({ kind: "reasoning" }))).toBe("reasoning");
 		// The wire's `EntryKind` is open. A row that vanished would shorten the
 		// conversation with no trace, so an unknown kind is a generic row instead.
 		expect(classifyEntry(entry({ kind: "brand_new_kind" }))).toBe("generic");
