@@ -32,6 +32,18 @@ it("records the compiled merge checkout, PR head and every exported file hash", 
 		expect(qa).toContain(text);
 });
 
+it("preserves hidden Expo assets only within the generated QA export", () => {
+	const upload = qa.split("      - uses: actions/upload-artifact@v7\n")[1];
+	expect(upload).toBeDefined();
+	// Exact single-directory scope keeps hidden source/home/credential files out;
+	// Expo's generated .pnpm asset paths must survive the SHA256SUMS upload intact.
+	expect(upload).toContain(
+		"          name: team-bridge-qa-web-export\n          path: team-bridge-qa-dist\n          include-hidden-files: true\n",
+	);
+	expect(upload?.match(/^\s+path:/gm)).toHaveLength(1);
+	expect(ci.replace(qa, "")).not.toContain("include-hidden-files:");
+});
+
 it("keeps fixtures out of every native/release workflow and artifact consumer", () => {
 	for (const name of readdirSync(
 		new URL("../../.github/workflows/", import.meta.url),

@@ -269,8 +269,12 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: steps.fixture.outputs.needed == 'true'
         with:
+          # Expo generates assets under .pnpm; dropping them breaks the complete
+          # SHA256SUMS proof. Include hidden files ONLY from this generated export,
+          # never the checkout/home (which could contain .env or credentials).
           name: team-bridge-qa-web-export
           path: team-bridge-qa-dist
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
 
