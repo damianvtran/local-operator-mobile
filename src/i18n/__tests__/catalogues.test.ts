@@ -115,7 +115,7 @@ const NAMESPACES = [
 		name: "mobile.projects",
 		messages: projects,
 		context: projectsContext,
-		expected: 15,
+		expected: 32,
 	},
 	{
 		name: "mobile.schedules",
@@ -256,18 +256,11 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* 358 on main — #180's sidebar footer key, the pickers' 34 (#182), the
-		 *  ended-session chip hints' 3, the switcher's two transport words, the paste
-		 *  chip plus the voice set-up/recording controls' 8, the working line's three
-		 *  mirrored Stop keys and the pending echo's 9 — PLUS the Team Bridge surface
-		 *  (#105): `mobile.team_bridge`'s 93 keys and the two `mobile.computers`
-		 *  transport keys main's count did not include. 358 + 93 + 2 = 453. */
-		/* Merged 2026-11-08: main's 453 keys plus the Team Bridge avatar slice's
-		 *  11 endpoint-owned profile/photo keys (mobile.team_bridge 93 -> 104). The
-		 *  branch's pre-merge 288 described the older base, not this corpus, and
-		 *  main's 453 predates the avatar keys. Counted from the merged catalogue
-		 *  files themselves: 464. */
-		expect(total).toBe(464);
+		/* 464 on main (the Team Bridge avatar slice's 104 includes the 11 endpoint-owned
+		 *  profile/photo keys) plus this slice's 17 `mobile.projects` keys — the create
+		 *  sheet's fields, validation and the two example placeholders. Counted from the
+		 *  merged catalogue files themselves, not from either branch's number: 481. */
+		expect(total).toBe(481);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -324,6 +317,16 @@ describe("the English catalogues", () => {
  * exemption cannot quietly become permanent.
  */
 const IDENTITY_PROSE = /[\p{L}\p{N}]/u;
+/* These are valid ASCII identifiers and tag examples, not untranslated prose.
+ * List them per locale below so a changed translation is still caught as stale. */
+const PROJECT_NAME_EXAMPLE = {
+	"mobile.projects.create.name_placeholder":
+		"Valid project-name example: the relay accepts ASCII letters, digits, dot, underscore or hyphen and the example preserves that grammar.",
+};
+const PROJECT_TAG_EXAMPLE = {
+	"mobile.projects.create.tags_placeholder":
+		"Valid ASCII tag examples with a comma separator; retaining the examples preserves the form's concrete input guidance.",
+};
 
 const IDENTICAL_BY_DESIGN: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
@@ -350,6 +353,11 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_TAG_EXAMPLE,
+		"mobile.projects.create.description":
+			"Description is the same French word for the project description field, not English fallback.",
+		"mobile.projects.status.validation":
+			"Validation is the same French word for the project lifecycle status, not English fallback.",
 		/* French spells these the same as English. `Description` is the French
 		 * word for the same field, not an untranslated value: the asset editor's
 		 * label, sitting beside `Nom` and `Étiquettes` in the same sheet. */
@@ -389,6 +397,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
@@ -397,6 +407,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -412,6 +424,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -427,6 +441,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -445,6 +461,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
@@ -458,6 +476,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
+		...PROJECT_NAME_EXAMPLE,
+		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
 		"mobile.library.editor.new_tag_placeholder":
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",

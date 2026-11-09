@@ -36,9 +36,18 @@ afterEach(async () => {
 // app's startConfigStream lifecycle pulls @ aliases into the intentionally
 // alias-free tools compilation. Mounted-provider consumption is exercised by
 // the separate registered retirement control, not modeled as native proof here.
-// Use the source catalogs of the EXACT already-built product, not #152's older
-// source tree and not invented UI literals. This is not native render evidence.
-const productHead = "91a3cbca1a2770e78dc5f216c2335b4b8126fe4d";
+// Read the catalogues out of a committed tree with `git show` rather than off the
+// working directory, so a mutated checkout cannot satisfy this proof.
+//
+// The revision is `HEAD`, deliberately not a recorded SHA. When this test landed on
+// main (#152) the project-creation catalogues were not on main yet, so it had to read
+// a branch commit that carried them, and that commit was pinned by SHA. A rebase
+// force-push then deleted that commit from the remote: CI's `git show` failed, while
+// any clone that still held the object passed — the pin was invisible locally and
+// fatal in CI. A recorded SHA is not an anchor; it is a pointer a force-push can
+// delete. `HEAD` carries these catalogues on both sides of the merge, so it cannot
+// dangle. This is not native render evidence.
+const productHead = "HEAD";
 const catalog = (locale: string) =>
 	JSON.parse(
 		execFileSync(

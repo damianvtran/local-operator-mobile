@@ -1,0 +1,432 @@
+{
+  "created_utc": "2026-11-02T00:57:39.776103+00:00",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "session": "de7352a477ae",
+  "translator_job": "9e1563031717",
+  "revision": "5d48015a75804c50638063492ecd6742ddf61af0",
+  "keys_read": 17,
+  "values_read": 34,
+  "verdict": "blocked_incomplete",
+  "input_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/hi/mobile.projects.json": "05cccabc2cbc7cb87614f2a3284efc845c31df268a9e4d5587809ba2f551211f",
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b",
+    "src/features/projects/project-create.tsx": "a0b45434e9d06fb343f88ad05649e0c8a7d8e6e018e5fac27bbfadee5deaa8f6"
+  },
+  "receipts": [
+    {
+      "key": "mobile.projects.create.description",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:0c802d46fb0245a0a8c22c8cc82161a4",
+      "returned_sha256": "1ddce66c66c67c6a0be7ff11e3913b1648d5bf2a86c59e20d514a77716c06fb5",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.description",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:ebaed00f2c664d7fba12c5bdf840017d",
+      "returned_sha256": "df56828dd0572a62c41a136fbb2908d989d57a6c4f7f346c6ea7e2a9bafcb5c8",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.description",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:8b5c4060393546729613b9f5c5e1d29a",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.description_placeholder",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:bc23b8a8ea9248c695a1cf77f2fbda33",
+      "returned_sha256": "27265e1eb644618f16aeffa7d857c02e2f281726cf2cee5670a2959a9dd3eeea",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.description_placeholder",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:7996ad0b701e4f169ea883bcf63764a2",
+      "returned_sha256": "fe2f539129ad5f0c32db1d9da50c014d2793766512075682e63b75ec1911fbf1",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.description_placeholder",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:9413a3aed0554a3796cde5b55b0c5685",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.name",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:924766a04e264e5e8bb120b1c565f52c",
+      "returned_sha256": "1a55e310db4db6b6da3c76134ec40feadd9a0e434413fcbfab739d7f4ad49b4b",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.name",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:4becc74e07504c749db9b53f6060a8e2",
+      "returned_sha256": "e02c8fb61e313062a7bcf3dc6d7df1c3361c5ddeb5de4df8ce851901f249d66d",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.name",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:663cc0728d254c91875f3e019cd8bff8",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.name_placeholder",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:e6f346cf03fd4cf0afd9b4c21b05b1f2",
+      "returned_sha256": "1a7f232b4f794fc393989e5548f9264e0f9d6379460b40c59d6840ef4ea730a8",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.name_placeholder",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:cb373cff599a4a138b33283d6e7a26bf",
+      "returned_sha256": "1a7f232b4f794fc393989e5548f9264e0f9d6379460b40c59d6840ef4ea730a8",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.name_placeholder",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:bfa4c80787114ca5be13bedd6a9f8c89",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.status",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:cc4b61cbef354ee3800c749d1c027dee",
+      "returned_sha256": "de7a795b39d5f6f65cc51c12bbc9d79fcb25e0d4a18f859b84f0bbecb8e30f24",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.status",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:7a9715ba640043c392976e3f8ea5128b",
+      "returned_sha256": "f49b3f992e0061e8b00e83f11f4707c61f36f65b5c708c5660ceea4ca0455437",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.status",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:32f9c727817e4b97b25393039f7ce876",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.submit",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:a4873f5fb0914dcaa582f20c06a8a3df",
+      "returned_sha256": "022a3e1ec0037f3aef10e70df0f31737de70dd02a036121f0d6982c80415fdfd",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.submit",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:3e33794e2d4d45d38508dd8a7d920c54",
+      "returned_sha256": "326000919de6711fc09969ea50558da091b2010f146177bc0f4e4c03c247afe2",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.submit",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:8fe89fd52c814916b0affae2b9e93a0e",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.tags",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:9c5d8bfb30234a1cbf4f506a358fc601",
+      "returned_sha256": "f2b9c80059e84d2bf75327fe13df61e389a8f534bb5f6fb9fc062a4d12e51c9e",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.tags",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:070fc6a7c5444007a9a36f73232405ab",
+      "returned_sha256": "a116c2b00ede5276a929feca0b802b97290d7ba2039db13e0840ff56b5e4677e",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.tags",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:b76faf7935844802b876635126b3b97a",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.tags_help",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:7759e08ec4ae4f55a345623a7377b7fe",
+      "returned_sha256": "296753671d0c859ed5157d58f1a7c6ea8b061f922e4e78026c17371da1ed04f2",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.tags_help",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:c2571932ac5345f39816e6cdfb9e105c",
+      "returned_sha256": "cbe446f8c769d912ef89b3875097910877d119b0046ccc53d7193b4177ecf0ee",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.tags_help",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:3b67e8d8ac094797873c892b2a6fcb17",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.tags_placeholder",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:2c81781809354e488995ce707937165d",
+      "returned_sha256": "68020ff0790ffa0038c5f94e9d3c21ad186fcacd6f8aabb37054c48f065c0420",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.tags_placeholder",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:f6aceb3fdad2458ea5e7df77bab017ff",
+      "returned_sha256": "68020ff0790ffa0038c5f94e9d3c21ad186fcacd6f8aabb37054c48f065c0420",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.tags_placeholder",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:a3559988c656418580423569fe2d1ac2",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.create.title",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:7e3f8c28f1f14506b5c16d1e6b2d29a2",
+      "returned_sha256": "ec06af38551e30e24abf519b0001d579b7a9c72fe9ccb944fbc4c62e6c6cb46c",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.title",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:7559465eaee841b68e8f3c5efabb21c2",
+      "returned_sha256": "040e5f6807c899f34a88d8f806f1416860b0b79d8d84df36720403ae87b4b20e",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.create.title",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:70e5ed23963d42b480f2a0458ce3f2ca",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.status.active",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:732374f67e804213bc738364593cc649",
+      "returned_sha256": "db0262692454347b63b58ab695bcd0320fb427e484e04bfa3baa0e9bcac0b7a6",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.active",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:38310a8ad270424c9007084a03d345e5",
+      "returned_sha256": "1de1928895ffd104d6568d042ba3926369f236836b32a3354eb9acf539af511b",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.active",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:6aa6013dcb5948aaaa9a8944433958a8",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.status.archived",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:5b856b2c8b31429d849eb02e7aa80fd7",
+      "returned_sha256": "5924c0b7ec528c0930c5f787fdd560b534a864b8ac1c5221dbba1030ae205644",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.archived",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:daa3e790021144b08fb47a1a5a7c32b2",
+      "returned_sha256": "5b09eb99dd88d4f31bad5838c4e5a6f4f93fa63a270c6a8a0b37112f39990f4b",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.archived",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:5e2bd64a003245a7b5c267031a7cc0d9",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.status.done",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:7fc46735a4174afea9a66bd1f3d297e2",
+      "returned_sha256": "0df884ec5d4061010e8993117f1906f02ec4185864ccab21bda8e4d8f70ef051",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.done",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:572dcd0005484665854d56a02166ea32",
+      "returned_sha256": "bfa6124a0b9ae4ae98a6d9022b18e373a1587fe4e5abd23d184c0c567f76102a",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.done",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:e8fa5a9ed0f24d45adc3e47d617a2885",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.status.paused",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:baf1fc23ffd84f73947fa9d2d19cffe5",
+      "returned_sha256": "e8f3ff1151104ca4fc0e6f81854784aee9fc51d04b13e12cfe2ed040ffddb022",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.paused",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:b4fd79bb735c459a918c9aa1d399109e",
+      "returned_sha256": "82f0faf6d0daeafd3a12b330264dd4b549bdd295f09ecdf3e150a67a00771bfa",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.paused",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:381a029cda924b9d8a8e6b302c22f7bf",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.status.planning",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:8d213d160f7141f29fe1e6dbe6592554",
+      "returned_sha256": "698a3e8e48e342d33b3cdddad0c7eaa4f39a3dcbb028f1cd0f46b002959a6d54",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.planning",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:b8256e40e0004922b6794878cfbe3b20",
+      "returned_sha256": "77d8cd83666d753e847a889b4337d5a40b5eae615ca1d1c6523e307760c259c2",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.planning",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:307ebe51a7bf4b90be4cfe395b340bde",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.status.qa",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:3ca37f30ae4f428592858b5a8f14be12",
+      "returned_sha256": "1f0ab64c03052caa97eb8f32682f49b73ad50f45e25c5cc2a5712ab2e399df3f",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.qa",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:7aa6a12ce3a8498d9a328a5c54181707",
+      "returned_sha256": "f30cd289d7615d9cecbf1ba357b5698f86d34e8c1b0e1b79fc2138e9efa275fc",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.qa",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:e2faf70a5a6e48488b2a614474674586",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    },
+    {
+      "key": "mobile.projects.status.validation",
+      "kind": "en",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:0eadfadc2fc74173a81923f485ea87ed",
+      "returned_sha256": "481a844fb8db41faba4931d85e93f04756b9c82bebbd2fba0d841721cbf12e34",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.validation",
+      "kind": "hi",
+      "status": "success",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:c5fe9309589742908025abc80a337e51",
+      "returned_sha256": "66cfcbb5861d1ae163d5e26af9d0de8cb4b285bf9e5be76390ec0c3750ff58ec",
+      "error": null
+    },
+    {
+      "key": "mobile.projects.status.validation",
+      "kind": "context",
+      "status": "refused",
+      "call_id": "call_6abe5dc188a34e4fb2595f71ad9a4495:4fb800f1c499482ea468685be8b4da4d",
+      "returned_sha256": null,
+      "error": "refused: catalogue keys and values must be strings"
+    }
+  ],
+  "artifact_sha256": {
+    "report.md": "ab214046bad64901af7488124b5d6b53cc8a75d41e117ac71ebb7d3c19cb24ea",
+    "audit.log": "89a3a406ee66e501407bd87a63c7921c1387bd36fa9ac2989f08ec6fd834fad9"
+  },
+  "incident": "Broad grep inadvertently surfaced context snippets after refusal; not relied upon."
+}

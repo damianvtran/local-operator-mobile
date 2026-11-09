@@ -1,0 +1,97 @@
+{
+  "status": "clean_context_width_check_outstanding",
+  "type": "context-only delta",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "timestamp_utc": "2026-11-02T05:58:30.435855+00:00",
+  "head": "edff6663a3efc5492af73600da94096dcac05c22",
+  "keys_read": 17,
+  "namespace_counts": {
+    "mobile.projects.create": 10,
+    "mobile.projects.status": 7
+  },
+  "input_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.context.json": "5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b",
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/vi/mobile.projects.json": "873fc26d8f8c5bcfad5d7cb112140511407040eb2333392d219eca1a1066fed2"
+  },
+  "scan": "literal [REDACTED] absent in the three input files; no other markers assessed",
+  "context_route": "direct ordinary read, explicitly authorized; nested sidecar not routable",
+  "copy_route": "34 successful keyed read_public_copy calls; receipts in audit.log",
+  "prior_audit": "vi-create-audit-4f6866fce770: English and Vietnamese catalogue SHA-256 hashes identical to this audit",
+  "context": {
+    "mobile.projects.create.description": {
+      "role": "meta",
+      "note": "Label for an optional project description."
+    },
+    "mobile.projects.create.description_placeholder": {
+      "role": "help",
+      "note": "Placeholder prompting an optional project description."
+    },
+    "mobile.projects.create.name": {
+      "role": "meta",
+      "note": "Label for the project identifier field; the nearby help states its grammar."
+    },
+    "mobile.projects.create.name_placeholder": {
+      "role": "help",
+      "note": "Example of a valid project identifier; preserve the hyphen and use only letters, digits, dot, underscore or hyphen, never starting with a hyphen."
+    },
+    "mobile.projects.create.status": {
+      "role": "heading",
+      "note": "Label for the project status choices."
+    },
+    "mobile.projects.create.submit": {
+      "role": "button",
+      "note": "Submits the new project form."
+    },
+    "mobile.projects.create.tags": {
+      "role": "meta",
+      "note": "Label for optional project tags."
+    },
+    "mobile.projects.create.tags_help": {
+      "role": "help",
+      "note": "Explains how to separate multiple project tags."
+    },
+    "mobile.projects.create.tags_placeholder": {
+      "role": "help",
+      "note": "Examples of two tags, separated by a comma; use valid short tag examples."
+    },
+    "mobile.projects.create.title": {
+      "role": "heading",
+      "note": "Title of the sheet for creating a project."
+    },
+    "mobile.projects.status.active": {
+      "role": "status",
+      "note": "Display label for the project status code active; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+    },
+    "mobile.projects.status.archived": {
+      "role": "status",
+      "note": "Display label for the project status code archived; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+    },
+    "mobile.projects.status.done": {
+      "role": "status",
+      "note": "Display label for the project status code done; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+    },
+    "mobile.projects.status.paused": {
+      "role": "status",
+      "note": "Display label for the project status code paused; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+    },
+    "mobile.projects.status.planning": {
+      "role": "status",
+      "note": "Display label for the project status code planning; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+    },
+    "mobile.projects.status.qa": {
+      "role": "status",
+      "note": "Display label for the project status code qa; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+    },
+    "mobile.projects.status.validation": {
+      "role": "status",
+      "note": "Display label for the project status code validation; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+    }
+  },
+  "limits": [
+    "No rendered chip-width check",
+    "No Node, tests, browser, install, signals"
+  ],
+  "public_path_normalization": "Local home-directory prefixes in captured receipt paths were replaced with ~/ for public portability; receipt content and audit conclusions are otherwise unchanged."
+}
