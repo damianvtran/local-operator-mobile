@@ -90,26 +90,75 @@ const pickFromFilesNative = async (): Promise<PromptImage | null> => {
 	};
 };
 
-/** The browser's own picker. Resolves `null` on cancel (the `cancel` event). */
+/**
+ * The browser's own picker. Resolves `null` on cancel (the `cancel` event).
+ *
+ * **Why the input is put in the document.** This used to click a DETACHED
+ * `<input type="file">`. A browser opens its chooser for that, but nothing that
+ * finds file inputs through the document can: browser automation (QA could not
+ * attach an image to the compiled web build at all, PR #206 Q2) and assistive
+ * tooling both look the input up in the page, and a detached one is not there.
+ * Expo's own web image picker appends its input for the same reason. Attached,
+ * the browser also dispatches the chooser's `cancel` to it like any page
+ * element, which is what lets an abandoned chooser settle this promise — and the
+ * composer's `finally` clear `attaching` — instead of leaving Attach and Clear
+ * disabled until a reload.
+ *
+ * **Constraints.** The input is hidden visually AND from the accessibility tree
+ * (`aria-hidden`, out of tab order): the sheet row the reader pressed is the
+ * control, and a second, invisible "choose file" stop would be noise. It is
+ * clipped off-screen rather than `display: none`, which some engines (older
+ * WebKit) refuse to open a chooser for. It is removed on EVERY settle path —
+ * change, cancel, a throwing `click()` — before the file is read, so repeated
+ * picks never accumulate stale inputs and a later pick can never be answered
+ * by an earlier one. There is no focus-return or timer fallback for browsers
+ * that never fire `cancel`: this codebase has no such pattern and no measured
+ * threshold to set one by. `accept` and single selection are unchanged.
+ */
 const pickOnWeb = (): Promise<PromptImage | null> =>
 	new Promise((resolve, reject) => {
 		const input = document.createElement("input");
 		input.type = "file";
 		input.accept = "image/*";
-		input.addEventListener("cancel", () => resolve(null), { once: true });
-		input.addEventListener(
-			"change",
-			() => {
-				const file = input.files?.[0];
-				if (!file) {
-					resolve(null);
-					return;
-				}
-				readWebImageFile(file).then(resolve, reject);
-			},
-			{ once: true },
-		);
-		input.click();
+		input.setAttribute("aria-hidden", "true");
+		input.tabIndex = -1;
+		Object.assign(input.style, {
+			position: "fixed",
+			left: "-10000px",
+			top: "0",
+			width: "1px",
+			height: "1px",
+			opacity: "0",
+			pointerEvents: "none",
+		});
+		const detach = () => {
+			input.removeEventListener("cancel", onCancel);
+			input.removeEventListener("change", onChange);
+			input.remove();
+		};
+		const onCancel = () => {
+			detach();
+			resolve(null);
+		};
+		const onChange = () => {
+			// Captured before detaching: the `File` outlives its input element.
+			const file = input.files?.[0];
+			detach();
+			if (!file) {
+				resolve(null);
+				return;
+			}
+			readWebImageFile(file).then(resolve, reject);
+		};
+		input.addEventListener("cancel", onCancel);
+		input.addEventListener("change", onChange);
+		document.body.appendChild(input);
+		try {
+			input.click();
+		} catch (error) {
+			detach();
+			reject(error);
+		}
 	});
 
 /**

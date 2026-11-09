@@ -366,9 +366,15 @@ export const Textarea = ({
 					placeholderTextColor={placeholderColour}
 					editable={!disabled}
 					onSubmitEditing={onSubmitEditing}
-					// A hardware keyboard offers Send; Shift+Enter still inserts a newline
-					// and is handled by the composer, which owns the send action.
-					returnKeyType="send"
+					/* Keep paragraphs available on the SOFTWARE keyboard. Calling this
+					 * key Send while RN inserts a newline is dishonest, but switching to
+					 * submit would remove the phone's only obvious newline gesture. Native
+					 * therefore says Return; the pinned footer owns Send/Steer. Web keeps
+					 * its existing Enter / Shift+Enter listener. */
+					submitBehavior={Platform.OS !== "web" ? "newline" : undefined}
+					returnKeyType={
+						Platform.OS === "web" && onSubmitEditing ? "send" : "default"
+					}
 					inputMode="text"
 					autoFocus={autoFocus}
 					testID={testID}

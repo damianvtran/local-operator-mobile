@@ -105,6 +105,9 @@ export interface ComposerState {
 	addImage: (image: PromptImage) => void;
 	removeImage: (index: number) => void;
 	clearImages: () => void;
+	/** Explicit editor-only actions: never discard a retained instruction or queue. */
+	clearUnsentDraft: () => void;
+	dismissError: () => void;
 	/** Opens the chosen attach source and adds the picked image. A cancel adds
 	 *  nothing and says nothing; a failed read says so on the composer's error
 	 *  line; a paste that found no image reports the outcome there too. */
@@ -962,6 +965,16 @@ export const useComposer = (input: {
 		removeImage: (index) =>
 			setImages((current) => current.filter((_, at) => at !== index)),
 		clearImages: () => setImages([]),
+		clearUnsentDraft: () => {
+			// A picker/send owns a snapshot while in flight. Never race its completion
+			// or turn a presentation reset into retirement of an uncertain instruction.
+			if (inFlight.current || attaching) return;
+			setDraft("");
+			setImages([]);
+			setError(null);
+			setNotice(null);
+		},
+		dismissError: () => setError(null),
 		attach,
 		pasteFile,
 		attaching,

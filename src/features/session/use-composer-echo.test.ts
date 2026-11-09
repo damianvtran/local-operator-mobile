@@ -19,6 +19,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PromptImage } from "@/contracts";
+import * as attachmentSources from "@/features/session/attach";
 import { composerCopy, composerFeedback } from "@/features/session/composer";
 import {
 	clearPendingEchoes,
@@ -32,12 +33,18 @@ import {
 	useComposer,
 } from "@/features/session/use-composer";
 import { type RelayEndpoints, RelayError } from "@/relay";
+import { MAX_STORED_ENVELOPE_CHARS } from "@/relay/retry-envelope";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 const storageFault = vi.hoisted(() => ({
 	failWrite: false,
 	reads: 0,
 	failReadAt: 0,
+}));
+
+// Native UUID generation belongs to Expo; this Node hook host has no bridge.
+vi.mock("expo-crypto", async () => ({
+	randomUUID: (await import("node:crypto")).randomUUID,
 }));
 
 vi.mock("@/features/session/envelope-store", async (importOriginal) => {
@@ -170,6 +177,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+	vi.restoreAllMocks();
 	await act(async () => root?.unmount());
 	root = null;
 	dom?.dispose();
@@ -369,6 +377,51 @@ describe("the pending row's box", () => {
 	);
 });
 
+it("keeps paste retry available after a null read, adds a second image, and retains explicit duplicates", async () => {
+	const { client, open } = handClient();
+	await mount(client, "image instructions");
+	const first = { mime_type: "image/png", data_b64: "iVBORw0KGgo=" };
+	const second = { mime_type: "image/jpeg", data_b64: "/9j/" };
+	const read = vi
+		.spyOn(attachmentSources, "pasteImage")
+		.mockResolvedValueOnce(null)
+		.mockResolvedValueOnce(first)
+		.mockResolvedValueOnce(second)
+		.mockResolvedValueOnce(second);
+	await act(async () => c().attach("paste", "offer"));
+	await settle();
+	expect(c().images).toEqual([]);
+	expect(c().error).not.toBeNull();
+	for (let attempt = 0; attempt < 3; attempt++) {
+		await act(async () => c().attach("paste", "offer"));
+		await settle();
+	}
+	expect(read).toHaveBeenCalledTimes(4);
+	// Existing policy: an intentional repeat is a separate removable thumbnail,
+	// never silently deduplicated. The encoded envelope size is the admission bound.
+	expect(c().images).toEqual([first, second, second]);
+	expect(c().error).toBeNull();
+	expect(c().draft).toBe("image instructions");
+	expect(open).toHaveLength(0);
+});
+
+it("refuses an oversized encoded attachment before POST and keeps the complete draft", async () => {
+	const { client, open } = handClient();
+	await mount(client, "keep this oversized draft");
+	const image = {
+		mime_type: "image/png",
+		data_b64: "A".repeat(MAX_STORED_ENVELOPE_CHARS),
+	};
+	await act(async () => c().addImage(image));
+	await act(async () => c().send());
+	await settle();
+	expect(open).toHaveLength(0);
+	expect(c().draft).toBe("keep this oversized draft");
+	expect(c().images).toEqual([image]);
+	expect(c().error).toContain("Not sent");
+	expect(c().retained).toBeNull();
+});
+
 it("keeps the real hook's text and image draft on a pre-dispatch storage failure", async () => {
 	const { client, open } = handClient();
 	await mount(client, "do not lose my text");
@@ -384,6 +437,64 @@ it("keeps the real hook's text and image draft on a pre-dispatch storage failure
 	expect(c().error).toContain("Not sent");
 	expect(c().error).not.toContain("synthetic private file failure");
 	expect(c().retained).toBeNull();
+	await act(async () => c().dismissError());
+	expect(c().error).toBeNull();
+	expect(c().draft).toBe("do not lose my text");
+	expect(c().images).toEqual([image]);
+	expect(open).toHaveLength(0);
+	storageFault.failWrite = false;
+	await act(async () => {
+		c().send();
+		c().send();
+	});
+	await settle();
+	expect(open).toHaveLength(1);
+	expect(open[0]?.body.images).toEqual([image]);
+	await act(async () => open[0]?.resolve({ ok: true, detail: "queued" }));
+	await settle();
+});
+
+it("clears only the new draft and dismisses an error without discarding uncertainty", async () => {
+	const { client, open } = handClient();
+	await mount(client, "earlier uncertain instruction");
+	await act(async () => c().send());
+	await settle();
+	// A newer draft keeps the earlier unconfirmed instruction in its own row.
+	await act(async () => c().setDraft("new unsent text"));
+	await act(async () =>
+		open[0]?.reject(
+			new RelayError("ambiguous-delivery", "no answer", {
+				status: 504,
+				serverError: "session did not answer",
+			}),
+		),
+	);
+	await settle();
+	const held = c().retained;
+	expect(held).not.toBeNull();
+	await act(async () => {
+		c().setDraft("new unsent text");
+		c().addImage({ mime_type: "image/png", data_b64: "iVBORw0KGgo=" });
+	});
+	await act(async () => c().dismissError());
+	expect(c().retained).toEqual(held);
+	expect(c().draft).toBe("new unsent text");
+	await act(async () => c().clearUnsentDraft());
+	expect(c().draft).toBe("");
+	expect(c().images).toEqual([]);
+	expect(c().error).toBeNull();
+	expect(c().retained).toEqual(held);
+	expect(rows[0]).toMatchObject({
+		commandId: held?.command_id,
+		failure: "unconfirmed",
+	});
+	expect(open).toHaveLength(1);
+	await act(async () => c().retry());
+	await settle();
+	expect(open[1]?.body.command_id).toBe(held?.command_id);
+	expect(open[1]?.body.text).toBe("earlier uncertain instruction");
+	await act(async () => open[1]?.resolve({ ok: true, detail: "queued" }));
+	await settle();
 });
 
 it.each([false, true])(

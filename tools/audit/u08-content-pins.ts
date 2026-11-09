@@ -228,6 +228,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
+/* Regenerated with --print from the fully staged composer-reliability tree:
+ * native commit awaiting, platform UUID, repeat paste, honest Return and
+ * session-only clear/dismiss plus keyboard budget. Identity admission only,
+ * not rendered or native-device evidence; instrument/original pins unchanged. */
 // Recomputed with --print at the staged #106 integration: attachment localization,
 // hardened byte reads and exact-lock image-manipulator dependency. Identity only;
 // rendered and real-path evidence is recorded separately, not inferred from hashes.
@@ -594,10 +598,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
+	/* QA round-3 Q3: the session screen passes the composer's `capped` report to
+	 * `composerLimit`, so the portrait ceiling cannot oscillate. Recomputed with
+	 * --print from the staged tree; `app` and `src` moved. Identity only. */
 	// PR #207 remediation: the session screen threads the history retry action
 	// and its failure scope to the list. Staged LIVE source admission only.
 	// Round 3 adds the gap position prop (`historyGapBefore`); same scope.
-	app: "a96c39e621b973e64016bae925f3f7475697ea81b5b56c9c41026fc6337fae7f",
+	// PR #207 merge-gate convergence with main 235db698 (#206): the merged
+	// app tree has neither parent's digest; re-pinned with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof
+	// refreshed.
+	app: "bc778f091d59e471f7f161c649c8c8e7b28c9bcede37f7b39718b01408370fbc",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1147,10 +1158,26 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * it is not proof of native visibility or compact D3 geometry. Historical,
 	 * instrument and input pins remain unchanged. */
 	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
+	/* PR #206 Q1/CI-T1: --print includes tracked test bytes under src, so the
+	 * type-only createRoot return-type repair changes this combined live digest.
+	 * Production app/src runtime bytes are unchanged; admission only, not new
+	 * rendered, native or historical evidence. */
+	/* CI-A1: centralize the two existing composer selectors without changing their
+	 * values. Recomputed with --print from staged source; identity, not visual proof. */
+	/* QA round-2 Q2: the web file picker's input is attached to the document
+	 * (hidden) for the pick and removed on every settle path, plus its lifecycle
+	 * tests. Recomputed with --print from the staged tree; only `src` moved.
+	 * Identity admission only, not rendered or native evidence. */
+	/* QA round-3 Q3: `composerLimit` decides overflow from the composer's
+	 * intrinsic `capped` fact (fixed point, not the capped box), plus its
+	 * regression tests. Recomputed with --print from the staged tree; `app` and
+	 * `src` moved. Identity admission only, not rendered or native evidence. */
 	/* Recomputed with --print after merging approved #108 (d9073ebc): the
 	 * combined src tree has neither parent's digest. Source admission only;
 	 * historical pixels, native visibility and compact D3 remain unproved. */
 	// #106 + main 8705a953: combined staged source identity only, not new pixels.
+	/* PR #206 merge-gate convergence with main 3e759dac: src re-derived with
+	 * --print over the staged merged tree; identity admission only. */
 	// Native history paging: staged LIVE source admission only; historical
 	// rendered frames, native anchor and interaction proof are not refreshed.
 	// PR #207 remediation (gap detection, retry targeting, refresh copy) re-pinned
@@ -1163,7 +1190,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #207 merge-gate convergence with main 3e759dac (#106): the merged src
 	// tree has neither parent's digest; re-pinned with --print over the staged
 	// merged tree. Source admission only, no rendered or native proof refreshed.
-	src: "8b23fc3219d29e53bd8616b6ddf147542f729f0db8eb23849bf666aec4fefe91",
+	// PR #207 merge-gate convergence with main 235db698 (#206): the merged
+	// src tree has neither parent's digest; re-pinned with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof
+	// refreshed.
+	src: "778b754050de74f487f4f6b17c0c01df24f9a6161fa0510c6e8c0c1ccc868ba0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
