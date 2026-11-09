@@ -28,6 +28,23 @@ function page(hostname = "localhost") {
 }
 
 describe("opted-in loopback fixture controls", () => {
+	it("applies admitted fixture settings through existing presentation consumers", () => {
+		page();
+		vi.stubEnv("EXPO_PUBLIC_TEAM_BRIDGE_FIXTURES", "1");
+		const store = createConfigStore();
+		const setScale = vi.fn();
+		const setTheme = vi.fn();
+		const cleanup = installFixturePresentation(
+			teamBridgeFixture(),
+			store,
+			setScale,
+			setTheme,
+		);
+		expect(setScale).toHaveBeenCalledWith("200");
+		expect(setTheme).toHaveBeenCalledWith("dark");
+		expect(store.getState().language).toBe("ur");
+		cleanup?.();
+	});
 	it("survives asynchronous config reset without a second language source or polling", () => {
 		const store = createConfigStore();
 		const unsubscribe = holdFixtureLocale(store, "ur");

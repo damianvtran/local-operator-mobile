@@ -11,6 +11,17 @@ import { useTextScale } from "@/ui/text-scale-provider";
 
 export function TeamBridgeFixturePresentation() {
 	const fixture = useMemo(() => teamBridgeFixture(), []);
+	// Keep the subscribing hooks behind a component boundary, not merely an
+	// early return inside their effect. Normal exports must mount no fixture
+	// text-scale subscriber at all, even when a URL supplies forged controls.
+	return fixture ? <FixturePresentation fixture={fixture} /> : null;
+}
+
+function FixturePresentation({
+	fixture,
+}: {
+	fixture: NonNullable<ReturnType<typeof teamBridgeFixture>>;
+}) {
 	const { setPreference } = useTextScale();
 	useEffect(() => {
 		return installFixturePresentation(
