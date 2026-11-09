@@ -83,7 +83,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  allowances above and main's own re-pin both stand. */
 
 	"tools/audit/checks.ts":
-		"212cbe4655fb457ff008a00df990904cc9d30630d78a5420a911bbe38a8b0e5c",
+		"8b995491008690b3e2f0885e124e81eb5079cdf275103bee9ea1928dc8c3b1f7",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -91,7 +91,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-11-07 for PR #189 (audit fix 2) with --print: one ADDED
 	 *  export, `SPACING_REST_PROBE`; `EXTRACT_PROBE`'s source is byte-unchanged. */
 	"tools/audit/probe.ts":
-		"ae34fd9cce868b60b385eed2064c07a3e82e2cd421526a7fea1fb81446437728",
+		"44ea427fefb9775fe5d8c2694f4c8788a9c5ec9eb19eefa8b7b5e7eac36ba2a6",
 	"tools/audit/u08-fragment-verification.ts":
 		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
 	"tools/audit/u08-geometry-proof.ts":
@@ -1171,7 +1171,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #106 + main 8705a953: combined staged source identity only, not new pixels.
 	/* PR #206 merge-gate convergence with main 3e759dac: src re-derived with
 	 * --print over the staged merged tree; identity admission only. */
-	src: "ce02b18e55ef5e6b2aed2a8afacd99e00e96d8649cfb4f8467bb0bc3da5c24b2",
+	src: "dc6d7da155396462c877c5f69767a4243df483a2b3fef66430dd984a45cf2207",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

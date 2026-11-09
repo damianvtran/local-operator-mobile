@@ -114,8 +114,12 @@ export type SheetProps = {
 	/** Opt-in for a picker whose first announcement is its purpose, not Close. */
 	focusTitle?: boolean;
 	/** Drawer openers unmount; return to the persistent Home chip after RNW has
-	 * completed its own focus return, never during the closing animation. */
-	returnFocusTestID?: string;
+	 * completed its own focus return, never during the closing animation.
+	 * A LIST is a fallback order: the first candidate that actually takes focus
+	 * wins. One id is not enough when the caller cannot know which screen will
+	 * be underneath at dismissal (UX round 1, U2 — a session screen has no Home
+	 * chip, so focus fell to `body`). */
+	returnFocusTestID?: string | readonly string[];
 	detent?: SheetDetent;
 	children: React.ReactNode;
 	/**
@@ -392,11 +396,20 @@ export const Sheet = ({
 									(document.activeElement === document.body ||
 										document.activeElement === null)
 								) {
-									document
-										.querySelector<HTMLElement>(
-											`[data-testid="${returnFocusTestID}"]`,
-										)
-										?.focus({ preventScroll: true });
+									/* Presence in the DOM is not focusability: an earlier
+									 *  screen stays mounted but hidden under the stack, and
+									 *  an exiting modal is kept mounted inert, so the same
+									 *  testID can match a node `focus()` silently refuses.
+									 *  Every match of every candidate is tried, and only a
+									 *  node that BECAME `activeElement` ends the search. */
+									candidates: for (const id of [returnFocusTestID].flat()) {
+										for (const target of document.querySelectorAll<HTMLElement>(
+											`[data-testid="${id}"]`,
+										)) {
+											target.focus({ preventScroll: true });
+											if (document.activeElement === target) break candidates;
+										}
+									}
 								}
 								dismissed();
 								onDismiss?.();

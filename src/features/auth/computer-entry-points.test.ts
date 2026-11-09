@@ -177,6 +177,7 @@ vi.mock("@/features/auth/connection-provider", async () => {
 const { ComputerSwitcherProvider } = await import("./computer-switcher-sheet");
 const {
 	DrawerComputerRow,
+	drawerRowFit,
 	HeaderComputerChip,
 	headerChipFit,
 	switcherFocusReturn,
@@ -360,11 +361,74 @@ describe("the drawer footer's workspace row", () => {
 	/* Review round 1, R3: the split layout does not render the header chip
 	 *  (`home.tsx`: `{split ? null : <HeaderComputerChip …`), so naming it as the
 	 *  focus target sent the sheet's close after a node that is not there. */
-	it("returns focus to the header chip on a phone, where the drawer row is gone by then", async () => {
+	/* UX round 1, U2: a session screen renders no Home chip, so naming ONLY the
+	 *  chip left focus on nothing after drawer → switcher → Escape. The phone
+	 *  names a fallback order; the Sheet takes the first that accepts focus. */
+	it("names a fallback chain on a phone: the chip, itself, then the drawer's own opener", async () => {
 		host.split = false;
 		await mount(createElement(DrawerComputerRow, { testID: ROW }));
 		await press(ROW);
-		expect(host.sheetReturnFocus).toBe(CHIP);
+		expect(host.sheetReturnFocus).toEqual([
+			CHIP,
+			ROW,
+			"session-back",
+			"home-sidebar",
+		]);
+	});
+
+	/* Design round 1 D1 / QA round 2 Q2, and the web audit's U-08 on
+	 *  S15/loading at 200 %: the health word was `shrink-0`, so the NAME paid for
+	 *  every missing point and an unshrinkable "· Checking…" left the row. */
+	describe("the name keeps priority; the status word drops first", () => {
+		const WORD = "· Online";
+		it("paints both when the whole name fits beside the word", () => {
+			expect(drawerRowFit("Mac mini", WORD, 200, 1, 12)).toEqual({
+				name: "Mac mini",
+				word: WORD,
+			});
+		});
+		it("drops the word whole, and paints the WHOLE name, when both do not fit", () => {
+			/* Wide enough for the name alone, not for name + gap + word. */
+			const both = drawerRowFit("192.168.100.210", WORD, 400, 1, 12);
+			expect(both.word).toBe(WORD);
+			const fit = drawerRowFit("192.168.100.210", WORD, 120, 1, 12);
+			expect(fit).toEqual({ name: "192.168.100.210", word: null });
+		});
+		it("cuts the name only once the word is already gone", () => {
+			const fit = drawerRowFit("192.168.100.210", WORD, 40, 1, 12);
+			expect(fit.word).toBeNull();
+			expect(fit.name).toContain("…");
+		});
+		it("drops an unshrinkable word at 200 % rather than let it leave the row", () => {
+			/* The S15/loading frame: a short name, "· Checking…" at 24 pt, and
+			 *  a slot far narrower than the word alone. */
+			expect(drawerRowFit("…", "· Checking…", 60, 2, 24)).toEqual({
+				name: "…",
+				word: null,
+			});
+		});
+		it("paints both before the slot is measured, so the common case never reflows", () => {
+			expect(drawerRowFit("Mac mini", WORD, 0, 1, 12)).toEqual({
+				name: "Mac mini",
+				word: WORD,
+			});
+		});
+		it("the row renders what the fit decides: no word in a slot too narrow for it", async () => {
+			await mount(createElement(DrawerComputerRow, { testID: ROW }));
+			host.layoutWidth = 60;
+			await live("Mac mini");
+			await act(async () => {
+				await new Promise<void>((resolve) => setImmediate(resolve));
+			});
+			host.texts.length = 0;
+			await live("Mac mini");
+			expect(host.texts).toContain("Mac mini");
+			expect(host.texts).not.toContain(WORD);
+			/* The state is still spoken in full. */
+			expect(host.labels.get(ROW)).toBe(
+				"Computer: Mac mini, Online. Switch computer",
+			);
+		});
 	});
 
 	it("returns focus to ITSELF in the split layout, where the chip is not rendered", async () => {
@@ -379,7 +443,12 @@ describe("the drawer footer's workspace row", () => {
 	});
 
 	it("the pane's other opener (the no-computer empty state) follows the same rule", () => {
-		expect(switcherFocusReturn(false, "sessions-connect")).toBe(CHIP);
+		expect(switcherFocusReturn(false, "sessions-connect")).toEqual([
+			CHIP,
+			"sessions-connect",
+			"session-back",
+			"home-sidebar",
+		]);
 		expect(switcherFocusReturn(true, "sessions-connect")).toBe(
 			"sessions-connect",
 		);

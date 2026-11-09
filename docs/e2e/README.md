@@ -987,7 +987,7 @@ with the measured number, the frame it came from, and a verdict.
 | `U-04` | Text scale to 200 % | Clipping at 200 %, **and** only when the harness showed the scale dimension is live |
 | `U-05` | Safe areas | Content inside the notch band, or pinned content inside the home-indicator band, or a control within 8 pt of an unsafe edge — measured on the node's **painted** box, and never on a node that paints nothing |
 | `U-06` | Horizontal overflow | The document wider than the viewport; a node wider than the viewport is an `EXCEPTION` (recorded, never a pass) when an ancestor scrolls horizontally on purpose — the rubric's own clause, and the shape a code block has |
-| `U-07` | Clipped text | `overflow: hidden`/clip with hidden content, except a single-line ellipsis that has a full value |
+| `U-07` | Clipped text | `overflow: hidden`/clip with hidden content, except a single-line ellipsis that has a full value, or an N-line clamp whose full value is in its control's accessible name |
 | `U-08` | Overlap | Two text-or-control boxes whose **painted regions** intersect by > 25 % of the smaller one. A pair whose layout boxes intersect while the painted regions do not is recorded as an `EXCEPTION` naming the reason, never reported as an overlap |
 | `U-09` | Accessible name | An interactive accessibility node with no name |
 | `U-10` | Label-in-name | The accessible name does not contain the visible label |

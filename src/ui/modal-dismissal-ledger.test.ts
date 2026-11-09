@@ -366,7 +366,7 @@ describe("picker focus across drawer dismissal", () => {
 		Object.assign(document, {
 			body,
 			activeElement: body,
-			querySelector: vi.fn(() => ({ focus })),
+			querySelectorAll: vi.fn(() => [{ focus }]),
 		});
 		await picker(true);
 		await picker(false);
@@ -380,7 +380,7 @@ describe("picker focus across drawer dismissal", () => {
 		Object.assign(document, {
 			body: {},
 			activeElement: {},
-			querySelector: vi.fn(() => ({ focus })),
+			querySelectorAll: vi.fn(() => [{ focus }]),
 		});
 		await picker(true);
 		await picker(false);
