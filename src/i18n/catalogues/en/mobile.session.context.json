@@ -143,6 +143,10 @@
 		"role": "status",
 		"note": "A transcript page failed or the server explicitly said unavailable; existing visible messages remain."
 	},
+	"mobile.session.history.refresh_failed": {
+		"role": "status",
+		"note": "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Existing visible messages remain; Try again re-reads the newest page. Must not say EARLIER messages failed."
+	},
 	"mobile.session.history.stalled": {
 		"role": "status",
 		"note": "The server returned a cursor that did not advance; automatic reads stop, manual retry or reopening is needed."

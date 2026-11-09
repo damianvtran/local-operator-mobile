@@ -35,6 +35,7 @@
 	"mobile.session.history.load": "Charger les messages précédents",
 	"mobile.session.history.loading": "Chargement des messages précédents…",
 	"mobile.session.history.failed": "Les messages précédents n’ont pas pu être chargés. Réessayez.",
+	"mobile.session.history.refresh_failed": "Les messages les plus récents n’ont pas pu être chargés. Réessayez.",
 	"mobile.session.history.stalled": "L’historique n’a pas avancé. Réessayez ou rouvrez cette conversation.",
 	"mobile.session.history.beginning": "Début des messages conservés",
 	"mobile.session.history.empty": "Aucun message conservé",

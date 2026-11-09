@@ -35,6 +35,7 @@
 	"mobile.session.history.load": "加载更早的消息",
 	"mobile.session.history.loading": "正在加载更早的消息…",
 	"mobile.session.history.failed": "无法加载更早的消息，请重试。",
+	"mobile.session.history.refresh_failed": "无法加载最新的消息，请重试。",
 	"mobile.session.history.stalled": "历史记录未向前加载。请重试或重新打开此对话。",
 	"mobile.session.history.beginning": "已保留消息的起点",
 	"mobile.session.history.empty": "没有保留的消息",

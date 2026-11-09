@@ -591,7 +591,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "cf5a8ea483ef81d773ed288171043e5816df93ffe15d1a688e09646eb366d239",
+	// PR #207 remediation: the session screen threads the history retry action
+	// and its failure scope to the list. Staged LIVE source admission only.
+	app: "c4f61556ee3f15acdba472763f8bdd172debb77b6c3ebe72173d0df34f2f9924",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1136,7 +1138,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * historical pixels, native visibility and compact D3 remain unproved. */
 	// Native history paging: staged LIVE source admission only; historical
 	// rendered frames, native anchor and interaction proof are not refreshed.
-	src: "99768793f62808d49f85a29e0855f0bf4777a0373ca5caf2f7c940d0a991d846",
+	// PR #207 remediation (gap detection, retry targeting, refresh copy) re-pinned
+	// with --print over the staged tree; same scope as above.
+	src: "770305b4f8d577883d8d45824cd6f35276403945b04d73267d42c115ee5b4230",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

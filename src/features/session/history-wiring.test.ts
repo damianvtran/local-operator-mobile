@@ -192,11 +192,13 @@ describe("history reader production wiring", () => {
 			"hasOlder",
 			"historyError",
 			"historyGap",
+			"retryHistory",
+			"historyErrorScope",
 		]) {
 			expect(screen).toContain(`${property}={runtime.${property}}`);
 		}
 		expect(list).toContain("testID={CONTROL.transcriptLoadEarlier}");
-		expect(list).toContain("onPress={requestOlder}");
+		expect(list).toContain("onPress={canRetry ? requestRetry : requestOlder}");
 		expect(list).toContain("historyTopReached(");
 		expect(list).not.toContain("onStartReached=");
 		expect(runtime).toContain("return () => historyWindow.retire();");
@@ -206,6 +208,85 @@ describe("history reader production wiring", () => {
 		expect(runtime).toContain(
 			"ownsProjection ? historyWindow.visibleRows : EMPTY_HISTORY",
 		);
+	});
+});
+
+describe("history retry targets the read that failed (PR #207 R2)", () => {
+	/** Execute the list's production retry decision with controlled props. A
+	 * source seam like the reload action above, not a mounted Native press. */
+	const retrySeam = (props: {
+		historyError: "failed" | "stalled" | null;
+		historyErrorScope: "newest" | "older" | null;
+		hasOlder: boolean;
+	}) => {
+		const start = list.indexOf("const newestFailed =");
+		const end = list.indexOf("\n\t/** The capture hook", start);
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+		const retryHistory = vi.fn(async () => {});
+		const requestOlder = vi.fn();
+		const { canRetry, requestRetry } = vm.runInNewContext(
+			`${list.slice(start, end)}\n({ canRetry, requestRetry })`,
+			{
+				...props,
+				loadingOlder: false,
+				retryHistory,
+				requestOlder,
+				useCallback: (callback: () => void) => callback,
+			},
+		);
+		return { canRetry, requestRetry, retryHistory, requestOlder };
+	};
+
+	it("a failed newest refresh at the beginning still offers a retry, and it refreshes", () => {
+		const seam = retrySeam({
+			historyError: "failed",
+			historyErrorScope: "newest",
+			hasOlder: false,
+		});
+		expect(seam.canRetry).toBe(true);
+		seam.requestRetry();
+		expect(seam.retryHistory).toHaveBeenCalledOnce();
+		expect(seam.requestOlder).not.toHaveBeenCalled();
+	});
+
+	it("a failed newest refresh with older pages remaining refreshes, not an older page", () => {
+		const seam = retrySeam({
+			historyError: "failed",
+			historyErrorScope: "newest",
+			hasOlder: true,
+		});
+		seam.requestRetry();
+		expect(seam.retryHistory).toHaveBeenCalledOnce();
+		expect(seam.requestOlder).not.toHaveBeenCalled();
+	});
+
+	it("an older-page failure retries the older page with its anchor handling", () => {
+		const seam = retrySeam({
+			historyError: "stalled",
+			historyErrorScope: "older",
+			hasOlder: true,
+		});
+		expect(seam.canRetry).toBe(true);
+		seam.requestRetry();
+		expect(seam.requestOlder).toHaveBeenCalledOnce();
+		expect(seam.retryHistory).not.toHaveBeenCalled();
+	});
+
+	it("hides retry when it could not issue a request", () => {
+		expect(
+			retrySeam({
+				historyError: "failed",
+				historyErrorScope: "older",
+				hasOlder: false,
+			}).canRetry,
+		).toBe(false);
+		expect(
+			retrySeam({ historyError: null, historyErrorScope: null, hasOlder: true })
+				.canRetry,
+		).toBe(false);
+		expect(list).toContain("{hasOlder || canRetry ? (");
+		expect(list).toContain('"mobile.session.history.refresh_failed"');
 	});
 });
 

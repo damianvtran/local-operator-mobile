@@ -35,6 +35,7 @@
 	"mobile.session.history.load": "Tải tin nhắn trước đó",
 	"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
 	"mobile.session.history.failed": "Không tải được tin nhắn trước đó. Hãy thử lại.",
+	"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất. Hãy thử lại.",
 	"mobile.session.history.stalled": "Lịch sử chưa tải thêm được. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
 	"mobile.session.history.beginning": "Bắt đầu các tin nhắn được lưu giữ",
 	"mobile.session.history.empty": "Không có tin nhắn được lưu giữ",

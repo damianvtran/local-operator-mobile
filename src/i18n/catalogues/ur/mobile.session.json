@@ -35,6 +35,7 @@
 	"mobile.session.history.load": "پہلے کے پیغامات لوڈ کریں",
 	"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
 	"mobile.session.history.failed": "پہلے کے پیغامات لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
+	"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
 	"mobile.session.history.stalled": "تاریخ میں مزید پیغامات لوڈ نہیں ہوئے۔ دوبارہ کوشش کریں یا یہ گفتگو دوبارہ کھولیں۔",
 	"mobile.session.history.beginning": "محفوظ پیغامات کی ابتدا",
 	"mobile.session.history.empty": "کوئی محفوظ پیغامات نہیں ہیں",

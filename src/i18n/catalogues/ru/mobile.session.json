@@ -35,6 +35,7 @@
 	"mobile.session.history.load": "Загрузить предыдущие сообщения",
 	"mobile.session.history.loading": "Загрузка предыдущих сообщений…",
 	"mobile.session.history.failed": "Не удалось загрузить предыдущие сообщения. Повторите попытку.",
+	"mobile.session.history.refresh_failed": "Не удалось загрузить последние сообщения. Повторите попытку.",
 	"mobile.session.history.stalled": "История не загрузилась дальше. Повторите попытку или откройте беседу заново.",
 	"mobile.session.history.beginning": "Начало сохранённых сообщений",
 	"mobile.session.history.empty": "Нет сохранённых сообщений",

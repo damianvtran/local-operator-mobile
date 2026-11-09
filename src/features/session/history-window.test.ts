@@ -560,3 +560,132 @@ describe("screen-owned retained history", () => {
 		expect(ids(window.rows)).toEqual(["retained-live"]);
 	});
 });
+
+/** Core's capped live frame: the first user message re-sent at the head of
+ * every frame, then the newest 79 rows, flagged `transcript_head_pinned`. */
+const capped = (journal: TranscriptEntry[], end: number, flag = true) =>
+	({
+		transcript: [journal[0], ...journal.slice(end - 79, end)],
+		...(flag ? { transcript_head_pinned: true } : {}),
+	}) as SessionProjection;
+const missing = (journal: TranscriptEntry[], window: HistoryWindow) => {
+	const held = new Set(ids(window.rows));
+	return journal.filter((entry) => !held.has(rowIdentity(entry))).length;
+};
+/** use-session's "older rows exist" claim; false renders "Beginning of retained
+ * messages". It must never be false while retained rows are unreachable. */
+const claimsBeginning = (window: HistoryWindow) =>
+	window.read === "ok" && !window.hasMore && !window.hasGap;
+
+describe("a reader paged to the beginning never claims it across a hole (PR #207)", () => {
+	const readToBeginning = async (retained: () => TranscriptEntry[]) => {
+		const journal = sequence(1500);
+		const fetch = vi.fn((before?: string) => pager(retained(), 80)(before));
+		const window = new HistoryWindow(fetch, () => {});
+		window.accept(capped(journal, 1200));
+		await window.load();
+		while (window.hasMore && !window.error) await window.load();
+		expect(window.error).toBeNull();
+		expect(window.olderState).toBe("end");
+		// The opener is now an ordinary paged row, no longer detached context.
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(0, 1200)));
+		expect(window.hasGap).toBe(false);
+		return { journal, fetch, window };
+	};
+
+	it.each([true, false])(
+		"Q2: a disjoint reconnect frame cannot overlap only through the re-sent opener (flag %s)",
+		async (flag) => {
+			const journal = sequence(1500);
+			const { window } = await readToBeginning(() => journal.slice(0, 1200));
+			window.accept(capped(journal, 1500, flag));
+			expect(missing(journal, window)).toBe(221);
+			expect(window.hasGap).toBe(true);
+			expect(claimsBeginning(window)).toBe(false);
+		},
+	);
+
+	it("Q2 control: a contiguous capped frame after reading to the beginning is not a gap", async () => {
+		const journal = sequence(1500);
+		const { window } = await readToBeginning(() => journal.slice(0, 1200));
+		for (let end = 1201; end <= 1279; end++)
+			window.accept(capped(journal, end));
+		expect(window.hasGap).toBe(false);
+		expect(missing(journal.slice(0, 1279), window)).toBe(0);
+		expect(claimsBeginning(window)).toBe(true);
+	});
+
+	it("R1: a refresh disjoint from every held row flags the gap, whichever of HTTP or the frame wins", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window, fetch } = await readToBeginning(() => retained);
+		retained = journal;
+		await window.load(true);
+		expect(fetch).toHaveBeenLastCalledWith(undefined);
+		expect(window.hasGap).toBe(true);
+		window.accept(capped(journal, 1500));
+		expect(missing(journal, window)).toBe(220);
+		expect(window.hasGap).toBe(true);
+		expect(claimsBeginning(window)).toBe(false);
+		// The gap's Reload history action recovers every retained row.
+		await window.reload();
+		while (window.hasMore && !window.error) await window.load();
+		expect(ids(window.visibleRows)).toEqual(ids(journal));
+		expect(window.hasGap).toBe(false);
+	});
+
+	it("R1 control: a refresh that overlaps the held rows merges without a gap", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window } = await readToBeginning(() => retained);
+		retained = journal.slice(0, 1250);
+		await window.load(true);
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(0, 1250)));
+		expect(claimsBeginning(window)).toBe(true);
+	});
+
+	it("R2: a failed newest refresh retries as a refresh, even at the beginning", async () => {
+		const journal = sequence(1500);
+		let fail = false;
+		let retained = journal.slice(0, 1200);
+		const { window, fetch } = await readToBeginning(() => {
+			if (fail) throw new Error("offline");
+			return retained;
+		});
+		fail = true;
+		await window.load(true);
+		expect(window.error).toBe("failed");
+		expect(window.errorScope).toBe("newest");
+		expect(window.hasMore).toBe(false);
+		fail = false;
+		retained = journal.slice(0, 1210);
+		const calls = fetch.mock.calls.length;
+		await window.retry();
+		expect(fetch.mock.calls.slice(calls)).toEqual([[undefined]]);
+		expect(window.error).toBeNull();
+		expect(window.errorScope).toBeNull();
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(0, 1210)));
+	});
+
+	it("R2: an older-page failure retries that same older cursor", async () => {
+		const journal = sequence(400);
+		let fail = false;
+		const fetch = vi.fn((before?: string) => {
+			if (fail) return Promise.reject(new Error("offline"));
+			// Not 80: a no-cursor 80-row user page reads as a legacy pinned frame.
+			return pager(journal, 50)(before);
+		});
+		const window = new HistoryWindow(fetch, () => {});
+		await window.load();
+		const cursor = window.cursor;
+		fail = true;
+		await window.load();
+		expect(window.errorScope).toBe("older");
+		fail = false;
+		await window.retry();
+		expect(fetch).toHaveBeenLastCalledWith(cursor);
+		expect(window.error).toBeNull();
+		expect(ids(window.rows)).toEqual(ids(journal.slice(300)));
+	});
+});

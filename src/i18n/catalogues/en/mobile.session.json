@@ -35,6 +35,7 @@
 	"mobile.session.history.load": "Load earlier messages",
 	"mobile.session.history.loading": "Loading earlier messages…",
 	"mobile.session.history.failed": "Earlier messages could not be loaded. Try again.",
+	"mobile.session.history.refresh_failed": "The latest messages could not be loaded. Try again.",
 	"mobile.session.history.stalled": "History did not advance. Retry or reopen this conversation.",
 	"mobile.session.history.beginning": "Beginning of retained messages",
 	"mobile.session.history.empty": "No retained messages",

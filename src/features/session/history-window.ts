@@ -25,6 +25,12 @@ export const journalAddressableRow = (row: TranscriptEntry): boolean =>
 	!!row.id &&
 	!LIVE_ONLY_ROW_PREFIXES.some((prefix) => row.id.startsWith(prefix));
 
+/** Core caps a live frame to its first user message plus the newest 79 rows and
+ * says so with `transcript_head_pinned`. Older wires lack the flag, so infer the
+ * same shape they produced. */
+const headPinned = (rows: TranscriptEntry[], flag?: boolean): boolean =>
+	flag ?? (rows.length >= 80 && rows[0]?.kind === "user");
+
 /** A screen-owned reader, not a second transcript store. Capped projections are
  * not deletion signals: keep accepted server rows until this reader is retired.
  * The wire has no retention generation, so unseen prunes cannot be inferred. */
@@ -38,6 +44,10 @@ export class HistoryWindow {
 	loading = false;
 	error: string | null = null;
 	read: "unknown" | "ok" | "failed" = "unknown";
+	/** Which request `error` belongs to, so a retry repeats THAT request: a
+	 * failed newest-page read (foreground refresh, reload, cold seed) is retried
+	 * as a newest read, never answered by fetching an older page instead. */
+	errorScope: "newest" | "older" | null = null;
 	private active = true;
 	private lease = 0;
 	private projection: SessionProjection | null = null;
@@ -95,13 +105,18 @@ export class HistoryWindow {
 		const frame = projection.transcript.filter(
 			(row) => !pinned.has(rowIdentity(row)),
 		);
-		if (this.read === "ok" && spine.length > 0 && frame.length > 0) {
-			const previous = new Set(spine.map(rowIdentity));
-			// The opener is context, never evidence that two capped tails overlap.
-			// Without a durable reconnect witness, do not call unseen rows complete.
-			if (!frame.some((row) => previous.has(rowIdentity(row))))
-				this.hasGap = true;
-		}
+		// The opener is context, never evidence that two capped tails overlap.
+		// Once paging reaches the true beginning it is no longer detached, but
+		// Core still re-sends it at the head of EVERY capped frame, so a disjoint
+		// reconnect tail would otherwise "overlap" through it alone (PR #207 Q2).
+		const head = headPinned(
+			projection.transcript,
+			projection.transcript_head_pinned,
+		)
+			? projection.transcript[0]
+			: undefined;
+		if (this.read === "ok" && spine.length > 0)
+			this.flagDisjoint(spine, frame, head ? rowIdentity(head) : undefined);
 		this.detached = this.detached.map(
 			(row) =>
 				projection.transcript.find(
@@ -115,12 +130,38 @@ export class HistoryWindow {
 		];
 	}
 
+	/** The reader cannot claim continuity between what it holds and a newer tail
+	 * that shares no row with it: rows between the two are unreachable by older
+	 * paging, so surface the gap and its Reload history action. Both `accept()`
+	 * (a live frame) and a newest-page refresh (an HTTP page) apply this ONE
+	 * test. `context` is the pinned opener, which repeats across disjoint tails;
+	 * fold-minted held rows are not journal rows a durable page could share. */
+	private flagDisjoint(
+		held: TranscriptEntry[],
+		incoming: TranscriptEntry[],
+		context?: string,
+		heldFilter: (row: TranscriptEntry) => boolean = () => true,
+	): void {
+		const previous = new Set(
+			held
+				.filter((row) => rowIdentity(row) !== context && heldFilter(row))
+				.map(rowIdentity),
+		);
+		const witness = incoming.filter((row) => rowIdentity(row) !== context);
+		// Without a durable reconnect witness, do not call unseen rows complete.
+		if (
+			previous.size > 0 &&
+			witness.length > 0 &&
+			!witness.some((row) => previous.has(rowIdentity(row)))
+		)
+			this.hasGap = true;
+	}
+
 	/** Same bootstrap domain as the relay: the projection is a newest render,
 	 * not evidence about older retention. Never fall back to a pinned opener
 	 * when the rest of the tail contains only fold-minted rows. */
-	private seedCursor(rows: TranscriptEntry[], headPinned?: boolean): void {
-		const pinned =
-			headPinned ?? (rows.length >= 80 && rows[0]?.kind === "user");
+	private seedCursor(rows: TranscriptEntry[], headPinnedFlag?: boolean): void {
+		const pinned = headPinned(rows, headPinnedFlag);
 		// Capped wire projections carry at most opener + 79 tail rows. A
 		// legacy oversized render can also re-inject preserved compaction turns:
 		// those are context too, never the newest tail's chronological cursor.
@@ -141,12 +182,23 @@ export class HistoryWindow {
 
 	load(refresh = false): Promise<void> {
 		if (!this.active || (!refresh && !this.hasMore)) return Promise.resolve();
+		// A refresh arriving while an older page is in flight joins that page
+		// rather than racing it. Dropping it is safe: the next live frame still
+		// runs accept()'s disjoint-tail test, and the foreground/reload refresh is
+		// re-fired on the next return, so a hole it would have revealed is still
+		// flagged rather than silently bridged (PR #207 R3).
 		if (this.pending) return this.pending;
-		const before = refresh && this.read === "ok" ? undefined : this.cursor;
+		// After a failed newest read `read` is "failed"; its retry must still ask
+		// for the newest page, not the older page at `cursor`.
+		const before =
+			refresh && (this.read === "ok" || this.errorScope === "newest")
+				? undefined
+				: this.cursor;
 		const lease = this.lease;
 		const started = this.revision;
 		this.loading = true;
 		this.error = null;
+		this.errorScope = null;
 		this.changed();
 		this.pending = Promise.resolve()
 			.then(() => this.fetchPage(before))
@@ -196,13 +248,35 @@ export class HistoryWindow {
 				// Cursor pages state journal order, even for preserved turns re-injected
 				// by compaction's render. Move overlapping copies to that stated position.
 				// A refresh is a newest tail: it must not prepend newer rows over history.
-				const joined =
-					before === undefined && this.cursor !== undefined
-						? mergeTranscript(
-								{ transcript: authoritative } as SessionProjection,
-								this.rows.filter((row) => !detachedIds.has(rowIdentity(row))),
-							).rows
-						: [...authoritative, ...held];
+				const refreshing = before === undefined && this.cursor !== undefined;
+				const spine = this.rows.filter(
+					(row) => !detachedIds.has(rowIdentity(row)),
+				);
+				if (refreshing) {
+					// More than a page appended while backgrounded makes the newest page
+					// disjoint from everything held; merging would silently bridge the
+					// hole (PR #207 R1). mergeTranscript's holeBelowPage is not used: it
+					// also fires on a head insert. Same test accept() applies.
+					const opener = this.projection;
+					const context =
+						opener &&
+						headPinned(opener.transcript, opener.transcript_head_pinned) &&
+						opener.transcript[0]
+							? rowIdentity(opener.transcript[0])
+							: undefined;
+					this.flagDisjoint(
+						spine,
+						authoritative,
+						context,
+						journalAddressableRow,
+					);
+				}
+				const joined = refreshing
+					? mergeTranscript(
+							{ transcript: authoritative } as SessionProjection,
+							spine,
+						).rows
+					: [...authoritative, ...held];
 				this.rows = [...this.detached, ...joined];
 				if (before !== undefined) {
 					this.cursor = next ?? before;
@@ -223,6 +297,7 @@ export class HistoryWindow {
 					error instanceof Error && error.message === "stalled"
 						? "stalled"
 						: "failed";
+				this.errorScope = before === undefined ? "newest" : "older";
 				this.read = "failed";
 			})
 			.finally(() => {
@@ -232,6 +307,12 @@ export class HistoryWindow {
 				this.changed();
 			});
 		return this.pending;
+	}
+
+	/** Repeat the request that failed: a newest-page failure is re-read as the
+	 * newest page, an older-page failure re-requests the same cursor. */
+	retry(): Promise<void> {
+		return this.load(this.errorScope === "newest");
 	}
 
 	/** Explicitly jump back to the current durable tail. Background refresh must
@@ -249,6 +330,7 @@ export class HistoryWindow {
 		this.hasGap = false;
 		this.loading = false;
 		this.error = null;
+		this.errorScope = null;
 		this.read = "unknown";
 		this.projection = null;
 		this.detached = [];

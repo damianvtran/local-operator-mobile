@@ -75,10 +75,14 @@ export interface SessionRuntime {
 	entries: TranscriptEntry[];
 	loadOlder: () => Promise<void>;
 	reloadHistory: () => Promise<void>;
+	/** Repeats the history request that failed (newest refresh or older page). */
+	retryHistory: () => Promise<void>;
 	loadingOlder: boolean;
 	historyError: string | null;
 	hasOlder: boolean;
 	historyGap: boolean;
+	/** Which read `historyError` belongs to; decides retry target and copy. */
+	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
 	connection: ConnectionView;
@@ -256,6 +260,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const loadOlder = useCallback(() => historyWindow.load(), [historyWindow]);
 	const reloadHistory = useCallback(
 		() => historyWindow.reload(),
+		[historyWindow],
+	);
+	const retryHistory = useCallback(
+		() => historyWindow.retry(),
 		[historyWindow],
 	);
 	const [commands, setCommands] = useSessionValue<SlashCommand[]>(identity, []);
@@ -759,10 +767,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		olderThanLoaded: olderRowClaim,
 		loadOlder,
 		reloadHistory,
+		retryHistory,
 		loadingOlder: historyWindow.loading,
 		historyError: historyWindow.error,
 		hasOlder: historyWindow.hasMore,
 		historyGap: historyWindow.hasGap,
+		historyErrorScope: historyWindow.errorScope,
 		// The shared route can be refused by its catalogue stream before this
 		// session's stream reports an error. Publish the same typed failure the
 		// banner already uses, so screen/composer facts cannot claim a healthy

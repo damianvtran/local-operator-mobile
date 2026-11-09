@@ -35,6 +35,7 @@
 	"mobile.session.history.load": "पहले के संदेश लोड करें",
 	"mobile.session.history.loading": "पहले के संदेश लोड हो रहे हैं…",
 	"mobile.session.history.failed": "पहले के संदेश लोड नहीं हो सके। फिर से कोशिश करें।",
+	"mobile.session.history.refresh_failed": "नवीनतम संदेश लोड नहीं हो सके। फिर से कोशिश करें।",
 	"mobile.session.history.stalled": "इतिहास में और संदेश लोड नहीं हुए। फिर से कोशिश करें या यह बातचीत दोबारा खोलें।",
 	"mobile.session.history.beginning": "सहेजे गए संदेशों की शुरुआत",
 	"mobile.session.history.empty": "कोई सहेजा गया संदेश नहीं है",

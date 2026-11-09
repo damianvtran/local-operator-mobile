@@ -114,6 +114,11 @@ export type TranscriptListProps = {
 	entries: TranscriptEntry[];
 	loadOlder?: () => Promise<void>;
 	reloadHistory?: () => Promise<void>;
+	/** Repeats the history read that failed; see `historyErrorScope`. */
+	retryHistory?: () => Promise<void>;
+	/** Which read failed: a newest-page refresh retries as a refresh and says so;
+	 *  an older page retries that page. */
+	historyErrorScope?: "newest" | "older" | null;
 	loadingOlder?: boolean;
 	hasOlder?: boolean;
 	historyGap?: boolean;
@@ -265,6 +270,8 @@ export const TranscriptList = ({
 	entries,
 	loadOlder,
 	reloadHistory,
+	retryHistory,
+	historyErrorScope = null,
 	loadingOlder = false,
 	hasOlder = false,
 	historyGap = false,
@@ -335,6 +342,22 @@ export const TranscriptList = ({
 		atTail.current = false;
 		void loadOlder();
 	}, [loadOlder, loadingOlder, hasOlder]);
+	/* "Try again" repeats the read that FAILED (PR #207 R2). A failed newest-page
+	 * refresh (foreground return, Check again) is re-read as the newest page: it
+	 * is not an older-page failure, and fetching an older page instead would
+	 * neither recover it nor act at all once the beginning is reached. The button
+	 * is shown only when this callback will issue a request. */
+	const newestFailed = historyError !== null && historyErrorScope === "newest";
+	const canRetry =
+		historyError !== null && (newestFailed ? !!retryHistory : hasOlder);
+	const requestRetry = useCallback(() => {
+		if (loadingOlder) return;
+		if (newestFailed && retryHistory) {
+			void retryHistory();
+			return;
+		}
+		requestOlder();
+	}, [loadingOlder, newestFailed, retryHistory, requestOlder]);
 	/** The capture hook's anchor: `top` starts the list unfollowed so a still can
 	 *  show the conversation's shape (see `scroll-hook.ts` for why the app exposes
 	 *  one position). Read once — it is a statement about the page. */
@@ -1432,20 +1455,22 @@ export const TranscriptList = ({
 								{t(
 									historyError === "stalled"
 										? "mobile.session.history.stalled"
-										: "mobile.session.history.failed",
+										: newestFailed
+											? "mobile.session.history.refresh_failed"
+											: "mobile.session.history.failed",
 								)}
 							</Text>
 						) : null}
-						{hasOlder || historyError ? (
+						{hasOlder || canRetry ? (
 							<Button
 								label={t(
 									loadingOlder
 										? "mobile.session.history.loading"
-										: historyError
+										: canRetry
 											? "mobile.common.try_again"
 											: "mobile.session.history.load",
 								)}
-								onPress={requestOlder}
+								onPress={canRetry ? requestRetry : requestOlder}
 								loading={loadingOlder}
 								disabled={loadingOlder}
 								variant="outline"
@@ -1476,6 +1501,9 @@ export const TranscriptList = ({
 			requestOlder,
 			reloadHistory,
 			requestHistoryReload,
+			canRetry,
+			newestFailed,
+			requestRetry,
 			entries.length,
 		],
 	);
