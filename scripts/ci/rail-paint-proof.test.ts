@@ -493,6 +493,54 @@ describe("analyseFrames", () => {
 		expect(report.verdict).toBe("fail");
 	});
 
+	it("rejects missing ticks plus one head pixel even when the absolute difference clears the floor", () => {
+		// R2-M1's exact false positive: losing 16 tick pixels must not supply the
+		// magnitude for the one building-only pixel in the correct head window.
+		const report = scenario({
+			deepUpMarks: THREE_MARKS,
+			buildingUpMarks: [{ y: 200 }, { y: HEAD_ROW, width: 1 }],
+		});
+		expect(report.states[DEEP_STATE]?.up.counts["8"]).toBe(24);
+		expect(report.states[BUILDING_STATE]?.up.counts["8"]).toBe(9);
+		expect(report.claims.buildingMinusDeep).toBe(-15);
+		expect(report.claims.buildingExtra.pixels).toBe(1);
+		expect(report.claims.buildingExtra.missingPixels).toBe(16);
+		expect(report.claims.buildingExtra.localised).toBe(true);
+		expect(report.claims.railPaints).toBe(true);
+		expect(report.claims.buildingDiffersFromDeep).toBe(false);
+		expect(report.verdict).toBe("fail");
+	});
+
+	it("accepts 159 building pixels versus 141 deep pixels when all 18 extra pixels are the head dash", () => {
+		const ticks = [
+			{ y: 200, width: 7, height: 20 },
+			{ y: 300, width: 1 },
+		];
+		const report = scenario({
+			deepUpMarks: ticks,
+			buildingUpMarks: [...ticks, { y: 194, width: 6, height: 3 }],
+		});
+		expect(report.states[DEEP_STATE]?.up.counts["8"]).toBe(141);
+		expect(report.states[BUILDING_STATE]?.up.counts["8"]).toBe(159);
+		expect(report.claims.buildingMinusDeep).toBe(18);
+		expect(report.claims.buildingExtra.pixels).toBe(18);
+		expect(report.claims.buildingExtra.missingPixels).toBe(0);
+		expect(report.claims.buildingExtra.localised).toBe(true);
+		expect(report.claims.buildingDiffersFromDeep).toBe(true);
+		expect(report.verdict).toBe("pass");
+	});
+
+	it("rejects missing tick ink even when the building-only head ink clears the floor", () => {
+		const report = scenario({
+			deepUpMarks: THREE_MARKS,
+			buildingUpMarks: [{ y: 200 }, { y: HEAD_ROW, width: 6 }],
+		});
+		expect(report.claims.buildingExtra.pixels).toBe(6);
+		expect(report.claims.buildingExtra.missingPixels).toBe(16);
+		expect(report.claims.buildingExtra.localised).toBe(true);
+		expect(report.claims.buildingDiffersFromDeep).toBe(false);
+	});
+
 	it("requires a whole dash row of difference, not just a difference", () => {
 		// The floor is the head mark's own width (6 pt at 1×), promoted from
 		// `MIN_INK_PX` once two independent runs measured 18 px in the same rows: a
@@ -519,6 +567,10 @@ describe("analyseFrames", () => {
 		expect(belowDashRow.claims.buildingMinusDeep).toBeGreaterThanOrEqual(
 			MIN_INK_PX,
 		);
+		expect(belowDashRow.claims.buildingExtra.pixels).toBe(
+			HEAD_MARK_WIDTH_PT - 1,
+		);
+		expect(belowDashRow.claims.buildingExtra.missingPixels).toBe(0);
 		expect(belowDashRow.claims.buildingExtra.localised).toBe(true);
 		expect(belowDashRow.claims.buildingDiffersFromDeep).toBe(false);
 
@@ -531,6 +583,8 @@ describe("analyseFrames", () => {
 			],
 		});
 		expect(oneDashRow.claims.buildingMinusDeep).toBe(HEAD_MARK_WIDTH_PT);
+		expect(oneDashRow.claims.buildingExtra.pixels).toBe(HEAD_MARK_WIDTH_PT);
+		expect(oneDashRow.claims.buildingExtra.missingPixels).toBe(0);
 		expect(oneDashRow.claims.buildingDiffersFromDeep).toBe(true);
 		expect(oneDashRow.verdict).toBe("pass");
 	});

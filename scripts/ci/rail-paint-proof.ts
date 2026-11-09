@@ -489,9 +489,8 @@ export type HeadMarkCheck = {
 	expectedRows: [number, number] | null;
 	/** The first row `deep` inks — the anchor the head mark is placed by. */
 	firstTickRow: number | null;
-	/** Pixels inked in `deep` and not in `building`. Reported, never gated: the
-	 *  two states are separate captures, so a tick row that landed on a different
-	 *  pixel between them is a sampling fact, not a mark that went missing. */
+	/** Pixels inked in `deep` and not in `building`. Any missing ink contradicts
+	 *  the claim that building preserves deep's ticks and only adds a head dash. */
 	missingPixels: number;
 	/** Every extra pixel is inside the head-mark rows. */
 	localised: boolean;
@@ -748,8 +747,12 @@ export function analyseFrames(
 	 * of the dash — the report's numbers are gated where they agreed, and the
 	 * `MIN_INK_PX` term keeps the smaller-density case from going below noise. */
 	const headMarkRowPx = HEAD_MARK_WIDTH_PT * densityScale;
+	/* Direction matters: the dash exists only in building, so only building-only
+	 * ink can clear its floor. Missing ink is evidence AGAINST an added dash,
+	 * never magnitude in its favour, even when the net difference is large. */
 	const buildingDiffersFromDeep =
-		Math.abs(buildingMinusDeep) >= Math.max(MIN_INK_PX, headMarkRowPx) &&
+		buildingExtra.pixels >= Math.max(MIN_INK_PX, headMarkRowPx) &&
+		buildingExtra.missingPixels === 0 &&
 		buildingExtra.localised;
 
 	/* A NEGATIVE DURATION IS A BROKEN CLOCK, NOT A FAST CAPTURE, and averaging it
@@ -852,9 +855,7 @@ export function formatReport(report: RailPaintReport): string {
 	lines.push(
 		`  building-only ink: ${extra.pixels} px in rows ${span(extra.rows)}; head-mark window rows ${span(extra.expectedRows)} (anchored on the first tick at row ${extra.firstTickRow ?? "none"}); localised: ${extra.localised}`,
 	);
-	lines.push(
-		`  deep-only ink (reported, not gated): ${extra.missingPixels} px`,
-	);
+	lines.push(`  deep-only ink (must be zero): ${extra.missingPixels} px`);
 	lines.push(`verdict: ${report.verdict}`);
 	return lines.join("\n");
 }
