@@ -706,21 +706,28 @@
 				gap: 16px;
 			}
 
+			/* The reader's own turn is a BORDERLESS FILL, as in the relay
+			 * (local_operator/mobile/web/src/components/transcript.tsx:
+			 * `rounded-md bg-surface px-3 py-1.5`) and in the app
+			 * (transcript-row.tsx). This sample used to draw a hairline box with a
+			 * 2px accent start rule; the hairline measured 1.25:1 on the light
+			 * canvas — an edge with no separation — and the rule put a green-edged
+			 * box on every exchange. Type is `body-read`, 14 / 1.55, the step the
+			 * app's message bodies actually use. */
 			.bubble-user {
 				align-self: flex-end;
 				max-width: 85%;
 				background: var(--lo-surface);
-				border: 1px solid var(--lo-hairline);
-				border-left: 2px solid var(--lo-accent);
 				border-radius: 10px;
 				padding: 6px 12px;
-				font-size: 16px;
-				line-height: 1.5;
+				font-size: 14px;
+				line-height: 1.55;
 			}
 
+			/* `body-read` too: the answer and the reader's turn are one step. */
 			.assistant {
-				font-size: 17px;
-				line-height: 1.5;
+				font-size: 14px;
+				line-height: 1.55;
 			}
 
 			.assistant p {
@@ -741,20 +748,37 @@
 				padding: 1px 4px;
 			}
 
-			.tool-row {
+			/* A trace is a BORDERLESS SINGLE LINE in every state: no fill, no
+			 * separator, no card (tool-row.tsx; the relay's tool-row.tsx). State is
+			 * the glyph's ink, and a pulse on the running glyph. The row is the 44px
+			 * touch floor tall, and its rows sit flush — `.trace` below removes the
+			 * transcript's 16px turn gap between them — so a run of calls reads as
+			 * a list, not as a stack of boxes. */
+			.trace {
 				display: flex;
-				align-items: baseline;
-				gap: 8px;
-				padding: 6px 0;
-				border-bottom: 1px solid var(--lo-hairline);
+				flex-direction: column;
 			}
 
+			.tool-row {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				min-height: 44px;
+				padding: 0 8px;
+			}
+
+			/* The glyph column: a FIXED 16px mono box, left-aligned, shared by the
+			 * tool row and the notice, so every row's text starts on one edge
+			 * whichever glyph it carries. */
 			.glyph {
 				flex: none;
+				width: 16px;
+				text-align: start;
 				font-family:
 					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
 					monospace;
-				font-size: 13px;
+				font-size: 12px;
+				line-height: 1.45;
 			}
 
 			.g-done {
@@ -770,18 +794,19 @@
 				color: var(--lo-ink-dim);
 			}
 
+			/* Name and summary are ONE 13 / 1.5 sans step (`trace`, the relay's
+			 * `--text-body-sm`), told apart by ink. The name was 12px mono, which
+			 * read as a second typeface on every line. */
 			.tool-name {
-				font-family:
-					"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo,
-					monospace;
-				font-size: 12px;
+				font-size: 13px;
+				line-height: 1.5;
 				color: var(--lo-ink-muted);
 				flex: none;
 			}
 
 			.tool-summary {
-				font-size: 14px;
-				line-height: 1.45;
+				font-size: 13px;
+				line-height: 1.5;
 				color: var(--lo-ink-dim);
 				min-width: 0;
 				flex: 1;
@@ -790,10 +815,12 @@
 				white-space: nowrap;
 			}
 
+			/* On the trace's rail: the same inset and the same 16px glyph box. */
 			.notice {
 				display: flex;
 				align-items: baseline;
-				gap: 8px;
+				gap: 6px;
+				padding: 4px 8px;
 				font-size: 14px;
 				line-height: 1.45;
 				color: var(--lo-ink-muted);
@@ -1267,8 +1294,9 @@
 				<p class="eyebrow">07 · transcript</p>
 				<h2>What the agent did, and what it cost</h2>
 				<p class="note">
-					A tool row is one line: state glyph, mono name, summary, diff counts,
-					elapsed. The state glyph is a text glyph, so it survives every system font.
+					A tool row is one borderless line: state glyph, name, summary, diff counts,
+					elapsed. No fill and no separator in any state: the glyph's ink carries it.
+					The state glyph is a text glyph, so it survives every system font.
 				</p>
 				<div class="transcript">
 					<div class="bubble-user">Rebuild the token pipeline and run the contract.</div>
@@ -1278,35 +1306,37 @@
 							contract. Two pairs needed a decision, both recorded.
 						</p>
 					</div>
-					<div class="tool-row">
-						<span class="glyph g-done">✓</span>
-						<span class="tool-name">read</span>
-						<span class="tool-summary">design/tokens/tokens.json</span>
-						<span class="mono-sm">0.4s</span>
-					</div>
-					<div class="tool-row">
-						<span class="glyph g-done">✓</span>
-						<span class="tool-name">edit</span>
-						<span class="tool-summary">design/tokens/tailwind-preset.js</span>
-						<span class="mono-sm"><span class="success-text">+18</span> <span class="danger-text">−4</span></span>
-						<span class="mono-sm">1.2s</span>
-					</div>
-					<div class="tool-row">
-						<span class="glyph g-running">⟳</span>
-						<span class="tool-name">bash</span>
-						<span class="tool-summary">node design/tokens/contrast-contract.mjs</span>
-						<span class="mono-sm">12s</span>
-					</div>
-					<div class="tool-row">
-						<span class="glyph g-queued">⋯</span>
-						<span class="tool-name">subagent</span>
-						<span class="tool-summary">qa-tester · write the matrix</span>
-					</div>
-					<div class="tool-row">
-						<span class="glyph g-failed">✗</span>
-						<span class="tool-name">bash</span>
-						<span class="tool-summary">magick montage … (no font)</span>
-						<span class="mono-sm">0.9s</span>
+					<div class="trace">
+						<div class="tool-row">
+							<span class="glyph g-done">✓</span>
+							<span class="tool-name">read</span>
+							<span class="tool-summary">design/tokens/tokens.json</span>
+							<span class="mono-sm">0.4s</span>
+						</div>
+						<div class="tool-row">
+							<span class="glyph g-done">✓</span>
+							<span class="tool-name">edit</span>
+							<span class="tool-summary">design/tokens/tailwind-preset.js</span>
+							<span class="mono-sm"><span class="success-text">+18</span> <span class="danger-text">−4</span></span>
+							<span class="mono-sm">1.2s</span>
+						</div>
+						<div class="tool-row">
+							<span class="glyph g-running">⟳</span>
+							<span class="tool-name">bash</span>
+							<span class="tool-summary">node design/tokens/contrast-contract.mjs</span>
+							<span class="mono-sm">12s</span>
+						</div>
+						<div class="tool-row">
+							<span class="glyph g-queued">⋯</span>
+							<span class="tool-name">subagent</span>
+							<span class="tool-summary">qa-tester · write the matrix</span>
+						</div>
+						<div class="tool-row">
+							<span class="glyph g-failed">✗</span>
+							<span class="tool-name">bash</span>
+							<span class="tool-summary">magick montage … (no font)</span>
+							<span class="mono-sm">0.9s</span>
+						</div>
 					</div>
 					<div class="notice">
 						<span class="glyph">!</span>

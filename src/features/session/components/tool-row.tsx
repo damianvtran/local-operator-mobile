@@ -48,6 +48,7 @@ import {
 } from "@/features/session/projection";
 import { ROLE, toolRowToggleId } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { Shimmer } from "@/ui/components/shimmer";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
@@ -68,22 +69,16 @@ import { cx } from "@/ui/variants";
  * (`write`/`edit`/`apply_patch`/`patch`): showing both says the same thing twice
  * and pushes the diff — the part the reader wants — below the fold.
  *
- * **The row's three fills, stated here because the kit does not state them.**
- * `components.md` § 15 defines the row's anatomy (glyph, name, summary, diff,
- * elapsed, disclosure) and no fill at all, while this row paints two:
- * `bg-elevated` while the action is unfinished (`running`, `queued`,
- * `composing`) and `bg-danger-wash` when it failed; a done row sits on the canvas.
- * The design round measured all three in the shipped frames and called the result
- * coherent — an unfinished row is raised, a failed row is red, and the glyph
- * carries the same fact so colour is never the only channel (§ 2.6) — but flagged
- * that § 2.2 reserves `elevated` for "sheets, dialogs, popovers, hovered and
- * pressed rows", so this is an EXTENSION rather than a reading of the kit.
- *
- * They are kept deliberately: a long transcript is scanned for "what is still
- * moving" and "what broke", and a fill answers both without reading glyphs. The
- * § 15 addition that would make them documented has been routed to the kit's owner
- * (design round 1, D5) — this comment is the interim record on the component, not
- * a second spec.
+ * **The row has no fill, in any state** — which is what `components.md` § 15
+ * always said (glyph, name, summary, diff, elapsed, disclosure; no fill). An
+ * earlier revision painted `bg-elevated` on unfinished rows and `bg-danger-wash`
+ * on failed ones so a long transcript could be scanned for "what is still
+ * moving" and "what broke". Rendered, that made every live or failed call a
+ * full-width 44 pt card, and consecutive ones a stack of cards (visual audit
+ * D4) — against the standing rule that a trace is a borderless single line and
+ * against the relay's own row, which never had the fills. The scan is answered
+ * by the glyph instead: its ink per state (`toolGlyph`), and an opacity pulse
+ * on the running glyph, so colour is still never the only channel (§ 2.6).
  *
  * **The send row carries one arm of its own**: a cross-session `send` whose
  * result states a `details.delivery` is painted with the state's own word and
@@ -318,10 +313,6 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 	 * say it twice (the diff-first tools' rule, `isDiffFirstTool`). */
 	const showArgs =
 		blocks.showArgs && blocks.args.length > 0 && bridgeMessage === null;
-	/* A queued call keeps the raised background of a live row — it is announced and
-	 * may still execute — but it does NOT pulse: the pulse is the "work is
-	 * happening" signal, and nothing is happening while it waits behind a sibling. */
-	const queued = entry.tool_state === "queued";
 	/* The bridge row's SECOND LINE, if any: at the larger text scale the chip's
 	 * word moves down (the `trailing` arm's rule), and below the width where an
 	 * unmarked phrase fits it takes its own line instead of being clipped (Q1).
@@ -352,17 +343,13 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 			: null;
 
 	return (
-		<View
-			className={cx(
-				"rounded-sm px-2",
-				(entry.tool_state === "running" ||
-					queued ||
-					entry.tool_state === "composing") &&
-					"bg-elevated",
-				entry.tool_state === "failed" && "bg-danger-wash",
-			)}
-			testID={testID}
-		>
+		/* NO FILL IN ANY STATE (visual audit D4). Running, queued and composing
+		 *  rows wore `bg-elevated` and failed rows `bg-danger-wash`, so two live
+		 *  rows read as two stacked 44 pt cards — the look the relay's row never
+		 *  had (`tool-row.tsx` there carries no state fill). State is the glyph's
+		 *  ink (`toolGlyph`) plus the pulse on a running glyph below; a queued
+		 *  or composing call is dim and still, because nothing is happening yet. */
+		<View className="rounded-sm px-2" testID={testID}>
 			<Pressable
 				accessibilityRole={details ? ROLE.button : ROLE.text}
 				accessibilityLabel={
@@ -394,19 +381,28 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 						secondLine !== null ? "min-h-8" : "min-h-11",
 					)}
 				>
-					<Text
-						/* LEFT-aligned in its fixed box, not centred: the delivery word (and the
-						 *  expansion's hint) start on the ROW's left edge, so a glyph centred in
-						 *  16 pt sat 2.6 pt to the right of line two at 150 % — U-41's "line 2
-						 *  starts off the row's rail". Left-aligned, the glyph is the rail. */
-						className={cx(
-							"w-4 text-start font-mono text-mono-sm",
-							tone.inkClass,
-						)}
-						aria-hidden
-					>
-						{tone.glyph}
-					</Text>
+					{/* The pulse is the running row's "work is happening" channel now
+					 *  that the row has no fill (D4). `Shimmer` is the kit's existing
+					 *  opacity pulse — native driver, 0.72 floor, stopped under
+					 *  reduced motion — and starts no loop at all unless `pulsing`,
+					 *  so the dozens of settled rows in a window cost nothing. It
+					 *  owns the fixed 16 pt box so the rail's width cannot depend on
+					 *  whether the glyph is animated. */}
+					<Shimmer active={tone.pulsing} className="w-4 shrink-0">
+						<Text
+							/* LEFT-aligned in its fixed box, not centred: the delivery word (and the
+							 *  expansion's hint) start on the ROW's left edge, so a glyph centred in
+							 *  16 pt sat 2.6 pt to the right of line two at 150 % — U-41's "line 2
+							 *  starts off the row's rail". Left-aligned, the glyph is the rail. */
+							className={cx(
+								"w-4 text-start font-mono text-mono-sm",
+								tone.inkClass,
+							)}
+							aria-hidden
+						>
+							{tone.glyph}
+						</Text>
+					</Shimmer>
 					{/* The NAME yields before the summary does, so the clock is the last
 					    thing lost rather than the first: a truncated name is visibly
 					    truncated, while a clipped duration is a shorter string that is
@@ -430,17 +426,18 @@ export const ToolRow = ({ entry, testID }: ToolRowProps) => {
 							)}
 						</View>
 					) : (
-						/* One 13/1.5 size for the name AND the headline: the relay's tool
-						 *  line is one 13 pt step, and a 12 pt mono name under a 14 pt
-						 *  headline left the trace without one size (review round 1, m1 /
-						 *  D5). The name takes `mono` (13/1.5, mono face), NOT
-						 *  `font-mono text-trace`: every step's utility DOES set its own
-						 *  family (theme.css's per-step `font-family` rules), and
-						 *  `.text-trace` is emitted after `.font-mono` in the same layer,
-						 *  so on web that pair rendered the name in sans (round 2, D8 /
-						 *  Q8). `tool-row.test.ts` compiles the theme to hold this. */
+						/* One 13/1.5 SANS step for the name AND the headline, told apart by
+						 *  ink alone — the relay's tool line exactly (its name and summary
+						 *  are both `text-body-sm`, 13 px sans; visual audit D13). The
+						 *  phone's step at that size is `trace`: this kit's `body-sm` is
+						 *  14, so borrowing the relay's class NAME would have made the name
+						 *  a point larger than the reference it is matching. The name was
+						 *  `text-mono`, which read as a second typeface on every line.
+						 *  `tool-row.test.ts` compiles the theme to hold the face, because
+						 *  each step's utility sets its own family and a stray `font-mono`
+						 *  beside it is decided by emit order (round 2, D8 / Q8). */
 						<Text
-							className="min-w-0 shrink truncate text-mono text-ink-muted"
+							className="min-w-0 shrink truncate text-trace text-ink-muted"
 							numberOfLines={1}
 						>
 							{entry.tool_name}
