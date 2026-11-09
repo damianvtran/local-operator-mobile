@@ -29,7 +29,7 @@
 	"mobile.session.pending_echo.not_confirmed": "chưa xác nhận — thử lại bên dưới",
 	"mobile.session.pending_echo.earlier_not_sent": "Tin nhắn trước của bạn chưa được gửi ({reason}). Chạm vào nó ở trên để đưa lại.",
 	"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
-	"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy kiểm tra dung lượng trống trên điện thoại này rồi thử lại.",
-	"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy kiểm tra dung lượng trống trên điện thoại này, rồi thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
+	"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy thử lại.",
+	"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
 	"mobile.session.reasoning_disclosure": "Suy nghĩ"
 }

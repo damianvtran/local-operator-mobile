@@ -8,6 +8,30 @@ const ROOT = "lo-mobile-sealed-v1";
 const SENTINEL = "lo-mobile-private-installation-v1";
 const HASH_NAME = /^[a-f0-9]{64}$/i;
 type Family = "device" | "startup" | "recovery";
+type StorageStage = "installation" | "encryption" | "commit";
+
+/** Fixed, content-free diagnostic metadata. Preserve the underlying exception
+ * internally for debugging without interpolating native messages (which may
+ * contain file paths or private values) into UI/log output. */
+export class NativePrivateStorageError extends Error {
+	override readonly name = "NativePrivateStorageError";
+	constructor(
+		readonly stage: StorageStage,
+		cause: unknown,
+	) {
+		super(`Native private storage failed: ${stage}`, { cause });
+	}
+}
+async function storageStage<T>(
+	stage: StorageStage,
+	operation: () => Promise<T>,
+): Promise<T> {
+	try {
+		return await operation();
+	} catch (cause) {
+		throw new NativePrivateStorageError(stage, cause);
+	}
+}
 /** Ports mirror the existing injectable persistence contracts. The singleton
  * below supplies real Expo adapters; isolated Node tests supply filesystem and
  * cryptography ports without loading or pretending to exercise native bridges. */
@@ -132,7 +156,9 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 				file.write(value);
 			},
 			move: async (from, to) => {
-				new File(dir, from).move(new File(dir, to));
+				// SDK 57's native move is asynchronous. This promise IS the commit:
+				// dropping it acknowledges an uncommitted envelope and loses failures.
+				await new File(dir, from).move(new File(dir, to));
 			},
 			remove: async (name) => {
 				const file = new File(dir, name);
@@ -144,7 +170,7 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 		family: Family,
 		name: string,
 	): Promise<{ key: string; value: string | null } | null> {
-		const cipher = await codec();
+		const cipher = await storageStage("installation", codec);
 		const raw = await (await revisions(family, name)).get();
 		if (raw === null) return null;
 		const entry: unknown = JSON.parse(
@@ -186,13 +212,14 @@ export function createNativePrivateStores(platform: NativePrivatePlatform) {
 			},
 			set(key: string, value: string): Promise<void> {
 				return serialize(`${family}/${key}`, async () => {
-					const cipher = await codec();
+					const cipher = await storageStage("installation", codec);
 					const name = await hash(key);
-					const sealed = await cipher.encode(
-						`${family}/${name}`,
-						JSON.stringify({ key, value }),
+					const sealed = await storageStage("encryption", () =>
+						cipher.encode(`${family}/${name}`, JSON.stringify({ key, value })),
 					);
-					await (await revisions(family, name)).set(sealed);
+					await storageStage("commit", async () =>
+						(await revisions(family, name)).set(sealed),
+					);
 				});
 			},
 			remove(key: string): Promise<void> {

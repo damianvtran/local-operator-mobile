@@ -6,5 +6,9 @@
 	"mobile.composer_input.voice.finish": "完成并转写",
 	"mobile.composer_input.paste.image": "粘贴图片",
 	"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
-	"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。"
+	"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。",
+	"mobile.composer_input.clear_draft": "清空草稿",
+	"mobile.composer_input.clear_draft_hint": "仅清空草稿中的文字和图片；保留排队中和未确认的消息",
+	"mobile.composer_input.dismiss_error": "关闭错误提示",
+	"mobile.composer_input.dismiss_error_hint": "隐藏此错误，不改变草稿或发送状态"
 }

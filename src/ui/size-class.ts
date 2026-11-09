@@ -536,6 +536,15 @@ export const composerBudget = (
 	return { field: fieldBox - FIELD_BORDER_Y, extras };
 };
 
+/** Native iOS keeps the full window while the dock moves above the keyboard;
+ * Android may resize it instead (overlap then is zero). Budget the WHOLE dock
+ * against that remaining space, not just the textarea. The existing 8pt dock
+ * gap lives outside its box. The caller intersects this with any tighter limit. */
+export const composerKeyboardLimit = (
+	windowHeight: number,
+	keyboardOverlap: number,
+): number => Math.max(TOUCH_TARGET.ios, windowHeight - keyboardOverlap - 8);
+
 /**
  * The composer's ceiling from WINDOW geometry, or `null` when it already fits.
  *
@@ -550,21 +559,57 @@ export const composerBudget = (
  * and measuring it while EMPTY froze a long draft at two lines (observed at
  * 320 pt / 100 %: field 60 px against a 132 px cap). Here an unbounded pass may
  * grow until its painted bottom reaches the window; only then does the ceiling
- * bind, and `>=` keeps it bound while the capped box sits exactly on the edge. A
- * one-pixel tolerance absorbs the integer rounding of both numbers.
+ * bind. A one-pixel tolerance absorbs the integer rounding of both numbers.
+ *
+ * INVARIANT: the overflow decision must not depend on the output it controls.
+ * The capped box does NOT sit on the edge: the composer spends the limit minus
+ * its outer gap (`composerHostBound`), so a capped box ends exactly where a
+ * bottom-anchored box that fits ends — `window - gap`. Geometry alone cannot
+ * tell the two apart, and deciding from the capped height unbound the composer
+ * on the very next measure, which regrew it past the window, which rebound it
+ * (QA #206 round 3 Q3: 1011 / 639 px oscillating with no input at 390x844).
+ * `capped` is the intrinsic fact instead: the composer is at its cap only when
+ * its content wants at least the cap (`rendered = min(natural, cap)`), so while
+ * it holds the answer stays the same, and the limit lets go only once the
+ * content shrinks below the cap — when the unbound box genuinely fits.
  */
 export const composerLimit = (
 	viewportHeight: number,
 	top: number | null,
 	height: number | null,
+	capped = false,
 ): number | null => {
 	if (top === null || height === null) return null;
-	const overflows = top + height >= viewportHeight - 1;
+	const overflows = capped || top + height >= viewportHeight - 1;
 	if (!overflows) return null;
 	/* The floor is the SMALLEST target the kit allows, not a share: a limit below
 	 *  one control would collapse the composer rather than bound it. */
 	return Math.max(TOUCH_TARGET.ios, Math.round(viewportHeight - top));
 };
+
+/** The box height the composer spends under a host `limit`: the limit is measured
+ * to the window bottom, and the dock's outer gap (`composerOuterGap`) lives below
+ * its box, so the box gets the limit minus that gap, never under one control. */
+export const composerHostBound = (
+	limit: number,
+	gap: number,
+	floor: number,
+): number => Math.max(floor, limit - gap);
+
+/** Whether the composer's measured box is held by the host limit — the `capped`
+ * input of `composerLimit`. Only the HOST limit counts: the keyboard budget
+ * (`composerKeyboardLimit`) is computed from window and keyboard geometry alone,
+ * never from a measurement, so it cannot feed back; a box held by it is not
+ * reported as capped, and the host limit then releases with nothing changing,
+ * because the keyboard bound is the tighter of the two either way. The same
+ * one-pixel rounding tolerance as `composerLimit`. */
+export const composerAtHostCap = (
+	height: number,
+	limit: number | null,
+	gap: number,
+	floor: number,
+): boolean =>
+	limit !== null && height >= composerHostBound(limit, gap, floor) - 1;
 
 /**
  * Whether the one-row status tray is painted. In short landscape it yields to a

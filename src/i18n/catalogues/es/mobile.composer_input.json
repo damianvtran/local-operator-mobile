@@ -6,5 +6,9 @@
 	"mobile.composer_input.voice.finish": "Terminar y transcribir",
 	"mobile.composer_input.paste.image": "Pegar imagen",
 	"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
-	"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar»."
+	"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar».",
+	"mobile.composer_input.clear_draft": "Borrar borrador",
+	"mobile.composer_input.clear_draft_hint": "Borra solo el texto y las imágenes del borrador; conserva los mensajes en cola y sin confirmar",
+	"mobile.composer_input.dismiss_error": "Ocultar error",
+	"mobile.composer_input.dismiss_error_hint": "Oculta este error sin cambiar el borrador ni el estado de entrega"
 }

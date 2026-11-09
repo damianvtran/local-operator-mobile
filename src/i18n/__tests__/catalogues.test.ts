@@ -92,7 +92,7 @@ const NAMESPACES = [
 		name: "mobile.composer_input",
 		messages: composerInput,
 		context: composerInputContext,
-		expected: 8,
+		expected: 12,
 	},
 	{
 		name: "mobile.library",
@@ -256,8 +256,9 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		// Exact merged catalogue union; verified after generation.
-		expect(total).toBe(538);
+		/* Exact merged catalogue union: main's 538 plus this PR's four
+		 * editor-only clear/dismiss labels and hints. */
+		expect(total).toBe(542);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -30,5 +30,21 @@
 	"mobile.composer_input.paste.denied": {
 		"role": "status",
 		"note": "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the paperclip (Attach) button, then the Paste image row (use this locale's translation of mobile.composer_input.paste.image), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop."
+	},
+	"mobile.composer_input.clear_draft": {
+		"role": "button",
+		"note": "User-action button clears only the unsent editor, not queued messages or retained instructions with uncertain delivery. No final full stop."
+	},
+	"mobile.composer_input.clear_draft_hint": {
+		"role": "button",
+		"note": "Screen-reader hint for Clear draft. Explicitly distinguishes editor clearing from deleting queued or unconfirmed instructions."
+	},
+	"mobile.composer_input.dismiss_error": {
+		"role": "button",
+		"note": "Presentation-only error dismissal. Does not retry, delete or acknowledge delivery. No final full stop."
+	},
+	"mobile.composer_input.dismiss_error_hint": {
+		"role": "button",
+		"note": "Screen-reader hint for dismissing only an error message. Draft and delivery records are unchanged."
 	}
 }

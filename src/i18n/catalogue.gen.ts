@@ -73,6 +73,10 @@ export type CatalogueKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.clear_draft"
+	| "mobile.composer_input.clear_draft_hint"
+	| "mobile.composer_input.dismiss_error"
+	| "mobile.composer_input.dismiss_error_hint"
 	| "mobile.composer_input.paste.denied"
 	| "mobile.composer_input.paste.image"
 	| "mobile.composer_input.paste.image_hint"
@@ -609,6 +613,10 @@ export type NoParamKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.clear_draft"
+	| "mobile.composer_input.clear_draft_hint"
+	| "mobile.composer_input.dismiss_error"
+	| "mobile.composer_input.dismiss_error_hint"
 	| "mobile.composer_input.paste.denied"
 	| "mobile.composer_input.paste.image"
 	| "mobile.composer_input.paste.image_hint"
@@ -1079,6 +1087,10 @@ export type MessageParams = {
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
 	"mobile.common.try_again": NoParams;
+	"mobile.composer_input.clear_draft": NoParams;
+	"mobile.composer_input.clear_draft_hint": NoParams;
+	"mobile.composer_input.dismiss_error": NoParams;
+	"mobile.composer_input.dismiss_error_hint": NoParams;
 	"mobile.composer_input.paste.denied": NoParams;
 	"mobile.composer_input.paste.image": NoParams;
 	"mobile.composer_input.paste.image_hint": NoParams;
@@ -1636,6 +1648,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
 	"mobile.common.try_again": "Try again",
+	"mobile.composer_input.clear_draft": "Clear draft",
+	"mobile.composer_input.clear_draft_hint": "Clears only the draft text and images; keeps queued and unconfirmed messages",
+	"mobile.composer_input.dismiss_error": "Dismiss error",
+	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status",
 	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
 	"mobile.composer_input.paste.image": "Paste image",
 	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
@@ -1872,8 +1888,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
-	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Check free space on this phone, then try again.",
-	"mobile.session.composer.retry_not_sent_storage": "This retry attempt wasn’t sent. Couldn’t prepare the earlier instruction safely for retry. Check free space on this phone, then retry the earlier instruction. Your current draft hasn’t been sent.",
+	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Try again.",
+	"mobile.session.composer.retry_not_sent_storage": "This retry attempt wasn’t sent. Couldn’t prepare the earlier instruction safely for retry. Try the earlier instruction again. Your current draft hasn’t been sent.",
 	"mobile.session.conversation_details": "Conversation details",
 	"mobile.session.highlights.sound_pause": "Pause {title}",
 	"mobile.session.highlights.sound_play": "Play {title}",
@@ -2178,6 +2194,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
+	"mobile.composer_input.clear_draft": { role: "button", note: "User-action button clears only the unsent editor, not queued messages or retained instructions with uncertain delivery. No final full stop." },
+	"mobile.composer_input.clear_draft_hint": { role: "button", note: "Screen-reader hint for Clear draft. Explicitly distinguishes editor clearing from deleting queued or unconfirmed instructions." },
+	"mobile.composer_input.dismiss_error": { role: "button", note: "Presentation-only error dismissal. Does not retry, delete or acknowledge delivery. No final full stop." },
+	"mobile.composer_input.dismiss_error_hint": { role: "button", note: "Screen-reader hint for dismissing only an error message. Draft and delivery records are unchanged." },
 	"mobile.composer_input.paste.denied": { role: "status", note: "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the paperclip (Attach) button, then the Paste image row (use this locale's translation of mobile.composer_input.paste.image), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop." },
 	"mobile.composer_input.paste.image": { role: "button", note: "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop." },
 	"mobile.composer_input.paste.image_hint": { role: "button", note: "Accessibility hint for the Paste image chip. No final full stop." },
@@ -2734,6 +2754,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
 		"mobile.common.try_again": "Reintentar",
+		"mobile.composer_input.clear_draft": "Borrar borrador",
+		"mobile.composer_input.clear_draft_hint": "Borra solo el texto y las imágenes del borrador; conserva los mensajes en cola y sin confirmar",
+		"mobile.composer_input.dismiss_error": "Ocultar error",
+		"mobile.composer_input.dismiss_error_hint": "Oculta este error sin cambiar el borrador ni el estado de entrega",
 		"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar».",
 		"mobile.composer_input.paste.image": "Pegar imagen",
 		"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
@@ -2970,8 +2994,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
-		"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Comprueba el espacio libre en este teléfono y vuelve a intentarlo.",
-		"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Comprueba el espacio libre de este teléfono y vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
+		"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Vuelve a intentarlo.",
+		"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
 		"mobile.session.conversation_details": "Detalles de la conversación",
 		"mobile.session.highlights.sound_pause": "Pausar {title}",
 		"mobile.session.highlights.sound_play": "Reproducir {title}",
@@ -3274,6 +3298,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
 		"mobile.common.try_again": "Réessayer",
+		"mobile.composer_input.clear_draft": "Effacer le brouillon",
+		"mobile.composer_input.clear_draft_hint": "Efface uniquement le texte et les images du brouillon ; conserve les messages en attente et non confirmés",
+		"mobile.composer_input.dismiss_error": "Masquer l’erreur",
+		"mobile.composer_input.dismiss_error_hint": "Masque cette erreur sans modifier le brouillon ni l’état de livraison",
 		"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez le trombone, puis Coller l’image, et choisissez « Autoriser le collage ».",
 		"mobile.composer_input.paste.image": "Coller l’image",
 		"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
@@ -3510,8 +3538,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
-		"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Vérifiez l’espace libre sur ce téléphone, puis réessayez.",
-		"mobile.session.composer.retry_not_sent_storage": "Cette tentative de renvoi n’a pas été envoyée. Impossible de préparer en toute sécurité le renvoi de l’instruction précédente. Vérifiez l’espace libre sur ce téléphone, puis réessayez d’envoyer l’instruction précédente. Votre brouillon actuel n’a pas été envoyé.",
+		"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Réessayez.",
+		"mobile.session.composer.retry_not_sent_storage": "Cette tentative de renvoi n’a pas été envoyée. Impossible de préparer en toute sécurité le renvoi de l’instruction précédente. Réessayez d’envoyer l’instruction précédente. Votre brouillon actuel n’a pas été envoyé.",
 		"mobile.session.conversation_details": "Détails de la conversation",
 		"mobile.session.highlights.sound_pause": "Mettre {title} en pause",
 		"mobile.session.highlights.sound_play": "Lire {title}",
@@ -3814,6 +3842,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
 		"mobile.common.try_again": "फिर से कोशिश करें",
+		"mobile.composer_input.clear_draft": "ड्राफ़्ट मिटाएँ",
+		"mobile.composer_input.clear_draft_hint": "केवल ड्राफ़्ट का टेक्स्ट और चित्र मिटाता है; कतार में और अपुष्ट संदेश रखता है",
+		"mobile.composer_input.dismiss_error": "त्रुटि छिपाएँ",
+		"mobile.composer_input.dismiss_error_hint": "ड्राफ़्ट या डिलीवरी की स्थिति बदले बिना यह त्रुटि छिपाता है",
 		"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। पेपरक्लिप पर टैप करें, फिर छवि चिपकाएँ, और अनुमति दें चुनें।",
 		"mobile.composer_input.paste.image": "छवि चिपकाएँ",
 		"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
@@ -4050,8 +4082,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
-		"mobile.session.composer.not_sent_storage": "नहीं भेजा गया। दोबारा भेजने के लिए यह संदेश सुरक्षित रूप से सहेजा नहीं जा सका। आपका टेक्स्ट और चित्र यहीं हैं। इस फ़ोन में खाली जगह जाँचें, फिर दोबारा कोशिश करें।",
-		"mobile.session.composer.retry_not_sent_storage": "दोबारा भेजने का यह प्रयास नहीं भेजा गया। पिछले निर्देश को सुरक्षित रूप से दोबारा भेजने की तैयारी नहीं हो सकी। इस फ़ोन में खाली जगह जाँचें, फिर पिछले निर्देश को दोबारा भेजने की कोशिश करें। आपका मौजूदा ड्राफ़्ट नहीं भेजा गया है।",
+		"mobile.session.composer.not_sent_storage": "नहीं भेजा गया। दोबारा भेजने के लिए यह संदेश सुरक्षित रूप से सहेजा नहीं जा सका। आपका टेक्स्ट और चित्र यहीं हैं। दोबारा कोशिश करें।",
+		"mobile.session.composer.retry_not_sent_storage": "दोबारा भेजने का यह प्रयास नहीं भेजा गया। पिछले निर्देश को सुरक्षित रूप से दोबारा भेजने की तैयारी नहीं हो सकी। पिछले निर्देश को दोबारा भेजने की कोशिश करें। आपका मौजूदा ड्राफ़्ट नहीं भेजा गया है।",
 		"mobile.session.conversation_details": "बातचीत का विवरण",
 		"mobile.session.highlights.sound_pause": "{title} रोकें",
 		"mobile.session.highlights.sound_play": "{title} चलाएँ",
@@ -4354,6 +4386,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
 		"mobile.common.try_again": "Повторить",
+		"mobile.composer_input.clear_draft": "Очистить черновик",
+		"mobile.composer_input.clear_draft_hint": "Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения",
+		"mobile.composer_input.dismiss_error": "Скрыть ошибку",
+		"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки",
 		"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку».",
 		"mobile.composer_input.paste.image": "Вставить изображение",
 		"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
@@ -4590,8 +4626,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
-		"mobile.session.composer.not_sent_storage": "Не отправлено. Не удалось надёжно сохранить сообщение для повторной отправки. Текст и изображения остались здесь. Проверьте свободное место на телефоне и попробуйте ещё раз.",
-		"mobile.session.composer.retry_not_sent_storage": "Эта попытка повторной отправки не была отправлена. Не удалось безопасно подготовить предыдущее указание к повторной отправке. Проверьте свободное место на этом телефоне, затем повторите отправку предыдущего указания. Текущий черновик не отправлен.",
+		"mobile.session.composer.not_sent_storage": "Не отправлено. Не удалось надёжно сохранить сообщение для повторной отправки. Текст и изображения остались здесь. Попробуйте ещё раз.",
+		"mobile.session.composer.retry_not_sent_storage": "Эта попытка повторной отправки не была отправлена. Не удалось безопасно подготовить предыдущее указание к повторной отправке. Повторите отправку предыдущего указания. Текущий черновик не отправлен.",
 		"mobile.session.conversation_details": "Детали беседы",
 		"mobile.session.highlights.sound_pause": "Приостановить {title}",
 		"mobile.session.highlights.sound_play": "Воспроизвести {title}",
@@ -4894,6 +4930,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
+		"mobile.composer_input.clear_draft": "مسودہ صاف کریں",
+		"mobile.composer_input.clear_draft_hint": "صرف مسودے کا متن اور تصاویر مٹاتا ہے؛ قطار میں موجود اور غیر مصدقہ پیغامات برقرار رکھتا ہے",
+		"mobile.composer_input.dismiss_error": "خرابی چھپائیں",
+		"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے",
 		"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔",
 		"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
 		"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
@@ -5130,8 +5170,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
-		"mobile.session.composer.not_sent_storage": "نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ اس فون میں خالی جگہ دیکھیں، پھر دوبارہ کوشش کریں۔",
-		"mobile.session.composer.retry_not_sent_storage": "دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ اس فون پر خالی جگہ چیک کریں، پھر پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔",
+		"mobile.session.composer.not_sent_storage": "نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ دوبارہ کوشش کریں۔",
+		"mobile.session.composer.retry_not_sent_storage": "دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔",
 		"mobile.session.conversation_details": "گفتگو کی تفصیلات",
 		"mobile.session.highlights.sound_pause": "{title} روکیں",
 		"mobile.session.highlights.sound_play": "{title} چلائیں",
@@ -5434,6 +5474,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
 		"mobile.common.try_again": "Thử lại",
+		"mobile.composer_input.clear_draft": "Xóa bản nháp",
+		"mobile.composer_input.clear_draft_hint": "Chỉ xóa văn bản và hình ảnh trong bản nháp; giữ các tin nhắn đang chờ và chưa được xác nhận",
+		"mobile.composer_input.dismiss_error": "Ẩn lỗi",
+		"mobile.composer_input.dismiss_error_hint": "Ẩn lỗi này mà không thay đổi bản nháp hay trạng thái gửi",
 		"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào kẹp giấy, chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
 		"mobile.composer_input.paste.image": "Dán hình ảnh",
 		"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
@@ -5670,8 +5714,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
 		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
-		"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy kiểm tra dung lượng trống trên điện thoại này rồi thử lại.",
-		"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy kiểm tra dung lượng trống trên điện thoại này, rồi thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
+		"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy thử lại.",
+		"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
 		"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
 		"mobile.session.highlights.sound_pause": "Tạm dừng {title}",
 		"mobile.session.highlights.sound_play": "Phát {title}",
@@ -5974,6 +6018,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
 		"mobile.common.try_again": "重试",
+		"mobile.composer_input.clear_draft": "清空草稿",
+		"mobile.composer_input.clear_draft_hint": "仅清空草稿中的文字和图片；保留排队中和未确认的消息",
+		"mobile.composer_input.dismiss_error": "关闭错误提示",
+		"mobile.composer_input.dismiss_error_hint": "隐藏此错误，不改变草稿或发送状态",
 		"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。",
 		"mobile.composer_input.paste.image": "粘贴图片",
 		"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
@@ -6210,8 +6258,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",
-		"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请检查此手机的可用空间，然后重试。",
-		"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请检查此手机的可用空间，然后重试之前的指令。你当前的草稿尚未发送。",
+		"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请重试。",
+		"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请重试之前的指令。你当前的草稿尚未发送。",
 		"mobile.session.conversation_details": "对话详情",
 		"mobile.session.highlights.sound_pause": "暂停{title}",
 		"mobile.session.highlights.sound_play": "播放{title}",

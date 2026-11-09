@@ -6,5 +6,9 @@
 	"mobile.composer_input.voice.finish": "ختم کریں اور تحریر کریں",
 	"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
 	"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
-	"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔"
+	"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔",
+	"mobile.composer_input.clear_draft": "مسودہ صاف کریں",
+	"mobile.composer_input.clear_draft_hint": "صرف مسودے کا متن اور تصاویر مٹاتا ہے؛ قطار میں موجود اور غیر مصدقہ پیغامات برقرار رکھتا ہے",
+	"mobile.composer_input.dismiss_error": "خرابی چھپائیں",
+	"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے"
 }
