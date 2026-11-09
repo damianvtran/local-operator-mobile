@@ -1,4 +1,5 @@
 import { once } from "node:events";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { expect, it } from "vitest";
 import {
@@ -135,7 +136,7 @@ it("pages authenticated synthetic history through production HTTP and retries re
 		expect(missingBefore).toBe(221);
 		retainedCount = 1500;
 		await window.reload();
-		expect(cursors.at(-1)).toBeNull();
+		expect(cursors.at(-1)).toBe("message-1421");
 		expect(window.visibleRows.at(-1)?.id).toBe("message-1499");
 		while (window.hasMore && !window.error) await window.load();
 		expect(window.rows.map((entry) => entry.id)).toEqual(
@@ -191,3 +192,99 @@ it("the production boundary preserves unavailable instead of treating it as an e
 		}),
 	).toThrow();
 });
+
+/** Captured synthetic Core production responses, not a hand-written pager.
+ * Provenance (Core head/helper ref) is retained in each fixture's result field.
+ * The initial rendered has_more is intentionally NOT the journal domain. */
+it.each(["short", "compaction"] as const)(
+	"projection-first cursor paging reaches the captured %s journal",
+	async (name) => {
+		const fixture = JSON.parse(
+			readFileSync(
+				new URL(`./fixtures/${name}-production-wire.json`, import.meta.url),
+				"utf8",
+			),
+		);
+		if (name === "short") {
+			expect(fixture.initial.entries).toHaveLength(11);
+			expect(fixture.initial.has_more).toBe(false);
+			expect(
+				fixture.expected.filter(
+					(id: string) =>
+						!fixture.initial.entries.some(
+							(row: TranscriptEntry) => row.id === id,
+						),
+				),
+			).toHaveLength(326);
+		}
+		const requests: string[] = [];
+		let pageIndex = 0;
+		let expectedBefore = fixture.initial.entries[0].id;
+		const server = createServer((request, response) => {
+			requests.push(request.url ?? "");
+			const url = new URL(request.url ?? "/", "http://127.0.0.1");
+			expect(request.method).toBe("GET");
+			expect(url.searchParams.get("before")).toBe(expectedBefore);
+			const page = fixture.pages_from_initial[pageIndex++];
+			expectedBefore = page.entries[0]?.id;
+			response.setHeader("Content-Type", "application/json");
+			response.end(JSON.stringify(page));
+		});
+		server.listen(0, "127.0.0.1");
+		try {
+			await once(server, "listening");
+			const address = server.address();
+			if (!address || typeof address === "string")
+				throw new Error("No loopback address");
+			const endpoints = new RelayEndpoints(
+				new RelayHttpClient({
+					baseUrl: `http://127.0.0.1:${address.port}`,
+					auth: () => ({ cookie: null, origin: null, credentials: "omit" }),
+				}),
+			);
+			const reader = new HistoryWindow(
+				(before) =>
+					endpoints.history("00000000-0000-4000-8000-000000000001", {
+						before,
+						limit: 17,
+					}),
+				() => {},
+			);
+			reader.accept(fixture.projection);
+			expect(reader.olderState).toBe("unknown");
+			expect(reader.hasMore).toBe(true);
+			expect(reader.visibleRows.at(-1)?.id).toBe(
+				fixture.projection.transcript.at(-1).id,
+			);
+			while (reader.hasMore && !reader.error) await reader.load();
+			expect(reader.error).toBeNull();
+			expect(reader.rows.map((row) => row.id)).toEqual(fixture.expected);
+			expect(reader.olderState).toBe("end");
+			expect(pageIndex).toBe(fixture.pages_from_initial.length);
+			expect(
+				requests.every((url) =>
+					new URL(url, "http://fixture").searchParams.has("before"),
+				),
+			).toBe(true);
+			console.log(
+				JSON.stringify({
+					fixture: name,
+					core_head: fixture.result.core_head,
+					initial_render_rows: fixture.initial.entries.length,
+					initial_render_has_more: fixture.initial.has_more,
+					rows_after: reader.rows.length,
+					missing: fixture.expected.filter(
+						(id: string) => !reader.rows.some((row) => row.id === id),
+					).length,
+					canonical_pages: pageIndex,
+					no_cursor_requests: 0,
+				}),
+			);
+		} finally {
+			server.closeAllConnections();
+			await new Promise<void>((resolve, reject) =>
+				server.close((error) => (error ? reject(error) : resolve())),
+			);
+		}
+	},
+);

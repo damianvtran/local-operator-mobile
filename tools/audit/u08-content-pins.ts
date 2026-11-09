@@ -1136,7 +1136,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * historical pixels, native visibility and compact D3 remain unproved. */
 	// Native history paging: staged LIVE source admission only; historical
 	// rendered frames, native anchor and interaction proof are not refreshed.
-	src: "4b8723b74369b3e604943a3da466d6e0fc356e58515aedd340bb5067547431d9",
+	src: "99768793f62808d49f85a29e0855f0bf4777a0373ca5caf2f7c940d0a991d846",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

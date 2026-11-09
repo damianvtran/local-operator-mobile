@@ -942,6 +942,7 @@ export const sessionProjectionSchema = z.looseObject({
 	 *  must not be REJECTED whole — blanking the session — for a field whose
 	 *  only safe reading of null is "no signal" (QA round 1, Q5). */
 	heartbeat_stale: z.boolean().nullish(),
+	transcript_head_pinned: z.boolean().optional(),
 	transcript: z.array(transcriptEntrySchema),
 	todos: z.array(todoPhaseSchema),
 	subagents: z.array(subagentRowSchema),

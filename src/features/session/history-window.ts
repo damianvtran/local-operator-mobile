@@ -5,12 +5,34 @@ import type {
 } from "@/contracts";
 import { mergeTranscript, rowIdentity } from "./runtime";
 
+/** The relay fold mints these non-journal ids. They cannot be before-cursors;
+ * served tool aliases (<message>:call_<call>) remain journal-addressable. Keep
+ * this protocol list aligned with Core mobile/web/src/components/transcript. */
+const LIVE_ONLY_ROW_PREFIXES = [
+	"rz-",
+	"tc-",
+	"nt-",
+	"rt-",
+	"err-",
+	"rej-",
+	"cx-",
+	"peer-",
+	"nonpeer-",
+	"prompt:",
+];
+export const journalAddressableRow = (row: TranscriptEntry): boolean =>
+	row.kind !== "reasoning" &&
+	!!row.id &&
+	!LIVE_ONLY_ROW_PREFIXES.some((prefix) => row.id.startsWith(prefix));
+
 /** A screen-owned reader, not a second transcript store. Capped projections are
  * not deletion signals: keep accepted server rows until this reader is retired.
  * The wire has no retention generation, so unseen prunes cannot be inferred. */
 export class HistoryWindow {
 	rows: TranscriptEntry[] = [];
 	cursor: string | undefined;
+	/** Only a canonical before-page can establish the retained beginning. */
+	olderState: "unknown" | "more" | "end" = "unknown";
 	hasMore = true;
 	hasGap = false;
 	loading = false;
@@ -47,9 +69,12 @@ export class HistoryWindow {
 	accept(projection: SessionProjection | null): void {
 		if (!this.active || !projection || projection === this.projection) return;
 		this.projection = projection;
+		if (this.cursor === undefined && this.olderState === "unknown") {
+			this.seedCursor(projection.transcript, projection.transcript_head_pinned);
+		}
 		// HTTP may win the opening race. Classify a detached live prefix against
 		// durable identities on that path too, not only when the first page lands.
-		if (this.cursor !== undefined) {
+		if (this.read === "ok" && this.cursor !== undefined) {
 			const firstDurable = projection.transcript.findIndex((row) =>
 				this.durableIds.has(rowIdentity(row)),
 			);
@@ -90,10 +115,34 @@ export class HistoryWindow {
 		];
 	}
 
+	/** Same bootstrap domain as the relay: the projection is a newest render,
+	 * not evidence about older retention. Never fall back to a pinned opener
+	 * when the rest of the tail contains only fold-minted rows. */
+	private seedCursor(rows: TranscriptEntry[], headPinned?: boolean): void {
+		const pinned =
+			headPinned ?? (rows.length >= 80 && rows[0]?.kind === "user");
+		// Capped wire projections carry at most opener + 79 tail rows. A
+		// legacy oversized render can also re-inject preserved compaction turns:
+		// those are context too, never the newest tail's chronological cursor.
+		const tail = pinned ? rows.slice(Math.max(1, rows.length - 79)) : rows;
+		if (pinned) this.detached = rows.slice(0, rows.length - tail.length);
+		const detachedIds = new Set(this.detached.map(rowIdentity));
+		// A no-cursor fallback can repeat the known pinned opener while the
+		// whole tail is minted. It still cannot turn that context into a cursor.
+		const addressable = tail.filter(
+			(row) => !detachedIds.has(rowIdentity(row)) && journalAddressableRow(row),
+		);
+		const candidate = addressable[0];
+		if (!candidate) return;
+		this.cursor = candidate.id;
+		this.cursors.add(candidate.id);
+		for (const row of addressable) this.durableIds.add(rowIdentity(row));
+	}
+
 	load(refresh = false): Promise<void> {
 		if (!this.active || (!refresh && !this.hasMore)) return Promise.resolve();
 		if (this.pending) return this.pending;
-		const before = refresh ? undefined : this.cursor;
+		const before = refresh && this.read === "ok" ? undefined : this.cursor;
 		const lease = this.lease;
 		const started = this.revision;
 		this.loading = true;
@@ -104,12 +153,14 @@ export class HistoryWindow {
 			.then((page) => {
 				if (!this.active || lease !== this.lease) return;
 				if (page.unavailable) throw new Error("failed");
-				const next = page.entries[0]?.id;
+				const next = page.entries.find(journalAddressableRow)?.id;
 				// Cursor progress is independent of the detached opener in live frames.
 				// A lying/overlapping page must not create an automatic request loop.
 				if (
 					page.has_more &&
-					(!next || next === before || (!refresh && this.cursors.has(next)))
+					(!next ||
+						next === before ||
+						(before !== undefined && this.cursors.has(next)))
 				) {
 					throw new Error("stalled");
 				}
@@ -131,9 +182,11 @@ export class HistoryWindow {
 					);
 					if (firstShared > 0) this.detached = this.rows.slice(0, firstShared);
 				}
-				this.detached = this.detached.filter(
-					(row) => !pageIds.has(rowIdentity(row)),
-				);
+				if (before !== undefined) {
+					this.detached = this.detached.filter(
+						(row) => !pageIds.has(rowIdentity(row)),
+					);
+				}
 				const detachedIds = new Set(this.detached.map(rowIdentity));
 				const held = this.rows.filter(
 					(row) =>
@@ -144,17 +197,23 @@ export class HistoryWindow {
 				// by compaction's render. Move overlapping copies to that stated position.
 				// A refresh is a newest tail: it must not prepend newer rows over history.
 				const joined =
-					refresh && this.cursor !== undefined
+					before === undefined && this.cursor !== undefined
 						? mergeTranscript(
 								{ transcript: authoritative } as SessionProjection,
 								this.rows.filter((row) => !detachedIds.has(rowIdentity(row))),
 							).rows
 						: [...authoritative, ...held];
 				this.rows = [...this.detached, ...joined];
-				if (!refresh || this.cursor === undefined) {
+				if (before !== undefined) {
 					this.cursor = next ?? before;
 					if (next) this.cursors.add(next);
 					this.hasMore = page.has_more;
+					this.olderState = page.has_more ? "more" : "end";
+				} else if (this.cursor === undefined) {
+					// Rare cold/no-addressable-live-tail fallback: this endpoint returns a
+					// rendered seed. Its has_more is NOT a retained-journal verdict.
+					this.seedCursor(page.entries);
+					if (this.cursor === undefined) throw new Error("failed");
 				}
 				this.read = "ok";
 			})
@@ -180,11 +239,13 @@ export class HistoryWindow {
 	 * Advancing the lease fences both success and failure of an old pending page. */
 	reload(): Promise<void> {
 		if (!this.active) return Promise.resolve();
+		const currentTail = this.projection;
 		this.lease += 1;
 		this.pending = null;
 		this.rows = [];
 		this.cursor = undefined;
 		this.hasMore = true;
+		this.olderState = "unknown";
 		this.hasGap = false;
 		this.loading = false;
 		this.error = null;
@@ -196,6 +257,9 @@ export class HistoryWindow {
 		this.durableIds.clear();
 		this.liveAt.clear();
 		this.revision = 0;
+		// Re-seed from the current stream frame, not the retired page islands.
+		// This also preserves a known pinned-head exclusion during rare fallback.
+		this.accept(currentTail);
 		return this.load();
 	}
 

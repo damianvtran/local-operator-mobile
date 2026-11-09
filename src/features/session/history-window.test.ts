@@ -4,7 +4,7 @@ import type {
 	SessionProjection,
 	TranscriptEntry,
 } from "@/contracts";
-import { HistoryWindow } from "./history-window";
+import { HistoryWindow, journalAddressableRow } from "./history-window";
 import { mergeTranscript, rowIdentity } from "./runtime";
 
 const row = (id: string, text = id): TranscriptEntry => ({
@@ -52,6 +52,116 @@ const pager = (journal: TranscriptEntry[], limit = 17) =>
 	});
 
 describe("screen-owned retained history", () => {
+	it("uses only journal-addressable rows, including served tool aliases", () => {
+		for (const prefix of [
+			"rz-",
+			"tc-",
+			"nt-",
+			"rt-",
+			"err-",
+			"rej-",
+			"cx-",
+			"peer-",
+			"nonpeer-",
+			"prompt:",
+		])
+			expect(journalAddressableRow(row(`${prefix}synthetic`))).toBe(false);
+		expect(
+			journalAddressableRow({ ...row("message"), kind: "reasoning" }),
+		).toBe(false);
+		expect(journalAddressableRow(row("message:call_synthetic"))).toBe(true);
+	});
+
+	it("never uses a pinned opener when the entire tail is minted; an unusable seed stays unknown", async () => {
+		const fetch = vi.fn(async () => ({
+			entries: [row("opener"), row("tc-minted")],
+			has_more: false,
+		}));
+		const reader = new HistoryWindow(fetch, () => {});
+		reader.accept({
+			...frame(row("opener"), row("tc-live")),
+			transcript_head_pinned: true,
+		});
+		expect(reader.cursor).toBeUndefined();
+		await reader.load();
+		expect(fetch).toHaveBeenCalledExactlyOnceWith(undefined);
+		expect(reader.cursor).toBeUndefined();
+		expect(reader.olderState).toBe("unknown");
+		expect(reader.hasMore).toBe(true);
+		expect(reader.error).toBe("failed");
+	});
+
+	it("seeding a cursor does not hide an ordinary live reasoning prefix or move the latest edge", () => {
+		const reasoning = {
+			...row("rz-live"),
+			kind: "reasoning",
+		} as TranscriptEntry;
+		const reader = new HistoryWindow(
+			async () => ({ entries: [], has_more: false }),
+			() => {},
+		);
+		reader.accept(frame(reasoning, row("journal-assistant"), row("tc-live")));
+		expect(reader.cursor).toBe("journal-assistant");
+		expect(ids(reader.visibleRows)).toEqual([
+			"rz-live",
+			"journal-assistant",
+			"tc-live",
+		]);
+	});
+
+	it("a byte-capped pinned opener alone cannot declare the retained beginning", async () => {
+		const reader = new HistoryWindow(
+			async () => ({ entries: [row("opener")], has_more: false }),
+			() => {},
+		);
+		reader.accept({ ...frame(row("opener")), transcript_head_pinned: true });
+		await reader.load();
+		expect(reader.cursor).toBeUndefined();
+		expect(reader.olderState).toBe("unknown");
+		expect(reader.error).toBe("failed");
+	});
+
+	it("a later journal-addressable live tail can recover an unknown minted-only seed", async () => {
+		const fetch = vi
+			.fn()
+			.mockResolvedValueOnce({
+				entries: [row("opener"), row("tc-minted")],
+				has_more: false,
+			})
+			.mockResolvedValueOnce({ entries: [row("older")], has_more: false });
+		const reader = new HistoryWindow(fetch, () => {});
+		reader.accept({
+			...frame(row("opener"), row("tc-live")),
+			transcript_head_pinned: true,
+		});
+		await reader.load();
+		reader.accept({
+			...frame(row("opener"), row("message:call_served")),
+			transcript_head_pinned: true,
+		});
+		await reader.load();
+		expect(fetch).toHaveBeenLastCalledWith("message:call_served");
+		expect(reader.error).toBeNull();
+		expect(reader.olderState).toBe("end");
+	});
+
+	it("does not trust a short no-cursor render's false flag; a canonical empty before-page ends paging", async () => {
+		const fetch = vi
+			.fn()
+			.mockResolvedValueOnce({ entries: [row("tail")], has_more: false })
+			.mockResolvedValueOnce({ entries: [], has_more: false });
+		const reader = new HistoryWindow(fetch, () => {});
+		await reader.load();
+		expect(reader.olderState).toBe("unknown");
+		expect(reader.hasMore).toBe(true);
+		await reader.load();
+		expect(fetch).toHaveBeenLastCalledWith("tail");
+		expect(reader.olderState).toBe("end");
+		expect(reader.hasMore).toBe(false);
+		await reader.load();
+		expect(fetch).toHaveBeenCalledTimes(2);
+	});
+
 	it("negative control reproduces Q1: old single-page merge misses 1119 of 1200 retained rows", () => {
 		const journal = sequence(1200);
 		const old = mergeTranscript(
@@ -70,8 +180,8 @@ describe("screen-owned retained history", () => {
 		const window = new HistoryWindow(fetch, () => {});
 		window.accept(frame(row("q00000"), ...journal.slice(-79)));
 		await window.load();
-		expect(window.cursor).toBe("q01183");
-		expect(window.visibleRows[0]?.id).toBe("q01183");
+		expect(window.cursor).toBe("q01104");
+		expect(window.visibleRows[0]?.id).toBe("q01104");
 		expect(window.visibleRows.some((entry) => entry.id === "q00000")).toBe(
 			false,
 		);
@@ -80,7 +190,18 @@ describe("screen-owned retained history", () => {
 		expect(ids(window.rows)).toEqual(ids(journal));
 		expect(new Set(ids(window.rows)).size).toBe(1200);
 		expect(ids(window.visibleRows)).toEqual(ids(journal));
-		expect(fetch).toHaveBeenCalledTimes(71);
+		expect(fetch).toHaveBeenCalledTimes(66);
+		console.log(
+			JSON.stringify({
+				fixture: "retained-1200",
+				legacy_held: 81,
+				legacy_missing: 1119,
+				rows_after: window.rows.length,
+				missing: journal.filter((entry) => !ids(window.rows).includes(entry.id))
+					.length,
+				canonical_pages: fetch.mock.calls.length,
+			}),
+		);
 	});
 
 	it("keeps detached opener out of the displayed page when HTTP arrives before the live frame", async () => {
@@ -88,8 +209,8 @@ describe("screen-owned retained history", () => {
 		const window = new HistoryWindow(pager(journal, 80), () => {});
 		await window.load();
 		window.accept(frame(row("q00000"), ...journal.slice(-79)));
-		expect(window.visibleRows[0]?.id).toBe("q01120");
-		expect(window.visibleRows).toHaveLength(80);
+		expect(window.visibleRows[0]?.id).toBe("q01121");
+		expect(window.visibleRows).toHaveLength(79);
 		while (window.hasMore && !window.error) await window.load();
 		expect(ids(window.visibleRows)).toEqual(ids(journal));
 	});
@@ -141,10 +262,10 @@ describe("screen-owned retained history", () => {
 		expect(window.hasGap).toBe(true);
 		retained = journal;
 		await window.reload();
-		expect(fetch).toHaveBeenLastCalledWith(undefined);
-		expect(window.cursor).toBe("q01420");
+		expect(fetch).toHaveBeenLastCalledWith("q01421");
+		expect(window.cursor).toBe("q01341");
 		expect(window.hasGap).toBe(false);
-		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(-80)));
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1341)));
 		while (window.hasMore && !window.error) await window.load();
 		expect(window.error).toBeNull();
 		expect(ids(window.visibleRows)).toEqual(ids(journal));
@@ -238,12 +359,15 @@ describe("screen-owned retained history", () => {
 		const read = deferred<HistoryResponse>();
 		const fetch = vi
 			.fn()
-			.mockResolvedValueOnce({ entries: [row("b", "old")], has_more: true })
+			.mockResolvedValueOnce({
+				entries: [row("a"), row("b", "old")],
+				has_more: true,
+			})
 			.mockImplementationOnce(() => read.promise);
 		const window = new HistoryWindow(fetch, () => {});
 		window.accept(frame(row("b", "stale live")));
 		await window.load();
-		expect(window.rows[0]?.text).toBe("old");
+		expect(window.rows[1]?.text).toBe("old");
 		const request = window.load();
 		window.accept(frame(row("b", "new live"), row("c")));
 		read.resolve({ entries: [row("a"), row("b", "durable")], has_more: false });
