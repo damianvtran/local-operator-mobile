@@ -7,6 +7,42 @@
 		"role": "heading",
 		"note": "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
 	},
+	"mobile.team_bridge.default_on.body": {
+		"role": "help",
+		"note": "One sentence under the heading. “Chief of staff” is the product term for the person's own agent. Do not imply the person did anything to enable it."
+	},
+	"mobile.team_bridge.default_on.dismiss": {
+		"role": "button",
+		"note": "Button. Closes the banner for good on this device, leaving Team Bridge on. Not “OK”, which would read as acceptance."
+	},
+	"mobile.team_bridge.default_on.dismiss_hint": {
+		"role": "help",
+		"note": "Screen-reader hint for Dismiss only; makes explicit that dismissing is not turning off."
+	},
+	"mobile.team_bridge.default_on.dismiss_label": {
+		"role": "button",
+		"note": "Screen-reader name for the short Dismiss button; identifies the notice being closed, not the Team Bridge setting."
+	},
+	"mobile.team_bridge.default_on.hide": {
+		"role": "button",
+		"note": "Same button once the consent text is showing; collapses it."
+	},
+	"mobile.team_bridge.default_on.read_more": {
+		"role": "button",
+		"note": "Button that reveals the full served consent text inline, in place; it does not navigate and does not open a dialog."
+	},
+	"mobile.team_bridge.default_on.title": {
+		"role": "heading",
+		"note": "Heading of a one-time, dismissible banner at the top of the Team Bridge tab. States a fact about the person's account; not a question and not an invitation to enable anything."
+	},
+	"mobile.team_bridge.default_on.turn_off": {
+		"role": "button",
+		"note": "Button. One tap opts the person out of agent messages for this organization. Not “Disable”, which sounds like an admin action."
+	},
+	"mobile.team_bridge.default_on.turn_off_error": {
+		"role": "status",
+		"note": "Shown under the buttons when the turn-off request failed; the setting is unchanged, so never say it is off."
+	},
 	"mobile.team_bridge.delivery.held": {
 		"role": "status",
 		"note": "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches."

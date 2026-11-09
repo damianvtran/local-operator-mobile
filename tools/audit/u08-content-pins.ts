@@ -591,7 +591,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "8cb9d4fa71e20233fdbb86b3a3abd4265e8245a63c0440648ac14ea616375b00",
+	app: "3afe51e7471b46ebb3846469248eb62c20d00a58ca2b0091a9e0273dc3059d6e",
+
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -1102,6 +1103,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * allocation regressions. The original capture fixture's AST and unchanged
 	 * component markup remain byte-identical against 64c0d71d. Source admission
 	 * only: no new U-08 pixels, instrument, input or render-file changes. */
+
 	/* Re-printed 2026-11-09 for PR #199's U1 remediation: composer retry
 	 * preparation copy and feedback projection retain the original command's
 	 * uncertainty, with active/ended hook regressions and all eight catalogues.
@@ -1124,7 +1126,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Q-tablet: recomputed LAST after the focused Home drawer-ownership fix and
 	 * its regressions. Only LIVE src identity changes; no historical pin, input,
 	 * instrument or activity/native-layout evidence is refreshed by admission. */
-	src: "c2bbad2074e093654c283a5195b89e29c50a8592af35b0b20b3989cf6e18fd15",
+	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
+	src: "ceb1a960fdb49de206da99edd9c2470958ecc50edb0cf4b9c5e78fe0098ea6bd",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
