@@ -1121,7 +1121,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * typed-metadata filtering sources from #200, plus one merged locale key.
 	 * Recomputed LAST after generation; no activity/layout/native-harness claim,
 	 * and no historical instrument, input or original evidence is refreshed. */
-	src: "7d829ed05fcc87c97d202d2c97ea3c156f478a05a234ea0d1086e1ee607c6ac8",
+	/* Q-tablet: recomputed LAST after the focused Home drawer-ownership fix and
+	 * its regressions. Only LIVE src identity changes; no historical pin, input,
+	 * instrument or activity/native-layout evidence is refreshed by admission. */
+	src: "c2bbad2074e093654c283a5195b89e29c50a8592af35b0b20b3989cf6e18fd15",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -8,6 +8,10 @@ import { describe, expect, it } from "vitest";
  * workspace-drawer.test.tsx and dismissal ordering in drawer-focus.test.ts. */
 
 const home = readFileSync(resolve(import.meta.dirname, "home.tsx"), "utf8");
+const drawerOwner = readFileSync(
+	resolve(import.meta.dirname, "use-home-drawer.ts"),
+	"utf8",
+);
 
 const GUARDED_INTENT =
 	/if \(consumeNewChatRequest\(newChatRequest\)\) newChat\(\);/;
@@ -36,7 +40,13 @@ describe("home New-chat callback identity", () => {
 	});
 
 	it("uses the shared controller for open and consumes each phone draft intent once", () => {
-		expect(home).toContain("open: openDrawer");
+		// The mounted owner regressions exercise this hook with the real provider;
+		// bind Home to the SAME split decision that renders its persistent pane.
+		expect(home).toContain("const split = layout.split;");
+		expect(home).toContain("useHomeDrawer(forcePanelOpen, split);");
+		expect(drawerOwner).toContain(
+			"const { open, close } = useWorkspaceDrawer();",
+		);
 		expect(home).toContain("<WorkspaceDrawerButton />");
 		expect(home).not.toContain("setPanelOpen");
 		expect(newChatBlock()).toContain("closeDrawer()");

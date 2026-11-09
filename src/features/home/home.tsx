@@ -58,6 +58,7 @@ import {
 	homeChips,
 	homeFolderChip,
 } from "@/features/home/picker-model";
+import { useHomeDrawer } from "@/features/home/use-home-drawer";
 import { StartupTranscript } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
 import { notificationsEnabled } from "@/features/notifications/notifications-model";
@@ -191,14 +192,8 @@ export default function Home({
 	const _showToast = useUiStore((state) => state.showToast);
 
 	const workspaceDrawer = useWorkspaceDrawer();
-	const {
-		open: openDrawer,
-		close: closeDrawer,
-		newChatRequest,
-	} = workspaceDrawer;
-	useEffect(() => {
-		if (forcePanelOpen) openDrawer();
-	}, [forcePanelOpen, openDrawer]);
+	const { close: closeDrawer, newChatRequest } = workspaceDrawer;
+	useHomeDrawer(forcePanelOpen, split);
 	/** Which of the three pickers is open — one at a time, each its own sheet. */
 	const [picker, setPicker] = useState<"folder" | "model" | "effort" | null>(
 		null,

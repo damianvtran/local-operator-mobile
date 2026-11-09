@@ -1,13 +1,16 @@
 import { act, createElement, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useHomeDrawer } from "@/features/home/use-home-drawer";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 import { CONTROL } from "@/ui/a11y";
+import { layoutFor } from "@/ui/size-class";
 import type { ConversationsDrawerProps } from "./conversations-drawer";
 import type { WorkspaceDrawerBridgeAdapter } from "./workspace-drawer.contract";
 
 const host = vi.hoisted(() => ({
 	path: "/session/synthetic-chat",
+	isHomeFocused: vi.fn(() => true),
 	platform: "web",
 	navigate: vi.fn(),
 	dismiss: vi.fn(),
@@ -18,8 +21,15 @@ const host = vi.hoisted(() => ({
 	unread: { count: 7, state: "ready" } as unknown,
 	mounts: 0,
 	unmounts: 0,
+	persistentRows: 0,
 }));
 vi.mock("expo-router", () => ({
+	useFocusEffect: (effect: () => undefined | (() => void)) => {
+		const focused = host.isHomeFocused();
+		useEffect(() => {
+			if (focused) return effect();
+		}, [effect, focused]);
+	},
 	usePathname: () => host.path,
 	useRouter: () => ({ navigate: host.navigate }),
 }));
@@ -106,7 +116,9 @@ beforeEach(() => {
 	host.badges = [];
 	host.mounts = 0;
 	host.unmounts = 0;
+	host.persistentRows = 0;
 	host.platform = "web";
+	host.isHomeFocused.mockReturnValue(true);
 	host.unread = { count: 7, state: "ready" };
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
@@ -203,5 +215,93 @@ describe("one workspace drawer above the mounted chat", () => {
 		await mount();
 		expect(host.labels.get("chat-menu")).toBe("Open conversations");
 		expect(host.badges).toEqual([]);
+	});
+});
+
+/** Mount the Home ownership effect inside the REAL shared provider. The native
+ * pane/drawer renderer is a boundary double here: one synthetic row per visible
+ * owner exposes duplicates without relying on selectors to choose a lucky copy.
+ * Real DOM hit testing and pixels remain the compiled-web QA lane. */
+function ResponsiveHome({
+	forcePanelOpen,
+	width,
+	height,
+}: {
+	forcePanelOpen: boolean;
+	width: number;
+	height: number;
+}) {
+	const { split } = layoutFor(width, height);
+	useHomeDrawer(forcePanelOpen, split);
+	host.persistentRows = split ? 1 : 0;
+	return <Chat />;
+}
+const home = (forcePanelOpen: boolean, width: number, height = 834) =>
+	act(async () =>
+		root.render(
+			<WorkspaceDrawerProvider>
+				<ResponsiveHome
+					forcePanelOpen={forcePanelOpen}
+					width={width}
+					height={height}
+				/>
+			</WorkspaceDrawerProvider>,
+		),
+	);
+const rowOwners = () => host.persistentRows + (host.drawer?.visible ? 1 : 0);
+
+describe("Home responsive workspace ownership (Q-tablet)", () => {
+	it("wide Conversations uses only its persistent pane, without opening a modal", async () => {
+		await home(true, 1112);
+		expect(rowOwners()).toBe(1);
+		expect(host.drawer?.visible).toBe(false);
+		expect(host.dismiss).not.toHaveBeenCalled();
+	});
+	it("narrow Conversations opens exactly one shared modal", async () => {
+		await home(true, 390, 844);
+		expect(rowOwners()).toBe(1);
+		expect(host.drawer?.visible).toBe(true);
+		expect(host.dismiss).toHaveBeenCalledOnce();
+	});
+	it("rotation transfers ownership without leaving a stale overlay or remounting the draft", async () => {
+		await home(true, 390, 844);
+		await act(async () => setDraft("synthetic rotation draft"));
+		await home(true, 1112);
+		expect(rowOwners()).toBe(1);
+		expect(host.drawer?.visible).toBe(false);
+		await home(true, 390, 844);
+		expect(rowOwners()).toBe(1);
+		expect(host.drawer?.visible).toBe(true);
+		expect(host.mounts).toBe(1);
+		expect(host.unmounts).toBe(0);
+		expect(draft).toBe("synthetic rotation draft");
+		expect(host.navigate).not.toHaveBeenCalled();
+	});
+	it("non-forced Home stays closed; its menu opens once and expanding closes it", async () => {
+		await home(false, 390, 844);
+		expect(rowOwners()).toBe(0);
+		expect(host.dismiss).not.toHaveBeenCalled();
+		await act(async () => host.presses.get("chat-menu")?.());
+		expect(rowOwners()).toBe(1);
+		expect(host.dismiss).toHaveBeenCalledOnce();
+		await home(false, 1112);
+		expect(rowOwners()).toBe(1);
+		expect(host.drawer?.visible).toBe(false);
+		await home(false, 390, 844);
+		expect(rowOwners()).toBe(0);
+	});
+	it("a retained background Home cannot steal a chat menu on resize; refocusing reconciles it", async () => {
+		await home(false, 390, 844);
+		host.isHomeFocused.mockReturnValue(false);
+		await home(false, 390, 844);
+		await act(async () => host.presses.get("chat-menu")?.());
+		expect(host.drawer?.visible).toBe(true);
+		await home(false, 1112);
+		expect(host.drawer?.visible).toBe(true);
+		host.isHomeFocused.mockReturnValue(true);
+		await home(false, 1112);
+		expect(host.drawer?.visible).toBe(false);
+		expect(host.mounts).toBe(1);
+		expect(host.navigate).not.toHaveBeenCalled();
 	});
 });
