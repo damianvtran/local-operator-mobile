@@ -6,11 +6,40 @@ import { CATALOGUES, renderFor, SHIPPED_LOCALES } from "@/i18n";
  * wire enum may be concatenated into a translated label. Real rendered frames
  * and independent linguistic audit still own line breaking and idiomatic copy. */
 describe("Team Bridge copy", () => {
+	// Keep the added surface explicit: cardinality alone cannot catch a renamed or
+	// substituted key, and every shipped locale must own this same message set.
+	it.each(SHIPPED_LOCALES)(
+		"owns the default_on key contract in %s",
+		(locale) => {
+			expect(
+				Object.keys(CATALOGUES[locale])
+					.filter((key) => key.startsWith("mobile.team_bridge.default_on."))
+					.sort(),
+			).toEqual([
+				"mobile.team_bridge.default_on.body",
+				"mobile.team_bridge.default_on.dismiss",
+				"mobile.team_bridge.default_on.dismiss_hint",
+				"mobile.team_bridge.default_on.dismiss_label",
+				"mobile.team_bridge.default_on.hide",
+				"mobile.team_bridge.default_on.read_more",
+				"mobile.team_bridge.default_on.title",
+				"mobile.team_bridge.default_on.turn_off",
+				"mobile.team_bridge.default_on.turn_off_error",
+			]);
+		},
+	);
+
 	it.each(SHIPPED_LOCALES)("covers the entire namespace in %s", (locale) => {
 		const keys = Object.keys(CATALOGUES[locale]).filter((k) =>
 			k.startsWith("mobile.team_bridge."),
 		);
-		expect(keys).toHaveLength(104);
+		// PR #108: 104 established keys + 9 default_on keys.
+		expect(keys).toHaveLength(113);
+		expect(keys.sort()).toEqual(
+			Object.keys(CATALOGUES.en)
+				.filter((key) => key.startsWith("mobile.team_bridge."))
+				.sort(),
+		);
 		for (const key of keys)
 			expect(
 				CATALOGUES[locale][key as keyof (typeof CATALOGUES)[typeof locale]],

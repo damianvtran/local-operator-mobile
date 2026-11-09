@@ -1095,7 +1095,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-pin admits the source; it is not evidence about the prose chip. */
 	// Recomputed with --print for #108 main integration, localized notice and
 	// durable account/org dismissal; source identity is not rendered evidence.
-	src: "e1021ba14b3f5de2a4709842368f2c9739f6e76fcf92523f4a45b2b5f8fa3562",
+	// PR #108 CI remediation: branch-local --print from the final source tree;
+	// test contracts only; no shipping source bytes changed.
+	// Source admission only, not fresh rendered or geometry evidence.
+	src: "49e273029a677b66adabb917e8ace39e4a362d9ee14026293b26a30b742ad0e1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

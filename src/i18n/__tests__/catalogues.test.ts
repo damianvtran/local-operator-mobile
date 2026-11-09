@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 104,
+		expected: 113, // 104 established keys + 9 default_on keys (PR #108).
 	},
 	{
 		name: "mobile.signin",
@@ -260,7 +260,8 @@ describe("the English catalogues", () => {
 		 *  profile/photo keys) plus this slice's 17 `mobile.projects` keys — the create
 		 *  sheet's fields, validation and the two example placeholders. Counted from the
 		 *  merged catalogue files themselves, not from either branch's number: 481. */
-		expect(total).toBe(481);
+		// PR #108: 481 established keys + 9 default_on keys.
+		expect(total).toBe(490);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
