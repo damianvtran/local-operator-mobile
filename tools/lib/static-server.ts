@@ -13,7 +13,7 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
@@ -29,8 +29,8 @@ import type { ReadableStream as NodeReadableStream } from "node:stream/web";
  * relay's own paths at the SAME origin is what fixes it, and it needs no
  * page-side seeding: the app's configured route is simply this origin.
  *
- * A path is proxied when it matches these prefixes exactly; everything else
- * stays a file lookup, so the app's own bundle is never shadowed.
+ * A path is proxied when it matches these prefixes exactly; `/assets/` alone
+ * shares its namespace with compiled files, which take precedence when present.
  */
 export const PROXIED_PREFIXES = [
 	"/api/",
@@ -52,6 +52,8 @@ export function isProxiedPath(pathname: string): boolean {
 			: pathname === prefix || pathname.startsWith(`${prefix}/`),
 	);
 }
+
+const REQUEST_PATH_SEPARATOR = /[?#]/;
 
 const TYPES: Record<string, string> = {
 	".html": "text/html; charset=utf-8",
@@ -261,23 +263,38 @@ export async function serveDir(
 			req.url ?? "/",
 			`http://${req.headers.host ?? "127.0.0.1"}`,
 		);
-		if (upstream !== null && isProxiedPath(url.pathname)) {
+		const rawPathname = (req.url ?? "/").split(REQUEST_PATH_SEPARATOR, 1)[0];
+		const isAssetPath =
+			rawPathname.startsWith("/assets/") || url.pathname.startsWith("/assets/");
+		// Only /assets/ is shared by the compiled bundle and the relay. Backend
+		// routes must keep proxying even when a same-named local file exists.
+		if (upstream !== null && !isAssetPath && isProxiedPath(url.pathname)) {
 			await forward(req, res, url);
 			return;
 		}
 		let pathname: string;
 		try {
-			pathname = decodeURIComponent(url.pathname);
+			// URL removes dot segments, so inspect the original asset path before
+			// normalization can hide an attempted escape from the static root.
+			pathname = decodeURIComponent(isAssetPath ? rawPathname : url.pathname);
 		} catch {
 			res.writeHead(400, { "content-type": "text/plain" });
 			res.end("bad request");
 			return;
 		}
-		let target = resolve(join(root, normalize(pathname)));
+		let target = resolve(root, `.${pathname}`);
 		// Traversal guard: a path that escapes the root is a 404, not a file read.
 		if (target !== root && !target.startsWith(root + sep)) {
 			res.writeHead(404, { "content-type": "text/plain" });
 			res.end("not found");
+			return;
+		}
+		if (
+			upstream !== null &&
+			isAssetPath &&
+			!(existsSync(target) && statSync(target).isFile())
+		) {
+			await forward(req, res, url);
 			return;
 		}
 		if (existsSync(target) && statSync(target).isDirectory())
