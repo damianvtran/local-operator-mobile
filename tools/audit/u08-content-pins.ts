@@ -1139,7 +1139,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #106 post-disposal remediation: permanent provider/store/draft admission
 	// and stale acquisition release, with focused regressions. Derived by --print
 	// from the staged source; this is admission identity, not rendered/native proof.
-	src: "cf5208a22d19ad83601e38fe369e41687bb657a3819623b7b98bf17232c46cfb",
+	/* PR #205: --print admits the reviewed activity fallback and intrinsic-clock
+	 * source, including its regressions. This updates source identity only;
+	 * it is not proof of native visibility or compact D3 geometry. Historical,
+	 * instrument and input pins remain unchanged. */
+	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
+	/* Recomputed with --print after merging approved #108 (d9073ebc): the
+	 * combined src tree has neither parent's digest. Source admission only;
+	 * historical pixels, native visibility and compact D3 remain unproved. */
+	// #106 + main 8705a953: combined staged source identity only, not new pixels.
+	src: "4e4c34935595b2cbe9b270083dd27484039708aeb23cb47232c4bbfe907311b8",
+
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
