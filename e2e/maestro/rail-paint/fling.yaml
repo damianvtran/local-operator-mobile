@@ -20,10 +20,15 @@
 # returns to roughly the same offset each pair, so every swipe in the burst is a
 # real gesture over real content.
 #
-# Ten swipes is a ~2.5 s of gesture inside a ~1.2 s rail window (1000 ms linger +
-# 200 ms fade), repeated: the burst is long enough that a capture that takes half
-# a second has several chances to land while the rail is up, and short enough that
-# the whole proof costs seconds of the nightly lane.
+# Ten swipes is 1.3 s of gesture TIME, and it is worth separating that from the
+# flow's WALL time: Maestro needs ~11 s of driver start-up before the first swipe
+# lands (measured in run 42546977251 — the first 63 of 110 in-fling frames still
+# read rail-down), and the flow then runs ~22 s in total. The rail is up for
+# `RAIL_LINGER_MS` + `RAIL_FADE_MS` after each gesture, so once the burst starts a
+# capture taking ~185 ms has almost every frame land inside the window: that run
+# measured 54 of 57 post-onset frames rail-up in the `deep` world and 58 of 58 in
+# `building` (the three gaps are the fade between one swipe and the next). Ten swipes is what makes that hold across the whole burst rather
+# than in the instant after one flick.
 appId: ${APP_ID}
 name: "Checkpoint rail — fast fling burst"
 ---
