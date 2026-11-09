@@ -307,6 +307,55 @@ afterEach(async () => {
 	vi.unstubAllGlobals();
 });
 
+describe("reasoning and harness metadata", () => {
+	it("preserves a future event under its actual wire type instead of entry", async () => {
+		entries = [
+			row("future", {
+				kind: "future_trace",
+				text: `Future event summary\n${HIDDEN}`,
+			}),
+		];
+		await render();
+		expect(drawn()).toContain("future_trace");
+		expect(drawn()).not.toContain(HIDDEN);
+		await press("future_trace: Future event summary");
+		expect(drawn()).toContain(HIDDEN);
+	});
+	it("names reasoning, preserves its expanded text, and never calls it entry", async () => {
+		entries = [
+			row("reasoning", {
+				kind: "reasoning",
+				text: `Checking the result\n${HIDDEN}`,
+			}),
+		];
+		await render();
+		expect(drawn()).toContain("Thinking");
+		expect(drawn()).not.toContain("entry");
+		expect(drawn()).not.toContain(HIDDEN);
+		await press("Thinking: Checking the result");
+		expect(drawn()).toContain(HIDDEN);
+	});
+
+	it("filters typed metadata before planning but retains literal user and peer quotes", async () => {
+		entries = [
+			row("state", {
+				kind: "notice",
+				custom_type: "session_state",
+				text: "private harness metadata",
+			}),
+			row("quote", { kind: "user", text: "[session-state] quoted by me" }),
+			row("peer-quote", {
+				kind: "peer_message",
+				text: "[session-state] quoted by peer",
+			}),
+		];
+		await render();
+		expect(drawn()).not.toContain("private harness metadata");
+		expect(drawn()).toContain("quoted by me");
+		expect(drawn()).toContain("quoted by peer");
+	});
+});
+
 describe("a fold the reader opened", () => {
 	it("survives its row leaving the window and coming back (Q5 / U6)", async () => {
 		await render();

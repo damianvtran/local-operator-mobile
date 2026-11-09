@@ -50,6 +50,7 @@ export type RowKind =
 	| "user"
 	| "steer"
 	| "assistant"
+	| "reasoning"
 	| "tool"
 	| "notice"
 	| "compaction"
@@ -67,6 +68,7 @@ const KIND_MAP: Record<string, RowKind> = {
 	user: "user",
 	steer: "steer",
 	assistant: "assistant",
+	reasoning: "reasoning",
 	tool: "tool",
 	notice: "notice",
 	compaction: "compaction",
@@ -79,6 +81,23 @@ const KIND_MAP: Record<string, RowKind> = {
 
 export const classifyEntry = (entry: TranscriptEntry): RowKind =>
 	KIND_MAP[entry.kind] ?? "generic";
+
+/** Session state is model-facing harness metadata, not a conversation event.
+ * The producer stamps `custom_type=session_state`; older projections carry the
+ * same provenance in `details.custom_kind`. Never infer this from the body's
+ * marker: a human or peer quoting [session-state] still owns those words.
+ * Filter before condensing so hidden metadata contributes no rows or counts.
+ * This is display-only: the received projection and durable history stay intact. */
+export const visibleTranscriptEntries = (
+	entries: readonly TranscriptEntry[],
+): readonly TranscriptEntry[] => {
+	const visible = (entry: TranscriptEntry) =>
+		!(
+			entry.kind === "notice" &&
+			(entry.custom_type || entry.details.custom_kind) === "session_state"
+		);
+	return entries.every(visible) ? entries : entries.filter(visible);
+};
 
 /** Whether the row is one the reader wrote. Used for alignment, and for the one
  *  place the transcript puts a bubble around text. */
