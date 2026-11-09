@@ -586,6 +586,9 @@ describe("the pin table covers what the drivers load", () => {
 			seen.add(current);
 			stack.push(...loadedModules(current));
 		}
+		// R3-1: opt-in journaling still loads through the relay's static import;
+		// omitting its registration must fail even without a native dispatch.
+		expect(seen.has("tools/mock-relay/request-journal.ts")).toBe(true);
 		const instrument = [...seen]
 			.filter((module) => !module.startsWith("src/"))
 			.filter((module) => !TRUSTED.has(module));

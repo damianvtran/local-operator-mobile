@@ -181,8 +181,16 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  `--print`: the merged relay carries both sides' routes, so its digest is
 	 *  neither side's. The U-08 scene the proof is fed did not move. */
 
+	/* Re-pinned 2026-11-09 for PR #200's R3-1 admission repair, using
+	 * `node tools/audit/u08-content-pins.ts --print`: the current relay imports
+	 * request-journal.ts for opt-in native admission evidence. Both are required
+	 * members of the drivers' transitive instrument closure even when journaling
+	 * is off. This updates current instrument identity, not historical ORIGINAL_*
+	 * captures, rendered content, fixture inputs, or the coverage rules. */
 	"tools/mock-relay/relay.ts":
-		"4803690ed1fdec4c1ddc551f84d728549bf36906b19ebe0394f329c72cea292b",
+		"cba46d91fe2a0303783e73ee1e3fe223fd767459a6d9a76ae88a2673088bb617",
+	"tools/mock-relay/request-journal.ts":
+		"421574a40ff1aafe14185b8ebefad08982a80aa34f89f43c9e0b51c32b4e6c93",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
