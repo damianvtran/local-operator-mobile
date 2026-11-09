@@ -92,10 +92,16 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  export, `SPACING_REST_PROBE`; `EXTRACT_PROBE`'s source is byte-unchanged. */
 	"tools/audit/probe.ts":
 		"ae34fd9cce868b60b385eed2064c07a3e82e2cd421526a7fea1fb81446437728",
+	/* Re-pinned for PR #207's CI remediation: the long-conversation fixture's
+	 * row ids moved from `tc-conv-…` to `m-conv-…` (`tc-` is the relay's
+	 * live-fold prefix, which the history pager refuses as a cursor), so the
+	 * fixture-control ids this instrument names moved with them. A rename of
+	 * the same rows; what the proof measures is unchanged. `--print`, staged. */
 	"tools/audit/u08-fragment-verification.ts":
-		"bcec0b75b00bbeeb51c1b8a989086c922072a64635a92ff6972a782f18b37908",
+		"21e0c079b0572599e10bef7f640214835dbe30ee96c0710104e702caad6d8055",
+	// PR #207 CI remediation: same `m-conv-…` fixture-id rename as above.
 	"tools/audit/u08-geometry-proof.ts":
-		"59358b798485dcb7662cd52a952bf988f24bd90fc5fb522d70f790260c326d00",
+		"dac279b1e8d6fbe728d44d96505c9a2c72c192c2be71c950bcffc23ba5ffef49",
 	/* Re-pinned for PR #175: `skipped` is now a terminal affordance answer, so
 	 *  a conditional opener whose control is already on the page stops polling its
 	 *  settled answer for the full `waitMs`. The proof still drives the SAME presses
@@ -181,8 +187,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  `--print`: the merged relay carries both sides' routes, so its digest is
 	 *  neither side's. The U-08 scene the proof is fed did not move. */
 
+	/* PR #207 CI remediation: `/history?before=<oldest row>` answers the empty
+	 * terminal page instead of re-serving the newest one. `--print`, staged. */
 	"tools/mock-relay/relay.ts":
-		"4803690ed1fdec4c1ddc551f84d728549bf36906b19ebe0394f329c72cea292b",
+		"375535169c6988971e31dd5a537d3907da6bbd050714fb8bb713c7b8caf65671",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -195,8 +203,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * emits the daemon's real-shaped nulls (`effort`, `opened_by`, `agent_id`,
 	 * `avatar_sha256`) and the always-present receipts/tags pair. Row DATA only;
 	 * no projection, transcript or layout input moved. */
+	/* PR #207 CI remediation: long-conversation ids are journal-addressable
+	 * (`m-conv-…`) and `long-transcript` declares `transcript_head_pinned:
+	 * false`. `--print`, staged. */
+	/* PR #207 round 5: omit the false head-pin flag, matching Core's wire.
+	 * Re-derived with --print from the staged tree; no capture assertion moved. */
 	"tools/mock-relay/scenarios.ts":
-		"8dd72a2a10564687d287adc3c577b6ee8f5d9d79a232abdfc2d766b23b3ce00b",
+		"cf2d3918ac43b711a31ed96188a695b3082eeaa18c9e5441c6422c5281759573",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -222,8 +235,9 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * plan input moved: the class is imported only by the capture's identity verdict
 	 * (`identical-states.ts`, `matchDeclared`), never by the plan or a readiness
 	 * probe, so no cell and no planned frame changes. */
+	// PR #207 CI remediation: the `m-conv-…` fixture-id rename, nothing else.
 	"tools/visual/matrix.ts":
-		"8f7b7edaf54e4a525e38ecd8ee582b0c46cf681f2ee71aea8467f2b736ea8f84",
+		"9f753d7aad6b191c8bc59af98e85adac897234a9734f60376b4bf9db3767777e",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -601,7 +615,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* QA round-3 Q3: the session screen passes the composer's `capped` report to
 	 * `composerLimit`, so the portrait ceiling cannot oscillate. Recomputed with
 	 * --print from the staged tree; `app` and `src` moved. Identity only. */
-	app: "ad8d520156ee1426c27c40e9fc61d637b1f00d7bc1428f305bef77d53e3cea8a",
+	// PR #207 remediation: the session screen threads the history retry action
+	// and its failure scope to the list. Staged LIVE source admission only.
+	// Round 3 adds the gap position prop (`historyGapBefore`); same scope.
+	// PR #207 merge-gate convergence with main 235db698 (#206): the merged
+	// app tree has neither parent's digest; re-pinned with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof
+	// refreshed.
+	app: "bc778f091d59e471f7f161c649c8c8e7b28c9bcede37f7b39718b01408370fbc",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1187,7 +1208,35 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * fonts, `public`, fixtures and the instrument files did not. This DOES
 	 * change what the U-08 scenes paint, so the digest is source admission
 	 * only, NOT rendered U-08 evidence: the frames are CI's audit run's. */
-	src: "4e4c8e758da9790b2268b8849aa53b35079b497e659b6a4ebfceaf6c3e9f0ffe",
+	// Native history paging: staged LIVE source admission only; historical
+	// rendered frames, native anchor and interaction proof are not refreshed.
+	// PR #207 remediation (gap detection, retry targeting, refresh copy) re-pinned
+	// with --print over the staged tree; same scope as above.
+	// Q3: biome reformatted the two synthetic history wire fixtures (whitespace
+	// only, JSON deep-equal before/after); re-pinned with --print, same scope.
+	// PR #207 round 3 (Q5-Q7, U1/U2, D1-D6): web prepend anchor, gap marker and
+	// newest-edge notice, copy; re-pinned with --print over the staged tree, same
+	// scope (no rendered frame or native proof refreshed).
+	// PR #207 merge-gate convergence with main 3e759dac (#106): the merged src
+	// tree has neither parent's digest; re-pinned with --print over the staged
+	// merged tree. Source admission only, no rendered or native proof refreshed.
+	// PR #207 merge-gate convergence with main 235db698 (#206): the merged
+	// src tree has neither parent's digest; re-pinned with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof
+	// refreshed.
+	// PR #207 CI remediation (visual gate): the history reader keeps a cold
+	// page's rows, substitutes live bodies by occurrence, and displays every
+	// row of an accepted frame (only a cap-sized frame's opener detaches); re-pinned with --print over the staged
+	// tree. Source admission only, no rendered or native proof refreshed.
+	// PR #207 round 5: cold disjoint pages precede live rows, explicit pinned
+	// context survives flagless frames, and HTTP reader-world tests live beside
+	// the app reader. Re-derived with --print, staged; source admission only.
+	// PR #207 merge-gate convergence with main 828c9b50 (#209): the merged src
+	// tree carries both #209's borderless rows / cached images and this PR's
+	// history reader, so it has neither parent's digest; re-pinned with --print
+	// over the staged merged tree. Source admission only, no rendered or native
+	// proof refreshed.
+	src: "1714a6b43209c664d62a089f14dc8f3086a42706028f7b7ada0e6b1ae77f39c6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
