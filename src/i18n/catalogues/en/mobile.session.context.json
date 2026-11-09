@@ -118,5 +118,9 @@
 	"mobile.session.pending_echo.earlier_went_through": {
 		"role": "status",
 		"note": "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)."
+	},
+	"mobile.session.composer.not_sent_storage": {
+		"role": "status",
+		"note": "Composer error before any HTTP dispatch: local safe-retry preparation failed. The text and image draft has not been consumed. Do not imply uncertain delivery or assert that disk space is the cause; checking free space is one actionable remedy. Never include storage exception text or private paths."
 	}
 }

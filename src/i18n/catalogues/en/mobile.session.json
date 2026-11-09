@@ -28,5 +28,6 @@
 	"mobile.session.pending_echo.not_sent": "not sent — tap to put back",
 	"mobile.session.pending_echo.not_confirmed": "not confirmed — retry below",
 	"mobile.session.pending_echo.earlier_not_sent": "Your earlier message wasn’t sent ({reason}). Tap it above to put it back.",
-	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet."
+	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet.",
+	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Check free space on this phone, then try again."
 }

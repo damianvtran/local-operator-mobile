@@ -28,5 +28,6 @@
 	"mobile.session.pending_echo.not_sent": "не отправлено — нажмите, чтобы вернуть",
 	"mobile.session.pending_echo.not_confirmed": "не подтверждено — повторите ниже",
 	"mobile.session.pending_echo.earlier_not_sent": "Предыдущее сообщение не отправлено ({reason}). Нажмите на него выше, чтобы вернуть.",
-	"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен."
+	"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен.",
+	"mobile.session.composer.not_sent_storage": "Не отправлено. Не удалось надёжно сохранить сообщение для повторной отправки. Текст и изображения остались здесь. Проверьте свободное место на телефоне и попробуйте ещё раз."
 }

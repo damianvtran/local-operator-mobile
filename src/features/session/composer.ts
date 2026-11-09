@@ -23,6 +23,7 @@ import type { PasteVia } from "@/features/session/attach-rule";
 import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
 import { t } from "@/i18n";
 import type { ContinuationOp, RelayError } from "@/relay";
+import { SendPreparationError } from "@/relay/send-command";
 
 /* ------------------------------------------------------------------- copy */
 
@@ -244,6 +245,8 @@ export const composerControls = (
 
 /** What a send's outcome means for the READER. */
 export type SendReceipt =
+	/** No dispatch began; preserve both the draft and any older retained envelope. */
+	| { kind: "not-sent"; message: string }
 	/** Delivery is unknown. Keep the envelope and offer the retry. */
 	| { kind: "ambiguous"; message: string }
 	/** A pre-admission rejection. Clear the envelope; a replay is never useful. */
@@ -269,6 +272,12 @@ export const receiptForError = (
 	 *  Working). Omitted, the class decides, as before. */
 	op?: ContinuationOp,
 ): SendReceipt => {
+	if (error instanceof SendPreparationError) {
+		return {
+			kind: "not-sent",
+			message: t("mobile.session.composer.not_sent_storage"),
+		};
+	}
 	/*
 	 * The sentence, in the order the three sources deserve to be trusted:
 	 *

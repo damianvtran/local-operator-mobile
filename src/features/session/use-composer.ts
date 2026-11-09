@@ -554,7 +554,7 @@ export const useComposer = (input: {
 				 * reading of one failure, which is how one failure acquires two rules. */
 				if (receipt !== null) {
 					setRetained(
-						receipt.kind === "ambiguous"
+						receipt.kind === "ambiguous" || receipt.kind === "not-sent"
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
@@ -565,7 +565,7 @@ export const useComposer = (input: {
 					 * A refused message kept as its row names the EARLIER message: the
 					 * text under the line is the reader's next one, not what failed. */
 					setError(
-						ended
+						ended && receipt.kind !== "not-sent"
 							? composerCopy().endedSendFailed
 							: echoed === "kept" && receipt.kind !== "ambiguous"
 								? earlierNotSentMessage(receipt.message)
@@ -695,12 +695,12 @@ export const useComposer = (input: {
 				);
 				if (receipt !== null) {
 					setRetained(
-						receipt.kind === "ambiguous"
+						receipt.kind === "ambiguous" || receipt.kind === "not-sent"
 							? await envelopeStore.peek(sessionId)
 							: null,
 					);
 					setError(
-						ended
+						ended && receipt.kind !== "not-sent"
 							? composerCopy().endedSendFailed
 							: echoed === "kept" && receipt.kind !== "ambiguous"
 								? earlierNotSentMessage(receipt.message)

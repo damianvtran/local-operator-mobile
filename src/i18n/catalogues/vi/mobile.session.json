@@ -28,5 +28,6 @@
 	"mobile.session.pending_echo.not_sent": "chưa gửi — chạm để đưa lại",
 	"mobile.session.pending_echo.not_confirmed": "chưa xác nhận — thử lại bên dưới",
 	"mobile.session.pending_echo.earlier_not_sent": "Tin nhắn trước của bạn chưa được gửi ({reason}). Chạm vào nó ở trên để đưa lại.",
-	"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi."
+	"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
+	"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy kiểm tra dung lượng trống trên điện thoại này rồi thử lại."
 }

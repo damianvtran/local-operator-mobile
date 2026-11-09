@@ -63,6 +63,22 @@ import {
 	type RetryEnvelopeStore,
 } from "./retry-envelope";
 
+/** Only constructed before dispatch: keeping an older envelope is a safety
+ * directive, not evidence that this new draft reached the relay. Never attach
+ * adapter exception text to diagnostics: it can contain private file paths. */
+export class SendPreparationError extends RelayError {
+	readonly stage = "pre-dispatch";
+	readonly category = "local-storage";
+	constructor(cause: unknown) {
+		super("rejected", "instruction not sent: retry preparation failed", {
+			envelope: "keep",
+			retry: "never",
+			diagnostic: "category=local-storage stage=pre-dispatch status=not-sent",
+			cause,
+		});
+	}
+}
+
 export interface SendResult {
 	/** The relay's own sentence: `prompt admitted`, or `already admitted` on a
 	 *  replay of an id it had seen. */
@@ -231,7 +247,12 @@ function begin(
 			) {
 				return {
 					ok: false,
-					error: unresolvedPredecessor(settled.error, input.sessionId),
+					// Preparation can fail while an OLDER unresolved envelope still
+					// owns the slot. Do not dispatch a waiting new draft automatically.
+					error:
+						settled.error instanceof SendPreparationError
+							? settled.error
+							: unresolvedPredecessor(settled.error, input.sessionId),
 				};
 			}
 		}
@@ -319,34 +340,42 @@ export async function sendPersistedCommand(
 async function runSend(input: SendCommandInput): Promise<SendResult> {
 	const { client, envelopes, sessionId } = input;
 	let held: { envelope: ContinuationEnvelope; reused: boolean };
-	if (input.envelope) {
-		const expected = input.envelope;
-		const existing = await envelopes.peek(sessionId);
-		const expectedPayload = payloadKeyOf({
-			...input,
-			...expected,
-			envelope: expected,
-		});
-		if (
-			expectedPayload !== payloadKeyOf(input) ||
-			(existing &&
-				payloadKeyOf({ ...input, ...existing, envelope: existing }) !==
-					expectedPayload)
-		) {
-			throw new EnvelopeStorageError(
-				"a different unresolved instruction owns this session",
+	try {
+		if (input.envelope) {
+			const expected = input.envelope;
+			const existing = await envelopes.peek(sessionId, {
+				requireReadable: true,
+			});
+			const expectedPayload = payloadKeyOf({
+				...input,
+				...expected,
+				envelope: expected,
+			});
+			if (
+				expectedPayload !== payloadKeyOf(input) ||
+				(existing &&
+					payloadKeyOf({ ...input, ...existing, envelope: existing }) !==
+						expectedPayload)
+			) {
+				throw new EnvelopeStorageError(
+					"a different unresolved instruction owns this session",
+				);
+			}
+			await envelopes.hold(sessionId, expected);
+			held = { envelope: expected, reused: false };
+		} else {
+			held = await envelopes.holdNew(
+				sessionId,
+				input.op,
+				input.text,
+				input.images,
+				{ input_mode: input.input_mode, input_path: input.input_path },
 			);
 		}
-		await envelopes.hold(sessionId, expected);
-		held = { envelope: expected, reused: false };
-	} else {
-		held = await envelopes.holdNew(
-			sessionId,
-			input.op,
-			input.text,
-			input.images,
-			{ input_mode: input.input_mode, input_path: input.input_path },
-		);
+	} catch (cause) {
+		// Scope this classification to preparation. A failed re-hold AFTER the
+		// first HTTP attempt must remain ambiguous, never become “not sent”.
+		throw new SendPreparationError(cause);
 	}
 	let { envelope } = held;
 	/* Paint ONCE, before the first attempt: a reconciled replay re-holds the

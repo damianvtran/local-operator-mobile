@@ -28,5 +28,6 @@
 	"mobile.session.pending_echo.not_sent": "未发送——轻点放回",
 	"mobile.session.pending_echo.not_confirmed": "未确认——请在下方重试",
 	"mobile.session.pending_echo.earlier_not_sent": "你之前的消息未发送（{reason}）。轻点上方的消息即可放回。",
-	"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。"
+	"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",
+	"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请检查此手机的可用空间，然后重试。"
 }
