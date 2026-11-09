@@ -1211,6 +1211,17 @@ jobs:
           # and the second call, after the install, warms the app once so the first
           # flow does not carry the cold start. Read the script's header for the
           # measurements. The retry path re-gates before re-running the set.
+          #
+          # WHY THE CHECKPOINT-RAIL CAPTURE IS HERE (the last script line): the rail
+          # is summoned by scroll SPEED, and react-native-web 0.21 emits no drag or
+          # momentum event at all (`src/features/session/transcript-presence.ts`), so
+          # the web audit — this repository's only other visual harness — cannot
+          # paint it. This emulator is therefore the only place the component's
+          # actual appearance is observable, and the capture runs on the APK that
+          # was just installed rather than a second build.
+          # Read the rail-paint-proof artifact's `report.json` for the numbers; the
+          # step fails only on the two structural claims (the rail paints during a
+          # fast fling, `building` differs from `deep`), not on the latencies.
           script: |
             sh scripts/ci/await-emulator-ready.sh
             adb uninstall "$APP_ID" || echo "no earlier $APP_ID on this AVD to remove"
@@ -1235,6 +1246,7 @@ jobs:
             # The tag flow needs a different mock world. Run it after the normal
             # set, on the same emulator and APK, in its own relay scenario.
             bash scripts/ci/run-maestro-tags.sh
+            bash scripts/ci/rail-android-capture.sh
 
       - name: Stop the mock relay
         if: always()
@@ -1262,6 +1274,19 @@ jobs:
         with:
           name: maestro-tag-screenshots
           path: ${{ runner.temp }}/maestro-tags-screenshots
+          retention-days: 30
+
+      - name: Upload the checkpoint-rail frames and report
+        # The frames ARE the evidence: the report's counts are only meaningful
+        # beside the pixels they were counted from, and a later disagreement about
+        # the rail's appearance is settled by looking at the same PNGs this step
+        # keeps. Uploaded on failure too — a run where the rail did not paint is
+        # the run whose frames are worth the most.
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rail-paint-proof
+          path: ${{ runner.temp }}/rail-paint
           retention-days: 30
 
 
