@@ -282,6 +282,8 @@ export const CONTROL = {
 	newSessionCwd: "new-session-cwd",
 	sessionsSplit: "sessions-split",
 	sessionsNoRoute: "sessions-no-route",
+	workspaceDrawerAgents: "workspace-drawer-agents",
+	workspaceDrawerTeamBridge: "workspace-drawer-team-bridge",
 
 	computersUseThisComputer: "computers-use-this-computer",
 	computersStartAgain: "computers-start-again",

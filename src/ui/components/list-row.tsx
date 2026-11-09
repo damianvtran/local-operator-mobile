@@ -1,3 +1,4 @@
+import { Check } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -89,9 +90,10 @@ export type ListRowProps = {
 	 *  LIST being degraded — a degraded row is one session not answering, a
 	 *  degraded listing is the relay unable to walk the catalogue. */
 	degraded?: boolean;
-	/** The session currently open. Selection is never colour alone: the title
-	 * also takes the accent role. */
+	/** Selected state and tint. Chat callers also opt into the visible check below. */
 	selected?: boolean;
+	/** Opt-in current-chat pictogram; generic selected rows keep their own semantics. */
+	selectedIndicator?: boolean;
 	/**
 	 * Present when this row is ANOTHER device's conversation (`locality:
 	 * "remote"`). The row then paints the device line — "On <device>" — in
@@ -198,6 +200,7 @@ export const ListRow = ({
 	ended = false,
 	degraded = false,
 	selected = false,
+	selectedIndicator = false,
 	remote,
 	onPress,
 	onLongPress,
@@ -209,6 +212,7 @@ export const ListRow = ({
 	surfaceClassName = "bg-canvas",
 	testID,
 }: ListRowProps) => {
+	const selectionInk = useTokenColor("ink");
 	const attention = listRowIndicator({
 		ready: true,
 		pending,
@@ -364,7 +368,7 @@ export const ListRow = ({
 								<Text
 									className={`text-label ${
 										selected
-											? // Selection's non-colour channel, plus the fill.
+											? // The optional check below supplies selection’s non-colour channel.
 												"text-accent-active dark:text-accent-hover"
 											: ended || degraded
 												? "text-ink-muted"
@@ -376,6 +380,14 @@ export const ListRow = ({
 									{title}
 								</Text>
 							</Shimmer>
+							{/* A non-shrinking pictogram survives long titles and large text without
+							 * competing with the counts on line two. No duplicated spoken label:
+							 * accessibilityState already announces the current row. */}
+							{selected && selectedIndicator ? (
+								<View className="shrink-0" aria-hidden>
+									<Check color={selectionInk} size={18} />
+								</View>
+							) : null}
 							{time !== undefined && time !== "" ? (
 								<Text
 									className="ms-auto shrink-0 text-mono-label text-ink-dim"

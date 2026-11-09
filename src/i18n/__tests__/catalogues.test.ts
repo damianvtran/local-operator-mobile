@@ -153,7 +153,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 32, // +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 33, // +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -206,7 +206,7 @@ const NAMESPACES = [
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 17,
+		expected: 20,
 	},
 	{
 		name: "relay.chrome",
@@ -256,11 +256,9 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* 464 on main (the Team Bridge avatar slice's 104 includes the 11 endpoint-owned
-		 *  profile/photo keys) plus this slice's 17 `mobile.projects` keys — the create
-		 *  sheet's fields, validation and the two example placeholders. Counted from the
-		 *  merged catalogue files themselves: 481 plus the initial-send and retry-attempt storage receipts. */
-		expect(total).toBe(483);
+		/* Counted from the combined catalogue files: 481 existing keys, three
+		 * drawer keys and two initial-send/retry-attempt storage receipt keys. */
+		expect(total).toBe(487);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -333,6 +331,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.chrome.drawer.agents":
+			"Agents is also the French plural for software agents; the drawer mode names the agent conversations, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.profile.badge_agent":
