@@ -109,7 +109,7 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 				</View>
 			</Pressable>
 			{open && hasDetails ? (
-				<View className="flex-col gap-1.5 pb-1.5 pl-6">
+				<View className="flex-col gap-1.5 pb-1.5 ps-6">
 					{pairs.length > 0
 						? pairs.map((pair, index) => (
 								<View key={index}>

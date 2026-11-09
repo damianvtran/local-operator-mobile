@@ -1,0 +1,19 @@
+{
+	"mobile.chrome.destination.inbox": "Входящие",
+	"mobile.chrome.destination.past": "Прошлые",
+	"mobile.chrome.destination.schedules": "Расписания",
+	"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
+	"mobile.chrome.destinations": "Разделы",
+	"mobile.chrome.new_chat": "Новый чат",
+	"mobile.chrome.close_conversations": "Закрыть список бесед",
+	"mobile.chrome.composer.more": "Дополнительный контекст",
+	"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
+	"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
+	"mobile.chrome.home.greeting": "Над чем вы хотите поработать?",
+	"mobile.chrome.home.connecting": "Подключение к {host}…",
+	"mobile.chrome.home.connect": "Подключить компьютер",
+	"mobile.chrome.home.sign_in": "Войдите для повторного подключения",
+	"mobile.chrome.home.saved_draft": "Черновик сохранён на этом телефоне и не отправлен.",
+	"mobile.chrome.home.reconnecting": "Повторное подключение к {host}…",
+	"mobile.chrome.composer.open_queue": "Открыть очередь"
+}

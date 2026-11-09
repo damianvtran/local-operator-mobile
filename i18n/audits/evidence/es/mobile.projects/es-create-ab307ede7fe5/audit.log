@@ -1,0 +1,8 @@
+Redaction-marker count /redacted/i: src/i18n/catalogues/en/mobile.projects.json=0, src/i18n/catalogues/en/mobile.projects.context.json=0, src/i18n/catalogues/es/mobile.projects.json=0; project-create.tsx=0; core glossary.md=0; core es.md=0.
+Selected key count=17; unique=17; all present EN/ES/context; JSON parsed; lexical placeholder/markup/# token lists empty for every selected key on both sides; Spanish NFC true for all.
+English read_public_copy: 17 successful keyed receipts; Spanish attempt refused (worktree differs from HEAD); context sidecar direct read.
+Whole-file SHA-256:
+src/i18n/catalogues/en/mobile.projects.json b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b
+src/i18n/catalogues/en/mobile.projects.context.json 5cf6fd4a2be5cf01f71ae4fea8380a0935afa42907d6273ae7331feaa1aef65b
+src/i18n/catalogues/es/mobile.projects.json fc7cf36f697081132b97a676d7ae11cb19d27411adee0151caddfed99e9e4081
+No tests, Node, installs, browser, translation edits, or rendered checks performed.

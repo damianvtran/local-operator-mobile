@@ -146,6 +146,71 @@ describe("timeouts and transport failures are never a success", () => {
 		expect(error.envelope).toBe("keep");
 	});
 
+	it("covers credential renewal with the request's own deadline", async () => {
+		// Review round 1, R1-M2: on the tunnel route `auth()` renews an expiring
+		// grant, so it is a network round trip. The deadline used to be armed AFTER
+		// it, which excluded the renewal from the request's budget entirely — a
+		// stalled token endpoint held the caller for as long as the renewal took.
+		let sent = 0;
+		const fetchImpl = (async () => {
+			sent += 1;
+			return json({ ok: true });
+		}) as unknown as typeof globalThis.fetch;
+		const http = client(fetchImpl, {
+			timeoutMs: 20,
+			/* A renewal that never answers, and that ignores its signal — the race is
+			 * what has to enforce the budget, not the renewal's cooperation. */
+			auth: () => new Promise<RequestAuth>(() => undefined),
+		});
+		const started = Date.now();
+		const error = (await http
+			.json("healthz", { method: "GET", path: "/healthz" })
+			.catch((caught: unknown) => caught)) as RelayError;
+		expect(error).toBeInstanceOf(RelayError);
+		expect(error.kind).toBe("transport");
+		expect(Date.now() - started).toBeLessThan(2000);
+		// Nothing was sent with credentials nobody is waiting for any more.
+		expect(sent).toBe(0);
+	});
+
+	it("hands the caller's abort to the renewal and sends nothing after it", async () => {
+		// A route switch must cancel the pending renewal, not just the fetch: the
+		// signal travels INTO auth (review round 1, R1-M2).
+		const controller = new AbortController();
+		let authSignal: AbortSignal | undefined;
+		let sawAbort = false;
+		let sent = 0;
+		const fetchImpl = (async () => {
+			sent += 1;
+			return json({ ok: true });
+		}) as unknown as typeof globalThis.fetch;
+		const http = client(fetchImpl, {
+			timeoutMs: 0,
+			auth: (signal) => {
+				authSignal = signal;
+				return new Promise<RequestAuth>(() => {
+					signal?.addEventListener("abort", () => {
+						sawAbort = true;
+					});
+				});
+			},
+		});
+		const pending = http.json("healthz", {
+			method: "GET",
+			path: "/healthz",
+			signal: controller.signal,
+		});
+		await vi.waitFor(() => expect(authSignal).toBeDefined());
+		controller.abort();
+		const error = (await pending.catch(
+			(caught: unknown) => caught,
+		)) as RelayError;
+		expect(sawAbort).toBe(true);
+		expect(error).toBeInstanceOf(RelayError);
+		expect(error.kind).toBe("transport");
+		expect(sent).toBe(0);
+	});
+
 	it("aborts an in-flight request when the caller's signal fires", async () => {
 		const controller = new AbortController();
 		const seen: boolean[] = [];

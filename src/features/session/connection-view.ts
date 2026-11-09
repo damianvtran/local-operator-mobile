@@ -65,26 +65,44 @@ export const RECONNECT_DEADLINE_MS = 5_000;
  * that is down for hours is a hot loop against a phone's radio and its battery;
  * the ceiling keeps a long outage cheap, while the first retry still lands inside
  * the second a reader expects. `retryAfterMs` — the gateway's own advice for a
- * typed refusal — always wins when the error carries one, because the server
- * knows its own recovery time better than a curve does.
+ * typed refusal — wins when it is LONGER than the curve's step, because the
+ * server knows its own recovery time better than a curve does; it is never
+ * allowed to shorten the step, which is what keeps a `0` from becoming a loop.
  *
  * `attempts` is the count of consecutive failures, reset by any delivered frame.
  */
 export const RECONNECT_BACKOFF_MIN_MS = 1_000;
 export const RECONNECT_BACKOFF_MAX_MS = 15_000;
 
+/** The largest delay `setTimeout` honours; anything above it fires at once. */
+const MAX_TIMER_DELAY_MS = 2 ** 31 - 1;
+
 export const reconnectDelay = (
 	attempts: number,
 	retryAfterMs: number | undefined,
 ): number => {
-	if (retryAfterMs !== undefined) return retryAfterMs;
 	/* Clamped before the shift: `2 ** 40` is fine in JavaScript but the guard keeps a
 	 * counter that somehow ran away from producing `Infinity` and a `setTimeout`
 	 * that never fires. */
 	const steps = Math.min(Math.max(attempts, 0), 8);
-	return Math.min(
+	const step = Math.min(
 		RECONNECT_BACKOFF_MAX_MS,
 		RECONNECT_BACKOFF_MIN_MS * 2 ** steps,
+	);
+	/* The server may ask for LONGER than the curve, never for less. `Retry-After: 0`
+	 * or a past HTTP date parses to 0, and taking it as-is made both streams
+	 * reconnect — and re-POST a grant renewal — with no delay at all, for as long
+	 * as the outage lasted (PR #178 review round 2, R2-1); a short positive value
+	 * held the delay flat below the curve (R2-2). The cap bounds the curve only:
+	 * a long server hint such as `authorization_deferred`'s 120 s still wins. */
+	/* Capped at setTimeout's own ceiling: a delay above 2^31-1 ms (a far-future
+	 * Retry-After date) is truncated by the platform to ~1 ms, which would be the
+	 * very hot loop the floor exists to prevent (PR #178 review round 3, M1). */
+	return Math.min(
+		MAX_TIMER_DELAY_MS,
+		retryAfterMs !== undefined && Number.isFinite(retryAfterMs)
+			? Math.max(retryAfterMs, step)
+			: step,
 	);
 };
 
@@ -162,6 +180,11 @@ export interface ConnectionViewInput {
 	/** Why the last open ended, as `sse.ts` recorded it. A clean `eof` is never a
 	 *  fault, whatever its length. */
 	lastEnd: "eof" | "error" | "stopped" | undefined;
+	/** The SAME graced drop the dot reads (`droppedSinceFrame`, held behind
+	 *  `OUTAGE_GRACE_MS`): C2 fires on this, not on the raw `lastEnd`, so the
+	 *  banner and the dot cannot disagree — before QA round 3 (Q11) a blip under
+	 *  2.5 s painted "The connection dropped" beside a green `Live` dot. */
+	droppedSinceFrame?: boolean;
 	/** A reconnect has outlived `RECONNECT_DEADLINE_MS` without a snapshot. */
 	reconnectExpired: boolean;
 	/** The last failure the connection layer resolved, if any. It already carries
@@ -191,6 +214,19 @@ export interface ConnectionViewInput {
 	phaseSurface?: ErrorSurface | null;
 	/** The session ended: terminal, and NOT the same thing as not-answering. */
 	ended: boolean;
+	/**
+	 * The session header's status dot is reporting this session's liveness, so
+	 * `C3` ("Not answering") is not drawn as a band as well. The relay retired
+	 * its degraded band with the dot (#3008) for exactly this reason, and native
+	 * kept both: the band said "Not answering — last update 1m ago" beside a
+	 * GREEN dot on an idle session and beside a GREY "Ended" one on a history
+	 * rebuild (UX round 1 U6, design D6) — two words for one state, and one of
+	 * them false. The dot reads the relay's own measurements (`degraded`,
+	 * `heartbeat_stale`); a quiet SOCKET is the SSE layer's silence watchdog's
+	 * job, which reopens it and lands in `C2`. Optional and off by default, so
+	 * every other caller (the home screen) keeps `C3`.
+	 */
+	healthDotShown?: boolean;
 }
 
 /**
@@ -315,8 +351,8 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 		);
 	}
 
-	/* ---- C2: a transport error, or a reconnect that produced nothing ---- */
-	if (input.lastEnd === "error") {
+	/* ---- C2: the graced drop, or a reconnect that produced nothing ---- */
+	if (input.droppedSinceFrame === true) {
 		return view("C2", "The connection dropped. Reconnecting…", "warning");
 	}
 	if (input.stream === "connecting" && input.reconnectExpired) {
@@ -344,6 +380,7 @@ export const connectionView = (input: ConnectionViewInput): ConnectionView => {
 	}
 
 	/* ---- C3: an open stream that has gone quiet, or a snapshot that is old ---- */
+	if (input.healthDotShown === true) return NOTHING_VISIBLE;
 	const quietFor =
 		input.ageS !== null && input.ageS >= KEEPALIVE_GRACE_S ? input.ageS : null;
 	if (quietFor !== null || input.stale) {

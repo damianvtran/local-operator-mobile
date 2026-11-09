@@ -1,0 +1,196 @@
+{
+ "head": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+ "checks": {
+  "structure": [
+   {
+    "ns": "mobile.schedules",
+    "en": 38,
+    "ru": 38,
+    "ctx": 38,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   },
+   {
+    "ns": "mobile.projects",
+    "en": 15,
+    "ru": 15,
+    "ctx": 15,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   },
+   {
+    "ns": "mobile.notifications",
+    "en": 14,
+    "ru": 14,
+    "ctx": 14,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   },
+   {
+    "ns": "mobile.computers",
+    "en": 10,
+    "ru": 10,
+    "ctx": 10,
+    "missing": [],
+    "extra": [],
+    "orderSame": true,
+    "ctxMissing": [],
+    "duplicateKeys": 0
+   }
+  ],
+  "paramOrArmProblems": [],
+  "sanctionedEscalations": [
+   {
+    "key": "mobile.schedules.cadence.left",
+    "param": "remaining",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.schedules.summary.monitors_armed",
+    "param": "count",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.schedules.summary.monitors_attention",
+    "param": "broken",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.schedules.tail.failed",
+    "param": "count",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.projects.milestones.count",
+    "param": "completed",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   },
+   {
+    "key": "mobile.projects.sessions.live",
+    "param": "live",
+    "note": "text -> plural, sanctioned by generate.ts parameter-parity and recorded in round 1"
+   }
+  ],
+  "tokenProblems": [],
+  "typography": [],
+  "cadenceLeftType": "\"mobile.schedules.cadence.left\": { cadence: string | number; remaining: number };",
+  "cadenceLeftParsedParams": [
+   [
+    "cadence",
+    "text"
+   ],
+   [
+    "remaining",
+    "plural"
+   ]
+  ],
+  "armedParsedParams": [
+   [
+    "count",
+    "plural"
+   ]
+  ],
+  "pluralStringNegativeControl": "threw RangeError: Message \"{n, plural, one {# x} other {# x}}\" needs a number for \"n\", received \"1\""
+ },
+ "renders": {
+  "cadence_left_bytes": "{cadence} · {remaining, plural, one {осталось #} few {осталось #} many {осталось #} other {осталось #}}",
+  "monitors_armed_bytes": "{count, plural, one {# активный} few {# активных} many {# активных} other {# активных}}",
+  "cadence_left": {
+   "0": "раз в 1d · осталось 0",
+   "1": "раз в 1d · осталось 1",
+   "2": "раз в 1d · осталось 2",
+   "5": "раз в 1d · осталось 5",
+   "11": "раз в 1d · осталось 11",
+   "21": "раз в 1d · осталось 21",
+   "22": "раз в 1d · осталось 22",
+   "101": "раз в 1d · осталось 101",
+   "1.5": "раз в 1d · осталось 1.5"
+  },
+  "monitors_armed": {
+   "0": "0 активных",
+   "1": "1 активный",
+   "2": "2 активных",
+   "5": "5 активных",
+   "11": "11 активных",
+   "21": "21 активный",
+   "22": "22 активных",
+   "101": "101 активный",
+   "1.5": "1.5 активных"
+  },
+  "cadence_left_arm_signatures": [
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]",
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]",
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]",
+   "[{\"type\":\"text\",\"value\":\"осталось \"},{\"type\":\"number\"}]"
+  ],
+  "cadence_left_arms_identical": true,
+  "cadence_left_codepoints": "007b 0063 0061 0064 0065 006e 0063 0065 007d 0020 00b7 0020 007b 0072 0065 006d 0061 0069 006e 0069 006e 0067 002c 0020 0070 006c 0075 0072 0061 006c 002c 0020 006f 006e 0065 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 0020 0066 0065 0077 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 0020 006d 0061 006e 0079 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 0020 006f 0074 0068 0065 0072 0020 007b 043e 0441 0442 0430 043b 043e 0441 044c 0020 0023 007d 007d",
+  "armed_codepoints": "007b 0063 006f 0075 006e 0074 002c 0020 0070 006c 0075 0072 0061 006c 002c 0020 006f 006e 0065 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0439 007d 0020 0066 0065 0077 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0445 007d 0020 006d 0061 006e 0079 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0445 007d 0020 006f 0074 0068 0065 0072 0020 007b 0023 0020 0430 043a 0442 0438 0432 043d 044b 0445 007d 007d"
+ },
+ "receipts": {
+  "project.created": "Создан проект «payments-migration».",
+  "project.completed": "Завершён проект «payments-migration».",
+  "project.reopened": "Возобновлён проект «payments-migration».",
+  "project.added": "Добавлен проект «payments-migration».",
+  "project.updated": "Обновлён проект «payments-migration».",
+  "project.removed": "Удалён проект «payments-migration».",
+  "project.deleted": "Удалён проект «payments-migration».",
+  "project.bogus": "Обновлён проект «payments-migration».",
+  "milestone.created": "Создана веха «payments-migration».",
+  "milestone.completed": "Завершена веха «payments-migration».",
+  "milestone.reopened": "Возобновлена веха «payments-migration».",
+  "milestone.added": "Добавлена веха «payments-migration».",
+  "milestone.updated": "Обновлена веха «payments-migration».",
+  "milestone.removed": "Удалена веха «payments-migration».",
+  "milestone.deleted": "Удалена веха «payments-migration».",
+  "milestone.bogus": "Обновлена веха «payments-migration».",
+  "other.created": "Создано «payments-migration».",
+  "other.completed": "Завершено «payments-migration».",
+  "other.reopened": "Возобновлено «payments-migration».",
+  "other.added": "Добавлено «payments-migration».",
+  "other.updated": "Обновлено «payments-migration».",
+  "other.removed": "Удалено «payments-migration».",
+  "other.deleted": "Удалено «payments-migration».",
+  "other.bogus": "Обновлено «payments-migration»."
+ },
+ "composition": {
+  "parked_wakes": "Приостановлено — пробуждения возобновятся после следующего хода этой беседы",
+  "parked_monitors": "Приостановлено — мониторы возобновятся, когда снова запустится эта беседа",
+  "wakes_1_next": "1 пробуждение · далее через 4m",
+  "wakes_2_next": "2 пробуждения · далее через 4m",
+  "wakes_5_next": "5 пробуждений · далее через 4m",
+  "wakes_21_next": "21 пробуждение · далее через 4m",
+  "wakes_3_overdue": "3 пробуждения · просрочено на 2h",
+  "monitors_3_next": "3 монитора · далее через 4m",
+  "monitor_summary_empty_family": "0 активных",
+  "monitor_summary_5": "5 активных",
+  "wake_summary_0": "0 запланировано",
+  "empty_body": "Попросите агента в чате делать что-то регулярно — и это появится здесь. Пробуждения отправляют промпт в беседу в заданное время; мониторы следят за одним объектом и сообщают об изменениях.",
+  "truncated": "Беседы с пробуждениями: показано 2 из 5.",
+  "project_name_hint": "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.",
+  "milestone_slash_note": "Имя вехи не может содержать косую черту — такую веху нельзя будет удалить.",
+  "linked_session_missing": "не найдена",
+  "linked_session_stopped": "не запущена",
+  "milestone_count_1of3": "1 веха из 3",
+  "milestone_count_2of5": "2 вехи из 5",
+  "sessions_5_live_1": "5 сессий · 1 активна",
+  "sessions_21_live_21": "21 сессия · 21 активна"
+ },
+ "receipts_bytes": "{kind, select, project {{action, select, created {Создан проект} completed {Завершён проект} reopened {Возобновлён проект} added {Добавлен проект} updated {Обновлён проект} removed {Удалён проект} deleted {Удалён проект} other {Обновлён проект}} «{subject}».} milestone {{action, select, created {Создана веха} completed {Завершена веха} reopened {Возобновлена веха} added {Добавлена веха} updated {Обновлена веха} removed {Удалена веха} deleted {Удалена веха} other {Обновлена веха}} «{subject}».} other {{action, select, created {Создано} completed {Завершено} reopened {Возобновлено} added {Добавлено} updated {Обновлено} removed {Удалено} deleted {Удалено} other {Обновлено}} «{subject}».}}",
+ "composition_en": {
+  "parked_wakes": "Parked — wakes resume after its next turn",
+  "parked_monitors": "Parked — monitors resume when its conversation runs again",
+  "project_name_hint": "1-64 characters: letters, digits, dot, underscore or hyphen. No spaces, and it can't start with a hyphen.",
+  "monitors_armed_5": "5 armed",
+  "cadence_left_1": "every 1d · 1 left"
+ }
+}

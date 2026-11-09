@@ -1,0 +1,103 @@
+{
+ "schema": 1,
+ "audit_kind": "independent_first_pass",
+ "audit_id": "ur30b2",
+ "locale": "ur",
+ "namespace": "mobile.projects",
+ "audit_date": "2026-10-30",
+ "wave": "ur wave — damianvtran/local-operator-mobile, branch feat/i18n-urdu, group B (schedules/projects/notifications/computers)",
+ "audited_revision": "32c7677 (main) plus the translator's UNCOMMITTED src/i18n/catalogues/ur/ (git status in audit.log)",
+ "key_count": {
+  "en": 15,
+  "target": 15,
+  "context": 15
+ },
+ "keyset_equal": true,
+ "auditor": {
+  "agent": "i18n-auditor (lopdev team)",
+  "session": "b5f20e88b803",
+  "model": "anthropic/claude-sonnet-5-5",
+  "actual_model": "anthropic/claude-sonnet-5-5",
+  "actual_model_source": "Session system header names anthropic/claude-sonnet-5-5; no model-switch/fallback header was observed in this turn. Fallback: none observed.",
+  "independent_from_translator_session": true,
+  "independence": "Not the translator and not the group A auditor; group A bundles were not read. No human native-speaker review and no rendered device frame are claimed; renders are through the app's own parseMessage/formatMessage only."
+ },
+ "route": "Catalogue, sidecars, scripts and generate.ts read by ordinary worktree file reads and `git show origin/main:` of the core repo; NOT the read_public_copy route (refused for src/i18n/**). Context sidecars are nested JSON, not routable. No receipt claimed.",
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.projects.json",
+   "sha256": "a598ddc447a47476a54dc0510b156fd4d35d27bf15d79b44850a65a4bf6efc09"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.projects.context.json",
+   "sha256": "5481687e7c4c089cf9ec39175630a5f3f5dd686c041561aceb671083933eed99"
+  },
+  "ur": {
+   "path": "src/i18n/catalogues/ur/mobile.projects.json",
+   "sha256": "8beeb0a9d35aba735138bd7c7a9abd126912d19f2611c031f51e9b1b66d38951"
+  }
+ },
+ "redaction_scan": {
+  "markers_found": 0,
+  "scope": "ur+en+context for this namespace (scan.py) and the git-read style guide, glossary, core ur catalogues and projects.py (scan2.sh); both counts in audit.log"
+ },
+ "bidi_control_chars_in_target": 0,
+ "mechanical": {
+  "param_parity_via_parseMessage": "0 placeholder-name mismatches across all 77 group-B keys; the only kind difference is mobile.schedules.truncated shown/total text->plural, an escalation generate.ts permits",
+  "generate_check": "scripts/i18n/generate.ts --check: catalogue.gen.ts is current, rc 0 (read-only mode)",
+  "plural_rules": "Intl.PluralRules('ur'): 0 other, 1 one, 2 other, 21 other, 100 other; app pluralCategory agrees",
+  "width": "no maxCells/maxChars hint in any group-B en context sidecar (count 0); no width finding possible",
+  "scoped_vitest": "catalogues.test.ts + messages.test.ts: 67 pass, 1 fail (ur not in SHIPPED_LOCALES yet; wiring, not copy)"
+ },
+ "artifacts": [
+  {
+   "path": "i18n/audits/evidence/ur/mobile.projects/ur30b2/audit.log",
+   "sha256": "e654d102d175cf64ab45ebc14e1e236a4034eb04cda7f31d2566736278178291",
+   "kind": "actual_execution_log (verbatim concatenation of three captured script runs)",
+   "sha256_pre_normalisation": "1018843c517b81a417b8fef3e135090658c30d0358e6615d128a03dde27bad73",
+   "note": "hash recomputed after publication path normalisation (see i18n/audits/evidence/ur/NOTE-paths.md); sha256_pre_normalisation is the value the auditor wrote"
+  },
+  {
+   "path": "i18n/audits/evidence/ur/mobile.projects/ur30b2/report.md",
+   "kind": "audit report (audit notes, not an execution log)"
+  }
+ ],
+ "audit_notes_not_execution_log": "report.md is audit notes. Only audit.log is an execution log; the same file is copied byte-identically into ur30b1..ur30b4 because one run covered all four namespaces. Scripts are in ur30b1/tools/.",
+ "findings": [
+  {
+   "id": "P1",
+   "severity": "MAJOR",
+   "key": "mobile.projects.project_name_hint",
+   "current": "لمبائی 1 سے 64 حروف؛ نام میں الفبائی حروف، ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔",
+   "replacement": "لمبائی 1 سے 64 حروف؛ نام میں صرف انگریزی حروف، 0 سے 9 تک ہندسے، نقطہ، انڈر اسکور یا ہائفن ہو سکتے ہیں۔ خالی جگہ نہیں ہو سکتی، اور نام ہائفن سے شروع نہیں ہو سکتا۔",
+   "why": "The sentence is 'the reader's only warning before a refusal' and must keep the allowed characters exact (sidecar). To an Urdu reader «الفبائی حروف» means letters of the alphabet — including their own — and «ہندسے» includes ۱۲۳. The relay accepts ONLY ASCII (core projects._NAME_RE = ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$): control run shows 'پروجیکٹ' and '٣٤' are refused. An Urdu user is therefore invited to type exactly what gets refused. Replacement states the alphabet (انگریزی حروف) and digits (0 سے 9) explicitly.",
+   "verified": "origin/main:local_operator/projects.py _NAME_RE read; repl.ts name-grammar control (پروجیکٹ false, alpha true, ٣٤ false); replacement parsed and rendered."
+  },
+  {
+   "id": "P2",
+   "severity": "MINOR",
+   "key": "mobile.projects.draft_kept_note",
+   "current": "آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ نئی چیز شروع کرنے کے لیے خانے صاف کریں۔",
+   "replacement": "آپ کی پچھلی بار کی تحریر برقرار رکھی گئی ہے۔ کچھ نیا شروع کرنے کے لیے خانے صاف کریں۔",
+   "why": "«نئی چیز» is a word-for-word 'something new' calque; «کچھ نیا» is the natural Urdu.",
+   "verified": "repl.ts render before/after."
+  }
+ ],
+ "observations_not_findings": [
+  "write_receipt: 4 kinds x 8 actions (7 codes + unknown) all rendered and read (audit.log): verb-final, correct masculine agreement for پروجیکٹ/سنگ میل/bare name, unknown kind and unknown action fall back to the 'other' arm / «اپ ڈیٹ کیا گیا». «“{subject}”» quoting is a translator addition (EN is unquoted); harmless and consistent with delete_body/remove_milestone_body.",
+  "milestones.count «{total} میں سے {completed} سنگ میل»: سنگ میل is invariant in the plural, so no agreement needed at any count; joined row meta «5 میں سے 2 سنگ میل · 3 سیشنز». sessions.count one/other with سیشنز matches core usage (relay.approvals «تمام سیشنز»).",
+  "English-source observation (NOT an Urdu defect, not filed as one): the relay regex also rejects a leading '.' or '_' (only [A-Za-z0-9] may start a name), but the EN hint (and the Urdu) say only 'can't start with a hyphen'. The Urdu follows the source faithfully."
+ ],
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 1,
+  "finding_ids": [
+   "P1",
+   "P2"
+  ]
+ },
+ "publication_normalisation": {
+  "applied_to_artefact_hashes": true,
+  "why": "machine-specific absolute paths (home directory, session scratchpad and the operating system's temporary directory) were replaced before merge so the evidence is portable in a public repository; catalogue and English-source hashes are untouched"
+ }
+}

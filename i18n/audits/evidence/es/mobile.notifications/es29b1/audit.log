@@ -1,0 +1,36 @@
+=== es audit (es29b1) — actual command output ===
+repo: /Users/damian/workspace/es-wave  branch: feat/i18n-spanish  head: c5f491e
+date(UTC): 2026-10-30T02:02:25Z  node: v24.22.1
+
+=== 1. repository validator: npm run -s i18n:catalogue:check ===
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:64105) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+validator exit: 0
+
+=== 2. independent mechanical + render pass (app parser: src/i18n/messages.ts) ===
+=== validator: generator --check output is appended to this log separately ===
+repo: /Users/damian/workspace/es-wave
+node: v24.22.1
+Intl es plural categories for 0/1/2/1000000: 0=other 1=one 2=other 1000000=many
+
+=== mobile.notifications ===
+sha256 en      c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064
+sha256 es      4aacb2f085c2a63d83fa239853c25e1a8f65018afd30bfb5b961e1c668df15eb
+sha256 context 240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6
+keys: en=14 es=14 ctx=14
+ok   key parity: es covers exactly the en key set
+ok   context sidecar covers every key
+  typography/bidi/quote scan: 14 values checked, no finding printed above means clean
+
+=== English leakage sweep (es values containing whole English words) ===
+ok   no English word tokens found in mobile.notifications
+
+=== RESULT: no mechanical failures ===
+(node:64132) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/es-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/es-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check exit: 0

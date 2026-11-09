@@ -14,6 +14,8 @@ import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
 import {
 	type AskOther,
 	answeredPairs,
+	askActions,
+	askBarLabel,
 	askResponseBody,
 	askStateLine,
 	asksPopulationSignature,
@@ -23,10 +25,11 @@ import {
 	EMPTY_OTHER,
 	hasOtherDoor,
 	isAnswerable,
+	isLapsed,
+	nextActionableAsk,
 	orderedForDisplay,
 	outstandingAsks,
 	questionIsAnswered,
-	questionsWaitingLabel,
 	READ_FAILED,
 	readFailureNotice,
 	refusalText,
@@ -292,7 +295,7 @@ const QuestionField = ({
 									<Text className="text-meta text-ink-dim"> · recommended</Text>
 								) : null}
 							</Text>
-							{option.description.length > 0 ? (
+							{(option.description ?? "").length > 0 ? (
 								<Text className="text-meta text-ink-dim">
 									{option.description}
 								</Text>
@@ -496,6 +499,32 @@ const AskDetail = ({
 						</View>
 					);
 				})}
+			</View>
+		);
+	}
+
+	/* A LAPSED ask is READ-ONLY (D10, the relay card's lapsed branch): the
+	 * questions the agent asked, so the reader knows what lapsed, and nothing to
+	 * answer them with. The row's state line already says the agent went ahead;
+	 * Dismiss, the only op, sits in the pinned footer. Drawn before the settled
+	 * branch, which would otherwise say "no answer was recorded" — true, but it
+	 * reads as a fault rather than a deadline. */
+	if (isLapsed(status)) {
+		const asked = Array.isArray(row.questions) ? row.questions : [];
+		return (
+			<View className="gap-1 pb-2 pt-1">
+				{asked.map((question, index) => (
+					<View key={String(question.id ?? index)} className="flex-row gap-2">
+						{asked.length > 1 ? (
+							<Text className="font-mono text-mono-sm text-ink-dim">
+								{index + 1}/{asked.length}
+							</Text>
+						) : null}
+						<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
+							{question.question}
+						</Text>
+					</View>
+				))}
 			</View>
 		);
 	}
@@ -743,6 +772,10 @@ export const AsksSheet = ({
 			? pendingAction.kind
 			: null;
 	const openDisabled = !openAnswerable || openBusy !== null;
+	/* What the footer may offer for the expanded ask — the same answer `settle`
+	 *  enforces, so a timed-out ask shows Dismiss alone and no answer request
+	 *  can leave for it. */
+	const openActions = askActions(openStatus);
 	const openError =
 		openRow && rowError?.askId === openRow.ask_id ? rowError.message : null;
 	/* Whether every still-open question carries a usable cell. A question counts
@@ -776,21 +809,12 @@ export const AsksSheet = ({
 					skipped: draft.skipped,
 				})
 			: {};
-	/* QUESTIONS, the unit the bar counts (E2 spec §1.3, the manager's ruling):
-	 *  the header says how much the queue owes in the same unit the bar does. */
-	const outstandingQuestions = outstandingAsks(shownRows).reduce(
-		(total, row) =>
-			total + (Array.isArray(row.questions) ? row.questions.length : 0),
-		0,
-	);
-	/* The bar's own sentence, so the sheet that arrives by itself names what the
-	 *  reader was about to meet in the bar's words ("1 question waiting"), not the
-	 *  queue's internal noun (design D5). Bare `asks` stays for a queue with nothing
-	 *  outstanding - answered rows can still be listed, and they are not waiting. */
-	const title =
-		outstandingQuestions > 0
-			? questionsWaitingLabel(outstandingQuestions)
-			: "asks";
+	/* The bar's own sentence (`askBarLabel`), so the sheet names what the reader
+	 *  met in the bar's words ("1 question waiting", or "1 question timed out" for
+	 *  a lapsed-only queue), in QUESTIONS, the unit the bar counts (E2 spec §1.3),
+	 *  not the queue's internal noun (design D5). Bare `asks` stays for a queue
+	 *  with nothing waiting or lapsed - answered rows can still be listed. */
+	const title = askBarLabel(shownRows)?.text ?? "asks";
 
 	/** Settle one ask, then advance the walk and re-read. On success the
 	 *  expansion moves to the next outstanding ask; on refusal the sentence
@@ -810,6 +834,10 @@ export const AsksSheet = ({
 				});
 				return;
 			}
+			/* THE REQUEST GATE, not only the button's: a control that is merely
+			 *  hidden still leaves a path (a stale footer, a re-render race) for an
+			 *  answer the other surfaces never send (D10). */
+			if (!askActions(String(row.status || "open"))[kind]) return;
 			setPendingAction({ askId: row.ask_id, kind });
 			setRowError(null);
 			try {
@@ -832,12 +860,9 @@ export const AsksSheet = ({
 				}
 				/* Advance the walk from the list as it stood: the re-read below
 				 *  refreshes the truth, but the reader's next ask is already
-				 *  visible here. */
-				const next = orderedForDisplay(shownRows).find(
-					(candidate) =>
-						candidate.ask_id !== row.ask_id &&
-						isAnswerable(String(candidate.status || "open")),
-				);
+				 *  visible here. Any row with a verb — a lapsed ask's Dismiss
+				 *  counts (UX r1 U1). */
+				const next = nextActionableAsk(shownRows, row.ask_id);
 				dispatchExpansion({ type: "pick", ask: next ? next.ask_id : null });
 				await load();
 			} catch (failure) {
@@ -876,46 +901,55 @@ export const AsksSheet = ({
 			 *  scrolling body keeps the questions; the footer holds the verbs for
 			 *  whichever ask is expanded. */
 			footer={
-				openRow !== null && (openAnswerable || openExpired) ? (
+				openRow !== null &&
+				(openAnswerable || openExpired || openActions.dismiss) ? (
 					<View className="gap-2">
 						{openError !== null ? (
 							<Text className="text-body-sm text-danger">{openError}</Text>
 						) : null}
-						<View className="flex-row gap-2">
-							<View className="flex-1">
-								<Button
-									label="Answer"
-									onPress={() =>
-										settleFromFooter("respond", { answers: respondBody() })
-									}
-									disabled={openDisabled || !openComplete}
-									loading={openBusy === "respond"}
-									testID={CONTROL.askRespond}
-								/>
+						{/* The pair only where answering is (or was) the question: live on
+						 *  an open ask, drawn disabled on an expired one so the window's
+						 *  close reads as a state, absent on a lapsed one (D10). */}
+						{openAnswerable || openExpired ? (
+							<View className="flex-row gap-2">
+								<View className="flex-1">
+									<Button
+										label="Answer"
+										onPress={() =>
+											settleFromFooter("respond", { answers: respondBody() })
+										}
+										disabled={openDisabled || !openComplete}
+										loading={openBusy === "respond"}
+										testID={CONTROL.askRespond}
+									/>
+								</View>
+								<View className="flex-1">
+									<Button
+										label="Decline"
+										variant="danger"
+										accessibilityHint="no answer — decide yourself"
+										onPress={() => settleFromFooter("decline")}
+										disabled={openDisabled}
+										loading={openBusy === "decline"}
+										testID={CONTROL.askDecline}
+									/>
+								</View>
 							</View>
-							<View className="flex-1">
-								<Button
-									label="Decline"
-									variant="danger"
-									accessibilityHint="no answer — decide yourself"
-									onPress={() => settleFromFooter("decline")}
-									disabled={openDisabled}
-									loading={openBusy === "decline"}
-									testID={CONTROL.askDecline}
-								/>
-							</View>
-						</View>
+						) : null}
 						{/* Dismiss is a third, quieter action and deliberately not
 						 *  beside Decline: declining ANSWERS the agent ("decide
 						 *  yourself"), while dismissing answers nobody and buys no turn —
 						 *  and it is offered only on a timed-out ask, which is what keeps
 						 *  it from shadowing an in-window answer. */}
-						{openStatus === "timed_out" ? (
+						{openActions.dismiss ? (
 							<Button
 								label="Dismiss"
 								variant="quiet"
 								onPress={() => settleFromFooter("dismiss")}
-								disabled={openDisabled}
+								/* Not `openDisabled`: that one is the ANSWER pair's gate and
+								 *  a lapsed ask is not answerable, so only the in-flight
+								 *  guard applies here. */
+								disabled={openBusy !== null}
 								loading={openBusy === "dismiss"}
 								testID={CONTROL.askDismiss}
 							/>

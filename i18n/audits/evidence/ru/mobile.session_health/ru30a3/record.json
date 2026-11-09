@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "audit_id": "ru30a3",
+  "audit_kind": "independent_current_byte_namespace_audit",
+  "locale": "ru",
+  "namespace": "mobile.session_health",
+  "audit_date": "2026-10-30",
+  "wave": "ru wave 4 — damianvtran/local-operator-mobile, after fr c5f491e, es a57fb8c, zh-CN ba39018",
+  "audited_revision": "ba39018c493dda114d42a6b4d9dfbf337f4110f5",
+  "audited_revision_note": "The ru catalogue is untracked on this branch (?? src/i18n/catalogues/ru/) and src/i18n/catalogue.gen.ts is modified; the hashes below are the bytes that were audited.",
+  "key_count": {
+    "en": 11,
+    "target": 11,
+    "context": 11
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "68877acd3c8a",
+    "model": "radient/auto",
+    "requested_model": "anthropic/claude-sonnet-5-5",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "actual_model_source": "the session's own [model switch] notices: primary anthropic/claude-sonnet-5-5 hit a provider quota and the turn continued on openai/gpt-6-astra, then kimi/k3.1-pro, then radient/auto; every command below ran on radient/auto.",
+    "independent_from_translator": true,
+    "independence": "Different agent (i18n-auditor, never i18n-translator) and a different session from the translator's; the translator's session id was not supplied to this auditor, so independence is asserted by role and by the audit being a separate run, not by a transcript comparison."
+  },
+  "second_independent_pass": {
+    "performed": true,
+    "job": "0e8a65e92a72",
+    "label": "ru-group-a-second-pass",
+    "agent": "reviewer (lopdev team)",
+    "actual_model": "radient/auto",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "actual_model_source": "the delegated job's own report: primary anthropic/claude-sonnet-5-5 hit provider quota, intermediate notices named openai/gpt-6-astra and kimi/k3.1-pro, and the run finished on radient/auto.",
+    "scope": "All 54 group-A keys (mobile.home 27, mobile.session 2, mobile.session_health 11, mobile.account_routing 14), read independently before seeing this auditor's verdict; it was given the style guide, glossary, English sidecars and the app code, and explicitly told not to read this auditor's scratch conclusions.",
+    "verdict_for_this_namespace": "It did NOT flag ended_placeholder: it measured only the 390 pt field (9 % headroom) and the documented 200 % clip, and concluded no honest shorter form exists. This audit keeps the MAJOR on the 320 pt field, where the same measurement clips and English does not. The disagreement is recorded rather than smoothed: the two passes differ on which width is binding."
+  },
+  "translator": {
+    "agent": "i18n-translator (as named by the requesting manager)",
+    "session": "not supplied to this auditor",
+    "model": "not disclosed to this auditor",
+    "date": "2026-10-30"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.json",
+      "sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+      "sha256": "df99892225c85921be703c29c2689c5fe1c74f1d5cc02e1c1bfe9e1c838af310"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/ru/mobile.session_health.json",
+      "sha256": "63d0b905ea5b4b07d012f84d66f6ce9b2eeda972c90aa05711a4d7902d1a7195"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/ru/mobile.session_health/ru30a3/audit.log",
+      "sha256": "892200ea14ae0e613dc62c10fd391645668887b557794389f0aedafea95311af",
+      "bytes": 5777
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.session_health/ru30a3/measure.swift.txt",
+      "sha256": "342e319c15066d509324cc20cebdfdcca7cc7532c1b166f8cdf23affe7a7a8ea",
+      "bytes": 2942
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.session_health/ru30a3/report.md",
+      "sha256": "83ea91f8548cd5c23c8762760049d6a92b303cdafcbfde0241b50d8b9204f12e",
+      "bytes": 4484
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.session_health/ru30a3/verify.mjs.txt",
+      "sha256": "c1c7c93a2d858e3f98e58be9cae190bb4f56c84d538b05b1e3dcb5fcab76f937",
+      "bytes": 11226
+    },
+    {
+      "path": "i18n/audits/evidence/ru/mobile.session_health/ru30a3/widths-placeholder.tsv",
+      "sha256": "744431450f9ee6e0862c2028fae3073c6cf16ec6e249c756e103645891637b06",
+      "bytes": 942
+    }
+  ],
+  "current_report_verdict": {
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 1,
+    "finding_ids": [
+      "ru30a3-F1"
+    ],
+    "severity_counts": {
+      "BLOCKER": 0,
+      "MAJOR": 1,
+      "MINOR": 0,
+      "NIT": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "ru30a3-F1",
+      "severity": "MAJOR",
+      "class": "fit",
+      "key": "mobile.session_health.ended_placeholder",
+      "current": "Отправка откроет её в домашней папке…",
+      "problem": "The slot is clamped to ONE line (placeholderMaxLines={1} in the composer; the field's resting height must not grow). Measured 316.0 pt at the body step against the field's own recorded size — ~348 pt at a 390 pt viewport, which tracks the viewport and leaves ~278 pt at 320 pt. At 390 pt the string takes 91 % of the box and fits; at 320 pt it exceeds it by roughly 38 pt and clips, where the English source (266.7 pt) still fits. It is also 37 cells against the sidecar's recorded 36-cell translator budget, and one cell over is enough to clip. The sidecar itself records the remedy for this exact slot: French ships the shortest honest form («Envoyer rouvre…») and leaves the destination to the health sheet's ended_detail sentence.",
+      "replacement": "Отправка откроет её…",
+      "replacement_width_pt": 171.5,
+      "gating": "MAJOR — a visible truncation at the narrowest supported phone width. The translator flagged the cell count and shipped anyway; judged here as SHORTEN rather than ship."
+    }
+  ],
+  "considered_and_accepted": [
+    {
+      "key": "mobile.session_health.resume_gone",
+      "value": "Эта сессия больше не сохранена.",
+      "judgement": "ACCEPT — but the cross-screen claim in its sidecar cannot hold yet.",
+      "reason": "The sidecar asks for «the same words this app's Past sessions screen uses for the same fact». src/features/past/past.tsx still sets that sentence as a hardcoded English literal (`setRefusal(\"This session is no longer saved.\")`), baselined in scripts/i18n/strings-baseline.json — check-strings tolerates it because it is an exact mirror of this catalogue value. So on a Russian device that screen will print English even after this wave ships. Not a defect in the translation; a code fix that belongs with whoever keys past.tsx."
+    }
+  ],
+  "notes": [
+    "The namespace has no plural node; verify.mjs reports it explicitly rather than skipping it.",
+    "resume_refused/(title) agree with the Resume button «Возобновить» as the sidecar requires; the two relay.health sentences this screen shows are byte-identical to core (verified in ru30a6m)."
+  ],
+  "route": {
+    "engine": "the repository's own renderer: messages.parseMessage + messages.formatMessage + messages.pluralCategory (the same functions renderFor calls)",
+    "render_entry_point": "renderFor(key, args, \"ru\") returns the ENGLISH source at this head, because ru is still in NOT_YET_SHIPPED_LOCALES (proved in audit.log of ru30a1 via appendix-composition.txt); every ru string in these records was therefore rendered by calling formatMessage(parseMessage(<ru value>), args, \"ru\") directly, which is byte-identically what renderFor does once ru ships — proved by rendering all 38 zh-CN mobile.schedules keys through both paths and getting identical output.",
+    "width_engine": "swift + CoreText over the app's sans stack (measure.swift.txt); Figtree absent on this machine, so widths use the system face — the harness reproduces the repo's recorded 189.4 pt Spanish chip measurement, which is why ratios are used for judgement",
+    "machine_translation": "none — no translation or MT service was used to compare or back-translate",
+    "read_only": "the working tree was not edited, staged, committed or pushed; the only writes are these audit bundles under i18n/audits/evidence/ru/"
+  },
+  "ledger": {
+    "command": "absent",
+    "note": "No audit-ledger command and no i18n ledger exist in this repository at this head (i18n/ holds only audits/, and scripts/i18n/ has check-strings, generate, key-shape, ratchet, scan-strings — no ledger writer). The served record is this record.json under i18n/audits/evidence/<locale>/<namespace>/<id>/, matching the fr, es and zh-CN waves' machinery. There is likewise no i18n/audits/evidence/README.md contract in this checkout."
+  },
+  "audit_notes_not_execution_log": "This record and report.md are NOTES. The execution evidence is audit.log in the same directory: a bash set -x transcript of the catalogue validator, verify.mjs for this namespace, and verify.mjs --negative, captured when they ran. widths.tsv / tip-overflow.txt / widths-placeholder.tsv / appendix-composition.txt are measurement and composition artifacts, produced by the harnesses also stored here.",
+  "evidence_limitations": [
+    "Figtree is not installed on this machine, so CoreText widths use the system sans face; absolute points are approximate and the report leans on ratios and on the headroom each row records. The harness reproduces the repository's own recorded 189.4 pt Spanish-chip measurement, which is the calibration check.",
+    "renderFor(key, args, \"ru\") cannot render this catalogue yet — ru is still in NOT_YET_SHIPPED_LOCALES — so renders come from formatMessage(parseMessage(<ru value>), args, \"ru\"), proved byte-equal to renderFor on the 38 zh-CN mobile.schedules keys.",
+    "No rendered frame was captured: this was a copy audit, and the app was not built or driven. A UI reviewer still has to look at the ru strings in a build.",
+    "The 320 pt field width for ended_placeholder is derived from the sidecar's own 390 pt measurement (~348 pt) minus the viewport difference; it is an inference from a recorded measurement, not a direct capture.",
+    "Plural and placeholder machinery was exercised on the whole ru catalogue (11 plural nodes, all carrying one/few/many/other with correct numeral-noun agreement) but this namespace contains none of them."
+  ]
+}

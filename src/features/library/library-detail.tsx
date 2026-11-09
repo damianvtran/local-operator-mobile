@@ -66,6 +66,7 @@ import {
 } from "@/features/library/library-model";
 import { publishLibraryUpdate } from "@/features/library/library-updates";
 import { Markdown } from "@/features/session/components/markdown";
+import { t } from "@/i18n";
 import type { RelayEndpoints } from "@/relay";
 import { isRelayError } from "@/relay";
 import {
@@ -88,6 +89,15 @@ import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
 import { Textarea } from "@/ui/components/textarea";
+
+/** The most tags one asset may carry in the editor. It was a bare `12` in two
+ *  places and a third time in the English sentence; one constant keeps the
+ *  gate and the sentence (which takes it as the `{limit}` placeholder) from
+ *  drifting apart. */
+/* Mirrors the server-side cap (`MAX_TAGS_PER_ASSET = 12` in the core library
+ * metadata module). The editor gates on it and passes it to `{limit}`, so the
+ * sentence a reader sees and the rule the server enforces are one number. */
+const MAX_ASSET_TAGS = 12;
 
 export default function LibraryDetail() {
 	const router = useRouter();
@@ -172,7 +182,7 @@ export default function LibraryDetail() {
 
 	if (!enabled) {
 		return (
-			<Screen title="Library" testID={SCREEN.libraryDetail}>
+			<Screen title={t("mobile.library.title")} testID={SCREEN.libraryDetail}>
 				<EmptyState
 					testID={EMPTY.library}
 					headline="The Library is not on this computer yet."
@@ -184,13 +194,13 @@ export default function LibraryDetail() {
 
 	return (
 		<Screen
-			title="Library"
+			title={t("mobile.library.title")}
 			testID={SCREEN.libraryDetail}
 			scroll={false}
 			headerLeading={
 				<Button
 					testID={CONTROL.libraryDetailBack}
-					label="Back"
+					label={t("mobile.common.back")}
 					onPress={() => router.back()}
 					variant="quiet"
 					size="sm"
@@ -200,7 +210,7 @@ export default function LibraryDetail() {
 				asset !== null ? (
 					<Button
 						testID={CONTROL.libraryEdit}
-						label="Edit"
+						label={t("mobile.library.action.edit")}
 						onPress={() => setEditorOpen(true)}
 						variant="quiet"
 						size="sm"
@@ -214,7 +224,7 @@ export default function LibraryDetail() {
 						{error}
 					</Alert>
 					<Button
-						label="Try again"
+						label={t("mobile.common.try_again")}
 						onPress={() => void load()}
 						variant="outline"
 						testID={CONTROL.libraryDetailRetry}
@@ -248,8 +258,7 @@ export default function LibraryDetail() {
 							{!asset.exists ? (
 								<View className="px-4">
 									<Alert severity="warning">
-										This file has moved or been deleted. Its name, tags and
-										description are still here.
+										{t("mobile.library.detail.missing_file")}
 									</Alert>
 								</View>
 							) : null}
@@ -305,7 +314,7 @@ export default function LibraryDetail() {
 								/>
 								{asset.chat !== null ? (
 									<Button
-										label="Open chat"
+										label={t("mobile.library.action.open_chat")}
 										onPress={() =>
 											router.push(`/session/${asset.chat?.session_id}`)
 										}
@@ -331,15 +340,17 @@ export default function LibraryDetail() {
 								</View>
 							) : (
 								<Text className="px-4 text-body-sm text-ink-dim">
-									No tags yet. Edit the details to add one.
+									{t("mobile.library.detail.no_tags")}
 								</Text>
 							)}
 
 							<View className="gap-2 px-4">
-								<Text className="text-body-sm text-ink-muted">Seen in</Text>
+								<Text className="text-body-sm text-ink-muted">
+									{t("mobile.library.detail.seen_in")}
+								</Text>
 								{asset.occurrences.length === 0 ? (
 									<Text className="text-body-sm text-ink-dim">
-										No source conversation is recorded for this asset.
+										{t("mobile.library.detail.no_source")}
 									</Text>
 								) : (
 									asset.occurrences.slice(0, 8).map((occurrence) => (
@@ -654,7 +665,7 @@ function AssetComposer({
 			<View className="flex-row items-end gap-2">
 				<View className="flex-1">
 					<Textarea
-						label="Message about this asset"
+						label={t("mobile.library.detail.message_label")}
 						value={draft}
 						onChangeText={setDraft}
 						placeholder={
@@ -668,7 +679,7 @@ function AssetComposer({
 					/>
 				</View>
 				<Button
-					label="Send"
+					label={t("mobile.common.send")}
 					onPress={() => send()}
 					loading={sending}
 					disabled={sending || draft.trim() === ""}
@@ -804,7 +815,7 @@ function MetadataEditor({
 			<Sheet
 				visible={visible}
 				onClose={close}
-				title="Edit details"
+				title={t("mobile.library.editor.title")}
 				testID={SURFACE.libraryEditorSheet}
 				footer={
 					<View className="gap-3">
@@ -814,14 +825,14 @@ function MetadataEditor({
 						{error !== null ? <Alert severity="error">{error}</Alert> : null}
 						<View className="flex-row justify-end gap-2">
 							<Button
-								label="Cancel"
+								label={t("mobile.common.cancel")}
 								onPress={close}
 								variant="quiet"
 								disabled={busy}
 								testID={CONTROL.libraryCloseEditor}
 							/>
 							<Button
-								label="Save"
+								label={t("mobile.common.save")}
 								onPress={save}
 								loading={busy}
 								disabled={busy}
@@ -833,14 +844,14 @@ function MetadataEditor({
 			>
 				<View className="gap-4">
 					<Input
-						label="Name"
+						label={t("mobile.library.editor.name")}
 						value={name}
 						onChangeText={setName}
 						disabled={busy}
 						testID={CONTROL.libraryEditName}
 					/>
 					<Textarea
-						label="Description"
+						label={t("mobile.library.editor.description")}
 						value={description}
 						onChangeText={setDescription}
 						disabled={busy}
@@ -848,11 +859,13 @@ function MetadataEditor({
 						testID={CONTROL.libraryEditDescription}
 					/>
 					<View className="gap-2">
-						<Text className="text-body-sm text-ink-muted">Tags</Text>
+						<Text className="text-body-sm text-ink-muted">
+							{t("mobile.library.editor.tags")}
+						</Text>
 						<View className="flex-row flex-wrap gap-2">
 							{available.map((tag) => {
 								const selected = assigned.includes(tag.id);
-								const atLimit = assigned.length >= 12 && !selected;
+								const atLimit = assigned.length >= MAX_ASSET_TAGS && !selected;
 								return (
 									<Chip
 										key={tag.id}
@@ -871,25 +884,27 @@ function MetadataEditor({
 								);
 							})}
 						</View>
-						{assigned.length >= 12 ? (
+						{assigned.length >= MAX_ASSET_TAGS ? (
 							<Text className="text-meta text-ink-dim">
-								An asset can carry at most 12 tags.
+								{t("mobile.library.editor.tag_limit", {
+									limit: MAX_ASSET_TAGS,
+								})}
 							</Text>
 						) : null}
 						<View className="flex-row items-end gap-2">
 							<View className="flex-1">
 								<Input
-									label="New tag"
+									label={t("mobile.library.editor.new_tag")}
 									value={newTag}
 									onChangeText={setNewTag}
 									disabled={busy}
 									autoCapitalize="none"
-									placeholder="topic-name"
+									placeholder={t("mobile.library.editor.new_tag_placeholder")}
 									testID={CONTROL.libraryNewTag}
 								/>
 							</View>
 							<Button
-								label="Add"
+								label={t("mobile.library.action.add_tag")}
 								onPress={addTag}
 								variant="outline"
 								disabled={busy || newTag.trim() === ""}
@@ -901,9 +916,9 @@ function MetadataEditor({
 			</Sheet>
 			<Dialog
 				visible={discard}
-				title="Discard changes?"
-				body="The name, description and tags you changed will not be saved."
-				confirmLabel="Discard"
+				title={t("mobile.library.editor.discard_title")}
+				body={t("mobile.library.discard_not_saved")}
+				confirmLabel={t("mobile.library.discard_confirm")}
 				destructive
 				busy={busy}
 				onCancel={() => setDiscard(false)}

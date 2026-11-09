@@ -1,0 +1,107 @@
+
+$ git rev-parse --short HEAD
+4fd4ad7c
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/hi/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json
+48235b2ffa9aa6311a27493a0301651ae87967dc99a864053a4540f429fc7367  src/i18n/catalogues/hi/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libd-r2/check.py hi
+== hi: keys=31 same_keyset=True ctx_keyset=True json_valid=True
+Cf/Cc chars: []
+NFC-stable: True trim-clean: True
+placeholder mismatches: []
+ascii-period mismatch: []
+endings: {'mobile.library.browse.no_tags': '।', 'mobile.library.detail.missing_file': '।', 'mobile.library.detail.no_source': '।', 'mobile.library.detail.no_tags': '।', 'mobile.library.editor.discard_title': '?', 'mobile.library.editor.tag_limit': '।', 'mobile.library.discard_not_saved': '।'}
+devanagari/arabic-indic digits: []
+[exit 0]
+
+$ node render.ts (parseMessage+formatMessage from src/i18n/messages.ts; 0/1/2/21 where a placeholder exists)
+== hi
+mobile.library.action.add_tag जोड़ें
+mobile.library.action.edit संपादित करें
+mobile.library.action.open_chat बातचीत खोलें
+mobile.library.browse.any_tag कोई भी टैग
+mobile.library.browse.filter_by_kind प्रकार के अनुसार फ़िल्टर करें
+mobile.library.browse.filters फ़िल्टर
+mobile.library.browse.filters_count [0] फ़िल्टर · 0
+mobile.library.browse.filters_count [1] फ़िल्टर · 1
+mobile.library.browse.filters_count [2] फ़िल्टर · 2
+mobile.library.browse.filters_count [21] फ़िल्टर · 21
+mobile.library.browse.more_kinds अन्य प्रकार
+mobile.library.browse.no_tags अभी कोई टैग नहीं है। लाइब्रेरियन संसाधनों को व्यवस्थित करते हुए टैग जोड़ता है।
+mobile.library.browse.refresh ताज़ा करें
+mobile.library.browse.search_label लाइब्रेरी में खोजें
+mobile.library.browse.search_placeholder नाम, टैग या शब्द
+mobile.library.browse.sort क्रमबद्ध करें
+mobile.library.browse.status स्थिति
+mobile.library.browse.tag टैग
+mobile.library.detail.message_label इस संसाधन के बारे में संदेश
+mobile.library.detail.missing_file यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और विवरण अब भी यहाँ हैं।
+mobile.library.detail.no_source इस संसाधन के लिए कोई स्रोत बातचीत दर्ज नहीं है।
+mobile.library.detail.no_tags अभी कोई टैग नहीं है। जोड़ने के लिए विवरण संपादित करें।
+mobile.library.detail.seen_in इन बातचीतों में दिखा
+mobile.library.editor.description विवरण
+mobile.library.editor.discard_title बदलाव छोड़ें?
+mobile.library.editor.name नाम
+mobile.library.editor.new_tag नया टैग
+mobile.library.editor.new_tag_placeholder topic-name
+mobile.library.editor.tag_limit [0] एक संसाधन पर टैग की सीमा 0 है।
+mobile.library.editor.tag_limit [1] एक संसाधन पर टैग की सीमा 1 है।
+mobile.library.editor.tag_limit [2] एक संसाधन पर टैग की सीमा 2 है।
+mobile.library.editor.tag_limit [21] एक संसाधन पर टैग की सीमा 21 है।
+mobile.library.editor.tags टैग
+mobile.library.editor.title विवरण संपादित करें
+mobile.library.title लाइब्रेरी
+mobile.library.discard_not_saved नाम, विवरण और टैग में किए गए बदलाव सहेजे नहीं जाएँगे।
+mobile.library.discard_confirm छोड़ें
+[exit 0]
+
+$ grep call sites for the two new keys (usage) and the dialog's hard-coded labels
+[usage grep exit 0 - 1 means no call site]
+			<Dialog
+				visible={discard}
+				title={t("mobile.library.editor.discard_title")}
+				body="The name, description and tags you changed will not be saved."
+				confirmLabel="Discard"
+				destructive
+132:							accessibilityLabel="Cancel"
+190:										label="Cancel"
+
+$ round-1 finding check (current value vs round-1 replacement)
+libb-hi-1 MAJOR mobile.library.editor.description
+   round-1 replacement: विवरण
+   current            : विवरण
+   byte-exact applied : True
+libb-hi-2 MAJOR mobile.library.detail.missing_file
+   round-1 replacement: यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और विवरण अब भी यहाँ हैं।
+   current            : यह फ़ाइल ले जाई गई है या हटा दी गई है। इसका नाम, टैग और विवरण अब भी यहाँ हैं।
+   byte-exact applied : True
+libb-hi-3 MAJOR mobile.library.editor.new_tag_placeholder
+   round-1 replacement: topic-name
+   current            : topic-name
+   byte-exact applied : True
+libb-hi-4 MINOR mobile.library.editor.discard_title
+   round-1 replacement: बदलाव छोड़ें?
+   current            : बदलाव छोड़ें?
+   byte-exact applied : True
+libb-hi-5 MINOR mobile.library.browse.refresh
+   round-1 replacement: लाइब्रेरी ताज़ा करें
+   current            : ताज़ा करें
+   byte-exact applied : False
+libb-hi-6 NIT mobile.library.browse.more_kinds
+   round-1 replacement: अन्य प्रकार
+   current            : अन्य प्रकार
+   byte-exact applied : True
+
+$ round-1 bundle hash vs now
+round-1 audited sha256: 50bd54a80febd6ca63e6ceaae9ea1bc6404d83b35e87cfec5e0aeb7607a34a20
+current sha256        : 48235b2ffa9aa6311a27493a0301651ae87967dc99a864053a4540f429fc7367
+round 1 attests current text: False

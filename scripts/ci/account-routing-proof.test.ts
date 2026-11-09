@@ -68,6 +68,81 @@ const root = new URL("../../", import.meta.url);
 const source = (path: string) => readFileSync(new URL(path, root), "utf8");
 const sha = (text: string) => createHash("sha256").update(text).digest("hex");
 
+/* Q163-3: removing the retired Tags capture changed only matrix-count comments
+ * in web-audit and web-audit-core. Their executable lines remain byte-identical
+ * to 5589d7fb; its hashes match frozen 0604aee9… / eb69e103…. Keep that historical
+ * JSON untouched, but pin the accepted CURRENT body (same normalization), so
+ * future command/step changes still fail instead of comparing to stale prose.
+ *
+ * Re-derived for PR #175 (`9eb6260f`), which is the only change since 764e56c7 that
+ * moved either body. The moves are intended and each is exactly that PR's own edit:
+ *
+ * - `web-audit` c53f3d1d → 111655be: the job is now SHARDED over the `ci` tier's
+ *   device profiles. The delta against 764e56c7 is the `(${{ matrix.device }})`
+ *   name, the `strategy.matrix` include list, the capture's `--devices`, the
+ *   `flows` gating of the inbox-return proof and the base export, the artifact
+ *   name, and the canary's `&& matrix.flows` guard — nothing else.
+ * - `web-audit-core` ada921e0 → 25ff0a6f: one prose line. That job's comment said
+ *   its upload name is "a distinct name from the per-push `audit-frames`", and the
+ *   per-push artifact is now `audit-frames-<device>`; the sentence had to follow or
+ *   it would describe a name nothing produces. No executable line changed.
+ *
+ * Both were DERIVED, not hand-edited: `jobBodySha` below applied to this head's
+ * workflow, after proving that same function reproduces the frozen 0604aee9… /
+ * eb69e103… pins from 5589d7fb byte for byte.
+ *
+ * Re-derived again for the checkpoint-rail proof (PR #197), the only change since
+ * 9eb6260f that moved a preserved body:
+ *
+ * - `maestro-android` 117fe6a7 → 0c95a5aa: one comment paragraph on the
+ *   emulator `script:` and ONE executable line, `bash
+ *   scripts/ci/rail-android-capture.sh`, after the tag flow. The rail is summoned
+ *   by scroll speed and react-native-web emits no drag or momentum event at all,
+ *   so this emulator is the only surface where the component's appearance is
+ *   observable. The condition, the trigger gating and every other job are
+ *   untouched, and the truth table below still holds — which is the point of the
+ *   pin: the change had to be deliberate and named, not a drift nobody noticed. */
+const CURRENT_PRESERVED_BODY_SHA256: Readonly<Record<string, string>> = {
+	"web-audit":
+		"111655be72c1c6fb7b683b8b0c056d5ff4ed654123c8d38c891e71a6c7bab1a6",
+	"web-audit-core":
+		"25ff0a6f4dbf29ab0a136a3630bc5827e3a0d0cd45739b3c5709c9e98cddbfdd",
+};
+
+/** Bodies accepted at a CURRENT head whose intended drift is NOT the web audit's
+ *  `--no-strict` command, so they cannot live in the table above: that table's
+ *  contract is "`pnpm audit:capture` is the only accepted change", and the test
+ *  below proves it by mutating exactly that token. Each entry carries its own
+ *  probe instead, so the pin is still demonstrated to catch a change rather than
+ *  being a constant nothing reads.
+ *
+ *  `maestro-android` 117fe6a7 → 0c95a5aa (PR #197, the checkpoint-rail proof):
+ *  the emulator `script:` gained one comment paragraph and ONE executable line,
+ *  `bash scripts/ci/rail-android-capture.sh`, after the tag flow. The rail is
+ *  summoned by scroll speed and react-native-web emits no drag or momentum event
+ *  at all, so this emulator is the only surface where the component's appearance
+ *  is observable. SHA derived by the same `jobBodySha`, which still reproduces
+ *  111655be and 25ff0a6f above. */
+const CURRENT_PRESERVED_BODY_WITH_PROBE: Readonly<
+	Record<string, { sha256: string; probe: [string, string] }>
+> = {
+	"maestro-android": {
+		sha256: "0c95a5aa8ee23bad62b77d04d5ff7a0f461339edb57a7aaef44a2260c0153b34",
+		probe: [
+			"bash scripts/ci/run-maestro-tags.sh",
+			"bash scripts/ci/run-maestro-tags.sh --dry",
+		],
+	},
+};
+const jobBodySha = (body: string) =>
+	sha(
+		body
+			.split("\n")
+			.filter((line) => !line.startsWith("    if: "))
+			.join("\n")
+			.trim(),
+	);
+
 function jobs(text: string) {
 	const section = text.split("\njobs:\n")[1];
 	if (!section) throw new Error("missing jobs");
@@ -162,6 +237,37 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		expect(() => selectProof(MANUAL, "full", "setup")).toThrow();
 		expect(() => selectProof("schedule", "s15-proof", "full")).toThrow();
 	});
+	it("preserves historical body pins and rejects executable drift in current jobs", () => {
+		expect(baseline.jobs["web-audit"].bodyWithoutConditionSha256).toBe(
+			"0604aee9f4abae9990605ad53eee40d53a6dbc286c8e17f48dc14fdb88662298",
+		);
+		expect(baseline.jobs["web-audit-core"].bodyWithoutConditionSha256).toBe(
+			"eb69e1033318489c3a9b6e3afa42f4e7cf92f9eace095851f95c1a71f266b1e2",
+		);
+		for (const [name, expected] of Object.entries(
+			CURRENT_PRESERVED_BODY_SHA256,
+		)) {
+			const body = jobs(source(".github/workflows/e2e.yml"))[name]?.body;
+			if (!body) throw new Error(`missing ${name} job`);
+			expect(jobBodySha(body)).toBe(expected);
+			const changed = body.replace(
+				"pnpm audit:capture",
+				"pnpm audit:capture --no-strict",
+			);
+			expect(changed).not.toBe(body);
+			expect(jobBodySha(changed)).not.toBe(expected);
+		}
+		for (const [name, pinned] of Object.entries(
+			CURRENT_PRESERVED_BODY_WITH_PROBE,
+		)) {
+			const body = jobs(source(".github/workflows/e2e.yml"))[name]?.body;
+			if (!body) throw new Error(`missing ${name} job`);
+			expect(jobBodySha(body)).toBe(pinned.sha256);
+			const changed = body.replace(pinned.probe[0], pinned.probe[1]);
+			expect(changed).not.toBe(body);
+			expect(jobBodySha(changed)).not.toBe(pinned.sha256);
+		}
+	});
 	it("the actual workflow preserves every normal full/S15 job membership and body", () => {
 		const current = jobs(source(".github/workflows/e2e.yml"));
 		expect(Object.keys(current).sort()).toEqual(
@@ -169,7 +275,16 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				...Object.keys(baseline.jobs),
 				PROOF_MODE,
 				ANDROID_PROOF_MODE,
+				"projects-create-ios-proof",
+				"chrome-ios-proof",
+				"theme-ios-proof",
 				"u08-geometry-proof",
+				/* The web audit's device legs are one matrix job, so they need no entry
+				 * here — but the job that folds their results into ONE verdict does. It
+				 * is named deliberately: without it a failed leg would surface only as
+				 * cancelled matrix children, and a nested matrix job is exactly the kind
+				 * of addition that must not slip in under a widened matcher. */
+				"web-audit-verdict",
 			].sort(),
 		);
 		for (const [name, old] of Object.entries(baseline.jobs)) {
@@ -177,15 +292,11 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			expect(job).toBeDefined();
 			if (!job) throw new Error("missing old job");
 			if (name !== "harness")
-				expect(
-					sha(
-						job.body
-							.split("\n")
-							.filter((line) => !line.startsWith("    if: "))
-							.join("\n")
-							.trim(),
-					),
-				).toBe(old.bodyWithoutConditionSha256);
+				expect(jobBodySha(job.body)).toBe(
+					CURRENT_PRESERVED_BODY_SHA256[name] ??
+						CURRENT_PRESERVED_BODY_WITH_PROBE[name]?.sha256 ??
+						old.bodyWithoutConditionSha256,
+				);
 			for (const event of ["pull_request", "push", "schedule", MANUAL])
 				for (const mode of ["", "full", "s15-proof"])
 					expect(evaluate(job.condition, event, mode)).toBe(
@@ -195,6 +306,13 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				if (name !== "harness")
 					expect(evaluate(job.condition, event, PROOF_MODE)).toBe(false);
 		}
+		/* The verdict job must select EXACTLY when the legs it aggregates select —
+		 * `always()` appended, so a failed leg still produces its red check rather
+		 * than a skipped (neutral) one. Pinned as a relationship to `web-audit`'s own
+		 * condition, not as a literal, so it cannot drift out of step with it. */
+		expect(current["web-audit-verdict"]?.condition).toBe(
+			`${current["web-audit"]?.condition} && always()`,
+		);
 		const targeted = current[PROOF_MODE];
 		if (!targeted) throw new Error("missing targeted job");
 		for (const event of ["pull_request", "push", "schedule", MANUAL])
@@ -218,6 +336,34 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				expect(evaluate(android.condition, event, mode)).toBe(
 					event === MANUAL && mode === ANDROID_PROOF_MODE,
 				);
+	});
+	it("the Urdu project-create job fires only on its own manual dispatch and never holds the token in the proof step", () => {
+		const text = source(".github/workflows/e2e.yml");
+		const job = jobs(text)["projects-create-ios-proof"];
+		if (!job) throw new Error("missing projects-create job");
+		for (const event of ["pull_request", "push", "schedule", MANUAL])
+			for (const mode of [
+				"",
+				"full",
+				"s15-proof",
+				PROOF_MODE,
+				ANDROID_PROOF_MODE,
+				"projects-create-ios-proof",
+			])
+				expect(evaluate(job.condition, event, mode)).toBe(
+					event === MANUAL && mode === "projects-create-ios-proof",
+				);
+		expect(job.body).toContain("actions: read");
+		expect(job.body).not.toContain("secrets.");
+		expect(job.body).not.toContain("contents: write");
+		// The token appears in exactly ONE step (the artifact download) and that
+		// step is not the one that runs the proof script.
+		expect(job.body.match(/github\.token/g)?.length).toBe(1);
+		const proofStep = job.body.split("- name: Native Urdu walk")[1] ?? "";
+		expect(proofStep.split("- uses: actions/upload-artifact")[0]).not.toMatch(
+			/github\.token|GH_TOKEN|GITHUB_TOKEN/,
+		);
+		expect(job.body).not.toMatch(/xcodebuild|expo prebuild|pnpm install/);
 	});
 	it("every dispatchable proof mode has an arm in the Validate-proof-selection shell", async () => {
 		// WHY THIS EXISTS: the truth table above reads the JOB `if:` conditions, and
@@ -245,6 +391,13 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			["account-routing-ios-proof", "preflight", true],
 			["account-routing-ios-proof", "setup", true],
 			["account-routing-android-proof", "full", true],
+			// The Urdu project-create proof is one fixed walk: no stage argument.
+			["projects-create-ios-proof", "full", true],
+			["projects-create-ios-proof", "setup", false],
+			["projects-create-ios-proof", "preflight", false],
+			// The chrome proof is one fixed plan of lanes: no stage argument either.
+			["chrome-ios-proof", "full", true],
+			["chrome-ios-proof", "setup", false],
 			// Stage arguments that must be refused rather than silently accepted.
 			["account-routing-android-proof", "setup", false],
 			["account-routing-android-proof", "preflight", false],

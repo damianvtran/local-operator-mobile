@@ -30,9 +30,10 @@ export type PendingKind = "approval" | "ask";
 
 export interface PendingOptionView {
 	label: string;
-	/** The option's own consequence line. An option without one is a guess the
-	 *  reader has to make (`components.md` § 13). */
-	description: string;
+	/** The option's own consequence line, when the producer sent one. `null`
+	 *  rather than `""`: the card draws no line at all for an option without
+	 *  one, and an empty string would be a line that says nothing. */
+	description: string | null;
 	/** Index into `options` AS CARRIED. Never re-derive after sorting: the wire
 	 *  index is what the answer cites. */
 	index: number;
@@ -197,7 +198,7 @@ export const pendingView = (input: PendingViewInput): PendingView => {
 				: null,
 		options: pending.options.map((option, index) => ({
 			label: option.label,
-			description: option.description,
+			description: option.description ?? null,
 			index,
 			// `recommended` is an index into the options AS CARRIED, and a client that
 			// re-sorted them and kept the index would mark the wrong one.

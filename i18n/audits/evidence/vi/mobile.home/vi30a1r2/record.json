@@ -1,0 +1,373 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_delta_reaudit_of_changed_namespace",
+	"audit_id": "vi30a1r2",
+	"locale": "vi",
+	"namespace": "mobile.home",
+	"audit_date": "2026-10-30",
+	"wave": "vi wave 5 — damianvtran/local-operator-mobile, branch feat/i18n-vietnamese, delta A",
+	"audited_revision": "fb4d8bcbc50c68301af624407e09b1789896e571",
+	"audited_revision_note": "The vi catalogue is tracked at this revision (the round-1 audit read it untracked at 31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b); target bytes are pinned by input_hashes.vi.",
+	"key_count": {
+		"en": 27,
+		"target": 27,
+		"context": 27
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "3fd3fed80964",
+		"job": "none exposed for this delegation (team child session)",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback. Every command in these bundles ran after the final switch, i.e. on radient/auto",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the round-1 translator and from the remediation author. Not model-diverse: the served model radient/auto is the translator's served model and the second pass's too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator (vi wave 5)",
+		"model": "not observed by this auditor",
+		"actual_model_source": "as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"date": "2026-10-30"
+	},
+	"remediation_author": {
+		"commit": "fb4d8bcbc50c68301af624407e09b1789896e571",
+		"author": "Damian Tran <damian@radienthq.com>",
+		"note": "per git log for the commit under audit; the agent or session that wrote the remediation copy is not observed by this auditor"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.home.json",
+			"sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.home.context.json",
+			"sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+		},
+		"vi": {
+			"path": "src/i18n/catalogues/vi/mobile.home.json",
+			"sha256": "c418df1e9f81ec9c30ee17745ec5f2391615ce99a621082b2c1ceddec28e6913"
+		}
+	},
+	"previous_round": {
+		"audit_id": "vi30a1",
+		"audited_revision": "31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b",
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 2,
+		"blocker_ids": [],
+		"major_ids": [
+			"H-01",
+			"H-02"
+		],
+		"minor_ids": [
+			"H-03",
+			"H-04",
+			"H-05",
+			"H-06"
+		],
+		"nit_ids": [],
+		"finding_ids": [
+			"H-01",
+			"H-02",
+			"H-03",
+			"H-04",
+			"H-05",
+			"H-06"
+		]
+	},
+	"round1_disposition": [
+		{
+			"id": "H-01",
+			"key": "mobile.home.options.fixed",
+			"severity": "MAJOR",
+			"status": "fixed",
+			"round1_text": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Dùng Chi tiết cuộc trò chuyện để xem các điều khiển trực tiếp.",
+			"shipped": "Tùy chọn khởi đầu của cuộc trò chuyện này đã cố định. Mở Chi tiết cuộc trò chuyện để dùng các điều khiển trực tiếp.",
+			"verification": "byte-exact against the round-1 prescription (audit.log D1); the round-1 text is absent (D2); `Mở Chi tiết cuộc trò chuyện để dùng` matches mobile.session.conversation_details' own title byte-for-byte (D5), which the context note requires; the narrowing verb `xem` is gone"
+		},
+		{
+			"id": "H-02",
+			"key": "mobile.home.tip.parallel",
+			"severity": "MAJOR",
+			"status": "fixed",
+			"round1_text": "yêu cầu chạy song song để tách ra tác nhân con",
+			"shipped": "yêu cầu chạy song song để tách tác nhân con",
+			"verification": "byte-exact (D1). Re-measured with the round-1 measurer at the round-1 role: 263.7 pt in the 270 pt text box (was 278.6 pt, 8.6 pt over); with the 12 pt icon and 6 pt gap the row is 281.7 pt inside 288 pt at a 320 pt viewport"
+		},
+		{
+			"id": "H-03",
+			"key": "mobile.home.greeting",
+			"severity": "MINOR",
+			"status": "fixed",
+			"round1_text": "Hôm nay tôi có thể giúp gì cho bạn?",
+			"shipped": "Hôm nay tôi có thể giúp gì?",
+			"verification": "byte-exact (D1). Re-measured at title 20/600/-0.24: 240.2 pt, one line in the 288 pt box (was 315.8 pt, which wrapped and stranded `bạn?`)"
+		},
+		{
+			"id": "H-04",
+			"key": "mobile.home.starting / mobile.home.startup_queue.unconfirmed",
+			"severity": "MINOR",
+			"status": "fixed",
+			"round1_text": "Đang khởi động… · Chưa xác nhận khởi động",
+			"shipped": "Đang bắt đầu… · Chưa xác nhận bắt đầu",
+			"verification": "both keys byte-exact (D1, split on the record's ' · ' join). The three start states now share one verb, `bắt đầu` (D5), which agrees with core's conversation-start verb (wire.slash.new 'Bắt đầu cuộc trò chuyện mới') and leaves the adjective `khởi đầu` in options.fixed alone (core: wire.settings.agents.description 'các vai trò khởi đầu')"
+		},
+		{
+			"id": "H-05",
+			"key": "mobile.home.suggestion.wake_summary",
+			"severity": "MINOR",
+			"status": "fixed",
+			"round1_text": "Đánh thức tôi kèm tóm tắt",
+			"shipped": "Đánh thức tôi kèm bản tóm tắt",
+			"verification": "byte-exact (D1); the classifier `bản` is present; 196.2 pt in the 256 pt row at the painted 14/400 role (round 1's 212.8 pt was the same string at the 15/600 role it does not paint)"
+		},
+		{
+			"id": "H-06",
+			"key": "mobile.home.suggestion.review_repo",
+			"severity": "MINOR",
+			"status": "fixed",
+			"round1_text": "Đánh giá repo này",
+			"shipped": "Rà soát repo này",
+			"verification": "byte-exact (D1); starts with `Rà soát`, core's term for the code-review feature (10 values in core tui.review.*), and core's tui.review never uses `đánh giá` for it (D5)"
+		}
+	],
+	"round1_disposition_summary": {
+		"fixed": 6,
+		"rejected": 0,
+		"deferred": 0,
+		"byte_exact": true
+	},
+	"delta": {
+		"changed_keys": [
+			"mobile.home.options.fixed",
+			"mobile.home.tip.parallel",
+			"mobile.home.greeting",
+			"mobile.home.starting",
+			"mobile.home.startup_queue.unconfirmed",
+			"mobile.home.suggestion.wake_summary",
+			"mobile.home.suggestion.review_repo"
+		],
+		"changed_key_count": 7,
+		"note": "seven values across the six round-1 findings (H-04 is one finding over two keys)",
+		"en_and_context_unchanged": true,
+		"vi_round1_sha256": "023141681a91d49bc481597c77c9bce2ae53f99c771d7ec4434db18d264d342c",
+		"vi_now_sha256": "c418df1e9f81ec9c30ee17745ec5f2391615ce99a621082b2c1ceddec28e6913",
+		"stale_round1_text_absent": true,
+		"unchanged_namespaces": {
+			"mobile.session": {
+				"round1_audit": "vi30a2",
+				"delta_audit": "vi30a2r2",
+				"sha256": "74f5b1adcbba89c3ec1791969370f63263b25106c2999ed9c2d32777dc546457"
+			},
+			"mobile.session_health": {
+				"round1_audit": "vi30a3",
+				"delta_audit": "vi30a3r2",
+				"sha256": "2ffbacd81c2240cb124f36570df694bed3244017fb4febebba6d32c2f2cf6bb4"
+			},
+			"mobile.account_routing": {
+				"round1_audit": "vi30a4",
+				"delta_audit": "vi30a4r2",
+				"sha256": "1cdcd6db23024beea401b37379fa64b2c7ade44f518036d1370d9160482df0f0"
+			},
+			"relay.chrome": {
+				"round1_audit": "vi30a5",
+				"delta_audit": "vi30a5r2",
+				"sha256": "ce983a6b24f733722ab74f6dfa5dfb2b575b22a6ccf941c3cd86e773f4aa45d9"
+			},
+			"relay.health": {
+				"round1_audit": "vi30a6",
+				"delta_audit": "vi30a6r2",
+				"sha256": "e8a1f7174f9928839bdb35354e3a9bc7e3249b74b4739b840c98e2ec58fd5e6c"
+			}
+		}
+	},
+	"role_corrections": [
+		{
+			"values": "all six mobile.home.suggestion.* rows",
+			"round1_role": "label 15/600/-0.075 (the row View's buttonClasses('quiet','md'))",
+			"painted_role": "Text text-body-sm = 14/400/0 (home-splash.tsx SuggestionRow; preset body-sm)",
+			"example": {
+				"key": "mobile.home.suggestion.wake_summary",
+				"round1_pt": 212.8,
+				"painted_pt": 196.2
+			},
+			"effect": "round 1 over-measured every chip; all round-1 fit conclusions stand and the shipped strings have more room than round 1 reported"
+		},
+		{
+			"values": "mobile.home.starting",
+			"round1_role": "title 20/600/-0.24",
+			"painted_role": "text-body = 16/400 (the splash's startingLine Text)",
+			"round1_pt": 136.2,
+			"painted_pt": 110.7,
+			"effect": "over-measured; the value fits by a wider margin than round 1 reported"
+		},
+		{
+			"values": "mobile.home.greeting, all mobile.home.tip.*",
+			"note": "these two roles (title 20/600/-0.24, meta 12/500) were correct in round 1, so the before/after numbers for H-02 and H-03 are directly comparable"
+		}
+	],
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:check -> exit 0 (catalogue.gen.ts current, 143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN; check-strings 284 baselined findings, 0 new, no growth vs 31f2ae46f45d)",
+		"validator_scope": "the validator checks key parity, message parse and the strings ratchet; it does not compare placeholders or ICU arms between locales, so this audit parsed both sides with the repository's own parser and compared the parameter surface and the arms itself",
+		"scoped_checks": "valid JSON; key and context parity; placeholder name/kind parity; every plural carries the 'other' arm and no foreign category; select arms match en; code spans and --flags byte-identical; NFC; no combining marks; no double spaces; no edge whitespace; no space before punctuation; no ASCII ellipsis; no straight quotes; no bidi controls; no control characters",
+		"renderer": "parseMessage/formatMessage/pluralCategory/renderFor imported from the worktree and driven per key; every value round-trips byte-identically; the round-1 fallback control was re-pointed from tag 'vi' (shipped at this head) to 'hi' (still unshipped) and discriminates",
+		"counts": "section harness: 346 PASS, 0 FINDING, 0 CONTROL-FAIL; delta assertions: 63 PASS, 0 FINDING, 0 CONTROL-FAIL; unpatched round-1 harness at this head: 344 PASS, 0 FINDING, 1 CONTROL-FAIL (the re-pointed control's stale premise, preserved in audit-original-harness.log)",
+		"fit_metric": "CoreText/AppKit advance widths (system font) at the app's painted roles — meta 12/500, text-body 16/400, text-body-sm 14/400, title 20/600/-0.24 — against boxes read again at this revision from home-splash.tsx (288 pt content at a 320 pt viewport; tip text box 270 pt after the 12 pt Info icon and 6 pt gap; chip row 256 pt)",
+		"no_rendered_frame": "widths are measured text advances, not a rendered frame; the claim is the comparison with the row boxes, not a screenshot",
+		"tests": "vitest run src/features/home/home-copy.test.ts src/i18n/__tests__/catalogues.test.ts -> 77 passed"
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "587726fed18f",
+		"agent": "reviewer subagent (label vi-deltaA-second-pass)",
+		"pinned_model": "anthropic/claude-sonnet-5-5",
+		"actual_model": "radient/auto",
+		"actual_model_source": "the subagent's own disclosure in its returned report: pinned anthropic/claude-sonnet-5-5 never served; provider-quota fallbacks to radient/auto",
+		"scope": "the six values and every same-file neighbour, read blind to this audit's findings; read-only, no edit",
+		"verdict": "clean — no BLOCKER, no MAJOR, no MINOR in the catalogue; 1 MINOR on the non-shipping home-copy.ts comment; no NIT",
+		"agreement": "independently reproduced tip.parallel 263.71/270, greeting 240.21/288, longest chip 196.22/256, and the desktop greeting variant 315.83/288; reached C-01 separately; confirmed the start family agrees with core's wire.slash.new wording",
+		"disagreements": [
+			"Its 'starting' width used the painted body 16/400 (110.73 pt) where round 1 used title 20/600 (136.2 pt); this audit adopts the painted role and records the correction — no verdict change.",
+			"It counted 28 values in a 27-key file; the count is a slip, the enumeration covers all 27."
+		],
+		"report_path": "i18n/audits/evidence/vi/mobile.home/vi30a1r2/second-pass-report.md",
+		"report_sha256": "77345a0ef365934877ee3fbda252d8ad49c74464e99c2bfc0a1b10f4f4c7ef9c"
+	},
+	"findings": [
+		{
+			"id": "C-01",
+			"severity": "MINOR",
+			"locus": "src/features/home/home-copy.ts (vi budget comment) — non-shipping copy",
+			"current": "its longest chip is 29 characters (`suggestion.wake_summary`, 212.8 pt in a ~256 pt box)",
+			"problem": "212.8 pt is the 15/600 label-role measurement; the suggestion row's Text paints text-body-sm 14/400, where the same chip is 196.2 pt. The figure cited to justify SUGGESTION_CHAR_BUDGET.vi = 32 is from a role the row does not use.",
+			"impact": "none on the shipped copy: the budget (32 >= 29 characters) and the fit (196.2 <= 256) are both correct; only the cited number is wrong",
+			"suggestion": "cite 196.2 pt at 14 pt/400, or name the role measured",
+			"independent_confirmation": "the blind second pass raised the same point as MINOR-1"
+		},
+		{
+			"id": "C-02",
+			"severity": "NIT",
+			"key": "mobile.home.starting",
+			"current": "Đang bắt đầu…",
+			"problem": "cross-surface wording: core renders a session boot as `đang khởi động…` (tui.status.band.starting) and `đang khởi động phiên` (relay.asks.card.cold_wait), while the phone's first-send state says `bắt đầu`.",
+			"resolution": "no change. Core does not settle one term — its own renderings for 'starting…'/'new session' span three verbs (khởi động, tạo, mới) — and its conversation-start verb is `bắt đầu` (wire.slash.new). The glossary has no start row. One verb inside mobile.home is the shipped rule and it holds; recorded for a future wave that unifies the surfaces."
+		},
+		{
+			"id": "C-03",
+			"severity": "NIT",
+			"key": "mobile.home.greeting",
+			"current": "Hôm nay tôi có thể giúp gì?",
+			"problem": "the addressee (`cho bạn`) is gone, and the phone's greeting is therefore no longer byte-identical to the desktop's committed vi (`local-operator-ui` ui.chat.composer.welcome = 'Hôm nay tôi có thể giúp gì cho bạn?').",
+			"resolution": "no change, and not a loss of meaning. The desktop form measures 315.83 pt at the mobile title role — it cannot fit the 288 pt one-line box and is exactly the string that stranded `bạn?` in round 1, so byte-identity is unreachable at 320 pt; `giúp gì?` is a complete predicate in Vietnamese; the vi guide PERMITS the pronoun at first contact but does not require it, and its default is that plain verbs carry the sentence; and the alternative that keeps the addressee ('Tôi có thể giúp gì cho bạn?', 235.8 pt) drops `Hôm nay` instead. Both fit; the shipped form keeps the word that carries the sentence, and the choice is recorded rather than re-litigated."
+		}
+	],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"minor_ids": [
+			"C-01"
+		],
+		"nit_ids": [
+			"C-02",
+			"C-03"
+		],
+		"finding_ids": [
+			"C-01",
+			"C-02",
+			"C-03"
+		],
+		"round1_findings_fixed": [
+			"H-01",
+			"H-02",
+			"H-03",
+			"H-04",
+			"H-05",
+			"H-06"
+		],
+		"round1_findings_open": [],
+		"reason": "0 BLOCKER, 0 MAJOR; all six round-1 findings fixed byte-exactly; one MINOR in a non-shipping code comment, two NITs recorded with reasons and no action"
+	},
+	"terminology": {
+		"core_reference": "core vi catalogues at origin/main 1dad86053fc037b4d7542eb40776c64e54d95d41",
+		"terms_checked": [
+			"rà soát",
+			"bắt đầu",
+			"khởi đầu",
+			"khởi động",
+			"phiên",
+			"cuộc trò chuyện",
+			"tác nhân con",
+			"thức dậy"
+		],
+		"divergences": 0,
+		"note": "the two mirrored namespaces are byte-identical to core at origin/main (D4); the one cross-surface wording difference is recorded as C-02 with the core bytes that show core is not uniform"
+	},
+	"ledger": {
+		"command": "absent",
+		"recorded": false,
+		"written": false,
+		"reason": "This repository has no i18n/ledger.json and no audit-ledger command at fb4d8bcbc50c68301af624407e09b1789896e571 (i18n/ holds audits/ only; package.json scripts and scripts/i18n/ carry generate/check only; docs/i18n.md records the report in the pull request). Core's i18n/ledger.json does hold one mobile.* row (zh-CN / mobile.setup, 2026-10-24) with evidence under core's own tree, so a row is possible - but that is an edit in a different repository, outside this read-only delta.",
+		"ledger_row_proposed": {
+			"locale": "vi",
+			"namespace": "mobile.home",
+			"source_sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3",
+			"status": "passed",
+			"auditor": {
+				"agent": "i18n-auditor",
+				"model": "radient/auto",
+				"date": "2026-10-30",
+				"result": "passed",
+				"findings": 3
+			},
+			"note": "vi delta A mobile.home passed at fb4d8bc: H-01..H-06 fixed byte-exact, tip 263.7/270, greeting 240.2/288; 1 MINOR (vi budget comment cites a 15/600 figure), 2 NIT; disposition in i18n/audits/evidence/vi/mobile.home/vi30a1r2/record.json; radient/auto fallback"
+		}
+	},
+	"route": {
+		"evidence_path": "written under this repository's i18n/audits/evidence root; no tracked manifest maps a different root",
+		"reads": "ordinary worktree reads; core's committed bytes read out of git at origin/main (1dad86053fc037b4d7542eb40776c64e54d95d41) via `git show`; the repository's own validator, renderer and test runner; local CoreText measurement",
+		"english_context_sidecars": "nested-JSON context sidecars are not routable through read_public_copy; read as ordinary worktree files",
+		"receipts": "no keyed public-copy receipt is claimed",
+		"translation_services": "no translation API, SDK, MT service or back-translation was used"
+	},
+	"limits": {
+		"native_review": "none performed",
+		"rendered_frame": "none captured; widths are measured text advances against row boxes, not pixels",
+		"translator_observation": "the translator's run and the remediation author's run were not observed by this auditor",
+		"edits": "nothing under src/ was edited by this audit; only this evidence directory was written",
+		"second_pass": "the second pass covered mobile.home only; the five unchanged namespaces were not re-read by it",
+		"remediation": "the remediation was supplied by the requesting manager as commit fb4d8bc; its authoring session was not observed by this auditor"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output; audit.log holds the actual commands and their actual output, and audit-original-harness.log holds the round-1 harness's own run at this head.",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/vi/mobile.home/vi30a1r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.home/vi30a1r2/report.md",
+			"sha256": "b597d3be4115924633460614d5294ca8372716f7c2d9c0cfdac23d9dabb6e12d"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.home/vi30a1r2/audit.log",
+			"sha256": "1232b3cdcb464c2f5607148a315cbbd206f4ce28898a60b4f2a28fd286da226e",
+			"note": "actual command output, not notes"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.home/vi30a1r2/audit-original-harness.log",
+			"sha256": "2a0318827a5c09c6b0043e56d6dd70639a32b542c7331247c440472d083c0e66",
+			"note": "the unpatched round-1 harness's own run at this head; one control fails because its premise (vi unshipped) is gone"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.home/vi30a1r2/second-pass-report.md",
+			"sha256": "77345a0ef365934877ee3fbda252d8ad49c74464e99c2bfc0a1b10f4f4c7ef9c",
+			"note": "the blind second pass's own returned report, verbatim; not command output"
+		}
+	]
+}

@@ -1,0 +1,7 @@
+Marker scan (case insensitive [redacted], <redacted>): English catalogue 0; English context 0; zh-CN catalogue 0.
+read_public_copy English catalogue: success.
+read_public_copy zh-CN catalogue: refused: differs from HEAD; commit public copy before auditing.
+read_public_copy zh-CN key mobile.projects.create.name: same refusal.
+read_public_copy English context: refused: catalogue keys and values must be strings.
+Direct read English context after scan: success.
+No bypass of refusal. No target copy read. No tests or browser.

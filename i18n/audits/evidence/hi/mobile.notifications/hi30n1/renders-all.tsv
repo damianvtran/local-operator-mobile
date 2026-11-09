@@ -1,0 +1,77 @@
+mobile.schedules.cadence.every	हर 1d
+mobile.schedules.cadence.left	हर 1d · 3 शेष
+mobile.schedules.cadence.once	एक बार
+mobile.schedules.cadence.spent	हर 1d · अब कोई डिलीवरी शेष नहीं
+mobile.schedules.count.monitors	2 मॉनिटर
+mobile.schedules.count.wakes	2 जागृतियाँ
+mobile.schedules.due.ahead	4m में
+mobile.schedules.due.overdue	4m विलंबित
+mobile.schedules.empty.body	चैट में किसी एजेंट से कोई काम नियमित रूप से करने को कहें, तो वह यहाँ दिखेगा। जागृति तय समय पर बातचीत में एक प्रॉम्प्ट भेजती है; मॉनिटर एक चीज़ पर नज़र रखता है और बताता है कि क्या बदला।
+mobile.schedules.empty.title	कुछ भी सक्रिय नहीं
+mobile.schedules.empty_line.monitors	कोई मॉनिटर सक्रिय नहीं।
+mobile.schedules.empty_line.wakes	कोई जागृति शेड्यूल नहीं की गई।
+mobile.schedules.gone.monitors	अब मौजूद नहीं — इसकी बातचीत इस मशीन पर नहीं रही, इसलिए इसकी जाँच नहीं होती
+mobile.schedules.gone.wakes	अब मौजूद नहीं — इसकी बातचीत इस मशीन पर नहीं रही, इसलिए कोई जागृति नहीं जागेगी
+mobile.schedules.head.next	3 जागृतियाँ · अगली बार 4m
+mobile.schedules.head.overdue	3 जागृतियाँ · 4m
+mobile.schedules.parked.monitors	रुका हुआ — बातचीत दोबारा चलने पर इसके मॉनिटर फिर शुरू होते हैं
+mobile.schedules.parked.wakes	रुका हुआ — अगले टर्न के बाद इसकी जागृतियाँ फिर चालू हो जाती हैं
+mobile.schedules.read_error.monitors	इस मशीन के मॉनिटर पढ़े नहीं जा सके।
+mobile.schedules.read_error.wakes	इस मशीन की जागृतियाँ पढ़ी नहीं जा सकीं।
+mobile.schedules.read_unreachable	हम अभी इस मशीन के शेड्यूल नहीं पढ़ सके।
+mobile.schedules.show_less.monitors	कम मॉनिटर दिखाएँ
+mobile.schedules.show_less.wakes	कम जागृतियाँ दिखाएँ
+mobile.schedules.show_more.monitors	2 और मॉनिटर दिखाएँ
+mobile.schedules.show_more.wakes	2 और जागृतियाँ दिखाएँ
+mobile.schedules.state.disabled	बंद
+mobile.schedules.state.dormant	निष्क्रिय
+mobile.schedules.state.expired	समाप्त
+mobile.schedules.state.stale	पुराना
+mobile.schedules.state.waiting	प्रतीक्षारत
+mobile.schedules.summary.monitors_armed	2 चालू
+mobile.schedules.summary.monitors_attention	3 में से 1 को ध्यान चाहिए
+mobile.schedules.summary.wakes	2 निर्धारित
+mobile.schedules.supervisor.not_running	जागृतियों का सुपरवाइज़र इंस्टॉल तो है पर चल नहीं रहा, इसलिए नीचे दी जागृतियाँ नहीं जागेंगी।
+mobile.schedules.supervisor.unsupported	इस प्लैटफ़ॉर्म पर जागृतियों की निगरानी अभी नहीं होती, इसलिए नीचे दी जागृतियाँ केवल तब जागेंगी जब उनकी बातचीत चल रही हो।
+mobile.schedules.supervisor.unverifiable	इन जागृतियों पर कोई निगरानी नहीं — ये केवल तब जागेंगी जब इनकी बातचीत चल रही हो।
+mobile.schedules.tail.failed	2 विफल
+mobile.schedules.truncated	जागृतियाँ वाली कुल 3 बातचीत में से 2 दिखा रहे हैं।
+mobile.projects.delete_body	Ram-laptop हटाएँ? प्रोजेक्ट की पंक्ति हमेशा के लिए चली जाएगी। उससे जुड़े सत्रों और उनकी ट्रांसक्रिप्ट को छुआ नहीं जाएगा।
+mobile.projects.draft_kept_note	पिछली बार से सुरक्षित रखा गया। नया कुछ शुरू करने के लिए फ़ील्ड खाली करें।
+mobile.projects.milestone_slash_note	पड़ाव के नाम में स्लैश नहीं हो सकता। स्लैश वाला पड़ाव कभी हटाया नहीं जा सकेगा।
+mobile.projects.milestones.count	3 में से 1 पड़ाव
+mobile.projects.milestones.none	कोई पड़ाव नहीं
+mobile.projects.project_name_hint	1-64 वर्ण: अक्षर, अंक, बिंदु (.), अंडरस्कोर (_) या हाइफ़न (-)। स्पेस नहीं, और हाइफ़न से शुरुआत नहीं हो सकती।
+mobile.projects.remove_milestone_body	Ram-laptop को इस प्रोजेक्ट से हटाएँ? पड़ाव हमेशा के लिए चला जाएगा। प्रोजेक्ट के सत्रों और उसकी प्रगति पंक्ति को छुआ नहीं जाएगा।
+mobile.projects.session_state.filed_by	दर्ज किया
+mobile.projects.session_state.missing	गायब
+mobile.projects.session_state.not_running	नहीं चल रहा
+mobile.projects.sessions.count	2 सत्र
+mobile.projects.sessions.live	3 सत्र · 1 सक्रिय
+mobile.projects.stale_badge	प्रगति पुरानी
+mobile.projects.write_receipt	“beta” प्रोजेक्ट अपडेट किया गया।
+mobile.projects.write_unknown_note	आपके कंप्यूटर तक नहीं पहुँच सके, इसलिए यह नहीं बता सकते कि वह सहेजा गया या नहीं। दोबारा कोशिश करने से पहले प्रोजेक्ट जाँच लें।
+mobile.notifications.answer	उत्तर दें
+mobile.notifications.back	वापस
+mobile.notifications.detail.answer_in_conversation	बातचीत में उत्तर दें
+mobile.notifications.detail.conversation_asks	इस बातचीत के सवाल
+mobile.notifications.detail.earlier_updates	पिछले अपडेट
+mobile.notifications.detail.from	स्रोत
+mobile.notifications.detail.no_asks	इस बातचीत में कोई सवाल नहीं।
+mobile.notifications.detail.nothing_to_dismiss	इस बातचीत से हटाने के लिए कोई अपडेट नहीं।
+mobile.notifications.detail.projects	प्रोजेक्ट
+mobile.notifications.dismiss	हटाएँ
+mobile.notifications.filter_label	दिखाएँ
+mobile.notifications.load_failed	सूचनाएँ लोड नहीं हो सकीं
+mobile.notifications.priority_high	उच्च
+mobile.notifications.title	सूचनाएँ
+mobile.computers.add	कंप्यूटर जोड़ें
+mobile.computers.added.stays_listed	यह इस फ़ोन पर सूची में बना रहता है, ताकि आप कंप्यूटर सूची से वापस स्विच कर सकें।
+mobile.computers.badge.active	सक्रिय
+mobile.computers.badge.connecting	कनेक्ट हो रहा
+mobile.computers.connecting	कनेक्ट हो रहा है…
+mobile.computers.none_on_phone	इस फ़ोन पर अभी कोई कंप्यूटर नहीं।
+mobile.computers.password_placeholder	lop mobile से मिला पासवर्ड
+mobile.computers.section.not_connected	आपके Radient खाते पर, कनेक्ट नहीं
+mobile.computers.section.on_phone	इस फ़ोन पर
+mobile.computers.switch	कंप्यूटर बदलें

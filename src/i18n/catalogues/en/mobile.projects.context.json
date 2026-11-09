@@ -1,0 +1,130 @@
+{
+	"mobile.projects.create.description": {
+		"role": "meta",
+		"note": "Label for an optional project description."
+	},
+	"mobile.projects.create.description_placeholder": {
+		"role": "help",
+		"note": "Placeholder prompting an optional project description."
+	},
+	"mobile.projects.create.name": {
+		"role": "meta",
+		"note": "Label for the project identifier field; the nearby help states its grammar."
+	},
+	"mobile.projects.create.name_placeholder": {
+		"role": "help",
+		"note": "Example of a valid project identifier; preserve the hyphen and use only letters, digits, dot, underscore or hyphen, never starting with a hyphen."
+	},
+	"mobile.projects.create.status": {
+		"role": "heading",
+		"note": "Label for the project status choices."
+	},
+	"mobile.projects.create.submit": {
+		"role": "button",
+		"note": "Submits the new project form."
+	},
+	"mobile.projects.create.tags": {
+		"role": "meta",
+		"note": "Label for optional project tags."
+	},
+	"mobile.projects.create.tags_help": {
+		"role": "help",
+		"note": "Explains how to separate multiple project tags."
+	},
+	"mobile.projects.create.tags_placeholder": {
+		"role": "help",
+		"note": "Examples of two tags, separated by a comma; use valid short tag examples."
+	},
+	"mobile.projects.create.title": {
+		"role": "heading",
+		"note": "Title of the sheet for creating a project."
+	},
+	"mobile.projects.delete_body": {
+		"role": "confirm",
+		"note": "Destructive confirmation. Placeholder {name} is the project's display name (user text, may contain spaces). Both halves are load-bearing: what the delete destroys and what it leaves alone."
+	},
+	"mobile.projects.draft_kept_note": {
+		"role": "help",
+		"note": "Tells the reader a dismissed form kept their unfinished work and how to discard it. Applies to both the create sheet and the milestone editor."
+	},
+	"mobile.projects.milestone_slash_note": {
+		"role": "help",
+		"note": "Explains why a milestone name may not contain a slash. Names the consequence the reader can act on; never mention routes, paths or encoding."
+	},
+	"mobile.projects.milestones.count": {
+		"role": "meta",
+		"note": "Milestone progress from the relay's own two counts. {completed} and {total} are non-negative integers and both must survive translation. ENGLISH needs no plural agreement because its noun is fixed to the count phrase; a locale whose noun agrees with the completed count must pluralize on {completed} (French: one/many/other) and keep {total} a plain placeholder inside every branch — the generator fails a translation that drops or retypes either name."
+	},
+	"mobile.projects.milestones.none": {
+		"role": "meta",
+		"note": "Lower-case fragment shown where a milestone count would go when the relay reports zero total milestones. It is joined with a session count, so it carries no final full stop."
+	},
+	"mobile.projects.project_name_hint": {
+		"role": "help",
+		"note": "The complete project-name grammar stated before the tap. Length range and allowed characters must stay exact: this sentence is the reader's only warning before a refusal."
+	},
+	"mobile.projects.remove_milestone_body": {
+		"role": "confirm",
+		"note": "Destructive confirmation. Placeholder {name} is the milestone name (user text, may contain spaces). Says what goes and what stays."
+	},
+	"mobile.projects.session_state.filed_by": {
+		"role": "status",
+		"note": "Lower-case two-word fragment marking a coordination row: the session filed the work rather than doing it. Never imply the row is a worker."
+	},
+	"mobile.projects.session_state.missing": {
+		"role": "status",
+		"note": "Lower-case word for a linked session whose directory is gone. The link is still listed; this names its state."
+	},
+	"mobile.projects.session_state.not_running": {
+		"role": "status",
+		"note": "Lower-case replacement for the relay's 'stopped' runtime state. The ordinary end of a session, not an error."
+	},
+	"mobile.projects.sessions.count": {
+		"role": "meta",
+		"note": "Session count. {count} is a non-negative integer and drives the plural category; # is that number. The zero case is 'other' in English."
+	},
+	"mobile.projects.sessions.live": {
+		"role": "meta",
+		"note": "Appends the live-session count to a session-count phrase. {base} is the already-rendered count phrase; {live} is a positive integer. Shown only when at least one session is live."
+	},
+	"mobile.projects.stale_badge": {
+		"role": "status",
+		"note": "One badge word pair naming WHAT is stale (progress) rather than the project. Lower case; it sits beside a project name."
+	},
+	"mobile.projects.status.active": {
+		"role": "status",
+		"note": "Display label for the project status code active; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.archived": {
+		"role": "status",
+		"note": "Display label for the project status code archived; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.done": {
+		"role": "status",
+		"note": "Display label for the project status code done; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.paused": {
+		"role": "status",
+		"note": "Display label for the project status code paused; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.planning": {
+		"role": "status",
+		"note": "Display label for the project status code planning; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.qa": {
+		"role": "status",
+		"note": "Display label for the project status code qa; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.status.validation": {
+		"role": "status",
+		"note": "Display label for the project status code validation; translate the label, not the underlying code. Shown in the create sheet as a selectable chip."
+	},
+	"mobile.projects.write_receipt": {
+		"role": "status",
+		"note": "One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop."
+	},
+	"mobile.projects.write_unknown_note": {
+		"role": "status",
+		"note": "Shown when a write got no answer. Must state that the outcome is UNKNOWN, never that nothing was saved."
+	}
+}

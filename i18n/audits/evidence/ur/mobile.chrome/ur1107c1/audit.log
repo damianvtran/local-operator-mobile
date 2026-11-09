@@ -1,0 +1,76 @@
+# audit.log — post-merge audit of PR #182/#180 translations. Real output, run 2026-11-07T19:40:46Z. Shared by all 14 bundles.
+
+$ git -C <repo> rev-parse origin/main
+b5a2f4a1b0721a5745e35e498d7d91851a93811c
+$ git -C <core> rev-parse origin/main
+0dbe7156be84fecf02564b743113bbc0b918bd3f
+
+$ python3 <scratch>/keys.py   # scope derivation
+mobile.home added 37 changed 0 [] still_on_main 37 changed_since []
+mobile.chrome added 1 changed 0 [] still_on_main 1 changed_since []
+--- per-locale value deltas in merge
+mobile.home es add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.home fr add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.home hi add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.home ru add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.home ur add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.home vi add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.home zh-CN add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.home en add 37 chg [] rm ['mobile.home.options.apply', 'mobile.home.options.default_folder', 'mobile.home.options.title']
+mobile.chrome es add 1 chg [] rm []
+mobile.chrome fr add 1 chg [] rm []
+mobile.chrome hi add 1 chg [] rm []
+mobile.chrome ru add 1 chg [] rm []
+mobile.chrome ur add 1 chg [] rm []
+mobile.chrome vi add 1 chg [] rm []
+mobile.chrome zh-CN add 1 chg [] rm []
+mobile.chrome en add 1 chg [] rm []
+
+$ python3 <scratch>/mech.py   # mechanical checks + input hashes
+mechanical issues: 0
+visible short strings with len ratio >=1.5 and len>=12:
+  ('mobile.home.chip.effort_default_short', 'es', 14, 23, 1.64, 'Esfuerzo predeterminado')
+  ('mobile.home.chip.model_no_default', 'es', 10, 18, 1.8, 'Sin predeterminado')
+  ('mobile.home.chip.model_no_default', 'fr', 10, 16, 1.6, 'Aucun par défaut')
+  ('mobile.home.chip.model_no_default', 'hi', 10, 17, 1.7, 'कोई डिफ़ॉल्ट नहीं')
+  ('mobile.home.chip.model_no_default', 'ru', 10, 16, 1.6, 'Нет по умолчанию')
+  ('mobile.home.chip.model_no_default', 'ur', 10, 16, 1.6, 'کوئی ڈیفالٹ نہیں')
+  ('mobile.home.chip.model_no_default', 'vi', 10, 17, 1.7, 'Không có mặc định')
+  ('mobile.home.effort.max', 'ru', 3, 12, 4.0, 'Максимальное')
+  ('mobile.home.effort.max', 'ur', 3, 14, 4.67, 'زیادہ سے زیادہ')
+  ('mobile.home.picker.badge_default', 'es', 7, 14, 2.0, 'Predeterminado')
+  ('mobile.home.picker.badge_default', 'ru', 7, 12, 1.71, 'По умолчанию')
+  ('mobile.home.picker.folder_home', 'fr', 4, 17, 4.25, 'Dossier personnel')
+  ('mobile.home.picker.folder_home', 'vi', 4, 13, 3.25, 'Thư mục chính')
+ba51a71b7c16c79ceff66c7bf6874e375c5c1ebf99a45096237f4da566b4b36e src/i18n/catalogues/es/mobile.home.json
+684df29e9bdcb4a36bbe4b88ebdb333cda2e14a7e099abe630bb4cb2c5eb8e35 src/i18n/catalogues/es/mobile.chrome.json
+72637daaec74943764c96a144eb86a2a6faeca562c7c185b33d2fe9ce9cede41 src/i18n/catalogues/fr/mobile.home.json
+e05e71607db911fe77671c73fe8fa443fa7d86f98f4aec79d87f83e10d886592 src/i18n/catalogues/fr/mobile.chrome.json
+8f5abc1597f4aa2819cda37277f3601e89e9540929cabe4e5540e1b8d524cdf4 src/i18n/catalogues/hi/mobile.home.json
+6c30e16e1a30d3e966d8c2f8afa6bb00e4c25e06b451c93c9864e2ce575c7c84 src/i18n/catalogues/hi/mobile.chrome.json
+07fd9f3d2ffb34d762766551f995d4a233c629b9a237ed30ef859cea0ee8c4ef src/i18n/catalogues/ru/mobile.home.json
+d85c9af88c5fa5c225ef724d7749903a8f9821deeda84abb1bf78650ae2a2461 src/i18n/catalogues/ru/mobile.chrome.json
+a596a55a248529e0694bb7ee575725c3639fea10f2198d6c79cbecc3cb306610 src/i18n/catalogues/ur/mobile.home.json
+bf1d07fa805142c3b10a399d609bb0ffd18e62331658713abab5184a4918e112 src/i18n/catalogues/ur/mobile.chrome.json
+1dcd42a6510ce817f727da08ff6b4d471b6fd612cd2a765e054d9a3c37b025f5 src/i18n/catalogues/vi/mobile.home.json
+6c2d18113a6ac059fbd9acd899f8670b778e549391db2aa993292b6c22a6e41d src/i18n/catalogues/vi/mobile.chrome.json
+b0c97e5e20b2182811402d074773247f26afdfe9141749a5ada15fa4d6847f28 src/i18n/catalogues/zh-CN/mobile.home.json
+4ec576910081b038a360c939f61594c4eec211eb7c6617e11f5fa6f37dccb983 src/i18n/catalogues/zh-CN/mobile.chrome.json
+12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b src/i18n/catalogues/en/mobile.home.json
+7b91a909393d20b3ced5ef3825bf0fd5b0f844ee634a6f8abf19f3cb0141b3f7 src/i18n/catalogues/en/mobile.chrome.json
+aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047 src/i18n/catalogues/en/mobile.home.context.json
+ba70cefe7de66b12c4f012daad4e7aa127a34eea6e3de17c9fda832415aeb140 src/i18n/catalogues/en/mobile.chrome.context.json
+
+$ python3 <scratch>/terms.py (term census, excerpt: counts)
+es «máquina»: mobile(other keys)=27 core=61 audited-keys=0
+es «computadora»: mobile(other keys)=0 core=0 audited-keys=9
+es «carpeta personal»: mobile(other keys)=1 core=5 audited-keys=0
+es «carpeta de inicio»: mobile(other keys)=0 core=0 audited-keys=1
+ur «کوشش»: mobile(other keys)=15 core=100 audited-keys=7
+ur «استدلال کی شدت»: mobile(other keys)=0 core=10 audited-keys=0
+ur «پاتھ»: mobile(other keys)=0 core=16 audited-keys=0
+ur «راستہ»: mobile(other keys)=0 core=1 audited-keys=3
+vi «thư mục home»: mobile(other keys)=2 core=4 audited-keys=0
+vi «thư mục chính»: mobile(other keys)=0 core=1 audited-keys=1
+vi «suy luận»: mobile(other keys)=0 core=21 audited-keys=0
+vi «nỗ lực»: mobile(other keys)=0 core=9 audited-keys=7

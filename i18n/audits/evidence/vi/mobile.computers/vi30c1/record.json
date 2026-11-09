@@ -1,0 +1,179 @@
+{
+	"schema": 1,
+	"audit_id": "vi30c1",
+	"audit_kind": "first_pass_independent_audit",
+	"round": 1,
+	"parent_audit_id": null,
+	"locale": "vi",
+	"namespace": "mobile.computers",
+	"file_group": "B",
+	"audit_date": "2026-10-30",
+	"audited_head_commit": "31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b",
+	"audited_revision": "31f2ae46f45d7b579fc704bd1ba8f3a6dcc7856b",
+	"audited_branch": "feat/i18n-vietnamese",
+	"audited_worktree": "/Users/damian/workspace/vi-wave",
+	"audited_worktree_note": "The vi catalogue is an UNTRACKED working-tree directory at this HEAD; the audited bytes are identified by the sha256 below, not by a commit. This audit wrote only i18n/audits/evidence/vi/<namespace>/<id>/; no catalogue byte was edited and nothing was committed.",
+	"key_count": {
+		"en": 10,
+		"target": 10,
+		"context": 10
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "0156ce9c9f5e",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra (provider quota) -> kimi/k3.1-pro (provider quota) -> radient/auto (provider quota); every command in audit.log ran under the final model. The second-pass reviewer subagent also reported radient/auto.",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"fallback_applied": true,
+		"fallback_note": "the model changed four times during the task; the audit decisions were made under the final model",
+		"independent_from_translator_session": true,
+		"independence": "Another agent and session than the translator; the translator's identity and model were not visible to this auditor, so model diversity is not claimed. No human native-speaker review; the second pass is another LLM agent (job 4ac043e37ef7)."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": null,
+		"job": null,
+		"model": "not observed by this auditor",
+		"actual_model_source": "not disclosed to this auditor; the brief guarantees a different agent/session"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/vi/mobile.computers/vi30c1/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.computers/vi30c1/report.md",
+			"sha256": "eeb4cb777c76eb7aa1062afd513cf57c65a1d42641ca91ff2b773e4a1651ff8c",
+			"bytes": 6251
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.computers/vi30c1/audit.log",
+			"sha256": "1d6ec411a937f51b90e2d2122d697575e63113546ef7f45902cf42398d5ac5a0",
+			"bytes": 38773
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.computers/vi30c1/verify.out.json",
+			"sha256": "aef4095bd2b1956f1cab70ea0e30a38274c99be965603cdf7d582d61155168d1",
+			"bytes": 100
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.computers/vi30c1/renders.tsv",
+			"sha256": "ccb4209b999cf1c36dfa9380d2f5f58fe68dc66dc1a192d6e8ff5c3ea8697f83",
+			"bytes": 8601
+		},
+		{
+			"path": "i18n/audits/evidence/vi/mobile.computers/vi30c1/typography.txt",
+			"sha256": "1e660ef23188fa8a8de5b397f6259aa79e3dcab93db2360a4e90a2054a05a43a",
+			"bytes": 2583
+		}
+	],
+	"ledger": {
+		"command": null,
+		"note": "No i18n ledger or audit-ledger command exists at this head (scripts/, package.json and docs/i18n.md scanned); docs/i18n.md makes the PR report the artifact of record. The row below is proposed, not written.",
+		"proposed_row": {
+			"locale": "vi",
+			"file_group": "mobile.computers",
+			"status": "passed",
+			"auditor": "i18n-auditor (lopdev team)",
+			"model": "radient/auto",
+			"source_hash": "ff1fa7f6b5294c2a240bd5af5827aad0c86989be42ebb4a6fbfed2c1edc7e0a1",
+			"audit_id": "vi30c1",
+			"record": "i18n/audits/evidence/vi/mobile.computers/vi30c1/record.json",
+			"note": "vi/mobile.computers vi30c1: 10 keys, 0 blocker/major/minor/nit; lop mobile kept verbatim, badges lower-case; repo validator and production renders pass. Record: i18n/audits/evidence/vi/mobile.computers/vi30c1/record.json"
+		}
+	},
+	"audit_notes_not_execution_log": "report.md holds judgement and per-key reasoning; audit.log is the executed transcript (bash set -x) and covers all four group-B namespaces, so it is identical in the four bundles. Notes never prove execution.",
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.computers.json",
+			"sha256": "356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.computers.context.json",
+			"sha256": "3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/vi/mobile.computers.json",
+			"sha256": "ff1fa7f6b5294c2a240bd5af5827aad0c86989be42ebb4a6fbfed2c1edc7e0a1"
+		}
+	},
+	"findings": [],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"finding_ids": [],
+		"carried_open": [],
+		"reason": "0 BLOCKER, 0 MAJOR."
+	},
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)'",
+		"repo_gate": "node scripts/i18n/check-strings.ts -> exit 0: 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs 31f2ae46f45d'",
+		"repo_validator_scope": "key parity, message parse, placeholder names/kinds; it does NOT compare select arms, plural reachability or NFC",
+		"structural_verifier": "verify.mts: 77 group-B keys, 0 problems; 5 plural nodes each exactly ['other']; 5 select nodes, arms identical to English at every node; per-select-arm placeholders; all keys NFC; key order identical to en",
+		"plural_categories": [
+			"other"
+		],
+		"negative_controls": "4/4 as expected: dropped {total} -> repo validator fails + verifier fails; dropped select arm -> repo validator passes, verifier fails; unreachable plural arm -> repo validator passes, verifier fails; decomposed diacritics -> repo validator passes, verifier fails",
+		"encoding": "key order identical to en; tabs; trailing newline; no BOM/CRLF; all values NFC",
+		"namespace_counts": {
+			"keys": 10,
+			"plural_nodes": 0,
+			"select_nodes": 0
+		},
+		"markup_and_identifiers": "no backticks, Rich tags, backslash escapes or bidi/zero-width controls (U+200B/200E/200F/202A-202E/2066-2069); the only command token is `lop mobile` in mobile.computers.password_placeholder, byte-identical; `dấu /` keeps the literal slash; `prompt` stays English per the style guide"
+	},
+	"renderer_provenance": {
+		"parser": "src/i18n/messages.ts (parseMessage/formatMessage/Intl.PluralRules)",
+		"runtime": "src/i18n/runtime.ts (renderFor/t)",
+		"composition": "src/features/schedules/schedules-copy.ts and src/features/projects/projects-copy.ts, imported through the repo's tsconfig '@/*' alias with tsx",
+		"preference": "setLocaleSource(() => 'vi') in the scratch copy. In the unmodified audited worktree vi is in NOT_YET_SHIPPED_LOCALES, so t()/renderFor() return English; the scratch copy's only edit is moving 'vi' into SHIPPED_LOCALES, and its four vi catalogue files are byte-identical (verified by sha256).",
+		"alias_resolution": "tsx with the repo tsconfig paths; no src/ file was modified in the audited worktree",
+		"sha256": {
+			"src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+			"src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+			"src/i18n/catalogue.gen.ts": "99d4ccf30236387005c3eb36c8bb8c8e9caf8debe17ec9e5443318bacb6f45c7",
+			"src/i18n/locale.ts": "9a83212d480017a9a08970b4c33f5eebf327d14e456e9fcc13d4a7146096a010",
+			"src/features/schedules/schedules-copy.ts": "fc3f87acb290fd9737142c09af6761456ecabe23917035636e5ad46f59077b52",
+			"src/features/projects/projects-copy.ts": "24d57749edf9b5705a0456e99e6d11d8c39e985854f56fdd647e79a6c95e36f7"
+		}
+	},
+	"renders_executed": {
+		"add": "Thêm máy tính",
+		"switch": "Chuyển máy tính",
+		"badge_active": "hoạt động",
+		"password_placeholder": "Mật khẩu từ lop mobile",
+		"section_not_connected": "Trong tài khoản Radient của bạn, chưa kết nối"
+	},
+	"glossary": {
+		"tracked_terms": 0,
+		"divergences": 0
+	},
+	"second_pass": {
+		"agent": "reviewer subagent (lopdev team)",
+		"job": "4ac043e37ef7",
+		"model": "radient/auto",
+		"actual_model_source": "provider quota fallbacks, as disclosed in its report",
+		"independent_from_first_pass_session": true,
+		"verdict": "no blocker/major",
+		"findings": [
+			"empty.body MINOR (same key as VI-B-S1; its replacement agreed on the 'what changes' reading)",
+			"head.next NIT (same as VI-B-S2)",
+			"show_less pair NIT (same as VI-B-S3)",
+			"code-side hardcoded English headings/controls, not a catalogue defect"
+		]
+	},
+	"rendered_artifact": {
+		"captured": false,
+		"native_review": false,
+		"claim": "No rendered frame and no human native-speaker review. Width claims are code-point/line-count reasoning against the components' clamps, not font metrics or pixels."
+	}
+}

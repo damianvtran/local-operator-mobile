@@ -312,16 +312,19 @@ describe("findIdenticalFrames", () => {
 });
 
 /**
- * The iphone-15-landscape / 200 % S5 group (nightly 38506995844): at 844×390 with 200 %
- * text the session chrome fills the viewport, so ten S5 cells that each reach their own
- * marker are byte-identical. These drive the REAL ledger through the real function, so
- * they fail on a matrix that does not declare the group and on an entry that is wider
- * than the ten cells observed.
+ * The iphone-15-landscape S5 class (nightly 38506995844 for the ten it produced,
+ * 42442578427 for `S5/rail-building`): at 844×390 with 200 % text the session chrome fills
+ * the viewport, so S5 cells that each reach their own marker are byte-identical, and the same
+ * names also collide at 135 % in both themes and 150 % light. These drive the REAL ledger
+ * through the real function, so they fail on a matrix that does not declare the group and on
+ * an entry that omits a cell the run produced. A WIDER entry still passes — the match is
+ * containment — so that is not what these pin.
  */
-const LANDSCAPE_200 = [
+const LANDSCAPE_CLASS = [
 	"S5/populated",
 	"S5/queued",
 	"S5/rail",
+	"S5/rail-building",
 	"S5/rail-deep",
 	"S5/supplement-empty",
 	"S5/supplement-failed",
@@ -340,27 +343,29 @@ const landscapeGroup = (names: readonly string[]): FrameRecord[] =>
 		});
 	});
 
-describe("S5 at iphone-15-landscape / 200 %", () => {
-	it("declares the observed ten-cell group as a camera limit, not a collapse", () => {
-		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_200));
+describe("S5 at iphone-15-landscape", () => {
+	it("declares every observed cell as a camera limit, not a collapse", () => {
+		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_CLASS));
 		expect(result.undeclared).toEqual([]);
 		expect(result.collapses).toEqual([]);
 		expect(result.exemptions).toHaveLength(1);
 		expect(result.exemptions[0]).toContain("declared, not a collapse");
 		// The entry hides a reader-facing condition, and the reason must say so.
 		expect(result.exemptions[0]).toContain("iphone-15-landscape");
-		expect(result.exemptions[0]).toContain("no transcript");
+		expect(result.exemptions[0]).toContain("single transcript row");
 	});
 
 	it("still exempts the group minus one cell — a subset of the entry", () => {
-		const result = findIdenticalFrames(landscapeGroup(LANDSCAPE_200.slice(1)));
+		const result = findIdenticalFrames(
+			landscapeGroup(LANDSCAPE_CLASS.slice(1)),
+		);
 		expect(result.undeclared).toEqual([]);
 		expect(result.exemptions).toHaveLength(1);
 	});
 
-	it("fails the ten plus one unlisted cell, and names it", () => {
+	it("fails the class plus one unlisted cell, and names it", () => {
 		const result = findIdenticalFrames([
-			...landscapeGroup(LANDSCAPE_200),
+			...landscapeGroup(LANDSCAPE_CLASS),
 			...landscapeGroup(["S5/empty"]),
 		]);
 		expect(result.exemptions).toEqual([]);
@@ -375,5 +380,120 @@ describe("S5 at iphone-15-landscape / 200 %", () => {
 		expect(result.exemptions).toEqual([]);
 		expect(result.undeclared).toHaveLength(1);
 		expect(result.undeclared[0]).toContain("'S5/scroll'");
+	});
+});
+
+/**
+ * PR #181, QA Q-R2-2: at iphone-se / 200 % the two rail cells settle to the same
+ * transcript (the rail has faded and carries no text), so CI's run 42347504435 read
+ * them as a collapse. Driven through the REAL ledger with the run's own shas and
+ * digest, so dropping the declaration reds this test the way it red the capture.
+ */
+describe("S5 rail-building / rail-deep at iphone-se / 200 %", () => {
+	const pair = (sha: string, rail: Partial<FrameRecord> = {}) => [
+		cell("S5", "rail-building", sha, "0d7188b6d4"),
+		cell("S5", "rail-deep", sha, "0d7188b6d4", rail),
+	];
+
+	it("is a declared one-view coincidence in both themes, not a collapse", () => {
+		for (const sha of ["0666d9744fd77250", "0a1cf2802e1b0784"]) {
+			const result = findIdenticalFrames(pair(sha));
+			expect(result.collapses).toEqual([]);
+			expect(result.undeclared).toEqual([]);
+			expect(result.coincidences).toHaveLength(1);
+			expect(result.coincidences[0]).toContain(
+				"S5/rail-building = S5/rail-deep",
+			);
+		}
+	});
+
+	it("is still a collapse when either cell misses its own marker", () => {
+		const result = findIdenticalFrames(
+			pair("0666d9744fd77250", { ready: false }),
+		);
+		expect(result.collapses).toHaveLength(1);
+		expect(result.coincidences).toEqual([]);
+	});
+
+	it("does not stretch to the ready rail beside them", () => {
+		const result = findIdenticalFrames([
+			...pair("0666d9744fd77250"),
+			cell("S5", "rail", "0666d9744fd77250", "0d7188b6d4"),
+		]);
+		expect(result.collapses).toHaveLength(1);
+	});
+});
+
+/**
+ * Nightly run 42442578427 (head 22546c00): at iphone-15-landscape the same two rail
+ * cells settled to identical bytes at five of the device's eight theme/scale
+ * combinations and the capture failed them as UNDECLARED, because the iphone-se
+ * coincidence above needs the content readings to agree as well and here they do not.
+ *
+ * The run's own settled shas, so dropping the declaration reds this test with the
+ * cells the capture named. The content digests are the run's too: at 200 % the
+ * building cell's virtualization window holds one row more than the deep one
+ * (`mountedElements` 199 against 192, text nodes 14 against 13), which is why the
+ * bytes agree while the content readings differ.
+ */
+describe("S5 rail-building / rail-deep at iphone-15-landscape", () => {
+	const LANDSCAPE_RAIL_SHAS = [
+		"dadb20209fba71c0", // dark 135 %
+		"b42d9f25c337dc19", // light 135 %
+		"e000c857934f4043", // light 150 %
+		"10aec7f1e89a5a52", // dark 200 %
+		"b565acace56edc2a", // light 200 %
+	];
+
+	const landscapePair = (sha: string, buildingDigest = "b32d867702657382") => [
+		cell("S5", "rail-building", sha, buildingDigest, {
+			device: "iphone-15-landscape",
+		}),
+		cell("S5", "rail-deep", sha, "c6855d230acb5cd4", {
+			device: "iphone-15-landscape",
+		}),
+	];
+
+	it("is a declared camera limit at every combination the run measured, not a collapse", () => {
+		for (const sha of LANDSCAPE_RAIL_SHAS) {
+			const result = findIdenticalFrames(landscapePair(sha));
+			expect(result.collapses).toEqual([]);
+			expect(result.undeclared).toEqual([]);
+			expect(result.exemptions).toHaveLength(1);
+			expect(result.exemptions[0]).toContain("S5/rail-building = S5/rail-deep");
+			expect(result.exemptions[0]).toContain("declared, not a collapse");
+			expect(result.exemptions[0]).toContain("iphone-15-landscape");
+		}
+	});
+
+	it("stays the iphone-se coincidence when the content readings agree too", () => {
+		// The two ledgers are asking different questions: agreeing content is one view
+		// (the iphone-se finding), and only the same bytes with DIFFERENT content is
+		// this entry's camera limit. The equal digests here are SYNTHETIC — the landscape
+		// run produced different ones at every scale — and exist to drive the branch.
+		const result = findIdenticalFrames(
+			landscapePair("10aec7f1e89a5a52", "c6855d230acb5cd4"),
+		);
+		expect(result.exemptions).toEqual([]);
+		expect(result.undeclared).toEqual([]);
+		expect(result.coincidences).toHaveLength(1);
+	});
+
+	it("does not cover the failing rail, which never shares their bytes", () => {
+		// Why `S5/rail-error` is absent from the reported pair set: its scenario mounts
+		// no history and its manifest carries zero ticks, so it differs from the deep
+		// cell at every combination (2331–29832 differing pixels across the eight, run
+		// 42442578427). What this pins is the WIDENING: adding `S5/rail-error` to the
+		// class reds it. A future head that made the two cells identical would NOT be
+		// caught here — the fixture is static — the nightly capture is what reds that.
+		const result = findIdenticalFrames([
+			cell("S5", "rail-error", "87398d8732e2c411", "92eee6d23de02df8", {
+				device: "iphone-15-landscape",
+			}),
+			...landscapePair("87398d8732e2c411"),
+		]);
+		expect(result.exemptions).toEqual([]);
+		expect(result.undeclared).toHaveLength(1);
+		expect(result.undeclared[0]).toContain("'S5/rail-error'");
 	});
 });

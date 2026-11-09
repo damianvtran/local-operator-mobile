@@ -1,0 +1,19 @@
+{
+	"mobile.chrome.destination.inbox": "Bandeja",
+	"mobile.chrome.destination.past": "Anteriores",
+	"mobile.chrome.destination.schedules": "Horarios",
+	"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
+	"mobile.chrome.destinations": "Destinos",
+	"mobile.chrome.new_chat": "Nuevo chat",
+	"mobile.chrome.close_conversations": "Cerrar conversaciones",
+	"mobile.chrome.composer.more": "Más contexto",
+	"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
+	"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
+	"mobile.chrome.home.greeting": "¿En qué te gustaría trabajar?",
+	"mobile.chrome.home.connecting": "Conectando con {host}…",
+	"mobile.chrome.home.connect": "Conectar un ordenador",
+	"mobile.chrome.home.sign_in": "Inicia sesión para reconectar",
+	"mobile.chrome.home.saved_draft": "Tu borrador está guardado en este teléfono y no se ha enviado.",
+	"mobile.chrome.home.reconnecting": "Reconectando con {host}…",
+	"mobile.chrome.composer.open_queue": "Abrir la cola"
+}

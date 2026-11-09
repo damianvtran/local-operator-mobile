@@ -1,0 +1,93 @@
+# audit.log — hindi wave 6, namespace mobile.home, audit id hi30a1
+# produced by executing the repository's own validator and renderer in this session; not notes
+
+$ cd /Users/damian/workspace/hi-wave && node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, vi, zh-CN)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/verify_ns.mjs mobile.home   # repository parser + formatter, per-key
+# Hindi audit — namespace mobile.home
+# generated: 2026-10-30T16:47:06.607Z
+# worktree: /Users/damian/workspace/hi-wave  HEAD: 647581a4abd5eafce09914b5b1936982749c16c4
+# git status (porcelain): M src/i18n/catalogue.gen.ts | ?? i18n/audits/evidence/hi/ | ?? src/i18n/catalogues/hi/
+
+## inputs
+  en       src/i18n/catalogues/en/mobile.home.json  sha256=4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  keys=27
+  context  src/i18n/catalogues/en/mobile.home.context.json  sha256=db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  keys=27
+  hi       src/i18n/catalogues/hi/mobile.home.json  sha256=b6c5a5142e9e469912bfd72ffd3813d970d43be57d9fcad6ec2078b7cae2ae59  keys=27
+
+## structure
+  [PASS] key set identical — en=27 hi=27
+  [PASS] no key dropped or added
+  [PASS] every key documented in the context sidecar — ctx=27
+  [INFO] placeholder-bearing messages: 0; plural-bearing messages: 0
+  [PASS] placeholder surface identical on every key
+  [PASS] ICU arms identical on every key
+  [PASS] code spans identical on every key
+
+## render through the worktree renderer (parseMessage + formatMessage)
+  [PASS] all 27 values render without error
+
+## typography / Devanagari
+  [PASS] typography predicates clean
+  [INFO] values carrying danda: 4/27; ellipsis U+2026: 3
+
+## mirror check: not a relay namespace (no core mirror required)
+
+## result
+  checks failed: 0
+  VERDICT(mechanical): PASS
+exit=0
+
+$ ./node_modules/.bin/tsx <session-scratch>/compose_ns.mjs mobile.home   # composed sentences quoted in report.md
+# composition for mobile.home
+  queue row, phase=blocked:
+    कतार के संदेश भेजने के लिए फिर कोशिश करें
+    कतार के संदेश देखें
+    → कतार के संदेश भेजने के लिए फिर कोशिश करें ⏎ कतार के संदेश देखें
+  queue row, phase=unconfirmed:
+    शुरू होना पक्का नहीं
+    कतार के संदेश देखें
+    → शुरू होना पक्का नहीं ⏎ कतार के संदेश देखें
+  queue row, phase=not_started:
+    शुरू नहीं हुआ
+    कतार के संदेश देखें
+    → शुरू नहीं हुआ ⏎ कतार के संदेश देखें
+  queue row, phase=sending:
+    कतार के संदेश भेजे जा रहे हैं…
+    कतार के संदेश देखें
+    → कतार के संदेश भेजे जा रहे हैं… ⏎ कतार के संदेश देखें
+  options.fixed as the sheet renders it:
+    इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।
+    → इस बातचीत के शुरुआती विकल्प तय हैं। इसके लाइव नियंत्रणों के लिए “बातचीत का विवरण” देखें।
+    quoted destination title present verbatim: true
+  greeting → starting swap (same slot):
+    आज मैं आपकी किस बात में मदद करूँ?
+    शुरू हो रहा है…
+    → आज मैं आपकी किस बात में मदद करूँ? ⏎ शुरू हो रहा है…
+exit=0
+
+$ cd <session-scratch>/audit && python3 negative_controls.py   # catalogue-wide: every predicate proved falsifiable
+== zero-case discrimination (real messages) ==
+  mobile.schedules.count.wakes: {count, plural, one {# जागृति} other {# जागृतियाँ}}
+  mobile.schedules.show_more.wakes: {hidden, plural, one {# और जागृति दिखाएँ} other {# और जागृतियाँ दिखाएँ}}
+  with an explicit =0 arm the same message would render '0 जागृतियाँ'; the arm list is asserted by the audit harness (render.out.json).
+
+== negative controls ==
+  key-parity (dropped key)                   FIRES   {'mobile.home.connect_disabled_reason': 'भेजने के लिए कंप्यूटर कनेक्ट करें।', 'mobile.home
+  placeholder-name parity (count -> counts)  FIRES   {'src': 'कतार में {counts} संदेश', 'en': '{count} queued'}
+  plural arm presence (other arm deleted)    FIRES   {'src': '{count, plural, one {# सत्र}}'}
+  NFC (precomposed nukta letter U+0958)      FIRES   'क़'
+  ZWNJ/ZWJ inserted                          FIRES   'फ\u200dोल्डर'
+  danda-vs-full-stop (ASCII '.' ending)      FIRES   'शुरू हो रहा है.'
+  ellipsis character ('...' instead of '…')  FIRES   'भेजा जा रहा है...'
+  space before danda                         FIRES   'शुरू हो रहा है ।'
+  nukta consistency (फोल्डर vs फ़ोल्डर)      FIRES   'इस कंप्यूटर पर फोल्डर'
+  double space                               FIRES   'शुरू हो  रहा है'
+
+10/10 predicates fired on their corrupted fixture
+exit=0

@@ -1,0 +1,16 @@
+{
+	"mobile.account_routing.disconnected": "连接电脑后才能更改账户路由。",
+	"mobile.account_routing.error": "无法确认此次更改。检查连接并重新加载，以读取当前策略。",
+	"mobile.account_routing.load_error": "无法加载账户路由。检查连接后重试。",
+	"mobile.account_routing.loading": "正在加载账户路由……",
+	"mobile.account_routing.rejected": "更改未保存。检查所选值或此电脑的设置后重试。",
+	"mobile.account_routing.reload": "重新加载策略",
+	"mobile.account_routing.retry": "重试",
+	"mobile.account_routing.save": "保存策略",
+	"mobile.account_routing.saved": "已保存在此电脑上。",
+	"mobile.account_routing.saving": "正在保存……",
+	"mobile.account_routing.scope": "更改仅对此电脑生效。",
+	"mobile.account_routing.title": "账户路由",
+	"mobile.account_routing.unavailable": "此中继不提供账户路由设置。在此电脑上更新Local Operator。",
+	"mobile.account_routing.unsaved": "尚未保存。"
+}

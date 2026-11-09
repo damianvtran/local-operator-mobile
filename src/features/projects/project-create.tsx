@@ -4,13 +4,14 @@ import { Text, View } from "react-native";
 import { PROJECT_STATUS_ORDER } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
-	DRAFT_KEPT_NOTE,
-	PROJECT_NAME_HINT,
+	draftKeptNote,
 	parseTags,
+	projectNameHint,
 	projectRefusalSentence,
-	WRITE_UNKNOWN_NOTE,
 	writeReceipt,
+	writeUnknownNote,
 } from "@/features/projects/projects-copy";
+import { activeLocale, t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, projectCreateStatusId, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -19,6 +20,18 @@ import { Chip } from "@/ui/components/chip";
 import { Input } from "@/ui/components/input";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
+
+/* Status codes remain the relay's values; only their visible labels are localised.
+ * Keep keys here rather than rendered strings so a later render reads the locale. */
+const STATUS_LABEL_KEYS = {
+	planning: "mobile.projects.status.planning",
+	active: "mobile.projects.status.active",
+	qa: "mobile.projects.status.qa",
+	validation: "mobile.projects.status.validation",
+	paused: "mobile.projects.status.paused",
+	done: "mobile.projects.status.done",
+	archived: "mobile.projects.status.archived",
+} as const;
 
 /**
  * The create sheet, opened from the listing's header (S16's one write on the
@@ -46,7 +59,7 @@ import { Textarea } from "@/ui/components/textarea";
  * moment the write refused, on a surface with no undo. The write's own answer is
  * what this sheet renders instead (the created row's name, in the receipt), and
  * the one state in between is the action's own in-flight one, named in the
- * button. A write the app could not make is `WRITE_UNKNOWN_NOTE`, which says the
+ * button. A write the app could not make is `writeUnknownNote()`, which says the
  * outcome is unknown rather than claiming nothing happened.
  */
 export const ProjectCreateSheet = ({
@@ -73,7 +86,7 @@ export const ProjectCreateSheet = ({
 	 *  survive a dismissal by construction — and that is the rule this slice chose
 	 *  deliberately: a stray tap on the scrim must not throw away a filled form,
 	 *  which is the failure the milestone editor's reset sat on the other side of.
-	 *  What was missing is the reader being TOLD (`DRAFT_KEPT_NOTE`), and this flag
+	 *  What was missing is the reader being TOLD (`draftKeptNote()`), and this flag
 	 *  gates that sentence. */
 	const [keptDraft, setKeptDraft] = useState(false);
 	/*
@@ -149,7 +162,7 @@ export const ProjectCreateSheet = ({
 			/* The receipt names the row the RELAY created, not the text that was
 			 *  typed: a store that normalised something would otherwise be reported
 			 *  as the string this screen holds. */
-			showToast(writeReceipt("Created", answer.project.name));
+			showToast(writeReceipt("created", answer.project.name, "project"));
 			setName("");
 			setDescription("");
 			setStatus("active");
@@ -160,7 +173,7 @@ export const ProjectCreateSheet = ({
 			/* The relay's own sentence when it wrote one — a taken name is a `409
 			 *  project_name_exists` and a refused value a `422 project_invalid`, and
 			 *  both are sentences written for a reader. */
-			setProblem(projectRefusalSentence(error) ?? WRITE_UNKNOWN_NOTE);
+			setProblem(projectRefusalSentence(error) ?? writeUnknownNote());
 		} finally {
 			setBusy(false);
 		}
@@ -178,7 +191,7 @@ export const ProjectCreateSheet = ({
 			 *  form is taller than the window at every detent). */
 			visible={visible}
 			onClose={onClose}
-			title="New project"
+			title={t("mobile.projects.create.title")}
 			testID={SURFACE.projectCreateSheet}
 			footer={
 				<View className="gap-3">
@@ -189,7 +202,7 @@ export const ProjectCreateSheet = ({
 					) : null}
 					<Button
 						testID={CONTROL.projectCreateSubmit}
-						label="Create"
+						label={t("mobile.projects.create.submit")}
 						onPress={() => void submit()}
 						/* The empty-name case is the ONLY client-side refusal: the relay
 						 *  would answer `name is required`, and that tap is worth saving.
@@ -214,46 +227,50 @@ export const ProjectCreateSheet = ({
 						testID={SURFACE.projectCreateDraftNote}
 						className="text-meta text-ink-muted"
 					>
-						{DRAFT_KEPT_NOTE}
+						{draftKeptNote()}
 					</Text>
 				) : null}
 
 				{/* The name grammar, said BEFORE the tap: the relay's own 422 sentence
 				 *  names it too, but a reader should not spend a round trip to learn
 				 *  that a space is not allowed. */}
-				<Text className="text-meta text-ink-dim">{PROJECT_NAME_HINT}</Text>
+				<Text className="text-meta text-ink-dim">{projectNameHint()}</Text>
 
 				<Input
 					testID={CONTROL.projectCreateName}
-					label="Name"
+					label={t("mobile.projects.create.name")}
 					value={name}
 					onChangeText={setName}
-					placeholder="my-project"
+					placeholder={t("mobile.projects.create.name_placeholder")}
 					disabled={busy}
 					autoCapitalize="none"
 				/>
 
 				<Textarea
 					testID={CONTROL.projectCreateDescription}
-					label="Description"
+					label={t("mobile.projects.create.description")}
 					value={description}
 					onChangeText={setDescription}
-					placeholder="What this project is for"
+					placeholder={t("mobile.projects.create.description_placeholder")}
 					disabled={busy}
 					maxLines={4}
 				/>
 
 				<View className="gap-2">
-					<Text className="text-body-sm text-ink-muted">Status</Text>
-					{/* Chips rather than a picker: seven words that fit two rows at the
-					 *  narrowest column, each a 44 pt target, and the selected one is
-					 *  announced as selected rather than only painted. */}
+					<Text className="text-body-sm text-ink-muted">
+						{t("mobile.projects.create.status")}
+					</Text>
+					{/* Chips wrap with the available width and keep full touch targets;
+					 *  the shared control also carries its selection state. */}
 					<View className="flex-row flex-wrap gap-2">
 						{PROJECT_STATUS_ORDER.map((option) => (
 							<Chip
 								key={option}
 								testID={projectCreateStatusId(option)}
-								label={option}
+								label={t(STATUS_LABEL_KEYS[option])}
+								/* The mono face breaks Arabic joining; use the app's prose stack
+								 * for Urdu without changing machine-word chips elsewhere. */
+								labelTypography={activeLocale() === "ur" ? "prose" : "mono"}
 								selected={option === status}
 								disabled={busy}
 								onPress={() => setStatus(option)}
@@ -264,15 +281,15 @@ export const ProjectCreateSheet = ({
 
 				<Input
 					testID={CONTROL.projectCreateTags}
-					label="Tags"
+					label={t("mobile.projects.create.tags")}
 					value={tags}
 					onChangeText={setTags}
-					placeholder="ios, q4"
+					placeholder={t("mobile.projects.create.tags_placeholder")}
 					disabled={busy}
 					autoCapitalize="none"
 				/>
 				<Text className="text-meta text-ink-dim">
-					Separate with commas or spaces.
+					{t("mobile.projects.create.tags_help")}
 				</Text>
 			</View>
 		</Sheet>

@@ -1,0 +1,111 @@
+{
+	"schema": 1,
+	"audit_id": "ru29n1r2",
+	"audit_kind": "same_history_delta_reaudit",
+	"round": 2,
+	"parent_audit_id": "ru29n1",
+	"locale": "ru",
+	"namespace": "mobile.notifications",
+	"file_group": "mobile.notifications",
+	"audit_date": "2026-10-30",
+	"audited_head_commit": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+	"audited_revision": "2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88",
+	"audited_branch": "feat/i18n-russian",
+	"audited_worktree": "/Users/damian/workspace/ru-wave",
+	"audited_worktree_note": "ru is committed at this head (git ls-tree -r HEAD -- src/i18n/catalogues/ru lists 10 files, audit.log coda); the worktree is clean for the catalogues and the projection. This audit wrote only its evidence bundle; no catalogue byte was edited and nothing was committed.",
+	"key_count": {
+		"en": 14,
+		"target": 14,
+		"context": 14
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "d598a29e6e64",
+		"job": null,
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"actual_model_source": "session model-switch headers: anthropic/claude-sonnet-5-5 → openai/gpt-6-astra (provider quota) → kimi/k3.1-pro (provider quota) → radient/auto (provider quota); every command in audit.log ran under the final model",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"fallback_disclosed": true,
+		"independent_from_translator_session": true,
+		"independence": "Different agent, session and context from the translator; not model-diverse (the translator's supplied model is also radient/auto), disclosed rather than closed. No human native-speaker review and no rendered UI frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": null,
+		"job": null,
+		"model": "radient/auto",
+		"actual_model_source": "supplied by the requesting manager; not independently observed here",
+		"date": "2026-10-30"
+	},
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/ru/mobile.notifications/ru29n1r2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.notifications/ru29n1r2/report.md",
+			"sha256": "df5429835a85aa28480e728712f1209453ed82bc2fb9468a1313b7ebaa6e40a9",
+			"bytes": 1777
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.notifications/ru29n1r2/audit.log",
+			"sha256": "e75d975a9c567a4d87a2ae450ec080222a01e51790d9e86694c7f3ab7b6151e4",
+			"bytes": 31620
+		}
+	],
+	"ledger": {
+		"command": null,
+		"note": "No i18n ledger or audit-ledger command exists at this head (audit.log); docs/i18n.md makes the PR report the artifact of record. A row is proposed here, not written."
+	},
+	"audit_notes_not_execution_log": "report.md holds judgement and per-key reasoning; audit.log is the executed transcript (bash set -x) and is identical in the four group-B delta bundles because it covers all four namespaces unfiltered. Notes never prove execution.",
+	"rendered_artifact": {
+		"captured": false,
+		"native_review": false,
+		"claim": "No rendered frame and no human native-speaker review. Widths in fit are CoreText font metrics, not pixels."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.notifications.json",
+			"sha256": "c6e58c6129727513a00b0c67abdfc6cd5284d326792f00886767a26a60778064"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.notifications.context.json",
+			"sha256": "240ec6befb692d72ac51a346fbc70a6f79e5853ae03f62ce25654d81db7f21e6"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/ru/mobile.notifications.json",
+			"sha256": "d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf"
+		}
+	},
+	"delta_scope": {
+		"changed_keys": [],
+		"proof": "target sha256 d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf == ru29n1 input_hashes.target.sha256 (d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf); the fix commit did not touch this file and the group-wide harness re-ran clean on the shipped head",
+		"source_unchanged": "en and context byte-identical to round 1"
+	},
+	"round1_findings": [],
+	"current_report_verdict": {
+		"status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"blocker_ids": [],
+		"major_ids": [],
+		"finding_ids": [],
+		"carried_open": [],
+		"reason": "No bytes changed in this delta and the round-1 pass (recorded and passed) audited exactly these bytes; the group-wide mechanical harness and i18n:check re-ran clean at 2921aea."
+	},
+	"mechanical": {
+		"repo_validator": "npm run -s i18n:catalogue:check -> exit 0: 'src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)'",
+		"repo_gate": "npm run -s i18n:check -> exit 0: catalogue check plus 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d'",
+		"pair_audit": "all four group-B namespaces parsed in en and ru (38/15/14/10 keys); zero missing, zero extra, authoring order identical, zero duplicate keys in the JSON text; paramOrArmProblems: []; every ru plural carries one/few/many/other; select arms identical to en; no bidi/zero-width; «ёлочки» and U+2026 only",
+		"gate_test": "vitest run src/i18n/__tests__/catalogues.test.ts -> 39 passed (39). Round 1 reported 1 failed / 37 passed on this file because ru was a directory without being shipped; the flip closed that gate."
+	},
+	"heredity": {
+		"semantic_evidence": "i18n/audits/evidence/ru/mobile.notifications/ru29n1/report.md — the round-1 independent pass over these exact bytes",
+		"target_sha256": "d3370e5eb37200607c6321218624718b34ca2dff6a1b3d684248cb252dcd1ecf"
+	}
+}

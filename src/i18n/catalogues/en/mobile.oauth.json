@@ -1,0 +1,6 @@
+{
+	"mobile.oauth.received": "Sign-in response received. Return to the app.",
+	"mobile.oauth.return": "Return to Local Operator",
+	"mobile.oauth.invalid": "This sign-in request was not accepted.",
+	"mobile.oauth.failed": "Sign-in could not finish. Try again."
+}

@@ -1,0 +1,100 @@
+
+$ git rev-parse --short HEAD
+4fd4ad7c
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/ur/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json
+6f7cd3c398ed2a2b8545baec51d25ca1818159c863a682bc83ae292efb153917  src/i18n/catalogues/ur/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libd-r2/check.py ur
+== ur: keys=31 same_keyset=True ctx_keyset=True json_valid=True
+Cf/Cc chars: []
+NFC-stable: True trim-clean: True
+placeholder mismatches: []
+ascii-period mismatch: []
+endings: {'mobile.library.browse.no_tags': '۔', 'mobile.library.detail.missing_file': '۔', 'mobile.library.detail.no_source': '۔', 'mobile.library.detail.no_tags': '۔', 'mobile.library.editor.discard_title': '؟', 'mobile.library.editor.tag_limit': '۔', 'mobile.library.discard_not_saved': '۔'}
+arabic yeh/kaf (U+064A/U+0643): []
+devanagari/arabic-indic digits: []
+[exit 0]
+
+$ node render.ts (parseMessage+formatMessage from src/i18n/messages.ts; 0/1/2/21 where a placeholder exists)
+== ur
+mobile.library.action.add_tag شامل کریں
+mobile.library.action.edit ترمیم کریں
+mobile.library.action.open_chat گفتگو کھولیں
+mobile.library.browse.any_tag کوئی بھی ٹیگ
+mobile.library.browse.filter_by_kind قسم کے مطابق فلٹر کریں
+mobile.library.browse.filters فلٹرز
+mobile.library.browse.filters_count [0] فلٹرز · 0
+mobile.library.browse.filters_count [1] فلٹرز · 1
+mobile.library.browse.filters_count [2] فلٹرز · 2
+mobile.library.browse.filters_count [21] فلٹرز · 21
+mobile.library.browse.more_kinds مزید اقسام
+mobile.library.browse.no_tags ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے وقت ٹیگ شامل کرتی ہے۔
+mobile.library.browse.refresh لائبریری تازہ کریں
+mobile.library.browse.search_label لائبریری میں تلاش کریں
+mobile.library.browse.search_placeholder نام، ٹیگ یا الفاظ
+mobile.library.browse.sort ترتیب دیں
+mobile.library.browse.status حالت
+mobile.library.browse.tag ٹیگ
+mobile.library.detail.message_label اس اثاثے کے بارے میں پیغام
+mobile.library.detail.missing_file یہ فائل منتقل ہو گئی ہے یا حذف کر دی گئی ہے۔ اس کا نام، ٹیگز اور تفصیل اب بھی یہاں موجود ہیں۔
+mobile.library.detail.no_source اس اثاثے کے لیے کوئی ماخذ گفتگو درج نہیں ہے۔
+mobile.library.detail.no_tags ابھی کوئی ٹیگ نہیں۔ ایک شامل کرنے کے لیے تفصیلات میں ترمیم کریں۔
+mobile.library.detail.seen_in ان گفتگوؤں میں دیکھا گیا
+mobile.library.editor.description تفصیل
+mobile.library.editor.discard_title تبدیلیاں چھوڑیں؟
+mobile.library.editor.name نام
+mobile.library.editor.new_tag نیا ٹیگ
+mobile.library.editor.new_tag_placeholder topic-name
+mobile.library.editor.tag_limit [0] ایک اثاثے پر ٹیگز کی حد 0 ہے۔
+mobile.library.editor.tag_limit [1] ایک اثاثے پر ٹیگز کی حد 1 ہے۔
+mobile.library.editor.tag_limit [2] ایک اثاثے پر ٹیگز کی حد 2 ہے۔
+mobile.library.editor.tag_limit [21] ایک اثاثے پر ٹیگز کی حد 21 ہے۔
+mobile.library.editor.tags ٹیگز
+mobile.library.editor.title تفصیلات میں ترمیم کریں
+mobile.library.title لائبریری
+mobile.library.discard_not_saved نام، تفصیل اور ٹیگز میں کی گئی تبدیلیاں محفوظ نہیں ہوں گی۔
+mobile.library.discard_confirm چھوڑ دیں
+[exit 0]
+
+$ grep call sites for the two new keys (usage) and the dialog's hard-coded labels
+[usage grep exit 0 - 1 means no call site]
+			<Dialog
+				visible={discard}
+				title={t("mobile.library.editor.discard_title")}
+				body="The name, description and tags you changed will not be saved."
+				confirmLabel="Discard"
+				destructive
+132:							accessibilityLabel="Cancel"
+190:										label="Cancel"
+
+$ round-1 finding check (current value vs round-1 replacement)
+libb-ur-1 MAJOR mobile.library.editor.new_tag_placeholder
+   round-1 replacement: topic-name
+   current            : topic-name
+   byte-exact applied : True
+libb-ur-2 MAJOR mobile.library.detail.seen_in
+   round-1 replacement: ان گفتگوؤں میں دیکھا گیا
+   current            : ان گفتگوؤں میں دیکھا گیا
+   byte-exact applied : True
+libb-ur-3 MAJOR mobile.library.browse.no_tags
+   round-1 replacement: ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے وقت ٹیگ شامل کرتی ہے۔
+   current            : ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے وقت ٹیگ شامل کرتی ہے۔
+   byte-exact applied : True
+libb-ur-4 MINOR mobile.library.editor.tag_limit
+   round-1 replacement: ایک اثاثے پر ٹیگز کی حد {limit} ہے۔
+   current            : ایک اثاثے پر ٹیگز کی حد {limit} ہے۔
+   byte-exact applied : True
+
+$ round-1 bundle hash vs now
+round-1 audited sha256: 22e5cf3611f379dc53ff724228bf8b2ad6e68f218d3138e82fcc9617a91298ce
+current sha256        : 6f7cd3c398ed2a2b8545baec51d25ca1818159c863a682bc83ae292efb153917
+round 1 attests current text: False

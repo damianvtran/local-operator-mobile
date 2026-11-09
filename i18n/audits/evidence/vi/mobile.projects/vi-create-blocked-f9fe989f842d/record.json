@@ -1,0 +1,22 @@
+{
+  "status": "blocked",
+  "scope": "17 new mobile.projects.create/status keys",
+  "locale": "vi",
+  "auditor": "translation-auditor",
+  "model": "openai/gpt-6.1-terra",
+  "timestamp_utc": "2026-11-02T00:54:34.461255+00:00",
+  "base_head": "8d0ee6a4082a2b9c19b331eab724637797150798",
+  "input_sha256": {
+    "src/i18n/catalogues/en/mobile.projects.json": "b5a81c9a56d68ede6175e996cce22571432d5da111771b0e437d9801c23cbf1b",
+    "src/i18n/catalogues/vi/mobile.projects.json": "873fc26d8f8c5bcfad5d7cb112140511407040eb2333392d219eca1a1066fed2"
+  },
+  "keys_read": 0,
+  "public_copy_route": "read_public_copy",
+  "route_receipts": {
+    "vi": "refused: src/i18n/catalogues/vi/mobile.projects.json differs from HEAD; commit the public copy before auditing it",
+    "en_wildcard": "refused: key not found in this catalogue: *"
+  },
+  "sidecar": "unroutable; not attempted",
+  "redaction_scan": "Both catalogue byte scans returned false for literal [REDACTED]; no catalogue content read for audit",
+  "limitations": "No meaning, ICU, placeholder, glossary, context, register or width conclusions possible. No Node, tests, installs or browser used."
+}

@@ -172,3 +172,71 @@ describe("an unreadable store is never an empty list", () => {
 		expect(caught.kind).toBe("malformed-frame");
 	});
 });
+
+/**
+ * The head line's FORWARD branch — the one a past-dated capture cannot reach.
+ *
+ * Every instant in `schedules-populated` was captured on 2026-10-08, so the live
+ * entry's head line reads `… overdue` today and `mobile.schedules.head.next`
+ * renders on no frame a rig can pin (QA Q2). The mock's `schedules-future` state
+ * exists for that and is asserted on the wire in
+ * `tools/mock-relay/scenario-control.test.ts`; this test takes the same shape
+ * through the REAL client and asks the SURFACE's own reading what it says, so
+ * "the arm is renderable" is a rendered sentence rather than a scenario name.
+ */
+describe("the head line's forward clause", () => {
+	interface ForwardBody {
+		wakes: {
+			entries: {
+				dormant: boolean;
+				ghost: boolean;
+				next_due_at: number | null;
+				schedules: { id: string; next_due_at: number; stale: boolean }[];
+			}[];
+		};
+	}
+
+	it("answers `· next …` while the reader is still before the instant", async () => {
+		/* One `nowMs` builds the body and reads it, so the label cannot drift between
+		 * the two halves of the assertion.
+		 *
+		 * THE BODY IS THE SHAPE `schedules-future` SERVES: the capture's own armed wake
+		 * (`w-armed`, the row the fixture dates an hour out) dated four minutes ahead,
+		 * with the stale and overdue rows dropped — a wake the supervisor has given up
+		 * on cannot be due in the future, so a future-dated frame that carried one would
+		 * put a flag and a clock in contradiction. The scenario's own construction is
+		 * asserted on the WIRE in `tools/mock-relay/scenario-control.test.ts`; this test
+		 * asks what the surface makes of such an answer. */
+		const nowMs = Date.now();
+		const body = structuredClone(
+			captured("schedules-populated.json"),
+		) as ForwardBody;
+		const live = body.wakes.entries.find(
+			(entry) => !entry.dormant && !entry.ghost,
+		);
+		expect(live).toBeDefined();
+		if (live === undefined) return;
+		live.schedules = live.schedules.filter((row) => row.id === "w-armed");
+		expect(live.schedules).toHaveLength(1);
+		for (const row of live.schedules) row.next_due_at = nowMs + 4 * 60_000;
+		live.next_due_at = nowMs + 4 * 60_000;
+
+		const answer = await clientFor(await serve(200, body)).schedules();
+		const view = wakeEntryViews(answer.wakes, nowMs).find(
+			(entry) => !entry.parked && !entry.ghost,
+		);
+
+		/* English spells it `{head} · next {label}` with the relative label `in 4m`. */
+		expect(view?.clause).toBe("1 wake · next in 4m");
+		expect(view?.rows[0]?.due).toBe("in 4m");
+
+		/* And the branch is chosen by the CLOCK, not by the payload: read the same
+		 * answer five minutes later and the clause has switched to the overdue one.
+		 * The label is `60s`, not `1m`: the port of the CLI's formatter keeps SECONDS
+		 * under 90 (`dueLabel`). */
+		const later = wakeEntryViews(answer.wakes, nowMs + 5 * 60_000).find(
+			(entry) => !entry.parked && !entry.ghost,
+		);
+		expect(later?.clause).toBe("1 wake · 60s overdue");
+	});
+});

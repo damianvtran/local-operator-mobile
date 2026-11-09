@@ -1,0 +1,54 @@
+name: iOS OAuth callback proof
+
+on:
+  pull_request:
+    paths:
+      - modules/radient-loopback/**
+      - src/connection/loopback.ts
+      - src/connection/radient-oauth.ts
+      - scripts/ci/oauth-callback-proof/**
+      - .github/workflows/oauth-callback-proof.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oauth-callback-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-native:
+    name: Real system browser to IPv4 loopback
+    runs-on: macos-26
+    # One build-for-testing, then four serial native UI cases (~15-18m total).
+    # Keep room for the real 5m deadline and one eligible startup-only retry;
+    # no product assertion is retried and no production timeout is shortened.
+    timeout-minutes: 35
+    env:
+      XCODEGEN_VERSION: "2.46.0"
+      # Computed from the 2.46.0 xcodegen.zip release asset, not an unpinned latest.
+      XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+    steps:
+      - uses: actions/checkout@v6
+      - name: Record actual hosted native toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+      - name: Install verified pinned XcodeGen
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/xcodegen.zip"
+          curl -fsSL "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip" -o "$archive"
+          printf '%s  %s\n' "$XCODEGEN_SHA256" "$archive" | shasum -a 256 -c -
+          destination="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION"
+          unzip -q "$archive" -d "$destination"
+          echo "$destination/xcodegen/bin" >> "$GITHUB_PATH"
+          echo "XCODEGEN=$destination/xcodegen/bin/xcodegen" >> "$GITHUB_ENV"
+      - name: Compile production transport and exercise real browser callbacks
+        run: bash scripts/ci/oauth-callback-proof/run.sh
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: oauth-callback-native-${{ github.sha }}
+          path: ${{ runner.temp }}/oauth-callback-proof/evidence/

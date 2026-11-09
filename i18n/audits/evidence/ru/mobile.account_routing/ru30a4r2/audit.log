@@ -1,0 +1,80 @@
+# audit id: ru30a4r2   (delta round 2 of mobile.account_routing)
+# locale: ru   namespace: mobile.account_routing   audit date: 2026-10-30
+# auditor: i18n-auditor (lopdev team), session c9aa2aca8837
+# This file is the captured transcript of the commands below (bash set -x), not a summary.
+
++ cd /Users/damian/workspace/ru-wave
++ git rev-parse --abbrev-ref HEAD
+feat/i18n-russian
++ git rev-parse HEAD
+2921aea7b1de32f3d64a4df5c8a1a1b5eaab9f88
++ shasum -a 256 src/i18n/catalogues/ru/mobile.account_routing.json
++ cut '-d ' -f1
+c1d8cfd327be840aaf756d10da3dc82b7f4aabce3ac32a1abefdd40f91d63341
++ npm run -s i18n:catalogue:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, ru, zh-CN)
++ npm run -s i18n:strings:check
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs ba39018c493d
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs mobile.account_routing
+# namespace mobile.account_routing  (group A)
+# keys en=14 ru=14 context=14
+# sha256 en=34fa87b25d0f65b83f675f51a99e592235902a25878938850287cbe397ed8a03
+# sha256 context=2103f8d2a4f3b649bbde90c78d8bf74628211bc99836920fb3ffa3eea985c58c
+# sha256 ru=c1d8cfd327be840aaf756d10da3dc82b7f4aabce3ac32a1abefdd40f91d63341
+
+=== key sets ===
+keys identical: true
+
+=== placeholders (names + types, read by the repo's parser) ===
+  same  mobile.account_routing.disconnected  en=[]  ru=[]
+  same  mobile.account_routing.error  en=[]  ru=[]
+  same  mobile.account_routing.load_error  en=[]  ru=[]
+  same  mobile.account_routing.loading  en=[]  ru=[]
+  same  mobile.account_routing.rejected  en=[]  ru=[]
+  same  mobile.account_routing.reload  en=[]  ru=[]
+  same  mobile.account_routing.retry  en=[]  ru=[]
+  same  mobile.account_routing.save  en=[]  ru=[]
+  same  mobile.account_routing.saved  en=[]  ru=[]
+  same  mobile.account_routing.saving  en=[]  ru=[]
+  same  mobile.account_routing.scope  en=[]  ru=[]
+  same  mobile.account_routing.title  en=[]  ru=[]
+  same  mobile.account_routing.unavailable  en=[]  ru=[]
+  same  mobile.account_routing.unsaved  en=[]  ru=[]
+
+=== plural nodes ===
+  plural nodes in mobile.account_routing: 0 (none to check — stated, not assumed)
+
+=== code tokens, product names, typography ===
+  checks run: 142; failed: 0
+
+=== rendered through the shipped formatter (formatMessage + parseMessage, locale ru) ===
+  mobile.account_routing.disconnected	Подключитесь к компьютеру, чтобы изменить маршрутизацию аккаунтов.
+  mobile.account_routing.error	Не удалось подтвердить изменение. Проверьте подключение и перезагрузите политику, чтобы прочитать текущую.
+  mobile.account_routing.load_error	Не удалось загрузить маршрутизацию аккаунтов. Проверьте подключение и повторите попытку.
+  mobile.account_routing.loading	Загрузка маршрутизации аккаунтов…
+  mobile.account_routing.rejected	Изменение не сохранено. Проверьте значение или настройки этого компьютера и повторите попытку.
+  mobile.account_routing.reload	Перезагрузить политику
+  mobile.account_routing.retry	Повторить
+  mobile.account_routing.save	Сохранить политику
+  mobile.account_routing.saved	Сохранено на этом компьютере.
+  mobile.account_routing.saving	Сохранение…
+  mobile.account_routing.scope	Изменения применяются только к этому компьютеру.
+  mobile.account_routing.title	Маршрутизация аккаунтов
+  mobile.account_routing.unavailable	Настройки маршрутизации аккаунтов недоступны на этом ретрансляторе. Обновите Local Operator на этом компьютере.
+  mobile.account_routing.unsaved	Ещё не сохранено.
+
+=== SUMMARY mobile.account_routing: 142 checks, 0 failed ===
++ node /Users/damian/.local-operator/sessions/c9aa2aca8837/scratchpad/ru-delta-a/verify.mjs --negative
+=== NEGATIVE CONTROLS — every check must FAIL on an injected defect ===
+PASS  placeholder renamed: reported the injected defect
+PASS  placeholder type changed: reported the injected defect
+PASS  plural arm missing under ru rules: reported the injected defect
+PASS  product name mutated: reported the injected defect
+PASS  ASCII dots for the ellipsis: reported the injected defect
+PASS  straight quotes for «ёлочки»: reported the injected defect
+PASS  wrong terminal punctuation: reported the injected defect
+PASS  JSON parse: reported the injected defect
+PASS  mirrored byte drift: reported the injected defect
+
+negative controls complete (13 injected defects reported)
++ set +x

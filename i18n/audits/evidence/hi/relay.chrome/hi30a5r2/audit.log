@@ -1,0 +1,88 @@
+# audit.log — hindi wave 6 · namespace relay.chrome · delta audit hi30a5r2
+# repository /Users/damian/workspace/hi-wave at d4e31b1915b558171ded41501c741568f0854f3f; no tracked file differs from HEAD (`git diff HEAD -- src/ i18n/` empty)
+# round-1 audit hi30a5: /Users/damian/workspace/hi-wave/i18n/audits/evidence/hi/relay.chrome/hi30a5/
+# every command below ran in this session; the text after each prompt is its captured output
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:41683) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/hi-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/hi-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 647581a4abd5
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/delta_check.py relay.chrome
+# namespace relay.chrome  round-1 audit hi30a5  audited revision d4e31b1
+
+## inputs (sha256)
+  en         src/i18n/catalogues/en/relay.chrome.json  e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1
+  context    src/i18n/catalogues/en/relay.chrome.context.json  195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b
+  hi (now)   src/i18n/catalogues/hi/relay.chrome.json  afcfa7fbf08b687b7f6f03a8b63d2959bca62654d59be962ecb6e699a2b037ae
+  hi (r1)    src/i18n/catalogues/hi/relay.chrome.json  afcfa7fbf08b687b7f6f03a8b63d2959bca62654d59be962ecb6e699a2b037ae  (from hi30a5/record.json)
+  source unchanged since round 1: en=True context=True
+  target unchanged since round 1: True
+
+## round-1 findings: byte-exact resolution
+  (round 1 raised no finding for this namespace)
+## structure and predicates on the current bytes
+  [PASS] key set identical — en=4 hi=4
+  [PASS] every key has a context note — ctx=4
+  [INFO] placeholder-bearing messages: 0; plural/select messages: 0
+  [PASS] placeholder surface identical
+  [PASS] ICU arms identical
+  [PASS] NFC
+  [PASS] no ZWJ/ZWNJ/ZWSP
+  [PASS] no bidi controls
+  [PASS] Latin digits only
+  [PASS] no space before punctuation
+  [PASS] U+2026 ellipsis
+  [PASS] danda not ASCII '.'
+  [PASS] curly quotes only
+  [PASS] no तुम/तू
+  [PASS] no double/edge space
+
+## delta diff coverage (old values recovered from the round-1 measurement artifacts)
+  values comparable for this namespace: 0 of 4
+  changed: 0
+
+## rendered through the repository's own parseMessage/formatMessage
+  every value in this namespace rendered without error in the group pass
+  (render_group_a.mts: 66 values across group A, 0 failures)
+exit=0
+
+$ swift /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/measure.swift   # CoreText CTLineGetTypographicBounds, AppKit system font
+session.resume	size=14/400	width=43.7pt	cells=5	जारी रखें
+session.resuming	size=14/400	width=64.6pt	cells=8	खुल रहा है…
+
+$ ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/render_group_a.mts   # group pass; block for this namespace
+## relay.chrome (4 keys)
+exit=0
+
+$ python3 /Users/damian/.local-operator/sessions/69ed4c2e63b0/scratchpad/hi-r2/negative_controls.py   # group-level predicate falsifiability
+  66 keys x 10 predicates on real values: PASS (0 failures)
+  [MISMATCH] mobile.session_health:mobile.session_health.still_reopening
+  mismatches in group A: 1
+RESULT: PASS (10/10 controls fired, 0 false positives)
+exit=0
+
+$ python3 - <<'PY'   # mirror identity against core origin/main
+core origin/main 8076c56acd56f07f1cabf90fd7fca8bf0e5acdff
+relay.chrome: mobile carries 4 keys; 4/4 byte-identical to core hi; core namespace has 85 keys
+  SAME  relay.chrome.session.subtitle.not_answering | उत्तर नहीं दे रहा
+  SAME  relay.chrome.session.subtitle.ended | समाप्त
+  SAME  relay.chrome.session.resume | जारी रखें
+  SAME  relay.chrome.session.resuming | खुल रहा है…
+relay.health: mobile carries 8 keys; 8/8 byte-identical to core hi; core namespace has 8 keys
+  SAME  relay.health.live | ऑनलाइन
+  SAME  relay.health.live_detail | आपके कंप्यूटर पर चल रहा है — संदेश तुरंत पहुँच जाते हैं
+  SAME  relay.health.reconnecting | फिर से कनेक्ट हो रहा
+  SAME  relay.health.reconnecting_detail | इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है।
+  SAME  relay.health.dropped_detail | आपका कंप्यूटर अभी इस सत्र तक नहीं पहुँच पा रहा है और लगातार कोशिश कर रहा है। जब तक वह पहुँच नहीं पाता, संदेश भेजते ही विफल हो जाता है और आपका लिखा हुआ टेक्स्ट इनपुट फ़ील्ड में ही रहता है।
+  SAME  relay.health.quiet_detail | आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा।
+  SAME  relay.health.ended_detail | इतिहास सुरक्षित है। इसे अपने होम फ़ोल्डर में फिर से खोलने के लिए संदेश भेजें या “जारी रखें” दबाएँ।
+  SAME  relay.health.ended_send_failed | यह सत्र समाप्त हो चुका है और अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें, या ऊपर “समाप्त” दबाएँ और “जारी रखें” चुनें।
+exit=0

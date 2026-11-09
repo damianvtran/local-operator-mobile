@@ -9,8 +9,8 @@ import {
 	projectDisplayName,
 	projectRefusalSentence,
 	projectRowMeta,
-	STALE_BADGE_LABEL,
 	showsStaleMark,
+	staleBadgeLabel,
 } from "@/features/projects/projects-copy";
 import { ProjectsStateMarkers } from "@/features/projects/projects-markers";
 import { CONTROL, EMPTY, projectRowId, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
@@ -243,7 +243,7 @@ export default function Projects() {
 									// explicit `accessibilityLabel` REPLACES the children's text, so a
 									// screen reader would otherwise announce the name and the counts and
 									// never the one word that says the row's progress has gone old.
-									accessibilityLabel={`${projectDisplayName(project)}, ${projectRowMeta(project)}${showsStaleMark(project) ? `, ${STALE_BADGE_LABEL}` : ""}`}
+									accessibilityLabel={`${projectDisplayName(project)}, ${projectRowMeta(project)}${showsStaleMark(project) ? `, ${staleBadgeLabel()}` : ""}`}
 									onPress={() => router.push(`/projects/${project.id}`)}
 									testID={projectRowId(project.id)}
 								>
@@ -265,7 +265,7 @@ export default function Projects() {
 												 *  phone's clock — and shown only where a progress line exists
 												 *  to be stale (`showsStaleMark`). */}
 												{showsStaleMark(project) ? (
-													<Badge label={STALE_BADGE_LABEL} tone="warning" />
+													<Badge label={staleBadgeLabel()} tone="warning" />
 												) : null}
 											</View>
 											<Text

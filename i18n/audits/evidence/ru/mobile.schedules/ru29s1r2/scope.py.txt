@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Prove the delta scope: inverting exactly the applied fixes must reproduce the
+round-1 audited bytes' SHA-256. If any other byte had moved, the hash would not
+match. Read-only: nothing is written."""
+import hashlib
+import json
+
+REPO = "/Users/damian/workspace/ru-wave"
+
+
+def swap(text, new, old):
+    assert text.count(new) == 1, (new[:60], text.count(new))
+    return text.replace(new, old)
+
+
+r1s = json.load(open(f"{REPO}/i18n/audits/evidence/ru/mobile.schedules/ru29s1/record.json"))
+r1p = json.load(open(f"{REPO}/i18n/audits/evidence/ru/mobile.projects/ru29p1/record.json"))
+
+s = open(f"{REPO}/src/i18n/catalogues/ru/mobile.schedules.json", encoding="utf-8").read()
+f = {x["id"]: x for x in r1s["findings"]}
+s = swap(s, f["RU-SCH-1"]["replacement"], f["RU-SCH-1"]["current"])
+s = swap(s, f["RU-SCH-2"]["replacement"], f["RU-SCH-2"]["current"])
+s = swap(s, "Приостановлено — пробуждения возобновятся после следующего хода этой беседы",
+         "Приостановлено — пробуждения возобновятся после её следующего хода")
+s = swap(s, "Приостановлено — мониторы возобновятся, когда снова запустится эта беседа",
+         "Приостановлено — мониторы возобновятся, когда её беседа снова запустится")
+h = hashlib.sha256(s.encode()).hexdigest()
+print("mobile.schedules: reconstructed", h)
+print("mobile.schedules: round-1 target", r1s["input_hashes"]["target"]["sha256"])
+print("mobile.schedules:", "SCOPE_EXACT" if h == r1s["input_hashes"]["target"]["sha256"] else "NO_MATCH")
+
+p = open(f"{REPO}/src/i18n/catalogues/ru/mobile.projects.json", encoding="utf-8").read()
+fp = {x["id"]: x for x in r1p["findings"]}
+p = swap(p, "created {Создана веха}", "created {Добавлена веха}")
+p = swap(p, "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.",
+         "От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов, и не может начинаться с дефиса.")
+p = swap(p, '"mobile.projects.session_state.missing": "не найдена"',
+         '"mobile.projects.session_state.missing": "отсутствует"')
+p = swap(p, fp["RU-PRJ-4"]["replacement"], fp["RU-PRJ-4"]["current"])
+h2 = hashlib.sha256(p.encode()).hexdigest()
+print("mobile.projects: reconstructed", h2)
+print("mobile.projects: round-1 target", r1p["input_hashes"]["target"]["sha256"])
+print("mobile.projects:", "SCOPE_EXACT" if h2 == r1p["input_hashes"]["target"]["sha256"] else "NO_MATCH")
+
+raise SystemExit(0 if h == r1s["input_hashes"]["target"]["sha256"] and h2 == r1p["input_hashes"]["target"]["sha256"] else 1)

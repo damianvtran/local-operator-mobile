@@ -19,6 +19,7 @@ import { useConnection } from "@/features/auth/connection-provider";
 import { loadNotifications } from "@/notifications/native";
 import { useUiStore } from "@/state/ui-store";
 import { clearAttachmentCache } from "@/team-bridge/attachments";
+import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import {
 	installTeamBridgeNotifications,
@@ -29,7 +30,10 @@ import {
 import { retirementAccessForAccount } from "@/team-bridge/push-account";
 import { createPushLifecycle } from "@/team-bridge/push-lifecycle";
 import { teamBridgeThreadPath } from "@/team-bridge/push-payload";
-import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
+import {
+	registerTeamBridgeRetirement,
+	retireTeamBridgeScope,
+} from "@/team-bridge/retirement";
 import {
 	createTeamBridgeStore,
 	type TeamBridgeState,
@@ -40,6 +44,7 @@ import { teamBridgeFixture } from "@/testing/team-bridge-fixture";
 const Context = createContext<
 	| (TeamBridgeStore & {
 			hub: HubClient;
+			avatars: AvatarCache;
 			registerPush: () => Promise<void>;
 			pushes: ReturnType<typeof createPushLifecycle>;
 	  })
@@ -69,8 +74,12 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		if (!fixture) return;
 		const theme = new URLSearchParams(location.search).get("tb-theme");
+		/* Main replaced `setThemePreference` with the selection/mode pair
+		 *  (`state/theme-preference.ts`); `setThemeMode` is its equivalent for the
+		 *  fixture's light/dark override, and a non-default mode is never undone by
+		 *  hydration (`hydrateThemeSelection` only fills the default). */
 		if (theme === "light" || theme === "dark")
-			useUiStore.getState().setThemePreference(theme);
+			useUiStore.getState().setThemeMode(theme);
 	}, [fixture]);
 	const value = useMemo(() => {
 		const accessToken = fixture
@@ -126,12 +135,17 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		return {
 			...createTeamBridgeStore({ hub: () => hub, accessToken }),
 			hub,
+			// Created with this account-keyed value, so a different account
+			// never reads this cache (`src/team-bridge/avatars.ts`).
+			avatars: createAvatarCache(),
 			pushes,
 			registerPush: () => pushes.register(),
 		};
 	}, [fixture, connection.radientAccountId]);
 	useEffect(() => {
-		const remove = registerTeamBridgeRetirement(() => value.pushes.retire());
+		const remove = registerTeamBridgeRetirement(() =>
+			retireTeamBridgeScope(value),
+		);
 		return () => {
 			/*
 			 * This provider is keyed by account (`TeamBridgeProvider`), so its
@@ -142,6 +156,9 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			 * still in flight are returned to nobody and never stored for B.
 			 */
 			clearAttachmentCache();
+			// Account replacement unmounts this provider; drop its photos now
+			// rather than waiting for the collector, and retire reads in flight.
+			value.avatars.clear();
 			remove();
 			void value.pushes.retire().catch(() => undefined);
 		};
@@ -151,6 +168,7 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		if (!connection.radientSignedIn && !fixture) {
 			value.pushes.suspend();
 			value.actions.reset();
+			value.avatars.clear();
 			void value.actions.checkStatus();
 			return;
 		}

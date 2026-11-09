@@ -1,0 +1,170 @@
+Independent French namespace audit — actual command output
+Audit ids: fr29rh1 (relay.health), fr29sh1 (mobile.session_health), fr29rc1 (relay.chrome)
+Auditor session: 208d48c700c7. Actual model: kimi/k3.1-pro, observed harness fallback.
+Date: 2026-10-29. Read-only catalogue audit; no catalogue edits or commits.
+
+The worktree changed while the audit was running. The original brief's 9/10/4
+split was superseded by moving ended_placeholder into mobile.session_health.
+All outputs below are for the final current 8/11/4 split (23 values total).
+
+
+===== COMMAND 1: revision and merge state =====
+$ git rev-parse HEAD MERGE_HEAD
+4500723be18a94e53cde39a6f3f9ee1aca92ddb5
+d5babfa1854416265df06ba9a78609348db7f13d
+
+===== COMMAND 2: repository validator on final assigned bytes =====
+$ npm run -s i18n:check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)
+(node:65556) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 34274c2d328d
+EXIT=0
+
+===== COMMAND 3: independent all-key mechanical and core-value comparisons =====
+$ python3 <scratchpad>/fr_namespace_audit.py
+SECTION input_hashes_and_key_parity
+relay.health keys en/context/fr=8/8/8 JSON=valid unique_keys=yes exact_order_parity=yes
+  en: src/i18n/catalogues/en/relay.health.json sha256=65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f
+  context: src/i18n/catalogues/en/relay.health.context.json sha256=b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec
+  fr: src/i18n/catalogues/fr/relay.health.json sha256=2875b4d9cdd1f67a1606ca799c41b837af3454ca13f949595c9790b42f6b751c
+mobile.session_health keys en/context/fr=11/11/11 JSON=valid unique_keys=yes exact_order_parity=yes
+  en: src/i18n/catalogues/en/mobile.session_health.json sha256=727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f
+  context: src/i18n/catalogues/en/mobile.session_health.context.json sha256=a8a29fe07e15725c434429017552411f9833a6688924c668cdab02289044725a
+  fr: src/i18n/catalogues/fr/mobile.session_health.json sha256=c28f177062c2a1a2d30a11e3167e40be0ae6d87f10f963fce762840fc2a6404c
+relay.chrome keys en/context/fr=4/4/4 JSON=valid unique_keys=yes exact_order_parity=yes
+  en: src/i18n/catalogues/en/relay.chrome.json sha256=e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1
+  context: src/i18n/catalogues/en/relay.chrome.context.json sha256=195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b
+  fr: src/i18n/catalogues/fr/relay.chrome.json sha256=ff7ccc8b2f778cea54b1d3c53bc2cfdae4b8ff899023c7205c38f645c7edb987
+
+SECTION icu_token_typography_bidi_inventory
+relay.health.live: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=8 utf16=8 utf8_bytes=8 special=
+relay.health.live_detail: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=75 utf16=75 utf8_bytes=80 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+2014 EM DASH; U+2019 RIGHT SINGLE QUOTATION MARK
+relay.health.reconnecting: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=11 utf16=11 utf8_bytes=11 special=
+relay.health.reconnecting_detail: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=202 utf16=202 utf8_bytes=216 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+00EA LATIN SMALL LETTER E WITH CIRCUMFLEX; U+2019 RIGHT SINGLE QUOTATION MARK; U+202F NARROW NO-BREAK SPACE
+relay.health.dropped_detail: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=190 utf16=190 utf8_bytes=203 special=U+00E0 LATIN SMALL LETTER A WITH GRAVE; U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+00F4 LATIN SMALL LETTER O WITH CIRCUMFLEX; U+2019 RIGHT SINGLE QUOTATION MARK
+relay.health.quiet_detail: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=227 utf16=227 utf8_bytes=241 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+00EA LATIN SMALL LETTER E WITH CIRCUMFLEX; U+2014 EM DASH; U+2019 RIGHT SINGLE QUOTATION MARK
+relay.health.ended_detail: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=124 utf16=124 utf8_bytes=133 special=U+00AB LEFT-POINTING DOUBLE ANGLE QUOTATION MARK; U+00BB RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK; U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+2019 RIGHT SINGLE QUOTATION MARK; U+202F NARROW NO-BREAK SPACE
+relay.health.ended_send_failed: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=144 utf16=144 utf8_bytes=162 special=U+00AB LEFT-POINTING DOUBLE ANGLE QUOTATION MARK; U+00BB RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK; U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+00EA LATIN SMALL LETTER E WITH CIRCUMFLEX; U+2019 RIGHT SINGLE QUOTATION MARK; U+202F NARROW NO-BREAK SPACE
+mobile.session_health.control_hint: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=67 utf16=67 utf8_bytes=70 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+2019 RIGHT SINGLE QUOTATION MARK
+mobile.session_health.menu_label: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=21 utf16=21 utf8_bytes=21 special=
+mobile.session_health.menu_hint: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=27 utf16=27 utf8_bytes=27 special=
+mobile.session_health.menu_title: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=7 utf16=7 utf8_bytes=7 special=
+mobile.session_health.reopening: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=50 utf16=50 utf8_bytes=53 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+2014 EM DASH
+mobile.session_health.still_reopening: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=62 utf16=62 utf8_bytes=67 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+2014 EM DASH; U+2019 RIGHT SINGLE QUOTATION MARK
+mobile.session_health.resume_refused_title: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=18 utf16=18 utf8_bytes=18 special=
+mobile.session_health.resume_refused: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=65 utf16=65 utf8_bytes=69 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+00EA LATIN SMALL LETTER E WITH CIRCUMFLEX; U+2019 RIGHT SINGLE QUOTATION MARK
+mobile.session_health.resume_gone: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=37 utf16=37 utf8_bytes=40 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE; U+2019 RIGHT SINGLE QUOTATION MARK
+mobile.session_health.resume_no_route: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=53 utf16=53 utf8_bytes=53 special=
+mobile.session_health.ended_placeholder: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=44 utf16=44 utf8_bytes=46 special=U+2026 HORIZONTAL ELLIPSIS
+relay.chrome.session.subtitle.not_answering: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=13 utf16=13 utf8_bytes=14 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE
+relay.chrome.session.subtitle.ended: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=8 utf16=8 utf8_bytes=9 special=U+00E9 LATIN SMALL LETTER E WITH ACUTE
+relay.chrome.session.resume: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=9 utf16=9 utf8_bytes=9 special=
+relay.chrome.session.resuming: ICU_args=none markup/code/commands=none bidi_controls=0 ASCII_apostrophes=0 cells=8 utf16=8 utf8_bytes=10 special=U+2026 HORIZONTAL ELLIPSIS
+All 23 keys: exact no-argument ICU parity; no Rich/backtick/flag/path tokens; no bidi controls; typography scan passed.
+
+SECTION core_adoption_comparison_against_origin_main
+relay.health.live: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.health.live_detail: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.health.reconnecting: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.health.reconnecting_detail: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.health.dropped_detail: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.health.quiet_detail: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.health.ended_detail: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.health.ended_send_failed: en_value_byte_identical=yes fr_value_byte_identical=yes
+relay.chrome.session.subtitle.not_answering: fr_value_byte_identical=yes
+relay.chrome.session.subtitle.ended: fr_value_byte_identical=yes
+relay.chrome.session.resume: fr_value_byte_identical=yes
+relay.chrome.session.resuming: fr_value_byte_identical=yes
+core origin/main has no relay.health.ended_placeholder; mobile-only key is mobile.session_health.ended_placeholder
+
+SECTION budget_and_cross_label_checks
+relay.health.live: fr_cells=8 budget=16 over_by=-8 en_cells=4
+relay.health.reconnecting: fr_cells=11 budget=16 over_by=-5 en_cells=12
+mobile.session_health.ended_placeholder: fr_cells=44 budget=36 over_by=8 en_cells=35
+Resume and Ended labels match their relay.chrome French referents exactly.
+mobile.session_health.ended_placeholder ends in the single ellipsis character U+2026.
+
+SECTION measured_result
+PASS: 23 current keys, hash-bound, JSON/key/ICU/token/bidi/typography/core-adoption/label checks all passed. Width over-budget is reported as a language finding, not treated as rendered evidence.
+EXIT=0
+
+===== COMMAND 4: production parser and renderFor on every key =====
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON <scratchpad>/render_fr_namespaces.ts
+relay.health.live: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.health.live_detail: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.health.reconnecting: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.health.reconnecting_detail: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.health.dropped_detail: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.health.quiet_detail: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.health.ended_detail: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.health.ended_send_failed: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.control_hint: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.menu_label: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.menu_hint: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.menu_title: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.reopening: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.still_reopening: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.resume_refused_title: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.resume_refused: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.resume_gone: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.resume_no_route: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+mobile.session_health.ended_placeholder: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.chrome.session.subtitle.not_answering: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.chrome.session.subtitle.ended: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.chrome.session.resume: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+relay.chrome.session.resuming: PARSE_OK params=[] RENDER_FR_EQUALS_BYTES=yes RENDER_EN_EQUALS_BYTES=yes
+RENDER PASS: all 23 current keys returned their exact source/target values through renderFor; no ICU arguments or plurals/selects occur.
+EXIT=0
+
+===== COMMAND 5: repository tests (failures disclosed, not a translation pass claim) =====
+$ npx vitest run src/i18n/__tests__ src/features/session/health.test.ts src/features/session/composer.test.ts
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.2 /Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n
+
+··························································································································································
+
+ Test Files  7 passed (7)
+      Tests  154 passed (154)
+   Start at  14:32:56
+   Duration  5.93s (transform 85%, import 9%, tests 6%, worker 1%)
+
+  Transform  transforming modules took 15.57s · 85% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+EXIT=1
+
+===== COMMAND 6: current test expectations explaining failures =====
+$ rg -n "expected: (9|10|8|11)|IDENTICAL_BY_DESIGN" src/i18n/__tests__/catalogues.test.ts
+71:		expected: 10,
+94:		expected: 8,
+105:		expected: 11,
+211:const IDENTICAL_BY_DESIGN: Readonly<Record<string, string>> = {
+224:	const allowlisted = Object.keys(IDENTICAL_BY_DESIGN).sort();
+238:		for (const [key, reason] of Object.entries(IDENTICAL_BY_DESIGN)) {
+
+===== COMMAND 7: reference and ledger provenance =====
+$ shasum -a 256 <core>/i18n/style-guides/fr.md <core>/i18n/glossary.md
+b916f3d1c30b0a2e18fc94ca51d130f60e86b3b17b1918aa51f5c5da6d52ec39  /Users/damian/local-operator/i18n/style-guides/fr.md
+ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd  /Users/damian/local-operator/i18n/glossary.md
+i18n/ledger.json ABSENT
+i18n/audits/evidence/README.md ABSENT
+
+===== COMMAND 8: final input hashes after all checks =====
+$ shasum -a 256 <nine assigned input files>
+b23f770b852c8f3ebdeceb3f733b973c8e0a51f654d6ad5cd98ea00cc89bb3ec  src/i18n/catalogues/en/relay.health.context.json
+65e8c90187268d8e675d3548e91e1d0405fde94ea3123c6c06fcf9433bd96d6f  src/i18n/catalogues/en/relay.health.json
+a8a29fe07e15725c434429017552411f9833a6688924c668cdab02289044725a  src/i18n/catalogues/en/mobile.session_health.context.json
+727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f  src/i18n/catalogues/en/mobile.session_health.json
+195bd21edf6b0bb7eba14ca804846ea5e5b26c097560584ccc677a20f8160b4b  src/i18n/catalogues/en/relay.chrome.context.json
+e96bfd5f4947af490ca41013d7d3c6df4b526cea4c6fe7404f0259dba159dad1  src/i18n/catalogues/en/relay.chrome.json
+2875b4d9cdd1f67a1606ca799c41b837af3454ca13f949595c9790b42f6b751c  src/i18n/catalogues/fr/relay.health.json
+c28f177062c2a1a2d30a11e3167e40be0ae6d87f10f963fce762840fc2a6404c  src/i18n/catalogues/fr/mobile.session_health.json
+ff7ccc8b2f778cea54b1d3c53bc2cfdae4b8ff899023c7205c38f645c7edb987  src/i18n/catalogues/fr/relay.chrome.json

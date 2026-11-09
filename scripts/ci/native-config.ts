@@ -143,6 +143,15 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 		}
 	}
 
+	// Check the built product, not only app.config.ts: a config/plugin omission
+	// otherwise leaves each uploaded build waiting for a manual compliance answer.
+	if (plist.ITSAppUsesNonExemptEncryption !== false) {
+		findings.push({
+			field: "ITSAppUsesNonExemptEncryption",
+			problem: "expected false after the OS-only cryptography dependency audit",
+		});
+	}
+
 	const description = plist.NSLocalNetworkUsageDescription;
 	if (typeof description !== "string" || description.trim().length === 0) {
 		findings.push({
@@ -301,7 +310,7 @@ export function checkAndroidManifest(xml: string): Finding[] {
 /** One line for the CI step summary, naming what was asserted. */
 export const summarize = (platform: "ios" | "android"): string =>
 	platform === "ios"
-		? `built Info.plist carries NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+		? `built Info.plist carries ITSAppUsesNonExemptEncryption=false, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
 		: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------

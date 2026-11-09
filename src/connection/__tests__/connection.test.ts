@@ -18,9 +18,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-
+import { readWithDeadline } from "../../relay/platform-fetch";
 import {
 	accessTokenNeedsRefresh,
+	accountIdFromIdToken,
 	authorizationUrl,
 	base64Url,
 	CALLBACK_PORT,
@@ -288,7 +289,7 @@ describe("the OAuth callback is verified wherever it arrives", () => {
 	it("reports a refusal the console put in the query string", () => {
 		expect(() =>
 			parseCallbackUrl(
-				"http://127.0.0.1:54549/callback?error=access_denied",
+				"http://127.0.0.1:54549/callback?error=access_denied&state=s1",
 				"s1",
 			),
 		).toThrow(/refused/);
@@ -332,6 +333,84 @@ describe("sign-in hands back tokens, or a cancellation", () => {
 			return url.replace("state=S", `state=${state}`);
 		},
 		dismiss: async () => undefined,
+	});
+
+	it("binds before browser launch and exchanges against the same ephemeral redirect", async () => {
+		const redirect = "http://127.0.0.1:49152/callback";
+		const order: string[] = [];
+		const { calls, fetchImpl } = recordingFetch(() =>
+			jsonResponse({ access_token: "synthetic" }),
+		);
+		await signInWithRadient({
+			browser: {
+				returnsCallback: true,
+				prepareRedirect: async () => {
+					order.push("bound");
+					return redirect;
+				},
+				open: async (url, actualRedirect) => {
+					order.push("browser");
+					expect(actualRedirect).toBe(redirect);
+					const params = new URL(url).searchParams;
+					expect(params.get("redirect_uri")).toBe(redirect);
+					return `${redirect}?code=synthetic&state=${params.get("state")}`;
+				},
+				dismiss: async () => {
+					order.push("closed");
+				},
+			},
+			fetchImpl,
+			crypto: fakeCrypto(),
+		});
+		expect(order).toEqual(["bound", "browser", "closed"]);
+		expect(
+			(calls[0]?.body as Record<string, string> | undefined)?.redirect_uri,
+		).toBe(redirect);
+	});
+
+	it("cleans up even when native prepare fails before the browser opens", async () => {
+		let dismissed = false;
+		await expect(
+			signInWithRadient({
+				browser: {
+					returnsCallback: true,
+					prepareRedirect: async () => {
+						throw new Error("bind failed");
+					},
+					open: async () => {
+						throw new Error("must not open");
+					},
+					dismiss: async () => {
+						dismissed = true;
+					},
+				},
+				crypto: fakeCrypto(),
+			}),
+		).rejects.toThrow("bind failed");
+		expect(dismissed).toBe(true);
+	});
+
+	it("aborts an active browser and never exchanges a late callback", async () => {
+		const controller = new AbortController();
+		const { calls, fetchImpl } = recordingFetch(() =>
+			jsonResponse({ access_token: "must-not-exchange" }),
+		);
+		await expect(
+			signInWithRadient({
+				signal: controller.signal,
+				browser: {
+					returnsCallback: true,
+					open: async (url) => {
+						controller.abort();
+						return `http://127.0.0.1:54549/callback?code=late&state=${new URL(url).searchParams.get("state")}`;
+					},
+					dismiss: async () => undefined,
+				},
+				fetchImpl,
+				crypto: fakeCrypto(),
+			}),
+		).rejects.toThrow("sign-in was cancelled");
+		expect(calls).toHaveLength(0);
 	});
 
 	it("exchanges the code the browser session returned", async () => {
@@ -489,6 +568,82 @@ describe("token refresh keeps a rotated refresh token", () => {
 	});
 });
 
+describe("the Radient account id comes from the id_token's sub (PR #122 M2)", () => {
+	/* A placeholder JWT: header.payload.signature, base64url. Never a real token. */
+	const jwt = (claims: object) =>
+		`e30.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.sig`;
+
+	it("reads sub on the refresh grant, and never the email", async () => {
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({
+				access_token: "at2",
+				expires_in: 3600,
+				id_token: jwt({ sub: "acct_placeholder", email: "x@example.com" }),
+			}),
+		);
+		const tokens = await refreshRadientTokens(
+			{ ...TOKENS, refresh: "rt1" },
+			{ fetchImpl, now: () => 0 },
+		);
+		expect(tokens.account_id).toBe("acct_placeholder");
+	});
+
+	it("reads sub on the authorization-code grant too (review round 2, m2)", async () => {
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({
+				access_token: "at1",
+				refresh_token: "rt1",
+				expires_in: 3600,
+				id_token: jwt({ sub: "acct_code_placeholder", email: "x@example.com" }),
+			}),
+		);
+		const tokens = await exchangeCode("c", "http://127.0.0.1/callback", "v", {
+			fetchImpl,
+			now: () => 0,
+		});
+		expect(tokens.account_id).toBe("acct_code_placeholder");
+		/* A sign-in with no id_token knows no account, rather than guessing one. */
+		const bare = recordingFetch(() =>
+			jsonResponse({ access_token: "at1", expires_in: 3600 }),
+		);
+		expect(
+			(
+				await exchangeCode("c", "http://127.0.0.1/callback", "v", {
+					fetchImpl: bare.fetchImpl,
+					now: () => 0,
+				})
+			).account_id,
+		).toBeNull();
+	});
+
+	it("keeps the previous id when a refresh carries no id_token, and is null when none was ever known", async () => {
+		const { fetchImpl } = recordingFetch(() =>
+			jsonResponse({ access_token: "at2", expires_in: 3600 }),
+		);
+		expect(
+			(
+				await refreshRadientTokens(
+					{ ...TOKENS, refresh: "rt1", account_id: "acct_kept" },
+					{ fetchImpl, now: () => 0 },
+				)
+			).account_id,
+		).toBe("acct_kept");
+		expect(
+			(
+				await refreshRadientTokens(
+					{ ...TOKENS, refresh: "rt1" },
+					{ fetchImpl, now: () => 0 },
+				)
+			).account_id,
+		).toBeNull();
+	});
+
+	it("reads nothing from a malformed token rather than failing sign-in", () => {
+		for (const bad of [undefined, 42, "", "a.b", "a.!!!.c", jwt({ sub: "  " })])
+			expect(accountIdFromIdToken(bad)).toBeNull();
+	});
+});
+
 describe("the token exchange itself", () => {
 	it("reports a missing access token instead of storing nothing", async () => {
 		const { fetchImpl } = recordingFetch(() =>
@@ -564,12 +719,67 @@ describe("discovery turns tunnels into computers, honestly", () => {
 		expect(unreachable.kind).toBe("unreachable");
 	});
 
+	/* Sign-in waits on this read after the browser sheet closes (TestFlight 453).
+	 * Both stall shapes — no headers, and headers with a body that never ends —
+	 * must end as `unreachable` (grant kept) within the budget. */
+	it("bounds a read that never answers, headers or body", async () => {
+		const never = new Promise<never>(() => undefined);
+		const noHeaders = await discoverComputers({
+			accessToken: () => "at",
+			timeoutMs: 50,
+			fetchImpl: (() => never) as unknown as typeof globalThis.fetch,
+		});
+		expect(noHeaders.kind).toBe("unreachable");
+		const stalledBody = await discoverComputers({
+			accessToken: () => "at",
+			timeoutMs: 50,
+			fetchImpl: (async () =>
+				({
+					status: 200,
+					ok: true,
+					json: () => never,
+				}) as unknown as Response) as unknown as typeof globalThis.fetch,
+		});
+		expect(stalledBody.kind).toBe("unreachable");
+	});
+
+	/* PR #178 R1-1: a listener added to an already-aborted signal never fires, so
+	 * a cancelled sign-in still sent its one-time code to the token endpoint. */
+	it("sends nothing when the caller's signal is already aborted", async () => {
+		let dispatched = 0;
+		const fetchImpl = (async (_url: unknown, init?: RequestInit) => {
+			dispatched += 1;
+			if (init?.signal?.aborted)
+				throw new DOMException("This operation was aborted", "AbortError");
+			return jsonResponse({ access_token: "late" });
+		}) as unknown as typeof globalThis.fetch;
+		const cancelled = new AbortController();
+		cancelled.abort();
+		await expect(
+			readWithDeadline(
+				fetchImpl,
+				"https://radient.example/token",
+				{ method: "POST", signal: cancelled.signal },
+				1_000,
+				async (response) => await response.json(),
+			),
+		).rejects.toThrow();
+		expect(dispatched).toBe(0);
+		await expect(
+			exchangeCode("one-time-code", "http://127.0.0.1:1/callback", "v", {
+				fetchImpl,
+				signal: cancelled.signal,
+			}),
+		).rejects.toMatchObject({ failure: "network" });
+		expect(dispatched).toBe(0);
+	});
+
 	it("treats a 401 as a sign-in, and an unknown shape as a version problem rather than an empty account", async () => {
 		expect(
 			(
 				await discoverComputers({
 					accessToken: () => "at",
-					fetchImpl: recordingFetch(() => jsonResponse({ msg: "no" }, 401))
+					fetchImpl: recordingFetch(() => jsonResponse({ error: "no" }, 401))
 						.fetchImpl,
 				})
 			).kind,
@@ -649,7 +859,10 @@ describe("the tunnel session lifecycle", () => {
 
 	const mintHandler = () => (url: string) =>
 		url.includes("/session/code")
-			? jsonResponse({ code: "one-time", state: "s", callback_uri: `${url}` })
+			? jsonResponse({
+					msg: "success",
+					result: { code: "one-time", state: "s", callback_uri: `${url}` },
+				})
 			: jsonResponse({
 					access_token: "grant",
 					refresh_token: "handle",
@@ -716,7 +929,7 @@ describe("the tunnel session lifecycle", () => {
 
 	it("maps a 402 to billing, which is what it means", async () => {
 		const { fetchImpl } = recordingFetch(() =>
-			jsonResponse({ msg: "tunnel billing is inactive" }, 402),
+			jsonResponse({ error: "tunnel billing is inactive" }, 402),
 		);
 		const manager = new TunnelSessionManager({
 			fetchImpl,
@@ -768,9 +981,12 @@ describe("the tunnel session lifecycle", () => {
 			}
 			if (url.includes("/session/code")) {
 				return jsonResponse({
-					code: "one-time",
-					state: "s",
-					callback_uri: url,
+					msg: "Authorization code created",
+					result: {
+						code: "one-time",
+						state: "s",
+						callback_uri: url,
+					},
 				});
 			}
 			return jsonResponse({
@@ -835,7 +1051,11 @@ describe("the tunnel session lifecycle", () => {
 			seen.push(url);
 			if (url.includes("/session/refresh"))
 				return jsonResponse({ error: "invalid_grant" }, 400);
-			if (url.includes("/session/code")) return jsonResponse({ code: "c" });
+			if (url.includes("/session/code"))
+				return jsonResponse({
+					msg: "Authorization code created",
+					result: { code: "c" },
+				});
 			return jsonResponse({
 				access_token: "fresh",
 				refresh_token: "fresh-handle",

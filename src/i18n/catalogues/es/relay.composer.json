@@ -1,0 +1,5 @@
+{
+	"relay.composer.action.stop": "detener",
+	"relay.composer.action.stopping": "deteniendo",
+	"relay.composer.action.stop_agent": "detener al agente"
+}

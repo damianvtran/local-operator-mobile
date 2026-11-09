@@ -1,0 +1,14 @@
+# NEGATIVE CONTROL for urdu-sheet.yaml: the identical walk against a relay
+# serving `en`. The sheet must read English and the Urdu title must be ABSENT, so
+# a build or harness that silently fell back to English (or one that always
+# rendered Urdu) cannot satisfy the Urdu proof by accident.
+appId: ${APP_ID}
+---
+- runFlow: open-sheet.yaml
+- extendedWaitUntil:
+    visible:
+      text: "New project"
+    timeout: 15000
+- assertNotVisible:
+    text: "نیا پروجیکٹ"
+- takeScreenshot: sheet-settled

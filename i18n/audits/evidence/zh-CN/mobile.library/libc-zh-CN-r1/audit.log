@@ -1,0 +1,111 @@
+# audit.log - libc-zh-CN-r1 mobile.library. Real output of /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/run.sh zh-CN, run 2026-10-31T13:47:38Z. Reads of call sites / sibling catalogues (sed/grep/python) are the auditor's own and are not replayed here.
+
+$ git rev-parse --short HEAD
+4fd4ad7c
+[exit 0]
+
+$ git status --short -- src/i18n/catalogues/zh-CN/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+ M src/features/library/library-detail.tsx
+ M src/ui/components/dialog.tsx
+?? src/i18n/catalogues/en/mobile.library.context.json
+?? src/i18n/catalogues/en/mobile.library.json
+?? src/i18n/catalogues/zh-CN/mobile.library.json
+[exit 0]
+
+$ shasum -a 256 src/i18n/catalogues/zh-CN/mobile.library.json src/i18n/catalogues/en/mobile.library.json src/i18n/catalogues/en/mobile.library.context.json src/i18n/catalogues/zh-CN/mobile.common.json
+27a055806e3d3f87e57bc2bdadeac3a39827cf317045d9a0ec97f2af9e6c3b61  src/i18n/catalogues/zh-CN/mobile.library.json
+710ec289379787f8d86cac0ea4b5d029df02ea3e577ac86e3ab6f80a3a343382  src/i18n/catalogues/en/mobile.library.json
+bb7b6a5cb68ea0281b3aa3b4eb2ab3031986d15546e99e91bae48d50fbe853bc  src/i18n/catalogues/en/mobile.library.context.json
+f5498e5e1e9718f194190aa78bae6e39b84e96b7c1b7979663d5bcd68a51a131  src/i18n/catalogues/zh-CN/mobile.common.json
+[exit 0]
+
+$ grep -n mobile.library.discard\|mobile.library.editor.discard_title\|mobile.common.cancel src/features/library/library-detail.tsx src/ui/components/dialog.tsx
+src/features/library/library-detail.tsx:825:								label={t("mobile.common.cancel")}
+src/features/library/library-detail.tsx:916:				title={t("mobile.library.editor.discard_title")}
+src/features/library/library-detail.tsx:917:				body={t("mobile.library.discard_not_saved")}
+src/features/library/library-detail.tsx:918:				confirmLabel={t("mobile.library.discard_confirm")}
+src/ui/components/dialog.tsx:133:							accessibilityLabel={t("mobile.common.cancel")}
+src/ui/components/dialog.tsx:191:										label={t("mobile.common.cancel")}
+[exit 0]
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (180 keys, 12 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+[exit 0]
+
+$ python3 /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/checks.py zh-CN
+en keys 31 sidecar keys 31 sidecar==en True
+zh-CN: keys=31 same_keyset_as_en=True all_values_str=True
+bidi/zero-width chars: 0
+Cf/Cc: []
+NFC-stable: True
+leading/trailing space: []
+U+FFFD / mojibake markers: []
+placeholder/ICU defects: none
+sentence keys (en ends with .): 6
+full-stop mismatch (locale stop vs en): none
+ASCII-quote / ASCII apostrophe in values: none
+special spaces (NNBSP U+202F / NBSP U+00A0): []
+new_tag_placeholder 'topic-name' matches server grammar ^[a-z0-9][a-z0-9_-]{0,23}$ : True
+mid-dot kept in filters_count: True
+discard_confirm != common cancel:
+   common.cancel = '取消' | discard_confirm = '放弃' | equal: False
+   common.save = '保存'
+length (chars) of button/chip/label values:
+   action.add_tag                 2 chars (en 3)  添加
+   action.edit                    2 chars (en 4)  编辑
+   action.open_chat               4 chars (en 9)  打开对话
+   browse.any_tag                 4 chars (en 7)  任意标签
+   browse.filters                 2 chars (en 7)  筛选
+   browse.more_kinds              4 chars (en 10)  更多类型
+   browse.sort                    2 chars (en 4)  排序
+   browse.status                  2 chars (en 6)  状态
+   browse.tag                     2 chars (en 3)  标签
+   discard_confirm                2 chars (en 7)  放弃
+   editor.discard_title           5 chars (en 16)  放弃更改？
+   browse.search_placeholder      8 chars (en 18)  名称、标签或文字
+[exit 0]
+
+### rendered text, real args (limit=12; count=1,2,5), via src/i18n/messages.ts, WITH any prescribed replacement beneath
+
+$ node /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/render.ts zh-CN /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/libc/zh-CN.repl.json
+action.add_tag                   {}           => 添加
+action.edit                      {}           => 编辑
+action.open_chat                 {}           => 打开对话
+browse.any_tag                   {}           => 任意标签
+browse.filter_by_kind            {}           => 按类型筛选
+browse.filters                   {}           => 筛选
+browse.filters_count             {"count":1}  => 筛选 · 1
+browse.filters_count             {"count":2}  => 筛选 · 2
+browse.filters_count             {"count":5}  => 筛选 · 5
+browse.more_kinds                {}           => 更多类型
+browse.no_tags                   {}           => 暂无标签。Librarian整理资源时会自动添加。
+browse.refresh                   {}           => 刷新资料库
+browse.search_label              {}           => 搜索资料库
+browse.search_placeholder        {}           => 名称、标签或文字
+browse.sort                      {}           => 排序
+browse.status                    {}           => 状态
+browse.tag                       {}           => 标签
+detail.message_label             {}           => 关于此资源的消息
+detail.missing_file              {}           => 此文件已被移动或删除。名称、标签和描述仍保留在这里。
+detail.no_source                 {}           => 此资源没有记录来源会话。
+                                 REPLACEMENT  => 此资源没有记录来源对话。
+detail.no_tags                   {}           => 暂无标签。编辑详情即可添加。
+detail.seen_in                   {}           => 出现于
+editor.description               {}           => 描述
+editor.discard_title             {}           => 放弃更改？
+editor.name                      {}           => 名称
+editor.new_tag                   {}           => 新标签
+editor.new_tag_placeholder       {}           => topic-name
+editor.tag_limit                 {"limit":12} => 每个资源最多可添加12个标签。
+editor.tags                      {}           => 标签
+editor.title                     {}           => 编辑详情
+title                            {}           => 资料库
+discard_not_saved                {}           => 对名称、描述和标签所做的更改不会保存。
+discard_confirm                  {}           => 放弃
+[exit 0]
+
+### re-hash at end of run (file must be unchanged)
+
+$ shasum -a 256 src/i18n/catalogues/zh-CN/mobile.library.json
+27a055806e3d3f87e57bc2bdadeac3a39827cf317045d9a0ec97f2af9e6c3b61  src/i18n/catalogues/zh-CN/mobile.library.json
+[exit 0]

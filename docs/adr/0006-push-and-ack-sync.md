@@ -1,6 +1,40 @@
 # ADR 0006 — Push notifications and cross-surface acknowledgement
 
-- **Status:** Proposed (for implementation)
+- **Status:** **Accepted (2026-10-29) — implementation not started.** A `Status` change settles the
+  transport, not the build: **no implementation work, no cloud-side schema and no dependency
+  addition exist yet**, and every cloud-side statement below stays marked *(proposal)* for the
+  separate reason that this repository has no access to that code.
+- **Decision record (operator, 2026-10-29): allow FCM only — add Firebase to the EXISTING Radient
+  Google Cloud project for push, and to nothing else.** What that registers is the constraint
+  stated in the next bullet; what it does not permit — no Firebase database, auth or hosting — is
+  §5, "What FCM is here, and what it is not". The operator's own console steps and the slices that
+  follow are in [`docs/publishing/push-setup.md`](../publishing/push-setup.md).
+- **The constraint the present decision answers, stated up front:**
+  **Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
+  project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+  Blaze plan once it is billed. Radient's prior **"Radient does not use Firebase"** decision
+  (2026-10-28) therefore ruled out Android background push, and the operator resolved that
+  collision on **2026-10-29** by allowing the registration and nothing further (§5 sets out what it
+  changes and what it does not).
+- **Amendment (2026-11-03): `data.sound`.** The visible emits (`completion`, `digest`) carry the
+  computer's selected notification sound — a built-in id, `"default"` or `"none"` — and the cloud
+  maps it to `aps.sound` / an Android channel; it never composes from it, so P2 holds. A **custom**
+  sound selected on the computer (or any id the phone has no file for) sends `soft-pulse` in
+  `data.sound`, and sound turned off sends `none`. The `attention` form carries no `sound`. Made **before S7 builds
+  against the freeze**; stated in §3.2's field tables and literals, and filed in core's
+  `fixtures/push/` (local-operator's notification-sounds C3).
+- **Amendment (2026-11-04): custom sounds on the phone — two optional fields.** Custom
+  sounds are no longer "not on the phone in v1": the phone fetches the computer's custom sound
+  through the tunnel and caches it (operator request, 2026-11-04). The freeze therefore adds
+  `data.sound_custom` (`"c_<sha256[:16]>"`, completion and digest) and the per-device
+  `devices[].sound_custom_ready` (bool), and the cloud picks per device: **ready** → the custom
+  file (`aps.sound = "<sound_custom>.wav"`) and channel (`sound.<sound_custom>`); **otherwise** →
+  `data.sound`, mapped exactly as the 2026-11-03 amendment says. Both are **optional and sent when
+  a custom sound is selected** (core notification-sounds C5, local-operator#3428): `sound_custom`
+  only when sound is enabled and the selected custom sound's file exists, and then
+  `sound_custom_ready` on **every** live device row; a built-in selection carries neither, so its
+  shape is unchanged. S7's `extra="forbid"` validation must accept both from day one. `data.sound`
+  stays required and unchanged.
 - **Date:** 2026-09-30
 - **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions listed
   below) **and** Local Operator (core) maintainers — this record is deliberately cross-repository,
@@ -581,6 +615,32 @@ and why §3.4's content-derived key has something to mint it.
 
 #### 2.2 What the cloud holds, and what it must not
 
+**The store, named.** The cloud-held records below live in **MongoDB Atlas**, the managed database
+Radient's cloud already runs on (operator decision, 2026-10-28: "state is stored in MongoDB Atlas").
+**Custody is not uniform, so each row is read with its own row rather than with this sentence:** the
+**Credential (per device)** row is the *machine's* record — its `device_key` is written to the
+machine's 0600 file and is never stored in Atlas — and the **Credentials** row (the APNs `.p8`,
+the FCM service account) lives in the cloud's **secret store**, not in a collection. Every other row
+is an Atlas collection.
+
+**Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
+project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+Blaze plan once it is billed ([Understand Firebase
+projects](https://firebase.google.com/docs/projects/learn-more), read 2026-10-28). **That
+registration is the operator's decision of 2026-10-29, allowed for the FCM send API only**
+([`docs/publishing/push-setup.md`](../publishing/push-setup.md)); the data layer does not move with
+it, and §5 says exactly where the permission stops.
+
+What the design does use, so that "no Firebase" is not read as more than it is: app state in Atlas,
+Google identity in the Google Cloud project + Identity Toolkit, Microsoft identity in the Azure
+tenant. FCM's one role is the Android push transport (§5, "What FCM is here, and what it is not"),
+and that role ends at the device: it is a delivery rail, not a place state is kept. Its one
+qualification — an accepted message that FCM may hold for up to four weeks by default before the app
+sees it — is in §5 and changes no ownership: the store of record is Atlas. A reader
+who took "FCM + `google-services.json`" to mean this ADR adopts Firebase as the cloud's data layer
+would be reading the opposite of what is designed — which is why the store is named rather than left
+implicit: a record table with no named store is a table an implementer is free to put anywhere.
+
 | Record | Fields | Why it is the minimum |
 |---|---|---|
 | **Device** | `device_id`, `platform`, the push token, `environment` (`sandbox`/`production` — only the app knows which build it is), app build, `created_at`, `last_seen_at`, and the state markers **`revoked_at` / `unpaired_at` / `expired_at`** — **not** `credential_live`, which lives in the Credential row below (`n3`, so one fact has one home) | token rotation and revocation are the whole of device management; **the markers are the states §4 defines, and §4's precedence (revoked > unpaired > expired) is what every reader of the row — the register route, `list`, the delivery gate — resolves, so one row cannot be read two ways** |
@@ -591,8 +651,15 @@ and why §3.4's content-derived key has something to mint it.
 | **Credentials** | the APNs `.p8` key id + team id; the FCM service account | the reason the cloud has to exist at all |
 | **Grant (per device)** *(cloud, proposal)* | `grant_id`, `device_id`, the computer it belongs to, `minted_at`, `last_refused_at` — **the shape is the note's** ([`docs/push-cloud-ops.md`](../push-cloud-ops.md), its credential-limb paragraph), which owns the grant's record; naming it here stops the two documents deferring to each other ([`docs/push-cloud-ops.md`](../push-cloud-ops.md)); this ADR fixes only the two properties rule 2 depends on | **the enforceable half of §4 rule 2 on the Radient route** (round 5 Q-F8): it is *minted* at registration against an `install_id` the machine's record carries, *required* for delivery (fan-out refuses without it), and *refused* for a row whose marker forbids it. The one property that cannot be verified from this repository — a mint refused while the account has revoked that computer's access — is stated as a **cloud-side requirement** in §4 rule 2 and in §7, not assumed here. **Its life — storage, refresh, rotation** (round 6 QA Q-F8, which caught that a record with no life cannot be implemented): it **lives in the cloud's own store** beside the device row *(proposal)*; it is **refreshed** from the machine's next `credential_live` report rather than from a clock, so the cloud re-arms it from evidence; it is **rotated** — invalidated and re-minted at the next registration — when an **owner** revokes it, or when the device re-registers (which re-mints the key, §3.1); and a **mint is refused outright** while the account's access for that computer is revoked. "The machine never refreshes a grant" in rule 2 means *the machine*, not the cloud |
 **What the cloud must NOT hold:** transcripts, conversation names, session ids, working directories,
-model names, prompt text, **read state or read history**, and **no unread count** (§1.5). §4 says
+model names, prompt text, **read state or read history**, **no unread count** (§1.5), and **no
+Firebase-hosted store of any kind** — the store is Atlas, and a second data layer would be a second
+answer to a question this ADR answers once. §4 says
 what it does learn, honestly, including the residue.
+
+**Android background push via FCM requires adding Firebase to a Google Cloud project** — the same
+project, which gains a `firebase:enabled` label, shares its IAM with Firebase, and moves to the
+Blaze plan once it is billed. **Registered, for the FCM send API only** (operator decision,
+2026-10-29), which is the decision this ADR implements and not a licence to keep anything there.
 
 **Two retention rules this ADR adopts, and one honest gap** (designed in the cloud ops note,
 [`docs/push-cloud-ops.md`](../push-cloud-ops.md), PR #15 — the note stays the operational runbook;
@@ -1040,6 +1107,7 @@ phone's number drops* — actually exist, which no slice did before.
 { "aps": { "alert": {"title": "Local Operator",
                      "body": "Task complete · 2 conversations need you"},
            "thread-id": "<conversation handle>",
+           "sound": "soft_pulse.wav",                    // mapped from data.sound: "-" → "_" (bundled file name)
            "interruption-level": "active" },
   "data": { "v": 1,
             "type": "completion",                       // "completion" | "attention" | "digest"
@@ -1048,7 +1116,9 @@ phone's number drops* — actually exist, which no slice did before.
             "completion_token": "<uuid>",
             "kind": "complete|error|interrupted|closed|retired",
             "emit_id": "<uuid, minted by the machine per emit>",
-            "count": 2 } }
+            "count": 2,
+            "sound": "soft-pulse" } }                   // built-in id | "default" | "none"
+            // optional, sent when a custom sound is selected (core C5 #3428): "sound_custom": "c_<sha256[:16]>"
 ```
 
 The attention form carries `{v, type: "attention", computer, count, emit_id, exclude:
@@ -1056,17 +1126,24 @@ The attention form carries `{v, type: "attention", computer, count, emit_id, exc
 term is used for it throughout: **the attention push**. It carries **no `alert` and no user-visible
 text of any kind**: `alert` is required on `completion` and `digest` and absent here (the field
 table
-below), so an `alert` on an attention emit would turn a silent badge correction into a banner.
+below), so an `alert` on an attention emit would turn a silent badge correction into a banner. It
+carries **no `sound`** either, for the same reason: a silent wake has no banner for a sound to ride.
 
 The **digest** form — §3.2's third emit type, and the visible counterpart of the attention push:
 
 ```jsonc
 { "aps": { "alert": {"title": "<APP_NAME>",
                      "body": "<digest house constant> · <count> conversations need you"},
+           "sound": "<id with - → _>.wav",
            "interruption-level": "active" },
   "data": { "v": 1, "type": "digest", "computer": "<computer handle>",
-            "count": <n>, "emit_id": "<uuid>" } }
+            "count": <n>, "emit_id": "<uuid>", "sound": "<built-in id | default | none>" } }
 ```
+
+`aps.sound` here is the built-in case; for `data.sound: "default"` it is `"default"`, and for
+`"none"` it is omitted (the field table's `sound` row). For a device whose
+`sound_custom_ready` is true it is `"<sound_custom>.wav"` instead: the digest also carries the
+optional `data.sound_custom` when a custom sound is selected (the `sound_custom` row; core C5 #3428).
 
 It carries **no `conversation` handle, no `completion_token` and no `kind`** — a digest spans
 conversations, so a tap resolves nowhere (the attention form's rule) and there is no
@@ -1116,6 +1193,8 @@ are **not two payload classes**:
 | `exclude` *(attention and digest)* | the device that just acted, so the self-correcting push skips it — the one field that makes §3.1's exclusion representable at all (round 2 M3: the claim had no wire field). Absent means "exclude nobody", which is what a tick-detected change sends because it never knows who acked. **Required** when the emit is an attention correction triggered by an **ack nudge** — the device that just acted is not told about a change its own action made. On a **digest** it is *permitted with the same meaning and never required*: the trigger for the required case is an ack, and an ack emits the attention correction, not a catch-up digest (round 2, R6). `(proposal)` like the rest of the attention form |
 | `type: "digest"` *(the third form)* | the catch-up form (§2.1): a **visible alert** carrying the count, with **no** `conversation`, `completion_token` or `kind` — it spans conversations, so nothing can deep-link or collapse per conversation; it collapses **per computer** (`digest:<computer handle>`) |
 | `count` | the number in the notification's **body**, so a user can judge whether to look now. **One number, one noun (round 2, R4)**: it is §1.1's count — the number of conversations with unread notifications, the same number the app's badge shows (§1.4) — read at composition time, and the cloud sees it. The bodies therefore say *"`<count>` conversations need you"*, a noun that is true of that number; a digest that said "updated" would imply a different quantity the field does not carry. (The alternative — body says "A turn finished" and nothing else — is a one-line change; recorded, not chosen) |
+| `sound` *(completion and digest; amendment 2026-11-03)* | the phone plays the sound the user chose **on the computer**, so the preference has one home and the phone keeps no second copy. Values: one of the ten **built-in ids** (`soft-pulse`, `two-note-chime`, `felt-marimba`, `hum-swell`, `task-complete`, `signal-handshake`, `tape-warble`, `bubble-chord`, `airy-whistle`, `bubble-pulse`); **`"default"`** when the computer's selection is `system` (the platform's own sound, which on the phone is the OS default); **`"none"`** when the computer's `notifications.sound.enabled` is `false` (the banner posts silently). **A custom sound selected on the computer sends `soft-pulse` here**, as does any id the phone has no file for, so a phone that does not hold the custom file falls back to the default rather than to silence; the custom file itself is named by the separate `sound_custom` row below. The computer's **volume does not travel** — the phone plays at its own notification volume. The cloud **maps** the value, per value, and never composes from it. **iOS:** a built-in id → `aps.sound` = `"<id with - → _>.wav"` (e.g. `"soft_pulse.wav"`: the bundled file name, because Android `res/raw` names must match `[a-z][a-z0-9_]*` and expo-notifications applies one `sounds:` list to both platforms); `"default"` → `aps.sound = "default"` (the OS default sound); `"none"` → **`aps.sound` omitted** — never `"none.wav"`/`"default.wav"`, because APNs plays the default sound for a file name that is not in the bundle, which for `none` is the opposite of the setting. **Android:** `android.channel_id = "sound.<id>"` for a built-in, `sound.default` for `"default"`, and the **silent** `sound.none` channel for `"none"` (one channel per value, because a channel's sound is fixed at creation). Mapping is not composition, so P2 is unchanged. **Absent on `attention`**, which is a silent wake |
+| `sound_custom` *(completion and digest; optional; sent when a custom sound is selected, core C5 #3428)* | the computer's **custom** sound, named by content: `"c_<sha256[:16]>"` of the stored WAV (an underscore, so the wire value IS the phone's file stem and no second mapping exists: `c_<sha16>.wav`), **never** the user's sound name, so P2 holds and the name changes whenever the bytes do. **Shape: `^c_[0-9a-f]{16}$`** (lowercase hex). The cloud **validates the pattern**, not only the type, because it splices the value into `aps.sound` and an Android channel id; a value outside it is refused like any other malformed field (review round 3, m1). Present only when sound is enabled and the selection is a custom sound whose file exists; `sound` still carries the `soft-pulse` fallback beside it. The phone fetches the file through the tunnel by that sha and caches it. **The cloud picks per device**, with that device's `devices[].sound_custom_ready` (§3.2's report block): **ready** → **iOS** `aps.sound = "<sound_custom>.wav"` (the phone wrote it to `Library/Sounds`), **Android** `android.channel_id = "sound.<sound_custom>"` (a channel the phone created for that sha, never reused); **not ready, or the bit absent** → map `sound` exactly as the row above. Sending the custom name to a phone that lacks the file would play the OS default (iOS) or FCM's default channel (Android), neither of which is the fallback, which is why readiness is per device. The machine sends it from core's notification-sounds C5 (local-operator#3428), so S7's `extra="forbid"` must accept it. **Absent on `attention`** |
 | ~~`aps.badge`~~ | **not sent, ever** (§1.5) |
 | ~~conversation name~~ | **never sent** (P2). Not in the title, not in the body, not in any field. §2.2 says the cloud must not hold it, and `session_names_in_notifications()` gates *local* notifications on the machine (`notify.py:802-820`, **default `True`** at `:820`) — it is not a cloud-facing consent, and it must never be read as one |
 | ~~`revision`~~ | dropped (M7). The badge comes from a read, not from a push |
@@ -1155,6 +1234,9 @@ POST /v1/tunnels/{tunnel_id}/push/events        Idempotency-Key: <emit key, §3.
   "count": 2, "exclude": ["<device_id>"],              // attention and digest; required only on the ack-triggered attention emit
   "alert": { "title": "<APP_NAME>",                    // THE MACHINE'S WORDS, SENT VERBATIM — required on completion and digest, ABSENT on attention (R8)
              "body": "<house constant> · <count> conversations need you" },
+  "sound": "soft-pulse",                               // built-in id | "default" | "none" — required on completion and digest, ABSENT on attention (2026-11-03)
+  // optional, sent when a custom sound is selected (core C5 #3428): "sound_custom": "c_<sha256[:16]>" on completion and digest,
+  // and then "sound_custom_ready": true|false on every live devices[] row — the cloud's per-device pick (§3.2)
   "devices": [ …the same block… ] }
 
 // 3. THE HEARTBEAT — the block and nothing else, sent when neither of the above has happened for
@@ -1172,7 +1254,10 @@ POST <cloud>/v1/push/credentials
 | `device` | object | the registration forward's own device body — `device_id`, `platform`, `environment`, `app_version`, `push_token`, `registered_at`; §2.2's Device row is the custody statement |
 | `devices[].credential_expires_at` | int, unix seconds | **NEW, and the reason the lapse is computable at all**: the cookie's own value is `<expiry>.<hmac>` (`mobile/auth.py`:465-469, signed once at login and never renewed), so the machine records **the expiry the phone presented** and the lapse is `expires_at <= now` — no clock arithmetic and no login-route writer (Q-F15 / R8-m1) |
 | `devices[].last_authenticated_at` | int, unix seconds | what the machine last observed — **never** the basis of the lapse |
+| `devices[].sound_custom_ready` | bool, **optional; sent when a custom sound is selected (core C5 #3428)** | true only when this device has reported the selected custom sound's sha **cached and** its channel created; the cloud uses the custom file for this device only when it is true, and `sound` otherwise (§3.2's `sound_custom` row). The machine sends it on **every** live device row of an emit that carries `sound_custom`, and on none otherwise; absent means not ready. The phone reports its cache through the relay's `PUT /api/notification-sounds/cached` (authenticated by `X-Lop-Device-Key`) |
 | `alert` | object | `{title, body}` — **the machine's words, sent verbatim**, because the cloud may not compose them (below). It is house-constant-plus-count only: no names, no snippets, no error text, no model-written text, and it is the same **push-specific builder** §3.2's payload table names (§3.2), not the desktop composer's body path. **Required on `completion` and `digest`; absent on `attention`**, which is a silent `content-available` wake with no text at all — a builder that put an `alert` on an attention emit would make a silent correction visible, and the cloud, forbidden to edit text, would deliver it verbatim (round 2, R8) |
+| `sound` | string | the computer's selected sound, **mapped** by the cloud per value (iOS: built-in → `"<id with - → _>.wav"`, e.g. `"soft_pulse.wav"`, `default` → `"default"`, `none` → `aps.sound` omitted; Android: `sound.<id>` / `sound.default` / silent `sound.none`) and never composed from (§3.2's field table, amendment 2026-11-03): a built-in id, `"default"` (computer selection `system`) or `"none"` (sound off); a custom selection sends `soft-pulse`. **Required on `completion` and `digest`; absent on `attention`** |
+| `sound_custom` | string, **optional; sent when a custom sound is selected (core C5 #3428)** | `"c_<sha256[:16]>"`, shape **`^c_[0-9a-f]{16}$`** (lowercase hex; validated, because it is spliced into `aps.sound` and a channel id): the custom sound by content hash, never by name; the cloud uses it only for a device whose `sound_custom_ready` is true (§3.2's `sound_custom` row). **Completion and digest only; absent on `attention`** |
 | `push_token` | string | the machine validates it and drops it (`daemon.py`:4776-4778 (#1864), PR #1864); the cloud's registry is where tokens live (§2.2) |
 | ~~conversation name, snippet, transcript, `aps.badge`~~ | — | **never** (P2 and §1.5) |
 
@@ -1262,10 +1347,12 @@ from):
 **Token handling.** Device tokens are opaque strings; **the machine never stores them** (P4 — the
 relay forwards the token to the cloud and keeps only the cloud's `device_id` and the metadata a
 Settings list needs: platform, app version, registered/last-seen). The cloud stores tokens encrypted
-at rest, keyed to the account and the computer. The APNs `.p8` and the FCM service account live in
-the cloud's secret store and never in the app or the repository; per this repository's rules,
-`google-services.json` / `GoogleService-Info.plist` are **build inputs injected from CI secrets**,
-never committed (the repo is public; `AGENTS.md`: "Never commit tokens, … certificates").
+at rest **in Atlas** — beside the device row in §2.2, not in a Firebase-side store — keyed to
+the account and the computer. The APNs `.p8` and the FCM service account live in the cloud's secret
+store and never in the app or the repository; per this repository's rules,
+`google-services.json` is a **build input injected from CI secrets**, never committed (the repo is
+public; `AGENTS.md`: "Never commit tokens, … certificates"). iOS needs no equivalent file: it goes
+straight to APNs (§5).
 
 **Revocation, and the stolen phone (P4, and review M9's question answered explicitly).** Five paths,
 and the honest limits of each:
@@ -1576,6 +1663,83 @@ the worker rides on that rather than inventing a second policy.
 - Payload limit 4 KB; `apns-expiration` decides how long an undelivered push is retained. The
   payload above is ~300 bytes, so there is no reason to compress content into it.
 
+**What FCM is here, and what it is not** *(the Google and Android pages cited here were read
+2026-10-28)*. This block exists because a reader can take "FCM + `google-services.json` + a
+cloud-held service account" to mean this project is adopting Firebase as a backend. FCM's one role
+is to carry an already-finished payload to an Android device: the cloud **composes nothing** (§3.2,
+"exactly one composer, the machine") and asks FCM for no state back. That is a claim about who
+authors state and who owns it, and not a claim of zero retention. FCM is not this design's store of
+record, and device, delivery and grant records remain Atlas's (§2.2); but Google does document
+provider-side buffering of an accepted message: "In these cases, FCM stores the message and delivers
+it as soon as possible", and "By default, requests that don't contain this field, last for a maximum
+period of four weeks" ([Set the lifespan of a
+message](https://firebase.google.com/docs/cloud-messaging/customize-messages/setting-message-lifespan),
+read 2026-10-29; a `ttl` of `0` is discarded rather than stored if it cannot be delivered at once).
+**What that means for revocation:** the token drop in §4 rule 1 stops future sends, while a message
+FCM has already accepted can still arrive afterwards — the transport owns it from acceptance, and
+only the app can decline to act on it. The app declines by treating no message as authority: a push
+carries no conversation name and no state (§3.2, P2), so a late one opens a read of the machine, and
+§3.3's rules finish it — the tap is authoritative over the push and the machine over both, so
+nothing is marked or acked that the machine does not already say.
+
+- **The constraint, as precisely as Google states it.** FCM clients "require devices running Android
+  7.0 or higher that also have the Google Play Store app installed" — that is, Google Play services
+  present on the device ([Get started with FCM in Android
+  apps](https://firebase.google.com/docs/cloud-messaging/android/get-started)). Transport rather
+  than preference is the platform's doing: when an app goes into the background "it has a window of
+  several minutes in which it is still allowed to create and use services. At the end of that
+  window, the app is considered to be idle. At this time, the system stops the app's background
+  services, just as if the app had called the services' `Service.stopSelf()` methods", and "the
+  system doesn't allow a background app to create a background service" ([Background Execution
+  Limits](https://developer.android.com/about/versions/oreo/background)). An app therefore cannot
+  hold a long-lived connection of its own from the background, so something outside it has to wake it,
+  and the same page names how: "An app is placed on the allowlist when it handles a task that's
+  visible to the user, such as: Handling a high-priority Firebase Cloud Messaging (FCM) message"
+  (same page). **When the transport is FCM, that wake arrives through the Play services process**,
+  which receives the message and delivers it. The page's own "such as" is why the claim stops there: a
+  user-installed UnifiedPush distributor is the other wake path (the bullet below), and ordinary
+  foreground work needs neither. What is true only of FCM is that it is the pre-installed path — the
+  Play-Store constraint quoted above — which is a statement about distribution, not a rule that only
+  Play services can reach an app.
+- **What that costs, in the same pages' words.** **Android background push via FCM requires adding
+  Firebase to a Google Cloud project** — the same project, which gains a `firebase:enabled` label,
+  shares its IAM with Firebase, and moves to the Blaze plan once it is billed: "Firebase
+  automatically adds to your project a label of firebase:enabled within the IAM & Admin > Labels
+  page of the Google Cloud console"; "IAM permissions and roles for the project are shared across
+  Firebase and Google Cloud. Any access a project member (that is, a principal) has to your Google
+  Cloud project will also apply to your Firebase project (and vice-versa)"; "If billing is enabled
+  on your Google Cloud project, then your Firebase project will be on Firebase's pay-as-you-go Blaze
+  pricing plan" ([Understand Firebase
+  projects](https://firebase.google.com/docs/projects/learn-more)). The registration is also how the
+  send credential and the `google-services.json` build input are issued: the v1 access token "is
+  associated with a service account that belongs to your Firebase project" ([Your server environment
+  and FCM](https://firebase.google.com/docs/cloud-messaging/server-environment)).
+- **The collision, resolved by the operator on 2026-10-29.** **Radient does not use Firebase**
+  (operator decision, 2026-10-28), and as written that decision ruled out Android background push.
+  The choice was between "no Firebase, and therefore no Android push" and "Firebase registered on
+  the existing Google Cloud project for the FCM API alone", and **the operator took the second** —
+  FCM only, on the existing Radient Google Cloud project, with no Firebase database, auth or hosting
+  ([`docs/publishing/push-setup.md`](../publishing/push-setup.md)). That settles the transport this
+  ADR describes; it does not build it (Status), and the remaining gates are the console steps the
+  operator must take and the core/cloud slices in [`docs/push-plan.md`](../push-plan.md).
+- **What using FCM does not require.** No Firebase data product is part of this design — no Cloud
+  Firestore, no Realtime Database, no Firebase Auth, no Hosting, no Cloud Functions, no Analytics.
+  Google identity stays the Google Cloud project + Identity Toolkit, and app state stays Atlas
+  (§2.2). That is a statement about this design's data layer, **and the operator's 2026-10-29
+  decision draws the same boundary**: "allow FCM only" was taken with state in Atlas and the
+  existing identity in place, so this bullet and that decision now say the same thing rather than
+  the decision arriving later and separately.
+- **Where the constraint is narrower than "only FCM".** Two cases sit outside it, and both are
+  already in this design rather than discovered later. *(a)* What FCM needs is **Play services on the
+  device, not Play as the distribution channel** — the same page says "you are not limited to
+  deploying your Android apps through Google Play Store", so sideloaded builds shipped through GitHub
+  Releases and Obtainium (`docs/publishing/other-channels.md` § 8) reach the identical FCM. *(b)* A
+  FOSS distributor app can hold the connection on the app's behalf — UnifiedPush's model, where the
+  notification arrives from a separate app the user installs ([UnifiedPush
+  FAQ](https://unifiedpush.org/users/faq/)). That is a genuine alternative for the `foss` flavour
+  below, and it is not one for the default flavour: it would make notifications conditional on the
+  user installing a second app.
+
 **FCM HTTP v1 (quoted)**
 
 - `notification.tag` replaces an existing notification ("Identifier used to replace existing
@@ -1597,7 +1761,9 @@ the worker rides on that rather than inventing a second policy.
 **Capability and account work, per store**
 
 - **iOS**: the APNs entitlement and the Push Notifications capability on the App ID and provisioning
-  profile; an App Store Connect `.p8` key held by the cloud. The Expo config plugin sets the APNs
+  profile; App Store Connect `.p8` keys held by the cloud, **one per sending environment** — team-scoped
+  keys are restricted to Sandbox or Production, so a single key cannot serve both, and the key's
+  environment has to match the entitlement's (`docs/publishing/push-setup.md` § 2). The Expo config plugin sets the APNs
   entitlement to `development` and Xcode flips it to `production` in an archive ("The iOS APNs
   entitlement is always set to 'development'. Xcode automatically changes this to 'production' in
   the archive generated by a release build." — same page). A background wake additionally needs
@@ -1757,8 +1923,10 @@ want a second reviewer to attack.
 shipped in Radient) and the **organisation developer accounts** (A2–A4: D-U-N-S, Apple Developer
 Program as the organisation, Play organisation account). **Push adds three more of the same kind:**
 
-- an **APNs key** and an **FCM service account** held by Radient — a new credential dependency whose
-  loss breaks a user-visible feature rather than a submission;
+- **APNs keys** (**one per sending environment**, §5) and an **FCM service account** held by Radient —
+  the send credentials issued by the existing Google Cloud project, registered with Firebase for the
+  FCM API only (§5) — a new credential dependency whose loss breaks a user-visible feature rather
+  than a submission;
 - **and a console-side device list**, so a user whose phone is stolen can revoke it without the
   machine (§4 path 2). Same class as A8: a Radient console feature this app cannot ship.
 - **and, unlike A8, the fan-out service is a runtime dependency**: it must be up, it costs money, it

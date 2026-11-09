@@ -96,6 +96,10 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
 	 *  are sections of it, and the sheet/panel entries above stay separate
 	 *  subjects only where the app really renders two roots. */
 	S17: "schedules",
+	/** The notifications inbox (S18) and its pushed detail: one subject each, so
+	 *  a frame says which of the two drew. */
+	S18: "notifications",
+	"S18-detail": "notification-detail",
 };
 
 /**
@@ -115,6 +119,14 @@ export const SCREEN_MARKER_SUBJECT: Record<string, string> = {
  */
 export const STATE_MARKER_ALIASES: Record<string, string> = {
 	"populated-long": "populated",
+	/* The grey dot's ended cell renders the same look the `ended` marker claims
+	 * (the header's grey status word + the terminal session), so it borrows that
+	 * marker rather than inventing a second id for one state. */
+	"health-ended": "ended",
+	/* The dropped-cause sheet is the same surface as the quiet one: the sheet's
+	 * own id affirms it, while its copy distinguishes the two yellow causes. */
+	"health-dropped-sheet": "health-sheet",
+	"health-quiet-sheet": "health-sheet",
 	narrow: "populated",
 	scroll: "populated",
 	approval: "pending-approval",

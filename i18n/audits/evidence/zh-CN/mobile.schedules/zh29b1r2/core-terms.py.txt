@@ -1,0 +1,15 @@
+"""Count exact term occurrences in core's COMMITTED zh-CN catalogue (git HEAD)."""
+import subprocess, sys
+repo = "/Users/damian/local-operator"
+path = "local_operator/i18n/catalogues/zh-CN/"
+files = subprocess.run(["git","-C",repo,"ls-tree","-r","--name-only","HEAD","--",path],capture_output=True,text=True).stdout.split()
+files = [f for f in files if f.endswith(".json")]
+print(f"core zh-CN catalogue files at HEAD: {len(files)}")
+for term in sys.argv[1:]:
+    out = subprocess.run(["git","-C",repo,"grep","-o","--no-color",term,"HEAD","--",path+"*"],capture_output=True,text=True).stdout
+    per_file = {}
+    for line in out.splitlines():
+        f = line.split(":", 2)[1].split(path)[-1]
+        per_file[f] = per_file.get(f, 0) + 1
+    top = sorted(per_file.items(), key=lambda x: -x[1])[:8]
+    print(f"{term!r}: occurrences={sum(per_file.values())} files={len(per_file)} top={top}")

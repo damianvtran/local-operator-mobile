@@ -460,6 +460,29 @@ async function main(): Promise<void> {
 			);
 		}
 
+		/* ---- the start route's effort vocabulary (local-operator v0.101.9) ---- */
+		group = "start effort vocabulary";
+		{
+			// `start_effort` runs BEFORE the directory read, so an off-vocabulary word
+			// is refused even beside a folder the relay would also refuse — the order
+			// is what makes `invalid_start_effort` the answer, not the cwd's fixture.
+			// Refusals only: an admitted effort would create a session here.
+			const word = await client.post("/api/sessions/start", {
+				cwd: "/etc",
+				effort: "turbo",
+			});
+			check("an unknown level is refused 400", word.status, 400);
+			check("with the relay's body", word.json, {
+				error: "invalid_start_effort",
+				code: "invalid_start_effort",
+			});
+			const typed = await client.post("/api/sessions/start", {
+				cwd: "/etc",
+				effort: 3,
+			});
+			check("a non-string level is refused 400", typed.status, 400);
+		}
+
 		/* ---- D4: the session is resolved before the parameter ---- */
 		group = "D4 image route order";
 		{

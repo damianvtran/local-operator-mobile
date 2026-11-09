@@ -465,6 +465,23 @@ rows = [
  ("P5 ADR effort row for the credential limb", has(af,"**Credential-live evaluation and the credential-change event**")),
  ("P5 plan row S4c", has(pf,"| **S4c** | **Credential-live evaluation and the credential-change event**")),
  ("P5 plan QA rows Q22/Q23", has(pf,"| Q22 |") and has(pf,"| Q23 |")),
+ # Custom-sound fields (amendment 2026-11-04; reserved in core C3, sent from C5 #3428): the two optional
+ # fields must be named in every place a cloud builder copies from, the per-device pick must be
+ # stated, and the retired "custom sounds are not on the phone in v1" rule must survive only as the
+ # quoted retraction — a stray copy would tell S7 to refuse the custom fields.
+ ("SND custom-sound amendment names both optional fields", has(af,"**Amendment (2026-11-04): custom sounds on the phone — two optional fields.**") and has(af,"`data.sound_custom` (`\"c_<sha256[:16]>\"`, completion and digest)") and has(af,"`devices[].sound_custom_ready` (bool)")),
+ ("SND per-device pick stated (ready -> custom, else data.sound)", has(af,"**ready** → **iOS** `aps.sound = \"<sound_custom>.wav\"`") and has(af,"**Android** `android.channel_id = \"sound.<sound_custom>\"`") and has(af,"**not ready, or the bit absent** → map `sound` exactly as the row above")),
+ # C5 (local-operator#3428) now SENDS both fields: the rows must say so, state when, and no
+ # "not sent yet" may survive, or S7 would read the fields as a future option it can defer.
+ ("SND both custom fields in the emit and report-block tables, sent by C5", has(af,"| `sound_custom` | string, **optional; sent when a custom sound is selected (core C5 #3428)** |") and has(af,"| `devices[].sound_custom_ready` | bool, **optional; sent when a custom sound is selected (core C5 #3428)** |") and has(af,"on **every** live device row of an emit that carries `sound_custom`, and on none otherwise") and has(af,"Present only when sound is enabled and the selection is a custom sound whose file exists") and not has(af,"not sent yet") and not has(af,"RESERVED 2026-11-04")),
+ # M1 prebuild constraint (2026-11-04): bundled iOS files are `<id with - → _>.wav`, and the custom
+ # wire value uses an underscore so it IS the file stem; a hyphenated file name here would make APNs
+ # play the OS default for every built-in.
+ ("SND iOS file names are the underscore form (built-in and custom)", has(af,'"sound": "soft_pulse.wav"') and has(af,'`"<id with - → _>.wav"`') and not has(af,'"<id>.wav"') and not has(af,"soft-pulse.wav") and not has(af,"c-<sha256")),
+ # Review round 3, m1: the cloud splices sound_custom into aps.sound and a channel id, so both
+ # sound_custom rows must pin the SHAPE (lowercase hex, underscore), not only `string`.
+ ("SND sound_custom shape pinned in both rows", af.count("`^c_[0-9a-f]{16}$`") >= 2 and has(af,"The cloud **validates the pattern**")),
+ ("SND the v1 no-custom rule survives only as its retraction", af.count("not on the phone in v1") == 1 and has(af,"sounds are no longer \"not on the phone in v1\"")),
  ("P5 plan note: vocabulary re-checked at the note head", has(pf,"`revoked_at` / `unpaired_at` / `expired_at`") and has(pf,"Re-checked at the note's head `30a0f4d`")),
 ]
 bad = [n for n, ok in rows if not ok]

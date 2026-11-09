@@ -1,0 +1,323 @@
+zh-CN delta re-audit — mobile.schedules
+audit log: actual command output, not notes
+worktree : /Users/damian/workspace/zh-wave
+branch   : feat/i18n-chinese
+harness  : node zhdelta.ts mobile.schedules  (copied beside this log as render.ts.txt)
+note     : MODULE_TYPELESS_PACKAGE_JSON is silenced; nothing about the run changes.
+browser  : none opened; no UI frame is claimed for this delta.
+
+$ git -C /Users/damian/workspace/zh-wave rev-parse HEAD
+# started 2026-10-30T07:12:30Z
+d3c39d8d2df2bccc78af82df9253776b4c933ad8
+# exit=0
+
+$ git -C /Users/damian/workspace/zh-wave status --porcelain
+# started 2026-10-30T07:12:30Z
+?? i18n/audits/evidence/zh-CN/mobile.account_routing/zh29a4r2/
+?? i18n/audits/evidence/zh-CN/mobile.home/zh29a1r2/
+# exit=0
+
+$ sha256sum <en> <context> <zh-CN target>
+# started 2026-10-30T07:12:30Z
+0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.schedules.json
+d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92  /Users/damian/workspace/zh-wave/src/i18n/catalogues/en/mobile.schedules.context.json
+6f138a280fdf857cec41acb334a9477ab84ec4381f8c37b1480a08251ea7969c  /Users/damian/workspace/zh-wave/src/i18n/catalogues/zh-CN/mobile.schedules.json
+# exit=0
+
+$ npm run -s i18n:catalogue:check
+# started 2026-10-30T07:12:30Z
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, zh-CN)
+(node:11281) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/workspace/zh-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/workspace/zh-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+# exit=0
+
+$ npm run -s i18n:strings:check
+# started 2026-10-30T07:12:34Z
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs a57fb8cbe161
+# exit=0
+
+$ node_modules/.bin/vitest run src/i18n/__tests__
+# started 2026-10-30T07:12:39Z
+      Tests  89 passed (89)
+   Start at  03:12:43
+   Duration  5.04s (transform 73%, import 12%, tests 10%, worker 6%)
+
+  Transform  transforming modules took 7.36s · 73% of tracked time, re-done on every run
+             persist transforms across runs with fsModuleCache: true
+             on CI this only helps when the cache directory is persisted between runs
+             learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+
+# exit=0
+
+$ python3 verify-prescriptions.py mobile.schedules   (HEAD bytes vs each round-1 prescribed replacement)
+# started 2026-10-30T07:12:48Z
+
+## mobile.schedules  (round-1 zh29b1, verdict changes_requested)
+  ZH-SCH-1 [major] mobile.schedules.head.next
+      round1 : {head} · 下次{label}
+      now    : {head} · 下次：{label}
+      rx     : {head} · 下次：{label}
+      -> APPLIED VERBATIM
+  ZH-SCH-2 [major] mobile.schedules.summary.monitors_attention
+      round1 : {broken}/{total}个需要处理
+      now    : {broken}/{total}项需要关注
+      rx     : {broken}/{total}项需要关注
+      -> APPLIED VERBATIM
+  ZH-SCH-3 [major] mobile.schedules.supervisor.not_running
+      round1 : 唤醒监管程序已安装但未运行，因此下方唤醒不会触发。
+      now    : 唤醒监督者已安装但未运行，因此以下唤醒不会触发。
+      rx     : 唤醒监督者已安装但未运行，因此以下唤醒不会触发。
+      -> APPLIED VERBATIM
+  ZH-SCH-3 [major] mobile.schedules.supervisor.unsupported
+      round1 : 此平台尚未支持唤醒监管，因此下方唤醒仅在对话运行时触发。
+      now    : 此平台尚不支持监督唤醒，因此以下唤醒仅在对话运行时触发。
+      rx     : 此平台尚不支持监督唤醒，因此以下唤醒仅在对话运行时触发。
+      -> APPLIED VERBATIM
+  ZH-SCH-3 [major] mobile.schedules.supervisor.unverifiable
+      round1 : 下方唤醒没有监管程序，因此仅在其对话运行时触发。
+      now    : 以下唤醒没有监督者，因此仅在其对话运行时触发。
+      rx     : 以下唤醒没有监督者，因此仅在其对话运行时触发。
+      -> APPLIED VERBATIM
+  ZH-SCH-4 [minor] mobile.schedules.tail.failed
+      round1 : {count}个失败
+      now    : {count}次失败
+      rx     : {count}次失败
+      -> APPLIED VERBATIM
+  ZH-SCH-5 [minor] mobile.schedules.truncated
+      round1 : 显示{shown}/{total}个设有{family, select, wakes {唤醒} other {监控}}的对话。
+      now    : 显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。
+      rx     : 显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。
+      -> APPLIED VERBATIM
+
+keys compared=7 applied_verbatim=7 rewritten=0 unchanged=0
+# exit=0
+
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON zhdelta.ts mobile.schedules
+# started 2026-10-30T07:12:48Z
+
+===== PROVENANCE =====
+namespace            : mobile.schedules
+repo                 : /Users/damian/workspace/zh-wave
+HEAD                 : ref: refs/heads/feat/i18n-chinese (worktree gitdir)
+branch/commit        : d3c39d8d2df2bccc78af82df9253776b4c933ad8  (HEAD -> feat/i18n-chinese, origin/feat/i18n-chinese)
+node                 : v24.22.1
+harness              : zhdelta.ts (uses src/i18n renderFor + schedules-copy)
+sha256 src/i18n/catalogues/en/mobile.schedules.json
+       0459a0485ceb2594c60a152a8dbdc5035689ade05ac370134f8e37be6abc575f
+sha256 src/i18n/catalogues/en/mobile.schedules.context.json
+       d3f0d3bba057aacf4d3495b3d5eec2471d66b6d6c011b50834a1f58a0839aa92
+sha256 src/i18n/catalogues/zh-CN/mobile.schedules.json
+       6f138a280fdf857cec41acb334a9477ab84ec4381f8c37b1480a08251ea7969c
+keys                 : en=38 zh=38 context=38
+SHIPPED_LOCALES      : ["en","fr","es","zh-CN"]
+activeLocale-ish     : renderFor(..., "zh-CN") + setLocaleSource(() => "zh-CN")
+
+===== MECHANICAL — key parity =====
+en - zh  : []
+zh - en  : []
+en - ctx : []
+ctx - en : []
+order identical: true
+
+===== MECHANICAL — parse + parameter parity (app parser) =====
+parse failures=0 param/structure mismatches=0
+
+===== MECHANICAL — plural categories (Intl.PluralRules('zh-CN')) =====
+zh-CN categories: ["other"]
+plural nodes inspected=4  select nodes inspected=1
+  mobile.schedules.count.monitors: zh=[["other"]] en=[["one","other"]]
+  mobile.schedules.count.wakes: zh=[["other"]] en=[["one","other"]]
+  mobile.schedules.show_more.monitors: zh=[["other"]] en=[["one","other"]]
+  mobile.schedules.show_more.wakes: zh=[["other"]] en=[["one","other"]]
+Intl.PluralRules('zh-CN').select(0) = other
+Intl.PluralRules('zh-CN').select(1) = other
+Intl.PluralRules('zh-CN').select(2) = other
+Intl.PluralRules('zh-CN').select(3) = other
+Intl.PluralRules('zh-CN').select(1000000) = other
+plural arm violations=0
+
+===== NEGATIVE CONTROLS — prove each check above can fail =====
+control 1 (a `one` arm must be caught): CAUGHT -> [["one","other"]]
+control 2 (a renamed/dropped placeholder must be caught): CAUGHT
+   good=[["broken","text"],["total","text"]] broken=[["total","text"]]
+control 3 (a renamed select arm must be caught): CAUGHT
+control 4 (a bidi control must be caught): CAUGHT
+control 5 (ASCII prose punctuation beside CJK must be caught): CAUGHT
+control 6 (a dropped plural must be caught): CAUGHT
+
+===== MECHANICAL — bidi controls / ASCII prose punctuation / Latin residue =====
+bidi controls: none
+ASCII prose punct adjacent to CJK: none
+Latin runs (naive; kept names/terms expected): []
+U+2026 ellipsis count: 0
+您 occurrences: 0
+
+===== RENDER — executed strings (zh-CN) =====
+
+-- count nouns (0/1/2/1000000) --
+mobile.schedules.count.wakes: 0->"0 个唤醒"  1->"1 个唤醒"  2->"2 个唤醒"  1000000->"1000000 个唤醒"
+mobile.schedules.count.monitors: 0->"0 个监控"  1->"1 个监控"  2->"2 个监控"  1000000->"1000000 个监控"
+
+-- due labels from the real dueLabel() --
+dueLabel(60) = "60s后"
+dueLabel(240) = "4m后"
+dueLabel(5400) = "1h后"
+dueLabel(-7200) = "已逾期2h"
+dueLabel(-259200) = "已逾期3d"
+dueLabel(-30) = "已逾期30s"
+
+-- head.next via the real nextDueClause() (app composition, both locales) --
+wakes 1 @240s -> "1 个唤醒 · 下次：4m后"   [en: "1 wake · next in 4m"]
+wakes 1 @60s -> "1 个唤醒 · 下次：60s后"   [en: "1 wake · next in 60s"]
+wakes 1 @-3600s -> "1 个唤醒 · 已逾期60m"   [en: "1 wake · 60m overdue"]
+wakes 1 @-7200s -> "1 个唤醒 · 已逾期2h"   [en: "1 wake · 2h overdue"]
+wakes 1 @-259200s -> "1 个唤醒 · 已逾期3d"   [en: "1 wake · 3d overdue"]
+wakes 3 @240s -> "3 个唤醒 · 下次：4m后"   [en: "3 wakes · next in 4m"]
+wakes 3 @60s -> "3 个唤醒 · 下次：60s后"   [en: "3 wakes · next in 60s"]
+wakes 3 @-3600s -> "3 个唤醒 · 已逾期60m"   [en: "3 wakes · 60m overdue"]
+wakes 3 @-7200s -> "3 个唤醒 · 已逾期2h"   [en: "3 wakes · 2h overdue"]
+wakes 3 @-259200s -> "3 个唤醒 · 已逾期3d"   [en: "3 wakes · 3d overdue"]
+wakes 5 @240s -> "5 个唤醒 · 下次：4m后"   [en: "5 wakes · next in 4m"]
+wakes 5 @60s -> "5 个唤醒 · 下次：60s后"   [en: "5 wakes · next in 60s"]
+wakes 5 @-3600s -> "5 个唤醒 · 已逾期60m"   [en: "5 wakes · 60m overdue"]
+wakes 5 @-7200s -> "5 个唤醒 · 已逾期2h"   [en: "5 wakes · 2h overdue"]
+wakes 5 @-259200s -> "5 个唤醒 · 已逾期3d"   [en: "5 wakes · 3d overdue"]
+monitors 1 @240s -> "1 个监控 · 下次：4m后"   [en: "1 monitor · next in 4m"]
+monitors 1 @60s -> "1 个监控 · 下次：60s后"   [en: "1 monitor · next in 60s"]
+monitors 1 @-3600s -> "1 个监控 · 已逾期60m"   [en: "1 monitor · 60m overdue"]
+monitors 1 @-7200s -> "1 个监控 · 已逾期2h"   [en: "1 monitor · 2h overdue"]
+monitors 1 @-259200s -> "1 个监控 · 已逾期3d"   [en: "1 monitor · 3d overdue"]
+monitors 3 @240s -> "3 个监控 · 下次：4m后"   [en: "3 monitors · next in 4m"]
+monitors 3 @60s -> "3 个监控 · 下次：60s后"   [en: "3 monitors · next in 60s"]
+monitors 3 @-3600s -> "3 个监控 · 已逾期60m"   [en: "3 monitors · 60m overdue"]
+monitors 3 @-7200s -> "3 个监控 · 已逾期2h"   [en: "3 monitors · 2h overdue"]
+monitors 3 @-259200s -> "3 个监控 · 已逾期3d"   [en: "3 monitors · 3d overdue"]
+
+-- dueLabel, the same app function in both locales --
+240s  zh="4m后"  en="in 4m"
+-7200s  zh="已逾期2h"  en="2h overdue"
+
+-- head.next direct with a future label (its only real use) --
+"3 个唤醒 · 下次：4m后"
+-- head.next fed an overdue-shaped label, to show why the app routes it away --
+"3 个唤醒 · 下次：已逾期2h"
+-- head.overdue (the overdue branch) --
+"3 个唤醒 · 已逾期2h"
+
+-- summary.monitors_attention at 1/3 and 2/3 (+ edges) --
+1/3 -> "1/3项需要关注"   [en: "1 of 3 need attention"]
+2/3 -> "2/3项需要关注"   [en: "2 of 3 need attention"]
+0/3 -> "0/3项需要关注"   [en: "0 of 3 need attention"]
+3/3 -> "3/3项需要关注"   [en: "3 of 3 need attention"]
+1000000/1000000 -> "1000000/1000000项需要关注"   [en: "1000000 of 1000000 need attention"]
+-- sibling summary keys --
+mobile.schedules.summary.wakes 0/1/3 -> "0个已定时"  "1个已定时"  "3个已定时"
+mobile.schedules.summary.monitors_armed 0/1/3 -> "0个已启用"  "1个已启用"  "3个已启用"
+
+-- the three supervisor notices --
+mobile.schedules.supervisor.not_running
+  zh: "唤醒监督者已安装但未运行，因此以下唤醒不会触发。"
+  en: "The wake supervisor is installed but not running, so the wakes below will not fire."
+  cells=48
+mobile.schedules.supervisor.unsupported
+  zh: "此平台尚不支持监督唤醒，因此以下唤醒仅在对话运行时触发。"
+  en: "Wakes are not supervised on this platform yet, so the wakes below only fire while a conversation is running."
+  cells=56
+mobile.schedules.supervisor.unverifiable
+  zh: "以下唤醒没有监督者，因此仅在其对话运行时触发。"
+  en: "Nothing supervises the wakes below, so they only fire while their conversation is running."
+  cells=46
+
+-- truncated, both families --
+wakes 3/10 -> "显示3/10个含唤醒的对话。"   [en: "Showing 3 of 10 conversations with wakes."]
+wakes 1/2 -> "显示1/2个含唤醒的对话。"   [en: "Showing 1 of 2 conversations with wakes."]
+wakes 1000000/1000000 -> "显示1000000/1000000个含唤醒的对话。"   [en: "Showing 1000000 of 1000000 conversations with wakes."]
+monitors 3/10 -> "显示3/10个含监控的对话。"   [en: "Showing 3 of 10 conversations with monitors."]
+monitors 1/2 -> "显示1/2个含监控的对话。"   [en: "Showing 1 of 2 conversations with monitors."]
+monitors 1000000/1000000 -> "显示1000000/1000000个含监控的对话。"   [en: "Showing 1000000 of 1000000 conversations with monitors."]
+
+-- tail/status + the rest of the namespace (unchanged keys, regression pass) --
+mobile.schedules.cadence.every: "每1h"
+mobile.schedules.cadence.left: "每1h · 剩余1次"
+mobile.schedules.cadence.once: "单次"
+mobile.schedules.cadence.spent: "每1h · 已无剩余次数"
+mobile.schedules.empty.body: "在对话中让智能体定期做某件事，它就会出现在这里。唤醒会在指定时间向对话发送提示词；监控会持续观察某一项内容并报告变化。"
+mobile.schedules.empty.title: "尚未启用任何任务"
+mobile.schedules.empty_line.monitors: "未启用任何监控。"
+mobile.schedules.empty_line.wakes: "未安排任何唤醒。"
+mobile.schedules.gone.monitors: "已失效——其对话已不在此机器上，因此不会检查"
+mobile.schedules.gone.wakes: "已失效——其对话已不在此机器上，因此不会触发"
+mobile.schedules.parked.monitors: "已暂停——对话再次运行后，监控会恢复"
+mobile.schedules.parked.wakes: "已暂停——下次回合结束后，唤醒会恢复"
+mobile.schedules.read_error.monitors: "无法读取此机器上的监控。"
+mobile.schedules.read_error.wakes: "无法读取此机器上的唤醒。"
+mobile.schedules.read_unreachable: "刚才无法读取此机器的定时任务。"
+mobile.schedules.show_less.monitors: "收起部分监控"
+mobile.schedules.show_less.wakes: "收起部分唤醒"
+mobile.schedules.show_more.monitors: "再显示2个监控"
+mobile.schedules.show_more.wakes: "再显示2个唤醒"
+mobile.schedules.state.disabled: "已禁用"
+mobile.schedules.state.dormant: "休眠中"
+mobile.schedules.state.expired: "已过期"
+mobile.schedules.state.stale: "已失效"
+mobile.schedules.state.waiting: "等待中"
+mobile.schedules.tail.failed: "3次失败"
+-- due.ahead / due.overdue direct --
+due.ahead(4m) -> "4m后"   [en: "in 4m"]
+due.overdue(2h) -> "已逾期2h"   [en: "2h overdue"]
+tail.failed 1/3 -> "1次失败"  "3次失败"
+
+===== FIT — cells, per string (2 cells per CJK/full-width char, 1 per ASCII) =====
+mobile.schedules.cadence.every: chars=11 cells=12 renderedCells=4
+mobile.schedules.cadence.left: chars=26 cells=29 renderedCells=14
+mobile.schedules.cadence.once: chars=2 cells=4 renderedCells=4
+mobile.schedules.cadence.spent: chars=18 cells=24 renderedCells=19
+mobile.schedules.count.monitors: chars=30 cells=33 renderedCells=8
+mobile.schedules.count.wakes: chars=30 cells=33 renderedCells=8
+mobile.schedules.due.ahead: chars=8 cells=9 renderedCells=9
+mobile.schedules.due.overdue: chars=10 cells=13 renderedCells=13
+mobile.schedules.empty.body: chars=59 cells=118 renderedCells=118
+mobile.schedules.empty.title: chars=8 cells=16 renderedCells=16
+mobile.schedules.empty_line.monitors: chars=8 cells=16 renderedCells=16
+mobile.schedules.empty_line.wakes: chars=8 cells=16 renderedCells=16
+mobile.schedules.gone.monitors: chars=22 cells=42 renderedCells=42
+mobile.schedules.gone.wakes: chars=22 cells=42 renderedCells=42
+mobile.schedules.head.next: chars=19 cells=22 renderedCells=22
+mobile.schedules.head.overdue: chars=16 cells=16 renderedCells=16
+mobile.schedules.parked.monitors: chars=18 cells=34 renderedCells=34
+mobile.schedules.parked.wakes: chars=18 cells=34 renderedCells=34
+mobile.schedules.read_error.monitors: chars=12 cells=24 renderedCells=24
+mobile.schedules.read_error.wakes: chars=12 cells=24 renderedCells=24
+mobile.schedules.read_unreachable: chars=15 cells=30 renderedCells=30
+mobile.schedules.show_less.monitors: chars=6 cells=12 renderedCells=12
+mobile.schedules.show_less.wakes: chars=6 cells=12 renderedCells=12
+mobile.schedules.show_more.monitors: chars=33 cells=39 renderedCells=13
+mobile.schedules.show_more.wakes: chars=33 cells=39 renderedCells=13
+mobile.schedules.state.disabled: chars=3 cells=6 renderedCells=6
+mobile.schedules.state.dormant: chars=3 cells=6 renderedCells=6
+mobile.schedules.state.expired: chars=3 cells=6 renderedCells=6
+mobile.schedules.state.stale: chars=3 cells=6 renderedCells=6
+mobile.schedules.state.waiting: chars=3 cells=6 renderedCells=6
+mobile.schedules.summary.monitors_armed: chars=11 cells=15 renderedCells=9
+mobile.schedules.summary.monitors_attention: chars=21 cells=26 renderedCells=13
+mobile.schedules.summary.wakes: chars=11 cells=15 renderedCells=9
+mobile.schedules.supervisor.not_running: chars=24 cells=48 renderedCells=48
+mobile.schedules.supervisor.unsupported: chars=28 cells=56 renderedCells=56
+mobile.schedules.supervisor.unverifiable: chars=23 cells=46 renderedCells=46
+mobile.schedules.tail.failed: chars=10 cells=13 renderedCells=7
+mobile.schedules.truncated: chars=62 cells=74 renderedCells=23
+
+DONE
+# exit=0
+
+$ python3 core-terms.py 监督者 监管 监督唤醒 项需要关注 项需要处理   (core committed zh-CN)
+# started 2026-10-30T07:12:52Z
+core zh-CN catalogue files at HEAD: 93
+'监督者': occurrences=14 files=4 top=[('cli.wake_help.json', 8), ('cli.browser.json', 2), ('cli.exec_help.json', 2), ('wire.exec.json', 2)]
+'监管': occurrences=1 files=1 top=[('tui.schedule.json', 1)]
+'监督唤醒': occurrences=0 files=0 top=[]
+'项需要关注': occurrences=1 files=1 top=[('tui.small.json', 1)]
+'项需要处理': occurrences=0 files=0 top=[]
+# exit=0

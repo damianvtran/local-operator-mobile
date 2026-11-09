@@ -99,8 +99,17 @@ describe("PR92/main semantic convergence", () => {
 			attrs(source, node).includes('className="min-w-0 flex-1 gap-1"'),
 		);
 		if (!detail) throw new Error("Missing inline header detail");
-		const heading = (detail.children as Ast[]).find(
-			(node) => node.type === "JSXElement",
+		/* The Heading is now inside a `{titleNode ?? <Heading/>}` conditional (the
+		 *  session header's tappable title block), so it is a descendant of the
+		 *  detail box rather than its first element child. What this assert protects
+		 *  is unchanged: with a `headerDetail` line the title keeps the `title` step
+		 *  in compact and `display` otherwise. */
+		const heading = elements(source).find(
+			(node) =>
+				Number(node.start) >= Number(detail.start) &&
+				Number(node.end) <= Number(detail.end) &&
+				node.type === "JSXElement" &&
+				attrs(source, node).includes("level={1}"),
 		);
 		if (!heading) throw new Error("Missing detail heading");
 		expect(attrs(source, heading)).toMatch(COMPACT_DETAIL);

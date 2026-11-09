@@ -123,6 +123,9 @@ describe("the capability block a scenario pins", () => {
 		expect(list.capabilities).toEqual({
 			features: expect.any(Object),
 			stt: { available: true, path: "provider_stt_radient", reason: "" },
+			// The start route's effort licence rides every scenario's block
+			// (`capabilityBlock`), voice override or not.
+			session_start: { effort: true },
 		});
 	});
 

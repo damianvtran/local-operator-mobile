@@ -14,6 +14,7 @@ import {
 	View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { t } from "@/i18n";
 
 import {
 	attachmentCacheKey,
@@ -63,8 +64,11 @@ const MESSAGE_ROW_GUTTERS = 76;
  */
 const imageLabel = (position: { index: number; count: number } | null) =>
 	!position || position.count === 1
-		? "Image"
-		: `Image ${position.index + 1} of ${position.count}`;
+		? t("mobile.team_bridge.attachment.image")
+		: t("mobile.team_bridge.attachment.image_position", {
+				index: position.index + 1,
+				count: position.count,
+			});
 
 type Source = {
 	hub: HubClient;
@@ -191,22 +195,35 @@ function ThreadImage({
 	const { uri, state, retry } = useAttachmentUri(source, descriptor.id);
 	const testID = teamBridgeAttachmentId(descriptor.id);
 	if (state === "gone")
-		return <Placeholder text="Image unavailable" box={box} testID={testID} />;
+		return (
+			<Placeholder
+				text={t("mobile.team_bridge.attachment.unavailable")}
+				box={box}
+				testID={testID}
+			/>
+		);
 	if (state === "error")
 		return (
 			<Placeholder
-				text="This image did not load."
+				text={t("mobile.team_bridge.attachment.load_error")}
 				box={box}
 				testID={testID}
-				action={{ label: "Retry", onPress: retry }}
+				action={{
+					label: t("mobile.team_bridge.attachment.retry"),
+					onPress: retry,
+				}}
 			/>
 		);
 	return (
 		<Pressable
 			testID={testID}
 			accessibilityRole={ROLE.imagebutton}
-			accessibilityLabel={state === "ready" ? label : `${label}, loading`}
-			accessibilityHint="Opens the image full screen"
+			accessibilityLabel={
+				state === "ready"
+					? label
+					: t("mobile.team_bridge.attachment.loading_label", { label })
+			}
+			accessibilityHint={t("mobile.team_bridge.attachment.open_hint")}
 			disabled={state !== "ready"}
 			onPress={onOpen}
 			className="overflow-hidden rounded-sm border border-hairline bg-elevated"
@@ -301,7 +318,9 @@ export function MessageAttachments({
 									key={descriptor?.id ?? fallbackId}
 									box={box}
 									text={
-										view === "expired" ? "Image expired" : "Image unavailable"
+										view === "expired"
+											? t("mobile.team_bridge.attachment.expired")
+											: t("mobile.team_bridge.attachment.unavailable")
 									}
 									testID={
 										descriptor
@@ -415,7 +434,12 @@ function ImageViewer({
 		settleTimer.current = setTimeout(() => pagerEvents.onSettle(), SETTLE_MS);
 	};
 	const many = images.length > 1;
-	const position = many ? `${index + 1} of ${images.length}` : "";
+	const position = many
+		? t("mobile.team_bridge.attachment.position", {
+				index: index + 1,
+				count: images.length,
+			})
+		: "";
 	const button = (
 		label: string,
 		icon: React.ReactNode,
@@ -454,7 +478,7 @@ function ImageViewer({
 				    AccessibilityRole has no dialog, so `role` + `aria-label`. */}
 				<View
 					role={ROLE.dialog}
-					aria-label="Image viewer"
+					aria-label={t("mobile.team_bridge.attachment.viewer")}
 					className="flex-1 bg-canvas"
 				>
 					<ScrollView
@@ -476,7 +500,14 @@ function ImageViewer({
 								descriptor={descriptor}
 								width={width}
 								height={height}
-								label={many ? `Image ${page + 1} of ${images.length}` : "Image"}
+								label={
+									many
+										? t("mobile.team_bridge.attachment.image_position", {
+												index: page + 1,
+												count: images.length,
+											})
+										: t("mobile.team_bridge.attachment.image")
+								}
 							/>
 						))}
 					</ScrollView>
@@ -486,7 +517,7 @@ function ImageViewer({
 						style={{ top: insets.top + 8 }}
 					>
 						{button(
-							"Close image",
+							t("mobile.team_bridge.attachment.close"),
 							<X color={ink} size={20} />,
 							onClose,
 							teamBridgeViewerId("close"),
@@ -507,14 +538,14 @@ function ImageViewer({
 							style={{ bottom: insets.bottom + 16 }}
 						>
 							{button(
-								"Previous image",
+								t("mobile.team_bridge.attachment.previous"),
 								<ChevronLeft color={ink} size={22} />,
 								() => pagerEvents.step(-1),
 								teamBridgeViewerId("previous"),
 								index === 0,
 							)}
 							{button(
-								"Next image",
+								t("mobile.team_bridge.attachment.next"),
 								<ChevronRight color={ink} size={22} />,
 								() => pagerEvents.step(1),
 								teamBridgeViewerId("next"),
@@ -549,11 +580,18 @@ function ViewerPage({
 				<Placeholder
 					box={{ width: Math.min(width - 32, 320), height: 160 }}
 					text={
-						state === "gone" ? "Image unavailable" : "This image did not load."
+						state === "gone"
+							? t("mobile.team_bridge.attachment.unavailable")
+							: t("mobile.team_bridge.attachment.load_error")
 					}
 					testID={teamBridgeViewerId(`page-${descriptor.id}`)}
 					action={
-						state === "error" ? { label: "Retry", onPress: retry } : undefined
+						state === "error"
+							? {
+									label: t("mobile.team_bridge.attachment.retry"),
+									onPress: retry,
+								}
+							: undefined
 					}
 				/>
 			</View>
@@ -586,7 +624,11 @@ function ViewerPage({
 					accessibilityLabel={label}
 				/>
 			) : (
-				<ActivityIndicator accessibilityLabel={`${label}, loading`} />
+				<ActivityIndicator
+					accessibilityLabel={t("mobile.team_bridge.attachment.loading_label", {
+						label,
+					})}
+				/>
 			)}
 		</ScrollView>
 	);
@@ -645,7 +687,16 @@ export function ComposerAttachments({
 							>
 								<View
 									accessible
-									accessibilityLabel={`Image ${n}, ${failed ? (chip.error ?? "failed") : (state ?? "ready")}`}
+									accessibilityLabel={t(
+										"mobile.team_bridge.attachment.chip_label",
+										{
+											index: n,
+											state: failed
+												? (chip.error ??
+													t("mobile.team_bridge.attachment.failed"))
+												: (state ?? t("mobile.team_bridge.attachment.ready")),
+										},
+									)}
 									className={`items-center justify-center overflow-hidden rounded-sm border ${failed ? "border-danger" : "border-border-control"} bg-elevated`}
 									style={{ width: CHIP_SIZE, height: CHIP_SIZE }}
 								>
@@ -684,7 +735,10 @@ export function ComposerAttachments({
 								{failed && chip.retryable ? (
 									<Pressable
 										accessibilityRole={ROLE.button}
-										accessibilityLabel={`Retry image ${n}`}
+										accessibilityLabel={t(
+											"mobile.team_bridge.attachment.retry_image",
+											{ index: n },
+										)}
 										testID={teamBridgeAttachmentChipId(`${index}-retry`)}
 										onPress={() => onRetry(chip.key)}
 										// The band below Remove's: disjoint by construction (D7).
@@ -709,7 +763,10 @@ export function ComposerAttachments({
 								) : null}
 								<Pressable
 									accessibilityRole={ROLE.button}
-									accessibilityLabel={`Remove image ${n}`}
+									accessibilityLabel={t(
+										"mobile.team_bridge.attachment.remove_image",
+										{ index: n },
+									)}
 									testID={teamBridgeAttachmentChipId(`${index}-remove`)}
 									onPress={() => onRemove(chip.key)}
 									// The top band, above Retry's: disjoint by construction (D7).

@@ -1,0 +1,218 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_current_byte_namespace_audit",
+	"audit_id": "hi30a1",
+	"locale": "hi",
+	"namespace": "mobile.home",
+	"audit_date": "2026-10-30",
+	"wave": "hi wave 6 — damianvtran/local-operator-mobile, branch feat/i18n-hindi, group A",
+	"audited_revision": "647581a4abd5eafce09914b5b1936982749c16c4",
+	"audited_revision_note": "The hi catalogue directory is untracked at this revision and src/i18n/catalogue.gen.ts is modified; the target bytes are pinned by input_hashes.hi.",
+	"key_count": {
+		"en": 27,
+		"target": 27,
+		"context": 27
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "0c3fa150075f",
+		"model": "radient/auto",
+		"actual_model": "radient/auto",
+		"model_history": [
+			"anthropic/claude-sonnet-5-5",
+			"openai/gpt-6-astra",
+			"kimi/k3.1-pro",
+			"radient/auto"
+		],
+		"actual_model_source": "session model-switch headers in this transcript: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each switch a provider quota fallback. Every command recorded in these bundles ran after the final switch, i.e. on radient/auto.",
+		"independent_from_translator_session": true,
+		"independence": "Different agent, different session and different context from the translator. Not model-diverse: the served model radient/auto is the translator's served model too; disclosed, not closed. No human native-speaker review and no rendered frame are claimed."
+	},
+	"translator": {
+		"agent": "i18n-translator (hi wave 6)",
+		"model": "not observed by this auditor",
+		"actual_model_source": "as supplied by the requesting manager; this auditor did not observe the translator's run",
+		"date": "2026-10-30"
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.home.json",
+			"sha256": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.home.context.json",
+			"sha256": "db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c"
+		},
+		"hi": {
+			"path": "src/i18n/catalogues/hi/mobile.home.json",
+			"sha256": "b6c5a5142e9e469912bfd72ffd3813d970d43be57d9fcad6ec2078b7cae2ae59"
+		}
+	},
+	"core_reference": {
+		"repo": "damianvtran/local-operator",
+		"origin_main": "8076c56acd56f07f1cabf90fd7fca8bf0e5acdff",
+		"paths": "core glossary + hi style guide; per-term occurrence counts over origin/main:local_operator/i18n/catalogues/hi/"
+	},
+	"mechanical": {
+		"repo_validator": "node scripts/i18n/generate.ts --check -> exit 0 (catalogue.gen.ts current, 143 keys, 10 namespaces); node scripts/i18n/check-strings.ts -> 284 baselined findings, 0 new, no growth vs 647581a",
+		"validator_scope": "the validator checks key parity, message parsing, catalogue projection and the strings ratchet; it does not compare placeholders or ICU arms between locales and does not run a plural zero case, so this audit parsed every value with the repository's own parser and compared those surfaces itself",
+		"scoped_checks": "valid JSON; key and sidecar parity; placeholder name/kind parity; ICU arm parity; whole-value round-trip through parseMessage/formatMessage; NFC; no ZWJ/ZWNJ; no double/edge spaces; no space before punctuation; no ASCII ellipsis or ASCII full stop after Devanagari; curly quotes only; no Devanagari digits; no control or bidi characters; no तुम/तू",
+		"renderer": "src/i18n/messages.ts parseMessage/formatMessage and src/i18n/locale.ts, driven from a scratch script; the repository's own code, not a reimplementation",
+		"fit_metric": "glyph advances measured with CoreText/AppKit (system font) at the app's token sizes (meta 12/500, body-sm 14/400, title 20/600, label 15/600) against boxes read from home-splash.tsx, tokens.gen.ts and the sidecars: 288 pt splash column at 320 pt, 270 pt tip text box, 256 pt chip text box",
+		"no_rendered_frame": "widths are measured text advances, not a rendered frame; the claim is the comparison with the row boxes, not a screenshot"
+	},
+	"second_independent_pass": {
+		"performed": true,
+		"job": "3509c19895bd",
+		"agent": "reviewer subagent (label hi-second-pass)",
+		"requested_model": "anthropic/claude-sonnet-5-5 (role default)",
+		"actual_model": "radient/auto",
+		"scope": "all four group-A namespaces, 54 values, read in full without seeing this auditor's findings",
+		"effect": "agreed the tip.parallel wording is wrong and proposed the same replacement (graded MINOR there; MAJOR here per the task rubric); refuted this auditor's tentative MAJOR on resume_refused with three checkable reasons (English does the same, core splits the same way, the title already carries the verb) — finding withdrawn; contributed the फिर से consistency finding and the अभी दोबारा alignment, both adopted; judged options.apply natural where this auditor files a NIT — disagreement disclosed; independently flagged the red catalogues.test.ts and the English accessibilityLabel on the status tray, both verified here"
+	},
+	"findings": [
+		{
+			"id": "H-01",
+			"key": "mobile.home.tip.parallel",
+			"severity": "MAJOR",
+			"current": "साथ-साथ काम कहें, तो उप-एजेंट बँट जाते हैं",
+			"problem": "Calque. Hindi कहना does not take काम as its object in the sense 'ask for work'; a reader gets 'say work together'. The living phrasings are काम माँगें or काम के लिए कहें. The second independent reader reached the same diagnosis and the same replacement, but graded it MINOR; this verdict follows the task rubric, where an unidiomatic rendering is MAJOR.",
+			"replacement": "साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं",
+			"evidence": "CoreText/AppKit, system font, meta 12/500: current 203.9 pt, replacement 204.8 pt, against the tip's 270 pt text box (288 pt row at 320 pt minus the Info glyph 12 pt and its 6 pt gap). 26 characters against TIP_CHAR_BUDGET 48. Only the verb changes; उप-एजेंट and बँट जाते हैं are already the style guide's terms."
+		},
+		{
+			"id": "H-02",
+			"key": "mobile.home.startup_queue.blocked",
+			"severity": "MINOR",
+			"current": "कतार के संदेश भेजने के लिए फिर कोशिश करें",
+			"problem": "One instruction, two forms in one product: core's shipped Hindi (and the mobile mirror of it) says फिर से कोशिश करें — relay.health.ended_send_failed '…फिर से कोशिश करें…' — and the hi style guide writes फिर से शुरू करें, while this and four sibling keys drop से. relay.health.ended_send_failed ships in this app (byte-identical to core) and is one of the strings a reader meets on the same session surfaces.",
+			"replacement": "कतार के संदेश भेजने के लिए फिर से कोशिश करें",
+			"evidence": "Measured 248.0 pt at body-sm 14/400 (was 234.7) inside the 288 pt content column; the row wraps if it must, nothing is clamped."
+		},
+		{
+			"id": "H-03",
+			"key": "mobile.home.suggestion.wake_summary",
+			"severity": "MINOR",
+			"current": "सारांश के साथ जगाएँ",
+			"problem": "जगाना is obligatorily transitive and the English object ('me') is dropped, so the chip asks the reader to 'wake' with no one woken. Every other chip in the pool has its object or is intransitive, so this one is the odd member rather than a terse convention.",
+			"replacement": "सारांश के साथ मुझे जगाएँ",
+			"evidence": "Measured 131.3 pt at body-sm 14/400 (was 108.2) in the 256 pt chip text box; 24 characters, the source locale's own chip budget."
+		},
+		{
+			"id": "H-04",
+			"key": "mobile.home.options.apply",
+			"severity": "NIT",
+			"current": "ये विकल्प इस्तेमाल करें",
+			"problem": "Optional. इस्तेमाल करना normally takes the genitive object (विकल्पों का इस्तेमाल); the dropped का is tolerated in terse UI Hindi. The second independent reader judged the current form natural and asked for no change; kept as a NIT so the choice is visible rather than silently made.",
+			"replacement": "इन विकल्पों का इस्तेमाल करें",
+			"evidence": "Measured 161.3 pt at label 15/600 (was 128.9); the button sizes to its label."
+		}
+	],
+	"current_report_verdict": {
+		"status": "changes_requested",
+		"unresolved_blocker_major_count": 1,
+		"blocker_ids": [],
+		"major_ids": [
+			"H-01"
+		],
+		"minor_ids": [
+			"H-02",
+			"H-03"
+		],
+		"nit_ids": [
+			"H-04"
+		],
+		"finding_ids": [
+			"H-01",
+			"H-02",
+			"H-03",
+			"H-04"
+		],
+		"reason": "1 MAJOR (calque in the parallel-work tip), 1 MINOR, 1 NIT; everything else reads as native Hindi and the mechanical suite is clean"
+	},
+	"ledger": {
+		"command": "absent",
+		"note": "No audit-ledger command and no i18n ledger exist in this repository at this head: i18n/ holds audits/ only, and scripts/i18n/ has generate.ts, check-strings.ts and the ratchet, with no ledger writer. docs/i18n.md records the report in the pull request. This bundle is the durable record; a ledger-ready row is proposed in ledger_row_proposed and explicitly NOT written.",
+		"ledger_row_proposed": {
+			"locale": "hi",
+			"namespace": "mobile.home",
+			"status": "changes_requested",
+			"auditor": "i18n-auditor",
+			"model": "radient/auto",
+			"source_hash": "4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3",
+			"note": "hi wave 6 hi30a1: see i18n/audits/evidence/hi/mobile.home/hi30a1/record.json",
+			"written": false
+		}
+	},
+	"route": {
+		"evidence_path": "written under this repository's i18n/audits/evidence root (no tracked manifest maps a different root)",
+		"reads": "ordinary worktree reads; core's committed bytes via git -C /Users/damian/local-operator show origin/main:<path>; the repository's own validator and renderer; local CoreText measurement",
+		"writes": "this bundle only; no edit to any catalogue, source or config file; nothing committed or pushed"
+	},
+	"limits": {
+		"native_review": "none performed; this auditor reads Hindi fluently by reasoning, not as a community-verified native reviewer",
+		"rendered_frame": "none captured; no simulator or browser frame was produced for these strings",
+		"translator_observation": "the translator's run was not observed by this auditor",
+		"plural_zero_case": "this namespace carries no plural message. The catalogue's plural messages live in mobile.schedules and mobile.projects (other auditors' groups); this auditor rendered them at 0/1/2/21 through the repository's formatter and independently reached the same zero-case defect the schedules bundle files as HI-B-5 (hi30s1), with the same fix. Rendered evidence is in this record's cross_namespace_observations. This auditor would grade it MAJOR; the schedules auditor owns the disposition. Width is measured, never rendered.",
+		"shipping_state": "at this head hi sits in NOT_YET_SHIPPED_LOCALES, so t() renders English for a hi preference and catalogues.test.ts fails until the ship step flips the list (verified: 51 pass, 1 fail at catalogues.test.ts:188) — a wave step, not a copy defect"
+	},
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement, not command output. audit.log holds the commands actually run and their actual output at this head. Rendered composed sentences quoted in report.md were produced by the repository's own formatter in this session.",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/hi/mobile.home/hi30a1/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.home/hi30a1/report.md",
+			"sha256": "ba78976830fefdf49443751f4777a92760950d2227808f7344466e206c5656f5"
+		},
+		{
+			"path": "i18n/audits/evidence/hi/mobile.home/hi30a1/audit.log",
+			"note": "actual command output, not notes",
+			"sha256": "c8f45f70f12a17ee892f6bd0b54fc4f51dc0aebe6494cce482cefb608f1b766c"
+		}
+	],
+	"cross_namespace_observations": [
+		{
+			"owner": "mobile.schedules audit hi30s1 (a different auditor; not this group)",
+			"keys": [
+				"mobile.schedules.count.wakes",
+				"mobile.schedules.show_more.wakes"
+			],
+			"what": "zero-case plural",
+			"rendered_here": {
+				"method": "repository parseMessage/formatMessage, locale 'hi', count 0/1/2/21",
+				"current_0": "0 जागृति  (mobile.schedules.count.wakes) · 0 और जागृति दिखाएँ (show_more.wakes)",
+				"current_1": "1 जागृति · 1 और जागृति दिखाएँ",
+				"current_2": "2 जागृतियाँ · 2 और जागृतियाँ दिखाएँ",
+				"current_21": "21 जागृतियाँ · 21 और जागृतियाँ दिखाएँ",
+				"with_exact_zero_arm_0": "0 जागृतियाँ · 0 और जागृतियाँ दिखाएँ"
+			},
+			"why": "Intl.PluralRules('hi').select(0) === 'one', so zero takes the singular arm; the sentence actually rendered at zero is '0 जागृति', where Hindi reads the plural after zero ('0 जागृतियाँ'), as it does for 2 and 21. The style guide's own example ('0 फ़ाइल is singular') is where this comes from and is the thing to correct.",
+			"exact_fix": "mobile.schedules.count.wakes → {count, plural, =0 {# जागृतियाँ} one {# जागृति} other {# जागृतियाँ}}; mobile.schedules.show_more.wakes → {hidden, plural, =0 {# और जागृतियाँ दिखाएँ} one {# और जागृति दिखाएँ} other {# और जागृतियाँ दिखाएँ}}",
+			"disposition": "filed by that namespace's owner as HI-B-5 at severity minor in i18n/audits/evidence/hi/mobile.schedules/hi30s1. Recorded here as independent corroboration with the same fix; this auditor would grade it MAJOR (the rendered zero phrase is not idiomatic Hindi), but the schedules auditor owns the disposition."
+		},
+		{
+			"owner": "mobile.schedules audit hi30s1 (a different auditor; not this group)",
+			"keys": [
+				"mobile.schedules.truncated"
+			],
+			"what": "oblique counted noun after a numeral",
+			"current": "{family, select, wakes {जागृतियाँ} other {मॉनिटर}} वाली कुल {total} बातचीत में से {shown} दिखा रहे हैं।",
+			"rendered_here": "… वाली कुल 2 बातचीत में से 2 दिखा रहे हैं।",
+			"why": "बातचीत sits after a numeral and before में से, so it needs the oblique plural (बातचीतों); the family noun before वाली likewise takes the oblique (जागृतियों / मॉनिटरों).",
+			"disposition": "filed by that namespace's owner as HI-B-1 at severity major in i18n/audits/evidence/hi/mobile.schedules/hi30s1, with the same substantive fix. No duplicate finding is filed here."
+		},
+		{
+			"owner": "this group (verified, nothing to fix)",
+			"keys": [
+				"mobile.projects.sessions.count",
+				"mobile.schedules.count.monitors"
+			],
+			"what": "count nouns that are invariant in the direct plural",
+			"rendered_here": "0 सत्र · 1 सत्र · 2 सत्र · 21 सत्र   and   0 मॉनिटर · 1 मॉनिटर · 2 मॉनिटर · 21 मॉनिटर",
+			"why": "सत्र and मॉनिटर have no distinct direct plural, so the CLDR one-for-zero selection produces a correct phrase in these two; only जागृति (जागृतियाँ) exposes the defect. This is why the zero case is observable on two keys and not five.",
+			"disposition": "no change needed"
+		}
+	]
+}

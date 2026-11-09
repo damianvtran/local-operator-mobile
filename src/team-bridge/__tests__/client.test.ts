@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { resetLocaleSource, setLocaleSource } from "@/i18n/locale";
 import { createHubClient, HubError, hubErrorKind } from "@/team-bridge/client";
 
 import { conversation, message, status, TENANT } from "./fixtures";
@@ -33,6 +34,41 @@ const json = (
 const ok = (result: unknown) => json(200, { msg: "ok", result });
 
 describe("hub client", () => {
+	it("localizes a body-less refusal at call time without changing server errors", async () => {
+		let locale = "en";
+		setLocaleSource(() => locale);
+		const { impl, calls } = fakeFetch([
+			() => new Response("upstream failure", { status: 500 }),
+			() => new Response("upstream failure", { status: 500 }),
+			() => json(422, { error: "field required", code: "invalid_request" }),
+		]);
+		const client = createHubClient({
+			accessToken: async () => "token-a",
+			fetchImpl: impl,
+		});
+		try {
+			await expect(client.status()).rejects.toMatchObject({
+				kind: "server",
+				status: 500,
+				message: "Radient refused the request (HTTP 500).",
+			});
+			// One existing client changes language without being reconstructed.
+			locale = "fr";
+			await expect(client.status()).rejects.toMatchObject({
+				kind: "server",
+				status: 500,
+				message: "Radient a refusé la requête (HTTP 500).",
+			});
+			await expect(client.status()).rejects.toMatchObject({
+				kind: "invalid",
+				status: 422,
+				message: "field required",
+			});
+			expect(calls).toHaveLength(3);
+		} finally {
+			resetLocaleSource();
+		}
+	});
 	it("calls the hub directly with the Radient bearer, never a cookie, and parses the envelope", async () => {
 		const { impl, calls } = fakeFetch([() => ok(status())]);
 		const client = createHubClient({

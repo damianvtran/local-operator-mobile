@@ -1,0 +1,400 @@
+# audit bundle ur/mobile.home/ur30a1 — captured 2026-10-30T22:23:48Z
+$ git -C <worktree> rev-parse HEAD
+32c7677715f6a6409b5da05021650c725169c853
+$ git -C <worktree> status --short src/i18n/catalogues/ur
+?? src/i18n/catalogues/ur/
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, es, fr, hi, ru, vi, zh-CN)
+(node:44286) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file://<scratch>/ur-wave/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <scratch>/ur-wave/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) node scripts/i18n/check-strings.ts
+check-strings: 284 finding(s), all baselined; 0 new; no growth vs 32c7677715f6
+exit=0
+
+$ cd <worktree> && HOME=$(mktemp -d) npx tsx <scratch>/ur-audit-a/evidence.mts mobile.home ur30a1
+== bundle ur/mobile.home/ur30a1 — independent Urdu audit, group A
+== command: npx tsx <scratch>/ur-audit-a/evidence.mts mobile.home ur30a1
+== route: catalogue read as ordinary WORKTREE FILES (read_public_copy is refused for src/i18n/**);
+   the en context sidecar is nested JSON ({role,note} objects), not a message map, so it is not routable;
+   NO copy-route receipt was obtained for any input below — none is claimed.
+
+-- inputs
+   en       4ebba126f106bada157ae56ef2a7fedc2b5ee056d01df7dcd9235c75bd68dce3  <worktree>/src/i18n/catalogues/en/mobile.home.json
+   context  db18b25dd2099a953b817d151b9605e43f0403b528c36fdadc822cb6c9125f3c  <worktree>/src/i18n/catalogues/en/mobile.home.context.json
+   ur       6181c9bf8198ccc599883578625f7f1293539794021d952f5b761952c5c1e213  <worktree>/src/i18n/catalogues/ur/mobile.home.json
+
+-- key parity: en=27 ur=27 missing=[] unknown=[]
+   JSON validity: both files parsed by JSON.parse above (no exception).
+
+-- plural probe (independent of the catalogue)
+   Intl.PluralRules('ur').select: 0=other 1=one 2=other 21=other
+   app pluralCategory("ur", n):    0=other 1=one 2=other 21=other
+   parameterised keys in mobile.home: 0 (no placeholder/plural/select in this namespace)
+   → CLDR category completeness (all categories for the locale) is vacuous here: no plural/select message exists in this namespace.
+
+-- per-key evidence (len = code points; the style guide measures ≈1 terminal cell per character)
+   mobile.home.connect_disabled_reason
+      en(27): Connect a computer to send.
+      ur(35): بھیجنے کے لیے کمپیوٹر سے منسلک ہوں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): بھیجنے کے لیے کمپیوٹر سے منسلک ہوں۔
+      render(renderFor(key,{},'ur')): Connect a computer to send.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.folders_read_failed
+      en(50): We couldn't read this computer's folders just now.
+      ur(42): ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔
+      render(renderFor(key,{},'ur')): We couldn't read this computer's folders just now.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.greeting
+      en(31): What can I help you with today?
+      ur(26): آج میں آپ کی کیا مدد کروں؟
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): آج میں آپ کی کیا مدد کروں؟
+      render(renderFor(key,{},'ur')): What can I help you with today?  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=heading
+   mobile.home.options.apply
+      en(17): Use these options
+      ur(24): یہ اختیارات استعمال کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): یہ اختیارات استعمال کریں
+      render(renderFor(key,{},'ur')): Use these options  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.options.fixed
+      en(95): This conversation's starting options are fixed. Use Conversation details for its live controls.
+      ur(97): اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اس گفتگو کے ابتدائی اختیارات طے ہو چکے ہیں۔ اس کے لائیو کنٹرولز کے لیے “گفتگو کی تفصیلات” دیکھیں۔
+      render(renderFor(key,{},'ur')): This conversation's starting options are fixed. Use Conversation details for its live controls.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   mobile.home.options.folder
+      en(23): Folder on this computer
+      ur(19): اس کمپیوٹر پر فولڈر
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اس کمپیوٹر پر فولڈر
+      render(renderFor(key,{},'ur')): Folder on this computer  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=meta
+   mobile.home.options.title
+      en(20): Conversation options
+      ur(17): گفتگو کے اختیارات
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): گفتگو کے اختیارات
+      render(renderFor(key,{},'ur')): Conversation options  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=heading
+   mobile.home.queue.discard
+      en(23): Discard queued messages
+      ur(29): قطار میں لگے پیغامات حذف کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): قطار میں لگے پیغامات حذف کریں
+      render(renderFor(key,{},'ur')): Discard queued messages  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.queue.restore
+      en(29): Move queued messages to draft
+      ur(41): قطار میں لگے پیغامات مسودے میں منتقل کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): قطار میں لگے پیغامات مسودے میں منتقل کریں
+      render(renderFor(key,{},'ur')): Move queued messages to draft  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.queue.sheet_title
+      en(15): Queued messages
+      ur(20): قطار میں لگے پیغامات
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): قطار میں لگے پیغامات
+      render(renderFor(key,{},'ur')): Queued messages  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=heading
+   mobile.home.queue.view
+      en(20): View queued messages
+      ur(27): قطار میں لگے پیغامات دیکھیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): قطار میں لگے پیغامات دیکھیں
+      render(renderFor(key,{},'ur')): View queued messages  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.refused_start_fallback
+      en(43): That folder doesn't exist on this computer.
+      ur(34): اس کمپیوٹر پر وہ فولڈر موجود نہیں۔
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اس کمپیوٹر پر وہ فولڈر موجود نہیں۔
+      render(renderFor(key,{},'ur')): That folder doesn't exist on this computer.  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.starting
+      en(9): Starting…
+      ur(15): شروع ہو رہا ہے…
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): شروع ہو رہا ہے…
+      render(renderFor(key,{},'ur')): Starting…  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.startup_queue.blocked
+      en(29): Retry to send queued messages
+      ur(46): قطار کے پیغامات بھیجنے کے لیے دوبارہ کوشش کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): قطار کے پیغامات بھیجنے کے لیے دوبارہ کوشش کریں
+      render(renderFor(key,{},'ur')): Retry to send queued messages  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.startup_queue.not_started
+      en(11): Not started
+      ur(13): شروع نہیں ہوا
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): شروع نہیں ہوا
+      render(renderFor(key,{},'ur')): Not started  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.startup_queue.sending
+      en(24): Sending queued messages…
+      ur(33): قطار کے پیغامات بھیجے جا رہے ہیں…
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): قطار کے پیغامات بھیجے جا رہے ہیں…
+      render(renderFor(key,{},'ur')): Sending queued messages…  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.startup_queue.unconfirmed
+      en(19): Start not confirmed
+      ur(23): شروع ہونے کی تصدیق نہیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): شروع ہونے کی تصدیق نہیں
+      render(renderFor(key,{},'ur')): Start not confirmed  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+   mobile.home.suggestion.last_turn
+      en(21): Show me the last turn
+      ur(16): آخری ٹرن دکھائیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): آخری ٹرن دکھائیں
+      render(renderFor(key,{},'ur')): Show me the last turn  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.suggestion.linear_mcp
+      en(17): Set up Linear MCP
+      ur(22): Linear MCP سیٹ اپ کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): Linear MCP سیٹ اپ کریں
+      render(renderFor(key,{},'ur')): Set up Linear MCP  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.suggestion.phone_access
+      en(20): Turn on phone access
+      ur(17): فون رسائی آن کریں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): فون رسائی آن کریں
+      render(renderFor(key,{},'ur')): Turn on phone access  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.suggestion.review_repo
+      en(16): Review this repo
+      ur(20): اس repo کا جائزہ لیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): اس repo کا جائزہ لیں
+      render(renderFor(key,{},'ur')): Review this repo  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.suggestion.team_of_agents
+      en(23): Create a team of agents
+      ur(20): ایجنٹس کی ٹیم بنائیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): ایجنٹس کی ٹیم بنائیں
+      render(renderFor(key,{},'ur')): Create a team of agents  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.suggestion.wake_summary
+      en(22): Wake me with a summary
+      ur(22): مجھے خلاصے سمیت جگائیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): مجھے خلاصے سمیت جگائیں
+      render(renderFor(key,{},'ur')): Wake me with a summary  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=button
+   mobile.home.tip.parallel
+      en(42): ask for parallel work to fan out subagents
+      ur(44): ذیلی ایجنٹس پھیلانے کے لیے متوازی کام مانگیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): ذیلی ایجنٹس پھیلانے کے لیے متوازی کام مانگیں
+      render(renderFor(key,{},'ur')): ask for parallel work to fan out subagents  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   mobile.home.tip.schedule
+      en(41): set a schedule to run a prompt on a timer
+      ur(41): ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں
+      render(renderFor(key,{},'ur')): set a schedule to run a prompt on a timer  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   mobile.home.tip.search
+      en(45): search past conversations to reopen a session
+      ur(41): گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں
+      render(renderFor(key,{},'ur')): search past conversations to reopen a session  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=help
+   mobile.home.transcript.waiting
+      en(29): Waiting for the conversation…
+      ur(16): گفتگو کا انتظار…
+      parse: en{} ur{} parity=true
+      render(formatMessage, ur text+ur rules): گفتگو کا انتظار…
+      render(renderFor(key,{},'ur')): Waiting for the conversation…  ← ENGLISH: ur is still in NOT_YET_SHIPPED_LOCALES (locale.ts:69), so the runtime catalogue does not serve ur; the ur text was exercised above through the same formatter renderFor delegates to.
+      context role=status
+
+-- bidi: control-character hits in this namespace = 0 (expected 0; the render layer adds FSI/PDI)
+-- latin runs: 3 in the ur text, 0 not present in the en source (expected 0)
+-- typography: ۔=5 ،=0 ؟=1 “”=2 …(U+2026)=3 | strings containing ASCII "..."=0 | digits=none | Arabic yeh/kaf/heh/marbuta=none
+-- non-ASCII code points used: U+0628 U+06BE U+06CC U+062C U+0646 U+06D2 U+06A9 U+0644 U+0645 U+067E U+0648 U+0679 U+0631 U+0633 U+06C1 U+06BA U+06D4 U+0627 U+0641 U+0688 U+0632 U+0691 U+0622 U+062F U+061F U+062E U+062A U+0639 U+06AF U+0626 U+0637 U+0686 U+201C U+0635 U+201D U+0642 U+063A U+062D U+0630 U+0634 U+2026 U+0638
+-- redaction scan: 0 marker(s) across the three inputs (expected 0)
+
+-- proposed replacements, parsed and rendered by the app's own formatter
+   ur30a1-M1 MAJOR mobile.home.connect_disabled_reason  (35 → 40 chars)
+      before: بھیجنے کے لیے کمپیوٹر سے منسلک ہوں۔
+      after : بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔
+      round-trip stable=true  bidi-controls-in-replacement=false
+   ur30a1-m1 MINOR mobile.home.tip.parallel  (44 → 47 chars)
+      before: ذیلی ایجنٹس پھیلانے کے لیے متوازی کام مانگیں
+      after : ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں
+      round-trip stable=true  bidi-controls-in-replacement=false
+   ur30a1-m2 MINOR mobile.home.suggestion.wake_summary  (22 → 23 chars)
+      before: مجھے خلاصے سمیت جگائیں
+      after : مجھے خلاصہ دے کر جگائیں
+      round-trip stable=true  bidi-controls-in-replacement=false
+   ur30a1-n1 NIT mobile.home.startup_queue.blocked: no change proposed
+   ur30a1-n2 NIT mobile.home.startup_queue.unconfirmed  (23 → 28 chars)
+      before: شروع ہونے کی تصدیق نہیں
+      after : شروع ہونے کی تصدیق نہیں ہوئی
+      round-trip stable=true  bidi-controls-in-replacement=false
+
+== end bundle ur/mobile.home/ur30a1
+exit=0
+
+$ python3 <scratch>/ur-audit-a/compose.py mobile.home
+-- composed / cross-namespace checks: mobile.home
+   reads: <scratch>/ur-wave/src/i18n/catalogues/ur/mobile.home.json, the en source and context beside it, sibling namespaces, core catalogues
+
+   TIP_CHAR_BUDGET read from home-copy.ts = 48 (the style guide also pins a 59-cell tip pool)
+      41  mobile.home.tip.schedule: ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں   OK
+      44  mobile.home.tip.parallel: ذیلی ایجنٹس پھیلانے کے لیے متوازی کام مانگیں   OK
+      41  mobile.home.tip.search: گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں   OK
+
+   suggestion chips (6): lengths vs the en-derived 24 and the translator's reported longest 22
+      22  linear_mcp: Linear MCP سیٹ اپ کریں
+      22  wake_summary: مجھے خلاصے سمیت جگائیں
+      20  review_repo: اس repo کا جائزہ لیں
+      20  team_of_agents: ایجنٹس کی ٹیم بنائیں
+      17  phone_access: فون رسائی آن کریں
+      16  last_turn: آخری ٹرن دکھائیں
+     longest ur chip = 22
+
+   composed: mobile.home.options.fixed quotes the Conversation-details title
+     quoted in fixed    : گفتگو کی تفصیلات
+     actual screen title: گفتگو کی تفصیلات
+     byte-equal         : True
+
+   composed: the startup queue row sits beside the composer's queued chip
+     queue row (ur)     : قطار کے پیغامات بھیجے جا رہے ہیں…
+     chip literal       : {queuedCount} queued  (composer.tsx, English in code, not a catalogue key)
+     → on a ur screen this row and the chip beside it are in different languages (out-of-scope observation)
+
+   composed: the composer slot every status line above uses (one line, one family)
+      35  connect_disabled_reason: بھیجنے کے لیے کمپیوٹر سے منسلک ہوں۔
+      42  folders_read_failed: ہم ابھی اس کمپیوٹر کے فولڈرز نہیں پڑھ سکے۔
+      15  starting: شروع ہو رہا ہے…
+
+   redaction scan: 6 input files read, 0 marker(s) in total (expected 0)
+exit=0
+
+$ python3 <scratch>/ur-audit-a/scan_all.py
+redaction scan: all inputs — 102 files enumerated below
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.home.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.session_health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.account_routing.context.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.chrome.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/relay.health.context.json
+   read: <worktree>/src/i18n/catalogues/ur/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.computers.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.projects.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.schedules.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/ur/mobile.notifications.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/fr/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/fr/relay.health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.home.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.session_health.json
+   read: <worktree>/src/i18n/catalogues/hi/mobile.account_routing.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.chrome.json
+   read: <worktree>/src/i18n/catalogues/hi/relay.health.json
+   read: <worktree>/src/i18n/catalogues/en/mobile.projects.json
+   read: <worktree>/src/i18n/messages.ts
+   read: <worktree>/src/i18n/runtime.ts
+   read: <worktree>/src/i18n/locale.ts
+   read: <worktree>/src/i18n/catalogues.ts
+   read: <worktree>/src/i18n/catalogue.gen.ts
+   read: <worktree>/scripts/i18n/generate.ts
+   read: <worktree>/scripts/i18n/check-strings.ts
+   read: <worktree>/package.json
+   read: <worktree>/src/features/home/home-copy.ts
+   read: <worktree>/src/features/home/home.tsx
+   read: <worktree>/src/features/home/home-splash.tsx
+   read: <worktree>/src/features/session/composer.ts
+   read: <worktree>/src/features/session/health-copy.ts
+   read: <worktree>/src/features/session/components/status-tray.tsx
+   read: <worktree>/src/features/session/components/composer.tsx
+   read: <worktree>/src/features/new-session/startup-transcript.tsx
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.exec_remote_help.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.services_status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/cli.team_bridge.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.approvals.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.ask.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.health.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.library.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.login.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.session.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.shell.json
+   read: <scratch>/ur-audit-a/core-ur/ur/relay.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.asks.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.palette.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.projects_edit.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.review.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.schedule.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.status.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.tags.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.team_authoring.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.transcript.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.viewer.json
+   read: <scratch>/ur-audit-a/core-ur/ur/tui.welcome.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.desktop.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.notifications.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.errors.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.incidents.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.memory.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.notices.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.radient_saver.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.remote_compute.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.settings.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.json
+   read: <scratch>/ur-audit-a/core-ur/ur/wire.slash.notifications_page.json
+   read: <scratch>/ur-audit-a/core-en/relay.account_policy.json
+   read: <scratch>/ur-audit-a/core-en/relay.chrome.json
+   read: <scratch>/ur-audit-a/core-en/relay.health.json
+   read: <core>/i18n/glossary.md
+   read: <core>/i18n/style-guides/ur.md
+   read: <core>/docs/I18N.md
+redaction scan: all inputs — 0 marker(s) across 102 files (expected 0)
+exit=0

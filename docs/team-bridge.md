@@ -104,6 +104,61 @@ push additionally needs an appropriately signed iOS build / Android Firebase
 build configuration and registered device. No feature flag, organization
 membership, consent receipt, deployment or credential was changed by this PR.
 
+## Image attachments
+
+Images require an enabled `status.attachments` capability; older hubs stay
+text-only and text-only sends omit `attachment_ids`. The advertised image count
+is clamped to four. General-file support is separate and not implemented here.
+System photo selection and clipboard paste feed `expo-image-manipulator`: every
+source is re-encoded to PNG/JPEG without metadata, within a 1024 px long edge and
+1 MiB. This dependency establishes the privacy/size boundary, not just previews.
+Picker and converted cache files are released after preparation. Chips retain
+text, retry only retryable failures, and release abandoned staged uploads.
+Image-only sends have an empty body; retry identity includes text and image IDs.
+
+Uploads, deletes and message-bound reads use the same tenant-scoped bearer client
+as messaging. Reads share main's hardened avatar reader: a full headers+body
+deadline, cancellation, and a 5 MiB protocol cap for other clients' larger images.
+Message-image MIME and magic bytes must agree. Non-streaming native fetch can
+only reject Content-Length early or check a completed buffer; a settled timeout
+is not proof the native networking stack stopped allocating. Rendered images
+use memory `data:` URIs with `cachePolicy="none"`; retirement clears the cache
+and invalidates pending reads. Unknown/expired descriptors never fetch.
+
+**Contract, not deployment evidence:** agent-server #169/#170 closed unmerged;
+image support moved to merged #213 (`7f6f56e7`, 2026-10-25). Server main read on
+2026-11-09 at `290286228d` exposes JWT-protected conversation upload/delete and
+message-bound byte routes. Multi-org requests require `tenant_id`; the default
+mode is image. Capability appears only when the deployment wires the service
+for an eligible scope. Merged code does not prove deployed/enabled status; local
+evidence here uses the supported fixture, never a production enrollment.
+
+## People: photos and profile cards
+
+Display only. The directory (`GET /v1/messaging/directory`) carries each
+member's `profile` and a relative, hash-pinned `avatar_url`
+(agent-server `docs/ACCOUNT-PROFILE.md`). Both are optional, so an older hub
+parses unchanged and the rows keep their initials. Conversation participants
+do not carry them; the directory is the one source.
+
+- **Photos** are read with the Radient bearer from
+  `GET /v1/accounts/{id}/avatar?v=<hash>&size=64|256` (`client.avatarBytes`)
+  and shown from an in-memory `data:` URI. A provider URL is never requested.
+  Rows read 64 px; the card reads 256 px. A 404, a network failure or bytes
+  that do not decode leave the initials in place, and a failure is remembered
+  so a list never re-requests it per render (`src/team-bridge/avatars.ts`).
+- **The cache** is in memory, keyed by account + hash + size, bounded in
+  entries and bytes, and owned by the account-keyed provider: an account
+  change or sign-out drops it and retires reads still in flight.
+- **The profile card** opens from a person's photo, or from a message author's
+  photo or name. It shows the photo, the hub-resolved name, a Person or Agent
+  badge (an agent reads "Aida (Ben)" and names its owner), title, description
+  and the person's local time when their timezone is known and valid. Its
+  Message action uses the existing DM navigation: an existing DM opens,
+  otherwise a draft opens and the DM is created on first send.
+- **Pronouns are not shown.** The hub sends them; the app deliberately strips
+  the field at parse time so no screen can render it.
+
 ## Verification and evidence limits
 
 The implementation has Node unit tests for schemas/client refusal paths,
@@ -137,7 +192,7 @@ attachments have their own opt-in cases, so the cases above keep a hub with no
 | Case (`case=` / `tb-fixture=`) | What the mock hub does | State it reaches |
 |---|---|---|
 | `attachments` | capability on; uploads stage, sends bind, bytes serve | Add image sheet, ready chips; with `thread=1` a 1-image, a 4-image, an image-only, an expired and an unavailable (unknown state) message |
-| `attachments_uploading` | uploads hang 30 s | chips stay "uploading" |
+| `attachments_uploading` | lifecycle-owned, cancellable loading delay | chips stay "uploading" |
 | `attachments_upload_failed` | uploads answer 503 | failed chip with Retry |
 | `attachments_upload_refused` | uploads answer 415 | final failed chip, no Retry |
 | `attachments_send_expired` | a send with images answers 404 `attachment_not_found` | chips turn expired, send error names it |
@@ -151,8 +206,9 @@ image. That seam exists only in a fixture web build on loopback.
 
 Chips need a real image: on the web build "Add image" → "Photo Library" opens
 the browser's file chooser (any PNG/JPEG), and "Paste image" reads the
-clipboard. The bundled fixture images are generated in memory by the mock. The iframe
-is a real 390×844 CSS-pixel viewport, scaled for display in the capture host. The
+clipboard. The bundled fixture images are generated in memory by the mock. The
+iframe is a real CSS-pixel viewport (default 390×844, widths 320–768 available),
+scaled only for display in the capture host. The
 fixture path is compiled out unless explicitly enabled, refuses non-loopback
 origins and never reads the real OAuth accessor. Stop the owned server and close
 the owned browser tab after captures.

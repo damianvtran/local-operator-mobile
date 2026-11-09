@@ -1,5 +1,4 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
 
@@ -17,6 +16,7 @@ import {
 	Screen,
 	Skeleton,
 } from "@/ui/components";
+import { BackIcon } from "@/ui/components/back-icon";
 
 /**
  * A subagent's own view (`docs/ux/flows.md` F-7).
@@ -92,7 +92,7 @@ export default function Subagent() {
 					accessibilityLabel={`Back to ${parentName}`}
 					testID={CONTROL.subagentBack}
 					onPress={() => router.back()}
-					icon={({ color, size }) => <ArrowLeft color={color} size={size} />}
+					icon={({ color, size }) => <BackIcon color={color} size={size} />}
 				/>
 			}
 		>

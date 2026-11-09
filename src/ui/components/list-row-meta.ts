@@ -424,3 +424,63 @@ export const rowAccessibilityLabel = (options: {
 	if (options.selected) parts.push("open");
 	return parts.join(", ");
 };
+
+/**
+ * The identity string as painted when its BOX is narrower than the string: head,
+ * one ellipsis, tail — with the port kept whole.
+ *
+ * Two earlier attempts are why this exists. A tail fit kept `…0.0.1:49869`, a
+ * fragment several machines share; a two-line middle ellipsis let react-native-web
+ * break at the string's own break opportunities, so `127.0.0.1:49892` split into
+ * `127.0.0.1:49` / `892` at 320 pt and 200 % (design D3). A host is ONE token: it
+ * must not wrap, and the part that identifies it is both ends.
+ *
+ * Pure and measured with the kit's own glyph widths, so the caller can pin the
+ * result to a single line with `numberOfLines={1}` and never rely on the platform's
+ * ellipsis behaviour.
+ */
+export const middleFit = (
+	text: string,
+	budgetDp: number,
+	scale: number,
+	// A sans label must pay its own face's advances, not the mono header's.
+	// Default preserves every existing mono caller's arithmetic.
+	measure: (text: string, scale: number) => number = textWidthDp,
+): string => {
+	if (measure(text, scale) <= budgetDp) return text;
+	const room = budgetDp - measure("…", scale);
+	if (room <= 0) return ELLIPSIS;
+	const glyphs = [...text];
+	/* The tail starts at the last colon when there is one: that keeps `:49892` — the
+	 * port, which is the half that changes between two tunnels on one machine. */
+	const colon = text.lastIndexOf(":");
+	const tailStart =
+		colon > 0
+			? colon
+			: Math.max(0, glyphs.length - Math.ceil(room / measure("…", scale)));
+	/* The port is the priority: reserve ONE head glyph so the machine still has a
+	 * face, and give the port everything else. Reserving a share for the head first
+	 * starved `:51078` at 140 dp / 200 % and painted a bare ellipsis — the identity
+	 * was gone entirely, which is worse than a short head. */
+	const oneGlyph = measure("…", scale);
+	let tail = "";
+	let tailSpent = 0;
+	const tailLimit = Math.max(oneGlyph, room - oneGlyph);
+	for (let index = glyphs.length - 1; index >= tailStart; index -= 1) {
+		const tailChar = glyphs[index] ?? "";
+		const width = measure(tailChar, scale);
+		if (tailSpent + width > tailLimit) break;
+		tailSpent += width;
+		tail = tailChar + tail;
+	}
+	let head = "";
+	let headSpent = 0;
+	const headLimit = room - tailSpent;
+	for (let index = 0; index < glyphs.length - [...tail].length; index += 1) {
+		const width = measure(glyphs[index] ?? "", scale);
+		if (headSpent + width > headLimit) break;
+		headSpent += width;
+		head += glyphs[index] ?? "";
+	}
+	return `${head}${ELLIPSIS}${tail}`;
+};

@@ -50,6 +50,11 @@ import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
+/* The fleet verdict: the desktop palettes, derived to the phone's roles and
+ * judged by the contrast contract's own per-palette rules. A plain `.mjs` so
+ * the design job's `node` (no install) and this script read one answer. */
+import { shippedPalettes } from "../design/themes/fleet.mjs";
+
 const require = createRequire(import.meta.url);
 const root = new URL("../", import.meta.url);
 
@@ -231,6 +236,25 @@ const valueFor = (role: string, theme: ThemeName): string => {
 	return "value" in colour ? colour.value : colour[theme];
 };
 
+/* The shipped palettes, and a structural check that the derivation produces
+ * exactly this app's role set — a role added to tokens.json that the derivation
+ * does not know would otherwise be emitted as `undefined`. */
+const fleet = shippedPalettes();
+for (const entry of fleet) {
+	const derived = Object.keys(entry.colors).sort().join(",");
+	if (derived !== [...roles].sort().join(",")) {
+		console.error(
+			"design/themes/derive.mjs and design/tokens/tokens.json disagree about the colour roles for " +
+				entry.id +
+				".\n  derived: " +
+				derived +
+				"\n  tokens:  " +
+				[...roles].sort().join(","),
+		);
+		process.exit(1);
+	}
+}
+
 /** `surface` -> `--color-surface`, the property Uniwind's utilities read. */
 const cssColour = (role: string): string => "--color-" + role;
 
@@ -376,6 +400,11 @@ const css = (): string => {
 	out.push(
 		"\t/* ---- radii: assigned by what the object is, never by taste ---- */",
 	);
+	/* Clears Tailwind's default radius ramp first, so an off-token class such as
+	 * `rounded-xl` (Tailwind's 12 px, which the composer shipped with and which
+	 * clipped against the display corner — decision record D-H4) stops compiling
+	 * instead of silently working. Only the kit's names below exist. */
+	out.push("\t--radius-*: initial;");
 	for (const [name, value] of Object.entries(radii)) {
 		out.push("\t--radius-" + name + ": " + value + "px;");
 	}
@@ -500,6 +529,71 @@ const css = (): string => {
 	out.push("\t* {");
 	out.push("\t\tfont-family: var(--font-sans);");
 	out.push("\t}");
+	out.push("}");
+	out.push("");
+	out.push("/*");
+	out.push(
+		" * The composer's placeholder, on the web build: ONE line, ellipsized.",
+	);
+	out.push(" *");
+	out.push(
+		" * A `<textarea>`'s `::placeholder` wraps, and the composer holds its empty",
+	);
+	out.push(
+		" * field to one body line (`placeholderMaxLines={1}`, §2.5 D1) — so a placeholder",
+	);
+	out.push(
+		" * longer than the line was cut THROUGH the glyphs of its second line at 320 pt",
+	);
+	out.push(
+		' * ("folder" half visible) and silently lost its tail at 200 % ("Send to reopen",',
+	);
+	out.push(
+		" * no ellipsis), losing exactly the words that say WHERE a send reopens an ended",
+	);
+	out.push(
+		" * session (design round 1 D4, UX round 1 U9). The copy is verbatim safety copy",
+	);
+	out.push(
+		" * and must not be shortened, so the field says it on one line and shows that it",
+	);
+	out.push(
+		" * continues. Scoped to the composer's field by its stable test id; native",
+	);
+	out.push(" * `TextInput` placeholders are single-line already.");
+	out.push(" *");
+	out.push(
+		" * WHY THE FIELD IS AN `<input>` ON WEB (UX round 2, U9): Chrome computes",
+	);
+	out.push(
+		" * `text-overflow: clip` on a textarea's `::placeholder` whatever the sheet",
+	);
+	out.push(
+		" * says, and on the textarea ITSELF the declaration computes while the",
+	);
+	out.push(
+		" * placeholder still wraps and clips — measured on this build, including a",
+	);
+	out.push(
+		" * bare isolated textarea. An `<input>` with the same box ellipsizes",
+	);
+	out.push(
+		" * correctly, so the empty one-placeholder-line field renders as one",
+	);
+	out.push(
+		" * (`Textarea`). The selector is deliberately not scoped to `textarea`: the",
+	);
+	out.push(
+		" * element changes. `:placeholder-shown` keeps it off any typed draft.",
+	);
+	out.push(" */");
+	out.push("@layer base {");
+	out.push('\t[data-testid="composer-input"]:placeholder-shown {');
+	out.push("		white-space: pre;");
+	out.push("		overflow: hidden;");
+	out.push("		text-overflow: ellipsis;");
+	out.push("		line-height: 1.5;");
+	out.push("	}");
 	out.push("}");
 	out.push("");
 	out.push(
@@ -936,6 +1030,92 @@ const ts = (): string => {
 	out.push("\ttabletBreakpoint: 700,");
 	out.push("} as const;");
 	out.push("");
+	out.push("/**");
+	out.push(
+		" * Every theme the app ships: the desktop app's palettes (the source of",
+	);
+	out.push(
+		" * truth, vendored in design/themes/desktop-palettes.json), derived to this",
+	);
+	out.push(
+		" * app's roles by design/themes/derive.mjs and admitted only if they clear",
+	);
+	out.push(
+		" * the contrast contract (design/themes/fleet.mjs). In the desktop's family",
+	);
+	out.push(
+		" * order, which the theme picker keeps. `name` is a proper noun and stays",
+	);
+	out.push(" * verbatim in every locale, as it does on the desktop.");
+	out.push(" */");
+	out.push("export const THEMES = [");
+	for (const entry of fleet) {
+		out.push("\t{");
+		out.push("\t\tid: " + q(entry.id) + ",");
+		out.push("\t\tname: " + q(entry.name) + ",");
+		out.push("\t\tmode: " + q(entry.mode) + ",");
+		out.push("\t\tcolors: {");
+		for (const role of roles) {
+			const value = entry.colors[role];
+			if (value === undefined)
+				throw new Error(entry.id + " derives no value for " + role);
+			out.push("\t\t\t" + q(role) + ": " + q(value) + ",");
+		}
+		out.push("\t\t},");
+		out.push("\t},");
+	}
+	out.push("] as const satisfies readonly {");
+	out.push("\tid: string;");
+	out.push("\tname: string;");
+	out.push("\tmode: ThemeName;");
+	out.push("\tcolors: Record<ColorRole, string>;");
+	out.push("}[];");
+	out.push("");
+	out.push('export type ThemeId = (typeof THEMES)[number]["id"];');
+	out.push("export type ThemeEntry = (typeof THEMES)[number];");
+	out.push("");
+	out.push(
+		"/** The defaults for each slot, and the theme a missing or withheld id",
+	);
+	out.push(" * falls back to. */");
+	out.push("export const DEFAULT_THEME_IDS = {");
+	out.push('\tlight: "localOperatorLight",');
+	out.push('\tdark: "localOperatorDark",');
+	out.push("} as const satisfies Record<ThemeName, ThemeId>;");
+	out.push("");
+	out.push("const THEME_BY_ID: ReadonlyMap<string, ThemeEntry> = new Map(");
+	out.push("\tTHEMES.map((entry) => [entry.id, entry]),");
+	out.push(");");
+	out.push("");
+	out.push("/**");
+	out.push(
+		" * The theme for `id` in `mode`. A stored id the app no longer ships (a",
+	);
+	out.push(
+		" * palette the gate withheld after the reader picked it, or one renamed",
+	);
+	out.push(
+		" * upstream) or one of the wrong mode resolves to that mode's default rather",
+	);
+	out.push(
+		" * than throwing: the preference is data from an older build, and a stale",
+	);
+	out.push(" * value must never leave the app unthemed.");
+	out.push(" */");
+	out.push(
+		"export const themeEntry = (id: string | null | undefined, mode: ThemeName): ThemeEntry => {",
+	);
+	out.push("\tconst entry = id ? THEME_BY_ID.get(id) : undefined;");
+	out.push("\tif (entry && entry.mode === mode) return entry;");
+	out.push("\treturn THEME_BY_ID.get(DEFAULT_THEME_IDS[mode]) as ThemeEntry;");
+	out.push("};");
+	out.push("");
+	out.push("/** Whether `id` names a theme this build ships, in that mode. */");
+	out.push(
+		"export const isThemeId = (id: unknown, mode: ThemeName): id is ThemeId =>",
+	);
+	out.push('\ttypeof id === "string" && THEME_BY_ID.get(id)?.mode === mode;');
+	out.push("");
 	out.push("/** The CSS custom property a role resolves through. */");
 	out.push(
 		'export const cssColorVar = (role: ColorRole): string => "--color-" + role;',
@@ -1081,6 +1261,8 @@ console.log(
 		" colour roles (" +
 		varying.length +
 		" theme-varying), " +
+		fleet.length +
+		" shipped themes, " +
 		Object.keys(typeSteps).length +
 		" type steps, " +
 		Object.keys(radii).length +

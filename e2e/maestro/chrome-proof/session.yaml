@@ -1,0 +1,31 @@
+# The session screen in the record's "streaming" state: Working subtitle, the stop
+# disc, 2 queued, Tasks/Agents chips (the `subagent-running` relay). Connects from
+# a clean install, opens the sidebar and the conversation row by id. Ends at rest;
+# the driver takes the frame and the hierarchy.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- runFlow: connect-relay-ios.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 30000
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "session-row-${SESSION_ID}"
+    timeout: 20000
+- tapOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "session-screen"
+    timeout: 20000
+- extendedWaitUntil:
+    visible:
+      id: "composer-input"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 3000

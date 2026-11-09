@@ -1,0 +1,48 @@
+# The checkpoint rail, reached on the only surface where it can paint.
+#
+# WHY A NATIVE FLOW FOR A COMPONENT: the rail is summoned by SCROLL VELOCITY
+# (`transcript-presence.ts`, `RAIL_FAST_PT_PER_MS`), and on react-native-web 0.21
+# the scroll view emits only `onScroll` — never a drag or a momentum event — so
+# every web offset reads as a scroll the app made and the rail is never raised.
+# The web audit is this repository's only visual harness, and on it this component
+# is structurally unable to appear. Android can raise it, so Android is where the
+# paint claim is settled (`scripts/ci/rail-android-capture.sh`).
+#
+# THIS FLOW ONLY SETS UP: a fresh app pointed at the mock relay's checkpoints
+# scenario, the deep conversation open, the list settled at its tail. Its
+# companion `fling.yaml` does the gesture and deliberately does NOT launch the
+# app — the state has to survive between the two invocations, because the capture
+# loop can only tag a frame "pre" while no gesture is running.
+appId: ${APP_ID}
+name: "Checkpoint rail — connect and open the deep conversation"
+---
+- launchApp:
+    clearState: true
+- runFlow: ../helpers/connect-relay.yaml
+- extendedWaitUntil:
+    visible:
+      id: "home-screen"
+    timeout: 15000
+- tapOn:
+    id: "home-sidebar"
+- extendedWaitUntil:
+    visible:
+      id: "conversations-sidebar"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "session-row-${SESSION_ID}"
+    timeout: 20000
+- tapOn:
+    id: "session-row-${SESSION_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "session-transcript"
+    timeout: 20000
+# The manifest read (`GET …/checkpoints`) lands after the transcript's own, and a
+# frame captured before it answers has a rail that cannot paint whatever the
+# gesture does. `session-transcript` is the latest signal available from here, so
+# the capture script waits a further settle before tagging the first frames
+# "pre" — the wait lives there, where it can be measured, rather than being
+# guessed at in a flow.
+- takeScreenshot: "rail-01-open"

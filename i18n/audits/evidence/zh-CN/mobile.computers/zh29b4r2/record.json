@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "audit_id": "zh29b4r2",
+  "audit_kind": "delta_reaudit",
+  "round": 2,
+  "round_1_reference": {
+    "audit_id": "zh29b4",
+    "report": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4/report.md",
+    "record": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4/record.json",
+    "verdict": "changes_requested"
+  },
+  "locale": "zh-CN",
+  "namespace": "mobile.computers",
+  "file_group": "mobile.computers",
+  "audit_date": "2026-10-30",
+  "audited_head_commit": "d3c39d8d2df2bccc78af82df9253776b4c933ad8",
+  "audited_branch": "feat/i18n-chinese",
+  "audited_worktree": "/Users/damian/workspace/zh-wave",
+  "audited_worktree_note": "Tracked tree clean at HEAD; the zh-CN catalogues are tracked in d3c39d8. The only untracked paths were peer auditors' bundles (zh29a1r2, zh29a4r2), untouched here.",
+  "key_count": {
+    "en": 10,
+    "target": 10,
+    "context": 10
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "09de4313fcaa",
+    "model": "radient/auto",
+    "actual_model": "radient/auto",
+    "actual_model_source": "session model-switch headers during this run: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra -> kimi/k3.1-pro -> radient/auto, each a provider-quota fallback. Every command in audit.log ran under the final model.",
+    "model_history": [
+      "anthropic/claude-sonnet-5-5",
+      "openai/gpt-6-astra",
+      "kimi/k3.1-pro",
+      "radient/auto"
+    ],
+    "fallback_disclosed": true,
+    "independent_from_translator_session": true,
+    "independence": "Different agent, session and context from the translator. Not model-diverse: the translator's supplied actual model is also radient/auto. This delta round is the round-1 first-pass auditor (session 09e9d1711068) re-checking its own findings from a new session (09de4313fcaa): a remediation check, NOT an independent second pass. No human native-speaker review and no rendered UI frame are claimed."
+  },
+  "translator": {
+    "agent": "i18n-translator",
+    "session": null,
+    "model": "radient/auto",
+    "actual_model_source": "supplied by the requesting manager; not independently observed by this auditor"
+  },
+  "second_pass": {
+    "performed": false,
+    "reason": "No independent second pass was requested for this delta round; the round-1 second pass (job a163531a0dbd) covered the initial translation only. This round is the round-1 auditor's own remediation check and is not presented as independent."
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.computers.json",
+      "sha256": "356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+      "sha256": "3ac04e8333c94e9d419a144bcf08b3ce40ea54b88acc153a9caa1789ba40b6a5"
+    },
+    "target_locale": "zh-CN",
+    "target": {
+      "path": "src/i18n/catalogues/zh-CN/mobile.computers.json",
+      "sha256": "90f4c203d68c8f7f402d448738b66cad3041ff3ea8df50588410af071f3701a5"
+    }
+  },
+  "source_of_truth_read": {
+    "core_repo": "/Users/damian/local-operator",
+    "core_ref": "HEAD=2008053b5d6af37fa449fc303d9e344c262f82c8",
+    "core_catalogue_path": "local_operator/i18n/catalogues/zh-CN/",
+    "note": "read from the committed ref with `git grep`/`git show`, never the working tree",
+    "script": "account-term.py.txt"
+  },
+  "renderer_provenance": {
+    "parser": "src/i18n/messages.ts (parseMessage/formatMessage)",
+    "runtime": "src/i18n/runtime.ts (renderFor, setLocaleSource)",
+    "composition": null,
+    "sha256": {
+      "src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+      "src/i18n/runtime.ts": "31c1c337027d3441349e4b2c3ea692cf055c4b6bba3ff86d26c849f5ed9148a4",
+      "src/i18n/catalogue.gen.ts": "7fa70e8999f737596e399e182608f30056cd2acc08a853bf89bfdd22702ed34a"
+    }
+  },
+  "delta": [
+    {
+      "finding_id": "ZH-CMP-1",
+      "severity_round1": "major",
+      "key": "mobile.computers.section.not_connected",
+      "round1_bytes": "Radient账号中，未连接",
+      "head_bytes": "Radient账户下，未连接",
+      "application": "applied_verbatim",
+      "matches_prescription": true
+    },
+    {
+      "finding_id": "ZH-CMP-2",
+      "severity_round1": "minor",
+      "key": "mobile.computers.added.stays_listed",
+      "round1_bytes": "它仍会保留在此手机列表中，可从电脑列表切回。",
+      "head_bytes": "它仍会保留在此手机列表中，可从电脑列表切回。",
+      "application": "unchanged",
+      "matches_prescription": false
+    }
+  ],
+  "findings": [
+    {
+      "id": "ZH-CMP-2",
+      "severity": "minor",
+      "status": "open-minor-carried",
+      "key": "mobile.computers.added.stays_listed",
+      "current": "它仍会保留在此手机列表中，可从电脑列表切回。",
+      "suggested": "它仍会保留在此手机的列表中，可从电脑列表中切回。",
+      "detail": "Carried from round 1 unchanged (bytes identical to the round-1 audited ones). Missing possessive 的 after 此手机 and missing 中 after 电脑列表; a help sentence whose meaning still lands -> MINOR."
+    }
+  ],
+  "findings_summary": "ZH-CMP-1 (the account noun) fixed verbatim and now agrees with core's committed zh-CN (42× 账户 / 0 账号, 10 files) across BOTH namespaces that use the term. All 10 keys re-rendered. ZH-CMP-2 MINOR carried unapplied. No BLOCKER or MAJOR remains.",
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "ZH-CMP-2"
+    ],
+    "carried_minor_ids": [
+      "ZH-CMP-2"
+    ],
+    "nit_ids": []
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/record.json",
+      "note": "this record; not self-hashed"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/report.md",
+      "sha256": "d6bf9cd2371e4b0cdda4bab9333775c17cf40d0afc01c625c0fa4031bdb3b580"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/audit.log",
+      "sha256": "511d8ca98124f7818d01b077f7654825ef9ec0b24e28dfb25921d34274cfdbd3"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/render.ts.txt",
+      "sha256": "23e328dfdd65eca98c614e62a646c951154fc0a173583d19c4126b8ab74cc9b7"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/verify-prescriptions.py.txt",
+      "sha256": "89f1af8500a49f947ffa040a355a88f8a5ee7a8da0e0b0f9fa9f10339fadcd7b"
+    },
+    {
+      "path": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/account-term.py.txt",
+      "sha256": "668c7b7436d0dd52536d34732a98cb2d80716dcd446ea4c3bfef7319cb76f309"
+    }
+  ],
+  "audit_notes_not_execution_log": "report.md carries judgement and per-key reasoning; audit.log carries the actual executed command output. Notes do not prove execution; the log does.",
+  "ledger": {
+    "recorded": false,
+    "reason": "local-operator-mobile has no i18n/ledger.json and no audit-ledger command at HEAD; docs/i18n.md makes the PR/evidence bundle the artifact of record. No ledger receipt is claimed.",
+    "ledger_row_proposed": {
+      "written": false,
+      "locale": "zh-CN",
+      "file_group": "mobile.computers",
+      "status": "passed",
+      "auditor": "i18n-auditor",
+      "model": "radient/auto",
+      "source_hash": "356f10123aa96d48169552395506cd9b1f2e3b50955bfd363624fd2371930643",
+      "target_hash": "90f4c203d68c8f7f402d448738b66cad3041ff3ea8df50588410af071f3701a5",
+      "record_path": "i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/record.json",
+      "note": "passed 0B/0M; zh-CN mobile.computers 10 keys; round-1 delta 1/2 applied verbatim; residual MINOR ZH-CMP-2; record: i18n/audits/evidence/zh-CN/mobile.computers/zh29b4r2/record.json",
+      "note_length": 179
+    }
+  }
+}

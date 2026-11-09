@@ -2,22 +2,10 @@
  * Device storage: the one module that touches a platform filesystem, behind the
  * async key/value port the retry envelope and the draft store both need.
  *
- * **Why not the keystore.** `src/connection/storage.ts` is the app's only
- * `expo-secure-store` caller and it deliberately is not this: an instruction can
- * legitimately be megabytes once it carries images, and iOS rejects large
- * SecureStore values outright. Nothing stored here is a secret either — a draft
- * and an instruction the reader already typed — so the keystore would buy
- * confidentiality nobody asked for at the cost of the guarantee that matters,
- * which is that the bytes survive. `docs/relay-client.md` records the same
- * decision for the envelope.
- *
- * **Two backends, one contract.** On the web build the store is `localStorage`
- * (which is also where the capture harness drives the app, so the same code path
- * is exercised by every captured frame). On native it is a directory of small
- * files under `Paths.document`, written through `expo-file-system`. The two are
- * chosen per CALL rather than at import time, so importing this module never
- * touches a filesystem that may not exist — the web bundle evaluates the native
- * branch's import, never its body.
+ * Native private values are AES-GCM ciphertext on disk; only the small key is
+ * in platform SecureStore. The cache sentinel binds that key to this installation,
+ * so a surviving iOS Keychain item is not recovery authority after reinstall.
+ * Web retains its existing localStorage behavior and has no cross-login recovery.
  *
  * **Failures are visible, never silent.** The port propagates a storage error to
  * its caller, because the alternative — swallowing it — is a command whose failure
@@ -33,6 +21,25 @@
  */
 
 import { Platform } from "react-native";
+import { getStartupAuthorization } from "@/connection/startup-authorization";
+import {
+	awaitCommandOperations,
+	withdrawDispatch,
+} from "@/relay/command-lifecycle";
+import {
+	discardRecoveryDraft,
+	getDraftRecoveryAuthority,
+	registerRetiringDraftCheckpoint,
+	writeRecoveryDraft,
+} from "./draft-recovery";
+import { nativePrivateStore } from "./native-private-store";
+import { clearPendingEchoes } from "./pending-echo";
+import {
+	awaitPrivateWrites,
+	runPrivateWrite,
+	scopedStore,
+	withdrawPrivateWrites,
+} from "./scoped-storage";
 
 /** The port. Identical in shape to `retry-envelope.ts`'s `EnvelopeStore`, which
  *  is why the envelope store takes this object directly rather than an adapter. */
@@ -45,7 +52,6 @@ export interface DeviceStore {
 
 /** The directory the native backend owns, under the app's document root. */
 const NATIVE_DIRECTORY = "lo-mobile-store";
-const NATIVE_FILE_SUFFIX = ".json";
 
 const isWeb = (): boolean => Platform.OS === "web";
 
@@ -109,70 +115,12 @@ const webKeys = (): string[] => {
 	return [...keys];
 };
 
-/* ------------------------------------------------------------- native backend */
-
-/**
- * The native file for a key.
- *
- * The import is inside the function, and deliberately: `expo-file-system`'s web
- * build is not the one this path uses, and a module-scope `Paths.document` read
- * would run on the web too, where there is no document directory.
- */
-const nativeFilePath = async (key: string) => {
-	const { Directory, File, Paths } = await import("expo-file-system");
-	const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
-	if (!directory.exists) directory.create({ intermediates: true });
-	return new File(directory, `${encodeURIComponent(key)}${NATIVE_FILE_SUFFIX}`);
-};
-
-const nativeGet = async (key: string): Promise<string | null> => {
-	const file = await nativeFilePath(key);
-	if (!file.exists) return null;
-	return file.text();
-};
-
-const nativeSet = async (key: string, value: string): Promise<void> => {
-	const file = await nativeFilePath(key);
-	// `write` overwrites in place, but a file that does not exist yet has to be
-	// created: the new API refuses a write to a missing path rather than creating
-	// it, and a silent failure here is a lost instruction.
-	if (!file.exists) file.create({ intermediates: true });
-	file.write(value);
-};
-
-const nativeRemove = async (key: string): Promise<void> => {
-	const file = await nativeFilePath(key);
-	if (file.exists) file.delete();
-};
-
-/**
- * The key of every file this store owns.
- *
- * A key that does not decode is skipped rather than returned raw: it was not
- * written by this module, so returning it would hand a caller a key whose
- * `remove` could not find it again.
- */
-const nativeKeys = async (): Promise<string[]> => {
-	const { Directory, File, Paths } = await import("expo-file-system");
-	const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
-	if (!directory.exists) return [];
-	const keys: string[] = [];
-	for (const entry of directory.list()) {
-		if (!(entry instanceof File)) continue;
-		const name = entry.name;
-		if (!name.endsWith(NATIVE_FILE_SUFFIX)) continue;
-		try {
-			keys.push(
-				decodeURIComponent(
-					name.slice(0, name.length - NATIVE_FILE_SUFFIX.length),
-				),
-			);
-		} catch {
-			/* Not one of ours. */
-		}
-	}
-	return keys;
-};
+/* Native bytes, including pending revisions, are encrypted before any write. */
+const sealedDeviceStore = nativePrivateStore("device");
+const nativeGet = sealedDeviceStore.get;
+const nativeSet = sealedDeviceStore.set;
+const nativeRemove = sealedDeviceStore.remove;
+const nativeKeys = sealedDeviceStore.keys;
 
 /* ------------------------------------------------------------------- the port */
 
@@ -189,12 +137,16 @@ export const deviceStore: DeviceStore = {
 		return isWeb() ? webGet(key) : nativeGet(key);
 	},
 	async set(key, value) {
-		if (isWeb()) webSet(key, value);
-		else await nativeSet(key, value);
+		return runPrivateWrite(async () => {
+			if (isWeb()) webSet(key, value);
+			else await nativeSet(key, value);
+		});
 	},
 	async remove(key) {
-		if (isWeb()) webRemove(key);
-		else await nativeRemove(key);
+		return runPrivateWrite(async () => {
+			if (isWeb()) webRemove(key);
+			else await nativeRemove(key);
+		});
 	},
 	async keys() {
 		if (isWeb()) return webKeys();
@@ -210,11 +162,13 @@ export const deviceStore: DeviceStore = {
 
 /**
  * Draft keys. A separate prefix from the envelope's (`lo-mobile-command:`) on
- * purpose, because the two have DIFFERENT lifetimes on a `401`: the envelope is
- * scoped to the identity that has just gone and is cleared with it, while the
- * draft is the reader's own unfinished sentence and survives to be sent after they
- * sign back in (`docs/ux/flows.md` § `C5` — "Never clear drafts on an auth blip";
- * the web client's rule, kept).
+ * purpose: they are different FAMILIES with different clearance rules, and the
+ * explicit purge names both.
+ *
+ * A 401 closes the authorization generation. Native cross-login recovery lives
+ * only in the separately sealed draft vault and needs fresh same-authority proof;
+ * command envelopes never acquire stable recovery scope. Explicit privacy cleanup
+ * removes both ordinary families and, for logout/forget, the vault/key too.
  */
 export const DRAFT_KEY_PREFIX = "lo-mobile-draft:";
 
@@ -232,47 +186,218 @@ export const draftKey = (sessionId: string): string =>
  */
 export const HOME_DRAFT_KEY = "lo-mobile-draft:home";
 
+const DRAFT_RECORD_PREFIX = "lo-mobile-draft-record:";
+const draftRecordKey = (key: string) =>
+	DRAFT_RECORD_PREFIX + encodeURIComponent(key);
+type OrdinaryDraft = { version: 1; text: string; pending: boolean };
+const draftEdits = new Map<string, number>();
+function parseOrdinaryDraft(raw: string): OrdinaryDraft {
+	const value = JSON.parse(raw) as OrdinaryDraft;
+	if (
+		value.version !== 1 ||
+		typeof value.text !== "string" ||
+		typeof value.pending !== "boolean"
+	)
+		throw new Error("invalid ordinary draft record");
+	return value;
+}
+async function ordinaryDraft(
+	key: string,
+	scope: string | null,
+): Promise<OrdinaryDraft | null> {
+	if (Platform.OS === "web") return null;
+	const raw = await scopedStore(deviceStore, scope).get(draftRecordKey(key));
+	if (raw === null) return null;
+	return parseOrdinaryDraft(raw);
+}
+export async function hasOrdinarySessionDraft(
+	sessionId: string,
+	scope: string,
+): Promise<boolean> {
+	return (
+		draftEdits.has(JSON.stringify([scope, draftKey(sessionId)])) ||
+		(await ordinaryDraft(draftKey(sessionId), scope)) !== null ||
+		(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) !== null
+	);
+}
+async function saveOrdinaryDraft(
+	key: string,
+	text: string,
+	scope: string | null,
+): Promise<void> {
+	const store = scopedStore(deviceStore, scope);
+	if (Platform.OS === "web") {
+		await store.set(key, text);
+		return;
+	}
+	const identity = JSON.stringify([scope, key]);
+	const revision = (draftEdits.get(identity) ?? 0) + 1;
+	draftEdits.set(identity, revision);
+	await store.set(
+		draftRecordKey(key),
+		JSON.stringify({ version: 1, text, pending: true }),
+	);
+	const authority = getDraftRecoveryAuthority();
+	if (authority === null) return;
+	try {
+		if (text === "") await discardRecoveryDraft(key, scope);
+		else await writeRecoveryDraft(key, text, scope);
+		if (
+			getStartupAuthorization()?.scope === scope &&
+			getDraftRecoveryAuthority() === authority &&
+			draftEdits.get(identity) === revision
+		)
+			await store.set(
+				draftRecordKey(key),
+				JSON.stringify({ version: 1, text, pending: false }),
+			);
+	} catch {
+		/* Ordinary intent is already durable; failed recovery stays pending. */
+	}
+}
+export async function reconcileOrdinarySessionDraft(
+	sessionId: string,
+	scope: string,
+): Promise<void> {
+	const draft = await ordinaryDraft(draftKey(sessionId), scope);
+	if (draft?.pending && getDraftRecoveryAuthority() !== null)
+		await saveOrdinaryDraft(draftKey(sessionId), draft.text, scope);
+}
+registerRetiringDraftCheckpoint(async (generation, write) => {
+	await awaitPrivateWrites();
+	// Ordinary scoped readers are intentionally CLOSED after withdrawal. Only
+	// this auth-owned retirement callback may read the exact old generation's
+	// encrypted records; never reopen the general read gate to perform handoff.
+	const suffix = `:authorization:${encodeURIComponent(generation)}`;
+	for (const key of await deviceStore.keys()) {
+		if (!key.startsWith(DRAFT_RECORD_PREFIX) || !key.endsWith(suffix)) continue;
+		const base = decodeURIComponent(
+			key.slice(DRAFT_RECORD_PREFIX.length, -suffix.length),
+		);
+		const raw = await deviceStore.get(key);
+		if (raw === null) continue;
+		const draft = parseOrdinaryDraft(raw);
+		if (draft.pending) await write(base, draft.text === "" ? null : draft.text);
+	}
+});
 export const readHomeDraft = async (): Promise<string> => {
+	const scope = getStartupAuthorization()?.scope ?? null;
 	try {
-		return (await deviceStore.get(HOME_DRAFT_KEY)) ?? "";
+		return (
+			(await ordinaryDraft(HOME_DRAFT_KEY, scope))?.text ??
+			(await scopedStore(deviceStore, scope).get(HOME_DRAFT_KEY)) ??
+			""
+		);
 	} catch {
-		/* An unreadable draft is an empty one for this screen; the store is
-		 * best-effort here because a failed READ has lost nothing. */
 		return "";
 	}
 };
-
-export const writeHomeDraft = (text: string): Promise<void> =>
-	deviceStore.set(HOME_DRAFT_KEY, text);
-
-export const clearHomeDraft = (): Promise<void> =>
-	deviceStore.remove(HOME_DRAFT_KEY);
-
-export const readDraft = async (sessionId: string): Promise<string> => {
+export const writeHomeDraft = async (text: string): Promise<void> =>
+	saveOrdinaryDraft(
+		HOME_DRAFT_KEY,
+		text,
+		getStartupAuthorization()?.scope ?? null,
+	);
+export const clearHomeDraft = async (): Promise<void> => {
+	const scope = getStartupAuthorization()?.scope ?? null;
+	await saveOrdinaryDraft(HOME_DRAFT_KEY, "", scope);
+	await scopedStore(deviceStore, scope).remove(HOME_DRAFT_KEY);
+};
+export const readDraft = async (
+	sessionId: string,
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<string> => {
 	try {
-		return (await deviceStore.get(draftKey(sessionId))) ?? "";
+		return (
+			(await ordinaryDraft(draftKey(sessionId), scope))?.text ??
+			(await scopedStore(deviceStore, scope).get(draftKey(sessionId))) ??
+			""
+		);
 	} catch {
-		/* An unreadable draft is an empty one for this screen; the store is
-		 * best-effort here because a failed READ has lost nothing. */
 		return "";
 	}
 };
-
 export const writeDraft = async (
 	sessionId: string,
 	text: string,
-): Promise<void> => deviceStore.set(draftKey(sessionId), text);
-
-export const clearDraft = async (sessionId: string): Promise<void> =>
-	deviceStore.remove(draftKey(sessionId));
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<void> => saveOrdinaryDraft(draftKey(sessionId), text, scope);
+export const clearDraft = async (
+	sessionId: string,
+	scope = getStartupAuthorization()?.scope ?? null,
+): Promise<void> => {
+	await saveOrdinaryDraft(draftKey(sessionId), "", scope);
+	await scopedStore(deviceStore, scope).remove(draftKey(sessionId));
+};
 
 /**
  * Clears every draft. Called on an EXPLICIT sign-out and on an identity change —
  * the two cases the rule above names — and never on a `401`, which is the case
  * that reads like one but is not.
  */
+/** Auth retirement is fail-closed, unlike ordinary best-effort draft reads.
+ * Never turn blocked enumeration/deletion into a successful account switch.
+ * This is invoked ONLY by an explicit auth boundary, not an upgrade migration:
+ * legacy unknown-owner keys remain quarantined until that privacy boundary. */
+export const clearAuthorizationData = async (): Promise<void> => {
+	/* Withdraw first, drain second, delete third (review R1-4). A writer that was
+	 * already past its admission check still runs to completion — its bytes are
+	 * written and then removed, which is the only order that can promise the purge
+	 * left nothing behind. */
+	withdrawPrivateWrites();
+	await awaitPrivateWrites();
+	/* Dispatch is the second half of the same promise. An envelope is not just a
+	 * key: `client.command` may still be on the wire, and deleting the envelope
+	 * before its disposition is written loses an admitted command (success) or
+	 * untracks ambiguity (lost reply). Withdraw refuses new sends; the await covers
+	 * every accepted one through its final settle (review round 2, R1-4). */
+	withdrawDispatch();
+	await awaitCommandOperations();
+	draftEdits.clear();
+	/* The in-memory pending rows hold what the signed-out user typed. */
+	clearPendingEchoes();
+	const privateKey = (key: string) =>
+		key.startsWith(DRAFT_KEY_PREFIX) ||
+		key.startsWith(DRAFT_RECORD_PREFIX) ||
+		key.startsWith("lo-mobile-command:");
+	if (Platform.OS === "web") {
+		const storage = globalThis.localStorage;
+		if (!storage) throw new Error("private storage cannot be enumerated");
+		const keys: string[] = [];
+		for (let index = 0; index < storage.length; index++) {
+			const key = storage.key(index);
+			if (key !== null && privateKey(key)) keys.push(key);
+		}
+		for (const key of keys) storage.removeItem(key);
+	} else {
+		await sealedDeviceStore.clear();
+		const { Directory, File, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
+		if (directory.exists) {
+			for (const entry of directory.list()) {
+				if (!(entry instanceof File) || !entry.name.endsWith(".json")) continue;
+				const key = decodeURIComponent(entry.name.slice(0, -5));
+				if (privateKey(key)) entry.delete();
+			}
+		}
+	}
+	/* A late writer can also have created the native directory after the listing
+	 * above; removing it is safe because the barrier has already drained the tails
+	 * and no new write may start. */
+	if (Platform.OS !== "web") {
+		const { Directory, Paths } = await import("expo-file-system");
+		const directory = new Directory(Paths.document, NATIVE_DIRECTORY);
+		if (directory.exists && directory.list().length === 0) directory.delete();
+	}
+	for (const key of memory.keys()) if (privateKey(key)) memory.delete(key);
+	/* Stay closed until actual admission, including its fresh owner proof.
+	 * Reopening here lets a stale captured scopedStore recreate old-generation
+	 * bytes between the purge and the asynchronous recovery/identity check. */
+};
+
 export const clearAllDrafts = async (): Promise<void> => {
 	for (const key of await deviceStore.keys()) {
-		if (key.startsWith(DRAFT_KEY_PREFIX)) await deviceStore.remove(key);
+		if (key.startsWith(DRAFT_KEY_PREFIX) || key.startsWith(DRAFT_RECORD_PREFIX))
+			await deviceStore.remove(key);
 	}
 };

@@ -1,3 +1,4 @@
+import { t } from "@/i18n";
 import { type ChipStatus, dataUri } from "@/team-bridge/attachments";
 import { isHubError } from "@/team-bridge/client";
 
@@ -60,16 +61,19 @@ function failureOf(
 	step: "prepare" | "upload",
 ): { error: string; retryable: boolean } {
 	if (step === "prepare")
-		return { error: "This image could not be prepared.", retryable: true };
+		return {
+			error: t("mobile.team_bridge.attachment.prepare_error"),
+			retryable: true,
+		};
 	const kind = isHubError(error) ? error.kind : null;
 	if (kind === "invalid")
 		return {
-			error: "Radient cannot accept this image. Remove it.",
+			error: t("mobile.team_bridge.attachment.refused"),
 			retryable: false,
 		};
 	if (kind === "rate_limited")
 		return {
-			error: "Too many images at once. Try again shortly.",
+			error: t("mobile.team_bridge.attachment.rate_error"),
 			retryable: true,
 		};
 	/*
@@ -84,16 +88,18 @@ function failureOf(
 		error.code === "attachment_quota_exceeded"
 	)
 		return {
-			error:
-				"You have 8 images waiting to send. Send or remove some, then add this one again.",
+			error: t("mobile.team_bridge.attachment.quota"),
 			retryable: false,
 		};
 	if (kind === "not_found")
 		return {
-			error: "This conversation is no longer available. Remove the image.",
+			error: t("mobile.team_bridge.attachment.conversation_gone"),
 			retryable: false,
 		};
-	return { error: "This image did not upload.", retryable: true };
+	return {
+		error: t("mobile.team_bridge.attachment.upload_error"),
+		retryable: true,
+	};
 }
 
 export function createAttachmentDraft(deps: {
@@ -136,7 +142,7 @@ export function createAttachmentDraft(deps: {
 	};
 
 	const limitNotice = (): string =>
-		`You can attach up to ${deps.maxCount} ${deps.maxCount === 1 ? "image" : "images"} per message.`;
+		t("mobile.team_bridge.attachment.limit", { count: deps.maxCount });
 
 	const release = (entry: Entry) => {
 		if (entry.raw === null || entry.raw === undefined) return;
@@ -273,7 +279,7 @@ export function createAttachmentDraft(deps: {
 			for (const entry of entries) {
 				if (entry.status !== "ready") continue;
 				entry.status = "failed";
-				entry.error = "This image expired before it was sent. Remove it.";
+				entry.error = t("mobile.team_bridge.attachment.expired_unsent");
 				entry.retryable = false;
 			}
 			publish();
@@ -361,8 +367,6 @@ export function syncDraft(
 	return { draft: create(limits, conversationId), conversationId };
 }
 
-const images = (n: number) => `${n} ${n === 1 ? "image" : "images"}`;
-
 /**
  * The composer's ONE image status line (design D9, code R3-05): one sentence
  * for one fix, and one live region, instead of a summary plus a separate
@@ -383,21 +387,24 @@ export function stripSummary(
 		(c) => c.status === "preparing" || c.status === "uploading",
 	).length;
 	if (failed.length > 0) {
-		const one = failed.length === 1;
 		const reasons = new Set(failed.map((c) => c.error));
 		const shared = reasons.size === 1 ? [...reasons][0] : null;
 		if (shared && failed.every((c) => !c.retryable)) return shared;
 		if (failed.some((c) => c.retryable))
-			return one
-				? "1 image didn't upload. Retry or remove it."
-				: `${failed.length} images didn't upload. Retry or remove them.`;
-		return one
-			? "1 image can't be sent. Remove it to send."
-			: `${failed.length} images can't be sent. Remove them to send.`;
+			return t("mobile.team_bridge.attachment.retry_summary", {
+				count: failed.length,
+			});
+		return t("mobile.team_bridge.attachment.unsendable_summary", {
+			count: failed.length,
+		});
 	}
 	if (busy > 0)
-		return `Uploading ${images(busy)}… Send is available when ${busy === 1 ? "it finishes" : "they finish"}.`;
-	return `${images(chips.length)} attached`;
+		return t("mobile.team_bridge.attachment.uploading_summary", {
+			count: busy,
+		});
+	return t("mobile.team_bridge.attachment.attached_summary", {
+		count: chips.length,
+	});
 }
 
 /**
@@ -408,9 +415,14 @@ export function stripSummary(
 export function chipStateLabel(
 	chip: Pick<DraftChip, "status" | "retryable">,
 ): string | null {
-	if (chip.status === "preparing") return "Preparing…";
-	if (chip.status === "uploading") return "Uploading…";
-	if (chip.status === "failed") return chip.retryable ? "Failed" : "Can't send";
+	if (chip.status === "preparing")
+		return t("mobile.team_bridge.attachment.preparing");
+	if (chip.status === "uploading")
+		return t("mobile.team_bridge.attachment.uploading");
+	if (chip.status === "failed")
+		return chip.retryable
+			? t("mobile.team_bridge.attachment.failed")
+			: t("mobile.team_bridge.attachment.cannot_send");
 	return null;
 }
 
@@ -424,10 +436,10 @@ export function sendBlockedReason(
 ): string | null {
 	if (chips.some((c) => c.status === "failed"))
 		return chips.some((c) => c.status === "failed" && !c.retryable)
-			? "Remove the images that can't be sent to send this message."
-			: "Retry or remove the images that didn't upload to send.";
+			? t("mobile.team_bridge.attachment.remove_blocked")
+			: t("mobile.team_bridge.attachment.retry_blocked");
 	if (chips.some((c) => c.status === "preparing" || c.status === "uploading"))
-		return "Send is available when the images finish uploading.";
+		return t("mobile.team_bridge.attachment.wait_uploads");
 	return null;
 }
 
@@ -449,7 +461,7 @@ export const CHIP_CONTROL_OUTSET = 6;
  * ending 2 pt above the thumbnail's bottom edge; at the 48 pt floor (Android,
  * web) it spans y 42–66, 2 pt past the thumbnail and flush with the label
  * row's top (0 pt clearance, no overlap). Neither draws over the state word
- * ("Failed"); both floors are asserted.
+ * (t("mobile.team_bridge.attachment.failed")); both floors are asserted.
  * The label row is taken at full chip width: the word's own width varies
  * with copy and text scale, and the badge must clear any of them.
  */

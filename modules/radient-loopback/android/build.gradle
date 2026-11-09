@@ -1,0 +1,17 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'dev.localoperator.loopback'
+version = '1.0.0'
+
+android {
+  namespace 'dev.localoperator.loopback'
+  defaultConfig { versionCode 1; versionName '1.0.0' }
+}
+
+dependencies {
+  // Match ExpoWebBrowser's existing dependency; no second browser stack.
+  implementation 'androidx.browser:browser:1.6.0'
+}

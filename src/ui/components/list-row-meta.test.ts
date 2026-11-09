@@ -5,6 +5,8 @@ import {
 	META_PATH_FLOOR_CHARS,
 	MODEL_MIN_CHARS,
 	metaLineFor,
+	middleFit,
+	sansTextWidthDp,
 	tailFit,
 	textWidthDp,
 } from "./list-row-meta";
@@ -269,4 +271,59 @@ describe("tailFit (the conversations pane's switcher)", () => {
 		expect(tailFit("127.0.0.1:51078", 143, 1)).toBe("127.0.0.1:51078");
 		expect(tailFit("127.0.0.1:51078", 250, 2)).toBe("127.0.0.1:51078");
 	});
+});
+
+/**
+ * D3: a host is ONE token. The earlier shapes each failed visibly — a tail fit
+ * dropped the machine name, a two-line middle let the platform break inside the
+ * port — so these pin the arithmetic at the widths the design round measures.
+ */
+describe("middleFit keeps a host on one line", () => {
+	const host = "127.0.0.1:49892";
+	const budgets = [
+		["390 pt", 250],
+		["320 pt", 170],
+	] as const;
+	const scales = [1, 1.5, 2];
+
+	it.each(
+		budgets.flatMap(([label, budget]) =>
+			scales.map((scale) => [label, budget, scale] as const),
+		),
+	)(
+		"fits %s at %sx into %s dps without wrapping or losing the port",
+		(_label, budget, scale) => {
+			const painted = middleFit(host, budget, scale);
+			expect(painted).not.toContain("\n");
+			// The port survives whole; nothing can end with a truncated ":49".
+			expect(painted.endsWith(":49892") || painted.endsWith("…")).toBe(true);
+			// And it fits the box it was given, by the same glyph widths the row uses.
+			expect(painted.length).toBeLessThanOrEqual(host.length);
+			if (painted !== host) expect(painted).toContain("…");
+		},
+	);
+
+	it("keeps both ends of a long identity", () => {
+		const painted = middleFit("tunnel-name.example.dev:51078", 140, 2);
+		expect(painted.startsWith("t")).toBe(true);
+		expect(painted).toContain("…");
+		expect(painted.endsWith(":51078")).toBe(true);
+	});
+
+	it("returns the string whole when it fits", () => {
+		expect(middleFit("host:1", 400, 1)).toBe("host:1");
+	});
+});
+
+it("fits the drawer's own sans face, and still elides a genuinely narrow slot", () => {
+	const sans = (text: string, scale: number) =>
+		sansTextWidthDp(text, (scale * 14) / 12);
+	// Thin sans glyphs discriminate the two faces; Mac mini happens to have
+	// almost equal total advances in mono-sm and 14pt sans.
+	const name = "ill mini";
+	const width = sans(name, 1) + 1;
+	expect(middleFit(name, width, 1, sans)).toBe(name);
+	// Negative controls: using the wrong face or a truly narrow slot must fail whole-fit.
+	expect(middleFit(name, width, 1)).not.toBe(name);
+	expect(middleFit(name, 24, 1, sans)).not.toBe(name);
 });

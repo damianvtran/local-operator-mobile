@@ -1,0 +1,29 @@
+import sys
+sys.path.insert(0, ".")
+from measure import width, wrap_lines, LABEL, META
+CONTENT = 288
+def show(label, text, style, avail=CONTENT):
+    size, weight, tr = style
+    n, widest = wrap_lines(text, avail, size, weight, tr)
+    print(f"{label:46} {width(text,size,weight,tr):7.1f}pt of {avail} -> {n} line(s)")
+print("== armed header vs monitor count (100% text, mono-label 11/600) ==")
+for c in range(1, 13):
+    show(f"MONITORS · {c} MONITORIZACIONES ACTIVAS".replace("MONITORS", "MONITORS"),
+         "MONITORS · " + (f"{c} MONITORIZACIÓN ACTIVA" if c == 1 else f"{c} MONITORIZACIONES ACTIVAS"), LABEL)
+print()
+print("== elided-noun alternative (fr's shape) ==")
+for c in (1, 5, 12):
+    show(f"MONITORS · {c} ACTIVA(S)", "MONITORS · " + (f"{c} ACTIVA" if c == 1 else f"{c} ACTIVAS"), LABEL)
+print()
+print("== wake header for comparison ==")
+show("WAKES · 5 DESPERTARES PROGRAMADOS", "WAKES · 5 DESPERTARES PROGRAMADOS", LABEL)
+show("WAKES · 1 DESPERTAR PROGRAMADO", "WAKES · 1 DESPERTAR PROGRAMADO", LABEL)
+print()
+print("== button label at 200% ==")
+show("Mostrar menos monitorizaciones [200%]", "Mostrar menos monitorizaciones", (24,500,0.0))
+show("Mostrar menos monitores [200%, round 1]", "Mostrar menos monitores", (24,500,0.0))
+show("Show fewer monitors [200%]", "Show fewer monitors", (24,500,0.0))
+print()
+print("== single widest token at 200% meta (clipping test) ==")
+for w in ("monitorizaciones", "MONITORIZACIONES", "comprobación"):
+    print(f"  {w:20} {width(w,24,500):6.1f}pt vs 276pt row width")

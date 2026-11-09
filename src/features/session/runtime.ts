@@ -31,6 +31,13 @@ export interface StreamFacts {
 	ageMs: number | null;
 	/** A reconnect opened, no snapshot landed, and the deadline has passed. */
 	overdue: boolean;
+	/** A transport error ended an open since the last accepted frame. STICKY
+	 *  until a frame lands — unlike `lastEnd`, which the reopen's `connecting`
+	 *  status overwrites before anything has arrived. The header's dot reads it
+	 *  (`healthLink`): the relay's own rule is "connected: false on any outage,
+	 *  until a fresh frame", and a dot that turned green again on the reopen
+	 *  ATTEMPT would promise a link nothing has proven (UX round 1, U4). */
+	droppedSinceFrame: boolean;
 }
 
 export const INITIAL_STREAM_FACTS: StreamFacts = {
@@ -38,6 +45,7 @@ export const INITIAL_STREAM_FACTS: StreamFacts = {
 	lastEnd: undefined,
 	ageMs: null,
 	overdue: false,
+	droppedSinceFrame: false,
 };
 
 /* ------------------------------------------------------------- image loading */
@@ -174,6 +182,58 @@ export const loadVideoSource = async (
 		if (isRelayMissing(error)) return null;
 		throw error;
 	}
+};
+
+/** The file extension for a supplement sound's mime type; `mp3` when unknown —
+ *  the players sniff the bytes, the extension only has to be plausible. */
+export const audioExtension = (mimeType: string | null): string => {
+	switch ((mimeType ?? "").split(";")[0]?.trim().toLowerCase()) {
+		case "audio/wav":
+		case "audio/x-wav":
+		case "audio/wave":
+			return "wav";
+		case "audio/ogg":
+			return "ogg";
+		case "audio/mp4":
+		case "audio/aac":
+		case "audio/x-m4a":
+			return "m4a";
+		case "audio/flac":
+			return "flac";
+		default:
+			return "mp3";
+	}
+};
+
+/**
+ * Fetched media bytes → a source a player opens, the posture `loadVideoSource`
+ * established: a Blob object URL on web (the CALLER revokes it), a cache file
+ * on native (the OS reclaims it). `key` must already be filename-safe (a
+ * digest, or a job id plus an index). Used by the highlights block, whose
+ * sounds and written videos arrive by digest or by row index rather than by a
+ * transcript entry, so `loadVideoSource`'s entry-keyed cache cannot name them.
+ */
+export const playableSource = async (
+	bytes: Uint8Array,
+	mimeType: string,
+	key: string,
+	extension: string,
+): Promise<string> => {
+	if (Platform.OS === "web") {
+		return URL.createObjectURL(
+			new Blob([bytes as BlobPart], { type: mimeType }),
+		);
+	}
+	const { Directory, File, Paths } = await import("expo-file-system");
+	const directory = new Directory(Paths.cache, "lo-supplement");
+	if (!directory.exists) directory.create({ intermediates: true });
+	const file = new File(
+		directory,
+		`${key.replace(/[^a-zA-Z0-9_-]/g, "")}.${extension}`,
+	);
+	if (!file.exists) file.create({ intermediates: true });
+	file.write(bytes);
+	return file.uri;
 };
 
 /** Every extension `loadVideoSource` may have cached under (the mime-derived

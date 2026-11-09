@@ -53,7 +53,11 @@ a copy for their records, out-of-band.
    truncated paste; redo that one.
 7. **Hand the operator their record** — the keystore file plus alias, the
    password, creation date, DN, the keystore's `SHA-256`, where the CI secrets
-   live, and the reset note. Suggested destination: their own password manager.
+   live, and the reset note. Destination: the operator's own password manager —
+   their copy is the **copy of record**, not a suggestion, because GitHub Actions
+   secrets are write-only (`gh secret set`) and cannot be read back to recover
+   one. CI holds the same bytes for the pipeline; it is not a backup you can
+   retrieve from.
 
 ## What must never happen
 

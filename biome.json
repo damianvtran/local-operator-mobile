@@ -15,11 +15,13 @@
 			"!.pnpm-store",
 			"!src/ui/theme.css",
 			"!src/ui/tokens.gen.ts",
+			"!src/i18n/*.gen.ts",
 			"!src/uniwind-types.d.ts",
 			"!design",
 			"!docs",
 			"!fixtures",
-			"!store"
+			"!store",
+			"!i18n/audits/evidence"
 		]
 	},
 	"formatter": {

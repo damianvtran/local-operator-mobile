@@ -52,35 +52,60 @@ import { useStore } from "zustand";
 import {
 	createRelayClient,
 	type DiscoveredComputer,
+	type DiscoveryResult,
 	discoverComputers,
-	RadientAuthError,
 	type RadientTokens,
 	type RouteProfile,
-	refreshRadientTokens,
 	TunnelSessionError,
 	TunnelSessionManager,
 	validateCustomBaseUrl,
 	validateRadientHostname,
 } from "@/connection";
 import {
+	accessTokenNeedsRefresh,
+	RadientAuthError,
+} from "@/connection/radient-oauth";
+import { createRadientRefresher } from "@/connection/radient-refresh";
+import {
+	proveRecoveryAuthority,
+	recoveryAuthorityScope,
+} from "@/connection/recovery-authority";
+import {
+	registerStartupAuthorizationCleanup,
+	startupAuthorizationLifecycle,
+} from "@/connection/startup-authorization";
+import { agentAvatarCache } from "@/features/agent-avatar/agent-avatar";
+import {
 	clearStoredCredentials,
 	clearStoredOauth,
+	readSavedComputers,
 	readSavedTunnel,
 	readStoredOauth,
 	readStoredTunnelSession,
+	rememberLiveComputer,
 	removeSavedTunnel,
 	type SavedTunnel,
 	writeSavedTunnel,
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { reconnectDelay } from "@/features/session/connection-view";
+import { clearAuthorizationData } from "@/features/session/device-storage";
+import {
+	notifyDraftRecoveryReady,
+	prepareDraftRecovery,
+	prepareOrdinaryPrivateStorage,
+} from "@/features/session/draft-recovery";
+import { clearNativePickerCache } from "@/features/session/picker-cache";
+import { pickerPrivacy } from "@/features/session/picker-privacy";
+import { setLocaleSource, t } from "@/i18n";
 import {
 	type RelayEndpoints,
 	RelayError,
 	type RelayStream,
 	type StreamStatus,
 } from "@/relay";
-import { createConfigStore } from "@/state/config-store";
+import { type ConfigSnapshot, createConfigStore } from "@/state/config-store";
 import {
 	type ConnectionSnapshot,
 	createConnectionStore,
@@ -92,16 +117,27 @@ import {
 	customRouteAuthentication,
 	nativeCredentialRetirement,
 } from "./authentication-lifecycle";
+import { resumeComputerOnColdStart } from "./cold-start-computer";
 import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
 import { createRadientAccess } from "./radient-access";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
-import { type RefusalView, refusalFromError } from "./refusal";
+import {
+	type RefusalView,
+	refusalFromError,
+	tunnelSessionRelayError,
+} from "./refusal";
 import {
 	authenticateCustomRoute,
 	type RouteAdmission,
 	routeAdmission,
 } from "./route-admission";
+import {
+	appendSignInDiagnostic,
+	type SignInDiagnostic,
+	SignInSupersededError,
+	signInErrorClass,
+} from "./sign-in-diagnostics";
 
 /**
  * The three stores, as process-wide singletons.
@@ -115,6 +151,20 @@ export const connectionStore = createConnectionStore();
 export const listStore = createListStore();
 export const configStore = createConfigStore();
 
+// Registration outlives route/provider mounts, just like the credential store.
+// Startup storage registers independently, avoiding an auth/coordinator cycle.
+registerStartupAuthorizationCleanup(clearAuthorizationData);
+type StartupRouteAdmission = RouteAdmission & {
+	authorizationRevision: number;
+	routeKey: string;
+};
+
+/* The i18n runtime reads the relay's RESOLVED language from this store and from
+ * nowhere else (`src/i18n/locale.ts` explains why that is the only source). The
+ * registration is a function rather than an import so the runtime stays free of
+ * this file's `react-native` dependency and can be exercised in Node. */
+setLocaleSource(() => configStore.getState().language);
+
 export const useConnectionState = <T,>(
 	selector: (state: ConnectionSnapshot) => T,
 ): T => useStore(connectionStore, selector);
@@ -122,11 +172,34 @@ export const useConnectionState = <T,>(
 export const useListState = <T,>(selector: (state: ListSnapshot) => T): T =>
 	useStore(listStore, selector);
 
+/**
+ * Subscribe to the config stream's snapshot — today, the resolved LANGUAGE.
+ *
+ * WHY IT IS EXPORTED RATHER THAN READ THROUGH `getState()`. `t()` reads the
+ * locale at CALL time, which is what keeps a copy module from freezing the
+ * language it was first imported in — but it cannot make an already-painted
+ * screen repaint. A screen that keeps its copy in a `useMemo` therefore needs
+ * BOTH: a subscription that re-renders it when a frame changes the language, and
+ * the language in the memo's dependency list so the memo re-runs. Home's composer
+ * is the surface that needed this (review M3): its controls and chips are memoised
+ * over pure copy readers, so a language change while mounted kept the old
+ * sentences until some unrelated state moved. `home.tsx` calls `useLocaleFrame()`
+ * and lists the value in those memos' dependency arrays; nothing else reads the
+ * config store directly.
+ */
+export const useLocaleFrame = (): string | null =>
+	useStore(configStore, (state: ConfigSnapshot) => state.language);
+
 /** How long the list stream waits before reopening after a transport failure.
  *  Long enough that a phone coming out of a tunnel does not hammer the relay,
  *  short enough that the list is live again before the reader notices. A clean
  *  end-of-body is NOT this path — the connection layer rotates on its own. */
 const RESTART_MS = 2_000;
+
+/** The body of a pick that never reached Radient (U5/D11): about THIS phone's
+ *  connection, because that is the one thing the failure tells us. */
+export const PICK_UNREACHABLE_DETAIL =
+	"This phone could not reach Radient. Check its connection, then try again.";
 
 /** What the connection pill shows, derived from the stream's own status. */
 export type StreamHealth =
@@ -140,6 +213,10 @@ export type ConnectCustomInput = {
 	url: string;
 	password: string;
 	allowInsecure: boolean;
+	/** The saved computer being reconnected, when the caller knows it (a tap on a
+	 *  computer switcher row). Recording the live route by this id, not by address,
+	 *  is what keeps two saved computers at one address apart (decision a-2a8b). */
+	computerId?: string;
 };
 
 export type Connection = {
@@ -158,8 +235,8 @@ export type Connection = {
 	discovering: boolean;
 	/** The reader's own tunnel from secure storage, or `null`. */
 	savedTunnel: SavedTunnel | null;
-	/** True when this cold start read a stored RADIENT credential, accepted it, and
-	 *  started discovery.
+	/** True when this app accepted a RADIENT grant (interactive or restored) and
+	 *  started discovery. The historical name is retained for existing consumers.
 	 *
 	 *  It exists because a restored sign-in is invisible to the store: no route exists
 	 *  yet (the reader has not picked a computer), so `phase` is still `signed-out` and
@@ -224,6 +301,7 @@ export type Connection = {
 	radientAccountId: string | null;
 	streamHealth: StreamHealth;
 	signInState: SignInState;
+	signInDiagnostics: readonly SignInDiagnostic[];
 	/** The last typed failure, for the diagnostics row. Never a status code on a
 	 *  screen; this is the one place a diagnostic is allowed. */
 	lastError: RelayError | null;
@@ -272,6 +350,97 @@ function routeForComputer(computer: DiscoveredComputer): RouteProfile | null {
 	return result.ok ? result.route : null;
 }
 
+/**
+ * Remembers the computer a route just reached, for the computer switcher: once the
+ * route is LIVE, never on a pick, because a computer that refused or never answered
+ * is not one this phone has used. Fire-and-forget: the registry is a keystore
+ * write, and a route must not wait on it or fail with it. The id lands in the store
+ * only while the same route is still current, so a slow write cannot label the
+ * next one. Module scope for the same reason as `verifiedRetirement`.
+ */
+const rememberLiveRoute = (
+	admission: RouteAdmission,
+	computerId: string | undefined,
+	radientAccount: string | null,
+): void => {
+	const state = connectionStore.getState();
+	const route = state.route;
+	if (!route || !admission.isCurrent()) return;
+	/* Discovery's name when it has one; otherwise NONE, so the registry keeps the
+	 *  name it already holds. A custom route clears discovery, so switching back to a
+	 *  Radient computer from one passed `undefined` here and the hostname overwrote
+	 *  the reader's name for it (PR #122 QA round 1, Q2; review m2). */
+	const name =
+		route.mode === "radient"
+			? state.discoveredComputers.find(
+					(computer) => computer.tunnelId === route.tunnelId,
+				)?.name
+			: undefined;
+	void rememberLiveComputer(route, {
+		name,
+		computerId,
+		/* The account the route was minted under, so the switcher lists this computer
+		 *  for that account only (review M2). Omitted when unknown, which keeps a key
+		 *  the entry already has instead of erasing it. */
+		...(route.mode === "radient" && radientAccount !== null
+			? { account: radientAccount }
+			: {}),
+		/* Re-checked INSIDE the registry's serialised write: a sign-out that cleared
+		 *  the registry while this write was queued ended the route, so the write is
+		 *  dropped instead of putting a hostname back into a wiped list (review m3). */
+		onlyIf: admission.isCurrent,
+	}).then((entry) => {
+		if (entry && admission.isCurrent())
+			connectionStore.getState().noteComputer(entry.id);
+	});
+};
+
+/** A Radient pick with no stored grant at all: the sign-in surface's sentence. */
+const RADIENT_PICK_SIGNED_OUT = "Sign in with Radient to use this computer.";
+
+/** Turns an unverified purge into the typed refusal the surfaces already know,
+ *  so a sign-out reports `false` rather than pretending the device is clean.
+ *  Module scope on purpose: it reads no component state, so it never becomes a
+ *  hook dependency that changes on every render. */
+const verifiedRetirement = (retirement: Promise<boolean>): Promise<void> =>
+	retirement.then((verified) => {
+		if (verified) return;
+		throw new RelayError(
+			"rejected",
+			"Cannot confirm those local drafts were removed",
+			{ surface: "diagnostic", detail: "" },
+		);
+	});
+
+/** A credential renewal's failure, as the ACCOUNT-level outcome the Computers banner
+ * already renders. Nothing here deletes a credential: only a confirmed refusal from
+ * the resource itself (the `unauthorized` arm) does, because a refresh the server
+ * refused says the grant was not accepted, not that the login ended.
+ *
+ * A throw here is not an option: `refreshComputers` is fired as `void` from Settings,
+ * the Computers header and the banner's Try now, and awaited inside the connector
+ * poll — an escaping rejection stopped that poll's next tick and reported a local
+ * condition as a transport failure (review round 1, Q2/R1-M5). */
+function grantFailureOutcome(error: unknown): DiscoveryResult {
+	if (error instanceof RadientAuthError) {
+		if (error.failure === "invalid_grant") return { kind: "unauthorized" };
+		// The copy is `discovery.ts`'s own, not a new sentence: the same refusal one
+		// layer earlier must read the same way.
+		if (error.failure === "rejected" && error.status !== undefined)
+			return {
+				kind: "rejected",
+				message: `Radient refused the request (HTTP ${error.status}).`,
+				status: error.status,
+			};
+	}
+	// `network`, an unreadable answer, and anything unexpected: nothing was learned
+	// about the grant, so the credential stays and the banner offers Try now.
+	return {
+		kind: "unreachable",
+		message: "Radient could not be reached. Check this device's connection.",
+	};
+}
+
 export const ConnectionProvider = ({
 	children,
 }: {
@@ -279,6 +448,8 @@ export const ConnectionProvider = ({
 }) => {
 	const [busy, setBusy] = useState(false);
 	const [discovering, setDiscovering] = useState(false);
+	/* The latest discovery pass, so only it lowers `discovering` (R2-m1). */
+	const discoveryPassRef = useRef(0);
 	/* See `Connection.coldStartSettled`. */
 	const [coldStartSettled, setColdStartSettled] = useState(false);
 	const cancelledRef = useRef(false);
@@ -287,12 +458,23 @@ export const ConnectionProvider = ({
 	const [restoredAccount, setRestoredAccount] = useState(false);
 	const [streamHealth, setStreamHealth] = useState<StreamHealth>("idle");
 	const [signInState, setSignInState] = useState<SignInState>({ kind: "idle" });
+	const [signInDiagnostics, setSignInDiagnostics] = useState<
+		SignInDiagnostic[]
+	>([]);
 	const [lastError, setLastError] = useState<RelayError | null>(null);
 
 	const clientRef = useRef<ReturnType<typeof createRelayClient> | null>(null);
 	const streamRef = useRef<RelayStream | null>(null);
 	const configRef = useRef<ConfigStreamHandle | null>(null);
+	/* The in-memory grant every request path reads. Written ONLY through the
+	 *  accessor's `publish`, so the ref and the rendered `radientSignedIn` cannot
+	 *  disagree. */
 	const tokensRef = useRef<RadientTokens | null>(null);
+	const refreshAccountTokens = useRef(createRadientRefresher()).current;
+	const pendingOauthWrite = useRef<RadientTokens | null>(null);
+	/** Serialises durable OAuth writes so an older rotation cannot land after a
+	 *  newer one and persist a handle the newer rotation already spent. */
+	const oauthWriteChain = useRef<Promise<void>>(Promise.resolve());
 	/* Mirrors `tokensRef !== null` for RENDERING. The ref stays the source the
 	 *  request paths read; this only lets a screen (the Team Bridge gate) re-render
 	 *  when a sign-in or a sign-out changes the answer. */
@@ -311,7 +493,12 @@ export const ConnectionProvider = ({
 					setRadientAccountId(accountIdFromToken(tokens?.access ?? null));
 				}
 			},
-			refresh: refreshRadientTokens,
+			/* Main's per-mount deduping refresher, NOT the raw `refreshRadientTokens`
+			 *  call the branch threaded through its old ref plumbing: OAuth refresh may
+			 *  rotate a single-use handle, and only this owner joins a rotation already in
+			 *  flight (main's `usableOauth` shares it). `revokeAuthorization` clears its
+			 *  completed-rotation cache at every session end. */
+			refresh: refreshAccountTokens,
 			write: writeStoredOauth,
 			clear: clearStoredOauth,
 			invalidGrant: (error) =>
@@ -333,15 +520,30 @@ export const ConnectionProvider = ({
 	/** The latest revision of the cold-start restore, so the retry a network failure
 	 *  offers can re-run the very function that offered it — see `restoreRadient`. */
 	const restoreRef = useRef<() => Promise<void>>(async () => undefined);
+	/** The latest `selectComputer`, for the cold start's computer restore. Read
+	 *  through a ref so the cold-start effect does not list it as a dependency: a
+	 *  new revision of the pick must never re-run the whole cold start. */
+	const selectRef = useRef<(computer: DiscoveredComputer) => Promise<void>>(
+		async () => undefined,
+	);
 	const mountedRef = useRef(true);
+	const signInAbortRef = useRef<AbortController | null>(null);
 
 	useEffect(() => {
 		mountedRef.current = true;
 		return () => {
 			mountedRef.current = false;
+			/* All three, all synchronous: the attempt's abort goes first so a browser
+			 *  hand-off that lands after this unmount cannot publish (main's `ownsUI`
+			 *  fence); the lifecycle gate then closes (main) and the in-memory grant's
+			 *  request epochs end (Team Bridge), so neither a late scope write nor a late
+			 *  hub refresh can publish into the next mount. */
+			signInAbortRef.current?.abort();
+			startupAuthorizationLifecycle.suspend();
 			radientAccessRef.current?.replace(null);
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
+			agentAvatarCache.clear();
 			streamRef.current?.stop();
 			configRef.current?.stop();
 			clientRef.current = null;
@@ -378,10 +580,89 @@ export const ConnectionProvider = ({
 		[],
 	);
 
+	/** Authentication ended without proof — a `401`, a lapsed grant, a cancelled
+	 *  login. The gate closes now and the persisted generation is invalidated, but
+	 *  NO draft is deleted: the reader's unfinished sentence survives a token blip
+	 *  (`docs/ux/flows.md` § C5) and is simply unreachable from the next generation.
+	 *  `afterCleanup` is for the credential that is genuinely dead (an expired
+	 *  grant), never for private content. */
+	const revokeAuthorization = useCallback(
+		(afterRevoke?: () => Promise<void>): Promise<boolean> => {
+			agentAvatarCache.clear();
+			/* A rotation cached for the session that just ended must never be handed
+			 * to the next one (review round 1, R1-n2). */
+			refreshAccountTokens.clear();
+			return startupAuthorizationLifecycle.revoke(afterRevoke).then(
+				() => true,
+				() => {
+					if (mountedRef.current) {
+						setBusy(false);
+						connectionStore
+							.getState()
+							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+					}
+					return false;
+				},
+			);
+		},
+		/* The refresher instance is stable for the provider's life (created once in a
+		 *  ref), and only its cache-clear is reached here. */
+		[refreshAccountTokens],
+	);
+
+	/** The synchronous half revokes dispatch; the resolved value reports whether
+	 * every deletion was VERIFIED. The rejection itself stays on the lifecycle's
+	 * own tail, so admission stays closed after a failure even though this
+	 * caller-facing promise resolves — no unhandled rejection from a 401 handler,
+	 * and no false success either. */
+	/** The ONE way a refused Radient grant is withdrawn (discovery 401, a restore
+	 *  the server refused). Two fences, in this order, both synchronous: the
+	 *  accessor's epoch ends (`holdRadientTokens(null)` — in-flight hub refreshes
+	 *  can no longer publish or persist), then `revoke` closes the lifecycle gate.
+	 *  The stored-OAuth clear runs INSIDE the lifecycle's revoke step and on the
+	 *  native credential queue, so it is ordered after any write already in
+	 *  platform storage and before any later sign-in's write (which queues behind
+	 *  this step). It deliberately calls the queue directly rather than the
+	 *  accessor's `retire()`: that would re-run `replace(null)` when the step
+	 *  finally executes, and could end the epoch of a grant held in between. */
+	const revokeRadientGrant = useCallback((): Promise<boolean> => {
+		holdRadientTokens(null);
+		return revokeAuthorization(() =>
+			nativeCredentialRetirement.retire(null, clearStoredOauth),
+		);
+	}, [holdRadientTokens, revokeAuthorization]);
+
+	const retireAuthorization = useCallback(
+		(
+			preserveUnscoped = false,
+			afterCleanup?: () => Promise<void>,
+			policy: "retire" | "reauthenticate" = "retire",
+		): Promise<boolean> => {
+			agentAvatarCache.clear();
+			return startupAuthorizationLifecycle
+				.retire(preserveUnscoped, afterCleanup, policy)
+				.then(
+					() => true,
+					() => {
+						if (mountedRef.current) {
+							setBusy(false);
+							connectionStore
+								.getState()
+								.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+						}
+						return false;
+					},
+				);
+		},
+		[],
+	);
+
 	/** Records a typed failure: the store owns the surface, and the retry closure
 	 *  is what the refusal surface's button re-runs. */
 	const noteError = useCallback(
 		(error: RelayError, retry?: () => Promise<void>) => {
+			if (error.surface === "password" || error.surface === "sign-in")
+				void revokeAuthorization();
 			setLastError(error);
 			retryRef.current = retry ?? null;
 			connectionStore.getState().noteFailure({
@@ -401,7 +682,7 @@ export const ConnectionProvider = ({
 				retryAfterMs: error.retryAfterMs ?? null,
 			});
 		},
-		[],
+		[revokeAuthorization],
 	);
 
 	const stopStream = useCallback(() => {
@@ -432,6 +713,9 @@ export const ConnectionProvider = ({
 			admission: RouteAdmission,
 		) => {
 			stopStream();
+			// Capture before asynchronous delivery: a reset changes the inbox's
+			// watermark domain, even when a reconnect reuses the client object.
+			const listGeneration = listStore.getState().connectionGeneration;
 			let stopped = false;
 			let _attempt = 0;
 
@@ -463,12 +747,22 @@ export const ConnectionProvider = ({
 						}
 						if (frame.kind === "sessions") {
 							_attempt = 0;
-							listStore.getState().applyFrame({
-								sessions: frame.data.sessions,
-								degraded: frame.data.degraded,
-								capabilities: frame.data.capabilities,
-								unread: frame.data.unread,
-							});
+							listStore.getState().applyFrame(
+								{
+									sessions: frame.data.sessions,
+									degraded: frame.data.degraded,
+									capabilities: frame.data.capabilities,
+									/* THE INBOX COUNTS RIDE THIS SAME FRAME (contract §5.4) and
+									 * were dropped at all three application sites, so the badge on
+									 * the home bell and the conversations rail could never render
+									 * on any relay — the count the design leans on was always
+									 * null (design review D3; the mock relay was the other half). */
+									notifications: frame.data.notifications,
+									unread: frame.data.unread,
+								},
+								undefined,
+								listGeneration,
+							);
 						}
 					},
 					onState: (status) => {
@@ -501,7 +795,15 @@ export const ConnectionProvider = ({
 						listStore.getState().markStale();
 						if (mountedRef.current) setStreamHealth("degraded");
 						_attempt += 1;
-						setTimeout(run, RESTART_MS);
+						/* The conversation stream's policy (`reconnectDelay`), so the two
+						 * streams of one route back off alike: 2 s, doubling to a 15 s
+						 * ceiling, and a server Retry-After only ever lengthens a step. A
+						 * flat 2 s turned a Radient outage into a renewal POST every 2 s
+						 * per phone once a 5xx stopped being terminal (PR #178 R1-2/Q1). */
+						setTimeout(
+							run,
+							reconnectDelay(_attempt, error.retryAfterMs ?? undefined),
+						);
 					},
 				});
 				streamRef.current = stream;
@@ -554,7 +856,21 @@ export const ConnectionProvider = ({
 	/** Retire the old client before publishing a provisional route. Its address
 	 * is useful for loading/refusal UI, but must not carry protected requests. */
 	const beginRoute = useCallback(
-		(route: RouteProfile) => {
+		(route: RouteProfile): StartupRouteAdmission => {
+			// Route changes include account/computer switches. Retire image bytes
+			// before the next credential can address the same agent id and hash.
+			agentAvatarCache.clear();
+			/* A route that supersedes an in-flight browser sign-in takes its UI too.
+			 * The abandoned attempt can no longer publish (`ownsUI()` is false once
+			 * the ref is cleared), so its last state — "Waiting for your browser" or
+			 * "Signing you in…" — was left on every screen that reads `signInState`
+			 * with no way to end it. Settle it here, where ownership moves. */
+			if (signInAbortRef.current) {
+				signInAbortRef.current.abort();
+				setSignInState({ kind: "idle" });
+			}
+			signInAbortRef.current = null;
+			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
 			stopStream();
@@ -571,7 +887,18 @@ export const ConnectionProvider = ({
 			setLastError(null);
 			retryRef.current = null;
 			connectionStore.getState().startRoute(route);
-			return routeAdmission(connectionStore, () => mountedRef.current);
+			// Keep route ownership independent from the dispatch generation: a 401
+			// closes dispatch immediately, but its typed onError must still reach
+			// this route's refusal surface rather than disappear as a stale event.
+			const admission = routeAdmission(
+				connectionStore,
+				() => mountedRef.current,
+			);
+			return {
+				...admission,
+				authorizationRevision,
+				routeKey: JSON.stringify(route),
+			};
 		},
 		[stopStream, stopConfig],
 	);
@@ -580,20 +907,109 @@ export const ConnectionProvider = ({
 	const goLive = useCallback(
 		async (
 			client: ReturnType<typeof createRelayClient>,
-			admission: RouteAdmission,
+			admission: StartupRouteAdmission,
+			computerId?: string,
 		): Promise<void> => {
+			if (
+				!admission.isCurrent() ||
+				!startupAuthorizationLifecycle.isCurrent(
+					admission.authorizationRevision,
+				)
+			)
+				return;
 			if (
 				!admission.publish(() => {
 					clientRef.current = client;
 				})
 			)
 				return;
+			rememberLiveRoute(
+				admission,
+				computerId,
+				tokensRef.current?.account_id ?? null,
+			);
 			startStream(client, admission);
 			startConfig(client);
+			/* Startup authorization is admitted by the AUTHENTICATED ROUTE, not by the
+			 * list read (review R1-1). Gating it on a frame meant one transient 503 on
+			 * `GET /sessions` left a healthy, stream-populated route permanently unable
+			 * to start a conversation — the stream's seed frame does not admit, and
+			 * neither did a later refresh. The retry covers a storage write that failed
+			 * once; `null` means a newer attempt superseded this one and must not retry. */
+			const accessToken = tokensRef.current?.access;
+			const route = connectionStore.getState().route;
+			const recoveryProof =
+				Platform.OS !== "web" && route?.mode === "radient" && accessToken
+					? proveRecoveryAuthority(accessToken, {
+							isCurrent: () =>
+								admission.isCurrent() &&
+								startupAuthorizationLifecycle.isCurrent(
+									admission.authorizationRevision,
+								) &&
+								tokensRef.current?.access === accessToken,
+						})
+					: Promise.resolve(null);
+			const admitStartup = async (): Promise<void> => {
+				for (let attempt = 0; attempt < 2; attempt += 1) {
+					if (!isAdmissionActive()) return;
+					try {
+						await startupAuthorizationLifecycle.admit(
+							admission.routeKey,
+							admission.authorizationRevision,
+							prepareOrdinaryPrivateStorage,
+							Platform.OS === "web" ? undefined : null,
+						);
+						return;
+					} catch {
+						if (!isAdmissionActive()) return;
+					}
+				}
+				if (isAdmissionActive())
+					connectionStore
+						.getState()
+						.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+			};
+			const isAdmissionActive = () => admission.isCurrent();
+			await admitStartup();
+			// Recovery is optional: ordinary generation-backed editors/outboxes do
+			// not wait for the control plane. A late proof can import only an untouched
+			// empty editor; restored bytes retain separate proof provenance on disk.
+			void recoveryProof
+				.then(async (owner) => {
+					if (!owner || !route || !isAdmissionActive()) return;
+					const scope = recoveryAuthorityScope(owner, route);
+					if (scope === null) return;
+					const admitted = await startupAuthorizationLifecycle.admit(
+						admission.routeKey,
+						admission.authorizationRevision,
+						() =>
+							prepareDraftRecovery(
+								scope,
+								() =>
+									admission.isCurrent() &&
+									startupAuthorizationLifecycle.isCurrent(
+										admission.authorizationRevision,
+									),
+							),
+						scope,
+					);
+					if (admitted && isAdmissionActive()) notifyDraftRecoveryReady();
+				})
+				.catch(() => {
+					if (
+						isAdmissionActive() &&
+						startupAuthorizationLifecycle.get() === null
+					)
+						connectionStore
+							.getState()
+							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+				});
+			if (!admission.isCurrent()) return;
 			/* The first paint is the REST read, not the stream's seed: the cold-start
 			 * rule is that the list renders immediately, and a stream that opens in a
 			 * second must not be the reason the screen is empty. It asks for the
 			 * peers' rows exactly as the stream does — one list, one population. */
+			const listGeneration = listStore.getState().connectionGeneration;
 			const frame = await client.sessions({ includePeers: true }).catch(
 				/* NOT SILENT (round 1, R1-1): this used to be `.catch(() => null)`, so
 				 *  a cold-start answer the schema refused (or a transport that never
@@ -613,21 +1029,29 @@ export const ConnectionProvider = ({
 				},
 			);
 			if (frame && admission.isCurrent()) {
-				listStore.getState().applyFrame({
-					sessions: frame.sessions,
-					degraded: frame.degraded,
-					capabilities: frame.capabilities,
-					unread: frame.unread,
-				});
+				listStore.getState().applyFrame(
+					{
+						sessions: frame.sessions,
+						degraded: frame.degraded,
+						capabilities: frame.capabilities,
+						notifications: frame.notifications,
+						unread: frame.unread,
+					},
+					undefined,
+					listGeneration,
+				);
 			}
 		},
 		[startStream, startConfig],
 	);
 
 	const connectCustom = useCallback(
-		async ({ url, password, allowInsecure }: ConnectCustomInput) => {
+		async (
+			{ url, password, allowInsecure, computerId }: ConnectCustomInput,
+			restoring = false,
+		) => {
 			setBusy(true);
-			let admission: RouteAdmission | null = null;
+			let admission: StartupRouteAdmission | null = null;
 			try {
 				const validated = validateCustomBaseUrl(url, { allowInsecure });
 				if (!validated.ok) {
@@ -643,13 +1067,21 @@ export const ConnectionProvider = ({
 					return;
 				}
 				const route = validated.route;
+				const privacy = restoring
+					? Promise.resolve()
+					: verifiedRetirement(retireAuthorization(true));
 				admission = beginRoute(route);
+				await privacy;
+				await nativeCredentialRetirement.settled();
+				if (!admission.isCurrent()) return;
 				if (!(await authenticateCustomRoute(route, password, admission)))
 					return;
 				const client = createRelayClient({
 					route,
 					onResponse: (facts) => {
 						if (admission?.isCurrent() && facts.status === 401) {
+							void revokeAuthorization();
+							setBusy(false);
 							connectionStore.getState().noteFailure({
 								surface: "password",
 								displayableMessage: "",
@@ -658,12 +1090,12 @@ export const ConnectionProvider = ({
 					},
 				});
 
-				await goLive(client, admission);
+				await goLive(client, admission, computerId);
 			} catch (error) {
 				if (admission && !admission.isCurrent()) return;
 				if (error instanceof RelayError) {
 					noteError(error, () =>
-						connectCustom({ url, password, allowInsecure }),
+						connectCustom({ url, password, allowInsecure, computerId }),
 					);
 					return;
 				}
@@ -673,7 +1105,73 @@ export const ConnectionProvider = ({
 					setBusy(false);
 			}
 		},
-		[beginRoute, goLive, noteError],
+		[beginRoute, goLive, noteError, retireAuthorization, revokeAuthorization],
+	);
+
+	// Account access and the five-minute tunnel grant have independent lives.
+	// Renew in place: retiring authorization here would quarantine drafts and end
+	// a perfectly valid route. Only a confirmed terminal refresh refusal may do so.
+	const usableOauth = useCallback(
+		async (
+			force = false,
+			rejectedAccess?: string,
+		): Promise<RadientTokens | null> => {
+			const initial = tokensRef.current;
+			if (!initial) return null;
+			let current = initial;
+			if (
+				(force && (!rejectedAccess || initial.access === rejectedAccess)) ||
+				accessTokenNeedsRefresh(initial)
+			) {
+				const renewed = await refreshAccountTokens(initial);
+				if (tokensRef.current !== initial && tokensRef.current !== renewed)
+					throw new SignInSupersededError();
+				if (
+					initial.account_id &&
+					renewed.account_id &&
+					initial.account_id !== renewed.account_id
+				)
+					throw new SignInSupersededError();
+				tokensRef.current = renewed;
+				pendingOauthWrite.current = renewed;
+				current = renewed;
+			}
+			if (pendingOauthWrite.current === current) {
+				const revision = startupAuthorizationLifecycle.getRevision();
+				// Persisting the rotation is BEST-EFFORT, exactly as in `radient-restore`:
+				// a keystore write that fails says this DEVICE could not record the
+				// grant, not that the grant is bad. Keep the rotated token in memory and
+				// leave the retry armed, so the next consumer retries THIS write rather
+				// than spending the old handle a second time.
+				/* Serialised, and re-checked INSIDE the queue: a rotation that arrived
+				 * while an earlier write was still in flight owns the durable record, and
+				 * letting this older one land afterwards would persist a handle the newer
+				 * rotation has already spent — a sign-out on the next launch (review
+				 * round 1, R1-M3). */
+				const queued = oauthWriteChain.current.then(() =>
+					startupAuthorizationLifecycle.runIfCurrent(revision, async () => {
+						if (pendingOauthWrite.current !== current) return;
+						await writeStoredOauth(current);
+						if (pendingOauthWrite.current === current)
+							pendingOauthWrite.current = null;
+					}),
+				);
+				oauthWriteChain.current = queued.then(
+					() => undefined,
+					() => undefined,
+				);
+				try {
+					await oauthWriteChain.current;
+				} catch {
+					/* The rotated token still works for this run. */
+				}
+			}
+			// A newer rotation, sign-in or route ended this one: stop rather than
+			// publish rows for an account this route no longer owns.
+			if (tokensRef.current !== current) throw new SignInSupersededError();
+			return current;
+		},
+		[refreshAccountTokens],
 	);
 
 	const refreshComputers = useCallback(async () => {
@@ -681,12 +1179,40 @@ export const ConnectionProvider = ({
 		/* Discovery answers an ACCOUNT question before a tunnel exists. The store's
 		 * phases describe a route, so the in-flight flag lives beside it instead of
 		 * inventing a route to hang a phase on. */
+		const pass = ++discoveryPassRef.current;
 		setDiscovering(true);
-		const result = await discoverComputers({
-			accessToken: async () => tokensRef.current?.access ?? null,
-		});
+		const revision = startupAuthorizationLifecycle.getRevision();
+		const isCurrent = () =>
+			mountedRef.current && startupAuthorizationLifecycle.isCurrent(revision);
+		/* ONE latch closer for the whole pass. Every early exit below — a superseded
+		 * pass, a superseded rotation, a refusal — used to bypass the inner `finally`
+		 * and leave `discovering` raised, which disables Refresh, the banner's Try now
+		 * and Settings' Refresh until some later pass happened to finish (review round
+		 * 1, R1-M1; the shape PR #121 R2-m1 fixed, re-entered through the new exits). */
 		try {
-			if (!ownsGrant?.()) return;
+			if (!isCurrent() || !ownsGrant?.()) return;
+			let result: DiscoveryResult;
+			try {
+				const tokens = await usableOauth();
+				if (!isCurrent()) return;
+				result = await discoverComputers({
+					accessToken: async () => tokens?.access ?? null,
+				});
+				// A resource 401 is not a revocation verdict: the server's clock or a
+				// server-side invalidation can outrun our own expiry. Judge it by a
+				// refresh before deleting anything.
+				if (result.kind === "unauthorized" && tokens?.refresh && isCurrent()) {
+					const renewed = await usableOauth(true, tokens.access);
+					if (!isCurrent()) return;
+					result = await discoverComputers({
+						accessToken: async () => renewed?.access ?? null,
+					});
+				}
+			} catch (error) {
+				if (!isCurrent() || error instanceof SignInSupersededError) return;
+				result = grantFailureOutcome(error);
+			}
+			if (!isCurrent()) return;
 			switch (result.kind) {
 				case "computers":
 					connectionStore.getState().setComputers(result.computers);
@@ -700,14 +1226,31 @@ export const ConnectionProvider = ({
 					/* The credential is gone SERVER-SIDE — revoked, or past its refresh window.
 					 *  Deleted here rather than left for the next launch to retry, so "sign in
 					 *  again" is a state the reader passes through once and not a loop. The other
-					 *  two failure arms deliberately KEEP the credential: an unreachable API or an
-					 *  unreadable answer says nothing about whether the grant is still good. */
-					const retired = radientAccessRef.current?.retire();
-					const ownsRetirement = radientAccessRef.current?.capture();
-					await retired;
-					if (!ownsRetirement?.()) return;
-					/* The in-memory grant goes with the stored one, so a hub read (Team
-					 *  Bridge) answers "sign in" instead of presenting a refused token. */
+					 *  failure arms deliberately KEEP the credential: an unreachable API, an
+					 *  unreadable answer or a refused refresh says nothing about whether the
+					 *  grant is still good. */
+					/* ORDERING (merge of the Team Bridge accessor with the startup lifecycle).
+					 *  Synchronously (`revokeRadientGrant`, which is main's `revokeAuthorization`
+					 *  with the clear wrapped): the in-memory grant goes (a hub read now answers
+					 *  "sign in" instead of presenting a refused token) and the lifecycle gate
+					 *  closes (`revoke` suspends first). Then, as ONE step on the lifecycle tail,
+					 *  the revoked record is written beside a stored-OAuth clear that is itself
+					 *  serialized on the native credential queue — the queue the accessor's
+					 *  `persist` uses, so a credential write already in platform storage finishes
+					 *  before the clear, and a later sign-in's write (which waits on this
+					 *  lifecycle step) can only land after it. Nothing private is deleted: a 401
+					 *  is an auth blip (§ C5), not sign-out. */
+					void revokeRadientGrant();
+					setDiscovering(false);
+					/* The rows go with the grant. A revoked account's list left in the store
+					 *  stayed rendered in Settings beside "Not signed in with Radient" (PR #121
+					 *  review round 1, R1-m1), now that the list outlives a route start. */
+					connectionStore.getState().setComputers([]);
+					/* Not awaited (main's shape): the expiry message lands in this same tick,
+					 *  so no replacement sign-in can start in between and inherit it — the
+					 *  ownership re-check #105 needed after its await is therefore moot. An
+					 *  unverified clear later replaces it with `revokeAuthorization`'s
+					 *  diagnostic, as on main. */
 					/* The landing latch goes with the credential (review round 5, r5-n1). This
 					 *  is the SECOND place a session ends — `signOut` is the other — and a latch
 					 *  left set here would route a signed-out reader to `/tunnels` the moment
@@ -720,53 +1263,211 @@ export const ConnectionProvider = ({
 					});
 					return;
 				}
+				/* The failures that say nothing about the grant are ACCOUNT-level, not a
+				 *  route refusal. Routed through `noteFailure` they flipped a live route to
+				 *  `refused`, hid the rows they failed to refresh, named the first computer
+				 *  as the thing "not ready yet", and offered a Try now that re-ran a route
+				 *  action instead of this one (PR #121 design round 1, D2/D3). The Computers
+				 *  screen renders this as a banner whose action calls `refreshComputers`. */
 				case "unreachable":
-					connectionStore.getState().noteFailure({
-						surface: "retry",
-						displayableMessage: result.message,
-					});
-					return;
 				case "rejected":
-					connectionStore.getState().noteFailure({
-						surface: "diagnostic",
-						displayableMessage: result.message,
-					});
+					connectionStore.getState().noteDiscoveryFailure(result.kind);
 					return;
 			}
 		} finally {
-			if (mountedRef.current) setDiscovering(false);
+			/* Keyed on the PASS, not on `isCurrent()`. A pick or a route start during an
+			 *  in-flight Refresh suspends the authorization revision, so this pass stops
+			 *  being current and its result is rightly dropped — but the flag it raised
+			 *  must still come down, or the banner's Try now and the header Refresh stay
+			 *  spinning (and inert) and an empty list paints the skeleton forever (PR
+			 *  #121 review round 2, R2-m1). Only the latest pass may lower it, so an
+			 *  older pass finishing late cannot hide a newer one still running. */
+			if (mountedRef.current && pass === discoveryPassRef.current)
+				setDiscovering(false);
 		}
-	}, []);
+	}, [revokeRadientGrant, usableOauth]);
 
 	const signInWithRadient = useCallback(async () => {
+		signInAbortRef.current?.abort();
+		const attempt = new AbortController();
+		signInAbortRef.current = attempt;
+		const ownsUI = () =>
+			mountedRef.current && signInAbortRef.current === attempt;
+		setSignInDiagnostics([]);
+		const trace = (stage: string, errorClass?: string) => {
+			if (ownsUI())
+				setSignInDiagnostics((trail) =>
+					appendSignInDiagnostic(trail, stage, errorClass),
+				);
+		};
+		trace("retiring");
+		// Checkpoint before ordinary purge; the sealed vault stays quarantined.
+		// UI ownership, callback cancellation and the auth epoch fence this attempt.
+		const privacy = retireAuthorization(true, undefined, "reauthenticate");
+		// retire() revokes synchronously; capture AFTER it, not before cleanup.
+		const revision = startupAuthorizationLifecycle.getRevision();
+		const isCurrent = () =>
+			ownsUI() &&
+			!attempt.signal.aborted &&
+			startupAuthorizationLifecycle.isCurrent(revision);
+		const requireCurrent = () => {
+			if (!isCurrent()) throw new SignInSupersededError();
+		};
+		cancelledRef.current = true;
+		stopStream();
+		stopConfig();
+		clientRef.current = null;
+		/* Through the accessor, not the ref: the epoch must end with the grant so an
+		 *  in-flight hub refresh cannot republish it, and `radientSignedIn` re-renders. */
+		holdRadientTokens(null);
+		const retired = nativeCredentialRetirement.retire(managerRef.current);
+		managerRef.current = null;
+		connectionStore.getState().endRoute();
 		setBusy(true);
+		setSignInState({ kind: "starting" });
 		try {
+			await Promise.all([verifiedRetirement(privacy), retired]);
+			requireCurrent();
 			const result = await beginRadientSignIn({
+				signal: attempt.signal,
 				onState: (state) => {
-					if (mountedRef.current) setSignInState(state);
+					if (isCurrent()) {
+						setSignInState(state);
+						trace(
+							state.kind,
+							state.kind === "failed" ? state.errorClass : undefined,
+						);
+					}
 				},
 			});
-			if (!result.ok) return;
+			requireCurrent();
+			if (!result.ok) {
+				setSignInState(result.state);
+				return;
+			}
+			trace("persisting");
+			// Publish admission only after durable persistence completes. A newer
+			// route/attempt cannot receive this grant, nor be overwritten by it.
 			holdRadientTokens(result.tokens);
+			const ownsGrant = radientAccessRef.current?.capture();
 			/* Persisted BEFORE discovery, and before any route exists: the credential is
 			 *  what makes the NEXT launch a computers screen instead of a second browser
 			 *  hand-off, and a discovery that then fails (an unreachable API, an empty
 			 *  account) must not throw a valid grant away. A runtime that cannot store it
 			 *  still gets a working session this run — `writeStoredOauth` reports which. */
-			await radientAccessRef.current?.persist(result.tokens);
-			if (mountedRef.current) setSignInState({ kind: "idle" });
-			/* Straight into discovery, which is what makes the button's promise —
-			 * "finds your computers" — true rather than a second tap away. */
+			/* Both fences: the lifecycle revision (a sign-out after this sign-in
+			 *  began wins) and the accessor epoch on the native credential queue (a
+			 *  replacement grant is never overwritten by this one). */
+			/* A fresh browser proof may replace a pending sign-out's retained grant,
+			 * but only a verified durable write makes it eligible for next-launch
+			 * restore. A newer sign-out wins even if it arrived during that write. */
+			const stored =
+				await startupAuthorizationLifecycle.replaceCredentialsIfCurrent(
+					revision,
+					() =>
+						radientAccessRef.current?.persist(result.tokens, ownsGrant) ??
+						Promise.resolve(false),
+				);
+			requireCurrent();
+			// Web's documented memory-only session is intentional. A native
+			// keystore failure is not: expose Retry instead of claiming persistence.
+			/* `stored` is the accessor's own durable verdict, read through main's fence:
+			 *  `replaceCredentialsIfCurrent` answers false for a superseded revision (which
+			 *  `requireCurrent()` above has already turned into `SignInSupersededError`) and
+			 *  for a write the platform did not persist. A redundant `{persistent}` object
+			 *  would only re-encode the same boolean. */
+			if (Platform.OS !== "web" && !stored) throw new Error();
+			tokensRef.current = result.tokens;
+			setRestoredAccount(true);
+			trace("discovering");
 			await refreshComputers();
+			// Discovery's 401 revokes this revision itself. That is a server
+			// refusal, not a competing attempt, and must use the general failure.
+			if (ownsUI() && connectionStore.getState().surface === "sign-in")
+				throw new Error();
+			requireCurrent();
+			trace("signed-in");
+			setSignInState({ kind: "idle" });
+		} catch (error) {
+			// A replacement attempt/route owns its own UI. Otherwise even a
+			// revoked revision must produce a visible terminal result, not vanish.
+			if (ownsUI()) {
+				trace("failed", signInErrorClass(error));
+				setSignInState({
+					kind: "failed",
+					detail: t(
+						error instanceof SignInSupersededError
+							? "mobile.signin.superseded"
+							: "mobile.signin.failed",
+					),
+					errorClass: signInErrorClass(error),
+				});
+			}
 		} finally {
-			if (mountedRef.current) setBusy(false);
+			if (ownsUI()) setBusy(false);
 		}
-	}, [refreshComputers, holdRadientTokens]);
+	}, [
+		refreshComputers,
+		retireAuthorization,
+		stopStream,
+		stopConfig,
+		holdRadientTokens,
+	]);
+
+	/**
+	 * The stored Radient grant for a pick that has none in memory — `carryOutRestore`
+	 * with no discovery, because the pick already knows its computer. Accepted
+	 * tokens land in `tokensRef` only while the pick's route is still current. A
+	 * refusal is returned in the restore's own shape (`sign-in` for a grant that is
+	 * gone, `retry` for an unreachable Radient, which must NOT discard it).
+	 */
+	const loadStoredRadient = useCallback(
+		async (
+			admission: StartupRouteAdmission,
+		): Promise<{
+			tokens: RadientTokens | null;
+			refusal: {
+				surface: "sign-in" | "retry";
+				displayableMessage: string;
+			} | null;
+		}> => {
+			const outcome = await carryOutRestore({
+				readOauth: readStoredOauth,
+				writeOauth: async (tokens) => {
+					if (admission.isCurrent())
+						await startupAuthorizationLifecycle.runIfCurrent(
+							admission.authorizationRevision,
+							async () => {
+								await radientAccessRef.current?.persist(tokens);
+							},
+						);
+				},
+				clearOauth: async () => {
+					if (admission.isCurrent()) await revokeRadientGrant();
+				},
+				refresh: (tokens) => refreshAccountTokens(tokens),
+				discover: async (tokens) => {
+					if (admission.isCurrent()) holdRadientTokens(tokens);
+				},
+				isCancelled: () => !admission.isCurrent(),
+			});
+			return {
+				tokens: outcome.tokens,
+				refusal: outcome.refusal
+					? {
+							surface: outcome.refusal.surface,
+							displayableMessage: outcome.refusal.message,
+						}
+					: null,
+			};
+		},
+		[revokeRadientGrant, holdRadientTokens, refreshAccountTokens],
+	);
 
 	const selectComputer = useCallback(
 		async (computer: DiscoveredComputer) => {
 			setBusy(true);
-			let admission: RouteAdmission | null = null;
+			let admission: StartupRouteAdmission | null = null;
 			try {
 				const route = routeForComputer(computer);
 				if (!route) {
@@ -781,13 +1482,68 @@ export const ConnectionProvider = ({
 				connectionStore.getState().selectComputer(computer);
 				await nativeCredentialRetirement.settled();
 				if (!admission.isCurrent()) return;
+				/* A cold start on the reader's own address dials that address and never
+				 *  loads the Radient grant (the cold start's order, below), so a pick made
+				 *  from the computer switcher afterwards minted with no token and ended on
+				 *  "needs attention in Radient… sign in with Radient again" (PR #122 UX
+				 *  round 1, U3). The stored grant is loaded here, through the same restore
+				 *  the cold start uses, so an expired one is refreshed and a refused one is
+				 *  discarded by the same rules. */
+				if (tokensRef.current === null) {
+					const loaded = await loadStoredRadient(admission);
+					if (!admission.isCurrent()) return;
+					if (loaded.refusal || loaded.tokens === null) {
+						connectionStore.getState().noteFailure(
+							loaded.refusal ?? {
+								surface: "sign-in",
+								displayableMessage: RADIENT_PICK_SIGNED_OUT,
+							},
+						);
+						return;
+					}
+				}
 				const adopted = adoptableSession(
 					await readStoredTunnelSession(),
 					computer,
 				);
 				if (!admission.isCurrent()) return;
 				const manager = new TunnelSessionManager({
-					oauthAccessToken: async () => tokensRef.current?.access ?? null,
+					oauthAccessToken: async () => {
+						if (!admission?.isCurrent())
+							throw new TunnelSessionError(
+								"rejected",
+								"Connection route ended",
+							);
+						try {
+							const tokens = await usableOauth();
+							if (!admission.isCurrent())
+								throw new TunnelSessionError(
+									"rejected",
+									"Connection route ended",
+								);
+							return tokens?.access ?? null;
+						} catch (error) {
+							if (
+								!admission.isCurrent() ||
+								error instanceof SignInSupersededError
+							)
+								throw new TunnelSessionError(
+									"rejected",
+									"Connection route ended",
+								);
+							// A network failure and a refused grant are different facts: the
+							// first keeps the credential, the second is what sends the reader
+							// to sign-in. Anything else is reported as a transport fault, not
+							// silently labelled a rejected grant (review round 1, R1-n1).
+							throw new TunnelSessionError(
+								error instanceof RadientAuthError &&
+									error.failure === "invalid_grant"
+									? "oauth"
+									: "network",
+								"Radient credentials could not be renewed",
+							);
+						}
+					},
 					initial: adopted,
 					/* Every mutation of the session is written through, so a crash mid-flow
 					 *  cannot leave the store behind the manager. */
@@ -807,12 +1563,45 @@ export const ConnectionProvider = ({
 				if (!admission.isCurrent()) return;
 				const client = createRelayClient({
 					route,
-					tunnelSession: () => manager.current,
+					tunnelSession: async (signal) => {
+						if (!admission?.isCurrent())
+							throw new RelayError("rejected", "Connection route ended");
+						try {
+							// The request's own signal travels with the renewal: the request
+							// deadline (armed before auth) and a route switch both cancel a
+							// mint/refresh nobody is waiting for any more.
+							const session = await manager.usableSession(signal);
+							if (!admission.isCurrent())
+								throw new RelayError("rejected", "Connection route ended");
+							return session;
+						} catch (error) {
+							if (error instanceof TunnelSessionError)
+								throw tunnelSessionRelayError(error);
+							throw error;
+						}
+					},
+					refreshTunnelSession: async (signal) => {
+						if (!admission?.isCurrent())
+							throw new RelayError("rejected", "Connection route ended");
+						try {
+							await manager.refresh(signal);
+						} catch (error) {
+							if (error instanceof TunnelSessionError)
+								throw tunnelSessionRelayError(error);
+							throw error;
+						}
+					},
+					assertCurrent: () => {
+						if (!admission?.isCurrent())
+							throw new RelayError("rejected", "Connection route ended");
+					},
 					onResponse: (facts) => {
 						/* The edge's own 401 (with `X-Radient-Login`) is the re-auth
 						 * signal; the connection layer types it as `sign-in`, and this
 						 * only records it so the surface is decided once. */
 						if (admission?.isCurrent() && facts.status === 401) {
+							void revokeAuthorization();
+							setBusy(false);
 							connectionStore.getState().noteFailure({
 								surface: "sign-in",
 								displayableMessage: "",
@@ -830,14 +1619,20 @@ export const ConnectionProvider = ({
 					noteError(
 						error instanceof RelayError
 							? error
-							: /* A control-plane refusal has no HTTP client error to carry it: it is
-								 * typed here so the surface stays the taxonomy's decision and never the
-								 * caller's. `console` because every `TunnelSessionError` this can be
-								 * is fixed on the computer or in the console. */
-								new RelayError("rejected", error.message, {
-									surface: "console",
-									detail: error.message,
-								}),
+							: error.failure === "network"
+								? /* The phone could not reach Radient at all: nothing on the
+									 * computer or in the console is wrong, and the `console` surface
+									 * sent an offline reader to the Radient console and a terminal
+									 * command (PR #121 UX round 1, U5; design D11). `retry` is the
+									 * surface whose button re-runs this pick. The sentence is ours,
+									 * not the session client's developer string, and it is passed as
+									 * `detail` because `transport`'s fixed copy names the relay, which
+									 * this request never reached. */
+									new RelayError("rejected", error.message, {
+										surface: "retry",
+										detail: PICK_UNREACHABLE_DETAIL,
+									})
+								: tunnelSessionRelayError(error),
 						() => selectComputer(computer),
 					);
 					return;
@@ -848,21 +1643,34 @@ export const ConnectionProvider = ({
 					setBusy(false);
 			}
 		},
-		[beginRoute, goLive, noteError],
+		[
+			beginRoute,
+			goLive,
+			loadStoredRadient,
+			noteError,
+			revokeAuthorization,
+			usableOauth,
+		],
 	);
 
 	const refreshList = useCallback(async () => {
 		const client = clientRef.current;
 		if (!client) return;
+		const listGeneration = listStore.getState().connectionGeneration;
 		setBusy(true);
 		try {
 			const frame = await client.sessions({ includePeers: true });
-			listStore.getState().applyFrame({
-				sessions: frame.sessions,
-				degraded: frame.degraded,
-				capabilities: frame.capabilities,
-				unread: frame.unread,
-			});
+			listStore.getState().applyFrame(
+				{
+					sessions: frame.sessions,
+					degraded: frame.degraded,
+					capabilities: frame.capabilities,
+					notifications: frame.notifications,
+					unread: frame.unread,
+				},
+				undefined,
+				listGeneration,
+			);
 		} catch (error) {
 			if (error instanceof RelayError) {
 				noteError(error, refreshList);
@@ -943,27 +1751,63 @@ export const ConnectionProvider = ({
 	);
 
 	const signOut = useCallback(async () => {
-		// Reserve route logout and durable retirement synchronously: yielding here
-		// lets a newer same-origin login enter before this logout and lose its cookie.
-		// Only OAuth clearing waits for push deregistration, which still needs its grant.
+		/*
+		 * SIGN-OUT ORDERING — the merge of two invariants that each held alone:
+		 *
+		 *  (A) startup lifecycle (main): the admission gate closes SYNCHRONOUSLY at
+		 *      entry, and the tombstone, the private-family purge and the credential
+		 *      wipe are ONE joined, retryable step on the lifecycle tail whose failure
+		 *      is reported (`verifiedRetirement`) rather than passed off as success.
+		 *  (B) Team Bridge (#105): push-device deregistration authenticates with the
+		 *      Radient grant, so the in-memory grant and the stored OAuth must outlive
+		 *      it; and every OAuth clear runs on the native credential queue, behind
+		 *      any accessor `persist` already in platform storage.
+		 *
+		 * Neither side's order satisfies the other: (B) alone wiped credentials
+		 * outside the lifecycle step (no tombstone join, no verified failure); (A)
+		 * alone cleared the stored grant with no wait for deregistration. The order
+		 * that satisfies both:
+		 *
+		 *  1. sync  — device retirement starts (it reads the in-memory grant through
+		 *             `radientRetirementAccessToken`, which deliberately joins neither
+		 *             queue, so nothing below can deadlock it), then `retire` closes
+		 *             the lifecycle gate and enqueues its durable step. The native
+		 *             route logout is also reserved synchronously below, so it sits
+		 *             AHEAD of the credential slot on the native queue.
+		 *  2. step  — tombstone write ∥ private-family purge ∥ native credential slot:
+		 *             await device retirement (bounded at 35 s by its owner) → drop the
+		 *             in-memory grant → clear the credential store.
+		 *  3. join  — any failure keeps admission closed and sign-out reports false.
+		 *
+		 * Why a later sign-in cannot be wiped: `signInWithRadient` retires on the same
+		 * lifecycle tail before it holds or persists a grant, so its tokens exist only
+		 * after this step settles. The ownership guard below is defence for any other
+		 * grant holder; an unmount (in-memory grant withdrawn, `tokensRef` null) must
+		 * NOT cancel an already requested durable sign-out. Cost, accepted: with the
+		 * push registry unreachable, the lifecycle tail (and so a sign-in right after
+		 * sign-out) waits up to that 35 s bound — fail-closed rather than half-open.
+		 */
 		const ownsGrant = radientAccessRef.current?.capture();
 		const deviceRetired = retireTeamBridgeDevice();
 		const clearCredentials = async () => {
 			await deviceRetired;
-			// A replacement sign-in wins; an unmount only withdrew the in-memory
-			// grant and must not cancel an already requested durable sign-out.
 			if (!ownsGrant?.() && tokensRef.current !== null) return;
 			holdRadientTokens(null);
 			await clearStoredCredentials();
 		};
+		const privacy = verifiedRetirement(
+			retireAuthorization(false, () =>
+				nativeCredentialRetirement.retire(null, clearCredentials),
+			),
+		);
 		if (pendingSignOutRef.current) {
 			const owner = revocationOwnerRef.current;
 			// The retained operation may originate from forgetting one custom route,
 			// which deliberately preserves OAuth. Ordinary Sign out still wipes all
 			// owned credentials, serialized before any newer native admission.
-			const clear = nativeCredentialRetirement.retire(null, clearCredentials);
+			const clear = nativeCredentialRetirement.settled();
 			const [, confirmed] = await Promise.all([
-				clear,
+				Promise.all([clear, privacy]),
 				pendingSignOutRef.current(),
 			]);
 			// Remote success may precede the additional clear. Validate ownership
@@ -998,12 +1842,19 @@ export const ConnectionProvider = ({
 		const revision = connectionStore.getState().revision;
 		// Enqueue both side effects before yielding. A new native selection waits
 		// for the clear; a new same-origin login queues behind the final logout.
-		const retired = nativeCredentialRetirement.retire(
-			manager,
-			clearCredentials,
+		const retired = nativeCredentialRetirement.retire(manager);
+		return await confirmRevocation(
+			activeRoute,
+			revision,
+			Promise.all([retired, privacy]).then(() => undefined),
 		);
-		return await confirmRevocation(activeRoute, revision, retired);
-	}, [confirmRevocation, stopStream, stopConfig, holdRadientTokens]);
+	}, [
+		confirmRevocation,
+		stopStream,
+		stopConfig,
+		retireAuthorization,
+		holdRadientTokens,
+	]);
 
 	const retry = useCallback(async () => {
 		const pending = retryRef.current;
@@ -1040,6 +1891,7 @@ export const ConnectionProvider = ({
 		 * Admission is withdrawn first, just as in `signOut`; revocation uses the
 		 * captured route so a slow response cannot leave requests enabled. */
 		if (active?.mode === "custom") {
+			const privacy = verifiedRetirement(retireAuthorization());
 			clientRef.current = null;
 			connectionStore.getState().endRoute();
 			stopStream();
@@ -1051,12 +1903,14 @@ export const ConnectionProvider = ({
 			await confirmRevocation(
 				active,
 				connectionStore.getState().revision,
-				nativeCredentialRetirement.settled(),
+				Promise.all([nativeCredentialRetirement.settled(), privacy]).then(
+					() => undefined,
+				),
 			);
 		}
 		await removeSavedTunnel();
 		setSavedTunnel(null);
-	}, [confirmRevocation, stopStream, stopConfig]);
+	}, [confirmRevocation, stopStream, stopConfig, retireAuthorization]);
 
 	const tunnelStoragePersistent = useCallback(
 		async () => Platform.OS !== "web",
@@ -1077,6 +1931,12 @@ export const ConnectionProvider = ({
 	const restoreRadient = useCallback(async () => {
 		let ownsGrant = radientAccessRef.current?.capture();
 		const revision = connectionStore.getState().revision;
+		const authorizationRevision = startupAuthorizationLifecycle.getRevision();
+		const isCurrent = () =>
+			mountedRef.current &&
+			!cancelledRef.current &&
+			connectionStore.getState().revision === revision &&
+			startupAuthorizationLifecycle.isCurrent(authorizationRevision);
 		/* The decision is `planRestore` and the carrying-out is `carryOutRestore`,
 		 *  both data/injectable and therefore testable; this wires them to the
 		 *  live storage, the live refresh and the list's own discovery. See that
@@ -1086,19 +1946,24 @@ export const ConnectionProvider = ({
 		const outcome = await carryOutRestore({
 			readOauth: readStoredOauth,
 			writeOauth: async (tokens) => {
-				if (ownsGrant?.())
-					await radientAccessRef.current?.persist(tokens, ownsGrant);
+				if (isCurrent() && ownsGrant?.())
+					await startupAuthorizationLifecycle.runIfCurrent(
+						authorizationRevision,
+						async () => {
+							await radientAccessRef.current?.persist(tokens, ownsGrant);
+						},
+					);
 			},
 			clearOauth: async () => {
-				if (ownsGrant?.()) {
-					const retired = radientAccessRef.current?.retire();
+				if (isCurrent() && ownsGrant?.()) {
+					const revoked = revokeRadientGrant();
 					ownsGrant = radientAccessRef.current?.capture();
-					await retired;
+					await revoked;
 				}
 			},
-			refresh: (tokens) => refreshRadientTokens(tokens),
+			refresh: (tokens) => refreshAccountTokens(tokens),
 			discover: async (tokens) => {
-				if (!ownsGrant?.()) return;
+				if (!isCurrent() || !ownsGrant?.()) return;
 				holdRadientTokens(tokens);
 				ownsGrant = radientAccessRef.current?.capture();
 				if (mountedRef.current) setRestoredAccount(true);
@@ -1107,12 +1972,9 @@ export const ConnectionProvider = ({
 				 *  since. */
 				await refreshComputers();
 			},
-			isCancelled: () =>
-				!ownsGrant?.() ||
-				cancelledRef.current ||
-				connectionStore.getState().revision !== revision,
+			isCancelled: () => !isCurrent() || !ownsGrant?.(),
 		});
-		if (!ownsGrant?.()) return;
+		if (!isCurrent() || !ownsGrant?.()) return;
 		/* One-way latch no more: any restore that does not end accepted clears it, so a
 		 *  later arrival at `/` cannot inherit a stale "signed in" landing. */
 		if (!outcome.restored && mountedRef.current) setRestoredAccount(false);
@@ -1127,7 +1989,12 @@ export const ConnectionProvider = ({
 		if (outcome.refusal.surface === "retry") {
 			retryRef.current = () => restoreRef.current();
 		}
-	}, [refreshComputers, holdRadientTokens]);
+	}, [
+		refreshComputers,
+		revokeRadientGrant,
+		holdRadientTokens,
+		refreshAccountTokens,
+	]);
 
 	/* The restore function is stable (its only dependency is `refreshComputers`), but
 	 *  the retry it publishes must call the latest one, and the two would otherwise
@@ -1135,6 +2002,10 @@ export const ConnectionProvider = ({
 	useEffect(() => {
 		restoreRef.current = restoreRadient;
 	}, [restoreRadient]);
+
+	useEffect(() => {
+		selectRef.current = selectComputer;
+	}, [selectComputer]);
 
 	/** The relay-served web bundle may already hold a cookie. Verify it once as
 	 * admission, not in each screen; this path never runs again after sign-out. */
@@ -1159,10 +2030,13 @@ export const ConnectionProvider = ({
 		const client = createRelayClient({
 			route,
 			onResponse: (facts) => {
-				if (admission.isCurrent() && facts.status === 401)
+				if (admission.isCurrent() && facts.status === 401) {
+					void revokeAuthorization();
+					setBusy(false);
 					connectionStore
 						.getState()
 						.noteFailure({ surface: "password", displayableMessage: "" });
+				}
 			},
 		});
 		try {
@@ -1174,7 +2048,7 @@ export const ConnectionProvider = ({
 			if (admission.isCurrent() && error instanceof RelayError)
 				noteError(error);
 		}
-	}, [beginRoute, goLive, noteError]);
+	}, [beginRoute, goLive, noteError, revokeAuthorization]);
 
 	/* The cold start. On web an explicit `lo-relay` override wins; otherwise the saved
 	 * CUSTOM tunnel is resumed, and failing that a stored RADIENT credential is
@@ -1201,22 +2075,48 @@ export const ConnectionProvider = ({
 		cancelledRef.current = false;
 		void (async () => {
 			try {
+				if (Platform.OS !== "web") {
+					pickerPrivacy.withdraw();
+					await clearNativePickerCache();
+				}
 				const stored = await readSavedTunnel();
 				if (interrupted()) return;
 				if (stored) {
 					setSavedTunnel(stored);
 					if (stored.password != null) {
-						await connectCustom({
-							url: stored.baseUrl,
-							password: stored.password,
-							allowInsecure: stored.allowInsecure,
-						});
+						await connectCustom(
+							{
+								url: stored.baseUrl,
+								password: stored.password,
+								allowInsecure: stored.allowInsecure,
+							},
+							true,
+						);
 						return;
 					}
 				}
 				/* Nothing of the reader's own to dial: the RECOMMENDED path's turn. */
 				if (!interrupted()) await restoreRadient();
 				if (!interrupted()) await restorePageRoute();
+				/* Last: open the computer the reader was on (or their only one) instead
+				 *  of parking a restored account on the picker every launch. Awaited
+				 *  inside the cold start so `coldStartSettled` stays false meanwhile and
+				 *  Home keeps its restoring splash — no flash of the picker. Every guard
+				 *  and branch is in `./cold-start-computer`. */
+				if (!interrupted())
+					await resumeComputerOnColdStart({
+						signedIn: () => tokensRef.current !== null,
+						routed: () => connectionStore.getState().route !== null,
+						refused: () => connectionStore.getState().surface !== null,
+						/* A saved own-tunnel without its password is the screen asking for
+						 *  it; dialling a Radient computer over that would take the
+						 *  reader's chosen path away from them. */
+						ownTunnelPending: () => stored !== null,
+						computers: () => connectionStore.getState().computers,
+						readSaved: readSavedComputers,
+						select: (computer) => selectRef.current(computer),
+						isCancelled: interrupted,
+					});
 			} catch {
 				/* The cold start is the APP's own setup, so a throw here is a bug in the app
 				 *  and not a fact about the reader's tunnel — which is exactly what the
@@ -1256,6 +2156,7 @@ export const ConnectionProvider = ({
 	const retryAfterMs = useConnectionState((state) => state.retryAfterMs);
 	const computers = useConnectionState((state) => state.computers);
 	const route = useConnectionState((state) => state.route);
+	const tunnelId = useConnectionState((state) => state.tunnelId);
 
 	const refusal = useMemo<RefusalView | null>(() => {
 		if (!surface || surface === "none") return null;
@@ -1266,12 +2167,22 @@ export const ConnectionProvider = ({
 		 *  `relay-stopped` headline that already says "The relay" — the frame read
 		 *  "The relay is not running on The relay." A bare address is the one name
 		 *  this app is certain the reader recognises." */
-		const subject =
-			computers.length > 0
-				? (computers[0]?.name ?? "Your computer")
-				: route?.mode === "radient"
+		/* The computer is the CHOSEN one, matched by tunnel id — never `computers[0]`.
+		 *  The list now outlives a route start, so the first row is just whichever
+		 *  computer Radient listed first: a refusal for the second computer named the
+		 *  first (PR #121 review round 1, R1-m2). */
+		const chosen = computers.find((computer) => computer.tunnelId === tunnelId);
+		/* No route at all means the refusal came from the ACCOUNT side — a cold-start
+		 *  restore that could not reach Radient, or a grant Radient refused — since a
+		 *  custom route always exists before it can fail. "That address" named an
+		 *  address the reader never typed (design round 1, D3). */
+		const subject = chosen
+			? chosen.name
+			: route === null
+				? "Radient"
+				: route.mode === "radient"
 					? "Your computer"
-					: (route?.baseUrl ?? "That address");
+					: route.baseUrl;
 		return refusalFromError({
 			error: lastError,
 			surface,
@@ -1279,7 +2190,7 @@ export const ConnectionProvider = ({
 			retryAfterMs,
 			subject,
 		});
-	}, [computers, detail, lastError, retryAfterMs, route, surface]);
+	}, [computers, detail, lastError, retryAfterMs, route, surface, tunnelId]);
 
 	const value = useMemo<Connection>(
 		() => ({
@@ -1307,6 +2218,7 @@ export const ConnectionProvider = ({
 			coldStartSettled,
 			streamHealth,
 			signInState,
+			signInDiagnostics,
 			lastError,
 			refusal,
 		}),
@@ -1333,6 +2245,7 @@ export const ConnectionProvider = ({
 			coldStartSettled,
 			streamHealth,
 			signInState,
+			signInDiagnostics,
 			lastError,
 			refusal,
 		],

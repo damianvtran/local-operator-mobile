@@ -1,0 +1,7 @@
+PASS  defect  RU-SCH-1 at remaining=1 must still read masculine  ->  раз в 1d · остался 1
+PASS  defect  RU-SCH-2 at count=0 must still read '0 активны'  ->  0 активны
+PASS  defect  RU-PRJ-2 must still carry the ', и не может' join  ->  От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов, и не может начинаться с дефиса.
+PASS  shipped RU-SCH-1 at remaining=1 reads neutral  ->  раз в 1d · осталось 1
+PASS  shipped RU-SCH-2 at count=0 reads adjectival  ->  0 активных
+PASS  shipped RU-PRJ-2 has no ', и' join  ->  От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.
+controls: 6/6 as expected

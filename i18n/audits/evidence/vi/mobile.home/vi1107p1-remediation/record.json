@@ -1,0 +1,103 @@
+{
+ "schema": 1,
+ "audit_id": "vi1107p1-remediation",
+ "kind": "implementer remediation receipt (NOT an audit verdict)",
+ "remediates": "i18n/audits/evidence/vi/mobile.home/vi1107p1/record.json",
+ "locale": "vi",
+ "namespace": "mobile.home",
+ "date": "2026-11-07",
+ "base_revision": "b5a2f4a1b0721a5745e35e498d7d91851a93811c",
+ "remediation_commit": "7a899ddf3cae8f2bdad98938772feb3309a6af8d",
+ "remediation_author": {
+  "agent": "coder (lopdev team)",
+  "session": "f76f34aff586",
+  "model": "anthropic/claude-opus-5-5",
+  "independent_from_auditor_session": true
+ },
+ "round1_verdict": "passed",
+ "findings": [
+  {
+   "id": "VI-H01",
+   "severity": "MINOR",
+   "status": "fixed",
+   "commit": "7a899ddf3cae8f2bdad98938772feb3309a6af8d",
+   "keys": [
+    "mobile.home.picker.folder_home",
+    "mobile.home.picker.folder_outside"
+   ],
+   "applied": {
+    "mobile.home.picker.folder_home": "Home",
+    "mobile.home.picker.folder_outside": "Máy tính này chỉ bắt đầu cuộc trò chuyện bên trong thư mục home của bạn hoặc thư mục tạm của nó."
+   }
+  },
+  {
+   "id": "VI-H02",
+   "severity": "MINOR",
+   "status": "fixed",
+   "commit": "7a899ddf3cae8f2bdad98938772feb3309a6af8d",
+   "keys": [
+    "mobile.home.chip.effort_chosen",
+    "mobile.home.chip.effort_default",
+    "mobile.home.chip.effort_default_short",
+    "mobile.home.chip.effort_default_unnamed",
+    "mobile.home.picker.effort_none",
+    "mobile.home.picker.effort_title"
+   ],
+   "applied": {
+    "mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
+    "mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
+    "mobile.home.chip.effort_default_short": "Mức suy luận mặc định",
+    "mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
+    "mobile.home.picker.effort_none": "Mô hình này không có cài đặt mức suy luận.",
+    "mobile.home.picker.effort_title": "Mức suy luận"
+   }
+  }
+ ],
+ "delta": {
+  "changed_keys": [
+   "mobile.home.chip.effort_chosen",
+   "mobile.home.chip.effort_default",
+   "mobile.home.chip.effort_default_short",
+   "mobile.home.chip.effort_default_unnamed",
+   "mobile.home.picker.effort_none",
+   "mobile.home.picker.effort_title",
+   "mobile.home.picker.effort_unsupported",
+   "mobile.home.picker.folder_home",
+   "mobile.home.picker.folder_outside"
+  ],
+  "changed_beyond_finding_keys": [
+   "mobile.home.picker.effort_unsupported"
+  ],
+  "finding_keys_not_changed": [],
+  "method": "each changed key reverted to its base-revision text in the current file bytes; the result's sha256 equals the round-1 record's input_hashes.target.sha256, so exactly these keys changed",
+  "reverted_sha_matches_round1": true
+ },
+ "input_hashes": {
+  "target": {
+   "path": "src/i18n/catalogues/vi/mobile.home.json",
+   "sha256": "48f55488d35e4fe001e6f76a20f70a8706574363bec08366b5d37a42cbc96a1c"
+  },
+  "target_round1": {
+   "path": "src/i18n/catalogues/vi/mobile.home.json",
+   "sha256": "1dcd42a6510ce817f727da08ff6b4d471b6fd612cd2a765e054d9a3c37b025f5"
+  },
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.home.json",
+   "sha256": "12d5edd75b0e2a6e969c15c90b2c248d78675f97ebf86dc2e9c49a42d10c761b"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.home.context.json",
+   "sha256": "aa5060ffb2c38f9e6e995011778f73acb9c896590774c513f2f38aba849be047"
+  },
+  "source": "mech.py from the auditor scratchpad (27cb86d0ecef) run against the remediation tree; en and context identical to round 1"
+ },
+ "status": "remediated_pending_independent_reaudit",
+ "note": "The repo convention attests a fixed catalogue with an independent round-2 delta re-audit (<id>r2, e.g. es29a3r2). This receipt records what the implementer changed and the post-fix hashes so that re-audit can scope to delta.changed_keys; it does not claim a passing verdict.",
+ "beyond_findings": [
+  {
+   "key": "mobile.home.picker.effort_unsupported",
+   "applied": "Local Operator trên máy tính này quá cũ để nhận mức suy luận, nên nó dùng mức đã cấu hình. Hãy cập nhật để chọn tại đây.",
+   "why": "VI-H02 renames the setting «Mức nỗ lực» → «Mức suy luận» but its key list omits this sentence, the only remaining «mức nỗ lực» in the vi catalogue; left alone the effort sheet would name the setting two ways. Needs the re-audit's confirmation."
+  }
+ ]
+}

@@ -1,10 +1,8 @@
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import { blockingPending } from "@/features/session/asks";
-import {
-	COMPOSER_COPY,
-	type ComposerControls,
-} from "@/features/session/composer";
+import type { ComposerControls } from "@/features/session/composer";
 import { sendDeliveryStateOf } from "@/features/session/delivery";
+import type { SessionHealth } from "@/features/session/health";
 import { hasFencedBlock, hasTableBlock } from "@/features/session/markdown";
 import { classifyEntry } from "@/features/session/projection";
 import {
@@ -90,6 +88,12 @@ export interface SessionStateFacts {
 	/** The projection's own process identity, for the stale-row rule
 	 *  (`beatLive`): 0 is a disk rebuild. */
 	supplementPid: number;
+	/** The dot's YELLOW "quiet" reading, derived from the screen's own verdict. */
+	healthQuiet: boolean;
+	/** The dot's YELLOW "reconnecting" reading (the link dropped after a frame). */
+	healthReconnecting: boolean;
+	/** The dot's explanation sheet is open. */
+	healthSheet: boolean;
 }
 
 /** The markers' own booleans: one per declared state, named as the marker is. */
@@ -109,6 +113,16 @@ export interface SessionStateFlags {
 	populated: boolean;
 	idle: boolean;
 	voice: boolean;
+	/** The YELLOW dot's "quiet" reading: not answering because `heartbeat_stale`
+	 *  (the owner went quiet), NOT because `degraded` won — the degraded state
+	 *  already has its own marker and cell. Present only when the sheet would say
+	 *  "quiet", so a frame cannot affirm the wrong yellow. */
+	healthQuiet: boolean;
+	/** The YELLOW dot's "reconnecting" reading: the phone's link dropped after
+	 *  a frame. Present only in that verdict (UX round 1, U4). */
+	healthReconnecting: boolean;
+	/** The dot's explanation sheet is OPEN. */
+	healthSheet: boolean;
 	/** The turn-supplement block's states, one per capture cell. Each is true
 	 *  while SOME anchor's newest beat renders with that disposition; the cells
 	 *  isolate them with one-beat scenarios. */
@@ -136,6 +150,9 @@ const NOTHING: SessionStateFlags = {
 	populated: false,
 	idle: false,
 	voice: false,
+	healthQuiet: false,
+	healthReconnecting: false,
+	healthSheet: false,
 	supplementPreparing: false,
 	supplementPopulated: false,
 	supplementFiles: false,
@@ -163,6 +180,13 @@ export interface SessionStateInput {
 	 *  route passes both. */
 	supplements?: Record<string, SupplementBeat>;
 	supplementPid?: number;
+	/** The header dot's verdict, computed by the screen from the SAME call the dot
+	 *  renders (`sessionHealth`). Optional so a pinned test that predates the dot
+	 *  reads the no-health case, which declares no dot marker. */
+	health?: SessionHealth | null;
+	/** The dot's explanation sheet is OPEN (`S5/health-sheet`). Owned by the screen
+	 *  as view state, passed in so the marker and the sheet cannot disagree. */
+	healthSheetOpen?: boolean;
 }
 
 /**
@@ -179,7 +203,15 @@ export const sessionFactsFrom = (
 ): SessionStateFacts => ({
 	connected: input.projection !== null,
 	streaming: input.streaming,
-	ended: input.projection?.ended === true,
+	/* The SAME verdict the header's dot shows, when the route supplies it: the
+	 * `ended` marker must affirm what the reader sees, and since #3008 the grey
+	 * dot is also the pid-0 disk rebuild that `projection.ended` does not flag
+	 * (a history-only conversation). A caller that passes no health (a pinned
+	 * test) keeps the older, narrower projection reading. */
+	ended:
+		input.health != null
+			? input.health === "ended"
+			: input.projection?.ended === true,
 	aborted:
 		input.projection?.stop_reason === "aborted" && input.streaming === false,
 	error: input.error,
@@ -214,6 +246,10 @@ export const sessionFactsFrom = (
 	voice: input.micVisible,
 	supplements: input.supplements ?? {},
 	supplementPid: input.supplementPid ?? 0,
+	healthQuiet:
+		input.health === "not_answering" && input.projection?.degraded !== true,
+	healthReconnecting: input.health === "reconnecting",
+	healthSheet: input.healthSheetOpen === true,
 });
 
 /**
@@ -315,15 +351,25 @@ export const sessionStateFlags = (
 		populated: facts.entries > 0,
 		idle: false,
 		voice: facts.voice,
+		healthQuiet: facts.healthQuiet,
+		healthReconnecting: facts.healthReconnecting,
+		healthSheet: facts.healthSheet,
 		...supplementStateFlags(facts.supplements, facts.supplementPid),
 	};
 	/* The fallback, so a connected session always affirms SOMETHING: a screen with a
 	 * root and no state marker is the case the affirmative rule exists to refuse.
-	 * `voice` is deliberately NOT a term of it: it describes an AFFORDANCE rather
-	 * than the session, so a blank connected session still says `idle` (which is
-	 * what the settled-empty look is) and its frame carries both markers. */
+	 * `voice` and `healthQuiet` are deliberately NOT terms of it: they describe an
+	 * AFFORDANCE and the dot's yellow copy rather than the session's look, so a
+	 * blank connected session still says `idle` (which is what the settled-empty
+	 * look is) and its frame carries both markers. */
 	flags.idle = !Object.entries(flags).some(
-		([key, value]) => key !== "idle" && key !== "voice" && value,
+		([key, value]) =>
+			key !== "idle" &&
+			key !== "voice" &&
+			key !== "healthQuiet" &&
+			key !== "healthReconnecting" &&
+			key !== "healthSheet" &&
+			value,
 	);
 	return flags;
 };
@@ -354,14 +400,14 @@ export interface ComposerStateFlags {
 export const composerStateFlags = (
 	controls: ComposerControls,
 ): ComposerStateFlags => {
-	/* One precedence, `sending > ended > steer > idle`, and it is a precedence rather
-	 * than four independent tests: a session can be ended AND still streaming, and a
-	 * disabled-for-ended primary is not "steering" whatever the wire says. Four
-	 * independent predicates reported ended AND steering at once, which is a state
-	 * the composer has no single look for. */
+	/* One branch, `sending > ended > streaming`: a send in flight is the state the
+	 * composer is in right now, so it outranks the session's own condition. An
+	 * ended session that is somehow also streaming still reads ended — its frames
+	 * are stale by definition — but the primary is NOT disabled for it any more
+	 * (`a send reopens the session`), so the marker reads the controls' explicit
+	 * `ended`, never a disabled reason: the copy stopped being a state. */
 	const sending = controls.sending;
-	const ended =
-		!sending && controls.disabledReason === COMPOSER_COPY.endedSession;
+	const ended = !sending && controls.ended;
 	const steering = !sending && !ended && controls.primary.kind === "steer";
 	return {
 		idle: !sending && !ended && !steering,

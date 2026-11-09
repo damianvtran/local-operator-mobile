@@ -1,0 +1,343 @@
+{
+  "schema": 1,
+  "audit_id": "fr29sm4",
+  "audit_kind": "final_fit_verdict_one_french_value",
+  "locale": "fr",
+  "namespace": "mobile.session_health",
+  "audit_date": "2026-10-29",
+  "audited_revision": "c0fe99944cd72cd6e8f993e285e72ef0e9017675",
+  "branch": "feat/i18n-mobile-locales",
+  "pull_request": 132,
+  "worktree_state": "clean at the audited head before this bundle was written; this bundle is untracked and deliberately uncommitted (task: read-only, no commit)",
+  "key_count": {
+    "en": 11,
+    "context": 11,
+    "target": 11
+  },
+  "key_parity": {
+    "order_identical_en_target": true,
+    "keys_added_or_dropped": []
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "a731c4942a85",
+    "job": "not exposed to this team child; manager owns the delegation job",
+    "model": "radient/auto",
+    "actual_model": "radient/auto",
+    "actual_model_source": "Observed harness model-switch notices in this session: anthropic/claude-sonnet-5-5 -> openai/gpt-6-astra (provider failure: quota) -> kimi/k3.1-pro (provider failure: quota) -> radient/auto (provider failure: quota). Every command, measurement and judgement below ran under radient/auto. No default, role or effort pin was set by the auditor.",
+    "fallback": {
+      "used": true,
+      "reason": "provider failure: quota",
+      "chain": [
+        "anthropic/claude-sonnet-5-5",
+        "openai/gpt-6-astra",
+        "kimi/k3.1-pro",
+        "radient/auto"
+      ]
+    },
+    "independent_from_translator_session": true,
+    "independence": "Separate agent and session a731c4942a85; the French values were translated in another session and this auditor did not translate, edit or generate any catalogue value. No translation API, MT service or back-translation was used."
+  },
+  "second_independent_pass": {
+    "performed": true,
+    "why": "The ended-composer placeholder is a pre-send, safety-adjacent surface; the auditor did not assume the first pass was right.",
+    "agent": "scout subagent (separate session), job 01a4bd530a81",
+    "model": "radient/auto",
+    "model_caveat": "Same provider fallback as the auditor: independence of pass, not of model. Two-model corroboration is NOT claimed.",
+    "saw_auditor_draft": false,
+    "outcome": "Agreed on all three questions: grammatical and idiomatic (infinitive subject with finite verb), meaning preserved apart from the destination, no over-promise; would not change the value."
+  },
+  "previous_round": {
+    "audit_id": "fr29sm3",
+    "record": "i18n/audits/evidence/fr/mobile.session_health/fr29sm3/record.json",
+    "finding_id": "SH-01",
+    "previous_target_sha256": "f48d24ef269c609e6b65ca5409875280e4ea8c248cd45476577127225a5cbac6",
+    "previous_verdict": "passed on 'Rouvre dans votre dossier personnel…' at exactly 36/36 cells",
+    "reassessment": "That verdict was reached on the cell budget, which this round establishes is not a fit instrument. The language judgement in it stands; its FIT evidence does not. SH-01 stays resolved because the value it was resolved for has since been replaced (c0fe999) and the replacement is measured fit."
+  },
+  "superseded_instrument": {
+    "instrument": "cell budget (36 cells), inherited from core's maxCells for this key at 24d328a19a and recorded in the context sidecar",
+    "why_inadequate": "A cell count is a character count: it assumes 1 cell per Latin glyph, ignores the field's measured geometry (348 px at 390 pt, 278 px at 320 pt), ignores the font, and cannot see a text-scale step. It certified a string that ellipsizes at every scale above 100 %.",
+    "superseded_by": "Design round 4's rendered measurement of the field and the strings (PR #132 comments), independently re-derived here with the field's own font via CoreText",
+    "retained_for": "Length bookkeeping only. It must not be cited as evidence of fit for a single-line ellipsizing field.",
+    "does_not_apply_to": "Keys whose surface does not ellipsize or whose geometry has not been measured; no claim is made here about other keys."
+  },
+  "field_geometry": {
+    "source": "design round 4, PR #132 comment thread, measured in the app's own web export with the field's computed font (16px Figtree)",
+    "content_box_px": {
+      "390pt": 348,
+      "320pt": 278
+    },
+    "app_text_scale_steps": [
+      100,
+      150,
+      200
+    ],
+    "app_text_scale_source": "src/ui/text-scale.ts:35 TEXT_SCALE_PERCENTS",
+    "capture_step_135": {
+      "factor": 1.3529411765,
+      "source": "tools/visual/matrix.ts:458",
+      "note": "iOS xxxLarge Dynamic Type step reached through the OS setting; NOT an in-app preference step, despite design round 4 and c0fe999 calling it 'the app's 135 % step' (CO-2)."
+    }
+  },
+  "auditor_measurement_method": {
+    "engine": "CoreText (CTLineGetTypographicBounds) via a Swift probe, inlined in audit.log section 4",
+    "font": "design/fonts/Figtree-Regular.ttf at 16 px body (100 %), 21.6 / 24 / 32 px for the 135 / 150 / 200 % steps",
+    "calibration": "The same probe returns 73.28 px for 'Message…'; src/features/session/composer.ts:43 records 73.3 pt for that string in this field, so family and size are the field's own.",
+    "agreement_with_design": "1.2-2.7 % at 100 %, diverging to ~9 % at 200 % (browser hinting and integer-px layout at large zoom vs a narrower static TTF). Ordering and thresholds identical under both; the verdict does not rest on the absolute value."
+  },
+  "candidates": [
+    {
+      "sequence": 1,
+      "id": "C1",
+      "value": "Envoyer rouvre dans votre dossier personnel…",
+      "cells": 44,
+      "measured_px": {
+        "design_100": null,
+        "auditor_100": 326.9,
+        "auditor_135": 441.31,
+        "auditor_150": 490.34,
+        "auditor_200": 653.79
+      },
+      "fits_278_at_200": false,
+      "threshold_scale_320": 0.85,
+      "threshold_scale_390": 1.06,
+      "result": "rejected: 8 cells over the old budget, and over the 278 px box already at 100 % on the 320 pt phone"
+    },
+    {
+      "sequence": 2,
+      "id": "C2",
+      "value": "Envoyer rouvre (dossier personnel)…",
+      "cells": 35,
+      "measured_px": {
+        "design_100": null,
+        "auditor_100": 258.69,
+        "auditor_135": 349.23,
+        "auditor_150": 388.03,
+        "auditor_200": 517.38
+      },
+      "fits_278_at_200": false,
+      "threshold_scale_320": 1.07,
+      "threshold_scale_390": 1.35,
+      "result": "rejected: the ownerless detached parenthetical does not grammatically name the destination (fr29sm2), and it now also fails at the 135-150 % steps it was supposed to survive"
+    },
+    {
+      "sequence": 3,
+      "id": "C3",
+      "value": "Rouvre dans votre dossier personnel…",
+      "cells": 36,
+      "measured_px": {
+        "design_100": 276.9,
+        "design_135": 354.4,
+        "design_150": 388.7,
+        "design_200": 590.9,
+        "auditor_100": 269.7,
+        "auditor_135": 364.09,
+        "auditor_150": 404.54,
+        "auditor_200": 539.39
+      },
+      "fits_278_at_200": false,
+      "threshold_scale_320": 1.03,
+      "threshold_scale_390": 1.29,
+      "result": "rejected: it fits 348 px only at 100 % (1.1 px spare on the 320 pt phone), and design round 4's frame paints 'Rouvre dans votre d…' at 200 % — the home-folder fact is the part that clips"
+    },
+    {
+      "sequence": 4,
+      "id": "C4",
+      "value": "Envoyer rouvre…",
+      "cells": 15,
+      "measured_px": {
+        "design_100": 120.7,
+        "design_200": 256.8,
+        "auditor_100": 117.7,
+        "auditor_135": 158.89,
+        "auditor_150": 176.54,
+        "auditor_200": 235.39
+      },
+      "fits_278_at_200": true,
+      "spare_px_at_200_in_278": {
+        "design": 21.2,
+        "auditor": 42.6
+      },
+      "threshold_scale_320": 2.36,
+      "threshold_scale_390": 2.96,
+      "result": "accepted: the only candidate with headroom at every app step on both phone widths, and it states the decision-relevant half (the send reopens)"
+    }
+  ],
+  "design_remedy_table_read": [
+    {
+      "value": "Envoyer rouvre…",
+      "cells": 15,
+      "design_px_100": 120.7,
+      "design_px_200": 256.8,
+      "fits": true
+    },
+    {
+      "value": "Rouvre la session…",
+      "cells": 18,
+      "design_px_100": 138.7,
+      "design_px_200": 295.9,
+      "fits": false
+    },
+    {
+      "value": "Envoyez pour rouvrir…",
+      "cells": 21,
+      "design_px_100": 160.6,
+      "design_px_200": 342.9,
+      "fits": false
+    },
+    {
+      "value": "Rouvre dans votre dossier…",
+      "cells": 27,
+      "design_px_100": 200.8,
+      "design_px_200": 429.4,
+      "fits": false,
+      "auditor_cells": 26,
+      "note": "one-cell counting difference between design and this probe; the ordering is unaffected"
+    }
+  ],
+  "alternative_considered_and_rejected": {
+    "value": "Envoyer la rouvre…",
+    "cells": 18,
+    "measured_px": {
+      "auditor_100": 133.33,
+      "auditor_200": 266.66
+    },
+    "reason": "Smoother French, but it spends most of C4's margin: 11.3 px spare at 200 % on the auditor metric, and roughly 291 px against a 278 px box on design's rendered ratio (~2.18x) — it turns a comfortable fit into a disagreement between two measurement paths. Not requested."
+  },
+  "question_verdicts": {
+    "Q1_destination_still_learnt_before_acting": {
+      "answer": "Yes, acceptably — the fact is one tap away and it is not a fact the reader can act on differently.",
+      "where_it_lives": "relay.health.ended_detail, the ended-state health sheet body: 'L’historique est conservé. Envoyez un message ou touchez « Reprendre » pour rouvrir la session dans votre dossier personnel.'",
+      "render_path_verified": [
+        "src/features/session/health.ts:234 — healthDetailKey('ended') -> relay.health.ended_detail",
+        "src/features/session/components/session-health.tsx:283-286 — the header control is a Pressable whose onPress opens that sheet; its accessibilityHint is mobile.session_health.control_hint ('Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.')",
+        "relay.health.ended_send_failed routes a failed reopen back to the same sheet"
+      ],
+      "why_enough": "The destination is not selectable: the session returns to the home folder and the app offers no alternative, so a reader who sends without opening the sheet gets the same outcome they would have chosen. The step that changes their decision is whether a send does anything at all — and that is what the placeholder now states at every scale. Consistency holds: the placeholder promises 'sending reopens' and the sheet promises the same reopen, in the home folder, for both sending and Resume.",
+      "cost_stated": "Pre-send disclosure of the location is reduced from always (at 100 %) to one tap away. Before this change the same location was already lost at every scale above 100 %, together with the action half."
+    },
+    "Q2_grammar_and_meaning": {
+      "answer": "Grammatical and idiomatic; meaning preserved except the destination; it under-promises rather than over-promises.",
+      "grammar": "French takes an infinitive as subject with a finite verb (Fumer nuit…, Cliquer ici ouvre une fenêtre); this catalogue already ships the construction in the neighbouring sentence relay.health.quiet_detail ('Réessayer ne l’enverra pas en double.'). 'Envoyer' is the field's own button verb and its object is supplied by the field being typed in, so the ellipsis is motivated. Style guide: infinitive for actions (fr.md:14), vous address (:9); both hold.",
+      "meaning": "'Send to reopen in your home folder…' states sender + effect + location; 'Envoyer rouvre…' states sender + effect. No success guarantee is added (the failure case is relay.health.ended_send_failed), and no destination is claimed that is no longer named.",
+      "effect_on_design_D2": "Design's D2 (MINOR: French named the outcome where English named the action) is closed as a side effect: 'Envoyer' restores the actor. Design round 4 predicted this outcome itself.",
+      "under_or_over": "under-promises (omits where), not over-promises"
+    },
+    "Q3_ship_over_parenthetical": {
+      "answer": "Yes.",
+      "reasoning": "The 35-cell parenthetical buys the destination back only to ~135 % before it ellipsizes (threshold 1.345 on 390 pt, 1.07 on 320 pt), so it re-creates the defect design round 4 measured and re-introduces the ownerless parenthetical fr29sm2 rejected — while the 15-cell form fits every app step on both phone widths with 21-43 px to spare and leaves a non-selectable fact one tap away."
+    },
+    "Q4_budget_superseded": {
+      "answer": "Yes, stated plainly: the cell budget was an inadequate proxy for fit and the measurement supersedes it for this key.",
+      "detail": "It is a character count inherited from core's maxCells; it cannot see a 348/278 px content box, a 16 px Figtree body, or a text-scale step. My own fr29sm3 'passed at exactly 36/36' used it as fit evidence and should not have. Design round 4 measured the field instead; this bundle re-derives the metric independently and records the instrument change."
+    }
+  },
+  "photo_fit_not_re_captured": "No device or browser re-render of the new value was produced here. Design round 4 supplied the rendered measurement of C4 and the clipping frame of C3; this audit verified the metric basis with the field's own font and did not repeat design's capture.",
+  "findings": [],
+  "carried_observations": [
+    {
+      "id": "CO-1",
+      "severity": "carried-upstream",
+      "blocks_fr": false,
+      "subject": "the English source of the same key",
+      "detail": "en 'Send to reopen in your home folder…' measures 263.44 px (auditor) / 266.7 px (design) at 100 %, but 526.88 px / 569.6 px at 200 % in a 348 px box: it clips in en exactly as C3 did. French now routes the destination to the sheet; English does not. Shared-key copy-length issue to carry upstream, not a French defect."
+    },
+    {
+      "id": "CO-2",
+      "severity": "documentation",
+      "blocks_fr": false,
+      "subject": "c0fe999's commit message and design round 4's D1",
+      "detail": "Both call 135 % 'the app's 135 % step'. The app offers 100/150/200 (src/ui/text-scale.ts:35); 135 is the capture matrix's iOS xxxLarge factor (tools/visual/matrix.ts:458). The load-bearing threshold is 150 %, so the conclusion is unaffected; correct it wherever release notes restate the number."
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "resolved_finding_ids": [
+      "SH-01",
+      "D2"
+    ],
+    "verdict_reason": "SH-01 stays resolved on the new bytes: 'Envoyer rouvre…' is grammatical, idiomatic, preserves the English effect, and is the only candidate measured to fit the composer field at every app text-scale step on both phone widths. The fit instrument changed (cell budget -> measurement) and that correction is recorded rather than hidden. Carried, non-blocking: the English source still clips at >=150 % (CO-1), and one documentation number is mislabelled (CO-2)."
+  },
+  "ledger_status": {
+    "row_written": false,
+    "why": "No audit-ledger command exists to run: the mobile repo has no ledger script (package.json has none; scripts/i18n holds generate/check-strings/key-shape/ratchet/scan-strings), core's i18n/ledger.json has 333 entries and no health-namespace row, and both the RFC section 6 schema and that file live outside this task's read-only checkout. Reporting 'recorded in the ledger' would be false; the bundle is the record and a ready row is supplied."
+  },
+  "ledger_row_candidate": {
+    "locale": "fr",
+    "namespace": "mobile.session_health",
+    "source_sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f",
+    "translator": {
+      "agent": "i18n-translator (mobile fr wave)",
+      "model": "not exposed to this team child; see fr29sm3",
+      "date": "2026-10-29"
+    },
+    "auditor": {
+      "agent": "i18n-auditor",
+      "model": "radient/auto",
+      "date": "2026-10-29",
+      "result": "passed",
+      "findings": 0
+    },
+    "status": "passed",
+    "note": "fr final fit verdict: 'Envoyer rouvre…' 15 cells fits every text-scale step (235.4 px of 278 at 200 %, 320 pt); the 36-cell budget is superseded by measurement. Record: i18n/audits/evidence/fr/mobile.session_health/fr29sm4/record.json"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.json",
+      "sha256": "727b7e4977b3954637af9b5f8310c3bb892ebf9d9ecebc483db4c1aa7be4fe0f"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.session_health.context.json",
+      "sha256": "b6d1cbde0fc8801a27745e16284d2abc593145202eb74b21b44e6216784480c5",
+      "note": "changed since fr29sm3 (a8a29fe0...) because c0fe999 added the MEASURED FIT paragraph to this key's note; the English source hash is unchanged"
+    },
+    "target": {
+      "path": "src/i18n/catalogues/fr/mobile.session_health.json",
+      "sha256": "87acf6979fc09af8852dd2f426529fecea6fa9ec0272f5d5c00d04b67c9a6a1c"
+    }
+  },
+  "supporting_reference_hashes": {
+    "style_guide": {
+      "path": "/Users/damian/local-operator/i18n/style-guides/fr.md",
+      "sha256": "b916f3d1c30b0a2e18fc94ca51d130f60e86b3b17b1918aa51f5c5da6d52ec39"
+    },
+    "glossary": {
+      "path": "/Users/damian/local-operator/i18n/glossary.md",
+      "sha256": "ef07b446668778822d0ff4dcd7b380543456ddf7b08e060dce5818cb8fd6fdcd"
+    },
+    "design_round_4": {
+      "path": "PR #132 (damianvtran/local-operator-mobile) comment 'Design review — round 4'",
+      "source": "gh pr view 132 --json comments",
+      "pull_request_head": "0a4742d1e8c7921f67791f6c0d22d88a7293db55"
+    }
+  },
+  "artifacts": {
+    "record_md": {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sm4/record.md",
+      "sha256": "07fcb9b6e91e2db81b1fb7693e9a9092e04b4b76c7ade542f6a9183e379f1856"
+    },
+    "audit_log": {
+      "path": "i18n/audits/evidence/fr/mobile.session_health/fr29sm4/audit.log",
+      "sha256": "376f5423914d23f1ec4de1a349674b62b63fcf0367d3b66fce2961960eebb62a"
+    },
+    "measurement_probes": {
+      "inlined_in": "audit.log sections 3 and 4",
+      "note": "no probe file is added to the tree; session scratchpad copies are not the artifact of record"
+    }
+  },
+  "mechanical_checks": {
+    "repo_validator": "cd <repo> && npm run -s i18n:check -> 'catalogue.gen.ts is current (143 keys, 10 namespaces, argument types from en, fr)'; 'check-strings: 284 finding(s), all baselined; 0 new; no growth vs d5babfa18544'; exit 0",
+    "independent_checks": "valid JSON; 11/11/11 en/context/target keys in identical order; no key added or dropped; the key has no ICU arguments in either locale (so no placeholder-name or CLDR-category exposure); U+2026 retained; no bidi control characters; no ASCII apostrophe; no backticks, markup tags or technical tokens",
+    "unicode_safety": "value is 15 code points, 15 cells, 17 UTF-8 bytes; only non-ASCII character is U+2026 HORIZONTAL ELLIPSIS"
+  },
+  "route_disclosure": {
+    "read_route": "Ordinary workspace file reads. Design's rendered measurements were read from PR #132's comment thread with gh pr view; the earlier audit records were read from this repo. No read_public_copy receipt is claimed for this bundle.",
+    "translation_services": "No translation API, SDK, MT service or back-translation used, by the auditor or by the second pass.",
+    "edits": "None to the repository's catalogues, context sidecars, generated projection or tests. The only writes are this bundle's three files, left untracked and uncommitted as instructed."
+  },
+  "audit_notes_not_execution_log": "record.md holds the language reasoning and the verdict; audit.log holds the commands actually run and their captured output. Statements in record.md are notes, not proof of execution.",
+  "scope_note": "Fifth pass on ONE French value, not a fresh audit of the namespace: fr29sh1 covered the ended-state and status keys, fr29sm2 the SH-01 remediation, fr29sm3 the 36-cell delta. Only mobile.session_health.ended_placeholder and (as the destination carrier) relay.health.ended_detail were re-read here."
+}

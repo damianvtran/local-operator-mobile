@@ -52,11 +52,25 @@ describe("the reconnect backoff", () => {
 		expect(reconnectDelay(40, undefined)).toBe(15_000);
 	});
 
-	it("takes the gateway's own advice over the curve", () => {
+	it("takes the gateway's own advice over the curve when it asks for longer", () => {
 		// `authorization_deferred` carries 120 s, `authorization_lease_pending` 5 s:
 		// the server knows its own recovery time better than a doubling curve does.
 		expect(reconnectDelay(0, 120_000)).toBe(120_000);
-		expect(reconnectDelay(7, 5_000)).toBe(5_000);
+		expect(reconnectDelay(0, 5_000)).toBe(5_000);
+	});
+
+	it("never lets Retry-After shorten the curve (PR #178 R2-1/R2-2)", () => {
+		// `Retry-After: 0` (or a past date) was a zero-delay reconnect-and-renew loop;
+		// a short value held the delay flat. The curve is the floor.
+		expect([1, 2, 3, 4, 5].map((n) => reconnectDelay(n, 0))).toEqual([
+			2_000, 4_000, 8_000, 15_000, 15_000,
+		]);
+		expect([1, 2, 3].map((n) => reconnectDelay(n, 1_000))).toEqual([
+			2_000, 4_000, 8_000,
+		]);
+		expect(reconnectDelay(7, 5_000)).toBe(15_000);
+		// A far-future Retry-After date must not overflow the timer to ~1 ms (M1).
+		expect(reconnectDelay(1, 2 ** 40)).toBe(2 ** 31 - 1);
 	});
 
 	it("never returns a delay a timer would ignore", () => {
@@ -125,12 +139,27 @@ describe("C1 — a rotation is invisible", () => {
 });
 
 describe("C2 — a genuine reconnect, and only then", () => {
-	it("reports a transport failure", () => {
+	it("reports a transport failure on the GRAced drop the dot reads", () => {
 		const view = connectionView(
-			input({ lastEnd: "error", stream: "connecting" }),
+			input({ droppedSinceFrame: true, stream: "connecting" }),
 		);
 		expect(view.id).toBe("C2");
 		expect(view.text).toContain("Reconnecting");
+	});
+
+	/* QA round 3, Q11: the banner fired on the raw `lastEnd`, which the reopen's
+	 * `connecting` overwrites, so a blip under the dot's 2.5 s grace painted
+	 * "The connection dropped" beside a green `Live` dot. The banner now reads the
+	 * same graced flag, and a raw error without it is NOT an outage yet. */
+	it("does not paint C2 for a drop the dot is still holding behind its grace", () => {
+		const view = connectionView(
+			input({
+				lastEnd: "error",
+				stream: "connecting",
+				droppedSinceFrame: false,
+			}),
+		);
+		expect(view.id).not.toBe("C2");
 	});
 
 	it("reports a reconnect that produced no snapshot inside its deadline", () => {
@@ -353,5 +382,23 @@ describe("an ended session is not a connection state", () => {
 		// `ended` is terminal and has its own affordance; painting it as "not
 		// answering" would be a different lie.
 		expect(connectionView(input({ ended: true, ageS: 400 })).id).toBeNull();
+	});
+});
+
+/* UX round 1 U6 / design D6: the session header's dot reports the session's
+ * liveness, so C3's band would say the same thing twice — and on a history
+ * rebuild or a green session it said a different thing. */
+describe("C3 behind the session-health dot", () => {
+	it("draws no C3 band while the dot is shown", () => {
+		expect(connectionView(input({ stale: true, ageS: 90 })).id).toBe("C3");
+		expect(
+			connectionView(input({ stale: true, ageS: 90, healthDotShown: true })).id,
+		).toBeNull();
+	});
+	it("keeps the real loss (C2) in front of the dot", () => {
+		expect(
+			connectionView(input({ droppedSinceFrame: true, healthDotShown: true }))
+				.id,
+		).toBe("C2");
 	});
 });

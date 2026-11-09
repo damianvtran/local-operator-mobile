@@ -24,6 +24,13 @@ import {
  */
 export type ButtonProps = {
 	label: string;
+	/** Clamp the label to ONE line with an ellipsis.
+	 *
+	 *  For a control whose width can be taken by something else on the same line —
+	 *  the rail's Notifications row, where a wide count shares the row at large
+	 *  text and the LABEL is the part that gives (code review round 10, m-5). The
+	 *  default is unchanged: a label wraps as it always has. */
+	labelLines?: 1;
 	onPress: () => void;
 	variant?: ButtonVariant;
 	size?: ButtonSize;
@@ -32,6 +39,13 @@ export type ButtonProps = {
 	loading?: boolean;
 	disabled?: boolean;
 	accessibilityHint?: string;
+	/** Disclosure state, omitted for ordinary action buttons. */
+	expanded?: boolean;
+	/** Selection state, for a button that is one row of a choice list (the home's
+	 *  options sheet). Announced only — the caller still picks the variant — so a
+	 *  selected row is never told by colour alone (`Chip` does the same). Omitted
+	 *  for ordinary action buttons, which carry no selection. */
+	selected?: boolean;
 	/** Required: a control with no identifier cannot be reached by an E2E flow,
 	 * and a shared default would put the same one on every button of a screen. */
 	testID: string;
@@ -47,6 +61,7 @@ const ICON_SIZE: Record<ButtonSize, number> = {
 
 export const Button = ({
 	label,
+	labelLines,
 	onPress,
 	variant = "primary",
 	size = "md",
@@ -54,6 +69,8 @@ export const Button = ({
 	loading = false,
 	disabled = false,
 	accessibilityHint,
+	expanded,
+	selected,
 	testID,
 }: ButtonProps) => {
 	const iconColor = useTokenColor(
@@ -71,7 +88,12 @@ export const Button = ({
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={label}
 			accessibilityHint={accessibilityHint}
-			accessibilityState={state({ disabled, busy: loading })}
+			accessibilityState={state({
+				disabled,
+				busy: loading,
+				expanded,
+				selected,
+			})}
 			/* `sm` is the one size under the floor, and the floor is now REAL geometry
 			 *  rather than `hitSlop`.
 			 *
@@ -116,7 +138,11 @@ export const Button = ({
 						</View>
 					) : null}
 					{size === "icon" || size === "fab" ? null : (
-						<Text className={buttonLabelClasses(size, disabled, variant)}>
+						<Text
+							className={buttonLabelClasses(size, disabled, variant)}
+							numberOfLines={labelLines}
+							ellipsizeMode={labelLines === 1 ? "tail" : undefined}
+						>
 							{label}
 						</Text>
 					)}

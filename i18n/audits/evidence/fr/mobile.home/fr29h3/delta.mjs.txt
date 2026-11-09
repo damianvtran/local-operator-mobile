@@ -1,0 +1,102 @@
+/**
+ * Round-3 delta check for one key: mobile.home.options.fixed (fr).
+ * Uses the app's own parser (src/i18n/messages.ts parseMessage/formatMessage).
+ * Read-only over the worktree: reads catalogue JSON, writes nothing.
+ */
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { parseMessage, formatMessage } from "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n/src/i18n/messages.ts";
+
+const ROOT = "/Users/damian/workspace/mobile-i18n-d5aaf8ba6ba5/mobile-i18n";
+const KEY = "mobile.home.options.fixed";
+
+const files = {
+	en: `${ROOT}/src/i18n/catalogues/en/mobile.home.json`,
+	context: `${ROOT}/src/i18n/catalogues/en/mobile.home.context.json`,
+	target: `${ROOT}/src/i18n/catalogues/fr/mobile.home.json`,
+	targetSession: `${ROOT}/src/i18n/catalogues/fr/mobile.session.json`,
+	enSession: `${ROOT}/src/i18n/catalogues/en/mobile.session.json`,
+};
+
+const sha = (p) => createHash("sha256").update(readFileSync(p)).digest("hex");
+
+console.log("== sha256 (current bytes) ==");
+for (const [name, p] of Object.entries(files)) {
+	console.log(`${name.padEnd(13)} ${sha(p)}  ${p.replace(`${ROOT}/`, "")}`);
+}
+
+const en = JSON.parse(readFileSync(files.en, "utf8"));
+const ctx = JSON.parse(readFileSync(files.context, "utf8"));
+const fr = JSON.parse(readFileSync(files.target, "utf8"));
+const frSession = JSON.parse(readFileSync(files.targetSession, "utf8"));
+const enSession = JSON.parse(readFileSync(files.enSession, "utf8"));
+
+console.log("\n== key counts ==");
+for (const [name, obj] of [["en", en], ["context", ctx], ["fr", fr]]) {
+	console.log(`${name.padEnd(8)} ${Object.keys(obj).length}`);
+}
+
+console.log("\n== source and current target ==");
+console.log("EN :", en[KEY]);
+console.log("FR :", fr[KEY]);
+console.log("LEN (UTF-16):", fr[KEY].length);
+console.log("CONTEXT NOTE:", ctx[KEY]?.note);
+console.log("CONTEXT ROLE:", ctx[KEY]?.role);
+
+console.log("\n== parser: the app's own parseMessage ==");
+let parsed;
+try {
+	parsed = parseMessage(fr[KEY]);
+	console.log("PARSE: OK");
+	console.log("PARSED:", JSON.stringify(parsed));
+} catch (e) {
+	console.log("PARSE: FAIL", e && e.message);
+	process.exitCode = 1;
+}
+const enParsed = parseMessage(en[KEY]);
+const names = (o) => [...new Set((JSON.stringify(o).match(/"name":"[^"]+"/g) ?? []))];
+console.log("en params:", JSON.stringify(names(enParsed)), "| fr params:", JSON.stringify(names(parsed ?? {})));
+
+console.log("\n== render (formatMessage, empty params) ==");
+const rendered = formatMessage(parseMessage(fr[KEY]), {}, undefined);
+console.log("rendered :", rendered);
+console.log("identical to catalogue value:", rendered === fr[KEY]);
+
+console.log("\n== the destination label this key names ==");
+const labelFr = frSession["mobile.session.conversation_details"];
+const labelEn = enSession["mobile.session.conversation_details"];
+console.log("fr mobile.session.conversation_details =", JSON.stringify(labelFr));
+console.log("en mobile.session.conversation_details =", JSON.stringify(labelEn));
+console.log("label appears byte-exactly in the sentence:", fr[KEY].includes(labelFr));
+const i = fr[KEY].indexOf(labelFr);
+console.log("window:", JSON.stringify(fr[KEY].slice(Math.max(0, i - 14), i + labelFr.length + 8)));
+
+console.log("\n== character inventory ==");
+const s = fr[KEY];
+const nonAscii = [...new Set([...s].filter((c) => c.codePointAt(0) > 127))].map(
+	(c) => `U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")} ${c}`,
+);
+console.log("non-ascii:", nonAscii.join(", ") || "none");
+const bidi = [...s].filter((c) => {
+	const v = c.codePointAt(0);
+	return (
+		v === 0x061c || v === 0x200e || v === 0x200f ||
+		(v >= 0x202a && v <= 0x202e) || (v >= 0x2066 && v <= 0x2069)
+	);
+});
+console.log("bidi controls:", bidi.length ? bidi.map((c) => `U+${c.codePointAt(0).toString(16)}`).join(",") : "none");
+console.log("ASCII apostrophe:", s.includes("'"), "| ASCII double quote:", s.includes('"'), "| ASCII '...':", s.includes("..."));
+console.log("U+00A0:", s.includes("\u00a0"), "| U+202F:", s.includes("\u202f"));
+console.log("U+202F before [;:!?]:", /\u202f[;:!?]/.test(s), "| bare U+0020 before [;:!?]:", / [;:!?]/.test(s));
+console.log("guillemets:", /[«»]/.test(s), "| em dash:", s.includes("—"), "| semicolon/colon:", /[;:]/.test(s));
+console.log("ends with a full stop:", s.endsWith("."), "| sentence count:", s.split(". ").length);
+
+console.log("\n== round-2 byte reconstruction (single-substring revert) ==");
+const raw = readFileSync(files.target, "utf8");
+const reverted = raw.replace("commandes en direct", "commandes en cours");
+const revertedHash = createHash("sha256").update(Buffer.from(reverted, "utf8")).digest("hex");
+console.log("reverted hash:", revertedHash);
+console.log("round-2 recorded target hash: 6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d");
+console.log("MATCH:", revertedHash === "6cb1b100a3881b7be3e4fa26d10bb5861c6d10a76a56ab3f457c098567b2b00d");
+console.log("occurrences of 'commandes en direct' in file:", raw.split("commandes en direct").length - 1);
+console.log("byte size now / after revert:", Buffer.byteLength(raw, "utf8"), "/", Buffer.byteLength(reverted, "utf8"));
