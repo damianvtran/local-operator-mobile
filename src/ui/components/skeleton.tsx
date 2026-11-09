@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { Animated, View } from "react-native";
 
 import { LIVE_REGION } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
+import { createSharedLoop } from "@/ui/shared-loop";
 import { SKELETON_PULSE_MS, skeletonBarClasses } from "@/ui/variants";
 
 /**
@@ -55,6 +56,57 @@ export type SkeletonProps = {
 	testID?: string;
 };
 
+/* ------------------------------------------------------------------ the pulse */
+
+/**
+ * ONE pulse for every bar on screen, on the NATIVE driver (performance audit P6).
+ *
+ * The pulse used to interpolate each bar's `backgroundColor`, which no native
+ * driver can animate, so every `Skeleton` instance ran its own 60 Hz loop on the
+ * JS thread. Skeletons are on screen exactly when that thread is busiest —
+ * mounting the transcript they stand in for — so the pulse stuttered and added
+ * load to the very mount it was waiting on.
+ *
+ * It is now an OPACITY, the one property the native driver animates here: the
+ * bar is painted in its resting colour and a layer in the dimmed colour fades
+ * over it. That is the same picture as the colour interpolation it replaces —
+ * a layer of colour B at opacity `t` over colour A composites to
+ * `A + t·(B − A)` per channel, which is what the interpolation computed — so
+ * the earlier rule stands: this is a brightness step BETWEEN TWO GROUNDS, never
+ * a fade of the bar itself towards the surface it has to stand out from.
+ *
+ * The value is module-level and reference-counted: N bars share one loop
+ * (started by the first, stopped by the last), so they also beat in phase.
+ */
+const sharedPulse = new Animated.Value(0);
+let pulseLoop: Animated.CompositeAnimation | null = null;
+
+const pulseUsers = createSharedLoop({
+	start: () => {
+		pulseLoop = Animated.loop(
+			Animated.sequence([
+				Animated.timing(sharedPulse, {
+					toValue: 1,
+					duration: SKELETON_PULSE_MS / 2,
+					useNativeDriver: true,
+				}),
+				Animated.timing(sharedPulse, {
+					toValue: 0,
+					duration: SKELETON_PULSE_MS / 2,
+					useNativeDriver: true,
+				}),
+			]),
+		);
+		pulseLoop.start();
+	},
+	stop: () => {
+		pulseLoop?.stop();
+		pulseLoop = null;
+		// Back to the resting tone, so the next first user starts a full cycle.
+		sharedPulse.setValue(0);
+	},
+});
+
 export const Skeleton = ({
 	lines = 3,
 	barClassName = "h-4",
@@ -63,7 +115,6 @@ export const Skeleton = ({
 	testID,
 }: SkeletonProps) => {
 	const reduceMotion = useReducedMotion();
-	const pulse = useRef(new Animated.Value(0)).current;
 	// Stable keys rather than the array index: the bars are identical, so an index
 	// key is not wrong here, but a key that survives a change in `lines` is what
 	// keeps a re-render from rebuilding every bar when one more line arrives.
@@ -82,32 +133,13 @@ export const Skeleton = ({
 	const dimmed = useTokenColor(ground === "raised" ? "canvas" : "sunken");
 
 	useEffect(() => {
-		if (reduceMotion) {
-			// The bars keep their resting tone; the pulse stops entirely rather
-			// than slowing, because at this duration a slow pulse reads as a
-			// rendering artefact.
-			pulse.setValue(0);
-			return;
-		}
-		const loop = Animated.loop(
-			Animated.sequence([
-				Animated.timing(pulse, {
-					toValue: 1,
-					duration: SKELETON_PULSE_MS / 2,
-					// A colour cannot run on the native driver; this animation is cheap
-					// enough (a handful of bars) that the JS driver is the right trade.
-					useNativeDriver: false,
-				}),
-				Animated.timing(pulse, {
-					toValue: 0,
-					duration: SKELETON_PULSE_MS / 2,
-					useNativeDriver: false,
-				}),
-			]),
-		);
-		loop.start();
-		return () => loop.stop();
-	}, [pulse, reduceMotion]);
+		// Reduced motion: the bars keep their resting tone and this instance
+		// takes no share of the loop at all — the pulse stops entirely rather
+		// than slowing, because at this duration a slow pulse reads as a
+		// rendering artefact.
+		if (reduceMotion) return;
+		return pulseUsers.retain();
+	}, [reduceMotion]);
 
 	return (
 		<View
@@ -119,21 +151,23 @@ export const Skeleton = ({
 			accessibilityLabel="Loading"
 		>
 			{barKeys.map((barKey) => (
-				<Animated.View
+				<View
 					key={barKey}
 					// One width, never two: see `widthClassName` and
 					// `skeletonBarClasses`, which holds that as a pure, tested rule.
-					className={skeletonBarClasses({ barClassName, widthClassName })}
-					style={{
-						// A brightness step between two grounds, not an opacity fade: an
-						// opacity pulse takes the bar towards the ground this fill exists to
-						// stand out from, which is the failure that made `sunken` wrong.
-						backgroundColor: pulse.interpolate({
-							inputRange: [0, 1],
-							outputRange: [resting, dimmed],
-						}),
-					}}
-				/>
+					// `overflow-hidden` clips the pulse layer to the bar's radius.
+					className={`${skeletonBarClasses({ barClassName, widthClassName })} overflow-hidden`}
+					style={{ backgroundColor: resting }}
+				>
+					{reduceMotion ? null : (
+						<Animated.View
+							aria-hidden
+							pointerEvents="none"
+							className="absolute inset-0"
+							style={{ backgroundColor: dimmed, opacity: sharedPulse }}
+						/>
+					)}
+				</View>
 			))}
 		</View>
 	);

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionProjection, TranscriptEntry } from "@/contracts";
 import {
+	type ImageFileStore,
+	imageExtension,
 	loadAttachments,
 	loadVideoSource,
 	mergeTranscript,
@@ -94,6 +96,121 @@ describe("loadAttachments tells a gone attachment from an unreachable host", () 
 		await expect(
 			loadAttachments(imageRejects(offline), "s", "e", 0),
 		).rejects.toBe(offline);
+	});
+});
+
+/**
+ * What `loadAttachments` hands the image view, and what it costs (performance
+ * audit P1).
+ *
+ * It used to answer a `data:` URI built by a per-byte base64 loop on the JS
+ * thread, on every mount. It now answers a source the view opens directly: a
+ * Blob object URL on web, a cache file on native — and on native a file that
+ * already exists is answered WITHOUT a request, which is what makes a remount
+ * or a relaunch free. The native arm runs here through the function's own
+ * seam (`env.files`), because the default store is a device filesystem.
+ */
+describe("loadAttachments answers a source, not an encoded payload", () => {
+	const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+	const serving = (mimeType: string | null = "image/png") => {
+		let calls = 0;
+		const endpoints = {
+			image: async () => {
+				calls += 1;
+				return { bytes: png, mimeType };
+			},
+		} as unknown as RelayEndpoints;
+		return { endpoints, calls: () => calls };
+	};
+	/** An in-memory stand-in for the cache directory. */
+	const memoryFiles = () => {
+		const written = new Map<string, Uint8Array>();
+		const store: ImageFileStore = {
+			find: async (stem) => {
+				for (const name of written.keys())
+					if (name.startsWith(`${stem}.`)) return `file:///cache/${name}`;
+				return null;
+			},
+			write: async (stem, extension, bytes) => {
+				written.set(`${stem}.${extension}`, bytes);
+				return `file:///cache/${stem}.${extension}`;
+			},
+		};
+		return { store, written };
+	};
+
+	it("answers a Blob object URL on web, never a data URI", async () => {
+		// The Node environment's `Platform.OS` is `web` (react-native-web).
+		const { endpoints } = serving();
+		const source = await loadAttachments(endpoints, "s", "e", 0);
+		expect(source?.startsWith("blob:")).toBe(true);
+		expect(source?.startsWith("data:")).toBe(false);
+	});
+
+	it("writes the bytes to a cache file on native and answers its URI", async () => {
+		const { endpoints, calls } = serving("image/jpeg");
+		const { store, written } = memoryFiles();
+		const source = await loadAttachments(endpoints, "sess", "entry", 2, {
+			platform: "ios",
+			files: store,
+		});
+		expect(source).toBe("file:///cache/sess-entry-2.jpg");
+		expect(written.get("sess-entry-2.jpg")).toBe(png);
+		expect(calls()).toBe(1);
+	});
+
+	it("reuses an existing cache file without a request", async () => {
+		const { endpoints, calls } = serving();
+		const { store } = memoryFiles();
+		const env = { platform: "android", files: store };
+		const first = await loadAttachments(endpoints, "sess", "entry", 0, env);
+		const second = await loadAttachments(endpoints, "sess", "entry", 0, env);
+		expect(second).toBe(first);
+		expect(calls()).toBe(1);
+	});
+
+	it("names the cache file from ids alone, with nothing that can leave the directory", async () => {
+		const { endpoints } = serving();
+		const { store, written } = memoryFiles();
+		await loadAttachments(endpoints, "../../etc", "tc-call/1?x=y", 0, {
+			platform: "ios",
+			files: store,
+		});
+		expect([...written.keys()]).toEqual(["etc-tc-call1xy-0.png"]);
+	});
+
+	it("still reads only the relay's own 404 as absence on the native arm", async () => {
+		const { store } = memoryFiles();
+		const gone = relayErrorFromResponse(
+			facts(
+				404,
+				{ "content-type": "application/json" },
+				'{"error":"no such image"}',
+			),
+		);
+		await expect(
+			loadAttachments(imageRejects(gone), "s", "e", 0, {
+				platform: "ios",
+				files: store,
+			}),
+		).resolves.toBeNull();
+		const deadTunnel = relayErrorFromResponse(
+			facts(404, { "content-type": "text/plain" }, "Unknown tunnel"),
+		);
+		await expect(
+			loadAttachments(imageRejects(deadTunnel), "s", "e", 0, {
+				platform: "ios",
+				files: store,
+			}),
+		).rejects.toBe(deadTunnel);
+	});
+
+	it("names the cache extension per mime, with a stable fallback", () => {
+		expect(imageExtension("image/png")).toBe("png");
+		expect(imageExtension("image/jpeg; charset=binary")).toBe("jpg");
+		expect(imageExtension("image/webp")).toBe("webp");
+		expect(imageExtension(null)).toBe("img");
+		expect(imageExtension("application/octet-stream")).toBe("img");
 	});
 });
 

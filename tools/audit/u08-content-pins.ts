@@ -626,8 +626,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
+	/* Re-pinned 2026-11-09 for feat/polish-transcript-rows with --print from the
+	 * staged tree: `tokens.json` changes two `use` DESCRIPTIONS only (the `trace`
+	 * step now names the tool name as well as its headline; `mono-sm` no longer
+	 * lists tool names) — no size, face, colour or role moved, and `theme:check`
+	 * and `preset:check` both report the generated layers current. Identity
+	 * only, NOT rendered U-08 evidence. */
 	"design/tokens":
-		"16f424a5d14a2c6f79fdc15f5793fa41d0034ab72ccd298f895b6ef4cf572997",
+		"40b677b7e493bd87e1c4201a635b5915ccaad6482286901a5e4a558c8a73801d",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -1192,6 +1198,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #106 + main 8705a953: combined staged source identity only, not new pixels.
 	/* PR #206 merge-gate convergence with main 3e759dac: src re-derived with
 	 * --print over the staged merged tree; identity admission only. */
+	/* Re-pinned 2026-11-09 for feat/polish-transcript-rows with --print from the
+	 * staged tree: the transcript's rows lose their borders, rules and state
+	 * fills (user bubble, peer/hub/parent block, tool row, image-generation
+	 * card), tool names take the sans `trace` step, images render at the
+	 * relay's 160 pt from a cached file/Blob source through `expo-image`
+	 * (`session/image-cache.ts`), and the skeleton pulses opacity on the native
+	 * driver (`ui/shared-loop.ts`). `src` and `design/tokens` moved; `app`,
+	 * fonts, `public`, fixtures and the instrument files did not. This DOES
+	 * change what the U-08 scenes paint, so the digest is source admission
+	 * only, NOT rendered U-08 evidence: the frames are CI's audit run's. */
 	// Native history paging: staged LIVE source admission only; historical
 	// rendered frames, native anchor and interaction proof are not refreshed.
 	// PR #207 remediation (gap detection, retry targeting, refresh copy) re-pinned
@@ -1215,7 +1231,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #207 round 5: cold disjoint pages precede live rows, explicit pinned
 	// context survives flagless frames, and HTTP reader-world tests live beside
 	// the app reader. Re-derived with --print, staged; source admission only.
-	src: "01a81cc8a445de49e7f6048d7773021df8ebee91d5a5c69e286099ca4bcef84a",
+	// PR #207 merge-gate convergence with main 828c9b50 (#209): the merged src
+	// tree carries both #209's borderless rows / cached images and this PR's
+	// history reader, so it has neither parent's digest; re-pinned with --print
+	// over the staged merged tree. Source admission only, no rendered or native
+	// proof refreshed.
+	src: "1714a6b43209c664d62a089f14dc8f3086a42706028f7b7ada0e6b1ae77f39c6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

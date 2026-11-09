@@ -21,6 +21,12 @@ import { describe, expect, it } from "vitest";
  * The anchors are the mapping expression and each call site, so a renamed prop
  * fails by name rather than passing quietly.
  */
+const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
+const LINE_COMMENT = /\/\/.*$/gm;
+const NATIVE_DRIVER = /useNativeDriver: true/g;
+const REDUCED_MOTION_OPTS_OUT =
+	/if \(reduceMotion\) return;\s*return pulseUsers\.retain\(\);/;
+
 const read = (file: string): string =>
 	readFileSync(fileURLToPath(new URL(`./${file}`, import.meta.url)), "utf8");
 
@@ -49,5 +55,50 @@ describe("the skeleton's ground", () => {
 		);
 		expect(image).toContain("<Skeleton");
 		expect(image).not.toContain('ground="raised"');
+	});
+});
+
+/**
+ * Performance audit P6 — the pulse runs on the NATIVE driver.
+ *
+ * It interpolated `backgroundColor`, which only the JS driver can animate: one
+ * 60 Hz JS loop per instance, on screen exactly while the JS thread mounts the
+ * content the skeleton stands in for. It is now the opacity of a dimmed layer
+ * over a resting bar — the same blend, on the native driver — from ONE shared
+ * loop (`shared-loop.test.ts` holds the counting). Source checks for the reason
+ * above: no render seam, and what must not return is a driver flag.
+ */
+describe("the skeleton's pulse driver", () => {
+	const source = read("skeleton.tsx");
+	/** Code only: the comments describe the retired approach by name. */
+	const code = source.replace(BLOCK_COMMENT, "").replace(LINE_COMMENT, "");
+
+	it("never animates on the JS driver", () => {
+		expect(code).not.toContain("useNativeDriver: false");
+		const flags = code.match(NATIVE_DRIVER) ?? [];
+		// Both halves of the loop.
+		expect(flags).toHaveLength(2);
+	});
+
+	it("animates opacity, and no colour", () => {
+		expect(code).not.toContain(".interpolate(");
+		expect(code).toContain("opacity: sharedPulse");
+		// The bar's own fill is a plain colour on a plain View.
+		expect(code).toContain("style={{ backgroundColor: resting }}");
+		// The brightness step is still between the ground pair: the dimmed
+		// colour fades OVER the bar, the bar never fades towards its ground.
+		expect(code).toContain("backgroundColor: dimmed, opacity: sharedPulse");
+	});
+
+	it("shares one loop between every instance", () => {
+		expect(code).toContain("createSharedLoop(");
+		expect(code).toContain("return pulseUsers.retain();");
+		// No per-instance animated value any more.
+		expect(code).not.toContain("useRef(new Animated.Value");
+	});
+
+	it("takes no share of the loop under reduced motion", () => {
+		expect(code).toMatch(REDUCED_MOTION_OPTS_OUT);
+		expect(code).toContain("{reduceMotion ? null : (");
 	});
 });
