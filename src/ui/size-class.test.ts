@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
 	compactChromeFor,
 	compactChromeShare,
+	composerAtHostCap,
 	composerBudget,
+	composerHostBound,
 	composerKeyboardLimit,
 	composerLimit,
 	computersHeaderStackWidth,
@@ -460,6 +462,61 @@ describe("composerLimit (D-c: portrait is bounded by the window too)", () => {
 		expect(composerLimit(568, 380, 60)).toBe(null);
 		// 320/200% long draft: 314 + 424 is over the bottom, and stays capped at it
 		expect(composerLimit(568, 314, 254)).toBe(254);
+	});
+
+	/* QA #206 round 3 Q3: the limit is a feedback loop — the screen measures the
+	 *  composer, `composerLimit` answers, the composer paints `composerHostBound` of
+	 *  that answer, and the screen measures THAT box. Run the loop exactly as the
+	 *  screen and the composer do and require a fixed point: the second pass must
+	 *  give the same answer as the first, or the composer oscillates with no input
+	 *  (1011 / 639 px at 390x844, Send below the viewport in the 1011 frames). */
+	const settle = (
+		viewport: number,
+		top: number,
+		natural: number,
+		gap: number,
+		passes = 4,
+	) => {
+		const floor = TOUCH_TARGET.ios;
+		let limit: number | null = null;
+		const answers: (number | null)[] = [];
+		for (let pass = 0; pass < passes; pass++) {
+			// The painted box is min(natural, cap); a fitting box sits on the gap.
+			const height =
+				limit === null
+					? natural
+					: Math.min(natural, composerHostBound(limit, gap, floor));
+			const boxTop =
+				height + top + gap <= viewport ? viewport - gap - height : top;
+			limit = composerLimit(
+				viewport,
+				boxTop,
+				height,
+				composerAtHostCap(height, limit, gap, floor),
+			);
+			answers.push(limit);
+		}
+		return answers;
+	};
+
+	it("reaches a fixed point once bound (QA numbers: 844 window, top 201)", () => {
+		// No inset (web) and a 34 pt home-indicator inset on native.
+		expect(settle(844, 201, 1011, 8)).toEqual([643, 643, 643, 643]);
+		expect(settle(844, 201, 1011, 42)).toEqual([643, 643, 643, 643]);
+	});
+
+	it("reaches a fixed point at 320x568 with a long 200 % draft", () => {
+		expect(settle(568, 314, 425, 8)).toEqual([254, 254, 254, 254]);
+		expect(settle(568, 314, 425, 42)).toEqual([254, 254, 254, 254]);
+	});
+
+	it("lets go only when the content fits again, and stays unbound", () => {
+		// A short draft never binds: its bottom-anchored box sits on the gap.
+		expect(settle(844, 201, 300, 8)).toEqual([null, null, null, null]);
+		// A box held below its cap is not capped, so the limit releases.
+		expect(composerAtHostCap(500, 643, 8, TOUCH_TARGET.ios)).toBe(false);
+		expect(composerAtHostCap(635, 643, 8, TOUCH_TARGET.ios)).toBe(true);
+		expect(composerAtHostCap(635, null, 8, TOUCH_TARGET.ios)).toBe(false);
 	});
 
 	it("never returns less than one control target", () => {

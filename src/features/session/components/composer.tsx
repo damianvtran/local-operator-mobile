@@ -116,7 +116,12 @@ import {
 import { ChromeGroup, ChromeSurface } from "@/ui/components/chrome-surface";
 import { useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
-import { composerBudget, composerKeyboardLimit } from "@/ui/size-class";
+import {
+	composerAtHostCap,
+	composerBudget,
+	composerHostBound,
+	composerKeyboardLimit,
+} from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
@@ -349,8 +354,10 @@ export type ComposerProps = {
 	/** Reports the composer's painted box in WINDOW coordinates. The SCREEN owns the
 	 *  window height; the composer owns the geometry, so the measurement lives here
 	 *  and no wrapper reparents the field (footer contract). Height is part of it:
-	 *  the ceiling only binds once the painted bottom reaches the window. */
-	onMeasure?: (box: { top: number; height: number }) => void;
+	 *  the ceiling only binds once the painted bottom reaches the window. `capped`
+	 *  says the box is held at `limit` (see `composerLimit`'s invariant): a capped
+	 *  box ends where a fitting one does, so the screen cannot read it from geometry. */
+	onMeasure?: (box: { top: number; height: number; capped: boolean }) => void;
 	/** Any value whose change moves the composer without resizing it (the find bar,
 	 *  a panel, the pending card). The measurement effect watches it. */
 	measureKey?: string;
@@ -1084,7 +1091,7 @@ export const Composer = ({
 	const bound =
 		rawBound === null
 			? null
-			: Math.max(TOUCH_FLOOR, rawBound - presentation.gap);
+			: composerHostBound(rawBound, presentation.gap, TOUCH_FLOOR);
 	const budget =
 		bound === null
 			? null
@@ -1105,8 +1112,18 @@ export const Composer = ({
 	 *  native-web` implements `measureInWindow` on the host node; native resolves it
 	 *  asynchronously, which is why this only publishes a number and never gates the
 	 *  first paint (a `null` top means "no limit" — the old behaviour — for a frame). */
+	/* Only the portrait host `limit` is fed back through the measurement; the compact
+	 *  share and the keyboard budget come from window geometry and never loop. */
+	const hostLimit = compact === null ? limit : null;
+	const outerGap = presentation.gap;
 	const publishBox = useCallback(() => {
 		if (!onMeasure) return;
+		const report = (top: number, height: number) =>
+			onMeasure({
+				top,
+				height,
+				capped: composerAtHostCap(height, hostLimit, outerGap, TOUCH_FLOOR),
+			});
 		/* On the web the host node answers directly: `measureInWindow` there returns
 		 *  a CACHED layout, so after the draft grew the screen kept reading the empty
 		 *  composer's box (top 335, height 225 — "fits") and the ceiling never bound
@@ -1117,13 +1134,15 @@ export const Composer = ({
 		} | null;
 		const rect = node?.getBoundingClientRect?.();
 		if (rect) {
-			onMeasure({ top: Math.round(rect.top), height: Math.round(rect.height) });
+			report(Math.round(rect.top), Math.round(rect.height));
 			return;
 		}
 		rootRef.current?.measureInWindow((_x, y, _w, h) =>
-			onMeasure({ top: Math.round(y), height: Math.round(h) }),
+			report(Math.round(y), Math.round(h)),
 		);
-	}, [onMeasure]);
+		/* `hostLimit` and `outerGap` are deps on purpose: binding the limit resizes the
+		 *  box, and that re-measure is what reports `capped` for the new cap. */
+	}, [onMeasure, hostLimit, outerGap]);
 	/* One string, because the effect must run when ANY of these moves the composer —
 	 *  the receipt wrapping, the extras, the scale, the mode, the dictation row — or
 	 *  when the screen says the chrome above it changed. Listing them as separate

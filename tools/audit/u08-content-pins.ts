@@ -595,7 +595,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "93ec58760cc4bacfd445fee865e8a7bdbc25ed9e791236e3ca83aba9bedd27cf",
+	/* QA round-3 Q3: the session screen passes the composer's `capped` report to
+	 * `composerLimit`, so the portrait ceiling cannot oscillate. Recomputed with
+	 * --print from the staged tree; `app` and `src` moved. Identity only. */
+	app: "ad8d520156ee1426c27c40e9fc61d637b1f00d7bc1428f305bef77d53e3cea8a",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1141,7 +1144,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (hidden) for the pick and removed on every settle path, plus its lifecycle
 	 * tests. Recomputed with --print from the staged tree; only `src` moved.
 	 * Identity admission only, not rendered or native evidence. */
-	src: "b0f4991c251579ca0086206aff893e9a470a3f0c98cc73b04bea55dfe01e8a4c",
+	/* QA round-3 Q3: `composerLimit` decides overflow from the composer's
+	 * intrinsic `capped` fact (fixed point, not the capped box), plus its
+	 * regression tests. Recomputed with --print from the staged tree; `app` and
+	 * `src` moved. Identity admission only, not rendered or native evidence. */
+	src: "5810437f181ccfe4ff46f80ea6ed5ed1f5609d61c76ec971ae4b332527e531a7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

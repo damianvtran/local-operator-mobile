@@ -607,6 +607,7 @@ export default function Session() {
 	const [composerBox, setComposerBox] = useState<{
 		top: number;
 		height: number;
+		capped: boolean;
 	} | null>(null);
 	const regionLayout = useRef<
 		Partial<Record<RegionKey, { y: number; h: number }>>
@@ -1519,6 +1520,7 @@ export default function Session() {
 							viewportHeight,
 							composerBox?.top ?? null,
 							composerBox?.height ?? null,
+							composerBox?.capped ?? false,
 						)}
 						onMeasure={setComposerBox}
 						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}`}
