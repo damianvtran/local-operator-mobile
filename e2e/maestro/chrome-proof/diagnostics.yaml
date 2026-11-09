@@ -1,0 +1,28 @@
+# Failure-only inspection of the STILL RUNNING app. No launchApp, clearState,
+# connect flow or retry: preserve the route/stream/error that caused the failure.
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      notVisible:
+        id: "settings-button"
+    commands:
+      - tapOn:
+          id: "home-sidebar"
+- tapOn:
+    id: "settings-button"
+- assertVisible:
+    id: "settings-screen"
+- scrollUntilVisible:
+    element:
+      id: "settings-section-diagnostics"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "settings-section-diagnostics"
+- scrollUntilVisible:
+    element:
+      text: "Last error"
+    direction: DOWN
+    timeout: 15000
+- assertVisible: "Last error"

@@ -38,13 +38,19 @@ import { lookup } from "node:dns/promises";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
-import { collectChromeFrames, LANES } from "./chrome-ios-proof-contract.ts";
+import {
+	activityWaitProjection,
+	chromeProofPlan,
+	collectChromeFrames,
+} from "./chrome-ios-proof-contract.ts";
 import {
 	nativeConnectionPrerequisiteFailed,
 	probeNativeRelay,
 } from "./native-relay-preflight.ts";
 
 const env = process.env;
+const activityOnly = env.PROOF_ACTIVITY_ONLY === "true";
+const plan = chromeProofPlan(activityOnly);
 const need = (name: string): string => {
 	const value = env[name];
 	if (!value) throw new Error(`missing ${name}`);
@@ -206,6 +212,7 @@ type Slot = {
 	sessionId: string;
 	shutdown: () => Promise<void>;
 	publisher: ChildProcess;
+	markNativeFlow: () => void;
 };
 
 /** A mock relay on a unique `.local` name — `projects-create-ios-proof.ts`'s
@@ -215,6 +222,15 @@ async function startRelay(scenario: string): Promise<Slot> {
 	const name = `ccp-${scenario.replace(/[^a-z]/g, "")}-${nonce}`.slice(0, 40);
 	const host = `${name}.local`;
 	const relay = createRelay({ scenario, password, quiet: true });
+	if (activityOnly && scenario === "subagent-running") {
+		// A silent wait is the reported failure, not a missing activity field:
+		// keep the producer-shaped frame busy and age the phase, so a blank
+		// status cannot be mistaken for a legitimate unnamed/clockless phase.
+		const projections = relay.state.world.projections ?? {};
+		for (const [id, projection] of Object.entries(projections)) {
+			projections[id] = activityWaitProjection(projection);
+		}
+	}
 	// The historical run omitted the request ledger, so "Connected" followed
 	// by an empty saved route could not be separated into auth vs transport.
 	// The mock records only cookie presence, never its value.
@@ -244,8 +260,16 @@ async function startRelay(scenario: string): Promise<Slot> {
 		scenario,
 		sessionId,
 		publisher,
+		markNativeFlow: () => {
+			relay.state.wirePhase = "native-flow";
+			note(`relay ${scenario} HOST preflight end; native flow start`);
+		},
 		shutdown: async () => {
 			await relay.shutdown();
+			writeFileSync(
+				join(ROOT, `relay-${scenario}-wire.json`),
+				JSON.stringify(relay.state.wireEvents, null, 2),
+			);
 			writeFileSync(
 				join(ROOT, `relay-${scenario}-requests.json`),
 				JSON.stringify(
@@ -391,6 +415,7 @@ async function flow(
 	file: string,
 	cap: number,
 ) {
+	relay.markNativeFlow();
 	const flowLog = join(
 		ROOT,
 		"commands",
@@ -422,6 +447,25 @@ async function flow(
 		try {
 			await shot(udid, lane, `failure-${file.replace(".yaml", "")}`);
 			await hierarchy(udid, lane, `failure-${file.replace(".yaml", "")}`);
+			// Inspect the surviving app, never relaunch/re-admit it: otherwise a
+			// transient route retirement disappears before Diagnostics can name it.
+			if (activityOnly) {
+				await run(
+					`diagnostics-${lane}`,
+					"maestro",
+					[
+						"--device",
+						udid,
+						"test",
+						"-e",
+						`APP_ID=${bundle}`,
+						"e2e/maestro/chrome-proof/diagnostics.yaml",
+					],
+					cap,
+				);
+				await shot(udid, lane, "failure-diagnostics");
+				await hierarchy(udid, lane, "failure-diagnostics");
+			}
 		} catch {
 			/* best effort; never masks the real error */
 		}
@@ -469,7 +513,8 @@ try {
 	relays.push(idle);
 	note(`relays: working=${working.origin} idle=${idle.origin}`);
 
-	for (const lane of LANES) {
+	receipt.activityOnly = activityOnly;
+	for (const lane of plan.lanes) {
 		const runtime = lane.os === 26 ? ios26 : ios18;
 		const deviceType = listing.devicetypes.find(
 			(d) => d.name === lane.device,
@@ -559,6 +604,7 @@ try {
 					["home.yaml", idle, "home", 600],
 					["sidebar.yaml", idle, "sidebar", 300],
 				] as const) {
+					if (!plan.frames.includes(frame)) continue;
 					await flow(udid, dir, build.bundleId, relay, file, cap);
 					await shot(udid, dir, frame);
 					await hierarchy(udid, dir, frame);
@@ -570,7 +616,10 @@ try {
 					120,
 				);
 			}
-			laneReceipt.frames = collectChromeFrames(join(ROOT, "frames", lane.id));
+			laneReceipt.frames = collectChromeFrames(
+				join(ROOT, "frames", lane.id),
+				plan.frames,
+			);
 			laneReceipt.verdict = "CAPTURED";
 		} catch (error) {
 			// A failed initial session flow is failed connection/setup, NOT a

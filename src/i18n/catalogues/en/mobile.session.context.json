@@ -1,4 +1,8 @@
 {
+	"mobile.session.reasoning_disclosure": {
+		"role": "button",
+		"note": "Disclosure label for an assistant reasoning trace, shared by its visible heading and accessibility label. Names the reasoning content, not a live progress status: the same label remains after the turn ends. No preview of reasoning is shown until explicitly expanded. Short noun phrase, no full stop."
+	},
 	"mobile.session.chip.model_default": {
 		"role": "meta",
 		"note": "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row."

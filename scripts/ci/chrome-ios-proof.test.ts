@@ -1,14 +1,147 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+	chmodSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { sessionProjectionSchema } from "../../src/contracts/schemas.ts";
 import {
+	activityWaitProjection,
+	chromeProofPlan,
 	collectChromeFrames,
 	LANE_FRAMES,
 	LANES,
 } from "./chrome-ios-proof-contract.ts";
 
+const RESET_FAILURE_STATE = /launchApp|clearState|connect-relay/;
+
 describe("chrome proof plan (record §7)", () => {
+	it("fails missing-driver setup before boot and proves PATH in a token-free environment", () => {
+		const workflow = readFileSync(
+			new URL("../../.github/workflows/e2e.yml", import.meta.url),
+			"utf8",
+		);
+		const job = workflow.split("\n  chrome-ios-proof:\n")[1] ?? "";
+		const step =
+			job
+				.split("Provision the existing pinned Maestro driver")[1]
+				?.split("Download and verify the already-built artifacts")[0] ?? "";
+		const lines = step.split("\n").map((line) => line.trim());
+		const check = lines.find((line) => line.startsWith("test -x "));
+		const command = lines.find((line) => line.startsWith("env -i PATH="));
+		expect(check).toBeTruthy();
+		expect(command).toBeTruthy();
+		const root = mkdtempSync(join(tmpdir(), "chrome-driver-"));
+		try {
+			const environment = {
+				PATH: "/usr/bin:/bin",
+				HOME: root,
+				// Keep the child synthetic while satisfying the shared ProcessEnv contract.
+				NODE_ENV: "test" as const,
+				RUNNER_TEMP: root,
+				JAVA_HOME: "/synthetic-java",
+				GH_TOKEN: "synthetic-must-not-leak",
+			};
+			const run = () =>
+				spawnSync("/bin/bash", ["-c", `${check} && ${command}`], {
+					env: environment,
+					encoding: "utf8",
+					timeout: 1000,
+				});
+			expect(run().status).toBe(1);
+			const bin = join(root, ".maestro", "bin");
+			mkdirSync(bin, { recursive: true });
+			const driver = join(bin, "maestro");
+			writeFileSync(
+				driver,
+				'#!/bin/sh\nif [ -n "${GH_TOKEN+x}" ]; then exit 9; fi\nprintf "2.11.0\\n"\n',
+			);
+			chmodSync(driver, 0o700);
+			const result = run();
+			expect(result.status).toBe(0);
+			expect(result.stdout.trim()).toBe("2.11.0");
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+	it("inspects failure diagnostics without relaunching, reconnecting or clearing state", () => {
+		const flow = readFileSync(
+			new URL(
+				"../../e2e/maestro/chrome-proof/diagnostics.yaml",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		const commands = flow
+			.split("\n")
+			.filter((line) => !line.trimStart().startsWith("#"))
+			.join("\n");
+		expect(commands).not.toMatch(RESET_FAILURE_STATE);
+		for (const id of [
+			"home-sidebar",
+			"settings-button",
+			"settings-screen",
+			"settings-section-diagnostics",
+		])
+			expect(commands).toContain(id);
+		expect(commands).toContain("Last error");
+		const driver = readFileSync(
+			new URL("./chrome-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const failure = driver.slice(
+			driver.indexOf("await shot(udid, lane, `failure-"),
+			driver.indexOf("existsSync(flowLog)"),
+		);
+		expect(failure).toContain("if (activityOnly)");
+		expect(failure.indexOf("failure-")).toBeLessThan(
+			failure.indexOf("diagnostics-"),
+		);
+		expect(failure).toContain('hierarchy(udid, lane, "failure-diagnostics")');
+	});
+	it("uses a valid busy wait frame and preserves the source fixture", () => {
+		const source = sessionProjectionSchema.parse(
+			JSON.parse(
+				readFileSync(
+					new URL(
+						"../../fixtures/relay/synthetic/sse-projection-every-entry-kind.json",
+						import.meta.url,
+					),
+					"utf8",
+				),
+			).data,
+		);
+		const before = JSON.stringify(source);
+		const frame = activityWaitProjection(source);
+		expect(sessionProjectionSchema.safeParse(frame).success).toBe(true);
+		expect(frame.streaming).toBe(true);
+		expect(frame.activity).toBe("Waiting for review");
+		expect(frame.activity_started_s).toBe(1470);
+		expect(frame.transcript.at(-1)).toMatchObject({
+			kind: "tool",
+			tool_name: "wait",
+			tool_state: "running",
+			intent: "Waiting for review",
+			final: false,
+		});
+		expect(JSON.stringify(source)).toBe(before);
+		expect(() => activityWaitProjection({ ...source, transcript: [] })).toThrow(
+			"activity fixture has no tool row",
+		);
+	});
+	it("keeps the original default matrix and scopes activity diagnosis to one phone", () => {
+		expect(chromeProofPlan(false).lanes).toBe(LANES);
+		expect(chromeProofPlan(false).frames).toBe(LANE_FRAMES);
+		const focused = chromeProofPlan(true);
+		expect(focused.lanes.map((lane) => lane.id)).toEqual(["d3-17pro-dark"]);
+		expect(focused.frames).toEqual(["session", "session-keyboard"]);
+	});
 	it("covers the device classes a hosted iOS runner can give, both themes, and both fallbacks", () => {
 		const ids = LANES.map((lane) => lane.id);
 		expect(new Set(ids).size).toBe(ids.length);

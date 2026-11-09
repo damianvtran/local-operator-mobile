@@ -181,8 +181,16 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  `--print`: the merged relay carries both sides' routes, so its digest is
 	 *  neither side's. The U-08 scene the proof is fed did not move. */
 
+	/* Re-pinned 2026-11-09 for PR #200's R3-1 admission repair, using
+	 * `node tools/audit/u08-content-pins.ts --print`: the current relay imports
+	 * request-journal.ts for opt-in native admission evidence. Both are required
+	 * members of the drivers' transitive instrument closure even when journaling
+	 * is off. This updates current instrument identity, not historical ORIGINAL_*
+	 * captures, rendered content, fixture inputs, or the coverage rules. */
 	"tools/mock-relay/relay.ts":
-		"4803690ed1fdec4c1ddc551f84d728549bf36906b19ebe0394f329c72cea292b",
+		"cba46d91fe2a0303783e73ee1e3fe223fd767459a6d9a76ae88a2673088bb617",
+	"tools/mock-relay/request-journal.ts":
+		"421574a40ff1aafe14185b8ebefad08982a80aa34f89f43c9e0b51c32b4e6c93",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -228,6 +236,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
+// Reprinted last for PR #200's activity/trace remediation: app/src now include
+// the activity placement, trace disclosure and its eight-locale label. This
+// identifies source only; native Stop-only root and remaining rendered flows
+// are still unverified. Instrument/input pins and historical hashes stay fixed.
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-11-07 for PR #187's round-2 remediation, with --print from
 	 * the staged tree. Only `src` moves: a resting voice outcome is no longer
@@ -586,7 +598,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "9f32ccb59ff78920a76f253f5d2ca670040c9aff5a5ae98811c4305ec0f4e5c1",
+	app: "54ec2885124eb08721149284dea6a7905753ec46df7f0dffcfbef03ef8e39719",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -1093,7 +1105,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	src: "7e253f8f3b2b26d8d39c6096a394d2d3128b49e6b046684c8c27055d51153792",
+	src: "5eaa1de0eb77b9acdd403d689f732d37573335d3d6542b7abf071a0fbe546f69",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

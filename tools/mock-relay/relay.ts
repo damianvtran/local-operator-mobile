@@ -59,6 +59,7 @@ import {
 	type NotificationsStore,
 } from "./notifications.ts";
 import { createProjectsStore, isProjectsRefusal } from "./projects.ts";
+import { createRequestJournal, type WireEvent } from "./request-journal.ts";
 import type {
 	FixtureOverride,
 	ScenarioWorld,
@@ -603,6 +604,8 @@ export interface RelayState {
 	/** All public requests held in memory, so a return proof can count actual
 	 * GETs. Off until a proof arms it: a full matrix must not grow this array. */
 	journalAll: boolean;
+	wireEvents: WireEvent[];
+	wirePhase: string;
 	/** Origins a mutation may come from; unset means the same-origin rule is off. */
 	allowedOrigins?: string[];
 	submittedAt: number | null;
@@ -811,6 +814,8 @@ export function createRelay(options: RelayOptions = {}) {
 		seq: 0,
 		recorded: [],
 		journalAll: false,
+		wireEvents: [],
+		wirePhase: "host-preflight",
 		failNotificationListReads: 0,
 		requestsServed: 0,
 		approvalsAnswered: 0,
@@ -3930,7 +3935,12 @@ export function createRelay(options: RelayOptions = {}) {
 
 	/* ------------------------------------------------------------ the server -- */
 
+	const wireJournal = createRequestJournal(state.wireEvents);
 	const server = createServer(async (req, res) => {
+		if (state.journalAll && !(req.url ?? "").startsWith("/__mock")) {
+			wireJournal.mark(state.wirePhase);
+			wireJournal.observe(req, res);
+		}
 		if (policyFixture)
 			res.once("finish", () => policyFixture.observeWire(req, res.statusCode));
 		if (policyFixture && !policyFixture.acceptHost(req)) {
