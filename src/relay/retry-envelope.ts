@@ -286,7 +286,7 @@ export class RetryEnvelopeStore {
 		images?: PromptImage[],
 		annotation?: { input_mode?: InputMode; input_path?: string },
 	): Promise<{ envelope: ContinuationEnvelope; reused: boolean }> {
-		const existing = await this.peek(sessionId);
+		const existing = await this.peek(sessionId, { requireReadable: true });
 		/* `reused` is the signal the composer needs: returning the stored envelope
 		 * is right for a double-tap or a retry, but it silently discards the `text`
 		 * this call was handed, so a caller that sends a genuinely NEW draft while an
@@ -313,12 +313,23 @@ export class RetryEnvelopeStore {
 
 	/** The envelope held for a session, or `null`. Expired, oversized and corrupt
 	 *  items are removed rather than returned. */
-	async peek(sessionId: string): Promise<ContinuationEnvelope | null> {
+	async peek(
+		sessionId: string,
+		options?: { requireReadable?: boolean },
+	): Promise<ContinuationEnvelope | null> {
 		const key = envelopeKey(sessionId);
 		let raw: string | null;
 		try {
 			raw = await this.store.get(key);
-		} catch {
+		} catch (cause) {
+			// A passive read can hide an unavailable item, but a new send MUST NOT
+			// interpret an unreadable slot as empty and overwrite an unresolved id.
+			if (options?.requireReadable) {
+				throw new EnvelopeStorageError(
+					"retry storage could not be read safely",
+					cause,
+				);
+			}
 			/* A read failure is indistinguishable from an empty slot for the caller,
 			 * and returning an envelope we could not verify would be worse. The item
 			 * is left in place: the next read may succeed. */

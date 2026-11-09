@@ -1097,7 +1097,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * allocation regressions. The original capture fixture's AST and unchanged
 	 * component markup remain byte-identical against 64c0d71d. Source admission
 	 * only: no new U-08 pixels, instrument, input or render-file changes. */
-	src: "a98dd0b1ddd60b5c85c7c0e83b84f5851f2b07155740ca55fae13506115d8865",
+	/* Re-printed 2026-11-09 for PR #199's U1 remediation: composer retry
+	 * preparation copy and feedback projection retain the original command's
+	 * uncertainty, with active/ended hook regressions and all eight catalogues.
+	 * Only the src root moves; no instrument, fixture or other pin changes.
+	 * Source admission only, NOT rendered U-08 or native storage evidence. */
+	/* Recomputed with --print at PR #201's merge of origin/main 953a00a7:
+	 * both approved source streams above survive unchanged. Their combined src
+	 * tree has neither parent's digest. This admits source identity only; it
+	 * does not refresh historical U-08 pixels, instrument or input evidence. */
+	src: "b6d902d4a44b881244cc86eb633b96d0c7fadc240fab8015559d1392b1b97e98",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
