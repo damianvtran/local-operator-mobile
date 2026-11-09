@@ -84,13 +84,57 @@ export const LANE_FRAMES = [
 	"sidebar",
 ] as const;
 
+/** A silent busy wait reproduces the operator's frame without private session data.
+ * Keep the actual producer shape (including a nonempty intent and known age):
+ * an absent label or withheld clock is not the failure this proof diagnoses. */
+export function activityWaitProjection<
+	T extends import("../../src/contracts/types.gen.ts").SessionProjection,
+>(projection: T): T {
+	const tool = projection.transcript.findLast((row) => row.kind === "tool");
+	if (!tool) throw new Error("activity fixture has no tool row");
+	return {
+		...projection,
+		streaming: true,
+		activity: "Waiting for review",
+		activity_started_s: 1470,
+		transcript: [
+			...projection.transcript,
+			{
+				...tool,
+				id: "activity-parity-wait",
+				tool_name: "wait",
+				tool_state: "running",
+				final: false,
+				elapsed_s: 1470,
+				intent: "Waiting for review",
+				text: "",
+				details: { args: { job_id: "synthetic-review-job" } },
+			},
+		],
+	};
+}
+
+/** Activity diagnosis spends one simulator on the operator's exact surface.
+ * The existing full matrix remains the default; this is not a full-E2E verdict. */
+export function chromeProofPlan(activityOnly: boolean) {
+	return activityOnly
+		? {
+				lanes: LANES.filter((lane) => lane.id === "d3-17pro-dark"),
+				frames: ["session", "session-keyboard"] as readonly string[],
+			}
+		: { lanes: LANES, frames: LANE_FRAMES as readonly string[] };
+}
+
 /** Assert a lane's frame set is complete for every build it ran, and list it. */
-export function collectChromeFrames(laneDir: string): string[] {
+export function collectChromeFrames(
+	laneDir: string,
+	frames: readonly string[] = LANE_FRAMES,
+): string[] {
 	const found: string[] = [];
 	for (const build of readdirSync(laneDir, { withFileTypes: true })) {
 		if (!build.isDirectory()) continue;
 		const names = readdirSync(join(laneDir, build.name));
-		for (const frame of LANE_FRAMES)
+		for (const frame of frames)
 			assert(
 				names.includes(`${frame}.png`),
 				`missing ${build.name}/${frame}.png`,

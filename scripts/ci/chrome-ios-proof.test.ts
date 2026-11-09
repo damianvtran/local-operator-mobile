@@ -1,14 +1,60 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { sessionProjectionSchema } from "@/contracts/schemas";
 import {
+	activityWaitProjection,
+	chromeProofPlan,
 	collectChromeFrames,
 	LANE_FRAMES,
 	LANES,
 } from "./chrome-ios-proof-contract.ts";
 
 describe("chrome proof plan (record §7)", () => {
+	it("uses a valid busy wait frame and preserves the source fixture", () => {
+		const source = sessionProjectionSchema.parse(
+			JSON.parse(
+				readFileSync(
+					new URL(
+						"../../fixtures/relay/synthetic/sse-projection-every-entry-kind.json",
+						import.meta.url,
+					),
+					"utf8",
+				),
+			).data,
+		);
+		const before = JSON.stringify(source);
+		const frame = activityWaitProjection(source);
+		expect(sessionProjectionSchema.safeParse(frame).success).toBe(true);
+		expect(frame.streaming).toBe(true);
+		expect(frame.activity).toBe("Waiting for review");
+		expect(frame.activity_started_s).toBe(1470);
+		expect(frame.transcript.at(-1)).toMatchObject({
+			kind: "tool",
+			tool_name: "wait",
+			tool_state: "running",
+			intent: "Waiting for review",
+			final: false,
+		});
+		expect(JSON.stringify(source)).toBe(before);
+		expect(() => activityWaitProjection({ ...source, transcript: [] })).toThrow(
+			"activity fixture has no tool row",
+		);
+	});
+	it("keeps the original default matrix and scopes activity diagnosis to one phone", () => {
+		expect(chromeProofPlan(false).lanes).toBe(LANES);
+		expect(chromeProofPlan(false).frames).toBe(LANE_FRAMES);
+		const focused = chromeProofPlan(true);
+		expect(focused.lanes.map((lane) => lane.id)).toEqual(["d3-17pro-dark"]);
+		expect(focused.frames).toEqual(["session", "session-keyboard"]);
+	});
 	it("covers the device classes a hosted iOS runner can give, both themes, and both fallbacks", () => {
 		const ids = LANES.map((lane) => lane.id);
 		expect(new Set(ids).size).toBe(ids.length);

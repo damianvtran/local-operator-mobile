@@ -74,6 +74,10 @@ on:
         description: "projects-create-ios-proof: expected sha256 of the artifact zip"
         type: string
         default: 080c27c8554638317baafbea91a163b049ead1ecdf7c3f78194d31e037c1c1fe
+      activity_only:
+        description: "chrome-ios-proof: one phone, busy wait + keyboard activity diagnosis only"
+        type: boolean
+        default: false
       # Inputs of chrome-ios-proof ONLY (the optional BEFORE build). Empty run id
       # means "no before pair": the proof then captures the after build alone.
       base_run_id:
@@ -1838,6 +1842,7 @@ jobs:
           PROOF_NATIVE_ARTIFACT_NAME: ${{ inputs.native_artifact_name }}
           PROOF_NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
           PROOF_BASE_ARTIFACT_SHA256: ${{ inputs.base_artifact_sha256 }}
+          PROOF_ACTIVITY_ONLY: ${{ inputs.activity_only }}
         run: node scripts/ci/chrome-ios-proof.ts
       - uses: actions/upload-artifact@v6
         if: always()
