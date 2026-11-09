@@ -86,6 +86,39 @@ describe("static asset and relay precedence", () => {
 		expect(requests).toEqual([]);
 	});
 
+	it.each([
+		["app.js", "payload.bin", "text/javascript; charset=utf-8"],
+		["mark.png", "image.bin", "image/png"],
+		["opaque.unknown", "source.js", "application/octet-stream"],
+	])(
+		"uses the requested extension for an in-root symlink: %s",
+		async (name, storageName, contentType) => {
+			local(`assets/${storageName}`, "actual target bytes");
+			symlinkSync(storageName, join(root, "assets", name));
+			const response = await fetch(`${server.url}/assets/${name}`);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("content-type")).toBe(contentType);
+			expect(await response.text()).toBe("actual target bytes");
+			expect(requests).toEqual([]);
+		},
+	);
+
+	it.each([
+		["assets/plain.js", "text/javascript; charset=utf-8"],
+		["assets/plain.unknown", "application/octet-stream"],
+		["docs/", "text/html; charset=utf-8"],
+		["deep/link", "text/html; charset=utf-8"],
+	])("retains MIME for ordinary files and fallbacks: %s", async (path, type) => {
+		local("assets/plain.js", "plain script");
+		local("assets/plain.unknown", "opaque bytes");
+		local("docs/index.html", "directory index");
+		local("index.html", "SPA index");
+		const response = await fetch(`${server.url}/${path}`);
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toBe(type);
+		expect(requests).toEqual([]);
+	});
+
 	it("proxies the same asset URL when the local file is absent", async () => {
 		const path = "/assets/assets/brand/mark.hash.png";
 		expect(await get(path)).toEqual({ status: 200, body: `relay:${path}` });

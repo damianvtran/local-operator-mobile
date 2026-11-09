@@ -294,6 +294,9 @@ export async function serveDir(
 			return;
 		}
 		let target = resolve(root, `.${pathname}`);
+		// Content type follows the requested filename, not a symlink's storage
+		// name. Canonicalization below is only for containment and file reads.
+		let logicalTarget = target;
 		// Traversal guard: a path that escapes the root is a 404, not a file read.
 		if (!isContained(target, root)) {
 			res.writeHead(404, { "content-type": "text/plain" });
@@ -327,10 +330,14 @@ export async function serveDir(
 			await forward(req, res, url);
 			return;
 		}
-		if (existsSync(target) && statSync(target).isDirectory())
+		if (existsSync(target) && statSync(target).isDirectory()) {
 			target = join(target, "index.html");
-		if (!existsSync(target) && extname(pathname) === "")
+			logicalTarget = join(logicalTarget, "index.html");
+		}
+		if (!existsSync(target) && extname(pathname) === "") {
 			target = join(root, "index.html");
+			logicalTarget = target;
+		}
 		if (!existsSync(target) || statSync(target).isDirectory()) {
 			res.writeHead(404, {
 				"content-type": "text/plain",
@@ -348,7 +355,7 @@ export async function serveDir(
 			return;
 		}
 		res.writeHead(200, {
-			"content-type": TYPES[extname(target)] ?? "application/octet-stream",
+			"content-type": TYPES[extname(logicalTarget)] ?? "application/octet-stream",
 			// A capture must never render a cached bundle from a previous run.
 			"cache-control": "no-store",
 			"access-control-allow-origin": "*",
