@@ -1,6 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import { countLabel, elapsedLabel, homeShortened } from "@/lib/format";
+import {
+	compactElapsedLabel,
+	countLabel,
+	elapsedLabel,
+	homeShortened,
+} from "@/lib/format";
+
+describe("compact working clock (relay parity)", () => {
+	it.each([
+		[0, "0s"],
+		[59, "59s"],
+		[60, "1m"],
+		[64, "1m4s"],
+		[1470, "24m30s"],
+		[3599, "59m59s"],
+		[3600, "1h"],
+		[86399, "23h59m"],
+		[86400, "1d"],
+		[99 * 86400 + 23 * 3600, "99d23h"],
+		[100 * 86400, "100d+"],
+		[Number.MAX_VALUE, "100d+"],
+	] as const)("formats %s into six unbroken cells", (seconds, label) => {
+		expect(compactElapsedLabel(seconds)).toBe(label);
+		expect(label.length).toBeLessThanOrEqual(6);
+		expect(label).not.toContain(" ");
+	});
+	it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])(
+		"withholds invalid age %s",
+		(seconds) => {
+			expect(compactElapsedLabel(seconds)).toBe("");
+		},
+	);
+});
 
 describe("homeShortened", () => {
 	it("shortens a path under the home directory", () => {

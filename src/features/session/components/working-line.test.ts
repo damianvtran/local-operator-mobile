@@ -15,7 +15,7 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
  */
 
 const probe = vi.hoisted(() => ({
-	/** Renders of the line's BODY: `elapsedLabel` is called once per render
+	/** Renders of the line's BODY: `compactElapsedLabel` is called once per render
 	 *  (accessible name) plus once for the clock, so this counts behind `memo`. */
 	bodies: 0,
 	presses: new Map<string, () => void>(),
@@ -117,9 +117,9 @@ vi.mock("@/lib/format", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("@/lib/format")>();
 	return {
 		...actual,
-		elapsedLabel: (seconds: number) => {
+		compactElapsedLabel: (seconds: number) => {
 			probe.bodies += 1;
-			return actual.elapsedLabel(seconds);
+			return actual.compactElapsedLabel(seconds);
 		},
 	};
 });

@@ -14,7 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { t } from "@/i18n";
-import { elapsedLabel } from "@/lib/format";
+import { compactElapsedLabel } from "@/lib/format";
 import { CONTROL } from "@/ui/a11y";
 import { useReducedMotion } from "@/ui/components";
 import { TEXT_END_CLASS } from "@/ui/direction";
@@ -189,7 +189,7 @@ const WorkingLineImpl = ({
 	// With a Stop the line is drawn even before a label exists: "a turn is alive"
 	// is the condition that must always have its Stop in reach (relay parity).
 	if (activity.length === 0 && onStop === undefined) return null;
-	const clock = elapsed === null ? "" : elapsedLabel(elapsed);
+	const clock = elapsed === null ? "" : compactElapsedLabel(elapsed);
 	// Before the daemon names an activity the line still says SOMETHING to a
 	// screen reader (review R1-5): an unnamed progressbar announces nothing.
 	const name =
@@ -232,8 +232,12 @@ const WorkingLineImpl = ({
 					>
 						{activity}
 					</Text>
+					{/* Six mono cells are 3.6em in JetBrains Mono. `ch` is not a
+					    native unit: Uniwind interprets 6ch as 6dp, clipping the
+					    clock. `em` follows the actual scaled text size on both
+					    platforms, and the compact formatter never exceeds it. */}
 					<Text
-						className={`w-[6ch] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
+						className={`w-[3.6em] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
 					>
 						{clock}
 					</Text>
@@ -269,7 +273,7 @@ const WorkingLineImpl = ({
 			    makes the label jump a few characters at each form change (`59m 59s` →
 			    `1h`), which reads as the screen twitching. */}
 			<Text
-				className={`w-[6ch] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
+				className={`w-[3.6em] shrink-0 ${TEXT_END_CLASS} font-mono text-mono-sm text-ink-dim tabular-nums`}
 			>
 				{clock}
 			</Text>

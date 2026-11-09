@@ -40,6 +40,29 @@ export const countLabel = (
 	plural = `${singular}s`,
 ): string => `${count} ${count === 1 ? singular : plural}`;
 
+/** The relay working line's bounded clock (`mobile/web/src/lib/format.ts`).
+ * Unlike the prose duration below, it fits six mono cells for every phase age.
+ * Keeping this separate avoids changing existing tool/header duration copy. */
+export const compactElapsedLabel = (seconds: number): string => {
+	if (!Number.isFinite(seconds) || seconds < 0) return "";
+	const total = Math.trunc(seconds);
+	if (total < 60) return `${total}s`;
+	if (total < 3600) {
+		const minutes = Math.floor(total / 60);
+		const rest = total % 60;
+		return rest ? `${minutes}m${rest}s` : `${minutes}m`;
+	}
+	if (total < 86400) {
+		const hours = Math.floor(total / 3600);
+		const minutes = Math.floor((total % 3600) / 60);
+		return minutes ? `${hours}h${minutes}m` : `${hours}h`;
+	}
+	const days = Math.floor(total / 86400);
+	if (days > 99) return "100d+";
+	const hours = Math.floor((total % 86400) / 3600);
+	return hours ? `${days}d${hours}h` : `${days}d`;
+};
+
 /**
  * Elapsed time in the register the transcript uses: `0s`, `59s`, `1m 04s`,
  * `2h 07m`.
