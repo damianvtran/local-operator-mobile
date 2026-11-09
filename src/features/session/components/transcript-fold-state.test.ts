@@ -332,8 +332,25 @@ describe("reasoning and harness metadata", () => {
 		expect(drawn()).toContain("Thinking");
 		expect(drawn()).not.toContain("entry");
 		expect(drawn()).not.toContain(HIDDEN);
-		await press("Thinking: Checking the result");
+		expect(drawn()).not.toContain("Checking the result");
+		await press("Thinking");
 		expect(drawn()).toContain(HIDDEN);
+		await press("Thinking");
+		entries = [
+			row("reasoning", {
+				kind: "reasoning",
+				text: `Checking the result\n${HIDDEN}\nNew streaming fragment`,
+			}),
+		];
+		await render();
+		expect(drawn()).not.toContain("Checking the result");
+		expect(drawn()).not.toContain("New streaming fragment");
+		await press("Thinking");
+		expect(drawn()).toContain("New streaming fragment");
+		session = "different-reasoning-session";
+		expect(await firstFrame(null)).not.toContain("Checking the result");
+		await render();
+		expect(drawn()).not.toContain(HIDDEN);
 	});
 
 	it("filters typed metadata before planning but retains literal user and peer quotes", async () => {

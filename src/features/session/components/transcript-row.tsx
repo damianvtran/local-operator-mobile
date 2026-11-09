@@ -248,8 +248,10 @@ const TranscriptRowImpl = ({
 					glyph="◇"
 					glyphClass="text-ink-dim"
 					label="Thinking"
-					summary={firstLine(entry.text)}
-					accessibilityLabel={`Thinking: ${firstLine(entry.text)}`}
+					// Even the preview is reasoning content: none is painted or
+					// announced until the reader explicitly opens this trace.
+					summary=""
+					accessibilityLabel="Thinking"
 					{...fold}
 				>
 					<Text className="text-body-read text-ink-muted">{entry.text}</Text>
