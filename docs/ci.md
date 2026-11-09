@@ -828,3 +828,55 @@ scenario.
 - **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=theme-ios-proof -f native_run_id=<run> -f native_artifact_name=ios-simulator -f native_artifact_sha256=<sha256>`.
 - **Output:** artifact `theme-ios-<run id>`. Simulator evidence for those frames
   only; reviewers must view the PNGs.
+
+## The checkpoint rail on a native surface
+
+The transcript's checkpoint rail (`src/features/session/components/checkpoint-rail.tsx`)
+has a component-level suite and no visual evidence, and it is the one surface in
+this repository where the web audit cannot help: the rail is summoned by scroll
+**speed** (`transcript-presence.ts`, `RAIL_FAST_PT_PER_MS`), and react-native-web
+0.21 emits only `onScroll` — never a drag or a momentum event — so every web
+offset reads as a scroll the app made and the rail is never raised. On web the
+component is structurally unable to appear. `e2e.yml`'s `maestro-android` job
+therefore captures it on the emulator, on the APK the job has just built:
+`scripts/ci/rail-android-capture.sh` runs last, after the tag flows.
+
+- **The two worlds:** the mock relay's `checkpoints-deep` and
+  `checkpoints-building` scenarios, one relay restart each. `deep` is the control
+  — 100 ticks over a 50-turn conversation, every mark loaded by the device.
+  `building` is the same rail under a pulsing liveness mark.
+- **The gesture:** `e2e/maestro/rail-paint/fling.yaml`, ten swipes of 130 ms over
+  40 % of the screen (~2 pt/ms, twice the gate), alternating direction so the
+  finite transcript never clamps and every swipe is a real scroll. It runs as a
+  **second** `maestro test` invocation with no `launchApp`, which is what leaves
+  the capture loop a "pre" window on a settled list to use as the rail-down
+  control.
+- **The capture:** `adb exec-out screencap -p` in a loop beside the flow, one
+  frame at a time, wall time recorded per frame. Maestro's own `takeScreenshot`
+  would not do: it is synchronous with the flow that is timing the gesture, so its
+  latency would be the thing under test. The loop is capped at 120 frames per
+  scenario (~60 s at ~0.5 s per capture, ~96 MB) so a flag file left behind by an
+  error path cannot fill the runner.
+- **The measurement:** `scripts/ci/rail-paint-proof.ts` counts non-background
+  pixels in the rail's own column — 7–15 pt in from the right edge, derived from
+  the device's `wm size`/`wm density` — for the inkiest frame during the fling and
+  the inkiest frame before it. The band is content-free by construction: the
+  transcript's text starts 16 pt in (`px-4`), and the outer and inner 10 % of rows
+  are dropped to keep the 24 pt edge fades out of it. Nothing else in the app
+  paints there, so a non-background pixel in the band is a mark.
+- **What is gated, and what is only reported:** the step fails on the two
+  structural claims — the rail paints during a fast fling, and `building` and
+  `deep` paint different band content. It does **not** gate the screencap latency
+  or the pixel counts, which are printed and uploaded until two independent runs
+  agree on them; gating a number nobody has measured is how a nightly becomes a
+  coin flip. `report.json` and the frames are artifact `rail-paint-proof`.
+- **If a capture cannot land inside the window:** the rail is up for
+  `RAIL_LINGER_MS` 1000 + `RAIL_FADE_MS` 200 ms after the last gesture, and a
+  burst of ten swipes extends that. If the recorded latency ever exceeds it, the
+  fallback is `adb shell screenrecord` over the burst plus frame extraction — the
+  script logs whether `ffmpeg` is on the runner, because a decoder that is not
+  installed cannot be a fallback.
+- **What stays unproven:** whether an 8 pt glyph and a 5 pt dash are *legible*,
+  and whether the column clears iOS's scroll indicator. Those are a designer's
+  reading of the same frames, not a pixel count; the iOS lane has no equivalent
+  capture yet.

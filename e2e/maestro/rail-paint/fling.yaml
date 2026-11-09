@@ -1,0 +1,69 @@
+# The gesture the rail exists for: a FAST fling, repeated.
+#
+# NO launchApp, AND THAT IS THE DESIGN. `session-rail-paint.yaml` has already left
+# the app on the deep conversation; this flow is a second `maestro test`
+# invocation against the same live app, which is what lets the capture script tag
+# the frames before this process started as "pre" — a settled list with no gesture
+# touching it, the rail-down control the measurement needs. Relaunching here would
+# destroy exactly the state the comparison is made of.
+#
+# WHY 130 ms AND WHY ALTERNATING. The rail's gate is `RAIL_FAST_PT_PER_MS` = 1
+# pt/ms (`transcript-presence.ts`). Each swipe below travels 40 % of a 640 pt
+# screen — 256 pt — in 130 ms, i.e. ~2 pt/ms, which is twice the gate. The
+# repository's only other swipes are 400 ms short drags
+# (`tags/session-tags.yaml`) at ~0.1 pt/ms, an order of magnitude under it.
+#
+# The directions alternate because the transcript is finite: ten swipes the same
+# way would reach the top of a 100-entry conversation in about five and then move
+# nothing, and a clamped list produces no scroll — which would read as "the rail
+# did not paint" for a reason that has nothing to do with the rail. Alternating
+# returns to roughly the same offset each pair, so every swipe in the burst is a
+# real gesture over real content.
+#
+# Ten swipes is a ~2.5 s of gesture inside a ~1.2 s rail window (1000 ms linger +
+# 200 ms fade), repeated: the burst is long enough that a capture that takes half
+# a second has several chances to land while the rail is up, and short enough that
+# the whole proof costs seconds of the nightly lane.
+appId: ${APP_ID}
+name: "Checkpoint rail — fast fling burst"
+---
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 30%"
+    duration: 130
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 70%"
+    duration: 130
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 30%"
+    duration: 130
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 70%"
+    duration: 130
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 30%"
+    duration: 130
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 70%"
+    duration: 130
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 30%"
+    duration: 130
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 70%"
+    duration: 130
+- swipe:
+    start: "50%, 70%"
+    end: "50%, 30%"
+    duration: 130
+- swipe:
+    start: "50%, 30%"
+    end: "50%, 70%"
+    duration: 130
