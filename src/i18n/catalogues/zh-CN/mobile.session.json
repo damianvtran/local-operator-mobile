@@ -31,5 +31,12 @@
 	"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",
 	"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请检查此手机的可用空间，然后重试。",
 	"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请检查此手机的可用空间，然后重试之前的指令。你当前的草稿尚未发送。",
-	"mobile.session.reasoning_disclosure": "思考"
+	"mobile.session.reasoning_disclosure": "思考",
+	"mobile.session.history.load": "加载更早的消息",
+	"mobile.session.history.loading": "正在加载更早的消息…",
+	"mobile.session.history.failed": "无法加载更早的消息，请重试。",
+	"mobile.session.history.stalled": "历史记录未向前加载。请重试或重新打开此对话。",
+	"mobile.session.history.beginning": "已保留消息的起点",
+	"mobile.session.history.empty": "没有保留的消息",
+	"mobile.session.history.gap": "断开连接期间错过了部分消息。请重新打开此对话以重新加载历史记录。"
 }

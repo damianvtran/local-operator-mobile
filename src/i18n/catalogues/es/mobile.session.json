@@ -31,5 +31,12 @@
 	"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
 	"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Comprueba el espacio libre en este teléfono y vuelve a intentarlo.",
 	"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Comprueba el espacio libre de este teléfono y vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
-	"mobile.session.reasoning_disclosure": "Razonamiento"
+	"mobile.session.reasoning_disclosure": "Razonamiento",
+	"mobile.session.history.load": "Cargar mensajes anteriores",
+	"mobile.session.history.loading": "Cargando mensajes anteriores…",
+	"mobile.session.history.failed": "No se pudieron cargar los mensajes anteriores. Vuelve a intentarlo.",
+	"mobile.session.history.stalled": "El historial no avanzó. Vuelve a intentarlo o abre de nuevo esta conversación.",
+	"mobile.session.history.beginning": "Inicio de los mensajes conservados",
+	"mobile.session.history.empty": "No hay mensajes conservados",
+	"mobile.session.history.gap": "Faltan algunos mensajes recibidos durante la desconexión. Abre de nuevo esta conversación para volver a cargar su historial."
 }

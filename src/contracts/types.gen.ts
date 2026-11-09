@@ -787,6 +787,8 @@ export interface SessionTagsResponse {
 export interface HistoryResponse {
 	entries: TranscriptEntry[];
 	has_more: boolean;
+	/** Existing relay archive/decode failure; never an empty retained beginning. */
+	unavailable?: string;
 }
 
 export interface SlashCommand {

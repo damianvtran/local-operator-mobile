@@ -130,5 +130,33 @@
 	"mobile.session.reasoning_disclosure": {
 		"role": "button",
 		"note": "Disclosure label for an assistant reasoning trace, shared by its visible heading and accessibility label. Names the reasoning content, not a live progress status: the same label remains after the turn ends. No preview of reasoning is shown until explicitly expanded. Short noun phrase, no full stop."
+	},
+	"mobile.session.history.load": {
+		"role": "button",
+		"note": "Button loads one older durable transcript page, never the whole conversation."
+	},
+	"mobile.session.history.loading": {
+		"role": "status",
+		"note": "Busy state while reading one earlier transcript page."
+	},
+	"mobile.session.history.failed": {
+		"role": "status",
+		"note": "A transcript page failed or the server explicitly said unavailable; existing visible messages remain."
+	},
+	"mobile.session.history.stalled": {
+		"role": "status",
+		"note": "The server returned a cursor that did not advance; automatic reads stop, manual retry or reopening is needed."
+	},
+	"mobile.session.history.beginning": {
+		"role": "status",
+		"note": "A successful page says no earlier retained rows remain; not a claim that deleted messages exist."
+	},
+	"mobile.session.history.empty": {
+		"role": "status",
+		"note": "A successful empty first transcript page; not used for failures or unavailable history."
+	},
+	"mobile.session.history.gap": {
+		"role": "status",
+		"note": "Two capped server tails have no non-opener row in common. Messages may have arrived unseen; existing oldest-cursor paging cannot fill this newer hole. Reopening allocates a new history reader from the newest tail. Not a claim that missed messages were deleted."
 	}
 }

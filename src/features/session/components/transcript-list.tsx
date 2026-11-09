@@ -11,6 +11,8 @@ import {
 	type LayoutChangeEvent,
 	type NativeScrollEvent,
 	type NativeSyntheticEvent,
+	Platform,
+	Text,
 	View,
 	type ViewStyle,
 } from "react-native";
@@ -29,6 +31,7 @@ import {
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
+import { historyTopReached } from "@/features/session/history-scroll";
 import { visibleTranscriptEntries } from "@/features/session/projection";
 import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
@@ -54,7 +57,14 @@ import {
 	tailStartIndex,
 	windowPolicy,
 } from "@/features/session/windowing";
-import { completionAnchorId, transcriptRowId } from "@/ui/a11y";
+import { t } from "@/i18n";
+import {
+	CONTROL,
+	completionAnchorId,
+	REGION,
+	transcriptRowId,
+} from "@/ui/a11y";
+import { Button } from "@/ui/components/button";
 import { cx } from "@/ui/variants";
 
 /**
@@ -102,6 +112,11 @@ import { cx } from "@/ui/variants";
 export type TranscriptListProps = {
 	sessionId: string;
 	entries: TranscriptEntry[];
+	loadOlder?: () => Promise<void>;
+	loadingOlder?: boolean;
+	hasOlder?: boolean;
+	historyGap?: boolean;
+	historyError?: string | null;
 	/** The row that carries `transcript-streaming`, or `null` when settled. */
 	streamingRowId: string | null;
 	/** Resolves an attachment's bytes. */
@@ -242,10 +257,16 @@ interface ScrollPlace {
 }
 
 const scrollPlaces = new Map<string, ScrollPlace>();
+const HISTORY_ANCHOR = { minIndexForVisible: 1 };
 
 export const TranscriptList = ({
 	sessionId,
 	entries,
+	loadOlder,
+	loadingOlder = false,
+	hasOlder = false,
+	historyGap = false,
+	historyError = null,
 	streamingRowId,
 	loadImage,
 	onOpenAgent,
@@ -266,6 +287,52 @@ export const TranscriptList = ({
 	testID,
 }: TranscriptListProps) => {
 	const listRef = useRef<FlatList<TranscriptItem>>(null);
+	const webRows = useRef(new Map<string, View>());
+	const webAnchor = useRef<{
+		node: HTMLElement;
+		top: number;
+		scroll: HTMLElement;
+		offset: number;
+	} | null>(null);
+	const restoreWebAnchor = useCallback(() => {
+		const anchor = webAnchor.current;
+		if (!anchor?.node.isConnected) return;
+		const delta = anchor.node.getBoundingClientRect().top - anchor.top;
+		if (delta !== 0) anchor.scroll.scrollTop += delta;
+		anchor.offset = anchor.scroll.scrollTop;
+	}, []);
+	const requestOlder = useCallback(() => {
+		if (!loadOlder || loadingOlder || !hasOlder) return;
+		// Native ScrollView preserves its visible child. RN-web lacks that prop:
+		// keep the actual mounted node's screen position, never estimated heights
+		// or total content growth (which also includes concurrent tail appends).
+		if (Platform.OS === "web") {
+			const scroll =
+				listRef.current?.getNativeScrollRef() as unknown as HTMLElement | null;
+			if (scroll?.getBoundingClientRect) {
+				const top = scroll.getBoundingClientRect().top;
+				const nodes = [...webRows.current.values()] as unknown as HTMLElement[];
+				const node = nodes
+					.filter(
+						(node) =>
+							node.isConnected && node.getBoundingClientRect().bottom > top,
+					)
+					.sort(
+						(a, b) =>
+							a.getBoundingClientRect().top - b.getBoundingClientRect().top,
+					)[0];
+				if (node)
+					webAnchor.current = {
+						node,
+						top: node.getBoundingClientRect().top,
+						scroll,
+						offset: scroll.scrollTop,
+					};
+			}
+		}
+		atTail.current = false;
+		void loadOlder();
+	}, [loadOlder, loadingOlder, hasOlder]);
 	/** The capture hook's anchor: `top` starts the list unfollowed so a still can
 	 *  show the conversation's shape (see `scroll-hook.ts` for why the app exposes
 	 *  one position). Read once — it is a statement about the page. */
@@ -622,9 +689,10 @@ export const TranscriptList = ({
 			heightsRef.current.set(id, height);
 			// Invalidates the cached offset table (`getItemLayout`'s, review NIT-2).
 			heightsVersionRef.current += 1;
+			restoreWebAnchor();
 			scheduleRecompute();
 		},
-		[scheduleRecompute],
+		[scheduleRecompute, restoreWebAnchor],
 	);
 
 	/* A session switch starts the geometry over: heights belong to the rows that
@@ -874,6 +942,20 @@ export const TranscriptList = ({
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
 			const { contentOffset, contentSize, layoutMeasurement } =
 				event.nativeEvent;
+			const previousOffset = factsRef.current.offsetY;
+			if (webAnchor.current && contentOffset.y !== webAnchor.current.offset)
+				webAnchor.current = null;
+			// An actual transition to the top, not mount/layout/onStartReached.
+			// One edge loads one page; remaining at the top cannot drain history.
+			if (
+				historyTopReached(
+					previousOffset,
+					contentOffset.y,
+					frozenInitialIndexRef.current?.session === sessionId,
+					historyError !== null,
+				)
+			)
+				requestOlder();
 			const distance =
 				contentSize.height - contentOffset.y - layoutMeasurement.height;
 			const atEnd = nextAtTail({
@@ -910,13 +992,14 @@ export const TranscriptList = ({
 			driveFades();
 			recompute();
 		},
-		[driveFades, presence, sessionId, recompute],
+		[driveFades, presence, sessionId, recompute, requestOlder, historyError],
 	);
 
 	/* A HELD THUMB KEEPS THE RAIL UP however long the reader holds still — the
 	 *  pointer analogue of a desktop scrollbar's thumb staying under the cursor,
 	 *  and the "or something like that" half of the operator's request. */
 	const onScrollBeginDrag = useCallback(() => {
+		webAnchor.current = null;
 		presence?.setHeld(true);
 	}, [presence]);
 	const onScrollEndDrag = useCallback(() => {
@@ -1150,6 +1233,10 @@ export const TranscriptList = ({
 			[driveFades, sessionId, recompute, scrollAnchor, pinTail],
 		);
 
+	useLayoutEffect(() => {
+		restoreWebAnchor();
+	});
+
 	const renderItem = useCallback(
 		({ item }: { item: TranscriptItem }) => {
 			/* The supplement block's seat: under the FINAL answer, inside the row's
@@ -1168,6 +1255,10 @@ export const TranscriptList = ({
 				 * anchor geometry (which walks the RENDERED items) must know its
 				 * height. */
 				<View
+					ref={(node) => {
+						if (node) webRows.current.set(item.id, node);
+						else webRows.current.delete(item.id);
+					}}
 					onLayout={(event) =>
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
@@ -1184,6 +1275,10 @@ export const TranscriptList = ({
 				/* The group bar is measured like the turn bar, for the same reason:
 				 * the anchor geometry walks the RENDERED items. */
 				<View
+					ref={(node) => {
+						if (node) webRows.current.set(item.id, node);
+						else webRows.current.delete(item.id);
+					}}
 					onLayout={(event) =>
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
@@ -1202,6 +1297,10 @@ export const TranscriptList = ({
 				 * except the find wash, which is a background on THIS box so it spans
 				 * the row's full bleed without touching any kind's own treatment. */
 				<View
+					ref={(node) => {
+						if (node) webRows.current.set(item.id, node);
+						else webRows.current.delete(item.id);
+					}}
 					onLayout={(event) =>
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
@@ -1295,10 +1394,68 @@ export const TranscriptList = ({
 				 * Zero-size and hidden from the accessibility tree: it is an anchor, and a
 				 * screen reader should not announce it. */}
 				<View testID={transcriptRowId(sessionId)} aria-hidden />
+				{loadOlder ? (
+					<View className="px-4 py-2 gap-2" testID={REGION.transcriptHistory}>
+						{historyGap ? (
+							<Text
+								accessibilityLiveRegion="polite"
+								className="text-body-sm text-ink-muted"
+							>
+								{t("mobile.session.history.gap")}
+							</Text>
+						) : null}
+						{historyError ? (
+							<Text
+								accessibilityLiveRegion="polite"
+								className="text-body-sm text-ink-muted"
+							>
+								{t(
+									historyError === "stalled"
+										? "mobile.session.history.stalled"
+										: "mobile.session.history.failed",
+								)}
+							</Text>
+						) : null}
+						{hasOlder || historyError ? (
+							<Button
+								label={t(
+									loadingOlder
+										? "mobile.session.history.loading"
+										: historyError
+											? "mobile.common.try_again"
+											: "mobile.session.history.load",
+								)}
+								onPress={requestOlder}
+								loading={loadingOlder}
+								disabled={loadingOlder}
+								variant="outline"
+								testID={CONTROL.transcriptLoadEarlier}
+							/>
+						) : historyGap ? null : (
+							<Text className="text-body-sm text-ink-muted">
+								{t(
+									entries.length === 0
+										? "mobile.session.history.empty"
+										: "mobile.session.history.beginning",
+								)}
+							</Text>
+						)}
+					</View>
+				) : null}
 				{header}
 			</>
 		),
-		[header, sessionId],
+		[
+			header,
+			sessionId,
+			loadOlder,
+			hasOlder,
+			historyError,
+			historyGap,
+			loadingOlder,
+			requestOlder,
+			entries.length,
+		],
 	);
 	/* One shape whether or not anything is pending, so the notice keeps its
 	 *  child index and is never remounted when the first echo appears. */
@@ -1321,6 +1478,7 @@ export const TranscriptList = ({
 				keyExtractor={keyOfItem}
 				renderItem={renderItem}
 				onLayout={onLayout}
+				maintainVisibleContentPosition={loadOlder ? HISTORY_ANCHOR : undefined}
 				onScroll={onScroll}
 				onScrollBeginDrag={onScrollBeginDrag}
 				onScrollEndDrag={onScrollEndDrag}

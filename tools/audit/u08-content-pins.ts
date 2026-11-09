@@ -591,7 +591,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "3afe51e7471b46ebb3846469248eb62c20d00a58ca2b0091a9e0273dc3059d6e",
+	app: "420c0e4b0644521109e6c8d3b533913532e0f7cb03a8cf9e4bceb6ec82571509",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1134,7 +1134,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Recomputed with --print after merging approved #108 (d9073ebc): the
 	 * combined src tree has neither parent's digest. Source admission only;
 	 * historical pixels, native visibility and compact D3 remain unproved. */
-	src: "785d4c22b6fb5baed1785b9d996fb9b29aaece7b61cfd3a33c7d9405569423b1",
+	// Native history paging: staged LIVE source admission only; historical
+	// rendered frames, native anchor and interaction proof are not refreshed.
+	src: "85cbbaf2d967d5d49c248dc487c74900fb6f415820c7669cb0e80e322f09819e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

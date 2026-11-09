@@ -844,6 +844,11 @@ export default function Session() {
 					testID={SURFACE.sessionTranscript}
 					sessionId={sessionId}
 					entries={runtime.entries}
+					loadOlder={runtime.loadOlder}
+					loadingOlder={runtime.loadingOlder}
+					hasOlder={runtime.hasOlder}
+					historyError={runtime.historyError}
+					historyGap={runtime.historyGap}
 					footer={transcriptNotice}
 					pending={pendingRows}
 					streamingRowId={runtime.streamingRowId}

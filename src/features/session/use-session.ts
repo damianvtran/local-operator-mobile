@@ -35,9 +35,6 @@ import {
 	INITIAL_STREAM_FACTS,
 	loadAttachments,
 	loadVideoSource,
-	mergeTranscript,
-	olderThanLoaded,
-	rowIdentity,
 	type StreamFacts,
 	sessions,
 } from "@/features/session/runtime";
@@ -48,6 +45,7 @@ import {
 import type { ImageBytes, RelayError } from "@/relay";
 import { readEntry } from "@/state";
 import { isUsable } from "@/state/connection-store";
+import { HistoryWindow } from "./history-window";
 import {
 	type ProjectionOwner,
 	sameProjectionOwner,
@@ -75,6 +73,11 @@ export interface SessionRuntime {
 	content: ReturnType<typeof sessionContent>;
 	projection: ReturnType<typeof readEntry>["projection"];
 	entries: TranscriptEntry[];
+	loadOlder: () => Promise<void>;
+	loadingOlder: boolean;
+	historyError: string | null;
+	hasOlder: boolean;
+	historyGap: boolean;
 	streaming: boolean;
 	streamingRowId: string | null;
 	connection: ConnectionView;
@@ -231,27 +234,25 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			dropGraceTimer.current = null;
 		};
 	}, [facts.droppedSinceFrame, setDroppedGrace]);
-	const [history, setHistory] = useSessionValue<TranscriptEntry[]>(
-		identity,
-		[],
-	);
-	/** Whether the last successful page read said the conversation runs deeper
-	 *  than the page's oldest row. The find caveat reads it together with the
-	 *  page's own rows (`history`), so the facts move with every successful page
-	 *  — a reload that finds the transcript complete must retract the claim
-	 *  rather than keep it stale. A failed read leaves this false — and it is
-	 *  `historyRead` beside it, not this default, that keeps the failure from
-	 *  reading as completeness. */
-	const [pageHasMore, setPageHasMore] = useSessionValue(identity, false);
-	/** The last settled history read: `"ok"` once a page has landed, `"failed"`
-	 *  when the most recent attempt came back with nothing, `"unknown"` before
-	 *  any attempt settles (in flight, or no endpoints to read from). The find
-	 *  caveat's first fact: only `"ok"` may back its silence, because a capped
-	 *  projection (≤80 rows) cannot be told from a whole conversation without
-	 *  a read (reviewer MAJOR-2 residual / QA Q63-7). */
-	const [historyRead, setHistoryRead] = useSessionValue<
-		"ok" | "failed" | "unknown"
-	>(identity, "unknown");
+	const [, historyChanged] = useState(0);
+	// Endpoint and owner changes allocate a new reader synchronously, so an old
+	// account/session's cached rows cannot paint before effect cleanup runs.
+	const historyWindow = useMemo(() => {
+		const owner = identity;
+		return new HistoryWindow(
+			(before) => {
+				if (!endpoints || !sameProjectionOwner(owner, currentIdentity.current))
+					return Promise.reject(new Error("History is unavailable."));
+				return endpoints.history(sessionId, { before });
+			},
+			() => historyChanged((revision) => revision + 1),
+		);
+	}, [endpoints, identity, sessionId]);
+	useEffect(() => {
+		historyWindow.activate();
+		return () => historyWindow.retire();
+	}, [historyWindow]);
+	const loadOlder = useCallback(() => historyWindow.load(), [historyWindow]);
 	const [commands, setCommands] = useSessionValue<SlashCommand[]>(identity, []);
 	const [models, setModels] = useSessionValue<ModelEntry[]>(identity, []);
 	const [error, setError] = useSessionValue<RelayError | null>(identity, null);
@@ -481,30 +482,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				return;
 			let cancelled = false;
 			setLoading(true);
-			/* The history read records its OUTCOME as well as its result: a failure is
-			 * swallowed here (the screen's connection state owns the sentence), but it
-			 * must not read as completeness for the find caveat — a device that cannot
-			 * read the page cannot know whether a capped window holds a whole
-			 * conversation (reviewer MAJOR-2 residual / QA Q63-7). */
-			const readHistory = endpoints.history(sessionId).then(
-				(page) => {
-					if (cancelled) return;
-					setHistory(page.entries);
-					// The find caveat reads this, so it moves with every successful page —
-					// a reload that finds the transcript complete must retract the claim
-					// rather than keep it stale. It describes the PAGE; where the page and
-					// the held rows must agree is `olderThanLoaded`.
-					setPageHasMore(page.has_more);
-					setHistoryRead("ok");
-				},
-				() => {
-					if (!cancelled) setHistoryRead("failed");
-				},
-			);
+			const readHistory = historyWindow.load(true);
 			Promise.all([
-				// One page of history, always: the projection's tail is capped at 80 rows,
-				// so a long conversation needs the page beneath it even when the stream is
-				// healthy.
+				// Refresh the newest durable page without discarding paged history.
 				readHistory,
 				endpoints.commands().catch(() => null),
 				endpoints.models().catch(() => null),
@@ -531,9 +511,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		sessionId,
 		identity,
 		setLoading,
-		setHistory,
-		setPageHasMore,
-		setHistoryRead,
+		historyWindow,
 		setCommands,
 		setModels,
 	]);
@@ -547,76 +525,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		? cachedEntry
 		: readEntry({ entries: {} }, sessionId);
 	const projection = entry.projection;
-	const ownedHistory = ownsProjection ? history : EMPTY_HISTORY;
-	/* ONE list, from the first paint, out of both sources: the page's rows stay
-	 * held when the live frame lands, so the open paints its page and then GROWS
-	 * with the frame instead of being replaced by it (`mergeTranscript`). The
-	 * `holeBelowPage` fact rides along because the merge is the only place that
-	 * can see it, and the find caveat needs it (see `olderThanLoaded`). */
-	const merged = useMemo(
-		() => mergeTranscript(projection, ownedHistory),
-		[projection, ownedHistory],
-	);
-	const entries = merged.rows;
-	/* The frame watch behind the find caveat's third proof (reviewer MAJOR-2):
-	 * a row held in an earlier frame and gone from this one left the ≤80-row
-	 * tail window — the frames only append or slide, so it still exists
-	 * conversation-side and cannot be searched. This is the one channel that
-	 * needs no history page at all (the failed-read case), and it is sticky on
-	 * purpose: nothing re-enters the window, so a claim that could flicker off
-	 * would be a lie twice. The PREVIOUS frame lives in a ref; only the verdict
-	 * is state.
-	 *
-	 * BY IDENTITY, NOT BY ID (review round 1, BLOCKER-1 secondary). The two
-	 * folds disagree about a tool row's id (`rowIdentity`), so a later frame
-	 * that rebuilds a row under the page's naming swaps `tc-call-x` for
-	 * `<message>:call-x` — the SAME row, re-labelled. Comparing raw ids read
-	 * that as a slide and made the caveat claim a row had left the window when
-	 * only its label had changed. Identity is what the claim is about. */
-	const heldIdsRef = useRef<{
-		owner: ProjectionOwner;
-		ids: Set<string>;
-	} | null>(null);
-	const [slidUnderWindow, setSlidUnderWindow] = useSessionValue(
-		identity,
-		false,
-	);
-	useEffect(() => {
-		const ids = new Set(entries.map(rowIdentity));
-		const before = heldIdsRef.current;
-		heldIdsRef.current = { owner: identity, ids };
-		if (before === null) return;
-		if (!sameProjectionOwner(before.owner, identity)) {
-			// Another conversation's rows are not this one's: start clean.
-			setSlidUnderWindow(false);
-			return;
-		}
-		for (const id of before.ids) {
-			if (!ids.has(id)) {
-				setSlidUnderWindow(true);
-				return;
-			}
-		}
-	}, [entries, identity, setSlidUnderWindow]);
-	const olderRowClaim = useMemo(
-		() =>
-			olderThanLoaded({
-				hasMore: pageHasMore,
-				read: historyRead,
-				page: ownedHistory,
-				entries,
-				slid: slidUnderWindow,
-				holeBelowPage: merged.holeBelowPage,
-			}),
-		[
-			pageHasMore,
-			historyRead,
-			ownedHistory,
-			entries,
-			slidUnderWindow,
-			merged.holeBelowPage,
-		],
-	);
+	if (ownsProjection) historyWindow.accept(projection);
+	const entries = ownsProjection ? historyWindow.visibleRows : EMPTY_HISTORY;
+	const olderRowClaim =
+		historyWindow.read !== "ok" ||
+		historyWindow.hasMore ||
+		historyWindow.hasGap;
 
 	/* The phone's link as the header dot reads it — computed once, here, so the
 	 *  dot and the connection banner read the same facts (`healthLink`). */
@@ -838,6 +752,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		models: ownsProjection ? models : [],
 		loading,
 		olderThanLoaded: olderRowClaim,
+		loadOlder,
+		loadingOlder: historyWindow.loading,
+		historyError: historyWindow.error,
+		hasOlder: historyWindow.hasMore,
+		historyGap: historyWindow.hasGap,
 		// The shared route can be refused by its catalogue stream before this
 		// session's stream reports an error. Publish the same typed failure the
 		// banner already uses, so screen/composer facts cannot claim a healthy

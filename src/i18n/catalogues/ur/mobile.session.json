@@ -31,5 +31,12 @@
 	"mobile.session.pending_echo.earlier_went_through": "آپ کا پچھلا پیغام چلا گیا۔ نیچے والا متن ابھی نہیں بھیجا گیا۔",
 	"mobile.session.composer.not_sent_storage": "نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ اس فون میں خالی جگہ دیکھیں، پھر دوبارہ کوشش کریں۔",
 	"mobile.session.composer.retry_not_sent_storage": "دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ اس فون پر خالی جگہ چیک کریں، پھر پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔",
-	"mobile.session.reasoning_disclosure": "سوچ بچار"
+	"mobile.session.reasoning_disclosure": "سوچ بچار",
+	"mobile.session.history.load": "پہلے کے پیغامات لوڈ کریں",
+	"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
+	"mobile.session.history.failed": "پہلے کے پیغامات لوڈ نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
+	"mobile.session.history.stalled": "تاریخ میں مزید پیغامات لوڈ نہیں ہوئے۔ دوبارہ کوشش کریں یا یہ گفتگو دوبارہ کھولیں۔",
+	"mobile.session.history.beginning": "محفوظ پیغامات کی ابتدا",
+	"mobile.session.history.empty": "کوئی محفوظ پیغامات نہیں ہیں",
+	"mobile.session.history.gap": "کنکشن منقطع ہونے کے دوران کچھ پیغامات رہ گئے۔ تاریخ دوبارہ لوڈ کرنے کے لیے یہ گفتگو دوبارہ کھولیں۔"
 }

@@ -868,6 +868,8 @@ export interface SearchSessionsResponse extends PastSessionsResponse {
 }
 
 export interface HistoryResponse {
+  /** Existing daemon `_history_response` archive/decode failure; not a retained beginning. */
+  unavailable?: string;
   /** The page immediately OLDER than `before`, chronological within the page. */
   entries: TranscriptEntry[];
   has_more: boolean;

@@ -1559,6 +1559,7 @@ export const projectMilestoneResponseSchema = z.looseObject({
 export const historyResponseSchema = z.looseObject({
 	entries: z.array(transcriptEntrySchema),
 	has_more: z.boolean(),
+	unavailable: z.string().optional(),
 });
 
 export const slashCommandSchema = z.looseObject({
