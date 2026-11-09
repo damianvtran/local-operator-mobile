@@ -33,6 +33,19 @@ const fieldInk = (): string => {
 	return match?.[1] ?? "";
 };
 
+describe("native keyboard submit contract", () => {
+	it("preserves software-keyboard paragraphs with an honest native Return key", () => {
+		expect(SOURCE).toContain(
+			'submitBehavior={Platform.OS !== "web" ? "newline" : undefined}',
+		);
+		expect(SOURCE).toMatch(
+			/returnKeyType=\{\s*Platform\.OS === "web" && onSubmitEditing \? "send" : "default"\s*\}/,
+		);
+		// Web Enter/Shift+Enter remains the composer's listener, never a second POST.
+		expect(SOURCE).toContain("onSubmitEditing={onSubmitEditing}");
+	});
+});
+
 describe("textarea placeholder ink", () => {
 	it("gives the field and its measuring copy one ink", () => {
 		const binding = fieldInk();

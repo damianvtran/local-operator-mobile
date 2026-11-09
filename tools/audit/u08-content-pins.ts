@@ -228,6 +228,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
+/* Regenerated with --print from the fully staged composer-reliability tree:
+ * native commit awaiting, platform UUID, repeat paste, honest Return and
+ * session-only clear/dismiss plus keyboard budget. Identity admission only,
+ * not rendered or native-device evidence; instrument/original pins unchanged. */
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
 	 * remediation: shared drawer navigation changes both render trees, including
@@ -591,7 +595,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "3afe51e7471b46ebb3846469248eb62c20d00a58ca2b0091a9e0273dc3059d6e",
+	app: "93ec58760cc4bacfd445fee865e8a7bdbc25ed9e791236e3ca83aba9bedd27cf",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1127,7 +1131,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * its regressions. Only LIVE src identity changes; no historical pin, input,
 	 * instrument or activity/native-layout evidence is refreshed by admission. */
 	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
-	src: "ceb1a960fdb49de206da99edd9c2470958ecc50edb0cf4b9c5e78fe0098ea6bd",
+	src: "d78b4b55c25d32214a69400777f972059870b55e9c9ad07db8a17438157df017",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

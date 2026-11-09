@@ -536,6 +536,15 @@ export const composerBudget = (
 	return { field: fieldBox - FIELD_BORDER_Y, extras };
 };
 
+/** Native iOS keeps the full window while the dock moves above the keyboard;
+ * Android may resize it instead (overlap then is zero). Budget the WHOLE dock
+ * against that remaining space, not just the textarea. The existing 8pt dock
+ * gap lives outside its box. The caller intersects this with any tighter limit. */
+export const composerKeyboardLimit = (
+	windowHeight: number,
+	keyboardOverlap: number,
+): number => Math.max(TOUCH_TARGET.ios, windowHeight - keyboardOverlap - 8);
+
 /**
  * The composer's ceiling from WINDOW geometry, or `null` when it already fits.
  *

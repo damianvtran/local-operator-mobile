@@ -4,6 +4,7 @@ import {
 	compactChromeFor,
 	compactChromeShare,
 	composerBudget,
+	composerKeyboardLimit,
 	composerLimit,
 	computersHeaderStackWidth,
 	HEADER_STACK_WIDTH,
@@ -35,6 +36,26 @@ import { FIELD_BORDER_Y, touchFloorFor } from "@/ui/variants";
  * which belongs to the capture harness in `tools/visual` where the frames and the
  * geometry come from the same run.
  */
+
+describe("keyboard-relative aggregate composer budget", () => {
+	it("reserves a footer above iOS overlap and Android's resized window", () => {
+		// Equal visible room through two different native keyboard contracts.
+		expect(composerKeyboardLimit(844, 344)).toBe(492);
+		expect(composerKeyboardLimit(500, 0)).toBe(492);
+		const budget = composerBudget(
+			composerKeyboardLimit(844, 344),
+			100,
+			900,
+			44,
+			20,
+		);
+		expect(budget.field + FIELD_BORDER_Y + budget.extras + 100 + 20 + 8).toBe(
+			500,
+		);
+		expect(budget.field + FIELD_BORDER_Y).toBe(44);
+		expect(budget.extras).toBeLessThan(900);
+	});
+});
 
 describe("sidebarFooterScrolls", () => {
 	it("reserves list space on short portrait even before the large-text step", () => {

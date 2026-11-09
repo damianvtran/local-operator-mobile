@@ -6,5 +6,9 @@
 	"mobile.composer_input.voice.finish": "Finish and transcribe",
 	"mobile.composer_input.paste.image": "Paste image",
 	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
-	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”."
+	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
+	"mobile.composer_input.clear_draft": "Clear draft",
+	"mobile.composer_input.clear_draft_hint": "Clears only the draft text and images; keeps queued and unconfirmed messages",
+	"mobile.composer_input.dismiss_error": "Dismiss error",
+	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status"
 }

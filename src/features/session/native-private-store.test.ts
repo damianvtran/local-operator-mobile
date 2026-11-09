@@ -8,6 +8,8 @@ const state = {
 	files: new Map<string, string>(),
 	dirs: new Set<string>(),
 	failWrite: false,
+	moveGate: null as Promise<void> | null,
+	moveStarted: null as (() => void) | null,
 };
 function filesystemFixture() {
 	const path = (parts: unknown[]) =>
@@ -93,7 +95,11 @@ function filesystemFixture() {
 		delete() {
 			state.files.delete(this.uri);
 		}
-		move(target: File) {
+		async move(target: File) {
+			// Expo SDK 57's File.move is asynchronous on both native platforms.
+			// A synchronous fixture hid the adapter dropping this commit promise.
+			state.moveStarted?.();
+			await state.moveGate;
 			if (target.exists) throw new Error("replace forbidden");
 			state.files.set(target.uri, state.files.get(this.uri) ?? "");
 			state.files.delete(this.uri);
@@ -226,12 +232,64 @@ beforeEach(() => {
 	state.files.clear();
 	state.dirs.clear();
 	state.failWrite = false;
+	state.moveGate = null;
+	state.moveStarted = null;
 	key = null;
 });
 
 /** Node ports exercise the production adapter + real AES-GCM, not native OS
  * bridges. Native FileSystem/Keychain/reinstall evidence remains a separate gate. */
 describe("native private adapter with Node platform ports", () => {
+	it("does not acknowledge a large private write before native move commits", async () => {
+		let release = () => {};
+		state.moveGate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		const started = new Promise<void>((resolve) => {
+			state.moveStarted = resolve;
+		});
+		const store = (await restart()).nativePrivateStore("device");
+		const payload = "image-data".repeat(40_000);
+		let acknowledged = false;
+		const saving = store.set("large-draft", payload).then(() => {
+			acknowledged = true;
+		});
+		await started;
+		await new Promise<void>((resolve) => setImmediate(resolve));
+		// Release even on the failing control: never leak a suspended fixture.
+		const premature = acknowledged;
+		release();
+		await saving;
+		expect(premature).toBe(false);
+		expect(await store.get("large-draft")).toBe(payload);
+		expect(
+			await (await restart()).nativePrivateStore("device").get("large-draft"),
+		).toBe(payload);
+	});
+	it("propagates an async move failure without retiring the last committed value", async () => {
+		const store = (await restart()).nativePrivateStore("device");
+		await store.set("draft", "committed before interruption");
+		let fail = (_cause: Error) => {};
+		state.moveGate = new Promise<void>((_resolve, reject) => {
+			fail = reject;
+		});
+		const started = new Promise<void>((resolve) => {
+			state.moveStarted = resolve;
+		});
+		const cause = new Error("synthetic native move failure with private path");
+		const saving = store.set("draft", "must not be acknowledged");
+		const rejected = expect(saving).rejects.toMatchObject({
+			stage: "commit",
+			cause,
+		});
+		await started;
+		fail(cause);
+		await rejected;
+		state.moveGate = null;
+		expect(
+			await (await restart()).nativePrivateStore("device").get("draft"),
+		).toBe("committed before interruption");
+	});
 	it("retires a native key with an authenticated compact tombstone, never a resurrectable delete", async () => {
 		const store = (await restart()).nativePrivateStore("recovery");
 		await store.set("draft", "private text");
@@ -267,9 +325,11 @@ describe("native private adapter with Node platform ports", () => {
 		const store = (await restart()).nativePrivateStore("recovery");
 		await store.set("draft", "first committed");
 		state.failWrite = true;
-		await expect(store.set("draft", "uncommitted")).rejects.toThrow(
-			"interrupted",
-		);
+		await expect(store.set("draft", "uncommitted")).rejects.toMatchObject({
+			stage: "commit",
+			message: "Native private storage failed: commit",
+			cause: { message: "interrupted ciphertext write" },
+		});
 		state.failWrite = false;
 		const restarted = (await restart()).nativePrivateStore("recovery");
 		expect(await restarted.get("draft")).toBe("first committed");

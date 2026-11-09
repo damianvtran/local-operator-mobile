@@ -1542,6 +1542,14 @@ export default function Session() {
 						attaching={composer.attaching}
 						voice={composer.voice}
 						onSend={composer.send}
+						onClearDraft={() => {
+							composer.clearUnsentDraft();
+							setChipError(null);
+						}}
+						onDismissError={() => {
+							composer.dismissError();
+							setChipError(null);
+						}}
 						onStop={composer.stop}
 						stopping={composer.stopping}
 						retainedMessage={
