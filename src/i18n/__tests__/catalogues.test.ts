@@ -153,7 +153,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 33, // +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 44, // +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -256,11 +256,12 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* Exact merged catalogue union: main's 538 plus this PR's four
-		 * editor-only clear/dismiss labels and hints. */
+		/* Exact merged union: main's 542 (538 plus #206's four editor-only
+		 * clear/dismiss labels and hints) and the eleven lazy-history keys this
+		 * branch adds; verified by counting the generated catalogue after the merge. */
 		/* Plus two from the header/drawer/secondary-screens polish: the
 		 * Settings "Text size" label and the Library filter sheet's "Source". */
-		expect(total).toBe(544);
+		expect(total).toBe(555);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -243,7 +243,7 @@ cell asks for them:
   TAP, and this harness drives no taps (the same limit the scroll position is
   named under), so without the hook the OPEN state of a condensed turn has no
   rendering a still can review. The keys are turn opening-row ids — for the
-  `long-transcript` scenario that is `tc-conv-<nn>-user` — so a cell names exactly
+  `long-transcript` scenario that is `m-conv-<nn>-user` — so a cell names exactly
   the turn it opens; absent, every turn renders its default state.
 
 A warm-up cell is needed for the FIRST relay-backed cell of a run: the browser
