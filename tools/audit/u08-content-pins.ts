@@ -1093,7 +1093,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	src: "6c0b8d139b18c095176e88230d5377ff3acff65f9689932f0292e3860d105a09",
+	src: "4607c4cc7e7697b4357bf3dcae154f0cd2b57309e726c1e05d079cce994fe5d8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

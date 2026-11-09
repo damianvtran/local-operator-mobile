@@ -462,24 +462,70 @@ describe("finite inline grammar", () => {
 			{ text: "removed", strike: true },
 		]);
 	});
-	it.each(["[".repeat(2048), `${"[x](".repeat(512)} bad${")".repeat(512)}`])(
-		"bounds failed delimiter scans by input length ($#)",
-		(source) => {
-			let reads = 0;
-			// A boxed string preserves the public string operations while counting
-			// actual character visits. No machine-load-dependent wall-clock gate.
-			const counted = new Proxy(new String(source), {
-				get(target, property) {
-					if (typeof property === "string" && INDEX_PROPERTY.test(property))
-						reads += 1;
-					const value = Reflect.get(target, property, target);
-					return typeof value === "function" ? value.bind(target) : value;
-				},
-			}) as unknown as string;
-			expect(parseInline(counted)).toEqual(parseInline(source));
-			expect(reads).toBeLessThan(source.length * 50);
-		},
-	);
+	it.each([
+		['https://example.com "literal `"', "https://example.com"],
+		["https://example.com/`", "https://example.com/`"],
+		['https://example.com "escaped \\" quote `"', "https://example.com"],
+		['<https://example.com/`> "title `"', "https://example.com/`"],
+	])("keeps destination/title ticks opaque in %s", (destination, href) => {
+		const spans = parseInline(
+			`[one](${destination}) [two](https://example.org) \`code\``,
+		);
+		expect(spans.filter((span) => span.href)).toMatchObject([
+			{ text: "one", href },
+			{ text: "two", href: "https://example.org" },
+		]);
+		expect(spans.at(-1)).toMatchObject({ text: "code", code: true });
+	});
+	it.each([
+		'[broken](https://example.com "unterminated ` [two](https://example.org)',
+		"[broken](https://example.com bad `) [two](https://example.org)",
+	])("does not hide later links after invalid destination %s", (source) => {
+		expect(
+			parseInline(source).filter((span) => span.text === "two"),
+		).toMatchObject([{ text: "two", href: "https://example.org" }]);
+	});
+	it("retains code precedence and later label emphasis around opaque titles", () => {
+		expect(
+			parseInline('`[one](https://example.com "title")`')[0],
+		).toMatchObject({
+			text: '[one](https://example.com "title")',
+			code: true,
+		});
+		expect(
+			parseInline(
+				'[one](https://example.com "literal `") [*two*](https://example.org) `code`',
+			),
+		).toMatchObject([
+			{ text: "one", href: "https://example.com" },
+			{ text: " " },
+			{ text: "two", italic: true, href: "https://example.org" },
+			{ text: " " },
+			{ text: "code", code: true },
+		]);
+	});
+	it.each([
+		"[".repeat(2048),
+		`${"[x](".repeat(512)} bad${")".repeat(512)}`,
+		'[one](https://example.com "literal `") [two](https://example.org) `code` '.repeat(
+			512,
+		),
+		`${'[x](https://example.com "` '.repeat(512)}${")".repeat(512)}`,
+	])("bounds failed delimiter scans by input length ($#)", (source) => {
+		let reads = 0;
+		// A boxed string preserves the public string operations while counting
+		// actual character visits. No machine-load-dependent wall-clock gate.
+		const counted = new Proxy(new String(source), {
+			get(target, property) {
+				if (typeof property === "string" && INDEX_PROPERTY.test(property))
+					reads += 1;
+				const value = Reflect.get(target, property, target);
+				return typeof value === "function" ? value.bind(target) : value;
+			},
+		}) as unknown as string;
+		expect(parseInline(counted)).toEqual(parseInline(source));
+		expect(reads).toBeLessThan(source.length * 50);
+	});
 	it("does not repeatedly scan unactivatable URL prefixes inside prose", () => {
 		const source = `a${"https://".repeat(512)}`;
 		let scanned = 0;

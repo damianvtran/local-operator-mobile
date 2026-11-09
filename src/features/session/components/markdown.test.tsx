@@ -137,6 +137,35 @@ describe("rendered assistant markdown dispatch", () => {
 			);
 		},
 	);
+	it.each([
+		'https://example.com "literal `"',
+		"https://example.com/`",
+		'https://example.com "escaped \\" quote `"',
+	])(
+		"keeps both labels actionable after opaque destination %s",
+		async (destination) => {
+			const markup = renderToStaticMarkup(
+				createElement(Markdown, {
+					text: `[one](${destination}) [two](https://example.org) \`code\``,
+				}),
+			);
+			expect(host.links.map((link) => link.label)).toEqual(["one", "two"]);
+			expect(markup).not.toContain("[two]");
+			expect(markup).toContain("code");
+			for (const link of host.links) {
+				link.press({ stopPropagation: vi.fn(), preventDefault: vi.fn() });
+				await Promise.resolve();
+			}
+			expect(host.open.mock.calls).toEqual([
+				[
+					destination.startsWith("https://example.com/`")
+						? "https://example.com/`"
+						: "https://example.com",
+				],
+				["https://example.org"],
+			]);
+		},
+	);
 	it("never wires unsafe links or link-shaped inline/fenced code", () => {
 		const markup = renderToStaticMarkup(
 			createElement(Markdown, {

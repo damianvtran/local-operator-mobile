@@ -354,7 +354,10 @@ function inlinePairs(text: string) {
 			? i
 			: (nextAngle[i + 1] ?? text.length);
 	}
-	const destination = (start: number, end: number): string | undefined => {
+	const destinationBounds = (
+		start: number,
+		end: number,
+	): [number, number] | undefined => {
 		start = nextContent[start] ?? end;
 		end = (previousContent[end - 1] ?? -1) + 1;
 		if (start >= end) return undefined;
@@ -372,10 +375,10 @@ function inlinePairs(text: string) {
 		if (text[start] === "<") {
 			const close = nextAngle[start + 1] ?? end;
 			if (close < end && text[close] === ">" && title(close + 1))
-				return unescapeMarkdown(text.slice(start + 1, close));
+				return [start + 1, close];
 		}
 		const space = Math.min(nextSpace[start] ?? end, end);
-		if (title(space)) return unescapeMarkdown(text.slice(start, space));
+		if (title(space)) return [start, space];
 		return undefined;
 	};
 	const runs: { start: number; width: number }[] = [];
@@ -429,6 +432,7 @@ function inlinePairs(text: string) {
 		}
 	}
 	const bracketStack: number[] = [];
+	const destinationEnds = new Map<number, number>();
 	for (let i = 0; i < text.length; i += 1) {
 		if (text[i] === "\\") {
 			i += 1;
@@ -442,7 +446,18 @@ function inlinePairs(text: string) {
 		if (text[i] === "[") bracketStack.push(i);
 		if (text[i] === "]") {
 			const start = bracketStack.pop();
-			if (start !== undefined) brackets.set(start, i);
+			if (start !== undefined) {
+				brackets.set(start, i);
+				const end = text[i + 1] === "(" ? parentheses.get(i + 1) : undefined;
+				// Only a complete, valid link makes its destination/title opaque.
+				// Tick candidates there are URL/title characters, not code openers
+				// that may hide later labels. Bounds validation is O(1), including
+				// failed/overlapping candidates; do not slice or scan their suffixes.
+				if (end !== undefined && destinationBounds(i + 2, end) !== undefined) {
+					destinationEnds.set(i, end);
+					i = end;
+				}
+			}
 		}
 	}
 	const stacks = new Map<string, { start: number; width: number }[]>();
@@ -458,12 +473,10 @@ function inlinePairs(text: string) {
 		}
 		// Destinations and public URLs are opaque to typography. Otherwise a
 		// URL underscore could steal a label's closing emphasis delimiter.
-		if (text[i] === "]" && text[i + 1] === "(") {
-			const end = parentheses.get(i + 1);
-			if (end !== undefined) {
-				i = end;
-				continue;
-			}
+		const destinationEnd = destinationEnds.get(i);
+		if (destinationEnd !== undefined) {
+			i = destinationEnd;
+			continue;
 		}
 		const bare = BARE_URL.exec(text.slice(i));
 		if (bare) {
@@ -504,6 +517,12 @@ function inlinePairs(text: string) {
 		)
 			stack.push({ start: closer, width: remaining });
 	}
+	const destination = (start: number, end: number) => {
+		const bounds = destinationBounds(start, end);
+		return bounds === undefined
+			? undefined
+			: unescapeMarkdown(text.slice(bounds[0], bounds[1]));
+	};
 	return { code, brackets, parentheses, emphasis, destination };
 }
 
