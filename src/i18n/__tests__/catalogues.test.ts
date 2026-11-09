@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 104,
+		expected: 113, // 104 established keys + 9 default_on keys (PR #108).
 	},
 	{
 		name: "mobile.signin",
@@ -256,9 +256,8 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* Counted from the combined catalogue files: 481 existing keys, three
-		 * drawer keys and two initial-send/retry-attempt storage receipt keys. */
-		expect(total).toBe(487);
+		/* Exact union of main and #108 catalogue entries; shared values agree. */
+		expect(total).toBe(496);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

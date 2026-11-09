@@ -591,7 +591,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "8cb9d4fa71e20233fdbb86b3a3abd4265e8245a63c0440648ac14ea616375b00",
+	app: "3afe51e7471b46ebb3846469248eb62c20d00a58ca2b0091a9e0273dc3059d6e",
+
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -1102,6 +1103,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * allocation regressions. The original capture fixture's AST and unchanged
 	 * component markup remain byte-identical against 64c0d71d. Source admission
 	 * only: no new U-08 pixels, instrument, input or render-file changes. */
+
 	/* Re-printed 2026-11-09 for PR #199's U1 remediation: composer retry
 	 * preparation copy and feedback projection retain the original command's
 	 * uncertainty, with active/ended hook regressions and all eight catalogues.
@@ -1128,7 +1130,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * source, including its regressions. This updates source identity only;
 	 * it is not proof of native visibility or compact D3 geometry. Historical,
 	 * instrument and input pins remain unchanged. */
-	src: "c43648d9e25a02ba7fb1a5cc87d4d9b12a3f8187d3874dd61faa9d12dd7e7b83",
+	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
+	/* Recomputed with --print after merging approved #108 (d9073ebc): the
+	 * combined src tree has neither parent's digest. Source admission only;
+	 * historical pixels, native visibility and compact D3 remain unproved. */
+	src: "785d4c22b6fb5baed1785b9d996fb9b29aaece7b61cfd3a33c7d9405569423b1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -24,6 +24,7 @@ import {
 	ADA,
 	agentDm,
 	BEN,
+	CONSENT_V2,
 	CY,
 	conversation,
 	deliveryFixtureHistory,
@@ -32,16 +33,19 @@ import {
 	OTHER_TENANT,
 	person,
 	SELF,
+	settings,
 	status,
 	TENANT,
 } from "../src/team-bridge/__tests__/fixtures.ts";
 
+import { fixtureWorld } from "../src/testing/team-bridge-options.ts";
+
 import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
 
-const MOCK_ROUTE = /^\/mock-hub\/([a-z_-]+)\/v1\/messaging(.*)$/;
+const MOCK_ROUTE = /^\/mock-hub\/([a-z0-9_~-]+)\/v1\/messaging(.*)$/;
 /* The profile slice's avatar route sits beside messaging, not under it. */
 const AVATAR_ROUTE =
-	/^\/mock-hub\/([a-z_-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
+	/^\/mock-hub\/([a-z0-9_~-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
 const ADA_HASH = "0123456789abcdef";
 const LONG = "acct_long_0005";
 /* Ben's row advertises a photo the hub then 404s: the "photo removed between
@@ -252,7 +256,15 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 				const qaCase = url.searchParams.get("case") ?? "populated";
 				const theme = url.searchParams.get("theme") ?? "light";
 				const requestedWidth = url.searchParams.get("width") ?? "390";
-				const phoneWidth = ["320", "360", "390", "430"].includes(requestedWidth)
+				const overrides = new URLSearchParams();
+				for (const key of ["flow", "account", "org", "locale", "scale"]) {
+					const value = url.searchParams.get(key);
+					if (value !== null) overrides.set(`tb-${key}`, value);
+				}
+
+				const phoneWidth = ["320", "360", "390", "430", "768"].includes(
+					requestedWidth,
+				)
 					? requestedWidth
 					: "390";
 				const route =
@@ -261,12 +273,12 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 						: "/team-bridge";
 				res.writeHead(200, { "content-type": "text/html" });
 				res.end(
-					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
+					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}&${overrides.toString()}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
 const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
- const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),width:Math.round(r.width),height:Math.round(r.height),disabled:e.getAttribute('aria-disabled')==='true'};});
- document.getElementById('geometry').textContent=JSON.stringify({viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
+ const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),x:Math.round(r.x),right:Math.round(r.right),width:Math.round(r.width),height:Math.round(r.height),scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,disabled:e.getAttribute('aria-disabled')==='true'};});
+ document.getElementById('geometry').textContent=JSON.stringify({locale:doc.documentElement.lang,direction:doc.documentElement.dir,noticeBodySize:win.getComputedStyle(doc.querySelector('[data-testid="team-bridge-default-on-notice"] [role="status"] > :last-child')||doc.body).fontSize,viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
 }catch{}},1000);
 </script>`,
 				);
@@ -309,9 +321,19 @@ setInterval(()=>{try{
 			}
 			const match = MOCK_ROUTE.exec(url.pathname);
 			if (match) {
-				const qaCase = match[1];
+				const world = fixtureWorld(match[1] ?? "");
+				const qaCase = world.scenario;
+				const noticeTenant = world.secondOrg ? OTHER_TENANT : TENANT;
 				const path = match[2] ?? "";
 				requests.push({ method: req.method ?? "GET", path });
+				if (
+					qaCase?.startsWith("notice_") &&
+					req.headers.authorization !==
+						`Bearer ${world.token ?? TEAM_BRIDGE_FIXTURE_TOKEN}`
+				) {
+					send(401, { error: "invalid or expired token" });
+					return;
+				}
 				if (qaCase === "loading" && path !== "/status" && path !== "/unread")
 					if (!(await waitForLoading(res))) return;
 				if (path === "/status") {
@@ -324,16 +346,19 @@ setInterval(()=>{try{
 					}
 					ok(
 						status({
+							// Notice fixtures model a server-enrolled endpoint. The client must
+							// never create consent or send an enabling PUT merely by mounting.
+							...(qaCase?.startsWith("notice_") ? { consent: CONSENT_V2 } : {}),
 							api_version: qaCase === "update_required" ? "2" : "1",
 							available: qaCase !== "plan_required",
 							tenants: [
 								{
-									tenant_id: TENANT,
+									tenant_id: noticeTenant,
 									tenant_name: "Example Org",
 									eligible: qaCase !== "plan_required",
 								},
 								{
-									tenant_id: OTHER_TENANT,
+									tenant_id: world.secondOrg ? TENANT : OTHER_TENANT,
 									tenant_name: "Research Lab",
 									eligible: qaCase !== "plan_required",
 								},
@@ -348,6 +373,39 @@ setInterval(()=>{try{
 						code: "messaging_unavailable",
 					});
 					return;
+				}
+				if (path === "/settings" && qaCase?.startsWith("notice_")) {
+					if (
+						url.searchParams.get("tenant_id") !== noticeTenant &&
+						req.method === "GET"
+					) {
+						send(403, { error: "Wrong organization", code: "not_a_member" });
+						return;
+					}
+					if (req.method === "GET") {
+						ok(settings(qaCase === "notice_dialog" ? "dialog" : "default_on"));
+						return;
+					}
+					if (req.method === "PUT") {
+						let raw = "";
+						for await (const part of req) raw += part;
+						const body = JSON.parse(raw);
+						if (
+							body.state !== "disabled" ||
+							body.tenant_id !== noticeTenant ||
+							Object.keys(body).length !== 2
+						) {
+							send(400, {
+								error: "Only an explicit scoped opt-out is supported",
+							});
+						} else if (qaCase === "notice_error") {
+							send(500, { error: "Fixture opt-out failed" });
+						} else {
+							if (qaCase === "notice_pending") await waitForLoading(res);
+							ok(settings("default_on", { state: "disabled" }));
+						}
+						return;
+					}
 				}
 				if (path === "/unread") {
 					ok({

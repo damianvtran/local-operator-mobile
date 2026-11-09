@@ -38,6 +38,8 @@ export type ButtonProps = {
 	leadingIcon?: (props: { color: string; size: number }) => ReactNode;
 	loading?: boolean;
 	disabled?: boolean;
+	/** Short visual labels may need a more descriptive screen-reader name. */
+	accessibilityLabel?: string;
 	accessibilityHint?: string;
 	/** Disclosure state, omitted for ordinary action buttons. */
 	expanded?: boolean;
@@ -68,6 +70,7 @@ export const Button = ({
 	leadingIcon,
 	loading = false,
 	disabled = false,
+	accessibilityLabel,
 	accessibilityHint,
 	expanded,
 	selected,
@@ -86,7 +89,7 @@ export const Button = ({
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
-			accessibilityLabel={label}
+			accessibilityLabel={accessibilityLabel ?? label}
 			accessibilityHint={accessibilityHint}
 			accessibilityState={state({
 				disabled,

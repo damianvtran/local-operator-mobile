@@ -385,6 +385,15 @@ export type CatalogueKey =
 	| "mobile.signin.superseded"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.default_on.body"
+	| "mobile.team_bridge.default_on.dismiss"
+	| "mobile.team_bridge.default_on.dismiss_hint"
+	| "mobile.team_bridge.default_on.dismiss_label"
+	| "mobile.team_bridge.default_on.hide"
+	| "mobile.team_bridge.default_on.read_more"
+	| "mobile.team_bridge.default_on.title"
+	| "mobile.team_bridge.default_on.turn_off"
+	| "mobile.team_bridge.default_on.turn_off_error"
 	| "mobile.team_bridge.delivery.held"
 	| "mobile.team_bridge.delivery.help"
 	| "mobile.team_bridge.delivery.help_action"
@@ -823,6 +832,15 @@ export type NoParamKey =
 	| "mobile.signin.superseded"
 	| "mobile.team_bridge.back"
 	| "mobile.team_bridge.conversation"
+	| "mobile.team_bridge.default_on.body"
+	| "mobile.team_bridge.default_on.dismiss"
+	| "mobile.team_bridge.default_on.dismiss_hint"
+	| "mobile.team_bridge.default_on.dismiss_label"
+	| "mobile.team_bridge.default_on.hide"
+	| "mobile.team_bridge.default_on.read_more"
+	| "mobile.team_bridge.default_on.title"
+	| "mobile.team_bridge.default_on.turn_off"
+	| "mobile.team_bridge.default_on.turn_off_error"
 	| "mobile.team_bridge.delivery.help"
 	| "mobile.team_bridge.delivery.help_action"
 	| "mobile.team_bridge.delivery.help_title"
@@ -1300,6 +1318,15 @@ export type MessageParams = {
 	"mobile.signin.superseded": NoParams;
 	"mobile.team_bridge.back": NoParams;
 	"mobile.team_bridge.conversation": NoParams;
+	"mobile.team_bridge.default_on.body": NoParams;
+	"mobile.team_bridge.default_on.dismiss": NoParams;
+	"mobile.team_bridge.default_on.dismiss_hint": NoParams;
+	"mobile.team_bridge.default_on.dismiss_label": NoParams;
+	"mobile.team_bridge.default_on.hide": NoParams;
+	"mobile.team_bridge.default_on.read_more": NoParams;
+	"mobile.team_bridge.default_on.title": NoParams;
+	"mobile.team_bridge.default_on.turn_off": NoParams;
+	"mobile.team_bridge.default_on.turn_off_error": NoParams;
 	"mobile.team_bridge.delivery.held": { recipient: string | number };
 	"mobile.team_bridge.delivery.help": NoParams;
 	"mobile.team_bridge.delivery.help_action": NoParams;
@@ -1806,6 +1833,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.signin.superseded": "Another sign-in started.",
 	"mobile.team_bridge.back": "Back",
 	"mobile.team_bridge.conversation": "Conversation",
+	"mobile.team_bridge.default_on.body": "Your organization’s agents can message your chief of staff. You can turn this off at any time.",
+	"mobile.team_bridge.default_on.dismiss": "Dismiss",
+	"mobile.team_bridge.default_on.dismiss_hint": "Keeps Team Bridge on and does not show this notice again",
+	"mobile.team_bridge.default_on.dismiss_label": "Dismiss Team Bridge notice",
+	"mobile.team_bridge.default_on.hide": "Hide details",
+	"mobile.team_bridge.default_on.read_more": "Read what this means",
+	"mobile.team_bridge.default_on.title": "Team Bridge is on for you",
+	"mobile.team_bridge.default_on.turn_off": "Turn off",
+	"mobile.team_bridge.default_on.turn_off_error": "Team Bridge was not turned off. Check the connection and try again.",
 	"mobile.team_bridge.delivery.held": "{recipient}: Waiting for delivery.",
 	"mobile.team_bridge.delivery.help": "Each recipient’s agent checks messages before accepting them. If a message is not accepted, you can rephrase it and send a new message.",
 	"mobile.team_bridge.delivery.help_action": "About message delivery",
@@ -2297,6 +2333,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.signin.superseded": { role: "status", note: "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI." },
 	"mobile.team_bridge.back": { role: "button", note: "Team Bridge mobile UI: back. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.conversation": { role: "heading", note: "Team Bridge mobile UI: conversation. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.default_on.body": { role: "help", note: "One sentence under the heading. “Chief of staff” is the product term for the person's own agent. Do not imply the person did anything to enable it." },
+	"mobile.team_bridge.default_on.dismiss": { role: "button", note: "Button. Closes the banner for good on this device, leaving Team Bridge on. Not “OK”, which would read as acceptance." },
+	"mobile.team_bridge.default_on.dismiss_hint": { role: "help", note: "Screen-reader hint for Dismiss only; makes explicit that dismissing is not turning off." },
+	"mobile.team_bridge.default_on.dismiss_label": { role: "button", note: "Screen-reader name for the short Dismiss button; identifies the notice being closed, not the Team Bridge setting." },
+	"mobile.team_bridge.default_on.hide": { role: "button", note: "Same button once the consent text is showing; collapses it." },
+	"mobile.team_bridge.default_on.read_more": { role: "button", note: "Button that reveals the full served consent text inline, in place; it does not navigate and does not open a dialog." },
+	"mobile.team_bridge.default_on.title": { role: "heading", note: "Heading of a one-time, dismissible banner at the top of the Team Bridge tab. States a fact about the person's account; not a question and not an invitation to enable anything." },
+	"mobile.team_bridge.default_on.turn_off": { role: "button", note: "Button. One tap opts the person out of agent messages for this organization. Not “Disable”, which sounds like an admin action." },
+	"mobile.team_bridge.default_on.turn_off_error": { role: "status", note: "Shown under the buttons when the turn-off request failed; the setting is unchanged, so never say it is off." },
 	"mobile.team_bridge.delivery.held": { role: "status", note: "Quiet per-recipient metadata. recipient is the supplied agent label, never an ID. Held is generic for every cause. Refused category is only a server-provided coarse class; other means no disclosed class. No raw screening detail or retry advice. Preserve placeholders and select branches." },
 	"mobile.team_bridge.delivery.help": { role: "help", note: "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance." },
 	"mobile.team_bridge.delivery.help_action": { role: "button", note: "Fixed message-delivery explanation for every state/category. Conditional rephrasing is general guidance, not a retry action or per-category evasion advice. No raw reasons, scores, identifiers, blame or promised acceptance." },
@@ -2802,6 +2847,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.superseded": "Se inició otro acceso.",
 		"mobile.team_bridge.back": "Atrás",
 		"mobile.team_bridge.conversation": "Conversación",
+		"mobile.team_bridge.default_on.body": "Los agentes de tu organización pueden enviar mensajes a tu jefe de gabinete. Puedes desactivar esta opción en cualquier momento.",
+		"mobile.team_bridge.default_on.dismiss": "Cerrar",
+		"mobile.team_bridge.default_on.dismiss_hint": "Mantiene Team Bridge activado y no vuelve a mostrar este aviso",
+		"mobile.team_bridge.default_on.dismiss_label": "Cerrar el aviso de Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Ocultar detalles",
+		"mobile.team_bridge.default_on.read_more": "Leer qué significa",
+		"mobile.team_bridge.default_on.title": "Team Bridge está activado para ti",
+		"mobile.team_bridge.default_on.turn_off": "Desactivar",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge no se ha desactivado. Comprueba la conexión e inténtalo de nuevo.",
 		"mobile.team_bridge.delivery.held": "{recipient}: En espera de entrega.",
 		"mobile.team_bridge.delivery.help": "El agente de cada destinatario revisa los mensajes antes de aceptarlos. Si un mensaje no se acepta, puedes reformularlo y enviar un mensaje nuevo.",
 		"mobile.team_bridge.delivery.help_action": "Acerca de la entrega de mensajes",
@@ -3291,6 +3345,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.superseded": "Une autre connexion a démarré.",
 		"mobile.team_bridge.back": "Retour",
 		"mobile.team_bridge.conversation": "Conversation",
+		"mobile.team_bridge.default_on.body": "Les agents de votre organisation peuvent envoyer des messages à votre chef de cabinet. Vous pouvez désactiver cette option à tout moment.",
+		"mobile.team_bridge.default_on.dismiss": "Fermer",
+		"mobile.team_bridge.default_on.dismiss_hint": "Laisse Team Bridge activé et ne montre plus cette notification",
+		"mobile.team_bridge.default_on.dismiss_label": "Fermer la notification Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Masquer les détails",
+		"mobile.team_bridge.default_on.read_more": "Lire les détails",
+		"mobile.team_bridge.default_on.title": "Team Bridge est activé pour vous",
+		"mobile.team_bridge.default_on.turn_off": "Désactiver",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge n’a pas été désactivé. Vérifiez la connexion et réessayez.",
 		"mobile.team_bridge.delivery.held": "{recipient} : En attente de livraison.",
 		"mobile.team_bridge.delivery.help": "L’agent de chaque destinataire vérifie les messages avant de les accepter. Si un message n’est pas accepté, vous pouvez le reformuler et envoyer un nouveau message.",
 		"mobile.team_bridge.delivery.help_action": "À propos de la livraison des messages",
@@ -3780,6 +3843,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।",
 		"mobile.team_bridge.back": "वापस",
 		"mobile.team_bridge.conversation": "बातचीत",
+		"mobile.team_bridge.default_on.body": "आपके संगठन के एजेंट आपके चीफ़ ऑफ़ स्टाफ़ को संदेश भेज सकते हैं। आप इसे कभी भी बंद कर सकते हैं।",
+		"mobile.team_bridge.default_on.dismiss": "हटाएँ",
+		"mobile.team_bridge.default_on.dismiss_hint": "Team Bridge चालू रहता है और यह सूचना दोबारा नहीं दिखाई जाती",
+		"mobile.team_bridge.default_on.dismiss_label": "Team Bridge की सूचना हटाएँ",
+		"mobile.team_bridge.default_on.hide": "विवरण छिपाएँ",
+		"mobile.team_bridge.default_on.read_more": "इसका मतलब पढ़ें",
+		"mobile.team_bridge.default_on.title": "आपके लिए Team Bridge चालू है",
+		"mobile.team_bridge.default_on.turn_off": "बंद करें",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge बंद नहीं हुआ। कनेक्शन जाँचें और फिर से कोशिश करें।",
 		"mobile.team_bridge.delivery.held": "{recipient}: पहुँचाए जाने की प्रतीक्षा में।",
 		"mobile.team_bridge.delivery.help": "हर प्राप्तकर्ता का एजेंट संदेश स्वीकार करने से पहले उसकी जाँच करता है। अगर कोई संदेश स्वीकार नहीं होता, तो आप उसे दूसरे शब्दों में लिखकर नया संदेश भेज सकते हैं।",
 		"mobile.team_bridge.delivery.help_action": "संदेश पहुँचाने के बारे में",
@@ -4269,6 +4341,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.superseded": "Начался другой вход.",
 		"mobile.team_bridge.back": "Назад",
 		"mobile.team_bridge.conversation": "Переписка",
+		"mobile.team_bridge.default_on.body": "Агенты вашей организации могут писать вашему руководителю аппарата. Вы можете отключить это в любой момент.",
+		"mobile.team_bridge.default_on.dismiss": "Закрыть",
+		"mobile.team_bridge.default_on.dismiss_hint": "Оставляет Team Bridge включённым и больше не показывает это уведомление",
+		"mobile.team_bridge.default_on.dismiss_label": "Закрыть уведомление Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Скрыть подробности",
+		"mobile.team_bridge.default_on.read_more": "Узнать подробнее",
+		"mobile.team_bridge.default_on.title": "Team Bridge включён для вас",
+		"mobile.team_bridge.default_on.turn_off": "Отключить",
+		"mobile.team_bridge.default_on.turn_off_error": "Не удалось отключить Team Bridge. Проверьте соединение и повторите попытку.",
 		"mobile.team_bridge.delivery.held": "{recipient}: Ожидает доставки.",
 		"mobile.team_bridge.delivery.help": "Агент каждого получателя проверяет сообщения перед принятием. Если сообщение не принято, вы можете переформулировать его и отправить новое сообщение.",
 		"mobile.team_bridge.delivery.help_action": "О доставке сообщений",
@@ -4758,6 +4839,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔",
 		"mobile.team_bridge.back": "واپس",
 		"mobile.team_bridge.conversation": "گفتگو",
+		"mobile.team_bridge.default_on.body": "آپ کی تنظیم کے ایجنٹ آپ کے چیف آف اسٹاف کو پیغامات بھیج سکتے ہیں۔ آپ اسے کسی بھی وقت بند کر سکتے ہیں۔",
+		"mobile.team_bridge.default_on.dismiss": "ہٹائیں",
+		"mobile.team_bridge.default_on.dismiss_hint": "Team Bridge آن رہتا ہے اور یہ اطلاع دوبارہ نہیں دکھائی جاتی",
+		"mobile.team_bridge.default_on.dismiss_label": "Team Bridge کی اطلاع ہٹائیں",
+		"mobile.team_bridge.default_on.hide": "تفصیلات چھپائیں",
+		"mobile.team_bridge.default_on.read_more": "اس کا مطلب پڑھیں",
+		"mobile.team_bridge.default_on.title": "آپ کے لیے Team Bridge آن ہے",
+		"mobile.team_bridge.default_on.turn_off": "بند کریں",
+		"mobile.team_bridge.default_on.turn_off_error": "Team Bridge بند نہیں ہوا۔ کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
 		"mobile.team_bridge.delivery.held": "{recipient}: ترسیل کا انتظار ہے۔",
 		"mobile.team_bridge.delivery.help": "ہر وصول کنندہ کا ایجنٹ پیغامات قبول کرنے سے پہلے انہیں جانچتا ہے۔ اگر کوئی پیغام قبول نہ ہو تو آپ اسے دوسرے الفاظ میں لکھ کر نیا پیغام بھیج سکتے ہیں۔",
 		"mobile.team_bridge.delivery.help_action": "پیغامات کی ترسیل کے بارے میں",
@@ -5247,6 +5337,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu.",
 		"mobile.team_bridge.back": "Quay lại",
 		"mobile.team_bridge.conversation": "Cuộc trò chuyện",
+		"mobile.team_bridge.default_on.body": "Các tác nhân trong tổ chức có thể nhắn tin cho chánh văn phòng của bạn. Bạn có thể tắt tính năng này bất cứ lúc nào.",
+		"mobile.team_bridge.default_on.dismiss": "Đóng",
+		"mobile.team_bridge.default_on.dismiss_hint": "Giữ Team Bridge bật và không hiển thị lại thông báo này",
+		"mobile.team_bridge.default_on.dismiss_label": "Đóng thông báo Team Bridge",
+		"mobile.team_bridge.default_on.hide": "Ẩn chi tiết",
+		"mobile.team_bridge.default_on.read_more": "Tìm hiểu ý nghĩa",
+		"mobile.team_bridge.default_on.title": "Team Bridge đã được bật cho bạn",
+		"mobile.team_bridge.default_on.turn_off": "Tắt",
+		"mobile.team_bridge.default_on.turn_off_error": "Chưa tắt được Team Bridge. Hãy kiểm tra kết nối và thử lại.",
 		"mobile.team_bridge.delivery.held": "{recipient}: Đang chờ gửi đến.",
 		"mobile.team_bridge.delivery.help": "Tác nhân của mỗi người nhận kiểm tra tin nhắn trước khi chấp nhận. Nếu tin nhắn không được chấp nhận, bạn có thể diễn đạt lại và gửi một tin nhắn mới.",
 		"mobile.team_bridge.delivery.help_action": "Về việc gửi tin nhắn",
@@ -5736,6 +5835,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.superseded": "另一次登录已开始。",
 		"mobile.team_bridge.back": "返回",
 		"mobile.team_bridge.conversation": "会话",
+		"mobile.team_bridge.default_on.body": "你所在组织的智能体可以向你的幕僚长发送消息。你可以随时关闭此功能。",
+		"mobile.team_bridge.default_on.dismiss": "关闭提示",
+		"mobile.team_bridge.default_on.dismiss_hint": "保持 Team Bridge 开启，不再显示此提示",
+		"mobile.team_bridge.default_on.dismiss_label": "关闭 Team Bridge 提示",
+		"mobile.team_bridge.default_on.hide": "收起详情",
+		"mobile.team_bridge.default_on.read_more": "了解详情",
+		"mobile.team_bridge.default_on.title": "Team Bridge 已为你开启",
+		"mobile.team_bridge.default_on.turn_off": "关闭",
+		"mobile.team_bridge.default_on.turn_off_error": "未能关闭 Team Bridge。请检查连接后重试。",
 		"mobile.team_bridge.delivery.held": "{recipient}：等待送达。",
 		"mobile.team_bridge.delivery.help": "每位收件人的智能体都会在接受消息前进行检查。如果消息未被接受，您可以重新措辞并发送一条新消息。",
 		"mobile.team_bridge.delivery.help_action": "关于消息送达",
