@@ -266,7 +266,12 @@ export async function serveDir(
 			req.url ?? "/",
 			`http://${req.headers.host ?? "127.0.0.1"}`,
 		);
-		const rawPathname = (req.url ?? "/").split(REQUEST_PATH_SEPARATOR, 1)[0];
+		// A limit-one split by this nonempty separator always yields a first string,
+		// even for an empty URL; the assertion changes no request handling at runtime.
+		const rawPathname = (req.url ?? "/").split(
+			REQUEST_PATH_SEPARATOR,
+			1,
+		)[0] as string;
 		// Raw-path validation and local-precedence eligibility are separate:
 		// a raw /assets/ prefix can normalize into a backend route.
 		const validateRawAssetPath =
@@ -355,7 +360,8 @@ export async function serveDir(
 			return;
 		}
 		res.writeHead(200, {
-			"content-type": TYPES[extname(logicalTarget)] ?? "application/octet-stream",
+			"content-type":
+				TYPES[extname(logicalTarget)] ?? "application/octet-stream",
 			// A capture must never render a cached bundle from a previous run.
 			"cache-control": "no-store",
 			"access-control-allow-origin": "*",

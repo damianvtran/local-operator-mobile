@@ -123,7 +123,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	"tools/lib/relay.ts":
 		"a4d87797069162240c01f58868b7df37154112c8cb9fdf964904df54a53a1311",
 	"tools/lib/static-server.ts":
-		"dd7312406f3b0fe2a4c47e94fe1d9d49abc414d382b43c3c0ee8fea71517e917",
+		"fdbe2094ec86ca60b9c5e81d1a34927acd4a395cb8b62db736c88ff4209fcb5d",
 	"tools/mock-relay/account-routing-gate.ts":
 		"2388f03adfea61dd69bcf397428fb899ab5d5977f47574727d81087d8d597379",
 	"tools/mock-relay/account-routing-identity.ts":
