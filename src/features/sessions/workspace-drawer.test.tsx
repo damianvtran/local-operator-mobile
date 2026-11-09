@@ -2,6 +2,7 @@ import { act, createElement, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
+import { CONTROL } from "@/ui/a11y";
 import type { ConversationsDrawerProps } from "./conversations-drawer";
 import type { WorkspaceDrawerBridgeAdapter } from "./workspace-drawer.contract";
 
@@ -165,7 +166,7 @@ describe("one workspace drawer above the mounted chat", () => {
 	});
 	it("renders no promised Bridge entry without an adapter, then switches content without a route push", async () => {
 		await mount();
-		expect(host.presses.has("workspace-drawer-team-bridge")).toBe(false);
+		expect(host.presses.has(CONTROL.workspaceDrawerTeamBridge)).toBe(false);
 		const pane = vi.fn(
 			(_props: { onNavigate: () => void; onClose: () => void }) => null,
 		);
@@ -178,7 +179,11 @@ describe("one workspace drawer above the mounted chat", () => {
 			},
 		});
 		await act(async () => controller.open());
-		await act(async () => controller.selectMode("team-bridge"));
+		expect(host.presses.has(CONTROL.workspaceDrawerAgents)).toBe(true);
+		expect(host.presses.has(CONTROL.workspaceDrawerTeamBridge)).toBe(true);
+		await act(async () =>
+			host.presses.get(CONTROL.workspaceDrawerTeamBridge)?.(),
+		);
 		expect(pane).toHaveBeenCalled();
 		expect(host.navigate).not.toHaveBeenCalled();
 		const callbacks = pane.mock.calls.at(-1)?.[0];

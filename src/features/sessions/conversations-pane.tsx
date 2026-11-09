@@ -701,6 +701,7 @@ export const ConversationsPane = ({
 					return (
 						<AgentListRow
 							selected={session.session_id === currentSessionId}
+							selectedIndicator
 							avatarRef={avatarRefOf(session)}
 							avatarTestID={sessionRowAvatarId(session.session_id)}
 							reserveLeading={anyRowPictured}

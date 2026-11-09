@@ -229,6 +229,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 };
 
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
+	 * remediation: shared drawer navigation changes both render trees, including
+	 * the opt-in current-chat check and its regression tests. This admits the
+	 * geometry instrument to the new source; it is NOT rendered/native proof.
+	 * ORIGINAL_*, instrument, file and input pins remain unchanged. */
 	/* Re-pinned 2026-11-07 for PR #187's round-2 remediation, with --print from
 	 * the staged tree. Only `src` moves: a resting voice outcome is no longer
 	 * line-capped, start/permission failures rest on the dictation row, ✓ moves to
@@ -586,7 +591,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "9f32ccb59ff78920a76f253f5d2ca670040c9aff5a5ae98811c4305ec0f4e5c1",
+	app: "8cb9d4fa71e20233fdbb86b3a3abd4265e8245a63c0440648ac14ea616375b00",
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
 	"design/tokens":
@@ -1093,7 +1098,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (`text-mono-sm` -> `text-body-sm`), which `project-create.tsx` asks for under
 	 * `ur` for script shaping. This proof does not measure that surface, so the
 	 * re-pin admits the source; it is not evidence about the prose chip. */
-	src: "7e253f8f3b2b26d8d39c6096a394d2d3128b49e6b046684c8c27055d51153792",
+	src: "ebaf74c96be7dd8592c50a164ac2cc8b79263c4c2497bd93e964b77acce81805",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

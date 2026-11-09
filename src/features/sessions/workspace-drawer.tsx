@@ -134,14 +134,14 @@ export const WorkspaceDrawerProvider = ({
 					bridgeAdapter ? (
 						<View className="flex-row gap-2 px-4 py-2">
 							<Button
-								testID="workspace-drawer-agents"
+								testID={CONTROL.workspaceDrawerAgents}
 								label={t("mobile.chrome.drawer.agents")}
 								selected={mode === "agents"}
 								variant={mode === "agents" ? "primary" : "quiet"}
 								onPress={() => selectMode("agents")}
 							/>
 							<Button
-								testID="workspace-drawer-team-bridge"
+								testID={CONTROL.workspaceDrawerTeamBridge}
 								label={bridgeAdapter.bridgeBadge.a11yLabel}
 								selected={Boolean(bridge)}
 								variant={bridge ? "primary" : "quiet"}
