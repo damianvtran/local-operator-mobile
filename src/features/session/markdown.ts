@@ -31,10 +31,36 @@ export const hasFencedBlock = (text: string): boolean =>
 export type Block =
 	| { kind: "code"; language: string; lines: string[] }
 	| { kind: "heading"; level: number; text: string }
-	| { kind: "list"; ordered: boolean; items: string[] }
+	| {
+			kind: "list";
+			ordered: boolean;
+			items: string[];
+			indents?: number[];
+			markers?: string[];
+	  }
 	| { kind: "quote"; text: string }
 	| { kind: "table"; header: string[]; rows: string[][] }
 	| { kind: "paragraph"; text: string };
+
+const INDENT = /^\s*/;
+const TABS = /\t/g;
+const LIST_MARKER = /^\s*(\d+[.)])/;
+const ESCAPE = /^\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/;
+const TICKS = /^`+/;
+const EMPHASIS_RUN = /^(\*+|_+|~{2,})/;
+const BARE_URL = /^https?:\/\/[^\s<>]+/i;
+const WORD_OR_SLASH = /[\w/]/;
+const TRAILING_PUNCTUATION = /[.,!?:;]+$/;
+const AUTOLINK = /^<(https?:\/\/[^<>\s]+|mailto:[^<>\s]+)>/i;
+const MAILTO = /^mailto:/i;
+const WORD = /\w/;
+const SPACE = /\s/;
+const LINE_BREAK = /[\r\n\u2028\u2029]/;
+const ANGLE_BOUNDARY = /[<>\n]/;
+// Conservative opener superset: even partial/escaped syntax must take the full
+// parser. A negative match proves every character is literal, including Unicode,
+// punctuation and newlines; it does NOT depend on length or prior streamed text.
+const INLINE_CANDIDATE = /[\\`*_~[<]|https?:\/\//i;
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
@@ -185,15 +211,32 @@ export const parseMarkdown = (text: string): Block[] => {
 		const ordered = bullet ? null : ORDERED.exec(line);
 		if (bullet || ordered) {
 			const isOrdered = ordered !== null;
-			const pattern = isOrdered ? ORDERED : BULLET;
 			const items: string[] = [];
+			const indents: number[] = [];
+			const markers: string[] = [];
 			while (index < lines.length) {
-				const item = pattern.exec(lines[index] ?? "");
+				const source = lines[index] ?? "";
+				const item = BULLET.exec(source) ?? ORDERED.exec(source);
 				if (!item) break;
 				items.push(item[1] ?? "");
+				// Keep source indentation and ordered numbers: flattening both made
+				// nested evidence lists read as unrelated top-level claims.
+				indents.push(
+					(INDENT.exec(source)?.[0] ?? "").replace(TABS, "    ").length,
+				);
+				markers.push(LIST_MARKER.exec(source)?.[1] ?? "•");
 				index += 1;
 			}
-			blocks.push({ kind: "list", ordered: isOrdered, items });
+			const plainMarkers = markers.every(
+				(marker, i) => marker === (isOrdered ? `${i + 1}.` : "•"),
+			);
+			blocks.push({
+				kind: "list",
+				ordered: isOrdered,
+				items,
+				...(indents.some((indent) => indent > 0) ? { indents } : {}),
+				...(!plainMarkers ? { markers } : {}),
+			});
 			continue;
 		}
 		if (startsTable(lines, index)) {
@@ -269,54 +312,384 @@ export type InlineSpan = {
 	code: boolean;
 	bold: boolean;
 	italic: boolean;
+	href?: string;
+	strike?: boolean;
 };
 
-const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+const unescapeMarkdown = (text: string) =>
+	text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1");
 
-/**
- * Split one line into styled spans.
- *
- * A deliberately small grammar, and a fixed point: text that matches nothing is a
- * plain span, so an unmatched `**` renders as itself rather than swallowing the
- * rest of the line — which is what a partial-`**` streamed frame would otherwise
- * do on every frame of a long answer.
- */
-export const parseInline = (text: string): InlineSpan[] => {
-	const spans: InlineSpan[] = [];
-	for (const piece of text.split(INLINE)) {
-		if (piece === undefined || piece.length === 0) continue;
-		if (piece.startsWith("`") && piece.endsWith("`") && piece.length > 1) {
-			spans.push({
-				text: piece.slice(1, -1),
-				code: true,
-				bold: false,
-				italic: false,
-			});
-		} else if (
-			piece.startsWith("**") &&
-			piece.endsWith("**") &&
-			piece.length > 3
-		) {
-			spans.push({
-				text: piece.slice(2, -2),
-				code: false,
-				bold: true,
-				italic: false,
-			});
-		} else if (
-			piece.startsWith("*") &&
-			piece.endsWith("*") &&
-			piece.length > 2
-		) {
-			spans.push({
-				text: piece.slice(1, -1),
-				code: false,
-				bold: false,
-				italic: true,
-			});
-		} else {
-			spans.push({ text: piece, code: false, bold: false, italic: false });
+type InlinePair = { end: number; width: number };
+
+/** Index delimiters once per streamed frame. A failed opener must be an O(1)
+ * lookup, not another walk over the remaining answer. Runs are pushed/popped
+ * once, and code is opaque to label/emphasis matching (but not to URL syntax).
+ * Rendering uses explicit frames below: deeply nested input cannot grow the JS
+ * call stack or repeatedly copy/reparse the same label/body. */
+function inlinePairs(text: string) {
+	const code = new Map<number, InlinePair>();
+	const brackets = new Map<number, number>();
+	const parentheses = new Map<number, number>();
+	const emphasis = new Map<number, InlinePair>();
+	// Range queries validate a destination without rescanning it. Malformed
+	// nested links can overlap destinations, so even a linear regex per opener
+	// would reintroduce quadratic work on the streaming path.
+	const nextSpace: number[] = [];
+	const nextContent: number[] = [];
+	const previousContent: number[] = [];
+	const nextAngle: number[] = [];
+	const lineBreaks: number[] = [0];
+	nextSpace[text.length] =
+		nextContent[text.length] =
+		nextAngle[text.length] =
+			text.length;
+	let previous = -1;
+	for (let i = 0; i < text.length; i += 1) {
+		if (!SPACE.test(text[i] ?? "")) previous = i;
+		previousContent[i] = previous;
+		lineBreaks[i + 1] =
+			(lineBreaks[i] ?? 0) + (LINE_BREAK.test(text[i] ?? "") ? 1 : 0);
+	}
+	for (let i = text.length - 1; i >= 0; i -= 1) {
+		const space = SPACE.test(text[i] ?? "");
+		nextSpace[i] = space ? i : (nextSpace[i + 1] ?? text.length);
+		nextContent[i] = space ? (nextContent[i + 1] ?? text.length) : i;
+		nextAngle[i] = ANGLE_BOUNDARY.test(text[i] ?? "")
+			? i
+			: (nextAngle[i + 1] ?? text.length);
+	}
+	const destinationBounds = (
+		start: number,
+		end: number,
+	): [number, number] | undefined => {
+		start = nextContent[start] ?? end;
+		end = (previousContent[end - 1] ?? -1) + 1;
+		if (start >= end) return undefined;
+		const title = (after: number) => {
+			if (after === end) return true;
+			const quote = nextContent[after] ?? end;
+			return (
+				SPACE.test(text[after] ?? "") &&
+				quote + 1 < end &&
+				(text[quote] === '"' || text[quote] === "'") &&
+				(text[end - 1] === '"' || text[end - 1] === "'") &&
+				lineBreaks[quote] === lineBreaks[end]
+			);
+		};
+		if (text[start] === "<") {
+			const close = nextAngle[start + 1] ?? end;
+			if (close < end && text[close] === ">" && title(close + 1))
+				return [start + 1, close];
 		}
+		const space = Math.min(nextSpace[start] ?? end, end);
+		if (title(space)) return [start, space];
+		return undefined;
+	};
+	const runs: { start: number; width: number }[] = [];
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] !== "`") continue;
+		const start = i;
+		while (text[i + 1] === "`") i += 1;
+		runs.push({ start, width: i - start + 1 });
+	}
+	// Preserve the existing code grammar: a closer may be a prefix of a longer
+	// tick run. Record suffixes too, since consuming that prefix leaves another
+	// possible opener. The monotone candidate stack and cursor visit at most
+	// one entry per tick character, rather than searching the suffix per run.
+	const tickCandidates: { start: number; width: number }[] = [];
+	for (let i = runs.length - 1; i >= 0; i -= 1) {
+		const run = runs[i];
+		if (!run) continue;
+		let candidate = tickCandidates.length - 1;
+		while (
+			candidate >= 0 &&
+			(tickCandidates[candidate]?.width ?? 0) < run.width
+		)
+			candidate -= 1;
+		for (let offset = 0; offset < run.width; offset += 1) {
+			const width = run.width - offset;
+			while (
+				candidate + 1 < tickCandidates.length &&
+				(tickCandidates[candidate + 1]?.width ?? 0) >= width
+			)
+				candidate += 1;
+			const closer = tickCandidates[candidate];
+			if (closer) code.set(run.start + offset, { end: closer.start, width });
+		}
+		while (
+			tickCandidates.length &&
+			(tickCandidates[tickCandidates.length - 1]?.width ?? 0) <= run.width
+		)
+			tickCandidates.pop();
+		tickCandidates.push(run);
+	}
+	const parenStack: number[] = [];
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] === "\\") {
+			i += 1;
+			continue;
+		}
+		if (text[i] === "(") parenStack.push(i);
+		if (text[i] === ")") {
+			const start = parenStack.pop();
+			if (start !== undefined) parentheses.set(start, i);
+		}
+	}
+	const bracketStack: number[] = [];
+	const destinationEnds = new Map<number, number>();
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] === "\\") {
+			i += 1;
+			continue;
+		}
+		const span = code.get(i);
+		if (span) {
+			i = span.end + span.width - 1;
+			continue;
+		}
+		if (text[i] === "[") bracketStack.push(i);
+		if (text[i] === "]") {
+			const start = bracketStack.pop();
+			if (start !== undefined) {
+				brackets.set(start, i);
+				const end = text[i + 1] === "(" ? parentheses.get(i + 1) : undefined;
+				// Only a complete, valid link makes its destination/title opaque.
+				// Tick candidates there are URL/title characters, not code openers
+				// that may hide later labels. Bounds validation is O(1), including
+				// failed/overlapping candidates; do not slice or scan their suffixes.
+				if (end !== undefined && destinationBounds(i + 2, end) !== undefined) {
+					destinationEnds.set(i, end);
+					i = end;
+				}
+			}
+		}
+	}
+	const stacks = new Map<string, { start: number; width: number }[]>();
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] === "\\") {
+			i += 1;
+			continue;
+		}
+		const span = code.get(i);
+		if (span) {
+			i = span.end + span.width - 1;
+			continue;
+		}
+		// Destinations and public URLs are opaque to typography. Otherwise a
+		// URL underscore could steal a label's closing emphasis delimiter.
+		const destinationEnd = destinationEnds.get(i);
+		if (destinationEnd !== undefined) {
+			i = destinationEnd;
+			continue;
+		}
+		const bare = BARE_URL.exec(text.slice(i));
+		if (bare) {
+			i += bare[0].length - 1;
+			continue;
+		}
+		const marker = text[i] ?? "";
+		if (marker !== "*" && marker !== "_" && marker !== "~") continue;
+		const start = i;
+		while (text[i + 1] === marker) i += 1;
+		const width = i - start + 1;
+		if (width > 3 || (marker === "~" && width !== 2)) continue;
+		const stack = stacks.get(marker) ?? [];
+		stacks.set(marker, stack);
+		let remaining = width;
+		let closer = start;
+		if (
+			start > 0 &&
+			!SPACE.test(text[start - 1] ?? "") &&
+			!(marker === "_" && WORD.test(text[i + 1] ?? ""))
+		) {
+			while (remaining > 0 && stack.length > 0) {
+				const opener = stack[stack.length - 1];
+				if (!opener) break;
+				const used = Math.min(opener.width, remaining);
+				opener.width -= used;
+				emphasis.set(opener.start + opener.width, { end: closer, width: used });
+				if (opener.width === 0) stack.pop();
+				remaining -= used;
+				closer += used;
+			}
+		}
+		if (
+			remaining > 0 &&
+			i + 1 < text.length &&
+			!SPACE.test(text[i + 1] ?? "") &&
+			!(marker === "_" && WORD.test(text[start - 1] ?? ""))
+		)
+			stack.push({ start: closer, width: remaining });
+	}
+	const destination = (start: number, end: number) => {
+		const bounds = destinationBounds(start, end);
+		return bounds === undefined
+			? undefined
+			: unescapeMarkdown(text.slice(bounds[0], bounds[1]));
+	};
+	return { code, brackets, parentheses, emphasis, destination };
+}
+
+/** Complete constructs only: unknown/incomplete streamed source remains literal.
+ * Indexed matching and an explicit frame stack keep work proportional to input
+ * plus output, rather than nesting depth or the count of unmatched openers. */
+export const parseInline = (text: string): InlineSpan[] => {
+	// Ordinary streamed prose needs one native scan and one span, not per-byte
+	// delimiter indexes, suffix recognizers and concatenations on every frame.
+	// Keep all possible openers on the indexed path so incomplete syntax can
+	// become markup on a later frame without any stale per-message cache.
+	if (!INLINE_CANDIDATE.test(text))
+		return text ? [{ text, code: false, bold: false, italic: false }] : [];
+	const pairs = inlinePairs(text);
+	const spans: InlineSpan[] = [];
+	type Frame = {
+		index: number;
+		end: number;
+		style: Omit<InlineSpan, "text">;
+		plain: number;
+	};
+	const frames: Frame[] = [
+		{
+			index: 0,
+			end: text.length,
+			style: { code: false, bold: false, italic: false },
+			plain: -1,
+		},
+	];
+	while (frames.length) {
+		const frame = frames[frames.length - 1];
+		if (!frame) break;
+		if (frame.index >= frame.end) {
+			frames.pop();
+			continue;
+		}
+		const index = frame.index;
+		const rest = text.slice(index, frame.end);
+		const plain = (value: string) => {
+			const last = spans[frame.plain];
+			if (last) last.text += value;
+			else {
+				frame.plain = spans.length;
+				spans.push({ text: value, ...frame.style });
+			}
+		};
+		const escaped = ESCAPE.exec(rest);
+		if (escaped) {
+			plain(escaped[1] ?? "");
+			frame.index += escaped[0].length;
+			continue;
+		}
+		const ticks = TICKS.exec(rest)?.[0];
+		if (ticks) {
+			const pair = pairs.code.get(index);
+			if (pair && pair.end < frame.end) {
+				spans.push({
+					text: text.slice(index + pair.width, pair.end),
+					...frame.style,
+					code: true,
+				});
+				frame.plain = -1;
+				frame.index = pair.end + pair.width;
+			} else {
+				plain(ticks);
+				frame.index += ticks.length;
+			}
+			continue;
+		}
+		if (text[index] === "[") {
+			const labelEnd = pairs.brackets.get(index);
+			const end =
+				labelEnd === undefined
+					? undefined
+					: pairs.parentheses.get(labelEnd + 1);
+			if (
+				labelEnd !== undefined &&
+				text[labelEnd + 1] === "(" &&
+				end !== undefined &&
+				end < frame.end
+			) {
+				const href = pairs.destination(labelEnd + 2, end);
+				if (href !== undefined) {
+					frame.index = end + 1;
+					frame.plain = -1;
+					frames.push({
+						index: index + 1,
+						end: labelEnd,
+						style: { ...frame.style, href: frame.style.href ?? href },
+						plain: -1,
+					});
+					continue;
+				}
+			}
+		}
+		// Check the boundary before scanning a URL-sized suffix: repeated URL
+		// prefixes inside one identifier are literal, not repeated lookaheads.
+		const bare = !WORD_OR_SLASH.test(text[index - 1] ?? "")
+			? BARE_URL.exec(rest)
+			: null;
+		if (bare) {
+			let href = bare[0].replace(TRAILING_PUNCTUATION, "");
+			let balance = 0;
+			for (const character of href) {
+				if (character === "(") balance += 1;
+				if (character === ")") balance -= 1;
+			}
+			let end = href.length;
+			while (balance < 0 && href[end - 1] === ")") {
+				end -= 1;
+				balance += 1;
+			}
+			href = href.slice(0, end);
+			spans.push({
+				text: href,
+				...frame.style,
+				href: frame.style.href ?? href,
+			});
+			frame.plain = -1;
+			frame.index += href.length;
+			continue;
+		}
+		const autolink = AUTOLINK.exec(rest);
+		if (autolink) {
+			const href = autolink[1] ?? "";
+			spans.push({
+				text: href.replace(MAILTO, ""),
+				...frame.style,
+				href: frame.style.href ?? href,
+			});
+			frame.plain = -1;
+			frame.index += autolink[0].length;
+			continue;
+		}
+		const pair = pairs.emphasis.get(index);
+		if (pair && pair.end < frame.end && pair.end > index + pair.width) {
+			frame.index = pair.end + pair.width;
+			frame.plain = -1;
+			frames.push({
+				index: index + pair.width,
+				end: pair.end,
+				plain: -1,
+				style: {
+					...frame.style,
+					...(text[index] === "~"
+						? { strike: true }
+						: pair.width === 3
+							? { bold: true, italic: true }
+							: pair.width === 2
+								? { bold: true }
+								: { italic: true }),
+				},
+			});
+			continue;
+		}
+		const run = EMPHASIS_RUN.exec(rest)?.[0];
+		if (run) {
+			plain(run);
+			frame.index += run.length;
+			continue;
+		}
+		plain(text[index] ?? "");
+		frame.index += 1;
 	}
 	return spans;
 };
