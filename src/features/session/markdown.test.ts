@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	hasTableBlock,
+	parseInline,
 	parseMarkdown,
 	splitTableRow,
 	TABLE_MONO_ADVANCE_PT,
@@ -354,6 +355,177 @@ describe("tableFadeGeometry (the scroll-cue fade, both directions)", () => {
 				const g = tableFadeGeometry(edge, rtl);
 				expect(g.side === "right" ? g.farOpacity : g.nearOpacity).toBe(1);
 			}
+		}
+	});
+});
+
+describe("assistant inline links", () => {
+	it.each([
+		"[Reuters](https://www.reuters.com/world/)",
+		"- [Reuters](https://www.reuters.com/world/)",
+	])("renders the reported source %s as a link span", (source) => {
+		const block = parseMarkdown(source)[0];
+		const text =
+			block?.kind === "list"
+				? block.items[0]
+				: block && "text" in block
+					? block.text
+					: "";
+		expect(parseInline(text ?? "")).toEqual([
+			{
+				text: "Reuters",
+				href: "https://www.reuters.com/world/",
+				code: false,
+				bold: false,
+				italic: false,
+			},
+		]);
+	});
+});
+
+describe("finite inline grammar", () => {
+	it.each([
+		[
+			"[article](https://example.com/a_(b))",
+			"article",
+			"https://example.com/a_(b)",
+		],
+		[
+			String.raw`[a\]b](https://example.com/a\(b\))`,
+			"a]b",
+			"https://example.com/a(b)",
+		],
+		['[title](https://example.com "A title")', "title", "https://example.com"],
+		["[angle](<https://example.com/a>)", "angle", "https://example.com/a"],
+		[
+			"<https://example.com/a_(b)>",
+			"https://example.com/a_(b)",
+			"https://example.com/a_(b)",
+		],
+		[
+			"https://example.com/a_(b).",
+			"https://example.com/a_(b)",
+			"https://example.com/a_(b)",
+		],
+		[
+			"<mailto:hello@example.com>",
+			"hello@example.com",
+			"mailto:hello@example.com",
+		],
+	])(
+		"recognizes %s without truncating the destination",
+		(source, label, href) => {
+			expect(parseInline(source)[0]).toMatchObject({ text: label, href });
+		},
+	);
+	it("combines nested emphasis and links in either direction", () => {
+		expect(parseInline("**[Reuters](https://example.com)**")[0]).toMatchObject({
+			text: "Reuters",
+			bold: true,
+			href: "https://example.com",
+		});
+		expect(parseInline("[**Reuters** and *BBC*](https://example.com)")).toEqual(
+			[
+				{
+					text: "Reuters",
+					bold: true,
+					italic: false,
+					code: false,
+					href: "https://example.com",
+				},
+				{
+					text: " and ",
+					bold: false,
+					italic: false,
+					code: false,
+					href: "https://example.com",
+				},
+				{
+					text: "BBC",
+					bold: false,
+					italic: true,
+					code: false,
+					href: "https://example.com",
+				},
+			],
+		);
+		expect(
+			parseInline("***both*** __bold__ _italic_ ~~removed~~").filter((span) =>
+				span.text.trim(),
+			),
+		).toMatchObject([
+			{ text: "both", bold: true, italic: true },
+			{ text: "bold", bold: true },
+			{ text: "italic", italic: true },
+			{ text: "removed", strike: true },
+		]);
+	});
+	it("leaves code literal, even when it contains links and markup", () => {
+		expect(parseInline("`[Reuters](https://example.com) **bold**`")).toEqual([
+			{
+				text: "[Reuters](https://example.com) **bold**",
+				code: true,
+				bold: false,
+				italic: false,
+			},
+		]);
+		expect(parseInline("``a ` b``")[0]).toMatchObject({
+			text: "a ` b",
+			code: true,
+		});
+	});
+	it.each([
+		"[Reuters]",
+		"[Reuters](https://example.",
+		"[Reuters](https://example.com/a_(b)",
+		"**partial",
+		"*partial",
+		"`partial",
+		"<script>alert(1)</script>",
+		"identifier_name_value",
+	])("keeps incomplete or unsupported source %s", (source) => {
+		expect(
+			parseInline(source)
+				.map((span) => span.text)
+				.join(""),
+		).toBe(source);
+	});
+	it("retains every streaming prefix until the complete link can replace it", () => {
+		const source = "[Reuters](https://www.reuters.com/world/)";
+		for (let length = 0; length < source.length; length += 1)
+			expect(
+				parseInline(source.slice(0, length))
+					.map((span) => span.text)
+					.join(""),
+			).toBe(source.slice(0, length));
+	});
+	it("preserves nested list indentation and mixed markers", () => {
+		expect(parseMarkdown("- top\n  3. nested\n    - deeper")[0]).toEqual({
+			kind: "list",
+			ordered: false,
+			items: ["top", "nested", "deeper"],
+			indents: [0, 2, 4],
+			markers: ["•", "3.", "•"],
+		});
+	});
+});
+
+describe("streamed formatting delimiters", () => {
+	it.each([
+		"**word**",
+		"***word***",
+		"__word__",
+		"~~word~~",
+		"`word`",
+		"``word``",
+	])("does not reinterpret an incomplete opening run in %s", (source) => {
+		for (let length = 0; length < source.length; length += 1) {
+			const prefix = source.slice(0, length);
+			expect(
+				parseInline(prefix)
+					.map((span) => span.text)
+					.join(""),
+			).toBe(prefix);
 		}
 	});
 });

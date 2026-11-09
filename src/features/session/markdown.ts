@@ -31,10 +31,33 @@ export const hasFencedBlock = (text: string): boolean =>
 export type Block =
 	| { kind: "code"; language: string; lines: string[] }
 	| { kind: "heading"; level: number; text: string }
-	| { kind: "list"; ordered: boolean; items: string[] }
+	| {
+			kind: "list";
+			ordered: boolean;
+			items: string[];
+			indents?: number[];
+			markers?: string[];
+	  }
 	| { kind: "quote"; text: string }
 	| { kind: "table"; header: string[]; rows: string[][] }
 	| { kind: "paragraph"; text: string };
+
+const INDENT = /^\s*/;
+const TABS = /\t/g;
+const LIST_MARKER = /^\s*(\d+[.)])/;
+const ESCAPE = /^\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/;
+const TICKS = /^`+/;
+const EMPHASIS_RUN = /^(\*+|_+|~{2,})/;
+const DESTINATION = /^(?:<([^<>\n]*)>|(\S+?))(?:\s+["'].*["'])?$/;
+const BARE_URL = /^https?:\/\/[^\s<>]+/i;
+const WORD_OR_SLASH = /[\w/]/;
+const TRAILING_PUNCTUATION = /[.,!?:;]+$/;
+const CLOSE_PAREN = /\)/g;
+const OPEN_PAREN = /\(/g;
+const AUTOLINK = /^<(https?:\/\/[^<>\s]+|mailto:[^<>\s]+)>/i;
+const MAILTO = /^mailto:/i;
+const WORD = /\w/;
+const EDGE_SPACE = /^\s|\s$/;
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
@@ -185,15 +208,32 @@ export const parseMarkdown = (text: string): Block[] => {
 		const ordered = bullet ? null : ORDERED.exec(line);
 		if (bullet || ordered) {
 			const isOrdered = ordered !== null;
-			const pattern = isOrdered ? ORDERED : BULLET;
 			const items: string[] = [];
+			const indents: number[] = [];
+			const markers: string[] = [];
 			while (index < lines.length) {
-				const item = pattern.exec(lines[index] ?? "");
+				const source = lines[index] ?? "";
+				const item = BULLET.exec(source) ?? ORDERED.exec(source);
 				if (!item) break;
 				items.push(item[1] ?? "");
+				// Keep source indentation and ordered numbers: flattening both made
+				// nested evidence lists read as unrelated top-level claims.
+				indents.push(
+					(INDENT.exec(source)?.[0] ?? "").replace(TABS, "    ").length,
+				);
+				markers.push(LIST_MARKER.exec(source)?.[1] ?? "•");
 				index += 1;
 			}
-			blocks.push({ kind: "list", ordered: isOrdered, items });
+			const plainMarkers = markers.every(
+				(marker, i) => marker === (isOrdered ? `${i + 1}.` : "•"),
+			);
+			blocks.push({
+				kind: "list",
+				ordered: isOrdered,
+				items,
+				...(indents.some((indent) => indent > 0) ? { indents } : {}),
+				...(!plainMarkers ? { markers } : {}),
+			});
 			continue;
 		}
 		if (startsTable(lines, index)) {
@@ -269,54 +309,171 @@ export type InlineSpan = {
 	code: boolean;
 	bold: boolean;
 	italic: boolean;
+	href?: string;
+	strike?: boolean;
 };
 
-const INLINE = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g;
+const unescapeMarkdown = (text: string) =>
+	text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1");
+
+/** Find a balanced closer, skipping escapes. A URL regex cannot
+ * distinguish a destination's parentheses from the link's closing delimiter. */
+function closing(
+	text: string,
+	start: number,
+	open: string,
+	close: string,
+): number {
+	let depth = 1;
+	for (let index = start; index < text.length; index += 1) {
+		if (text[index] === "\\") {
+			index += 1;
+			continue;
+		}
+		if (text[index] === open) depth += 1;
+		if (text[index] === close) {
+			depth -= 1;
+			if (depth === 0) return index;
+		}
+	}
+	return -1;
+}
 
 /**
- * Split one line into styled spans.
- *
- * A deliberately small grammar, and a fixed point: text that matches nothing is a
- * plain span, so an unmatched `**` renders as itself rather than swallowing the
- * rest of the line — which is what a partial-`**` streamed frame would otherwise
- * do on every frame of a long answer.
+ * Inline grammar shared by every text-bearing block. Consume only COMPLETE
+ * constructs: streamed delimiters otherwise remain visible, never disappear.
+ * Recursive styling flattens to native Text spans so links inside emphasis and
+ * emphasis inside links retain both the action and typography. HTML is text,
+ * never parsed. This is intentionally not a second browser/HTML renderer.
  */
 export const parseInline = (text: string): InlineSpan[] => {
 	const spans: InlineSpan[] = [];
-	for (const piece of text.split(INLINE)) {
-		if (piece === undefined || piece.length === 0) continue;
-		if (piece.startsWith("`") && piece.endsWith("`") && piece.length > 1) {
-			spans.push({
-				text: piece.slice(1, -1),
-				code: true,
-				bold: false,
-				italic: false,
-			});
-		} else if (
-			piece.startsWith("**") &&
-			piece.endsWith("**") &&
-			piece.length > 3
-		) {
-			spans.push({
-				text: piece.slice(2, -2),
-				code: false,
-				bold: true,
-				italic: false,
-			});
-		} else if (
-			piece.startsWith("*") &&
-			piece.endsWith("*") &&
-			piece.length > 2
-		) {
-			spans.push({
-				text: piece.slice(1, -1),
-				code: false,
-				bold: false,
-				italic: true,
-			});
-		} else {
-			spans.push({ text: piece, code: false, bold: false, italic: false });
+	const plain = (value: string) => {
+		const last = spans[spans.length - 1];
+		if (
+			last &&
+			!last.code &&
+			!last.bold &&
+			!last.italic &&
+			!last.href &&
+			!last.strike
+		)
+			last.text += value;
+		else spans.push({ text: value, code: false, bold: false, italic: false });
+	};
+	let index = 0;
+	while (index < text.length) {
+		const rest = text.slice(index);
+		const escaped = ESCAPE.exec(rest);
+		if (escaped) {
+			plain(escaped[1] ?? "");
+			index += escaped[0].length;
+			continue;
 		}
+		const ticks = TICKS.exec(rest)?.[0];
+		if (ticks) {
+			const end = text.indexOf(ticks, index + ticks.length);
+			if (end > index + ticks.length) {
+				spans.push({
+					text: text.slice(index + ticks.length, end),
+					code: true,
+					bold: false,
+					italic: false,
+				});
+				index = end + ticks.length;
+				continue;
+			}
+			// An incomplete multi-backtick opener is one literal token, not a
+			// shorter opener beginning at its second character on the next pass.
+			plain(ticks);
+			index += ticks.length;
+			continue;
+		}
+		if (text[index] === "[") {
+			const labelEnd = closing(text, index + 1, "[", "]");
+			if (labelEnd >= 0 && text[labelEnd + 1] === "(") {
+				const end = closing(text, labelEnd + 2, "(", ")");
+				if (end >= 0) {
+					const destination = text.slice(labelEnd + 2, end).trim();
+					const match = DESTINATION.exec(destination);
+					if (match) {
+						const href = unescapeMarkdown(match[1] ?? match[2] ?? "");
+						spans.push(
+							...parseInline(text.slice(index + 1, labelEnd)).map((span) => ({
+								...span,
+								href,
+							})),
+						);
+						index = end + 1;
+						continue;
+					}
+				}
+			}
+		}
+		// GFM's public URL subset, also used by desktop/relay. Peel sentence
+		// punctuation, but retain balanced parentheses inside the destination.
+		const bare = BARE_URL.exec(rest);
+		if (bare && !WORD_OR_SLASH.test(text[index - 1] ?? "")) {
+			let href = bare[0].replace(TRAILING_PUNCTUATION, "");
+			while (
+				href.endsWith(")") &&
+				(href.match(CLOSE_PAREN)?.length ?? 0) >
+					(href.match(OPEN_PAREN)?.length ?? 0)
+			)
+				href = href.slice(0, -1);
+			spans.push({ text: href, href, code: false, bold: false, italic: false });
+			index += href.length;
+			continue;
+		}
+		const autolink = AUTOLINK.exec(rest);
+		if (autolink) {
+			const href = autolink[1] ?? "";
+			spans.push({
+				text: href.replace(MAILTO, ""),
+				href,
+				code: false,
+				bold: false,
+				italic: false,
+			});
+			index += autolink[0].length;
+			continue;
+		}
+		let styled = false;
+		const emphasisRun = EMPHASIS_RUN.exec(rest)?.[0];
+		for (const delimiter of ["***", "___", "**", "__", "~~", "*", "_"]) {
+			if (emphasisRun !== delimiter) continue;
+			// Intraword underscores are prose (URLs and identifiers), not emphasis.
+			if (delimiter.includes("_") && WORD.test(text[index - 1] ?? "")) continue;
+			let end = text.indexOf(delimiter, index + delimiter.length);
+			while (end >= 0 && text[end - 1] === "\\")
+				end = text.indexOf(delimiter, end + delimiter.length);
+			if (end <= index + delimiter.length) continue;
+			const body = text.slice(index + delimiter.length, end);
+			if (EDGE_SPACE.test(body)) continue;
+			spans.push(
+				...parseInline(body).map((span) => ({
+					...span,
+					...(delimiter === "~~"
+						? { strike: true }
+						: delimiter.length === 3
+							? { bold: true, italic: true }
+							: delimiter.length === 2
+								? { bold: true }
+								: { italic: true }),
+				})),
+			);
+			index = end + delimiter.length;
+			styled = true;
+			break;
+		}
+		if (styled) continue;
+		if (emphasisRun) {
+			plain(emphasisRun);
+			index += emphasisRun.length;
+			continue;
+		}
+		plain(text[index] ?? "");
+		index += 1;
 	}
 	return spans;
 };
