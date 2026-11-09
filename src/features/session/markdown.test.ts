@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
 	hasTableBlock,
@@ -26,6 +26,8 @@ import {
  *    the transcript re-parses on every frame and a grammar that only works on
  *    settled text would flicker the reader's answer while it arrives.
  */
+
+const INDEX_PROPERTY = /^\d+$/;
 
 const blocksOf = (text: string) => parseMarkdown(text);
 
@@ -458,6 +460,126 @@ describe("finite inline grammar", () => {
 			{ text: "bold", bold: true },
 			{ text: "italic", italic: true },
 			{ text: "removed", strike: true },
+		]);
+	});
+	it.each(["[".repeat(2048), `${"[x](".repeat(512)} bad${")".repeat(512)}`])(
+		"bounds failed delimiter scans by input length ($#)",
+		(source) => {
+			let reads = 0;
+			// A boxed string preserves the public string operations while counting
+			// actual character visits. No machine-load-dependent wall-clock gate.
+			const counted = new Proxy(new String(source), {
+				get(target, property) {
+					if (typeof property === "string" && INDEX_PROPERTY.test(property))
+						reads += 1;
+					const value = Reflect.get(target, property, target);
+					return typeof value === "function" ? value.bind(target) : value;
+				},
+			}) as unknown as string;
+			expect(parseInline(counted)).toEqual(parseInline(source));
+			expect(reads).toBeLessThan(source.length * 50);
+		},
+	);
+	it("does not repeatedly scan unactivatable URL prefixes inside prose", () => {
+		const source = `a${"https://".repeat(512)}`;
+		let scanned = 0;
+		const original = RegExp.prototype.exec;
+		const spy = vi.spyOn(RegExp.prototype, "exec").mockImplementation(function (
+			this: RegExp,
+			value: string,
+		) {
+			const result = original.call(this, value);
+			if (result?.[0]?.startsWith("https://")) scanned += result[0].length;
+			return result;
+		});
+		try {
+			expect(parseInline(source)).toEqual([
+				{ text: source, code: false, bold: false, italic: false },
+			]);
+			expect(scanned).toBeLessThan(source.length * 2);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+	it("never recounts a shrinking URL's parentheses", () => {
+		const source = `https://example.com/${")".repeat(2048)}`;
+		let rescanned = 0;
+		const original = String.prototype.match;
+		const spy = vi
+			.spyOn(String.prototype, "match")
+			.mockImplementation(function (
+				this: string,
+				pattern: Parameters<typeof original>[0],
+			) {
+				rescanned += this.length;
+				return original.call(this, pattern);
+			});
+		try {
+			const spans = parseInline(source);
+			expect(spans[0]?.href).toBe("https://example.com/");
+			expect(spans.map((span) => span.text).join("")).toBe(source);
+			expect(rescanned).toBeLessThan(source.length * 2);
+		} finally {
+			spy.mockRestore();
+		}
+	});
+	it("retains all content in deeply nested labels without recursive calls", () => {
+		const source = `${"[".repeat(12000)}label${"](https://example.com)".repeat(12000)}`;
+		expect(
+			parseInline(source)
+				.map((span) => span.text)
+				.join(""),
+		).toBe("label");
+	});
+	it.each(["]", "["])(
+		"ignores code %s when balancing link labels",
+		(bracket) => {
+			const spans = parseInline(`[a \`${bracket}\` b](https://example.com)`);
+			expect(spans).toMatchObject([
+				{ text: "a ", href: "https://example.com" },
+				{ text: bracket, code: true, href: "https://example.com" },
+				{ text: " b", href: "https://example.com" },
+			]);
+		},
+	);
+	it.each(["*italic **bold** italic*", "_italic __bold__ italic_"])(
+		"retains nested emphasis in %s",
+		(source) => {
+			expect(parseInline(source)).toMatchObject([
+				{ text: "italic ", italic: true, bold: false },
+				{ text: "bold", italic: true, bold: true },
+				{ text: " italic", italic: true, bold: false },
+			]);
+		},
+	);
+	it("closes nested styled label runs from the inside out", () => {
+		expect(
+			parseInline("[*Reuters **World***](https://example.com)"),
+		).toMatchObject([
+			{
+				text: "Reuters ",
+				italic: true,
+				bold: false,
+				href: "https://example.com",
+			},
+			{ text: "World", italic: true, bold: true, href: "https://example.com" },
+		]);
+	});
+	it.each(["https://label.example", "<https://label.example>"])(
+		"retains the explicit destination when label %s is also URL-shaped",
+		(label) => {
+			expect(
+				parseInline(`[${label}](https://target.example)`)[0],
+			).toMatchObject({
+				text: "https://label.example",
+				href: "https://target.example",
+			});
+		},
+	);
+	it("preserves the existing longer-backtick closer grammar", () => {
+		expect(parseInline("``a ```")).toMatchObject([
+			{ text: "a ", code: true },
+			{ text: "`", code: false },
 		]);
 	});
 	it("leaves code literal, even when it contains links and markup", () => {

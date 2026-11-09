@@ -48,16 +48,15 @@ const LIST_MARKER = /^\s*(\d+[.)])/;
 const ESCAPE = /^\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/;
 const TICKS = /^`+/;
 const EMPHASIS_RUN = /^(\*+|_+|~{2,})/;
-const DESTINATION = /^(?:<([^<>\n]*)>|(\S+?))(?:\s+["'].*["'])?$/;
 const BARE_URL = /^https?:\/\/[^\s<>]+/i;
 const WORD_OR_SLASH = /[\w/]/;
 const TRAILING_PUNCTUATION = /[.,!?:;]+$/;
-const CLOSE_PAREN = /\)/g;
-const OPEN_PAREN = /\(/g;
 const AUTOLINK = /^<(https?:\/\/[^<>\s]+|mailto:[^<>\s]+)>/i;
 const MAILTO = /^mailto:/i;
 const WORD = /\w/;
-const EDGE_SPACE = /^\s|\s$/;
+const SPACE = /\s/;
+const LINE_BREAK = /[\r\n\u2028\u2029]/;
+const ANGLE_BOUNDARY = /[<>\n]/;
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
 const BULLET = /^\s*[-*+]\s+(.*)$/;
@@ -316,113 +315,309 @@ export type InlineSpan = {
 const unescapeMarkdown = (text: string) =>
 	text.replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/g, "$1");
 
-/** Find a balanced closer, skipping escapes. A URL regex cannot
- * distinguish a destination's parentheses from the link's closing delimiter. */
-function closing(
-	text: string,
-	start: number,
-	open: string,
-	close: string,
-): number {
-	let depth = 1;
-	for (let index = start; index < text.length; index += 1) {
-		if (text[index] === "\\") {
-			index += 1;
+type InlinePair = { end: number; width: number };
+
+/** Index delimiters once per streamed frame. A failed opener must be an O(1)
+ * lookup, not another walk over the remaining answer. Runs are pushed/popped
+ * once, and code is opaque to label/emphasis matching (but not to URL syntax).
+ * Rendering uses explicit frames below: deeply nested input cannot grow the JS
+ * call stack or repeatedly copy/reparse the same label/body. */
+function inlinePairs(text: string) {
+	const code = new Map<number, InlinePair>();
+	const brackets = new Map<number, number>();
+	const parentheses = new Map<number, number>();
+	const emphasis = new Map<number, InlinePair>();
+	// Range queries validate a destination without rescanning it. Malformed
+	// nested links can overlap destinations, so even a linear regex per opener
+	// would reintroduce quadratic work on the streaming path.
+	const nextSpace: number[] = [];
+	const nextContent: number[] = [];
+	const previousContent: number[] = [];
+	const nextAngle: number[] = [];
+	const lineBreaks: number[] = [0];
+	nextSpace[text.length] =
+		nextContent[text.length] =
+		nextAngle[text.length] =
+			text.length;
+	let previous = -1;
+	for (let i = 0; i < text.length; i += 1) {
+		if (!SPACE.test(text[i] ?? "")) previous = i;
+		previousContent[i] = previous;
+		lineBreaks[i + 1] =
+			(lineBreaks[i] ?? 0) + (LINE_BREAK.test(text[i] ?? "") ? 1 : 0);
+	}
+	for (let i = text.length - 1; i >= 0; i -= 1) {
+		const space = SPACE.test(text[i] ?? "");
+		nextSpace[i] = space ? i : (nextSpace[i + 1] ?? text.length);
+		nextContent[i] = space ? (nextContent[i + 1] ?? text.length) : i;
+		nextAngle[i] = ANGLE_BOUNDARY.test(text[i] ?? "")
+			? i
+			: (nextAngle[i + 1] ?? text.length);
+	}
+	const destination = (start: number, end: number): string | undefined => {
+		start = nextContent[start] ?? end;
+		end = (previousContent[end - 1] ?? -1) + 1;
+		if (start >= end) return undefined;
+		const title = (after: number) => {
+			if (after === end) return true;
+			const quote = nextContent[after] ?? end;
+			return (
+				SPACE.test(text[after] ?? "") &&
+				quote + 1 < end &&
+				(text[quote] === '"' || text[quote] === "'") &&
+				(text[end - 1] === '"' || text[end - 1] === "'") &&
+				lineBreaks[quote] === lineBreaks[end]
+			);
+		};
+		if (text[start] === "<") {
+			const close = nextAngle[start + 1] ?? end;
+			if (close < end && text[close] === ">" && title(close + 1))
+				return unescapeMarkdown(text.slice(start + 1, close));
+		}
+		const space = Math.min(nextSpace[start] ?? end, end);
+		if (title(space)) return unescapeMarkdown(text.slice(start, space));
+		return undefined;
+	};
+	const runs: { start: number; width: number }[] = [];
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] !== "`") continue;
+		const start = i;
+		while (text[i + 1] === "`") i += 1;
+		runs.push({ start, width: i - start + 1 });
+	}
+	// Preserve the existing code grammar: a closer may be a prefix of a longer
+	// tick run. Record suffixes too, since consuming that prefix leaves another
+	// possible opener. The monotone candidate stack and cursor visit at most
+	// one entry per tick character, rather than searching the suffix per run.
+	const tickCandidates: { start: number; width: number }[] = [];
+	for (let i = runs.length - 1; i >= 0; i -= 1) {
+		const run = runs[i];
+		if (!run) continue;
+		let candidate = tickCandidates.length - 1;
+		while (
+			candidate >= 0 &&
+			(tickCandidates[candidate]?.width ?? 0) < run.width
+		)
+			candidate -= 1;
+		for (let offset = 0; offset < run.width; offset += 1) {
+			const width = run.width - offset;
+			while (
+				candidate + 1 < tickCandidates.length &&
+				(tickCandidates[candidate + 1]?.width ?? 0) >= width
+			)
+				candidate += 1;
+			const closer = tickCandidates[candidate];
+			if (closer) code.set(run.start + offset, { end: closer.start, width });
+		}
+		while (
+			tickCandidates.length &&
+			(tickCandidates[tickCandidates.length - 1]?.width ?? 0) <= run.width
+		)
+			tickCandidates.pop();
+		tickCandidates.push(run);
+	}
+	const parenStack: number[] = [];
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] === "\\") {
+			i += 1;
 			continue;
 		}
-		if (text[index] === open) depth += 1;
-		if (text[index] === close) {
-			depth -= 1;
-			if (depth === 0) return index;
+		if (text[i] === "(") parenStack.push(i);
+		if (text[i] === ")") {
+			const start = parenStack.pop();
+			if (start !== undefined) parentheses.set(start, i);
 		}
 	}
-	return -1;
+	const bracketStack: number[] = [];
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] === "\\") {
+			i += 1;
+			continue;
+		}
+		const span = code.get(i);
+		if (span) {
+			i = span.end + span.width - 1;
+			continue;
+		}
+		if (text[i] === "[") bracketStack.push(i);
+		if (text[i] === "]") {
+			const start = bracketStack.pop();
+			if (start !== undefined) brackets.set(start, i);
+		}
+	}
+	const stacks = new Map<string, { start: number; width: number }[]>();
+	for (let i = 0; i < text.length; i += 1) {
+		if (text[i] === "\\") {
+			i += 1;
+			continue;
+		}
+		const span = code.get(i);
+		if (span) {
+			i = span.end + span.width - 1;
+			continue;
+		}
+		// Destinations and public URLs are opaque to typography. Otherwise a
+		// URL underscore could steal a label's closing emphasis delimiter.
+		if (text[i] === "]" && text[i + 1] === "(") {
+			const end = parentheses.get(i + 1);
+			if (end !== undefined) {
+				i = end;
+				continue;
+			}
+		}
+		const bare = BARE_URL.exec(text.slice(i));
+		if (bare) {
+			i += bare[0].length - 1;
+			continue;
+		}
+		const marker = text[i] ?? "";
+		if (marker !== "*" && marker !== "_" && marker !== "~") continue;
+		const start = i;
+		while (text[i + 1] === marker) i += 1;
+		const width = i - start + 1;
+		if (width > 3 || (marker === "~" && width !== 2)) continue;
+		const stack = stacks.get(marker) ?? [];
+		stacks.set(marker, stack);
+		let remaining = width;
+		let closer = start;
+		if (
+			start > 0 &&
+			!SPACE.test(text[start - 1] ?? "") &&
+			!(marker === "_" && WORD.test(text[i + 1] ?? ""))
+		) {
+			while (remaining > 0 && stack.length > 0) {
+				const opener = stack[stack.length - 1];
+				if (!opener) break;
+				const used = Math.min(opener.width, remaining);
+				opener.width -= used;
+				emphasis.set(opener.start + opener.width, { end: closer, width: used });
+				if (opener.width === 0) stack.pop();
+				remaining -= used;
+				closer += used;
+			}
+		}
+		if (
+			remaining > 0 &&
+			i + 1 < text.length &&
+			!SPACE.test(text[i + 1] ?? "") &&
+			!(marker === "_" && WORD.test(text[start - 1] ?? ""))
+		)
+			stack.push({ start: closer, width: remaining });
+	}
+	return { code, brackets, parentheses, emphasis, destination };
 }
 
-/**
- * Inline grammar shared by every text-bearing block. Consume only COMPLETE
- * constructs: streamed delimiters otherwise remain visible, never disappear.
- * Recursive styling flattens to native Text spans so links inside emphasis and
- * emphasis inside links retain both the action and typography. HTML is text,
- * never parsed. This is intentionally not a second browser/HTML renderer.
- */
+/** Complete constructs only: unknown/incomplete streamed source remains literal.
+ * Indexed matching and an explicit frame stack keep work proportional to input
+ * plus output, rather than nesting depth or the count of unmatched openers. */
 export const parseInline = (text: string): InlineSpan[] => {
+	const pairs = inlinePairs(text);
 	const spans: InlineSpan[] = [];
-	const plain = (value: string) => {
-		const last = spans[spans.length - 1];
-		if (
-			last &&
-			!last.code &&
-			!last.bold &&
-			!last.italic &&
-			!last.href &&
-			!last.strike
-		)
-			last.text += value;
-		else spans.push({ text: value, code: false, bold: false, italic: false });
+	type Frame = {
+		index: number;
+		end: number;
+		style: Omit<InlineSpan, "text">;
+		plain: number;
 	};
-	let index = 0;
-	while (index < text.length) {
-		const rest = text.slice(index);
+	const frames: Frame[] = [
+		{
+			index: 0,
+			end: text.length,
+			style: { code: false, bold: false, italic: false },
+			plain: -1,
+		},
+	];
+	while (frames.length) {
+		const frame = frames[frames.length - 1];
+		if (!frame) break;
+		if (frame.index >= frame.end) {
+			frames.pop();
+			continue;
+		}
+		const index = frame.index;
+		const rest = text.slice(index, frame.end);
+		const plain = (value: string) => {
+			const last = spans[frame.plain];
+			if (last) last.text += value;
+			else {
+				frame.plain = spans.length;
+				spans.push({ text: value, ...frame.style });
+			}
+		};
 		const escaped = ESCAPE.exec(rest);
 		if (escaped) {
 			plain(escaped[1] ?? "");
-			index += escaped[0].length;
+			frame.index += escaped[0].length;
 			continue;
 		}
 		const ticks = TICKS.exec(rest)?.[0];
 		if (ticks) {
-			const end = text.indexOf(ticks, index + ticks.length);
-			if (end > index + ticks.length) {
+			const pair = pairs.code.get(index);
+			if (pair && pair.end < frame.end) {
 				spans.push({
-					text: text.slice(index + ticks.length, end),
+					text: text.slice(index + pair.width, pair.end),
+					...frame.style,
 					code: true,
-					bold: false,
-					italic: false,
 				});
-				index = end + ticks.length;
-				continue;
+				frame.plain = -1;
+				frame.index = pair.end + pair.width;
+			} else {
+				plain(ticks);
+				frame.index += ticks.length;
 			}
-			// An incomplete multi-backtick opener is one literal token, not a
-			// shorter opener beginning at its second character on the next pass.
-			plain(ticks);
-			index += ticks.length;
 			continue;
 		}
 		if (text[index] === "[") {
-			const labelEnd = closing(text, index + 1, "[", "]");
-			if (labelEnd >= 0 && text[labelEnd + 1] === "(") {
-				const end = closing(text, labelEnd + 2, "(", ")");
-				if (end >= 0) {
-					const destination = text.slice(labelEnd + 2, end).trim();
-					const match = DESTINATION.exec(destination);
-					if (match) {
-						const href = unescapeMarkdown(match[1] ?? match[2] ?? "");
-						spans.push(
-							...parseInline(text.slice(index + 1, labelEnd)).map((span) => ({
-								...span,
-								href,
-							})),
-						);
-						index = end + 1;
-						continue;
-					}
+			const labelEnd = pairs.brackets.get(index);
+			const end =
+				labelEnd === undefined
+					? undefined
+					: pairs.parentheses.get(labelEnd + 1);
+			if (
+				labelEnd !== undefined &&
+				text[labelEnd + 1] === "(" &&
+				end !== undefined &&
+				end < frame.end
+			) {
+				const href = pairs.destination(labelEnd + 2, end);
+				if (href !== undefined) {
+					frame.index = end + 1;
+					frame.plain = -1;
+					frames.push({
+						index: index + 1,
+						end: labelEnd,
+						style: { ...frame.style, href: frame.style.href ?? href },
+						plain: -1,
+					});
+					continue;
 				}
 			}
 		}
-		// GFM's public URL subset, also used by desktop/relay. Peel sentence
-		// punctuation, but retain balanced parentheses inside the destination.
-		const bare = BARE_URL.exec(rest);
-		if (bare && !WORD_OR_SLASH.test(text[index - 1] ?? "")) {
+		// Check the boundary before scanning a URL-sized suffix: repeated URL
+		// prefixes inside one identifier are literal, not repeated lookaheads.
+		const bare = !WORD_OR_SLASH.test(text[index - 1] ?? "")
+			? BARE_URL.exec(rest)
+			: null;
+		if (bare) {
 			let href = bare[0].replace(TRAILING_PUNCTUATION, "");
-			while (
-				href.endsWith(")") &&
-				(href.match(CLOSE_PAREN)?.length ?? 0) >
-					(href.match(OPEN_PAREN)?.length ?? 0)
-			)
-				href = href.slice(0, -1);
-			spans.push({ text: href, href, code: false, bold: false, italic: false });
-			index += href.length;
+			let balance = 0;
+			for (const character of href) {
+				if (character === "(") balance += 1;
+				if (character === ")") balance -= 1;
+			}
+			let end = href.length;
+			while (balance < 0 && href[end - 1] === ")") {
+				end -= 1;
+				balance += 1;
+			}
+			href = href.slice(0, end);
+			spans.push({
+				text: href,
+				...frame.style,
+				href: frame.style.href ?? href,
+			});
+			frame.plain = -1;
+			frame.index += href.length;
 			continue;
 		}
 		const autolink = AUTOLINK.exec(rest);
@@ -430,50 +625,42 @@ export const parseInline = (text: string): InlineSpan[] => {
 			const href = autolink[1] ?? "";
 			spans.push({
 				text: href.replace(MAILTO, ""),
-				href,
-				code: false,
-				bold: false,
-				italic: false,
+				...frame.style,
+				href: frame.style.href ?? href,
 			});
-			index += autolink[0].length;
+			frame.plain = -1;
+			frame.index += autolink[0].length;
 			continue;
 		}
-		let styled = false;
-		const emphasisRun = EMPHASIS_RUN.exec(rest)?.[0];
-		for (const delimiter of ["***", "___", "**", "__", "~~", "*", "_"]) {
-			if (emphasisRun !== delimiter) continue;
-			// Intraword underscores are prose (URLs and identifiers), not emphasis.
-			if (delimiter.includes("_") && WORD.test(text[index - 1] ?? "")) continue;
-			let end = text.indexOf(delimiter, index + delimiter.length);
-			while (end >= 0 && text[end - 1] === "\\")
-				end = text.indexOf(delimiter, end + delimiter.length);
-			if (end <= index + delimiter.length) continue;
-			const body = text.slice(index + delimiter.length, end);
-			if (EDGE_SPACE.test(body)) continue;
-			spans.push(
-				...parseInline(body).map((span) => ({
-					...span,
-					...(delimiter === "~~"
+		const pair = pairs.emphasis.get(index);
+		if (pair && pair.end < frame.end && pair.end > index + pair.width) {
+			frame.index = pair.end + pair.width;
+			frame.plain = -1;
+			frames.push({
+				index: index + pair.width,
+				end: pair.end,
+				plain: -1,
+				style: {
+					...frame.style,
+					...(text[index] === "~"
 						? { strike: true }
-						: delimiter.length === 3
+						: pair.width === 3
 							? { bold: true, italic: true }
-							: delimiter.length === 2
+							: pair.width === 2
 								? { bold: true }
 								: { italic: true }),
-				})),
-			);
-			index = end + delimiter.length;
-			styled = true;
-			break;
+				},
+			});
+			continue;
 		}
-		if (styled) continue;
-		if (emphasisRun) {
-			plain(emphasisRun);
-			index += emphasisRun.length;
+		const run = EMPHASIS_RUN.exec(rest)?.[0];
+		if (run) {
+			plain(run);
+			frame.index += run.length;
 			continue;
 		}
 		plain(text[index] ?? "");
-		index += 1;
+		frame.index += 1;
 	}
 	return spans;
 };

@@ -114,6 +114,29 @@ describe("rendered assistant markdown dispatch", () => {
 			"https://www.reuters.com/world/",
 		);
 	});
+	it.each(["]", "["])(
+		"dispatches a linked code-span label containing %s",
+		async (bracket) => {
+			const markup = renderToStaticMarkup(
+				createElement(Markdown, {
+					text: `[a \`${bracket}\` b](https://example.com)`,
+				}),
+			);
+			expect(markup.match(/role="link"/g)).toHaveLength(3);
+			expect(host.links.map((link) => link.label)).toEqual([
+				"a ",
+				bracket,
+				" b",
+			]);
+			for (const link of host.links) {
+				link.press({ stopPropagation: vi.fn(), preventDefault: vi.fn() });
+				await Promise.resolve();
+			}
+			expect(host.open.mock.calls).toEqual(
+				Array.from({ length: 3 }, () => ["https://example.com"]),
+			);
+		},
+	);
 	it("never wires unsafe links or link-shaped inline/fenced code", () => {
 		const markup = renderToStaticMarkup(
 			createElement(Markdown, {
