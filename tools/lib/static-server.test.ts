@@ -108,16 +108,19 @@ describe("static asset and relay precedence", () => {
 		["assets/plain.unknown", "application/octet-stream"],
 		["docs/", "text/html; charset=utf-8"],
 		["deep/link", "text/html; charset=utf-8"],
-	])("retains MIME for ordinary files and fallbacks: %s", async (path, type) => {
-		local("assets/plain.js", "plain script");
-		local("assets/plain.unknown", "opaque bytes");
-		local("docs/index.html", "directory index");
-		local("index.html", "SPA index");
-		const response = await fetch(`${server.url}/${path}`);
-		expect(response.status).toBe(200);
-		expect(response.headers.get("content-type")).toBe(type);
-		expect(requests).toEqual([]);
-	});
+	])(
+		"retains MIME for ordinary files and fallbacks: %s",
+		async (path, type) => {
+			local("assets/plain.js", "plain script");
+			local("assets/plain.unknown", "opaque bytes");
+			local("docs/index.html", "directory index");
+			local("index.html", "SPA index");
+			const response = await fetch(`${server.url}/${path}`);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("content-type")).toBe(type);
+			expect(requests).toEqual([]);
+		},
+	);
 
 	it("proxies the same asset URL when the local file is absent", async () => {
 		const path = "/assets/assets/brand/mark.hash.png";
