@@ -228,6 +228,9 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
+// Recomputed with --print at the staged #106 integration: attachment localization,
+// hardened byte reads and exact-lock image-manipulator dependency. Identity only;
+// rendered and real-path evidence is recorded separately, not inferred from hashes.
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
 	 * remediation: shared drawer navigation changes both render trees, including
@@ -1129,6 +1132,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Q-tablet: recomputed LAST after the focused Home drawer-ownership fix and
 	 * its regressions. Only LIVE src identity changes; no historical pin, input,
 	 * instrument or activity/native-layout evidence is refreshed by admission. */
+	// #106 + landed main d9073ebc union and synthetic source adapter: all pin
+	// declarations derived with --print LAST. Source admission only, not refreshed
+	// historical pixels, native picker/EXIF or remote-push evidence.
+	// PR #106 batched remediation: account-owned upload/retirement and wrapping
+	// attachment toolbar change the rendered app. Derived with --print after
+	// staging the new regression files (src identity includes tests); proof
+	// instruments, thresholds, corpus and historical ORIGINAL_* remain unchanged.
+	// PR #106 post-disposal remediation: permanent provider/store/draft admission
+	// and stale acquisition release, with focused regressions. Derived by --print
+	// from the staged source; this is admission identity, not rendered/native proof.
 	/* PR #205: --print admits the reviewed activity fallback and intrinsic-clock
 	 * source, including its regressions. This updates source identity only;
 	 * it is not proof of native visibility or compact D3 geometry. Historical,
@@ -1137,6 +1150,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Recomputed with --print after merging approved #108 (d9073ebc): the
 	 * combined src tree has neither parent's digest. Source admission only;
 	 * historical pixels, native visibility and compact D3 remain unproved. */
+	// #106 + main 8705a953: combined staged source identity only, not new pixels.
 	// Native history paging: staged LIVE source admission only; historical
 	// rendered frames, native anchor and interaction proof are not refreshed.
 	// PR #207 remediation (gap detection, retry targeting, refresh copy) re-pinned
@@ -1146,7 +1160,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #207 round 3 (Q5-Q7, U1/U2, D1-D6): web prepend anchor, gap marker and
 	// newest-edge notice, copy; re-pinned with --print over the staged tree, same
 	// scope (no rendered frame or native proof refreshed).
-	src: "a3969983b062cb86052366d01a5630ce9fa17026b19fdc0f4343556cf91b2aba",
+	// PR #207 merge-gate convergence with main 3e759dac (#106): the merged src
+	// tree has neither parent's digest; re-pinned with --print over the staged
+	// merged tree. Source admission only, no rendered or native proof refreshed.
+	src: "8b23fc3219d29e53bd8616b6ddf147542f729f0db8eb23849bf666aec4fefe91",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1164,9 +1181,9 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":
-		"e7f8eefe80a606d858bc16831c82a95f226fbcef5468d384556cc79f2006ad0a",
+		"d9e51cb60408e70560c2c26dfcba24dd004b7e33dc474e01a7b156226944c137",
 	"pnpm-lock.yaml":
-		"a6680f1b911b580ee77f3ecd9313e83af23a9a94770f80d08b9d148745e45ddb",
+		"76e536b328a564df7e995ab00d9e661f6b9f08ca2ff3c9496a754253a7903312",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };

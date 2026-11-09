@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-
+import {
+	attachmentCacheSize,
+	clearAttachmentCache,
+	loadAttachment,
+} from "@/team-bridge/attachments";
 import {
 	createHubClient,
 	type HubClient,
@@ -78,6 +82,55 @@ function fakeHub(overrides: Partial<HubClient> = {}): HubClient {
 }
 
 describe("team bridge store", () => {
+	it("terminal retirement closes every store entry point without consulting dependencies or clearing a successor cache", async () => {
+		const hub = vi.fn(() => fakeHub());
+		const accessToken = vi.fn(async () => token(SELF));
+		const bridge = createTeamBridgeStore({ hub, accessToken });
+		bridge.actions.retire();
+		const retired = bridge.store.getState();
+		await loadAttachment("successor-private", async () => "data:b");
+		bridge.actions.retire();
+		bridge.actions.reset();
+		bridge.actions.selectOrganization(TENANT);
+		bridge.actions.adopt(conversation());
+		await bridge.actions.checkStatus();
+		await bridge.actions.loadDefaultOnNotice(TENANT);
+		await bridge.actions.dismissDefaultOnNotice();
+		await bridge.actions.refreshUnread();
+		await bridge.actions.loadOrganization(TENANT);
+		await bridge.actions.loadThread(TENANT, "c1");
+		await bridge.actions.loadOlder(TENANT, "c1");
+		for (const command of [
+			() => bridge.actions.turnOffDefaultOn(),
+			() => bridge.actions.markRead(TENANT, "c1", 4),
+			() => bridge.actions.uploadAttachment(TENANT, "c1", new Uint8Array([1])),
+			() => bridge.actions.setNotify(TENANT, "c1", "all"),
+			() => bridge.actions.send(TENANT, "c1", "body", "ref"),
+		])
+			await expect(command()).rejects.toMatchObject({ kind: "sign_in" });
+		expect(bridge.isActive()).toBe(false);
+		expect(bridge.store.getState()).toBe(retired);
+		expect(hub).not.toHaveBeenCalled();
+		expect(accessToken).not.toHaveBeenCalled();
+		expect(attachmentCacheSize()).toBe(1);
+		clearAttachmentCache();
+	});
+
+	it("a live RESET remains reusable and recovers through the normal status path", async () => {
+		const hub = fakeHub();
+		const bridge = createTeamBridgeStore({
+			hub: () => hub,
+			accessToken: async () => token(SELF),
+		});
+		await bridge.actions.checkStatus();
+		expect(bridge.store.getState().gate).toBe("open");
+		bridge.actions.reset();
+		expect(bridge.isActive()).toBe(true);
+		expect(bridge.store.getState().gate).toBe("checking");
+		await bridge.actions.checkStatus();
+		expect(bridge.store.getState().gate).toBe("open");
+		expect(hub.status).toHaveBeenCalledTimes(2);
+	});
 	it("reads the caller's account id from the access token's subject", () => {
 		expect(accountIdFromToken(token(SELF))).toBe(SELF);
 		expect(accountIdFromToken("not-a-jwt")).toBeNull();
@@ -876,4 +929,53 @@ describe("terminal authorization refusals", () => {
 			});
 		},
 	);
+
+	describe("image attachments", () => {
+		it("offers attachments only when status advertises them", async () => {
+			const without = createTeamBridgeStore({
+				hub: () => fakeHub(),
+				accessToken: async () => token(SELF),
+			});
+			await without.actions.checkStatus();
+			expect(without.store.getState().attachments).toBe(null);
+			const hub = fakeHub({
+				status: vi.fn(async () =>
+					status({ attachments: { enabled: true, max_count: 4 } }),
+				),
+			});
+			const withBlock = createTeamBridgeStore({
+				hub: () => hub,
+				accessToken: async () => token(SELF),
+			});
+			await withBlock.actions.checkStatus();
+			expect(withBlock.store.getState().attachments).toEqual({ maxCount: 4 });
+		});
+
+		it("forwards attachment ids on send", async () => {
+			const sent = { ...message(5, SELF, "2026-10-21T10:05:00Z"), body: "" };
+			const hub = fakeHub({ send: vi.fn(async () => sent) });
+			const { actions } = createTeamBridgeStore({
+				hub: () => hub,
+				accessToken: async () => token(SELF),
+			});
+			await actions.checkStatus();
+			await actions.send(TENANT, "c1", "", "ref", ["batt_1"]);
+			expect(hub.send).toHaveBeenCalledWith(TENANT, "c1", {
+				clientRef: "ref",
+				body: "",
+				attachmentIds: ["batt_1"],
+			});
+		});
+
+		it("reset (sign-out/account change) clears the in-memory image cache", async () => {
+			const { actions } = createTeamBridgeStore({
+				hub: () => fakeHub(),
+				accessToken: async () => token(SELF),
+			});
+			await loadAttachment("t/c/m/a", async () => "data:image/png;base64,AA==");
+			expect(attachmentCacheSize()).toBe(1);
+			actions.reset();
+			expect(attachmentCacheSize()).toBe(0);
+		});
+	});
 });
