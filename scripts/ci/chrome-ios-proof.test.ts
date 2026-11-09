@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process";
 import {
+	chmodSync,
 	mkdirSync,
 	mkdtempSync,
 	readFileSync,
@@ -18,6 +20,52 @@ import {
 } from "./chrome-ios-proof-contract.ts";
 
 describe("chrome proof plan (record §7)", () => {
+	it("fails missing-driver setup before boot and proves PATH in a token-free environment", () => {
+		const workflow = readFileSync(
+			new URL("../../.github/workflows/e2e.yml", import.meta.url),
+			"utf8",
+		);
+		const job = workflow.split("\n  chrome-ios-proof:\n")[1] ?? "";
+		const step =
+			job
+				.split("Provision the existing pinned Maestro driver")[1]
+				?.split("Download and verify the already-built artifacts")[0] ?? "";
+		const lines = step.split("\n").map((line) => line.trim());
+		const check = lines.find((line) => line.startsWith("test -x "));
+		const command = lines.find((line) => line.startsWith("env -i PATH="));
+		expect(check).toBeTruthy();
+		expect(command).toBeTruthy();
+		const root = mkdtempSync(join(tmpdir(), "chrome-driver-"));
+		try {
+			const environment = {
+				PATH: "/usr/bin:/bin",
+				HOME: root,
+				RUNNER_TEMP: root,
+				JAVA_HOME: "/synthetic-java",
+				GH_TOKEN: "synthetic-must-not-leak",
+			};
+			const run = () =>
+				spawnSync("/bin/bash", ["-c", `${check} && ${command}`], {
+					env: environment,
+					encoding: "utf8",
+					timeout: 1000,
+				});
+			expect(run().status).toBe(1);
+			const bin = join(root, ".maestro", "bin");
+			mkdirSync(bin, { recursive: true });
+			const driver = join(bin, "maestro");
+			writeFileSync(
+				driver,
+				'#!/bin/sh\nif [ -n "${GH_TOKEN+x}" ]; then exit 9; fi\nprintf "2.11.0\\n"\n',
+			);
+			chmodSync(driver, 0o700);
+			const result = run();
+			expect(result.status).toBe(0);
+			expect(result.stdout.trim()).toBe("2.11.0");
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
 	it("uses a valid busy wait frame and preserves the source fixture", () => {
 		const source = sessionProjectionSchema.parse(
 			JSON.parse(

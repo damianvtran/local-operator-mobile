@@ -1797,6 +1797,12 @@ jobs:
           set -euo pipefail
           export MAESTRO_VERSION
           curl -fsSL "https://get.maestro.mobile.dev" | bash
+          # The installer can return zero after an internal archive download
+          # fails (run 42571245938: HTTP 504/corrupt zip). Check the executable
+          # in the proof's token-free environment BEFORE spending a simulator.
+          test -x "$HOME/.maestro/bin/maestro"
+          mkdir -p "$RUNNER_TEMP/chrome-maestro-preflight-home"
+          env -i PATH="$PATH:$HOME/.maestro/bin" HOME="$RUNNER_TEMP/chrome-maestro-preflight-home" JAVA_HOME="$JAVA_HOME" maestro --version
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
       - name: Download and verify the already-built artifacts (the only step holding the token)
         env:
