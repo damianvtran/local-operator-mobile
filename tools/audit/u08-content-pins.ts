@@ -1117,7 +1117,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Integration of reviewed PRs #201 and #202 retains both convergence notes
 	 * above. Recompute LIVE src/app only after both histories are merged: source
 	 * admission does not refresh historical pixels or native interaction proof. */
-	src: "5b2f5c859a1348105741fa8420bc04877ec1a9f50ddd2e6315a03b71fec167e9",
+	/* The bounded trace-display privacy fix imports only reviewed disclosure /
+	 * typed-metadata filtering sources from #200, plus one merged locale key.
+	 * Recomputed LAST after generation; no activity/layout/native-harness claim,
+	 * and no historical instrument, input or original evidence is refreshed. */
+	src: "7d829ed05fcc87c97d202d2c97ea3c156f478a05a234ea0d1086e1ee607c6ac8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

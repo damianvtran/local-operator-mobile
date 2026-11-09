@@ -153,7 +153,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 32, // +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 33, // +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -258,7 +258,7 @@ describe("the English catalogues", () => {
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
 		/* Counted from the combined catalogue files: 481 existing keys, three
 		 * drawer keys and two initial-send/retry-attempt storage receipt keys. */
-		expect(total).toBe(486);
+		expect(total).toBe(487);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
