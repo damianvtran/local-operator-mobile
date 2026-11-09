@@ -148,7 +148,7 @@ describe("actual FlatList callback bindings", () => {
 			"thread",
 			"conversationId",
 			`return (_width, height) => {${contentBody}}`,
-		)({ current: viewport }, { state: "ready" }, "bcv_humans");
+		)({ current: viewport }, { state: "ready", messages: [] }, "bcv_humans");
 		viewport.layout(500);
 		onScroll({
 			nativeEvent: {
