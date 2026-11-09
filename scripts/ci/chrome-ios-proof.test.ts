@@ -19,6 +19,8 @@ import {
 	LANES,
 } from "./chrome-ios-proof-contract.ts";
 
+const RESET_FAILURE_STATE = /launchApp|clearState|connect-relay/;
+
 describe("chrome proof plan (record §7)", () => {
 	it("fails missing-driver setup before boot and proves PATH in a token-free environment", () => {
 		const workflow = readFileSync(
@@ -67,6 +69,41 @@ describe("chrome proof plan (record §7)", () => {
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
+	});
+	it("inspects failure diagnostics without relaunching, reconnecting or clearing state", () => {
+		const flow = readFileSync(
+			new URL(
+				"../../e2e/maestro/chrome-proof/diagnostics.yaml",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		const commands = flow
+			.split("\n")
+			.filter((line) => !line.trimStart().startsWith("#"))
+			.join("\n");
+		expect(commands).not.toMatch(RESET_FAILURE_STATE);
+		for (const id of [
+			"home-sidebar",
+			"settings-button",
+			"settings-screen",
+			"settings-section-diagnostics",
+		])
+			expect(commands).toContain(id);
+		expect(commands).toContain("Last error");
+		const driver = readFileSync(
+			new URL("./chrome-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const failure = driver.slice(
+			driver.indexOf("await shot(udid, lane, `failure-"),
+			driver.indexOf("existsSync(flowLog)"),
+		);
+		expect(failure).toContain("if (activityOnly)");
+		expect(failure.indexOf("failure-")).toBeLessThan(
+			failure.indexOf("diagnostics-"),
+		);
+		expect(failure).toContain('hierarchy(udid, lane, "failure-diagnostics")');
 	});
 	it("uses a valid busy wait frame and preserves the source fixture", () => {
 		const source = sessionProjectionSchema.parse(

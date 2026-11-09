@@ -7,6 +7,8 @@
  * fixture/auth/seed from a device-only failure, but cannot prove ATS, the native
  * cookie jar, or its streaming fetch. Never return/log the temporary cookie.
  */
+import { sessionListFrameSchema } from "../../src/contracts/schemas.ts";
+
 export async function probeNativeRelay(
 	origin: string,
 	password: string,
@@ -33,9 +35,7 @@ export async function probeNativeRelay(
 	// read must agree; a successful first read alone does not prove the handoff.
 	for (const path of ["/api/sessions", "/api/sessions?include_peers=true"]) {
 		const response = await request(path, { headers });
-		const body = (await response.json()) as {
-			sessions?: { session_id?: string }[];
-		};
+		const body = sessionListFrameSchema.parse(await response.json());
 		if (response.status !== 200 || !Array.isArray(body.sessions))
 			throw new Error("relay preflight: authenticated list unavailable");
 		if (sessionId && !body.sessions.some((row) => row.session_id === sessionId))
@@ -64,9 +64,15 @@ export async function probeNativeRelay(
 				if (done) break;
 				seed += decoder.decode(value, { stream: true });
 			}
+			const data = seed.split("\n").find((line) => line.startsWith("data:"));
+			const frame = data
+				? sessionListFrameSchema.parse(JSON.parse(data.slice(5)))
+				: null;
 			if (
 				!seed.includes("event: sessions") ||
-				(sessionId && !seed.includes(sessionId))
+				!frame ||
+				(sessionId &&
+					!frame.sessions.some((row) => row.session_id === sessionId))
 			)
 				throw new Error(
 					"relay preflight: session stream did not seed the expected list",

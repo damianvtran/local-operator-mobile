@@ -212,6 +212,7 @@ type Slot = {
 	sessionId: string;
 	shutdown: () => Promise<void>;
 	publisher: ChildProcess;
+	markNativeFlow: () => void;
 };
 
 /** A mock relay on a unique `.local` name — `projects-create-ios-proof.ts`'s
@@ -259,8 +260,16 @@ async function startRelay(scenario: string): Promise<Slot> {
 		scenario,
 		sessionId,
 		publisher,
+		markNativeFlow: () => {
+			relay.state.wirePhase = "native-flow";
+			note(`relay ${scenario} HOST preflight end; native flow start`);
+		},
 		shutdown: async () => {
 			await relay.shutdown();
+			writeFileSync(
+				join(ROOT, `relay-${scenario}-wire.json`),
+				JSON.stringify(relay.state.wireEvents, null, 2),
+			);
 			writeFileSync(
 				join(ROOT, `relay-${scenario}-requests.json`),
 				JSON.stringify(
@@ -406,6 +415,7 @@ async function flow(
 	file: string,
 	cap: number,
 ) {
+	relay.markNativeFlow();
 	const flowLog = join(
 		ROOT,
 		"commands",
@@ -437,6 +447,25 @@ async function flow(
 		try {
 			await shot(udid, lane, `failure-${file.replace(".yaml", "")}`);
 			await hierarchy(udid, lane, `failure-${file.replace(".yaml", "")}`);
+			// Inspect the surviving app, never relaunch/re-admit it: otherwise a
+			// transient route retirement disappears before Diagnostics can name it.
+			if (activityOnly) {
+				await run(
+					`diagnostics-${lane}`,
+					"maestro",
+					[
+						"--device",
+						udid,
+						"test",
+						"-e",
+						`APP_ID=${bundle}`,
+						"e2e/maestro/chrome-proof/diagnostics.yaml",
+					],
+					cap,
+				);
+				await shot(udid, lane, "failure-diagnostics");
+				await hierarchy(udid, lane, "failure-diagnostics");
+			}
 		} catch {
 			/* best effort; never masks the real error */
 		}
