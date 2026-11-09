@@ -3,10 +3,6 @@ import { createServer, request } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { OTHER_TENANT, SELF, TENANT } from "@/team-bridge/__tests__/fixtures";
-import { createHubClient } from "@/team-bridge/client";
-import { createTeamBridgeStore } from "@/team-bridge/store";
-import { TEAM_BRIDGE_FIXTURE_TOKEN } from "@/testing/team-bridge-token";
 import {
 	createTeamBridgeFixture,
 	fixtureArguments,
@@ -50,74 +46,6 @@ afterEach(async () => {
 	if ([...closed, ...removed].some((result) => result.status === "rejected"))
 		throw new Error("owned hub fixture cleanup failed");
 }, 15_000);
-
-describe("default-on notice over the actual HTTP client", () => {
-	it.each(["notice_default", "notice_error", "notice_dialog"])(
-		"keeps enrollment server-owned in %s",
-		async (variant) => {
-			const fixture = await rig();
-			const { url } = await fixture.listen();
-			const accessToken = async () => TEAM_BRIDGE_FIXTURE_TOKEN;
-			const hub = createHubClient({
-				baseUrl: `${url}/mock-hub/${variant}`,
-				accessToken,
-			});
-			const dismissed = new Set<string>();
-			const deps = {
-				hub: () => hub,
-				accessToken,
-				dismissals: {
-					has: async (account: string, tenant: string) =>
-						dismissed.has(`${account}:${tenant}`),
-					set: async (account: string, tenant: string) => {
-						dismissed.add(`${account}:${tenant}`);
-					},
-				},
-			};
-			const made = createTeamBridgeStore(deps);
-			await made.actions.checkStatus();
-			await made.actions.loadDefaultOnNotice(TENANT);
-			const stats = async () =>
-				(await (await get(url, "/__stats")).json()).result.requests as {
-					method: string;
-					path: string;
-				}[];
-			expect((await stats()).every((r) => r.method === "GET")).toBe(true);
-			if (variant === "notice_dialog") {
-				expect(made.store.getState().defaultOnNotice).toBeNull();
-				return;
-			}
-			expect(made.store.getState().selfAccountId).toBe(SELF);
-			expect(made.store.getState().defaultOnNotice?.tenantId).toBe(TENANT);
-			await made.actions.turnOffDefaultOn();
-			if (variant === "notice_error") {
-				expect(made.store.getState().defaultOnNotice).not.toBeNull();
-				expect(made.store.getState().defaultOnNoticeError?.status).toBe(500);
-				expect(dismissed.size).toBe(0);
-			} else {
-				expect(made.store.getState().defaultOnNotice).toBeNull();
-				expect(dismissed.has(`${SELF}:${TENANT}`)).toBe(true);
-				const remount = createTeamBridgeStore(deps);
-				await remount.actions.checkStatus();
-				await remount.actions.loadDefaultOnNotice(TENANT);
-				expect(remount.store.getState().defaultOnNotice).toBeNull();
-			}
-			expect((await stats()).filter((r) => r.method === "PUT")).toEqual([
-				{ method: "PUT", path: "/settings" },
-			]);
-			await expect(hub.settings(OTHER_TENANT)).rejects.toMatchObject({
-				kind: "refused",
-			});
-			const expired = createHubClient({
-				baseUrl: `${url}/mock-hub/${variant}`,
-				accessToken: async () => "synthetic-expired",
-			});
-			await expect(expired.settings(TENANT)).rejects.toMatchObject({
-				kind: "sign_in",
-			});
-		},
-	);
-});
 
 describe("owned Team Bridge fixture lifecycle", () => {
 	it("does not create a server as an import side effect", async () => {

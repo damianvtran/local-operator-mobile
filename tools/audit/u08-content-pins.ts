@@ -1095,7 +1095,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-pin admits the source; it is not evidence about the prose chip. */
 	// Recomputed with --print for #108 main integration, localized notice and
 	// durable account/org dismissal; source identity is not rendered evidence.
-	src: "23ce318b414125e0fe7cf5751564c1fa4bb2598a73bfdeb33ba33d7d4595e3ad",
+	src: "2c0f5a7aaf888ca89cb58e8a3cf584dde26c246eec04cad6860bf26d9390aad7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

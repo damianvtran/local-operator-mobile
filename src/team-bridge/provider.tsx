@@ -15,7 +15,10 @@ import {
 } from "react";
 import { AppState } from "react-native";
 import { useStore } from "zustand";
-import { useConnection } from "@/features/auth/connection-provider";
+import {
+	configStore,
+	useConnection,
+} from "@/features/auth/connection-provider";
 import { loadNotifications } from "@/notifications/native";
 import { useUiStore } from "@/state/ui-store";
 import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
@@ -40,6 +43,7 @@ import {
 	type TeamBridgeStore,
 } from "@/team-bridge/store";
 import { teamBridgeFixture } from "@/testing/team-bridge-fixture";
+import { useTextScale } from "@/ui/text-scale-provider";
 
 const Context = createContext<
 	| (TeamBridgeStore & {
@@ -71,16 +75,19 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	const retirementAccess = useRef(connection.radientRetirementAccessToken);
 	retirementAccess.current = connection.radientRetirementAccessToken;
 	const fixture = useMemo(() => teamBridgeFixture(), []);
+	const { setPreference } = useTextScale();
 	useEffect(() => {
 		if (!fixture) return;
-		const theme = new URLSearchParams(location.search).get("tb-theme");
-		/* Main replaced `setThemePreference` with the selection/mode pair
-		 *  (`state/theme-preference.ts`); `setThemeMode` is its equivalent for the
-		 *  fixture's light/dark override, and a non-default mode is never undone by
-		 *  hydration (`hydrateThemeSelection` only fills the default). */
-		if (theme === "light" || theme === "dark")
-			useUiStore.getState().setThemeMode(theme);
-	}, [fixture]);
+		// The account provider outlives routes: exercise the same live config,
+		// theme and text-scale consumers as Settings, without a second renderer
+		// or any alternate dismissal/storage writer. The web-only gate above
+		// refuses every override in a normal export or on a native platform.
+		configStore
+			.getState()
+			.applyFrame({ changed_keys: [], language: fixture.locale });
+		setPreference(fixture.scale);
+		useUiStore.getState().setThemeMode(fixture.theme);
+	}, [fixture, setPreference]);
 	const value = useMemo(() => {
 		const accessToken = fixture
 			? async () => fixture.token

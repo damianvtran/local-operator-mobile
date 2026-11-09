@@ -38,12 +38,14 @@ import {
 	TENANT,
 } from "../src/team-bridge/__tests__/fixtures.ts";
 
+import { fixtureWorld } from "../src/testing/team-bridge-options.ts";
+
 import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
 
-const MOCK_ROUTE = /^\/mock-hub\/([a-z_-]+)\/v1\/messaging(.*)$/;
+const MOCK_ROUTE = /^\/mock-hub\/([a-z0-9_~-]+)\/v1\/messaging(.*)$/;
 /* The profile slice's avatar route sits beside messaging, not under it. */
 const AVATAR_ROUTE =
-	/^\/mock-hub\/([a-z_-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
+	/^\/mock-hub\/([a-z0-9_~-]+)\/v1\/accounts\/([A-Za-z0-9_-]+)\/avatar$/;
 const ADA_HASH = "0123456789abcdef";
 const LONG = "acct_long_0005";
 /* Ben's row advertises a photo the hub then 404s: the "photo removed between
@@ -254,6 +256,12 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 				const qaCase = url.searchParams.get("case") ?? "populated";
 				const theme = url.searchParams.get("theme") ?? "light";
 				const requestedWidth = url.searchParams.get("width") ?? "390";
+				const overrides = new URLSearchParams();
+				for (const key of ["flow", "account", "org", "locale", "scale"]) {
+					const value = url.searchParams.get(key);
+					if (value !== null) overrides.set(`tb-${key}`, value);
+				}
+
 				const phoneWidth = ["320", "360", "390", "430", "768"].includes(
 					requestedWidth,
 				)
@@ -265,7 +273,7 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 						: "/team-bridge";
 				res.writeHead(200, { "content-type": "text/html" });
 				res.end(
-					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
+					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}&${overrides.toString()}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
 const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
@@ -313,12 +321,15 @@ setInterval(()=>{try{
 			}
 			const match = MOCK_ROUTE.exec(url.pathname);
 			if (match) {
-				const qaCase = match[1];
+				const world = fixtureWorld(match[1] ?? "");
+				const qaCase = world.scenario;
+				const noticeTenant = world.secondOrg ? OTHER_TENANT : TENANT;
 				const path = match[2] ?? "";
 				requests.push({ method: req.method ?? "GET", path });
 				if (
 					qaCase?.startsWith("notice_") &&
-					req.headers.authorization !== `Bearer ${TEAM_BRIDGE_FIXTURE_TOKEN}`
+					req.headers.authorization !==
+						`Bearer ${world.token ?? TEAM_BRIDGE_FIXTURE_TOKEN}`
 				) {
 					send(401, { error: "invalid or expired token" });
 					return;
@@ -342,12 +353,12 @@ setInterval(()=>{try{
 							available: qaCase !== "plan_required",
 							tenants: [
 								{
-									tenant_id: TENANT,
+									tenant_id: noticeTenant,
 									tenant_name: "Example Org",
 									eligible: qaCase !== "plan_required",
 								},
 								{
-									tenant_id: OTHER_TENANT,
+									tenant_id: world.secondOrg ? TENANT : OTHER_TENANT,
 									tenant_name: "Research Lab",
 									eligible: qaCase !== "plan_required",
 								},
@@ -365,7 +376,7 @@ setInterval(()=>{try{
 				}
 				if (path === "/settings" && qaCase?.startsWith("notice_")) {
 					if (
-						url.searchParams.get("tenant_id") !== TENANT &&
+						url.searchParams.get("tenant_id") !== noticeTenant &&
 						req.method === "GET"
 					) {
 						send(403, { error: "Wrong organization", code: "not_a_member" });
@@ -381,7 +392,7 @@ setInterval(()=>{try{
 						const body = JSON.parse(raw);
 						if (
 							body.state !== "disabled" ||
-							body.tenant_id !== TENANT ||
+							body.tenant_id !== noticeTenant ||
 							Object.keys(body).length !== 2
 						) {
 							send(400, {
@@ -389,7 +400,10 @@ setInterval(()=>{try{
 							});
 						} else if (qaCase === "notice_error") {
 							send(500, { error: "Fixture opt-out failed" });
-						} else ok(settings("default_on", { state: "disabled" }));
+						} else {
+							if (qaCase === "notice_pending") await waitForLoading(res);
+							ok(settings("default_on", { state: "disabled" }));
+						}
 						return;
 					}
 				}

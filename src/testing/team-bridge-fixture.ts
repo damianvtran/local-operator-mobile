@@ -6,21 +6,19 @@
  * into a capture rig or forwarding a real bearer to a mock server.
  */
 import { Platform } from "react-native";
+import { fixtureOptions } from "@/testing/team-bridge-options";
 import { TEAM_BRIDGE_FIXTURE_TOKEN } from "@/testing/team-bridge-token";
 
-const VALID_CASE = /^[a-z_-]+$/;
-
-export function teamBridgeFixture(): {
-	baseUrl: string;
-	token: string | null;
-} | null {
+export function teamBridgeFixture() {
 	if (process.env.EXPO_PUBLIC_TEAM_BRIDGE_FIXTURES !== "1") return null;
 	if (Platform.OS !== "web" || typeof location === "undefined") return null;
 	if (!["localhost", "127.0.0.1"].includes(location.hostname)) return null;
-	const scenario = new URLSearchParams(location.search).get("tb-fixture");
-	if (!scenario || !VALID_CASE.test(scenario)) return null;
+	const options = fixtureOptions(location.search);
+	if (!options) return null;
 	return {
-		baseUrl: `${location.origin}/mock-hub/${scenario}`,
-		token: scenario === "signed_out" ? null : TEAM_BRIDGE_FIXTURE_TOKEN,
+		...options,
+		token:
+			options.token === undefined ? TEAM_BRIDGE_FIXTURE_TOKEN : options.token,
+		baseUrl: `${location.origin}/mock-hub/${options.world}`,
 	};
 }
