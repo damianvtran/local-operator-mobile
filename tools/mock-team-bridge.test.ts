@@ -3,6 +3,7 @@ import { createServer, request } from "node:http";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
 import {
 	createTeamBridgeFixture,
 	fixtureArguments,
@@ -48,6 +49,53 @@ afterEach(async () => {
 }, 15_000);
 
 describe("owned Team Bridge fixture lifecycle", () => {
+	it.each([
+		["attachments_upload_plan", "bridge_not_available"],
+		["attachments_upload_membership", "not_a_member"],
+	] as const)(
+		"keeps %s upload recovery separate from a healthy world",
+		async (qaCase, code) => {
+			const fixture = await rig();
+			const { url } = await fixture.listen();
+			const upload = (world: string) =>
+				fetch(
+					`${url}/mock-hub/${world}/v1/messaging/conversations/bcv_humans/attachments?tenant_id=ten_0123456789abcdef`,
+					{
+						method: "POST",
+						headers: {
+							authorization: `Bearer ${TEAM_BRIDGE_FIXTURE_TOKEN}`,
+							"content-type": "application/octet-stream",
+						},
+						// Minimal JPEG signature accepted by this wire fixture, not native decode proof.
+						body: new Uint8Array([0xff, 0xd8, 0xff, 1]),
+					},
+				);
+			const refused = await upload(qaCase);
+			expect(refused.status).toBe(403);
+			expect(await refused.json()).toMatchObject({ code });
+			const healthy = await upload("attachments");
+			expect(healthy.status).toBe(201);
+		},
+	);
+	it.each([
+		["device=tablet-768", 768, 1024],
+		["device=tablet-768-landscape", 1024, 768],
+		["device=unknown&width=320", 320, 844],
+		["device=__proto__", 390, 844],
+		["width=768", 768, 844],
+		["width=9999", 390, 844],
+	] as const)(
+		"serves validated iframe geometry for %s",
+		async (query, width, height) => {
+			const fixture = await rig();
+			const { url } = await fixture.listen();
+			const answer = await get(url, `/__phone?${query}`);
+			expect(answer.status).toBe(200);
+			expect(await answer.text()).toContain(
+				`iframe{width:${width}px;height:${height}px;`,
+			);
+		},
+	);
 	it("does not create a server as an import side effect", async () => {
 		vi.resetModules();
 		vi.mocked(createServer).mockClear();

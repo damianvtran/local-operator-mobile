@@ -66,6 +66,18 @@ function failureOf(
 			retryable: true,
 		};
 	const kind = isHubError(error) ? error.kind : null;
+	// Retrying the same bytes cannot restore account authority. The store owns
+	// sign-in/plan gates; a membership refusal remains local, not a new login.
+	if (kind === "sign_in" || kind === "plan" || kind === "refused")
+		return {
+			error:
+				kind === "sign_in"
+					? t("mobile.team_bridge.gate.signed_out")
+					: kind === "plan"
+						? t("mobile.team_bridge.gate.plan_required")
+						: t("mobile.team_bridge.error.http_status", { status: 403 }),
+			retryable: false,
+		};
 	if (kind === "invalid")
 		return {
 			error: t("mobile.team_bridge.attachment.refused"),

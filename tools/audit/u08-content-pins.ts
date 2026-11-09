@@ -1132,7 +1132,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #106 + landed main d9073ebc union and synthetic source adapter: all pin
 	// declarations derived with --print LAST. Source admission only, not refreshed
 	// historical pixels, native picker/EXIF or remote-push evidence.
-	src: "1063034026c03ac97aa57d872fb01678e48f99e78babca1a89579e1fb8043946",
+	// PR #106 batched remediation: account-owned upload/retirement and wrapping
+	// attachment toolbar change the rendered app. Derived with --print after
+	// staging the new regression files (src identity includes tests); proof
+	// instruments, thresholds, corpus and historical ORIGINAL_* remain unchanged.
+	src: "ab9ebcfd48db9b51044a86f53616ea612f658bc259ccb6e80f4b7a49acc73b61",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

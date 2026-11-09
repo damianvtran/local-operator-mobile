@@ -41,6 +41,7 @@ import {
 import { fixtureWorld } from "../src/testing/team-bridge-options.ts";
 
 import { TEAM_BRIDGE_FIXTURE_TOKEN } from "../src/testing/team-bridge-token.ts";
+import { DEVICES } from "./visual/matrix.ts";
 
 const MOCK_ROUTE = /^\/mock-hub\/([a-z0-9_~-]+)\/v1\/messaging(.*)$/;
 /* The profile slice's avatar route sits beside messaging, not under it. */
@@ -413,6 +414,15 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 				)
 					? requestedWidth
 					: "390";
+				// Deliberate preset selection, never arbitrary dimensions. Keep legacy
+				// width-only phone links unchanged; tablets use the shared matrix.
+				const device = url.searchParams.get("device");
+				const profile =
+					device === "tablet-768" || device === "tablet-768-landscape"
+						? DEVICES[device]
+						: undefined;
+				const frameWidth = profile?.width ?? phoneWidth;
+				const frameHeight = profile?.height ?? 844;
 				const route =
 					url.searchParams.get("thread") === "1"
 						? `/team-bridge/${TENANT}/bcv_humans`
@@ -423,7 +433,7 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 					: "";
 				res.writeHead(200, { "content-type": "text/html" });
 				res.end(
-					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${phoneWidth}px;height:844px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}&${overrides.toString()}${viewerParam}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
+					`<!doctype html><meta name="viewport" content="width=device-width"><style>body{margin:0;background:#777;display:flex;justify-content:center;padding:8px}iframe{width:${frameWidth}px;height:${frameHeight}px;border:0;transform:scale(.75);transform-origin:top center}</style><iframe title="Phone viewport" src="${route}?tb-fixture=${encodeURIComponent(qaCase)}&tb-theme=${encodeURIComponent(theme)}&${overrides.toString()}${viewerParam}"></iframe><pre id="geometry" style="position:fixed;left:8px;top:8px;max-width:300px;white-space:pre-wrap;color:white;font:12px monospace"></pre><script>
 const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
@@ -521,6 +531,19 @@ setInterval(()=>{try{
 						const parts: Buffer[] = [];
 						for await (const part of req) parts.push(part as Buffer);
 						imageWorld.attempts++;
+						if (
+							qaCase === "attachments_upload_plan" ||
+							qaCase === "attachments_upload_membership"
+						) {
+							send(403, {
+								error: "Synthetic upload authority refused",
+								code:
+									qaCase === "attachments_upload_plan"
+										? "bridge_not_available"
+										: "not_a_member",
+							});
+							return;
+						}
 						if (qaCase === "attachments_upload_unauthorized") {
 							send(401, { error: "Synthetic session retired" });
 							return;

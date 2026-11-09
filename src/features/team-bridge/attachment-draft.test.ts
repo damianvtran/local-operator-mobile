@@ -154,6 +154,26 @@ describe("composer attachment chips", () => {
 	it("R1-03: deterministic upload refusals are final; rate limits and transport stay retryable", async () => {
 		for (const [error, retryable, text] of [
 			[
+				new HubError({ kind: "sign_in", message: "x", status: 401 }),
+				false,
+				"Sign in to Team Bridge",
+			],
+			[
+				new HubError({ kind: "plan", message: "x", status: 403 }),
+				false,
+				"Team Bridge requires a Radient Team plan",
+			],
+			[
+				new HubError({
+					kind: "refused",
+					message: "x",
+					status: 403,
+					code: "not_a_member",
+				}),
+				false,
+				"Radient refused the request (HTTP 403).",
+			],
+			[
 				new HubError({ kind: "invalid", message: "x", status: 415 }),
 				false,
 				"Radient cannot accept this image. Remove it.",

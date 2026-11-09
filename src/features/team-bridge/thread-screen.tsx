@@ -174,7 +174,7 @@ function ThreadContent({
 					prepareTeamBridgeImage(
 						raw as Parameters<typeof prepareTeamBridgeImage>[0],
 					),
-				upload: (bytes) => hub.uploadAttachment(tenantId, uploadTo, bytes),
+				upload: (bytes) => actions.uploadAttachment(tenantId, uploadTo, bytes),
 				discard: (attachmentId) =>
 					hub.deleteAttachment(tenantId, uploadTo, attachmentId),
 				releaseSource: (raw) => {
@@ -751,17 +751,21 @@ function ThreadContent({
 												disabled={sending}
 												testID={CONTROL.teamBridgeMessageInput}
 											/>
-											<View className="flex-row gap-2">
+											{/* Intrinsic labels wrap the toolbar before they shrink; an
+											  oversized label may wrap inside its full-width control. */}
+											<View className="flex-row flex-wrap gap-2">
 												{images ? (
-													<Button
-														variant="outline"
-														label={t("mobile.team_bridge.attachment.add")}
-														disabled={sending || images.remaining() === 0}
-														testID={CONTROL.teamBridgeAttach}
-														onPress={() => setAttachOpen(true)}
-													/>
+													<View className="max-w-full shrink-0">
+														<Button
+															variant="outline"
+															label={t("mobile.team_bridge.attachment.add")}
+															disabled={sending || images.remaining() === 0}
+															testID={CONTROL.teamBridgeAttach}
+															onPress={() => setAttachOpen(true)}
+														/>
+													</View>
 												) : null}
-												<View className="flex-1">
+												<View className="max-w-full grow shrink-0">
 													<Button
 														// "Retry send" only when pressing it can succeed: while
 														// images block the send, the button is plain "Send" (D4).

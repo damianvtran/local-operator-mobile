@@ -797,6 +797,53 @@ export function createTeamBridgeStore(deps: {
 			}
 		},
 
+		/**
+		 * Upload through the same account gate as Send, not directly from a chip.
+		 * The client owns the single forced refresh; only its final refusal may
+		 * retire private state, and an old account's refusal cannot retire its
+		 * successor. Successful late uploads are released using the captured
+		 * client/conversation rather than publishing into the new account.
+		 */
+		async uploadAttachment(
+			tenantId: string,
+			conversationId: string,
+			bytes: Uint8Array,
+		) {
+			const gate = store.getState().gate;
+			if (gate === "plan_required" || gate === "signed_out")
+				throw new HubError({
+					kind: gate === "plan_required" ? "plan" : "sign_in",
+					message: "Team Bridge is not available for this account.",
+				});
+			const epoch = generation;
+			const client = deps.hub();
+			try {
+				if (!client)
+					throw new HubError({
+						kind: "sign_in",
+						message: "Sign in to Radient.",
+					});
+				const answer = await client.uploadAttachment(
+					tenantId,
+					conversationId,
+					bytes,
+				);
+				if (epoch !== generation) {
+					void client
+						.deleteAttachment(tenantId, conversationId, answer.id)
+						.catch(() => undefined);
+					throw new HubError({
+						kind: "sign_in",
+						message: "Account changed while uploading.",
+					});
+				}
+				return answer;
+			} catch (error) {
+				if (epoch === generation) gateFailure(error);
+				throw error;
+			}
+		},
+
 		/** Change this conversation's notification policy. Throws so the menu can say so. */
 		async setNotify(tenantId: string, conversationId: string, notify: Notify) {
 			const gate = store.getState().gate;

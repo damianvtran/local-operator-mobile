@@ -1,17 +1,17 @@
 import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
 import {
 	attachmentCacheSize,
 	cachedAttachment,
 	loadAttachment,
 } from "@/team-bridge/attachments";
+import type { TeamBridgeStore } from "@/team-bridge/store";
 
 /*
  * R1-01: the image cache must not survive a DIRECT account replacement (A→B
- * with no signed-out state between). That path never calls
- * `store.actions.reset`; only the account-keyed provider remount marks it. So
+ * with no signed-out state between). Only the account-keyed provider remount
+ * marks it; its teardown must reset the cache AND retire store publications. So
  * this mounts the real `TeamBridgeProvider` and changes `radientAccountId`
  * under it, the same way `holdRadientTokens` → `radientAccess.replace` does.
  *
@@ -41,7 +41,10 @@ vi.mock("@/features/auth/connection-provider", () => ({
 		// thing that can clear the cache is the account boundary under test.
 		coldStartSettled: false,
 		radientSignedIn: connection.radientAccountId !== null,
-		radientAccessToken: async () => null,
+		radientAccessToken: async () =>
+			connection.radientAccountId
+				? `h.${Buffer.from(JSON.stringify({ sub: connection.radientAccountId })).toString("base64url")}.s`
+				: null,
 		radientRetirementAccessToken: async () => null,
 	}),
 }));
@@ -58,7 +61,14 @@ vi.mock("@/testing/team-bridge-fixture", () => ({
 	teamBridgeFixture: () => null,
 }));
 
-const { TeamBridgeProvider } = await import("@/team-bridge/provider");
+const { TeamBridgeProvider, useTeamBridge } = await import(
+	"@/team-bridge/provider"
+);
+let held: TeamBridgeStore | null = null;
+function Capture() {
+	held = useTeamBridge();
+	return null;
+}
 
 let root: ReturnType<typeof createRoot> | null = null;
 
@@ -91,7 +101,9 @@ function host() {
 
 const render = async () => {
 	await act(async () => {
-		root?.render(createElement(TeamBridgeProvider, null, null));
+		root?.render(
+			createElement(TeamBridgeProvider, null, createElement(Capture)),
+		);
 	});
 };
 
@@ -104,6 +116,37 @@ afterEach(async () => {
 });
 
 describe("Team Bridge provider account boundary", () => {
+	it("a retired account's final upload 401 cannot clear the replacement's images or replay as it", async () => {
+		connection.radientAccountId = "acct_a";
+		let finish!: (response: Response) => void;
+		const transport = vi.fn(async () => new Response("{}", { status: 401 }));
+		transport.mockImplementationOnce(
+			() =>
+				new Promise<Response>((resolve) => {
+					finish = resolve;
+				}),
+		);
+		vi.stubGlobal("fetch", transport);
+		root = createRoot(host());
+		await render();
+		const old = held;
+		if (!old) throw new Error("Expected mounted Bridge context");
+		old.store.setState({ gate: "open", selfAccountId: "acct_a" });
+		const pending = old.actions.uploadAttachment(
+			"ten_example",
+			"c1",
+			new Uint8Array([1]),
+		);
+		await vi.waitFor(() => expect(transport).toHaveBeenCalledTimes(1));
+		connection.radientAccountId = "acct_b";
+		await render();
+		await loadAttachment("b-private-image", async () => "data:b");
+		finish(new Response("{}", { status: 401 }));
+		await expect(pending).rejects.toMatchObject({ kind: "sign_in" });
+		expect(transport).toHaveBeenCalledTimes(1);
+		expect(cachedAttachment("b-private-image")).toBe("data:b");
+		expect(held).not.toBe(old);
+	});
 	it("a direct A→B account switch clears A's images and fences A's in-flight loads", async () => {
 		connection.radientAccountId = "acct_a";
 		root = createRoot(host());
