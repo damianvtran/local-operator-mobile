@@ -92,7 +92,7 @@ const NAMESPACES = [
 		name: "mobile.composer_input",
 		messages: composerInput,
 		context: composerInputContext,
-		expected: 12,
+		expected: 14, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6)
 	},
 	{
 		name: "mobile.library",
@@ -153,7 +153,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 33, // +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 47, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -206,7 +206,7 @@ const NAMESPACES = [
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 20,
+		expected: 25, // +5: the More sheet's row labels (visual audit D5)
 	},
 	{
 		name: "relay.chrome",
@@ -256,9 +256,10 @@ describe("the English catalogues", () => {
 			0,
 		);
 		expect(Object.keys(ENGLISH_CATALOGUE)).toHaveLength(total);
-		/* Exact merged catalogue union: main's 538 plus this PR's four
-		 * editor-only clear/dismiss labels and hints. */
-		expect(total).toBe(542);
+		/* Exact merged union: main's 542 (538 plus #206's four editor-only
+		 * clear/dismiss labels and hints) and the eleven lazy-history keys this
+		 * branch adds; verified by counting the generated catalogue after the merge. */
+		expect(total).toBe(563);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -381,6 +382,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Mirrored from the core relay's French catalogue, which keeps « Tags » (the app's own tag vocabulary in French).",
 		"mobile.chrome.destinations":
 			"« Destinations » is the French word for the same set of places.",
+		"mobile.chrome.composer.row_effort":
+			"« Effort » is the French word, and the one the French effort chip already uses (« Effort par défaut »).",
+		"mobile.session.sheet_title.effort":
+			"« Effort » is the French word; the sheet's title is that one noun.",
 		"mobile.notifications.title":
 			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
 		/* French « session » is the same word as English "session": identical

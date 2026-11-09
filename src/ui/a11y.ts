@@ -159,6 +159,14 @@ export const EMPTY = {
  * identifier is typed as a literal where a constant exists.
  */
 export const CONTROL = {
+	/** Explicit paging remains reachable without native-only scroll gestures. */
+	transcriptLoadEarlier: "transcript-load-earlier",
+	/** Explicitly rebase only the history reader after a disconnected gap. */
+	transcriptReloadHistory: "transcript-reload-history",
+	/** The same reload, on the marker that sits at the hole itself (PR #207 U2). */
+	transcriptGapReload: "transcript-gap-reload",
+	/** Re-read the newest page after a failed refresh, at the newest edge. */
+	transcriptRetryLatest: "transcript-retry-latest",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttach: "team-bridge-attach",
 	teamBridgeBack: "team-bridge-back",
@@ -1335,6 +1343,11 @@ export const state = (options: {
  * one of them is a place the flows and this file must agree.
  */
 export const REGION = {
+	transcriptHistory: "transcript-history",
+	/** The marker at a disconnected gap's actual position in the transcript. */
+	transcriptGap: "transcript-gap",
+	/** Gap and newest-refresh status at the newest edge, where the reader is. */
+	transcriptNewestEdge: "transcript-newest-edge",
 	/** The Library listing's grid and its origin tab strip: regions a flow
 	 *  asserts rather than controls it presses. */
 	libraryGrid: "library-grid",

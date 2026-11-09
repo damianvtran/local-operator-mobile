@@ -35,7 +35,7 @@ export function nextArtifactBytes(current: number, next: number) {
 	return current + next;
 }
 
-export const TURN_CONTROL_ID = "turn-bar-tc-conv-00-user";
+export const TURN_CONTROL_ID = "turn-bar-m-conv-00-user";
 /** RNW does not forward accessibilityState.expanded. The visible caret is
  * rendered from the same open prop as the transcript plan; missing ARIA is
  * recorded, never interpreted as false. Do not read private React internals. */
@@ -388,13 +388,13 @@ export function verificationRecords(base: AuditRecord): AuditRecord[] {
 			...base,
 			theme,
 			state: expanded ? "expanded" : "condensed",
-			screen: `path:/session/{sessionId}?lo-scroll=top${expanded ? "&lo-expand=tc-conv-00-user" : ""}`,
-			path: `/session/6714def86197?lo-scroll=top${expanded ? "&lo-expand=tc-conv-00-user" : ""}`,
+			screen: `path:/session/{sessionId}?lo-scroll=top${expanded ? "&lo-expand=m-conv-00-user" : ""}`,
+			path: `/session/6714def86197?lo-scroll=top${expanded ? "&lo-expand=m-conv-00-user" : ""}`,
 			openers: [],
 		})),
 	);
 }
-const CONTROL = /^turn-bar-tc-conv-(?:0[0-9]|1[0-2])-user$/;
+const CONTROL = /^turn-bar-m-conv-(?:0[0-9]|1[0-2])-user$/;
 /** The refusal has to name the gate's reason, not only its absence: the run this
  * check failed on reported "Missing actual own-text fragment measurement" and
  * nothing else, which cannot distinguish a react-native-web property the gate

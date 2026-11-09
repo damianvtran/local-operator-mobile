@@ -167,7 +167,7 @@ describe("hosted control contract and live-lifetime failure evidence", () => {
 				);
 				const carets = [...html.matchAll(/>(▸|▾)</gu)].map((m) => m[1]);
 				expect([
-					...html.matchAll(/data-testid="turn-bar-tc-conv-00-user"/g),
+					...html.matchAll(/data-testid="turn-bar-m-conv-00-user"/g),
 				]).toHaveLength(1);
 				expect(carets).toEqual([expanded ? "▾" : "▸"]);
 				// Markup is actually rendered by RNW; style/layout facts below are explicit
@@ -493,7 +493,7 @@ function incident(): AuditState {
 		{
 			index: 0,
 			tag: "button",
-			testId: "turn-bar-tc-conv-03-user",
+			testId: "turn-bar-m-conv-03-user",
 			interactive: true,
 			ownText: "",
 			ancestors: [],
@@ -786,7 +786,7 @@ function incidentReceipt(): FailureContext & Record<string, unknown> {
 			path: "/session/6714def86197",
 			testIds: Array.from(
 				{ length: 24 },
-				(_, i) => `turn-bar-tc-conv-${i}-user`,
+				(_, i) => `turn-bar-m-conv-${i}-user`,
 			),
 		},
 		environment: {

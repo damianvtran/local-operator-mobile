@@ -54,6 +54,14 @@ vi.mock("@/features/session/components/quiet-group-bar", () => ({
 vi.mock("@/features/session/components/supplement-block", () => ({
 	SupplementBlock: () => null,
 }));
+/* The history header's buttons are the list's only `Button` use. The real one
+ * reaches `@/ui/appearance` and react-native primitives this file's null host
+ * does not provide, so the module would fail to load before any case ran. The
+ * footer contracts here never press it; the history header's own behaviour is
+ * `history-window.test.ts`'s and `history-wiring.test.ts`'s. */
+vi.mock("@/ui/components/button", () => ({
+	Button: () => null,
+}));
 
 interface ListProps {
 	data: unknown[];

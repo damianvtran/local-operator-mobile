@@ -3329,7 +3329,17 @@ export function createRelay(options: RelayOptions = {}) {
 				const end = before
 					? all.findIndex((entry) => entry.id === before)
 					: all.length;
-				const sliceEnd = end <= 0 ? all.length : end;
+				// `before` naming the OLDEST row is the protocol's terminal page:
+				// nothing is older, so the answer is empty and `has_more: false`.
+				// This used to fall through with the unknown-cursor case and re-serve
+				// the NEWEST page, which a cursor pager (PR #207) reads as older rows
+				// and prepends above the conversation it already holds. An unknown
+				// cursor keeps the newest-page answer it always had.
+				if (before && end === 0) {
+					sendJson(res, 200, { entries: [], has_more: false });
+					return;
+				}
+				const sliceEnd = end < 0 ? all.length : end;
 				const entries = all.slice(Math.max(0, sliceEnd - limit), sliceEnd);
 				sendJson(res, 200, { entries, has_more: sliceEnd - limit > 0 });
 				return;
