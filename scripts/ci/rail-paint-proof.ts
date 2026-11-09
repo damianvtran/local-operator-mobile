@@ -39,10 +39,12 @@
  * column, which is not a fact about the `building` state; the shape the component
  * actually adds is a 6 × 2.5 pt liveness dash at the head of the track
  * (`checkpoint-rail.tsx`), 18 px at 1×. So the claim requires three things: a
- * difference of at least `MIN_INK_PX` (the same floor claim 1 uses), that
- * difference being *only* extra ink in `building` localised to the head-mark rows,
- * and those rows being derived from the first tick's row measured in the same
- * capture rather than from a device profile (review round 1, M1 and QA Q3).
+ * difference of at least one whole row of that dash (`HEAD_MARK_WIDTH_PT` scaled
+ * by the device density, with `MIN_INK_PX` as the lower bound at small scales — it
+ * was `MIN_INK_PX` alone until two runs measured 18 px in the same rows twice),
+ * that difference being *only* extra ink in `building` localised to the head-mark
+ * rows, and those rows being derived from the first tick's row measured in the
+ * same capture rather than from a device profile (review round 1, M1 and QA Q3).
  *
  * THE CLOCK AND THE PIXELS ARE SEPARATE EVIDENCE. A frame whose recorded capture
  * duration is negative was timed by a clock that stepped, so its duration is not
@@ -108,6 +110,11 @@ export const MIN_INK_PX = 3;
  *  cannot measure. */
 export const HEAD_Y_PT = 6;
 export const HEAD_MARK_HEIGHT_PT = 2.5;
+/** The dash box's width. One full row of it is the smallest thing `building`
+ *  alone can paint, which is what promotes the difference claim's floor from
+ *  `MIN_INK_PX` (a compact mark's 3 pt length) to this state's own mark now that
+ *  two independent runs have measured it (18 px twice, identical). */
+export const HEAD_MARK_WIDTH_PT = 6;
 export const RAIL_INSET_PT = 10;
 
 /** One row of slack each side of the derived head-mark window. The anchor is a
@@ -732,8 +739,18 @@ export function analyseFrames(
 		band,
 		densityScale,
 	);
+	/* THE FLOOR IS THE HEAD MARK'S OWN SIZE, NOT A MARK'S. `MIN_INK_PX` answers
+	 * "is this more than noise" for the paint claim; for the difference claim the
+	 * smallest honest amount is one whole row of the dash building adds, whose
+	 * width the component states. Two independent runs (42546977251 at 2afef62a,
+	 * 42557966264 at 8ed82692) measured building-only ink at 18 px in rows
+	 * 135–137 both times, so this floor sits at half the observed value and a third
+	 * of the dash — the report's numbers are gated where they agreed, and the
+	 * `MIN_INK_PX` term keeps the smaller-density case from going below noise. */
+	const headMarkRowPx = HEAD_MARK_WIDTH_PT * densityScale;
 	const buildingDiffersFromDeep =
-		Math.abs(buildingMinusDeep) >= MIN_INK_PX && buildingExtra.localised;
+		Math.abs(buildingMinusDeep) >= Math.max(MIN_INK_PX, headMarkRowPx) &&
+		buildingExtra.localised;
 
 	/* A NEGATIVE DURATION IS A BROKEN CLOCK, NOT A FAST CAPTURE, and averaging it
 	 * into the distribution is how a 175 ms median silently becomes nonsense. The

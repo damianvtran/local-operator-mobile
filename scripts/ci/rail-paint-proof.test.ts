@@ -24,6 +24,7 @@ import {
 	type FrameRecord,
 	formatReport,
 	GATE_THRESHOLD,
+	HEAD_MARK_WIDTH_PT,
 	headMarkRows,
 	MIN_INK_PX,
 	RAIL_COLUMN_PT,
@@ -385,6 +386,14 @@ describe("headMarkRows", () => {
 		expect(headMarkRows(280, 2).y0).toBeLessThanOrEqual(270);
 		expect(headMarkRows(280, 2).y1).toBeGreaterThanOrEqual(274);
 	});
+
+	it("keeps the dash inside the column that carries it", () => {
+		// The mirrors are only correct together: a dash wider than the column would
+		// put the promoted floor above the ink any frame can hold, and the gate would
+		// be unpassable rather than merely strict.
+		expect(HEAD_MARK_WIDTH_PT).toBeLessThanOrEqual(RAIL_COLUMN_PT);
+		expect(HEAD_MARK_WIDTH_PT).toBeGreaterThan(MIN_INK_PX);
+	});
 });
 
 describe("analyseFrames", () => {
@@ -484,17 +493,46 @@ describe("analyseFrames", () => {
 		expect(report.verdict).toBe("fail");
 	});
 
-	it("requires the difference to beat MIN_INK_PX, not just to exist", () => {
-		// Two pixels in the right rows are still not a mark: the same floor claim 1
-		// uses is what makes "differs" mean something.
-		const report = scenario({
+	it("requires a whole dash row of difference, not just a difference", () => {
+		// The floor is the head mark's own width (6 pt at 1×), promoted from
+		// `MIN_INK_PX` once two independent runs measured 18 px in the same rows: a
+		// sub-row sliver inside the right rows is still not the mark the state adds.
+		const sliver = scenario({
 			deepUpMarks: THREE_MARKS,
 			buildingUpMarks: [...THREE_MARKS, { y: HEAD_ROW, width: MIN_INK_PX - 1 }],
 		});
-		expect(report.claims.buildingMinusDeep).toBe(MIN_INK_PX - 1);
-		expect(report.claims.buildingExtra.localised).toBe(true);
-		expect(report.claims.buildingDiffersFromDeep).toBe(false);
-		expect(report.verdict).toBe("fail");
+		expect(sliver.claims.buildingMinusDeep).toBe(MIN_INK_PX - 1);
+		expect(sliver.claims.buildingExtra.localised).toBe(true);
+		expect(sliver.claims.buildingDiffersFromDeep).toBe(false);
+		expect(sliver.verdict).toBe("fail");
+
+		// Above the old floor and below the promoted one: five pixels in the right
+		// rows pass `MIN_INK_PX` and still fail, which is the promotion biting.
+		const belowDashRow = scenario({
+			deepUpMarks: THREE_MARKS,
+			buildingUpMarks: [
+				...THREE_MARKS,
+				{ y: HEAD_ROW, width: HEAD_MARK_WIDTH_PT - 1 },
+			],
+		});
+		expect(belowDashRow.claims.buildingMinusDeep).toBe(HEAD_MARK_WIDTH_PT - 1);
+		expect(belowDashRow.claims.buildingMinusDeep).toBeGreaterThanOrEqual(
+			MIN_INK_PX,
+		);
+		expect(belowDashRow.claims.buildingExtra.localised).toBe(true);
+		expect(belowDashRow.claims.buildingDiffersFromDeep).toBe(false);
+
+		// Exactly one dash row is the threshold, and it passes.
+		const oneDashRow = scenario({
+			deepUpMarks: THREE_MARKS,
+			buildingUpMarks: [
+				...THREE_MARKS,
+				{ y: HEAD_ROW, width: HEAD_MARK_WIDTH_PT },
+			],
+		});
+		expect(oneDashRow.claims.buildingMinusDeep).toBe(HEAD_MARK_WIDTH_PT);
+		expect(oneDashRow.claims.buildingDiffersFromDeep).toBe(true);
+		expect(oneDashRow.verdict).toBe("pass");
 	});
 
 	it("requires more than noise above the rail-down control", () => {

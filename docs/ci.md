@@ -876,12 +876,14 @@ therefore captures it on the emulator, on the APK the job has just built:
   structural claims — the rail paints during a fast fling, and `building` paints
   the head liveness mark that `deep` does not. The second is checked as a claim
   about one mark rather than "the band contents differ": the difference must be at
-  least `MIN_INK_PX`, must be extra ink in `building` only, and must lie in the
+  least one whole row of that dash (`HEAD_MARK_WIDTH_PT` scaled by the device
+  density — promoted from `MIN_INK_PX` once two independent runs measured 18 px in
+  the same rows), must be extra ink in `building` only, and must lie in the
   head-mark rows, anchored on the first tick row the capture itself paints. A
   difference anywhere else in the column is not the mark the component adds. It
-  does **not** gate the screencap latency or the pixel counts, which are printed
-  and uploaded until two independent runs agree on them; gating a number nobody
-  has measured is how a nightly becomes a coin flip. `report.json` and the frames
+  does **not** gate the screencap latency, which is printed and uploaded: one of
+  the two runs so far was timed by the stepped wall clock, so there is one valid
+  distribution and not the two a threshold would need. `report.json` and the frames
   are artifact `rail-paint-proof`.
 - **If a capture cannot land inside the window:** the rail is up for
   `RAIL_LINGER_MS` 1000 + `RAIL_FADE_MS` 200 ms after the last gesture, and a
