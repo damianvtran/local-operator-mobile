@@ -113,3 +113,74 @@ export const sessionEffortMaxWidth = (
 		stripWidth - MODEL_FLOOR_PT - trailing * touchFloor - gaps,
 	);
 };
+
+/** The card's chip zone: everything between attach and the mic/send cluster on
+ *  the controls row (visual audit D5). `flex-1 min-w-0` between fixed-width
+ *  siblings, so its width is set by the row and never by the chips inside it —
+ *  which is what lets `composerChipPlan` read that width without feeding it.
+ *  `overflow-hidden` is the last line of defence, not the layout: a chip that
+ *  somehow out-measures the plan is cut at the zone's edge rather than painted
+ *  over the send disc (U-08). */
+export const COMPOSER_CHIP_ZONE =
+	"min-w-0 flex-1 flex-row items-center gap-1 overflow-hidden";
+
+/** A `text-mono-sm` glyph's advance, pt at 100 % (12 pt × the 0.6 em advance
+ *  of the kit's mono face), and a quiet chip's horizontal padding. An ESTIMATE
+ *  on purpose: the plan needs to know whether effort fits BEFORE either chip
+ *  has been laid out, and measuring the chips first is a frame in which both
+ *  paint and one is then removed. Erring wide only drops effort a little early;
+ *  erring narrow is what `COMPOSER_CHIP_ZONE`'s clip is for. */
+export const CHIP_CHAR_PT = 7.2;
+export const CHIP_PAD_PT = 24;
+
+/** A value chip's estimated width: its floor, or its label at the text scale. */
+export const chipWidthEstimate = (chars: number, scale: number): number =>
+	Math.max(
+		MODEL_FLOOR_PT,
+		Math.ceil(chars * CHIP_CHAR_PT * scale) + CHIP_PAD_PT,
+	);
+
+/**
+ * Which chips the card's controls row shows at a given zone width.
+ *
+ * The order is the operator's and the audit's (D5): EFFORT LEAVES FIRST, whole,
+ * and only then is the model's name allowed to truncate; below one floor-wide
+ * chip the model leaves too and More — which lists both — is all that remains.
+ * The old strip shrank them together, which is how 320 pt read `claude-op…`
+ * beside `Hi…`: two fragments where one whole name would have fitted.
+ *
+ * `width <= 0` is "not measured yet" and shows everything, because the common
+ * case (a 390 pt phone) does fit and hiding chips for one frame would be a
+ * flicker on every mount.
+ */
+export const composerChipPlan = (input: {
+	/** The chip zone's measured width, pt. */
+	width: number;
+	scale: number;
+	modelChars: number;
+	/** `null` when no effort chip is offered for the row at all. */
+	effortChars: number | null;
+	/** The home's folder chip leads the zone; it is charged at its floor,
+	 *  because it yields to glyph-only before anything else gives way. */
+	folder: boolean;
+	/** Floor-sized trailing controls inside the zone (More / dismiss). */
+	trailing: number;
+	touchFloor: number;
+}): { model: boolean; effort: boolean } => {
+	if (!(input.width > 0))
+		return { model: true, effort: input.effortChars !== null };
+	const fixed =
+		input.trailing * input.touchFloor + (input.folder ? MODEL_FLOOR_PT : 0);
+	const children = input.trailing + (input.folder ? 1 : 0);
+	/* `children` siblings before the model → that many gaps once it is shown. */
+	const forModel = input.width - fixed - children * COMPOSER_META_GAP_PT;
+	const model = forModel >= MODEL_FLOOR_PT;
+	const effort =
+		model &&
+		input.effortChars !== null &&
+		forModel >=
+			chipWidthEstimate(input.modelChars, input.scale) +
+				COMPOSER_META_GAP_PT +
+				chipWidthEstimate(input.effortChars, input.scale);
+	return { model, effort };
+};

@@ -18,5 +18,10 @@
 	"mobile.chrome.composer.open_queue": "Открыть очередь",
 	"mobile.chrome.drawer.open": "Открыть беседы",
 	"mobile.chrome.drawer.open_count": "Открыть беседы, {count, plural, one {# новая беседа} few {# новые беседы} many {# новых бесед} other {# новой беседы}}",
-	"mobile.chrome.drawer.agents": "Агенты"
+	"mobile.chrome.drawer.agents": "Агенты",
+	"mobile.chrome.composer.row_model": "Модель",
+	"mobile.chrome.composer.row_effort": "Усилие",
+	"mobile.chrome.composer.row_usage": "Контекст",
+	"mobile.chrome.composer.row_cost": "Стоимость",
+	"mobile.chrome.composer.row_queue": "Очередь"
 }

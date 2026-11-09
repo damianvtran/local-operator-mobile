@@ -23,11 +23,16 @@ import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { useStartup } from "@/features/new-session/use-startup";
+import {
+	activityCounts,
+	activityCountsStack,
+} from "@/features/session/activity-counts";
 import { blockingPending, outstandingAsks } from "@/features/session/asks";
 import {
 	attentionRecord,
 	overlaysBlocked,
 } from "@/features/session/completion-ack";
+import { ActivityCounts } from "@/features/session/components/activity-counts";
 import { AskBar } from "@/features/session/components/ask-bar";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { CheckpointRail } from "@/features/session/components/checkpoint-rail";
@@ -53,7 +58,6 @@ import {
 	FindStateMarkers,
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
-import { StatusChips } from "@/features/session/components/status-chips";
 import {
 	StatusTray,
 	type StatusTrayFacts,
@@ -99,6 +103,7 @@ import { isRemoteRow } from "@/features/sessions/session-projection";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
+import { t } from "@/i18n";
 import { elapsedLabel } from "@/lib/format";
 import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import {
@@ -110,16 +115,18 @@ import {
 } from "@/ui/components";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Sheet } from "@/ui/components/sheet";
-import { useCompactChrome } from "@/ui/layout";
+import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
 	COMPACT_OPEN_PANEL_SHARE,
 	COMPACT_PENDING_SHARE,
+	type ComposerBox,
 	compactChromeShare,
 	composerLimit,
 	headerStacks,
 	type RegionKey,
 	regionOrder,
+	sameComposerBox,
 	sessionStatusLayout,
 	snapRegion,
 	statusTrayVisible,
@@ -604,11 +611,20 @@ export default function Session() {
 	 *  short-landscape budget, and this is the only honest ceiling for a long draft at
 	 *  large text (design recheck D-c). The COMPOSER measures itself — wrapping it
 	 *  would reparent the field, which the footer contract forbids. */
-	const [composerBox, setComposerBox] = useState<{
-		top: number;
-		height: number;
-		capped: boolean;
-	} | null>(null);
+	const [composerBox, setComposerBoxState] = useState<ComposerBox | null>(null);
+	/* An unchanged measurement is not a new state (perf audit P15). The composer
+	 *  publishes a FRESH `{top, height, capped}` on every layout pass and every
+	 *  measure-key change, and a fresh object re-rendered this whole screen even
+	 *  when all three numbers were the ones it already held. The guard is the
+	 *  comparison only: what is measured and when is the composer's and
+	 *  unchanged, so `composerLimit`'s input still never depends on its output. */
+	const setComposerBox = useCallback(
+		(next: ComposerBox) =>
+			setComposerBoxState((previous) =>
+				sameComposerBox(previous, next) ? previous : next,
+			),
+		[],
+	);
 	const regionLayout = useRef<
 		Partial<Record<RegionKey, { y: number; h: number }>>
 	>({});
@@ -932,6 +948,42 @@ export default function Session() {
 				? `${Math.round((projection.context_tokens / projection.context_window) * 100)}${viewportWidth < 340 ? "% ctx" : "% context"}${projection.context_is_estimate === true ? " (est.)" : ""}`
 				: null,
 	};
+	/* The activity line's trailing counts, rebuilt only when a NUMBER moves: the
+	 *  screen re-renders on every streamed frame, and a fresh array each time
+	 *  would defeat the memo on the row that paints them. */
+	const tasksOpen = trayFacts.tasks?.open ?? null;
+	const tasksTotal = trayFacts.tasks?.total ?? null;
+	const agentsRunning = trayFacts.agents?.running ?? null;
+	const agentsTotal = trayFacts.agents?.total ?? null;
+	const queuedCount = projection?.queued_count ?? 0;
+	const pendingShowing = pendingViewProps !== null;
+	const lineCounts = useMemo(
+		() =>
+			activityCounts(
+				pendingShowing
+					? null
+					: {
+							tasks:
+								tasksOpen === null || tasksTotal === null
+									? null
+									: { open: tasksOpen, total: tasksTotal },
+							agents:
+								agentsRunning === null || agentsTotal === null
+									? null
+									: { running: agentsRunning, total: agentsTotal },
+						},
+				queuedCount,
+			),
+		[
+			pendingShowing,
+			tasksOpen,
+			tasksTotal,
+			agentsRunning,
+			agentsTotal,
+			queuedCount,
+		],
+	);
+	const openStatusSheet = useCallback(() => setStatusSheetOpen(true), []);
 
 	const statusStrip =
 		hasStatus && (!compact || projection?.context_tokens != null) ? (
@@ -1223,8 +1275,9 @@ export default function Session() {
 			/>
 			{/* PORTRAIT PHONE: no under-header row. Its facts moved where the relay
 			    puts them (record §2.2, D-S3): the state into the header subtitle, the
-			    Tasks/Agents chips above the composer (`StatusChips` below), and the
-			    context % onto the composer's meta line. Short landscape keeps the
+			    task and agent counts onto the activity line above the composer
+			    (`ActivityCounts` below), and the context % into the composer's More
+			    sheet. Short landscape keeps the
 			    one-line tray — its own budgeted layout, outside this pass. */}
 			{tray ? (
 				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
@@ -1483,26 +1536,35 @@ export default function Session() {
 						    tray at the top already leads with the activity, and a second
 						    copy here would both repeat it and spend a row of the tightest
 						    layout. The composer's ■ stays the Stop there. */}
+						{/* ONE ACTIVITY LINE (visual audit D1). The Tasks/Agents capsules
+						    had a 48 pt band of their own under this line, and the queued
+						    count a chip on the composer's strip; they are now the line's
+						    trailing counts and open the same status sheet. A pending card
+						    owns the slot's attention while it is up, so the tasks/agents
+						    counts yield to it as the capsules did (UX U12); the queue
+						    count does not, because nothing else on the screen shows it. */}
 						{tray && !compact ? (
 							<PinnedWorkingLine
 								line={pinned}
 								onStop={composer.stop}
 								stopping={composer.stopping}
-								gapBelow={
-									pendingViewProps === null ||
-									outstandingAsks(projection?.asks).length > 0
+								gapBelow={outstandingAsks(projection?.asks).length > 0}
+								trailing={
+									lineCounts.length > 0 ? (
+										<ActivityCounts
+											counts={lineCounts}
+											onOpen={openStatusSheet}
+										/>
+									) : null
 								}
+								trailingStacked={activityCountsStack({
+									width: viewportWidth,
+									scale: effectiveScale,
+									counts: lineCounts,
+									touchFloor: TOUCH_FLOOR,
+								})}
 								testID={SURFACE.sessionWorkingLine}
 							/>
-						) : null}
-						{tray && !compact && pendingViewProps === null ? (
-							<View testID={SURFACE.sessionStatusChips}>
-								<StatusChips
-									facts={trayFacts}
-									glass={chromeGlass}
-									onOpen={() => setStatusSheetOpen(true)}
-								/>
-							</View>
 						) : null}
 						<AskBar
 							asks={projection?.asks}
@@ -1563,7 +1625,7 @@ export default function Session() {
 						onResume={composer.send}
 						ended={ended}
 						error={pending === null ? (composer.error ?? chipError) : null}
-						queuedCount={projection?.queued_count ?? 0}
+						queuedCount={queuedCount}
 						/* The context % and spend ride the meta line on a phone (D-S3);
 						 *  a tablet keeps its inline status strip, which already shows them. */
 						contextLabel={tray && !compact ? trayFacts.context : null}
@@ -1599,7 +1661,7 @@ export default function Session() {
 			<Sheet
 				visible={statusSheetOpen}
 				onClose={() => setStatusSheetOpen(false)}
-				title="status"
+				title={t("mobile.session.sheet_title.status")}
 				testID={SURFACE.sessionStatusSheet}
 			>
 				<View className="gap-2 pb-2">
@@ -1610,6 +1672,13 @@ export default function Session() {
 					{compact ? workingLineView : null}
 					{subagents.total > 0 ? subagentsPanel : null}
 					{todos.empty ? null : todosPanel}
+					{/* The queue's count in words: the activity line shows it as a glyph
+					    and a number, and this sheet is what that count opens. */}
+					{queuedCount > 0 ? (
+						<Text className="px-4 text-body-sm text-ink-muted">
+							{t("mobile.chrome.composer.queued", { count: queuedCount })}
+						</Text>
+					) : null}
 					{projection?.context_tokens != null ? (
 						<Text className="px-4 text-mono-sm text-ink-dim">
 							{trayFacts.context}

@@ -124,12 +124,21 @@ describe("what the chips say", () => {
 		expect(JSON.stringify(model)).not.toContain("Opus");
 	});
 
-	it("keeps #174's plain Default for an older daemon, and says which chip is effort", () => {
-		/* UX U8: both chips read `Default` against an older daemon, two
-		 *  identical words with nothing telling model from effort. */
+	it("says Default model ONCE for an older daemon; the unnamed effort leaves the row (D5)", () => {
+		/* UX U8 fixed `Default  Default` by naming the second chip; the visual
+		 *  audit found `Default  Default effort` was still one non-fact twice.
+		 *  The model chip names what is default and the effort chip stays in
+		 *  More, where its row label is what tells it from the model. */
 		const { model, effort } = chips({ catalogueDefault: undefined });
-		expect(model).toMatchObject({ kind: "value", text: "Default" });
-		expect(effort).toMatchObject({ kind: "value", text: "Default effort" });
+		expect(model).toMatchObject({ kind: "value", text: "Default model" });
+		expect(effort).toMatchObject({
+			kind: "value",
+			text: "Default",
+			rowHidden: true,
+		});
+		/* A NAMED level is a fact and keeps its chip. */
+		const named = chips({ catalogueDefault: undefined, defaultEffort: "high" });
+		expect(named.effort).not.toHaveProperty("rowHidden");
 	});
 
 	it("never names a picked effort a relay too old for effort will not send (R2)", () => {
@@ -138,7 +147,11 @@ describe("what the chips say", () => {
 			offer: { kind: "unsupported" },
 			defaultEffort: null,
 		});
-		expect(effort).toMatchObject({ kind: "value", text: "Default effort" });
+		expect(effort).toMatchObject({
+			kind: "value",
+			text: "Default",
+			rowHidden: true,
+		});
 		expect(JSON.stringify(effort)).not.toContain("High");
 	});
 

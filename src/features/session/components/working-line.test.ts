@@ -313,6 +313,57 @@ describe("PinnedWorkingLine", () => {
 		expect(visible).not.toContain("59m 59s");
 	});
 
+	it("carries the trailing counts between the clock and the Stop (D1)", () => {
+		render({
+			line: frame(true, "Reading", 3),
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+			trailing: createElement("span", null, "[counts]"),
+		});
+		const visible = screen().replace(/<[^>]*>/g, "");
+		expect(visible).toContain("Reading");
+		expect(visible.indexOf("[counts]")).toBeGreaterThan(
+			visible.indexOf("Reading"),
+		);
+		expect(visible.indexOf(t("relay.composer.action.stop"))).toBeGreaterThan(
+			visible.indexOf("[counts]"),
+		);
+		expect(visible.match(/\[counts\]/g)).toHaveLength(1);
+	});
+
+	it("draws the counts ONCE when they take their own line (large text)", () => {
+		render({
+			line: frame(true, "Reading", 3),
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+			trailing: createElement("span", null, "[counts]"),
+			trailingStacked: true,
+		});
+		const visible = screen().replace(/<[^>]*>/g, "");
+		expect(visible.match(/\[counts\]/g)).toHaveLength(1);
+		/* Under the row: after the Stop, not between the clock and it. */
+		expect(visible.indexOf("[counts]")).toBeGreaterThan(
+			visible.indexOf(t("relay.composer.action.stop")),
+		);
+	});
+
+	it("keeps the slot open for the counts alone when no turn is alive", () => {
+		/* Tasks, agents and a queue outlive the turn: the capsule band showed
+		 *  them at rest, so the line that replaced it must too — with no
+		 *  spinner, no status and no Stop to press. */
+		render({
+			line: null,
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+			trailing: createElement("span", null, "[counts]"),
+		});
+		expect(screen()).toBe("[counts]");
+		expect(probe.presses.has("session-working-stop")).toBe(false);
+	});
+
 	it("renders nothing when no turn is alive", () => {
 		render({
 			line: null,

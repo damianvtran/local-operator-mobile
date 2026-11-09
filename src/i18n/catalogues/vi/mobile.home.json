@@ -1,7 +1,6 @@
 {
 	"mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
 	"mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
-	"mobile.home.chip.effort_default_short": "Mức suy luận mặc định",
 	"mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
 	"mobile.home.chip.model_chosen": "Mô hình, {model}, đã chọn cho cuộc trò chuyện này",
 	"mobile.home.chip.model_default": "Mô hình, {model}, mặc định của máy tính này",
@@ -63,5 +62,6 @@
 	"mobile.home.tip.parallel": "yêu cầu chạy song song để tách tác nhân con",
 	"mobile.home.tip.schedule": "lên lịch để chạy prompt theo hẹn giờ",
 	"mobile.home.tip.search": "tìm lại cuộc trò chuyện cũ để mở lại phiên",
-	"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…"
+	"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…",
+	"mobile.home.chip.model_default_short": "Mô hình mặc định"
 }

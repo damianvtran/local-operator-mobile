@@ -18,6 +18,7 @@ import {
 	SIDEBAR_MIN_WIDTH,
 	SIDEBAR_TABLET_MAX,
 	SPLIT_MIN_HEIGHT,
+	sameComposerBox,
 	sessionStatusLayout,
 	sidebarFooterScrolls,
 	sidebarWidthFor,
@@ -750,5 +751,37 @@ describe("sidebarWidthFor", () => {
 	it("lets the 240 minimum win below 284 / 288 pt", () => {
 		expect(sidebarWidthFor(280, IOS_FLOOR)).toBe(SIDEBAR_MIN_WIDTH);
 		expect(sidebarWidthFor(284, OTHER_FLOOR)).toBe(SIDEBAR_MIN_WIDTH);
+	});
+});
+
+describe("sameComposerBox (perf audit P15: a no-op measurement is not a new state)", () => {
+	const box = { top: 314, height: 254, capped: true };
+
+	it("is true only when every field the limit reads is unchanged", () => {
+		expect(sameComposerBox(box, { ...box })).toBe(true);
+		expect(sameComposerBox(null, box)).toBe(false);
+		expect(sameComposerBox(box, { ...box, top: 313 })).toBe(false);
+		expect(sameComposerBox(box, { ...box, height: 255 })).toBe(false);
+		/* `capped` alone must register: a capped box ends where a fitting one
+		 *  does, so it is the one field geometry cannot stand in for. */
+		expect(sameComposerBox(box, { ...box, capped: false })).toBe(false);
+	});
+
+	it("leaves the cap's fixed point exactly where it was", () => {
+		/* The guard only skips a state write; it must not round or merge. Fed
+		 *  the settled measurement again and again, the limit it produces does
+		 *  not move, and a real change still gets through on the next publish. */
+		let held: typeof box | null = null;
+		let writes = 0;
+		const publish = (next: typeof box) => {
+			if (sameComposerBox(held, next)) return;
+			held = next;
+			writes += 1;
+		};
+		for (let pass = 0; pass < 5; pass += 1) publish({ ...box });
+		expect(writes).toBe(1);
+		publish({ ...box, capped: false });
+		expect(writes).toBe(2);
+		expect(held).toEqual({ ...box, capped: false });
 	});
 });

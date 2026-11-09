@@ -150,7 +150,7 @@ export const ModelSheet = ({
 		<Sheet
 			visible={visible}
 			onClose={onClose}
-			title="model"
+			title={t("mobile.session.sheet_title.model")}
 			testID={SURFACE.modelSheet}
 		>
 			<ScrollView className="max-h-96">
@@ -276,7 +276,7 @@ export const EffortSheet = ({
 	<Sheet
 		visible={visible}
 		onClose={onClose}
-		title="effort"
+		title={t("mobile.session.sheet_title.effort")}
 		testID={SURFACE.effortSheet}
 	>
 		<View className="py-1">

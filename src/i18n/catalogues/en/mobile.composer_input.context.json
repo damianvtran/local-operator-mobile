@@ -46,5 +46,13 @@
 	"mobile.composer_input.dismiss_error_hint": {
 		"role": "button",
 		"note": "Screen-reader hint for dismissing only an error message. Draft and delivery records are unchanged."
+	},
+	"mobile.composer_input.notice_retry": {
+		"role": "button",
+		"note": "Short text action inside the composer's failure notice, directly under the sentence saying an earlier instruction may not have been delivered. Sends that instruction again. One word where the language allows; no final full stop."
+	},
+	"mobile.composer_input.notice_dismiss": {
+		"role": "button",
+		"note": "Short text action inside the composer's failure notice. Hides the error line only; it does not retry, delete or acknowledge anything. One word where the language allows; no final full stop."
 	}
 }

@@ -31,5 +31,8 @@
 	"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
 	"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy thử lại.",
 	"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
-	"mobile.session.reasoning_disclosure": "Suy nghĩ"
+	"mobile.session.reasoning_disclosure": "Suy nghĩ",
+	"mobile.session.sheet_title.model": "Mô hình",
+	"mobile.session.sheet_title.effort": "Mức suy luận",
+	"mobile.session.sheet_title.status": "Tác vụ và tác nhân"
 }

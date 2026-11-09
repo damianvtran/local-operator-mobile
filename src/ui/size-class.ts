@@ -668,3 +668,26 @@ export const sessionStatusLayout = (
 		statusSheet: phone || compact,
 	};
 };
+
+/** The composer's painted box as its host holds it: `composerLimit`'s inputs. */
+export type ComposerBox = { top: number; height: number; capped: boolean };
+
+/**
+ * Whether a published composer measurement is the one the host already holds.
+ *
+ * The composer publishes a fresh object on every layout pass, so identity says
+ * nothing; the three fields are the whole value. The host uses this to keep its
+ * previous state object when nothing moved, which is what stops a no-op
+ * measurement re-rendering the session screen (perf audit P15). It compares and
+ * nothing else: it must never round, clamp or merge, because `composerLimit`
+ * reads `capped` and the exact `top`/`height` to decide whether the cap holds,
+ * and a tolerance here would be a second, different rule about the same box.
+ */
+export const sameComposerBox = (
+	previous: ComposerBox | null,
+	next: ComposerBox,
+): boolean =>
+	previous !== null &&
+	previous.top === next.top &&
+	previous.height === next.height &&
+	previous.capped === next.capped;

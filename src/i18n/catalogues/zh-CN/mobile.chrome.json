@@ -18,5 +18,10 @@
 	"mobile.chrome.composer.open_queue": "打开队列",
 	"mobile.chrome.drawer.open": "打开对话",
 	"mobile.chrome.drawer.open_count": "打开对话，{count, plural, other {# 个新对话}}",
-	"mobile.chrome.drawer.agents": "智能体"
+	"mobile.chrome.drawer.agents": "智能体",
+	"mobile.chrome.composer.row_model": "模型",
+	"mobile.chrome.composer.row_effort": "推理强度",
+	"mobile.chrome.composer.row_usage": "上下文",
+	"mobile.chrome.composer.row_cost": "费用",
+	"mobile.chrome.composer.row_queue": "队列"
 }

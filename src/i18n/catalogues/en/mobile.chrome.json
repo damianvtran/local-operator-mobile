@@ -18,5 +18,10 @@
 	"mobile.chrome.composer.open_queue": "Open the queue",
 	"mobile.chrome.drawer.open": "Open conversations",
 	"mobile.chrome.drawer.open_count": "Open conversations, {count, plural, one {# new conversation} other {# new conversations}}",
-	"mobile.chrome.drawer.agents": "Agents"
+	"mobile.chrome.drawer.agents": "Agents",
+	"mobile.chrome.composer.row_model": "Model",
+	"mobile.chrome.composer.row_effort": "Effort",
+	"mobile.chrome.composer.row_usage": "Context",
+	"mobile.chrome.composer.row_cost": "Cost",
+	"mobile.chrome.composer.row_queue": "Queue"
 }

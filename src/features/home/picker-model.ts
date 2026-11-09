@@ -213,7 +213,14 @@ export const homeModelChip = (input: {
 			text: t("mobile.home.chip.model_no_default"),
 			accessibilityLabel: t("mobile.home.chip.model_no_default_label"),
 		};
-	if (input.catalogueDefault === undefined) return base;
+	/* An unnamed default says "Default model", not the bare "Default" (visual
+	 *  audit D5): on the home it is the one chip left standing for both unnamed
+	 *  defaults — the effort chip leaves the row (`homeEffortChip`) — so it has
+	 *  to say WHAT is default. The session's chip keeps its own wording. */
+	if (input.catalogueDefault === undefined)
+		return base.kind === "value"
+			? { ...base, text: t("mobile.home.chip.model_default_short") }
+			: base;
 	const model = defaultLabel(input.models, input.catalogueDefault);
 	return {
 		kind: "value",
@@ -270,14 +277,18 @@ export const homeEffortChip = (input: {
 			accessibilityLabel: t("mobile.home.chip.effort_default", { effort }),
 		};
 	}
-	/* "Default effort", not the model chip's bare "Default": against an older
-	 *  daemon both chips are unnamed defaults, and the strip read `Default
-	 *  Default` — two identical words with nothing telling model from effort at
-	 *  a glance (UX U8). */
+	/* Both chips unnamed defaults (an older daemon): the row says it ONCE, on
+	 *  the model chip ("Default model"), and this one stays off the row
+	 *  (`rowHidden`). The strip read `Default  Default effort` — the same
+	 *  non-fact twice, and at 200 % text `Defau…` beside `Default…` (visual
+	 *  audit D5; this supersedes UX U8's two-word disambiguation). The effort is
+	 *  still named and still pickable in More, whose row carries the "Effort"
+	 *  label, so the value there is the bare word. */
 	return {
 		kind: "value",
-		text: t("mobile.home.chip.effort_default_short"),
+		text: t("mobile.home.picker.badge_default"),
 		accessibilityLabel: t("mobile.home.chip.effort_default_unnamed"),
+		rowHidden: true,
 	};
 };
 

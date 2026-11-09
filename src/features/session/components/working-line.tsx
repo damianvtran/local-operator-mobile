@@ -1,5 +1,6 @@
 import {
 	memo,
+	type ReactNode,
 	useCallback,
 	useEffect,
 	useState,
@@ -62,6 +63,11 @@ export type WorkingLineProps = {
 	 *  Stop stays drawn (no reflow mid-fade) but answers nothing, so a late tap
 	 *  cannot send an abort to an idle session (review R1-4). */
 	stopInert?: boolean;
+	/** The activity line's trailing counts, drawn between the clock and the
+	 *  Stop (visual audit D1) — or on their own line when `trailingStacked`.
+	 *  Only the pinned instance passes them. */
+	trailing?: ReactNode;
+	trailingStacked?: boolean;
 	testID?: string;
 };
 
@@ -169,6 +175,8 @@ const WorkingLineImpl = ({
 	onStop,
 	stopping = false,
 	stopInert = false,
+	trailing,
+	trailingStacked = false,
 	testID,
 }: WorkingLineProps) => {
 	const [frame, setFrame] = useState(0);
@@ -200,7 +208,7 @@ const WorkingLineImpl = ({
 	const glyph = reduceMotion ? SPINNER_REST : SPINNER[frame % SPINNER.length];
 
 	if (onStop !== undefined) {
-		return (
+		const row = (
 			<View
 				// No row minimum of its own (design D1): the row is as tall as its
 				// tallest child, and that is the Stop's touch-floor box below. The
@@ -235,9 +243,24 @@ const WorkingLineImpl = ({
 					</Text>
 					<PhaseClock clock={clock} />
 				</View>
+				{trailingStacked ? null : trailing}
 				<WorkingStop onStop={onStop} stopping={stopping} inert={stopInert} />
 			</View>
 		);
+		/* The counts on their own line under the status, leading edge aligned
+		 *  with the spinner, when the host says one line cannot hold both
+		 *  (`activityCountsStack`): a wrap decided by the host from the window,
+		 *  not by `flex-wrap`, so the row's height is known before it paints
+		 *  and the slot's measured height does not flap between one line and
+		 *  two as the intent's length changes. */
+		if (trailingStacked && trailing != null)
+			return (
+				<View>
+					{row}
+					<View className="flex-row px-2">{trailing}</View>
+				</View>
+			);
+		return row;
 	}
 
 	return (
@@ -389,6 +412,13 @@ export type PinnedWorkingLineProps = {
 	 *  the dock grows and shrinks by ONE continuous amount instead of a smooth
 	 *  height plus an 8 pt jump when the slot mounts or unmounts. */
 	gapBelow: boolean;
+	/** The activity line's trailing counts (`ActivityCounts`), or `null`/absent
+	 *  when there is nothing to count. While present the slot STAYS OPEN with
+	 *  no turn alive: tasks, agents and a queue outlive the turn that made
+	 *  them, and they used to have a band of their own for exactly that. */
+	trailing?: ReactNode;
+	/** The counts take their own line under the status (`activityCountsStack`). */
+	trailingStacked?: boolean;
 	testID?: string;
 };
 
@@ -415,11 +445,14 @@ const PinnedWorkingLineImpl = ({
 	onStop,
 	stopping,
 	gapBelow,
+	trailing,
+	trailingStacked = false,
 	testID,
 }: PinnedWorkingLineProps) => {
 	const reduceMotion = useReducedMotion();
 	const [held, setHeld] = useState(line);
-	const open = line !== null;
+	const counted = trailing != null;
+	const open = line !== null || counted;
 	const rowHeight = useSharedValue(0);
 	const progress = useSharedValue(0);
 	const gap = useSharedValue(gapBelow ? DOCK_GAP : 0);
@@ -459,8 +492,28 @@ const PinnedWorkingLineImpl = ({
 		marginBottom: -gap.value * (1 - progress.value),
 	}));
 
-	if (held === null) return null;
+	if (held === null && !counted) return null;
+	/* No turn alive, counts present: the same slot, the same measured row,
+	 *  holding the counts alone at the line's trailing edge — where they sat a
+	 *  moment ago beside the Stop, so ending a turn does not move them. */
+	if (line === null && counted)
+		return (
+			<Animated.View
+				style={[{ overflow: settled ? "visible" : "hidden" }, style]}
+				testID={testID}
+			>
+				<View
+					className="flex-row items-center justify-end px-2"
+					onLayout={(event) => {
+						rowHeight.value = event.nativeEvent.layout.height;
+					}}
+				>
+					{trailing}
+				</View>
+			</Animated.View>
+		);
 	const shown = line ?? held;
+	if (shown === null) return null;
 	return (
 		<Animated.View
 			style={[{ overflow: settled ? "visible" : "hidden" }, style]}
@@ -477,6 +530,8 @@ const PinnedWorkingLineImpl = ({
 					onStop={onStop}
 					stopping={stopping}
 					stopInert={line === null}
+					trailing={trailing}
+					trailingStacked={trailingStacked}
 				/>
 			</View>
 		</Animated.View>

@@ -172,14 +172,20 @@ describe("the composer's glass wiring", () => {
 		expect(SESSION.slice(at, at + 200)).toContain("glass={chromeGlass}");
 	});
 
-	it("routes the shell's fill and the strip chips through ChromeSurface/ChromeGroup", () => {
+	it("routes the shell's fill through ChromeSurface and keeps the card's chips plain", () => {
 		expect(COMPOSER).toContain(
 			'backgroundColor: glass ? "transparent" : elevated',
 		);
 		expect(COMPOSER).toMatch(/\{glass \? \(\s*<View\s+pointerEvents="none"/);
-		expect(COMPOSER).toMatch(
-			/<ChromeGroup\s+glass=\{glass\}\s+spacing=\{COMPOSER_META_GLASS_SPACING\}\s+className=\{COMPOSER_META_ROW\}/,
+		/* The chips ride INSIDE the shell now (visual audit D5), so they sit on
+		 *  the shell's one material and take no capsule of their own: a glass
+		 *  group around them would be glass on glass. */
+		expect(COMPOSER).not.toContain("<ChromeGroup");
+		const zone = COMPOSER.slice(
+			COMPOSER.indexOf("const chipZone = ("),
+			COMPOSER.indexOf("const clearDraft ="),
 		);
+		expect(zone).not.toMatch(/glass=\{glass\}/);
 		// Solid chips are NOT wrapped: the fallback stays the quiet, fill-less chip.
 		expect(COMPOSER).toMatch(
 			/glass \? \(\s*<ChromeSurface[\s\S]*?\) : \(\s*chip\s*\)/,

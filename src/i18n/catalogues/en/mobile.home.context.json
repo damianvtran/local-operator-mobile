@@ -7,10 +7,6 @@
 		"role": "meta",
 		"note": "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit."
 	},
-	"mobile.home.chip.effort_default_short": {
-		"role": "meta",
-		"note": "Visible text of the effort chip when the computer's configured level applies but the app cannot name it (an older Local Operator, or a model other than the default). Says 'effort' so it does not read the same as the model chip's 'Default' beside it. Keep it short: it shares one row with the folder and model chips. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit."
-	},
 	"mobile.home.chip.effort_default_unnamed": {
 		"role": "meta",
 		"note": "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit."
@@ -258,5 +254,9 @@
 	"mobile.home.transcript.waiting": {
 		"role": "status",
 		"note": "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character."
+	},
+	"mobile.home.chip.model_default_short": {
+		"role": "meta",
+		"note": "Visible text of the home's model chip when the computer's configured default applies but the app cannot name it (an older Local Operator). Says 'model' because it is the only chip on the row for both unnamed defaults: the effort chip is not drawn beside it. Keep it short: it shares one row with the folder chip and the send controls."
 	}
 }

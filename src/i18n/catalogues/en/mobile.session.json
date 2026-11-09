@@ -31,5 +31,8 @@
 	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet.",
 	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Try again.",
 	"mobile.session.composer.retry_not_sent_storage": "This retry attempt wasn’t sent. Couldn’t prepare the earlier instruction safely for retry. Try the earlier instruction again. Your current draft hasn’t been sent.",
-	"mobile.session.reasoning_disclosure": "Thinking"
+	"mobile.session.reasoning_disclosure": "Thinking",
+	"mobile.session.sheet_title.model": "Model",
+	"mobile.session.sheet_title.effort": "Effort",
+	"mobile.session.sheet_title.status": "Tasks and agents"
 }

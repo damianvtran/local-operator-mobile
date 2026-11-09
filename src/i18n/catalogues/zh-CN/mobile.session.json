@@ -31,5 +31,8 @@
 	"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",
 	"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请重试。",
 	"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请重试之前的指令。你当前的草稿尚未发送。",
-	"mobile.session.reasoning_disclosure": "思考"
+	"mobile.session.reasoning_disclosure": "思考",
+	"mobile.session.sheet_title.model": "模型",
+	"mobile.session.sheet_title.effort": "推理强度",
+	"mobile.session.sheet_title.status": "任务和智能体"
 }

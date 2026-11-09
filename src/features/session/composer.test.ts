@@ -7,6 +7,7 @@ import {
 	composerControls,
 	composerCopy,
 	composerFeedback,
+	noticeActionName,
 	receiptForError,
 } from "@/features/session/composer";
 import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
@@ -351,5 +352,25 @@ describe("the composer's ended copy has ONE source", () => {
 			healthResumeCopy().reopening,
 		])
 			expect(source).not.toContain(sentence);
+	});
+});
+
+describe("the failure notice's short actions keep a whole accessible name (D6)", () => {
+	it("uses the sentence when it already contains the visible word", () => {
+		expect(noticeActionName("Retry", composerCopy().retryLabel)).toBe(
+			"Retry earlier instruction",
+		);
+		expect(noticeActionName("Dismiss", "Dismiss error")).toBe("Dismiss error");
+	});
+
+	it("leads with the visible word when the sentence does not contain it", () => {
+		/* Label-in-name (U-10) has to hold in every locale and for the reopen
+		 *  wording, neither of which is obliged to contain the short word. */
+		expect(noticeActionName("Retry", composerCopy().endedRetryLabel)).toBe(
+			"Retry, Try again",
+		);
+		expect(noticeActionName("Réessayer", "Renvoyer l’instruction")).toBe(
+			"Réessayer, Renvoyer l’instruction",
+		);
 	});
 });

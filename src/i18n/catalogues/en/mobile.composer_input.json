@@ -10,5 +10,7 @@
 	"mobile.composer_input.clear_draft": "Clear draft",
 	"mobile.composer_input.clear_draft_hint": "Clears only the draft text and images; keeps queued and unconfirmed messages",
 	"mobile.composer_input.dismiss_error": "Dismiss error",
-	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status"
+	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status",
+	"mobile.composer_input.notice_retry": "Retry",
+	"mobile.composer_input.notice_dismiss": "Dismiss"
 }

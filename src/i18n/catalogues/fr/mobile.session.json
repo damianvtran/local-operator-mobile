@@ -31,5 +31,8 @@
 	"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé.",
 	"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Réessayez.",
 	"mobile.session.composer.retry_not_sent_storage": "Cette tentative de renvoi n’a pas été envoyée. Impossible de préparer en toute sécurité le renvoi de l’instruction précédente. Réessayez d’envoyer l’instruction précédente. Votre brouillon actuel n’a pas été envoyé.",
-	"mobile.session.reasoning_disclosure": "Réflexion"
+	"mobile.session.reasoning_disclosure": "Réflexion",
+	"mobile.session.sheet_title.model": "Modèle",
+	"mobile.session.sheet_title.effort": "Effort",
+	"mobile.session.sheet_title.status": "Tâches et agents"
 }

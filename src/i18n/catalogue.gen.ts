@@ -52,6 +52,11 @@ export type CatalogueKey =
 	| "mobile.chrome.composer.more"
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.queued"
+	| "mobile.chrome.composer.row_cost"
+	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_model"
+	| "mobile.chrome.composer.row_queue"
+	| "mobile.chrome.composer.row_usage"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.inbox_count"
 	| "mobile.chrome.destination.past"
@@ -77,6 +82,8 @@ export type CatalogueKey =
 	| "mobile.composer_input.clear_draft_hint"
 	| "mobile.composer_input.dismiss_error"
 	| "mobile.composer_input.dismiss_error_hint"
+	| "mobile.composer_input.notice_dismiss"
+	| "mobile.composer_input.notice_retry"
 	| "mobile.composer_input.paste.denied"
 	| "mobile.composer_input.paste.image"
 	| "mobile.composer_input.paste.image_hint"
@@ -113,10 +120,10 @@ export type CatalogueKey =
 	| "mobile.computers.transport.radient"
 	| "mobile.home.chip.effort_chosen"
 	| "mobile.home.chip.effort_default"
-	| "mobile.home.chip.effort_default_short"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_chosen"
 	| "mobile.home.chip.model_default"
+	| "mobile.home.chip.model_default_short"
 	| "mobile.home.chip.model_no_default"
 	| "mobile.home.chip.model_no_default_label"
 	| "mobile.home.connect_disabled_reason"
@@ -338,6 +345,9 @@ export type CatalogueKey =
 	| "mobile.session.pending_echo.sending"
 	| "mobile.session.pending_echo.sent"
 	| "mobile.session.reasoning_disclosure"
+	| "mobile.session.sheet_title.effort"
+	| "mobile.session.sheet_title.model"
+	| "mobile.session.sheet_title.status"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent_open"
 	| "mobile.session.subagent_open_short"
@@ -596,6 +606,11 @@ export type NoParamKey =
 	| "mobile.chrome.composer.dismiss_keyboard"
 	| "mobile.chrome.composer.more"
 	| "mobile.chrome.composer.open_queue"
+	| "mobile.chrome.composer.row_cost"
+	| "mobile.chrome.composer.row_effort"
+	| "mobile.chrome.composer.row_model"
+	| "mobile.chrome.composer.row_queue"
+	| "mobile.chrome.composer.row_usage"
 	| "mobile.chrome.destination.inbox"
 	| "mobile.chrome.destination.past"
 	| "mobile.chrome.destination.schedules"
@@ -617,6 +632,8 @@ export type NoParamKey =
 	| "mobile.composer_input.clear_draft_hint"
 	| "mobile.composer_input.dismiss_error"
 	| "mobile.composer_input.dismiss_error_hint"
+	| "mobile.composer_input.notice_dismiss"
+	| "mobile.composer_input.notice_retry"
 	| "mobile.composer_input.paste.denied"
 	| "mobile.composer_input.paste.image"
 	| "mobile.composer_input.paste.image_hint"
@@ -651,8 +668,8 @@ export type NoParamKey =
 	| "mobile.computers.switch"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
-	| "mobile.home.chip.effort_default_short"
 	| "mobile.home.chip.effort_default_unnamed"
+	| "mobile.home.chip.model_default_short"
 	| "mobile.home.chip.model_no_default"
 	| "mobile.home.chip.model_no_default_label"
 	| "mobile.home.connect_disabled_reason"
@@ -841,6 +858,9 @@ export type NoParamKey =
 	| "mobile.session.pending_echo.sending"
 	| "mobile.session.pending_echo.sent"
 	| "mobile.session.reasoning_disclosure"
+	| "mobile.session.sheet_title.effort"
+	| "mobile.session.sheet_title.model"
+	| "mobile.session.sheet_title.status"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent_open_short"
 	| "mobile.session_health.control_hint"
@@ -1066,6 +1086,11 @@ export type MessageParams = {
 	"mobile.chrome.composer.more": NoParams;
 	"mobile.chrome.composer.open_queue": NoParams;
 	"mobile.chrome.composer.queued": { count: number };
+	"mobile.chrome.composer.row_cost": NoParams;
+	"mobile.chrome.composer.row_effort": NoParams;
+	"mobile.chrome.composer.row_model": NoParams;
+	"mobile.chrome.composer.row_queue": NoParams;
+	"mobile.chrome.composer.row_usage": NoParams;
 	"mobile.chrome.destination.inbox": NoParams;
 	"mobile.chrome.destination.inbox_count": { count: number };
 	"mobile.chrome.destination.past": NoParams;
@@ -1091,6 +1116,8 @@ export type MessageParams = {
 	"mobile.composer_input.clear_draft_hint": NoParams;
 	"mobile.composer_input.dismiss_error": NoParams;
 	"mobile.composer_input.dismiss_error_hint": NoParams;
+	"mobile.composer_input.notice_dismiss": NoParams;
+	"mobile.composer_input.notice_retry": NoParams;
 	"mobile.composer_input.paste.denied": NoParams;
 	"mobile.composer_input.paste.image": NoParams;
 	"mobile.composer_input.paste.image_hint": NoParams;
@@ -1127,10 +1154,10 @@ export type MessageParams = {
 	"mobile.computers.transport.radient": NoParams;
 	"mobile.home.chip.effort_chosen": { effort: string | number };
 	"mobile.home.chip.effort_default": { effort: string | number };
-	"mobile.home.chip.effort_default_short": NoParams;
 	"mobile.home.chip.effort_default_unnamed": NoParams;
 	"mobile.home.chip.model_chosen": { model: string | number };
 	"mobile.home.chip.model_default": { model: string | number };
+	"mobile.home.chip.model_default_short": NoParams;
 	"mobile.home.chip.model_no_default": NoParams;
 	"mobile.home.chip.model_no_default_label": NoParams;
 	"mobile.home.connect_disabled_reason": NoParams;
@@ -1352,6 +1379,9 @@ export type MessageParams = {
 	"mobile.session.pending_echo.sending": NoParams;
 	"mobile.session.pending_echo.sent": NoParams;
 	"mobile.session.reasoning_disclosure": NoParams;
+	"mobile.session.sheet_title.effort": NoParams;
+	"mobile.session.sheet_title.model": NoParams;
+	"mobile.session.sheet_title.status": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session.subagent_open": { agent: string | number };
 	"mobile.session.subagent_open_short": NoParams;
@@ -1627,6 +1657,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.composer.more": "More context",
 	"mobile.chrome.composer.open_queue": "Open the queue",
 	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
+	"mobile.chrome.composer.row_cost": "Cost",
+	"mobile.chrome.composer.row_effort": "Effort",
+	"mobile.chrome.composer.row_model": "Model",
+	"mobile.chrome.composer.row_queue": "Queue",
+	"mobile.chrome.composer.row_usage": "Context",
 	"mobile.chrome.destination.inbox": "Inbox",
 	"mobile.chrome.destination.inbox_count": "Inbox, {count, plural, one {# unread} other {# unread}}",
 	"mobile.chrome.destination.past": "Past",
@@ -1652,6 +1687,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.composer_input.clear_draft_hint": "Clears only the draft text and images; keeps queued and unconfirmed messages",
 	"mobile.composer_input.dismiss_error": "Dismiss error",
 	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status",
+	"mobile.composer_input.notice_dismiss": "Dismiss",
+	"mobile.composer_input.notice_retry": "Retry",
 	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
 	"mobile.composer_input.paste.image": "Paste image",
 	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
@@ -1688,10 +1725,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.transport.radient": "Radient",
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
-	"mobile.home.chip.effort_default_short": "Default effort",
 	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
 	"mobile.home.chip.model_chosen": "Model, {model}, chosen for this conversation",
 	"mobile.home.chip.model_default": "Model, {model}, this computer's default",
+	"mobile.home.chip.model_default_short": "Default model",
 	"mobile.home.chip.model_no_default": "No default",
 	"mobile.home.chip.model_no_default_label": "Model, this computer has no default model. Choose one.",
 	"mobile.home.connect_disabled_reason": "Connect a computer to send.",
@@ -1913,6 +1950,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.pending_echo.sending": "sending…",
 	"mobile.session.pending_echo.sent": "sent",
 	"mobile.session.reasoning_disclosure": "Thinking",
+	"mobile.session.sheet_title.effort": "Effort",
+	"mobile.session.sheet_title.model": "Model",
+	"mobile.session.sheet_title.status": "Tasks and agents",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
@@ -2173,6 +2213,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.open_queue": { role: "button", note: "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control." },
 	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
+	"mobile.chrome.composer.row_cost": { role: "meta", note: "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_effort": { role: "meta", note: "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_model": { role: "meta", note: "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_queue": { role: "meta", note: "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_usage": { role: "meta", note: "Row label in the composer's More sheet for how much of the model's context window is used; the reading is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
 	"mobile.chrome.destination.inbox_count": { role: "button", note: "Accessible name of the Inbox destination when it has unread items. {count} is a positive integer; the visible badge shows only the number. No final full stop." },
 	"mobile.chrome.destination.past": { role: "button", note: "Label under the history icon in the sidebar's destinations strip (~52 pt slot). One short word meaning past/finished sessions; opens the resumable history list." },
@@ -2198,6 +2243,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.composer_input.clear_draft_hint": { role: "button", note: "Screen-reader hint for Clear draft. Explicitly distinguishes editor clearing from deleting queued or unconfirmed instructions." },
 	"mobile.composer_input.dismiss_error": { role: "button", note: "Presentation-only error dismissal. Does not retry, delete or acknowledge delivery. No final full stop." },
 	"mobile.composer_input.dismiss_error_hint": { role: "button", note: "Screen-reader hint for dismissing only an error message. Draft and delivery records are unchanged." },
+	"mobile.composer_input.notice_dismiss": { role: "button", note: "Short text action inside the composer's failure notice. Hides the error line only; it does not retry, delete or acknowledge anything. One word where the language allows; no final full stop." },
+	"mobile.composer_input.notice_retry": { role: "button", note: "Short text action inside the composer's failure notice, directly under the sentence saying an earlier instruction may not have been delivered. Sends that instruction again. One word where the language allows; no final full stop." },
 	"mobile.composer_input.paste.denied": { role: "status", note: "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the paperclip (Attach) button, then the Paste image row (use this locale's translation of mobile.composer_input.paste.image), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop." },
 	"mobile.composer_input.paste.image": { role: "button", note: "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop." },
 	"mobile.composer_input.paste.image_hint": { role: "button", note: "Accessibility hint for the Paste image chip. No final full stop." },
@@ -2234,10 +2281,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written." },
 	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
-	"mobile.home.chip.effort_default_short": { role: "meta", note: "Visible text of the effort chip when the computer's configured level applies but the app cannot name it (an older Local Operator, or a model other than the default). Says 'effort' so it does not read the same as the model chip's 'Default' beside it. Keep it short: it shares one row with the folder and model chips. Added in the pickers' round-1 remediation; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.model_chosen": { role: "meta", note: "Spoken label of the model chip when the reader chose a model for this conversation. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.model_default": { role: "meta", note: "Spoken label of the model chip when the computer's configured default model applies. {model} is the model's name, untranslated. New in the three-pickers change; the non-English text awaits the translation audit." },
+	"mobile.home.chip.model_default_short": { role: "meta", note: "Visible text of the home's model chip when the computer's configured default applies but the app cannot name it (an older Local Operator). Says 'model' because it is the only chip on the row for both unnamed defaults: the effort chip is not drawn beside it. Keep it short: it shares one row with the folder chip and the send controls." },
 	"mobile.home.chip.model_no_default": { role: "meta", note: "Visible text of the model chip when the computer has no default model configured. Very short: it shares a narrow strip. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.model_no_default_label": { role: "meta", note: "Spoken label of the model chip when the computer has no default model; tapping it opens the model picker. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.connect_disabled_reason": { role: "status", note: "The composer's disabled reason when no computer is connected. One sentence; it shares a slot with the connect action, so it must stay short." },
@@ -2459,6 +2506,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.pending_echo.sending": { role: "meta", note: "Caption under a message the user just sent, before the computer has acknowledged it. Lower case, trailing ellipsis, no full stop; mirrors the desktop relay's pending row. Must not read as an invitation to send again." },
 	"mobile.session.pending_echo.sent": { role: "meta", note: "Caption under a just-sent prompt once the computer acknowledged it but before the conversation shows it. One lower-case word, no full stop." },
 	"mobile.session.reasoning_disclosure": { role: "button", note: "Disclosure label for an assistant reasoning trace, shared by its visible heading and accessibility label. Names the reasoning content, not a live progress status: the same label remains after the turn ends. No preview of reasoning is shown until explicitly expanded. Short noun phrase, no full stop." },
+	"mobile.session.sheet_title.effort": { role: "heading", note: "Title of the sheet that lists the reasoning-effort levels to choose from. Title case in English." },
+	"mobile.session.sheet_title.model": { role: "heading", note: "Title of the sheet that lists the models to choose from. Title case in English." },
+	"mobile.session.sheet_title.status": { role: "heading", note: "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
 	"mobile.session.subagent_open_short": { role: "button", note: "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop." },
@@ -2733,6 +2783,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.more": "Más contexto",
 		"mobile.chrome.composer.open_queue": "Abrir la cola",
 		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
+		"mobile.chrome.composer.row_cost": "Costo",
+		"mobile.chrome.composer.row_effort": "Esfuerzo",
+		"mobile.chrome.composer.row_model": "Modelo",
+		"mobile.chrome.composer.row_queue": "Cola",
+		"mobile.chrome.composer.row_usage": "Contexto",
 		"mobile.chrome.destination.inbox": "Bandeja",
 		"mobile.chrome.destination.inbox_count": "Bandeja, {count, plural, one {# sin leer} other {# sin leer}}",
 		"mobile.chrome.destination.past": "Anteriores",
@@ -2758,6 +2813,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.clear_draft_hint": "Borra solo el texto y las imágenes del borrador; conserva los mensajes en cola y sin confirmar",
 		"mobile.composer_input.dismiss_error": "Ocultar error",
 		"mobile.composer_input.dismiss_error_hint": "Oculta este error sin cambiar el borrador ni el estado de entrega",
+		"mobile.composer_input.notice_dismiss": "Ocultar",
+		"mobile.composer_input.notice_retry": "Reintentar",
 		"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar».",
 		"mobile.composer_input.paste.image": "Pegar imagen",
 		"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
@@ -2794,10 +2851,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
-		"mobile.home.chip.effort_default_short": "Esfuerzo predeterminado",
 		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
 		"mobile.home.chip.model_chosen": "Modelo, {model}, elegido para esta conversación",
 		"mobile.home.chip.model_default": "Modelo, {model}, predeterminado de esta máquina",
+		"mobile.home.chip.model_default_short": "Modelo predeterminado",
 		"mobile.home.chip.model_no_default": "Sin predeterminado",
 		"mobile.home.chip.model_no_default_label": "Modelo, esta máquina no tiene un modelo predeterminado. Elige uno.",
 		"mobile.home.connect_disabled_reason": "Conecta una máquina para enviar.",
@@ -3019,6 +3076,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.sending": "enviando…",
 		"mobile.session.pending_echo.sent": "enviado",
 		"mobile.session.reasoning_disclosure": "Razonamiento",
+		"mobile.session.sheet_title.effort": "Esfuerzo",
+		"mobile.session.sheet_title.model": "Modelo",
+		"mobile.session.sheet_title.status": "Tareas y agentes",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 		"mobile.session.subagent_open": "Abrir {agent}",
 		"mobile.session.subagent_open_short": "abrir",
@@ -3277,6 +3337,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.more": "Plus de contexte",
 		"mobile.chrome.composer.open_queue": "Ouvrir la file",
 		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
+		"mobile.chrome.composer.row_cost": "Coût",
+		"mobile.chrome.composer.row_effort": "Effort",
+		"mobile.chrome.composer.row_model": "Modèle",
+		"mobile.chrome.composer.row_queue": "File d’attente",
+		"mobile.chrome.composer.row_usage": "Contexte",
 		"mobile.chrome.destination.inbox": "Boîte",
 		"mobile.chrome.destination.inbox_count": "Boîte, {count, plural, one {# non lue} other {# non lues}}",
 		"mobile.chrome.destination.past": "Passées",
@@ -3302,6 +3367,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.clear_draft_hint": "Efface uniquement le texte et les images du brouillon ; conserve les messages en attente et non confirmés",
 		"mobile.composer_input.dismiss_error": "Masquer l’erreur",
 		"mobile.composer_input.dismiss_error_hint": "Masque cette erreur sans modifier le brouillon ni l’état de livraison",
+		"mobile.composer_input.notice_dismiss": "Masquer",
+		"mobile.composer_input.notice_retry": "Réessayer",
 		"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez le trombone, puis Coller l’image, et choisissez « Autoriser le collage ».",
 		"mobile.composer_input.paste.image": "Coller l’image",
 		"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
@@ -3338,10 +3405,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
 		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
-		"mobile.home.chip.effort_default_short": "Effort par défaut",
 		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
 		"mobile.home.chip.model_chosen": "Modèle, {model}, choisi pour cette conversation",
 		"mobile.home.chip.model_default": "Modèle, {model}, par défaut sur cet ordinateur",
+		"mobile.home.chip.model_default_short": "Modèle par défaut",
 		"mobile.home.chip.model_no_default": "Aucun par défaut",
 		"mobile.home.chip.model_no_default_label": "Modèle, cet ordinateur n’a pas de modèle par défaut. Choisissez-en un.",
 		"mobile.home.connect_disabled_reason": "Connectez un ordinateur pour envoyer.",
@@ -3563,6 +3630,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.sending": "envoi…",
 		"mobile.session.pending_echo.sent": "envoyé",
 		"mobile.session.reasoning_disclosure": "Réflexion",
+		"mobile.session.sheet_title.effort": "Effort",
+		"mobile.session.sheet_title.model": "Modèle",
+		"mobile.session.sheet_title.status": "Tâches et agents",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 		"mobile.session.subagent_open": "Ouvrir {agent}",
 		"mobile.session.subagent_open_short": "ouvrir",
@@ -3821,6 +3891,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.more": "अधिक संदर्भ",
 		"mobile.chrome.composer.open_queue": "कतार खोलें",
 		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
+		"mobile.chrome.composer.row_cost": "लागत",
+		"mobile.chrome.composer.row_effort": "प्रयास",
+		"mobile.chrome.composer.row_model": "मॉडल",
+		"mobile.chrome.composer.row_queue": "कतार",
+		"mobile.chrome.composer.row_usage": "संदर्भ",
 		"mobile.chrome.destination.inbox": "इनबॉक्स",
 		"mobile.chrome.destination.inbox_count": "इनबॉक्स, {count, plural, one {# अपठित} other {# अपठित}}",
 		"mobile.chrome.destination.past": "पिछले",
@@ -3846,6 +3921,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.clear_draft_hint": "केवल ड्राफ़्ट का टेक्स्ट और चित्र मिटाता है; कतार में और अपुष्ट संदेश रखता है",
 		"mobile.composer_input.dismiss_error": "त्रुटि छिपाएँ",
 		"mobile.composer_input.dismiss_error_hint": "ड्राफ़्ट या डिलीवरी की स्थिति बदले बिना यह त्रुटि छिपाता है",
+		"mobile.composer_input.notice_dismiss": "छिपाएँ",
+		"mobile.composer_input.notice_retry": "फिर से प्रयास करें",
 		"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। पेपरक्लिप पर टैप करें, फिर छवि चिपकाएँ, और अनुमति दें चुनें।",
 		"mobile.composer_input.paste.image": "छवि चिपकाएँ",
 		"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
@@ -3882,10 +3959,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
-		"mobile.home.chip.effort_default_short": "डिफ़ॉल्ट प्रयास",
 		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
 		"mobile.home.chip.model_chosen": "मॉडल, {model}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.model_default": "मॉडल, {model}, इस कंप्यूटर का डिफ़ॉल्ट",
+		"mobile.home.chip.model_default_short": "डिफ़ॉल्ट मॉडल",
 		"mobile.home.chip.model_no_default": "कोई डिफ़ॉल्ट नहीं",
 		"mobile.home.chip.model_no_default_label": "मॉडल, इस कंप्यूटर पर कोई डिफ़ॉल्ट मॉडल नहीं है। एक चुनें।",
 		"mobile.home.connect_disabled_reason": "भेजने के लिए कंप्यूटर कनेक्ट करें।",
@@ -4107,6 +4184,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.sending": "भेजा जा रहा है…",
 		"mobile.session.pending_echo.sent": "भेजा गया",
 		"mobile.session.reasoning_disclosure": "चिंतन",
+		"mobile.session.sheet_title.effort": "प्रयास",
+		"mobile.session.sheet_title.model": "मॉडल",
+		"mobile.session.sheet_title.status": "कार्य और एजेंट",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 		"mobile.session.subagent_open": "{agent} खोलें",
 		"mobile.session.subagent_open_short": "खोलें",
@@ -4365,6 +4445,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.more": "Дополнительный контекст",
 		"mobile.chrome.composer.open_queue": "Открыть очередь",
 		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
+		"mobile.chrome.composer.row_cost": "Стоимость",
+		"mobile.chrome.composer.row_effort": "Усилие",
+		"mobile.chrome.composer.row_model": "Модель",
+		"mobile.chrome.composer.row_queue": "Очередь",
+		"mobile.chrome.composer.row_usage": "Контекст",
 		"mobile.chrome.destination.inbox": "Входящие",
 		"mobile.chrome.destination.inbox_count": "Входящие, {count, plural, one {# непрочитанное} few {# непрочитанных} many {# непрочитанных} other {# непрочитанного}}",
 		"mobile.chrome.destination.past": "Прошлые",
@@ -4390,6 +4475,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.clear_draft_hint": "Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения",
 		"mobile.composer_input.dismiss_error": "Скрыть ошибку",
 		"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки",
+		"mobile.composer_input.notice_dismiss": "Скрыть",
+		"mobile.composer_input.notice_retry": "Повторить",
 		"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку».",
 		"mobile.composer_input.paste.image": "Вставить изображение",
 		"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
@@ -4426,10 +4513,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
-		"mobile.home.chip.effort_default_short": "Усилие по умолчанию",
 		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
 		"mobile.home.chip.model_chosen": "Модель, {model}, выбрана для этой беседы",
 		"mobile.home.chip.model_default": "Модель, {model}, по умолчанию на этом компьютере",
+		"mobile.home.chip.model_default_short": "Модель по умолчанию",
 		"mobile.home.chip.model_no_default": "Не задана",
 		"mobile.home.chip.model_no_default_label": "Модель, на этом компьютере нет модели по умолчанию. Выберите модель.",
 		"mobile.home.connect_disabled_reason": "Подключите компьютер, чтобы отправить.",
@@ -4651,6 +4738,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.sending": "отправка…",
 		"mobile.session.pending_echo.sent": "отправлено",
 		"mobile.session.reasoning_disclosure": "Размышления",
+		"mobile.session.sheet_title.effort": "Усилие",
+		"mobile.session.sheet_title.model": "Модель",
+		"mobile.session.sheet_title.status": "Задачи и агенты",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 		"mobile.session.subagent_open": "Открыть {agent}",
 		"mobile.session.subagent_open_short": "открыть",
@@ -4909,6 +4999,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.more": "مزید سیاق",
 		"mobile.chrome.composer.open_queue": "قطار کھولیں",
 		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
+		"mobile.chrome.composer.row_cost": "لاگت",
+		"mobile.chrome.composer.row_effort": "شدت",
+		"mobile.chrome.composer.row_model": "ماڈل",
+		"mobile.chrome.composer.row_queue": "قطار",
+		"mobile.chrome.composer.row_usage": "سیاق",
 		"mobile.chrome.destination.inbox": "ان باکس",
 		"mobile.chrome.destination.inbox_count": "ان باکس، {count, plural, one {# غیر پڑھا} other {# غیر پڑھے}}",
 		"mobile.chrome.destination.past": "گزشتہ",
@@ -4934,6 +5029,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.clear_draft_hint": "صرف مسودے کا متن اور تصاویر مٹاتا ہے؛ قطار میں موجود اور غیر مصدقہ پیغامات برقرار رکھتا ہے",
 		"mobile.composer_input.dismiss_error": "خرابی چھپائیں",
 		"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے",
+		"mobile.composer_input.notice_dismiss": "چھپائیں",
+		"mobile.composer_input.notice_retry": "دوبارہ کوشش کریں",
 		"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔",
 		"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
 		"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
@@ -4970,10 +5067,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.effort_default": "استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ",
-		"mobile.home.chip.effort_default_short": "ڈیفالٹ شدت",
 		"mobile.home.chip.effort_default_unnamed": "استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح",
 		"mobile.home.chip.model_chosen": "ماڈل، {model}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.model_default": "ماڈل، {model}، اس کمپیوٹر کا ڈیفالٹ",
+		"mobile.home.chip.model_default_short": "ڈیفالٹ ماڈل",
 		"mobile.home.chip.model_no_default": "کوئی ڈیفالٹ نہیں",
 		"mobile.home.chip.model_no_default_label": "ماڈل، اس کمپیوٹر پر کوئی ڈیفالٹ ماڈل نہیں۔ ایک منتخب کریں۔",
 		"mobile.home.connect_disabled_reason": "بھیجنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
@@ -5195,6 +5292,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.sending": "بھیجا جا رہا ہے…",
 		"mobile.session.pending_echo.sent": "بھیج دیا گیا",
 		"mobile.session.reasoning_disclosure": "سوچ بچار",
+		"mobile.session.sheet_title.effort": "شدت",
+		"mobile.session.sheet_title.model": "ماڈل",
+		"mobile.session.sheet_title.status": "کام اور ایجنٹس",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 		"mobile.session.subagent_open": "{agent} کھولیں",
 		"mobile.session.subagent_open_short": "کھولیں",
@@ -5453,6 +5553,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
 		"mobile.chrome.composer.open_queue": "Mở hàng đợi",
 		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
+		"mobile.chrome.composer.row_cost": "Chi phí",
+		"mobile.chrome.composer.row_effort": "Mức suy luận",
+		"mobile.chrome.composer.row_model": "Mô hình",
+		"mobile.chrome.composer.row_queue": "Hàng đợi",
+		"mobile.chrome.composer.row_usage": "Ngữ cảnh",
 		"mobile.chrome.destination.inbox": "Hộp thư",
 		"mobile.chrome.destination.inbox_count": "Hộp thư, {count, plural, other {# chưa đọc}}",
 		"mobile.chrome.destination.past": "Trước",
@@ -5478,6 +5583,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.clear_draft_hint": "Chỉ xóa văn bản và hình ảnh trong bản nháp; giữ các tin nhắn đang chờ và chưa được xác nhận",
 		"mobile.composer_input.dismiss_error": "Ẩn lỗi",
 		"mobile.composer_input.dismiss_error_hint": "Ẩn lỗi này mà không thay đổi bản nháp hay trạng thái gửi",
+		"mobile.composer_input.notice_dismiss": "Ẩn",
+		"mobile.composer_input.notice_retry": "Thử lại",
 		"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào kẹp giấy, chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
 		"mobile.composer_input.paste.image": "Dán hình ảnh",
 		"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
@@ -5514,10 +5621,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
-		"mobile.home.chip.effort_default_short": "Mức suy luận mặc định",
 		"mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
 		"mobile.home.chip.model_chosen": "Mô hình, {model}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.model_default": "Mô hình, {model}, mặc định của máy tính này",
+		"mobile.home.chip.model_default_short": "Mô hình mặc định",
 		"mobile.home.chip.model_no_default": "Không có mặc định",
 		"mobile.home.chip.model_no_default_label": "Mô hình, máy tính này không có mô hình mặc định. Hãy chọn một.",
 		"mobile.home.connect_disabled_reason": "Kết nối máy tính để gửi.",
@@ -5739,6 +5846,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.sending": "đang gửi…",
 		"mobile.session.pending_echo.sent": "đã gửi",
 		"mobile.session.reasoning_disclosure": "Suy nghĩ",
+		"mobile.session.sheet_title.effort": "Mức suy luận",
+		"mobile.session.sheet_title.model": "Mô hình",
+		"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
 		"mobile.session.subagent_open": "Mở {agent}",
 		"mobile.session.subagent_open_short": "mở",
@@ -5997,6 +6107,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.more": "更多上下文",
 		"mobile.chrome.composer.open_queue": "打开队列",
 		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
+		"mobile.chrome.composer.row_cost": "费用",
+		"mobile.chrome.composer.row_effort": "推理强度",
+		"mobile.chrome.composer.row_model": "模型",
+		"mobile.chrome.composer.row_queue": "队列",
+		"mobile.chrome.composer.row_usage": "上下文",
 		"mobile.chrome.destination.inbox": "收件箱",
 		"mobile.chrome.destination.inbox_count": "收件箱，{count, plural, other {# 条未读}}",
 		"mobile.chrome.destination.past": "历史",
@@ -6022,6 +6137,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.clear_draft_hint": "仅清空草稿中的文字和图片；保留排队中和未确认的消息",
 		"mobile.composer_input.dismiss_error": "关闭错误提示",
 		"mobile.composer_input.dismiss_error_hint": "隐藏此错误，不改变草稿或发送状态",
+		"mobile.composer_input.notice_dismiss": "关闭",
+		"mobile.composer_input.notice_retry": "重试",
 		"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。",
 		"mobile.composer_input.paste.image": "粘贴图片",
 		"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
@@ -6058,10 +6175,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.home.chip.effort_chosen": "推理强度，{effort}，已为此对话选择",
 		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
-		"mobile.home.chip.effort_default_short": "默认推理强度",
 		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
 		"mobile.home.chip.model_chosen": "模型，{model}，已为此对话选择",
 		"mobile.home.chip.model_default": "模型，{model}，此电脑的默认设置",
+		"mobile.home.chip.model_default_short": "默认模型",
 		"mobile.home.chip.model_no_default": "无默认",
 		"mobile.home.chip.model_no_default_label": "模型，此电脑没有默认模型。请选择一个。",
 		"mobile.home.connect_disabled_reason": "连接电脑后才能发送。",
@@ -6283,6 +6400,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.sending": "正在发送…",
 		"mobile.session.pending_echo.sent": "已发送",
 		"mobile.session.reasoning_disclosure": "思考",
+		"mobile.session.sheet_title.effort": "推理强度",
+		"mobile.session.sheet_title.model": "模型",
+		"mobile.session.sheet_title.status": "任务和智能体",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 		"mobile.session.subagent_open": "打开{agent}",
 		"mobile.session.subagent_open_short": "打开",

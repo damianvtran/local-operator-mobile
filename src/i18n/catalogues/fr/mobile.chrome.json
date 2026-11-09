@@ -18,5 +18,10 @@
 	"mobile.chrome.composer.open_queue": "Ouvrir la file",
 	"mobile.chrome.drawer.open": "Ouvrir les conversations",
 	"mobile.chrome.drawer.open_count": "Ouvrir les conversations, {count, plural, one {# nouvelle conversation} other {# nouvelles conversations}}",
-	"mobile.chrome.drawer.agents": "Agents"
+	"mobile.chrome.drawer.agents": "Agents",
+	"mobile.chrome.composer.row_model": "Modèle",
+	"mobile.chrome.composer.row_effort": "Effort",
+	"mobile.chrome.composer.row_usage": "Contexte",
+	"mobile.chrome.composer.row_cost": "Coût",
+	"mobile.chrome.composer.row_queue": "File d’attente"
 }
