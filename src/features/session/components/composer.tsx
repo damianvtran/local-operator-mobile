@@ -57,6 +57,7 @@ import {
 	attachmentLabel,
 	type ComposerControls,
 	composerCopy,
+	composerFeedback,
 } from "@/features/session/composer";
 import {
 	ATTACH_GLYPH_PT,
@@ -589,6 +590,7 @@ export const Composer = ({
 	testID,
 	onLayout,
 }: ComposerProps) => {
+	const feedback = composerFeedback({ ended, error, retainedMessage });
 	const attachmentSummary = useMemo(
 		() => images.map(attachmentLabel).join(" · "),
 		[images],
@@ -1247,28 +1249,11 @@ export const Composer = ({
 						accessibilityLiveRegion="assertive"
 						testID={SURFACE.composerRetained}
 					>
-						{/* ONE message on an ended session (UX U7, design D5): a failed
-						    reopen used to stack the generic "an earlier instruction may
-						    have been delivered" card, the ended sentence and a disabled
-						    hint — three remedies, one of them pointing at a send button
-						    the screen had just disabled. The ended sentence REPLACES the
-						    card's, and its Retry stays the one retry. */}
-						{ended && error !== null ? error : retainedMessage}
+						{feedback.retainedText}
 					</Text>
 					<View className="pt-2">
 						<Button
-							/* On an ENDED session the card's sentence is the ended one, whose
-							 * verb is "Try again" — so the button under it must say that,
-							 * not "Retry earlier instruction" about the very text sitting
-							 * in the field. The primary stays disabled while the envelope
-							 * is unresolved (the duplicate hazard), so the retry is THE
-							 * way to try again and the copy now names it (UX round 2, U7 /
-							 * design D5). One control, one verb. */
-							label={
-								ended && error !== null
-									? composerCopy().endedRetryLabel
-									: composerCopy().retryLabel
-							}
+							label={feedback.retryLabel}
 							variant="outline"
 							size="sm"
 							onPress={onRetry}
@@ -1278,14 +1263,14 @@ export const Composer = ({
 				</View>
 			) : null}
 
-			{error !== null && !(ended && retainedMessage !== null) ? (
+			{feedback.errorText !== null ? (
 				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
 					<Text
 						className="text-body-sm text-danger"
 						accessibilityLiveRegion="assertive"
 						testID={SURFACE.composerError}
 					>
-						{error}
+						{feedback.errorText}
 					</Text>
 				</View>
 			) : null}
