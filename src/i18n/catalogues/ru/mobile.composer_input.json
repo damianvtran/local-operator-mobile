@@ -6,5 +6,9 @@
 	"mobile.composer_input.voice.finish": "Завершить и расшифровать",
 	"mobile.composer_input.paste.image": "Вставить изображение",
 	"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
-	"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку»."
+	"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку».",
+	"mobile.composer_input.clear_draft": "Очистить черновик",
+	"mobile.composer_input.clear_draft_hint": "Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения",
+	"mobile.composer_input.dismiss_error": "Скрыть ошибку",
+	"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки"
 }

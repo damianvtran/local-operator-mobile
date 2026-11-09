@@ -1,3 +1,4 @@
+import { randomUUID } from "expo-crypto";
 import { getStartupAuthorization } from "@/connection/startup-authorization";
 import { deviceStore } from "@/features/session/device-storage";
 import { RetryEnvelopeStore } from "@/relay";
@@ -37,6 +38,10 @@ export const envelopeStoreFor = (
 	const existing = stores.get(identity);
 	if (existing !== undefined) return existing;
 	const created = new RetryEnvelopeStore({
+		// Native Hermes need not provide the browser's global crypto.randomUUID.
+		// Use the same cryptographic Expo port as startup-runtime; never fall back
+		// to predictable IDs or bypass hold-before-POST when that port fails.
+		randomUuid: randomUUID,
 		store: scopedStore(deviceStore, scope),
 	});
 	stores.set(identity, created);

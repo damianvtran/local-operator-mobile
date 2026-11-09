@@ -525,9 +525,10 @@ function parseStored(value: unknown): StoredEnvelope | null {
 	};
 }
 
-/** `crypto.randomUUID` where it exists (Node 19+, Hermes with the polyfill the
- *  app ships), with a clear failure where it does not rather than a predictable
- *  id — a non-random command id would defeat the de-duplication it exists for. */
+/** Browser/Node default. Native callers inject Expo's cryptographic UUID port:
+ * a Hermes runtime need not expose this browser global. Refuse rather than
+ * invent a predictable id when no secure port exists, because retry identity
+ * is a delivery-safety boundary. */
 function defaultUuid(): string {
 	const cryptoObject = (globalThis as { crypto?: Crypto }).crypto;
 	if (cryptoObject && typeof cryptoObject.randomUUID === "function") {

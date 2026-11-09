@@ -228,6 +228,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
 
+/* Regenerated with --print from the fully staged composer-reliability tree:
+ * native commit awaiting, platform UUID, repeat paste, honest Return and
+ * session-only clear/dismiss plus keyboard budget. Identity admission only,
+ * not rendered or native-device evidence; instrument/original pins unchanged. */
 // Recomputed with --print at the staged #106 integration: attachment localization,
 // hardened byte reads and exact-lock image-manipulator dependency. Identity only;
 // rendered and real-path evidence is recorded separately, not inferred from hashes.
@@ -594,12 +598,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * probe, thresholds and scene inputs did not move, so this is CONTENT identity,
 	 * not a measured-pixel change. Neither side's previous digest is kept. */
 
-	app: "3afe51e7471b46ebb3846469248eb62c20d00a58ca2b0091a9e0273dc3059d6e",
+	/* QA round-3 Q3: the session screen passes the composer's `capped` report to
+	 * `composerLimit`, so the portrait ceiling cannot oscillate. Recomputed with
+	 * --print from the staged tree; `app` and `src` moved. Identity only. */
+	app: "ad8d520156ee1426c27c40e9fc61d637b1f00d7bc1428f305bef77d53e3cea8a",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
+	/* Re-pinned 2026-11-09 for feat/polish-transcript-rows with --print from the
+	 * staged tree: `tokens.json` changes two `use` DESCRIPTIONS only (the `trace`
+	 * step now names the tool name as well as its headline; `mono-sm` no longer
+	 * lists tool names) — no size, face, colour or role moved, and `theme:check`
+	 * and `preset:check` both report the generated layers current. Identity
+	 * only, NOT rendered U-08 evidence. */
 	"design/tokens":
-		"16f424a5d14a2c6f79fdc15f5793fa41d0034ab72ccd298f895b6ef4cf572997",
+		"40b677b7e493bd87e1c4201a635b5915ccaad6482286901a5e4a558c8a73801d",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -1144,13 +1157,39 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * it is not proof of native visibility or compact D3 geometry. Historical,
 	 * instrument and input pins remain unchanged. */
 	// #108 + main bdc043ff union: source admission only, not refreshed pixels.
+	/* PR #206 Q1/CI-T1: --print includes tracked test bytes under src, so the
+	 * type-only createRoot return-type repair changes this combined live digest.
+	 * Production app/src runtime bytes are unchanged; admission only, not new
+	 * rendered, native or historical evidence. */
+	/* CI-A1: centralize the two existing composer selectors without changing their
+	 * values. Recomputed with --print from staged source; identity, not visual proof. */
+	/* QA round-2 Q2: the web file picker's input is attached to the document
+	 * (hidden) for the pick and removed on every settle path, plus its lifecycle
+	 * tests. Recomputed with --print from the staged tree; only `src` moved.
+	 * Identity admission only, not rendered or native evidence. */
+	/* QA round-3 Q3: `composerLimit` decides overflow from the composer's
+	 * intrinsic `capped` fact (fixed point, not the capped box), plus its
+	 * regression tests. Recomputed with --print from the staged tree; `app` and
+	 * `src` moved. Identity admission only, not rendered or native evidence. */
 	/* Recomputed with --print after merging approved #108 (d9073ebc): the
 	 * combined src tree has neither parent's digest. Source admission only;
 	 * historical pixels, native visibility and compact D3 remain unproved. */
 	// #106 + main 8705a953: combined staged source identity only, not new pixels.
-	// #208 thread title, viewport and icon-only Notifications (round 1
-	// remediation): source identity only, not new pixels.
-	src: "577452c11ffb6f864523f329b95f353b11688b5f8f16fa9edf6df662e7192c76",
+	/* PR #206 merge-gate convergence with main 3e759dac: src re-derived with
+	 * --print over the staged merged tree; identity admission only. */
+	/* Re-pinned 2026-11-09 for feat/polish-transcript-rows with --print from the
+	 * staged tree: the transcript's rows lose their borders, rules and state
+	 * fills (user bubble, peer/hub/parent block, tool row, image-generation
+	 * card), tool names take the sans `trace` step, images render at the
+	 * relay's 160 pt from a cached file/Blob source through `expo-image`
+	 * (`session/image-cache.ts`), and the skeleton pulses opacity on the native
+	 * driver (`ui/shared-loop.ts`). `src` and `design/tokens` moved; `app`,
+	 * fonts, `public`, fixtures and the instrument files did not. This DOES
+	 * change what the U-08 scenes paint, so the digest is source admission
+	 * only, NOT rendered U-08 evidence: the frames are CI's audit run's. */
+	// #208 merge with main 828c9b50: thread title, viewport and icon-only
+	// Notifications on top of the above; source identity only, not new pixels.
+	src: "b9dd9c66086deb281a18c54a331342646136ac33d11380d03f7d59349046bf17",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

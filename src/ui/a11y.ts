@@ -407,6 +407,9 @@ export const CONTROL = {
 	composerDismissKeyboard: "composer-dismiss-keyboard",
 	composerCompactDismiss: "composer-compact-dismiss",
 	composerRetry: "composer-retry",
+	/** Keep existing automation selectors stable when clearing only draft/presentation. */
+	composerClearDraft: "composer-clear-draft",
+	composerDismissError: "composer-dismiss-error",
 	composerModelChip: "composer-model-chip",
 	composerEffortChip: "composer-effort-chip",
 	slashFilter: "slash-filter",

@@ -201,7 +201,15 @@ const TranscriptRowImpl = ({
 						isSteer
 							? // No fill, no accent edge: a quiet right-aligned block.
 								"px-1"
-							: "rounded-md border border-hairline border-s-2 border-s-accent bg-surface px-3 py-1.5",
+							: /* A BORDERLESS FILL, the relay's own bubble (its
+								 *  `transcript.tsx`: `rounded-md bg-surface px-3 py-1.5`;
+								 *  visual audit D3). It carried a hairline on all sides
+								 *  plus a 2 px accent start rule: the hairline measured
+								 *  1.25:1 on the light canvas — an edge with no
+								 *  separation — and the rule put a green-edged box on
+								 *  every exchange. The fill and the right alignment
+								 *  already say whose turn it is. */
+								"rounded-md bg-surface px-3 py-1.5",
 					)}
 				>
 					{entry.text.length > 0 ? (
@@ -297,7 +305,20 @@ const TranscriptRowImpl = ({
 		}
 		return (
 			<View className="flex-row items-start gap-2 px-4 py-1" testID={testID}>
-				<Text className={cx("text-mono-sm", ink)} aria-hidden>
+				{/* A FIXED 16 pt mono box: the glyph-column recipe the tool row
+				 *  and the folded row already use (`w-4 … font-mono text-mono-sm`)
+				 *  and the relay's own notice recipe (visual audit D9). Sized to
+				 *  its own advance in the proportional face, `•`, `✗` and `≡`
+				 *  each started the notice's text on a different x (31 pt
+				 *  measured), so a run of notices had no text edge. With the box,
+				 *  this row is `px-4` + 16 + `gap-2` — glyph at 16, text at 40 —
+				 *  which is exactly `CollapsedRow`'s rail, so an open notice and
+				 *  a folded one beside it now share both columns. LEFT-aligned
+				 *  for the reason the tool glyph is: the glyph is the rail. */}
+				<Text
+					className={cx("w-4 shrink-0 text-start font-mono text-mono-sm", ink)}
+					aria-hidden
+				>
 					{glyph}
 				</Text>
 				<Text className="min-w-0 flex-1 text-body-sm text-ink">
@@ -312,8 +333,8 @@ const TranscriptRowImpl = ({
 	}
 
 	/* A message from another participant — the parent, a child, a peer session.
-	 * Depth is a 2 px left edge and a label, so the row is attributable at a glance
-	 * without a card inside the column. */
+	 * A glyph and a label attribute it at a glance; no edge rule and no card
+	 * inside the column (visual audit D9). */
 	// Forward-compatible events keep their actual wire type instead of the
 	// meaningless "entry" caption; unknown data must stay visible and attributable.
 	const label = kind === "generic" ? entry.kind : (BLOCK_LABEL[kind] ?? kind);
@@ -439,27 +460,40 @@ const TranscriptRowImpl = ({
 		);
 	}
 	return (
+		/* NO START RULE (visual audit D9). The block carried a 2 px accent edge
+		 *  (`border-s-2 ps-2`), which put its label at x 26 — a fifth left edge
+		 *  on a screen that already had the glyph rail and the text rail — and
+		 *  repeated the green rule the reader's own bubble has just lost (D3).
+		 *  Attribution is the glyph and the label, as in the folded form above;
+		 *  the glyph sits in the same fixed 16 pt mono box and `gap-2` as every
+		 *  other row, so `↔` / `↳` stand on the glyph rail (x 16) and the sender
+		 *  on the text rail (x 40), and the body starts on the page's own edge
+		 *  like the answer it sits between. */
 		<View className="px-4 py-1" testID={testID}>
-			<View
-				className={cx(
-					"border-s-2 ps-2",
-					kind === "subagent" ? "border-hairline" : "border-accent",
-				)}
-			>
-				<View className="flex-row items-center gap-1">
-					<Text className="text-meta text-ink-dim" aria-hidden>
-						{kind === "peer" ? "↔" : "↳"}
-					</Text>
-					<Text className="text-meta text-ink-dim" numberOfLines={1}>
-						{who}
-						{intent.length ? ` · ${intent.join(" · ")}` : ""}
-					</Text>
-					{openAgentControl(false)}
-				</View>
-				{route}
-				<Text className="text-body-read text-ink">{body}</Text>
-				{images}
+			<View className="flex-row items-center gap-2">
+				<Text
+					className={cx(
+						"w-4 shrink-0 text-start font-mono text-mono-sm",
+						// The folded bar's inks, so a message does not change colour
+						// when it grows past the fold threshold.
+						kind === "subagent" ? "text-ink-dim" : "text-accent",
+					)}
+					aria-hidden
+				>
+					{kind === "peer" ? "↔" : "↳"}
+				</Text>
+				<Text
+					className="min-w-0 shrink text-meta text-ink-dim"
+					numberOfLines={1}
+				>
+					{who}
+					{intent.length ? ` · ${intent.join(" · ")}` : ""}
+				</Text>
+				{openAgentControl(false)}
 			</View>
+			{route}
+			<Text className="text-body-read text-ink">{body}</Text>
+			{images}
 			{anchors}
 		</View>
 	);

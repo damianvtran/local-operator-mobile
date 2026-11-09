@@ -116,7 +116,12 @@ import {
 import { ChromeGroup, ChromeSurface } from "@/ui/components/chrome-surface";
 import { useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
-import { composerBudget } from "@/ui/size-class";
+import {
+	composerAtHostCap,
+	composerBudget,
+	composerHostBound,
+	composerKeyboardLimit,
+} from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
@@ -258,6 +263,10 @@ export type ComposerProps = {
 	 *  gets the set-up mic (`micSetup`) rather than no mic at all. */
 	voice?: DictationState | null;
 	onSend: () => void;
+	/** Clears only the unsent editor, never retained/queued instructions. */
+	onClearDraft?: () => void;
+	/** Presentation only; the host must not discard any delivery record. */
+	onDismissError?: () => void;
 	onStop: () => void;
 	/** A stop is pending for this turn (`turn-stop.ts`), shared with the pinned
 	 *  working line's `stop`: the ■ dims and reads busy with it, so the two
@@ -345,8 +354,10 @@ export type ComposerProps = {
 	/** Reports the composer's painted box in WINDOW coordinates. The SCREEN owns the
 	 *  window height; the composer owns the geometry, so the measurement lives here
 	 *  and no wrapper reparents the field (footer contract). Height is part of it:
-	 *  the ceiling only binds once the painted bottom reaches the window. */
-	onMeasure?: (box: { top: number; height: number }) => void;
+	 *  the ceiling only binds once the painted bottom reaches the window. `capped`
+	 *  says the box is held at `limit` (see `composerLimit`'s invariant): a capped
+	 *  box ends where a fitting one does, so the screen cannot read it from geometry. */
+	onMeasure?: (box: { top: number; height: number; capped: boolean }) => void;
 	/** Any value whose change moves the composer without resizing it (the find bar,
 	 *  a panel, the pending card). The measurement effect watches it. */
 	measureKey?: string;
@@ -558,6 +569,8 @@ export const Composer = ({
 	attaching = false,
 	voice = null,
 	onSend,
+	onClearDraft,
+	onDismissError,
 	onStop,
 	stopping = false,
 	retainedMessage,
@@ -654,15 +667,9 @@ export const Composer = ({
 		 * `TextInput` is a `<textarea>`, and `onSubmitEditing` never fires for one
 		 * (measured: the draft became "…\n" and nothing reached the wire).
 		 *
-		 * **The native half of this rule is NOT wired, and is not claimed.** RN 0.86.3
-		 * resolves `multiline` with no `submitBehavior` to `"newline"`, and both native
-		 * layers dispatch submit only for `"submit"`/`"blurAndSubmit"` — so the
-		 * `onSubmitEditing` passed to the Textarea below cannot fire, and a hardware
-		 * Enter on iOS/Android inserts a newline instead of sending. Native is NOT RUN
-		 * here (no simulator on this host), so this is read from the installed RN source
-		 * rather than measured. Closing it needs `submitBehavior="submit"` or
-		 * `onKeyPress` forwarding, both with the kit's owner (D1); until then the send
-		 * control and the `keydown` listener above are the only paths that send. */
+		 * Native keeps an honestly labelled Return key for software-keyboard
+		 * paragraph entry. Its pinned footer owns Send/Steer instead. This DOM
+		 * listener stays web-only; it must never intercept mobile paragraph entry. */
 		if (Platform.OS !== "web") return;
 		// `View`'s ref is the DOM element on react-native-web; the cast is the whole
 		// of the platform bridge, and `WebFieldNode` names only what is read from it.
@@ -854,6 +861,7 @@ export const Composer = ({
 	const [focused, setFocused] = useState(false);
 	const pasteOffer = useClipboardImageOffer(focused);
 	const [keyboardVisible, setKeyboardVisible] = useState(false);
+	const [nativeKeyboardOverlap, setNativeKeyboardOverlap] = useState(0);
 	const [contextOpen, setContextOpen] = useState(false);
 	const ownField = useRef<TextInput>(null);
 	const inputRef = fieldRef ?? ownField;
@@ -910,6 +918,7 @@ export const Composer = ({
 				Dimensions.get("window").height,
 				event.endCoordinates.screenY,
 			);
+			setNativeKeyboardOverlap(overlap);
 			keyboardOffset.value = withTiming(overlap, {
 				duration: event.duration || 200,
 			});
@@ -923,6 +932,7 @@ export const Composer = ({
 			),
 			Keyboard.addListener("keyboardDidHide", () => {
 				setKeyboardVisible(false);
+				setNativeKeyboardOverlap(0);
 				keyboardOffset.value = 0;
 			}),
 		];
@@ -1067,11 +1077,21 @@ export const Composer = ({
 	 *  line when it has its own row. With the keyboard up it only rides inline
 	 *  when model + effort targets fit; otherwise reserve the separate row too. */
 	const fixedRows = compactSingle ? 0 : TOUCH_FLOOR + receiptHeight + 4;
-	const rawBound = compact === null ? limit : compact.maxHeight;
+	const hostBound = compact === null ? limit : compact.maxHeight;
+	// The iOS window does not shrink with its keyboard. A bottom translation
+	// alone keeps the footer above it but lets extras grow off-screen forever.
+	const keyboardBound =
+		Platform.OS !== "web" && keyboardVisible
+			? composerKeyboardLimit(_window.height, nativeKeyboardOverlap)
+			: null;
+	const rawBound =
+		keyboardBound === null
+			? hostBound
+			: Math.min(hostBound ?? keyboardBound, keyboardBound);
 	const bound =
 		rawBound === null
 			? null
-			: Math.max(TOUCH_FLOOR, rawBound - presentation.gap);
+			: composerHostBound(rawBound, presentation.gap, TOUCH_FLOOR);
 	const budget =
 		bound === null
 			? null
@@ -1092,8 +1112,18 @@ export const Composer = ({
 	 *  native-web` implements `measureInWindow` on the host node; native resolves it
 	 *  asynchronously, which is why this only publishes a number and never gates the
 	 *  first paint (a `null` top means "no limit" — the old behaviour — for a frame). */
+	/* Only the portrait host `limit` is fed back through the measurement; the compact
+	 *  share and the keyboard budget come from window geometry and never loop. */
+	const hostLimit = compact === null ? limit : null;
+	const outerGap = presentation.gap;
 	const publishBox = useCallback(() => {
 		if (!onMeasure) return;
+		const report = (top: number, height: number) =>
+			onMeasure({
+				top,
+				height,
+				capped: composerAtHostCap(height, hostLimit, outerGap, TOUCH_FLOOR),
+			});
 		/* On the web the host node answers directly: `measureInWindow` there returns
 		 *  a CACHED layout, so after the draft grew the screen kept reading the empty
 		 *  composer's box (top 335, height 225 — "fits") and the ceiling never bound
@@ -1104,13 +1134,15 @@ export const Composer = ({
 		} | null;
 		const rect = node?.getBoundingClientRect?.();
 		if (rect) {
-			onMeasure({ top: Math.round(rect.top), height: Math.round(rect.height) });
+			report(Math.round(rect.top), Math.round(rect.height));
 			return;
 		}
 		rootRef.current?.measureInWindow((_x, y, _w, h) =>
-			onMeasure({ top: Math.round(y), height: Math.round(h) }),
+			report(Math.round(y), Math.round(h)),
 		);
-	}, [onMeasure]);
+		/* `hostLimit` and `outerGap` are deps on purpose: binding the limit resizes the
+		 *  box, and that re-measure is what reports `capped` for the new cap. */
+	}, [onMeasure, hostLimit, outerGap]);
 	/* One string, because the effect must run when ANY of these moves the composer —
 	 *  the receipt wrapping, the extras, the scale, the mode, the dictation row — or
 	 *  when the screen says the chrome above it changed. Listing them as separate
@@ -1142,6 +1174,22 @@ export const Composer = ({
 	const extras = (
 		<>
 			<ComposerStateMarkers controls={controls} />
+			{onClearDraft && (draft.length > 0 || images.length > 0) ? (
+				<Button
+					label={t("mobile.composer_input.clear_draft")}
+					accessibilityHint={t("mobile.composer_input.clear_draft_hint")}
+					variant="quiet"
+					size="sm"
+					disabled={attaching || controls.sending}
+					onPress={() => {
+						onClearDraft();
+						inputRef.current?.blur();
+						Keyboard.dismiss();
+						setFocused(false);
+					}}
+					testID={CONTROL.composerClearDraft}
+				/>
+			) : null}
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
@@ -1272,6 +1320,16 @@ export const Composer = ({
 					>
 						{feedback.errorText}
 					</Text>
+					{onDismissError ? (
+						<Button
+							label={t("mobile.composer_input.dismiss_error")}
+							accessibilityHint={t("mobile.composer_input.dismiss_error_hint")}
+							variant="quiet"
+							size="sm"
+							onPress={onDismissError}
+							testID={CONTROL.composerDismissError}
+						/>
+					) : null}
 				</View>
 			) : null}
 
@@ -1566,7 +1624,6 @@ export const Composer = ({
 			shrink
 			disabled={attaching}
 			onPress={() => {
-				pasteOffer.consume();
 				/* `"offer"`: an empty answer to THIS press is the iOS denial, not an
 				 *  empty clipboard, and is said as such (`pasteNothingLine`, U3). */
 				onAttach("paste", "offer");
@@ -1821,11 +1878,11 @@ export const Composer = ({
 						 * must not grow with a wrapped placeholder, or the last transcript row is
 						 * pushed past the scroller at 200 % text (design round 1, D1/D2). */
 						placeholderMaxLines={1}
-						// Kept because it is the callback a hardware keyboard submits
-						// through, and it costs nothing — but see the note above: on this RN
-						// version a multiline field never dispatches it. Native is NOT RUN
-						// here, so this records the gap rather than a behaviour.
-						onSubmitEditing={onSend}
+						// A web submit shares the footer's availability and in-flight latch.
+						// Native's honestly labelled Return key stays newline-only.
+						onSubmitEditing={() => {
+							if (canSendRef.current) sendRef.current();
+						}}
 						fieldRef={inputRef}
 						onFocus={() => setFocused(true)}
 						onBlur={() => setFocused(false)}
@@ -1955,7 +2012,7 @@ export const Composer = ({
 				<View onLayout={measureContent}>
 					<ScrollView
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
-						scrollEnabled={compact !== null}
+						scrollEnabled={extrasMaxHeight !== undefined}
 						onContentSizeChange={(_width, height) =>
 							setExtrasHeight(Math.round(height))
 						}

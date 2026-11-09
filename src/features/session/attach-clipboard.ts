@@ -1,5 +1,5 @@
 import * as Clipboard from "expo-clipboard";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppState, Platform } from "react-native";
 
 import {
@@ -30,19 +30,18 @@ import {
  */
 export const useClipboardImageOffer = (
 	focused: boolean,
-): { visible: boolean; consume: () => void } => {
+): { visible: boolean } => {
 	const kind = Platform.OS === "web" ? "web" : "native";
 	const [hasImage, setHasImage] = useState(false);
-	const [consumed, setConsumed] = useState(false);
 
 	useEffect(() => {
 		if (kind === "web" || !focused) {
 			setHasImage(false);
 			return;
 		}
-		/* A fresh focus is a fresh offer: the reader may have pasted this image,
-		 * removed the attachment, and want it again. */
-		setConsumed(false);
+		/* Availability is not consumption: iOS may not notify this mounted field
+		 * when another app replaces an image. Keep the door available after a read,
+		 * including a denied read, so retry never depends on blur or remount. */
 		let live = true;
 		const probe = () => {
 			void probeClipboardImage(Clipboard).then((has) => {
@@ -52,12 +51,10 @@ export const useClipboardImageOffer = (
 		probe();
 		const appState = AppState.addEventListener("change", (next) => {
 			if (next !== "active") return;
-			setConsumed(false);
 			probe();
 		});
 		const clipboard = Clipboard.addClipboardListener((event) => {
 			if (!live) return;
-			setConsumed(false);
 			setHasImage(event.contentTypes.includes(Clipboard.ContentType.IMAGE));
 		});
 		return () => {
@@ -67,9 +64,7 @@ export const useClipboardImageOffer = (
 		};
 	}, [focused, kind]);
 
-	const consume = useCallback(() => setConsumed(true), []);
 	return {
-		visible: pasteOfferVisible({ kind, focused, hasImage, consumed }),
-		consume,
+		visible: pasteOfferVisible({ kind, focused, hasImage, consumed: false }),
 	};
 };

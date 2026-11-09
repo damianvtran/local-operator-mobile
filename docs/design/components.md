@@ -641,12 +641,12 @@ give back the space the cap just bought.
 
 | Row kind | Treatment | Ink |
 |---|---|---|
-| **user** | bubble, `max-width: 85%`, right-aligned, fill `surface`, border `hairline` + a 2px `accent` left edge, `radius.md`, padding 12/6 | `body` in `ink` |
+| **user** | borderless fill, `max-width: 85%`, right-aligned, fill `surface`, **no border and no accent edge**, `radius.md`, padding 12/6 | `body-read` in `ink` |
 | user, steer | no accent edge, no fill: a quiet right-aligned block | `body-sm` in `ink-muted` |
 | **assistant** | no bubble at all: plain column, full width, markdown | `body-lg` in `ink` |
 | tool | one line + a disclosure (§ 15) | see § 15 |
-| parent / subagent / peer | labelled block with a 2px left edge (`accent` for parent/peer, `hairline` for subagent) and a `meta` label | `body-sm` in `ink` |
-| notice / compaction | glyph + text in the severity colour | `body-sm` |
+| parent / subagent / peer | labelled block, **no edge rule**: the kind's glyph (`↔` peer, `↳` parent/subagent; `accent`, `ink-dim` for a subagent) in the fixed glyph box, then a `meta` label | `body-read` in `ink` |
+| notice / compaction | glyph in the fixed 16pt `mono-sm` glyph box (the tool row's), then text; glyph in the severity colour | `body-sm` |
 | working line | spinner glyph + verb + elapsed, in-place, the **only** in-progress indicator | `body-sm`, label in `shimmer` |
 
 **The assistant's turn has no bubble.** A bubble is a container for something the
@@ -661,6 +661,19 @@ in-progress animation elsewhere is a defect.
 An image the reader sent is part of the turn, not a `[image attached]` note. The
 attachment component owns its own loading and failure states so a flaky fetch
 never shows a broken glyph or reflows the bubble.
+
+**160pt tall, aspect preserved, never cropped** — the relay's own frame. The
+height is the same in every state (loading, shown, unavailable), so a late or
+failed image never moves the text under it; before the picture's ratio is known
+the frame is a 160pt square, and a generated image's progress is drawn in that
+same square. A wide image is contained inside the column, not pushed past it.
+An image is fetched once: the source is kept across the row leaving and
+re-entering the list, so scrolling back to it shows the picture, not a second
+loading state.
+
+**No edge rules, no boxes around a turn.** Whose turn it is comes from alignment
+and fill (the reader's), a glyph and label (another participant's), or nothing
+at all (the answer). A rule down the side of a message is not part of this kit.
 
 ---
 
@@ -678,12 +691,17 @@ never shows a broken glyph or reflows the bubble.
 
 | Slot | Binding |
 |---|---|
-| State glyph | 12pt wide, `mono-sm`, **identity colour** (see below) |
-| Name | `mono-sm` `ink-muted`, `min-w-0 truncate` |
-| Summary | `body-sm` `ink-dim`, `flex-1 truncate` |
+| State glyph | fixed 16pt box, `mono-sm`, left-aligned, **identity colour** (see below) |
+| Name | `trace` (13/1.5, **sans**) `ink-muted`, `min-w-0 truncate` |
+| Summary | `trace` `ink-dim`, `flex-1 truncate` — one step with the name, told apart by ink |
 | Diff counts | `mono-sm`: `+N` in `success`, `−N` in `danger`; **suppressed when both are zero** |
 | Elapsed | `mono-sm` `ink-dim`, `tabular-nums`, `shrink-0` |
 | Disclosure | `▸` / `▾` in `ink-dim`, only when there are details |
+
+**The row has no fill and no border, in any state.** Running, queued, composing
+and failed rows are the same borderless line as a finished one; the glyph's
+colour is the state, and the running glyph pulses. A row drawn as a filled card
+is a defect, however useful the fill looks for scanning.
 
 ### The glyph is a text glyph, not an icon
 
@@ -691,7 +709,7 @@ never shows a broken glyph or reflows the bubble.
 |---|---|---|
 | composing | `⟳` | `ink-dim` |
 | queued | `⋯` | `ink-dim` |
-| running | `⟳` | `accent`, pulsing (`lo-pulse`, 1.2 s) |
+| running | `⟳` | `accent`, pulsing (opacity, native driver; still under reduced motion) |
 | done | `✓` | `success` |
 | failed | `✗` | `danger` |
 | interrupted | `–` | `warning` |
@@ -788,7 +806,7 @@ and say so quietly, and must never present a 60-second cut as a failure.
 |---|---|
 | Fill | the pair is a property of the GROUND: on the **canvas** `elevated` → `sunken`; on a **raised** surface `sunken` → `canvas` |
 | Shape | three bars for a transcript, one row per list item |
-| Animation | a gentle brightness pulse at 1.4 s |
+| Animation | a gentle brightness pulse at 1.4 s: a layer in the dimmed colour fades over the resting bar (opacity, native driver), one shared loop for every bar on screen |
 | Under reduced motion | the pulse stops; the bars keep their resting tone |
 
 **The pair flips with the ground, and getting it wrong was measured on both.**
