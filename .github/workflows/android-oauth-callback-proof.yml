@@ -181,10 +181,9 @@ jobs:
           echo "KVM is usable: $(ls -l /dev/kvm)"
 
       - name: Install the repository-pinned hosted UI driver
-        run: |
-          set -euo pipefail
-          curl -fsSL https://get.maestro.mobile.dev | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
       - name: Exercise real browser/provider/socket/lifecycle boundaries
         uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc
         with:
