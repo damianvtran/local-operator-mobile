@@ -244,10 +244,12 @@ describe("Team Bridge visual & semantic polish contracts", () => {
 		expect(paneSource).toContain("testID={REGION.sidebarFooter}");
 	});
 
-	it("loading skeletons draw for the panel's raised ground, sit under their section header, and are one labelled element (R1-2/R1-6/U1-5)", () => {
-		expect(adapterSource).toContain(
-			'<BridgeDirectory onBeforeOpen={onNavigate} ground="raised" />',
+	it("loading skeletons draw for the panel's own ground, sit under their section header, and are one labelled element (R1-2/R1-6/U1-5/Q2-1)", () => {
+		// Raised in the drawer, canvas in the docked split (no `onClose`).
+		expect(flat(adapterSource)).toContain(
+			'<BridgeDirectory onBeforeOpen={onNavigate} ground={onClose ? "raised" : "canvas"} />',
 		);
+		expect(flat(paneSource)).not.toContain("onClose: () => undefined");
 		expect(listSource).toContain('ground = "canvas"');
 		expect(listSource).toContain("<Skeleton lines={3} ground={ground} />");
 		expect(listSource).toContain("<Skeleton lines={2} ground={ground} />");

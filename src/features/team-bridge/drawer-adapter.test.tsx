@@ -16,6 +16,8 @@ import { CONTROL } from "@/ui/a11y";
  */
 const RAW_KEY_OR_PLACEHOLDER = /mobile\.team_bridge|\{/;
 const WHITESPACE = /\s+/;
+/** A label class that lets it shrink below its longest word (D2-1). */
+const SHRINKING_LABEL = /\b(min-w-0|shrink)\b/;
 type BridgeSlice = Pick<
 	TeamBridgeState,
 	"gate" | "unreadKnown" | "unreadFailed" | "totalUnread"
@@ -38,6 +40,7 @@ const host = vi.hoisted(() => ({
 	labels: new Map<string, string>(),
 	selected: new Map<string, boolean>(),
 	labelLines: new Map<string, number | undefined>(),
+	labelClasses: new Map<string, string | undefined>(),
 	views: [] as ViewProps[],
 	texts: [] as string[],
 	badges: [] as string[],
@@ -89,13 +92,16 @@ vi.mock("react-native", () => ({
 	Text: ({
 		children,
 		numberOfLines,
+		className,
 	}: {
 		children?: ReactNode;
 		numberOfLines?: number;
+		className?: string;
 	}) => {
 		if (typeof children === "string") {
 			host.texts.push(children);
 			host.labelLines.set(children, numberOfLines);
+			host.labelClasses.set(children, className);
 		}
 		return children ?? null;
 	},
@@ -207,9 +213,8 @@ vi.mock("@/features/sessions/conversations-drawer", () => ({
 	},
 }));
 
-const { WorkspaceDrawerProvider, useWorkspaceDrawer } = await import(
-	"@/features/sessions/workspace-drawer"
-);
+const { MODE_BADGE_INSET, WorkspaceDrawerProvider, useWorkspaceDrawer } =
+	await import("@/features/sessions/workspace-drawer");
 const {
 	BridgeThreadDrawerButton,
 	bridgeDrawerBadge,
@@ -255,6 +260,7 @@ beforeEach(() => {
 	host.labels.clear();
 	host.selected.clear();
 	host.labelLines.clear();
+	host.labelClasses.clear();
 	host.views = [];
 	host.texts = [];
 	host.badges = [];
@@ -400,9 +406,10 @@ describe("the adapter in the shared workspace drawer", () => {
 		// The pane renders the shared directory and hands it the drawer's own
 		// navigate, which closes the overlay before the row routes.
 		expect(host.directory?.onBeforeOpen).toBeTypeOf("function");
-		/* The pane is `bg-elevated` (drawer and docked split alike), so the
-		 *  directory must draw its skeletons and row fills for a raised
-		 *  ground: the canvas pair painted invisible bars there (R1-2). */
+		/* The temporary drawer is `bg-elevated`, so the directory must draw
+		 *  its skeletons and row fills for a raised ground: the canvas pair
+		 *  painted invisible bars there (R1-2). The docked split's canvas
+		 *  ground is pinned in the pane suite below (Q2-1). */
 		expect(host.directory?.ground).toBe("raised");
 		await act(async () => host.directory?.onBeforeOpen?.());
 		expect(host.drawer?.visible).toBe(false);
@@ -561,7 +568,6 @@ describe("the mode row: one row at normal text, wraps at large text, shares the 
 			expect.arrayContaining(["min-w-0", "grow", "shrink"]),
 		);
 		expect(classes(group)).not.toContain("flex-1");
-		// The segment's content keeps the count inline.
 		const content = host.views.find(
 			(v) =>
 				classes(v).includes("gap-1.5") &&
@@ -571,8 +577,62 @@ describe("the mode row: one row at normal text, wraps at large text, shares the 
 		expect(classes(content)).toEqual(
 			expect.arrayContaining(["flex-nowrap", "px-2"]),
 		);
+		/* U2-1/U2-2: the count is an out-of-flow corner overlay, a sibling of
+		 *  the segment's Pressable inside its group — never in the segment's
+		 *  content row, where its 36 pt wrapped "Team Bridge" at 320 pt. */
+		const overlay = host.views.find(
+			(v) => v.pointerEvents === "none" && classes(v).includes("absolute"),
+		);
+		expect(classes(overlay)).toEqual(
+			expect.arrayContaining(["absolute", "rounded-full", "border-2"]),
+		);
+		// Unselected: ringed in the track's own sunken ground.
+		expect(classes(overlay)).toContain("border-sunken");
+		expect(overlay?.style).toEqual(MODE_BADGE_INSET);
+		expect(holds(group?.children, CONTROL.workspaceDrawerTeamBridge)).toBe(
+			true,
+		);
 		expect(host.badges.at(-1)).toBe("99+");
 		expect(host.labelLines.get(t("mobile.team_bridge.title"))).toBe(undefined);
+		// D2-1: the label never shrinks below its longest word.
+		expect(host.labelClasses.get(t("mobile.team_bridge.title"))).not.toMatch(
+			SHRINKING_LABEL,
+		);
+	});
+	it("at 100 % an arriving count changes no in-flow class: the track, group and segment content are identical at 0 and 7 (U2-1)", async () => {
+		const snapshot = () => {
+			const { topRow, track, group } = modeRow();
+			const inFlow = host.views
+				.filter((v) => !classes(v).includes("absolute"))
+				.map((v) => v.className ?? "");
+			return {
+				topRow: topRow?.className,
+				track: track?.className,
+				group: group?.className,
+				inFlow: inFlow.slice(-8),
+			};
+		};
+		setBridge({ gate: "open", unreadKnown: true, totalUnread: 0 });
+		await mountDrawer();
+		const without = snapshot();
+		expect(host.badges).toEqual([]);
+		host.views = [];
+		await act(async () => setBridge({ totalUnread: 7 }));
+		expect(host.badges.at(-1)).toBe("7");
+		expect(snapshot()).toEqual(without);
+	});
+	it("at 100 % the overlay ring follows a selected segment's raised ground", async () => {
+		setBridge({ gate: "open", unreadKnown: true, totalUnread: 3 });
+		await mountDrawer();
+		await act(async () => controller.open());
+		await press(CONTROL.workspaceDrawerTeamBridge);
+		const overlay = host.views
+			.filter(
+				(v) => v.pointerEvents === "none" && classes(v).includes("absolute"),
+			)
+			.at(-1);
+		expect(classes(overlay)).toContain("border-elevated");
+		expect(classes(overlay)).not.toContain("border-sunken");
 	});
 	it("at 200 % the track and the Bridge group wrap and shrink, the badge sits inline, and neither label is one-line clamped", async () => {
 		host.scale = 2;
@@ -592,8 +652,15 @@ describe("the mode row: one row at normal text, wraps at large text, shares the 
 			]),
 		);
 		expect(holds(track?.children, CONTROL.workspaceDrawerAgents)).toBe(true);
+		/* D2-1: content-proportioned, never equal `flex-1` halves — two 93 pt
+		 *  halves of the 190 pt track left "Bridge" a 73 pt box and broke it
+		 *  "Bridg / e". A segment that does not fit takes its own row. */
 		expect(classes(group)).toEqual(
-			expect.arrayContaining(["min-w-0", "shrink"]),
+			expect.arrayContaining(["min-w-0", "grow", "shrink"]),
+		);
+		expect(classes(group)).not.toContain("flex-1");
+		expect(host.labelClasses.get(t("mobile.team_bridge.title"))).not.toMatch(
+			SHRINKING_LABEL,
 		);
 		// Neither label may be clamped: the product name wraps, not "Team B…".
 		expect(host.labelLines.has(t("mobile.team_bridge.title"))).toBe(true);
@@ -601,9 +668,12 @@ describe("the mode row: one row at normal text, wraps at large text, shares the 
 		expect(host.labelLines.get(t("mobile.chrome.drawer.agents"))).toBe(
 			undefined,
 		);
-		// Inline badge wrapper passes taps through (`pointerEvents="none"`).
+		/* Inline at large text (the wrap absorbs its width; a 200 % pill on
+		 *  the corner would sit over the wrapped label), and its wrapper
+		 *  passes taps through (`pointerEvents="none"`). */
 		const badge = host.views.find((v) => v.pointerEvents === "none");
 		expect(badge).toBeDefined();
+		expect(classes(badge)).not.toContain("absolute");
 		expect(host.badges.at(-1)).toBe("4");
 	});
 });
@@ -616,6 +686,20 @@ describe("the Bridge pane omits a duplicate close row and shows gate help (D3, U
 			),
 		);
 		expect(host.presses.has(CONTROL.sidebarClose)).toBe(false);
+	});
+	it("names the directory's ground from where it sits: raised in the drawer, canvas docked (Q2-1)", async () => {
+		setBridge({ gate: "open" });
+		await act(async () =>
+			root.render(
+				<TeamBridgeDrawerPane onNavigate={vi.fn()} onClose={vi.fn()} />,
+			),
+		);
+		expect(host.directory?.ground).toBe("raised");
+		// The docked split pane passes no `onClose` and sits on `bg-canvas`.
+		await act(async () =>
+			root.render(<TeamBridgeDrawerPane onNavigate={vi.fn()} />),
+		);
+		expect(host.directory?.ground).toBe("canvas");
 	});
 	it.each([
 		["signed_out", "mobile.team_bridge.gate.signed_out_help"],

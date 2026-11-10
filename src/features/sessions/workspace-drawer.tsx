@@ -65,21 +65,28 @@ export const useOptionalWorkspaceDrawer = () =>
  * The mode track's layout, by text scale. Exported so the arithmetic below is
  * pinned in a unit test (Node has no layout engine to measure it).
  *
- * BELOW `LARGE_TEXT_SCALE`: ONE row, always. Equal `flex-1` halves starved the
- * Team Bridge segment — on a 390 pt phone it had 107 px for "Team Bridge"
- * (79) + gap (6) + a 23–31 px count, so the count wrapped to a second and
- * third line, the segments went 60/81 pt against Agents' 48, and the whole
- * drawer shifted down whenever an unread arrived (design D1-2, UX U1-1, QA
- * Q1-2). Segments now size from their content (`grow`, basis auto) and share
- * only the slack, so Agents gives up the empty half it never used: at 320 pt
- * the ~225 pt track holds Agents (~66) + Team Bridge with a "99+" count
- * (~131) + gaps with room to spare. They may still `shrink` (`min-w-0`), so a
- * long translated label wraps its words rather than overflowing — but the
- * count stays inline (`flex-nowrap` on the segment's content).
+ * BELOW `LARGE_TEXT_SCALE`: ONE row, always, and the unread count costs NO
+ * layout. The panel at 320 pt is `sidebarWidthFor(320, 48)` = 272 pt; the
+ * row's `px-3` (24) + `gap-1.5` (6) + the 48 pt close button leave 194 pt, the
+ * track's `p-0.5` a 190 pt inner track, and its `gap-0.5` 188 pt for the two
+ * segments. Agents (47 + 16 + 2) and Team Bridge (79 + 16 + 2) need ~162 pt; an
+ * INLINE count (6 gap + up to 30.5 for "99+") pushed that to ~198.5 pt, so
+ * "Team Bridge" wrapped to two lines, the bar grew 48 → 54.6 pt and the
+ * drawer and the segment divider moved whenever an unread arrived (PR #222 UX U2-1/U2-2, design D2-2). The
+ * count is therefore an out-of-flow corner overlay (`badge: "overlay"`): adding
+ * or clearing "7" / "99+" changes zero layout pixels. Segments size from their
+ * content (`grow`, basis auto) and share only the slack (D1-2/U1-1/Q1-2).
  *
- * AT AND ABOVE IT: the previous wrap rules (PR #212 QA Q1-1): equal shares,
- * the track and the segment content wrap, so "Team Bridge" breaks onto a
- * second line instead of truncating at 200 %+ / Urdu RTL.
+ * AT AND ABOVE IT: the track wraps (PR #212 QA Q1-1) so "Team Bridge" breaks
+ * onto its own row instead of truncating at 200 %+ / Urdu RTL. Segments are
+ * content-proportioned (`grow shrink`, basis auto), NOT `flex-1` halves: equal
+ * halves of the 190 pt track gave each label a 73 pt inner box, narrower than
+ * the single word "Bridge" (~80 pt at 28 px), and with `min-w-0 shrink` on the
+ * label that forced the mid-word break "Bridg / e" (design D2-1). Now a segment
+ * that does not fit wraps onto its own full-width row, and the label never
+ * shrinks below its longest word (`label` carries no `min-w-0 shrink`). The
+ * count stays INLINE here: a 200–300 % pill overlaid on the corner would sit
+ * on top of a wrapped label, and the wrap already absorbs its width.
  *
  * Both: the track stretches its children (`items-stretch`) so the two
  * segments are always the same height, and wrapped rows centre in the track
@@ -88,18 +95,29 @@ export const useOptionalWorkspaceDrawer = () =>
  */
 export const modeBarLayout = (largeText: boolean) =>
 	largeText
-		? {
+		? ({
 				track:
 					"min-w-0 flex-1 flex-row flex-wrap content-center items-stretch gap-0.5 rounded-md bg-sunken p-0.5",
-				segment: "min-w-0 flex-1 shrink",
+				segment: "min-w-0 grow shrink",
 				content: "flex-wrap px-2.5",
-			}
-		: {
+				label: "text-center text-body-sm",
+				badge: "inline",
+			} as const)
+		: ({
 				track:
 					"min-w-0 flex-1 flex-row flex-nowrap content-center items-stretch gap-0.5 rounded-md bg-sunken p-0.5",
 				segment: "min-w-0 grow shrink",
 				content: "flex-nowrap px-2",
-			};
+				label: "text-center text-body-sm",
+				badge: "overlay",
+			} as const);
+
+/** Where the overlaid Team Bridge count sits on its segment's top-trailing
+ *  corner. It rises into the row's `pt-1.5` (6 pt) and reaches past the track
+ *  into the `gap-1.5` before the close button (or the docked pane's `px-3`),
+ *  so it never clips or leaves the panel. `end`, not `right`, so Urdu RTL
+ *  mirrors it to the leading corner. */
+export const MODE_BADGE_INSET = { top: -5, end: -4 } as const;
 
 /**
  * Minimal, calm segmented mode track shared by the temporary workspace drawer
@@ -111,8 +129,9 @@ export const modeBarLayout = (largeText: boolean) =>
  * into a zero-contrast green-on-green lump. Here a quiet sunken pill track
  * raises the active segment (`bg-elevated`, subtle hairline, `text-ink
  * font-semibold`) while keeping `TOUCH_FLOOR` hit height, full multi-line wrap
- * at 200 %+ / RTL (`min-w-0 shrink`, never `numberOfLines={1}`), and crisp
- * inline badge contrast in both selected and unselected states.
+ * at 200 %+ / RTL (whole-word wraps, never `numberOfLines={1}`), and a crisp
+ * count in both selected and unselected states (`bg-elevated` / `bg-sunken`
+ * grounds, never `bg-accent`, ringed in the segment's own ground).
  *
  * When `onClose` is supplied (the temporary drawer), `CONTROL.sidebarClose`
  * sits on the same top chrome row so neither Agents nor Team Bridge needs a
@@ -143,9 +162,9 @@ export const WorkspaceModeBar = ({
 			 *  At 200 % text a fixed row cut "Team Bridge" to "Team B" and
 			 *  pushed the badge past the panel (320/390 pt phones, Urdu RTL
 			 *  started the button at x −88; text scale reaches 3×). The track
-			 *  wraps, and each segment may shrink (`min-w-0 shrink`) so its
-			 *  label breaks cleanly onto a second line instead of ellipsizing.
-			 *  Below large text it stays one row instead (`modeBarLayout`). */}
+			 *  wraps, and a segment that does not fit takes its own row so its
+			 *  label breaks between words instead of ellipsizing. Below large
+			 *  text it stays one row instead (`modeBarLayout`). */}
 			<View className={layout.track}>
 				<Pressable
 					testID={CONTROL.workspaceDrawerAgents}
@@ -171,7 +190,7 @@ export const WorkspaceModeBar = ({
 						>
 							<Text
 								className={cx(
-									"text-center text-body-sm",
+									layout.label,
 									agentsSelected
 										? "font-semibold text-ink"
 										: pressed
@@ -219,7 +238,7 @@ export const WorkspaceModeBar = ({
 							>
 								<Text
 									className={cx(
-										"min-w-0 shrink text-center text-body-sm",
+										layout.label,
 										bridgeSelected
 											? "font-semibold text-ink"
 											: pressed
@@ -229,7 +248,9 @@ export const WorkspaceModeBar = ({
 								>
 									{t("mobile.team_bridge.title")}
 								</Text>
-								{showCount && bridgeBadge.count !== null ? (
+								{showCount &&
+								bridgeBadge.count !== null &&
+								layout.badge === "inline" ? (
 									<View aria-hidden pointerEvents="none">
 										<Badge
 											label={countLabel(bridgeBadge.count)}
@@ -242,6 +263,32 @@ export const WorkspaceModeBar = ({
 							</View>
 						)}
 					</Pressable>
+					{/* Out of flow (U2-1/U2-2): a sibling of the Pressable, so it is
+					 *  never part of the hit target's layout, and `pointerEvents
+					 *  ="none"` so a tap on it still lands on the segment. The 2 pt
+					 *  ring is the segment's own ground (`bg-elevated` selected,
+					 *  the track's `bg-sunken` otherwise) so the pill reads as
+					 *  lifted off its corner rather than fused to the edge. */}
+					{showCount &&
+					bridgeBadge.count !== null &&
+					layout.badge === "overlay" ? (
+						<View
+							aria-hidden
+							pointerEvents="none"
+							className={cx(
+								"absolute rounded-full border-2",
+								bridgeSelected ? "border-elevated" : "border-sunken",
+							)}
+							style={MODE_BADGE_INSET}
+						>
+							<Badge
+								label={countLabel(bridgeBadge.count)}
+								emphasis
+								mono
+								scale={effectiveScale}
+							/>
+						</View>
+					) : null}
 				</View>
 			</View>
 			{onClose ? (

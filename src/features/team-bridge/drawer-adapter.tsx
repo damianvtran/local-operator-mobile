@@ -85,9 +85,10 @@ export function bridgeDrawerBadge({
  *  without a redundant empty 52 pt close row. */
 export function TeamBridgeDrawerPane({
 	onNavigate,
+	onClose,
 }: {
 	onNavigate: () => void;
-	onClose: () => void;
+	onClose?: () => void;
 }) {
 	const router = useRouter();
 	const pathname = usePathname();
@@ -95,10 +96,16 @@ export function TeamBridgeDrawerPane({
 	return (
 		<View className="min-h-0 flex-1" testID={SURFACE.teamBridgeDrawerPane}>
 			{gate === "open" ? (
-				/* `raised`: the drawer and the docked pane are `bg-elevated`, where
-				 *  the canvas skeleton pair paints its bars in the ground's own
-				 *  colour (review R1-2). */
-				<BridgeDirectory onBeforeOpen={onNavigate} ground="raised" />
+				/* The ground follows the panel the pane sits on: the temporary
+				 *  drawer is `bg-elevated` (`raised`; the canvas skeleton pair
+				 *  painted its bars in the ground's own colour there, review
+				 *  R1-2), while the docked split pane has no fill of its own and
+				 *  sits on the screen's `bg-canvas` (QA Q2-1). Only the drawer
+				 *  passes `onClose`, so its presence names the ground. */
+				<BridgeDirectory
+					onBeforeOpen={onNavigate}
+					ground={onClose ? "raised" : "canvas"}
+				/>
 			) : (
 				/* Not admitted (yet): say which state, and hand off to the full
 				 * screen, which owns sign-in, plan and retry. Never a dead end, and

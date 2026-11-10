@@ -16,7 +16,10 @@ export type WorkspaceDrawerController = {
 export type WorkspaceDrawerBridgeAdapter = {
 	bridgePane: (props: {
 		onNavigate: () => void;
-		onClose: () => void;
+		/** Present only in the temporary drawer. The docked split pane has
+		 *  nothing to close and omits it, which is also how the pane tells its
+		 *  `bg-elevated` drawer ground from the docked `bg-canvas` (QA Q2-1). */
+		onClose?: () => void;
 	}) => ReactNode;
 	bridgeBadge: {
 		count: number | null;

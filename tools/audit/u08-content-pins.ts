@@ -1355,7 +1355,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Bridge footer, raised directory skeletons/row fills, full-width profile
 	// rows, author touch box. --print over the staged tree; source identity
 	// only, no rendered or native proof.
-	src: "d8b5b471761fa68c9138d7b98c317856b5b5186f99db8339a9fe90e837c7db40",
+	// #222 round-2 remediation: out-of-flow Team Bridge count below large
+	// text, content-proportioned segments and whole-word labels above it,
+	// docked directory on its canvas ground. --print over the staged tree;
+	// source identity only, no rendered or native proof.
+	src: "1f5088ca45452e16ae066d663c26e4a27cf00cee5a56e419c86a7c57d598677c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useHomeDrawer } from "@/features/home/use-home-drawer";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
 import { CONTROL } from "@/ui/a11y";
-import { layoutFor } from "@/ui/size-class";
+import { layoutFor, sidebarWidthFor } from "@/ui/size-class";
+import { TOUCH_TARGET } from "@/ui/tokens.gen";
 import type { ConversationsDrawerProps } from "./conversations-drawer";
 import type { WorkspaceDrawerBridgeAdapter } from "./workspace-drawer.contract";
 
@@ -118,6 +119,7 @@ const {
 	WorkspaceDrawerButton,
 	useWorkspaceDrawer,
 	modeBarLayout,
+	MODE_BADGE_INSET,
 } = await import("./workspace-drawer");
 let controller: ReturnType<typeof useWorkspaceDrawer>;
 let setDraft: (text: string) => void;
@@ -214,7 +216,7 @@ describe("one workspace drawer above the mounted chat", () => {
 		await mount();
 		expect(host.presses.has(CONTROL.workspaceDrawerTeamBridge)).toBe(false);
 		const pane = vi.fn(
-			(_props: { onNavigate: () => void; onClose: () => void }) => null,
+			(_props: { onNavigate: () => void; onClose?: () => void }) => null,
 		);
 		await mount({
 			bridgePane: pane,
@@ -413,19 +415,41 @@ describe("the mode track stays one row below large text (D1-2/U1-1/Q1-2/U1-2)", 
 		expect(split(layout.track)).not.toContain("flex-wrap");
 		expect(split(layout.segment)).toEqual(["min-w-0", "grow", "shrink"]);
 		expect(split(layout.content)).toEqual(["flex-nowrap", "px-2"]);
-		/* The budget at 320 pt: a ~225 pt track holds Agents (48 text + 16 px +
-		 *  2 border) and Team Bridge (79 + 6 gap + a 28 "99+" pill + 16 + 2)
-		 *  plus the track's own 2 gap and 4 padding. */
-		const agents = 48 + 16 + 2;
-		const bridge = 79 + 6 + 28 + 16 + 2;
-		expect(agents + bridge + 2 + 4).toBeLessThanOrEqual(225);
+		// U2-1/U2-2: the count is out of flow, so it costs no width at all.
+		expect(layout.badge).toBe("overlay");
+		/* The TRUE 320 pt budget (U2-1): the drawer panel is
+		 *  `sidebarWidthFor(320, 48)`, and the row's px-3 (24) + gap-1.5 (6)
+		 *  + the 48 pt close button + the track's p-0.5 (4) leave a 190 pt
+		 *  inner track, and its gap-0.5 (2) leaves 188 pt for the two
+		 *  segments. The 225 pt this test used to assume was wrong. The 48 pt
+		 *  (Android / web) floor is the tighter of the two platforms. */
+		const floor = TOUCH_TARGET.android;
+		const panel = sidebarWidthFor(320, floor);
+		expect(panel).toBe(272);
+		const track = panel - 24 - 6 - floor - 4;
+		expect(track).toBe(190);
+		const segments = track - 2;
+		const agents = 47 + 16 + 2;
+		const bridge = 79 + 16 + 2;
+		expect(agents + bridge).toBeLessThanOrEqual(segments);
+		// The inline count this replaced (6 gap + a 30.5 "99+" pill) overflowed.
+		expect(agents + bridge + 6 + 30.5).toBeGreaterThan(segments);
+		// The overlay rises into the row's 6 pt top inset and the 6 pt gap.
+		expect(-MODE_BADGE_INSET.top).toBeLessThanOrEqual(6);
+		expect(-MODE_BADGE_INSET.end).toBeLessThanOrEqual(6);
 	});
-	it("at large text: wraps and shrinks (200 % / Urdu RTL) and still centres wrapped rows", () => {
+	it("at large text: wraps whole segments, never mid-word (200 % / Urdu RTL, D2-1) and still centres wrapped rows", () => {
 		const layout = modeBarLayout(true);
 		expect(split(layout.track)).toEqual(
 			expect.arrayContaining(["flex-wrap", "items-stretch", "content-center"]),
 		);
-		expect(split(layout.segment)).toEqual(["min-w-0", "flex-1", "shrink"]);
+		/* D2-1: content-proportioned segments, never `flex-1` halves (93 pt
+		 *  each of the 190 pt track left "Bridge", ~80 pt at 28 px, a 73 pt
+		 *  box), and a label that never shrinks below its longest word. */
+		expect(split(layout.segment)).toEqual(["min-w-0", "grow", "shrink"]);
 		expect(split(layout.content)).toContain("flex-wrap");
+		expect(split(layout.label)).not.toContain("min-w-0");
+		expect(split(layout.label)).not.toContain("shrink");
+		expect(layout.badge).toBe("inline");
 	});
 });

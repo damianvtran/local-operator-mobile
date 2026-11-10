@@ -693,7 +693,6 @@ export const ConversationsPane = ({
 				/>
 				{dockedBridgeAdapter.bridgePane({
 					onNavigate: onNavigate ?? (() => undefined),
-					onClose: () => undefined,
 				})}
 				{/* The workspace footer (computer switcher, Settings, Inbox/Past/
 				 *  Projects/Schedules/Library) belongs to the PANEL, not to the
