@@ -95,6 +95,13 @@ export type ComposerPresentationFacts = {
 	scale: number;
 	/** The platform's touch floor; the field paints at it. Defaults to iOS's 44. */
 	floor?: number;
+	/** The dock RESTS as the two-row card rather than the one-row pill (visual
+	 *  audit D1/D5): model and effort live on the card's controls row beside
+	 *  attach, as on the relay, so that row must exist before the reader types —
+	 *  a pill has nowhere to put them, which is what kept a separate 48 pt chip
+	 *  band above the composer. Short landscape passes `false` and keeps its
+	 *  pill; absent means `false`, so every earlier caller and pin is unchanged. */
+	card?: boolean;
 };
 /** Clearance is outside the shell; one radius applies to all corners. Whitespace
  * is still a draft, so geometry must never normalize the reader's content.
@@ -107,6 +114,7 @@ export type ComposerPresentationFacts = {
  * called during render. */
 export const composerPresentation = (facts: ComposerPresentationFacts) => {
 	const expanded =
+		facts.card === true ||
 		facts.focused ||
 		facts.draft.length > 0 ||
 		facts.attachments > 0 ||

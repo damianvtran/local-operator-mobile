@@ -139,6 +139,16 @@ export const composerFeedback = ({
 	};
 };
 
+/** The accessible name for a short visible action: the full sentence when it
+ *  already contains the visible word, else the word then the sentence. The
+ *  visible label must be IN the name (label-in-name, U-10) in every locale, and
+ *  a translation of "Retry earlier instruction" is not obliged to start with
+ *  the translation of "Retry". */
+export const noticeActionName = (label: string, sentence: string): string =>
+	sentence.toLocaleLowerCase().includes(label.toLocaleLowerCase())
+		? sentence
+		: `${label}, ${sentence}`;
+
 /**
  * The line for a paste that came back with no image.
  *

@@ -67,3 +67,45 @@ export const compactTitleChars = (
 	_extras: HeaderExtras = {},
 	_nativeChrome = false,
 ): number => NO_TITLE_BUDGET;
+
+/**
+ * The conversation-title type style of a header: the class, the line clamp and
+ * the ramp step they draw with, from the header's two layout facts.
+ *
+ * `heading` (17/600), not `display` (28): a 28 pt title in a 56 pt row with
+ * three leading marks was the "crunched" header (D-S2). The relay uses the same
+ * 17 pt step with a 12 pt subtitle; together they are 39.8 pt of text in the
+ * 56 pt row. Compact (short landscape) keeps its `title` step. ONE line inline;
+ * stacked (large text / narrow phone) the title owns its row and may use two
+ * full lines before the tail is cut.
+ *
+ * EXPORTED so every conversation header draws the same title. The Team Bridge
+ * thread header used its own 20 pt two-line `text-title` and the operator
+ * called it "way too large" beside the agent chat title (TestFlight 753); a
+ * copied class string would drift the next time this ramp step moves, so the
+ * bridge reads this function instead. Pure and hook-free: callers pass the
+ * facts they already derive (`useCompactChrome`, `headerStacks`). It lives
+ * HERE, beside the title's width budget, rather than in `session-health.tsx`
+ * (whose `SessionHealthControl` draws with it) because that component's
+ * module graph does not load in the Node test host, and the bridge's suite
+ * must assert against this very function, not a copy of its strings.
+ */
+export function sessionHeaderTitle({
+	compact,
+	stacked,
+}: {
+	compact: boolean;
+	stacked: boolean;
+}): {
+	className: string;
+	numberOfLines: 1 | 2;
+	step: "title" | "heading";
+} {
+	return compact
+		? { className: "text-title text-ink", numberOfLines: 1, step: "title" }
+		: {
+				className: "text-heading text-ink",
+				numberOfLines: stacked ? 2 : 1,
+				step: "heading",
+			};
+}

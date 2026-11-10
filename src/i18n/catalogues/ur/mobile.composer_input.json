@@ -10,5 +10,7 @@
 	"mobile.composer_input.clear_draft": "مسودہ صاف کریں",
 	"mobile.composer_input.clear_draft_hint": "صرف مسودے کا متن اور تصاویر مٹاتا ہے؛ قطار میں موجود اور غیر مصدقہ پیغامات برقرار رکھتا ہے",
 	"mobile.composer_input.dismiss_error": "خرابی چھپائیں",
-	"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے"
+	"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے",
+	"mobile.composer_input.notice_retry": "دوبارہ کوشش کریں",
+	"mobile.composer_input.notice_dismiss": "چھپائیں"
 }

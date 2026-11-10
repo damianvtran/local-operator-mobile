@@ -1,7 +1,6 @@
 {
 	"mobile.home.chip.effort_chosen": "推理强度，{effort}，已为此对话选择",
 	"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
-	"mobile.home.chip.effort_default_short": "默认推理强度",
 	"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
 	"mobile.home.chip.model_chosen": "模型，{model}，已为此对话选择",
 	"mobile.home.chip.model_default": "模型，{model}，此电脑的默认设置",
@@ -63,5 +62,6 @@
 	"mobile.home.tip.parallel": "要求并行工作以展开多个子智能体",
 	"mobile.home.tip.schedule": "设置定时任务按时运行提示词",
 	"mobile.home.tip.search": "搜索过往对话以重新打开会话",
-	"mobile.home.transcript.waiting": "正在等待对话……"
+	"mobile.home.transcript.waiting": "正在等待对话……",
+	"mobile.home.chip.model_default_short": "默认模型"
 }

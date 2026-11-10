@@ -1,7 +1,6 @@
 {
 	"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 	"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
-	"mobile.home.chip.effort_default_short": "Esfuerzo predeterminado",
 	"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
 	"mobile.home.chip.model_chosen": "Modelo, {model}, elegido para esta conversación",
 	"mobile.home.chip.model_default": "Modelo, {model}, predeterminado de esta máquina",
@@ -63,5 +62,6 @@
 	"mobile.home.tip.parallel": "pide varios subagentes en paralelo",
 	"mobile.home.tip.schedule": "programa un prompt para que se repita",
 	"mobile.home.tip.search": "busca una conversación pasada y reábrela",
-	"mobile.home.transcript.waiting": "Esperando la conversación…"
+	"mobile.home.transcript.waiting": "Esperando la conversación…",
+	"mobile.home.chip.model_default_short": "Modelo predeterminado"
 }

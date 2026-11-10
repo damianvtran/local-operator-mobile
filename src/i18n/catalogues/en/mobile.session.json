@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "Messages are missing here: some were missed while disconnected. Reload from the latest messages, then load earlier messages to reach the missing ones. Pages you loaded will be cleared.",
 	"mobile.session.history.gap_newest": "Some messages above were missed while disconnected.",
 	"mobile.session.history.reload": "Reload from latest messages",
-	"mobile.session.history.reload_hint": "Returns to the latest messages and clears the earlier pages you loaded."
+	"mobile.session.history.reload_hint": "Returns to the latest messages and clears the earlier pages you loaded.",
+	"mobile.session.sheet_title.model": "Model",
+	"mobile.session.sheet_title.effort": "Effort",
+	"mobile.session.sheet_title.status": "Tasks and agents"
 }

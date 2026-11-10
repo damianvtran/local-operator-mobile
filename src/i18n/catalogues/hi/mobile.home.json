@@ -1,7 +1,6 @@
 {
 	"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 	"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
-	"mobile.home.chip.effort_default_short": "डिफ़ॉल्ट प्रयास",
 	"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
 	"mobile.home.chip.model_chosen": "मॉडल, {model}, इस बातचीत के लिए चुना गया",
 	"mobile.home.chip.model_default": "मॉडल, {model}, इस कंप्यूटर का डिफ़ॉल्ट",
@@ -63,5 +62,6 @@
 	"mobile.home.tip.parallel": "साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं",
 	"mobile.home.tip.schedule": "टाइमर पर प्रॉम्प्ट चलाने के लिए शेड्यूल सेट करें",
 	"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
-	"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…"
+	"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
+	"mobile.home.chip.model_default_short": "डिफ़ॉल्ट मॉडल"
 }

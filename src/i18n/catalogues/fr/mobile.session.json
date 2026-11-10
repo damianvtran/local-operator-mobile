@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "Des messages manquent ici : certains ont été manqués pendant la déconnexion. Rechargez depuis les derniers messages, puis chargez les précédents pour retrouver ceux qui manquent. Les pages chargées seront effacées.",
 	"mobile.session.history.gap_newest": "Plus haut, des messages ont été manqués pendant la déconnexion.",
 	"mobile.session.history.reload": "Recharger depuis les derniers messages",
-	"mobile.session.history.reload_hint": "Revient aux derniers messages et efface les pages précédentes que vous avez chargées."
+	"mobile.session.history.reload_hint": "Revient aux derniers messages et efface les pages précédentes que vous avez chargées.",
+	"mobile.session.sheet_title.model": "Modèle",
+	"mobile.session.sheet_title.effort": "Effort",
+	"mobile.session.sheet_title.status": "Tâches et agents"
 }

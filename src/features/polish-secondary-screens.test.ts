@@ -80,6 +80,30 @@ describe("D11: the drawer footer is two rows", () => {
 		expect(footer.match(/<TeamBridgeEntry/g)?.length).toBe(1);
 	});
 
+	it("drops the footer icon inside the drawer, where the labelled mode switch replaces it", () => {
+		// `onClose` is passed only by the drawer; the docked tablet pane has no
+		// drawer header, so it keeps the icon as its one Bridge entry.
+		expect(footer).toContain(
+			'{onClose ? null : ( <TeamBridgeEntry variant="compact"',
+		);
+		const root = flat(
+			readFileSync(join(FEATURES, "../../app/_layout.tsx"), "utf8"),
+		);
+		expect(root).toContain(
+			"<WorkspaceDrawerProvider bridgeAdapter={useTeamBridgeDrawerAdapter()}>",
+		);
+		expect(root).toContain(
+			"<BridgeWorkspaceDrawer> <Stack screenOptions={{ headerShown: false }} /> </BridgeWorkspaceDrawer>",
+		);
+	});
+
+	it("the shared Bridge directory dismisses the drawer before any row routes", () => {
+		const list = flat(read("team-bridge/list-screen.tsx"));
+		expect(list).toContain("onBeforeOpen?.(); openTarget(target);");
+		const card = flat(read("team-bridge/profile-card.tsx"));
+		expect(card).toContain("onBeforeOpen?.(); open(target);");
+	});
+
 	it("draws the switcher without a border or a fill", () => {
 		const chip = read("auth/computer-entry-points.tsx");
 		const row = chip.slice(chip.indexOf("export function DrawerComputerRow"));

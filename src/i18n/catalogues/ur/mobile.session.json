@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "یہاں پیغامات غائب ہیں: کنکشن منقطع ہونے کے دوران کچھ پیغامات رہ گئے۔ تازہ ترین پیغامات سے تاریخچہ دوبارہ لوڈ کریں، پھر رہ جانے والے پیغامات دیکھنے کے لیے پہلے کے پیغامات لوڈ کریں۔ آپ کے لوڈ کیے گئے صفحات ہٹ جائیں گے۔",
 	"mobile.session.history.gap_newest": "اوپر کچھ پیغامات کنکشن منقطع ہونے کے دوران رہ گئے۔",
 	"mobile.session.history.reload": "تازہ ترین پیغامات سے تاریخچہ دوبارہ لوڈ کریں",
-	"mobile.session.history.reload_hint": "تازہ ترین پیغامات پر واپس لے جاتا ہے اور آپ کے لوڈ کیے گئے پہلے کے صفحات ہٹا دیتا ہے۔"
+	"mobile.session.history.reload_hint": "تازہ ترین پیغامات پر واپس لے جاتا ہے اور آپ کے لوڈ کیے گئے پہلے کے صفحات ہٹا دیتا ہے۔",
+	"mobile.session.sheet_title.model": "ماڈل",
+	"mobile.session.sheet_title.effort": "شدت",
+	"mobile.session.sheet_title.status": "کام اور ایجنٹس"
 }

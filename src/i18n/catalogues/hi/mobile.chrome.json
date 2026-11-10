@@ -18,5 +18,11 @@
 	"mobile.chrome.composer.open_queue": "कतार खोलें",
 	"mobile.chrome.drawer.open": "बातचीत खोलें",
 	"mobile.chrome.drawer.open_count": "बातचीत खोलें, {count, plural, one {# नई बातचीत} other {# नई बातचीत}}",
-	"mobile.chrome.drawer.agents": "एजेंट"
+	"mobile.chrome.drawer.agents": "एजेंट",
+	"mobile.chrome.composer.row_model": "मॉडल",
+	"mobile.chrome.composer.row_effort": "प्रयास",
+	"mobile.chrome.composer.row_usage": "संदर्भ",
+	"mobile.chrome.composer.row_cost": "लागत",
+	"mobile.chrome.composer.row_queue": "कतार",
+	"mobile.chrome.composer.row_questions": "प्रश्न"
 }

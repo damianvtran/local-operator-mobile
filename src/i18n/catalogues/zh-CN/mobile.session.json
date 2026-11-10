@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "此处缺少消息：断开连接期间遗漏了部分消息。从最新消息重新加载，再加载更早的消息以查看遗漏内容。已加载的页面将被清除。",
 	"mobile.session.history.gap_newest": "上方有部分消息在断开连接期间被遗漏。",
 	"mobile.session.history.reload": "从最新消息重新加载",
-	"mobile.session.history.reload_hint": "返回最新消息，并清除你已加载的更早页面。"
+	"mobile.session.history.reload_hint": "返回最新消息，并清除你已加载的更早页面。",
+	"mobile.session.sheet_title.model": "模型",
+	"mobile.session.sheet_title.effort": "推理强度",
+	"mobile.session.sheet_title.status": "任务和智能体"
 }

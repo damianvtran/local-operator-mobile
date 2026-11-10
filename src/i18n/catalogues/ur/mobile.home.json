@@ -1,7 +1,6 @@
 {
 	"mobile.home.chip.effort_chosen": "استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب",
 	"mobile.home.chip.effort_default": "استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ",
-	"mobile.home.chip.effort_default_short": "ڈیفالٹ شدت",
 	"mobile.home.chip.effort_default_unnamed": "استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح",
 	"mobile.home.chip.model_chosen": "ماڈل، {model}، اس گفتگو کے لیے منتخب",
 	"mobile.home.chip.model_default": "ماڈل، {model}، اس کمپیوٹر کا ڈیفالٹ",
@@ -63,5 +62,6 @@
 	"mobile.home.tip.parallel": "ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں",
 	"mobile.home.tip.schedule": "ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں",
 	"mobile.home.tip.search": "گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں",
-	"mobile.home.transcript.waiting": "گفتگو کا انتظار…"
+	"mobile.home.transcript.waiting": "گفتگو کا انتظار…",
+	"mobile.home.chip.model_default_short": "ڈیفالٹ ماڈل"
 }

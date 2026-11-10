@@ -423,6 +423,18 @@
 		"role": "help",
 		"note": "Team Bridge mobile UI: navigation / entry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated."
 	},
+	"mobile.team_bridge.navigation.entry_loading": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: accessible name of the workspace drawer's Team Bridge mode button while the account's unread count has not been read yet. Says 'loading', never zero: the count is unknown, not empty. Keep the product name 'Team Bridge' untranslated."
+	},
+	"mobile.team_bridge.navigation.entry_unavailable": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: accessible name of the workspace drawer's Team Bridge mode button when Team Bridge cannot be used right now (signed out, plan, update or hub unavailable). Distinct from loading and from zero unread. Keep the product name 'Team Bridge' untranslated."
+	},
+	"mobile.team_bridge.navigation.open_hub": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: button in the workspace drawer's Team Bridge pane, shown when Team Bridge is not open yet (checking, signed out, unavailable); opens the full Team Bridge screen where the reader can sign in or retry. Keep the product name 'Team Bridge' untranslated."
+	},
 	"mobile.team_bridge.profile.about_owner": {
 		"role": "help",
 		"note": "Heading introducing the human owner of this software agent. {owner} is the caller-provided owner name; preserve the exact placeholder and keep the whole name without translation or ellipsis. The profile description below is user data and must not be translated."

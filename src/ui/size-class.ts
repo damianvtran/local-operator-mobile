@@ -521,12 +521,33 @@ export const composerBudget = (
 	 *  the pinned `main` fragment, so it is reserved with the receipt line; without it a
 	 *  recording take pushed the composer past its share (reviewer m3). */
 	dictationReserve = 0,
+	/** The height of the whole action rows that LEAD the extras (the failure
+	 *  notice's, `noticeActionPlan`), in rows of `touchFloor`; 0 when there are
+	 *  none. A cap landing inside that block is cut back to whole rows, so an
+	 *  action is shown entire or not at all and never as a half-cut target (QA
+	 *  #211 round 4 Q7: "Dismiss error" cut by 14 px). The px given up go to the
+	 *  field, so the composer spends the same bound either way. A cap under one
+	 *  row is left alone: part of the first action beats none of it, and the
+	 *  budget has nothing to raise it with (code #211 R3 M1). */
+	leadingActions = 0,
 ): { field: number; extras: number } => {
 	const room = Math.max(
 		touchFloor,
 		maxHeight - receiptHeight - padding - dictationReserve,
 	);
-	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
+	/* The extras get what the field's floor leaves, and NOTHING more — not even
+	 *  for a failure notice. Round 2 gave the notice a floor of one touch row
+	 *  out of a budget that could not hold it, and the composer then overspent
+	 *  its bound by up to 44 px in windows 120-163 px tall below its top (code
+	 *  #211 R3 M1): the controls row, which is what the bound exists to keep on
+	 *  screen, was what left it. The notice scrolls in whatever is left; the
+	 *  collapse that floor was guarding against (a 44 px limit from a stale
+	 *  box, UX U1) is prevented at its cause by `heldComposerLimit`. */
+	const fits = Math.min(extrasNatural, Math.max(0, room - touchFloor));
+	const extras =
+		fits < leadingActions && fits >= touchFloor
+			? Math.floor(fits / touchFloor) * touchFloor
+			: fits;
 	const fieldBox = Math.max(touchFloor, room - extras);
 	/* `field` is the CONTENT cap the Textarea receives (`maxHeightPx`), and the field
 	 *  paints a border box: its height is that cap plus `FIELD_BORDER_Y` (U-07's fix).
@@ -668,3 +689,129 @@ export const sessionStatusLayout = (
 		statusSheet: phone || compact,
 	};
 };
+
+/** The composer's painted box as its host holds it: `composerLimit`'s inputs,
+ * plus the WINDOW the box was measured in. `top` is a window coordinate, so it
+ * means nothing against any other window size (see `heldComposerLimit`). */
+export type ComposerBox = {
+	top: number;
+	height: number;
+	capped: boolean;
+	viewportWidth: number;
+	viewportHeight: number;
+};
+
+/**
+ * Whether a published composer measurement is the one the host already holds.
+ *
+ * The composer publishes a fresh object on every layout pass, so identity says
+ * nothing; the fields are the whole value. The host uses this to keep its
+ * previous state object when nothing moved, which is what stops a no-op
+ * measurement re-rendering the session screen (perf audit P15). It compares and
+ * nothing else: it must never round, clamp or merge, because `composerLimit`
+ * reads `capped` and the exact `top`/`height` to decide whether the cap holds,
+ * and a tolerance here would be a second, different rule about the same box.
+ * The window is part of the value: the same numbers measured in another window
+ * are a different fact, and treating them as "unchanged" would keep a box that
+ * `heldComposerLimit` has to throw away.
+ */
+export const sameComposerBox = (
+	previous: ComposerBox | null,
+	next: ComposerBox,
+): boolean =>
+	previous !== null &&
+	previous.top === next.top &&
+	previous.height === next.height &&
+	previous.capped === next.capped &&
+	previous.viewportWidth === next.viewportWidth &&
+	previous.viewportHeight === next.viewportHeight;
+
+/**
+ * The host limit for the box the screen HOLDS, in the window it has NOW.
+ *
+ * The held box is a measurement from an earlier render. While the window keeps
+ * its size that is fine (`composerLimit`'s loop settles on it), but after a
+ * resize the box's `top` is a coordinate in a window that no longer exists.
+ * Shrinking 390x844 to 320x568 left the empty composer's top (about 714) below
+ * the new window bottom, so `composerLimit` read "overflowing" and answered its
+ * floor, one control (44); the composer painted that, reported `capped` (its
+ * content does want more than 44), and `capped` then HELD the collapsed size:
+ * limit = window - top = the collapsed box's own height + gap, a fixed point.
+ * A failed send in that state gave its notice an extras budget of zero (UX #211
+ * U1: the scroller measured 342x0, nothing visible, until the window grew back).
+ * The Android resizing keyboard and rotation are the same change.
+ *
+ * So a box from another window is no measurement at all: the answer is `null`
+ * ("unbound") until the composer re-measures in this one, exactly the first-
+ * paint state. That keeps #206's invariant — the reset is keyed on the window
+ * size alone, an input the limit never controls, so it cannot loop.
+ */
+export const heldComposerLimit = (
+	box: ComposerBox | null,
+	viewport: { width: number; height: number },
+): number | null => {
+	const live =
+		box !== null &&
+		box.viewportWidth === viewport.width &&
+		box.viewportHeight === viewport.height
+			? box
+			: null;
+	return composerLimit(
+		viewport.height,
+		live?.top ?? null,
+		live?.height ?? null,
+		live?.capped ?? false,
+	);
+};
+
+/**
+ * The part of the composer's re-measure key that says "what sits above me
+ * changed height", built from the heights the session screen already measures.
+ *
+ * WHY IT EXISTS (QA #211 round 3 Q5). The composer's ceiling is `window - top`,
+ * and it only re-reads `top` when something tells it to: its own box changing
+ * size (the dock's `onLayout`), the limit or the window changing, or this key.
+ * A composer that is PUSHED — same size, new top — matched none of those. The
+ * activity band above it takes its height from a shared value set in its own
+ * `onLayout`, outside React, so after a window resize it lands a frame or more
+ * after the composer measured, and on the web `onLayout` is a ResizeObserver
+ * that never fires for a move. Two orders of that race, both measured at
+ * 320x568 / 200 % with a long draft: the one measurement in the new window saw
+ * a composer that still fit, the limit stayed unbound and the box ended at 635
+ * in a 568 pt window; or it bound against the early top and the cap then held
+ * while the box slid down, 615. Send and Attach were below the window in both.
+ * Main never showed it only because it kept reading the stale pre-resize box
+ * (the U1 defect `heldComposerLimit` removed), so it never needed the re-read.
+ *
+ * The band is the mover the code shows, not a proven sole cause (its lags were
+ * solved from QA's numbers, not observed), so the key carries every height the
+ * screen measures above the composer (code #211 round 4 m1):
+ *
+ *  - `column`: the session column's height. The header and the tray sit OVER
+ *    the column, so a header that stacks to two rows at 200 % text shows up
+ *    here as a shorter column.
+ *  - `regions`: the summed row heights of the secondary region (the inline
+ *    panels and, in short landscape, the strip and working line).
+ *  - `before`: the pending card's y.
+ *  - `after`: the band between the transcript and the composer.
+ *
+ * Discrete changes (find bar, open panel, sheet) are the rest of the key and
+ * stay with the caller. The composer's OWN measured height, which the screen
+ * holds beside these, must never be added: the key may only name heights
+ * measured above the composer.
+ *
+ * #206's invariant holds: this decides WHEN to measure, never what the
+ * measurement says. `column`, `regions` and `after` are not sized by the
+ * composer's limit at all. `before` is, loosely: the card's y follows the flex
+ * transcript, which shrinks as the composer grows. That cannot loop either,
+ * because a re-measure it triggers changes the limit only if the top really
+ * moved, and the limit, the box and with them the card's y then settle
+ * together (the limit is a function of the top alone while capped).
+ */
+export const composerChromeKey = (facts: {
+	column?: number;
+	before?: number;
+	after?: number;
+	regions?: number;
+}): string =>
+	`${facts.column ?? ""}/${facts.before ?? ""}/${facts.after ?? ""}/${facts.regions ?? ""}`;

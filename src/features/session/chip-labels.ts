@@ -44,7 +44,17 @@ export type ComposerChip =
 			 *  sentence that is false about one of them. */
 			accessibilityHint: string;
 	  }
-	| { kind: "value"; text: string; accessibilityLabel: string };
+	| {
+			kind: "value";
+			text: string;
+			accessibilityLabel: string;
+			/** Keep this chip OFF the composer's row and in More only. The home's
+			 *  unnamed-default effort sets it: beside a model chip that already
+			 *  says "Default model", a second chip saying "Default effort" was the
+			 *  same non-fact twice (visual audit D5), while More's `Effort` row
+			 *  still names it and still opens the picker. */
+			rowHidden?: boolean;
+	  };
 
 /** What the connection can say about a value. Not a boolean, because "no value
  *  yet, still coming" and "no value, and nothing is coming" are the two states a
