@@ -1243,7 +1243,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * refreshed. */
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
-	src: "b443bfe86803b87164d709fc655c3fdc43fc4345489b20a9a405f0f590cfaab7",
+	// feat/bridge-thread-chrome: the bridge thread header reuses the session
+	// title style (`sessionHeaderTitle`) and the composer the agent composer's
+	// field/disc tokens; re-derived with --print over the staged tree. Source
+	// admission only, no rendered or native proof refreshed.
+	src: "9764ab5466bbe52ff9e35aff2be95ae8dad1c3ca16208f81e368aaa98c59258b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

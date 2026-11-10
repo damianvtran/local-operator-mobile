@@ -31,6 +31,7 @@ import {
 } from "react-native";
 
 import { useConnection } from "@/features/auth/connection-provider";
+import { sessionHeaderTitle } from "@/features/session/header";
 import {
 	HEALTH_DOT_TONE,
 	type HealthInput,
@@ -259,16 +260,15 @@ export function SessionHealthControl({
 	controlRef: RefObject<View | null>;
 }) {
 	useReturnFocus(sheetOpen, controlRef);
-	/* `heading` (17/600), not `display` (28): a 28 pt title in a 56 pt row with
-	 *  three leading marks was the "crunched" header (D-S2). The relay uses the
-	 *  same 17 pt step with a 12 pt subtitle; together they are 39.8 pt of text
-	 *  in the 56 pt row. Compact (short landscape) keeps its `title` step. */
-	const titleClass = compact ? "text-title text-ink" : "text-heading text-ink";
-	const titleLines = stacked ? 2 : 1;
+	const {
+		className: titleClass,
+		numberOfLines: titleLines,
+		step: titleStep,
+	} = sessionHeaderTitle({ compact, stacked });
 	const { effectiveScale } = useTextScale();
 	/* The first line's box, for the dot's slot (`HealthDot`). The step is the
 	 *  one `titleClass` draws with, so the two cannot disagree. */
-	const titleLineBox = lineBoxPt(compact ? "title" : "heading", effectiveScale);
+	const titleLineBox = lineBoxPt(titleStep, effectiveScale);
 	/* No reading: the plain heading the screen had before the dot, nothing to tap,
 	   nothing announced (review M3 / QA Q3 / UX U5 — the reference renders no
 	   health control while `!projection`). */

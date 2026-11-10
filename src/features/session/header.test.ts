@@ -11,6 +11,7 @@ const {
 	HEADER_AVATAR_PT,
 	headerTitleChars,
 	NO_TITLE_BUDGET,
+	sessionHeaderTitle,
 } = await import("@/features/session/header");
 const { headerSubtitle } = await import("@/features/session/health-copy");
 const { middleTruncate } = await import("@/features/session/projection");
@@ -90,7 +91,22 @@ describe("the title control truncates by layout", () => {
 	);
 
 	it("draws one line inline and two when stacked, with a tail ellipsis", () => {
-		expect(HEALTH).toContain("const titleLines = stacked ? 2 : 1;");
+		// One line inline, two when stacked: the shared style function the
+		// control draws with (and the Team Bridge thread header reuses).
+		expect(HEALTH).toContain("} = sessionHeaderTitle({ compact, stacked });");
+		expect(sessionHeaderTitle({ compact: false, stacked: false })).toEqual({
+			className: "text-heading text-ink",
+			numberOfLines: 1,
+			step: "heading",
+		});
+		expect(
+			sessionHeaderTitle({ compact: false, stacked: true }).numberOfLines,
+		).toBe(2);
+		expect(sessionHeaderTitle({ compact: true, stacked: false })).toEqual({
+			className: "text-title text-ink",
+			numberOfLines: 1,
+			step: "title",
+		});
 		const text = title.slice(0, title.indexOf("{title}"));
 		expect(text).toContain("numberOfLines={titleLines}");
 		expect(text).toContain('ellipsizeMode="tail"');
@@ -102,9 +118,8 @@ describe("the title control truncates by layout", () => {
 		// The dot is centred in a slot one title line tall, and the row is
 		// top-aligned only where a second line can exist.
 		expect(HEALTH).toContain("style={{ height: lineBox }}");
-		expect(HEALTH).toContain(
-			'lineBoxPt(compact ? "title" : "heading", effectiveScale)',
-		);
+		// The slot's step is the one the title draws with (`sessionHeaderTitle`).
+		expect(HEALTH).toContain("lineBoxPt(titleStep, effectiveScale)");
 		expect(HEALTH).toContain('stacked ? "items-start" : "items-center"');
 	});
 });

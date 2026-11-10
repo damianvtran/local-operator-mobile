@@ -296,8 +296,9 @@ describe("screen wiring", () => {
 		expect(source).not.toContain("onContentSizeChange={");
 	});
 	it("keeps the heading semantic and scalable and the identity account scoped", () => {
-		expect(source).toContain("numberOfLines={2}");
-		expect(source).toContain("min-w-0 flex-1 text-title text-ink");
+		// The heading is the session header's title style now (one line, two
+		// when stacked): `thread-chrome.test.tsx` renders and pins it.
+		expect(source).toContain("titleNode={<BridgeThreadTitle title={title} />}");
 		expect(source).not.toContain("allowFontScaling={false}");
 		expect(source).not.toContain("adjustsFontSizeToFit");
 		expect(source).toContain("accessibilityElementsHidden={initialRowsHidden}");
