@@ -42,6 +42,7 @@ const colors = {
 	"elevated": "var(--lo-elevated)",
 	"sunken": "var(--lo-sunken)",
 	"message-surface": "var(--lo-message-surface)",
+	"user-bubble": "var(--lo-user-bubble)",
 	"row-hover": "var(--lo-row-hover)",
 	"row-selected": "var(--lo-row-selected)",
 	"ink": "var(--lo-ink)",
@@ -171,6 +172,7 @@ module.exports.cssVariables = () => `
 	--lo-elevated: #fefdfa;
 	--lo-sunken: #ece6d8;
 	--lo-message-surface: #fcfbf7;
+	--lo-user-bubble: #d9d4ca;
 	--lo-row-hover: #edece7;
 	--lo-row-selected: #ebe7d8;
 	--lo-ink: #211e18;
@@ -224,6 +226,7 @@ module.exports.cssVariables = () => `
 	--lo-elevated: #322d22;
 	--lo-sunken: #1d1b19;
 	--lo-message-surface: #2e2a21;
+	--lo-user-bubble: #363228;
 	--lo-row-hover: #302d29;
 	--lo-row-selected: #372f24;
 	--lo-ink: #f1eee6;
@@ -271,6 +274,7 @@ module.exports.themeBlock = () => `
 	--color-elevated: var(--lo-elevated);
 	--color-sunken: var(--lo-sunken);
 	--color-message-surface: var(--lo-message-surface);
+	--color-user-bubble: var(--lo-user-bubble);
 	--color-row-hover: var(--lo-row-hover);
 	--color-row-selected: var(--lo-row-selected);
 	--color-ink: var(--lo-ink);

@@ -37,6 +37,7 @@
 	--color-elevated: #fefdfa;
 	--color-sunken: #ece6d8;
 	--color-message-surface: #fcfbf7;
+	--color-user-bubble: #d9d4ca;
 	--color-row-hover: #edece7;
 	--color-row-selected: #ebe7d8;
 	--color-ink: #211e18;
@@ -294,6 +295,7 @@
 			--color-elevated: #fefdfa;
 			--color-sunken: #ece6d8;
 			--color-message-surface: #fcfbf7;
+			--color-user-bubble: #d9d4ca;
 			--color-row-hover: #edece7;
 			--color-row-selected: #ebe7d8;
 			--color-ink: #211e18;
@@ -340,6 +342,7 @@
 			--color-elevated: #322d22;
 			--color-sunken: #1d1b19;
 			--color-message-surface: #2e2a21;
+			--color-user-bubble: #363228;
 			--color-row-hover: #302d29;
 			--color-row-selected: #372f24;
 			--color-ink: #f1eee6;

@@ -6,8 +6,10 @@ import {
 	pendingEchoBoxClass,
 	pendingEchoCaption,
 } from "@/features/session/pending-echo";
+import { userBubbleFill } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
 import { pendingEchoId, ROLE } from "@/ui/a11y";
+import { useTheme } from "@/ui/appearance";
 import { cx } from "@/ui/variants";
 
 /**
@@ -42,30 +44,46 @@ const PendingEchoRowImpl = ({
 	onPutBack?: (commandId: string) => void;
 }) => {
 	const caption = pendingEchoCaption(echo, streaming);
+	const { active } = useTheme();
 	const body = (
-		<View className={pendingEchoBoxClass(echo.op)}>
-			{/* Attachments ride as a count: the composer owns the image bytes,
-			 *  and the real row shows them once the transcript carries it. */}
-			{echo.imageCount > 0 ? (
-				<Text className="text-meta text-ink-dim">
-					{t("mobile.session.pending_echo.images", {
-						count: echo.imageCount,
-					})}
-				</Text>
-			) : null}
-			{echo.text.length > 0 ? (
-				<Text className="text-body-read text-ink-muted">{echo.text}</Text>
-			) : null}
+		<>
+			<View
+				className={pendingEchoBoxClass(echo.op)}
+				/* A prompt carries the settled bubble's fill as an explicit style too
+				 *  (`userBubbleFill`: the native fill did not paint from the class
+				 *  alone on the operator's build; design round 1, D1). A steer stays
+				 *  unfilled, like its settled row. */
+				style={echo.op === "steer" ? undefined : userBubbleFill(active)}
+			>
+				{/* Attachments ride as a count: the composer owns the image bytes,
+				 *  and the real row shows them once the transcript carries it.
+				 *  `ink-muted`, not `ink-dim`: this line sits ON the bubble, where
+				 *  `ink-dim` misses 4.5:1 in most light themes (design D2). */}
+				{echo.imageCount > 0 ? (
+					<Text className="text-meta text-ink-muted">
+						{t("mobile.session.pending_echo.images", {
+							count: echo.imageCount,
+						})}
+					</Text>
+				) : null}
+				{echo.text.length > 0 ? (
+					<Text className="text-body-read text-ink-muted">{echo.text}</Text>
+				) : null}
+			</View>
+			{/* The caption sits BELOW the box, on canvas (design round 1, D2):
+			 *  `ink-dim` and `danger` are contracted on canvas, and on `user-bubble`
+			 *  they miss 4.5:1 in most light themes (min 4.12 / 3.70). Its own
+			 *  85 % cap and `px-1` keep it under the box's end edge. */}
 			<Text
 				className={cx(
-					"text-meta",
+					"max-w-[85%] px-1 pt-0.5 text-meta",
 					echo.failure === undefined ? "text-ink-dim" : "text-danger",
 				)}
 				accessibilityLiveRegion="polite"
 			>
 				{caption}
 			</Text>
-		</View>
+		</>
 	);
 	if (echo.failure === "refused" && onPutBack) {
 		return (

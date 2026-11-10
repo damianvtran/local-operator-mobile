@@ -642,7 +642,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// TestFlight 753 keyboard fix: the session screen caps the composer against
 	// the keyboard-aware visible height; re-pinned with --print over the staged
 	// tree. Source admission only, no rendered or native proof refreshed.
-	app: "e590d56fe89badf13022952423978fcfc441245cc6d98b9c47848801cf8c5cc4",
+	// Resume gap heal (#217): the session screen threads `healHistory` (the
+	// quiet gap row's Load) instead of the destructive reload. Merged with main
+	// 2faead90 (#211): re-derived with --print over the staged merged tree;
+	// source identity only, no rendered or native proof.
+	// PR #216 merged with main 5fb51be0 (#214 user bubble, #217 transcript
+	// self-heal): the merged tree carries healHistory and the keyboard-aware
+	// cap, so it has neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof.
+	app: "5278073b84e0ecd140bddbe4d2b3e04e54973936b16dd1cb826bb6f5c95635f3",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -652,8 +660,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lists tool names) — no size, face, colour or role moved, and `theme:check`
 	 * and `preset:check` both report the generated layers current. Identity
 	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-09 for fix/user-message-bubble with --print from the
+	 * staged tree: `tokens.json` gains ONE colour role, `user-bubble` (the fill
+	 * of the reader's own transcript turn, solved >= 1.25:1 on canvas), with its
+	 * rule in `palette-rules.mjs` and the regenerated preset. No existing role's
+	 * value moved. Identity only, NOT rendered U-08 evidence. */
 	"design/tokens":
-		"40b677b7e493bd87e1c4201a635b5915ccaad6482286901a5e4a558c8a73801d",
+		"505afe475a6bd4f05c9673940f123fd273e18c98171f3d676a9fb7e037ba2291",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -1279,6 +1292,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// tree. Source admission only, no rendered or native proof refreshed.
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
+	/* Re-pinned 2026-11-09 for fix/user-message-bubble with --print from the
+	 * staged tree: the user row's fill is `bg-user-bubble` (was `bg-surface`),
+	 * and `theme.css` / `tokens.gen.ts` carry the new role for every theme. The
+	 * user bubble's FILL colour therefore differs in a frame; its box, type and
+	 * every other row are unchanged. Source admission only, NOT rendered or
+	 * native proof.
+	 *
+	 * Re-pinned again the same day with --print from the staged round-1
+	 * remediation tree: the bubble box moves to `features/session/user-bubble.ts`
+	 * and also carries an explicit native `backgroundColor` from the active
+	 * palette (design D1); the pending echo takes the same box with its caption
+	 * below it (M1, D2); an image on the bubble is framed `hairline-strong`
+	 * (m1). Source admission only, NOT rendered or native proof. */
 	// PR #211 merged with main 6d36c22a (#208): the merged src tree carries
 	// #208's Team Bridge thread titles/tail landing and this PR's composer work
 	// (round-4 remediation c7f7b474 included), so it has neither parent's
@@ -1312,7 +1338,29 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #216 merged with main 8fec5440 (#211 squash, #213): the merged tree
 	// carries #213's thread chrome and this PR's keyboard work, so src
 	// re-derived with --print over the staged merged tree. Admission only.
-	src: "4df1306c13d324e4ca0b34c9338058d710bd09585a31773640ee764633682c3c",
+	// Resume gap heal: HistoryWindow fills a reconnect/foreground hole by
+	// walking before= pages, a debounced resume gate, and the quiet gap row
+	// copy in all locales. --print over the staged tree; source identity only,
+	// no rendered or native proof.
+	// Round-1 remediation (#217 Q1/R1-1..R1-4): every hole tracked, newest
+	// reads merged against the block above the newest hole, web anchor held
+	// on Load, gap copy reworded. --print over the staged tree; source
+	// identity only, no rendered or native proof.
+	// Merged with main 2faead90 (#211 asks/notice/activity copy): src carries
+	// both sides, re-derived with --print over the staged merged tree. Source
+	// identity only, no rendered or native proof.
+	// PR #214 merged with main 8fec5440 (#211, #212, #213): the merged src tree
+	// carries the user bubble fill and #211's activity line/composer work, so it
+	// has neither parent's digest; re-pinned with --print over the staged merged
+	// tree. Source admission only, no rendered or native proof refreshed.
+	// #217 merged with main d46e8535 (#214 user bubble squash): src carries
+	// both sides, re-derived with --print over the staged merged tree. Source
+	// identity only, no rendered or native proof.
+	// PR #216 merged with main 5fb51be0 (#214 user bubble, #217 transcript
+	// self-heal): the merged tree carries healHistory and the keyboard-aware
+	// cap, so it has neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof.
+	src: "be83a5b5a065b7ce9b1fb150f6aa02a4777678056d75ad2a8214e62a3cf784c6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

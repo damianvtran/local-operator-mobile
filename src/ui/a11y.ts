@@ -161,10 +161,11 @@ export const EMPTY = {
 export const CONTROL = {
 	/** Explicit paging remains reachable without native-only scroll gestures. */
 	transcriptLoadEarlier: "transcript-load-earlier",
-	/** Explicitly rebase only the history reader after a disconnected gap. */
-	transcriptReloadHistory: "transcript-reload-history",
-	/** The same reload, on the marker that sits at the hole itself (PR #207 U2). */
-	transcriptGapReload: "transcript-gap-reload",
+	/** Continue filling a disconnected gap the automatic fill did not close,
+	 *  from the quiet row at the newest edge. Never jumps or clears pages. */
+	transcriptGapLoadNewest: "transcript-gap-load-newest",
+	/** The same action, on the row that sits at the hole itself (PR #207 U2). */
+	transcriptGapLoad: "transcript-gap-load",
 	/** Re-read the newest page after a failed refresh, at the newest edge. */
 	transcriptRetryLatest: "transcript-retry-latest",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */

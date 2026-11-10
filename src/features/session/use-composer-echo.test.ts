@@ -375,6 +375,17 @@ describe("the pending row's box", () => {
 			expect(pendingEchoBoxClass(op).split(" ")).toContain("items-end");
 		},
 	);
+
+	/* Agent review round 1, M1: a prompt in flight wears the settled bubble's
+	 *  fill, with no hairline, so the message does not change colour or lose
+	 *  an edge when the daemon's echo replaces it. */
+	it("gives a prompt the settled bubble's fill and no hairline", () => {
+		const classes = pendingEchoBoxClass("prompt").split(" ");
+		expect(classes).toContain("bg-user-bubble");
+		expect(classes).not.toContain("bg-surface");
+		expect(classes).not.toContain("border");
+		expect(classes).not.toContain("border-hairline");
+	});
 });
 
 it("keeps paste retry available after a null read, adds a second image, and retains explicit duplicates", async () => {

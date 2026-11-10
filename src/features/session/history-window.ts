@@ -38,6 +38,30 @@ const FRAME_CAP = 80;
 const headPinned = (rows: TranscriptEntry[], flag?: boolean): boolean =>
 	flag ?? (rows.length === FRAME_CAP && rows[0]?.kind === "user");
 
+/** How far an automatic gap fill may walk before it hands the hole to the
+ * reader as a quiet notice. A resume after a long background can leave
+ * thousands of rows unseen; walking all of them unasked would hold the radio
+ * and the relay for minutes. The cap is five pages (the relay serves 80 rows
+ * per `before=` page), so up to five round trips; the common
+ * return-to-a-running-turn case closes in one or two. The time cap keeps a
+ * slow link from hiding the hole behind an invisible fetch. One budget covers
+ * a whole run, however many holes it works. */
+export const HEAL_BUDGET = { pages: 5, rows: 400, ms: 3000 } as const;
+
+/** `healing`: an automatic or requested gap fill is in flight, so the list
+ * shows no notice. `exhausted`: the fill stopped (budget, failure or no
+ * progress) with the hole still open; the list shows the quiet notice. */
+export type HealState = "idle" | "healing" | "exhausted";
+
+export interface HistoryWindowOptions {
+	/** Fill a detected reconnect/refresh hole without the reader acting.
+	 * Off by default so the PR #207 reader tests keep pinning the bare
+	 * detection contract; the session screen turns it on. */
+	autoHeal?: boolean;
+	budget?: { pages: number; rows: number; ms: number };
+	now?: () => number;
+}
+
 /** A screen-owned reader, not a second transcript store. Capped projections are
  * not deletion signals: keep accepted server rows until this reader is retired.
  * The wire has no retention generation, so unseen prunes cannot be inferred. */
@@ -47,12 +71,25 @@ export class HistoryWindow {
 	/** Only a canonical before-page can establish the retained beginning. */
 	olderState: "unknown" | "more" | "end" = "unknown";
 	hasMore = true;
-	hasGap = false;
-	/** The first row AFTER the newest known hole (entry id), so the list can mark
-	 * the gap where it actually is instead of only above the oldest loaded row
-	 * (PR #207 U2). Only the newest hole is tracked: it is the one a reader at
-	 * the newest edge meets first, and Reload history clears every hole at once. */
-	gapBefore: string | null = null;
+	/** EVERY open hole, oldest → newest by list position. Each names the first
+	 * row AFTER it (the oldest row of the newer block). A list, not one marker:
+	 * two resumes can leave two holes, and tracking only the newest let closing
+	 * it declare the transcript complete while the older one was still open —
+	 * 621 rows silently missing and "Beginning of retained messages" claimed
+	 * over them (PR #217 R1-1). Objects, not ids, so a fill that is in flight
+	 * still finds its hole after a refresh moved the hole's boundary. */
+	private holes: { before: string }[] = [];
+	/** Some retained rows sit in a hole older paging cannot reach. True until
+	 * EVERY hole is closed; the beginning is never claimed while it is. */
+	get hasGap(): boolean {
+		return this.holes.length > 0;
+	}
+	/** The first row after the newest open hole, so the list marks the gap where
+	 * it is (PR #207 U2). The newest is the one a reader at the tail meets
+	 * first, and the one the fill works; the next shows once it closes. */
+	get gapBefore(): string | null {
+		return this.holes.at(-1)?.before ?? null;
+	}
 	loading = false;
 	/** Which read is in flight: the list must not claim "Loading earlier
 	 * messages" while a foreground refresh re-reads the NEWEST page (PR #207 D1). */
@@ -77,10 +114,17 @@ export class HistoryWindow {
 	private revision = 0;
 	private liveAt = new Map<string, number>();
 	private pending: Promise<void> | null = null;
+	/** Gap fill state. The relay has no forward (`after=`) read and no SSE
+	 * replay cursor, so a hole between the held rows and a newer tail is closed
+	 * by walking `before=` pages back from the oldest row of the newer island
+	 * until a page shares a row with the island below the hole. */
+	healState: HealState = "idle";
+	private healRun: Promise<void> | null = null;
 
 	constructor(
 		private fetchPage: (before?: string) => Promise<HistoryResponse>,
 		private changed: () => void,
+		private options: HistoryWindowOptions = {},
 	) {}
 
 	/** Detached opener context is cached but not interleaved into a contiguous
@@ -156,9 +200,59 @@ export class HistoryWindow {
 			...this.detached,
 			...(disjoint
 				? this.appendAfterHole(spine, frame)
-				: mergeTranscript({ transcript: frame } as SessionProjection, spine)
-						.rows),
+				: this.mergeNewest(spine, frame, head ? rowIdentity(head) : undefined)),
 		];
+	}
+
+	/** Merge a newest-edge read (a live frame or a newest-page refresh) that
+	 * overlaps what is held.
+	 *
+	 * WITH A HOLE OPEN, ONLY AGAINST THE BLOCK ABOVE IT. A newest page carries
+	 * 80 rows and a capped frame 79, so the page's oldest row is often one the
+	 * reader does not hold. mergeTranscript puts a row older than every shared
+	 * row at the HEAD of the list; with a hole open that head is the oldest
+	 * block, so the row landed above history it is newer than, and the gap fill
+	 * then took it for its overlap and closed the hole with nothing inserted —
+	 * 70 (or 920) rows silently lost (PR #217 Q1). Such a row is older than the
+	 * newer block and newer than the hole, so it joins the newer block at its
+	 * bottom edge and becomes the hole's new boundary. A read that also shares a
+	 * row with the block BELOW the newest hole spans that hole: the whole-list
+	 * merge places its rows between the two and the hole is closed. */
+	private mergeNewest(
+		spine: TranscriptEntry[],
+		incoming: TranscriptEntry[],
+		context?: string,
+	): TranscriptEntry[] {
+		const whole = () =>
+			mergeTranscript({ transcript: incoming } as SessionProjection, spine)
+				.rows;
+		const newest = this.holes.at(-1);
+		const at = newest ? spine.findIndex((row) => row.id === newest.before) : -1;
+		if (!newest || at < 0) return whole();
+		const lower = spine.slice(0, at);
+		const upper = spine.slice(at);
+		const incomingIds = new Set(incoming.map(rowIdentity));
+		const lowerIds = new Set(lower.map(rowIdentity));
+		const bridges = lower.some(
+			(row) =>
+				rowIdentity(row) !== context &&
+				journalAddressableRow(row) &&
+				incomingIds.has(rowIdentity(row)),
+		);
+		if (bridges) {
+			this.holes = this.holes.filter((hole) => hole !== newest);
+			return whole();
+		}
+		// Rows the lower blocks already hold (the pinned opener once paging has
+		// reached it) keep their place; they are not newer-block rows.
+		const merged = mergeTranscript(
+			{
+				transcript: incoming.filter((row) => !lowerIds.has(rowIdentity(row))),
+			} as SessionProjection,
+			upper,
+		).rows;
+		if (merged[0]) newest.before = merged[0].id;
+		return [...lower, ...merged];
 	}
 
 	/** A disjoint tail is NEWER than everything held, so it goes after the held
@@ -173,7 +267,8 @@ export class HistoryWindow {
 	): TranscriptEntry[] {
 		const heldIds = new Set(held.map(rowIdentity));
 		const tail = incoming.filter((row) => !heldIds.has(rowIdentity(row)));
-		if (tail[0]) this.gapBefore = tail[0].id;
+		// A new hole, newer than any already open: older holes stay listed.
+		if (tail[0]) this.holes.push({ before: tail[0].id });
 		return [...held, ...tail];
 	}
 
@@ -222,7 +317,9 @@ export class HistoryWindow {
 			previous.size > 0 &&
 			witness.length > 0 &&
 			!witness.some((row) => previous.has(rowIdentity(row)));
-		if (disjoint) this.hasGap = true;
+		// The caller records the hole (appendAfterHole) before the fill's
+		// microtask runs.
+		if (disjoint) this.scheduleHeal();
 		return disjoint;
 	}
 
@@ -359,18 +456,18 @@ export class HistoryWindow {
 					(row) => !detachedIds.has(rowIdentity(row)),
 				);
 				let disjoint = false;
+				const opener = this.projection;
+				const context =
+					opener &&
+					headPinned(opener.transcript, opener.transcript_head_pinned) &&
+					opener.transcript[0]
+						? rowIdentity(opener.transcript[0])
+						: undefined;
 				if (refreshing) {
 					// More than a page appended while backgrounded makes the newest page
 					// disjoint from everything held; merging would silently bridge the
 					// hole (PR #207 R1). mergeTranscript's holeBelowPage is not used: it
 					// also fires on a head insert. Same test accept() applies.
-					const opener = this.projection;
-					const context =
-						opener &&
-						headPinned(opener.transcript, opener.transcript_head_pinned) &&
-						opener.transcript[0]
-							? rowIdentity(opener.transcript[0])
-							: undefined;
 					disjoint = this.flagDisjoint(
 						spine,
 						authoritative,
@@ -380,24 +477,25 @@ export class HistoryWindow {
 				}
 				const joined = disjoint
 					? this.appendAfterHole(spine, authoritative)
-					: // A cold page landing on rows a frame already supplied is a merge
-						// too: those rows are displayed and keep their positions; the
-						// page must not be stacked above rows older than it.
-						// ONLY ON OVERLAP. With no shared row the merge has no anchor and
-						// returns `[...held, ...page]`, which is right for a refresh (the
-						// page is newer) and wrong here: the held rows are the LIVE tail
-						// and the cold page is the history before it, so the turn rendered
-						// above its own history and every later live row kept anchoring
-						// there (PR #207 R5-2). Disjoint cold pages fall through to
-						// insertOlder, which keeps the page first.
-						refreshing ||
-							(before === undefined &&
-								spine.some((row) => pageIds.has(rowIdentity(row))))
-						? mergeTranscript(
-								{ transcript: authoritative } as SessionProjection,
-								spine,
-							).rows
-						: this.insertOlder(authoritative, held, before);
+					: refreshing
+						? this.mergeNewest(spine, authoritative, context)
+						: // A cold page landing on rows a frame already supplied is a merge
+							// too: those rows are displayed and keep their positions; the
+							// page must not be stacked above rows older than it.
+							// ONLY ON OVERLAP. With no shared row the merge has no anchor and
+							// returns `[...held, ...page]`, which is right for a refresh (the
+							// page is newer) and wrong here: the held rows are the LIVE tail
+							// and the cold page is the history before it, so the turn rendered
+							// above its own history and every later live row kept anchoring
+							// there (PR #207 R5-2). Disjoint cold pages fall through to
+							// insertOlder, which keeps the page first.
+							before === undefined &&
+								spine.some((row) => pageIds.has(rowIdentity(row)))
+							? mergeTranscript(
+									{ transcript: authoritative } as SessionProjection,
+									spine,
+								).rows
+							: this.insertOlder(authoritative, held, before);
 				this.rows = [...this.detached, ...joined];
 				if (before !== undefined) {
 					this.cursor = next ?? before;
@@ -449,8 +547,7 @@ export class HistoryWindow {
 		this.cursor = undefined;
 		this.hasMore = true;
 		this.olderState = "unknown";
-		this.hasGap = false;
-		this.gapBefore = null;
+		this.holes = [];
 		this.loading = false;
 		this.loadingScope = null;
 		this.error = null;
@@ -463,6 +560,8 @@ export class HistoryWindow {
 		this.cursors.clear();
 		this.durableIds.clear();
 		this.liveAt.clear();
+		this.healRun = null;
+		this.healState = "idle";
 		this.revision = 0;
 		// Re-seed from the current stream frame, not the retired page islands.
 		// This also preserves a known pinned-head exclusion during rare fallback.
@@ -474,9 +573,178 @@ export class HistoryWindow {
 		this.active = true;
 	}
 
+	/** Called from `accept()`, which runs during render: it must not notify
+	 * (`changed()` is a React state setter). `healing` is set synchronously so
+	 * the render that discovers the hole never paints the notice for one frame
+	 * before the fill starts; the fill itself starts on the next microtask. */
+	private scheduleHeal(): void {
+		if (!this.options.autoHeal || !this.active || this.healRun) return;
+		this.healState = "healing";
+		const lease = this.lease;
+		queueMicrotask(() => {
+			if (lease === this.lease) void this.heal();
+		});
+	}
+
+	/** The oldest journal-addressable row of the newer island: the `before=`
+	 * cursor whose page is the rows immediately older than that island. */
+	private gapCursor(hole: { before: string }): string | undefined {
+		const at = this.rows.findIndex((row) => row.id === hole.before);
+		if (at < 0) return undefined;
+		return this.rows.slice(at).find(journalAddressableRow)?.id;
+	}
+
+	/** Put one gap page into `hole`, read against the rows as they are NOW (a
+	 * refresh may have moved the boundary while the page was in flight). The
+	 * overlap must be a row of the block directly BELOW this hole — the one
+	 * between the previous hole (or the list head) and this one — and the row
+	 * nearest the hole wins: a page is contiguous and older than its cursor, so
+	 * the held row that continues the older block is the one adjacent to the
+	 * hole. Any id anywhere in the list is not an overlap: a misplaced row at
+	 * the list head once "overlapped" and closed a 70-row hole with nothing
+	 * inserted (PR #217 Q1). Everything after the overlap is the missing run,
+	 * and the hole is closed. Without an overlap the page becomes the new
+	 * bottom edge of the upper island and the walk continues from it. Rows
+	 * already held keep their objects and positions, so nothing on screen
+	 * re-keys or moves; only rows the reader never had are inserted, all of
+	 * them between the islands (native maintainVisibleContentPosition keeps a
+	 * reader inside the upper island still; a reader at the tail stays pinned). */
+	private spliceGapPage(hole: { before: string }, page: HistoryResponse): void {
+		const at = this.rows.findIndex((row) => row.id === hole.before);
+		if (at < 0) {
+			// Its boundary row is gone (cannot happen short of a reload, which
+			// clears every hole): an unplaceable hole must not keep the walk alive.
+			this.holes = this.holes.filter((open) => open !== hole);
+			return;
+		}
+		const previous = this.holes[this.holes.indexOf(hole) - 1];
+		const floor = previous
+			? Math.max(
+					0,
+					this.rows.findIndex((row) => row.id === previous.before),
+				)
+			: 0;
+		const detachedIds = new Set(this.detached.map(rowIdentity));
+		const block = this.rows
+			.slice(floor, at)
+			.filter(
+				(row) =>
+					!detachedIds.has(rowIdentity(row)) && journalAddressableRow(row),
+			);
+		const pageAt = new Map<string, number>();
+		for (const [index, row] of page.entries.entries())
+			pageAt.set(rowIdentity(row), index);
+		const held = new Set(this.rows.map(rowIdentity));
+		for (const row of page.entries) this.durableIds.add(rowIdentity(row));
+		let overlap = -1;
+		for (let index = block.length - 1; index >= 0; index -= 1) {
+			const entry = block[index];
+			const found = entry ? pageAt.get(rowIdentity(entry)) : undefined;
+			if (found !== undefined) {
+				overlap = found;
+				break;
+			}
+		}
+		const fresh = page.entries
+			.slice(overlap + 1)
+			.filter((row) => !held.has(rowIdentity(row)));
+		this.rows = [...this.rows.slice(0, at), ...fresh, ...this.rows.slice(at)];
+		// Reaching the journal's beginning also ends the walk: nothing older can
+		// still be missing between the islands.
+		if (overlap >= 0 || !page.has_more) {
+			this.holes = this.holes.filter((open) => open !== hole);
+		} else if (fresh[0]) {
+			hole.before = fresh[0].id;
+		}
+	}
+
+	/** Close every open hole, newest first, by walking `before=` pages back from
+	 * it, within ONE budget for the whole run. Also the quiet notice's Load
+	 * action, which grants a fresh budget. Joins a fill already in flight.
+	 * Independent of `load()`'s oldest-edge cursor: the two touch different
+	 * spans of `rows`, and each applies its page against the rows as they are
+	 * when it lands. A newest-page read in flight is waited for first, so the
+	 * fill starts from the boundary that read leaves (PR #217 Q1). */
+	heal(): Promise<void> {
+		if (this.healRun) return this.healRun;
+		if (!this.active || !this.hasGap) {
+			this.healState = "idle";
+			return Promise.resolve();
+		}
+		const budget = this.options.budget ?? HEAL_BUDGET;
+		const now = this.options.now ?? Date.now;
+		const lease = this.lease;
+		const startedAt = now();
+		this.healState = "healing";
+		this.changed();
+		let run: Promise<void> | null = null;
+		// A hung request must not hide the hole: past the time budget the notice
+		// shows, and a page that still lands closes it after all.
+		const timer = setTimeout(() => {
+			if (this.healRun !== run || lease !== this.lease) return;
+			if (this.healState !== "healing" || !this.hasGap) return;
+			this.healState = "exhausted";
+			this.changed();
+		}, budget.ms);
+		const walk = async () => {
+			let pages = 0;
+			let rows = 0;
+			let previous: string | undefined;
+			let previousHole: { before: string } | undefined;
+			while (this.active && lease === this.lease && this.hasGap) {
+				// The newest-page refresh and the fill fire in the same tick on a
+				// resume; let the refresh merge first (its failure is its own).
+				if (this.pending && this.loadingScope === "newest") {
+					await this.pending.catch(() => undefined);
+					continue;
+				}
+				if (
+					pages >= budget.pages ||
+					rows >= budget.rows ||
+					now() - startedAt >= budget.ms
+				)
+					return;
+				const hole = this.holes.at(-1);
+				if (!hole) return;
+				if (hole !== previousHole) previous = undefined;
+				previousHole = hole;
+				const cursor = this.gapCursor(hole);
+				// No progress since the last page: a repeating page must not become
+				// an automatic request loop.
+				if (!cursor || cursor === previous) return;
+				previous = cursor;
+				const page = await this.fetchPage(cursor);
+				if (!this.active || lease !== this.lease) return;
+				pages += 1;
+				rows += page.entries.length;
+				if (page.unavailable) return;
+				// A read in flight closed this hole (it spanned it): nothing to put.
+				// A NEWER hole opening meanwhile does not void the page: it still
+				// belongs to this hole, and the next turn walks the newest one.
+				if (!this.holes.includes(hole)) continue;
+				this.spliceGapPage(hole, page);
+				this.changed();
+			}
+		};
+		run = walk()
+			.catch(() => undefined)
+			.finally(() => {
+				clearTimeout(timer);
+				if (this.healRun !== run) return;
+				this.healRun = null;
+				if (!this.active || lease !== this.lease) return;
+				this.healState = this.hasGap ? "exhausted" : "idle";
+				this.changed();
+			});
+		this.healRun = run;
+		return run;
+	}
+
 	retire(): void {
 		this.active = false;
 		this.lease += 1;
+		this.healRun = null;
+		this.healState = "idle";
 		this.pending = null;
 		this.loading = false;
 		this.loadingScope = null;
