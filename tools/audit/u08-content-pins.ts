@@ -1344,7 +1344,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// when Save and connect is refused, the keystore refusal's sanitised cause,
 	// seven catalogue keys and tests; only `src` moves, re-derived with --print
 	// over the staged tree. Source identity only, no rendered or native proof.
-	src: "55c7a132970dfcbfb7684eda75e9a61645b359cf3d6206455c9db5638f5167f7",
+	// PR #220 round-1 remediation (R1-m1/m2, D1-D3, U1/U2/U4, Q1): own-tunnel
+	// clears stale state on edit, keeps the refusal up during Retry, new copy
+	// and keys; only `src` moves, re-derived with --print over the staged tree.
+	// Source identity only, no rendered or native proof.
+	src: "44d21c544fed4fef0a1ade1b986a6febc46bd64e2e70a20f8b444855ec5da8b7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

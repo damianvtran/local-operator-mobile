@@ -311,6 +311,9 @@ const oauth: RadientTokens = {
 async function relay(
 	options: {
 		holdLogin?: boolean;
+		/** The relay refuses the password: `POST /login` answers the relay's own
+		 *  401 `{"error":"authentication required"}` (PR #220 design D2). */
+		rejectLogin?: boolean;
 		/** The branch's own token-endpoint controls: a rotation that succeeds, and one
 		 *  the server refuses, so the accessor's `invalidGrant` arm is reachable. */
 		rejectOauthRefresh?: boolean;
@@ -533,6 +536,11 @@ async function relay(
 			const login = ++loginCount;
 			loginReceived.resolve();
 			if (login === 1 && options.holdLogin) await releaseLogin.promise;
+			if (options.rejectLogin) {
+				events.push(`login:${login}:401`);
+				json({ error: "authentication required" }, 401);
+				return;
+			}
 			events.push(`login:${login}:cookie`);
 			response.writeHead(303, {
 				location: "/",
@@ -957,6 +965,26 @@ describe("connectCustomOutcome and the keystore refusal reason", () => {
 		expect((outcome as { detail: string | null }).detail).toBeTruthy();
 	});
 
+	it("names a relay 401 by its surface, so the screen can say the password was rejected", async () => {
+		const mock = await relay({ rejectLogin: true });
+		transport();
+		await mount();
+		let outcome: unknown;
+		await act(async () => {
+			outcome = await latest.connectCustomOutcome({
+				url: mock.origin,
+				password: "wrong-test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(mock.events).toContain("login:1:401");
+		expect(outcome).toMatchObject({
+			status: "refused",
+			storageRefusal: null,
+			surface: "password",
+		});
+	});
+
 	it("carries a keystore rejection's step and code into the outcome, the store and the refusal, redacted", async () => {
 		const mock = await relay();
 		transport();
@@ -988,6 +1016,7 @@ describe("connectCustomOutcome and the keystore refusal reason", () => {
 			status: "refused",
 			detail: null,
 			storageRefusal: refusal,
+			surface: "diagnostic",
 		});
 		const state = connectionStore.getState();
 		expect(state.surface).toBe("diagnostic");

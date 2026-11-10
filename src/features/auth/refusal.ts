@@ -174,12 +174,34 @@ export function secureStorageRefusalSentence(
  * sentence, else a generic one that still tells the reader their entries are
  * kept. Never empty, so the inline alert cannot render a bare title.
  */
+/**
+ * The "Connected, but not saved" body: the route is live, the keystore refused to
+ * keep it. Deliberately NOT `secureStorageRefusalSentence` (design D3 / UX U2 /
+ * QA Q1, PR #220): that sentence says "Try again, or reinstall the app", but this
+ * notice's only action is Continue, and the commonest web cause — a saved route
+ * over the keystore's size cap — fails identically on every retry. So it says
+ * what happened and what it costs, and keeps the platform code for support.
+ */
+export function saveRefusalSentence(refusal: SecureStorageRefusal): string {
+	return refusal.code
+		? t("mobile.computers.save_refused.body_with_code", { code: refusal.code })
+		: t("mobile.computers.save_refused.body");
+}
+
 export function connectRefusalSentence(input: {
 	detail: string | null;
 	storageRefusal: SecureStorageRefusal | null;
+	/** The store's surface for the refusal; `password` is the relay's 401. */
+	surface?: ErrorSurface | null;
 }): string {
 	if (input.storageRefusal)
 		return secureStorageRefusalSentence(input.storageRefusal);
+	/* A refusal whose cause is KNOWN gets the reader's sentence with its next step
+	 *  (design D2, PR #220): the relay's own detail for a 401 is the bare fragment
+	 *  "Authentication required", which names no fix. Every other surface keeps
+	 *  the relay's sanitised sentence, which is already written for the reader. */
+	if (input.surface === "password")
+		return t("mobile.computers.connect_refused.password");
 	const detail = input.detail?.trim();
 	return detail ? detail : t("mobile.computers.connect_refused.generic");
 }

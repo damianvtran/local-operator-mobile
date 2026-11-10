@@ -16,7 +16,12 @@ import type { ConnectCustomOutcome } from "@/features/auth/connection-provider";
  */
 type Props = Record<string, unknown>;
 const host = vi.hoisted(() => ({
-	alerts: [] as { testID?: string; title?: string; body: string }[],
+	alerts: [] as {
+		testID?: string;
+		title?: string;
+		body: string;
+		loading?: boolean;
+	}[],
 	presses: new Map<string, () => void>(),
 	inputs: new Map<
 		string,
@@ -27,6 +32,9 @@ const host = vi.hoisted(() => ({
 	connected: [] as unknown[],
 	outcome: { status: "live" } as ConnectCustomOutcome,
 	stored: { persistent: true, storageRefusal: null } as unknown,
+	/* When set, connectCustomOutcome waits on it: an attempt kept in flight so a
+	 *  test can read the screen DURING a retry (UX U1). */
+	gate: null as Promise<void> | null,
 }));
 
 vi.mock("react-native", () => ({
@@ -60,6 +68,7 @@ vi.mock("@/features/auth/connection-provider", () => ({
 		},
 		connectCustomOutcome: async (input: unknown) => {
 			host.connected.push(input);
+			if (host.gate) await host.gate;
 			return host.outcome;
 		},
 		/* The quiet member too, so this suite run against the pre-fix screen (which
@@ -78,14 +87,15 @@ const flatten = (children: unknown): string =>
 			: "";
 vi.mock("@/ui/components/alert", () => ({
 	Alert: (props: Props) => {
+		const action = props.action as
+			| { testID: string; onPress: () => void; loading?: boolean }
+			| undefined;
 		host.alerts.push({
 			testID: props.testID as string | undefined,
 			title: props.title as string | undefined,
 			body: flatten(props.children),
+			loading: action?.loading,
 		});
-		const action = props.action as
-			| { testID: string; onPress: () => void }
-			| undefined;
 		if (action) host.presses.set(action.testID, action.onPress);
 		return null;
 	},
@@ -127,6 +137,7 @@ const CONNECT = "custom-connect";
 const RETRY = "own-tunnel-connect-retry";
 const REFUSED = "own-tunnel-connect-refused";
 const UNSAVED = "own-tunnel-unsaved";
+const RETRY_ADVICE = /try again|reinstall/i;
 /* Placeholder host only (AGENTS.md: never a real tunnel hostname). */
 const ADDRESS = "https://relay.example.com";
 
@@ -141,9 +152,17 @@ const type = (id: string, value: string) =>
 	act(async () => {
 		host.inputs.get(id)?.onChangeText(value);
 	});
-/** The alerts of the LAST render pass only. */
+/** The most recent render of `testID`'s alert. Absence after an action needs
+ *  `freshRender` first, since the recorder keeps every earlier pass. */
 const lastAlert = (testID: string) =>
 	host.alerts.filter((alert) => alert.testID === testID).at(-1);
+/** Forget earlier passes, so the next reads see only what renders from now on. */
+const freshRender = () => {
+	host.alerts.length = 0;
+};
+/* The test verdict's alert carries no testID; its title is the handle. */
+const verdictShown = () =>
+	host.alerts.some((alert) => alert.title === "Connected");
 
 async function fillAndTest() {
 	await type(URL_FIELD, ADDRESS);
@@ -160,6 +179,7 @@ beforeEach(async () => {
 	host.connected.length = 0;
 	host.outcome = { status: "live" };
 	host.stored = { persistent: true, storageRefusal: null };
+	host.gate = null;
 	const doc = {
 		nodeType: 9,
 		activeElement: null,
@@ -206,6 +226,7 @@ describe("own-tunnel Save and connect", () => {
 			status: "refused",
 			detail: "The relay password was not accepted.",
 			storageRefusal: null,
+			surface: "retry",
 		};
 		await fillAndTest();
 		await press(CONNECT);
@@ -234,6 +255,7 @@ describe("own-tunnel Save and connect", () => {
 				kind: "CodedError",
 				code: "ERR_KEY_CHAIN -34018",
 			},
+			surface: "diagnostic",
 		};
 		await fillAndTest();
 		await press(CONNECT);
@@ -244,7 +266,12 @@ describe("own-tunnel Save and connect", () => {
 	});
 
 	it("falls back to a sentence that still says the entries are kept", async () => {
-		host.outcome = { status: "refused", detail: null, storageRefusal: null };
+		host.outcome = {
+			status: "refused",
+			detail: null,
+			storageRefusal: null,
+			surface: null,
+		};
 		await fillAndTest();
 		await press(CONNECT);
 		expect(lastAlert(REFUSED)?.body).toContain(
@@ -270,11 +297,119 @@ describe("own-tunnel Save and connect", () => {
 		expect(host.replaced).toEqual([]);
 		const unsaved = lastAlert(UNSAVED);
 		expect(unsaved?.title).toBe("Connected, but not saved");
-		expect(unsaved?.body).toContain(
-			"This device's secure storage refused the request.",
+		// D3 / U2 / Q1 (PR #220): says what was not kept and what it costs, and no
+		// "Try again" — the notice's only action is Continue, and an oversize route
+		// fails the same way on every retry.
+		expect(unsaved?.body).toBe(
+			"This device couldn't store the address and password securely. The connection works for now, but you'll need to enter them again after the app restarts.",
 		);
-		expect(unsaved?.body).toContain("after the app restarts");
+		expect(unsaved?.body).not.toMatch(RETRY_ADVICE);
 		await press("own-tunnel-unsaved-continue");
 		expect(host.replaced).toEqual(["/"]);
+	});
+
+	it("keeps the platform code in the not-saved notice for support", async () => {
+		host.stored = {
+			persistent: false,
+			storageRefusal: { step: "write", kind: "CodedError", code: "-34018" },
+		};
+		await fillAndTest();
+		await press(CONNECT);
+		expect(lastAlert(UNSAVED)?.body).toBe(
+			"This device couldn't store the address and password securely (code -34018). The connection works for now, but you'll need to enter them again after the app restarts.",
+		);
+	});
+
+	it("says the relay rejected the password, with the next step, instead of the bare 401 fragment (D2)", async () => {
+		host.outcome = {
+			status: "refused",
+			detail: "Authentication required",
+			storageRefusal: null,
+			surface: "password",
+		};
+		await fillAndTest();
+		await press(CONNECT);
+		expect(lastAlert(REFUSED)?.body).toBe(
+			"The relay didn't accept that password. Check it and try again.",
+		);
+	});
+
+	it("hides the stale test verdict while a refusal is shown, and clears both when a field changes (D1, U4)", async () => {
+		host.outcome = {
+			status: "refused",
+			detail: "The relay could not be reached.",
+			storageRefusal: null,
+			surface: "retry",
+		};
+		await fillAndTest();
+		expect(verdictShown()).toBe(true);
+		freshRender();
+		await press(CONNECT);
+		expect(lastAlert(REFUSED)).toBeDefined();
+		// No green "Connected" above the red "Couldn't connect".
+		expect(verdictShown()).toBe(false);
+		// Save and connect stays usable: the tunnel did answer the test.
+		expect(host.presses.has(CONNECT)).toBe(true);
+
+		freshRender();
+		await type(PASSWORD_FIELD, "corrected-test-only");
+		// The refusal described the old password; the verdict an untested draft.
+		expect(lastAlert(REFUSED)).toBeUndefined();
+		expect(verdictShown()).toBe(false);
+		// ... so saving waits for a test of what is typed now.
+		expect(host.presses.has(CONNECT)).toBe(false);
+		await press(TEST);
+		expect(verdictShown()).toBe(true);
+		expect(host.presses.has(CONNECT)).toBe(true);
+
+		freshRender();
+		await type(URL_FIELD, "https://other.example.com");
+		expect(verdictShown()).toBe(false);
+		expect(host.presses.has(CONNECT)).toBe(false);
+	});
+
+	it("keeps the refusal and Retry mounted, loading, while the retry is in flight (U1)", async () => {
+		host.outcome = {
+			status: "refused",
+			detail: "The relay could not be reached.",
+			storageRefusal: null,
+			surface: "retry",
+		};
+		await fillAndTest();
+		await press(CONNECT);
+		let release = () => {};
+		host.gate = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		freshRender();
+		await press(RETRY);
+		// Mid-attempt: the alert the reader pressed is still there, its Retry
+		// showing progress, so focus has somewhere to stay.
+		const during = lastAlert(REFUSED);
+		expect(during?.body).toBe("The relay could not be reached.");
+		expect(during?.loading).toBe(true);
+		host.outcome = { status: "live" };
+		await act(async () => {
+			release();
+			await host.gate;
+		});
+		expect(host.replaced).toEqual(["/"]);
+	});
+
+	it("clears a previous refusal when a later attempt is superseded", async () => {
+		host.outcome = {
+			status: "refused",
+			detail: "The relay could not be reached.",
+			storageRefusal: null,
+			surface: "retry",
+		};
+		await fillAndTest();
+		await press(CONNECT);
+		expect(lastAlert(REFUSED)).toBeDefined();
+		host.outcome = { status: "superseded" };
+		freshRender();
+		await press(RETRY);
+		expect(lastAlert(REFUSED)).toBeUndefined();
+		expect(host.replaced).toEqual([]);
 	});
 });

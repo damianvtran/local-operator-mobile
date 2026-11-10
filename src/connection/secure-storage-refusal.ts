@@ -82,22 +82,41 @@ export function isSecureStorageRefusal(
 ): value is SecureStorageRefusal {
 	if (typeof value !== "object" || value === null) return false;
 	const { step, kind, code } = value as Record<string, unknown>;
+	/* Every field is re-checked against the shape `describeSecureStorageRefusal`
+	 *  emits (code review R1-m2, PR #220), so a hand-built object carrying free
+	 *  text in `kind` or `code` is refused rather than rendered as "sanitised".
+	 *  `CLASS_NAME` also admits `kindOf`'s `typeof` fallback (letters only). */
 	return (
 		typeof step === "string" &&
 		STEPS.has(step) &&
 		typeof kind === "string" &&
-		(code === null || typeof code === "string")
+		CLASS_NAME.test(kind) &&
+		(code === null || (typeof code === "string" && isCodeShape(code)))
+	);
+}
+
+/** `codeOf`'s output: one Expo identifier and/or one numeric status, space-joined. */
+function isCodeShape(code: string): boolean {
+	const parts = code.split(" ");
+	return (
+		parts.length >= 1 &&
+		parts.length <= 2 &&
+		parts.every((part) => EXPO_CODE.test(part) || NUMERIC.test(part))
 	);
 }
 
 const EXPO_CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
 const CLASS_NAME = /^[A-Za-z]{1,48}$/;
-/* A numeric status QUOTED in a message: `OSStatus -34018`, `code -25300`,
- * `error: 5`. Only the number is lifted out — the message itself is dropped.
- * Bounded to 7 digits: OSStatus is an Int32 and every observed keychain/keystore
- * status fits in 6, so a longer run is more likely an id than a status. */
+/* A numeric status QUOTED in a message, in the two forms a status is written in
+ * and nothing looser: `OSStatus -34018` (the iOS keychain's own wording), or
+ * `code: -25300` / `status=5` with an explicit `:` or `=`. Only the number is
+ * lifted out — the message itself is dropped. A bare `error 482913` or
+ * `code 42` is NOT a status form (code review R1-m1, PR #220): a message can
+ * quote a stored value after those words, and the record must carry platform
+ * codes only. Bounded to 7 digits: OSStatus is an Int32 and every observed
+ * keychain/keystore status fits in 6, so a longer run is more likely an id. */
 const QUOTED_STATUS =
-	/\b(?:OSStatus|status|code|error)\s*[:=]?\s*(-?\d{1,7})\b/i;
+	/\b(?:OSStatus\s*[:=]?|(?:status|code)\s*[:=])\s*(-?\d{1,7})\b/i;
 const NUMERIC = /^-?\d{1,7}$/;
 
 /**

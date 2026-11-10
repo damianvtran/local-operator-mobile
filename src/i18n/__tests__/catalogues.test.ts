@@ -141,9 +141,11 @@ const NAMESPACES = [
 		name: "mobile.computers",
 		messages: computers,
 		context: computersContext,
-		/* main's 24 + the two transport keys + seven refused-connect keys (own-tunnel
-		 * "Couldn't connect", the secure-storage refusal, "Connected, but not saved"). */
-		expected: 33,
+		/* main's 24 + the two transport keys + nine refused-connect keys (own-tunnel
+		 * "Couldn't connect" with its generic and wrong-password bodies, the
+		 * secure-storage refusal, "Connected, but not saved" with its body with and
+		 * without a code, and Continue). */
+		expected: 35,
 	},
 	{
 		name: "mobile.notifications",
@@ -275,8 +277,11 @@ describe("the English catalogues", () => {
 		 * inline "Couldn't connect" title and generic body, the secure-storage
 		 * refusal sentence with and without a platform code, and the "Connected,
 		 * but not saved" title, consequence and Continue. 569 + 7, verified by the
-		 * generator's own count (576 keys). */
-		expect(total).toBe(576);
+		 * generator's own count (576 keys). PR #220 round-1 remediation: + the
+		 * wrong-password body, and the not-saved body (with and without a code)
+		 * replacing its "until restart" tail: 576 + 3 - 1 = 578, the generator's
+		 * count. */
+		expect(total).toBe(578);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

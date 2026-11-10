@@ -79,6 +79,38 @@ describe("describeSecureStorageRefusal", () => {
 		expect(isSecureStorageRefusal({ step: "delete", kind: "Error" })).toBe(
 			false,
 		);
+		// R1-m2 (PR #220): free text in `kind` or `code` is not a record this
+		// module could have built.
+		expect(
+			isSecureStorageRefusal({
+				step: "read",
+				kind: "Error: hunter2",
+				code: null,
+			}),
+		).toBe(false);
+		expect(
+			isSecureStorageRefusal({ step: "read", kind: "Error", code: "hunter2" }),
+		).toBe(false);
+		expect(
+			isSecureStorageRefusal({
+				step: "read",
+				kind: "CodedError",
+				code: "ERR_KEY_CHAIN -34018",
+			}),
+		).toBe(true);
+	});
+
+	it("lifts a status only from its documented forms, never a bare number after a word (R1-m1)", () => {
+		const coded = (message: string) =>
+			describeSecureStorageRefusal(new Error(message), "write").code;
+		// The reviewer's repro: a value quoted after "error" is message content.
+		expect(coded("Invalid key error 482913 for value")).toBeNull();
+		expect(coded("bad code 42 in stored value")).toBeNull();
+		expect(coded("status 7 of 9")).toBeNull();
+		// The documented forms still survive.
+		expect(coded("Keychain failed (OSStatus -34018)")).toBe("-34018");
+		expect(coded("keystore refused, code: -25300")).toBe("-25300");
+		expect(coded("provider status=5")).toBe("5");
 	});
 });
 

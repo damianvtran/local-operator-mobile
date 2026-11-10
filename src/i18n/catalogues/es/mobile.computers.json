@@ -27,9 +27,11 @@
 	"mobile.computers.transport.custom": "Tu dirección",
 	"mobile.computers.connect_refused.title": "No se pudo conectar",
 	"mobile.computers.connect_refused.generic": "El ordenador no aceptó la conexión. Tu dirección y tu contraseña siguen aquí, así que revísalas y vuelve a intentarlo.",
+	"mobile.computers.connect_refused.password": "El relay no aceptó esa contraseña. Revísala y vuelve a intentarlo.",
 	"mobile.computers.storage_refused.with_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud (código {code}). Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
 	"mobile.computers.storage_refused.no_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud. Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
 	"mobile.computers.save_refused.title": "Conectado, pero sin guardar",
-	"mobile.computers.save_refused.until_restart": "La conexión funciona por ahora, pero tendrás que volver a introducir la dirección cuando se reinicie la app.",
+	"mobile.computers.save_refused.body": "Este dispositivo no pudo guardar la dirección y la contraseña de forma segura. La conexión funciona por ahora, pero tendrás que volver a introducirlas cuando se reinicie la app.",
+	"mobile.computers.save_refused.body_with_code": "Este dispositivo no pudo guardar la dirección y la contraseña de forma segura (código {code}). La conexión funciona por ahora, pero tendrás que volver a introducirlas cuando se reinicie la app.",
 	"mobile.computers.save_refused.continue": "Continuar"
 }

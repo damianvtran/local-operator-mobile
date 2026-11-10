@@ -105,6 +105,7 @@ import { clearNativePickerCache } from "@/features/session/picker-cache";
 import { pickerPrivacy } from "@/features/session/picker-privacy";
 import { setLocaleSource, t } from "@/i18n";
 import {
+	type ErrorSurface,
 	type RelayEndpoints,
 	RelayError,
 	type RelayStream,
@@ -251,6 +252,10 @@ export type ConnectCustomOutcome =
 			detail: string | null;
 			/** Set when this device's secure storage was what refused. */
 			storageRefusal: SecureStorageRefusal | null;
+			/** The store's surface, so the screen can name a KNOWN cause (a relay
+			 *  401 is `password`) in the reader's words instead of the relay's
+			 *  fragment. `null` when the attempt never recorded a failure. */
+			surface: ErrorSurface | null;
 	  };
 
 /** What `saveCustomRoute` could keep. `storageRefusal` is set when the keystore
@@ -1145,6 +1150,7 @@ export const ConnectionProvider = ({
 					status: "refused",
 					detail: state.detail,
 					storageRefusal: state.storageRefusal,
+					surface: state.surface,
 				};
 			};
 			try {

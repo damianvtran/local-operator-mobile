@@ -10,7 +10,7 @@ import {
 import { useConnection } from "@/features/auth/connection-provider";
 import {
 	connectRefusalSentence,
-	secureStorageRefusalSentence,
+	saveRefusalSentence,
 } from "@/features/auth/refusal";
 import {
 	COMPUTER_COMMANDS,
@@ -145,6 +145,36 @@ export default function OwnTunnel() {
 	 *  before the reader moves on, since nothing on home would say it. */
 	const [unsaved, setUnsaved] = useState<string | null>(null);
 
+	/* An edit makes both the test result and the last refusal describe input that
+	 *  is no longer in the fields (design D1 / UX U4, PR #220): a green "Connected"
+	 *  for an address the reader has since changed, or a red reason for a password
+	 *  they have already corrected. Clearing the verdict also re-gates Save and
+	 *  connect on a test of what is actually typed, which is what `canSave` and its
+	 *  "Test the connection first" hint already promise. The prefill effect above
+	 *  uses the raw setters on purpose: loading the saved entry is not an edit. */
+	const edited = useCallback(() => {
+		setVerdict(null);
+		setConnectError(null);
+	}, []);
+	const editUrl = useCallback(
+		(value: string) => {
+			setUrl(value);
+			edited();
+		},
+		[edited],
+	);
+	const editPassword = useCallback(
+		(value: string) => {
+			setPassword(value);
+			edited();
+		},
+		[edited],
+	);
+	const toggleInsecure = useCallback(() => {
+		setAllowInsecure((value) => !value);
+		edited();
+	}, [edited]);
+
 	const test = useCallback(async () => {
 		setTesting(true);
 		setVerdict(null);
@@ -160,10 +190,14 @@ export default function OwnTunnel() {
 	 *  refusal now stays here: the fields keep their state (nothing below clears
 	 *  them), the reason is shown inline beside the button, and Retry re-runs the
 	 *  same draft. A superseded attempt says nothing — the newer action owns the
-	 *  screen. */
+	 *  screen.
+	 *
+	 *  The previous refusal is NOT cleared when the attempt starts, only replaced
+	 *  when its outcome arrives (UX U1, PR #220): clearing it first unmounted the
+	 *  alert under the reader's finger, so Retry's own spinner never showed and
+	 *  keyboard/screen-reader focus fell back to the top of the screen. */
 	const saveAndConnect = useCallback(async () => {
 		setSaving(true);
-		setConnectError(null);
 		setUnsaved(null);
 		try {
 			const stored = await saveCustomRoute({ url, password, allowInsecure });
@@ -179,9 +213,10 @@ export default function OwnTunnel() {
 				setConnectError(connectRefusalSentence(outcome));
 				return;
 			}
+			setConnectError(null);
 			if (outcome.status === "superseded") return;
 			if (stored?.storageRefusal) {
-				setUnsaved(secureStorageRefusalSentence(stored.storageRefusal));
+				setUnsaved(saveRefusalSentence(stored.storageRefusal));
 				return;
 			}
 			router.replace("/");
@@ -212,7 +247,12 @@ export default function OwnTunnel() {
 				disabled={testing || url.trim().length === 0}
 				testID={CONTROL.ownTunnelTest}
 			/>
-			{verdict ? <VerdictBlock verdict={verdict} /> : null}
+			{/* Hidden, not cleared, while a refusal is shown (design D1): a green
+			 *  "Connected" above a red "Couldn't connect" reads as two answers to one
+			 *  action. The verdict itself stays so Save and connect remains enabled —
+			 *  the tunnel DID answer the test; clearing it would swap the refusal's
+			 *  reason for a misleading "Test the connection first". */}
+			{verdict && !connectError ? <VerdictBlock verdict={verdict} /> : null}
 			<Button
 				label={saving ? "Saving…" : "Save and connect"}
 				onPress={() => void saveAndConnect()}
@@ -248,7 +288,7 @@ export default function OwnTunnel() {
 						testID: CONTROL.ownTunnelUnsavedContinue,
 					}}
 				>
-					{`${unsaved} ${t("mobile.computers.save_refused.until_restart")}`}
+					{unsaved}
 				</Alert>
 			) : null}
 			{!canSave ? (
@@ -299,7 +339,7 @@ export default function OwnTunnel() {
 					<Input
 						label="Relay password"
 						value={password}
-						onChangeText={setPassword}
+						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
 						secureTextEntry
 						autoCapitalize="none"
@@ -371,7 +411,7 @@ export default function OwnTunnel() {
 					<Input
 						label="Public URL"
 						value={url}
-						onChangeText={setUrl}
+						onChangeText={editUrl}
 						placeholder="https://your-tunnel.example.com"
 						autoCapitalize="none"
 						testID={CONTROL.customUrlField}
@@ -379,7 +419,7 @@ export default function OwnTunnel() {
 					<Input
 						label="Relay password"
 						value={password}
-						onChangeText={setPassword}
+						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
 						secureTextEntry
 						autoCapitalize="none"
@@ -392,7 +432,7 @@ export default function OwnTunnel() {
 									? "Plain http:// is allowed"
 									: "Allow a plain http:// address"
 							}
-							onPress={() => setAllowInsecure((value) => !value)}
+							onPress={toggleInsecure}
 							variant={allowInsecure ? "outline" : "quiet"}
 							size="sm"
 							testID={CONTROL.customInsecureOptIn}
