@@ -98,5 +98,9 @@
 	"mobile.chrome.composer.row_queue": {
 		"role": "meta",
 		"note": "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon."
+	},
+	"mobile.chrome.composer.row_questions": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon."
 	}
 }

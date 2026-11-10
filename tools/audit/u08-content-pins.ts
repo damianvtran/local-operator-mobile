@@ -630,7 +630,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Re-pinned with --print over the staged tree for PR B's round-1
 	// remediation (the session screen memoises the counts element and derives
 	// one activity-line flag). Source admission only.
-	app: "190f30526deec95cff857a338cde05d8cd9f106fcccbb9ef3f7a81e84987bbee",
+	// PR #211 build-753 feedback: the session screen feeds the composer
+	// More sheet's Questions row from any ask. Re-pinned with --print over the
+	// staged tree; source admission only, no rendered or native proof.
+	app: "ea522772dc9b78faa9d343b0fb615a627cb709b2e29da574eabd1827799d30a9",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1272,7 +1275,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// (round-4 remediation c7f7b474 included), so it has neither parent's
 	// digest; re-pinned with --print over the staged merged tree. Source
 	// admission only, no rendered or native proof refreshed.
-	src: "c60350b027d45522330976f095320e433dd77c1eab2e0a69340f1db7fe19301c",
+	// PR #211 build-753 feedback: the activity line's measured slot wrappers
+	// are absolute (native slot never opened), the ask bar is a borderless row
+	// that paints nothing for timed-out-only asks, and More gains a Questions
+	// row (one i18n key). Re-pinned with --print over the staged tree; source
+	// admission only, no rendered or native proof.
+	src: "792adb2a3430e367e96f41541c4d0609940448f8668b79fdd6799105f00cb21b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

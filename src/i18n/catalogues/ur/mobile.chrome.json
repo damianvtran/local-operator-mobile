@@ -23,5 +23,6 @@
 	"mobile.chrome.composer.row_effort": "شدت",
 	"mobile.chrome.composer.row_usage": "سیاق",
 	"mobile.chrome.composer.row_cost": "لاگت",
-	"mobile.chrome.composer.row_queue": "قطار"
+	"mobile.chrome.composer.row_queue": "قطار",
+	"mobile.chrome.composer.row_questions": "سوالات"
 }

@@ -55,6 +55,7 @@ export type CatalogueKey =
 	| "mobile.chrome.composer.row_cost"
 	| "mobile.chrome.composer.row_effort"
 	| "mobile.chrome.composer.row_model"
+	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
 	| "mobile.chrome.composer.row_usage"
 	| "mobile.chrome.destination.inbox"
@@ -622,6 +623,7 @@ export type NoParamKey =
 	| "mobile.chrome.composer.row_cost"
 	| "mobile.chrome.composer.row_effort"
 	| "mobile.chrome.composer.row_model"
+	| "mobile.chrome.composer.row_questions"
 	| "mobile.chrome.composer.row_queue"
 	| "mobile.chrome.composer.row_usage"
 	| "mobile.chrome.destination.inbox"
@@ -1115,6 +1117,7 @@ export type MessageParams = {
 	"mobile.chrome.composer.row_cost": NoParams;
 	"mobile.chrome.composer.row_effort": NoParams;
 	"mobile.chrome.composer.row_model": NoParams;
+	"mobile.chrome.composer.row_questions": NoParams;
 	"mobile.chrome.composer.row_queue": NoParams;
 	"mobile.chrome.composer.row_usage": NoParams;
 	"mobile.chrome.destination.inbox": NoParams;
@@ -1699,6 +1702,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.composer.row_cost": "Cost",
 	"mobile.chrome.composer.row_effort": "Effort",
 	"mobile.chrome.composer.row_model": "Model",
+	"mobile.chrome.composer.row_questions": "Questions",
 	"mobile.chrome.composer.row_queue": "Queue",
 	"mobile.chrome.composer.row_usage": "Context",
 	"mobile.chrome.destination.inbox": "Inbox",
@@ -2268,6 +2272,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.composer.row_cost": { role: "meta", note: "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_effort": { role: "meta", note: "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_model": { role: "meta", note: "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon." },
+	"mobile.chrome.composer.row_questions": { role: "meta", note: "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon." },
 	"mobile.chrome.composer.row_queue": { role: "meta", note: "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_usage": { role: "meta", note: "Row label in the composer's More sheet for how much of the model's context window is used; the reading is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
@@ -2851,6 +2856,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "Costo",
 		"mobile.chrome.composer.row_effort": "Esfuerzo",
 		"mobile.chrome.composer.row_model": "Modelo",
+		"mobile.chrome.composer.row_questions": "Preguntas",
 		"mobile.chrome.composer.row_queue": "Cola",
 		"mobile.chrome.composer.row_usage": "Contexto",
 		"mobile.chrome.destination.inbox": "Bandeja",
@@ -3418,6 +3424,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "Coût",
 		"mobile.chrome.composer.row_effort": "Effort",
 		"mobile.chrome.composer.row_model": "Modèle",
+		"mobile.chrome.composer.row_questions": "Questions",
 		"mobile.chrome.composer.row_queue": "File d’attente",
 		"mobile.chrome.composer.row_usage": "Contexte",
 		"mobile.chrome.destination.inbox": "Boîte",
@@ -3985,6 +3992,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "लागत",
 		"mobile.chrome.composer.row_effort": "प्रयास",
 		"mobile.chrome.composer.row_model": "मॉडल",
+		"mobile.chrome.composer.row_questions": "प्रश्न",
 		"mobile.chrome.composer.row_queue": "कतार",
 		"mobile.chrome.composer.row_usage": "संदर्भ",
 		"mobile.chrome.destination.inbox": "इनबॉक्स",
@@ -4552,6 +4560,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "Стоимость",
 		"mobile.chrome.composer.row_effort": "Усилие",
 		"mobile.chrome.composer.row_model": "Модель",
+		"mobile.chrome.composer.row_questions": "Вопросы",
 		"mobile.chrome.composer.row_queue": "Очередь",
 		"mobile.chrome.composer.row_usage": "Контекст",
 		"mobile.chrome.destination.inbox": "Входящие",
@@ -5119,6 +5128,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "لاگت",
 		"mobile.chrome.composer.row_effort": "شدت",
 		"mobile.chrome.composer.row_model": "ماڈل",
+		"mobile.chrome.composer.row_questions": "سوالات",
 		"mobile.chrome.composer.row_queue": "قطار",
 		"mobile.chrome.composer.row_usage": "سیاق",
 		"mobile.chrome.destination.inbox": "ان باکس",
@@ -5686,6 +5696,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "Chi phí",
 		"mobile.chrome.composer.row_effort": "Mức suy luận",
 		"mobile.chrome.composer.row_model": "Mô hình",
+		"mobile.chrome.composer.row_questions": "Câu hỏi",
 		"mobile.chrome.composer.row_queue": "Hàng đợi",
 		"mobile.chrome.composer.row_usage": "Ngữ cảnh",
 		"mobile.chrome.destination.inbox": "Hộp thư",
@@ -6253,6 +6264,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "费用",
 		"mobile.chrome.composer.row_effort": "推理强度",
 		"mobile.chrome.composer.row_model": "模型",
+		"mobile.chrome.composer.row_questions": "问题",
 		"mobile.chrome.composer.row_queue": "队列",
 		"mobile.chrome.composer.row_usage": "上下文",
 		"mobile.chrome.destination.inbox": "收件箱",

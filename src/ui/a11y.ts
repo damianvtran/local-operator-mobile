@@ -406,6 +406,9 @@ export const CONTROL = {
 	composerOpenQueue: "composer-open-queue",
 	composerContextModel: "composer-context-model",
 	composerContextEffort: "composer-context-effort",
+	/** More's Questions row: the door to the asks sheet that survives a queue
+	 *  of only timed-out asks, which paints no ask bar (build 753). */
+	composerContextQuestions: "composer-context-questions",
 	composerContextSheet: "composer-context-sheet",
 	/** The composer shell's painted edge, which is a CHILD of the shell rather than its
 	 *  `borderWidth` (docs/design/components.md § 12). Not a control and never a hit

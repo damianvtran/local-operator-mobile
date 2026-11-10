@@ -66,10 +66,32 @@ describe("build389 persistent field and context", () => {
 		const sheet = COMPOSER.slice(
 			COMPOSER.indexOf("testID={CONTROL.composerContextSheet}"),
 		);
-		expect(sheet.match(/<ContextRow\b/g) ?? []).toHaveLength(5);
+		expect(sheet.match(/<ContextRow\b/g) ?? []).toHaveLength(6);
 		expect(sheet).not.toContain("<ComposerChipButton");
 		// D2 (round 6): landscape has ONE context affordance — the compact strip's.
 		expect(COMPOSER).not.toContain("CONTROL.composerCompactContext");
+	});
+});
+describe("More's Questions row (build 753: no bar for timed-out asks)", () => {
+	it("is drawn only when the host passes asks, and opens the asks sheet after closing More", () => {
+		const sheet = COMPOSER.slice(
+			COMPOSER.indexOf("testID={CONTROL.composerContextSheet}"),
+		);
+		const at = sheet.indexOf("testID={CONTROL.composerContextQuestions}");
+		expect(at).toBeGreaterThan(-1);
+		const row = sheet
+			.slice(sheet.lastIndexOf("{questions ? (", at), at)
+			.replace(/\s+/g, " ");
+		expect(row).toContain('label={t("mobile.chrome.composer.row_questions")}');
+		expect(row).toContain("setContextOpen(false); questions.onOpen();");
+	});
+	it("is fed by ANY ask, waiting or timed out, and opens the same sheet as the bar", () => {
+		const flat = SCREEN.replace(/\s+/g, " ");
+		expect(flat).toContain("const label = askBarLabel(projection?.asks);");
+		expect(flat).toContain(
+			"? null : { value: label.text, onOpen: asksSheet.open };",
+		);
+		expect(flat).toContain("onOpen={asksSheet.open}");
 	});
 });
 describe("the above-composer stack (relay above-composer.spacing)", () => {

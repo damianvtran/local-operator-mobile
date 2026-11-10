@@ -23,5 +23,6 @@
 	"mobile.chrome.composer.row_effort": "推理强度",
 	"mobile.chrome.composer.row_usage": "上下文",
 	"mobile.chrome.composer.row_cost": "费用",
-	"mobile.chrome.composer.row_queue": "队列"
+	"mobile.chrome.composer.row_queue": "队列",
+	"mobile.chrome.composer.row_questions": "问题"
 }

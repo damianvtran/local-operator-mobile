@@ -23,5 +23,6 @@
 	"mobile.chrome.composer.row_effort": "प्रयास",
 	"mobile.chrome.composer.row_usage": "संदर्भ",
 	"mobile.chrome.composer.row_cost": "लागत",
-	"mobile.chrome.composer.row_queue": "कतार"
+	"mobile.chrome.composer.row_queue": "कतार",
+	"mobile.chrome.composer.row_questions": "प्रश्न"
 }

@@ -23,5 +23,6 @@
 	"mobile.chrome.composer.row_effort": "Effort",
 	"mobile.chrome.composer.row_usage": "Context",
 	"mobile.chrome.composer.row_cost": "Cost",
-	"mobile.chrome.composer.row_queue": "Queue"
+	"mobile.chrome.composer.row_queue": "Queue",
+	"mobile.chrome.composer.row_questions": "Questions"
 }

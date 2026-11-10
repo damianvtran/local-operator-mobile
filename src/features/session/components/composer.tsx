@@ -302,6 +302,13 @@ export type ComposerProps = {
 	 *  there whatever this says. */
 	queueOnCard?: boolean;
 	onOpenQueue?: () => void;
+	/** The More sheet's Questions row, or `null` while the session has no ask
+	 *  at all. `value` is the asks sheet's own count sentence (`askBarLabel`).
+	 *  It exists because a queue of only TIMED-OUT asks paints no ask bar
+	 *  (operator feedback, TestFlight build 753), yet its Dismiss lives in the
+	 *  asks sheet; the status sheet cannot be that door, since with no counts
+	 *  the activity line draws nothing that opens it. */
+	questions?: { value: string; onOpen: () => void } | null;
 	onEditingChange?: (editing: boolean) => void;
 	suppressDisabledHint?: boolean;
 	/** The working-folder chip on the meta line. The composer home passes its
@@ -726,6 +733,7 @@ export const Composer = ({
 	queuedCount,
 	queueOnCard = false,
 	onOpenQueue,
+	questions = null,
 	onEditingChange,
 	suppressDisabledHint = false,
 	folderChip = null,
@@ -2555,6 +2563,17 @@ export const Composer = ({
 							/>
 						) : null}
 					</View>
+				) : null}
+				{questions ? (
+					<ContextRow
+						label={t("mobile.chrome.composer.row_questions")}
+						value={questions.value}
+						onPress={() => {
+							setContextOpen(false);
+							questions.onOpen();
+						}}
+						testID={CONTROL.composerContextQuestions}
+					/>
 				) : null}
 			</Sheet>
 		</Animated.View>

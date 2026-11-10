@@ -283,10 +283,12 @@ export function outstandingAsks(
 	return rows.filter((row) => isOutstanding(String(row?.status || "open")));
 }
 
-/** The asks the BAR stands for: the waiting ones plus the lapsed ones. A queue
- *  of only lapsed asks keeps a quiet bar (`askBarLabel`) because the sheet
- *  behind it is where Dismiss lives — the same door the desktop chip ("1
- *  question timed out") and the relay's web dock keep. Same wire order. */
+/** The asks the sheet and its count sentence stand for: the waiting ones plus
+ *  the lapsed ones (lapsed rows keep the sheet's Dismiss). The BAR no longer
+ *  paints for a lapsed-only queue (operator feedback on TestFlight build 753:
+ *  "timed out questions don't show up as a bar"; the desktop shows nothing
+ *  pending for such a session) — that door is the composer More sheet's
+ *  Questions row instead. Same wire order. */
 export function askBarRows(
 	rows: PendingAsk[] | undefined | null,
 ): PendingAsk[] {
@@ -684,7 +686,16 @@ export function questionsWaitingLabel(questions: number): string {
 		: `${questions} questions waiting`;
 }
 
-/** The bar's sentence for a queue with nothing waiting and only lapsed asks —
+/** The bar's VISIBLE count: "1 question", the relay tray's short form
+ *  (`relay.chrome.session.tray.questions`). The full "… waiting" sentence
+ *  stays the bar's accessible name; the visible line is shortened so the
+ *  borderless row leaves its width to the question itself (build 753). */
+export function questionsCountLabel(questions: number): string {
+	return questions === 1 ? "1 question" : `${questions} questions`;
+}
+
+/** The sheet title's and the More row's sentence for a queue with nothing
+ *  waiting and only lapsed asks —
  *  the desktop chip's own words (`askChipCountClause`), in the quiet register. */
 export function questionsTimedOutLabel(questions: number): string {
 	return questions === 1

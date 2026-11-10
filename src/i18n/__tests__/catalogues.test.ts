@@ -206,7 +206,7 @@ const NAMESPACES = [
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 25, // +5: the More sheet's row labels (visual audit D5)
+		expected: 26, // +5: the More sheet's row labels (visual audit D5); +1 its Questions row (build 753)
 	},
 	{
 		name: "relay.chrome",
@@ -263,7 +263,9 @@ describe("the English catalogues", () => {
 		 * Settings "Text size" label and the Library filter sheet's "Source".
 		 * Merged with the polish-composer branch (563 on its own): 563 + 2,
 		 * verified by counting unique `en` keys over the merged tree. */
-		expect(total).toBe(565);
+		/* Plus one: More's Questions row, the door to timed-out asks now that
+		 * they paint no ask bar (PR #211, TestFlight build 753 feedback). */
+		expect(total).toBe(566);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -388,6 +390,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"« Destinations » is the French word for the same set of places.",
 		"mobile.chrome.composer.row_effort":
 			"« Effort » is the French word, and the one the French effort chip already uses (« Effort par défaut »).",
+		"mobile.chrome.composer.row_questions":
+			"« Questions » is the French plural of « question », spelled as in English.",
 		"mobile.session.sheet_title.effort":
 			"« Effort » is the French word; the sheet's title is that one noun.",
 		"mobile.notifications.title":

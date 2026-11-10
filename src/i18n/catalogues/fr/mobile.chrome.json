@@ -23,5 +23,6 @@
 	"mobile.chrome.composer.row_effort": "Effort",
 	"mobile.chrome.composer.row_usage": "Contexte",
 	"mobile.chrome.composer.row_cost": "Coût",
-	"mobile.chrome.composer.row_queue": "File d’attente"
+	"mobile.chrome.composer.row_queue": "File d’attente",
+	"mobile.chrome.composer.row_questions": "Questions"
 }

@@ -19,7 +19,11 @@ import {
 	activityCounts,
 	activityCountsStack,
 } from "@/features/session/activity-counts";
-import { blockingPending, outstandingAsks } from "@/features/session/asks";
+import {
+	askBarLabel,
+	blockingPending,
+	outstandingAsks,
+} from "@/features/session/asks";
 import {
 	attentionRecord,
 	overlaysBlocked,
@@ -1594,6 +1598,14 @@ export default function Session() {
 						effortChip={chipLabels.effort}
 						onOpenModels={() => setModelsOpen(true)}
 						onOpenEffort={() => setEffortOpen(true)}
+						/* Any ask, waiting or timed out: a lapsed-only queue paints no
+						 *  ask bar (build 753), so this row is its door to Dismiss. */
+						questions={(() => {
+							const label = askBarLabel(projection?.asks);
+							return label === null
+								? null
+								: { value: label.text, onOpen: asksSheet.open };
+						})()}
 						fieldRef={composerFieldRef}
 						slashQuery={slash}
 						slashSheet={
