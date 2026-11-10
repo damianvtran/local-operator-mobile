@@ -24,5 +24,12 @@
 	"mobile.computers.hide_details": "تفصیلات چھپائیں",
 	"mobile.computers.connection_response": "کنکشن کا جواب",
 	"mobile.computers.transport.radient": "Radient",
-	"mobile.computers.transport.custom": "آپ کا پتہ"
+	"mobile.computers.transport.custom": "آپ کا پتہ",
+	"mobile.computers.connect_refused.title": "منسلک نہیں ہو سکا",
+	"mobile.computers.connect_refused.generic": "کمپیوٹر نے کنکشن قبول نہیں کیا۔ آپ کا پتہ اور پاس ورڈ ابھی یہیں ہیں، اس لیے انہیں جانچیں اور دوبارہ کوشش کریں۔",
+	"mobile.computers.storage_refused.with_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی (کوڈ {code})۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
+	"mobile.computers.storage_refused.no_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
+	"mobile.computers.save_refused.title": "منسلک ہو گیا، لیکن محفوظ نہیں ہوا",
+	"mobile.computers.save_refused.until_restart": "کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو پتہ دوبارہ درج کرنا ہوگا۔",
+	"mobile.computers.save_refused.continue": "جاری رکھیں"
 }

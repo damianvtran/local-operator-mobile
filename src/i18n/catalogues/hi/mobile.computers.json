@@ -24,5 +24,12 @@
 	"mobile.computers.hide_details": "विवरण छिपाएँ",
 	"mobile.computers.connection_response": "कनेक्शन की प्रतिक्रिया",
 	"mobile.computers.transport.radient": "Radient",
-	"mobile.computers.transport.custom": "आपका पता"
+	"mobile.computers.transport.custom": "आपका पता",
+	"mobile.computers.connect_refused.title": "कनेक्ट नहीं हो सका",
+	"mobile.computers.connect_refused.generic": "कंप्यूटर ने कनेक्शन स्वीकार नहीं किया। आपका पता और पासवर्ड अभी भी यहाँ हैं, इसलिए उन्हें जाँचें और फिर से कोशिश करें।",
+	"mobile.computers.storage_refused.with_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया (कोड {code})। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
+	"mobile.computers.storage_refused.no_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
+	"mobile.computers.save_refused.title": "कनेक्ट हो गया, पर सहेजा नहीं गया",
+	"mobile.computers.save_refused.until_restart": "कनेक्शन अभी काम कर रहा है, लेकिन ऐप दोबारा शुरू होने के बाद आपको पता फिर से डालना होगा।",
+	"mobile.computers.save_refused.continue": "जारी रखें"
 }

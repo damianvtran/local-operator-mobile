@@ -24,5 +24,12 @@
 	"mobile.computers.hide_details": "Ẩn chi tiết",
 	"mobile.computers.connection_response": "Phản hồi kết nối",
 	"mobile.computers.transport.radient": "Radient",
-	"mobile.computers.transport.custom": "Địa chỉ của bạn"
+	"mobile.computers.transport.custom": "Địa chỉ của bạn",
+	"mobile.computers.connect_refused.title": "Không thể kết nối",
+	"mobile.computers.connect_refused.generic": "Máy tính không chấp nhận kết nối. Địa chỉ và mật khẩu của bạn vẫn còn ở đây, hãy kiểm tra lại rồi thử lại.",
+	"mobile.computers.storage_refused.with_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu (mã {code}). Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
+	"mobile.computers.storage_refused.no_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu. Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
+	"mobile.computers.save_refused.title": "Đã kết nối nhưng chưa lưu",
+	"mobile.computers.save_refused.until_restart": "Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại địa chỉ sau khi ứng dụng khởi động lại.",
+	"mobile.computers.save_refused.continue": "Tiếp tục"
 }

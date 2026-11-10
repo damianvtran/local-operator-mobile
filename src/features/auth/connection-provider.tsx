@@ -71,6 +71,11 @@ import {
 	recoveryAuthorityScope,
 } from "@/connection/recovery-authority";
 import {
+	describeSecureStorageRefusal,
+	isSecureStorageRefusal,
+	type SecureStorageRefusal,
+} from "@/connection/secure-storage-refusal";
+import {
 	registerStartupAuthorizationCleanup,
 	startupAuthorizationLifecycle,
 } from "@/connection/startup-authorization";
@@ -219,8 +224,51 @@ export type ConnectCustomInput = {
 	computerId?: string;
 };
 
+/**
+ * How a `connectCustom` attempt ended, for the ONE caller that must react to it:
+ * the own-tunnel screen's Save and connect, which navigated home unconditionally
+ * and so dropped a refused reader on "Not connected / Not answering" with no
+ * reason and no draft (diagnostic run 42855980853, PR #216).
+ *
+ * Read from the store at the end of the attempt rather than threaded through each
+ * early return: every refusal path already records itself with `noteFailure`, so
+ * the store's phase is the single truth and a new early return cannot forget to
+ * report. `live` is ONLY a route that reached `markLive`; anything short of that
+ * (still minting, a silent `false` from authentication) counts as refused, so the
+ * screen never leaves the form for a route that is not answering.
+ *
+ * Every other caller (computer switcher, settings, cold start, the web override)
+ * ignores the value and keeps its existing behaviour: the failure is still in the
+ * store and still painted by the refusal surface exactly as before.
+ */
+export type ConnectCustomOutcome =
+	| { status: "live" }
+	/** A newer route action replaced this one; its own outcome is the one to show. */
+	| { status: "superseded" }
+	| {
+			status: "refused";
+			/** The store's sanitised sentence (`displayableMessage`), or null. */
+			detail: string | null;
+			/** Set when this device's secure storage was what refused. */
+			storageRefusal: SecureStorageRefusal | null;
+	  };
+
+/** What `saveCustomRoute` could keep. `storageRefusal` is set when the keystore
+ *  refused the write: the route still works for this run (see `writeSavedTunnel`),
+ *  but the reader is told it will not survive a restart. */
+export type SaveCustomRouteResult = {
+	persistent: boolean;
+	storageRefusal: SecureStorageRefusal | null;
+};
+
 export type Connection = {
 	connectCustom: (input: ConnectCustomInput) => Promise<void>;
+	/** `connectCustom`, reporting how the attempt ended. A separate member rather
+	 *  than a changed return type so every existing caller (switcher, settings,
+	 *  cold start) and every test double keeps its exact contract. */
+	connectCustomOutcome: (
+		input: ConnectCustomInput,
+	) => Promise<ConnectCustomOutcome>;
 	signInWithRadient: () => Promise<void>;
 	refreshComputers: () => Promise<void>;
 	/** What the console says about the account's billing, when discovery returned
@@ -251,7 +299,9 @@ export type Connection = {
 	/** Persists the reader's own tunnel, so a self-hosted setup survives a
 	 *  restart. Storage is written HERE rather than by a screen: two screens can
 	 *  save a tunnel (setup, and Settings' edit), and the record has one owner. */
-	saveCustomRoute: (input: ConnectCustomInput) => Promise<void>;
+	saveCustomRoute: (
+		input: ConnectCustomInput,
+	) => Promise<SaveCustomRouteResult | null>;
 	/** Forgets the saved own-tunnel. Deliberately not a sign-out: a reader
 	 *  dropping a tunnel keeps their Radient login, and vice versa. */
 	removeCustomRoute: () => Promise<void>;
@@ -402,15 +452,30 @@ const RADIENT_PICK_SIGNED_OUT = "Sign in with Radient to use this computer.";
  *  so a sign-out reports `false` rather than pretending the device is clean.
  *  Module scope on purpose: it reads no component state, so it never becomes a
  *  hook dependency that changes on every render. */
-const verifiedRetirement = (retirement: Promise<boolean>): Promise<void> =>
-	retirement.then((verified) => {
-		if (verified) return;
+const verifiedRetirement = (
+	retirement: Promise<SecureStorageRefusal | null>,
+): Promise<void> =>
+	retirement.then((refusal) => {
+		if (refusal === null) return;
+		/* The sanitised cause rides on `cause` (plain data, no platform message) so
+		 *  `noteError` can put it in the store and the screens can say the DEVICE
+		 *  refused, with its code. It used to be dropped here, leaving only a bare
+		 *  diagnostic surface (PR #216 evidence). */
 		throw new RelayError(
 			"rejected",
 			"Cannot confirm those local drafts were removed",
-			{ surface: "diagnostic", detail: "" },
+			{
+				surface: "diagnostic",
+				detail: "",
+				cause: refusal,
+				diagnostic: `secure-storage ${refusal.step} ${refusal.kind}${refusal.code ? ` ${refusal.code}` : ""}`,
+			},
 		);
 	});
+
+/** The keystore refusal a typed failure carries, if any. */
+const storageRefusalOf = (error: RelayError): SecureStorageRefusal | null =>
+	isSecureStorageRefusal(error.cause) ? error.cause : null;
 
 /** A credential renewal's failure, as the ACCOUNT-level outcome the Computers banner
  * already renders. Nothing here deletes a credential: only a confirmed refusal from
@@ -637,20 +702,31 @@ export const ConnectionProvider = ({
 			preserveUnscoped = false,
 			afterCleanup?: () => Promise<void>,
 			policy: "retire" | "reauthenticate" = "retire",
-		): Promise<boolean> => {
+		): Promise<SecureStorageRefusal | null> => {
 			agentAvatarCache.clear();
+			/* Resolves `null` when every deletion was verified, else the SANITISED reason
+			 *  (step + platform code). The rejection reason used to be discarded here, so
+			 *  a Keychain refusal reached the reader as an unexplained "Not connected".
+			 *  `clear` is the fallback step: everything `retire()` does not tag itself is
+			 *  part of the purge. */
 			return startupAuthorizationLifecycle
 				.retire(preserveUnscoped, afterCleanup, policy)
 				.then(
-					() => true,
-					() => {
+					() => null,
+					(reason: unknown) => {
+						const storageRefusal = describeSecureStorageRefusal(
+							reason,
+							"clear",
+						);
 						if (mountedRef.current) {
 							setBusy(false);
-							connectionStore
-								.getState()
-								.noteFailure({ surface: "diagnostic", displayableMessage: "" });
+							connectionStore.getState().noteFailure({
+								surface: "diagnostic",
+								displayableMessage: "",
+								storageRefusal,
+							});
 						}
-						return false;
+						return storageRefusal;
 					},
 				);
 		},
@@ -680,6 +756,7 @@ export const ConnectionProvider = ({
 				 *  merely stated. */
 				displayableMessage: error.displayableMessage,
 				retryAfterMs: error.retryAfterMs ?? null,
+				storageRefusal: storageRefusalOf(error),
 			});
 		},
 		[revokeAuthorization],
@@ -1049,9 +1126,27 @@ export const ConnectionProvider = ({
 		async (
 			{ url, password, allowInsecure, computerId }: ConnectCustomInput,
 			restoring = false,
-		) => {
+		): Promise<ConnectCustomOutcome> => {
 			setBusy(true);
 			let admission: StartupRouteAdmission | null = null;
+			/* The outcome is read from the store, never assembled per return path; see
+			 *  `ConnectCustomOutcome`. */
+			const outcome = (): ConnectCustomOutcome => {
+				if (admission && !admission.isCurrent())
+					return { status: "superseded" };
+				const state = connectionStore.getState();
+				if (
+					state.phase === "live" ||
+					state.phase === "degraded" ||
+					state.phase === "re-minting"
+				)
+					return { status: "live" };
+				return {
+					status: "refused",
+					detail: state.detail,
+					storageRefusal: state.storageRefusal,
+				};
+			};
 			try {
 				const validated = validateCustomBaseUrl(url, { allowInsecure });
 				if (!validated.ok) {
@@ -1064,7 +1159,7 @@ export const ConnectionProvider = ({
 						displayableMessage: validated.reason,
 					});
 					retryRef.current = null;
-					return;
+					return outcome();
 				}
 				const route = validated.route;
 				const privacy = restoring
@@ -1073,9 +1168,9 @@ export const ConnectionProvider = ({
 				admission = beginRoute(route);
 				await privacy;
 				await nativeCredentialRetirement.settled();
-				if (!admission.isCurrent()) return;
+				if (!admission.isCurrent()) return outcome();
 				if (!(await authenticateCustomRoute(route, password, admission)))
-					return;
+					return outcome();
 				const client = createRelayClient({
 					route,
 					onResponse: (facts) => {
@@ -1091,13 +1186,14 @@ export const ConnectionProvider = ({
 				});
 
 				await goLive(client, admission, computerId);
+				return outcome();
 			} catch (error) {
-				if (admission && !admission.isCurrent()) return;
+				if (admission && !admission.isCurrent()) return outcome();
 				if (error instanceof RelayError) {
-					noteError(error, () =>
-						connectCustom({ url, password, allowInsecure, computerId }),
-					);
-					return;
+					noteError(error, async () => {
+						await connectCustom({ url, password, allowInsecure, computerId });
+					});
+					return outcome();
 				}
 				throw error;
 			} finally {
@@ -1869,7 +1965,7 @@ export const ConnectionProvider = ({
 		const validated = validateCustomBaseUrl(input.url, {
 			allowInsecure: input.allowInsecure,
 		});
-		if (!validated.ok) return;
+		if (!validated.ok) return null;
 		const tunnel: SavedTunnel = {
 			baseUrl: validated.route.baseUrl,
 			/* An empty field means "not remembered", which is a state the record
@@ -1877,8 +1973,12 @@ export const ConnectionProvider = ({
 			password: input.password.length > 0 ? input.password : null,
 			allowInsecure: input.allowInsecure,
 		};
-		await writeSavedTunnel(tunnel);
+		const written = await writeSavedTunnel(tunnel);
 		setSavedTunnel(tunnel);
+		return {
+			persistent: written.persistent,
+			storageRefusal: written.storageRefusal ?? null,
+		};
 	}, []);
 
 	const removeCustomRoute = useCallback(async () => {
@@ -2154,6 +2254,7 @@ export const ConnectionProvider = ({
 	const surface = useConnectionState((state) => state.surface);
 	const detail = useConnectionState((state) => state.detail);
 	const retryAfterMs = useConnectionState((state) => state.retryAfterMs);
+	const storageRefusal = useConnectionState((state) => state.storageRefusal);
 	const computers = useConnectionState((state) => state.computers);
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
@@ -2189,12 +2290,34 @@ export const ConnectionProvider = ({
 			detail,
 			retryAfterMs,
 			subject,
+			storageRefusal,
 		});
-	}, [computers, detail, lastError, retryAfterMs, route, surface, tunnelId]);
+	}, [
+		computers,
+		detail,
+		lastError,
+		retryAfterMs,
+		route,
+		storageRefusal,
+		surface,
+		tunnelId,
+	]);
+
+	const connectCustomQuiet = useCallback(
+		async (input: ConnectCustomInput): Promise<void> => {
+			await connectCustom(input);
+		},
+		[connectCustom],
+	);
+	const connectCustomOutcome = useCallback(
+		(input: ConnectCustomInput) => connectCustom(input),
+		[connectCustom],
+	);
 
 	const value = useMemo<Connection>(
 		() => ({
-			connectCustom,
+			connectCustom: connectCustomQuiet,
+			connectCustomOutcome,
 			signInWithRadient,
 			refreshComputers,
 			billing: computers[0]?.billing ?? null,
@@ -2223,7 +2346,8 @@ export const ConnectionProvider = ({
 			refusal,
 		}),
 		[
-			connectCustom,
+			connectCustomQuiet,
+			connectCustomOutcome,
 			signInWithRadient,
 			refreshComputers,
 			computers,

@@ -1340,7 +1340,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #217 merged with main d46e8535 (#214 user bubble squash): src carries
 	// both sides, re-derived with --print over the staged merged tree. Source
 	// identity only, no rendered or native proof.
-	src: "f8a5e006d9038b719ba1fab515c715585dc9e25a47d4de702bb8c9566b6c7c5c",
+	// fix/refused-connect-feedback: own-tunnel stays on the form with the reason
+	// when Save and connect is refused, the keystore refusal's sanitised cause,
+	// seven catalogue keys and tests; only `src` moves, re-derived with --print
+	// over the staged tree. Source identity only, no rendered or native proof.
+	src: "55c7a132970dfcbfb7684eda75e9a61645b359cf3d6206455c9db5638f5167f7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

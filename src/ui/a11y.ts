@@ -239,6 +239,11 @@ export const CONTROL = {
 	customUrlField: "custom-url-field",
 	customPasswordField: "custom-password-field",
 	customConnect: "custom-connect",
+	/** Retry on the own-tunnel screen's inline refusal: Save and connect again with
+	 *  the draft the reader typed, which the refusal deliberately leaves in place. */
+	ownTunnelConnectRetry: "own-tunnel-connect-retry",
+	/** Continue past the "connected, but not saved" notice to home. */
+	ownTunnelUnsavedContinue: "own-tunnel-unsaved-continue",
 	customInsecureOptIn: "custom-insecure-opt-in",
 	/** The home header's computer chip (`● Mac mini ▾`), opening the switcher
 	 *  sheet. The panel's one switcher is its footer row, `sidebarComputers`:
@@ -1422,6 +1427,10 @@ export const REGION = {
 	connectionErrorSignIn: "connection-error-sign-in",
 	connectionErrorWaiting: "connection-error-waiting",
 	connectionDetails: "connection-details",
+	/** The own-tunnel screen's inline "Couldn't connect" alert, carrying the reason. */
+	ownTunnelConnectRefused: "own-tunnel-connect-refused",
+	/** The own-tunnel screen's notice that the keystore refused to keep the route. */
+	ownTunnelUnsaved: "own-tunnel-unsaved",
 	connectionErrorClearsByItself: "connection-error-clears-by-itself",
 	connectionErrorRelayNotInstalled: "connection-error-relay-not-installed",
 	connectionErrorCertificate: "connection-error-certificate",

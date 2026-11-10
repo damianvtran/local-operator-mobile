@@ -102,5 +102,33 @@
 	"mobile.computers.transport.custom": {
 		"role": "meta",
 		"note": "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case."
+	},
+	"mobile.computers.connect_refused.title": {
+		"role": "heading",
+		"note": "Title of an inline error on the \"Your own tunnel\" screen, shown when Save and connect was refused. The screen stays open with the address and password still filled in. Short, sentence case, no final full stop."
+	},
+	"mobile.computers.connect_refused.generic": {
+		"role": "status",
+		"note": "Body of the \"Couldn't connect\" error when the computer gave no more specific reason. Reassures the user that what they typed is kept, and tells them to check it and retry (a Retry button follows)."
+	},
+	"mobile.computers.storage_refused.with_code": {
+		"role": "status",
+		"note": "Shown when the phone's own secure storage (iOS Keychain / Android Keystore) refused to read, delete or save the app's sign-in data. {code} is a technical platform code such as \"ERR_KEY_CHAIN -34018\" for support: keep it exactly as written, untranslated, inside the parentheses. \"Reinstall the app\" is the remedy when retrying keeps failing."
+	},
+	"mobile.computers.storage_refused.no_code": {
+		"role": "status",
+		"note": "Same message as mobile.computers.storage_refused.with_code when the platform gave no code: the phone's own secure storage (iOS Keychain / Android Keystore) refused the request."
+	},
+	"mobile.computers.save_refused.title": {
+		"role": "heading",
+		"note": "Title of a warning on the \"Your own tunnel\" screen: the connection succeeded, but the phone's secure storage refused to save the address and password, so they are lost when the app restarts. Short, sentence case, no final full stop."
+	},
+	"mobile.computers.save_refused.until_restart": {
+		"role": "help",
+		"note": "Follows the secure-storage refusal sentence in the \"Connected, but not saved\" warning. Explains the consequence: it works now, but the address must be entered again after the app restarts."
+	},
+	"mobile.computers.save_refused.continue": {
+		"role": "button",
+		"note": "Button in the \"Connected, but not saved\" warning that continues to the home screen. One word, sentence case."
 	}
 }

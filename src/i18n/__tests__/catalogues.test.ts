@@ -141,7 +141,9 @@ const NAMESPACES = [
 		name: "mobile.computers",
 		messages: computers,
 		context: computersContext,
-		expected: 26, // main's 24 + the branch's two transport keys
+		/* main's 24 + the two transport keys + seven refused-connect keys (own-tunnel
+		 * "Couldn't connect", the secure-storage refusal, "Connected, but not saved"). */
+		expected: 33,
 	},
 	{
 		name: "mobile.notifications",
@@ -269,7 +271,12 @@ describe("the English catalogues", () => {
 		 * Bridge entry's loading and unavailable names and "Open Team Bridge".
 		 * PR #211 merged with main a563a6f3: 566 + 3, verified by counting
 		 * unique `en` keys over the merged tree. */
-		expect(total).toBe(569);
+		/* Plus seven for refused-connect feedback on the own-tunnel screen: the
+		 * inline "Couldn't connect" title and generic body, the secure-storage
+		 * refusal sentence with and without a platform code, and the "Connected,
+		 * but not saved" title, consequence and Continue. 569 + 7, verified by the
+		 * generator's own count (576 keys). */
+		expect(total).toBe(576);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
