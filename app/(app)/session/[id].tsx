@@ -793,7 +793,7 @@ export default function Session() {
 					sessionId={sessionId}
 					entries={runtime.entries}
 					loadOlder={runtime.loadOlder}
-					reloadHistory={runtime.reloadHistory}
+					healHistory={runtime.healHistory}
 					retryHistory={runtime.retryHistory}
 					historyErrorScope={runtime.historyErrorScope}
 					loadingOlder={runtime.loadingOlder}

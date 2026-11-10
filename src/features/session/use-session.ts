@@ -46,6 +46,7 @@ import type { ImageBytes, RelayError } from "@/relay";
 import { readEntry } from "@/state";
 import { isUsable } from "@/state/connection-store";
 import { HistoryWindow } from "./history-window";
+import { createResumeGate } from "./resume-gate";
 import {
 	type ProjectionOwner,
 	sameProjectionOwner,
@@ -77,9 +78,13 @@ export interface SessionRuntime {
 	reloadHistory: () => Promise<void>;
 	/** Repeats the history request that failed (newest refresh or older page). */
 	retryHistory: () => Promise<void>;
+	/** Continues filling the newest disconnected gap with a fresh budget
+	 *  (`HistoryWindow.heal`); the quiet gap row's Load action. */
+	healHistory: () => Promise<void>;
 	loadingOlder: boolean;
 	historyError: string | null;
 	hasOlder: boolean;
+	/** A hole the automatic fill could not close; false while it is filling. */
 	historyGap: boolean;
 	/** Entry id of the first row after the newest hole, where the list marks it. */
 	historyGapBefore: string | null;
@@ -253,12 +258,21 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				return endpoints.history(sessionId, { before });
 			},
 			() => historyChanged((revision) => revision + 1),
+			// A hole left by a background, a network change or a stream reconnect
+			// is filled from the relay without the reader acting (the TestFlight
+			// "Reload from latest messages" report); only a fill that runs out of
+			// budget surfaces, as a quiet notice.
+			{ autoHeal: true },
 		);
 	}, [endpoints, identity, sessionId]);
 	useEffect(() => {
 		historyWindow.activate();
 		return () => historyWindow.retire();
 	}, [historyWindow]);
+	/** The stream effect does not re-run per reader; it reaches the current one
+	 *  through this ref. */
+	const historyRef = useRef(historyWindow);
+	historyRef.current = historyWindow;
 	const loadOlder = useCallback(() => historyWindow.load(), [historyWindow]);
 	const reloadHistory = useCallback(
 		() => historyWindow.reload(),
@@ -268,6 +282,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		() => historyWindow.retry(),
 		[historyWindow],
 	);
+	const healHistory = useCallback(() => historyWindow.heal(), [historyWindow]);
 	const [commands, setCommands] = useSessionValue<SlashCommand[]>(identity, []);
 	const [models, setModels] = useSessionValue<ModelEntry[]>(identity, []);
 	const [error, setError] = useSessionValue<RelayError | null>(identity, null);
@@ -282,8 +297,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * entry points in refs means `reload` calls exactly the work it means to redo.
 	 */
 	const reconnectRef = useRef<() => void>(() => undefined);
-	const rereadRef = useRef<() => void>(() => undefined);
+	/** `history: false` re-reads commands and models only: the resume gate
+	 * dedupes the history read, never the rest of a return (PR #217 R1-4). */
+	const rereadRef = useRef<(history?: boolean) => void>(() => undefined);
 	const streamRef = useRef<{ stop: () => void } | null>(null);
+	/** One gate for every resume signal (foreground, stream recovery). */
+	const resumeGate = useRef(createResumeGate());
+	/** Set when the stream reported a drop or stall; the next frame is the
+	 *  reconnect, and the moment to re-read the newest durable page. */
+	const recovering = useRef(false);
 	/** A pending reconnect after a transient drop; cleared whenever the stream is. */
 	const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastFrameAt = useRef<number | null>(null);
@@ -340,6 +362,15 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					lastFrameAt.current = Date.now();
 					retries.current = 0;
 					sessions.getState().applyFrame(sessionId, frame.data);
+					// First frame after a drop/stall (a network change lands here too:
+					// native has no route signal, see deviceOnline): re-read the newest
+					// page so a hole the capped frame cannot reveal is found and filled.
+					// History only: the reader's own lease fences a late answer after
+					// unmount, which the commands/models re-read (rereadRef) does not.
+					if (recovering.current) {
+						recovering.current = false;
+						if (resumeGate.current()) void historyRef.current.load(true);
+					}
 					setLoading(false);
 					// Any frame proves the path is alive, so a deadline that fired is
 					// retired by the next frame rather than by a timer of its own.
@@ -356,6 +387,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				onState: (status) => {
 					if (!active || !sameProjectionOwner(owner, currentIdentity.current))
 						return;
+					if (status.lastEnd === "error" || status.state === "stalled")
+						recovering.current = true;
 					setFacts((current) => ({
 						...current,
 						state: status.state,
@@ -383,6 +416,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					 * reconnect by hand. Only a failure the reader must resolve (a 401, a
 					 * typed gateway refusal, a client bug) stops and surfaces. */
 					if (isTransient(streamError)) {
+						recovering.current = true;
 						setFacts((current) => ({
 							...current,
 							state: "connecting",
@@ -469,13 +503,22 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	useEffect(() => {
 		const subscription = AppState.addEventListener("change", (state) => {
 			if (state !== "active") return;
+			// A quick flick out and back, or a system sheet, reports "active"
+			// again within moments; the first signal's history read already
+			// covers it. ONLY that read is deduped: the gate is shared with the
+			// stream-recovery frame, so gating the reopen too could leave a
+			// return within 1.5 s of a recovery with a dead stream (PR #217 R1-4).
+			const readHistory = resumeGate.current();
+			// This return re-opens the stream itself; its first frame is not a
+			// second resume.
+			recovering.current = false;
 			lastFrameAt.current = null;
 			setFacts((current) => ({ ...current, ageMs: null }));
 			// A return from the background is exactly a reload: re-open the stream (which
 			// re-syncs from a fresh snapshot) and re-read the requests that may have
 			// failed while the app was suspended.
 			reconnectRef.current();
-			rereadRef.current();
+			rereadRef.current(readHistory);
 		});
 		return () => subscription.remove();
 		// The reload refs are current, but the setter also has an identity lease.
@@ -487,7 +530,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * refusal interrupted, and `Check again` has to be able to run them. */
 	useEffect(() => {
 		const owner = identity;
-		const read = () => {
+		const read = (history = true) => {
 			// Nothing to read, and nothing to ask the relay about (Q10).
 			if (!hasSessionId(sessionId)) return;
 			if (
@@ -497,7 +540,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				return;
 			let cancelled = false;
 			setLoading(true);
-			const readHistory = historyWindow.load(true);
+			const readHistory = history
+				? historyWindow.load(true)
+				: Promise.resolve();
 			Promise.all([
 				// Refresh the newest durable page without discarding paged history.
 				readHistory,
@@ -516,8 +561,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				cancelled = true;
 			};
 		};
-		rereadRef.current = () => {
-			void read();
+		rereadRef.current = (history = true) => {
+			void read(history);
 		};
 		const cancel = read();
 		return cancel;
@@ -776,7 +821,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			historyWindow.loading && historyWindow.loadingScope === "older",
 		historyError: historyWindow.error,
 		hasOlder: historyWindow.hasMore,
-		historyGap: historyWindow.hasGap,
+		// The notice is for a hole the automatic fill could not close; while the
+		// fill runs the list shows nothing (no flash, no layout jump).
+		historyGap: historyWindow.hasGap && historyWindow.healState !== "healing",
+		healHistory,
 		historyGapBefore: historyWindow.gapBefore,
 		historyErrorScope: historyWindow.errorScope,
 		// The shared route can be refused by its catalogue stream before this

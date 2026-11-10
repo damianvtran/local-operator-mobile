@@ -639,7 +639,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge drawer switch and this PR's composer work, so it has neither
 	// parent's digest; re-pinned with --print over the staged merged tree.
 	// Source admission only, no rendered or native proof refreshed.
-	app: "0797430d8932614cc0286f22373fcb4d89d5dcb23eb3951dc17d89152e4f6e40",
+	// Resume gap heal (#217): the session screen threads `healHistory` (the
+	// quiet gap row's Load) instead of the destructive reload. Merged with main
+	// 2faead90 (#211): re-derived with --print over the staged merged tree;
+	// source identity only, no rendered or native proof.
+	app: "3abf85a4e105ed4bcc1051ac06be0860aa7761aa176cd35cbbc1962368da7001",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1318,11 +1322,25 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #211 merged with main 0ae5fe28 (#213): the merged tree carries both,
 	// so src re-derived with --print over the staged merged tree. Source
 	// identity only, no rendered or native proof.
+	// Resume gap heal: HistoryWindow fills a reconnect/foreground hole by
+	// walking before= pages, a debounced resume gate, and the quiet gap row
+	// copy in all locales. --print over the staged tree; source identity only,
+	// no rendered or native proof.
+	// Round-1 remediation (#217 Q1/R1-1..R1-4): every hole tracked, newest
+	// reads merged against the block above the newest hole, web anchor held
+	// on Load, gap copy reworded. --print over the staged tree; source
+	// identity only, no rendered or native proof.
+	// Merged with main 2faead90 (#211 asks/notice/activity copy): src carries
+	// both sides, re-derived with --print over the staged merged tree. Source
+	// identity only, no rendered or native proof.
 	// PR #214 merged with main 8fec5440 (#211, #212, #213): the merged src tree
 	// carries the user bubble fill and #211's activity line/composer work, so it
 	// has neither parent's digest; re-pinned with --print over the staged merged
 	// tree. Source admission only, no rendered or native proof refreshed.
-	src: "e2d1978f22461b3cdea32498970a9b66f03eaf2d01092e33c77e379d6f1c9fdc",
+	// #217 merged with main d46e8535 (#214 user bubble squash): src carries
+	// both sides, re-derived with --print over the staged merged tree. Source
+	// identity only, no rendered or native proof.
+	src: "f8a5e006d9038b719ba1fab515c715585dc9e25a47d4de702bb8c9566b6c7c5c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

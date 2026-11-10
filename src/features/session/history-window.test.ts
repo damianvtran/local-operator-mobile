@@ -964,3 +964,444 @@ describe("a reader paged to the beginning never claims it across a hole (PR #207
 		await older;
 	});
 });
+
+/* ------------------------------------------------------------------------
+ * Automatic gap healing (TestFlight report: "Reload from latest messages"
+ * after returning to a running session). The relay serves `before=` pages
+ * only: no `after=` read and no SSE replay cursor, so the reader walks back
+ * from the newer island until a page overlaps the rows held below the hole.
+ * ---------------------------------------------------------------------- */
+describe("a reconnect or foreground hole heals itself", () => {
+	/** The relay's own cursor contract: rows strictly older than `before`, and
+	 * an unknown cursor answered as end-of-history (`_journal_page`), never as
+	 * an arbitrary slice. */
+	const relay = (journal: () => TranscriptEntry[], limit = 80) =>
+		vi.fn(async (before?: string): Promise<HistoryResponse> => {
+			const rows = journal();
+			const end =
+				before === undefined
+					? rows.length
+					: rows.findIndex((entry) => entry.id === before);
+			if (end < 0) return { entries: [], has_more: false };
+			const start = Math.max(0, end - limit);
+			return { entries: rows.slice(start, end), has_more: start > 0 };
+		});
+	const settle = async (window: HistoryWindow) => {
+		// The fill starts on a microtask after accept(); let it run to the end.
+		for (let turn = 0; turn < 50 && window.healState === "healing"; turn++)
+			await new Promise((resolve) => setTimeout(resolve, 0));
+	};
+	const contiguous = (window: HistoryWindow) => {
+		const seq = window.visibleRows.map((entry) => Number(entry.id.slice(1)));
+		return seq.every(
+			(value, at) => at === 0 || value === (seq[at - 1] ?? 0) + 1,
+		);
+	};
+	const opened = async (
+		journal: TranscriptEntry[],
+		retained: () => TranscriptEntry[],
+		options: ConstructorParameters<typeof HistoryWindow>[2] = {
+			autoHeal: true,
+		},
+	) => {
+		const fetch = relay(retained);
+		const changed = vi.fn();
+		const window = new HistoryWindow(fetch, changed, options);
+		window.accept(capped(journal, 1200));
+		await window.load();
+		return { fetch, changed, window };
+	};
+
+	it("(a) a resume frame that overlaps the held tail merges with no gap and no extra read", async () => {
+		const journal = sequence(1500);
+		const { fetch, window } = await opened(journal, () =>
+			journal.slice(0, 1260),
+		);
+		const calls = fetch.mock.calls.length;
+		window.accept(capped(journal, 1260));
+		await settle(window);
+		expect(window.hasGap).toBe(false);
+		expect(window.healState).toBe("idle");
+		expect(fetch.mock.calls.length).toBe(calls);
+		// The newest-page refresh a foreground fires also overlaps: still no gap.
+		await window.load(true);
+		expect(window.hasGap).toBe(false);
+		const shown = ids(window.visibleRows);
+		expect(new Set(shown).size).toBe(shown.length);
+		expect(shown.at(-1)).toBe("q01259");
+		expect(contiguous(window)).toBe(true);
+	});
+
+	it("(b) a disjoint resume frame is back-filled automatically until it overlaps, with no notice", async () => {
+		const journal = sequence(1500);
+		const { fetch, window } = await opened(journal, () => journal);
+		const calls = fetch.mock.calls.length;
+		window.accept(capped(journal, 1500));
+		// The render that discovers the hole is already "healing": no notice frame.
+		expect(window.hasGap).toBe(true);
+		expect(window.healState).toBe("healing");
+		await settle(window);
+		expect(fetch.mock.calls.slice(calls)).toEqual([
+			["q01421"],
+			["q01341"],
+			["q01261"],
+		]);
+		expect(window.hasGap).toBe(false);
+		expect(window.gapBefore).toBeNull();
+		expect(window.healState).toBe("idle");
+		// 1041: the older page the reader had already loaded stays loaded.
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1500)));
+		expect(contiguous(window)).toBe(true);
+	});
+
+	it("(b) a disjoint newest-page refresh (foreground HTTP read) heals the same way", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window } = await opened(journal, () => retained);
+		retained = journal;
+		await window.load(true);
+		await settle(window);
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1500)));
+	});
+
+	it("(c) a hole larger than the budget stops quietly, and Load continues from where it stopped", async () => {
+		const journal = sequence(2400);
+		const { fetch, window, changed } = await opened(journal, () => journal);
+		const calls = fetch.mock.calls.length;
+		window.accept(capped(journal, 2400));
+		await settle(window);
+		// 5 pages x 80 rows: the budget, not the hole, ended the walk.
+		expect(fetch.mock.calls.length - calls).toBe(5);
+		expect(window.hasGap).toBe(true);
+		expect(window.healState).toBe("exhausted");
+		expect(window.gapBefore).toBe("q01921");
+		expect(contiguous(window)).toBe(false);
+		expect(changed).toHaveBeenCalled();
+		// The notice's Load: a fresh budget from the same hole, nothing reset.
+		await window.heal();
+		expect(fetch.mock.calls[calls + 5]).toEqual(["q01921"]);
+		// Still more than one budget away (1200..1520): progress, then quiet again.
+		expect(window.gapBefore).toBe("q01521");
+		expect(window.healState).toBe("exhausted");
+		await window.heal();
+		expect(fetch.mock.calls.length - calls).toBe(15);
+		expect(window.hasGap).toBe(false);
+		expect(window.healState).toBe("idle");
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 2400)));
+		// The oldest-edge cursor was never touched by the fill.
+		expect(window.cursor).toBe("q01041");
+	});
+
+	it("(c) a hung page shows the notice at the time budget; the late page still closes the hole", async () => {
+		vi.useFakeTimers();
+		try {
+			const journal = sequence(1500);
+			const late = deferred<HistoryResponse>();
+			let hang = false;
+			const base = relay(() => journal);
+			const fetch = vi.fn((before?: string) =>
+				hang ? late.promise : base(before),
+			);
+			const window = new HistoryWindow(fetch, () => {}, {
+				budget: { pages: 5, rows: 400, ms: 3000 },
+			});
+			window.accept(capped(journal, 1200));
+			await window.load();
+			// Frame 1279..1357: the page before it (1199..1278) overlaps at 1199.
+			window.accept(capped(journal, 1358));
+			expect(window.hasGap).toBe(true);
+			hang = true;
+			const healing = window.heal();
+			expect(window.healState).toBe("healing");
+			await vi.advanceTimersByTimeAsync(3000);
+			expect(window.healState).toBe("exhausted");
+			hang = false;
+			late.resolve(await base("q01279"));
+			await healing;
+			expect(window.hasGap).toBe(false);
+			expect(window.healState).toBe("idle");
+			expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1358)));
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("(c) a failed or unavailable gap page ends the fill as a quiet notice, never a loop", async () => {
+		const journal = sequence(1500);
+		let mode: "fail" | "unavailable" | "ok" = "fail";
+		const base = relay(() => journal);
+		const fetch = vi.fn((before?: string) => {
+			if (before !== undefined && before > "q01300" && mode === "fail")
+				return Promise.reject(new Error("offline"));
+			if (before !== undefined && before > "q01300" && mode === "unavailable")
+				return Promise.resolve({
+					entries: [],
+					has_more: false,
+					unavailable: "x",
+				});
+			return base(before);
+		});
+		const window = new HistoryWindow(fetch, () => {}, { autoHeal: true });
+		window.accept(capped(journal, 1200));
+		await window.load();
+		const calls = fetch.mock.calls.length;
+		window.accept(capped(journal, 1500));
+		await settle(window);
+		expect(fetch.mock.calls.length - calls).toBe(1);
+		expect(window.healState).toBe("exhausted");
+		expect(window.error).toBeNull();
+		mode = "unavailable";
+		await window.heal();
+		expect(window.healState).toBe("exhausted");
+		expect(window.hasGap).toBe(true);
+		mode = "ok";
+		await window.heal();
+		expect(window.hasGap).toBe(false);
+	});
+
+	it("(e) healing never moves or re-keys a held row: same objects, upper island order kept, live tail still last", async () => {
+		const journal = sequence(1500);
+		const late = deferred<HistoryResponse>();
+		const base = relay(() => journal);
+		let hold = true;
+		const fetch = vi.fn((before?: string) =>
+			before === "q01421" && hold ? late.promise : base(before),
+		);
+		const window = new HistoryWindow(fetch, () => {}, { autoHeal: true });
+		window.accept(capped(journal, 1200));
+		await window.load();
+		window.accept(capped(journal, 1500));
+		const before = [...window.visibleRows];
+		// A live frame lands while the first gap page is in flight: the tail grows.
+		const grown = journal.concat(row("q01500"), row("q01501"));
+		window.accept(capped(grown, 1502));
+		hold = false;
+		late.resolve(await base("q01421"));
+		await settle(window);
+		expect(window.hasGap).toBe(false);
+		const after = window.visibleRows;
+		// Every row that was on screen is the SAME object (no re-key, no flicker)
+		// and keeps its relative order.
+		const kept = after.filter((entry) => before.includes(entry));
+		expect(kept).toEqual(before);
+		expect(after.at(-1)?.id).toBe("q01501");
+		expect(ids(after)).toEqual(ids(grown.slice(1041, 1502)));
+	});
+
+	it("(f) the PR #207 1200/1500 replay ends with zero missing rows and no duplicates", async () => {
+		const journal = sequence(1500);
+		const { window } = await opened(journal, () => journal);
+		window.accept(capped(journal, 1500));
+		await settle(window);
+		while (window.hasMore && !window.error) await window.load();
+		expect(missing(journal, window)).toBe(0);
+		expect(ids(window.visibleRows)).toEqual(ids(journal));
+		expect(new Set(ids(window.visibleRows)).size).toBe(1500);
+		expect(claimsBeginning(window)).toBe(true);
+	});
+
+	it("(f) a reader already paged to the beginning heals a reconnect hole to the full journal", async () => {
+		const journal = sequence(1500);
+		const fetch = relay(() => journal);
+		const window = new HistoryWindow(fetch, () => {}, { autoHeal: true });
+		window.accept(capped(journal, 1200));
+		await window.load();
+		while (window.hasMore && !window.error) await window.load();
+		window.accept(capped(journal, 1500, false));
+		await settle(window);
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal));
+	});
+
+	it("reload and retire fence an in-flight fill", async () => {
+		const journal = sequence(1500);
+		const late = deferred<HistoryResponse>();
+		const base = relay(() => journal);
+		const fetch = vi.fn((before?: string) =>
+			before === "q01421" ? late.promise : base(before),
+		);
+		const window = new HistoryWindow(fetch, () => {}, { autoHeal: true });
+		window.accept(capped(journal, 1200));
+		await window.load();
+		window.accept(capped(journal, 1500));
+		await Promise.resolve();
+		window.retire();
+		late.resolve(await base("q01421"));
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		expect(window.healState).toBe("idle");
+		expect(ids(window.rows)).not.toContain("q01341");
+	});
+
+	it("without autoHeal the bare PR #207 detection contract is unchanged", async () => {
+		const journal = sequence(1500);
+		const { fetch, window } = await opened(journal, () => journal, {});
+		const calls = fetch.mock.calls.length;
+		window.accept(capped(journal, 1500));
+		await Promise.resolve();
+		expect(window.hasGap).toBe(true);
+		expect(window.healState).toBe("idle");
+		expect(fetch.mock.calls.length).toBe(calls);
+	});
+
+	/* PR #217 Q1. A resume fires the newest-page refresh and the gap fill in the
+	 * same tick. The newest page holds 80 rows, one more than the capped frame's
+	 * 79, so its oldest row is one the reader does not hold. It used to merge at
+	 * the LIST HEAD, and the fill then took it for its overlap and closed the
+	 * hole with nothing inserted. Every arrival order must leave zero missing. */
+	const gaps = (window: HistoryWindow) => {
+		const seq = window.visibleRows.map((entry) => Number(entry.id.slice(1)));
+		return seq.filter((value, at) => at > 0 && value !== (seq[at - 1] ?? 0) + 1)
+			.length;
+	};
+	/** A relay whose answers are held until the test releases them, so the two
+	 * reads can be made to land in a chosen order. */
+	const gatedOpen = async (
+		journal: TranscriptEntry[],
+		retained: () => TranscriptEntry[],
+	) => {
+		const inner = relay(retained);
+		const queue: { before?: string; release: () => void }[] = [];
+		let gate = false;
+		const fetch = vi.fn((before?: string) =>
+			gate
+				? new Promise<HistoryResponse>((resolve) =>
+						queue.push({
+							before,
+							release: () => void inner(before).then(resolve),
+						}),
+					)
+				: inner(before),
+		);
+		const window = new HistoryWindow(fetch, vi.fn(), { autoHeal: true });
+		window.accept(capped(journal, 1200));
+		await window.load();
+		gate = true;
+		const take = (newest: boolean) => {
+			const at = queue.findIndex(
+				(call) => (call.before === undefined) === newest,
+			);
+			const [call] = queue.splice(at, 1);
+			call?.release();
+		};
+		return { window, queue, take, ungate: () => (gate = false) };
+	};
+	const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+	it("(Q1) a newest refresh racing the fill, newest page landing first, loses no row", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window, queue, take, ungate } = await gatedOpen(
+			journal,
+			() => retained,
+		);
+		retained = journal.slice(0, 1350);
+		window.accept(capped(journal, 1350));
+		await flush(); // the fill's microtask has issued its page
+		void window.load(true);
+		await flush(); // load() issues its read on a microtask too
+		expect(queue.map((call) => call.before)).toEqual(["q01271", undefined]);
+		ungate();
+		take(true);
+		await flush();
+		// The 80th newest-page row sits at the newer block's bottom, never the head.
+		expect(window.visibleRows[0]?.id).toBe("q01041");
+		expect(window.gapBefore).toBe("q01270");
+		take(false);
+		await settle(window);
+		expect(window.hasGap).toBe(false);
+		expect(window.healState).toBe("idle");
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1350)));
+	});
+
+	it("(Q1) the same race with the gap page landing first loses no row", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window, take, ungate } = await gatedOpen(journal, () => retained);
+		retained = journal.slice(0, 1350);
+		window.accept(capped(journal, 1350));
+		await flush();
+		void window.load(true);
+		ungate();
+		take(false);
+		await flush();
+		take(true);
+		await settle(window);
+		await flush();
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1350)));
+	});
+
+	it("(Q1) a refresh fired in the same tick as the hole is merged before the fill reads", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { fetch, window } = await opened(journal, () => retained);
+		const calls = fetch.mock.calls.length;
+		retained = journal.slice(0, 1350);
+		window.accept(capped(journal, 1350));
+		const refresh = window.load(true);
+		await refresh;
+		await settle(window);
+		// The fill waited for the refresh, so it walks from the boundary the
+		// refresh moved (q01270), not the frame's oldest row.
+		expect(fetch.mock.calls.slice(calls)).toEqual([[undefined], ["q01270"]]);
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1350)));
+	});
+
+	it("(Q1) a 1000-row hole under the same race reaches the budget and keeps the notice", async () => {
+		const journal = sequence(2400);
+		let retained = journal.slice(0, 1200);
+		const { window, take, ungate } = await gatedOpen(journal, () => retained);
+		retained = journal.slice(0, 2200);
+		window.accept(capped(journal, 2200));
+		await flush();
+		void window.load(true);
+		await flush();
+		ungate();
+		take(true); // the shape QA saw: the newest page lands first
+		await flush();
+		take(false);
+		await settle(window);
+		await flush();
+		expect(window.healState).toBe("exhausted");
+		expect(window.hasGap).toBe(true);
+		// One hole, at the boundary; nothing misplaced above the held history.
+		expect(gaps(window)).toBe(1);
+		expect(window.visibleRows[0]?.id).toBe("q01041");
+		expect(claimsBeginning(window)).toBe(false);
+		for (let turn = 0; turn < 5 && window.hasGap; turn++) await window.heal();
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 2200)));
+	});
+
+	/* PR #217 R1-1. Two resumes leave two holes. Closing the newer one must not
+	 * declare the transcript complete while the older one is still open. */
+	it("(R1-1) two resumes, the first past the budget: the older hole stays marked until it is filled", async () => {
+		const journal = sequence(4000);
+		let retained = journal.slice(0, 2300);
+		const { window } = await opened(journal, () => retained);
+		window.accept(capped(journal, 2300));
+		await settle(window);
+		expect(window.healState).toBe("exhausted");
+		const older = window.gapBefore;
+		expect(older).not.toBeNull();
+		retained = journal.slice(0, 2600);
+		window.accept(capped(journal, 2600));
+		await settle(window);
+		// The small newer hole closed; the older one is still open and marked.
+		expect(window.hasGap).toBe(true);
+		expect(window.healState).toBe("exhausted");
+		expect(gaps(window)).toBe(1);
+		expect(window.gapBefore).not.toBeNull();
+		// Paging to the retained beginning still does not claim it.
+		for (let turn = 0; turn < 40 && window.hasMore; turn++) await window.load();
+		expect(window.hasMore).toBe(false);
+		expect(claimsBeginning(window)).toBe(false);
+		for (let turn = 0; turn < 10 && window.hasGap; turn++) await window.heal();
+		expect(window.hasGap).toBe(false);
+		expect(missing(journal.slice(0, 2600), window)).toBe(0);
+		expect(gaps(window)).toBe(0);
+		expect(claimsBeginning(window)).toBe(true);
+	});
+});
