@@ -46,10 +46,12 @@ vi.mock("@/ui/components/textarea", async () => {
 			testID: string;
 			disabled?: boolean;
 			value: string;
+			placeholderMaxLines?: number;
 		}) =>
 			h("textarea", {
 				"aria-label": p.label,
 				"data-testid": p.testID,
+				"data-placeholder-lines": p.placeholderMaxLines ?? "grow",
 				disabled: p.disabled,
 				defaultValue: p.value,
 			}),
@@ -198,6 +200,17 @@ describe("bridge composer field", () => {
 		);
 		expect(html.indexOf(CONTROL.teamBridgeMessageInput)).toBeLessThan(
 			html.indexOf(CONTROL.teamBridgeSend),
+		);
+	});
+
+	it("lets a long channel placeholder wrap whole instead of cutting it", () => {
+		// An integrated web field is a <textarea>: a one-line cap clipped the
+		// second line of "Message <long name>" (after frame at 390 pt).
+		const html = renderToStaticMarkup(
+			createElement(BridgeComposerField, props()),
+		);
+		expect(tagOf(html, CONTROL.teamBridgeMessageInput)).toContain(
+			'data-placeholder-lines="grow"',
 		);
 	});
 

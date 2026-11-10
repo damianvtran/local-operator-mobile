@@ -205,10 +205,14 @@ export function BridgeComposerField({
 					label={label}
 					hideLabel
 					integrated
+					/* No `placeholderMaxLines={1}` (the agent composer's choice): its
+					 *  placeholder is short, but "Message {title}" carries the channel
+					 *  name, and an `integrated` field stays a <textarea> on web, which
+					 *  wraps the placeholder and does not ellipsize it — capped at one
+					 *  line, the second line was CUT (after frame, 390 pt, a 38-character
+					 *  name). Uncapped, the field keeps the kit's shipped growth (D20): a
+					 *  wrapped placeholder is shown whole, as before this change. */
 					placeholder={placeholder}
-					/* One line of placeholder: the resting pill must not grow with a
-					 *  long channel name in "Message {title}" (agent composer §2.5 D1). */
-					placeholderMaxLines={1}
 					value={draft}
 					onChangeText={onDraftChange}
 					disabled={sending}
