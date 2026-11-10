@@ -39,8 +39,8 @@
 	"mobile.session.history.stalled": "无法继续加载更早的消息。请重试或重新打开此对话。",
 	"mobile.session.history.beginning": "已保留消息的起点",
 	"mobile.session.history.empty": "没有保留的消息",
-	"mobile.session.history.gap": "此处缺少消息：断开连接期间遗漏了部分消息。从最新消息重新加载，再加载更早的消息以查看遗漏内容。已加载的页面将被清除。",
-	"mobile.session.history.gap_newest": "上方有部分消息在断开连接期间被遗漏。",
-	"mobile.session.history.reload": "从最新消息重新加载",
-	"mobile.session.history.reload_hint": "返回最新消息，并清除你已加载的更早页面。"
+	"mobile.session.history.gap": "部分较早的消息仍在加载。",
+	"mobile.session.history.gap_newest": "上方部分消息仍在加载。",
+	"mobile.session.history.gap_load": "加载",
+	"mobile.session.history.gap_load_hint": "加载此手机断开连接期间遗漏的消息。"
 }

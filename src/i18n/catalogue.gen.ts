@@ -333,12 +333,12 @@ export type CatalogueKey =
 	| "mobile.session.history.empty"
 	| "mobile.session.history.failed"
 	| "mobile.session.history.gap"
+	| "mobile.session.history.gap_load"
+	| "mobile.session.history.gap_load_hint"
 	| "mobile.session.history.gap_newest"
 	| "mobile.session.history.load"
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
-	| "mobile.session.history.reload"
-	| "mobile.session.history.reload_hint"
 	| "mobile.session.history.stalled"
 	| "mobile.session.pending_echo.earlier_not_sent"
 	| "mobile.session.pending_echo.earlier_went_through"
@@ -854,12 +854,12 @@ export type NoParamKey =
 	| "mobile.session.history.empty"
 	| "mobile.session.history.failed"
 	| "mobile.session.history.gap"
+	| "mobile.session.history.gap_load"
+	| "mobile.session.history.gap_load_hint"
 	| "mobile.session.history.gap_newest"
 	| "mobile.session.history.load"
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
-	| "mobile.session.history.reload"
-	| "mobile.session.history.reload_hint"
 	| "mobile.session.history.stalled"
 	| "mobile.session.pending_echo.earlier_went_through"
 	| "mobile.session.pending_echo.not_confirmed"
@@ -1379,12 +1379,12 @@ export type MessageParams = {
 	"mobile.session.history.empty": NoParams;
 	"mobile.session.history.failed": NoParams;
 	"mobile.session.history.gap": NoParams;
+	"mobile.session.history.gap_load": NoParams;
+	"mobile.session.history.gap_load_hint": NoParams;
 	"mobile.session.history.gap_newest": NoParams;
 	"mobile.session.history.load": NoParams;
 	"mobile.session.history.loading": NoParams;
 	"mobile.session.history.refresh_failed": NoParams;
-	"mobile.session.history.reload": NoParams;
-	"mobile.session.history.reload_hint": NoParams;
 	"mobile.session.history.stalled": NoParams;
 	"mobile.session.pending_echo.earlier_not_sent": { reason: string | number };
 	"mobile.session.pending_echo.earlier_went_through": NoParams;
@@ -1955,13 +1955,13 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.history.beginning": "Beginning of retained messages",
 	"mobile.session.history.empty": "No retained messages",
 	"mobile.session.history.failed": "Earlier messages could not be loaded.",
-	"mobile.session.history.gap": "Messages are missing here: some were missed while disconnected. Reload from the latest messages, then load earlier messages to reach the missing ones. Pages you loaded will be cleared.",
-	"mobile.session.history.gap_newest": "Some messages above were missed while disconnected.",
+	"mobile.session.history.gap": "Some earlier messages are still loading.",
+	"mobile.session.history.gap_load": "Load",
+	"mobile.session.history.gap_load_hint": "Loads the messages missed while this phone was disconnected.",
+	"mobile.session.history.gap_newest": "Some messages above are still loading.",
 	"mobile.session.history.load": "Load earlier messages",
 	"mobile.session.history.loading": "Loading earlier messages…",
 	"mobile.session.history.refresh_failed": "The latest messages could not be loaded.",
-	"mobile.session.history.reload": "Reload from latest messages",
-	"mobile.session.history.reload_hint": "Returns to the latest messages and clears the earlier pages you loaded.",
 	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
 	"mobile.session.pending_echo.earlier_not_sent": "Your earlier message wasn’t sent ({reason}). Tap it above to put it back.",
 	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet.",
@@ -2517,13 +2517,13 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.history.beginning": { role: "status", note: "A successful page says no earlier retained rows remain; not a claim that deleted messages exist." },
 	"mobile.session.history.empty": { role: "status", note: "A successful empty first transcript page; not used for failures or unavailable history." },
 	"mobile.session.history.failed": { role: "status", note: "A transcript page failed or the server explicitly said unavailable; existing visible messages remain. Do not repeat the Try again button's label in this text." },
-	"mobile.session.history.gap": { role: "status", note: "Marker shown at the actual hole in the transcript after a disconnected gap. Says messages are missing HERE, that Reload jumps to the latest durable page, that earlier messages are then loaded to reach the missing ones, and that pages the reader loaded are cleared. Not automatic gap repair." },
-	"mobile.session.history.gap_newest": { role: "status", note: "Compact notice at the newest edge (under the latest messages) that a gap exists further up; the Reload button sits next to it. Short: the full explanation is on the marker at the hole." },
+	"mobile.session.history.gap": { role: "status", note: "Quiet inline row at the actual hole in the transcript, shown only after the automatic gap fill (which runs on every return to the app or reconnect) stopped before reaching the rows below the hole. Calm and factual: the messages exist and are still being fetched; never says they were lost or that the reader did something wrong. The small Load action sits beside it." },
+	"mobile.session.history.gap_load": { role: "button", note: "Small text action beside the gap row: continues fetching the missing messages from where the automatic fill stopped. One short verb; does not jump away from the reader's position or clear anything." },
+	"mobile.session.history.gap_load_hint": { role: "help", note: "Screen-reader hint for the Load action: it fetches the messages missed while the phone was disconnected." },
+	"mobile.session.history.gap_newest": { role: "status", note: "The same quiet row at the newest edge (under the latest messages), pointing UP at the hole further up the transcript. Short; the Load action sits beside it." },
 	"mobile.session.history.load": { role: "button", note: "Button loads one older durable transcript page, never the whole conversation." },
 	"mobile.session.history.loading": { role: "status", note: "Busy state while reading one earlier transcript page." },
 	"mobile.session.history.refresh_failed": { role: "status", note: "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Shown at the newest edge with a Try again button; do not repeat that label. Must not say EARLIER messages failed." },
-	"mobile.session.history.reload": { role: "button", note: "Button: explicit reader-only reset to the latest durable history page. Says it returns to the latest messages; no middle dot or separator (screen readers read it aloud). Draft, attachments, queue and live connection are untouched." },
-	"mobile.session.history.reload_hint": { role: "help", note: "Screen-reader hint for the Reload button: it returns to the latest messages and clears the earlier pages the reader loaded." },
 	"mobile.session.history.stalled": { role: "status", note: "The server returned a cursor that did not advance; automatic reads stop. Name the button's own action (Try again) or reopening; plain wording, no engineering terms." },
 	"mobile.session.pending_echo.earlier_not_sent": { role: "status", note: "Error line above the message box when an earlier message was refused while the user was already typing the next one: it must be clear the EARLIER message failed, not the text in the box. {reason} is the relay's own short reason, in English. Points at the kept message above, which puts itself back on a tap." },
 	"mobile.session.pending_echo.earlier_went_through": { role: "status", note: "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)." },
@@ -3093,13 +3093,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.beginning": "Inicio de los mensajes conservados",
 		"mobile.session.history.empty": "No hay mensajes conservados",
 		"mobile.session.history.failed": "No se pudieron cargar los mensajes anteriores.",
-		"mobile.session.history.gap": "Aquí faltan mensajes: algunos se perdieron durante la desconexión. Recarga desde los mensajes más recientes y luego carga los anteriores para ver los que faltan. Se borrarán las páginas que cargaste.",
-		"mobile.session.history.gap_newest": "Más arriba faltan mensajes que se perdieron durante la desconexión.",
+		"mobile.session.history.gap": "Algunos mensajes anteriores aún se están cargando.",
+		"mobile.session.history.gap_load": "Cargar",
+		"mobile.session.history.gap_load_hint": "Carga los mensajes que se perdieron mientras este teléfono estaba desconectado.",
+		"mobile.session.history.gap_newest": "Algunos mensajes de arriba aún se están cargando.",
 		"mobile.session.history.load": "Cargar mensajes anteriores",
 		"mobile.session.history.loading": "Cargando mensajes anteriores…",
 		"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes.",
-		"mobile.session.history.reload": "Recargar desde los mensajes más recientes",
-		"mobile.session.history.reload_hint": "Vuelve a los mensajes más recientes y borra las páginas anteriores que cargaste.",
 		"mobile.session.history.stalled": "Los mensajes anteriores dejaron de cargarse. Reintenta o abre de nuevo esta conversación.",
 		"mobile.session.pending_echo.earlier_not_sent": "Tu mensaje anterior no se envió ({reason}). Tócalo arriba para recuperarlo.",
 		"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
@@ -3653,13 +3653,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.beginning": "Début des messages conservés",
 		"mobile.session.history.empty": "Aucun message conservé",
 		"mobile.session.history.failed": "Les messages précédents n’ont pas pu être chargés.",
-		"mobile.session.history.gap": "Des messages manquent ici : certains ont été manqués pendant la déconnexion. Rechargez depuis les derniers messages, puis chargez les précédents pour retrouver ceux qui manquent. Les pages chargées seront effacées.",
-		"mobile.session.history.gap_newest": "Plus haut, des messages ont été manqués pendant la déconnexion.",
+		"mobile.session.history.gap": "Certains messages précédents sont encore en cours de chargement.",
+		"mobile.session.history.gap_load": "Charger",
+		"mobile.session.history.gap_load_hint": "Charge les messages manqués pendant que ce téléphone était déconnecté.",
+		"mobile.session.history.gap_newest": "Certains messages plus haut sont encore en cours de chargement.",
 		"mobile.session.history.load": "Charger les messages précédents",
 		"mobile.session.history.loading": "Chargement des messages précédents…",
 		"mobile.session.history.refresh_failed": "Les derniers messages n’ont pas pu être chargés.",
-		"mobile.session.history.reload": "Recharger depuis les derniers messages",
-		"mobile.session.history.reload_hint": "Revient aux derniers messages et efface les pages précédentes que vous avez chargées.",
 		"mobile.session.history.stalled": "Le chargement des messages précédents s’est arrêté. Réessayez ou rouvrez cette conversation.",
 		"mobile.session.pending_echo.earlier_not_sent": "Votre message précédent n’a pas été envoyé ({reason}). Touchez-le ci-dessus pour le récupérer.",
 		"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé.",
@@ -4213,13 +4213,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.beginning": "सहेजे गए संदेशों की शुरुआत",
 		"mobile.session.history.empty": "कोई सहेजा गया संदेश नहीं है",
 		"mobile.session.history.failed": "पहले के संदेश लोड नहीं हो सके।",
-		"mobile.session.history.gap": "यहाँ संदेश छूटे हैं: कनेक्शन टूटने के दौरान कुछ संदेश छूट गए। सबसे नए संदेशों से फिर लोड करें, फिर छूटे हुए संदेश देखने के लिए पहले के संदेश लोड करें। आपके लोड किए गए पेज हट जाएँगे।",
-		"mobile.session.history.gap_newest": "ऊपर कुछ संदेश कनेक्शन टूटने के दौरान छूट गए।",
+		"mobile.session.history.gap": "कुछ पहले के संदेश अभी लोड हो रहे हैं।",
+		"mobile.session.history.gap_load": "लोड करें",
+		"mobile.session.history.gap_load_hint": "इस फ़ोन के डिस्कनेक्ट रहने के दौरान छूटे संदेश लोड करता है।",
+		"mobile.session.history.gap_newest": "ऊपर के कुछ संदेश अभी लोड हो रहे हैं।",
 		"mobile.session.history.load": "पहले के संदेश लोड करें",
 		"mobile.session.history.loading": "पहले के संदेश लोड हो रहे हैं…",
 		"mobile.session.history.refresh_failed": "सबसे नए संदेश लोड नहीं हो सके।",
-		"mobile.session.history.reload": "सबसे नए संदेशों से फिर लोड करें",
-		"mobile.session.history.reload_hint": "सबसे नए संदेशों पर लौटता है और आपके लोड किए गए पहले के पेज हटा देता है।",
 		"mobile.session.history.stalled": "पहले के संदेश लोड होना रुक गया। फिर से कोशिश करें, या यह बातचीत दोबारा खोलें।",
 		"mobile.session.pending_echo.earlier_not_sent": "आपका पिछला संदेश नहीं भेजा गया ({reason})। उसे वापस लाने के लिए ऊपर टैप करें।",
 		"mobile.session.pending_echo.earlier_went_through": "आपका पिछला संदेश भेज दिया गया। नीचे का टेक्स्ट अभी नहीं भेजा गया है।",
@@ -4773,13 +4773,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.beginning": "Начало сохранённых сообщений",
 		"mobile.session.history.empty": "Нет сохранённых сообщений",
 		"mobile.session.history.failed": "Не удалось загрузить предыдущие сообщения.",
-		"mobile.session.history.gap": "Здесь не хватает сообщений: часть была пропущена во время отключения. Перезагрузите с последних сообщений, затем загрузите более ранние, чтобы найти пропущенные. Загруженные страницы будут сброшены.",
-		"mobile.session.history.gap_newest": "Выше часть сообщений была пропущена во время отключения.",
+		"mobile.session.history.gap": "Часть более ранних сообщений ещё загружается.",
+		"mobile.session.history.gap_load": "Загрузить",
+		"mobile.session.history.gap_load_hint": "Загружает сообщения, пропущенные, пока телефон был отключён.",
+		"mobile.session.history.gap_newest": "Часть сообщений выше ещё загружается.",
 		"mobile.session.history.load": "Загрузить предыдущие сообщения",
 		"mobile.session.history.loading": "Загрузка предыдущих сообщений…",
 		"mobile.session.history.refresh_failed": "Не удалось загрузить последние сообщения.",
-		"mobile.session.history.reload": "Перезагрузить с последних сообщений",
-		"mobile.session.history.reload_hint": "Возвращает к последним сообщениям и сбрасывает загруженные ранее страницы.",
 		"mobile.session.history.stalled": "Загрузка предыдущих сообщений остановилась. Повторите или откройте беседу заново.",
 		"mobile.session.pending_echo.earlier_not_sent": "Предыдущее сообщение не отправлено ({reason}). Нажмите на него выше, чтобы вернуть.",
 		"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен.",
@@ -5333,13 +5333,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.beginning": "محفوظ پیغامات کی ابتدا",
 		"mobile.session.history.empty": "کوئی محفوظ پیغامات نہیں ہیں",
 		"mobile.session.history.failed": "پہلے کے پیغامات لوڈ نہیں ہو سکے۔",
-		"mobile.session.history.gap": "یہاں پیغامات غائب ہیں: کنکشن منقطع ہونے کے دوران کچھ پیغامات رہ گئے۔ تازہ ترین پیغامات سے تاریخچہ دوبارہ لوڈ کریں، پھر رہ جانے والے پیغامات دیکھنے کے لیے پہلے کے پیغامات لوڈ کریں۔ آپ کے لوڈ کیے گئے صفحات ہٹ جائیں گے۔",
-		"mobile.session.history.gap_newest": "اوپر کچھ پیغامات کنکشن منقطع ہونے کے دوران رہ گئے۔",
+		"mobile.session.history.gap": "کچھ پہلے کے پیغامات ابھی لوڈ ہو رہے ہیں۔",
+		"mobile.session.history.gap_load": "لوڈ کریں",
+		"mobile.session.history.gap_load_hint": "وہ پیغامات لوڈ کرتا ہے جو اس فون کے منقطع رہنے کے دوران رہ گئے۔",
+		"mobile.session.history.gap_newest": "اوپر کے کچھ پیغامات ابھی لوڈ ہو رہے ہیں۔",
 		"mobile.session.history.load": "پہلے کے پیغامات لوڈ کریں",
 		"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔",
-		"mobile.session.history.reload": "تازہ ترین پیغامات سے تاریخچہ دوبارہ لوڈ کریں",
-		"mobile.session.history.reload_hint": "تازہ ترین پیغامات پر واپس لے جاتا ہے اور آپ کے لوڈ کیے گئے پہلے کے صفحات ہٹا دیتا ہے۔",
 		"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
 		"mobile.session.pending_echo.earlier_not_sent": "آپ کا پچھلا پیغام نہیں بھیجا گیا ({reason})۔ اسے واپس لانے کے لیے اوپر ٹیپ کریں۔",
 		"mobile.session.pending_echo.earlier_went_through": "آپ کا پچھلا پیغام چلا گیا۔ نیچے والا متن ابھی نہیں بھیجا گیا۔",
@@ -5893,13 +5893,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.beginning": "Phần đầu của các tin nhắn đã lưu giữ",
 		"mobile.session.history.empty": "Không có tin nhắn được lưu giữ",
 		"mobile.session.history.failed": "Không tải được tin nhắn trước đó.",
-		"mobile.session.history.gap": "Thiếu tin nhắn ở đây: một số tin đã bị bỏ lỡ khi mất kết nối. Tải lại từ tin nhắn mới nhất, rồi tải các tin trước đó để xem những tin còn thiếu. Các trang bạn đã tải sẽ bị xóa.",
-		"mobile.session.history.gap_newest": "Một số tin nhắn phía trên đã bị bỏ lỡ khi mất kết nối.",
+		"mobile.session.history.gap": "Một số tin nhắn trước đó vẫn đang tải.",
+		"mobile.session.history.gap_load": "Tải",
+		"mobile.session.history.gap_load_hint": "Tải các tin nhắn bị bỏ lỡ khi điện thoại này mất kết nối.",
+		"mobile.session.history.gap_newest": "Một số tin nhắn phía trên vẫn đang tải.",
 		"mobile.session.history.load": "Tải tin nhắn trước đó",
 		"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
 		"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất.",
-		"mobile.session.history.reload": "Tải lại từ tin nhắn mới nhất",
-		"mobile.session.history.reload_hint": "Quay về các tin nhắn mới nhất và xóa các trang trước đó bạn đã tải.",
 		"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
 		"mobile.session.pending_echo.earlier_not_sent": "Tin nhắn trước của bạn chưa được gửi ({reason}). Chạm vào nó ở trên để đưa lại.",
 		"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
@@ -6453,13 +6453,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.beginning": "已保留消息的起点",
 		"mobile.session.history.empty": "没有保留的消息",
 		"mobile.session.history.failed": "无法加载更早的消息。",
-		"mobile.session.history.gap": "此处缺少消息：断开连接期间遗漏了部分消息。从最新消息重新加载，再加载更早的消息以查看遗漏内容。已加载的页面将被清除。",
-		"mobile.session.history.gap_newest": "上方有部分消息在断开连接期间被遗漏。",
+		"mobile.session.history.gap": "部分较早的消息仍在加载。",
+		"mobile.session.history.gap_load": "加载",
+		"mobile.session.history.gap_load_hint": "加载此手机断开连接期间遗漏的消息。",
+		"mobile.session.history.gap_newest": "上方部分消息仍在加载。",
 		"mobile.session.history.load": "加载更早的消息",
 		"mobile.session.history.loading": "正在加载更早的消息…",
 		"mobile.session.history.refresh_failed": "无法加载最新的消息。",
-		"mobile.session.history.reload": "从最新消息重新加载",
-		"mobile.session.history.reload_hint": "返回最新消息，并清除你已加载的更早页面。",
 		"mobile.session.history.stalled": "无法继续加载更早的消息。请重试或重新打开此对话。",
 		"mobile.session.pending_echo.earlier_not_sent": "你之前的消息未发送（{reason}）。轻点上方的消息即可放回。",
 		"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",

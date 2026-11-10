@@ -161,18 +161,18 @@
 	},
 	"mobile.session.history.gap": {
 		"role": "status",
-		"note": "Marker shown at the actual hole in the transcript after a disconnected gap. Says messages are missing HERE, that Reload jumps to the latest durable page, that earlier messages are then loaded to reach the missing ones, and that pages the reader loaded are cleared. Not automatic gap repair."
+		"note": "Quiet inline row at the actual hole in the transcript, shown only after the automatic gap fill (which runs on every return to the app or reconnect) stopped before reaching the rows below the hole. Calm and factual: the messages exist and are still being fetched; never says they were lost or that the reader did something wrong. The small Load action sits beside it."
 	},
 	"mobile.session.history.gap_newest": {
 		"role": "status",
-		"note": "Compact notice at the newest edge (under the latest messages) that a gap exists further up; the Reload button sits next to it. Short: the full explanation is on the marker at the hole."
+		"note": "The same quiet row at the newest edge (under the latest messages), pointing UP at the hole further up the transcript. Short; the Load action sits beside it."
 	},
-	"mobile.session.history.reload": {
+	"mobile.session.history.gap_load": {
 		"role": "button",
-		"note": "Button: explicit reader-only reset to the latest durable history page. Says it returns to the latest messages; no middle dot or separator (screen readers read it aloud). Draft, attachments, queue and live connection are untouched."
+		"note": "Small text action beside the gap row: continues fetching the missing messages from where the automatic fill stopped. One short verb; does not jump away from the reader's position or clear anything."
 	},
-	"mobile.session.history.reload_hint": {
+	"mobile.session.history.gap_load_hint": {
 		"role": "help",
-		"note": "Screen-reader hint for the Reload button: it returns to the latest messages and clears the earlier pages the reader loaded."
+		"note": "Screen-reader hint for the Load action: it fetches the messages missed while the phone was disconnected."
 	}
 }

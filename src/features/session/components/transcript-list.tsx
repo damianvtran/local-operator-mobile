@@ -116,7 +116,9 @@ export type TranscriptListProps = {
 	sessionId: string;
 	entries: TranscriptEntry[];
 	loadOlder?: () => Promise<void>;
-	reloadHistory?: () => Promise<void>;
+	/** Continues filling the newest disconnected gap (`HistoryWindow.heal`):
+	 *  the quiet gap row's Load action. Never jumps or clears loaded pages. */
+	healHistory?: () => Promise<void>;
 	/** Repeats the history read that failed; see `historyErrorScope`. */
 	retryHistory?: () => Promise<void>;
 	/** Which read failed: a newest-page refresh retries as a refresh and says so;
@@ -296,7 +298,7 @@ export const TranscriptList = ({
 	sessionId,
 	entries,
 	loadOlder,
-	reloadHistory,
+	healHistory,
 	retryHistory,
 	historyErrorScope = null,
 	loadingOlder = false,
@@ -1155,16 +1157,14 @@ export const TranscriptList = ({
 			animated: false,
 		});
 	}, []);
-	const requestHistoryReload = useCallback(() => {
-		if (!reloadHistory) return;
-		// This explicit jump abandons the old reading anchor, not the conversation,
-		// composer or stream. Never carry a prepend offset into the fresh tail.
-		webAnchor.current = null;
-		atTail.current = true;
-		setOpenElsewhere(false);
-		scrollPlaces.delete(sessionId);
-		void reloadHistory().then(pinTail);
-	}, [reloadHistory, sessionId, pinTail]);
+	/* The gap row's Load continues the fill where the automatic one stopped.
+	 *  Unlike the reload it replaced, it keeps every loaded page and the
+	 *  reader's anchor: the missing rows land between the two islands, where
+	 *  native maintainVisibleContentPosition and the tail pin already hold the
+	 *  viewport still. */
+	const requestHeal = useCallback(() => {
+		if (healHistory) void healHistory();
+	}, [healHistory]);
 	/* The viewport's own height changing is a reason to re-pin, but ONLY while the reader
 	 *  is at the tail. The composer growing (a 7-line draft in short landscape took the
 	 *  transcript from 118 to 66 pt) shrinks this viewport without any content change, and
@@ -1389,25 +1389,29 @@ export const TranscriptList = ({
 	const gapMarker = useMemo(
 		() =>
 			gapItemId === null ? null : (
-				<View className="px-4 py-2 gap-2" testID={REGION.transcriptGap}>
+				<View
+					className="flex-row items-center gap-2 px-4 py-1"
+					testID={REGION.transcriptGap}
+				>
 					<Text
 						accessibilityRole="text"
-						className="text-body-sm text-ink-muted"
+						className="flex-1 text-body-sm text-ink-muted"
 					>
 						{t("mobile.session.history.gap")}
 					</Text>
-					{reloadHistory ? (
+					{healHistory ? (
 						<Button
-							label={t("mobile.session.history.reload")}
-							accessibilityHint={t("mobile.session.history.reload_hint")}
-							onPress={requestHistoryReload}
-							variant="outline"
-							testID={CONTROL.transcriptGapReload}
+							label={t("mobile.session.history.gap_load")}
+							accessibilityHint={t("mobile.session.history.gap_load_hint")}
+							onPress={requestHeal}
+							variant="quiet"
+							size="sm"
+							testID={CONTROL.transcriptGapLoad}
 						/>
 					) : null}
 				</View>
 			),
-		[gapItemId, reloadHistory, requestHistoryReload],
+		[gapItemId, healHistory, requestHeal],
 	);
 
 	const renderItem = useCallback(
@@ -1556,8 +1560,9 @@ export const TranscriptList = ({
 	 *  fresh fragment) tells the virtualiser its header and footer changed on every
 	 *  streaming frame. */
 	/* THE NEWEST EDGE, where a reader of a live conversation actually is (PR #207
-	 * D1/U2): a failed newest-page refresh, and a compact pointer to a gap above
-	 * with the same Reload action as the marker at the hole. Rendered above the
+	 * D1/U2): a failed newest-page refresh, and a quiet pointer to a gap above
+	 * that the automatic fill could not close, with the same Load action as the
+	 * row at the hole. Rendered above the
 	 * pending echoes in the footer so it sits directly under the newest rows. */
 	const newestEdgeNotice = useMemo(
 		() =>
@@ -1582,23 +1587,24 @@ export const TranscriptList = ({
 						</>
 					) : null}
 					{historyGap ? (
-						<>
+						<View className="flex-row items-center gap-2">
 							<Text
 								accessibilityLiveRegion="polite"
-								className="text-body-sm text-ink-muted"
+								className="flex-1 text-body-sm text-ink-muted"
 							>
 								{t("mobile.session.history.gap_newest")}
 							</Text>
-							{reloadHistory ? (
+							{healHistory ? (
 								<Button
-									label={t("mobile.session.history.reload")}
-									accessibilityHint={t("mobile.session.history.reload_hint")}
-									onPress={requestHistoryReload}
-									variant="outline"
-									testID={CONTROL.transcriptReloadHistory}
+									label={t("mobile.session.history.gap_load")}
+									accessibilityHint={t("mobile.session.history.gap_load_hint")}
+									onPress={requestHeal}
+									variant="quiet"
+									size="sm"
+									testID={CONTROL.transcriptGapLoadNewest}
 								/>
 							) : null}
-						</>
+						</View>
 					) : null}
 				</View>
 			) : null,
@@ -1608,8 +1614,8 @@ export const TranscriptList = ({
 			historyGap,
 			canRetry,
 			requestRetry,
-			reloadHistory,
-			requestHistoryReload,
+			healHistory,
+			requestHeal,
 		],
 	);
 	const listHeader = useMemo(

@@ -39,8 +39,8 @@
 	"mobile.session.history.stalled": "Le chargement des messages précédents s’est arrêté. Réessayez ou rouvrez cette conversation.",
 	"mobile.session.history.beginning": "Début des messages conservés",
 	"mobile.session.history.empty": "Aucun message conservé",
-	"mobile.session.history.gap": "Des messages manquent ici : certains ont été manqués pendant la déconnexion. Rechargez depuis les derniers messages, puis chargez les précédents pour retrouver ceux qui manquent. Les pages chargées seront effacées.",
-	"mobile.session.history.gap_newest": "Plus haut, des messages ont été manqués pendant la déconnexion.",
-	"mobile.session.history.reload": "Recharger depuis les derniers messages",
-	"mobile.session.history.reload_hint": "Revient aux derniers messages et efface les pages précédentes que vous avez chargées."
+	"mobile.session.history.gap": "Certains messages précédents sont encore en cours de chargement.",
+	"mobile.session.history.gap_newest": "Certains messages plus haut sont encore en cours de chargement.",
+	"mobile.session.history.gap_load": "Charger",
+	"mobile.session.history.gap_load_hint": "Charge les messages manqués pendant que ce téléphone était déconnecté."
 }

@@ -151,16 +151,14 @@ describe("history reader production wiring", () => {
 		);
 		expect(JSON.stringify(composer)).toBe(before);
 		expect(declaration).not.toMatch(NON_READER_MUTATIONS);
-		expect(screen).toContain("reloadHistory={runtime.reloadHistory}");
-		expect(list).toContain("reloadHistory ? (");
-		expect(list).toContain("onPress={requestHistoryReload}");
-		expect(list).toContain("testID={CONTROL.transcriptReloadHistory}");
-		expect(list).toContain("webAnchor.current = null;");
-		expect(list).toContain("void reloadHistory().then(pinTail)");
+		// The list no longer offers the destructive reload for a disconnected
+		// gap: the gap heals itself and its quiet row continues the fill.
+		expect(screen).not.toContain("reloadHistory={runtime.reloadHistory}");
+		expect(list).not.toContain("reloadHistory");
 	});
 
-	it("the explicit list action abandons stale anchors and pins the fresh tail without navigation", async () => {
-		const start = list.indexOf("const requestHistoryReload = useCallback(");
+	it("the gap row's Load continues the fill and keeps the reader's anchor and tail state", async () => {
+		const start = list.indexOf("const requestHeal = useCallback(");
 		const end = list.indexOf("\n\t/* The viewport", start);
 		const webAnchor = { current: { offset: 1200 } as unknown };
 		const atTail = { current: false };
@@ -169,36 +167,64 @@ describe("history reader production wiring", () => {
 		]);
 		const setOpenElsewhere = vi.fn();
 		const pinTail = vi.fn();
-		const reloadHistory = vi.fn(async () => {});
+		const healHistory = vi.fn(async () => {});
 		expect(start).toBeGreaterThan(-1);
 		expect(end).toBeGreaterThan(start);
 		const action = vm.runInNewContext(
-			`${list.slice(start, end)}\nrequestHistoryReload`,
+			`${list.slice(start, end)}\nrequestHeal`,
 			{
 				webAnchor,
 				atTail,
 				scrollPlaces,
 				setOpenElsewhere,
 				pinTail,
-				reloadHistory,
+				healHistory,
 				sessionId: "synthetic-session",
 				useCallback: (callback: () => void) => callback,
 			},
 		);
 		action();
-		expect(webAnchor.current).toBeNull();
-		expect(atTail.current).toBe(true);
-		expect(setOpenElsewhere).toHaveBeenCalledWith(false);
-		expect(scrollPlaces.has("synthetic-session")).toBe(false);
-		expect(reloadHistory).toHaveBeenCalledOnce();
 		await Promise.resolve();
-		expect(pinTail).toHaveBeenCalledOnce();
+		expect(healHistory).toHaveBeenCalledOnce();
+		expect(webAnchor.current).toEqual({ offset: 1200 });
+		expect(atTail.current).toBe(false);
+		expect(setOpenElsewhere).not.toHaveBeenCalled();
+		expect(scrollPlaces.get("synthetic-session")).toEqual({
+			offset: 1200,
+			atTail: false,
+		});
+		expect(pinTail).not.toHaveBeenCalled();
+	});
+
+	it("the session screen heals automatically and resumes through one debounced gate", () => {
+		expect(runtime).toContain("{ autoHeal: true },");
+		expect(runtime).toContain(
+			'historyGap: historyWindow.hasGap && historyWindow.healState !== "healing",',
+		);
+		expect(runtime).toContain("healHistory,");
+		expect(screen).toContain("healHistory={runtime.healHistory}");
+		const foreground =
+			runtime.match(
+				/AppState\.addEventListener\("change", \(state\) => \{[\s\S]*?\n\t\t\}\);/,
+			)?.[0] ?? "";
+		expect(foreground).toContain("if (!resumeGate.current()) return;");
+		expect(foreground.indexOf("resumeGate.current()")).toBeLessThan(
+			foreground.indexOf("reconnectRef.current();"),
+		);
+		// A drop, a stall or a transient error arms the recovery re-read; the
+		// first frame after it spends it through the same gate.
+		expect(runtime).toContain(
+			'if (status.lastEnd === "error" || status.state === "stalled")',
+		);
+		expect(runtime).toContain(
+			"if (resumeGate.current()) void historyRef.current.load(true);",
+		);
 	});
 
 	it("threads the actual runtime action and all states to the list, with explicit accessible fallback", () => {
 		for (const property of [
 			"loadOlder",
-			"reloadHistory",
+			"healHistory",
 			"loadingOlder",
 			"hasOlder",
 			"historyError",
@@ -554,18 +580,25 @@ describe("the gap is shown where it is and where the reader is (PR #207 U2/D1)",
 		expect(
 			list.match(/\{item\.id === gapItemId \? gapMarker : null\}/g),
 		).toHaveLength(3);
-		expect(list).toContain("testID={CONTROL.transcriptGapReload}");
+		expect(list).toContain("testID={CONTROL.transcriptGapLoad}");
 		expect(list).toContain("{newestEdgeNotice}");
-		expect(list).toContain("testID={CONTROL.transcriptReloadHistory}");
+		expect(list).toContain("testID={CONTROL.transcriptGapLoadNewest}");
 		expect(list).toContain(
-			'accessibilityHint={t("mobile.session.history.reload_hint")}',
+			'accessibilityHint={t("mobile.session.history.gap_load_hint")}',
 		);
+		// Quiet: a small text action beside the line, never a full-width
+		// bordered button (the TestFlight screenshot).
+		const marker = seam(/const gapMarker = useMemo\([\s\S]*?\n\t\);/);
+		expect(marker).toContain('variant="quiet"');
+		expect(marker).toContain('size="sm"');
+		expect(marker).toContain("flex-row");
+		expect(marker).not.toContain('variant="outline"');
 	});
 
 	it("reports a newest-refresh failure at the newest edge, not in the older header", () => {
 		const header = seam(/const listHeader = useMemo\([\s\S]*?\n\t\);/);
 		expect(header).not.toContain("refresh_failed");
-		expect(header).not.toContain("transcriptReloadHistory");
+		expect(header).not.toContain("transcriptGapLoadNewest");
 		const edge = seam(/const newestEdgeNotice = useMemo\([\s\S]*?\n\t\);/);
 		expect(edge).toContain('"mobile.session.history.refresh_failed"');
 		expect(edge).toContain("testID={CONTROL.transcriptRetryLatest}");

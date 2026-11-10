@@ -624,7 +624,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// refreshed.
 	// Bridge drawer switch: the root layout mounts the Team Bridge drawer
 	// adapter; source identity only, no rendered or native proof.
-	app: "088209fbfceac0cdb1b592a25dda9c8142081d8b97642e918df22aaf8103fef3",
+	// Resume gap heal: the session screen threads `healHistory` (the quiet gap
+	// row's Load) instead of the destructive reload. --print over the staged
+	// tree; source identity only, no rendered or native proof.
+	app: "51a34bd522baa97f625b07c263769c33e76b6eb58423d5488bbef4da8d2468c2",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1255,7 +1258,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// admission only, no rendered or native proof refreshed.
 	// Converged #213 onto main a563a6f3 (#212): src re-derived with --print
 	// over the merged tree. Source identity only, no rendered or native proof.
-	src: "bab726bf50df165da3b1803ef43d1fd82609a50db7179a6c7d9d1ebe7c469794",
+	// Resume gap heal: HistoryWindow fills a reconnect/foreground hole by
+	// walking before= pages, a debounced resume gate, and the quiet gap row
+	// copy in all locales. --print over the staged tree; source identity only,
+	// no rendered or native proof.
+	src: "dce98863fbcf7f829f6ccc7b15eef3817572a4af87509732dfbaaffa27315e6e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

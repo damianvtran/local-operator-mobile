@@ -38,6 +38,29 @@ const FRAME_CAP = 80;
 const headPinned = (rows: TranscriptEntry[], flag?: boolean): boolean =>
 	flag ?? (rows.length === FRAME_CAP && rows[0]?.kind === "user");
 
+/** How far an automatic gap fill may walk before it hands the hole to the
+ * reader as a quiet notice. A resume after a long background can leave
+ * thousands of rows unseen; walking all of them unasked would hold the radio
+ * and the relay for minutes. Five default pages (the relay serves 80 rows per
+ * `before=` page) cover the common return-to-a-running-turn case in one or
+ * two round trips, and the time cap keeps a slow link from hiding the hole
+ * behind an invisible fetch. */
+export const HEAL_BUDGET = { pages: 5, rows: 400, ms: 3000 } as const;
+
+/** `healing`: an automatic or requested gap fill is in flight, so the list
+ * shows no notice. `exhausted`: the fill stopped (budget, failure or no
+ * progress) with the hole still open; the list shows the quiet notice. */
+export type HealState = "idle" | "healing" | "exhausted";
+
+export interface HistoryWindowOptions {
+	/** Fill a detected reconnect/refresh hole without the reader acting.
+	 * Off by default so the PR #207 reader tests keep pinning the bare
+	 * detection contract; the session screen turns it on. */
+	autoHeal?: boolean;
+	budget?: { pages: number; rows: number; ms: number };
+	now?: () => number;
+}
+
 /** A screen-owned reader, not a second transcript store. Capped projections are
  * not deletion signals: keep accepted server rows until this reader is retired.
  * The wire has no retention generation, so unseen prunes cannot be inferred. */
@@ -77,10 +100,17 @@ export class HistoryWindow {
 	private revision = 0;
 	private liveAt = new Map<string, number>();
 	private pending: Promise<void> | null = null;
+	/** Gap fill state. The relay has no forward (`after=`) read and no SSE
+	 * replay cursor, so a hole between the held rows and a newer tail is closed
+	 * by walking `before=` pages back from the oldest row of the newer island
+	 * until a page shares a row with the island below the hole. */
+	healState: HealState = "idle";
+	private healRun: Promise<void> | null = null;
 
 	constructor(
 		private fetchPage: (before?: string) => Promise<HistoryResponse>,
 		private changed: () => void,
+		private options: HistoryWindowOptions = {},
 	) {}
 
 	/** Detached opener context is cached but not interleaved into a contiguous
@@ -222,7 +252,10 @@ export class HistoryWindow {
 			previous.size > 0 &&
 			witness.length > 0 &&
 			!witness.some((row) => previous.has(rowIdentity(row)));
-		if (disjoint) this.hasGap = true;
+		if (disjoint) {
+			this.hasGap = true;
+			this.scheduleHeal();
+		}
 		return disjoint;
 	}
 
@@ -463,6 +496,8 @@ export class HistoryWindow {
 		this.cursors.clear();
 		this.durableIds.clear();
 		this.liveAt.clear();
+		this.healRun = null;
+		this.healState = "idle";
 		this.revision = 0;
 		// Re-seed from the current stream frame, not the retired page islands.
 		// This also preserves a known pinned-head exclusion during rare fallback.
@@ -474,9 +509,150 @@ export class HistoryWindow {
 		this.active = true;
 	}
 
+	/** Called from `accept()`, which runs during render: it must not notify
+	 * (`changed()` is a React state setter). `healing` is set synchronously so
+	 * the render that discovers the hole never paints the notice for one frame
+	 * before the fill starts; the fill itself starts on the next microtask. */
+	private scheduleHeal(): void {
+		if (!this.options.autoHeal || !this.active || this.healRun) return;
+		this.healState = "healing";
+		const lease = this.lease;
+		queueMicrotask(() => {
+			if (lease === this.lease) void this.heal();
+		});
+	}
+
+	/** The oldest journal-addressable row of the newer island: the `before=`
+	 * cursor whose page is the rows immediately older than that island. */
+	private gapCursor(): string | undefined {
+		const at = this.rows.findIndex((row) => row.id === this.gapBefore);
+		if (at < 0) return undefined;
+		return this.rows.slice(at).find(journalAddressableRow)?.id;
+	}
+
+	/** Put one gap page between the two islands. The newest page row the lower
+	 * island already holds is the overlap: everything after it is the missing
+	 * run, and the hole is closed. Without an overlap the page becomes the new
+	 * bottom edge of the upper island and the walk continues from it. Rows
+	 * already held keep their objects and positions, so nothing on screen
+	 * re-keys or moves; only rows the reader never had are inserted, all of
+	 * them between the islands (native maintainVisibleContentPosition keeps a
+	 * reader inside the upper island still; a reader at the tail stays pinned). */
+	private spliceGapPage(page: HistoryResponse): void {
+		const at = this.rows.findIndex((row) => row.id === this.gapBefore);
+		if (at < 0) return;
+		const lower = this.rows.slice(0, at);
+		const upper = this.rows.slice(at);
+		const detachedIds = new Set(this.detached.map(rowIdentity));
+		const lowerIds = new Set(
+			lower
+				.filter(
+					(row) =>
+						!detachedIds.has(rowIdentity(row)) && journalAddressableRow(row),
+				)
+				.map(rowIdentity),
+		);
+		const held = new Set(this.rows.map(rowIdentity));
+		for (const row of page.entries) this.durableIds.add(rowIdentity(row));
+		let overlap = -1;
+		for (let index = page.entries.length - 1; index >= 0; index -= 1) {
+			const entry = page.entries[index];
+			if (entry && lowerIds.has(rowIdentity(entry))) {
+				overlap = index;
+				break;
+			}
+		}
+		const fresh = page.entries
+			.slice(overlap + 1)
+			.filter((row) => !held.has(rowIdentity(row)));
+		this.rows = [...lower, ...fresh, ...upper];
+		// Reaching the journal's beginning also ends the walk: nothing older can
+		// still be missing between the islands.
+		if (overlap >= 0 || !page.has_more) {
+			this.hasGap = false;
+			this.gapBefore = null;
+		} else if (fresh[0]) {
+			this.gapBefore = fresh[0].id;
+		}
+	}
+
+	/** Close the newest hole by walking `before=` pages back from it, within
+	 * the budget. Also the quiet notice's Load action, which grants a fresh
+	 * budget. Joins a fill already in flight. Independent of `load()`'s
+	 * oldest-edge cursor: the two touch different spans of `rows`, and each
+	 * applies its page against the rows as they are when it lands. */
+	heal(): Promise<void> {
+		if (this.healRun) return this.healRun;
+		if (!this.active || !this.hasGap) {
+			this.healState = "idle";
+			return Promise.resolve();
+		}
+		const budget = this.options.budget ?? HEAL_BUDGET;
+		const now = this.options.now ?? Date.now;
+		const lease = this.lease;
+		const startedAt = now();
+		this.healState = "healing";
+		this.changed();
+		let run: Promise<void> | null = null;
+		// A hung request must not hide the hole: past the time budget the notice
+		// shows, and a page that still lands closes it after all.
+		const timer = setTimeout(() => {
+			if (this.healRun !== run || lease !== this.lease) return;
+			if (this.healState !== "healing" || !this.hasGap) return;
+			this.healState = "exhausted";
+			this.changed();
+		}, budget.ms);
+		const walk = async () => {
+			let pages = 0;
+			let rows = 0;
+			let previous: string | undefined;
+			while (this.active && lease === this.lease && this.hasGap) {
+				if (
+					pages >= budget.pages ||
+					rows >= budget.rows ||
+					now() - startedAt >= budget.ms
+				)
+					return;
+				const cursor = this.gapCursor();
+				// No progress since the last page: a repeating page must not become
+				// an automatic request loop.
+				if (!cursor || cursor === previous) return;
+				previous = cursor;
+				const hole = this.gapBefore;
+				const page = await this.fetchPage(cursor);
+				if (!this.active || lease !== this.lease) return;
+				pages += 1;
+				rows += page.entries.length;
+				if (page.unavailable) return;
+				// A newer hole replaced this one while the page was in flight; walk
+				// from the new hole (only the newest is tracked, see gapBefore).
+				if (this.gapBefore !== hole) {
+					previous = undefined;
+					continue;
+				}
+				this.spliceGapPage(page);
+				this.changed();
+			}
+		};
+		run = walk()
+			.catch(() => undefined)
+			.finally(() => {
+				clearTimeout(timer);
+				if (this.healRun !== run) return;
+				this.healRun = null;
+				if (!this.active || lease !== this.lease) return;
+				this.healState = this.hasGap ? "exhausted" : "idle";
+				this.changed();
+			});
+		this.healRun = run;
+		return run;
+	}
+
 	retire(): void {
 		this.active = false;
 		this.lease += 1;
+		this.healRun = null;
+		this.healState = "idle";
 		this.pending = null;
 		this.loading = false;
 		this.loadingScope = null;
