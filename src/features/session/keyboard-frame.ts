@@ -81,11 +81,35 @@ const emit = (next: KeyboardFrame) => {
 	for (const listener of [...listeners]) listener(next);
 };
 
+/**
+ * The frame of a keyboard that is ALREADY up when the store (re)starts.
+ *
+ * WHY (PR #216 review m2). The store resets to hidden when its last reader
+ * leaves, and the native events only describe CHANGES: a reader arriving while
+ * the keyboard is up would read "hidden" until the keyboard next moved, so a
+ * session composer mounting over an open keyboard never lifted and the screen
+ * capped it against the full window. RN's `Keyboard.metrics()` is the frame the
+ * last show reported, `undefined` while hidden; it carries no duration, so the
+ * seed uses the default (nothing animates on a seed anyway).
+ */
+const seededFrame = (): KeyboardFrame => {
+	const metrics = Keyboard.isVisible?.() ? Keyboard.metrics?.() : undefined;
+	if (!metrics) return KEYBOARD_HIDDEN;
+	return keyboardFrameFrom(KEYBOARD_HIDDEN, Dimensions.get("window").height, {
+		duration: 0,
+		endCoordinates: metrics,
+	});
+};
+
 /** Subscribe to keyboard frames; the listener runs synchronously in the native
- *  event, which is what lets the composer start its lift in the same frame. */
+ *  event, which is what lets the composer start its lift in the same frame.
+ *  A reader that must start from the keyboard's present state (the composer's
+ *  lift) reads `keyboardFrameNow()` right after subscribing: the store is seeded
+ *  here, before the first native event (`seededFrame`). */
 export const subscribeKeyboardFrame = (listener: Listener): (() => void) => {
 	listeners.add(listener);
 	if (native === null && Platform.OS !== "web") {
+		current = seededFrame();
 		native = [
 			Keyboard.addListener(
 				Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow",

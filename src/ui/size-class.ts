@@ -761,13 +761,27 @@ export const heldComposerLimit = (
 	viewport: { width: number; height: number; keyboardOverlap?: number },
 ): number | null => {
 	const overlap = viewport.keyboardOverlap ?? 0;
-	const live =
+	const sameWindow =
 		box !== null &&
 		box.viewportWidth === viewport.width &&
-		box.viewportHeight === viewport.height &&
-		(box.keyboardOverlap ?? 0) === overlap
-			? box
-			: null;
+		box.viewportHeight === viewport.height;
+	/* THROUGH THE LIFT (PR #216 review m1). The store moves to the new overlap
+	 *  at the native event, but the box that matches it only arrives when the
+	 *  lift lands, ~250 ms later; leaving the composer unbound for that window
+	 *  let a long draft grow to its natural height under the keyboard and snap
+	 *  back. A CAPPED box is pinned at the chrome above it: its top is where
+	 *  the chrome ends, which the keyboard does not move, so the limit for the
+	 *  new keyboard is the settled one, `(window - overlap) - top`, and the end-
+	 *  of-lift re-measure reports the same top and replaces it with the same
+	 *  number (no flash, no fixed point). An uncapped box rides the lift, so its
+	 *  top says nothing about the new layout and it stays unbound as before.
+	 *  Only boxes the composer published SETTLED reach here (it does not publish
+	 *  mid-lift), so this top is never one the animation is still moving. A
+	 *  different window is still no measurement at all (U1, above). */
+	if (sameWindow && (box.keyboardOverlap ?? 0) !== overlap && box.capped)
+		return composerLimit(viewport.height - overlap, box.top, box.height, true);
+	const live =
+		sameWindow && (box.keyboardOverlap ?? 0) === overlap ? box : null;
 	return composerLimit(
 		viewport.height - overlap,
 		live?.top ?? null,

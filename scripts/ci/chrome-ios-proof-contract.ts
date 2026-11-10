@@ -139,6 +139,7 @@ const boxOf = (bounds: string | undefined): Box | null => {
 	return m ? { top: Number(m[2]), bottom: Number(m[4]) } : null;
 };
 const KEY_LABEL = /^(space|return|shift|delete|[a-z])$/i;
+const LETTER_KEY = /^[a-z]$/i;
 /** The tallest iOS software keyboard's key area, in pt, above the space row. */
 const KEYBOARD_SPAN = 300;
 
@@ -147,30 +148,72 @@ export function sendAboveKeyboard(
 	sendId = "composer-send",
 ): { ok: boolean; reason: string; send?: Box; keyboardTop?: number } {
 	const nodes: HierarchyNode[] = [];
+	const parent = new Map<HierarchyNode, HierarchyNode>();
 	const walk = (node: HierarchyNode) => {
 		nodes.push(node);
-		for (const child of node.children ?? []) walk(child);
+		for (const child of node.children ?? []) {
+			parent.set(child, node);
+			walk(child);
+		}
 	};
 	walk(tree);
+	const subtree = (root: HierarchyNode): HierarchyNode[] => {
+		const out: HierarchyNode[] = [];
+		const visit = (node: HierarchyNode) => {
+			out.push(node);
+			for (const child of node.children ?? []) visit(child);
+		};
+		visit(root);
+		return out;
+	};
+	const ancestors = (node: HierarchyNode): HierarchyNode[] => {
+		const out: HierarchyNode[] = [];
+		for (let at = parent.get(node); at; at = parent.get(at)) out.push(at);
+		return out;
+	};
 	const label = (n: HierarchyNode) =>
 		(n.attributes?.accessibilityText || n.attributes?.text || "").trim();
-	const send = nodes
-		.filter((n) => n.attributes?.["resource-id"] === sendId)
-		.map((n) => boxOf(n.attributes?.bounds))
-		.find((b) => b !== null);
-	if (!send) return { ok: false, reason: `no ${sendId} in the hierarchy` };
-	const space = nodes
-		.filter((n) => SPACE_KEY.test(label(n)))
-		.map((n) => boxOf(n.attributes?.bounds))
-		.find((b) => b !== null);
-	if (!space)
+	const sendNode = nodes.find(
+		(n) =>
+			n.attributes?.["resource-id"] === sendId &&
+			boxOf(n.attributes?.bounds) !== null,
+	);
+	const send = sendNode ? boxOf(sendNode.attributes?.bounds) : null;
+	if (!sendNode || !send)
+		return { ok: false, reason: `no ${sendId} in the hierarchy` };
+	const spaceNode = nodes.find(
+		(n) => SPACE_KEY.test(label(n)) && boxOf(n.attributes?.bounds) !== null,
+	);
+	const space = spaceNode ? boxOf(spaceNode.attributes?.bounds) : null;
+	if (!spaceNode || !space)
 		return {
 			ok: false,
 			send,
 			reason: "no software keyboard (no space key) in the hierarchy",
 		};
+	/* ONLY THE KEYBOARD'S KEYS (PR #216 review m3). Maestro's iOS hierarchy
+	 *  carries no element type (`IOSDriver.mapViewHierarchy` maps label, title,
+	 *  value, identifier, frame and state only), so a key is known by its label
+	 *  — and app content shares labels: an avatar initial or a one-letter chip
+	 *  within the span above the space key would have set the keyboard's top
+	 *  too high and FAILED a correct build. The keyboard is its own subtree in
+	 *  XCUITest's tree (a separate window from the app's), so keys are read
+	 *  from the HIGHEST ancestor of the space key that does not also hold Send:
+	 *  the keyboard's container, never the app's. A tree where no such
+	 *  container holds a letter key (everything flattened under one root) falls
+	 *  back to the label band, minus nodes carrying an app testID, and says so
+	 *  in its reason. */
+	const sendLine = new Set([sendNode, ...ancestors(sendNode)]);
+	const container = [spaceNode, ...ancestors(spaceNode)]
+		.filter((n) => !sendLine.has(n))
+		.at(-1);
+	const inContainer = container ? subtree(container) : [];
+	const scoped = inContainer.some((n) => LETTER_KEY.test(label(n)));
+	const candidates = scoped
+		? inContainer
+		: nodes.filter((n) => !n.attributes?.["resource-id"]);
 	const keyboardTop = Math.min(
-		...nodes
+		...candidates
 			.filter((n) => KEY_LABEL.test(label(n)))
 			.map((n) => boxOf(n.attributes?.bounds))
 			.filter(
@@ -186,8 +229,10 @@ export function sendAboveKeyboard(
 		ok,
 		send,
 		keyboardTop,
-		reason: ok
-			? `send bottom ${send.bottom} <= keyboard top ${keyboardTop}`
-			: `send bottom ${send.bottom} is below the keyboard top ${keyboardTop}`,
+		reason: `${
+			ok
+				? `send bottom ${send.bottom} <= keyboard top ${keyboardTop}`
+				: `send bottom ${send.bottom} is below the keyboard top ${keyboardTop}`
+		}${scoped ? "" : " (flat hierarchy: keys read by label band)"}`,
 	};
 }

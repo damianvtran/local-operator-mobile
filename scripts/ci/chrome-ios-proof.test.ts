@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import type { HierarchyNode } from "./chrome-ios-proof-contract.ts";
 import {
 	collectChromeFrames,
 	LANE_FRAMES,
@@ -12,6 +13,7 @@ import {
 
 /* A Maestro iOS hierarchy at 390x844: the composer's Send, plus (optionally)
  *  the software keyboard's keys, top row at 548 and space at 760. */
+const FLAT_FALLBACK = /flat hierarchy/;
 const tree = (sendBottom: number, keyboard = true) => ({
 	attributes: {},
 	children: [
@@ -60,6 +62,98 @@ describe("sendAboveKeyboard (TestFlight 753)", () => {
 
 	it("fails when Send is missing", () => {
 		expect(sendAboveKeyboard({ children: [] }).ok).toBe(false);
+	});
+
+	/* PR #216 review m3: app content shares key labels. XCUITest keeps the
+	 *  keyboard in its own window, so a real dump nests the keys under a
+	 *  container apart from the app's; an avatar initial within 300 pt of the
+	 *  space key must not read as the keyboard's top. */
+	const nested = (
+		sendBottom: number,
+		appLabel?: { text: string; top: number },
+	) => ({
+		attributes: {},
+		children: [
+			{
+				attributes: {},
+				children: [
+					{
+						attributes: {
+							"resource-id": "composer-send",
+							bounds: `[330,${sendBottom - 44}][374,${sendBottom}]`,
+						},
+					},
+					...(appLabel
+						? [
+								{
+									attributes: {
+										accessibilityText: appLabel.text,
+										bounds: `[16,${appLabel.top}][48,${appLabel.top + 32}]`,
+									},
+								},
+							]
+						: []),
+				],
+			},
+			{
+				attributes: {},
+				children: [
+					{
+						attributes: {},
+						children: [
+							{
+								attributes: {
+									accessibilityText: "q",
+									bounds: "[3,548][39,590]",
+								},
+							},
+						],
+					},
+					{
+						attributes: {},
+						children: [
+							{
+								attributes: {
+									accessibilityText: "space",
+									bounds: "[100,760][290,802]",
+								},
+							},
+						],
+					},
+				],
+			},
+		],
+	});
+
+	it("reads the keys from the keyboard's container: an avatar initial near it is not a key", () => {
+		/* "D" at 470, inside the old 300 pt span above space (460..760). */
+		const verdict = sendAboveKeyboard(nested(540, { text: "D", top: 470 }));
+		expect(verdict).toMatchObject({ ok: true, keyboardTop: 548 });
+		expect(verdict.reason).not.toMatch(FLAT_FALLBACK);
+		/* And still fails the reported defect. */
+		expect(sendAboveKeyboard(nested(700, { text: "D", top: 470 })).ok).toBe(
+			false,
+		);
+	});
+
+	it("a flat tree falls back to the label band, minus app testIDs, and says so", () => {
+		const base = tree(540);
+		const flat: HierarchyNode = {
+			...base,
+			children: [
+				...base.children,
+				{
+					attributes: {
+						"resource-id": "avatar-initial",
+						accessibilityText: "D",
+						bounds: "[16,470][48,502]",
+					},
+				},
+			],
+		};
+		const verdict = sendAboveKeyboard(flat);
+		expect(verdict).toMatchObject({ ok: true, keyboardTop: 548 });
+		expect(verdict.reason).toMatch(FLAT_FALLBACK);
 	});
 
 	it("reads the tree out of output with log lines around it", () => {

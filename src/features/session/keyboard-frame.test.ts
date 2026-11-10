@@ -7,6 +7,11 @@ const native = vi.hoisted(() => ({
 	os: "ios",
 	window: 844,
 	listeners: new Map<string, (event: unknown) => void>(),
+	/* What RN's `Keyboard.metrics()` answers: the frame of a keyboard that is
+	 *  already up, `undefined` while hidden. */
+	metrics: undefined as
+		| { screenX: number; screenY: number; width: number; height: number }
+		| undefined,
 }));
 vi.mock("react-native", () => ({
 	Platform: {
@@ -20,6 +25,8 @@ vi.mock("react-native", () => ({
 			native.listeners.set(name, listener);
 			return { remove: () => native.listeners.delete(name) };
 		},
+		isVisible: () => native.metrics !== undefined,
+		metrics: () => native.metrics,
 	},
 }));
 
@@ -37,6 +44,7 @@ const frame = (screenY: number, height: number, duration = 250) => ({
 
 afterEach(() => {
 	native.listeners.clear();
+	native.metrics = undefined;
 });
 
 describe("keyboardFrameFrom", () => {
@@ -102,7 +110,9 @@ describe("subscribeKeyboardFrame", () => {
 			new URL("./components/composer.tsx", import.meta.url),
 			"utf8",
 		).replace(/\s+/g, " ");
-		expect(composer).toContain("return subscribeKeyboardFrame((frame) => {");
+		expect(composer).toContain(
+			"const unsubscribe = subscribeKeyboardFrame((frame) => {",
+		);
 		expect(composer).toContain(
 			"(finished) => { if (finished) runOnJS(remeasure)(); },",
 		);
@@ -113,6 +123,52 @@ describe("subscribeKeyboardFrame", () => {
 		/* No second native listener for the lift. */
 		expect(composer).not.toContain("Keyboard.addListener");
 		expect(composer).not.toContain("composerKeyboardLimit");
+	});
+
+	/* PR #216 review m2: a reader that MOUNTS while the keyboard is up (the
+	 *  session composer opened over a focused field) used to read "hidden" until
+	 *  the keyboard next moved, so it never lifted and the screen capped it
+	 *  against the full window. */
+	it("a reader mounting with the keyboard already up reads its frame, with no event", () => {
+		native.os = "ios";
+		native.window = 844;
+		native.metrics = { screenX: 0, screenY: 528, width: 390, height: 316 };
+		const seen: number[] = [];
+		const off = subscribeKeyboardFrame((f) => seen.push(f.overlap));
+		expect(keyboardFrameNow()).toMatchObject({ visible: true, overlap: 316 });
+		/* Seeding is not an event: no reader is called for it. */
+		expect(seen).toEqual([]);
+		/* A second reader joining a live store reads the same present frame. */
+		const offLate = subscribeKeyboardFrame(() => {});
+		expect(keyboardFrameNow().overlap).toBe(316);
+		offLate();
+		off();
+		/* After the reset, a restart seeds again from the native keyboard. */
+		native.metrics = undefined;
+		const offHidden = subscribeKeyboardFrame(() => {});
+		expect(keyboardFrameNow()).toEqual(KEYBOARD_HIDDEN);
+		offHidden();
+	});
+
+	it("the composer seeds its lift and its box tag from the present frame on subscribe", () => {
+		const composer = readFileSync(
+			new URL("./components/composer.tsx", import.meta.url),
+			"utf8",
+		).replace(/\s+/g, " ");
+		const subscribe = composer.indexOf(
+			"const unsubscribe = subscribeKeyboardFrame((frame) => {",
+		);
+		const seed = composer.indexOf("const present = keyboardFrameNow();");
+		/* Read AFTER subscribing: that is when the store seeds itself. */
+		expect(subscribe).toBeGreaterThan(0);
+		expect(seed).toBeGreaterThan(subscribe);
+		expect(composer).toContain(
+			"liftTarget.current = present.visible ? present.overlap : 0; keyboardOffset.value = liftTarget.current;",
+		);
+		/* Mid-lift boxes are not published, so the screen keeps a settled one. */
+		expect(composer).toContain(
+			"if (keyboardOverlap !== liftTarget.current) return;",
+		);
 	});
 
 	it("subscribes to nothing on the web", () => {

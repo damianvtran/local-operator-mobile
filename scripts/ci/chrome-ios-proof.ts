@@ -508,21 +508,25 @@ try {
 		laneReceipt.udid = udid;
 		/* The SOFTWARE keyboard is the subject of session-keyboard.yaml, and a
 		 *  simulator may default to the connected hardware keyboard, which shows
-		 *  none. Both the global and this device's preference are set before boot;
-		 *  `sendAboveKeyboard` still FAILS when no keyboard is in the hierarchy,
-		 *  so a preference that did not take is reported, never passed. */
-		await run(
-			`soft-keyboard-${lane.id}`,
-			"defaults",
-			[
-				"write",
-				"com.apple.iphonesimulator",
-				"ConnectHardwareKeyboard",
-				"-bool",
-				"false",
-			],
-			30,
-		);
+		 *  none. This device's preference is set before boot; the GLOBAL one only
+		 *  on CI (PR #216 review n1): it is a persistent host-wide Simulator
+		 *  setting, and on a developer's Mac it would silently turn off their
+		 *  hardware keyboard for every simulator. `sendAboveKeyboard` still FAILS
+		 *  when no keyboard is in the hierarchy, so a preference that did not take
+		 *  is reported, never passed. */
+		if (env.CI === "true")
+			await run(
+				`soft-keyboard-${lane.id}`,
+				"defaults",
+				[
+					"write",
+					"com.apple.iphonesimulator",
+					"ConnectHardwareKeyboard",
+					"-bool",
+					"false",
+				],
+				30,
+			);
 		await run(
 			`soft-keyboard-device-${lane.id}`,
 			"defaults",

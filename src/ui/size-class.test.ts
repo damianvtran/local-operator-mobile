@@ -87,15 +87,162 @@ describe("the composer's ceiling above the keyboard (TestFlight 753)", () => {
 		expect(heldComposerLimit(box(241, 500, down), down)).toBe(null);
 	});
 
-	it("discards a box measured under another keyboard height, as it does another window", () => {
-		/* A box measured before (or mid-way through) the lift has a top from a
-		 *  layout that no longer exists; holding it is the U1 fixed point. */
+	it("discards an uncapped box measured under another keyboard height, as it does another window", () => {
+		/* An uncapped box rides the lift: its top is from a layout that no longer
+		 *  exists, and holding it is the U1 fixed point. */
 		const up = { width: 390, height: 844, keyboardOverlap: 336 };
-		const mid = { width: 390, height: 844, keyboardOverlap: 120 };
-		expect(heldComposerLimit(box(400, 100, mid, true), up)).toBe(null);
+		const down = { width: 390, height: 844, keyboardOverlap: 0 };
+		expect(heldComposerLimit(box(600, 236, down), up)).toBe(null);
 		expect(heldComposerLimit(box(400, 100, up, true), up)).toBe(108);
-		expect(sameComposerBox(box(241, 279, up), box(241, 279, mid))).toBe(false);
+		expect(sameComposerBox(box(241, 279, up), box(241, 279, down))).toBe(false);
+		/* Another window is still no measurement, capped or not. */
+		expect(
+			heldComposerLimit(box(241, 595, down, true), {
+				...up,
+				height: 800,
+			}),
+		).toBe(null);
 	});
+
+	/* PR #216 review m1: the store reaches the new overlap at the native event,
+	 *  the matching box only when the lift lands. A CAPPED box is pinned at the
+	 *  chrome, which the keyboard does not move, so it keeps the settled bound
+	 *  for the NEW keyboard through the animation instead of none. */
+	it("bounds a capped box for the new keyboard through the lift", () => {
+		const down = { width: 390, height: 844, keyboardOverlap: 0 };
+		const up = { width: 390, height: 844, keyboardOverlap: 316 };
+		/* The screenshot: a long draft capped at the chrome (top 241). */
+		expect(heldComposerLimit(box(241, 595, down, true), up)).toBe(287);
+		/* The same number the settled box gives: no flash when it lands. */
+		expect(heldComposerLimit(box(241, 279, up, true), up)).toBe(287);
+		/* And back down. */
+		expect(heldComposerLimit(box(241, 279, up, true), down)).toBe(603);
+	});
+
+	/* The lift over time, with the REAL functions: the screen holds the last
+	 *  box the composer published, and the composer publishes only when its
+	 *  lift sits at the frame's overlap (mid-lift layouts are not published).
+	 *  Layout model: bottom = window - lift - gap; a box taller than the room
+	 *  under the chrome overflows downward. */
+	const simulate = (
+		H: number,
+		chromeTop: number,
+		natural: number,
+		overlaps: number[],
+	) => {
+		const vp = (overlap: number) => ({
+			width: 390,
+			height: H,
+			keyboardOverlap: overlap,
+		});
+		let held: ComposerBox | null = null;
+		const paint = (overlap: number, lift: number) => {
+			const limit = heldComposerLimit(held, vp(overlap));
+			const bound =
+				limit === null
+					? Number.POSITIVE_INFINITY
+					: composerHostBound(limit, GAP, floor);
+			const height = Math.min(natural, bound);
+			const bottom = Math.max(H - lift - GAP, chromeTop + height);
+			return { limit, height, top: bottom - height, bottom };
+		};
+		const settle = (overlap: number) => {
+			const passes: ReturnType<typeof paint>[] = [];
+			for (let pass = 0; pass < 12; pass++) {
+				const p = paint(overlap, overlap);
+				passes.push(p);
+				held = {
+					top: p.top,
+					height: p.height,
+					capped: composerAtHostCap(p.height, p.limit, GAP, floor),
+					viewportWidth: 390,
+					viewportHeight: H,
+					keyboardOverlap: overlap,
+				};
+			}
+			return passes;
+		};
+		const steps: {
+			overlap: number;
+			settled: ReturnType<typeof paint>;
+			lifting: number[];
+			stable: boolean;
+		}[] = [];
+		let from = overlaps[0] ?? 0;
+		settle(from);
+		for (const overlap of overlaps.slice(1)) {
+			/* The animation: the store is at `overlap`, the lift on its way. */
+			const lifting = [0, 0.25, 0.5, 0.75].map(
+				(k) => paint(overlap, from + (overlap - from) * k).height,
+			);
+			const passes = settle(overlap);
+			const last = passes.at(-1);
+			if (!last) throw new Error("no passes");
+			steps.push({
+				overlap,
+				settled: last,
+				lifting,
+				stable: passes
+					.slice(1)
+					.every((p) => p.height === last.height && p.top === last.top),
+			});
+			from = overlap;
+		}
+		return steps;
+	};
+
+	it.each([
+		["screenshot, long draft", 844, 241, 700],
+		["screenshot, edge draft", 844, 241, 283],
+		["short draft", 844, 241, 140],
+		["probe 844/201, very long draft", 844, 201, 1011],
+		["Android 800/120", 800, 120, 642],
+		["probe 568/314 (floor)", 568, 314, 425],
+	])(
+		"%s: show, hide and height changes never grow the box past the new keyboard or oscillate",
+		(_name, H, chromeTop, natural) => {
+			const sequence = [0, 316, 336, 316, 0, 336, 0, 260, 0];
+			const steps = simulate(H, chromeTop, natural, sequence);
+			for (const [index, step] of steps.entries()) {
+				expect(step.stable).toBe(true);
+				const settled = step.settled.height;
+				/* Settled: above the keyboard's top (a box that just fits may eat
+				 *  its gap: `composerLimit`'s overflow test) or at the one-control
+				 *  floor, where the geometry has no room at all — pre-existing,
+				 *  review round 1. */
+				if (settled > floor)
+					expect(step.settled.bottom).toBeLessThanOrEqual(H - step.overlap);
+				/* Through the lift: never taller than the larger of the settled
+				 *  boxes either side of it, so a long draft cannot grow under the
+				 *  keyboard and snap back (m1: it grew to `natural`). */
+				const before =
+					index === 0
+						? Math.min(natural, H - chromeTop - GAP)
+						: (steps[index - 1]?.settled.height ?? 0);
+				for (const height of step.lifting)
+					expect(height).toBeLessThanOrEqual(Math.max(before, settled));
+				/* The same keyboard gives the same box every time, up to the dock's
+				 *  gap: no latch. The one difference is `composerLimit`'s own band
+				 *  at the edge (edge draft, 283 at 316: unbound eating its gap,
+				 *  bottom 524, when it arrives from below; capped at 279, bottom
+				 *  520, when it arrives capped from 336), the same hysteresis a
+				 *  draft has against the window bottom. Both end above the
+				 *  keyboard, asserted above. */
+				const first = steps.find((s) => s.overlap === step.overlap);
+				expect(
+					Math.abs((first?.settled.height ?? 0) - settled),
+				).toBeLessThanOrEqual(GAP);
+			}
+			/* Keyboard down at the end: the box is back to its resting size. */
+			expect(steps.at(-1)?.settled.height).toBe(
+				Math.min(
+					natural,
+					heldComposerLimit(null, { width: 390, height: H }) ?? natural,
+					composerHostBound(H - chromeTop, GAP, floor),
+				),
+			);
+		},
+	);
 
 	/* The controls row (attach, paste, mic, Stop, Send) is what the bound exists
 	 *  to keep on screen: under a binding cap the FIELD and the EXTRAS scroll,

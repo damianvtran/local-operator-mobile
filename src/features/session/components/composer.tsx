@@ -94,6 +94,7 @@ import {
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
 import {
+	keyboardFrameNow,
 	subscribeKeyboardFrame,
 	useKeyboardFrame,
 } from "@/features/session/keyboard-frame";
@@ -1046,6 +1047,11 @@ export const Composer = ({
 	 *  not morph in from a pill on every mount. */
 	const progress = useSharedValue(compact === null ? 1 : 0);
 	const keyboardOffset = useSharedValue(0);
+	/* The overlap the lift is heading for (the latest keyboard frame's). A box
+	 *  measured while the offset is anywhere else is a mid-lift layout and is not
+	 *  published (`publishBox`), so the screen keeps the last SETTLED box and can
+	 *  bound the composer from it through the lift (`heldComposerLimit`). */
+	const liftTarget = useRef(0);
 	const keyboardDuration = useRef(200);
 	/* The latest `publishBox`, for the lift's completion callback below, which is
 	 *  subscribed once and must not capture a stale one. */
@@ -1126,8 +1132,9 @@ export const Composer = ({
 		const remeasure = () => {
 			requestAnimationFrame(() => publishBoxRef.current());
 		};
-		return subscribeKeyboardFrame((frame) => {
+		const unsubscribe = subscribeKeyboardFrame((frame) => {
 			keyboardDuration.current = frame.duration;
+			liftTarget.current = frame.visible ? frame.overlap : 0;
 			if (!frame.visible) {
 				keyboardOffset.value = 0;
 				remeasure();
@@ -1141,6 +1148,18 @@ export const Composer = ({
 				},
 			);
 		});
+		/* SEED FROM THE PRESENT KEYBOARD (PR #216 review m2). Frames are changes;
+		 *  a composer mounting over a keyboard that is already up (the session
+		 *  composer opened from Home with the field focused) got no frame, stayed
+		 *  at offset 0 under the keyboard, and tagged its boxes 0 against the
+		 *  screen's overlap, which discarded them until the keyboard next moved.
+		 *  Read after subscribing, so the store has seeded itself from the native
+		 *  keyboard if this is its first reader. No animation: nothing moved. */
+		const present = keyboardFrameNow();
+		liftTarget.current = present.visible ? present.overlap : 0;
+		keyboardOffset.value = liftTarget.current;
+		if (present.visible) remeasure();
+		return unsubscribe;
 	}, [keyboardOffset]);
 	useEffect(() => {
 		progress.value = withTiming(presentation.expanded ? 1 : 0, {
@@ -1351,6 +1370,13 @@ export const Composer = ({
 		 *  carries an offset that is not the settled keyboard's, and the screen
 		 *  discards it (`heldComposerLimit`) until the end-of-lift re-measure. */
 		const keyboardOverlap = Math.round(keyboardOffset.value);
+		/* MID-LIFT: not published (PR #216 review m1). The screen bounds the
+		 *  composer through the lift from its last settled box and the new overlap
+		 *  (`heldComposerLimit`); a mid-lift box would replace that box with a top
+		 *  from a layout that is still moving, and a provisional bound computed from
+		 *  THAT top shrinks a little on every layout pass of the animation. The
+		 *  end-of-lift re-measure (above) publishes the settled box. */
+		if (keyboardOverlap !== liftTarget.current) return;
 		const report = (top: number, height: number) =>
 			onMeasure({
 				top,

@@ -1300,7 +1300,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// TestFlight 753 keyboard fix (shared keyboard frame, keyboard-aware held
 	// box, end-of-lift re-measure, paste offer while composing) and its tests;
 	// re-pinned with --print over the staged tree. Admission only.
-	src: "8d92db20fa3eeae42a1b9515ba2a2254590c28d1d818cc77ff2574505eb13f7d",
+	// PR #216 round 1 remediation (keyboard-frame seed, the composer's lift
+	// seed and mid-lift publish guard, the capped box's bound through the lift)
+	// and its tests; re-pinned with --print over the staged tree. Admission only.
+	src: "3c7ffe89cd091bcb4cbd059b0545102e7b9159064e2bb83365103abc8b5d2c65",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
