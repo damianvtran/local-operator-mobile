@@ -639,7 +639,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge drawer switch and this PR's composer work, so it has neither
 	// parent's digest; re-pinned with --print over the staged merged tree.
 	// Source admission only, no rendered or native proof refreshed.
-	app: "0797430d8932614cc0286f22373fcb4d89d5dcb23eb3951dc17d89152e4f6e40",
+	// TestFlight 753 keyboard fix: the session screen caps the composer against
+	// the keyboard-aware visible height; re-pinned with --print over the staged
+	// tree. Source admission only, no rendered or native proof refreshed.
+	app: "e590d56fe89badf13022952423978fcfc441245cc6d98b9c47848801cf8c5cc4",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1294,7 +1297,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge drawer switch and this PR's composer work, so it has neither
 	// parent's digest; re-pinned with --print over the staged merged tree.
 	// Source admission only, no rendered or native proof refreshed.
-	src: "160680106942a28c33da1df96b37aa948e2840d076d5652c07d12479f855917c",
+	// TestFlight 753 keyboard fix (shared keyboard frame, keyboard-aware held
+	// box, end-of-lift re-measure, paste offer while composing) and its tests;
+	// re-pinned with --print over the staged tree. Admission only.
+	src: "8d92db20fa3eeae42a1b9515ba2a2254590c28d1d818cc77ff2574505eb13f7d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1307,8 +1313,10 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Deliberate --print re-pin: only the native Info.plist export-compliance
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
+	// --print re-pin: the Android `softwareKeyboardLayoutMode: "resize"` (Expo's
+	// default, stated with its why); not a U-08 web layout input.
 	"app.config.ts":
-		"09a1ae6b5ebc4967b5d93e34121653ae10a28356378f29f1a0a064631762c52e",
+		"fbe62d79b01e3189a103fecf3cae02114e89f746ae36cf15546b68c7bd3f003b",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

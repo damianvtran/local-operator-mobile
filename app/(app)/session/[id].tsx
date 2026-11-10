@@ -69,6 +69,7 @@ import {
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth } from "@/features/session/health";
 import { headerSubtitle } from "@/features/session/health-copy";
+import { useKeyboardFrame } from "@/features/session/keyboard-frame";
 import { rosterNeedsAttention } from "@/features/session/panels";
 import { pendingView } from "@/features/session/pending";
 import { usePendingEchoes } from "@/features/session/pending-echo";
@@ -566,6 +567,12 @@ export default function Session() {
 	 *  large text (design recheck D-c). The COMPOSER measures itself — wrapping it
 	 *  would reparent the field, which the footer contract forbids. */
 	const [composerBox, setComposerBoxState] = useState<ComposerBox | null>(null);
+	/* The keyboard frame the composer lifts by, from the SAME store
+	 *  (`keyboard-frame.ts`). The ceiling is measured against the visible height
+	 *  `window - overlap`: `useWindowDimensions()` keeps the full window while the
+	 *  iOS (and edge-to-edge Android) keyboard is up, so capping against it let the
+	 *  composer's controls row run under the keyboard (TestFlight 753). */
+	const keyboardOverlap = useKeyboardFrame().overlap;
 	/* An unchanged measurement is not a new state (perf audit P15). The composer
 	 *  publishes a FRESH `{top, height, capped}` on every layout pass and every
 	 *  measure-key change, and a fresh object re-rendered this whole screen even
@@ -581,7 +588,12 @@ export default function Session() {
 	 *  native `measureInWindow` answer from before the resize carries the old
 	 *  window in its closure and is discarded the same way. */
 	const setComposerBox = useCallback(
-		(measured: { top: number; height: number; capped: boolean }) => {
+		(measured: {
+			top: number;
+			height: number;
+			capped: boolean;
+			keyboardOverlap: number;
+		}) => {
 			const next: ComposerBox = { ...measured, viewportWidth, viewportHeight };
 			setComposerBoxState((previous) =>
 				sameComposerBox(previous, next) ? previous : next,
@@ -1533,6 +1545,7 @@ export default function Session() {
 						limit={heldComposerLimit(composerBox, {
 							width: viewportWidth,
 							height: viewportHeight,
+							keyboardOverlap,
 						})}
 						onMeasure={setComposerBox}
 						/* The measured heights above the composer close the key

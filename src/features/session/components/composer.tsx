@@ -22,10 +22,8 @@ import {
 } from "react";
 import {
 	ActivityIndicator,
-	Dimensions,
 	Image,
 	Keyboard,
-	type KeyboardEvent,
 	type LayoutChangeEvent,
 	Platform,
 	Pressable,
@@ -51,6 +49,7 @@ import {
 	type AttachSource,
 	attachActions,
 	type PasteVia,
+	pasteOfferComposing,
 } from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
@@ -90,11 +89,14 @@ import {
 	composerShellPadding,
 	composerShellRadius,
 	controlsTrailing,
-	keyboardOverlap,
 	morphHeight,
 	seedFor,
 } from "@/features/session/composer-presentation";
 import { isSendKey } from "@/features/session/keyboard";
+import {
+	subscribeKeyboardFrame,
+	useKeyboardFrame,
+} from "@/features/session/keyboard-frame";
 import type { DictationState } from "@/features/session/use-dictation";
 import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
@@ -125,7 +127,6 @@ import {
 	composerAtHostCap,
 	composerBudget,
 	composerHostBound,
-	composerKeyboardLimit,
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -378,7 +379,13 @@ export type ComposerProps = {
 	 *  the ceiling only binds once the painted bottom reaches the window. `capped`
 	 *  says the box is held at `limit` (see `composerLimit`'s invariant): a capped
 	 *  box ends where a fitting one does, so the screen cannot read it from geometry. */
-	onMeasure?: (box: { top: number; height: number; capped: boolean }) => void;
+	onMeasure?: (box: {
+		top: number;
+		height: number;
+		capped: boolean;
+		/** The lift's keyboard offset when this box was measured (whole pt). */
+		keyboardOverlap: number;
+	}) => void;
 	/** Any value whose change moves the composer without resizing it (the find bar,
 	 *  a panel, the pending card). The measurement effect watches it. */
 	measureKey?: string;
@@ -1013,9 +1020,14 @@ export const Composer = ({
 	const [chipZoneWidth, setChipZoneWidth] = useState(0);
 	const _window = useWindowDimensions();
 	const [focused, setFocused] = useState(false);
-	const pasteOffer = useClipboardImageOffer(focused);
-	const [keyboardVisible, setKeyboardVisible] = useState(false);
-	const [nativeKeyboardOverlap, setNativeKeyboardOverlap] = useState(0);
+	/* Offered while COMPOSING, not only while focused (`pasteOfferComposing`,
+	 *  TestFlight 753: a blur after the first paste hid the chip). */
+	const pasteOffer = useClipboardImageOffer(
+		pasteOfferComposing({ focused, draft, attachments: images.length }),
+	);
+	/* The ONE keyboard frame the screen also caps against (`keyboard-frame.ts`). */
+	const keyboard = useKeyboardFrame();
+	const keyboardVisible = keyboard.visible;
 	const [contextOpen, setContextOpen] = useState(false);
 	const ownField = useRef<TextInput>(null);
 	const inputRef = fieldRef ?? ownField;
@@ -1035,6 +1047,9 @@ export const Composer = ({
 	const progress = useSharedValue(compact === null ? 1 : 0);
 	const keyboardOffset = useSharedValue(0);
 	const keyboardDuration = useRef(200);
+	/* The latest `publishBox`, for the lift's completion callback below, which is
+	 *  subscribed once and must not capture a stale one. */
+	const publishBoxRef = useRef<() => void>(() => {});
 	const presentationFacts = {
 		focused,
 		draft,
@@ -1092,38 +1107,40 @@ export const Composer = ({
 	const presentation = restsAsCard
 		? composerPresentation({ ...presentationFacts, card: true })
 		: activePresentation;
-	/* One keyboard owner. Android's resized window already ends at keyboard top:
-	 * overlap is then zero. iOS follows the native frame/duration, not a second
-	 * keyboardDidShow correction; safe-area clearance belongs OUTSIDE the shell. */
+	/* The lift. One keyboard source (`keyboard-frame.ts`); this subscription runs
+	 * in the native event itself, so the lift starts with the keyboard. iOS follows
+	 * the native frame/duration; safe-area clearance belongs OUTSIDE the shell.
+	 *
+	 * RE-MEASURE WHEN THE LIFT LANDS (TestFlight 753). The screen's ceiling is
+	 * `visible - top`, and `top` moves by the whole lift. The measure key flips
+	 * with the keyboard, but that measurement lands while the lift is still
+	 * running and nothing measured again at its end, so the screen held a `top`
+	 * from before the lift. The box carries the offset the lift had reached
+	 * (`publishBox`), the screen discards a box whose offset is not the settled
+	 * keyboard's (`heldComposerLimit`), and the measurement that counts is this
+	 * one: on the next frame after the timing finishes, once the final margin has
+	 * been laid out. A height change while the keyboard is up (predictive bar,
+	 * emoji keyboard, an Android IME resize) is a new frame and lands the same
+	 * way. */
 	useEffect(() => {
-		if (Platform.OS === "web") return;
-		const frame = (event: KeyboardEvent) => {
-			keyboardDuration.current = event.duration || 200;
-			const overlap = keyboardOverlap(
-				Dimensions.get("window").height,
-				event.endCoordinates.screenY,
-			);
-			setNativeKeyboardOverlap(overlap);
-			keyboardOffset.value = withTiming(overlap, {
-				duration: event.duration || 200,
-			});
-			if (overlap > 0 || event.endCoordinates.height > 0)
-				setKeyboardVisible(true);
+		const remeasure = () => {
+			requestAnimationFrame(() => publishBoxRef.current());
 		};
-		const subs = [
-			Keyboard.addListener(
-				Platform.OS === "ios" ? "keyboardWillChangeFrame" : "keyboardDidShow",
-				frame,
-			),
-			Keyboard.addListener("keyboardDidHide", () => {
-				setKeyboardVisible(false);
-				setNativeKeyboardOverlap(0);
+		return subscribeKeyboardFrame((frame) => {
+			keyboardDuration.current = frame.duration;
+			if (!frame.visible) {
 				keyboardOffset.value = 0;
-			}),
-		];
-		return () => {
-			for (const sub of subs) sub.remove();
-		};
+				remeasure();
+				return;
+			}
+			keyboardOffset.value = withTiming(
+				frame.overlap,
+				{ duration: frame.duration },
+				(finished) => {
+					if (finished) runOnJS(remeasure)();
+				},
+			);
+		});
 	}, [keyboardOffset]);
 	useEffect(() => {
 		progress.value = withTiming(presentation.expanded ? 1 : 0, {
@@ -1264,17 +1281,22 @@ export const Composer = ({
 	 *  between the field and the controls row (`COMPOSER_CONTROLS_GAP`). */
 	const stripHeight = compactSingle ? receiptHeight : 0;
 	const fixedRows = compactSingle ? 0 : TOUCH_FLOOR + stripHeight + 4;
-	const hostBound = compact === null ? limit : compact.maxHeight;
-	// The iOS window does not shrink with its keyboard. A bottom translation
-	// alone keeps the footer above it but lets extras grow off-screen forever.
-	const keyboardBound =
-		Platform.OS !== "web" && keyboardVisible
-			? composerKeyboardLimit(_window.height, nativeKeyboardOverlap)
-			: null;
+	/* The host `limit` is the ONE measured ceiling, and it is keyboard-aware: the
+	 *  screen computes it as `composerLimit(window - keyboardOverlap, top, …)`
+	 *  (`heldComposerLimit`), so with the keyboard up it ends at the keyboard's
+	 *  top. The bound this replaced, `window - overlap - 8`, was the room from
+	 *  the window's TOP: with the composer's top at 241 pt it allowed 512 pt
+	 *  against the 279 visible, and the controls row (Send) went under the
+	 *  keyboard (TestFlight 753). Short landscape keeps its geometry share and,
+	 *  while the keyboard is up, also honours the host limit, because the share
+	 *  is a fraction of the WINDOW and knows nothing of the keyboard. */
+	const keyboardLimit = compact !== null && keyboardVisible ? limit : null;
 	const rawBound =
-		keyboardBound === null
-			? hostBound
-			: Math.min(hostBound ?? keyboardBound, keyboardBound);
+		compact === null
+			? limit
+			: keyboardLimit === null
+				? compact.maxHeight
+				: Math.min(compact.maxHeight, keyboardLimit);
 	const bound =
 		rawBound === null
 			? null
@@ -1318,17 +1340,23 @@ export const Composer = ({
 	 *  native-web` implements `measureInWindow` on the host node; native resolves it
 	 *  asynchronously, which is why this only publishes a number and never gates the
 	 *  first paint (a `null` top means "no limit" — the old behaviour — for a frame). */
-	/* Only the portrait host `limit` is fed back through the measurement; the compact
-	 *  share and the keyboard budget come from window geometry and never loop. */
-	const hostLimit = compact === null ? limit : null;
+	/* Only the host `limit` is fed back through the measurement (portrait always,
+	 *  short landscape while it binds above the keyboard); the compact share comes
+	 *  from window geometry and never loops. */
+	const hostLimit = compact === null ? limit : keyboardLimit;
 	const outerGap = presentation.gap;
 	const publishBox = useCallback(() => {
 		if (!onMeasure) return;
+		/* The lift's offset when the measurement was TAKEN: a box measured mid-lift
+		 *  carries an offset that is not the settled keyboard's, and the screen
+		 *  discards it (`heldComposerLimit`) until the end-of-lift re-measure. */
+		const keyboardOverlap = Math.round(keyboardOffset.value);
 		const report = (top: number, height: number) =>
 			onMeasure({
 				top,
 				height,
 				capped: composerAtHostCap(height, hostLimit, outerGap, TOUCH_FLOOR),
+				keyboardOverlap,
 			});
 		/* On the web the host node answers directly: `measureInWindow` there returns
 		 *  a CACHED layout, so after the draft grew the screen kept reading the empty
@@ -1348,7 +1376,8 @@ export const Composer = ({
 		);
 		/* `hostLimit` and `outerGap` are deps on purpose: binding the limit resizes the
 		 *  box, and that re-measure is what reports `capped` for the new cap. */
-	}, [onMeasure, hostLimit, outerGap]);
+	}, [onMeasure, hostLimit, outerGap, keyboardOffset]);
+	publishBoxRef.current = publishBox;
 	/* One string, because the effect must run when ANY of these moves the composer —
 	 *  the receipt wrapping, the extras, the scale, the mode, the dictation row — or
 	 *  when the screen says the chrome above it changed. Listing them as separate
@@ -1356,8 +1385,10 @@ export const Composer = ({
 	 *  ceiling stops matching the column. */
 	/* The keyboard is in the key (deferred #177 finding): toggling it moves the
 	 *  dock by the keyboard's height without changing any other input here, and a
-	 *  key that missed it left the host reading a stale `composerBox.top`. */
-	const measurementKey = `${measureKey}|${stripHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}|${keyboardVisible ? "keyboard" : ""}`;
+	 *  key that missed it left the host reading a stale `composerBox.top`. Its
+	 *  HEIGHT is in the key too: a predictive bar or emoji keyboard changes the
+	 *  overlap while it stays visible (TestFlight 753). */
+	const measurementKey = `${measureKey}|${stripHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}|${keyboardVisible ? `keyboard:${keyboard.overlap}` : ""}`;
 	useEffect(() => {
 		/* `measurementKey` is READ here only to make it the dependency it is: the
 		 *  effect's whole purpose is to re-measure when the key changes (find bar,

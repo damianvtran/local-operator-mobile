@@ -204,6 +204,17 @@ const config: ExpoConfig = {
 		// The value both stores compare for monotonicity. Omitted when there is no
 		// build number, for the same reason as `ios.buildNumber`.
 		...(buildNumber > 0 ? { versionCode: buildNumber } : {}),
+		// `adjustResize` is Expo's default, stated here because the composer's
+		// keyboard math depends on it (`src/features/session/keyboard-frame.ts`).
+		// The app is edge-to-edge (enforced from Android 15 / RN 0.81), and an
+		// edge-to-edge window is NOT shrunk by the IME even under adjustResize: the
+		// keyboard is an inset, `useWindowDimensions()` keeps the full height and
+		// the keyboard event's overlap is the keyboard's height — the iOS contract,
+		// which the composer's lift and the screen's ceiling both read. "pan" would
+		// instead slide the whole window up under the header, and should the window
+		// ever resize, the overlap reads 0 against an already-shortened window, so
+		// the ceiling stays right either way.
+		softwareKeyboardLayoutMode: "resize",
 		// The permissions that may NEVER reach the manifest, whatever a dependency's
 		// library manifest declares. `expo-image-picker` ships CAMERA /
 		// READ_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE for camera-roll flows this

@@ -100,3 +100,94 @@ export function collectChromeFrames(laneDir: string): string[] {
 	assert(found.length > 0, "no frames collected");
 	return found.sort();
 }
+
+/**
+ * Whether Send sits above the software keyboard, from a `maestro hierarchy`
+ * dump (TestFlight 753: "it pushes the composer send buttons below the bottom
+ * of the keyboard"). `session-keyboard.yaml` types a long draft with the
+ * keyboard up; the driver dumps the hierarchy after it and the AFTER build
+ * must pass this. The BEFORE build is not held to it — showing main's defect
+ * is what its frame is for.
+ *
+ * Maestro's iOS hierarchy is a tree of `{ attributes, children }`, with
+ * `attributes["resource-id"]` (the testID) and `attributes.bounds` as
+ * "[x1,y1][x2,y2]" in points. The keyboard is found by its keys, not an
+ * element type the dump does not carry: the `space` key proves a SOFTWARE
+ * keyboard is up (a simulator defaulting to the hardware keyboard shows none,
+ * and that is a FAIL, never a pass), and the keyboard's top is the highest key
+ * within one keyboard's height of it. That is the top KEY row, so a Send
+ * hidden behind the predictive bar alone would pass: the check is a floor,
+ * stated so a green row is not read as more.
+ */
+export type HierarchyNode = {
+	attributes?: Record<string, string | undefined>;
+	children?: HierarchyNode[];
+};
+/** The JSON tree out of `maestro hierarchy`'s output, which the driver
+ *  captures with stderr folded in, so log lines may surround it. */
+export function parseHierarchy(output: string): HierarchyNode {
+	const start = output.indexOf("{");
+	const end = output.lastIndexOf("}");
+	assert(start >= 0 && end > start, "no JSON in the hierarchy output");
+	return JSON.parse(output.slice(start, end + 1)) as HierarchyNode;
+}
+type Box = { top: number; bottom: number };
+const BOUNDS = /^\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]$/;
+const SPACE_KEY = /^space$/i;
+const boxOf = (bounds: string | undefined): Box | null => {
+	const m = bounds?.match(BOUNDS);
+	return m ? { top: Number(m[2]), bottom: Number(m[4]) } : null;
+};
+const KEY_LABEL = /^(space|return|shift|delete|[a-z])$/i;
+/** The tallest iOS software keyboard's key area, in pt, above the space row. */
+const KEYBOARD_SPAN = 300;
+
+export function sendAboveKeyboard(
+	tree: HierarchyNode,
+	sendId = "composer-send",
+): { ok: boolean; reason: string; send?: Box; keyboardTop?: number } {
+	const nodes: HierarchyNode[] = [];
+	const walk = (node: HierarchyNode) => {
+		nodes.push(node);
+		for (const child of node.children ?? []) walk(child);
+	};
+	walk(tree);
+	const label = (n: HierarchyNode) =>
+		(n.attributes?.accessibilityText || n.attributes?.text || "").trim();
+	const send = nodes
+		.filter((n) => n.attributes?.["resource-id"] === sendId)
+		.map((n) => boxOf(n.attributes?.bounds))
+		.find((b) => b !== null);
+	if (!send) return { ok: false, reason: `no ${sendId} in the hierarchy` };
+	const space = nodes
+		.filter((n) => SPACE_KEY.test(label(n)))
+		.map((n) => boxOf(n.attributes?.bounds))
+		.find((b) => b !== null);
+	if (!space)
+		return {
+			ok: false,
+			send,
+			reason: "no software keyboard (no space key) in the hierarchy",
+		};
+	const keyboardTop = Math.min(
+		...nodes
+			.filter((n) => KEY_LABEL.test(label(n)))
+			.map((n) => boxOf(n.attributes?.bounds))
+			.filter(
+				(b): b is Box =>
+					b !== null &&
+					b.top >= space.top - KEYBOARD_SPAN &&
+					b.top <= space.top,
+			)
+			.map((b) => b.top),
+	);
+	const ok = send.bottom <= keyboardTop;
+	return {
+		ok,
+		send,
+		keyboardTop,
+		reason: ok
+			? `send bottom ${send.bottom} <= keyboard top ${keyboardTop}`
+			: `send bottom ${send.bottom} is below the keyboard top ${keyboardTop}`,
+	};
+}

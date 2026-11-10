@@ -11,7 +11,6 @@ import {
 	composerBudget,
 	composerChromeKey,
 	composerHostBound,
-	composerKeyboardLimit,
 	composerLimit,
 	computersHeaderStackWidth,
 	HEADER_STACK_WIDTH,
@@ -46,23 +45,116 @@ import { FIELD_BORDER_Y, touchFloorFor } from "@/ui/variants";
  * geometry come from the same run.
  */
 
-describe("keyboard-relative aggregate composer budget", () => {
-	it("reserves a footer above iOS overlap and Android's resized window", () => {
-		// Equal visible room through two different native keyboard contracts.
-		expect(composerKeyboardLimit(844, 344)).toBe(492);
-		expect(composerKeyboardLimit(500, 0)).toBe(492);
-		const budget = composerBudget(
-			composerKeyboardLimit(844, 344),
-			100,
-			900,
-			44,
-			20,
-		);
-		expect(budget.field + FIELD_BORDER_Y + budget.extras + 100 + 20 + 8).toBe(
-			500,
-		);
-		expect(budget.field + FIELD_BORDER_Y).toBe(44);
-		expect(budget.extras).toBeLessThan(900);
+/**
+ * The composer's ceiling while the keyboard is up (TestFlight 753: "when I paste
+ * images it pushes the composer send buttons below the bottom of the keyboard").
+ *
+ * The old keyboard bound was `window - overlap - 8`: the room from the window's
+ * TOP to the keyboard, as if the composer's top were at 0. A composer whose top
+ * sits under the header and the chrome (241 pt in the operator's screenshot)
+ * was allowed 512 pt it did not have, so its controls row ran under the
+ * keyboard. The ceiling is now `composerLimit` over the KEYBOARD-AWARE visible
+ * height (`window - overlap`), through the same held-box rule the screen uses,
+ * so the measurement still never depends on the output it controls.
+ */
+describe("the composer's ceiling above the keyboard (TestFlight 753)", () => {
+	const GAP = 8;
+	const floor = TOUCH_TARGET.ios;
+	const PAD = 20; // `composerPad` for the portrait card.
+	const CONTROLS = floor + 4; // `fixedRows`: the controls row + its gap.
+	const box = (
+		top: number,
+		height: number,
+		viewport: { width: number; height: number; keyboardOverlap: number },
+		capped = false,
+	): ComposerBox => ({
+		top,
+		height,
+		capped,
+		viewportWidth: viewport.width,
+		viewportHeight: viewport.height,
+		keyboardOverlap: viewport.keyboardOverlap,
+	});
+
+	it("binds at the keyboard's top, not the window's top (the screenshot's arithmetic)", () => {
+		/* Screenshot: composer top 241, keyboard top 528 in an 844 pt window. */
+		const viewport = { width: 390, height: 844, keyboardOverlap: 316 };
+		const limit = heldComposerLimit(box(241, 600, viewport), viewport);
+		expect(limit).toBe(287);
+		expect(composerHostBound(limit ?? 0, GAP, floor)).toBe(279);
+		/* The same box with the keyboard down fits the window, so stays unbound. */
+		const down = { width: 390, height: 844, keyboardOverlap: 0 };
+		expect(heldComposerLimit(box(241, 500, down), down)).toBe(null);
+	});
+
+	it("discards a box measured under another keyboard height, as it does another window", () => {
+		/* A box measured before (or mid-way through) the lift has a top from a
+		 *  layout that no longer exists; holding it is the U1 fixed point. */
+		const up = { width: 390, height: 844, keyboardOverlap: 336 };
+		const mid = { width: 390, height: 844, keyboardOverlap: 120 };
+		expect(heldComposerLimit(box(400, 100, mid, true), up)).toBe(null);
+		expect(heldComposerLimit(box(400, 100, up, true), up)).toBe(108);
+		expect(sameComposerBox(box(241, 279, up), box(241, 279, mid))).toBe(false);
+	});
+
+	/* The controls row (attach, paste, mic, Stop, Send) is what the bound exists
+	 *  to keep on screen: under a binding cap the FIELD and the EXTRAS scroll,
+	 *  never it. Model of the portrait card: padding, field, extras (the
+	 *  attachment strip), then the controls row, bottom-anchored on its gap. */
+	const controlsBottom = (
+		viewport: { width: number; height: number; keyboardOverlap: number },
+		chromeTop: number,
+		naturalField: number,
+		naturalExtras: number,
+	) => {
+		const natural = PAD + naturalField + naturalExtras + CONTROLS;
+		const visible = viewport.height - viewport.keyboardOverlap;
+		/* Unbound first paint: the composer grows down from the chrome (the
+		 *  transcript above it is already 0 tall) or rests on its gap. */
+		const top = Math.max(chromeTop, visible - GAP - natural);
+		const limit = heldComposerLimit(box(top, natural, viewport), viewport);
+		if (limit === null) return { bottom: top + natural - PAD / 2, visible };
+		const bound = composerHostBound(limit, GAP, floor);
+		const budget = composerBudget(bound, CONTROLS, naturalExtras, floor, PAD);
+		const height =
+			PAD +
+			Math.min(naturalField, budget.field + FIELD_BORDER_Y) +
+			budget.extras +
+			CONTROLS;
+		expect(height).toBeLessThanOrEqual(bound);
+		/* The controls row's bottom: the box's bottom less its bottom padding. */
+		return { bottom: top + height - PAD / 2, visible, budget };
+	};
+
+	it.each([
+		["iPhone, one image, long draft", 844, 336, 241, 72],
+		["iPhone, two images, long draft", 844, 336, 241, 144],
+		["Android 800 window, one image", 800, 300, 120, 72],
+		["Android 800 window, two images", 800, 300, 120, 144],
+	])(
+		"%s: the controls row ends above the keyboard",
+		(_name, h, kb, chromeTop, extras) => {
+			const viewport = { width: 390, height: h, keyboardOverlap: kb };
+			const { bottom, visible, budget } = controlsBottom(
+				viewport,
+				chromeTop,
+				12 * 22, // A long draft: twelve lines.
+				extras,
+			);
+			expect(budget).toBeDefined();
+			expect(bottom).toBeLessThanOrEqual(visible - GAP);
+			/* The field keeps at least one touch row of its own. */
+			expect((budget?.field ?? 0) + FIELD_BORDER_Y).toBeGreaterThanOrEqual(
+				floor,
+			);
+		},
+	);
+
+	it("a short draft with the keyboard up stays unbound and above the keyboard", () => {
+		const viewport = { width: 390, height: 844, keyboardOverlap: 336 };
+		const { bottom, visible, budget } = controlsBottom(viewport, 241, 44, 0);
+		expect(budget).toBeUndefined();
+		expect(bottom).toBeLessThanOrEqual(visible - GAP);
 	});
 });
 
@@ -957,7 +1049,11 @@ describe("heldComposerLimit (UX #211 U1: a measurement does not survive a window
 		);
 		expect(screen).toContain("[viewportWidth, viewportHeight], );");
 		expect(screen).toContain(
-			"limit={heldComposerLimit(composerBox, { width: viewportWidth, height: viewportHeight, })}",
+			"limit={heldComposerLimit(composerBox, { width: viewportWidth, height: viewportHeight, keyboardOverlap, })}",
+		);
+		/* The overlap is the shared keyboard store's, not a second listener. */
+		expect(screen).toContain(
+			"const keyboardOverlap = useKeyboardFrame().overlap;",
 		);
 		expect(screen).not.toMatch(/[^d]composerLimit\(/i);
 	});
