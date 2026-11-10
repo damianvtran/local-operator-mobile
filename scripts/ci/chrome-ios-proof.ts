@@ -38,7 +38,12 @@ import { lookup } from "node:dns/promises";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
-import { collectChromeFrames, LANES } from "./chrome-ios-proof-contract.ts";
+import {
+	collectChromeFrames,
+	LANES,
+	parseHierarchy,
+	sendAboveKeyboard,
+} from "./chrome-ios-proof-contract.ts";
 import type { Provenance } from "./native-artifact-provenance.ts";
 import {
 	nativeConnectionPrerequisiteFailed,
@@ -415,6 +420,7 @@ async function hierarchy(udid: string, lane: string, name: string) {
 		join(ROOT, "hierarchies", `${flat(lane)}-${name}.json`),
 		redact(tree),
 	);
+	return tree;
 }
 
 async function flow(
@@ -534,6 +540,40 @@ try {
 		owned.push(created);
 		const udid = created;
 		laneReceipt.udid = udid;
+		/* The SOFTWARE keyboard is the subject of session-keyboard.yaml, and a
+		 *  simulator may default to the connected hardware keyboard, which shows
+		 *  none. This device's preference is set before boot; the GLOBAL one only
+		 *  on CI (PR #216 review n1): it is a persistent host-wide Simulator
+		 *  setting, and on a developer's Mac it would silently turn off their
+		 *  hardware keyboard for every simulator. `sendAboveKeyboard` still FAILS
+		 *  when no keyboard is in the hierarchy, so a preference that did not take
+		 *  is reported, never passed. */
+		if (env.CI === "true")
+			await run(
+				`soft-keyboard-${lane.id}`,
+				"defaults",
+				[
+					"write",
+					"com.apple.iphonesimulator",
+					"ConnectHardwareKeyboard",
+					"-bool",
+					"false",
+				],
+				30,
+			);
+		await run(
+			`soft-keyboard-device-${lane.id}`,
+			"defaults",
+			[
+				"write",
+				"com.apple.iphonesimulator",
+				"DevicePreferences",
+				"-dict-add",
+				udid,
+				"<dict><key>ConnectHardwareKeyboard</key><false/></dict>",
+			],
+			30,
+		);
 		await run(`boot-${lane.id}`, "xcrun", ["simctl", "boot", udid], 180);
 		await run(
 			`ready-${lane.id}`,
@@ -595,7 +635,17 @@ try {
 				] as const) {
 					await flow(udid, dir, build.bundleId, relay, file, cap);
 					await shot(udid, dir, frame);
-					await hierarchy(udid, dir, frame);
+					const tree = await hierarchy(udid, dir, frame);
+					/* TestFlight 753: the AFTER build must keep Send above the
+					 *  keyboard with a long draft typed. Checked here, right after
+					 *  session-keyboard.yaml and before the idle relay's flows. */
+					if (frame === "session-keyboard" && build.tag === "after") {
+						const verdict = sendAboveKeyboard(parseHierarchy(tree));
+						laneReceipt.sendAboveKeyboard = verdict;
+						note(`${lane.id}: send above keyboard: ${verdict.reason}`);
+						if (!verdict.ok)
+							throw new Error(`send above keyboard: ${verdict.reason}`);
+					}
 				}
 				await run(
 					`uninstall-${lane.id}-${build.tag}`,

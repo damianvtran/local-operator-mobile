@@ -639,11 +639,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge drawer switch and this PR's composer work, so it has neither
 	// parent's digest; re-pinned with --print over the staged merged tree.
 	// Source admission only, no rendered or native proof refreshed.
+	// TestFlight 753 keyboard fix: the session screen caps the composer against
+	// the keyboard-aware visible height; re-pinned with --print over the staged
+	// tree. Source admission only, no rendered or native proof refreshed.
 	// Resume gap heal (#217): the session screen threads `healHistory` (the
 	// quiet gap row's Load) instead of the destructive reload. Merged with main
 	// 2faead90 (#211): re-derived with --print over the staged merged tree;
 	// source identity only, no rendered or native proof.
-	app: "3abf85a4e105ed4bcc1051ac06be0860aa7761aa176cd35cbbc1962368da7001",
+	// PR #216 merged with main 5fb51be0 (#214 user bubble, #217 transcript
+	// self-heal): the merged tree carries healHistory and the keyboard-aware
+	// cap, so it has neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof.
+	app: "5278073b84e0ecd140bddbe4d2b3e04e54973936b16dd1cb826bb6f5c95635f3",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1322,6 +1329,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #211 merged with main 0ae5fe28 (#213): the merged tree carries both,
 	// so src re-derived with --print over the staged merged tree. Source
 	// identity only, no rendered or native proof.
+	// TestFlight 753 keyboard fix (shared keyboard frame, keyboard-aware held
+	// box, end-of-lift re-measure, paste offer while composing) and its tests;
+	// re-pinned with --print over the staged tree. Admission only.
+	// PR #216 round 1 remediation (keyboard-frame seed, the composer's lift
+	// seed and mid-lift publish guard, the capped box's bound through the lift)
+	// and its tests; re-pinned with --print over the staged tree. Admission only.
+	// PR #216 merged with main 8fec5440 (#211 squash, #213): the merged tree
+	// carries #213's thread chrome and this PR's keyboard work, so src
+	// re-derived with --print over the staged merged tree. Admission only.
 	// Resume gap heal: HistoryWindow fills a reconnect/foreground hole by
 	// walking before= pages, a debounced resume gate, and the quiet gap row
 	// copy in all locales. --print over the staged tree; source identity only,
@@ -1340,7 +1356,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #217 merged with main d46e8535 (#214 user bubble squash): src carries
 	// both sides, re-derived with --print over the staged merged tree. Source
 	// identity only, no rendered or native proof.
-	src: "f8a5e006d9038b719ba1fab515c715585dc9e25a47d4de702bb8c9566b6c7c5c",
+	// PR #216 merged with main 5fb51be0 (#214 user bubble, #217 transcript
+	// self-heal): the merged tree carries healHistory and the keyboard-aware
+	// cap, so it has neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source admission only, no rendered or native proof.
+	src: "be83a5b5a065b7ce9b1fb150f6aa02a4777678056d75ad2a8214e62a3cf784c6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1353,8 +1373,10 @@ export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
 export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Deliberate --print re-pin: only the native Info.plist export-compliance
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
+	// --print re-pin: the Android `softwareKeyboardLayoutMode: "resize"` (Expo's
+	// default, stated with its why); not a U-08 web layout input.
 	"app.config.ts":
-		"09a1ae6b5ebc4967b5d93e34121653ae10a28356378f29f1a0a064631762c52e",
+		"fbe62d79b01e3189a103fecf3cae02114e89f746ae36cf15546b68c7bd3f003b",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

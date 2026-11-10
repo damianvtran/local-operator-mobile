@@ -172,6 +172,24 @@ export const probeClipboardImage = async (
 };
 
 /**
+ * Whether the reader is COMPOSING, for the paste offer: the field has focus, or
+ * the card is open with a draft or an attachment.
+ *
+ * Focus alone hid the chip after the first image (TestFlight 753: "I still
+ * can't paste more than one image"). The reader put the keyboard away to reach
+ * the controls, which blurs the field, and the chip went with it while the next
+ * image was still on the clipboard. A draft or an attachment keeps the card
+ * open (`composerPresentation`), and that card is still being composed. The
+ * offer still only PROBES the clipboard (`hasImageAsync`); bytes are read on
+ * tap, never polled.
+ */
+export const pasteOfferComposing = (input: {
+	focused: boolean;
+	draft: string;
+	attachments: number;
+}): boolean => input.focused || input.draft.length > 0 || input.attachments > 0;
+
+/**
  * Whether the composer shows its "Paste image" chip.
  *
  * Why a chip exists at all: a React Native `TextInput` on iOS/Android never
