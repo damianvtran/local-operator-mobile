@@ -1347,7 +1347,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Round-1 remediation (#219): the composer's edge becomes a focus ring and
 	// the drawer's "Open Team Bridge" replaces on Bridge routes. --print over the
 	// staged tree; source identity only, no rendered or native proof.
-	src: "05eae16cc08bd5ee6717701811565b831da6311cd679264e593cc49b95496b9d",
+	// feat/bridge-nav-polish: minimal sunken WorkspaceModeBar + unified top close
+	// row, shared WorkspaceSidebarFooter across drawer modes, and Team Bridge
+	// directory/thread/delivery/sheet polish. Re-derived with --print over the
+	// staged src tree; source identity only, no rendered or native proof.
+	src: "52648afc5865578d8eba194e0104de783355c931e7dc2ac8642473c705571a6b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -29,7 +29,6 @@
  *   still offers the full screen (where sign-in lives).
  */
 import { usePathname, useRouter } from "expo-router";
-import { X } from "lucide-react-native";
 import { useMemo } from "react";
 import { Text, View } from "react-native";
 import { useLocaleFrame } from "@/features/auth/connection-provider";
@@ -40,7 +39,6 @@ import { useTeamBridgeState } from "@/team-bridge/provider";
 import type { TeamBridgeState } from "@/team-bridge/store";
 import { CONTROL, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
-import { IconButton } from "@/ui/components/icon-button";
 import { gateHelp, gateTitle } from "./gate";
 import { BridgeDirectory } from "./list-screen";
 import { bridgeRouteDisposition } from "./profile-card";
@@ -81,10 +79,12 @@ export function bridgeDrawerBadge({
 	};
 }
 
-/** The pane shown when the drawer is in Team Bridge mode. */
+/** The pane shown when the drawer is in Team Bridge mode.
+ *  `CONTROL.sidebarClose` lives on the shared `WorkspaceModeBar` at the top of
+ *  the drawer, so this pane starts straight at the organization switcher
+ *  without a redundant empty 52 pt close row. */
 export function TeamBridgeDrawerPane({
 	onNavigate,
-	onClose,
 }: {
 	onNavigate: () => void;
 	onClose: () => void;
@@ -94,45 +94,38 @@ export function TeamBridgeDrawerPane({
 	const gate = useTeamBridgeState((s) => s.gate);
 	return (
 		<View className="min-h-0 flex-1" testID={SURFACE.teamBridgeDrawerPane}>
-			{/* The Agents pane carries its own visible close; this pane replaces it,
-			 *  so it keeps one too — the scrim is not reachable by every reader. */}
-			{/* `py-1` matches the Agents pane's close row (conversations-pane.tsx),
-			 *  so the ✕ does not jump 4 pt when the mode switches (design D3). */}
-			<View className="flex-row justify-end px-2 py-1">
-				<IconButton
-					accessibilityLabel={t("mobile.chrome.close_conversations")}
-					onPress={onClose}
-					icon={({ color, size }) => <X color={color} size={size} />}
-					testID={CONTROL.sidebarClose}
-				/>
-			</View>
 			{gate === "open" ? (
 				<BridgeDirectory onBeforeOpen={onNavigate} />
 			) : (
 				/* Not admitted (yet): say which state, and hand off to the full
 				 * screen, which owns sign-in, plan and retry. Never a dead end, and
 				 * never a relay requirement. */
-				<View className="gap-4 px-4 py-6">
-					<Text className="text-body text-ink-muted">{gateTitle(gate)}</Text>
+				<View className="gap-3 px-4 py-4">
+					<Text className="text-label font-semibold text-ink">
+						{gateTitle(gate)}
+					</Text>
 					{/* The full screen's own explanation of this state, so the pane
 					 *  says why before offering the way out — a signed-out heading
 					 *  alone read as a mismatch with "Open" (UX U2/U3). Existing
 					 *  copy, shared with `BridgeGate`. */}
-					<Text className="text-body text-ink-muted">{gateHelp(gate)}</Text>
-					<Button
-						label={t("mobile.team_bridge.navigation.open_hub")}
-						variant="outline"
-						testID={CONTROL.teamBridgeDrawerOpen}
-						onPress={() => {
-							onNavigate();
-							/* Replace, not push, when already on a Team Bridge route
-							 *  (a thread showing its gate): the rows' own rule, so the
-							 *  list never lands on top of a thread (R1-2 / U1-1). */
-							if (bridgeRouteDisposition(pathname) === "replace")
-								router.replace("/team-bridge" as never);
-							else router.push("/team-bridge" as never);
-						}}
-					/>
+					<Text className="text-body-sm text-ink-muted">{gateHelp(gate)}</Text>
+					<View className="self-start">
+						<Button
+							label={t("mobile.team_bridge.navigation.open_hub")}
+							variant="outline"
+							size="sm"
+							testID={CONTROL.teamBridgeDrawerOpen}
+							onPress={() => {
+								onNavigate();
+								/* Replace, not push, when already on a Team Bridge route
+								 *  (a thread showing its gate): the rows' own rule, so the
+								 *  list never lands on top of a thread (R1-2 / U1-1). */
+								if (bridgeRouteDisposition(pathname) === "replace")
+									router.replace("/team-bridge" as never);
+								else router.push("/team-bridge" as never);
+							}}
+						/>
+					</View>
 				</View>
 			)}
 		</View>

@@ -250,7 +250,14 @@ export function BridgeComposerFieldView({
 			) : null}
 			<View
 				className="min-w-0 flex-1 justify-center"
-				style={{ minHeight: row }}
+				style={{
+					minHeight: row,
+					/* When no attach control renders (e.g. a draft DM before first send,
+					 * or a hub without attachment support), add 4 pt start inset on top
+					 * of the shell's 12 pt side pad so text sits cleanly at 16 pt (`px-4`)
+					 * rather than hugging the curved 28 pt pill corner. */
+					paddingStart: onAttach && attachLabel ? 0 : 4,
+				}}
 			>
 				<Textarea
 					label={label}

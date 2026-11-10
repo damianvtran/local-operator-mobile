@@ -60,16 +60,16 @@ describe("D16: one back control", () => {
 	});
 });
 
-describe("D11: the drawer footer is two rows", () => {
+describe("D11: the drawer footer is two rows and shared across Agents and Team Bridge", () => {
 	const pane = read("sessions/conversations-pane.tsx");
 	const footer = flat(
 		pane.slice(
-			pane.indexOf("const footer = ("),
-			pane.indexOf("return (", pane.indexOf("const footer = (")),
+			pane.indexOf("export const WorkspaceSidebarFooter = ("),
+			pane.indexOf("export const ConversationsPane = ("),
 		),
 	);
 
-	it("puts the switcher, Team Bridge and Settings on ONE workspace row", () => {
+	it("puts the switcher, Team Bridge fallback and Settings on ONE workspace row", () => {
 		const row = footer.slice(
 			footer.indexOf("<DrawerComputerRow"),
 			footer.indexOf("{largeText ? ("),
@@ -80,12 +80,15 @@ describe("D11: the drawer footer is two rows", () => {
 		expect(footer.match(/<TeamBridgeEntry/g)?.length).toBe(1);
 	});
 
-	it("drops the footer icon inside the drawer, where the labelled mode switch replaces it", () => {
-		// `onClose` is passed only by the drawer; the docked tablet pane has no
-		// drawer header, so it keeps the icon as its one Bridge entry.
+	it("drops the footer icon whenever the labelled WorkspaceModeBar header replaces it, and keeps WorkspaceSidebarFooter mounted in Team Bridge drawer mode", () => {
+		// `hasModeHeader` is true inside the drawer (`onClose`) and on a docked
+		// split pane with a `bridgeAdapter`; only a standalone pane with no mode
+		// header keeps the compact footer icon as its Bridge fallback.
 		expect(footer).toContain(
-			'{onClose ? null : ( <TeamBridgeEntry variant="compact"',
+			'{hasModeHeader ? null : ( <TeamBridgeEntry variant="compact"',
 		);
+		const conversationsDrawer = flat(read("sessions/conversations-drawer.tsx"));
+		expect(conversationsDrawer).toContain("<WorkspaceSidebarFooter");
 		const root = flat(
 			readFileSync(join(FEATURES, "../../app/_layout.tsx"), "utf8"),
 		);
@@ -129,16 +132,18 @@ describe("D11: the drawer footer is two rows", () => {
 		expect(compact).not.toContain("navigation.caption");
 	});
 
-	it("the drawer's mode selector keeps the label and the count apart", () => {
+	it("the drawer's mode selector uses a minimal sunken track, keeps the label and count apart, and never stacks bg-accent on bg-accent", () => {
 		const drawer = flat(read("sessions/workspace-drawer.tsx"));
-		expect(drawer).toContain('label={t("mobile.team_bridge.title")}');
-		expect(drawer).toContain(
-			"accessibilityLabel={bridgeAdapter.bridgeBadge.a11yLabel}",
-		);
+		expect(drawer).toContain("rounded-md bg-sunken p-0.5");
+		expect(drawer).toContain('{t("mobile.team_bridge.title")}');
+		expect(drawer).toContain("accessibilityLabel={bridgeBadge.a11yLabel}");
 		// Unknown (null) and not-ready never paint as a number.
 		expect(drawer).toContain(
-			'bridgeAdapter.bridgeBadge.state === "ready" && bridgeAdapter.bridgeBadge.count !== null && bridgeAdapter.bridgeBadge.count > 0',
+			'bridgeBadge.state === "ready" && bridgeBadge.count !== null && bridgeBadge.count > 0',
 		);
+		// Selected segment uses bg-elevated rather than a primary bg-accent button slab.
+		expect(drawer).toContain("border-hairline bg-elevated");
+		expect(drawer).not.toContain('variant={bridge ? "primary"');
 	});
 });
 

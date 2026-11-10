@@ -33,7 +33,7 @@ vi.mock("expo-router", () => ({
 	usePathname: () => host.path,
 	useRouter: () => ({ navigate: host.navigate }),
 }));
-vi.mock("lucide-react-native", () => ({ Menu: () => null }));
+vi.mock("lucide-react-native", () => ({ Menu: () => null, X: () => null }));
 vi.mock("react-native", () => ({
 	Platform: {
 		get OS() {
@@ -43,15 +43,23 @@ vi.mock("react-native", () => ({
 	Keyboard: { dismiss: host.dismiss },
 	View: ({ children }: { children?: import("react").ReactNode }) =>
 		children ?? null,
+	Text: ({ children }: { children?: import("react").ReactNode }) =>
+		children ?? null,
 	Pressable: (props: {
-		children?: import("react").ReactNode;
+		children?:
+			| import("react").ReactNode
+			| ((state: { pressed: boolean }) => import("react").ReactNode);
 		testID: string;
 		onPress: () => void;
 		accessibilityLabel: string;
 	}) => {
 		host.presses.set(props.testID, props.onPress);
 		host.labels.set(props.testID, props.accessibilityLabel);
-		return props.children ?? null;
+		const content =
+			typeof props.children === "function"
+				? props.children({ pressed: false })
+				: props.children;
+		return content ?? null;
 	},
 }));
 vi.mock("@/features/auth/connection-provider", () => ({
@@ -72,6 +80,18 @@ vi.mock("@/ui/components/badge", () => ({
 }));
 vi.mock("@/ui/components/button", () => ({
 	Button: ({ testID, onPress }: { testID: string; onPress: () => void }) => {
+		host.presses.set(testID, onPress);
+		return null;
+	},
+}));
+vi.mock("@/ui/components/icon-button", () => ({
+	IconButton: ({
+		testID,
+		onPress,
+	}: {
+		testID: string;
+		onPress: () => void;
+	}) => {
 		host.presses.set(testID, onPress);
 		return null;
 	},
@@ -213,6 +233,32 @@ describe("one workspace drawer above the mounted chat", () => {
 		host.unread = null;
 		host.badges = [];
 		await mount();
+		expect(host.labels.get("chat-menu")).toBe("Open conversations");
+		expect(host.badges).toEqual([]);
+	});
+	it("surfaces known positive Team Bridge unreads on the menu trigger when agent unreads are absent, and suppresses non-ready bridge counts", async () => {
+		host.unread = { count: 0, state: "ready" };
+		host.badges = [];
+		await mount({
+			bridgePane: () => null,
+			bridgeBadge: {
+				count: 3,
+				state: "ready",
+				a11yLabel: "Team Bridge · 3 unread",
+			},
+		});
+		expect(host.labels.get("chat-menu")).toBe("Team Bridge · 3 unread");
+		expect(host.badges.at(-1)).toBe("3");
+		// Negative control: loading/unavailable bridge badge never paints a count.
+		host.badges = [];
+		await mount({
+			bridgePane: () => null,
+			bridgeBadge: {
+				count: null,
+				state: "loading",
+				a11yLabel: "Team Bridge · loading",
+			},
+		});
 		expect(host.labels.get("chat-menu")).toBe("Open conversations");
 		expect(host.badges).toEqual([]);
 	});

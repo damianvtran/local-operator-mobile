@@ -1,11 +1,18 @@
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { Bell } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	Bell,
+	BellOff,
+	Check,
+	ClipboardPaste,
+	ImagePlus,
+} from "lucide-react-native";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	AppState,
 	FlatList,
 	KeyboardAvoidingView,
 	Platform,
+	Pressable,
 	RefreshControl,
 	Text,
 	View,
@@ -20,15 +27,23 @@ import {
 	messageAttachments,
 	sendableAttachmentIds,
 } from "@/team-bridge/attachments";
-import type { Notify } from "@/team-bridge/contract";
+import type { HubClient } from "@/team-bridge/client";
+import type { DirectoryMember, Message, Notify } from "@/team-bridge/contract";
 import * as model from "@/team-bridge/model";
 import { type ProfileSubject, senderSubject } from "@/team-bridge/profile";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { setWatchedThread } from "@/team-bridge/push";
 import { threadKey } from "@/team-bridge/store";
+import {
+	readTeamBridgeDraft,
+	teamBridgeDraftKey,
+	writeTeamBridgeDraft,
+} from "@/team-bridge/thread-drafts";
 import { teamBridgeViewerFixture } from "@/testing/team-bridge-fixture";
 import {
+	state as a11yState,
 	CONTROL,
+	ROLE,
 	SCREEN,
 	SURFACE,
 	teamBridgeAttachSourceId,
@@ -36,13 +51,17 @@ import {
 	teamBridgeNotifyId,
 	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
+import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { useKeyboardVisible } from "@/ui/components/chrome-surface";
 import { IconButton } from "@/ui/components/icon-button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
+import { Skeleton } from "@/ui/components/skeleton";
 import { composerOuterGap } from "@/ui/device-corner";
-import { useCompactChrome } from "@/ui/layout";
+import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
+import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 import {
 	addDraftImages,
 	createAttachmentDraft,
@@ -63,16 +82,111 @@ import { BridgeGate } from "./gate";
 import { MessageDelivery } from "./message-delivery";
 import { createMessageSender } from "./message-sender";
 import {
-	PersonAvatar,
 	ProfileAuthorName,
 	ProfileAuthorPhoto,
 	ProfileSheet,
+	UnknownSenderAvatar,
 } from "./profile-card";
 import { BridgeComposerField, BridgeThreadTitle } from "./thread-chrome";
 import { createThreadViewport, type ThreadViewport } from "./thread-viewport";
 
 const single = (value: string | string[] | undefined): string =>
 	typeof value === "string" ? value : "";
+
+/**
+ * Memoized message row: typing in the composer updates `draft` on every
+ * keystroke, so isolating each message's `<Markdown>` parse behind `memo`
+ * avoids re-rendering every message cell in the thread while composing.
+ */
+const ThreadMessageRow = memo(function ThreadMessageRow({
+	message,
+	continuation,
+	people,
+	hub,
+	tenantId,
+	initialViewerIndex,
+	onOpenProfile,
+	onDeliveryHelp,
+}: {
+	message: Message;
+	continuation: boolean;
+	people: readonly DirectoryMember[];
+	hub: HubClient;
+	tenantId: string;
+	initialViewerIndex?: number;
+	onOpenProfile: (subject: ProfileSubject) => void;
+	onDeliveryHelp: (opener: string) => void;
+}) {
+	const sender = model.senderLabel(message.sender, people);
+	// A sender the directory no longer knows renders a neutral silhouette + inert name.
+	const subject = senderSubject(message.sender, people);
+	const attachments = messageAttachments(message);
+	return (
+		<View
+			className={`flex-row gap-3 px-4 ${continuation ? "py-0.5" : "pt-3 pb-0.5"}`}
+			testID={teamBridgeMessageId(message.id)}
+		>
+			<View className="w-8">
+				{!continuation &&
+					(subject ? (
+						<ProfileAuthorPhoto subject={subject} onOpen={onOpenProfile} />
+					) : (
+						<View className="mt-0.5">
+							<UnknownSenderAvatar kind={message.sender.kind} size="sm" />
+						</View>
+					))}
+			</View>
+			<View className="min-w-0 flex-1">
+				{!continuation && (
+					<View className="flex-row flex-wrap items-baseline gap-x-2">
+						{subject ? (
+							<ProfileAuthorName
+								subject={subject}
+								label={sender}
+								onOpen={onOpenProfile}
+								testID={teamBridgeProfileOpenId(message.id)}
+							/>
+						) : (
+							<Text className="py-0.5 text-body-read font-semibold text-ink">
+								{sender}
+							</Text>
+						)}
+						<Text className="text-meta text-ink-muted">
+							{model.messageTime(message.created_at)}
+						</Text>
+					</View>
+				)}
+				{message.body === null ? (
+					<Text className="text-body-read italic text-ink-dim">
+						{t("mobile.team_bridge.thread.body_unavailable")}
+					</Text>
+				) : message.body.trim() === "" ? (
+					/*
+					 * An image-only message has `body: ""`. With its images listed
+					 * below, the images ARE the message. With none (a kind of content
+					 * this build does not render), say so instead of an empty bubble.
+					 */
+					attachments.length === 0 ? (
+						<Text className="text-body-read italic text-ink-dim">
+							{t("mobile.team_bridge.attachment.unsupported_content")}
+						</Text>
+					) : null
+				) : (
+					<Markdown text={message.body} />
+				)}
+				<MessageAttachments
+					hub={hub}
+					tenantId={tenantId}
+					conversationId={message.conversation_id}
+					messageId={message.id}
+					attachments={attachments}
+					initialViewerIndex={initialViewerIndex}
+				/>
+				<MessageDelivery message={message} onHelp={onDeliveryHelp} />
+			</View>
+		</View>
+	);
+});
 
 function ThreadContent({
 	tenantId,
@@ -105,7 +219,30 @@ function ThreadContent({
 		!!organization?.readOnly || conversation?.status === "archived";
 	const [metadataLoading, setMetadataLoading] = useState(false);
 	const [metadataError, setMetadataError] = useState<string | null>(null);
-	const [draft, setDraft] = useState("");
+	const accountId = state.selfAccountId;
+	const draftStorageKey = useMemo(
+		() =>
+			teamBridgeDraftKey({
+				accountId,
+				tenantId,
+				routeId: conversationId ?? routeId,
+				kind: target?.kind,
+				targetAccountId:
+					target?.kind === "person" ? target.accountId : undefined,
+				endpointId: target?.kind === "agent" ? target.endpointId : undefined,
+			}),
+		[accountId, tenantId, conversationId, routeId, target],
+	);
+	const [draft, setDraftState] = useState(() =>
+		readTeamBridgeDraft(draftStorageKey),
+	);
+	const setDraft = useCallback(
+		(next: string) => {
+			setDraftState(next);
+			writeTeamBridgeDraft(draftStorageKey, next);
+		},
+		[draftStorageKey],
+	);
 	const [sending, setSending] = useState(false);
 	const sendingRef = useRef(false);
 	const [sendError, setSendError] = useState<string | null>(null);
@@ -125,7 +262,8 @@ function ThreadContent({
 	const focusNow = useRef(false);
 	const activeNow = useRef(AppState.currentState === "active");
 	const mounted = useRef(true);
-	const accountId = state.selfAccountId;
+	const checkColor = useTokenColor("accent");
+	const sheetIconColor = useTokenColor("ink-muted");
 	// Derive visibility synchronously from the actual account/route identity,
 	// not a passive reset effect: even the first boundary render cannot display
 	// another account's help or return focus to its opener.
@@ -156,6 +294,8 @@ function ThreadContent({
 			send: actions.send,
 			isCurrent,
 			adopt: (answer) => {
+				// Clear the initial `new` route key before adopting the created conversation id.
+				writeTeamBridgeDraft(draftStorageKey, "");
 				actions.adopt(answer);
 				setCreatedId(answer.id);
 			},
@@ -235,10 +375,15 @@ function ThreadContent({
 		if (organization && (!directoryState || directoryState === "idle"))
 			void actions.loadOrganization(tenantId, { silent: true });
 	}, [actions, organization, directoryState, tenantId]);
-	const title = conversation
+	const rawTitle = conversation
 		? (model.conversationTitle(conversation, state.selfAccountId) ??
 			t("mobile.team_bridge.conversation"))
 		: label || t("mobile.team_bridge.conversation");
+	const title =
+		conversation?.kind === "channel" && !rawTitle.startsWith("#")
+			? `# ${rawTitle}`
+			: rawTitle;
+	const notifyMode = conversation ? model.notifyOf(conversation) : "all";
 	const loadMetadata = useCallback(async () => {
 		if (!conversationId || !organization) return;
 		setMetadataLoading(true);
@@ -457,102 +602,53 @@ function ThreadContent({
 		if (conversationId && admitted)
 			void actions.loadThread(tenantId, conversationId);
 	};
-	const renderItem = ({ item }: { item: model.ThreadItem }) => {
-		if (item.type === "day")
-			return (
-				<Text
-					accessibilityRole="header"
-					className="px-4 py-4 text-center text-meta text-ink-muted"
-					testID={SURFACE.teamBridgeDayDivider}
-				>
-					{item.label}
-				</Text>
-			);
-		const sender = model.senderLabel(item.message.sender, people);
-		// A sender the directory no longer knows keeps a plain, inert header.
-		const subject = senderSubject(item.message.sender, people);
-		return (
-			<View
-				className={`flex-row gap-3 px-4 ${item.continuation ? "py-1" : "pt-4 pb-1"}`}
-				testID={teamBridgeMessageId(item.message.id)}
-			>
-				<View className="w-8">
-					{!item.continuation &&
-						(subject ? (
-							<ProfileAuthorPhoto subject={subject} onOpen={setProfile} />
-						) : (
-							<PersonAvatar member={null} label={sender} size="sm" />
-						))}
-				</View>
-				<View className="min-w-0 flex-1">
-					{!item.continuation && (
-						/* `relative z-10`: the author control pads its box to 44 pt with
-						 * a negative margin, so its bottom 11 pt overhang the body
-						 * below. As a later sibling the body painted (and hit-tested)
-						 * over that overhang and over the focus ring (design round 2,
-						 * D6). Raising the header makes the whole 44 pt the name's. */
-						<View className="relative z-10 flex-row flex-wrap items-baseline gap-x-2">
-							{subject ? (
-								<ProfileAuthorName
-									subject={subject}
-									label={sender}
-									onOpen={setProfile}
-									testID={teamBridgeProfileOpenId(item.message.id)}
-								/>
-							) : (
-								<Text className="text-body font-semibold text-ink">
-									{sender}
-								</Text>
-							)}
-							<Text className="text-meta text-ink-muted">
-								{model.messageTime(item.message.created_at)}
-							</Text>
-						</View>
-					)}
-					{item.message.body === null ? (
-						<Text className="text-body text-ink-muted">
-							{t("mobile.team_bridge.thread.body_unavailable")}
+	const openDeliveryHelp = useCallback(
+		(opener: string) => {
+			setDeliveryHelp({
+				identity: deliveryHelpIdentity,
+				opener,
+				open: true,
+			});
+		},
+		[deliveryHelpIdentity],
+	);
+	const renderItem = useCallback(
+		({ item }: { item: model.ThreadItem }) => {
+			if (item.type === "day")
+				return (
+					<View
+						className="flex-row items-center gap-3 px-4 py-3"
+						testID={SURFACE.teamBridgeDayDivider}
+					>
+						<View className="h-px flex-1 bg-hairline" aria-hidden />
+						<Text
+							accessibilityRole="header"
+							className="text-center text-meta font-medium text-ink-muted"
+						>
+							{item.label}
 						</Text>
-					) : item.message.body.trim() === "" ? (
-						/*
-						 * An image-only message has `body: ""`. With its images listed
-						 * below, the images ARE the message. With none (a kind of content
-						 * this build does not render), say so instead of an empty bubble.
-						 */
-						messageAttachments(item.message).length === 0 ? (
-							<Text className="text-body text-ink-muted">
-								{t("mobile.team_bridge.attachment.unsupported_content")}
-							</Text>
-						) : null
-					) : (
-						<Markdown text={item.message.body} />
-					)}
-					<MessageAttachments
-						hub={hub}
-						tenantId={tenantId}
-						conversationId={item.message.conversation_id}
-						messageId={item.message.id}
-						attachments={messageAttachments(item.message)}
-						initialViewerIndex={
-							viewerFixture?.messageId === item.message.id
-								? viewerFixture.index
-								: undefined
-						}
-					/>
-					<MessageDelivery
-						message={item.message}
-						onHelp={(opener) => {
-							setDeliveryHelp({
-								identity: deliveryHelpIdentity,
-								opener,
-								open: true,
-							});
-						}}
-					/>
-				</View>
-			</View>
-		);
-	};
+						<View className="h-px flex-1 bg-hairline" aria-hidden />
+					</View>
+				);
+			return (
+				<ThreadMessageRow
+					message={item.message}
+					continuation={item.continuation}
+					people={people}
+					hub={hub}
+					tenantId={tenantId}
+					initialViewerIndex={
+						viewerFixture?.messageId === item.message.id
+							? viewerFixture.index
+							: undefined
+					}
+					onOpenProfile={setProfile}
+					onDeliveryHelp={openDeliveryHelp}
+				/>
+			);
+		},
+		[people, hub, tenantId, viewerFixture, openDeliveryHelp],
+	);
 	const validDraft = routeId === "new" && !!target;
 	return (
 		<Screen
@@ -584,7 +680,13 @@ function ThreadContent({
 					// (48 on web/Android, 44 pt on iOS).
 					<IconButton
 						accessibilityLabel={t("mobile.team_bridge.thread.notifications")}
-						icon={({ color, size }) => <Bell color={color} size={size} />}
+						icon={({ color, size }) =>
+							notifyMode === "mute" ? (
+								<BellOff color={color} size={size} />
+							) : (
+								<Bell color={color} size={size} />
+							)
+						}
 						testID={CONTROL.teamBridgeNotifications}
 						onPress={() => setNotifyOpen(true)}
 					/>
@@ -613,12 +715,15 @@ function ThreadContent({
 				) : (
 					<>
 						{metadataLoading && (
-							<Text
-								className="p-4 text-body text-ink-muted"
+							<View
+								className="gap-3 p-4"
 								testID={SURFACE.teamBridgeThreadLoading}
 							>
-								{t("mobile.team_bridge.thread.loading")}
-							</Text>
+								<Skeleton lines={3} />
+								<Text className="text-body-sm text-ink-dim">
+									{t("mobile.team_bridge.thread.loading")}
+								</Text>
+							</View>
 						)}
 						{metadataError && (
 							<View className="gap-2 p-4">
@@ -706,78 +811,95 @@ function ThreadContent({
 										/>
 									}
 									ListHeaderComponent={
-										<View className="gap-2 px-4">
+										<View className="gap-2 px-4 pt-2">
 											{thread?.hasMore && (
-												<Button
-													label={
-														thread.loadingOlder
-															? t("mobile.team_bridge.thread.older_loading")
-															: t("mobile.team_bridge.thread.older_load")
-													}
-													variant="outline"
-													disabled={thread.loadingOlder}
-													testID={CONTROL.teamBridgeLoadOlder}
-													onPress={() => {
-														if (!conversationId) return;
-														// A prepend must not pull a history reader down.
-														viewport.current?.releaseFollow();
-														void actions.loadOlder(tenantId, conversationId);
-													}}
-												/>
-											)}
-											{thread?.olderError && (
-												<>
-													<Text
-														accessibilityRole="alert"
-														className="text-body text-ink"
-													>
-														{t("mobile.team_bridge.thread.older_error")}
-													</Text>
+												<View className="self-center">
 													<Button
-														label={t("mobile.team_bridge.thread.older_retry")}
-														testID={CONTROL.teamBridgeOlderRetry}
+														label={
+															thread.loadingOlder
+																? t("mobile.team_bridge.thread.older_loading")
+																: t("mobile.team_bridge.thread.older_load")
+														}
+														variant="quiet"
+														size="sm"
+														disabled={thread.loadingOlder}
+														testID={CONTROL.teamBridgeLoadOlder}
 														onPress={() => {
 															if (!conversationId) return;
+															// A prepend must not pull a history reader down.
 															viewport.current?.releaseFollow();
 															void actions.loadOlder(tenantId, conversationId);
 														}}
 													/>
-												</>
+												</View>
+											)}
+											{thread?.olderError && (
+												<Alert
+													severity="warning"
+													action={{
+														label: t("mobile.team_bridge.thread.older_retry"),
+														testID: CONTROL.teamBridgeOlderRetry,
+														onPress: () => {
+															if (!conversationId) return;
+															viewport.current?.releaseFollow();
+															void actions.loadOlder(tenantId, conversationId);
+														},
+													}}
+												>
+													{t("mobile.team_bridge.thread.older_error")}
+												</Alert>
 											)}
 											{thread?.state === "error" && (
-												<>
-													<Text
-														accessibilityRole="alert"
-														className="text-body text-ink"
-													>
-														{t("mobile.team_bridge.thread.refresh_error")}
-													</Text>
-													<Button
-														label={t(
+												<Alert
+													severity="warning"
+													action={{
+														label: t(
 															"mobile.team_bridge.thread.messages_retry",
-														)}
-														testID={CONTROL.teamBridgeMessagesRetry}
-														onPress={reload}
-													/>
-												</>
+														),
+														testID: CONTROL.teamBridgeMessagesRetry,
+														onPress: reload,
+													}}
+												>
+													{t("mobile.team_bridge.thread.refresh_error")}
+												</Alert>
 											)}
 										</View>
 									}
 									ListEmptyComponent={
-										<Text
-											className="p-4 text-body text-ink-muted"
-											testID={SURFACE.teamBridgeThreadEmpty}
-										>
-											{!conversationId
-												? t("mobile.team_bridge.thread.new_empty")
-												: !thread ||
-														thread.state === "idle" ||
-														thread.state === "loading"
-													? t("mobile.team_bridge.thread.messages_loading")
-													: thread?.state === "error"
-														? t("mobile.team_bridge.thread.messages_error")
-														: t("mobile.team_bridge.thread.messages_empty")}
-										</Text>
+										conversationId &&
+										(!thread ||
+											thread.state === "idle" ||
+											thread.state === "loading") ? (
+											<View
+												className="gap-3 px-4 py-6"
+												testID={SURFACE.teamBridgeThreadEmpty}
+											>
+												<Skeleton lines={4} />
+												<Text className="text-body-sm text-ink-dim">
+													{t("mobile.team_bridge.thread.messages_loading")}
+												</Text>
+											</View>
+										) : (
+											<View
+												className="items-center justify-center px-6 py-12"
+												testID={SURFACE.teamBridgeThreadEmpty}
+											>
+												<Text
+													className={cx(
+														"text-center text-body-sm",
+														thread?.state === "error"
+															? "text-danger"
+															: "text-ink-muted",
+													)}
+												>
+													{!conversationId
+														? t("mobile.team_bridge.thread.new_empty")
+														: thread?.state === "error"
+															? t("mobile.team_bridge.thread.messages_error")
+															: t("mobile.team_bridge.thread.messages_empty")}
+												</Text>
+											</View>
+										)
 									}
 								/>
 								<View
@@ -790,7 +912,7 @@ function ThreadContent({
 									 *  keyboard down, 8 alone above the keyboard (the old
 									 *  `max(inset, 12)` kept the home-indicator inset ABOVE the
 									 *  keyboard too). */
-									className="gap-3 pt-2"
+									className="gap-2 pt-2"
 									style={{
 										paddingHorizontal: COMPOSER_SIDE_PAD,
 										paddingBottom: composerOuterGap(
@@ -801,21 +923,22 @@ function ThreadContent({
 									testID={SURFACE.teamBridgeComposer}
 								>
 									{readOnly ? (
-										<Text className="text-body text-ink-muted">
-											{conversation?.status === "archived"
-												? t("mobile.team_bridge.thread.archived")
-												: t("mobile.team_bridge.thread.readonly")}
-										</Text>
+										<View className="mx-1 rounded-md border border-hairline bg-surface px-3.5 py-2.5">
+											<Text className="text-body-sm text-ink-muted">
+												{conversation?.status === "archived"
+													? t("mobile.team_bridge.thread.archived")
+													: t("mobile.team_bridge.thread.readonly")}
+											</Text>
+										</View>
 									) : (
 										<>
 											{sendError && (
-												<Text
-													accessibilityRole="alert"
-													className="text-body text-ink"
+												<Alert
+													severity="error"
 													testID={SURFACE.teamBridgeSendError}
 												>
 													{sendError}
-												</Text>
+												</Alert>
 											)}
 											<ComposerAttachments
 												chips={chips}
@@ -895,7 +1018,7 @@ function ThreadContent({
 				title={t("mobile.team_bridge.delivery.help_title")}
 				testID={SURFACE.teamBridgeDeliveryHelpSheet}
 			>
-				<Text className="p-4 text-body text-ink-muted">
+				<Text className="py-2 text-body-read text-ink-muted">
 					{t("mobile.team_bridge.delivery.help")}
 				</Text>
 			</Sheet>
@@ -905,23 +1028,46 @@ function ThreadContent({
 				title={t("mobile.team_bridge.attachment.add")}
 				testID={SURFACE.teamBridgeAttachSheet}
 			>
-				<View className="gap-2">
-					<Button
-						variant="outline"
-						label={t("mobile.team_bridge.attachment.library")}
-						testID={teamBridgeAttachSourceId("library")}
-						onPress={() => {
-							void addImages("library");
-						}}
-					/>
-					<Button
-						variant="outline"
-						label={t("mobile.team_bridge.attachment.paste")}
-						testID={teamBridgeAttachSourceId("paste")}
-						onPress={() => {
-							void addImages("paste");
-						}}
-					/>
+				<View className="gap-1 pb-2">
+					{(
+						[
+							[
+								"library",
+								t("mobile.team_bridge.attachment.library"),
+								ImagePlus,
+							],
+							[
+								"paste",
+								t("mobile.team_bridge.attachment.paste"),
+								ClipboardPaste,
+							],
+						] as const
+					).map(([source, text, Icon]) => (
+						<Pressable
+							key={source}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={text}
+							testID={teamBridgeAttachSourceId(source)}
+							onPress={() => {
+								void addImages(source);
+							}}
+							style={{ minHeight: TOUCH_FLOOR }}
+						>
+							{({ pressed }) => (
+								<View
+									className={cx(
+										"flex-1 flex-row items-center gap-3 rounded-sm px-3 py-2",
+										pressed ? "bg-row-hover" : "bg-transparent",
+									)}
+								>
+									<Icon size={18} color={sheetIconColor} aria-hidden />
+									<Text className="min-w-0 flex-1 text-body text-ink">
+										{text}
+									</Text>
+								</View>
+							)}
+						</Pressable>
+					))}
 				</View>
 			</Sheet>
 			<Sheet
@@ -930,35 +1076,70 @@ function ThreadContent({
 				title={t("mobile.team_bridge.thread.notify_sheet")}
 				testID={SURFACE.teamBridgeNotifySheet}
 			>
-				<View className="gap-3 p-4">
-					<Text className="text-body text-ink-muted">
+				<View className="gap-2 pb-2">
+					<Text className="px-1 text-body-sm text-ink-dim">
 						{t("mobile.team_bridge.thread.notify_current", {
-							mode: conversation ? model.notifyOf(conversation) : "all",
+							mode: notifyMode,
 						})}
 					</Text>
-					{(
-						[
-							["all", t("mobile.team_bridge.thread.notify_all")],
-							["mention", t("mobile.team_bridge.thread.notify_mentions")],
-							["mute", t("mobile.team_bridge.thread.notify_mute")],
-						] as const
-					).map(([value, text]) => (
-						<Button
-							key={value}
-							label={text}
-							variant="outline"
-							disabled={notifyBusy}
-							testID={teamBridgeNotifyId(value)}
-							onPress={() => {
-								void changeNotify(value);
-							}}
-						/>
-					))}
-					{notifyError && (
-						<Text accessibilityRole="alert" className="text-body text-ink">
-							{notifyError}
-						</Text>
-					)}
+					<View className="gap-1">
+						{(
+							[
+								["all", t("mobile.team_bridge.thread.notify_all")],
+								["mention", t("mobile.team_bridge.thread.notify_mentions")],
+								["mute", t("mobile.team_bridge.thread.notify_mute")],
+							] as const
+						).map(([value, text]) => {
+							const activeOption = notifyMode === value;
+							return (
+								<Pressable
+									key={value}
+									accessibilityRole={ROLE.button}
+									accessibilityLabel={text}
+									accessibilityState={a11yState({
+										selected: activeOption,
+										disabled: notifyBusy,
+									})}
+									disabled={notifyBusy}
+									testID={teamBridgeNotifyId(value)}
+									onPress={() => {
+										void changeNotify(value);
+									}}
+									style={{ minHeight: TOUCH_FLOOR }}
+								>
+									{({ pressed }) => (
+										<View
+											className={cx(
+												"flex-1 flex-row items-center gap-3 rounded-sm px-3 py-2",
+												activeOption
+													? "bg-row-selected"
+													: pressed && !notifyBusy
+														? "bg-row-hover"
+														: "bg-transparent",
+											)}
+										>
+											<Text
+												className={cx(
+													"min-w-0 flex-1 text-body",
+													notifyBusy
+														? CONTROL_DISABLED_INK
+														: activeOption
+															? "font-semibold text-ink"
+															: "text-ink",
+												)}
+											>
+												{text}
+											</Text>
+											{activeOption ? (
+												<Check size={18} color={checkColor} aria-hidden />
+											) : null}
+										</View>
+									)}
+								</Pressable>
+							);
+						})}
+					</View>
+					{notifyError && <Alert severity="error">{notifyError}</Alert>}
 				</View>
 			</Sheet>
 		</Screen>

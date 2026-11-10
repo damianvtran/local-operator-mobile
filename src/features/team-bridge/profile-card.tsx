@@ -12,9 +12,9 @@
  * scrim) and its own modal accessibility scope.
  */
 import { usePathname, useRouter } from "expo-router";
-import { Bot, Clock, MessageSquare } from "lucide-react-native";
+import { Bot, Clock, MessageSquare, UserRound } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
 import { toBase64 } from "@/features/session/runtime";
 import { t } from "@/i18n";
 import {
@@ -42,6 +42,7 @@ import { useTokenColor } from "@/ui/appearance";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { AVATAR_SIZES, type AvatarSize } from "@/ui/variants";
 import { ProfileDetails } from "./profile-details";
 
@@ -210,6 +211,29 @@ function AgentAvatar({
 	);
 }
 
+/**
+ * Neutral silhouette for an unknown or departed sender when no `ProfileSubject`
+ * resolves from the directory, matching Desktop's `UserRound` fallback
+ * (`team-bridge-message-list.tsx`) instead of painting a `?` initial circle.
+ */
+export function UnknownSenderAvatar({
+	kind,
+	size = "sm",
+}: {
+	kind: "human" | "agent";
+	size?: AvatarSize;
+}) {
+	const ink = useTokenColor(kind === "agent" ? "accent-active" : "ink-muted");
+	const Icon = kind === "agent" ? Bot : UserRound;
+	return (
+		<Avatar
+			initials=""
+			size={size}
+			fallback={<Icon size={AVATAR_SIZES[size].px / 2} color={ink} />}
+		/>
+	);
+}
+
 /** One identity selector for list marks, author runs and the profile sheet. */
 export function ProfileSubjectAvatar({
 	subject,
@@ -305,7 +329,7 @@ export function bridgeRouteDisposition(pathname: string): "push" | "replace" {
 export function ProfileAvatarButton({
 	subject,
 	label,
-	size = "md",
+	size = "sm",
 	onOpen,
 	testID,
 }: {
@@ -319,7 +343,8 @@ export function ProfileAvatarButton({
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={t("mobile.team_bridge.profile.open", { name: label })}
-			hitSlop={6}
+			className="items-center justify-center"
+			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 			onPress={() => onOpen(subject)}
 			testID={testID}
 		>
@@ -352,11 +377,12 @@ export function ProfileAuthorName({
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={label}
 			accessibilityHint={t("mobile.team_bridge.profile.opens_hint")}
+			hitSlop={8}
 			onPress={() => onOpen(subject)}
 			testID={testID}
-			className="-my-2.5 py-2.5"
+			className="rounded-xs py-0.5"
 		>
-			<Text className="text-body font-semibold text-ink">{label}</Text>
+			<Text className="text-body-read font-semibold text-ink">{label}</Text>
 		</Pressable>
 	);
 }
@@ -383,6 +409,7 @@ export function ProfileAuthorPhoto({
 			// accessibility tree (design round 2, D7; `brand-mark.tsx` likewise).
 			aria-hidden
 			hitSlop={6}
+			className="mt-0.5"
 			onPress={() => onOpen(subject)}
 		>
 			<ProfileSubjectAvatar subject={subject} size="sm" />
@@ -443,25 +470,23 @@ export function ProfileSheet({
 			testID={SURFACE.teamBridgeProfile}
 			footer={
 				target ? (
-					<View className="p-4">
-						<Button
-							label={t("mobile.team_bridge.profile.message")}
-							leadingIcon={({ color, size }) => (
-								<MessageSquare color={color} size={size} />
-							)}
-							testID={CONTROL.teamBridgeProfileMessage}
-							onPress={() => {
-								onClose();
-								if (
-									target.kind === "conversation" &&
-									target.conversationId === currentConversationId
-								)
-									return;
-								onBeforeOpen?.();
-								open(target);
-							}}
-						/>
-					</View>
+					<Button
+						label={t("mobile.team_bridge.profile.message")}
+						leadingIcon={({ color, size }) => (
+							<MessageSquare color={color} size={size} />
+						)}
+						testID={CONTROL.teamBridgeProfileMessage}
+						onPress={() => {
+							onClose();
+							if (
+								target.kind === "conversation" &&
+								target.conversationId === currentConversationId
+							)
+								return;
+							onBeforeOpen?.();
+							open(target);
+						}}
+					/>
 				) : undefined
 			}
 		>
