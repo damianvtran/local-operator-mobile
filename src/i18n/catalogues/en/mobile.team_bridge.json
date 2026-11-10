@@ -146,7 +146,6 @@
 	"mobile.team_bridge.thread.older_loading": "Loading older messages…",
 	"mobile.team_bridge.thread.older_retry": "Retry older messages",
 	"mobile.team_bridge.thread.organization_unavailable": "This organization is not available to this account.",
-	"mobile.team_bridge.thread.placeholder": "Message {title}",
 	"mobile.team_bridge.thread.preview_help": "Join this channel to read its history and send messages.",
 	"mobile.team_bridge.thread.readonly": "This organization is read only. You can read history, but cannot send messages.",
 	"mobile.team_bridge.thread.recipient_incomplete": "This message recipient is incomplete. Go back and choose a person or chief of staff.",
