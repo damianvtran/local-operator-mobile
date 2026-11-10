@@ -14,16 +14,34 @@ const host = vi.hoisted(() => ({
 	}[],
 	open: vi.fn(async (_url: string) => undefined),
 	copies: [] as (() => void)[],
+	os: "web" as "web" | "ios" | "android",
 }));
 vi.mock("react-native", async () => {
 	const { createElement } = await import("react");
+	/* The host's styling props are serialised onto the markup (`data-class`,
+	 *  `data-style`, `data-testid`) so a test can read the layout CONTRACT the
+	 *  component hands the native host — the shared column widths and the code
+	 *  face — without a layout engine. */
+	const hostProps = (props: {
+		className?: string;
+		style?: unknown;
+		testID?: string;
+	}) => ({
+		"data-class": props.className,
+		"data-style": props.style ? JSON.stringify(props.style) : undefined,
+		"data-testid": props.testID,
+	});
 	const text = ({
 		children,
 		accessibilityRole,
 		onPress,
+		...rest
 	}: {
 		children: ReactNode;
 		accessibilityRole?: string;
+		className?: string;
+		style?: unknown;
+		testID?: string;
 		onPress?: (event: {
 			stopPropagation: () => void;
 			preventDefault: () => void;
@@ -33,12 +51,19 @@ vi.mock("react-native", async () => {
 			host.links.push({ label: String(children), press: onPress });
 		return createElement(
 			accessibilityRole === "link" ? "a" : "span",
-			{ role: accessibilityRole },
+			{ role: accessibilityRole, ...hostProps(rest) },
 			children,
 		);
 	};
-	const view = ({ children }: { children: ReactNode }) =>
-		createElement("div", null, children);
+	const view = ({
+		children,
+		...rest
+	}: {
+		children: ReactNode;
+		className?: string;
+		style?: unknown;
+		testID?: string;
+	}) => createElement("div", hostProps(rest), children);
 	return {
 		Text: text,
 		View: view,
@@ -53,7 +78,13 @@ vi.mock("react-native", async () => {
 			if (onLongPress) host.copies.push(onLongPress);
 			return view({ children });
 		},
-		Platform: { OS: "web" },
+		Platform: {
+			get OS() {
+				return host.os;
+			},
+			select: (options: Record<string, unknown>) =>
+				host.os in options ? options[host.os] : options.default,
+		},
 		Linking: { openURL: host.open },
 	};
 });
@@ -177,5 +208,102 @@ describe("rendered assistant markdown dispatch", () => {
 		expect(markup).toContain("&lt;script&gt;");
 		expect(markup).toContain("[code](https://example.com)");
 		expect(markup).toContain("[fenced](https://example.com)");
+	});
+});
+
+/* The operator's report (iPhone build 773): the "wait & bash sleep — Actual
+ *  Impact" answer, reconstructed from the screenshot's visible cells. Its
+ *  label column carries inline code and is the longest column, which is what
+ *  made each row's flex layout settle on different boundaries. */
+const IMPACT_ANSWER = [
+	"Your instinct on `wait` was spot-on — once I separated **true** `wait_ms` **timeouts** from event-driven early returns, the picture changed completely:",
+	"",
+	"### `wait` & `bash sleep` — Actual Impact",
+	"",
+	"| Pattern | Calls (%) | 24h Calls | Lifetime | 24h Cost |",
+	"| --- | --- | --- | --- | --- |",
+	"| `wait` early return (inbound message) | 4,121 (46.3%) | 550 | $66.64 | $8.12 |",
+	"| `wait` child settled | 2,266 (25.5%) | 114 | $24.79 | $1.66 |",
+	"| `hub`/peer wake-ups | 1,083 (12.2%) | 115 | $6.28 | $0.97 |",
+	"| true `wait_ms` timeouts | 663 (7.4%) | 123 | $10.91 | $0.40 |",
+	"| `bash sleep` (any), 484 CI polls | 13 | $1.28 | $0.40 | 54% (161/296) |",
+	"",
+	"```bash",
+	"lop wait --job 4f2c --wait-ms 600000   # long line that must scroll, never wrap",
+	"```",
+].join("\n");
+
+/* Rows are found by their test ids and each row's cells are the cell styles
+ *  between it and the next row marker; the table is the only owner of either id. */
+const ROW_MARK = /data-testid="md-table-(?:head|row)"/g;
+const CELL_STYLE = /data-style="([^"]*)" data-testid="md-table-cell"/g;
+const decodeQuotes = (value: string) => value.replace(/&quot;/g, '"');
+const INLINE_CHIP =
+	/<span data-class="([^"]*)"(?: data-style="([^"]*)")?>wait<\/span>/;
+const FENCE_BODY =
+	/<span data-class="[^"]*font-mono[^"]*" data-style="([^"]*)">lop wait/;
+
+describe("operator report: table columns and code faces (build 773)", () => {
+	beforeEach(() => {
+		host.os = "web";
+	});
+
+	it("gives the header and every body row the SAME explicit column widths", () => {
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, { text: IMPACT_ANSWER }),
+		);
+		const marks = [...markup.matchAll(ROW_MARK)].map((mark) => mark.index ?? 0);
+		const rows = marks.map((start, index) =>
+			[...markup.slice(start, marks[index + 1]).matchAll(CELL_STYLE)].map(
+				(cell) =>
+					JSON.parse(decodeQuotes(cell[1] ?? "{}")) as Record<string, number>,
+			),
+		);
+		// One header + five body rows, five cells each.
+		expect(rows).toHaveLength(6);
+		for (const row of rows) expect(row).toHaveLength(5);
+		const header = rows[0] ?? [];
+		for (const cell of header) {
+			// A fixed width, not a flex share: a row-local flex pass is what let
+			// each iOS row settle on its own boundaries.
+			expect(cell.width).toBeGreaterThan(0);
+			expect(cell.flexGrow ?? 0).toBe(0);
+			expect(cell.flexShrink).toBe(0);
+		}
+		for (const row of rows.slice(1))
+			expect(row.map((cell) => cell.width)).toEqual(
+				header.map((cell) => cell.width),
+			);
+	});
+
+	it("renders inline code as a mono chip, natively naming a bundled face", () => {
+		for (const os of ["web", "ios", "android"] as const) {
+			host.os = os;
+			const markup = renderToStaticMarkup(
+				createElement(Markdown, { text: "Use `wait` not `bash sleep`." }),
+			);
+			const chip = markup.match(INLINE_CHIP);
+			expect(chip).not.toBeNull();
+			expect(chip?.[1]).toContain("font-mono");
+			expect(chip?.[1]).toContain("bg-sunken");
+			const style = chip?.[2] ? JSON.parse(decodeQuotes(chip[2])) : {};
+			// React Native cannot resolve a CSS fallback LIST: the theme's
+			// `--font-mono` stack silently became the system face on iPhone.
+			expect(style.fontFamily).toBe(
+				os === "web" ? undefined : "JetBrainsMono-Regular",
+			);
+		}
+	});
+
+	it("gives a fenced block's body the bundled mono face natively", () => {
+		host.os = "ios";
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, { text: IMPACT_ANSWER }),
+		);
+		const body = markup.match(FENCE_BODY);
+		expect(body).not.toBeNull();
+		expect(JSON.parse(decodeQuotes(body?.[1] ?? "{}")).fontFamily).toBe(
+			"JetBrainsMono-Regular",
+		);
 	});
 });

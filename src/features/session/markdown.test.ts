@@ -5,9 +5,11 @@ import {
 	parseInline,
 	parseMarkdown,
 	splitTableRow,
+	TABLE_CELL_PADDING_X_PT,
 	TABLE_MONO_ADVANCE_PT,
 	TABLE_SANS_ADVANCE_PT,
 	TABLE_TOKEN_CAP,
+	tableColumnWidths,
 	tableFadeGeometry,
 	tablePricing,
 } from "@/features/session/markdown";
@@ -771,5 +773,45 @@ describe("streamed formatting delimiters", () => {
 					.join(""),
 			).toBe(prefix);
 		}
+	});
+});
+
+describe("tableColumnWidths (one width per column, shared by every row)", () => {
+	const pricing = tablePricing(
+		["Pattern", "Calls (%)", "24h Calls"],
+		[
+			["`wait` early return", "4,121 (46.3%)", "550"],
+			["`hub`/peer wake-ups", "1,083 (12.2%)", "115"],
+		],
+		1,
+	);
+	const boxes = pricing.minWidths.map(
+		(width, column) =>
+			width + 2 * TABLE_CELL_PADDING_X_PT + (column > 0 ? 1 : 0),
+	);
+	const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+	it("keeps the priced boxes before the viewport is measured", () => {
+		expect(tableColumnWidths(pricing, 0)).toEqual(boxes);
+	});
+
+	it("keeps the priced boxes (and scrolls) when the table is wider than the viewport", () => {
+		expect(tableColumnWidths(pricing, sum(boxes) - 40)).toEqual(boxes);
+	});
+
+	it("fills the viewport exactly, distributing the slack by share", () => {
+		const available = sum(boxes) + 120;
+		const widths = tableColumnWidths(pricing, available);
+		expect(sum(widths)).toBeCloseTo(available, 6);
+		const totalShare = sum(pricing.shares);
+		widths.forEach((width, column) => {
+			expect(width).toBeCloseTo(
+				(boxes[column] ?? 0) +
+					(120 * (pricing.shares[column] ?? 0)) / totalShare,
+				6,
+			);
+			// No column is ever narrowed below its priced box.
+			expect(width).toBeGreaterThanOrEqual(boxes[column] ?? 0);
+		});
 	});
 });

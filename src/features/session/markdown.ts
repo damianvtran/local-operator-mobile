@@ -895,6 +895,44 @@ export function tablePricing(
 }
 
 /**
+ * The ONE width every cell of a column is laid out at, in pt, border-box (the
+ * cell's padding and its leading separator included).
+ *
+ * WHY EXPLICIT WIDTHS (operator report, iPhone build 773): the table used to hand
+ * each cell a `flexBasis`/`minWidth`/`flexGrow` and let every row run its own flex
+ * pass. Each row is a separate flex container, so nothing tied row 2's column 1
+ * to the header's: on iOS the rows settled on different boundaries (the label
+ * column empty in one row, three cells wide in another) and the grid stopped
+ * reading as columns. A table's columns are a TABLE-level decision, so they are
+ * resolved here once and every row — header included — receives the same numbers;
+ * no row-local layout can move a boundary.
+ *
+ * `available` is the width the row should fill (the scroll viewport's content
+ * width), or 0 before it is measured. A table narrower than that receives the
+ * slack in proportion to `shares` (§1.3's distribution, previously done by
+ * `flexGrow`); a wider one keeps its priced boxes and scrolls. Pure arithmetic on
+ * the pricing, so the streaming path pays no measurement.
+ */
+export function tableColumnWidths(
+	pricing: TablePricing,
+	available: number,
+): number[] {
+	const boxes = pricing.minWidths.map(
+		(width, column) =>
+			width + 2 * TABLE_CELL_PADDING_X_PT + (column > 0 ? TABLE_BORDER_PT : 0),
+	);
+	const used = boxes.reduce((sum, width) => sum + width, 0);
+	const slack = available - used;
+	if (!(slack > 0)) return boxes;
+	const totalShare = pricing.shares.reduce((sum, share) => sum + share, 0);
+	if (totalShare <= 0) return boxes;
+	return boxes.map(
+		(width, column) =>
+			width + (slack * (pricing.shares[column] ?? 0)) / totalShare,
+	);
+}
+
+/**
  * Where a table's scroll-cue fade sits and which end of it is opaque.
  *
  * The cue is stated in READING order (`end` = where the next column would be) but
