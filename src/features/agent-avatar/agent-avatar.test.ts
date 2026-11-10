@@ -313,11 +313,18 @@ const BUDGET_CHARGE =
 /* Match within this component, regardless of prop ordering; never across rows. */
 const ROW_REF =
 	/<AgentListRow\s+(?:(?!\/>)[\s\S])*?avatarRef=\{avatarRefOf\(session\)\}/;
+const PANE_DRAWS_SESSION_ROW = /<SessionRow\s/;
+const PANE_DRAWS_KIT_ROW = /<AgentListRow\s/;
 const AVATAR_LEADING = /leading=\{[\s\S]*?<AgentAvatarImage[\s\S]*?uri=\{uri\}/;
 const CURRENT_CHAT_MARKER =
 	/selected && selectedIndicator \? \([\s\S]*?className="shrink-0"[\s\S]*?<Check color=\{selectionInk\} size=\{18\}/;
+/* The opt-in has two halves since the row became its own memoised component
+ *  (`session-row.tsx`): the PANE decides which row is current and hands it down
+ *  as a boolean, and the ROW WRAPPER turns that into the kit's indicator. */
+const CURRENT_CHAT_DECIDED_BY_PANE =
+	/<SessionRow\s+(?:(?!\/>)[\s\S])*?selected=\{item\.session\.session_id === currentSessionId\}/;
 const CURRENT_CHAT_OPT_IN =
-	/selected=\{session.session_id === currentSessionId\}\s+selectedIndicator/;
+	/<AgentListRow\s+selected=\{selected\}\s+selectedIndicator\s/;
 /* D1: the picture belongs to the TITLE's line, so stacked it is handed to
  *  `Screen`'s title row and withheld from the chrome cluster. */
 const STACKED_TITLE_PICTURE =
@@ -380,6 +387,8 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 	const SCREEN = read("../../../app/(app)/session/[id].tsx");
 	const PANE = read("../sessions/conversations-pane.tsx");
 	const DRAWER = read("../sessions/conversations-drawer.tsx");
+	/* The pane's row, since it moved out of the pane to be memoised. */
+	const SESSION_ROW = read("../sessions/session-row.tsx");
 	const ROW = read("../../ui/components/list-row.tsx");
 
 	it("a tap AND a long press on the header picture show the desktop hint", () => {
@@ -433,17 +442,25 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		expect(ROW).toMatch(RESERVE_SLOT_PADDED);
 	});
 
-	it("the title budget charges the picture only when the row names one", () => {
-		/* Both inline budgets (regular and compact); the third match is the
-		 *  comment beside the picture naming the same expression. */
-		expect(SCREEN.match(BUDGET_CHARGE)?.length).toBe(2);
+	it("the screen no longer charges a title budget for the picture (#210)", () => {
+		/* The header measures its title by layout since #210, so the character
+		 *  budgets that charged the picture's slot are identities and the route
+		 *  stopped calling them: a charge here would be dead arithmetic. The
+		 *  picture's own slot is still drawn (the stacked/inline tests below). */
+		expect(SCREEN.match(BUDGET_CHARGE)).toBe(null);
 	});
 
 	it("the list rows resolve their picture from the row's own fields", () => {
-		expect(PANE).toMatch(ROW_REF);
+		expect(SESSION_ROW).toMatch(ROW_REF);
 		expect(
-			PANE.replace("avatarRef={avatarRefOf(session)}", "avatarRef={null}"),
+			SESSION_ROW.replace(
+				"avatarRef={avatarRefOf(session)}",
+				"avatarRef={null}",
+			),
 		).not.toMatch(ROW_REF);
+		/* …and the pane draws its conversations through that row, not its own. */
+		expect(PANE).toMatch(PANE_DRAWS_SESSION_ROW);
+		expect(PANE).not.toMatch(PANE_DRAWS_KIT_ROW);
 		// Avatar resolution alone is insufficient: it must still feed the leading cluster.
 		expect(VIEW).toMatch(AVATAR_LEADING);
 	});
@@ -459,7 +476,17 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		expect(ROW).not.toContain("accessibilityElementsHidden");
 		expect(ROW).not.toContain("importantForAccessibility");
 		expect(ROW).toContain("accessibilityState={state({ selected })}");
-		expect(PANE).toMatch(CURRENT_CHAT_OPT_IN);
+		expect(PANE).toMatch(CURRENT_CHAT_DECIDED_BY_PANE);
+		expect(
+			PANE.replace(
+				"selected={item.session.session_id === currentSessionId}",
+				"selected={false}",
+			),
+		).not.toMatch(CURRENT_CHAT_DECIDED_BY_PANE);
+		expect(SESSION_ROW).toMatch(CURRENT_CHAT_OPT_IN);
+		expect(SESSION_ROW.replace("selectedIndicator", "")).not.toMatch(
+			CURRENT_CHAT_OPT_IN,
+		);
 		expect(ROW).toMatch(BADGED);
 	});
 

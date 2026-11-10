@@ -955,9 +955,60 @@ function u06HorizontalOverflow(state: AuditState): CheckRow[] {
 	return rows;
 }
 
-/** U-07 — no clipped text, except deliberate single-line ellipsis with a full value. */
+/**
+ * U-07's second allowance: the platform's MULTI-LINE tail ellipsis
+ * (`-webkit-line-clamp`, what `numberOfLines={N}` is on the web), and only with
+ * the full value PROVED reachable.
+ *
+ * WHY IT EXISTS. The session header used to cut its title to a character budget
+ * before painting it, so the DOM never held the hidden tail and this check had
+ * nothing to measure. The title is now truncated by layout — the whole name
+ * arrives and the platform cuts it once, at the box's real edge, on the second
+ * line when the header stacks (`session-health.tsx`, visual audit D2). The
+ * painted result is the same shape as before ("…worker and its retry…"), but
+ * the tail now exists in the DOM, so `scrollHeight > clientHeight` on a clamped
+ * box reads as clipped text. It is the same deliberate idiom the single-line
+ * branch records, on N lines.
+ *
+ * WHY IT IS NARROWER THAN THE SINGLE-LINE BRANCH, not a wider door. That branch
+ * records "needs the full value" and trusts it; this one refuses unless every
+ * premise is measured:
+ *  - the computed clamp is a real line count of 2 or more (`none`, or a legacy
+ *    capture without the field, never qualifies);
+ *  - only the block axis clips — a clamped box that ALSO loses text sideways is
+ *    cutting mid-line, which no ellipsis explains;
+ *  - the box is no taller than its clamped lines (the same 1.8x-font line bound
+ *    the single-line branch uses), so a fixed-height box that happens to carry
+ *    a clamp cannot hide extra lines behind it;
+ *  - an interactive ancestor's accessible name CONTAINS the node's text, so the
+ *    hidden tail is announced and reachable — a clamped paragraph, or a control
+ *    named something else, still FAILs.
+ * An EXCEPTION row, never a PASS: every clamp stays visible in the report.
+ */
+function u07VerifiedLineClamp(
+	node: AuditNode,
+	clipsX: boolean,
+	byIndex: Map<number, AuditNode>,
+): { lines: number; control: AuditNode } | null {
+	const lines = /^\d+$/.test(node.lineClamp ?? "")
+		? Number(node.lineClamp)
+		: Number.NaN;
+	if (!(lines >= 2) || clipsX) return null;
+	if (node.clientHeight > lines * node.fontSize * 1.8) return null;
+	const squash = (text: string) => text.replace(/\s+/g, " ").trim();
+	const own = squash(node.ownText);
+	if (own === "") return null;
+	const control = [node, ...node.ancestors.map((i) => byIndex.get(i))].find(
+		(n) => n?.interactive && squash(n.accessibleName ?? "").includes(own),
+	);
+	return control ? { lines, control } : null;
+}
+
+/** U-07 — no clipped text, except a deliberate ellipsis (one line, or a verified
+ *  N-line clamp) with a full value. */
 function u07ClippedText(state: AuditState): CheckRow[] {
 	const rows: CheckRow[] = [];
+	const byIndex = new Map(state.nodes.map((n) => [n.index, n]));
 	for (const node of state.nodes) {
 		if (!node.ownText) continue;
 		const clipsY =
@@ -978,6 +1029,16 @@ function u07ClippedText(state: AuditState): CheckRow[] {
 				verdict: "EXCEPTION",
 				measured: `single-line ellipsis (${node.scrollWidth}px in ${node.clientWidth}px)`,
 				detail: `${node.path} — recorded, needs the full value on tap or in an accessible name`,
+			});
+			continue;
+		}
+		const clamp = u07VerifiedLineClamp(node, clipsX, byIndex);
+		if (clamp !== null) {
+			rows.push({
+				check: "U-07",
+				verdict: "EXCEPTION",
+				measured: `${clamp.lines}-line clamp (${node.scrollHeight}px in ${node.clientHeight}px)`,
+				detail: `${node.path} — recorded, the full value is in the accessible name of ${clamp.control.path}`,
 			});
 			continue;
 		}
@@ -2945,6 +3006,10 @@ export interface AuditNode {
 	overflowY: string;
 	textOverflow: string;
 	whiteSpace: string;
+	/** Computed `-webkit-line-clamp`: `"none"` or a line count. Optional so a
+	 *  hand-built fixture or an older capture reads as "no clamp" — the
+	 *  conservative side for U-07's clamp allowance. */
+	lineClamp?: string;
 	scrollWidth: number;
 	scrollHeight: number;
 	clientWidth: number;

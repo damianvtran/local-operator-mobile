@@ -3,12 +3,6 @@
 	"findings": [
 		{
 			"file": "src/features/auth/computers.tsx",
-			"text": "Back",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/auth/computers.tsx",
 			"text": "Nothing answered.",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -107,12 +101,6 @@
 		{
 			"file": "src/features/auth/own-tunnel.tsx",
 			"text": "4. Test it",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/auth/own-tunnel.tsx",
-			"text": "Back",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -322,12 +310,6 @@
 		},
 		{
 			"file": "src/features/auth/sign-in.tsx",
-			"text": "Back",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/auth/sign-in.tsx",
 			"text": "Sign in",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -503,12 +485,6 @@
 		},
 		{
 			"file": "src/features/past/past.tsx",
-			"text": "Back",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/past/past.tsx",
 			"text": "Could not resume",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -558,12 +534,6 @@
 		{
 			"file": "src/features/projects/project-detail.tsx",
 			"text": "Add milestone",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/project-detail.tsx",
-			"text": "Back",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -647,12 +617,6 @@
 		},
 		{
 			"file": "src/features/projects/projects.tsx",
-			"text": "Back",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/projects/projects.tsx",
 			"text": "New project",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -696,12 +660,6 @@
 		{
 			"file": "src/features/schedules/schedules-copy.ts",
 			"text": "${Math.floor(magnitude)}s",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/schedules/schedules.tsx",
-			"text": "Back",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
@@ -1283,12 +1241,6 @@
 		},
 		{
 			"file": "src/features/settings/settings.tsx",
-			"text": "Back",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
 			"text": "Computers",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -1338,12 +1290,6 @@
 		{
 			"file": "src/features/settings/settings.tsx",
 			"text": "Status",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Text size",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},

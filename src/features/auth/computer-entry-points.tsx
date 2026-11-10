@@ -34,7 +34,7 @@ import {
 	textWidthDp,
 } from "@/ui/components/list-row-meta";
 import { NavigationMark } from "@/ui/components/navigation-mark";
-import { TOUCH_FLOOR } from "@/ui/layout";
+import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { CONTROL_HEIGHTS, TYPE_STEPS } from "@/ui/tokens.gen";
 
@@ -313,6 +313,89 @@ export function HeaderComputerChip({
 }
 
 /**
+ * Where focus goes when the switcher sheet closes, for an opener that lives in
+ * the conversations pane: candidates in priority order, the first that can
+ * actually TAKE focus wins (`Sheet`'s `returnFocusTestID`).
+ *
+ * WHY (review round 1, R3). On a phone the pane is a drawer that closes in the
+ * same press, so its opener is unmounted by the time the sheet dismisses and
+ * the Home header chip is the nearest surviving switcher: focus returns there.
+ * In the split layout the pane never leaves and the chip is NOT rendered (one
+ * switcher per screen, visual audit D12) — naming the chip there sent the
+ * sheet's `querySelector` after nothing and left focus on `body`. So split
+ * returns focus to the control that opened the sheet.
+ *
+ * WHY A CHAIN ON A PHONE (UX round 1, U2). "The chip is not rendered" is not
+ * only the split layout: a session screen has no chip either, so drawer →
+ * switcher → Escape left `:focus` matching nothing. Whether the chip exists is
+ * a fact about the screen underneath at DISMISSAL time, which this opener
+ * cannot know when it opens, so it names a fallback order instead of guessing:
+ * the chip, then the opener itself (still there when the pane did not close),
+ * then the control that opened the drawer — the one control every drawer
+ * screen renders (`WorkspaceDrawerButton`, under its session and Home ids).
+ */
+export const switcherFocusReturn = (
+	split: boolean,
+	openerTestID: string,
+): string | readonly string[] =>
+	split
+		? openerTestID
+		: [
+				CONTROL.computersButton,
+				openerTestID,
+				CONTROL.sessionBack,
+				CONTROL.homeSidebar,
+			];
+
+/** The drawer row's name step, expressed as the scale `sansTextWidthDp` takes
+ *  (it measures at `meta`): the shipped face scaled from meta to body-sm. */
+const drawerNameWidthDp = (text: string, scale: number) =>
+	sansTextWidthDp(
+		text,
+		(scale * TYPE_STEPS["body-sm"].size) / TYPE_STEPS.meta.size,
+	);
+
+/** The gap between the name and its health word: the row's `gap-2`. */
+const DRAWER_ROW_GAP = 8;
+
+/**
+ * What the drawer row paints in the slot the name and the health word share.
+ *
+ * THE NAME HAS PRIORITY; THE WORD DROPS FIRST (design round 1 D1, QA round 2
+ * Q2). The word used to be `shrink-0` beside a `flex-1` name, so the name paid
+ * for every missing point: at 320 pt it read `1…210` beside a whole
+ * "· Online", at 320 pt / 200 % it was 0 pt wide, and in the loading state the
+ * unshrinkable "· Checking…" ran out of the row and over the Team Bridge
+ * button (the web audit's U-08 on S15/loading at 200 %). The name is what
+ * tells two computers apart; the state is already carried by the leading
+ * health mark's shape and, in full, by the control's accessible name. So the
+ * word is painted only when the WHOLE name fits beside it, and dropped whole
+ * otherwise — never clipped, because half a status word reads as a different
+ * word. Pure, so the rule is pinned without a renderer.
+ *
+ * `slotDp === 0` is "not measured yet": the first frame paints both, which is
+ * the settled result in the common case, so nothing moves when the width lands.
+ */
+export const drawerRowFit = (
+	label: string,
+	word: string | null,
+	slotDp: number,
+	scale: number,
+	wordFontSize: number,
+): { name: string; word: string | null } => {
+	if (slotDp <= 0) return { name: label, word };
+	if (word !== null) {
+		const wordDp = sansTextWidthDp(word, wordFontSize / TYPE_STEPS.meta.size);
+		if (drawerNameWidthDp(label, scale) + DRAWER_ROW_GAP + wordDp <= slotDp)
+			return { name: label, word };
+	}
+	return {
+		name: middleFit(label, slotDp, scale, drawerNameWidthDp),
+		word: null,
+	};
+};
+
+/**
  * The drawer footer's workspace row: `● Mac mini · Online ⇅`.
  *
  * This is the "bottom of the navigation" the operator asked for: the app has no
@@ -322,8 +405,9 @@ export function HeaderComputerChip({
  * from the sheet ("Add a computer") and from Settings.
  *
  * The health WORD is painted here, not only spoken: the drawer has the width the
- * header does not. The name pre-fits to one line like the header's, and the word
- * never shrinks, so a long name gives way first. The name uses Figtree Medium:
+ * header does not — when it has it. The name pre-fits to one line like the
+ * header's and keeps priority; the word is dropped whole when the name would
+ * otherwise be cut (`drawerRowFit`). The name uses Figtree Medium:
  * that is the shipped face the shared sans advance table was measured from,
  * scaled from its meta size to body-sm rather than charged the mono advance.
  */
@@ -338,58 +422,66 @@ export function DrawerComputerRow({
 }) {
 	const entry = useComputerEntry();
 	const { open } = useComputerSwitcher();
+	const { split } = useLayout();
 	const { effectiveScale } = useTextScale();
 	const [nameWidth, setNameWidth] = useState(0);
 	const ink = useTokenColor("ink-dim");
 	const label = entry.kind === "computer" ? entry.name : entry.label;
 	const geometry = markGeometry(effectiveScale);
+	const fit = drawerRowFit(
+		label,
+		entry.kind === "computer" ? `· ${entryHealthWord(entry.health)}` : null,
+		nameWidth,
+		effectiveScale,
+		geometry.fontSize,
+	);
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={entry.accessibilityLabel}
 			onPress={() => {
 				onNavigate?.();
-				open({ returnFocusTestID: CONTROL.computersButton });
+				open({ returnFocusTestID: switcherFocusReturn(split, testID) });
 			}}
 			testID={testID}
-			/* The same control edge as the chip: one deliberate affordance pair for
-			 *  both entry points, and in the light palette the old `panel-edge` was
-			 *  `hairline` — 1.18:1 on this row's `surface` fill (D8). `border-control`
-			 *  measures 3.65:1 here. */
-			className="w-full flex-row items-center gap-2 rounded-md border border-border-control bg-surface px-3"
+			/* BORDERLESS (visual audit D11, and the standing direction that the
+			 *  sidebar is dense and borderless). The row used to be a bordered,
+			 *  filled chip — a second boxed control stacked on the destinations bar,
+			 *  which is what made the footer read as three bands. The affordance is
+			 *  carried by what a switcher row is everywhere else: the health mark,
+			 *  the name, and the up/down chevrons at the trailing edge. `px-2`
+			 *  aligns the mark with the destination icons below it. */
+			className="w-full flex-row items-center gap-2 rounded-md px-2"
 			style={{ minHeight: TOUCH_FLOOR }}
 		>
 			<HealthMark entry={entry} {...geometry} />
-			{/* The slot must stretch independently of its painted string: measuring
-			 * the Text feeds its ellipsis back into the next layout and shrinks it. */}
+			{/* ONE measured slot for the name AND the word (`drawerRowFit`). It must
+			 * stretch independently of what it paints: measuring the Text feeds its
+			 * ellipsis back into the next layout and shrinks it, and measuring only
+			 * the name's share would let the word's presence decide its own fit. */}
 			<View
-				className="min-w-0 flex-1"
+				className="min-w-0 flex-1 flex-row items-center gap-2"
 				onLayout={(event) => setNameWidth(event.nativeEvent.layout.width)}
 			>
-				<Text className="text-body-sm font-medium text-ink" numberOfLines={1}>
-					{nameWidth > 0
-						? middleFit(label, nameWidth, effectiveScale, (text, scale) =>
-								sansTextWidthDp(
-									text,
-									(scale * TYPE_STEPS["body-sm"].size) / TYPE_STEPS.meta.size,
-								),
-							)
-						: label}
-				</Text>
-			</View>
-			{entry.kind === "computer" ? (
 				<Text
-					/* `text-meta` for the step's line box and weight, with the size taken
-					 *  from `markGeometry`: `meta` is a CHROME step, capped at 1.5x, so the
-					 *  word a low-vision reader needs stopped scaling while the name doubled
-					 *  (D9). The cap is about chrome labels, not status content. */
-					className="shrink-0 text-meta text-ink-muted"
-					style={{ fontSize: geometry.fontSize }}
+					className="min-w-0 flex-1 text-body-sm font-medium text-ink"
+					numberOfLines={1}
 				>
-					{`· ${entryHealthWord(entry.health)}`}
+					{fit.name}
 				</Text>
-			) : null}
-
+				{fit.word !== null ? (
+					<Text
+						/* `text-meta` for the step's line box and weight, with the size taken
+						 *  from `markGeometry`: `meta` is a CHROME step, capped at 1.5x, so the
+						 *  word a low-vision reader needs stopped scaling while the name doubled
+						 *  (D9). The cap is about chrome labels, not status content. */
+						className="shrink-0 text-meta text-ink-muted"
+						style={{ fontSize: geometry.fontSize }}
+					>
+						{fit.word}
+					</Text>
+				) : null}
+			</View>
 			<ChevronsUpDown size={16} strokeWidth={2} color={ink} aria-hidden />
 		</Pressable>
 	);

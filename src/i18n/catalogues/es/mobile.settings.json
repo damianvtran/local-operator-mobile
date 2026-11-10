@@ -1,4 +1,5 @@
 {
+	"mobile.settings.text_size.label": "Tamaño del texto",
 	"mobile.settings.theme.caption_forced": "Siempre {name}",
 	"mobile.settings.theme.caption_system": "Sistema usa {light} y {dark}",
 	"mobile.settings.theme.card_dark": "{name}, tema oscuro",

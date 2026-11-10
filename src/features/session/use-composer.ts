@@ -58,6 +58,7 @@ import {
 	type DictationState,
 	useDictation,
 } from "@/features/session/use-dictation";
+import { haptic } from "@/lib/haptics";
 import {
 	type ContinuationEnvelope,
 	isRelayError,
@@ -403,6 +404,10 @@ export const useComposer = (input: {
 	const runSend = useCallback(
 		async (op: "prompt" | "steer") => {
 			if (endpoints === null || inFlight.current) return;
+			/* The send is felt (perf audit P16): one light tick as the message
+			 * leaves the composer — after the guard, so a refused or duplicate
+			 * press stays silent. */
+			haptic("light");
 			/* U2/defect 4: a send takes the composer, so any dictation still in flight
 			 * is aborted and discarded — a transcript landing after the message left
 			 * belongs to the NEXT message, and appending it here would be a clobber by

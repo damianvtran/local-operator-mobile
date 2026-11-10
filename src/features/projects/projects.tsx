@@ -15,6 +15,7 @@ import {
 import { ProjectsStateMarkers } from "@/features/projects/projects-markers";
 import { CONTROL, EMPTY, projectRowId, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { EmptyState } from "@/ui/components/empty-state";
@@ -137,12 +138,9 @@ export default function Projects() {
 			title="Projects"
 			testID={SCREEN.projects}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.projectsBack}
-					label="Back"
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 			headerAction={

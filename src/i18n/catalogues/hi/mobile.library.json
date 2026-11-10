@@ -8,6 +8,7 @@
 	"mobile.library.browse.filters_count": "फ़िल्टर · {count}",
 	"mobile.library.browse.more_kinds": "अन्य प्रकार",
 	"mobile.library.browse.no_tags": "अभी कोई टैग नहीं है। लाइब्रेरियन संसाधनों को व्यवस्थित करते हुए टैग जोड़ता है।",
+	"mobile.library.browse.origin": "स्रोत",
 	"mobile.library.browse.refresh": "लाइब्रेरी ताज़ा करें",
 	"mobile.library.browse.search_label": "लाइब्रेरी में खोजें",
 	"mobile.library.browse.search_placeholder": "नाम, टैग या शब्द",

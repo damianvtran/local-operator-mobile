@@ -37,6 +37,7 @@ import { t } from "@/i18n";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
@@ -442,14 +443,11 @@ export default function Computers() {
 				 *  (Home's landing effect returns a restored account here), so the
 				 *  control is absent rather than inert (U1, `backAction`). */
 				back ? (
-					<Button
+					<BackButton
 						testID={CONTROL.computersBack}
-						label="Back"
 						onPress={() =>
 							back === "pop" ? router.back() : router.replace("/")
 						}
-						variant="quiet"
-						size="sm"
 					/>
 				) : null
 			}

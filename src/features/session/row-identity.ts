@@ -26,7 +26,7 @@
  * over the shapes this contract actually has (strings, numbers, booleans, null,
  * plain objects, arrays of the same).
  */
-const sameValue = (a: unknown, b: unknown): boolean => {
+export const sameValue = (a: unknown, b: unknown): boolean => {
 	if (a === b) return true;
 	if (typeof a !== typeof b) return false;
 	if (a === null || b === null || typeof a !== "object") return false;

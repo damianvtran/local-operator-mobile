@@ -83,7 +83,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  allowances above and main's own re-pin both stand. */
 
 	"tools/audit/checks.ts":
-		"212cbe4655fb457ff008a00df990904cc9d30630d78a5420a911bbe38a8b0e5c",
+		"8b995491008690b3e2f0885e124e81eb5079cdf275103bee9ea1928dc8c3b1f7",
 	"tools/audit/color.ts":
 		"a005d29b4eca066a0f4418e4ef66cdbed471898a2307c76a6ccfe83e7dded0ef",
 	"tools/audit/paint-fragments.ts":
@@ -91,7 +91,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-11-07 for PR #189 (audit fix 2) with --print: one ADDED
 	 *  export, `SPACING_REST_PROBE`; `EXTRACT_PROBE`'s source is byte-unchanged. */
 	"tools/audit/probe.ts":
-		"ae34fd9cce868b60b385eed2064c07a3e82e2cd421526a7fea1fb81446437728",
+		"44ea427fefb9775fe5d8c2694f4c8788a9c5ec9eb19eefa8b7b5e7eac36ba2a6",
 	/* Re-pinned for PR #207's CI remediation: the long-conversation fixture's
 	 * row ids moved from `tc-conv-…` to `m-conv-…` (`tc-` is the relay's
 	 * live-fold prefix, which the history pager refuses as a cursor), so the
@@ -630,7 +630,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Re-pinned with --print over the staged tree for PR B's round-1
 	// remediation (the session screen memoises the counts element and derives
 	// one activity-line flag). Source admission only.
-	app: "a242465bd7ba73e2732cc0eef0c06624effdae1c91244712fffdc20809ad64a1",
+	app: "e93799bc82dcd86b073b644fd1ec67b0069de9e0813f9ded582a66fd4779e2f3",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1256,7 +1256,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// remediation: the queued count stays on the card where the host has no
 	// activity line, the counts keep one edge and drop the held line, and the
 	// dead strip exports are removed. Source admission only.
-	src: "a94cc45b96ebeb658edd8c1a242a19e3cf20f9fd466eee99b16d7df5eb50f6bc",
+	/* PR #210 merge-gate convergence with main 519db4e6 (#207): the merged src
+	 * tree carries both #207's history pager and this PR's header/drawer polish,
+	 * so it has neither parent's digest; every pin re-derived with --print over
+	 * the staged merged tree. Source admission only, no rendered or native proof
+	 * refreshed. */
+	// PR #211 merged with main aef9b7b2 (#210): the merged src tree carries both
+	// #210's header/drawer/sheet-exit polish and this PR's composer work, so it
+	// has neither parent's digest; re-pinned with --print over the staged merged
+	// tree. Source admission only, no rendered or native proof refreshed.
+	src: "39dd370f05c4ae2549d5c8599df407d64c085755db9c80533458451a9886a244",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -106,7 +106,10 @@ export type HealthCopyKey = keyof ReturnType<typeof healthCopy>;
  * relay's own words (`relay.chrome.session.subtitle.*`), so the two clients
  * name every state one way:
  *
- *  - live and working → "Working · 1m 36s" (or "Working" before a start time);
+ *  - live and working → "Working". NOT "Working · 1m 36s": the activity line
+ *    above the composer already counts the running phase, and two clocks 600 pt
+ *    apart ticking different numbers (turn age here, phase age there) read as
+ *    a disagreement, not as detail (visual audit D2: show the timer once);
  *  - live and stopped on a decision → "Waiting for you";
  *  - live and quiet → "Idle";
  *  - otherwise the health word: "Not answering", "Reconnecting", "Ended".
@@ -120,14 +123,12 @@ export const headerSubtitle = (input: {
 	health: "live" | "not_answering" | "reconnecting" | "ended";
 	working: boolean;
 	waiting: boolean;
-	/** Already formatted (`elapsedLabel`), or null when the start is unknown. */
-	elapsed: string | null;
+	/** @deprecated Accepted and IGNORED: the header shows no clock (D2). The
+	 *  session route stopped passing it; optional so older callers compile. */
+	elapsed?: string | null;
 }): string => {
 	if (input.health !== "live") return healthStateWords()[input.health];
 	if (input.waiting) return t("relay.chrome.session.subtitle.waiting");
-	if (input.working)
-		return input.elapsed === null
-			? t("relay.chrome.session.subtitle.working_plain")
-			: t("relay.chrome.session.subtitle.working", { elapsed: input.elapsed });
+	if (input.working) return t("relay.chrome.session.subtitle.working_plain");
 	return t("relay.chrome.session.subtitle.idle");
 };

@@ -1016,6 +1016,9 @@ export default function Home({
 						className={cx(
 							"min-w-0 flex-1 flex-row items-center gap-1",
 							!split && "ms-2",
+							/* With no chip to fill the row (split, D12) the bell keeps
+							 *  its trailing edge instead of sliding to the leading one. */
+							split && "justify-end",
 						)}
 					>
 						{/* The computer this will run on, and the switcher's primary entry
@@ -1024,17 +1027,25 @@ export default function Home({
 						 *  (record §2.4: it read "M… Operator" beside the mark, the badge
 						 *  and the gear). The bell still yields its pill at large text
 						 *  (D24), so nothing overflows the 320 pt row. */}
-						<HeaderComputerChip
-							testID={CONTROL.computersButton}
-							/* THE BRAND MARK rides INSIDE the chip as its leading glyph
-							 *  (operator, build 453: "add the local operator logo to the
-							 *  left of the local operator title"; UX U2 / design D3): as a
-							 *  sibling it was a dead 20 pt strip 4 pt from both the ☰ and
-							 *  the chip. It is DECORATION, so it yields first and on the
-							 *  bell's own gate: below 360 pt or at large text the chip
-							 *  needs every point to keep its floor and its name (D-H1, D24). */
-							brandMark={viewport.width >= 360 && effectiveScale < 1.5}
-						/>
+						{/* ONE SWITCHER PER SCREEN (visual audit D12). In the split
+						 *  layout the conversations pane is always on screen and its
+						 *  footer already carries the computer switcher, so this chip
+						 *  was the same control a second time, stretched across both
+						 *  panes. The phone keeps it: there the pane is behind the ☰
+						 *  and this is the only switcher in view. */}
+						{split ? null : (
+							<HeaderComputerChip
+								testID={CONTROL.computersButton}
+								/* THE BRAND MARK rides INSIDE the chip as its leading glyph
+								 *  (operator, build 453: "add the local operator logo to the
+								 *  left of the local operator title"; UX U2 / design D3): as a
+								 *  sibling it was a dead 20 pt strip 4 pt from both the ☰ and
+								 *  the chip. It is DECORATION, so it yields first and on the
+								 *  bell's own gate: below 360 pt or at large text the chip
+								 *  needs every point to keep its floor and its name (D-H1, D24). */
+								brandMark={viewport.width >= 360 && effectiveScale < 1.5}
+							/>
+						)}
 						{/* THE COUNT BELONGS TO THE BELL, and it is INSIDE the control.
 						 *  As a sibling chip it measured 25.3 × 22 pt, 8 pt from the
 						 *  button's box — an inert fifth control the reader tries to tap

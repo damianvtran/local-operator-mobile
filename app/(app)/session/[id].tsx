@@ -1,15 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-	type ComponentProps,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
-import {
-	Platform,
 	Pressable,
 	ScrollView,
 	Text,
@@ -68,11 +60,9 @@ import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import {
 	PinnedWorkingLine,
-	usePhaseElapsed,
 	WorkingLine,
 } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
-import { compactTitleChars, headerTitleChars } from "@/features/session/header";
 import { headerHealth } from "@/features/session/health";
 import { headerSubtitle } from "@/features/session/health-copy";
 import { rosterNeedsAttention } from "@/features/session/panels";
@@ -80,7 +70,6 @@ import { pendingView } from "@/features/session/pending";
 import { usePendingEchoes } from "@/features/session/pending-echo";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
 import {
-	middleTruncate,
 	pinnedWorkingLine,
 	projectSubagents,
 	projectTodos,
@@ -104,7 +93,6 @@ import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
-import { elapsedLabel } from "@/lib/format";
 import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import {
 	Chip,
@@ -132,35 +120,6 @@ import {
 	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
-
-/**
- * The header's health control with a subtitle that TICKS on the same phase clock
- * as the working line (`usePhaseElapsed`), so "Working · 12s" up top and `12s` in
- * the pinned line can never disagree (design D2, UX U1). Before, the header's
- * elapsed was frozen at the last projection frame while the line counted on.
- * Its own component so the once-a-second tick re-renders this control only, never
- * the session screen. `subtitle` takes the formatted elapsed (`null` when the
- * server has no instant for the phase) and returns the line to show.
- */
-const TickingSessionHealthControl = ({
-	phase,
-	subtitle,
-	...rest
-}: Omit<ComponentProps<typeof SessionHealthControl>, "subtitle"> & {
-	phase: { activity: string; startedS: number | null } | null;
-	subtitle: ((elapsed: string | null) => string) | undefined;
-}) => {
-	const elapsed = usePhaseElapsed(
-		phase?.activity ?? "",
-		phase?.startedS ?? null,
-	);
-	return (
-		<SessionHealthControl
-			{...rest}
-			subtitle={subtitle?.(elapsed === null ? null : elapsedLabel(elapsed))}
-		/>
-	);
-};
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -572,16 +531,6 @@ export default function Session() {
 	);
 
 	const title = projection?.conversation_name ?? "";
-	/* The header name is MIDDLE-truncated with a floor, because the shipped web
-	 * client collapsed it to a single glyph at 200 % text (`R14`) — the two ends of
-	 * a session name are what distinguish it, so a truncation has to keep both.
-	 *
-	 * The budget is the ROW's width, not a fixed 40 characters: at a fixed 40 the
-	 * truncation never ran for a real name, so a 25-character name reached the
-	 * layout whole and the platform clipped its tail (`Refactor th…` at 390,
-	 * `Refact…` at 320 — design round 1, D2). `headerTitleChars` derives it from
-	 * the viewport and the same column cap this screen renders inside, and the
-	 * header no longer carries a status chip for the name to compete with. */
 	const { width: viewportWidth, height: viewportHeight } =
 		useWindowDimensions();
 	/* Short landscape only, and decided from the SCREEN's orientation so a keyboard-
@@ -669,10 +618,8 @@ export default function Session() {
 		Partial<Record<RegionKey, number>>
 	>({});
 	/* The same predicate `Screen` stacks on (it passes no `stackBelowWidth`
-	 *  here), so the title's line clamp and its budget agree: stacked, the
-	 *  budget assumes TWO lines (`headerTitleChars`' stacked branch) and the
-	 *  control draws two (review M1 — a one-line clamp under a two-line budget
-	 *  cut every stacked name twice). Compact never stacks. */
+	 *  here), so the title's line clamp agrees with the row it is drawn in:
+	 *  stacked, the control draws two lines (review M1). Compact never stacks. */
 	const headerStacked = !compact && headerStacks(effectiveScale, viewportWidth);
 	/* The agent picture is a mark of the TITLE's line, not of the chrome. Inline it
 	 *  is the last item of the leading cluster and the title follows it; stacked, the
@@ -689,42 +636,11 @@ export default function Session() {
 			testID={CONTROL.sessionAgentAvatar}
 		/>
 	);
-	const headerTitle =
-		title.length > 0
-			? middleTruncate(
-					title,
-					compact
-						? compactTitleChars(
-								{ width: viewportWidth, height: viewportHeight },
-								effectiveScale,
-								/* The word rides this row in compact and takes width from
-								 *  the title, so it is charged — in EVERY state, live
-								 *  included, so the name's shape does not change when the
-								 *  dot changes colour (review round 4, D15 / QA N3). */
-								/* The dot is ALWAYS inline in compact, so it is
-								 *  charged here too — the budget promised 356.83 pt
-								 *  into a 341 pt box without it (design round 6,
-								 *  D19). */
-								{
-									dot: true,
-									menu: ended,
-									word: true,
-									avatar: headerAvatarRef !== null,
-								},
-								Platform.OS !== "web",
-							)
-						: headerTitleChars(
-								{ width: viewportWidth, height: viewportHeight },
-								/* The dot now holds ONE slot before the name in EVERY state
-								 *  (round 2 D11), so it is charged in every state rather than
-								 *  only on live — and the ⋮ only while it has an item (ended).
-								 *  Review M1, and round 2's D11 layout unification. */
-								{ dot: true, menu: ended, avatar: headerAvatarRef !== null },
-								effectiveScale,
-								Platform.OS !== "web",
-							),
-				)
-			: "session";
+	/* The name goes to the header whole: since #210 the header measures by layout
+	 *  (a tail ellipsis on the line it actually has), and the character budgets
+	 *  that used to middle-truncate it here are identities kept only for callers
+	 *  not yet migrated (`features/session/header.ts`). */
+	const headerTitle = title.length > 0 ? title : "session";
 
 	/* The panels, in one place: they sit between the transcript and the composer.
 	 * One panel at a time, because a phone's column has room for one and a tablet's is
@@ -1229,32 +1145,32 @@ export default function Session() {
 			 *  title cannot pull it into the title column (review M2), and stacked
 			 *  it sits on the back row rather than a third one (QA Q2, design D8). */
 			titleNode={
-				<TickingSessionHealthControl
+				<SessionHealthControl
 					health={health}
 					projection={projection}
 					title={headerTitle}
 					compact={compact}
 					stacked={headerStacked}
-					phase={working}
+					/* No clock here (visual audit D2: the timer is shown once, on the
+					 *  pinned working line), so the header no longer ticks: the
+					 *  subtitle is a plain string of the health state. */
 					subtitle={
 						health === null
 							? undefined
-							: (elapsed) =>
-									headerSubtitle({
-										health,
-										/* The composer's own reading (`turnRunning`), so the
-										 *  header never says Working while a send mints a prompt. */
-										working: runtime.streaming,
-										waiting: pending !== null,
-										elapsed,
-									})
+							: headerSubtitle({
+									health,
+									/* The composer's own reading (`turnRunning`), so the
+									 *  header never says Working while a send mints a prompt. */
+									working: runtime.streaming,
+									waiting: pending !== null,
+								})
 					}
 					sheetOpen={healthSheetOpen}
 					onSheetOpenChange={setHealthSheetOpen}
 					controlRef={healthControlRef}
 				>
 					{ended ? <ResumeBlock resume={resume} /> : null}
-				</TickingSessionHealthControl>
+				</SessionHealthControl>
 			}
 			stackedActionsBeside
 			/* Stacked, the picture leads the TITLE row instead of the chrome row

@@ -27,6 +27,7 @@ import type {
 	SessionSummary,
 	UnreadBlock,
 } from "../contracts";
+import { sameValue } from "../features/session/row-identity";
 
 export interface ListSnapshot {
 	/** Reset is an identity boundary, even when the same computer reconnects. */
@@ -91,6 +92,47 @@ const INITIAL: ListSnapshot = {
 	stale: true,
 };
 
+/**
+ * The frame's sessions, with every row that is structurally equal to the one
+ * already held replaced by the held OBJECT — and the held ARRAY when nothing
+ * changed at all.
+ *
+ * WHY (perf audit P11). "Replaced wholesale on each push" is still the rule for
+ * CONTENT and ORDER: the result always has the frame's rows in the frame's
+ * order, and a row is only ever swapped for one `sameValue` proved equal, so
+ * this cannot resurrect a stale field. What it changes is identity: without it
+ * every list frame handed the sidebar a fresh object per conversation, so every
+ * mounted row re-rendered on every frame whether or not anything about it
+ * moved. With it, `memo(SessionRow)` bails on unchanged rows, and a frame that
+ * changed nothing does not even wake the list's selector.
+ *
+ * Keyed by `session_id` through a Map rather than by index, because the common
+ * change is a row MOVING (a conversation becoming the most recent) and an index
+ * pairing would then miss every row between its old and new place. A duplicate
+ * id is safe: the later row wins the Map slot and the equality check decides,
+ * so the worst case is a missed reuse, never a wrong one. The transcript's
+ * `reuseRows` is not used directly only because it is typed for rows keyed
+ * `id`.
+ */
+export const reuseSessions = (
+	previous: SessionSummary[],
+	next: SessionSummary[],
+): SessionSummary[] => {
+	if (previous.length === 0 || previous === next) return next;
+	const held = new Map<string, SessionSummary>();
+	for (const row of previous) held.set(row.session_id, row);
+	let inPlace = 0;
+	const out = next.map((row, at) => {
+		const old = held.get(row.session_id);
+		if (old === undefined || !sameValue(old, row)) return row;
+		if (previous[at] === old) inPlace += 1;
+		return old;
+	});
+	return inPlace === next.length && previous.length === next.length
+		? previous
+		: out;
+};
+
 export function createListStore(deps: { now?: () => number } = {}) {
 	const now = deps.now ?? (() => Date.now());
 	// Keep freshness even while a degraded frame hides the badge. Otherwise an
@@ -116,8 +158,10 @@ export function createListStore(deps: { now?: () => number } = {}) {
 		applyFrame(frame, at, connectionGeneration = get().connectionGeneration) {
 			if (connectionGeneration !== get().connectionGeneration) return;
 			set({
-				/* Nothing is merged: the frame IS the list. */
-				sessions: frame.sessions,
+				/* Nothing is merged: the frame IS the list. Unchanged rows keep
+				 * their previous OBJECT so the sidebar re-renders only what moved
+				 * (`reuseSessions`). */
+				sessions: reuseSessions(get().sessions, frame.sessions),
 				degraded: frame.degraded,
 				/* A frame that carries no capabilities must not erase the ones a previous
 				 * frame established: `capabilities.stt` decides whether a mic exists, and

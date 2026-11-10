@@ -1,4 +1,8 @@
 {
+	"mobile.settings.text_size.label": {
+		"role": "heading",
+		"note": "Visible label and accessible name of the Settings control that chooses the app's text size (System, 100%, 150%, 200%). \"Text size\" means how large the app draws its type, not a font. No final full stop."
+	},
 	"mobile.settings.theme.caption_forced": {
 		"role": "help",
 		"note": "Caption under the mode control while it is forced to one side. {name} is a theme NAME (proper noun, never translated). No final full stop."

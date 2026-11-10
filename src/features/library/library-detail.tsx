@@ -80,6 +80,7 @@ import {
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Alert } from "@/ui/components/alert";
+import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Chip } from "@/ui/components/chip";
 import { Dialog } from "@/ui/components/dialog";
@@ -198,12 +199,9 @@ export default function LibraryDetail() {
 			testID={SCREEN.libraryDetail}
 			scroll={false}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.libraryDetailBack}
-					label={t("mobile.common.back")}
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 			headerAction={

@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ScopedVariables } from "uniwind";
+import { haptic } from "@/lib/haptics";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { maxColumnWidth } from "@/ui/column";
@@ -197,7 +198,13 @@ export const Dialog = ({
 										variant={destructive ? "danger" : "primary"}
 										loading={busy}
 										testID={CONTROL.dialogConfirm}
-										onPress={onConfirm}
+										/* A destructive confirm is felt as well as seen
+										 *  (P16): the one press in the app that cannot be
+										 *  taken back gets the warning tick. */
+										onPress={() => {
+											if (destructive) haptic("warning");
+											onConfirm();
+										}}
 									/>
 								</View>
 							</View>

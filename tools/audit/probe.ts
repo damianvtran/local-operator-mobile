@@ -500,6 +500,7 @@ const probeWithGeometry = (extra = "") => `
       overflowY: style.overflowY,
       textOverflow: style.textOverflow,
       whiteSpace: style.whiteSpace,
+      lineClamp: style.webkitLineClamp || 'none',
       scrollWidth: el.scrollWidth,
       scrollHeight: el.scrollHeight,
       clientWidth: el.clientWidth,
