@@ -13,19 +13,26 @@ describe("attachment toolbar available-width layout", () => {
 		);
 		expect(source).not.toContain("upload: (bytes) => hub.uploadAttachment");
 	});
-	it("wraps intrinsic controls rather than shrinking translated labels", () => {
-		const toolbar = source.slice(
-			source.indexOf(
-				'<View className="flex-row',
-				source.indexOf("testID={CONTROL.teamBridgeMessageInput}"),
-			),
+	it("draws the composer as the shared rounded field, not full-width buttons", () => {
+		// Operator, TestFlight 753: a "Message" label over the field and two
+		// full-width "Add image" / "Send" buttons; the agent composer's look (one
+		// field, inline icon controls) replaced them. The words stay as names.
+		const composer = source.slice(
+			source.indexOf("<BridgeComposerField"),
 			source.indexOf("</KeyboardAvoidingView>"),
 		);
-		expect(toolbar).toContain("flex-wrap");
-		expect(toolbar).toContain('className="max-w-full shrink-0"');
-		expect(toolbar).toContain('className="max-w-full grow shrink-0"');
-		expect(toolbar.indexOf("CONTROL.teamBridgeAttach")).toBeLessThan(
-			toolbar.indexOf("CONTROL.teamBridgeSend"),
+		expect(composer).toContain(
+			'label={t("mobile.team_bridge.thread.message")}',
 		);
+		expect(composer).toContain('t("mobile.team_bridge.attachment.add")');
+		expect(composer).toContain('t("mobile.team_bridge.thread.send")');
+		expect(composer).toContain('t("mobile.team_bridge.thread.send_retry")');
+		expect(composer).toContain(
+			"images ? () => setAttachOpen(true) : undefined",
+		);
+		expect(composer).toContain("images.remaining() === 0");
+		expect(composer).toContain("sendDisabled={!sendable}");
+		expect(composer).not.toContain("<Button");
+		expect(composer).not.toContain("<Textarea");
 	});
 });

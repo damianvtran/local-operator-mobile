@@ -1297,13 +1297,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge drawer switch and this PR's composer work, so it has neither
 	// parent's digest; re-pinned with --print over the staged merged tree.
 	// Source admission only, no rendered or native proof refreshed.
+	// feat/bridge-thread-chrome (#213): the bridge thread header reuses the
+	// session title style (`sessionHeaderTitle`) and the composer the agent
+	// composer's field/disc tokens.
+	// PR #211 merged with main 0ae5fe28 (#213): the merged tree carries both,
+	// so src re-derived with --print over the staged merged tree. Source
+	// identity only, no rendered or native proof.
 	// TestFlight 753 keyboard fix (shared keyboard frame, keyboard-aware held
 	// box, end-of-lift re-measure, paste offer while composing) and its tests;
 	// re-pinned with --print over the staged tree. Admission only.
 	// PR #216 round 1 remediation (keyboard-frame seed, the composer's lift
 	// seed and mid-lift publish guard, the capped box's bound through the lift)
 	// and its tests; re-pinned with --print over the staged tree. Admission only.
-	src: "3c7ffe89cd091bcb4cbd059b0545102e7b9159064e2bb83365103abc8b5d2c65",
+	// PR #216 merged with main 8fec5440 (#211 squash, #213): the merged tree
+	// carries #213's thread chrome and this PR's keyboard work, so src
+	// re-derived with --print over the staged merged tree. Admission only.
+	src: "4df1306c13d324e4ca0b34c9338058d710bd09585a31773640ee764633682c3c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
