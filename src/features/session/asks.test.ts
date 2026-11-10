@@ -28,6 +28,7 @@ import {
 	outstandingQuestions,
 	questionIsAnswered,
 	questionProgress,
+	questionsCountLabel,
 	questionsWaitingLabel,
 	questionTally,
 	READ_FAILED,
@@ -314,7 +315,8 @@ describe("outstanding / answerable", () => {
 			ask({ ask_id: "e", status: "dismissed" }),
 		];
 		/* `open` only — the runtime's OUTSTANDING_STATUSES since #2388. The
-		   timed-out row stays on the BAR (quietly) but is not waiting. */
+		   timed-out row stays in the SHEET's set (its Dismiss) but is not
+		   waiting, and paints no bar (build 753). */
 		expect(outstandingAsks(rows).map((row) => row.ask_id)).toEqual(["a"]);
 		expect(askBarRows(rows).map((row) => row.ask_id)).toEqual(["a", "b"]);
 		expect(isOutstanding("timed_out")).toBe(false);
@@ -402,7 +404,7 @@ describe("the bar's question count (the unit split)", () => {
 		});
 	});
 
-	it("says a lapsed-only queue TIMED OUT, quietly — never waiting (the Aida repro)", () => {
+	it("says a lapsed-only queue TIMED OUT, quietly — never waiting (the Aida repro; the sheet title and More row, not a bar)", () => {
 		/* The reported state: one day-old timed-out ask, nothing open. The
 		   desktop shows nothing pending; the bar used to say "1 question
 		   waiting" in accent. */
@@ -426,6 +428,9 @@ describe("the bar's question count (the unit split)", () => {
 
 	it("labels its unit, singular and plural, so it cannot be read as asks", () => {
 		expect(questionsWaitingLabel(1)).toBe("1 question waiting");
+		/* The bar's visible short form (build 753); the sentence stays its name. */
+		expect(questionsCountLabel(1)).toBe("1 question");
+		expect(questionsCountLabel(3)).toBe("3 questions");
 		expect(questionsWaitingLabel(3)).toBe("3 questions waiting");
 	});
 });

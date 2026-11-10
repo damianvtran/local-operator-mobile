@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "Faltan algunos mensajes anteriores aquí.",
 	"mobile.session.history.gap_newest": "Faltan algunos mensajes de arriba.",
 	"mobile.session.history.gap_load": "Cargar",
-	"mobile.session.history.gap_load_hint": "Carga los mensajes que se perdieron mientras este teléfono estaba desconectado."
+	"mobile.session.history.gap_load_hint": "Carga los mensajes que se perdieron mientras este teléfono estaba desconectado.",
+	"mobile.session.sheet_title.model": "Modelo",
+	"mobile.session.sheet_title.effort": "Esfuerzo",
+	"mobile.session.sheet_title.status": "Tareas y agentes"
 }

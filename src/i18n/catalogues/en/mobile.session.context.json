@@ -174,5 +174,17 @@
 	"mobile.session.history.gap_load_hint": {
 		"role": "help",
 		"note": "Screen-reader hint for the Load action: it fetches the messages missed while the phone was disconnected."
+	},
+	"mobile.session.sheet_title.model": {
+		"role": "heading",
+		"note": "Title of the sheet that lists the models to choose from. Title case in English."
+	},
+	"mobile.session.sheet_title.effort": {
+		"role": "heading",
+		"note": "Title of the sheet that lists the reasoning-effort levels to choose from. Title case in English."
+	},
+	"mobile.session.sheet_title.status": {
+		"role": "heading",
+		"note": "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English."
 	}
 }

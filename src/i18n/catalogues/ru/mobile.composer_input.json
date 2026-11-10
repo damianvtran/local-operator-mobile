@@ -10,5 +10,7 @@
 	"mobile.composer_input.clear_draft": "Очистить черновик",
 	"mobile.composer_input.clear_draft_hint": "Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения",
 	"mobile.composer_input.dismiss_error": "Скрыть ошибку",
-	"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки"
+	"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки",
+	"mobile.composer_input.notice_retry": "Повторить",
+	"mobile.composer_input.notice_dismiss": "Скрыть"
 }

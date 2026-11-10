@@ -410,6 +410,9 @@ export const CONTROL = {
 	composerOpenQueue: "composer-open-queue",
 	composerContextModel: "composer-context-model",
 	composerContextEffort: "composer-context-effort",
+	/** More's Questions row: the door to the asks sheet that survives a queue
+	 *  of only timed-out asks, which paints no ask bar (build 753). */
+	composerContextQuestions: "composer-context-questions",
 	composerContextSheet: "composer-context-sheet",
 	/** The composer shell's painted edge, which is a CHILD of the shell rather than its
 	 *  `borderWidth` (docs/design/components.md § 12). Not a control and never a hit
@@ -443,10 +446,11 @@ export const CONTROL = {
 	sessionSubagents: "session-subagents-chip",
 	/** The compact status row: the one control that opens working/tasks/agents. */
 	sessionStatusTray: "session-status-tray",
-	/** The Tasks and Agents chips above the composer (record §2.2/D-S3): each
-	 *  opens the same status sheet the tray opened, at its own panel. */
-	sessionTasksChip: "session-tasks-chip",
-	sessionAgentsChip: "session-agents-chip",
+	/** The activity line's trailing counts above the composer (visual audit D1):
+	 *  tasks, agents and the queued-message count behind ONE target that opens
+	 *  the status sheet. Replaces the two capsules (`session-tasks-chip`,
+	 *  `session-agents-chip`) that had a band of their own. */
+	sessionActivityCounts: "session-activity-counts",
 	/** The ⋮ sheet's Tags row: the session's tags left the header (record §2.3,
 	 *  D-S1) and are one row of the always-present overflow menu. */
 	sessionMenuTags: "session-menu-tags",
@@ -921,15 +925,16 @@ export const SURFACE = {
 	composerDictationMeter: "composer-dictation-meter",
 	composerError: "composer-error",
 	composerRetained: "composer-retained",
+	/** The composer's single failure notice (visual audit D6): the block that
+	 *  holds the retained-instruction sentence, the error line and their text
+	 *  actions. One id for the block so a capture can frame the whole notice. */
+	composerFailureNotice: "composer-failure-notice",
 	composerReceipt: "composer-receipt",
 	/** The composer's controls row (attach, mic, stop, send) and its meta line
 	 *  (queued, folder, model, effort, context, cost) — the record's rows 2 and 3,
 	 *  addressed by the layout capture that measures their centres and line count. */
 	composerControls: "composer-controls",
 	composerMeta: "composer-meta",
-	/** The Tasks/Agents chips above the composer (record §2.2), which replaced the
-	 *  under-header status tray on a phone. */
-	sessionStatusChips: "session-status-chips",
 	composerDisabledReason: "composer-disabled-reason",
 	queuedMessageChip: "queued-message-chip",
 	connectionBanner: "connection-banner",

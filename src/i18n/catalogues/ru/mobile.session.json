@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "Здесь не хватает части более ранних сообщений.",
 	"mobile.session.history.gap_newest": "Не хватает части сообщений выше.",
 	"mobile.session.history.gap_load": "Загрузить",
-	"mobile.session.history.gap_load_hint": "Загружает сообщения, пропущенные, пока телефон был отключён."
+	"mobile.session.history.gap_load_hint": "Загружает сообщения, пропущенные, пока телефон был отключён.",
+	"mobile.session.sheet_title.model": "Модель",
+	"mobile.session.sheet_title.effort": "Усилие",
+	"mobile.session.sheet_title.status": "Задачи и агенты"
 }

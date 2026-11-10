@@ -1,7 +1,6 @@
 {
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
-	"mobile.home.chip.effort_default_short": "Default effort",
 	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
 	"mobile.home.chip.model_chosen": "Model, {model}, chosen for this conversation",
 	"mobile.home.chip.model_default": "Model, {model}, this computer's default",
@@ -63,5 +62,6 @@
 	"mobile.home.tip.parallel": "ask for parallel work to fan out subagents",
 	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
 	"mobile.home.tip.search": "search past conversations to reopen a session",
-	"mobile.home.transcript.waiting": "Waiting for the conversation…"
+	"mobile.home.transcript.waiting": "Waiting for the conversation…",
+	"mobile.home.chip.model_default_short": "Default model"
 }

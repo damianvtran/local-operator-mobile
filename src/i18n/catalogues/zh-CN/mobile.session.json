@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "此处缺少部分较早的消息。",
 	"mobile.session.history.gap_newest": "上方缺少部分消息。",
 	"mobile.session.history.gap_load": "加载",
-	"mobile.session.history.gap_load_hint": "加载此手机断开连接期间遗漏的消息。"
+	"mobile.session.history.gap_load_hint": "加载此手机断开连接期间遗漏的消息。",
+	"mobile.session.sheet_title.model": "模型",
+	"mobile.session.sheet_title.effort": "推理强度",
+	"mobile.session.sheet_title.status": "任务和智能体"
 }

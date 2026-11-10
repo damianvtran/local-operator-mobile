@@ -10,5 +10,7 @@
 	"mobile.composer_input.clear_draft": "Xóa bản nháp",
 	"mobile.composer_input.clear_draft_hint": "Chỉ xóa văn bản và hình ảnh trong bản nháp; giữ các tin nhắn đang chờ và chưa được xác nhận",
 	"mobile.composer_input.dismiss_error": "Ẩn lỗi",
-	"mobile.composer_input.dismiss_error_hint": "Ẩn lỗi này mà không thay đổi bản nháp hay trạng thái gửi"
+	"mobile.composer_input.dismiss_error_hint": "Ẩn lỗi này mà không thay đổi bản nháp hay trạng thái gửi",
+	"mobile.composer_input.notice_retry": "Thử lại",
+	"mobile.composer_input.notice_dismiss": "Ẩn"
 }

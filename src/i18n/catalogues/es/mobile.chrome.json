@@ -18,5 +18,11 @@
 	"mobile.chrome.composer.open_queue": "Abrir la cola",
 	"mobile.chrome.drawer.open": "Abrir conversaciones",
 	"mobile.chrome.drawer.open_count": "Abrir conversaciones, {count, plural, one {# conversación nueva} other {# conversaciones nuevas}}",
-	"mobile.chrome.drawer.agents": "Agentes"
+	"mobile.chrome.drawer.agents": "Agentes",
+	"mobile.chrome.composer.row_model": "Modelo",
+	"mobile.chrome.composer.row_effort": "Esfuerzo",
+	"mobile.chrome.composer.row_usage": "Contexto",
+	"mobile.chrome.composer.row_cost": "Costo",
+	"mobile.chrome.composer.row_queue": "Cola",
+	"mobile.chrome.composer.row_questions": "Preguntas"
 }

@@ -1,5 +1,6 @@
 import {
 	memo,
+	type ReactNode,
 	useCallback,
 	useEffect,
 	useState,
@@ -16,9 +17,10 @@ import Animated, {
 import { t } from "@/i18n";
 import { elapsedLabel } from "@/lib/format";
 import { CONTROL } from "@/ui/a11y";
-import { useReducedMotion } from "@/ui/components";
+import { useReducedMotion, useTextScale } from "@/ui/components";
 import { TEXT_END_CLASS } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { lineBoxPt } from "@/ui/text-scale";
 
 /**
  * The working line: the ONE in-progress indicator on the screen
@@ -62,6 +64,11 @@ export type WorkingLineProps = {
 	 *  Stop stays drawn (no reflow mid-fade) but answers nothing, so a late tap
 	 *  cannot send an abort to an idle session (review R1-4). */
 	stopInert?: boolean;
+	/** The activity line's trailing counts, drawn between the clock and the
+	 *  Stop (visual audit D1) — or on their own line when `trailingStacked`.
+	 *  Only the pinned instance passes them. */
+	trailing?: ReactNode;
+	trailingStacked?: boolean;
 	testID?: string;
 };
 
@@ -169,6 +176,8 @@ const WorkingLineImpl = ({
 	onStop,
 	stopping = false,
 	stopInert = false,
+	trailing,
+	trailingStacked = false,
 	testID,
 }: WorkingLineProps) => {
 	const [frame, setFrame] = useState(0);
@@ -177,6 +186,7 @@ const WorkingLineImpl = ({
 	// moves without the reader asking it to, and reduced motion caps motion while
 	// keeping the state legible (the label and the clock carry the meaning).
 	const reduceMotion = useReducedMotion();
+	const { effectiveScale } = useTextScale();
 
 	useEffect(() => {
 		const spin = setInterval(
@@ -200,7 +210,7 @@ const WorkingLineImpl = ({
 	const glyph = reduceMotion ? SPINNER_REST : SPINNER[frame % SPINNER.length];
 
 	if (onStop !== undefined) {
-		return (
+		const row = (
 			<View
 				// No row minimum of its own (design D1): the row is as tall as its
 				// tallest child, and that is the Stop's touch-floor box below. The
@@ -227,17 +237,38 @@ const WorkingLineImpl = ({
 					{/* Monospace and muted: the relay paints the activity as the
 					    terminal's working line does, and a tool intent reads as a
 					    machine status, not prose. */}
+					{/* Floored at one rendered line (build 753): a constrained
+					    parent once laid this label out 0 tall while the Stop kept
+					    its touch floor, so the status read as missing. A present
+					    label is never shorter than the line it draws. */}
 					<Text
 						className="min-w-0 flex-1 font-mono text-mono-sm text-ink-muted"
+						style={{ minHeight: lineBoxPt("mono-sm", effectiveScale) }}
 						numberOfLines={1}
 					>
 						{name}
 					</Text>
 					<PhaseClock clock={clock} />
 				</View>
+				{trailingStacked ? null : trailing}
 				<WorkingStop onStop={onStop} stopping={stopping} inert={stopInert} />
 			</View>
 		);
+		/* The counts on their own line under the status, leading edge aligned
+		 *  with the spinner (`countsRowClass`, the edge the idle slot keeps),
+		 *  when the host says one line cannot hold both
+		 *  (`activityCountsStack`): a wrap decided by the host from the window,
+		 *  not by `flex-wrap`, so the row's height is known before it paints
+		 *  and the slot's measured height does not flap between one line and
+		 *  two as the intent's length changes. */
+		if (trailingStacked && trailing != null)
+			return (
+				<View>
+					{row}
+					<View className={countsRowClass(true)}>{trailing}</View>
+				</View>
+			);
+		return row;
 	}
 
 	return (
@@ -389,11 +420,78 @@ export type PinnedWorkingLineProps = {
 	 *  the dock grows and shrinks by ONE continuous amount instead of a smooth
 	 *  height plus an 8 pt jump when the slot mounts or unmounts. */
 	gapBelow: boolean;
+	/** The activity line's trailing counts (`ActivityCounts`), or `null`/absent
+	 *  when there is nothing to count. While present the slot STAYS OPEN with
+	 *  no turn alive: tasks, agents and a queue outlive the turn that made
+	 *  them, and they used to have a band of their own for exactly that. */
+	trailing?: ReactNode;
+	/** The counts take their own line under the status (`activityCountsStack`). */
+	trailingStacked?: boolean;
 	testID?: string;
 };
 
 /** The dock column's gap (`gap-2`). */
 const DOCK_GAP = 8;
+
+/**
+ * The style of EVERY measured wrapper inside the animated slot: out of flow,
+ * pinned to the slot's top edge and stretched across its width (the standard
+ * Reanimated accordion).
+ *
+ * WHY ABSOLUTE (operator report, TestFlight build 753: the clock and Stop showed
+ * but never the mark or the status text). The slot's height is
+ * `rowHeight * progress` and `rowHeight` comes from this wrapper's `onLayout`,
+ * so the slot starts at 0. On native, Yoga lays an IN-FLOW auto-height child of
+ * a zero-height parent out at most 0 tall and reports 0 to `onLayout` — the
+ * slot then opens to 0 × 1 = 0, a fixed point it never leaves. The in-flow
+ * Text leaves collapse with it (the mark and the label vanish), the Stop
+ * survives on its `minHeight`, and the clock is absolute, which is exactly the
+ * screenshot. Web CSS gives the in-flow child its natural height regardless,
+ * which is why every web frame passed. An absolute child is measured against
+ * no height constraint, so `onLayout` reports the row's real height and the
+ * slot's tween has something to open to.
+ */
+export const MEASURED_SLOT_CHILD = {
+	position: "absolute",
+	top: 0,
+	/* Logical edges (the physical-edge guard); both are 0, so RTL is the same box. */
+	start: 0,
+	end: 0,
+} as const;
+
+/**
+ * The row that holds the counts when they are NOT beside the Stop: their own
+ * line under a running status (stacked), and the idle slot with no turn alive.
+ *
+ * ONE function for both so the counts keep ONE EDGE across a turn's end
+ * (review round 1, m3). Stacked, they sit at the leading edge under the
+ * spinner while a turn runs, and the idle slot used to push them to the
+ * trailing edge — at 320 pt / 200 % text they jumped across the screen the
+ * moment the turn finished. Not stacked, they sit at the trailing edge beside
+ * the Stop while a turn runs, so the idle slot keeps them trailing. Only the
+ * side is promised: the slot still loses the status row's height when the
+ * turn ends, which is the turn ending, not the counts moving.
+ */
+export const countsRowClass = (stacked: boolean): string =>
+	stacked ? "flex-row px-2" : "flex-row items-center justify-end px-2";
+
+/**
+ * The line the slot keeps painting through its CLOSE tween.
+ *
+ * A live line is always the held one. With no turn alive the last line is
+ * held only while the slot is closing with nothing else in it; when the
+ * counts keep the slot open (`counted`), the status row is already off screen
+ * and the hold is dropped at once (review round 1, m2). The slot's close
+ * callback is what used to clear it, and it never ran while counts held the
+ * slot open — so when they later went away (queue drained, list cleared, a
+ * pending card arriving) the 180 ms close repainted the LAST turn's activity,
+ * its clock and an inert Stop.
+ */
+export const heldLine = <T,>(
+	previous: T | null,
+	line: T | null,
+	counted: boolean,
+): T | null => (line !== null ? line : counted ? null : previous);
 
 /**
  * The working line PINNED above the dock (chips, ask bar, composer), outside the
@@ -415,11 +513,14 @@ const PinnedWorkingLineImpl = ({
 	onStop,
 	stopping,
 	gapBelow,
+	trailing,
+	trailingStacked = false,
 	testID,
 }: PinnedWorkingLineProps) => {
 	const reduceMotion = useReducedMotion();
 	const [held, setHeld] = useState(line);
-	const open = line !== null;
+	const counted = trailing != null;
+	const open = line !== null || counted;
 	const rowHeight = useSharedValue(0);
 	const progress = useSharedValue(0);
 	const gap = useSharedValue(gapBelow ? DOCK_GAP : 0);
@@ -429,8 +530,8 @@ const PinnedWorkingLineImpl = ({
 	const [settled, setSettled] = useState(false);
 
 	useEffect(() => {
-		if (line !== null) setHeld(line);
-	}, [line]);
+		setHeld((previous) => heldLine(previous, line, counted));
+	}, [line, counted]);
 
 	useEffect(() => {
 		gap.value = gapBelow ? DOCK_GAP : 0;
@@ -459,14 +560,37 @@ const PinnedWorkingLineImpl = ({
 		marginBottom: -gap.value * (1 - progress.value),
 	}));
 
-	if (held === null) return null;
+	if (held === null && !counted) return null;
+	/* No turn alive, counts present: the same slot, holding the counts alone
+	 *  on the edge they had while the turn ran (`countsRowClass`) — trailing
+	 *  when they sat beside the Stop, leading when they had their own line —
+	 *  so ending a turn never moves them across the row. */
+	if (line === null && counted)
+		return (
+			<Animated.View
+				style={[{ overflow: settled ? "visible" : "hidden" }, style]}
+				testID={testID}
+			>
+				<View
+					className={countsRowClass(trailingStacked)}
+					style={MEASURED_SLOT_CHILD}
+					onLayout={(event) => {
+						rowHeight.value = event.nativeEvent.layout.height;
+					}}
+				>
+					{trailing}
+				</View>
+			</Animated.View>
+		);
 	const shown = line ?? held;
+	if (shown === null) return null;
 	return (
 		<Animated.View
 			style={[{ overflow: settled ? "visible" : "hidden" }, style]}
 			testID={testID}
 		>
 			<View
+				style={MEASURED_SLOT_CHILD}
 				onLayout={(event) => {
 					rowHeight.value = event.nativeEvent.layout.height;
 				}}
@@ -477,6 +601,8 @@ const PinnedWorkingLineImpl = ({
 					onStop={onStop}
 					stopping={stopping}
 					stopInert={line === null}
+					trailing={trailing}
+					trailingStacked={trailingStacked}
 				/>
 			</View>
 		</Animated.View>

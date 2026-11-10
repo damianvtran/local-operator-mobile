@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "Certains messages précédents manquent ici.",
 	"mobile.session.history.gap_newest": "Certains messages plus haut manquent.",
 	"mobile.session.history.gap_load": "Charger",
-	"mobile.session.history.gap_load_hint": "Charge les messages manqués pendant que ce téléphone était déconnecté."
+	"mobile.session.history.gap_load_hint": "Charge les messages manqués pendant que ce téléphone était déconnecté.",
+	"mobile.session.sheet_title.model": "Modèle",
+	"mobile.session.sheet_title.effort": "Effort",
+	"mobile.session.sheet_title.status": "Tâches et agents"
 }

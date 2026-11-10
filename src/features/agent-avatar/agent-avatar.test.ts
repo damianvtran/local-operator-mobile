@@ -442,10 +442,12 @@ describe("wiring (asserted over the source; frames are the design round's)", () 
 		expect(ROW).toMatch(RESERVE_SLOT_PADDED);
 	});
 
-	it("the title budget charges the picture only when the row names one", () => {
-		/* Both inline budgets (regular and compact); the third match is the
-		 *  comment beside the picture naming the same expression. */
-		expect(SCREEN.match(BUDGET_CHARGE)?.length).toBe(2);
+	it("the screen no longer charges a title budget for the picture (#210)", () => {
+		/* The header measures its title by layout since #210, so the character
+		 *  budgets that charged the picture's slot are identities and the route
+		 *  stopped calling them: a charge here would be dead arithmetic. The
+		 *  picture's own slot is still drawn (the stacked/inline tests below). */
+		expect(SCREEN.match(BUDGET_CHARGE)).toBe(null);
 	});
 
 	it("the list rows resolve their picture from the row's own fields", () => {
