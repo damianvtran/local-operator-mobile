@@ -1249,7 +1249,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// labelled mode switch; round-1 remediation (wrapping mode row, failed
 	// unread read, pane help line) re-derived with --print. Source identity
 	// only, no rendered or native proof.
-	src: "82b429e24b2cce48ad780bc066cc0806147a63375b2a55592d42e70a7c9ae308",
+	// feat/bridge-thread-chrome: the bridge thread header reuses the session
+	// title style (`sessionHeaderTitle`) and the composer the agent composer's
+	// field/disc tokens; re-derived with --print over the staged tree. Source
+	// admission only, no rendered or native proof refreshed.
+	// Converged #213 onto main a563a6f3 (#212): src re-derived with --print
+	// over the merged tree. Source identity only, no rendered or native proof.
+	src: "bab726bf50df165da3b1803ef43d1fd82609a50db7179a6c7d9d1ebe7c469794",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
