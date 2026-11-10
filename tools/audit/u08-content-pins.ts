@@ -1265,7 +1265,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #210's header/drawer/sheet-exit polish and this PR's composer work, so it
 	// has neither parent's digest; re-pinned with --print over the staged merged
 	// tree. Source admission only, no rendered or native proof refreshed.
-	src: "edd52b637642bede15c5d445b1aefd8c7b014ade59c84c89a2a2ede61ee3ffdf",
+	src: "b8c2b6ecc1555ae6684dca8c0bab5ad63703e0d4b1b704344b586a9a0f4a8261",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

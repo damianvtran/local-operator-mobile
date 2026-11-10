@@ -821,11 +821,14 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 				/<View className="flex-row flex-wrap items-start justify-end gap-x-3" style=\{\{ minHeight: NOTICE_ROW_FLOOR \}\} >/g,
 			) ?? [],
 		).toHaveLength(2);
-		/* The wrap floor must not move the English actions off that first row
-		 *  at 320 pt / 200 %: column 250, gap 12, "Retry" 69 and "Dismiss
-		 *  error" 96 (QA round 3) leave more than the floor. */
+		/* The wrap floor must not move the actions that fit off that first
+		 *  row at 320 pt / 200 %: column 250, gap 12, floor 64 x 2. "Retry"
+		 *  (69) and the lone "Dismiss" (96), as QA round 3 measured them,
+		 *  keep their row; "Dismiss error" (82 at 100 %, so about 164) left
+		 *  its sentence 74 px and is the one that wraps (design D7). */
 		for (const action of [69, 96])
 			expect(250 - 12 - action).toBeGreaterThanOrEqual(64 * 2);
+		expect(250 - 12 - 164).toBeLessThan(64 * 2);
 		/* No separate actions row any more. */
 		expect(notice).not.toContain("flex-row flex-wrap items-center gap-x-4");
 		expect(code).toContain("const NOTICE_ROW_FLOOR = TOUCH_FLOOR;");

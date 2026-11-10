@@ -537,12 +537,13 @@ const NOTICE_LINE_INSET = Math.max(0, (NOTICE_ROW_FLOOR - 20) / 2);
  *
  *  64, and not more, ON PURPOSE. At 320x568 / 200 % the extras scroller is
  *  143 px tall, and an action is only certain to be seen while it shares its
- *  sentence's FIRST row (UX #211 U4). QA round 3's boxes there: the notice
- *  column is 250 px, "Retry" 69 and "Dismiss error" 96 wide, leaving the
- *  sentences 169 and 142 px against a floor of 128, so the English rows keep
- *  the action beside the sentence. The floor only bites where the label is
- *  long enough to leave a sliver (the hi/ur Retry, the fr/ru dismissal at
- *  200 %), which is the case design D7 and code R3 M2 describe. */
+ *  sentence's FIRST row (UX #211 U4), so the floor must not wrap the actions
+ *  that fit. The notice column there is 250 px and the floor 128. Measured
+ *  widths (QA round 3): "Retry" 69 and the lone "Dismiss" 96 leave their
+ *  sentences 169 and 142 px, so both stay on the first row. "Dismiss error"
+ *  is 82 px at 100 %, about 164 at 200 %, and left the error line 74 px, some
+ *  seven characters a line (design round 2 D7): that one wraps, as do the
+ *  long-label locales (the hi/ur Retry, the fr/ru dismissal). */
 const NOTICE_SENTENCE_MIN = 64;
 
 /**
