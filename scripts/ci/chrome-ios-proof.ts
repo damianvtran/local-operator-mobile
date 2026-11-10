@@ -39,6 +39,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import { collectChromeFrames, LANES } from "./chrome-ios-proof-contract.ts";
+import type { Provenance } from "./native-artifact-provenance.ts";
 import {
 	nativeConnectionPrerequisiteFailed,
 	probeNativeRelay,
@@ -95,9 +96,42 @@ type Record_ = {
 };
 const records: Record_[] = [];
 const groups = new Set<ChildProcess>();
+/* What chrome-ios-provenance validated: intended (the dispatch inputs) vs actual
+ * (the build run's and artifact's GitHub metadata). Required, and re-checked
+ * against this job's own inputs, so a receipt can never again carry only the
+ * workflow head (`sourceSha`) while the installed build came from elsewhere —
+ * run 42789156345's receipt said b67f4f54 and installed 91a3cbca's build 348. */
+const provenance = parseProvenance(env.PROOF_PROVENANCE ?? "");
+function parseProvenance(raw: string): Provenance[] {
+	if (!raw)
+		throw new Error("missing PROOF_PROVENANCE from chrome-ios-provenance");
+	const parsed = JSON.parse(raw) as Provenance[];
+	const after = parsed.find((p) => p.role === "after");
+	const before = parsed.find((p) => p.role === "before");
+	if (
+		!after ||
+		after.intended.runId !== env.PROOF_NATIVE_RUN_ID ||
+		after.intended.sha256 !== env.PROOF_NATIVE_ARTIFACT_SHA256
+	)
+		throw new Error(
+			"validated provenance does not describe this job's after artifact",
+		);
+	if (Boolean(before) !== Boolean(BASE_ZIP))
+		throw new Error(
+			"before artifact present without validated provenance (or vice versa)",
+		);
+	if (before && before.intended.sha256 !== env.PROOF_BASE_ARTIFACT_SHA256)
+		throw new Error(
+			"validated provenance does not describe this job's before artifact",
+		);
+	return parsed;
+}
 const receipt: Record<string, unknown> = {
 	mode: "chrome-ios-proof",
+	// The WORKFLOW head this proof ran on — not the build's source; that is
+	// `provenance[].actual.compiled`.
 	sourceSha: env.GITHUB_SHA,
+	provenance,
 	runId: env.GITHUB_RUN_ID,
 	artifact: {
 		runId: env.PROOF_NATIVE_RUN_ID,

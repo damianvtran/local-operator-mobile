@@ -74,6 +74,14 @@ on:
         description: "projects-create-ios-proof: expected sha256 of the artifact zip"
         type: string
         default: 080c27c8554638317baafbea91a163b049ead1ecdf7c3f78194d31e037c1c1fe
+      # chrome-ios-proof REQUIRES this and refuses to start without it: the
+      # native_run_id/native_artifact_sha256 defaults above belong to
+      # projects-create, and run 42789156345 installed exactly that unrelated
+      # build. The full commit the after artifact's iOS run was built for.
+      native_source_sha:
+        description: "chrome-ios-proof (required): full commit SHA the native_run_id build was built for"
+        type: string
+        default: ""
       # Inputs of chrome-ios-proof ONLY (the optional BEFORE build). Empty run id
       # means "no before pair": the proof then captures the after build alone.
       base_run_id:
@@ -82,6 +90,10 @@ on:
         default: ""
       base_artifact_sha256:
         description: "chrome-ios-proof: expected sha256 of that artifact zip"
+        type: string
+        default: ""
+      base_source_sha:
+        description: "chrome-ios-proof: full commit SHA the base_run_id build was built for (required with base_run_id)"
         type: string
         default: ""
   schedule:
@@ -1753,13 +1765,93 @@ jobs:
   # corner, Liquid Glass on iOS 26, session header, sidebar) is about native
   # geometry and a native material. The web export renders the glass module's
   # plain-View fallback and has no display corner, so only a simulator shows it.
+  # PROVENANCE BEFORE ANY macOS MINUTE. Run 42789156345 "proved" PR #216 by
+  # installing build 348 of an unrelated branch: the shared `native_run_id` /
+  # `native_artifact_sha256` inputs default to projects-create's pinned artifact,
+  # and a digest check passes on any artifact whose digest you also name — a
+  # digest authenticates bytes, not the revision they were compiled from. So this
+  # cheap Ubuntu job requires the revision explicitly (`native_source_sha`, and
+  # `base_source_sha` for a before build), checks it against the build run's and
+  # the artifact's own GitHub metadata, and hands the macOS job the artifact id it
+  # validated. A mismatch fails here, before a macOS runner or simulator starts.
+  chrome-ios-provenance:
+    name: Chrome proof artifact provenance (before any simulator)
+    needs: harness
+    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'chrome-ios-proof'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      after_artifact_id: ${{ steps.verify.outputs.after_artifact_id }}
+      before_artifact_id: ${{ steps.verify.outputs.before_artifact_id }}
+      provenance: ${{ steps.verify.outputs.provenance }}
+    env:
+      AFTER_RUN_ID: ${{ inputs.native_run_id }}
+      AFTER_NAME: ${{ inputs.native_artifact_name }}
+      AFTER_SHA256: ${{ inputs.native_artifact_sha256 }}
+      AFTER_SOURCE_SHA: ${{ inputs.native_source_sha }}
+      BEFORE_RUN_ID: ${{ inputs.base_run_id }}
+      BEFORE_SHA256: ${{ inputs.base_artifact_sha256 }}
+      BEFORE_SOURCE_SHA: ${{ inputs.base_source_sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Refuse implicit or malformed artifact inputs (no token, no network)
+        run: |
+          set -euo pipefail
+          node scripts/ci/native-artifact-provenance.ts inputs \
+            --after-run-id "$AFTER_RUN_ID" --after-name "$AFTER_NAME" \
+            --after-sha256 "$AFTER_SHA256" --after-source-sha "$AFTER_SOURCE_SHA" \
+            --before-run-id "$BEFORE_RUN_ID" --before-sha256 "$BEFORE_SHA256" \
+            --before-source-sha "$BEFORE_SOURCE_SHA"
+      - name: Fetch run and artifact metadata (the only step holding the token)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/provenance"
+          mkdir -m 700 "$dir"
+          # Ids were shape-checked (digits) by the previous step.
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$AFTER_RUN_ID" > "$dir/after-run.json"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$AFTER_RUN_ID/artifacts" > "$dir/after-artifacts.json"
+          if [ -n "$BEFORE_RUN_ID" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BEFORE_RUN_ID" > "$dir/before-run.json"
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BEFORE_RUN_ID/artifacts" > "$dir/before-artifacts.json"
+          fi
+      - name: Verify intended vs actual provenance
+        id: verify
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/provenance"
+          before=()
+          if [ -n "$BEFORE_RUN_ID" ]; then
+            before=(--before-run-id "$BEFORE_RUN_ID" --before-sha256 "$BEFORE_SHA256"
+              --before-source-sha "$BEFORE_SOURCE_SHA"
+              --before-run "$dir/before-run.json" --before-artifacts "$dir/before-artifacts.json")
+          fi
+          node scripts/ci/native-artifact-provenance.ts verify --repo "$GITHUB_REPOSITORY" \
+            --after-run-id "$AFTER_RUN_ID" --after-name "$AFTER_NAME" \
+            --after-sha256 "$AFTER_SHA256" --after-source-sha "$AFTER_SOURCE_SHA" \
+            --after-run "$dir/after-run.json" --after-artifacts "$dir/after-artifacts.json" \
+            "${before[@]}" --out "$dir/provenance.json"
+          {
+            echo "provenance=$(cat "$dir/provenance.json")"
+            echo "after_artifact_id=$(jq -r '.[] | select(.role == "after") | .actual.artifactId' "$dir/provenance.json")"
+            echo "before_artifact_id=$(jq -r '.[] | select(.role == "before") | .actual.artifactId' "$dir/provenance.json")"
+          } >> "$GITHUB_OUTPUT"
+
   # Same shape as projects-create-ios-proof: an ALREADY-BUILT `ios-simulator`
   # artifact (never a rebuild), the token in the download step only, a run-only
   # password, fresh owned simulators per lane, frames + hierarchies + receipt
   # uploaded even on failure. See scripts/ci/chrome-ios-proof.ts for the lanes.
+  # It installs ONLY the artifact ids chrome-ios-provenance validated.
   chrome-ios-proof:
     name: Targeted native chrome proof (NOT full E2E)
-    needs: harness
+    needs: [harness, chrome-ios-provenance]
     if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'chrome-ios-proof'
     runs-on: macos-26
     # The script spends at most 90 minutes on proof operations (seven lanes, three
@@ -1786,34 +1878,27 @@ jobs:
         uses: ./.github/actions/install-maestro
         with:
           version: ${{ env.MAESTRO_VERSION }}
-      - name: Download and verify the already-built artifacts (the only step holding the token)
+      - name: Download and verify the validated artifacts (the only step holding the token)
         env:
           GH_TOKEN: ${{ github.token }}
-          NATIVE_RUN_ID: ${{ inputs.native_run_id }}
-          NATIVE_ARTIFACT_NAME: ${{ inputs.native_artifact_name }}
+          AFTER_ARTIFACT_ID: ${{ needs.chrome-ios-provenance.outputs.after_artifact_id }}
           NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
-          BASE_RUN_ID: ${{ inputs.base_run_id }}
+          BEFORE_ARTIFACT_ID: ${{ needs.chrome-ios-provenance.outputs.before_artifact_id }}
           BASE_ARTIFACT_SHA256: ${{ inputs.base_artifact_sha256 }}
         run: |
           set -euo pipefail
           dir="$RUNNER_TEMP/chrome-artifacts"
           mkdir -m 700 "$dir"
-          fetch() { # run-id name sha out-env
-            [[ "$1" =~ ^[0-9]+$ ]] || { echo "::error::run id must be digits"; exit 1; }
-            [[ "$2" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "::error::bad artifact name"; exit 1; }
-            [[ "$3" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bad digest"; exit 1; }
-            meta=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$1/artifacts" \
-              --jq "[.artifacts[] | select(.name == \"$2\" and .expired == false)] | if length == 1 then .[0] else error(\"expected exactly one live artifact\") end | \"\(.id) \(.digest)\"")
-            id="${meta% *}"; api_digest="${meta#* }"
-            [ "$api_digest" = "sha256:$3" ] || { echo "::error::artifact digest differs from the expected digest"; exit 1; }
-            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$dir/$4.zip"
-            actual=$(shasum -a 256 "$dir/$4.zip" | cut -d' ' -f1)
-            [ "$actual" = "$3" ] || { echo "::error::downloaded zip digest $actual differs"; exit 1; }
+          fetch() { # artifact-id sha out-name
+            [[ "$1" =~ ^[0-9]+$ ]] || { echo "::error::validated artifact id missing"; exit 1; }
+            gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$1/zip" > "$dir/$3.zip"
+            actual=$(shasum -a 256 "$dir/$3.zip" | cut -d' ' -f1)
+            [ "$actual" = "$2" ] || { echo "::error::downloaded zip digest $actual differs"; exit 1; }
           }
-          fetch "$NATIVE_RUN_ID" "$NATIVE_ARTIFACT_NAME" "$NATIVE_ARTIFACT_SHA256" head
+          fetch "$AFTER_ARTIFACT_ID" "$NATIVE_ARTIFACT_SHA256" head
           echo "PROOF_ARTIFACT_ZIP=$dir/head.zip" >> "$GITHUB_ENV"
-          if [ -n "$BASE_RUN_ID" ]; then
-            fetch "$BASE_RUN_ID" ios-simulator "$BASE_ARTIFACT_SHA256" base
+          if [ -n "$BEFORE_ARTIFACT_ID" ]; then
+            fetch "$BEFORE_ARTIFACT_ID" "$BASE_ARTIFACT_SHA256" base
             echo "PROOF_BASE_ARTIFACT_ZIP=$dir/base.zip" >> "$GITHUB_ENV"
           fi
       - name: Run-only relay password (0600, masked before any use)
@@ -1830,6 +1915,7 @@ jobs:
           PROOF_NATIVE_ARTIFACT_NAME: ${{ inputs.native_artifact_name }}
           PROOF_NATIVE_ARTIFACT_SHA256: ${{ inputs.native_artifact_sha256 }}
           PROOF_BASE_ARTIFACT_SHA256: ${{ inputs.base_artifact_sha256 }}
+          PROOF_PROVENANCE: ${{ needs.chrome-ios-provenance.outputs.provenance }}
         run: node scripts/ci/chrome-ios-proof.ts
       - uses: actions/upload-artifact@v6
         if: always()
