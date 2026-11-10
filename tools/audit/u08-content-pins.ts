@@ -1294,7 +1294,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge drawer switch and this PR's composer work, so it has neither
 	// parent's digest; re-pinned with --print over the staged merged tree.
 	// Source admission only, no rendered or native proof refreshed.
-	src: "160680106942a28c33da1df96b37aa948e2840d076d5652c07d12479f855917c",
+	// feat/bridge-thread-chrome (#213): the bridge thread header reuses the
+	// session title style (`sessionHeaderTitle`) and the composer the agent
+	// composer's field/disc tokens.
+	// PR #211 merged with main 0ae5fe28 (#213): the merged tree carries both,
+	// so src re-derived with --print over the staged merged tree. Source
+	// identity only, no rendered or native proof.
+	src: "33dc7f848a366902a58d16ebbd9d716dd4897bd26c289c39be30815b3ebc252a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

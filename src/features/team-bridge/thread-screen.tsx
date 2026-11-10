@@ -36,11 +36,10 @@ import {
 	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
-import { Heading } from "@/ui/components/heading";
 import { IconButton } from "@/ui/components/icon-button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
-import { Textarea } from "@/ui/components/textarea";
+import { useCompactChrome } from "@/ui/layout";
 import {
 	addDraftImages,
 	createAttachmentDraft,
@@ -65,6 +64,7 @@ import {
 	ProfileAuthorPhoto,
 	ProfileSheet,
 } from "./profile-card";
+import { BridgeComposerField, BridgeThreadTitle } from "./thread-chrome";
 import { createThreadViewport, type ThreadViewport } from "./thread-viewport";
 
 const single = (value: string | string[] | undefined): string =>
@@ -84,6 +84,7 @@ function ThreadContent({
 	const { actions, hub, store } = useTeamBridge();
 	const state = useTeamBridgeState((s) => s);
 	const insets = useSafeAreaInsets();
+	const compact = useCompactChrome();
 	const [createdId, setCreatedId] = useState<string | null>(null);
 	const conversationId = createdId ?? (routeId === "new" ? null : routeId);
 	const conversation = state.orgs[tenantId]?.conversations.find(
@@ -551,17 +552,18 @@ function ThreadContent({
 	return (
 		<Screen
 			title={title}
-			titleNode={
-				// Channel identity needs room to wrap without borrowing the display
-				// size used by standalone screens or shrinking accessible text.
-				<Heading
-					level={1}
-					className="min-w-0 flex-1 text-title text-ink"
-					numberOfLines={2}
-				>
-					{title}
-				</Heading>
-			}
+			/* The session header's title style, one line beside back and two
+			 *  only when the header stacks (`BridgeThreadTitle`, operator on
+			 *  TestFlight 753: "way too large"). `compact` is passed to `Screen`
+			 *  too, so the row and the title agree in short landscape exactly as
+			 *  the session screen's do. */
+			titleNode={<BridgeThreadTitle title={title} />}
+			compact={compact}
+			/* Stacked (320 pt / large text), the one trailing icon sits on the
+			 *  back row at the edge, as the session header's cluster does,
+			 *  instead of a third header row under the title (measured on the
+			 *  #208 build at 320: the bell alone on its own 48 pt row). */
+			stackedActionsBeside
 			headerLeading={<BridgeBack />}
 			headerAction={
 				admitted ? (
@@ -803,49 +805,36 @@ function ThreadContent({
 													{attachNotice}
 												</Text>
 											)}
-											<Textarea
+											<BridgeComposerField
 												label={t("mobile.team_bridge.thread.message")}
 												placeholder={t(
 													"mobile.team_bridge.thread.placeholder",
 													{ title },
 												)}
-												value={draft}
-												onChangeText={setDraft}
-												disabled={sending}
-												testID={CONTROL.teamBridgeMessageInput}
+												draft={draft}
+												onDraftChange={setDraft}
+												sending={sending}
+												attachLabel={
+													images
+														? t("mobile.team_bridge.attachment.add")
+														: undefined
+												}
+												attachDisabled={!images || images.remaining() === 0}
+												onAttach={
+													images ? () => setAttachOpen(true) : undefined
+												}
+												// "Retry send" only when pressing it can succeed: while
+												// images block the send, the control is plain "Send" (D4).
+												sendLabel={
+													sendError && !blockedBy
+														? t("mobile.team_bridge.thread.send_retry")
+														: t("mobile.team_bridge.thread.send")
+												}
+												sendDisabled={!sendable}
+												onSend={() => {
+													void send();
+												}}
 											/>
-											{/* Intrinsic labels wrap the toolbar before they shrink; an
-											  oversized label may wrap inside its full-width control. */}
-											<View className="flex-row flex-wrap gap-2">
-												{images ? (
-													<View className="max-w-full shrink-0">
-														<Button
-															variant="outline"
-															label={t("mobile.team_bridge.attachment.add")}
-															disabled={sending || images.remaining() === 0}
-															testID={CONTROL.teamBridgeAttach}
-															onPress={() => setAttachOpen(true)}
-														/>
-													</View>
-												) : null}
-												<View className="max-w-full grow shrink-0">
-													<Button
-														// "Retry send" only when pressing it can succeed: while
-														// images block the send, the button is plain "Send" (D4).
-														label={
-															sendError && !blockedBy
-																? t("mobile.team_bridge.thread.send_retry")
-																: t("mobile.team_bridge.thread.send")
-														}
-														loading={sending}
-														disabled={!sendable || sending}
-														testID={CONTROL.teamBridgeSend}
-														onPress={() => {
-															void send();
-														}}
-													/>
-												</View>
-											</View>
 										</>
 									)}
 								</View>
