@@ -1,0 +1,53 @@
+# REPEATED image paste on the same session (TestFlight 753: "I still can't
+# paste more than one image"; PR #216). Continues from session-keyboard.yaml's
+# end state: the long draft typed, the software keyboard up — no relaunch.
+#
+# The image comes from the proof-bundle-only seed control
+# (src/features/session/clipboard-seed-node.tsx): the simulator's pasteboard
+# cannot be given an image from the host (`simctl pbcopy` is text-only). The
+# paste itself goes through the composer's real "Paste image" chip. The second
+# paste is taken AFTER the keyboard is put away with the composer's own
+# dismiss control, which is the step that used to hide the chip. The keyboard
+# is then brought back so the driver's hierarchy dump after this flow measures
+# Send against the keyboard with two attachments staged.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "diagnostic-seed-clipboard-image"
+- extendedWaitUntil:
+    visible:
+      id: "composer-paste-image"
+    timeout: 15000
+- tapOn:
+    id: "composer-paste-image"
+# iOS asks only when another app wrote the pasteboard; never expected here.
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "composer-attachment-0"
+    timeout: 15000
+- tapOn:
+    id: "composer-dismiss-keyboard"
+- waitForAnimationToEnd:
+    timeout: 3000
+- extendedWaitUntil:
+    visible:
+      id: "composer-paste-image"
+    timeout: 15000
+- tapOn:
+    id: "composer-paste-image"
+- tapOn:
+    text: "Allow Paste"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "composer-attachment-1"
+    timeout: 15000
+- tapOn:
+    id: "composer-input"
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "composer-send"

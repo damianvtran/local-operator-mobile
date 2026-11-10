@@ -41,9 +41,12 @@ import { createRelay } from "../../tools/mock-relay/relay.ts";
 import {
 	collectChromeFrames,
 	connectPhasesFrom,
+	flowsFor,
+	type KeyboardStep,
+	keyboardStep,
 	LANES,
 	parseHierarchy,
-	sendAboveKeyboard,
+	phaseFileText,
 } from "./chrome-ios-proof-contract.ts";
 import type { Provenance } from "./native-artifact-provenance.ts";
 import {
@@ -478,6 +481,36 @@ async function phaseLog(udid: string, lane: string, name: string) {
 	).catch(() => undefined);
 }
 
+/** The ring's FILE mirror (`src/features/auth/connect-phase-file.ts`), read from
+ *  the host out of the app's data container. This is the carrier that does not
+ *  depend on what is on screen: run 42855980853 lost the hidden node behind the
+ *  open sidebar, and Release drops `console.info`. Best effort, never masks the
+ *  flow's own error; a missing file is written as such, never as "no phases". */
+async function phaseFile(
+	udid: string,
+	lane: string,
+	name: string,
+	bundle: string,
+) {
+	const target = join(ROOT, "connect-phases", `${flat(lane)}-${name}.file.txt`);
+	try {
+		const container = (
+			await run(
+				`app-container-${lane}-${name}`,
+				"xcrun",
+				["simctl", "get_app_container", udid, bundle, "data"],
+				60,
+			)
+		).trim();
+		writeFileSync(target, redact(phaseFileText(container)));
+	} catch (error) {
+		writeFileSync(
+			target,
+			redact(`NO APP CONTAINER: ${String(error).slice(0, 300)}\n`),
+		);
+	}
+}
+
 async function flow(
 	udid: string,
 	lane: string,
@@ -527,6 +560,7 @@ async function flow(
 			/* best effort; never masks the real error */
 		}
 		await phaseLog(udid, lane, `failure-${file.replace(".yaml", "")}`);
+		await phaseFile(udid, lane, `failure-${file.replace(".yaml", "")}`, bundle);
 		if (
 			existsSync(flowLog) &&
 			nativeConnectionPrerequisiteFailed(readFileSync(flowLog, "utf8"))
@@ -689,13 +723,35 @@ try {
 				// Session first, then the home and the sidebar on the idle relay. The
 				// frame and the hierarchy are taken here, outside the flow, so a frame
 				// is never Maestro's own screenshot of a transition.
-				for (const [file, relay, frame, cap] of [
-					["session.yaml", working, "session", 900],
-					["session-keyboard.yaml", working, "session-keyboard", 300],
-					["home.yaml", idle, "home", 600],
-					["sidebar.yaml", idle, "sidebar", 300],
-				] as const) {
-					await flow(udid, dir, build.bundleId, relay, file, cap);
+				/* Per-step Send-vs-keyboard numbers, in the order measured. */
+				const keyboardSteps: KeyboardStep[] = [];
+				let pasteFailure: string | null = null;
+				for (const [file, relay, frame, cap] of flowsFor(
+					build.tag,
+					working,
+					idle,
+				)) {
+					if (frame === "session-paste") {
+						/* Repeated paste is recorded, not fatal on the spot: a failure
+						 *  here must not cost the lane its home and sidebar frames
+						 *  (home.yaml relaunches with cleared state). The lane still
+						 *  FAILS after them. */
+						try {
+							await flow(udid, dir, build.bundleId, relay, file, cap);
+						} catch (error) {
+							pasteFailure = String(error).slice(0, 300);
+							laneReceipt.paste = { ok: false, reason: pasteFailure };
+							note(`${lane.id}: repeated paste: FAIL ${pasteFailure}`);
+							continue;
+						}
+						laneReceipt.paste = {
+							ok: true,
+							reason:
+								"two images pasted through composer-paste-image, the second after the keyboard was dismissed",
+						};
+					} else {
+						await flow(udid, dir, build.bundleId, relay, file, cap);
+					}
 					await shot(udid, dir, frame);
 					const tree = await hierarchy(udid, dir, frame);
 					/* Success carries the same evidence as failure: the connect that
@@ -703,18 +759,28 @@ try {
 					if (frame === "session") {
 						relay.snapshotArrivals(`${dir}-session`);
 						await phaseLog(udid, dir, frame);
+						await phaseFile(udid, dir, frame, build.bundleId);
 					}
 					/* TestFlight 753: the AFTER build must keep Send above the
-					 *  keyboard with a long draft typed. Checked here, right after
-					 *  session-keyboard.yaml and before the idle relay's flows. */
-					if (frame === "session-keyboard" && build.tag === "after") {
-						const verdict = sendAboveKeyboard(parseHierarchy(tree));
-						laneReceipt.sendAboveKeyboard = verdict;
-						note(`${lane.id}: send above keyboard: ${verdict.reason}`);
-						if (!verdict.ok)
-							throw new Error(`send above keyboard: ${verdict.reason}`);
+					 *  keyboard with a long draft typed, and again with two images
+					 *  pasted. Checked right after each flow, before the idle relay's. */
+					if (
+						build.tag === "after" &&
+						(frame === "session-keyboard" || frame === "session-paste")
+					) {
+						const step = keyboardStep(frame, parseHierarchy(tree));
+						keyboardSteps.push(step);
+						laneReceipt.keyboardSteps = keyboardSteps;
+						if (frame === "session-keyboard")
+							laneReceipt.sendAboveKeyboard = step;
+						note(`${lane.id}: send above keyboard (${frame}): ${step.reason}`);
+						if (!step.ok)
+							throw new Error(`send above keyboard (${frame}): ${step.reason}`);
 					}
 				}
+				/* The ring as it stands at the end of this build's flows. */
+				await phaseFile(udid, dir, "final", build.bundleId);
+				if (pasteFailure) throw new Error(`repeated paste: ${pasteFailure}`);
 				await run(
 					`uninstall-${lane.id}-${build.tag}`,
 					"xcrun",

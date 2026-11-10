@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  SIMULATOR-ONLY entitlements for the ad-hoc signed proof build that ios.yml
+  produces when dispatched with `simulator_keychain=true`. Never used by the
+  signed `internal` (device/TestFlight) job, which signs with its own profile.
+
+  Why: an unsigned simulator app (CODE_SIGNING_ALLOWED=NO) has no application
+  identifier, so every Keychain call fails with errSecMissingEntitlement
+  (-34018). Xcode 8.1's release notes: "Keychain APIs may fail to work in the
+  Simulator if your entitlements file doesn't contain a value for the
+  application-identifier entitlement." For simulator builds Xcode ad-hoc signs
+  and embeds these in the binary's __TEXT,__entitlements section, which is what
+  the simulator reads (facebook/buck#1304).
+
+  expo-secure-store 57.0.4 (ios/SecureStoreModule.swift `query(with:)`) sets
+  kSecAttrAccessGroup only when the caller passes `accessGroup`, and this app
+  never does (src/connection/storage.ts), so its items land in the DEFAULT
+  access group: the first keychain-access-groups entry, else the
+  application-identifier. Both are declared with the same value.
+
+  "LOCALOPSIM" stands in for $(AppIdentifierPrefix): an ad-hoc simulator build
+  has no team to expand it from, and the simulator does not validate the prefix.
+-->
+<plist version="1.0">
+<dict>
+	<key>application-identifier</key>
+	<string>LOCALOPSIM.com.localoperator.mobile</string>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>LOCALOPSIM.com.localoperator.mobile</string>
+	</array>
+</dict>
+</plist>

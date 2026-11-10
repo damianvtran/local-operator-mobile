@@ -13,7 +13,7 @@
  * one device — the only comparison in which a pixel difference is the change.
  */
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export type Lane = {
@@ -83,6 +83,32 @@ export const LANE_FRAMES = [
 	"home",
 	"sidebar",
 ] as const;
+
+/**
+ * The flows one build runs, in order: `[file, relay, frame, cap seconds]`.
+ *
+ * `session-paste.yaml` (repeated image paste, TestFlight 753) runs on the AFTER
+ * build only: it taps the proof-bundle seed control
+ * (`src/features/session/clipboard-seed-node.tsx`), which main's build does not
+ * have, and so its frame is not in `LANE_FRAMES`. It reuses session-keyboard's
+ * 300 s cap: both are a handful of taps on an already-open session, and its
+ * own waits total at most 60 s (four 15 s `extendedWaitUntil`s).
+ */
+export function flowsFor<R>(
+	tag: string,
+	working: R,
+	idle: R,
+): (readonly [string, R, string, number])[] {
+	return [
+		["session.yaml", working, "session", 900],
+		["session-keyboard.yaml", working, "session-keyboard", 300],
+		...(tag === "after"
+			? [["session-paste.yaml", working, "session-paste", 300] as const]
+			: []),
+		["home.yaml", idle, "home", 600],
+		["sidebar.yaml", idle, "sidebar", 300],
+	];
+}
 
 /** Assert a lane's frame set is complete for every build it ran, and list it. */
 export function collectChromeFrames(laneDir: string): string[] {
@@ -235,6 +261,34 @@ export function sendAboveKeyboard(
 				: `send bottom ${send.bottom} is below the keyboard top ${keyboardTop}`
 		}${scoped ? "" : " (flat hierarchy: keys read by label band)"}`,
 	};
+}
+
+/** One Send-vs-keyboard measurement, named by the flow it followed, for the
+ *  receipt's per-step record. */
+export type KeyboardStep = ReturnType<typeof sendAboveKeyboard> & {
+	step: string;
+};
+
+export function keyboardStep(step: string, tree: HierarchyNode): KeyboardStep {
+	return { step, ...sendAboveKeyboard(tree) };
+}
+
+/** The file the app's phase-ring mirror writes (`connect-phase-file.ts`'s
+ *  `CONNECT_PHASE_FILE`, under `Paths.document`). */
+export const PHASE_FILE = "Documents/connect-phases.txt";
+
+/**
+ * The ring file's text out of an app data container path
+ * (`simctl get_app_container … data`), or a line saying it is absent. An
+ * absent file is said as such, never written as an empty file that would read
+ * as "no phases ran"; an existing empty file is said too.
+ */
+export function phaseFileText(container: string): string {
+	const path = join(container, PHASE_FILE);
+	if (!container || !existsSync(path))
+		return `NO ${PHASE_FILE} IN THE APP CONTAINER (${container || "no path"})\n`;
+	const text = readFileSync(path, "utf8");
+	return text.length > 0 ? `${text}\n` : `${PHASE_FILE} IS EMPTY\n`;
 }
 
 /**

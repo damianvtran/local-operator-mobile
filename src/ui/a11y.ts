@@ -404,6 +404,9 @@ export const CONTROL = {
 	composerDictationCancel: "composer-dictation-cancel",
 	composerDictationFinish: "composer-dictation-finish",
 	composerPasteImage: "composer-paste-image",
+	/** Proof bundles only (`clipboard-seed-node.tsx`): puts a PNG on the
+	 *  clipboard so the native proof can drive repeated image paste. */
+	diagnosticSeedClipboardImage: "diagnostic-seed-clipboard-image",
 	composerResume: "composer-resume",
 	composerInput: "composer-input",
 	composerContext: "composer-context",

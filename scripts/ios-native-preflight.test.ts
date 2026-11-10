@@ -126,6 +126,34 @@ describe("hosted iOS native preflight boundaries", () => {
 			);
 		}
 	});
+	/* PR #216's last native diagnostic: the simulator build may be AD-HOC signed
+	 *  so Keychain calls work there, but only on an explicit dispatch input that
+	 *  defaults off, only with identity `-` and the committed simulator
+	 *  entitlements, and never with a secret or a team. */
+	it("ad-hoc simulator keychain signing is dispatch-only, default off and secret-free", () => {
+		const source = workflow("ios");
+		expect(source).toMatch(
+			/ {6}simulator_keychain:\n(?: {8}.+\n)*? {8}default: false\n/,
+		);
+		const simulator = job(source, "ios");
+		expect(simulator).toContain(
+			"SIMULATOR_KEYCHAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.simulator_keychain == true }}",
+		);
+		expect(simulator).toContain('if [ "$SIMULATOR_KEYCHAIN" = true ]; then');
+		expect(simulator).toContain("CODE_SIGN_IDENTITY=-\n");
+		expect(simulator).toContain("DEVELOPMENT_TEAM=\n");
+		expect(simulator).toContain(
+			"CODE_SIGN_ENTITLEMENTS=$GITHUB_WORKSPACE/scripts/ci/ios-simulator-keychain.entitlements",
+		);
+		expect(simulator).not.toMatch(SECRET_OR_UPLOAD);
+		for (const name of ["credentials", "internal"])
+			expect(job(source, name)).not.toContain("simulator_keychain");
+		const entitlements = read("scripts/ci/ios-simulator-keychain.entitlements");
+		expect(entitlements).toContain(
+			"<key>application-identifier</key>\n\t<string>LOCALOPSIM.com.localoperator.mobile</string>",
+		);
+		expect(entitlements).toContain("<key>keychain-access-groups</key>");
+	});
 	it("default dispatch and forks remain unsigned and isolated", () => {
 		const source = workflow("ios");
 		expect(source).toMatch(MANUAL_DISPATCH);

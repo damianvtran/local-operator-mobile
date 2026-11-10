@@ -6,9 +6,13 @@ import type { HierarchyNode } from "./chrome-ios-proof-contract.ts";
 import {
 	collectChromeFrames,
 	connectPhasesFrom,
+	flowsFor,
+	keyboardStep,
 	LANE_FRAMES,
 	LANES,
+	PHASE_FILE,
 	parseHierarchy,
+	phaseFileText,
 	sendAboveKeyboard,
 } from "./chrome-ios-proof-contract.ts";
 
@@ -193,6 +197,58 @@ describe("chrome proof plan (record §7)", () => {
 			);
 		} finally {
 			rmSync(root, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("flowsFor", () => {
+	it("runs repeated paste on the AFTER build only, right after the keyboard flow", () => {
+		const after = flowsFor("after", "working", "idle").map(
+			([f, r]) => `${f}@${r}`,
+		);
+		expect(after).toEqual([
+			"session.yaml@working",
+			"session-keyboard.yaml@working",
+			"session-paste.yaml@working",
+			"home.yaml@idle",
+			"sidebar.yaml@idle",
+		]);
+		/* main's build has no seed control, so the before build skips it, and
+		 *  the required frame set stays the four both builds take. */
+		const before = flowsFor("before", "w", "i").map(([, , frame]) => frame);
+		expect(before).toEqual([...LANE_FRAMES]);
+	});
+});
+
+describe("keyboardStep", () => {
+	it("names the step and carries Send's bottom and the keyboard's top", () => {
+		const step = keyboardStep("session-paste", tree(540));
+		expect(step).toMatchObject({
+			step: "session-paste",
+			ok: true,
+			keyboardTop: 548,
+			send: { bottom: 540 },
+		});
+		expect(keyboardStep("session-keyboard", tree(700)).ok).toBe(false);
+	});
+});
+
+describe("phaseFileText", () => {
+	it("reads the ring file from the app container, and says when it is absent or empty", () => {
+		const container = mkdtempSync(join(tmpdir(), "chrome-proof-container-"));
+		try {
+			expect(phaseFileText(container)).toMatch(
+				/^NO Documents\/connect-phases\.txt IN THE APP CONTAINER/,
+			);
+			expect(phaseFileText("")).toMatch(/\(no path\)/);
+			mkdirSync(join(container, "Documents"));
+			writeFileSync(join(container, PHASE_FILE), "");
+			expect(phaseFileText(container)).toBe(`${PHASE_FILE} IS EMPTY\n`);
+			const ring = "t+0 start\nt+12 error kind=rejected surface=diagnostic";
+			writeFileSync(join(container, PHASE_FILE), ring);
+			expect(phaseFileText(container)).toBe(`${ring}\n`);
+		} finally {
+			rmSync(container, { recursive: true, force: true });
 		}
 	});
 });

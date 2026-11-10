@@ -17,6 +17,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
+import { ClipboardSeedNode } from "@/features/session/clipboard-seed-node";
 import { WorkspaceDrawerProvider } from "@/features/sessions/workspace-drawer";
 import { useTeamBridgeDrawerAdapter } from "@/features/team-bridge/drawer-adapter";
 import { activeDirection, activeLocale } from "@/i18n";
@@ -71,6 +72,9 @@ export default function RootLayout() {
 								{/* Proof bundles only (EXPO_PUBLIC_CONNECT_PHASE_NODE): the connect
 								 *  phase ring as a node hierarchy dumps can read. */}
 								<ConnectPhaseNode />
+								{/* Proof bundles only, same gate: seeds the clipboard with an
+								 *  image for the native proof's repeated-paste flow. */}
+								<ClipboardSeedNode />
 							</TeamBridgeProvider>
 						</DirectionRoot>
 					</TextScaleProvider>

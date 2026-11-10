@@ -47,6 +47,10 @@ on:
         description: "On main only: explicitly upload the signed IPA to TestFlight"
         type: boolean
         default: false
+      simulator_keychain:
+        description: "Simulator build only: ad-hoc sign with keychain entitlements (no secrets) so Keychain calls work on the simulator"
+        type: boolean
+        default: false
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -235,18 +239,65 @@ jobs:
         # native chrome proof's hierarchy dumps say which stage a Save and
         # connect reached. Inlined into THIS unsigned simulator bundle only; the
         # signed `internal` job never sets it, so no shipped build renders it.
+        #
+        # `simulator_keychain=true` (dispatch only, default false) AD-HOC signs
+        # this simulator build instead: identity `-`, so still no secret, no team
+        # and no profile. An unsigned app has no application identifier, so every
+        # Keychain call fails with errSecMissingEntitlement (-34018), and the
+        # native chrome proof's Save and connect stops at the keystore read
+        # before any request (PR #216 diagnostic run 42855980853). The
+        # entitlements file says why each key is there. This touches ONLY this
+        # job: the signed `internal` job has its own build and profile.
         env:
           EXPO_PUBLIC_CONNECT_PHASE_NODE: "1"
+          SIMULATOR_KEYCHAIN: ${{ github.event_name == 'workflow_dispatch' && inputs.simulator_keychain == true }}
         run: |
           set -euo pipefail
+          signing=(CODE_SIGNING_ALLOWED=NO)
+          if [ "$SIMULATOR_KEYCHAIN" = true ]; then
+            # Manual style with an empty team: Automatic would demand a
+            # development team for the Pods resource bundles.
+            signing=(
+              CODE_SIGNING_ALLOWED=YES
+              CODE_SIGN_IDENTITY=-
+              CODE_SIGN_STYLE=Manual
+              DEVELOPMENT_TEAM=
+              PROVISIONING_PROFILE_SPECIFIER=
+              "CODE_SIGN_ENTITLEMENTS=$GITHUB_WORKSPACE/scripts/ci/ios-simulator-keychain.entitlements"
+            )
+            echo 'Simulator build AD-HOC signed with keychain entitlements (simulator_keychain=true).' >> "$GITHUB_STEP_SUMMARY"
+          fi
           xcodebuild \
             -workspace "${{ steps.project.outputs.workspace }}" \
             -scheme "${{ steps.project.outputs.scheme }}" \
             -configuration Release \
             -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
-            CODE_SIGNING_ALLOWED=NO \
+            "${signing[@]}" \
             build
+
+      - name: Record the simulator build's signature and entitlements
+        # Evidence for the keychain question either way: an unsigned build reads
+        # "code object is not signed at all"; the ad-hoc one shows its signature
+        # and the embedded __TEXT,__entitlements section the simulator reads.
+        # Uploaded with the artifact (launch/), never fails the job.
+        run: |
+          set -uo pipefail
+          app=$(find "$RUNNER_TEMP/DerivedData/Build/Products" -maxdepth 2 -name "*.app" -type d | head -1)
+          exe=$(plutil -extract CFBundleExecutable raw "$app/Info.plist")
+          mkdir -p "$RUNNER_TEMP/launch"
+          out="$RUNNER_TEMP/launch/codesign.txt"
+          {
+            echo "## codesign -dvvv"; codesign -dvvv "$app" 2>&1
+            echo "## codesign -d --entitlements -"; codesign -d --entitlements - "$app" 2>&1
+            # otool's dump format varies by arch and a Release build may be fat,
+            # so the section is shown by its load command and its literal value.
+            echo "## __TEXT,__entitlements section (load command)"
+            otool -l "$app/$exe" 2>&1 | grep -A3 'sectname __entitlements' || echo "no __entitlements section"
+            echo "## entitlement values in the executable"
+            grep -a -o 'LOCALOPSIM[A-Za-z0-9.]*' "$app/$exe" | sort | uniq -c || echo "no LOCALOPSIM value"
+          } > "$out"
+          cat "$out"
 
       - name: Assert the built Info.plist carries the local-network configuration
         # THE BUILT PRODUCT, NOT THE SOURCE PLIST. `plutil` reads the plist INSIDE

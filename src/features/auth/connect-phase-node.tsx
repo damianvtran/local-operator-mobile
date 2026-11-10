@@ -1,6 +1,10 @@
-import { useSyncExternalStore } from "react";
-import { Text } from "react-native";
+import { useEffect, useSyncExternalStore } from "react";
+import { Platform, Text } from "react-native";
 
+import {
+	nativePhaseFileSink,
+	persistConnectPhases,
+} from "@/features/auth/connect-phase-file";
 import {
 	formatConnectPhases,
 	subscribeConnectPhases,
@@ -28,6 +32,23 @@ export function ConnectPhaseNode() {
 }
 
 function ConnectPhaseText() {
+	/* The file mirror (`connect-phase-file.ts`): the carrier that does not depend
+	 *  on this node being in the accessibility tree. Mounted here so it shares
+	 *  this node's gate and lifetime (the root layout's). */
+	useEffect(() => {
+		if (Platform.OS === "web") return;
+		let stop: (() => void) | undefined;
+		let cancelled = false;
+		nativePhaseFileSink()
+			.then((sink) => {
+				if (!cancelled) stop = persistConnectPhases(sink);
+			})
+			.catch(() => undefined);
+		return () => {
+			cancelled = true;
+			stop?.();
+		};
+	}, []);
 	const text = useSyncExternalStore(
 		subscribeConnectPhases,
 		formatConnectPhases,
