@@ -557,15 +557,6 @@ export const composerBudget = (
 	return { field: fieldBox - FIELD_BORDER_Y, extras };
 };
 
-/** Native iOS keeps the full window while the dock moves above the keyboard;
- * Android may resize it instead (overlap then is zero). Budget the WHOLE dock
- * against that remaining space, not just the textarea. The existing 8pt dock
- * gap lives outside its box. The caller intersects this with any tighter limit. */
-export const composerKeyboardLimit = (
-	windowHeight: number,
-	keyboardOverlap: number,
-): number => Math.max(TOUCH_TARGET.ios, windowHeight - keyboardOverlap - 8);
-
 /**
  * The composer's ceiling from WINDOW geometry, or `null` when it already fits.
  *
@@ -618,12 +609,10 @@ export const composerHostBound = (
 ): number => Math.max(floor, limit - gap);
 
 /** Whether the composer's measured box is held by the host limit — the `capped`
- * input of `composerLimit`. Only the HOST limit counts: the keyboard budget
- * (`composerKeyboardLimit`) is computed from window and keyboard geometry alone,
- * never from a measurement, so it cannot feed back; a box held by it is not
- * reported as capped, and the host limit then releases with nothing changing,
- * because the keyboard bound is the tighter of the two either way. The same
- * one-pixel rounding tolerance as `composerLimit`. */
+ * input of `composerLimit`. The host limit is the ONLY measured bound, and it is
+ * keyboard-aware (`heldComposerLimit` over `window - keyboardOverlap`), so a box
+ * held above the keyboard reports `capped` like one held at the window bottom.
+ * The same one-pixel rounding tolerance as `composerLimit`. */
 export const composerAtHostCap = (
 	height: number,
 	limit: number | null,
@@ -699,6 +688,12 @@ export type ComposerBox = {
 	capped: boolean;
 	viewportWidth: number;
 	viewportHeight: number;
+	/** The keyboard overlap the box was measured under, in pt (0 = keyboard
+	 *  down). The composer reports the overlap its lift had actually reached
+	 *  when it measured, so a box taken mid-lift does not match the settled
+	 *  keyboard and is discarded like a box from another window. Optional only
+	 *  so hosts and tests without a keyboard read it as 0. */
+	keyboardOverlap?: number;
 };
 
 /**
@@ -724,7 +719,8 @@ export const sameComposerBox = (
 	previous.height === next.height &&
 	previous.capped === next.capped &&
 	previous.viewportWidth === next.viewportWidth &&
-	previous.viewportHeight === next.viewportHeight;
+	previous.viewportHeight === next.viewportHeight &&
+	(previous.keyboardOverlap ?? 0) === (next.keyboardOverlap ?? 0);
 
 /**
  * The host limit for the box the screen HOLDS, in the window it has NOW.
@@ -745,19 +741,49 @@ export const sameComposerBox = (
  * ("unbound") until the composer re-measures in this one, exactly the first-
  * paint state. That keeps #206's invariant — the reset is keyed on the window
  * size alone, an input the limit never controls, so it cannot loop.
+ *
+ * THE KEYBOARD (TestFlight 753: pasted images pushed Send under the keyboard).
+ * The iOS window keeps its full height while the keyboard is up, and Android's
+ * edge-to-edge window does too, so the room the composer really has ends at
+ * the keyboard's top: `window - keyboardOverlap`. The old keyboard bound was
+ * `window - overlap - 8` measured from the window's TOP, i.e. as if the
+ * composer's top were 0; with its top at 241 pt under the chrome it was
+ * allowed 512 pt against the 279 it had. The visible height here is the same
+ * `composerLimit` rule over that keyboard-aware height, so the ceiling binds at
+ * the keyboard exactly as it binds at the window bottom. The overlap is part of
+ * the key for the same reason the window is: a box measured with another
+ * keyboard height (or mid-lift) has a `top` from a layout that is gone, and
+ * holding it is the U1 fixed point. The overlap is an input the limit never
+ * controls (it comes from the keyboard's frame), so the invariant holds.
  */
 export const heldComposerLimit = (
 	box: ComposerBox | null,
-	viewport: { width: number; height: number },
+	viewport: { width: number; height: number; keyboardOverlap?: number },
 ): number | null => {
-	const live =
+	const overlap = viewport.keyboardOverlap ?? 0;
+	const sameWindow =
 		box !== null &&
 		box.viewportWidth === viewport.width &&
-		box.viewportHeight === viewport.height
-			? box
-			: null;
+		box.viewportHeight === viewport.height;
+	/* THROUGH THE LIFT (PR #216 review m1). The store moves to the new overlap
+	 *  at the native event, but the box that matches it only arrives when the
+	 *  lift lands, ~250 ms later; leaving the composer unbound for that window
+	 *  let a long draft grow to its natural height under the keyboard and snap
+	 *  back. A CAPPED box is pinned at the chrome above it: its top is where
+	 *  the chrome ends, which the keyboard does not move, so the limit for the
+	 *  new keyboard is the settled one, `(window - overlap) - top`, and the end-
+	 *  of-lift re-measure reports the same top and replaces it with the same
+	 *  number (no flash, no fixed point). An uncapped box rides the lift, so its
+	 *  top says nothing about the new layout and it stays unbound as before.
+	 *  Only boxes the composer published SETTLED reach here (it does not publish
+	 *  mid-lift), so this top is never one the animation is still moving. A
+	 *  different window is still no measurement at all (U1, above). */
+	if (sameWindow && (box.keyboardOverlap ?? 0) !== overlap && box.capped)
+		return composerLimit(viewport.height - overlap, box.top, box.height, true);
+	const live =
+		sameWindow && (box.keyboardOverlap ?? 0) === overlap ? box : null;
 	return composerLimit(
-		viewport.height,
+		viewport.height - overlap,
 		live?.top ?? null,
 		live?.height ?? null,
 		live?.capped ?? false,
