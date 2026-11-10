@@ -6,12 +6,13 @@ import {
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_BASE_HEIGHT,
+	COMPOSER_SIDE_PAD,
 	composerRestRow,
 	composerShellPadding,
 	morphPillRadius,
 } from "@/features/session/composer-presentation";
 import { sessionHeaderTitle } from "@/features/session/header";
-import { CONTROL, ROLE, state } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Heading } from "@/ui/components/heading";
 import { Textarea } from "@/ui/components/textarea";
@@ -100,6 +101,12 @@ export function BridgeThreadTitleView({
 	);
 }
 
+/** Where the field's text starts, measured from the shell's outer edge (inside
+ *  its 1 pt border): side padding plus the attach column. The agent composer's
+ *  resting row is the same sum with the same values, so the two placeholders
+ *  line up; the suite asserts it against the rendered shell. */
+export const BRIDGE_TEXT_INSET = COMPOSER_SIDE_PAD + TOUCH_FLOOR;
+
 export type BridgeComposerFieldProps = {
 	/** The field's accessible name ("Message"): kept as the name, not painted —
 	 *  the placeholder ("Message qa-coordination") already says what it is. */
@@ -154,6 +161,7 @@ export function BridgeComposerField({
 	const sendOff = sendDisabled || sending;
 	const attachOff = attachDisabled || sending;
 	const pad = composerShellPadding(false);
+	const row = composerRestRow(TOUCH_FLOOR);
 	return (
 		<View
 			/* The shell: the agent composer's `elevated` pill at rest — the 56 pt
@@ -163,7 +171,14 @@ export function BridgeComposerField({
 			 *  `canvas` is under the 3:1 a boundary owes. It is NOT animated: a bridge field
 			 *  grows with its draft (the Textarea's own line growth, capped at six),
 			 *  and the controls stay on the BOTTOM row so a long draft never moves
-			 *  Send away from the thumb. */
+			 *  Send away from the thumb.
+			 *
+			 *  NO `gap` between the three columns (operator, TestFlight 773: "the
+			 *  placeholder is off alignment"). The agent composer's resting row is
+			 *  attach · field · send with nothing between them, so its text starts
+			 *  12 + 44 = 56 pt in from the shell edge; the 4 pt gap this shell used
+			 *  to add put the bridge's text at 60. `BRIDGE_TEXT_INSET` is that sum,
+			 *  pinned by the suite against the agent composer's own values. */
 			className="flex-row items-end"
 			style={{
 				backgroundColor: elevated,
@@ -172,14 +187,21 @@ export function BridgeComposerField({
 				borderRadius: morphPillRadius(COMPOSER_BASE_HEIGHT),
 				paddingTop: pad.top,
 				paddingBottom: pad.bottom,
-				paddingHorizontal: 12,
+				paddingHorizontal: COMPOSER_SIDE_PAD,
 				minHeight: COMPOSER_BASE_HEIGHT,
-				gap: 4,
 			}}
+			testID={SURFACE.teamBridgeComposerShell}
 		>
 			{onAttach && attachLabel ? (
 				<Pressable
-					style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+					/* Each control box is the RESTING ROW's height (48, H5), not the
+					 *  44 pt floor, with its disc centred: the agent composer centres a
+					 *  44 pt disc in its 48 pt row (`composerFieldRowAlign(false)`), and
+					 *  this row stays `items-end` so a growing draft keeps the discs on
+					 *  its last line — boxes of the row's own height give both at once
+					 *  (TestFlight 773: the paperclip and Send sat in the bottom
+					 *  corners of a tall card, level with nothing). */
+					style={{ minWidth: TOUCH_FLOOR, minHeight: row }}
 					className="items-center justify-center"
 					accessibilityRole={ROLE.button}
 					accessibilityLabel={attachLabel}
@@ -199,19 +221,23 @@ export function BridgeComposerField({
 			) : null}
 			<View
 				className="min-w-0 flex-1 justify-center"
-				style={{ minHeight: composerRestRow() }}
+				style={{ minHeight: row }}
 			>
 				<Textarea
 					label={label}
 					hideLabel
 					integrated
-					/* No `placeholderMaxLines={1}` (the agent composer's choice): its
-					 *  placeholder is short, but "Message {title}" carries the channel
-					 *  name, and an `integrated` field stays a <textarea> on web, which
-					 *  wraps the placeholder and does not ellipsize it — capped at one
-					 *  line, the second line was CUT (after frame, 390 pt, a 38-character
-					 *  name). Uncapped, the field keeps the kit's shipped growth (D20): a
-					 *  wrapped placeholder is shown whole, as before this change. */
+					/* ONE line of placeholder, the agent composer's own rule (§2.5 D1):
+					 *  the resting height must never grow with a wrapped placeholder.
+					 *  #213 left it uncapped because the placeholder was "Message
+					 *  {channel}", and an `integrated` field stays a <textarea> on web,
+					 *  which wraps a long name and cannot ellipsize it — capped, the
+					 *  tail was CUT; uncapped, a long name wrapped and on iOS the empty
+					 *  field rested as a tall card (TestFlight 773, ~85 pt). The screen
+					 *  now passes the short channel-free "Message" instead: the thread
+					 *  title right above already names the channel, so the name in the
+					 *  field said nothing new and was the only thing that could wrap. */
+					placeholderMaxLines={1}
 					placeholder={placeholder}
 					value={draft}
 					onChangeText={onDraftChange}
@@ -223,7 +249,7 @@ export function BridgeComposerField({
 				accessibilityRole={ROLE.button}
 				accessibilityLabel={sendLabel}
 				accessibilityState={state({ disabled: sendOff, busy: sending })}
-				style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
+				style={{ minWidth: TOUCH_FLOOR, minHeight: row }}
 				className="items-center justify-center"
 				disabled={sendOff}
 				onPress={onSend}

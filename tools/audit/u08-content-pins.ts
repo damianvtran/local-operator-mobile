@@ -1340,7 +1340,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #217 merged with main d46e8535 (#214 user bubble squash): src carries
 	// both sides, re-derived with --print over the staged merged tree. Source
 	// identity only, no rendered or native proof.
-	src: "f8a5e006d9038b719ba1fab515c715585dc9e25a47d4de702bb8c9566b6c7c5c",
+	// Bridge composer + drawer nav (TestFlight 773): the Bridge composer rests as
+	// the agent's one-row pill, Bridge threads lead with the drawer button, and
+	// Bridge opens replace; one Team Bridge key retired in all locales. --print
+	// over the staged tree; source identity only, no rendered or native proof.
+	src: "fea6ab931f3a2c70db62199dd8bfce3738e07ad3a7e50a15f7dd06f73256ae34",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

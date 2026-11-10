@@ -1,10 +1,25 @@
-import { createElement, isValidElement, type ReactNode } from "react";
+import {
+	Children,
+	createElement,
+	isValidElement,
+	type ReactElement,
+	type ReactNode,
+} from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Pressable } from "react-native";
 import { describe, expect, it, vi } from "vitest";
+import { COMPOSER_DISC } from "@/features/session/composer-layout";
+import {
+	composerPaintedHeight,
+	composerPresentation,
+	composerRestRow,
+	composerShellPadding,
+} from "@/features/session/composer-presentation";
 import { sessionHeaderTitle } from "@/features/session/header";
 import { CONTROL } from "@/ui/a11y";
 import { Heading } from "@/ui/components/heading";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 import {
 	BridgeComposerField,
 	type BridgeComposerFieldProps,
@@ -57,6 +72,11 @@ vi.mock("@/ui/components/textarea", async () => {
 			}),
 	};
 });
+
+type DiscProps = {
+	className: string;
+	children: ReactElement<{ className: string }>;
+};
 
 const OLD_TITLE_STEPS = /text-title|text-display/;
 const TAG = /<[^>]+>/g;
@@ -203,14 +223,82 @@ describe("bridge composer field", () => {
 		);
 	});
 
-	it("lets a long channel placeholder wrap whole instead of cutting it", () => {
-		// An integrated web field is a <textarea>: a one-line cap clipped the
-		// second line of "Message <long name>" (after frame at 390 pt).
+	/* TestFlight 773, operator: "The team bridge composer needs to be fixed,
+	 * looks janky and the placeholder is off alignment". Each pin below is
+	 * measured against the AGENT composer's own exported values, not literals,
+	 * so the two stay one geometry. */
+	it("caps the placeholder to one line, so it can never inflate the rest height", () => {
 		const html = renderToStaticMarkup(
-			createElement(BridgeComposerField, props()),
+			createElement(BridgeComposerField, props({ draft: "" })),
 		);
 		expect(tagOf(html, CONTROL.teamBridgeMessageInput)).toContain(
-			'data-placeholder-lines="grow"',
+			'data-placeholder-lines="1"',
+		);
+	});
+
+	it("rests as the agent composer's one-row pill: attach | field | send", () => {
+		const shell = BridgeComposerField(props({ draft: "" })) as ReactElement<{
+			style: Record<string, number | string | undefined>;
+			children: ReactNode;
+		}>;
+		const style = shell.props.style;
+		const pad = composerShellPadding(false);
+		expect(style.paddingTop).toBe(pad.top);
+		expect(style.paddingBottom).toBe(pad.bottom);
+		expect(style.minHeight).toBe(composerPaintedHeight(false, TOUCH_FLOOR));
+		// Exactly three columns, each the resting row's own height, so the
+		// discs centre on the field's line instead of sitting in the corners.
+		const columns = Children.toArray(shell.props.children) as ReactElement<{
+			style: { minHeight: number };
+		}>[];
+		expect(columns).toHaveLength(3);
+		for (const column of columns)
+			expect(column.props.style.minHeight).toBe(composerRestRow(TOUCH_FLOOR));
+		expect(pad.top + composerRestRow(TOUCH_FLOOR) + pad.bottom).toBe(
+			composerPaintedHeight(false, TOUCH_FLOOR),
+		);
+	});
+
+	it("insets the placeholder exactly as far as the agent composer's text", () => {
+		const shell = BridgeComposerField(props({ draft: "" })) as ReactElement<{
+			style: Record<string, number | undefined>;
+			children: ReactNode;
+		}>;
+		const [attach] = Children.toArray(shell.props.children) as ReactElement<{
+			style: { minWidth: number };
+		}>[];
+		expect(attach).toBeDefined();
+		const bridgeInset =
+			(shell.props.style.paddingHorizontal ?? 0) +
+			(attach?.props.style.minWidth ?? 0) +
+			(shell.props.style.gap ?? 0);
+		// The agent dock: its `side` padding, then its attach column (a
+		// TOUCH_FLOOR-wide Pressable), then the field with no gap between.
+		const agent = composerPresentation({
+			focused: false,
+			draft: "",
+			attachments: 0,
+			dictation: false,
+			stop: false,
+			error: false,
+			keyboard: false,
+			inset: 0,
+			scale: 1,
+		});
+		expect(bridgeInset).toBe(agent.side + TOUCH_FLOOR);
+	});
+
+	it("paints the disabled send with the agent composer's exact treatment", () => {
+		// The agent composer's disabled primary (`composer.tsx`): a `sunken`
+		// disc with the kit's `CONTROL_DISABLED_INK` label. classNames do not
+		// survive RNW's SSR, so read the disc off the element tree.
+		const send = tree({ draft: "", sendDisabled: true }).get(
+			CONTROL.teamBridgeSend,
+		) as unknown as { children: ReactElement<DiscProps> };
+		const disc = send.children;
+		expect(disc.props.className).toBe(cx(COMPOSER_DISC, "bg-sunken"));
+		expect(disc.props.children.props.className).toBe(
+			cx("text-body-sm font-medium", CONTROL_DISABLED_INK),
 		);
 	});
 

@@ -171,6 +171,8 @@ export const CONTROL = {
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttach: "team-bridge-attach",
 	teamBridgeBack: "team-bridge-back",
+	/** A Bridge thread's leading workspace-drawer button (Team Bridge mode). */
+	teamBridgeMenu: "team-bridge-menu",
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
 	teamBridgeGateRetry: "team-bridge-gate-retry",
 	teamBridgeJoin: "team-bridge-join",
@@ -734,6 +736,8 @@ export const SURFACE = {
 	teamBridgeImageViewer: "team-bridge-image-viewer",
 	teamBridgeChannelPreview: "team-bridge-channel-preview",
 	teamBridgeComposer: "team-bridge-composer",
+	/** The composer's rounded shell, so its resting geometry is assertable. */
+	teamBridgeComposerShell: "team-bridge-composer-shell",
 	teamBridgeConversationsLoading: "team-bridge-conversations-loading",
 	teamBridgeDayDivider: "team-bridge-day-divider",
 	teamBridgeDefaultOnNotice: "team-bridge-default-on-notice",

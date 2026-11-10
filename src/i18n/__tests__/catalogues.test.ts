@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 158, // Exact merged Team Bridge key union.
+		expected: 157, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder).
 	},
 	{
 		name: "mobile.signin",
@@ -269,7 +269,10 @@ describe("the English catalogues", () => {
 		 * Bridge entry's loading and unavailable names and "Open Team Bridge".
 		 * PR #211 merged with main a563a6f3: 566 + 3, verified by counting
 		 * unique `en` keys over the merged tree. */
-		expect(total).toBe(569);
+		/* Minus one: TestFlight 773 retired `mobile.team_bridge.thread.placeholder`
+		 * — the Bridge composer shows its field label, the title names the
+		 * channel. 569 - 1. */
+		expect(total).toBe(568);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

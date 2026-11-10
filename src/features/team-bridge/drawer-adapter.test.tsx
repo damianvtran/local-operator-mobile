@@ -31,6 +31,8 @@ const host = vi.hoisted(() => ({
 	log: [] as string[],
 	navigate: vi.fn(),
 	push: vi.fn(),
+	replace: vi.fn(),
+	pathname: "/session/synthetic-chat",
 	drawer: null as ConversationsDrawerProps | null,
 	presses: new Map<string, () => void>(),
 	labels: new Map<string, string>(),
@@ -55,8 +57,12 @@ const setBridge = (next: Partial<BridgeSlice>) => {
 	for (const listener of host.bridge.listeners) listener();
 };
 vi.mock("expo-router", () => ({
-	usePathname: () => "/session/synthetic-chat",
-	useRouter: () => ({ navigate: host.navigate, push: host.push }),
+	usePathname: () => host.pathname,
+	useRouter: () => ({
+		navigate: host.navigate,
+		push: host.push,
+		replace: host.replace,
+	}),
 }));
 vi.mock("expo-web-browser", () => ({}));
 vi.mock("lucide-react-native", () => ({
@@ -81,7 +87,18 @@ vi.mock("react-native", () => ({
 		if (typeof children === "string") host.texts.push(children);
 		return children ?? null;
 	},
-	Pressable: ({ children }: { children?: ReactNode }) => children ?? null,
+	Pressable: ({
+		children,
+		testID,
+		onPress,
+	}: {
+		children?: ReactNode;
+		testID?: string;
+		onPress?: () => void;
+	}) => {
+		if (testID && onPress) host.presses.set(testID, onPress);
+		return children ?? null;
+	},
 }));
 vi.mock("@/features/auth/connection-provider", () => ({
 	useLocaleFrame: () => "en",
@@ -169,9 +186,15 @@ vi.mock("@/features/sessions/conversations-drawer", () => ({
 const { WorkspaceDrawerProvider, useWorkspaceDrawer } = await import(
 	"@/features/sessions/workspace-drawer"
 );
-const { bridgeDrawerBadge, TeamBridgeDrawerPane, useTeamBridgeDrawerAdapter } =
-	await import("./drawer-adapter");
-const { ProfileSheet } = await import("./profile-card");
+const {
+	BridgeThreadDrawerButton,
+	bridgeDrawerBadge,
+	TeamBridgeDrawerPane,
+	useTeamBridgeDrawerAdapter,
+} = await import("./drawer-adapter");
+const { openDisposition, ProfileSheet, useOpenTarget } = await import(
+	"./profile-card"
+);
 const { directoryMemberSchema } = await import("@/team-bridge/contract");
 
 let controller: ReturnType<typeof useWorkspaceDrawer>;
@@ -202,6 +225,7 @@ const press = (id: string) => act(async () => host.presses.get(id)?.());
 beforeEach(() => {
 	vi.clearAllMocks();
 	host.platform = "web";
+	host.pathname = "/session/synthetic-chat";
 	host.log = [];
 	host.presses.clear();
 	host.labels.clear();
@@ -582,5 +606,112 @@ describe("a profile card's Message from the drawer (R1-3)", () => {
 				conversationId: "new",
 			},
 		});
+	});
+});
+
+/* TestFlight 773, operator: "when you tap in the sidebar to switch and go to a
+ * channel, there's a back button instead of the hamburger menu which makes it
+ * hard to switch channels, remove the back UX there and replace with the
+ * sidebar access". */
+describe("a Bridge thread leads with the drawer, not back (TestFlight 773)", () => {
+	it("the thread's hamburger opens the shared drawer straight into Team Bridge", async () => {
+		setBridge({ gate: "open" });
+		await act(async () =>
+			root.render(
+				<BridgeWorkspaceDrawer>
+					<BridgeThreadDrawerButton />
+				</BridgeWorkspaceDrawer>,
+			),
+		);
+		expect(host.drawer?.visible).toBe(false);
+		expect(host.presses.has(CONTROL.teamBridgeMenu)).toBe(true);
+		expect(host.presses.has(CONTROL.teamBridgeBack)).toBe(false);
+		await press(CONTROL.teamBridgeMenu);
+		expect(host.drawer?.visible).toBe(true);
+		// The Bridge pane's directory is what is mounted, and the mode switch
+		// reads Team Bridge as selected — not the Agents list it last showed.
+		expect(host.directory).not.toBeNull();
+		expect(host.selected.get(CONTROL.workspaceDrawerTeamBridge)).toBe(true);
+		expect(host.selected.get(CONTROL.workspaceDrawerAgents)).toBe(false);
+	});
+
+	it("the agents hamburger (no mode) still opens on the drawer's current mode", async () => {
+		setBridge({ gate: "open" });
+		const { WorkspaceDrawerButton } = await import(
+			"@/features/sessions/workspace-drawer"
+		);
+		await act(async () =>
+			root.render(
+				<BridgeWorkspaceDrawer>
+					<WorkspaceDrawerButton testID={CONTROL.sessionBack} />
+				</BridgeWorkspaceDrawer>,
+			),
+		);
+		await press(CONTROL.sessionBack);
+		expect(host.drawer?.visible).toBe(true);
+		expect(host.selected.get(CONTROL.workspaceDrawerAgents)).toBe(true);
+		expect(host.directory).toBeNull();
+	});
+});
+
+describe("opening a Bridge target: push from outside, replace inside (TestFlight 773)", () => {
+	const target = {
+		kind: "conversation" as const,
+		tenantId: "synthetic-tenant",
+		conversationId: "synthetic-other",
+	};
+	let open: (t: typeof target) => void;
+	function Opener() {
+		open = useOpenTarget();
+		return null;
+	}
+	const mountOpener = () => act(async () => root.render(<Opener />));
+	const destination = {
+		pathname: "/team-bridge/[tenantId]/[conversationId]",
+		params: { tenantId: "synthetic-tenant", conversationId: "synthetic-other" },
+	};
+
+	it("a channel picked while a thread is open REPLACES it — no stack push", async () => {
+		host.pathname = "/team-bridge/synthetic-tenant/synthetic-current";
+		await mountOpener();
+		await act(async () => open(target));
+		expect(host.replace).toHaveBeenCalledWith(destination);
+		expect(host.push).not.toHaveBeenCalled();
+	});
+
+	it("the list screen also replaces, so the thread's back never reaches the list", async () => {
+		host.pathname = "/team-bridge";
+		await mountOpener();
+		await act(async () => open(target));
+		expect(host.replace).toHaveBeenCalledWith(destination);
+		expect(host.push).not.toHaveBeenCalled();
+	});
+
+	it("from Home or an agent chat it pushes, so back returns there", async () => {
+		await mountOpener();
+		await act(async () => open(target));
+		expect(host.push).toHaveBeenCalledWith(destination);
+		expect(host.replace).not.toHaveBeenCalled();
+	});
+
+	it("picking the thread already shown neither pushes nor replaces", async () => {
+		host.pathname = "/team-bridge/synthetic-tenant/synthetic-other";
+		await mountOpener();
+		await act(async () => open(target));
+		expect(host.push).not.toHaveBeenCalled();
+		expect(host.replace).not.toHaveBeenCalled();
+	});
+
+	it("disposition is decided by route alone", () => {
+		expect(openDisposition("/", target)).toBe("push");
+		expect(openDisposition("/team-bridge-other", target)).toBe("push");
+		expect(openDisposition("/team-bridge/x/new", target)).toBe("replace");
+		expect(
+			openDisposition("/team-bridge/x/y", {
+				kind: "person",
+				tenantId: "x",
+				accountId: "a",
+			} as never),
+		).toBe("replace");
 	});
 });

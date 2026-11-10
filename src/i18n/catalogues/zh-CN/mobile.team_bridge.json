@@ -146,7 +146,6 @@
 	"mobile.team_bridge.thread.older_loading": "正在加载更早的消息…",
 	"mobile.team_bridge.thread.older_retry": "重试加载更早的消息",
 	"mobile.team_bridge.thread.organization_unavailable": "此账户无法访问该组织。",
-	"mobile.team_bridge.thread.placeholder": "给 {title} 发消息",
 	"mobile.team_bridge.thread.preview_help": "加入此频道即可阅读历史记录并发送消息。",
 	"mobile.team_bridge.thread.readonly": "此组织为只读，你可以阅读历史记录，但无法发送消息。",
 	"mobile.team_bridge.thread.recipient_incomplete": "收件人信息不完整，请返回并选择一位成员或幕僚长。",

@@ -33,6 +33,7 @@ import { X } from "lucide-react-native";
 import { useMemo } from "react";
 import { Text, View } from "react-native";
 import { useLocaleFrame } from "@/features/auth/connection-provider";
+import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
 import type { WorkspaceDrawerBridgeAdapter } from "@/features/sessions/workspace-drawer.contract";
 import { t } from "@/i18n";
 import { useTeamBridgeState } from "@/team-bridge/provider";
@@ -162,3 +163,23 @@ export function useTeamBridgeDrawerAdapter(): WorkspaceDrawerBridgeAdapter {
 const bridgePane: WorkspaceDrawerBridgeAdapter["bridgePane"] = (props) => (
 	<TeamBridgeDrawerPane {...props} />
 );
+
+/**
+ * The thread's leading control: the workspace drawer button in Team Bridge
+ * mode. Also passed to `BridgeGate`, so a thread opened cold from a push or a
+ * deep link leads with the same hamburger while admission is still checking,
+ * rather than a back arrow into a list that is not under it.
+ *
+ * SWIPE-BACK. The session screen sets no `gestureEnabled` override and adds no
+ * edge-swipe-to-drawer (`app/(app)/_layout.tsx` is one `Stack` with only
+ * `headerShown: false`), so the bridge thread mirrors it exactly and keeps the
+ * stack's default. The list is kept out from under the thread instead: every
+ * open from a Team Bridge route REPLACES (`useOpenTarget`), so the thread's
+ * back gesture returns to wherever Team Bridge was entered from (Home), never
+ * to the channel list — the same place a session's back gesture goes.
+ */
+export function BridgeThreadDrawerButton() {
+	return (
+		<WorkspaceDrawerButton mode="team-bridge" testID={CONTROL.teamBridgeMenu} />
+	);
+}
