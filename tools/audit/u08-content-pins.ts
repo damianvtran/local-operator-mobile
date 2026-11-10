@@ -622,7 +622,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// app tree has neither parent's digest; re-pinned with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof
 	// refreshed.
-	app: "bc778f091d59e471f7f161c649c8c8e7b28c9bcede37f7b39718b01408370fbc",
+	// Bridge drawer switch: the root layout mounts the Team Bridge drawer
+	// adapter; source identity only, no rendered or native proof.
+	app: "088209fbfceac0cdb1b592a25dda9c8142081d8b97642e918df22aaf8103fef3",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1243,11 +1245,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * refreshed. */
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
+	// Bridge drawer switch: the Team Bridge adapter for the workspace drawer's
+	// labelled mode switch; round-1 remediation (wrapping mode row, failed
+	// unread read, pane help line) re-derived with --print. Source identity
+	// only, no rendered or native proof.
 	// feat/bridge-thread-chrome: the bridge thread header reuses the session
 	// title style (`sessionHeaderTitle`) and the composer the agent composer's
 	// field/disc tokens; re-derived with --print over the staged tree. Source
 	// admission only, no rendered or native proof refreshed.
-	src: "0a180decd43e6ff1dcfcf9d23a025d393fd54417d680e9203ed9327936986113",
+	// Converged #213 onto main a563a6f3 (#212): src re-derived with --print
+	// over the merged tree. Source identity only, no rendered or native proof.
+	src: "bab726bf50df165da3b1803ef43d1fd82609a50db7179a6c7d9d1ebe7c469794",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

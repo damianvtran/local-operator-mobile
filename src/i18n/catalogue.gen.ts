@@ -506,6 +506,9 @@ export type CatalogueKey =
 	| "mobile.team_bridge.list.self"
 	| "mobile.team_bridge.navigation.caption"
 	| "mobile.team_bridge.navigation.entry"
+	| "mobile.team_bridge.navigation.entry_loading"
+	| "mobile.team_bridge.navigation.entry_unavailable"
+	| "mobile.team_bridge.navigation.open_hub"
 	| "mobile.team_bridge.profile.about_owner"
 	| "mobile.team_bridge.profile.badge_agent"
 	| "mobile.team_bridge.profile.badge_person"
@@ -995,6 +998,9 @@ export type NoParamKey =
 	| "mobile.team_bridge.list.quiet"
 	| "mobile.team_bridge.list.self"
 	| "mobile.team_bridge.navigation.caption"
+	| "mobile.team_bridge.navigation.entry_loading"
+	| "mobile.team_bridge.navigation.entry_unavailable"
+	| "mobile.team_bridge.navigation.open_hub"
 	| "mobile.team_bridge.profile.badge_agent"
 	| "mobile.team_bridge.profile.badge_person"
 	| "mobile.team_bridge.profile.chief"
@@ -1546,6 +1552,9 @@ export type MessageParams = {
 	"mobile.team_bridge.list.self": NoParams;
 	"mobile.team_bridge.navigation.caption": NoParams;
 	"mobile.team_bridge.navigation.entry": { count: number };
+	"mobile.team_bridge.navigation.entry_loading": NoParams;
+	"mobile.team_bridge.navigation.entry_unavailable": NoParams;
+	"mobile.team_bridge.navigation.open_hub": NoParams;
 	"mobile.team_bridge.profile.about_owner": { owner: string | number };
 	"mobile.team_bridge.profile.badge_agent": NoParams;
 	"mobile.team_bridge.profile.badge_person": NoParams;
@@ -2120,6 +2129,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.list.self": "you",
 	"mobile.team_bridge.navigation.caption": "Your organization, even with your computer asleep",
 	"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # unread} other {Team Bridge · # unread}}",
+	"mobile.team_bridge.navigation.entry_loading": "Team Bridge · loading",
+	"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · unavailable",
+	"mobile.team_bridge.navigation.open_hub": "Open Team Bridge",
 	"mobile.team_bridge.profile.about_owner": "About {owner}",
 	"mobile.team_bridge.profile.badge_agent": "Agent",
 	"mobile.team_bridge.profile.badge_person": "Person",
@@ -2679,6 +2691,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.list.self": { role: "help", note: "Team Bridge mobile UI: list / self. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.navigation.caption": { role: "help", note: "Team Bridge mobile UI: navigation / caption. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.navigation.entry": { role: "help", note: "Team Bridge mobile UI: navigation / entry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
+	"mobile.team_bridge.navigation.entry_loading": { role: "button", note: "Team Bridge mobile UI: accessible name of the workspace drawer's Team Bridge mode button while the account's unread count has not been read yet. Says 'loading', never zero: the count is unknown, not empty. Keep the product name 'Team Bridge' untranslated." },
+	"mobile.team_bridge.navigation.entry_unavailable": { role: "button", note: "Team Bridge mobile UI: accessible name of the workspace drawer's Team Bridge mode button when Team Bridge cannot be used right now (signed out, plan, update or hub unavailable). Distinct from loading and from zero unread. Keep the product name 'Team Bridge' untranslated." },
+	"mobile.team_bridge.navigation.open_hub": { role: "button", note: "Team Bridge mobile UI: button in the workspace drawer's Team Bridge pane, shown when Team Bridge is not open yet (checking, signed out, unavailable); opens the full Team Bridge screen where the reader can sign in or retry. Keep the product name 'Team Bridge' untranslated." },
 	"mobile.team_bridge.profile.about_owner": { role: "help", note: "Heading introducing the human owner of this software agent. {owner} is the caller-provided owner name; preserve the exact placeholder and keep the whole name without translation or ellipsis. The profile description below is user data and must not be translated." },
 	"mobile.team_bridge.profile.badge_agent": { role: "status", note: "Profile badge identifying a software agent, not a real-estate agent or broker. No parameters; do not translate user-provided profile names, titles, descriptions or timezones." },
 	"mobile.team_bridge.profile.badge_person": { role: "status", note: "Profile badge identifying a human person rather than a software agent. No parameters; do not translate user-provided profile names, titles, descriptions or timezones." },
@@ -3252,6 +3267,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "tú",
 		"mobile.team_bridge.navigation.caption": "Tu organización, incluso con tu ordenador en reposo",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # sin leer} other {Team Bridge · # sin leer}}",
+		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · cargando",
+		"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · no disponible",
+		"mobile.team_bridge.navigation.open_hub": "Abrir Team Bridge",
 		"mobile.team_bridge.profile.about_owner": "Acerca de {owner}",
 		"mobile.team_bridge.profile.badge_agent": "Agente",
 		"mobile.team_bridge.profile.badge_person": "Persona",
@@ -3809,6 +3827,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "vous",
 		"mobile.team_bridge.navigation.caption": "Votre organisation, même lorsque votre ordinateur est en veille",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # non lu} other {Team Bridge · # non lus}}",
+		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · chargement",
+		"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · indisponible",
+		"mobile.team_bridge.navigation.open_hub": "Ouvrir Team Bridge",
 		"mobile.team_bridge.profile.about_owner": "À propos de {owner}",
 		"mobile.team_bridge.profile.badge_agent": "Agent",
 		"mobile.team_bridge.profile.badge_person": "Personne",
@@ -4366,6 +4387,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "आप",
 		"mobile.team_bridge.navigation.caption": "कंप्यूटर स्लीप में हो, तब भी आपका संगठन आपके साथ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # अपठित} other {Team Bridge · # अपठित}}",
+		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · लोड हो रहा है",
+		"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · उपलब्ध नहीं",
+		"mobile.team_bridge.navigation.open_hub": "Team Bridge खोलें",
 		"mobile.team_bridge.profile.about_owner": "{owner} के बारे में",
 		"mobile.team_bridge.profile.badge_agent": "एजेंट",
 		"mobile.team_bridge.profile.badge_person": "व्यक्ति",
@@ -4923,6 +4947,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "вы",
 		"mobile.team_bridge.navigation.caption": "Ваша организация рядом, даже когда компьютер спит",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # непрочитанное} few {Team Bridge · # непрочитанных} many {Team Bridge · # непрочитанных} other {Team Bridge · # непрочитанных}}",
+		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · загрузка",
+		"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · недоступно",
+		"mobile.team_bridge.navigation.open_hub": "Открыть Team Bridge",
 		"mobile.team_bridge.profile.about_owner": "О пользователе {owner}",
 		"mobile.team_bridge.profile.badge_agent": "Агент",
 		"mobile.team_bridge.profile.badge_person": "Человек",
@@ -5480,6 +5507,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "آپ",
 		"mobile.team_bridge.navigation.caption": "کمپیوٹر سلیپ میں ہو، تب بھی آپ کی تنظیم آپ کے ساتھ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} one {Team Bridge · # نا پڑھا گیا پیغام} other {Team Bridge · # نا پڑھے گئے پیغامات}}",
+		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · لوڈ ہو رہا ہے",
+		"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · دستیاب نہیں",
+		"mobile.team_bridge.navigation.open_hub": "Team Bridge کھولیں",
 		"mobile.team_bridge.profile.about_owner": "{owner} کے بارے میں",
 		"mobile.team_bridge.profile.badge_agent": "ایجنٹ",
 		"mobile.team_bridge.profile.badge_person": "شخص",
@@ -6037,6 +6067,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "bạn",
 		"mobile.team_bridge.navigation.caption": "Tổ chức luôn bên bạn, ngay cả khi máy tính đang ngủ",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # chưa đọc}}",
+		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · đang tải",
+		"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · không khả dụng",
+		"mobile.team_bridge.navigation.open_hub": "Mở Team Bridge",
 		"mobile.team_bridge.profile.about_owner": "Giới thiệu về {owner}",
 		"mobile.team_bridge.profile.badge_agent": "Tác nhân",
 		"mobile.team_bridge.profile.badge_person": "Người",
@@ -6594,6 +6627,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.list.self": "你",
 		"mobile.team_bridge.navigation.caption": "即使电脑休眠，也能与组织保持联系",
 		"mobile.team_bridge.navigation.entry": "{count, plural, =0 {Team Bridge} other {Team Bridge · # 条未读}}",
+		"mobile.team_bridge.navigation.entry_loading": "Team Bridge · 正在加载",
+		"mobile.team_bridge.navigation.entry_unavailable": "Team Bridge · 不可用",
+		"mobile.team_bridge.navigation.open_hub": "打开 Team Bridge",
 		"mobile.team_bridge.profile.about_owner": "关于{owner}",
 		"mobile.team_bridge.profile.badge_agent": "智能体",
 		"mobile.team_bridge.profile.badge_person": "成员",

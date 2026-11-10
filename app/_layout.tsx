@@ -17,6 +17,7 @@ import {
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
 import { WorkspaceDrawerProvider } from "@/features/sessions/workspace-drawer";
+import { useTeamBridgeDrawerAdapter } from "@/features/team-bridge/drawer-adapter";
 import { activeDirection, activeLocale } from "@/i18n";
 import { useNotificationTapRouting } from "@/notifications/use-notification-taps";
 import { TeamBridgeProvider } from "@/team-bridge/provider";
@@ -61,9 +62,9 @@ export default function RootLayout() {
 								 *  can never show two lists. Inside the providers it reads (the
 								 *  connection, the text scale) and below the router's context. */}
 								<ComputerSwitcherProvider>
-									<WorkspaceDrawerProvider>
+									<BridgeWorkspaceDrawer>
 										<Stack screenOptions={{ headerShown: false }} />
-									</WorkspaceDrawerProvider>
+									</BridgeWorkspaceDrawer>
 								</ComputerSwitcherProvider>
 								<ToastHost />
 							</TeamBridgeProvider>
@@ -73,6 +74,21 @@ export default function RootLayout() {
 				<TeamBridgeFixturePresentation />
 			</ThemeProvider>
 		</SafeAreaProvider>
+	);
+}
+
+/**
+ * The workspace drawer WITH Team Bridge's adapter, which is what makes the
+ * drawer's labelled Agents / Team Bridge switch appear. A component of its own
+ * because the adapter reads the live Team Bridge store, so it must render
+ * inside `TeamBridgeProvider`; the Stack passes through as `children` and is
+ * never remounted when the Bridge badge changes.
+ */
+function BridgeWorkspaceDrawer({ children }: { children: ReactNode }) {
+	return (
+		<WorkspaceDrawerProvider bridgeAdapter={useTeamBridgeDrawerAdapter()}>
+			{children}
+		</WorkspaceDrawerProvider>
 	);
 }
 

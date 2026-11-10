@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 155, // Exact merged Team Bridge key union.
+		expected: 158, // Exact merged Team Bridge key union.
 	},
 	{
 		name: "mobile.signin",
@@ -261,7 +261,9 @@ describe("the English catalogues", () => {
 		 * branch adds; verified by counting the generated catalogue after the merge. */
 		/* Plus two from the header/drawer/secondary-screens polish: the
 		 * Settings "Text size" label and the Library filter sheet's "Source". */
-		expect(total).toBe(555);
+		/* Plus three from the workspace drawer's Team Bridge mode (#212): the
+		 * Bridge entry's loading and unavailable names and "Open Team Bridge". */
+		expect(total).toBe(558);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
