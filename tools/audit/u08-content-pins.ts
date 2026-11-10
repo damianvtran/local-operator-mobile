@@ -1241,7 +1241,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * so it has neither parent's digest; every pin re-derived with --print over
 	 * the staged merged tree. Source admission only, no rendered or native proof
 	 * refreshed. */
-	src: "21372a020e873d49f313c1154b16d458db392cb5f2eaa36814439540b6fa6fe1",
+	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
+	// Notifications on top of the above; source identity only, not new pixels.
+	src: "b443bfe86803b87164d709fc655c3fdc43fc4345489b20a9a405f0f590cfaab7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

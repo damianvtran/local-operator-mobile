@@ -277,6 +277,19 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 			body: "Great. I'll verify **light and dark** frames before review.",
 		}),
 	];
+	// Long, paginated synthetic history exercises initial admission and prepend
+	// through the same HTTP contract as the hub, never by injecting DOM rows.
+	const polishHistories = new Map(
+		conversations.map((c) => [
+			c.id,
+			Array.from({ length: 80 }, (_, index) =>
+				message(index + 1, ADA, at(index), {
+					conversation_id: c.id,
+					body: `History ${index + 1}: synthetic release planning notes for the cross-organisation working group.`,
+				}),
+			),
+		]),
+	);
 	let created = 0;
 	const defaultHistories = new Map(
 		conversations.map((c) => [
@@ -423,9 +436,15 @@ export function createTeamBridgeFixture(options: { root?: string } = {}) {
 						: undefined;
 				const frameWidth = profile?.width ?? phoneWidth;
 				const frameHeight = profile?.height ?? 844;
+				const threadId =
+					url.searchParams.get("conversation") === "group"
+						? "bcv_group"
+						: url.searchParams.get("conversation") === "dm"
+							? dm(ADA, "Ada").id
+							: "bcv_humans";
 				const route =
 					url.searchParams.get("thread") === "1"
-						? `/team-bridge/${TENANT}/bcv_humans`
+						? `/team-bridge/${TENANT}/${threadId}`
 						: "/team-bridge";
 				const viewer = url.searchParams.get("viewer");
 				const viewerParam = viewer
@@ -438,7 +457,7 @@ const frame=document.querySelector('iframe');
 setInterval(()=>{try{
  const doc=frame.contentDocument, win=frame.contentWindow;
  const controls=[...doc.querySelectorAll('[role="button"],button,input,textarea,[role="link"]')].map(e=>{const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.textContent?.trim().slice(0,45),x:Math.round(r.x),right:Math.round(r.right),width:Math.round(r.width),height:Math.round(r.height),scrollWidth:e.scrollWidth,clientWidth:e.clientWidth,disabled:e.getAttribute('aria-disabled')==='true'};});
- document.getElementById('geometry').textContent=JSON.stringify({locale:doc.documentElement.lang,direction:doc.documentElement.dir,noticeBodySize:win.getComputedStyle(doc.querySelector('[data-testid="team-bridge-default-on-notice"] [role="status"] > :last-child')||doc.body).fontSize,viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls},null,2);
+ document.getElementById('geometry').textContent=JSON.stringify({locale:doc.documentElement.lang,direction:doc.documentElement.dir,noticeBodySize:win.getComputedStyle(doc.querySelector('[data-testid="team-bridge-default-on-notice"] [role="status"] > :last-child')||doc.body).fontSize,viewport:[win.innerWidth,win.innerHeight],root:[doc.documentElement.scrollWidth,doc.documentElement.scrollHeight],controls,headings:[...doc.querySelectorAll('[role="heading"],h1')].map(e=>({name:e.textContent,size:win.getComputedStyle(e).fontSize,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height})),transcript:(()=>{const e=doc.querySelector('[data-testid="team-bridge-messages"]');if(!e)return null;const r=e.getBoundingClientRect();return {scrollTop:e.scrollTop,clientHeight:e.clientHeight,contentHeight:e.scrollHeight,visible:[...e.querySelectorAll('[data-testid^="team-bridge-message-"]')].filter(n=>{const b=n.getBoundingClientRect();return b.bottom>r.top&&b.top<r.bottom}).map(n=>n.getAttribute('data-testid'))}})()},null,2);
 }catch{}},1000);
 </script>`,
 				);
@@ -504,7 +523,28 @@ setInterval(()=>{try{
 					imageWorlds.set(worldKey, imageWorld);
 				}
 				const { images, descriptor, showcase } = imageWorld;
-				const histories = withImages ? imageWorld.histories : defaultHistories;
+				const histories = withImages
+					? imageWorld.histories
+					: qaCase === "thread_polish"
+						? polishHistories
+						: defaultHistories;
+				const threadRows =
+					qaCase === "thread_polish"
+						? conversations.map((row) => ({
+								...row,
+								name:
+									row.kind === "dm"
+										? row.name
+										: row.kind === "group"
+											? "Launch planning and cross-organisation programme coordination"
+											: "international-partnerships-and-launch-planning",
+								members: row.members?.map((member) => ({
+									...member,
+									display_label:
+										"Maximiliana Konstantinopoulou-Whitfield-Abernathy",
+								})),
+							}))
+						: conversations;
 				if (
 					withImages &&
 					req.headers.authorization !==
@@ -780,7 +820,7 @@ setInterval(()=>{try{
 										: OTHER_TENANT
 									: OTHER_TENANT)
 								? []
-								: conversations,
+								: threadRows,
 						has_more: false,
 					});
 					return;
@@ -805,7 +845,7 @@ setInterval(()=>{try{
 					return;
 				}
 				const id = path.split("/")[2];
-				const row = conversations.find((c) => c.id === id);
+				const row = threadRows.find((c) => c.id === id);
 				const history = histories.get(id ?? "") ?? [];
 				if (path.endsWith("/messages") && req.method === "GET") {
 					// Read failures remain non-2xx, never fake legacy projection absence.
@@ -816,9 +856,18 @@ setInterval(()=>{try{
 						});
 						return;
 					}
+					if (qaCase === "thread_polish") {
+						const before = Number(
+							url.searchParams.get("before_seq") ?? Number.MAX_SAFE_INTEGER,
+						);
+						const eligible = history.filter((entry) => entry.seq < before);
+						const page = eligible.slice(-50).reverse();
+						ok({ messages: page, has_more: eligible.length > page.length });
+						return;
+					}
 					ok({
 						messages:
-							qaCase === "empty"
+							qaCase === "empty" || qaCase === "thread_empty"
 								? []
 								: (deliveryFixtureHistory(qaCase ?? "", id ?? "") ??
 									(withImages && id === "bcv_humans"
