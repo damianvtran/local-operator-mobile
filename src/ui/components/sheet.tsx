@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { ScopedVariables } from "uniwind";
-
+import { haptic } from "@/lib/haptics";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import { Heading } from "@/ui/components/heading";
@@ -28,6 +28,11 @@ import {
 import { DirectionView } from "@/ui/direction";
 import { useShadow } from "@/ui/elevation";
 import { useModalDismissal } from "@/ui/modal-dismissal-ledger";
+import {
+	createTransitionTick,
+	exitPointerEvents,
+	useModalExit,
+} from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
@@ -75,6 +80,11 @@ const SHEET_BODY_FADE = 24;
  */
 let sheetFadeSeq = 0;
 
+/* ONE gate for every sheet in the app, at module scope on purpose: the two
+ *  sheets of a hand-off are different component instances, and only a shared
+ *  gate can see that their edges are one event (`createTransitionTick`). */
+const sheetTransitionTick = createTransitionTick(() => haptic("selection"));
+
 /**
  * A bottom sheet: bottom-anchored, never centred — a centred dialog on a phone is
  * under neither thumb (docs/design/components.md § 8).
@@ -104,8 +114,12 @@ export type SheetProps = {
 	/** Opt-in for a picker whose first announcement is its purpose, not Close. */
 	focusTitle?: boolean;
 	/** Drawer openers unmount; return to the persistent Home chip after RNW has
-	 * completed its own focus return, never during the closing animation. */
-	returnFocusTestID?: string;
+	 * completed its own focus return, never during the closing animation.
+	 * A LIST is a fallback order: the first candidate that actually takes focus
+	 * wins. One id is not enough when the caller cannot know which screen will
+	 * be underneath at dismissal (UX round 1, U2 — a session screen has no Home
+	 * chip, so focus fell to `body`). */
+	returnFocusTestID?: string | readonly string[];
 	detent?: SheetDetent;
 	children: React.ReactNode;
 	/**
@@ -165,12 +179,49 @@ export const Sheet = ({
 	const rise = useRef(new Animated.Value(0)).current;
 	const scrimFade = useRef(new Animated.Value(0)).current;
 
-	useEffect(() => {
-		if (!visible) {
+	/* THE EXIT (perf audit P7; the rule and its limits are in `@/ui/modal-exit`).
+	 *  Both values run back to 0 on the native driver over `duration.fast` — a
+	 *  close should be quicker than an arrival — and the `Modal` stays mounted
+	 *  (`exiting`) until they land. A skipped exit resets them, as before. */
+	const exitMs = effectiveDuration(DURATIONS.fast, reduceMotion);
+	const exiting = useModalExit({
+		visible,
+		reduceMotion,
+		durationMs: exitMs,
+		reset: () => {
 			rise.setValue(0);
 			scrimFade.setValue(0);
-			return;
-		}
+		},
+		animateOut: (done) => {
+			Animated.parallel([
+				Animated.timing(rise, {
+					toValue: 0,
+					duration: exitMs,
+					/* The kit's `in-out` token: there is no "in" curve in the
+					 *  token set and an exit does not earn a new one. */
+					easing: Easing.bezier(...parseCubicBezier(EASINGS["in-out"])),
+					useNativeDriver: true,
+				}),
+				Animated.timing(scrimFade, {
+					toValue: 0,
+					duration: exitMs,
+					useNativeDriver: true,
+				}),
+			]).start(done);
+		},
+	});
+	/* One tick when the sheet arrives and one when it leaves (P16) — on a real
+	 *  transition only, never for a sheet that mounts closed. Through the shared
+	 *  gate, so a sheet handing off to another in one press is ONE tick (R4). */
+	const wasVisible = useRef(visible);
+	useEffect(() => {
+		if (wasVisible.current !== visible) sheetTransitionTick();
+		wasVisible.current = visible;
+	}, [visible]);
+
+	useEffect(() => {
+		/* Closed: `useModalExit` above owns the values (animated or reset). */
+		if (!visible) return;
 		// `duration.slow` / `ease-out-expo` for the rise, `duration.fast` for the
 		// scrim. Both pass through `effectiveDuration`, so reduced motion caps the
 		// durations instead of removing the feedback that a press is a press.
@@ -268,8 +319,20 @@ export const Sheet = ({
 	/* Owes a dismissal from the close until RNW's `onDismiss`, so a screen that
 	 *  moves the reader waits out this sheet's focus return (`@/ui/modal-dismissal-
 	 *  ledger`; PR #122 QA round 6, Q9). Keyed on what the Modal is given. */
-	const shown = visible && !covered;
-	const dismissed = useModalDismissal(shown, Platform.OS === "web");
+	/* `exiting` keeps the Modal mounted for the exit animation. It is never true
+	 *  while another modal is up (`shouldAnimateExit`), so it cannot paint over
+	 *  the modal that covers this one. */
+	const shown = (visible || exiting) && !covered;
+	/* The LEDGER stays keyed on the caller's close, not on `shown`: a dismissal
+	 *  is owed from the commit that closes the sheet — the exit animation only
+	 *  moves the `onDismiss` that settles it later. Keyed on `shown`, the debt
+	 *  would not exist while the sheet animates out, and a screen waiting on it
+	 *  (Settings' refusal reveal, Q9) would move the reader mid-exit;
+	 *  `modal-dismissal-ledger.test.ts` fails on exactly that. */
+	const dismissed = useModalDismissal(
+		visible && !covered,
+		Platform.OS === "web",
+	);
 
 	/**
 	 * Keep the pointer-only scrim from taking focus from the sheet's title.
@@ -333,11 +396,20 @@ export const Sheet = ({
 									(document.activeElement === document.body ||
 										document.activeElement === null)
 								) {
-									document
-										.querySelector<HTMLElement>(
-											`[data-testid="${returnFocusTestID}"]`,
-										)
-										?.focus({ preventScroll: true });
+									/* Presence in the DOM is not focusability: an earlier
+									 *  screen stays mounted but hidden under the stack, and
+									 *  an exiting modal is kept mounted inert, so the same
+									 *  testID can match a node `focus()` silently refuses.
+									 *  Every match of every candidate is tried, and only a
+									 *  node that BECAME `activeElement` ends the search. */
+									candidates: for (const id of [returnFocusTestID].flat()) {
+										for (const target of document.querySelectorAll<HTMLElement>(
+											`[data-testid="${id}"]`,
+										)) {
+											target.focus({ preventScroll: true });
+											if (document.activeElement === target) break candidates;
+										}
+									}
 								}
 								dismissed();
 								onDismiss?.();
@@ -364,6 +436,9 @@ export const Sheet = ({
 					 *  its leading/trailing chrome on the English edges. */}
 					<DirectionView
 						className="flex-1 justify-end"
+						/* Inert from the close on: the exit keeps this mounted, and a
+						 *  second tap must not land on a sheet that is leaving (R2). */
+						pointerEvents={exitPointerEvents(visible)}
 						onLayout={(event) =>
 							setColumnHeight(event.nativeEvent.layout.height)
 						}

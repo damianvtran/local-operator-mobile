@@ -185,6 +185,7 @@ export type CatalogueKey =
 	| "mobile.library.browse.filters_count"
 	| "mobile.library.browse.more_kinds"
 	| "mobile.library.browse.no_tags"
+	| "mobile.library.browse.origin"
 	| "mobile.library.browse.refresh"
 	| "mobile.library.browse.search_label"
 	| "mobile.library.browse.search_placeholder"
@@ -363,6 +364,7 @@ export type CatalogueKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.text_size.label"
 	| "mobile.settings.theme.caption_forced"
 	| "mobile.settings.theme.caption_system"
 	| "mobile.settings.theme.card_dark"
@@ -731,6 +733,7 @@ export type NoParamKey =
 	| "mobile.library.browse.filters"
 	| "mobile.library.browse.more_kinds"
 	| "mobile.library.browse.no_tags"
+	| "mobile.library.browse.origin"
 	| "mobile.library.browse.refresh"
 	| "mobile.library.browse.search_label"
 	| "mobile.library.browse.search_placeholder"
@@ -876,6 +879,7 @@ export type NoParamKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.text_size.label"
 	| "mobile.settings.theme.mode_dark"
 	| "mobile.settings.theme.mode_label"
 	| "mobile.settings.theme.mode_light"
@@ -1221,6 +1225,7 @@ export type MessageParams = {
 	"mobile.library.browse.filters_count": { count: string | number };
 	"mobile.library.browse.more_kinds": NoParams;
 	"mobile.library.browse.no_tags": NoParams;
+	"mobile.library.browse.origin": NoParams;
 	"mobile.library.browse.refresh": NoParams;
 	"mobile.library.browse.search_label": NoParams;
 	"mobile.library.browse.search_placeholder": NoParams;
@@ -1399,6 +1404,7 @@ export type MessageParams = {
 	"mobile.session_health.resume_refused": NoParams;
 	"mobile.session_health.resume_refused_title": NoParams;
 	"mobile.session_health.still_reopening": NoParams;
+	"mobile.settings.text_size.label": NoParams;
 	"mobile.settings.theme.caption_forced": { name: string | number };
 	"mobile.settings.theme.caption_system": { dark: string | number; light: string | number };
 	"mobile.settings.theme.card_dark": { name: string | number };
@@ -1793,6 +1799,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.library.browse.filters_count": "Filters · {count}",
 	"mobile.library.browse.more_kinds": "More kinds",
 	"mobile.library.browse.no_tags": "No tags yet. The Librarian adds them as it organizes assets.",
+	"mobile.library.browse.origin": "Source",
 	"mobile.library.browse.refresh": "Refresh library",
 	"mobile.library.browse.search_label": "Search the library",
 	"mobile.library.browse.search_placeholder": "Name, tag or words",
@@ -1971,6 +1978,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"mobile.settings.text_size.label": "Text size",
 	"mobile.settings.theme.caption_forced": "Always {name}",
 	"mobile.settings.theme.caption_system": "System uses {light} and {dark}",
 	"mobile.settings.theme.card_dark": "{name}, dark theme",
@@ -2350,6 +2358,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.library.browse.filters_count": { role: "meta", note: "Label of the filters chip when at least one filter is active. {count} is the number of active filters, a positive integer; it is a count, not a plural-agreeing noun, so no plural arms. The middle dot is a separator, keep it. Same word as the plain 'Filters' chip and sheet title." },
 	"mobile.library.browse.more_kinds": { role: "heading", note: "Title of the sheet listing the kinds of file that did not fit in the main kind control. 'Kinds' are types of file, such as spreadsheet or presentation. No final full stop." },
 	"mobile.library.browse.no_tags": { role: "status", note: "Shown in the tag filter when no tag exists. Two sentences. 'The Librarian' is the name of a background helper that labels assets automatically; keep it a proper noun and do not imply the user must create tags." },
+	"mobile.library.browse.origin": { role: "meta", note: "Label above the choices in the Library Filters sheet that filter by where an asset came from: All, Created (the agent made it) or Mentioned (it was referenced in a conversation). A noun, no final full stop; not a data source or a citation." },
 	"mobile.library.browse.refresh": { role: "button", note: "Accessible label of an icon-only button that reloads the list from the computer. Not visible text. Imperative, no final full stop." },
 	"mobile.library.browse.search_label": { role: "meta", note: "Label of the search field. Imperative, no final full stop. Searches the user's catalogue of assets, not the web." },
 	"mobile.library.browse.search_placeholder": { role: "help", note: "Placeholder of the search field: three things the search matches (an asset's name, a tag, or words in its text), in that order. A fragment, not a sentence; no final full stop." },
@@ -2528,6 +2537,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.resume_refused": { role: "status", note: "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"." },
 	"mobile.session_health.resume_refused_title": { role: "heading", note: "Title of the sheet's failure notice when Resume did not work." },
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
+	"mobile.settings.text_size.label": { role: "heading", note: "Visible label and accessible name of the Settings control that chooses the app's text size (System, 100%, 150%, 200%). \"Text size\" means how large the app draws its type, not a font. No final full stop." },
 	"mobile.settings.theme.caption_forced": { role: "help", note: "Caption under the mode control while it is forced to one side. {name} is a theme NAME (proper noun, never translated). No final full stop." },
 	"mobile.settings.theme.caption_system": { role: "help", note: "Caption under the mode control while it follows the phone. {light} and {dark} are theme NAMES (proper nouns such as \"Dracula\", never translated). Says which theme shows in each phone mode. No final full stop." },
 	"mobile.settings.theme.card_dark": { role: "button", note: "Screen-reader name of a theme card that is not selected. {name} is the theme NAME (proper noun, never translated). No final full stop." },
@@ -2921,6 +2931,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.browse.filters_count": "Filtros · {count}",
 		"mobile.library.browse.more_kinds": "Más tipos",
 		"mobile.library.browse.no_tags": "Aún no hay etiquetas. El Bibliotecario las añade al organizar los recursos.",
+		"mobile.library.browse.origin": "Origen",
 		"mobile.library.browse.refresh": "Actualizar biblioteca",
 		"mobile.library.browse.search_label": "Buscar en la biblioteca",
 		"mobile.library.browse.search_placeholder": "Nombre, etiqueta o palabras",
@@ -3099,6 +3110,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
 		"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
+		"mobile.settings.text_size.label": "Tamaño del texto",
 		"mobile.settings.theme.caption_forced": "Siempre {name}",
 		"mobile.settings.theme.caption_system": "Sistema usa {light} y {dark}",
 		"mobile.settings.theme.card_dark": "{name}, tema oscuro",
@@ -3476,6 +3488,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.browse.filters_count": "Filtres · {count}",
 		"mobile.library.browse.more_kinds": "Autres types",
 		"mobile.library.browse.no_tags": "Aucune étiquette pour l’instant. Le bibliothécaire les ajoute en organisant les éléments.",
+		"mobile.library.browse.origin": "Origine",
 		"mobile.library.browse.refresh": "Actualiser la bibliothèque",
 		"mobile.library.browse.search_label": "Rechercher dans la bibliothèque",
 		"mobile.library.browse.search_placeholder": "Nom, étiquette ou mots",
@@ -3654,6 +3667,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
 		"mobile.session_health.resume_refused_title": "Reprise impossible",
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+		"mobile.settings.text_size.label": "Taille du texte",
 		"mobile.settings.theme.caption_forced": "Toujours {name}",
 		"mobile.settings.theme.caption_system": "Système utilise {light} et {dark}",
 		"mobile.settings.theme.card_dark": "{name}, thème sombre",
@@ -4031,6 +4045,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.browse.filters_count": "फ़िल्टर · {count}",
 		"mobile.library.browse.more_kinds": "अन्य प्रकार",
 		"mobile.library.browse.no_tags": "अभी कोई टैग नहीं है। लाइब्रेरियन संसाधनों को व्यवस्थित करते हुए टैग जोड़ता है।",
+		"mobile.library.browse.origin": "स्रोत",
 		"mobile.library.browse.refresh": "लाइब्रेरी ताज़ा करें",
 		"mobile.library.browse.search_label": "लाइब्रेरी में खोजें",
 		"mobile.library.browse.search_placeholder": "नाम, टैग या शब्द",
@@ -4209,6 +4224,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 		"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
+		"mobile.settings.text_size.label": "टेक्स्ट का आकार",
 		"mobile.settings.theme.caption_forced": "हमेशा {name}",
 		"mobile.settings.theme.caption_system": "सिस्टम {light} और {dark} का उपयोग करता है",
 		"mobile.settings.theme.card_dark": "{name}, गहरी थीम",
@@ -4586,6 +4602,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.browse.filters_count": "Фильтры · {count}",
 		"mobile.library.browse.more_kinds": "Другие типы",
 		"mobile.library.browse.no_tags": "Тегов пока нет. Библиотекарь добавляет их, когда упорядочивает ресурсы.",
+		"mobile.library.browse.origin": "Источник",
 		"mobile.library.browse.refresh": "Обновить библиотеку",
 		"mobile.library.browse.search_label": "Искать в библиотеке",
 		"mobile.library.browse.search_placeholder": "Название, тег или слова",
@@ -4764,6 +4781,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
 		"mobile.session_health.resume_refused_title": "Не удалось возобновить",
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
+		"mobile.settings.text_size.label": "Размер текста",
 		"mobile.settings.theme.caption_forced": "Всегда {name}",
 		"mobile.settings.theme.caption_system": "Как в системе: {light} и {dark}",
 		"mobile.settings.theme.card_dark": "{name}, тёмная тема",
@@ -5141,6 +5159,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.browse.filters_count": "فلٹرز · {count}",
 		"mobile.library.browse.more_kinds": "مزید اقسام",
 		"mobile.library.browse.no_tags": "ابھی کوئی ٹیگ نہیں۔ Librarian اثاثے منظم کرتے وقت ٹیگ شامل کرتی ہے۔",
+		"mobile.library.browse.origin": "ماخذ",
 		"mobile.library.browse.refresh": "لائبریری تازہ کریں",
 		"mobile.library.browse.search_label": "لائبریری میں تلاش کریں",
 		"mobile.library.browse.search_placeholder": "نام، ٹیگ یا الفاظ",
@@ -5319,6 +5338,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
 		"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+		"mobile.settings.text_size.label": "متن کا سائز",
 		"mobile.settings.theme.caption_forced": "ہمیشہ {name}",
 		"mobile.settings.theme.caption_system": "سسٹم {light} اور {dark} استعمال کرتا ہے",
 		"mobile.settings.theme.card_dark": "{name}، گہرا تھیم",
@@ -5696,6 +5716,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.browse.filters_count": "Bộ lọc · {count}",
 		"mobile.library.browse.more_kinds": "Các loại khác",
 		"mobile.library.browse.no_tags": "Chưa có thẻ nào. Thủ thư sẽ thêm thẻ khi sắp xếp các tài nguyên.",
+		"mobile.library.browse.origin": "Nguồn",
 		"mobile.library.browse.refresh": "Làm mới thư viện",
 		"mobile.library.browse.search_label": "Tìm kiếm trong thư viện",
 		"mobile.library.browse.search_placeholder": "Tên, thẻ hoặc từ trong nội dung",
@@ -5874,6 +5895,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Vừa rồi không mở lại được phiên này. Hãy thử lại.",
 		"mobile.session_health.resume_refused_title": "Không thể mở lại",
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
+		"mobile.settings.text_size.label": "Cỡ chữ",
 		"mobile.settings.theme.caption_forced": "Luôn dùng {name}",
 		"mobile.settings.theme.caption_system": "Hệ thống dùng {light} và {dark}",
 		"mobile.settings.theme.card_dark": "{name}, giao diện tối",
@@ -6251,6 +6273,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.library.browse.filters_count": "筛选 · {count}",
 		"mobile.library.browse.more_kinds": "更多类型",
 		"mobile.library.browse.no_tags": "暂无标签。Librarian整理资源时会自动添加。",
+		"mobile.library.browse.origin": "来源",
 		"mobile.library.browse.refresh": "刷新资料库",
 		"mobile.library.browse.search_label": "搜索资料库",
 		"mobile.library.browse.search_placeholder": "名称、标签或文字",
@@ -6429,6 +6452,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
 		"mobile.session_health.resume_refused_title": "无法恢复",
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
+		"mobile.settings.text_size.label": "文字大小",
 		"mobile.settings.theme.caption_forced": "始终使用 {name}",
 		"mobile.settings.theme.caption_system": "跟随系统时使用 {light} 和 {dark}",
 		"mobile.settings.theme.card_dark": "{name}，深色主题",

@@ -4,6 +4,7 @@ import { Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
+import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { signInPresentation } from "./sign-in-presentation";
@@ -52,13 +53,7 @@ export default function SignIn() {
 			title="Sign in"
 			testID={SCREEN.signIn}
 			headerLeading={
-				<Button
-					testID={CONTROL.signInBack}
-					label="Back"
-					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
-				/>
+				<BackButton testID={CONTROL.signInBack} onPress={() => router.back()} />
 			}
 		>
 			<View className="gap-4 pt-2">

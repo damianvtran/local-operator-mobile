@@ -8,6 +8,7 @@
 	"mobile.library.browse.filters_count": "Bộ lọc · {count}",
 	"mobile.library.browse.more_kinds": "Các loại khác",
 	"mobile.library.browse.no_tags": "Chưa có thẻ nào. Thủ thư sẽ thêm thẻ khi sắp xếp các tài nguyên.",
+	"mobile.library.browse.origin": "Nguồn",
 	"mobile.library.browse.refresh": "Làm mới thư viện",
 	"mobile.library.browse.search_label": "Tìm kiếm trong thư viện",
 	"mobile.library.browse.search_placeholder": "Tên, thẻ hoặc từ trong nội dung",

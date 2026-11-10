@@ -16,6 +16,7 @@ import {
 	SCREEN,
 } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { EmptyState } from "@/ui/components/empty-state";
 import { Input } from "@/ui/components/input";
@@ -119,13 +120,7 @@ export default function PastSessions() {
 			title="Past sessions"
 			testID={SCREEN.past}
 			headerLeading={
-				<Button
-					testID={CONTROL.pastBack}
-					label="Back"
-					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
-				/>
+				<BackButton testID={CONTROL.pastBack} onPress={() => router.back()} />
 			}
 		>
 			<View className="gap-3 pt-2">

@@ -64,7 +64,7 @@ import { avatarClasses, cx } from "@/ui/variants";
  */
 
 type SwitcherContextValue = {
-	open: (options?: { returnFocusTestID?: string }) => void;
+	open: (options?: { returnFocusTestID?: string | readonly string[] }) => void;
 	/** Whether the sheet is up. A screen that reacts to what a pick left behind
 	 *  waits for it to go down: Settings scrolls a refusal into view only after the
 	 *  sheet closed, because the close returns focus to the opener, and on the web
@@ -97,12 +97,12 @@ export function ComputerSwitcherProvider({
 	 *  (PR #122 QA round 6, Q9) rather than on this provider's count alone. */
 	const [visible, setVisible] = useState(false);
 	const [returnFocusTestID, setReturnFocusTestID] = useState<
-		string | undefined
+		string | readonly string[] | undefined
 	>();
 	const close = useCallback(() => setVisible(false), []);
 	const value = useMemo(
 		() => ({
-			open: (options?: { returnFocusTestID?: string }) => {
+			open: (options?: { returnFocusTestID?: string | readonly string[] }) => {
 				setReturnFocusTestID(options?.returnFocusTestID);
 				setVisible(true);
 			},
@@ -410,7 +410,7 @@ export function ComputerSwitcherSheet({
 }: {
 	visible: boolean;
 	onClose: () => void;
-	returnFocusTestID?: string;
+	returnFocusTestID?: string | readonly string[];
 }) {
 	const router = useRouter();
 	const pathname = usePathname();

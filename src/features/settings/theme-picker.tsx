@@ -9,7 +9,7 @@ import { chooseTheme, type ThemeMode } from "@/state/theme-preference";
 import { CONTROL, REGION, ROLE, SCREEN, state, themeCardId } from "@/ui/a11y";
 import { useTheme, useTokenColor } from "@/ui/appearance";
 import { maxColumnWidth } from "@/ui/column";
-import { Button } from "@/ui/components/button";
+import { BackButton } from "@/ui/components/back-button";
 import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
@@ -75,12 +75,9 @@ export default function ThemePicker() {
 			title={t("mobile.settings.theme.title")}
 			testID={SCREEN.themePicker}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.themePickerBack}
-					label={t("mobile.common.back")}
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 		>

@@ -20,6 +20,9 @@ const host = vi.hoisted(() => ({
 	labels: new Map<string, string>(),
 	presses: new Map<string, () => void>(),
 	sheetVisible: [] as unknown[],
+	/* The focus target the ONE sheet was last handed, and the layout it ran in. */
+	sheetReturnFocus: undefined as unknown,
+	split: false,
 	saved: [] as import("@/connection/saved-computers").SavedComputer[],
 	scale: 1,
 	chevrons: 0,
@@ -117,7 +120,10 @@ vi.mock("expo-router", () => ({
 	useGlobalSearchParams: () => ({}),
 }));
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
-vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 48 }));
+vi.mock("@/ui/layout", () => ({
+	TOUCH_FLOOR: 48,
+	useLayout: () => ({ split: host.split }),
+}));
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: host.scale }),
 }));
@@ -129,6 +135,7 @@ vi.mock("@/ui/components/section-header", () => ({
 vi.mock("@/ui/components/sheet", () => ({
 	Sheet: (props: Props) => {
 		host.sheetVisible.push(props.visible);
+		host.sheetReturnFocus = props.returnFocusTestID;
 		return null;
 	},
 }));
@@ -168,9 +175,13 @@ vi.mock("@/features/auth/connection-provider", async () => {
 });
 
 const { ComputerSwitcherProvider } = await import("./computer-switcher-sheet");
-const { DrawerComputerRow, HeaderComputerChip, headerChipFit } = await import(
-	"./computer-entry-points"
-);
+const {
+	DrawerComputerRow,
+	drawerRowFit,
+	HeaderComputerChip,
+	headerChipFit,
+	switcherFocusReturn,
+} = await import("./computer-entry-points");
 
 /* Placeholder host only (AGENTS.md: never a real tunnel hostname). */
 const HOST = "0123456789abcdef0123456789abcdef-lop.example.com";
@@ -345,6 +356,111 @@ describe("the drawer footer's workspace row", () => {
 		expect(host.texts).toContain("Choose a computer");
 		await press(ROW);
 		expect(sheetUp()).toBe(true);
+	});
+
+	/* Review round 1, R3: the split layout does not render the header chip
+	 *  (`home.tsx`: `{split ? null : <HeaderComputerChip …`), so naming it as the
+	 *  focus target sent the sheet's close after a node that is not there. */
+	/* UX round 1, U2: a session screen renders no Home chip, so naming ONLY the
+	 *  chip left focus on nothing after drawer → switcher → Escape. The phone
+	 *  names a fallback order; the Sheet takes the first that accepts focus. */
+	it("names a fallback chain on a phone: the chip, itself, then the drawer's own opener", async () => {
+		host.split = false;
+		await mount(createElement(DrawerComputerRow, { testID: ROW }));
+		await press(ROW);
+		expect(host.sheetReturnFocus).toEqual([
+			CHIP,
+			ROW,
+			"session-back",
+			"home-sidebar",
+		]);
+	});
+
+	/* Design round 1 D1 / QA round 2 Q2, and the web audit's U-08 on
+	 *  S15/loading at 200 %: the health word was `shrink-0`, so the NAME paid for
+	 *  every missing point and an unshrinkable "· Checking…" left the row. */
+	describe("the name keeps priority; the status word drops first", () => {
+		const WORD = "· Online";
+		it("paints both when the whole name fits beside the word", () => {
+			expect(drawerRowFit("Mac mini", WORD, 200, 1, 12)).toEqual({
+				name: "Mac mini",
+				word: WORD,
+			});
+		});
+		it("drops the word whole, and paints the WHOLE name, when both do not fit", () => {
+			/* Wide enough for the name alone, not for name + gap + word. */
+			const both = drawerRowFit("192.168.100.210", WORD, 400, 1, 12);
+			expect(both.word).toBe(WORD);
+			const fit = drawerRowFit("192.168.100.210", WORD, 120, 1, 12);
+			expect(fit).toEqual({ name: "192.168.100.210", word: null });
+		});
+		it("cuts the name only once the word is already gone", () => {
+			const fit = drawerRowFit("192.168.100.210", WORD, 40, 1, 12);
+			expect(fit.word).toBeNull();
+			expect(fit.name).toContain("…");
+		});
+		it("drops an unshrinkable word at 200 % rather than let it leave the row", () => {
+			/* The S15/loading frame: a short name, "· Checking…" at 24 pt, and
+			 *  a slot far narrower than the word alone. */
+			expect(drawerRowFit("…", "· Checking…", 60, 2, 24)).toEqual({
+				name: "…",
+				word: null,
+			});
+		});
+		it("paints both before the slot is measured, so the common case never reflows", () => {
+			expect(drawerRowFit("Mac mini", WORD, 0, 1, 12)).toEqual({
+				name: "Mac mini",
+				word: WORD,
+			});
+		});
+		it("the row renders what the fit decides: no word in a slot too narrow for it", async () => {
+			await mount(createElement(DrawerComputerRow, { testID: ROW }));
+			host.layoutWidth = 60;
+			await live("Mac mini");
+			await act(async () => {
+				await new Promise<void>((resolve) => setImmediate(resolve));
+			});
+			host.texts.length = 0;
+			await live("Mac mini");
+			expect(host.texts).toContain("Mac mini");
+			expect(host.texts).not.toContain(WORD);
+			/* The state is still spoken in full. */
+			expect(host.labels.get(ROW)).toBe(
+				"Computer: Mac mini, Online. Switch computer",
+			);
+		});
+	});
+
+	it("returns focus to ITSELF in the split layout, where the chip is not rendered", async () => {
+		host.split = true;
+		try {
+			await mount(createElement(DrawerComputerRow, { testID: ROW }));
+			await press(ROW);
+			expect(host.sheetReturnFocus).toBe(ROW);
+		} finally {
+			host.split = false;
+		}
+	});
+
+	it("the pane's other opener (the no-computer empty state) follows the same rule", () => {
+		expect(switcherFocusReturn(false, "sessions-connect")).toEqual([
+			CHIP,
+			"sessions-connect",
+			"session-back",
+			"home-sidebar",
+		]);
+		expect(switcherFocusReturn(true, "sessions-connect")).toBe(
+			"sessions-connect",
+		);
+		const PANE = readFileSync(
+			new URL("../sessions/conversations-pane.tsx", import.meta.url),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(PANE).toContain(
+			"returnFocusTestID: switcherFocusReturn( layout.split, CONTROL.sessionsConnectAction, )",
+		);
+		/* The stale literal is gone from both pane openers. */
+		expect(PANE).not.toContain("returnFocusTestID: CONTROL.computersButton");
 	});
 });
 

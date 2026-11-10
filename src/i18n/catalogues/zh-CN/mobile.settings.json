@@ -1,4 +1,5 @@
 {
+	"mobile.settings.text_size.label": "文字大小",
 	"mobile.settings.theme.caption_forced": "始终使用 {name}",
 	"mobile.settings.theme.caption_system": "跟随系统时使用 {light} 和 {dark}",
 	"mobile.settings.theme.card_dark": "{name}，深色主题",

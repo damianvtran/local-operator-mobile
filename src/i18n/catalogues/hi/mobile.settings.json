@@ -1,4 +1,5 @@
 {
+	"mobile.settings.text_size.label": "टेक्स्ट का आकार",
 	"mobile.settings.theme.caption_forced": "हमेशा {name}",
 	"mobile.settings.theme.caption_system": "सिस्टम {light} और {dark} का उपयोग करता है",
 	"mobile.settings.theme.card_dark": "{name}, गहरी थीम",

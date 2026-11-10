@@ -982,6 +982,115 @@ describe("U-42 — spacing on the token scale", () => {
 	});
 });
 
+/* The session header's title is truncated by LAYOUT now (two lines when the
+ * header stacks), so the hidden tail exists in the DOM. The web gate failed
+ * S8/populated-long on exactly this shape: "content 69px in a 46px box
+ * (overflow-y: clip)" on the title inside its health control. */
+describe("U-07 — a multi-line clamp whose full value is in its control's name", () => {
+	const TITLE =
+		"Refactor the payment reconciliation worker and its retry queue";
+	const control = (over: Partial<AuditNode> = {}) =>
+		node({
+			index: 3,
+			tag: "button",
+			path: "h1>button",
+			interactive: true,
+			hasAccessibleName: true,
+			accessibleName: `${TITLE}, Live, Waiting for you`,
+			...over,
+		});
+	const title = (over: Partial<AuditNode> = {}) =>
+		node({
+			index: 4,
+			path: "h1>button>div>div",
+			ancestors: [3],
+			ownText: TITLE,
+			fontSize: 18,
+			rect: { x: 40, y: 80, w: 262, h: 46, right: 302, bottom: 126 },
+			overflowX: "hidden",
+			overflowY: "clip",
+			lineClamp: "2",
+			scrollWidth: 262,
+			clientWidth: 262,
+			scrollHeight: 69,
+			clientHeight: 46,
+			...over,
+		});
+	const verdicts = (nodes: AuditNode[]) =>
+		run("U-07", state({ nodes })).map((r) => r.verdict);
+
+	it("records the measured S8 shape as an EXCEPTION naming the control", () => {
+		const rows = run("U-07", state({ nodes: [control(), title()] }));
+		expect(rows.map((r) => r.verdict)).toEqual(["EXCEPTION"]);
+		expect(rows[0]?.measured).toBe("2-line clamp (69px in 46px)");
+		expect(rows[0]?.detail).toContain("h1>button");
+	});
+
+	it("still FAILs the same box with no clamp (a fixed-height clip)", () => {
+		expect(verdicts([control(), title({ lineClamp: "none" })])).toEqual([
+			"FAIL",
+		]);
+		expect(verdicts([control(), title({ lineClamp: undefined })])).toEqual([
+			"FAIL",
+		]);
+	});
+
+	it("still FAILs when no control's accessible name carries the full value", () => {
+		expect(
+			verdicts([control({ accessibleName: "Session health" }), title()]),
+		).toEqual(["FAIL"]);
+		// A name that carries only the visible head is not the full value.
+		expect(
+			verdicts([
+				control({ accessibleName: "Refactor the payment reconciliation" }),
+				title(),
+			]),
+		).toEqual(["FAIL"]);
+		// A clamped paragraph: the ancestor exists but is not a control.
+		expect(verdicts([control({ interactive: false }), title()])).toEqual([
+			"FAIL",
+		]);
+		expect(verdicts([title({ ancestors: [] })])).toEqual(["FAIL"]);
+	});
+
+	it("still FAILs a clamped box taller than its clamped lines", () => {
+		expect(
+			verdicts([control(), title({ clientHeight: 80, scrollHeight: 120 })]),
+		).toEqual(["FAIL"]);
+	});
+
+	it("still FAILs a clamped box that also loses text sideways", () => {
+		expect(verdicts([control(), title({ scrollWidth: 300 })])).toEqual([
+			"FAIL",
+		]);
+	});
+
+	it("does not treat a one-line clamp as this idiom (that is the nowrap branch)", () => {
+		expect(
+			verdicts([control(), title({ lineClamp: "1", clientHeight: 23 })]),
+		).toEqual(["FAIL"]);
+	});
+
+	it("U-04 follows: the 200 % frame is clean when the clamp is the verified one", () => {
+		const large = { scale: "200", textScale: "200" } as Partial<AuditState>;
+		const big = { fontSize: 36, scrollHeight: 230, clientHeight: 92 };
+		expect(
+			run("U-04", state({ ...large, nodes: [control(), title(big)] })).map(
+				(r) => r.verdict,
+			),
+		).toEqual(["PASS"]);
+		expect(
+			run(
+				"U-04",
+				state({
+					...large,
+					nodes: [control({ accessibleName: "Session health" }), title(big)],
+				}),
+			).map((r) => r.verdict),
+		).toEqual(["FAIL"]);
+	});
+});
+
 describe("U-06 — an overrunning run inside a single-line ellipsis clip", () => {
 	/** The find sheet's measured shape: a matched inline run keeps its full
 	 *  layout box (330 on a 320 viewport) while its ancestor's `text-overflow:

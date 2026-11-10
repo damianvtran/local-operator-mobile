@@ -35,6 +35,10 @@
 		"role": "status",
 		"note": "Shown in the tag filter when no tag exists. Two sentences. 'The Librarian' is the name of a background helper that labels assets automatically; keep it a proper noun and do not imply the user must create tags."
 	},
+	"mobile.library.browse.origin": {
+		"role": "meta",
+		"note": "Label above the choices in the Library Filters sheet that filter by where an asset came from: All, Created (the agent made it) or Mentioned (it was referenced in a conversation). A noun, no final full stop; not a data source or a citation."
+	},
 	"mobile.library.browse.refresh": {
 		"role": "button",
 		"note": "Accessible label of an icon-only button that reloads the list from the computer. Not visible text. Imperative, no final full stop."
