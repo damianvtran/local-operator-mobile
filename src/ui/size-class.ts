@@ -770,17 +770,35 @@ export const heldComposerLimit = (
  * Main never showed it only because it kept reading the stale pre-resize box
  * (the U1 defect `heldComposerLimit` removed), so it never needed the re-read.
  *
- * `before` is the pending card's y and `after` the height of the band between
- * the transcript and the composer (`RecoveryFacts`): everything in the column
- * that can change height under the composer without the composer's own size
- * changing. Discrete changes above it (find bar, panels, sheet) are the rest
- * of the key and stay with the caller.
+ * The band is the mover the code shows, not a proven sole cause (its lags were
+ * solved from QA's numbers, not observed), so the key carries every height the
+ * screen measures above the composer (code #211 round 4 m1):
+ *
+ *  - `column`: the session column's height. The header and the tray sit OVER
+ *    the column, so a header that stacks to two rows at 200 % text shows up
+ *    here as a shorter column.
+ *  - `regions`: the summed row heights of the secondary region (the inline
+ *    panels and, in short landscape, the strip and working line).
+ *  - `before`: the pending card's y.
+ *  - `after`: the band between the transcript and the composer.
+ *
+ * Discrete changes (find bar, open panel, sheet) are the rest of the key and
+ * stay with the caller. The composer's OWN measured height, which the screen
+ * holds beside these, must never be added: the key may only name heights
+ * measured above the composer.
  *
  * #206's invariant holds: this decides WHEN to measure, never what the
- * measurement says, and neither fact is sized by the composer's limit, so a
- * re-measure cannot change the key that asked for it.
+ * measurement says. `column`, `regions` and `after` are not sized by the
+ * composer's limit at all. `before` is, loosely: the card's y follows the flex
+ * transcript, which shrinks as the composer grows. That cannot loop either,
+ * because a re-measure it triggers changes the limit only if the top really
+ * moved, and the limit, the box and with them the card's y then settle
+ * together (the limit is a function of the top alone while capped).
  */
 export const composerChromeKey = (facts: {
+	column?: number;
 	before?: number;
 	after?: number;
-}): string => `${facts.before ?? ""}/${facts.after ?? ""}`;
+	regions?: number;
+}): string =>
+	`${facts.column ?? ""}/${facts.before ?? ""}/${facts.after ?? ""}/${facts.regions ?? ""}`;

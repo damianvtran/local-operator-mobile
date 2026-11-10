@@ -1532,11 +1532,14 @@ export default function Session() {
 						})}
 						onMeasure={setComposerBox}
 						/* The measured heights above the composer close the key
-						 *  (`composerChromeKey`): the activity band settles after a
-						 *  resize without the composer's own size changing, and a
-						 *  composer that is only pushed must still re-read its top
-						 *  (QA #211 round 3 Q5). */
-						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}|${composerChromeKey(recoveryFacts)}`}
+						 *  (`composerChromeKey`): the activity band, a header that
+						 *  stacks (seen as the column's height) or a panel row can
+						 *  settle after a resize without the composer's own size
+						 *  changing, and a composer that is only pushed must still
+						 *  re-read its top (QA #211 round 3 Q5, code round 4 m1).
+						 *  Named field by field so `recoveryFacts.composer`, the
+						 *  composer's own height, can never ride along. */
+						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}|${composerChromeKey({ column: recoveryFacts.column, before: recoveryFacts.before, after: recoveryFacts.after, regions: regionContent })}`}
 						compact={
 							compact
 								? {

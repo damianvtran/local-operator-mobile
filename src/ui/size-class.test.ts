@@ -1105,8 +1105,103 @@ describe("the composer's bound survives chrome that settles after it measured (Q
 			expect(frame(TALL, 1011, 201, 48)).toEqual(first);
 	});
 
+	/* Code #211 round 4 m1: the band is not the only thing that can land late.
+	 *  The same loop, with the composer's floor (`above`) moved by something the
+	 *  key did not see: the header, which sits over the column and so shows up
+	 *  as the COLUMN's height, and the secondary region's rows. `late` frames
+	 *  in, the facts take their second value; the composer has measured and
+	 *  bound by then. */
+	const pushed = (
+		viewport: Viewport,
+		natural: number,
+		states: readonly [
+			{ above: number; column: number; regions: number },
+			{ above: number; column: number; regions: number },
+		],
+		late: number,
+	) => {
+		let held: ComposerBox | null = null;
+		let seen: string | null = null;
+		const bottoms: number[] = [];
+		for (let step = 0; step < 12; step += 1) {
+			const now = states[step >= late ? 1 : 0];
+			const limit = heldComposerLimit(held, viewport);
+			const height =
+				limit === null
+					? natural
+					: Math.min(natural, composerHostBound(limit, GAP, floor));
+			const top = Math.max(now.above, viewport.height - GAP - height);
+			const trigger = [
+				height,
+				limit,
+				composerChromeKey({ column: now.column, regions: now.regions }),
+			].join("|");
+			if (trigger !== seen) {
+				seen = trigger;
+				held = {
+					top,
+					height,
+					capped: composerAtHostCap(height, limit, GAP, floor),
+					viewportWidth: viewport.width,
+					viewportHeight: viewport.height,
+				};
+			}
+			bottoms.push(top + height);
+		}
+		return bottoms;
+	};
+
+	it("a header that goes from one row to two after the composer bound re-bounds it", () => {
+		/* 320x568 / 200 %: the header measured 64 on one row and 125 stacked
+		 *  (the frame audit's figures for this cell), so the column under it
+		 *  goes 504 -> 443 and the composer's floor 236 -> 297. */
+		const bottoms = pushed(
+			SMALL,
+			NATURAL,
+			[
+				{ above: 236, column: 504, regions: 0 },
+				{ above: 297, column: 443, regions: 0 },
+			],
+			3,
+		);
+		/* Bound against the early top first (limit 332, box 324, bottom 560). */
+		expect(bottoms.slice(1, 3)).toEqual([560, 560]);
+		/* One frame pushed (621) is the measurement's own latency; then it
+		 *  holds one answer inside the window. Unkeyed, it stayed at 621. */
+		expect(bottoms.slice(4)).toEqual(Array(8).fill(560));
+	});
+
+	it("an inline panel that grows a row after the composer bound re-bounds it", () => {
+		const bottoms = pushed(
+			WIDE,
+			500,
+			[
+				{ above: 300, column: 656, regions: 120 },
+				{ above: 348, column: 656, regions: 168 },
+			],
+			3,
+		);
+		expect(bottoms.slice(1, 3)).toEqual([712, 712]);
+		expect(bottoms.slice(4)).toEqual(Array(8).fill(712));
+	});
+
 	it("keys on the measured heights above the composer, and only on them", () => {
 		expect(composerChromeKey({})).toBe(composerChromeKey({}));
+		expect(composerChromeKey({ column: 504 })).not.toBe(
+			composerChromeKey({ column: 443 }),
+		);
+		expect(composerChromeKey({ regions: 120 })).not.toBe(
+			composerChromeKey({ regions: 168 }),
+		);
+		expect(composerChromeKey({ column: 48 })).not.toBe(
+			composerChromeKey({ regions: 48 }),
+		);
+		/* The composer's own measured height is a `RecoveryFacts` field too, and
+		 *  must never reach the key: that would be the output asking for its own
+		 *  re-measure. */
+		expect(
+			composerChromeKey({ after: 48, composer: 263 } as { after: number }),
+		).toBe(composerChromeKey({ after: 48 }));
 		expect(composerChromeKey({ after: 48 })).not.toBe(
 			composerChromeKey({ after: 104 }),
 		);
@@ -1124,7 +1219,7 @@ describe("the composer's bound survives chrome that settles after it measured (Q
 			"utf8",
 		).replace(/\s+/g, " ");
 		expect(screen).toMatch(
-			/measureKey=\{`[^`]*\$\{composerChromeKey\(recoveryFacts\)\}`\}/,
+			/measureKey=\{`[^`]*\$\{composerChromeKey\(\{ column: recoveryFacts\.column, before: recoveryFacts\.before, after: recoveryFacts\.after, regions: regionContent \}\)\}`\}/,
 		);
 	});
 });

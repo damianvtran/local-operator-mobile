@@ -630,7 +630,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Re-pinned with --print over the staged tree for PR B's round-1
 	// remediation (the session screen memoises the counts element and derives
 	// one activity-line flag). Source admission only.
-	app: "c9f7aa600339bf4f42bb296af954de63edfe472c95ddc88660f933a105ed0aab",
+	app: "190f30526deec95cff857a338cde05d8cd9f106fcccbb9ef3f7a81e84987bbee",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1265,7 +1265,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #210's header/drawer/sheet-exit polish and this PR's composer work, so it
 	// has neither parent's digest; re-pinned with --print over the staged merged
 	// tree. Source admission only, no rendered or native proof refreshed.
-	src: "b8c2b6ecc1555ae6684dca8c0bab5ad63703e0d4b1b704344b586a9a0f4a8261",
+	src: "84ebdd33e7069fc1ef89965af0e8cca0d0e5412b40fe70dae86543e1c78e91b9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
