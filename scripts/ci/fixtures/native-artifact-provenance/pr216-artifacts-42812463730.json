@@ -1,0 +1,19 @@
+{
+	"artifacts": [
+		{
+			"digest": "sha256:ef7d9ddaa64329142c15fa04c2ebb8e30f48d717c52d62e8707fce113dd96975",
+			"expired": false,
+			"id": 13765198900,
+			"name": "ios-simulator",
+			"size_in_bytes": 36339838,
+			"workflow_run": {
+				"head_branch": "fix/keyboard-composer-bound",
+				"head_repository_id": 1396732902,
+				"head_sha": "d5886f8fc4448b10ac16f677d39d81077130ef0d",
+				"id": 42812463730,
+				"repository_id": 1396732902
+			}
+		}
+	],
+	"total_count": 1
+}
