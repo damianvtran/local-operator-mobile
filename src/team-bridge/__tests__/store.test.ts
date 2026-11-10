@@ -470,6 +470,38 @@ describe("account ownership and concurrent reconciliation", () => {
 		expect(store.getState().threads).toEqual({});
 	});
 
+	it("a failed FIRST unread read is unavailable, not loading forever (R1-2)", async () => {
+		const hub = fakeHub();
+		const { store, actions } = setup(hub);
+		await actions.checkStatus();
+		vi.mocked(hub.accountUnread).mockRejectedValueOnce(
+			new Error("synthetic offline"),
+		);
+		await actions.refreshUnread();
+		expect(store.getState()).toMatchObject({
+			gate: "open",
+			unreadKnown: false,
+			unreadFailed: true,
+			totalUnread: 0,
+		});
+		// A later success clears it; a failure after that keeps the known count.
+		await actions.refreshUnread();
+		expect(store.getState()).toMatchObject({
+			unreadKnown: true,
+			unreadFailed: false,
+			totalUnread: 5,
+		});
+		vi.mocked(hub.accountUnread).mockRejectedValueOnce(
+			new Error("synthetic offline"),
+		);
+		await actions.refreshUnread();
+		expect(store.getState()).toMatchObject({
+			unreadKnown: true,
+			unreadFailed: false,
+			totalUnread: 5,
+		});
+	});
+
 	it("a signed-out status clears identity, selected org and account total", async () => {
 		const hub = fakeHub();
 		const { store, actions } = setup(hub);
@@ -485,6 +517,7 @@ describe("account ownership and concurrent reconciliation", () => {
 			selectedTenantId: null,
 			totalUnread: 0,
 			unreadKnown: false,
+			unreadFailed: false,
 			orgs: {},
 			threads: {},
 		});

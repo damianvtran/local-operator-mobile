@@ -88,6 +88,15 @@ export interface TeamBridgeState {
 	 */
 	unreadKnown: boolean;
 	/**
+	 * The FIRST account-unread read failed and none has succeeded since. Without
+	 * it a failed first read left `unreadKnown` false forever, and the drawer's
+	 * Bridge button kept announcing "loading" for a read that was never coming
+	 * (PR #212 review R1-2 / QA Q1-2). The badge reads this as "unavailable" —
+	 * still never a zero. Cleared by the next successful read; once a count is
+	 * known a later failure keeps that count, so this stays false.
+	 */
+	unreadFailed: boolean;
+	/**
 	 * What the composer may attach, from `status.attachments`. `null` until a
 	 * status read says otherwise, and whenever the hub has no attachment store:
 	 * no attach affordance is offered (`attachmentLimits`).
@@ -142,6 +151,7 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 	selectedTenantId: null,
 	totalUnread: 0,
 	unreadKnown: false,
+	unreadFailed: false,
 	attachments: null,
 	orgs: {},
 	threads: {},
@@ -519,6 +529,7 @@ export function createTeamBridgeStore(deps: {
 					store.setState((s) => ({
 						totalUnread: answer.total,
 						unreadKnown: true,
+						unreadFailed: false,
 						organizations: s.organizations.map((o) => ({
 							...o,
 							unread: byTenant.get(o.tenantId) ?? o.unread,
@@ -526,8 +537,14 @@ export function createTeamBridgeStore(deps: {
 					}));
 				} catch (error) {
 					if (!owned()) return;
-					gateFailure(error);
-					/* The badge keeps its last value; the list's own read reports failures. */
+					// A gate failure (sign-in, plan) resets or re-gates the store, and
+					// the gate then speaks for the badge.
+					if (gateFailure(error) || !owned()) return;
+					/* The badge keeps its last value; the list's own read reports
+					 * failures. With no last value there is nothing to keep: say the
+					 * count is unavailable instead of loading forever. */
+					if (!store.getState().unreadKnown)
+						store.setState({ unreadFailed: true });
 				}
 			});
 		},

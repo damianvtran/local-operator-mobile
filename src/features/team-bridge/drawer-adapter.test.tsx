@@ -15,10 +15,17 @@ import { CONTROL } from "@/ui/a11y";
  * before routing, and close returns focus through the shared controller.
  */
 const RAW_KEY_OR_PLACEHOLDER = /mobile\.team_bridge|\{/;
+const WHITESPACE = /\s+/;
 type BridgeSlice = Pick<
 	TeamBridgeState,
-	"gate" | "unreadKnown" | "totalUnread"
+	"gate" | "unreadKnown" | "unreadFailed" | "totalUnread"
 >;
+type ViewProps = {
+	className?: string;
+	style?: Record<string, number>;
+	pointerEvents?: string;
+	children?: ReactNode;
+};
 const host = vi.hoisted(() => ({
 	platform: "web",
 	log: [] as string[],
@@ -28,12 +35,16 @@ const host = vi.hoisted(() => ({
 	presses: new Map<string, () => void>(),
 	labels: new Map<string, string>(),
 	selected: new Map<string, boolean>(),
+	labelLines: new Map<string, number | undefined>(),
+	views: [] as ViewProps[],
+	texts: [] as string[],
 	badges: [] as string[],
 	directory: null as { onBeforeOpen?: () => void } | null,
 	bridge: {
 		state: {
 			gate: "checking",
 			unreadKnown: false,
+			unreadFailed: false,
 			totalUnread: 0,
 		} as BridgeSlice,
 		listeners: new Set<() => void>(),
@@ -48,7 +59,13 @@ vi.mock("expo-router", () => ({
 	useRouter: () => ({ navigate: host.navigate, push: host.push }),
 }));
 vi.mock("expo-web-browser", () => ({}));
-vi.mock("lucide-react-native", () => ({ Menu: () => null, X: () => null }));
+vi.mock("lucide-react-native", () => ({
+	Menu: () => null,
+	X: () => null,
+	Bot: () => null,
+	Clock: () => null,
+	MessageSquare: () => null,
+}));
 vi.mock("react-native", () => ({
 	Platform: {
 		get OS() {
@@ -56,8 +73,14 @@ vi.mock("react-native", () => ({
 		},
 	},
 	Keyboard: { dismiss: vi.fn() },
-	View: ({ children }: { children?: ReactNode }) => children ?? null,
-	Text: ({ children }: { children?: ReactNode }) => children ?? null,
+	View: (props: ViewProps) => {
+		host.views.push(props);
+		return props.children ?? null;
+	},
+	Text: ({ children }: { children?: ReactNode }) => {
+		if (typeof children === "string") host.texts.push(children);
+		return children ?? null;
+	},
 	Pressable: ({ children }: { children?: ReactNode }) => children ?? null,
 }));
 vi.mock("@/features/auth/connection-provider", () => ({
@@ -74,7 +97,13 @@ vi.mock("@/team-bridge/provider", () => ({
 				host.bridge.listeners.add(listener);
 				return () => host.bridge.listeners.delete(listener);
 			},
-			() => select(host.bridge.state),
+			// The profile sheet also reads who "self" is and the org's rows;
+			// none is the synthetic account's state here.
+			() =>
+				select({
+					...host.bridge.state,
+					...({ orgs: {}, selfAccountId: null } as object),
+				}),
 		),
 }));
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "black" }));
@@ -94,10 +123,12 @@ vi.mock("@/ui/components/button", () => ({
 	Button: (props: {
 		testID: string;
 		label: string;
+		labelLines?: number;
 		accessibilityLabel?: string;
 		selected?: boolean;
 		onPress: () => void;
 	}) => {
+		host.labelLines.set(props.testID, props.labelLines);
 		host.presses.set(props.testID, props.onPress);
 		host.labels.set(props.testID, props.accessibilityLabel ?? props.label);
 		host.selected.set(props.testID, !!props.selected);
@@ -110,6 +141,13 @@ vi.mock("@/ui/components/icon-button", () => ({
 		return null;
 	},
 }));
+/* The profile sheet's chrome only: `Sheet` renders its footer (where "Message"
+ * lives) while visible, and the card body is out of this suite's scope. */
+vi.mock("@/ui/components/sheet", () => ({
+	Sheet: (props: { visible: boolean; footer?: ReactNode }) =>
+		props.visible ? (props.footer ?? null) : null,
+}));
+vi.mock("./profile-details", () => ({ ProfileDetails: () => null }));
 vi.mock("./list-screen", () => ({
 	BridgeDirectory: (props: { onBeforeOpen?: () => void }) => {
 		host.directory = props;
@@ -133,6 +171,8 @@ const { WorkspaceDrawerProvider, useWorkspaceDrawer } = await import(
 );
 const { bridgeDrawerBadge, TeamBridgeDrawerPane, useTeamBridgeDrawerAdapter } =
 	await import("./drawer-adapter");
+const { ProfileSheet } = await import("./profile-card");
+const { directoryMemberSchema } = await import("@/team-bridge/contract");
 
 let controller: ReturnType<typeof useWorkspaceDrawer>;
 function Chat() {
@@ -166,10 +206,18 @@ beforeEach(() => {
 	host.presses.clear();
 	host.labels.clear();
 	host.selected.clear();
+	host.labelLines.clear();
+	host.views = [];
+	host.texts = [];
 	host.badges = [];
 	host.directory = null;
 	host.drawer = null;
-	host.bridge.state = { gate: "checking", unreadKnown: false, totalUnread: 0 };
+	host.bridge.state = {
+		gate: "checking",
+		unreadKnown: false,
+		unreadFailed: false,
+		totalUnread: 0,
+	};
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
 });
@@ -182,17 +230,54 @@ describe("bridgeDrawerBadge: unknown is not zero", () => {
 	const loading = t("mobile.team_bridge.navigation.entry_loading");
 	const unavailable = t("mobile.team_bridge.navigation.entry_unavailable");
 	it.each([
-		[{ gate: "checking", unreadKnown: false, totalUnread: 0 }, "loading"],
-		// Admitted, but the account-unread read has not landed: still unknown.
-		[{ gate: "open", unreadKnown: false, totalUnread: 0 }, "loading"],
-		[{ gate: "signed_out", unreadKnown: false, totalUnread: 0 }, "unavailable"],
-		[{ gate: "unavailable", unreadKnown: true, totalUnread: 3 }, "unavailable"],
 		[
-			{ gate: "plan_required", unreadKnown: false, totalUnread: 0 },
+			{
+				gate: "checking",
+				unreadKnown: false,
+				unreadFailed: false,
+				totalUnread: 0,
+			},
+			"loading",
+		],
+		// Admitted, but the account-unread read has not landed: still unknown.
+		[
+			{ gate: "open", unreadKnown: false, unreadFailed: false, totalUnread: 0 },
+			"loading",
+		],
+		[
+			{
+				gate: "signed_out",
+				unreadKnown: false,
+				unreadFailed: false,
+				totalUnread: 0,
+			},
 			"unavailable",
 		],
 		[
-			{ gate: "update_required", unreadKnown: false, totalUnread: 0 },
+			{
+				gate: "unavailable",
+				unreadKnown: true,
+				unreadFailed: false,
+				totalUnread: 3,
+			},
+			"unavailable",
+		],
+		[
+			{
+				gate: "plan_required",
+				unreadKnown: false,
+				unreadFailed: false,
+				totalUnread: 0,
+			},
+			"unavailable",
+		],
+		[
+			{
+				gate: "update_required",
+				unreadKnown: false,
+				unreadFailed: false,
+				totalUnread: 0,
+			},
 			"unavailable",
 		],
 	] as const)("%o is %s with no count", (input, state) => {
@@ -204,10 +289,20 @@ describe("bridgeDrawerBadge: unknown is not zero", () => {
 	});
 	it("a known count is ready, zero included, with the catalogue's plural label", () => {
 		expect(
-			bridgeDrawerBadge({ gate: "open", unreadKnown: true, totalUnread: 0 }),
+			bridgeDrawerBadge({
+				gate: "open",
+				unreadKnown: true,
+				unreadFailed: false,
+				totalUnread: 0,
+			}),
 		).toEqual({ count: 0, state: "ready", a11yLabel: "Team Bridge" });
 		expect(
-			bridgeDrawerBadge({ gate: "open", unreadKnown: true, totalUnread: 4 }),
+			bridgeDrawerBadge({
+				gate: "open",
+				unreadKnown: true,
+				unreadFailed: false,
+				totalUnread: 4,
+			}),
 		).toEqual({
 			count: 4,
 			state: "ready",
@@ -299,4 +394,193 @@ describe("the Bridge pane before admission", () => {
 			expect(host.log).toEqual(["dismiss", "/team-bridge"]);
 		},
 	);
+});
+
+describe("a failed first unread read (R1-2 / Q1-2)", () => {
+	it("is unavailable, never loading forever and never a zero", () => {
+		expect(
+			bridgeDrawerBadge({
+				gate: "open",
+				unreadKnown: false,
+				unreadFailed: true,
+				totalUnread: 0,
+			}),
+		).toEqual({
+			count: null,
+			state: "unavailable",
+			a11yLabel: t("mobile.team_bridge.navigation.entry_unavailable"),
+		});
+	});
+	it("the live drawer button moves off loading, draws no badge, and recovers on a later read", async () => {
+		setBridge({ gate: "open" });
+		await mountDrawer();
+		expect(host.labels.get(CONTROL.workspaceDrawerTeamBridge)).toBe(
+			t("mobile.team_bridge.navigation.entry_loading"),
+		);
+		host.badges = [];
+		await act(async () => setBridge({ unreadFailed: true }));
+		expect(host.labels.get(CONTROL.workspaceDrawerTeamBridge)).toBe(
+			t("mobile.team_bridge.navigation.entry_unavailable"),
+		);
+		expect(host.badges).toEqual([]);
+		await act(async () =>
+			setBridge({ unreadKnown: true, unreadFailed: false, totalUnread: 3 }),
+		);
+		expect(host.labels.get(CONTROL.workspaceDrawerTeamBridge)).toBe(
+			"Team Bridge · 3 unread",
+		);
+		expect(host.badges.at(-1)).toBe("3");
+	});
+});
+
+describe("the adapter object is memoized (R1-4)", () => {
+	it("keeps its identity across unrelated re-renders and changes with the badge", async () => {
+		const seen: unknown[] = [];
+		function Probe({ tick }: { tick: number }) {
+			seen.push(useTeamBridgeDrawerAdapter());
+			return tick;
+		}
+		setBridge({ gate: "open", unreadKnown: true, totalUnread: 1 });
+		await act(async () => root.render(<Probe tick={1} />));
+		await act(async () => root.render(<Probe tick={2} />));
+		expect(seen).toHaveLength(2);
+		expect(seen[1]).toBe(seen[0]);
+		await act(async () => setBridge({ totalUnread: 2 }));
+		expect(seen.at(-1)).not.toBe(seen[0]);
+	});
+});
+
+/** Whether a JSX subtree (unrendered elements) holds the given `testID`. */
+const holds = (node: ReactNode, testID: string): boolean => {
+	if (Array.isArray(node)) return node.some((child) => holds(child, testID));
+	if (!node || typeof node !== "object" || !("props" in node)) return false;
+	const props = node.props as { testID?: string; children?: ReactNode };
+	return props.testID === testID || holds(props.children, testID);
+};
+
+describe("the mode row wraps at large text, never truncates (F2)", () => {
+	it("the row wraps, the Bridge group shrinks, the badge sits on the button's corner, and the label is never one-line clamped", async () => {
+		setBridge({ gate: "open", unreadKnown: true, totalUnread: 4 });
+		await mountDrawer();
+		const containing = host.views.filter((v) =>
+			holds(v.children, CONTROL.workspaceDrawerTeamBridge),
+		);
+		// Outermost first: the mode row, then the Bridge button's own group.
+		const [row, group] = containing.slice(-2);
+		const classes = (v?: ViewProps) => (v?.className ?? "").split(WHITESPACE);
+		expect(classes(row)).toEqual(
+			expect.arrayContaining(["flex-row", "flex-wrap"]),
+		);
+		expect(holds(row?.children, CONTROL.workspaceDrawerAgents)).toBe(true);
+		expect(classes(group)).toEqual(
+			expect.arrayContaining(["min-w-0", "shrink"]),
+		);
+		// Neither label may be clamped: the product name wraps, not "Team B…".
+		expect(host.labelLines.has(CONTROL.workspaceDrawerTeamBridge)).toBe(true);
+		expect(host.labelLines.get(CONTROL.workspaceDrawerTeamBridge)).toBe(
+			undefined,
+		);
+		expect(host.labelLines.get(CONTROL.workspaceDrawerAgents)).toBe(undefined);
+		// The badge overlaps the button (inside the group, absolutely placed) and
+		// passes taps through to it (design D2).
+		const badge = host.views.find(
+			(v) => v.pointerEvents === "none" && classes(v).includes("absolute"),
+		);
+		expect(badge).toBeDefined();
+		expect(
+			group && holds(group.children, CONTROL.workspaceDrawerTeamBridge),
+		).toBe(true);
+		expect(badge?.style).toMatchObject({ end: expect.any(Number) });
+		expect(host.badges.at(-1)).toBe("4");
+	});
+});
+
+describe("the Bridge pane's close row and gate help (D3, U2/U3)", () => {
+	it("the close row carries the Agents pane's vertical padding", async () => {
+		await act(async () =>
+			root.render(
+				<TeamBridgeDrawerPane onNavigate={vi.fn()} onClose={vi.fn()} />,
+			),
+		);
+		// Innermost View holding the ✕: the close row itself, not the pane.
+		const closeRow = host.views
+			.filter((v) => holds(v.children, CONTROL.sidebarClose))
+			.at(-1);
+		expect((closeRow?.className ?? "").split(WHITESPACE)).toContain("py-1");
+	});
+	it.each([
+		["signed_out", "mobile.team_bridge.gate.signed_out_help"],
+		["unavailable", "mobile.team_bridge.gate.unavailable_help"],
+		["update_required", "mobile.team_bridge.gate.update_help"],
+		["plan_required", "mobile.team_bridge.gate.plan_description"],
+		["checking", "mobile.team_bridge.gate.connecting"],
+	] as const)("%s says why under its heading", async (gate, help) => {
+		setBridge({ gate });
+		await act(async () =>
+			root.render(
+				<TeamBridgeDrawerPane onNavigate={vi.fn()} onClose={vi.fn()} />,
+			),
+		);
+		const line = t(help);
+		expect(line).not.toMatch(RAW_KEY_OR_PLACEHOLDER);
+		expect(host.texts).toContain(line);
+	});
+});
+
+describe("a profile card's Message from the drawer (R1-3)", () => {
+	const person = directoryMemberSchema.parse({
+		account_id: "acct_synthetic_ada",
+		display_label: "Ada",
+		role: "member",
+		bridge_enabled: true,
+		bridge_state: "active",
+	});
+	it("closes the card, then the drawer, then routes to the DM", async () => {
+		setBridge({ gate: "open", unreadKnown: true, totalUnread: 0 });
+		host.push.mockImplementation(() => host.log.push("route"));
+		const onCardClose = vi.fn(() => host.log.push("card"));
+		/* The real drawer provider plus the real ProfileSheet, wired the way
+		 * `BridgeDirectory` wires it: the drawer's own navigate is the card's
+		 * `onBeforeOpen`. */
+		function Card() {
+			const drawer = useWorkspaceDrawer();
+			controller = drawer;
+			return (
+				<ProfileSheet
+					subject={{ person, agent: false }}
+					tenantId="tnt_synthetic"
+					onClose={onCardClose}
+					onBeforeOpen={() => {
+						host.log.push("drawer");
+						// Exactly what the pane hands `BridgeDirectory`, which passes
+						// it on to its ProfileSheet (list-screen.tsx).
+						host.directory?.onBeforeOpen?.();
+					}}
+				/>
+			);
+		}
+		await act(async () =>
+			root.render(
+				<BridgeWorkspaceDrawer>
+					<Card />
+				</BridgeWorkspaceDrawer>,
+			),
+		);
+		await act(async () => controller.open());
+		await press(CONTROL.workspaceDrawerTeamBridge);
+		expect(host.drawer?.visible).toBe(true);
+		await press(CONTROL.teamBridgeProfileMessage);
+		expect(host.log).toEqual(["card", "drawer", "route"]);
+		expect(host.drawer?.visible).toBe(false);
+		expect(host.push).toHaveBeenCalledWith({
+			pathname: "/team-bridge/[tenantId]/[conversationId]",
+			params: {
+				kind: "person",
+				tenantId: "tnt_synthetic",
+				accountId: "acct_synthetic_ada",
+				label: "Ada",
+				conversationId: "new",
+			},
+		});
+	});
 });

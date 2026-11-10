@@ -38,6 +38,23 @@ export function gateTitle(
 					: t("mobile.team_bridge.gate.unavailable");
 }
 
+/** The one line under `gateTitle` explaining that state — the copy the full
+ * screen already shows below its heading, reused by the workspace drawer's
+ * Bridge pane so the pane is not a bare heading plus a button (UX U2/U3). */
+export function gateHelp(
+	gate: Exclude<TeamBridgeState["gate"], "open">,
+): string {
+	return gate === "checking"
+		? t("mobile.team_bridge.gate.connecting")
+		: gate === "signed_out"
+			? t("mobile.team_bridge.gate.signed_out_help")
+			: gate === "update_required"
+				? t("mobile.team_bridge.gate.update_help")
+				: gate === "plan_required"
+					? t("mobile.team_bridge.gate.plan_description")
+					: t("mobile.team_bridge.gate.unavailable_help");
+}
+
 /** Admission wraps the entire surface: restricted accounts must not briefly see directory or composer chrome. */
 export function BridgeGate({ children }: { children: ReactNode }) {
 	const gate = useTeamBridgeState((s) => s.gate);

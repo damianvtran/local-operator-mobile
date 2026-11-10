@@ -1246,8 +1246,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
 	// Bridge drawer switch: the Team Bridge adapter for the workspace drawer's
-	// labelled mode switch; source identity only, no rendered or native proof.
-	src: "9c4b3f84a16a5bc3a3121dbf9e362f48cebf58a3c7af636b3fb93ee9b1bb8bb3",
+	// labelled mode switch; round-1 remediation (wrapping mode row, failed
+	// unread read, pane help line) re-derived with --print. Source identity
+	// only, no rendered or native proof.
+	src: "82b429e24b2cce48ad780bc066cc0806147a63375b2a55592d42e70a7c9ae308",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

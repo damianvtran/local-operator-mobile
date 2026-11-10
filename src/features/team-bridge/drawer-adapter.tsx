@@ -30,6 +30,7 @@
  */
 import { useRouter } from "expo-router";
 import { X } from "lucide-react-native";
+import { useMemo } from "react";
 import { Text, View } from "react-native";
 import { useLocaleFrame } from "@/features/auth/connection-provider";
 import type { WorkspaceDrawerBridgeAdapter } from "@/features/sessions/workspace-drawer.contract";
@@ -39,12 +40,12 @@ import type { TeamBridgeState } from "@/team-bridge/store";
 import { CONTROL, SURFACE } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { IconButton } from "@/ui/components/icon-button";
-import { gateTitle } from "./gate";
+import { gateHelp, gateTitle } from "./gate";
 import { BridgeDirectory } from "./list-screen";
 
 type BadgeInputs = Pick<
 	TeamBridgeState,
-	"gate" | "unreadKnown" | "totalUnread"
+	"gate" | "unreadKnown" | "unreadFailed" | "totalUnread"
 >;
 
 /** The drawer's Bridge badge from live hub state. Pure, so every state is
@@ -52,15 +53,18 @@ type BadgeInputs = Pick<
 export function bridgeDrawerBadge({
 	gate,
 	unreadKnown,
+	unreadFailed,
 	totalUnread,
 }: BadgeInputs): WorkspaceDrawerBridgeAdapter["bridgeBadge"] {
-	if (gate === "checking" || (gate === "open" && !unreadKnown))
+	if (gate === "checking" || (gate === "open" && !unreadKnown && !unreadFailed))
 		return {
 			count: null,
 			state: "loading",
 			a11yLabel: t("mobile.team_bridge.navigation.entry_loading"),
 		};
-	if (gate !== "open")
+	// A closed gate, or an open one whose first unread read failed: there is
+	// no count to show and none is coming until a retry lands (R1-2).
+	if (gate !== "open" || !unreadKnown)
 		return {
 			count: null,
 			state: "unavailable",
@@ -89,7 +93,9 @@ export function TeamBridgeDrawerPane({
 		<View className="min-h-0 flex-1" testID={SURFACE.teamBridgeDrawerPane}>
 			{/* The Agents pane carries its own visible close; this pane replaces it,
 			 *  so it keeps one too — the scrim is not reachable by every reader. */}
-			<View className="flex-row justify-end px-2">
+			{/* `py-1` matches the Agents pane's close row (conversations-pane.tsx),
+			 *  so the ✕ does not jump 4 pt when the mode switches (design D3). */}
+			<View className="flex-row justify-end px-2 py-1">
 				<IconButton
 					accessibilityLabel={t("mobile.chrome.close_conversations")}
 					onPress={onClose}
@@ -105,6 +111,11 @@ export function TeamBridgeDrawerPane({
 				 * never a relay requirement. */
 				<View className="gap-4 px-4 py-6">
 					<Text className="text-body text-ink-muted">{gateTitle(gate)}</Text>
+					{/* The full screen's own explanation of this state, so the pane
+					 *  says why before offering the way out — a signed-out heading
+					 *  alone read as a mismatch with "Open" (UX U2/U3). Existing
+					 *  copy, shared with `BridgeGate`. */}
+					<Text className="text-body text-ink-muted">{gateHelp(gate)}</Text>
 					<Button
 						label={t("mobile.team_bridge.navigation.open_hub")}
 						variant="outline"
@@ -124,14 +135,26 @@ export function TeamBridgeDrawerPane({
 export function useTeamBridgeDrawerAdapter(): WorkspaceDrawerBridgeAdapter {
 	const gate = useTeamBridgeState((s) => s.gate);
 	const unreadKnown = useTeamBridgeState((s) => s.unreadKnown);
+	const unreadFailed = useTeamBridgeState((s) => s.unreadFailed);
 	const totalUnread = useTeamBridgeState((s) => s.totalUnread);
-	// Subscribed for its re-render only: the badge label is catalogue copy, so
-	// a language change must recompute it.
-	useLocaleFrame();
-	return {
-		bridgePane,
-		bridgeBadge: bridgeDrawerBadge({ gate, unreadKnown, totalUnread }),
-	};
+	// The badge label is catalogue copy, so a language change must recompute
+	// it: the locale is a memo dependency for that reason alone.
+	const locale = useLocaleFrame();
+	// Memoized so the provider's `bridgeAdapter` prop keeps its identity across
+	// unrelated root re-renders; it changes only when the badge does (R1-4).
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `locale` re-derives the translated label.
+	return useMemo(
+		() => ({
+			bridgePane,
+			bridgeBadge: bridgeDrawerBadge({
+				gate,
+				unreadKnown,
+				unreadFailed,
+				totalUnread,
+			}),
+		}),
+		[gate, unreadKnown, unreadFailed, totalUnread, locale],
+	);
 }
 
 /** Module-level, so the pane's element type never changes as the badge does:
