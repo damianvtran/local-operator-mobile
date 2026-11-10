@@ -122,7 +122,10 @@ vi.mock("react-native-reanimated", async () => {
 		useAnimatedStyle: (fn: () => unknown) => fn(),
 	};
 });
-vi.mock("@/ui/components", () => ({ useReducedMotion: () => false }));
+vi.mock("@/ui/components", () => ({
+	useReducedMotion: () => false,
+	useTextScale: () => ({ effectiveScale: 1 }),
+}));
 vi.mock("@/ui/direction", () => ({ TEXT_END_CLASS: "text-right" }));
 vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 vi.mock("@/lib/format", async (importOriginal) => {
@@ -136,8 +139,13 @@ vi.mock("@/lib/format", async (importOriginal) => {
 	};
 });
 
-const { PinnedWorkingLine, countsRowClass, heldLine, usePhaseElapsed } =
-	await import("@/features/session/components/working-line");
+const {
+	MEASURED_SLOT_CHILD,
+	PinnedWorkingLine,
+	countsRowClass,
+	heldLine,
+	usePhaseElapsed,
+} = await import("@/features/session/components/working-line");
 const { STOPPING_BOUND_MS, resetTurnStopForTests, stopTurn, useTurnStopping } =
 	await import("@/features/session/turn-stop");
 const { CONTROL } = await import("@/ui/a11y");
@@ -716,5 +724,78 @@ describe("the counts outliving a turn (review round 1, m2 / m3)", () => {
 		expect(source).toContain("<View className={countsRowClass(true)}>");
 		expect(source).toContain("className={countsRowClass(trailingStacked)}");
 		expect(source.match(/justify-end/g)).toHaveLength(1);
+	});
+});
+
+/**
+ * Operator report, TestFlight build 753: the pinned line showed its clock and
+ * Stop but never the mark or the status text. The slot's height is
+ * `rowHeight * progress`, `rowHeight` is the measured wrapper's `onLayout`, and
+ * on native Yoga lays an in-flow auto-height child of a zero-height parent out
+ * at most 0 tall — so the measurement reads 0 and the slot never opens. Units
+ * run without Yoga, so the guard is the source shape plus a model of that rule.
+ */
+describe("the slot's measured wrappers open on native (build 753)", () => {
+	const source = readFileSync(
+		new URL("./working-line.tsx", import.meta.url),
+		"utf8",
+	);
+
+	it("draws every wrapper that feeds the slot height out of flow", () => {
+		expect(MEASURED_SLOT_CHILD).toEqual({
+			position: "absolute",
+			top: 0,
+			start: 0,
+			end: 0,
+		});
+		const marker = "rowHeight.value = event.nativeEvent.layout.height";
+		const wrappers: string[] = [];
+		for (let at = source.indexOf(marker); at !== -1; ) {
+			wrappers.push(source.slice(source.lastIndexOf("<View", at), at));
+			at = source.indexOf(marker, at + marker.length);
+		}
+		/* The status wrapper and the counts-only wrapper. */
+		expect(wrappers).toHaveLength(2);
+		for (const wrapper of wrappers)
+			expect(wrapper).toContain("style={MEASURED_SLOT_CHILD}");
+	});
+
+	/** Yoga's rule for the slot's child, reduced to the fact that matters: an
+	 *  in-flow auto-height child is laid out no taller than its parent, an
+	 *  absolute one at its natural height. */
+	const layoutChild = (
+		style: { position?: string },
+		natural: number,
+		slot: number,
+	) => (style.position === "absolute" ? natural : Math.min(natural, slot));
+	/** The slot's height on each tween frame, fed back through `onLayout`. */
+	const openSlot = (style: { position?: string }, natural: number) => {
+		let row = 0;
+		return [0, 0.25, 0.5, 0.75, 1, 1].map((progress) => {
+			row = layoutChild(style, natural, row * progress);
+			return row * progress;
+		});
+	};
+
+	it("never opens an in-flow wrapper, and opens the absolute one", () => {
+		/* The old wrapper: the measurement is clamped by the slot it sizes. */
+		expect(openSlot({}, 44)).toEqual([0, 0, 0, 0, 0, 0]);
+		/* The shipped wrapper: the tween runs to the row's own height. */
+		expect(openSlot(MEASURED_SLOT_CHILD, 44)).toEqual([0, 11, 22, 33, 44, 44]);
+	});
+
+	it("floors the status label at one rendered line", () => {
+		act(() =>
+			root.render(
+				createElement(PinnedWorkingLine, {
+					line: { activity: "thinking", startedS: 3 },
+					onStop: async () => true,
+					stopping: false,
+					gapBelow: false,
+				}),
+			),
+		);
+		const label = probe.texts.find((text) => text.children === "thinking");
+		expect(label?.style).toEqual({ minHeight: 12 * 1.45 });
 	});
 });

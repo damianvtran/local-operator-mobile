@@ -17,9 +17,10 @@ import Animated, {
 import { t } from "@/i18n";
 import { elapsedLabel } from "@/lib/format";
 import { CONTROL } from "@/ui/a11y";
-import { useReducedMotion } from "@/ui/components";
+import { useReducedMotion, useTextScale } from "@/ui/components";
 import { TEXT_END_CLASS } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { lineBoxPt } from "@/ui/text-scale";
 
 /**
  * The working line: the ONE in-progress indicator on the screen
@@ -185,6 +186,7 @@ const WorkingLineImpl = ({
 	// moves without the reader asking it to, and reduced motion caps motion while
 	// keeping the state legible (the label and the clock carry the meaning).
 	const reduceMotion = useReducedMotion();
+	const { effectiveScale } = useTextScale();
 
 	useEffect(() => {
 		const spin = setInterval(
@@ -235,8 +237,13 @@ const WorkingLineImpl = ({
 					{/* Monospace and muted: the relay paints the activity as the
 					    terminal's working line does, and a tool intent reads as a
 					    machine status, not prose. */}
+					{/* Floored at one rendered line (build 753): a constrained
+					    parent once laid this label out 0 tall while the Stop kept
+					    its touch floor, so the status read as missing. A present
+					    label is never shorter than the line it draws. */}
 					<Text
 						className="min-w-0 flex-1 font-mono text-mono-sm text-ink-muted"
+						style={{ minHeight: lineBoxPt("mono-sm", effectiveScale) }}
 						numberOfLines={1}
 					>
 						{name}
@@ -427,6 +434,32 @@ export type PinnedWorkingLineProps = {
 const DOCK_GAP = 8;
 
 /**
+ * The style of EVERY measured wrapper inside the animated slot: out of flow,
+ * pinned to the slot's top edge and stretched across its width (the standard
+ * Reanimated accordion).
+ *
+ * WHY ABSOLUTE (operator report, TestFlight build 753: the clock and Stop showed
+ * but never the mark or the status text). The slot's height is
+ * `rowHeight * progress` and `rowHeight` comes from this wrapper's `onLayout`,
+ * so the slot starts at 0. On native, Yoga lays an IN-FLOW auto-height child of
+ * a zero-height parent out at most 0 tall and reports 0 to `onLayout` — the
+ * slot then opens to 0 × 1 = 0, a fixed point it never leaves. The in-flow
+ * Text leaves collapse with it (the mark and the label vanish), the Stop
+ * survives on its `minHeight`, and the clock is absolute, which is exactly the
+ * screenshot. Web CSS gives the in-flow child its natural height regardless,
+ * which is why every web frame passed. An absolute child is measured against
+ * no height constraint, so `onLayout` reports the row's real height and the
+ * slot's tween has something to open to.
+ */
+export const MEASURED_SLOT_CHILD = {
+	position: "absolute",
+	top: 0,
+	/* Logical edges (the physical-edge guard); both are 0, so RTL is the same box. */
+	start: 0,
+	end: 0,
+} as const;
+
+/**
  * The row that holds the counts when they are NOT beside the Stop: their own
  * line under a running status (stacked), and the idle slot with no turn alive.
  *
@@ -540,6 +573,7 @@ const PinnedWorkingLineImpl = ({
 			>
 				<View
 					className={countsRowClass(trailingStacked)}
+					style={MEASURED_SLOT_CHILD}
 					onLayout={(event) => {
 						rowHeight.value = event.nativeEvent.layout.height;
 					}}
@@ -556,6 +590,7 @@ const PinnedWorkingLineImpl = ({
 			testID={testID}
 		>
 			<View
+				style={MEASURED_SLOT_CHILD}
 				onLayout={(event) => {
 					rowHeight.value = event.nativeEvent.layout.height;
 				}}
