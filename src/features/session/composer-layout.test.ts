@@ -706,7 +706,7 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 	const code = stripComments(COMPOSER).replace(/\s+/g, " ");
 	const notice = code.slice(
 		code.indexOf("testID={SURFACE.composerFailureNotice}"),
-		code.indexOf("testID={SURFACE.composerDisabledReason}"),
+		code.indexOf("const extras = ("),
 	);
 
 	it("holds the retained sentence, the error and both actions in ONE block", () => {
@@ -739,11 +739,62 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 		expect(notice).toContain("onPress={onDismissError}");
 		/* Dismiss is offered for the ERROR line only: a retained instruction has
 		 *  no dismiss, so the notice cannot drop a retained UUID or a queue. */
-		expect(notice).toContain(
-			"{feedback.errorText !== null && onDismissError ? ( <NoticeAction",
+		const errorRow = notice.slice(
+			notice.indexOf("{feedback.errorText !== null ? ("),
 		);
+		expect(errorRow).toContain("{onDismissError ? ( <NoticeAction");
+		expect(errorRow).not.toContain("onPress={onRetry}");
+	});
+
+	/* UX #211 U2: with a retained instruction showing, "Dismiss" under both
+	 *  sentences removed only the grey error line and itself, so it read as
+	 *  "Dismiss did not work". Each action now lives on the line it acts on. */
+	it("puts Retry on the retained sentence and the dismissal on the error line", () => {
+		const retainedRow = notice.slice(
+			notice.indexOf("{feedback.retainedText !== null ? ("),
+			notice.indexOf("{feedback.errorText !== null ? ("),
+		);
+		expect(retainedRow).toContain("testID={SURFACE.composerRetained}");
+		expect(retainedRow).toContain("testID={CONTROL.composerRetry}");
+		/* The retained sentence keeps Retry ONLY: nothing on its row dismisses. */
+		expect(retainedRow).not.toContain("onDismissError");
+		expect(retainedRow.match(/<NoticeAction\b/g) ?? []).toHaveLength(1);
+		const errorRow = notice.slice(
+			notice.indexOf("{feedback.errorText !== null ? ("),
+		);
+		expect(errorRow).toContain("testID={SURFACE.composerError}");
+		expect(errorRow).toContain("testID={CONTROL.composerDismissError}");
+	});
+
+	it("names the dismissal for the error whenever a retained sentence is beside it", () => {
 		expect(notice).toContain(
-			"{feedback.retainedText !== null ? ( <NoticeAction",
+			'label={ feedback.retainedText !== null ? t("mobile.composer_input.dismiss_error") : t("mobile.composer_input.notice_dismiss") }',
+		);
+		/* The accessible name and the id are unchanged either way. */
+		expect(notice).toContain(
+			'accessibilityLabel={t("mobile.composer_input.dismiss_error")}',
+		);
+	});
+
+	/* UX #211 U4 / QA Q2: at 320x568 and 200 % the actions' own row was below
+	 *  the fold of the extras scroller. An action now shares its sentence's
+	 *  FIRST row, and that row is the one the budget keeps visible (U1). */
+	it("keeps each action on its sentence's first row, inside the guaranteed floor", () => {
+		expect(
+			notice.match(
+				/<View className="flex-row items-start gap-3" style=\{\{ minHeight: NOTICE_ROW_FLOOR \}\} >/g,
+			) ?? [],
+		).toHaveLength(2);
+		/* No separate actions row any more. */
+		expect(notice).not.toContain("flex-row flex-wrap items-center gap-x-4");
+		expect(code).toContain("const NOTICE_ROW_FLOOR = TOUCH_FLOOR;");
+		/* The notice is the first thing in the extras scroller... */
+		expect(code).toMatch(
+			/const extras = \( <> <ComposerStateMarkers controls=\{controls\} \/> \{\} \{failureNotice\}/,
+		);
+		/* ...and the budget is told to keep its first row whenever it is up. */
+		expect(code).toContain(
+			"feedback.retainedText !== null || feedback.errorText !== null ? NOTICE_ROW_FLOOR : 0, );",
 		);
 	});
 

@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
+	type ComposerBox,
 	compactChromeFor,
 	compactChromeShare,
 	composerAtHostCap,
@@ -12,6 +16,7 @@ import {
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
+	heldComposerLimit,
 	layoutFor,
 	pinnedRoutesPaneFloor,
 	regionOrder,
@@ -555,6 +560,21 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 		});
 	});
 
+	it("gives a failure notice its first row even when the budget has no room (UX #211 U1/U4)", () => {
+		// A 44 pt bound: the field keeps its floor and, strictly, the extras get 0.
+		expect(composerBudget(44, 0, 96, 44, 20).extras).toBe(0);
+		// With the notice's floor they get one touch-floor row, never the whole block.
+		expect(composerBudget(44, 0, 96, 44, 20, 0, 44)).toEqual({
+			extras: 44,
+			field: 44 - FIELD_BORDER_Y,
+		});
+		// Never more than the notice needs, and no effect when there is room.
+		expect(composerBudget(44, 0, 30, 44, 20, 0, 44).extras).toBe(30);
+		expect(composerBudget(175, 52, 40, 48, 8, 0, 44)).toEqual(
+			composerBudget(175, 52, 40, 48, 8),
+		);
+	});
+
 	it("reserves the dictation row so a recording take cannot push the composer past its share", () => {
 		// 175 pt share, 52 receipt, 8 pad, 49 + 8 dictation: only 58 pt left for the field
 		const budget = composerBudget(175, 52, 0, 48, 8, 57);
@@ -755,7 +775,13 @@ describe("sidebarWidthFor", () => {
 });
 
 describe("sameComposerBox (perf audit P15: a no-op measurement is not a new state)", () => {
-	const box = { top: 314, height: 254, capped: true };
+	const box = {
+		top: 314,
+		height: 254,
+		capped: true,
+		viewportWidth: 320,
+		viewportHeight: 568,
+	};
 
 	it("is true only when every field the limit reads is unchanged", () => {
 		expect(sameComposerBox(box, { ...box })).toBe(true);
@@ -765,6 +791,10 @@ describe("sameComposerBox (perf audit P15: a no-op measurement is not a new stat
 		/* `capped` alone must register: a capped box ends where a fitting one
 		 *  does, so it is the one field geometry cannot stand in for. */
 		expect(sameComposerBox(box, { ...box, capped: false })).toBe(false);
+		/* The window is part of the value: the same numbers in another window
+		 *  are a new measurement the host must take (UX #211 U1). */
+		expect(sameComposerBox(box, { ...box, viewportHeight: 500 })).toBe(false);
+		expect(sameComposerBox(box, { ...box, viewportWidth: 390 })).toBe(false);
 	});
 
 	it("leaves the cap's fixed point exactly where it was", () => {
@@ -783,5 +813,123 @@ describe("sameComposerBox (perf audit P15: a no-op measurement is not a new stat
 		publish({ ...box, capped: false });
 		expect(writes).toBe(2);
 		expect(held).toEqual({ ...box, capped: false });
+	});
+});
+
+describe("heldComposerLimit (UX #211 U1: a measurement does not survive a window resize)", () => {
+	const floor = TOUCH_TARGET.ios;
+	const GAP = 8;
+	/* The screen and the composer as they run: the screen holds the last box and
+	 *  asks for the limit in the CURRENT window; the composer paints
+	 *  min(natural, cap), bottom-anchored on its gap, and publishes that box
+	 *  tagged with the window it was measured in. `natural` grows by the notice
+	 *  when a send fails. Each call is one render + measure. */
+	const rig = () => {
+		let held: ComposerBox | null = null;
+		const pass = (
+			viewport: { width: number; height: number },
+			natural: number,
+		) => {
+			const limit = heldComposerLimit(held, viewport);
+			const height =
+				limit === null
+					? natural
+					: Math.min(natural, composerHostBound(limit, GAP, floor));
+			held = {
+				top: viewport.height - GAP - height,
+				height,
+				capped: composerAtHostCap(height, limit, GAP, floor),
+				viewportWidth: viewport.width,
+				viewportHeight: viewport.height,
+			};
+			return { limit, height };
+		};
+		return { pass };
+	};
+	const TALL = { width: 390, height: 844 };
+	const SMALL = { width: 320, height: 568 };
+	const SHORT = { width: 390, height: 500 };
+	const EMPTY = 122; // the empty card: field row + controls + padding
+	const NOTICE = 48; // one failure line with its action, plus the block margin
+
+	for (const [name, shrunk] of [
+		["390x844 -> 320x568", SMALL],
+		["390x844 -> 390x500 (height only)", SHORT],
+	] as const)
+		it(`shrink then fail keeps the notice's room (${name})`, () => {
+			const { pass } = rig();
+			expect(pass(TALL, EMPTY)).toEqual({ limit: null, height: EMPTY });
+			/* The shrink: the held box is the tall window's (top 714). It must
+			 *  not be read against the short window. */
+			expect(pass(shrunk, EMPTY)).toEqual({ limit: null, height: EMPTY });
+			/* The 503: the composer grows by the notice and still fits. */
+			for (let settle = 0; settle < 4; settle += 1)
+				expect(pass(shrunk, EMPTY + NOTICE)).toEqual({
+					limit: null,
+					height: EMPTY + NOTICE,
+				});
+			/* Grow back: unbound again, with the notice still whole. */
+			for (let settle = 0; settle < 3; settle += 1)
+				expect(pass(TALL, EMPTY + NOTICE)).toEqual({
+					limit: null,
+					height: EMPTY + NOTICE,
+				});
+		});
+
+	it("still binds, and settles, when the content really overflows the new window", () => {
+		/* A long draft at 200 % in the small window: the first pass in the new
+		 *  window is unbound (no measurement yet), then #206's loop takes over
+		 *  from a column top of 314 and holds one answer. */
+		const answers: (number | null)[] = [];
+		let held: ComposerBox | null = null;
+		for (let step = 0; step < 5; step += 1) {
+			const limit = heldComposerLimit(held, SMALL);
+			const height =
+				limit === null
+					? 425
+					: Math.min(425, composerHostBound(limit, GAP, floor));
+			held = {
+				top: height + 314 + GAP <= 568 ? 568 - GAP - height : 314,
+				height,
+				capped: composerAtHostCap(height, limit, GAP, floor),
+				viewportWidth: 320,
+				viewportHeight: 568,
+			};
+			answers.push(limit);
+		}
+		expect(answers).toEqual([null, 254, 254, 254, 254]);
+	});
+
+	it("reads a box only in the window it was measured in", () => {
+		const box: ComposerBox = {
+			top: 201,
+			height: 635,
+			capped: true,
+			viewportWidth: 390,
+			viewportHeight: 844,
+		};
+		expect(heldComposerLimit(box, TALL)).toBe(643);
+		expect(heldComposerLimit(box, SMALL)).toBe(null);
+		expect(heldComposerLimit(box, { width: 844, height: 844 })).toBe(null);
+		expect(heldComposerLimit(null, TALL)).toBe(null);
+	});
+
+	/* The pure rule is only as good as its wiring: the screen must tag what it
+	 *  holds with the CURRENT window, re-create the callback when the window
+	 *  changes (that identity change is what makes the composer measure again),
+	 *  and ask through `heldComposerLimit`, never `composerLimit` directly. */
+	it("is how the session screen holds and reads the box", () => {
+		const screen = readFileSync(
+			join(process.cwd(), "app/(app)/session/[id].tsx"),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(screen).toContain(
+			"const next: ComposerBox = { ...measured, viewportWidth, viewportHeight };",
+		);
+		expect(screen).toContain("[viewportWidth, viewportHeight], );");
+		expect(screen).toContain(
+			"limit={heldComposerLimit(composerBox, { width: viewportWidth, height: viewportHeight, })}",
+		);
+		expect(screen).not.toMatch(/[^d]composerLimit\(/i);
 	});
 });

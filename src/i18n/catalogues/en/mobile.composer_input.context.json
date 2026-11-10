@@ -41,7 +41,7 @@
 	},
 	"mobile.composer_input.dismiss_error": {
 		"role": "button",
-		"note": "Presentation-only error dismissal. Does not retry, delete or acknowledge delivery. No final full stop."
+		"note": "Presentation-only error dismissal. Does not retry, delete or acknowledge delivery. The accessible name of the dismissal, and also its VISIBLE text action when the error line sits under a retained-instruction sentence, where a bare Dismiss would read as dismissing that sentence. Keep it short; no final full stop."
 	},
 	"mobile.composer_input.dismiss_error_hint": {
 		"role": "button",
@@ -49,10 +49,10 @@
 	},
 	"mobile.composer_input.notice_retry": {
 		"role": "button",
-		"note": "Short text action inside the composer's failure notice, directly under the sentence saying an earlier instruction may not have been delivered. Sends that instruction again. One word where the language allows; no final full stop."
+		"note": "Short text action inside the composer's failure notice, trailing the sentence saying an earlier instruction may not have been delivered. Sends that instruction again. One word where the language allows; no final full stop."
 	},
 	"mobile.composer_input.notice_dismiss": {
 		"role": "button",
-		"note": "Short text action inside the composer's failure notice. Hides the error line only; it does not retry, delete or acknowledge anything. One word where the language allows; no final full stop."
+		"note": "Short text action trailing the error line of the composer's failure notice, shown when that error is the only sentence there. Hides the error line only; it does not retry, delete or acknowledge anything. One word where the language allows; no final full stop."
 	}
 }

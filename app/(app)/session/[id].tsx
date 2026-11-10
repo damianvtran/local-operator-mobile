@@ -122,8 +122,8 @@ import {
 	COMPACT_PENDING_SHARE,
 	type ComposerBox,
 	compactChromeShare,
-	composerLimit,
 	headerStacks,
+	heldComposerLimit,
 	type RegionKey,
 	regionOrder,
 	sameComposerBox,
@@ -618,12 +618,22 @@ export default function Session() {
 	 *  when all three numbers were the ones it already held. The guard is the
 	 *  comparison only: what is measured and when is the composer's and
 	 *  unchanged, so `composerLimit`'s input still never depends on its output. */
+	/* The box is tagged with the window it was measured in, and the callback is
+	 *  keyed on that window: a resize (rotation, the Android resizing keyboard, a
+	 *  browser window) makes the held box a measurement of a window that is gone,
+	 *  which `heldComposerLimit` ignores, and the new callback identity makes the
+	 *  composer measure again in this one (UX #211 U1: a stale `top` collapsed the
+	 *  composer to one control and a failed send then showed nothing). A late
+	 *  native `measureInWindow` answer from before the resize carries the old
+	 *  window in its closure and is discarded the same way. */
 	const setComposerBox = useCallback(
-		(next: ComposerBox) =>
+		(measured: { top: number; height: number; capped: boolean }) => {
+			const next: ComposerBox = { ...measured, viewportWidth, viewportHeight };
 			setComposerBoxState((previous) =>
 				sameComposerBox(previous, next) ? previous : next,
-			),
-		[],
+			);
+		},
+		[viewportWidth, viewportHeight],
 	);
 	const regionLayout = useRef<
 		Partial<Record<RegionKey, { y: number; h: number }>>
@@ -1599,12 +1609,10 @@ export default function Session() {
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
 						}
-						limit={composerLimit(
-							viewportHeight,
-							composerBox?.top ?? null,
-							composerBox?.height ?? null,
-							composerBox?.capped ?? false,
-						)}
+						limit={heldComposerLimit(composerBox, {
+							width: viewportWidth,
+							height: viewportHeight,
+						})}
 						onMeasure={setComposerBox}
 						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}`}
 						compact={

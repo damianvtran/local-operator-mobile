@@ -521,12 +521,24 @@ export const composerBudget = (
 	 *  the pinned `main` fragment, so it is reserved with the receipt line; without it a
 	 *  recording take pushed the composer past its share (reviewer m3). */
 	dictationReserve = 0,
+	/** The least the extras scroller is given while it holds something that must be
+	 *  SEEN: the failure notice, whose first line and action share one touch-floor
+	 *  row at the top of the extras. A budget too small for it used to answer 0 and
+	 *  the notice then existed with no pixels (UX #211 U1/U4: a failed send that
+	 *  showed nothing). The composer overspends a too-small budget by this much
+	 *  instead, the same choice `composerLimit`'s floor makes for the field: a
+	 *  bound may not delete the thing it bounds. 0 (the default) keeps the strict
+	 *  budget for extras that can wait a scroll, such as attachments. */
+	extrasFloor = 0,
 ): { field: number; extras: number } => {
 	const room = Math.max(
 		touchFloor,
 		maxHeight - receiptHeight - padding - dictationReserve,
 	);
-	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
+	const extras = Math.min(
+		extrasNatural,
+		Math.max(extrasFloor, room - touchFloor),
+	);
 	const fieldBox = Math.max(touchFloor, room - extras);
 	/* `field` is the CONTENT cap the Textarea receives (`maxHeightPx`), and the field
 	 *  paints a border box: its height is that cap plus `FIELD_BORDER_Y` (U-07's fix).
@@ -669,19 +681,30 @@ export const sessionStatusLayout = (
 	};
 };
 
-/** The composer's painted box as its host holds it: `composerLimit`'s inputs. */
-export type ComposerBox = { top: number; height: number; capped: boolean };
+/** The composer's painted box as its host holds it: `composerLimit`'s inputs,
+ * plus the WINDOW the box was measured in. `top` is a window coordinate, so it
+ * means nothing against any other window size (see `heldComposerLimit`). */
+export type ComposerBox = {
+	top: number;
+	height: number;
+	capped: boolean;
+	viewportWidth: number;
+	viewportHeight: number;
+};
 
 /**
  * Whether a published composer measurement is the one the host already holds.
  *
  * The composer publishes a fresh object on every layout pass, so identity says
- * nothing; the three fields are the whole value. The host uses this to keep its
+ * nothing; the fields are the whole value. The host uses this to keep its
  * previous state object when nothing moved, which is what stops a no-op
  * measurement re-rendering the session screen (perf audit P15). It compares and
  * nothing else: it must never round, clamp or merge, because `composerLimit`
  * reads `capped` and the exact `top`/`height` to decide whether the cap holds,
  * and a tolerance here would be a second, different rule about the same box.
+ * The window is part of the value: the same numbers measured in another window
+ * are a different fact, and treating them as "unchanged" would keep a box that
+ * `heldComposerLimit` has to throw away.
  */
 export const sameComposerBox = (
 	previous: ComposerBox | null,
@@ -690,4 +713,44 @@ export const sameComposerBox = (
 	previous !== null &&
 	previous.top === next.top &&
 	previous.height === next.height &&
-	previous.capped === next.capped;
+	previous.capped === next.capped &&
+	previous.viewportWidth === next.viewportWidth &&
+	previous.viewportHeight === next.viewportHeight;
+
+/**
+ * The host limit for the box the screen HOLDS, in the window it has NOW.
+ *
+ * The held box is a measurement from an earlier render. While the window keeps
+ * its size that is fine (`composerLimit`'s loop settles on it), but after a
+ * resize the box's `top` is a coordinate in a window that no longer exists.
+ * Shrinking 390x844 to 320x568 left the empty composer's top (about 714) below
+ * the new window bottom, so `composerLimit` read "overflowing" and answered its
+ * floor, one control (44); the composer painted that, reported `capped` (its
+ * content does want more than 44), and `capped` then HELD the collapsed size:
+ * limit = window - top = the collapsed box's own height + gap, a fixed point.
+ * A failed send in that state gave its notice an extras budget of zero (UX #211
+ * U1: the scroller measured 342x0, nothing visible, until the window grew back).
+ * The Android resizing keyboard and rotation are the same change.
+ *
+ * So a box from another window is no measurement at all: the answer is `null`
+ * ("unbound") until the composer re-measures in this one, exactly the first-
+ * paint state. That keeps #206's invariant — the reset is keyed on the window
+ * size alone, an input the limit never controls, so it cannot loop.
+ */
+export const heldComposerLimit = (
+	box: ComposerBox | null,
+	viewport: { width: number; height: number },
+): number | null => {
+	const live =
+		box !== null &&
+		box.viewportWidth === viewport.width &&
+		box.viewportHeight === viewport.height
+			? box
+			: null;
+	return composerLimit(
+		viewport.height,
+		live?.top ?? null,
+		live?.height ?? null,
+		live?.capped ?? false,
+	);
+};

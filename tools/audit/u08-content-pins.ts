@@ -250,6 +250,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 // hardened byte reads and exact-lock image-manipulator dependency. Identity only;
 // rendered and real-path evidence is recorded separately, not inferred from hashes.
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-09 for PR #211's UX round-1 remediation, with --print from
+	 * the staged tree. `app` moves: the session screen tags the composer box with
+	 * the window it was measured in (U1). `src` moves: `heldComposerLimit`, the
+	 * extras floor, and the failure notice's actions on their own lines (U2/U4).
+	 * Source admission only, NOT a rendered geometry proof. */
 	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
 	 * remediation: shared drawer navigation changes both render trees, including
 	 * the opt-in current-chat check, RN-web-safe aria-hidden and regression tests. This admits the
@@ -625,7 +630,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Re-pinned with --print over the staged tree for PR B's round-1
 	// remediation (the session screen memoises the counts element and derives
 	// one activity-line flag). Source admission only.
-	app: "6683caff469f241f87193cc8eee8e9b377e6493e1f457290b10242e3fd104afb",
+	app: "a242465bd7ba73e2732cc0eef0c06624effdae1c91244712fffdc20809ad64a1",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1251,7 +1256,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// remediation: the queued count stays on the card where the host has no
 	// activity line, the counts keep one edge and drop the held line, and the
 	// dead strip exports are removed. Source admission only.
-	src: "aac0d6aa333f872239b64e36e28a196bc5a729f53c826dc363bf922281929cc2",
+	src: "a94cc45b96ebeb658edd8c1a242a19e3cf20f9fd466eee99b16d7df5eb50f6bc",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

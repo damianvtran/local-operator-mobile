@@ -524,6 +524,15 @@ const stripChipSurface = (glass: boolean, chip: ReactElement) =>
 		chip
 	);
 
+/** The failure notice's row floor: one touch target, because each row holds a
+ * sentence AND its action, and the action's box is the taller of the two. Also
+ * the extras' minimum visible height while the notice is up (`composerBudget`). */
+const NOTICE_ROW_FLOOR = TOUCH_FLOOR;
+/** Centres the sentence's first 20 pt line (`text-body-sm`) in that floor, so the
+ * word of the trailing action and the first line of the sentence share a
+ * baseline row; a wrapped sentence grows downward from there. */
+const NOTICE_LINE_INSET = Math.max(0, (NOTICE_ROW_FLOOR - 20) / 2);
+
 /**
  * A text action inside the composer's failure notice (visual audit D6): the
  * word alone, no outline and no fill, because the notice it belongs to is one
@@ -1247,6 +1256,12 @@ export const Composer = ({
 					dictationShowing
 						? dictationRowBox(effectiveScale) + DICTATION_ROW_MARGIN_PX
 						: 0,
+					/* A failure notice may not be budgeted to nothing (UX #211 U1/U4):
+					 *  its first row — sentence and action — stays visible, and the
+					 *  rest scrolls beneath it. */
+					feedback.retainedText !== null || feedback.errorText !== null
+						? NOTICE_ROW_FLOOR
+						: 0,
 				);
 	const fieldMaxHeight = budget?.field;
 	const extrasMaxHeight = budget?.extras;
@@ -1306,6 +1321,119 @@ export const Composer = ({
 		publishBox();
 	}, [publishBox, measurementKey]);
 
+	/* ONE NOTICE for an uncertain delivery and for an error (visual audit D6; the
+	 *  operator: warnings inside the composer "look ugly"). It was two bordered red
+	 *  boxes, a full-width outlined button and a helper sentence restating the
+	 *  first box, stacked inside the card. Now a danger glyph and, per line, the
+	 *  sentence with its one text action trailing it: no border, no wash, no
+	 *  full-width button.
+	 *
+	 *  Each action sits on the line it acts on (UX #211 U2/U4). They used to share
+	 *  a row UNDER both sentences, which failed twice: at 320 pt / 200 % that row
+	 *  was below the fold of the extras scroller, so a failed send offered no
+	 *  reachable Retry; and with a retained instruction showing, "Dismiss" read as
+	 *  dismissing the red sentence, removed only the grey error line and itself,
+	 *  and so looked broken. Now the retained sentence carries Retry and nothing
+	 *  else, and the error line carries its own dismissal, which is NAMED for the
+	 *  error ("Dismiss error") whenever there is another sentence it could be
+	 *  mistaken for. Alone, the error is the only thing there and the one word
+	 *  is enough.
+	 *
+	 *  Behaviour is #206's and unchanged: Retry is the host's `onRetry`, and
+	 *  Dismiss is its `onDismissError`, which hides the ERROR line only — a
+	 *  retained instruction has no dismiss here at all, so neither action can
+	 *  drop a retained UUID, an uncertainty row or the queue, and a failure
+	 *  that recurs is a new `error` value the host hands back in.
+	 *
+	 *  When both are present the retained sentence leads (it is the one that
+	 *  blocks Send) and the error is its cause, said once beneath it in the
+	 *  quieter ink rather than as a second alert. Each keeps its own id and
+	 *  live region, so assistive tech hears both as before.
+	 *
+	 *  The first row is `NOTICE_ROW_FLOOR` tall with the action inside it, and the
+	 *  block is the FIRST thing in the extras: that row is what `composerBudget`'s
+	 *  `extrasFloor` keeps on screen when the composer has no room (U1). */
+	const failureNotice =
+		feedback.retainedText !== null || feedback.errorText !== null ? (
+			<View
+				className="mb-1 flex-row items-start gap-2"
+				testID={SURFACE.composerFailureNotice}
+			>
+				{/* The glyph is centred on the FIRST line (a 20 pt line box, itself
+				    centred in the row's touch floor by `NOTICE_LINE_INSET`), not on
+				    the block: under a two-line sentence at 200 % it would otherwise
+				    drift to the middle and stop reading as the sentence's mark. */}
+				<View
+					className="h-5 items-center justify-center"
+					style={{ marginTop: NOTICE_LINE_INSET }}
+					aria-hidden
+				>
+					<TriangleAlert size={14} color={dangerInk} />
+				</View>
+				<View className="min-w-0 flex-1">
+					{feedback.retainedText !== null ? (
+						<View
+							className="flex-row items-start gap-3"
+							style={{ minHeight: NOTICE_ROW_FLOOR }}
+						>
+							<Text
+								className="min-w-0 flex-1 text-body-sm text-danger"
+								style={{ paddingVertical: NOTICE_LINE_INSET }}
+								accessibilityRole={ROLE.alert}
+								accessibilityLiveRegion="assertive"
+								testID={SURFACE.composerRetained}
+							>
+								{feedback.retainedText}
+							</Text>
+							<NoticeAction
+								label={t("mobile.composer_input.notice_retry")}
+								/* The full sentence stays the accessible name: "Retry"
+								 *  alone does not say WHAT is retried, and it contains
+								 *  the visible word (label-in-name, U-10). */
+								accessibilityLabel={feedback.retryLabel}
+								onPress={onRetry}
+								testID={CONTROL.composerRetry}
+							/>
+						</View>
+					) : null}
+					{feedback.errorText !== null ? (
+						<View
+							className="flex-row items-start gap-3"
+							style={{ minHeight: NOTICE_ROW_FLOOR }}
+						>
+							<Text
+								className={
+									feedback.retainedText !== null
+										? "min-w-0 flex-1 text-meta text-ink-muted"
+										: "min-w-0 flex-1 text-body-sm text-danger"
+								}
+								style={{ paddingVertical: NOTICE_LINE_INSET }}
+								accessibilityLiveRegion="assertive"
+								testID={SURFACE.composerError}
+							>
+								{feedback.errorText}
+							</Text>
+							{onDismissError ? (
+								<NoticeAction
+									label={
+										feedback.retainedText !== null
+											? t("mobile.composer_input.dismiss_error")
+											: t("mobile.composer_input.notice_dismiss")
+									}
+									accessibilityLabel={t("mobile.composer_input.dismiss_error")}
+									accessibilityHint={t(
+										"mobile.composer_input.dismiss_error_hint",
+									)}
+									onPress={onDismissError}
+									testID={CONTROL.composerDismissError}
+								/>
+							) : null}
+						</View>
+					) : null}
+				</View>
+			</View>
+		) : null;
+
 	/* TWO fragments, one scroll owner. `extras` is everything ABOVE the field —
 	 *  attachments, the retained-instruction alert, the error, the disabled reason — and
 	 *  is the ONLY part that may scroll in the compact form. `main` is the field row, the
@@ -1317,6 +1445,10 @@ export const Composer = ({
 	const extras = (
 		<>
 			<ComposerStateMarkers controls={controls} />
+			{/* First, above even the attachments: its first row is the one the budget
+			    guarantees (`extrasFloor`), and a guarantee about the top of a scroller
+			    only helps what is AT the top. */}
+			{failureNotice}
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
@@ -1414,86 +1546,6 @@ export const Composer = ({
 				>
 					{composerCopy().reopening}
 				</Text>
-			) : null}
-
-			{/* ONE NOTICE for an uncertain delivery and for an error (visual audit
-			    D6; the operator: warnings inside the composer "look ugly"). It was two
-			    bordered red boxes, a full-width outlined button and a helper sentence
-			    restating the first box, stacked inside the card. Now a
-			    danger glyph, the sentence, and text actions on the same block: no
-			    border, no wash, no full-width button.
-
-			    Behaviour is #206's and unchanged: Retry is the host's `onRetry`, and
-			    Dismiss is its `onDismissError`, which hides the ERROR line only — a
-			    retained instruction has no dismiss here at all, so neither action can
-			    drop a retained UUID, an uncertainty row or the queue, and a failure
-			    that recurs is a new `error` value the host hands back in.
-
-			    When both are present the retained sentence leads (it is the one that
-			    blocks Send) and the error is its cause, said once beneath it in the
-			    quieter ink rather than as a second alert. Each keeps its own id and
-			    live region, so assistive tech hears both as before. */}
-			{feedback.retainedText !== null || feedback.errorText !== null ? (
-				<View
-					className="mb-1 flex-row items-start gap-2"
-					testID={SURFACE.composerFailureNotice}
-				>
-					{/* The glyph is centred on the FIRST line (a 20 pt line box), not on
-					    the block: under a two-line sentence at 200 % it would otherwise
-					    drift to the middle and stop reading as the sentence's mark. */}
-					<View className="h-5 items-center justify-center" aria-hidden>
-						<TriangleAlert size={14} color={dangerInk} />
-					</View>
-					<View className="min-w-0 flex-1">
-						{feedback.retainedText !== null ? (
-							<Text
-								className="text-body-sm text-danger"
-								accessibilityRole={ROLE.alert}
-								accessibilityLiveRegion="assertive"
-								testID={SURFACE.composerRetained}
-							>
-								{feedback.retainedText}
-							</Text>
-						) : null}
-						{feedback.errorText !== null ? (
-							<Text
-								className={
-									feedback.retainedText !== null
-										? "pt-0.5 text-meta text-ink-muted"
-										: "text-body-sm text-danger"
-								}
-								accessibilityLiveRegion="assertive"
-								testID={SURFACE.composerError}
-							>
-								{feedback.errorText}
-							</Text>
-						) : null}
-						<View className="flex-row flex-wrap items-center gap-x-4">
-							{feedback.retainedText !== null ? (
-								<NoticeAction
-									label={t("mobile.composer_input.notice_retry")}
-									/* The full sentence stays the accessible name: "Retry"
-									 *  alone does not say WHAT is retried, and it contains
-									 *  the visible word (label-in-name, U-10). */
-									accessibilityLabel={feedback.retryLabel}
-									onPress={onRetry}
-									testID={CONTROL.composerRetry}
-								/>
-							) : null}
-							{feedback.errorText !== null && onDismissError ? (
-								<NoticeAction
-									label={t("mobile.composer_input.notice_dismiss")}
-									accessibilityLabel={t("mobile.composer_input.dismiss_error")}
-									accessibilityHint={t(
-										"mobile.composer_input.dismiss_error_hint",
-									)}
-									onPress={onDismissError}
-									testID={CONTROL.composerDismissError}
-								/>
-							) : null}
-						</View>
-					</View>
-				</View>
 			) : null}
 
 			{/* U4: name why the primary is dead, whatever the reason — an unresolved
