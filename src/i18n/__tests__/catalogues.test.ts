@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 158, // Exact merged Team Bridge key union.
+		expected: 157, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder).
 	},
 	{
 		name: "mobile.signin",
@@ -273,6 +273,9 @@ describe("the English catalogues", () => {
 		 * Bridge entry's loading and unavailable names and "Open Team Bridge".
 		 * PR #211 merged with main a563a6f3: 566 + 3, verified by counting
 		 * unique `en` keys over the merged tree. */
+		/* Minus one: TestFlight 773 retired `mobile.team_bridge.thread.placeholder`
+		 * — the Bridge composer shows its field label, the title names the
+		 * channel. 569 - 1. */
 		/* Plus seven for refused-connect feedback on the own-tunnel screen: the
 		 * inline "Couldn't connect" title and generic body, the secure-storage
 		 * refusal sentence with and without a platform code, and the "Connected,
@@ -281,7 +284,9 @@ describe("the English catalogues", () => {
 		 * wrong-password body, and the not-saved body (with and without a code)
 		 * replacing its "until restart" tail: 576 + 3 - 1 = 578, the generator's
 		 * count. */
-		expect(total).toBe(578);
+		/* PR #220 merged with main becb972b (#219 retired one key): 568 + 9 (this
+		 * branch's net) = 577, verified by counting unique `en` keys over the merged tree. */
+		expect(total).toBe(577);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

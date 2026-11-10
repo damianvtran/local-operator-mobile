@@ -567,7 +567,6 @@ export type CatalogueKey =
 	| "mobile.team_bridge.thread.older_loading"
 	| "mobile.team_bridge.thread.older_retry"
 	| "mobile.team_bridge.thread.organization_unavailable"
-	| "mobile.team_bridge.thread.placeholder"
 	| "mobile.team_bridge.thread.preview_help"
 	| "mobile.team_bridge.thread.readonly"
 	| "mobile.team_bridge.thread.recipient_incomplete"
@@ -1651,7 +1650,6 @@ export type MessageParams = {
 	"mobile.team_bridge.thread.older_loading": NoParams;
 	"mobile.team_bridge.thread.older_retry": NoParams;
 	"mobile.team_bridge.thread.organization_unavailable": NoParams;
-	"mobile.team_bridge.thread.placeholder": { title: string | number };
 	"mobile.team_bridge.thread.preview_help": NoParams;
 	"mobile.team_bridge.thread.readonly": NoParams;
 	"mobile.team_bridge.thread.recipient_incomplete": NoParams;
@@ -2248,7 +2246,6 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.thread.older_loading": "Loading older messages…",
 	"mobile.team_bridge.thread.older_retry": "Retry older messages",
 	"mobile.team_bridge.thread.organization_unavailable": "This organization is not available to this account.",
-	"mobile.team_bridge.thread.placeholder": "Message {title}",
 	"mobile.team_bridge.thread.preview_help": "Join this channel to read its history and send messages.",
 	"mobile.team_bridge.thread.readonly": "This organization is read only. You can read history, but cannot send messages.",
 	"mobile.team_bridge.thread.recipient_incomplete": "This message recipient is incomplete. Go back and choose a person or chief of staff.",
@@ -2830,7 +2827,6 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.thread.older_loading": { role: "button", note: "Team Bridge mobile UI: thread / older loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.older_retry": { role: "button", note: "Team Bridge mobile UI: thread / older retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.organization_unavailable": { role: "help", note: "Team Bridge mobile UI: thread / organization unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
-	"mobile.team_bridge.thread.placeholder": { role: "help", note: "Team Bridge mobile UI: thread / placeholder. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
 	"mobile.team_bridge.thread.preview_help": { role: "help", note: "Team Bridge mobile UI: thread / preview help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.readonly": { role: "help", note: "Team Bridge mobile UI: thread / readonly. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.recipient_incomplete": { role: "help", note: "Team Bridge mobile UI: thread / recipient incomplete. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
@@ -3426,7 +3422,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Cargando mensajes anteriores…",
 		"mobile.team_bridge.thread.older_retry": "Reintentar mensajes anteriores",
 		"mobile.team_bridge.thread.organization_unavailable": "Esta organización no está disponible para esta cuenta.",
-		"mobile.team_bridge.thread.placeholder": "Mensaje a {title}",
 		"mobile.team_bridge.thread.preview_help": "Únete a este canal para leer su historial y enviar mensajes.",
 		"mobile.team_bridge.thread.readonly": "Esta organización es de solo lectura. Puedes leer el historial, pero no enviar mensajes.",
 		"mobile.team_bridge.thread.recipient_incomplete": "El destinatario está incompleto. Vuelve atrás y elige una persona o un jefe de gabinete.",
@@ -4006,7 +4001,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Chargement des anciens messages…",
 		"mobile.team_bridge.thread.older_retry": "Réessayer les anciens messages",
 		"mobile.team_bridge.thread.organization_unavailable": "Cette organisation n’est pas accessible depuis ce compte.",
-		"mobile.team_bridge.thread.placeholder": "Message à {title}",
 		"mobile.team_bridge.thread.preview_help": "Rejoignez ce canal pour lire son historique et envoyer des messages.",
 		"mobile.team_bridge.thread.readonly": "Cette organisation est en lecture seule. Vous pouvez lire l’historique, mais pas envoyer de messages.",
 		"mobile.team_bridge.thread.recipient_incomplete": "Le destinataire est incomplet. Revenez en arrière et choisissez une personne ou un chef de cabinet.",
@@ -4586,7 +4580,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "पुराने संदेश लोड हो रहे हैं…",
 		"mobile.team_bridge.thread.older_retry": "पुराने संदेश फिर लोड करें",
 		"mobile.team_bridge.thread.organization_unavailable": "यह संगठन इस खाते के लिए उपलब्ध नहीं है।",
-		"mobile.team_bridge.thread.placeholder": "{title} को संदेश भेजें",
 		"mobile.team_bridge.thread.preview_help": "इतिहास पढ़ने और संदेश भेजने के लिए इस चैनल से जुड़ें।",
 		"mobile.team_bridge.thread.readonly": "इस संगठन में केवल पढ़ने की अनुमति है। आप इतिहास पढ़ सकते हैं, लेकिन संदेश नहीं भेज सकते।",
 		"mobile.team_bridge.thread.recipient_incomplete": "प्राप्तकर्ता की जानकारी अधूरी है। वापस जाकर कोई व्यक्ति या चीफ़ ऑफ़ स्टाफ़ चुनें।",
@@ -5166,7 +5159,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Загрузка предыдущих сообщений…",
 		"mobile.team_bridge.thread.older_retry": "Повторить загрузку предыдущих сообщений",
 		"mobile.team_bridge.thread.organization_unavailable": "Эта организация недоступна для данного аккаунта.",
-		"mobile.team_bridge.thread.placeholder": "Сообщение: {title}",
 		"mobile.team_bridge.thread.preview_help": "Вступите в канал, чтобы читать историю и отправлять сообщения.",
 		"mobile.team_bridge.thread.readonly": "В организации доступно только чтение. Историю можно читать, но отправлять сообщения нельзя.",
 		"mobile.team_bridge.thread.recipient_incomplete": "Получатель указан не полностью. Вернитесь и выберите человека или руководителя аппарата.",
@@ -5746,7 +5738,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "پرانے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.team_bridge.thread.older_retry": "پرانے پیغامات دوبارہ لوڈ کریں",
 		"mobile.team_bridge.thread.organization_unavailable": "یہ تنظیم اس اکاؤنٹ کے لیے دستیاب نہیں ہے۔",
-		"mobile.team_bridge.thread.placeholder": "{title} کو پیغام بھیجیں",
 		"mobile.team_bridge.thread.preview_help": "تاریخ پڑھنے اور پیغامات بھیجنے کے لیے اس چینل میں شامل ہوں۔",
 		"mobile.team_bridge.thread.readonly": "یہ تنظیم صرف پڑھنے کے لیے ہے۔ آپ تاریخ پڑھ سکتے ہیں، لیکن پیغامات نہیں بھیج سکتے۔",
 		"mobile.team_bridge.thread.recipient_incomplete": "وصول کنندہ کی معلومات نامکمل ہیں۔ واپس جا کر کوئی شخص یا چیف آف اسٹاف منتخب کریں۔",
@@ -6326,7 +6317,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Đang tải tin nhắn cũ…",
 		"mobile.team_bridge.thread.older_retry": "Thử tải lại tin nhắn cũ",
 		"mobile.team_bridge.thread.organization_unavailable": "Tài khoản này không có quyền truy cập tổ chức này.",
-		"mobile.team_bridge.thread.placeholder": "Nhắn tin cho {title}",
 		"mobile.team_bridge.thread.preview_help": "Tham gia kênh này để đọc lịch sử và gửi tin nhắn.",
 		"mobile.team_bridge.thread.readonly": "Tổ chức này ở chế độ chỉ đọc. Bạn có thể đọc lịch sử nhưng không thể gửi tin nhắn.",
 		"mobile.team_bridge.thread.recipient_incomplete": "Thông tin người nhận chưa đầy đủ. Quay lại và chọn một người hoặc chánh văn phòng.",
@@ -6906,7 +6896,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "正在加载更早的消息…",
 		"mobile.team_bridge.thread.older_retry": "重试加载更早的消息",
 		"mobile.team_bridge.thread.organization_unavailable": "此账户无法访问该组织。",
-		"mobile.team_bridge.thread.placeholder": "给 {title} 发消息",
 		"mobile.team_bridge.thread.preview_help": "加入此频道即可阅读历史记录并发送消息。",
 		"mobile.team_bridge.thread.readonly": "此组织为只读，你可以阅读历史记录，但无法发送消息。",
 		"mobile.team_bridge.thread.recipient_incomplete": "收件人信息不完整，请返回并选择一位成员或幕僚长。",

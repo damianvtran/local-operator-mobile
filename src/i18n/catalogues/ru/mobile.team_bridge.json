@@ -146,7 +146,6 @@
 	"mobile.team_bridge.thread.older_loading": "Загрузка предыдущих сообщений…",
 	"mobile.team_bridge.thread.older_retry": "Повторить загрузку предыдущих сообщений",
 	"mobile.team_bridge.thread.organization_unavailable": "Эта организация недоступна для данного аккаунта.",
-	"mobile.team_bridge.thread.placeholder": "Сообщение: {title}",
 	"mobile.team_bridge.thread.preview_help": "Вступите в канал, чтобы читать историю и отправлять сообщения.",
 	"mobile.team_bridge.thread.readonly": "В организации доступно только чтение. Историю можно читать, но отправлять сообщения нельзя.",
 	"mobile.team_bridge.thread.recipient_incomplete": "Получатель указан не полностью. Вернитесь и выберите человека или руководителя аппарата.",

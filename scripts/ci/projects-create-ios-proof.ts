@@ -38,6 +38,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import { collectProofFrames } from "./projects-create-proof-contract.ts";
+import {
+	APPEARANCE_CAP_SECONDS,
+	appearanceArgs,
+	appearanceTimingLine,
+	type SimctlAppearance,
+} from "./simctl-appearance.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -191,6 +197,27 @@ async function run(
 			`${name} failed rc=${code}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
 		);
 	return output;
+}
+
+/** Switch the simulator's appearance under its own measured cap (see
+ *  simctl-appearance.ts), logging the duration even when the call fails or is
+ *  killed — that log line is the distribution the cap is tuned from. */
+async function setAppearance(
+	step: string,
+	udid: string,
+	theme: SimctlAppearance,
+): Promise<void> {
+	const t0 = Date.now();
+	try {
+		await run(
+			step,
+			"xcrun",
+			appearanceArgs(udid, theme),
+			APPEARANCE_CAP_SECONDS,
+		);
+	} finally {
+		note(appearanceTimingLine(step, Date.now() - t0));
+	}
 }
 
 type Slot = {
@@ -439,26 +466,11 @@ try {
 
 	// Light then dark for Urdu; the English control runs once. The first maestro
 	// call also pays the cold driver start, hence its larger cap.
-	await run(
-		"appearance-light",
-		"xcrun",
-		["simctl", "ui", udid, "appearance", "light"],
-		60,
-	);
+	await setAppearance("appearance-light", udid, "light");
 	await flowRun("ur-light", ur.origin, "urdu-sheet.yaml", 900);
-	await run(
-		"appearance-dark",
-		"xcrun",
-		["simctl", "ui", udid, "appearance", "dark"],
-		60,
-	);
+	await setAppearance("appearance-dark", udid, "dark");
 	await flowRun("ur-dark", ur.origin, "urdu-sheet.yaml", 300);
-	await run(
-		"appearance-light-2",
-		"xcrun",
-		["simctl", "ui", udid, "appearance", "light"],
-		60,
-	);
+	await setAppearance("appearance-light-2", udid, "light");
 	await flowRun("en-control", en.origin, "english-control.yaml", 300);
 	receipt.verdict = "PASS (assertions only; reviewers must view the PNGs)";
 } catch (error) {

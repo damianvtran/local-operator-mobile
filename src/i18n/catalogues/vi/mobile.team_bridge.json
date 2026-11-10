@@ -146,7 +146,6 @@
 	"mobile.team_bridge.thread.older_loading": "Đang tải tin nhắn cũ…",
 	"mobile.team_bridge.thread.older_retry": "Thử tải lại tin nhắn cũ",
 	"mobile.team_bridge.thread.organization_unavailable": "Tài khoản này không có quyền truy cập tổ chức này.",
-	"mobile.team_bridge.thread.placeholder": "Nhắn tin cho {title}",
 	"mobile.team_bridge.thread.preview_help": "Tham gia kênh này để đọc lịch sử và gửi tin nhắn.",
 	"mobile.team_bridge.thread.readonly": "Tổ chức này ở chế độ chỉ đọc. Bạn có thể đọc lịch sử nhưng không thể gửi tin nhắn.",
 	"mobile.team_bridge.thread.recipient_incomplete": "Thông tin người nhận chưa đầy đủ. Quay lại và chọn một người hoặc chánh văn phòng.",

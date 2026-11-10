@@ -215,8 +215,14 @@ const BRIDGE_BADGE_INSET = { top: -6, end: -6 } as const;
  * Unknown unread is absence, not zero; no local row count invents a receipt. */
 export const WorkspaceDrawerButton = ({
 	testID = CONTROL.homeSidebar,
+	mode,
 }: {
 	testID?: string;
+	/** The pane to open on. Absent keeps whichever mode the drawer last showed
+	 *  (Home and agent chats); a Team Bridge thread passes `"team-bridge"` so
+	 *  its hamburger opens on the channel list, the switcher it replaced a
+	 *  back arrow with (TestFlight 773). */
+	mode?: WorkspaceDrawerMode;
 }) => {
 	const drawer = useWorkspaceDrawer();
 	useLocaleFrame();
@@ -235,7 +241,7 @@ export const WorkspaceDrawerButton = ({
 					: t("mobile.chrome.drawer.open")
 			}
 			onPress={() =>
-				drawer.open({ returnFocus: () => trigger.current?.focus() })
+				drawer.open({ returnFocus: () => trigger.current?.focus(), mode })
 			}
 			testID={testID}
 			className="items-center justify-center"
