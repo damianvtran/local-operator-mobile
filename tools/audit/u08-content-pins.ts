@@ -1360,7 +1360,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// self-heal): the merged tree carries healHistory and the keyboard-aware
 	// cap, so it has neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof.
-	src: "be83a5b5a065b7ce9b1fb150f6aa02a4777678056d75ad2a8214e62a3cf784c6",
+	// Bridge composer + drawer nav (TestFlight 773): the Bridge composer rests as
+	// the agent's one-row pill, Bridge threads lead with the drawer button, and
+	// Bridge opens replace; one Team Bridge key retired in all locales. --print
+	// over the staged tree; source identity only, no rendered or native proof.
+	// Round-1 remediation (#219): the composer's edge becomes a focus ring and
+	// the drawer's "Open Team Bridge" replaces on Bridge routes. --print over the
+	// staged tree; source identity only, no rendered or native proof.
+	// PR #216 merged with main 580fcde9 (#219 bridge composer + drawer nav):
+	// disjoint src files, so the merged tree has neither parent's digest;
+	// re-derived with --print over the staged merged tree. Source identity
+	// only, no rendered or native proof.
+	src: "4634366d3e9b1aa4b4bf42eea4f142c4acd2a017739dde0e49a1a87c0b139082",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

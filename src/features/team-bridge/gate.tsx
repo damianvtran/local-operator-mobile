@@ -56,7 +56,17 @@ export function gateHelp(
 }
 
 /** Admission wraps the entire surface: restricted accounts must not briefly see directory or composer chrome. */
-export function BridgeGate({ children }: { children: ReactNode }) {
+export function BridgeGate({
+	children,
+	headerLeading = <BridgeBack />,
+}: {
+	children: ReactNode;
+	/** The header's leading control while admission is not open. The list
+	 *  screen keeps `BridgeBack` (it is a pushed destination from Home); a
+	 *  thread passes its drawer button so a push or deep link never lands on a
+	 *  back arrow (TestFlight 773). */
+	headerLeading?: ReactNode;
+}) {
 	const gate = useTeamBridgeState((s) => s.gate);
 	const { actions } = useTeamBridge();
 	const connection = useConnection();
@@ -66,7 +76,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 	return (
 		<Screen
 			title={t("mobile.team_bridge.title")}
-			headerLeading={<BridgeBack />}
+			headerLeading={headerLeading}
 			testID={teamBridgeGateId(gate)}
 		>
 			<View className="gap-5 px-4 py-6">

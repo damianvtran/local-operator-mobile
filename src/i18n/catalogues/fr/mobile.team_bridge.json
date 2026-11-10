@@ -146,7 +146,6 @@
 	"mobile.team_bridge.thread.older_loading": "Chargement des anciens messages…",
 	"mobile.team_bridge.thread.older_retry": "Réessayer les anciens messages",
 	"mobile.team_bridge.thread.organization_unavailable": "Cette organisation n’est pas accessible depuis ce compte.",
-	"mobile.team_bridge.thread.placeholder": "Message à {title}",
 	"mobile.team_bridge.thread.preview_help": "Rejoignez ce canal pour lire son historique et envoyer des messages.",
 	"mobile.team_bridge.thread.readonly": "Cette organisation est en lecture seule. Vous pouvez lire l’historique, mais pas envoyer de messages.",
 	"mobile.team_bridge.thread.recipient_incomplete": "Le destinataire est incomplet. Revenez en arrière et choisissez une personne ou un chef de cabinet.",

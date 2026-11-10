@@ -146,7 +146,6 @@
 	"mobile.team_bridge.thread.older_loading": "पुराने संदेश लोड हो रहे हैं…",
 	"mobile.team_bridge.thread.older_retry": "पुराने संदेश फिर लोड करें",
 	"mobile.team_bridge.thread.organization_unavailable": "यह संगठन इस खाते के लिए उपलब्ध नहीं है।",
-	"mobile.team_bridge.thread.placeholder": "{title} को संदेश भेजें",
 	"mobile.team_bridge.thread.preview_help": "इतिहास पढ़ने और संदेश भेजने के लिए इस चैनल से जुड़ें।",
 	"mobile.team_bridge.thread.readonly": "इस संगठन में केवल पढ़ने की अनुमति है। आप इतिहास पढ़ सकते हैं, लेकिन संदेश नहीं भेज सकते।",
 	"mobile.team_bridge.thread.recipient_incomplete": "प्राप्तकर्ता की जानकारी अधूरी है। वापस जाकर कोई व्यक्ति या चीफ़ ऑफ़ स्टाफ़ चुनें।",
