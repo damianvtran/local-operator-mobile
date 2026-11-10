@@ -110,6 +110,7 @@ import {
 	COMPACT_PENDING_SHARE,
 	type ComposerBox,
 	compactChromeShare,
+	composerChromeKey,
 	headerStacks,
 	heldComposerLimit,
 	type RegionKey,
@@ -1530,7 +1531,12 @@ export default function Session() {
 							height: viewportHeight,
 						})}
 						onMeasure={setComposerBox}
-						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}`}
+						/* The measured heights above the composer close the key
+						 *  (`composerChromeKey`): the activity band settles after a
+						 *  resize without the composer's own size changing, and a
+						 *  composer that is only pushed must still re-read its top
+						 *  (QA #211 round 3 Q5). */
+						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}|${composerChromeKey(recoveryFacts)}`}
 						compact={
 							compact
 								? {

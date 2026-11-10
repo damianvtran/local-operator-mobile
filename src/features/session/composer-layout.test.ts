@@ -746,6 +746,42 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 		expect(errorRow).not.toContain("onPress={onRetry}");
 	});
 
+	/* Design D7 / code R3 M2: beside a trailing action the sentence was whatever
+	 *  the action left it. At 320 pt / 200 % that was a sliver, and the retained
+	 *  sentence ran to 474 px of two-word lines (QA round 3 Q4). The sentence now
+	 *  has a floor that scales with the text, and the row wraps: an action that
+	 *  would squeeze it below the floor drops under it, on the trailing edge. */
+	it("lets an action wrap under its sentence instead of squeezing it", () => {
+		expect(COMPOSER).toContain("const NOTICE_SENTENCE_MIN = 64;");
+		expect(
+			notice.match(
+				/className="flex-row flex-wrap items-start justify-end gap-x-3"/g,
+			) ?? [],
+		).toHaveLength(2);
+		expect(
+			notice.match(
+				/style=\{\{ paddingVertical: NOTICE_LINE_INSET, minWidth: noticeSentenceMin, \}\}/g,
+			) ?? [],
+		).toHaveLength(2);
+		expect(code).toContain(
+			"const noticeSentenceMin = Math.round(NOTICE_SENTENCE_MIN * effectiveScale);",
+		);
+		/* `min-w-0` on the sentence would be the squeeze again. */
+		expect(notice).not.toMatch(/min-w-0 flex-1 text-(body-sm|meta)/);
+	});
+
+	/* QA round 3 Q4: after scrolling the notice to reach "Dismiss error" and
+	 *  using it, the scroller kept its offset and Retry sat above the fold. */
+	it("returns the extras to their top when the notice's contents change", () => {
+		expect(code).toContain("ref={extrasScrollRef}");
+		expect(code).toContain(
+			"extrasScrollRef.current?.scrollTo({ y: 0, animated: false });",
+		);
+		expect(code).toMatch(
+			/const noticeKey = `\$\{feedback\.retainedText \?\? ""\}\|\$\{feedback\.errorText \?\? ""\}`;/,
+		);
+	});
+
 	/* UX #211 U2: with a retained instruction showing, "Dismiss" under both
 	 *  sentences removed only the grey error line and itself, so it read as
 	 *  "Dismiss did not work". Each action now lives on the line it acts on. */
@@ -782,9 +818,14 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 	it("keeps each action on its sentence's first row, inside the guaranteed floor", () => {
 		expect(
 			notice.match(
-				/<View className="flex-row items-start gap-3" style=\{\{ minHeight: NOTICE_ROW_FLOOR \}\} >/g,
+				/<View className="flex-row flex-wrap items-start justify-end gap-x-3" style=\{\{ minHeight: NOTICE_ROW_FLOOR \}\} >/g,
 			) ?? [],
 		).toHaveLength(2);
+		/* The wrap floor must not move the English actions off that first row
+		 *  at 320 pt / 200 %: column 250, gap 12, "Retry" 69 and "Dismiss
+		 *  error" 96 (QA round 3) leave more than the floor. */
+		for (const action of [69, 96])
+			expect(250 - 12 - action).toBeGreaterThanOrEqual(64 * 2);
 		/* No separate actions row any more. */
 		expect(notice).not.toContain("flex-row flex-wrap items-center gap-x-4");
 		expect(code).toContain("const NOTICE_ROW_FLOOR = TOUCH_FLOOR;");
@@ -792,10 +833,9 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 		expect(code).toMatch(
 			/const extras = \( <> <ComposerStateMarkers controls=\{controls\} \/> \{\} \{failureNotice\}/,
 		);
-		/* ...and the budget is told to keep its first row whenever it is up. */
-		expect(code).toContain(
-			"feedback.retainedText !== null || feedback.errorText !== null ? NOTICE_ROW_FLOOR : 0, );",
-		);
+		/* ...and the budget carries no floor for it: a floor it cannot fit put
+		 *  the controls row past the window (code R3 M1). */
+		expect(code).not.toContain("? NOTICE_ROW_FLOOR : 0");
 	});
 
 	it("does not repeat the reason under the notice, and keeps it on the disabled Send", () => {

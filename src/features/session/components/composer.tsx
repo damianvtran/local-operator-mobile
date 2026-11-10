@@ -525,13 +525,25 @@ const stripChipSurface = (glass: boolean, chip: ReactElement) =>
 	);
 
 /** The failure notice's row floor: one touch target, because each row holds a
- * sentence AND its action, and the action's box is the taller of the two. Also
- * the extras' minimum visible height while the notice is up (`composerBudget`). */
+ * sentence AND its action, and the action's box is the taller of the two. */
 const NOTICE_ROW_FLOOR = TOUCH_FLOOR;
 /** Centres the sentence's first 20 pt line (`text-body-sm`) in that floor, so the
  * word of the trailing action and the first line of the sentence share a
  * baseline row; a wrapped sentence grows downward from there. */
 const NOTICE_LINE_INSET = Math.max(0, (NOTICE_ROW_FLOOR - 20) / 2);
+/** The least width a notice sentence keeps beside its trailing action, at 100 %
+ *  text (it scales with the reader's text): below it the sentence is a column
+ *  of single words and the action wraps under it instead.
+ *
+ *  64, and not more, ON PURPOSE. At 320x568 / 200 % the extras scroller is
+ *  143 px tall, and an action is only certain to be seen while it shares its
+ *  sentence's FIRST row (UX #211 U4). QA round 3's boxes there: the notice
+ *  column is 250 px, "Retry" 69 and "Dismiss error" 96 wide, leaving the
+ *  sentences 169 and 142 px against a floor of 128, so the English rows keep
+ *  the action beside the sentence. The floor only bites where the label is
+ *  long enough to leave a sliver (the hi/ur Retry, the fr/ru dismissal at
+ *  200 %), which is the case design D7 and code R3 M2 describe. */
+const NOTICE_SENTENCE_MIN = 64;
 
 /**
  * A text action inside the composer's failure notice (visual audit D6): the
@@ -1256,12 +1268,6 @@ export const Composer = ({
 					dictationShowing
 						? dictationRowBox(effectiveScale) + DICTATION_ROW_MARGIN_PX
 						: 0,
-					/* A failure notice may not be budgeted to nothing (UX #211 U1/U4):
-					 *  its first row — sentence and action — stays visible, and the
-					 *  rest scrolls beneath it. */
-					feedback.retainedText !== null || feedback.errorText !== null
-						? NOTICE_ROW_FLOOR
-						: 0,
 				);
 	const fieldMaxHeight = budget?.field;
 	const extrasMaxHeight = budget?.extras;
@@ -1350,9 +1356,28 @@ export const Composer = ({
 	 *  quieter ink rather than as a second alert. Each keeps its own id and
 	 *  live region, so assistive tech hears both as before.
 	 *
-	 *  The first row is `NOTICE_ROW_FLOOR` tall with the action inside it, and the
-	 *  block is the FIRST thing in the extras: that row is what `composerBudget`'s
-	 *  `extrasFloor` keeps on screen when the composer has no room (U1). */
+	 *  The first row is `NOTICE_ROW_FLOOR` tall, and the block is the FIRST
+	 *  thing in the extras, so whatever the budget leaves the extras shows the
+	 *  notice before anything else.
+	 *
+	 *  A row WRAPS (design D7, code R3 M2): the sentence keeps at least
+	 *  `noticeSentenceMin`, and an action that would leave it less drops under
+	 *  it on the trailing edge. Without that the action took its full one-line
+	 *  width and the sentence the remainder, which at 320 pt / 200 % (and in
+	 *  the long-label locales) was a sliver many lines tall. */
+	const noticeSentenceMin = Math.round(NOTICE_SENTENCE_MIN * effectiveScale);
+	/* The extras return to their top whenever the notice's contents change (QA
+	 *  #211 round 3 Q4): after scrolling down to "Dismiss error" and using it,
+	 *  the scroller kept its offset and Retry, on the first row, sat above the
+	 *  fold of what was left. New or removed sentences are new content; where
+	 *  the reader had scrolled the old one says nothing about it. */
+	const extrasScrollRef = useRef<ScrollView | null>(null);
+	const noticeKey = `${feedback.retainedText ?? ""}|${feedback.errorText ?? ""}`;
+	useEffect(() => {
+		/* Read, as `measurementKey` is below: the key IS the dependency. */
+		if (noticeKey === "|") return;
+		extrasScrollRef.current?.scrollTo({ y: 0, animated: false });
+	}, [noticeKey]);
 	const failureNotice =
 		feedback.retainedText !== null || feedback.errorText !== null ? (
 			<View
@@ -1373,12 +1398,15 @@ export const Composer = ({
 				<View className="min-w-0 flex-1">
 					{feedback.retainedText !== null ? (
 						<View
-							className="flex-row items-start gap-3"
+							className="flex-row flex-wrap items-start justify-end gap-x-3"
 							style={{ minHeight: NOTICE_ROW_FLOOR }}
 						>
 							<Text
-								className="min-w-0 flex-1 text-body-sm text-danger"
-								style={{ paddingVertical: NOTICE_LINE_INSET }}
+								className="flex-1 text-body-sm text-danger"
+								style={{
+									paddingVertical: NOTICE_LINE_INSET,
+									minWidth: noticeSentenceMin,
+								}}
 								accessibilityRole={ROLE.alert}
 								accessibilityLiveRegion="assertive"
 								testID={SURFACE.composerRetained}
@@ -1398,16 +1426,19 @@ export const Composer = ({
 					) : null}
 					{feedback.errorText !== null ? (
 						<View
-							className="flex-row items-start gap-3"
+							className="flex-row flex-wrap items-start justify-end gap-x-3"
 							style={{ minHeight: NOTICE_ROW_FLOOR }}
 						>
 							<Text
 								className={
 									feedback.retainedText !== null
-										? "min-w-0 flex-1 text-meta text-ink-muted"
-										: "min-w-0 flex-1 text-body-sm text-danger"
+										? "flex-1 text-meta text-ink-muted"
+										: "flex-1 text-body-sm text-danger"
 								}
-								style={{ paddingVertical: NOTICE_LINE_INSET }}
+								style={{
+									paddingVertical: NOTICE_LINE_INSET,
+									minWidth: noticeSentenceMin,
+								}}
 								accessibilityLiveRegion="assertive"
 								testID={SURFACE.composerError}
 							>
@@ -1445,9 +1476,9 @@ export const Composer = ({
 	const extras = (
 		<>
 			<ComposerStateMarkers controls={controls} />
-			{/* First, above even the attachments: its first row is the one the budget
-			    guarantees (`extrasFloor`), and a guarantee about the top of a scroller
-			    only helps what is AT the top. */}
+			{/* First, above even the attachments: when the extras are short of room
+			    it is the top of the scroller that shows, and the notice is what
+			    must be seen first. */}
 			{failureNotice}
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
@@ -2317,6 +2348,7 @@ export const Composer = ({
 				) : null}
 				<View onLayout={measureContent}>
 					<ScrollView
+						ref={extrasScrollRef}
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
 						scrollEnabled={extrasMaxHeight !== undefined}
 						onContentSizeChange={(_width, height) =>
