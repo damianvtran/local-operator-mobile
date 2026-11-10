@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "Aquí faltan mensajes: algunos se perdieron durante la desconexión. Recarga desde los mensajes más recientes y luego carga los anteriores para ver los que faltan. Se borrarán las páginas que cargaste.",
 	"mobile.session.history.gap_newest": "Más arriba faltan mensajes que se perdieron durante la desconexión.",
 	"mobile.session.history.reload": "Recargar desde los mensajes más recientes",
-	"mobile.session.history.reload_hint": "Vuelve a los mensajes más recientes y borra las páginas anteriores que cargaste."
+	"mobile.session.history.reload_hint": "Vuelve a los mensajes más recientes y borra las páginas anteriores que cargaste.",
+	"mobile.session.sheet_title.model": "Modelo",
+	"mobile.session.sheet_title.effort": "Esfuerzo",
+	"mobile.session.sheet_title.status": "Tareas y agentes"
 }

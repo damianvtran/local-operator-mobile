@@ -123,10 +123,9 @@ export const headerSubtitle = (input: {
 	health: "live" | "not_answering" | "reconnecting" | "ended";
 	working: boolean;
 	waiting: boolean;
-	/** Accepted and IGNORED. The session route still computes it, and that file
-	 *  is owned by other open pull requests; the next owner should stop passing
-	 *  it (and stop ticking the header for it). */
-	elapsed: string | null;
+	/** @deprecated Accepted and IGNORED: the header shows no clock (D2). The
+	 *  session route stopped passing it; optional so older callers compile. */
+	elapsed?: string | null;
 }): string => {
 	if (input.health !== "live") return healthStateWords()[input.health];
 	if (input.waiting) return t("relay.chrome.session.subtitle.waiting");

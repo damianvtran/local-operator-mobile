@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "Здесь не хватает сообщений: часть была пропущена во время отключения. Перезагрузите с последних сообщений, затем загрузите более ранние, чтобы найти пропущенные. Загруженные страницы будут сброшены.",
 	"mobile.session.history.gap_newest": "Выше часть сообщений была пропущена во время отключения.",
 	"mobile.session.history.reload": "Перезагрузить с последних сообщений",
-	"mobile.session.history.reload_hint": "Возвращает к последним сообщениям и сбрасывает загруженные ранее страницы."
+	"mobile.session.history.reload_hint": "Возвращает к последним сообщениям и сбрасывает загруженные ранее страницы.",
+	"mobile.session.sheet_title.model": "Модель",
+	"mobile.session.sheet_title.effort": "Усилие",
+	"mobile.session.sheet_title.status": "Задачи и агенты"
 }

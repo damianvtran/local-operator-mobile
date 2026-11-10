@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/i18n", () => ({
@@ -154,5 +155,26 @@ describe("the header subtitle shows no second clock", () => {
 				elapsed: null,
 			}),
 		).toBe("relay.chrome.session.subtitle.idle");
+	});
+});
+
+describe("the session route no longer feeds the retired header inputs (#210)", () => {
+	const route = readFileSync(
+		join(process.cwd(), "app/(app)/session/[id].tsx"),
+		"utf8",
+	);
+
+	it("hands the name over whole and does not tick the header", () => {
+		/* The budgets are identities now and the header measures by layout; a
+		 *  call here would only be a second, dead truncation rule. */
+		expect(route).not.toMatch(/headerTitleChars|compactTitleChars/);
+		expect(route).not.toContain("middleTruncate(");
+		expect(route).toContain(
+			'const headerTitle = title.length > 0 ? title : "session";',
+		);
+		/* `headerSubtitle` ignores `elapsed`, so the route neither computes a
+		 *  phase clock for the header nor re-renders it once a second. */
+		expect(route).not.toContain("usePhaseElapsed");
+		expect(route).not.toContain("TickingSessionHealthControl");
 	});
 });

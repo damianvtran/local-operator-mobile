@@ -10,5 +10,7 @@
 	"mobile.composer_input.clear_draft": "ड्राफ़्ट मिटाएँ",
 	"mobile.composer_input.clear_draft_hint": "केवल ड्राफ़्ट का टेक्स्ट और चित्र मिटाता है; कतार में और अपुष्ट संदेश रखता है",
 	"mobile.composer_input.dismiss_error": "त्रुटि छिपाएँ",
-	"mobile.composer_input.dismiss_error_hint": "ड्राफ़्ट या डिलीवरी की स्थिति बदले बिना यह त्रुटि छिपाता है"
+	"mobile.composer_input.dismiss_error_hint": "ड्राफ़्ट या डिलीवरी की स्थिति बदले बिना यह त्रुटि छिपाता है",
+	"mobile.composer_input.notice_retry": "फिर से प्रयास करें",
+	"mobile.composer_input.notice_dismiss": "छिपाएँ"
 }

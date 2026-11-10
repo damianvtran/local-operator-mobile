@@ -1,15 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Search } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-	type ComponentProps,
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
-import {
-	Platform,
 	Pressable,
 	ScrollView,
 	Text,
@@ -23,11 +15,20 @@ import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { useStartup } from "@/features/new-session/use-startup";
-import { blockingPending, outstandingAsks } from "@/features/session/asks";
+import {
+	activityCounts,
+	activityCountsStack,
+} from "@/features/session/activity-counts";
+import {
+	askBarLabel,
+	blockingPending,
+	outstandingAsks,
+} from "@/features/session/asks";
 import {
 	attentionRecord,
 	overlaysBlocked,
 } from "@/features/session/completion-ack";
+import { ActivityCounts } from "@/features/session/components/activity-counts";
 import { AskBar } from "@/features/session/components/ask-bar";
 import { AsksSheet } from "@/features/session/components/asks-sheet";
 import { CheckpointRail } from "@/features/session/components/checkpoint-rail";
@@ -53,7 +54,6 @@ import {
 	FindStateMarkers,
 	SessionStateMarkers,
 } from "@/features/session/components/state-markers";
-import { StatusChips } from "@/features/session/components/status-chips";
 import {
 	StatusTray,
 	type StatusTrayFacts,
@@ -64,11 +64,9 @@ import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import {
 	PinnedWorkingLine,
-	usePhaseElapsed,
 	WorkingLine,
 } from "@/features/session/components/working-line";
 import { isRouteRefused } from "@/features/session/connection-view";
-import { compactTitleChars, headerTitleChars } from "@/features/session/header";
 import { headerHealth } from "@/features/session/health";
 import { headerSubtitle } from "@/features/session/health-copy";
 import { rosterNeedsAttention } from "@/features/session/panels";
@@ -76,7 +74,6 @@ import { pendingView } from "@/features/session/pending";
 import { usePendingEchoes } from "@/features/session/pending-echo";
 import { collapsePendingTranscript } from "@/features/session/pending-layout";
 import {
-	middleTruncate,
 	pinnedWorkingLine,
 	projectSubagents,
 	projectTodos,
@@ -99,7 +96,7 @@ import { isRemoteRow } from "@/features/sessions/session-projection";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
 import { WorkspaceDrawerButton } from "@/features/sessions/workspace-drawer";
-import { elapsedLabel } from "@/lib/format";
+import { t } from "@/i18n";
 import { CONTROL, EMPTY, ROLE, SCREEN, SURFACE } from "@/ui/a11y";
 import {
 	Chip,
@@ -110,50 +107,24 @@ import {
 } from "@/ui/components";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { Sheet } from "@/ui/components/sheet";
-import { useCompactChrome } from "@/ui/layout";
+import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
 import {
 	COMPACT_COMPOSER_SHARE,
 	COMPACT_OPEN_PANEL_SHARE,
 	COMPACT_PENDING_SHARE,
+	type ComposerBox,
 	compactChromeShare,
-	composerLimit,
+	composerChromeKey,
 	headerStacks,
+	heldComposerLimit,
 	type RegionKey,
 	regionOrder,
+	sameComposerBox,
 	sessionStatusLayout,
 	snapRegion,
 	statusTrayVisible,
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
-
-/**
- * The header's health control with a subtitle that TICKS on the same phase clock
- * as the working line (`usePhaseElapsed`), so "Working · 12s" up top and `12s` in
- * the pinned line can never disagree (design D2, UX U1). Before, the header's
- * elapsed was frozen at the last projection frame while the line counted on.
- * Its own component so the once-a-second tick re-renders this control only, never
- * the session screen. `subtitle` takes the formatted elapsed (`null` when the
- * server has no instant for the phase) and returns the line to show.
- */
-const TickingSessionHealthControl = ({
-	phase,
-	subtitle,
-	...rest
-}: Omit<ComponentProps<typeof SessionHealthControl>, "subtitle"> & {
-	phase: { activity: string; startedS: number | null } | null;
-	subtitle: ((elapsed: string | null) => string) | undefined;
-}) => {
-	const elapsed = usePhaseElapsed(
-		phase?.activity ?? "",
-		phase?.startedS ?? null,
-	);
-	return (
-		<SessionHealthControl
-			{...rest}
-			subtitle={subtitle?.(elapsed === null ? null : elapsedLabel(elapsed))}
-		/>
-	);
-};
 
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
@@ -565,16 +536,6 @@ export default function Session() {
 	);
 
 	const title = projection?.conversation_name ?? "";
-	/* The header name is MIDDLE-truncated with a floor, because the shipped web
-	 * client collapsed it to a single glyph at 200 % text (`R14`) — the two ends of
-	 * a session name are what distinguish it, so a truncation has to keep both.
-	 *
-	 * The budget is the ROW's width, not a fixed 40 characters: at a fixed 40 the
-	 * truncation never ran for a real name, so a 25-character name reached the
-	 * layout whole and the platform clipped its tail (`Refactor th…` at 390,
-	 * `Refact…` at 320 — design round 1, D2). `headerTitleChars` derives it from
-	 * the viewport and the same column cap this screen renders inside, and the
-	 * header no longer carries a status chip for the name to compete with. */
 	const { width: viewportWidth, height: viewportHeight } =
 		useWindowDimensions();
 	/* Short landscape only, and decided from the SCREEN's orientation so a keyboard-
@@ -604,11 +565,30 @@ export default function Session() {
 	 *  short-landscape budget, and this is the only honest ceiling for a long draft at
 	 *  large text (design recheck D-c). The COMPOSER measures itself — wrapping it
 	 *  would reparent the field, which the footer contract forbids. */
-	const [composerBox, setComposerBox] = useState<{
-		top: number;
-		height: number;
-		capped: boolean;
-	} | null>(null);
+	const [composerBox, setComposerBoxState] = useState<ComposerBox | null>(null);
+	/* An unchanged measurement is not a new state (perf audit P15). The composer
+	 *  publishes a FRESH `{top, height, capped}` on every layout pass and every
+	 *  measure-key change, and a fresh object re-rendered this whole screen even
+	 *  when all three numbers were the ones it already held. The guard is the
+	 *  comparison only: what is measured and when is the composer's and
+	 *  unchanged, so `composerLimit`'s input still never depends on its output. */
+	/* The box is tagged with the window it was measured in, and the callback is
+	 *  keyed on that window: a resize (rotation, the Android resizing keyboard, a
+	 *  browser window) makes the held box a measurement of a window that is gone,
+	 *  which `heldComposerLimit` ignores, and the new callback identity makes the
+	 *  composer measure again in this one (UX #211 U1: a stale `top` collapsed the
+	 *  composer to one control and a failed send then showed nothing). A late
+	 *  native `measureInWindow` answer from before the resize carries the old
+	 *  window in its closure and is discarded the same way. */
+	const setComposerBox = useCallback(
+		(measured: { top: number; height: number; capped: boolean }) => {
+			const next: ComposerBox = { ...measured, viewportWidth, viewportHeight };
+			setComposerBoxState((previous) =>
+				sameComposerBox(previous, next) ? previous : next,
+			);
+		},
+		[viewportWidth, viewportHeight],
+	);
 	const regionLayout = useRef<
 		Partial<Record<RegionKey, { y: number; h: number }>>
 	>({});
@@ -643,10 +623,8 @@ export default function Session() {
 		Partial<Record<RegionKey, number>>
 	>({});
 	/* The same predicate `Screen` stacks on (it passes no `stackBelowWidth`
-	 *  here), so the title's line clamp and its budget agree: stacked, the
-	 *  budget assumes TWO lines (`headerTitleChars`' stacked branch) and the
-	 *  control draws two (review M1 — a one-line clamp under a two-line budget
-	 *  cut every stacked name twice). Compact never stacks. */
+	 *  here), so the title's line clamp agrees with the row it is drawn in:
+	 *  stacked, the control draws two lines (review M1). Compact never stacks. */
 	const headerStacked = !compact && headerStacks(effectiveScale, viewportWidth);
 	/* The agent picture is a mark of the TITLE's line, not of the chrome. Inline it
 	 *  is the last item of the leading cluster and the title follows it; stacked, the
@@ -663,42 +641,11 @@ export default function Session() {
 			testID={CONTROL.sessionAgentAvatar}
 		/>
 	);
-	const headerTitle =
-		title.length > 0
-			? middleTruncate(
-					title,
-					compact
-						? compactTitleChars(
-								{ width: viewportWidth, height: viewportHeight },
-								effectiveScale,
-								/* The word rides this row in compact and takes width from
-								 *  the title, so it is charged — in EVERY state, live
-								 *  included, so the name's shape does not change when the
-								 *  dot changes colour (review round 4, D15 / QA N3). */
-								/* The dot is ALWAYS inline in compact, so it is
-								 *  charged here too — the budget promised 356.83 pt
-								 *  into a 341 pt box without it (design round 6,
-								 *  D19). */
-								{
-									dot: true,
-									menu: ended,
-									word: true,
-									avatar: headerAvatarRef !== null,
-								},
-								Platform.OS !== "web",
-							)
-						: headerTitleChars(
-								{ width: viewportWidth, height: viewportHeight },
-								/* The dot now holds ONE slot before the name in EVERY state
-								 *  (round 2 D11), so it is charged in every state rather than
-								 *  only on live — and the ⋮ only while it has an item (ended).
-								 *  Review M1, and round 2's D11 layout unification. */
-								{ dot: true, menu: ended, avatar: headerAvatarRef !== null },
-								effectiveScale,
-								Platform.OS !== "web",
-							),
-				)
-			: "session";
+	/* The name goes to the header whole: since #210 the header measures by layout
+	 *  (a tail ellipsis on the line it actually has), and the character budgets
+	 *  that used to middle-truncate it here are identities kept only for callers
+	 *  not yet migrated (`features/session/header.ts`). */
+	const headerTitle = title.length > 0 ? title : "session";
 
 	/* The panels, in one place: they sit between the transcript and the composer.
 	 * One panel at a time, because a phone's column has room for one and a tablet's is
@@ -941,6 +888,61 @@ export default function Session() {
 				? `${Math.round((projection.context_tokens / projection.context_window) * 100)}${viewportWidth < 340 ? "% ctx" : "% context"}${projection.context_is_estimate === true ? " (est.)" : ""}`
 				: null,
 	};
+	/* The activity line's trailing counts, rebuilt only when a NUMBER moves: the
+	 *  screen re-renders on every streamed frame, and a fresh array each time
+	 *  would defeat the memo on the row that paints them. */
+	const tasksOpen = trayFacts.tasks?.open ?? null;
+	const tasksTotal = trayFacts.tasks?.total ?? null;
+	const agentsRunning = trayFacts.agents?.running ?? null;
+	const agentsTotal = trayFacts.agents?.total ?? null;
+	const queuedCount = projection?.queued_count ?? 0;
+	const pendingShowing = pendingViewProps !== null;
+	const lineCounts = useMemo(
+		() =>
+			activityCounts(
+				pendingShowing
+					? null
+					: {
+							tasks:
+								tasksOpen === null || tasksTotal === null
+									? null
+									: { open: tasksOpen, total: tasksTotal },
+							agents:
+								agentsRunning === null || agentsTotal === null
+									? null
+									: { running: agentsRunning, total: agentsTotal },
+						},
+				queuedCount,
+			),
+		[
+			pendingShowing,
+			tasksOpen,
+			tasksTotal,
+			agentsRunning,
+			agentsTotal,
+			queuedCount,
+		],
+	);
+	const openStatusSheet = useCallback(() => setStatusSheetOpen(true), []);
+	/* The counts ELEMENT, memoised like the array it paints (review round 1,
+	 *  m1): `PinnedWorkingLine` and `WorkingLine` are `memo`'d so they skip the
+	 *  ~10 Hz streamed frames, and an element built inline is a new object on
+	 *  every one of those frames — it fails the shallow compare and re-renders
+	 *  both whenever any count exists. */
+	const lineCountsElement = useMemo(
+		() =>
+			lineCounts.length > 0 ? (
+				<ActivityCounts counts={lineCounts} onOpen={openStatusSheet} />
+			) : null,
+		[lineCounts, openStatusSheet],
+	);
+	/* WHERE THE ACTIVITY LINE LIVES: a portrait phone. Short landscape keeps its
+	 *  one-line tray and a tablet its inline panels, and neither has this line —
+	 *  so this ONE flag also tells the composer whether the queued count is
+	 *  already on screen above it or must stay on the card (review round 1, M1:
+	 *  two separately written conditions is how the count went missing on a
+	 *  tablet). */
+	const activityLineHost = tray && !compact;
 
 	const statusStrip =
 		hasStatus && (!compact || projection?.context_tokens != null) ? (
@@ -1148,32 +1150,32 @@ export default function Session() {
 			 *  title cannot pull it into the title column (review M2), and stacked
 			 *  it sits on the back row rather than a third one (QA Q2, design D8). */
 			titleNode={
-				<TickingSessionHealthControl
+				<SessionHealthControl
 					health={health}
 					projection={projection}
 					title={headerTitle}
 					compact={compact}
 					stacked={headerStacked}
-					phase={working}
+					/* No clock here (visual audit D2: the timer is shown once, on the
+					 *  pinned working line), so the header no longer ticks: the
+					 *  subtitle is a plain string of the health state. */
 					subtitle={
 						health === null
 							? undefined
-							: (elapsed) =>
-									headerSubtitle({
-										health,
-										/* The composer's own reading (`turnRunning`), so the
-										 *  header never says Working while a send mints a prompt. */
-										working: runtime.streaming,
-										waiting: pending !== null,
-										elapsed,
-									})
+							: headerSubtitle({
+									health,
+									/* The composer's own reading (`turnRunning`), so the
+									 *  header never says Working while a send mints a prompt. */
+									working: runtime.streaming,
+									waiting: pending !== null,
+								})
 					}
 					sheetOpen={healthSheetOpen}
 					onSheetOpenChange={setHealthSheetOpen}
 					controlRef={healthControlRef}
 				>
 					{ended ? <ResumeBlock resume={resume} /> : null}
-				</TickingSessionHealthControl>
+				</SessionHealthControl>
 			}
 			stackedActionsBeside
 			/* Stacked, the picture leads the TITLE row instead of the chrome row
@@ -1232,8 +1234,9 @@ export default function Session() {
 			/>
 			{/* PORTRAIT PHONE: no under-header row. Its facts moved where the relay
 			    puts them (record §2.2, D-S3): the state into the header subtitle, the
-			    Tasks/Agents chips above the composer (`StatusChips` below), and the
-			    context % onto the composer's meta line. Short landscape keeps the
+			    task and agent counts onto the activity line above the composer
+			    (`ActivityCounts` below), and the context % into the composer's More
+			    sheet. Short landscape keeps the
 			    one-line tray — its own budgeted layout, outside this pass. */}
 			{tray ? (
 				/* Short landscape: a pending decision owns the column, so the tray's 48 pt
@@ -1492,26 +1495,28 @@ export default function Session() {
 						    tray at the top already leads with the activity, and a second
 						    copy here would both repeat it and spend a row of the tightest
 						    layout. The composer's ■ stays the Stop there. */}
-						{tray && !compact ? (
+						{/* ONE ACTIVITY LINE (visual audit D1). The Tasks/Agents capsules
+						    had a 48 pt band of their own under this line, and the queued
+						    count a chip on the composer's strip; they are now the line's
+						    trailing counts and open the same status sheet. A pending card
+						    owns the slot's attention while it is up, so the tasks/agents
+						    counts yield to it as the capsules did (UX U12); the queue
+						    count does not, because nothing else on the screen shows it. */}
+						{activityLineHost ? (
 							<PinnedWorkingLine
 								line={pinned}
 								onStop={composer.stop}
 								stopping={composer.stopping}
-								gapBelow={
-									pendingViewProps === null ||
-									outstandingAsks(projection?.asks).length > 0
-								}
+								gapBelow={outstandingAsks(projection?.asks).length > 0}
+								trailing={lineCountsElement}
+								trailingStacked={activityCountsStack({
+									width: viewportWidth,
+									scale: effectiveScale,
+									counts: lineCounts,
+									touchFloor: TOUCH_FLOOR,
+								})}
 								testID={SURFACE.sessionWorkingLine}
 							/>
-						) : null}
-						{tray && !compact && pendingViewProps === null ? (
-							<View testID={SURFACE.sessionStatusChips}>
-								<StatusChips
-									facts={trayFacts}
-									glass={chromeGlass}
-									onOpen={() => setStatusSheetOpen(true)}
-								/>
-							</View>
 						) : null}
 						<AskBar
 							asks={projection?.asks}
@@ -1525,14 +1530,20 @@ export default function Session() {
 						onLayout={(event) =>
 							measureRecovery("composer", event.nativeEvent.layout.height)
 						}
-						limit={composerLimit(
-							viewportHeight,
-							composerBox?.top ?? null,
-							composerBox?.height ?? null,
-							composerBox?.capped ?? false,
-						)}
+						limit={heldComposerLimit(composerBox, {
+							width: viewportWidth,
+							height: viewportHeight,
+						})}
 						onMeasure={setComposerBox}
-						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}`}
+						/* The measured heights above the composer close the key
+						 *  (`composerChromeKey`): the activity band, a header that
+						 *  stacks (seen as the column's height) or a panel row can
+						 *  settle after a resize without the composer's own size
+						 *  changing, and a composer that is only pushed must still
+						 *  re-read its top (QA #211 round 3 Q5, code round 4 m1).
+						 *  Named field by field so `recoveryFacts.composer`, the
+						 *  composer's own height, can never ride along. */
+						measureKey={`${find.barVisible}|${openPanel}|${statusSheetOpen}|${pendingViewProps ? "pending" : ""}|${compact ? "compact" : "tall"}|${composerChromeKey({ column: recoveryFacts.column, before: recoveryFacts.before, after: recoveryFacts.after, regions: regionContent })}`}
 						compact={
 							compact
 								? {
@@ -1572,7 +1583,8 @@ export default function Session() {
 						onResume={composer.send}
 						ended={ended}
 						error={pending === null ? (composer.error ?? chipError) : null}
-						queuedCount={projection?.queued_count ?? 0}
+						queuedCount={queuedCount}
+						queueOnCard={!activityLineHost}
 						/* The context % and spend ride the meta line on a phone (D-S3);
 						 *  a tablet keeps its inline status strip, which already shows them. */
 						contextLabel={tray && !compact ? trayFacts.context : null}
@@ -1586,6 +1598,14 @@ export default function Session() {
 						effortChip={chipLabels.effort}
 						onOpenModels={() => setModelsOpen(true)}
 						onOpenEffort={() => setEffortOpen(true)}
+						/* Any ask, waiting or timed out: a lapsed-only queue paints no
+						 *  ask bar (build 753), so this row is its door to Dismiss. */
+						questions={(() => {
+							const label = askBarLabel(projection?.asks);
+							return label === null
+								? null
+								: { value: label.text, onOpen: asksSheet.open };
+						})()}
 						fieldRef={composerFieldRef}
 						slashQuery={slash}
 						slashSheet={
@@ -1608,7 +1628,7 @@ export default function Session() {
 			<Sheet
 				visible={statusSheetOpen}
 				onClose={() => setStatusSheetOpen(false)}
-				title="status"
+				title={t("mobile.session.sheet_title.status")}
 				testID={SURFACE.sessionStatusSheet}
 			>
 				<View className="gap-2 pb-2">
@@ -1619,6 +1639,13 @@ export default function Session() {
 					{compact ? workingLineView : null}
 					{subagents.total > 0 ? subagentsPanel : null}
 					{todos.empty ? null : todosPanel}
+					{/* The queue's count in words: the activity line shows it as a glyph
+					    and a number, and this sheet is what that count opens. */}
+					{queuedCount > 0 ? (
+						<Text className="px-4 text-body-sm text-ink-muted">
+							{t("mobile.chrome.composer.queued", { count: queuedCount })}
+						</Text>
+					) : null}
 					{projection?.context_tokens != null ? (
 						<Text className="px-4 text-mono-sm text-ink-dim">
 							{trayFacts.context}

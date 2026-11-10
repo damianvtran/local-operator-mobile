@@ -9,6 +9,7 @@ import {
 	MoreHorizontal,
 	Paperclip,
 	Square,
+	TriangleAlert,
 	X,
 } from "lucide-react-native";
 import {
@@ -58,21 +59,25 @@ import {
 	type ComposerControls,
 	composerCopy,
 	composerFeedback,
+	noticeActionName,
 } from "@/features/session/composer";
 import {
 	ATTACH_GLYPH_PT,
 	COMPOSER_ACTION_CLUSTER,
 	COMPOSER_CHIP_CAPSULE_ALIGN,
+	COMPOSER_CHIP_TRAILING,
+	COMPOSER_CHIP_ZONE,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
-	COMPOSER_META_GLASS_SPACING,
+	COMPOSER_META_GAP_PT,
 	COMPOSER_META_ROW,
+	composerChipPlan,
 	FOLDER_CHIP_MAX_PT,
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
-	SESSION_STRIP_SHRINK,
-	sessionEffortMaxWidth,
+	NOTICE_GLYPH_COLUMN_PT,
+	noticeActionPlan,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -113,8 +118,8 @@ import {
 	Skeleton,
 	Textarea,
 } from "@/ui/components";
-import { ChromeGroup, ChromeSurface } from "@/ui/components/chrome-surface";
-import { useIsRTL } from "@/ui/direction";
+import { ChromeSurface } from "@/ui/components/chrome-surface";
+import { TEXT_END_CLASS, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
 	composerAtHostCap,
@@ -287,7 +292,23 @@ export type ComposerProps = {
 	/** A refused start or a failed steer, stated beside the control that caused it. */
 	error: string | null;
 	queuedCount: number;
+	/** The queued count stays VISIBLE on the card's controls row. The session
+	 *  passes this wherever it has no activity line above the composer to carry
+	 *  the count (a tablet, short landscape) — on those layouts nothing else on
+	 *  screen says a message is waiting (review round 1, M1). Off by default:
+	 *  the home states its queue on its own line, and a portrait phone on the
+	 *  activity line, and a second copy on the card would only take the model's
+	 *  width. Short landscape wide enough for the compact strip shows the count
+	 *  there whatever this says. */
+	queueOnCard?: boolean;
 	onOpenQueue?: () => void;
+	/** The More sheet's Questions row, or `null` while the session has no ask
+	 *  at all. `value` is the asks sheet's own count sentence (`askBarLabel`).
+	 *  It exists because a queue of only TIMED-OUT asks paints no ask bar
+	 *  (operator feedback, TestFlight build 753), yet its Dismiss lives in the
+	 *  asks sheet; the status sheet cannot be that door, since with no counts
+	 *  the activity line draws nothing that opens it. */
+	questions?: { value: string; onOpen: () => void } | null;
 	onEditingChange?: (editing: boolean) => void;
 	suppressDisabledHint?: boolean;
 	/** The working-folder chip on the meta line. The composer home passes its
@@ -492,8 +513,7 @@ const ComposerChipButton = ({
  *  in its solid branch, which would turn today's quiet, fill-less chip into a
  *  box — the fallback must stay byte-for-byte what ships. The capsule's radius
  *  is half the chip's touch-floor height: `radius.full` in spirit, as a number
- *  because the glass view takes its corners as props (`status-chips.tsx` makes
- *  the same call). `min-w-0`/`maxWidth` keep the chip's own shrink rule
+ *  because the glass view takes its corners as props. `min-w-0`/`maxWidth` keep the chip's own shrink rule
  *  working through the extra box, so a long model name still ellipsizes. */
 const stripChipSurface = (glass: boolean, chip: ReactElement) =>
 	glass ? (
@@ -512,6 +532,136 @@ const stripChipSurface = (glass: boolean, chip: ReactElement) =>
 	) : (
 		chip
 	);
+
+/** The failure notice's row floor: one touch target, because each row holds a
+ * sentence AND its action, and the action's box is the taller of the two. */
+const NOTICE_ROW_FLOOR = TOUCH_FLOOR;
+/** Centres the sentence's first 20 pt line (`text-body-sm`) in that floor, so the
+ * word of the trailing action and the first line of the sentence share a
+ * baseline row; a wrapped sentence grows downward from there. */
+const NOTICE_LINE_INSET = Math.max(0, (NOTICE_ROW_FLOOR - 20) / 2);
+/** The least width a notice sentence keeps beside its trailing action, at 100 %
+ *  text (it scales with the reader's text): below it the sentence is a column
+ *  of single words and the action wraps under it instead.
+ *
+ *  64, and not more, ON PURPOSE. At 320x568 / 200 % the extras scroller is
+ *  143 px tall, and an action is only certain to be seen while it shares its
+ *  sentence's FIRST row (UX #211 U4), so the floor must not wrap the actions
+ *  that fit. The notice column there is 250 px and the floor 128. Measured
+ *  widths (QA round 3): "Retry" 69 and the lone "Dismiss" 96 leave their
+ *  sentences 169 and 142 px, so both stay on the first row. "Dismiss error"
+ *  is 82 px at 100 %, about 164 at 200 %, and left the error line 74 px, some
+ *  seven characters a line (design round 2 D7): that one wraps, as do the
+ *  long-label locales (the hi/ur Retry, the fr/ru dismissal). */
+const NOTICE_SENTENCE_MIN = 64;
+
+/**
+ * A text action inside the composer's failure notice (visual audit D6): the
+ * word alone, no outline and no fill, because the notice it belongs to is one
+ * borderless block and a boxed button inside it was the "ugly" part. The
+ * touch-floor box is real geometry on both axes (react-native-web implements no
+ * `hitSlop`, and the audit reads the box), with the word centred on the
+ * block's leading edge so it lines up under the sentence.
+ */
+const NoticeAction = ({
+	label,
+	accessibilityLabel,
+	accessibilityHint,
+	onPress,
+	onWidth,
+	testID,
+}: {
+	label: string;
+	accessibilityLabel: string;
+	accessibilityHint?: string;
+	onPress: () => void;
+	/** The action's own painted width, for `noticeActionPlan`. Intrinsic: the
+	 *  box hugs its one-line label in either placement, so reporting it cannot
+	 *  feed the decision it informs. */
+	onWidth: (width: number) => void;
+	testID: string;
+}) => (
+	<Pressable
+		accessibilityRole={ROLE.button}
+		accessibilityLabel={noticeActionName(label, accessibilityLabel)}
+		accessibilityHint={accessibilityHint}
+		onPress={onPress}
+		onLayout={(event) => onWidth(Math.ceil(event.nativeEvent.layout.width))}
+		style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+		className="justify-center"
+		testID={testID}
+	>
+		<Text className="text-body-sm font-medium text-ink underline">{label}</Text>
+	</Pressable>
+);
+
+/**
+ * One row of the More sheet: a label and its value on ONE leading edge (visual
+ * audit D5). The sheet used to list the two chips and two bare sentences, which
+ * put unlabelled text on two different left edges (a chip pads its label, a
+ * `Text` does not) and left "High" to be recognised as an effort by position.
+ * A row with `onPress` is the way into that value's own picker.
+ */
+const ContextRow = ({
+	label,
+	value,
+	onPress,
+	accessibilityLabel,
+	accessibilityHint,
+	disabled = false,
+	testID,
+}: {
+	label: string;
+	/** `null` while the value is still expected: the row keeps its place and
+	 *  shows the kit's skeleton instead of a word that would be a guess. */
+	value: string | null;
+	onPress?: () => void;
+	accessibilityLabel?: string;
+	accessibilityHint?: string;
+	disabled?: boolean;
+	testID?: string;
+}) => {
+	const body = (
+		<View
+			className="flex-row items-center justify-between gap-3"
+			style={{ minHeight: TOUCH_FLOOR }}
+		>
+			<Text className="shrink-0 text-body-sm text-ink-muted">{label}</Text>
+			{value === null ? (
+				<Skeleton lines={1} widthClassName="w-24" />
+			) : (
+				<Text
+					className={cx(
+						"min-w-0 flex-1 text-body-sm",
+						TEXT_END_CLASS,
+						disabled ? CONTROL_DISABLED_INK : "text-ink",
+					)}
+					numberOfLines={1}
+				>
+					{value}
+				</Text>
+			)}
+		</View>
+	);
+	if (!onPress) return <View testID={testID}>{body}</View>;
+	return (
+		<Pressable
+			accessibilityRole={ROLE.button}
+			accessibilityLabel={accessibilityLabel ?? `${label}, ${value ?? ""}`}
+			accessibilityHint={accessibilityHint}
+			accessibilityState={state({ disabled })}
+			disabled={disabled}
+			onPress={onPress}
+			testID={testID}
+		>
+			{body}
+		</Pressable>
+	);
+};
+
+/** The More sheet's row for a chip, in whichever of its three states it is. */
+const chipRowValue = (chip: ComposerChip): string | null =>
+	chip.kind === "loading" ? null : chip.text;
 
 /** iOS presents its picker from the current native controller, not the next
  * React state. Wait for the sheet's actual dismissal so it cannot take a newly
@@ -581,7 +731,9 @@ export const Composer = ({
 	ended = false,
 	error,
 	queuedCount,
+	queueOnCard = false,
 	onOpenQueue,
+	questions = null,
 	onEditingChange,
 	suppressDisabledHint = false,
 	folderChip = null,
@@ -857,6 +1009,8 @@ export const Composer = ({
 	const [receiptHeight, setReceiptHeight] = useState(48);
 	/* Measure this dock's width (not the whole window) for compact split fit. */
 	const [metaWidth, setMetaWidth] = useState(0);
+	/* The card's chip zone, measured: what `composerChipPlan` fits chips into. */
+	const [chipZoneWidth, setChipZoneWidth] = useState(0);
 	const _window = useWindowDimensions();
 	const [focused, setFocused] = useState(false);
 	const pasteOffer = useClipboardImageOffer(focused);
@@ -867,14 +1021,18 @@ export const Composer = ({
 	const inputRef = fieldRef ?? ownField;
 	const reducedMotion = useReducedMotion();
 	const elevated = useTokenColor("elevated");
-	/* The shell's ONLY boundary. `elevated` over `canvas` is a fill step of
-	 *  1.1244–1.2799:1 across all 59 themes — below the 3:1 a boundary owes, and
-	 *  thinnest at the near-white end, where a card delimited by its fill alone
-	 *  reads as unframed. `border-control` is the kit's token for a field's
-	 *  boundary on a plain ground: 3.132–5.924:1 against `canvas` in every theme.
-	 *  The reasoning is in `docs/design/components.md` § 5 and § 12. */
+	/* The shell's FOCUS edge, and only that (visual audit D8). At rest the card
+	 *  is separated by its `elevated` fill alone, as the relay's is: the operator
+	 *  asked for no border line, and a permanent 1 pt `border-control` ring read
+	 *  as a definite outline (3.4–4.2:1 against the canvas). The field is
+	 *  `integrated` and draws no outline of its own, so focus still needs a
+	 *  visible mark — the same ring, painted only while the field holds focus,
+	 *  in the token whose contrast against `canvas` is already known
+	 *  (3.132–5.924:1 in every theme, `docs/design/components.md` § 5). */
 	const borderControl = useTokenColor("border-control");
-	const progress = useSharedValue(0);
+	/* Seeded at the resting form's own end: a dock that rests as the card must
+	 *  not morph in from a pill on every mount. */
+	const progress = useSharedValue(compact === null ? 1 : 0);
 	const keyboardOffset = useSharedValue(0);
 	const keyboardDuration = useRef(200);
 	const presentationFacts = {
@@ -892,7 +1050,11 @@ export const Composer = ({
 		 *  (28 announced over a 30 pt paint). */
 		floor: TOUCH_FLOOR,
 	};
-	const presentation = composerPresentation(presentationFacts);
+	/* What the dock would be on ITS OWN facts — focus, a draft, an attachment, a
+	 *  take, a live turn or a notice. `onEditingChange` and the dictation slot
+	 *  rule below read this one: the host's "is the reader editing" must not turn
+	 *  true just because the dock now rests as a card. */
+	const activePresentation = composerPresentation(presentationFacts);
 	/* Open ONLY because of dictation: without the take (or its outcome line) this
 	 *  card would be the collapsed pill, whose trailing slot is the mic. The
 	 *  controls row then keeps the mic in that trailing slot, so the press that
@@ -900,13 +1062,36 @@ export const Composer = ({
 	 *  mic (UX review round 1, U2). Send is disabled in this state anyway: a card
 	 *  with a draft, an attachment or focus is open for its own reasons. */
 	const openForDictationOnly =
-		presentation.expanded &&
+		activePresentation.expanded &&
 		!composerPresentation({ ...presentationFacts, dictation: false }).expanded;
 	const trailing = controlsTrailing({
 		openForDictationOnly,
 		recording: voice?.phase === "recording",
 		micShown,
 	});
+	/* Physical orientation is supplied by the caller, not the keyboard-shortened
+	 * window. Narrow splits retain two rows rather than clipping a control. */
+	const compactSingle =
+		compact !== null &&
+		metaWidth >=
+			80 +
+				5 * TOUCH_FLOOR +
+				(micShown ? TOUCH_FLOOR : 0) +
+				(controls.stopVisible ? TOUCH_FLOOR : 0) +
+				24;
+	/* THE RESTING FORM (visual audit D1/D5). Everywhere but short landscape the
+	 *  dock rests as the two-row card: field above, `attach · model · effort · … ·
+	 *  mic · send` below, the relay's own shape. The chips used to ride a separate
+	 *  48 pt strip above a 56 pt pill; the card is the same height as that pair
+	 *  and one surface instead of two. Short landscape keeps its one-row pill and
+	 *  its compact strip, because a 390 pt-tall window cannot spare the row. */
+	/* `metaWidth > 0`: until the dock has been measured a short-landscape host
+	 *  cannot know whether it is the pill, and painting the card for that one
+	 *  frame is a visible flip. */
+	const restsAsCard = compact === null || (metaWidth > 0 && !compactSingle);
+	const presentation = restsAsCard
+		? composerPresentation({ ...presentationFacts, card: true })
+		: activePresentation;
 	/* One keyboard owner. Android's resized window already ends at keyboard top:
 	 * overlap is then zero. iOS follows the native frame/duration, not a second
 	 * keyboardDidShow correction; safe-area clearance belongs OUTSIDE the shell. */
@@ -950,18 +1135,8 @@ export const Composer = ({
 		});
 	}, [presentation.expanded, reducedMotion, keyboardVisible, progress]);
 	useEffect(() => {
-		onEditingChange?.(presentation.expanded);
-	}, [presentation.expanded, onEditingChange]);
-	/* Physical orientation is supplied by the caller, not the keyboard-shortened
-	 * window. Narrow splits retain two rows rather than clipping a control. */
-	const compactSingle =
-		compact !== null &&
-		metaWidth >=
-			80 +
-				5 * TOUCH_FLOOR +
-				(micShown ? TOUCH_FLOOR : 0) +
-				(controls.stopVisible ? TOUCH_FLOOR : 0) +
-				24;
+		onEditingChange?.(activePresentation.expanded);
+	}, [activePresentation.expanded, onEditingChange]);
 	/* THE PAINTED BASE, measured. The pill's radius is half the pill the platform
 	 * actually paints (56/R28 on every floor since H5: 4 + 48 + 4), not
 	 * half a constant: the 24/28 pair is a JOINT rule, so a radius derived from a
@@ -989,7 +1164,13 @@ export const Composer = ({
 	 *  round measured. Each end is captured while ITS state is mounted. */
 	const [collapsedSeed, setCollapsedSeed] = useState<number | null>(null);
 	const [expandedSeed, setExpandedSeed] = useState<number | null>(null);
+	/* The width the extras' content is LAID OUT at: the content block's own
+	 *  width, which the shell's padding decides and nothing inside the extras
+	 *  scroller can change (QA #211 round 4 Q6, below at the scroller). */
+	const [contentWidth, setContentWidth] = useState(0);
 	const measureContent = (event: LayoutChangeEvent) => {
+		const width = Math.floor(event.nativeEvent.layout.width);
+		if (width > 0 && width !== contentWidth) setContentWidth(width);
 		/* `Math.ceil`, not `Math.round`: half a point of rounding at rest is a clip
 		 *  the moment the shell is allowed to hide overflow, and the content below
 		 *  the true height is exactly what would disappear. */
@@ -1076,7 +1257,13 @@ export const Composer = ({
 	/* What sits under the field and never scrolls: the controls row, plus the meta
 	 *  line when it has its own row. With the keyboard up it only rides inline
 	 *  when model + effort targets fit; otherwise reserve the separate row too. */
-	const fixedRows = compactSingle ? 0 : TOUCH_FLOOR + receiptHeight + 4;
+	/* Only short landscape still has a strip outside the shell; the card's chips
+	 *  ride its controls row, which `TOUCH_FLOOR` already pays for. The strip's
+	 *  last measured height is ignored rather than reset, so a rotation back
+	 *  cannot charge a row that is no longer mounted. The 4 pt is the gap
+	 *  between the field and the controls row (`COMPOSER_CONTROLS_GAP`). */
+	const stripHeight = compactSingle ? receiptHeight : 0;
+	const fixedRows = compactSingle ? 0 : TOUCH_FLOOR + stripHeight + 4;
 	const hostBound = compact === null ? limit : compact.maxHeight;
 	// The iOS window does not shrink with its keyboard. A bottom translation
 	// alone keeps the footer above it but lets extras grow off-screen forever.
@@ -1092,6 +1279,24 @@ export const Composer = ({
 		rawBound === null
 			? null
 			: composerHostBound(rawBound, presentation.gap, TOUCH_FLOOR);
+	/* Where the failure notice's actions sit (QA #211 round 4 Q7): trailing
+	 *  their sentences while every sentence keeps `noticeSentenceMin` beside
+	 *  its action, else together on the notice's first row. Decided here, above
+	 *  the budget, because the budget snaps the extras' cap to the whole action
+	 *  rows this plan reports. The widths are each action's own (its label at
+	 *  the reader's scale) and the column is the shell's, so the plan is not an
+	 *  output of the cap it informs. */
+	const noticeSentenceMin = Math.round(NOTICE_SENTENCE_MIN * effectiveScale);
+	const [retryWidth, setRetryWidth] = useState(0);
+	const [dismissWidth, setDismissWidth] = useState(0);
+	const noticePlan = noticeActionPlan({
+		column: contentWidth > 0 ? contentWidth - NOTICE_GLYPH_COLUMN_PT : 0,
+		sentenceMin: noticeSentenceMin,
+		actions: [
+			...(feedback.retainedText !== null ? [retryWidth] : []),
+			...(feedback.errorText !== null && onDismissError ? [dismissWidth] : []),
+		],
+	});
 	const budget =
 		bound === null
 			? null
@@ -1104,6 +1309,7 @@ export const Composer = ({
 					dictationShowing
 						? dictationRowBox(effectiveScale) + DICTATION_ROW_MARGIN_PX
 						: 0,
+					noticePlan.rows * NOTICE_ROW_FLOOR,
 				);
 	const fieldMaxHeight = budget?.field;
 	const extrasMaxHeight = budget?.extras;
@@ -1151,7 +1357,7 @@ export const Composer = ({
 	/* The keyboard is in the key (deferred #177 finding): toggling it moves the
 	 *  dock by the keyboard's height without changing any other input here, and a
 	 *  key that missed it left the host reading a stale `composerBox.top`. */
-	const measurementKey = `${measureKey}|${receiptHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}|${keyboardVisible ? "keyboard" : ""}`;
+	const measurementKey = `${measureKey}|${stripHeight}|${extrasHeight}|${effectiveScale}|${compact === null ? "tall" : "compact"}|${dictationShowing ? "dictation" : ""}|${keyboardVisible ? "keyboard" : ""}`;
 	useEffect(() => {
 		/* `measurementKey` is READ here only to make it the dependency it is: the
 		 *  effect's whole purpose is to re-measure when the key changes (find bar,
@@ -1162,6 +1368,165 @@ export const Composer = ({
 		if (measurementKey === "") return;
 		publishBox();
 	}, [publishBox, measurementKey]);
+
+	/* ONE NOTICE for an uncertain delivery and for an error (visual audit D6; the
+	 *  operator: warnings inside the composer "look ugly"). It was two bordered red
+	 *  boxes, a full-width outlined button and a helper sentence restating the
+	 *  first box, stacked inside the card. Now a danger glyph and, per line, the
+	 *  sentence with its one text action trailing it: no border, no wash, no
+	 *  full-width button.
+	 *
+	 *  Each action sits on the line it acts on (UX #211 U2/U4). They used to share
+	 *  a row UNDER both sentences, which failed twice: at 320 pt / 200 % that row
+	 *  was below the fold of the extras scroller, so a failed send offered no
+	 *  reachable Retry; and with a retained instruction showing, "Dismiss" read as
+	 *  dismissing the red sentence, removed only the grey error line and itself,
+	 *  and so looked broken. Now the retained sentence carries Retry and nothing
+	 *  else, and the error line carries its own dismissal, which is NAMED for the
+	 *  error ("Dismiss error") whenever there is another sentence it could be
+	 *  mistaken for. Alone, the error is the only thing there and the one word
+	 *  is enough.
+	 *
+	 *  Behaviour is #206's and unchanged: Retry is the host's `onRetry`, and
+	 *  Dismiss is its `onDismissError`, which hides the ERROR line only — a
+	 *  retained instruction has no dismiss here at all, so neither action can
+	 *  drop a retained UUID, an uncertainty row or the queue, and a failure
+	 *  that recurs is a new `error` value the host hands back in.
+	 *
+	 *  When both are present the retained sentence leads (it is the one that
+	 *  blocks Send) and the error is its cause, said once beneath it in the
+	 *  quieter ink rather than as a second alert. Each keeps its own id and
+	 *  live region, so assistive tech hears both as before.
+	 *
+	 *  The first row is `NOTICE_ROW_FLOOR` tall, and the block is the FIRST
+	 *  thing in the extras, so whatever the budget leaves the extras shows the
+	 *  notice before anything else.
+	 *
+	 *  A row WRAPS (design D7, code R3 M2): the sentence keeps at least
+	 *  `noticeSentenceMin`, and an action that would leave it less drops under
+	 *  it on the trailing edge. Without that the action took its full one-line
+	 *  width and the sentence the remainder, which at 320 pt / 200 % (and in
+	 *  the long-label locales) was a sliver many lines tall.
+	 *
+	 *  ACTIONS FIRST when any would wrap (QA #211 round 4 Q7, `noticeActionPlan`):
+	 *  wrapping UNDER the sentence put the French Retry 210 px below the fold
+	 *  of a 143 px scroller and cut the English "Dismiss error" by 14 px. When
+	 *  one action would leave its sentence under the minimum, all of them move
+	 *  to one trailing-aligned row above the sentences (wrapping among
+	 *  themselves), so the first action is on the first visible row in every
+	 *  locale; `composerBudget` keeps that block to whole rows. The row-level
+	 *  `flex-wrap` stays as the fallback for the frame before the widths are
+	 *  measured. */
+	const noticeRetry =
+		feedback.retainedText !== null ? (
+			<NoticeAction
+				label={t("mobile.composer_input.notice_retry")}
+				/* The full sentence stays the accessible name: "Retry"
+				 *  alone does not say WHAT is retried, and it contains
+				 *  the visible word (label-in-name, U-10). */
+				accessibilityLabel={feedback.retryLabel}
+				onPress={onRetry}
+				onWidth={setRetryWidth}
+				testID={CONTROL.composerRetry}
+			/>
+		) : null;
+	const noticeDismiss =
+		feedback.errorText !== null && onDismissError ? (
+			<NoticeAction
+				label={
+					feedback.retainedText !== null
+						? t("mobile.composer_input.dismiss_error")
+						: t("mobile.composer_input.notice_dismiss")
+				}
+				accessibilityLabel={t("mobile.composer_input.dismiss_error")}
+				accessibilityHint={t("mobile.composer_input.dismiss_error_hint")}
+				onPress={onDismissError}
+				onWidth={setDismissWidth}
+				testID={CONTROL.composerDismissError}
+			/>
+		) : null;
+	/* The extras return to their top whenever the notice's contents change (QA
+	 *  #211 round 3 Q4): after scrolling down to "Dismiss error" and using it,
+	 *  the scroller kept its offset and Retry, on the first row, sat above the
+	 *  fold of what was left. New or removed sentences are new content; where
+	 *  the reader had scrolled the old one says nothing about it. */
+	const extrasScrollRef = useRef<ScrollView | null>(null);
+	const noticeKey = `${feedback.retainedText ?? ""}|${feedback.errorText ?? ""}`;
+	useEffect(() => {
+		/* Read, as `measurementKey` is below: the key IS the dependency. */
+		if (noticeKey === "|") return;
+		extrasScrollRef.current?.scrollTo({ y: 0, animated: false });
+	}, [noticeKey]);
+	const failureNotice =
+		feedback.retainedText !== null || feedback.errorText !== null ? (
+			<View
+				className="mb-1 flex-row items-start gap-2"
+				testID={SURFACE.composerFailureNotice}
+			>
+				{/* The glyph is centred on the FIRST line (a 20 pt line box, itself
+				    centred in the row's touch floor by `NOTICE_LINE_INSET`), not on
+				    the block: under a two-line sentence at 200 % it would otherwise
+				    drift to the middle and stop reading as the sentence's mark. */}
+				<View
+					className="h-5 items-center justify-center"
+					style={{ marginTop: NOTICE_LINE_INSET }}
+					aria-hidden
+				>
+					<TriangleAlert size={14} color={dangerInk} />
+				</View>
+				<View className="min-w-0 flex-1">
+					{noticePlan.lead ? (
+						<View className="flex-row flex-wrap justify-end gap-x-3">
+							{noticeRetry}
+							{noticeDismiss}
+						</View>
+					) : null}
+					{feedback.retainedText !== null ? (
+						<View
+							className="flex-row flex-wrap items-start justify-end gap-x-3"
+							style={{ minHeight: NOTICE_ROW_FLOOR }}
+						>
+							<Text
+								className="flex-1 text-body-sm text-danger"
+								style={{
+									paddingVertical: NOTICE_LINE_INSET,
+									minWidth: noticeSentenceMin,
+								}}
+								accessibilityRole={ROLE.alert}
+								accessibilityLiveRegion="assertive"
+								testID={SURFACE.composerRetained}
+							>
+								{feedback.retainedText}
+							</Text>
+							{noticePlan.lead ? null : noticeRetry}
+						</View>
+					) : null}
+					{feedback.errorText !== null ? (
+						<View
+							className="flex-row flex-wrap items-start justify-end gap-x-3"
+							style={{ minHeight: NOTICE_ROW_FLOOR }}
+						>
+							<Text
+								className={
+									feedback.retainedText !== null
+										? "flex-1 text-meta text-ink-muted"
+										: "flex-1 text-body-sm text-danger"
+								}
+								style={{
+									paddingVertical: NOTICE_LINE_INSET,
+									minWidth: noticeSentenceMin,
+								}}
+								accessibilityLiveRegion="assertive"
+								testID={SURFACE.composerError}
+							>
+								{feedback.errorText}
+							</Text>
+							{noticePlan.lead ? null : noticeDismiss}
+						</View>
+					) : null}
+				</View>
+			</View>
+		) : null;
 
 	/* TWO fragments, one scroll owner. `extras` is everything ABOVE the field —
 	 *  attachments, the retained-instruction alert, the error, the disabled reason — and
@@ -1174,22 +1539,10 @@ export const Composer = ({
 	const extras = (
 		<>
 			<ComposerStateMarkers controls={controls} />
-			{onClearDraft && (draft.length > 0 || images.length > 0) ? (
-				<Button
-					label={t("mobile.composer_input.clear_draft")}
-					accessibilityHint={t("mobile.composer_input.clear_draft_hint")}
-					variant="quiet"
-					size="sm"
-					disabled={attaching || controls.sending}
-					onPress={() => {
-						onClearDraft();
-						inputRef.current?.blur();
-						Keyboard.dismiss();
-						setFocused(false);
-					}}
-					testID={CONTROL.composerClearDraft}
-				/>
-			) : null}
+			{/* First, above even the attachments: when the extras are short of room
+			    it is the top of the scroller that shows, and the notice is what
+			    must be seen first. */}
+			{failureNotice}
 			{/* Attachments, above the field: an attachment changes what send means, so it
 			    is read before the control that is pressed. */}
 			{images.length > 0 ? (
@@ -1289,56 +1642,16 @@ export const Composer = ({
 				</Text>
 			) : null}
 
-			{retainedMessage !== null ? (
-				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
-					<Text
-						className="text-body-sm text-danger"
-						accessibilityRole={ROLE.alert}
-						accessibilityLiveRegion="assertive"
-						testID={SURFACE.composerRetained}
-					>
-						{feedback.retainedText}
-					</Text>
-					<View className="pt-2">
-						<Button
-							label={feedback.retryLabel}
-							variant="outline"
-							size="sm"
-							onPress={onRetry}
-							testID={CONTROL.composerRetry}
-						/>
-					</View>
-				</View>
-			) : null}
-
-			{feedback.errorText !== null ? (
-				<View className="mb-2 rounded-sm border border-danger-border bg-danger-wash px-3 py-2">
-					<Text
-						className="text-body-sm text-danger"
-						accessibilityLiveRegion="assertive"
-						testID={SURFACE.composerError}
-					>
-						{feedback.errorText}
-					</Text>
-					{onDismissError ? (
-						<Button
-							label={t("mobile.composer_input.dismiss_error")}
-							accessibilityHint={t("mobile.composer_input.dismiss_error_hint")}
-							variant="quiet"
-							size="sm"
-							onPress={onDismissError}
-							testID={CONTROL.composerDismissError}
-						/>
-					) : null}
-				</View>
-			) : null}
-
 			{/* U4: name why the primary is dead, whatever the reason — an unresolved
 			    instruction or a session that has ended — so a disabled ↑ reads as
 			    intentional rather than as a broken button. The sentence is the
 			    projection's, and this is the only place it is rendered. */}
+			{/* Not while the retained notice is up (D6): the reason then IS that
+			    notice, and repeating it one line lower was the third copy of one
+			    fact. It stays on the disabled Send as its hint (see the disc). */}
 			{controls.disabledReason !== null &&
 			presentation.expanded &&
+			feedback.retainedText === null &&
 			!suppressDisabledHint ? (
 				<Text
 					className="pb-1 text-meta text-ink-muted"
@@ -1351,26 +1664,25 @@ export const Composer = ({
 	);
 
 	/* VISIBLE, not just announced (round 4 reviewer MAJOR): a queue the reader
-	 *  cannot see is a queue they cannot trust. The chip opens More, which lists
-	 *  the count and — where the surface can open the queue — the way in; it is
-	 *  never a disabled control. ONE element for both strips (tall and short
-	 *  landscape), so its floor and its width cap are written once. */
-	/* Effort's measured cap on the session strip (R3-M1): rigid, so Yoga only
-	 *  ever floors the model, and capped by what the strip leaves after the
-	 *  model's floor and the trailing controls actually rendered below — More,
-	 *  the queued chip, keyboard-dismiss. Undefined until `metaWidth` arrives. */
-	const sessionEffortCap = sessionEffortMaxWidth(
-		metaWidth,
-		1 + (queuedCount > 0 ? 1 : 0) + (keyboardVisible || focused ? 1 : 0),
-		TOUCH_FLOOR,
-	);
-	const queuedChip =
+	 *  cannot see is a queue they cannot trust. On the card the count rides the
+	 *  host's activity line above the dock (visual audit D1/D5: it was a fourth,
+	 *  sans-serif thing on a row of mono chips); this chip is what is left for
+	 *  short landscape, whose compact strip has no activity line above it. It
+	 *  opens More, which lists the count and — where the surface can open the
+	 *  queue — the way in; it is never a disabled control. */
+	const queuedLabel = t("mobile.chrome.composer.queued", {
+		count: queuedCount,
+	});
+	/* `planned` is the card's form of the chip: RIGID, at the width the chip
+	 *  plan charged for it. The compact strip's chip shrinks instead — it is the
+	 *  only shrinker on that row. On the card the model already shrinks to a
+	 *  floor, and a second floored shrinker after it is the yoga#2006 shape
+	 *  that once threw the trailing controls off the row (`composer-layout.ts`). */
+	const queuedChipFor = (bare: boolean, planned: { width: number } | null) =>
 		queuedCount > 0 ? (
 			<Pressable
 				accessibilityRole={ROLE.button}
-				accessibilityLabel={t("mobile.chrome.composer.queued", {
-					count: queuedCount,
-				})}
+				accessibilityLabel={queuedLabel}
 				onPress={() => setContextOpen(true)}
 				/* Bounded width is the point (UX round 5, U2): an unconstrained
 				 *  label at 200 % text pushed the dismiss control past the 390 pt
@@ -1384,50 +1696,86 @@ export const Composer = ({
 					 *  44 pt height hid — and a shorter strip (the spec's 36 pt) must
 					 *  never take the target down with it. */
 					minHeight: TOUCH_FLOOR,
-					maxWidth: 160,
-					flexShrink: 1,
+					maxWidth: planned === null ? 160 : planned.width,
+					flexShrink: planned === null ? 1 : 0,
 				}}
 				className="items-center justify-center px-1"
 				testID={SURFACE.queuedMessageChip}
 			>
 				<Text className="text-meta text-ink-dim" numberOfLines={1}>
-					{dictationLargeText
-						? String(queuedCount)
-						: t("mobile.chrome.composer.queued", { count: queuedCount })}
+					{bare ? String(queuedCount) : queuedLabel}
 				</Text>
 			</Pressable>
 		) : null;
+	const queuedChip = queuedChipFor(dictationLargeText, null);
 
-	/* The permanent context strip is outside the shell. No keyboard-dependent
-	 * reparenting or first-frame facts ladder: model and effort always retain a
-	 * target; optional facts are disclosed via More. */
-	const receipt = (
-		/* A glass GROUP so iOS renders the two chips' material together (spec
-		 *  §12) — as two capsules, with a merge distance under the row's gap
-		 *  (D1); with glass off it is this same plain row, unchanged. */
-		<ChromeGroup
-			glass={glass}
-			spacing={COMPOSER_META_GLASS_SPACING}
-			className={COMPOSER_META_ROW}
-			testID={SURFACE.composerMeta}
-			onLayout={(event) => {
-				setReceiptHeight(Math.ceil(event.nativeEvent.layout.height));
-				setMetaWidth(event.nativeEvent.layout.width);
+	/* WHAT FITS ON THE CARD'S CONTROLS ROW (visual audit D5). The zone between
+	 *  attach and the mic/send cluster is measured, and effort leaves the row
+	 *  before the model's name is cut: `claude-op… High` told the reader less
+	 *  than `claude-opus-5` alone, and a dropped effort is still one tap away in
+	 *  More. The zone is `flex-1` between fixed-width siblings, so its width does
+	 *  not depend on which chips it holds — the measurement cannot feed itself. */
+	const moreSlot = 1;
+	const chipPlan = composerChipPlan({
+		width: chipZoneWidth,
+		scale: effectiveScale,
+		modelChars: modelChip.kind === "loading" ? 12 : modelChip.text.length,
+		effortChars:
+			!effortChip || (effortChip.kind === "value" && effortChip.rowHidden)
+				? null
+				: effortChip.kind === "loading"
+					? 4
+					: effortChip.text.length,
+		folder: !!folderChip,
+		trailing: moreSlot,
+		touchFloor: TOUCH_FLOOR,
+		/* Large text shows the bare number in either form (UX round 5, U2), so
+		 *  the sentence is charged at the number's width there. */
+		queued:
+			queueOnCard && queuedCount > 0
+				? {
+						labelChars: dictationLargeText
+							? String(queuedCount).length
+							: queuedLabel.length,
+						countChars: String(queuedCount).length,
+					}
+				: null,
+	});
+	/* The count on the card (review round 1, M1). Before this the chip mounted
+	 *  only on the compact strip and the count otherwise rode the host's
+	 *  activity line — which a tablet and a narrow short-landscape split do not
+	 *  have, so a queued message was announced (More's name) and never shown. */
+	const cardQueuedChip = chipPlan.queued
+		? queuedChipFor(
+				dictationLargeText || chipPlan.queued.form === "count",
+				chipPlan.queued,
+			)
+		: null;
+	const chipZone = (
+		<View
+			className={COMPOSER_CHIP_ZONE}
+			/* Never narrower than what it must always show: its one trailing
+			 *  control (More / dismiss) and, where the card carries it, the queued
+			 *  count beside it — so the zone's clip can cut a chip but never those. */
+			style={{
+				minWidth:
+					TOUCH_FLOOR +
+					(chipPlan.queued ? chipPlan.queued.width + COMPOSER_META_GAP_PT : 0),
 			}}
+			testID={SURFACE.composerMeta}
+			onLayout={(event) =>
+				setChipZoneWidth(Math.floor(event.nativeEvent.layout.width))
+			}
 		>
-			{/* The home's folder chip leads the strip: where, then with what model, then
-			 *  how hard — one chip per picker (the operator: "a separate dialog to
-			 *  handle directory vs model vs effort selection"). It was reachable only
-			 *  through More, so the folder was two taps and a sheet away from the
-			 *  composer it configures. Glyph + the folder's name, capped, glyph only
-			 *  at large text; it yields first, then effort, then the model
-			 *  (`HOME_STRIP_SHRINK`, design D2). The session view passes no
-			 *  `folderChip` and its strip is unchanged. */}
-			{/* TODO(native, O1): the home strip puts a min-floored shrinker (folder)
-			 *  FIRST, then more shrinkers — the yoga#2006 shape that broke the
-			 *  session strip on iOS (R3-M1): once folder floors, effort and model
-			 *  are charged against the original free space. Needs a device check;
-			 *  if it overflows, cap like `sessionEffortMaxWidth`. */}
+			{/* The home's folder chip leads: where, then with what model, then how
+			 *  hard — one chip per picker (the operator: "a separate dialog to
+			 *  handle directory vs model vs effort selection"). Glyph + the folder's
+			 *  name, capped, glyph only at large text; it yields first
+			 *  (`HOME_STRIP_SHRINK`, design D2). The session view passes none. */}
+			{/* TODO(native, O1): a min-floored shrinker (folder) FIRST, then another
+			 *  shrinker (model), is the yoga#2006 shape. Effort is rigid here and
+			 *  leaves the row by plan rather than by shrinking, which removes one of
+			 *  the three shrinkers the old strip had; still needs a device check. */}
 			{folderChip ? (
 				<View
 					style={{
@@ -1437,7 +1785,6 @@ export const Composer = ({
 					}}
 				>
 					<ComposerChipButton
-						glass={glass}
 						chip={{
 							kind: "value",
 							text: folderChipText(folderChip.label, effectiveScale),
@@ -1451,55 +1798,34 @@ export const Composer = ({
 					/>
 				</View>
 			) : null}
-			<View
-				/* The model keeps its NATURAL width on both strips and never grows
-				 *  (operator, TestFlight 578: "left justify the effort selector with the
-				 *  other selectors on that row"). A growing slot (`grow` on the home,
-				 *  `flex-1` on the session) took all the free width while the chip
-				 *  inside kept its own, so effort floated right behind an empty gap:
-				 *  `[folder][Claude Opus 5.5]      [Medium] ⋯`. The chips now pack
-				 *  left at the row's gap and the free width goes to More's auto margin
-				 *  (`STRIP_TRAILING`, below). Shrink order: the home yields folder →
-				 *  effort → model (`HOME_STRIP_SHRINK`); the session yields the model
-				 *  to its floor; effort is rigid under a measured cap
-				 *  (`SESSION_STRIP_SHRINK`, `sessionEffortMaxWidth`), so the trailing
-				 *  controls never clip — on native Yoga too (R3-M1). */
-				className="min-w-0 shrink"
-				style={{
-					minWidth: MODEL_FLOOR_PT,
-					flexBasis: "auto",
-					flexShrink: folderChip
-						? HOME_STRIP_SHRINK.model
-						: SESSION_STRIP_SHRINK.model,
-				}}
-			>
-				<ComposerChipButton
-					glass={glass}
-					chip={modelChip}
-					onPress={onOpenModels}
-					chooseHint="Choose the model"
-					loadingWidthClassName="w-24"
-					testID={CONTROL.composerModelChip}
-				/>
-			</View>
-			{effortChip ? (
+			{chipPlan.model ? (
 				<View
-					className="shrink"
-					style={
-						folderChip
-							? {
-									minWidth: MODEL_FLOOR_PT,
-									flexShrink: HOME_STRIP_SHRINK.effort,
-								}
-							: {
-									minWidth: MODEL_FLOOR_PT,
-									flexShrink: SESSION_STRIP_SHRINK.effort,
-									maxWidth: sessionEffortCap,
-								}
-					}
+					/* The model keeps its NATURAL width and never grows (operator,
+					 *  TestFlight 578: "left justify the effort selector with the other
+					 *  selectors on that row"), so the chips pack at the leading edge
+					 *  beside attach. It is the row's one elastic chip: it shrinks to
+					 *  its floor and ellipsizes only after effort has left. */
+					className="min-w-0 shrink"
+					style={{
+						minWidth: MODEL_FLOOR_PT,
+						flexBasis: "auto",
+						flexShrink: HOME_STRIP_SHRINK.model,
+					}}
 				>
 					<ComposerChipButton
-						glass={glass}
+						chip={modelChip}
+						onPress={onOpenModels}
+						chooseHint="Choose the model"
+						loadingWidthClassName="w-24"
+						testID={CONTROL.composerModelChip}
+					/>
+				</View>
+			) : null}
+			{effortChip && chipPlan.effort ? (
+				/* Rigid: an effort that shrank was the `Hi…` the audit saw. It is
+				 *  either whole or in More. */
+				<View style={{ flexShrink: 0 }}>
+					<ComposerChipButton
 						chip={effortChip}
 						onPress={onOpenEffort}
 						chooseHint="Choose the effort"
@@ -1508,40 +1834,76 @@ export const Composer = ({
 					/>
 				</View>
 			) : null}
-			{/* STRIP_TRAILING: the free width goes to an AUTO leading margin on More,
-			 *  so the chips pack LEFT and only More (and the queue/keyboard controls
-			 *  after it) sits trailing. A margin, not a spacer element: a spacer is
-			 *  one more child and charged one more `gap-1` (4 pt) in the narrow rows
-			 *  where every point decides whether the model name fits. `ms-auto` is
-			 *  the logical edge, so RTL mirrors it. */}
-			<View className="ms-auto" testID={SURFACE.composerStripTrailing}>
-				<IconButton
-					accessibilityLabel={
-						queuedCount > 0
-							? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
-							: t("mobile.chrome.composer.more")
-					}
-					onPress={() => setContextOpen(true)}
-					icon={({ color, size }) => (
-						<MoreHorizontal color={color} size={size} />
-					)}
-					testID={CONTROL.composerContext}
-				/>
+			{/* `ms-auto`: the slot holds the zone's trailing edge whether or not
+			 *  effort is on the row, so More does not slide left when effort
+			 *  leaves; the chips still pack left (TestFlight 578). */}
+			{/* ONE trailing slot, two occupants. While the field has the keyboard
+			 *  the slot is the way to put it down; otherwise it is More. Both in one
+			 *  slot because a second 44 pt control here costs the model its name at
+			 *  390 pt, and a sheet opened over a raised keyboard is the wrong order
+			 *  anyway — More is one blur away. */}
+			{/* The queued count rides the SAME trailing slot, ahead of More: one
+			 *  auto margin still absorbs the zone's free width, so neither moves
+			 *  when effort leaves the row. */}
+			<View
+				className={COMPOSER_CHIP_TRAILING}
+				testID={SURFACE.composerStripTrailing}
+			>
+				{cardQueuedChip}
+				{keyboardVisible || focused ? (
+					<IconButton
+						accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
+						onPress={() => {
+							inputRef.current?.blur();
+							Keyboard.dismiss();
+						}}
+						icon={({ color, size }) => (
+							<KeyboardIcon color={color} size={size} />
+						)}
+						testID={CONTROL.composerDismissKeyboard}
+					/>
+				) : (
+					<IconButton
+						accessibilityLabel={
+							queuedCount > 0
+								? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+								: t("mobile.chrome.composer.more")
+						}
+						onPress={() => setContextOpen(true)}
+						icon={({ color, size }) => (
+							<MoreHorizontal color={color} size={size} />
+						)}
+						testID={CONTROL.composerContext}
+					/>
+				)}
 			</View>
-			{queuedChip}
-			{keyboardVisible || focused ? (
-				<IconButton
-					accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
-					onPress={() => {
-						inputRef.current?.blur();
-						Keyboard.dismiss();
-					}}
-					icon={({ color, size }) => <KeyboardIcon color={color} size={size} />}
-					testID={CONTROL.composerDismissKeyboard}
-				/>
-			) : null}
-		</ChromeGroup>
+		</View>
 	);
+
+	/* D7: Clear is a small trailing ✕ at the end of the field row, shown only
+	 *  while there is something to clear. It was a centred text button at the
+	 *  top of the card, above the attachments, where it read as the card's
+	 *  title. Clearing also puts the keyboard down, so the card is back at its
+	 *  resting height in one press (the operator: "shrinks back once cleared").
+	 *  The host's `onClearDraft` clears the unsent editor only — never a
+	 *  retained instruction, an uncertainty row or the queue (#206). */
+	const clearDraft =
+		onClearDraft && (draft.length > 0 || images.length > 0) ? (
+			<IconButton
+				accessibilityLabel={t("mobile.composer_input.clear_draft")}
+				accessibilityHint={t("mobile.composer_input.clear_draft_hint")}
+				disabled={attaching || controls.sending}
+				onPress={() => {
+					onClearDraft();
+					inputRef.current?.blur();
+					Keyboard.dismiss();
+					setFocused(false);
+				}}
+				icon={({ color, size }) => <X color={color} size={size} />}
+				size={16}
+				testID={CONTROL.composerClearDraft}
+			/>
+		) : null;
 
 	/* U3: short landscape used to collapse the strip to zero height, which took
 	 *  the queued count and the only context route with it. The compact row keeps
@@ -1685,6 +2047,14 @@ export const Composer = ({
 			<Pressable
 				accessibilityRole={ROLE.button}
 				accessibilityLabel={controls.primary.accessibilityLabel}
+				/* Why the primary is dead, on the control itself: the visible
+				 *  sentence yields to the retained notice (D6), and a screen reader
+				 *  landing on a disabled Send should still hear the reason. */
+				accessibilityHint={
+					controls.primary.disabled
+						? (controls.disabledReason ?? undefined)
+						: undefined
+				}
 				style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
 				accessibilityState={state({
 					disabled: controls.primary.disabled,
@@ -1889,6 +2259,7 @@ export const Composer = ({
 						testID={CONTROL.composerInput}
 					/>
 				</View>
+				{clearDraft}
 				{presentation.expanded ? null : (
 					<View className="flex-row items-center">{mic ?? actionCluster}</View>
 				)}
@@ -1901,17 +2272,40 @@ export const Composer = ({
 					testID={SURFACE.composerControls}
 				>
 					{attach}
-					{trailing === "actions" ? mic : null}
-					{pasteChip}
-					{/* Landscape has exactly ONE context affordance, and it is the one
-					 *  in the compact strip: a second More on this row was the same
-					 *  action twice in one 44 pt line (design round 6, D2). */}
-					{trailing === "actions" ? (
-						actionCluster
-					) : (
-						<View className={COMPOSER_ACTION_CLUSTER}>
+					{restsAsCard ? (
+						<>
+							{/* The paste offer leads the zone while it is up (it only exists
+							 *  with the field focused). The zone keeps its floor beside
+							 *  it, so the keyboard-dismiss in its trailing slot is never
+							 *  the thing the offer pushes off the row; the chips yield by
+							 *  plan, as they do for any narrow zone. */}
+							{pasteChip}
+							{chipZone}
+							{/* ONE slot for the mic, whatever the card is open for. The
+							 *  card no longer expands out of a pill under the finger that
+							 *  pressed the mic, so nothing slides: the mic stays here,
+							 *  Send stays beside it, and while RECORDING on an otherwise
+							 *  empty card the ✓ takes the mic's own slot — the spot a
+							 *  tap-to-toggle reader taps again (UX round 2, U7). It still
+							 *  MOVES there from the dictation row, never copied. */}
 							{trailing === "finish" ? dictationFinish : mic}
-						</View>
+							{actionCluster}
+						</>
+					) : (
+						<>
+							{trailing === "actions" ? mic : null}
+							{pasteChip}
+							{/* Landscape has exactly ONE context affordance, and it is the
+							 *  one in the compact strip: a second More on this row was the
+							 *  same action twice in one 44 pt line (design round 6, D2). */}
+							{trailing === "actions" ? (
+								actionCluster
+							) : (
+								<View className={COMPOSER_ACTION_CLUSTER}>
+									{trailing === "finish" ? dictationFinish : mic}
+								</View>
+							)}
+						</>
 					)}
 					{compactSingle && keyboardVisible ? (
 						<IconButton
@@ -1947,11 +2341,15 @@ export const Composer = ({
 			style={[{ marginHorizontal: 12 }, dockMotion]}
 			onLayout={(event) => {
 				onLayout?.(event);
+				/* The dock's own width, for the short-landscape fit: the strip that
+				 *  used to report it is gone from the card, and the dock is the same
+				 *  width the strip was (the window less the 12 pt side margins). */
+				setMetaWidth(Math.ceil(event.nativeEvent.layout.width));
 				publishBox();
 			}}
 			testID={testID}
 		>
-			{compactSingle ? compactReceipt : receipt}
+			{compactSingle ? compactReceipt : null}
 			<Animated.View
 				style={[
 					{
@@ -1967,7 +2365,9 @@ export const Composer = ({
 						 *  outside the card, which is what the design round saw. */
 						overflow: "hidden",
 						paddingHorizontal: 12,
-						marginTop: compactSingle ? 0 : 4,
+						/* The 4 pt above the shell separated it from the chip strip;
+						 *  with no strip above the card there is nothing to separate. */
+						marginTop: 0,
 					},
 					shellMotion,
 				]}
@@ -2010,8 +2410,29 @@ export const Composer = ({
 					</View>
 				) : null}
 				<View onLayout={measureContent}>
+					{/* THE EXTRAS' CONTENT WIDTH MUST NOT DEPEND ON WHETHER THEY OVERFLOW
+					    (QA #211 round 4 Q6). In a browser that paints classic scrollbars
+					    the bar takes ~15 px of layout width, and it shows only while the
+					    content is taller than the cap. The notice then wrapped to one
+					    more line (+41 px at 200 %), `extrasHeight` grew, the cap grew to
+					    hold it, the bar left, the line came back — and for that frame
+					    the box was a line short of its cap, so it reported "not capped",
+					    the host limit let go and the composer regrew past the window:
+					    539 / 498 / 554 px in rotation at 390x844 with no input. That is
+					    #206's rule broken by a new path: the measured input (content
+					    height) depended on the output (capped -> scrollbar -> width).
+					    Two halves, both needed. The web scroller paints no layout
+					    scrollbar (`showsVerticalScrollIndicator={false}` is
+					    react-native-web's `scrollbar-width: none`, as the attachment
+					    strip already does); it still scrolls, and the cut row at its
+					    edge is the cue, as on every touch browser. And the content is
+					    laid out at the content block's width, measured OUTSIDE the
+					    scroller, for an engine that ignores that property. Native keeps
+					    its overlay indicator, which never took width. */}
 					<ScrollView
+						ref={extrasScrollRef}
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
+						showsVerticalScrollIndicator={Platform.OS !== "web"}
 						scrollEnabled={extrasMaxHeight !== undefined}
 						onContentSizeChange={(_width, height) =>
 							setExtrasHeight(Math.round(height))
@@ -2019,11 +2440,16 @@ export const Composer = ({
 						nestedScrollEnabled
 						keyboardShouldPersistTaps="handled"
 					>
-						{extras}
+						<View
+							style={contentWidth > 0 ? { width: contentWidth } : undefined}
+						>
+							{extras}
+						</View>
 					</ScrollView>
 					{main}
 				</View>
-				{/* THE SHELL'S EDGE, drawn as an absolutely positioned child rather than a
+				{/* THE SHELL'S FOCUS EDGE (D8: transparent at rest, so the fill is the
+				 *  card's only separation). Still drawn as an absolutely positioned child rather than a
 				 *  `borderWidth` on the shell. The shell's height is a border box, so a border
 				 *  there takes 1 pt off each edge of the interior: the 44 pt field paints 42,
 				 *  under the touch floor, and every measured seed lands 2 pt short of its end
@@ -2056,7 +2482,7 @@ export const Composer = ({
 							start: 0,
 							end: 0,
 							borderWidth: 1,
-							borderColor: borderControl,
+							borderColor: focused ? borderControl : "transparent",
 						},
 						ringMotion,
 					]}
@@ -2069,41 +2495,62 @@ export const Composer = ({
 				title={t("mobile.chrome.composer.more")}
 				testID={CONTROL.composerContextSheet}
 			>
-				<ComposerChipButton
-					chip={modelChip}
+				<ContextRow
+					label={t("mobile.chrome.composer.row_model")}
+					value={chipRowValue(modelChip)}
+					accessibilityLabel={modelChip.accessibilityLabel}
+					accessibilityHint={
+						modelChip.kind === "unavailable"
+							? modelChip.accessibilityHint
+							: "Choose the model"
+					}
+					disabled={modelChip.kind !== "value"}
 					onPress={() => {
 						setContextOpen(false);
 						onOpenModels();
 					}}
-					chooseHint="Choose the model"
-					loadingWidthClassName="w-24"
 					testID={CONTROL.composerContextModel}
 				/>
 				{effortChip ? (
-					<ComposerChipButton
-						chip={effortChip}
+					<ContextRow
+						label={t("mobile.chrome.composer.row_effort")}
+						value={chipRowValue(effortChip)}
+						accessibilityLabel={effortChip.accessibilityLabel}
+						accessibilityHint={
+							effortChip.kind === "unavailable"
+								? effortChip.accessibilityHint
+								: "Choose the effort"
+						}
+						disabled={effortChip.kind !== "value"}
 						onPress={() => {
 							setContextOpen(false);
 							onOpenEffort();
 						}}
-						chooseHint="Choose the effort"
-						loadingWidthClassName="w-7"
 						testID={CONTROL.composerContextEffort}
 					/>
 				) : null}
-				{/* No folder chip here: the strip leads with it, and a second copy in
-				 *  More was two entry points for one setting (UX U5). */}
+				{/* No folder row here: the card leads with the chip, and a second copy
+				 *  in More was two entry points for one setting (UX U5). */}
 				{contextLabel ? (
-					<Text className="text-body text-ink">{contextLabel}</Text>
+					<ContextRow
+						label={t("mobile.chrome.composer.row_usage")}
+						value={contextLabel}
+					/>
 				) : null}
 				{costLabel ? (
-					<Text className="text-body text-ink">{costLabel}</Text>
+					<ContextRow
+						label={t("mobile.chrome.composer.row_cost")}
+						value={costLabel}
+					/>
 				) : null}
 				{queuedCount > 0 ? (
-					<View className="gap-1">
-						<Text className="text-body text-ink">
-							{t("mobile.chrome.composer.queued", { count: queuedCount })}
-						</Text>
+					<View>
+						<ContextRow
+							label={t("mobile.chrome.composer.row_queue")}
+							value={t("mobile.chrome.composer.queued", {
+								count: queuedCount,
+							})}
+						/>
 						{onOpenQueue ? (
 							<Button
 								variant="quiet"
@@ -2116,6 +2563,17 @@ export const Composer = ({
 							/>
 						) : null}
 					</View>
+				) : null}
+				{questions ? (
+					<ContextRow
+						label={t("mobile.chrome.composer.row_questions")}
+						value={questions.value}
+						onPress={() => {
+							setContextOpen(false);
+							questions.onOpen();
+						}}
+						testID={CONTROL.composerContextQuestions}
+					/>
 				) : null}
 			</Sheet>
 		</Animated.View>

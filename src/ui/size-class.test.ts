@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
+	type ComposerBox,
 	compactChromeFor,
 	compactChromeShare,
 	composerAtHostCap,
 	composerBudget,
+	composerChromeKey,
 	composerHostBound,
 	composerKeyboardLimit,
 	composerLimit,
@@ -12,12 +17,14 @@ import {
 	HEADER_STACK_WIDTH,
 	headerStacks,
 	headerStackWidth,
+	heldComposerLimit,
 	layoutFor,
 	pinnedRoutesPaneFloor,
 	regionOrder,
 	SIDEBAR_MIN_WIDTH,
 	SIDEBAR_TABLET_MAX,
 	SPLIT_MIN_HEIGHT,
+	sameComposerBox,
 	sessionStatusLayout,
 	sidebarFooterScrolls,
 	sidebarWidthFor,
@@ -554,6 +561,29 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 		});
 	});
 
+	it("never spends past the bound for the extras: the controls row outranks the notice (code #211 R3 M1)", () => {
+		/* Portrait card: 48 of controls row and gap, 20 of padding. For every
+		 *  bound that can hold the field's floor at all (>= 112), field box +
+		 *  extras + fixed rows + padding is at most the bound, whatever the
+		 *  extras want. A floor for the notice used to add up to 44 px here
+		 *  (bound 128, notice 140: 156 spent, the controls row 28 px past the
+		 *  window). The notice gets what is left and scrolls. */
+		for (let bound = 112; bound <= 400; bound += 1)
+			for (const natural of [0, 30, 44, 140, 474]) {
+				const budget = composerBudget(bound, 48, natural, 44, 20);
+				const spent = budget.field + FIELD_BORDER_Y + budget.extras + 48 + 20;
+				expect(spent).toBeLessThanOrEqual(bound);
+				expect(budget.field + FIELD_BORDER_Y).toBeGreaterThanOrEqual(44);
+			}
+		expect(composerBudget(128, 48, 140, 44, 20)).toEqual({
+			extras: 16,
+			field: 44 - FIELD_BORDER_Y,
+		});
+		/* The budget has no notice floor to pass any more: seven arguments would
+		 *  be the overspend coming back. */
+		expect(composerBudget.length).toBe(5);
+	});
+
 	it("reserves the dictation row so a recording take cannot push the composer past its share", () => {
 		// 175 pt share, 52 receipt, 8 pad, 49 + 8 dictation: only 58 pt left for the field
 		const budget = composerBudget(175, 52, 0, 48, 8, 57);
@@ -584,6 +614,26 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 		// The floor is a PAINTED floor (min-height on the field's box), so the content
 		// cap it translates to is one border shorter.
 		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48 - FIELD_BORDER_Y);
+	});
+
+	/* QA #211 round 4 Q7: the failure notice's actions lead the extras on a
+	 *  row (or two) of their own, and a cap that lands inside that block showed
+	 *  half an action ("Dismiss error" cut by 14 px). */
+	it("cuts the extras back to whole action rows, and gives the field the rest", () => {
+		/* Room 115, of which 48 is the field's floor: 67 px for extras whose two
+		 *  action rows are 96. One whole row shows; the field takes the 19 px. */
+		const cut = composerBudget(175, 52, 200, 48, 8, 0, 96);
+		expect(cut.extras).toBe(48);
+		expect(cut.field + FIELD_BORDER_Y + cut.extras + 52 + 8).toBe(175);
+		/* The same budget without leading actions is untouched. */
+		expect(composerBudget(175, 52, 200, 48, 8).extras).toBe(67);
+		/* A cap that already holds every action row is not snapped... */
+		expect(composerBudget(300, 52, 200, 48, 8, 0, 96).extras).toBe(192);
+		/* ...and one under a single row is left alone: part of the first
+		 *  action beats none, and nothing may be spent past the bound. */
+		expect(composerBudget(130, 52, 200, 48, 8, 0, 96).extras).toBe(22);
+		/* 320x568 / 200 %, French, QA's 143 px scroller: both rows whole. */
+		expect(composerBudget(263, 52, 400, 48, 20, 0, 96).extras).toBe(143);
 	});
 });
 
@@ -750,5 +800,568 @@ describe("sidebarWidthFor", () => {
 	it("lets the 240 minimum win below 284 / 288 pt", () => {
 		expect(sidebarWidthFor(280, IOS_FLOOR)).toBe(SIDEBAR_MIN_WIDTH);
 		expect(sidebarWidthFor(284, OTHER_FLOOR)).toBe(SIDEBAR_MIN_WIDTH);
+	});
+});
+
+describe("sameComposerBox (perf audit P15: a no-op measurement is not a new state)", () => {
+	const box = {
+		top: 314,
+		height: 254,
+		capped: true,
+		viewportWidth: 320,
+		viewportHeight: 568,
+	};
+
+	it("is true only when every field the limit reads is unchanged", () => {
+		expect(sameComposerBox(box, { ...box })).toBe(true);
+		expect(sameComposerBox(null, box)).toBe(false);
+		expect(sameComposerBox(box, { ...box, top: 313 })).toBe(false);
+		expect(sameComposerBox(box, { ...box, height: 255 })).toBe(false);
+		/* `capped` alone must register: a capped box ends where a fitting one
+		 *  does, so it is the one field geometry cannot stand in for. */
+		expect(sameComposerBox(box, { ...box, capped: false })).toBe(false);
+		/* The window is part of the value: the same numbers in another window
+		 *  are a new measurement the host must take (UX #211 U1). */
+		expect(sameComposerBox(box, { ...box, viewportHeight: 500 })).toBe(false);
+		expect(sameComposerBox(box, { ...box, viewportWidth: 390 })).toBe(false);
+	});
+
+	it("leaves the cap's fixed point exactly where it was", () => {
+		/* The guard only skips a state write; it must not round or merge. Fed
+		 *  the settled measurement again and again, the limit it produces does
+		 *  not move, and a real change still gets through on the next publish. */
+		let held: typeof box | null = null;
+		let writes = 0;
+		const publish = (next: typeof box) => {
+			if (sameComposerBox(held, next)) return;
+			held = next;
+			writes += 1;
+		};
+		for (let pass = 0; pass < 5; pass += 1) publish({ ...box });
+		expect(writes).toBe(1);
+		publish({ ...box, capped: false });
+		expect(writes).toBe(2);
+		expect(held).toEqual({ ...box, capped: false });
+	});
+});
+
+describe("heldComposerLimit (UX #211 U1: a measurement does not survive a window resize)", () => {
+	const floor = TOUCH_TARGET.ios;
+	const GAP = 8;
+	/* The screen and the composer as they run: the screen holds the last box and
+	 *  asks for the limit in the CURRENT window; the composer paints
+	 *  min(natural, cap), bottom-anchored on its gap, and publishes that box
+	 *  tagged with the window it was measured in. `natural` grows by the notice
+	 *  when a send fails. Each call is one render + measure. */
+	const rig = () => {
+		let held: ComposerBox | null = null;
+		const pass = (
+			viewport: { width: number; height: number },
+			natural: number,
+		) => {
+			const limit = heldComposerLimit(held, viewport);
+			const height =
+				limit === null
+					? natural
+					: Math.min(natural, composerHostBound(limit, GAP, floor));
+			held = {
+				top: viewport.height - GAP - height,
+				height,
+				capped: composerAtHostCap(height, limit, GAP, floor),
+				viewportWidth: viewport.width,
+				viewportHeight: viewport.height,
+			};
+			return { limit, height };
+		};
+		return { pass };
+	};
+	const TALL = { width: 390, height: 844 };
+	const SMALL = { width: 320, height: 568 };
+	const SHORT = { width: 390, height: 500 };
+	const EMPTY = 122; // the empty card: field row + controls + padding
+	const NOTICE = 48; // one failure line with its action, plus the block margin
+
+	for (const [name, shrunk] of [
+		["390x844 -> 320x568", SMALL],
+		["390x844 -> 390x500 (height only)", SHORT],
+	] as const)
+		it(`shrink then fail keeps the notice's room (${name})`, () => {
+			const { pass } = rig();
+			expect(pass(TALL, EMPTY)).toEqual({ limit: null, height: EMPTY });
+			/* The shrink: the held box is the tall window's (top 714). It must
+			 *  not be read against the short window. */
+			expect(pass(shrunk, EMPTY)).toEqual({ limit: null, height: EMPTY });
+			/* The 503: the composer grows by the notice and still fits. */
+			for (let settle = 0; settle < 4; settle += 1)
+				expect(pass(shrunk, EMPTY + NOTICE)).toEqual({
+					limit: null,
+					height: EMPTY + NOTICE,
+				});
+			/* Grow back: unbound again, with the notice still whole. */
+			for (let settle = 0; settle < 3; settle += 1)
+				expect(pass(TALL, EMPTY + NOTICE)).toEqual({
+					limit: null,
+					height: EMPTY + NOTICE,
+				});
+		});
+
+	it("still binds, and settles, when the content really overflows the new window", () => {
+		/* A long draft at 200 % in the small window: the first pass in the new
+		 *  window is unbound (no measurement yet), then #206's loop takes over
+		 *  from a column top of 314 and holds one answer. */
+		const answers: (number | null)[] = [];
+		let held: ComposerBox | null = null;
+		for (let step = 0; step < 5; step += 1) {
+			const limit = heldComposerLimit(held, SMALL);
+			const height =
+				limit === null
+					? 425
+					: Math.min(425, composerHostBound(limit, GAP, floor));
+			held = {
+				top: height + 314 + GAP <= 568 ? 568 - GAP - height : 314,
+				height,
+				capped: composerAtHostCap(height, limit, GAP, floor),
+				viewportWidth: 320,
+				viewportHeight: 568,
+			};
+			answers.push(limit);
+		}
+		expect(answers).toEqual([null, 254, 254, 254, 254]);
+	});
+
+	it("reads a box only in the window it was measured in", () => {
+		const box: ComposerBox = {
+			top: 201,
+			height: 635,
+			capped: true,
+			viewportWidth: 390,
+			viewportHeight: 844,
+		};
+		expect(heldComposerLimit(box, TALL)).toBe(643);
+		expect(heldComposerLimit(box, SMALL)).toBe(null);
+		expect(heldComposerLimit(box, { width: 844, height: 844 })).toBe(null);
+		expect(heldComposerLimit(null, TALL)).toBe(null);
+	});
+
+	/* The pure rule is only as good as its wiring: the screen must tag what it
+	 *  holds with the CURRENT window, re-create the callback when the window
+	 *  changes (that identity change is what makes the composer measure again),
+	 *  and ask through `heldComposerLimit`, never `composerLimit` directly. */
+	it("is how the session screen holds and reads the box", () => {
+		const screen = readFileSync(
+			join(process.cwd(), "app/(app)/session/[id].tsx"),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(screen).toContain(
+			"const next: ComposerBox = { ...measured, viewportWidth, viewportHeight };",
+		);
+		expect(screen).toContain("[viewportWidth, viewportHeight], );");
+		expect(screen).toContain(
+			"limit={heldComposerLimit(composerBox, { width: viewportWidth, height: viewportHeight, })}",
+		);
+		expect(screen).not.toMatch(/[^d]composerLimit\(/i);
+	});
+});
+
+describe("the composer's bound survives chrome that settles after it measured (QA #211 round 3 Q5)", () => {
+	const floor = TOUCH_TARGET.ios;
+	const GAP = 8;
+	type Viewport = { width: number; height: number };
+	/* One frame is one render plus, WHEN ONE IS DUE, one measurement — which is
+	 *  the whole point: the composer does not measure every frame. It measures
+	 *  when its own box changes size (the dock's `onLayout`), when the limit or
+	 *  the window changes (`publishBox`'s identity) and when its key changes.
+	 *  A frame in which only its TOP moved used to be none of those.
+	 *
+	 *  `above` is everything over the composer in the column, in px: the composer
+	 *  is bottom-anchored on its gap while that leaves room and is pushed down by
+	 *  it otherwise (the transcript between them is already 0 pt tall). `band` is
+	 *  the height of the row directly above the composer (the activity line and
+	 *  its counts), the one fact the screen measures and can put in the key. */
+	const rig = () => {
+		let held: ComposerBox | null = null;
+		let seen: string | null = null;
+		const frame = (
+			viewport: Viewport,
+			natural: number,
+			above: number,
+			band: number,
+		) => {
+			const limit = heldComposerLimit(held, viewport);
+			const height =
+				limit === null
+					? natural
+					: Math.min(natural, composerHostBound(limit, GAP, floor));
+			const top = Math.max(above, viewport.height - GAP - height);
+			const trigger = [
+				viewport.width,
+				viewport.height,
+				height,
+				limit,
+				composerChromeKey({ after: band }),
+			].join("|");
+			if (trigger !== seen) {
+				seen = trigger;
+				held = {
+					top,
+					height,
+					capped: composerAtHostCap(height, limit, GAP, floor),
+					viewportWidth: viewport.width,
+					viewportHeight: viewport.height,
+				};
+			}
+			return { bottom: top + height, height, limit };
+		};
+		/* A window change whose band settles `lag` frames after the commit: the
+		 *  slot above the composer takes its height from a shared value set in
+		 *  its own `onLayout`, outside React, so the composer's first frames in
+		 *  the new window still see the band the OLD window gave it. */
+		const arrive = (
+			viewport: Viewport,
+			natural: number,
+			chrome: number,
+			band: { from: number; to: number },
+			lag: number,
+		) => {
+			let last = frame(viewport, natural, chrome + band.from, band.from);
+			for (let step = 1; step < 10; step += 1)
+				last = frame(
+					viewport,
+					natural,
+					chrome + (step >= lag ? band.to : band.from),
+					step >= lag ? band.to : band.from,
+				);
+			return last;
+		};
+		return { frame, arrive };
+	};
+	const SMALL = { width: 320, height: 568 };
+	const TALL = { width: 390, height: 844 };
+	const WIDE = { width: 1280, height: 720 };
+	/* 320x568 at 200 %, a 405-character draft: the field rests at its own six
+	 *  line cap (270) over the 48 + 20 of controls row and padding = 338, under
+	 *  297 px of header and activity band (QA round 3's own boxes). */
+	const NATURAL = 338;
+	const ABOVE = 297;
+
+	it("no resize: the draft grows in a settled window and the bound holds", () => {
+		const { frame } = rig();
+		frame(SMALL, 122, ABOVE, 76);
+		let last = frame(SMALL, NATURAL, ABOVE, 76);
+		for (let step = 0; step < 4; step += 1)
+			last = frame(SMALL, NATURAL, ABOVE, 76);
+		expect(last).toEqual({ bottom: 560, height: 263, limit: 271 });
+	});
+
+	/* The two outcomes QA measured are the two orders the same race can take.
+	 *  band 76 px late by one frame: the only measurement in the new window saw
+	 *  a composer that still fit (top 222), so the limit never bound: 635.
+	 *  band 55 px late by two: it bound against the early top (242), and the
+	 *  cap then held at 318 while the box slid down: 615. */
+	for (const [name, from, grow, lag] of [
+		["390x844 -> 320x568, unbound when the band lands", TALL, 76, 1],
+		[
+			"320x480 -> 320x568, unbound when the band lands",
+			{ width: 320, height: 480 },
+			76,
+			1,
+		],
+		["390x844 -> 320x568, capped against the early top", TALL, 55, 2],
+		["1280x720 -> 320x568 (the rig's hop)", WIDE, 76, 1],
+		["1280x720 -> 320x568, three frames late", WIDE, 40, 3],
+	] as const)
+		it(`after a resize the composer ends inside the window (${name})`, () => {
+			const { frame, arrive } = rig();
+			frame(from, NATURAL, 200, 48);
+			frame(from, NATURAL, 200, 48);
+			const settled = arrive(
+				SMALL,
+				NATURAL,
+				ABOVE - grow,
+				{ from: 0, to: grow },
+				lag,
+			);
+			expect(settled.bottom).toBeLessThanOrEqual(SMALL.height - GAP);
+			expect(settled).toEqual({ bottom: 560, height: 263, limit: 271 });
+		});
+
+	it("growing back to 390x844 with two images, a draft and a refused send settles on the window, not 15 px past it", () => {
+		const { frame, arrive } = rig();
+		frame(SMALL, 700, ABOVE, 76);
+		frame(SMALL, 700, ABOVE, 76);
+		/* Natural 700 over a column top of 297 in the tall window: bound 539
+		 *  (QA: 539, bottom 836). The band arrives 15 px taller, two frames in. */
+		const settled = arrive(TALL, 700, 282, { from: 0, to: 15 }, 2);
+		expect(settled).toEqual({ bottom: 836, height: 539, limit: 547 });
+	});
+
+	it("shrink, then type: the bound follows a draft that grows after the window settled", () => {
+		const { frame, arrive } = rig();
+		frame(TALL, 122, 200, 48);
+		expect(arrive(SMALL, 122, ABOVE - 76, { from: 0, to: 76 }, 1).limit).toBe(
+			null,
+		);
+		let last = frame(SMALL, NATURAL, ABOVE, 76);
+		for (let step = 0; step < 4; step += 1)
+			last = frame(SMALL, NATURAL, ABOVE, 76);
+		expect(last).toEqual({ bottom: 560, height: 263, limit: 271 });
+	});
+
+	it("a band that opens under a capped composer (a turn starting) re-bounds it", () => {
+		const { frame } = rig();
+		for (let step = 0; step < 3; step += 1) frame(SMALL, NATURAL, 249, 0);
+		let last = frame(SMALL, NATURAL, ABOVE, 48);
+		for (let step = 0; step < 4; step += 1)
+			last = frame(SMALL, NATURAL, ABOVE, 48);
+		expect(last.bottom).toBe(560);
+	});
+
+	it("holds one answer once settled: the key is not an input the limit controls (#206)", () => {
+		const { frame, arrive } = rig();
+		frame(TALL, 1011, 201, 48);
+		const first = arrive(TALL, 1011, 201 - 48, { from: 48, to: 48 }, 1);
+		expect(first).toEqual({ bottom: 836, height: 635, limit: 643 });
+		for (let step = 0; step < 6; step += 1)
+			expect(frame(TALL, 1011, 201, 48)).toEqual(first);
+	});
+
+	/* Code #211 round 4 m1: the band is not the only thing that can land late.
+	 *  The same loop, with the composer's floor (`above`) moved by something the
+	 *  key did not see: the header, which sits over the column and so shows up
+	 *  as the COLUMN's height, and the secondary region's rows. `late` frames
+	 *  in, the facts take their second value; the composer has measured and
+	 *  bound by then. */
+	const pushed = (
+		viewport: Viewport,
+		natural: number,
+		states: readonly [
+			{ above: number; column: number; regions: number },
+			{ above: number; column: number; regions: number },
+		],
+		late: number,
+	) => {
+		let held: ComposerBox | null = null;
+		let seen: string | null = null;
+		const bottoms: number[] = [];
+		for (let step = 0; step < 12; step += 1) {
+			const now = states[step >= late ? 1 : 0];
+			const limit = heldComposerLimit(held, viewport);
+			const height =
+				limit === null
+					? natural
+					: Math.min(natural, composerHostBound(limit, GAP, floor));
+			const top = Math.max(now.above, viewport.height - GAP - height);
+			const trigger = [
+				height,
+				limit,
+				composerChromeKey({ column: now.column, regions: now.regions }),
+			].join("|");
+			if (trigger !== seen) {
+				seen = trigger;
+				held = {
+					top,
+					height,
+					capped: composerAtHostCap(height, limit, GAP, floor),
+					viewportWidth: viewport.width,
+					viewportHeight: viewport.height,
+				};
+			}
+			bottoms.push(top + height);
+		}
+		return bottoms;
+	};
+
+	it("a header that goes from one row to two after the composer bound re-bounds it", () => {
+		/* 320x568 / 200 %: the header measured 64 on one row and 125 stacked
+		 *  (the frame audit's figures for this cell), so the column under it
+		 *  goes 504 -> 443 and the composer's floor 236 -> 297. */
+		const bottoms = pushed(
+			SMALL,
+			NATURAL,
+			[
+				{ above: 236, column: 504, regions: 0 },
+				{ above: 297, column: 443, regions: 0 },
+			],
+			3,
+		);
+		/* Bound against the early top first (limit 332, box 324, bottom 560). */
+		expect(bottoms.slice(1, 3)).toEqual([560, 560]);
+		/* One frame pushed (621) is the measurement's own latency; then it
+		 *  holds one answer inside the window. Unkeyed, it stayed at 621. */
+		expect(bottoms.slice(4)).toEqual(Array(8).fill(560));
+	});
+
+	it("an inline panel that grows a row after the composer bound re-bounds it", () => {
+		const bottoms = pushed(
+			WIDE,
+			500,
+			[
+				{ above: 300, column: 656, regions: 120 },
+				{ above: 348, column: 656, regions: 168 },
+			],
+			3,
+		);
+		expect(bottoms.slice(1, 3)).toEqual([712, 712]);
+		expect(bottoms.slice(4)).toEqual(Array(8).fill(712));
+	});
+
+	it("keys on the measured heights above the composer, and only on them", () => {
+		expect(composerChromeKey({})).toBe(composerChromeKey({}));
+		expect(composerChromeKey({ column: 504 })).not.toBe(
+			composerChromeKey({ column: 443 }),
+		);
+		expect(composerChromeKey({ regions: 120 })).not.toBe(
+			composerChromeKey({ regions: 168 }),
+		);
+		expect(composerChromeKey({ column: 48 })).not.toBe(
+			composerChromeKey({ regions: 48 }),
+		);
+		/* The composer's own measured height is a `RecoveryFacts` field too, and
+		 *  must never reach the key: that would be the output asking for its own
+		 *  re-measure. */
+		expect(
+			composerChromeKey({ after: 48, composer: 263 } as { after: number }),
+		).toBe(composerChromeKey({ after: 48 }));
+		expect(composerChromeKey({ after: 48 })).not.toBe(
+			composerChromeKey({ after: 104 }),
+		);
+		expect(composerChromeKey({ before: 10 })).not.toBe(
+			composerChromeKey({ before: 30 }),
+		);
+		expect(composerChromeKey({ before: 48 })).not.toBe(
+			composerChromeKey({ after: 48 }),
+		);
+	});
+
+	it("is wired into the composer's measure key by the session screen", () => {
+		const screen = readFileSync(
+			join(process.cwd(), "app/(app)/session/[id].tsx"),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(screen).toMatch(
+			/measureKey=\{`[^`]*\$\{composerChromeKey\(\{ column: recoveryFacts\.column, before: recoveryFacts\.before, after: recoveryFacts\.after, regions: regionContent \}\)\}`\}/,
+		);
+	});
+});
+
+/**
+ * QA #211 round 4 Q6: at 390x844 / 200 % with two images, a long draft and a
+ * refused send, in a browser whose scrollbars take layout width, the composer
+ * cycled (297.4, 554) -> (297.4, 539) -> (338, 498) with no input.
+ *
+ * The loop, one frame per step, through the real limit and budget functions:
+ *  - the extras' content is a fraction of a px taller than the height the
+ *    composer stored for it, so once the budget hands that stored height back
+ *    as the cap the scroller overflows and paints its scrollbar;
+ *  - the scrollbar takes `gutter` px of width and the notice wraps to one more
+ *    line (+41 px), so the stored height grows by a line;
+ *  - the cap now holds that line, the scrollbar leaves, the line goes with it,
+ *    and for that frame the box is a line SHORT of its bound (498): it reports
+ *    "not capped", `composerLimit` lets go, the composer regrows to its natural
+ *    554 px past the window, and binds again at 539.
+ * That is #206's invariant broken by a new path: the measured input (content
+ * height) depended on the output (capped -> scrollbar -> width).
+ *
+ * The numbers are QA's except ONE that is inferred: the extras' natural height
+ * (212.4), chosen so the unbound composer is QA's 554 (20 + 52 + 212.4 + 270).
+ * The other two heights and both tops then fall out of the model, which is the
+ * evidence that this is the loop QA saw. The sub-pixel part of that height is
+ * the model's TRIGGER and is an assumption (QA's host could not be re-read
+ * here); the loop's cause, the width the scrollbar takes, does not depend on
+ * which trigger first makes the extras overflow.
+ */
+describe("the extras' scrollbar cannot feed the composer's own measurement (QA #211 round 4 Q6)", () => {
+	const floor = TOUCH_TARGET.android;
+	const GAP = 8;
+	const TALL = { width: 390, height: 844 };
+	const ABOVE = 297.4;
+	/* Padding 20, controls row 48 + 4, the field's six-line cap at 200 %. */
+	const PAD = 20;
+	const FIXED = 52;
+	const FIELD = 270;
+	/* The notice is two lines at the full width and three once `gutter` px
+	 *  are gone; a line of `text-body-sm` at 200 % is 41 px. */
+	const natural = (width: number) =>
+		width >= TALL.width - 16 - 24 ? 212.4 : 253.4;
+	const run = (
+		gutter: number,
+		store: (height: number) => number,
+		frames = 24,
+	) => {
+		let held: ComposerBox | null = null;
+		let stored = 0;
+		const seen: Array<{ top: number; height: number }> = [];
+		const full = TALL.width - 16 - 24;
+		for (let step = 0; step < frames; step += 1) {
+			const limit = heldComposerLimit(held, TALL);
+			const budget =
+				limit === null
+					? null
+					: composerBudget(
+							composerHostBound(limit, GAP, floor),
+							FIXED,
+							stored,
+							floor,
+							PAD,
+						);
+			/* The browser's own pass: lay out without the bar, add it if the
+			 *  content overflows the cap, and lay out again at what is left. */
+			const bar = budget !== null && natural(full) > budget.extras;
+			const content = natural(bar ? full - gutter : full);
+			const extras =
+				budget === null ? content : Math.min(content, budget.extras);
+			const field =
+				budget === null
+					? FIELD
+					: Math.min(FIELD, budget.field + FIELD_BORDER_Y);
+			const height = Math.round(PAD + FIXED + extras + field);
+			const top = Math.round(
+				Math.max(ABOVE, TALL.height - GAP - (PAD + FIXED + extras + field)),
+			);
+			held = {
+				top,
+				height,
+				capped: composerAtHostCap(height, limit, GAP, floor),
+				viewportWidth: TALL.width,
+				viewportHeight: TALL.height,
+			};
+			stored = store(content);
+			seen.push({ top, height });
+		}
+		/* The first frame is the unbound mount; what matters is where it rests. */
+		return [...new Set(seen.slice(4).map((box) => `${box.top},${box.height}`))];
+	};
+	const composer = readFileSync(
+		join(process.cwd(), "src/features/session/components/composer.tsx"),
+		"utf8",
+	).replace(/\s+/g, " ");
+
+	it("reproduces QA's three boxes when the scrollbar takes width (the defect)", () => {
+		expect(run(15, Math.round).sort()).toEqual(
+			["297,539", "297,554", "338,498"].sort(),
+		);
+	});
+
+	it("settles on the bound once the content's width ignores the scrollbar", () => {
+		expect(run(0, Math.round)).toEqual(["297,539"]);
+	});
+
+	it("the composer as written settles in one answer", () => {
+		/* The fact the model takes from the component, read from its source:
+		 *  whether its extras can lose width to a scrollbar. Both halves are
+		 *  required, because each covers an engine the other does not: an old
+		 *  WebKit ignores `scrollbar-width`, and a width pin alone leaves a
+		 *  classic bar painted over the trailing actions. The stored height's
+		 *  rounding is the component's own and is not changed by this fix. */
+		const pinned =
+			composer.includes(
+				'showsVerticalScrollIndicator={Platform.OS !== "web"}',
+			) &&
+			composer.includes(
+				"<View style={contentWidth > 0 ? { width: contentWidth } : undefined} > {extras} </View>",
+			);
+		expect(composer).toContain("setExtrasHeight(Math.round(height))");
+		expect(run(pinned ? 0 : 15, Math.round)).toEqual(["297,539"]);
+		expect(pinned).toBe(true);
 	});
 });

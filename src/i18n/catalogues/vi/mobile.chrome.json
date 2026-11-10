@@ -18,5 +18,11 @@
 	"mobile.chrome.composer.open_queue": "Mở hàng đợi",
 	"mobile.chrome.drawer.open": "Mở cuộc trò chuyện",
 	"mobile.chrome.drawer.open_count": "Mở cuộc trò chuyện, {count, plural, other {# cuộc trò chuyện mới}}",
-	"mobile.chrome.drawer.agents": "Tác nhân"
+	"mobile.chrome.drawer.agents": "Tác nhân",
+	"mobile.chrome.composer.row_model": "Mô hình",
+	"mobile.chrome.composer.row_effort": "Mức suy luận",
+	"mobile.chrome.composer.row_usage": "Ngữ cảnh",
+	"mobile.chrome.composer.row_cost": "Chi phí",
+	"mobile.chrome.composer.row_queue": "Hàng đợi",
+	"mobile.chrome.composer.row_questions": "Câu hỏi"
 }

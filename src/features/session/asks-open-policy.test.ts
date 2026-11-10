@@ -1385,7 +1385,7 @@ describe("D1/U1 - an auto-opened sheet shows the question", () => {
 		expect(expandTargetFor("policy", [...TWO].reverse())).toBe("old");
 	});
 
-	it("falls back to a still-answerable timed-out ask when nothing is open, as the bar does", () => {
+	it("falls back to a timed-out ask when nothing is open (the sheet's head; no bar paints for it since build 753)", () => {
 		expect(
 			expandTargetFor("policy", [ask({ ask_id: "t", status: "timed_out" })]),
 		).toBe("t");

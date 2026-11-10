@@ -209,6 +209,24 @@ describe("shell glass layer radius", () => {
 	});
 });
 
+describe("the dock rests as the card (visual audit D1/D5)", () => {
+	it("is the two-row card with nothing typed, at the card's own height and radius", () => {
+		const card = composerPresentation({ ...empty, card: true });
+		expect(card.expanded).toBe(true);
+		expect(card.height).toBe(composerPaintedHeight(true));
+		expect(card.radius).toBe(24);
+		/* The clearance below is a device fact, not a presentation one. */
+		expect(card.gap).toBe(composerPresentation(empty).gap);
+	});
+
+	it("changes nothing for a caller that does not ask for it", () => {
+		expect(composerPresentation({ ...empty, card: false })).toEqual(
+			composerPresentation(empty),
+		);
+		expect(composerPresentation(empty).expanded).toBe(false);
+	});
+});
+
 describe("the controls row's trailing slot (UX U2 / U7, design D2)", () => {
 	const at = (
 		openForDictationOnly: boolean,

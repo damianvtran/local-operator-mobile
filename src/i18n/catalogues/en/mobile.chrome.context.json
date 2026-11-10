@@ -78,5 +78,29 @@
 	"mobile.chrome.drawer.agents": {
 		"note": "Short mode-tab label for conversations with software agents in the shared workspace drawer, contrasted with Team Bridge.",
 		"role": "button"
+	},
+	"mobile.chrome.composer.row_model": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon."
+	},
+	"mobile.chrome.composer.row_effort": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon."
+	},
+	"mobile.chrome.composer.row_usage": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet for how much of the model's context window is used; the reading is shown at the other end of the same row. A noun, no colon."
+	},
+	"mobile.chrome.composer.row_cost": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon."
+	},
+	"mobile.chrome.composer.row_queue": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon."
+	},
+	"mobile.chrome.composer.row_questions": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon."
 	}
 }

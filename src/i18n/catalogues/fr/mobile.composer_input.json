@@ -10,5 +10,7 @@
 	"mobile.composer_input.clear_draft": "Effacer le brouillon",
 	"mobile.composer_input.clear_draft_hint": "Efface uniquement le texte et les images du brouillon ; conserve les messages en attente et non confirmés",
 	"mobile.composer_input.dismiss_error": "Masquer l’erreur",
-	"mobile.composer_input.dismiss_error_hint": "Masque cette erreur sans modifier le brouillon ni l’état de livraison"
+	"mobile.composer_input.dismiss_error_hint": "Masque cette erreur sans modifier le brouillon ni l’état de livraison",
+	"mobile.composer_input.notice_retry": "Réessayer",
+	"mobile.composer_input.notice_dismiss": "Masquer"
 }

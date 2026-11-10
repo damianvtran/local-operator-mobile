@@ -42,5 +42,8 @@
 	"mobile.session.history.gap": "यहाँ संदेश छूटे हैं: कनेक्शन टूटने के दौरान कुछ संदेश छूट गए। सबसे नए संदेशों से फिर लोड करें, फिर छूटे हुए संदेश देखने के लिए पहले के संदेश लोड करें। आपके लोड किए गए पेज हट जाएँगे।",
 	"mobile.session.history.gap_newest": "ऊपर कुछ संदेश कनेक्शन टूटने के दौरान छूट गए।",
 	"mobile.session.history.reload": "सबसे नए संदेशों से फिर लोड करें",
-	"mobile.session.history.reload_hint": "सबसे नए संदेशों पर लौटता है और आपके लोड किए गए पहले के पेज हटा देता है।"
+	"mobile.session.history.reload_hint": "सबसे नए संदेशों पर लौटता है और आपके लोड किए गए पहले के पेज हटा देता है।",
+	"mobile.session.sheet_title.model": "मॉडल",
+	"mobile.session.sheet_title.effort": "प्रयास",
+	"mobile.session.sheet_title.status": "कार्य और एजेंट"
 }

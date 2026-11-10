@@ -250,6 +250,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 // hardened byte reads and exact-lock image-manipulator dependency. Identity only;
 // rendered and real-path evidence is recorded separately, not inferred from hashes.
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* Re-pinned 2026-11-09 for PR #211's UX round-1 remediation, with --print from
+	 * the staged tree. `app` moves: the session screen tags the composer box with
+	 * the window it was measured in (U1). `src` moves: `heldComposerLimit`, the
+	 * extras floor, and the failure notice's actions on their own lines (U2/U4).
+	 * Source admission only, NOT a rendered geometry proof. */
 	/* Reprinted with --print after the LAST app/src edit for PR #202 round-1
 	 * remediation: shared drawer navigation changes both render trees, including
 	 * the opt-in current-chat check, RN-web-safe aria-hidden and regression tests. This admits the
@@ -622,9 +627,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// app tree has neither parent's digest; re-pinned with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof
 	// refreshed.
+	// Re-pinned with --print over the staged tree for PR B's round-1
+	// remediation (the session screen memoises the counts element and derives
+	// one activity-line flag). Source admission only.
+	// PR #211 build-753 feedback: the session screen feeds the composer
+	// More sheet's Questions row from any ask. Re-pinned with --print over the
+	// staged tree; source admission only, no rendered or native proof.
 	// Bridge drawer switch: the root layout mounts the Team Bridge drawer
 	// adapter; source identity only, no rendered or native proof.
-	app: "088209fbfceac0cdb1b592a25dda9c8142081d8b97642e918df22aaf8103fef3",
+	// PR #211 merged with main a563a6f3 (#212): the merged tree carries #212's
+	// Team Bridge drawer switch and this PR's composer work, so it has neither
+	// parent's digest; re-pinned with --print over the staged merged tree.
+	// Source admission only, no rendered or native proof refreshed.
+	app: "0797430d8932614cc0286f22373fcb4d89d5dcb23eb3951dc17d89152e4f6e40",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1043,7 +1058,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * remediation (R3-M1) re-printed it again: effort is rigid under a measured
 	 * JS cap (sessionEffortMaxWidth), because native Yoga 0.86.3 mis-resolves the
 	 * weighted pair (yoga#2006). Source admission only, NOT rendered U-08
-	 * evidence. */
+	 * evidence. (History: that strip is gone. Polish PR B moved the chips onto
+	 * the composer card and removed both names; `composerChipPlan` in
+	 * composer-layout.ts is the rule that replaced them.) */
 	/* Re-printed 2026-11-07 with --print at the STAGED merge of origin/main
 	 * (b5a2f4a1, PR #190 smooth steering) into feat/composer-paste-voice
 	 * (PR #187, round-2 head 875cebf7): both lines of history stand, the value is
@@ -1238,24 +1255,52 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// history reader, so it has neither parent's digest; re-pinned with --print
 	// over the staged merged tree. Source admission only, no rendered or native
 	// proof refreshed.
+	// Polish PR B (single activity line, chips inside the composer card, one
+	// borderless failure notice, no shell ring at rest) merged with main 519db4e6
+	// (#207): the merged src tree has neither parent's digest; re-pinned with
+	// --print over the staged merged tree. This DOES change what the session
+	// scenes paint; the digest is source admission only, NOT rendered U-08
+	// evidence — the frames are CI's audit run's.
+	// Re-pinned with --print over the staged tree for PR B's round-1
+	// remediation: the queued count stays on the card where the host has no
+	// activity line, the counts keep one edge and drop the held line, and the
+	// dead strip exports are removed. Source admission only.
 	/* PR #210 merge-gate convergence with main 519db4e6 (#207): the merged src
 	 * tree carries both #207's history pager and this PR's header/drawer polish,
 	 * so it has neither parent's digest; every pin re-derived with --print over
 	 * the staged merged tree. Source admission only, no rendered or native proof
 	 * refreshed. */
+	// PR #211 merged with main aef9b7b2 (#210): the merged src tree carries both
+	// #210's header/drawer/sheet-exit polish and this PR's composer work, so it
+	// has neither parent's digest; re-pinned with --print over the staged merged
+	// tree. Source admission only, no rendered or native proof refreshed.
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
+	// PR #211 merged with main 6d36c22a (#208): the merged src tree carries
+	// #208's Team Bridge thread titles/tail landing and this PR's composer work
+	// (round-4 remediation c7f7b474 included), so it has neither parent's
+	// digest; re-pinned with --print over the staged merged tree. Source
+	// admission only, no rendered or native proof refreshed.
+	// PR #211 build-753 feedback: the activity line's measured slot wrappers
+	// are absolute (native slot never opened), the ask bar is a borderless row
+	// that paints nothing for timed-out-only asks, and More gains a Questions
+	// row (one i18n key). Re-pinned with --print over the staged tree; source
+	// admission only, no rendered or native proof.
 	// Bridge drawer switch: the Team Bridge adapter for the workspace drawer's
 	// labelled mode switch; round-1 remediation (wrapping mode row, failed
 	// unread read, pane help line) re-derived with --print. Source identity
 	// only, no rendered or native proof.
-	// feat/bridge-thread-chrome: the bridge thread header reuses the session
-	// title style (`sessionHeaderTitle`) and the composer the agent composer's
-	// field/disc tokens; re-derived with --print over the staged tree. Source
-	// admission only, no rendered or native proof refreshed.
-	// Converged #213 onto main a563a6f3 (#212): src re-derived with --print
-	// over the merged tree. Source identity only, no rendered or native proof.
-	src: "bab726bf50df165da3b1803ef43d1fd82609a50db7179a6c7d9d1ebe7c469794",
+	// PR #211 merged with main a563a6f3 (#212): the merged tree carries #212's
+	// Team Bridge drawer switch and this PR's composer work, so it has neither
+	// parent's digest; re-pinned with --print over the staged merged tree.
+	// Source admission only, no rendered or native proof refreshed.
+	// feat/bridge-thread-chrome (#213): the bridge thread header reuses the
+	// session title style (`sessionHeaderTitle`) and the composer the agent
+	// composer's field/disc tokens.
+	// PR #211 merged with main 0ae5fe28 (#213): the merged tree carries both,
+	// so src re-derived with --print over the staged merged tree. Source
+	// identity only, no rendered or native proof.
+	src: "33dc7f848a366902a58d16ebbd9d716dd4897bd26c289c39be30815b3ebc252a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

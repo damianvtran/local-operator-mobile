@@ -122,7 +122,10 @@ vi.mock("react-native-reanimated", async () => {
 		useAnimatedStyle: (fn: () => unknown) => fn(),
 	};
 });
-vi.mock("@/ui/components", () => ({ useReducedMotion: () => false }));
+vi.mock("@/ui/components", () => ({
+	useReducedMotion: () => false,
+	useTextScale: () => ({ effectiveScale: 1 }),
+}));
 vi.mock("@/ui/direction", () => ({ TEXT_END_CLASS: "text-right" }));
 vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 vi.mock("@/lib/format", async (importOriginal) => {
@@ -136,9 +139,13 @@ vi.mock("@/lib/format", async (importOriginal) => {
 	};
 });
 
-const { PinnedWorkingLine, usePhaseElapsed } = await import(
-	"@/features/session/components/working-line"
-);
+const {
+	MEASURED_SLOT_CHILD,
+	PinnedWorkingLine,
+	countsRowClass,
+	heldLine,
+	usePhaseElapsed,
+} = await import("@/features/session/components/working-line");
 const { STOPPING_BOUND_MS, resetTurnStopForTests, stopTurn, useTurnStopping } =
 	await import("@/features/session/turn-stop");
 const { CONTROL } = await import("@/ui/a11y");
@@ -311,6 +318,57 @@ describe("PinnedWorkingLine", () => {
 		expect(visible).toContain("Reading exact intent");
 		expect(visible).not.toContain("Working");
 		expect(visible).not.toContain("59m 59s");
+	});
+
+	it("carries the trailing counts between the clock and the Stop (D1)", () => {
+		render({
+			line: frame(true, "Reading", 3),
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+			trailing: createElement("span", null, "[counts]"),
+		});
+		const visible = screen().replace(/<[^>]*>/g, "");
+		expect(visible).toContain("Reading");
+		expect(visible.indexOf("[counts]")).toBeGreaterThan(
+			visible.indexOf("Reading"),
+		);
+		expect(visible.indexOf(t("relay.composer.action.stop"))).toBeGreaterThan(
+			visible.indexOf("[counts]"),
+		);
+		expect(visible.match(/\[counts\]/g)).toHaveLength(1);
+	});
+
+	it("draws the counts ONCE when they take their own line (large text)", () => {
+		render({
+			line: frame(true, "Reading", 3),
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+			trailing: createElement("span", null, "[counts]"),
+			trailingStacked: true,
+		});
+		const visible = screen().replace(/<[^>]*>/g, "");
+		expect(visible.match(/\[counts\]/g)).toHaveLength(1);
+		/* Under the row: after the Stop, not between the clock and it. */
+		expect(visible.indexOf("[counts]")).toBeGreaterThan(
+			visible.indexOf(t("relay.composer.action.stop")),
+		);
+	});
+
+	it("keeps the slot open for the counts alone when no turn is alive", () => {
+		/* Tasks, agents and a queue outlive the turn: the capsule band showed
+		 *  them at rest, so the line that replaced it must too — with no
+		 *  spinner, no status and no Stop to press. */
+		render({
+			line: null,
+			onStop: async () => true,
+			gapBelow: false,
+			stopping: false,
+			trailing: createElement("span", null, "[counts]"),
+		});
+		expect(screen()).toBe("[counts]");
+		expect(probe.presses.has("session-working-stop")).toBe(false);
 	});
 
 	it("renders nothing when no turn is alive", () => {
@@ -574,5 +632,170 @@ describe("PinnedWorkingLine memo", () => {
 		act(() => vi.advanceTimersByTime(2000));
 		expect(probe.bodies).toBeGreaterThan(bodiesAfterMount);
 		expect(parentRenders).toBe(parentsAfterMount + 2);
+	});
+
+	/* Review round 1, m1: the screen built `<ActivityCounts/>` inline, a new
+	 *  element per streamed frame, so the memo above never held once any count
+	 *  existed. `memoised` is the screen's `useMemo`; the inline arm is the
+	 *  control that shows this harness can see the regression. */
+	it.each([{ memoised: true }, { memoised: false }])(
+		"holds across parent frames only when the counts element is stable (memoised: $memoised)",
+		({ memoised }) => {
+			const onStop = async () => true;
+			let setTick: (n: number) => void = () => {};
+			const line = { activity: "thinking", startedS: 0 };
+			const Parent = () => {
+				const [, set] = React.useState(0);
+				setTick = set;
+				const stable = React.useMemo(
+					() => createElement("span", null, "[counts]"),
+					[],
+				);
+				return createElement(PinnedWorkingLine, {
+					line,
+					onStop,
+					gapBelow: false,
+					stopping: false,
+					trailing: memoised ? stable : createElement("span", null, "[counts]"),
+				});
+			};
+			act(() => root.render(createElement(Parent)));
+			const bodiesAfterMount = probe.bodies;
+			act(() => setTick(1));
+			act(() => setTick(2));
+			if (memoised) expect(probe.bodies).toBe(bodiesAfterMount);
+			else expect(probe.bodies).toBeGreaterThan(bodiesAfterMount);
+		},
+	);
+});
+
+describe("the counts outliving a turn (review round 1, m2 / m3)", () => {
+	const counts = () => createElement("span", null, "[counts]");
+	const base = { onStop: async () => true, gapBelow: false, stopping: false };
+
+	it("never repaints the last turn's line when the counts later go away", () => {
+		const trailing = counts();
+		render({ ...base, line: frame(true, "Reading", 3), trailing });
+		expect(screen()).toContain("Reading");
+		/* The turn ends; the counts keep the slot open with no status and no Stop. */
+		render({ ...base, line: null, trailing });
+		expect(screen()).toBe("[counts]");
+		/* The counts go (queue drained, list cleared, a pending card arriving).
+		 *  Inside the close tween the slot used to paint `held`: "Reading", its
+		 *  clock and an inert Stop, for 180 ms. */
+		probe.deferTweens = true;
+		probe.presses.clear();
+		render({ ...base, line: null });
+		expect(screen()).toBe("");
+		expect(probe.presses.has(CONTROL.sessionWorkingStop)).toBe(false);
+	});
+
+	it("still holds the line through an ordinary close, with nothing else in the slot", () => {
+		/* The hold m2 removes is only the one behind the counts. */
+		render({ ...base, line: frame(true, "Reading", 3) });
+		probe.deferTweens = true;
+		render({ ...base, line: null });
+		expect(screen()).toContain("Reading");
+	});
+
+	it("derives the held line: live wins, counts drop it, otherwise it stays", () => {
+		const last = { activity: "Reading", startedS: 3 };
+		const next = { activity: "Editing", startedS: 9 };
+		expect(heldLine(last, next, false)).toBe(next);
+		expect(heldLine(last, next, true)).toBe(next);
+		expect(heldLine(last, null, true)).toBeNull();
+		expect(heldLine(last, null, false)).toBe(last);
+		expect(heldLine(null, null, false)).toBeNull();
+	});
+
+	it("keeps the counts on ONE edge between a running turn and idle", () => {
+		/* Stacked: their own line at the leading edge, running or idle. */
+		expect(countsRowClass(true)).not.toMatch(
+			/justify-end|ms-auto|flex-row-reverse/,
+		);
+		/* Beside the Stop while running, so trailing when idle. */
+		expect(countsRowClass(false)).toContain("justify-end");
+		/* Both rows are painted through the one function: the stacked line under
+		 *  a running status, and the idle slot, which follows the same flag. */
+		const source = readFileSync(
+			new URL("./working-line.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(source).toContain("<View className={countsRowClass(true)}>");
+		expect(source).toContain("className={countsRowClass(trailingStacked)}");
+		expect(source.match(/justify-end/g)).toHaveLength(1);
+	});
+});
+
+/**
+ * Operator report, TestFlight build 753: the pinned line showed its clock and
+ * Stop but never the mark or the status text. The slot's height is
+ * `rowHeight * progress`, `rowHeight` is the measured wrapper's `onLayout`, and
+ * on native Yoga lays an in-flow auto-height child of a zero-height parent out
+ * at most 0 tall — so the measurement reads 0 and the slot never opens. Units
+ * run without Yoga, so the guard is the source shape plus a model of that rule.
+ */
+describe("the slot's measured wrappers open on native (build 753)", () => {
+	const source = readFileSync(
+		new URL("./working-line.tsx", import.meta.url),
+		"utf8",
+	);
+
+	it("draws every wrapper that feeds the slot height out of flow", () => {
+		expect(MEASURED_SLOT_CHILD).toEqual({
+			position: "absolute",
+			top: 0,
+			start: 0,
+			end: 0,
+		});
+		const marker = "rowHeight.value = event.nativeEvent.layout.height";
+		const wrappers: string[] = [];
+		for (let at = source.indexOf(marker); at !== -1; ) {
+			wrappers.push(source.slice(source.lastIndexOf("<View", at), at));
+			at = source.indexOf(marker, at + marker.length);
+		}
+		/* The status wrapper and the counts-only wrapper. */
+		expect(wrappers).toHaveLength(2);
+		for (const wrapper of wrappers)
+			expect(wrapper).toContain("style={MEASURED_SLOT_CHILD}");
+	});
+
+	/** Yoga's rule for the slot's child, reduced to the fact that matters: an
+	 *  in-flow auto-height child is laid out no taller than its parent, an
+	 *  absolute one at its natural height. */
+	const layoutChild = (
+		style: { position?: string },
+		natural: number,
+		slot: number,
+	) => (style.position === "absolute" ? natural : Math.min(natural, slot));
+	/** The slot's height on each tween frame, fed back through `onLayout`. */
+	const openSlot = (style: { position?: string }, natural: number) => {
+		let row = 0;
+		return [0, 0.25, 0.5, 0.75, 1, 1].map((progress) => {
+			row = layoutChild(style, natural, row * progress);
+			return row * progress;
+		});
+	};
+
+	it("never opens an in-flow wrapper, and opens the absolute one", () => {
+		/* The old wrapper: the measurement is clamped by the slot it sizes. */
+		expect(openSlot({}, 44)).toEqual([0, 0, 0, 0, 0, 0]);
+		/* The shipped wrapper: the tween runs to the row's own height. */
+		expect(openSlot(MEASURED_SLOT_CHILD, 44)).toEqual([0, 11, 22, 33, 44, 44]);
+	});
+
+	it("floors the status label at one rendered line", () => {
+		act(() =>
+			root.render(
+				createElement(PinnedWorkingLine, {
+					line: { activity: "thinking", startedS: 3 },
+					onStop: async () => true,
+					stopping: false,
+					gapBelow: false,
+				}),
+			),
+		);
+		const label = probe.texts.find((text) => text.children === "thinking");
+		expect(label?.style).toEqual({ minHeight: 12 * 1.45 });
 	});
 });

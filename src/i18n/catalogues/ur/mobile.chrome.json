@@ -18,5 +18,11 @@
 	"mobile.chrome.composer.open_queue": "قطار کھولیں",
 	"mobile.chrome.drawer.open": "گفتگوئیں کھولیں",
 	"mobile.chrome.drawer.open_count": "گفتگوئیں کھولیں، {count, plural, one {# نئی گفتگو} other {# نئی گفتگوئیں}}",
-	"mobile.chrome.drawer.agents": "ایجنٹس"
+	"mobile.chrome.drawer.agents": "ایجنٹس",
+	"mobile.chrome.composer.row_model": "ماڈل",
+	"mobile.chrome.composer.row_effort": "شدت",
+	"mobile.chrome.composer.row_usage": "سیاق",
+	"mobile.chrome.composer.row_cost": "لاگت",
+	"mobile.chrome.composer.row_queue": "قطار",
+	"mobile.chrome.composer.row_questions": "سوالات"
 }
