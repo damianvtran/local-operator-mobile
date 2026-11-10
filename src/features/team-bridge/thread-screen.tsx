@@ -1,4 +1,5 @@
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { Bell } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	AppState,
@@ -35,6 +36,8 @@ import {
 	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
+import { Heading } from "@/ui/components/heading";
+import { IconButton } from "@/ui/components/icon-button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Textarea } from "@/ui/components/textarea";
@@ -62,6 +65,7 @@ import {
 	ProfileAuthorPhoto,
 	ProfileSheet,
 } from "./profile-card";
+import { createThreadViewport, type ThreadViewport } from "./thread-viewport";
 
 const single = (value: string | string[] | undefined): string =>
 	typeof value === "string" ? value : "";
@@ -278,11 +282,60 @@ function ThreadContent({
 			setWatchedThread(null);
 		};
 	}, [focused, active, admitted, conversationId, tenantId, actions]);
-	const visibleSeq = useRef(0);
 	const list = useRef<FlatList<model.ThreadItem>>(null);
-	const followTail = useRef(true);
+	const [positioned, setPositioned] = useState(false);
+	// The controller is created once per mounted thread, so it reads the latest
+	// render's thread through refs rather than a stale closure.
+	const newestSeq = useRef(0);
+	newestSeq.current = Math.max(
+		0,
+		...(thread?.messages ?? []).map((m) => m.seq),
+	);
+	const dataReady = useRef(false);
+	dataReady.current =
+		!conversationId || !!thread?.messages.length || thread?.state === "ready";
+	const viewport = useRef<ThreadViewport | null>(null);
+	if (!viewport.current)
+		viewport.current = createThreadViewport({
+			// Exact measured offset, not scrollToEnd's estimated frame offset.
+			scrollTo: (offset) => {
+				list.current?.scrollToOffset({ offset, animated: false });
+				if (Platform.OS !== "web") return null;
+				// react-native-web scrolls the DOM node synchronously, so its geometry
+				// is readable now; no scroll event fires when nothing moved.
+				const node = list.current?.getScrollableNode?.() as
+					| { scrollTop?: unknown; clientHeight: number; scrollHeight: number }
+					| undefined;
+				return node && typeof node.scrollTop === "number"
+					? {
+							y: node.scrollTop,
+							viewport: node.clientHeight,
+							content: node.scrollHeight,
+						}
+					: null;
+			},
+			positioned: () => setPositioned(true),
+			read: () => rendered.current(),
+			newestSeq: () => newestSeq.current,
+			dataReady: () => dataReady.current,
+			web: Platform.OS === "web",
+		});
+	useEffect(() => {
+		// Empty admitted threads have no message layout event to wait for.
+		if (
+			!conversationId ||
+			(thread?.state === "ready" && thread.messages.length === 0)
+		)
+			viewport.current?.settledEmpty();
+	}, [conversationId, thread?.state, thread?.messages.length]);
+	// Loading/empty/error copy remains visible; only unpositioned message rows
+	// are concealed, so a failed initial request never becomes a blank screen.
+	const initialRowsHidden = !positioned && items.length > 0;
 	const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 20 }).current;
+	// readSeq stays 0 until the viewport is positioned, so this needs no
+	// `positioned` dependency (which would post a second mark on landing).
 	const markRendered = useCallback(() => {
+		const seq = viewport.current?.readSeq ?? 0;
 		if (
 			focused &&
 			active &&
@@ -290,19 +343,19 @@ function ThreadContent({
 			activeNow.current &&
 			admitted &&
 			conversationId &&
-			visibleSeq.current > 0
+			seq > 0
 		)
-			void actions.markRead(tenantId, conversationId, visibleSeq.current);
+			void actions.markRead(tenantId, conversationId, seq);
 	}, [focused, active, admitted, conversationId, tenantId, actions]);
 	const rendered = useRef(markRendered);
 	rendered.current = markRendered;
 	const onViewableItemsChanged = useRef(
 		({ viewableItems }: { viewableItems: ViewToken<model.ThreadItem>[] }) => {
-			const seqs = viewableItems.flatMap((v) =>
-				v.item.type === "message" ? [v.item.message.seq] : [],
+			viewport.current?.visible(
+				viewableItems.flatMap((v) =>
+					v.item.type === "message" ? [v.item.message.seq] : [],
+				),
 			);
-			visibleSeq.current = Math.max(0, ...seqs);
-			rendered.current();
 		},
 	).current;
 	useEffect(() => {
@@ -498,12 +551,27 @@ function ThreadContent({
 	return (
 		<Screen
 			title={title}
+			titleNode={
+				// Channel identity needs room to wrap without borrowing the display
+				// size used by standalone screens or shrinking accessible text.
+				<Heading
+					level={1}
+					className="min-w-0 flex-1 text-title text-ink"
+					numberOfLines={2}
+				>
+					{title}
+				</Heading>
+			}
 			headerLeading={<BridgeBack />}
 			headerAction={
 				admitted ? (
-					<Button
-						variant="quiet"
-						label={t("mobile.team_bridge.thread.notifications")}
+					// Icon-only so a 390 px header gives the channel name the width the
+					// 122 px text button took (PR #208 D3). The label stays the
+					// accessible name; IconButton's box is the platform touch floor
+					// (48 on web/Android, 44 pt on iOS).
+					<IconButton
+						accessibilityLabel={t("mobile.team_bridge.thread.notifications")}
+						icon={({ color, size }) => <Bell color={color} size={size} />}
 						testID={CONTROL.teamBridgeNotifications}
 						onPress={() => setNotifyOpen(true)}
 					/>
@@ -604,19 +672,20 @@ function ThreadContent({
 									onViewableItemsChanged={onViewableItemsChanged}
 									viewabilityConfig={viewabilityConfig}
 									ref={list}
-									maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-									onScroll={(event) => {
-										const { contentOffset, layoutMeasurement, contentSize } =
-											event.nativeEvent;
-										followTail.current =
-											contentOffset.y + layoutMeasurement.height >=
-											contentSize.height - 44;
-									}}
+									// Anchoring helps prepends only AFTER initial-tail authority has
+									// positioned the list; otherwise it can pin the initial top row.
+									maintainVisibleContentPosition={
+										positioned ? { minIndexForVisible: 0 } : undefined
+									}
+									style={{ opacity: initialRowsHidden ? 0 : 1 }}
+									accessibilityElementsHidden={initialRowsHidden}
+									importantForAccessibility={
+										initialRowsHidden ? "no-hide-descendants" : "auto"
+									}
+									// Every list callback is the viewport controller's, so the tests
+									// that drive these handlers drive the shipping wiring.
+									{...viewport.current.handlers}
 									scrollEventThrottle={100}
-									onContentSizeChange={() => {
-										if (followTail.current)
-											list.current?.scrollToEnd({ animated: false });
-									}}
 									refreshControl={
 										<RefreshControl
 											refreshing={thread?.state === "loading"}
@@ -636,8 +705,10 @@ function ThreadContent({
 													disabled={thread.loadingOlder}
 													testID={CONTROL.teamBridgeLoadOlder}
 													onPress={() => {
-														if (conversationId)
-															void actions.loadOlder(tenantId, conversationId);
+														if (!conversationId) return;
+														// A prepend must not pull a history reader down.
+														viewport.current?.releaseFollow();
+														void actions.loadOlder(tenantId, conversationId);
 													}}
 												/>
 											)}
@@ -653,11 +724,9 @@ function ThreadContent({
 														label={t("mobile.team_bridge.thread.older_retry")}
 														testID={CONTROL.teamBridgeOlderRetry}
 														onPress={() => {
-															if (conversationId)
-																void actions.loadOlder(
-																	tenantId,
-																	conversationId,
-																);
+															if (!conversationId) return;
+															viewport.current?.releaseFollow();
+															void actions.loadOlder(tenantId, conversationId);
 														}}
 													/>
 												</>
@@ -882,6 +951,7 @@ function ThreadContent({
 }
 
 export default function TeamBridgeThreadScreen() {
+	const selfAccountId = useTeamBridgeState((state) => state.selfAccountId);
 	const params = useLocalSearchParams<{
 		tenantId?: string;
 		conversationId?: string;
@@ -911,7 +981,7 @@ export default function TeamBridgeThreadScreen() {
 	return (
 		<BridgeGate>
 			<ThreadContent
-				key={`${tenantId}/${routeId}/${kind}/${accountId}/${ownerAccountId}/${endpointId}`}
+				key={`${selfAccountId}/${tenantId}/${routeId}/${kind}/${accountId}/${ownerAccountId}/${endpointId}`}
 				tenantId={tenantId}
 				routeId={routeId}
 				target={target}

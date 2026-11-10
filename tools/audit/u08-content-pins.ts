@@ -1265,7 +1265,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// #210's header/drawer/sheet-exit polish and this PR's composer work, so it
 	// has neither parent's digest; re-pinned with --print over the staged merged
 	// tree. Source admission only, no rendered or native proof refreshed.
-	src: "84ebdd33e7069fc1ef89965af0e8cca0d0e5412b40fe70dae86543e1c78e91b9",
+	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
+	// Notifications on top of the above; source identity only, not new pixels.
+	// PR #211 merged with main 6d36c22a (#208): the merged src tree carries
+	// #208's Team Bridge thread titles/tail landing and this PR's composer work
+	// (round-4 remediation c7f7b474 included), so it has neither parent's
+	// digest; re-pinned with --print over the staged merged tree. Source
+	// admission only, no rendered or native proof refreshed.
+	src: "c60350b027d45522330976f095320e433dd77c1eab2e0a69340f1db7fe19301c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
