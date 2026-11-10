@@ -1344,7 +1344,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// the agent's one-row pill, Bridge threads lead with the drawer button, and
 	// Bridge opens replace; one Team Bridge key retired in all locales. --print
 	// over the staged tree; source identity only, no rendered or native proof.
-	src: "fea6ab931f3a2c70db62199dd8bfce3738e07ad3a7e50a15f7dd06f73256ae34",
+	// Round-1 remediation (#219): the composer's edge becomes a focus ring and
+	// the drawer's "Open Team Bridge" replaces on Bridge routes. --print over the
+	// staged tree; source identity only, no rendered or native proof.
+	src: "05eae16cc08bd5ee6717701811565b831da6311cd679264e593cc49b95496b9d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

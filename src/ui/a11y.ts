@@ -738,6 +738,9 @@ export const SURFACE = {
 	teamBridgeComposer: "team-bridge-composer",
 	/** The composer's rounded shell, so its resting geometry is assertable. */
 	teamBridgeComposerShell: "team-bridge-composer-shell",
+	/** The shell's layout-free edge ring (clear at rest, focused edge), so
+	 *  its rest and focus colours are assertable apart from the shell box. */
+	teamBridgeComposerRing: "team-bridge-composer-ring",
 	teamBridgeConversationsLoading: "team-bridge-conversations-loading",
 	teamBridgeDayDivider: "team-bridge-day-divider",
 	teamBridgeDefaultOnNotice: "team-bridge-default-on-notice",

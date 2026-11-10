@@ -281,6 +281,19 @@ export function openDisposition(
 		pathname === `/team-bridge/${target.tenantId}/${target.conversationId}`
 	)
 		return "stay";
+	return bridgeRouteDisposition(pathname);
+}
+
+/**
+ * Push or replace for ANY Team Bridge destination opened from `pathname`,
+ * target-independent. Split out of `openDisposition` so the drawer's "Open
+ * Team Bridge" (shown while the gate is not open) follows the same rule as a
+ * row: from a thread whose admission gate is showing, a push would stack the
+ * list over that thread, and the next row pick would then leave
+ * `[…, threadA, threadB]` — back into the previous thread, which A7 forbids
+ * (round 1 R1-2 / U1-1). One function, so the two entry points cannot drift.
+ */
+export function bridgeRouteDisposition(pathname: string): "push" | "replace" {
 	return BRIDGE_ROUTE.test(pathname) ? "replace" : "push";
 }
 

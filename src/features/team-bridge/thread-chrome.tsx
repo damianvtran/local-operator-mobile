@@ -1,4 +1,5 @@
 import { Paperclip } from "lucide-react-native";
+import { useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import {
 	ATTACH_GLYPH_PT,
@@ -101,15 +102,16 @@ export function BridgeThreadTitleView({
 	);
 }
 
-/** Where the field's text starts, measured from the shell's outer edge (inside
- *  its 1 pt border): side padding plus the attach column. The agent composer's
+/** Where the field's text starts, measured from the shell's outer edge (the
+ *  shell has no border; its edge is a layout-free ring, see the shell below):
+ *  side padding plus the attach column. The agent composer's
  *  resting row is the same sum with the same values, so the two placeholders
  *  line up; the suite asserts it against the rendered shell. */
 export const BRIDGE_TEXT_INSET = COMPOSER_SIDE_PAD + TOUCH_FLOOR;
 
 export type BridgeComposerFieldProps = {
 	/** The field's accessible name ("Message"): kept as the name, not painted —
-	 *  the placeholder ("Message qa-coordination") already says what it is. */
+	 *  the placeholder already says what the field is for. */
 	label: string;
 	placeholder: string;
 	draft: string;
@@ -141,7 +143,28 @@ export type BridgeComposerFieldProps = {
  * newline and sending is the disc. The agent composer's web Enter-to-send is a
  * session behaviour and is NOT adopted here (non-goal of this change).
  */
-export function BridgeComposerField({
+export function BridgeComposerField(props: BridgeComposerFieldProps) {
+	/* Focus drives ONLY the shell's edge ring (design D1): the agent composer
+	 *  paints its edge transparent at rest and `border-control` while the field is
+	 *  focused, and the Bridge now does the same. Held here rather than in the
+	 *  view so the view stays a hook-free function the Node suite can call. */
+	const [focused, setFocused] = useState(false);
+	return (
+		<BridgeComposerFieldView
+			{...props}
+			focused={focused}
+			onFocus={() => setFocused(true)}
+			onBlur={() => setFocused(false)}
+		/>
+	);
+}
+
+/** The drawing half of `BridgeComposerField`: focus comes in as a prop, the
+ *  same split as `BridgeThreadTitle` / `BridgeThreadTitleView`. */
+export function BridgeComposerFieldView({
+	focused,
+	onFocus,
+	onBlur,
 	label,
 	placeholder,
 	draft,
@@ -153,7 +176,11 @@ export function BridgeComposerField({
 	sendLabel,
 	sendDisabled,
 	onSend,
-}: BridgeComposerFieldProps) {
+}: BridgeComposerFieldProps & {
+	focused: boolean;
+	onFocus?: () => void;
+	onBlur?: () => void;
+}) {
 	const elevated = useTokenColor("elevated");
 	const borderControl = useTokenColor("border-control");
 	const attachInk = useTokenColor("ink-muted");
@@ -166,9 +193,13 @@ export function BridgeComposerField({
 		<View
 			/* The shell: the agent composer's `elevated` pill at rest — the 56 pt
 			 *  pill's radius (`morphPillRadius(COMPOSER_BASE_HEIGHT)`), its 4 pt
-			 *  vertical padding and 12 pt sides. Its 1 pt `border-control` edge is the
-			 *  shell's only boundary, as in the agent composer: `elevated` over
-			 *  `canvas` is under the 3:1 a boundary owes. It is NOT animated: a bridge field
+			 *  vertical padding and 12 pt sides. It has NO border of its own (design
+			 *  D1, round 1): a 1 pt `border-control` outline at rest was the one thing
+			 *  that read as a different component beside the agent pill, whose edge is
+			 *  a separate ring, transparent at rest (`composer.tsx`, THE SHELL'S FOCUS
+			 *  EDGE). A border here also sits inside the box, so the rest height
+			 *  was 58 and the text +61 against the agent's 56 / +60. The ring is this
+			 *  shell's last child (below). It is NOT animated: a bridge field
 			 *  grows with its draft (the Textarea's own line growth, capped at six),
 			 *  and the controls stay on the BOTTOM row so a long draft never moves
 			 *  Send away from the thumb.
@@ -182,8 +213,6 @@ export function BridgeComposerField({
 			className="flex-row items-end"
 			style={{
 				backgroundColor: elevated,
-				borderWidth: 1,
-				borderColor: borderControl,
 				borderRadius: morphPillRadius(COMPOSER_BASE_HEIGHT),
 				paddingTop: pad.top,
 				paddingBottom: pad.bottom,
@@ -228,20 +257,23 @@ export function BridgeComposerField({
 					hideLabel
 					integrated
 					/* ONE line of placeholder, the agent composer's own rule (§2.5 D1):
-					 *  the resting height must never grow with a wrapped placeholder.
-					 *  #213 left it uncapped because the placeholder was "Message
-					 *  {channel}", and an `integrated` field stays a <textarea> on web,
-					 *  which wraps a long name and cannot ellipsize it — capped, the
-					 *  tail was CUT; uncapped, a long name wrapped and on iOS the empty
-					 *  field rested as a tall card (TestFlight 773, ~85 pt). The screen
-					 *  now passes the short channel-free "Message" instead: the thread
-					 *  title right above already names the channel, so the name in the
-					 *  field said nothing new and was the only thing that could wrap. */
+					 *  the resting height must never grow with the placeholder. #213 left
+					 *  it uncapped (the placeholder was "Message {channel}", and a capped
+					 *  web <textarea> cuts a long name rather than ellipsizing it). The
+					 *  tall iOS card (TestFlight 773, ~85 pt, channel "humans", which does
+					 *  not wrap at 390) is NOT a wrap: with no cap the Textarea lets the
+					 *  placeholder's measured box claim the empty field's floor. With a
+					 *  cap, `contentFloor` is `oneLineBox` while the value is empty
+					 *  (`textarea.tsx`), which is what holds the rest to one row (review
+					 *  R1-3). The screen passes the channel-free "Message" too, since the
+					 *  title right above already names the channel. */
 					placeholderMaxLines={1}
 					placeholder={placeholder}
 					value={draft}
 					onChangeText={onDraftChange}
 					disabled={sending}
+					onFocus={onFocus}
+					onBlur={onBlur}
 					testID={CONTROL.teamBridgeMessageInput}
 				/>
 			</View>
@@ -272,6 +304,33 @@ export function BridgeComposerField({
 					</Text>
 				</View>
 			</Pressable>
+			{/* THE SHELL'S EDGE, the agent composer's construction (`composer.tsx`,
+			 *  THE SHELL'S FOCUS EDGE): an absolute child adds nothing to layout, so
+			 *  the 56 pt rest and the +60 text inset are the agent's; a `borderWidth`
+			 *  on the shell would shrink its interior instead (design D1).
+			 *  It is clear at rest and `border-control` only while the field
+			 *  has focus, like the agent's. `pointerEvents="none"` is required, not
+			 *  styling: an absolute layer over the field must never take its taps.
+			 *  Painted last so the edge sits over the content it bounds. Not
+			 *  animated: the agent fades its ring with the shell's morph, which the
+			 *  bridge shell does not have. */}
+			<View
+				pointerEvents="none"
+				testID={SURFACE.teamBridgeComposerRing}
+				style={{
+					position: "absolute",
+					top: 0,
+					bottom: 0,
+					start: 0,
+					end: 0,
+					borderWidth: 1,
+					borderRadius: morphPillRadius(COMPOSER_BASE_HEIGHT),
+					borderColor: focused ? borderControl : CLEAR,
+				}}
+			/>
 		</View>
 	);
 }
+
+/** The ring's resting colour, spelled once (the agent ring's literal). */
+const CLEAR = "transparent";

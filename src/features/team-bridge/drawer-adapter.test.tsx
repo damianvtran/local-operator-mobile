@@ -418,6 +418,26 @@ describe("the Bridge pane before admission", () => {
 			expect(host.log).toEqual(["dismiss", "/team-bridge"]);
 		},
 	);
+
+	/* Round 1 R1-2 / U1-1: from a thread showing its admission gate, a push put
+	 * the list ON TOP of the thread, so a later row pick (which replaces the
+	 * list) left the previous thread underneath to swipe back into (A7). */
+	it("from a thread's gate it REPLACES the thread with the list, never pushes", async () => {
+		setBridge({ gate: "unavailable" });
+		host.pathname = "/team-bridge/synthetic-tenant/synthetic-current";
+		const onNavigate = vi.fn(() => host.log.push("dismiss"));
+		host.replace.mockImplementation((path: string) =>
+			host.log.push(`replace ${path}`),
+		);
+		await act(async () =>
+			root.render(
+				<TeamBridgeDrawerPane onNavigate={onNavigate} onClose={vi.fn()} />,
+			),
+		);
+		await press(CONTROL.teamBridgeDrawerOpen);
+		expect(host.log).toEqual(["dismiss", "replace /team-bridge"]);
+		expect(host.push).not.toHaveBeenCalled();
+	});
 });
 
 describe("a failed first unread read (R1-2 / Q1-2)", () => {

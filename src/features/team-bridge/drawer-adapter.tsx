@@ -28,7 +28,7 @@
  *   stay reachable with every computer asleep, and while signed out the pane
  *   still offers the full screen (where sign-in lives).
  */
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { X } from "lucide-react-native";
 import { useMemo } from "react";
 import { Text, View } from "react-native";
@@ -43,6 +43,7 @@ import { Button } from "@/ui/components/button";
 import { IconButton } from "@/ui/components/icon-button";
 import { gateHelp, gateTitle } from "./gate";
 import { BridgeDirectory } from "./list-screen";
+import { bridgeRouteDisposition } from "./profile-card";
 
 type BadgeInputs = Pick<
 	TeamBridgeState,
@@ -89,6 +90,7 @@ export function TeamBridgeDrawerPane({
 	onClose: () => void;
 }) {
 	const router = useRouter();
+	const pathname = usePathname();
 	const gate = useTeamBridgeState((s) => s.gate);
 	return (
 		<View className="min-h-0 flex-1" testID={SURFACE.teamBridgeDrawerPane}>
@@ -123,7 +125,12 @@ export function TeamBridgeDrawerPane({
 						testID={CONTROL.teamBridgeDrawerOpen}
 						onPress={() => {
 							onNavigate();
-							router.push("/team-bridge" as never);
+							/* Replace, not push, when already on a Team Bridge route
+							 *  (a thread showing its gate): the rows' own rule, so the
+							 *  list never lands on top of a thread (R1-2 / U1-1). */
+							if (bridgeRouteDisposition(pathname) === "replace")
+								router.replace("/team-bridge" as never);
+							else router.push("/team-bridge" as never);
 						}}
 					/>
 				</View>
