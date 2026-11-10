@@ -649,8 +649,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lists tool names) — no size, face, colour or role moved, and `theme:check`
 	 * and `preset:check` both report the generated layers current. Identity
 	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-09 for fix/user-message-bubble with --print from the
+	 * staged tree: `tokens.json` gains ONE colour role, `user-bubble` (the fill
+	 * of the reader's own transcript turn, solved >= 1.25:1 on canvas), with its
+	 * rule in `palette-rules.mjs` and the regenerated preset. No existing role's
+	 * value moved. Identity only, NOT rendered U-08 evidence. */
 	"design/tokens":
-		"40b677b7e493bd87e1c4201a635b5915ccaad6482286901a5e4a558c8a73801d",
+		"505afe475a6bd4f05c9673940f123fd273e18c98171f3d676a9fb7e037ba2291",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -1276,6 +1281,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// tree. Source admission only, no rendered or native proof refreshed.
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
+	/* Re-pinned 2026-11-09 for fix/user-message-bubble with --print from the
+	 * staged tree: the user row's fill is `bg-user-bubble` (was `bg-surface`),
+	 * and `theme.css` / `tokens.gen.ts` carry the new role for every theme. The
+	 * user bubble's FILL colour therefore differs in a frame; its box, type and
+	 * every other row are unchanged. Source admission only, NOT rendered or
+	 * native proof.
+	 *
+	 * Re-pinned again the same day with --print from the staged round-1
+	 * remediation tree: the bubble box moves to `features/session/user-bubble.ts`
+	 * and also carries an explicit native `backgroundColor` from the active
+	 * palette (design D1); the pending echo takes the same box with its caption
+	 * below it (M1, D2); an image on the bubble is framed `hairline-strong`
+	 * (m1). Source admission only, NOT rendered or native proof. */
 	// PR #211 merged with main 6d36c22a (#208): the merged src tree carries
 	// #208's Team Bridge thread titles/tail landing and this PR's composer work
 	// (round-4 remediation c7f7b474 included), so it has neither parent's
@@ -1300,7 +1318,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #211 merged with main 0ae5fe28 (#213): the merged tree carries both,
 	// so src re-derived with --print over the staged merged tree. Source
 	// identity only, no rendered or native proof.
-	src: "33dc7f848a366902a58d16ebbd9d716dd4897bd26c289c39be30815b3ebc252a",
+	// PR #214 merged with main 8fec5440 (#211, #212, #213): the merged src tree
+	// carries the user bubble fill and #211's activity line/composer work, so it
+	// has neither parent's digest; re-pinned with --print over the staged merged
+	// tree. Source admission only, no rendered or native proof refreshed.
+	src: "e2d1978f22461b3cdea32498970a9b66f03eaf2d01092e33c77e379d6f1c9fdc",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

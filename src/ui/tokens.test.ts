@@ -227,3 +227,68 @@ describe("the shipped theme catalogue", () => {
 		expect(new Set(ids).size).toBe(ids.length);
 	});
 });
+
+describe("the user bubble's fill", () => {
+	/* The reader's own turn is a BORDERLESS fill, so its step off the page is
+	 * the only thing that makes it a card. It was painted with `surface`, which
+	 * this block measures at 1.06-1.14:1 on canvas across the shipped themes —
+	 * on the iOS build the bubble was not visible at all (operator report,
+	 * 2026-11-09). The contrast contract asserts the same floor at the token
+	 * source (`palette-rules.mjs` § "the user bubble"); this pins it on the
+	 * values the APP ships, per theme, so a generator that dropped or mis-keyed
+	 * the role cannot pass. */
+	const FLOOR = 1.25;
+
+	it("clears 1.25:1 on canvas in every shipped theme, light and dark", () => {
+		expect(THEMES.length).toBeGreaterThan(0);
+		for (const mode of ["light", "dark"] as const)
+			expect(
+				THEMES.some((entry) => entry.mode === mode),
+				`a ${mode} theme ships`,
+			).toBe(true);
+		for (const entry of THEMES)
+			expect(
+				contrast(entry.colors["user-bubble"], entry.colors.canvas),
+				`${entry.id} (${entry.mode}) user-bubble on canvas`,
+			).toBeGreaterThanOrEqual(FLOOR);
+		for (const theme of ["light", "dark"] as const)
+			expect(
+				contrast(
+					resolveColor("user-bubble", theme),
+					resolveColor("canvas", theme),
+				),
+				`brand ${theme} user-bubble on canvas`,
+			).toBeGreaterThanOrEqual(FLOOR);
+	});
+
+	it("steps AWAY from the page: lighter in dark, darker in light", () => {
+		for (const entry of THEMES) {
+			const bubble = luminance(entry.colors["user-bubble"]);
+			const page = luminance(entry.colors.canvas);
+			if (entry.mode === "dark")
+				expect(bubble, `${entry.id}`).toBeGreaterThan(page);
+			else expect(bubble, `${entry.id}`).toBeLessThan(page);
+		}
+	});
+
+	it("keeps the reader's prose readable on it", () => {
+		for (const entry of THEMES)
+			expect(
+				contrast(entry.colors.ink, entry.colors["user-bubble"]),
+				`${entry.id} ink on user-bubble`,
+			).toBeGreaterThanOrEqual(4.5);
+	});
+
+	/* The negative control, and the cause on record: the panel grounds the
+	 * bubble could be mistaken for do NOT clear the floor, in any theme. If a
+	 * palette change ever makes one clear it, this fails and the choice of a
+	 * dedicated role can be revisited deliberately. */
+	it("is not replaceable by a panel ground", () => {
+		for (const ground of ["surface", "message-surface"] as const)
+			for (const entry of THEMES)
+				expect(
+					contrast(entry.colors[ground], entry.colors.canvas),
+					`${entry.id} ${ground} on canvas`,
+				).toBeLessThan(FLOOR);
+	});
+});

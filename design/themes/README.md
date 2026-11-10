@@ -10,7 +10,7 @@ copies, and those have drifted, so they are not used.
 | `desktop-palettes.json` | The palettes as data, exported (never hand-edited) from the desktop at one commit. |
 | `desktop-palettes.lock.json` | That commit plus the sha256 of every source file and of the export. |
 | `export-desktop-palettes.mjs` | Writes both (`--from <checkout> --ref <commit>`), or proves them (`--check`, which re-derives the export from GitHub at the locked commit). |
-| `derive.mjs` | Maps a desktop palette onto the phone's 47 colour roles: 34 copied, 13 derived and solved against the contrast floors, desktop-only roles dropped. |
+| `derive.mjs` | Maps a desktop palette onto the phone's 48 colour roles: 34 copied, 14 derived and solved against the contrast floors, desktop-only roles dropped. |
 | `fleet.mjs` | Runs every derived palette through the contrast contract's per-palette rules (`design/tokens/palette-rules.mjs`) and decides which ones ship. `EXPECTED_WITHHELD` pins the ones that don't, with the reason. |
 
 `scripts/build-theme.ts` emits the palettes that ship as `THEMES` in

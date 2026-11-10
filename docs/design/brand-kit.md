@@ -293,6 +293,7 @@ measuring **8.58:1**. In light the accent is dark enough that white is correct
 | `ink-disabled` | `#9a9488` | `#5f5a4e` | Disabled control text **only**, exempt under SC 1.4.3 |
 | `border-control` | `#857f70` | `#837c6d` | The **structural** line: any 1px rule that is the *sole* boundary of required content. 3.20–3.92 light, 3.18–4.14 dark |
 | `panel-edge` | `#dad5cb` | `#857b69` | **Scoped**: the edge of an overlay panel over a scrim — the conversations drawer. It reads against the dimmed content it separates from: 4.53:1 dark against the scrim ground and 3.28:1 against its own panel; light keeps the hairline's step (5.68:1 against the light scrim ground). Never a control boundary — controls keep `border-control` |
+| `user-bubble` | `#d9d4ca` | `#363228` | **Scoped**: the fill of the reader's own turn in the transcript, and nothing else. A borderless fill has only its value to be seen by, so it is solved to 1.27:1 on `canvas` in both themes (floor 1.25:1, every shipped palette), with `ink` at 11.25 / 11.02. Darker than the page in light, lighter in dark. Not a rung of the ground ladder and not a ground for muted or semantic ink |
 
 `hairline` and `hairline-strong` are **decorative and may never be a sole
 boundary**: measured 1.18–1.54 across all grounds. The contract asserts that as a

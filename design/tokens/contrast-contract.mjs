@@ -342,7 +342,7 @@ for (const theme of ["light", "dark"]) {
 /* ---- 12. the fleet: every desktop palette the phone can ship ----------
 
    The same per-palette rules (`palette-rules.mjs`) over each palette in
-   `design/themes/desktop-palettes.json`, after the phone's 13 derived roles
+   `design/themes/desktop-palettes.json`, after the phone's 14 derived roles
    are solved (`design/themes/derive.mjs`). A failing palette is WITHHELD: the
    generator leaves it out of the app. The withheld set is pinned in
    `design/themes/fleet.mjs` (EXPECTED_WITHHELD), so it cannot change in either

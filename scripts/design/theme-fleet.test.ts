@@ -49,7 +49,7 @@ describe("the theme fleet", () => {
 			const entry = report.find((e) => e.id === id);
 			expect(entry, id).toBeDefined();
 			expect(entry?.failures, id).toEqual([]);
-			expect(entry?.checks, id).toBe(585);
+			expect(entry?.checks, id).toBe(587);
 		}
 	});
 
