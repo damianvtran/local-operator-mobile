@@ -622,7 +622,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// app tree has neither parent's digest; re-pinned with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof
 	// refreshed.
-	app: "bc778f091d59e471f7f161c649c8c8e7b28c9bcede37f7b39718b01408370fbc",
+	// Bridge drawer switch: the root layout mounts the Team Bridge drawer
+	// adapter; source identity only, no rendered or native proof.
+	app: "088209fbfceac0cdb1b592a25dda9c8142081d8b97642e918df22aaf8103fef3",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1243,7 +1245,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * refreshed. */
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
-	src: "b443bfe86803b87164d709fc655c3fdc43fc4345489b20a9a405f0f590cfaab7",
+	// Bridge drawer switch: the Team Bridge adapter for the workspace drawer's
+	// labelled mode switch; round-1 remediation (wrapping mode row, failed
+	// unread read, pane help line) re-derived with --print. Source identity
+	// only, no rendered or native proof.
+	src: "82b429e24b2cce48ad780bc066cc0806147a63375b2a55592d42e70a7c9ae308",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
