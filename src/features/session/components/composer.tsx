@@ -76,6 +76,8 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
+	NOTICE_GLYPH_COLUMN_PT,
+	noticeActionPlan,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -559,12 +561,17 @@ const NoticeAction = ({
 	accessibilityLabel,
 	accessibilityHint,
 	onPress,
+	onWidth,
 	testID,
 }: {
 	label: string;
 	accessibilityLabel: string;
 	accessibilityHint?: string;
 	onPress: () => void;
+	/** The action's own painted width, for `noticeActionPlan`. Intrinsic: the
+	 *  box hugs its one-line label in either placement, so reporting it cannot
+	 *  feed the decision it informs. */
+	onWidth: (width: number) => void;
 	testID: string;
 }) => (
 	<Pressable
@@ -572,6 +579,7 @@ const NoticeAction = ({
 		accessibilityLabel={noticeActionName(label, accessibilityLabel)}
 		accessibilityHint={accessibilityHint}
 		onPress={onPress}
+		onLayout={(event) => onWidth(Math.ceil(event.nativeEvent.layout.width))}
 		style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 		className="justify-center"
 		testID={testID}
@@ -1148,7 +1156,13 @@ export const Composer = ({
 	 *  round measured. Each end is captured while ITS state is mounted. */
 	const [collapsedSeed, setCollapsedSeed] = useState<number | null>(null);
 	const [expandedSeed, setExpandedSeed] = useState<number | null>(null);
+	/* The width the extras' content is LAID OUT at: the content block's own
+	 *  width, which the shell's padding decides and nothing inside the extras
+	 *  scroller can change (QA #211 round 4 Q6, below at the scroller). */
+	const [contentWidth, setContentWidth] = useState(0);
 	const measureContent = (event: LayoutChangeEvent) => {
+		const width = Math.floor(event.nativeEvent.layout.width);
+		if (width > 0 && width !== contentWidth) setContentWidth(width);
 		/* `Math.ceil`, not `Math.round`: half a point of rounding at rest is a clip
 		 *  the moment the shell is allowed to hide overflow, and the content below
 		 *  the true height is exactly what would disappear. */
@@ -1257,6 +1271,24 @@ export const Composer = ({
 		rawBound === null
 			? null
 			: composerHostBound(rawBound, presentation.gap, TOUCH_FLOOR);
+	/* Where the failure notice's actions sit (QA #211 round 4 Q7): trailing
+	 *  their sentences while every sentence keeps `noticeSentenceMin` beside
+	 *  its action, else together on the notice's first row. Decided here, above
+	 *  the budget, because the budget snaps the extras' cap to the whole action
+	 *  rows this plan reports. The widths are each action's own (its label at
+	 *  the reader's scale) and the column is the shell's, so the plan is not an
+	 *  output of the cap it informs. */
+	const noticeSentenceMin = Math.round(NOTICE_SENTENCE_MIN * effectiveScale);
+	const [retryWidth, setRetryWidth] = useState(0);
+	const [dismissWidth, setDismissWidth] = useState(0);
+	const noticePlan = noticeActionPlan({
+		column: contentWidth > 0 ? contentWidth - NOTICE_GLYPH_COLUMN_PT : 0,
+		sentenceMin: noticeSentenceMin,
+		actions: [
+			...(feedback.retainedText !== null ? [retryWidth] : []),
+			...(feedback.errorText !== null && onDismissError ? [dismissWidth] : []),
+		],
+	});
 	const budget =
 		bound === null
 			? null
@@ -1269,6 +1301,7 @@ export const Composer = ({
 					dictationShowing
 						? dictationRowBox(effectiveScale) + DICTATION_ROW_MARGIN_PX
 						: 0,
+					noticePlan.rows * NOTICE_ROW_FLOOR,
 				);
 	const fieldMaxHeight = budget?.field;
 	const extrasMaxHeight = budget?.extras;
@@ -1365,8 +1398,45 @@ export const Composer = ({
 	 *  `noticeSentenceMin`, and an action that would leave it less drops under
 	 *  it on the trailing edge. Without that the action took its full one-line
 	 *  width and the sentence the remainder, which at 320 pt / 200 % (and in
-	 *  the long-label locales) was a sliver many lines tall. */
-	const noticeSentenceMin = Math.round(NOTICE_SENTENCE_MIN * effectiveScale);
+	 *  the long-label locales) was a sliver many lines tall.
+	 *
+	 *  ACTIONS FIRST when any would wrap (QA #211 round 4 Q7, `noticeActionPlan`):
+	 *  wrapping UNDER the sentence put the French Retry 210 px below the fold
+	 *  of a 143 px scroller and cut the English "Dismiss error" by 14 px. When
+	 *  one action would leave its sentence under the minimum, all of them move
+	 *  to one trailing-aligned row above the sentences (wrapping among
+	 *  themselves), so the first action is on the first visible row in every
+	 *  locale; `composerBudget` keeps that block to whole rows. The row-level
+	 *  `flex-wrap` stays as the fallback for the frame before the widths are
+	 *  measured. */
+	const noticeRetry =
+		feedback.retainedText !== null ? (
+			<NoticeAction
+				label={t("mobile.composer_input.notice_retry")}
+				/* The full sentence stays the accessible name: "Retry"
+				 *  alone does not say WHAT is retried, and it contains
+				 *  the visible word (label-in-name, U-10). */
+				accessibilityLabel={feedback.retryLabel}
+				onPress={onRetry}
+				onWidth={setRetryWidth}
+				testID={CONTROL.composerRetry}
+			/>
+		) : null;
+	const noticeDismiss =
+		feedback.errorText !== null && onDismissError ? (
+			<NoticeAction
+				label={
+					feedback.retainedText !== null
+						? t("mobile.composer_input.dismiss_error")
+						: t("mobile.composer_input.notice_dismiss")
+				}
+				accessibilityLabel={t("mobile.composer_input.dismiss_error")}
+				accessibilityHint={t("mobile.composer_input.dismiss_error_hint")}
+				onPress={onDismissError}
+				onWidth={setDismissWidth}
+				testID={CONTROL.composerDismissError}
+			/>
+		) : null;
 	/* The extras return to their top whenever the notice's contents change (QA
 	 *  #211 round 3 Q4): after scrolling down to "Dismiss error" and using it,
 	 *  the scroller kept its offset and Retry, on the first row, sat above the
@@ -1397,6 +1467,12 @@ export const Composer = ({
 					<TriangleAlert size={14} color={dangerInk} />
 				</View>
 				<View className="min-w-0 flex-1">
+					{noticePlan.lead ? (
+						<View className="flex-row flex-wrap justify-end gap-x-3">
+							{noticeRetry}
+							{noticeDismiss}
+						</View>
+					) : null}
 					{feedback.retainedText !== null ? (
 						<View
 							className="flex-row flex-wrap items-start justify-end gap-x-3"
@@ -1414,15 +1490,7 @@ export const Composer = ({
 							>
 								{feedback.retainedText}
 							</Text>
-							<NoticeAction
-								label={t("mobile.composer_input.notice_retry")}
-								/* The full sentence stays the accessible name: "Retry"
-								 *  alone does not say WHAT is retried, and it contains
-								 *  the visible word (label-in-name, U-10). */
-								accessibilityLabel={feedback.retryLabel}
-								onPress={onRetry}
-								testID={CONTROL.composerRetry}
-							/>
+							{noticePlan.lead ? null : noticeRetry}
 						</View>
 					) : null}
 					{feedback.errorText !== null ? (
@@ -1445,21 +1513,7 @@ export const Composer = ({
 							>
 								{feedback.errorText}
 							</Text>
-							{onDismissError ? (
-								<NoticeAction
-									label={
-										feedback.retainedText !== null
-											? t("mobile.composer_input.dismiss_error")
-											: t("mobile.composer_input.notice_dismiss")
-									}
-									accessibilityLabel={t("mobile.composer_input.dismiss_error")}
-									accessibilityHint={t(
-										"mobile.composer_input.dismiss_error_hint",
-									)}
-									onPress={onDismissError}
-									testID={CONTROL.composerDismissError}
-								/>
-							) : null}
+							{noticePlan.lead ? null : noticeDismiss}
 						</View>
 					) : null}
 				</View>
@@ -2348,9 +2402,29 @@ export const Composer = ({
 					</View>
 				) : null}
 				<View onLayout={measureContent}>
+					{/* THE EXTRAS' CONTENT WIDTH MUST NOT DEPEND ON WHETHER THEY OVERFLOW
+					    (QA #211 round 4 Q6). In a browser that paints classic scrollbars
+					    the bar takes ~15 px of layout width, and it shows only while the
+					    content is taller than the cap. The notice then wrapped to one
+					    more line (+41 px at 200 %), `extrasHeight` grew, the cap grew to
+					    hold it, the bar left, the line came back — and for that frame
+					    the box was a line short of its cap, so it reported "not capped",
+					    the host limit let go and the composer regrew past the window:
+					    539 / 498 / 554 px in rotation at 390x844 with no input. That is
+					    #206's rule broken by a new path: the measured input (content
+					    height) depended on the output (capped -> scrollbar -> width).
+					    Two halves, both needed. The web scroller paints no layout
+					    scrollbar (`showsVerticalScrollIndicator={false}` is
+					    react-native-web's `scrollbar-width: none`, as the attachment
+					    strip already does); it still scrolls, and the cut row at its
+					    edge is the cue, as on every touch browser. And the content is
+					    laid out at the content block's width, measured OUTSIDE the
+					    scroller, for an engine that ignores that property. Native keeps
+					    its overlay indicator, which never took width. */}
 					<ScrollView
 						ref={extrasScrollRef}
 						style={{ flexGrow: 0, flexShrink: 0, maxHeight: extrasMaxHeight }}
+						showsVerticalScrollIndicator={Platform.OS !== "web"}
 						scrollEnabled={extrasMaxHeight !== undefined}
 						onContentSizeChange={(_width, height) =>
 							setExtrasHeight(Math.round(height))
@@ -2358,7 +2432,11 @@ export const Composer = ({
 						nestedScrollEnabled
 						keyboardShouldPersistTaps="handled"
 					>
-						{extras}
+						<View
+							style={contentWidth > 0 ? { width: contentWidth } : undefined}
+						>
+							{extras}
+						</View>
 					</ScrollView>
 					{main}
 				</View>

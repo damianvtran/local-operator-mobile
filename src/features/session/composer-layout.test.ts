@@ -14,6 +14,8 @@ import {
 	folderChipText,
 	HOME_STRIP_SHRINK,
 	MODEL_FLOOR_PT,
+	NOTICE_ACTION_GAP_PT,
+	noticeActionPlan,
 	queuedChipWidthEstimate,
 } from "./composer-layout";
 import {
@@ -704,8 +706,10 @@ describe("the home strip's folder chip (design D2 / UX U4 / U5)", () => {
 
 describe("the composer's failure notice is one borderless block (visual audit D6)", () => {
 	const code = stripComments(COMPOSER).replace(/\s+/g, " ");
+	/* From the two actions' own definitions: they are declared once, above the
+	 *  block, because the block places them in one of two spots (QA round 4 Q7). */
 	const notice = code.slice(
-		code.indexOf("testID={SURFACE.composerFailureNotice}"),
+		code.indexOf("const noticeRetry ="),
 		code.indexOf("const extras = ("),
 	);
 
@@ -739,11 +743,11 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 		expect(notice).toContain("onPress={onDismissError}");
 		/* Dismiss is offered for the ERROR line only: a retained instruction has
 		 *  no dismiss, so the notice cannot drop a retained UUID or a queue. */
-		const errorRow = notice.slice(
-			notice.indexOf("{feedback.errorText !== null ? ("),
+		const dismiss = notice.slice(notice.indexOf("const noticeDismiss ="));
+		expect(dismiss).toContain(
+			"feedback.errorText !== null && onDismissError ? ( <NoticeAction",
 		);
-		expect(errorRow).toContain("{onDismissError ? ( <NoticeAction");
-		expect(errorRow).not.toContain("onPress={onRetry}");
+		expect(dismiss).not.toContain("onPress={onRetry}");
 	});
 
 	/* Design D7 / code R3 M2: beside a trailing action the sentence was whatever
@@ -791,15 +795,104 @@ describe("the composer's failure notice is one borderless block (visual audit D6
 			notice.indexOf("{feedback.errorText !== null ? ("),
 		);
 		expect(retainedRow).toContain("testID={SURFACE.composerRetained}");
-		expect(retainedRow).toContain("testID={CONTROL.composerRetry}");
+		expect(retainedRow).toContain("{noticePlan.lead ? null : noticeRetry}");
 		/* The retained sentence keeps Retry ONLY: nothing on its row dismisses. */
-		expect(retainedRow).not.toContain("onDismissError");
-		expect(retainedRow.match(/<NoticeAction\b/g) ?? []).toHaveLength(1);
+		expect(retainedRow).not.toMatch(/onDismissError|noticeDismiss/);
 		const errorRow = notice.slice(
 			notice.indexOf("{feedback.errorText !== null ? ("),
 		);
 		expect(errorRow).toContain("testID={SURFACE.composerError}");
-		expect(errorRow).toContain("testID={CONTROL.composerDismissError}");
+		expect(errorRow).toContain("{noticePlan.lead ? null : noticeDismiss}");
+		expect(errorRow).not.toContain("noticeRetry");
+		/* Each action is DEFINED once, with the id and handler it always had. */
+		const retry = notice.slice(0, notice.indexOf("const noticeDismiss ="));
+		expect(retry).toContain("testID={CONTROL.composerRetry}");
+		expect(retry).not.toContain("onDismissError");
+		expect(notice.slice(retry.length)).toContain(
+			"testID={CONTROL.composerDismissError}",
+		);
+	});
+
+	/* QA #211 round 4 Q7 and its English twin. Wrapping an action UNDER its
+	 *  sentence kept the sentence readable and lost the action: at 320x568 /
+	 *  200 % the extras scroller is 143 px tall, the French Retry landed at
+	 *  y 662 (the scroller ends at 452) and the English "Dismiss error" was
+	 *  cut by 14 px on its second row. */
+	describe("puts the actions on the notice's first row when one would wrap (QA round 4 Q7)", () => {
+		/* 320 pt / 200 %: the sentence column QA measured (250) and the scaled
+		 *  floor (64 x 2). Widths: "Retry" 69, "Dismiss" 96, "Dismiss error"
+		 *  164 and "Réessayer" 129 are QA's (rounds 3 and 4). "Masquer
+		 *  l’erreur" was not measured: 202 is 164 scaled by its 16 characters
+		 *  over the English 13, an ESTIMATE, and the row count below holds for
+		 *  any width over 109 (250 - 12 - 129). */
+		const at320 = (actions: readonly number[]) =>
+			noticeActionPlan({ column: 250, sentenceMin: 128, actions });
+		it("English, retained + error: both actions share one leading row", () => {
+			expect(at320([69, 164])).toEqual({ lead: true, rows: 1 });
+			/* 69 + 12 + 164 = 245 of 250: "Dismiss error" is whole, on row one. */
+			expect(69 + NOTICE_ACTION_GAP_PT + 164).toBeLessThanOrEqual(250);
+		});
+		it("French, retained + error: Retry leads, the dismissal takes a whole second row", () => {
+			expect(at320([129, 202])).toEqual({ lead: true, rows: 2 });
+			expect(at320([129, 110])).toEqual({ lead: true, rows: 2 });
+		});
+		it("French, retained alone: Réessayer (129) no longer drops under its sentence", () => {
+			expect(250 - NOTICE_ACTION_GAP_PT - 129).toBeLessThan(128);
+			expect(at320([129])).toEqual({ lead: true, rows: 1 });
+		});
+		it("keeps an action trailing its sentence wherever the sentence keeps its floor", () => {
+			expect(at320([69])).toEqual({ lead: false, rows: 1 });
+			expect(at320([96])).toEqual({ lead: false, rows: 1 });
+			/* 390 pt / 100 %: column 320, floor 64, "Dismiss error" 82. */
+			expect(
+				noticeActionPlan({ column: 320, sentenceMin: 64, actions: [35, 82] }),
+			).toEqual({ lead: false, rows: 1 });
+		});
+		it("does not flip before it has measured, and reports no rows with no action", () => {
+			expect(at320([])).toEqual({ lead: false, rows: 0 });
+			expect(at320([0, 164])).toEqual({ lead: false, rows: 1 });
+			expect(
+				noticeActionPlan({ column: 0, sentenceMin: 128, actions: [164] }),
+			).toEqual({ lead: false, rows: 1 });
+		});
+		it("is one decision for the whole notice, from widths the layout cannot change", () => {
+			expect(notice).toContain(
+				'{noticePlan.lead ? ( <View className="flex-row flex-wrap justify-end gap-x-3"> {noticeRetry} {noticeDismiss} </View> ) : null}',
+			);
+			/* The leading row is the first thing in the sentence column. */
+			expect(notice.indexOf("{noticePlan.lead ? ( <View")).toBeLessThan(
+				notice.indexOf("testID={SURFACE.composerRetained}"),
+			);
+			expect(code).toContain(
+				"column: contentWidth > 0 ? contentWidth - NOTICE_GLYPH_COLUMN_PT : 0,",
+			);
+			expect(code).toContain(
+				"onLayout={(event) => onWidth(Math.ceil(event.nativeEvent.layout.width))}",
+			);
+			/* The budget is told how many whole action rows lead the extras. */
+			expect(code).toContain("noticePlan.rows * NOTICE_ROW_FLOOR, )");
+		});
+	});
+
+	/* QA #211 round 4 Q6: the model of the loop is in `size-class.test.ts`; this
+	 *  is the composer's half, that its extras cannot gain or lose width with
+	 *  their overflow state. */
+	it("lays the extras out at a width their own scrollbar cannot change (QA round 4 Q6)", () => {
+		const scroller = code.slice(
+			code.indexOf("ref={extrasScrollRef}"),
+			code.indexOf("{main}"),
+		);
+		expect(scroller).toContain(
+			'showsVerticalScrollIndicator={Platform.OS !== "web"}',
+		);
+		expect(scroller).toContain(
+			"<View style={contentWidth > 0 ? { width: contentWidth } : undefined} > {extras} </View>",
+		);
+		/* Measured on the content block, OUTSIDE the scroller. */
+		expect(code).toContain(
+			"const width = Math.floor(event.nativeEvent.layout.width); if (width > 0 && width !== contentWidth) setContentWidth(width);",
+		);
+		expect(code).toContain("<View onLayout={measureContent}> {} <ScrollView");
 	});
 
 	it("names the dismissal for the error whenever a retained sentence is beside it", () => {

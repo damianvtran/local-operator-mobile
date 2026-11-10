@@ -209,3 +209,68 @@ export const composerChipPlan = (input: {
 				chipWidthEstimate(input.effortChars, input.scale);
 	return { model, effort, ...(queued ? { queued } : {}) };
 };
+
+/** The failure notice's glyph (14 pt) plus the `gap-2` beside it: what the
+ *  notice's sentence column loses from the extras' content width. */
+export const NOTICE_GLYPH_COLUMN_PT = 14 + 8;
+
+/** The `gap-x-3` between a notice sentence and its action, and between two
+ *  actions sharing the leading row. */
+export const NOTICE_ACTION_GAP_PT = 12;
+
+/**
+ * Where the failure notice's actions sit: trailing their sentences, or all
+ * together on a row of their own ABOVE the sentences (QA #211 round 4 Q7).
+ *
+ * WHY. An action is only certain to be seen while it is on the FIRST row of the
+ * extras scroller (UX #211 U4): at 320x568 / 200 % that scroller is 143 px tall.
+ * Round 3 let an action that would squeeze its sentence under `sentenceMin`
+ * wrap UNDER it, which is right for the sentence and wrong for the action: in
+ * French "Réessayer" (129 px) landed 210 px below the fold, and in English
+ * "Dismiss error" was cut by 14 px on its second row. So the decision is made
+ * for the whole notice, from widths that do not depend on it: if ANY action
+ * would leave its sentence less than the minimum, every action moves to one
+ * trailing-aligned row at the top (the first action — Retry when an
+ * instruction is retained, else the dismissal — leading it) and the sentences
+ * take the full column below.
+ *
+ * `rows` is how many touch-floor rows the actions then occupy when they wrap
+ * among themselves; `composerBudget` snaps the extras' cap to that many whole
+ * rows, so none is ever half cut. Trailing actions report one row: the first
+ * sentence's row, whose action box is its top `touchFloor`.
+ *
+ * `column <= 0` or an unmeasured action (`0`) is "not measured yet" and keeps
+ * the trailing form, which is the common one, rather than flipping for a frame
+ * on every phone that fits. Every input is intrinsic: the column comes from the
+ * shell's content width and an action's width from its own label, so nothing
+ * here is fed by the layout it decides (the #206 rule).
+ */
+export const noticeActionPlan = (input: {
+	/** The sentence column's width, px: content width less the glyph column. */
+	column: number;
+	/** The scaled least width a sentence keeps beside an action. */
+	sentenceMin: number;
+	/** Measured action widths, in reading order; empty when there is none. */
+	actions: readonly number[];
+}): { lead: boolean; rows: number } => {
+	const { column, sentenceMin, actions } = input;
+	if (actions.length === 0) return { lead: false, rows: 0 };
+	if (!(column > 0) || actions.some((width) => !(width > 0)))
+		return { lead: false, rows: 1 };
+	const lead = actions.some(
+		(width) => column - NOTICE_ACTION_GAP_PT - width < sentenceMin,
+	);
+	if (!lead) return { lead: false, rows: 1 };
+	/* Greedy line breaking, as flex-wrap does it: an action joins the row while
+	 *  it and its gap still fit, and an action wider than the column is a row. */
+	let rows = 1;
+	let used = 0;
+	for (const width of actions) {
+		const next = used === 0 ? width : used + NOTICE_ACTION_GAP_PT + width;
+		if (used > 0 && next > column) {
+			rows += 1;
+			used = width;
+		} else used = next;
+	}
+	return { lead: true, rows };
+};

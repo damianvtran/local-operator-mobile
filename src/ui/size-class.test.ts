@@ -615,6 +615,26 @@ describe("composerBudget (UX U1: the actions never scroll away)", () => {
 		// cap it translates to is one border shorter.
 		expect(composerBudget(90, 52, 30, 48, 8).field).toBe(48 - FIELD_BORDER_Y);
 	});
+
+	/* QA #211 round 4 Q7: the failure notice's actions lead the extras on a
+	 *  row (or two) of their own, and a cap that lands inside that block showed
+	 *  half an action ("Dismiss error" cut by 14 px). */
+	it("cuts the extras back to whole action rows, and gives the field the rest", () => {
+		/* Room 115, of which 48 is the field's floor: 67 px for extras whose two
+		 *  action rows are 96. One whole row shows; the field takes the 19 px. */
+		const cut = composerBudget(175, 52, 200, 48, 8, 0, 96);
+		expect(cut.extras).toBe(48);
+		expect(cut.field + FIELD_BORDER_Y + cut.extras + 52 + 8).toBe(175);
+		/* The same budget without leading actions is untouched. */
+		expect(composerBudget(175, 52, 200, 48, 8).extras).toBe(67);
+		/* A cap that already holds every action row is not snapped... */
+		expect(composerBudget(300, 52, 200, 48, 8, 0, 96).extras).toBe(192);
+		/* ...and one under a single row is left alone: part of the first
+		 *  action beats none, and nothing may be spent past the bound. */
+		expect(composerBudget(130, 52, 200, 48, 8, 0, 96).extras).toBe(22);
+		/* 320x568 / 200 %, French, QA's 143 px scroller: both rows whole. */
+		expect(composerBudget(263, 52, 400, 48, 20, 0, 96).extras).toBe(143);
+	});
 });
 
 /**
@@ -1221,5 +1241,127 @@ describe("the composer's bound survives chrome that settles after it measured (Q
 		expect(screen).toMatch(
 			/measureKey=\{`[^`]*\$\{composerChromeKey\(\{ column: recoveryFacts\.column, before: recoveryFacts\.before, after: recoveryFacts\.after, regions: regionContent \}\)\}`\}/,
 		);
+	});
+});
+
+/**
+ * QA #211 round 4 Q6: at 390x844 / 200 % with two images, a long draft and a
+ * refused send, in a browser whose scrollbars take layout width, the composer
+ * cycled (297.4, 554) -> (297.4, 539) -> (338, 498) with no input.
+ *
+ * The loop, one frame per step, through the real limit and budget functions:
+ *  - the extras' content is a fraction of a px taller than the height the
+ *    composer stored for it, so once the budget hands that stored height back
+ *    as the cap the scroller overflows and paints its scrollbar;
+ *  - the scrollbar takes `gutter` px of width and the notice wraps to one more
+ *    line (+41 px), so the stored height grows by a line;
+ *  - the cap now holds that line, the scrollbar leaves, the line goes with it,
+ *    and for that frame the box is a line SHORT of its bound (498): it reports
+ *    "not capped", `composerLimit` lets go, the composer regrows to its natural
+ *    554 px past the window, and binds again at 539.
+ * That is #206's invariant broken by a new path: the measured input (content
+ * height) depended on the output (capped -> scrollbar -> width).
+ *
+ * The numbers are QA's except ONE that is inferred: the extras' natural height
+ * (212.4), chosen so the unbound composer is QA's 554 (20 + 52 + 212.4 + 270).
+ * The other two heights and both tops then fall out of the model, which is the
+ * evidence that this is the loop QA saw. The sub-pixel part of that height is
+ * the model's TRIGGER and is an assumption (QA's host could not be re-read
+ * here); the loop's cause, the width the scrollbar takes, does not depend on
+ * which trigger first makes the extras overflow.
+ */
+describe("the extras' scrollbar cannot feed the composer's own measurement (QA #211 round 4 Q6)", () => {
+	const floor = TOUCH_TARGET.android;
+	const GAP = 8;
+	const TALL = { width: 390, height: 844 };
+	const ABOVE = 297.4;
+	/* Padding 20, controls row 48 + 4, the field's six-line cap at 200 %. */
+	const PAD = 20;
+	const FIXED = 52;
+	const FIELD = 270;
+	/* The notice is two lines at the full width and three once `gutter` px
+	 *  are gone; a line of `text-body-sm` at 200 % is 41 px. */
+	const natural = (width: number) =>
+		width >= TALL.width - 16 - 24 ? 212.4 : 253.4;
+	const run = (
+		gutter: number,
+		store: (height: number) => number,
+		frames = 24,
+	) => {
+		let held: ComposerBox | null = null;
+		let stored = 0;
+		const seen: Array<{ top: number; height: number }> = [];
+		const full = TALL.width - 16 - 24;
+		for (let step = 0; step < frames; step += 1) {
+			const limit = heldComposerLimit(held, TALL);
+			const budget =
+				limit === null
+					? null
+					: composerBudget(
+							composerHostBound(limit, GAP, floor),
+							FIXED,
+							stored,
+							floor,
+							PAD,
+						);
+			/* The browser's own pass: lay out without the bar, add it if the
+			 *  content overflows the cap, and lay out again at what is left. */
+			const bar = budget !== null && natural(full) > budget.extras;
+			const content = natural(bar ? full - gutter : full);
+			const extras =
+				budget === null ? content : Math.min(content, budget.extras);
+			const field =
+				budget === null
+					? FIELD
+					: Math.min(FIELD, budget.field + FIELD_BORDER_Y);
+			const height = Math.round(PAD + FIXED + extras + field);
+			const top = Math.round(
+				Math.max(ABOVE, TALL.height - GAP - (PAD + FIXED + extras + field)),
+			);
+			held = {
+				top,
+				height,
+				capped: composerAtHostCap(height, limit, GAP, floor),
+				viewportWidth: TALL.width,
+				viewportHeight: TALL.height,
+			};
+			stored = store(content);
+			seen.push({ top, height });
+		}
+		/* The first frame is the unbound mount; what matters is where it rests. */
+		return [...new Set(seen.slice(4).map((box) => `${box.top},${box.height}`))];
+	};
+	const composer = readFileSync(
+		join(process.cwd(), "src/features/session/components/composer.tsx"),
+		"utf8",
+	).replace(/\s+/g, " ");
+
+	it("reproduces QA's three boxes when the scrollbar takes width (the defect)", () => {
+		expect(run(15, Math.round).sort()).toEqual(
+			["297,539", "297,554", "338,498"].sort(),
+		);
+	});
+
+	it("settles on the bound once the content's width ignores the scrollbar", () => {
+		expect(run(0, Math.round)).toEqual(["297,539"]);
+	});
+
+	it("the composer as written settles in one answer", () => {
+		/* The fact the model takes from the component, read from its source:
+		 *  whether its extras can lose width to a scrollbar. Both halves are
+		 *  required, because each covers an engine the other does not: an old
+		 *  WebKit ignores `scrollbar-width`, and a width pin alone leaves a
+		 *  classic bar painted over the trailing actions. The stored height's
+		 *  rounding is the component's own and is not changed by this fix. */
+		const pinned =
+			composer.includes(
+				'showsVerticalScrollIndicator={Platform.OS !== "web"}',
+			) &&
+			composer.includes(
+				"<View style={contentWidth > 0 ? { width: contentWidth } : undefined} > {extras} </View>",
+			);
+		expect(composer).toContain("setExtrasHeight(Math.round(height))");
+		expect(run(pinned ? 0 : 15, Math.round)).toEqual(["297,539"]);
+		expect(pinned).toBe(true);
 	});
 });

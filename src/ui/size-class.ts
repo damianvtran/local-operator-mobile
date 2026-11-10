@@ -521,6 +521,15 @@ export const composerBudget = (
 	 *  the pinned `main` fragment, so it is reserved with the receipt line; without it a
 	 *  recording take pushed the composer past its share (reviewer m3). */
 	dictationReserve = 0,
+	/** The height of the whole action rows that LEAD the extras (the failure
+	 *  notice's, `noticeActionPlan`), in rows of `touchFloor`; 0 when there are
+	 *  none. A cap landing inside that block is cut back to whole rows, so an
+	 *  action is shown entire or not at all and never as a half-cut target (QA
+	 *  #211 round 4 Q7: "Dismiss error" cut by 14 px). The px given up go to the
+	 *  field, so the composer spends the same bound either way. A cap under one
+	 *  row is left alone: part of the first action beats none of it, and the
+	 *  budget has nothing to raise it with (code #211 R3 M1). */
+	leadingActions = 0,
 ): { field: number; extras: number } => {
 	const room = Math.max(
 		touchFloor,
@@ -534,7 +543,11 @@ export const composerBudget = (
 	 *  screen, was what left it. The notice scrolls in whatever is left; the
 	 *  collapse that floor was guarding against (a 44 px limit from a stale
 	 *  box, UX U1) is prevented at its cause by `heldComposerLimit`. */
-	const extras = Math.min(extrasNatural, Math.max(0, room - touchFloor));
+	const fits = Math.min(extrasNatural, Math.max(0, room - touchFloor));
+	const extras =
+		fits < leadingActions && fits >= touchFloor
+			? Math.floor(fits / touchFloor) * touchFloor
+			: fits;
 	const fieldBox = Math.max(touchFloor, room - extras);
 	/* `field` is the CONTENT cap the Textarea receives (`maxHeightPx`), and the field
 	 *  paints a border box: its height is that cap plus `FIELD_BORDER_Y` (U-07's fix).
