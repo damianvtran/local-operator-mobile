@@ -39,8 +39,8 @@
 	"mobile.session.history.stalled": "Загрузка предыдущих сообщений остановилась. Повторите или откройте беседу заново.",
 	"mobile.session.history.beginning": "Начало сохранённых сообщений",
 	"mobile.session.history.empty": "Нет сохранённых сообщений",
-	"mobile.session.history.gap": "Часть более ранних сообщений ещё загружается.",
-	"mobile.session.history.gap_newest": "Часть сообщений выше ещё загружается.",
+	"mobile.session.history.gap": "Здесь не хватает части более ранних сообщений.",
+	"mobile.session.history.gap_newest": "Не хватает части сообщений выше.",
 	"mobile.session.history.gap_load": "Загрузить",
 	"mobile.session.history.gap_load_hint": "Загружает сообщения, пропущенные, пока телефон был отключён."
 }

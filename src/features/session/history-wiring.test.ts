@@ -168,6 +168,9 @@ describe("history reader production wiring", () => {
 		const setOpenElsewhere = vi.fn();
 		const pinTail = vi.fn();
 		const healHistory = vi.fn(async () => {});
+		// PR #217 R1-2: a reader up-thread pressing Load gets the same web anchor
+		// an older page does; the missing rows land above them.
+		const holdWebAnchor = vi.fn();
 		expect(start).toBeGreaterThan(-1);
 		expect(end).toBeGreaterThan(start);
 		const action = vm.runInNewContext(
@@ -179,6 +182,7 @@ describe("history reader production wiring", () => {
 				setOpenElsewhere,
 				pinTail,
 				healHistory,
+				holdWebAnchor,
 				sessionId: "synthetic-session",
 				useCallback: (callback: () => void) => callback,
 			},
@@ -186,6 +190,12 @@ describe("history reader production wiring", () => {
 		action();
 		await Promise.resolve();
 		expect(healHistory).toHaveBeenCalledOnce();
+		expect(holdWebAnchor).toHaveBeenCalledOnce();
+		// A reader pinned to the tail stays pinned; no anchor to hold there.
+		atTail.current = true;
+		action();
+		expect(holdWebAnchor).toHaveBeenCalledOnce();
+		atTail.current = false;
 		expect(webAnchor.current).toEqual({ offset: 1200 });
 		expect(atTail.current).toBe(false);
 		expect(setOpenElsewhere).not.toHaveBeenCalled();
@@ -207,9 +217,14 @@ describe("history reader production wiring", () => {
 			runtime.match(
 				/AppState\.addEventListener\("change", \(state\) => \{[\s\S]*?\n\t\t\}\);/,
 			)?.[0] ?? "";
-		expect(foreground).toContain("if (!resumeGate.current()) return;");
-		expect(foreground.indexOf("resumeGate.current()")).toBeLessThan(
-			foreground.indexOf("reconnectRef.current();"),
+		// The gate dedupes only the history read; the stream always re-opens
+		// (PR #217 R1-4).
+		expect(foreground).toContain("const readHistory = resumeGate.current();");
+		expect(foreground).not.toContain("if (!resumeGate.current()) return;");
+		expect(foreground).toContain("reconnectRef.current();");
+		expect(foreground).toContain("rereadRef.current(readHistory);");
+		expect(runtime).toContain(
+			"const readHistory = history\n\t\t\t\t? historyWindow.load(true)\n\t\t\t\t: Promise.resolve();",
 		);
 		// A drop, a stall or a transient error arms the recovery re-read; the
 		// first frame after it spends it through the same gate.
@@ -422,10 +437,15 @@ describe("web prepend keeps the reader's row in place (PR #207 Q5/Q6)", () => {
 			geometryFor,
 			anchoredScrollTop,
 		};
+		const holdWebAnchor = runSeam(
+			seam(/const holdWebAnchor = useCallback\([\s\S]*?\n\t\}, \[[^\]]*\]\);/),
+			"holdWebAnchor",
+			context,
+		);
 		const requestOlder = runSeam(
 			seam(/const requestOlder = useCallback\([\s\S]*?\n\t\}, \[[^\]]*\]\);/),
 			"requestOlder",
-			context,
+			{ ...context, holdWebAnchor },
 		);
 		const restore = runSeam(
 			seam(
@@ -512,6 +532,26 @@ describe("web prepend keeps the reader's row in place (PR #207 Q5/Q6)", () => {
 		webRows.current.set("o0", element(128 + 6, 40));
 		restore();
 		expect(scroll.scrollTop).toBe(80 * 29 + 6);
+	});
+
+	it("hands anchoring back to the browser once the reader moves (PR #217 R1-2)", () => {
+		const { scroll, restore, webAnchor } = prepend();
+		restore();
+		expect(scroll.style.overflowAnchor).toBe("none");
+		const release = runSeam(
+			seam(
+				/const releaseWebAnchor = useCallback\([\s\S]*?\n\t\}, \[[^\]]*\]\);/,
+			),
+			"releaseWebAnchor",
+			{ webAnchor },
+		);
+		release();
+		expect(webAnchor.current).toBeNull();
+		// Not left off for the session: the automatic fill holds no list anchor.
+		expect(scroll.style.overflowAnchor).toBe("");
+		expect(list).toContain(
+			"if (webAnchor.current && contentOffset.y !== webAnchor.current.offset)\n\t\t\t\treleaseWebAnchor();",
+		);
 	});
 
 	it("computes both anchor paths from the list's own geometry", () => {

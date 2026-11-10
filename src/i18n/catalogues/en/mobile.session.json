@@ -39,8 +39,8 @@
 	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
 	"mobile.session.history.beginning": "Beginning of retained messages",
 	"mobile.session.history.empty": "No retained messages",
-	"mobile.session.history.gap": "Some earlier messages are still loading.",
-	"mobile.session.history.gap_newest": "Some messages above are still loading.",
+	"mobile.session.history.gap": "Some earlier messages are missing here.",
+	"mobile.session.history.gap_newest": "Some messages above are missing.",
 	"mobile.session.history.gap_load": "Load",
 	"mobile.session.history.gap_load_hint": "Loads the messages missed while this phone was disconnected."
 }

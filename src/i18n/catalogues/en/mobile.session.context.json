@@ -161,11 +161,11 @@
 	},
 	"mobile.session.history.gap": {
 		"role": "status",
-		"note": "Quiet inline row at the actual hole in the transcript, shown only after the automatic gap fill (which runs on every return to the app or reconnect) stopped before reaching the rows below the hole. Calm and factual: the messages exist and are still being fetched; never says they were lost or that the reader did something wrong. The small Load action sits beside it."
+		"note": "Quiet inline row at the actual hole in the transcript, shown only after the automatic gap fill (which runs on every return to the app or reconnect) stopped before reaching the rows below the hole. Nothing is loading when it shows, so it must not say 'loading': it states plainly that some messages are missing from this spot, and the small Load action beside it fetches them. Calm and factual; never says they were lost or deleted, or that the reader did something wrong."
 	},
 	"mobile.session.history.gap_newest": {
 		"role": "status",
-		"note": "The same quiet row at the newest edge (under the latest messages), pointing UP at the hole further up the transcript. Short; the Load action sits beside it."
+		"note": "The same quiet row at the newest edge (under the latest messages), pointing UP at the hole further up the transcript: some messages above are missing. Short; nothing is loading when it shows, and the Load action sits beside it."
 	},
 	"mobile.session.history.gap_load": {
 		"role": "button",

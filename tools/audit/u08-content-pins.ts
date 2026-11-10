@@ -1262,7 +1262,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// walking before= pages, a debounced resume gate, and the quiet gap row
 	// copy in all locales. --print over the staged tree; source identity only,
 	// no rendered or native proof.
-	src: "dce98863fbcf7f829f6ccc7b15eef3817572a4af87509732dfbaaffa27315e6e",
+	// Round-1 remediation (#217 Q1/R1-1..R1-4): every hole tracked, newest
+	// reads merged against the block above the newest hole, web anchor held
+	// on Load, gap copy reworded. --print over the staged tree; source
+	// identity only, no rendered or native proof.
+	src: "1318361d68d9fbcb330a030279f4067276d156683e4b6714398c2fffa3a70095",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

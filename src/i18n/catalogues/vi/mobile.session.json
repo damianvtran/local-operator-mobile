@@ -39,8 +39,8 @@
 	"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
 	"mobile.session.history.beginning": "Phần đầu của các tin nhắn đã lưu giữ",
 	"mobile.session.history.empty": "Không có tin nhắn được lưu giữ",
-	"mobile.session.history.gap": "Một số tin nhắn trước đó vẫn đang tải.",
-	"mobile.session.history.gap_newest": "Một số tin nhắn phía trên vẫn đang tải.",
+	"mobile.session.history.gap": "Thiếu một số tin nhắn trước đó ở đây.",
+	"mobile.session.history.gap_newest": "Thiếu một số tin nhắn phía trên.",
 	"mobile.session.history.gap_load": "Tải",
 	"mobile.session.history.gap_load_hint": "Tải các tin nhắn bị bỏ lỡ khi điện thoại này mất kết nối."
 }

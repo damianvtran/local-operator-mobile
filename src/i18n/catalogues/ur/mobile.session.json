@@ -39,8 +39,8 @@
 	"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
 	"mobile.session.history.beginning": "محفوظ پیغامات کی ابتدا",
 	"mobile.session.history.empty": "کوئی محفوظ پیغامات نہیں ہیں",
-	"mobile.session.history.gap": "کچھ پہلے کے پیغامات ابھی لوڈ ہو رہے ہیں۔",
-	"mobile.session.history.gap_newest": "اوپر کے کچھ پیغامات ابھی لوڈ ہو رہے ہیں۔",
+	"mobile.session.history.gap": "یہاں پہلے کے کچھ پیغامات موجود نہیں ہیں۔",
+	"mobile.session.history.gap_newest": "اوپر کے کچھ پیغامات موجود نہیں ہیں۔",
 	"mobile.session.history.gap_load": "لوڈ کریں",
 	"mobile.session.history.gap_load_hint": "وہ پیغامات لوڈ کرتا ہے جو اس فون کے منقطع رہنے کے دوران رہ گئے۔"
 }

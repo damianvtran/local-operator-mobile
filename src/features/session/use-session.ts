@@ -297,7 +297,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * entry points in refs means `reload` calls exactly the work it means to redo.
 	 */
 	const reconnectRef = useRef<() => void>(() => undefined);
-	const rereadRef = useRef<() => void>(() => undefined);
+	/** `history: false` re-reads commands and models only: the resume gate
+	 * dedupes the history read, never the rest of a return (PR #217 R1-4). */
+	const rereadRef = useRef<(history?: boolean) => void>(() => undefined);
 	const streamRef = useRef<{ stop: () => void } | null>(null);
 	/** One gate for every resume signal (foreground, stream recovery). */
 	const resumeGate = useRef(createResumeGate());
@@ -502,8 +504,11 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		const subscription = AppState.addEventListener("change", (state) => {
 			if (state !== "active") return;
 			// A quick flick out and back, or a system sheet, reports "active"
-			// again within moments; the first return's reads already cover it.
-			if (!resumeGate.current()) return;
+			// again within moments; the first signal's history read already
+			// covers it. ONLY that read is deduped: the gate is shared with the
+			// stream-recovery frame, so gating the reopen too could leave a
+			// return within 1.5 s of a recovery with a dead stream (PR #217 R1-4).
+			const readHistory = resumeGate.current();
 			// This return re-opens the stream itself; its first frame is not a
 			// second resume.
 			recovering.current = false;
@@ -513,7 +518,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			// re-syncs from a fresh snapshot) and re-read the requests that may have
 			// failed while the app was suspended.
 			reconnectRef.current();
-			rereadRef.current();
+			rereadRef.current(readHistory);
 		});
 		return () => subscription.remove();
 		// The reload refs are current, but the setter also has an identity lease.
@@ -525,7 +530,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * refusal interrupted, and `Check again` has to be able to run them. */
 	useEffect(() => {
 		const owner = identity;
-		const read = () => {
+		const read = (history = true) => {
 			// Nothing to read, and nothing to ask the relay about (Q10).
 			if (!hasSessionId(sessionId)) return;
 			if (
@@ -535,7 +540,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				return;
 			let cancelled = false;
 			setLoading(true);
-			const readHistory = historyWindow.load(true);
+			const readHistory = history
+				? historyWindow.load(true)
+				: Promise.resolve();
 			Promise.all([
 				// Refresh the newest durable page without discarding paged history.
 				readHistory,
@@ -554,8 +561,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				cancelled = true;
 			};
 		};
-		rereadRef.current = () => {
-			void read();
+		rereadRef.current = (history = true) => {
+			void read(history);
 		};
 		const cancel = read();
 		return cancel;

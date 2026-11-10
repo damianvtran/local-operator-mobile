@@ -341,26 +341,40 @@ export const TranscriptList = ({
 	} | null>(null);
 	/** See its assignment below the offset table. */
 	const captureWebAnchor = useRef<(scroll: HTMLElement) => void>(() => {});
+	/* Native ScrollView preserves its visible child. RN-web lacks that prop:
+	 * keep the actual mounted node's screen position, never estimated heights
+	 * or total content growth (which also includes concurrent tail appends).
+	 * Used by every read that inserts rows ABOVE the reader: an older page, and
+	 * the gap row's Load, whose rows land between the islands (PR #217 R1-2). */
+	const holdWebAnchor = useCallback(() => {
+		if (Platform.OS !== "web") return;
+		const scroll =
+			listRef.current?.getNativeScrollRef() as unknown as HTMLElement | null;
+		if (!scroll?.getBoundingClientRect) return;
+		// Two anchoring mechanisms on one scroller fight: the browser's own
+		// (`overflow-anchor: auto`) moves scrollTop as rows above mount, and its
+		// scroll event reads as a reader's scroll in `onScroll`, which releases
+		// this anchor mid-settle. While this list holds an anchor it owns
+		// anchoring; releaseWebAnchor hands it back.
+		scroll.style.overflowAnchor = "none";
+		captureWebAnchor.current(scroll);
+	}, []);
+	/* The reader moved: the list's anchor is spent. Hand anchoring back to the
+	 * browser rather than leaving it off for the rest of the session, so rows
+	 * the automatic gap fill inserts above the viewport (no list anchor is
+	 * held for those) do not push the reader down on web (PR #217 R1-2). */
+	const releaseWebAnchor = useCallback(() => {
+		const anchor = webAnchor.current;
+		if (!anchor) return;
+		anchor.scroll.style.overflowAnchor = "";
+		webAnchor.current = null;
+	}, []);
 	const requestOlder = useCallback(() => {
 		if (!loadOlder || loadingOlder || !hasOlder) return;
-		// Native ScrollView preserves its visible child. RN-web lacks that prop:
-		// keep the actual mounted node's screen position, never estimated heights
-		// or total content growth (which also includes concurrent tail appends).
-		if (Platform.OS === "web") {
-			const scroll =
-				listRef.current?.getNativeScrollRef() as unknown as HTMLElement | null;
-			if (scroll?.getBoundingClientRect) {
-				// Two anchoring mechanisms on one scroller fight: the browser's own
-				// (`overflow-anchor: auto`) moves scrollTop as rows above mount, and
-				// its scroll event reads as a reader's scroll in `onScroll`, which
-				// releases this anchor mid-settle. This list owns prepend anchoring.
-				scroll.style.overflowAnchor = "none";
-				captureWebAnchor.current(scroll);
-			}
-		}
+		holdWebAnchor();
 		atTail.current = false;
 		void loadOlder();
-	}, [loadOlder, loadingOlder, hasOlder]);
+	}, [loadOlder, loadingOlder, hasOlder, holdWebAnchor]);
 	/* "Try again" repeats the read that FAILED (PR #207 R2). A failed newest-page
 	 * refresh (foreground return, Check again) is re-read as the newest page: it
 	 * is not an older-page failure, and fetching an older page instead would
@@ -1064,7 +1078,7 @@ export const TranscriptList = ({
 				event.nativeEvent;
 			const previousOffset = factsRef.current.offsetY;
 			if (webAnchor.current && contentOffset.y !== webAnchor.current.offset)
-				webAnchor.current = null;
+				releaseWebAnchor();
 			// An actual transition to the top, not mount/layout/onStartReached.
 			// One edge loads one page; remaining at the top cannot drain history.
 			if (
@@ -1112,16 +1126,24 @@ export const TranscriptList = ({
 			driveFades();
 			recompute();
 		},
-		[driveFades, presence, sessionId, recompute, requestOlder, historyError],
+		[
+			driveFades,
+			presence,
+			sessionId,
+			recompute,
+			requestOlder,
+			historyError,
+			releaseWebAnchor,
+		],
 	);
 
 	/* A HELD THUMB KEEPS THE RAIL UP however long the reader holds still — the
 	 *  pointer analogue of a desktop scrollbar's thumb staying under the cursor,
 	 *  and the "or something like that" half of the operator's request. */
 	const onScrollBeginDrag = useCallback(() => {
-		webAnchor.current = null;
+		releaseWebAnchor();
 		presence?.setHeld(true);
-	}, [presence]);
+	}, [presence, releaseWebAnchor]);
 	const onScrollEndDrag = useCallback(() => {
 		presence?.setHeld(false);
 	}, [presence]);
@@ -1161,10 +1183,12 @@ export const TranscriptList = ({
 	 *  Unlike the reload it replaced, it keeps every loaded page and the
 	 *  reader's anchor: the missing rows land between the two islands, where
 	 *  native maintainVisibleContentPosition and the tail pin already hold the
-	 *  viewport still. */
+	 *  viewport still; on web the list holds the row the reader sees. */
 	const requestHeal = useCallback(() => {
-		if (healHistory) void healHistory();
-	}, [healHistory]);
+		if (!healHistory) return;
+		if (!atTail.current) holdWebAnchor();
+		void healHistory();
+	}, [healHistory, holdWebAnchor]);
 	/* The viewport's own height changing is a reason to re-pin, but ONLY while the reader
 	 *  is at the tail. The composer growing (a 7-line draft in short landscape took the
 	 *  transcript from 118 to 66 pt) shrinks this viewport without any content change, and

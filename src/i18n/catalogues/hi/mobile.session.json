@@ -39,8 +39,8 @@
 	"mobile.session.history.stalled": "पहले के संदेश लोड होना रुक गया। फिर से कोशिश करें, या यह बातचीत दोबारा खोलें।",
 	"mobile.session.history.beginning": "सहेजे गए संदेशों की शुरुआत",
 	"mobile.session.history.empty": "कोई सहेजा गया संदेश नहीं है",
-	"mobile.session.history.gap": "कुछ पहले के संदेश अभी लोड हो रहे हैं।",
-	"mobile.session.history.gap_newest": "ऊपर के कुछ संदेश अभी लोड हो रहे हैं।",
+	"mobile.session.history.gap": "यहाँ पहले के कुछ संदेश छूटे हुए हैं।",
+	"mobile.session.history.gap_newest": "ऊपर के कुछ संदेश छूटे हुए हैं।",
 	"mobile.session.history.gap_load": "लोड करें",
 	"mobile.session.history.gap_load_hint": "इस फ़ोन के डिस्कनेक्ट रहने के दौरान छूटे संदेश लोड करता है।"
 }

@@ -1243,4 +1243,165 @@ describe("a reconnect or foreground hole heals itself", () => {
 		expect(window.healState).toBe("idle");
 		expect(fetch.mock.calls.length).toBe(calls);
 	});
+
+	/* PR #217 Q1. A resume fires the newest-page refresh and the gap fill in the
+	 * same tick. The newest page holds 80 rows, one more than the capped frame's
+	 * 79, so its oldest row is one the reader does not hold. It used to merge at
+	 * the LIST HEAD, and the fill then took it for its overlap and closed the
+	 * hole with nothing inserted. Every arrival order must leave zero missing. */
+	const gaps = (window: HistoryWindow) => {
+		const seq = window.visibleRows.map((entry) => Number(entry.id.slice(1)));
+		return seq.filter((value, at) => at > 0 && value !== (seq[at - 1] ?? 0) + 1)
+			.length;
+	};
+	/** A relay whose answers are held until the test releases them, so the two
+	 * reads can be made to land in a chosen order. */
+	const gatedOpen = async (
+		journal: TranscriptEntry[],
+		retained: () => TranscriptEntry[],
+	) => {
+		const inner = relay(retained);
+		const queue: { before?: string; release: () => void }[] = [];
+		let gate = false;
+		const fetch = vi.fn((before?: string) =>
+			gate
+				? new Promise<HistoryResponse>((resolve) =>
+						queue.push({
+							before,
+							release: () => void inner(before).then(resolve),
+						}),
+					)
+				: inner(before),
+		);
+		const window = new HistoryWindow(fetch, vi.fn(), { autoHeal: true });
+		window.accept(capped(journal, 1200));
+		await window.load();
+		gate = true;
+		const take = (newest: boolean) => {
+			const at = queue.findIndex(
+				(call) => (call.before === undefined) === newest,
+			);
+			const [call] = queue.splice(at, 1);
+			call?.release();
+		};
+		return { window, queue, take, ungate: () => (gate = false) };
+	};
+	const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+	it("(Q1) a newest refresh racing the fill, newest page landing first, loses no row", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window, queue, take, ungate } = await gatedOpen(
+			journal,
+			() => retained,
+		);
+		retained = journal.slice(0, 1350);
+		window.accept(capped(journal, 1350));
+		await flush(); // the fill's microtask has issued its page
+		void window.load(true);
+		await flush(); // load() issues its read on a microtask too
+		expect(queue.map((call) => call.before)).toEqual(["q01271", undefined]);
+		ungate();
+		take(true);
+		await flush();
+		// The 80th newest-page row sits at the newer block's bottom, never the head.
+		expect(window.visibleRows[0]?.id).toBe("q01041");
+		expect(window.gapBefore).toBe("q01270");
+		take(false);
+		await settle(window);
+		expect(window.hasGap).toBe(false);
+		expect(window.healState).toBe("idle");
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1350)));
+	});
+
+	it("(Q1) the same race with the gap page landing first loses no row", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { window, take, ungate } = await gatedOpen(journal, () => retained);
+		retained = journal.slice(0, 1350);
+		window.accept(capped(journal, 1350));
+		await flush();
+		void window.load(true);
+		ungate();
+		take(false);
+		await flush();
+		take(true);
+		await settle(window);
+		await flush();
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1350)));
+	});
+
+	it("(Q1) a refresh fired in the same tick as the hole is merged before the fill reads", async () => {
+		const journal = sequence(1500);
+		let retained = journal.slice(0, 1200);
+		const { fetch, window } = await opened(journal, () => retained);
+		const calls = fetch.mock.calls.length;
+		retained = journal.slice(0, 1350);
+		window.accept(capped(journal, 1350));
+		const refresh = window.load(true);
+		await refresh;
+		await settle(window);
+		// The fill waited for the refresh, so it walks from the boundary the
+		// refresh moved (q01270), not the frame's oldest row.
+		expect(fetch.mock.calls.slice(calls)).toEqual([[undefined], ["q01270"]]);
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 1350)));
+	});
+
+	it("(Q1) a 1000-row hole under the same race reaches the budget and keeps the notice", async () => {
+		const journal = sequence(2400);
+		let retained = journal.slice(0, 1200);
+		const { window, take, ungate } = await gatedOpen(journal, () => retained);
+		retained = journal.slice(0, 2200);
+		window.accept(capped(journal, 2200));
+		await flush();
+		void window.load(true);
+		await flush();
+		ungate();
+		take(true); // the shape QA saw: the newest page lands first
+		await flush();
+		take(false);
+		await settle(window);
+		await flush();
+		expect(window.healState).toBe("exhausted");
+		expect(window.hasGap).toBe(true);
+		// One hole, at the boundary; nothing misplaced above the held history.
+		expect(gaps(window)).toBe(1);
+		expect(window.visibleRows[0]?.id).toBe("q01041");
+		expect(claimsBeginning(window)).toBe(false);
+		for (let turn = 0; turn < 5 && window.hasGap; turn++) await window.heal();
+		expect(window.hasGap).toBe(false);
+		expect(ids(window.visibleRows)).toEqual(ids(journal.slice(1041, 2200)));
+	});
+
+	/* PR #217 R1-1. Two resumes leave two holes. Closing the newer one must not
+	 * declare the transcript complete while the older one is still open. */
+	it("(R1-1) two resumes, the first past the budget: the older hole stays marked until it is filled", async () => {
+		const journal = sequence(4000);
+		let retained = journal.slice(0, 2300);
+		const { window } = await opened(journal, () => retained);
+		window.accept(capped(journal, 2300));
+		await settle(window);
+		expect(window.healState).toBe("exhausted");
+		const older = window.gapBefore;
+		expect(older).not.toBeNull();
+		retained = journal.slice(0, 2600);
+		window.accept(capped(journal, 2600));
+		await settle(window);
+		// The small newer hole closed; the older one is still open and marked.
+		expect(window.hasGap).toBe(true);
+		expect(window.healState).toBe("exhausted");
+		expect(gaps(window)).toBe(1);
+		expect(window.gapBefore).not.toBeNull();
+		// Paging to the retained beginning still does not claim it.
+		for (let turn = 0; turn < 40 && window.hasMore; turn++) await window.load();
+		expect(window.hasMore).toBe(false);
+		expect(claimsBeginning(window)).toBe(false);
+		for (let turn = 0; turn < 10 && window.hasGap; turn++) await window.heal();
+		expect(window.hasGap).toBe(false);
+		expect(missing(journal.slice(0, 2600), window)).toBe(0);
+		expect(gaps(window)).toBe(0);
+		expect(claimsBeginning(window)).toBe(true);
+	});
 });
