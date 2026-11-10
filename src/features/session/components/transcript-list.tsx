@@ -222,6 +222,9 @@ const TAIL_BAND_PT = 48;
 /** No turns open — a shared empty so a session-switch reset bails out of a
  *  render instead of committing an equal-but-new set. */
 const NO_TURNS: ReadonlySet<string> = new Set();
+/** No row overrides: every row shows its own default (closed, or open for a
+ *  bang-mode `user_run` tool row — see `ToolRow`). */
+const NO_ROW_OVERRIDES: ReadonlyMap<string, boolean> = new Map();
 
 /** The list's key function, hoisted: an inline arrow is a NEW prop on every
  *  render, which is a fresh reason for the virtualiser to re-run its cells. */
@@ -545,8 +548,14 @@ export const TranscriptList = ({
 				items: plan.items,
 				expanded,
 				latch: groupLatchRef.current.latch,
+				// R1-2: without it `certifiedPeerCycleGroups` returns nothing, so the
+				// core's `details.peer_cycle` stamp never grouped on device. The stamp
+				// carries the session that ran the cycle; a subagent view's composite
+				// `<parent>:<child>` id never matches it, and must not — that view
+				// does not own the parent's cycles.
+				sessionId,
 			}),
-		[plan, expanded],
+		[plan, expanded, sessionId],
 	);
 	/* Idempotent like the turn plan: the latch only grows. */
 	groupLatchRef.current.latch = grouped.latch;
@@ -619,7 +628,11 @@ export const TranscriptList = ({
 	 * the anchors (review round 1, Q5 / U6 / m4). Reset on a session switch with
 	 * the turn folds.
 	 */
-	const [rowOpen, setRowOpen] = useState<ReadonlySet<string>>(NO_TURNS);
+	/* A Map of EXPLICIT overrides, not a Set of open ids (R1-1): a Set can only
+	 *  say "closed" for an untouched row, which overrode `user_run` and shut every
+	 *  bang-mode row the reader was waiting on. Absent = the row's own default. */
+	const [rowOpen, setRowOpen] =
+		useState<ReadonlyMap<string, boolean>>(NO_ROW_OVERRIDES);
 	/* Set by a reader's own expand or collapse, consumed by the content-size
 	 *  change that toggle causes: see `onContentSizeChange`. */
 	const foldResizeRef = useRef(false);
@@ -632,11 +645,13 @@ export const TranscriptList = ({
 	 *  run twice under StrictMode, which is harmless for an idempotent flag. */
 	const toggleRowOpen = useCallback((id: string, open: boolean) => {
 		setRowOpen((current) => {
-			if (current.has(id) === open) return current;
+			// Callers request the flip of the row's EFFECTIVE state (`ToolRow`
+			// toggles `!open`, `override ?? user_run`), so only a repeat of the
+			// same explicit override is a no-op here.
+			if (current.get(id) === open) return current;
 			foldResizeRef.current = true;
-			const next = new Set(current);
-			if (open) next.add(id);
-			else next.delete(id);
+			const next = new Map(current);
+			next.set(id, open);
 			return next;
 		});
 	}, []);
@@ -941,7 +956,7 @@ export const TranscriptList = ({
 	 *  layout effect, so it must not clear this set). */
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `sessionId` is the TRIGGER for the reset, not a read.
 	useLayoutEffect(() => {
-		setRowOpen(NO_TURNS);
+		setRowOpen(NO_ROW_OVERRIDES);
 	}, [sessionId]);
 	/* KEYED ON THE LANDING, NOT THE HIGHLIGHT (round 3, U14 / m-r3-1). A
 	 *  landing is `reveal`'s id AND nonce: the find session bumps the nonce on
@@ -958,9 +973,9 @@ export const TranscriptList = ({
 	useLayoutEffect(() => {
 		if (landingId === null) return;
 		setRowOpen((current) => {
-			if (current.has(landingId)) return current;
-			const next = new Set(current);
-			next.add(landingId);
+			if (current.get(landingId) === true) return current;
+			const next = new Map(current);
+			next.set(landingId, true);
 			return next;
 		});
 	}, [landingId, landingNonce]);
@@ -1643,7 +1658,7 @@ export const TranscriptList = ({
 						onOpenAgent={onOpenAgent}
 						onOpenVideo={onOpenVideo}
 						onCancelTurn={onCancelTurn}
-						open={rowOpen.has(canonicalRowKey(item.entry))}
+						open={rowOpen.get(canonicalRowKey(item.entry))}
 						onToggleOpen={toggleRowOpen}
 					/>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge

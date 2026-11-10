@@ -32,6 +32,8 @@ import { cx } from "@/ui/variants";
  * **The glyph is a text glyph beside its word, never colour alone** (`U-03`):
  * the bar's whole job is that a condensed turn still shows it completed, and a
  * mark that only exists as green would fail the one reader this clause is for.
+ * The word itself is the accessible name's (`barAccessibleName`); the painted
+ * line carries the numbers beside the glyph.
  *
  * Like the quiet-group disclosure, this is a compact trace, not a card.
  * The completion mark, label and caret identify the control without adding
@@ -61,10 +63,12 @@ export const TurnBar = ({
 	open,
 	onToggle,
 }: TurnBarProps) => {
-	// The one copy function, shared with the tests: the first phrase is the
-	// completion, the rest are the counts. Splitting here keeps the string
-	// single-sourced rather than re-spelling "completed" at the render site.
-	const [outcome, ...details] = barPhrases(facts);
+	// The one copy function, shared with the tests. A steered turn's label
+	// leads in the muted ink; the counts follow in the dim detail ink. No
+	// painted outcome word (U1-3): `completed` beside a red `✗` read as a
+	// contradiction, so — as on Relay — only the accessible name says it.
+	const phrases = barPhrases(facts);
+	const [lead, ...details] = facts.steered ? phrases : ["", ...phrases];
 	const failedCount = facts.failed ?? 0;
 	const failed = failedCount > 0;
 	return (
@@ -97,10 +101,14 @@ export const TurnBar = ({
 							{failed ? "✗" : "✓"}
 						</Text>
 						<Text className="min-w-0 flex-1 text-trace text-ink-muted">
-							{outcome}
+							{lead}
 							{details.length > 0 ? (
-								<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
-									{` · ${details.map(unbreakable).join(" · ")}`}
+								/* Proportional `text-meta`, not `font-mono` (Q1-3): the details
+								 * are translated words now, and the monospace stack draws Urdu's
+								 * cursive script as disconnected letters; `tabular-nums` keeps
+								 * the digits aligned, as Relay's `text-meta` units do. */
+								<Text className="text-meta text-ink-dim tabular-nums">
+									{`${lead ? " · " : ""}${details.map(unbreakable).join(" · ")}`}
 								</Text>
 							) : null}
 						</Text>

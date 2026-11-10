@@ -7,6 +7,8 @@ import {
 } from "@/features/session/components/trace-rail";
 import { ROLE } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
 /**
@@ -128,6 +130,38 @@ export const CollapsedRow = ({
 }: CollapsedRowProps) => {
 	const [ownOpen, setOwnOpen] = useState(false);
 	const open = controlledOpen ?? ownOpen;
+	/* At large text the label and the summary STACK (D1): at 320 pt / 200 %
+	 * `Hub · From reviewer` alone took 218 of the row's 288 pt, leaving the
+	 * summary one clipped letter. Two lines on the same 40 pt text rail give
+	 * each a full line — the shape the Bridge receipt already wrapped into. The
+	 * stack holds open or closed, so a tap never reflows the header. */
+	const { effectiveScale } = useTextScale();
+	const stacked = effectiveScale > LARGE_TEXT_SCALE;
+	const hasLabel = label !== undefined && label.length > 0;
+	const labelText = hasLabel ? (
+		<Text
+			className={cx("min-w-0 shrink text-meta", labelClass)}
+			/* A STYLE cap, not `max-w-1/2`: that class never constrained the label
+			 * on RN web (measured 218 pt of 288, D1). Stacked, the label owns its
+			 * line and needs no cap. */
+			style={stacked ? undefined : { maxWidth: "50%" }}
+			numberOfLines={1}
+		>
+			{label}
+		</Text>
+	) : null;
+	const summaryText = (
+		<Text
+			className={cx(
+				"min-w-0 text-body-sm",
+				stacked ? undefined : "flex-1",
+				bodyClass,
+			)}
+			numberOfLines={1}
+		>
+			{summary}
+		</Text>
+	);
 	return (
 		<View>
 			<View className="flex-row items-stretch">
@@ -168,29 +202,21 @@ export const CollapsedRow = ({
 							>
 								{glyph}
 							</Text>
-							{/* The label may take at most half the row, so at the largest text
-				    sizes the summary — the thing the reader decides on — keeps
-				    some words (UX round 1, U5). */}
-							{label !== undefined && label.length > 0 ? (
-								<Text
-									className={cx(
-										"min-w-0 max-w-1/2 shrink text-meta",
-										labelClass,
-									)}
-									numberOfLines={1}
-								>
-									{label}
-								</Text>
-							) : null}
-							{/* The summary is the fold's whole point: ONE line, tail ellipsis,
-				    and the widest thing on the row because the body is what the
-				    reader is deciding whether to open. */}
-							<Text
-								className={cx("min-w-0 flex-1 text-body-sm", bodyClass)}
-								numberOfLines={1}
-							>
-								{summary}
-							</Text>
+							{/* The label may take at most half the row, so the summary — the
+				    thing the reader decides on — keeps words (UX round 1, U5); at
+				    large text it gets its own line instead (D1). The summary is
+				    the fold's whole point: ONE line, tail ellipsis. */}
+							{stacked && hasLabel ? (
+								<View className="min-w-0 flex-1">
+									{labelText}
+									{summaryText}
+								</View>
+							) : (
+								<>
+									{labelText}
+									{summaryText}
+								</>
+							)}
 							{meta !== undefined && meta.length > 0 ? (
 								<Text
 									className="min-w-0 max-w-1/3 shrink font-mono text-mono-sm text-ink-dim tabular-nums"

@@ -86,7 +86,9 @@ export const QuietGroupBar = ({
 						<Text className="min-w-0 flex-1 text-trace text-ink-muted">
 							{what}
 							{details.length > 0 ? (
-								<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
+								/* Proportional, not `font-mono`: localized words (Q1-3 — the
+								 * monospace stack breaks Urdu's cursive joins). */
+								<Text className="text-meta text-ink-dim tabular-nums">
 									{` · ${details.map(unbreakable).join(" · ")}`}
 								</Text>
 							) : null}

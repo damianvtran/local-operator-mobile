@@ -29,3 +29,28 @@ describe("turn-bar.tsx geometry", () => {
 		expect(source).toContain("u00A0");
 	});
 });
+
+describe("turn-bar.tsx copy face (PR 223 round 1, U1-3 / Q1-3)", () => {
+	it("paints the translated details proportional, digits tabular — never mono", () => {
+		// `font-mono` drew Urdu's cursive details as disconnected letters.
+		expect(source).toContain('"text-meta text-ink-dim tabular-nums"');
+		expect(source).not.toContain(
+			'<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">',
+		);
+	});
+});
+
+const foldSource = readFileSync(
+	new URL("./fold-bar.tsx", import.meta.url),
+	"utf8",
+);
+describe("fold-bar.tsx live glyph (PR 223 round 1, Q1-1 / U1-4)", () => {
+	it("keeps `⟳` while running, open or closed, even after an earlier failure", () => {
+		expect(foldSource).toContain(
+			'const glyph = fold.running ? "⟳" : failed ? "✗" : "✓";',
+		);
+		expect(foldSource).toContain("active={fold.running && !open}");
+		// The failure count still paints on the trailing edge.
+		expect(foldSource).toContain("{fold.failedCount}");
+	});
+});

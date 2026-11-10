@@ -76,6 +76,11 @@ vi.mock(
 	},
 );
 
+/* `collapsed-row.tsx` reads the text scale (its large-text stack, D1); the
+ *  real provider pulls the native `react-native` tree this harness stubs. */
+vi.mock("@/ui/text-scale-provider", () => ({
+	useTextScale: () => ({ effectiveScale: 1, scale: 1 }),
+}));
 vi.mock("@/features/session/components/markdown", () => ({
 	Markdown: () => null,
 }));

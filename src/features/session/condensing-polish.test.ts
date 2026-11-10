@@ -6,6 +6,8 @@
  * Every positive case sits beside its negative control, so a pass cannot come
  * from a predicate that is simply always true (or always false).
  */
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import type { TranscriptEntry } from "@/contracts";
@@ -32,9 +34,13 @@ import {
 	toolRowSummary,
 } from "@/features/session/projection";
 import {
+	barAccessibleName,
+	barPhrases,
 	condensePlan,
 	foldPlan,
+	groupPlan,
 	type LatchedTurn,
+	type QuietGroup,
 	type TranscriptItem,
 } from "@/features/session/turn-condensing";
 
@@ -348,5 +354,332 @@ describe("the shared rail and spacing tiers", () => {
 			block: "pt-2",
 			trace: "",
 		});
+	});
+});
+
+/* ------------------------------------------------- round 1 remediation (PR 223) */
+
+const peerRow = (id: string, over: Partial<TranscriptEntry> = {}) =>
+	row({
+		id,
+		kind: "peer_message",
+		text: "a peer note",
+		details: { sender: { conversation_name: "reviewer" } },
+		...over,
+	});
+const NO_GROUPS: ReadonlyMap<string, QuietGroup> = new Map();
+/** The list's three passes, in its order, over one frame. */
+const pipeline = (
+	entries: TranscriptEntry[],
+	options: {
+		live: boolean;
+		expanded?: ReadonlySet<string>;
+		latch?: ReadonlyMap<string, LatchedTurn>;
+		sessionId?: string;
+	},
+) => {
+	const expanded = options.expanded ?? NONE;
+	const plan = condensePlan({
+		entries,
+		expanded,
+		latch: options.latch ?? NO_LATCH,
+		live: options.live,
+	});
+	const grouped = groupPlan({
+		items: plan.items,
+		expanded,
+		latch: NO_GROUPS,
+		...(options.sessionId !== undefined
+			? { sessionId: options.sessionId }
+			: {}),
+	});
+	const folded = foldPlan({
+		items: grouped.items,
+		expanded,
+		live: options.live,
+	});
+	return { plan, grouped, folded };
+};
+
+/** R1-2: the list's `groupPlan` call carries `sessionId` and re-plans on it. */
+const GROUP_PLAN_SESSION_WIRING =
+	/groupPlan\(\{[\s\S]{0,1200}?\bsessionId,\s*\}\),\s*\[plan, expanded, sessionId\]/;
+
+describe("certified peer cycles reach the list (R1-2)", () => {
+	const cycle = (sessionId: string): TranscriptEntry[] => [
+		user("u1"),
+		peerRow("p1", {
+			details: {
+				sender: { conversation_name: "reviewer" },
+				peer_cycle: {
+					version: 1,
+					session_id: sessionId,
+					first_id: "p1",
+					last_id: "s1",
+					quiet_call_id: "q1",
+					member_ids: ["p1", "s1"],
+				},
+			} as TranscriptEntry["details"],
+		}),
+		tool("s1", "send"),
+	];
+	const groupKeys = (entries: TranscriptEntry[], sessionId?: string) =>
+		pipeline(entries, {
+			live: true,
+			...(sessionId !== undefined ? { sessionId } : {}),
+		}).grouped.groups.map((group) => group.key);
+
+	it("groups a single-receipt cycle stamped for THIS session", () => {
+		expect(groupKeys(cycle("sess-1"), "sess-1")).toEqual(["qg:p1"]);
+	});
+
+	it("never groups it for another session, a subagent's composite id, or no id", () => {
+		expect(groupKeys(cycle("sess-1"), "sess-2")).toEqual([]);
+		expect(groupKeys(cycle("sess-1"), "sess-1:child-7")).toEqual([]);
+		expect(groupKeys(cycle("sess-1"))).toEqual([]);
+	});
+
+	it("is wired: the list hands groupPlan its sessionId and re-plans on it", () => {
+		const source = readFileSync(
+			new URL("./components/transcript-list.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(source).toMatch(GROUP_PLAN_SESSION_WIRING);
+	});
+});
+
+describe("an opened quiet group shows its rows (R1-3 / U1-2)", () => {
+	const entries = [
+		user("u1"),
+		peerRow("p1"),
+		tool("r1", "read"),
+		tool("r2", "read"),
+		tool("r3", "read"),
+		peerRow("p2"),
+		row({
+			id: "a1",
+			kind: "assistant",
+			text: "Reading the reply",
+			final: false,
+			text_complete: false,
+		}),
+	];
+	const kinds = (expanded: ReadonlySet<string>) =>
+		pipeline(entries, { live: true, expanded }).folded.items.map(
+			(item) => `${item.kind}:${item.id}`,
+		);
+
+	it("closed: one group bar (control — the group exists)", () => {
+		expect(kinds(NONE)).toEqual([
+			"entry:u1",
+			"group:quiet-group-qg:p1",
+			"entry:a1",
+		]);
+	});
+
+	it("open: the member rows directly, with no FoldBar over the same rows", () => {
+		const open = kinds(new Set(["qg:p1"]));
+		expect(open.filter((id) => id.startsWith("fold:"))).toEqual([]);
+		expect(open).toEqual([
+			"entry:u1",
+			"group:quiet-group-qg:p1",
+			"entry:p1",
+			"entry:r1",
+			"entry:r2",
+			"entry:r3",
+			"entry:p2",
+			"entry:a1",
+		]);
+	});
+
+	it("still folds the same three reads when no open group discloses them", () => {
+		const bare = [
+			user("u1"),
+			tool("r1", "read"),
+			tool("r2", "read"),
+			tool("r3", "read"),
+		];
+		expect(
+			pipeline(bare, { live: true }).folded.items.some(
+				(item) => item.kind === "fold",
+			),
+		).toBe(true);
+	});
+});
+
+describe("the fold latch across a `!live` frame (R1-4)", () => {
+	it("keeps the ids it painted, pruning only rows the frame no longer holds", () => {
+		const items = entryItems([user("u1"), tool("t1"), tool("t2"), tool("t3")]);
+		const live = foldPlan({ items, expanded: NONE, live: true });
+		expect(live.latchedFoldIds.size).toBe(3);
+		const dip = foldPlan({
+			items,
+			expanded: NONE,
+			live: false,
+			latchedFoldIds: live.latchedFoldIds,
+		});
+		expect([...dip.latchedFoldIds].sort()).toEqual(
+			[...live.latchedFoldIds].sort(),
+		);
+		const slid = foldPlan({
+			items: entryItems([user("u1"), tool("t2"), tool("t3")]),
+			expanded: NONE,
+			live: false,
+			latchedFoldIds: dip.latchedFoldIds,
+		});
+		expect([...slid.latchedFoldIds].sort()).toEqual([
+			"call:call-t2",
+			"call:call-t3",
+		]);
+	});
+});
+
+describe("a condensed newest turn takes in its continuation (U1-1)", () => {
+	const hub = (id: string) =>
+		row({
+			id,
+			kind: "subagent_message",
+			text: "auditor: done",
+			details: { direction: "to_parent", body: "done" },
+		});
+	const first = [user("u1"), tool("t1"), answer("a1")];
+	const continued = [
+		...first,
+		hub("h1"),
+		tool("t2", "read"),
+		tool("t3", "bash", { elapsed_s: 2 }),
+		answer("a2"),
+	];
+	const bars = (items: TranscriptItem[]) =>
+		items.filter((item) => item.kind === "bar");
+
+	it("an idle-condensed turn re-condenses into ONE bar matching a fresh reload", () => {
+		const f1 = condensePlan({
+			entries: first,
+			expanded: NONE,
+			latch: NO_LATCH,
+			live: false,
+		});
+		expect(f1.latch.get("u1")?.facts.steps).toBe(1);
+		// The continuation runs: the earlier span stays collapsed, new rows stream below.
+		const f2 = condensePlan({
+			entries: continued,
+			expanded: NONE,
+			latch: f1.latch,
+			live: true,
+		});
+		expect(bars(f2.items)).toHaveLength(1);
+		expect(f2.items.map((item) => item.id)).toEqual(
+			expect.arrayContaining(["h1", "t2", "t3", "a2"]),
+		);
+		// Idle again: one bar over the whole turn, as a reload computes it.
+		const f3 = condensePlan({
+			entries: continued,
+			expanded: NONE,
+			latch: f2.latch,
+			live: false,
+		});
+		const reload = condensePlan({
+			entries: continued,
+			expanded: NONE,
+			latch: NO_LATCH,
+			live: false,
+		});
+		expect(bars(f3.items)).toHaveLength(1);
+		expect(f3.latch.get("u1")?.facts).toEqual(reload.latch.get("u1")?.facts);
+		expect(f3.latch.get("u1")?.facts.steps).toBe(3);
+		expect(f3.items.map((item) => item.id)).toEqual(
+			reload.items.map((item) => item.id),
+		);
+		expect(f3.turns[0]?.hiddenIds).toEqual(reload.turns[0]?.hiddenIds);
+		// …and it stays that way once a newer turn exists.
+		const next = [...continued, user("u2")];
+		const f4 = condensePlan({
+			entries: next,
+			expanded: NONE,
+			latch: f3.latch,
+			live: true,
+		});
+		expect(f4.latch.get("u1")?.facts.steps).toBe(3);
+	});
+
+	it("a one-frame `!live` dip never leaves later work raw or under a stale count", () => {
+		const mid = [user("u1"), tool("t1"), answer("a1")];
+		const dip = condensePlan({
+			entries: mid,
+			expanded: NONE,
+			latch: NO_LATCH,
+			live: false,
+		});
+		const resumed = [...mid, tool("t2"), tool("t3")];
+		const live = condensePlan({
+			entries: resumed,
+			expanded: NONE,
+			latch: dip.latch,
+			live: true,
+		});
+		// Live: the bar only hides what it counted; the running work is visible.
+		expect(live.items.map((item) => item.id)).toEqual(
+			expect.arrayContaining(["t2", "t3"]),
+		);
+		const settled = [...resumed, answer("a2")];
+		const idle = condensePlan({
+			entries: settled,
+			expanded: NONE,
+			latch: live.latch,
+			live: false,
+		});
+		const reload = condensePlan({
+			entries: settled,
+			expanded: NONE,
+			latch: NO_LATCH,
+			live: false,
+		});
+		expect(idle.latch.get("u1")?.facts).toEqual(reload.latch.get("u1")?.facts);
+		expect(idle.items.map((item) => item.id)).toEqual(
+			reload.items.map((item) => item.id),
+		);
+	});
+
+	it("never moves the latch on an EARLIER closing (a transport-cap regression)", () => {
+		const f1 = condensePlan({
+			entries: continued,
+			expanded: NONE,
+			latch: NO_LATCH,
+			live: false,
+		});
+		// The closing answer arrives as a capped prefix: the scan stops calling it one.
+		const capped = continued.map((entry) =>
+			entry.id === "a2" ? { ...entry, text_complete: false } : entry,
+		);
+		const f2 = condensePlan({
+			entries: capped,
+			expanded: NONE,
+			latch: f1.latch,
+			live: false,
+		});
+		expect(f2.latch.get("u1")).toBe(f1.latch.get("u1"));
+	});
+});
+
+describe("the turn bar's painted words (U1-3)", () => {
+	it("paints no outcome word — the numbers, or `Turn condensed`", () => {
+		expect(barPhrases({ steps: 4, durationS: 4, failed: 1 })).toEqual([
+			"Took 4s",
+			"4 actions",
+		]);
+		expect(barPhrases({ steps: 2, durationS: 0, steered: true })).toEqual([
+			"Steered",
+			"2 actions",
+		]);
+		expect(barPhrases({ steps: 0, durationS: 0 })).toEqual(["Turn condensed"]);
+	});
+
+	it("still says `completed` to a screen reader", () => {
+		expect(
+			barAccessibleName({ steps: 4, durationS: 4, failed: 1 }, "Fix it"),
+		).toBe(
+			'Turn "Fix it": completed, Took 4s, 4 actions, Includes a failed action',
+		);
 	});
 });

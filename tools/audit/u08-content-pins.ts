@@ -1379,7 +1379,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// condensing, the shared 16/40 pt trace rail, spacing tiers, hub and Team
 	// Bridge receipt rows, `relay.transcript.*` catalogues. --print over the
 	// staged tree; source identity only, no rendered or native proof.
-	src: "5ac8f108c2e44c669f98d8655a8e53df3dad4bee0cc216c95b28f9e9eff1b599",
+	// PR #223 round-1 remediation: `user_run` default under list overrides,
+	// session-certified peer cycles, no fold inside an open quiet group, the
+	// continuation latch, bar/fold glyph and copy face, the large-text receipt
+	// stack. --print over the staged tree; source identity only.
+	src: "c014b1f4f139ce7555ef5cfb18a6131358b82995fa3bcdc33884a711c62a1f8a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

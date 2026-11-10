@@ -222,7 +222,9 @@ const TranscriptRowImpl = ({
 						testID={testID}
 						{...(onToggleOpen !== undefined
 							? {
-									open: open === true,
+									// Pass-through, not `=== true`: `undefined` is "untouched",
+									// which lets a bang-mode (`user_run`) row open itself (R1-1).
+									...(open !== undefined ? { open } : {}),
 									onToggleOpen: (next: boolean) => onToggleOpen(rowKey, next),
 								}
 							: {})}
@@ -412,12 +414,19 @@ const TranscriptRowImpl = ({
 					>
 						↔
 					</Text>
-					<Text className="min-w-0 flex-1 text-body-sm text-ink">
+					{/* Caption line, then the body on its own line — both on the 40 pt
+					 *  text rail (D2). Running the 12 pt caption into the 14 pt body
+					 *  started the body mid-line (x = 254 at 390 pt) and wrapped it
+					 *  back to 40; the folded Hub receipt beside it reads label-then-
+					 *  words on the same rail, so the two coordination rows match. */}
+					<View className="min-w-0 flex-1">
 						<Text className="text-meta text-ink-dim">
 							{where ? `${sender} · ${where}` : sender}
 						</Text>
-						{entry.text ? ` ${entry.text}` : ""}
-					</Text>
+						{entry.text ? (
+							<Text className="text-body-sm text-ink">{entry.text}</Text>
+						) : null}
+					</View>
 					{anchors}
 				</View>
 			);

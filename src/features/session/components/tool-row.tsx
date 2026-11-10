@@ -113,8 +113,9 @@ const ROW_CHROME_PT = TRACE_ROW_CHROME_PT;
 export type ToolRowProps = {
 	entry: TranscriptEntry;
 	testID?: string;
-	/** Controlled open state from `TranscriptList` (`rowOpen` keyed by `canonicalRowKey`),
-	 *  preserving open tool disclosures across window unmounts and live-to-durable handoff. */
+	/** The reader's explicit open/closed override from `TranscriptList` (`rowOpen`
+	 *  keyed by `canonicalRowKey`), preserving disclosures across window unmounts
+	 *  and the live-to-durable handoff. `undefined` = untouched: `user_run` decides. */
 	open?: boolean;
 	onToggleOpen?: (next: boolean) => void;
 };
@@ -198,11 +199,21 @@ export const ToolRow = ({
 	open: controlledOpen,
 	onToggleOpen,
 }: ToolRowProps) => {
+	/**
+	 * `user_run` is the DEFAULT under every override, never initial state.
+	 *
+	 * A bang-mode row (`! cmd`) opens expanded, matching the TUI and the relay's
+	 * row (`override ?? user_run`): the reader typed this command themselves and
+	 * is waiting to read its output. But a live bang row is mounted while still
+	 * running and only learns `user_run` when its result settles, and a
+	 * `useState` initializer runs once at mount — seeding it there would leave
+	 * the live card shut. So `undefined` (from the list) and `null` (local) both
+	 * mean "the reader has not touched this row", and only then does `user_run`
+	 * decide. The list's controlled value is an explicit override only (R1-1:
+	 * passing `false` for untouched rows shut every bang row).
+	 */
 	const [override, setOverride] = useState<boolean | null>(null);
-	const open =
-		controlledOpen !== undefined
-			? controlledOpen
-			: (override ?? entry.details.user_run === true);
+	const open = controlledOpen ?? override ?? entry.details.user_run === true;
 	const toggle = (next: boolean) => {
 		if (onToggleOpen !== undefined) {
 			onToggleOpen(next);

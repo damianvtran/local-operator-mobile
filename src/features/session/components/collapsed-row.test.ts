@@ -30,7 +30,16 @@ const presses = vi.hoisted(() => ({
 	/** What the stub Pressable reports to a `({ pressed })` render child. */
 	pressed: false,
 	/** Every className a host element was drawn with, in render order. */
-	classes: [] as { host: string; className: string }[],
+	classes: [] as { host: string; className: string; style?: unknown }[],
+	/** The text scale the stubbed provider reports (D1: 2 = 200 %). */
+	scale: 1,
+}));
+
+vi.mock("@/ui/text-scale-provider", () => ({
+	useTextScale: () => ({
+		effectiveScale: presses.scale,
+		scale: presses.scale,
+	}),
 }));
 
 vi.mock("react-native", async () => {
@@ -40,11 +49,13 @@ vi.mock("react-native", async () => {
 		({
 			children,
 			className,
+			style,
 		}: {
 			children?: React.ReactNode;
 			className?: string;
+			style?: unknown;
 		}) => {
-			presses.classes.push({ host: name, className: className ?? "" });
+			presses.classes.push({ host: name, className: className ?? "", style });
 			return children ?? null;
 		};
 	return {
@@ -138,6 +149,7 @@ const render = async (open?: boolean, pressed = false) => {
 };
 
 beforeEach(() => {
+	presses.scale = 1;
 	dom = installDomShim();
 	vi.stubGlobal("requestAnimationFrame", () => 0);
 	vi.stubGlobal("cancelAnimationFrame", () => {});
@@ -284,5 +296,40 @@ describe("a folded row is a quiet line, not a card (design round 3, D4)", () => 
 	it("keeps the touch floor as its minimum height", async () => {
 		await render();
 		expect(presses.last?.style?.minHeight).toBeGreaterThanOrEqual(44);
+	});
+});
+
+describe("the label never starves the summary (design round 1 of PR 223, D1)", () => {
+	const words = (className: string) => new Set(className.split(WHITESPACE));
+	const labelOf = () =>
+		presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("text-meta"),
+		);
+	/** The label + summary column only the stacked layout draws. */
+	const stackOf = () =>
+		presses.classes.find(
+			(c) => c.host === "View" && c.className === "min-w-0 flex-1",
+		);
+
+	it("caps the label with a STYLE at normal text (the class never applied on web)", async () => {
+		await render();
+		expect(labelOf()?.style).toEqual({ maxWidth: "50%" });
+		expect(words(labelOf()?.className ?? "").has("max-w-1/2")).toBe(false);
+		expect(stackOf()).toBeUndefined();
+	});
+
+	it("stacks label over summary at large text, each one line on the text rail", async () => {
+		presses.scale = 2;
+		await render();
+		expect(stackOf()).toBeDefined();
+		expect(labelOf()?.style).toBeUndefined();
+		const text = textOf(dom?.container);
+		expect(text).toContain("reviewer");
+		expect(text).toContain("first line of the peer message");
+		// The summary no longer flexes beside the label: it owns its line.
+		const summary = presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("text-body-sm"),
+		);
+		expect(words(summary?.className ?? "").has("flex-1")).toBe(false);
 	});
 });

@@ -314,6 +314,22 @@ export interface TurnBarFacts {
 export interface LatchedTurn {
 	facts: TurnBarFacts;
 	hiddenIds: readonly string[];
+	/**
+	 * `canonicalRowKey` of every span row, recorded beside `hiddenIds` because a
+	 * tool row's `id` changes at the stream-to-history handoff (`tc-<call>` →
+	 * `<msg>:<call>`) while its canonical key does not. The continuation
+	 * extension (`extendLatchedTurn`) matches rows by this list, so a row that
+	 * only changed id is never counted twice. Optional: a latch built by an
+	 * older caller (or a test) without it falls back to `hiddenIds`.
+	 */
+	canonicalIds?: readonly string[];
+	/**
+	 * `canonicalRowKey` of the last row BEFORE the closing answer when the latch
+	 * froze. A continuation (a hub reply or wake that resumes the same turn with
+	 * new work and a new answer, U1-1) is detected as "a later closing exists
+	 * after this row"; without it (older latches) the span never extends.
+	 */
+	spanEndKey?: string;
 }
 
 /** One row of the rendered transcript list. A bar's id is the a11y builder's
@@ -330,6 +346,11 @@ export type TranscriptItem =
 			condensed?: boolean;
 			/** True when this `user` row opens a new exchange turn (for `16 pt` turn spacing). */
 			opensTurn?: boolean;
+			/** True on a member row `groupPlan` emitted under an OPEN `QuietGroupBar`.
+			 *  The reader's tap on the group bar already disclosed it, so `foldPlan`
+			 *  must not fold it again behind a second bar over the same rows
+			 *  (R1-3 / U1-2: three taps to read one peer cycle). */
+			inOpenGroup?: boolean;
 	  }
 	| {
 			kind: "bar";
@@ -430,7 +451,31 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 	turns.forEach((turn, index) => {
 		const isNewestTurn = index === turns.length - 1;
 		const isActive = isNewestTurn && live;
-		const latchedTurn = latch.get(turn.key);
+		let latchedTurn = latch.get(turn.key);
+		/*
+		 * CONTINUATION CYCLES EXTEND THE LATCH (U1-1). A turn that condensed at an
+		 * idle moment can be resumed without a new user row: a child's hub reply
+		 * or a wake starts another run (tools, a new answer) inside the SAME turn,
+		 * and a one-frame `!live` dip at a tool boundary latches mid-turn the same
+		 * way. Freezing the first idle snapshot left that later work raw under a
+		 * bar whose count disagreed with a reload of the same transcript. So once
+		 * the turn is settled again (`!isActive`) and its scan finds a closing
+		 * answer strictly AFTER the latched one, the latch grows to cover the
+		 * whole turn. This only ever ADDS rows (invariant 2 holds: a seen bar is
+		 * never withdrawn) and requires the latched span's last row to still be
+		 * in the frame, so a capped window or a transport-cap prefix — which can
+		 * only make the scan find an EARLIER closing or none — never moves it.
+		 * While the continuation is still running, the earlier span stays
+		 * collapsed and the new rows stream visibly beneath it; the bar then says
+		 * only what it hides (no painted "completed", U1-3).
+		 */
+		if (latchedTurn !== undefined && !isActive && turn.opensWithUserRow) {
+			const extended = extendLatchedTurn(entries, turn, latchedTurn);
+			if (extended !== null) {
+				latch.set(turn.key, extended);
+				latchedTurn = extended;
+			}
+		}
 		/*
 		 * THE LATCH OUTRANKS THE FRAME. A latched turn's render must be a pure
 		 * function of the latch for ANY later frame — including the relay's real
@@ -466,10 +511,7 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 				closing !== null &&
 				spanIds.length > 0);
 		if (latchedTurn === undefined && condensed && closing !== null) {
-			latch.set(turn.key, {
-				facts: barFactsFor(entries, turn, closing),
-				hiddenIds: spanIds,
-			});
+			latch.set(turn.key, latchedTurnFor(entries, turn, closing, spanIds));
 		}
 		const facts = latch.get(turn.key)?.facts ?? null;
 		const open = input.expanded.has(turn.key);
@@ -510,7 +552,10 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 					headline: turnHeadline(opening?.text ?? ""),
 				});
 				view.itemIds.push(barId);
-				const hidden = new Set(spanIds);
+				const hidden = new Set([
+					...spanIds,
+					...(latch.get(turn.key)?.canonicalIds ?? []),
+				]);
 				for (let at = turn.start + 1; at <= turn.end; at += 1) {
 					const row = entries[at];
 					if (
@@ -570,19 +615,109 @@ function spanBetween(
 	return ids;
 }
 
-function barFactsFor(
+/** The latch record for a span the frame can see: facts, ids, and the
+ *  canonical keys the continuation extension matches by. */
+function latchedTurnFor(
 	entries: readonly TranscriptEntry[],
 	turn: TranscriptTurn,
 	closing: number,
-): TurnBarFacts {
+	spanIds: readonly string[],
+): LatchedTurn {
+	const spanRows = rowsBetween(entries, turn, closing);
+	const last = entries[Math.min(closing, turn.end + 1) - 1];
+	return {
+		facts: factsOverRows(spanRows),
+		hiddenIds: spanIds,
+		canonicalIds: spanRows.map(canonicalRowKey),
+		...(last !== undefined ? { spanEndKey: canonicalRowKey(last) } : {}),
+	};
+}
+
+/**
+ * The latch grown over a continuation cycle, or `null` when the turn has none
+ * (see the U1-1 note in `condensePlan`). Facts are recomputed over the whole
+ * span when every row the latch froze is still in the frame — exactly what a
+ * reload computes; otherwise (the capped window slid past old rows) the new
+ * rows' facts are ADDED to the frozen ones, which is the same sum without
+ * needing rows the wire no longer sends.
+ */
+function extendLatchedTurn(
+	entries: readonly TranscriptEntry[],
+	turn: TranscriptTurn,
+	latched: LatchedTurn,
+): LatchedTurn | null {
+	const endKey = latched.spanEndKey;
+	if (endKey === undefined) return null;
+	let latchedEnd = -1;
+	for (let at = turn.end; at >= turn.start; at -= 1) {
+		const row = entries[at];
+		if (row !== undefined && canonicalRowKey(row) === endKey) {
+			latchedEnd = at;
+			break;
+		}
+	}
+	// The latched closing is `latchedEnd + 1`; nothing after it → no continuation.
+	if (latchedEnd < 0 || latchedEnd + 1 >= turn.end) return null;
+	const closing = closingAnswerIndex(entries, turn);
+	if (closing === null || closing <= latchedEnd + 1) return null;
+
+	const known = new Set(latched.canonicalIds ?? latched.hiddenIds);
+	const isKnown = (row: TranscriptEntry): boolean =>
+		known.has(canonicalRowKey(row)) || latched.hiddenIds.includes(row.id);
+	const spanRows = rowsBetween(entries, turn, closing);
+	const added = spanRows.filter((row) => !isKnown(row));
+	if (added.length === 0) return null;
+	const presentCount = spanRows.length - added.length;
+	const fullyPresent = presentCount >= known.size;
+	const facts = fullyPresent
+		? factsOverRows(spanRows)
+		: addFacts(latched.facts, factsOverRows(added));
+	const hiddenIds = [...latched.hiddenIds, ...added.map((row) => row.id)];
+	const canonicalIds = [
+		...(latched.canonicalIds ?? latched.hiddenIds),
+		...added.map(canonicalRowKey),
+	];
+	const last = entries[Math.min(closing, turn.end + 1) - 1];
+	return {
+		facts,
+		hiddenIds,
+		canonicalIds,
+		...(last !== undefined ? { spanEndKey: canonicalRowKey(last) } : {}),
+	};
+}
+
+function addFacts(a: TurnBarFacts, b: TurnBarFacts): TurnBarFacts {
+	const failed = (a.failed ?? 0) + (b.failed ?? 0);
+	return {
+		steps: a.steps + b.steps,
+		durationS: a.durationS + b.durationS,
+		...(failed > 0 ? { failed } : {}),
+		...(a.steered || b.steered ? { steered: true } : {}),
+	};
+}
+
+/** The span's rows (not ids) — `spanBetween`'s rule, for facts and keys. */
+function rowsBetween(
+	entries: readonly TranscriptEntry[],
+	turn: TranscriptTurn,
+	closing: number,
+): TranscriptEntry[] {
+	const rows: TranscriptEntry[] = [];
+	const limit = Math.min(closing, turn.end + 1);
+	for (let at = turn.start + 1; at < limit; at += 1) {
+		const row = entries[at];
+		if (row === undefined || staysVisibleOutsideTurnBar(row)) continue;
+		rows.push(row);
+	}
+	return rows;
+}
+
+function factsOverRows(rows: readonly TranscriptEntry[]): TurnBarFacts {
 	let steps = 0;
 	let durationS = 0;
 	let failed = 0;
 	let steered = false;
-	const limit = Math.min(closing, turn.end + 1);
-	for (let at = turn.start + 1; at < limit; at += 1) {
-		const entry = entries[at];
-		if (entry === undefined || staysVisibleOutsideTurnBar(entry)) continue;
+	for (const entry of rows) {
 		if (entry.kind === "steer" || entry.kind === "user") {
 			steered = true;
 			continue;
@@ -603,15 +738,20 @@ function barFactsFor(
 /* --------------------------------------------------------------------- copy */
 
 /**
- * The bar's visible localized phrases (`relay.transcript.turn.*`), joined with `·`:
- * e.g. `completed · Took 42s · 38 actions` or `Steered · Took 12s · 4 actions`.
+ * The bar's visible localized phrases (`relay.transcript.turn.*`), joined with
+ * `·`: an optional steered label, the `took` clause (its shape is the locale's
+ * — English reads `Took 42s`, some locales render the duration alone) and the
+ * action count; `Turn condensed` when neither number exists.
+ *
+ * The outcome word `completed` is deliberately NOT painted (U1-3): beside a
+ * red `✗` failure glyph it read as a contradiction, and Relay's `TurnBar`
+ * (`condense-rows.tsx`) paints only the numbers too. Screen readers still hear
+ * it — `barAccessibleName` keeps `completed`, as Relay's `sr-only` span does.
  */
 export function barPhrases(facts: TurnBarFacts): string[] {
 	const phrases: string[] = [];
 	if (facts.steered) {
 		phrases.push(t("relay.transcript.label.steered"));
-	} else {
-		phrases.push(t("relay.transcript.turn.completed"));
 	}
 	const seconds = Math.floor(facts.durationS);
 	if (seconds >= 1) {
@@ -655,7 +795,18 @@ export function barAccessibleName(
 	headline: string,
 ): string {
 	const subject = headline.length > 0 ? `Turn "${headline}"` : "Turn";
-	const clauses = [...barPhrases(facts)];
+	/* `completed` leads the spoken name (the eligibility IS the completion, see
+	 * the module note) even though the bar no longer paints it (U1-3); the
+	 * painted `Turn condensed` fallback is redundant once it is there. */
+	const painted = barPhrases(facts);
+	const clauses = facts.steered
+		? painted
+		: [
+				t("relay.transcript.turn.completed"),
+				...painted.filter(
+					(phrase) => phrase !== t("relay.transcript.turn.condensed"),
+				),
+			];
 	if ((facts.failed ?? 0) > 0) {
 		clauses.push(t("relay.transcript.fold.failed_label"));
 	}
@@ -1305,7 +1456,9 @@ export function groupPlan(input: GroupInput): GroupPlan {
 			groups.push(view);
 		}
 		if (open) {
-			emitted.push(item);
+			emitted.push(
+				item.kind === "entry" ? { ...item, inOpenGroup: true } : item,
+			);
 			view.itemIds.push(item.id);
 		}
 	}
@@ -1467,6 +1620,7 @@ export function foldPlan(input: FoldPlanInput): FoldPlan {
 		if (
 			item.kind === "entry" &&
 			item.opensTurn !== true &&
+			item.inOpenGroup !== true &&
 			(isFoldableToolEntry(item.entry) || isFoldReceiptEntry(item.entry))
 		) {
 			if (runItems.length === 0) runStartAt = at;
@@ -1478,13 +1632,16 @@ export function foldPlan(input: FoldPlanInput): FoldPlan {
 	}
 	flush();
 
-	const latchedFoldIds = live
-		? latchFoldedIds(
-				input.latchedFoldIds ?? new Set(),
-				heldCanonical,
-				createdRuns,
-			)
-		: new Set<string>();
+	/* The latch survives a `!live` frame (R1-4): the stream dips at tool-segment
+	 * boundaries (the relay's "THE SETTLE LATCH" note in `condense-plan.ts`),
+	 * and wiping it there dissolved a fold only the latch kept alive, for good.
+	 * Pruning to the canonical ids this frame still holds is the reset: rows
+	 * that left (a session switch re-keys the list's ref anyway) drop out. */
+	const latchedFoldIds = latchFoldedIds(
+		input.latchedFoldIds ?? new Set(),
+		heldCanonical,
+		createdRuns,
+	);
 
 	return { items: emitted, folds, latchedFoldIds };
 }

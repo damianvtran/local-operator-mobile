@@ -222,3 +222,21 @@ describe("tool row has no state fill (D4)", () => {
 		expect(row).toMatch(PULSING_GLYPH);
 	});
 });
+
+/** R1-1: list override, then local override, then the bang-mode default. */
+const OPEN_PRECEDENCE =
+	/const open =\s*controlledOpen \?\? override \?\? entry\.details\.user_run === true;/;
+
+describe("tool row open precedence (R1-1)", () => {
+	const source = readFileSync(
+		new URL("./tool-row.tsx", import.meta.url),
+		"utf8",
+	);
+	it("lets `user_run` decide whenever the reader has not overridden the row", () => {
+		// A list-supplied override, then the local one, then the bang-mode
+		// default — never `controlled !== undefined ? controlled : …` with the
+		// list always supplying a boolean (that shut every `! cmd` row).
+		expect(source).toMatch(OPEN_PRECEDENCE);
+		expect(source).toContain("`user_run` is the DEFAULT under every override");
+	});
+});

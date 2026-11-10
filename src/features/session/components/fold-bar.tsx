@@ -30,9 +30,11 @@ import { cx } from "@/ui/variants";
  *     borderless with `bg-row-hover` press feedback only.
  *
  * STATES:
- *   - Closed + live running: pulsing `⟳` glyph (`Shimmer`), active tool's
- *     semantic display name + summary, total action count, and live elapsed time.
- *   - Settled (or open): `✓` (or `✗` + failure count in `text-danger` when any
+ *   - Closed + live running: pulsing `⟳` glyph (`Shimmer`) even after an
+ *     earlier call failed (the red count still shows), active tool's semantic
+ *     display name + summary, total action count, and live elapsed time.
+ *   - Open + running: a static dim `⟳` — never a `✓` over a running row.
+ *   - Settled: `✓` (or `✗` + failure count in `text-danger` when any
  *     folded call errored) plus localized structured action-class units up to 5
  *     (`3 files · 2 searches · 1 shell · 1 task` via `relay.transcript.fold.*`).
  */
@@ -51,12 +53,19 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 	const units = foldSettledUnits(fold.countSegments, fold.receiptEntries);
 	const totalActions = foldActionCountLabel(fold.actions.length);
 
-	const glyph = failed ? "✗" : fold.running && !open ? "⟳" : "✓";
-	const glyphInk = failed
-		? "text-danger"
-		: fold.running && !open
+	/* Running outranks failed for the GLYPH (Q1-1 / U1-4): the fold's state is
+	 * "still working" until it settles, so neither an open bar (a static `✓`
+	 * over a running row) nor an earlier failure (a still `✗` beside the call
+	 * that is running now) may claim it is done. The failure is not hidden —
+	 * the red `failedCount` on the trailing edge stays. Open + running paints a
+	 * static, dim `⟳`: the rows below carry the live motion. */
+	const glyph = fold.running ? "⟳" : failed ? "✗" : "✓";
+	const glyphInk =
+		fold.running && !open
 			? "text-accent"
-			: "text-ink-dim";
+			: !fold.running && failed
+				? "text-danger"
+				: "text-ink-dim";
 
 	return (
 		<View className={TRACE_ROW_OUTER_CLASS}>
@@ -78,10 +87,7 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 							TRACE_COLUMN_GAP_CLASS,
 						)}
 					>
-						<Shimmer
-							active={fold.running && !open && !failed}
-							className="w-4 shrink-0"
-						>
+						<Shimmer active={fold.running && !open} className="w-4 shrink-0">
 							<Text className={cx(TRACE_GLYPH_BOX_CLASS, glyphInk)} aria-hidden>
 								{glyph}
 							</Text>

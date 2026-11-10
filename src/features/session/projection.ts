@@ -32,6 +32,7 @@ import type {
 	ToolState,
 	TranscriptEntry,
 } from "@/contracts";
+import { canonicalKeyOf } from "@/features/session/row-identity";
 import { elapsedLabel } from "@/lib/format";
 import { subagentChipId, transcriptRowId } from "@/ui/a11y";
 
@@ -174,15 +175,13 @@ export function bridgeReceiptMeta(entry: TranscriptEntry): string {
 }
 
 /** Canonical identity for a transcript row across live (`tc-<call>`) and durable
- *  (`<msg>:<call>`) tool streams: when `tool_call_id` is present on a tool row,
- *  `call:<tool_call_id>` stays invariant across stream-to-history handoff so open
- *  disclosures and fold bars never reset or duplicate. */
+ *  (`<msg>:<call>`) tool streams, so open disclosures and fold bars never reset
+ *  or duplicate at the handoff. ONE implementation (`row-identity.ts`
+ *  `canonicalKeyOf`, R1-6): the row-reuse path and the latches must agree on
+ *  the key, and two copies were one edit away from splitting them. */
 export const canonicalRowKey = (
 	entry: Pick<TranscriptEntry, "id" | "kind" | "tool_call_id">,
-): string =>
-	entry.kind === "tool" && entry.tool_call_id !== ""
-		? `call:${entry.tool_call_id}`
-		: entry.id;
+): string => canonicalKeyOf(entry);
 
 /** Display identity rejects control/bidi code points, never authored body.
  * Numeric ranges make that boundary explicit without a regex whose embedded

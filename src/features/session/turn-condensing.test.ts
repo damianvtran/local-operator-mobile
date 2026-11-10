@@ -620,21 +620,15 @@ describe("no un-condense jitter: a condensed turn's rendering is a constant of e
 /* --------------------------------------------------------------- copy, hook */
 
 describe("the bar's copy", () => {
-	it("spells the completion, the step count and the tool seconds, omitting zero clauses", () => {
-		// Localized (`relay.transcript.turn.*`): the relay's own bar copy.
+	it("spells the step count and the tool seconds, omitting zero clauses", () => {
+		// Localized (`relay.transcript.turn.*`): the relay's own bar copy, which
+		// paints no outcome word — `completed` is the accessible name's (U1-3).
 		expect(barPhrases({ steps: 38, durationS: 42 })).toEqual([
-			"completed",
 			"Took 42s",
 			"38 actions",
 		]);
-		expect(barPhrases({ steps: 1, durationS: 0.4 })).toEqual([
-			"completed",
-			"1 action",
-		]);
-		expect(barPhrases({ steps: 0, durationS: 124 })).toEqual([
-			"completed",
-			"Took 2m 04s",
-		]);
+		expect(barPhrases({ steps: 1, durationS: 0.4 })).toEqual(["1 action"]);
+		expect(barPhrases({ steps: 0, durationS: 124 })).toEqual(["Took 2m 04s"]);
 	});
 
 	it("names the turn and the completion in the accessible name", () => {
