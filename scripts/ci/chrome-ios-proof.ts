@@ -44,6 +44,12 @@ import {
 	nativeConnectionPrerequisiteFailed,
 	probeNativeRelay,
 } from "./native-relay-preflight.ts";
+import {
+	APPEARANCE_CAP_SECONDS,
+	appearanceArgs,
+	appearanceTimingLine,
+	type SimctlAppearance,
+} from "./simctl-appearance.ts";
 
 const env = process.env;
 const need = (name: string): string => {
@@ -232,6 +238,27 @@ async function run(
 			`${name} failed rc=${code}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
 		);
 	return output;
+}
+
+/** Switch the simulator's appearance under its own measured cap (see
+ *  simctl-appearance.ts), logging the duration even when the call fails or is
+ *  killed — that log line is the distribution the cap is tuned from. */
+async function setAppearance(
+	step: string,
+	udid: string,
+	theme: SimctlAppearance,
+): Promise<void> {
+	const t0 = Date.now();
+	try {
+		await run(
+			step,
+			"xcrun",
+			appearanceArgs(udid, theme),
+			APPEARANCE_CAP_SECONDS,
+		);
+	} finally {
+		note(appearanceTimingLine(step, Date.now() - t0));
+	}
 }
 
 type Slot = {
@@ -541,12 +568,7 @@ try {
 			["simctl", "bootstatus", udid, "-b"],
 			600,
 		);
-		await run(
-			`appearance-${lane.id}`,
-			"xcrun",
-			["simctl", "ui", udid, "appearance", lane.theme],
-			60,
-		);
+		await setAppearance(`appearance-${lane.id}`, udid, lane.theme);
 		if (lane.reduceTransparency) {
 			/* Reduce Transparency through the simulator's accessibility domain. The
 			 *  app reads it via AccessibilityInfo at mount, so it is set BEFORE the
