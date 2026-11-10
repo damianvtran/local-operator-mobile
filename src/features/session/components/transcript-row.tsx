@@ -20,8 +20,13 @@ import {
 	peerLabel,
 	transcriptRowTestID,
 } from "@/features/session/projection";
+import {
+	USER_BUBBLE_BOX_CLASS,
+	userBubbleFill,
+} from "@/features/session/user-bubble";
 import { t } from "@/i18n";
 import { ROLE, SURFACE, transcriptImageId } from "@/ui/a11y";
+import { useTheme } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
@@ -95,6 +100,52 @@ const BLOCK_LABEL: Record<string, string> = {
 	subagent: "subagent",
 	peer: "peer",
 	generic: "entry",
+};
+
+/**
+ * The box of the reader's own turn: the bubble for a prompt, a quiet block for a
+ * steer.
+ *
+ * A prompt is a BORDERLESS FILL, the relay's own bubble box (its
+ * `transcript.tsx`: `rounded-md bg-surface px-3 py-1.5`; visual audit D3). It
+ * carried a hairline on all sides plus a 2 px accent start rule: the hairline
+ * measured 1.25:1 on the light canvas — an edge with no separation — and the
+ * rule put a green-edged box on every exchange. The fill and the right
+ * alignment say whose turn it is.
+ *
+ * THE FILL IS `user-bubble`, NOT `surface` (`USER_BUBBLE_BOX_CLASS`). With the
+ * edges gone the fill is the bubble's only signal, and `surface` sits
+ * 1.06-1.14:1 off `canvas` in every shipped theme (`surface`/`canvas` across
+ * all 59 palettes in `tokens.gen.ts`): on a phone the reader's turn rendered as
+ * bare indented text, indistinguishable from the assistant's prose (operator
+ * report on the iOS build, 2026-11-09). Do not swap it back for a panel ground.
+ *
+ * The fill ALSO rides `style` (`userBubbleFill`), read from the active palette
+ * rather than through uniwind's variable: on that build the box's padding
+ * applied and its fill did not (design round 1, D1; the module comment in
+ * `user-bubble.ts` records what was ruled out). A separate component so the
+ * theme hook runs only for the reader's own rows, never for every row kind.
+ */
+const UserBox = ({
+	isSteer,
+	children,
+}: {
+	isSteer: boolean;
+	children: React.ReactNode;
+}) => {
+	const { active } = useTheme();
+	if (isSteer) {
+		// No fill, no accent edge: a quiet right-aligned block.
+		return <View className="max-w-[85%] px-1">{children}</View>;
+	}
+	return (
+		<View
+			className={cx("max-w-[85%]", USER_BUBBLE_BOX_CLASS)}
+			style={userBubbleFill(active)}
+		>
+			{children}
+		</View>
+	);
 };
 
 const TranscriptRowImpl = ({
@@ -195,35 +246,7 @@ const TranscriptRowImpl = ({
 		 *  or peer receipt, below) folds. A steer is the same reader's voice. */
 		return (
 			<View className="items-end px-4 py-1" testID={testID}>
-				<View
-					className={cx(
-						"max-w-[85%]",
-						isSteer
-							? // No fill, no accent edge: a quiet right-aligned block.
-								"px-1"
-							: /* A BORDERLESS FILL, the relay's own bubble box (its
-								 *  `transcript.tsx`: `rounded-md bg-surface px-3 py-1.5`;
-								 *  visual audit D3). It carried a hairline on all sides
-								 *  plus a 2 px accent start rule: the hairline measured
-								 *  1.25:1 on the light canvas — an edge with no
-								 *  separation — and the rule put a green-edged box on
-								 *  every exchange. The fill and the right alignment
-								 *  say whose turn it is.
-								 *
-								 *  THE FILL IS `user-bubble`, NOT `surface`. With the
-								 *  edges gone the fill is the bubble's only signal, and
-								 *  `surface` sits 1.06-1.14:1 off `canvas` in every
-								 *  shipped theme: on a phone the reader's turn rendered
-								 *  as bare indented text, indistinguishable from the
-								 *  assistant's prose (operator report on the iOS build,
-								 *  2026-11-09). `user-bubble` is solved per palette to
-								 *  >= 1.25:1 on canvas with `ink` at the text floor
-								 *  (`design/themes/derive.mjs`; asserted by
-								 *  `palette-rules.mjs` § "the user bubble"). Do not
-								 *  swap it back for a panel ground. */
-								"rounded-md bg-user-bubble px-3 py-1.5",
-					)}
-				>
+				<UserBox isSteer={isSteer}>
 					{entry.text.length > 0 ? (
 						<Text
 							className={cx(
@@ -247,12 +270,13 @@ const TranscriptRowImpl = ({
 									index={image.index}
 									mimeType={image.mime_type}
 									load={loadImage}
+									onBubble={!isSteer}
 									testID={transcriptImageId(entry.id, image.index)}
 								/>
 							))}
 						</View>
 					) : null}
-				</View>
+				</UserBox>
 				{anchors}
 			</View>
 		);

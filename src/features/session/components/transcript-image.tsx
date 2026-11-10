@@ -61,7 +61,19 @@ export type TranscriptImageProps = {
 	 *  reads a literal default as exactly that. The only caller passes
 	 *  `transcriptImageId(entryId, index)`, so nothing is lost by requiring it. */
 	testID: string;
+	/** The frame sits inside the reader's `user-bubble` fill. There `hairline`
+	 *  all but vanishes in the light themes (1.006-1.02:1 against the bubble in
+	 *  `localOperatorLight`, `tokyoNightDay`, `gruvboxLight`…; agent review
+	 *  round 1, m1), so the frame steps up to `hairline-strong`. Everywhere
+	 *  else (an assistant image, an image card) it stays on canvas/surface and
+	 *  keeps the quieter `hairline`. */
+	onBubble?: boolean;
 };
+
+/** The frame's edge class for where it sits (see `onBubble`). Exported so a
+ *  Node source test can pin it without rendering. */
+export const imageFrameBorderClass = (onBubble: boolean): string =>
+	onBubble ? "border-hairline-strong" : "border-hairline";
 
 /** What the frame shows. `failed` is a transport failure — the same reading for
  *  the reader as a missing image, but NOT remembered, so the next mount retries. */
@@ -77,6 +89,7 @@ export const TranscriptImage = ({
 	index,
 	load,
 	testID,
+	onBubble = false,
 }: TranscriptImageProps) => {
 	/* The lazy initialiser reads the cache, so a remount starts settled. */
 	const [view, setView] = useState<Shown>(() => ({
@@ -119,7 +132,7 @@ export const TranscriptImage = ({
 
 	return (
 		<View
-			className="overflow-hidden rounded-sm border border-hairline"
+			className={`overflow-hidden rounded-sm border ${imageFrameBorderClass(onBubble)}`}
 			/* `maxWidth` is the column's cap: a wide image is letterboxed inside
 			 * the frame (`contain`) instead of pushing the bubble past the edge. */
 			style={{ width: frame.width, height: frame.height, maxWidth: "100%" }}

@@ -85,6 +85,12 @@ vi.mock("@/features/session/components/tool-row", () => ({
 vi.mock("@/features/session/components/ask-response-row", () => ({
 	AskResponseRow: () => null,
 }));
+/* The reader's bubble reads its native fill from the active palette
+ *  (`transcript-row.tsx`'s `UserBox`); the real module reaches `uniwind`,
+ *  which Node cannot load. Same stub as `transcript-fold-state.test.ts`. */
+vi.mock("@/ui/appearance", () => ({
+	useTheme: () => ({ active: { colors: {} } }),
+}));
 vi.mock("@/features/session/components/transcript-image", () => ({
 	TranscriptImage: () => null,
 }));

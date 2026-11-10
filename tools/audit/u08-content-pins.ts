@@ -1253,8 +1253,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * and `theme.css` / `tokens.gen.ts` carry the new role for every theme. The
 	 * user bubble's FILL colour therefore differs in a frame; its box, type and
 	 * every other row are unchanged. Source admission only, NOT rendered or
-	 * native proof. */
-	src: "324e518b82cfb7b336a4eddf0fb8be359e8c13a985a8cff0bcdd1aa7a6559be5",
+	 * native proof.
+	 *
+	 * Re-pinned again the same day with --print from the staged round-1
+	 * remediation tree: the bubble box moves to `features/session/user-bubble.ts`
+	 * and also carries an explicit native `backgroundColor` from the active
+	 * palette (design D1); the pending echo takes the same box with its caption
+	 * below it (M1, D2); an image on the bubble is framed `hairline-strong`
+	 * (m1). Source admission only, NOT rendered or native proof. */
+	src: "545f62049a3bfa7b3ef70e920999dccdec53946e9678e5aa7bafe846c1c40687",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
