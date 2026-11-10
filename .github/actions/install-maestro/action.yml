@@ -1,0 +1,31 @@
+name: Install the pinned Maestro CLI
+description: >
+  Provision Maestro $MAESTRO_VERSION from its GitHub release with retries,
+  sha256 + zip verification and an actions/cache of the archive, then put
+  ~/.maestro/bin on PATH. The single shared copy of what used to be six
+  `curl https://get.maestro.mobile.dev | bash` steps, so the lanes cannot
+  drift; see scripts/ci/install-maestro.sh for why (a CDN 504 in e2e.yml run
+  42581162973 failed every native proof lane at provisioning).
+inputs:
+  version:
+    description: Maestro CLI version to install (callers pass env.MAESTRO_VERSION)
+    required: true
+runs:
+  using: composite
+  steps:
+    # Keyed on version + OS + arch: the zip itself is platform-neutral, but
+    # the cache scope stays per runner image so a cache entry never crosses
+    # an architecture the lane did not test. A hit skips the download; the
+    # script still re-verifies the sha256 before unpacking.
+    - name: Restore the Maestro archive cache
+      uses: actions/cache@v6
+      with:
+        path: ${{ runner.temp }}/maestro-dist/${{ inputs.version }}
+        key: maestro-zip-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Install Maestro
+      shell: bash
+      env:
+        MAESTRO_VERSION: ${{ inputs.version }}
+        MAESTRO_ZIP_CACHE: ${{ runner.temp }}/maestro-dist
+      run: scripts/ci/install-maestro.sh
