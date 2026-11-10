@@ -87,7 +87,7 @@ describe("Team Bridge copy", () => {
 			k.startsWith("mobile.team_bridge."),
 		);
 		// Exact merged attachment + consent + established key union.
-		expect(keys).toHaveLength(155);
+		expect(keys).toHaveLength(158);
 		expect(keys.sort()).toEqual(
 			Object.keys(CATALOGUES.en)
 				.filter((key) => key.startsWith("mobile.team_bridge."))

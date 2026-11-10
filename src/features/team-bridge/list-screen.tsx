@@ -185,10 +185,30 @@ function BridgeRowLink({
 	);
 }
 
-function ListContent() {
+/**
+ * The organization directory (org switcher, sections, profile and org sheets)
+ * WITHOUT a screen around it, so the route screen and the workspace drawer's
+ * Team Bridge pane render the one list rather than two that drift (Bridge UI
+ * brief §2: reuse the list content, never nest the full route Screen in the
+ * drawer's modal). Reads the live Team Bridge store directly; there is no
+ * drawer-side copy of it.
+ *
+ * `onBeforeOpen` runs before a row routes to a thread. The drawer passes its
+ * `onNavigate`, which dismisses the panel first so the thread is not opened
+ * underneath a still-covering drawer; the route screen passes nothing.
+ */
+export function BridgeDirectory({
+	onBeforeOpen,
+}: {
+	onBeforeOpen?: () => void;
+} = {}) {
 	const { actions } = useTeamBridge();
 	const state = useTeamBridgeState((s) => s);
-	const open = useOpenTarget();
+	const openTarget = useOpenTarget();
+	const open = (target: Parameters<typeof openTarget>[0]) => {
+		onBeforeOpen?.();
+		openTarget(target);
+	};
 	const [switching, setSwitching] = useState(false);
 	const [profile, setProfile] = useState<ProfileSubject | null>(null);
 	const tenantId = state.selectedTenantId;
@@ -266,12 +286,7 @@ function ListContent() {
 		if (tenantId) void actions.loadOrganization(tenantId);
 	};
 	return (
-		<Screen
-			title={t("mobile.team_bridge.title")}
-			headerLeading={<BridgeBack />}
-			scroll={false}
-			testID={SCREEN.teamBridgeList}
-		>
+		<>
 			<View className="px-4 py-2">
 				<Button
 					label={t("mobile.team_bridge.list.organization_selected", {
@@ -473,6 +488,7 @@ function ListContent() {
 					subject={profile}
 					tenantId={tenantId}
 					onClose={() => setProfile(null)}
+					onBeforeOpen={onBeforeOpen}
 				/>
 			)}
 			<Sheet
@@ -500,6 +516,19 @@ function ListContent() {
 					))}
 				</View>
 			</Sheet>
+		</>
+	);
+}
+
+function ListContent() {
+	return (
+		<Screen
+			title={t("mobile.team_bridge.title")}
+			headerLeading={<BridgeBack />}
+			scroll={false}
+			testID={SCREEN.teamBridgeList}
+		>
+			<BridgeDirectory />
 		</Screen>
 	);
 }

@@ -177,6 +177,9 @@ export const CONTROL = {
 	teamBridgeMessageInput: "team-bridge-message-input",
 	teamBridgeMessagesRetry: "team-bridge-messages-retry",
 	teamBridgeMetadataRetry: "team-bridge-metadata-retry",
+	/** The workspace drawer Bridge pane's "Open Team Bridge" control, shown
+	 *  while the hub is not open (checking, signed out, unavailable). */
+	teamBridgeDrawerOpen: "team-bridge-drawer-open",
 	teamBridgeNavigation: "team-bridge-navigation",
 	teamBridgeNoticeDismiss: "team-bridge-notice-dismiss",
 	teamBridgeNoticeRead: "team-bridge-notice-read",
@@ -736,6 +739,8 @@ export const SURFACE = {
 	teamBridgeDeliveryHelpSheet: "team-bridge-delivery-help-sheet",
 	teamBridgeNotifySheet: "team-bridge-notify-sheet",
 	teamBridgeOrganizations: "team-bridge-organizations",
+	/** The Team Bridge pane inside the workspace drawer. */
+	teamBridgeDrawerPane: "team-bridge-drawer-pane",
 	teamBridgeProfile: "team-bridge-profile",
 	teamBridgeProfileName: "team-bridge-profile-name",
 	teamBridgePlanConsole: "team-bridge-plan-console",

@@ -80,6 +80,14 @@ export interface TeamBridgeState {
 	selectedTenantId: string | null;
 	totalUnread: number;
 	/**
+	 * Whether `totalUnread` came from a successful account-unread read. Until one
+	 * lands, `totalUnread` is the initial 0 and an absence of knowledge, not a
+	 * receipt: the workspace drawer's Bridge badge must say "loading" rather than
+	 * paint "no unread" (Bridge UI brief §2, unknown ≠ zero). A failed refresh
+	 * keeps whatever was last known, like the badge itself does.
+	 */
+	unreadKnown: boolean;
+	/**
 	 * What the composer may attach, from `status.attachments`. `null` until a
 	 * status read says otherwise, and whenever the hub has no attachment store:
 	 * no attach affordance is offered (`attachmentLimits`).
@@ -133,6 +141,7 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 	organizations: [],
 	selectedTenantId: null,
 	totalUnread: 0,
+	unreadKnown: false,
 	attachments: null,
 	orgs: {},
 	threads: {},
@@ -509,6 +518,7 @@ export function createTeamBridgeStore(deps: {
 					);
 					store.setState((s) => ({
 						totalUnread: answer.total,
+						unreadKnown: true,
 						organizations: s.organizations.map((o) => ({
 							...o,
 							unread: byTenant.get(o.tenantId) ?? o.unread,

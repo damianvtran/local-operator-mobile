@@ -337,7 +337,10 @@ describe("team bridge store", () => {
 			accessToken: async () => token(SELF),
 		});
 		await actions.checkStatus();
+		// An open gate is not an unread receipt: the initial 0 is unknown.
+		expect(store.getState().unreadKnown).toBe(false);
 		await actions.refreshUnread();
+		expect(store.getState().unreadKnown).toBe(true);
 		await actions.loadOrganization(TENANT);
 		expect(store.getState().totalUnread).toBe(5);
 		await actions.markRead(TENANT, "bcv_channel_general", 4);
@@ -481,6 +484,7 @@ describe("account ownership and concurrent reconciliation", () => {
 			selfAccountId: null,
 			selectedTenantId: null,
 			totalUnread: 0,
+			unreadKnown: false,
 			orgs: {},
 			threads: {},
 		});

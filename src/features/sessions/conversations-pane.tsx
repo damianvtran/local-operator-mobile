@@ -525,7 +525,13 @@ export const ConversationsPane = ({
 				 *  with its unread count on the icon; and because this row is kept
 				 *  at every text size, it stays reachable where the strip below
 				 *  collapses to "More". */}
-				<TeamBridgeEntry variant="compact" onNavigate={onNavigate} />
+				{/* Inside the drawer (`onClose` is passed only there) the drawer's own
+				 *  labelled Agents / Team Bridge switch is the entry, so this icon would
+				 *  be a second, unlabelled one. The docked tablet pane has no drawer
+				 *  header, so it keeps the icon. */}
+				{onClose ? null : (
+					<TeamBridgeEntry variant="compact" onNavigate={onNavigate} />
+				)}
 				<IconButton
 					accessibilityLabel={t("relay.chrome.drawer.settings")}
 					onPress={() => go("/settings")}

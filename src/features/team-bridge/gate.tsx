@@ -5,6 +5,7 @@ import { Platform, Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { t } from "@/i18n";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
+import type { TeamBridgeState } from "@/team-bridge/store";
 import { CONTROL, SURFACE, teamBridgeGateId } from "@/ui/a11y";
 import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
@@ -21,6 +22,22 @@ export function BridgeBack() {
 	);
 }
 
+/** The one sentence naming a closed gate; shared with the workspace drawer's
+ * Bridge pane so the two never describe the same state differently. */
+export function gateTitle(
+	gate: Exclude<TeamBridgeState["gate"], "open">,
+): string {
+	return gate === "checking"
+		? t("mobile.team_bridge.gate.checking")
+		: gate === "signed_out"
+			? t("mobile.team_bridge.gate.signed_out")
+			: gate === "update_required"
+				? t("mobile.team_bridge.gate.update_required")
+				: gate === "plan_required"
+					? t("mobile.team_bridge.gate.plan_required")
+					: t("mobile.team_bridge.gate.unavailable");
+}
+
 /** Admission wraps the entire surface: restricted accounts must not briefly see directory or composer chrome. */
 export function BridgeGate({ children }: { children: ReactNode }) {
 	const gate = useTeamBridgeState((s) => s.gate);
@@ -28,16 +45,7 @@ export function BridgeGate({ children }: { children: ReactNode }) {
 	const connection = useConnection();
 	const [error, setError] = useState<string | null>(null);
 	if (gate === "open") return children;
-	const title =
-		gate === "checking"
-			? t("mobile.team_bridge.gate.checking")
-			: gate === "signed_out"
-				? t("mobile.team_bridge.gate.signed_out")
-				: gate === "update_required"
-					? t("mobile.team_bridge.gate.update_required")
-					: gate === "plan_required"
-						? t("mobile.team_bridge.gate.plan_required")
-						: t("mobile.team_bridge.gate.unavailable");
+	const title = gateTitle(gate);
 	return (
 		<Screen
 			title={t("mobile.team_bridge.title")}
