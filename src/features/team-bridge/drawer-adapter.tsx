@@ -95,7 +95,10 @@ export function TeamBridgeDrawerPane({
 	return (
 		<View className="min-h-0 flex-1" testID={SURFACE.teamBridgeDrawerPane}>
 			{gate === "open" ? (
-				<BridgeDirectory onBeforeOpen={onNavigate} />
+				/* `raised`: the drawer and the docked pane are `bg-elevated`, where
+				 *  the canvas skeleton pair paints its bars in the ground's own
+				 *  colour (review R1-2). */
+				<BridgeDirectory onBeforeOpen={onNavigate} ground="raised" />
 			) : (
 				/* Not admitted (yet): say which state, and hand off to the full
 				 * screen, which owns sign-in, plan and retry. Never a dead end, and

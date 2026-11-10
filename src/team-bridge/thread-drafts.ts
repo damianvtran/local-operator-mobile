@@ -13,10 +13,15 @@
  *   Bridge store, wiping every entry synchronously on sign-out or account
  *   replacement so nothing survives an authentication boundary in memory.
  * - Intentionally in-memory only (not described as restart-safe).
+ *
+ * NO SIZE CAP (review R1-7). Entries exist only for threads with unsent text:
+ * writing an empty draft (send clears the composer) deletes the entry, and the
+ * sign-out/reset wipe empties the map. What remains is bounded by what one
+ * person has typed and not sent in one signed-in session — an unmeasured
+ * eviction count would only ever discard someone's unsent words.
  */
 
 const drafts = new Map<string, string>();
-const MAX_DRAFTS = 64;
 
 export function teamBridgeDraftKey(input: {
 	accountId: string | null;
@@ -48,13 +53,7 @@ export function writeTeamBridgeDraft(key: string | null, text: string): void {
 		drafts.delete(key);
 		return;
 	}
-	// Refresh insertion order and bound total retained entries.
-	drafts.delete(key);
 	drafts.set(key, text);
-	if (drafts.size > MAX_DRAFTS) {
-		const oldest = drafts.keys().next().value;
-		if (oldest !== undefined) drafts.delete(oldest);
-	}
 }
 
 export function clearTeamBridgeDrafts(): void {

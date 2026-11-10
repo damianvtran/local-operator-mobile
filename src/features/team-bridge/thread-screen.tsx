@@ -138,7 +138,12 @@ const ThreadMessageRow = memo(function ThreadMessageRow({
 			</View>
 			<View className="min-w-0 flex-1">
 				{!continuation && (
-					<View className="flex-row flex-wrap items-baseline gap-x-2">
+					/* `relative z-10`: the author name pads its box to the touch
+					 * floor with a negative margin (`AUTHOR_NAME_TOUCH_BOX`), so its
+					 * bottom edge overhangs the body below. As a later sibling the
+					 * body would paint (and hit-test) over that overhang and the
+					 * focus ring (design round 2 D6, restored per review R1-4). */
+					<View className="relative z-10 flex-row flex-wrap items-baseline gap-x-2">
 						{subject ? (
 							<ProfileAuthorName
 								subject={subject}
@@ -658,7 +663,14 @@ function ThreadContent({
 			 *  TestFlight 753: "way too large"). `compact` is passed to `Screen`
 			 *  too, so the row and the title agree in short landscape exactly as
 			 *  the session screen's do. */
-			titleNode={<BridgeThreadTitle title={title} />}
+			titleNode={
+				/* `#` is drawn for sighted readers only: announced, it is
+				 *  "number sign humans" (review R1-10). */
+				<BridgeThreadTitle
+					title={title}
+					accessibilityLabel={title === rawTitle ? undefined : rawTitle}
+				/>
+			}
 			compact={compact}
 			/* Stacked (320 pt / large text), the one trailing icon sits on the
 			 *  back row at the edge, as the session header's cluster does,

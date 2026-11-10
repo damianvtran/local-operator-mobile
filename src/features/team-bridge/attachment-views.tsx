@@ -455,7 +455,10 @@ function ImageViewer({
 			disabled={disabled}
 			onPress={onPress}
 			testID={testID}
-			className={`items-center justify-center rounded-full border border-hairline ${disabled ? "bg-sunken" : "bg-elevated"}`}
+			/* An enabled control keeps the 3:1 `border-control` boundary (brand
+			 * kit; review R1-5); passive tiles and a disabled control take the
+			 * quiet hairline. */
+			className={`items-center justify-center rounded-full border ${disabled ? "border-hairline bg-sunken" : "border-border-control bg-elevated"}`}
 			style={{
 				width: TOUCH_FLOOR,
 				height: TOUCH_FLOOR,
@@ -757,7 +760,7 @@ export function ComposerAttachments({
 										}}
 									>
 										<View
-											className="absolute h-6 w-6 items-center justify-center rounded-full border border-hairline bg-elevated"
+											className="absolute h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated"
 											style={{
 												left: badges.retry.x - rects.retry.x,
 												top: badges.retry.y - rects.retry.y,
@@ -785,7 +788,7 @@ export function ComposerAttachments({
 									}}
 								>
 									<View
-										className="absolute h-6 w-6 items-center justify-center rounded-full border border-hairline bg-elevated"
+										className="absolute h-6 w-6 items-center justify-center rounded-full border border-border-control bg-elevated"
 										style={{
 											left: badges.remove.x - rects.remove.x,
 											top: badges.remove.y - rects.remove.y,

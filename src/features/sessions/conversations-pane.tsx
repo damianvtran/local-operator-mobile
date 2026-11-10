@@ -695,6 +695,18 @@ export const ConversationsPane = ({
 					onNavigate: onNavigate ?? (() => undefined),
 					onClose: () => undefined,
 				})}
+				{/* The workspace footer (computer switcher, Settings, Inbox/Past/
+				 *  Projects/Schedules/Library) belongs to the PANEL, not to the
+				 *  Agents mode: dropping it here left a docked split view in Team
+				 *  Bridge mode with no way to Settings or the destinations short of
+				 *  switching modes first (review R1-1). The bridge pane owns its own
+				 *  scroll, so the footer always pins below it — without the
+				 *  short-landscape negative margin, which only cancels the
+				 *  conversation list's px-4 and has no list to cancel here. */}
+				<WorkspaceSidebarFooter
+					onNavigate={onNavigate}
+					hasModeHeader={hasModeHeader}
+				/>
 			</View>
 		);
 	}

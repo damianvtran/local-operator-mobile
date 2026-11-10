@@ -8,7 +8,13 @@ import {
 	Lock,
 	Users,
 } from "lucide-react-native";
-import { type ReactNode, useEffect, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+	useState,
+} from "react";
 import {
 	Pressable,
 	RefreshControl,
@@ -92,6 +98,34 @@ function ConversationKindGlyph({
 	);
 }
 
+/**
+ * The surface the directory is drawn on. The route screen sits on the canvas;
+ * the workspace drawer and the docked split pane sit on `bg-elevated`. The
+ * pair matters because the row fills are measured AGAINST the ground: dark
+ * `row-selected` (#372f24) and `row-hover` (#302d29) are ~1.0:1 on the
+ * elevated #322d22, so on that ground a selected or pressed row painted
+ * nothing at all (QA Q1-1). A context rather than a prop, because every
+ * `BridgeRow` in a directory shares its ground and the rows are built several
+ * helpers deep.
+ */
+type DirectoryGround = "canvas" | "raised";
+const DirectoryGroundContext = createContext<DirectoryGround>("canvas");
+
+/**
+ * Selection fill: the accent wash, on either ground. It stays distinct where
+ * `row-selected` vanished (dark #16281d on #322d22, light #e7f1e8 on #fefdfa),
+ * and it is never the only channel — the label also turns accent + semibold
+ * and the kind glyph turns accent (`variants.ts` row rule: "selection is
+ * never colour alone").
+ */
+const ROW_SELECTED_FILL = "bg-accent-wash";
+/** Pressed fill per ground: `row-hover` reads on the canvas, but on the dark
+ *  elevated panel it is a 1.045:1 step, so there the press sinks instead. */
+const rowPressedFill = (ground: DirectoryGround) =>
+	ground === "raised" ? "bg-row-hover dark:bg-sunken" : "bg-row-hover";
+/** Selected label ink: the segmented/chip selected pair (`variants.ts`). */
+const ROW_SELECTED_INK = "text-accent-active dark:text-accent-hover";
+
 export function BridgeRow({
 	label,
 	detail,
@@ -135,7 +169,7 @@ export function BridgeRow({
 			<View
 				className={cx(
 					"mx-2 flex-row items-center gap-1 rounded-sm ps-1 pe-3",
-					selected && !disabled && "bg-row-selected",
+					selected && !disabled && ROW_SELECTED_FILL,
 				)}
 				style={{ minHeight: TOUCH_FLOOR }}
 			>
@@ -157,6 +191,12 @@ export function BridgeRow({
 					onPress={onPress}
 					testID={testID}
 					baseClassName="min-w-0 flex-1 flex-row items-center gap-2.5 rounded-sm ps-1 py-1.5"
+					/* On RN web a `Pressable` sizes to its content unless the flex
+					 *  share is on the Pressable itself (`segmented.tsx`): with it only
+					 *  on the inner View, People/Chiefs rows shrank to their label,
+					 *  clipped long names past the panel edge and left the unread pill
+					 *  floating mid-row (design D1-1). */
+					pressableClassName="min-w-0 flex-1"
 					allowHoverFill={!selected}
 				/>
 			</View>
@@ -201,6 +241,7 @@ function BridgeRowLink({
 	onPress,
 	testID,
 	baseClassName,
+	pressableClassName,
 	allowHoverFill,
 	leading,
 }: {
@@ -214,9 +255,13 @@ function BridgeRowLink({
 	onPress: () => void;
 	testID: string;
 	baseClassName: string;
+	/** Flex share for the Pressable itself, when the row sits beside another
+	 *  control (the profile avatar) and must fill the remaining width. */
+	pressableClassName?: string;
 	allowHoverFill: boolean;
 	leading?: ReactNode;
 }) {
+	const ground = useContext(DirectoryGroundContext);
 	/* `unread.loud` (not `unread.count`): a muted conversation keeps a quiet
 	 * count pill without bolding its row label (`model.rowUnread`). */
 	const bold = Boolean(!disabled && (selected || unread?.loud));
@@ -241,6 +286,7 @@ function BridgeRowLink({
 			disabled={disabled}
 			onPress={onPress}
 			testID={testID}
+			className={pressableClassName}
 			style={{ minHeight: TOUCH_FLOOR }}
 		>
 			{({ pressed }) => (
@@ -251,11 +297,11 @@ function BridgeRowLink({
 						allowHoverFill &&
 							!disabled &&
 							(selected
-								? "bg-row-selected"
+								? ROW_SELECTED_FILL
 								: pressed
-									? "bg-row-hover"
+									? rowPressedFill(ground)
 									: "bg-transparent"),
-						!allowHoverFill && !disabled && pressed && "bg-row-hover",
+						!allowHoverFill && !disabled && pressed && rowPressedFill(ground),
 					)}
 				>
 					{leading}
@@ -265,8 +311,8 @@ function BridgeRowLink({
 								"text-body-sm",
 								disabled
 									? CONTROL_DISABLED_INK
-									: selected || unread?.loud
-										? "text-ink"
+									: selected
+										? ROW_SELECTED_INK
 										: "text-ink",
 								bold ? "font-semibold" : "font-normal",
 							)}
@@ -331,8 +377,13 @@ function BridgeRowLink({
  */
 export function BridgeDirectory({
 	onBeforeOpen,
+	ground = "canvas",
 }: {
 	onBeforeOpen?: () => void;
+	/** The surface the directory is drawn on: `raised` in the drawer and the
+	 *  docked pane (`bg-elevated`), `canvas` on the route screen. Drives the
+	 *  skeleton pair and the row fills, which are both measured against it. */
+	ground?: DirectoryGround;
 } = {}) {
 	const { actions } = useTeamBridge();
 	const state = useTeamBridgeState((s) => s);
@@ -428,9 +479,14 @@ export function BridgeDirectory({
 		if (tenantId) void actions.loadOrganization(tenantId);
 	};
 	const orgName = selected?.name ?? t("mobile.team_bridge.list.choose");
+	const conversationsLoading =
+		(!org ||
+			org.conversationsState === "idle" ||
+			org.conversationsState === "loading") &&
+		!conversations.length;
 	const multiOrg = state.organizations.length > 1;
 	return (
-		<>
+		<DirectoryGroundContext.Provider value={ground}>
 			<View className="px-2 py-1">
 				<Pressable
 					accessibilityRole={ROLE.button}
@@ -499,20 +555,6 @@ export function BridgeDirectory({
 				)}
 				{tenantId && (
 					<>
-						{(!org ||
-							org.conversationsState === "idle" ||
-							org.conversationsState === "loading") &&
-							!conversations.length && (
-								<View
-									className="px-4 py-3"
-									testID={SURFACE.teamBridgeConversationsLoading}
-									accessibilityLabel={t(
-										"mobile.team_bridge.list.conversations_loading",
-									)}
-								>
-									<Skeleton lines={3} />
-								</View>
-							)}
 						{org?.conversationsState === "error" && (
 							<View className="gap-2 px-4 py-2">
 								<Text
@@ -534,26 +576,48 @@ export function BridgeDirectory({
 							</View>
 						)}
 						{heading(t("mobile.team_bridge.list.channels"))}
-						{conversationRows(
-							sections.channels,
-							org?.conversationsState === "ready"
-								? t("mobile.team_bridge.list.channels_empty")
-								: "",
-						)}
-						{heading(t("mobile.team_bridge.list.groups"))}
-						{conversationRows(
-							sections.groups,
-							org?.conversationsState === "ready"
-								? t("mobile.team_bridge.list.groups_empty")
-								: "",
+						{/* The loading placeholder sits UNDER the first section it
+						 *  stands in for, and the Groups header waits for data: a
+						 *  skeleton floating above two empty headers read as content
+						 *  belonging to neither (UX U1-5). `accessible` makes the
+						 *  wrapper one element so its label is what a screen reader
+						 *  hears, not three unlabeled bars (R1-6). */}
+						{conversationsLoading ? (
+							<View
+								accessible
+								className="px-4 py-3"
+								testID={SURFACE.teamBridgeConversationsLoading}
+								accessibilityLabel={t(
+									"mobile.team_bridge.list.conversations_loading",
+								)}
+							>
+								<Skeleton lines={3} ground={ground} />
+							</View>
+						) : (
+							<>
+								{conversationRows(
+									sections.channels,
+									org?.conversationsState === "ready"
+										? t("mobile.team_bridge.list.channels_empty")
+										: "",
+								)}
+								{heading(t("mobile.team_bridge.list.groups"))}
+								{conversationRows(
+									sections.groups,
+									org?.conversationsState === "ready"
+										? t("mobile.team_bridge.list.groups_empty")
+										: "",
+								)}
+							</>
 						)}
 						{heading(t("mobile.team_bridge.list.people"))}
 						{org?.peopleState === "loading" && !people.length && (
 							<View
+								accessible
 								className="px-4 py-2"
 								accessibilityLabel={t("mobile.team_bridge.list.people_loading")}
 							>
-								<Skeleton lines={2} />
+								<Skeleton lines={2} ground={ground} />
 							</View>
 						)}
 						{org?.peopleState === "error" && (
@@ -778,7 +842,7 @@ export function BridgeDirectory({
 					})}
 				</View>
 			</Sheet>
-		</>
+		</DirectoryGroundContext.Provider>
 	);
 }
 

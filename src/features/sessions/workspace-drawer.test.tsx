@@ -18,6 +18,7 @@ const host = vi.hoisted(() => ({
 	presses: new Map<string, () => void>(),
 	labels: new Map<string, string>(),
 	badges: [] as string[],
+	badgeTones: [] as string[],
 	unread: { count: 7, state: "ready" } as unknown,
 	mounts: 0,
 	unmounts: 0,
@@ -73,8 +74,17 @@ vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: 1 }),
 }));
 vi.mock("@/ui/components/badge", () => ({
-	Badge: ({ label }: { label: string }) => {
+	Badge: ({
+		label,
+		tone,
+		emphasis,
+	}: {
+		label: string;
+		tone?: string;
+		emphasis?: boolean;
+	}) => {
 		host.badges.push(label);
+		host.badgeTones.push(emphasis ? "emphasis" : (tone ?? "neutral"));
 		return null;
 	},
 }));
@@ -103,8 +113,12 @@ vi.mock("./conversations-drawer", () => ({
 	},
 }));
 
-const { WorkspaceDrawerProvider, WorkspaceDrawerButton, useWorkspaceDrawer } =
-	await import("./workspace-drawer");
+const {
+	WorkspaceDrawerProvider,
+	WorkspaceDrawerButton,
+	useWorkspaceDrawer,
+	modeBarLayout,
+} = await import("./workspace-drawer");
 let controller: ReturnType<typeof useWorkspaceDrawer>;
 let setDraft: (text: string) => void;
 let draft = "";
@@ -236,30 +250,60 @@ describe("one workspace drawer above the mounted chat", () => {
 		expect(host.labels.get("chat-menu")).toBe("Open conversations");
 		expect(host.badges).toEqual([]);
 	});
-	it("surfaces known positive Team Bridge unreads on the menu trigger when agent unreads are absent, and suppresses non-ready bridge counts", async () => {
+	it("names and badges the trigger after the pane it opens: agent unreads only on Home/chats, Team Bridge unreads (green) on a bridge thread (R1-3/U1-3/D1-3)", async () => {
 		host.unread = { count: 0, state: "ready" };
 		host.badges = [];
-		await mount({
+		host.badgeTones = [];
+		const bridgeAdapter: WorkspaceDrawerBridgeAdapter = {
 			bridgePane: () => null,
 			bridgeBadge: {
 				count: 3,
 				state: "ready",
 				a11yLabel: "Team Bridge · 3 unread",
 			},
-		});
-		expect(host.labels.get("chat-menu")).toBe("Team Bridge · 3 unread");
-		expect(host.badges.at(-1)).toBe("3");
-		// Negative control: loading/unavailable bridge badge never paints a count.
-		host.badges = [];
-		await mount({
-			bridgePane: () => null,
-			bridgeBadge: {
-				count: null,
-				state: "loading",
-				a11yLabel: "Team Bridge · loading",
-			},
-		});
+		};
+		// Home/chat trigger opens Agents: bridge unreads must not rename it.
+		// (The drawer header's mode bar paints its own green "3"; the trigger
+		// must add no red one.)
+		await mount(bridgeAdapter);
 		expect(host.labels.get("chat-menu")).toBe("Open conversations");
+		expect(host.badgeTones).not.toContain("danger");
+		// The thread header's trigger opens Team Bridge: its count, its name,
+		// and the same green emphasis pill the drawer's segment uses.
+		await act(async () =>
+			root.render(
+				<WorkspaceDrawerProvider bridgeAdapter={bridgeAdapter}>
+					<WorkspaceDrawerButton testID="bridge-menu" mode="team-bridge" />
+				</WorkspaceDrawerProvider>,
+			),
+		);
+		expect(host.labels.get("bridge-menu")).toBe("Team Bridge · 3 unread");
+		expect(host.badges.at(-1)).toBe("3");
+		expect(host.badgeTones).not.toContain("danger");
+		// Agent unreads keep the danger tone on the Home trigger.
+		host.unread = { count: 7, state: "ready" };
+		host.badgeTones = [];
+		await mount(bridgeAdapter);
+		expect(host.badgeTones).toContain("danger");
+		// Negative control: a loading bridge badge never paints a count.
+		host.badges = [];
+		await act(async () =>
+			root.render(
+				<WorkspaceDrawerProvider
+					bridgeAdapter={{
+						bridgePane: () => null,
+						bridgeBadge: {
+							count: null,
+							state: "loading",
+							a11yLabel: "Team Bridge · loading",
+						},
+					}}
+				>
+					<WorkspaceDrawerButton testID="bridge-menu" mode="team-bridge" />
+				</WorkspaceDrawerProvider>,
+			),
+		);
+		expect(host.labels.get("bridge-menu")).toBe("Open conversations");
 		expect(host.badges).toEqual([]);
 	});
 });
@@ -349,5 +393,39 @@ describe("Home responsive workspace ownership (Q-tablet)", () => {
 		expect(host.drawer?.visible).toBe(false);
 		expect(host.mounts).toBe(1);
 		expect(host.navigate).not.toHaveBeenCalled();
+	});
+});
+
+/* Node has no layout engine, so the mode track's geometry is pinned as the
+ * class contract that produces it plus the width budget it was sized from
+ * (design D1-2 / UX U1-1, measured on the #222 web build at 100 %). */
+describe("the mode track stays one row below large text (D1-2/U1-1/Q1-2/U1-2)", () => {
+	const split = (value: string) => value.split(" ");
+	it("below LARGE_TEXT_SCALE: no wrap, content-sized segments, equal heights, centred", () => {
+		const layout = modeBarLayout(false);
+		expect(split(layout.track)).toEqual(
+			expect.arrayContaining([
+				"flex-nowrap",
+				"items-stretch",
+				"content-center",
+			]),
+		);
+		expect(split(layout.track)).not.toContain("flex-wrap");
+		expect(split(layout.segment)).toEqual(["min-w-0", "grow", "shrink"]);
+		expect(split(layout.content)).toEqual(["flex-nowrap", "px-2"]);
+		/* The budget at 320 pt: a ~225 pt track holds Agents (48 text + 16 px +
+		 *  2 border) and Team Bridge (79 + 6 gap + a 28 "99+" pill + 16 + 2)
+		 *  plus the track's own 2 gap and 4 padding. */
+		const agents = 48 + 16 + 2;
+		const bridge = 79 + 6 + 28 + 16 + 2;
+		expect(agents + bridge + 2 + 4).toBeLessThanOrEqual(225);
+	});
+	it("at large text: wraps and shrinks (200 % / Urdu RTL) and still centres wrapped rows", () => {
+		const layout = modeBarLayout(true);
+		expect(split(layout.track)).toEqual(
+			expect.arrayContaining(["flex-wrap", "items-stretch", "content-center"]),
+		);
+		expect(split(layout.segment)).toEqual(["min-w-0", "flex-1", "shrink"]);
+		expect(split(layout.content)).toContain("flex-wrap");
 	});
 });

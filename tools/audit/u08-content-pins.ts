@@ -1351,7 +1351,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// row, shared WorkspaceSidebarFooter across drawer modes, and Team Bridge
 	// directory/thread/delivery/sheet polish. Re-derived with --print over the
 	// staged src tree; source identity only, no rendered or native proof.
-	src: "52648afc5865578d8eba194e0104de783355c931e7dc2ac8642473c705571a6b",
+	// #222 round-1 remediation: one-row mode bar below large text, docked
+	// Bridge footer, raised directory skeletons/row fills, full-width profile
+	// rows, author touch box. --print over the staged tree; source identity
+	// only, no rendered or native proof.
+	src: "d8b5b471761fa68c9138d7b98c317856b5b5186f99db8339a9fe90e837c7db40",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

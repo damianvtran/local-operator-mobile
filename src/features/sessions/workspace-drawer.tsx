@@ -28,6 +28,7 @@ import { useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { IconButton } from "@/ui/components/icon-button";
 import { TOUCH_FLOOR } from "@/ui/layout";
+import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { cx } from "@/ui/variants";
 
@@ -61,6 +62,46 @@ export const useOptionalWorkspaceDrawer = () =>
 	useContext(WorkspaceDrawerContext);
 
 /**
+ * The mode track's layout, by text scale. Exported so the arithmetic below is
+ * pinned in a unit test (Node has no layout engine to measure it).
+ *
+ * BELOW `LARGE_TEXT_SCALE`: ONE row, always. Equal `flex-1` halves starved the
+ * Team Bridge segment — on a 390 pt phone it had 107 px for "Team Bridge"
+ * (79) + gap (6) + a 23–31 px count, so the count wrapped to a second and
+ * third line, the segments went 60/81 pt against Agents' 48, and the whole
+ * drawer shifted down whenever an unread arrived (design D1-2, UX U1-1, QA
+ * Q1-2). Segments now size from their content (`grow`, basis auto) and share
+ * only the slack, so Agents gives up the empty half it never used: at 320 pt
+ * the ~225 pt track holds Agents (~66) + Team Bridge with a "99+" count
+ * (~131) + gaps with room to spare. They may still `shrink` (`min-w-0`), so a
+ * long translated label wraps its words rather than overflowing — but the
+ * count stays inline (`flex-nowrap` on the segment's content).
+ *
+ * AT AND ABOVE IT: the previous wrap rules (PR #212 QA Q1-1): equal shares,
+ * the track and the segment content wrap, so "Team Bridge" breaks onto a
+ * second line instead of truncating at 200 %+ / Urdu RTL.
+ *
+ * Both: the track stretches its children (`items-stretch`) so the two
+ * segments are always the same height, and wrapped rows centre in the track
+ * (`content-center`) rather than top-aligning one label above the other
+ * (UX U1-2).
+ */
+export const modeBarLayout = (largeText: boolean) =>
+	largeText
+		? {
+				track:
+					"min-w-0 flex-1 flex-row flex-wrap content-center items-stretch gap-0.5 rounded-md bg-sunken p-0.5",
+				segment: "min-w-0 flex-1 shrink",
+				content: "flex-wrap px-2.5",
+			}
+		: {
+				track:
+					"min-w-0 flex-1 flex-row flex-nowrap content-center items-stretch gap-0.5 rounded-md bg-sunken p-0.5",
+				segment: "min-w-0 grow shrink",
+				content: "flex-nowrap px-2",
+			};
+
+/**
  * Minimal, calm segmented mode track shared by the temporary workspace drawer
  * and the docked split-view pane.
  *
@@ -89,6 +130,7 @@ export const WorkspaceModeBar = ({
 	onClose?: () => void;
 }) => {
 	const { effectiveScale } = useTextScale();
+	const layout = modeBarLayout(effectiveScale > LARGE_TEXT_SCALE);
 	const agentsSelected = mode === "agents";
 	const bridgeSelected = mode === "team-bridge";
 	const showCount =
@@ -102,8 +144,9 @@ export const WorkspaceModeBar = ({
 			 *  pushed the badge past the panel (320/390 pt phones, Urdu RTL
 			 *  started the button at x −88; text scale reaches 3×). The track
 			 *  wraps, and each segment may shrink (`min-w-0 shrink`) so its
-			 *  label breaks cleanly onto a second line instead of ellipsizing. */}
-			<View className="min-w-0 flex-1 flex-row flex-wrap items-center gap-0.5 rounded-md bg-sunken p-0.5">
+			 *  label breaks cleanly onto a second line instead of ellipsizing.
+			 *  Below large text it stays one row instead (`modeBarLayout`). */}
+			<View className={layout.track}>
 				<Pressable
 					testID={CONTROL.workspaceDrawerAgents}
 					accessibilityRole={ROLE.button}
@@ -111,13 +154,14 @@ export const WorkspaceModeBar = ({
 					accessibilityState={a11yState({ selected: agentsSelected })}
 					aria-selected={agentsSelected}
 					onPress={() => onSelectMode("agents")}
-					className="min-w-0 flex-1 shrink"
+					className={layout.segment}
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
 					{({ pressed }) => (
 						<View
 							className={cx(
-								"flex-1 flex-row items-center justify-center rounded-sm border px-2.5 py-1.5",
+								"flex-1 flex-row items-center justify-center rounded-sm border py-1.5",
+								layout.content,
 								agentsSelected
 									? "border-hairline bg-elevated"
 									: pressed
@@ -148,7 +192,7 @@ export const WorkspaceModeBar = ({
 				 *  its own badge and is drawn ONLY for a known, positive
 				 *  number: `null` is unknown and a non-ready state has no
 				 *  count to trust, and neither may paint as a zero. */}
-				<View className="min-w-0 flex-1 shrink">
+				<View className={layout.segment}>
 					<Pressable
 						testID={CONTROL.workspaceDrawerTeamBridge}
 						accessibilityRole={ROLE.button}
@@ -156,12 +200,16 @@ export const WorkspaceModeBar = ({
 						accessibilityState={a11yState({ selected: bridgeSelected })}
 						aria-selected={bridgeSelected}
 						onPress={() => onSelectMode("team-bridge")}
+						/* `flex-1` so the Pressable fills its stretched wrapper and
+						 *  both segments paint the same height. */
+						className="flex-1"
 						style={{ minHeight: TOUCH_FLOOR }}
 					>
 						{({ pressed }) => (
 							<View
 								className={cx(
-									"flex-1 flex-row flex-wrap items-center justify-center gap-1.5 rounded-sm border px-2.5 py-1.5",
+									"flex-1 flex-row items-center justify-center gap-1.5 rounded-sm border py-1.5",
+									layout.content,
 									bridgeSelected
 										? "border-hairline bg-elevated"
 										: pressed
@@ -171,7 +219,7 @@ export const WorkspaceModeBar = ({
 							>
 								<Text
 									className={cx(
-										"text-center text-body-sm",
+										"min-w-0 shrink text-center text-body-sm",
 										bridgeSelected
 											? "font-semibold text-ink"
 											: pressed
@@ -310,13 +358,18 @@ export const WorkspaceDrawerProvider = ({
 	);
 };
 
+/** The thread header's badge sits 2 pt higher than Home's and carries a
+ *  2 pt canvas ring: at `MENU_BADGE_INSET` it covered ~13 px of the glyph's
+ *  top stroke with no separation (design D1-4). `end` keeps 2 pt from the box
+ *  edge so the pill never touches the title beside the button. */
+const BRIDGE_MENU_BADGE_INSET = { top: 0, end: 2 } as const;
+
 /** Home and chats deliberately share the exact projection and glyph geometry.
  * Unknown unread is absence, not zero; no local row count invents a receipt.
  * When `mode === "team-bridge"` (the thread header's hamburger), the badge and
- * accessible name reflect Team Bridge's known unreads rather than agent chat
- * unreads; when `mode` is omitted and agent unreads are absent/zero, known
- * positive bridge unreads still surface on the menu icon so hub messages are
- * not hidden behind a badge-free button. */
+ * accessible name reflect Team Bridge's known unreads; otherwise they reflect
+ * agent chat unreads only, because that is the pane the button opens. */
+
 export const WorkspaceDrawerButton = ({
 	testID = CONTROL.homeSidebar,
 	mode,
@@ -339,16 +392,16 @@ export const WorkspaceDrawerButton = ({
 		bridgeBadge.count > 0
 			? bridgeBadge.count
 			: null;
-	const useBridgeCount =
-		mode === "team-bridge" ||
-		((agentCount === null || agentCount <= 0) && bridgeCount !== null);
-	const count =
-		mode === "team-bridge"
-			? bridgeCount
-			: agentCount && agentCount > 0
-				? agentCount
-				: bridgeCount;
-	const accessibilityLabel = useBridgeCount
+	/* The badge and the name follow the pane this button OPENS, never the
+	 *  other one (UX U1-3 / review R1-3): Home and agent chats open on Agents,
+	 *  so they count agent unreads and are named "Open conversations" as on the
+	 *  base; a Team Bridge thread opens on the channel list, so it counts
+	 *  Team Bridge unreads and takes the adapter's name for that pane. Showing
+	 *  bridge unreads on a button that lands in Agents announced "Team Bridge,
+	 *  11 unread" and then opened something else. */
+	const bridgeTrigger = mode === "team-bridge";
+	const count = bridgeTrigger ? bridgeCount : agentCount;
+	const accessibilityLabel = bridgeTrigger
 		? bridgeCount !== null && bridgeBadge
 			? bridgeBadge.a11yLabel
 			: t("mobile.chrome.drawer.open")
@@ -374,15 +427,31 @@ export const WorkspaceDrawerButton = ({
 			{count !== null && count > 0 ? (
 				<View
 					pointerEvents="none"
-					className="absolute"
-					style={MENU_BADGE_INSET}
+					className={cx(
+						"absolute",
+						bridgeTrigger && "rounded-full border-2 border-canvas",
+					)}
+					style={bridgeTrigger ? BRIDGE_MENU_BADGE_INSET : MENU_BADGE_INSET}
 				>
-					<Badge
-						label={countLabel(count)}
-						tone="danger"
-						mono
-						scale={effectiveScale}
-					/>
+					{/* Team Bridge counts are the green emphasis pill everywhere
+					 *  — this trigger, the drawer's segment and the directory rows —
+					 *  so the same number is not red here and green one tap later
+					 *  (design D1-3). Agent unreads keep Home's danger tone. */}
+					{bridgeTrigger ? (
+						<Badge
+							label={countLabel(count)}
+							emphasis
+							mono
+							scale={effectiveScale}
+						/>
+					) : (
+						<Badge
+							label={countLabel(count)}
+							tone="danger"
+							mono
+							scale={effectiveScale}
+						/>
+					)}
 				</View>
 			) : null}
 		</Pressable>
