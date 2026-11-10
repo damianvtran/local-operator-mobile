@@ -68,7 +68,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 155, // Exact merged Team Bridge key union.
+		expected: 158, // Exact merged Team Bridge key union.
 	},
 	{
 		name: "mobile.signin",
@@ -265,7 +265,11 @@ describe("the English catalogues", () => {
 		 * verified by counting unique `en` keys over the merged tree. */
 		/* Plus one: More's Questions row, the door to timed-out asks now that
 		 * they paint no ask bar (PR #211, TestFlight build 753 feedback). */
-		expect(total).toBe(566);
+		/* Plus three from the workspace drawer's Team Bridge mode (#212): the
+		 * Bridge entry's loading and unavailable names and "Open Team Bridge".
+		 * PR #211 merged with main a563a6f3: 566 + 3, verified by counting
+		 * unique `en` keys over the merged tree. */
+		expect(total).toBe(569);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

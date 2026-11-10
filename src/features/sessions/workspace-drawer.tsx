@@ -133,7 +133,13 @@ export const WorkspaceDrawerProvider = ({
 				{...agentsPresentation}
 				header={
 					bridgeAdapter ? (
-						<View className="flex-row gap-2 px-4 py-2">
+						/* WRAP, NEVER TRUNCATE (PR #212 QA Q1-1 / design D1 / UX U1).
+						 *  At 200 % text a fixed row cut "Team Bridge" to "Team B" and
+						 *  pushed the badge past the panel (320/390 pt phones, Urdu RTL
+						 *  started the button at x −88; text scale reaches 3×). The row
+						 *  wraps, and the Bridge group may shrink so its label breaks
+						 *  onto a second line — the product name is never ellipsized. */
+						<View className="flex-row flex-wrap gap-2 px-4 py-2">
 							<Button
 								testID={CONTROL.workspaceDrawerAgents}
 								label={t("mobile.chrome.drawer.agents")}
@@ -149,7 +155,13 @@ export const WorkspaceDrawerProvider = ({
 							 *  its own badge and is drawn ONLY for a known, positive
 							 *  number: `null` is unknown and a non-ready state has no
 							 *  count to trust, and neither may paint as a zero. */}
-							<View className="flex-row items-center gap-1">
+							{/* `min-w-0 shrink`: lets this group narrow below its label's
+							 *  one-line width so the label wraps inside the panel.
+							 *  The badge overlaps the button's trailing corner, as the
+							 *  home drawer trigger's does (design D2): over the tap
+							 *  target (`pointerEvents="none"` passes taps through) and
+							 *  costing the row no width. */}
+							<View className="min-w-0 shrink">
 								<Button
 									testID={CONTROL.workspaceDrawerTeamBridge}
 									label={t("mobile.team_bridge.title")}
@@ -161,7 +173,12 @@ export const WorkspaceDrawerProvider = ({
 								{bridgeAdapter.bridgeBadge.state === "ready" &&
 								bridgeAdapter.bridgeBadge.count !== null &&
 								bridgeAdapter.bridgeBadge.count > 0 ? (
-									<View aria-hidden pointerEvents="none">
+									<View
+										aria-hidden
+										pointerEvents="none"
+										className="absolute"
+										style={BRIDGE_BADGE_INSET}
+									>
 										<Badge
 											label={countLabel(bridgeAdapter.bridgeBadge.count)}
 											tone="warning"
@@ -184,6 +201,15 @@ export const WorkspaceDrawerProvider = ({
 		</WorkspaceDrawerContext.Provider>
 	);
 };
+
+/**
+ * The Bridge mode button's badge position. Straddles the pill's top-trailing
+ * corner rather than `MENU_BADGE_INSET`'s inside-the-box spot: that one sits
+ * over a 22 pt glyph with room to spare, but here it would cover the label's
+ * last letters inside `px-4`. `end` mirrors in RTL. The row's `py-2`/`px-4`
+ * leave room for the 6 pt overhang, so it never crosses the panel edge.
+ */
+const BRIDGE_BADGE_INSET = { top: -6, end: -6 } as const;
 
 /** Home and chats deliberately share the exact projection and glyph geometry.
  * Unknown unread is absence, not zero; no local row count invents a receipt. */

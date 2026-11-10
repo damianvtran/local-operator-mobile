@@ -337,7 +337,10 @@ describe("team bridge store", () => {
 			accessToken: async () => token(SELF),
 		});
 		await actions.checkStatus();
+		// An open gate is not an unread receipt: the initial 0 is unknown.
+		expect(store.getState().unreadKnown).toBe(false);
 		await actions.refreshUnread();
+		expect(store.getState().unreadKnown).toBe(true);
 		await actions.loadOrganization(TENANT);
 		expect(store.getState().totalUnread).toBe(5);
 		await actions.markRead(TENANT, "bcv_channel_general", 4);
@@ -467,6 +470,38 @@ describe("account ownership and concurrent reconciliation", () => {
 		expect(store.getState().threads).toEqual({});
 	});
 
+	it("a failed FIRST unread read is unavailable, not loading forever (R1-2)", async () => {
+		const hub = fakeHub();
+		const { store, actions } = setup(hub);
+		await actions.checkStatus();
+		vi.mocked(hub.accountUnread).mockRejectedValueOnce(
+			new Error("synthetic offline"),
+		);
+		await actions.refreshUnread();
+		expect(store.getState()).toMatchObject({
+			gate: "open",
+			unreadKnown: false,
+			unreadFailed: true,
+			totalUnread: 0,
+		});
+		// A later success clears it; a failure after that keeps the known count.
+		await actions.refreshUnread();
+		expect(store.getState()).toMatchObject({
+			unreadKnown: true,
+			unreadFailed: false,
+			totalUnread: 5,
+		});
+		vi.mocked(hub.accountUnread).mockRejectedValueOnce(
+			new Error("synthetic offline"),
+		);
+		await actions.refreshUnread();
+		expect(store.getState()).toMatchObject({
+			unreadKnown: true,
+			unreadFailed: false,
+			totalUnread: 5,
+		});
+	});
+
 	it("a signed-out status clears identity, selected org and account total", async () => {
 		const hub = fakeHub();
 		const { store, actions } = setup(hub);
@@ -481,6 +516,8 @@ describe("account ownership and concurrent reconciliation", () => {
 			selfAccountId: null,
 			selectedTenantId: null,
 			totalUnread: 0,
+			unreadKnown: false,
+			unreadFailed: false,
 			orgs: {},
 			threads: {},
 		});

@@ -353,11 +353,15 @@ export function ProfileSheet({
 	tenantId,
 	onClose,
 	currentConversationId,
+	onBeforeOpen,
 }: {
 	subject: ProfileSubject | null;
 	tenantId: string;
 	onClose: () => void;
 	currentConversationId?: string | null;
+	/** Runs before "Message" routes. The workspace drawer's Bridge pane passes
+	 *  its `onNavigate` so the drawer dismisses before the thread opens. */
+	onBeforeOpen?: () => void;
 }) {
 	const open = useOpenTarget();
 	const selfAccountId = useTeamBridgeState((s) => s.selfAccountId);
@@ -407,6 +411,7 @@ export function ProfileSheet({
 									target.conversationId === currentConversationId
 								)
 									return;
+								onBeforeOpen?.();
 								open(target);
 							}}
 						/>
