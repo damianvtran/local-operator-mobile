@@ -1,0 +1,19 @@
+{
+	"artifacts": [
+		{
+			"digest": "sha256:c324d12290e4c7b57116a29a7d8249ae3a6059c179f0e4f610b36367e4d6b567",
+			"expired": false,
+			"id": 13765833742,
+			"name": "ios-simulator",
+			"size_in_bytes": 36336046,
+			"workflow_run": {
+				"head_branch": "main",
+				"head_repository_id": 1396732902,
+				"head_sha": "5fb51be02bbb22b39e42f24b50e70b6e51ded18b",
+				"id": 42811945754,
+				"repository_id": 1396732902
+			}
+		}
+	],
+	"total_count": 1
+}

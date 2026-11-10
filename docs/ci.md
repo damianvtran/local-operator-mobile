@@ -804,6 +804,29 @@ frame, and the development host has no simulator.
   cleanup receipt), `commands.json`, command logs, PNG frames, hierarchy dumps.
   A pass is simulator evidence for those frames only; reviewers must view the PNGs.
 
+## Targeted native chrome proof: artifact provenance
+
+`proof_mode = chrome-ios-proof` installs an already-built `ios-simulator`
+artifact, so it must be told WHICH REVISION that artifact was built for:
+`native_source_sha` (and `base_source_sha` with `base_run_id` for a before
+build) is required and has no default. A cheap Ubuntu job,
+`chrome-ios-provenance`, runs `scripts/ci/native-artifact-provenance.ts`
+before any macOS runner starts: the build run must be this repository's
+`.github/workflows/ios.yml`, completed/success, with `head_sha` equal to the
+named source, and exactly one live artifact whose own `workflow_run` and digest
+match. The macOS job then downloads only the artifact ids it validated and the
+receipt records `provenance` (intended inputs vs actual run/artifact metadata).
+
+- **Why:** run 42789156345 (workflow head `b67f4f54`, meant for PR #216)
+  installed run 41506698136's build 348 of `feat/i18n-project-create@91a3cbca`:
+  the shared `native_run_id`/`native_artifact_sha256` defaults belong to
+  projects-create, and a digest authenticates bytes, not the revision.
+- **Compiled source:** a `push`/`workflow_dispatch` iOS run compiles its
+  `head_sha`; a `pull_request` run compiles `refs/pull/<n>/merge` (head merged
+  into the base at run time), whose SHA the runs API does not expose — the
+  receipt says `pull_request-merge`, never literal-head provenance.
+- **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=chrome-ios-proof -f native_run_id=<ios run> -f native_artifact_sha256=<sha256> -f native_source_sha=<40-char sha> [-f base_run_id=<main ios run> -f base_artifact_sha256=<sha256> -f base_source_sha=<sha>]`.
+
 ## Targeted native theme proof
 
 `e2e.yml` offers `proof_mode = theme-ios-proof` (dispatch only, not full E2E),

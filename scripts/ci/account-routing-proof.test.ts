@@ -286,6 +286,8 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 				ANDROID_PROOF_MODE,
 				"projects-create-ios-proof",
 				"chrome-ios-proof",
+				/* Ubuntu provenance gate the chrome proof's macOS job needs. */
+				"chrome-ios-provenance",
 				"theme-ios-proof",
 				"u08-geometry-proof",
 				/* The web audit's device legs are one matrix job, so they need no entry

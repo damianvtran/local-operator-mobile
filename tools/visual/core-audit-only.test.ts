@@ -105,6 +105,8 @@ describe("core-audit-only dispatch isolation", () => {
 		const later = [
 			"u08-geometry-proof",
 			"chrome-ios-proof",
+			/* The chrome proof's provenance gate: same guard as chrome-ios-proof. */
+			"chrome-ios-provenance",
 			"web-audit-verdict",
 		];
 		expect([...guards.keys()].filter((name) => !later.includes(name))).toEqual(
@@ -128,10 +130,11 @@ describe("core-audit-only dispatch isolation", () => {
 				"core-audit-only",
 				"chrome-ios-proof",
 			])
-				expect(
-					selects(guards.get("chrome-ios-proof") ?? "true", event, mode),
-					`${event}/${mode}/chrome-ios-proof`,
-				).toBe(event === "workflow_dispatch" && mode === "chrome-ios-proof");
+				for (const name of ["chrome-ios-proof", "chrome-ios-provenance"])
+					expect(
+						selects(guards.get(name) ?? "true", event, mode),
+						`${event}/${mode}/${name}`,
+					).toBe(event === "workflow_dispatch" && mode === "chrome-ios-proof");
 		for (const event of [
 			"push",
 			"pull_request",

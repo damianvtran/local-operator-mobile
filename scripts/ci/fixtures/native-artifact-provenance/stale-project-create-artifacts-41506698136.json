@@ -1,0 +1,19 @@
+{
+	"artifacts": [
+		{
+			"digest": "sha256:080c27c8554638317baafbea91a163b049ead1ecdf7c3f78194d31e037c1c1fe",
+			"expired": false,
+			"id": 13174180988,
+			"name": "ios-simulator",
+			"size_in_bytes": 34235681,
+			"workflow_run": {
+				"head_branch": "feat/i18n-project-create",
+				"head_repository_id": 1396732902,
+				"head_sha": "91a3cbca1a2770e78dc5f216c2335b4b8126fe4d",
+				"id": 41506698136,
+				"repository_id": 1396732902
+			}
+		}
+	],
+	"total_count": 1
+}
