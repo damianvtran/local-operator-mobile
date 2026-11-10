@@ -1120,13 +1120,13 @@ jobs:
           key: ${{ runner.os }}-avd-${{ env.MAESTRO_API_LEVEL }}-${{ hashFiles('e2e/maestro/**') }}
 
       - name: Install the pinned Maestro CLI
-        # The one `curl | bash` this repository allows (ADR 0004), and
-        # MAESTRO_VERSION is what keeps it from being "latest".
-        run: |
-          set -euo pipefail
-          export MAESTRO_VERSION
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        # MAESTRO_VERSION is what keeps it from being "latest". The shared
+        # action downloads the pinned release zip directly (retried, sha256-
+        # verified, cached) instead of piping the installer to bash, which a
+        # single CDN 504 broke (run 42581162973).
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
 
       - name: Write the relay password the flows are given
         # Generated per run into a 0600 file rather than committed as a literal,
@@ -1433,11 +1433,9 @@ jobs:
           key: ${{ runner.os }}-avd-${{ env.MAESTRO_API_LEVEL }}-${{ hashFiles('e2e/maestro/**') }}
 
       - name: Install the pinned Maestro CLI
-        run: |
-          set -euo pipefail
-          export MAESTRO_VERSION
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
 
       - name: Write the relay password the flows are given
         # Per run into a 0600 file, never a committed literal: a flow carrying a
@@ -1629,11 +1627,9 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
       - name: Provision the existing pinned Maestro driver
         if: inputs.proof_stage != 'preflight'
-        run: |
-          set -euo pipefail
-          export MAESTRO_VERSION
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
       - name: Selected setup/full stage (base setup before ONE candidate producer)
         if: inputs.proof_stage != 'preflight'
         env:
@@ -1698,11 +1694,9 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - name: Provision the existing pinned Maestro driver
-        run: |
-          set -euo pipefail
-          export MAESTRO_VERSION
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
       - name: Download and verify the already-built artifact (the only step holding the token)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1789,11 +1783,9 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - name: Provision the existing pinned Maestro driver
-        run: |
-          set -euo pipefail
-          export MAESTRO_VERSION
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
       - name: Download and verify the already-built artifacts (the only step holding the token)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1879,11 +1871,9 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
       - name: Provision the existing pinned Maestro driver
-        run: |
-          set -euo pipefail
-          export MAESTRO_VERSION
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
       - name: Download and verify the already-built artifact (the only step holding the token)
         env:
           GH_TOKEN: ${{ github.token }}
