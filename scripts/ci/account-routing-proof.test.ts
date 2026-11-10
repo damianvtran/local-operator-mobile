@@ -122,12 +122,21 @@ const CURRENT_PRESERVED_BODY_SHA256: Readonly<Record<string, string>> = {
  *  summoned by scroll speed and react-native-web emits no drag or momentum event
  *  at all, so this emulator is the only surface where the component's appearance
  *  is observable. SHA derived by the same `jobBodySha`, which still reproduces
- *  111655be and 25ff0a6f above. */
+ *  111655be and 25ff0a6f above.
+ *
+ *  `maestro-android` 0c95a5aa → 7f60feab (PR #215, Maestro provisioning): the
+ *  "Install the pinned Maestro CLI" step's `curl | bash` run block became
+ *  `uses: ./.github/actions/install-maestro` with `version: MAESTRO_VERSION`,
+ *  plus its comment, because one CDN 504 from the installer broke run
+ *  42581162973; the action downloads the same pinned release zip with retries,
+ *  a sha256 check and a cache. No other line of the job moved and the condition
+ *  is untouched. Derived by `jobBodySha` on that head (the value this test
+ *  reported as received), not hand-edited. */
 const CURRENT_PRESERVED_BODY_WITH_PROBE: Readonly<
 	Record<string, { sha256: string; probe: [string, string] }>
 > = {
 	"maestro-android": {
-		sha256: "0c95a5aa8ee23bad62b77d04d5ff7a0f461339edb57a7aaef44a2260c0153b34",
+		sha256: "7f60feabb36c017157e5158a08e5492e938f4a36ec72a38697b900d9be167b5d",
 		probe: [
 			"bash scripts/ci/run-maestro-tags.sh",
 			"bash scripts/ci/run-maestro-tags.sh --dry",
