@@ -59,6 +59,7 @@
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { PromptImage, TranscriptEntry } from "@/contracts";
+import { USER_BUBBLE_BOX_CLASS } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
 import type { ContinuationEnvelope, ContinuationOp } from "@/relay";
 
@@ -383,11 +384,17 @@ export const earlierWentThroughNotice = (): string =>
  *  wide as its widest child, and under a caption wider than a short steer the
  *  steer's text sat left-aligned, then jumped ~77 px right when the caption
  *  left at handover (design round 1, D1). Hugging the end edge keeps the text's
- *  right edge where the settled row puts it. */
+ *  right edge where the settled row puts it.
+ *
+ *  A prompt takes the settled bubble's box EXACTLY (`USER_BUBBLE_BOX_CLASS`, no
+ *  hairline), so the fill does not jump at handover (agent review round 1, M1;
+ *  design D2). The pending signal stays in ink (`ink-muted`) and in the caption,
+ *  which `pending-echo-row.tsx` renders BELOW the box, on canvas: `ink-dim` and
+ *  `danger` are contracted on canvas but not on `user-bubble`. */
 export const pendingEchoBoxClass = (op: ContinuationOp): string =>
 	op === "steer"
 		? "max-w-[85%] items-end px-1"
-		: "max-w-[85%] items-end rounded-md border border-hairline bg-surface px-3 py-1.5";
+		: `max-w-[85%] items-end ${USER_BUBBLE_BOX_CLASS}`;
 
 /** Drop every echo on this device — for the auth boundary: a signed-out user's
  *  words must not be shown to whoever signs in next. */

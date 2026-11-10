@@ -1,14 +1,14 @@
 /**
- * Desktop palette -> the phone's 47 colour roles.
+ * Desktop palette -> the phone's 48 colour roles.
  *
  * The desktop's `ThemePalette` carries 38 colour roles; the phone's token set
- * (`design/tokens/tokens.json`, flattened by `tailwind-preset.js`) carries 47.
+ * (`design/tokens/tokens.json`, flattened by `tailwind-preset.js`) carries 48.
  * The rules below are the ENTIRE mapping — no palette is hand-tuned here, so a
  * new desktop palette arrives on the phone by re-exporting, never by editing
  * this file (decision record `mobile-design-direction.md` § 5, "Role mapping").
  *
  *   34 roles copy straight across (camelCase -> kebab-case).
- *   13 roles exist only on the phone and are derived per palette:
+ *   14 roles exist only on the phone and are derived per palette:
  *     diff-add / diff-remove / diff-hunk   <- success / danger / info
  *     diff-context                          <- inkDim
  *     diff-*-surface                        <- the matching *Wash, stepped in L*
@@ -18,6 +18,9 @@
  *     accent-border                         <- accentWash stepped to >= 3:1
  *     panel-edge                            <- borderControl (dark) / hairline
  *                                              (light), stepped to 3:1 on the scrim
+ *     user-bubble                           <- messageSurface (dark) / canvas
+ *                                              (light), stepped away from the
+ *                                              page to >= 1.27:1 on canvas
  *     shadow-color                          <- overlayShadow's rgb base
  *     focus-ring-photo-inner / -outer       <- fixed (they sit on a photograph,
  *                                              which no palette controls)
@@ -238,7 +241,7 @@ export const derivePalette = (desktop) => {
 		"tokenCommand",
 		"overlayShadow",
 	]);
-	/* 34 copied + 13 derived = the phone's 47; `scrim` is copied by name but
+	/* 34 copied + 14 derived = the phone's 48; `scrim` is copied by name but
 	 * replaced from FIXED below, so the count holds. */
 	for (const [key, value] of Object.entries(v)) {
 		if (DROPPED.has(key)) continue;
@@ -344,6 +347,32 @@ export const derivePalette = (desktop) => {
 		unsolved.push({
 			role: "panel-edge",
 			why: "no lighter step of the start value clears 3:1 on the scrim ground (and on elevated in dark)",
+		});
+	}
+	/* user-bubble: the fill of the reader's own turn. The desktop's
+	 * `messageSurface` is the authored bubble, but it sits 1.06-1.20:1 off its
+	 * canvas across the fleet — a step the phone does not show — so the phone
+	 * steps it AWAY from the page until the fill reads as a card on its own
+	 * (palette-rules' USER_BUBBLE_FLOOR, 1.25) and still carries `ink` at the
+	 * text floor. The target is 1.27, not 1.25, for the reason the ground
+	 * adaptation aims at 4.55: a candidate measured at 1.2501 is one the next
+	 * rounding loses. Dark starts from the authored bubble and goes lighter,
+	 * keeping the palette's own tint. Light starts from the CANVAS and goes
+	 * darker: a light page is too near white for a lighter fill to clear the
+	 * floor (white on the brand canvas is 1.17:1), so the bubble is a deeper
+	 * step of the paper itself rather than the authored near-white moved
+	 * through and past the page. */
+	const bubble = stepUntil(
+		mode === "dark" ? c["message-surface"] : c.canvas,
+		mode === "dark" ? 1 : -1,
+		(x) => ratio(x, c.canvas) >= 1.27 && ratio(c.ink, x) >= 4.55,
+	);
+	if (bubble) c["user-bubble"] = bubble;
+	else {
+		c["user-bubble"] = c["message-surface"];
+		unsolved.push({
+			role: "user-bubble",
+			why: "no step away from the canvas clears 1.27:1 on it while ink keeps 4.5:1",
 		});
 	}
 	c["shadow-color"] = rgbToHex(v.overlayShadow.replace(/^.*?(rgba?\()/, "$1")).slice(0, 7);
