@@ -8,7 +8,14 @@ import {
 	askStateLine,
 	askToneInk,
 } from "@/features/session/asks";
+import {
+	TRACE_BAR_PAD_CLASS,
+	TRACE_COLUMN_GAP_CLASS,
+	TRACE_EXPANDED_INDENT_CLASS,
+	TRACE_GLYPH_BOX_CLASS,
+} from "@/features/session/components/trace-rail";
 import { ROLE } from "@/ui/a11y";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
 import { AnsweredValues } from "./answered-values";
@@ -73,7 +80,7 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 	const tone = status === "declined" ? "text-ink-muted" : askToneInk(line.tone);
 
 	return (
-		<View className="rounded-sm px-2" testID={testID}>
+		<View className={cx("rounded-sm", TRACE_BAR_PAD_CLASS)} testID={testID}>
 			<Pressable
 				accessibilityRole={hasDetails ? ROLE.button : ROLE.text}
 				accessibilityLabel={
@@ -82,19 +89,17 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 				accessibilityState={hasDetails ? { expanded: open } : undefined}
 				disabled={!hasDetails}
 				onPress={() => hasDetails && setOpen((value) => !value)}
+				style={{ minHeight: TOUCH_FLOOR }}
+				className="justify-center"
 			>
-				<View className="min-h-11 flex-row items-center gap-1.5">
-					<Text
-						className={cx(
-							"w-4 shrink-0 text-center font-mono text-mono-sm",
-							tone,
-						)}
-						aria-hidden
-					>
+				<View
+					className={cx("flex-row items-start py-2", TRACE_COLUMN_GAP_CLASS)}
+				>
+					<Text className={cx(TRACE_GLYPH_BOX_CLASS, tone)} aria-hidden>
 						{GLYPH[status] ?? "•"}
 					</Text>
 					<Text
-						className={cx("min-w-0 flex-1 text-body-sm", tone)}
+						className="min-w-0 flex-1 text-trace text-ink-muted"
 						numberOfLines={2}
 					>
 						{headQuestion.length > 0
@@ -102,14 +107,18 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 							: line.text}
 					</Text>
 					{hasDetails ? (
-						<Text className="shrink-0 text-body-sm text-ink-dim" aria-hidden>
-							{open ? "▾" : "▸"}
+						<Text className="text-trace" aria-hidden>
+							<Text className="font-mono text-mono-sm text-ink-dim">
+								{open ? "▾" : "▸"}
+							</Text>
 						</Text>
 					) : null}
 				</View>
 			</Pressable>
 			{open && hasDetails ? (
-				<View className="flex-col gap-1.5 pb-1.5 ps-6">
+				<View
+					className={cx("flex-col gap-2 pb-1", TRACE_EXPANDED_INDENT_CLASS)}
+				>
 					{pairs.length > 0
 						? pairs.map((pair, index) => (
 								<View key={index}>

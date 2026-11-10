@@ -1,0 +1,96 @@
+/**
+ * Shared horizontal rail and vertical spacing vocabulary for the transcript.
+ *
+ * WHY ONE MODULE. Before this rail, glyphs landed at 16 pt, 22 pt and 24 pt
+ * while labels landed across 16 pt, 24 pt, 36 pt, 38 pt, 40 pt, 46 pt and
+ * 48 pt — every row component spelled its own padding and gap. Declaring the
+ * geometry once keeps every trace, bar, notice and disclosure on two exact
+ * vertical lines:
+ *
+ *   - Outer row inset: `px-4` (`16 pt`), inner bar inset: `px-0` (`0 pt`).
+ *   - Glyph box: fixed `w-4` (`16 pt`) `shrink-0 text-start font-mono text-mono-sm`,
+ *     starting at `x = 16 pt`.
+ *   - Column gap: `gap-2` (`8 pt`), putting the `min-w-0 flex-1` text column —
+ *     its wrapped second lines AND any expanded disclosure panel (`ps-6` = 24 pt
+ *     inside `px-4` = 40 pt) — on the exact `x = 40 pt` rail.
+ *
+ * All spacing steps sit strictly on `space.scale` (`0, 4, 8, 12, 16, 20, 24…`)
+ * so U-41 (summary rail & first-line caret) and U-42 (token spacing scale) hold
+ * by construction.
+ */
+
+import type { TranscriptEntry } from "@/contracts";
+
+/** Outer full-width horizontal inset (`16 pt` each side) shared by every transcript row. */
+export const TRACE_ROW_OUTER_CLASS = "px-4";
+
+/** Inner bar horizontal inset (`0 pt`) inside `TRACE_ROW_OUTER_CLASS`. */
+export const TRACE_BAR_PAD_CLASS = "px-0";
+
+/** Gap (`8 pt`) between the `16 pt` glyph column (`w-4`) and the `x = 40 pt` text column. */
+export const TRACE_COLUMN_GAP_CLASS = "gap-2";
+
+/** Fixed `16 pt` leading glyph box, left-aligned so wrapped lines and sibling glyphs share `x = 16 pt`. */
+export const TRACE_GLYPH_BOX_CLASS =
+	"w-4 shrink-0 text-start font-mono text-mono-sm";
+
+/** Left indent (`24 pt` inside `px-4` = `40 pt`) for expanded panels beneath a trace row. */
+export const TRACE_EXPANDED_INDENT_CLASS = "ps-6";
+
+/** Horizontal chrome consumed by `px-4` (`16 pt` left + `16 pt` right = `32 pt`). */
+export const TRACE_ROW_CHROME_PT = 32;
+
+/**
+ * Context-aware vertical spacing tiers between adjacent rendered transcript items,
+ * mirrored from the desktop's `spacingTier` (`canonical-transcript.tsx`):
+ *
+ *   - `first`: `0 pt` above the first rendered item.
+ *   - `turn`: `pt-4` (`16 pt`, on `space.scale`) before a fresh user turn after
+ *     prior turn content so exchanges read as distinct beats.
+ *   - `block`: `pt-2` (`8 pt`, on `space.scale`) at register transitions between
+ *     user bubbles, ledger/trace runs, assistant prose, and supplements.
+ *   - `trace`: `0 pt` between consecutive trace, fold, turn-bar, quiet-group,
+ *     ask-receipt and notice rows so machine-voice ledger lines sit cohesively
+ *     on their `TOUCH_FLOOR` rhythm without extra air.
+ */
+export type TranscriptSpacingTier = "first" | "turn" | "block" | "trace";
+
+export const SPACING_TIER_CLASS: Record<TranscriptSpacingTier, string> = {
+	first: "",
+	turn: "pt-4",
+	block: "pt-2",
+	trace: "",
+};
+
+/** Visual register of a rendered transcript item for vertical rhythm calculation. */
+export type ItemRegister = "user" | "prose" | "trace";
+
+/** Classify a raw entry into its vertical spacing register. */
+export function entryRegister(entry: TranscriptEntry): ItemRegister {
+	if (entry.kind === "user" || entry.kind === "steer") return "user";
+	if (entry.kind === "assistant") return "prose";
+	// Unstamped parent/subagent rows that paint full prose blocks read as prose;
+	// hub receipts, peer messages, notices, tools, reasoning and asks are trace-rail rows.
+	if (
+		(entry.kind === "parent_message" || entry.kind === "subagent_message") &&
+		entry.details.direction !== "to_child" &&
+		entry.details.direction !== "to_parent"
+	) {
+		return "prose";
+	}
+	return "trace";
+}
+
+/** Compute the vertical spacing tier before `current` when preceded by `previous`.
+ *  `startsNewTurn` distinguishes a genuine turn-opening `user` prompt (`16 pt`
+ *  exchange boundary) from an in-flight mid-turn steer (`8 pt` block transition). */
+export function spacingTierBetween(
+	previous: ItemRegister | null,
+	current: ItemRegister,
+	startsNewTurn: boolean,
+): TranscriptSpacingTier {
+	if (previous === null) return "first";
+	if (startsNewTurn) return "turn";
+	if (previous === "trace" && current === "trace") return "trace";
+	return "block";
+}

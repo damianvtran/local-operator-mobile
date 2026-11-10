@@ -51,6 +51,9 @@ vi.mock("@/features/session/components/turn-bar", () => ({
 vi.mock("@/features/session/components/quiet-group-bar", () => ({
 	QuietGroupBar: () => null,
 }));
+vi.mock("@/features/session/components/fold-bar", () => ({
+	FoldBar: () => null,
+}));
 vi.mock("@/features/session/components/supplement-block", () => ({
 	SupplementBlock: () => null,
 }));

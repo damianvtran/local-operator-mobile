@@ -251,9 +251,11 @@ describe("which event kinds fold", () => {
 		expect(action.props.accessibilityLabel).toBe("Open coder");
 		action.props.onPress();
 		expect(opened).toEqual(["job-7"]);
-		// The expanded body carries the direction / Job line the unfolded row had.
+		// The expanded body carries the Job line; the raw wire direction
+		// (`to_parent`) is never painted — it read as the message's first words.
 		const drawn = textOf(dom?.container as TextNode);
-		expect(drawn).toContain("to_parent · Job job-7");
+		expect(drawn).toContain("Job job-7");
+		expect(drawn).not.toContain("to_parent");
 		expect(drawn).toContain(LONG);
 	});
 
@@ -327,8 +329,39 @@ describe("which event kinds fold", () => {
 			}),
 		);
 		expect(seen[0]?.glyph).toBe("↳");
-		expect(seen[0]?.label).toBe("manager");
+		expect(seen[0]?.label).toBe("Hub · From manager");
 		expect(seen[0]?.meta).toBe("Reply requested");
+	});
+
+	it("folds a SHORT hub receipt too, in both directions, without wire tokens", async () => {
+		for (const direction of ["to_child", "to_parent"] as const) {
+			const seen = await render(
+				entry({
+					kind:
+						direction === "to_child" ? "parent_message" : "subagent_message",
+					text: "ok",
+					details: { direction, label: "coder" },
+				}),
+			);
+			// Under the 80-char budget a peer body stays open; a hub one does not.
+			expect(seen, direction).toHaveLength(1);
+			expect(seen[0]?.label).toBe("Hub · From coder");
+			expect(seen[0]?.summary).toBe("ok");
+			expect(textOf(dom?.container as TextNode)).not.toContain(direction);
+		}
+	});
+
+	it("keeps a SHORT peer message open (negative control for the hub fold)", async () => {
+		const seen = await render(
+			entry({
+				kind: "peer_message",
+				text: "ok",
+				details: {
+					sender: { conversation_name: "reviewer", session_id: "s-2" },
+				},
+			}),
+		);
+		expect(seen).toHaveLength(0);
 	});
 
 	it("gives a peer message the peer glyph and its sender as the label", async () => {

@@ -1,11 +1,19 @@
 import { Pressable, Text, View } from "react-native";
 
 import {
+	TRACE_BAR_PAD_CLASS,
+	TRACE_COLUMN_GAP_CLASS,
+	TRACE_GLYPH_BOX_CLASS,
+	TRACE_ROW_OUTER_CLASS,
+} from "@/features/session/components/trace-rail";
+import {
 	groupAccessibleName,
 	groupPhrases,
 	type QuietGroup,
 } from "@/features/session/turn-condensing";
 import { quietGroupId, ROLE } from "@/ui/a11y";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { cx } from "@/ui/variants";
 
 /**
  * The quiet group's bar: one row standing in for a run of delivery receipts.
@@ -36,6 +44,8 @@ export type QuietGroupBarProps = {
 	onToggle: (open: boolean) => void;
 };
 
+const unbreakable = (detail: string): string => detail.replace(/ /g, "\u00A0");
+
 export const QuietGroupBar = ({
 	groupKey,
 	group,
@@ -48,29 +58,46 @@ export const QuietGroupBar = ({
 	// site — the turn bar's own split.
 	const [what, ...details] = groupPhrases(group);
 	return (
-		<View className="px-3 py-1">
+		<View className={TRACE_ROW_OUTER_CLASS}>
 			<Pressable
 				testID={quietGroupId(groupKey)}
 				accessibilityRole={ROLE.button}
 				accessibilityLabel={groupAccessibleName(group)}
 				accessibilityState={{ expanded: open }}
 				onPress={() => onToggle(!open)}
-				className="min-h-12 flex-row items-center gap-1.5 px-2.5"
+				style={{ minHeight: TOUCH_FLOOR }}
+				className="justify-center"
 			>
-				<Text className="font-mono text-mono-sm text-ink-dim" aria-hidden>
-					↔
-				</Text>
-				<Text className="min-w-0 flex-1 text-body-sm text-ink">
-					{what}
-					{details.length > 0 ? (
-						<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
-							{` · ${details.join(" · ")}`}
+				{({ pressed }) => (
+					<View
+						className={cx(
+							"flex-row items-start py-2",
+							pressed && "bg-row-hover",
+							TRACE_BAR_PAD_CLASS,
+							TRACE_COLUMN_GAP_CLASS,
+						)}
+					>
+						<Text
+							className={cx(TRACE_GLYPH_BOX_CLASS, "text-ink-dim")}
+							aria-hidden
+						>
+							↔
 						</Text>
-					) : null}
-				</Text>
-				<Text className="font-mono text-mono-sm text-ink-dim" aria-hidden>
-					{open ? "▾" : "▸"}
-				</Text>
+						<Text className="min-w-0 flex-1 text-trace text-ink-muted">
+							{what}
+							{details.length > 0 ? (
+								<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
+									{` · ${details.map(unbreakable).join(" · ")}`}
+								</Text>
+							) : null}
+						</Text>
+						<Text className="text-trace" aria-hidden>
+							<Text className="font-mono text-mono-sm text-ink-dim">
+								{open ? "▾" : "▸"}
+							</Text>
+						</Text>
+					</View>
+				)}
 			</Pressable>
 		</View>
 	);

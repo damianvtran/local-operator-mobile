@@ -137,6 +137,53 @@ export function bridgeReceiptLabel(entry: TranscriptEntry): string {
 		: "Team Bridge";
 }
 
+/** Optional secondary facts on a typed Bridge receipt (channel/DM + attachment count)
+ *  from receiver-projected display metadata, sanitized against control/bidi code points. */
+export function bridgeReceiptMeta(entry: TranscriptEntry): string {
+	const receipt = entry.details.bridge_receipt;
+	if (receipt?.v !== 1) return "";
+	const parts: string[] = [];
+	const convName = receipt.conversation?.label;
+	if (typeof convName === "string") {
+		const clean = [...convName]
+			.filter((char) => !isHubIdentityControl(char.codePointAt(0) ?? 0))
+			.join("")
+			.trim()
+			.slice(0, 120);
+		// Only channels read as `#name`; a group conversation keeps its label bare.
+		if (clean) {
+			parts.push(
+				receipt.conversation?.kind === "channel" && !clean.startsWith("#")
+					? `#${clean}`
+					: clean,
+			);
+		}
+	} else if (receipt.conversation?.kind === "dm") {
+		parts.push("DM");
+	}
+	const attachments = receipt.attachment_count;
+	if (
+		typeof attachments === "number" &&
+		Number.isFinite(attachments) &&
+		attachments > 0
+	) {
+		const n = Math.floor(attachments);
+		if (n > 0) parts.push(`${n} ${n === 1 ? "attachment" : "attachments"}`);
+	}
+	return parts.join(" · ");
+}
+
+/** Canonical identity for a transcript row across live (`tc-<call>`) and durable
+ *  (`<msg>:<call>`) tool streams: when `tool_call_id` is present on a tool row,
+ *  `call:<tool_call_id>` stays invariant across stream-to-history handoff so open
+ *  disclosures and fold bars never reset or duplicate. */
+export const canonicalRowKey = (
+	entry: Pick<TranscriptEntry, "id" | "kind" | "tool_call_id">,
+): string =>
+	entry.kind === "tool" && entry.tool_call_id !== ""
+		? `call:${entry.tool_call_id}`
+		: entry.id;
+
 /** Display identity rejects control/bidi code points, never authored body.
  * Numeric ranges make that boundary explicit without a regex whose embedded
  * control escapes violate the pinned linter's source-safety rule. */
@@ -195,6 +242,222 @@ const GLYPHS: Record<ToolState, ToolGlyph> = {
 
 export const toolGlyph = (state: ToolState): ToolGlyph => GLYPHS[state];
 
+const MCP_PREFIX = "mcp__";
+
+/**
+ * A tool's display name: strips the `mcp__<server>__` / `mcp__<server>_` prefix
+ * so narrow phone rows show the actual call identifier (`query_metrics`) rather
+ * than repeating `mcp__` across every server call. Matches desktop & relay
+ * `displayName` (`tool-row-model.ts` / `condense-predicates.ts`) so `FoldBar`
+ * count keys agree across surfaces.
+ */
+export function displayToolName(toolName: string): string {
+	const name = toolName.trim();
+	if (!name.toLowerCase().startsWith(MCP_PREFIX)) return name;
+	const rest = name.slice(MCP_PREFIX.length);
+	const doubleSplit = rest.indexOf("__");
+	if (doubleSplit > 0) {
+		return rest.slice(doubleSplit + 2) || rest;
+	}
+	const split = rest.indexOf("_");
+	if (split <= 0) return rest || name;
+	return rest.slice(split + 1) || rest;
+}
+
+/** Whether a raw summary adds nothing to the name column (`todo  todo` stutter). */
+export function isBareToolName(summary: string, toolName: string): boolean {
+	const s = summary.trim();
+	const raw = toolName.trim();
+	return (
+		s.length === 0 ||
+		s === raw ||
+		s === displayToolName(raw) ||
+		s.toLowerCase() === raw.toLowerCase() ||
+		s.toLowerCase() === displayToolName(raw).toLowerCase()
+	);
+}
+
+const PYTHON_REPR_SUMMARY =
+	/^\s*[a-zA-Z_]\w*\s*=\s*(?:['"`[\]{]|True\b|False\b|None\b|-?\d)/;
+const QUOTED_INTENT_REPR =
+	/^(?:.*,\s*)?i\s*=\s*(?:'([^']*)'|"([^"]*)")(?:\s*,.*)?$/;
+
+function firstCleanLine(value: unknown, skipComments = false): string {
+	if (typeof value !== "string") return "";
+	for (const raw of value.split("\n")) {
+		const trimmed = raw.trim();
+		if (!trimmed) continue;
+		if (skipComments && trimmed.startsWith("#")) continue;
+		return trimmed;
+	}
+	return "";
+}
+
+function scalarArg(value: unknown): string {
+	if (typeof value === "string") return firstCleanLine(value);
+	if (typeof value === "number" || typeof value === "boolean")
+		return String(value);
+	return "";
+}
+
+/** Derive a clean, human-readable one-line summary from structured `args`. */
+export function summaryFromToolArgs(
+	toolName: string,
+	args: Record<string, unknown> | null | undefined,
+): string {
+	if (!args) return "";
+	const name = displayToolName(toolName).toLowerCase();
+	const intent = firstCleanLine(args.i);
+
+	if (name === "read" || name === "edit" || name === "write") {
+		const path = scalarArg(args.path ?? args.file_path);
+		const range = scalarArg(args.range);
+		if (path) return range ? `${path}:${range}` : path;
+		if (intent) return intent;
+	}
+	if (name === "grep" || name === "glob") {
+		const pattern = scalarArg(args.pattern);
+		const path = scalarArg(args.path);
+		if (pattern && path && path !== ".") return `${pattern} ${path}`;
+		if (pattern) return pattern;
+		if (intent) return intent;
+	}
+	if (name === "bash" || name === "exec" || name === "shell") {
+		if (intent) return intent;
+		const cmd = firstCleanLine(args.command ?? args.cmd);
+		if (cmd) return cmd;
+	}
+	if (name === "eval") {
+		if (intent) return intent;
+		const code = firstCleanLine(args.code, true);
+		if (code) return code;
+	}
+	if (name === "task" || name === "delegate") {
+		if (Array.isArray(args.tasks) && args.tasks.length > 0) {
+			return `${args.tasks.length} ${args.tasks.length === 1 ? "task" : "tasks"}`;
+		}
+		const label = scalarArg(args.label);
+		const agent = scalarArg(args.agent);
+		if (label && agent && label !== agent) return `${agent} · ${label}`;
+		if (label) return label;
+		if (agent) return agent;
+		if (intent) return intent;
+	}
+	if (name === "wait") {
+		const jobId = args.job_id;
+		if (Array.isArray(jobId) && jobId.length > 0) {
+			const ids = jobId.map(scalarArg).filter(Boolean);
+			if (ids.length > 0) return ids.join(", ");
+		}
+		const single = scalarArg(jobId);
+		if (single) return single;
+		if (intent) return intent;
+	}
+	if (name === "hub") {
+		const op = scalarArg(args.op);
+		const to = scalarArg(args.to ?? args.job_id);
+		if (op && to) return `${op} · ${to}`;
+		if (op) return op;
+		const msg = firstCleanLine(args.message);
+		if (msg) return msg;
+		if (intent) return intent;
+	}
+	if (name === "todo") {
+		const op = scalarArg(args.op);
+		const phase = scalarArg(args.phase);
+		if (op && phase) return `${op} · ${phase}`;
+		if (op) return op;
+		if (intent) return intent;
+	}
+	if (name === "ask") {
+		if (Array.isArray(args.questions) && args.questions.length > 0) {
+			const first = args.questions[0];
+			if (first && typeof first === "object") {
+				const q = firstCleanLine((first as Record<string, unknown>).question);
+				if (q) return q;
+			}
+		}
+		const q = firstCleanLine(args.question);
+		if (q) return q;
+		if (intent) return intent;
+	}
+	if (
+		name === "web_search" ||
+		name === "search_the_web" ||
+		name === "web_fetch" ||
+		name === "fetch_url"
+	) {
+		const target = scalarArg(args.query ?? args.url);
+		if (target) return target;
+		if (intent) return intent;
+	}
+
+	if (intent) return intent;
+
+	const op = scalarArg(args.op ?? args.action ?? args.method);
+	const subjectKeys = [
+		"name",
+		"path",
+		"url",
+		"query",
+		"pattern",
+		"target",
+		"session",
+		"key",
+		"job_id",
+		"id",
+	];
+	const subjects = subjectKeys
+		.map((key) => scalarArg(args[key]))
+		.filter(Boolean);
+	if (op && subjects.length > 0) return `${op} ${subjects[0]}`;
+	if (subjects.length > 0) return subjects.slice(0, 2).join(" ");
+	if (op) return op;
+
+	const fallback = Object.entries(args)
+		.filter(([key]) => key !== "i")
+		.map(([, val]) => scalarArg(val))
+		.filter(Boolean);
+	return fallback.slice(0, 2).join(" ");
+}
+
+/**
+ * Clean one-line summary for a tool row: suppresses duplicate bare tool names
+ * (`todo  todo`) and replaces raw Python-repr strings (`i='Checking...'`,
+ * `op='list'`) with structured human-readable summaries derived from `args`.
+ */
+export function toolRowSummary(
+	entry: Pick<TranscriptEntry, "tool_name" | "summary" | "intent" | "details">,
+): string {
+	const raw = entry.summary.trim();
+	const rawArgs = entry.details.args;
+	const argsObj =
+		rawArgs !== null && typeof rawArgs === "object" && !Array.isArray(rawArgs)
+			? (rawArgs as Record<string, unknown>)
+			: null;
+
+	const bare = isBareToolName(raw, entry.tool_name);
+	const isRepr = PYTHON_REPR_SUMMARY.test(raw);
+
+	if (!bare && !isRepr) return raw;
+
+	const derived = summaryFromToolArgs(entry.tool_name, argsObj);
+	if (derived) return derived;
+
+	if (isRepr) {
+		const intentMatch = QUOTED_INTENT_REPR.exec(raw);
+		const extracted = (intentMatch?.[1] ?? intentMatch?.[2] ?? "").trim();
+		if (extracted) return extracted;
+	}
+
+	const intentFallback = entry.intent.trim();
+	if (intentFallback && !isBareToolName(intentFallback, entry.tool_name)) {
+		return intentFallback;
+	}
+
+	return bare ? "" : raw;
+}
+
 /**
  * Tools whose expansion IS the diff.
  *
@@ -213,28 +476,45 @@ export const isDiffFirstTool = (entry: TranscriptEntry): boolean =>
 	DIFF_FIRST_TOOLS.has(entry.tool_name.toLowerCase()) &&
 	entry.details.diff !== undefined;
 
+const MAX_SERIALIZED_LINE_CHARS = 400;
+
+function formatStructuredValue(item: unknown): string {
+	if (typeof item === "string") return item;
+	if (item === null || item === undefined) return String(item);
+	if (typeof item === "number" || typeof item === "boolean")
+		return String(item);
+	try {
+		const json = JSON.stringify(item);
+		if (typeof json === "string") {
+			return json.length > MAX_SERIALIZED_LINE_CHARS
+				? `${json.slice(0, MAX_SERIALIZED_LINE_CHARS - 1)}…`
+				: json;
+		}
+	} catch {
+		// Circular or non-serializable value falls back safely below.
+	}
+	return "[unserializable]";
+}
+
 /**
  * Normalise one `details` field to display lines.
  *
  * Three shapes arrive here and all three are legal: a string (`output`,
- * `partial`), an array of lines (the fold's `diff`), and a plain object (the
- * fold's `args`, one `key: value` per entry). The object arm is the one that has
- * crashed a shipped client, so it is handled explicitly rather than by a
- * `String(…)` fallback.
+ * `partial`), an array of lines or structured items (the fold's `diff` or an
+ * array-typed payload), and a plain object (the fold's `args`, one `key: value`
+ * per entry). Nested objects inside arrays serialize cleanly via JSON instead
+ * of `[object Object]`, and excessively wide values cap safely.
  */
 export const toLines = (value: unknown): string[] => {
 	if (value === null || value === undefined) return [];
 	if (typeof value === "string") return value.split("\n");
-	if (Array.isArray(value)) return value.map((line) => String(line));
+	if (Array.isArray(value)) {
+		return value.map((line) => formatStructuredValue(line));
+	}
 	if (typeof value === "object") {
-		// Deliberately no cast: `Object.entries` has an `object` overload, and the
-		// values are re-narrowed on the next line. Asserting a `Record<string,
-		// unknown>` here would be claiming to know the shape of a fold payload that
-		// is already known to vary by tool.
-		return Object.entries(value).map(
-			([key, item]) =>
-				`${key}: ${typeof item === "string" ? item : JSON.stringify(item)}`,
-		);
+		return Object.entries(value)
+			.filter(([, item]) => item !== undefined)
+			.map(([key, item]) => `${key}: ${formatStructuredValue(item)}`);
 	}
 	return [String(value)];
 };

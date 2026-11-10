@@ -1,11 +1,19 @@
 import { Pressable, Text, View } from "react-native";
 
 import {
+	TRACE_BAR_PAD_CLASS,
+	TRACE_COLUMN_GAP_CLASS,
+	TRACE_GLYPH_BOX_CLASS,
+	TRACE_ROW_OUTER_CLASS,
+} from "@/features/session/components/trace-rail";
+import {
 	barAccessibleName,
 	barPhrases,
 	type TurnBarFacts,
 } from "@/features/session/turn-condensing";
 import { ROLE, turnBarId } from "@/ui/a11y";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { cx } from "@/ui/variants";
 
 /**
  * The condensed turn's bar: one row standing in for a completed turn's work,
@@ -57,51 +65,60 @@ export const TurnBar = ({
 	// completion, the rest are the counts. Splitting here keeps the string
 	// single-sourced rather than re-spelling "completed" at the render site.
 	const [outcome, ...details] = barPhrases(facts);
+	const failedCount = facts.failed ?? 0;
+	const failed = failedCount > 0;
 	return (
-		<View className="px-3 py-1">
+		<View className={TRACE_ROW_OUTER_CLASS}>
 			<Pressable
 				testID={turnBarId(turnKey)}
 				accessibilityRole={ROLE.button}
 				accessibilityLabel={barAccessibleName(facts, headline)}
 				accessibilityState={{ expanded: open }}
 				onPress={() => onToggle(!open)}
-				// 48 = `min-h-12`, the strict platform of the two. Deliberately NOT
-				// `numberOfLines`-capped below: a clipped "42s" is a shorter string
-				// that is still a valid duration, which is how a truncated clock
-				// survives review (`components.md` § 7) — the bar wraps instead.
-				className="min-h-12 justify-center px-3 py-2"
+				style={{ minHeight: TOUCH_FLOOR }}
+				className="justify-center"
 			>
-				{/* ONE RAIL, AND THE CARET RIDES THE FIRST LINE. The ✓ used to be its own
-				 *  flex column and the caret was centred on the whole row, so once the label
-				 *  wrapped (150 % on a phone) the first line sat 27.8 pt inside the row, the
-				 *  wrapped lines started under the glyph rather than beside it, and the caret
-				 *  floated 15.9 pt off line one — U-41's rail and caret rules. The glyph is
-				 *  now the first RUN of the label's own text, so every line shares the rail,
-				 *  and the row is `items-start` so the caret keys to line one at any scale.
-				 *  The outer Pressable centres this row vertically, which keeps a single-line
-				 *  bar optically centred inside its 48 pt target. */}
-				<View className="flex-row items-start gap-2">
-					<Text className="min-w-0 flex-1 text-body-sm text-ink">
-						<Text className="font-mono text-mono-sm text-success" aria-hidden>
-							{"✓ "}
+				{({ pressed }) => (
+					<View
+						className={cx(
+							"flex-row items-start py-2",
+							pressed && "bg-row-hover",
+							TRACE_BAR_PAD_CLASS,
+							TRACE_COLUMN_GAP_CLASS,
+						)}
+					>
+						<Text
+							className={cx(
+								TRACE_GLYPH_BOX_CLASS,
+								failed ? "text-danger" : "text-success",
+							)}
+							aria-hidden
+						>
+							{failed ? "✗" : "✓"}
 						</Text>
-						{outcome}
-						{details.length > 0 ? (
-							<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
-								{` · ${details.map(unbreakable).join(" · ")}`}
+						<Text className="min-w-0 flex-1 text-trace text-ink-muted">
+							{outcome}
+							{details.length > 0 ? (
+								<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
+									{` · ${details.map(unbreakable).join(" · ")}`}
+								</Text>
+							) : null}
+						</Text>
+						{failed ? (
+							<Text
+								className="shrink-0 font-mono text-mono-sm text-danger tabular-nums"
+								aria-hidden
+							>
+								{failedCount}
 							</Text>
 						) : null}
-					</Text>
-					{/* The caret is wrapped in the label's OWN type role, the way the label wraps
-					 *  its ✓: both lines then have the body-sm line box, and the caret's centre
-					 *  is the first line's centre by construction rather than 4 pt off at 200 %
-					 *  (a bare mono-sm caret has a shorter line box than the body-sm label). */}
-					<Text className="text-body-sm" aria-hidden>
-						<Text className="font-mono text-mono-sm text-ink-dim">
-							{open ? "▾" : "▸"}
+						<Text className="text-trace" aria-hidden>
+							<Text className="font-mono text-mono-sm text-ink-dim">
+								{open ? "▾" : "▸"}
+							</Text>
 						</Text>
-					</Text>
-				</View>
+					</View>
+				)}
 			</Pressable>
 		</View>
 	);

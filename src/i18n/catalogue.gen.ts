@@ -598,7 +598,26 @@ export type CatalogueKey =
 	| "relay.health.live_detail"
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
-	| "relay.health.reconnecting_detail";
+	| "relay.health.reconnecting_detail"
+	| "relay.transcript.composer.queued"
+	| "relay.transcript.fold.failed_label"
+	| "relay.transcript.fold.more"
+	| "relay.transcript.fold.partial_label"
+	| "relay.transcript.fold.python"
+	| "relay.transcript.fold.shell"
+	| "relay.transcript.fold.unit"
+	| "relay.transcript.label.ask"
+	| "relay.transcript.label.job"
+	| "relay.transcript.label.messages"
+	| "relay.transcript.label.peer"
+	| "relay.transcript.label.steered"
+	| "relay.transcript.label.wake"
+	| "relay.transcript.older.failed"
+	| "relay.transcript.session.unread_refused"
+	| "relay.transcript.turn.actions"
+	| "relay.transcript.turn.completed"
+	| "relay.transcript.turn.condensed"
+	| "relay.transcript.turn.took";
 
 /** Keys with no placeholders: `t()` takes no second argument for these. */
 export type NoParamKey =
@@ -1091,7 +1110,18 @@ export type NoParamKey =
 	| "relay.health.live_detail"
 	| "relay.health.quiet_detail"
 	| "relay.health.reconnecting"
-	| "relay.health.reconnecting_detail";
+	| "relay.health.reconnecting_detail"
+	| "relay.transcript.fold.failed_label"
+	| "relay.transcript.label.ask"
+	| "relay.transcript.label.job"
+	| "relay.transcript.label.messages"
+	| "relay.transcript.label.peer"
+	| "relay.transcript.label.steered"
+	| "relay.transcript.label.wake"
+	| "relay.transcript.older.failed"
+	| "relay.transcript.session.unread_refused"
+	| "relay.transcript.turn.completed"
+	| "relay.transcript.turn.condensed";
 
 /** Keys that take one argument object, typed by `MessageParams`. */
 export type ParamKey = Exclude<CatalogueKey, NoParamKey>;
@@ -1666,6 +1696,25 @@ export type MessageParams = {
 	"relay.health.quiet_detail": NoParams;
 	"relay.health.reconnecting": NoParams;
 	"relay.health.reconnecting_detail": NoParams;
+	"relay.transcript.composer.queued": { count: number };
+	"relay.transcript.fold.failed_label": NoParams;
+	"relay.transcript.fold.more": { count: number };
+	"relay.transcript.fold.partial_label": { count: number };
+	"relay.transcript.fold.python": { count: number };
+	"relay.transcript.fold.shell": { count: number };
+	"relay.transcript.fold.unit": { name: string | number; count: number; kind: string };
+	"relay.transcript.label.ask": NoParams;
+	"relay.transcript.label.job": NoParams;
+	"relay.transcript.label.messages": NoParams;
+	"relay.transcript.label.peer": NoParams;
+	"relay.transcript.label.steered": NoParams;
+	"relay.transcript.label.wake": NoParams;
+	"relay.transcript.older.failed": NoParams;
+	"relay.transcript.session.unread_refused": NoParams;
+	"relay.transcript.turn.actions": { label: string | number; count: number };
+	"relay.transcript.turn.completed": NoParams;
+	"relay.transcript.turn.condensed": NoParams;
+	"relay.transcript.turn.took": { duration: string | number };
 };
 
 export type ContextRole =
@@ -2253,6 +2302,25 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"relay.health.quiet_detail": "This session on your computer has stopped responding — it may be busy or stuck. A send can show a failure and still arrive once it catches up. Retrying won't send it twice.",
 	"relay.health.reconnecting": "Reconnecting",
 	"relay.health.reconnecting_detail": "This phone lost its connection to your computer and keeps trying. The session may still be running there; sending may fail until the connection is back.",
+	"relay.transcript.composer.queued": "{count, plural, one {# queued} other {# queued}}",
+	"relay.transcript.fold.failed_label": "Includes a failed action",
+	"relay.transcript.fold.more": "{count, plural, one {and # other action} other {and # other actions}}",
+	"relay.transcript.fold.partial_label": "{count, plural, one {At least # action — earlier messages aren’t loaded yet} other {At least # actions — earlier messages aren’t loaded yet}}",
+	"relay.transcript.fold.python": "{count, plural, one {# python} other {# python}}",
+	"relay.transcript.fold.shell": "{count, plural, one {# shell} other {# shell}}",
+	"relay.transcript.fold.unit": "{kind, select, files {{count, plural, one {# file} other {# files}}} searches {{count, plural, one {# search} other {# searches}}} web {{count, plural, one {# web search} other {# web searches}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, one {# edit} other {# edits}}} tasks {{count, plural, one {# task} other {# tasks}}} incoming {{count, plural, one {# incoming message} other {# incoming messages}}} wakes {{count, plural, one {# wake receipt} other {# wake receipts}}} other {{count, plural, other {# {name}}}}}",
+	"relay.transcript.label.ask": "Ask",
+	"relay.transcript.label.job": "Job result",
+	"relay.transcript.label.messages": "Messages",
+	"relay.transcript.label.peer": "Peer message",
+	"relay.transcript.label.steered": "Steered",
+	"relay.transcript.label.wake": "Wake",
+	"relay.transcript.older.failed": "Couldn’t load earlier messages",
+	"relay.transcript.session.unread_refused": "Could not read what is unread — nothing was cleared. Try again.",
+	"relay.transcript.turn.actions": "{count, plural, one {{label} action} other {{label} actions}}",
+	"relay.transcript.turn.completed": "completed",
+	"relay.transcript.turn.condensed": "Turn condensed",
+	"relay.transcript.turn.took": "Took {duration}",
 };
 
 /** Translator context for every key above. */
@@ -2825,6 +2893,25 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"relay.health.quiet_detail": { role: "help", note: "Sheet body for the YELLOW 'Not answering' state when the session is reachable but has gone quiet (heartbeat_stale). True behaviour to keep: a send can report a failure yet still be delivered once the session catches up; retrying under the same command id is safe. Do not promise queueing or delivery." },
 	"relay.health.reconnecting": { role: "status", note: "Title of the sheet and accessible name of the YELLOW status dot when the PHONE's own connection is down (the computer may be fine). One short state word, no ellipsis. Translator budget: 16 cells (the core's own maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here." },
 	"relay.health.reconnecting_detail": { role: "help", note: "Sheet body for the reconnecting state. It is the PHONE's connection that is down; the session itself may still be running, and the phone keeps trying on its own. 'Sending may fail' is deliberate — never promise that messages wait or are queued." },
+	"relay.transcript.composer.queued": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: composer queued prompt count). Restores the pre-redesign queued-prompt count; {count} is the number of prompts waiting, not tool calls." },
+	"relay.transcript.fold.failed_label": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed group accessible failure state). Screen-reader text accompanying the failure glyph; it does not claim a count." },
+	"relay.transcript.fold.more": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: tool-fold overflow unit). Follows at most five count units and counts actions hidden by that display cap, not additional tool types." },
+	"relay.transcript.fold.partial_label": { role: "help", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: head-cut count accessible explanation). Explains that N+ is a minimum because earlier history has not loaded." },
+	"relay.transcript.fold.python": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: Python evaluation count unit). python is a runtime tool category and stays untranslated. Use the locale's number formatting and plural rules; the noun remains python in every arm." },
+	"relay.transcript.fold.shell": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: shell command count unit). shell is a runtime tool category and stays untranslated. Use the locale's number formatting and plural rules; the noun remains shell in every arm." },
+	"relay.transcript.fold.unit": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: tool-fold count unit). One complete unit per kind. shell, python and {name} are runtime/tool names and stay untranslated. The other arm formats a raw tool name; preserve placeholders and plural/select syntax exactly. Native difference: the core writes {count, number}; this runtime has no number argument type, and rejects mixing plural and text uses of `count`, so the shell/python/other arms use `{count, plural, other {# ...}}`." },
+	"relay.transcript.label.ask": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment contains a settled operator question." },
+	"relay.transcript.label.job": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a background job result." },
+	"relay.transcript.label.messages": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: mixed quiet-group label). Used when receipts from multiple families form one quiet group." },
+	"relay.transcript.label.peer": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a peer message." },
+	"relay.transcript.label.steered": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a steering message." },
+	"relay.transcript.label.wake": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a scheduled wake." },
+	"relay.transcript.older.failed": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: history paging error). Shown beside the existing Try again action at the top of the transcript." },
+	"relay.transcript.session.unread_refused": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: unread-state operation refusal). Explains that unread state could not be read and that no messages were marked read. Used by both bulk and row-level mark operations." },
+	"relay.transcript.turn.actions": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: turn and tool-group action count). {label} is the formatted count, including a trailing + when the loaded history is partial. Translate the complete plural message; do not print {count} separately. Native difference: the core wraps this in `{label, select, other {...}}` for its validator; this runtime rejects a placeholder used as both select and text, so `{label}` stands directly inside `{count, plural, ...}`." },
+	"relay.transcript.turn.completed": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: screen-reader completion state). Appended to a completed condensed bar's accessible name." },
+	"relay.transcript.turn.condensed": { role: "status", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed turn bar fallback label). Used only when the model supplies no more specific segment label." },
+	"relay.transcript.turn.took": { role: "meta", note: "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed turn duration clause). {duration} is already formatted, for example 31s or 2m14s. Never claim a duration when absent." },
 };
 
 /**
@@ -3411,6 +3498,25 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Esta sesión dejó de responder en tu máquina — puede que esté ocupada o atascada. Un mensaje puede aparecer como fallido y aun así llegar cuando la sesión se ponga al día. Reintentar no lo enviará dos veces.",
 		"relay.health.reconnecting": "Reconectando",
 		"relay.health.reconnecting_detail": "Este teléfono perdió la conexión con tu máquina y sigue intentando reconectarse. Puede que la sesión siga ejecutándose allí; un envío puede fallar hasta que vuelva la conexión.",
+		"relay.transcript.composer.queued": "{count, plural, one {# en cola} many {# en cola} other {# en cola}}",
+		"relay.transcript.fold.failed_label": "Incluye una acción fallida",
+		"relay.transcript.fold.more": "{count, plural, one {y # acción más} many {y # de acciones más} other {y # acciones más}}",
+		"relay.transcript.fold.partial_label": "{count, plural, one {Al menos # acción — los mensajes anteriores aún no se han cargado} many {Al menos # de acciones — los mensajes anteriores aún no se han cargado} other {Al menos # acciones — los mensajes anteriores aún no se han cargado}}",
+		"relay.transcript.fold.python": "{count, plural, one {# python} many {# python} other {# python}}",
+		"relay.transcript.fold.shell": "{count, plural, one {# shell} many {# shell} other {# shell}}",
+		"relay.transcript.fold.unit": "{kind, select, files {{count, plural, one {# archivo} many {# de archivos} other {# archivos}}} searches {{count, plural, one {# búsqueda} many {# de búsquedas} other {# búsquedas}}} web {{count, plural, one {# búsqueda web} many {# de búsquedas web} other {# búsquedas web}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, one {# edición} many {# de ediciones} other {# ediciones}}} tasks {{count, plural, one {# tarea} many {# de tareas} other {# tareas}}} incoming {{count, plural, one {# mensaje entrante} many {# de mensajes entrantes} other {# mensajes entrantes}}} wakes {{count, plural, one {# recibo de despertar} many {# de recibos de despertar} other {# recibos de despertar}}} other {{count, plural, other {# {name}}}}}",
+		"relay.transcript.label.ask": "Pregunta",
+		"relay.transcript.label.job": "Resultado de trabajo",
+		"relay.transcript.label.messages": "Mensajes",
+		"relay.transcript.label.peer": "Mensaje de otra sesión",
+		"relay.transcript.label.steered": "Redirigido",
+		"relay.transcript.label.wake": "Despertar",
+		"relay.transcript.older.failed": "No se pudieron cargar los mensajes anteriores",
+		"relay.transcript.session.unread_refused": "No se pudo leer lo que está sin leer; no se borró nada. Inténtalo de nuevo.",
+		"relay.transcript.turn.actions": "{count, plural, one {{label} acción} many {{label} de acciones} other {{label} acciones}}",
+		"relay.transcript.turn.completed": "completado",
+		"relay.transcript.turn.condensed": "Turno resumido",
+		"relay.transcript.turn.took": "{duration}",
 	},
 	"fr": {
 		"mobile.account_routing.disconnected": "Connectez un ordinateur pour modifier l’acheminement du compte.",
@@ -3981,6 +4087,25 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Sur votre ordinateur, cette session ne répond plus — elle est peut-être occupée ou bloquée. Un message peut être signalé en échec et arriver malgré tout quand elle aura rattrapé son retard. Réessayer ne l’enverra pas en double.",
 		"relay.health.reconnecting": "Reconnexion",
 		"relay.health.reconnecting_detail": "Ce téléphone a perdu la connexion avec votre ordinateur et continue d’essayer de se reconnecter. La session s’y exécute peut-être encore ; un envoi peut échouer tant que la connexion n’est pas rétablie.",
+		"relay.transcript.composer.queued": "{count, plural, one {# en attente} many {# en attente} other {# en attente}}",
+		"relay.transcript.fold.failed_label": "Contient une action en échec",
+		"relay.transcript.fold.more": "{count, plural, one {et # autre action} many {et # d’autres actions} other {et # autres actions}}",
+		"relay.transcript.fold.partial_label": "{count, plural, one {Au moins # action — les messages précédents ne sont pas encore chargés} many {Au moins # d’actions — les messages précédents ne sont pas encore chargés} other {Au moins # actions — les messages précédents ne sont pas encore chargés}}",
+		"relay.transcript.fold.python": "{count, plural, one {# python} many {# python} other {# python}}",
+		"relay.transcript.fold.shell": "{count, plural, one {# shell} many {# shell} other {# shell}}",
+		"relay.transcript.fold.unit": "{kind, select, files {{count, plural, one {# fichier} many {# de fichiers} other {# fichiers}}} searches {{count, plural, one {# recherche} many {# de recherches} other {# recherches}}} web {{count, plural, one {# recherche web} many {# de recherches web} other {# recherches web}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, one {# modification} many {# de modifications} other {# modifications}}} tasks {{count, plural, one {# tâche} many {# de tâches} other {# tâches}}} incoming {{count, plural, one {# message entrant} many {# de messages entrants} other {# messages entrants}}} wakes {{count, plural, one {# accusé de réveil} many {# d’accusés de réveil} other {# accusés de réveil}}} other {{count, plural, other {# {name}}}}}",
+		"relay.transcript.label.ask": "Question",
+		"relay.transcript.label.job": "Résultat de tâche",
+		"relay.transcript.label.messages": "Messages",
+		"relay.transcript.label.peer": "Message d’une autre session",
+		"relay.transcript.label.steered": "Réorienté",
+		"relay.transcript.label.wake": "Réveil",
+		"relay.transcript.older.failed": "Impossible de charger les messages précédents",
+		"relay.transcript.session.unread_refused": "Impossible de lire les messages non lus — rien n’a été effacé. Réessayez.",
+		"relay.transcript.turn.actions": "{count, plural, one {{label} action} many {{label} d’actions} other {{label} actions}}",
+		"relay.transcript.turn.completed": "terminé",
+		"relay.transcript.turn.condensed": "Tour condensé",
+		"relay.transcript.turn.took": "{duration}",
 	},
 	"hi": {
 		"mobile.account_routing.disconnected": "खाता रूटिंग बदलने के लिए कंप्यूटर से कनेक्ट करें।",
@@ -4551,6 +4676,25 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "आपके कंप्यूटर पर इस सत्र ने उत्तर देना बंद कर दिया है — शायद यह व्यस्त हो या अटक गया हो। भेजा गया संदेश विफल दिख सकता है, फिर भी सत्र के दोबारा उत्तर देने पर पहुँच सकता है। फिर से कोशिश करने पर भी यह दो बार नहीं पहुँचेगा।",
 		"relay.health.reconnecting": "फिर से कनेक्ट हो रहा",
 		"relay.health.reconnecting_detail": "इस फ़ोन का आपके कंप्यूटर से कनेक्शन टूट गया है और यह लगातार फिर से कनेक्ट होने की कोशिश कर रहा है। हो सकता है सत्र वहाँ अब भी चल रहा हो; कनेक्शन वापस आने तक संदेश भेजना विफल हो सकता है।",
+		"relay.transcript.composer.queued": "{count, plural, one {# कतार में} other {# कतार में}}",
+		"relay.transcript.fold.failed_label": "इसमें एक विफल क्रिया शामिल है",
+		"relay.transcript.fold.more": "{count, plural, one {और # अन्य क्रिया} other {और # अन्य क्रियाएँ}}",
+		"relay.transcript.fold.partial_label": "{count, plural, one {कम से कम # क्रिया — पिछले संदेश अभी लोड नहीं हुए} other {कम से कम # क्रियाएँ — पिछले संदेश अभी लोड नहीं हुए}}",
+		"relay.transcript.fold.python": "{count, plural, one {# python} other {# python}}",
+		"relay.transcript.fold.shell": "{count, plural, one {# shell} other {# shell}}",
+		"relay.transcript.fold.unit": "{kind, select, files {{count, plural, one {# फ़ाइल} other {# फ़ाइलें}}} searches {{count, plural, one {# खोज} other {# खोजें}}} web {{count, plural, one {# वेब खोज} other {# वेब खोजें}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, one {# संपादन} other {# संपादन}}} tasks {{count, plural, one {# कार्य} other {# कार्य}}} incoming {{count, plural, one {# आया संदेश} other {# आए संदेश}}} wakes {{count, plural, one {# जागृति रसीद} other {# जागृति रसीदें}}} other {{count, plural, other {# {name}}}}}",
+		"relay.transcript.label.ask": "प्रश्न",
+		"relay.transcript.label.job": "जॉब परिणाम",
+		"relay.transcript.label.messages": "संदेश",
+		"relay.transcript.label.peer": "दूसरे सत्र का संदेश",
+		"relay.transcript.label.steered": "दिशा बदली गई",
+		"relay.transcript.label.wake": "जागृति",
+		"relay.transcript.older.failed": "पिछले संदेश लोड नहीं हो सके",
+		"relay.transcript.session.unread_refused": "अपठित स्थिति पढ़ी नहीं जा सकी — कुछ भी साफ़ नहीं किया गया। फिर कोशिश करें।",
+		"relay.transcript.turn.actions": "{count, plural, one {{label} क्रिया} other {{label} क्रियाएँ}}",
+		"relay.transcript.turn.completed": "पूर्ण",
+		"relay.transcript.turn.condensed": "संक्षिप्त चरण",
+		"relay.transcript.turn.took": "{duration} लगे",
 	},
 	"ru": {
 		"mobile.account_routing.disconnected": "Подключитесь к компьютеру, чтобы изменить маршрутизацию аккаунтов.",
@@ -5121,6 +5265,25 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Эта сессия на компьютере перестала отвечать — возможно, она занята или зависла. Даже если отправка покажет ошибку, сообщение может дойти, когда сессия наверстает упущенное. Повторная попытка не отправит его дважды.",
 		"relay.health.reconnecting": "Переподключение",
 		"relay.health.reconnecting_detail": "Этот телефон потерял подключение к компьютеру и продолжает попытки переподключиться. Сессия там, возможно, всё ещё работает; пока подключение не восстановится, отправка может не пройти.",
+		"relay.transcript.composer.queued": "{count, plural, one {# в очереди} few {# в очереди} many {# в очереди} other {# в очереди}}",
+		"relay.transcript.fold.failed_label": "Содержит неудачное действие",
+		"relay.transcript.fold.more": "{count, plural, one {и ещё # действие} few {и ещё # действия} many {и ещё # действий} other {и ещё # действия}}",
+		"relay.transcript.fold.partial_label": "{count, plural, one {Не менее # действия — предыдущие сообщения ещё не загружены} few {Не менее # действия — предыдущие сообщения ещё не загружены} many {Не менее # действий — предыдущие сообщения ещё не загружены} other {Не менее # действия — предыдущие сообщения ещё не загружены}}",
+		"relay.transcript.fold.python": "{count, plural, one {# python} few {# python} many {# python} other {# python}}",
+		"relay.transcript.fold.shell": "{count, plural, one {# shell} few {# shell} many {# shell} other {# shell}}",
+		"relay.transcript.fold.unit": "{kind, select, files {{count, plural, one {# файл} few {# файла} many {# файлов} other {# файла}}} searches {{count, plural, one {# поиск} few {# поиска} many {# поисков} other {# поиска}}} web {{count, plural, one {# поиск в интернете} few {# поиска в интернете} many {# поисков в интернете} other {# поиска в интернете}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, one {# правка} few {# правки} many {# правок} other {# правки}}} tasks {{count, plural, one {# задача} few {# задачи} many {# задач} other {# задачи}}} incoming {{count, plural, one {# входящее сообщение} few {# входящих сообщения} many {# входящих сообщений} other {# входящего сообщения}}} wakes {{count, plural, one {# уведомление о пробуждении} few {# уведомления о пробуждении} many {# уведомлений о пробуждении} other {# уведомления о пробуждении}}} other {{count, plural, other {# {name}}}}}",
+		"relay.transcript.label.ask": "Вопрос",
+		"relay.transcript.label.job": "Результат задания",
+		"relay.transcript.label.messages": "Сообщения",
+		"relay.transcript.label.peer": "Сообщение от другого сеанса",
+		"relay.transcript.label.steered": "Перенаправлено",
+		"relay.transcript.label.wake": "Пробуждение",
+		"relay.transcript.older.failed": "Не удалось загрузить предыдущие сообщения",
+		"relay.transcript.session.unread_refused": "Не удалось прочитать непрочитанное — ничего не очищено. Повторите попытку.",
+		"relay.transcript.turn.actions": "{count, plural, one {{label} действие} few {{label} действия} many {{label} действий} other {{label} действия}}",
+		"relay.transcript.turn.completed": "завершено",
+		"relay.transcript.turn.condensed": "Сжатый ход",
+		"relay.transcript.turn.took": "Заняло {duration}",
 	},
 	"ur": {
 		"mobile.account_routing.disconnected": "اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہو جائیں۔",
@@ -5691,6 +5854,25 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "آپ کے کمپیوٹر پر اس سیشن نے جواب دینا بند کر دیا ہے — شاید یہ مصروف ہو یا اٹک گیا ہو۔ بھیجا گیا پیغام ناکام دکھائی دے سکتا ہے، مگر سیشن کے پھر سے جواب دینے پر پہنچ بھی سکتا ہے۔ دوبارہ کوشش کرنے پر بھی یہ دو بار نہیں پہنچے گا۔",
 		"relay.health.reconnecting": "پھر منسلک ہو رہا",
 		"relay.health.reconnecting_detail": "اس فون کا آپ کے کمپیوٹر سے کنکشن ٹوٹ گیا ہے اور یہ مسلسل دوبارہ کوشش کر رہا ہے۔ ہو سکتا ہے سیشن وہاں اب بھی چل رہا ہو؛ کنکشن بحال ہونے تک پیغام بھیجنا ناکام ہو سکتا ہے۔",
+		"relay.transcript.composer.queued": "{count, plural, one {# قطار میں} other {# قطار میں}}",
+		"relay.transcript.fold.failed_label": "اس میں ناکام عمل شامل ہے",
+		"relay.transcript.fold.more": "{count, plural, one {اور # دوسرا عمل} other {اور # دیگر اعمال}}",
+		"relay.transcript.fold.partial_label": "{count, plural, one {کم از کم # عمل — پچھلے پیغامات ابھی لوڈ نہیں ہوئے} other {کم از کم # اعمال — پچھلے پیغامات ابھی لوڈ نہیں ہوئے}}",
+		"relay.transcript.fold.python": "{count, plural, one {# python} other {# python}}",
+		"relay.transcript.fold.shell": "{count, plural, one {# shell} other {# shell}}",
+		"relay.transcript.fold.unit": "{kind, select, files {{count, plural, one {# فائل} other {# فائلیں}}} searches {{count, plural, one {# تلاش} other {# تلاشیں}}} web {{count, plural, one {# ویب تلاش} other {# ویب تلاشیں}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, one {# ترمیم} other {# ترامیم}}} tasks {{count, plural, one {# کام} other {# کام}}} incoming {{count, plural, one {# آنے والا پیغام} other {# آنے والے پیغامات}}} wakes {{count, plural, one {# بیداری کی رسید} other {# بیداری کی رسیدیں}}} other {{count, plural, other {# {name}}}}}",
+		"relay.transcript.label.ask": "سوال",
+		"relay.transcript.label.job": "کام کا نتیجہ",
+		"relay.transcript.label.messages": "پیغامات",
+		"relay.transcript.label.peer": "دوسرے سیشن کا پیغام",
+		"relay.transcript.label.steered": "رخ بدلا گیا",
+		"relay.transcript.label.wake": "بیداری",
+		"relay.transcript.older.failed": "پچھلے پیغامات لوڈ نہیں ہو سکے",
+		"relay.transcript.session.unread_refused": "ناپڑھے پیغامات کی حالت پڑھی نہیں جا سکی — کچھ صاف نہیں کیا گیا۔ دوبارہ کوشش کریں۔",
+		"relay.transcript.turn.actions": "{count, plural, one {{label} عمل} other {{label} اعمال}}",
+		"relay.transcript.turn.completed": "مکمل",
+		"relay.transcript.turn.condensed": "سمیٹا گیا مرحلہ",
+		"relay.transcript.turn.took": "{duration} لگے",
 	},
 	"vi": {
 		"mobile.account_routing.disconnected": "Kết nối máy tính để thay đổi định tuyến tài khoản.",
@@ -6261,6 +6443,25 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "Phiên này trên máy tính của bạn đã ngừng phản hồi — có thể đang bận hoặc bị treo. Có thể tin nhắn báo gửi thất bại nhưng vẫn được chuyển đến khi phiên bắt kịp. Thử lại sẽ không gửi tin nhắn hai lần.",
 		"relay.health.reconnecting": "Đang kết nối lại",
 		"relay.health.reconnecting_detail": "Điện thoại này đã mất kết nối với máy tính của bạn và đang liên tục thử lại. Phiên có thể vẫn đang chạy ở đó; gửi tin nhắn có thể không thành công cho đến khi kết nối trở lại.",
+		"relay.transcript.composer.queued": "{count, plural, other {# đang chờ}}",
+		"relay.transcript.fold.failed_label": "Có thao tác thất bại",
+		"relay.transcript.fold.more": "{count, plural, other {và # thao tác khác}}",
+		"relay.transcript.fold.partial_label": "{count, plural, other {Ít nhất # thao tác — tin nhắn trước chưa được tải}}",
+		"relay.transcript.fold.python": "{count, plural, other {# python}}",
+		"relay.transcript.fold.shell": "{count, plural, other {# shell}}",
+		"relay.transcript.fold.unit": "{kind, select, files {{count, plural, other {# tệp}}} searches {{count, plural, other {# lượt tìm kiếm}}} web {{count, plural, other {# lượt tìm kiếm web}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, other {# lượt chỉnh sửa}}} tasks {{count, plural, other {# tác vụ}}} incoming {{count, plural, other {# tin nhắn đến}}} wakes {{count, plural, other {# xác nhận thức dậy}}} other {{count, plural, other {# {name}}}}}",
+		"relay.transcript.label.ask": "Câu hỏi",
+		"relay.transcript.label.job": "Kết quả tác vụ",
+		"relay.transcript.label.messages": "Tin nhắn",
+		"relay.transcript.label.peer": "Tin nhắn từ phiên khác",
+		"relay.transcript.label.steered": "Đã đổi chỉ dẫn",
+		"relay.transcript.label.wake": "Thức dậy",
+		"relay.transcript.older.failed": "Không thể tải tin nhắn trước",
+		"relay.transcript.session.unread_refused": "Không thể đọc trạng thái chưa đọc — chưa có gì bị xóa. Hãy thử lại.",
+		"relay.transcript.turn.actions": "{count, plural, other {{label} thao tác}}",
+		"relay.transcript.turn.completed": "đã hoàn tất",
+		"relay.transcript.turn.condensed": "Lượt đã thu gọn",
+		"relay.transcript.turn.took": "Mất {duration}",
 	},
 	"zh-CN": {
 		"mobile.account_routing.disconnected": "连接电脑后才能更改账户路由。",
@@ -6831,5 +7032,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"relay.health.quiet_detail": "电脑上的此会话已停止响应——可能正忙或卡住了。发送可能显示失败，但会话重新响应后仍可能送达。重试也不会重复送达。",
 		"relay.health.reconnecting": "重连中",
 		"relay.health.reconnecting_detail": "此手机与电脑的连接已断开，正在不断尝试重连。会话可能仍在电脑上运行；重新连上之前，发送消息可能会失败。",
+		"relay.transcript.composer.queued": "{count, plural, other {# 条已排队}}",
+		"relay.transcript.fold.failed_label": "包含失败的操作",
+		"relay.transcript.fold.more": "{count, plural, other {另有 # 项操作}}",
+		"relay.transcript.fold.partial_label": "{count, plural, other {至少 # 项操作 — 更早的消息尚未加载}}",
+		"relay.transcript.fold.python": "{count, plural, other {# python}}",
+		"relay.transcript.fold.shell": "{count, plural, other {# shell}}",
+		"relay.transcript.fold.unit": "{kind, select, files {{count, plural, other {# 个文件}}} searches {{count, plural, other {# 次搜索}}} web {{count, plural, other {# 次网页搜索}}} shell {{count, plural, other {# shell}}} python {{count, plural, other {# python}}} edits {{count, plural, other {# 次编辑}}} tasks {{count, plural, other {# 项任务}}} incoming {{count, plural, other {# 条收到的消息}}} wakes {{count, plural, other {# 条唤醒回执}}} other {{count, plural, other {# {name}}}}}",
+		"relay.transcript.label.ask": "提问",
+		"relay.transcript.label.job": "任务结果",
+		"relay.transcript.label.messages": "消息",
+		"relay.transcript.label.peer": "其他会话消息",
+		"relay.transcript.label.steered": "已引导",
+		"relay.transcript.label.wake": "唤醒",
+		"relay.transcript.older.failed": "无法加载更早的消息",
+		"relay.transcript.session.unread_refused": "无法读取未读状态，未清除任何内容。请重试。",
+		"relay.transcript.turn.actions": "{count, plural, other {{label} 项操作}}",
+		"relay.transcript.turn.completed": "已完成",
+		"relay.transcript.turn.condensed": "已折叠的轮次",
+		"relay.transcript.turn.took": "耗时 {duration}",
 	},
 };

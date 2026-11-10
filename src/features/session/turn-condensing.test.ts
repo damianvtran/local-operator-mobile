@@ -248,7 +248,9 @@ describe("the condense decision", () => {
 		]);
 		const [first] = plan.turns;
 		expect(first?.condensed).toBe(true);
-		expect(first?.bar).toEqual({ steps: 4, durationS: 10 });
+		// The refusal is still a step, and now also the bar's failure tally, so
+		// the bar never paints `✓ completed` over a refused send.
+		expect(first?.bar).toEqual({ steps: 4, durationS: 10, failed: 1 });
 		expect(first?.hiddenIds).toEqual(["b1", "s1", "b2", "b3"]);
 		expect(plan.items.map((item) => item.id)).toEqual([
 			"u1",
@@ -619,25 +621,26 @@ describe("no un-condense jitter: a condensed turn's rendering is a constant of e
 
 describe("the bar's copy", () => {
 	it("spells the completion, the step count and the tool seconds, omitting zero clauses", () => {
+		// Localized (`relay.transcript.turn.*`): the relay's own bar copy.
 		expect(barPhrases({ steps: 38, durationS: 42 })).toEqual([
 			"completed",
-			"38 steps",
-			"42s",
+			"Took 42s",
+			"38 actions",
 		]);
 		expect(barPhrases({ steps: 1, durationS: 0.4 })).toEqual([
 			"completed",
-			"1 step",
+			"1 action",
 		]);
 		expect(barPhrases({ steps: 0, durationS: 124 })).toEqual([
 			"completed",
-			"2m 04s",
+			"Took 2m 04s",
 		]);
 	});
 
 	it("names the turn and the completion in the accessible name", () => {
 		expect(
 			barAccessibleName({ steps: 3, durationS: 65 }, "Refactor the retry"),
-		).toBe('Turn "Refactor the retry": completed, 3 steps, 1m 05s');
+		).toBe('Turn "Refactor the retry": completed, Took 1m 05s, 3 actions');
 		expect(barAccessibleName({ steps: 0, durationS: 0 }, "")).toBe(
 			"Turn: completed",
 		);
@@ -1347,9 +1350,12 @@ describe("the group latch — facts freeze at the close", () => {
 			"t1",
 		]);
 		expect(after.groups[0]?.group.failed).toBe(0);
+		// A nonzero action count is always stated (the relay's
+		// `quietGroupClauseFacts`), never gated behind a threshold.
 		expect(groupPhrases(after.groups[0]!.group)).toEqual([
 			"Incoming messages",
 			"2",
+			"1 action",
 			"1 steered",
 		]);
 
@@ -1578,13 +1584,17 @@ const unquoted = (label: string): string =>
 /** The fixture's expected, mapped onto this client's spelling (see the block
  *  comment): times dropped, the UI's sender quoting stripped. */
 const parityExpected = (group: ParityGroup) => {
-	// The native trigger set is the receipt kind itself, so a fixture group of
-	// another family cannot come from this wire; a case expecting one belongs
-	// in the boundary map, and this guard makes a misplacement fail loudly.
-	expect(group.family, `${group.key}: family`).toBe("peer");
+	// Peer and wake receipts (and their mix) group on this client; monitor and
+	// job families still cannot, and belong in the boundary map — this guard
+	// makes a misplacement fail loudly.
+	expect(["peer", "wake", "mixed"], `${group.key}: family`).toContain(
+		group.family,
+	);
 	return {
 		key: group.key,
 		count: group.count,
+		// This client stamps `family` only off the peer default (`wake` | `mixed`).
+		...(group.family !== "peer" ? { family: group.family } : {}),
 		senders: group.senders.map((sender) => ({
 			label: unquoted(sender.label),
 			count: sender.count,
@@ -1596,13 +1606,11 @@ const parityExpected = (group: ParityGroup) => {
 	};
 };
 
-/** Case indexes whose EXPECTED fold needs a delivery kind this wire does not
- *  carry as a receipt (wake / monitor / job). The native definition is the
- *  `peer_message` run, so these rows yield no group here; the pin records
- *  that boundary deliberately. */
+/** Case indexes whose EXPECTED fold needs a delivery kind this client does
+ *  not group as a receipt (monitor / job). Wake notices joined the quiet-group
+ *  receipts with Tier A condensing, so cases 6 and 11 now meet the fixture's
+ *  own expectation instead of pinning a boundary. */
 const WIRE_BOUNDARY: ReadonlyMap<number, string> = new Map([
-	[5, "mixed peer+wake: a wake is a `notice` line here, not a receipt kind"],
-	[10, "wake-only run: same boundary"],
 	[
 		11,
 		"monitor-only run: a monitor prompt is a `notice` here, not a receipt kind",

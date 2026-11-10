@@ -650,7 +650,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// self-heal): the merged tree carries healHistory and the keyboard-aware
 	// cap, so it has neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof.
-	app: "5278073b84e0ecd140bddbe4d2b3e04e54973936b16dd1cb826bb6f5c95635f3",
+	// Transcript condensing polish (Tier A fold bar, idle completed-turn
+	// condensing): the startup and subagent screens pass `turnLive` to the
+	// list. Re-derived with --print over the staged tree; source identity
+	// only, no rendered or native proof.
+	app: "b3395f372c394955090686a8e26157c717ed28a3762f516466fdbdba34fe9c06",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1371,7 +1375,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// disjoint src files, so the merged tree has neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
-	src: "4634366d3e9b1aa4b4bf42eea4f142c4acd2a017739dde0e49a1a87c0b139082",
+	// Transcript condensing polish: Tier A `FoldBar`, idle completed-turn
+	// condensing, the shared 16/40 pt trace rail, spacing tiers, hub and Team
+	// Bridge receipt rows, `relay.transcript.*` catalogues. --print over the
+	// staged tree; source identity only, no rendered or native proof.
+	src: "5ac8f108c2e44c669f98d8655a8e53df3dad4bee0cc216c95b28f9e9eff1b599",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

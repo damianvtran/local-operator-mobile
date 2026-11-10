@@ -619,7 +619,8 @@ describe("the gap is shown where it is and where the reader is (PR #207 U2/D1)",
 	it("marks the hole inside every measured row wrapper and at the newest edge", () => {
 		expect(
 			list.match(/\{item\.id === gapItemId \? gapMarker : null\}/g),
-		).toHaveLength(3);
+			// turn bar, quiet group, fold bar (Tier A) and the entry row
+		).toHaveLength(4);
 		expect(list).toContain("testID={CONTROL.transcriptGapLoad}");
 		expect(list).toContain("{newestEdgeNotice}");
 		expect(list).toContain("testID={CONTROL.transcriptGapLoadNewest}");

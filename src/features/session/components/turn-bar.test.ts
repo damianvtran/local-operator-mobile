@@ -18,7 +18,11 @@ describe("turn-bar.tsx geometry", () => {
 	it("keeps the caret keyed to the first line and the ✓ inline", () => {
 		expect(source).toContain("items-start");
 		expect(source).not.toContain("items-center");
-		expect(source).toMatch(/✓ /);
+		// The ✓ (or ✗ when a hidden call failed) now stands in the shared
+		// 16 pt glyph box (`trace-rail.ts`), so the bar's words sit on the
+		// 40 pt text rail with every other trace row.
+		expect(source).toContain('{failed ? "✗" : "✓"}');
+		expect(source).toContain("TRACE_GLYPH_BOX_CLASS");
 	});
 
 	it("keeps each detail's unit unbreakable", () => {

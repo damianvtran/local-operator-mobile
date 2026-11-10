@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import {
+	TRACE_BAR_PAD_CLASS,
+	TRACE_COLUMN_GAP_CLASS,
+} from "@/features/session/components/trace-rail";
 import { ROLE } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
@@ -103,9 +107,9 @@ export type CollapsedRowProps = {
  * own: the round-1 `border` + `px-2.5` inset existed to clear the card's edge,
  * and there is no card.
  */
-const COLUMN_PAD = "px-0";
+const COLUMN_PAD = TRACE_BAR_PAD_CLASS;
 const GLYPH_COLUMN = "w-4 shrink-0";
-const COLUMN_GAP = "gap-2";
+const COLUMN_GAP = TRACE_COLUMN_GAP_CLASS;
 
 export const CollapsedRow = ({
 	testID,
@@ -205,7 +209,7 @@ export const CollapsedRow = ({
 					)}
 				</Pressable>
 				{action !== undefined && action !== null ? (
-					<View className={cx("justify-center", "pe-2.5")}>{action}</View>
+					<View className={cx("justify-center", "pe-2")}>{action}</View>
 				) : null}
 			</View>
 			{open ? (
