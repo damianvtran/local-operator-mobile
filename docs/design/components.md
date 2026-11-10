@@ -641,7 +641,7 @@ give back the space the cap just bought.
 
 | Row kind | Treatment | Ink |
 |---|---|---|
-| **user** | borderless fill, `max-width: 85%`, right-aligned, fill `surface`, **no border and no accent edge**, `radius.md`, padding 12/6 | `body-read` in `ink` |
+| **user** | borderless fill, `max-width: 85%`, right-aligned, fill `user-bubble` (solved ≥ 1.25:1 on `canvas` in every theme — a panel ground is 1.06–1.20:1 and does not read as a card on a phone), **no border and no accent edge**, `radius.md`, padding 12/6 | `body-read` in `ink` |
 | user, steer | no accent edge, no fill: a quiet right-aligned block | `body-sm` in `ink-muted` |
 | **assistant** | no bubble at all: plain column, full width, markdown | `body-lg` in `ink` |
 | tool | one line + a disclosure (§ 15) | see § 15 |

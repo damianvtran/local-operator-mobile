@@ -713,11 +713,16 @@
 			 * 2px accent start rule; the hairline measured 1.25:1 on the light
 			 * canvas — an edge with no separation — and the rule put a green-edged
 			 * box on every exchange. Type is `body-read`, 14 / 1.55, the step the
-			 * app's message bodies actually use. */
+			 * app's message bodies actually use.
+			 *
+			 * The fill is `user-bubble`, not `surface`: a borderless fill has only
+			 * its value to be seen by, and `surface` is 1.06-1.14:1 on canvas —
+			 * on a phone the turn read as bare text. `user-bubble` is solved to
+			 * >= 1.25:1 on canvas in every theme (palette-rules.mjs). */
 			.bubble-user {
 				align-self: flex-end;
 				max-width: 85%;
-				background: var(--lo-surface);
+				background: var(--lo-user-bubble);
 				border-radius: 10px;
 				padding: 6px 12px;
 				font-size: 14px;

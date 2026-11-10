@@ -32,8 +32,8 @@ import { cx } from "@/ui/variants";
  * the two most worth separating:
  *
  *   - **The reader's own turn is a bubble**: right-aligned, capped at 85 % of the
- *     column, with a 2 px accent edge — it is something to be told apart from the
- *     answer.
+ *     column, filled with `user-bubble` (a solved step off the page; no border
+ *     and no accent edge) — it is something to be told apart from the answer.
  *   - **The assistant's turn has NO bubble**: a plain full-width column. The
  *     answer is the page, and wrapping it in a container says it is one more item
  *     among several when it is the thing being read.
@@ -201,15 +201,27 @@ const TranscriptRowImpl = ({
 						isSteer
 							? // No fill, no accent edge: a quiet right-aligned block.
 								"px-1"
-							: /* A BORDERLESS FILL, the relay's own bubble (its
+							: /* A BORDERLESS FILL, the relay's own bubble box (its
 								 *  `transcript.tsx`: `rounded-md bg-surface px-3 py-1.5`;
 								 *  visual audit D3). It carried a hairline on all sides
 								 *  plus a 2 px accent start rule: the hairline measured
 								 *  1.25:1 on the light canvas — an edge with no
 								 *  separation — and the rule put a green-edged box on
 								 *  every exchange. The fill and the right alignment
-								 *  already say whose turn it is. */
-								"rounded-md bg-surface px-3 py-1.5",
+								 *  say whose turn it is.
+								 *
+								 *  THE FILL IS `user-bubble`, NOT `surface`. With the
+								 *  edges gone the fill is the bubble's only signal, and
+								 *  `surface` sits 1.06-1.14:1 off `canvas` in every
+								 *  shipped theme: on a phone the reader's turn rendered
+								 *  as bare indented text, indistinguishable from the
+								 *  assistant's prose (operator report on the iOS build,
+								 *  2026-11-09). `user-bubble` is solved per palette to
+								 *  >= 1.25:1 on canvas with `ink` at the text floor
+								 *  (`design/themes/derive.mjs`; asserted by
+								 *  `palette-rules.mjs` § "the user bubble"). Do not
+								 *  swap it back for a panel ground. */
+								"rounded-md bg-user-bubble px-3 py-1.5",
 					)}
 				>
 					{entry.text.length > 0 ? (

@@ -64,6 +64,11 @@ export const textPairs = (theme) => {
 	on("accent-hover", GROUNDS);
 	on("accent-alt", GROUNDS);
 
+	/* The user bubble carries exactly one ink: the reader's own prose. It is
+	   NOT one of GROUNDS — nothing muted, tinted or semantic is drawn on it —
+	   so only this pair is claimed for it. */
+	p.push(["ink", "user-bubble"]);
+
 	/* Semantic text on a page ground, and on its own wash. */
 	for (const s of ["success", "warning", "danger", "info"]) {
 		on(s, GROUNDS);
@@ -247,6 +252,15 @@ export const CONTROLS = [
 
 /* ---- the ground ladder ------------------------------------------------- */
 
+/* The user bubble's step off the page. A FILL with no edge has to be told from
+   its ground by value alone, and the panel ladder's own steps do not do it:
+   `surface` measured 1.06-1.14:1 on canvas across the 59 shipped palettes and
+   `message-surface` 1.06-1.20:1, which on a phone rendered the reader's turn as
+   bare text among the assistant's prose (operator report, 2026-11-09). 1.25:1
+   is the smallest step this file already treats as perceivable for a borderless
+   tint (the dark diff band's lower bound). */
+export const USER_BUBBLE_FLOOR = 1.25;
+
 /**
  * The ladder's bands, synced to the desktop's 2026-11-03 values — the "darker
  * grounds" pass that re-lit every desktop palette, and therefore every palette
@@ -352,6 +366,15 @@ export const checkPalette = (theme, P, h) => {
 		if (got < lo || got > hi)
 			h.fail(`${theme}  the diff tint step is unusable: ${tint} on sunken is ${got.toFixed(2)}, outside the ${lo}-${hi} band for ${theme}`);
 	}
+
+	/* The user bubble: its fill against the page it sits on (USER_BUBBLE_FLOOR).
+	   Its ink is asserted with the text pairs below. */
+	h.tick();
+	const bubbleOnCanvas = ratio(P["user-bubble"], P.canvas);
+	if (bubbleOnCanvas < USER_BUBBLE_FLOOR)
+		h.fail(
+			`${theme}  the user bubble: user-bubble on canvas = ${bubbleOnCanvas.toFixed(2)} < ${USER_BUBBLE_FLOOR} — the reader's own turn has no visible card`,
+		);
 
 
 	/* text pairs */

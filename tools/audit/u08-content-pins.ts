@@ -632,8 +632,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * lists tool names) — no size, face, colour or role moved, and `theme:check`
 	 * and `preset:check` both report the generated layers current. Identity
 	 * only, NOT rendered U-08 evidence. */
+	/* Re-pinned 2026-11-09 for fix/user-message-bubble with --print from the
+	 * staged tree: `tokens.json` gains ONE colour role, `user-bubble` (the fill
+	 * of the reader's own transcript turn, solved >= 1.25:1 on canvas), with its
+	 * rule in `palette-rules.mjs` and the regenerated preset. No existing role's
+	 * value moved. Identity only, NOT rendered U-08 evidence. */
 	"design/tokens":
-		"40b677b7e493bd87e1c4201a635b5915ccaad6482286901a5e4a558c8a73801d",
+		"505afe475a6bd4f05c9673940f123fd273e18c98171f3d676a9fb7e037ba2291",
 	public: "fffab05c9f1bcb5a820ec6fc62f853d005db87e152bca97fe3e22337aa85851b",
 	/* Re-pinned 2026-10-29 for the i18n policy PR itself: this branch changes only
 	 * `src/i18n/locale.ts` (the SUPPORTED/SHIPPED split), adds `src/i18n/key-shape.ts`
@@ -1243,7 +1248,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * refreshed. */
 	// #208 merge with main aef9b7b2: thread title, viewport and icon-only
 	// Notifications on top of the above; source identity only, not new pixels.
-	src: "b443bfe86803b87164d709fc655c3fdc43fc4345489b20a9a405f0f590cfaab7",
+	/* Re-pinned 2026-11-09 for fix/user-message-bubble with --print from the
+	 * staged tree: the user row's fill is `bg-user-bubble` (was `bg-surface`),
+	 * and `theme.css` / `tokens.gen.ts` carry the new role for every theme. The
+	 * user bubble's FILL colour therefore differs in a frame; its box, type and
+	 * every other row are unchanged. Source admission only, NOT rendered or
+	 * native proof. */
+	src: "324e518b82cfb7b336a4eddf0fb8be359e8c13a985a8cff0bcdd1aa7a6559be5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

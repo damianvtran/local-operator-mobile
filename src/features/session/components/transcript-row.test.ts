@@ -34,9 +34,21 @@ const IMAGE = code(read("./transcript-image.tsx"));
 const CARD = code(read("./imagegen-card.tsx"));
 
 describe("the reader's own message (D3)", () => {
-	it("is the relay's borderless fill", () => {
-		expect(ROW).toContain('"rounded-md bg-surface px-3 py-1.5"');
+	it("is the relay's borderless box, filled with the solved bubble role", () => {
+		expect(ROW).toContain('"rounded-md bg-user-bubble px-3 py-1.5"');
 		expect(ROW).toContain('"max-w-[85%]"');
+	});
+
+	/* The regression the operator reported on the iOS build (2026-11-09): the
+	 *  bubble was filled with a PANEL ground, which sits 1.06-1.20:1 off the
+	 *  canvas in every shipped theme, so with its edges gone the reader's turn
+	 *  had no visible card. No panel ground may be the bubble's fill again; the
+	 *  fill's contrast itself is asserted per theme in `ui/tokens.test.ts`. */
+	it("is not filled with a panel ground", () => {
+		const bubble = ROW.match(/"rounded-md bg-[a-z-]+ px-3 py-1\.5"/g) ?? [];
+		expect(bubble).toEqual(['"rounded-md bg-user-bubble px-3 py-1.5"']);
+		for (const ground of ["surface", "message-surface", "elevated", "sunken"])
+			expect(ROW).not.toContain(`rounded-md bg-${ground} px-3`);
 	});
 
 	it("carries no hairline box and no accent rule", () => {
