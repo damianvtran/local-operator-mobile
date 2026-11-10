@@ -40,6 +40,7 @@ import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import {
 	collectChromeFrames,
+	connectPhasesFrom,
 	LANES,
 	parseHierarchy,
 	sendAboveKeyboard,
@@ -89,7 +90,14 @@ const childEnv: NodeJS.ProcessEnv = {
 	HOME: join(ROOT, "home"),
 	TMPDIR: join(ROOT, "tmp"),
 };
-for (const dir of ["home", "tmp", "frames", "hierarchies", "commands"])
+for (const dir of [
+	"home",
+	"tmp",
+	"frames",
+	"hierarchies",
+	"commands",
+	"connect-phases",
+])
 	mkdirSync(join(ROOT, dir), { recursive: true, mode: 0o700 });
 
 type Record_ = {
@@ -244,6 +252,9 @@ type Slot = {
 	scenario: string;
 	sessionId: string;
 	shutdown: () => Promise<void>;
+	/** Writes the relay's ARRIVAL log (`tools/mock-relay/arrivals.ts`) now, open
+	 *  requests and streams included, under `relay-<scenario>-arrivals-<tag>.json`. */
+	snapshotArrivals: (tag: string) => void;
 	publisher: ChildProcess;
 };
 
@@ -283,7 +294,16 @@ async function startRelay(scenario: string): Promise<Slot> {
 		scenario,
 		sessionId,
 		publisher,
+		snapshotArrivals: (tag) => {
+			writeFileSync(
+				join(ROOT, `relay-${scenario}-arrivals-${flat(tag)}.json`),
+				JSON.stringify(relay.arrivals.snapshot(), null, 2),
+			);
+		},
 		shutdown: async () => {
+			/* Before the relay closes its sockets: after that every open stream reads
+			 *  `aborted`, and "still open at the end of the run" is the fact wanted. */
+			slot.snapshotArrivals("final");
 			await relay.shutdown();
 			writeFileSync(
 				join(ROOT, `relay-${scenario}-requests.json`),
@@ -420,7 +440,42 @@ async function hierarchy(udid: string, lane: string, name: string) {
 		join(ROOT, "hierarchies", `${flat(lane)}-${name}.json`),
 		redact(tree),
 	);
+	/* The connect phase ring rides every hierarchy; lifted into its own file so a
+	 *  reader need not search a 100 KB tree. Never fails the capture. */
+	try {
+		const phases = connectPhasesFrom(parseHierarchy(tree));
+		writeFileSync(
+			join(ROOT, "connect-phases", `${flat(lane)}-${name}.txt`),
+			redact(phases ?? "NO connect-phase-log NODE IN THIS HIERARCHY\n"),
+		);
+	} catch {
+		/* an unparsable tree is already on disk above */
+	}
 	return tree;
+}
+
+/** The same ring from the unified log (`console.info("[connect-phase] …")`),
+ *  the carrier that survives a pruned accessibility node. Best effort: `run`
+ *  writes the output to `commands/`; a failure never masks the flow's own. */
+async function phaseLog(udid: string, lane: string, name: string) {
+	await run(
+		`connect-phase-log-${lane}-${name}`,
+		"xcrun",
+		[
+			"simctl",
+			"spawn",
+			udid,
+			"log",
+			"show",
+			"--last",
+			"20m",
+			"--style",
+			"compact",
+			"--predicate",
+			'eventMessage CONTAINS "[connect-phase]"',
+		],
+		120,
+	).catch(() => undefined);
 }
 
 async function flow(
@@ -459,12 +514,19 @@ async function flow(
 			cap,
 		);
 	} catch (error) {
+		// Arrivals FIRST: the app is still running, so its open streams are open.
+		try {
+			relay.snapshotArrivals(`failure-${lane}-${file.replace(".yaml", "")}`);
+		} catch {
+			/* best effort; never masks the real error */
+		}
 		try {
 			await shot(udid, lane, `failure-${file.replace(".yaml", "")}`);
 			await hierarchy(udid, lane, `failure-${file.replace(".yaml", "")}`);
 		} catch {
 			/* best effort; never masks the real error */
 		}
+		await phaseLog(udid, lane, `failure-${file.replace(".yaml", "")}`);
 		if (
 			existsSync(flowLog) &&
 			nativeConnectionPrerequisiteFailed(readFileSync(flowLog, "utf8"))
@@ -636,6 +698,12 @@ try {
 					await flow(udid, dir, build.bundleId, relay, file, cap);
 					await shot(udid, dir, frame);
 					const tree = await hierarchy(udid, dir, frame);
+					/* Success carries the same evidence as failure: the connect that
+					 *  session.yaml performs, as phases and as relay arrivals. */
+					if (frame === "session") {
+						relay.snapshotArrivals(`${dir}-session`);
+						await phaseLog(udid, dir, frame);
+					}
 					/* TestFlight 753: the AFTER build must keep Send above the
 					 *  keyboard with a long draft typed. Checked here, right after
 					 *  session-keyboard.yaml and before the idle relay's flows. */

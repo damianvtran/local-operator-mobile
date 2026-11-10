@@ -229,6 +229,14 @@ jobs:
         # `CODE_SIGNING_ALLOWED=NO` is what lets this run with ZERO secrets. It
         # is not a way of ignoring a signing problem: a simulator build genuinely
         # has no signing step, and the signed path is the `internal` job.
+        #
+        # EXPO_PUBLIC_CONNECT_PHASE_NODE=1 renders the connect phase ring as a
+        # hidden text node (src/features/auth/connect-phase-node.tsx) so the
+        # native chrome proof's hierarchy dumps say which stage a Save and
+        # connect reached. Inlined into THIS unsigned simulator bundle only; the
+        # signed `internal` job never sets it, so no shipped build renders it.
+        env:
+          EXPO_PUBLIC_CONNECT_PHASE_NODE: "1"
         run: |
           set -euo pipefail
           xcodebuild \

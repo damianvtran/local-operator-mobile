@@ -729,6 +729,9 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** The connect phase ring's hidden text node (`connect-phase-node.tsx`), read
+	 *  from hierarchy dumps by the native proof driver; proof bundles only. */
+	connectPhaseLog: "connect-phase-log",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttachSheet: "team-bridge-attach-sheet",
 	teamBridgeImageViewer: "team-bridge-image-viewer",

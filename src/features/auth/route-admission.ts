@@ -12,6 +12,7 @@ import {
 	type CustomRouteAuthentication,
 	customRouteAuthentication,
 } from "./authentication-lifecycle";
+import { recordConnectPhase } from "./connect-phases";
 
 export interface RouteAdmission {
 	isCurrent: () => boolean;
@@ -47,6 +48,16 @@ export const authenticateCustomRoute = async (
 		password,
 		admission.isCurrent,
 	);
+	/* `ok`/`signedIn` and the failure's kind only: the verdict object carries a
+	 *  `detail` sentence that is copy, not evidence, and is not recorded. */
+	recordConnectPhase("auth-response", {
+		facts: {
+			answered: result !== null,
+			signedIn: result?.signedIn ?? false,
+			current: admission.isCurrent(),
+		},
+		...(result?.failure ? { error: result.failure, secrets: [password] } : {}),
+	});
 	if (!result || !admission.isCurrent()) return false;
 	if (result.signedIn) return true;
 	// The canonical login boundary already verifies opaque redirects. Re-reading

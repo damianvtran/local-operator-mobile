@@ -236,3 +236,24 @@ export function sendAboveKeyboard(
 		}${scoped ? "" : " (flat hierarchy: keys read by label band)"}`,
 	};
 }
+
+/**
+ * The connect phase ring (`src/features/auth/connect-phases.ts`) out of a
+ * hierarchy dump: the text of the `connect-phase-log` node a proof bundle
+ * renders (`EXPO_PUBLIC_CONNECT_PHASE_NODE=1`). `null` when the node is absent —
+ * a build without the flag, or a tree the accessibility layer pruned — so the
+ * driver can say "no ring" rather than write an empty file that reads as "no
+ * phases ran". iOS exposes the label as `accessibilityText`; `text` is the
+ * fallback some Maestro versions fill instead.
+ */
+export function connectPhasesFrom(tree: HierarchyNode): string | null {
+	const stack = [tree];
+	while (stack.length > 0) {
+		const node = stack.pop() as HierarchyNode;
+		const a = node.attributes ?? {};
+		if (a["resource-id"] === "connect-phase-log")
+			return a.accessibilityText ?? a.text ?? "";
+		stack.push(...(node.children ?? []));
+	}
+	return null;
+}

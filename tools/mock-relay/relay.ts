@@ -48,6 +48,7 @@ import {
 	createCanonicalPolicyFixture,
 	type PolicyFixtureMode,
 } from "./account-routing.ts";
+import { createArrivalLog } from "./arrivals.ts";
 import { createAvatarCapture } from "./avatar-capture.ts";
 import type { FaultSet } from "./faults.ts";
 import { FAULT_NAMES, parseFaults, summariseFaults } from "./faults.ts";
@@ -3940,7 +3941,15 @@ export function createRelay(options: RelayOptions = {}) {
 
 	/* ------------------------------------------------------------ the server -- */
 
+	const arrivals = createArrivalLog();
+
 	const server = createServer(async (req, res) => {
+		// Arrival, not completion (`arrivals.ts`), and BEFORE the host boundary so a
+		// request it refuses still shows up: open streams and requests that never
+		// finish are visible here and nowhere else.
+		const arrivedPath = (req.url ?? "/").split("?")[0] ?? "/";
+		if (!arrivedPath.startsWith("/__mock"))
+			arrivals.arrive(req, res, arrivedPath);
 		if (policyFixture)
 			res.once("finish", () => policyFixture.observeWire(req, res.statusCode));
 		if (policyFixture && !policyFixture.acceptHost(req)) {
@@ -4391,6 +4400,8 @@ export function createRelay(options: RelayOptions = {}) {
 
 	return {
 		state,
+		/** Every public request at ARRIVAL, with the still-open ones (`arrivals.ts`). */
+		arrivals,
 		fixtures: fix,
 		scenarios,
 		shutdown,

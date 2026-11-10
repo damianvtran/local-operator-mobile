@@ -10,6 +10,7 @@ import { StatusBar } from "expo-status-bar";
 import type { ReactNode } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ComputerSwitcherProvider } from "@/features/auth/computer-switcher-sheet";
+import { ConnectPhaseNode } from "@/features/auth/connect-phase-node";
 import {
 	ConnectionProvider,
 	useLocaleFrame,
@@ -67,6 +68,9 @@ export default function RootLayout() {
 									</BridgeWorkspaceDrawer>
 								</ComputerSwitcherProvider>
 								<ToastHost />
+								{/* Proof bundles only (EXPO_PUBLIC_CONNECT_PHASE_NODE): the connect
+								 *  phase ring as a node hierarchy dumps can read. */}
+								<ConnectPhaseNode />
 							</TeamBridgeProvider>
 						</DirectionRoot>
 					</TextScaleProvider>

@@ -119,6 +119,7 @@ import {
 } from "./authentication-lifecycle";
 import { resumeComputerOnColdStart } from "./cold-start-computer";
 import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
+import { recordConnectPhase } from "./connect-phases";
 import { createRadientAccess } from "./radient-access";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
@@ -643,7 +644,14 @@ export const ConnectionProvider = ({
 				.retire(preserveUnscoped, afterCleanup, policy)
 				.then(
 					() => true,
-					() => {
+					(reason: unknown) => {
+						/* The reason was discarded here, so a native keystore refusal during
+						 *  the privacy retirement surfaced only as a content-free
+						 *  `diagnostic` refusal. Keep its sanitised facts in the ring. */
+						recordConnectPhase("error", {
+							facts: { at: "retirement" },
+							error: reason,
+						});
 						if (mountedRef.current) {
 							setBusy(false);
 							connectionStore
@@ -721,6 +729,7 @@ export const ConnectionProvider = ({
 
 			const run = () => {
 				if (stopped || !admission.isCurrent()) return;
+				recordConnectPhase("stream-open", { facts: { attempt: _attempt } });
 				const stream = client.sessionsStream({
 					/* The flag goes to the STREAM as well as the REST read below, together:
 					 * the relay reads it once at connection open, so a repaint from a
@@ -767,10 +776,14 @@ export const ConnectionProvider = ({
 					},
 					onState: (status) => {
 						if (!admission.isCurrent()) return;
+						recordConnectPhase("stream-state", {
+							facts: { state: status.state },
+						});
 						if (mountedRef.current) setStreamHealth(healthFrom(status));
 					},
 					onError: (error) => {
 						if (stopped || !admission.isCurrent()) return;
+						recordConnectPhase("stream-error", { error });
 						/* A surface the reader must act on ends the loop: retrying a
 						 * 401 or a revoked tunnel in a tight cycle is how a phone
 						 * burns a battery to annoy a gateway. */
@@ -915,14 +928,18 @@ export const ConnectionProvider = ({
 				!startupAuthorizationLifecycle.isCurrent(
 					admission.authorizationRevision,
 				)
-			)
+			) {
+				recordConnectPhase("golive-skipped", { facts: { at: "admission" } });
 				return;
+			}
 			if (
 				!admission.publish(() => {
 					clientRef.current = client;
 				})
-			)
+			) {
+				recordConnectPhase("golive-skipped", { facts: { at: "publish" } });
 				return;
+			}
 			rememberLiveRoute(
 				admission,
 				computerId,
@@ -1010,6 +1027,7 @@ export const ConnectionProvider = ({
 			 * second must not be the reason the screen is empty. It asks for the
 			 * peers' rows exactly as the stream does — one list, one population. */
 			const listGeneration = listStore.getState().connectionGeneration;
+			recordConnectPhase("list-request-sent");
 			const frame = await client.sessions({ includePeers: true }).catch(
 				/* NOT SILENT (round 1, R1-1): this used to be `.catch(() => null)`, so
 				 *  a cold-start answer the schema refused (or a transport that never
@@ -1019,6 +1037,7 @@ export const ConnectionProvider = ({
 				 *  loud and the list carries the same stale mark a dropped stream
 				 *  paints. */
 				(error: unknown) => {
+					recordConnectPhase("list-error", { error });
 					if (!admission.isCurrent()) return null;
 					console.warn(
 						"[sessions] the cold-start list read could not be applied; the stream's seed frame is the fallback",
@@ -1028,6 +1047,10 @@ export const ConnectionProvider = ({
 					return null;
 				},
 			);
+			if (frame)
+				recordConnectPhase("list-response", {
+					facts: { sessions: frame.sessions.length },
+				});
 			if (frame && admission.isCurrent()) {
 				listStore.getState().applyFrame(
 					{
@@ -1052,9 +1075,16 @@ export const ConnectionProvider = ({
 		) => {
 			setBusy(true);
 			let admission: StartupRouteAdmission | null = null;
+			/* Phase ring (`connect-phases.ts`): the password is passed ONLY as a
+			 *  literal to strip from error messages, never recorded. */
+			const secrets = [password];
+			recordConnectPhase("start", {
+				facts: { restoring, allowInsecure, known: computerId !== undefined },
+			});
 			try {
 				const validated = validateCustomBaseUrl(url, { allowInsecure });
 				if (!validated.ok) {
+					recordConnectPhase("invalid-url");
 					/* A shape the validator refuses is not a transport failure: it never
 					 * reaches the network, and the screen states the reason beside the
 					 * field rather than in a refusal surface. */
@@ -1072,10 +1102,20 @@ export const ConnectionProvider = ({
 					: verifiedRetirement(retireAuthorization(true));
 				admission = beginRoute(route);
 				await privacy;
+				recordConnectPhase("retirement-done");
 				await nativeCredentialRetirement.settled();
-				if (!admission.isCurrent()) return;
-				if (!(await authenticateCustomRoute(route, password, admission)))
+				recordConnectPhase("credentials-read");
+				if (!admission.isCurrent()) {
+					recordConnectPhase("superseded", { facts: { at: "credentials" } });
 					return;
+				}
+				recordConnectPhase("auth-request-sent", {
+					facts: { hasPassword: password.length > 0 },
+				});
+				if (!(await authenticateCustomRoute(route, password, admission))) {
+					recordConnectPhase("superseded", { facts: { at: "auth" } });
+					return;
+				}
 				const client = createRelayClient({
 					route,
 					onResponse: (facts) => {
@@ -1090,8 +1130,13 @@ export const ConnectionProvider = ({
 					},
 				});
 
+				recordConnectPhase("golive-start");
 				await goLive(client, admission, computerId);
+				recordConnectPhase("done", {
+					facts: { current: admission.isCurrent() },
+				});
 			} catch (error) {
+				recordConnectPhase("error", { error, secrets });
 				if (admission && !admission.isCurrent()) return;
 				if (error instanceof RelayError) {
 					noteError(error, () =>
@@ -1877,7 +1922,8 @@ export const ConnectionProvider = ({
 			password: input.password.length > 0 ? input.password : null,
 			allowInsecure: input.allowInsecure,
 		};
-		await writeSavedTunnel(tunnel);
+		const { persistent } = await writeSavedTunnel(tunnel);
+		recordConnectPhase("persisted", { facts: { persistent } });
 		setSavedTunnel(tunnel);
 	}, []);
 

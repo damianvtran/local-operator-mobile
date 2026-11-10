@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { HierarchyNode } from "./chrome-ios-proof-contract.ts";
 import {
 	collectChromeFrames,
+	connectPhasesFrom,
 	LANE_FRAMES,
 	LANES,
 	parseHierarchy,
@@ -193,5 +194,33 @@ describe("chrome proof plan (record §7)", () => {
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
+	});
+});
+
+describe("connectPhasesFrom", () => {
+	const tree = (attributes?: Record<string, string>): HierarchyNode => ({
+		attributes: { text: "Local Operator" },
+		children: [
+			{ attributes: { "resource-id": "home-screen" } },
+			...(attributes ? [{ attributes }] : []),
+		],
+	});
+
+	it("reads the ring from the node's accessibility text", () => {
+		const ring = "connect-phases\nt+0 start\nt+40 error kind=rejected";
+		expect(
+			connectPhasesFrom(
+				tree({ "resource-id": "connect-phase-log", accessibilityText: ring }),
+			),
+		).toBe(ring);
+	});
+
+	it("falls back to `text`, and says null when the node is absent", () => {
+		expect(
+			connectPhasesFrom(
+				tree({ "resource-id": "connect-phase-log", text: "t+0 start" }),
+			),
+		).toBe("t+0 start");
+		expect(connectPhasesFrom(tree())).toBeNull();
 	});
 });

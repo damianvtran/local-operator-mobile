@@ -1925,6 +1925,8 @@ jobs:
             ${{ runner.temp }}/chrome-ios-proof/receipt.json
             ${{ runner.temp }}/chrome-ios-proof/commands.json
             ${{ runner.temp }}/chrome-ios-proof/relay-*-requests.json
+            ${{ runner.temp }}/chrome-ios-proof/relay-*-arrivals-*.json
+            ${{ runner.temp }}/chrome-ios-proof/connect-phases/*.txt
             ${{ runner.temp }}/chrome-ios-proof/commands/*.log
             ${{ runner.temp }}/chrome-ios-proof/frames/**/*.png
             ${{ runner.temp }}/chrome-ios-proof/hierarchies/*.json

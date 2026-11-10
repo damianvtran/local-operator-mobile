@@ -22,6 +22,7 @@ import {
 } from "@/connection/saved-computers";
 import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
 import { thisDeviceOnlyAccessibility } from "@/connection/storage";
+import { recordConnectPhase } from "@/features/auth/connect-phases";
 
 /**
  * Where the app keeps the reader's credentials.
@@ -160,7 +161,15 @@ export async function writeSavedTunnel(
 	};
 	try {
 		await store.writeCustomRoute(record);
-	} catch {
+	} catch (error) {
+		/* Swallowed for the reader (below), but a keystore refusal here is the first
+		 *  sign a later read of the same store will fail too, so its sanitised
+		 *  facts go to the connect phase ring. The password is stripped literally. */
+		recordConnectPhase("error", {
+			facts: { at: "persist" },
+			error,
+			secrets: tunnel.password ? [tunnel.password] : [],
+		});
 		/* A platform that cannot store it (no keystore, a value over the cap) still
 		 * gets a working session: the route lives in the store for this run. */
 		return { persistent: false };
