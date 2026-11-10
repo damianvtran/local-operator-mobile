@@ -559,6 +559,11 @@ function ThreadContent({
 			 *  the session screen's do. */
 			titleNode={<BridgeThreadTitle title={title} />}
 			compact={compact}
+			/* Stacked (320 pt / large text), the one trailing icon sits on the
+			 *  back row at the edge, as the session header's cluster does,
+			 *  instead of a third header row under the title (measured on the
+			 *  #208 build at 320: the bell alone on its own 48 pt row). */
+			stackedActionsBeside
 			headerLeading={<BridgeBack />}
 			headerAction={
 				admitted ? (

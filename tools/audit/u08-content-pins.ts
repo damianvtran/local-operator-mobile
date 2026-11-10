@@ -1247,7 +1247,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// title style (`sessionHeaderTitle`) and the composer the agent composer's
 	// field/disc tokens; re-derived with --print over the staged tree. Source
 	// admission only, no rendered or native proof refreshed.
-	src: "9764ab5466bbe52ff9e35aff2be95ae8dad1c3ca16208f81e368aaa98c59258b",
+	src: "8b0df397678f1338da2be74e2905daec39ad5a7446bc38dcf1af4ba018aa9df7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
