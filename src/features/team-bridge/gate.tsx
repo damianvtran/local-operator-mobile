@@ -6,15 +6,15 @@ import { useConnection } from "@/features/auth/connection-provider";
 import { t } from "@/i18n";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
 import { CONTROL, SURFACE, teamBridgeGateId } from "@/ui/a11y";
+import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 
 export function BridgeBack() {
 	const router = useRouter();
 	return (
-		<Button
-			label={t("mobile.team_bridge.back")}
-			variant="quiet"
+		<BackButton
+			accessibilityLabel={t("mobile.team_bridge.back")}
 			testID={CONTROL.teamBridgeBack}
 			onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
 		/>

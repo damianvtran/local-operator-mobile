@@ -160,7 +160,7 @@ both the capture and the audit call; a bespoke rig that opens its own page must
 call it too, or it measures a page with no clearance at all.
 
 | U-06 | Horizontal overflow | Measure content width vs viewport at every state and every text scale | Never exceeds the viewport at 100 %; at 200 % overflowing *only* inside an explicitly scrollable region | P-11 |
-| U-07 | Clipped text | For each text node, compare rendered box vs scroll extent; flag `overflow: hidden`/clip with hidden content | No clipped text except deliberate single-line ellipsis with a full value available on tap or in the accessibility label | P-11 |
+| U-07 | Clipped text | For each text node, compare rendered box vs scroll extent; flag `overflow: hidden`/clip with hidden content | No clipped text except a deliberate ellipsis — one line, or an N-line clamp whose full value is measured in its control's accessible name — with the full value available on tap or in the accessibility label | P-11 |
 | U-08 | Overlap | Pair-wise rectangle intersection over text and interactive boxes | Zero overlaps between two elements that both convey meaning. **Judged on PAINTED regions**, never on layout boxes: a node an ancestor clips part of the way keeps its full layout box, so a pair whose layout boxes intersect while their painted regions do not is *not* an overlap | P-11 |
 | U-09 | Accessible name | Walk the accessibility tree; every interactive node must have a name | No unnamed buttons, links, inputs, toggles. Icon-only controls carry a label; a decorative icon is hidden from the tree | P-11 |
 | U-10 | Label-in-name | Compare the visible label with the accessible name | The accessible name **contains** the visible label, so voice control ("tap approve") works | P-11 |

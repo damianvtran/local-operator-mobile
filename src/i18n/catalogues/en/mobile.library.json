@@ -8,6 +8,7 @@
 	"mobile.library.browse.filters_count": "Filters · {count}",
 	"mobile.library.browse.more_kinds": "More kinds",
 	"mobile.library.browse.no_tags": "No tags yet. The Librarian adds them as it organizes assets.",
+	"mobile.library.browse.origin": "Source",
 	"mobile.library.browse.refresh": "Refresh library",
 	"mobile.library.browse.search_label": "Search the library",
 	"mobile.library.browse.search_placeholder": "Name, tag or words",

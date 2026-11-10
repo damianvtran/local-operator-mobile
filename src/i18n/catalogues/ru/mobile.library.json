@@ -8,6 +8,7 @@
 	"mobile.library.browse.filters_count": "Фильтры · {count}",
 	"mobile.library.browse.more_kinds": "Другие типы",
 	"mobile.library.browse.no_tags": "Тегов пока нет. Библиотекарь добавляет их, когда упорядочивает ресурсы.",
+	"mobile.library.browse.origin": "Источник",
 	"mobile.library.browse.refresh": "Обновить библиотеку",
 	"mobile.library.browse.search_label": "Искать в библиотеке",
 	"mobile.library.browse.search_placeholder": "Название, тег или слова",

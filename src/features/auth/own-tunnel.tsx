@@ -21,6 +21,7 @@ import { t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
+import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { CommandBlock } from "@/ui/components/command-block";
 import { Divider } from "@/ui/components/divider";
@@ -215,12 +216,9 @@ export default function OwnTunnel() {
 				title="Your own tunnel"
 				testID={SCREEN.ownTunnel}
 				headerLeading={
-					<Button
+					<BackButton
 						testID={CONTROL.ownTunnelBack}
-						label="Back"
 						onPress={() => router.back()}
-						variant="quiet"
-						size="sm"
 					/>
 				}
 			>
@@ -262,12 +260,9 @@ export default function OwnTunnel() {
 			title="Your own tunnel"
 			testID={SCREEN.ownTunnel}
 			headerLeading={
-				<Button
+				<BackButton
 					testID={CONTROL.ownTunnelBack}
-					label="Back"
 					onPress={() => router.back()}
-					variant="quiet"
-					size="sm"
 				/>
 			}
 		>

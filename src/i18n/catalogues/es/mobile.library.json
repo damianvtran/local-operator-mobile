@@ -8,6 +8,7 @@
 	"mobile.library.browse.filters_count": "Filtros · {count}",
 	"mobile.library.browse.more_kinds": "Más tipos",
 	"mobile.library.browse.no_tags": "Aún no hay etiquetas. El Bibliotecario las añade al organizar los recursos.",
+	"mobile.library.browse.origin": "Origen",
 	"mobile.library.browse.refresh": "Actualizar biblioteca",
 	"mobile.library.browse.search_label": "Buscar en la biblioteca",
 	"mobile.library.browse.search_placeholder": "Nombre, etiqueta o palabras",
