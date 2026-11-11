@@ -11,7 +11,7 @@ import {
 	fieldClasses,
 	fieldScrollEnabled,
 	fieldScrollsWithContent,
-	TEXTAREA_MAX_PX,
+	textareaContentCap,
 	webFieldOverflow,
 	webFieldResize,
 } from "@/ui/variants";
@@ -173,11 +173,15 @@ export const Textarea = ({
 	 * and the minimum term in the height come from it, so the two states are equal
 	 * by construction at every scale — the invariant design §2.5 D1 asks for. */
 	const oneLineBox = BODY_LINE_PX * effectiveScale + FIELD_PAD_Y;
-	const cap = Math.min(
-		maxLines * line,
-		TEXTAREA_MAX_PX * effectiveScale,
-		maxHeightPx ?? Number.POSITIVE_INFINITY,
-	);
+	/* `textareaContentCap` keeps the shipped six-line rule and lets a caller
+	 * above six (the composer) count in body lines (TestFlight 836). */
+	const cap = textareaContentCap({
+		maxLines,
+		scale: effectiveScale,
+		bodyLine: BODY_LINE_PX,
+		pad: FIELD_PAD_Y,
+		maxHeightPx,
+	});
 	const [contentHeight, setContentHeight] = useState(line);
 	/* The placeholder is not part of `contentSize`, so the floor has to come from its
 	 * own render: same typography, same width, measured in place inside a zero-height

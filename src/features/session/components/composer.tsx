@@ -131,7 +131,11 @@ import {
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
+import {
+	COMPOSER_FIELD_MAX_LINES,
+	CONTROL_DISABLED_INK,
+	cx,
+} from "@/ui/variants";
 
 /** The outcome lines the status row can rest on, and whether the row is showing a
  *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
@@ -387,6 +391,12 @@ export type ComposerProps = {
 		/** The lift's keyboard offset when this box was measured (whole pt). */
 		keyboardOverlap: number;
 	}) => void;
+	/** `true` when a keyboard lift starts, `false` once the composer publishes
+	 *  the settled box that ends it (PR #230 R2 M2). Between the two the held
+	 *  box's `top` is frozen (no mid-lift publish), so a host that pairs it
+	 *  with another live measurement (the transcript's slack) must hold that
+	 *  one too, or the pair stops describing one layout. */
+	onLift?: (lifting: boolean) => void;
 	/** Any value whose change moves the composer without resizing it (the find bar,
 	 *  a panel, the pending card). The measurement effect watches it. */
 	measureKey?: string;
@@ -759,6 +769,7 @@ export const Composer = ({
 	compact = null,
 	limit = null,
 	onMeasure,
+	onLift,
 	measureKey = "",
 	testID,
 	onLayout,
@@ -1056,6 +1067,13 @@ export const Composer = ({
 	/* The latest `publishBox`, for the lift's completion callback below, which is
 	 *  subscribed once and must not capture a stale one. */
 	const publishBoxRef = useRef<() => void>(() => {});
+	/* Whether a lift is under way, reported to the host through `onLift`. A ref
+	 *  for the latest callback for the same reason as `publishBoxRef`: the
+	 *  keyboard subscription is made once. An interrupted lift (the paste
+	 *  prompt's hide and re-show) stays ONE lift: it only ends at a publish. */
+	const lifting = useRef(false);
+	const onLiftRef = useRef(onLift);
+	onLiftRef.current = onLift;
 	const presentationFacts = {
 		focused,
 		draft,
@@ -1139,6 +1157,13 @@ export const Composer = ({
 				keyboardOffset.value = 0;
 				remeasure();
 				return;
+			}
+			if (
+				!lifting.current &&
+				Math.round(keyboardOffset.value) !== frame.overlap
+			) {
+				lifting.current = true;
+				onLiftRef.current?.(true);
 			}
 			keyboardOffset.value = withTiming(
 				frame.overlap,
@@ -1356,9 +1381,14 @@ export const Composer = ({
 	const extrasMaxHeight = budget?.extras;
 
 	/* The window-coordinate top of the composer, for the portrait ceiling. `react-
-	 *  native-web` implements `measureInWindow` on the host node; native resolves it
-	 *  asynchronously, which is why this only publishes a number and never gates the
-	 *  first paint (a `null` top means "no limit" — the old behaviour — for a frame). */
+	 *  native-web` implements `measureInWindow` on the host node; native (Fabric,
+	 *  RN 0.86) answers it SYNCHRONOUSLY from the current shadow-tree revision
+	 *  (`ReactCommon/react/nativemodule/dom/NativeDOM.cpp:434-447`), so a settled
+	 *  publish is never older than the layout that fired it. This still only
+	 *  publishes a number and never gates the first paint (a `null` top means "no
+	 *  limit" — the old behaviour — for a frame). The one window where the held top
+	 *  IS stale is the lift, by design: the mid-lift return below suppresses the
+	 *  publish until it lands, which is what `onLift` tells the host. */
 	/* Only the host `limit` is fed back through the measurement (portrait always,
 	 *  short landscape while it binds above the keyboard); the compact share comes
 	 *  from window geometry and never loops. */
@@ -1377,18 +1407,26 @@ export const Composer = ({
 		 *  THAT top shrinks a little on every layout pass of the animation. The
 		 *  end-of-lift re-measure (above) publishes the settled box. */
 		if (keyboardOverlap !== liftTarget.current) return;
-		const report = (top: number, height: number) =>
+		const report = (top: number, height: number) => {
 			onMeasure({
 				top,
 				height,
 				capped: composerAtHostCap(height, hostLimit, outerGap, TOUCH_FLOOR),
 				keyboardOverlap,
 			});
+			/* After the box, so the host takes the settled top and lets the live
+			 *  slack back in from the same layout (PR #230 R2 M2). */
+			if (lifting.current) {
+				lifting.current = false;
+				onLiftRef.current?.(false);
+			}
+		};
 		/* On the web the host node answers directly: `measureInWindow` there returns
 		 *  a CACHED layout, so after the draft grew the screen kept reading the empty
 		 *  composer's box (top 335, height 225 — "fits") and the ceiling never bound
 		 *  ([redacted]: bound "none" at a bottom of 739 in a 568 pt window). Native
-		 *  keeps the platform call, which is live and asynchronous. */
+		 *  keeps the platform call, which reads the current shadow tree and calls
+		 *  back synchronously on Fabric (`NativeDOM.cpp:434-447`). */
 		const node = rootRef.current as unknown as {
 			getBoundingClientRect?: () => DOMRect;
 		} | null;
@@ -2032,15 +2070,19 @@ export const Composer = ({
 	 *  the iOS paste prompt, a denial (`pasteNothingLine`), a failed read and the strip are one
 	 *  path. It lives on the controls row, which only paints while the field is
 	 *  focused (the expanded card), so it appears without moving the composer. */
+	/* ICON-ONLY, like the paperclip beside it (TestFlight 836: the worded
+	 *  "Paste image" chip took ~100 pt of the controls row, and the model chip,
+	 *  the row's one elastic chip, was squeezed to its 44 pt floor and read
+	 *  "Cl…"). The clipboard glyph is the attach sheet's own Paste glyph, and
+	 *  the words stay the control's accessible name and hint. */
 	const pasteChip = pasteOffer.visible ? (
-		<Chip
-			label={t("mobile.composer_input.paste.image")}
+		<IconButton
+			accessibilityLabel={t("mobile.composer_input.paste.image")}
 			accessibilityHint={t("mobile.composer_input.paste.image_hint")}
-			leadingIcon={
-				<ClipboardPaste size={ATTACH_GLYPH_PT} color={attachInk} aria-hidden />
-			}
-			quiet
-			shrink
+			icon={({ size }) => (
+				<ClipboardPaste size={size} color={attachInk} aria-hidden />
+			)}
+			size={ATTACH_GLYPH_PT}
 			disabled={attaching}
 			onPress={() => {
 				/* `"offer"`: an empty answer to THIS press is the iOS denial, not an
@@ -2293,7 +2335,10 @@ export const Composer = ({
 								? composerCopy().endedPlaceholder
 								: composerCopy().placeholder
 						}
-						maxLines={compactSingle ? 1 : 6}
+						/* Eight body lines when the screen has them (TestFlight 836: the
+						 * old six-on-a-22-pt-ruler showed ~4); `maxHeightPx` below holds
+						 * it under the header/keyboard budget. */
+						maxLines={compactSingle ? 1 : COMPOSER_FIELD_MAX_LINES}
 						/* The field's own box is the dock's ruler: the 48 pt resting row
 						 * and 44 pt in both open rows, so 56 = 4 + 48 + 4 and
 						 * 112 = 12 + 44 + 4 + 44 + 8 hold

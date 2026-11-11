@@ -252,6 +252,67 @@ describe("following after positioning", () => {
 	});
 });
 
+describe("a follower re-pins when the viewport GROWS (TestFlight 836)", () => {
+	/* The operator's #general screenshot: the keyboard (or a tall draft) had
+	 *  shortened the list, the follower sat at the end, and when the list grew
+	 *  back iOS kept the old offset — the host below does not clamp on layout,
+	 *  as UIScrollView does not — so the newest message hung ~150 pt above the
+	 *  composer over blank canvas. */
+	it.each([false, true])(
+		"keyboard down brings the newest row back to the composer (web: %s)",
+		(web) => {
+			const r = openLong(web);
+			expect(r.bottom).toBe(2718);
+			r.layout(300); // keyboard up: the follower is re-pinned at the end
+			r.flush();
+			expect(r.bottom).toBe(2718);
+			r.moves.mockClear();
+			r.layout(450); // keyboard down: the list grows by 150 pt
+			r.flush();
+			expect(r.moves).toHaveBeenCalledWith(2718 - 450);
+			expect(r.y).toBe(2718 - 450);
+			expect(r.bottom).toBe(2718);
+		},
+	);
+	it("still leaves a history reader where they are when the list grows", () => {
+		const r = openLong(false);
+		r.scrollTo(900);
+		r.moves.mockClear();
+		r.layout(700);
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.y).toBe(900);
+	});
+});
+
+describe("an anchored landing is never re-pinned by viewport growth (PR #230 m3)", () => {
+	/* #228's anchored open (`anchored()`: following off, `landing` on) and
+	 *  #230's past-end re-pin meet here: the keyboard going down grows the
+	 *  viewport past the end under the anchored reader, exactly the geometry
+	 *  the re-pin exists for. The reader came to read THAT message, so it must
+	 *  not fire: `position()` returns before the past-end branch whenever the
+	 *  initial phase is over and the thread is not following. Geometry from
+	 *  the reviewer's probe: anchor at 2418, viewport 300, content 2718. */
+	it.each([false, true])(
+		"keyboard down past the end keeps the reader and Jump to newest (web: %s)",
+		(web) => {
+			const r = host({ web });
+			r.newest = 80;
+			r.v.anchored();
+			r.layout(300);
+			r.grow(2718);
+			r.scrollTo(2418); // the landing's own scroll: no intent callback
+			r.moves.mockClear();
+			r.layout(450); // keyboard down: 150 pt past the end
+			r.flush();
+			r.grow(2900); // and a new message arrives below
+			r.flush();
+			expect(r.moves).not.toHaveBeenCalled();
+			expect(r.v.following).toBe(false);
+			expect(r.y).toBe(2418);
+		},
+	);
+});
+
 describe("read marks", () => {
 	it("posts once, for the newest seq, on open", () => {
 		const r = host({ web: true });

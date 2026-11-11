@@ -980,7 +980,13 @@ function ThreadContent({
 									data={items}
 									keyExtractor={(item) => item.key}
 									renderItem={renderItem}
-									contentContainerClassName="pb-4"
+									/* 8 pt here plus the dock's own 8 pt = a 16 pt rect gap
+									 *  (~22 pt of ink with the row's leading), the same rest
+									 *  the agent chat's last line has above the same dock
+									 *  (PR #230 design D1; `pb-4` read ~30 pt, a visible step
+									 *  when switching screens). Not tighter: 12 pt puts
+									 *  descenders against the card's rounded top. */
+									contentContainerClassName="pb-2"
 									keyboardShouldPersistTaps="handled"
 									onViewableItemsChanged={onViewableItemsChanged}
 									viewabilityConfig={viewabilityConfig}

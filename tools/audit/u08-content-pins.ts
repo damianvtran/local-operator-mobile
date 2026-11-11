@@ -662,6 +662,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * words), plus the catalogues and generated projection under `src/i18n`. No
 	 * layout, token, instrument or fixture input changed. Source admission only,
 	 * NOT rendered U-08 evidence. */
+	// Composer growth / paste / Bridge gap (TestFlight 836): the session
+	// screen measures its transcript for the composer's ceiling. Re-derived
+	// with --print; source identity only, no rendered or native proof.
+	// PR #230 round-2 remediation (M2): the session screen holds the
+	// transcript slack through a keyboard lift (`onLift`). Re-derived with
+	// --print; source identity only, no rendered or native proof.
 	app: "ba44b40368da37d77a6c34c6dae76252fabfc1b11862627bf0943759b08e6026",
 
 	"design/fonts":
@@ -1513,6 +1519,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * carried with #227's, so this is no parent's digest; re-derived with
 	 * `--print` over the converged tree. Source admission only, NOT rendered
 	 * U-08 evidence. */
+	// Composer growth / paste / Bridge gap (TestFlight 836): heldComposerLimit's
+	// transcript slack, the 8-line composer cap, the icon-only paste control
+	// and the Bridge follower re-pin. Re-derived with --print; source
+	// identity only, no rendered or native proof.
+	// PR #230 round-1 remediation: the Bridge list's bottom padding (D1,
+	// pb-4 -> pb-2) and three unit tests. Re-derived with --print; source
+	// identity only, no rendered or native proof.
+	// PR #230 round-2 remediation (M2, m4): the through-the-lift branch
+	// ignores the slack, the composer reports `onLift`, and the lift tests.
+	// Re-derived with --print; source identity only, no rendered or native
+	// proof.
 	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
 };
 

@@ -104,6 +104,136 @@ describe("the composer's ceiling above the keyboard (TestFlight 753)", () => {
 		).toBe(null);
 	});
 
+	/* TestFlight 836 (build 836, main eee80204): with the keyboard up and two
+	 *  pasted images, the composer froze at ~108 pt — two lines of draft, the
+	 *  thumbnails clipped out of a zero-height extras scroller — while the
+	 *  transcript still had half the screen. Read off the screenshot at 393x852:
+	 *  composer top 417, keyboard top 533. */
+	describe("a capped composer is not a fixed point while the transcript can still yield", () => {
+		const viewport = { width: 393, height: 852, keyboardOverlap: 319 };
+		const visible = viewport.height - viewport.keyboardOverlap;
+		const CHROME_BOTTOM = 150; // where the transcript starts (header + safe area)
+
+		/* One settle loop of the real pieces: the host's limit from the held box,
+		 *  the composer painting `min(natural, bound)` bottom-anchored above the
+		 *  keyboard, and the transcript taking whatever is left above it. */
+		const settle = (natural: number, start: ComposerBox, passes = 12) => {
+			let held = start;
+			const heights: number[] = [];
+			for (let i = 0; i < passes; i++) {
+				const slack = Math.max(0, held.top - CHROME_BOTTOM);
+				const limit = heldComposerLimit(held, {
+					...viewport,
+					transcriptSlack: slack,
+				});
+				const bound =
+					limit === null
+						? Number.POSITIVE_INFINITY
+						: composerHostBound(limit, GAP, floor);
+				const room = visible - GAP - CHROME_BOTTOM;
+				const height = Math.min(natural, bound, room);
+				heights.push(height);
+				held = box(
+					visible - GAP - height,
+					height,
+					viewport,
+					composerAtHostCap(height, limit, GAP, floor),
+				);
+			}
+			return heights;
+		};
+
+		it("the stale bound alone holds the frozen height (the defect, slack unknown)", () => {
+			const frozen = box(417, 108, viewport, true);
+			expect(heldComposerLimit(frozen, viewport)).toBe(116);
+		});
+
+		it("measures the ceiling from the transcript's top, so the frozen box can grow", () => {
+			const frozen = box(417, 108, viewport, true);
+			const limit = heldComposerLimit(frozen, {
+				...viewport,
+				transcriptSlack: 417 - CHROME_BOTTOM,
+			});
+			expect(limit).toBe(visible - CHROME_BOTTOM);
+		});
+
+		it("a frozen composer whose content fits grows to it and stays there", () => {
+			/* 8 lines (208) + thumbnails (88) + controls (48) + padding (20). */
+			const natural = 208 + 88 + CONTROLS + PAD;
+			const heights = settle(natural, box(417, 108, viewport, true));
+			expect(heights.at(-1)).toBe(natural);
+			expect(new Set(heights.slice(-4)).size).toBe(1);
+		});
+
+		/* The paste half of the same report: the two images WERE in state (they
+		 *  appeared a minute later, unchanged) but the extras scroller is capped
+		 *  by `composerBudget`, and a budget spent from the frozen bound has no
+		 *  room for the strip, so it painted at height 0. */
+		it("gives a pasted strip its height once the stale bound lets go", () => {
+			const STRIP = 88; // 64 pt thumbnails + their meta line + `pb-2`
+			const frozenBound = composerHostBound(116, GAP, floor);
+			expect(
+				composerBudget(frozenBound, CONTROLS, STRIP, floor, PAD).extras,
+			).toBe(0);
+			const limit = heldComposerLimit(box(417, 108, viewport, true), {
+				...viewport,
+				transcriptSlack: 417 - CHROME_BOTTOM,
+			});
+			const bound = composerHostBound(limit ?? 0, GAP, floor);
+			const budget = composerBudget(bound, CONTROLS, STRIP, floor, PAD);
+			expect(budget.extras).toBe(STRIP);
+			/* ...and the field keeps room for more than the two lines it showed. */
+			expect(budget.field).toBeGreaterThanOrEqual(5 * 24 + 16);
+		});
+
+		it("content past the room binds at the chrome and holds without oscillating", () => {
+			const heights = settle(900, box(417, 108, viewport, true));
+			const room = visible - GAP - CHROME_BOTTOM;
+			expect(heights.at(-1)).toBe(room);
+			expect(new Set(heights.slice(-4)).size).toBe(1);
+		});
+
+		/* PR #230 review m1: a defensive pin, not a native ordering. On Fabric
+		 *  (RN 0.86) `measureInWindow` calls back synchronously from the current
+		 *  shadow-tree revision (`NativeDOM.cpp:434-447`), and the composer
+		 *  publishes inside its own `onLayout`, so in a settled state the top is
+		 *  never older than the slack. The real stale-top window is the keyboard
+		 *  lift, where the composer suppresses its mid-lift publish on purpose
+		 *  (covered by "through the keyboard lift" above). Should any pass still
+		 *  pair a fresh slack with an older top, this pins that it costs at most
+		 *  one off frame (`375,108,375,…`) and then holds, rather than staying
+		 *  bound. */
+		it("one pass whose top is older than the slack recovers on the next paired pass", () => {
+			const room = visible - GAP - CHROME_BOTTOM;
+			let held = box(417, 108, viewport, true);
+			let previous = held;
+			const heights: number[] = [];
+			for (let i = 0; i < 12; i++) {
+				// Pass 1 reads pass 0's fresh slack against the top from before it.
+				const top = i === 1 ? previous : held;
+				const limit = heldComposerLimit(top, {
+					...viewport,
+					transcriptSlack: Math.max(0, held.top - CHROME_BOTTOM),
+				});
+				const bound =
+					limit === null
+						? Number.POSITIVE_INFINITY
+						: composerHostBound(limit, GAP, floor);
+				const height = Math.min(900, bound, room);
+				heights.push(height);
+				previous = held;
+				held = box(
+					visible - GAP - height,
+					height,
+					viewport,
+					composerAtHostCap(height, limit, GAP, floor),
+				);
+			}
+			expect(heights.slice(0, 3)).toEqual([room, 108, room]);
+			expect(new Set(heights.slice(2))).toEqual(new Set([room]));
+		});
+	});
+
 	/* PR #216 review m1: the store reaches the new overlap at the native event,
 	 *  the matching box only when the lift lands. A CAPPED box is pinned at the
 	 *  chrome, which the keyboard does not move, so it keeps the settled bound
@@ -302,6 +432,153 @@ describe("the composer's ceiling above the keyboard (TestFlight 753)", () => {
 		const { bottom, visible, budget } = controlsBottom(viewport, 241, 44, 0);
 		expect(budget).toBeUndefined();
 		expect(bottom).toBeLessThanOrEqual(visible - GAP);
+	});
+
+	/* PR #230 review round 2, M2: the lift is the one window where the two
+	 *  inputs of `top - slack` come from different layouts. The composer does
+	 *  not publish mid-lift (`publishBox`), so the held `top` is frozen at the
+	 *  last settled layout; the transcript's `onLayout` still fires on every
+	 *  pass of the animated `marginBottom`, and its height depends on the
+	 *  composer's own painted height H. A fresh slack against a frozen top made
+	 *  the limit an output of itself and a capped composer alternated by up to
+	 *  ~240 pt through the lift (`375,615,375,547,…`). The model: 393×852, a
+	 *  319 pt keyboard, chrome ending at 150, an ease-out lift; the composer
+	 *  paints bottom-anchored at `window - k - gap` and the column can never
+	 *  give it more than `window - k - gap - chrome`. */
+	describe("through the keyboard lift (PR #230 R2 M2)", () => {
+		const VW = 393;
+		const VH = 852;
+		const KB = 319;
+		const CHROME = 150;
+		const liftBox = (
+			top: number,
+			height: number,
+			overlap: number,
+			capped: boolean,
+		): ComposerBox => ({
+			top,
+			height,
+			capped,
+			keyboardOverlap: overlap,
+			viewportWidth: VW,
+			viewportHeight: VH,
+		});
+		const ease = (from: number, to: number, n: number) =>
+			Array.from({ length: n }, (_, i) =>
+				Math.round(from + (to - from) * (1 - (1 - (i + 1) / n) ** 2)),
+			);
+		type Phase = { frames: number[]; target: number };
+		/* One layout pass per frame (the reviewer's model also ran two; the
+		 *  flip is the same). `freezeSlack` is the screen's wiring: while the
+		 *  composer reports it is lifting, `[id].tsx` passes the slack it held
+		 *  when the lift began instead of the transcript's fresh `onLayout`. */
+		const lift = (
+			natural: number,
+			start: ComposerBox,
+			phases: Phase[],
+			freezeSlack: boolean,
+		) => {
+			let held = start;
+			let H = start.height;
+			const settledSlack = Math.max(0, start.top - CHROME);
+			const heights: number[][] = [];
+			for (const { frames, target } of phases) {
+				const phase: number[] = [];
+				heights.push(phase);
+				for (const k of frames) {
+					const fresh = Math.max(0, VH - k - GAP - H - CHROME);
+					const lifting = k !== target;
+					const limit = heldComposerLimit(held, {
+						width: VW,
+						height: VH,
+						keyboardOverlap: target,
+						transcriptSlack: freezeSlack && lifting ? settledSlack : fresh,
+					});
+					const bound =
+						limit === null
+							? Number.POSITIVE_INFINITY
+							: composerHostBound(limit, GAP, floor);
+					H = Math.min(natural, bound, VH - k - GAP - CHROME);
+					phase.push(H);
+					/* Published only once the lift lands (`publishBox`). */
+					if (!lifting)
+						held = liftBox(
+							VH - k - GAP - H,
+							H,
+							k,
+							composerAtHostCap(H, limit, GAP, floor),
+						);
+				}
+			}
+			return heights;
+		};
+		/* "No a,b,a": within one phase (one keyboard direction) consecutive
+		 *  deltas never change sign. A reversal AT a phase boundary is the
+		 *  keyboard turning round, which the height should follow. */
+		const flips = (phases: number[][]) =>
+			phases.reduce((n, phase) => n + phaseFlips(phase), 0);
+		const phaseFlips = (heights: number[]) => {
+			const deltas = heights
+				.slice(1)
+				.map((h, i) => Math.sign(h - (heights[i] ?? h)))
+				.filter((d) => d !== 0);
+			return deltas.slice(1).filter((d, i) => d !== deltas[i]).length;
+		};
+		const room = VH - KB - GAP - CHROME; // 375
+		const roomDown = VH - GAP - CHROME; // 694
+
+		it("a box capped at keyboard-down shrinks monotonically to the room", () => {
+			const heights = lift(
+				900,
+				liftBox(CHROME, roomDown, 0, true),
+				[{ frames: ease(0, KB, 15), target: KB }],
+				true,
+			);
+			expect(flips(heights)).toBe(0);
+			expect(heights.flat().at(-1)).toBe(room);
+		});
+
+		/* Fix 1 is in `heldComposerLimit` itself: the through-the-lift branch
+		 *  holds `box.top`, so even a FRESH slack cannot feed back there. */
+		it("the through-the-lift branch ignores a fresh slack", () => {
+			const heights = lift(
+				900,
+				liftBox(CHROME, roomDown, 0, true),
+				[{ frames: ease(0, KB, 15), target: KB }],
+				false,
+			);
+			expect(flips(heights)).toBe(0);
+			expect(heights.flat().at(-1)).toBe(room);
+		});
+
+		/* The paste prompt's hide/re-show: the keyboard heads for 0, is
+		 *  interrupted at 200 and returns to 319. The re-show is the LIVE branch
+		 *  (the store's overlap matches the held box again), so only the
+		 *  screen's frozen slack keeps it flat. */
+		it("an interrupted 319 → 200 → 319 bounce does not flicker", () => {
+			const start = liftBox(CHROME, room, KB, true);
+			const phases = [
+				{ frames: ease(KB, 200, 6), target: 0 },
+				{ frames: ease(200, KB, 8), target: KB },
+			];
+			const heights = lift(900, start, phases, true);
+			expect(flips(heights)).toBe(0);
+			expect(heights.flat().at(-1)).toBe(room);
+			/* Negative control: the same path with the fresh slack the screen
+			 *  passed before this fix alternates. */
+			expect(flips(lift(900, start, phases, false))).toBeGreaterThan(0);
+		});
+
+		it("an uncapped draft still rides the lift without flicker", () => {
+			const heights = lift(
+				500,
+				liftBox(VH - GAP - 500, 500, 0, false),
+				[{ frames: ease(0, KB, 15), target: KB }],
+				true,
+			);
+			expect(flips(heights)).toBe(0);
+			expect(heights.flat().at(-1)).toBe(room);
+		});
 	});
 });
 
@@ -1196,7 +1473,17 @@ describe("heldComposerLimit (UX #211 U1: a measurement does not survive a window
 		);
 		expect(screen).toContain("[viewportWidth, viewportHeight], );");
 		expect(screen).toContain(
-			"limit={heldComposerLimit(composerBox, { width: viewportWidth, height: viewportHeight, keyboardOverlap, })}",
+			"limit={heldComposerLimit(composerBox, { width: viewportWidth, height: viewportHeight, keyboardOverlap, transcriptSlack: liftSlack ?? transcriptSlack, })} onMeasure={setComposerBox} onLift={onComposerLift}",
+		);
+		/* TestFlight 836: the slack is the transcript's OWN measured height (the
+		 *  thing that yields), never the composer's or the column's. */
+		expect(screen).toContain(
+			"const height = Math.round(event.nativeEvent.layout.height); transcriptSlackRef.current = height; setTranscriptSlack(height);",
+		);
+		/* PR #230 R2 M2: through a lift the slack is the one held when it began,
+		 *  released by the composer's settled publish. */
+		expect(screen).toContain(
+			"lifting ? (held ?? transcriptSlackRef.current) : null",
 		);
 		/* The overlap is the shared keyboard store's, not a second listener. */
 		expect(screen).toContain(
