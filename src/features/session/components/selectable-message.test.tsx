@@ -1,4 +1,4 @@
-import { act, createElement, type ReactNode } from "react";
+import { act, type ComponentProps, createElement, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -14,13 +14,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  */
 const host = vi.hoisted(() => ({
 	os: "ios" as "ios" | "android" | "web",
-	pressables: [] as { onLongPress?: () => void; onPress?: () => void }[],
+	pressables: [] as {
+		onLongPress?: () => void;
+		onPress?: () => void;
+		accessible?: boolean;
+	}[],
 	inputs: [] as Record<string, unknown>[],
+	/* Imperative `setSelection` calls on the mounted input (PR #233 R1, B1). */
+	setSelections: [] as [number, number][],
 	texts: [] as Record<string, unknown>[],
 }));
 
 vi.mock("react-native", async () => {
-	const { createElement } = await import("react");
+	const { createElement, useImperativeHandle } = await import("react");
 	const record =
 		(bucket: Record<string, unknown>[] | null, tag: string) =>
 		({ children, ...props }: { children?: ReactNode }) => {
@@ -35,7 +41,20 @@ vi.mock("react-native", async () => {
 		},
 		View: record(null, "div"),
 		Text: record(host.texts, "span"),
-		TextInput: ({ value, ...props }: { value?: string }) => {
+		// React 19 hands `ref` to a function component as a prop; the handle
+		// records select-all the way RN's `TextInput.setSelection` would send it.
+		TextInput: ({
+			value,
+			ref,
+			...props
+		}: {
+			value?: string;
+			ref?: unknown;
+		}) => {
+			useImperativeHandle(ref as never, () => ({
+				setSelection: (start: number, end: number) =>
+					host.setSelections.push([start, end]),
+			}));
 			host.inputs.push({ value, ...props });
 			return createElement("textarea", null, value);
 		},
@@ -70,6 +89,16 @@ const load = async (os: "ios" | "android" | "web") => {
 	return { ...module, store };
 };
 
+type Selectable =
+	typeof import("@/features/session/components/selectable-message").SelectableMessage;
+/** `createElement` with the child folded into props: the component's
+ *  `children` is required, which the variadic overload does not satisfy. */
+const message = (
+	component: Selectable,
+	props: Omit<ComponentProps<Selectable>, "children">,
+	children: ReactNode,
+) => createElement(component, { ...props, children });
+
 let dom: ReturnType<typeof installDomShim>;
 let root: ReturnType<typeof createRoot>;
 beforeEach(() => {
@@ -77,6 +106,7 @@ beforeEach(() => {
 	host.pressables.length = 0;
 	host.inputs.length = 0;
 	host.texts.length = 0;
+	host.setSelections.length = 0;
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
 });
@@ -99,7 +129,7 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 		const plain = vi.fn(() => "First paragraph.\n\nSecond paragraph.");
 		await act(async () =>
 			root.render(
-				createElement(
+				message(
 					SelectableMessage,
 					{
 						text: plain,
@@ -125,18 +155,100 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 			scrollEnabled: false,
 			autoFocus: true,
 			value: "First paragraph.\n\nSecond paragraph.",
-			selection: { start: 0, end: 35 },
 			selectionColor: "token:accent",
 			className: "text-body-read text-ink",
 		});
+		// Select-all is sent ONCE, imperatively; the input is never controlled.
+		expect(input).not.toHaveProperty("selection");
+		expect(host.setSelections).toEqual([[0, 35]]);
 		expect(store.activeTextSelection()).not.toBeNull();
+	});
+
+	/* PR #233 review R1, B1: a controlled `selection={{0, len}}` made RN re-send
+	 *  select-all after every native selection event, snapping each drag back to
+	 *  the whole message. The reader's range must survive re-renders. */
+	it("never re-imposes select-all after the reader drags a range", async () => {
+		const { SelectableMessage, store } = await load("ios");
+		const tree = (theme: string) =>
+			message(
+				SelectableMessage,
+				{ text: "hello world", textClassName: theme },
+				"hello world",
+			);
+		await act(async () => root.render(tree("a")));
+		await act(async () => host.pressables.at(-1)?.onLongPress?.());
+		const rendersBefore = host.inputs.length;
+		await act(async () =>
+			(mountedInput().onSelectionChange as (e: unknown) => void)({
+				nativeEvent: { selection: { start: 6, end: 11 } },
+			}),
+		);
+		// An unrelated parent re-render (a theme flip) while the range is held.
+		await act(async () => root.render(tree("b")));
+		expect(host.inputs.length).toBeGreaterThan(rendersBefore);
+		for (const props of host.inputs)
+			expect(props).not.toHaveProperty("selection");
+		expect(host.setSelections).toEqual([[0, 11]]);
+		expect(store.activeTextSelection()).not.toBeNull();
+	});
+
+	/* Review R1, m3: a streamed token must not swap the text (and move the
+	 *  caret) under the reader's handles; the view is the entry-time snapshot. */
+	it("selects a snapshot taken on entry, not the still-streaming text", async () => {
+		const { SelectableMessage } = await load("ios");
+		const tree = (body: string) =>
+			message(
+				SelectableMessage,
+				{ text: () => body, textClassName: "x" },
+				body,
+			);
+		await act(async () => root.render(tree("partial")));
+		await act(async () => host.pressables.at(-1)?.onLongPress?.());
+		await act(async () => root.render(tree("partial answer, longer")));
+		expect(mountedInput().value).toBe("partial");
+		expect(host.setSelections).toEqual([[0, 7]]);
+	});
+
+	/* Review R1, M1: an accessible iOS container hides its descendants from
+	 *  VoiceOver; the wrapper must not be one, and the leaf offers the mode. */
+	it("keeps the wrapper out of VoiceOver and offers a Select text action", async () => {
+		const { SelectableMessage, SelectableLeafText, SELECT_TEXT_ACTION, store } =
+			await load("ios");
+		await act(async () =>
+			root.render(
+				message(
+					SelectableMessage,
+					{ text: "body", textClassName: "x" },
+					createElement(SelectableLeafText, null, "body"),
+				),
+			),
+		);
+		expect(host.pressables.at(-1)?.accessible).toBe(false);
+		const leaf = host.texts.at(-1) as {
+			accessibilityActions?: { name: string; label: string }[];
+			onAccessibilityAction?: (event: unknown) => void;
+		};
+		expect(leaf.accessibilityActions).toEqual([
+			{ name: SELECT_TEXT_ACTION, label: "Select text" },
+		]);
+		await act(async () =>
+			leaf.onAccessibilityAction?.({ nativeEvent: { actionName: "magicTap" } }),
+		);
+		expect(store.activeTextSelection()).toBeNull();
+		await act(async () =>
+			leaf.onAccessibilityAction?.({
+				nativeEvent: { actionName: SELECT_TEXT_ACTION },
+			}),
+		);
+		expect(store.activeTextSelection()).not.toBeNull();
+		expect(mountedInput().value).toBe("body");
 	});
 
 	it("ends on a collapsed selection only after a real range was seen", async () => {
 		const { SelectableMessage, store } = await load("ios");
 		await act(async () =>
 			root.render(
-				createElement(
+				message(
 					SelectableMessage,
 					{
 						text: "hello world",
@@ -175,7 +287,7 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 				createElement(
 					"div",
 					null,
-					createElement(
+					message(
 						SelectableMessage,
 						{
 							text: "a",
@@ -183,7 +295,7 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 						},
 						"a",
 					),
-					createElement(
+					message(
 						SelectableMessage,
 						{
 							text: "b",
@@ -215,7 +327,7 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 		const { SelectableMessage } = await load("ios");
 		await act(async () =>
 			root.render(
-				createElement(
+				message(
 					SelectableMessage,
 					{
 						text: "prompt",
@@ -236,7 +348,7 @@ describe("Android and web: native selection on the leaf, no mode", () => {
 			const { SelectableMessage, SelectableLeafText } = await load(os);
 			await act(async () =>
 				root.render(
-					createElement(
+					message(
 						SelectableMessage,
 						{
 							text: "body",
@@ -252,6 +364,8 @@ describe("Android and web: native selection on the leaf, no mode", () => {
 				selectable: true,
 				selectionColor: "token:accent-wash",
 			});
+			// The leaf selects natively: no VoiceOver detour into a mode.
+			expect(host.texts.at(-1)).not.toHaveProperty("accessibilityActions");
 		});
 	}
 });

@@ -141,11 +141,12 @@ const Inline = memo(function Inline({
 	 *  same text: on a long answer that is the frame budget spent on work whose
 	 *  input did not change. */
 	const spans = useMemo(() => parseInline(text), [text]);
-	const { selectionColor } = useTextSelection();
+	const { selectionColor, accessibility } = useTextSelection();
 	return (
 		<Text
 			selectable={LEAF_SELECTABLE}
 			selectionColor={selectionColor}
+			{...accessibility}
 			className={cx(base ?? MESSAGE_BODY_CLASS)}
 			style={INLINE_WRAP}
 		>

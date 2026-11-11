@@ -21,18 +21,40 @@
  *    enters it.
  *  - Formatting is dropped while selecting (the plain text is what Copy puts
  *    on the pasteboard, as in Slack's "Select text"); it returns on exit.
+ *  - THE SELECTION IS UNCONTROLLED (PR #233 review R1, B1). Select-all is sent
+ *    once, imperatively, after the view mounts; after that the reader's handles
+ *    own the range. A `selection` prop would re-impose `{0, len}` on every drag
+ *    (RN 0.86.3 `TextInput.js`: each `onSelectionChange` re-renders through
+ *    `setLastNativeSelection`, `:531-534`, and the sync layout effect at
+ *    `:208-216` re-sends the prop whenever the native range differs; native
+ *    accepts it because a read-only input never bumps its event count).
+ *  - THE TEXT IS A SNAPSHOT taken on entry, so a streaming answer cannot move
+ *    the selection under the reader's handles (review R1, m3).
+ *  - VOICEOVER STILL REACHES THE PARTS (review R1, M1). The long-press wrapper
+ *    is `accessible={false}`: an accessible iOS container hides its children,
+ *    which would swallow the links and the code block's copy button. VoiceOver
+ *    users enter the mode through a "Select text" action on each body leaf.
  */
 import {
 	createContext,
 	type ReactNode,
 	useCallback,
 	useContext,
+	useEffect,
 	useId,
 	useMemo,
 	useRef,
+	useState,
 	useSyncExternalStore,
 } from "react";
-import { Pressable, Text, TextInput, type TextProps, View } from "react-native";
+import {
+	type AccessibilityActionEvent,
+	Pressable,
+	Text,
+	TextInput,
+	type TextProps,
+	View,
+} from "react-native";
 
 import {
 	activeTextSelection,
@@ -52,11 +74,28 @@ type TextSelectionContextValue = {
 	enter: () => void;
 	/** The theme's selection tint for leaf `<Text selectable>`. */
 	selectionColor: string | undefined;
+	/** Spread onto each body leaf: VoiceOver's way into the mode (iOS), empty
+	 *  where the leaf selects natively or there is no mode. */
+	accessibility: SelectTextAccessibility;
 };
+
+type SelectTextAccessibility = Pick<
+	TextProps,
+	"accessibilityActions" | "onAccessibilityAction"
+>;
+
+/** The custom rotor action's name; the label is what VoiceOver speaks. */
+export const SELECT_TEXT_ACTION = "selectText";
+const SELECT_TEXT_ACTIONS = [
+	{ name: SELECT_TEXT_ACTION, label: "Select text" },
+];
+
+const NO_ACCESSIBILITY: SelectTextAccessibility = {};
 
 const NOOP_CONTEXT: TextSelectionContextValue = {
 	enter: () => {},
 	selectionColor: undefined,
+	accessibility: NO_ACCESSIBILITY,
 };
 
 const TextSelectionContext =
@@ -104,26 +143,46 @@ export function SelectableMessage({
 		() => false,
 	);
 	const sawRange = useRef(false);
-	/* Stable per text: a fresh object on an unrelated re-render (a theme flip)
-	 *  would push select-all again and wipe the range the reader dragged. */
-	const plain = useMemo(
-		() => (selecting ? (typeof text === "function" ? text() : text) : ""),
-		[selecting, text],
-	);
-	const initialSelection = useMemo(
-		() => ({ start: 0, end: plain.length }),
-		[plain],
-	);
+	const input = useRef<TextInput>(null);
+	/* Read through a ref so `enter` (and the context consumers) stay stable when
+	 *  a caller hands a fresh function per render. */
+	const latestText = useRef(text);
+	latestText.current = text;
+	/* The snapshot shown while selecting, taken once on entry (see the header:
+	 *  a streamed token must not reset the reader's range). */
+	const [plain, setPlain] = useState("");
 
 	const enter = useCallback(() => {
 		if (disabled || !usesSelectionMode()) return;
 		sawRange.current = false;
+		const current = latestText.current;
+		setPlain(typeof current === "function" ? current() : current);
 		enterTextSelection(id);
 	}, [disabled, id]);
 
+	/* Select-all ONCE per entry, imperatively (`TextInput.js:483-493`,
+	 *  `setSelection` -> `setTextAndSelection`), so the handles are on screen at
+	 *  once and are the reader's from then on. Keyed on entry, not on renders. */
+	useEffect(() => {
+		if (selecting) input.current?.setSelection(0, plain.length);
+	}, [selecting, plain]);
+
+	const accessibility = useMemo<SelectTextAccessibility>(
+		() =>
+			disabled || !usesSelectionMode()
+				? NO_ACCESSIBILITY
+				: {
+						accessibilityActions: SELECT_TEXT_ACTIONS,
+						onAccessibilityAction: (event: AccessibilityActionEvent) => {
+							if (event.nativeEvent.actionName === SELECT_TEXT_ACTION) enter();
+						},
+					},
+		[disabled, enter],
+	);
+
 	const context = useMemo(
-		() => ({ enter, selectionColor }),
-		[enter, selectionColor],
+		() => ({ enter, selectionColor, accessibility }),
+		[enter, selectionColor, accessibility],
 	);
 
 	if (!usesSelectionMode() || disabled) {
@@ -138,15 +197,14 @@ export function SelectableMessage({
 		return (
 			<View onTouchStart={noteTextSelectionTouch} testID={testID}>
 				<TextInput
+					ref={input}
 					// Read-only UITextView: selectable with handles, never editable.
 					editable={false}
 					multiline
 					// The row grows to the text; the transcript list does the scrolling.
 					scrollEnabled={false}
 					autoFocus
-					// Pre-select the whole message so the handles are on screen at
-					// once; the reader drags them in to the part they want.
-					selection={initialSelection}
+					// NO `selection` prop: select-all is the effect above, once.
 					value={plain}
 					selectionColor={selectionColor}
 					className={textClassName}
@@ -170,6 +228,9 @@ export function SelectableMessage({
 				// No `onPress`: taps belong to the links, images and code blocks
 				// inside, and to the row around this body.
 				onLongPress={enter}
+				// Not one VoiceOver element: the links and copy buttons inside
+				// must stay individually reachable (review R1, M1).
+				accessible={false}
 				testID={testID}
 			>
 				{children}
@@ -185,11 +246,12 @@ const LEAF_SELECTABLE = leafSelectable();
  *  with the theme's selection colour. On iOS it is a plain `Text`; the mode
  *  does the selecting. */
 export function SelectableLeafText(props: TextProps & { className?: string }) {
-	const { selectionColor } = useTextSelection();
+	const { selectionColor, accessibility } = useTextSelection();
 	return (
 		<Text
 			selectable={LEAF_SELECTABLE}
 			selectionColor={selectionColor}
+			{...accessibility}
 			{...props}
 		/>
 	);

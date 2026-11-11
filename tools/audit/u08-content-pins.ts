@@ -1503,8 +1503,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Re-pinned 2026-11-11 for fix/native-text-selection with --print: the
 	// transcript's drag-to-select wrapper (`selectable-message.tsx`) — on web
 	// it renders its children unchanged and the leaf Text keeps `selectable`,
-	// so no measured web pixel moves. Source identity only.
-	src: "da2bfb3aff3a42b0b76d0b65c21c4627f18ba97bd49183943382b6062cfce4d0",
+	// so no measured web pixel moves. Source identity only. Re-printed for the
+	// PR #233 round-1 remediation (uncontrolled iOS selection, wrapper out of
+	// VoiceOver, memoised output joins): web renders the same children and
+	// leaves, so again source identity only.
+	src: "fc417a89c1d71355f9f16bedc9a194bbcc8bbaf5d69b7095cce27f2532b1bed9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
