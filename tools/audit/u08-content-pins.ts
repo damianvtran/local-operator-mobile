@@ -1530,6 +1530,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// ignores the slack, the composer reports `onLift`, and the lift tests.
 	// Re-derived with --print; source identity only, no rendered or native
 	// proof.
+	// fix/silent-resume-reconnect: the session stream's resume hold
+	// (`resume-hold.ts`) and the Team Bridge thread's silent `unreachable`
+	// retries, with tests. Timers and state only — no rendered change. --print
+	// over the staged tree; source identity only.
 	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
 };
 
