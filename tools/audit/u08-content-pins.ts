@@ -1375,8 +1375,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// docks above the keyboard from #216's store (new composer-dock.tsx, no
 	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
 	// layer. --print over the staged tree; source identity only, no rendered or
-	// native proof.
-	src: "560cd16d9099d0eac23b798c08199900927eeda358a0db5b0d79b06279007acb",
+	// native proof. Round-1 remediation: the dock test mounts with JSX (Biome
+	// noChildrenProp) and pins the thread's glass={chromeGlass} prop; a test
+	// file only, but `src` covers tests, so it moves. --print over the staged
+	// tree; source identity only, no rendered or native proof.
+	src: "da3e3fb8a5b7eead2b2cec6775601c947df0071610ae9e070b64d2c810ea759c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

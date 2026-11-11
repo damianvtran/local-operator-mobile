@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import {
 	act,
 	Children,
-	createElement,
 	isValidElement,
 	type ReactElement,
 	type ReactNode,
@@ -146,8 +145,14 @@ vi.mock("@/ui/components/textarea", async () => {
 });
 
 const INSET = 34;
-/** The component named in the `react-native` import list. */
-const KAV_IMPORT = /^\s*KeyboardAvoidingView,$/m;
+/** `KeyboardAvoidingView` named in any import list: single-line
+ *  (`import { KeyboardAvoidingView } from …`) or one name per line —
+ *  `[^}]` spans newlines, so both layouts Biome may print are caught. */
+const KAV_IMPORT =
+	/import\s+(?:type\s+)?\{[^}]*\bKeyboardAvoidingView\b[^}]*\}/;
+/** The host reads the platform glass once, for the composer field. */
+const CHROME_GLASS_HOOK = /const chromeGlass = useChromeGlass\(\);/;
+const GLASS_PROP = /\sglass=\{chromeGlass\}/;
 
 type StyledNode = {
 	nodeName?: string;
@@ -181,12 +186,16 @@ const mountDock = async () => {
 	const root = createRoot(dom.container as Element);
 	await act(async () =>
 		root.render(
-			createElement(BridgeComposerDock, {
-				bottomInset: INSET,
-				className: "gap-3 pt-2",
-				testID: SURFACE.teamBridgeComposer,
-				children: createElement("p", null, "composer"),
-			}),
+			// JSX, not createElement: the dock's `children` is required, and
+			// Biome's `noChildrenProp` rejects passing it as a prop while
+			// createElement's third argument does not satisfy the props type.
+			<BridgeComposerDock
+				bottomInset={INSET}
+				className="gap-3 pt-2"
+				testID={SURFACE.teamBridgeComposer}
+			>
+				<p>composer</p>
+			</BridgeComposerDock>,
 		),
 	);
 	const container = dom.container as unknown as StyledNode;
@@ -278,6 +287,16 @@ describe("the Bridge composer rides above the keyboard (TestFlight 800)", () => 
 		expect(source).toContain("<BridgeComposerDock");
 		expect(source).toContain("bottomInset={insets.bottom}");
 		expect(source).toContain("testID={SURFACE.teamBridgeComposer}");
+		// The field draws the agent's glass shell only when the host hands it
+		// the platform glass: without the prop it silently falls back to the
+		// flat fill, so pin both the hook call and the prop on the field. The
+		// element is sliced to its own `/>` so another component's `glass`
+		// cannot satisfy the check.
+		expect(source).toMatch(CHROME_GLASS_HOOK);
+		const start = source.indexOf("<BridgeComposerField");
+		expect(start).toBeGreaterThan(-1);
+		const field = source.slice(start, source.indexOf("/>", start));
+		expect(field).toMatch(GLASS_PROP);
 	});
 });
 
