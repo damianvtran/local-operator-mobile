@@ -1382,7 +1382,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
 	// src carried, so neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source identity only, no rendered or native proof.
-	src: "577bf6f14b078145ce1acc74442b6da11bc12bd69310946aa71f9b8044bfea07",
+	// Re-pinned 2026-11-10 for PR #224 (markdown table columns + code faces)
+	// with its round-1 remediation (M1, m1/D2 seeded table width, m2/D1 chip
+	// wash, D4 native ligatures, n1; the width estimate lives in `ui/column.ts`
+	// so the node-loaded `markdown.ts` stays import-free), merged with main
+	// 56831114: only `src` moves, re-derived with --print over the merged
+	// tree. Source admission only, NOT a rendered geometry proof.
+	src: "83c95774b3e1160e434f6ca6a5f0a0b7cdc82e55b37620243a904545912bef81",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

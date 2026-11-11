@@ -17,7 +17,6 @@ import {
 	type InlineSpan,
 	parseInline,
 	parseMarkdown,
-	seedTableColumnWidth,
 	TABLE_BORDER_PT,
 	tableColumnWidths,
 	tableFadeGeometry,
@@ -30,6 +29,7 @@ import {
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { estimatedColumnWidth } from "@/ui/column";
 import { LTR_TEXT, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -321,11 +321,11 @@ function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 	 */
 	const viewport = useWindowDimensions();
 	/* `measured` is the wrapper's onLayout width (0 until it reports); before
-	 *  that the column is SEEDED from the window (`seedTableColumnWidth`) so the
+	 *  that the column is SEEDED from the window (`estimatedColumnWidth`, `column.ts`) so the
 	 *  first frame is the settled one (review m1 / design D2). Same single input
 	 *  downstream either way, so the no-feedback property above still holds. */
 	const [measured, setColumnWidth] = useState(0);
-	const columnWidth = measured > 0 ? measured : seedTableColumnWidth(viewport);
+	const columnWidth = measured > 0 ? measured : estimatedColumnWidth(viewport);
 	const [scrollX, setScrollX] = useState(0);
 	const [atEnd, setAtEnd] = useState(false);
 	const scrollRef = useRef<ScrollView>(null);

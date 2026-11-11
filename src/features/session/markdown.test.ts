@@ -4,7 +4,6 @@ import {
 	hasTableBlock,
 	parseInline,
 	parseMarkdown,
-	seedTableColumnWidth,
 	splitTableRow,
 	TABLE_BORDER_PT,
 	TABLE_CELL_PADDING_X_PT,
@@ -815,22 +814,5 @@ describe("tableColumnWidths (one width per column, shared by every row)", () => 
 			// No column is ever narrowed below its priced box.
 			expect(width).toBeGreaterThanOrEqual(boxes[column] ?? 0);
 		});
-	});
-});
-
-describe("seedTableColumnWidth (the column before onLayout measures it)", () => {
-	it("is the portrait phone viewport less a 16pt gutter each side", () => {
-		expect(seedTableColumnWidth({ width: 390, height: 844 })).toBe(358);
-		expect(seedTableColumnWidth({ width: 320, height: 640 })).toBe(288);
-	});
-
-	it("caps a landscape phone and a tablet at the content column", () => {
-		// 620 / 640 are `space.maxContentWidth`'s device shapes (column.ts).
-		expect(seedTableColumnWidth({ width: 844, height: 390 })).toBe(620 - 32);
-		expect(seedTableColumnWidth({ width: 1194, height: 834 })).toBe(640 - 32);
-	});
-
-	it("never goes negative on an unmeasured window", () => {
-		expect(seedTableColumnWidth({ width: 0, height: 0 })).toBe(0);
 	});
 });
