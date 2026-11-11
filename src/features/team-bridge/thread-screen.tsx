@@ -10,7 +10,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	AppState,
 	FlatList,
-	KeyboardAvoidingView,
 	Platform,
 	Pressable,
 	RefreshControl,
@@ -20,7 +19,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
-import { COMPOSER_SIDE_PAD } from "@/features/session/composer-presentation";
 import { t } from "@/i18n";
 import {
 	canSend,
@@ -54,12 +52,11 @@ import {
 import { useTokenColor } from "@/ui/appearance";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
-import { useKeyboardVisible } from "@/ui/components/chrome-surface";
+import { useChromeGlass } from "@/ui/components/chrome-surface";
 import { IconButton } from "@/ui/components/icon-button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
-import { composerOuterGap } from "@/ui/device-corner";
 import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 import {
@@ -77,6 +74,7 @@ import {
 	releaseTeamBridgeSource,
 } from "./attachment-source";
 import { ComposerAttachments, MessageAttachments } from "./attachment-views";
+import { BridgeComposerDock } from "./composer-dock";
 import { BridgeThreadDrawerButton } from "./drawer-adapter";
 import { BridgeGate } from "./gate";
 import { MessageDelivery } from "./message-delivery";
@@ -207,7 +205,10 @@ function ThreadContent({
 	const { actions, hub, store } = useTeamBridge();
 	const state = useTeamBridgeState((s) => s);
 	const insets = useSafeAreaInsets();
-	const keyboardVisible = useKeyboardVisible();
+	/* The composer shell's fill: glass on iOS 26 with Reduce Transparency off,
+	 *  solid otherwise — the agent screen's host pattern (`home.tsx`,
+	 *  `session/[id].tsx`): the host decides once and passes it down. */
+	const chromeGlass = useChromeGlass();
 	const compact = useCompactChrome();
 	const [createdId, setCreatedId] = useState<string | null>(null);
 	const conversationId = createdId ?? (routeId === "new" ? null : routeId);
@@ -707,10 +708,11 @@ function ThreadContent({
 			scroll={false}
 			testID={SCREEN.teamBridgeThread}
 		>
-			<KeyboardAvoidingView
-				className="flex-1"
-				behavior={Platform.OS === "ios" ? "padding" : undefined}
-			>
+			{/* A plain column, NOT a `KeyboardAvoidingView` (operator, TestFlight 800:
+			 *  the composer did not rise above the keyboard like the agent's). The
+			 *  composer's dock lifts itself from #216's keyboard store
+			 *  (`BridgeComposerDock`), the agent screen's mechanism. */}
+			<View className="flex-1">
 				{!organization ? (
 					<View className="gap-3 p-4">
 						<Text className="text-body text-ink">
@@ -914,24 +916,16 @@ function ThreadContent({
 										)
 									}
 								/>
-								<View
-									/* The agent composer's dock clearance, not a footer bar
-									 *  (operator, TestFlight 773): NO top hairline rule — he
-									 *  had that line removed above the agent composer, and the
-									 *  shell's own border is the boundary; the agent dock's
-									 *  12 pt sides; and `composerOuterGap` below, the agent
-									 *  dock's rule — the safe-area inset plus 8 with the
-									 *  keyboard down, 8 alone above the keyboard (the old
-									 *  `max(inset, 12)` kept the home-indicator inset ABOVE the
-									 *  keyboard too). */
+								<BridgeComposerDock
+									/* The agent composer's dock, not a footer bar (operator,
+									 *  TestFlight 773): NO top hairline rule — he had that line
+									 *  removed above the agent composer, and the shell's own
+									 *  edge is the boundary. The dock pays the agent's 12 pt
+									 *  sides and `composerOuterGap` (inset + 8 with the keyboard
+									 *  down, 8 alone above it) and lifts by the keyboard's
+									 *  overlap (TestFlight 800; `composer-dock.tsx`). */
+									bottomInset={insets.bottom}
 									className="gap-2 pt-2"
-									style={{
-										paddingHorizontal: COMPOSER_SIDE_PAD,
-										paddingBottom: composerOuterGap(
-											insets.bottom,
-											keyboardVisible,
-										),
-									}}
 									testID={SURFACE.teamBridgeComposer}
 								>
 									{readOnly ? (
@@ -967,6 +961,7 @@ function ThreadContent({
 												</Text>
 											)}
 											<BridgeComposerField
+												glass={chromeGlass}
 												label={t("mobile.team_bridge.thread.message")}
 												/* The label, not "Message {channel}": the title above
 												 *  names the channel, and a one-line placeholder must
@@ -998,12 +993,12 @@ function ThreadContent({
 											/>
 										</>
 									)}
-								</View>
+								</BridgeComposerDock>
 							</>
 						) : null}
 					</>
 				)}
-			</KeyboardAvoidingView>
+			</View>
 			<ProfileSheet
 				subject={profile}
 				tenantId={tenantId}

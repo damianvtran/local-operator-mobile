@@ -1382,6 +1382,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
 	// src carried, so neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source identity only, no rendered or native proof.
+	// fix/bridge-composer-keyboard-glass (TestFlight 800): the Bridge composer
+	// docks above the keyboard from #216's store (new composer-dock.tsx, no
+	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
+	// layer. --print over the staged tree; source identity only, no rendered or
+	// native proof. Round-1 remediation: the dock test mounts with JSX (Biome
+	// noChildrenProp) and pins the thread's glass={chromeGlass} prop; a test
+	// file only, but `src` covers tests, so it moves. --print over the staged
+	// tree; source identity only, no rendered or native proof.
+	// PR #225 merged with main 56831114 (#220 refused-connect feedback): both
+	// sides' src carried, so neither parent's digest; re-derived with --print
+	// over the staged merged tree. Source identity only, no rendered or native
+	// proof.
 	// feat/bridge-nav-polish: minimal sunken WorkspaceModeBar + unified top close
 	// row, shared WorkspaceSidebarFooter across drawer modes, and Team Bridge
 	// directory/thread/delivery/sheet polish. Re-derived with --print over the
@@ -1399,7 +1411,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Converged #222 onto main 56831114 (#220) and moved WorkspaceModeBar onto
 	// space.scale (U-42); src re-derived with --print over the merged tree.
 	// Source identity only, no rendered or native proof.
-	src: "e67d93f1b0281c8d29852f1418e7ed295d960bf8591bcbbc4ca56e7896b2083d",
+	// Converged #222 onto main 240362a6 (#225 Bridge composer keyboard dock +
+	// glass shell): both sides' src carried, so neither parent's digest;
+	// re-derived with --print over the staged merged tree. Source identity
+	// only, no rendered or native proof.
+	src: "61a338c88fec56efe78cce3647fb8630cf97fbc3c539c799f39d0cfeb35a25d3",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
