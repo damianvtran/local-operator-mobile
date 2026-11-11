@@ -18,7 +18,11 @@ import {
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_EXPANDED_INDENT_CLASS,
 	TRACE_GLYPH_BOX_CLASS,
+	TRACE_GLYPH_ROW_CLASS,
+	TRACE_GLYPH_SLOT_CLASS,
+	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
 	TRACE_ROW_OUTER_CLASS,
+	TRACE_TEXT_RAIL_INSET_CLASS,
 } from "@/features/session/components/trace-rail";
 import {
 	buildFoldRun,
@@ -338,6 +342,65 @@ describe("the shared rail and spacing tiers", () => {
 		expect(pt(TRACE_ROW_OUTER_CLASS) + pt(TRACE_EXPANDED_INDENT_CLASS)).toBe(
 			40,
 		);
+	});
+
+	/* PR #223 CI (U-41, "rail drift: line 2 starts 24pt off the row's rail"):
+	 * the audit reads every text node inside a caret-bearing button as one of
+	 * its lines, so a glyph INSIDE the button set line 1 at 16 pt while a
+	 * wrapped line sat on 40 pt. The glyph now lives in a sibling slot. */
+	it("starts the pressable after the glyph and every line it owns at 40 pt", () => {
+		const step = (cls: string): number => {
+			const match = /^[a-z]+-(\d+)$/.exec(cls);
+			return match === null ? Number.NaN : Number(match[1]) * 4;
+		};
+		const pick = (classes: string, prefix: string): number =>
+			step(classes.split(" ").find((c) => c.startsWith(prefix)) ?? "");
+		const slotX = pick(TRACE_ROW_OUTER_CLASS, "px-");
+		const pressableX = slotX + pick(TRACE_GLYPH_SLOT_CLASS, "w-");
+		expect(slotX).toBe(16);
+		// The button's box starts AFTER the glyph (32 pt): drawn under it, U-08
+		// read the glyph's ink inside a control it is not part of (30 FAIL).
+		expect(pressableX).toBe(32);
+		expect(pressableX + pick(TRACE_TEXT_RAIL_INSET_CLASS, "ps-")).toBe(40);
+		// The same 40 pt the shared rail declares for the old in-row layout.
+		expect(
+			slotX +
+				pick(TRACE_GLYPH_BOX_CLASS, "w-") +
+				pick(TRACE_COLUMN_GAP_CLASS, "gap-"),
+		).toBe(40);
+		expect(TRACE_GLYPH_ROW_CLASS.split(" ")).toContain("items-baseline");
+		expect(TRACE_PRESSABLE_BESIDE_GLYPH_CLASS).not.toMatch(/-m[se]-/);
+	});
+
+	it.each([
+		"turn-bar",
+		"fold-bar",
+		"quiet-group-bar",
+		"collapsed-row",
+		"tool-row",
+		"ask-response-row",
+	])("%s draws its glyph outside the pressable", (name) => {
+		const source = readFileSync(
+			new URL(`./components/${name}.tsx`, import.meta.url),
+			"utf8",
+		);
+		const open = source.indexOf("<Pressable");
+		const close = source.indexOf("</Pressable>");
+		expect(open).toBeGreaterThan(0);
+		const inside = source.slice(open, close);
+		const before = source.slice(0, open);
+		expect(inside).not.toContain("TRACE_GLYPH_BOX_CLASS");
+		expect(inside).not.toContain('"text-start font-mono text-mono-sm"');
+		expect(inside).toContain("TRACE_PRESSABLE_BESIDE_GLYPH_CLASS");
+		expect(inside).toContain("TRACE_TEXT_RAIL_INSET_CLASS");
+		expect(before).toContain("TRACE_GLYPH_ROW_CLASS");
+		expect(before).toContain("TRACE_GLYPH_SLOT_CLASS");
+		expect(before).toMatch(/pointerEvents="none"/);
+		// U-42: no off-scale half step anywhere in the row.
+		const code = source
+			.replace(/\/\*[\s\S]*?\*\//g, "")
+			.replace(/\/\/.*$/gm, "");
+		expect(code).not.toMatch(/\b-?(?:p[trblxyse]?|m[trblxyse]?|gap)-\d+\.5\b/);
 	});
 
 	it("separates turns by 16 pt, registers by 8 pt, and trace lines by nothing", () => {

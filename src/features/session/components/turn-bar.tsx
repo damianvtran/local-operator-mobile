@@ -1,10 +1,15 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import {
-	TRACE_BAR_PAD_CLASS,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_GLYPH_BOX_CLASS,
+	TRACE_GLYPH_ROW_CLASS,
+	TRACE_GLYPH_SLOT_CLASS,
+	TRACE_PRESS_WASH_CLASS,
+	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
 	TRACE_ROW_OUTER_CLASS,
+	TRACE_TEXT_RAIL_INSET_CLASS,
 } from "@/features/session/components/trace-rail";
 import {
 	barAccessibleName,
@@ -77,35 +82,50 @@ export const TurnBar = ({
 	 * inside an Urdu page and push them off the 40 pt start rail (Q2-1).
 	 * `useComposedDir` states the page's base instead; see `@/ui/direction`. */
 	const composedDir = useComposedDir();
+	/* The press wash lives on the row holding the glyph AND the button
+	 * (`TRACE_PRESS_WASH_CLASS`, `trace-rail.ts`), so it is lifted here. */
+	const [pressed, setPressed] = useState(false);
 	return (
+		/* Glyph outside the pressable, baseline-aligned (`TRACE_GLYPH_ROW_CLASS`
+		 * in `trace-rail.ts`): every text line the button owns starts on the
+		 * 40 pt rail, so a wrapped bar keeps one rail under U-41. */
 		<View className={TRACE_ROW_OUTER_CLASS}>
-			<Pressable
-				testID={turnBarId(turnKey)}
-				accessibilityRole={ROLE.button}
-				accessibilityLabel={barAccessibleName(facts, headline)}
-				accessibilityState={{ expanded: open }}
-				onPress={() => onToggle(!open)}
-				style={{ minHeight: TOUCH_FLOOR }}
-				className="justify-center"
+			<View
+				className={cx(TRACE_GLYPH_ROW_CLASS, pressed && TRACE_PRESS_WASH_CLASS)}
 			>
-				{({ pressed }) => (
+				<View
+					className={TRACE_GLYPH_SLOT_CLASS}
+					pointerEvents="none"
+					aria-hidden
+				>
+					<Text
+						className={cx(
+							TRACE_GLYPH_BOX_CLASS,
+							failed ? "text-danger" : "text-success",
+						)}
+						aria-hidden
+					>
+						{failed ? "✗" : "✓"}
+					</Text>
+				</View>
+				<Pressable
+					testID={turnBarId(turnKey)}
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={barAccessibleName(facts, headline)}
+					accessibilityState={{ expanded: open }}
+					onPress={() => onToggle(!open)}
+					onPressIn={() => setPressed(true)}
+					onPressOut={() => setPressed(false)}
+					style={{ minHeight: TOUCH_FLOOR }}
+					className={cx(TRACE_PRESSABLE_BESIDE_GLYPH_CLASS, "justify-center")}
+				>
 					<View
 						className={cx(
 							"flex-row items-start py-2",
-							pressed && "bg-row-hover",
-							TRACE_BAR_PAD_CLASS,
+							TRACE_TEXT_RAIL_INSET_CLASS,
 							TRACE_COLUMN_GAP_CLASS,
 						)}
 					>
-						<Text
-							className={cx(
-								TRACE_GLYPH_BOX_CLASS,
-								failed ? "text-danger" : "text-success",
-							)}
-							aria-hidden
-						>
-							{failed ? "✗" : "✓"}
-						</Text>
 						<Text
 							className="min-w-0 flex-1 text-trace text-ink-muted"
 							{...composedDir}
@@ -135,8 +155,8 @@ export const TurnBar = ({
 							</Text>
 						</Text>
 					</View>
-				)}
-			</Pressable>
+				</Pressable>
+			</View>
 		</View>
 	);
 };

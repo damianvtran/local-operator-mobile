@@ -267,7 +267,7 @@ const TranscriptRowImpl = ({
 				 *  on the wire and nowhere on screen. Same strip as the user row's,
 				 *  minus the bubble ground. */}
 				{entry.images.length > 0 && loadImage ? (
-					<View className="flex-row flex-wrap gap-1.5 pt-1.5">
+					<View className="flex-row flex-wrap gap-2 pt-2">
 						{entry.images.map((image) => (
 							<TranscriptImage
 								key={image.index}
@@ -521,7 +521,7 @@ const TranscriptRowImpl = ({
 		(kind === "parent" || kind === "subagent") &&
 		entry.images.length > 0 &&
 		loadImage ? (
-			<View className="flex-row flex-wrap gap-1.5 pt-1.5">
+			<View className="flex-row flex-wrap gap-2 pt-2">
 				{entry.images.map((image) => (
 					<TranscriptImage
 						key={image.index}

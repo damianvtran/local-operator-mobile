@@ -1416,7 +1416,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #223 merged with main 240362a6 (#225): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only.
-	src: "a95e68bf2c24798986ba9662c01c39c6431cbebe124145a8fa53593c8e67af9c",
+	// PR #223 CI fix (U-41/U-42): the trace-row glyph stands outside its
+	// pressable in a baseline-aligned slot, the press wash lifts to the row,
+	// the assistant/parent image strips go on-scale, `pt-0.5` is gone; tests
+	// with it. --print over the staged tree; source identity only.
+	src: "aeb37d70c830420c1c7ce52313224febbdbf08d54a01d888d4ca4a183ef72f54",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

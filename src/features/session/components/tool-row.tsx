@@ -36,7 +36,11 @@ import {
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_EXPANDED_INDENT_CLASS,
 	TRACE_GLYPH_BOX_CLASS,
+	TRACE_GLYPH_ROW_CLASS,
+	TRACE_GLYPH_SLOT_CLASS,
+	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
 	TRACE_ROW_CHROME_PT,
+	TRACE_TEXT_RAIL_INSET_CLASS,
 } from "@/features/session/components/trace-rail";
 import {
 	deliveryAccessibleName,
@@ -382,26 +386,14 @@ export const ToolRow = ({
 		 *  ink (`toolGlyph`) plus the pulse on a running glyph below; a queued
 		 *  or composing call is dim and still, because nothing is happening yet. */
 		<View className={cx("rounded-sm", TRACE_BAR_PAD_CLASS)} testID={testID}>
-			<Pressable
-				accessibilityRole={details ? ROLE.button : ROLE.text}
-				accessibilityLabel={
-					isBridge
-						? bridgeAccessibleName(entry, bridge, bridgeCopy)
-						: `${displayName} ${entry.tool_state}${cleanSummary ? `, ${cleanSummary}` : ""}${deliveryName ? `, ${deliveryName}` : ""}`
-				}
-				accessibilityState={details ? { expanded: open } : undefined}
-				disabled={!details}
-				onPress={() => details && toggle(!open)}
-				style={{ minHeight: TOUCH_FLOOR }}
-				className="justify-center"
-				testID={toolRowToggleId(entry.id)}
-			>
+			{/* Glyph outside the pressable, baseline-aligned (`TRACE_GLYPH_ROW_CLASS`
+			 *  in `trace-rail.ts`): the second line (the send word, a bridge
+			 *  caveat) and line one then share the button's 40 pt rail under U-41. */}
+			<View className={TRACE_GLYPH_ROW_CLASS}>
 				<View
-					className={cx(
-						"flex-row",
-						secondLine !== null ? "items-start py-1" : "items-center",
-						TRACE_COLUMN_GAP_CLASS,
-					)}
+					className={TRACE_GLYPH_SLOT_CLASS}
+					pointerEvents="none"
+					aria-hidden
 				>
 					<Shimmer active={tone.pulsing} className="w-4 shrink-0">
 						<Text
@@ -411,108 +403,139 @@ export const ToolRow = ({
 							{tone.glyph}
 						</Text>
 					</Shimmer>
-					<View className="min-w-0 flex-1">
-						<View className="flex-row items-center gap-2">
-							{isBridge ? (
-								<View className="w-3.5 shrink-0 items-start" aria-hidden>
-									{mark === "message-off" ? (
-										<MessageSquareOff color={warningInk} size={14} />
-									) : mark === "hourglass" ? (
-										<Hourglass color={dimInk} size={14} />
-									) : (
-										<MessagesSquare color={iconInk} size={14} />
-									)}
-								</View>
-							) : (
-								<Text
-									className="min-w-0 shrink truncate text-trace text-ink-muted"
-									numberOfLines={1}
-								>
-									{displayName}
-								</Text>
-							)}
-							<Text
-								className={cx(
-									"min-w-0 flex-1 text-trace text-ink-dim",
-									isBridge && bridgeOutcome !== null && "min-w-[4.5rem]",
-								)}
-								numberOfLines={1}
-							>
-								{headline}
-							</Text>
-
-							{bridgeOutcome !== null &&
-							!deliveryOnOwnLine &&
-							chipLayout === "words" ? (
-								<View
-									className={cx(
-										"min-w-0 shrink flex-row items-center",
-										bridgeOutcome.tone === "danger"
-											? "text-danger"
-											: "text-warning",
-									)}
-									style={{ maxWidth: rowWidthPt >= 384 ? "55%" : "40%" }}
-								>
-									<Text
-										className={cx(
-											"min-w-0 shrink text-body-sm",
-											trailing?.inkClass,
+				</View>
+				<Pressable
+					accessibilityRole={details ? ROLE.button : ROLE.text}
+					accessibilityLabel={
+						isBridge
+							? bridgeAccessibleName(entry, bridge, bridgeCopy)
+							: `${displayName} ${entry.tool_state}${cleanSummary ? `, ${cleanSummary}` : ""}${deliveryName ? `, ${deliveryName}` : ""}`
+					}
+					accessibilityState={details ? { expanded: open } : undefined}
+					disabled={!details}
+					onPress={() => details && toggle(!open)}
+					style={{ minHeight: TOUCH_FLOOR }}
+					className={cx(TRACE_PRESSABLE_BESIDE_GLYPH_CLASS, "justify-center")}
+					testID={toolRowToggleId(entry.id)}
+				>
+					<View
+						className={cx(
+							"flex-row",
+							secondLine !== null ? "items-start py-1" : "items-center",
+							TRACE_TEXT_RAIL_INSET_CLASS,
+							TRACE_COLUMN_GAP_CLASS,
+						)}
+					>
+						<View className="min-w-0 flex-1">
+							<View className="flex-row items-center gap-2">
+								{isBridge ? (
+									<View className="w-3.5 shrink-0 items-start" aria-hidden>
+										{mark === "message-off" ? (
+											<MessageSquareOff color={warningInk} size={14} />
+										) : mark === "hourglass" ? (
+											<Hourglass color={dimInk} size={14} />
+										) : (
+											<MessagesSquare color={iconInk} size={14} />
 										)}
+									</View>
+								) : (
+									<Text
+										className="min-w-0 shrink truncate text-trace text-ink-muted"
 										numberOfLines={1}
 									>
-										{bridgeOutcome.word}
-										{bridgeChipShowsCode(rowWidthPt)
-											? bridgeOutcome.code
-											: null}
+										{displayName}
 									</Text>
-								</View>
-							) : null}
-							{word !== null && !deliveryOnOwnLine && bridgeOutcome === null ? (
+								)}
 								<Text
-									className={cx("shrink-0 text-body-sm", trailing?.inkClass)}
+									className={cx(
+										"min-w-0 flex-1 text-trace text-ink-dim",
+										isBridge && bridgeOutcome !== null && "min-w-[4.5rem]",
+										/* A bridge row leads with an icon, which has no text
+										 *  baseline: without this the line's baseline — the one
+										 *  the outside glyph keys to (`TRACE_GLYPH_ROW_CLASS`)
+										 *  — would be synthesised from the icon's bottom edge. */
+										isBridge && "self-baseline",
+									)}
 									numberOfLines={1}
 								>
-									{word}
+									{headline}
 								</Text>
-							) : null}
-							{counts !== null ? (
-								<Text className="shrink-0 font-mono text-mono-sm">
-									{counts.added > 0 ? (
-										<Text className="text-success">+{counts.added}</Text>
-									) : null}
-									{counts.added > 0 && counts.removed > 0 ? " " : null}
-									{counts.removed > 0 ? (
-										<Text className="text-danger">−{counts.removed}</Text>
-									) : null}
-								</Text>
-							) : null}
-							{elapsed !== null ? (
-								<Text className="shrink-0 font-mono text-mono-sm text-ink-dim tabular-nums">
-									{elapsed}
-								</Text>
-							) : null}
-							{details ? (
+
+								{bridgeOutcome !== null &&
+								!deliveryOnOwnLine &&
+								chipLayout === "words" ? (
+									<View
+										className={cx(
+											"min-w-0 shrink flex-row items-center",
+											bridgeOutcome.tone === "danger"
+												? "text-danger"
+												: "text-warning",
+										)}
+										style={{ maxWidth: rowWidthPt >= 384 ? "55%" : "40%" }}
+									>
+										<Text
+											className={cx(
+												"min-w-0 shrink text-body-sm",
+												trailing?.inkClass,
+											)}
+											numberOfLines={1}
+										>
+											{bridgeOutcome.word}
+											{bridgeChipShowsCode(rowWidthPt)
+												? bridgeOutcome.code
+												: null}
+										</Text>
+									</View>
+								) : null}
+								{word !== null &&
+								!deliveryOnOwnLine &&
+								bridgeOutcome === null ? (
+									<Text
+										className={cx("shrink-0 text-body-sm", trailing?.inkClass)}
+										numberOfLines={1}
+									>
+										{word}
+									</Text>
+								) : null}
+								{counts !== null ? (
+									<Text className="shrink-0 font-mono text-mono-sm">
+										{counts.added > 0 ? (
+											<Text className="text-success">+{counts.added}</Text>
+										) : null}
+										{counts.added > 0 && counts.removed > 0 ? " " : null}
+										{counts.removed > 0 ? (
+											<Text className="text-danger">−{counts.removed}</Text>
+										) : null}
+									</Text>
+								) : null}
+								{elapsed !== null ? (
+									<Text className="shrink-0 font-mono text-mono-sm text-ink-dim tabular-nums">
+										{elapsed}
+									</Text>
+								) : null}
+								{details ? (
+									<Text
+										className="shrink-0 text-mono-sm text-ink-dim"
+										aria-hidden
+									>
+										{open ? "▾" : "▸"}
+									</Text>
+								) : null}
+							</View>
+							{/* Line 2 stays inside the `flex-1` text column so it aligns to `x = 40 pt`
+							 *  instead of dropping back under the leading glyph. */}
+							{secondLine !== null ? (
 								<Text
-									className="shrink-0 text-mono-sm text-ink-dim"
-									aria-hidden
+									className={cx("pt-1 text-body-sm", secondLine.inkClass)}
+									numberOfLines={1}
 								>
-									{open ? "▾" : "▸"}
+									{secondLine.text}
 								</Text>
 							) : null}
 						</View>
-						{/* Line 2 stays inside the `flex-1` text column so it aligns to `x = 40 pt`
-						 *  instead of dropping back under the leading glyph. */}
-						{secondLine !== null ? (
-							<Text
-								className={cx("pt-1 text-body-sm", secondLine.inkClass)}
-								numberOfLines={1}
-							>
-								{secondLine.text}
-							</Text>
-						) : null}
 					</View>
-				</View>
-			</Pressable>
+				</Pressable>
+			</View>
 			{open && details ? (
 				<View
 					className={cx(

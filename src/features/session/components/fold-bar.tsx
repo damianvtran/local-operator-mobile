@@ -1,10 +1,15 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import {
-	TRACE_BAR_PAD_CLASS,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_GLYPH_BOX_CLASS,
+	TRACE_GLYPH_ROW_CLASS,
+	TRACE_GLYPH_SLOT_CLASS,
+	TRACE_PRESS_WASH_CLASS,
+	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
 	TRACE_ROW_OUTER_CLASS,
+	TRACE_TEXT_RAIL_INSET_CLASS,
 } from "@/features/session/components/trace-rail";
 import {
 	type FoldRun,
@@ -72,31 +77,46 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 				? "text-danger"
 				: "text-ink-dim";
 
+	/* The press wash lives on the row holding the glyph AND the button
+	 * (`TRACE_PRESS_WASH_CLASS`, `trace-rail.ts`), so it is lifted here. */
+	const [pressed, setPressed] = useState(false);
 	return (
+		/* Glyph outside the pressable, baseline-aligned (`TRACE_GLYPH_ROW_CLASS`
+		 * in `trace-rail.ts`): every text line the button owns starts on the
+		 * 40 pt rail, so a wrapped bar keeps one rail under U-41. */
 		<View className={TRACE_ROW_OUTER_CLASS}>
-			<Pressable
-				testID={foldBarId(foldKey)}
-				accessibilityRole={ROLE.button}
-				accessibilityLabel={foldBarAccessibleName(fold)}
-				accessibilityState={{ expanded: open }}
-				onPress={() => onToggle(!open)}
-				style={{ minHeight: TOUCH_FLOOR }}
-				className="justify-center"
+			<View
+				className={cx(TRACE_GLYPH_ROW_CLASS, pressed && TRACE_PRESS_WASH_CLASS)}
 			>
-				{({ pressed }) => (
+				<View
+					className={TRACE_GLYPH_SLOT_CLASS}
+					pointerEvents="none"
+					aria-hidden
+				>
+					<Shimmer active={fold.running && !open} className="w-4 shrink-0">
+						<Text className={cx(TRACE_GLYPH_BOX_CLASS, glyphInk)} aria-hidden>
+							{glyph}
+						</Text>
+					</Shimmer>
+				</View>
+				<Pressable
+					testID={foldBarId(foldKey)}
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={foldBarAccessibleName(fold)}
+					accessibilityState={{ expanded: open }}
+					onPress={() => onToggle(!open)}
+					onPressIn={() => setPressed(true)}
+					onPressOut={() => setPressed(false)}
+					style={{ minHeight: TOUCH_FLOOR }}
+					className={cx(TRACE_PRESSABLE_BESIDE_GLYPH_CLASS, "justify-center")}
+				>
 					<View
 						className={cx(
 							"flex-row items-start py-2",
-							pressed && "bg-row-hover",
-							TRACE_BAR_PAD_CLASS,
+							TRACE_TEXT_RAIL_INSET_CLASS,
 							TRACE_COLUMN_GAP_CLASS,
 						)}
 					>
-						<Shimmer active={fold.running && !open} className="w-4 shrink-0">
-							<Text className={cx(TRACE_GLYPH_BOX_CLASS, glyphInk)} aria-hidden>
-								{glyph}
-							</Text>
-						</Shimmer>
 						{showLive && fold.liveAction !== null ? (
 							<View className="min-w-0 flex-1">
 								<View className="flex-row items-center gap-2">
@@ -154,8 +174,8 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 							</Text>
 						</Text>
 					</View>
-				)}
-			</Pressable>
+				</Pressable>
+			</View>
 		</View>
 	);
 };

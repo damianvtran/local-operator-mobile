@@ -23,7 +23,7 @@ const WHITESPACE = /\s+/;
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
 const LINE_COMMENT = /\/\/.*$/gm;
 const ROW_CONTAINER =
-	/<View className=\{cx\("rounded-sm", (TRACE_BAR_PAD_CLASS)\)\} testID=\{testID\}>\s*<Pressable/;
+	/<View className=\{cx\("rounded-sm", (TRACE_BAR_PAD_CLASS)\)\} testID=\{testID\}>\s*(?:\{\s*\}\s*)?<View className=\{TRACE_GLYPH_ROW_CLASS\}>/;
 const STATE_GATED_FILL = /tool_state === "[a-z]+"[\s\S]{0,80}"bg-/;
 const CARD_STATE_FILL = /liveTone\) && "bg-/;
 const PULSING_GLYPH =

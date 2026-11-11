@@ -4,6 +4,11 @@ import { Pressable, Text, View } from "react-native";
 import {
 	TRACE_BAR_PAD_CLASS,
 	TRACE_COLUMN_GAP_CLASS,
+	TRACE_GLYPH_ROW_CLASS,
+	TRACE_GLYPH_SLOT_CLASS,
+	TRACE_PRESS_WASH_CLASS,
+	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
+	TRACE_TEXT_RAIL_INSET_CLASS,
 } from "@/features/session/components/trace-rail";
 import { ROLE } from "@/ui/a11y";
 import { TOUCH_FLOOR } from "@/ui/layout";
@@ -129,6 +134,9 @@ export const CollapsedRow = ({
 	children,
 }: CollapsedRowProps) => {
 	const [ownOpen, setOwnOpen] = useState(false);
+	/* The press wash lives on the row holding the glyph AND the button
+	 * (`TRACE_PRESS_WASH_CLASS`, `trace-rail.ts`), so it is lifted here. */
+	const [pressed, setPressed] = useState(false);
 	const open = controlledOpen ?? ownOpen;
 	/* At large text the label and the summary STACK (D1): at 320 pt / 200 %
 	 * `Hub · From reviewer` alone took 218 of the row's 288 pt, leaving the
@@ -170,82 +178,99 @@ export const CollapsedRow = ({
 	return (
 		<View>
 			<View className="flex-row items-stretch">
-				<Pressable
-					testID={testID}
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={accessibilityLabel}
-					accessibilityState={{ expanded: open }}
-					onPress={() => {
-						if (controlledOpen !== undefined && onToggle !== undefined) {
-							onToggle(!controlledOpen);
-							return;
-						}
-						setOwnOpen((current) => !current);
-					}}
-					/* The floor is a style, not `min-h-12`: 48 everywhere was the card's
-					 *  height, and iOS's floor is 44 — the shorter box is the tighter
-					 *  rhythm the notice lines around it keep (D4). */
-					style={{ minHeight: TOUCH_FLOOR }}
-					className="min-w-0 flex-1"
+				{/* Glyph outside the pressable, baseline-aligned
+				 *  (`TRACE_GLYPH_ROW_CLASS` in `trace-rail.ts`): a stacked row's
+				 *  label and summary then share the button's 40 pt rail under
+				 *  U-41, and the glyph keys to the label's line without the
+				 *  off-scale `pt-0.5` nudge U-42 refused (Q2-2 follow-up). */}
+				<View
+					className={cx(
+						"min-w-0 flex-1",
+						TRACE_GLYPH_ROW_CLASS,
+						pressed && TRACE_PRESS_WASH_CLASS,
+					)}
 				>
-					{({ pressed }) => (
-						<View
+					<View
+						className={TRACE_GLYPH_SLOT_CLASS}
+						pointerEvents="none"
+						aria-hidden
+					>
+						<Text
 							className={cx(
-								/* Stacked, the line is two lines tall: centring would float the
-								 * glyph and the chevron BETWEEN them (Q2-2), so they key to the
-								 * first line — the TurnBar's caret rule. */
-								"flex-1 flex-row",
-								stacked ? "items-start" : "items-center",
-								pressed && "bg-row-hover",
-								COLUMN_PAD,
-								COLUMN_GAP,
+								"text-start font-mono text-mono-sm",
+								GLYPH_COLUMN,
+								glyphClass,
 							)}
+							aria-hidden
 						>
-							<Text
+							{glyph}
+						</Text>
+					</View>
+					<Pressable
+						testID={testID}
+						accessibilityRole={ROLE.button}
+						accessibilityLabel={accessibilityLabel}
+						accessibilityState={{ expanded: open }}
+						onPressIn={() => setPressed(true)}
+						onPressOut={() => setPressed(false)}
+						onPress={() => {
+							if (controlledOpen !== undefined && onToggle !== undefined) {
+								onToggle(!controlledOpen);
+								return;
+							}
+							setOwnOpen((current) => !current);
+						}}
+						/* The floor is a style, not `min-h-12`: 48 everywhere was the card's
+						 *  height, and iOS's floor is 44 — the shorter box is the tighter
+						 *  rhythm the notice lines around it keep (D4). */
+						style={{ minHeight: TOUCH_FLOOR }}
+						className={TRACE_PRESSABLE_BESIDE_GLYPH_CLASS}
+					>
+						{
+							<View
 								className={cx(
-									"text-start font-mono text-mono-sm",
-									GLYPH_COLUMN,
-									/* Mono glyph vs the proportional label: nudge it onto
-									 * the label's line box when the two lines stack. */
-									stacked && "pt-0.5",
-									glyphClass,
+									/* Stacked, the line is two lines tall: centring would float the
+									 * glyph and the chevron BETWEEN them (Q2-2), so they key to the
+									 * first line — the TurnBar's caret rule. */
+									"flex-1 flex-row",
+									stacked ? "items-start" : "items-center",
+									TRACE_TEXT_RAIL_INSET_CLASS,
+									COLUMN_GAP,
 								)}
-								aria-hidden
 							>
-								{glyph}
-							</Text>
-							{/* The label may take at most half the row, so the summary — the
+								{/* The label may take at most half the row, so the summary — the
 				    thing the reader decides on — keeps words (UX round 1, U5); at
 				    large text it gets its own line instead (D1). The summary is
 				    the fold's whole point: ONE line, tail ellipsis. */}
-							{stacked && hasLabel ? (
-								<View className="min-w-0 flex-1">
-									{labelText}
-									{summaryText}
-								</View>
-							) : (
-								<>
-									{labelText}
-									{summaryText}
-								</>
-							)}
-							{meta !== undefined && meta.length > 0 ? (
+								{stacked && hasLabel ? (
+									<View className="min-w-0 flex-1">
+										{labelText}
+										{summaryText}
+									</View>
+								) : (
+									<>
+										{labelText}
+										{summaryText}
+									</>
+								)}
+								{meta !== undefined && meta.length > 0 ? (
+									<Text
+										className="min-w-0 max-w-1/3 shrink font-mono text-mono-sm text-ink-dim tabular-nums"
+										numberOfLines={1}
+									>
+										{meta}
+									</Text>
+								) : null}
 								<Text
-									className="min-w-0 max-w-1/3 shrink font-mono text-mono-sm text-ink-dim tabular-nums"
-									numberOfLines={1}
+									className="shrink-0 font-mono text-mono-sm text-ink-dim"
+									aria-hidden
 								>
-									{meta}
+									{open ? "▾" : "▸"}
 								</Text>
-							) : null}
-							<Text
-								className="shrink-0 font-mono text-mono-sm text-ink-dim"
-								aria-hidden
-							>
-								{open ? "▾" : "▸"}
-							</Text>
-						</View>
-					)}
-				</Pressable>
+							</View>
+						}
+					</Pressable>
+				</View>
 				{action !== undefined && action !== null ? (
 					<View className={cx("justify-center", "pe-2")}>{action}</View>
 				) : null}

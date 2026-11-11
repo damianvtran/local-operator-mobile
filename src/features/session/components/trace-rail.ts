@@ -34,6 +34,50 @@ export const TRACE_COLUMN_GAP_CLASS = "gap-2";
 export const TRACE_GLYPH_BOX_CLASS =
 	"w-4 shrink-0 text-start font-mono text-mono-sm";
 
+/**
+ * A disclosure row's glyph sits OUTSIDE its pressable, in a baseline-aligned
+ * sibling slot, and the pressable starts right after it.
+ *
+ * WHY. U-41 (`tools/audit/probe.ts`) reads every text node inside a
+ * caret-bearing pressable as a line of that row, aria-hidden or not. With the
+ * ✓/⟳/↔ glyph INSIDE the pressable, line 1 started at the glyph (16 pt) while a
+ * wrapped or second line started on the 40 pt text rail — "rail drift: line 2
+ * starts 24pt off the row's rail" on every wrapped bar (PR #223 CI). With the
+ * glyph a sibling, every text line the pressable owns starts at 40 pt.
+ *
+ * WHY BESIDE, NOT UNDER. Pulling the pressable back under the glyph (`-ms-6`)
+ * kept the glyph column tappable, but U-08 then measures the glyph's ink inside
+ * a control's box it does not belong to — an overlap, 30 FAIL rows on S5/S6
+ * (measured on this change's own capture). So the pressable's box starts at
+ * 32 pt, after the slot; the glyph's own 16 pt is not a tap target, and the
+ * row's press wash is lifted to the row wrapping both (`TRACE_PRESS_WASH_CLASS`
+ * gated on the pressable's `onPressIn`/`onPressOut`), so the glyph is still
+ * tinted with the row it belongs to.
+ *
+ * WHY BASELINE. The pressable centres its content inside the touch floor when
+ * it is one line, and top-anchors it when it wraps, so the first line's height
+ * depends on how many lines there are — something no static offset on a
+ * sibling can know. `items-baseline` hands the glyph the pressable's own first
+ * baseline (its first text line's, wherever centring put it), on web and Yoga
+ * alike, with no measurement pass and no off-scale nudge (U-42).
+ *
+ * THE GEOMETRY. Slot `w-4` at 16 pt, the pressable from 32 pt, its content's
+ * `ps-2` (8 pt, on `space.scale`) putting the text on 40 pt.
+ */
+export const TRACE_GLYPH_ROW_CLASS = "flex-row items-baseline";
+
+/** The glyph slot: the 16 pt column, never the touch target. */
+export const TRACE_GLYPH_SLOT_CLASS = "w-4 shrink-0";
+
+/** The pressable beside the glyph slot: its box starts at 32 pt. */
+export const TRACE_PRESSABLE_BESIDE_GLYPH_CLASS = "min-w-0 flex-1";
+
+/** The pressable's content inset: the column gap, so text sits on 40 pt. */
+export const TRACE_TEXT_RAIL_INSET_CLASS = "ps-2";
+
+/** The row's press wash, on the row holding glyph AND pressable while pressed. */
+export const TRACE_PRESS_WASH_CLASS = "bg-row-hover";
+
 /** Left indent (`24 pt` inside `px-4` = `40 pt`) for expanded panels beneath a trace row. */
 export const TRACE_EXPANDED_INDENT_CLASS = "ps-6";
 

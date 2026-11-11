@@ -20,6 +20,8 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 type PressProps = {
 	onPress?: () => void;
+	onPressIn?: () => void;
+	onPressOut?: () => void;
 	accessibilityState?: { expanded?: boolean };
 	accessibilityRole?: string;
 	accessibilityLabel?: string;
@@ -259,11 +261,19 @@ describe("the expanded body starts on the bar's text column (design round 1, D3)
 			(c) => c.host === "View" && c.className === "w-4 shrink-0",
 		);
 		expect(bar && glyph && body && spacer).toBeTruthy();
-		// Horizontal start of the text = padding + glyph column + gap, both places.
+		/* Horizontal start of the text, both places, 24 pt inside the row: the
+		 *  body's `px-0` + 16 pt spacer + `gap-2`, and the bar's 16 pt glyph
+		 *  slot + its pressable's `ps-2` — the glyph now stands OUTSIDE the
+		 *  pressable (PR #223 CI, U-41), so the gap became the button's inset. */
+		expect(words(bar?.className ?? "").has("ps-2")).toBe(true);
 		for (const token of ["px-0", "gap-2"]) {
-			expect(words(bar?.className ?? "").has(token)).toBe(true);
 			expect(words(body?.className ?? "").has(token)).toBe(true);
 		}
+		expect(
+			presses.classes.some(
+				(c) => c.host === "View" && c.className === "w-4 shrink-0",
+			),
+		).toBe(true);
 		expect(words(glyph?.className ?? "").has("shrink-0")).toBe(true);
 	});
 });
@@ -285,12 +295,25 @@ describe("a folded row is a quiet line, not a card (design round 3, D4)", () => 
 	});
 
 	it("tints only while pressed", async () => {
-		await render(false, true);
-		expect(
+		const tinted = () =>
 			presses.classes.some((c) =>
 				c.className.split(WHITESPACE).includes("bg-row-hover"),
-			),
-		).toBe(true);
+			);
+		await render(false);
+		expect(tinted()).toBe(false);
+		/* The wash is the ROW's (glyph slot + button), lifted out of the
+		 *  pressable since the glyph left it (PR #223 CI, U-41/U-08): it follows
+		 *  the button's press-in and press-out. */
+		presses.classes.length = 0;
+		await act(async () => presses.last?.onPressIn?.());
+		expect(tinted()).toBe(true);
+		const wash = presses.classes.find((c) =>
+			c.className.split(WHITESPACE).includes("bg-row-hover"),
+		);
+		expect(wash?.className.split(WHITESPACE)).toContain("items-baseline");
+		presses.classes.length = 0;
+		await act(async () => presses.last?.onPressOut?.());
+		expect(tinted()).toBe(false);
 	});
 
 	it("keeps the touch floor as its minimum height", async () => {
@@ -362,25 +385,33 @@ describe("the label never starves the summary (design round 1 of PR 223, D1)", (
 			(c) =>
 				c.host === "View" &&
 				words(c.className).has("flex-row") &&
-				words(c.className).has("flex-1"),
+				words(c.className).has("ps-2"),
 		);
 		expect(words(line?.className ?? "").has("items-center")).toBe(true);
 	});
 
-	it("stacked: glyph and chevron key to the first line, not between the two (Q2-2)", async () => {
+	it("stacked: glyph and chevron key to the first line, on-scale, not between the two (Q2-2)", async () => {
 		presses.scale = 2;
 		await render();
 		const line = presses.classes.find(
 			(c) =>
 				c.host === "View" &&
 				words(c.className).has("flex-row") &&
-				words(c.className).has("flex-1"),
+				words(c.className).has("ps-2"),
 		);
 		expect(words(line?.className ?? "").has("items-start")).toBe(true);
 		expect(words(line?.className ?? "").has("items-center")).toBe(false);
 		const glyph = presses.classes.find(
 			(c) => c.host === "Text" && words(c.className).has("w-4"),
 		);
-		expect(words(glyph?.className ?? "").has("pt-0.5")).toBe(true);
+		expect(glyph).toBeDefined();
+		/* PR #223 CI: `pt-0.5` (2 pt) failed U-42 at 200 %. The glyph keys to
+		 * the label's line through the baseline-aligned slot instead — no
+		 * padding, so nothing off `space.scale`. */
+		expect(words(glyph?.className ?? "").has("pt-0.5")).toBe(false);
+		const slotRow = presses.classes.find(
+			(c) => c.host === "View" && words(c.className).has("items-baseline"),
+		);
+		expect(slotRow).toBeDefined();
 	});
 });
