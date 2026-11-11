@@ -1386,6 +1386,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
 	// src carried, so neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source identity only, no rendered or native proof.
+	// fix/bridge-composer-keyboard-glass (TestFlight 800): the Bridge composer
+	// docks above the keyboard from #216's store (new composer-dock.tsx, no
+	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
+	// layer. --print over the staged tree; source identity only, no rendered or
+	// native proof. Round-1 remediation: the dock test mounts with JSX (Biome
+	// noChildrenProp) and pins the thread's glass={chromeGlass} prop; a test
+	// file only, but `src` covers tests, so it moves. --print over the staged
+	// tree; source identity only, no rendered or native proof.
+	// PR #225 merged with main 56831114 (#220 refused-connect feedback): both
+	// sides' src carried, so neither parent's digest; re-derived with --print
+	// over the staged merged tree. Source identity only, no rendered or native
+	// proof.
 	// Transcript condensing polish: Tier A `FoldBar`, idle completed-turn
 	// condensing, the shared 16/40 pt trace rail, spacing tiers, hub and Team
 	// Bridge receipt rows, `relay.transcript.*` catalogues. --print over the
@@ -1401,7 +1413,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #223 merged with main 56831114 (#220): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only.
-	src: "076222112b3d5b04ffdfae349e04c539732279b7c98e9eebb5d48988735f380d",
+	// PR #223 merged with main 240362a6 (#225): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	src: "a95e68bf2c24798986ba9662c01c39c6431cbebe124145a8fa53593c8e67af9c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
