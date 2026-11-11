@@ -1479,8 +1479,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// an executing call draw `LiveGlyph` (relay `lo-pulse`, static accent tick
 	// under Reduce Motion) instead of the text `Shimmer`; a fold with only a
 	// composing/queued call stays dim. Tests with it. --print over the staged
-	// tree; source identity only, no rendered or native proof.
-	src: "bab744acad81844facce47ee2fbf648557c7b1d4ed92101c5c82deb188f21f11",
+	// tree; source identity only, no rendered or native proof. Re-printed
+	// after the live-glyph test ids moved into `SURFACE` (src/ui/a11y.ts): the
+	// same two strings, now declared once — no rendered change.
+	src: "6f5e23d429a253d830c935ea3512b716d4c68116345fa17837bc8723a8e177a6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

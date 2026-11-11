@@ -917,6 +917,15 @@ export const SURFACE = {
 	 *  state markers below on purpose: this id is on screen in several states,
 	 *  and a marker must be present in only the state it names. */
 	checkpointRail: "session-checkpoint-rail",
+	/** The running tool's live indicator (`LiveGlyph`, the trace's 16 pt glyph
+	 *  column on a tool row and on a closed fold over an executing call). Two
+	 *  drawings of one state, so two names: the relay-matched `lo-pulse` wrapper,
+	 *  and the static accent rail tick drawn instead under Reduce Motion. A flow
+	 *  (and `live-glyph.test.tsx`) asserts WHICH one drew, which is the whole
+	 *  contract — so neither may be a second spelling outside this file. Both
+	 *  are aria-hidden and carry no text; present only while a call executes. */
+	traceLivePulse: "trace-live-pulse",
+	traceLiveTick: "trace-live-tick",
 	/* --- the markdown table (design pass `fix/hero-tables-strips` §1.4–§1.6).
 	 *  The wrapper, its scrolling viewport and the fade are what U-38/U-40
 	 *  address by name; the two row ids and the cell id are what let U-38 count

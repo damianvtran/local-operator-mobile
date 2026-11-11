@@ -2,6 +2,7 @@ import { memo, useEffect } from "react";
 import { Animated, Easing, Text, View } from "react-native";
 
 import { TRACE_GLYPH_BOX_CLASS } from "@/features/session/components/trace-rail";
+import { SURFACE } from "@/ui/a11y";
 import { useReducedMotion } from "@/ui/appearance";
 import { createSharedLoop } from "@/ui/shared-loop";
 import { cx } from "@/ui/variants";
@@ -50,10 +51,6 @@ export const liveGlyphMode = (
 	live: boolean,
 	reduceMotion: boolean,
 ): LiveGlyphMode => (!live ? "still" : reduceMotion ? "static-live" : "pulse");
-
-/** Test handles for the two drawn indicators (no visible text, aria-hidden). */
-export const LIVE_GLYPH_PULSE_ID = "trace-live-pulse";
-export const LIVE_GLYPH_TICK_ID = "trace-live-tick";
 
 /** `lo-pulse` in the relay: 1.2 s cycle, floor 0.4. */
 export const LIVE_PULSE_PERIOD_MS = 1200;
@@ -128,7 +125,7 @@ const LiveGlyphImpl = ({ glyph, inkClass, live }: LiveGlyphProps) => {
 			<Animated.View
 				className="w-4 shrink-0"
 				style={{ opacity: livePulse() }}
-				testID={LIVE_GLYPH_PULSE_ID}
+				testID={SURFACE.traceLivePulse}
 			>
 				{text}
 			</Animated.View>
@@ -143,7 +140,7 @@ const LiveGlyphImpl = ({ glyph, inkClass, live }: LiveGlyphProps) => {
 					aria-hidden
 					pointerEvents="none"
 					className="absolute -start-1.5 top-1 bottom-1 w-0.5 rounded-full bg-accent"
-					testID={LIVE_GLYPH_TICK_ID}
+					testID={SURFACE.traceLiveTick}
 				/>
 				{text}
 			</View>

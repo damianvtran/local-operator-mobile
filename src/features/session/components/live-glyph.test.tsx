@@ -4,10 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { TranscriptEntry } from "@/contracts";
 import { buildFoldRun, type FoldRun } from "@/features/session/fold-model";
+import { SURFACE } from "@/ui/a11y";
 import { FoldBar } from "./fold-bar";
 import {
-	LIVE_GLYPH_PULSE_ID,
-	LIVE_GLYPH_TICK_ID,
 	LIVE_PULSE_FLOOR,
 	LIVE_PULSE_PERIOD_MS,
 	LiveGlyph,
@@ -131,9 +130,9 @@ const html = (node: Parameters<typeof renderToStaticMarkup>[0]) =>
 	renderToStaticMarkup(node);
 
 const hasPulse = (markup: string) =>
-	markup.includes(`data-testid="${LIVE_GLYPH_PULSE_ID}"`);
+	markup.includes(`data-testid="${SURFACE.traceLivePulse}"`);
 const hasTick = (markup: string) =>
-	markup.includes(`data-testid="${LIVE_GLYPH_TICK_ID}"`);
+	markup.includes(`data-testid="${SURFACE.traceLiveTick}"`);
 
 describe("liveGlyphMode", () => {
 	it("pulses a live glyph, holds a static mark under Reduce Motion, and leaves the rest still", () => {
