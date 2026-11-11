@@ -13,9 +13,16 @@ import {
  * The rule is `pasteOfferVisible` (`attach-rule.ts`, where a test can drive it);
  * this file owns only what a pure module cannot: the probe's lifecycle.
  *
+ * `composing` is the field's focus OR an open card with a draft or an
+ * attachment (the composer decides). It used to be focus alone, and that hid
+ * the chip after the first paste: the controls row was under the keyboard, so
+ * the reader put the keyboard away to reach it, which blurred the field and
+ * took the offer with it (TestFlight 753: "I still can't paste more than one
+ * image").
+ *
  * WHEN IT PROBES, and why only then:
- * - on focus — the reader is composing, which is when a paste is useful;
- * - when the app comes back to the foreground while focused — the usual way an
+ * - when composing starts — that is when a paste is useful;
+ * - when the app comes back to the foreground while composing — the usual way an
  *   image reaches the clipboard is a screenshot or a Copy in ANOTHER app, and
  *   iOS posts no in-app clipboard notification for that;
  * - on an in-app clipboard change (`addClipboardListener`).
@@ -29,13 +36,13 @@ import {
  * copy and the attachment strip are one implementation, not two.
  */
 export const useClipboardImageOffer = (
-	focused: boolean,
+	composing: boolean,
 ): { visible: boolean } => {
 	const kind = Platform.OS === "web" ? "web" : "native";
 	const [hasImage, setHasImage] = useState(false);
 
 	useEffect(() => {
-		if (kind === "web" || !focused) {
+		if (kind === "web" || !composing) {
 			setHasImage(false);
 			return;
 		}
@@ -62,9 +69,14 @@ export const useClipboardImageOffer = (
 			appState.remove();
 			clipboard.remove();
 		};
-	}, [focused, kind]);
+	}, [composing, kind]);
 
 	return {
-		visible: pasteOfferVisible({ kind, focused, hasImage, consumed: false }),
+		visible: pasteOfferVisible({
+			kind,
+			focused: composing,
+			hasImage,
+			consumed: false,
+		}),
 	};
 };

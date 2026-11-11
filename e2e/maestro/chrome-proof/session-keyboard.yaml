@@ -1,9 +1,26 @@
 # Keyboard up on the same session (the record's "keyboard up (inline meta)"
 # state): the composer drops to r_b = r_t = 20 and the meta folds into the
 # controls row. Continues from session.yaml's end state — no relaunch.
+#
+# Then a LONG draft (TestFlight 753: on longer messages "the send button is
+# occluded so the user has to bring down the keyboard before they can send").
+# Ten lines typed with the software keyboard up; the driver dumps the
+# hierarchy after this flow and `sendAboveKeyboard` (chrome-ios-proof-
+# contract.ts) fails the AFTER build unless `composer-send`'s bottom is above
+# the keyboard's top, and fails it too when no software keyboard is present.
+# The frame taken after this flow is therefore the long-draft state.
 appId: ${APP_ID}
 ---
 - tapOn:
     id: "composer-input"
 - waitForAnimationToEnd:
     timeout: 3000
+- repeat:
+    times: 10
+    commands:
+      - inputText: "A longer line of draft text to grow the composer"
+      - pressKey: Enter
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "composer-send"

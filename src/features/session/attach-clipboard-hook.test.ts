@@ -1,4 +1,4 @@
-import { act, createElement } from "react";
+import { act, createElement, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type DomShim, installDomShim } from "@/testing/dom-shim";
@@ -42,7 +42,7 @@ vi.mock("expo-clipboard", () => ({
 }));
 
 import { useClipboardImageOffer } from "./attach-clipboard";
-import { readClipboardImage } from "./attach-rule";
+import { pasteOfferComposing, readClipboardImage } from "./attach-rule";
 
 let offer: { visible: boolean; consume?: () => void };
 let root: ReturnType<typeof createRoot>;
@@ -59,6 +59,45 @@ beforeEach(() => {
 afterEach(async () => {
 	await act(async () => root.unmount());
 	dom.dispose();
+});
+
+/* The composer's own rule over its own state: focus, the draft and the
+ *  attachment strip, with a paste appending to the strip as `useComposer`'s
+ *  `attach("paste", …)` does (`[...current, image]`, pinned through the real
+ *  hook in use-composer-echo.test.ts). */
+let composerState: {
+	setFocused: (focused: boolean) => void;
+	paste: () => void;
+	images: string[];
+};
+function ComposingHost() {
+	const [focused, setFocused] = useState(true);
+	const [images, setImages] = useState<string[]>([]);
+	offer = useClipboardImageOffer(
+		pasteOfferComposing({ focused, draft: "", attachments: images.length }),
+	);
+	composerState = {
+		setFocused,
+		paste: () =>
+			setImages((current) => [...current, `image-${current.length}`]),
+		images,
+	};
+	return null;
+}
+
+describe("a second image after the keyboard is put away (TestFlight 753)", () => {
+	it("keeps Paste image offered after one paste and a blur, and a second paste appends", async () => {
+		native.os = "ios";
+		await act(async () => root.render(createElement(ComposingHost)));
+		expect(offer.visible).toBe(true);
+		await act(async () => composerState.paste());
+		/* The reader puts the keyboard away to reach Send: the field blurs. */
+		await act(async () => composerState.setFocused(false));
+		expect(offer.visible).toBe(true);
+		await act(async () => composerState.paste());
+		expect(composerState.images).toEqual(["image-0", "image-1"]);
+		expect(offer.visible).toBe(true);
+	});
 });
 
 describe("mounted native paste availability", () => {

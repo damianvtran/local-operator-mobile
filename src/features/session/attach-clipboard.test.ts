@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+	pasteOfferComposing,
 	pasteOfferVisible,
 	probeClipboardImage,
 	readClipboardImage,
@@ -88,6 +89,27 @@ describe("when the paste chip shows", () => {
 		expect(pasteOfferVisible({ ...base, focused: false })).toBe(false);
 		expect(pasteOfferVisible({ ...base, consumed: true })).toBe(false);
 		expect(pasteOfferVisible({ ...base, kind: "web" })).toBe(false);
+	});
+});
+
+describe("the offer outlives a blur while the card is composing (TestFlight 753)", () => {
+	it("stays composing with a draft or an attachment, and only the empty unfocused card is not", () => {
+		const at = { focused: false, draft: "", attachments: 0 };
+		expect(pasteOfferComposing(at)).toBe(false);
+		expect(pasteOfferComposing({ ...at, focused: true })).toBe(true);
+		expect(pasteOfferComposing({ ...at, attachments: 1 })).toBe(true);
+		expect(pasteOfferComposing({ ...at, draft: "look" })).toBe(true);
+	});
+
+	it("is what the composer hands the offer hook, not focus alone", () => {
+		const COMPOSER = readFileSync(
+			new URL("./components/composer.tsx", import.meta.url),
+			"utf8",
+		).replace(/\s+/g, " ");
+		expect(COMPOSER).toContain(
+			"useClipboardImageOffer( pasteOfferComposing({ focused, draft, attachments: images.length }), )",
+		);
+		expect(COMPOSER).not.toContain("useClipboardImageOffer(focused)");
 	});
 });
 
