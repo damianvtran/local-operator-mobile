@@ -250,8 +250,8 @@ const WaitPanel = ({
 					</Text>
 					<Text className="text-body-sm text-ink-muted">
 						{host
-							? `Waiting for your computer at ${host} to answer. A provisioned route is not the same as a machine that is up.`
-							: "Waiting for your computer to answer."}
+							? t("mobile.computers.wait.host_answering", { host })
+							: t("mobile.computers.wait.answering")}
 					</Text>
 				</>
 			) : null}
@@ -627,7 +627,10 @@ export default function Computers() {
 					{addedComputerLive ? (
 						<View className="gap-1 rounded-sm border border-hairline bg-surface p-4">
 							<Text className="text-body text-ink">
-								Connected to {appeared?.name ?? "your computer"}.
+								{t("mobile.computers.added.connected_to", {
+									name:
+										appeared?.name ?? t("mobile.computers.added.fallback_name"),
+								})}
 							</Text>
 							<Text className="text-body-sm text-ink-muted">
 								{t("mobile.computers.added.stays_listed")}

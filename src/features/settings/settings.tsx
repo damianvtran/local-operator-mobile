@@ -20,6 +20,7 @@ import {
 } from "@/features/auth/computers-view";
 import {
 	connectionStore,
+	type StreamHealth,
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
@@ -292,7 +293,9 @@ export default function Settings() {
 					>
 						<Avatar
 							initials={initialsOf(
-								accountLabel ?? computers[0]?.name ?? "Local Operator",
+								accountLabel ??
+									computers[0]?.name ??
+									t("mobile.settings.account.app_name"),
 							)}
 							size="md"
 							accessibilityLabel={t("mobile.settings.account.signed_in")}
@@ -303,7 +306,7 @@ export default function Settings() {
 							}
 						>
 							<Text className="text-body text-ink">
-								{accountLabel ?? "Not signed in with Radient"}
+								{accountLabel ?? t("mobile.settings.account.not_signed_in")}
 							</Text>
 							<Text
 								className="text-body-sm text-ink-dim"
@@ -312,9 +315,11 @@ export default function Settings() {
 							>
 								{route
 									? route.mode === "radient"
-										? `Through your Radient tunnel`
-										: `Connected directly to ${route.baseUrl}`
-									: "No connection yet"}
+										? t("mobile.settings.account.route_radient")
+										: t("mobile.settings.account.route_direct", {
+												baseUrl: route.baseUrl,
+											})
+									: t("mobile.settings.status.no_connection")}
 							</Text>
 						</View>
 					</View>
@@ -592,7 +597,7 @@ export default function Settings() {
 					/>
 					<DiagnosticRow
 						label={t("mobile.settings.diagnostics.stream")}
-						value={streamHealth}
+						value={streamWord(streamHealth)}
 					/>
 					<DiagnosticRow
 						label={t("mobile.settings.diagnostics.last_error")}
@@ -714,20 +719,57 @@ function statusFor(input: {
 	state: ConnectionPillState;
 	message: string;
 } {
-	if (!input.routed) return { state: "inactive", message: "No connection yet" };
-	if (input.refused) return { state: "offline", message: "Not connected" };
+	if (!input.routed)
+		return {
+			state: "inactive",
+			message: t("mobile.settings.status.no_connection"),
+		};
+	if (input.refused)
+		return {
+			state: "offline",
+			message: t("mobile.settings.status.not_connected"),
+		};
 	/* No stream exists yet while a session is minted, and an idle stream fell
 	 *  through to "Connected" (U3). */
-	if (input.minting) return { state: "reconnecting", message: "Connecting…" };
+	if (input.minting) {
+		return { state: "reconnecting", message: t("mobile.computers.connecting") };
+	}
 	switch (input.health) {
 		case "connecting":
-			return { state: "reconnecting", message: "Connecting…" };
+			return {
+				state: "reconnecting",
+				message: t("mobile.computers.connecting"),
+			};
 		case "offline":
-			return { state: "offline", message: "Offline" };
+			return { state: "offline", message: t("mobile.settings.status.offline") };
 		case "degraded":
-			return { state: "degraded", message: "Not answering" };
+			return {
+				state: "degraded",
+				message: t("mobile.settings.status.not_answering"),
+			};
 		default:
-			return { state: "connected", message: "Connected" };
+			return {
+				state: "connected",
+				message: t("mobile.settings.status.connected"),
+			};
+	}
+}
+
+/** The Diagnostics "Stream" value: the stream health enum, as a keyed word. A
+ *  switch rather than a template key so the typed catalogue surface still
+ *  checks every key, and a new `StreamHealth` member fails to compile here. */
+function streamWord(health: StreamHealth): string {
+	switch (health) {
+		case "idle":
+			return t("mobile.settings.diagnostics.stream_idle");
+		case "connecting":
+			return t("mobile.settings.diagnostics.stream_connecting");
+		case "live":
+			return t("mobile.settings.diagnostics.stream_live");
+		case "degraded":
+			return t("mobile.settings.diagnostics.stream_degraded");
+		case "offline":
+			return t("mobile.settings.diagnostics.stream_offline");
 	}
 }
 

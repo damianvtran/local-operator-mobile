@@ -6,8 +6,9 @@ import {
 } from "expo-video";
 import { useEffect, useState } from "react";
 import { Platform, Text, View } from "react-native";
-
+import { backToParentLabel } from "@/features/session/back-label";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { t } from "@/i18n";
 import { CONTROL, SCREEN, SURFACE } from "@/ui/a11y";
 import { IconButton, Screen, Skeleton } from "@/ui/components";
 import { BackIcon } from "@/ui/components/back-icon";
@@ -145,17 +146,16 @@ export default function VideoPlayer() {
 		return () => subscription.remove();
 	}, [player]);
 
-	/** The parent's own name, from the projection this route shares with its
-	 *  parent (`agent/[jobId].tsx`'s own crumb rule). */
-	const parentName = runtime.projection?.conversation_name ?? "session";
-
 	/** The row's own one-line summary (e.g. "the 8s loop, 16:9"), so the screen
 	 *  says WHICH artifact is open when a session holds several (UX round 1,
 	 *  U4). The design froze no header copy here, so the row's own words are
 	 *  used; "Video" is the fallback while the transcript is not held yet (a
 	 *  deep link lands before the stream does). */
 	const row = runtime.entries.find((candidate) => candidate.id === entryId);
-	const title = row !== undefined && row.summary !== "" ? row.summary : "Video";
+	const title =
+		row !== undefined && row.summary !== ""
+			? row.summary
+			: t("mobile.session.video.title_fallback");
 
 	return (
 		<Screen
@@ -165,7 +165,9 @@ export default function VideoPlayer() {
 			scroll={false}
 			headerLeading={
 				<IconButton
-					accessibilityLabel={`Back to ${parentName}`}
+					accessibilityLabel={backToParentLabel(
+						runtime.projection?.conversation_name,
+					)}
 					testID={CONTROL.videoBack}
 					onPress={() => router.back()}
 					icon={({ color, size }) => <BackIcon color={color} size={size} />}

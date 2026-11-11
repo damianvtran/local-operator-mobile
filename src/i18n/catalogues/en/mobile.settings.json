@@ -43,5 +43,19 @@
 	"mobile.settings.diagnostics.route_radient": "Radient tunnel",
 	"mobile.settings.diagnostics.route_direct": "Direct relay",
 	"mobile.settings.diagnostics.none": "None",
-	"mobile.settings.diagnostics.privacy_note": "These lines never include a token, a password, or a session's content."
+	"mobile.settings.diagnostics.privacy_note": "These lines never include a token, a password, or a session's content.",
+	"mobile.settings.account.not_signed_in": "Not signed in with Radient",
+	"mobile.settings.account.route_radient": "Through your Radient tunnel",
+	"mobile.settings.account.route_direct": "Connected directly to {baseUrl}",
+	"mobile.settings.status.no_connection": "No connection yet",
+	"mobile.settings.status.not_connected": "Not connected",
+	"mobile.settings.status.offline": "Offline",
+	"mobile.settings.status.not_answering": "Not answering",
+	"mobile.settings.status.connected": "Connected",
+	"mobile.settings.diagnostics.stream_idle": "idle",
+	"mobile.settings.diagnostics.stream_connecting": "connecting",
+	"mobile.settings.diagnostics.stream_live": "live",
+	"mobile.settings.diagnostics.stream_degraded": "degraded",
+	"mobile.settings.diagnostics.stream_offline": "offline",
+	"mobile.settings.account.app_name": "Local Operator"
 }

@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "在已加载到此设备的会话记录中搜索消息",
 	"mobile.session.chip.model_change_failed": "无法更改模型。",
 	"mobile.session.chip.effort_change_failed": "无法更改推理强度。",
-	"mobile.session.composer.retained_instruction": "之前的指令可能已送达。先重试之前的指令，再发送当前草稿。"
+	"mobile.session.composer.retained_instruction": "之前的指令可能已送达。先重试之前的指令，再发送当前草稿。",
+	"mobile.session.tray.context": "上下文{percent}%",
+	"mobile.session.tray.context_short": "上下文{percent}%",
+	"mobile.session.tray.context_estimate": "上下文{percent}%（估算）",
+	"mobile.session.tray.context_short_estimate": "上下文{percent}%（约）",
+	"mobile.session.region.end": "已到底部 · 向上滚动 ↑",
+	"mobile.session.region.below_labels": "{labels}在下方 · 向下滚动 ↓",
+	"mobile.session.region.more_below": "下方还有内容 · 向下滚动 ↓",
+	"mobile.session.video.title_fallback": "视频",
+	"mobile.session.fallback_name": "会话",
+	"mobile.session.region.label_working": "动态",
+	"mobile.session.region.label_subagents": "子智能体",
+	"mobile.session.region.label_todos": "任务",
+	"mobile.session.region.label_strip": "状态",
+	"mobile.session.back_to": "返回{name}",
+	"mobile.session.back_to_session": "返回会话"
 }

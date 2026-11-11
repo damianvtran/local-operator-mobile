@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "Tạm dừng khi ứng dụng chạy nền. Mở lại ứng dụng để tiếp tục theo dõi.",
 	"mobile.computers.wait.relay_version_sessions": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version} và {sessions, plural, other {# phiên đang chạy}}.",
 	"mobile.computers.wait.relay_version": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version}.",
-	"mobile.computers.wait.relay_sessions": "Máy chủ chuyển tiếp trên máy tính báo có {sessions, plural, other {# phiên đang chạy}}."
+	"mobile.computers.wait.relay_sessions": "Máy chủ chuyển tiếp trên máy tính báo có {sessions, plural, other {# phiên đang chạy}}.",
+	"mobile.computers.wait.host_answering": "Đang chờ máy tính tại {host} phản hồi. Tuyến kết nối đã cấp không có nghĩa là máy tính đang chạy.",
+	"mobile.computers.wait.answering": "Đang chờ máy tính phản hồi.",
+	"mobile.computers.added.fallback_name": "máy tính của bạn",
+	"mobile.computers.added.connected_to": "Đã kết nối với {name}."
 }

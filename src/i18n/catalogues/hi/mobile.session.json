@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "इस डिवाइस पर लोड किए गए ट्रांसक्रिप्ट में संदेश खोजता है",
 	"mobile.session.chip.model_change_failed": "मॉडल नहीं बदला जा सका।",
 	"mobile.session.chip.effort_change_failed": "प्रयास नहीं बदला जा सका।",
-	"mobile.session.composer.retained_instruction": "हो सकता है कि पहले भेजा गया कोई निर्देश पहुँच चुका हो। अपना मौजूदा ड्राफ़्ट भेजने से पहले उस निर्देश को दोबारा भेजने की कोशिश करें।"
+	"mobile.session.composer.retained_instruction": "हो सकता है कि पहले भेजा गया कोई निर्देश पहुँच चुका हो। अपना मौजूदा ड्राफ़्ट भेजने से पहले उस निर्देश को दोबारा भेजने की कोशिश करें।",
+	"mobile.session.tray.context": "{percent}% संदर्भ",
+	"mobile.session.tray.context_short": "{percent}% संद॰",
+	"mobile.session.tray.context_estimate": "{percent}% संदर्भ (अनुमानित)",
+	"mobile.session.tray.context_short_estimate": "{percent}% संद॰ (अनुमान)",
+	"mobile.session.region.end": "अंत · स्क्रॉल करें ↑",
+	"mobile.session.region.below_labels": "नीचे: {labels} · स्क्रॉल करें ↓",
+	"mobile.session.region.more_below": "नीचे और भी है · स्क्रॉल करें ↓",
+	"mobile.session.video.title_fallback": "वीडियो",
+	"mobile.session.fallback_name": "सत्र",
+	"mobile.session.region.label_working": "गतिविधि",
+	"mobile.session.region.label_subagents": "उप-एजेंट",
+	"mobile.session.region.label_todos": "कार्य",
+	"mobile.session.region.label_strip": "स्थिति",
+	"mobile.session.back_to": "{name} पर वापस जाएँ",
+	"mobile.session.back_to_session": "सत्र पर वापस जाएँ"
 }

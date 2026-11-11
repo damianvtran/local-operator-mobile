@@ -258,5 +258,65 @@
 	"mobile.session.composer.retained_instruction": {
 		"role": "confirm",
 		"note": "Notice above the composer when an earlier instruction is retained and may already have been delivered, so the user must retry it before sending the current draft. Two sentences."
+	},
+	"mobile.session.tray.context": {
+		"role": "meta",
+		"note": "Activity tray fact: how full the model's context window is. {percent} is a whole number; keep the percent sign. Lower case \"context\"."
+	},
+	"mobile.session.tray.context_short": {
+		"role": "meta",
+		"note": "Narrow-screen form of the context-window fact (screens under 340 pt wide). \"ctx\" is a standard abbreviation of \"context\"; use the language's own short form or the full word if none exists."
+	},
+	"mobile.session.tray.context_estimate": {
+		"role": "meta",
+		"note": "Context-window fact when the percentage is an estimate. \"est.\" abbreviates \"estimated\". Keep the parentheses."
+	},
+	"mobile.session.tray.context_short_estimate": {
+		"role": "meta",
+		"note": "Narrow-screen form of the estimated context-window fact. \"ctx\" and \"est.\" are abbreviations; keep the parentheses."
+	},
+	"mobile.session.region.end": {
+		"role": "meta",
+		"note": "Cue under the capped activity region when the reader is at its end. Keep the middle dot and the up arrow; lower case."
+	},
+	"mobile.session.region.below_labels": {
+		"role": "meta",
+		"note": "Cue under the capped activity region naming what is hidden further down. {labels} is a list of region names already joined with the middle dot; keep it unchanged. Keep the down arrow."
+	},
+	"mobile.session.region.more_below": {
+		"role": "meta",
+		"note": "Cue under the capped activity region when more rows are hidden below and there are no region names to list. Keep the middle dot and the down arrow; lower case."
+	},
+	"mobile.session.video.title_fallback": {
+		"role": "heading",
+		"note": "Header title of the video screen while the transcript row that names the clip is not loaded yet. One word, Title case if the language uses it."
+	},
+	"mobile.session.fallback_name": {
+		"role": "meta",
+		"note": "Lower-case noun used as the header title of an untitled session and in \"Back to <name>\" when the conversation has no name. A bare noun meaning one conversation with the agent."
+	},
+	"mobile.session.region.label_working": {
+		"role": "meta",
+		"note": "Lower-case noun spliced into mobile.session.region.below_labels {labels} (joined with ' · '): names the 'activity' band that is scrolled out of view. Must read inside 'X below'. Lower case, one word if possible."
+	},
+	"mobile.session.region.label_subagents": {
+		"role": "meta",
+		"note": "Lower-case noun spliced into {labels} of below_labels: the 'agents' (subagents) band. Reuse the shipped agents/subagents term."
+	},
+	"mobile.session.region.label_todos": {
+		"role": "meta",
+		"note": "Lower-case noun spliced into {labels} of below_labels: the 'tasks' (todo list) band. Reuse the shipped tasks term."
+	},
+	"mobile.session.region.label_strip": {
+		"role": "meta",
+		"note": "Lower-case noun spliced into {labels} of below_labels: the status strip band."
+	},
+	"mobile.session.back_to": {
+		"role": "button",
+		"note": "Back-navigation label on the video and agent-job screens; {name} is the parent session's own name or the noun phrase from mobile.session.fallback_name ('session') when unknown. Must read grammatically with BOTH (mind case/article: e.g. ru dative). Sentence case, no full stop."
+	},
+	"mobile.session.back_to_session": {
+		"role": "button",
+		"note": "Back-navigation label on the video and agent-job screens when the parent session has no name of its own (replaces 'Back to {name}' in that case). Full phrase, sentence case, no full stop; free to adapt article/case/word order. Reuse the locale's 'session' term."
 	}
 }

@@ -147,7 +147,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 41, // +6: the add-a-computer wait panel's keyed lines (app/ scan)
+		expected: 45, // +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.notifications",
@@ -161,7 +161,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 65, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836)
+		expected: 80, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -213,7 +213,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 45, // +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out)
+		expected: 59, // +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -320,7 +320,9 @@ describe("the English catalogues", () => {
 		/* feat/bridge-push-readiness (#231) merged with main fa2bc5e0 (#227): + the
 		 *  five `mobile.notifications.permission.*` Settings sentences: 651 + 5 = 656.
 		 *  Integrated with #235 (+2) and #239 (-1): 652 + 5 = 657. */
-		expect(total).toBe(657);
+		/* M2 (#236) expression-literal keys (4 computers + 15 session + 14
+		 * settings = 33), rebased onto main 2b508d9d: 657 + 33 = 690. */
+		expect(total).toBe(690);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -394,6 +396,12 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.settings.account.app_name":
+			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
+		"mobile.session.fallback_name":
+			"session is the French cognate for the bare-noun header title; identical spelling is idiomatic (M2 audit), not an English fallback.",
+		"mobile.session.region.label_subagents":
+			"agents is the normal French plural for the sub-agents region label; identical spelling is idiomatic (M2 round-2 audit), not an English fallback.",
 		"mobile.session.subagent.prompt_label":
 			"`prompt` is the French style-guide glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.settings.about.version":
@@ -468,6 +476,10 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	/* Spanish preserves these placeholder-only templates: names and separators
 	 * have no English prose to translate. Each key remains explicitly listed. */
 	es: {
+		"mobile.settings.account.app_name":
+			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
+		"mobile.session.tray.context_short":
+			"`ctx` is the context-tray abbreviation the sidecar prescribes for the narrow (<340 pt) form; it is the same short token as the English source, judged by the M2 round-2 audit, not an English fallback.",
 		"mobile.session.subagent.prompt_label":
 			"`prompt` is the Spanish glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
@@ -484,6 +496,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
 	},
 	"zh-CN": {
+		"mobile.settings.account.app_name":
+			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
 		"mobile.computers.transport.radient":
@@ -497,6 +511,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
 	},
 	ru: {
+		"mobile.settings.account.app_name":
+			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
@@ -514,6 +530,12 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.settings.account.app_name":
+			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
+		"mobile.session.tray.context_short":
+			"`ctx` is the context-tray abbreviation the sidecar prescribes for the narrow (<340 pt) form; it is the same short token as the English source, judged by the M2 round-2 audit, not an English fallback.",
+		"mobile.session.video.title_fallback":
+			"Video is the shipped Vietnamese term for the video screen title (M2 round-2 audit); identical spelling is idiomatic, not an English fallback.",
 		"mobile.session.subagent.prompt_label":
 			"`prompt` is the Vietnamese binding glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
@@ -536,6 +558,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Vietnamese names the home folder «thư mục home» across mobile and core (relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
 	},
 	hi: {
+		"mobile.settings.account.app_name":
+			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
@@ -557,6 +581,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Mirrored from the core relay catalogue: language/tool proper token `python` kept in Latin script beside the count.",
 	},
 	ur: {
+		"mobile.settings.account.app_name":
+			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":

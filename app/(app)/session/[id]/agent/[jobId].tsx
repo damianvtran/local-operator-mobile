@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Text, View } from "react-native";
 
 import type { SubagentDetail } from "@/contracts";
+import { backToParentLabel } from "@/features/session/back-label";
 import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { middleTruncate, projectTodos } from "@/features/session/projection";
@@ -65,7 +66,8 @@ export default function Subagent() {
 	}, [runtime.loadAgent, childId]);
 
 	/** The parent's own name, from the projection this route shares with its parent. */
-	const parentName = runtime.projection?.conversation_name ?? "session";
+	const parentName =
+		runtime.projection?.conversation_name ?? t("mobile.session.fallback_name");
 	const todos = useMemo(
 		() => projectTodos(detail?.todos ?? []),
 		[detail?.todos],
@@ -90,7 +92,9 @@ export default function Subagent() {
 			scroll={false}
 			headerLeading={
 				<IconButton
-					accessibilityLabel={`Back to ${parentName}`}
+					accessibilityLabel={backToParentLabel(
+						runtime.projection?.conversation_name,
+					)}
 					testID={CONTROL.subagentBack}
 					onPress={() => router.back()}
 					icon={({ color, size }) => <BackIcon color={color} size={size} />}
