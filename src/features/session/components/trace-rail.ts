@@ -22,7 +22,10 @@
 import { createContext } from "react";
 
 import type { TranscriptEntry } from "@/contracts";
-import type { TranscriptItem } from "@/features/session/turn-condensing";
+import {
+	isBlankAssistantEntry,
+	type TranscriptItem,
+} from "@/features/session/turn-condensing";
 
 /** Outer full-width horizontal inset (`16 pt` each side) shared by every transcript row. */
 export const TRACE_ROW_OUTER_CLASS = "px-4";
@@ -114,33 +117,10 @@ export const SPACING_TIER_CLASS: Record<TranscriptSpacingTier, string> = {
  *  tier of its own and does not change the register its neighbours see. */
 export type ItemRegister = "user" | "prose" | "trace" | "none";
 
-/**
- * An assistant row with nothing to paint: no visible text and no media.
- *
- * WHY THIS EXISTS. The relay's live fold appends an assistant entry at every
- * `MessageStartEvent` (`local_operator/mobile/projection.py`, the
- * `MessageStartEvent` arm), and a tool-only model message never gets text — so
- * a live turn carries one blank assistant row per tool batch. (The history
- * fold drops them through `assistant_row_text`, which is why a reload looked
- * fine.) Rendered as prose, each blank row cost 24 pt of empty space between
- * two tool rows: the `block` tier above it (8 pt, trace → prose), its own
- * `py-1` (8 pt) around an empty `Markdown`, and the `block` tier on the next
- * trace row (8 pt, prose → trace). That is the uneven spacing the operator saw
- * inside an expanded turn on iOS build 836 — a gap wherever the model started
- * a new tool batch, none between calls of the same batch.
- *
- * The row still renders (a zero-size box carrying its testID and anchors), so
- * the streaming anchor, find and the offset table keep addressing it; text
- * arriving on a streaming row turns it back into ordinary prose.
- */
-export function isBlankAssistantEntry(entry: TranscriptEntry): boolean {
-	return (
-		entry.kind === "assistant" &&
-		entry.text.trim() === "" &&
-		entry.images.length === 0 &&
-		(entry.videos?.length ?? 0) === 0
-	);
-}
+/* `isBlankAssistantEntry` lives in the plan module (`turn-condensing.ts`)
+ * because the fold planner needs it too, and that module stays free of React;
+ * re-exported here so the render side keeps one import site. */
+export { isBlankAssistantEntry };
 
 /** Classify a raw entry into its vertical spacing register. */
 export function entryRegister(entry: TranscriptEntry): ItemRegister {

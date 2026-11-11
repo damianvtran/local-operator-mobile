@@ -1504,8 +1504,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// the rhythm; rows inside an opened turn bar or fold are indented one
 	// 24 pt step per level beside a hairline guide (`group-containment.ts`,
 	// `group-guides.tsx`). Tests with it. --print over the staged tree; source
-	// identity only, no rendered or native proof.
-	src: "360b4d49a9890ebe4d263144da75a68f708a4856cc75508a5e7d54d431948d1e",
+	// identity only, no rendered or native proof. Re-printed for PR #234 R1:
+	// blank rows pass through fold runs (live/reload parity), a table's seed
+	// loses the group inset, and the blank-row test renders. Same caveat.
+	src: "3fa77d6dfad6c68bd053912a3d7b0a19a64768e62e06579170062cd0d295128e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

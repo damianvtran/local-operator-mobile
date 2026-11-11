@@ -1506,6 +1506,34 @@ export function groupPhrases(group: QuietGroup): string[] {
 	return phrases;
 }
 
+/**
+ * An assistant row with nothing to paint: no visible text and no media.
+ *
+ * WHY THIS EXISTS. The relay's live fold appends an assistant entry at every
+ * `MessageStartEvent` (`local_operator/mobile/projection.py`, the
+ * `MessageStartEvent` arm), and a tool-only model message never gets text — so
+ * a live turn carries one blank assistant row per tool batch. (The history
+ * fold drops them through `assistant_row_text`, which is why a reload looked
+ * fine.) Rendered as prose, each blank row cost 24 pt of empty space between
+ * two tool rows: the `block` tier above it (8 pt, trace → prose), its own
+ * `py-1` (8 pt) around an empty `Markdown`, and the `block` tier on the next
+ * trace row (8 pt, prose → trace). That is the uneven spacing the operator saw
+ * inside an expanded turn on iOS build 836 — a gap wherever the model started
+ * a new tool batch, none between calls of the same batch.
+ *
+ * The row still renders (a zero-size box carrying its testID and anchors), so
+ * the streaming anchor, find and the offset table keep addressing it; text
+ * arriving on a streaming row turns it back into ordinary prose.
+ */
+export function isBlankAssistantEntry(entry: TranscriptEntry): boolean {
+	return (
+		entry.kind === "assistant" &&
+		entry.text.trim() === "" &&
+		entry.images.length === 0 &&
+		(entry.videos?.length ?? 0) === 0
+	);
+}
+
 /* ----------------------------------------------------- Tier A fold run plan */
 
 export interface FoldView {
@@ -1539,7 +1567,8 @@ export interface FoldPlan {
  * Rows already claimed by a closed `TurnBar` or `QuietGroupBar` are no longer
  * in `items` as `"entry"`, and any non-foldable row (`user`, `assistant`,
  * `ImageGenCard`, error `notice`, `bar`, `group`) breaks a run so chronology
- * is preserved cleanly.
+ * is preserved cleanly — except a BLANK assistant row, which paints nothing
+ * and passes through an open run (live/reload parity; see the loop).
  */
 export function foldPlan(input: FoldPlanInput): FoldPlan {
 	const { items, expanded } = input;
@@ -1571,10 +1600,27 @@ export function foldPlan(input: FoldPlanInput): FoldPlan {
 	const createdRuns: FoldRun[] = [];
 
 	let runItems: Array<Extract<TranscriptItem, { kind: "entry" }>> = [];
+	/* The run in arrival order: its foldable members AND the blank assistant
+	 * rows that passed through it (see the loop below). `runItems` stays the
+	 * members only, because the fold's key, count and `hiddenIds` must be the
+	 * same facts a reload computes, and a reload has no blank rows. */
+	let runSeq: Array<Extract<TranscriptItem, { kind: "entry" }>> = [];
 	let runStartAt = 0;
 
 	const flush = () => {
-		if (runItems.length === 0) return;
+		if (runItems.length === 0) {
+			for (const it of runSeq) emitted.push(it);
+			runSeq = [];
+			return;
+		}
+		/* Blank rows after the last member are not inside the run (the next
+		 * row may be the prose that ends it), so they land after the fold. */
+		const lastMember = runItems[runItems.length - 1];
+		const cut =
+			lastMember === undefined ? 0 : runSeq.lastIndexOf(lastMember) + 1;
+		const body = runSeq.slice(0, cut);
+		const trailing = runSeq.slice(cut);
+		runSeq = [];
 		const inNewestTurn = runStartAt >= lastTurnStartAt;
 		const inLiveTurn = live && inNewestTurn;
 		const runEntries = runItems.map((it) => it.entry);
@@ -1588,7 +1634,8 @@ export function foldPlan(input: FoldPlanInput): FoldPlan {
 			latchedFoldIds: inNewestTurn ? input.latchedFoldIds : undefined,
 		});
 		if (run === null) {
-			for (const it of runItems) emitted.push(it);
+			for (const it of body) emitted.push(it);
+			for (const it of trailing) emitted.push(it);
 			runItems = [];
 			return;
 		}
@@ -1611,11 +1658,20 @@ export function foldPlan(input: FoldPlanInput): FoldPlan {
 			liveTurn: inLiveTurn,
 		});
 		if (open) {
-			for (const it of runItems) {
+			/* Interleaved blank rows are members of an open fold: zero-size, they
+			 * draw only the guide, which keeps the containment line unbroken. */
+			for (const it of body) {
 				emitted.push(it);
 				view.itemIds.push(it.id);
 			}
+		} else {
+			/* A closed fold still emits its interleaved blank rows (zero-size, right
+			 * after the bar) so their testID and the streaming anchor survive. */
+			for (const it of body) {
+				if (!runItems.includes(it)) emitted.push(it);
+			}
 		}
+		for (const it of trailing) emitted.push(it);
 		folds.push(view);
 		runItems = [];
 	};
@@ -1631,6 +1687,23 @@ export function foldPlan(input: FoldPlanInput): FoldPlan {
 		) {
 			if (runItems.length === 0) runStartAt = at;
 			runItems.push(item);
+			runSeq.push(item);
+			continue;
+		}
+		/* LIVE/RELOAD PARITY (PR #234 R1-1). The relay's live fold carries one
+		 * blank assistant row per tool batch (`isBlankAssistantEntry`); the
+		 * history fold drops them. Letting such a row end the run split one
+		 * turn's three calls into runs too short to fold live, while a reload of
+		 * the same turn folded them. A blank row inside an open run therefore
+		 * passes through it: it rides along, never counts toward the run. */
+		if (
+			runItems.length > 0 &&
+			item.kind === "entry" &&
+			item.opensTurn !== true &&
+			item.inOpenGroup !== true &&
+			isBlankAssistantEntry(item.entry)
+		) {
+			runSeq.push(item);
 			continue;
 		}
 		flush();

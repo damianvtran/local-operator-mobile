@@ -120,6 +120,7 @@ vi.mock("@/features/session/table-scroll-hook", () => ({
 }));
 
 import { Markdown } from "./markdown";
+import { GroupInsetContext } from "./trace-rail";
 
 describe("rendered assistant markdown dispatch", () => {
 	beforeEach(() => {
@@ -375,6 +376,26 @@ describe("a fitting table's first frame is its settled frame (PR #224 m1 / D2)",
 		expect(
 			renderToStaticMarkup(createElement(Markdown, { text: EXACT })),
 		).toContain(cue);
+	});
+
+	it("seeds the column inside an opened group without the group's inset (PR #234 R1-4)", () => {
+		// 390 − 2·16 gutters − 2·1 border = 356 at the top level; one opened
+		// group indents the row 24 pt, two 48 pt, and the seed must follow.
+		const inGroup = (inset: number) =>
+			sum(
+				cellWidths(
+					renderToStaticMarkup(
+						createElement(
+							GroupInsetContext.Provider,
+							{ value: inset },
+							createElement(Markdown, { text: FITS }),
+						),
+					),
+				),
+			);
+		expect(inGroup(0)).toBeCloseTo(356, 6);
+		expect(inGroup(24)).toBeCloseTo(332, 6);
+		expect(inGroup(48)).toBeCloseTo(308, 6);
 	});
 
 	it("falls back to the priced boxes when the window is unknown", () => {

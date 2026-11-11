@@ -22,7 +22,8 @@ import { foldBarId, turnBarId } from "@/ui/a11y";
  * Operator report, iOS build 836: "when you expand action groups the spacing
  * seems to be uneven and it's hard to tell what's part of the group". Two
  * defects, pinned here at the plan level (the render half is in
- * `components/group-containment-render.test.tsx`):
+ * `components/live-glyph.test.tsx`'s "an expanded group keeps the live child
+ * indicator" block and `components/transcript-row-blank.test.tsx`):
  *
  *   1. UNEVEN: the live projection carries one blank assistant row per tool
  *      batch, and each one rendered as 24 pt of empty prose rhythm between two
@@ -146,12 +147,14 @@ describe("groupContainment", () => {
 		const depth = groupContainment(folded.items, turns.turns, folded.folds);
 		const ids = folded.items.map((item) => item.id);
 		expect(ids).toContain(turnBarId("u1"));
-		// The blank batch-opening rows split the three actions into runs too
-		// short to fold, so the turn re-emits them flat — the screenshot's
-		// shape. Every row the bar stood for is a member, blank rows included
-		// (they draw only the guide, which keeps the line unbroken).
+		// The blank batch-opening rows no longer split the three actions
+		// (R1-1), so the turn re-emits them as one closed fold, as a reload
+		// does. The blank rows stay in the list as zero-size members, so the
+		// guide is unbroken and their testIDs survive.
+		const fold = folded.folds[0];
+		expect(fold?.hiddenIds).toEqual(["t1", "t2", "t3"]);
 		const members = ids.filter((id) => depth.has(id));
-		expect(members).toEqual(["a1", "t1", "t2", "a2", "t3"]);
+		expect(members).toEqual(["a1", foldBarId(fold?.key ?? ""), "a2"]);
 		for (const id of members) expect(depth.get(id)).toBe(1);
 	});
 
@@ -201,6 +204,173 @@ describe("groupContainment", () => {
 		expect(GROUP_GUIDE_START_CLASS.slice(0, 2)).toEqual([
 			"start-5",
 			"start-11",
+		]);
+	});
+});
+
+/* PR #234 R1-1: the live projection carries a blank assistant row per tool
+ * batch and the history fold does not, so the SAME turn arrives in two shapes.
+ * Once the blank rows are set aside (they paint nothing), both shapes must
+ * plan to the same items, folds and containment — closed, turn opened, and
+ * turn plus fold opened. Before the fix, live re-emitted every call flat. */
+describe("live and reload plan an opened turn identically", () => {
+	const withoutBlanks = (entries: TranscriptEntry[]) =>
+		entries.filter((entry) => !isBlankAssistantEntry(entry));
+	const blankIds = (entries: TranscriptEntry[]) =>
+		new Set(entries.filter(isBlankAssistantEntry).map((entry) => entry.id));
+	const shape = (
+		entries: TranscriptEntry[],
+		expanded: ReadonlySet<string>,
+		hide: ReadonlySet<string>,
+	) => {
+		const { turns, folded } = plan(entries, expanded);
+		const depth = groupContainment(folded.items, turns.turns, folded.folds);
+		const visible = folded.items.filter((item) => !hide.has(item.id));
+		return {
+			items: visible.map((item) => `${item.kind}:${item.id}`),
+			depth: visible.map((item) => depth.get(item.id) ?? 0),
+			folds: folded.folds.map((fold) => [fold.key, [...fold.hiddenIds]]),
+		};
+	};
+
+	const cases: Array<[string, TranscriptEntry[]]> = [
+		["the screenshot turn (task, todo | todo)", screenshotTurn()],
+		[
+			"read | read | read",
+			[
+				user("u1"),
+				blank("a1"),
+				tool("t1", "read"),
+				blank("a2"),
+				tool("t2", "read"),
+				blank("a3"),
+				tool("t3", "read"),
+				prose("a4", "Read all three."),
+				user("u2"),
+				prose("a5", "next"),
+			],
+		],
+		[
+			"bash, bash | read",
+			[
+				user("u1"),
+				blank("a1"),
+				tool("t1", "bash"),
+				tool("t2", "bash"),
+				blank("a2"),
+				tool("t3", "read"),
+				prose("a3", "Ran and read."),
+				user("u2"),
+				prose("a4", "next"),
+			],
+		],
+	];
+
+	for (const [name, live] of cases) {
+		it(`${name}: same plan in every open state`, () => {
+			const reload = withoutBlanks(live);
+			const hide = blankIds(live);
+			const key = plan(reload, new Set(["u1"])).folded.folds[0]?.key ?? "";
+			expect(key).not.toBe("");
+			for (const expanded of [
+				new Set<string>(),
+				new Set(["u1"]),
+				new Set(["u1", key]),
+			]) {
+				const fromLive = shape(live, expanded, hide);
+				const fromReload = shape(reload, expanded, new Set());
+				expect(fromLive, [...expanded].join(",")).toEqual(fromReload);
+			}
+		});
+	}
+
+	it("keeps every blank row in the list, in order, whether the fold is open or not", () => {
+		const live = screenshotTurn();
+		const key = plan(live, new Set(["u1"])).folded.folds[0]?.key ?? "";
+		const closed = plan(live, new Set(["u1"])).folded.items.map((i) => i.id);
+		expect(closed).toEqual([
+			"u1",
+			turnBarId("u1"),
+			"a1",
+			foldBarId(key),
+			"a2",
+			"a3",
+			"u2",
+			"a4",
+		]);
+		const open = plan(live, new Set(["u1", key])).folded;
+		expect(open.items.map((i) => i.id)).toEqual([
+			"u1",
+			turnBarId("u1"),
+			"a1",
+			foldBarId(key),
+			"t1",
+			"t2",
+			"a2",
+			"t3",
+			"a3",
+			"u2",
+			"a4",
+		]);
+		// The interleaved blank row is a member of the open fold; the trailing
+		// prose is not.
+		expect(open.folds[0]?.itemIds).toEqual([
+			foldBarId(key),
+			"t1",
+			"t2",
+			"a2",
+			"t3",
+		]);
+	});
+
+	it("folds a live turn's batches into the one run a reload folds (QA Q1)", () => {
+		// QA round 1, row 5: live `t1+t2+t3 | loose t4, t5` vs reload
+		// `t1+t2+t3+t4+t5`, in the newest (still-live) turn.
+		const live = [
+			user("u1"),
+			blank("a1"),
+			tool("t1"),
+			tool("t2"),
+			tool("t3"),
+			blank("a2"),
+			tool("t4"),
+			tool("t5"),
+		];
+		const reload = withoutBlanks(live);
+		const run = (entries: TranscriptEntry[]) =>
+			foldPlan({ items: asItems(entries), expanded: new Set(), live: true });
+		const hidden = (entries: TranscriptEntry[]) =>
+			run(entries).folds.map((fold) => [...fold.hiddenIds]);
+		expect(hidden(live)).toEqual([["t1", "t2", "t3", "t4", "t5"]]);
+		expect(hidden(live)).toEqual(hidden(reload));
+		const hide = blankIds(live);
+		expect(
+			run(live)
+				.items.filter((item) => !hide.has(item.id))
+				.map((item) => item.id),
+		).toEqual(run(reload).items.map((item) => item.id));
+	});
+
+	it("does not fold a short run just because blank rows sit in it", () => {
+		const live = [
+			user("u1"),
+			tool("t1"),
+			blank("a1"),
+			tool("t2"),
+			prose("a2", "ok"),
+		];
+		const folded = foldPlan({
+			items: asItems(live),
+			expanded: new Set(),
+			live: true,
+		});
+		expect(folded.folds).toEqual([]);
+		expect(folded.items.map((i) => i.id)).toEqual([
+			"u1",
+			"t1",
+			"a1",
+			"t2",
+			"a2",
 		]);
 	});
 });
