@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
 	hasTableBlock,
+	markdownPlainText,
 	parseInline,
 	parseMarkdown,
 	splitTableRow,
@@ -814,5 +815,49 @@ describe("tableColumnWidths (one width per column, shared by every row)", () => 
 			// No column is ever narrowed below its priced box.
 			expect(width).toBeGreaterThanOrEqual(boxes[column] ?? 0);
 		});
+	});
+});
+
+describe("markdownPlainText — what the iOS selection view shows and Copy writes", () => {
+	it("drops the markers the renderer consumes and keeps what it draws", () => {
+		expect(
+			markdownPlainText(
+				[
+					"# Title",
+					"",
+					"Some **bold** and `code` with [a link](https://example.com).",
+					"",
+					"- one",
+					"- two",
+					"",
+					"```ts",
+					"const x = 1;",
+					"```",
+				].join("\n"),
+			),
+		).toBe(
+			[
+				"Title",
+				"",
+				"Some bold and code with a link.",
+				"",
+				"• one",
+				"• two",
+				"",
+				"const x = 1;",
+			].join("\n"),
+		);
+	});
+
+	it("tabs a table's cells so it pastes as columns", () => {
+		expect(markdownPlainText("| A | B |\n|---|---|\n| 1 | **2** |")).toBe(
+			"A\tB\n1\t2",
+		);
+	});
+
+	it("keeps an ordered list's own numbers", () => {
+		expect(markdownPlainText("1. first\n2. second")).toBe(
+			"1. first\n2. second",
+		);
 	});
 });

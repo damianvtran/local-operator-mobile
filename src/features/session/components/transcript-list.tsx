@@ -51,6 +51,10 @@ import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
 import {
+	exitTextSelection,
+	textSelectionContainerTouch,
+} from "@/features/session/text-selection";
+import {
 	edgeFadeLevels,
 	type ScrollPresence,
 	TRANSCRIPT_FADE_PT,
@@ -1237,6 +1241,8 @@ export const TranscriptList = ({
 	 *  pointer analogue of a desktop scrollbar's thumb staying under the cursor,
 	 *  and the "or something like that" half of the operator's request. */
 	const onScrollBeginDrag = useCallback(() => {
+		// A scroll ends an iOS drag-to-select mode (`text-selection.ts`).
+		exitTextSelection();
 		releaseWebAnchor();
 		presence?.setHeld(true);
 	}, [presence, releaseWebAnchor]);
@@ -1875,6 +1881,8 @@ export const TranscriptList = ({
 				maintainVisibleContentPosition={loadOlder ? HISTORY_ANCHOR : undefined}
 				onScroll={onScroll}
 				onScrollBeginDrag={onScrollBeginDrag}
+				// A tap outside the selecting message ends the select mode.
+				onTouchStart={textSelectionContainerTouch}
 				onScrollEndDrag={onScrollEndDrag}
 				onMomentumScrollBegin={onMomentumScrollBegin}
 				onMomentumScrollEnd={onMomentumScrollEnd}

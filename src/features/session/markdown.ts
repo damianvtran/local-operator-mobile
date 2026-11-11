@@ -961,3 +961,48 @@ export const tableFadeGeometry = (
 		farOpacity: atEndEdge ? 1 : 0,
 	};
 };
+
+/**
+ * The plain text of a markdown answer, as the reader sees it: what the iOS
+ * drag-to-select view shows and what Copy puts on the pasteboard
+ * (`components/selectable-message.tsx`). Markers the renderer consumes
+ * (`**`, backticks, link targets, table pipes) are dropped; what it draws as
+ * text (list bullets, code lines) is kept, so a copied list still reads as a
+ * list. Blocks join with a blank line, as the renderer spaces them; table cells
+ * join with a tab, which pastes into a spreadsheet as columns.
+ */
+export const markdownPlainText = (text: string): string =>
+	blocksPlainText(parseMarkdown(text));
+
+/** `markdownPlainText` over an already-parsed block list, so the renderer that
+ *  holds the blocks does not parse the answer twice. */
+export const blocksPlainText = (blocks: readonly Block[]): string => {
+	const inline = (source: string) =>
+		parseInline(source)
+			.map((span) => span.text)
+			.join("");
+	return blocks
+		.map((block) => {
+			switch (block.kind) {
+				case "code":
+					return block.lines.join("\n");
+				case "list":
+					return block.items
+						.map((item, index) => {
+							const indent = " ".repeat((block.indents?.[index] ?? 0) * 2);
+							const marker =
+								block.markers?.[index] ??
+								(block.ordered ? `${index + 1}.` : "•");
+							return `${indent}${marker} ${inline(item)}`;
+						})
+						.join("\n");
+				case "table":
+					return [block.header, ...block.rows]
+						.map((row) => row.map(inline).join("\t"))
+						.join("\n");
+				default:
+					return inline(block.text);
+			}
+		})
+		.join("\n\n");
+};

@@ -33,6 +33,10 @@ import {
 import { LiveGlyph } from "@/features/session/components/live-glyph";
 import { Markdown } from "@/features/session/components/markdown";
 import {
+	SelectableLeafText,
+	SelectableMessage,
+} from "@/features/session/components/selectable-message";
+import {
 	TRACE_BAR_PAD_CLASS,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_EXPANDED_INDENT_CLASS,
@@ -130,22 +134,31 @@ const DIFF_TONE_CLASS = {
 	plain: "text-ink-muted",
 } as const;
 
+const MONO_CLASS = "whitespace-pre-wrap font-mono text-mono-sm";
+
 const DiffBlock = ({ lines }: { lines: string[] }) => (
 	// `whitespace-pre-wrap` plus per-line block text: the wrap is what makes this
 	// readable on a phone, and the tint comes from the diff roles rather than from
 	// a colour chosen here.
 	<View className="max-h-64 overflow-hidden rounded-sm bg-sunken p-2">
 		<ScrollView>
-			<Text className="whitespace-pre-wrap font-mono text-mono-sm">
-				{lines.map((line, index) => (
-					<Text
-						key={index}
-						className={cx("block", DIFF_TONE_CLASS[diffLineTone(line)])}
-					>
-						{line}
-					</Text>
-				))}
-			</Text>
+			{/* Output is the thing a reader most often needs to paste elsewhere
+			 *  (a path, an error line): drag-select it like any message. */}
+			<SelectableMessage
+				text={() => lines.join("\n")}
+				textClassName={MONO_CLASS}
+			>
+				<SelectableLeafText className={MONO_CLASS}>
+					{lines.map((line, index) => (
+						<Text
+							key={index}
+							className={cx("block", DIFF_TONE_CLASS[diffLineTone(line)])}
+						>
+							{line}
+						</Text>
+					))}
+				</SelectableLeafText>
+			</SelectableMessage>
 		</ScrollView>
 	</View>
 );
@@ -189,9 +202,14 @@ const TextBlock = ({
 		style={capPx === undefined ? undefined : { maxHeight: capPx }}
 	>
 		<ScrollView>
-			<Text className={cx("whitespace-pre-wrap font-mono text-mono-sm", tone)}>
-				{lines.join("\n")}
-			</Text>
+			<SelectableMessage
+				text={() => lines.join("\n")}
+				textClassName={cx(MONO_CLASS, tone)}
+			>
+				<SelectableLeafText className={cx(MONO_CLASS, tone)}>
+					{lines.join("\n")}
+				</SelectableLeafText>
+			</SelectableMessage>
 		</ScrollView>
 	</View>
 );

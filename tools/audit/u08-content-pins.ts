@@ -1500,7 +1500,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #229 merged with main 502945a6 (#228): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only, no rendered or native proof.
-	src: "b533d1206624f7d868c2eda8d8347c86ff840db6820709d6a4db197c06dcbe77",
+	// Re-pinned 2026-11-11 for fix/native-text-selection with --print: the
+	// transcript's drag-to-select wrapper (`selectable-message.tsx`) — on web
+	// it renders its children unchanged and the leaf Text keeps `selectable`,
+	// so no measured web pixel moves. Source identity only.
+	src: "f26ae95d82345ae7a9ae4c5d2d2c84400183b774179a4b1ea998918d8c2695da",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

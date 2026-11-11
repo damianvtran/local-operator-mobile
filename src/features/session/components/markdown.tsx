@@ -12,8 +12,12 @@ import {
 	View,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
-
 import {
+	SelectableMessage,
+	useTextSelection,
+} from "@/features/session/components/selectable-message";
+import {
+	blocksPlainText,
 	type InlineSpan,
 	parseInline,
 	parseMarkdown,
@@ -27,6 +31,7 @@ import {
 	safeMarkdownHref,
 } from "@/features/session/markdown-links";
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
+import { leafSelectable } from "@/features/session/text-selection";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { estimatedColumnWidth } from "@/ui/column";
@@ -64,6 +69,9 @@ import { cx } from "@/ui/variants";
  *  traces" — is that ratio; with the trace on `trace` 13 (`tool-row.tsx`) it is
  *  now the relay's 1.08x (review round 1, m1). */
 const MESSAGE_BODY_CLASS = "text-body-read text-ink";
+/** Native selection on the leaf `<Text>` (Android, web); iOS selects through
+ *  `SelectableMessage`'s mode instead — `text-selection.ts` has the why. */
+const LEAF_SELECTABLE = leafSelectable();
 
 /**
  * The mono face's NATIVE family name: the PostScript name of the bundled
@@ -133,9 +141,11 @@ const Inline = memo(function Inline({
 	 *  same text: on a long answer that is the frame budget spent on work whose
 	 *  input did not change. */
 	const spans = useMemo(() => parseInline(text), [text]);
+	const { selectionColor } = useTextSelection();
 	return (
 		<Text
-			selectable
+			selectable={LEAF_SELECTABLE}
+			selectionColor={selectionColor}
 			className={cx(base ?? MESSAGE_BODY_CLASS)}
 			style={INLINE_WRAP}
 		>
@@ -599,6 +609,7 @@ function CodeBlockView({
 	language: string;
 }) {
 	const [copied, setCopied] = useState(false);
+	const { enter, selectionColor } = useTextSelection();
 	const body = lines.join("\n");
 	return (
 		<Pressable
@@ -621,6 +632,11 @@ function CodeBlockView({
 				// transient, because a toast for a copy would replace a real message.
 				void Clipboard.setStringAsync(body).then(() => setCopied(true));
 			}}
+			// This Pressable is the deepest responder under a long-press on code, so
+			// it must forward the hold to the message's selection mode (iOS). On
+			// Android `enter` is a no-op whose presence still stops the long hold
+			// that selected text natively from also firing the copy-on-tap.
+			onLongPress={enter}
 		>
 			<View className="overflow-hidden rounded-sm border border-hairline bg-sunken">
 				{language.length > 0 ? (
@@ -633,6 +649,8 @@ function CodeBlockView({
 				    column never widens (the transcript's own overflow guard). */}
 				<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 					<Text
+						selectable={LEAF_SELECTABLE}
+						selectionColor={selectionColor}
 						className="px-2 py-1 font-mono text-mono-sm text-ink-muted"
 						/* Code keeps its own direction inside an Urdu transcript: the block
 						 *  is the canonical mixed-content case — a bidi algorithm given no
@@ -664,68 +682,76 @@ export const Markdown = memo(function Markdown({ text }: { text: string }) {
 	 *  disclosure) re-uses the block list, and a streaming frame re-parses only the
 	 *  row that actually changed. */
 	const blocks = useMemo(() => parseMarkdown(text), [text]);
+	const plainText = useCallback(() => blocksPlainText(blocks), [blocks]);
 	return (
-		/* ONE gap container, and every block carries no outer margin of its own
-		 * (`components.md` §22, "the container owns the gap"). Before this an
-		 * answer's only separation was each block's own line-box leading: a code
-		 * well met the next paragraph with ≈6 pt of half-leading and two
-		 * paragraphs met at 0 pt, so nine different separations were all the same
-		 * value. The gap is the `between-components` tier, desktop parity. */
-		<View className="gap-3">
-			{blocks.map((block, index) => {
-				switch (block.kind) {
-					case "code":
-						return (
-							<CodeBlock
-								key={index}
-								lines={block.lines}
-								language={block.language}
-							/>
-						);
-					case "heading":
-						return (
-							<Inline
-								key={index}
-								text={block.text}
-								base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
-							/>
-						);
-					case "list":
-						return (
-							<View key={index} className="gap-1">
-								{block.items.map((item, itemIndex) => (
-									<View
-										key={itemIndex}
-										className="flex-row gap-2"
-										style={{
-											paddingStart: (block.indents?.[itemIndex] ?? 0) * 8,
-										}}
-									>
-										<Text className="text-body-read text-ink-dim" aria-hidden>
-											{block.markers?.[itemIndex] ??
-												(block.ordered ? `${itemIndex + 1}.` : "•")}
-										</Text>
-										<View className="min-w-0 flex-1">
-											<Inline text={item} />
+		/* The whole answer is ONE selection surface, so a drag can run across
+		 *  paragraphs, lists and code (iOS mode; `selectable-message.tsx`). */
+		<SelectableMessage text={plainText} textClassName={MESSAGE_BODY_CLASS}>
+			{/* ONE gap container, and every block carries no outer margin of its own
+			 * (`components.md` §22, "the container owns the gap"). Before this an
+			 * answer's only separation was each block's own line-box leading: a code
+			 * well met the next paragraph with ≈6 pt of half-leading and two
+			 * paragraphs met at 0 pt, so nine different separations were all the same
+			 * value. The gap is the `between-components` tier, desktop parity. */}
+			<View className="gap-3">
+				{blocks.map((block, index) => {
+					switch (block.kind) {
+						case "code":
+							return (
+								<CodeBlock
+									key={index}
+									lines={block.lines}
+									language={block.language}
+								/>
+							);
+						case "heading":
+							return (
+								<Inline
+									key={index}
+									text={block.text}
+									base={HEADING_CLASS[block.level] ?? "text-body-lg text-ink"}
+								/>
+							);
+						case "list":
+							return (
+								<View key={index} className="gap-1">
+									{block.items.map((item, itemIndex) => (
+										<View
+											key={itemIndex}
+											className="flex-row gap-2"
+											style={{
+												paddingStart: (block.indents?.[itemIndex] ?? 0) * 8,
+											}}
+										>
+											<Text className="text-body-read text-ink-dim" aria-hidden>
+												{block.markers?.[itemIndex] ??
+													(block.ordered ? `${itemIndex + 1}.` : "•")}
+											</Text>
+											<View className="min-w-0 flex-1">
+												<Inline text={item} />
+											</View>
 										</View>
-									</View>
-								))}
-							</View>
-						);
-					case "quote":
-						return (
-							<View key={index} className="border-s-2 border-hairline ps-2">
-								<Inline text={block.text} base="text-body-sm text-ink-muted" />
-							</View>
-						);
-					case "table":
-						return (
-							<Table key={index} header={block.header} rows={block.rows} />
-						);
-					default:
-						return <Inline key={index} text={block.text} />;
-				}
-			})}
-		</View>
+									))}
+								</View>
+							);
+						case "quote":
+							return (
+								<View key={index} className="border-s-2 border-hairline ps-2">
+									<Inline
+										text={block.text}
+										base="text-body-sm text-ink-muted"
+									/>
+								</View>
+							);
+						case "table":
+							return (
+								<Table key={index} header={block.header} rows={block.rows} />
+							);
+						default:
+							return <Inline key={index} text={block.text} />;
+					}
+				})}
+			</View>
+		</SelectableMessage>
 	);
 });

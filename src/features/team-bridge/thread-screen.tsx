@@ -21,6 +21,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
+import {
+	exitTextSelection,
+	textSelectionContainerTouch,
+} from "@/features/session/text-selection";
 import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import {
@@ -998,6 +1002,14 @@ function ThreadContent({
 									// Every list callback is the viewport controller's, so the tests
 									// that drive these handlers drive the shipping wiring.
 									{...viewport.current.handlers}
+									/* Drag-to-select (iOS mode, `text-selection.ts`): a touch
+									 *  outside the selecting message or a scroll ends it, as in
+									 *  iMessage. Wraps — never replaces — the viewport's intent. */
+									onTouchStart={textSelectionContainerTouch}
+									onScrollBeginDrag={() => {
+										exitTextSelection();
+										viewport.current?.handlers.onScrollBeginDrag();
+									}}
 									onScrollToIndexFailed={onScrollToIndexFailed}
 									scrollEventThrottle={100}
 									refreshControl={
