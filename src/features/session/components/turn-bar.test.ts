@@ -54,3 +54,38 @@ describe("fold-bar.tsx live glyph (PR 223 round 1, Q1-1 / U1-4)", () => {
 		expect(foldSource).toContain("{fold.failedCount}");
 	});
 });
+
+/**
+ * Q2-1 (PR 223 round 2): `9s لگے · 8 اعمال` begins with the Latin unit, so RN-web's
+ * default `dir="auto"` laid the bar's words out LTR inside the Urdu page and they
+ * left the 40 pt start rail. The composed `Text` must state the page's base.
+ * Rendered through real react-native-web markup, as `section-header.test.ts`.
+ */
+describe("TurnBar: composed summary states the page direction (Q2-1)", async () => {
+	const { createElement: h } = await import("react");
+	const { renderToStaticMarkup } = await import("react-dom/server");
+	const { DirectionProvider } = await import("@/ui/direction");
+	const { TurnBar } = await import("./turn-bar");
+	const markup = (direction: "ltr" | "rtl") =>
+		renderToStaticMarkup(
+			h(DirectionProvider, {
+				direction,
+				locale: direction === "rtl" ? "ur" : "en",
+				children: h(TurnBar, {
+					turnKey: "u1",
+					facts: { steps: 8, durationS: 9 },
+					headline: "do the thing",
+					open: false,
+					onToggle: () => {},
+				}),
+			}),
+		);
+
+	it("rtl: the summary Text carries an explicit dir=rtl", () => {
+		expect(markup("rtl")).toContain('dir="rtl"');
+	});
+
+	it("ltr: no dir is stated, so en/fr/hi markup is unchanged", () => {
+		expect(markup("ltr")).not.toContain('dir="rtl"');
+	});
+});

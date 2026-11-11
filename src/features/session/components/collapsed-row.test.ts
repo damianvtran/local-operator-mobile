@@ -332,4 +332,55 @@ describe("the label never starves the summary (design round 1 of PR 223, D1)", (
 		);
 		expect(words(summary?.className ?? "").has("flex-1")).toBe(false);
 	});
+
+	it("a label-less row (a folded long notice) keeps `flex-1` on its summary at large text (R2-1)", async () => {
+		presses.scale = 2;
+		presses.classes.length = 0;
+		await act(async () =>
+			root?.render(
+				createElement(
+					CollapsedRow,
+					{
+						glyph: "·",
+						summary:
+							"a long notice that must shrink rather than push the chevron off",
+						meta: "woken",
+						accessibilityLabel: "notice",
+					} as unknown as Parameters<typeof CollapsedRow>[0],
+					createElement("span", null, "body"),
+				),
+			),
+		);
+		expect(stackOf()).toBeUndefined();
+		const summary = presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("text-body-sm"),
+		);
+		expect(words(summary?.className ?? "").has("flex-1")).toBe(true);
+		expect(words(summary?.className ?? "").has("min-w-0")).toBe(true);
+		// Not stacked, so the line stays centred in the touch floor.
+		const line = presses.classes.find(
+			(c) =>
+				c.host === "View" &&
+				words(c.className).has("flex-row") &&
+				words(c.className).has("flex-1"),
+		);
+		expect(words(line?.className ?? "").has("items-center")).toBe(true);
+	});
+
+	it("stacked: glyph and chevron key to the first line, not between the two (Q2-2)", async () => {
+		presses.scale = 2;
+		await render();
+		const line = presses.classes.find(
+			(c) =>
+				c.host === "View" &&
+				words(c.className).has("flex-row") &&
+				words(c.className).has("flex-1"),
+		);
+		expect(words(line?.className ?? "").has("items-start")).toBe(true);
+		expect(words(line?.className ?? "").has("items-center")).toBe(false);
+		const glyph = presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("w-4"),
+		);
+		expect(words(glyph?.className ?? "").has("pt-0.5")).toBe(true);
+	});
 });

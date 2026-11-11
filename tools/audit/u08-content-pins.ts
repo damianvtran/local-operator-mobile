@@ -1383,7 +1383,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// session-certified peer cycles, no fold inside an open quiet group, the
 	// continuation latch, bar/fold glyph and copy face, the large-text receipt
 	// stack. --print over the staged tree; source identity only.
-	src: "c014b1f4f139ce7555ef5cfb18a6131358b82995fa3bcdc33884a711c62a1f8a",
+	// PR #223 round-2 remediation: label-less `CollapsedRow` keeps `flex-1` at
+	// large text, composed `dir` on the bar summaries, the newest-turn fold
+	// latch through a `!live` dip. --print over the staged tree; source
+	// identity only.
+	src: "ebd7a0d9e66844ebb3e4f0ff7f27d27080e32a155aab20ffab650c4d20b26051",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

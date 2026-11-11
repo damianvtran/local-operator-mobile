@@ -12,6 +12,7 @@ import {
 	type TurnBarFacts,
 } from "@/features/session/turn-condensing";
 import { ROLE, turnBarId } from "@/ui/a11y";
+import { useComposedDir } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
@@ -71,6 +72,11 @@ export const TurnBar = ({
 	const [lead, ...details] = facts.steered ? phrases : ["", ...phrases];
 	const failedCount = facts.failed ?? 0;
 	const failed = failedCount > 0;
+	/* The words are composed copy (`9s لگے · 8 اعمال`) whose first strong
+	 * character is the Latin unit, so RN-web's `dir="auto"` would read them LTR
+	 * inside an Urdu page and push them off the 40 pt start rail (Q2-1).
+	 * `useComposedDir` states the page's base instead; see `@/ui/direction`. */
+	const composedDir = useComposedDir();
 	return (
 		<View className={TRACE_ROW_OUTER_CLASS}>
 			<Pressable
@@ -100,7 +106,10 @@ export const TurnBar = ({
 						>
 							{failed ? "✗" : "✓"}
 						</Text>
-						<Text className="min-w-0 flex-1 text-trace text-ink-muted">
+						<Text
+							className="min-w-0 flex-1 text-trace text-ink-muted"
+							{...composedDir}
+						>
 							{lead}
 							{details.length > 0 ? (
 								/* Proportional `text-meta`, not `font-mono` (Q1-3): the details

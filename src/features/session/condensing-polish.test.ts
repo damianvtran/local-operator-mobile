@@ -532,6 +532,30 @@ describe("the fold latch across a `!live` frame (R1-4)", () => {
 			"call:call-t3",
 		]);
 	});
+
+	it("keeps painting the latch-held fold through the `!live` dip itself (R2-2)", () => {
+		const items = entryItems([user("u1"), tool("t1"), tool("t2"), tool("t3")]);
+		const live = foldPlan({ items, expanded: NONE, live: true });
+		// Two actions are below the fold threshold: only the latch can hold them.
+		const slidItems = entryItems([user("u1"), tool("t2"), tool("t3")]);
+		const liveSlid = foldPlan({
+			items: slidItems,
+			expanded: NONE,
+			live: true,
+			latchedFoldIds: live.latchedFoldIds,
+		});
+		expect(liveSlid.items.some((item) => item.kind === "fold")).toBe(true);
+		const dip = foldPlan({
+			items: slidItems,
+			expanded: NONE,
+			live: false,
+			latchedFoldIds: liveSlid.latchedFoldIds,
+		});
+		expect(dip.items.some((item) => item.kind === "fold")).toBe(true);
+		// Without a latch the same two rows stay flat: the fold is the latch's.
+		const bare = foldPlan({ items: slidItems, expanded: NONE, live: false });
+		expect(bare.items.some((item) => item.kind === "fold")).toBe(false);
+	});
 });
 
 describe("a condensed newest turn takes in its continuation (U1-1)", () => {

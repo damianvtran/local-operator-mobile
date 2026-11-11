@@ -14,6 +14,7 @@ import {
 } from "@/features/session/fold-model";
 import { foldBarId, ROLE } from "@/ui/a11y";
 import { Shimmer } from "@/ui/components/shimmer";
+import { useComposedDir } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
@@ -52,6 +53,10 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 	const showLive = fold.running && !open && fold.liveAction !== null;
 	const units = foldSettledUnits(fold.countSegments, fold.receiptEntries);
 	const totalActions = foldActionCountLabel(fold.actions.length);
+	/* The settled units and the count are composed copy whose first strong
+	 * character can be Latin (`9s`), so they state the page's base rather than
+	 * RN-web's `dir="auto"` (Q2-1; `@/ui/direction`). */
+	const composedDir = useComposedDir();
 
 	/* Running outranks failed for the GLYPH (Q1-1 / U1-4): the fold's state is
 	 * "still working" until it settles, so neither an open bar (a static `✓`
@@ -120,12 +125,16 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 								<Text
 									className="text-meta text-ink-dim tabular-nums"
 									numberOfLines={1}
+									{...composedDir}
 								>
 									{totalActions}
 								</Text>
 							</View>
 						) : (
-							<Text className="min-w-0 flex-1 text-trace text-ink-muted">
+							<Text
+								className="min-w-0 flex-1 text-trace text-ink-muted"
+								{...composedDir}
+							>
 								{(units.length > 0 ? units : [totalActions])
 									.map(unbreakable)
 									.join(" · ")}

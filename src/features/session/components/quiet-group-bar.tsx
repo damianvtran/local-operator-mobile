@@ -12,6 +12,7 @@ import {
 	type QuietGroup,
 } from "@/features/session/turn-condensing";
 import { quietGroupId, ROLE } from "@/ui/a11y";
+import { useComposedDir } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
@@ -57,6 +58,8 @@ export const QuietGroupBar = ({
 	// single-sourced rather than re-spelling "Peer messages" at the render
 	// site — the turn bar's own split.
 	const [what, ...details] = groupPhrases(group);
+	// A composed line (label + counts): state the page's base, never `auto` (Q2-1).
+	const composedDir = useComposedDir();
 	return (
 		<View className={TRACE_ROW_OUTER_CLASS}>
 			<Pressable
@@ -83,7 +86,10 @@ export const QuietGroupBar = ({
 						>
 							↔
 						</Text>
-						<Text className="min-w-0 flex-1 text-trace text-ink-muted">
+						<Text
+							className="min-w-0 flex-1 text-trace text-ink-muted"
+							{...composedDir}
+						>
 							{what}
 							{details.length > 0 ? (
 								/* Proportional, not `font-mono`: localized words (Q1-3 — the

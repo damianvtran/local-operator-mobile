@@ -136,8 +136,13 @@ export const CollapsedRow = ({
 	 * each a full line — the shape the Bridge receipt already wrapped into. The
 	 * stack holds open or closed, so a tap never reflows the header. */
 	const { effectiveScale } = useTextScale();
-	const stacked = effectiveScale > LARGE_TEXT_SCALE;
 	const hasLabel = label !== undefined && label.length > 0;
+	/* Only a row WITH a label stacks (R2-1): stacking is how the label stops
+	 * starving the summary, so a label-less row (a folded long notice,
+	 * `transcript-row.tsx`) has nothing to stack. Letting it count as stacked
+	 * stripped `flex-1` from its lone summary, and on native an unshrinkable
+	 * long line then pushed the meta and the `▸` off the row. */
+	const stacked = hasLabel && effectiveScale > LARGE_TEXT_SCALE;
 	const labelText = hasLabel ? (
 		<Text
 			className={cx("min-w-0 shrink text-meta", labelClass)}
@@ -186,7 +191,11 @@ export const CollapsedRow = ({
 					{({ pressed }) => (
 						<View
 							className={cx(
-								"flex-1 flex-row items-center",
+								/* Stacked, the line is two lines tall: centring would float the
+								 * glyph and the chevron BETWEEN them (Q2-2), so they key to the
+								 * first line — the TurnBar's caret rule. */
+								"flex-1 flex-row",
+								stacked ? "items-start" : "items-center",
 								pressed && "bg-row-hover",
 								COLUMN_PAD,
 								COLUMN_GAP,
@@ -196,6 +205,9 @@ export const CollapsedRow = ({
 								className={cx(
 									"text-start font-mono text-mono-sm",
 									GLYPH_COLUMN,
+									/* Mono glyph vs the proportional label: nudge it onto
+									 * the label's line box when the two lines stack. */
+									stacked && "pt-0.5",
 									glyphClass,
 								)}
 								aria-hidden

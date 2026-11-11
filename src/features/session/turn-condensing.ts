@@ -1575,11 +1575,17 @@ export function foldPlan(input: FoldPlanInput): FoldPlan {
 
 	const flush = () => {
 		if (runItems.length === 0) return;
-		const inLiveTurn = live && runStartAt >= lastTurnStartAt;
+		const inNewestTurn = runStartAt >= lastTurnStartAt;
+		const inLiveTurn = live && inNewestTurn;
 		const runEntries = runItems.map((it) => it.entry);
+		/* The latch is honoured for the NEWEST turn whatever `live` says (R2-2):
+		 * the stream dips `!live` for a frame at tool boundaries, and gating the
+		 * latch on `live` let a latch-held fold paint flat for that one frame.
+		 * `buildFoldRun`'s `liveTurn` only gates the latch, so it takes the
+		 * newest-turn fact; the emitted item and `createdRuns` keep `inLiveTurn`. */
 		const run = buildFoldRun(runEntries, {
-			liveTurn: inLiveTurn,
-			latchedFoldIds: inLiveTurn ? input.latchedFoldIds : undefined,
+			liveTurn: inNewestTurn,
+			latchedFoldIds: inNewestTurn ? input.latchedFoldIds : undefined,
 		});
 		if (run === null) {
 			for (const it of runItems) emitted.push(it);
