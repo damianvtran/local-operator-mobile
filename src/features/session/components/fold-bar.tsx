@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { LiveGlyph } from "@/features/session/components/live-glyph";
 import {
 	TRACE_COLUMN_GAP_CLASS,
-	TRACE_GLYPH_BOX_CLASS,
 	TRACE_GLYPH_ROW_CLASS,
 	TRACE_GLYPH_SLOT_CLASS,
 	TRACE_PRESS_WASH_CLASS,
@@ -18,7 +18,6 @@ import {
 	foldSettledUnits,
 } from "@/features/session/fold-model";
 import { foldBarId, ROLE } from "@/ui/a11y";
-import { Shimmer } from "@/ui/components/shimmer";
 import { useComposedDir } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
@@ -36,7 +35,7 @@ import { cx } from "@/ui/variants";
  *     borderless with `bg-row-hover` press feedback only.
  *
  * STATES:
- *   - Closed + live running: pulsing `⟳` glyph (`Shimmer`) even after an
+ *   - Closed + live running: the live-tool `⟳` indicator (`LiveGlyph`) even after an
  *     earlier call failed (the red count still shows), active tool's semantic
  *     display name + summary, total action count, and live elapsed time.
  *   - Open + running: a static dim `⟳` — never a `✓` over a running row.
@@ -70,12 +69,17 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 	 * the red `failedCount` on the trailing edge stays. Open + running paints a
 	 * static, dim `⟳`: the rows below carry the live motion. */
 	const glyph = fold.running ? "⟳" : failed ? "✗" : "✓";
-	const glyphInk =
-		fold.running && !open
-			? "text-accent"
-			: !fold.running && failed
-				? "text-danger"
-				: "text-ink-dim";
+	/* The live-tool indicator needs a call that is EXECUTING, not merely
+	 * unsettled: `fold.running` is also true for a composing or queued call,
+	 * and those stay dim and still on `ToolRow` because nothing is happening
+	 * yet. The relay's fold header goes live on the same test (a member whose
+	 * phase is `running`, `condense-rows.tsx`). */
+	const live = !open && fold.actions.some((action) => action.executing);
+	const glyphInk = live
+		? "text-accent"
+		: !fold.running && failed
+			? "text-danger"
+			: "text-ink-dim";
 
 	/* The press wash lives on the row holding the glyph AND the button
 	 * (`TRACE_PRESS_WASH_CLASS`, `trace-rail.ts`), so it is lifted here. */
@@ -93,11 +97,10 @@ export const FoldBar = ({ foldKey, fold, open, onToggle }: FoldBarProps) => {
 					pointerEvents="none"
 					aria-hidden
 				>
-					<Shimmer active={fold.running && !open} className="w-4 shrink-0">
-						<Text className={cx(TRACE_GLYPH_BOX_CLASS, glyphInk)} aria-hidden>
-							{glyph}
-						</Text>
-					</Shimmer>
+					{/* Closed over a running call, the bar IS the live row (it shows
+					 *  the running call's name and elapsed), so it carries the same
+					 *  indicator as `ToolRow`; open, the row below carries it. */}
+					<LiveGlyph glyph={glyph} inkClass={glyphInk} live={live} />
 				</View>
 				<Pressable
 					testID={foldBarId(foldKey)}

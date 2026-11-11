@@ -49,7 +49,12 @@ describe("fold-bar.tsx live glyph (PR 223 round 1, Q1-1 / U1-4)", () => {
 		expect(foldSource).toContain(
 			'const glyph = fold.running ? "⟳" : failed ? "✗" : "✓";',
 		);
-		expect(foldSource).toContain("active={fold.running && !open}");
+		// Live (the indicator) only while closed over an EXECUTING call; the
+		// drawn states are `live-glyph.test.tsx`'s.
+		expect(foldSource).toContain(
+			"const live = !open && fold.actions.some((action) => action.executing);",
+		);
+		expect(foldSource).toContain("live={live}");
 		// The failure count still paints on the trailing edge.
 		expect(foldSource).toContain("{fold.failedCount}");
 	});
