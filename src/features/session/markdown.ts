@@ -15,6 +15,9 @@
  * `components/` directory already keeps between logic and its rendering.
  */
 
+import { maxColumnWidth, type Viewport } from "@/ui/column";
+import { LAYOUT } from "@/ui/tokens.gen";
+
 /** The opening/closing fence, the renderer's own pattern moved verbatim:
  *  `parseMarkdown` uses it both to open a block and to find a paragraph's end, so
  *  a fence this does not match is a fence the transcript does not draw either. */
@@ -960,4 +963,33 @@ export const tableFadeGeometry = (
 		nearOpacity: atEndEdge ? 0 : 1,
 		farOpacity: atEndEdge ? 1 : 0,
 	};
+};
+
+/**
+ * The markdown column's width BEFORE `onLayout` has measured it, so a table's
+ * first frame is already its settled frame (PR #224 review m1 / design D2).
+ *
+ * Measured on the PR head: with no seed, `available` was 0 until the first
+ * layout, so a table that fits painted at its priced Σ (171 px) and snapped to
+ * the viewport (356 px at 390) 10–27 ms later on every mount. The old per-row
+ * `flexGrow` filled on frame one, so the explicit widths had made it a
+ * regression.
+ *
+ * The seed follows the derivation the session column itself uses
+ * (`theme-picker.tsx`): the viewport, capped by `maxColumnWidth`'s device
+ * shapes, less the phone gutter (`space.gutters.phone`, = `TABLE_RAIL_PT`) on
+ * each side. It is an ESTIMATE, deliberately: the measured width still wins the
+ * moment `onLayout` reports, so a host narrower than the session column (a tool
+ * row's nested reply, a notification body) corrects on its first layout as
+ * before. Horizontal safe-area insets are not read — `Markdown` renders on
+ * surfaces without a `SafeAreaProvider`, and the landscape cap is already
+ * narrower than the inset viewport, so on a phone in portrait (the reported
+ * case) the seed equals the measurement.
+ */
+export const seedTableColumnWidth = (viewport: Viewport): number => {
+	const capped = Math.min(
+		viewport.width,
+		maxColumnWidth(viewport) ?? viewport.width,
+	);
+	return Math.max(0, capped - 2 * LAYOUT.gutter);
 };

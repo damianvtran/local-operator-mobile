@@ -15,6 +15,9 @@ const host = vi.hoisted(() => ({
 	open: vi.fn(async (_url: string) => undefined),
 	copies: [] as (() => void)[],
 	os: "web" as "web" | "ios" | "android",
+	/* What `useWindowDimensions` reports: the table seeds its column width
+	 *  from it before `onLayout` (which static markup never fires). */
+	window: { width: 390, height: 844 },
 }));
 vi.mock("react-native", async () => {
 	const { createElement } = await import("react");
@@ -86,6 +89,7 @@ vi.mock("react-native", async () => {
 				host.os in options ? options[host.os] : options.default,
 		},
 		Linking: { openURL: host.open },
+		useWindowDimensions: () => host.window,
 	};
 });
 vi.mock("react-native-svg", async () => {
@@ -285,12 +289,20 @@ describe("operator report: table columns and code faces (build 773)", () => {
 			const chip = markup.match(INLINE_CHIP);
 			expect(chip).not.toBeNull();
 			expect(chip?.[1]).toContain("font-mono");
-			expect(chip?.[1]).toContain("bg-sunken");
+			// `elevated`, not `sunken`: sunken is the header's own fill, so a
+			// backticked header cell drew no chip at all (PR #224 m2 / D1).
+			expect(chip?.[1]).toContain("bg-elevated");
+			expect(chip?.[1]).not.toContain("bg-sunken");
+			expect(chip?.[1]).toContain("web:px-0.5");
 			const style = chip?.[2] ? JSON.parse(decodeQuotes(chip[2])) : {};
 			// React Native cannot resolve a CSS fallback LIST: the theme's
 			// `--font-mono` stack silently became the system face on iPhone.
 			expect(style.fontFamily).toBe(
 				os === "web" ? undefined : "JetBrainsMono-Regular",
+			);
+			// No `calt` ligatures natively: `!=` must not draw as `≠` (D4).
+			expect(style.fontVariant).toEqual(
+				os === "web" ? undefined : ["no-contextual"],
 			);
 		}
 	});
@@ -305,5 +317,48 @@ describe("operator report: table columns and code faces (build 773)", () => {
 		expect(JSON.parse(decodeQuotes(body?.[1] ?? "{}")).fontFamily).toBe(
 			"JetBrainsMono-Regular",
 		);
+	});
+});
+
+describe("a fitting table's first frame is its settled frame (PR #224 m1 / D2)", () => {
+	const FITS = "| Key | Value |\n| --- | --- |\n| `a` | b |";
+	const cellWidths = (markup: string) => {
+		const head = markup.indexOf('data-testid="md-table-head"');
+		const row = markup.indexOf('data-testid="md-table-row"');
+		return [...markup.slice(head, row).matchAll(CELL_STYLE)].map(
+			(cell) =>
+				(JSON.parse(decodeQuotes(cell[1] ?? "{}")) as { width: number }).width,
+		);
+	};
+	const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+	beforeEach(() => {
+		host.os = "web";
+		host.window = { width: 390, height: 844 };
+	});
+
+	it("fills the seeded column before any onLayout has run", () => {
+		// Static markup never fires onLayout, so this IS the first frame. QA
+		// measured the fitting table at 356 px once settled at 390 (390 − 2·16
+		// gutters − 2·1 border); before the seed it painted at 171.4 first.
+		const at390 = cellWidths(
+			renderToStaticMarkup(createElement(Markdown, { text: FITS })),
+		);
+		expect(at390).toHaveLength(2);
+		expect(sum(at390)).toBeCloseTo(356, 6);
+		host.window = { width: 320, height: 640 };
+		const at320 = cellWidths(
+			renderToStaticMarkup(createElement(Markdown, { text: FITS })),
+		);
+		expect(sum(at320)).toBeCloseTo(286, 6);
+	});
+
+	it("falls back to the priced boxes when the window is unknown", () => {
+		host.window = { width: 0, height: 0 };
+		const priced = sum(
+			cellWidths(renderToStaticMarkup(createElement(Markdown, { text: FITS }))),
+		);
+		expect(priced).toBeLessThan(286);
+		expect(priced).toBeGreaterThan(0);
 	});
 });

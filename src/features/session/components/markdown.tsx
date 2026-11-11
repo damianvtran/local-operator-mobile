@@ -8,6 +8,7 @@ import {
 	ScrollView,
 	Text,
 	type TextStyle,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
@@ -16,6 +17,7 @@ import {
 	type InlineSpan,
 	parseInline,
 	parseMarkdown,
+	seedTableColumnWidth,
 	TABLE_BORDER_PT,
 	tableColumnWidths,
 	tableFadeGeometry,
@@ -76,18 +78,32 @@ const MESSAGE_BODY_CLASS = "text-body-read text-ink";
  * stack (and its woff2), so this applies off-web only.
  */
 const NATIVE_MONO_FAMILY = "JetBrainsMono-Regular";
+/* `no-contextual` turns off JetBrains Mono's `calt` ligatures natively (design
+ * D4): with the real face now resolving, `!=` would otherwise draw as `≠` in a
+ * listing the reader is meant to copy. Web keeps the theme's ligature setting
+ * (pre-existing there, and shared with the relay). */
 const nativeMono = (): TextStyle | undefined =>
-	Platform.OS === "web" ? undefined : { fontFamily: NATIVE_MONO_FAMILY };
+	Platform.OS === "web"
+		? undefined
+		: { fontFamily: NATIVE_MONO_FAMILY, fontVariant: ["no-contextual"] };
 /** A fenced block's body: its own LTR direction plus, natively, the bundled
  *  mono face (the class's stack does not resolve there — see above). */
 const codeBodyStyle = (): TextStyle => ({ ...LTR_TEXT, ...nativeMono() });
 
-/** Inline code: the relay's chip (`rounded-xs bg-sunken font-mono text-mono-sm`,
+/** Inline code: the relay's chip (`rounded-xs px-0.5 font-mono text-mono-sm`,
  *  local-operator `mobile/web/src/components/markdown.tsx`) — the mono step on
- *  a `sunken` wash so a command reads as a command mid-sentence. A nested
- *  `Text` cannot take padding or a radius on native, so the chip is the wash
- *  alone; it still shares the line's baseline because it is the same line box. */
-const INLINE_CODE_CLASS = "font-mono text-mono-sm bg-sunken text-ink";
+ *  a wash so a command reads as a command mid-sentence.
+ *
+ *  WHY `elevated`, NOT `sunken` (PR #224 design D1 / review m2): `sunken` sits
+ *  at 1.035–1.165:1 against `canvas` across the shipped palettes, which reads
+ *  as no chip in a still, and it IS the table header's fill — so a backticked
+ *  header cell lost the chip entirely (1.000:1). `elevated` clears both: ≥1.124
+ *  on canvas and ≥1.164 on the sunken header across every palette, the same
+ *  move the relay made for its tiles. A nested `Text` cannot take padding or a
+ *  radius on native, so `px-0.5 rounded-xs` apply on web only; natively the
+ *  chip is the wash alone, still on the line's baseline (same line box). */
+const INLINE_CODE_CLASS =
+	"font-mono text-mono-sm bg-elevated text-ink web:px-0.5 web:rounded-xs";
 
 const spanClass = (span: InlineSpan): string =>
 	cx(
@@ -303,7 +319,13 @@ function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 	 * cannot move is the fix: the column is the same number whether or not the
 	 * bleed applies, so the classification is a pure function of it.
 	 */
-	const [columnWidth, setColumnWidth] = useState(0);
+	const viewport = useWindowDimensions();
+	/* `measured` is the wrapper's onLayout width (0 until it reports); before
+	 *  that the column is SEEDED from the window (`seedTableColumnWidth`) so the
+	 *  first frame is the settled one (review m1 / design D2). Same single input
+	 *  downstream either way, so the no-feedback property above still holds. */
+	const [measured, setColumnWidth] = useState(0);
+	const columnWidth = measured > 0 ? measured : seedTableColumnWidth(viewport);
 	const [scrollX, setScrollX] = useState(0);
 	const [atEnd, setAtEnd] = useState(false);
 	const scrollRef = useRef<ScrollView>(null);
