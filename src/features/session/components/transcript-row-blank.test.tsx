@@ -74,6 +74,13 @@ vi.mock("@/features/session/components/transcript-image", () => ({
 vi.mock("@/features/session/components/tool-row", () => ({
 	ToolRow: () => null,
 }));
+/* Integration of #234 with #235: the row now imports the user arm's
+ * Show-more clamp, whose `react-native-svg` fade the Node host cannot load
+ * (the suite failed to import with "SyntaxError: Unexpected token 'typeof'").
+ * This file never renders the user arm, so it is stubbed like the arms above. */
+vi.mock("@/features/session/components/user-message-clamp", () => ({
+	UserMessageClamp: () => null,
+}));
 
 import { TranscriptRow } from "./transcript-row";
 
