@@ -153,7 +153,9 @@ const NAMESPACES = [
 		name: "mobile.notifications",
 		messages: notifications,
 		context: notificationsContext,
-		expected: 27,
+		// +5: the Settings permission sentences (`permission.*`), moved out of
+		// an English-only table in the Team Bridge push-readiness PR.
+		expected: 32,
 	},
 	{
 		name: "mobile.session",
@@ -306,7 +308,9 @@ describe("the English catalogues", () => {
 		 *  generated catalogue's own count over this tree. Round-1 remediation
 		 *  adds `mobile.team_bridge.thread.anchor_missing` (the "no longer
 		 *  available" toast): 597 + 1 = 598. */
-		expect(total).toBe(598);
+		/* feat/bridge-push-readiness: + the five `mobile.notifications.permission.*`
+		 *  Settings sentences: 598 + 5 = 603. */
+		expect(total).toBe(603);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

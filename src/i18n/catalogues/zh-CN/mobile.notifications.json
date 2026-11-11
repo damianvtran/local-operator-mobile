@@ -24,6 +24,11 @@
 	"mobile.notifications.dismiss": "忽略",
 	"mobile.notifications.filter_label": "显示",
 	"mobile.notifications.load_failed": "无法加载通知",
+	"mobile.notifications.permission.denied": "此应用的通知已在系统设置中关闭。请在那里重新开启，以接收 Team Bridge 消息提醒。来自你电脑的提醒尚未开启——在开启之前，只有 Local Operator 处于打开状态时才会提醒。",
+	"mobile.notifications.permission.granted": "已允许。Radient 推送服务可用时，Team Bridge 消息会在此手机上提醒。来自你电脑的提醒尚未开启——在开启之前，只有 Local Operator 处于打开状态时才会提醒。",
+	"mobile.notifications.permission.undetermined": "向手机请求权限，以接收 Team Bridge 消息提醒。来自你电脑的提醒尚未开启——在开启之前，只有 Local Operator 处于打开状态时才会提醒。",
+	"mobile.notifications.permission.unknown": "无法检查此手机上的通知。这不是拒绝——请重新打开设置再检查一次。",
+	"mobile.notifications.permission.unsupported": "此版本不包含通知功能。",
 	"mobile.notifications.priority_high": "高",
 	"mobile.notifications.title": "通知"
 }

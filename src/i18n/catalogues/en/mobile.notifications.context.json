@@ -99,6 +99,26 @@
 		"role": "heading",
 		"note": "Title of the error alert when the inbox could not be loaded. The relay's own sentence follows as the alert body."
 	},
+	"mobile.notifications.permission.denied": {
+		"role": "status",
+		"note": "Settings › Notifications, the state sentence when the OS refused notifications for the app. Names the remedy (system settings) and what it enables (Team Bridge message alerts), then that computer alerts are not switched on yet. Team Bridge is a brand."
+	},
+	"mobile.notifications.permission.granted": {
+		"role": "status",
+		"note": "Settings › Notifications, the state sentence after the reader allowed notifications. Two separate facts: Team Bridge (a brand, keep in Latin script) message alerts depend on Radient's (brand) push service being available, and alerts from the reader's computers are not switched on yet. Must not promise that alerts will definitely arrive."
+	},
+	"mobile.notifications.permission.undetermined": {
+		"role": "status",
+		"note": "Settings › Notifications, the state sentence before the OS has been asked; an 'Enable notifications' button sits under it. Team Bridge is a brand. Must not promise that alerts will definitely arrive."
+	},
+	"mobile.notifications.permission.unknown": {
+		"role": "status",
+		"note": "Settings › Notifications, the state sentence when the permission read failed. Must read as 'could not check', never as a refusal, and name the remedy (reopen Settings)."
+	},
+	"mobile.notifications.permission.unsupported": {
+		"role": "status",
+		"note": "Settings › Notifications, the state sentence when this app build or platform has no notification support (e.g. web). States a fact; offers no action."
+	},
 	"mobile.notifications.priority_high": {
 		"role": "status",
 		"note": "Badge on a notification the sender marked high priority. One word."

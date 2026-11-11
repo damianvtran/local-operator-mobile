@@ -24,6 +24,11 @@
 	"mobile.notifications.dismiss": "Dismiss",
 	"mobile.notifications.filter_label": "Show",
 	"mobile.notifications.load_failed": "Couldn't load notifications",
+	"mobile.notifications.permission.denied": "Notifications are turned off for this app in system settings. Turn them back on there to get Team Bridge message alerts. Alerts from your computers are not switched on yet — until they are, those work only while Local Operator is open.",
+	"mobile.notifications.permission.granted": "Allowed. Team Bridge messages alert this phone when Radient's push delivery is available. Alerts from your computers are not switched on yet — until they are, those work only while Local Operator is open.",
+	"mobile.notifications.permission.undetermined": "Ask your phone for permission to get Team Bridge message alerts. Alerts from your computers are not switched on yet — until they are, those work only while Local Operator is open.",
+	"mobile.notifications.permission.unknown": "Notifications could not be checked on this phone. This is not a refusal — reopen Settings to check again.",
+	"mobile.notifications.permission.unsupported": "This build does not include notifications.",
 	"mobile.notifications.priority_high": "High",
 	"mobile.notifications.title": "Notifications"
 }
