@@ -573,6 +573,9 @@ export default function Session() {
 	 *  iOS (and edge-to-edge Android) keyboard is up, so capping against it let the
 	 *  composer's controls row run under the keyboard (TestFlight 753). */
 	const keyboardOverlap = useKeyboardFrame().overlap;
+	/* The transcript's measured height: room a composer bound by a stale top
+	 *  may still take (TestFlight 836, see `heldComposerLimit`). */
+	const [transcriptSlack, setTranscriptSlack] = useState(0);
 	/* An unchanged measurement is not a new state (perf audit P15). The composer
 	 *  publishes a FRESH `{top, height, capped}` on every layout pass and every
 	 *  measure-key change, and a fresh object re-rendered this whole screen even
@@ -1292,7 +1295,19 @@ export default function Session() {
 						measureRecovery("column", event.nativeEvent.layout.height)
 					}
 				>
-					{transcript}
+					{/* Measured for the composer's ceiling (`heldComposerLimit`'s
+					    `transcriptSlack`): the transcript is the one thing above the
+					    composer that yields, so its height is room a capped composer
+					    may still take. The wrapper is `flex-1 min-h-0` like every
+					    transcript branch inside it, so the column lays out as before. */}
+					<View
+						className="flex-1 min-h-0"
+						onLayout={(event) =>
+							setTranscriptSlack(Math.round(event.nativeEvent.layout.height))
+						}
+					>
+						{transcript}
+					</View>
 					{/* SECONDARY CHROME. Wide: the panels and the working line are plain
 					    siblings, exactly the column this screen has always had. Short
 					    landscape: the SAME children go into ONE scroller — the status strip,
@@ -1546,6 +1561,7 @@ export default function Session() {
 							width: viewportWidth,
 							height: viewportHeight,
 							keyboardOverlap,
+							transcriptSlack,
 						})}
 						onMeasure={setComposerBox}
 						/* The measured heights above the composer close the key

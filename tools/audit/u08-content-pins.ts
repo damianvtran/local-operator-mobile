@@ -654,7 +654,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// condensing): the startup and subagent screens pass `turnLive` to the
 	// list. Re-derived with --print over the staged tree; source identity
 	// only, no rendered or native proof.
-	app: "b3395f372c394955090686a8e26157c717ed28a3762f516466fdbdba34fe9c06",
+	// Composer growth / paste / Bridge gap (TestFlight 836): the session
+	// screen measures its transcript for the composer's ceiling. Re-derived
+	// with --print; source identity only, no rendered or native proof.
+	app: "5ef9d76e32727b3b2a5e3b06bcae1d8a29314f6d8699e5339f045e4f5df3725e",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1490,7 +1493,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #228 merged with main eee80204 (#224): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the merged tree.
 	// Source identity only.
-	src: "0c1c85a82ece0143dd088e2914b218c130ac04cf35f7bae7775297dcbb3fa715",
+	// Composer growth / paste / Bridge gap (TestFlight 836): heldComposerLimit's
+	// transcript slack, the 8-line composer cap, the icon-only paste control
+	// and the Bridge follower re-pin. Re-derived with --print; source
+	// identity only, no rendered or native proof.
+	src: "5199e6f590a23999b50aaf813a09880c05c02b2e2bde1fd7ddc30afa9f350217",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

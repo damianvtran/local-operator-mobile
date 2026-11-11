@@ -131,7 +131,11 @@ import {
 } from "@/ui/size-class";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
-import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
+import {
+	COMPOSER_FIELD_MAX_LINES,
+	CONTROL_DISABLED_INK,
+	cx,
+} from "@/ui/variants";
 
 /** The outcome lines the status row can rest on, and whether the row is showing a
  *  LIVE dictation (a phase) rather than a settled outcome. Both are read from the
@@ -2032,15 +2036,19 @@ export const Composer = ({
 	 *  the iOS paste prompt, a denial (`pasteNothingLine`), a failed read and the strip are one
 	 *  path. It lives on the controls row, which only paints while the field is
 	 *  focused (the expanded card), so it appears without moving the composer. */
+	/* ICON-ONLY, like the paperclip beside it (TestFlight 836: the worded
+	 *  "Paste image" chip took ~100 pt of the controls row, and the model chip,
+	 *  the row's one elastic chip, was squeezed to its 44 pt floor and read
+	 *  "Cl…"). The clipboard glyph is the attach sheet's own Paste glyph, and
+	 *  the words stay the control's accessible name and hint. */
 	const pasteChip = pasteOffer.visible ? (
-		<Chip
-			label={t("mobile.composer_input.paste.image")}
+		<IconButton
+			accessibilityLabel={t("mobile.composer_input.paste.image")}
 			accessibilityHint={t("mobile.composer_input.paste.image_hint")}
-			leadingIcon={
-				<ClipboardPaste size={ATTACH_GLYPH_PT} color={attachInk} aria-hidden />
-			}
-			quiet
-			shrink
+			icon={({ size }) => (
+				<ClipboardPaste size={size} color={attachInk} aria-hidden />
+			)}
+			size={ATTACH_GLYPH_PT}
 			disabled={attaching}
 			onPress={() => {
 				/* `"offer"`: an empty answer to THIS press is the iOS denial, not an
@@ -2293,7 +2301,10 @@ export const Composer = ({
 								? composerCopy().endedPlaceholder
 								: composerCopy().placeholder
 						}
-						maxLines={compactSingle ? 1 : 6}
+						/* Eight body lines when the screen has them (TestFlight 836: the
+						 * old six-on-a-22-pt-ruler showed ~4); `maxHeightPx` below holds
+						 * it under the header/keyboard budget. */
+						maxLines={compactSingle ? 1 : COMPOSER_FIELD_MAX_LINES}
 						/* The field's own box is the dock's ruler: the 48 pt resting row
 						 * and 44 pt in both open rows, so 56 = 4 + 48 + 4 and
 						 * 112 = 12 + 44 + 4 + 44 + 8 hold

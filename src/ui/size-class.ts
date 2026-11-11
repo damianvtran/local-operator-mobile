@@ -758,9 +758,35 @@ export const sameComposerBox = (
  */
 export const heldComposerLimit = (
 	box: ComposerBox | null,
-	viewport: { width: number; height: number; keyboardOverlap?: number },
+	viewport: {
+		width: number;
+		height: number;
+		keyboardOverlap?: number;
+		/** The height the transcript above the composer still occupies — room
+		 *  it would yield to a growing composer (it is `flex-1 min-h-0`). */
+		transcriptSlack?: number;
+	},
 ): number | null => {
 	const overlap = viewport.keyboardOverlap ?? 0;
+	/* THE YIELDABLE TOP (TestFlight 836: the composer froze at ~2 lines with
+	 *  two pasted images clipped out of its extras while half the screen was
+	 *  transcript). `capped` holds a limit of `visible - top`, and while the
+	 *  box sits AT that limit its own top is `visible - gap - height`, so the
+	 *  limit it implies is `height + gap`: ANY height the composer is once bound
+	 *  at is a fixed point. That is only the right answer when the top is the
+	 *  chrome's edge — when there is nothing left above the composer to give
+	 *  up. One measurement with a stale top (a keyboard transition: tap-in, or
+	 *  the iOS paste prompt hiding and re-showing the keyboard) bound it at the
+	 *  floor, and nothing ever let go, until a remount.
+	 *
+	 *  The transcript is the only thing above the composer that yields (it is
+	 *  `flex-1 min-h-0`), so the composer's real ceiling is measured from the
+	 *  transcript's top: `top - slack`. That quantity does not depend on the
+	 *  limit — the composer growing by d moves its top up by d and shrinks the
+	 *  transcript by d — so #206's invariant (the input never depends on the
+	 *  output it controls) is kept, and a legitimately capped composer, whose
+	 *  transcript has already collapsed to 0, is unchanged. */
+	const slack = Math.max(0, viewport.transcriptSlack ?? 0);
 	const sameWindow =
 		box !== null &&
 		box.viewportWidth === viewport.width &&
@@ -779,12 +805,17 @@ export const heldComposerLimit = (
 	 *  mid-lift), so this top is never one the animation is still moving. A
 	 *  different window is still no measurement at all (U1, above). */
 	if (sameWindow && (box.keyboardOverlap ?? 0) !== overlap && box.capped)
-		return composerLimit(viewport.height - overlap, box.top, box.height, true);
+		return composerLimit(
+			viewport.height - overlap,
+			box.top - slack,
+			box.height,
+			true,
+		);
 	const live =
 		sameWindow && (box.keyboardOverlap ?? 0) === overlap ? box : null;
 	return composerLimit(
 		viewport.height - overlap,
-		live?.top ?? null,
+		live ? live.top - slack : null,
 		live?.height ?? null,
 		live?.capped ?? false,
 	);

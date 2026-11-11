@@ -252,6 +252,38 @@ describe("following after positioning", () => {
 	});
 });
 
+describe("a follower re-pins when the viewport GROWS (TestFlight 836)", () => {
+	/* The operator's #general screenshot: the keyboard (or a tall draft) had
+	 *  shortened the list, the follower sat at the end, and when the list grew
+	 *  back iOS kept the old offset — the host below does not clamp on layout,
+	 *  as UIScrollView does not — so the newest message hung ~150 pt above the
+	 *  composer over blank canvas. */
+	it.each([false, true])(
+		"keyboard down brings the newest row back to the composer (web: %s)",
+		(web) => {
+			const r = openLong(web);
+			expect(r.bottom).toBe(2718);
+			r.layout(300); // keyboard up: the follower is re-pinned at the end
+			r.flush();
+			expect(r.bottom).toBe(2718);
+			r.moves.mockClear();
+			r.layout(450); // keyboard down: the list grows by 150 pt
+			r.flush();
+			expect(r.moves).toHaveBeenCalledWith(2718 - 450);
+			expect(r.y).toBe(2718 - 450);
+			expect(r.bottom).toBe(2718);
+		},
+	);
+	it("still leaves a history reader where they are when the list grows", () => {
+		const r = openLong(false);
+		r.scrollTo(900);
+		r.moves.mockClear();
+		r.layout(700);
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.y).toBe(900);
+	});
+});
+
 describe("read marks", () => {
 	it("posts once, for the newest seq, on open", () => {
 		const r = host({ web: true });
