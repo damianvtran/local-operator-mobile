@@ -14,16 +14,37 @@ const host = vi.hoisted(() => ({
 	}[],
 	open: vi.fn(async (_url: string) => undefined),
 	copies: [] as (() => void)[],
+	os: "web" as "web" | "ios" | "android",
+	/* What `useWindowDimensions` reports: the table seeds its column width
+	 *  from it before `onLayout` (which static markup never fires). */
+	window: { width: 390, height: 844 },
 }));
 vi.mock("react-native", async () => {
 	const { createElement } = await import("react");
+	/* The host's styling props are serialised onto the markup (`data-class`,
+	 *  `data-style`, `data-testid`) so a test can read the layout CONTRACT the
+	 *  component hands the native host — the shared column widths and the code
+	 *  face — without a layout engine. */
+	const hostProps = (props: {
+		className?: string;
+		style?: unknown;
+		testID?: string;
+	}) => ({
+		"data-class": props.className,
+		"data-style": props.style ? JSON.stringify(props.style) : undefined,
+		"data-testid": props.testID,
+	});
 	const text = ({
 		children,
 		accessibilityRole,
 		onPress,
+		...rest
 	}: {
 		children: ReactNode;
 		accessibilityRole?: string;
+		className?: string;
+		style?: unknown;
+		testID?: string;
 		onPress?: (event: {
 			stopPropagation: () => void;
 			preventDefault: () => void;
@@ -33,12 +54,19 @@ vi.mock("react-native", async () => {
 			host.links.push({ label: String(children), press: onPress });
 		return createElement(
 			accessibilityRole === "link" ? "a" : "span",
-			{ role: accessibilityRole },
+			{ role: accessibilityRole, ...hostProps(rest) },
 			children,
 		);
 	};
-	const view = ({ children }: { children: ReactNode }) =>
-		createElement("div", null, children);
+	const view = ({
+		children,
+		...rest
+	}: {
+		children: ReactNode;
+		className?: string;
+		style?: unknown;
+		testID?: string;
+	}) => createElement("div", hostProps(rest), children);
 	return {
 		Text: text,
 		View: view,
@@ -53,8 +81,15 @@ vi.mock("react-native", async () => {
 			if (onLongPress) host.copies.push(onLongPress);
 			return view({ children });
 		},
-		Platform: { OS: "web" },
+		Platform: {
+			get OS() {
+				return host.os;
+			},
+			select: (options: Record<string, unknown>) =>
+				host.os in options ? options[host.os] : options.default,
+		},
 		Linking: { openURL: host.open },
+		useWindowDimensions: () => host.window,
 	};
 });
 vi.mock("react-native-svg", async () => {
@@ -177,5 +212,177 @@ describe("rendered assistant markdown dispatch", () => {
 		expect(markup).toContain("&lt;script&gt;");
 		expect(markup).toContain("[code](https://example.com)");
 		expect(markup).toContain("[fenced](https://example.com)");
+	});
+});
+
+/* The operator's report (iPhone build 773): the "wait & bash sleep — Actual
+ *  Impact" answer, reconstructed from the screenshot's visible cells. Its
+ *  label column carries inline code and is the longest column, which is what
+ *  made each row's flex layout settle on different boundaries. */
+const IMPACT_ANSWER = [
+	"Your instinct on `wait` was spot-on — once I separated **true** `wait_ms` **timeouts** from event-driven early returns, the picture changed completely:",
+	"",
+	"### `wait` & `bash sleep` — Actual Impact",
+	"",
+	"| Pattern | Calls (%) | 24h Calls | Lifetime | 24h Cost |",
+	"| --- | --- | --- | --- | --- |",
+	"| `wait` early return (inbound message) | 4,121 (46.3%) | 550 | $66.64 | $8.12 |",
+	"| `wait` child settled | 2,266 (25.5%) | 114 | $24.79 | $1.66 |",
+	"| `hub`/peer wake-ups | 1,083 (12.2%) | 115 | $6.28 | $0.97 |",
+	"| true `wait_ms` timeouts | 663 (7.4%) | 123 | $10.91 | $0.40 |",
+	"| `bash sleep` (any), 484 CI polls | 13 | $1.28 | $0.40 | 54% (161/296) |",
+	"",
+	"```bash",
+	"lop wait --job 4f2c --wait-ms 600000   # long line that must scroll, never wrap",
+	"```",
+].join("\n");
+
+/* Rows are found by their test ids and each row's cells are the cell styles
+ *  between it and the next row marker; the table is the only owner of either id. */
+const ROW_MARK = /data-testid="md-table-(?:head|row)"/g;
+const CELL_STYLE = /data-style="([^"]*)" data-testid="md-table-cell"/g;
+const decodeQuotes = (value: string) => value.replace(/&quot;/g, '"');
+/** Any horizontal or all-side padding utility, on any platform variant. */
+const CHIP_PADDING = /(^|\s)(web:)?p[xse]?-/;
+const INLINE_CHIP =
+	/<span data-class="([^"]*)"(?: data-style="([^"]*)")?>wait<\/span>/;
+const FENCE_BODY =
+	/<span data-class="[^"]*font-mono[^"]*" data-style="([^"]*)">lop wait/;
+
+describe("operator report: table columns and code faces (build 773)", () => {
+	beforeEach(() => {
+		host.os = "web";
+	});
+
+	it("gives the header and every body row the SAME explicit column widths", () => {
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, { text: IMPACT_ANSWER }),
+		);
+		const marks = [...markup.matchAll(ROW_MARK)].map((mark) => mark.index ?? 0);
+		const rows = marks.map((start, index) =>
+			[...markup.slice(start, marks[index + 1]).matchAll(CELL_STYLE)].map(
+				(cell) =>
+					JSON.parse(decodeQuotes(cell[1] ?? "{}")) as Record<string, number>,
+			),
+		);
+		// One header + five body rows, five cells each.
+		expect(rows).toHaveLength(6);
+		for (const row of rows) expect(row).toHaveLength(5);
+		const header = rows[0] ?? [];
+		for (const cell of header) {
+			// A fixed width, not a flex share: a row-local flex pass is what let
+			// each iOS row settle on its own boundaries.
+			expect(cell.width).toBeGreaterThan(0);
+			expect(cell.flexGrow ?? 0).toBe(0);
+			expect(cell.flexShrink).toBe(0);
+		}
+		for (const row of rows.slice(1))
+			expect(row.map((cell) => cell.width)).toEqual(
+				header.map((cell) => cell.width),
+			);
+	});
+
+	it("renders inline code as a mono chip, natively naming a bundled face", () => {
+		for (const os of ["web", "ios", "android"] as const) {
+			host.os = os;
+			const markup = renderToStaticMarkup(
+				createElement(Markdown, { text: "Use `wait` not `bash sleep`." }),
+			);
+			const chip = markup.match(INLINE_CHIP);
+			expect(chip).not.toBeNull();
+			expect(chip?.[1]).toContain("font-mono");
+			// `elevated`, not `sunken`: sunken is the header's own fill, so a
+			// backticked header cell drew no chip at all (PR #224 m2 / D1).
+			expect(chip?.[1]).toContain("bg-elevated");
+			expect(chip?.[1]).not.toContain("bg-sunken");
+			// No chip padding: 2pt is off space.scale (U-42) and unpriced width
+			// that broke a 64-char digest in its column (U-39) — CI 42948464285.
+			expect(chip?.[1]).not.toMatch(CHIP_PADDING);
+			const style = chip?.[2] ? JSON.parse(decodeQuotes(chip[2])) : {};
+			// React Native cannot resolve a CSS fallback LIST: the theme's
+			// `--font-mono` stack silently became the system face on iPhone.
+			expect(style.fontFamily).toBe(
+				os === "web" ? undefined : "JetBrainsMono-Regular",
+			);
+			// No `calt` ligatures natively: `!=` must not draw as `≠` (D4).
+			expect(style.fontVariant).toEqual(
+				os === "web" ? undefined : ["no-contextual"],
+			);
+		}
+	});
+
+	it("gives a fenced block's body the bundled mono face natively", () => {
+		host.os = "ios";
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, { text: IMPACT_ANSWER }),
+		);
+		const body = markup.match(FENCE_BODY);
+		expect(body).not.toBeNull();
+		expect(JSON.parse(decodeQuotes(body?.[1] ?? "{}")).fontFamily).toBe(
+			"JetBrainsMono-Regular",
+		);
+	});
+});
+
+describe("a fitting table's first frame is its settled frame (PR #224 m1 / D2)", () => {
+	const FITS = "| Key | Value |\n| --- | --- |\n| `a` | b |";
+	const cellWidths = (markup: string) => {
+		const head = markup.indexOf('data-testid="md-table-head"');
+		const row = markup.indexOf('data-testid="md-table-row"');
+		return [...markup.slice(head, row).matchAll(CELL_STYLE)].map(
+			(cell) =>
+				(JSON.parse(decodeQuotes(cell[1] ?? "{}")) as { width: number }).width,
+		);
+	};
+	const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
+
+	beforeEach(() => {
+		host.os = "web";
+		host.window = { width: 390, height: 844 };
+	});
+
+	it("fills the seeded column before any onLayout has run", () => {
+		// Static markup never fires onLayout, so this IS the first frame. QA
+		// measured the fitting table at 356 px once settled at 390 (390 − 2·16
+		// gutters − 2·1 border); before the seed it painted at 171.4 first.
+		const at390 = cellWidths(
+			renderToStaticMarkup(createElement(Markdown, { text: FITS })),
+		);
+		expect(at390).toHaveLength(2);
+		expect(sum(at390)).toBeCloseTo(356, 6);
+		host.window = { width: 320, height: 640 };
+		const at320 = cellWidths(
+			renderToStaticMarkup(createElement(Markdown, { text: FITS })),
+		);
+		expect(sum(at320)).toBeCloseTo(286, 6);
+	});
+
+	it("draws no cue on a row exactly as wide as its bleeded viewport (U-40)", () => {
+		// CI run 42948464285: S5 rich-rows on iphone-se drew the cue on a 302pt
+		// row in a 302pt viewport. Priced: Key 4·12 + 10·12 = 168, natural =
+		// 168 + 3 borders + 4·12 padding = 219. At 235 the column is 203, the
+		// bleeded viewport's content 203 + 16 − 2 = 217 and the row 219 − 2 =
+		// 217: it fits exactly, so nothing scrolls. One pt narrower, it does.
+		const EXACT = "| Key | abcdefghij |\n| --- | --- |\n| a | b |";
+		const cue = 'data-testid="md-table-scroll-cue"';
+		host.window = { width: 235, height: 640 };
+		const exact = renderToStaticMarkup(
+			createElement(Markdown, { text: EXACT }),
+		);
+		expect(sum(cellWidths(exact))).toBeCloseTo(217, 6);
+		expect(exact).not.toContain(cue);
+		host.window = { width: 234, height: 640 };
+		expect(
+			renderToStaticMarkup(createElement(Markdown, { text: EXACT })),
+		).toContain(cue);
+	});
+
+	it("falls back to the priced boxes when the window is unknown", () => {
+		host.window = { width: 0, height: 0 };
+		const priced = sum(
+			cellWidths(renderToStaticMarkup(createElement(Markdown, { text: FITS }))),
+		);
+		expect(priced).toBeLessThan(286);
+		expect(priced).toBeGreaterThan(0);
 	});
 });

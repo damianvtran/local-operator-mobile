@@ -1386,6 +1386,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
 	// src carried, so neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source identity only, no rendered or native proof.
+	// Re-pinned 2026-11-10 for PR #224 (markdown table columns + code faces)
+	// with its round-1 remediation (M1, m1/D2 seeded table width, m2/D1 chip
+	// wash, D4 native ligatures, n1; the width estimate lives in `ui/column.ts`
+	// so the node-loaded `markdown.ts` stays import-free), merged with main
+	// 56831114: only `src` moves, re-derived with --print over the merged
+	// tree. Source admission only, NOT a rendered geometry proof.
 	// fix/bridge-composer-keyboard-glass (TestFlight 800): the Bridge composer
 	// docks above the keyboard from #216's store (new composer-dock.tsx, no
 	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
@@ -1395,6 +1401,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// file only, but `src` covers tests, so it moves. --print over the staged
 	// tree; source identity only, no rendered or native proof.
 	// PR #225 merged with main 56831114 (#220 refused-connect feedback): both
+	// sides' src carried, so neither parent's digest; re-derived with --print
+	// over the staged merged tree. Source identity only, no rendered or native
+	// proof.
+	// PR #224 merged with main 240362a6 (#225 composer keyboard glass): both
 	// sides' src carried, so neither parent's digest; re-derived with --print
 	// over the staged merged tree. Source identity only, no rendered or native
 	// proof.
@@ -1419,6 +1429,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// glass shell): both sides' src carried, so neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
+	// PR #224 merged with main 98e53308 (#222 bridge nav polish): both sides'
+	// src carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
+	// PR #224 CI audit fix (run 42948464285): inline-code chip loses its
+	// off-scale 2pt web padding (U-42/U-39) and the table cue reads the laid-out
+	// row against its viewport (U-40). --print over the staged tree; source
+	// identity only, no rendered or native proof.
 	// Transcript condensing polish: Tier A `FoldBar`, idle completed-turn
 	// condensing, the shared 16/40 pt trace rail, spacing tiers, hub and Team
 	// Bridge receipt rows, `relay.transcript.*` catalogues. --print over the
@@ -1455,6 +1472,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #226 merged with main d78ca861 (#223): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only, no rendered or native proof.
+	// PR #224 merged with main 9fe002f3 (#223, #226): both sides' src
+	// carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
 	// feat/bridge-last-target: the last-target memory, the message-anchored
 	// thread open and its Jump to newest copy (8 locales). --print over the
 	// committed tree; source identity only.
@@ -1467,7 +1487,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// source identity only.
 	// PR #228 round-2 QA remediation (Q2-1): an anchored landing's own scroll
 	// no longer resumes following. --print over this tree; source identity only.
-	src: "e05287f85b9af0a3b28a09e978831cefa7a886d09fa1c6aa527f2174eb8568ca",
+	// PR #228 merged with main eee80204 (#224): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the merged tree.
+	// Source identity only.
+	src: "0c1c85a82ece0143dd088e2914b218c130ac04cf35f7bae7775297dcbb3fa715",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
