@@ -38,8 +38,10 @@ vi.mock("lucide-react-native", async () => {
 		Clock: () => createElement("span"),
 		MessageSquare: () => createElement("span"),
 		Bot: () => createElement("span", { "data-agent-glyph": "true" }),
+		UserRound: () => createElement("span", { "data-user-glyph": "true" }),
 	};
 });
+vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 
 // Synthetic marker, deliberately not a decoded-photo/pixel claim. A positive
 // human control proves the fixture exposes cached bytes through the real mark;

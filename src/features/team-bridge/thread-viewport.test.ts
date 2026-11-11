@@ -298,7 +298,11 @@ describe("screen wiring", () => {
 	it("keeps the heading semantic and scalable and the identity account scoped", () => {
 		// The heading is the session header's title style now (one line, two
 		// when stacked): `thread-chrome.test.tsx` renders and pins it.
-		expect(source).toContain("titleNode={<BridgeThreadTitle title={title} />}");
+		expect(source).toContain("<BridgeThreadTitle");
+		// The drawn `# ` is decorative: the spoken name is the plain title (R1-10).
+		expect(source).toContain(
+			"accessibilityLabel={title === rawTitle ? undefined : rawTitle}",
+		);
 		// Stacked, the notifications icon rides the back row like the session's.
 		expect(source).toContain("stackedActionsBeside");
 		expect(source).not.toContain("allowFontScaling={false}");

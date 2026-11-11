@@ -1394,7 +1394,28 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// sides' src carried, so neither parent's digest; re-derived with --print
 	// over the staged merged tree. Source identity only, no rendered or native
 	// proof.
-	src: "01807a9d9f7bb04739b86cfb3a143410386ebc3eef09c0e6f208e3b0eb80eabd",
+	// feat/bridge-nav-polish: minimal sunken WorkspaceModeBar + unified top close
+	// row, shared WorkspaceSidebarFooter across drawer modes, and Team Bridge
+	// directory/thread/delivery/sheet polish. Re-derived with --print over the
+	// staged src tree; source identity only, no rendered or native proof.
+	// #222 round-1 remediation: one-row mode bar below large text, docked
+	// Bridge footer, raised directory skeletons/row fills, full-width profile
+	// rows, author touch box. --print over the staged tree; source identity
+	// only, no rendered or native proof.
+	// #222 round-2 remediation: out-of-flow Team Bridge count below large
+	// text, content-proportioned segments and whole-word labels above it,
+	// docked directory on its canvas ground. --print over the staged tree;
+	// source identity only, no rendered or native proof.
+	// Converged #222 onto main becb972b (#216): src re-derived with --print over
+	// the merged tree. Source identity only, no rendered or native proof.
+	// Converged #222 onto main 56831114 (#220) and moved WorkspaceModeBar onto
+	// space.scale (U-42); src re-derived with --print over the merged tree.
+	// Source identity only, no rendered or native proof.
+	// Converged #222 onto main 240362a6 (#225 Bridge composer keyboard dock +
+	// glass shell): both sides' src carried, so neither parent's digest;
+	// re-derived with --print over the staged merged tree. Source identity
+	// only, no rendered or native proof.
+	src: "61a338c88fec56efe78cce3647fb8630cf97fbc3c539c799f39d0cfeb35a25d3",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

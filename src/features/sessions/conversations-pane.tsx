@@ -44,6 +44,10 @@ import {
 import { SessionRow } from "@/features/sessions/session-row";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
+import {
+	useOptionalWorkspaceDrawer,
+	WorkspaceModeBar,
+} from "@/features/sessions/workspace-drawer";
 import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
@@ -140,6 +144,13 @@ export type ConversationsPaneProps = {
 	 * hardcoded ring was right in exactly one placement (agent review round 2, R2-2).
 	 * Undefined leaves `ListRow`'s own default (the screen canvas) in place.
 	 */
+	/**
+	 * When true, the caller (`WorkspaceDrawerProvider`) already rendered the
+	 * top mode bar and `CONTROL.sidebarClose`, so this pane omits a duplicate
+	 * close button on its search row. Defaults to false so standalone drawer
+	 * renders without a `bridgeAdapter` still carry `CONTROL.sidebarClose`.
+	 */
+	hideCloseButton?: boolean;
 	surfaceClassName?: string;
 };
 
@@ -168,6 +179,240 @@ const RailCount = ({ count }: { count: number }) => {
 	);
 };
 
+/**
+ * Shared workspace footer (computer switcher, Settings, Inbox/Past/Projects/
+ * Schedules/Library rail + large-text "More" sheet). Extracted so both `Agents`
+ * and `Team Bridge` drawer modes keep consistent workspace navigation at the
+ * bottom of the panel, matching Desktop's `SidebarFoot` (`team-bridge-route-column.tsx`).
+ */
+export const WorkspaceSidebarFooter = ({
+	onNavigate,
+	hasModeHeader = false,
+	style,
+}: {
+	onNavigate?: () => void;
+	/** True when a labelled `WorkspaceModeBar` already sits at the top of this
+	 *  panel (either the phone drawer with a `bridgeAdapter` or the docked
+	 *  split pane with one), so the compact footer icon is not rendered a second time. */
+	hasModeHeader?: boolean;
+	style?: { marginHorizontal: number };
+}) => {
+	const router = useRouter();
+	const capabilities = useListState((state) => state.capabilities);
+	const inboxBlock = useListState((state) => state.notifications);
+	const inboxCount = inboxBadgeCount(inboxBlock);
+	const hasInboxCount = inboxCount !== null && inboxCount > 0;
+	const [destinationsOpen, setDestinationsOpen] = useState(false);
+	const destinationInk = useTokenColor("ink-muted");
+	const { effectiveScale } = useTextScale();
+	const largeText = effectiveScale > LARGE_TEXT_SCALE;
+
+	const destinations = [
+		...(notificationsEnabled(capabilities)
+			? [
+					{
+						key: "inbox",
+						label: t("mobile.chrome.destination.inbox"),
+						accessibilityLabel: hasInboxCount
+							? t("mobile.chrome.destination.inbox_count", {
+									count: inboxCount ?? 0,
+								})
+							: t("mobile.chrome.destination.inbox"),
+						route: "/notifications",
+						Icon: Inbox,
+						count: hasInboxCount ? inboxCount : null,
+						testID: CONTROL.sidebarNotifications,
+					},
+				]
+			: []),
+		{
+			key: "past",
+			label: t("mobile.chrome.destination.past"),
+			accessibilityLabel: t("relay.chrome.drawer.past"),
+			route: "/past",
+			Icon: History,
+			count: null,
+			testID: CONTROL.sidebarPast,
+		},
+		{
+			key: "projects",
+			label: t("relay.chrome.drawer.projects"),
+			accessibilityLabel: t("relay.chrome.drawer.projects"),
+			route: "/projects",
+			Icon: FolderKanban,
+			count: null,
+			testID: CONTROL.sidebarProjects,
+		},
+		{
+			key: "schedules",
+			label: t("mobile.chrome.destination.schedules"),
+			accessibilityLabel: t("mobile.chrome.destination.schedules"),
+			route: "/schedules",
+			Icon: CalendarClock,
+			count: null,
+			testID: CONTROL.sidebarSchedules,
+		},
+		...(libraryEnabled(capabilities)
+			? [
+					{
+						key: "library",
+						label: t("relay.chrome.drawer.library"),
+						accessibilityLabel: t("relay.chrome.drawer.library"),
+						route: "/library",
+						Icon: Library,
+						count: null,
+						testID: CONTROL.sidebarLibrary,
+					},
+				]
+			: []),
+	] as const;
+
+	const go = (route: string) => {
+		onNavigate?.();
+		router.push(route as never);
+	};
+
+	return (
+		<>
+			<View
+				className="gap-2 border-t border-hairline px-2 pt-1 pb-2"
+				style={style}
+				testID={REGION.sidebarFooter}
+			>
+				{/* The workspace row sits ABOVE the destinations (design spec 2026-11-06
+				 *  § 4): the destinations are the panel's bottom bar, at the edge the thumb
+				 *  rests on, and the computer chip reads as the context the list above
+				 *  belongs to rather than as a sixth destination.
+				 *
+				 *  `gap-2` (8 pt), not `gap-1`: the Inbox count rides 6 pt ABOVE its icon
+				 *  (`top: -6` below), out of flow, and the slot's content grows to fill
+				 *  it as text scales, so at worst the icon sits flush with the slot's top.
+				 *  With a 4 pt gap the badge crossed the computer chip's outline (0.4 pt
+				 *  at 100 % on iOS, 2 pt at 135 %; design round 1 D1); 8 pt keeps it
+				 *  clear at every scale. `sidebar-footer.test.ts` pins the arithmetic. */}
+				<View className="flex-row items-center gap-1">
+					<View className="min-w-0 flex-1">
+						<DrawerComputerRow
+							testID={CONTROL.sidebarComputers}
+							onNavigate={onNavigate}
+						/>
+					</View>
+					{/* Team Bridge: a hub destination, never a relay capability, so it is
+					 *  not capability-gated. Shown as a compact icon control ONLY when no
+					 *  labelled `WorkspaceModeBar` sits at the top of the panel; inside
+					 *  the drawer or split pane with `bridgeAdapter`, the mode bar owns
+					 *  the labelled Agents / Team Bridge switch so we never duplicate an
+					 *  unlabelled icon in the footer. */}
+					{hasModeHeader ? null : (
+						<TeamBridgeEntry variant="compact" onNavigate={onNavigate} />
+					)}
+					<IconButton
+						accessibilityLabel={t("relay.chrome.drawer.settings")}
+						onPress={() => go("/settings")}
+						icon={({ color, size }) => <Settings color={color} size={size} />}
+						testID={CONTROL.settingsButton}
+					/>
+				</View>
+				{largeText ? (
+					/* ≥ 200 %-class text: one honest row instead of five clipped labels. */
+					<Pressable
+						accessibilityRole={ROLE.button}
+						accessibilityLabel={t("relay.chrome.row.more")}
+						accessibilityHint={t("mobile.chrome.destinations")}
+						onPress={() => setDestinationsOpen(true)}
+						testID={CONTROL.sidebarMore}
+						className="flex-row items-center gap-3 px-2"
+						style={{ minHeight: TOUCH_FLOOR }}
+					>
+						<Text
+							className="min-w-0 flex-1 text-body-sm text-ink"
+							numberOfLines={1}
+						>
+							{t("relay.chrome.row.more")}
+						</Text>
+						{hasInboxCount ? <RailCount count={inboxCount} /> : null}
+						<ChevronRight size={18} color={destinationInk} aria-hidden />
+					</Pressable>
+				) : (
+					<View className="flex-row" accessibilityRole="toolbar">
+						{destinations.map((item) => (
+							/* `gap-1`: the icon-to-label step is the scale's 4 pt, not
+							 *  `gap-0.5`'s off-scale 2 pt (U-42); the touch-floor slot absorbs it. */
+							<Pressable
+								key={item.key}
+								accessibilityRole={ROLE.button}
+								accessibilityLabel={item.accessibilityLabel}
+								onPress={() => go(item.route)}
+								testID={item.testID}
+								className="min-w-0 flex-1 items-center justify-center gap-1"
+								style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
+							>
+								<View>
+									<item.Icon size={20} color={destinationInk} aria-hidden />
+									{item.count !== null ? (
+										/* The count on the ICON's corner (record §3): out of
+										 *  flow, so it never shifts the label off the slot's
+										 *  centre — the asymmetry D19–D23 spent four rounds on. */
+										<View
+											pointerEvents="none"
+											className="absolute"
+											style={{ top: -6, start: 12 }}
+										>
+											<RailCount count={item.count} />
+										</View>
+									) : null}
+								</View>
+								{/* `meta` (12 pt sans), not the mono label: the mono step's wide
+								 *  advance cut "Projects"/"Schedules" to "Projec…" in a 65 pt slot
+								 *  on the first web capture. */}
+								<Text className="text-meta text-ink-muted" numberOfLines={1}>
+									{item.label}
+								</Text>
+							</Pressable>
+						))}
+					</View>
+				)}
+			</View>
+
+			{/* "More" at large text: the same destinations as the strip, as full
+			 *  rows a 200 % label fits in. Closes before navigating, like every row
+			 *  sheet here, so no sheet is left stacked under the next screen. */}
+			<Sheet
+				visible={destinationsOpen}
+				onClose={() => setDestinationsOpen(false)}
+				title={t("mobile.chrome.destinations")}
+				testID={CONTROL.sidebarDestinationsSheet}
+			>
+				<View className="pb-4">
+					{destinations.map((item) => (
+						<Pressable
+							key={item.key}
+							accessibilityRole={ROLE.button}
+							accessibilityLabel={item.accessibilityLabel}
+							onPress={() => {
+								setDestinationsOpen(false);
+								go(item.route);
+							}}
+							className="flex-row items-center gap-3 px-4"
+							style={{ minHeight: TOUCH_FLOOR }}
+						>
+							<item.Icon size={20} color={destinationInk} aria-hidden />
+							<Text className="min-w-0 flex-1 text-body text-ink">
+								{item.accessibilityLabel === item.label
+									? item.label
+									: item.key === "inbox"
+										? item.label
+										: item.accessibilityLabel}
+							</Text>
+							{item.count !== null ? <RailCount count={item.count} /> : null}
+						</Pressable>
+					))}
+				</View>
+			</Sheet>
+		</>
+	);
+};
+
 export const ConversationsPane = ({
 	onClose,
 	currentSessionId,
@@ -175,6 +420,7 @@ export const ConversationsPane = ({
 	onNewChat,
 	notice,
 	homeDirectory,
+	hideCloseButton = false,
 	surfaceClassName,
 }: ConversationsPaneProps) => {
 	const router = useRouter();
@@ -199,17 +445,15 @@ export const ConversationsPane = ({
 		state.stale ? state.lastFrameAt : null,
 	);
 	const capabilities = useListState((state) => state.capabilities);
-	/* The inbox's own count, off the list frame (contract §5.4). `null` draws no
-	 * numeral — an older relay's omission is unknown, never a zero. */
-	const inboxBlock = useListState((state) => state.notifications);
-	const inboxCount = inboxBadgeCount(inboxBlock);
 	const route = useConnectionState((state) => state.route);
-
-	/* Whether the inbox has a count to show on its destination's icon. `null` is
-	 *  an older relay's omission (unknown), never a zero. */
-	const hasInboxCount = inboxCount !== null && inboxCount > 0;
-	const [destinationsOpen, setDestinationsOpen] = useState(false);
 	const destinationInk = useTokenColor("ink-muted");
+	const workspaceDrawer = useOptionalWorkspaceDrawer();
+	const dockedBridgeAdapter = !onClose
+		? workspaceDrawer?.bridgeAdapter
+		: undefined;
+	const dockedMode = dockedBridgeAdapter
+		? (workspaceDrawer?.mode ?? "agents")
+		: "agents";
 
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -430,179 +674,51 @@ export const ConversationsPane = ({
 	 *
 	 *  Short landscape still scrolls the footer WITH the list (`scrollFooter`); the
 	 *  negative margin only cancels the list's px-4 there. */
-	const destinations = [
-		...(notificationsEnabled(capabilities)
-			? [
-					{
-						key: "inbox",
-						label: t("mobile.chrome.destination.inbox"),
-						accessibilityLabel: hasInboxCount
-							? t("mobile.chrome.destination.inbox_count", {
-									count: inboxCount ?? 0,
-								})
-							: t("mobile.chrome.destination.inbox"),
-						route: "/notifications",
-						Icon: Inbox,
-						count: hasInboxCount ? inboxCount : null,
-						testID: CONTROL.sidebarNotifications,
-					},
-				]
-			: []),
-		{
-			key: "past",
-			label: t("mobile.chrome.destination.past"),
-			accessibilityLabel: t("relay.chrome.drawer.past"),
-			route: "/past",
-			Icon: History,
-			count: null,
-			testID: CONTROL.sidebarPast,
-		},
-		{
-			key: "projects",
-			label: t("relay.chrome.drawer.projects"),
-			accessibilityLabel: t("relay.chrome.drawer.projects"),
-			route: "/projects",
-			Icon: FolderKanban,
-			count: null,
-			testID: CONTROL.sidebarProjects,
-		},
-		{
-			key: "schedules",
-			label: t("mobile.chrome.destination.schedules"),
-			accessibilityLabel: t("mobile.chrome.destination.schedules"),
-			route: "/schedules",
-			Icon: CalendarClock,
-			count: null,
-			testID: CONTROL.sidebarSchedules,
-		},
-		...(libraryEnabled(capabilities)
-			? [
-					{
-						key: "library",
-						label: t("relay.chrome.drawer.library"),
-						accessibilityLabel: t("relay.chrome.drawer.library"),
-						route: "/library",
-						Icon: Library,
-						count: null,
-						testID: CONTROL.sidebarLibrary,
-					},
-				]
-			: []),
-	] as const;
-	const go = (route: string) => {
-		onNavigate?.();
-		router.push(route as never);
-	};
+	const hasModeHeader = Boolean(onClose || dockedBridgeAdapter);
 	const footer = (
-		<View
-			className="gap-2 border-t border-hairline px-2 pt-1 pb-2"
+		<WorkspaceSidebarFooter
+			onNavigate={onNavigate}
+			hasModeHeader={hasModeHeader}
 			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
-			testID={REGION.sidebarFooter}
-		>
-			{/* The workspace row sits ABOVE the destinations (design spec 2026-11-06
-			 *  § 4): the destinations are the panel's bottom bar, at the edge the thumb
-			 *  rests on, and the computer chip reads as the context the list above
-			 *  belongs to rather than as a sixth destination.
-			 *
-			 *  `gap-2` (8 pt), not `gap-1`: the Inbox count rides 6 pt ABOVE its icon
-			 *  (`top: -6` below), out of flow, and the slot's content grows to fill
-			 *  it as text scales, so at worst the icon sits flush with the slot's top.
-			 *  With a 4 pt gap the badge crossed the computer chip's outline (0.4 pt
-			 *  at 100 % on iOS, 2 pt at 135 %; design round 1 D1); 8 pt keeps it
-			 *  clear at every scale. `sidebar-footer.test.ts` pins the arithmetic. */}
-			<View className="flex-row items-center gap-1">
-				<View className="min-w-0 flex-1">
-					<DrawerComputerRow
-						testID={CONTROL.sidebarComputers}
-						onNavigate={onNavigate}
-					/>
-				</View>
-				{/* Team Bridge: a hub destination, never a relay capability, so it is
-				 *  not capability-gated. It is ONE CONTROL ON THIS ROW now (visual
-				 *  audit D11): as its own band — a centred label over a two-line
-				 *  caption, ~74 pt — it read as a promotion and cost the list a row
-				 *  and a half. Beside the gear it is a toolbar item like Settings,
-				 *  with its unread count on the icon; and because this row is kept
-				 *  at every text size, it stays reachable where the strip below
-				 *  collapses to "More". */}
-				{/* Inside the drawer (`onClose` is passed only there) the drawer's own
-				 *  labelled Agents / Team Bridge switch is the entry, so this icon would
-				 *  be a second, unlabelled one. The docked tablet pane has no drawer
-				 *  header, so it keeps the icon. */}
-				{onClose ? null : (
-					<TeamBridgeEntry variant="compact" onNavigate={onNavigate} />
-				)}
-				<IconButton
-					accessibilityLabel={t("relay.chrome.drawer.settings")}
-					onPress={() => go("/settings")}
-					icon={({ color, size }) => <Settings color={color} size={size} />}
-					testID={CONTROL.settingsButton}
+		/>
+	);
+
+	if (dockedBridgeAdapter && dockedMode === "team-bridge") {
+		return (
+			<View className="flex-1" style={{ paddingTop: 0 }}>
+				<WorkspaceModeBar
+					mode={dockedMode}
+					onSelectMode={(next) => workspaceDrawer?.selectMode(next)}
+					bridgeBadge={dockedBridgeAdapter.bridgeBadge}
+				/>
+				{dockedBridgeAdapter.bridgePane({
+					onNavigate: onNavigate ?? (() => undefined),
+				})}
+				{/* The workspace footer (computer switcher, Settings, Inbox/Past/
+				 *  Projects/Schedules/Library) belongs to the PANEL, not to the
+				 *  Agents mode: dropping it here left a docked split view in Team
+				 *  Bridge mode with no way to Settings or the destinations short of
+				 *  switching modes first (review R1-1). The bridge pane owns its own
+				 *  scroll, so the footer always pins below it — without the
+				 *  short-landscape negative margin, which only cancels the
+				 *  conversation list's px-4 and has no list to cancel here. */}
+				<WorkspaceSidebarFooter
+					onNavigate={onNavigate}
+					hasModeHeader={hasModeHeader}
 				/>
 			</View>
-			{largeText ? (
-				/* ≥ 200 %-class text: one honest row instead of five clipped labels. */
-				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={t("relay.chrome.row.more")}
-					accessibilityHint={t("mobile.chrome.destinations")}
-					onPress={() => setDestinationsOpen(true)}
-					testID={CONTROL.sidebarMore}
-					className="flex-row items-center gap-3 px-2"
-					style={{ minHeight: TOUCH_FLOOR }}
-				>
-					<Text
-						className="min-w-0 flex-1 text-body-sm text-ink"
-						numberOfLines={1}
-					>
-						{t("relay.chrome.row.more")}
-					</Text>
-					{hasInboxCount ? <RailCount count={inboxCount} /> : null}
-					<ChevronRight size={18} color={destinationInk} aria-hidden />
-				</Pressable>
-			) : (
-				<View className="flex-row" accessibilityRole="toolbar">
-					{destinations.map((item) => (
-						/* `gap-1`: the icon-to-label step is the scale's 4 pt, not
-						 *  `gap-0.5`'s off-scale 2 pt (U-42); the touch-floor slot absorbs it. */
-						<Pressable
-							key={item.key}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={item.accessibilityLabel}
-							onPress={() => go(item.route)}
-							testID={item.testID}
-							className="min-w-0 flex-1 items-center justify-center gap-1"
-							style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
-						>
-							<View>
-								<item.Icon size={20} color={destinationInk} aria-hidden />
-								{item.count !== null ? (
-									/* The count on the ICON's corner (record §3): out of
-									 *  flow, so it never shifts the label off the slot's
-									 *  centre — the asymmetry D19–D23 spent four rounds on. */
-									<View
-										pointerEvents="none"
-										className="absolute"
-										style={{ top: -6, start: 12 }}
-									>
-										<RailCount count={item.count} />
-									</View>
-								) : null}
-							</View>
-							{/* `meta` (12 pt sans), not the mono label: the mono step's wide
-							 *  advance cut "Projects"/"Schedules" to "Projec…" in a 65 pt slot
-							 *  on the first web capture. */}
-							<Text className="text-meta text-ink-muted" numberOfLines={1}>
-								{item.label}
-							</Text>
-						</Pressable>
-					))}
-				</View>
-			)}
-		</View>
-	);
+		);
+	}
 
 	return (
 		<View className="flex-1" style={{ paddingTop: 0 }}>
+			{dockedBridgeAdapter ? (
+				<WorkspaceModeBar
+					mode={dockedMode}
+					onSelectMode={(next) => workspaceDrawer?.selectMode(next)}
+					bridgeBadge={dockedBridgeAdapter.bridgeBadge}
+				/>
+			) : null}
 			{/* ---- the header row (record §2.5): search pill · new chat · close ----
 			 *  The touch floor plus `py-1` (52/56 pt; was a fixed 60): its children are
 			 *  all touch-floor controls, so the extra 8 pt of a fixed 60 was air the
@@ -644,7 +760,7 @@ export const ConversationsPane = ({
 						testID={CONTROL.sidebarNewChat}
 					/>
 				)}
-				{onClose ? (
+				{onClose && !hideCloseButton ? (
 					<IconButton
 						accessibilityLabel={t("mobile.chrome.close_conversations")}
 						onPress={onClose}
@@ -855,42 +971,6 @@ export const ConversationsPane = ({
 							if (target) openSession(target);
 						}}
 					/>
-				</View>
-			</Sheet>
-
-			{/* "More" at large text: the same destinations as the strip, as full
-			 *  rows a 200 % label fits in. Closes before navigating, like every row
-			 *  sheet here, so no sheet is left stacked under the next screen. */}
-			<Sheet
-				visible={destinationsOpen}
-				onClose={() => setDestinationsOpen(false)}
-				title={t("mobile.chrome.destinations")}
-				testID={CONTROL.sidebarDestinationsSheet}
-			>
-				<View className="pb-4">
-					{destinations.map((item) => (
-						<Pressable
-							key={item.key}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={item.accessibilityLabel}
-							onPress={() => {
-								setDestinationsOpen(false);
-								go(item.route);
-							}}
-							className="flex-row items-center gap-3 px-4"
-							style={{ minHeight: TOUCH_FLOOR }}
-						>
-							<item.Icon size={20} color={destinationInk} aria-hidden />
-							<Text className="min-w-0 flex-1 text-body text-ink">
-								{item.accessibilityLabel === item.label
-									? item.label
-									: item.key === "inbox"
-										? item.label
-										: item.accessibilityLabel}
-							</Text>
-							{item.count !== null ? <RailCount count={item.count} /> : null}
-						</Pressable>
-					))}
 				</View>
 			</Sheet>
 

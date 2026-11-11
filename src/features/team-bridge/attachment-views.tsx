@@ -152,7 +152,7 @@ function Placeholder({
 	return (
 		<View
 			testID={testID}
-			className="items-center justify-center gap-1 overflow-hidden rounded-sm border border-border-control bg-elevated px-2"
+			className="items-center justify-center gap-1 overflow-hidden rounded-sm border border-hairline bg-elevated px-2"
 			style={box}
 		>
 			<Text className="text-center text-meta text-ink-muted">{text}</Text>
@@ -386,6 +386,7 @@ function ImageViewer({
 	const { width, height } = useWindowDimensions();
 	const insets = useSafeAreaInsets();
 	const ink = useTokenColor("ink");
+	const disabledInk = useTokenColor("ink-disabled");
 	const pager = useRef<ScrollView>(null);
 	const [index, setIndex] = useState(initialIndex);
 	// Joins the app's modal stack like `Dialog`/`Sheet`, so a sheet raised
@@ -442,7 +443,7 @@ function ImageViewer({
 		: "";
 	const button = (
 		label: string,
-		icon: React.ReactNode,
+		icon: (color: string) => React.ReactNode,
 		onPress: () => void,
 		testID: string,
 		disabled = false,
@@ -454,14 +455,16 @@ function ImageViewer({
 			disabled={disabled}
 			onPress={onPress}
 			testID={testID}
-			className="items-center justify-center rounded-full bg-elevated"
+			/* An enabled control keeps the 3:1 `border-control` boundary (brand
+			 * kit; review R1-5); passive tiles and a disabled control take the
+			 * quiet hairline. */
+			className={`items-center justify-center rounded-full border ${disabled ? "border-hairline bg-sunken" : "border-border-control bg-elevated"}`}
 			style={{
 				width: TOUCH_FLOOR,
 				height: TOUCH_FLOOR,
-				opacity: disabled ? 0.4 : 1,
 			}}
 		>
-			{icon}
+			{icon(disabled ? disabledInk : ink)}
 		</Pressable>
 	);
 	return (
@@ -518,14 +521,16 @@ function ImageViewer({
 					>
 						{button(
 							t("mobile.team_bridge.attachment.close"),
-							<X color={ink} size={20} />,
+							(color) => (
+								<X color={color} size={20} />
+							),
 							onClose,
 							teamBridgeViewerId("close"),
 						)}
 						{many ? (
 							<Text
 								role={ROLE.status}
-								className="rounded-full bg-elevated px-3 py-1 text-meta text-ink"
+								className="rounded-full border border-hairline bg-elevated px-3 py-1 text-meta text-ink"
 							>
 								{position}
 							</Text>
@@ -539,14 +544,18 @@ function ImageViewer({
 						>
 							{button(
 								t("mobile.team_bridge.attachment.previous"),
-								<ChevronLeft color={ink} size={22} />,
+								(color) => (
+									<ChevronLeft color={color} size={22} />
+								),
 								() => pagerEvents.step(-1),
 								teamBridgeViewerId("previous"),
 								index === 0,
 							)}
 							{button(
 								t("mobile.team_bridge.attachment.next"),
-								<ChevronRight color={ink} size={22} />,
+								(color) => (
+									<ChevronRight color={color} size={22} />
+								),
 								() => pagerEvents.step(1),
 								teamBridgeViewerId("next"),
 								index === images.length - 1,
@@ -697,7 +706,7 @@ export function ComposerAttachments({
 												: (state ?? t("mobile.team_bridge.attachment.ready")),
 										},
 									)}
-									className={`items-center justify-center overflow-hidden rounded-sm border ${failed ? "border-danger" : "border-border-control"} bg-elevated`}
+									className={`items-center justify-center overflow-hidden rounded-sm border ${failed ? "border-danger" : "border-hairline"} bg-elevated`}
 									style={{ width: CHIP_SIZE, height: CHIP_SIZE }}
 								>
 									{chip.preview ? (
