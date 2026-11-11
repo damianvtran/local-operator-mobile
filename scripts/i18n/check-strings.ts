@@ -227,7 +227,16 @@ async function historicalCandidates(base: BaseCopy) {
 	try {
 		const archive = spawnSync(
 			"git",
-			["archive", base.ref, "src", "scripts/i18n/scan-strings.ts"],
+			[
+				"archive",
+				base.ref,
+				"src",
+				/* `app/` joined the scan after the first baseline; a base that
+				 * predates it (or a fixture without it) has no such tree, and
+				 * `git archive` fails on a missing pathspec rather than skipping it. */
+				...(git("cat-file", "-e", `${base.ref}:app`).ok ? ["app"] : []),
+				"scripts/i18n/scan-strings.ts",
+			],
 			{ cwd: ROOT, maxBuffer: 100 * 1024 * 1024 },
 		);
 		if (archive.status !== 0 || !archive.stdout)

@@ -33,5 +33,10 @@
 	"mobile.computers.save_refused.title": "Đã kết nối nhưng chưa lưu",
 	"mobile.computers.save_refused.body": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật. Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
 	"mobile.computers.save_refused.body_with_code": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật (mã {code}). Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
-	"mobile.computers.save_refused.continue": "Tiếp tục"
+	"mobile.computers.save_refused.continue": "Tiếp tục",
+	"mobile.computers.wait.nothing_answered": "Nothing answered.",
+	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
+	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
+	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
+	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}."
 }

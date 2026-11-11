@@ -255,7 +255,7 @@ export default function Settings() {
 			// A failed logout keeps its refusal/retry on this screen; do not claim
 			// revocation or navigate away merely because local readiness ended.
 			if (!(await signOut())) return;
-			showToast("Signed out. The session was revoked on your computer.");
+			showToast(t("mobile.settings.sign_out.done"));
 			router.replace("/welcome");
 		} finally {
 			signingOutRef.current = false;
@@ -265,7 +265,7 @@ export default function Settings() {
 
 	return (
 		<Screen
-			title="Settings"
+			title={t("mobile.settings.screen_title")}
 			testID={SCREEN.settings}
 			scrollRef={scrollRef}
 			headerLeading={
@@ -295,7 +295,7 @@ export default function Settings() {
 								accountLabel ?? computers[0]?.name ?? "Local Operator",
 							)}
 							size="md"
-							accessibilityLabel="Signed in"
+							accessibilityLabel={t("mobile.settings.account.signed_in")}
 						/>
 						<View
 							className={
@@ -322,7 +322,7 @@ export default function Settings() {
 
 				{/* -------------------------------------------------------- connection */}
 				<View className="gap-2" testID={REGION.settingsConnection}>
-					<SectionHeader label="Connection" />
+					<SectionHeader label={t("mobile.settings.section.connection")} />
 					<View
 						ref={statusRef}
 						/* Programmatically focusable, never a Tab stop: the target of U18's
@@ -330,7 +330,9 @@ export default function Settings() {
 						tabIndex={-1}
 						className="flex-row items-center justify-between"
 					>
-						<Text className="text-body-sm text-ink-muted">Status</Text>
+						<Text className="text-body-sm text-ink-muted">
+							{t("mobile.settings.connection.status")}
+						</Text>
 						{/* The WORD, not just the dot. In the list the connected state is
 						 *  deliberately silent (it is furniture there), but this is the VALUE
 						 *  of a row whose label is "Status", and it was a 22x14 pt dot with an
@@ -377,7 +379,9 @@ export default function Settings() {
 					) : null}
 					{computers.length > 0 ? (
 						<View className="gap-2 pt-1">
-							<Text className="text-body-sm text-ink-muted">Computers</Text>
+							<Text className="text-body-sm text-ink-muted">
+								{t("mobile.settings.connection.computers")}
+							</Text>
 							{computers.map((computer) => (
 								<View
 									key={computer.tunnelId}
@@ -409,7 +413,7 @@ export default function Settings() {
 									) : (
 										<Button
 											testID={CONTROL.settingsUseComputer}
-											label="Use"
+											label={t("mobile.settings.connection.use")}
 											onPress={() => {
 												/* Switching routes is the picker's job, so this hands
 												 *  over rather than reimplementing it. */
@@ -441,7 +445,7 @@ export default function Settings() {
 					<View className="flex-row flex-wrap gap-2 pt-1">
 						<Button
 							testID={CONTROL.settingsRefresh}
-							label="Refresh"
+							label={t("mobile.settings.connection.refresh")}
 							onPress={() => void refreshComputers()}
 							/* ONE STYLE FOR THE THREE (visual audit D15). Refresh was
 							 *  outlined while its two neighbours were plain text, which
@@ -466,7 +470,7 @@ export default function Settings() {
 						/>
 						<Button
 							testID={CONTROL.settingsAddComputer}
-							label="Add a computer"
+							label={t("mobile.computers.add")}
 							/* The set-up paths, not the list: the list has no add path once
 							 *  the account has a computer (UX round 2, U12), and the switcher's
 							 *  own "Add a computer" goes to the same place. */
@@ -489,7 +493,7 @@ export default function Settings() {
 
 				{/* -------------------------------------------------------- appearance */}
 				<View className="gap-3" testID={REGION.settingsAppearance}>
-					<SectionHeader label="Appearance" />
+					<SectionHeader label={t("mobile.settings.section.appearance")} />
 					{/* The mode stays here, one tap away, as it was; WHICH palette each
 					 *  side paints is the Theme screen behind the row below (decision
 					 *  record § 5). The Segmented keeps its ids, so the settings flows
@@ -556,11 +560,13 @@ export default function Settings() {
 						/>
 					</View>
 					<Text className="text-body-sm text-ink-dim">
-						This phone's own text size is{" "}
-						{Math.round(textScale.platformScale * 100)}%.
 						{textScale.preference === "system"
-							? " Following it."
-							: " Overridden above."}
+							? t("mobile.settings.text_size.following", {
+									percent: Math.round(textScale.platformScale * 100),
+								})
+							: t("mobile.settings.text_size.overridden", {
+									percent: Math.round(textScale.platformScale * 100),
+								})}
 					</Text>
 				</View>
 
@@ -573,25 +579,31 @@ export default function Settings() {
 
 				{/* -------------------------------------------------------- diagnostics */}
 				<View className="gap-2" testID={REGION.settingsDiagnostics}>
-					<SectionHeader label="Diagnostics" />
+					<SectionHeader label={t("mobile.settings.section.diagnostics")} />
 					<DiagnosticRow
-						label="Route"
+						label={t("mobile.settings.diagnostics.route")}
 						value={
 							route
 								? route.mode === "radient"
-									? "Radient tunnel"
-									: "Direct relay"
-								: "None"
+									? t("mobile.settings.diagnostics.route_radient")
+									: t("mobile.settings.diagnostics.route_direct")
+								: t("mobile.settings.diagnostics.none")
 						}
 					/>
-					<DiagnosticRow label="Stream" value={streamHealth} />
 					<DiagnosticRow
-						label="Last error"
-						value={lastError ? lastError.summary : "None"}
+						label={t("mobile.settings.diagnostics.stream")}
+						value={streamHealth}
+					/>
+					<DiagnosticRow
+						label={t("mobile.settings.diagnostics.last_error")}
+						value={
+							lastError
+								? lastError.summary
+								: t("mobile.settings.diagnostics.none")
+						}
 					/>
 					<Text className="text-body-sm text-ink-dim">
-						These lines never include a token, a password, or a session's
-						content.
+						{t("mobile.settings.diagnostics.privacy_note")}
 					</Text>
 					{/* No second retry here: the refusal surface under Status carries
 					 *  this refusal's remedy, Try again included where retrying can work,
@@ -605,12 +617,13 @@ export default function Settings() {
 
 				{/* ------------------------------------------------------- about, legal */}
 				<View className="gap-2">
-					<SectionHeader label="About" />
-					<DiagnosticRow label="Version" value={version} />
+					<SectionHeader label={t("mobile.settings.section.about")} />
+					<DiagnosticRow
+						label={t("mobile.settings.about.version")}
+						value={version}
+					/>
 					<Text className="text-body-sm text-ink-dim">
-						Local Operator is open source (MIT). Agent sessions connect to your
-						relay. Team Bridge messages and notification registration connect
-						directly to Radient.
+						{t("mobile.settings.about.blurb")}
 					</Text>
 				</View>
 
@@ -629,7 +642,7 @@ export default function Settings() {
 						testID={CONTROL.settingsSignOut}
 					/>
 					<Button
-						label="Delete my Radient account"
+						label={t("mobile.settings.account.delete")}
 						onPress={() =>
 							void WebBrowser.openBrowserAsync(
 								RADIENT_CONSOLE_TUNNELS_URL.replace(
@@ -642,17 +655,15 @@ export default function Settings() {
 						testID={CONTROL.settingsDeleteAccount}
 					/>
 					<Text className="text-body-sm text-ink-dim">
-						Deleting your account happens in the Radient console, in the browser
-						— this app cannot do it for you. It deletes the account and every
-						tunnel on it. Sessions on your computer are not touched.
+						{t("mobile.settings.account.delete_help")}
 					</Text>
 				</View>
 			</View>
 
 			<Dialog
 				visible={confirmSignOut}
-				title="Sign out?"
-				body="This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched."
+				title={t("mobile.settings.sign_out.title")}
+				body={t("mobile.settings.sign_out.body")}
 				confirmLabel="Sign out"
 				onConfirm={() => void doSignOut()}
 				onCancel={() => setConfirmSignOut(false)}

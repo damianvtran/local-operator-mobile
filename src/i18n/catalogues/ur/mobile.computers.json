@@ -33,5 +33,10 @@
 	"mobile.computers.save_refused.title": "منسلک ہو گیا، لیکن محفوظ نہیں ہوا",
 	"mobile.computers.save_refused.body": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
 	"mobile.computers.save_refused.body_with_code": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی (کوڈ {code})۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
-	"mobile.computers.save_refused.continue": "جاری رکھیں"
+	"mobile.computers.save_refused.continue": "جاری رکھیں",
+	"mobile.computers.wait.nothing_answered": "Nothing answered.",
+	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
+	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
+	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
+	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}."
 }

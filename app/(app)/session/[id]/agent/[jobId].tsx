@@ -7,6 +7,7 @@ import { TodosPanel } from "@/features/session/components/todos-panel";
 import { TranscriptList } from "@/features/session/components/transcript-list";
 import { middleTruncate, projectTodos } from "@/features/session/projection";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { t } from "@/i18n";
 import { elapsedLabel } from "@/lib/format";
 import { CONTROL, EMPTY, SCREEN, SURFACE } from "@/ui/a11y";
 import {
@@ -83,7 +84,7 @@ export default function Subagent() {
 
 	return (
 		<Screen
-			title="Subagent"
+			title={t("mobile.session.subagent.screen_title")}
 			testID={SCREEN.subagent}
 			// The transcript owns its own scrolling, the same as the parent screen.
 			scroll={false}
@@ -166,15 +167,17 @@ export default function Subagent() {
 						className="border-b border-hairline px-4 py-2"
 						testID={SURFACE.subagentPrompt}
 					>
-						<Text className="pb-1 text-meta text-ink-dim">prompt</Text>
+						<Text className="pb-1 text-meta text-ink-dim">
+							{t("mobile.session.subagent.prompt_label")}
+						</Text>
 						<Text className="text-body-sm text-ink-muted">{detail.prompt}</Text>
 					</View>
 				) : null}
 
 				{missing && detail === null ? (
 					<EmptyState
-						headline="This subagent is no longer available."
-						next="Its transcript was not kept, or the computer is not answering."
+						headline={t("mobile.session.subagent.unavailable_headline")}
+						next={t("mobile.session.subagent.unavailable_next")}
 						testID={EMPTY.subagent}
 					/>
 				) : detail === null ? (
@@ -193,7 +196,9 @@ export default function Subagent() {
 						header={
 							detail.result_text.length > 0 ? (
 								<View className="px-4 py-2">
-									<Text className="pb-1 text-meta text-ink-dim">result</Text>
+									<Text className="pb-1 text-meta text-ink-dim">
+										{t("mobile.session.subagent.result_label")}
+									</Text>
 									<Text className="text-body-sm text-ink">
 										{detail.result_text}
 									</Text>
@@ -203,7 +208,7 @@ export default function Subagent() {
 						empty={
 							<View className="px-4 py-3">
 								<Text className="text-body-sm text-ink-dim">
-									This subagent has no transcript rows of its own.
+									{t("mobile.session.subagent.no_rows")}
 								</Text>
 							</View>
 						}

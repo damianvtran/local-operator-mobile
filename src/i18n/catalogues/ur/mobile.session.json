@@ -45,5 +45,21 @@
 	"mobile.session.history.gap_load_hint": "وہ پیغامات لوڈ کرتا ہے جو اس فون کے منقطع رہنے کے دوران رہ گئے۔",
 	"mobile.session.sheet_title.model": "ماڈل",
 	"mobile.session.sheet_title.effort": "شدت",
-	"mobile.session.sheet_title.status": "کام اور ایجنٹس"
+	"mobile.session.sheet_title.status": "کام اور ایجنٹس",
+	"mobile.session.subagent.screen_title": "Subagent",
+	"mobile.session.subagent.prompt_label": "prompt",
+	"mobile.session.subagent.result_label": "result",
+	"mobile.session.subagent.unavailable_headline": "This subagent is no longer available.",
+	"mobile.session.subagent.unavailable_next": "Its transcript was not kept, or the computer is not answering.",
+	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
+	"mobile.session.not_connected.headline": "This session is not connected yet.",
+	"mobile.session.not_connected.next": "Open it from the session list once a computer is connected.",
+	"mobile.session.empty.headline": "Nothing here yet.",
+	"mobile.session.empty.next": "Send the first message below.",
+	"mobile.session.subagents_hint": "Show the subagents",
+	"mobile.session.find.label": "Search this conversation",
+	"mobile.session.find.hint": "Finds messages in the transcript loaded on this device",
+	"mobile.session.chip.model_change_failed": "Could not change the model.",
+	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
+	"mobile.session.composer.retained_instruction": "An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft."
 }

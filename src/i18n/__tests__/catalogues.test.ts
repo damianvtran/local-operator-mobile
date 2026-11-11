@@ -88,7 +88,7 @@ const NAMESPACES = [
 		name: "mobile.common",
 		messages: common,
 		context: commonContext,
-		expected: 6,
+		expected: 10, // +4: the not-found screen (app/ scan)
 	},
 	{
 		name: "mobile.composer_input",
@@ -147,7 +147,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 35,
+		expected: 40, // +5: the add-a-computer wait panel's keyed lines (app/ scan)
 	},
 	{
 		name: "mobile.notifications",
@@ -159,7 +159,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 47, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 63, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -211,7 +211,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 18,
+		expected: 44, // +26: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -305,8 +305,11 @@ describe("the English catalogues", () => {
 		 *  anchored open's way back to the newest edge: 596 + 1 = 597, the
 		 *  generated catalogue's own count over this tree. Round-1 remediation
 		 *  adds `mobile.team_bridge.thread.anchor_missing` (the "no longer
-		 *  available" toast): 597 + 1 = 598. */
-		expect(total).toBe(598);
+		 *  available" toast): 597 + 1 = 598.
+		 * Plus 51 keyed by the app/ scan (the new `app/` coverage in
+		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 51
+		 * = 649, the generator's own count. */
+		expect(total).toBe(649);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -374,7 +377,75 @@ const PROJECT_TAG_EXAMPLE = {
 		"Valid ASCII tag examples with a comma separator; retaining the examples preserves the form's concrete input guidance.",
 };
 
-const IDENTICAL_BY_DESIGN: Readonly<
+/**
+ * Keys whose shipped-locale value is TEMPORARILY the English source.
+ *
+ * WHY. The app/ scan keyed 51 user-visible literals as English keys. Generation
+ * requires every shipped locale to carry every key, and the translator wave has
+ * not run yet, so each locale holds the English string as a placeholder. This is
+ * NOT a design judgement that English is right (unlike the entries below): it is
+ * a ledger of debt. SHRINK ONLY — when a key is translated, delete it from this
+ * list in the same change, and the guard below then demands the translation
+ * differ. Adding a key here without a brief in the translation wave defeats the
+ * guard; reviewers should treat growth of this list as a smell.
+ */
+const PENDING_TRANSLATION: readonly string[] = [
+	"mobile.computers.wait.nothing_answered",
+	"mobile.computers.wait.paused",
+	"mobile.computers.wait.relay_version_sessions",
+	"mobile.computers.wait.relay_version",
+	"mobile.computers.wait.relay_sessions",
+	"mobile.settings.screen_title",
+	"mobile.settings.section.connection",
+	"mobile.settings.section.appearance",
+	"mobile.settings.section.about",
+	"mobile.settings.account.signed_in",
+	"mobile.settings.connection.status",
+	"mobile.settings.connection.computers",
+	"mobile.settings.connection.use",
+	"mobile.settings.connection.refresh",
+	"mobile.settings.about.version",
+	"mobile.settings.about.blurb",
+	"mobile.settings.account.delete",
+	"mobile.settings.account.delete_help",
+	"mobile.settings.sign_out.title",
+	"mobile.settings.sign_out.body",
+	"mobile.settings.sign_out.done",
+	"mobile.settings.text_size.following",
+	"mobile.settings.text_size.overridden",
+	"mobile.session.subagent.screen_title",
+	"mobile.session.subagent.prompt_label",
+	"mobile.session.subagent.result_label",
+	"mobile.session.subagent.unavailable_headline",
+	"mobile.session.subagent.unavailable_next",
+	"mobile.session.subagent.no_rows",
+	"mobile.session.not_connected.headline",
+	"mobile.session.not_connected.next",
+	"mobile.session.empty.headline",
+	"mobile.session.empty.next",
+	"mobile.session.subagents_hint",
+	"mobile.session.find.label",
+	"mobile.session.find.hint",
+	"mobile.session.chip.model_change_failed",
+	"mobile.session.chip.effort_change_failed",
+	"mobile.session.composer.retained_instruction",
+	"mobile.common.not_found.title",
+	"mobile.common.not_found.headline",
+	"mobile.common.not_found.next",
+	"mobile.common.not_found.action",
+	"mobile.settings.section.diagnostics",
+	"mobile.settings.diagnostics.route",
+	"mobile.settings.diagnostics.stream",
+	"mobile.settings.diagnostics.last_error",
+	"mobile.settings.diagnostics.route_radient",
+	"mobile.settings.diagnostics.route_direct",
+	"mobile.settings.diagnostics.none",
+	"mobile.settings.diagnostics.privacy_note",
+];
+const PENDING_TRANSLATION_REASON =
+	"Pending the translator wave: the English source is held as a placeholder so the catalogue stays in key parity; delete this entry when the key is translated.";
+
+const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
 > = {
 	en: {},
@@ -553,6 +624,23 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Mirrored from the core relay catalogue: language/tool proper token `python` kept in Latin script beside the count.",
 	},
 };
+
+/** The judged exceptions plus the pending-translation ledger, per locale. */
+const IDENTICAL_BY_DESIGN: Readonly<
+	Record<ShippedLocale, Readonly<Record<string, string>>>
+> = Object.fromEntries(
+	Object.entries(IDENTICAL_BY_DESIGN_JUDGED).map(([locale, judged]) => [
+		locale,
+		locale === "en"
+			? judged
+			: {
+					...judged,
+					...Object.fromEntries(
+						PENDING_TRANSLATION.map((key) => [key, PENDING_TRANSLATION_REASON]),
+					),
+				},
+	]),
+) as Record<ShippedLocale, Readonly<Record<string, string>>>;
 
 describe("a shipped translation is still translated", () => {
 	const shipped = SHIPPED_LOCALES.filter((locale) => locale !== "en");

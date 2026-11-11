@@ -1,5 +1,5 @@
 /**
- * Find user-facing literals in `src/` that are not catalogue keys.
+ * Find user-facing literals in `src/` and `app/` that are not catalogue keys.
  *
  * WHAT THIS IS FOR. The i18n programme forbids keying `src/i18n/` only for the
  * four modules keyed so far; without a ratchet the next screen adds an English
@@ -33,7 +33,7 @@
  * whole file.
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 export type FindingRule = "jsx-text" | "jsx-attribute" | "copy-module-literal";
@@ -346,7 +346,14 @@ export function scanTree(
 	owned: ReadonlySet<string> = new Set(),
 ): Finding[] {
 	const files: string[] = [];
-	walk(join(root, "src"), root, files);
+	/* `app/` holds the Expo Router screens — the most user-visible copy in the
+	 * tree (EmptyState headlines, Screen titles, a11y labels). It was left out
+	 * of the first scan, so a route could add an English sentence no catalogue
+	 * owned and the ratchet never saw it. A fixture without `app/` simply has
+	 * nothing to add. */
+	for (const top of ["src", "app"]) {
+		if (existsSync(join(root, top))) walk(join(root, top), root, files);
+	}
 	files.sort();
 	const findings: Finding[] = [];
 	for (const file of files) {

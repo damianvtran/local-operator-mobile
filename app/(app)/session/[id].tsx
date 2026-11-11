@@ -739,8 +739,8 @@ export default function Session() {
 				contentContainerStyle={{ flexGrow: 1 }}
 			>
 				<EmptyState
-					headline="This session is not connected yet."
-					next="Open it from the session list once a computer is connected."
+					headline={t("mobile.session.not_connected.headline")}
+					next={t("mobile.session.not_connected.next")}
 					testID={EMPTY.session}
 				/>
 				{transcriptNotice}
@@ -847,8 +847,8 @@ export default function Session() {
 					empty={
 						pendingEchoes.length > 0 ? null : (
 							<EmptyState
-								headline="Nothing here yet."
-								next="Send the first message below."
+								headline={t("mobile.session.empty.headline")}
+								next={t("mobile.session.empty.next")}
 								testID={SURFACE.sessionTranscriptEmpty}
 							/>
 						)
@@ -1000,7 +1000,7 @@ export default function Session() {
 						onPress={() =>
 							setOpenPanel(openPanel === "subagents" ? null : "subagents")
 						}
-						accessibilityHint="Show the subagents"
+						accessibilityHint={t("mobile.session.subagents_hint")}
 						// The panel lever. Its id is the contract's
 						// (`CONTROL.sessionSubagents`), like every other anchor on this
 						// screen: the drill-down flow addresses them by name, so a name
@@ -1214,8 +1214,8 @@ export default function Session() {
 						   48 pt on the web/audit build, 44 on iOS — and it IS header chrome:
 						   `header.ts` counts it and its gap in the title budget. */
 						<IconButton
-							accessibilityLabel="Search this conversation"
-							accessibilityHint="Finds messages in the transcript loaded on this device"
+							accessibilityLabel={t("mobile.session.find.label")}
+							accessibilityHint={t("mobile.session.find.hint")}
 							size={22}
 							testID={CONTROL.sessionFind}
 							onPress={find.open}
@@ -1588,7 +1588,9 @@ export default function Session() {
 						onStop={composer.stop}
 						stopping={composer.stopping}
 						retainedMessage={
-							composer.retained !== null ? COMPOSER_RETAINED : null
+							composer.retained !== null
+								? t("mobile.session.composer.retained_instruction")
+								: null
 						}
 						notice={composer.notice}
 						onRetry={composer.retry}
@@ -1683,7 +1685,9 @@ export default function Session() {
 							provider: model.provider,
 							model_id: model.model_id,
 						})
-						.catch(() => setChipError("Could not change the model."));
+						.catch(() =>
+							setChipError(t("mobile.session.chip.model_change_failed")),
+						);
 				}}
 			/>
 
@@ -1699,7 +1703,9 @@ export default function Session() {
 							op: "set_effort",
 							effort,
 						})
-						.catch(() => setChipError("Could not change the effort."));
+						.catch(() =>
+							setChipError(t("mobile.session.chip.effort_change_failed")),
+						);
 				}}
 			/>
 
@@ -1747,12 +1753,6 @@ export default function Session() {
 	);
 }
 
-/**
-/** The composer's own sentence for a retained instruction, kept beside the screen
- *  rather than in `composer.ts` because it is passed in as a prop. */
 /** Below this width the header's find button folds into ⋮ (record §2.3): the
  *  narrowest phones (320 pt) need its 52 pt for the title. */
 const FIND_FOLD_WIDTH = 360;
-
-const COMPOSER_RETAINED =
-	"An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.";

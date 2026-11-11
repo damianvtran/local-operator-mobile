@@ -138,5 +138,25 @@
 	"mobile.computers.save_refused.continue": {
 		"role": "button",
 		"note": "Button in the \"Connected, but not saved\" warning that continues to the home screen. One word, sentence case."
+	},
+	"mobile.computers.wait.nothing_answered": {
+		"role": "status",
+		"note": "Heading of the add-a-computer wait panel when the three-minute wait ended with no tunnel listed and no host answering. A short sentence with a final full stop; a follow-up help line sits under it."
+	},
+	"mobile.computers.wait.paused": {
+		"role": "help",
+		"note": "Wait-panel line shown when the app was backgrounded during the add-a-computer wait and polling stopped. Two short sentences; the second is the instruction to reopen the app."
+	},
+	"mobile.computers.wait.relay_version_sessions": {
+		"role": "help",
+		"note": "Wait-panel line once the computer answered: the relay's protocol version and its running-session count. {version} is a number, {sessions} a count; preserve the ICU plural arms and both placeholders. 'Relay' is the product's name for the program on the computer."
+	},
+	"mobile.computers.wait.relay_version": {
+		"role": "help",
+		"note": "Wait-panel line once the computer answered and only the protocol version is known. {version} is a number; preserve the placeholder."
+	},
+	"mobile.computers.wait.relay_sessions": {
+		"role": "help",
+		"note": "Wait-panel line once the computer answered and only the running-session count is known. {sessions} is a count; preserve the ICU plural arms."
 	}
 }
