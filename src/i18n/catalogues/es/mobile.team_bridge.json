@@ -126,6 +126,7 @@
 	"mobile.team_bridge.thread.join": "Unirse al canal",
 	"mobile.team_bridge.thread.join_error": "No se pudo acceder al canal. Inténtalo de nuevo.",
 	"mobile.team_bridge.thread.join_pending": "Aún no se ha completado la unión al canal. Inténtalo de nuevo antes de leerlo.",
+	"mobile.team_bridge.thread.jump_newest": "Ir a lo más reciente",
 	"mobile.team_bridge.thread.loading": "Cargando conversación…",
 	"mobile.team_bridge.thread.message": "Mensaje",
 	"mobile.team_bridge.thread.messages_empty": "Aún no hay mensajes. Inicia la conversación.",

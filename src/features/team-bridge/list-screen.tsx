@@ -26,6 +26,7 @@ import { countLabel } from "@/features/notifications/notifications-model";
 import { t } from "@/i18n";
 import { activeBridgeRoute } from "@/team-bridge/active-route";
 import type { Conversation } from "@/team-bridge/contract";
+import { recallTeamBridgeTarget } from "@/team-bridge/last-target";
 import * as model from "@/team-bridge/model";
 import { dmSubject, type ProfileSubject } from "@/team-bridge/profile";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
@@ -52,6 +53,7 @@ import { TOUCH_FLOOR } from "@/ui/layout";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 import { DefaultOnNoticeBanner } from "./default-on-notice-banner";
 import { BridgeBack, BridgeGate } from "./gate";
+import { useRestoreLastTarget } from "./last-target-hooks";
 import {
 	PersonAvatar,
 	ProfileAvatarButton,
@@ -393,7 +395,18 @@ export function BridgeDirectory({
 		accountId?: string;
 		endpointId?: string;
 	}>();
-	const activeRoute = activeBridgeRoute(pathname, searchParams);
+	/* The marked row: the open thread, else — from Home or an agent chat —
+	 *  the conversation a target-less entry would reopen (`last-target.ts`),
+	 *  so the drawer shows where "Team Bridge" will land. */
+	const openRoute = activeBridgeRoute(pathname, searchParams);
+	const remembered = openRoute
+		? null
+		: recallTeamBridgeTarget(state.selfAccountId, state.selectedTenantId);
+	const activeRoute: ReturnType<typeof activeBridgeRoute> =
+		openRoute ??
+		(remembered && state.selectedTenantId
+			? { tenantId: state.selectedTenantId, conversationId: remembered }
+			: null);
 	const chevronColor = useTokenColor("ink-dim");
 	const checkColor = useTokenColor("accent");
 	const openTarget = useOpenTarget();
@@ -847,6 +860,7 @@ export function BridgeDirectory({
 }
 
 function ListContent() {
+	useRestoreLastTarget();
 	return (
 		<Screen
 			title={t("mobile.team_bridge.title")}

@@ -231,6 +231,10 @@
 		"role": "help",
 		"note": "Team Bridge mobile UI: thread / join pending. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
 	},
+	"mobile.team_bridge.thread.jump_newest": {
+		"role": "button",
+		"note": "Team Bridge mobile UI: thread / jump to newest. Shown only after a notification or link opened the thread at one older message; returns the reader to the newest messages and resumes following new ones. Short; does not mark anything read or load anything."
+	},
 	"mobile.team_bridge.thread.loading": {
 		"role": "status",
 		"note": "Team Bridge mobile UI: thread / loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."

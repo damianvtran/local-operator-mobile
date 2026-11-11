@@ -126,6 +126,7 @@
 	"mobile.team_bridge.thread.join": "Tham gia kênh",
 	"mobile.team_bridge.thread.join_error": "Không thể tham gia kênh này. Hãy thử lại.",
 	"mobile.team_bridge.thread.join_pending": "Chưa tham gia xong. Hãy thử lại trước khi đọc kênh này.",
+	"mobile.team_bridge.thread.jump_newest": "Đến tin mới nhất",
 	"mobile.team_bridge.thread.loading": "Đang tải cuộc trò chuyện…",
 	"mobile.team_bridge.thread.message": "Tin nhắn",
 	"mobile.team_bridge.thread.messages_empty": "Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.",

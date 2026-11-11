@@ -126,6 +126,7 @@
 	"mobile.team_bridge.thread.join": "Вступить в канал",
 	"mobile.team_bridge.thread.join_error": "Не удалось вступить в канал. Повторите попытку.",
 	"mobile.team_bridge.thread.join_pending": "Вступление ещё не завершено. Повторите попытку, прежде чем читать канал.",
+	"mobile.team_bridge.thread.jump_newest": "К новым сообщениям",
 	"mobile.team_bridge.thread.loading": "Загрузка переписки…",
 	"mobile.team_bridge.thread.message": "Сообщение",
 	"mobile.team_bridge.thread.messages_empty": "Сообщений пока нет. Начните переписку.",

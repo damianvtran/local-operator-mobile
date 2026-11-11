@@ -547,6 +547,7 @@ export type CatalogueKey =
 	| "mobile.team_bridge.thread.join"
 	| "mobile.team_bridge.thread.join_error"
 	| "mobile.team_bridge.thread.join_pending"
+	| "mobile.team_bridge.thread.jump_newest"
 	| "mobile.team_bridge.thread.loading"
 	| "mobile.team_bridge.thread.message"
 	| "mobile.team_bridge.thread.messages_empty"
@@ -1071,6 +1072,7 @@ export type NoParamKey =
 	| "mobile.team_bridge.thread.join"
 	| "mobile.team_bridge.thread.join_error"
 	| "mobile.team_bridge.thread.join_pending"
+	| "mobile.team_bridge.thread.jump_newest"
 	| "mobile.team_bridge.thread.loading"
 	| "mobile.team_bridge.thread.message"
 	| "mobile.team_bridge.thread.messages_empty"
@@ -1660,6 +1662,7 @@ export type MessageParams = {
 	"mobile.team_bridge.thread.join": NoParams;
 	"mobile.team_bridge.thread.join_error": NoParams;
 	"mobile.team_bridge.thread.join_pending": NoParams;
+	"mobile.team_bridge.thread.jump_newest": NoParams;
 	"mobile.team_bridge.thread.loading": NoParams;
 	"mobile.team_bridge.thread.message": NoParams;
 	"mobile.team_bridge.thread.messages_empty": NoParams;
@@ -2275,6 +2278,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.thread.join": "Join channel",
 	"mobile.team_bridge.thread.join_error": "Could not join this channel. Try again.",
 	"mobile.team_bridge.thread.join_pending": "Joining has not completed. Try again before reading this channel.",
+	"mobile.team_bridge.thread.jump_newest": "Jump to newest",
 	"mobile.team_bridge.thread.loading": "Loading conversation…",
 	"mobile.team_bridge.thread.message": "Message",
 	"mobile.team_bridge.thread.messages_empty": "No messages yet. Start the conversation.",
@@ -2875,6 +2879,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.thread.join": { role: "button", note: "Team Bridge mobile UI: thread / join. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.join_error": { role: "help", note: "Team Bridge mobile UI: thread / join error. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.join_pending": { role: "help", note: "Team Bridge mobile UI: thread / join pending. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
+	"mobile.team_bridge.thread.jump_newest": { role: "button", note: "Team Bridge mobile UI: thread / jump to newest. Shown only after a notification or link opened the thread at one older message; returns the reader to the newest messages and resumes following new ones. Short; does not mark anything read or load anything." },
 	"mobile.team_bridge.thread.loading": { role: "status", note: "Team Bridge mobile UI: thread / loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.message": { role: "help", note: "Team Bridge mobile UI: thread / message. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.messages_empty": { role: "status", note: "Team Bridge mobile UI: thread / messages empty. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
@@ -3489,6 +3494,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.join": "Unirse al canal",
 		"mobile.team_bridge.thread.join_error": "No se pudo acceder al canal. Inténtalo de nuevo.",
 		"mobile.team_bridge.thread.join_pending": "Aún no se ha completado la unión al canal. Inténtalo de nuevo antes de leerlo.",
+		"mobile.team_bridge.thread.jump_newest": "Ir a lo más reciente",
 		"mobile.team_bridge.thread.loading": "Cargando conversación…",
 		"mobile.team_bridge.thread.message": "Mensaje",
 		"mobile.team_bridge.thread.messages_empty": "Aún no hay mensajes. Inicia la conversación.",
@@ -4087,6 +4093,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.join": "Rejoindre le canal",
 		"mobile.team_bridge.thread.join_error": "Impossible de rejoindre ce canal. Réessayez.",
 		"mobile.team_bridge.thread.join_pending": "L’accès au canal n’est pas encore confirmé. Réessayez avant de le lire.",
+		"mobile.team_bridge.thread.jump_newest": "Aller aux plus récents",
 		"mobile.team_bridge.thread.loading": "Chargement de la conversation…",
 		"mobile.team_bridge.thread.message": "Message",
 		"mobile.team_bridge.thread.messages_empty": "Aucun message pour le moment. Lancez la conversation.",
@@ -4685,6 +4692,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.join": "चैनल से जुड़ें",
 		"mobile.team_bridge.thread.join_error": "इस चैनल से नहीं जुड़ सके। फिर कोशिश करें।",
 		"mobile.team_bridge.thread.join_pending": "चैनल से जुड़ना अभी पूरा नहीं हुआ। पढ़ने से पहले फिर कोशिश करें।",
+		"mobile.team_bridge.thread.jump_newest": "नवीनतम पर जाएँ",
 		"mobile.team_bridge.thread.loading": "बातचीत लोड हो रही है…",
 		"mobile.team_bridge.thread.message": "संदेश",
 		"mobile.team_bridge.thread.messages_empty": "अभी कोई संदेश नहीं है। बातचीत शुरू करें।",
@@ -5283,6 +5291,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.join": "Вступить в канал",
 		"mobile.team_bridge.thread.join_error": "Не удалось вступить в канал. Повторите попытку.",
 		"mobile.team_bridge.thread.join_pending": "Вступление ещё не завершено. Повторите попытку, прежде чем читать канал.",
+		"mobile.team_bridge.thread.jump_newest": "К новым сообщениям",
 		"mobile.team_bridge.thread.loading": "Загрузка переписки…",
 		"mobile.team_bridge.thread.message": "Сообщение",
 		"mobile.team_bridge.thread.messages_empty": "Сообщений пока нет. Начните переписку.",
@@ -5881,6 +5890,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.join": "چینل میں شامل ہوں",
 		"mobile.team_bridge.thread.join_error": "اس چینل میں شامل نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
 		"mobile.team_bridge.thread.join_pending": "چینل میں شمولیت ابھی مکمل نہیں ہوئی۔ پڑھنے سے پہلے دوبارہ کوشش کریں۔",
+		"mobile.team_bridge.thread.jump_newest": "تازہ ترین پر جائیں",
 		"mobile.team_bridge.thread.loading": "گفتگو لوڈ ہو رہی ہے…",
 		"mobile.team_bridge.thread.message": "پیغام",
 		"mobile.team_bridge.thread.messages_empty": "ابھی کوئی پیغام نہیں ہے۔ گفتگو شروع کریں۔",
@@ -6479,6 +6489,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.join": "Tham gia kênh",
 		"mobile.team_bridge.thread.join_error": "Không thể tham gia kênh này. Hãy thử lại.",
 		"mobile.team_bridge.thread.join_pending": "Chưa tham gia xong. Hãy thử lại trước khi đọc kênh này.",
+		"mobile.team_bridge.thread.jump_newest": "Đến tin mới nhất",
 		"mobile.team_bridge.thread.loading": "Đang tải cuộc trò chuyện…",
 		"mobile.team_bridge.thread.message": "Tin nhắn",
 		"mobile.team_bridge.thread.messages_empty": "Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện.",
@@ -7077,6 +7088,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.join": "加入频道",
 		"mobile.team_bridge.thread.join_error": "无法加入此频道，请重试。",
 		"mobile.team_bridge.thread.join_pending": "尚未完成加入，请重试后再阅读此频道。",
+		"mobile.team_bridge.thread.jump_newest": "跳到最新",
 		"mobile.team_bridge.thread.loading": "正在加载会话…",
 		"mobile.team_bridge.thread.message": "消息",
 		"mobile.team_bridge.thread.messages_empty": "暂无消息，开始会话吧。",

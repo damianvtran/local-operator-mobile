@@ -126,6 +126,7 @@
 	"mobile.team_bridge.thread.join": "加入频道",
 	"mobile.team_bridge.thread.join_error": "无法加入此频道，请重试。",
 	"mobile.team_bridge.thread.join_pending": "尚未完成加入，请重试后再阅读此频道。",
+	"mobile.team_bridge.thread.jump_newest": "跳到最新",
 	"mobile.team_bridge.thread.loading": "正在加载会话…",
 	"mobile.team_bridge.thread.message": "消息",
 	"mobile.team_bridge.thread.messages_empty": "暂无消息，开始会话吧。",

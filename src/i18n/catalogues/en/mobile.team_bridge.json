@@ -126,6 +126,7 @@
 	"mobile.team_bridge.thread.join": "Join channel",
 	"mobile.team_bridge.thread.join_error": "Could not join this channel. Try again.",
 	"mobile.team_bridge.thread.join_pending": "Joining has not completed. Try again before reading this channel.",
+	"mobile.team_bridge.thread.jump_newest": "Jump to newest",
 	"mobile.team_bridge.thread.loading": "Loading conversation…",
 	"mobile.team_bridge.thread.message": "Message",
 	"mobile.team_bridge.thread.messages_empty": "No messages yet. Start the conversation.",

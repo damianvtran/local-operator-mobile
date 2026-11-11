@@ -176,6 +176,7 @@ export const CONTROL = {
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
 	teamBridgeGateRetry: "team-bridge-gate-retry",
 	teamBridgeJoin: "team-bridge-join",
+	teamBridgeJumpNewest: "team-bridge-jump-newest",
 	teamBridgeLoadOlder: "team-bridge-load-older",
 	teamBridgeMessageInput: "team-bridge-message-input",
 	teamBridgeMessagesRetry: "team-bridge-messages-retry",

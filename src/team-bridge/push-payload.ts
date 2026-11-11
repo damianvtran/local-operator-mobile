@@ -90,9 +90,23 @@ export function teamBridgePushFromResponse(
 	return teamBridgePushFromData((content as Record<string, unknown>).data);
 }
 
-/** The route a tap opens. */
+/**
+ * The route a tap opens. The message the push is about rides along as the
+ * thread route's `messageId`/`seq` anchor (the same params a deep link uses,
+ * `thread-anchor.ts`), so the tap lands ON that message rather than at the
+ * newest edge. Both are already validated ids/integers; absent ones are left
+ * off so an anchor-less tap keeps #208's open-at-newest.
+ */
 export const teamBridgeThreadPath = (push: {
 	tenantId: string;
 	conversationId: string;
-}): string =>
-	`/team-bridge/${encodeURIComponent(push.tenantId)}/${encodeURIComponent(push.conversationId)}`;
+	messageId?: string | null;
+	seq?: number | null;
+}): string => {
+	const base = `/team-bridge/${encodeURIComponent(push.tenantId)}/${encodeURIComponent(push.conversationId)}`;
+	const query = [
+		push.messageId ? `messageId=${encodeURIComponent(push.messageId)}` : null,
+		typeof push.seq === "number" ? `seq=${push.seq}` : null,
+	].filter(Boolean);
+	return query.length ? `${base}?${query.join("&")}` : base;
+};

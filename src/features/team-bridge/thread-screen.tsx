@@ -25,8 +25,9 @@ import {
 	messageAttachments,
 	sendableAttachmentIds,
 } from "@/team-bridge/attachments";
-import type { HubClient } from "@/team-bridge/client";
+import { type HubClient, isHubError } from "@/team-bridge/client";
 import type { DirectoryMember, Message, Notify } from "@/team-bridge/contract";
+import { isGoneStatus } from "@/team-bridge/last-target";
 import * as model from "@/team-bridge/model";
 import { type ProfileSubject, senderSubject } from "@/team-bridge/profile";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
@@ -77,6 +78,7 @@ import { ComposerAttachments, MessageAttachments } from "./attachment-views";
 import { BridgeComposerDock } from "./composer-dock";
 import { BridgeThreadDrawerButton } from "./drawer-adapter";
 import { BridgeGate } from "./gate";
+import { useRememberedThread } from "./last-target-hooks";
 import { MessageDelivery } from "./message-delivery";
 import { createMessageSender } from "./message-sender";
 import {
@@ -85,8 +87,10 @@ import {
 	ProfileSheet,
 	UnknownSenderAvatar,
 } from "./profile-card";
+import { parseThreadAnchor, type ThreadAnchor } from "./thread-anchor";
 import { BridgeComposerField, BridgeThreadTitle } from "./thread-chrome";
 import { createThreadViewport, type ThreadViewport } from "./thread-viewport";
+import { useThreadAnchor } from "./use-thread-anchor";
 
 const single = (value: string | string[] | undefined): string =>
 	typeof value === "string" ? value : "";
@@ -105,9 +109,12 @@ const ThreadMessageRow = memo(function ThreadMessageRow({
 	initialViewerIndex,
 	onOpenProfile,
 	onDeliveryHelp,
+	highlighted = false,
 }: {
 	message: Message;
 	continuation: boolean;
+	/** The message an anchored open landed on, for `ANCHOR_HIGHLIGHT_MS`. */
+	highlighted?: boolean;
 	people: readonly DirectoryMember[];
 	hub: HubClient;
 	tenantId: string;
@@ -121,7 +128,12 @@ const ThreadMessageRow = memo(function ThreadMessageRow({
 	const attachments = messageAttachments(message);
 	return (
 		<View
-			className={`flex-row gap-3 px-4 ${continuation ? "py-0.5" : "pt-3 pb-0.5"}`}
+			className={cx(
+				`flex-row gap-3 px-4 ${continuation ? "py-0.5" : "pt-3 pb-0.5"}`,
+				/* The selected-row fill the directory already uses: "this is the
+				 *  one you came for", without a new colour or any layout change. */
+				highlighted && "bg-row-selected",
+			)}
 			testID={teamBridgeMessageId(message.id)}
 		>
 			<View className="w-8">
@@ -196,11 +208,18 @@ function ThreadContent({
 	routeId,
 	target,
 	label,
+	anchor = null,
+	restored = false,
 }: {
 	tenantId: string;
 	routeId: string;
 	target: Exclude<model.Target, { kind: "conversation" }> | null;
 	label: string;
+	/** An explicit push/deep-link message to land on (`thread-anchor.ts`). */
+	anchor?: ThreadAnchor | null;
+	/** Opened from the remembered last target, not by the reader's choice:
+	 *  a gone conversation then falls back to the list (`last-target.ts`). */
+	restored?: boolean;
 }) {
 	const { actions, hub, store } = useTeamBridge();
 	const state = useTeamBridgeState((s) => s);
@@ -390,6 +409,15 @@ function ThreadContent({
 			? `# ${rawTitle}`
 			: rawTitle;
 	const notifyMode = conversation ? model.notifyOf(conversation) : "all";
+	// Records this open as the last target; `gone` handles a 403/404 (`last-target-hooks.ts`).
+	const gone = useRememberedThread({
+		admitted,
+		accountId,
+		tenantId,
+		conversationId,
+		restored,
+		threadErrorStatus: thread?.error?.status,
+	});
 	const loadMetadata = useCallback(async () => {
 		if (!conversationId || !organization) return;
 		setMetadataLoading(true);
@@ -397,12 +425,14 @@ function ThreadContent({
 		try {
 			const answer = await hub.getConversation(tenantId, conversationId);
 			if (isCurrent()) actions.adopt(answer);
-		} catch {
+		} catch (error) {
+			if (isHubError(error) && isGoneStatus(error.status) && isCurrent())
+				gone();
 			setMetadataError(t("mobile.team_bridge.thread.metadata_error"));
 		} finally {
 			setMetadataLoading(false);
 		}
-	}, [actions, hub, tenantId, conversationId, organization, isCurrent]);
+	}, [actions, hub, tenantId, conversationId, organization, isCurrent, gone]);
 	useEffect(() => {
 		if (conversationId && organization && !conversation) void loadMetadata();
 	}, [conversationId, organization, conversation, loadMetadata]);
@@ -448,10 +478,24 @@ function ThreadContent({
 		0,
 		...(thread?.messages ?? []).map((m) => m.seq),
 	);
+	const viewport = useRef<ThreadViewport | null>(null);
+	// Message-anchored opens (`use-thread-anchor.ts`): hold open-at-newest until landed.
+	const anchorState = useThreadAnchor({
+		anchor,
+		conversationId,
+		thread,
+		items,
+		list,
+		viewport,
+		loadOlder: () => {
+			if (conversationId) void actions.loadOlder(tenantId, conversationId);
+		},
+	});
+	const [followingNewest, setFollowingNewest] = useState(true);
 	const dataReady = useRef(false);
 	dataReady.current =
-		!conversationId || !!thread?.messages.length || thread?.state === "ready";
-	const viewport = useRef<ThreadViewport | null>(null);
+		!anchorState.pending &&
+		(!conversationId || !!thread?.messages.length || thread?.state === "ready");
 	if (!viewport.current)
 		viewport.current = createThreadViewport({
 			// Exact measured offset, not scrollToEnd's estimated frame offset.
@@ -476,7 +520,10 @@ function ThreadContent({
 			newestSeq: () => newestSeq.current,
 			dataReady: () => dataReady.current,
 			web: Platform.OS === "web",
+			followChanged: setFollowingNewest,
 		});
+	const showJump = anchorState.phase === "landed" && !followingNewest;
+	const { highlightId, clearHighlight, onScrollToIndexFailed } = anchorState;
 	useEffect(() => {
 		// Empty admitted threads have no message layout event to wait for.
 		if (
@@ -650,12 +697,17 @@ function ThreadContent({
 					}
 					onOpenProfile={setProfile}
 					onDeliveryHelp={openDeliveryHelp}
+					highlighted={item.message.id === highlightId}
 				/>
 			);
 		},
-		[people, hub, tenantId, viewerFixture, openDeliveryHelp],
+		[people, hub, tenantId, viewerFixture, openDeliveryHelp, highlightId],
 	);
 	const validDraft = routeId === "new" && !!target;
+	const jumpToNewest = useCallback(() => {
+		clearHighlight();
+		viewport.current?.jumpToNewest();
+	}, [clearHighlight]);
 	return (
 		<Screen
 			title={title}
@@ -817,6 +869,7 @@ function ThreadContent({
 									// Every list callback is the viewport controller's, so the tests
 									// that drive these handlers drive the shipping wiring.
 									{...viewport.current.handlers}
+									onScrollToIndexFailed={onScrollToIndexFailed}
 									scrollEventThrottle={100}
 									refreshControl={
 										<RefreshControl
@@ -928,6 +981,26 @@ function ThreadContent({
 									className="gap-2 pt-2"
 									testID={SURFACE.teamBridgeComposer}
 								>
+									{showJump ? (
+										/* Above the dock's top edge, over the list's foot, so it
+										 *  rides the keyboard lift with the composer and takes no
+										 *  row from the transcript (no reflow when it goes). Only
+										 *  after an anchored open, until the reader is back at the
+										 *  newest edge; #208's ordinary reader never sees it. */
+										<View
+											pointerEvents="box-none"
+											className="absolute start-0 end-0 items-center pb-2"
+											style={{ bottom: "100%" }}
+										>
+											<Button
+												label={t("mobile.team_bridge.thread.jump_newest")}
+												variant="outline"
+												size="sm"
+												testID={CONTROL.teamBridgeJumpNewest}
+												onPress={jumpToNewest}
+											/>
+										</View>
+									) : null}
 									{readOnly ? (
 										<View className="mx-1 rounded-md border border-hairline bg-surface px-3.5 py-2.5">
 											<Text className="text-body-sm text-ink-muted">
@@ -1163,6 +1236,9 @@ export default function TeamBridgeThreadScreen() {
 		ownerAccountId?: string;
 		endpointId?: string;
 		label?: string;
+		messageId?: string;
+		seq?: string;
+		restored?: string;
 	}>();
 	const tenantId = single(params.tenantId);
 	const routeId = single(params.conversationId);
@@ -1181,14 +1257,25 @@ export default function TeamBridgeThreadScreen() {
 			return { kind, tenantId, ownerAccountId, endpointId, label };
 		return null;
 	}, [kind, tenantId, accountId, ownerAccountId, endpointId, label]);
+	const messageId = single(params.messageId);
+	const seq = single(params.seq);
+	const anchor = useMemo(
+		() => parseThreadAnchor({ messageId, seq }),
+		[messageId, seq],
+	);
+	// Set only by the list's restore (`useRestoreLastTarget`); a link or push
+	// never carries it, so a restored open can never outrank an explicit one.
+	const restored = single(params.restored) === "1";
 	return (
 		<BridgeGate headerLeading={<BridgeThreadDrawerButton />}>
 			<ThreadContent
-				key={`${selfAccountId}/${tenantId}/${routeId}/${kind}/${accountId}/${ownerAccountId}/${endpointId}`}
+				key={`${selfAccountId}/${tenantId}/${routeId}/${kind}/${accountId}/${ownerAccountId}/${endpointId}/${messageId}/${seq}`}
 				tenantId={tenantId}
 				routeId={routeId}
 				target={target}
 				label={label}
+				anchor={anchor}
+				restored={restored}
 			/>
 		</BridgeGate>
 	);

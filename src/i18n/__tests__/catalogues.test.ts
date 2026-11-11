@@ -70,7 +70,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 157, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder).
+		expected: 158, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder); +1: thread.jump_newest (anchored opens).
 	},
 	{
 		name: "mobile.signin",
@@ -301,7 +301,10 @@ describe("the English catalogues", () => {
 		/* PR #223 merged with main 56831114 (#220): 568 + 19 (this branch's
 		 * relay.transcript keys) + 9 (#220's net) = 596, verified by the
 		 * generated catalogue's own count over the merged tree. */
-		expect(total).toBe(596);
+		/* feat/bridge-last-target: + `mobile.team_bridge.thread.jump_newest`, the
+		 *  anchored open's way back to the newest edge: 596 + 1 = 597, the
+		 *  generated catalogue's own count over this tree. */
+		expect(total).toBe(597);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

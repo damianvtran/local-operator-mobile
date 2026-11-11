@@ -36,6 +36,7 @@ import type {
 	Notify,
 	StatusConsent,
 } from "@/team-bridge/contract";
+import { clearTeamBridgeTargets } from "@/team-bridge/last-target";
 import {
 	type DefaultOnNotice,
 	defaultOnNoticeFor,
@@ -1012,6 +1013,8 @@ export function createTeamBridgeStore(deps: {
 			inFlight.clear();
 			clearAttachmentCache();
 			clearTeamBridgeDrafts();
+			// The remembered last conversation is the same account-scoped class (`last-target.ts`).
+			clearTeamBridgeTargets();
 			store.setState(initialTeamBridgeState());
 		},
 
@@ -1023,6 +1026,8 @@ export function createTeamBridgeStore(deps: {
 			// decoded images and unsent text drafts must not outlive it in memory.
 			clearAttachmentCache();
 			clearTeamBridgeDrafts();
+			// The remembered last conversation is the same account-scoped class (`last-target.ts`).
+			clearTeamBridgeTargets();
 			store.setState(initialTeamBridgeState());
 		},
 	};

@@ -83,11 +83,19 @@ export type ThreadViewportOptions = {
 	dataReady: () => boolean;
 	/** Web adds wheel, pointer and key intent; native has drag callbacks. */
 	web: boolean;
+	/** Follow mode flipped (optional): the anchored open's "Jump to newest"
+	 *  shows only while the reader is away from the newest edge. */
+	followChanged?: (following: boolean) => void;
 };
 
 export function createThreadViewport(options: ThreadViewportOptions) {
 	let initial = true;
 	let following = true;
+	const setFollowing = (next: boolean) => {
+		if (next === following) return;
+		following = next;
+		options.followChanged?.(next);
+	};
 	let gesture = false;
 	let height = 0;
 	let content: number | null = null;
@@ -119,7 +127,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		}
 		const atTail = y + viewport >= measured - FOLLOW_SLACK;
 		if (atTail) {
-			following = true;
+			setFollowing(true);
 			gesture = false;
 		} else if (
 			lastY !== null &&
@@ -128,7 +136,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			// offset is layout drift, not the reader, unless a gesture is live.
 			(y < lastY - POSITION_SLACK || (gesture && y !== lastY))
 		) {
-			following = false;
+			setFollowing(false);
 		}
 		lastY = y;
 	};
@@ -203,6 +211,11 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		get readSeq() {
 			return readSeq;
 		},
+		/** `dataReady` turned true without a layout event (an anchored open that
+		 *  fell back to newest): run the initial positioning it was holding. */
+		dataChanged() {
+			position();
+		},
 		/** For thread states with no list layout to report (empty, no thread). */
 		settledEmpty() {
 			content = 0;
@@ -219,7 +232,35 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		},
 		/** Load older: the reader is in history; a prepend must not pull them down. */
 		releaseFollow() {
-			following = false;
+			setFollowing(false);
+		},
+		/**
+		 * A message-anchored open (`thread-anchor.ts`) has scrolled the reader to
+		 * that message. It IS the initial position, so it ends the initial phase
+		 * WITHOUT claiming the newest edge: nothing is marked read on landing
+		 * (only rows the reader then sees, via `visible`), and the reader stays
+		 * in control — a new message must not pull them away from the one they
+		 * came to read. Reaching the tail resumes following as usual.
+		 */
+		anchored() {
+			if (initial) finish(false);
+			setFollowing(false);
+			gesture = false;
+		},
+		/** Whether new content keeps the reader pinned to the newest edge. */
+		get following() {
+			return following;
+		},
+		/**
+		 * "Jump to newest" after an anchored open: back to #208's follow mode at
+		 * the measured tail (exact offset, as `position` uses).
+		 */
+		jumpToNewest() {
+			if (content === null || height <= 0) return;
+			setFollowing(true);
+			gesture = false;
+			const readBack = options.scrollTo(Math.max(0, content - height));
+			if (readBack) settle(readBack.y, readBack.viewport, readBack.content);
 		},
 	};
 }

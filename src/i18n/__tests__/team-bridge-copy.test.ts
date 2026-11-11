@@ -86,8 +86,9 @@ describe("Team Bridge copy", () => {
 		const keys = Object.keys(CATALOGUES[locale]).filter((k) =>
 			k.startsWith("mobile.team_bridge."),
 		);
-		// Exact merged attachment + consent + established key union.
-		expect(keys).toHaveLength(157);
+		// Exact merged attachment + consent + established key union; +1:
+		// `thread.jump_newest` (feat/bridge-last-target's anchored open).
+		expect(keys).toHaveLength(158);
 		expect(keys.sort()).toEqual(
 			Object.keys(CATALOGUES.en)
 				.filter((key) => key.startsWith("mobile.team_bridge."))

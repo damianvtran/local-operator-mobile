@@ -126,6 +126,7 @@
 	"mobile.team_bridge.thread.join": "چینل میں شامل ہوں",
 	"mobile.team_bridge.thread.join_error": "اس چینل میں شامل نہیں ہو سکے۔ دوبارہ کوشش کریں۔",
 	"mobile.team_bridge.thread.join_pending": "چینل میں شمولیت ابھی مکمل نہیں ہوئی۔ پڑھنے سے پہلے دوبارہ کوشش کریں۔",
+	"mobile.team_bridge.thread.jump_newest": "تازہ ترین پر جائیں",
 	"mobile.team_bridge.thread.loading": "گفتگو لوڈ ہو رہی ہے…",
 	"mobile.team_bridge.thread.message": "پیغام",
 	"mobile.team_bridge.thread.messages_empty": "ابھی کوئی پیغام نہیں ہے۔ گفتگو شروع کریں۔",
