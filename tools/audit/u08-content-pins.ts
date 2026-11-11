@@ -668,7 +668,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #230 round-2 remediation (M2): the session screen holds the
 	// transcript slack through a keyboard lift (`onLift`). Re-derived with
 	// --print; source identity only, no rendered or native proof.
-	app: "ba44b40368da37d77a6c34c6dae76252fabfc1b11862627bf0943759b08e6026",
+	/* Re-pinned 2026-11-11 for integrate/mobile-batch-1111 (#230, #232, #233,
+	 * #234 and #235 merged onto main fa2bc5e0): #230's session-screen change is
+	 * carried with #227's, so this is neither parent's digest; re-derived with
+	 * `--print` over the staged integrated tree. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	app: "da23213d3caa6a22566f638b008b148adc595a0f38113b79043665ace8ecac47",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1558,7 +1563,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// --print over the staged tree; source identity only, no rendered proof.
 	// PR #235 round-1 remediation (R1-M1): the pending echo's prompt text
 	// rides the same clamp; re-printed with --print over the staged tree.
-	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
+	/* Re-pinned 2026-11-11 for integrate/mobile-batch-1111 (#230, #232, #233,
+	 * #234 and #235 merged onto main fa2bc5e0): all five PRs' src changes are
+	 * carried with #227's, plus the regenerated `catalogue.gen.ts` (653 keys)
+	 * and the user-row integration of #233's selectable text inside #235's
+	 * clamp, and the blank-row test's clamp stub, so this is no parent's digest;
+	 * re-derived with `--print` over the staged integrated tree. Source
+	 * admission only, NOT rendered U-08 evidence. */
+	src: "c3027605789d794d4a29a90280e5b37743a4912665e5bf9ea75866ea7deac915",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
