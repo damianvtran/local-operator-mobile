@@ -1497,7 +1497,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// transcript slack, the 8-line composer cap, the icon-only paste control
 	// and the Bridge follower re-pin. Re-derived with --print; source
 	// identity only, no rendered or native proof.
-	src: "5199e6f590a23999b50aaf813a09880c05c02b2e2bde1fd7ddc30afa9f350217",
+	// PR #230 round-1 remediation: the Bridge list's bottom padding (D1,
+	// pb-4 -> pb-2) and three unit tests. Re-derived with --print; source
+	// identity only, no rendered or native proof.
+	src: "7b310a116c6469a470111f11f840dfdebf21b0cd7262ab3e4caf28ae0c0765fa",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

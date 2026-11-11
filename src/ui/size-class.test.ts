@@ -192,6 +192,44 @@ describe("the composer's ceiling above the keyboard (TestFlight 753)", () => {
 			expect(heights.at(-1)).toBe(room);
 			expect(new Set(heights.slice(-4)).size).toBe(1);
 		});
+
+		/* PR #230 review m1 (deferred to a device check): on native the two
+		 *  inputs are not one measurement. The transcript's height arrives by a
+		 *  synchronous `onLayout`, the composer's top by an async
+		 *  `measureInWindow`, so one pass can pair a fresh slack with the top
+		 *  from the pass before. The composer republishes after each of its own
+		 *  layouts, so the next pass is paired again; this pins that ONE stale
+		 *  pass costs at most one off frame (the reviewer's `375,108,375,…`) and
+		 *  then holds, rather than staying bound. */
+		it("one pass whose top is older than the slack recovers on the next paired pass", () => {
+			const room = visible - GAP - CHROME_BOTTOM;
+			let held = box(417, 108, viewport, true);
+			let previous = held;
+			const heights: number[] = [];
+			for (let i = 0; i < 12; i++) {
+				// Pass 1 reads pass 0's fresh slack against the top from before it.
+				const top = i === 1 ? previous : held;
+				const limit = heldComposerLimit(top, {
+					...viewport,
+					transcriptSlack: Math.max(0, held.top - CHROME_BOTTOM),
+				});
+				const bound =
+					limit === null
+						? Number.POSITIVE_INFINITY
+						: composerHostBound(limit, GAP, floor);
+				const height = Math.min(900, bound, room);
+				heights.push(height);
+				previous = held;
+				held = box(
+					visible - GAP - height,
+					height,
+					viewport,
+					composerAtHostCap(height, limit, GAP, floor),
+				);
+			}
+			expect(heights.slice(0, 3)).toEqual([room, 108, room]);
+			expect(new Set(heights.slice(2))).toEqual(new Set([room]));
+		});
 	});
 
 	/* PR #216 review m1: the store reaches the new overlap at the native event,
