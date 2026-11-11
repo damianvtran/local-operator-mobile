@@ -3,9 +3,64 @@
 Two halves, and the boundary between them is the whole point of this file:
 
 1. **Operator steps** — console work a human with account access must do, in Google Cloud and in
-   Apple's developer console. Nothing here can be done by an agent, and nothing here is done yet.
-2. **Implementation steps that follow** — the code. **None of it is implemented**, in any
-   repository, at any layer.
+   Apple's developer console. Nothing here can be done by an agent, and **as of 2026-11-11 none of
+   it is done** (see "Status" below).
+2. **Implementation steps** — the code. For **Team Bridge** push (teammate and agent messages,
+   [`docs/team-bridge.md`](../team-bridge.md)) the app and the cloud are **implemented and deployed
+   since 2026-10-27**; for **computer** completion push (ADR 0006's relay path) the slices in Part 2
+   remain unbuilt.
+
+## Status — 2026-11-11
+
+**Team Bridge push is waiting only on credentials.** What exists:
+
+- **App (this repository):** device-token registration with the hub (`PUT
+  /v1/messaging/push/devices`, persisted monotonic generation), deregistration on sign-out before
+  the OAuth grant is retired, tap routing to the conversation and message anchor, foreground
+  suppression while the same thread is on screen, the per-conversation notification control
+  (all / mentions / mute, in the thread's bell sheet), the app-owned icon badge
+  (`src/notifications/app-badge.ts`), and the Android FCM config wiring
+  (`android.googleServicesFile` from `GOOGLE_SERVICES_JSON_PATH` or `./google-services.json`; CI
+  materialises it from the optional `GOOGLE_SERVICES_JSON_BASE64` secret — [`docs/ci.md`](../ci.md),
+  "Secrets").
+- **Cloud (Radient agent-server, deployed 2026-10-27):** device registry, the durable push outbox,
+  revocation tombstones, and APNs + FCM v1 fan-out, with the notify policy enforced at send time.
+- **Missing:** the credentials. Production boot logs read
+  `Team Bridge push: apns_configured=false fcm_configured=false` (production boot log, as reported
+  2026-11-11; the line is `cmd/server/main.go` in agent-server), so the
+  outbox drains without sending: a device whose platform has no sender is skipped.
+
+**The remaining operator steps, in order** (each is detailed in Part 1):
+
+1. **Firebase on the existing Google Cloud project** (step 1 below) — confirm `firebase:enabled`.
+2. **Register the Android app in Firebase** with package `com.localoperator.mobile` (Firebase
+   console → Project settings → Your apps → Add app → Android; no SDK steps, no Analytics), and
+   download its `google-services.json`.
+3. **Store it as the GitHub `release` environment secret `GOOGLE_SERVICES_JSON_BASE64`**:
+   `base64 < google-services.json | tr -d '\n'` → Settings → Environments → release → Add secret.
+   The next internal (`main`) or tagged Android build then carries FCM; no code change.
+4. **Create the FCM send service account** (step 3 below; role *Firebase Cloud Messaging API Admin*
+   only) and set, in the agent-server deployment's secret store,
+   `BRIDGE_PUSH_FCM_SERVICE_ACCOUNT_JSON` (the JSON key's text) and `BRIDGE_PUSH_FCM_PROJECT_ID`
+   (the project id).
+5. **Create ONE APNs key, environment Production** (step 2 below), enable Push Notifications on the
+   `com.localoperator.mobile` App ID, and set `BRIDGE_PUSH_APNS_KEY_P8` (the `.p8` PEM text),
+   `BRIDGE_PUSH_APNS_KEY_ID` and `BRIDGE_PUSH_APNS_TEAM_ID`. `BRIDGE_PUSH_APNS_TOPIC` defaults to
+   `com.localoperator.mobile` and needs no value.
+6. **Restart agent-server and read the boot line**: it must say
+   `Team Bridge push: apns_configured=true fcm_configured=true`.
+7. **Build** (an Android build after step 3; an iOS TestFlight build after step 5's capability) and
+   run [`docs/team-bridge-push-device-proof.md`](../team-bridge-push-device-proof.md).
+
+**One APNs key, not two — for now.** agent-server holds a single APNs key
+(`BRIDGE_PUSH_APNS_KEY_P8` / `_KEY_ID` / `_TEAM_ID`) and picks the host per device from the
+environment the device registered with (`api.push.apple.com` for `production`,
+`api.sandbox.push.apple.com` for `sandbox`). The app registers `production` from every release
+build (`__DEV__` false), so **a Production-scoped key is enough for TestFlight and store builds**.
+Development builds register `sandbox`, and a Production-scoped key fails there
+(`BadEnvironmentKeyInToken`); supporting them needs either a second, Sandbox-scoped key in the
+cloud (a follow-up agent-server change) or Apple's legacy unscoped key. Step 2's two-key advice below
+is the end state, not a prerequisite for the first device proof.
 
 Read beside [ADR 0006](../adr/0006-push-and-ack-sync.md), which carries the reasoning this runbook
 executes, and [`docs/push-plan.md`](../push-plan.md), which carries the slice table and owners.
@@ -182,7 +237,10 @@ pasted into a workflow, a log line, a screenshot or a pull-request comment. It g
 store and nowhere else: this key can send push to every user of the app, so a copy outside the store
 widens the blast radius the ops note already records as team-wide.
 
-**On secret names: this repository names none, and that is deliberate.** [`docs/ci.md`](../ci.md)
+**On secret names (updated 2026-11-11).** This paragraph used to name none; the Android app slice
+has landed, so the one CI-side input now has a name: `GOOGLE_SERVICES_JSON_BASE64` (optional — see
+[`docs/ci.md`](../ci.md), "Secrets", and the Status section above). The send credentials below are
+still the cloud's and CI holds neither. The original reasoning, kept for the record: [`docs/ci.md`](../ci.md)
 enumerates the **release** environment's secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEY_*`,
 `PLAY_SERVICE_ACCOUNT_JSON_BASE64`, …) and none of them is a push credential — the FCM key and the
 APNs key are the cloud's, and CI holds neither (above). The Android build input the ADR requires,
@@ -196,8 +254,9 @@ Do not invent a name here for a file no workflow reads yet, and do not add one t
 - **No new Google Cloud project.** The decision is the existing one.
 - **No Firebase app registration for the iOS build.** APNs is direct; a Firebase iOS app would add a
   `GoogleService-Info.plist` the app does not need and a second path to the same device.
-- **No `google-services.json` in the repository.** It arrives by slice (Part 2), from CI, when the
-  Android app code that reads it exists.
+- **No `google-services.json` in the repository.** It arrives from CI
+  (`GOOGLE_SERVICES_JSON_BASE64` → `scripts/ci/google-services.ts` → `GOOGLE_SERVICES_JSON_PATH`),
+  and `.gitignore` keeps a local copy out of git.
 - **No Firebase data product of any kind** — no Firestore, Realtime Database, Firebase Auth or
   Hosting. A prompt to enable one is a prompt to decline.
 - **No credential in the app, ever.** The `.p8` and the service-account JSON are the cloud's; the
@@ -207,7 +266,9 @@ Do not invent a name here for a file no workflow reads yet, and do not add one t
 
 ## Part 2 — Implementation steps that follow
 
-**Every item below is unimplemented.** They are listed so the operator steps above have a
+**Scope note (2026-11-11):** these are the slices for **computer** completion push (ADR 0006).
+Team Bridge push reuses the cloud's APNs/FCM senders and is built — see "Status" above. Unless a
+section says otherwise, **every item below is unimplemented.** They are listed so the operator steps above have a
 destination, not to describe code that exists. Slice ids, owners and exit criteria are
 [`docs/push-plan.md`](../push-plan.md)'s; this section says what each one is and that it is not
 built.
@@ -232,7 +293,13 @@ cloud **composes nothing** — no payload class of its own, no alert text, no `a
 here is marked *(proposal)* in the ADR because this repository cannot read that code: **it is not
 implemented anywhere this repository can see.**
 
-### 2.3 Client registration and permission flow — **unimplemented** (this repository)
+### 2.3 Client registration and permission flow — **partly built** (this repository)
+
+*Built since this was written:* the in-context permission request and the Settings →
+Notifications section (`src/features/settings/notifications-section.tsx`,
+`src/notifications/permission.ts`), the device-token read, and Team Bridge registration with the
+hub. *Still unbuilt:* registration of this phone **for a paired computer** (the forward the
+computer's completion pushes need) and the five-state per-device surface below.
 
 The in-app half: request the notification permission at the moment the user asks for notifications
 rather than at launch, obtain the device token from APNs or FCM, register it with the cloud for the
@@ -258,9 +325,13 @@ today.**
 
 - **Decided:** the transport, and the boundary of Firebase's involvement — ADR 0006, Status
   **Accepted (2026-10-29)**.
-- **Done:** nothing in Part 1 and nothing in Part 2. The three artefacts are console work the
-  operator has not done; the four slices are unstarted.
+- **Done:** Team Bridge push, app and cloud (2026-10-27), including the Android FCM config wiring
+  and the app-owned badge (2026-11-11). Nothing in Part 1: the credentials are console work the
+  operator has not done. The computer-push slices 2.1, 2.2 and 2.4 are unstarted; 2.3 is partly
+  built.
 - **The gate to watch:** the ADR's own words, unchanged by acceptance — a green build proves the app
   still builds, and only an exercised push (an event on a real machine reaching a real device, and
-  the machine still authoritative when the push is late or absent) proves the feature. That test does
-  not exist yet either.
+  the machine still authoritative when the push is late or absent) proves the feature. For Team
+  Bridge that test is written down:
+  [`docs/team-bridge-push-device-proof.md`](../team-bridge-push-device-proof.md); it has not been
+  run, because the credentials do not exist yet.
