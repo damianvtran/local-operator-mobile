@@ -1506,8 +1506,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// so no measured web pixel moves. Source identity only. Re-printed for the
 	// PR #233 round-1 remediation (uncontrolled iOS selection, wrapper out of
 	// VoiceOver, memoised output joins): web renders the same children and
-	// leaves, so again source identity only.
-	src: "fc417a89c1d71355f9f16bedc9a194bbcc8bbaf5d69b7095cce27f2532b1bed9",
+	// leaves, so again source identity only. Re-printed for the PR #233 design
+	// R1 remediation (Android highlight derived per theme, diff selection ink,
+	// scroll keeps the iOS mode): the web leaf's `selectionColor` is ignored by
+	// RNW `Text`, and the rest is iOS-mode or touch wiring, so again source
+	// identity only.
+	src: "2b842540f8b613a52cc6c14e688c3ed306e810a5eaa3d2ba382a45d9f1715c6f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

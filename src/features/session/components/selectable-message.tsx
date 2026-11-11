@@ -17,8 +17,9 @@
  *    one?"), so entering the mode re-renders this row and the row it replaced,
  *    never the list. The context value is stable across renders.
  *  - THE MODE ENDS on a tap that collapses the selection, a tap outside the row
- *    or a scroll (the lists call the store), on blur, or when another message
- *    enters it.
+ *    (the lists call the store), on blur, when another message enters it, or
+ *    when the row unmounts. NOT on a scroll (design R1, D3): the reader must be
+ *    able to scroll to a long message's off-screen handle.
  *  - Formatting is dropped while selecting (the plain text is what Copy puts
  *    on the pasteboard, as in Slack's "Select text"); it returns on exit.
  *  - THE SELECTION IS UNCONTROLLED (PR #233 review R1, B1). Select-all is sent
@@ -63,6 +64,7 @@ import {
 	leafSelectable,
 	noteTextSelectionTouch,
 	selectionEndsMode,
+	selectionHighlight,
 	subscribeTextSelection,
 	usesSelectionMode,
 } from "@/features/session/text-selection";
@@ -105,16 +107,6 @@ const TextSelectionContext =
 export const useTextSelection = (): TextSelectionContextValue =>
 	useContext(TextSelectionContext);
 
-/**
- * The selection colour role per platform. iOS takes it as the input's
- * `tintColor` (handles + caret, with UIKit deriving the translucent highlight),
- * so it wants the solid accent. Android paints `selectionColor` as an opaque
- * highlight BEHIND the glyphs, so the solid accent would bury the ink; the
- * accent wash is the palette's own "selected background" step.
- */
-export const selectionColorRole = (os: string): "accent" | "accent-wash" =>
-	os === "ios" ? "accent" : "accent-wash";
-
 export function SelectableMessage({
 	text,
 	children,
@@ -133,9 +125,32 @@ export function SelectableMessage({
 	disabled?: boolean;
 	testID?: string;
 }) {
-	const selectionColor = useTokenColor(
-		selectionColorRole(usesSelectionMode() ? "ios" : "other"),
-	);
+	/* The selection colour per platform. iOS takes it as the input's
+	 *  `tintColor` (handles + caret; UIKit derives the translucent highlight),
+	 *  so it wants the solid accent (handles >= 3.72:1 on every surface, design
+	 *  R1). Android paints `selectionColor` as the highlight BEHIND the glyphs,
+	 *  so it gets the accent near 30 % alpha (`selectionHighlight`, derived per
+	 *  theme from its tokens) — the solid accent would bury the ink, and the old
+	 *  `accent-wash` was invisible (design R1, D1). */
+	const accent = useTokenColor("accent");
+	/* The roles the Android highlight is derived against, read live like the
+	 *  accent (`useTokenColor` tracks a theme switch). Five unconditional hook
+	 *  calls rather than the palette object, so every row reads the same
+	 *  source the rest of the app's non-className colours do. */
+	const ink = useTokenColor("ink");
+	const messageSurface = useTokenColor("message-surface");
+	const userBubble = useTokenColor("user-bubble");
+	const sunken = useTokenColor("sunken");
+	// iOS: the solid accent as tint. Elsewhere: the translucent highlight.
+	const selectionColor = usesSelectionMode()
+		? accent
+		: selectionHighlight({
+				accent,
+				ink,
+				"message-surface": messageSurface,
+				"user-bubble": userBubble,
+				sunken,
+			});
 	const id = useId();
 	const selecting = useSyncExternalStore(
 		subscribeTextSelection,
@@ -159,6 +174,13 @@ export function SelectableMessage({
 		setPlain(typeof current === "function" ? current() : current);
 		enterTextSelection(id);
 	}, [disabled, id]);
+
+	/* A row that leaves the list while selecting (FlatList windowing unmounts
+	 *  it once the reader scrolls far enough) takes the mode with it, so no
+	 *  orphaned id keeps the store "active" with nothing on screen (design R1,
+	 *  D3: scrolling no longer ends the mode by itself). Id-scoped, so a row
+	 *  unmounting never closes the row that took over. */
+	useEffect(() => () => exitTextSelection(id), [id]);
 
 	/* Select-all ONCE per entry, imperatively (`TextInput.js:483-493`,
 	 *  `setSelection` -> `setTextAndSelection`), so the handles are on screen at

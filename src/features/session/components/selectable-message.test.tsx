@@ -1,4 +1,10 @@
-import { act, type ComponentProps, createElement, type ReactNode } from "react";
+import {
+	act,
+	type ComponentProps,
+	createElement,
+	Fragment,
+	type ReactNode,
+} from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -70,9 +76,18 @@ vi.mock("react-native", async () => {
 		},
 	};
 });
-vi.mock("@/ui/appearance", () => ({
-	useTokenColor: (role: string) => `token:${role}`,
-}));
+/* A real hex for the accent (the default light palette's), so the Android
+ *  highlight derivation (`selectionHighlight`) runs for real. */
+const ACCENT = "#137742";
+vi.mock("@/ui/appearance", async () => {
+	const { themeEntry } = await import("@/ui/tokens.gen");
+	// The default light palette, whose accent is ACCENT: the Android highlight
+	// derivation runs on real token values.
+	const colors = themeEntry(null, "light").colors as Record<string, string>;
+	return {
+		useTokenColor: (role: string) => colors[role] ?? `token:${role}`,
+	};
+});
 
 const { installDomShim } = await import("@/testing/dom-shim");
 const selection = await import("@/features/session/text-selection");
@@ -155,7 +170,7 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 			scrollEnabled: false,
 			autoFocus: true,
 			value: "First paragraph.\n\nSecond paragraph.",
-			selectionColor: "token:accent",
+			selectionColor: ACCENT,
 			className: "text-body-read text-ink",
 		});
 		// Select-all is sent ONCE, imperatively; the input is never controlled.
@@ -280,7 +295,7 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 		expect(host.pressables.length).toBe(pressablesBefore + 1);
 	});
 
-	it("ends on blur and on a scroll; another message's long-press takes over", async () => {
+	it("ends on blur; another message's long-press takes over", async () => {
 		const { SelectableMessage, store } = await load("ios");
 		await act(async () =>
 			root.render(
@@ -323,6 +338,34 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 		expect(store.activeTextSelection()).toBeNull();
 	});
 
+	/* Design R1, D3: a scroll no longer ends the mode, so a row that windowing
+	 *  unmounts must end it itself — and only if it is still the active one. */
+	it("a row that unmounts while selecting ends the mode; a stale row does not", async () => {
+		const { SelectableMessage, store } = await load("ios");
+		// Keyed, as FlatList rows are, so removing "a" unmounts "a" — not the
+		// positional second child.
+		const row = (text: string) =>
+			createElement(
+				Fragment,
+				{ key: text },
+				message(SelectableMessage, { text, textClassName: "x" }, text),
+			);
+		await act(async () =>
+			root.render(createElement("div", null, row("a"), row("b"))),
+		);
+		const [first, second] = host.pressables.slice(-2);
+		await act(async () => first?.onLongPress?.());
+		await act(async () => second?.onLongPress?.());
+		const active = store.activeTextSelection();
+		expect(active).not.toBeNull();
+		// The first row (no longer active) leaves the window: the second keeps it.
+		await act(async () => root.render(createElement("div", null, row("b"))));
+		expect(store.activeTextSelection()).toBe(active);
+		// The selecting row itself leaves: nothing is left "active" off-screen.
+		await act(async () => root.render(createElement("div", null)));
+		expect(store.activeTextSelection()).toBeNull();
+	});
+
 	it("gives a clamped preview no mode", async () => {
 		const { SelectableMessage } = await load("ios");
 		await act(async () =>
@@ -344,8 +387,15 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 
 describe("Android and web: native selection on the leaf, no mode", () => {
 	for (const os of ["android", "web"] as const) {
-		it(`${os}: leaf Text is selectable with the theme wash, no wrapper Pressable`, async () => {
-			const { SelectableMessage, SelectableLeafText } = await load(os);
+		it(`${os}: leaf Text is selectable with the ~30 % accent highlight, no wrapper Pressable`, async () => {
+			const { SelectableMessage, SelectableLeafText, store } = await load(os);
+			const { themeEntry } = await import("@/ui/tokens.gen");
+			// The per-theme derivation over the palette the mock serves (design
+			// R1, D1) — never the old `accent-wash`, never the opaque accent.
+			const expected = store.selectionHighlight(
+				themeEntry(null, "light").colors,
+			);
+			expect(expected).toMatch(new RegExp(`^${ACCENT}[0-9a-f]{2}$`));
 			await act(async () =>
 				root.render(
 					message(
@@ -362,7 +412,7 @@ describe("Android and web: native selection on the leaf, no mode", () => {
 			expect(host.inputs).toHaveLength(0);
 			expect(host.texts.at(-1)).toMatchObject({
 				selectable: true,
-				selectionColor: "token:accent-wash",
+				selectionColor: expected,
 			});
 			// The leaf selects natively: no VoiceOver detour into a mode.
 			expect(host.texts.at(-1)).not.toHaveProperty("accessibilityActions");
@@ -373,13 +423,52 @@ describe("Android and web: native selection on the leaf, no mode", () => {
 describe("the mode store", () => {
 	beforeEach(() => selection.exitTextSelection());
 
-	it("a touch outside the selecting row ends the mode; one inside does not", () => {
+	it("a tap outside the selecting row ends the mode; one inside does not", () => {
 		selection.enterTextSelection("row-1");
 		selection.noteTextSelectionTouch();
 		selection.textSelectionContainerTouch();
+		selection.textSelectionContainerTouchEnd();
 		expect(selection.activeTextSelection()).toBe("row-1");
 		selection.textSelectionContainerTouch();
+		// Undecided until the touch lifts: it could still become a scroll.
+		expect(selection.activeTextSelection()).toBe("row-1");
+		selection.textSelectionContainerTouchEnd();
 		expect(selection.activeTextSelection()).toBeNull();
+	});
+
+	/* Design R1, D3: the reader scrolls to reach a long message's far handle,
+	 *  so a drag that scrolls the list — from inside the row or outside it —
+	 *  keeps the mode, whether the touch then ends or is cancelled. */
+	it("a scroll keeps the mode", () => {
+		selection.enterTextSelection("row-1");
+		selection.textSelectionContainerTouch();
+		selection.textSelectionContainerScroll();
+		selection.textSelectionContainerTouchEnd();
+		expect(selection.activeTextSelection()).toBe("row-1");
+
+		selection.textSelectionContainerTouch();
+		selection.textSelectionContainerTouchCancel();
+		selection.textSelectionContainerTouchEnd();
+		expect(selection.activeTextSelection()).toBe("row-1");
+
+		selection.noteTextSelectionTouch();
+		selection.textSelectionContainerTouch();
+		selection.textSelectionContainerScroll();
+		selection.textSelectionContainerTouchEnd();
+		expect(selection.activeTextSelection()).toBe("row-1");
+
+		// And a later plain tap outside still ends it.
+		selection.textSelectionContainerTouch();
+		selection.textSelectionContainerTouchEnd();
+		expect(selection.activeTextSelection()).toBeNull();
+	});
+
+	it("a touch end with no mode or no pending outside touch is a no-op", () => {
+		selection.textSelectionContainerTouchEnd();
+		expect(selection.activeTextSelection()).toBeNull();
+		selection.enterTextSelection("row-1");
+		selection.textSelectionContainerTouchEnd();
+		expect(selection.activeTextSelection()).toBe("row-1");
 	});
 
 	it("a stale row's exit does not close the row that took over", () => {

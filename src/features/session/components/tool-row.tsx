@@ -135,6 +135,7 @@ const DIFF_TONE_CLASS = {
 } as const;
 
 const MONO_CLASS = "whitespace-pre-wrap font-mono text-mono-sm";
+const DIFF_SELECTION_CLASS = cx(MONO_CLASS, "text-ink");
 
 const DiffBlock = ({ lines }: { lines: string[] }) => {
 	/* Memoised on `lines` (review R1, m1) and still lazy: the diff renders per
@@ -147,8 +148,12 @@ const DiffBlock = ({ lines }: { lines: string[] }) => {
 		<View className="max-h-64 overflow-hidden rounded-sm bg-sunken p-2">
 			<ScrollView>
 				{/* Output is the thing a reader most often needs to paste elsewhere
-				 *  (a path, an error line): drag-select it like any message. */}
-				<SelectableMessage text={joined} textClassName={MONO_CLASS}>
+				 *  (a path, an error line): drag-select it like any message. The
+				 *  selection view takes ONE ink: a TextInput has no per-line spans,
+				 *  and RN iOS defaults input text to black (1.10–1.27:1 on `sunken`
+				 *  in every dark palette, design R1 D2). The diff tints return on
+				 *  exit, like every other dropped format. */}
+				<SelectableMessage text={joined} textClassName={DIFF_SELECTION_CLASS}>
 					<SelectableLeafText className={MONO_CLASS}>
 						{lines.map((line, index) => (
 							<Text
