@@ -63,13 +63,26 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
  * title its own row (large text / narrow phone) and ONE line beside the back
  * control otherwise. The tail is cut by layout, never by a character count.
  */
-export function BridgeThreadTitle({ title }: { title: string }) {
+export function BridgeThreadTitle({
+	title,
+	accessibilityLabel,
+}: {
+	title: string;
+	/** The name a screen reader hears when it differs from the drawn title:
+	 *  a channel draws `# humans` but is announced "humans" (review R1-10). */
+	accessibilityLabel?: string;
+}) {
 	const compact = useCompactChrome();
 	const { effectiveScale } = useTextScale();
 	const { width } = useWindowDimensions();
 	const stacked = !compact && headerStacks(effectiveScale, width);
 	return (
-		<BridgeThreadTitleView title={title} compact={compact} stacked={stacked} />
+		<BridgeThreadTitleView
+			title={title}
+			accessibilityLabel={accessibilityLabel}
+			compact={compact}
+			stacked={stacked}
+		/>
 	);
 }
 
@@ -77,10 +90,12 @@ export function BridgeThreadTitle({ title }: { title: string }) {
  *  assert each layout branch without a native layout host. */
 export function BridgeThreadTitleView({
 	title,
+	accessibilityLabel,
 	compact,
 	stacked,
 }: {
 	title: string;
+	accessibilityLabel?: string;
 	compact: boolean;
 	stacked: boolean;
 }) {
@@ -97,6 +112,7 @@ export function BridgeThreadTitleView({
 				/* React Native's default `ellipsizeMode` is "tail", which is the
 				 *  session title's cut; `Heading` does not forward the prop. */
 				numberOfLines={style.numberOfLines}
+				accessibilityLabel={accessibilityLabel}
 			>
 				{title}
 			</Heading>
@@ -299,7 +315,14 @@ export function BridgeComposerFieldView({
 			) : null}
 			<View
 				className="min-w-0 flex-1 justify-center"
-				style={{ minHeight: row }}
+				style={{
+					minHeight: row,
+					/* When no attach control renders (e.g. a draft DM before first send,
+					 * or a hub without attachment support), add 4 pt start inset on top
+					 * of the shell's 12 pt side pad so text sits cleanly at 16 pt (`px-4`)
+					 * rather than hugging the curved 28 pt pill corner. */
+					paddingStart: onAttach && attachLabel ? 0 : 4,
+				}}
 			>
 				<Textarea
 					label={label}

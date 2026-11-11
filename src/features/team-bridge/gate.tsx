@@ -10,6 +10,8 @@ import { CONTROL, SURFACE, teamBridgeGateId } from "@/ui/a11y";
 import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
+import { Skeleton } from "@/ui/components/skeleton";
+import { BridgeThreadTitle } from "./thread-chrome";
 
 export function BridgeBack() {
 	const router = useRouter();
@@ -76,10 +78,11 @@ export function BridgeGate({
 	return (
 		<Screen
 			title={t("mobile.team_bridge.title")}
+			titleNode={<BridgeThreadTitle title={t("mobile.team_bridge.title")} />}
 			headerLeading={headerLeading}
 			testID={teamBridgeGateId(gate)}
 		>
-			<View className="gap-5 px-4 py-6">
+			<View className="gap-4 px-4 py-6">
 				<Text className="text-title text-ink" accessibilityRole="header">
 					{title}
 				</Text>
@@ -89,9 +92,8 @@ export function BridgeGate({
 						className="gap-3"
 						testID={SURFACE.teamBridgeGateSkeleton}
 					>
-						<View className="h-6 rounded-sm bg-surface" />
-						<View className="h-6 rounded-sm bg-surface" />
-						<Text className="text-body text-ink-muted">
+						<Skeleton lines={3} />
+						<Text className="text-body-sm text-ink-muted">
 							{t("mobile.team_bridge.gate.connecting")}
 						</Text>
 					</View>

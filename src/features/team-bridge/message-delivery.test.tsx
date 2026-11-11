@@ -1,27 +1,20 @@
 import { Children, createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Pressable } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetLocaleSource, setLocaleSource } from "@/i18n/locale";
 import { message, SELF } from "@/team-bridge/__tests__/fixtures";
 import { messageSchema } from "@/team-bridge/contract";
 import { teamBridgeDeliveryHelpId, teamBridgeDeliveryId } from "@/ui/a11y";
-import { IconButton } from "@/ui/components/icon-button";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { MessageDelivery } from "./message-delivery";
 
-// The DOM host is not a native appearance provider. Stub ONLY the shared
-// primitive's rendering; activation below invokes the real component binding.
-// The Node SSR host has no native SVG/Flow loader. Stub only the icon
-// boundary; the actual annotation component and its action binding still run.
+// The DOM host is not a native appearance provider. Stub ONLY the token reader
+// and the SVG icon boundary; the actual annotation component, its inline row,
+// and its Pressable action binding run for real.
 vi.mock("lucide-react-native", () => ({ Info: () => null }));
-
-vi.mock("@/ui/components/icon-button", () => ({
-	IconButton: (props: { accessibilityLabel: string; testID: string }) =>
-		createElement("button", {
-			type: "button",
-			"aria-label": props.accessibilityLabel,
-			"data-testid": props.testID,
-		}),
-}));
+vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#555555" }));
+vi.mock("@/ui/layout", () => ({ TOUCH_FLOOR: 44 }));
 
 const entry = {
 	endpoint_id: "fixture-endpoint",
@@ -70,7 +63,7 @@ describe("quiet message delivery component", () => {
 		expect(html).toContain("Nova: Waiting for delivery.");
 		expect(html).toContain("Nova: Not delivered. (Abusive content)");
 		expect(html).toContain(teamBridgeDeliveryId("bcm_1", "fixture-other"));
-		expect(html.match(/<button/g) ?? []).toHaveLength(1);
+		expect(html.match(/role="button"/g) ?? []).toHaveLength(1);
 		expect(html).toContain("About message delivery");
 		expect(html.includes("Retry")).toBe(false);
 		expect(html.includes(entry.recipient_owner_label)).toBe(false);
@@ -85,7 +78,7 @@ describe("quiet message delivery component", () => {
 		expect(renamed).toContain(id);
 		expect(renamed).toContain("Renamed agent: Waiting for delivery.");
 	});
-	it("binds the actual single info action to its message opener callback", () => {
+	it("places the info affordance inline beside annotations and binds its touch-floor action", () => {
 		const onHelp = vi.fn();
 		const parsed = messageSchema.parse({
 			...message(1, SELF, "2026-11-02T09:00:00Z"),
@@ -93,16 +86,23 @@ describe("quiet message delivery component", () => {
 		});
 		const tree = MessageDelivery({ message: parsed, onHelp });
 		if (!tree) throw new Error("annotation group absent");
+		expect(String(tree.props.className)).toContain("flex-row");
 		const action = Children.toArray(tree.props.children).find(
-			(child) => isValidElement(child) && child.type === IconButton,
+			(child) => isValidElement(child) && child.type === Pressable,
 		);
 		if (
-			!isValidElement<{ onPress: () => void; accessibilityLabel: string }>(
-				action,
-			)
+			!isValidElement<{
+				onPress: () => void;
+				accessibilityLabel: string;
+				style?: { minHeight?: number; minWidth?: number };
+			}>(action)
 		)
 			throw new Error("info action absent");
 		expect(action.props.accessibilityLabel).toBe("About message delivery");
+		expect(action.props.style).toMatchObject({
+			minHeight: TOUCH_FLOOR,
+			minWidth: TOUCH_FLOOR,
+		});
 		action.props.onPress();
 		expect(onHelp).toHaveBeenCalledExactlyOnceWith(
 			teamBridgeDeliveryHelpId(parsed.id),

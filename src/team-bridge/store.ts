@@ -47,6 +47,7 @@ import {
 	preferredOrganization,
 	type StatusRead,
 } from "@/team-bridge/model";
+import { clearTeamBridgeDrafts } from "@/team-bridge/thread-drafts";
 
 export type LoadState = "idle" | "loading" | "ready" | "error";
 
@@ -1010,6 +1011,7 @@ export function createTeamBridgeStore(deps: {
 			generation += 1;
 			inFlight.clear();
 			clearAttachmentCache();
+			clearTeamBridgeDrafts();
 			store.setState(initialTeamBridgeState());
 		},
 
@@ -1018,8 +1020,9 @@ export function createTeamBridgeStore(deps: {
 			generation += 1;
 			inFlight.clear();
 			// Sign-out and account change both land here: the previous account's
-			// decoded images must not outlive it in this process.
+			// decoded images and unsent text drafts must not outlive it in memory.
 			clearAttachmentCache();
+			clearTeamBridgeDrafts();
 			store.setState(initialTeamBridgeState());
 		},
 	};

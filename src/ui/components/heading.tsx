@@ -30,6 +30,9 @@ export type HeadingProps = {
 	testID?: string;
 	ref?: Ref<Text>;
 	tabIndex?: 0 | -1;
+	/** The spoken name, when the visible text carries a decorative mark a
+	 *  screen reader should not read (a channel's `#` is "number sign"). */
+	accessibilityLabel?: string;
 };
 
 export const Heading = ({
@@ -41,9 +44,11 @@ export const Heading = ({
 	testID,
 	ref,
 	tabIndex,
+	accessibilityLabel,
 }: HeadingProps) => (
 	<Text
 		ref={ref}
+		accessibilityLabel={accessibilityLabel}
 		onTextLayout={onTextLayout}
 		{...{ tabIndex }}
 		role="heading"
