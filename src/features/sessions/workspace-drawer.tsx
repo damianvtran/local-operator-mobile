@@ -67,10 +67,13 @@ export const useOptionalWorkspaceDrawer = () =>
  *
  * BELOW `LARGE_TEXT_SCALE`: ONE row, always, and the unread count costs NO
  * layout. The panel at 320 pt is `sidebarWidthFor(320, 48)` = 272 pt; the
- * row's `px-3` (24) + `gap-1.5` (6) + the 48 pt close button leave 194 pt, the
- * track's `p-0.5` a 190 pt inner track, and its `gap-0.5` 188 pt for the two
- * segments. Agents (47 + 16 + 2) and Team Bridge (79 + 16 + 2) need ~162 pt; an
- * INLINE count (6 gap + up to 30.5 for "99+") pushed that to ~198.5 pt, so
+ * row's `px-2` (16) + `gap-1` (4) + the 48 pt close button leave 204 pt, the
+ * track's `p-1` (8) a 196 pt inner track, and its `gap-1` (4) 192 pt for the
+ * two segments. Every one of those steps is on `space.scale` (4 pt multiples):
+ * the earlier 2 / 6 / 10 pt half steps failed the web audit's U-42 spacing
+ * check on every frame showing the drawer (1,152 rows at 320 pt alone), and
+ * `workspace-drawer.test.tsx` now refuses any half-step spacing utility here. Agents (47 + 16 + 2) and Team Bridge (79 + 16 + 2) need ~162 pt; an
+ * INLINE count (4 gap + up to 30.5 for "99+") pushes that to ~196.5 pt, so
  * "Team Bridge" wrapped to two lines, the bar grew 48 → 54.6 pt and the
  * drawer and the segment divider moved whenever an unread arrived (PR #222 UX U2-1/U2-2, design D2-2). The
  * count is therefore an out-of-flow corner overlay (`badge: "overlay"`): adding
@@ -80,7 +83,7 @@ export const useOptionalWorkspaceDrawer = () =>
  * AT AND ABOVE IT: the track wraps (PR #212 QA Q1-1) so "Team Bridge" breaks
  * onto its own row instead of truncating at 200 %+ / Urdu RTL. Segments are
  * content-proportioned (`grow shrink`, basis auto), NOT `flex-1` halves: equal
- * halves of the 190 pt track gave each label a 73 pt inner box, narrower than
+ * halves of the (then) 190 pt track gave each label a 73 pt inner box, narrower than
  * the single word "Bridge" (~80 pt at 28 px), and with `min-w-0 shrink` on the
  * label that forced the mid-word break "Bridg / e" (design D2-1). Now a segment
  * that does not fit wraps onto its own full-width row, and the label never
@@ -97,15 +100,15 @@ export const modeBarLayout = (largeText: boolean) =>
 	largeText
 		? ({
 				track:
-					"min-w-0 flex-1 flex-row flex-wrap content-center items-stretch gap-0.5 rounded-md bg-sunken p-0.5",
+					"min-w-0 flex-1 flex-row flex-wrap content-center items-stretch gap-1 rounded-md bg-sunken p-1",
 				segment: "min-w-0 grow shrink",
-				content: "flex-wrap px-2.5",
+				content: "flex-wrap px-3",
 				label: "text-center text-body-sm",
 				badge: "inline",
 			} as const)
 		: ({
 				track:
-					"min-w-0 flex-1 flex-row flex-nowrap content-center items-stretch gap-0.5 rounded-md bg-sunken p-0.5",
+					"min-w-0 flex-1 flex-row flex-nowrap content-center items-stretch gap-1 rounded-md bg-sunken p-1",
 				segment: "min-w-0 grow shrink",
 				content: "flex-nowrap px-2",
 				label: "text-center text-body-sm",
@@ -113,9 +116,11 @@ export const modeBarLayout = (largeText: boolean) =>
 			} as const);
 
 /** Where the overlaid Team Bridge count sits on its segment's top-trailing
- *  corner. It rises into the row's `pt-1.5` (6 pt) and reaches past the track
- *  into the `gap-1.5` before the close button (or the docked pane's `px-3`),
- *  so it never clips or leaves the panel. `end`, not `right`, so Urdu RTL
+ *  corner. It rises into the track's `p-1` (4) + the row's `pt-2` (8) above
+ *  the segment and reaches past the track's `p-1` into the `gap-1` before the
+ *  close button (8 pt in all, or the docked pane's `px-2`), so it never clips,
+ *  leaves the panel or touches the close hit box. `top`/`end` are insets, not
+ *  spacing, so U-42's scale does not bind them. `end`, not `right`, so Urdu RTL
  *  mirrors it to the leading corner. */
 export const MODE_BADGE_INSET = { top: -5, end: -4 } as const;
 
@@ -157,7 +162,7 @@ export const WorkspaceModeBar = ({
 		bridgeBadge.count !== null &&
 		bridgeBadge.count > 0;
 	return (
-		<View className="flex-row items-center gap-1.5 px-3 pt-1.5 pb-1">
+		<View className="flex-row items-center gap-1 px-2 pt-2 pb-1">
 			{/* WRAP, NEVER TRUNCATE (PR #212 QA Q1-1 / design D1 / UX U1).
 			 *  At 200 % text a fixed row cut "Team Bridge" to "Team B" and
 			 *  pushed the badge past the panel (320/390 pt phones, Urdu RTL
@@ -179,7 +184,7 @@ export const WorkspaceModeBar = ({
 					{({ pressed }) => (
 						<View
 							className={cx(
-								"flex-1 flex-row items-center justify-center rounded-sm border py-1.5",
+								"flex-1 flex-row items-center justify-center rounded-sm border py-1",
 								layout.content,
 								agentsSelected
 									? "border-hairline bg-elevated"
@@ -227,7 +232,7 @@ export const WorkspaceModeBar = ({
 						{({ pressed }) => (
 							<View
 								className={cx(
-									"flex-1 flex-row items-center justify-center gap-1.5 rounded-sm border py-1.5",
+									"flex-1 flex-row items-center justify-center gap-1 rounded-sm border py-1",
 									layout.content,
 									bridgeSelected
 										? "border-hairline bg-elevated"

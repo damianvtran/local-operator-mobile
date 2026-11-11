@@ -570,12 +570,12 @@ describe("the mode row: one row at normal text, wraps at large text, shares the 
 		expect(classes(group)).not.toContain("flex-1");
 		const content = host.views.find(
 			(v) =>
-				classes(v).includes("gap-1.5") &&
+				classes(v).includes("gap-1") &&
 				classes(v).includes("justify-center") &&
 				classes(v).includes("rounded-sm"),
 		);
 		expect(classes(content)).toEqual(
-			expect.arrayContaining(["flex-nowrap", "px-2"]),
+			expect.arrayContaining(["flex-nowrap", "px-2", "py-1"]),
 		);
 		/* U2-1/U2-2: the count is an out-of-flow corner overlay, a sibling of
 		 *  the segment's Pressable inside its group — never in the segment's

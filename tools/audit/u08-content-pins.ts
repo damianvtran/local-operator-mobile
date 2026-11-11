@@ -1371,6 +1371,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// disjoint src files, so the merged tree has neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
+	// fix/refused-connect-feedback: own-tunnel stays on the form with the reason
+	// when Save and connect is refused, the keystore refusal's sanitised cause,
+	// seven catalogue keys and tests; only `src` moves, re-derived with --print
+	// over the staged tree. Source identity only, no rendered or native proof.
+	// PR #220 round-1 remediation (R1-m1/m2, D1-D3, U1/U2/U4, Q1): own-tunnel
+	// clears stale state on edit, keeps the refusal up during Retry, new copy
+	// and keys; only `src` moves, re-derived with --print over the staged tree.
+	// Source identity only, no rendered or native proof.
+	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
+	// src carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
 	// feat/bridge-nav-polish: minimal sunken WorkspaceModeBar + unified top close
 	// row, shared WorkspaceSidebarFooter across drawer modes, and Team Bridge
 	// directory/thread/delivery/sheet polish. Re-derived with --print over the
@@ -1385,7 +1396,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// source identity only, no rendered or native proof.
 	// Converged #222 onto main becb972b (#216): src re-derived with --print over
 	// the merged tree. Source identity only, no rendered or native proof.
-	src: "e0d3471684cc7cf5817c58438e7fadb6517e075931987a2e55493c0856b37f6e",
+	// Converged #222 onto main 56831114 (#220) and moved WorkspaceModeBar onto
+	// space.scale (U-42); src re-derived with --print over the merged tree.
+	// Source identity only, no rendered or native proof.
+	src: "e67d93f1b0281c8d29852f1418e7ed295d960bf8591bcbbc4ca56e7896b2083d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

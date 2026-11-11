@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { act, createElement, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -418,25 +419,29 @@ describe("the mode track stays one row below large text (D1-2/U1-1/Q1-2/U1-2)", 
 		// U2-1/U2-2: the count is out of flow, so it costs no width at all.
 		expect(layout.badge).toBe("overlay");
 		/* The TRUE 320 pt budget (U2-1): the drawer panel is
-		 *  `sidebarWidthFor(320, 48)`, and the row's px-3 (24) + gap-1.5 (6)
-		 *  + the 48 pt close button + the track's p-0.5 (4) leave a 190 pt
-		 *  inner track, and its gap-0.5 (2) leaves 188 pt for the two
-		 *  segments. The 225 pt this test used to assume was wrong. The 48 pt
+		 *  `sidebarWidthFor(320, 48)`, and the row's px-2 (16) + gap-1 (4)
+		 *  + the 48 pt close button + the track's p-1 (8) leave a 196 pt
+		 *  inner track, and its gap-1 (4) leaves 192 pt for the two
+		 *  segments — every step on space.scale (U-42). The 225 pt this test used to assume was wrong. The 48 pt
 		 *  (Android / web) floor is the tighter of the two platforms. */
 		const floor = TOUCH_TARGET.android;
 		const panel = sidebarWidthFor(320, floor);
 		expect(panel).toBe(272);
-		const track = panel - 24 - 6 - floor - 4;
-		expect(track).toBe(190);
-		const segments = track - 2;
+		const track = panel - 16 - 4 - floor - 8;
+		expect(track).toBe(196);
+		const segments = track - 4;
+		expect(segments).toBe(192);
 		const agents = 47 + 16 + 2;
 		const bridge = 79 + 16 + 2;
 		expect(agents + bridge).toBeLessThanOrEqual(segments);
-		// The inline count this replaced (6 gap + a 30.5 "99+" pill) overflowed.
-		expect(agents + bridge + 6 + 30.5).toBeGreaterThan(segments);
-		// The overlay rises into the row's 6 pt top inset and the 6 pt gap.
-		expect(-MODE_BADGE_INSET.top).toBeLessThanOrEqual(6);
-		expect(-MODE_BADGE_INSET.end).toBeLessThanOrEqual(6);
+		// An inline count (4 gap + a 30.5 "99+" pill) would still overflow,
+		// which is why the count stays an out-of-flow overlay.
+		expect(agents + bridge + 4 + 30.5).toBeGreaterThan(segments);
+		/* The overlay rises into the track's p-1 (4) + the row's pt-2 (8)
+		 *  above the segment, and reaches into the track's p-1 (4) + the
+		 *  gap-1 (4) before the close button without touching it. */
+		expect(-MODE_BADGE_INSET.top).toBeLessThanOrEqual(4 + 8);
+		expect(-MODE_BADGE_INSET.end).toBeLessThan(4 + 4);
 	});
 	it("at large text: wraps whole segments, never mid-word (200 % / Urdu RTL, D2-1) and still centres wrapped rows", () => {
 		const layout = modeBarLayout(true);
@@ -444,12 +449,32 @@ describe("the mode track stays one row below large text (D1-2/U1-1/Q1-2/U1-2)", 
 			expect.arrayContaining(["flex-wrap", "items-stretch", "content-center"]),
 		);
 		/* D2-1: content-proportioned segments, never `flex-1` halves (93 pt
-		 *  each of the 190 pt track left "Bridge", ~80 pt at 28 px, a 73 pt
+		 *  each of the then-190 pt track left "Bridge", ~80 pt at 28 px, a 73 pt
 		 *  box), and a label that never shrinks below its longest word. */
 		expect(split(layout.segment)).toEqual(["min-w-0", "grow", "shrink"]);
 		expect(split(layout.content)).toContain("flex-wrap");
 		expect(split(layout.label)).not.toContain("min-w-0");
 		expect(split(layout.label)).not.toContain("shrink");
 		expect(layout.badge).toBe("inline");
+	});
+});
+
+/* U-42 TRIPWIRE (PR #222 CI). The web audit failed 1,152 rows at 320 pt and
+ * 1,200 at tablet landscape because the mode bar used 2 / 6 / 10 pt half steps
+ * (`*-0.5`, `*-1.5`, `*-2.5`); space.scale is 4 pt multiples. Node cannot
+ * render, so this pins the source; the rendered U-42 proof is the audit. */
+describe("workspace-drawer.tsx spacing", () => {
+	it("uses on-scale padding, margin and gap only", () => {
+		const source = readFileSync(
+			new URL("./workspace-drawer.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(source).not.toMatch(
+			/\b-?(?:p|px|py|pt|pb|ps|pe|pl|pr|m|mx|my|mt|mb|ms|me|ml|mr|gap|gap-x|gap-y)-\d+\.5\b/,
+		);
+		for (const largeText of [false, true]) {
+			const layout = modeBarLayout(largeText);
+			expect(`${layout.track} ${layout.content}`).not.toMatch(/\.5\b/);
+		}
 	});
 });
