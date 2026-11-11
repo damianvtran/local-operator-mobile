@@ -186,6 +186,9 @@ export default function Subagent() {
 						sessionId={`${sessionId}:${childId}`}
 						entries={detail.transcript}
 						streamingRowId={null}
+						// A child's run state is its status, not a stream: a running or
+						// queued child keeps its turn open; a settled one condenses.
+						turnLive={detail.status === "running" || detail.status === "queued"}
 						testID={SURFACE.subagentTranscript}
 						header={
 							detail.result_text.length > 0 ? (

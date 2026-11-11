@@ -8,7 +8,18 @@ import {
 	askStateLine,
 	askToneInk,
 } from "@/features/session/asks";
+import {
+	TRACE_BAR_PAD_CLASS,
+	TRACE_COLUMN_GAP_CLASS,
+	TRACE_EXPANDED_INDENT_CLASS,
+	TRACE_GLYPH_BOX_CLASS,
+	TRACE_GLYPH_ROW_CLASS,
+	TRACE_GLYPH_SLOT_CLASS,
+	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
+	TRACE_TEXT_RAIL_INSET_CLASS,
+} from "@/features/session/components/trace-rail";
 import { ROLE } from "@/ui/a11y";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
 
 import { AnsweredValues } from "./answered-values";
@@ -73,43 +84,62 @@ export const AskResponseRow = ({ entry, testID }: AskResponseRowProps) => {
 	const tone = status === "declined" ? "text-ink-muted" : askToneInk(line.tone);
 
 	return (
-		<View className="rounded-sm px-2" testID={testID}>
-			<Pressable
-				accessibilityRole={hasDetails ? ROLE.button : ROLE.text}
-				accessibilityLabel={
-					headQuestion.length > 0 ? `${line.text}, ${headQuestion}` : line.text
-				}
-				accessibilityState={hasDetails ? { expanded: open } : undefined}
-				disabled={!hasDetails}
-				onPress={() => hasDetails && setOpen((value) => !value)}
-			>
-				<View className="min-h-11 flex-row items-center gap-1.5">
-					<Text
-						className={cx(
-							"w-4 shrink-0 text-center font-mono text-mono-sm",
-							tone,
-						)}
-						aria-hidden
-					>
+		<View className={cx("rounded-sm", TRACE_BAR_PAD_CLASS)} testID={testID}>
+			{/* Glyph outside the pressable, baseline-aligned (`TRACE_GLYPH_ROW_CLASS`
+			 *  in `trace-rail.ts`): a receipt wrapped onto its second line keeps
+			 *  the button's 40 pt rail under U-41. */}
+			<View className={TRACE_GLYPH_ROW_CLASS}>
+				<View
+					className={TRACE_GLYPH_SLOT_CLASS}
+					pointerEvents="none"
+					aria-hidden
+				>
+					<Text className={cx(TRACE_GLYPH_BOX_CLASS, tone)} aria-hidden>
 						{GLYPH[status] ?? "•"}
 					</Text>
-					<Text
-						className={cx("min-w-0 flex-1 text-body-sm", tone)}
-						numberOfLines={2}
-					>
-						{headQuestion.length > 0
-							? `${line.text} · ${headQuestion}`
-							: line.text}
-					</Text>
-					{hasDetails ? (
-						<Text className="shrink-0 text-body-sm text-ink-dim" aria-hidden>
-							{open ? "▾" : "▸"}
-						</Text>
-					) : null}
 				</View>
-			</Pressable>
+				<Pressable
+					accessibilityRole={hasDetails ? ROLE.button : ROLE.text}
+					accessibilityLabel={
+						headQuestion.length > 0
+							? `${line.text}, ${headQuestion}`
+							: line.text
+					}
+					accessibilityState={hasDetails ? { expanded: open } : undefined}
+					disabled={!hasDetails}
+					onPress={() => hasDetails && setOpen((value) => !value)}
+					style={{ minHeight: TOUCH_FLOOR }}
+					className={cx(TRACE_PRESSABLE_BESIDE_GLYPH_CLASS, "justify-center")}
+				>
+					<View
+						className={cx(
+							"flex-row items-start py-2",
+							TRACE_TEXT_RAIL_INSET_CLASS,
+							TRACE_COLUMN_GAP_CLASS,
+						)}
+					>
+						<Text
+							className="min-w-0 flex-1 text-trace text-ink-muted"
+							numberOfLines={2}
+						>
+							{headQuestion.length > 0
+								? `${line.text} · ${headQuestion}`
+								: line.text}
+						</Text>
+						{hasDetails ? (
+							<Text className="text-trace" aria-hidden>
+								<Text className="font-mono text-mono-sm text-ink-dim">
+									{open ? "▾" : "▸"}
+								</Text>
+							</Text>
+						) : null}
+					</View>
+				</Pressable>
+			</View>
 			{open && hasDetails ? (
-				<View className="flex-col gap-1.5 pb-1.5 ps-6">
+				<View
+					className={cx("flex-col gap-2 pb-1", TRACE_EXPANDED_INDENT_CLASS)}
+				>
 					{pairs.length > 0
 						? pairs.map((pair, index) => (
 								<View key={index}>

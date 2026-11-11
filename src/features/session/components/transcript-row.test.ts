@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import { TRACE_GLYPH_BOX_CLASS } from "@/features/session/components/trace-rail";
 import { pendingEchoBoxClass } from "@/features/session/pending-echo";
 import {
 	USER_BUBBLE_BOX_CLASS,
@@ -31,6 +32,7 @@ const LOAD_THROUGH_CACHE = /transcriptImages\s*\.load\(load, entryId, index\)/;
 const EXPLICIT_FILL =
 	/className=\{cx\("max-w-\[85%\]", USER_BUBBLE_BOX_CLASS\)\}\s*style=\{userBubbleFill\(active\)\}/;
 const GLYPH_BOX = /w-4 shrink-0 text-start font-mono text-mono-sm/g;
+const TRACE_GLYPH_BOX_USE = /cx\(\s*TRACE_GLYPH_BOX_CLASS,/g;
 
 const read = (file: string): string =>
 	readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
@@ -152,8 +154,14 @@ describe("peer, hub and parent messages (D9)", () => {
 		/* Two boxes in this file — the notice's and the participant row's —
 		 *  and both are the tool row's and the folded row's recipe, so every
 		 *  glyph in the transcript stands on one rail. */
-		const boxes = ROW.match(GLYPH_BOX);
-		expect(boxes ?? []).toHaveLength(2);
+		/* The recipe now lives once, in the shared rail (`trace-rail.ts`), and
+		 *  every glyph box in this file — notice, Team Bridge receipt and the
+		 *  participant row — names it rather than respelling it. */
+		expect(TRACE_GLYPH_BOX_CLASS).toBe(
+			"w-4 shrink-0 text-start font-mono text-mono-sm",
+		);
+		expect(ROW.match(GLYPH_BOX) ?? []).toHaveLength(0);
+		expect(ROW.match(TRACE_GLYPH_BOX_USE) ?? []).toHaveLength(3);
 		// The notice glyph is no longer sized to its own advance.
 		expect(ROW).not.toContain('cx("text-mono-sm", ink)');
 	});

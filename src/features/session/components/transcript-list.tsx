@@ -19,11 +19,19 @@ import {
 
 import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
+import { FoldBar } from "@/features/session/components/fold-bar";
 import { QuietGroupBar } from "@/features/session/components/quiet-group-bar";
 import {
 	SupplementBlock,
 	type SupplementClient,
 } from "@/features/session/components/supplement-block";
+import {
+	entryRegister,
+	type ItemRegister,
+	SPACING_TIER_CLASS,
+	spacingTierBetween,
+	type TranscriptSpacingTier,
+} from "@/features/session/components/trace-rail";
 import {
 	TranscriptEdgeFades,
 	type TranscriptEdgeFadesHandle,
@@ -35,7 +43,10 @@ import {
 	anchoredScrollTop,
 	historyTopReached,
 } from "@/features/session/history-scroll";
-import { visibleTranscriptEntries } from "@/features/session/projection";
+import {
+	canonicalRowKey,
+	visibleTranscriptEntries,
+} from "@/features/session/projection";
 import { reuseRows } from "@/features/session/row-identity";
 import { scrollAnchorFromHook } from "@/features/session/scroll-hook";
 import { beatLive, type SupplementBeat } from "@/features/session/supplements";
@@ -46,6 +57,7 @@ import {
 } from "@/features/session/transcript-presence";
 import {
 	condensePlan,
+	foldPlan,
 	groupPlan,
 	type LatchedTurn,
 	parseExpandHook,
@@ -132,6 +144,14 @@ export type TranscriptListProps = {
 	historyError?: string | null;
 	/** The row that carries `transcript-streaming`, or `null` when settled. */
 	streamingRowId: string | null;
+	/** Whether a turn is running in this transcript right now. Decides whether
+	 *  the NEWEST turn may condense: an idle session condenses its finished last
+	 *  turn immediately (the relay's `!live` rule), a live one never touches it.
+	 *  When omitted it is read off the props that already mean "a turn is
+	 *  running" — a streaming row, or the turn interrupt the screen threads only
+	 *  while the composer's Stop is visible. Callers that have neither signal but
+	 *  know the run state (a subagent view, the startup transcript) pass it. */
+	turnLive?: boolean;
 	/** Resolves an attachment's bytes. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
 	/** Opens a subagent's own view. */
@@ -202,6 +222,9 @@ const TAIL_BAND_PT = 48;
 /** No turns open — a shared empty so a session-switch reset bails out of a
  *  render instead of committing an equal-but-new set. */
 const NO_TURNS: ReadonlySet<string> = new Set();
+/** No row overrides: every row shows its own default (closed, or open for a
+ *  bang-mode `user_run` tool row — see `ToolRow`). */
+const NO_ROW_OVERRIDES: ReadonlyMap<string, boolean> = new Map();
 
 /** The list's key function, hoisted: an inline arrow is a NEW prop on every
  *  render, which is a fresh reason for the virtualiser to re-run its cells. */
@@ -307,6 +330,7 @@ export const TranscriptList = ({
 	historyGapBefore = null,
 	historyError = null,
 	streamingRowId,
+	turnLive,
 	loadImage,
 	onOpenAgent,
 	onOpenVideo,
@@ -484,14 +508,20 @@ export const TranscriptList = ({
 		if (hookExpanded.size === 0) return readerExpanded;
 		return new Set([...readerExpanded, ...hookExpanded]);
 	}, [readerExpanded, hookExpanded]);
+	const live =
+		turnLive ?? (streamingRowId !== null || onCancelTurn !== undefined);
+	/* `live` only ever ADDS a condensation (the idle newest turn): once a turn
+	 * has condensed it is in the latch, so the next prompt making it non-newest
+	 * — or the session going live again — cannot un-condense it. */
 	const plan = useMemo(
 		() =>
 			condensePlan({
 				entries: stableEntries,
 				expanded,
 				latch: latchRef.current.latch,
+				live,
 			}),
-		[stableEntries, expanded],
+		[stableEntries, expanded, live],
 	);
 	/* Idempotent for a given `entries` (the latch only grows), so a
 	 * double-invoked render computes the same plan. */
@@ -518,11 +548,65 @@ export const TranscriptList = ({
 				items: plan.items,
 				expanded,
 				latch: groupLatchRef.current.latch,
+				// R1-2: without it `certifiedPeerCycleGroups` returns nothing, so the
+				// core's `details.peer_cycle` stamp never grouped on device. The stamp
+				// carries the session that ran the cycle; a subagent view's composite
+				// `<parent>:<child>` id never matches it, and must not — that view
+				// does not own the parent's cycles.
+				sessionId,
 			}),
-		[plan, expanded],
+		[plan, expanded, sessionId],
 	);
 	/* Idempotent like the turn plan: the latch only grows. */
 	groupLatchRef.current.latch = grouped.latch;
+	/*
+	 * Tier A, over what the turn and group passes left visible: runs of >= 3
+	 * tool calls (or a trailing stretch of >= 2 receipts) in the ACTIVE turn and
+	 * inside an opened completed turn fold behind one `FoldBar`. Its latch is a
+	 * set of canonical row ids already painted inside a fold while the turn is
+	 * live, so a receipt landing mid-run cannot dissolve a fold the reader saw.
+	 */
+	const foldLatchRef = useRef<{ session: string; ids: ReadonlySet<string> }>({
+		session: sessionId,
+		ids: new Set(),
+	});
+	if (foldLatchRef.current.session !== sessionId) {
+		foldLatchRef.current = { session: sessionId, ids: new Set() };
+	}
+	const folded = useMemo(
+		() =>
+			foldPlan({
+				items: grouped.items,
+				expanded,
+				live,
+				latchedFoldIds: foldLatchRef.current.ids,
+			}),
+		[grouped, expanded, live],
+	);
+	foldLatchRef.current.ids = folded.latchedFoldIds;
+	/* The vertical rhythm, one tier per rendered item (`trace-rail.ts`): 16 pt
+	 * before a new exchange, 8 pt at a register change (bubble ↔ trace ↔ prose),
+	 * nothing between trace lines that already carry the touch floor. Applied as
+	 * padding INSIDE each row's measured wrapper, so the measured heights the
+	 * offset table and the ack gate read already include it. */
+	const spacingTiers = useMemo(() => {
+		const tiers = new Map<string, TranscriptSpacingTier>();
+		let previous: ItemRegister | null = null;
+		for (const item of folded.items) {
+			const register: ItemRegister =
+				item.kind === "entry" ? entryRegister(item.entry) : "trace";
+			tiers.set(
+				item.id,
+				spacingTierBetween(
+					previous,
+					register,
+					item.kind === "entry" && item.opensTurn === true,
+				),
+			);
+			previous = register;
+		}
+		return tiers;
+	}, [folded.items]);
 	const toggleExpansion = useCallback((key: string, open: boolean) => {
 		setReaderExpanded((current) => {
 			const next = new Set(current);
@@ -544,7 +628,11 @@ export const TranscriptList = ({
 	 * the anchors (review round 1, Q5 / U6 / m4). Reset on a session switch with
 	 * the turn folds.
 	 */
-	const [rowOpen, setRowOpen] = useState<ReadonlySet<string>>(NO_TURNS);
+	/* A Map of EXPLICIT overrides, not a Set of open ids (R1-1): a Set can only
+	 *  say "closed" for an untouched row, which overrode `user_run` and shut every
+	 *  bang-mode row the reader was waiting on. Absent = the row's own default. */
+	const [rowOpen, setRowOpen] =
+		useState<ReadonlyMap<string, boolean>>(NO_ROW_OVERRIDES);
 	/* Set by a reader's own expand or collapse, consumed by the content-size
 	 *  change that toggle causes: see `onContentSizeChange`. */
 	const foldResizeRef = useRef(false);
@@ -557,11 +645,13 @@ export const TranscriptList = ({
 	 *  run twice under StrictMode, which is harmless for an idempotent flag. */
 	const toggleRowOpen = useCallback((id: string, open: boolean) => {
 		setRowOpen((current) => {
-			if (current.has(id) === open) return current;
+			// Callers request the flip of the row's EFFECTIVE state (`ToolRow`
+			// toggles `!open`, `override ?? user_run`), so only a repeat of the
+			// same explicit override is a no-op here.
+			if (current.get(id) === open) return current;
 			foldResizeRef.current = true;
-			const next = new Set(current);
-			if (open) next.add(id);
-			else next.delete(id);
+			const next = new Map(current);
+			next.set(id, open);
 			return next;
 		});
 	}, []);
@@ -569,8 +659,8 @@ export const TranscriptList = ({
 	const policy = useMemo(
 		// The window's unit is what the FlatList MOUNTS, so it counts the plan's
 		// items: a condensed turn mounts its bar, not the work behind it.
-		() => windowPolicy(viewportPt > 0 ? viewportPt : 844, grouped.items.length),
-		[viewportPt, grouped.items.length],
+		() => windowPolicy(viewportPt > 0 ? viewportPt : 844, folded.items.length),
+		[viewportPt, folded.items.length],
 	);
 
 	/* ---------------------------------------------------- the anchor geometry --
@@ -667,8 +757,8 @@ export const TranscriptList = ({
 	anchorIdRef.current = anchorId;
 	/* The plan's items, not the raw entries: the anchor's position is computed
 	 * over what is RENDERED (see `recompute`), and this is that list. */
-	const itemsRef = useRef<readonly TranscriptItem[]>(grouped.items);
-	itemsRef.current = grouped.items;
+	const itemsRef = useRef<readonly TranscriptItem[]>(folded.items);
+	itemsRef.current = folded.items;
 	/* Which row the reader is looking at, captured before an older page is
 	 * requested. Only rows that INTERSECT the viewport count: right after a jump
 	 * to the top (a focus or click scrolling the Load earlier control into view)
@@ -866,7 +956,7 @@ export const TranscriptList = ({
 	 *  layout effect, so it must not clear this set). */
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `sessionId` is the TRIGGER for the reset, not a read.
 	useLayoutEffect(() => {
-		setRowOpen(NO_TURNS);
+		setRowOpen(NO_ROW_OVERRIDES);
 	}, [sessionId]);
 	/* KEYED ON THE LANDING, NOT THE HIGHLIGHT (round 3, U14 / m-r3-1). A
 	 *  landing is `reveal`'s id AND nonce: the find session bumps the nonce on
@@ -883,9 +973,9 @@ export const TranscriptList = ({
 	useLayoutEffect(() => {
 		if (landingId === null) return;
 		setRowOpen((current) => {
-			if (current.has(landingId)) return current;
-			const next = new Set(current);
-			next.add(landingId);
+			if (current.get(landingId) === true) return current;
+			const next = new Map(current);
+			next.set(landingId, true);
 			return next;
 		});
 	}, [landingId, landingNonce]);
@@ -909,9 +999,10 @@ export const TranscriptList = ({
 	/* What a reveal reads: the rendered items, and every fold's hidden rows —
 	 * turn bars and group bars alike (`find.ts`'s `RevealSubject`). */
 	const revealSubject: RevealSubject = {
-		items: grouped.items,
+		items: folded.items,
 		turns: plan.turns,
 		groups: grouped.groups,
+		folds: folded.folds,
 	};
 	const planRef = useRef<RevealSubject>(revealSubject);
 	planRef.current = revealSubject;
@@ -1022,7 +1113,12 @@ export const TranscriptList = ({
 			revealToIndex(target.index);
 			return;
 		}
-		const key = target.kind === "turn" ? target.turnKey : target.groupKey;
+		const key =
+			target.kind === "turn"
+				? target.turnKey
+				: target.kind === "group"
+					? target.groupKey
+					: target.foldKey;
 		setReaderExpanded((current) => {
 			if (current.has(key)) return current;
 			const next = new Set(current);
@@ -1042,10 +1138,10 @@ export const TranscriptList = ({
 	 * frame can move the plan under a pending request — both are EVENTS that
 	 * must re-ask the walk, while the body reads the plan through the ref. The
 	 * same shape, and the same exemption, as the recompute effect below. */
-	// biome-ignore lint/correctness/useExhaustiveDependencies: grouped is the re-plan event; the body reads the plan through planRef
+	// biome-ignore lint/correctness/useExhaustiveDependencies: folded is the re-plan event; the body reads the plan through planRef
 	useEffect(() => {
 		resolveRevealWalk();
-	}, [grouped, resolveRevealWalk]);
+	}, [folded, resolveRevealWalk]);
 
 	/* Anchors and frames change outside scroll events too (a new frame appends
 	 * rows; the attention moves to a new anchor). The rule reads the body —
@@ -1209,11 +1305,11 @@ export const TranscriptList = ({
 		[driveFades, recompute, pinTail],
 	);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: `grouped.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `folded.items.length` is the trigger (a commit that brought rows); the body reads refs by design.
 	useLayoutEffect(() => {
 		if (openElsewhere) return;
 		pinTail();
-	}, [openElsewhere, pinTail, grouped.items.length]);
+	}, [openElsewhere, pinTail, folded.items.length]);
 
 	/* THE INITIAL JUMP IS SPENT ONCE, AND ONLY ONCE (QA round 3, Q-RF1).
 	 *
@@ -1265,7 +1361,7 @@ export const TranscriptList = ({
 		index: number;
 	} | null>(null);
 	const liveInitialIndex = tailStartIndex(
-		grouped.items.length,
+		folded.items.length,
 		policy.initialNumToRender,
 	);
 	const frozenInitial = frozenInitialIndexRef.current;
@@ -1283,7 +1379,7 @@ export const TranscriptList = ({
 	passedInitialIndexRef.current = {
 		session: sessionId,
 		index: initialIndex,
-		items: grouped.items.length,
+		items: folded.items.length,
 	};
 
 	/* The offset is restored once, after the first content change: before that there
@@ -1396,20 +1492,23 @@ export const TranscriptList = ({
 	 * that row. It carries the same Reload action as the newest-edge notice. */
 	const gapItemId = useMemo(() => {
 		if (!historyGap || !historyGapBefore) return null;
-		// planRef carries THIS render's plan (assigned above); grouped is its trigger.
+		// planRef carries THIS render's plan (assigned above); folded is its trigger.
 		const target = revealTarget(planRef.current, expanded, historyGapBefore);
 		if (target === null) return null;
 		const item =
 			target.kind === "item"
-				? grouped.items[target.index]
-				: grouped.items.find((candidate) =>
+				? folded.items[target.index]
+				: folded.items.find((candidate) =>
 						target.kind === "turn"
 							? candidate.kind === "bar" && candidate.turnKey === target.turnKey
-							: candidate.kind === "group" &&
-								candidate.groupKey === target.groupKey,
+							: target.kind === "group"
+								? candidate.kind === "group" &&
+									candidate.groupKey === target.groupKey
+								: candidate.kind === "fold" &&
+									candidate.foldKey === target.foldKey,
 					);
 		return item?.id ?? null;
-	}, [historyGap, historyGapBefore, grouped, expanded]);
+	}, [historyGap, historyGapBefore, folded, expanded]);
 	const gapMarker = useMemo(
 		() =>
 			gapItemId === null ? null : (
@@ -1451,6 +1550,7 @@ export const TranscriptList = ({
 				item.kind === "entry" && item.entry.kind === "assistant"
 					? supplements?.[item.id]
 					: undefined;
+			const gap = SPACING_TIER_CLASS[spacingTiers.get(item.id) ?? "first"];
 			return item.kind === "bar" ? (
 				/* The bar is measured like any row: it stands in the list, so the
 				 * anchor geometry (which walks the RENDERED items) must know its
@@ -1463,6 +1563,7 @@ export const TranscriptList = ({
 					onLayout={(event) =>
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
+					className={cx(gap)}
 				>
 					{item.id === gapItemId ? gapMarker : null}
 					<TurnBar
@@ -1484,6 +1585,7 @@ export const TranscriptList = ({
 					onLayout={(event) =>
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
+					className={cx(gap)}
 				>
 					{item.id === gapItemId ? gapMarker : null}
 					<QuietGroupBar
@@ -1491,6 +1593,27 @@ export const TranscriptList = ({
 						group={item.group}
 						open={item.expanded}
 						onToggle={(open) => toggleExpansion(item.groupKey, open)}
+					/>
+				</View>
+			) : item.kind === "fold" ? (
+				/* Measured like the other bars: the anchor geometry walks the
+				 * RENDERED items, and a fold is one of them. */
+				<View
+					ref={(node) => {
+						if (node) webRows.current.set(item.id, node);
+						else webRows.current.delete(item.id);
+					}}
+					onLayout={(event) =>
+						measureRow(item.id, event.nativeEvent.layout.height)
+					}
+					className={cx(gap)}
+				>
+					{item.id === gapItemId ? gapMarker : null}
+					<FoldBar
+						foldKey={item.foldKey}
+						fold={item.fold}
+						open={item.expanded}
+						onToggle={(open) => toggleExpansion(item.foldKey, open)}
 					/>
 				</View>
 			) : (
@@ -1508,6 +1631,7 @@ export const TranscriptList = ({
 						measureRow(item.id, event.nativeEvent.layout.height)
 					}
 					className={cx(
+						gap,
 						item.id === highlightId ? "bg-row-selected" : undefined,
 					)}
 				>
@@ -1528,12 +1652,13 @@ export const TranscriptList = ({
 					) : null}
 					<TranscriptRow
 						entry={item.entry}
+						condensed={item.condensed === true}
 						streaming={streamingRowId !== null && item.id === streamingRowId}
 						loadImage={loadImage}
 						onOpenAgent={onOpenAgent}
 						onOpenVideo={onOpenVideo}
 						onCancelTurn={onCancelTurn}
-						open={rowOpen.has(item.id)}
+						open={rowOpen.get(canonicalRowKey(item.entry))}
 						onToggleOpen={toggleRowOpen}
 					/>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
@@ -1576,6 +1701,7 @@ export const TranscriptList = ({
 			supplementClient,
 			gapItemId,
 			gapMarker,
+			spacingTiers,
 		],
 	);
 
@@ -1742,7 +1868,7 @@ export const TranscriptList = ({
 			<FlatList
 				ref={listRef}
 				testID={testID}
-				data={grouped.items}
+				data={folded.items}
 				keyExtractor={keyOfItem}
 				renderItem={renderItem}
 				onLayout={onLayout}

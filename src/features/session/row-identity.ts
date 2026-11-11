@@ -53,14 +53,30 @@ export const sameValue = (a: unknown, b: unknown): boolean => {
 };
 
 /**
+ * Canonical identity of a transcript-like row across live (`tc-<call>`) and
+ * durable (`<msg>:<call>`) streams: when `tool_call_id` is non-empty on a tool
+ * row, `call:<tool_call_id>` stays invariant across stream-to-history handoff.
+ */
+export function canonicalKeyOf(row: {
+	id: string;
+	kind?: string;
+	tool_call_id?: string;
+}): string {
+	return row.kind === "tool" &&
+		typeof row.tool_call_id === "string" &&
+		row.tool_call_id.length > 0
+		? `call:${row.tool_call_id}`
+		: row.id;
+}
+
+/**
  * `next`, with every row that equals its predecessor in `previous` replaced by
  * the predecessor's own object — and `previous` itself when the whole list is
  * unchanged.
  */
-export function reuseRows<T extends { id: string }>(
-	previous: readonly T[] | null | undefined,
-	next: readonly T[],
-): readonly T[] {
+export function reuseRows<
+	T extends { id: string; kind?: string; tool_call_id?: string },
+>(previous: readonly T[] | null | undefined, next: readonly T[]): readonly T[] {
 	if (previous === null || previous === undefined) return next;
 	if (previous === next) return next;
 	/* THE COMMON CASE, without allocating a lookup: a streamed frame re-sends the
@@ -73,7 +89,13 @@ export function reuseRows<T extends { id: string }>(
 	if (previous.length === next.length) {
 		let aligned = true;
 		for (let at = 0; at < next.length; at += 1) {
-			if (previous[at]?.id !== next[at]?.id) {
+			const prevRow = previous[at];
+			const nextRow = next[at];
+			if (
+				!prevRow ||
+				!nextRow ||
+				canonicalKeyOf(prevRow) !== canonicalKeyOf(nextRow)
+			) {
 				aligned = false;
 				break;
 			}
@@ -96,14 +118,15 @@ export function reuseRows<T extends { id: string }>(
 	}
 	const buckets = new Map<string, T[]>();
 	for (const row of previous) {
-		const bucket = buckets.get(row.id);
-		if (bucket === undefined) buckets.set(row.id, [row]);
+		const key = canonicalKeyOf(row);
+		const bucket = buckets.get(key);
+		if (bucket === undefined) buckets.set(key, [row]);
 		else bucket.push(row);
 	}
 	const out: T[] = new Array(next.length);
 	for (let at = 0; at < next.length; at += 1) {
 		const row = next[at] as T;
-		const old = buckets.get(row.id)?.shift();
+		const old = buckets.get(canonicalKeyOf(row))?.shift();
 		if (old !== undefined && sameValue(old, row)) {
 			out[at] = old;
 		} else {

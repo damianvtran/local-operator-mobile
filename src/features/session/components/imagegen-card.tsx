@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Platform, Text, View } from "react-native";
+import {
+	TRACE_BAR_PAD_CLASS,
+	TRACE_COLUMN_GAP_CLASS,
+	TRACE_EXPANDED_INDENT_CLASS,
+	TRACE_GLYPH_BOX_CLASS,
+} from "@/features/session/components/trace-rail";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
 import { TranscriptVideo } from "@/features/session/components/transcript-video";
 import { IMAGE_FRAME_HEIGHT_PT } from "@/features/session/image-cache";
@@ -19,6 +25,7 @@ import {
 	transcriptVideoId,
 } from "@/ui/a11y";
 import { Button, Shimmer, useReducedMotion } from "@/ui/components";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { parseCubicBezier } from "@/ui/motion";
 import { EASINGS } from "@/ui/tokens.gen";
 import { cx } from "@/ui/variants";
@@ -367,25 +374,22 @@ export const ImageGenCard = ({
 		 *  failed generation painted as a full-width filled card beside
 		 *  borderless siblings. The glyph ink and the shimmering line carry
 		 *  the state. */
-		<View className="rounded-sm px-2" testID={testID}>
-			<View className="min-h-11 flex-row items-center gap-1.5">
-				<Text
-					className={cx(
-						"w-4 shrink-0 text-center font-mono text-mono-sm",
-						tone.inkClass,
-					)}
-					aria-hidden
-				>
+		<View className={cx("rounded-sm", TRACE_BAR_PAD_CLASS)} testID={testID}>
+			<View
+				className={cx("flex-row items-center", TRACE_COLUMN_GAP_CLASS)}
+				style={{ minHeight: TOUCH_FLOOR }}
+			>
+				<Text className={cx(TRACE_GLYPH_BOX_CLASS, tone.inkClass)} aria-hidden>
 					{tone.glyph}
 				</Text>
 				<Text
-					className="min-w-0 shrink truncate font-mono text-mono-sm text-ink-muted"
+					className="min-w-0 shrink truncate text-trace text-ink-muted"
 					numberOfLines={1}
 				>
 					{view.tool}
 				</Text>
 				<Text
-					className="min-w-0 flex-1 text-body-sm text-ink-dim"
+					className="min-w-0 flex-1 text-trace text-ink-dim"
 					numberOfLines={1}
 				>
 					{view.summary}
@@ -407,16 +411,12 @@ export const ImageGenCard = ({
 				) : null}
 			</View>
 			{phase === "queued" ? (
-				<View className="pb-1.5 ps-6">
+				<View className={cx("pb-2", TRACE_EXPANDED_INDENT_CLASS)}>
 					<Text className="text-body-sm text-ink-muted">{line}</Text>
 				</View>
 			) : null}
 			{liveTone ? (
-				<View className="gap-1.5 pb-1.5 ps-6">
-					{/* The word shimmers while the call is still moving — the kit's
-					 *  own "still arriving" signal, shared with the streaming row —
-					 *  and stops at its resting frame under reduced motion like
-					 *  every other loop. */}
+				<View className={cx("gap-2 pb-2", TRACE_EXPANDED_INDENT_CLASS)}>
 					<Shimmer active>
 						<Text className="text-body-sm text-ink-muted">{line}</Text>
 					</Shimmer>
@@ -432,15 +432,9 @@ export const ImageGenCard = ({
 				</View>
 			) : null}
 			{phase === "done" ? (
-				/* A COLUMN: picture, then its line. At the old 64 pt the tile sat
-				 *  beside the words "Image ready"; at the relay's 160 pt a row
-				 *  would squeeze that line into what is left of a 390 pt screen
-				 *  and centre it against a picture three lines taller (D10). */
-				<View className="items-start gap-1.5 pb-1.5 ps-6">
-					{/* The finished image through the EXISTING transcript image path:
-					 *  artifact blocks are indexed like images and served by the same
-					 *  route, so the card hands `TranscriptImage` the same two facts
-					 *  the assistant rows do. */}
+				<View
+					className={cx("items-start gap-2 pb-2", TRACE_EXPANDED_INDENT_CLASS)}
+				>
 					{view.artifact !== null && loadImage !== undefined ? (
 						<TranscriptImage
 							entryId={entryId}
@@ -450,11 +444,6 @@ export const ImageGenCard = ({
 							testID={transcriptImageId(entryId, view.artifact.index)}
 						/>
 					) : null}
-					{/* The finished video frames itself: the frame opens the
-					 *  full-screen player, a pushed ROUTE — outside the FlatList, so
-					 *  recycling cannot kill playback, and the frame itself has no
-					 *  bytes or animations to lose on a remount. The player owns the
-					 *  byte fetch and every fallback state. */}
 					{videoArtifact !== null && onOpenVideo !== undefined ? (
 						<TranscriptVideo
 							onOpen={() => onOpenVideo(entryId, videoArtifact.index)}
@@ -465,26 +454,16 @@ export const ImageGenCard = ({
 				</View>
 			) : null}
 			{phase === "failed" ? (
-				<View className="gap-1 pb-1.5 ps-6">
+				<View className={cx("gap-1 pb-2", TRACE_EXPANDED_INDENT_CLASS)}>
 					<Text className="text-body-sm text-ink-muted">{line}</Text>
-					{/* The platform's own sentence, verbatim — the one place on this
-					 *  card where the machine speaks. WITHHELD for the
-					 *  cancel-vs-finished conflict: that reading is "Already
-					 *  finished", and a conflict must never be dressed as an error
-					 *  (the frozen rule); the sentence is the conflict's own, so it
-					 *  has no quieter register to take here. */}
 					{view.live.error !== null && !view.alreadyFinished ? (
 						<Text className="text-body-sm text-danger">{view.live.error}</Text>
 					) : null}
 				</View>
 			) : null}
 			{phase === "cancelled" ? (
-				<View className="gap-1 pb-1.5 ps-6">
+				<View className={cx("gap-1 pb-2", TRACE_EXPANDED_INDENT_CLASS)}>
 					<Text className="text-body-sm text-ink-muted">{line}</Text>
-					{/* Affordance slot: restart / steer (v1 = interrupt + a NEW
-					 *  generate call) mounts HERE once its op is defined. NOT wired:
-					 *  the frozen facts reserve it, and a control that cannot work is
-					 *  worse than its absence. */}
 				</View>
 			) : null}
 		</View>

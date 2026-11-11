@@ -3,6 +3,7 @@ import { useEffect, useMemo } from "react";
 import { Text, View } from "react-native";
 import type { SupplementClient } from "@/features/session/components/supplement-block";
 import { TranscriptList } from "@/features/session/components/transcript-list";
+import { turnRunning } from "@/features/session/projection";
 import { useSessionRuntime } from "@/features/session/use-session";
 import { t } from "@/i18n";
 import { CONTROL, SURFACE } from "@/ui/a11y";
@@ -63,6 +64,12 @@ export function StartupTranscript({
 				sessionId={sessionId}
 				entries={runtime.entries}
 				streamingRowId={runtime.streamingRowId}
+				// This screen threads no turn interrupt, so the list cannot read
+				// "running" off `onCancelTurn`: between streamed rows a first turn
+				// would look idle and condense mid-run. The projection says.
+				turnLive={
+					runtime.projection === null ? true : turnRunning(runtime.projection)
+				}
 				loadImage={runtime.loadImage}
 				onOpenAgent={(jobId) =>
 					router.push(`/session/${sessionId}/agent/${jobId}`)

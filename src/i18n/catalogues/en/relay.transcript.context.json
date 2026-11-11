@@ -1,0 +1,78 @@
+{
+	"relay.transcript.turn.condensed": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed turn bar fallback label). Used only when the model supplies no more specific segment label."
+	},
+	"relay.transcript.turn.took": {
+		"role": "meta",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed turn duration clause). {duration} is already formatted, for example 31s or 2m14s. Never claim a duration when absent."
+	},
+	"relay.transcript.turn.actions": {
+		"role": "meta",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: turn and tool-group action count). {label} is the formatted count, including a trailing + when the loaded history is partial. Translate the complete plural message; do not print {count} separately. Native difference: the core wraps this in `{label, select, other {...}}` for its validator; this runtime rejects a placeholder used as both select and text, so `{label}` stands directly inside `{count, plural, ...}`."
+	},
+	"relay.transcript.turn.completed": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: screen-reader completion state). Appended to a completed condensed bar's accessible name."
+	},
+	"relay.transcript.fold.unit": {
+		"role": "meta",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: tool-fold count unit). One complete unit per kind. shell, python and {name} are runtime/tool names and stay untranslated. The other arm formats a raw tool name; preserve placeholders and plural/select syntax exactly. Native difference: the core writes {count, number}; this runtime has no number argument type, and rejects mixing plural and text uses of `count`, so the shell/python/other arms use `{count, plural, other {# ...}}`."
+	},
+	"relay.transcript.fold.shell": {
+		"role": "meta",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: shell command count unit). shell is a runtime tool category and stays untranslated. Use the locale's number formatting and plural rules; the noun remains shell in every arm."
+	},
+	"relay.transcript.fold.python": {
+		"role": "meta",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: Python evaluation count unit). python is a runtime tool category and stays untranslated. Use the locale's number formatting and plural rules; the noun remains python in every arm."
+	},
+	"relay.transcript.fold.more": {
+		"role": "meta",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: tool-fold overflow unit). Follows at most five count units and counts actions hidden by that display cap, not additional tool types."
+	},
+	"relay.transcript.fold.failed_label": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: collapsed group accessible failure state). Screen-reader text accompanying the failure glyph; it does not claim a count."
+	},
+	"relay.transcript.fold.partial_label": {
+		"role": "help",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: head-cut count accessible explanation). Explains that N+ is a minimum because earlier history has not loaded."
+	},
+	"relay.transcript.older.failed": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: history paging error). Shown beside the existing Try again action at the top of the transcript."
+	},
+	"relay.transcript.label.steered": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a steering message."
+	},
+	"relay.transcript.label.wake": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a scheduled wake."
+	},
+	"relay.transcript.label.peer": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a peer message."
+	},
+	"relay.transcript.label.job": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment followed a background job result."
+	},
+	"relay.transcript.label.ask": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: condensed segment label). The segment contains a settled operator question."
+	},
+	"relay.transcript.label.messages": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: mixed quiet-group label). Used when receipts from multiple families form one quiet group."
+	},
+	"relay.transcript.composer.queued": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: composer queued prompt count). Restores the pre-redesign queued-prompt count; {count} is the number of prompts waiting, not tool calls."
+	},
+	"relay.transcript.session.unread_refused": {
+		"role": "status",
+		"note": "Mirrored from the core relay catalogue (local_operator/i18n/catalogues/en/relay.transcript.context.json; core role: unread-state operation refusal). Explains that unread state could not be read and that no messages were marked read. Used by both bulk and row-level mark operations."
+	}
+}

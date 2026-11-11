@@ -53,6 +53,11 @@ const harness = vi.hoisted(() => ({
 	folds: new Map<string, PressProps>(),
 	/** The latest non-fold pressable per accessible name (the `open` route). */
 	buttons: new Map<string, PressProps>(),
+	/** The latest props each (stubbed) `ToolRow` received, by entry id. */
+	toolRows: new Map<
+		string,
+		{ open?: boolean; onToggleOpen?: (next: boolean) => void }
+	>(),
 }));
 
 vi.mock("react-native", async () => {
@@ -134,7 +139,14 @@ vi.mock("@/features/session/components/supplement-block", () => ({
 	SupplementBlock: () => null,
 }));
 vi.mock("@/features/session/components/tool-row", () => ({
-	ToolRow: () => null,
+	ToolRow: (props: {
+		entry: { id: string };
+		open?: boolean;
+		onToggleOpen?: (next: boolean) => void;
+	}) => {
+		harness.toolRows.set(props.entry.id, props);
+		return null;
+	},
 }));
 vi.mock("@/features/session/components/ask-response-row", () => ({
 	AskResponseRow: () => null,
@@ -295,6 +307,7 @@ beforeEach(() => {
 	harness.scrolls.length = 0;
 	harness.folds.clear();
 	harness.buttons.clear();
+	harness.toolRows.clear();
 	dom = installDomShim();
 	vi.stubGlobal("requestAnimationFrame", () => 0);
 	vi.stubGlobal("cancelAnimationFrame", () => {});
@@ -402,6 +415,45 @@ describe("a fold the reader opened", () => {
 		await render();
 		expect(drawn()).toContain(HIDDEN);
 		expect(harness.folds.get(FOLD)?.accessibilityState?.expanded).toBe(true);
+	});
+});
+
+describe("a bang-mode (`user_run`) tool row (R1-1)", () => {
+	const bang = (id: string, userRun: boolean): TranscriptEntry =>
+		row(id, {
+			kind: "tool",
+			text: "",
+			tool_name: "bash",
+			tool_call_id: `call-${id}`,
+			tool_state: "done",
+			details: userRun ? { user_run: true } : {},
+		});
+
+	it("reaches ToolRow UNTOUCHED, so `user_run` opens it; the toggle is an override both ways", async () => {
+		entries = [row("a0", {}), bang("t1", true), bang("t2", false)];
+		await render();
+		// `undefined` is "the reader has not touched it": ToolRow falls back to
+		// `user_run === true`. A list-supplied `false` was the regression.
+		expect(harness.toolRows.get("t1")?.open).toBeUndefined();
+		expect(harness.toolRows.get("t2")?.open).toBeUndefined();
+		expect(harness.toolRows.get("t1")?.onToggleOpen).toBeDefined();
+		// ToolRow toggles from its EFFECTIVE state (open) → the reader closes it…
+		await act(async () => harness.toolRows.get("t1")?.onToggleOpen?.(false));
+		expect(harness.toolRows.get("t1")?.open).toBe(false);
+		// …and re-opens it; the untouched sibling is still untouched.
+		await act(async () => harness.toolRows.get("t1")?.onToggleOpen?.(true));
+		expect(harness.toolRows.get("t1")?.open).toBe(true);
+		expect(harness.toolRows.get("t2")?.open).toBeUndefined();
+	});
+
+	it("drops the overrides on a session switch, back to the row's own default", async () => {
+		entries = [row("a0", {}), bang("t1", true)];
+		await render();
+		await act(async () => harness.toolRows.get("t1")?.onToggleOpen?.(false));
+		expect(harness.toolRows.get("t1")?.open).toBe(false);
+		session = `${session}-next`;
+		await render();
+		expect(harness.toolRows.get("t1")?.open).toBeUndefined();
 	});
 });
 
