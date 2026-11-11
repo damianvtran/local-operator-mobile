@@ -5,8 +5,8 @@
 	"mobile.common.save": "Lưu",
 	"mobile.common.send": "Gửi",
 	"mobile.common.try_again": "Thử lại",
-	"mobile.common.not_found.title": "Page not found",
-	"mobile.common.not_found.headline": "That page does not exist.",
-	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
-	"mobile.common.not_found.action": "Back to sessions"
+	"mobile.common.not_found.title": "Không tìm thấy trang",
+	"mobile.common.not_found.headline": "Trang đó không tồn tại.",
+	"mobile.common.not_found.next": "Quay lại danh sách phiên để tiếp tục.",
+	"mobile.common.not_found.action": "Về danh sách phiên"
 }

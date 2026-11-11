@@ -5,8 +5,8 @@
 	"mobile.common.save": "सहेजें",
 	"mobile.common.send": "भेजें",
 	"mobile.common.try_again": "फिर से कोशिश करें",
-	"mobile.common.not_found.title": "Page not found",
-	"mobile.common.not_found.headline": "That page does not exist.",
-	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
-	"mobile.common.not_found.action": "Back to sessions"
+	"mobile.common.not_found.title": "पेज नहीं मिला",
+	"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
+	"mobile.common.not_found.next": "आगे बढ़ने के लिए अपने सत्रों पर लौटें।",
+	"mobile.common.not_found.action": "सत्रों पर लौटें"
 }

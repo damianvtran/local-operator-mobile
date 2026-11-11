@@ -34,10 +34,10 @@
 	"mobile.computers.save_refused.body": "यह डिवाइस पता और पासवर्ड सुरक्षित रूप से सहेज नहीं सका। कनेक्शन अभी काम कर रहा है, लेकिन ऐप दोबारा शुरू होने के बाद आपको उन्हें फिर से डालना होगा।",
 	"mobile.computers.save_refused.body_with_code": "यह डिवाइस पता और पासवर्ड सुरक्षित रूप से सहेज नहीं सका (कोड {code})। कनेक्शन अभी काम कर रहा है, लेकिन ऐप दोबारा शुरू होने के बाद आपको उन्हें फिर से डालना होगा।",
 	"mobile.computers.save_refused.continue": "जारी रखें",
-	"mobile.computers.wait.nothing_answered": "Nothing answered.",
-	"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
-	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
-	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
-	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
-	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}."
+	"mobile.computers.wait.nothing_answered": "कहीं से जवाब नहीं आया।",
+	"mobile.computers.wait.nothing_answered_help": "तीन मिनट तक न कोई टनल सूची में दिखी, न किसी होस्ट ने जवाब दिया। जाँच लें कि कंप्यूटर पर कमांड चली या नहीं। फिर दोबारा शुरू करें।",
+	"mobile.computers.wait.paused": "ऐप बैकग्राउंड में है, इसलिए निगरानी रुकी हुई है। जारी रखने के लिए ऐप फिर खोलें।",
+	"mobile.computers.wait.relay_version_sessions": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है और {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।",
+	"mobile.computers.wait.relay_version": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है।",
+	"mobile.computers.wait.relay_sessions": "इसका रिले बताता है कि {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।"
 }

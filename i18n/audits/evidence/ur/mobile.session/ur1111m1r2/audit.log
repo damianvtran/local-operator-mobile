@@ -1,0 +1,182 @@
+=== ur M1 round-2 delta audit — executed log ===
+2026-11-11T07:40:00Z
+
+=== 1. audited revision ===
+84c4bee109d048e3dad0f996921e1b8ed561dfc8
+84c4bee1 feat(i18n): key the w4 help line and sign-out confirm label; name the translator wave in the ledger reason
+
+=== 2. mechanical pass over the staged v2 (checks.py) ===
+PASS  key set + order identical to source — 53/53 keys, added=[], dropped=[]
+PASS  ICU arg names/kinds, ur CLDR plural arms (one/other), '#' per arm — 5 parameterised keys; 2 plural (sessions), no select
+PASS  arguments match the context sidecar's declared placeholders — 51 keys declared; 2 keys (mobile.computers.wait.nothing_answered_help, mobile.settings.sign_out.confirm) carry no context record
+PASS  no empty values — []
+PASS  no value identical to the English source — []
+PASS  no stray/double whitespace, no space before Urdu punctuation — []
+PASS  no manual bidi/Cf control characters (RLM/LRM/FSI/PDI/ALM) — []
+PASS  Urdu letter forms (no Arabic yeh/kaf/teh-marbuta/alef-maksura) — []
+PASS  Latin digits only (no Urdu/Arabic-Indic/Devanagari digits) — []
+PASS  no Hindi danda — []
+PASS  no exclamation marks — []
+PASS  Urdu punctuation only in translated prose (۔ ، ؟ ؛) — []
+PASS  Latin residue limited to kept product/licence names — {}
+PASS  kept-English names appear as often as in source (spelling intact) — []
+INFO  quote/ellipsis characters present: none
+
+changed keys: 14/53 — cell widths (rich.cells.cell_len)
+  mobile.common.not_found.action               en= 16 v1= 19 v2= 20
+  mobile.common.not_found.next                 en= 37 v1= 43 v2= 44
+  mobile.computers.wait.paused                 en= 70 v1= 85 v2= 92
+  mobile.session.chip.effort_change_failed     en= 28 v1= 22 v2= 33
+  mobile.session.subagent.no_rows              en= 48 v1= 40 v2= 50
+  mobile.settings.about.blurb                  en=154 v1=160 v2=160
+  mobile.settings.account.delete               en= 25 v1= 28 v2= 28
+  mobile.settings.account.delete_help          en=191 v1=175 v2=186
+  mobile.settings.account.signed_in            en=  9 v1= 10 v2= 11
+  mobile.settings.section.about                en=  5 v1=  5 v2= 15
+  mobile.settings.sign_out.body                en=161 v1=172 v2=190
+  mobile.settings.sign_out.done                en= 53 v1= 56 v2= 67
+  mobile.settings.text_size.following          en= 55 v1= 53 v2= 57
+  mobile.settings.text_size.overridden         en= 59 v1= 72 v2= 81
+
+widest v2 values:
+  190  mobile.settings.sign_out.body
+  186  mobile.settings.account.delete_help
+  160  mobile.settings.about.blurb
+  123  mobile.computers.wait.nothing_answered_help
+  117  mobile.computers.wait.relay_version_sessions
+  100  mobile.session.composer.retained_instruction
+
+RESULT: PASS — no mechanical failure
+exit=0
+
+=== 3. render all 53 through the app's own ICU parser (render.mts) ===
+parse+render with the repo parser, locale ur: OK 53 of 53
+failures: []
+Intl.PluralRules('ur') via pluralCategory: 0:other 1:one 2:other 11:other 21:other 100:other
+plural keys: ["mobile.computers.wait.relay_sessions","mobile.computers.wait.relay_version_sessions"]
+  mobile.computers.wait.relay_sessions
+    0=>اس کا ریلے 0 جاری سیشنز کی اطلاع دے رہا ہے۔
+    1=>اس کا ریلے 1 جاری سیشن کی اطلاع دے رہا ہے۔
+    2=>اس کا ریلے 2 جاری سیشنز کی اطلاع دے رہا ہے۔
+  mobile.computers.wait.relay_version_sessions
+    0=>اس کا ریلے پروٹوکول ورژن 3 اور 0 جاری سیشنز کی اطلاع دے رہا ہے۔
+    1=>اس کا ریلے پروٹوکول ورژن 3 اور 1 جاری سیشن کی اطلاع دے رہا ہے۔
+    2=>اس کا ریلے پروٹوکول ورژن 3 اور 2 جاری سیشنز کی اطلاع دے رہا ہے۔
+  mobile.settings.sign_out.body -> اس سے کنٹرول پلین پر سائن ان کا سیشن ختم ہو جاتا ہے اور اس فون سے بھی اس کی محفوظ معلومات ہٹ جاتی ہیں، اس لیے ٹنل اس فون سے درخواستیں قبول کرنا بند کر دیتا ہے۔ آپ کا کمپیوٹر متاثر نہیں ہوتا۔
+  mobile.settings.sign_out.done -> سائن آؤٹ ہو گیا۔ آپ کے کمپیوٹر پر سائن ان کا سیشن منسوخ کر دیا گیا۔
+(node:93432) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+=== 4. shipped-catalogue evidence and input hashes (evidence.py) ===
+A. shipped ur (landing target) vs the English source, 53 keys
+   en in keys.json identical to repo en: 53/53 (drift: [])
+   shipped ur == English source (English left on screen): 53/53
+   shipped ur already translated: 0; missing: 0
+
+B. shipped ur usage counts (649-key catalogue), recomputed here
+   shipped ur keys: 649
+   کمپیوٹر               43 keys
+   ریلے                   2 keys
+   کنٹرول پلین            0 keys
+   استدلال کی شدت         6 keys
+   شدت                    8 keys
+   کوشش                  40 keys
+   روٹنگ                  5 keys
+   راستہ                  0 keys
+   متاثر                  2 keys
+   اپنا                   1 keys
+   میرا                   0 keys
+   تعارف                  0 keys
+   متعلق                  0 keys
+   سائن ان               17 keys
+   ٹنل                    3 keys
+   کنسول                  5 keys
+   واپس                   9 keys
+   bare شدت (label form) = شدت keys minus استدلال کی شدت keys: 2
+
+   روٹنگ / راستہ — every shipped value:
+     mobile.account_routing.disconnected = اکاؤنٹ روٹنگ تبدیل کرنے کے لیے کسی کمپیوٹر سے منسلک ہو جائیں۔
+     mobile.account_routing.load_error = اکاؤنٹ روٹنگ لوڈ نہیں ہو سکی۔ کنکشن چیک کر کے دوبارہ کوشش کریں۔
+     mobile.account_routing.loading = اکاؤنٹ روٹنگ لوڈ ہو رہی ہے…
+     mobile.account_routing.title = اکاؤنٹ روٹنگ
+     mobile.account_routing.unavailable = اس ریلے پر اکاؤنٹ روٹنگ کی ترتیبات دستیاب نہیں۔ اس کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔
+
+   returning-navigation precedent (واپس):
+     mobile.computers.added.stays_listed = پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔
+     mobile.oauth.received = سائن اِن کا جواب موصول ہو گیا ہے۔ ایپ پر واپس جائیں۔
+     mobile.oauth.return = Local Operator پر واپس جائیں
+     mobile.team_bridge.back = واپس
+     mobile.team_bridge.thread.recipient_incomplete = وصول کنندہ کی معلومات نامکمل ہیں۔ واپس جا کر کوئی شخص یا چیف آف اسٹاف منتخب کریں۔
+     mobile.notifications.back = واپس
+     mobile.session.pending_echo.not_sent = نہیں بھیجا گیا — واپس لانے کے لیے ٹیپ کریں
+     mobile.session.pending_echo.earlier_not_sent = آپ کا پچھلا پیغام نہیں بھیجا گیا ({reason})۔ اسے واپس لانے کے لیے اوپر ٹیپ کریں۔
+     mobile.common.back = واپس
+
+   Radient + Urdu-noun order in shipped diagnostics/console copy:
+     mobile.computers.billing_help = Radient کنسول میں اس ٹنل کی بلنگ کی ترتیبات کھولیں اور ریموٹ رسائی فعال کریں۔
+     mobile.computers.disabled_help = Radient کے مطابق یہ ٹنل اس وقت فعال نہیں ہے۔ Radient کنسول میں اس کی حالت دیکھیں۔
+     mobile.computers.harness_help = Radient کنسول میں اس ٹنل کے لیے Local Operator فعال کریں۔
+     mobile.team_bridge.gate.console_error = Radient کنسول نہیں کھل سکا۔
+     mobile.team_bridge.gate.manage_plan = Radient کنسول میں اپنا پلان منظم کریں
+
+   effort term precedent:
+     mobile.session_health.resume_refused = یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔
+     mobile.home.chip.effort_chosen = استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب
+     mobile.home.chip.effort_default = استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ
+     mobile.home.chip.effort_default_unnamed = استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح
+     mobile.home.picker.effort_none = اس ماڈل میں استدلال کی شدت کی کوئی ترتیب نہیں۔
+     mobile.home.picker.effort_title = استدلال کی شدت
+     mobile.home.picker.effort_unsupported = اس کمپیوٹر کا Local Operator استدلال کی شدت قبول کرنے کے لیے بہت پرانا ہے، اس لیے یہ اپنی ترتیب شدہ سطح استعمال کرتا ہے۔ یہاں سے منتخب کرنے کے لیے اسے اپ ڈیٹ کریں۔
+     mobile.chrome.composer.row_effort = شدت
+     relay.transcript.session.unread_refused = ناپڑھے پیغامات کی حالت پڑھی نہیں جا سکی — کچھ صاف نہیں کیا گیا۔ دوبارہ کوشش کریں۔
+     mobile.computers.session_error_help = کمپیوٹر کی ترتیب بدلنے کی ضرورت نہیں۔ دوبارہ کوشش کریں یا مدد کے لیے تفصیلات دکھائیں۔
+     mobile.session.chip.effort_resume_hint = کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں
+     mobile.session.pending_echo.not_confirmed = تصدیق نہیں ہوئی — نیچے دوبارہ کوشش کریں
+     mobile.session.composer.not_sent_storage = نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ دوبارہ کوشش کریں۔
+     mobile.session.composer.retry_not_sent_storage = دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔
+     mobile.session.history.stalled = تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔
+     mobile.session.sheet_title.effort = شدت
+
+C. input hashes
+   1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/keys.json
+   43275b9bc7b8b09f4d458ce228f77a47cbdb85013bb77ba721598b758b6d52bf  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/ur.json
+   b6f343ef3320719247487c4dc932ddacea0214ce64d49bb0c92ba25e31fbd3cd  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/ur.v2.json
+   831c8f637d3c3720fe0abbdfded1c4a0d49ced3b3540ccc49aad657e0cd28fcd  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/ur.v2-changes.md
+   b74466e83cebf0befee3c5959b8c706570b3645a71682b4df13e7fcc14d867af  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.common.json
+   6ccd282a967b206a762550173e15aa6e4c6eaacf948446d12a7d7133c5f3ae44  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.computers.json
+   fd14c2081991d4370d4086e47810e375a23c509c06c836f2e146f9c2aeb65b9a  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.session.json
+   257daa349bf9bf03fea8241cd4367148ec3a2cc9867e4ebd21271f510e0a45c9  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.settings.json
+   f6aadb8f1e837bd1bcca10f8dc701c43e84a1ca8519f95a07a770d15da7624e6  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.common.context.json
+   15e04ab447262538a7bc05e19dd0d03a0b7b0c7c21a678f8f73520da88ae780f  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.computers.context.json
+   1b93b3ddc3996d12d4a8902053a9258d7a49b4e25b7dd17a2de15b0190139de4  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.session.context.json
+   b995b0b659091b1d145d313f9183316dbafa4354865e4f072fd141355adfa35d  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.settings.context.json
+   771b33efc51ea1e7be72fde1564c40c7e9c1de6d52b92ea1287bd948e5113abe  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.common.json
+   ce9cfe7c3ad53b0edd45f8bbaf9e2a1174ef22745531f18a0e2e1f85feab7b12  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.computers.json
+   ac6b1b74b6a45c067f515f888f934480f223e73d3166aa59271b24fc1a7c2bb9  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.session.json
+   314535e965f7bde9de7ae69d9fb9ec0bc9a3e0190dcddcd2ba2b0577d24b844a  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.settings.json
+
+   staged v2 value count: 53
+exit=0
+
+=== 5. repo validator (proves repo state, not the staged values) ===
+src/i18n/catalogue.gen.ts is current (649 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+(node:93493) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+scanner sha256: base=fd5946dfe556d9f0161b6093ab9792ae2049758d1870a56a0d888e4d95154d5c head=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813
+check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs d78ca8616286
+(node:93519) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/67973ed5e595/scratchpad/i18n-base-MjGyDc/scripts/i18n/scan-strings.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+=== 6. artifact hashes ===
+7957562b6fdab1550c886d779791862cc47c1d5f53c89079b033cbf4f72b13db  report.md
+066318a8d0e373404ead8f1c1d588081498b591b8faf235afeda8012f6165fc5  checks.py
+6f202e2070a17c324c3e2fe33c7e8392b2584f6ffb53f46ce3c6154ce117d815  evidence.py
+fb0975b0eeabc6ed0282dd0d1ca5d1f44b7348119a916e9feecf57e4770f9917  render.mts

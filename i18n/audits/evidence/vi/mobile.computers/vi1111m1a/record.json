@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "audit_kind": "independent audit of agent-written translations (M1 native-phone English-closure slice, auditor A)",
+  "audit_id": "vi1111m1a",
+  "locale": "vi",
+  "namespace": "mobile.computers",
+  "audit_date": "2026-11-11",
+  "wave": "local-operator-mobile M1 slice — 53 new phone-app keys; lopdev team; independent auditor A of two passes",
+  "audited_revision": "84c4bee109d048e3dad0f996921e1b8ed561dfc8",
+  "audited_revision_note": "mobile worktree i18n-app-scan at this head; staged target values are not in the tree, so the catalogue bytes at this revision are still English placeholders and are recorded as landing_target",
+  "key_count": {
+    "slice": 53,
+    "namespace": 6,
+    "en": 6,
+    "target": 6,
+    "context": 6
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "2b8bafe5512c",
+    "model": "deepseek/deepseek-flash",
+    "actual_model": "deepseek/deepseek-flash",
+    "actual_model_source": "session header as shown to this session; no provider-fallback notice appeared in this transcript",
+    "independent_from_translator_session": true,
+    "independence": "Different agent, session and model from the translator (reported openai/gpt-6.1-sol); the translator's run was not observed by this auditor. No human native-speaker review and no rendered frame are claimed."
+  },
+  "translator": {
+    "agent": "i18n-translator (M1 slice)",
+    "model": "openai/gpt-6.1-sol",
+    "actual_model_source": "as supplied by the requesting manager; this auditor did not observe the translator's run",
+    "date": "2026-11-11"
+  },
+  "input_hashes": {
+    "en_slice": {
+      "path": "<scratch>/m1-prep/keys.json",
+      "sha256": "1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8",
+      "note": "English source and per-key context for all 53 keys; all 53 English values verified byte-identical to the repo en catalogues at this head"
+    },
+    "target_slice": {
+      "path": "<scratch>/m1-prep/vi.json",
+      "sha256": "34f5d012cff565d79e3b66cb02cfd34a49ffef81c76844c889ace048beca6de9"
+    },
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.computers.json",
+      "sha256": "6ccd282a967b206a762550173e15aa6e4c6eaacf948446d12a7d7133c5f3ae44"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+      "sha256": "15e04ab447262538a7bc05e19dd0d03a0b7b0c7c21a678f8f73520da88ae780f"
+    },
+    "landing_target": {
+      "path": "src/i18n/catalogues/vi/mobile.computers.json",
+      "sha256": "27fc7ce49ae2318c2f795b92b7cfbadac65035869038252a8dc7fbf286c31934",
+      "note": "all 6 audited keys already exist here as English placeholders, so the change is a replacement, not an addition"
+    }
+  },
+  "verdict": "clean-with-findings",
+  "ledger_status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 2,
+    "NIT": 3
+  },
+  "finding_ids_in_this_namespace": [
+    "viA-N1"
+  ],
+  "findings": [
+    {
+      "id": "viA-M1",
+      "severity": "MINOR",
+      "namespace": "mobile.settings",
+      "key": "mobile.settings.sign_out.body",
+      "summary": "control plane rendered as unrecorded «hệ thống điều khiển», sharing its head noun with «bảng điều khiển» (the Radient console); claims themselves correct"
+    },
+    {
+      "id": "viA-M2",
+      "severity": "MINOR",
+      "namespace": "mobile.session",
+      "key": "mobile.session.not_connected.next",
+      "summary": "\"the session list\" becomes noun-less «danh sách»; shipped copy and sibling keys in this slice name the noun"
+    },
+    {
+      "id": "viA-N1",
+      "severity": "NIT",
+      "namespace": "mobile.computers",
+      "key": "mobile.computers.wait.nothing_answered_help",
+      "summary": "\"no tunnel listed\" becomes «chưa thấy đường hầm nào» (not seen) rather than the list staying empty; suggest «danh sách vẫn không có đường hầm nào»"
+    },
+    {
+      "id": "viA-N2",
+      "severity": "NIT",
+      "namespace": "mobile.session",
+      "key": "mobile.session.find.label",
+      "summary": "«Tìm» where the shipped search vocabulary is «Tìm kiếm»"
+    },
+    {
+      "id": "viA-N3",
+      "severity": "NIT",
+      "namespace": "mobile.session",
+      "key": "mobile.session.subagent.prompt_label",
+      "summary": "English-identical «prompt» beside «kết quả»; glossary-mandated for vi, recorded so it is not 'fixed'"
+    }
+  ],
+  "mechanical": {
+    "key_set_and_order_identical": true,
+    "icu_argument_sets_identical": true,
+    "plural_structure": "both relay plural keys carry one 'other' arm only with '#' inside it; no one/few/many/zero arm — correct CLDR for vi; {sessions} and {version} argument sets identical to source",
+    "bidi_or_format_control_chars": 0,
+    "combining_marks": 0,
+    "empty_values": 0,
+    "english_identical_values": 1,
+    "staged_en_matches_repo_en": true,
+    "keys_replace_existing_placeholders": true,
+    "repo_validator": "npm run -s i18n:check at 84c4bee1 — catalogue.gen.ts current (649 keys, 21 namespaces), check-strings 212 findings all baselined, 0 new. The staged values are not in the tree, so this run did not read them.",
+    "method": "jq over keys.json / vi.json and the four repo catalogues plus their en context sidecars; every command and its real output are in audit.log"
+  },
+  "artifacts": {
+    "report.md": {
+      "sha256": "0ed3c30e59805720d603df820752781848fb71a99674222b38e5fc30fbc4b089"
+    },
+    "audit.log": {
+      "sha256": "711c4198db5f606a2fa52743b02de1528939cf297cc7b66f93b04f7236854ff1",
+      "note": "shared by all four bundles of audit vi1111m1a"
+    }
+  },
+  "observations_outside_slice": [
+    "mobile.computers.connect_refused.password ships «Relay không chấp nhận mật khẩu đó…» — the English word 'Relay' remains in the vi interface, a live exception to the 'no English anywhere' acceptance criterion. Not one of the 53 audited keys, not counted in this verdict."
+  ],
+  "route_disclosure": "Read-only: repo catalogues, shipped vi catalogues and the staged slice JSON were read with jq/grep/shasum; no translation, MT or API service was used; no other auditor's report was read; no translation file was edited",
+  "limits": [
+    "no rendered frame: no browser or native build in this role, and no maxCells hint exists for these keys — width is a character-count judgement",
+    "staged values are not in the tree, so generate.ts did not check them"
+  ]
+}

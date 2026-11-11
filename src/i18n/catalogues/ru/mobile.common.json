@@ -5,8 +5,8 @@
 	"mobile.common.save": "Сохранить",
 	"mobile.common.send": "Отправить",
 	"mobile.common.try_again": "Повторить",
-	"mobile.common.not_found.title": "Page not found",
-	"mobile.common.not_found.headline": "That page does not exist.",
-	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
-	"mobile.common.not_found.action": "Back to sessions"
+	"mobile.common.not_found.title": "Страница не найдена",
+	"mobile.common.not_found.headline": "Этой страницы не существует.",
+	"mobile.common.not_found.next": "Вернитесь к сессиям, чтобы продолжить.",
+	"mobile.common.not_found.action": "К сессиям"
 }

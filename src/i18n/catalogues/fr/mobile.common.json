@@ -5,8 +5,8 @@
 	"mobile.common.save": "Enregistrer",
 	"mobile.common.send": "Envoyer",
 	"mobile.common.try_again": "Réessayer",
-	"mobile.common.not_found.title": "Page not found",
-	"mobile.common.not_found.headline": "That page does not exist.",
-	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
-	"mobile.common.not_found.action": "Back to sessions"
+	"mobile.common.not_found.title": "Page introuvable",
+	"mobile.common.not_found.headline": "Cette page n’existe pas.",
+	"mobile.common.not_found.next": "Revenez à vos sessions pour continuer.",
+	"mobile.common.not_found.action": "Retour aux sessions"
 }

@@ -377,81 +377,15 @@ const PROJECT_TAG_EXAMPLE = {
 		"Valid ASCII tag examples with a comma separator; retaining the examples preserves the form's concrete input guidance.",
 };
 
-/**
- * Keys whose shipped-locale value is TEMPORARILY the English source.
- *
- * WHY. The app/ scan keyed 53 user-visible literals as English keys. Generation
- * requires every shipped locale to carry every key, and the translator wave has
- * not run yet, so each locale holds the English string as a placeholder. This is
- * NOT a design judgement that English is right (unlike the entries below): it is
- * a ledger of debt. SHRINK ONLY — when a key is translated, delete it from this
- * list in the same change, and the guard below then demands the translation
- * differ. Adding a key here without a brief in the translation wave defeats the
- * guard; reviewers should treat growth of this list as a smell.
- */
-const PENDING_TRANSLATION: readonly string[] = [
-	"mobile.computers.wait.nothing_answered",
-	"mobile.computers.wait.nothing_answered_help",
-	"mobile.computers.wait.paused",
-	"mobile.computers.wait.relay_version_sessions",
-	"mobile.computers.wait.relay_version",
-	"mobile.computers.wait.relay_sessions",
-	"mobile.settings.screen_title",
-	"mobile.settings.section.connection",
-	"mobile.settings.section.appearance",
-	"mobile.settings.section.about",
-	"mobile.settings.account.signed_in",
-	"mobile.settings.connection.status",
-	"mobile.settings.connection.computers",
-	"mobile.settings.connection.use",
-	"mobile.settings.connection.refresh",
-	"mobile.settings.about.version",
-	"mobile.settings.about.blurb",
-	"mobile.settings.account.delete",
-	"mobile.settings.account.delete_help",
-	"mobile.settings.sign_out.title",
-	"mobile.settings.sign_out.body",
-	"mobile.settings.sign_out.confirm",
-	"mobile.settings.sign_out.done",
-	"mobile.settings.text_size.following",
-	"mobile.settings.text_size.overridden",
-	"mobile.session.subagent.screen_title",
-	"mobile.session.subagent.prompt_label",
-	"mobile.session.subagent.result_label",
-	"mobile.session.subagent.unavailable_headline",
-	"mobile.session.subagent.unavailable_next",
-	"mobile.session.subagent.no_rows",
-	"mobile.session.not_connected.headline",
-	"mobile.session.not_connected.next",
-	"mobile.session.empty.headline",
-	"mobile.session.empty.next",
-	"mobile.session.subagents_hint",
-	"mobile.session.find.label",
-	"mobile.session.find.hint",
-	"mobile.session.chip.model_change_failed",
-	"mobile.session.chip.effort_change_failed",
-	"mobile.session.composer.retained_instruction",
-	"mobile.common.not_found.title",
-	"mobile.common.not_found.headline",
-	"mobile.common.not_found.next",
-	"mobile.common.not_found.action",
-	"mobile.settings.section.diagnostics",
-	"mobile.settings.diagnostics.route",
-	"mobile.settings.diagnostics.stream",
-	"mobile.settings.diagnostics.last_error",
-	"mobile.settings.diagnostics.route_radient",
-	"mobile.settings.diagnostics.route_direct",
-	"mobile.settings.diagnostics.none",
-	"mobile.settings.diagnostics.privacy_note",
-];
-const PENDING_TRANSLATION_REASON =
-	"Pending the translator wave (owner: i18n programme; expected date: not yet scheduled, docs/i18n.md names none): the English source is held as a placeholder so the catalogue stays in key parity; delete this entry when the key is translated.";
-
 const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
 > = {
 	en: {},
 	fr: {
+		"mobile.session.subagent.prompt_label":
+			"`prompt` is the French style-guide glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
+		"mobile.settings.about.version":
+			"Version is the correct French cognate for the app-version row label; identical spelling is idiomatic, not an English fallback.",
 		"mobile.team_bridge.attachment.image":
 			"Image is the French noun for a picture too; the isolated attachment label is an idiomatic cognate.",
 		"mobile.team_bridge.attachment.chip_label":
@@ -522,6 +456,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	/* Spanish preserves these placeholder-only templates: names and separators
 	 * have no English prose to translate. Each key remains explicitly listed. */
 	es: {
+		"mobile.session.subagent.prompt_label":
+			"`prompt` is the Spanish glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
@@ -566,6 +502,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.session.subagent.prompt_label":
+			"`prompt` is the Vietnamese binding glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
@@ -627,22 +565,10 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	},
 };
 
-/** The judged exceptions plus the pending-translation ledger, per locale. */
+/** The judged exceptions, per locale (no pending-translation ledger remains). */
 const IDENTICAL_BY_DESIGN: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
-> = Object.fromEntries(
-	Object.entries(IDENTICAL_BY_DESIGN_JUDGED).map(([locale, judged]) => [
-		locale,
-		locale === "en"
-			? judged
-			: {
-					...judged,
-					...Object.fromEntries(
-						PENDING_TRANSLATION.map((key) => [key, PENDING_TRANSLATION_REASON]),
-					),
-				},
-	]),
-) as Record<ShippedLocale, Readonly<Record<string, string>>>;
+> = IDENTICAL_BY_DESIGN_JUDGED;
 
 describe("a shipped translation is still translated", () => {
 	const shipped = SHIPPED_LOCALES.filter((locale) => locale !== "en");

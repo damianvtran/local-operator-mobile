@@ -1,0 +1,182 @@
+== ru M1 round-2 delta audit — execution log (locale ru, audit ru1111m1r2, 2026-11-11)
+== working head: 84c4bee109d048e3dad0f996921e1b8ed561dfc8 (i18n-app-scan worktree)
+== scratch: /Users/damian/.local-operator/sessions/b074e5794284/scratchpad
+
+== [1] repo validator on the audited head (baseline; staged ru.v2 values are NOT installed in the tree)
+$ (cd /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan && npm run -s i18n:check)
+src/i18n/catalogue.gen.ts is current (649 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+scanner sha256: base=fd5946dfe556d9f0161b6093ab9792ae2049758d1870a56a0d888e4d95154d5c head=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813
+check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs d78ca8616286
+exit=0
+
+== [2] CLDR ru categories and rendered plural arms (Node Intl.PluralRules, real CLDR data)
+$ node -e '...Intl.PluralRules("ru") + arm rendering...'
+categories: {"0":"many","1":"one","2":"few","3":"few","4":"few","5":"many","11":"many","21":"one","22":"few","25":"many","101":"one","111":"many","1.5":"other"}
+0 | relay_sessions: Его ретранслятор сообщает: 0 запущенных сессий. | ... версию протокола 7 и 0 запущенных сессий.
+1 | relay_sessions: Его ретранслятор сообщает: 1 запущенная сессия. | ... версию протокола 7 и 1 запущенную сессию.
+2 | relay_sessions: Его ретранслятор сообщает: 2 запущенные сессии. | ... версию протокола 7 и 2 запущенные сессии.
+5 | relay_sessions: Его ретранслятор сообщает: 5 запущенных сессий. | ... версию протокола 7 и 5 запущенных сессий.
+21 | relay_sessions: Его ретранслятор сообщает: 21 запущенная сессия. | ... версию протокола 7 и 21 запущенную сессию.
+25 | relay_sessions: Его ретранслятор сообщает: 25 запущенных сессий. | ... версию протокола 7 и 25 запущенных сессий.
+101 | relay_sessions: Его ретранслятор сообщает: 101 запущенная сессия. | ... версию протокола 7 и 101 запущенную сессию.
+1.5 | relay_sessions: Его ретранслятор сообщает: 1,5 запущенной сессии. | ... версию протокола 7 и 1,5 запущенной сессии.
+
+== [3] shipped ru usage counts over non-context catalogues (values and occurrences)
+$ python3 - <<'PY'  # glob src/i18n/catalogues/ru/*.json, skip *.context.json
+shipped ru values: 649
+бесед              values=28 occ=33
+аккаунт            values=9 occ=9
+учётн              values=1 occ=1
+сеанс              values=4 occ=4
+усили              values=9 occ=9
+поток              values=0 occ=0
+сервер управления  values=0 occ=0
+консоль            values=1 occ=1
+статус             values=3 occ=3
+состояни           values=2 occ=2
+сменить            values=2 occ=2
+изменить           values=5 occ=5
+выбрать            values=1 occ=1
+использовать       values=2 occ=2
+фонов              values=0 occ=0
+--- English "Status" labels and their shipped ru:
+  mobile.library.browse.status  EN='Status'  RU='Статус'
+  mobile.projects.create.status  EN='Status'  RU='Статус'
+--- shipped a11y hints (register):
+  mobile.agent_avatar.edit_hint = Изменить это изображение можно в приложении для компьютера
+  mobile.composer_input.clear_draft_hint = Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения
+  mobile.composer_input.dismiss_error_hint = Скрывает ошибку, не изменяя черновик или статус доставки
+  mobile.composer_input.paste.image_hint = Прикрепляет изображение из буфера обмена
+  mobile.composer_input.voice.mic_setup_hint = Объясняет, как включить голосовой ввод
+  mobile.projects.project_name_hint = От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.
+  mobile.session.chip.effort_resume_hint = Возобновите этот сеанс, чтобы изменить усилие
+  mobile.session.chip.model_resume_hint = Возобновите этот сеанс, чтобы сменить модель
+  mobile.session.chip.model_unrecorded_hint = Этот сеанс не сохранил модель
+  mobile.session.find.hint = Finds messages in the transcript loaded on this device
+  mobile.session.history.gap_load_hint = Загружает сообщения, пропущенные, пока телефон был отключён.
+  mobile.session.status_tray.hint = Открывает строку текущей работы, задачи и субагентов
+  mobile.session.subagents_hint = Show the subagents
+  mobile.session_health.control_hint = Показывает, что означает это состояние и что произойдёт при отправке
+  mobile.session_health.menu_hint = Открывает меню сессии
+  mobile.team_bridge.attachment.open_hint = Открывает изображение на весь экран
+  mobile.team_bridge.default_on.dismiss_hint = Оставляет Team Bridge включённым и больше не показывает это уведомление
+  mobile.team_bridge.profile.opens_hint = Открывает профиль
+
+== [3] shipped ru usage counts over non-context catalogues (values and occurrences)
+$ python3 - <<'PY'   # glob src/i18n/catalogues/ru/*.json, skip *.context.json
+shipped ru values: 649
+бесед              values=28 occ=33
+аккаунт            values=9 occ=9
+учётн              values=1 occ=1
+сеанс              values=4 occ=4
+усили              values=9 occ=9
+поток              values=0 occ=0
+сервер управления  values=0 occ=0
+консоль            values=1 occ=1
+статус             values=3 occ=3
+состояни           values=2 occ=2
+сменить            values=2 occ=2
+изменить           values=5 occ=5
+выбрать            values=1 occ=1
+использовать       values=2 occ=2
+фонов              values=0 occ=0
+--- English "Status" labels and their shipped ru:
+  mobile.library.browse.status  EN='Status'  RU='Статус'
+  mobile.projects.create.status  EN='Status'  RU='Статус'
+--- shipped a11y hints (register):
+  mobile.agent_avatar.edit_hint = Изменить это изображение можно в приложении для компьютера
+  mobile.composer_input.clear_draft_hint = Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения
+  mobile.composer_input.dismiss_error_hint = Скрывает ошибку, не изменяя черновик или статус доставки
+  mobile.composer_input.paste.image_hint = Прикрепляет изображение из буфера обмена
+  mobile.composer_input.voice.mic_setup_hint = Объясняет, как включить голосовой ввод
+  mobile.projects.project_name_hint = От 1 до 64 символов: буквы, цифры, точка, подчёркивание или дефис. Без пробелов. Имя не может начинаться с дефиса.
+  mobile.session.chip.effort_resume_hint = Возобновите этот сеанс, чтобы изменить усилие
+  mobile.session.chip.model_resume_hint = Возобновите этот сеанс, чтобы сменить модель
+  mobile.session.chip.model_unrecorded_hint = Этот сеанс не сохранил модель
+  mobile.session.find.hint = Finds messages in the transcript loaded on this device
+  mobile.session.history.gap_load_hint = Загружает сообщения, пропущенные, пока телефон был отключён.
+  mobile.session.status_tray.hint = Открывает строку текущей работы, задачи и субагентов
+  mobile.session.subagents_hint = Show the subagents
+  mobile.session_health.control_hint = Показывает, что означает это состояние и что произойдёт при отправке
+  mobile.session_health.menu_hint = Открывает меню сессии
+  mobile.team_bridge.attachment.open_hint = Открывает изображение на весь экран
+  mobile.team_bridge.default_on.dismiss_hint = Оставляет Team Bridge включённым и больше не показывает это уведомление
+  mobile.team_bridge.profile.opens_hint = Открывает профиль
+
+== [4] diff v1 -> v2 and changed-key widths (inputs read from the manager's m1-prep staging dir)
+$ python3 - <<'PY'
+keys v1=53 v2=53 changed=9 order_same=True set_same=True
+--- mobile.computers.wait.paused
+  en   ( 70): Paused while the app is in the background. Reopen it to keep watching.
+  v1   ( 86): Проверка приостановлена, пока приложение в фоне. Откройте его снова, чтобы продолжить.
+  v2   (105): Проверка приостановлена, пока приложение в фоновом режиме. Откройте его снова, чтобы продолжить проверку.
+--- mobile.computers.wait.relay_version_sessions
+  en   (120): Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.
+  v1   (184): Его ретранслятор сообщает: версия протокола — {version}; {sessions, plural, one {# запущенная сессия} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.
+  v2   (182): Его ретранслятор сообщает версию протокола {version} и {sessions, plural, one {# запущенную сессию} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.
+--- mobile.session.composer.retained_instruction
+  en   (113): An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.
+  v1   (110): Предыдущее указание, возможно, уже доставлено. Повторите его отправку, прежде чем отправлять текущий черновик.
+  v2   (118): Предыдущее указание, возможно, уже доставлено. Отправьте это указание ещё раз, прежде чем отправлять текущий черновик.
+--- mobile.session.not_connected.next
+  en   ( 59): Open it from the session list once a computer is connected.
+  v1   ( 58): После подключения компьютера откройте её из списка сессий.
+  v2   ( 57): После подключения компьютера откройте её в списке сессий.
+--- mobile.settings.about.blurb
+  en   (154): Local Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to Radient.
+  v1   (185): Local Operator — приложение с открытым исходным кодом (MIT). Сессии агентов подключаются к вашему ретранслятору. Сообщения Team Bridge и регистрация уведомлений идут напрямую в Radient.
+  v2   (193): Local Operator — приложение с открытым исходным кодом (MIT). Сессии агентов подключаются к вашему ретранслятору. Сообщения Team Bridge и регистрация уведомлений отправляются напрямую в Radient.
+--- mobile.settings.account.delete_help
+  en   (191): Deleting your account happens in the Radient console, in the browser — this app cannot do it for you. It deletes the account and every tunnel on it. Sessions on your computer are not touched.
+  v1   (164): Аккаунт удаляется в консоли Radient в браузере — приложение не может сделать это за вас. Удаляются аккаунт и все его туннели. Сессии на компьютере не затрагиваются.
+  v2   (166): Аккаунт удаляется в консоли Radient (в браузере) — приложение не может сделать это за вас. Удаляются аккаунт и все его туннели. Сессии на компьютере не затрагиваются.
+--- mobile.settings.sign_out.body
+  en   (161): This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.
+  v1   (170): Сессия на сервере управления будет завершена, а её данные удалены из приложения. Туннель перестанет принимать запросы с этого телефона. На компьютере ничего не изменится.
+  v2   (171): Сессия входа с сервером управления будет завершена, а приложение забудет её, поэтому туннель перестанет принимать запросы с этого телефона. Ваш компьютер не затрагивается.
+--- mobile.settings.sign_out.done
+  en   ( 53): Signed out. The session was revoked on your computer.
+  v1   ( 46): Выход выполнен. Сессия на компьютере отозвана.
+  v2   ( 52): Выход выполнен. Сессия входа отозвана на компьютере.
+--- mobile.settings.text_size.following
+  en   ( 55): This phone's own text size is {percent}%. Following it.
+  v1   ( 75): Размер текста в настройках телефона — {percent}%. Используется этот размер.
+  v2   ( 84): Размер текста в настройках телефона — {percent}%. Приложение использует этот размер.
+
+== [5] input hashes (sha256)
+$ python3 - <<'PY'  # hashlib over the four staged inputs
+1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8  keys.json  (23242 bytes)
+1ecfaf98401dd76aedc288d63b53c71299aa7ed10b6a997fe698dd68111bd164  ru.json  (6416 bytes)
+247837f44c1eb9b16f34c2f9b8594ae8fea446ce8331a6afd1a0ba8b53984daa  ru.v2.json  (6510 bytes)
+322219289473014244fea378c543f57af63bca583feb2731cd8b2a1d72998814  ru.v2-changes.md  (15538 bytes)
+
+== [6] independent structural + ICU parity + hygiene pass (own recursive parser)
+$ python3 icu_check.py
+== 1. structural
+  key count en=53 ru=53
+  same order: True
+  same set: True
+  empty values: []
+  english-identical: []
+== 2. ICU parse + args
+  ICU failures: none
+== 3. plural arm renderings
+   mobile.computers.wait.relay_sessions
+     EN: Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.
+     RU: Его ретранслятор сообщает: {sessions, plural, one {# запущенная сессия} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.
+   mobile.computers.wait.relay_version_sessions
+     EN: Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.
+     RU: Его ретранслятор сообщает версию протокола {version} и {sessions, plural, one {# запущенную сессию} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.
+== 4. hygiene
+   mobile.computers.wait.relay_sessions ['latin:few,many,one,other,plural,sessions']
+   mobile.computers.wait.relay_version ['latin:version']
+   mobile.computers.wait.relay_version_sessions ['latin:few,many,one,other,plural,sessions,version']
+   mobile.settings.about.blurb ['latin:Bridge,Local,MIT,Operator,Radient.,Team']
+   mobile.settings.account.delete ['latin:Radient']
+   mobile.settings.account.delete_help ['latin:Radient']
+   mobile.settings.diagnostics.route_radient ['latin:Radient']
+   mobile.settings.text_size.following ['latin:percent']
+   mobile.settings.text_size.overridden ['latin:percent']
+== done
+
+== end of log

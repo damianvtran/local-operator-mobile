@@ -5,8 +5,8 @@
 	"mobile.common.save": "محفوظ کریں",
 	"mobile.common.send": "بھیجیں",
 	"mobile.common.try_again": "دوبارہ کوشش کریں",
-	"mobile.common.not_found.title": "Page not found",
-	"mobile.common.not_found.headline": "That page does not exist.",
-	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
-	"mobile.common.not_found.action": "Back to sessions"
+	"mobile.common.not_found.title": "صفحہ نہیں ملا",
+	"mobile.common.not_found.headline": "یہ صفحہ موجود نہیں ہے۔",
+	"mobile.common.not_found.next": "جاری رکھنے کے لیے اپنے سیشنز میں واپس جائیں۔",
+	"mobile.common.not_found.action": "سیشنز میں واپس جائیں"
 }
