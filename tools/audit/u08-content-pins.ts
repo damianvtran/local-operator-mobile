@@ -1534,6 +1534,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// (`resume-hold.ts`) and the Team Bridge thread's silent `unreachable`
 	// retries, with tests. Timers and state only — no rendered change. --print
 	// over the staged tree; source identity only.
+	// Re-pinned 2026-11-11 for fix/native-text-selection with --print: the
+	// transcript's drag-to-select wrapper (`selectable-message.tsx`) — on web
+	// it renders its children unchanged and the leaf Text keeps `selectable`,
+	// so no measured web pixel moves. Source identity only. Re-printed for the
+	// PR #233 round-1 remediation (uncontrolled iOS selection, wrapper out of
+	// VoiceOver, memoised output joins): web renders the same children and
+	// leaves, so again source identity only. Re-printed for the PR #233 design
+	// R1 remediation (Android highlight derived per theme, diff selection ink,
+	// scroll keeps the iOS mode): the web leaf's `selectionColor` is ignored by
+	// RNW `Text`, and the rest is iOS-mode or touch wiring, so again source
+	// identity only.
 	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
 };
 

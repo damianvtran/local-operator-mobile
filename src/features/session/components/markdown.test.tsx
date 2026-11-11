@@ -14,6 +14,12 @@ const host = vi.hoisted(() => ({
 	}[],
 	open: vi.fn(async (_url: string) => undefined),
 	copies: [] as (() => void)[],
+	/* Every Pressable's accessibility contract, in mount order (PR #233 R1, M1). */
+	pressables: [] as {
+		accessible?: boolean;
+		accessibilityRole?: string;
+		longPress: boolean;
+	}[],
 	os: "web" as "web" | "ios" | "android",
 	/* What `useWindowDimensions` reports: the table seeds its column width
 	 *  from it before `onLayout` (which static markup never fires). */
@@ -37,11 +43,13 @@ vi.mock("react-native", async () => {
 	const text = ({
 		children,
 		accessibilityRole,
+		accessibilityActions,
 		onPress,
 		...rest
 	}: {
 		children: ReactNode;
 		accessibilityRole?: string;
+		accessibilityActions?: { name: string }[];
 		className?: string;
 		style?: unknown;
 		testID?: string;
@@ -54,7 +62,11 @@ vi.mock("react-native", async () => {
 			host.links.push({ label: String(children), press: onPress });
 		return createElement(
 			accessibilityRole === "link" ? "a" : "span",
-			{ role: accessibilityRole, ...hostProps(rest) },
+			{
+				role: accessibilityRole,
+				"data-actions": accessibilityActions?.map((a) => a.name).join(","),
+				...hostProps(rest),
+			},
 			children,
 		);
 	};
@@ -74,11 +86,20 @@ vi.mock("react-native", async () => {
 		Pressable: ({
 			children,
 			onLongPress,
+			accessible,
+			accessibilityRole,
 		}: {
 			children: ReactNode;
 			onLongPress?: () => void;
+			accessible?: boolean;
+			accessibilityRole?: string;
 		}) => {
 			if (onLongPress) host.copies.push(onLongPress);
+			host.pressables.push({
+				accessible,
+				accessibilityRole,
+				longPress: onLongPress !== undefined,
+			});
 			return view({ children });
 		},
 		Platform: {
@@ -125,6 +146,7 @@ describe("rendered assistant markdown dispatch", () => {
 	beforeEach(() => {
 		host.links = [];
 		host.copies = [];
+		host.pressables = [];
 		host.open.mockClear();
 	});
 	it.each([
@@ -384,5 +406,50 @@ describe("a fitting table's first frame is its settled frame (PR #224 m1 / D2)",
 		);
 		expect(priced).toBeLessThan(286);
 		expect(priced).toBeGreaterThan(0);
+	});
+});
+
+/* PR #233 review R1, M1: on iOS an accessible container hides its children from
+ *  VoiceOver, so the answer's long-press wrapper must not be one, or the links
+ *  and the code block's copy button become unreachable. */
+describe("iOS VoiceOver reach inside a selectable answer", () => {
+	beforeEach(() => {
+		host.links = [];
+		host.pressables = [];
+	});
+	const ANSWER =
+		"See [Reuters](https://www.reuters.com/world/).\n\n```sh\nls\n```";
+
+	it("keeps the wrapper non-accessible and the link and copy button reachable", () => {
+		host.os = "ios";
+		const markup = renderToStaticMarkup(
+			createElement(Markdown, { text: ANSWER }),
+		);
+		const [wrapper, ...inner] = host.pressables;
+		// The outermost Pressable is the selection wrapper: a hold, no role, and
+		// explicitly NOT one accessibility element.
+		expect(wrapper).toEqual({
+			accessible: false,
+			accessibilityRole: undefined,
+			longPress: true,
+		});
+		// The code block's copy control stays its own accessible button.
+		expect(inner).toEqual([
+			{ accessible: undefined, accessibilityRole: "button", longPress: true },
+		]);
+		expect(markup).toContain('role="link"');
+		expect(host.links.map((link) => link.label)).toEqual(["Reuters"]);
+		// VoiceOver's way into the mode: a "Select text" action on the paragraph.
+		expect(markup).toContain('data-actions="selectText"');
+	});
+
+	it("adds no Select text action where the leaf selects natively", () => {
+		for (const os of ["android", "web"] as const) {
+			host.os = os;
+			const markup = renderToStaticMarkup(
+				createElement(Markdown, { text: ANSWER }),
+			);
+			expect(markup).not.toContain("data-actions=");
+		}
 	});
 });

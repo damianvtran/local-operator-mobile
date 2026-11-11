@@ -10,6 +10,10 @@ import {
 } from "@/features/session/components/collapsed-row";
 import { ImageGenCard } from "@/features/session/components/imagegen-card";
 import { Markdown } from "@/features/session/components/markdown";
+import {
+	SelectableLeafText,
+	SelectableMessage,
+} from "@/features/session/components/selectable-message";
 import { ToolRow } from "@/features/session/components/tool-row";
 import {
 	TRACE_COLUMN_GAP_CLASS,
@@ -291,6 +295,12 @@ const TranscriptRowImpl = ({
 		 *  reader opens the turn's bar, and nothing is hidden that the bar does
 		 *  not also stand for. A steer never heads a turn, so it never clamps. */
 		const clamp = condensed && !isSteer;
+		// `body-read` 14 / 1.55: the relay's own `--text-body` step and its
+		// reading leading (design item 11, round 1 type parity). It was `body`
+		// 16, one step above the reference.
+		const userTextClass = isSteer
+			? "text-body-read text-ink-muted"
+			: "text-body-read text-ink";
 		/* NEVER COLLAPSIBLE, AT ANY LENGTH (review round 1, R1-2 / U1 / D2). The
 		 *  reader's own prompt is the turn's landmark: the relay and the desktop
 		 *  both keep it open, and folding it hid what was asked while the answer
@@ -301,19 +311,21 @@ const TranscriptRowImpl = ({
 			<View className="items-end px-4 py-1" testID={testID}>
 				<UserBox isSteer={isSteer}>
 					{entry.text.length > 0 ? (
-						<Text
-							className={cx(
-								// `body-read` 14 / 1.55: the relay's own `--text-body` step and
-								// its reading leading (design item 11, round 1 type parity). It
-								// was `body` 16, one step above the reference.
-								isSteer
-									? "text-body-read text-ink-muted"
-									: "text-body-read text-ink",
-							)}
-							numberOfLines={clamp ? 1 : undefined}
+						/* The reader's own prompt is as copyable as the answer: long-press
+						 *  selects on iOS, native `selectable` on Android. A clamped
+						 *  one-line preview is not a reading surface, so no mode for it. */
+						<SelectableMessage
+							text={entry.text}
+							textClassName={userTextClass}
+							disabled={clamp}
 						>
-							{entry.text}
-						</Text>
+							<SelectableLeafText
+								className={userTextClass}
+								numberOfLines={clamp ? 1 : undefined}
+							>
+								{entry.text}
+							</SelectableLeafText>
+						</SelectableMessage>
 					) : null}
 					{!clamp && entry.images.length > 0 && loadImage ? (
 						<View className="flex-row flex-wrap gap-1.5 pt-1.5">
