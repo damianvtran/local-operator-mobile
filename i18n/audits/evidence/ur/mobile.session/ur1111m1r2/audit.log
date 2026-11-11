@@ -64,9 +64,9 @@ plural keys: ["mobile.computers.wait.relay_sessions","mobile.computers.wait.rela
     2=>اس کا ریلے پروٹوکول ورژن 3 اور 2 جاری سیشنز کی اطلاع دے رہا ہے۔
   mobile.settings.sign_out.body -> اس سے کنٹرول پلین پر سائن ان کا سیشن ختم ہو جاتا ہے اور اس فون سے بھی اس کی محفوظ معلومات ہٹ جاتی ہیں، اس لیے ٹنل اس فون سے درخواستیں قبول کرنا بند کر دیتا ہے۔ آپ کا کمپیوٹر متاثر نہیں ہوتا۔
   mobile.settings.sign_out.done -> سائن آؤٹ ہو گیا۔ آپ کے کمپیوٹر پر سائن ان کا سیشن منسوخ کر دیا گیا۔
-(node:93432) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+(node:93432) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file://<repo>/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/package.json.
+To eliminate this warning, add "type": "module" to <repo>/package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
 exit=0
 
@@ -141,37 +141,37 @@ B. shipped ur usage counts (649-key catalogue), recomputed here
      mobile.session.sheet_title.effort = شدت
 
 C. input hashes
-   1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/keys.json
-   43275b9bc7b8b09f4d458ce228f77a47cbdb85013bb77ba721598b758b6d52bf  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/ur.json
-   b6f343ef3320719247487c4dc932ddacea0214ce64d49bb0c92ba25e31fbd3cd  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/ur.v2.json
-   831c8f637d3c3720fe0abbdfded1c4a0d49ced3b3540ccc49aad657e0cd28fcd  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/ur.v2-changes.md
-   b74466e83cebf0befee3c5959b8c706570b3645a71682b4df13e7fcc14d867af  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.common.json
-   6ccd282a967b206a762550173e15aa6e4c6eaacf948446d12a7d7133c5f3ae44  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.computers.json
-   fd14c2081991d4370d4086e47810e375a23c509c06c836f2e146f9c2aeb65b9a  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.session.json
-   257daa349bf9bf03fea8241cd4367148ec3a2cc9867e4ebd21271f510e0a45c9  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.settings.json
-   f6aadb8f1e837bd1bcca10f8dc701c43e84a1ca8519f95a07a770d15da7624e6  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.common.context.json
-   15e04ab447262538a7bc05e19dd0d03a0b7b0c7c21a678f8f73520da88ae780f  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.computers.context.json
-   1b93b3ddc3996d12d4a8902053a9258d7a49b4e25b7dd17a2de15b0190139de4  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.session.context.json
-   b995b0b659091b1d145d313f9183316dbafa4354865e4f072fd141355adfa35d  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.settings.context.json
-   771b33efc51ea1e7be72fde1564c40c7e9c1de6d52b92ea1287bd948e5113abe  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.common.json
-   ce9cfe7c3ad53b0edd45f8bbaf9e2a1174ef22745531f18a0e2e1f85feab7b12  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.computers.json
-   ac6b1b74b6a45c067f515f888f934480f223e73d3166aa59271b24fc1a7c2bb9  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.session.json
-   314535e965f7bde9de7ae69d9fb9ec0bc9a3e0190dcddcd2ba2b0577d24b844a  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/ur/mobile.settings.json
+   1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8  <scratch>/m1-prep/keys.json
+   43275b9bc7b8b09f4d458ce228f77a47cbdb85013bb77ba721598b758b6d52bf  <scratch>/m1-prep/ur.json
+   b6f343ef3320719247487c4dc932ddacea0214ce64d49bb0c92ba25e31fbd3cd  <scratch>/m1-prep/ur.v2.json
+   831c8f637d3c3720fe0abbdfded1c4a0d49ced3b3540ccc49aad657e0cd28fcd  <scratch>/m1-prep/ur.v2-changes.md
+   b74466e83cebf0befee3c5959b8c706570b3645a71682b4df13e7fcc14d867af  <repo>/src/i18n/catalogues/en/mobile.common.json
+   6ccd282a967b206a762550173e15aa6e4c6eaacf948446d12a7d7133c5f3ae44  <repo>/src/i18n/catalogues/en/mobile.computers.json
+   fd14c2081991d4370d4086e47810e375a23c509c06c836f2e146f9c2aeb65b9a  <repo>/src/i18n/catalogues/en/mobile.session.json
+   257daa349bf9bf03fea8241cd4367148ec3a2cc9867e4ebd21271f510e0a45c9  <repo>/src/i18n/catalogues/en/mobile.settings.json
+   f6aadb8f1e837bd1bcca10f8dc701c43e84a1ca8519f95a07a770d15da7624e6  <repo>/src/i18n/catalogues/en/mobile.common.context.json
+   15e04ab447262538a7bc05e19dd0d03a0b7b0c7c21a678f8f73520da88ae780f  <repo>/src/i18n/catalogues/en/mobile.computers.context.json
+   1b93b3ddc3996d12d4a8902053a9258d7a49b4e25b7dd17a2de15b0190139de4  <repo>/src/i18n/catalogues/en/mobile.session.context.json
+   b995b0b659091b1d145d313f9183316dbafa4354865e4f072fd141355adfa35d  <repo>/src/i18n/catalogues/en/mobile.settings.context.json
+   771b33efc51ea1e7be72fde1564c40c7e9c1de6d52b92ea1287bd948e5113abe  <repo>/src/i18n/catalogues/ur/mobile.common.json
+   ce9cfe7c3ad53b0edd45f8bbaf9e2a1174ef22745531f18a0e2e1f85feab7b12  <repo>/src/i18n/catalogues/ur/mobile.computers.json
+   ac6b1b74b6a45c067f515f888f934480f223e73d3166aa59271b24fc1a7c2bb9  <repo>/src/i18n/catalogues/ur/mobile.session.json
+   314535e965f7bde9de7ae69d9fb9ec0bc9a3e0190dcddcd2ba2b0577d24b844a  <repo>/src/i18n/catalogues/ur/mobile.settings.json
 
    staged v2 value count: 53
 exit=0
 
 === 5. repo validator (proves repo state, not the staged values) ===
 src/i18n/catalogue.gen.ts is current (649 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
-(node:93493) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+(node:93493) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file://<repo>/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/package.json.
+To eliminate this warning, add "type": "module" to <repo>/package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
 scanner sha256: base=fd5946dfe556d9f0161b6093ab9792ae2049758d1870a56a0d888e4d95154d5c head=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813
 check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs d78ca8616286
-(node:93519) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/67973ed5e595/scratchpad/i18n-base-MjGyDc/scripts/i18n/scan-strings.ts is not specified and it doesn't parse as CommonJS.
+(node:93519) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file://<scratch>/i18n-base-MjGyDc/scripts/i18n/scan-strings.ts is not specified and it doesn't parse as CommonJS.
 Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-To eliminate this warning, add "type": "module" to /Users/damian/package.json.
+To eliminate this warning, add "type": "module" to ~/package.json.
 (Use `node --trace-warnings ...` to show where the warning was created)
 exit=0
 

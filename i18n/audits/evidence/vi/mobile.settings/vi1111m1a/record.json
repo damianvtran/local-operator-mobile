@@ -135,7 +135,8 @@
       "sha256": "31320c7efa00f5ee7b442ed68dc6ce3d18f037b9786f1715ead0444958b192b9"
     },
     "audit.log": {
-      "sha256": "711c4198db5f606a2fa52743b02de1528939cf297cc7b66f93b04f7236854ff1",
+      "sha256": "ace7dc51f47188d5ca2b33f10d805dcfd69630652e6bb46c895e11d942929ba5",
+      "sha256_pre_normalisation": "711c4198db5f606a2fa52743b02de1528939cf297cc7b66f93b04f7236854ff1",
       "note": "shared by all four bundles of audit vi1111m1a"
     }
   },

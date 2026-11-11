@@ -210,7 +210,8 @@
     "audit.log": {
       "path_rel": "i18n/audits/evidence/ur/<namespace>/ur1111m1r2/audit.log",
       "note": "one slice-wide executed log, identical in all four bundles of ur1111m1r2",
-      "sha256": "6b37fdf3bff6c07d8df9148b763a02227d971b258667ea29d5b41303b9ae7e79"
+      "sha256": "f81e5428056ac6db01ffca5ffac4b1466bc67c170c8963341b3e8b967b0c9ebf",
+      "sha256_pre_normalisation": "6b37fdf3bff6c07d8df9148b763a02227d971b258667ea29d5b41303b9ae7e79"
     },
     "scripts": [
       {

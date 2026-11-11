@@ -105,7 +105,8 @@
       "sha256": "8519d32303724232fd3f9ac5ec5ee8e106dd6b2d6e6df67367ddee2007c01087"
     },
     "audit.log": {
-      "sha256": "996bcdbce2a2e969a3c465a3f1ce2a7a2d438b8ad7031746a2c2f24a3af7e4ed",
+      "sha256": "922e7542483358273b334a67f89826b93bd701ebe2471081dd46b8cae384de8c",
+      "sha256_pre_normalisation": "996bcdbce2a2e969a3c465a3f1ce2a7a2d438b8ad7031746a2c2f24a3af7e4ed",
       "note": "shared by all four ru1111m1r2 bundles; actual execution log of the commands this auditor ran"
     },
     "slice_note": {

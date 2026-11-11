@@ -1,28 +1,28 @@
 # vi m1-slice A — audit execution log (real command output, not notes)
 # date: 2026-11-11T07:13:23Z
-# worktree: /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan
-$ git -C "/Users/damian/local-operator-mobile/.worktrees/i18n-app-scan" rev-parse HEAD
+# worktree: <repo>
+$ git -C "<repo>" rev-parse HEAD
 84c4bee109d048e3dad0f996921e1b8ed561dfc8
-$ git -C "/Users/damian/local-operator-mobile/.worktrees/i18n-app-scan" status --porcelain | wc -l
+$ git -C "<repo>" status --porcelain | wc -l
        0
 
 ## 1. inputs and hashes
 $ shasum -a 256 keys.json vi.json
-1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/keys.json
-34f5d012cff565d79e3b66cb02cfd34a49ffef81c76844c889ace048beca6de9  /Users/damian/.local-operator/sessions/3ef6295a5545/scratchpad/m1-prep/vi.json
+1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8  <scratch>/m1-prep/keys.json
+34f5d012cff565d79e3b66cb02cfd34a49ffef81c76844c889ace048beca6de9  <scratch>/m1-prep/vi.json
 $ shasum -a 256 vi/{mobile.common,mobile.computers,mobile.session,mobile.settings}.json en/{same}.json + context
-214b9e8dc4c893a319d454b0858bad66951d8958d5daa25a129bf98a4c9b94d7  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/vi/mobile.common.json
-27fc7ce49ae2318c2f795b92b7cfbadac65035869038252a8dc7fbf286c31934  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/vi/mobile.computers.json
-24aac246ef4f9003d658ebd2ab81093f4e796fac3b15df508a8b4044813e3131  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/vi/mobile.session.json
-416837e13fb1a513564ec245dd57b9607f35f10b94e77db3b0105a27c5309ed4  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/vi/mobile.settings.json
-b74466e83cebf0befee3c5959b8c706570b3645a71682b4df13e7fcc14d867af  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.common.json
-6ccd282a967b206a762550173e15aa6e4c6eaacf948446d12a7d7133c5f3ae44  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.computers.json
-fd14c2081991d4370d4086e47810e375a23c509c06c836f2e146f9c2aeb65b9a  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.session.json
-257daa349bf9bf03fea8241cd4367148ec3a2cc9867e4ebd21271f510e0a45c9  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.settings.json
-f6aadb8f1e837bd1bcca10f8dc701c43e84a1ca8519f95a07a770d15da7624e6  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.common.context.json
-15e04ab447262538a7bc05e19dd0d03a0b7b0c7c21a678f8f73520da88ae780f  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.computers.context.json
-1b93b3ddc3996d12d4a8902053a9258d7a49b4e25b7dd17a2de15b0190139de4  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.session.context.json
-b995b0b659091b1d145d313f9183316dbafa4354865e4f072fd141355adfa35d  /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan/src/i18n/catalogues/en/mobile.settings.context.json
+214b9e8dc4c893a319d454b0858bad66951d8958d5daa25a129bf98a4c9b94d7  <repo>/src/i18n/catalogues/vi/mobile.common.json
+27fc7ce49ae2318c2f795b92b7cfbadac65035869038252a8dc7fbf286c31934  <repo>/src/i18n/catalogues/vi/mobile.computers.json
+24aac246ef4f9003d658ebd2ab81093f4e796fac3b15df508a8b4044813e3131  <repo>/src/i18n/catalogues/vi/mobile.session.json
+416837e13fb1a513564ec245dd57b9607f35f10b94e77db3b0105a27c5309ed4  <repo>/src/i18n/catalogues/vi/mobile.settings.json
+b74466e83cebf0befee3c5959b8c706570b3645a71682b4df13e7fcc14d867af  <repo>/src/i18n/catalogues/en/mobile.common.json
+6ccd282a967b206a762550173e15aa6e4c6eaacf948446d12a7d7133c5f3ae44  <repo>/src/i18n/catalogues/en/mobile.computers.json
+fd14c2081991d4370d4086e47810e375a23c509c06c836f2e146f9c2aeb65b9a  <repo>/src/i18n/catalogues/en/mobile.session.json
+257daa349bf9bf03fea8241cd4367148ec3a2cc9867e4ebd21271f510e0a45c9  <repo>/src/i18n/catalogues/en/mobile.settings.json
+f6aadb8f1e837bd1bcca10f8dc701c43e84a1ca8519f95a07a770d15da7624e6  <repo>/src/i18n/catalogues/en/mobile.common.context.json
+15e04ab447262538a7bc05e19dd0d03a0b7b0c7c21a678f8f73520da88ae780f  <repo>/src/i18n/catalogues/en/mobile.computers.context.json
+1b93b3ddc3996d12d4a8902053a9258d7a49b4e25b7dd17a2de15b0190139de4  <repo>/src/i18n/catalogues/en/mobile.session.context.json
+b995b0b659091b1d145d313f9183316dbafa4354865e4f072fd141355adfa35d  <repo>/src/i18n/catalogues/en/mobile.settings.context.json
 
 ## 2. JSON validity, key count, key order and set
 $ jq empty vi.json && jq empty keys.json

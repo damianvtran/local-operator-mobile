@@ -1,9 +1,9 @@
 == ru M1 round-2 delta audit — execution log (locale ru, audit ru1111m1r2, 2026-11-11)
 == working head: 84c4bee109d048e3dad0f996921e1b8ed561dfc8 (i18n-app-scan worktree)
-== scratch: /Users/damian/.local-operator/sessions/b074e5794284/scratchpad
+== scratch: <scratch>
 
 == [1] repo validator on the audited head (baseline; staged ru.v2 values are NOT installed in the tree)
-$ (cd /Users/damian/local-operator-mobile/.worktrees/i18n-app-scan && npm run -s i18n:check)
+$ (cd <repo> && npm run -s i18n:check)
 src/i18n/catalogue.gen.ts is current (649 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
 scanner sha256: base=fd5946dfe556d9f0161b6093ab9792ae2049758d1870a56a0d888e4d95154d5c head=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813
 check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs d78ca8616286
