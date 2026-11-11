@@ -1371,7 +1371,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// disjoint src files, so the merged tree has neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
-	src: "4634366d3e9b1aa4b4bf42eea4f142c4acd2a017739dde0e49a1a87c0b139082",
+	// fix/bridge-composer-keyboard-glass (TestFlight 800): the Bridge composer
+	// docks above the keyboard from #216's store (new composer-dock.tsx, no
+	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
+	// layer. --print over the staged tree; source identity only, no rendered or
+	// native proof.
+	src: "560cd16d9099d0eac23b798c08199900927eeda358a0db5b0d79b06279007acb",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
