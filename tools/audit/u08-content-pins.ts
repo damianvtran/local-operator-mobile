@@ -1444,7 +1444,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #223 merged with main 98e53308 (#222): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only.
-	src: "f2470bb3f393e8c7e2b18f3dd683257da90855d6de0490d61d0dcb703b00ab01",
+	// 2026-11-10 fix/composer-ios-wrap (TestFlight 800): native Textarea no
+	// longer pins `height` from onContentSizeChange (iOS Fabric emits it only on
+	// a layout change); it bounds the self-measured box with min/max instead.
+	// --print over the staged tree; source identity only, no rendered or native
+	// proof.
+	// PR #226 merged with main 98e53308 (#220, #225, #222): both sides' src
+	// carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
+	// PR #226 merged with main d78ca861 (#223): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only, no rendered or native proof.
+	src: "0d4e7b9e0b9625fe03c614b6bddc046df79f799f97850ccddd2a815af7f74ae3",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
