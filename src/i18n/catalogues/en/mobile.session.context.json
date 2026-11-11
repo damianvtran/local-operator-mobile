@@ -186,5 +186,69 @@
 	"mobile.session.sheet_title.status": {
 		"role": "heading",
 		"note": "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English."
+	},
+	"mobile.session.subagent.screen_title": {
+		"role": "heading",
+		"note": "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent."
+	},
+	"mobile.session.subagent.prompt_label": {
+		"role": "meta",
+		"note": "Lower-case label above the instruction the subagent was given. One word, lower case to match its sibling label."
+	},
+	"mobile.session.subagent.result_label": {
+		"role": "meta",
+		"note": "Lower-case label above the text the subagent returned. One word, lower case to match its sibling label."
+	},
+	"mobile.session.subagent.unavailable_headline": {
+		"role": "status",
+		"note": "Empty-state headline on the subagent screen when the computer has no record of it. Sentence with a final full stop."
+	},
+	"mobile.session.subagent.unavailable_next": {
+		"role": "help",
+		"note": "Empty-state follow-up giving the two possible reasons the subagent cannot be shown. One sentence."
+	},
+	"mobile.session.subagent.no_rows": {
+		"role": "status",
+		"note": "Muted line shown when a subagent's transcript is empty. One sentence."
+	},
+	"mobile.session.not_connected.headline": {
+		"role": "status",
+		"note": "Empty-state headline on a session screen opened with no computer connected. Sentence with a final full stop."
+	},
+	"mobile.session.not_connected.next": {
+		"role": "help",
+		"note": "Empty-state follow-up telling the user how to reach the session once a computer is connected. One sentence."
+	},
+	"mobile.session.empty.headline": {
+		"role": "status",
+		"note": "Empty-state headline for a session with no messages. Short, final full stop."
+	},
+	"mobile.session.empty.next": {
+		"role": "help",
+		"note": "Empty-state follow-up pointing to the composer under the transcript. 'Below' refers to the composer's position."
+	},
+	"mobile.session.subagents_hint": {
+		"role": "help",
+		"note": "Accessibility hint of the control that reveals the subagents list; read after its name, never drawn. Imperative, no final full stop."
+	},
+	"mobile.session.find.label": {
+		"role": "button",
+		"note": "Accessible name of the header find button. Imperative, no final full stop."
+	},
+	"mobile.session.find.hint": {
+		"role": "help",
+		"note": "Accessibility hint of the header find button: it searches only the transcript already loaded on the phone. Read aloud, no final full stop."
+	},
+	"mobile.session.chip.model_change_failed": {
+		"role": "status",
+		"note": "Inline error under the composer when changing the session's model failed. One short sentence."
+	},
+	"mobile.session.chip.effort_change_failed": {
+		"role": "status",
+		"note": "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works."
+	},
+	"mobile.session.composer.retained_instruction": {
+		"role": "confirm",
+		"note": "Notice above the composer when an earlier instruction is retained and may already have been delivered, so the user must retry it before sending the current draft. Two sentences."
 	}
 }

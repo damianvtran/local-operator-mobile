@@ -33,5 +33,11 @@
 	"mobile.computers.save_refused.title": "منسلک ہو گیا، لیکن محفوظ نہیں ہوا",
 	"mobile.computers.save_refused.body": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
 	"mobile.computers.save_refused.body_with_code": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی (کوڈ {code})۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
-	"mobile.computers.save_refused.continue": "جاری رکھیں"
+	"mobile.computers.save_refused.continue": "جاری رکھیں",
+	"mobile.computers.wait.nothing_answered": "کوئی جواب نہیں ملا۔",
+	"mobile.computers.wait.nothing_answered_help": "تین منٹ میں نہ کوئی ٹنل فہرست میں آیا، نہ کسی میزبان نے جواب دیا۔ جانچیں کہ کمپیوٹر پر کمانڈ چلی تھی، پھر دوبارہ شروع کریں۔",
+	"mobile.computers.wait.paused": "ایپ پس منظر میں ہونے کے باعث نگرانی رکی ہوئی ہے۔ نگرانی جاری رکھنے کے لیے ایپ دوبارہ کھولیں۔",
+	"mobile.computers.wait.relay_version_sessions": "اس کا ریلے پروٹوکول ورژن {version} اور {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔",
+	"mobile.computers.wait.relay_version": "اس کا ریلے پروٹوکول ورژن {version} کی اطلاع دے رہا ہے۔",
+	"mobile.computers.wait.relay_sessions": "اس کا ریلے {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔"
 }

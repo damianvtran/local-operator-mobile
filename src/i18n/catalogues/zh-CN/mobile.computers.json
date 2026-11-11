@@ -33,5 +33,11 @@
 	"mobile.computers.save_refused.title": "已连接，但未保存",
 	"mobile.computers.save_refused.body": "此设备无法安全地保存地址和密码。连接目前可用，但应用重启后你需要重新输入它们。",
 	"mobile.computers.save_refused.body_with_code": "此设备无法安全地保存地址和密码（代码 {code}）。连接目前可用，但应用重启后你需要重新输入它们。",
-	"mobile.computers.save_refused.continue": "继续"
+	"mobile.computers.save_refused.continue": "继续",
+	"mobile.computers.wait.nothing_answered": "没有响应。",
+	"mobile.computers.wait.nothing_answered_help": "三分钟内没有出现任何隧道，电脑也没有响应。确认命令已在电脑上运行，然后重新开始。",
+	"mobile.computers.wait.paused": "应用在后台时已暂停。重新打开应用以继续查看。",
+	"mobile.computers.wait.relay_version_sessions": "它的中继报告：协议版本为{version}，{sessions, plural, other {# 个会话正在运行}}。",
+	"mobile.computers.wait.relay_version": "它的中继报告：协议版本为{version}。",
+	"mobile.computers.wait.relay_sessions": "它的中继报告：{sessions, plural, other {# 个会话正在运行}}。"
 }

@@ -45,5 +45,21 @@
 	"mobile.session.history.gap_load_hint": "Carga los mensajes que se perdieron mientras este teléfono estaba desconectado.",
 	"mobile.session.sheet_title.model": "Modelo",
 	"mobile.session.sheet_title.effort": "Esfuerzo",
-	"mobile.session.sheet_title.status": "Tareas y agentes"
+	"mobile.session.sheet_title.status": "Tareas y agentes",
+	"mobile.session.subagent.screen_title": "Subagente",
+	"mobile.session.subagent.prompt_label": "prompt",
+	"mobile.session.subagent.result_label": "resultado",
+	"mobile.session.subagent.unavailable_headline": "Este subagente ya no está disponible.",
+	"mobile.session.subagent.unavailable_next": "Su transcripción no se conservó o la máquina no responde.",
+	"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
+	"mobile.session.not_connected.headline": "Esta sesión aún no está conectada.",
+	"mobile.session.not_connected.next": "Ábrela desde la lista de sesiones cuando haya una máquina conectada.",
+	"mobile.session.empty.headline": "Aún no hay nada aquí.",
+	"mobile.session.empty.next": "Envía el primer mensaje aquí abajo.",
+	"mobile.session.subagents_hint": "Mostrar los subagentes",
+	"mobile.session.find.label": "Buscar en esta conversación",
+	"mobile.session.find.hint": "Busca mensajes en la transcripción cargada en este dispositivo",
+	"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
+	"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
+	"mobile.session.composer.retained_instruction": "Puede que ya se haya entregado una instrucción anterior. Reintenta enviarla antes de enviar tu borrador actual."
 }

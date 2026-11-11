@@ -30,12 +30,12 @@ import {
 	isLoneReceiptLine,
 	scrubOpaqueIds,
 } from "@/features/session/bridge-row";
+import { LiveGlyph } from "@/features/session/components/live-glyph";
 import { Markdown } from "@/features/session/components/markdown";
 import {
 	TRACE_BAR_PAD_CLASS,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_EXPANDED_INDENT_CLASS,
-	TRACE_GLYPH_BOX_CLASS,
 	TRACE_GLYPH_ROW_CLASS,
 	TRACE_GLYPH_SLOT_CLASS,
 	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
@@ -61,7 +61,6 @@ import {
 } from "@/features/session/projection";
 import { ROLE, toolRowToggleId } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { Shimmer } from "@/ui/components/shimmer";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -395,14 +394,13 @@ export const ToolRow = ({
 					pointerEvents="none"
 					aria-hidden
 				>
-					<Shimmer active={tone.pulsing} className="w-4 shrink-0">
-						<Text
-							className={cx(TRACE_GLYPH_BOX_CLASS, tone.inkClass)}
-							aria-hidden
-						>
-							{tone.glyph}
-						</Text>
-					</Shimmer>
+					{/* The live-tool indicator (`live-glyph.tsx`): only a RUNNING call
+					 *  pulses; composing/queued stay dim and still. */}
+					<LiveGlyph
+						glyph={tone.glyph}
+						inkClass={tone.inkClass}
+						live={tone.pulsing}
+					/>
 				</View>
 				<Pressable
 					accessibilityRole={details ? ROLE.button : ROLE.text}

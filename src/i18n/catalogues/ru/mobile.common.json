@@ -4,5 +4,9 @@
 	"mobile.common.done": "Готово",
 	"mobile.common.save": "Сохранить",
 	"mobile.common.send": "Отправить",
-	"mobile.common.try_again": "Повторить"
+	"mobile.common.try_again": "Повторить",
+	"mobile.common.not_found.title": "Страница не найдена",
+	"mobile.common.not_found.headline": "Этой страницы не существует.",
+	"mobile.common.not_found.next": "Вернитесь к сессиям, чтобы продолжить.",
+	"mobile.common.not_found.action": "К сессиям"
 }

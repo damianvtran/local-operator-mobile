@@ -70,5 +70,113 @@
 	"mobile.settings.theme.title": {
 		"role": "heading",
 		"note": "Title of the Theme screen and the label of the Settings row that opens it. \"Theme\" means a colour scheme for the whole app. No final full stop."
+	},
+	"mobile.settings.screen_title": {
+		"role": "heading",
+		"note": "Title of the Settings screen header. One word, no final full stop."
+	},
+	"mobile.settings.section.connection": {
+		"role": "heading",
+		"note": "Section header on Settings above the connection status and the computers list. One word."
+	},
+	"mobile.settings.section.appearance": {
+		"role": "heading",
+		"note": "Section header on Settings above the theme and text-size controls. One word."
+	},
+	"mobile.settings.section.about": {
+		"role": "heading",
+		"note": "Section header on Settings above the app version and the open-source note. One word."
+	},
+	"mobile.settings.account.signed_in": {
+		"role": "status",
+		"note": "Accessible name of the account avatar on the Settings account card; read by a screen reader, never drawn. Short."
+	},
+	"mobile.settings.connection.status": {
+		"role": "meta",
+		"note": "Small row label left of the connection state pill on Settings. One word, no colon."
+	},
+	"mobile.settings.connection.computers": {
+		"role": "meta",
+		"note": "Small label above the list of computers on this account in Settings. Plural noun, no colon."
+	},
+	"mobile.settings.connection.use": {
+		"role": "button",
+		"note": "Small button on a Settings computer row that switches to that computer. One short verb; it sits in a narrow row."
+	},
+	"mobile.settings.connection.refresh": {
+		"role": "button",
+		"note": "Quiet button under the Settings computers list that re-reads the account's computers. One verb."
+	},
+	"mobile.settings.about.version": {
+		"role": "meta",
+		"note": "Label of the diagnostic row that shows the app's version number to its right. One word."
+	},
+	"mobile.settings.about.blurb": {
+		"role": "help",
+		"note": "Plain-language data note at the end of Settings. 'Local Operator', 'Team Bridge' and 'Radient' are product names; 'MIT' is a licence name; 'relay' is the product's word for the program on the user's computer."
+	},
+	"mobile.settings.account.delete": {
+		"role": "button",
+		"note": "Quiet button on Settings that opens the Radient console in the browser, where the account is deleted. Radient is a product name."
+	},
+	"mobile.settings.account.delete_help": {
+		"role": "help",
+		"note": "Explanation under the delete-account button: deletion happens in the browser, removes the account and its tunnels, and does not touch sessions on the user's computer. Radient is a product name; 'tunnel' is the product's word for the published route to a computer."
+	},
+	"mobile.settings.sign_out.title": {
+		"role": "confirm",
+		"note": "Title of the confirmation dialog opened by Settings Sign out. A question; keep it short."
+	},
+	"mobile.settings.sign_out.body": {
+		"role": "confirm",
+		"note": "Body of the sign-out confirmation: signing out also ends the session on the control plane, so the tunnel stops accepting this phone, and the user's computer is untouched. 'Control plane' and 'tunnel' are product vocabulary."
+	},
+	"mobile.settings.sign_out.confirm": {
+		"role": "button",
+		"note": "Confirm button of the sign-out dialog; it performs the sign-out, so it repeats the Sign out action verb. One or two words, sentence case."
+	},
+	"mobile.settings.sign_out.done": {
+		"role": "status",
+		"note": "Toast shown after a successful sign-out, just before the welcome screen. Two short sentences; must fit a toast."
+	},
+	"mobile.settings.text_size.following": {
+		"role": "help",
+		"note": "Help line under the text-size control when the app follows the phone's setting. {percent} is a whole number shown with a % sign; preserve the placeholder and the percent sign."
+	},
+	"mobile.settings.text_size.overridden": {
+		"role": "help",
+		"note": "Help line under the text-size control when the user has chosen a size that overrides the phone's. {percent} is a whole number shown with a % sign; 'above' points to the control just above."
+	},
+	"mobile.settings.section.diagnostics": {
+		"role": "heading",
+		"note": "Section header on Settings above the read-only connection facts (route, stream, last error). One word."
+	},
+	"mobile.settings.diagnostics.route": {
+		"role": "meta",
+		"note": "Label of the diagnostic row naming how the phone reaches the computer (Radient tunnel or direct relay). One word."
+	},
+	"mobile.settings.diagnostics.stream": {
+		"role": "meta",
+		"note": "Label of the diagnostic row showing the live session stream's health word. One word."
+	},
+	"mobile.settings.diagnostics.last_error": {
+		"role": "meta",
+		"note": "Label of the diagnostic row showing the most recent connection error's summary. Two words, no colon."
+	},
+	"mobile.settings.diagnostics.route_radient": {
+		"role": "status",
+		"note": "Value of the Route diagnostic row when the phone connects through a Radient tunnel. 'Radient' is a product name."
+	},
+	"mobile.settings.diagnostics.route_direct": {
+		"role": "status",
+		"note": "Value of the Route diagnostic row when the phone connects straight to the user's own relay. 'Relay' is the product's word for the program on the computer."
+	},
+	"mobile.settings.diagnostics.none": {
+		"role": "status",
+		"note": "Value of a diagnostic row that has nothing to show (no route, no error). One word."
+	},
+	"mobile.settings.diagnostics.privacy_note": {
+		"role": "help",
+		"note": "Reassurance under the Settings diagnostics rows: the lines shown never contain secrets or conversation content. One sentence."
 	}
 }

@@ -4,5 +4,9 @@
 	"mobile.common.done": "हो गया",
 	"mobile.common.save": "सहेजें",
 	"mobile.common.send": "भेजें",
-	"mobile.common.try_again": "फिर से कोशिश करें"
+	"mobile.common.try_again": "फिर से कोशिश करें",
+	"mobile.common.not_found.title": "पेज नहीं मिला",
+	"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
+	"mobile.common.not_found.next": "आगे बढ़ने के लिए अपने सत्रों पर लौटें।",
+	"mobile.common.not_found.action": "सत्रों पर लौटें"
 }

@@ -1,0 +1,146 @@
+# vi m1-slice A — audit execution log (real command output, not notes)
+# date: 2026-11-11T07:13:23Z
+# worktree: <repo>
+$ git -C "<repo>" rev-parse HEAD
+84c4bee109d048e3dad0f996921e1b8ed561dfc8
+$ git -C "<repo>" status --porcelain | wc -l
+       0
+
+## 1. inputs and hashes
+$ shasum -a 256 keys.json vi.json
+1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8  <scratch>/m1-prep/keys.json
+34f5d012cff565d79e3b66cb02cfd34a49ffef81c76844c889ace048beca6de9  <scratch>/m1-prep/vi.json
+$ shasum -a 256 vi/{mobile.common,mobile.computers,mobile.session,mobile.settings}.json en/{same}.json + context
+214b9e8dc4c893a319d454b0858bad66951d8958d5daa25a129bf98a4c9b94d7  <repo>/src/i18n/catalogues/vi/mobile.common.json
+27fc7ce49ae2318c2f795b92b7cfbadac65035869038252a8dc7fbf286c31934  <repo>/src/i18n/catalogues/vi/mobile.computers.json
+24aac246ef4f9003d658ebd2ab81093f4e796fac3b15df508a8b4044813e3131  <repo>/src/i18n/catalogues/vi/mobile.session.json
+416837e13fb1a513564ec245dd57b9607f35f10b94e77db3b0105a27c5309ed4  <repo>/src/i18n/catalogues/vi/mobile.settings.json
+b74466e83cebf0befee3c5959b8c706570b3645a71682b4df13e7fcc14d867af  <repo>/src/i18n/catalogues/en/mobile.common.json
+6ccd282a967b206a762550173e15aa6e4c6eaacf948446d12a7d7133c5f3ae44  <repo>/src/i18n/catalogues/en/mobile.computers.json
+fd14c2081991d4370d4086e47810e375a23c509c06c836f2e146f9c2aeb65b9a  <repo>/src/i18n/catalogues/en/mobile.session.json
+257daa349bf9bf03fea8241cd4367148ec3a2cc9867e4ebd21271f510e0a45c9  <repo>/src/i18n/catalogues/en/mobile.settings.json
+f6aadb8f1e837bd1bcca10f8dc701c43e84a1ca8519f95a07a770d15da7624e6  <repo>/src/i18n/catalogues/en/mobile.common.context.json
+15e04ab447262538a7bc05e19dd0d03a0b7b0c7c21a678f8f73520da88ae780f  <repo>/src/i18n/catalogues/en/mobile.computers.context.json
+1b93b3ddc3996d12d4a8902053a9258d7a49b4e25b7dd17a2de15b0190139de4  <repo>/src/i18n/catalogues/en/mobile.session.context.json
+b995b0b659091b1d145d313f9183316dbafa4354865e4f072fd141355adfa35d  <repo>/src/i18n/catalogues/en/mobile.settings.context.json
+
+## 2. JSON validity, key count, key order and set
+$ jq empty vi.json && jq empty keys.json
+both VALID JSON
+$ jq 'length' vi.json keys.json
+53
+53
+$ diff <(jq -r '.[]|.key' keys.json) <(jq -r 'keys_unsorted[]' vi.json)
+IDENTICAL key order and set (53 keys)
+$ per-namespace key counts in the slice
+   4 mobile.common
+   6 mobile.computers
+  16 mobile.session
+  27 mobile.settings
+
+## 3. ICU arguments per key (EN vs VI)
+$ EN args (name set extracted from english)
+mobile.computers.wait.relay_sessions	Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.
+mobile.computers.wait.relay_version	Its relay reports protocol version {version}.
+mobile.computers.wait.relay_version_sessions	Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.
+mobile.settings.text_size.following	This phone's own text size is {percent}%. Following it.
+mobile.settings.text_size.overridden	This phone's own text size is {percent}%. Overridden above.
+$ VI args
+mobile.computers.wait.relay_sessions	Bộ chuyển tiếp trên máy tính báo có {sessions, plural, other {# phiên đang chạy}}.
+mobile.computers.wait.relay_version	Bộ chuyển tiếp trên máy tính báo phiên bản giao thức {version}.
+mobile.computers.wait.relay_version_sessions	Bộ chuyển tiếp trên máy tính báo phiên bản giao thức {version} và {sessions, plural, other {# phiên đang chạy}}.
+mobile.settings.text_size.following	Cỡ chữ của điện thoại này là {percent}%. Đang dùng cỡ chữ đó.
+mobile.settings.text_size.overridden	Cỡ chữ của điện thoại này là {percent}%. Đã dùng cỡ chữ khác ở trên.
+
+## 4. plural arms and CLDR categories for vi (other only)
+$ VI keys whose value has a plural/select structure
+mobile.computers.wait.relay_sessions	Bộ chuyển tiếp trên máy tính báo có {sessions, plural, other {# phiên đang chạy}}.
+mobile.computers.wait.relay_version_sessions	Bộ chuyển tiếp trên máy tính báo phiên bản giao thức {version} và {sessions, plural, other {# phiên đang chạy}}.
+$ any 'one'/'few'/'many'/'zero' arm present in vi (must be empty for vi)
+$ 'other' arm count per plural key
+mobile.computers.wait.relay_sessions	other_arms=1
+mobile.computers.wait.relay_version_sessions	other_arms=1
+
+## 5. empties, English-identical values, invisible characters
+$ blank values
+(none above)
+$ English-identical values
+mobile.session.subagent.prompt_label = prompt
+$ combining marks / bidi controls / NBSP / BOM (codepoint scan)
+(none above)
+$ leading/trailing space
+(none above)
+$ ASCII ellipsis / exclamation / double space
+(none above)
+
+## 6. staged English is the repo's current English (source freshness)
+$ staged english vs en/<ns>.json, all four namespaces
+ALL 53 staged English values byte-identical to en/ at HEAD
+
+## 7. every audited key already exists in the shipped vi catalogue (replacement, not addition)
+$ for each key: which vi/<ns>.json holds it
+ALL 53 keys present in the shipped vi catalogues (English placeholders today)
+
+## 8. length table (characters, EN vs VI) for phone-width judgement
+$ key role en vi delta
+mobile.settings.account.delete_help	help	en=191	vi=227	delta=36
+mobile.settings.about.blurb	help	en=154	vi=174	delta=20
+mobile.computers.wait.nothing_answered_help	-	en=115	vi=135	delta=20
+mobile.computers.wait.relay_version	help	en=45	vi=63	delta=18
+mobile.settings.sign_out.body	confirm	en=161	vi=175	delta=14
+mobile.settings.text_size.overridden	help	en=59	vi=68	delta=9
+mobile.settings.diagnostics.route_direct	status	en=12	vi=21	delta=9
+mobile.settings.diagnostics.route	meta	en=5	vi=13	delta=8
+mobile.common.not_found.action	button	en=16	vi=24	delta=8
+mobile.settings.text_size.following	help	en=55	vi=61	delta=6
+mobile.common.not_found.title	heading	en=14	vi=20	delta=6
+mobile.settings.section.about	heading	en=5	vi=10	delta=5
+mobile.session.find.label	button	en=24	vi=29	delta=5
+mobile.settings.diagnostics.none	status	en=4	vi=8	delta=4
+mobile.settings.connection.status	meta	en=6	vi=10	delta=4
+mobile.settings.account.delete	button	en=25	vi=29	delta=4
+mobile.session.subagent.screen_title	heading	en=8	vi=12	delta=4
+mobile.settings.diagnostics.route_radient	status	en=14	vi=17	delta=3
+mobile.settings.account.signed_in	status	en=9	vi=12	delta=3
+mobile.session.subagents_hint	help	en=18	vi=21	delta=3
+mobile.settings.diagnostics.last_error	meta	en=10	vi=12	delta=2
+mobile.settings.about.version	meta	en=7	vi=9	delta=2
+mobile.session.empty.next	help	en=29	vi=31	delta=2
+mobile.settings.sign_out.title	confirm	en=9	vi=10	delta=1
+mobile.settings.sign_out.confirm	-	en=8	vi=9	delta=1
+mobile.settings.connection.use	button	en=3	vi=4	delta=1
+mobile.session.subagent.result_label	meta	en=6	vi=7	delta=1
+mobile.session.subagent.no_rows	status	en=48	vi=49	delta=1
+mobile.computers.wait.nothing_answered	status	en=17	vi=18	delta=1
+mobile.settings.connection.refresh	button	en=7	vi=7	delta=0
+mobile.session.subagent.prompt_label	meta	en=6	vi=6	delta=0
+mobile.session.empty.headline	status	en=17	vi=17	delta=0
+mobile.common.not_found.next	help	en=37	vi=37	delta=0
+mobile.settings.section.appearance	heading	en=10	vi=9	delta=-1
+mobile.settings.screen_title	heading	en=8	vi=7	delta=-1
+mobile.settings.diagnostics.stream	meta	en=6	vi=5	delta=-1
+mobile.settings.connection.computers	meta	en=9	vi=8	delta=-1
+mobile.session.subagent.unavailable_headline	status	en=37	vi=36	delta=-1
+mobile.session.chip.effort_change_failed	status	en=28	vi=27	delta=-1
+mobile.settings.section.diagnostics	heading	en=11	vi=9	delta=-2
+mobile.common.not_found.headline	status	en=25	vi=23	delta=-2
+mobile.settings.section.connection	heading	en=10	vi=7	delta=-3
+mobile.settings.diagnostics.privacy_note	help	en=70	vi=67	delta=-3
+mobile.session.find.hint	help	en=54	vi=51	delta=-3
+mobile.settings.sign_out.done	status	en=53	vi=48	delta=-5
+mobile.session.chip.model_change_failed	status	en=27	vi=22	delta=-5
+mobile.session.subagent.unavailable_next	help	en=62	vi=56	delta=-6
+mobile.session.not_connected.headline	status	en=34	vi=28	delta=-6
+mobile.computers.wait.relay_sessions	help	en=89	vi=82	delta=-7
+mobile.computers.wait.relay_version_sessions	help	en=120	vi=112	delta=-8
+mobile.session.composer.retained_instruction	confirm	en=113	vi=103	delta=-10
+mobile.computers.wait.paused	help	en=70	vi=60	delta=-10
+mobile.session.not_connected.next	help	en=59	vi=47	delta=-12
+
+## 9. repo i18n validator on this head (baseline green; staged values are not yet in the tree)
+$ npm run -s i18n:check (cwd $W)
+src/i18n/catalogue.gen.ts is current (649 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+scanner sha256: base=fd5946dfe556d9f0161b6093ab9792ae2049758d1870a56a0d888e4d95154d5c head=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813
+check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs d78ca8616286
+
+# end of log

@@ -1,0 +1,270 @@
+{
+  "schema": 1,
+  "audit_kind": "independent round-2 delta audit of agent-written translations (M1 native-phone English-closure slice)",
+  "audit_id": "ur1111m1r2",
+  "locale": "ur",
+  "audit_date": "2026-11-11",
+  "wave": "local-operator-mobile M1 slice — 53 new phone-app keys; lopdev team; round 2 = delta audit of the translator's revision",
+  "audited_revision": "84c4bee109d048e3dad0f996921e1b8ed561dfc8",
+  "audited_revision_note": "mobile worktree i18n-app-scan at this head; the staged target values are not in the tree, so the catalogue bytes at this revision are still English placeholders (53/53) and are recorded as landing_target",
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "67973ed5e595",
+    "model": "deepseek/deepseek-flash",
+    "actual_model": "deepseek/deepseek-flash",
+    "actual_model_source": "this run's model header; no provider-fallback or model-switch notice appeared in this transcript",
+    "independent_from_translator_session": true,
+    "independence": "different agent, session and model from the translator (reported openai/gpt-6.1-sol, session bac1ce0d95f8); the translator's run was not observed here; no human native-speaker review and no rendered frame are claimed",
+    "target_locale_native_fluency": "ur (native-fluent reader; no MT/API/dictionary service used anywhere in this audit)"
+  },
+  "translator": {
+    "agent": "i18n-translator / m1-rm-ur",
+    "session": "bac1ce0d95f8",
+    "model": "openai/gpt-6.1-sol",
+    "actual_model_source": "as reported by the translator's own v2-changes note and by the requesting manager; not observed by this auditor",
+    "date": "2026-11-11"
+  },
+  "scope": {
+    "round": 2,
+    "diff": "<scratch>/m1-prep/ur.json -> ur.v2.json",
+    "changed_keys": 14,
+    "keys_rejudged_semantically": 14,
+    "unchanged_keys": 39,
+    "unchanged_keys_note": "mechanically re-checked in the 53-key pass; NOT semantically re-audited (round 1 approved them)",
+    "declines_adjudicated": [
+      "B-N2",
+      "B-N4"
+    ],
+    "deferrals_adjudicated": [
+      "U-A-01"
+    ],
+    "sibling_contradiction_check": "each changed value read against its unchanged neighbours in the same namespace; no contradiction found"
+  },
+  "input_hashes": {
+    "en_slice": {
+      "path": "<scratch>/m1-prep/keys.json",
+      "sha256": "1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8",
+      "note": "English source + per-key context for all 53; all 53 English values verified byte-identical to the repo en catalogues at this head"
+    },
+    "target_slice": {
+      "path": "<scratch>/m1-prep/ur.v2.json",
+      "sha256": "b6f343ef3320719247487c4dc932ddacea0214ce64d49bb0c92ba25e31fbd3cd"
+    },
+    "target_v1": {
+      "path": "<scratch>/m1-prep/ur.json",
+      "sha256": "43275b9bc7b8b09f4d458ce228f77a47cbdb85013bb77ba721598b758b6d52bf"
+    },
+    "translator_dispositions": {
+      "path": "<scratch>/m1-prep/ur.v2-changes.md",
+      "sha256": "831c8f637d3c3720fe0abbdfded1c4a0d49ced3b3540ccc49aad657e0cd28fcd"
+    },
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.common.json",
+      "sha256": "b74466e83cebf0befee3c5959b8c706570b3645a71682b4df13e7fcc14d867af"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.common.context.json",
+      "sha256": "f6aadb8f1e837bd1bcca10f8dc701c43e84a1ca8519f95a07a770d15da7624e6"
+    },
+    "landing_target": {
+      "path": "src/i18n/catalogues/ur/mobile.common.json",
+      "sha256": "771b33efc51ea1e7be72fde1564c40c7e9c1de6d52b92ea1287bd948e5113abe",
+      "note": "the audited keys exist here as English placeholders at this revision, so the change is a replacement, not an addition"
+    }
+  },
+  "verdict": "clean-with-findings",
+  "ledger_status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 1,
+    "NIT": 4
+  },
+  "findings": [
+    {
+      "id": "ur-M1-R2-01",
+      "severity": "MINOR",
+      "kind": "process / terminology landing (not a wording defect)",
+      "namespaces": [
+        "mobile.session",
+        "mobile.settings"
+      ],
+      "keys": [
+        "mobile.settings.sign_out.body",
+        "mobile.settings.sign_out.done",
+        "mobile.session.chip.effort_change_failed",
+        "mobile.settings.diagnostics.route"
+      ],
+      "summary": "copy is consistent; the four new-term glossary/style-guide rows the wave proposed (control plane کنٹرول پلین, effort استدلال کی شدت as prose vs شدت as label, sign-in session سائن ان کا سیشن, route راستہ vs account routing اکاؤنٹ روٹنگ) are unlanded, against en.md and glossary §4",
+      "suggested_fix": "add the four rows to i18n/glossary.md and record the ur calls in i18n/style-guides/ur.md under 'Locale calls', with the catalogue commit"
+    },
+    {
+      "id": "ur-M1-R2-02",
+      "severity": "NIT",
+      "kind": "idiom / in-catalogue precedent",
+      "namespaces": [
+        "mobile.common"
+      ],
+      "keys": [
+        "mobile.common.not_found.action",
+        "mobile.common.not_found.next"
+      ],
+      "current": "سیشنز میں واپس جائیں / جاری رکھنے کے لیے اپنے سیشنز میں واپس جائیں۔",
+      "problem": "«میں» is grammatical (destination as container), but shipped ur has 0 values with «میں واپس» and both returning-navigation labels use «پر» («ایپ پر واپس جائیں», «Local Operator پر واپس جائیں»)",
+      "suggested": "«سیشنز پر واپس جائیں» (19 cells) or «سیشنز کی فہرست پر واپس جائیں» (28 cells; that noun is already the catalogue's, mobile.session.not_connected.next)"
+    },
+    {
+      "id": "ur-M1-R2-03",
+      "severity": "NIT",
+      "kind": "idiom",
+      "namespaces": [
+        "mobile.settings"
+      ],
+      "keys": [
+        "mobile.settings.text_size.following"
+      ],
+      "current": "اس فون کے متن کا سائز {percent}% ہے۔ ایپ اسی کے مطابق ہے۔",
+      "problem": "subject fix is right; «مطابق» governs a rule/standard, so it reads faintly as 'the app complies with it'",
+      "suggested": "اس فون کے متن کا سائز {percent}% ہے۔ ایپ اسی کی پیروی کر رہی ہے۔ (57→64 cells, a help line that already wraps)"
+    },
+    {
+      "id": "ur-M1-R2-04",
+      "severity": "NIT",
+      "kind": "redundancy",
+      "namespaces": [
+        "mobile.settings"
+      ],
+      "keys": [
+        "mobile.settings.account.delete_help"
+      ],
+      "current": "اکاؤنٹ حذف کرنے سے اس کے تمام ٹنلز بھی حذف ہو جاتے ہیں۔",
+      "problem": "«حذف» twice in one clause",
+      "suggested": "اکاؤنٹ کے ساتھ اس کے تمام ٹنلز بھی حذف ہو جاتے ہیں۔ (55→51 cells, same claim)"
+    },
+    {
+      "id": "ur-M1-R2-05",
+      "severity": "NIT",
+      "kind": "fit, unproven (needs a rendered frame)",
+      "namespaces": [
+        "mobile.settings"
+      ],
+      "keys": [
+        "mobile.settings.sign_out.done"
+      ],
+      "current": "سائن آؤٹ ہو گیا۔ آپ کے کمپیوٹر پر سائن ان کا سیشن منسوخ کر دیا گیا۔",
+      "problem": "toast grew 53 (en) → 56 (v1) → 67 cells; two sentences; no maxCells/maxChars hint exists for any of the 53 keys (en context sidecars carry only role/note)",
+      "suggested": "no wording change recommended without a rendered toast; if it clips at the smallest width, «…پر سائن ان کا سیشن منسوخ ہو گیا۔» saves 4 cells (63) and keeps the claim"
+    }
+  ],
+  "adjudications": [
+    {
+      "id": "U-A-01",
+      "key": "mobile.settings.connection.use",
+      "translator_disposition": "deferred",
+      "my_ruling": "upheld",
+      "evidence": "12 cells vs en 'Use' 3; no maxCells hint exists anywhere; the same row carries «تازہ کریں» (9 cells), so 'Use' alone does not set the row width; «استعمال» (7 cells) is a noun fragment and costs the respectful imperative",
+      "still_owed": "rendered proof at the smallest supported width (visual lane) — not claimed here"
+    },
+    {
+      "id": "B-N2",
+      "key": "mobile.settings.diagnostics.route",
+      "translator_disposition": "declined",
+      "my_ruling": "upheld",
+      "evidence": "my count over the shipped 649-key ur catalogue: «روٹنگ» 5 keys, all mobile.account_routing.* (feature name); «راستہ» 0 keys. The English row is a concrete path beside 'Direct relay' / 'Radient tunnel'. Round 1's own text also said 'keep unless consistency wanted'"
+    },
+    {
+      "id": "B-N4",
+      "key": "mobile.settings.diagnostics.route_radient",
+      "translator_disposition": "declined",
+      "my_ruling": "upheld",
+      "evidence": "shipped ur puts the Latin product name first with an Urdu head noun: «Radient کنسول» ×5, «ٹنل» in 3 keys; the value renders in a deliberately LTR writing cell; no wording change was requested"
+    }
+  ],
+  "safety_lines": {
+    "dialog": "mobile.settings.sign_out.body — ends the sign-in session on the control plane AND removes its saved information from this phone, therefore the tunnel stops accepting this phone; computer unaffected; causal «اس لیے» kept",
+    "toast": "mobile.settings.sign_out.done — the sign-in session was revoked on your computer",
+    "distinct_and_unambiguous": true,
+    "agent_session_reading": "both values say «سائن ان کا سیشن», so neither reads as an agent/chat session; the unchanged title/confirm name the action",
+    "source_asymmetry_note": "the two locations differ because the English source differs; harmonising them would be a source change, not a translation fix"
+  },
+  "mechanical": {
+    "key_set_and_order_identical": true,
+    "icu_argument_names_and_kinds": "5 parameterised keys, identical to source ({sessions} plural, {version} simple, {percent} simple); equal to the context sidecar's declared placeholders on the 51 keys that carry a record",
+    "plural_categories": "ur = one/other; both plural keys carry both arms with '#' in each; pluralCategory('ur', n): 0=other 1=one 2/11/21/100=other",
+    "render_through_app_code": "parseMessage/formatMessage from the checkout's src/i18n/messages.ts at locale ur: 53/53 parsed and rendered, 0 unexpanded braces",
+    "empty_values": 0,
+    "english_identical_values": 0,
+    "latin_residue": "only Local Operator / Team Bridge / Radient / MIT, each exactly as often as in source",
+    "bidi_or_format_controls": 0,
+    "script_hygiene": "0 Arabic yeh/kaf/teh-marbuta/alef-maksura, 0 native digits, 0 Hindi danda, 0 '!', 0 ASCII . , ? ; : in translated prose, Urdu punctuation ۔ ، ؟ with correct spacing",
+    "repo_validator": "npm run -s i18n:check at 84c4bee1 — exit 0: catalogue.gen.ts current (649 keys, 21 namespaces); check-strings 212 findings all baselined, 0 new. The staged values are not in the tree, so this run did not read them",
+    "widths": "widest values sign_out.body 190, account.delete_help 186, about.blurb 160 cells; no maxCells/maxChars hint exists for any of the 53 keys (verified: en context sidecars carry only role/note)",
+    "method": "scripts in <scratch>/m1-a2-ur (checks.py, evidence.py, render.mts); every command and its real output is in audit.log"
+  },
+  "artifacts": {
+    "report.md": {
+      "path_rel": "i18n/audits/evidence/ur/<namespace>/ur1111m1r2/report.md",
+      "sha256": "7957562b6fdab1550c886d779791862cc47c1d5f53c89079b033cbf4f72b13db"
+    },
+    "audit.log": {
+      "path_rel": "i18n/audits/evidence/ur/<namespace>/ur1111m1r2/audit.log",
+      "note": "one slice-wide executed log, identical in all four bundles of ur1111m1r2",
+      "sha256": "f81e5428056ac6db01ffca5ffac4b1466bc67c170c8963341b3e8b967b0c9ebf",
+      "sha256_pre_normalisation": "6b37fdf3bff6c07d8df9148b763a02227d971b258667ea29d5b41303b9ae7e79"
+    },
+    "scripts": [
+      {
+        "path": "<scratch>/m1-a2-ur/checks.py",
+        "sha256": "066318a8d0e373404ead8f1c1d588081498b591b8faf235afeda8012f6165fc5"
+      },
+      {
+        "path": "<scratch>/m1-a2-ur/evidence.py",
+        "sha256": "6f202e2070a17c324c3e2fe33c7e8392b2584f6ffb53f46ce3c6154ce117d815"
+      },
+      {
+        "path": "<scratch>/m1-a2-ur/render.mts",
+        "sha256": "fb0975b0eeabc6ed0282dd0d1ca5d1f44b7348119a916e9feecf57e4770f9917"
+      },
+      {
+        "path": "<scratch>/m1-a2-ur/run.sh",
+        "sha256": "f483f36432b191fa69764cbe5256092d01abd5f88afafcda212cf2c485845c7b"
+      }
+    ]
+  },
+  "ledger": {
+    "command_named_by_the_rfc": "scripts/i18n/ledger.py append --receipt <json> --expected-history-sha <digest>",
+    "run_here": false,
+    "why": "the tool is absent from the checked-out core branch (present on core origin/main, blob 2b89089) and appends per-key rows asserting audited SHIPPED coverage in the core catalogue; the audited bytes are uncommitted staged translation and the shipped ur catalogue still holds English for all 53 keys, so an append now would claim coverage that does not exist",
+    "who_appends": "whoever lands the catalogue commit: status passed, note pointing at these record paths (<=280 chars)"
+  },
+  "limits": [
+    "no rendered frame: no browser or native build in this role; fit is a cell-width judgement plus one flagged, unproven toast question",
+    "staged values are not in the tree, so generate.ts did not check them; the generated-argument check happens when the implementer lands the values",
+    "TUI RTL is best-effort by programme decision; nothing here is RTL layout sign-off",
+    "findings are recorded once per slice and listed in every bundle; finding_ids_in_this_namespace says which touch this namespace"
+  ],
+  "namespace": "mobile.common",
+  "key_count": {
+    "slice": 53,
+    "namespace": 4,
+    "en": 4,
+    "target": 4,
+    "context": 4
+  },
+  "finding_ids_in_this_namespace": [
+    "ur-M1-R2-02"
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "ur-M1-R2-02"
+    ],
+    "note": "passed = no BLOCKER/MAJOR; one MINOR (glossary landing, process) and four NITs stand in the report"
+  },
+  "publication_normalisation": {
+    "applies": true,
+    "detail": "audit.log (and a few report.md lines) quote absolute home, core-checkout and scratch paths from the auditing machine. Publishing these bundles normalises them per i18n/audits/evidence/ur/NOTE-paths.md; doing so changes the bytes and therefore invalidates the report.md/audit.log sha256 values above. Record the auditors' pre-normalisation values as sha256_pre_normalisation rather than deleting the attestations. No input hash is affected: every audited input is named with a repo-relative path."
+  }
+}

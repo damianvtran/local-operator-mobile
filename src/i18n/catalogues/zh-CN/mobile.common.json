@@ -4,5 +4,9 @@
 	"mobile.common.done": "完成",
 	"mobile.common.save": "保存",
 	"mobile.common.send": "发送",
-	"mobile.common.try_again": "重试"
+	"mobile.common.try_again": "重试",
+	"mobile.common.not_found.title": "找不到页面",
+	"mobile.common.not_found.headline": "此页面不存在。",
+	"mobile.common.not_found.next": "返回会话列表即可继续。",
+	"mobile.common.not_found.action": "返回会话列表"
 }

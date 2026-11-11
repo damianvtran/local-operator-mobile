@@ -33,5 +33,11 @@
 	"mobile.computers.save_refused.title": "Подключено, но не сохранено",
 	"mobile.computers.save_refused.body": "Этому устройству не удалось надёжно сохранить адрес и пароль. Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
 	"mobile.computers.save_refused.body_with_code": "Этому устройству не удалось надёжно сохранить адрес и пароль (код {code}). Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
-	"mobile.computers.save_refused.continue": "Продолжить"
+	"mobile.computers.save_refused.continue": "Продолжить",
+	"mobile.computers.wait.nothing_answered": "Ответа нет.",
+	"mobile.computers.wait.nothing_answered_help": "За три минуты туннель не появился в списке, а компьютер не ответил. Убедитесь, что команда выполнилась на компьютере, и начните снова.",
+	"mobile.computers.wait.paused": "Проверка приостановлена, пока приложение в фоновом режиме. Откройте его снова, чтобы продолжить проверку.",
+	"mobile.computers.wait.relay_version_sessions": "Его ретранслятор сообщает версию протокола {version} и {sessions, plural, one {# запущенную сессию} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.",
+	"mobile.computers.wait.relay_version": "Его ретранслятор сообщает версию протокола: {version}.",
+	"mobile.computers.wait.relay_sessions": "Его ретранслятор сообщает: {sessions, plural, one {# запущенная сессия} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}."
 }
