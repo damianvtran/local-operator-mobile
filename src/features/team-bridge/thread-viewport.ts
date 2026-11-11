@@ -103,6 +103,20 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		options.followChanged?.(next);
 	};
 	let gesture = false;
+	/**
+	 * After an anchored landing, only the READER may resume following. The
+	 * landing's own scrolls (`scrollToIndex`, the placement correction, the
+	 * scroll-to-index-failed retries) run while the virtualized list is still
+	 * mounting rows, so the host can sit at the end of a SHORTER content than
+	 * the thread's: PR #228 QA round 2 (Q2-1) saw 24 rows mounted at landing,
+	 * 44 a sample later. A tail check on that geometry turned following on,
+	 * which retired "Jump to newest" before it was ever seen and would let the
+	 * next growth or new message pull the reader off the message they came
+	 * for. So until a reader gesture (`intent`) or Jump to newest, arriving at
+	 * the tail does not resume following. A reader who moves without raising
+	 * intent (a screen reader's scroll) keeps the pill as their way back.
+	 */
+	let landing = false;
 	let height = 0;
 	let content: number | null = null;
 	/**
@@ -145,6 +159,10 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		}
 		const atTail = y + viewport >= measured - FOLLOW_SLACK;
 		if (atTail) {
+			if (landing) {
+				lastY = y;
+				return;
+			}
 			setFollowing(true);
 			gesture = false;
 		} else if (
@@ -183,6 +201,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		// on hidden rows; it does not prove the newest row is in view.
 		if (initial) finish(false);
 		gesture = true;
+		landing = false;
 	};
 
 	const handlers = {
@@ -281,6 +300,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			if (initial) finish(false);
 			setFollowing(false);
 			gesture = false;
+			landing = true;
 		},
 		/** The list's visible height (0 before its first layout). */
 		get viewportHeight() {
@@ -296,6 +316,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		 */
 		jumpToNewest() {
 			if (content === null || height <= 0) return;
+			landing = false;
 			setFollowing(true);
 			gesture = false;
 			const readBack = options.scrollTo(Math.max(0, content - height));

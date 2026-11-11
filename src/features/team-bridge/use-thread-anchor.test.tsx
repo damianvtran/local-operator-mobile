@@ -510,3 +510,58 @@ describe("anchor placement clears the Jump pill (D3 / U1-4 / Q1-3)", () => {
 		expect(scrollToIndex).toHaveBeenCalledTimes(2);
 	});
 });
+
+/**
+ * PR #228 QA round 2 (Q2-1, MAJOR): the landing's own scroll can sit at the
+ * end of a list still mounting rows (24 rows at landing, 44 a sample later),
+ * and that tail turned following on, retiring "Jump to newest" unseen. Only a
+ * reader's arrival at newest may resume following and retire the pill.
+ */
+describe("the landing's own scroll does not retire Jump to newest (Q2-1)", () => {
+	it("rows grow after land(): pill stays, following stays off; a real scroll to newest retires it", async () => {
+		const toTail = vi.fn((offset: number) => ({
+			y: offset,
+			viewport: 708,
+			content: 3892,
+		}));
+		const v = createThreadViewport({
+			scrollTo: toTail,
+			positioned: vi.fn(),
+			read: vi.fn(),
+			newestSeq: () => 80,
+			dataReady: () => true,
+			web: true,
+			followChanged: (f) => result.followChanged(f),
+		});
+		v.handlers.onLayout({ nativeEvent: { layout: { height: 708 } } });
+		v.handlers.onContentSizeChange(0, 1100);
+		viewport.current = v;
+		await render({ messageId: "bcm_20", seq: 20 }, thread(page(1, 80)));
+		expect(result.phase).toBe("landed");
+		expect(result.showJump).toBe(true);
+		const scroll = (y: number, content: number) =>
+			act(async () =>
+				v.handlers.onScroll({
+					nativeEvent: {
+						contentOffset: { y },
+						layoutMeasurement: { height: 708 },
+						contentSize: { height: content },
+					},
+				}),
+			);
+		// Only 24 rows mounted: the landing is clamped at the end of a short list.
+		await scroll(1100 - 708, 1100);
+		expect(v.following).toBe(false);
+		expect(result.showJump).toBe(true);
+		// More rows mount: nothing pulls the reader to the newest edge.
+		const before = toTail.mock.calls.length;
+		await act(async () => v.handlers.onContentSizeChange(0, 3892));
+		expect(toTail.mock.calls.length).toBe(before);
+		expect(result.showJump).toBe(true);
+		// The reader scrolls down to the real newest edge: follow resumes, pill retires.
+		await act(async () => v.handlers.onScrollBeginDrag());
+		await scroll(3892 - 708, 3892);
+		expect(v.following).toBe(true);
+		expect(result.showJump).toBe(false);
+	});
+});

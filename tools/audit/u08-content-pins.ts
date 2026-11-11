@@ -1465,7 +1465,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// edge and fade, walk bound, placement, drawer a11y split, restore race and
 	// `thread.anchor_missing` (8 locales). --print over the remediation tree;
 	// source identity only.
-	src: "74ba3499a7b84907193d2f8456214ff4aa87e0b94b7469576afcefc401aaec98",
+	// PR #228 round-2 QA remediation (Q2-1): an anchored landing's own scroll
+	// no longer resumes following. --print over this tree; source identity only.
+	src: "e05287f85b9af0a3b28a09e978831cefa7a886d09fa1c6aa527f2174eb8568ca",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
