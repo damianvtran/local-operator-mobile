@@ -88,7 +88,7 @@ const NAMESPACES = [
 		name: "mobile.common",
 		messages: common,
 		context: commonContext,
-		expected: 6,
+		expected: 10, // +4: the not-found screen (app/ scan)
 	},
 	{
 		name: "mobile.composer_input",
@@ -147,7 +147,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 35,
+		expected: 41, // +6: the add-a-computer wait panel's keyed lines (app/ scan)
 	},
 	{
 		name: "mobile.notifications",
@@ -159,7 +159,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 47, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 63, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -211,7 +211,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 18,
+		expected: 45, // +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -305,8 +305,11 @@ describe("the English catalogues", () => {
 		 *  anchored open's way back to the newest edge: 596 + 1 = 597, the
 		 *  generated catalogue's own count over this tree. Round-1 remediation
 		 *  adds `mobile.team_bridge.thread.anchor_missing` (the "no longer
-		 *  available" toast): 597 + 1 = 598. */
-		expect(total).toBe(598);
+		 *  available" toast): 597 + 1 = 598.
+		 * Plus 53 keyed by the app/ scan (the new `app/` coverage in
+		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 53
+		 * = 651, the generator's own count. */
+		expect(total).toBe(651);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -374,11 +377,16 @@ const PROJECT_TAG_EXAMPLE = {
 		"Valid ASCII tag examples with a comma separator; retaining the examples preserves the form's concrete input guidance.",
 };
 
-const IDENTICAL_BY_DESIGN: Readonly<
+/** The judged exceptions, per locale (no pending-translation ledger remains). */
+const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
 > = {
 	en: {},
 	fr: {
+		"mobile.session.subagent.prompt_label":
+			"`prompt` is the French style-guide glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
+		"mobile.settings.about.version":
+			"Version is the correct French cognate for the app-version row label; identical spelling is idiomatic, not an English fallback.",
 		"mobile.team_bridge.attachment.image":
 			"Image is the French noun for a picture too; the isolated attachment label is an idiomatic cognate.",
 		"mobile.team_bridge.attachment.chip_label":
@@ -449,6 +457,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 	/* Spanish preserves these placeholder-only templates: names and separators
 	 * have no English prose to translate. Each key remains explicitly listed. */
 	es: {
+		"mobile.session.subagent.prompt_label":
+			"`prompt` is the Spanish glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
@@ -493,6 +503,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
 	},
 	vi: {
+		"mobile.session.subagent.prompt_label":
+			"`prompt` is the Vietnamese binding glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
@@ -564,14 +576,14 @@ describe("a shipped translation is still translated", () => {
 			.filter((key) => catalogue[key] === source[key])
 			.sort();
 		expect(identical).toEqual(
-			Object.keys(IDENTICAL_BY_DESIGN[locale] ?? {}).sort(),
+			Object.keys(IDENTICAL_BY_DESIGN_JUDGED[locale] ?? {}).sort(),
 		);
 	});
 
 	it("keeps exempt profile-name templates free of untranslated prose", () => {
 		const key = "mobile.team_bridge.profile.name_with_owner";
 		for (const locale of shipped) {
-			if (!IDENTICAL_BY_DESIGN[locale]?.[key]) continue;
+			if (!IDENTICAL_BY_DESIGN_JUDGED[locale]?.[key]) continue;
 			// Empty caller names expose only the template itself. A future English
 			// phrase cannot silently inherit this names-and-punctuation exception.
 			expect(renderFor(key, { agent: "", owner: "" }, locale)).not.toMatch(
@@ -583,7 +595,7 @@ describe("a shipped translation is still translated", () => {
 	it("gives every allowlisted value its reason", () => {
 		/* The reason is the reviewable part: an entry without one is a blanket
 		 *  exemption, and the point of the list is that each case was judged. */
-		for (const perLocale of Object.values(IDENTICAL_BY_DESIGN)) {
+		for (const perLocale of Object.values(IDENTICAL_BY_DESIGN_JUDGED)) {
 			for (const [key, reason] of Object.entries(perLocale)) {
 				expect(reason.trim().length).toBeGreaterThan(20);
 				expect(Object.keys(ENGLISH_MESSAGES)).toContain(key);

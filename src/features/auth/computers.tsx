@@ -261,27 +261,34 @@ const WaitPanel = ({
 			{state.kind === "w3" &&
 			(state.version !== null || state.sessions !== null) ? (
 				<Text className="text-body-sm text-ink-muted">
-					{state.version !== null
-						? `Its relay reports protocol version ${state.version}`
-						: "Its relay reports"}
-					{state.sessions !== null
-						? `${state.version !== null ? " and" : ""} ${state.sessions} running session${state.sessions === 1 ? "" : "s"}`
-						: ""}
-					.
+					{state.version !== null && state.sessions !== null
+						? t("mobile.computers.wait.relay_version_sessions", {
+								version: state.version,
+								sessions: state.sessions,
+							})
+						: state.version !== null
+							? t("mobile.computers.wait.relay_version", {
+									version: state.version,
+								})
+							: t("mobile.computers.wait.relay_sessions", {
+									// Unreachable (outer guard needs version or sessions non-null); `?? 0` only narrows number|null for the type.
+									sessions: state.sessions ?? 0,
+								})}
 				</Text>
 			) : null}
 			{state.kind === "w4" ? (
 				<>
-					<Text className="text-body text-ink">Nothing answered.</Text>
+					<Text className="text-body text-ink">
+						{t("mobile.computers.wait.nothing_answered")}
+					</Text>
 					<Text className="text-body-sm text-ink-muted">
-						Three minutes with no tunnel listed and no host answering. Check the
-						command ran on the computer, then start again.
+						{t("mobile.computers.wait.nothing_answered_help")}
 					</Text>
 				</>
 			) : null}
 			{state.kind === "w5" ? (
 				<Text className="text-body text-ink-muted">
-					Paused while the app is in the background. Reopen it to keep watching.
+					{t("mobile.computers.wait.paused")}
 				</Text>
 			) : null}
 

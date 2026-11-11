@@ -4,5 +4,9 @@
 	"mobile.common.done": "Hecho",
 	"mobile.common.save": "Guardar",
 	"mobile.common.send": "Enviar",
-	"mobile.common.try_again": "Reintentar"
+	"mobile.common.try_again": "Reintentar",
+	"mobile.common.not_found.title": "Página no encontrada",
+	"mobile.common.not_found.headline": "Esa página no existe.",
+	"mobile.common.not_found.next": "Vuelve a tus sesiones para continuar.",
+	"mobile.common.not_found.action": "Volver a las sesiones"
 }

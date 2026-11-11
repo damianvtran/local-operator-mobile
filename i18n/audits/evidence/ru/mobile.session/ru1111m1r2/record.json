@@ -1,0 +1,135 @@
+{
+  "schema": 1,
+  "audit_kind": "independent delta audit (round 2) of agent-written translations — M1 native-phone English-closure slice",
+  "audit_id": "ru1111m1r2",
+  "round": 2,
+  "locale": "ru",
+  "namespace": "mobile.session",
+  "audit_date": "2026-11-11",
+  "wave": "local-operator-mobile M1 slice — 53 new phone-app keys; lopdev team; round-2 delta audit after two round-1 auditor passes",
+  "audited_revision": "84c4bee109d048e3dad0f996921e1b8ed561dfc8",
+  "audited_revision_note": "mobile worktree i18n-app-scan at this head; the staged v2 values are not in the tree, so the catalogue bytes at this revision are still English placeholders and are recorded as landing_target",
+  "key_count": {
+    "slice": 53,
+    "namespace": 16,
+    "changed_in_v2": 2,
+    "en": 16,
+    "target": 16,
+    "context": 16
+  },
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "b074e5794284",
+    "model": "deepseek/deepseek-flash",
+    "actual_model": "deepseek/deepseek-flash",
+    "actual_model_source": "session header as shown to this session; no provider-fallback notice appeared in this transcript",
+    "independent_from_translator_session": true,
+    "independence": "Different agent, session and model from the translator (reported openai/gpt-6.1-sol, session 48676ea694c1); the translator run was not observed by this auditor. No human native-speaker review and no rendered frame are claimed."
+  },
+  "translator": {
+    "agent": "i18n-translator (M1 slice)",
+    "session": "48676ea694c1",
+    "model": "openai/gpt-6.1-sol",
+    "actual_model_source": "as stated in ru.v2-changes.md; this auditor did not observe the translator run",
+    "date": "2026-11-11"
+  },
+  "input_hashes": {
+    "en_slice": {
+      "path": "<m1-prep>/keys.json",
+      "sha256": "1f0f346e5595ae4c26e7b397ba6f96c7bc797dfc453798934f019f82a5879ed8",
+      "note": "English source and per-key context for all 53 keys; all 53 values verified byte-identical to the repo en catalogues at this head"
+    },
+    "target_slice_v1": {
+      "path": "<m1-prep>/ru.json",
+      "sha256": "1ecfaf98401dd76aedc288d63b53c71299aa7ed10b6a997fe698dd68111bd164"
+    },
+    "target_slice_v2": {
+      "path": "<m1-prep>/ru.v2.json",
+      "sha256": "247837f44c1eb9b16f34c2f9b8594ae8fea446ce8331a6afd1a0ba8b53984daa",
+      "note": "the audited values"
+    },
+    "dispositions": {
+      "path": "<m1-prep>/ru.v2-changes.md",
+      "sha256": "322219289473014244fea378c543f57af63bca583feb2731cd8b2a1d72998814"
+    },
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.session.json",
+      "sha256": "fd14c2081991d4370d4086e47810e375a23c509c06c836f2e146f9c2aeb65b9a"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.session.context.json",
+      "sha256": "1b93b3ddc3996d12d4a8902053a9258d7a49b4e25b7dd17a2de15b0190139de4"
+    },
+    "landing_target": {
+      "path": "src/i18n/catalogues/ru/mobile.session.json",
+      "sha256": "e69e1e4dfcddac0b8fabb5ff5af4d14dd4347309d6a91a9e7b3938b4314a4bbd",
+      "note": "all audited keys already exist here as English placeholders, so the change is a replacement, not an addition"
+    }
+  },
+  "verdict": "clean-with-findings",
+  "ledger_status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "ru-R2-N2"
+    ]
+  },
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 1
+  },
+  "finding_ids_in_this_namespace": [
+    "ru-R2-N2"
+  ],
+  "findings": [
+    {
+      "id": "ru-R2-N2",
+      "severity": "NIT",
+      "key": "mobile.session.find.hint",
+      "summary": "«загруженном на это устройство» vs the more usual «на этом устройстве» for a stored copy; audible-only, both parse"
+    }
+  ],
+  "mechanical": {
+    "key_set_and_order_identical": true,
+    "icu_argument_sets_identical": true,
+    "plural_structure": "no plural or select structure in this namespace",
+    "bidi_or_format_control_chars": 0,
+    "empty_values": 0,
+    "english_identical_values": 0,
+    "straight_quotes": 0,
+    "three_dot_ellipsis": 0,
+    "spaced_em_dash": true,
+    "staged_en_matches_repo_en": true,
+    "keys_replace_existing_placeholders": true
+  },
+  "adjudications_slice_level": {
+    "declined_upheld": 3,
+    "declined_overturned": 0,
+    "reference": "i18n/audits/evidence/ru/NOTE-m1-slice-r2.md — A N-2 (Выбрать), B M3 (Поток), B N4 (Показать субагентов), all upheld with this auditor's own shipped-usage counts"
+  },
+  "artifacts": {
+    "report.md": {
+      "sha256": "4cfd780d64cc4c7e76c1a4cc390fce5e2162571cb112aaac7b1ac0983cb67541"
+    },
+    "audit.log": {
+      "sha256": "922e7542483358273b334a67f89826b93bd701ebe2471081dd46b8cae384de8c",
+      "sha256_pre_normalisation": "996bcdbce2a2e969a3c465a3f1ce2a7a2d438b8ad7031746a2c2f24a3af7e4ed",
+      "note": "shared by all four ru1111m1r2 bundles; actual execution log of the commands this auditor ran"
+    },
+    "slice_note": {
+      "path": "i18n/audits/evidence/ru/NOTE-m1-slice-r2.md",
+      "sha256": "226cff88414121330000b761fda6ded018c1efc21347b2f6440e5f5b1208352a"
+    }
+  },
+  "audit_notes_not_execution_log": "report.md and record.json are the auditor's notes and judgement; they do not prove command execution. audit.log is the execution log (verbatim output of the commands actually run).",
+  "route_disclosure": "Read-only over the repo catalogues and the manager's staged slice JSON; no translation, MT or API service used; no translation file edited; no other round-2 audit report read",
+  "limits": [
+    "no rendered frame, native build or device run in this role, and no maxCells/maxChars hint exists for these keys — fit is a character-count judgement",
+    "staged values are not in the tree, so generate.ts/tsc did not check them; landing must re-run i18n:check",
+    "one independent auditor for round 2; no human native review; sibling-namespace findings live in their own bundles and in the slice note"
+  ]
+}

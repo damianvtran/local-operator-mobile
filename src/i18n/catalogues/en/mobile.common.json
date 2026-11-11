@@ -4,5 +4,9 @@
 	"mobile.common.done": "Done",
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
-	"mobile.common.try_again": "Try again"
+	"mobile.common.try_again": "Try again",
+	"mobile.common.not_found.title": "Page not found",
+	"mobile.common.not_found.headline": "That page does not exist.",
+	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
+	"mobile.common.not_found.action": "Back to sessions"
 }

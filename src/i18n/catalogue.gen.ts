@@ -76,6 +76,10 @@ export type CatalogueKey =
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
+	| "mobile.common.not_found.action"
+	| "mobile.common.not_found.headline"
+	| "mobile.common.not_found.next"
+	| "mobile.common.not_found.title"
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
@@ -128,6 +132,12 @@ export type CatalogueKey =
 	| "mobile.computers.switch"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
+	| "mobile.computers.wait.nothing_answered"
+	| "mobile.computers.wait.nothing_answered_help"
+	| "mobile.computers.wait.paused"
+	| "mobile.computers.wait.relay_sessions"
+	| "mobile.computers.wait.relay_version"
+	| "mobile.computers.wait.relay_version_sessions"
 	| "mobile.home.chip.effort_chosen"
 	| "mobile.home.chip.effort_default"
 	| "mobile.home.chip.effort_default_unnamed"
@@ -326,14 +336,21 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
 	| "mobile.schedules.truncated"
+	| "mobile.session.chip.effort_change_failed"
 	| "mobile.session.chip.effort_resume_hint"
+	| "mobile.session.chip.model_change_failed"
 	| "mobile.session.chip.model_default"
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
 	| "mobile.session.composer.not_sent_storage"
+	| "mobile.session.composer.retained_instruction"
 	| "mobile.session.composer.retry_not_sent_storage"
 	| "mobile.session.conversation_details"
+	| "mobile.session.empty.headline"
+	| "mobile.session.empty.next"
+	| "mobile.session.find.hint"
+	| "mobile.session.find.label"
 	| "mobile.session.highlights.sound_pause"
 	| "mobile.session.highlights.sound_play"
 	| "mobile.session.highlights.sound_refused"
@@ -357,6 +374,8 @@ export type CatalogueKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.not_connected.headline"
+	| "mobile.session.not_connected.next"
 	| "mobile.session.pending_echo.earlier_not_sent"
 	| "mobile.session.pending_echo.earlier_went_through"
 	| "mobile.session.pending_echo.images"
@@ -371,8 +390,15 @@ export type CatalogueKey =
 	| "mobile.session.sheet_title.model"
 	| "mobile.session.sheet_title.status"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent.no_rows"
+	| "mobile.session.subagent.prompt_label"
+	| "mobile.session.subagent.result_label"
+	| "mobile.session.subagent.screen_title"
+	| "mobile.session.subagent.unavailable_headline"
+	| "mobile.session.subagent.unavailable_next"
 	| "mobile.session.subagent_open"
 	| "mobile.session.subagent_open_short"
+	| "mobile.session.subagents_hint"
 	| "mobile.session_health.control_hint"
 	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
@@ -384,7 +410,34 @@ export type CatalogueKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.about.blurb"
+	| "mobile.settings.about.version"
+	| "mobile.settings.account.delete"
+	| "mobile.settings.account.delete_help"
+	| "mobile.settings.account.signed_in"
+	| "mobile.settings.connection.computers"
+	| "mobile.settings.connection.refresh"
+	| "mobile.settings.connection.status"
+	| "mobile.settings.connection.use"
+	| "mobile.settings.diagnostics.last_error"
+	| "mobile.settings.diagnostics.none"
+	| "mobile.settings.diagnostics.privacy_note"
+	| "mobile.settings.diagnostics.route"
+	| "mobile.settings.diagnostics.route_direct"
+	| "mobile.settings.diagnostics.route_radient"
+	| "mobile.settings.diagnostics.stream"
+	| "mobile.settings.screen_title"
+	| "mobile.settings.section.about"
+	| "mobile.settings.section.appearance"
+	| "mobile.settings.section.connection"
+	| "mobile.settings.section.diagnostics"
+	| "mobile.settings.sign_out.body"
+	| "mobile.settings.sign_out.confirm"
+	| "mobile.settings.sign_out.done"
+	| "mobile.settings.sign_out.title"
+	| "mobile.settings.text_size.following"
 	| "mobile.settings.text_size.label"
+	| "mobile.settings.text_size.overridden"
 	| "mobile.settings.theme.caption_forced"
 	| "mobile.settings.theme.caption_system"
 	| "mobile.settings.theme.card_dark"
@@ -672,6 +725,10 @@ export type NoParamKey =
 	| "mobile.common.back"
 	| "mobile.common.cancel"
 	| "mobile.common.done"
+	| "mobile.common.not_found.action"
+	| "mobile.common.not_found.headline"
+	| "mobile.common.not_found.next"
+	| "mobile.common.not_found.title"
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
@@ -722,6 +779,9 @@ export type NoParamKey =
 	| "mobile.computers.switch"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
+	| "mobile.computers.wait.nothing_answered"
+	| "mobile.computers.wait.nothing_answered_help"
+	| "mobile.computers.wait.paused"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_default_short"
 	| "mobile.home.chip.model_no_default"
@@ -892,14 +952,21 @@ export type NoParamKey =
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
+	| "mobile.session.chip.effort_change_failed"
 	| "mobile.session.chip.effort_resume_hint"
+	| "mobile.session.chip.model_change_failed"
 	| "mobile.session.chip.model_default"
 	| "mobile.session.chip.model_resume_hint"
 	| "mobile.session.chip.model_unknown"
 	| "mobile.session.chip.model_unrecorded_hint"
 	| "mobile.session.composer.not_sent_storage"
+	| "mobile.session.composer.retained_instruction"
 	| "mobile.session.composer.retry_not_sent_storage"
 	| "mobile.session.conversation_details"
+	| "mobile.session.empty.headline"
+	| "mobile.session.empty.next"
+	| "mobile.session.find.hint"
+	| "mobile.session.find.label"
 	| "mobile.session.highlights.sound_untitled"
 	| "mobile.session.highlights.withheld_missing"
 	| "mobile.session.highlights.withheld_outside"
@@ -916,6 +983,8 @@ export type NoParamKey =
 	| "mobile.session.history.loading"
 	| "mobile.session.history.refresh_failed"
 	| "mobile.session.history.stalled"
+	| "mobile.session.not_connected.headline"
+	| "mobile.session.not_connected.next"
 	| "mobile.session.pending_echo.earlier_went_through"
 	| "mobile.session.pending_echo.not_confirmed"
 	| "mobile.session.pending_echo.not_sent"
@@ -928,7 +997,14 @@ export type NoParamKey =
 	| "mobile.session.sheet_title.model"
 	| "mobile.session.sheet_title.status"
 	| "mobile.session.status_tray.hint"
+	| "mobile.session.subagent.no_rows"
+	| "mobile.session.subagent.prompt_label"
+	| "mobile.session.subagent.result_label"
+	| "mobile.session.subagent.screen_title"
+	| "mobile.session.subagent.unavailable_headline"
+	| "mobile.session.subagent.unavailable_next"
 	| "mobile.session.subagent_open_short"
+	| "mobile.session.subagents_hint"
 	| "mobile.session_health.control_hint"
 	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
@@ -940,6 +1016,31 @@ export type NoParamKey =
 	| "mobile.session_health.resume_refused"
 	| "mobile.session_health.resume_refused_title"
 	| "mobile.session_health.still_reopening"
+	| "mobile.settings.about.blurb"
+	| "mobile.settings.about.version"
+	| "mobile.settings.account.delete"
+	| "mobile.settings.account.delete_help"
+	| "mobile.settings.account.signed_in"
+	| "mobile.settings.connection.computers"
+	| "mobile.settings.connection.refresh"
+	| "mobile.settings.connection.status"
+	| "mobile.settings.connection.use"
+	| "mobile.settings.diagnostics.last_error"
+	| "mobile.settings.diagnostics.none"
+	| "mobile.settings.diagnostics.privacy_note"
+	| "mobile.settings.diagnostics.route"
+	| "mobile.settings.diagnostics.route_direct"
+	| "mobile.settings.diagnostics.route_radient"
+	| "mobile.settings.diagnostics.stream"
+	| "mobile.settings.screen_title"
+	| "mobile.settings.section.about"
+	| "mobile.settings.section.appearance"
+	| "mobile.settings.section.connection"
+	| "mobile.settings.section.diagnostics"
+	| "mobile.settings.sign_out.body"
+	| "mobile.settings.sign_out.confirm"
+	| "mobile.settings.sign_out.done"
+	| "mobile.settings.sign_out.title"
 	| "mobile.settings.text_size.label"
 	| "mobile.settings.theme.mode_dark"
 	| "mobile.settings.theme.mode_label"
@@ -1193,6 +1294,10 @@ export type MessageParams = {
 	"mobile.common.back": NoParams;
 	"mobile.common.cancel": NoParams;
 	"mobile.common.done": NoParams;
+	"mobile.common.not_found.action": NoParams;
+	"mobile.common.not_found.headline": NoParams;
+	"mobile.common.not_found.next": NoParams;
+	"mobile.common.not_found.title": NoParams;
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
 	"mobile.common.try_again": NoParams;
@@ -1245,6 +1350,12 @@ export type MessageParams = {
 	"mobile.computers.switch": NoParams;
 	"mobile.computers.transport.custom": NoParams;
 	"mobile.computers.transport.radient": NoParams;
+	"mobile.computers.wait.nothing_answered": NoParams;
+	"mobile.computers.wait.nothing_answered_help": NoParams;
+	"mobile.computers.wait.paused": NoParams;
+	"mobile.computers.wait.relay_sessions": { sessions: number };
+	"mobile.computers.wait.relay_version": { version: string | number };
+	"mobile.computers.wait.relay_version_sessions": { version: string | number; sessions: number };
 	"mobile.home.chip.effort_chosen": { effort: string | number };
 	"mobile.home.chip.effort_default": { effort: string | number };
 	"mobile.home.chip.effort_default_unnamed": NoParams;
@@ -1443,14 +1554,21 @@ export type MessageParams = {
 	"mobile.schedules.supervisor.unverifiable": NoParams;
 	"mobile.schedules.tail.failed": { count: number };
 	"mobile.schedules.truncated": { shown: number; total: number; family: string };
+	"mobile.session.chip.effort_change_failed": NoParams;
 	"mobile.session.chip.effort_resume_hint": NoParams;
+	"mobile.session.chip.model_change_failed": NoParams;
 	"mobile.session.chip.model_default": NoParams;
 	"mobile.session.chip.model_resume_hint": NoParams;
 	"mobile.session.chip.model_unknown": NoParams;
 	"mobile.session.chip.model_unrecorded_hint": NoParams;
 	"mobile.session.composer.not_sent_storage": NoParams;
+	"mobile.session.composer.retained_instruction": NoParams;
 	"mobile.session.composer.retry_not_sent_storage": NoParams;
 	"mobile.session.conversation_details": NoParams;
+	"mobile.session.empty.headline": NoParams;
+	"mobile.session.empty.next": NoParams;
+	"mobile.session.find.hint": NoParams;
+	"mobile.session.find.label": NoParams;
 	"mobile.session.highlights.sound_pause": { title: string | number };
 	"mobile.session.highlights.sound_play": { title: string | number };
 	"mobile.session.highlights.sound_refused": { reason: string | number };
@@ -1474,6 +1592,8 @@ export type MessageParams = {
 	"mobile.session.history.loading": NoParams;
 	"mobile.session.history.refresh_failed": NoParams;
 	"mobile.session.history.stalled": NoParams;
+	"mobile.session.not_connected.headline": NoParams;
+	"mobile.session.not_connected.next": NoParams;
 	"mobile.session.pending_echo.earlier_not_sent": { reason: string | number };
 	"mobile.session.pending_echo.earlier_went_through": NoParams;
 	"mobile.session.pending_echo.images": { count: number };
@@ -1488,8 +1608,15 @@ export type MessageParams = {
 	"mobile.session.sheet_title.model": NoParams;
 	"mobile.session.sheet_title.status": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
+	"mobile.session.subagent.no_rows": NoParams;
+	"mobile.session.subagent.prompt_label": NoParams;
+	"mobile.session.subagent.result_label": NoParams;
+	"mobile.session.subagent.screen_title": NoParams;
+	"mobile.session.subagent.unavailable_headline": NoParams;
+	"mobile.session.subagent.unavailable_next": NoParams;
 	"mobile.session.subagent_open": { agent: string | number };
 	"mobile.session.subagent_open_short": NoParams;
+	"mobile.session.subagents_hint": NoParams;
 	"mobile.session_health.control_hint": NoParams;
 	"mobile.session_health.ended_placeholder": NoParams;
 	"mobile.session_health.menu_hint": NoParams;
@@ -1501,7 +1628,34 @@ export type MessageParams = {
 	"mobile.session_health.resume_refused": NoParams;
 	"mobile.session_health.resume_refused_title": NoParams;
 	"mobile.session_health.still_reopening": NoParams;
+	"mobile.settings.about.blurb": NoParams;
+	"mobile.settings.about.version": NoParams;
+	"mobile.settings.account.delete": NoParams;
+	"mobile.settings.account.delete_help": NoParams;
+	"mobile.settings.account.signed_in": NoParams;
+	"mobile.settings.connection.computers": NoParams;
+	"mobile.settings.connection.refresh": NoParams;
+	"mobile.settings.connection.status": NoParams;
+	"mobile.settings.connection.use": NoParams;
+	"mobile.settings.diagnostics.last_error": NoParams;
+	"mobile.settings.diagnostics.none": NoParams;
+	"mobile.settings.diagnostics.privacy_note": NoParams;
+	"mobile.settings.diagnostics.route": NoParams;
+	"mobile.settings.diagnostics.route_direct": NoParams;
+	"mobile.settings.diagnostics.route_radient": NoParams;
+	"mobile.settings.diagnostics.stream": NoParams;
+	"mobile.settings.screen_title": NoParams;
+	"mobile.settings.section.about": NoParams;
+	"mobile.settings.section.appearance": NoParams;
+	"mobile.settings.section.connection": NoParams;
+	"mobile.settings.section.diagnostics": NoParams;
+	"mobile.settings.sign_out.body": NoParams;
+	"mobile.settings.sign_out.confirm": NoParams;
+	"mobile.settings.sign_out.done": NoParams;
+	"mobile.settings.sign_out.title": NoParams;
+	"mobile.settings.text_size.following": { percent: string | number };
 	"mobile.settings.text_size.label": NoParams;
+	"mobile.settings.text_size.overridden": { percent: string | number };
 	"mobile.settings.theme.caption_forced": { name: string | number };
 	"mobile.settings.theme.caption_system": { dark: string | number; light: string | number };
 	"mobile.settings.theme.card_dark": { name: string | number };
@@ -1810,6 +1964,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.back": "Back",
 	"mobile.common.cancel": "Cancel",
 	"mobile.common.done": "Done",
+	"mobile.common.not_found.action": "Back to sessions",
+	"mobile.common.not_found.headline": "That page does not exist.",
+	"mobile.common.not_found.next": "Go back to your sessions to carry on.",
+	"mobile.common.not_found.title": "Page not found",
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
 	"mobile.common.try_again": "Try again",
@@ -1862,6 +2020,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.switch": "Switch computer",
 	"mobile.computers.transport.custom": "Your address",
 	"mobile.computers.transport.radient": "Radient",
+	"mobile.computers.wait.nothing_answered": "Nothing answered.",
+	"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
+	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
+	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
+	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
+	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
 	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
@@ -2060,14 +2224,21 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.supervisor.unverifiable": "Nothing supervises the wakes below, so they only fire while their conversation is running.",
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
 	"mobile.session.chip.effort_resume_hint": "Resume this session to change the effort",
+	"mobile.session.chip.model_change_failed": "Could not change the model.",
 	"mobile.session.chip.model_default": "Default",
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_unrecorded_hint": "This session has not recorded a model",
 	"mobile.session.composer.not_sent_storage": "Not sent. Couldn’t save this message safely for retry. Your text and images are still here. Try again.",
+	"mobile.session.composer.retained_instruction": "An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.",
 	"mobile.session.composer.retry_not_sent_storage": "This retry attempt wasn’t sent. Couldn’t prepare the earlier instruction safely for retry. Try the earlier instruction again. Your current draft hasn’t been sent.",
 	"mobile.session.conversation_details": "Conversation details",
+	"mobile.session.empty.headline": "Nothing here yet.",
+	"mobile.session.empty.next": "Send the first message below.",
+	"mobile.session.find.hint": "Finds messages in the transcript loaded on this device",
+	"mobile.session.find.label": "Search this conversation",
 	"mobile.session.highlights.sound_pause": "Pause {title}",
 	"mobile.session.highlights.sound_play": "Play {title}",
 	"mobile.session.highlights.sound_refused": "Could not play: {reason}",
@@ -2091,6 +2262,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.history.loading": "Loading earlier messages…",
 	"mobile.session.history.refresh_failed": "The latest messages could not be loaded.",
 	"mobile.session.history.stalled": "Earlier messages stopped loading. Try again, or reopen this conversation.",
+	"mobile.session.not_connected.headline": "This session is not connected yet.",
+	"mobile.session.not_connected.next": "Open it from the session list once a computer is connected.",
 	"mobile.session.pending_echo.earlier_not_sent": "Your earlier message wasn’t sent ({reason}). Tap it above to put it back.",
 	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet.",
 	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}",
@@ -2105,8 +2278,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.sheet_title.model": "Model",
 	"mobile.session.sheet_title.status": "Tasks and agents",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
+	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
+	"mobile.session.subagent.prompt_label": "prompt",
+	"mobile.session.subagent.result_label": "result",
+	"mobile.session.subagent.screen_title": "Subagent",
+	"mobile.session.subagent.unavailable_headline": "This subagent is no longer available.",
+	"mobile.session.subagent.unavailable_next": "Its transcript was not kept, or the computer is not answering.",
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
+	"mobile.session.subagents_hint": "Show the subagents",
 	"mobile.session_health.control_hint": "Shows what this state means and what a send does now",
 	"mobile.session_health.ended_placeholder": "Send to reopen in your home folder…",
 	"mobile.session_health.menu_hint": "Opens the session menu",
@@ -2118,7 +2298,34 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session_health.resume_refused": "This session could not be reopened just now. Try again.",
 	"mobile.session_health.resume_refused_title": "Could not resume",
 	"mobile.session_health.still_reopening": "Still reopening — it has not come up yet.",
+	"mobile.settings.about.blurb": "Local Operator is open source (MIT). Agent sessions connect to your relay. Team Bridge messages and notification registration connect directly to Radient.",
+	"mobile.settings.about.version": "Version",
+	"mobile.settings.account.delete": "Delete my Radient account",
+	"mobile.settings.account.delete_help": "Deleting your account happens in the Radient console, in the browser — this app cannot do it for you. It deletes the account and every tunnel on it. Sessions on your computer are not touched.",
+	"mobile.settings.account.signed_in": "Signed in",
+	"mobile.settings.connection.computers": "Computers",
+	"mobile.settings.connection.refresh": "Refresh",
+	"mobile.settings.connection.status": "Status",
+	"mobile.settings.connection.use": "Use",
+	"mobile.settings.diagnostics.last_error": "Last error",
+	"mobile.settings.diagnostics.none": "None",
+	"mobile.settings.diagnostics.privacy_note": "These lines never include a token, a password, or a session's content.",
+	"mobile.settings.diagnostics.route": "Route",
+	"mobile.settings.diagnostics.route_direct": "Direct relay",
+	"mobile.settings.diagnostics.route_radient": "Radient tunnel",
+	"mobile.settings.diagnostics.stream": "Stream",
+	"mobile.settings.screen_title": "Settings",
+	"mobile.settings.section.about": "About",
+	"mobile.settings.section.appearance": "Appearance",
+	"mobile.settings.section.connection": "Connection",
+	"mobile.settings.section.diagnostics": "Diagnostics",
+	"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+	"mobile.settings.sign_out.confirm": "Sign out",
+	"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
+	"mobile.settings.sign_out.title": "Sign out?",
+	"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
 	"mobile.settings.text_size.label": "Text size",
+	"mobile.settings.text_size.overridden": "This phone's own text size is {percent}%. Overridden above.",
 	"mobile.settings.theme.caption_forced": "Always {name}",
 	"mobile.settings.theme.caption_system": "System uses {light} and {dark}",
 	"mobile.settings.theme.card_dark": "{name}, dark theme",
@@ -2412,6 +2619,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.back": { role: "button", note: "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)." },
 	"mobile.common.cancel": { role: "button", note: "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key." },
 	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
+	"mobile.common.not_found.action": { role: "button", note: "Button on the not-found screen that goes to the session list. Short, no final full stop." },
+	"mobile.common.not_found.headline": { role: "status", note: "Empty-state headline on the not-found screen. Sentence with a final full stop." },
+	"mobile.common.not_found.next": { role: "help", note: "Empty-state follow-up on the not-found screen, pointing to the session list. One sentence." },
+	"mobile.common.not_found.title": { role: "heading", note: "Header title of the screen shown for a route that does not exist. No final full stop." },
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
@@ -2464,6 +2675,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.computers.transport.custom": { role: "meta", note: "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case." },
 	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written." },
+	"mobile.computers.wait.nothing_answered": { role: "status", note: "Heading of the add-a-computer wait panel when the three-minute wait ended with no tunnel listed and no host answering. A short sentence with a final full stop; a follow-up help line sits under it." },
+	"mobile.computers.wait.nothing_answered_help": { role: "help", note: "Continuation line under the \"Nothing answered.\" heading of the add-a-computer wait panel: explains that three minutes passed with no tunnel listed and no host answering, then tells the user to check the command ran on the computer and start again. Two sentences; the second is the instruction." },
+	"mobile.computers.wait.paused": { role: "help", note: "Wait-panel line shown when the app was backgrounded during the add-a-computer wait and polling stopped. Two short sentences; the second is the instruction to reopen the app." },
+	"mobile.computers.wait.relay_sessions": { role: "help", note: "Wait-panel line once the computer answered and only the running-session count is known. {sessions} is a count; preserve the ICU plural arms." },
+	"mobile.computers.wait.relay_version": { role: "help", note: "Wait-panel line once the computer answered and only the protocol version is known. {version} is a number; preserve the placeholder." },
+	"mobile.computers.wait.relay_version_sessions": { role: "help", note: "Wait-panel line once the computer answered: the relay's protocol version and its running-session count. {version} is a number, {sessions} a count; preserve the ICU plural arms and both placeholders. 'Relay' is the product's name for the program on the computer." },
 	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -2662,14 +2879,21 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.supervisor.unverifiable": { role: "status", note: "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked." },
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+	"mobile.session.chip.effort_change_failed": { role: "status", note: "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works." },
 	"mobile.session.chip.effort_resume_hint": { role: "help", note: "Accessibility hint on the effort (reasoning effort) chip of an ENDED session: shown but disabled until the session is resumed. Use the same word for 'effort' as mobile.home effort copy. Imperative, no final full stop." },
+	"mobile.session.chip.model_change_failed": { role: "status", note: "Inline error under the composer when changing the session's model failed. One short sentence." },
 	"mobile.session.chip.model_default": { role: "meta", note: "The model chip when the reader has chosen no model: the computer's configured default is what a start uses. One word, sentence case, no final full stop — it sits in a chip beside the folder name and must stay short enough for a 320 pt row." },
 	"mobile.session.chip.model_resume_hint": { role: "help", note: "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop." },
 	"mobile.session.chip.model_unknown": { role: "meta", note: "The model chip when the model list could not be read at all. One word, sentence case, no final full stop: the accessible name carries the explanation. Never renders as a model name." },
 	"mobile.session.chip.model_unrecorded_hint": { role: "help", note: "Accessibility hint on the model chip of an ended session when no model was ever recorded; the chip itself shows a dash. A statement, no final full stop." },
 	"mobile.session.composer.not_sent_storage": { role: "status", note: "Composer error before any HTTP dispatch: local safe-retry preparation failed. The text and image draft has not been consumed. Do not imply uncertain delivery or assert that disk space is the cause; checking free space is one actionable remedy. Never include storage exception text or private paths." },
+	"mobile.session.composer.retained_instruction": { role: "confirm", note: "Notice above the composer when an earlier instruction is retained and may already have been delivered, so the user must retry it before sending the current draft. Two sentences." },
 	"mobile.session.composer.retry_not_sent_storage": { role: "status", note: "Only the current RETRY ATTEMPT was not dispatched because local safe-retry preparation failed. The original instruction may already have arrived: its separate retained-envelope warning and Retry earlier instruction action stay visible. Never imply the current draft was retried or disk space is the known cause. Never include raw storage errors." },
 	"mobile.session.conversation_details": { role: "heading", note: "The destination screen's own title, used as the label of the control that opens it — not an action verb. It must stay identical wherever that screen is named, including the sentence in mobile.home.options.fixed, so a reader recognises the same destination. No final full stop." },
+	"mobile.session.empty.headline": { role: "status", note: "Empty-state headline for a session with no messages. Short, final full stop." },
+	"mobile.session.empty.next": { role: "help", note: "Empty-state follow-up pointing to the composer under the transcript. 'Below' refers to the composer's position." },
+	"mobile.session.find.hint": { role: "help", note: "Accessibility hint of the header find button: it searches only the transcript already loaded on the phone. Read aloud, no final full stop." },
+	"mobile.session.find.label": { role: "button", note: "Accessible name of the header find button. Imperative, no final full stop." },
 	"mobile.session.highlights.sound_pause": { role: "button", note: "Accessibility label of a sound cell's control while it plays. {title} is the sound's own name. No full stop." },
 	"mobile.session.highlights.sound_play": { role: "button", note: "Accessibility label of a sound cell's play control. {title} is the sound's own name, copied verbatim. No full stop." },
 	"mobile.session.highlights.sound_refused": { role: "status", note: "Shown under a sound cell when its bytes could not be fetched. {reason} is the relay's own sentence, passed through untranslated. No final full stop." },
@@ -2693,6 +2917,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.history.loading": { role: "status", note: "Busy state while reading one earlier transcript page." },
 	"mobile.session.history.refresh_failed": { role: "status", note: "Reading the newest transcript page failed (returning to the app, Check again, or reloading history). Shown at the newest edge with a Try again button; do not repeat that label. Must not say EARLIER messages failed." },
 	"mobile.session.history.stalled": { role: "status", note: "The server returned a cursor that did not advance; automatic reads stop. Name the button's own action (Try again) or reopening; plain wording, no engineering terms." },
+	"mobile.session.not_connected.headline": { role: "status", note: "Empty-state headline on a session screen opened with no computer connected. Sentence with a final full stop." },
+	"mobile.session.not_connected.next": { role: "help", note: "Empty-state follow-up telling the user how to reach the session once a computer is connected. One sentence." },
 	"mobile.session.pending_echo.earlier_not_sent": { role: "status", note: "Error line above the message box when an earlier message was refused while the user was already typing the next one: it must be clear the EARLIER message failed, not the text in the box. {reason} is the relay's own short reason, in English. Points at the kept message above, which puts itself back on a tap." },
 	"mobile.session.pending_echo.earlier_went_through": { role: "status", note: "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)." },
 	"mobile.session.pending_echo.images": { role: "meta", note: "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop." },
@@ -2707,8 +2933,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.sheet_title.model": { role: "heading", note: "Title of the sheet that lists the models to choose from. Title case in English." },
 	"mobile.session.sheet_title.status": { role: "heading", note: "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
+	"mobile.session.subagent.no_rows": { role: "status", note: "Muted line shown when a subagent's transcript is empty. One sentence." },
+	"mobile.session.subagent.prompt_label": { role: "meta", note: "Lower-case label above the instruction the subagent was given. One word, lower case to match its sibling label." },
+	"mobile.session.subagent.result_label": { role: "meta", note: "Lower-case label above the text the subagent returned. One word, lower case to match its sibling label." },
+	"mobile.session.subagent.screen_title": { role: "heading", note: "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent." },
+	"mobile.session.subagent.unavailable_headline": { role: "status", note: "Empty-state headline on the subagent screen when the computer has no record of it. Sentence with a final full stop." },
+	"mobile.session.subagent.unavailable_next": { role: "help", note: "Empty-state follow-up giving the two possible reasons the subagent cannot be shown. One sentence." },
 	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
 	"mobile.session.subagent_open_short": { role: "button", note: "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop." },
+	"mobile.session.subagents_hint": { role: "help", note: "Accessibility hint of the control that reveals the subagents list; read after its name, never drawn. Imperative, no final full stop." },
 	"mobile.session_health.control_hint": { role: "help", note: "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer." },
 	"mobile.session_health.ended_placeholder": { role: "help", note: "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder. MEASURED FIT: the field holds ~348 px at 390 pt, and this sentence needs 569.6 px at 200 % text scale at the English length (590.9 px at the French one) — it clips there in both locales, which is an upstream copy-length issue rather than a translation one. French therefore ships the shortest honest form (\"Envoyer rouvre…\") and the destination lives in the health sheet's ended_detail sentence." },
 	"mobile.session_health.menu_hint": { role: "button", note: "Accessibility hint for the same overflow button." },
@@ -2720,7 +2953,34 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session_health.resume_refused": { role: "status", note: "The retryable Resume failure. It must agree with the button it sits under, which says \"Resume\"." },
 	"mobile.session_health.resume_refused_title": { role: "heading", note: "Title of the sheet's failure notice when Resume did not work." },
 	"mobile.session_health.still_reopening": { role: "status", note: "Replaces the line above after the reference client's 20 s cap: the reopen is still pending, and the reader should know it has not silently failed." },
+	"mobile.settings.about.blurb": { role: "help", note: "Plain-language data note at the end of Settings. 'Local Operator', 'Team Bridge' and 'Radient' are product names; 'MIT' is a licence name; 'relay' is the product's word for the program on the user's computer." },
+	"mobile.settings.about.version": { role: "meta", note: "Label of the diagnostic row that shows the app's version number to its right. One word." },
+	"mobile.settings.account.delete": { role: "button", note: "Quiet button on Settings that opens the Radient console in the browser, where the account is deleted. Radient is a product name." },
+	"mobile.settings.account.delete_help": { role: "help", note: "Explanation under the delete-account button: deletion happens in the browser, removes the account and its tunnels, and does not touch sessions on the user's computer. Radient is a product name; 'tunnel' is the product's word for the published route to a computer." },
+	"mobile.settings.account.signed_in": { role: "status", note: "Accessible name of the account avatar on the Settings account card; read by a screen reader, never drawn. Short." },
+	"mobile.settings.connection.computers": { role: "meta", note: "Small label above the list of computers on this account in Settings. Plural noun, no colon." },
+	"mobile.settings.connection.refresh": { role: "button", note: "Quiet button under the Settings computers list that re-reads the account's computers. One verb." },
+	"mobile.settings.connection.status": { role: "meta", note: "Small row label left of the connection state pill on Settings. One word, no colon." },
+	"mobile.settings.connection.use": { role: "button", note: "Small button on a Settings computer row that switches to that computer. One short verb; it sits in a narrow row." },
+	"mobile.settings.diagnostics.last_error": { role: "meta", note: "Label of the diagnostic row showing the most recent connection error's summary. Two words, no colon." },
+	"mobile.settings.diagnostics.none": { role: "status", note: "Value of a diagnostic row that has nothing to show (no route, no error). One word." },
+	"mobile.settings.diagnostics.privacy_note": { role: "help", note: "Reassurance under the Settings diagnostics rows: the lines shown never contain secrets or conversation content. One sentence." },
+	"mobile.settings.diagnostics.route": { role: "meta", note: "Label of the diagnostic row naming how the phone reaches the computer (Radient tunnel or direct relay). One word." },
+	"mobile.settings.diagnostics.route_direct": { role: "status", note: "Value of the Route diagnostic row when the phone connects straight to the user's own relay. 'Relay' is the product's word for the program on the computer." },
+	"mobile.settings.diagnostics.route_radient": { role: "status", note: "Value of the Route diagnostic row when the phone connects through a Radient tunnel. 'Radient' is a product name." },
+	"mobile.settings.diagnostics.stream": { role: "meta", note: "Label of the diagnostic row showing the live session stream's health word. One word." },
+	"mobile.settings.screen_title": { role: "heading", note: "Title of the Settings screen header. One word, no final full stop." },
+	"mobile.settings.section.about": { role: "heading", note: "Section header on Settings above the app version and the open-source note. One word." },
+	"mobile.settings.section.appearance": { role: "heading", note: "Section header on Settings above the theme and text-size controls. One word." },
+	"mobile.settings.section.connection": { role: "heading", note: "Section header on Settings above the connection status and the computers list. One word." },
+	"mobile.settings.section.diagnostics": { role: "heading", note: "Section header on Settings above the read-only connection facts (route, stream, last error). One word." },
+	"mobile.settings.sign_out.body": { role: "confirm", note: "Body of the sign-out confirmation: signing out also ends the session on the control plane, so the tunnel stops accepting this phone, and the user's computer is untouched. 'Control plane' and 'tunnel' are product vocabulary." },
+	"mobile.settings.sign_out.confirm": { role: "button", note: "Confirm button of the sign-out dialog; it performs the sign-out, so it repeats the Sign out action verb. One or two words, sentence case." },
+	"mobile.settings.sign_out.done": { role: "status", note: "Toast shown after a successful sign-out, just before the welcome screen. Two short sentences; must fit a toast." },
+	"mobile.settings.sign_out.title": { role: "confirm", note: "Title of the confirmation dialog opened by Settings Sign out. A question; keep it short." },
+	"mobile.settings.text_size.following": { role: "help", note: "Help line under the text-size control when the app follows the phone's setting. {percent} is a whole number shown with a % sign; preserve the placeholder and the percent sign." },
 	"mobile.settings.text_size.label": { role: "heading", note: "Visible label and accessible name of the Settings control that chooses the app's text size (System, 100%, 150%, 200%). \"Text size\" means how large the app draws its type, not a font. No final full stop." },
+	"mobile.settings.text_size.overridden": { role: "help", note: "Help line under the text-size control when the user has chosen a size that overrides the phone's. {percent} is a whole number shown with a % sign; 'above' points to the control just above." },
 	"mobile.settings.theme.caption_forced": { role: "help", note: "Caption under the mode control while it is forced to one side. {name} is a theme NAME (proper noun, never translated). No final full stop." },
 	"mobile.settings.theme.caption_system": { role: "help", note: "Caption under the mode control while it follows the phone. {light} and {dark} are theme NAMES (proper nouns such as \"Dracula\", never translated). Says which theme shows in each phone mode. No final full stop." },
 	"mobile.settings.theme.card_dark": { role: "button", note: "Screen-reader name of a theme card that is not selected. {name} is the theme NAME (proper noun, never translated). No final full stop." },
@@ -3028,6 +3288,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.back": "Atrás",
 		"mobile.common.cancel": "Cancelar",
 		"mobile.common.done": "Hecho",
+		"mobile.common.not_found.action": "Volver a las sesiones",
+		"mobile.common.not_found.headline": "Esa página no existe.",
+		"mobile.common.not_found.next": "Vuelve a tus sesiones para continuar.",
+		"mobile.common.not_found.title": "Página no encontrada",
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
 		"mobile.common.try_again": "Reintentar",
@@ -3045,15 +3309,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.voice.mic_setup": "La entrada de voz no está configurada",
 		"mobile.composer_input.voice.mic_setup_hint": "Explica cómo activar la entrada de voz",
 		"mobile.composer_input.voice.setup_needed": "Configura la conversión de voz a texto en tu ordenador.",
-		"mobile.computers.account_help": "Inicia sesión con la cuenta propietaria. Si se eliminó, elige otro equipo.",
-		"mobile.computers.account_mismatch": "Este equipo pertenece a otra cuenta de Radient o se ha eliminado.",
+		"mobile.computers.account_help": "Inicia sesión con la cuenta propietaria. Si se eliminó, elige otra máquina.",
+		"mobile.computers.account_mismatch": "Esta máquina pertenece a otra cuenta de Radient o se ha eliminado.",
 		"mobile.computers.add": "Añadir una máquina",
 		"mobile.computers.added.stays_listed": "No desaparece de este teléfono: puedes volver a esa máquina desde la lista.",
 		"mobile.computers.badge.active": "activa",
 		"mobile.computers.badge.connecting": "conectando",
 		"mobile.computers.billing_help": "En la consola de Radient, abre la facturación de este túnel y activa el acceso remoto.",
 		"mobile.computers.connect_refused.generic": "El ordenador no aceptó la conexión. Tu dirección y tu contraseña siguen aquí, así que revísalas y vuelve a intentarlo.",
-		"mobile.computers.connect_refused.password": "El relay no aceptó esa contraseña. Revísala y vuelve a intentarlo.",
+		"mobile.computers.connect_refused.password": "El relé no aceptó esa contraseña. Revísala y vuelve a intentarlo.",
 		"mobile.computers.connect_refused.title": "No se pudo conectar",
 		"mobile.computers.connecting": "Conectando…",
 		"mobile.computers.connection_response": "Respuesta de conexión",
@@ -3070,8 +3334,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.save_refused.title": "Conectado, pero sin guardar",
 		"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
 		"mobile.computers.section.on_phone": "En este teléfono",
-		"mobile.computers.session_error": "La app no pudo conectarse a este equipo.",
-		"mobile.computers.session_error_help": "No hace falta reconfigurar el equipo. Reintenta o muestra los detalles para soporte.",
+		"mobile.computers.session_error": "La app no pudo conectarse a esta máquina.",
+		"mobile.computers.session_error_help": "No hace falta reconfigurar la máquina. Reintenta o muestra los detalles para soporte.",
 		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.sign_out": "Cerrar sesión",
 		"mobile.computers.signing_out": "Cerrando sesión…",
@@ -3080,6 +3344,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Cambiar de máquina",
 		"mobile.computers.transport.custom": "Tu dirección",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.wait.nothing_answered": "Ninguna máquina respondió.",
+		"mobile.computers.wait.nothing_answered_help": "Tres minutos sin túneles en la lista ni máquinas que respondan. Comprueba que el comando se ejecutó en la máquina y vuelve a empezar.",
+		"mobile.computers.wait.paused": "En pausa mientras la app está en segundo plano. Vuelve a abrirla para que siga comprobando.",
+		"mobile.computers.wait.relay_sessions": "El relé indica {sessions, plural, one {# sesión en ejecución} many {# de sesiones en ejecución} other {# sesiones en ejecución}}.",
+		"mobile.computers.wait.relay_version": "El relé indica la versión {version} del protocolo.",
+		"mobile.computers.wait.relay_version_sessions": "El relé indica la versión {version} del protocolo y {sessions, plural, one {# sesión en ejecución} many {# de sesiones en ejecución} other {# sesiones en ejecución}}.",
 		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
 		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
@@ -3278,14 +3548,21 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Nada supervisa los despertares de abajo, así que solo se disparan mientras su conversación está en marcha.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# fallo} many {# de fallos} other {# fallos}}",
 		"mobile.schedules.truncated": "Mostrando {shown} de {total} conversaciones con {family, select, wakes {despertares} other {monitorizaciones}}.",
+		"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
 		"mobile.session.chip.effort_resume_hint": "Reanuda esta sesión para cambiar el esfuerzo",
+		"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
 		"mobile.session.chip.model_default": "Predeterminado",
 		"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 		"mobile.session.chip.model_unknown": "Desconocido",
 		"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",
 		"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Vuelve a intentarlo.",
+		"mobile.session.composer.retained_instruction": "Puede que ya se haya entregado una instrucción anterior. Reintenta enviarla antes de enviar tu borrador actual.",
 		"mobile.session.composer.retry_not_sent_storage": "Este intento de reenvío no se envió. No se pudo preparar de forma segura la instrucción anterior para volver a intentarlo. Vuelve a intentar enviar la instrucción anterior. Tu borrador actual no se ha enviado.",
 		"mobile.session.conversation_details": "Detalles de la conversación",
+		"mobile.session.empty.headline": "Aún no hay nada aquí.",
+		"mobile.session.empty.next": "Envía el primer mensaje aquí abajo.",
+		"mobile.session.find.hint": "Busca mensajes en la transcripción cargada en este dispositivo",
+		"mobile.session.find.label": "Buscar en esta conversación",
 		"mobile.session.highlights.sound_pause": "Pausar {title}",
 		"mobile.session.highlights.sound_play": "Reproducir {title}",
 		"mobile.session.highlights.sound_refused": "No se pudo reproducir: {reason}",
@@ -3309,6 +3586,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Cargando mensajes anteriores…",
 		"mobile.session.history.refresh_failed": "No se pudieron cargar los mensajes más recientes.",
 		"mobile.session.history.stalled": "Los mensajes anteriores dejaron de cargarse. Reintenta o abre de nuevo esta conversación.",
+		"mobile.session.not_connected.headline": "Esta sesión aún no está conectada.",
+		"mobile.session.not_connected.next": "Ábrela desde la lista de sesiones cuando haya una máquina conectada.",
 		"mobile.session.pending_echo.earlier_not_sent": "Tu mensaje anterior no se envió ({reason}). Tócalo arriba para recuperarlo.",
 		"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
@@ -3323,8 +3602,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Modelo",
 		"mobile.session.sheet_title.status": "Tareas y agentes",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
+		"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
+		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.result_label": "resultado",
+		"mobile.session.subagent.screen_title": "Subagente",
+		"mobile.session.subagent.unavailable_headline": "Este subagente ya no está disponible.",
+		"mobile.session.subagent.unavailable_next": "Su transcripción no se conservó o la máquina no responde.",
 		"mobile.session.subagent_open": "Abrir {agent}",
 		"mobile.session.subagent_open_short": "abrir",
+		"mobile.session.subagents_hint": "Mostrar los subagentes",
 		"mobile.session_health.control_hint": "Muestra qué significa este estado y qué hace un envío ahora",
 		"mobile.session_health.ended_placeholder": "Envía para reabrir…",
 		"mobile.session_health.menu_hint": "Abre el menú de la sesión",
@@ -3336,7 +3622,34 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
 		"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 		"mobile.session_health.still_reopening": "Sigue reabriéndose — todavía no está lista.",
+		"mobile.settings.about.blurb": "Local Operator es de código abierto (MIT). Las sesiones de los agentes se conectan a tu relé. Los mensajes de Team Bridge y el registro de notificaciones se conectan directamente con Radient.",
+		"mobile.settings.about.version": "Versión",
+		"mobile.settings.account.delete": "Eliminar mi cuenta de Radient",
+		"mobile.settings.account.delete_help": "Puedes eliminar tu cuenta desde la consola de Radient, en el navegador — esta app no puede hacerlo por ti. Al hacerlo, se eliminan la cuenta y todos sus túneles. Las sesiones de tu máquina no se modifican.",
+		"mobile.settings.account.signed_in": "Sesión iniciada",
+		"mobile.settings.connection.computers": "Máquinas",
+		"mobile.settings.connection.refresh": "Actualizar",
+		"mobile.settings.connection.status": "Estado",
+		"mobile.settings.connection.use": "Usar",
+		"mobile.settings.diagnostics.last_error": "Último error",
+		"mobile.settings.diagnostics.none": "Nada",
+		"mobile.settings.diagnostics.privacy_note": "Estas líneas nunca incluyen tokens, contraseñas ni el contenido de una sesión.",
+		"mobile.settings.diagnostics.route": "Ruta",
+		"mobile.settings.diagnostics.route_direct": "Relé directo",
+		"mobile.settings.diagnostics.route_radient": "Túnel de Radient",
+		"mobile.settings.diagnostics.stream": "Flujo",
+		"mobile.settings.screen_title": "Ajustes",
+		"mobile.settings.section.about": "Acerca de",
+		"mobile.settings.section.appearance": "Apariencia",
+		"mobile.settings.section.connection": "Conexión",
+		"mobile.settings.section.diagnostics": "Diagnóstico",
+		"mobile.settings.sign_out.body": "Esto cierra tu sesión de acceso en el plano de control y la borra de este teléfono, por lo que el túnel deja de aceptar solicitudes de este teléfono. Tu máquina no se ve afectada.",
+		"mobile.settings.sign_out.confirm": "Cerrar sesión",
+		"mobile.settings.sign_out.done": "Sesión cerrada. Se revocó tu sesión de acceso en tu máquina.",
+		"mobile.settings.sign_out.title": "¿Cerrar sesión?",
+		"mobile.settings.text_size.following": "El tamaño del texto configurado en este teléfono es {percent}%. Se usa ese tamaño.",
 		"mobile.settings.text_size.label": "Tamaño del texto",
+		"mobile.settings.text_size.overridden": "El tamaño del texto configurado en este teléfono es {percent}%. Se usa el ajuste de arriba.",
 		"mobile.settings.theme.caption_forced": "Siempre {name}",
 		"mobile.settings.theme.caption_system": "Sistema usa {light} y {dark}",
 		"mobile.settings.theme.card_dark": "{name}, tema oscuro",
@@ -3362,7 +3675,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.show_diagnostics": "Mostrar detalles del inicio de sesión",
 		"mobile.signin.stage_browser": "Esperando a tu navegador",
 		"mobile.signin.stage_cancelled": "Inicio de sesión cancelado",
-		"mobile.signin.stage_discovering": "Buscando tus equipos",
+		"mobile.signin.stage_discovering": "Buscando tus máquinas",
 		"mobile.signin.stage_exchanging": "Finalizando el inicio de sesión en el navegador",
 		"mobile.signin.stage_failed": "Error al iniciar sesión",
 		"mobile.signin.stage_idle": "Sin iniciar",
@@ -3628,6 +3941,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.back": "Retour",
 		"mobile.common.cancel": "Annuler",
 		"mobile.common.done": "Terminé",
+		"mobile.common.not_found.action": "Retour aux sessions",
+		"mobile.common.not_found.headline": "Cette page n’existe pas.",
+		"mobile.common.not_found.next": "Revenez à vos sessions pour continuer.",
+		"mobile.common.not_found.title": "Page introuvable",
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
 		"mobile.common.try_again": "Réessayer",
@@ -3680,6 +3997,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Changer d’ordinateur",
 		"mobile.computers.transport.custom": "Votre adresse",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.wait.nothing_answered": "Aucune réponse.",
+		"mobile.computers.wait.nothing_answered_help": "Trois minutes sans aucun tunnel dans la liste ni réponse d’un hôte. Vérifiez que la commande s’est exécutée sur l’ordinateur, puis recommencez.",
+		"mobile.computers.wait.paused": "En pause tant que l’app est en arrière-plan. Rouvrez-la pour poursuivre la surveillance.",
+		"mobile.computers.wait.relay_sessions": "Son relais signale {sessions, plural, one {# session en cours} many {# de sessions en cours} other {# sessions en cours}}.",
+		"mobile.computers.wait.relay_version": "Son relais signale la version {version} du protocole.",
+		"mobile.computers.wait.relay_version_sessions": "Son relais signale la version {version} du protocole et {sessions, plural, one {# session en cours} many {# de sessions en cours} other {# sessions en cours}}.",
 		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
 		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
 		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
@@ -3878,14 +4201,21 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
 		"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+		"mobile.session.chip.effort_change_failed": "Impossible de changer le niveau d’effort.",
 		"mobile.session.chip.effort_resume_hint": "Reprenez cette session pour changer l’effort",
+		"mobile.session.chip.model_change_failed": "Impossible de changer de modèle.",
 		"mobile.session.chip.model_default": "Par défaut",
 		"mobile.session.chip.model_resume_hint": "Reprenez cette session pour changer de modèle",
 		"mobile.session.chip.model_unknown": "Inconnu",
 		"mobile.session.chip.model_unrecorded_hint": "Cette session n’a enregistré aucun modèle",
 		"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Réessayez.",
+		"mobile.session.composer.retained_instruction": "Une instruction précédente a peut-être été transmise. Réessayez d’envoyer cette instruction avant de transmettre votre brouillon actuel.",
 		"mobile.session.composer.retry_not_sent_storage": "Cette tentative de renvoi n’a pas été envoyée. Impossible de préparer en toute sécurité le renvoi de l’instruction précédente. Réessayez d’envoyer l’instruction précédente. Votre brouillon actuel n’a pas été envoyé.",
 		"mobile.session.conversation_details": "Détails de la conversation",
+		"mobile.session.empty.headline": "Rien ici pour le moment.",
+		"mobile.session.empty.next": "Envoyez le premier message ci-dessous.",
+		"mobile.session.find.hint": "Recherche les messages dans la transcription chargée sur cet appareil",
+		"mobile.session.find.label": "Rechercher dans cette conversation",
 		"mobile.session.highlights.sound_pause": "Mettre {title} en pause",
 		"mobile.session.highlights.sound_play": "Lire {title}",
 		"mobile.session.highlights.sound_refused": "Lecture impossible : {reason}",
@@ -3909,6 +4239,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Chargement des messages précédents…",
 		"mobile.session.history.refresh_failed": "Les derniers messages n’ont pas pu être chargés.",
 		"mobile.session.history.stalled": "Le chargement des messages précédents s’est arrêté. Réessayez ou rouvrez cette conversation.",
+		"mobile.session.not_connected.headline": "Cette session n’est pas encore connectée.",
+		"mobile.session.not_connected.next": "Ouvrez-la depuis la liste des sessions une fois qu’un ordinateur est connecté.",
 		"mobile.session.pending_echo.earlier_not_sent": "Votre message précédent n’a pas été envoyé ({reason}). Touchez-le ci-dessus pour le récupérer.",
 		"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}",
@@ -3923,8 +4255,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Modèle",
 		"mobile.session.sheet_title.status": "Tâches et agents",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
+		"mobile.session.subagent.no_rows": "Ce sous-agent n’a aucune ligne de transcription qui lui soit propre.",
+		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.result_label": "résultat",
+		"mobile.session.subagent.screen_title": "Sous-agent",
+		"mobile.session.subagent.unavailable_headline": "Ce sous-agent n’est plus disponible.",
+		"mobile.session.subagent.unavailable_next": "Sa transcription n’a pas été conservée, ou l’ordinateur ne répond pas.",
 		"mobile.session.subagent_open": "Ouvrir {agent}",
 		"mobile.session.subagent_open_short": "ouvrir",
+		"mobile.session.subagents_hint": "Afficher les sous-agents",
 		"mobile.session_health.control_hint": "Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.",
 		"mobile.session_health.ended_placeholder": "Envoyer rouvre…",
 		"mobile.session_health.menu_hint": "Ouvre le menu de la session",
@@ -3936,7 +4275,34 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Cette session n’a pas pu être rouverte pour le moment. Réessayez.",
 		"mobile.session_health.resume_refused_title": "Reprise impossible",
 		"mobile.session_health.still_reopening": "Réouverture toujours en cours — elle n’est pas encore revenue.",
+		"mobile.settings.about.blurb": "Local Operator est open source (MIT). Les sessions d’agents se connectent à votre relais. Les messages Team Bridge et l’inscription aux notifications se connectent directement à Radient.",
+		"mobile.settings.about.version": "Version",
+		"mobile.settings.account.delete": "Supprimer mon compte Radient",
+		"mobile.settings.account.delete_help": "La suppression du compte se fait dans la console Radient, dans le navigateur — cette app ne peut pas s’en charger. Cette opération supprime le compte et tous les tunnels qui y sont rattachés. Les sessions sur votre ordinateur restent intactes.",
+		"mobile.settings.account.signed_in": "Connecté",
+		"mobile.settings.connection.computers": "Ordinateurs",
+		"mobile.settings.connection.refresh": "Actualiser",
+		"mobile.settings.connection.status": "État",
+		"mobile.settings.connection.use": "Utiliser",
+		"mobile.settings.diagnostics.last_error": "Dernière erreur",
+		"mobile.settings.diagnostics.none": "Rien",
+		"mobile.settings.diagnostics.privacy_note": "Ces lignes ne contiennent jamais de token, de mot de passe ni de contenu de session.",
+		"mobile.settings.diagnostics.route": "Acheminement",
+		"mobile.settings.diagnostics.route_direct": "Relais direct",
+		"mobile.settings.diagnostics.route_radient": "Tunnel Radient",
+		"mobile.settings.diagnostics.stream": "Flux",
+		"mobile.settings.screen_title": "Paramètres",
+		"mobile.settings.section.about": "À propos",
+		"mobile.settings.section.appearance": "Apparence",
+		"mobile.settings.section.connection": "Connexion",
+		"mobile.settings.section.diagnostics": "Diagnostic",
+		"mobile.settings.sign_out.body": "Votre session de connexion est fermée sur le plan de contrôle et oubliée sur ce téléphone : le tunnel n’accepte donc plus les requêtes de ce téléphone. Votre ordinateur reste intact.",
+		"mobile.settings.sign_out.confirm": "Se déconnecter",
+		"mobile.settings.sign_out.done": "Déconnecté. Votre session de connexion a été révoquée sur votre ordinateur.",
+		"mobile.settings.sign_out.title": "Se déconnecter ?",
+		"mobile.settings.text_size.following": "La taille du texte de ce téléphone est de {percent} %. L’app la suit.",
 		"mobile.settings.text_size.label": "Taille du texte",
+		"mobile.settings.text_size.overridden": "La taille du texte de ce téléphone est de {percent} %. Le réglage ci-dessus la remplace.",
 		"mobile.settings.theme.caption_forced": "Toujours {name}",
 		"mobile.settings.theme.caption_system": "Système utilise {light} et {dark}",
 		"mobile.settings.theme.card_dark": "{name}, thème sombre",
@@ -4228,6 +4594,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.back": "वापस",
 		"mobile.common.cancel": "रद्द करें",
 		"mobile.common.done": "हो गया",
+		"mobile.common.not_found.action": "सत्रों पर लौटें",
+		"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
+		"mobile.common.not_found.next": "आगे बढ़ने के लिए अपने सत्रों पर लौटें।",
+		"mobile.common.not_found.title": "पेज नहीं मिला",
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
 		"mobile.common.try_again": "फिर से कोशिश करें",
@@ -4280,6 +4650,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "कंप्यूटर बदलें",
 		"mobile.computers.transport.custom": "आपका पता",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.wait.nothing_answered": "कहीं से जवाब नहीं आया।",
+		"mobile.computers.wait.nothing_answered_help": "तीन मिनट तक न कोई टनल सूची में दिखी, न किसी होस्ट ने जवाब दिया। जाँच लें कि कंप्यूटर पर कमांड चली या नहीं। फिर दोबारा शुरू करें।",
+		"mobile.computers.wait.paused": "ऐप बैकग्राउंड में है, इसलिए निगरानी रुकी हुई है। जारी रखने के लिए ऐप फिर खोलें।",
+		"mobile.computers.wait.relay_sessions": "इसका रिले बताता है कि {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।",
+		"mobile.computers.wait.relay_version": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है।",
+		"mobile.computers.wait.relay_version_sessions": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है और {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।",
 		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
 		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
@@ -4478,14 +4854,21 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "इन जागृतियों पर कोई निगरानी नहीं — ये केवल तब जागेंगी जब इनकी बातचीत चल रही हो।",
 		"mobile.schedules.tail.failed": "{count} विफल",
 		"mobile.schedules.truncated": "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।",
+		"mobile.session.chip.effort_change_failed": "प्रयास नहीं बदला जा सका।",
 		"mobile.session.chip.effort_resume_hint": "प्रयास बदलने के लिए यह सत्र फिर से शुरू करें",
+		"mobile.session.chip.model_change_failed": "मॉडल नहीं बदला जा सका।",
 		"mobile.session.chip.model_default": "डिफ़ॉल्ट",
 		"mobile.session.chip.model_resume_hint": "मॉडल बदलने के लिए यह सत्र फिर से शुरू करें",
 		"mobile.session.chip.model_unknown": "अज्ञात",
 		"mobile.session.chip.model_unrecorded_hint": "इस सत्र ने कोई मॉडल दर्ज नहीं किया है",
 		"mobile.session.composer.not_sent_storage": "नहीं भेजा गया। दोबारा भेजने के लिए यह संदेश सुरक्षित रूप से सहेजा नहीं जा सका। आपका टेक्स्ट और चित्र यहीं हैं। दोबारा कोशिश करें।",
+		"mobile.session.composer.retained_instruction": "हो सकता है कि पहले भेजा गया कोई निर्देश पहुँच चुका हो। अपना मौजूदा ड्राफ़्ट भेजने से पहले उस निर्देश को दोबारा भेजने की कोशिश करें।",
 		"mobile.session.composer.retry_not_sent_storage": "दोबारा भेजने का यह प्रयास नहीं भेजा गया। पिछले निर्देश को सुरक्षित रूप से दोबारा भेजने की तैयारी नहीं हो सकी। पिछले निर्देश को दोबारा भेजने की कोशिश करें। आपका मौजूदा ड्राफ़्ट नहीं भेजा गया है।",
 		"mobile.session.conversation_details": "बातचीत का विवरण",
+		"mobile.session.empty.headline": "यहाँ अभी कुछ नहीं है।",
+		"mobile.session.empty.next": "नीचे पहला संदेश भेजें।",
+		"mobile.session.find.hint": "इस डिवाइस पर लोड किए गए ट्रांसक्रिप्ट में संदेश खोजता है",
+		"mobile.session.find.label": "इस बातचीत में खोजें",
 		"mobile.session.highlights.sound_pause": "{title} रोकें",
 		"mobile.session.highlights.sound_play": "{title} चलाएँ",
 		"mobile.session.highlights.sound_refused": "चलाया नहीं जा सका: {reason}",
@@ -4509,6 +4892,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "पहले के संदेश लोड हो रहे हैं…",
 		"mobile.session.history.refresh_failed": "सबसे नए संदेश लोड नहीं हो सके।",
 		"mobile.session.history.stalled": "पहले के संदेश लोड होना रुक गया। फिर से कोशिश करें, या यह बातचीत दोबारा खोलें।",
+		"mobile.session.not_connected.headline": "यह सत्र अभी कनेक्ट नहीं है।",
+		"mobile.session.not_connected.next": "कंप्यूटर कनेक्ट होने पर इसे सत्रों की सूची से खोलें।",
 		"mobile.session.pending_echo.earlier_not_sent": "आपका पिछला संदेश नहीं भेजा गया ({reason})। उसे वापस लाने के लिए ऊपर टैप करें।",
 		"mobile.session.pending_echo.earlier_went_through": "आपका पिछला संदेश भेज दिया गया। नीचे का टेक्स्ट अभी नहीं भेजा गया है।",
 		"mobile.session.pending_echo.images": "{count, plural, one {# छवि संलग्न} other {# छवियाँ संलग्न}}",
@@ -4523,8 +4908,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "मॉडल",
 		"mobile.session.sheet_title.status": "कार्य और एजेंट",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
+		"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
+		"mobile.session.subagent.prompt_label": "प्रॉम्प्ट",
+		"mobile.session.subagent.result_label": "परिणाम",
+		"mobile.session.subagent.screen_title": "उप-एजेंट",
+		"mobile.session.subagent.unavailable_headline": "यह उप-एजेंट अब उपलब्ध नहीं है।",
+		"mobile.session.subagent.unavailable_next": "इसका ट्रांसक्रिप्ट सहेजा नहीं गया था, या कंप्यूटर जवाब नहीं दे रहा है।",
 		"mobile.session.subagent_open": "{agent} खोलें",
 		"mobile.session.subagent_open_short": "खोलें",
+		"mobile.session.subagents_hint": "उप-एजेंट दिखाएँ",
 		"mobile.session_health.control_hint": "बताता है कि इस स्थिति का अर्थ क्या है और अभी भेजने पर क्या होगा",
 		"mobile.session_health.ended_placeholder": "भेजने पर होम फ़ोल्डर में खुलेगा…",
 		"mobile.session_health.menu_hint": "सत्र मेन्यू खोलता है",
@@ -4536,7 +4928,34 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 		"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 		"mobile.session_health.still_reopening": "अब भी खुल रहा है — अभी तक तैयार नहीं हुआ।",
+		"mobile.settings.about.blurb": "Local Operator ओपन सोर्स (MIT) है। एजेंट सत्र आपके रिले से जुड़ते हैं। Team Bridge के संदेश सीधे Radient से जुड़ते हैं और सूचनाओं का पंजीकरण भी सीधे Radient से होता है।",
+		"mobile.settings.about.version": "संस्करण",
+		"mobile.settings.account.delete": "मेरा Radient खाता हटाएँ",
+		"mobile.settings.account.delete_help": "आपका खाता ब्राउज़र में Radient कंसोल से हटाया जाता है — यह ऐप आपकी ओर से ऐसा नहीं कर सकता। खाता हटाने पर खाता और उस पर मौजूद हर टनल मिट जाती है। आपके कंप्यूटर पर मौजूद सत्रों में कोई बदलाव नहीं किया जाता।",
+		"mobile.settings.account.signed_in": "साइन इन है",
+		"mobile.settings.connection.computers": "कंप्यूटर",
+		"mobile.settings.connection.refresh": "रीफ़्रेश करें",
+		"mobile.settings.connection.status": "स्थिति",
+		"mobile.settings.connection.use": "इस्तेमाल करें",
+		"mobile.settings.diagnostics.last_error": "पिछली त्रुटि",
+		"mobile.settings.diagnostics.none": "कोई नहीं",
+		"mobile.settings.diagnostics.privacy_note": "इन पंक्तियों में कभी टोकन, पासवर्ड या किसी सत्र की सामग्री शामिल नहीं होती।",
+		"mobile.settings.diagnostics.route": "रूट",
+		"mobile.settings.diagnostics.route_direct": "सीधा रिले",
+		"mobile.settings.diagnostics.route_radient": "Radient टनल",
+		"mobile.settings.diagnostics.stream": "स्ट्रीम",
+		"mobile.settings.screen_title": "सेटिंग",
+		"mobile.settings.section.about": "जानकारी",
+		"mobile.settings.section.appearance": "रूप-रंग",
+		"mobile.settings.section.connection": "कनेक्शन",
+		"mobile.settings.section.diagnostics": "निदान",
+		"mobile.settings.sign_out.body": "इससे आपका साइन-इन सत्र इस फ़ोन से हट जाता है और कंट्रोल प्लेन पर भी समाप्त हो जाता है। इसलिए टनल इस फ़ोन से अनुरोध स्वीकार करना बंद कर देती है। आपके कंप्यूटर में कोई बदलाव नहीं किया जाता।",
+		"mobile.settings.sign_out.confirm": "साइन आउट करें",
+		"mobile.settings.sign_out.done": "साइन आउट हो गया। आपके कंप्यूटर पर साइन-इन सत्र रद्द कर दिया गया।",
+		"mobile.settings.sign_out.title": "साइन आउट करें?",
+		"mobile.settings.text_size.following": "इस फ़ोन का अपना टेक्स्ट आकार {percent}% है। उसी का उपयोग हो रहा है।",
 		"mobile.settings.text_size.label": "टेक्स्ट का आकार",
+		"mobile.settings.text_size.overridden": "इस फ़ोन का अपना टेक्स्ट आकार {percent}% है। ऊपर चुने गए आकार का उपयोग हो रहा है।",
 		"mobile.settings.theme.caption_forced": "हमेशा {name}",
 		"mobile.settings.theme.caption_system": "सिस्टम {light} और {dark} का उपयोग करता है",
 		"mobile.settings.theme.card_dark": "{name}, गहरी थीम",
@@ -4828,6 +5247,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.back": "Назад",
 		"mobile.common.cancel": "Отмена",
 		"mobile.common.done": "Готово",
+		"mobile.common.not_found.action": "К сессиям",
+		"mobile.common.not_found.headline": "Этой страницы не существует.",
+		"mobile.common.not_found.next": "Вернитесь к сессиям, чтобы продолжить.",
+		"mobile.common.not_found.title": "Страница не найдена",
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
 		"mobile.common.try_again": "Повторить",
@@ -4880,6 +5303,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Сменить компьютер",
 		"mobile.computers.transport.custom": "Ваш адрес",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.wait.nothing_answered": "Ответа нет.",
+		"mobile.computers.wait.nothing_answered_help": "За три минуты туннель не появился в списке, а компьютер не ответил. Убедитесь, что команда выполнилась на компьютере, и начните снова.",
+		"mobile.computers.wait.paused": "Проверка приостановлена, пока приложение в фоновом режиме. Откройте его снова, чтобы продолжить проверку.",
+		"mobile.computers.wait.relay_sessions": "Его ретранслятор сообщает: {sessions, plural, one {# запущенная сессия} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.",
+		"mobile.computers.wait.relay_version": "Его ретранслятор сообщает версию протокола: {version}.",
+		"mobile.computers.wait.relay_version_sessions": "Его ретранслятор сообщает версию протокола {version} и {sessions, plural, one {# запущенную сессию} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.",
 		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
 		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
@@ -5078,14 +5507,21 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "У пробуждений ниже нет супервизора, поэтому они срабатывают, только пока идёт их беседа.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# сбой} few {# сбоя} many {# сбоев} other {# сбоя}}",
 		"mobile.schedules.truncated": "Беседы с {family, select, wakes {пробуждениями} other {мониторами}}: показано {shown} из {total}.",
+		"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
 		"mobile.session.chip.effort_resume_hint": "Возобновите этот сеанс, чтобы изменить усилие",
+		"mobile.session.chip.model_change_failed": "Не удалось сменить модель.",
 		"mobile.session.chip.model_default": "По умолчанию",
 		"mobile.session.chip.model_resume_hint": "Возобновите этот сеанс, чтобы сменить модель",
 		"mobile.session.chip.model_unknown": "Неизвестно",
 		"mobile.session.chip.model_unrecorded_hint": "Этот сеанс не сохранил модель",
 		"mobile.session.composer.not_sent_storage": "Не отправлено. Не удалось надёжно сохранить сообщение для повторной отправки. Текст и изображения остались здесь. Попробуйте ещё раз.",
+		"mobile.session.composer.retained_instruction": "Предыдущее указание, возможно, уже доставлено. Отправьте это указание ещё раз, прежде чем отправлять текущий черновик.",
 		"mobile.session.composer.retry_not_sent_storage": "Эта попытка повторной отправки не была отправлена. Не удалось безопасно подготовить предыдущее указание к повторной отправке. Повторите отправку предыдущего указания. Текущий черновик не отправлен.",
 		"mobile.session.conversation_details": "Детали беседы",
+		"mobile.session.empty.headline": "Здесь пока ничего нет.",
+		"mobile.session.empty.next": "Отправьте первое сообщение ниже.",
+		"mobile.session.find.hint": "Ищет сообщения в транскрипте, загруженном на это устройство",
+		"mobile.session.find.label": "Искать в этой беседе",
 		"mobile.session.highlights.sound_pause": "Приостановить {title}",
 		"mobile.session.highlights.sound_play": "Воспроизвести {title}",
 		"mobile.session.highlights.sound_refused": "Не удалось воспроизвести: {reason}",
@@ -5109,6 +5545,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Загрузка предыдущих сообщений…",
 		"mobile.session.history.refresh_failed": "Не удалось загрузить последние сообщения.",
 		"mobile.session.history.stalled": "Загрузка предыдущих сообщений остановилась. Повторите или откройте беседу заново.",
+		"mobile.session.not_connected.headline": "Эта сессия пока не подключена.",
+		"mobile.session.not_connected.next": "После подключения компьютера откройте её в списке сессий.",
 		"mobile.session.pending_echo.earlier_not_sent": "Предыдущее сообщение не отправлено ({reason}). Нажмите на него выше, чтобы вернуть.",
 		"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# изображение прикреплено} few {# изображения прикреплены} many {# изображений прикреплено} other {# изображения прикреплено}}",
@@ -5123,8 +5561,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Модель",
 		"mobile.session.sheet_title.status": "Задачи и агенты",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
+		"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
+		"mobile.session.subagent.prompt_label": "промпт",
+		"mobile.session.subagent.result_label": "результат",
+		"mobile.session.subagent.screen_title": "Субагент",
+		"mobile.session.subagent.unavailable_headline": "Этот субагент больше недоступен.",
+		"mobile.session.subagent.unavailable_next": "Его транскрипт не сохранён или компьютер не отвечает.",
 		"mobile.session.subagent_open": "Открыть {agent}",
 		"mobile.session.subagent_open_short": "открыть",
+		"mobile.session.subagents_hint": "Показать субагентов",
 		"mobile.session_health.control_hint": "Показывает, что означает это состояние и что произойдёт при отправке",
 		"mobile.session_health.ended_placeholder": "Отправка возобновит её…",
 		"mobile.session_health.menu_hint": "Открывает меню сессии",
@@ -5136,7 +5581,34 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Не удалось возобновить эту сессию. Повторите попытку.",
 		"mobile.session_health.resume_refused_title": "Не удалось возобновить",
 		"mobile.session_health.still_reopening": "Всё ещё открывается — сессия пока не поднялась.",
+		"mobile.settings.about.blurb": "Local Operator — приложение с открытым исходным кодом (MIT). Сессии агентов подключаются к вашему ретранслятору. Сообщения Team Bridge и регистрация уведомлений отправляются напрямую в Radient.",
+		"mobile.settings.about.version": "Версия",
+		"mobile.settings.account.delete": "Удалить мой аккаунт Radient",
+		"mobile.settings.account.delete_help": "Аккаунт удаляется в консоли Radient (в браузере) — приложение не может сделать это за вас. Удаляются аккаунт и все его туннели. Сессии на компьютере не затрагиваются.",
+		"mobile.settings.account.signed_in": "Вход выполнен",
+		"mobile.settings.connection.computers": "Компьютеры",
+		"mobile.settings.connection.refresh": "Обновить",
+		"mobile.settings.connection.status": "Состояние",
+		"mobile.settings.connection.use": "Выбрать",
+		"mobile.settings.diagnostics.last_error": "Последняя ошибка",
+		"mobile.settings.diagnostics.none": "Нет",
+		"mobile.settings.diagnostics.privacy_note": "В этих строках никогда нет токенов, паролей или содержимого сессий.",
+		"mobile.settings.diagnostics.route": "Маршрут",
+		"mobile.settings.diagnostics.route_direct": "Напрямую к ретранслятору",
+		"mobile.settings.diagnostics.route_radient": "Туннель Radient",
+		"mobile.settings.diagnostics.stream": "Поток",
+		"mobile.settings.screen_title": "Настройки",
+		"mobile.settings.section.about": "О приложении",
+		"mobile.settings.section.appearance": "Оформление",
+		"mobile.settings.section.connection": "Подключение",
+		"mobile.settings.section.diagnostics": "Диагностика",
+		"mobile.settings.sign_out.body": "Сессия входа с сервером управления будет завершена, а приложение забудет её, поэтому туннель перестанет принимать запросы с этого телефона. Ваш компьютер не затрагивается.",
+		"mobile.settings.sign_out.confirm": "Выйти",
+		"mobile.settings.sign_out.done": "Выход выполнен. Сессия входа отозвана на компьютере.",
+		"mobile.settings.sign_out.title": "Выйти?",
+		"mobile.settings.text_size.following": "Размер текста в настройках телефона — {percent}%. Приложение использует этот размер.",
 		"mobile.settings.text_size.label": "Размер текста",
+		"mobile.settings.text_size.overridden": "Размер текста в настройках телефона — {percent}%. Вместо него используется размер, выбранный выше.",
 		"mobile.settings.theme.caption_forced": "Всегда {name}",
 		"mobile.settings.theme.caption_system": "Как в системе: {light} и {dark}",
 		"mobile.settings.theme.card_dark": "{name}, тёмная тема",
@@ -5428,6 +5900,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.back": "واپس",
 		"mobile.common.cancel": "منسوخ کریں",
 		"mobile.common.done": "ہو گیا",
+		"mobile.common.not_found.action": "سیشنز میں واپس جائیں",
+		"mobile.common.not_found.headline": "یہ صفحہ موجود نہیں ہے۔",
+		"mobile.common.not_found.next": "جاری رکھنے کے لیے اپنے سیشنز میں واپس جائیں۔",
+		"mobile.common.not_found.title": "صفحہ نہیں ملا",
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
@@ -5480,6 +5956,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
 		"mobile.computers.transport.custom": "آپ کا پتہ",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.wait.nothing_answered": "کوئی جواب نہیں ملا۔",
+		"mobile.computers.wait.nothing_answered_help": "تین منٹ میں نہ کوئی ٹنل فہرست میں آیا، نہ کسی میزبان نے جواب دیا۔ جانچیں کہ کمپیوٹر پر کمانڈ چلی تھی، پھر دوبارہ شروع کریں۔",
+		"mobile.computers.wait.paused": "ایپ پس منظر میں ہونے کے باعث نگرانی رکی ہوئی ہے۔ نگرانی جاری رکھنے کے لیے ایپ دوبارہ کھولیں۔",
+		"mobile.computers.wait.relay_sessions": "اس کا ریلے {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔",
+		"mobile.computers.wait.relay_version": "اس کا ریلے پروٹوکول ورژن {version} کی اطلاع دے رہا ہے۔",
+		"mobile.computers.wait.relay_version_sessions": "اس کا ریلے پروٹوکول ورژن {version} اور {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔",
 		"mobile.home.chip.effort_chosen": "استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.effort_default": "استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ",
 		"mobile.home.chip.effort_default_unnamed": "استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح",
@@ -5678,14 +6160,21 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "نیچے دی گئی بیداریوں کی نگرانی کوئی نہیں کرتا، اس لیے یہ صرف تب چلتی ہیں جب ان کی گفتگو چل رہی ہو۔",
 		"mobile.schedules.tail.failed": "{count} ناکام",
 		"mobile.schedules.truncated": "{family, select, wakes {بیداریوں} other {نگرانیوں}} والی کل {total, plural, one {# گفتگو} other {# گفتگوؤں}} میں سے {shown, plural, one {# دکھائی جا رہی ہے} other {# دکھائی جا رہی ہیں}}۔",
+		"mobile.session.chip.effort_change_failed": "استدلال کی شدت تبدیل نہیں ہو سکی۔",
 		"mobile.session.chip.effort_resume_hint": "کوشش بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
+		"mobile.session.chip.model_change_failed": "ماڈل تبدیل نہیں ہو سکا۔",
 		"mobile.session.chip.model_default": "ڈیفالٹ",
 		"mobile.session.chip.model_resume_hint": "ماڈل بدلنے کے لیے یہ سیشن دوبارہ شروع کریں",
 		"mobile.session.chip.model_unknown": "نامعلوم",
 		"mobile.session.chip.model_unrecorded_hint": "اس سیشن نے کوئی ماڈل درج نہیں کیا",
 		"mobile.session.composer.not_sent_storage": "نہیں بھیجا گیا۔ دوبارہ کوشش کے لیے یہ پیغام محفوظ طریقے سے محفوظ نہیں ہو سکا۔ آپ کا متن اور تصاویر یہیں ہیں۔ دوبارہ کوشش کریں۔",
+		"mobile.session.composer.retained_instruction": "ممکن ہے پچھلی ہدایت پہنچ چکی ہو۔ موجودہ مسودہ بھیجنے سے پہلے پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔",
 		"mobile.session.composer.retry_not_sent_storage": "دوبارہ بھیجنے کی یہ کوشش نہیں بھیجی گئی۔ پچھلی ہدایت کو محفوظ طریقے سے دوبارہ بھیجنے کی تیاری نہیں ہو سکی۔ پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔ آپ کا موجودہ مسودہ نہیں بھیجا گیا۔",
 		"mobile.session.conversation_details": "گفتگو کی تفصیلات",
+		"mobile.session.empty.headline": "یہاں ابھی کچھ نہیں۔",
+		"mobile.session.empty.next": "نیچے پہلا پیغام بھیجیں۔",
+		"mobile.session.find.hint": "اس ڈیوائس پر لوڈ شدہ ٹرانسکرپٹ میں پیغامات تلاش کرتا ہے",
+		"mobile.session.find.label": "اس گفتگو میں تلاش کریں",
 		"mobile.session.highlights.sound_pause": "{title} روکیں",
 		"mobile.session.highlights.sound_play": "{title} چلائیں",
 		"mobile.session.highlights.sound_refused": "نہیں چلایا جا سکا: {reason}",
@@ -5709,6 +6198,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "پہلے کے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.session.history.refresh_failed": "تازہ ترین پیغامات لوڈ نہیں ہو سکے۔",
 		"mobile.session.history.stalled": "تاریخچے کے پہلے کے پیغامات لوڈ ہونا رک گئے۔ دوبارہ کوشش کریں، یا یہ گفتگو دوبارہ کھولیں۔",
+		"mobile.session.not_connected.headline": "یہ سیشن ابھی منسلک نہیں ہے۔",
+		"mobile.session.not_connected.next": "کمپیوٹر منسلک ہونے کے بعد اسے سیشن کی فہرست سے کھولیں۔",
 		"mobile.session.pending_echo.earlier_not_sent": "آپ کا پچھلا پیغام نہیں بھیجا گیا ({reason})۔ اسے واپس لانے کے لیے اوپر ٹیپ کریں۔",
 		"mobile.session.pending_echo.earlier_went_through": "آپ کا پچھلا پیغام چلا گیا۔ نیچے والا متن ابھی نہیں بھیجا گیا۔",
 		"mobile.session.pending_echo.images": "{count, plural, one {# تصویر منسلک} other {# تصاویر منسلک}}",
@@ -5723,8 +6214,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "ماڈل",
 		"mobile.session.sheet_title.status": "کام اور ایجنٹس",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
+		"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
+		"mobile.session.subagent.prompt_label": "پرامپٹ",
+		"mobile.session.subagent.result_label": "نتیجہ",
+		"mobile.session.subagent.screen_title": "ذیلی ایجنٹ",
+		"mobile.session.subagent.unavailable_headline": "یہ ذیلی ایجنٹ اب دستیاب نہیں ہے۔",
+		"mobile.session.subagent.unavailable_next": "اس کا ٹرانسکرپٹ محفوظ نہیں رکھا گیا، یا کمپیوٹر جواب نہیں دے رہا۔",
 		"mobile.session.subagent_open": "{agent} کھولیں",
 		"mobile.session.subagent_open_short": "کھولیں",
+		"mobile.session.subagents_hint": "ذیلی ایجنٹس دکھائیں",
 		"mobile.session_health.control_hint": "بتاتا ہے کہ اس حالت کا مطلب کیا ہے اور اب بھیجنے پر کیا ہوگا",
 		"mobile.session_health.ended_placeholder": "بھیجنے پر ہوم فولڈر میں کھلے گا…",
 		"mobile.session_health.menu_hint": "سیشن مینو کھولتا ہے",
@@ -5736,7 +6234,34 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
 		"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 		"mobile.session_health.still_reopening": "اب بھی کھل رہا ہے — ابھی تک تیار نہیں ہوا۔",
+		"mobile.settings.about.blurb": "ایجنٹ سیشنز آپ کے ریلے سے منسلک ہوتے ہیں۔ Team Bridge کے پیغامات اور اطلاعات کی رجسٹریشن براہ راست Radient سے منسلک ہوتے ہیں۔ Local Operator اوپن سورس ہے (MIT)۔",
+		"mobile.settings.about.version": "ورژن",
+		"mobile.settings.account.delete": "اپنا Radient اکاؤنٹ حذف کریں",
+		"mobile.settings.account.delete_help": "اکاؤنٹ براؤزر میں Radient کنسول سے حذف ہوتا ہے — یہ ایپ آپ کے لیے ایسا نہیں کر سکتی۔ اکاؤنٹ حذف کرنے سے اس کے تمام ٹنلز بھی حذف ہو جاتے ہیں۔ آپ کے کمپیوٹر پر موجود سیشنز متاثر نہیں ہوتے۔",
+		"mobile.settings.account.signed_in": "سائن ان شدہ",
+		"mobile.settings.connection.computers": "کمپیوٹرز",
+		"mobile.settings.connection.refresh": "تازہ کریں",
+		"mobile.settings.connection.status": "حالت",
+		"mobile.settings.connection.use": "استعمال کریں",
+		"mobile.settings.diagnostics.last_error": "آخری خرابی",
+		"mobile.settings.diagnostics.none": "کوئی نہیں",
+		"mobile.settings.diagnostics.privacy_note": "ان سطروں میں کبھی ٹوکن، پاس ورڈ یا سیشن کا مواد شامل نہیں ہوتا۔",
+		"mobile.settings.diagnostics.route": "راستہ",
+		"mobile.settings.diagnostics.route_direct": "براہ راست ریلے",
+		"mobile.settings.diagnostics.route_radient": "Radient ٹنل",
+		"mobile.settings.diagnostics.stream": "اسٹریم",
+		"mobile.settings.screen_title": "ترتیبات",
+		"mobile.settings.section.about": "ایپ کے بارے میں",
+		"mobile.settings.section.appearance": "ظاہری شکل",
+		"mobile.settings.section.connection": "کنکشن",
+		"mobile.settings.section.diagnostics": "تشخیص",
+		"mobile.settings.sign_out.body": "اس سے کنٹرول پلین پر سائن ان کا سیشن ختم ہو جاتا ہے اور اس فون سے بھی اس کی محفوظ معلومات ہٹ جاتی ہیں، اس لیے ٹنل اس فون سے درخواستیں قبول کرنا بند کر دیتا ہے۔ آپ کا کمپیوٹر متاثر نہیں ہوتا۔",
+		"mobile.settings.sign_out.confirm": "سائن آؤٹ کریں",
+		"mobile.settings.sign_out.done": "سائن آؤٹ ہو گیا۔ آپ کے کمپیوٹر پر سائن ان کا سیشن منسوخ کر دیا گیا۔",
+		"mobile.settings.sign_out.title": "سائن آؤٹ کریں؟",
+		"mobile.settings.text_size.following": "اس فون کے متن کا سائز {percent}% ہے۔ ایپ اسی کے مطابق ہے۔",
 		"mobile.settings.text_size.label": "متن کا سائز",
+		"mobile.settings.text_size.overridden": "اس فون کے متن کا سائز {percent}% ہے۔ اوپر منتخب سائز اس کی جگہ استعمال ہو رہا ہے۔",
 		"mobile.settings.theme.caption_forced": "ہمیشہ {name}",
 		"mobile.settings.theme.caption_system": "سسٹم {light} اور {dark} استعمال کرتا ہے",
 		"mobile.settings.theme.card_dark": "{name}، گہرا تھیم",
@@ -6028,6 +6553,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.back": "Quay lại",
 		"mobile.common.cancel": "Hủy",
 		"mobile.common.done": "Xong",
+		"mobile.common.not_found.action": "Về danh sách phiên",
+		"mobile.common.not_found.headline": "Trang đó không tồn tại.",
+		"mobile.common.not_found.next": "Quay lại danh sách phiên để tiếp tục.",
+		"mobile.common.not_found.title": "Không tìm thấy trang",
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
 		"mobile.common.try_again": "Thử lại",
@@ -6053,7 +6582,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.connecting": "đang kết nối",
 		"mobile.computers.billing_help": "Trong bảng điều khiển Radient, mở cài đặt thanh toán của đường hầm này và bật truy cập từ xa.",
 		"mobile.computers.connect_refused.generic": "Máy tính không chấp nhận kết nối. Địa chỉ và mật khẩu của bạn vẫn còn ở đây, hãy kiểm tra lại rồi thử lại.",
-		"mobile.computers.connect_refused.password": "Relay không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
+		"mobile.computers.connect_refused.password": "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
 		"mobile.computers.connect_refused.title": "Không thể kết nối",
 		"mobile.computers.connecting": "Đang kết nối…",
 		"mobile.computers.connection_response": "Phản hồi kết nối",
@@ -6080,6 +6609,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "Chuyển máy tính",
 		"mobile.computers.transport.custom": "Địa chỉ của bạn",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.wait.nothing_answered": "Không có phản hồi.",
+		"mobile.computers.wait.nothing_answered_help": "Đã ba phút mà danh sách vẫn không có đường hầm nào và không máy tính nào phản hồi. Kiểm tra xem lệnh đã chạy trên máy tính chưa, rồi bắt đầu lại.",
+		"mobile.computers.wait.paused": "Tạm dừng khi ứng dụng chạy nền. Mở lại ứng dụng để tiếp tục theo dõi.",
+		"mobile.computers.wait.relay_sessions": "Máy chủ chuyển tiếp trên máy tính báo có {sessions, plural, other {# phiên đang chạy}}.",
+		"mobile.computers.wait.relay_version": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version}.",
+		"mobile.computers.wait.relay_version_sessions": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version} và {sessions, plural, other {# phiên đang chạy}}.",
 		"mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
 		"mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
@@ -6278,14 +6813,21 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.",
 		"mobile.schedules.tail.failed": "{count} thất bại",
 		"mobile.schedules.truncated": "Đang hiện {shown} trên {total} cuộc trò chuyện có {family, select, wakes {lần thức dậy} other {giám sát}}.",
-		"mobile.session.chip.effort_resume_hint": "Tiếp tục phiên này để đổi mức nỗ lực",
+		"mobile.session.chip.effort_change_failed": "Không thể đổi mức suy luận.",
+		"mobile.session.chip.effort_resume_hint": "Tiếp tục phiên này để đổi mức suy luận",
+		"mobile.session.chip.model_change_failed": "Không thể đổi mô hình.",
 		"mobile.session.chip.model_default": "Mặc định",
 		"mobile.session.chip.model_resume_hint": "Tiếp tục phiên này để đổi mô hình",
 		"mobile.session.chip.model_unknown": "Không rõ",
 		"mobile.session.chip.model_unrecorded_hint": "Phiên này chưa ghi lại mô hình nào",
 		"mobile.session.composer.not_sent_storage": "Chưa gửi. Không thể lưu tin nhắn này an toàn để thử lại. Văn bản và hình ảnh của bạn vẫn còn ở đây. Hãy thử lại.",
+		"mobile.session.composer.retained_instruction": "Chỉ dẫn trước đó có thể đã được chuyển đến. Hãy thử gửi lại chỉ dẫn đó trước khi gửi bản nháp hiện tại.",
 		"mobile.session.composer.retry_not_sent_storage": "Lần thử gửi lại này chưa được gửi đi. Không thể chuẩn bị an toàn để gửi lại chỉ dẫn trước đó. Hãy thử gửi lại chỉ dẫn trước đó. Bản nháp hiện tại của bạn chưa được gửi.",
 		"mobile.session.conversation_details": "Chi tiết cuộc trò chuyện",
+		"mobile.session.empty.headline": "Chưa có gì ở đây.",
+		"mobile.session.empty.next": "Gửi tin nhắn đầu tiên bên dưới.",
+		"mobile.session.find.hint": "Tìm tin nhắn trong bản ghi đã tải trên thiết bị này",
+		"mobile.session.find.label": "Tìm kiếm trong cuộc trò chuyện này",
 		"mobile.session.highlights.sound_pause": "Tạm dừng {title}",
 		"mobile.session.highlights.sound_play": "Phát {title}",
 		"mobile.session.highlights.sound_refused": "Không thể phát: {reason}",
@@ -6309,6 +6851,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "Đang tải tin nhắn trước đó…",
 		"mobile.session.history.refresh_failed": "Không tải được các tin nhắn mới nhất.",
 		"mobile.session.history.stalled": "Tin nhắn trước đó đã ngừng tải. Hãy thử lại hoặc mở lại cuộc trò chuyện này.",
+		"mobile.session.not_connected.headline": "Phiên này chưa được kết nối.",
+		"mobile.session.not_connected.next": "Sau khi kết nối máy tính, mở lại từ danh sách phiên.",
 		"mobile.session.pending_echo.earlier_not_sent": "Tin nhắn trước của bạn chưa được gửi ({reason}). Chạm vào nó ở trên để đưa lại.",
 		"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
 		"mobile.session.pending_echo.images": "{count, plural, other {đã đính kèm # hình ảnh}}",
@@ -6323,8 +6867,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Mô hình",
 		"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
+		"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
+		"mobile.session.subagent.prompt_label": "prompt",
+		"mobile.session.subagent.result_label": "kết quả",
+		"mobile.session.subagent.screen_title": "Tác nhân con",
+		"mobile.session.subagent.unavailable_headline": "Tác nhân con này không còn khả dụng.",
+		"mobile.session.subagent.unavailable_next": "Bản ghi không được lưu giữ hoặc máy tính không phản hồi.",
 		"mobile.session.subagent_open": "Mở {agent}",
 		"mobile.session.subagent_open_short": "mở",
+		"mobile.session.subagents_hint": "Hiện các tác nhân con",
 		"mobile.session_health.control_hint": "Cho biết trạng thái này nghĩa là gì và lần gửi tiếp theo sẽ ra sao",
 		"mobile.session_health.ended_placeholder": "Gửi để mở lại trong thư mục home…",
 		"mobile.session_health.menu_hint": "Mở menu phiên",
@@ -6336,7 +6887,34 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "Vừa rồi không mở lại được phiên này. Hãy thử lại.",
 		"mobile.session_health.resume_refused_title": "Không thể mở lại",
 		"mobile.session_health.still_reopening": "Vẫn đang mở lại — phiên chưa lên.",
+		"mobile.settings.about.blurb": "Local Operator là phần mềm mã nguồn mở (MIT). Các phiên tác nhân kết nối với máy chủ chuyển tiếp của bạn. Tin nhắn Team Bridge và việc đăng ký nhận thông báo kết nối trực tiếp với Radient.",
+		"mobile.settings.about.version": "Phiên bản",
+		"mobile.settings.account.delete": "Xóa tài khoản Radient của tôi",
+		"mobile.settings.account.delete_help": "Việc xóa tài khoản được thực hiện trong bảng điều khiển Radient trên trình duyệt — ứng dụng này không thể xóa giúp bạn. Thao tác này xóa tài khoản và mọi đường hầm thuộc tài khoản đó. Các phiên trên máy tính không bị ảnh hưởng.",
+		"mobile.settings.account.signed_in": "Đã đăng nhập",
+		"mobile.settings.connection.computers": "Máy tính",
+		"mobile.settings.connection.refresh": "Làm mới",
+		"mobile.settings.connection.status": "Trạng thái",
+		"mobile.settings.connection.use": "Dùng",
+		"mobile.settings.diagnostics.last_error": "Lỗi gần nhất",
+		"mobile.settings.diagnostics.none": "Không có",
+		"mobile.settings.diagnostics.privacy_note": "Các dòng này không bao giờ chứa token, mật khẩu hay nội dung phiên.",
+		"mobile.settings.diagnostics.route": "Tuyến kết nối",
+		"mobile.settings.diagnostics.route_direct": "Máy chủ chuyển tiếp trực tiếp",
+		"mobile.settings.diagnostics.route_radient": "Đường hầm Radient",
+		"mobile.settings.diagnostics.stream": "Luồng",
+		"mobile.settings.screen_title": "Cài đặt",
+		"mobile.settings.section.about": "Giới thiệu",
+		"mobile.settings.section.appearance": "Giao diện",
+		"mobile.settings.section.connection": "Kết nối",
+		"mobile.settings.section.diagnostics": "Chẩn đoán",
+		"mobile.settings.sign_out.body": "Thao tác này kết thúc phiên đăng nhập với lớp điều khiển và xóa thông tin phiên đó khỏi điện thoại, nên đường hầm sẽ ngừng nhận yêu cầu từ điện thoại này. Máy tính không bị ảnh hưởng.",
+		"mobile.settings.sign_out.confirm": "Đăng xuất",
+		"mobile.settings.sign_out.done": "Đã đăng xuất. Phiên đăng nhập đã bị thu hồi trên máy tính.",
+		"mobile.settings.sign_out.title": "Đăng xuất?",
+		"mobile.settings.text_size.following": "Cỡ chữ của điện thoại này là {percent}%. Đang dùng cỡ chữ đó.",
 		"mobile.settings.text_size.label": "Cỡ chữ",
+		"mobile.settings.text_size.overridden": "Cỡ chữ của điện thoại này là {percent}%. Cỡ chữ đặt ở trên thay thế cỡ chữ này.",
 		"mobile.settings.theme.caption_forced": "Luôn dùng {name}",
 		"mobile.settings.theme.caption_system": "Hệ thống dùng {light} và {dark}",
 		"mobile.settings.theme.card_dark": "{name}, giao diện tối",
@@ -6628,6 +7206,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.back": "返回",
 		"mobile.common.cancel": "取消",
 		"mobile.common.done": "完成",
+		"mobile.common.not_found.action": "返回会话列表",
+		"mobile.common.not_found.headline": "此页面不存在。",
+		"mobile.common.not_found.next": "返回会话列表即可继续。",
+		"mobile.common.not_found.title": "找不到页面",
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
 		"mobile.common.try_again": "重试",
@@ -6680,6 +7262,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.switch": "切换电脑",
 		"mobile.computers.transport.custom": "你的地址",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.wait.nothing_answered": "没有响应。",
+		"mobile.computers.wait.nothing_answered_help": "三分钟内没有出现任何隧道，电脑也没有响应。确认命令已在电脑上运行，然后重新开始。",
+		"mobile.computers.wait.paused": "应用在后台时已暂停。重新打开应用以继续查看。",
+		"mobile.computers.wait.relay_sessions": "它的中继报告：{sessions, plural, other {# 个会话正在运行}}。",
+		"mobile.computers.wait.relay_version": "它的中继报告：协议版本为{version}。",
+		"mobile.computers.wait.relay_version_sessions": "它的中继报告：协议版本为{version}，{sessions, plural, other {# 个会话正在运行}}。",
 		"mobile.home.chip.effort_chosen": "推理强度，{effort}，已为此对话选择",
 		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
 		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
@@ -6878,14 +7466,21 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "以下唤醒没有监督者，因此仅在其对话运行时触发。",
 		"mobile.schedules.tail.failed": "{count}次失败",
 		"mobile.schedules.truncated": "显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。",
+		"mobile.session.chip.effort_change_failed": "无法更改推理强度。",
 		"mobile.session.chip.effort_resume_hint": "恢复此会话以更改推理强度",
+		"mobile.session.chip.model_change_failed": "无法更改模型。",
 		"mobile.session.chip.model_default": "默认",
 		"mobile.session.chip.model_resume_hint": "恢复此会话以更改模型",
 		"mobile.session.chip.model_unknown": "未知",
 		"mobile.session.chip.model_unrecorded_hint": "此会话未记录模型",
 		"mobile.session.composer.not_sent_storage": "未发送。无法安全保存此消息以便重试。文字和图片仍保留在这里。请重试。",
+		"mobile.session.composer.retained_instruction": "之前的指令可能已送达。先重试之前的指令，再发送当前草稿。",
 		"mobile.session.composer.retry_not_sent_storage": "本次重试未发送。无法安全地准备重试之前的指令。请重试之前的指令。你当前的草稿尚未发送。",
 		"mobile.session.conversation_details": "对话详情",
+		"mobile.session.empty.headline": "暂无消息。",
+		"mobile.session.empty.next": "在下方发送第一条消息。",
+		"mobile.session.find.hint": "在已加载到此设备的会话记录中搜索消息",
+		"mobile.session.find.label": "搜索此对话",
 		"mobile.session.highlights.sound_pause": "暂停{title}",
 		"mobile.session.highlights.sound_play": "播放{title}",
 		"mobile.session.highlights.sound_refused": "无法播放：{reason}",
@@ -6909,6 +7504,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.history.loading": "正在加载更早的消息…",
 		"mobile.session.history.refresh_failed": "无法加载最新的消息。",
 		"mobile.session.history.stalled": "无法继续加载更早的消息。请重试或重新打开此对话。",
+		"mobile.session.not_connected.headline": "此会话尚未连接。",
+		"mobile.session.not_connected.next": "连接电脑后，从会话列表中打开此会话。",
 		"mobile.session.pending_echo.earlier_not_sent": "你之前的消息未发送（{reason}）。轻点上方的消息即可放回。",
 		"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",
 		"mobile.session.pending_echo.images": "{count, plural, other {已附加 # 张图片}}",
@@ -6923,8 +7520,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "模型",
 		"mobile.session.sheet_title.status": "任务和智能体",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
+		"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",
+		"mobile.session.subagent.prompt_label": "提示词",
+		"mobile.session.subagent.result_label": "结果",
+		"mobile.session.subagent.screen_title": "子智能体",
+		"mobile.session.subagent.unavailable_headline": "此子智能体已不可用。",
+		"mobile.session.subagent.unavailable_next": "其会话记录未保留，或电脑没有响应。",
 		"mobile.session.subagent_open": "打开{agent}",
 		"mobile.session.subagent_open_short": "打开",
+		"mobile.session.subagents_hint": "显示子智能体",
 		"mobile.session_health.control_hint": "说明此状态的含义，以及现在发送会怎样",
 		"mobile.session_health.ended_placeholder": "发送即可重新打开……",
 		"mobile.session_health.menu_hint": "打开会话菜单",
@@ -6936,7 +7540,34 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
 		"mobile.session_health.resume_refused_title": "无法恢复",
 		"mobile.session_health.still_reopening": "仍在重新打开——尚未就绪。",
+		"mobile.settings.about.blurb": "Local Operator是开源软件（MIT）。智能体会话连接到你的中继。Team Bridge消息和通知注册直接连接到Radient。",
+		"mobile.settings.about.version": "版本",
+		"mobile.settings.account.delete": "删除我的Radient账户",
+		"mobile.settings.account.delete_help": "删除账户需在浏览器中的Radient控制台操作，本应用无法代为删除。此操作会删除账户及其所有隧道，不会影响电脑上的会话。",
+		"mobile.settings.account.signed_in": "已登录",
+		"mobile.settings.connection.computers": "电脑",
+		"mobile.settings.connection.refresh": "刷新",
+		"mobile.settings.connection.status": "状态",
+		"mobile.settings.connection.use": "切换",
+		"mobile.settings.diagnostics.last_error": "最近错误",
+		"mobile.settings.diagnostics.none": "无",
+		"mobile.settings.diagnostics.privacy_note": "这些信息绝不包含令牌、密码或会话内容。",
+		"mobile.settings.diagnostics.route": "连接路径",
+		"mobile.settings.diagnostics.route_direct": "直连中继",
+		"mobile.settings.diagnostics.route_radient": "Radient隧道",
+		"mobile.settings.diagnostics.stream": "数据流",
+		"mobile.settings.screen_title": "设置",
+		"mobile.settings.section.about": "关于",
+		"mobile.settings.section.appearance": "外观",
+		"mobile.settings.section.connection": "连接",
+		"mobile.settings.section.diagnostics": "诊断",
+		"mobile.settings.sign_out.body": "这会结束控制平面上的登录会话，并清除此手机上保存的登录信息，隧道将不再接受此手机的请求。不会影响你的电脑。",
+		"mobile.settings.sign_out.confirm": "退出登录",
+		"mobile.settings.sign_out.done": "已退出登录。已在你的电脑上撤销此手机的登录会话。",
+		"mobile.settings.sign_out.title": "退出登录？",
+		"mobile.settings.text_size.following": "此手机的系统文字大小为{percent}%。当前跟随系统。",
 		"mobile.settings.text_size.label": "文字大小",
+		"mobile.settings.text_size.overridden": "此手机的系统文字大小为{percent}%。当前使用上方设置。",
 		"mobile.settings.theme.caption_forced": "始终使用 {name}",
 		"mobile.settings.theme.caption_system": "跟随系统时使用 {light} 和 {dark}",
 		"mobile.settings.theme.card_dark": "{name}，深色主题",

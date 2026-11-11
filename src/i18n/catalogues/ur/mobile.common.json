@@ -4,5 +4,9 @@
 	"mobile.common.done": "ہو گیا",
 	"mobile.common.save": "محفوظ کریں",
 	"mobile.common.send": "بھیجیں",
-	"mobile.common.try_again": "دوبارہ کوشش کریں"
+	"mobile.common.try_again": "دوبارہ کوشش کریں",
+	"mobile.common.not_found.title": "صفحہ نہیں ملا",
+	"mobile.common.not_found.headline": "یہ صفحہ موجود نہیں ہے۔",
+	"mobile.common.not_found.next": "جاری رکھنے کے لیے اپنے سیشنز میں واپس جائیں۔",
+	"mobile.common.not_found.action": "سیشنز میں واپس جائیں"
 }

@@ -1,3 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,7 +13,7 @@ import {
 	unaccountable,
 	validateGrowth,
 } from "./ratchet.ts";
-import { scanSource } from "./scan-strings.ts";
+import { scanSource, scanTree } from "./scan-strings.ts";
 
 /**
  * The scanner and the ratchet, on inputs small enough to read.
@@ -237,5 +241,59 @@ describe("the baseline's growth check", () => {
 			"a.tsx",
 			"b.tsx",
 		]);
+	});
+});
+
+describe("the tree scan covers app/ routes", () => {
+	/* WHY: Expo Router screens live under `app/`, outside `src/`. Before the scan
+	 * walked it, an unkeyed EmptyState headline in a route passed the ratchet. The
+	 * negative control is the first case: the same literal in app/ must come back
+	 * as a finding that `ratchet` reports as added, which is what fails the check. */
+	const withTree = (
+		files: Record<string, string>,
+		run: (root: string) => void,
+	) => {
+		const root = mkdtempSync(join(tmpdir(), "scan-app-"));
+		try {
+			for (const [name, body] of Object.entries(files)) {
+				mkdirSync(join(root, name, ".."), { recursive: true });
+				writeFileSync(join(root, name), body);
+			}
+			run(root);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	};
+
+	it("detects an unkeyed literal in an app/ route and the ratchet fails it", () => {
+		withTree(
+			{
+				"app/example.tsx":
+					'export default () => <EmptyState headline="Nothing here yet." />;\n',
+			},
+			(root) => {
+				const findings = scanTree(root);
+				expect(findings.map((f) => [f.file, f.text])).toEqual([
+					["app/example.tsx", "Nothing here yet."],
+				]);
+				expect(ratchet([], findings).added).toHaveLength(1);
+			},
+		);
+	});
+
+	it("is clean once the route renders the literal through t()", () => {
+		withTree(
+			{
+				"app/example.tsx":
+					'export default () => <EmptyState headline={t("mobile.session.empty.headline")} />;\n',
+			},
+			(root) => expect(scanTree(root)).toEqual([]),
+		);
+	});
+
+	it("still scans a tree that has no app/ directory", () => {
+		withTree({ "src/a.tsx": "export const a = 1;\n" }, (root) =>
+			expect(scanTree(root)).toEqual([]),
+		);
 	});
 });

@@ -1,5 +1,6 @@
 import { useRouter } from "expo-router";
 
+import { t } from "@/i18n";
 import { CONTROL, EMPTY, SCREEN } from "@/ui/a11y";
 import { EmptyState, Screen } from "@/ui/components";
 
@@ -24,12 +25,12 @@ import { EmptyState, Screen } from "@/ui/components";
 export default function NotFound() {
 	const router = useRouter();
 	return (
-		<Screen title="Page not found" testID={SCREEN.notFound}>
+		<Screen title={t("mobile.common.not_found.title")} testID={SCREEN.notFound}>
 			<EmptyState
-				headline="That page does not exist."
-				next="Go back to your sessions to carry on."
+				headline={t("mobile.common.not_found.headline")}
+				next={t("mobile.common.not_found.next")}
 				action={{
-					label: "Back to sessions",
+					label: t("mobile.common.not_found.action"),
 					onPress: () => router.replace("/"),
 					testID: CONTROL.notFoundHome,
 				}}

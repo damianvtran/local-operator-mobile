@@ -45,5 +45,21 @@
 	"mobile.session.history.gap_load_hint": "Загружает сообщения, пропущенные, пока телефон был отключён.",
 	"mobile.session.sheet_title.model": "Модель",
 	"mobile.session.sheet_title.effort": "Усилие",
-	"mobile.session.sheet_title.status": "Задачи и агенты"
+	"mobile.session.sheet_title.status": "Задачи и агенты",
+	"mobile.session.subagent.screen_title": "Субагент",
+	"mobile.session.subagent.prompt_label": "промпт",
+	"mobile.session.subagent.result_label": "результат",
+	"mobile.session.subagent.unavailable_headline": "Этот субагент больше недоступен.",
+	"mobile.session.subagent.unavailable_next": "Его транскрипт не сохранён или компьютер не отвечает.",
+	"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
+	"mobile.session.not_connected.headline": "Эта сессия пока не подключена.",
+	"mobile.session.not_connected.next": "После подключения компьютера откройте её в списке сессий.",
+	"mobile.session.empty.headline": "Здесь пока ничего нет.",
+	"mobile.session.empty.next": "Отправьте первое сообщение ниже.",
+	"mobile.session.subagents_hint": "Показать субагентов",
+	"mobile.session.find.label": "Искать в этой беседе",
+	"mobile.session.find.hint": "Ищет сообщения в транскрипте, загруженном на это устройство",
+	"mobile.session.chip.model_change_failed": "Не удалось сменить модель.",
+	"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
+	"mobile.session.composer.retained_instruction": "Предыдущее указание, возможно, уже доставлено. Отправьте это указание ещё раз, прежде чем отправлять текущий черновик."
 }

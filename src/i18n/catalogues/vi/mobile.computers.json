@@ -27,11 +27,17 @@
 	"mobile.computers.transport.custom": "Địa chỉ của bạn",
 	"mobile.computers.connect_refused.title": "Không thể kết nối",
 	"mobile.computers.connect_refused.generic": "Máy tính không chấp nhận kết nối. Địa chỉ và mật khẩu của bạn vẫn còn ở đây, hãy kiểm tra lại rồi thử lại.",
-	"mobile.computers.connect_refused.password": "Relay không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
+	"mobile.computers.connect_refused.password": "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
 	"mobile.computers.storage_refused.with_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu (mã {code}). Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 	"mobile.computers.storage_refused.no_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu. Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 	"mobile.computers.save_refused.title": "Đã kết nối nhưng chưa lưu",
 	"mobile.computers.save_refused.body": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật. Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
 	"mobile.computers.save_refused.body_with_code": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật (mã {code}). Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
-	"mobile.computers.save_refused.continue": "Tiếp tục"
+	"mobile.computers.save_refused.continue": "Tiếp tục",
+	"mobile.computers.wait.nothing_answered": "Không có phản hồi.",
+	"mobile.computers.wait.nothing_answered_help": "Đã ba phút mà danh sách vẫn không có đường hầm nào và không máy tính nào phản hồi. Kiểm tra xem lệnh đã chạy trên máy tính chưa, rồi bắt đầu lại.",
+	"mobile.computers.wait.paused": "Tạm dừng khi ứng dụng chạy nền. Mở lại ứng dụng để tiếp tục theo dõi.",
+	"mobile.computers.wait.relay_version_sessions": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version} và {sessions, plural, other {# phiên đang chạy}}.",
+	"mobile.computers.wait.relay_version": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version}.",
+	"mobile.computers.wait.relay_sessions": "Máy chủ chuyển tiếp trên máy tính báo có {sessions, plural, other {# phiên đang chạy}}."
 }

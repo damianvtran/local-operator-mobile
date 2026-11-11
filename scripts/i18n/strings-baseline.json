@@ -3,18 +3,6 @@
 	"findings": [
 		{
 			"file": "src/features/auth/computers.tsx",
-			"text": "Nothing answered.",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/auth/computers.tsx",
-			"text": "Paused while the app is in the background. Reopen it to keep watching.",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/auth/computers.tsx",
 			"text": "Refresh",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -43,12 +31,6 @@
 			"owner": "Mobile i18n",
 			"payoff": "Key this literal in the catalogue",
 			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/auth/computers.tsx",
-			"text": "Three minutes with no tunnel listed and no host answering. Check the",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
 			"file": "src/features/auth/computers.tsx",
@@ -1218,103 +1200,6 @@
 		{
 			"file": "src/features/settings/own-tunnel-settings.tsx",
 			"text": "https://your-tunnel.example.com",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "About",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Add a computer",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Appearance",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Computers",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Connection",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Delete my Radient account",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Deleting your account happens in the Radient console, in the browser",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Refresh",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Settings",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Sign out?",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Signed in",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Status",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "This phone",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Use",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/settings/settings.tsx",
-			"text": "Version",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
