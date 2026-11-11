@@ -7,8 +7,9 @@ import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
 	type FieldState,
-	fieldBoxHeight,
+	fieldBoxStyle,
 	fieldClasses,
+	fieldScrollEnabled,
 	fieldScrollsWithContent,
 	TEXTAREA_MAX_PX,
 	webFieldOverflow,
@@ -229,6 +230,10 @@ export const Textarea = ({
 	 *  web `overflow` style. Computing it twice is how a proof can pass while the
 	 *  rendered field still scrolls. */
 	const scrollable = fieldScrollsWithContent(contentFloor, cap);
+	/* The prop itself: web keeps `scrollable`, native scrolls whenever filled,
+	 *  because past the cap iOS sends no content report (`fieldScrollEnabled`). */
+	const empty = value === "";
+	const nativeScroll = fieldScrollEnabled(Platform.OS, scrollable, empty);
 	/* The caller's handle wins: it exists so the home can focus the field, and
 	 *  the internal one is never read — only forwarded to the element. */
 	const resolvedRef = fieldRef ?? inputRef;
@@ -307,13 +312,20 @@ export const Textarea = ({
 						/* The border is part of the painted box (border-box), so the height
 						 *  the content measured must grow by it or the last line is clipped
 						 *  by 2px — S16/create-filled's 100% frame (U-07). */
-						height: fieldBoxHeight(
+						/* Web pins the height from the content report; native only bounds
+						 *  it and lets the text input measure itself, because on iOS's New
+						 *  Architecture that report fires only on a LAYOUT change, so a
+						 *  pinned height never learned of line two (TestFlight 800; the
+						 *  full reasoning is on `fieldBoxStyle`). */
+						...fieldBoxStyle(Platform.OS, {
 							contentFloor,
 							oneLineBox,
 							placeholderFloor,
 							cap,
-						),
-						minHeight: TOUCH_FLOOR,
+							touchFloor: TOUCH_FLOOR,
+							empty,
+							placeholderClamped: placeholderMaxLines !== undefined,
+						}),
 						/* `scrollEnabled` is a NATIVE prop: react-native-web does not turn it
 						 *  into CSS, so `false` left the browser free to paint its own overflow
 						 *  on an empty field at 200 % — the scrollbar and resize glyph the design
@@ -355,7 +367,7 @@ export const Textarea = ({
 					}
 					// The transcript scrolls, not the page: the field clips its own
 					// overflow once it hits the cap.
-					scrollEnabled={scrollable}
+					scrollEnabled={nativeScroll}
 					onContentSizeChange={handleContentSize}
 					accessibilityRole={ROLE.text}
 					accessibilityLabel={label}

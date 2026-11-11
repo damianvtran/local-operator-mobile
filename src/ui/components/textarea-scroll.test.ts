@@ -37,7 +37,12 @@ describe("textarea scroll decision", () => {
 		expect(source).toContain(
 			"const scrollable = fieldScrollsWithContent(contentFloor, cap)",
 		);
-		expect(source).toContain("scrollEnabled={scrollable}");
+		// The web branch of `fieldScrollEnabled` returns `scrollable` unchanged;
+		// native has its own rule (textarea-native-growth.test.ts).
+		expect(source).toContain(
+			"const nativeScroll = fieldScrollEnabled(Platform.OS, scrollable, empty)",
+		);
+		expect(source).toContain("scrollEnabled={nativeScroll}");
 		expect(source).not.toContain(
 			"scrollEnabled={fieldScrollsWithContent(contentFloor, cap)}",
 		);

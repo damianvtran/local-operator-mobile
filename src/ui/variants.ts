@@ -276,6 +276,83 @@ export const fieldBoxHeight = (
 	Math.min(Math.max(contentFloor, oneLineBox, placeholderFloor), cap) +
 	FIELD_BORDER_Y;
 
+/**
+ * The field's height STYLE, per platform: who decides how tall the box is.
+ *
+ * WEB pins `height` from the content report (`fieldBoxHeight`). A `<textarea>`
+ * has no content-driven height of its own, and react-native-web reports
+ * `scrollHeight` on every input, so the report is live and the pin follows it.
+ *
+ * NATIVE must NOT pin it (TestFlight 800: the composer stayed one line on iOS
+ * and the draft ran on out of sight below it, on both the new-conversation and
+ * the agent-chat composer). On the New Architecture iOS emits
+ * `onContentSizeChange` from ONE place only — `updateLayoutMetrics` in React
+ * Native's `RCTTextInputComponentView.mm` — so the event fires only when the
+ * field's LAYOUT changes. A `height` derived from that event is a closed loop:
+ * the pinned height keeps the layout still, so a second line never reports,
+ * so the height never moves. Web never showed it because its report does not
+ * depend on layout. Instead native leaves the height to the text input's own
+ * Yoga measure (`BaseTextInputShadowNode::measureContent`, which measures the
+ * natively typed text, or the placeholder while empty, at the box's width) and
+ * only bounds it: the same floor and the same cap `fieldBoxHeight` resolves,
+ * as `minHeight`/`maxHeight`. An EMPTY field whose placeholder is held to a
+ * line budget (`placeholderClamped`, the composer's §2.5 D1) is held AT its
+ * floor, because the native measure of a wrapped placeholder would otherwise
+ * grow the resting box the budget exists to keep still.
+ *
+ * `touchFloor` is the platform's touch minimum; it wins over the cap exactly as
+ * the old `minHeight` key did (Yoga resolves min over max).
+ */
+export const fieldBoxStyle = (
+	platform: string,
+	box: {
+		contentFloor: number;
+		oneLineBox: number;
+		placeholderFloor: number;
+		cap: number;
+		touchFloor: number;
+		empty: boolean;
+		placeholderClamped: boolean;
+	},
+): { height?: number; minHeight: number; maxHeight?: number } => {
+	if (platform === "web") {
+		return {
+			height: fieldBoxHeight(
+				box.contentFloor,
+				box.oneLineBox,
+				box.placeholderFloor,
+				box.cap,
+			),
+			minHeight: box.touchFloor,
+		};
+	}
+	const floor =
+		Math.min(Math.max(box.oneLineBox, box.placeholderFloor), box.cap) +
+		FIELD_BORDER_Y;
+	return {
+		minHeight: Math.max(box.touchFloor, floor),
+		maxHeight:
+			box.empty && box.placeholderClamped ? floor : box.cap + FIELD_BORDER_Y,
+	};
+};
+
+/**
+ * Whether the field may scroll. Web keeps the content-report decision
+ * (`fieldScrollsWithContent`) because it also drives the `overflow` CSS there.
+ * Native cannot use it: past the cap the box stops moving, so — for the reason
+ * `fieldBoxStyle` gives — no further content report arrives and a decision fed
+ * by it would stay `false` with line seven unreachable. A filled native field
+ * therefore always scrolls (React Native's own multiline default); it has
+ * nothing to scroll until it is at the cap, because below it the box IS the
+ * content. An empty one never does, so the resting field cannot scroll its
+ * placeholder (the design round's empty-field invariant).
+ */
+export const fieldScrollEnabled = (
+	platform: string,
+	scrollable: boolean,
+	empty: boolean,
+): boolean => (platform === "web" ? scrollable : !empty);
+
 export const fieldClasses = (
 	state: FieldState = "rest",
 	options: { inComposer?: boolean } = {},

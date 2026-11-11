@@ -333,7 +333,12 @@ describe("web field overflow", () => {
 		);
 		expect(source).toContain("webFieldStyle(Platform.OS, scrollable)");
 		expect(source).toContain("webFieldResize(platform)");
-		expect(source).toContain("scrollEnabled={scrollable}");
+		// Web still reads `scrollable`; native reads `!empty` (see
+		// `fieldScrollEnabled` and textarea-native-growth.test.ts).
+		expect(source).toContain(
+			"const nativeScroll = fieldScrollEnabled(Platform.OS, scrollable, empty)",
+		);
+		expect(source).toContain("scrollEnabled={nativeScroll}");
 	});
 });
 
