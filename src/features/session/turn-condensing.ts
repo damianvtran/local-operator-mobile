@@ -76,14 +76,25 @@
 import type { TranscriptEntry } from "@/contracts";
 import { entryComplete } from "@/features/session/completion-visibility";
 import {
+	buildFoldRun,
+	type FoldRun,
+	isFoldableToolEntry,
+	isFoldReceiptEntry,
+	isToolActionFailed,
+	latchFoldedIds,
+	MEDIA_ARTIFACT_TOOLS,
+} from "@/features/session/fold-model";
+import {
 	bridgeReceiptLabel,
+	canonicalRowKey,
 	hubLabel,
 	isBridgeReceipt,
 	isHubReceipt,
 	peerLabel,
 } from "@/features/session/projection";
-import { countLabel, elapsedLabel } from "@/lib/format";
-import { quietGroupId, turnBarId } from "@/ui/a11y";
+import { t } from "@/i18n";
+import { elapsedLabel } from "@/lib/format";
+import { foldBarId, quietGroupId, turnBarId } from "@/ui/a11y";
 
 /* -------------------------------------------------------------------- turns */
 
@@ -99,20 +110,63 @@ export interface TranscriptTurn {
 	end: number;
 }
 
+const HARNESS_PREAMBLE_TYPES: ReadonlySet<string> = new Set([
+	"system_prefix",
+	"selected_model",
+	"session_mcp_unavailable",
+]);
+
+const isHarnessPreambleNotice = (entry: TranscriptEntry): boolean => {
+	if (entry.kind !== "notice") return false;
+	const customType = entry.custom_type || entry.details.custom_kind || "";
+	return HARNESS_PREAMBLE_TYPES.has(customType);
+};
+
+const hasExplicitCallsTools = (entry: TranscriptEntry): boolean =>
+	(entry as TranscriptEntry & { calls_tools?: boolean }).calls_tools === true;
+
+const isExplicitTerminalNotice = (entry: TranscriptEntry): boolean => {
+	if (entry.kind !== "notice") return false;
+	if ((entry as TranscriptEntry & { terminal?: boolean }).terminal === true) {
+		return true;
+	}
+	const customType = entry.custom_type || entry.details.custom_kind || "";
+	return (
+		customType === "session_incident" || entry.details.severity === "error"
+	);
+};
+
+const isQuietCloseEntry = (entry: TranscriptEntry): boolean =>
+	entry.kind === "tool" &&
+	entry.tool_name.trim().toLowerCase() === "no_reply" &&
+	entry.tool_state === "done" &&
+	!entry.error;
+
 /**
- * Split the transcript into turns. A `user` row opens a turn; every other row —
- * steer, assistant, tool, receipt, statement — belongs to the open turn. Rows
- * before the first user row form one head-cut segment.
+ * Split the transcript into turns.
+ *
+ * A `user` row opens a turn EXCEPT when a durable mid-turn steer arrives after
+ * an assistant row that explicitly declared `calls_tools === true` and before
+ * any terminal notice or quiet close settled that run (matching Relay `walkTurns`).
+ * Harness preamble notices (`system_prefix`, `selected_model`,
+ * `session_mcp_unavailable`) before any work has run never trap the first user
+ * prompt inside a head-cut segment.
  */
 export function transcriptTurns(
 	entries: readonly TranscriptEntry[],
 ): TranscriptTurn[] {
 	const turns: TranscriptTurn[] = [];
 	let open: TranscriptTurn | null = null;
+	let awaitingToolCall = false;
+
 	for (let index = 0; index < entries.length; index += 1) {
 		const entry = entries[index];
 		if (entry === undefined) continue;
 		if (entry.kind === "user") {
+			if (open !== null && awaitingToolCall) {
+				open.end = index;
+				continue;
+			}
 			open = {
 				key: entry.id,
 				opensWithUserRow: true,
@@ -120,6 +174,7 @@ export function transcriptTurns(
 				end: index,
 			};
 			turns.push(open);
+			awaitingToolCall = false;
 			continue;
 		}
 		if (open === null) {
@@ -130,19 +185,25 @@ export function transcriptTurns(
 				end: index,
 			};
 			turns.push(open);
-			continue;
+		} else {
+			open.end = index;
 		}
-		open.end = index;
+
+		if (isHarnessPreambleNotice(entry)) continue;
+		if (entry.kind === "assistant") {
+			awaitingToolCall = hasExplicitCallsTools(entry);
+		} else if (isExplicitTerminalNotice(entry) || isQuietCloseEntry(entry)) {
+			awaitingToolCall = false;
+		}
 	}
 	return turns;
 }
 
 /**
- * The row kinds that are STATEMENTS rather than work, for the closing-answer
- * scan: a receipt that arrives after the answer does not un-close the turn, so
- * the scan looks past these to the last row that actually did something. The
- * web client's `isStatementRow` is the same rule against its own kinds; this is
- * that list mapped onto the mobile wire's names.
+ * The row kinds that are STATEMENTS (or transient finished reasoning) rather
+ * than work, for the closing-answer scan: a receipt or completed reasoning trace
+ * after the answer does not un-close the turn, EXCEPT an unhandled error notice
+ * (`severity === "error"` / `session_incident`), which keeps a failed turn open.
  */
 const STATEMENT_KINDS: ReadonlySet<string> = new Set([
 	"notice",
@@ -152,15 +213,40 @@ const STATEMENT_KINDS: ReadonlySet<string> = new Set([
 	"peer_message",
 ]);
 
+function isUnhandledErrorNotice(entry: TranscriptEntry): boolean {
+	if (entry.kind !== "notice") return false;
+	const customType = entry.custom_type || entry.details.custom_kind || "";
+	return (
+		entry.details.severity === "error" || customType === "session_incident"
+	);
+}
+
+/** Rows that own visible media artifacts or error notices stay on screen outside
+ *  the collapsed span even when the surrounding turn condenses. */
+export function staysVisibleOutsideTurnBar(entry: TranscriptEntry): boolean {
+	if (isUnhandledErrorNotice(entry)) return true;
+	if (entry.kind === "compaction") return true;
+	if (entry.kind === "tool") {
+		if (MEDIA_ARTIFACT_TOOLS.has(entry.tool_name.trim().toLowerCase())) {
+			return true;
+		}
+		if (entry.images.length > 0 || (entry.videos?.length ?? 0) > 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
 /**
- * The index of the turn's closing answer, or `null` when the turn has none.
+ * The index of the turn's closing row, or `null` when the turn has none.
  *
- * The closing answer is the last row that paints something the turn did, and it
- * counts only when it is a COMPLETED assistant message with text: an unfinished
- * answer closes no turn (the web's "unfinished answer closes a turn without
- * being an answer"), and an empty one paints nothing. This is the eligibility
- * gate for condensing, so it failing — interrupted, capped, still streaming —
- * resolves to "stays open", never to a bar that would misreport the turn.
+ * Eligible closings:
+ *  - a completed assistant message (`entryComplete`, non-empty text or images,
+ *    and not declaring owed `calls_tools`);
+ *  - a settled `no_reply` quiet-turn close (`isQuietCloseEntry`) when no
+ *    unhandled error notice ended the turn.
+ * Completed `reasoning` traces are skipped like statements; an active streaming
+ * `reasoning` row (`final === false`) blocks condensing so a thinking turn stays open.
  */
 function closingAnswerIndex(
 	entries: readonly TranscriptEntry[],
@@ -169,10 +255,17 @@ function closingAnswerIndex(
 	for (let index = turn.end; index > turn.start; index -= 1) {
 		const entry = entries[index];
 		if (entry === undefined) continue;
+		if (isUnhandledErrorNotice(entry)) return null;
+		if (entry.kind === "reasoning") {
+			if (!entry.final) return null;
+			continue;
+		}
 		if (STATEMENT_KINDS.has(entry.kind)) continue;
+		if (isQuietCloseEntry(entry)) return index + 1;
 		return entry.kind === "assistant" &&
-			entry.text.length > 0 &&
-			entryComplete(entry)
+			(entry.text.length > 0 || entry.images.length > 0) &&
+			entryComplete(entry) &&
+			!hasExplicitCallsTools(entry)
 			? index
 			: null;
 	}
@@ -194,6 +287,12 @@ export interface TurnBarFacts {
 	/** Summed tool seconds behind the bar; under one second renders no clause
 	 *  (the kit's "never a 0s claim" rule, `components.md` § 17). */
 	durationS: number;
+	/** Optional count of genuinely failed tool actions (`tool_state === "failed"`,
+	 *  excluding partial `send` deliveries) so `TurnBar` surfaces `✗` + failure
+	 *  count instead of painting a green `✓ completed` over failed actions. */
+	failed?: number;
+	/** Optional flag when the turn included a mid-turn `steer` or steered user row. */
+	steered?: boolean;
 }
 
 /**
@@ -215,6 +314,22 @@ export interface TurnBarFacts {
 export interface LatchedTurn {
 	facts: TurnBarFacts;
 	hiddenIds: readonly string[];
+	/**
+	 * `canonicalRowKey` of every span row, recorded beside `hiddenIds` because a
+	 * tool row's `id` changes at the stream-to-history handoff (`tc-<call>` →
+	 * `<msg>:<call>`) while its canonical key does not. The continuation
+	 * extension (`extendLatchedTurn`) matches rows by this list, so a row that
+	 * only changed id is never counted twice. Optional: a latch built by an
+	 * older caller (or a test) without it falls back to `hiddenIds`.
+	 */
+	canonicalIds?: readonly string[];
+	/**
+	 * `canonicalRowKey` of the last row BEFORE the closing answer when the latch
+	 * froze. A continuation (a hub reply or wake that resumes the same turn with
+	 * new work and a new answer, U1-1) is detected as "a later closing exists
+	 * after this row"; without it (older latches) the span never extends.
+	 */
+	spanEndKey?: string;
 }
 
 /** One row of the rendered transcript list. A bar's id is the a11y builder's
@@ -222,7 +337,21 @@ export interface LatchedTurn {
  *  testID a flow selects are ONE string rather than three spellings of it. A
  *  group item's id is its builder's (`quiet-group-<key>`) for the same reason. */
 export type TranscriptItem =
-	| { kind: "entry"; id: string; entry: TranscriptEntry }
+	| {
+			kind: "entry";
+			id: string;
+			entry: TranscriptEntry;
+			/** True on an opening `user` row whose turn is currently condensed (`!expanded`),
+			 *  clamping the prompt bubble to 1 headline line until the turn bar opens. */
+			condensed?: boolean;
+			/** True when this `user` row opens a new exchange turn (for `16 pt` turn spacing). */
+			opensTurn?: boolean;
+			/** True on a member row `groupPlan` emitted under an OPEN `QuietGroupBar`.
+			 *  The reader's tap on the group bar already disclosed it, so `foldPlan`
+			 *  must not fold it again behind a second bar over the same rows
+			 *  (R1-3 / U1-2: three taps to read one peer cycle). */
+			inOpenGroup?: boolean;
+	  }
 	| {
 			kind: "bar";
 			id: string;
@@ -235,6 +364,15 @@ export type TranscriptItem =
 			 *  "which turn" must survive the collapse for a screen reader landing
 			 *  on the bar directly. */
 			headline: string;
+	  }
+	| {
+			kind: "fold";
+			id: string;
+			foldKey: string;
+			fold: FoldRun;
+			expanded: boolean;
+			/** True when this fold belongs to the currently active/live turn. */
+			liveTurn: boolean;
 	  }
 	| {
 			kind: "group";
@@ -272,6 +410,12 @@ export interface CondenseInput {
 	expanded: ReadonlySet<string>;
 	/** The latch from the previous pass; see the module's invariant note. */
 	latch: ReadonlyMap<string, LatchedTurn>;
+	/** Whether a turn is currently running (`projection !== null && turnRunning(projection)`).
+	 *  When explicitly `false` (session idle), a finished last turn condenses just like
+	 *  Relay web (`!live`) and latches into `latch` so starting a new turn never
+	 *  un-condenses it. Defaults to `true` when omitted so pure callers without
+	 *  session state preserve the conservative active-tail guard. */
+	live?: boolean;
 }
 
 export interface CondensePlan {
@@ -302,9 +446,36 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 	const items: TranscriptItem[] = [];
 	const views: TurnView[] = [];
 
+	const live = input.live ?? true;
+
 	turns.forEach((turn, index) => {
-		const isActive = index === turns.length - 1;
-		const latchedTurn = latch.get(turn.key);
+		const isNewestTurn = index === turns.length - 1;
+		const isActive = isNewestTurn && live;
+		let latchedTurn = latch.get(turn.key);
+		/*
+		 * CONTINUATION CYCLES EXTEND THE LATCH (U1-1). A turn that condensed at an
+		 * idle moment can be resumed without a new user row: a child's hub reply
+		 * or a wake starts another run (tools, a new answer) inside the SAME turn,
+		 * and a one-frame `!live` dip at a tool boundary latches mid-turn the same
+		 * way. Freezing the first idle snapshot left that later work raw under a
+		 * bar whose count disagreed with a reload of the same transcript. So once
+		 * the turn is settled again (`!isActive`) and its scan finds a closing
+		 * answer strictly AFTER the latched one, the latch grows to cover the
+		 * whole turn. This only ever ADDS rows (invariant 2 holds: a seen bar is
+		 * never withdrawn) and requires the latched span's last row to still be
+		 * in the frame, so a capped window or a transport-cap prefix — which can
+		 * only make the scan find an EARLIER closing or none — never moves it.
+		 * While the continuation is still running, the earlier span stays
+		 * collapsed and the new rows stream visibly beneath it; the bar then says
+		 * only what it hides (no painted "completed", U1-3).
+		 */
+		if (latchedTurn !== undefined && !isActive && turn.opensWithUserRow) {
+			const extended = extendLatchedTurn(entries, turn, latchedTurn);
+			if (extended !== null) {
+				latch.set(turn.key, extended);
+				latchedTurn = extended;
+			}
+		}
 		/*
 		 * THE LATCH OUTRANKS THE FRAME. A latched turn's render must be a pure
 		 * function of the latch for ANY later frame — including the relay's real
@@ -318,7 +489,8 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 		/*
 		 * The span the collapse stands for: for a first condensation, the rows
 		 * between the opening user row and the scanned closing in THIS frame (all
-		 * a first frame can honestly freeze); for a latched turn, the frozen list.
+		 * a first frame can honestly freeze, minus pinned media/error rows); for a
+		 * latched turn, the frozen list.
 		 */
 		const spanIds: readonly string[] =
 			latchedTurn !== undefined
@@ -329,8 +501,8 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 		 * occur (a replacement frame — not an append — that makes a latched turn
 		 * last again): a bar the reader has already seen cannot be withdrawn by a
 		 * frame, because the alternative reinstates exactly the jitter this module
-		 * exists to prevent. Appends never produce this: a turn that was not last
-		 * stays not last while rows only arrive.
+		 * exists to prevent. When `live === false` (session idle), a completed
+		 * newest turn also condenses and latches immediately.
 		 */
 		const condensed =
 			latchedTurn !== undefined ||
@@ -339,12 +511,11 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 				closing !== null &&
 				spanIds.length > 0);
 		if (latchedTurn === undefined && condensed && closing !== null) {
-			latch.set(turn.key, {
-				facts: barFactsFor(entries, turn, closing),
-				hiddenIds: spanIds,
-			});
+			latch.set(turn.key, latchedTurnFor(entries, turn, closing, spanIds));
 		}
 		const facts = latch.get(turn.key)?.facts ?? null;
+		const open = input.expanded.has(turn.key);
+		const isCollapsed = condensed && facts !== null && !open;
 
 		const view: TurnView = {
 			key: turn.key,
@@ -356,11 +527,17 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 
 		const opening = entries[turn.start];
 		if (opening !== undefined) {
-			items.push({ kind: "entry", id: opening.id, entry: opening });
+			const entryItem: Extract<TranscriptItem, { kind: "entry" }> = {
+				kind: "entry",
+				id: opening.id,
+				entry: opening,
+				...(turn.opensWithUserRow && index > 0 ? { opensTurn: true } : {}),
+				...(turn.opensWithUserRow && isCollapsed ? { condensed: true } : {}),
+			};
+			items.push(entryItem);
 			view.itemIds.push(opening.id);
 		}
 
-		const open = input.expanded.has(turn.key);
 		if (view.condensed && facts !== null) {
 			view.bar = facts;
 			view.hiddenIds = spanIds;
@@ -375,18 +552,19 @@ export function condensePlan(input: CondenseInput): CondensePlan {
 					headline: turnHeadline(opening?.text ?? ""),
 				});
 				view.itemIds.push(barId);
-				/*
-				 * The collapse hides exactly its own frozen span; nothing else is
-				 * ever hidden by this turn. The closing-absent frame — the window
-				 * has slid past the span — needs no boundary: the intersection is
-				 * simply empty, the bar stays (its numbers state what the collapse
-				 * stood for), and every row the frame still carries renders. This
-				 * is the whole point: the frame cannot re-decide the collapse.
-				 */
-				const hidden = new Set(spanIds);
+				const hidden = new Set([
+					...spanIds,
+					...(latch.get(turn.key)?.canonicalIds ?? []),
+				]);
 				for (let at = turn.start + 1; at <= turn.end; at += 1) {
 					const row = entries[at];
-					if (row === undefined || hidden.has(row.id)) continue;
+					if (
+						row === undefined ||
+						hidden.has(row.id) ||
+						hidden.has(canonicalRowKey(row))
+					) {
+						continue;
+					}
 					items.push({ kind: "entry", id: row.id, entry: row });
 					view.itemIds.push(row.id);
 				}
@@ -428,53 +606,170 @@ function spanBetween(
 ): readonly string[] {
 	if (closing === null || closing <= turn.start + 1) return [];
 	const ids: string[] = [];
-	for (let at = turn.start + 1; at < closing; at += 1) {
+	const limit = Math.min(closing, turn.end + 1);
+	for (let at = turn.start + 1; at < limit; at += 1) {
 		const row = entries[at];
-		if (row !== undefined) ids.push(row.id);
+		if (row === undefined || staysVisibleOutsideTurnBar(row)) continue;
+		ids.push(row.id);
 	}
 	return ids;
 }
 
-/** The bar's facts for one turn: the tool rows the collapse hides — those
- *  strictly inside the span (rows after the closing answer are statements that
- *  stay visible, so a collapsed turn never has tools there).
- *
- *  `steps` counts TOOL rows; the span itself may also hide non-tool rows (a
- *  steer, a notice), so "N steps" and "the span is N rows long" are two
- *  different quantities by design — the bar states the former, the collapse
- *  hides the latter. */
-function barFactsFor(
+/** The latch record for a span the frame can see: facts, ids, and the
+ *  canonical keys the continuation extension matches by. */
+function latchedTurnFor(
 	entries: readonly TranscriptEntry[],
 	turn: TranscriptTurn,
 	closing: number,
-): TurnBarFacts {
+	spanIds: readonly string[],
+): LatchedTurn {
+	const spanRows = rowsBetween(entries, turn, closing);
+	const last = entries[Math.min(closing, turn.end + 1) - 1];
+	return {
+		facts: factsOverRows(spanRows),
+		hiddenIds: spanIds,
+		canonicalIds: spanRows.map(canonicalRowKey),
+		...(last !== undefined ? { spanEndKey: canonicalRowKey(last) } : {}),
+	};
+}
+
+/**
+ * The latch grown over a continuation cycle, or `null` when the turn has none
+ * (see the U1-1 note in `condensePlan`). Facts are recomputed over the whole
+ * span when every row the latch froze is still in the frame — exactly what a
+ * reload computes; otherwise (the capped window slid past old rows) the new
+ * rows' facts are ADDED to the frozen ones, which is the same sum without
+ * needing rows the wire no longer sends.
+ */
+function extendLatchedTurn(
+	entries: readonly TranscriptEntry[],
+	turn: TranscriptTurn,
+	latched: LatchedTurn,
+): LatchedTurn | null {
+	const endKey = latched.spanEndKey;
+	if (endKey === undefined) return null;
+	let latchedEnd = -1;
+	for (let at = turn.end; at >= turn.start; at -= 1) {
+		const row = entries[at];
+		if (row !== undefined && canonicalRowKey(row) === endKey) {
+			latchedEnd = at;
+			break;
+		}
+	}
+	// The latched closing is `latchedEnd + 1`; nothing after it → no continuation.
+	if (latchedEnd < 0 || latchedEnd + 1 >= turn.end) return null;
+	const closing = closingAnswerIndex(entries, turn);
+	if (closing === null || closing <= latchedEnd + 1) return null;
+
+	const known = new Set(latched.canonicalIds ?? latched.hiddenIds);
+	const isKnown = (row: TranscriptEntry): boolean =>
+		known.has(canonicalRowKey(row)) || latched.hiddenIds.includes(row.id);
+	const spanRows = rowsBetween(entries, turn, closing);
+	const added = spanRows.filter((row) => !isKnown(row));
+	if (added.length === 0) return null;
+	const presentCount = spanRows.length - added.length;
+	const fullyPresent = presentCount >= known.size;
+	const facts = fullyPresent
+		? factsOverRows(spanRows)
+		: addFacts(latched.facts, factsOverRows(added));
+	const hiddenIds = [...latched.hiddenIds, ...added.map((row) => row.id)];
+	const canonicalIds = [
+		...(latched.canonicalIds ?? latched.hiddenIds),
+		...added.map(canonicalRowKey),
+	];
+	const last = entries[Math.min(closing, turn.end + 1) - 1];
+	return {
+		facts,
+		hiddenIds,
+		canonicalIds,
+		...(last !== undefined ? { spanEndKey: canonicalRowKey(last) } : {}),
+	};
+}
+
+function addFacts(a: TurnBarFacts, b: TurnBarFacts): TurnBarFacts {
+	const failed = (a.failed ?? 0) + (b.failed ?? 0);
+	return {
+		steps: a.steps + b.steps,
+		durationS: a.durationS + b.durationS,
+		...(failed > 0 ? { failed } : {}),
+		...(a.steered || b.steered ? { steered: true } : {}),
+	};
+}
+
+/** The span's rows (not ids) — `spanBetween`'s rule, for facts and keys. */
+function rowsBetween(
+	entries: readonly TranscriptEntry[],
+	turn: TranscriptTurn,
+	closing: number,
+): TranscriptEntry[] {
+	const rows: TranscriptEntry[] = [];
+	const limit = Math.min(closing, turn.end + 1);
+	for (let at = turn.start + 1; at < limit; at += 1) {
+		const row = entries[at];
+		if (row === undefined || staysVisibleOutsideTurnBar(row)) continue;
+		rows.push(row);
+	}
+	return rows;
+}
+
+function factsOverRows(rows: readonly TranscriptEntry[]): TurnBarFacts {
 	let steps = 0;
 	let durationS = 0;
-	for (let at = turn.start + 1; at < closing; at += 1) {
-		const entry = entries[at];
-		if (entry?.kind !== "tool") continue;
+	let failed = 0;
+	let steered = false;
+	for (const entry of rows) {
+		if (entry.kind === "steer" || entry.kind === "user") {
+			steered = true;
+			continue;
+		}
+		if (entry.kind !== "tool" || isQuietCloseEntry(entry)) continue;
 		steps += 1;
 		durationS += Math.max(0, entry.elapsed_s);
+		if (isToolActionFailed(entry)) failed += 1;
 	}
-	return { steps, durationS };
+	return {
+		steps,
+		durationS,
+		...(failed > 0 ? { failed } : {}),
+		...(steered ? { steered: true } : {}),
+	};
 }
 
 /* --------------------------------------------------------------------- copy */
 
 /**
- * The bar's visible sentence, as phrases the renderer joins with `·`:
- * `completed · 38 steps · 42s`.
+ * The bar's visible localized phrases (`relay.transcript.turn.*`), joined with
+ * `·`: an optional steered label, the `took` clause (its shape is the locale's
+ * — English reads `Took 42s`, some locales render the duration alone) and the
+ * action count; `Turn condensed` when neither number exists.
  *
- * `completed` is unconditional because a condensed turn is, by construction, a
- * completed one (see the module note) — the clause the requirement names
- * ("turn completion always visible") is answered by the eligibility gate and
- * stated here, not inferred at the render site.
+ * The outcome word `completed` is deliberately NOT painted (U1-3): beside a
+ * red `✗` failure glyph it read as a contradiction, and Relay's `TurnBar`
+ * (`condense-rows.tsx`) paints only the numbers too. Screen readers still hear
+ * it — `barAccessibleName` keeps `completed`, as Relay's `sr-only` span does.
  */
 export function barPhrases(facts: TurnBarFacts): string[] {
-	const phrases = ["completed"];
-	if (facts.steps > 0) phrases.push(countLabel(facts.steps, "step"));
+	const phrases: string[] = [];
+	if (facts.steered) {
+		phrases.push(t("relay.transcript.label.steered"));
+	}
 	const seconds = Math.floor(facts.durationS);
-	if (seconds >= 1) phrases.push(elapsedLabel(seconds));
+	if (seconds >= 1) {
+		phrases.push(
+			t("relay.transcript.turn.took", { duration: elapsedLabel(seconds) }),
+		);
+	}
+	if (facts.steps > 0) {
+		phrases.push(
+			t("relay.transcript.turn.actions", {
+				count: facts.steps,
+				label: String(facts.steps),
+			}),
+		);
+	}
+	if (phrases.length === 0) {
+		phrases.push(t("relay.transcript.turn.condensed"));
+	}
 	return phrases;
 }
 
@@ -493,14 +788,29 @@ export function turnHeadline(text: string): string {
 		: trimmed;
 }
 
-/** The bar's accessible name: which turn, and the completion the collapse must
- *  not hide. The open state rides `accessibilityState`, not this string. */
+/** The bar's accessible name: which turn, completion/duration/action phrases,
+ *  and localized failure warning (`Includes a failed action`) when `facts.failed > 0`. */
 export function barAccessibleName(
 	facts: TurnBarFacts,
 	headline: string,
 ): string {
 	const subject = headline.length > 0 ? `Turn "${headline}"` : "Turn";
-	return `${subject}: ${barPhrases(facts).join(", ")}`;
+	/* `completed` leads the spoken name (the eligibility IS the completion, see
+	 * the module note) even though the bar no longer paints it (U1-3); the
+	 * painted `Turn condensed` fallback is redundant once it is there. */
+	const painted = barPhrases(facts);
+	const clauses = facts.steered
+		? painted
+		: [
+				t("relay.transcript.turn.completed"),
+				...painted.filter(
+					(phrase) => phrase !== t("relay.transcript.turn.condensed"),
+				),
+			];
+	if ((facts.failed ?? 0) > 0) {
+		clauses.push(t("relay.transcript.fold.failed_label"));
+	}
+	return `${subject}: ${clauses.join(", ")}`;
 }
 
 /* ------------------------------------------------------------ quiet groups */
@@ -557,9 +867,14 @@ export interface QuietGroupSender {
  * id>`, and a slid window still answers with it while any member survives, so
  * a group is never remounted under a new identity.
  */
+export type QuietGroupFamily = "peer" | "wake" | "mixed";
+
 export interface QuietGroup {
 	/** `qg:<first row id>` — stable for the life of the transcript. */
 	key: string;
+	/** Optional receipt family when wake triggers participate (`wake` | `mixed`);
+	 *  omitted on pure peer/hub groups to preserve existing snapshot shapes. */
+	family?: QuietGroupFamily;
 	/** Internal receipts; one needs at least three actual non-quiet calls. */
 	count: number;
 	/** The receipt senders, by count: the top 2, then one `<N> more` entry
@@ -567,7 +882,7 @@ export interface QuietGroup {
 	senders: readonly QuietGroupSender[];
 	/** Non-quiet tool rows in the group. */
 	actions: number;
-	/** Of `actions`, the rows that FAILED (`tool_state === \"failed\"`; an
+	/** Of `actions`, the rows that FAILED (`tool_state === "failed"`; an
 	 *  interrupted call is not a failure — the contract the turn bar counts by). */
 	failed: number;
 	/** It reaches the end of the frame: no later visible row exists and it may
@@ -591,28 +906,39 @@ const QUIET_TURN_TOOL_NAME = "no_reply";
 const isQuietToolRow = (entry: TranscriptEntry): boolean =>
 	entry.kind === "tool" && entry.tool_name === QUIET_TURN_TOOL_NAME;
 
-/**
- * Does this row END a peer run? The design's §5 boundary vocabulary mapped
- * onto the mobile wire: everything that is not a tool row, a receipt, or a
- * textless (imageless) assistant row is a boundary.
- *
- * WHY NOTICE IS A BOUNDARY HERE, where the shared vocabulary can call a wake
- * receipt a group member. Only a positive producer custom_type (or the older
- * custom_kind display marker) admits incoming Bridge notices here; generic
- * notices, incidents and operator boundaries remain visible. The envelope's
- * wording, admission guidance and attachment counts are never provenance.
- */
+const isWakeReceiptEntry = (entry: TranscriptEntry): boolean =>
+	entry.kind === "notice" &&
+	entry.details.severity !== "error" &&
+	entry.details.severity !== "warning" &&
+	(entry.details.notice_kind === "wake" ||
+		entry.custom_type === "wake_prompt" ||
+		entry.details.custom_kind === "wake_prompt");
+
+const quietTriggerFamilyOf = (
+	entry: TranscriptEntry,
+): "peer" | "wake" | null => {
+	if (
+		entry.kind === "peer_message" ||
+		isHubReceipt(entry) ||
+		isBridgeReceipt(entry)
+	) {
+		return "peer";
+	}
+	if (isWakeReceiptEntry(entry)) return "wake";
+	return null;
+};
+
 const breaksPeerRun = (entry: TranscriptEntry): boolean => {
 	// Material stays on its source row; a receipt's attachment COUNT is not
 	// an admitted image, and no envelope grants ownership of another row's media.
 	if (entry.images.length > 0 || (entry.videos?.length ?? 0) > 0) return true;
 	if (
-		entry.kind === "peer_message" ||
-		isHubReceipt(entry) ||
-		isBridgeReceipt(entry) ||
-		entry.kind === "tool"
-	)
+		quietTriggerFamilyOf(entry) !== null ||
+		(entry.kind === "tool" &&
+			!MEDIA_ARTIFACT_TOOLS.has(entry.tool_name.trim().toLowerCase()))
+	) {
 		return false;
+	}
 	if (entry.kind === "assistant") {
 		return entry.text.length > 0 || entry.images.length > 0;
 	}
@@ -689,18 +1015,23 @@ function groupFactsOf(
 	let hubCount = 0;
 	let replyRequested = 0;
 	let steered = 0;
+	let sawPeer = false;
+	let sawWake = false;
 	const rowIds: string[] = [];
 	for (let at = stretch.from; at <= stretch.to; at += 1) {
 		const item = items[at];
 		if (item === undefined || item.kind !== "entry") continue;
 		const entry = item.entry;
 		rowIds.push(entry.id);
-		if (
-			entry.kind === "peer_message" ||
-			isHubReceipt(entry) ||
-			isBridgeReceipt(entry)
-		) {
+		const trig = quietTriggerFamilyOf(entry);
+		if (trig === "wake") {
 			count += 1;
+			sawWake = true;
+			continue;
+		}
+		if (trig === "peer") {
+			count += 1;
+			sawPeer = true;
 			const hub = isHubReceipt(entry);
 			if (hub) {
 				hubCount += 1;
@@ -723,10 +1054,17 @@ function groupFactsOf(
 	// One receipt can bridge three actual calls; receipt-only still needs two.
 	// This is the existing scanner/latch, not a new coordinator or row order.
 	if (count < 2 && !(count > 0 && actions >= 3)) return null;
+	const family: QuietGroupFamily | undefined = sawWake
+		? sawPeer
+			? "mixed"
+			: "wake"
+		: undefined;
 	return {
 		key: `qg:${first.id}`,
+		...(family !== undefined ? { family } : {}),
 		count,
-		senders: topSenders(senders),
+		// Sender summary is peer-only (`quiet-groups.parity.json` case 5: mixed carries `[]`).
+		senders: family === undefined ? topSenders(senders) : [],
 		actions,
 		failed,
 		open,
@@ -792,8 +1130,9 @@ function refreshedGroupFacts(
 	// and a spread would keep it.
 	return {
 		key: group.key,
+		...(group.family !== undefined ? { family: group.family } : {}),
 		count: group.count,
-		senders: topSenders(senders),
+		senders: group.family === undefined ? topSenders(senders) : [],
 		actions: group.actions,
 		failed: group.failed,
 		open: group.open,
@@ -862,6 +1201,115 @@ export function quietGroupsOf(items: readonly TranscriptItem[]): QuietGroup[] {
 
 /* ------------------------------------------------------- the group fold plan */
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Certified single-peer quiet cycles (`details.peer_cycle`, matching Relay
+ * `contextualQuietGroupsOf` in `peer-cycles.ts`): when `sessionId` is supplied
+ * and matches `stamp.session_id`, a 1-peer + `send`/`eval` cycle certified by
+ * the daemon folds into a `QuietGroup`.
+ */
+export function certifiedPeerCycleGroups(
+	items: readonly TranscriptItem[],
+	sessionId?: string,
+): QuietGroup[] {
+	if (!sessionId) return [];
+	const claimed = new Set<string>();
+	const certified: QuietGroup[] = [];
+	const idOccurrences = new Map<string, number>();
+	for (const item of items) {
+		if (item.kind === "entry") {
+			idOccurrences.set(item.id, (idOccurrences.get(item.id) ?? 0) + 1);
+		}
+	}
+
+	for (let start = 0; start < items.length; start += 1) {
+		const firstItem = items[start];
+		if (firstItem === undefined || firstItem.kind !== "entry") continue;
+		const first = firstItem.entry;
+		const stamp: unknown = (
+			first.details as Record<string, unknown> | undefined
+		)?.peer_cycle;
+		if (
+			!isObjectRecord(stamp) ||
+			stamp.version !== 1 ||
+			stamp.session_id !== sessionId ||
+			first.kind !== "peer_message" ||
+			stamp.first_id !== first.id ||
+			typeof stamp.quiet_call_id !== "string" ||
+			!stamp.quiet_call_id ||
+			!Array.isArray(stamp.member_ids) ||
+			stamp.member_ids.length < 2 ||
+			stamp.member_ids.length > 4096 ||
+			!stamp.member_ids.every(
+				(id: unknown): id is string => typeof id === "string" && id.length > 0,
+			)
+		) {
+			continue;
+		}
+		const ids: string[] = stamp.member_ids;
+		if (
+			new Set(ids).size !== ids.length ||
+			stamp.last_id !== ids[ids.length - 1] ||
+			ids.some((id) => claimed.has(id)) ||
+			start + ids.length > items.length
+		) {
+			continue;
+		}
+		const slice = items.slice(start, start + ids.length);
+		if (
+			slice.some((item, index) => {
+				if (item.kind !== "entry") return true;
+				const row = item.entry;
+				return (
+					row.id !== ids[index] ||
+					row.text_complete === false ||
+					row.images.length > 0 ||
+					(row.videos?.length ?? 0) > 0 ||
+					Boolean(row.error) ||
+					(row.details as Record<string, unknown>).held === true ||
+					row.details.steer === true ||
+					row.details.severity === "error" ||
+					row.details.severity === "warning" ||
+					(index > 0 &&
+						(row.kind !== "tool" ||
+							row.tool_state !== "done" ||
+							(row.tool_name !== "send" && row.tool_name !== "eval")))
+				);
+			})
+		) {
+			continue;
+		}
+		const memberEntries = slice.map(
+			(item) => (item as Extract<TranscriptItem, { kind: "entry" }>).entry,
+		);
+		const calls = memberEntries.slice(1).map((row) => row.tool_call_id);
+		if (
+			calls.some((id) => !id) ||
+			new Set(calls).size !== calls.length ||
+			ids.some((id) => (idOccurrences.get(id) ?? 0) !== 1)
+		) {
+			continue;
+		}
+		const label = peerLabel(first.details.sender);
+		certified.push({
+			key: `qg:${first.id}`,
+			count: 1,
+			senders: [{ label, count: 1 }],
+			// Eval carriers are physical disclosure rows, not additional sends.
+			actions: memberEntries.filter(
+				(row) => row.kind === "tool" && row.tool_name === "send",
+			).length,
+			failed: 0,
+			open: false,
+			rowIds: ids,
+		});
+		for (const id of ids) claimed.add(id);
+	}
+	return certified;
+}
+
 export interface GroupInput {
 	items: readonly TranscriptItem[];
 	/** Keys the reader has opened. The same set the turn bars read — the two
@@ -869,6 +1317,8 @@ export interface GroupInput {
 	expanded: ReadonlySet<string>;
 	/** The group latch from the previous pass. */
 	latch: ReadonlyMap<string, QuietGroup>;
+	/** Optional session ID to enable owner-certified `details.peer_cycle` groups. */
+	sessionId?: string;
 }
 
 /** One group, as THIS plan rendered it — the unit the jitter test compares.
@@ -946,6 +1396,15 @@ export function groupPlan(input: GroupInput): GroupPlan {
 		latch.set(key, refreshedGroupFacts(group, items));
 	}
 
+	/* (1b) Certified `peer_cycle` single-receipt spans when `sessionId` matches. */
+	for (const cert of certifiedPeerCycleGroups(items, input.sessionId)) {
+		if (cert.rowIds.some((id) => claimed.has(id))) continue;
+		if (!latch.has(cert.key)) latch.set(cert.key, cert);
+		for (const id of cert.rowIds) {
+			if (present.has(id)) claimed.set(id, cert.key);
+		}
+	}
+
 	/* (2) Fresh stretches and their groups. */
 	const fresh = new Map<number, QuietGroup>();
 	for (const stretch of stretchesOf(items.length, (at) => {
@@ -997,7 +1456,9 @@ export function groupPlan(input: GroupInput): GroupPlan {
 			groups.push(view);
 		}
 		if (open) {
-			emitted.push(item);
+			emitted.push(
+				item.kind === "entry" ? { ...item, inOpenGroup: true } : item,
+			);
 			view.itemIds.push(item.id);
 		}
 	}
@@ -1018,19 +1479,177 @@ export function groupPlan(input: GroupInput): GroupPlan {
  * and requested intent is historical metadata, never current operator attention.
  */
 export function groupPhrases(group: QuietGroup): string[] {
-	const what = group.hubCount
-		? group.hubCount === group.count
-			? "Hub messages"
-			: "Incoming messages"
-		: "Peer messages";
+	const what =
+		group.family === "wake"
+			? "Wake messages"
+			: group.family === "mixed"
+				? t("relay.transcript.label.messages")
+				: group.hubCount
+					? group.hubCount === group.count
+						? "Hub messages"
+						: "Incoming messages"
+					: "Peer messages";
 	const phrases = [what, String(group.count)];
-	// Receipt count and actual work stay distinct. The older peer-only group
-	// remains terse; mixed hub/action bars expose their newly folded work.
-	if (group.mixedActions) phrases.push(countLabel(group.actions, "action"));
+	// Nonzero actions are ALWAYS stated (matching Relay `quietGroupClauseFacts`:
+	// `if (group.actions) facts.push(...)`, never gated behind >= 3).
+	if (group.actions > 0) {
+		phrases.push(
+			t("relay.transcript.turn.actions", {
+				count: group.actions,
+				label: String(group.actions),
+			}),
+		);
+	}
 	if (group.replyRequested)
 		phrases.push(`${group.replyRequested} reply requested`);
 	if (group.steered) phrases.push(`${group.steered} steered`);
 	return phrases;
+}
+
+/* ----------------------------------------------------- Tier A fold run plan */
+
+export interface FoldView {
+	key: string;
+	fold: FoldRun;
+	itemIds: string[];
+	hiddenIds: readonly string[];
+	canonicalIds: readonly string[];
+}
+
+export interface FoldPlanInput {
+	items: readonly TranscriptItem[];
+	expanded: ReadonlySet<string>;
+	/** Whether the newest turn is currently live. */
+	live?: boolean;
+	/** Canonical ids previously painted inside a `FoldBar` in the active turn. */
+	latchedFoldIds?: ReadonlySet<string>;
+}
+
+export interface FoldPlan {
+	items: TranscriptItem[];
+	folds: FoldView[];
+	latchedFoldIds: Set<string>;
+}
+
+/**
+ * Tier A — Fold consecutive runs of `>= 3` foldable tool actions (or `>= 2`
+ * trailing internal receipts) into `FoldBar` items (`fold-bar-fold:<key>`),
+ * both in the active turn AND inside an expanded completed turn.
+ *
+ * Rows already claimed by a closed `TurnBar` or `QuietGroupBar` are no longer
+ * in `items` as `"entry"`, and any non-foldable row (`user`, `assistant`,
+ * `ImageGenCard`, error `notice`, `bar`, `group`) breaks a run so chronology
+ * is preserved cleanly.
+ */
+export function foldPlan(input: FoldPlanInput): FoldPlan {
+	const { items, expanded } = input;
+	const live = input.live ?? false;
+
+	// Locate the start of the newest turn so `liveTurn` applies only to the active turn.
+	let lastTurnStartAt = 0;
+	for (let i = items.length - 1; i >= 0; i -= 1) {
+		const candidate = items[i];
+		if (
+			candidate?.kind === "entry" &&
+			(candidate.opensTurn === true ||
+				(i === 0 && candidate.entry.kind === "user"))
+		) {
+			lastTurnStartAt = i;
+			break;
+		}
+	}
+
+	const heldCanonical = new Set<string>();
+	for (const item of items) {
+		if (item.kind === "entry") {
+			heldCanonical.add(canonicalRowKey(item.entry));
+		}
+	}
+
+	const emitted: TranscriptItem[] = [];
+	const folds: FoldView[] = [];
+	const createdRuns: FoldRun[] = [];
+
+	let runItems: Array<Extract<TranscriptItem, { kind: "entry" }>> = [];
+	let runStartAt = 0;
+
+	const flush = () => {
+		if (runItems.length === 0) return;
+		const inNewestTurn = runStartAt >= lastTurnStartAt;
+		const inLiveTurn = live && inNewestTurn;
+		const runEntries = runItems.map((it) => it.entry);
+		/* The latch is honoured for the NEWEST turn whatever `live` says (R2-2):
+		 * the stream dips `!live` for a frame at tool boundaries, and gating the
+		 * latch on `live` let a latch-held fold paint flat for that one frame.
+		 * `buildFoldRun`'s `liveTurn` only gates the latch, so it takes the
+		 * newest-turn fact; the emitted item and `createdRuns` keep `inLiveTurn`. */
+		const run = buildFoldRun(runEntries, {
+			liveTurn: inNewestTurn,
+			latchedFoldIds: inNewestTurn ? input.latchedFoldIds : undefined,
+		});
+		if (run === null) {
+			for (const it of runItems) emitted.push(it);
+			runItems = [];
+			return;
+		}
+		if (inLiveTurn) createdRuns.push(run);
+		const open = expanded.has(run.key);
+		const barId = foldBarId(run.key);
+		const view: FoldView = {
+			key: run.key,
+			fold: run,
+			itemIds: [barId],
+			hiddenIds: run.rowIds,
+			canonicalIds: run.canonicalIds,
+		};
+		emitted.push({
+			kind: "fold",
+			id: barId,
+			foldKey: run.key,
+			fold: run,
+			expanded: open,
+			liveTurn: inLiveTurn,
+		});
+		if (open) {
+			for (const it of runItems) {
+				emitted.push(it);
+				view.itemIds.push(it.id);
+			}
+		}
+		folds.push(view);
+		runItems = [];
+	};
+
+	for (let at = 0; at < items.length; at += 1) {
+		const item = items[at];
+		if (item === undefined) continue;
+		if (
+			item.kind === "entry" &&
+			item.opensTurn !== true &&
+			item.inOpenGroup !== true &&
+			(isFoldableToolEntry(item.entry) || isFoldReceiptEntry(item.entry))
+		) {
+			if (runItems.length === 0) runStartAt = at;
+			runItems.push(item);
+			continue;
+		}
+		flush();
+		emitted.push(item);
+	}
+	flush();
+
+	/* The latch survives a `!live` frame (R1-4): the stream dips at tool-segment
+	 * boundaries (the relay's "THE SETTLE LATCH" note in `condense-plan.ts`),
+	 * and wiping it there dissolved a fold only the latch kept alive, for good.
+	 * Pruning to the canonical ids this frame still holds is the reset: rows
+	 * that left (a session switch re-keys the list's ref anyway) drop out. */
+	const latchedFoldIds = latchFoldedIds(
+		input.latchedFoldIds ?? new Set(),
+		heldCanonical,
+		createdRuns,
+	);
+
+	return { items: emitted, folds, latchedFoldIds };
 }
 
 /** The group bar's accessible name: what the fold is, and who it is from —

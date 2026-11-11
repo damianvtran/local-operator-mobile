@@ -5,13 +5,16 @@ import { fileURLToPath } from "node:url";
 import { compile } from "tailwindcss";
 import { describe, expect, it } from "vitest";
 
+import { TRACE_BAR_PAD_CLASS } from "@/features/session/components/trace-rail";
+
 const CENTRED = /\btext-center\b/;
 /** The two wiring lines R7 and Q1 depend on. Their pure decisions are tested in
  *  `bridge-row.test.ts`; the one-line wiring had no guard but the audit frames. */
 const GLYPH_CALL = /const glyphOverride = bridgeGlyphFor\(bridge\);/;
-/** The tool name's className, read off its `{entry.tool_name}` text (D8). */
+/** The tool name's className, read off its `{displayName}` text (D8; the
+ *  `mcp__<server>__` prefix is stripped before it is painted). */
 const TOOL_NAME_CLASSES =
-	/className="([^"]+)"\s*numberOfLines=\{1\}\s*>\s*\{entry\.tool_name\}/;
+	/className="([^"]+)"\s*numberOfLines=\{1\}\s*>\s*\{displayName\}/;
 /** A flat CSS rule and a `font-family` declaration in the compiled theme. */
 const CSS_RULE = /([^{}]+)\{([^{}]*)\}/g;
 const FONT_FAMILY = /font-family:\s*([^;]+);/g;
@@ -20,7 +23,7 @@ const WHITESPACE = /\s+/;
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
 const LINE_COMMENT = /\/\/.*$/gm;
 const ROW_CONTAINER =
-	/<View className="([^"]+)" testID=\{testID\}>\s*<Pressable/;
+	/<View className=\{cx\("rounded-sm", (TRACE_BAR_PAD_CLASS)\)\} testID=\{testID\}>\s*(?:\{\s*\}\s*)?<View className=\{TRACE_GLYPH_ROW_CLASS\}>/;
 const STATE_GATED_FILL = /tool_state === "[a-z]+"[\s\S]{0,80}"bg-/;
 const CARD_STATE_FILL = /liveTone\) && "bg-/;
 const PULSING_GLYPH =
@@ -195,7 +198,10 @@ describe("tool row has no state fill (D4)", () => {
 		const row = jsx(read("./tool-row.tsx"));
 		const container = row.match(ROW_CONTAINER);
 		expect(container, "the row's own container").not.toBeNull();
-		expect(container?.[1]).toBe("rounded-sm px-2");
+		// The inner inset is the shared rail's (`trace-rail.ts`): `px-0` inside
+		// the row's `px-4`, so the glyph sits at 16 pt and the name at 40 pt.
+		expect(container?.[1]).toBe("TRACE_BAR_PAD_CLASS");
+		expect(TRACE_BAR_PAD_CLASS).toBe("px-0");
 		expect(row).not.toMatch(STATE_GATED_FILL);
 		expect(row).not.toContain("bg-danger-wash");
 	});
@@ -203,7 +209,7 @@ describe("tool row has no state fill (D4)", () => {
 	it("gives the image-generation card the same borderless container", () => {
 		const card = jsx(read("./imagegen-card.tsx"));
 		expect(card).toContain(
-			'<View className="rounded-sm px-2" testID={testID}>',
+			'<View className={cx("rounded-sm", TRACE_BAR_PAD_CLASS)} testID={testID}>',
 		);
 		expect(card).not.toContain("bg-danger-wash");
 		expect(card).not.toMatch(CARD_STATE_FILL);
@@ -214,5 +220,23 @@ describe("tool row has no state fill (D4)", () => {
 		/* `pulsing` is true for `running` alone (`toolGlyph`, held by
 		 *  `projection.test.ts`), and `Shimmer` starts no loop when inactive. */
 		expect(row).toMatch(PULSING_GLYPH);
+	});
+});
+
+/** R1-1: list override, then local override, then the bang-mode default. */
+const OPEN_PRECEDENCE =
+	/const open =\s*controlledOpen \?\? override \?\? entry\.details\.user_run === true;/;
+
+describe("tool row open precedence (R1-1)", () => {
+	const source = readFileSync(
+		new URL("./tool-row.tsx", import.meta.url),
+		"utf8",
+	);
+	it("lets `user_run` decide whenever the reader has not overridden the row", () => {
+		// A list-supplied override, then the local one, then the bang-mode
+		// default — never `controlled !== undefined ? controlled : …` with the
+		// list always supplying a boolean (that shut every `! cmd` row).
+		expect(source).toMatch(OPEN_PRECEDENCE);
+		expect(source).toContain("`user_run` is the DEFAULT under every override");
 	});
 });

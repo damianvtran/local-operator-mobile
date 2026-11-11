@@ -650,7 +650,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// self-heal): the merged tree carries healHistory and the keyboard-aware
 	// cap, so it has neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source admission only, no rendered or native proof.
-	app: "5278073b84e0ecd140bddbe4d2b3e04e54973936b16dd1cb826bb6f5c95635f3",
+	// Transcript condensing polish (Tier A fold bar, idle completed-turn
+	// condensing): the startup and subagent screens pass `turnLive` to the
+	// list. Re-derived with --print over the staged tree; source identity
+	// only, no rendered or native proof.
+	app: "b3395f372c394955090686a8e26157c717ed28a3762f516466fdbdba34fe9c06",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1415,7 +1419,32 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// glass shell): both sides' src carried, so neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
-	src: "61a338c88fec56efe78cce3647fb8630cf97fbc3c539c799f39d0cfeb35a25d3",
+	// Transcript condensing polish: Tier A `FoldBar`, idle completed-turn
+	// condensing, the shared 16/40 pt trace rail, spacing tiers, hub and Team
+	// Bridge receipt rows, `relay.transcript.*` catalogues. --print over the
+	// staged tree; source identity only, no rendered or native proof.
+	// PR #223 round-1 remediation: `user_run` default under list overrides,
+	// session-certified peer cycles, no fold inside an open quiet group, the
+	// continuation latch, bar/fold glyph and copy face, the large-text receipt
+	// stack. --print over the staged tree; source identity only.
+	// PR #223 round-2 remediation: label-less `CollapsedRow` keeps `flex-1` at
+	// large text, composed `dir` on the bar summaries, the newest-turn fold
+	// latch through a `!live` dip. --print over the staged tree; source
+	// identity only.
+	// PR #223 merged with main 56831114 (#220): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	// PR #223 merged with main 240362a6 (#225): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	// PR #223 CI fix (U-41/U-42): the trace-row glyph stands outside its
+	// pressable in a baseline-aligned slot, the press wash lifts to the row,
+	// the assistant/parent image strips go on-scale, `pt-0.5` is gone; tests
+	// with it. --print over the staged tree; source identity only.
+	// PR #223 merged with main 98e53308 (#222): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	src: "f2470bb3f393e8c7e2b18f3dd683257da90855d6de0490d61d0dcb703b00ab01",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

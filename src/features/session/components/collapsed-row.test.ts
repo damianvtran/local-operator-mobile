@@ -20,6 +20,8 @@ import { type DomShim, installDomShim } from "@/testing/dom-shim";
 
 type PressProps = {
 	onPress?: () => void;
+	onPressIn?: () => void;
+	onPressOut?: () => void;
 	accessibilityState?: { expanded?: boolean };
 	accessibilityRole?: string;
 	accessibilityLabel?: string;
@@ -30,7 +32,16 @@ const presses = vi.hoisted(() => ({
 	/** What the stub Pressable reports to a `({ pressed })` render child. */
 	pressed: false,
 	/** Every className a host element was drawn with, in render order. */
-	classes: [] as { host: string; className: string }[],
+	classes: [] as { host: string; className: string; style?: unknown }[],
+	/** The text scale the stubbed provider reports (D1: 2 = 200 %). */
+	scale: 1,
+}));
+
+vi.mock("@/ui/text-scale-provider", () => ({
+	useTextScale: () => ({
+		effectiveScale: presses.scale,
+		scale: presses.scale,
+	}),
 }));
 
 vi.mock("react-native", async () => {
@@ -40,11 +51,13 @@ vi.mock("react-native", async () => {
 		({
 			children,
 			className,
+			style,
 		}: {
 			children?: React.ReactNode;
 			className?: string;
+			style?: unknown;
 		}) => {
-			presses.classes.push({ host: name, className: className ?? "" });
+			presses.classes.push({ host: name, className: className ?? "", style });
 			return children ?? null;
 		};
 	return {
@@ -138,6 +151,7 @@ const render = async (open?: boolean, pressed = false) => {
 };
 
 beforeEach(() => {
+	presses.scale = 1;
 	dom = installDomShim();
 	vi.stubGlobal("requestAnimationFrame", () => 0);
 	vi.stubGlobal("cancelAnimationFrame", () => {});
@@ -247,11 +261,19 @@ describe("the expanded body starts on the bar's text column (design round 1, D3)
 			(c) => c.host === "View" && c.className === "w-4 shrink-0",
 		);
 		expect(bar && glyph && body && spacer).toBeTruthy();
-		// Horizontal start of the text = padding + glyph column + gap, both places.
+		/* Horizontal start of the text, both places, 24 pt inside the row: the
+		 *  body's `px-0` + 16 pt spacer + `gap-2`, and the bar's 16 pt glyph
+		 *  slot + its pressable's `ps-2` — the glyph now stands OUTSIDE the
+		 *  pressable (PR #223 CI, U-41), so the gap became the button's inset. */
+		expect(words(bar?.className ?? "").has("ps-2")).toBe(true);
 		for (const token of ["px-0", "gap-2"]) {
-			expect(words(bar?.className ?? "").has(token)).toBe(true);
 			expect(words(body?.className ?? "").has(token)).toBe(true);
 		}
+		expect(
+			presses.classes.some(
+				(c) => c.host === "View" && c.className === "w-4 shrink-0",
+			),
+		).toBe(true);
 		expect(words(glyph?.className ?? "").has("shrink-0")).toBe(true);
 	});
 });
@@ -273,16 +295,123 @@ describe("a folded row is a quiet line, not a card (design round 3, D4)", () => 
 	});
 
 	it("tints only while pressed", async () => {
-		await render(false, true);
-		expect(
+		const tinted = () =>
 			presses.classes.some((c) =>
 				c.className.split(WHITESPACE).includes("bg-row-hover"),
-			),
-		).toBe(true);
+			);
+		await render(false);
+		expect(tinted()).toBe(false);
+		/* The wash is the ROW's (glyph slot + button), lifted out of the
+		 *  pressable since the glyph left it (PR #223 CI, U-41/U-08): it follows
+		 *  the button's press-in and press-out. */
+		presses.classes.length = 0;
+		await act(async () => presses.last?.onPressIn?.());
+		expect(tinted()).toBe(true);
+		const wash = presses.classes.find((c) =>
+			c.className.split(WHITESPACE).includes("bg-row-hover"),
+		);
+		expect(wash?.className.split(WHITESPACE)).toContain("items-baseline");
+		presses.classes.length = 0;
+		await act(async () => presses.last?.onPressOut?.());
+		expect(tinted()).toBe(false);
 	});
 
 	it("keeps the touch floor as its minimum height", async () => {
 		await render();
 		expect(presses.last?.style?.minHeight).toBeGreaterThanOrEqual(44);
+	});
+});
+
+describe("the label never starves the summary (design round 1 of PR 223, D1)", () => {
+	const words = (className: string) => new Set(className.split(WHITESPACE));
+	const labelOf = () =>
+		presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("text-meta"),
+		);
+	/** The label + summary column only the stacked layout draws. */
+	const stackOf = () =>
+		presses.classes.find(
+			(c) => c.host === "View" && c.className === "min-w-0 flex-1",
+		);
+
+	it("caps the label with a STYLE at normal text (the class never applied on web)", async () => {
+		await render();
+		expect(labelOf()?.style).toEqual({ maxWidth: "50%" });
+		expect(words(labelOf()?.className ?? "").has("max-w-1/2")).toBe(false);
+		expect(stackOf()).toBeUndefined();
+	});
+
+	it("stacks label over summary at large text, each one line on the text rail", async () => {
+		presses.scale = 2;
+		await render();
+		expect(stackOf()).toBeDefined();
+		expect(labelOf()?.style).toBeUndefined();
+		const text = textOf(dom?.container);
+		expect(text).toContain("reviewer");
+		expect(text).toContain("first line of the peer message");
+		// The summary no longer flexes beside the label: it owns its line.
+		const summary = presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("text-body-sm"),
+		);
+		expect(words(summary?.className ?? "").has("flex-1")).toBe(false);
+	});
+
+	it("a label-less row (a folded long notice) keeps `flex-1` on its summary at large text (R2-1)", async () => {
+		presses.scale = 2;
+		presses.classes.length = 0;
+		await act(async () =>
+			root?.render(
+				createElement(
+					CollapsedRow,
+					{
+						glyph: "·",
+						summary:
+							"a long notice that must shrink rather than push the chevron off",
+						meta: "woken",
+						accessibilityLabel: "notice",
+					} as unknown as Parameters<typeof CollapsedRow>[0],
+					createElement("span", null, "body"),
+				),
+			),
+		);
+		expect(stackOf()).toBeUndefined();
+		const summary = presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("text-body-sm"),
+		);
+		expect(words(summary?.className ?? "").has("flex-1")).toBe(true);
+		expect(words(summary?.className ?? "").has("min-w-0")).toBe(true);
+		// Not stacked, so the line stays centred in the touch floor.
+		const line = presses.classes.find(
+			(c) =>
+				c.host === "View" &&
+				words(c.className).has("flex-row") &&
+				words(c.className).has("ps-2"),
+		);
+		expect(words(line?.className ?? "").has("items-center")).toBe(true);
+	});
+
+	it("stacked: glyph and chevron key to the first line, on-scale, not between the two (Q2-2)", async () => {
+		presses.scale = 2;
+		await render();
+		const line = presses.classes.find(
+			(c) =>
+				c.host === "View" &&
+				words(c.className).has("flex-row") &&
+				words(c.className).has("ps-2"),
+		);
+		expect(words(line?.className ?? "").has("items-start")).toBe(true);
+		expect(words(line?.className ?? "").has("items-center")).toBe(false);
+		const glyph = presses.classes.find(
+			(c) => c.host === "Text" && words(c.className).has("w-4"),
+		);
+		expect(glyph).toBeDefined();
+		/* PR #223 CI: `pt-0.5` (2 pt) failed U-42 at 200 %. The glyph keys to
+		 * the label's line through the baseline-aligned slot instead — no
+		 * padding, so nothing off `space.scale`. */
+		expect(words(glyph?.className ?? "").has("pt-0.5")).toBe(false);
+		const slotRow = presses.classes.find(
+			(c) => c.host === "View" && words(c.className).has("items-baseline"),
+		);
+		expect(slotRow).toBeDefined();
 	});
 });
