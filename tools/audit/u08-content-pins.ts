@@ -1375,6 +1375,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// disjoint src files, so the merged tree has neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
+	// fix/refused-connect-feedback: own-tunnel stays on the form with the reason
+	// when Save and connect is refused, the keystore refusal's sanitised cause,
+	// seven catalogue keys and tests; only `src` moves, re-derived with --print
+	// over the staged tree. Source identity only, no rendered or native proof.
+	// PR #220 round-1 remediation (R1-m1/m2, D1-D3, U1/U2/U4, Q1): own-tunnel
+	// clears stale state on edit, keeps the refusal up during Retry, new copy
+	// and keys; only `src` moves, re-derived with --print over the staged tree.
+	// Source identity only, no rendered or native proof.
+	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
+	// src carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
 	// Transcript condensing polish: Tier A `FoldBar`, idle completed-turn
 	// condensing, the shared 16/40 pt trace rail, spacing tiers, hub and Team
 	// Bridge receipt rows, `relay.transcript.*` catalogues. --print over the
@@ -1387,7 +1398,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// large text, composed `dir` on the bar summaries, the newest-turn fold
 	// latch through a `!live` dip. --print over the staged tree; source
 	// identity only.
-	src: "ebd7a0d9e66844ebb3e4f0ff7f27d27080e32a155aab20ffab650c4d20b26051",
+	// PR #223 merged with main 56831114 (#220): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	src: "076222112b3d5b04ffdfae349e04c539732279b7c98e9eebb5d48988735f380d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
