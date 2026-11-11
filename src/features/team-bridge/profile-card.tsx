@@ -12,9 +12,9 @@
  * scrim) and its own modal accessibility scope.
  */
 import { usePathname, useRouter } from "expo-router";
-import { Bot, Clock, MessageSquare } from "lucide-react-native";
+import { Bot, Clock, MessageSquare, UserRound } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text } from "react-native";
 import { toBase64 } from "@/features/session/runtime";
 import { t } from "@/i18n";
 import {
@@ -42,6 +42,7 @@ import { useTokenColor } from "@/ui/appearance";
 import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { AVATAR_SIZES, type AvatarSize } from "@/ui/variants";
 import { ProfileDetails } from "./profile-details";
 
@@ -210,6 +211,29 @@ function AgentAvatar({
 	);
 }
 
+/**
+ * Neutral silhouette for an unknown or departed sender when no `ProfileSubject`
+ * resolves from the directory, matching Desktop's `UserRound` fallback
+ * (`team-bridge-message-list.tsx`) instead of painting a `?` initial circle.
+ */
+export function UnknownSenderAvatar({
+	kind,
+	size = "sm",
+}: {
+	kind: "human" | "agent";
+	size?: AvatarSize;
+}) {
+	const ink = useTokenColor(kind === "agent" ? "accent-active" : "ink-muted");
+	const Icon = kind === "agent" ? Bot : UserRound;
+	return (
+		<Avatar
+			initials=""
+			size={size}
+			fallback={<Icon size={AVATAR_SIZES[size].px / 2} color={ink} />}
+		/>
+	);
+}
+
 /** One identity selector for list marks, author runs and the profile sheet. */
 export function ProfileSubjectAvatar({
 	subject,
@@ -305,7 +329,7 @@ export function bridgeRouteDisposition(pathname: string): "push" | "replace" {
 export function ProfileAvatarButton({
 	subject,
 	label,
-	size = "md",
+	size = "sm",
 	onOpen,
 	testID,
 }: {
@@ -319,7 +343,8 @@ export function ProfileAvatarButton({
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={t("mobile.team_bridge.profile.open", { name: label })}
-			hitSlop={6}
+			className="items-center justify-center"
+			style={{ minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR }}
 			onPress={() => onOpen(subject)}
 			testID={testID}
 		>
@@ -331,11 +356,40 @@ export function ProfileAvatarButton({
 /**
  * A thread author: the photo and the name open the same card, so they are ONE
  * accessible control (design round 1, D3). The name is the focus stop,
- * labelled with the name, and its hit box is padded to 44 pt with an equal
- * negative margin so the header keeps its line height. The photo stays
- * tappable for touch, but is hidden from assistive tech and the tab order so
- * it is not a second stop doing the same thing.
+ * labelled with the name, and its hit box is padded to the touch floor with an
+ * equal negative margin so the header keeps its line height (review R1-4: the
+ * `py-0.5` + `hitSlop` box was ~26 pt tall, and react-native-web ignores
+ * `hitSlop`). The photo stays tappable for touch, but is hidden from assistive
+ * tech and the tab order so it is not a second stop doing the same thing.
  */
+/** The author name's `text-body-read` line box (14 × 1.55 = 21.7), rounded
+ *  DOWN so the padded box lands at or just above the floor (21.7 + 4 of the
+ *  former `py-0.5` = 25.7 laid out; the box is TOUCH_FLOOR + 0.7). */
+const AUTHOR_NAME_LINE = 25;
+/**
+ * The overhang BELOW the name, into the message body. Kept small on purpose:
+ * the body is a later sibling, and a padded box that covers >= 35 % of a short
+ * one-line body ("ok", ~22 px tall) reads as overlap to the rendered-DOM audit
+ * and to a reader's eye. 6 px is 28 % of that line. The rest of the floor goes
+ * ABOVE, into the row's own `pt-3` (12) and, on the 48 pt floor, 4 px past it
+ * into the previous row's bottom padding.
+ */
+const AUTHOR_NAME_BELOW = 6;
+const AUTHOR_NAME_ABOVE = Math.max(
+	0,
+	TOUCH_FLOOR - AUTHOR_NAME_LINE - AUTHOR_NAME_BELOW,
+);
+/** Padding grows the hit box to the floor; the equal negative margin gives the
+ *  space back, so layout sees the original 25.7 pt line. The header row is
+ *  `relative z-10` in the thread so the overhang paints and hit-tests above
+ *  the body that follows it. */
+export const AUTHOR_NAME_TOUCH_BOX = {
+	paddingTop: AUTHOR_NAME_ABOVE + 2,
+	paddingBottom: AUTHOR_NAME_BELOW + 2,
+	marginTop: -AUTHOR_NAME_ABOVE,
+	marginBottom: -AUTHOR_NAME_BELOW,
+} as const;
+
 export function ProfileAuthorName({
 	subject,
 	label,
@@ -352,11 +406,13 @@ export function ProfileAuthorName({
 			accessibilityRole={ROLE.button}
 			accessibilityLabel={label}
 			accessibilityHint={t("mobile.team_bridge.profile.opens_hint")}
+			hitSlop={8}
 			onPress={() => onOpen(subject)}
 			testID={testID}
-			className="-my-2.5 py-2.5"
+			className="rounded-xs"
+			style={AUTHOR_NAME_TOUCH_BOX}
 		>
-			<Text className="text-body font-semibold text-ink">{label}</Text>
+			<Text className="text-body-read font-semibold text-ink">{label}</Text>
 		</Pressable>
 	);
 }
@@ -383,6 +439,7 @@ export function ProfileAuthorPhoto({
 			// accessibility tree (design round 2, D7; `brand-mark.tsx` likewise).
 			aria-hidden
 			hitSlop={6}
+			className="mt-0.5"
 			onPress={() => onOpen(subject)}
 		>
 			<ProfileSubjectAvatar subject={subject} size="sm" />
@@ -443,25 +500,23 @@ export function ProfileSheet({
 			testID={SURFACE.teamBridgeProfile}
 			footer={
 				target ? (
-					<View className="p-4">
-						<Button
-							label={t("mobile.team_bridge.profile.message")}
-							leadingIcon={({ color, size }) => (
-								<MessageSquare color={color} size={size} />
-							)}
-							testID={CONTROL.teamBridgeProfileMessage}
-							onPress={() => {
-								onClose();
-								if (
-									target.kind === "conversation" &&
-									target.conversationId === currentConversationId
-								)
-									return;
-								onBeforeOpen?.();
-								open(target);
-							}}
-						/>
-					</View>
+					<Button
+						label={t("mobile.team_bridge.profile.message")}
+						leadingIcon={({ color, size }) => (
+							<MessageSquare color={color} size={size} />
+						)}
+						testID={CONTROL.teamBridgeProfileMessage}
+						onPress={() => {
+							onClose();
+							if (
+								target.kind === "conversation" &&
+								target.conversationId === currentConversationId
+							)
+								return;
+							onBeforeOpen?.();
+							open(target);
+						}}
+					/>
 				) : undefined
 			}
 		>

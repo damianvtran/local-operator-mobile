@@ -210,6 +210,30 @@ describe("bridge thread title", () => {
 		expect(html).toContain(LONG);
 	});
 
+	it("draws a channel's `#` but announces the plain name (R1-10)", () => {
+		const html = renderToStaticMarkup(
+			createElement(BridgeThreadTitleView, {
+				title: "# humans",
+				accessibilityLabel: "humans",
+				compact: false,
+				stacked: false,
+			}),
+		);
+		const at = html.indexOf("<h1");
+		const open = html.slice(at, html.indexOf(">", at) + 1);
+		expect(open).toContain('aria-label="humans"');
+		expect(html).toContain("# humans");
+		// Negative control: without a distinct spoken name, no label is forced.
+		const plain = renderToStaticMarkup(
+			createElement(BridgeThreadTitleView, {
+				title: "Ops sync",
+				compact: false,
+				stacked: false,
+			}),
+		);
+		expect(plain).not.toContain("aria-label=");
+	});
+
 	it("is no longer #208's 20 pt two-line title step", () => {
 		expect(headingProps(false, false).className).not.toMatch(OLD_TITLE_STEPS);
 	});

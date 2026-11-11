@@ -28,8 +28,8 @@ const flat = (text: string) => text.replace(/\s+/g, " ");
 const COUNT_ON_ICON = /<RailCount count=\{item\.count\} \/>/;
 
 const footer = () => {
-	const start = source.indexOf("const footer = (");
-	const end = source.indexOf("\treturn (", start);
+	const start = source.indexOf("export const WorkspaceSidebarFooter = (");
+	const end = source.indexOf("export const ConversationsPane = (", start);
 	expect(start).toBeGreaterThan(-1);
 	expect(end).toBeGreaterThan(start);
 	return source.slice(start, end);
@@ -72,7 +72,7 @@ describe("the sidebar's destinations (record §3)", () => {
 	it("caps the numeral with the app's one label", () => {
 		const component = source.slice(
 			source.indexOf("const RailCount = ("),
-			source.indexOf("export const ConversationsPane = ("),
+			source.indexOf("export const WorkspaceSidebarFooter = ("),
 		);
 		expect(component).toContain("label={countLabel(count)}");
 	});

@@ -11,7 +11,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ConversationsPane } from "@/features/sessions/conversations-pane";
+import {
+	ConversationsPane,
+	WorkspaceSidebarFooter,
+} from "@/features/sessions/conversations-pane";
 import {
 	cancelDrawerNewChat,
 	finishDrawerDismiss,
@@ -354,9 +357,18 @@ export const ConversationsDrawer = ({
 							 *  re-declares the same values rather than computing a second scale. */}
 							<TextScaleProvider>
 								{header}
-								{content ?? (
+								{content ? (
+									<View className="min-h-0 flex-1">
+										{content}
+										<WorkspaceSidebarFooter
+											onNavigate={onNavigate ?? close}
+											hasModeHeader={Boolean(header)}
+										/>
+									</View>
+								) : (
 									<ConversationsPane
 										onClose={close}
+										hideCloseButton={Boolean(header)}
 										onNavigate={onNavigate ?? close}
 										currentSessionId={currentSessionId}
 										onNewChat={onNewChat ? newChat : undefined}

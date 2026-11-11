@@ -39,22 +39,26 @@ export function DefaultOnNoticeView({
 	const [expanded, setExpanded] = useState(defaultExpanded);
 	return (
 		<View className="px-4 pt-2" testID={SURFACE.teamBridgeDefaultOnNotice}>
-			<Card>
-				<View className="gap-3" role={ROLE.status}>
-					<Text className="text-title text-ink" accessibilityRole={ROLE.header}>
+			<Card inList>
+				<View className="gap-1" role={ROLE.status}>
+					<Text
+						className="text-label font-semibold text-ink"
+						accessibilityRole={ROLE.header}
+					>
 						{copy("mobile.team_bridge.default_on.title")}
 					</Text>
-					<Text className="text-body text-ink-muted">
+					<Text className="text-body-sm text-ink-muted">
 						{copy("mobile.team_bridge.default_on.body")}
 					</Text>
 				</View>
 				{/* Bound each action to the card: wrapping the row alone still lets a
 				 * long localized/200% label keep its unbounded intrinsic width. */}
-				<View className="mt-3 flex-row flex-wrap items-center gap-2">
+				<View className="mt-2 flex-row flex-wrap items-center gap-1.5">
 					<View className="max-w-full shrink">
 						<Button
 							label={copy("mobile.team_bridge.default_on.turn_off")}
 							variant="outline"
+							size="sm"
 							loading={busy}
 							testID={CONTROL.teamBridgeNoticeTurnOff}
 							onPress={onTurnOff}
@@ -68,6 +72,7 @@ export function DefaultOnNoticeView({
 									: copy("mobile.team_bridge.default_on.read_more")
 							}
 							variant="quiet"
+							size="sm"
 							testID={CONTROL.teamBridgeNoticeRead}
 							onPress={() => setExpanded((open) => !open)}
 						/>
@@ -76,6 +81,7 @@ export function DefaultOnNoticeView({
 						<Button
 							label={copy("mobile.team_bridge.default_on.dismiss")}
 							variant="quiet"
+							size="sm"
 							accessibilityLabel={copy(
 								"mobile.team_bridge.default_on.dismiss_label",
 							)}
@@ -89,26 +95,28 @@ export function DefaultOnNoticeView({
 					</View>
 				</View>
 				{/* Controls precede unbounded served text so opting out stays reachable. */}
-				<View className="mt-3 gap-3">
-					{expanded && (
-						<Text
-							className="text-body-sm text-ink"
-							selectable
-							testID={SURFACE.teamBridgeNoticeText}
-						>
-							{notice.text}
-						</Text>
-					)}
-					{failed && (
-						<Text
-							className="text-body-sm text-danger"
-							accessibilityRole={ROLE.alert}
-							testID={SURFACE.teamBridgeNoticeError}
-						>
-							{copy("mobile.team_bridge.default_on.turn_off_error")}
-						</Text>
-					)}
-				</View>
+				{(expanded || failed) && (
+					<View className="mt-2 gap-2">
+						{expanded && (
+							<Text
+								className="text-body-sm text-ink"
+								selectable
+								testID={SURFACE.teamBridgeNoticeText}
+							>
+								{notice.text}
+							</Text>
+						)}
+						{failed && (
+							<Text
+								className="text-body-sm text-danger"
+								accessibilityRole={ROLE.alert}
+								testID={SURFACE.teamBridgeNoticeError}
+							>
+								{copy("mobile.team_bridge.default_on.turn_off_error")}
+							</Text>
+						)}
+					</View>
+				)}
 			</Card>
 		</View>
 	);

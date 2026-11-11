@@ -1398,6 +1398,27 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// sides' src carried, so neither parent's digest; re-derived with --print
 	// over the staged merged tree. Source identity only, no rendered or native
 	// proof.
+	// feat/bridge-nav-polish: minimal sunken WorkspaceModeBar + unified top close
+	// row, shared WorkspaceSidebarFooter across drawer modes, and Team Bridge
+	// directory/thread/delivery/sheet polish. Re-derived with --print over the
+	// staged src tree; source identity only, no rendered or native proof.
+	// #222 round-1 remediation: one-row mode bar below large text, docked
+	// Bridge footer, raised directory skeletons/row fills, full-width profile
+	// rows, author touch box. --print over the staged tree; source identity
+	// only, no rendered or native proof.
+	// #222 round-2 remediation: out-of-flow Team Bridge count below large
+	// text, content-proportioned segments and whole-word labels above it,
+	// docked directory on its canvas ground. --print over the staged tree;
+	// source identity only, no rendered or native proof.
+	// Converged #222 onto main becb972b (#216): src re-derived with --print over
+	// the merged tree. Source identity only, no rendered or native proof.
+	// Converged #222 onto main 56831114 (#220) and moved WorkspaceModeBar onto
+	// space.scale (U-42); src re-derived with --print over the merged tree.
+	// Source identity only, no rendered or native proof.
+	// Converged #222 onto main 240362a6 (#225 Bridge composer keyboard dock +
+	// glass shell): both sides' src carried, so neither parent's digest;
+	// re-derived with --print over the staged merged tree. Source identity
+	// only, no rendered or native proof.
 	// Transcript condensing polish: Tier A `FoldBar`, idle completed-turn
 	// condensing, the shared 16/40 pt trace rail, spacing tiers, hub and Team
 	// Bridge receipt rows, `relay.transcript.*` catalogues. --print over the
@@ -1420,7 +1441,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// pressable in a baseline-aligned slot, the press wash lifts to the row,
 	// the assistant/parent image strips go on-scale, `pt-0.5` is gone; tests
 	// with it. --print over the staged tree; source identity only.
-	src: "aeb37d70c830420c1c7ce52313224febbdbf08d54a01d888d4ca4a183ef72f54",
+	// PR #223 merged with main 98e53308 (#222): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	src: "f2470bb3f393e8c7e2b18f3dd683257da90855d6de0490d61d0dcb703b00ab01",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
