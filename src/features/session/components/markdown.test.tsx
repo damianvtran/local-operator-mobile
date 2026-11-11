@@ -242,6 +242,8 @@ const IMPACT_ANSWER = [
 const ROW_MARK = /data-testid="md-table-(?:head|row)"/g;
 const CELL_STYLE = /data-style="([^"]*)" data-testid="md-table-cell"/g;
 const decodeQuotes = (value: string) => value.replace(/&quot;/g, '"');
+/** Any horizontal or all-side padding utility, on any platform variant. */
+const CHIP_PADDING = /(^|\s)(web:)?p[xse]?-/;
 const INLINE_CHIP =
 	/<span data-class="([^"]*)"(?: data-style="([^"]*)")?>wait<\/span>/;
 const FENCE_BODY =
@@ -293,7 +295,9 @@ describe("operator report: table columns and code faces (build 773)", () => {
 			// backticked header cell drew no chip at all (PR #224 m2 / D1).
 			expect(chip?.[1]).toContain("bg-elevated");
 			expect(chip?.[1]).not.toContain("bg-sunken");
-			expect(chip?.[1]).toContain("web:px-0.5");
+			// No chip padding: 2pt is off space.scale (U-42) and unpriced width
+			// that broke a 64-char digest in its column (U-39) — CI 42948464285.
+			expect(chip?.[1]).not.toMatch(CHIP_PADDING);
 			const style = chip?.[2] ? JSON.parse(decodeQuotes(chip[2])) : {};
 			// React Native cannot resolve a CSS fallback LIST: the theme's
 			// `--font-mono` stack silently became the system face on iPhone.
@@ -351,6 +355,26 @@ describe("a fitting table's first frame is its settled frame (PR #224 m1 / D2)",
 			renderToStaticMarkup(createElement(Markdown, { text: FITS })),
 		);
 		expect(sum(at320)).toBeCloseTo(286, 6);
+	});
+
+	it("draws no cue on a row exactly as wide as its bleeded viewport (U-40)", () => {
+		// CI run 42948464285: S5 rich-rows on iphone-se drew the cue on a 302pt
+		// row in a 302pt viewport. Priced: Key 4·12 + 10·12 = 168, natural =
+		// 168 + 3 borders + 4·12 padding = 219. At 235 the column is 203, the
+		// bleeded viewport's content 203 + 16 − 2 = 217 and the row 219 − 2 =
+		// 217: it fits exactly, so nothing scrolls. One pt narrower, it does.
+		const EXACT = "| Key | abcdefghij |\n| --- | --- |\n| a | b |";
+		const cue = 'data-testid="md-table-scroll-cue"';
+		host.window = { width: 235, height: 640 };
+		const exact = renderToStaticMarkup(
+			createElement(Markdown, { text: EXACT }),
+		);
+		expect(sum(cellWidths(exact))).toBeCloseTo(217, 6);
+		expect(exact).not.toContain(cue);
+		host.window = { width: 234, height: 640 };
+		expect(
+			renderToStaticMarkup(createElement(Markdown, { text: EXACT })),
+		).toContain(cue);
 	});
 
 	it("falls back to the priced boxes when the window is unknown", () => {

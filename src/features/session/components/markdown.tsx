@@ -94,16 +94,23 @@ const codeBodyStyle = (): TextStyle => ({ ...LTR_TEXT, ...nativeMono() });
  *  local-operator `mobile/web/src/components/markdown.tsx`) — the mono step on
  *  a wash so a command reads as a command mid-sentence.
  *
+ *  NO HORIZONTAL PADDING, on any platform (CI run 42948464285): the relay's
+ *  `px-0.5` is 2pt, off `space.scale`, so U-42 failed every chip; and it is
+ *  unpriced width — `tablePricing` prices a code token at exactly
+ *  `TABLE_MONO_ADVANCE_PT` per glyph, so 4pt of chip padding broke a 64-char
+ *  sha256 in its own column by one glyph (U-39). The wash alone marks the
+ *  span, which is what native already drew.
+ *
  *  WHY `elevated`, NOT `sunken` (PR #224 design D1 / review m2): `sunken` sits
  *  at 1.035–1.165:1 against `canvas` across the shipped palettes, which reads
  *  as no chip in a still, and it IS the table header's fill — so a backticked
  *  header cell lost the chip entirely (1.000:1). `elevated` clears both: ≥1.124
  *  on canvas and ≥1.164 on the sunken header across every palette, the same
  *  move the relay made for its tiles. A nested `Text` cannot take padding or a
- *  radius on native, so `px-0.5 rounded-xs` apply on web only; natively the
- *  chip is the wash alone, still on the line's baseline (same line box). */
+ *  radius on native, so `rounded-xs` applies on web only; natively the chip
+ *  is the wash alone, still on the line's baseline (same line box). */
 const INLINE_CODE_CLASS =
-	"font-mono text-mono-sm bg-elevated text-ink web:px-0.5 web:rounded-xs";
+	"font-mono text-mono-sm bg-elevated text-ink web:rounded-xs";
 
 const spanClass = (span: InlineSpan): string =>
 	cx(
@@ -353,8 +360,30 @@ function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 	 * gets neither — a cue on a table that does not scroll is the false
 	 * affordance the anti-pattern exists to prevent, inverted. */
 	const bleeds = columnWidth > 0 && pricing.naturalWidth > columnWidth + 0.5;
-	const scrolls =
-		bleeds && pricing.naturalWidth > columnWidth + TABLE_RAIL_PT - 0.5;
+
+	/* The row fills the scroll viewport's CONTENT width: the frame's two 1pt
+	 *  borders sit outside the ScrollView, and the viewport bleeds to the screen
+	 *  edge exactly when `bleeds`. Derived from `columnWidth` alone — the one
+	 *  measurement that cannot feed back (see above) — so no second measure
+	 *  pass, and a streaming token that changes no cell changes no width. */
+	const available =
+		columnWidth > 0
+			? columnWidth + (bleeds ? TABLE_RAIL_PT : 0) - 2 * TABLE_BORDER_PT
+			: 0;
+	const widths = useMemo(
+		() => tableColumnWidths(pricing, available),
+		[pricing, available],
+	);
+	const rowWidth = widths.reduce((sum, width) => sum + width, 0);
+	/* `scrolls` is read off the SAME geometry the row is laid out at (the row
+	 *  against the viewport's content width), not re-derived from
+	 *  `naturalWidth`: the two disagreed by the frame's 2pt of border once the
+	 *  row stopped carrying it, and the `- 0.5` tolerance then pointed the wrong
+	 *  way — a row exactly as wide as its viewport (302pt in 302pt, S5
+	 *  rich-rows on iphone-se at 100 %) drew the cue with nothing to scroll
+	 *  (CI run 42948464285, U-40). The tolerance now sits on the overflow side:
+	 *  sub-point float residue never manufactures a cue. */
+	const scrolls = bleeds && rowWidth > available + 0.5;
 	const forced = useMemo(() => forcedTableScroll(), []);
 
 	const onColumnLayout = useCallback(
@@ -461,20 +490,6 @@ function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 	const moreAhead = showRight;
 	const moreBehind = showLeft;
 
-	/* The row fills the scroll viewport's CONTENT width: the frame's two 1pt
-	 *  borders sit outside the ScrollView, and the viewport bleeds to the screen
-	 *  edge exactly when `bleeds`. Derived from `columnWidth` alone — the one
-	 *  measurement that cannot feed back (see above) — so no second measure
-	 *  pass, and a streaming token that changes no cell changes no width. */
-	const available =
-		columnWidth > 0
-			? columnWidth + (bleeds ? TABLE_RAIL_PT : 0) - 2 * TABLE_BORDER_PT
-			: 0;
-	const widths = useMemo(
-		() => tableColumnWidths(pricing, available),
-		[pricing, available],
-	);
-	const rowWidth = widths.reduce((sum, width) => sum + width, 0);
 	const cellStyle = (column: number) => ({
 		// ONE fixed border-box width per column, identical in every row (header
 		// included): the cell carries its padding and separator inside it, and

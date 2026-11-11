@@ -1428,7 +1428,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #224 merged with main 98e53308 (#222 bridge nav polish): both sides'
 	// src carried, so neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source identity only, no rendered or native proof.
-	src: "0a6a1ae84a28377a987b5f6e63d8a19043172125c7bf1d56e304520a95b39413",
+	// PR #224 CI audit fix (run 42948464285): inline-code chip loses its
+	// off-scale 2pt web padding (U-42/U-39) and the table cue reads the laid-out
+	// row against its viewport (U-40). --print over the staged tree; source
+	// identity only, no rendered or native proof.
+	src: "92704a6f5b07399ed06621ae2a27f4a55210e5520c0f8d938972eb6cc7b8e52a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
