@@ -27,7 +27,7 @@ const ROW_CONTAINER =
 const STATE_GATED_FILL = /tool_state === "[a-z]+"[\s\S]{0,80}"bg-/;
 const CARD_STATE_FILL = /liveTone\) && "bg-/;
 const PULSING_GLYPH =
-	/<Shimmer active=\{tone\.pulsing\} className="w-4 shrink-0">\s*<Text[\s\S]*?\{tone\.glyph\}/;
+	/<LiveGlyph\s+glyph=\{tone\.glyph\}\s+inkClass=\{tone\.inkClass\}\s+live=\{tone\.pulsing\}/;
 const CHIP_GATE = /chipLayout === "words" ?/;
 /** R17: the layout's scale argument must reach it from the provider, not default. */
 const CHIP_SCALE =
@@ -218,7 +218,8 @@ describe("tool row has no state fill (D4)", () => {
 	it("pulses the glyph of a running row, and only that", () => {
 		const row = jsx(read("./tool-row.tsx"));
 		/* `pulsing` is true for `running` alone (`toolGlyph`, held by
-		 *  `projection.test.ts`), and `Shimmer` starts no loop when inactive. */
+		 *  `projection.test.ts`), and `LiveGlyph` starts no loop when not live
+		 *  (its drawn states: `live-glyph.test.tsx`). */
 		expect(row).toMatch(PULSING_GLYPH);
 	});
 });

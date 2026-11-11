@@ -1490,7 +1490,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #228 merged with main eee80204 (#224): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the merged tree.
 	// Source identity only.
-	src: "0c1c85a82ece0143dd088e2914b218c130ac04cf35f7bae7775297dcbb3fa715",
+	// fix/running-tool-indicator: the running tool glyph and a closed fold over
+	// an executing call draw `LiveGlyph` (relay `lo-pulse`, static accent tick
+	// under Reduce Motion) instead of the text `Shimmer`; a fold with only a
+	// composing/queued call stays dim. Tests with it. --print over the staged
+	// tree; source identity only, no rendered or native proof. Re-printed
+	// after the live-glyph test ids moved into `SURFACE` (src/ui/a11y.ts): the
+	// same two strings, now declared once — no rendered change.
+	// PR #229 merged with main 502945a6 (#228): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only, no rendered or native proof.
+	src: "b533d1206624f7d868c2eda8d8347c86ff840db6820709d6a4db197c06dcbe77",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

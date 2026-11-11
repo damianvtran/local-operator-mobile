@@ -225,8 +225,10 @@ export interface ToolGlyph {
 	glyph: string;
 	/** The identity colour's class. */
 	inkClass: string;
-	/** The accent pulse, `lo-pulse` 1.2 s. Only a RUNNING call moves: a queued one
-	 *  is announced but nothing is happening, so it keeps the dim glyph. */
+	/** The live-tool indicator (`LiveGlyph`: the relay's `lo-pulse`, 1 → 0.4 over
+	 *  1.2 s; a static accent tick under Reduce Motion). Only a RUNNING call
+	 *  moves: a queued one is announced but nothing is happening, so it keeps
+	 *  the dim glyph. */
 	pulsing: boolean;
 }
 
