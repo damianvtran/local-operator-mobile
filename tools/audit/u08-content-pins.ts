@@ -1504,7 +1504,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// transcript's drag-to-select wrapper (`selectable-message.tsx`) — on web
 	// it renders its children unchanged and the leaf Text keeps `selectable`,
 	// so no measured web pixel moves. Source identity only.
-	src: "f26ae95d82345ae7a9ae4c5d2d2c84400183b774179a4b1ea998918d8c2695da",
+	src: "da2bfb3aff3a42b0b76d0b65c21c4627f18ba97bd49183943382b6062cfce4d0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
