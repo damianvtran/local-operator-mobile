@@ -657,7 +657,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// Composer growth / paste / Bridge gap (TestFlight 836): the session
 	// screen measures its transcript for the composer's ceiling. Re-derived
 	// with --print; source identity only, no rendered or native proof.
-	app: "5ef9d76e32727b3b2a5e3b06bcae1d8a29314f6d8699e5339f045e4f5df3725e",
+	// PR #230 round-2 remediation (M2): the session screen holds the
+	// transcript slack through a keyboard lift (`onLift`). Re-derived with
+	// --print; source identity only, no rendered or native proof.
+	app: "6c35af53d36a53883a7c6962f333a0677089fd6a1524dd64efdcfb3ea3a0baf4",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1500,7 +1503,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #230 round-1 remediation: the Bridge list's bottom padding (D1,
 	// pb-4 -> pb-2) and three unit tests. Re-derived with --print; source
 	// identity only, no rendered or native proof.
-	src: "7b310a116c6469a470111f11f840dfdebf21b0cd7262ab3e4caf28ae0c0765fa",
+	// PR #230 round-2 remediation (M2, m4): the through-the-lift branch
+	// ignores the slack, the composer reports `onLift`, and the lift tests.
+	// Re-derived with --print; source identity only, no rendered or native
+	// proof.
+	src: "11d4c135071bd85163700a593972f6e6896a32f7fdd1e9735ba437ccf6a9208e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

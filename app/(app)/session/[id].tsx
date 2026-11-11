@@ -576,6 +576,24 @@ export default function Session() {
 	/* The transcript's measured height: room a composer bound by a stale top
 	 *  may still take (TestFlight 836, see `heldComposerLimit`). */
 	const [transcriptSlack, setTranscriptSlack] = useState(0);
+	/* THE SLACK HELD THROUGH A LIFT (PR #230 review round 2, M2). While the
+	 *  composer lifts it does not publish, so `composerBox.top` is frozen at the
+	 *  last settled layout; the transcript's `onLayout` keeps firing on every
+	 *  pass of the animated margin, and its height depends on the composer's
+	 *  own painted height. Pairing that fresh slack with the frozen top made the
+	 *  ceiling an output of itself (a capped composer alternated by up to
+	 *  ~240 pt, e.g. the paste prompt's hide and re-show). So the slack is
+	 *  frozen at the value it had when the lift began, and released when the
+	 *  composer publishes the settled box (`onLift(false)`), which brings a top
+	 *  and a slack from the same layout back together. No threshold: the
+	 *  composer says when the pair is out of step. */
+	const transcriptSlackRef = useRef(0);
+	const [liftSlack, setLiftSlack] = useState<number | null>(null);
+	const onComposerLift = useCallback((lifting: boolean) => {
+		setLiftSlack((held) =>
+			lifting ? (held ?? transcriptSlackRef.current) : null,
+		);
+	}, []);
 	/* An unchanged measurement is not a new state (perf audit P15). The composer
 	 *  publishes a FRESH `{top, height, capped}` on every layout pass and every
 	 *  measure-key change, and a fresh object re-rendered this whole screen even
@@ -1302,9 +1320,11 @@ export default function Session() {
 					    transcript branch inside it, so the column lays out as before. */}
 					<View
 						className="flex-1 min-h-0"
-						onLayout={(event) =>
-							setTranscriptSlack(Math.round(event.nativeEvent.layout.height))
-						}
+						onLayout={(event) => {
+							const height = Math.round(event.nativeEvent.layout.height);
+							transcriptSlackRef.current = height;
+							setTranscriptSlack(height);
+						}}
 					>
 						{transcript}
 					</View>
@@ -1561,9 +1581,10 @@ export default function Session() {
 							width: viewportWidth,
 							height: viewportHeight,
 							keyboardOverlap,
-							transcriptSlack,
+							transcriptSlack: liftSlack ?? transcriptSlack,
 						})}
 						onMeasure={setComposerBox}
+						onLift={onComposerLift}
 						/* The measured heights above the composer close the key
 						 *  (`composerChromeKey`): the activity band, a header that
 						 *  stacks (seen as the column's height) or a panel row can

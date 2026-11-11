@@ -785,7 +785,11 @@ export const heldComposerLimit = (
 	 *  limit — the composer growing by d moves its top up by d and shrinks the
 	 *  transcript by d — so #206's invariant (the input never depends on the
 	 *  output it controls) is kept, and a legitimately capped composer, whose
-	 *  transcript has already collapsed to 0, is unchanged. */
+	 *  transcript has already collapsed to 0, is unchanged. That holds only
+	 *  when `top` and the slack come from the SAME layout: through a keyboard
+	 *  lift the top is frozen (the composer does not publish mid-lift), so the
+	 *  screen passes the slack it held when the lift began (`onLift`), and the
+	 *  through-the-lift branch below ignores the slack (PR #230 R2 M2). */
 	const slack = Math.max(0, viewport.transcriptSlack ?? 0);
 	const sameWindow =
 		box !== null &&
@@ -803,14 +807,19 @@ export const heldComposerLimit = (
 	 *  top says nothing about the new layout and it stays unbound as before.
 	 *  Only boxes the composer published SETTLED reach here (it does not publish
 	 *  mid-lift), so this top is never one the animation is still moving. A
-	 *  different window is still no measurement at all (U1, above). */
+	 *  different window is still no measurement at all (U1, above).
+	 *
+	 *  NO SLACK HERE (PR #230 review round 2, M2). This branch only runs while
+	 *  the lift is under way, so the held `top` is frozen at the last settled
+	 *  layout while the transcript's `onLayout` keeps reporting a fresh height
+	 *  on every pass of the animated margin, and that height depends on the
+	 *  composer's own painted height. `top - slack` would then pair two
+	 *  layouts and become an output of itself: a capped composer alternated by
+	 *  up to ~240 pt through the lift. A settled capped box has a slack of ~0
+	 *  anyway (its transcript has collapsed), so `box.top` is the same ceiling,
+	 *  and the end-of-lift publish brings the slack back in the live branch. */
 	if (sameWindow && (box.keyboardOverlap ?? 0) !== overlap && box.capped)
-		return composerLimit(
-			viewport.height - overlap,
-			box.top - slack,
-			box.height,
-			true,
-		);
+		return composerLimit(viewport.height - overlap, box.top, box.height, true);
 	const live =
 		sameWindow && (box.keyboardOverlap ?? 0) === overlap ? box : null;
 	return composerLimit(
