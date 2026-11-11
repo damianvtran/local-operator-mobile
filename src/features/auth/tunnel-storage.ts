@@ -20,6 +20,10 @@ import {
 	type SavedComputer,
 	SavedComputers,
 } from "@/connection/saved-computers";
+import {
+	describeSecureStorageRefusal,
+	type SecureStorageRefusal,
+} from "@/connection/secure-storage-refusal";
 import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
 import { thisDeviceOnlyAccessibility } from "@/connection/storage";
 
@@ -149,9 +153,10 @@ export async function readSavedTunnel(): Promise<SavedTunnel | null> {
 
 /** Persists a tunnel. Returns whether it can survive a restart, so the caller can
  *  say so plainly. */
-export async function writeSavedTunnel(
-	tunnel: SavedTunnel,
-): Promise<{ persistent: boolean }> {
+export async function writeSavedTunnel(tunnel: SavedTunnel): Promise<{
+	persistent: boolean;
+	storageRefusal?: SecureStorageRefusal;
+}> {
 	const { storage: store, persistent } = await open();
 	const record: CustomRouteSet = {
 		base_url: tunnel.baseUrl,
@@ -160,10 +165,17 @@ export async function writeSavedTunnel(
 	};
 	try {
 		await store.writeCustomRoute(record);
-	} catch {
-		/* A platform that cannot store it (no keystore, a value over the cap) still
-		 * gets a working session: the route lives in the store for this run. */
-		return { persistent: false };
+	} catch (error) {
+		/* Not thrown: a platform that cannot store it (no keystore, a value over the
+		 * cap) still gets a working session — the route lives in the store for this
+		 * run, and failing Save and connect over persistence would take away a
+		 * connection that works. But no longer SILENT either (PR #216 evidence): the
+		 * sanitised reason goes back so the screen can say the address will not
+		 * survive a restart, and why. */
+		return {
+			persistent: false,
+			storageRefusal: describeSecureStorageRefusal(error, "write"),
+		};
 	}
 	return { persistent };
 }

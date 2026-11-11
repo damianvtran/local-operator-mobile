@@ -46,6 +46,7 @@ import {
 } from "@/features/session/scoped-storage";
 import { reopenDispatch, withdrawDispatch } from "@/relay/command-lifecycle";
 import { randomState } from "./pkce";
+import { secureStorageStep } from "./secure-storage-refusal";
 import type { StartupAuthorizationRecord } from "./storage";
 
 export type StartupAuthorization = Readonly<{
@@ -180,16 +181,25 @@ export class StartupAuthorizationLifecycle {
 	): Promise<void> {
 		this.suspend();
 		return this.enqueue(async () => {
-			if (preserveUnscoped && (await this.storage.read()) === null) return;
+			/* Each keystore operation is tagged with its step so a refusal can say WHICH
+			 * one the device refused (`describeSecureStorageRefusal`); the original error
+			 * stays on `cause` and its message is unchanged. */
+			if (
+				preserveUnscoped &&
+				(await secureStorageStep("read", () => this.storage.read())) === null
+			)
+				return;
 			if (policy === "reauthenticate")
 				await this.checkpointBeforeReauthentication();
 			const outcomes = await Promise.allSettled([
-				this.storage.write({
-					version: 1,
-					state: policy === "reauthenticate" ? "reauthenticate" : "tombstone",
-				}),
-				this.cleanup(policy),
-				afterCleanup?.() ?? Promise.resolve(),
+				secureStorageStep("write", () =>
+					this.storage.write({
+						version: 1,
+						state: policy === "reauthenticate" ? "reauthenticate" : "tombstone",
+					}),
+				),
+				secureStorageStep("clear", () => this.cleanup(policy)),
+				secureStorageStep("clear", () => afterCleanup?.() ?? Promise.resolve()),
 			]);
 			const failures = outcomes.flatMap((outcome) =>
 				outcome.status === "rejected" ? [outcome.reason] : [],

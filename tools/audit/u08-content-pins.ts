@@ -1371,6 +1371,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// disjoint src files, so the merged tree has neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
+	// fix/refused-connect-feedback: own-tunnel stays on the form with the reason
+	// when Save and connect is refused, the keystore refusal's sanitised cause,
+	// seven catalogue keys and tests; only `src` moves, re-derived with --print
+	// over the staged tree. Source identity only, no rendered or native proof.
+	// PR #220 round-1 remediation (R1-m1/m2, D1-D3, U1/U2/U4, Q1): own-tunnel
+	// clears stale state on edit, keeps the refusal up during Retry, new copy
+	// and keys; only `src` moves, re-derived with --print over the staged tree.
+	// Source identity only, no rendered or native proof.
+	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
+	// src carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
 	// fix/bridge-composer-keyboard-glass (TestFlight 800): the Bridge composer
 	// docks above the keyboard from #216's store (new composer-dock.tsx, no
 	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
@@ -1379,7 +1390,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// noChildrenProp) and pins the thread's glass={chromeGlass} prop; a test
 	// file only, but `src` covers tests, so it moves. --print over the staged
 	// tree; source identity only, no rendered or native proof.
-	src: "da3e3fb8a5b7eead2b2cec6775601c947df0071610ae9e070b64d2c810ea759c",
+	// PR #225 merged with main 56831114 (#220 refused-connect feedback): both
+	// sides' src carried, so neither parent's digest; re-derived with --print
+	// over the staged merged tree. Source identity only, no rendered or native
+	// proof.
+	src: "01807a9d9f7bb04739b86cfb3a143410386ebc3eef09c0e6f208e3b0eb80eabd",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

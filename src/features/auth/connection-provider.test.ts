@@ -45,7 +45,14 @@ import { signInPresentation } from "./sign-in-presentation";
 // The strict privacy adapter is supplied by the adjacent storage slice. These
 // tests exercise the real provider boundary, not native filesystem/Keychain I/O.
 const nativePlatform = vi.hoisted(() => ({ OS: "web" }));
-const privacy = vi.hoisted(() => ({ calls: 0, fail: false }));
+const privacy = vi.hoisted(() => ({
+	calls: 0,
+	fail: false,
+	/* The rejection to throw instead of the default one: a platform-shaped error
+	 *  (an Expo `code` and a message quoting the OSStatus) for the keystore
+	 *  refusal tests. */
+	error: null as Error | null,
+}));
 const handoff = vi.hoisted(() => ({
 	block: null as Promise<void> | null,
 	started: false,
@@ -63,7 +70,8 @@ vi.mock("@/features/session/device-storage", async (importOriginal) => ({
 	...(await importOriginal<object>()),
 	clearAuthorizationData: async () => {
 		privacy.calls += 1;
-		if (privacy.fail) throw new Error("Synthetic privacy storage failure");
+		if (privacy.fail)
+			throw privacy.error ?? new Error("Synthetic privacy storage failure");
 	},
 }));
 
@@ -303,6 +311,9 @@ const oauth: RadientTokens = {
 async function relay(
 	options: {
 		holdLogin?: boolean;
+		/** The relay refuses the password: `POST /login` answers the relay's own
+		 *  401 `{"error":"authentication required"}` (PR #220 design D2). */
+		rejectLogin?: boolean;
 		/** The branch's own token-endpoint controls: a rotation that succeeds, and one
 		 *  the server refuses, so the accessor's `invalidGrant` arm is reachable. */
 		rejectOauthRefresh?: boolean;
@@ -525,6 +536,11 @@ async function relay(
 			const login = ++loginCount;
 			loginReceived.resolve();
 			if (login === 1 && options.holdLogin) await releaseLogin.promise;
+			if (options.rejectLogin) {
+				events.push(`login:${login}:401`);
+				json({ error: "authentication required" }, 401);
+				return;
+			}
 			events.push(`login:${login}:cookie`);
 			response.writeHead(303, {
 				location: "/",
@@ -784,6 +800,7 @@ beforeEach(async () => {
 	await realRegistry();
 	nativePlatform.OS = "web";
 	privacy.fail = false;
+	privacy.error = null;
 	handoff.block = null;
 	handoff.started = false;
 	handoff.signals.length = 0;
@@ -891,6 +908,170 @@ describe("startup authorization is admitted by the route (R1-1)", () => {
 		// ... and the route is still authorized to start work, which is what the
 		// startup coordinator opens on.
 		expect(getStartupAuthorization()).not.toBeNull();
+	});
+});
+
+/**
+ * Save and connect's outcome, and the keystore refusal's reason (PR #216 evidence,
+ * diagnostic run 42855980853). Real provider, real lifecycle, real store: the only
+ * synthetic piece is the private-data purge rejecting with a platform-shaped error.
+ */
+describe("connectCustomOutcome and the keystore refusal reason", () => {
+	const keychainRefusal = () =>
+		Object.assign(
+			new Error(
+				"Calling the 'deleteValueWithKeyAsync' function has failed\n→ Caused by: secret-value-must-not-leak (OSStatus -34018)",
+			),
+			{ code: "ERR_KEY_CHAIN" },
+		);
+
+	it("reports live for a route that went live, and the quiet member still resolves undefined", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		let outcome: unknown;
+		await act(async () => {
+			outcome = await latest.connectCustomOutcome({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(outcome).toEqual({ status: "live" });
+		let quiet: unknown = "unset";
+		await act(async () => {
+			quiet = await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// Other callers' contract is unchanged: `connectCustom` reports nothing.
+		expect(quiet).toBeUndefined();
+		expect(connectionStore.getState().phase).toBe("live");
+	});
+
+	it("reports a validator refusal with its sentence", async () => {
+		await mount();
+		let outcome: unknown;
+		await act(async () => {
+			outcome = await latest.connectCustomOutcome({
+				url: "http://example.invalid",
+				password: "test-only",
+				allowInsecure: false,
+			});
+		});
+		expect(outcome).toMatchObject({ status: "refused", storageRefusal: null });
+		expect((outcome as { detail: string | null }).detail).toBeTruthy();
+	});
+
+	it("names a relay 401 by its surface, so the screen can say the password was rejected", async () => {
+		const mock = await relay({ rejectLogin: true });
+		transport();
+		await mount();
+		let outcome: unknown;
+		await act(async () => {
+			outcome = await latest.connectCustomOutcome({
+				url: mock.origin,
+				password: "wrong-test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(mock.events).toContain("login:1:401");
+		expect(outcome).toMatchObject({
+			status: "refused",
+			storageRefusal: null,
+			surface: "password",
+		});
+	});
+
+	it("carries a keystore rejection's step and code into the outcome, the store and the refusal, redacted", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		// A record now exists, so the next explicit connect runs the real purge.
+		privacy.fail = true;
+		privacy.error = keychainRefusal();
+		let outcome: unknown;
+		await act(async () => {
+			outcome = await latest.connectCustomOutcome({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		const refusal = {
+			step: "clear",
+			kind: "Error",
+			code: "ERR_KEY_CHAIN -34018",
+		};
+		expect(outcome).toEqual({
+			status: "refused",
+			detail: null,
+			storageRefusal: refusal,
+			surface: "diagnostic",
+		});
+		const state = connectionStore.getState();
+		expect(state.surface).toBe("diagnostic");
+		expect(state.storageRefusal).toEqual(refusal);
+		// The diagnostics row names the step; the reader's sentence carries the code.
+		expect(latest.lastError?.diagnostic).toBe(
+			"secure-storage clear Error ERR_KEY_CHAIN -34018",
+		);
+		expect(latest.refusal?.detail).toBe(
+			"This device's secure storage refused the request (code ERR_KEY_CHAIN -34018). Try again, or reinstall the app if it keeps happening.",
+		);
+		// Redaction: the platform message never reaches any of them.
+		const everywhere = JSON.stringify([
+			outcome,
+			state.storageRefusal,
+			state.detail,
+			latest.refusal,
+			latest.lastError?.diagnostic,
+		]);
+		expect(everywhere).not.toContain("secret-value-must-not-leak");
+		expect(everywhere).not.toContain("deleteValueWithKeyAsync");
+		// A later success clears the cause with the rest of the failure.
+		privacy.fail = false;
+		await act(async () => {
+			outcome = await latest.connectCustomOutcome({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(outcome).toEqual({ status: "live" });
+		expect(connectionStore.getState().storageRefusal).toBeNull();
+	});
+
+	it("keeps the reason on sign-out's refusal too (another verifiedRetirement caller)", async () => {
+		const mock = await relay();
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		privacy.fail = true;
+		privacy.error = keychainRefusal();
+		await act(async () => {
+			// Unchanged contract: sign-out still reports false.
+			expect(await latest.signOut()).toBe(false);
+		});
+		expect(connectionStore.getState().surface).toBe("diagnostic");
+		expect(connectionStore.getState().storageRefusal?.code).toBe(
+			"ERR_KEY_CHAIN -34018",
+		);
 	});
 });
 

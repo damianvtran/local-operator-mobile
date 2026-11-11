@@ -24,5 +24,14 @@
 	"mobile.computers.hide_details": "Скрыть сведения",
 	"mobile.computers.connection_response": "Ответ подключения",
 	"mobile.computers.transport.radient": "Radient",
-	"mobile.computers.transport.custom": "Ваш адрес"
+	"mobile.computers.transport.custom": "Ваш адрес",
+	"mobile.computers.connect_refused.title": "Не удалось подключиться",
+	"mobile.computers.connect_refused.generic": "Компьютер не принял подключение. Адрес и пароль сохранены на экране — проверьте их и попробуйте снова.",
+	"mobile.computers.connect_refused.password": "Ретранслятор не принял этот пароль. Проверьте его и попробуйте снова.",
+	"mobile.computers.storage_refused.with_code": "Защищённое хранилище этого устройства отклонило запрос (код {code}). Попробуйте снова или переустановите приложение, если это повторяется.",
+	"mobile.computers.storage_refused.no_code": "Защищённое хранилище этого устройства отклонило запрос. Попробуйте снова или переустановите приложение, если это повторяется.",
+	"mobile.computers.save_refused.title": "Подключено, но не сохранено",
+	"mobile.computers.save_refused.body": "Этому устройству не удалось надёжно сохранить адрес и пароль. Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
+	"mobile.computers.save_refused.body_with_code": "Этому устройству не удалось надёжно сохранить адрес и пароль (код {code}). Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
+	"mobile.computers.save_refused.continue": "Продолжить"
 }

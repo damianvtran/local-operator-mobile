@@ -25,6 +25,7 @@
 import { createStore } from "zustand/vanilla";
 import type { DiscoveredComputer } from "../connection/discovery";
 import type { RouteProfile } from "../connection/profile";
+import type { SecureStorageRefusal } from "../connection/secure-storage-refusal";
 import type { ErrorSurface } from "../relay";
 
 export type ConnectionPhase =
@@ -94,6 +95,13 @@ export interface ConnectionSnapshot {
 	surface: ErrorSurface | null;
 	/** A server-supplied backoff, when it sent one. */
 	retryAfterMs: number | null;
+	/** When the failure was THIS device's secure storage refusing a read, clear or
+	 *  write: which step and the platform code, sanitised
+	 *  (`connection/secure-storage-refusal.ts`). Kept apart from `detail` because a
+	 *  `diagnostic` surface stores no sentence (see `noteFailure`), yet this cause
+	 *  is one the reader can act on (retry, or reinstall) and support needs the code.
+	 *  Plain data: never the platform's message, never a stored value. */
+	storageRefusal: SecureStorageRefusal | null;
 	/** Bumped on every route change. Consumers use it to drop work that belongs to
 	 *  a route that is no longer active. */
 	revision: number;
@@ -145,6 +153,8 @@ export interface ConnectionActions {
 		surface: ErrorSurface;
 		displayableMessage: string;
 		retryAfterMs?: number | null;
+		/** Only a keystore refusal passes this; every other failure clears it. */
+		storageRefusal?: SecureStorageRefusal | null;
 	}) => void;
 	/** Ends the route: the only other action that touches `route`. */
 	endRoute: () => void;
@@ -165,6 +175,7 @@ const INITIAL: ConnectionSnapshot = {
 	detail: null,
 	surface: null,
 	retryAfterMs: null,
+	storageRefusal: null,
 	revision: 0,
 };
 
@@ -271,6 +282,7 @@ export function createConnectionStore() {
 				phase: "minting",
 				detail: null,
 				surface: null,
+				storageRefusal: null,
 			});
 		},
 
@@ -281,6 +293,7 @@ export function createConnectionStore() {
 				detail: null,
 				surface: null,
 				retryAfterMs: null,
+				storageRefusal: null,
 				...(input?.accountLabel !== undefined
 					? { accountLabel: input.accountLabel }
 					: {}),
@@ -313,6 +326,7 @@ export function createConnectionStore() {
 				detail,
 				surface,
 				retryAfterMs: error.retryAfterMs ?? null,
+				storageRefusal: error.storageRefusal ?? null,
 				phase: surface === "sign-in" ? "signed-out" : "refused",
 				/* A sign-in failure removes the route's identity but keeps the route: the
 				 * user is re-authenticating the same computer, not choosing a new one. */
