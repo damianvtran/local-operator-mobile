@@ -277,6 +277,7 @@ release → Environment secrets) — see "Where they live, and why" below.
 | `ANDROID_KEY_ALIAS` | same | Key alias. |
 | `ANDROID_KEY_PASSWORD` | same | Key password. |
 | `PLAY_SERVICE_ACCOUNT_JSON_BASE64` | `android.yml` `internal`, `release.yml` | Google Play service-account JSON, base64. Decoded to `SUPPLY_JSON_KEY`. |
+| `GOOGLE_SERVICES_JSON_BASE64` | `android.yml` `internal`, `release.yml` — **optional** | The Firebase `google-services.json` for the Android app, base64 (`base64 < google-services.json \| tr -d '\n'`). FCM only — no other Firebase product (2026-10-29 decision). `scripts/ci/google-services.ts` writes it under `$RUNNER_TEMP` and exports `GOOGLE_SERVICES_JSON_PATH` for `app.config.ts`. **Absent → a `::notice::` and a build with Android push off; present but for another package or not JSON → the job fails.** `check-secrets.ts --optional` reports it and never fails on it. Not a secret in Google's model; kept out of git to match `.gitignore`. |
 | `APPLE_TEAM_ID` | `ios.yml` `internal`, `release.yml` | Apple team id. Feeds `ios.appleTeamId` through the app config and the export options. |
 | `APPLE_ASC_KEY_ID` | same | App Store Connect API key id. |
 | `APPLE_ASC_ISSUER_ID` | same | App Store Connect issuer id. |
