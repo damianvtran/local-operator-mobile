@@ -1444,7 +1444,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #223 merged with main 98e53308 (#222): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only.
-	src: "f2470bb3f393e8c7e2b18f3dd683257da90855d6de0490d61d0dcb703b00ab01",
+	// feat/bridge-last-target: the last-target memory, the message-anchored
+	// thread open and its Jump to newest copy (8 locales). --print over the
+	// committed tree; source identity only.
+	src: "e9cadbfdc2f1bf2522fff11fd4ad7b399c9823d4e6c38897915df3a4d5b430cd",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
