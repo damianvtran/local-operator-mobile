@@ -24,5 +24,14 @@
 	"mobile.computers.hide_details": "Masquer les détails",
 	"mobile.computers.connection_response": "Réponse de connexion",
 	"mobile.computers.transport.radient": "Radient",
-	"mobile.computers.transport.custom": "Votre adresse"
+	"mobile.computers.transport.custom": "Votre adresse",
+	"mobile.computers.connect_refused.title": "Connexion impossible",
+	"mobile.computers.connect_refused.generic": "L’ordinateur n’a pas accepté la connexion. Votre adresse et votre mot de passe sont toujours là : vérifiez-les et réessayez.",
+	"mobile.computers.connect_refused.password": "Le relais n’a pas accepté ce mot de passe. Vérifiez-le et réessayez.",
+	"mobile.computers.storage_refused.with_code": "Le stockage sécurisé de cet appareil a refusé la demande (code {code}). Réessayez, ou réinstallez l’app si le problème persiste.",
+	"mobile.computers.storage_refused.no_code": "Le stockage sécurisé de cet appareil a refusé la demande. Réessayez, ou réinstallez l’app si le problème persiste.",
+	"mobile.computers.save_refused.title": "Connecté, mais non enregistré",
+	"mobile.computers.save_refused.body": "Cet appareil n’a pas pu enregistrer l’adresse et le mot de passe de façon sécurisée. La connexion fonctionne pour l’instant, mais vous devrez les saisir à nouveau après le redémarrage de l’app.",
+	"mobile.computers.save_refused.body_with_code": "Cet appareil n’a pas pu enregistrer l’adresse et le mot de passe de façon sécurisée (code {code}). La connexion fonctionne pour l’instant, mais vous devrez les saisir à nouveau après le redémarrage de l’app.",
+	"mobile.computers.save_refused.continue": "Continuer"
 }

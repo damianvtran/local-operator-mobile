@@ -19,7 +19,7 @@ describe("attachment toolbar available-width layout", () => {
 		// field, inline icon controls) replaced them. The words stay as names.
 		const composer = source.slice(
 			source.indexOf("<BridgeComposerField"),
-			source.indexOf("</KeyboardAvoidingView>"),
+			source.indexOf("</BridgeComposerDock>"),
 		);
 		expect(composer).toContain(
 			'label={t("mobile.team_bridge.thread.message")}',
@@ -41,16 +41,23 @@ describe("attachment toolbar available-width layout", () => {
 	it("draws no hairline above the composer and pays the agent dock's clearance", () => {
 		const area = source.slice(
 			source.lastIndexOf(
-				"<View",
+				"<BridgeComposerDock",
 				source.indexOf("testID={SURFACE.teamBridgeComposer}"),
 			),
 			source.indexOf("testID={SURFACE.teamBridgeComposer}"),
 		);
 		expect(area).not.toContain("border-t");
 		expect(area).not.toContain("border-hairline");
-		expect(area).toContain("composerOuterGap(");
-		expect(area).toContain("keyboardVisible");
-		expect(area).toContain("paddingHorizontal: COMPOSER_SIDE_PAD");
+		// TestFlight 800: the clearance and the keyboard lift moved into the dock,
+		// which reads #216's keyboard store; `composer-keyboard-glass.test.tsx`
+		// renders it and pins the offsets to the agent dock's rule.
+		expect(area).toContain("bottomInset={insets.bottom}");
+		const dock = readFileSync(
+			new URL("./composer-dock.tsx", import.meta.url),
+			"utf8",
+		);
+		expect(dock).toContain("composerOuterGap(bottomInset, keyboardVisible)");
+		expect(dock).toContain("paddingHorizontal: COMPOSER_SIDE_PAD");
 	});
 	it("leads the thread with the drawer button, never a back arrow", () => {
 		expect(source).not.toContain("BridgeBack");

@@ -140,7 +140,11 @@ describe("the ☰'s count never touches the computer selector (TestFlight 578)",
 		).replace(/\s+/g, " ");
 		expect(SOURCE).toContain("<WorkspaceDrawerButton />");
 		expect(menu).toContain("testID = CONTROL.homeSidebar");
-		expect(menu).toContain("style={MENU_BADGE_INSET}");
+		// Home's ☰ keeps MENU_BADGE_INSET; only the Team Bridge thread trigger
+		// takes its own ringed inset (design D1-4).
+		expect(menu).toContain(
+			"style={bridgeTrigger ? BRIDGE_MENU_BADGE_INSET : MENU_BADGE_INSET}",
+		);
 		expect(menu).not.toContain("style={{ top: 2, end: 0 }}");
 		expect(menu).toContain("minHeight: TOUCH_FLOOR, minWidth: TOUCH_FLOOR");
 		/* `ms-2` is HEADER_SELECTOR_LEAD_PT; only beside the ☰ (not in the split). */

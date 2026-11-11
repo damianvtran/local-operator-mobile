@@ -141,7 +141,11 @@ const NAMESPACES = [
 		name: "mobile.computers",
 		messages: computers,
 		context: computersContext,
-		expected: 26, // main's 24 + the branch's two transport keys
+		/* main's 24 + the two transport keys + nine refused-connect keys (own-tunnel
+		 * "Couldn't connect" with its generic and wrong-password bodies, the
+		 * secure-storage refusal, "Connected, but not saved" with its body with and
+		 * without a code, and Continue). */
+		expected: 35,
 	},
 	{
 		name: "mobile.notifications",
@@ -272,7 +276,17 @@ describe("the English catalogues", () => {
 		/* Minus one: TestFlight 773 retired `mobile.team_bridge.thread.placeholder`
 		 * — the Bridge composer shows its field label, the title names the
 		 * channel. 569 - 1. */
-		expect(total).toBe(568);
+		/* Plus seven for refused-connect feedback on the own-tunnel screen: the
+		 * inline "Couldn't connect" title and generic body, the secure-storage
+		 * refusal sentence with and without a platform code, and the "Connected,
+		 * but not saved" title, consequence and Continue. 569 + 7, verified by the
+		 * generator's own count (576 keys). PR #220 round-1 remediation: + the
+		 * wrong-password body, and the not-saved body (with and without a code)
+		 * replacing its "until restart" tail: 576 + 3 - 1 = 578, the generator's
+		 * count. */
+		/* PR #220 merged with main becb972b (#219 retired one key): 568 + 9 (this
+		 * branch's net) = 577, verified by counting unique `en` keys over the merged tree. */
+		expect(total).toBe(577);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

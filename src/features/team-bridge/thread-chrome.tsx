@@ -7,6 +7,7 @@ import {
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_BASE_HEIGHT,
+	COMPOSER_GLASS_LAYER_RADIUS,
 	COMPOSER_SIDE_PAD,
 	composerRestRow,
 	composerShellPadding,
@@ -15,6 +16,7 @@ import {
 import { sessionHeaderTitle } from "@/features/session/header";
 import { CONTROL, ROLE, SURFACE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { ChromeSurface } from "@/ui/components/chrome-surface";
 import { Heading } from "@/ui/components/heading";
 import { Textarea } from "@/ui/components/textarea";
 import { TOUCH_FLOOR, useCompactChrome } from "@/ui/layout";
@@ -61,13 +63,26 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
  * title its own row (large text / narrow phone) and ONE line beside the back
  * control otherwise. The tail is cut by layout, never by a character count.
  */
-export function BridgeThreadTitle({ title }: { title: string }) {
+export function BridgeThreadTitle({
+	title,
+	accessibilityLabel,
+}: {
+	title: string;
+	/** The name a screen reader hears when it differs from the drawn title:
+	 *  a channel draws `# humans` but is announced "humans" (review R1-10). */
+	accessibilityLabel?: string;
+}) {
 	const compact = useCompactChrome();
 	const { effectiveScale } = useTextScale();
 	const { width } = useWindowDimensions();
 	const stacked = !compact && headerStacks(effectiveScale, width);
 	return (
-		<BridgeThreadTitleView title={title} compact={compact} stacked={stacked} />
+		<BridgeThreadTitleView
+			title={title}
+			accessibilityLabel={accessibilityLabel}
+			compact={compact}
+			stacked={stacked}
+		/>
 	);
 }
 
@@ -75,10 +90,12 @@ export function BridgeThreadTitle({ title }: { title: string }) {
  *  assert each layout branch without a native layout host. */
 export function BridgeThreadTitleView({
 	title,
+	accessibilityLabel,
 	compact,
 	stacked,
 }: {
 	title: string;
+	accessibilityLabel?: string;
 	compact: boolean;
 	stacked: boolean;
 }) {
@@ -95,6 +112,7 @@ export function BridgeThreadTitleView({
 				/* React Native's default `ellipsizeMode` is "tail", which is the
 				 *  session title's cut; `Heading` does not forward the prop. */
 				numberOfLines={style.numberOfLines}
+				accessibilityLabel={accessibilityLabel}
 			>
 				{title}
 			</Heading>
@@ -127,6 +145,10 @@ export type BridgeComposerFieldProps = {
 	sendLabel: string;
 	sendDisabled: boolean;
 	onSend: () => void;
+	/** The shell's fill: the host's `useChromeGlass()` (iOS 26, Reduce
+	 *  Transparency off), as the agent composer takes it. Absent is solid —
+	 *  exactly the shell as it was before glass. */
+	glass?: boolean;
 };
 
 /**
@@ -176,6 +198,7 @@ export function BridgeComposerFieldView({
 	sendLabel,
 	sendDisabled,
 	onSend,
+	glass = false,
 }: BridgeComposerFieldProps & {
 	focused: boolean;
 	onFocus?: () => void;
@@ -212,7 +235,14 @@ export function BridgeComposerFieldView({
 			 *  pinned by the suite against the agent composer's own values. */
 			className="flex-row items-end"
 			style={{
-				backgroundColor: elevated,
+				/* Glass (operator, TestFlight 800: "doesn't have the same liquid glass
+				 *  style ... as the agent chat composer"): the shell paints NO colour,
+				 *  which would cover the material, and clips the glass layer below to
+				 *  the pill — the agent shell's own construction (`composer.tsx`, THE
+				 *  GLASS FILL). Solid keeps `elevated` and no clip, byte-for-byte the
+				 *  shell it was. */
+				backgroundColor: glass ? "transparent" : elevated,
+				...(glass ? { overflow: "hidden" as const } : null),
 				borderRadius: morphPillRadius(COMPOSER_BASE_HEIGHT),
 				paddingTop: pad.top,
 				paddingBottom: pad.bottom,
@@ -221,6 +251,41 @@ export function BridgeComposerFieldView({
 			}}
 			testID={SURFACE.teamBridgeComposerShell}
 		>
+			{/* THE GLASS FILL, the agent composer's layer: an absolutely positioned
+			 *  `ChromeSurface` painted first, so it adds nothing to layout (glass and
+			 *  solid have the same box) and never wraps the field. That is also how
+			 *  the field keeps its width: the shell stays the `flex-row` whose width
+			 *  the dock constrains, and the field's column below stays
+			 *  `min-w-0 flex-1` as a direct child of it — no glass view sits between
+			 *  the TextInput and the row that sizes it. The layer's radius is the
+			 *  agent's `COMPOSER_GLASS_LAYER_RADIUS` (at or under the pill's, so the
+			 *  shell's clip is the only shape); its tint is `ChromeSurface`'s, the
+			 *  same `elevated` at `GLASS_TINT_ALPHA` the agent paints.
+			 *  `pointerEvents="none"`: a layer across the field must never take its
+			 *  taps. Solid draws no layer. */}
+			{glass ? (
+				<View
+					pointerEvents="none"
+					style={{
+						position: "absolute",
+						top: 0,
+						bottom: 0,
+						start: 0,
+						end: 0,
+					}}
+				>
+					<ChromeSurface
+						glass
+						radii={{
+							top: COMPOSER_GLASS_LAYER_RADIUS,
+							bottom: COMPOSER_GLASS_LAYER_RADIUS,
+						}}
+						style={{ flex: 1 }}
+					>
+						{null}
+					</ChromeSurface>
+				</View>
+			) : null}
 			{onAttach && attachLabel ? (
 				<Pressable
 					/* Each control box is the RESTING ROW's height (48, H5), not the
@@ -250,7 +315,14 @@ export function BridgeComposerFieldView({
 			) : null}
 			<View
 				className="min-w-0 flex-1 justify-center"
-				style={{ minHeight: row }}
+				style={{
+					minHeight: row,
+					/* When no attach control renders (e.g. a draft DM before first send,
+					 * or a hub without attachment support), add 4 pt start inset on top
+					 * of the shell's 12 pt side pad so text sits cleanly at 16 pt (`px-4`)
+					 * rather than hugging the curved 28 pt pill corner. */
+					paddingStart: onAttach && attachLabel ? 0 : 4,
+				}}
 			>
 				<Textarea
 					label={label}

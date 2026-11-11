@@ -1371,12 +1371,59 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// disjoint src files, so the merged tree has neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
+	// fix/refused-connect-feedback: own-tunnel stays on the form with the reason
+	// when Save and connect is refused, the keystore refusal's sanitised cause,
+	// seven catalogue keys and tests; only `src` moves, re-derived with --print
+	// over the staged tree. Source identity only, no rendered or native proof.
+	// PR #220 round-1 remediation (R1-m1/m2, D1-D3, U1/U2/U4, Q1): own-tunnel
+	// clears stale state on edit, keeps the refusal up during Retry, new copy
+	// and keys; only `src` moves, re-derived with --print over the staged tree.
+	// Source identity only, no rendered or native proof.
+	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
+	// src carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
+	// fix/bridge-composer-keyboard-glass (TestFlight 800): the Bridge composer
+	// docks above the keyboard from #216's store (new composer-dock.tsx, no
+	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
+	// layer. --print over the staged tree; source identity only, no rendered or
+	// native proof. Round-1 remediation: the dock test mounts with JSX (Biome
+	// noChildrenProp) and pins the thread's glass={chromeGlass} prop; a test
+	// file only, but `src` covers tests, so it moves. --print over the staged
+	// tree; source identity only, no rendered or native proof.
+	// PR #225 merged with main 56831114 (#220 refused-connect feedback): both
+	// sides' src carried, so neither parent's digest; re-derived with --print
+	// over the staged merged tree. Source identity only, no rendered or native
+	// proof.
+	// feat/bridge-nav-polish: minimal sunken WorkspaceModeBar + unified top close
+	// row, shared WorkspaceSidebarFooter across drawer modes, and Team Bridge
+	// directory/thread/delivery/sheet polish. Re-derived with --print over the
+	// staged src tree; source identity only, no rendered or native proof.
+	// #222 round-1 remediation: one-row mode bar below large text, docked
+	// Bridge footer, raised directory skeletons/row fills, full-width profile
+	// rows, author touch box. --print over the staged tree; source identity
+	// only, no rendered or native proof.
+	// #222 round-2 remediation: out-of-flow Team Bridge count below large
+	// text, content-proportioned segments and whole-word labels above it,
+	// docked directory on its canvas ground. --print over the staged tree;
+	// source identity only, no rendered or native proof.
+	// Converged #222 onto main becb972b (#216): src re-derived with --print over
+	// the merged tree. Source identity only, no rendered or native proof.
+	// Converged #222 onto main 56831114 (#220) and moved WorkspaceModeBar onto
+	// space.scale (U-42); src re-derived with --print over the merged tree.
+	// Source identity only, no rendered or native proof.
+	// Converged #222 onto main 240362a6 (#225 Bridge composer keyboard dock +
+	// glass shell): both sides' src carried, so neither parent's digest;
+	// re-derived with --print over the staged merged tree. Source identity
+	// only, no rendered or native proof.
 	// 2026-11-10 fix/composer-ios-wrap (TestFlight 800): native Textarea no
 	// longer pins `height` from onContentSizeChange (iOS Fabric emits it only on
 	// a layout change); it bounds the self-measured box with min/max instead.
 	// --print over the staged tree; source identity only, no rendered or native
 	// proof.
-	src: "b71de0e1ea29ba7b1d3c1d40e53f198a7032b48bd8e4832fb2a6bb28b508213f",
+	// PR #226 merged with main 98e53308 (#220, #225, #222): both sides' src
+	// carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
+	src: "5556877aa56704fbfb40229872a6c87e710eb478aacec39c10d15048f8f0b252",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
