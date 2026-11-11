@@ -1475,6 +1475,21 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #224 merged with main 9fe002f3 (#223, #226): both sides' src
 	// carried, so neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source identity only, no rendered or native proof.
+	// feat/bridge-last-target: the last-target memory, the message-anchored
+	// thread open and its Jump to newest copy (8 locales). --print over the
+	// committed tree; source identity only.
+	// PR #228 merged with main 9fe002f3 (#226): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	// PR #228 round-1 remediation: the anchor/viewport hand-off, highlight
+	// edge and fade, walk bound, placement, drawer a11y split, restore race and
+	// `thread.anchor_missing` (8 locales). --print over the remediation tree;
+	// source identity only.
+	// PR #228 round-2 QA remediation (Q2-1): an anchored landing's own scroll
+	// no longer resumes following. --print over this tree; source identity only.
+	// PR #228 merged with main eee80204 (#224): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the merged tree.
+	// Source identity only.
 	// fix/running-tool-indicator: the running tool glyph and a closed fold over
 	// an executing call draw `LiveGlyph` (relay `lo-pulse`, static accent tick
 	// under Reduce Motion) instead of the text `Shimmer`; a fold with only a
@@ -1482,7 +1497,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// tree; source identity only, no rendered or native proof. Re-printed
 	// after the live-glyph test ids moved into `SURFACE` (src/ui/a11y.ts): the
 	// same two strings, now declared once — no rendered change.
-	src: "6f5e23d429a253d830c935ea3512b716d4c68116345fa17837bc8723a8e177a6",
+	// PR #229 merged with main 502945a6 (#228): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only, no rendered or native proof.
+	src: "b533d1206624f7d868c2eda8d8347c86ff840db6820709d6a4db197c06dcbe77",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
