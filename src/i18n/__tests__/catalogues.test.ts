@@ -377,6 +377,7 @@ const PROJECT_TAG_EXAMPLE = {
 		"Valid ASCII tag examples with a comma separator; retaining the examples preserves the form's concrete input guidance.",
 };
 
+/** The judged exceptions, per locale (no pending-translation ledger remains). */
 const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>
 > = {
@@ -565,11 +566,6 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	},
 };
 
-/** The judged exceptions, per locale (no pending-translation ledger remains). */
-const IDENTICAL_BY_DESIGN: Readonly<
-	Record<ShippedLocale, Readonly<Record<string, string>>>
-> = IDENTICAL_BY_DESIGN_JUDGED;
-
 describe("a shipped translation is still translated", () => {
 	const shipped = SHIPPED_LOCALES.filter((locale) => locale !== "en");
 
@@ -580,14 +576,14 @@ describe("a shipped translation is still translated", () => {
 			.filter((key) => catalogue[key] === source[key])
 			.sort();
 		expect(identical).toEqual(
-			Object.keys(IDENTICAL_BY_DESIGN[locale] ?? {}).sort(),
+			Object.keys(IDENTICAL_BY_DESIGN_JUDGED[locale] ?? {}).sort(),
 		);
 	});
 
 	it("keeps exempt profile-name templates free of untranslated prose", () => {
 		const key = "mobile.team_bridge.profile.name_with_owner";
 		for (const locale of shipped) {
-			if (!IDENTICAL_BY_DESIGN[locale]?.[key]) continue;
+			if (!IDENTICAL_BY_DESIGN_JUDGED[locale]?.[key]) continue;
 			// Empty caller names expose only the template itself. A future English
 			// phrase cannot silently inherit this names-and-punctuation exception.
 			expect(renderFor(key, { agent: "", owner: "" }, locale)).not.toMatch(
@@ -599,7 +595,7 @@ describe("a shipped translation is still translated", () => {
 	it("gives every allowlisted value its reason", () => {
 		/* The reason is the reviewable part: an entry without one is a blanket
 		 *  exemption, and the point of the list is that each case was judged. */
-		for (const perLocale of Object.values(IDENTICAL_BY_DESIGN)) {
+		for (const perLocale of Object.values(IDENTICAL_BY_DESIGN_JUDGED)) {
 			for (const [key, reason] of Object.entries(perLocale)) {
 				expect(reason.trim().length).toBeGreaterThan(20);
 				expect(Object.keys(ENGLISH_MESSAGES)).toContain(key);

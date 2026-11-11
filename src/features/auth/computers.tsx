@@ -271,6 +271,7 @@ const WaitPanel = ({
 									version: state.version,
 								})
 							: t("mobile.computers.wait.relay_sessions", {
+									// Unreachable (outer guard needs version or sessions non-null); `?? 0` only narrows number|null for the type.
 									sessions: state.sessions ?? 0,
 								})}
 				</Text>
