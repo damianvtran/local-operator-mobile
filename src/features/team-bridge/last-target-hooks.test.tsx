@@ -125,6 +125,25 @@ describe("useRestoreLastTarget (target-less entry onto the list)", () => {
 		expect(host.replace).toHaveBeenCalledWith(threadOpen("conv_ops"));
 	});
 
+	it("Back from a push that landed while the list was loading does not bounce into it (R1-1 / U1-5)", async () => {
+		// The reviewer's sequence: a memory exists, the list mounts and waits for
+		// the organization, a push or deep link opens X over it, X becomes the
+		// memory, the list turns ready underneath, and the reader presses Back.
+		rememberTeamBridgeTarget(SELF, TENANT, "conv_ops");
+		host.state = openState({ [TENANT]: org([], "loading") });
+		await act(async () => root.render(<Restore />));
+		host.pathname = `/team-bridge/${TENANT}/conv_general`;
+		await act(async () => root.render(<Restore />));
+		rememberTeamBridgeTarget(SELF, TENANT, "conv_general");
+		await act(async () =>
+			setState({ orgs: { [TENANT]: org(["conv_general", "conv_ops"]) } }),
+		);
+		host.pathname = "/team-bridge";
+		await act(async () => root.render(<Restore />));
+		expect(host.replace).not.toHaveBeenCalled();
+		expect(host.push).not.toHaveBeenCalled();
+	});
+
 	it("a stale target falls back to the list and is cleared", async () => {
 		rememberTeamBridgeTarget(SELF, TENANT, "conv_removed");
 		await act(async () => root.render(<Restore />));

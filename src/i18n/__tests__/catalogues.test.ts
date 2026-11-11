@@ -70,7 +70,7 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 158, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder); +1: thread.jump_newest (anchored opens).
+		expected: 159, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder); +2: thread.jump_newest and thread.anchor_missing (anchored opens).
 	},
 	{
 		name: "mobile.signin",
@@ -303,8 +303,10 @@ describe("the English catalogues", () => {
 		 * generated catalogue's own count over the merged tree. */
 		/* feat/bridge-last-target: + `mobile.team_bridge.thread.jump_newest`, the
 		 *  anchored open's way back to the newest edge: 596 + 1 = 597, the
-		 *  generated catalogue's own count over this tree. */
-		expect(total).toBe(597);
+		 *  generated catalogue's own count over this tree. Round-1 remediation
+		 *  adds `mobile.team_bridge.thread.anchor_missing` (the "no longer
+		 *  available" toast): 597 + 1 = 598. */
+		expect(total).toBe(598);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

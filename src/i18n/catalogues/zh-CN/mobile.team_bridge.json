@@ -121,6 +121,7 @@
 	"mobile.team_bridge.profile.title": "个人资料",
 	"mobile.team_bridge.retry": "重试",
 	"mobile.team_bridge.thread.access_retry": "重试访问",
+	"mobile.team_bridge.thread.anchor_missing": "该消息已不可用。",
 	"mobile.team_bridge.thread.archived": "此会话已归档，你可以阅读历史记录，但无法发送消息。",
 	"mobile.team_bridge.thread.body_unavailable": "消息内容不可用。",
 	"mobile.team_bridge.thread.join": "加入频道",

@@ -107,3 +107,25 @@ export function restoreDecision(input: {
 /** A thread-open failure that means "this conversation is not yours to open". */
 export const isGoneStatus = (status: number | null | undefined): boolean =>
 	status === 403 || status === 404;
+
+/**
+ * The directory's marked row (A7, round-1 R1-2 / D5 / U1-6). On a thread the
+ * open conversation is marked and it IS the current page. From Home or an
+ * agent chat the remembered conversation is marked too — visually only, as a
+ * preview of where "Team Bridge" will land — and must NOT announce
+ * `aria-current="page"` / `selected`: a screen reader would call a page the
+ * reader is not on "current". `current` says which of the two it is.
+ */
+export function directoryMark(
+	openRoute: { tenantId: string; conversationId: string } | null,
+	remembered: string | null,
+	tenantId: string | null,
+): {
+	route: { tenantId: string; conversationId: string } | null;
+	current: boolean;
+} {
+	if (openRoute) return { route: openRoute, current: true };
+	if (remembered && tenantId)
+		return { route: { tenantId, conversationId: remembered }, current: false };
+	return { route: null, current: false };
+}

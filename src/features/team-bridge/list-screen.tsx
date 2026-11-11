@@ -26,7 +26,10 @@ import { countLabel } from "@/features/notifications/notifications-model";
 import { t } from "@/i18n";
 import { activeBridgeRoute } from "@/team-bridge/active-route";
 import type { Conversation } from "@/team-bridge/contract";
-import { recallTeamBridgeTarget } from "@/team-bridge/last-target";
+import {
+	directoryMark,
+	recallTeamBridgeTarget,
+} from "@/team-bridge/last-target";
 import * as model from "@/team-bridge/model";
 import { dmSubject, type ProfileSubject } from "@/team-bridge/profile";
 import { useTeamBridge, useTeamBridgeState } from "@/team-bridge/provider";
@@ -133,6 +136,7 @@ export function BridgeRow({
 	detail,
 	conversation,
 	selected = false,
+	current = selected,
 	disabled,
 	onPress,
 	testID,
@@ -142,6 +146,9 @@ export function BridgeRow({
 	detail?: string | null;
 	conversation?: Conversation | null;
 	selected?: boolean;
+	/** Announce `aria-current="page"` / `selected`: the row IS the open page.
+	 *  Defaults to `selected`; a remembered-only row passes false. */
+	current?: boolean;
 	disabled?: boolean;
 	onPress: () => void;
 	testID: string;
@@ -189,6 +196,7 @@ export function BridgeRow({
 					muted={!!muted}
 					mutedColor={mutedColor}
 					selected={selected}
+					current={current}
 					disabled={disabled}
 					onPress={onPress}
 					testID={testID}
@@ -211,6 +219,7 @@ export function BridgeRow({
 			muted={!!muted}
 			mutedColor={mutedColor}
 			selected={selected}
+			current={current}
 			disabled={disabled}
 			onPress={onPress}
 			testID={testID}
@@ -239,6 +248,7 @@ function BridgeRowLink({
 	muted,
 	mutedColor,
 	selected,
+	current,
 	disabled,
 	onPress,
 	testID,
@@ -253,6 +263,7 @@ function BridgeRowLink({
 	muted: boolean;
 	mutedColor: string;
 	selected: boolean;
+	current: boolean;
 	disabled?: boolean;
 	onPress: () => void;
 	testID: string;
@@ -282,9 +293,9 @@ function BridgeRowLink({
 				.join(", ")}
 			accessibilityState={a11yState({
 				disabled: !!disabled,
-				selected: selected || undefined,
+				selected: current || undefined,
 			})}
-			aria-current={selected ? "page" : undefined}
+			aria-current={current ? "page" : undefined}
 			disabled={disabled}
 			onPress={onPress}
 			testID={testID}
@@ -402,11 +413,12 @@ export function BridgeDirectory({
 	const remembered = openRoute
 		? null
 		: recallTeamBridgeTarget(state.selfAccountId, state.selectedTenantId);
+	const mark = directoryMark(openRoute, remembered, state.selectedTenantId);
+	/* Only a row naming the OPEN thread is the current page (`directoryMark`);
+	 *  the remembered preview keeps the visual marker without the a11y state. */
+	const markCurrent = mark.current;
 	const activeRoute: ReturnType<typeof activeBridgeRoute> =
-		openRoute ??
-		(remembered && state.selectedTenantId
-			? { tenantId: state.selectedTenantId, conversationId: remembered }
-			: null);
+		openRoute ?? mark.route;
 	const chevronColor = useTokenColor("ink-dim");
 	const checkColor = useTokenColor("accent");
 	const openTarget = useOpenTarget();
@@ -463,6 +475,7 @@ export function BridgeDirectory({
 						}
 						conversation={c}
 						selected={rowSelected}
+						current={rowSelected && markCurrent}
 						detail={
 							model.isPreview(c) ? t("mobile.team_bridge.list.preview") : null
 						}
@@ -690,6 +703,7 @@ export function BridgeDirectory({
 									}
 									conversation={dm}
 									selected={personSelected}
+									current={personSelected && markCurrent}
 									disabled={rowState === "unavailable" || rowState === "self"}
 									testID={teamBridgePersonId(person.account_id)}
 									profile={{
@@ -744,6 +758,7 @@ export function BridgeDirectory({
 									}
 									conversation={dm}
 									selected={chiefSelected}
+									current={chiefSelected && markCurrent}
 									testID={teamBridgeChiefId(chief.endpointId)}
 									profile={{
 										subject: { person: chief.person, agent: true },

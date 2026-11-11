@@ -121,6 +121,7 @@
 	"mobile.team_bridge.profile.title": "Профиль",
 	"mobile.team_bridge.retry": "Повторить",
 	"mobile.team_bridge.thread.access_retry": "Повторить проверку доступа",
+	"mobile.team_bridge.thread.anchor_missing": "Это сообщение больше недоступно.",
 	"mobile.team_bridge.thread.archived": "Переписка в архиве. Историю можно читать, но отправлять сообщения нельзя.",
 	"mobile.team_bridge.thread.body_unavailable": "Текст сообщения недоступен.",
 	"mobile.team_bridge.thread.join": "Вступить в канал",

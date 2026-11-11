@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
 	clearTeamBridgeTargets,
+	directoryMark,
 	forgetTeamBridgeTarget,
 	recallTeamBridgeTarget,
 	rememberTeamBridgeTarget,
@@ -143,5 +144,29 @@ describe("teamBridgeThreadPath carries the push's message anchor", () => {
 				seq: null,
 			}),
 		).toBe(`/team-bridge/${TENANT}/conv_general`);
+	});
+});
+
+describe("directoryMark: the drawer's marked row (round-1 R1-2 / D5 / U1-6)", () => {
+	it("on a thread, the open conversation is marked AND is the current page", () => {
+		const open = { tenantId: TENANT, conversationId: "conv_ops" };
+		expect(directoryMark(open, "conv_general", TENANT)).toEqual({
+			route: open,
+			current: true,
+		});
+	});
+	it("from Home or an agent chat, the remembered row is marked but NOT current", () => {
+		// The screen announces aria-current / selected only from `current`.
+		expect(directoryMark(null, "conv_general", TENANT)).toEqual({
+			route: { tenantId: TENANT, conversationId: "conv_general" },
+			current: false,
+		});
+	});
+	it("nothing open and nothing remembered marks nothing", () => {
+		expect(directoryMark(null, null, TENANT)).toEqual({
+			route: null,
+			current: false,
+		});
+		expect(directoryMark(null, "conv_general", null).route).toBeNull();
 	});
 });

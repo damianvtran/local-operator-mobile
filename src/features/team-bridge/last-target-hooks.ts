@@ -33,7 +33,8 @@ export const TEAM_BRIDGE_LIST_PATH = "/team-bridge";
  *   a list left beneath another screen must not replace what is on top.
  * - Once per account + organization per mount: returning to the list (Back
  *   from a pushed thread, or the stale-target fallback) shows the list rather
- *   than bouncing the reader into a thread again.
+ *   than bouncing the reader into a thread again. Leaving the list before it
+ *   decided counts as deciding: the reader picked something else.
  * - Waits for the organization's full conversation list; a remembered id not
  *   in it is cleared and the list stays (never a dead end). The thread handles
  *   a later 403/404 itself by falling back here (`restored=1`).
@@ -48,9 +49,23 @@ export function useRestoreLastTarget(): void {
 		s.selectedTenantId ? s.orgs[s.selectedTenantId] : undefined,
 	);
 	const decided = useRef(new Set<string>());
+	const seenList = useRef(false);
 	useEffect(() => {
-		if (gate !== "open" || pathname !== TEAM_BRIDGE_LIST_PATH) return;
+		if (gate !== "open") return;
 		const key = JSON.stringify([accountId, tenantId]);
+		if (pathname !== TEAM_BRIDGE_LIST_PATH) {
+			/* The reader left this list for another target BEFORE it decided
+			 *  (a push tap or deep link landed while the organization list was
+			 *  still loading underneath). They chose; this mount gives up its
+			 *  restore for that account + organization. Otherwise Back from that
+			 *  thread reached a list deciding for the first time, and it replaced
+			 *  itself with the thread just left: Back looked like it did nothing
+			 *  (round-1 R1-1 / U1-5). `seenList` keeps a mount that has not yet
+			 *  shown the list from deciding on a path it never had. */
+			if (seenList.current) decided.current.add(key);
+			return;
+		}
+		seenList.current = true;
 		if (decided.current.has(key)) return;
 		const decision = restoreDecision({
 			accountId,

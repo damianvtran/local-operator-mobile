@@ -86,6 +86,12 @@ export type ThreadViewportOptions = {
 	/** Follow mode flipped (optional): the anchored open's "Jump to newest"
 	 *  shows only while the reader is away from the newest edge. */
 	followChanged?: (following: boolean) => void;
+	/**
+	 * The scroll host's geometry right now, when the platform can read it
+	 * synchronously (web: the DOM node), else null. Only `dataChanged` uses it:
+	 * see there for why a layout event cannot be waited for.
+	 */
+	measure?: () => ScrollGeometry | null;
 };
 
 export function createThreadViewport(options: ThreadViewportOptions) {
@@ -99,6 +105,18 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 	let gesture = false;
 	let height = 0;
 	let content: number | null = null;
+	/**
+	 * Whether `content` was measured while `dataReady` held, i.e. it describes
+	 * the admitted rows rather than the skeleton or rows still held back.
+	 * The "content fits, nothing to move" shortcut below ends the initial phase
+	 * and claims the newest row read WITHOUT any scroll proving it, so it may
+	 * only trust such a measurement. PR #228 Q1-1: a missing anchor handed back
+	 * through `dataChanged()` while `content` still held the pre-data height;
+	 * `content - height <= 1` read as "fits", read seq 80 was posted with zero
+	 * scroll calls (instrumented CI artifact ba74e3ac), and the reader stayed
+	 * at the oldest row.
+	 */
+	let contentReady = false;
 	let lastY: number | null = null;
 	let readSeq = 0;
 
@@ -150,8 +168,10 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			(lastY !== null && lastY >= target - POSITION_SLACK)
 		) {
 			// Content fits, or the host already reads at max scroll: no move
-			// would happen, so no scroll event would ever confirm one.
-			if (initial) finish(true);
+			// would happen, so no scroll event would ever confirm one. Trusted
+			// only from a measurement of the admitted rows (`contentReady`); a
+			// stale one waits for the layout event those rows will raise.
+			if (initial && contentReady) finish(true);
 			return;
 		}
 		const readBack = options.scrollTo(target);
@@ -174,6 +194,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		},
 		onContentSizeChange: (_width: number, contentHeight: number) => {
 			content = contentHeight;
+			contentReady = options.dataReady();
 			position();
 		},
 		onScroll: (event: {
@@ -211,14 +232,28 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		get readSeq() {
 			return readSeq;
 		},
-		/** `dataReady` turned true without a layout event (an anchored open that
-		 *  fell back to newest): run the initial positioning it was holding. */
+		/**
+		 * `dataReady` turned true from a state change rather than a layout event
+		 * (an anchored open that fell back to newest): run the initial positioning
+		 * it was holding. The last layout event may predate the rows it now has to
+		 * position against, so re-read the host where the platform allows (web);
+		 * elsewhere the stale measurement is not trusted to finish (`contentReady`)
+		 * and the rows' own layout event completes the landing.
+		 */
 		dataChanged() {
+			const now = options.measure?.();
+			if (now && now.viewport > 0) {
+				content = now.content;
+				height = now.viewport;
+				lastY = now.y;
+				contentReady = options.dataReady();
+			}
 			position();
 		},
 		/** For thread states with no list layout to report (empty, no thread). */
 		settledEmpty() {
 			content = 0;
+			contentReady = true;
 			position();
 		},
 		/** Viewability of message seqs; only a positioned viewport can mark read. */
@@ -246,6 +281,10 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			if (initial) finish(false);
 			setFollowing(false);
 			gesture = false;
+		},
+		/** The list's visible height (0 before its first layout). */
+		get viewportHeight() {
+			return height;
 		},
 		/** Whether new content keeps the reader pinned to the newest edge. */
 		get following() {

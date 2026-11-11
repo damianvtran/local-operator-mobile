@@ -121,6 +121,7 @@
 	"mobile.team_bridge.profile.title": "Perfil",
 	"mobile.team_bridge.retry": "Reintentar",
 	"mobile.team_bridge.thread.access_retry": "Reintentar acceso",
+	"mobile.team_bridge.thread.anchor_missing": "Ese mensaje ya no está disponible.",
 	"mobile.team_bridge.thread.archived": "Esta conversación está archivada. Puedes leer el historial, pero no enviar mensajes.",
 	"mobile.team_bridge.thread.body_unavailable": "El contenido del mensaje no está disponible.",
 	"mobile.team_bridge.thread.join": "Unirse al canal",

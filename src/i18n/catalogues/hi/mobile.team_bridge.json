@@ -121,6 +121,7 @@
 	"mobile.team_bridge.profile.title": "प्रोफ़ाइल",
 	"mobile.team_bridge.retry": "फिर कोशिश करें",
 	"mobile.team_bridge.thread.access_retry": "पहुँच की फिर कोशिश करें",
+	"mobile.team_bridge.thread.anchor_missing": "वह संदेश अब उपलब्ध नहीं है।",
 	"mobile.team_bridge.thread.archived": "यह बातचीत संग्रहित है। आप इतिहास पढ़ सकते हैं, लेकिन संदेश नहीं भेज सकते।",
 	"mobile.team_bridge.thread.body_unavailable": "संदेश का पाठ उपलब्ध नहीं है।",
 	"mobile.team_bridge.thread.join": "चैनल से जुड़ें",

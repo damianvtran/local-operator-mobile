@@ -1461,7 +1461,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #228 merged with main 9fe002f3 (#226): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only.
-	src: "c3dbf06148f7fcc0606756ca4604f8f216bc1e42b8beb6a48df1a56dfa5dea79",
+	// PR #228 round-1 remediation: the anchor/viewport hand-off, highlight
+	// edge and fade, walk bound, placement, drawer a11y split, restore race and
+	// `thread.anchor_missing` (8 locales). --print over the remediation tree;
+	// source identity only.
+	src: "74ba3499a7b84907193d2f8456214ff4aa87e0b94b7469576afcefc401aaec98",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

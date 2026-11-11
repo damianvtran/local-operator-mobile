@@ -211,6 +211,10 @@
 		"role": "button",
 		"note": "Team Bridge mobile UI: thread / access retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
 	},
+	"mobile.team_bridge.thread.anchor_missing": {
+		"role": "status",
+		"note": "Team Bridge mobile UI: thread / anchor missing. Shown once, briefly, when a notification or link pointed at one message that was deleted or can no longer be seen; the thread is shown at its newest messages instead. Not shown when the message simply could not be loaded."
+	},
 	"mobile.team_bridge.thread.archived": {
 		"role": "help",
 		"note": "Team Bridge mobile UI: thread / archived. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state."
@@ -233,7 +237,7 @@
 	},
 	"mobile.team_bridge.thread.jump_newest": {
 		"role": "button",
-		"note": "Team Bridge mobile UI: thread / jump to newest. Shown only after a notification or link opened the thread at one older message; returns the reader to the newest messages and resumes following new ones. Short; does not mark anything read or load anything."
+		"note": "Team Bridge mobile UI: thread / jump to newest. Shown only after a notification or link opened the thread at one older message; returns the reader to the newest messages and resumes following new ones. Short; does not load anything. Messages count as read once they are shown, as in any open."
 	},
 	"mobile.team_bridge.thread.loading": {
 		"role": "status",
