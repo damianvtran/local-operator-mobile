@@ -83,14 +83,54 @@ export type ThreadViewportOptions = {
 	dataReady: () => boolean;
 	/** Web adds wheel, pointer and key intent; native has drag callbacks. */
 	web: boolean;
+	/** Follow mode flipped (optional): the anchored open's "Jump to newest"
+	 *  shows only while the reader is away from the newest edge. */
+	followChanged?: (following: boolean) => void;
+	/**
+	 * The scroll host's geometry right now, when the platform can read it
+	 * synchronously (web: the DOM node), else null. Only `dataChanged` uses it:
+	 * see there for why a layout event cannot be waited for.
+	 */
+	measure?: () => ScrollGeometry | null;
 };
 
 export function createThreadViewport(options: ThreadViewportOptions) {
 	let initial = true;
 	let following = true;
+	const setFollowing = (next: boolean) => {
+		if (next === following) return;
+		following = next;
+		options.followChanged?.(next);
+	};
 	let gesture = false;
+	/**
+	 * After an anchored landing, only the READER may resume following. The
+	 * landing's own scrolls (`scrollToIndex`, the placement correction, the
+	 * scroll-to-index-failed retries) run while the virtualized list is still
+	 * mounting rows, so the host can sit at the end of a SHORTER content than
+	 * the thread's: PR #228 QA round 2 (Q2-1) saw 24 rows mounted at landing,
+	 * 44 a sample later. A tail check on that geometry turned following on,
+	 * which retired "Jump to newest" before it was ever seen and would let the
+	 * next growth or new message pull the reader off the message they came
+	 * for. So until a reader gesture (`intent`) or Jump to newest, arriving at
+	 * the tail does not resume following. A reader who moves without raising
+	 * intent (a screen reader's scroll) keeps the pill as their way back.
+	 */
+	let landing = false;
 	let height = 0;
 	let content: number | null = null;
+	/**
+	 * Whether `content` was measured while `dataReady` held, i.e. it describes
+	 * the admitted rows rather than the skeleton or rows still held back.
+	 * The "content fits, nothing to move" shortcut below ends the initial phase
+	 * and claims the newest row read WITHOUT any scroll proving it, so it may
+	 * only trust such a measurement. PR #228 Q1-1: a missing anchor handed back
+	 * through `dataChanged()` while `content` still held the pre-data height;
+	 * `content - height <= 1` read as "fits", read seq 80 was posted with zero
+	 * scroll calls (instrumented CI artifact ba74e3ac), and the reader stayed
+	 * at the oldest row.
+	 */
+	let contentReady = false;
 	let lastY: number | null = null;
 	let readSeq = 0;
 
@@ -119,7 +159,11 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		}
 		const atTail = y + viewport >= measured - FOLLOW_SLACK;
 		if (atTail) {
-			following = true;
+			if (landing) {
+				lastY = y;
+				return;
+			}
+			setFollowing(true);
 			gesture = false;
 		} else if (
 			lastY !== null &&
@@ -128,7 +172,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			// offset is layout drift, not the reader, unless a gesture is live.
 			(y < lastY - POSITION_SLACK || (gesture && y !== lastY))
 		) {
-			following = false;
+			setFollowing(false);
 		}
 		lastY = y;
 	};
@@ -142,8 +186,10 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 			(lastY !== null && lastY >= target - POSITION_SLACK)
 		) {
 			// Content fits, or the host already reads at max scroll: no move
-			// would happen, so no scroll event would ever confirm one.
-			if (initial) finish(true);
+			// would happen, so no scroll event would ever confirm one. Trusted
+			// only from a measurement of the admitted rows (`contentReady`); a
+			// stale one waits for the layout event those rows will raise.
+			if (initial && contentReady) finish(true);
 			return;
 		}
 		const readBack = options.scrollTo(target);
@@ -155,6 +201,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		// on hidden rows; it does not prove the newest row is in view.
 		if (initial) finish(false);
 		gesture = true;
+		landing = false;
 	};
 
 	const handlers = {
@@ -166,6 +213,7 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		},
 		onContentSizeChange: (_width: number, contentHeight: number) => {
 			content = contentHeight;
+			contentReady = options.dataReady();
 			position();
 		},
 		onScroll: (event: {
@@ -203,9 +251,28 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		get readSeq() {
 			return readSeq;
 		},
+		/**
+		 * `dataReady` turned true from a state change rather than a layout event
+		 * (an anchored open that fell back to newest): run the initial positioning
+		 * it was holding. The last layout event may predate the rows it now has to
+		 * position against, so re-read the host where the platform allows (web);
+		 * elsewhere the stale measurement is not trusted to finish (`contentReady`)
+		 * and the rows' own layout event completes the landing.
+		 */
+		dataChanged() {
+			const now = options.measure?.();
+			if (now && now.viewport > 0) {
+				content = now.content;
+				height = now.viewport;
+				lastY = now.y;
+				contentReady = options.dataReady();
+			}
+			position();
+		},
 		/** For thread states with no list layout to report (empty, no thread). */
 		settledEmpty() {
 			content = 0;
+			contentReady = true;
 			position();
 		},
 		/** Viewability of message seqs; only a positioned viewport can mark read. */
@@ -219,7 +286,41 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		},
 		/** Load older: the reader is in history; a prepend must not pull them down. */
 		releaseFollow() {
-			following = false;
+			setFollowing(false);
+		},
+		/**
+		 * A message-anchored open (`thread-anchor.ts`) has scrolled the reader to
+		 * that message. It IS the initial position, so it ends the initial phase
+		 * WITHOUT claiming the newest edge: nothing is marked read on landing
+		 * (only rows the reader then sees, via `visible`), and the reader stays
+		 * in control — a new message must not pull them away from the one they
+		 * came to read. Reaching the tail resumes following as usual.
+		 */
+		anchored() {
+			if (initial) finish(false);
+			setFollowing(false);
+			gesture = false;
+			landing = true;
+		},
+		/** The list's visible height (0 before its first layout). */
+		get viewportHeight() {
+			return height;
+		},
+		/** Whether new content keeps the reader pinned to the newest edge. */
+		get following() {
+			return following;
+		},
+		/**
+		 * "Jump to newest" after an anchored open: back to #208's follow mode at
+		 * the measured tail (exact offset, as `position` uses).
+		 */
+		jumpToNewest() {
+			if (content === null || height <= 0) return;
+			landing = false;
+			setFollowing(true);
+			gesture = false;
+			const readBack = options.scrollTo(Math.max(0, content - height));
+			if (readBack) settle(readBack.y, readBack.viewport, readBack.content);
 		},
 	};
 }

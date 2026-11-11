@@ -1475,7 +1475,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #224 merged with main 9fe002f3 (#223, #226): both sides' src
 	// carried, so neither parent's digest; re-derived with --print over the
 	// staged merged tree. Source identity only, no rendered or native proof.
-	src: "4cba8c9dbe808dfaca4de28123ab79659b5e182fd00dd805f81a541f3b3ece72",
+	// feat/bridge-last-target: the last-target memory, the message-anchored
+	// thread open and its Jump to newest copy (8 locales). --print over the
+	// committed tree; source identity only.
+	// PR #228 merged with main 9fe002f3 (#226): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the staged merged
+	// tree. Source identity only.
+	// PR #228 round-1 remediation: the anchor/viewport hand-off, highlight
+	// edge and fade, walk bound, placement, drawer a11y split, restore race and
+	// `thread.anchor_missing` (8 locales). --print over the remediation tree;
+	// source identity only.
+	// PR #228 round-2 QA remediation (Q2-1): an anchored landing's own scroll
+	// no longer resumes following. --print over this tree; source identity only.
+	// PR #228 merged with main eee80204 (#224): both sides' src carried, so
+	// neither parent's digest; re-derived with --print over the merged tree.
+	// Source identity only.
+	src: "0c1c85a82ece0143dd088e2914b218c130ac04cf35f7bae7775297dcbb3fa715",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

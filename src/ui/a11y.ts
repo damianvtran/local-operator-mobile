@@ -176,6 +176,7 @@ export const CONTROL = {
 	teamBridgeConversationsRetry: "team-bridge-conversations-retry",
 	teamBridgeGateRetry: "team-bridge-gate-retry",
 	teamBridgeJoin: "team-bridge-join",
+	teamBridgeJumpNewest: "team-bridge-jump-newest",
 	teamBridgeLoadOlder: "team-bridge-load-older",
 	teamBridgeMessageInput: "team-bridge-message-input",
 	teamBridgeMessagesRetry: "team-bridge-messages-retry",
@@ -765,6 +766,10 @@ export const SURFACE = {
 	teamBridgeSendError: "team-bridge-send-error",
 	teamBridgeThreadEmpty: "team-bridge-thread-empty",
 	teamBridgeThreadLoading: "team-bridge-thread-loading",
+	/** The anchored landing's highlight layer (fill + accent edge). */
+	teamBridgeAnchorHighlight: "team-bridge-anchor-highlight",
+	/** The loading block shown while an anchored open locates its message. */
+	teamBridgeAnchorLoading: "team-bridge-anchor-loading",
 
 	/** The provisional conversation's own surfaces: its queued-count line and the
 	 *  transcript it adopts once the relay has returned a real session. */
