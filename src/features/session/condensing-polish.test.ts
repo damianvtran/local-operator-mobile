@@ -101,7 +101,8 @@ describe("idle completed-turn condensing (Tier B)", () => {
 			"bar",
 			"entry",
 		]);
-		// The opening prompt clamps while its turn is collapsed.
+		// The opening prompt is marked condensed while its turn is collapsed: its
+		// image strip waits for the bar, its text keeps the 8-line Show more clamp.
 		expect(plan.items[0]).toMatchObject({ id: "u1", condensed: true });
 	});
 

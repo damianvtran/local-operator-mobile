@@ -159,7 +159,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 63, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice)
+		expected: 65, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -309,7 +309,10 @@ describe("the English catalogues", () => {
 		 * Plus 53 keyed by the app/ scan (the new `app/` coverage in
 		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 53
 		 * = 651, the generator's own count. */
-		expect(total).toBe(651);
+		/* fix/user-message-show-more: + `mobile.session.user_message.show_more`
+		 *  and `.show_less`: 651 + 2 = 653, the generated catalogue's own count
+		 *  (integration of #235 onto #227). */
+		expect(total).toBe(653);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

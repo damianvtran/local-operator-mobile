@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import {
 	type PendingEcho,
 	pendingEchoBoxClass,
@@ -66,9 +67,21 @@ const PendingEchoRowImpl = ({
 						})}
 					</Text>
 				) : null}
-				{echo.text.length > 0 ? (
+				{/* The SAME clamp as the settled row's `user` arm, chosen the same way
+				 *  (steer-or-not): a prompt clips to eight lines with `Show more`, a
+				 *  steer shows in full. Without it a long send painted at full height
+				 *  in flight and then shrank to the clamp at handover — the jump the
+				 *  one-box rule in `user-bubble.ts` exists to prevent (agent review
+				 *  PR #235 round 1, R1-M1). Uncontrolled: an echo is not in the list's
+				 *  row-open map, and a reader who opens it mid-flight sees it re-clamp
+				 *  when the settled row takes over, which is the settled default. */}
+				{echo.text.length === 0 ? null : echo.op === "steer" ? (
 					<Text className="text-body-read text-ink-muted">{echo.text}</Text>
-				) : null}
+				) : (
+					<UserMessageClamp testID={`${pendingEchoId(echo.commandId)}-more`}>
+						<Text className="text-body-read text-ink-muted">{echo.text}</Text>
+					</UserMessageClamp>
+				)}
 			</View>
 			{/* The caption sits BELOW the box, on canvas (design round 1, D2):
 			 *  `ink-dim` and `danger` are contracted on canvas, and on `user-bubble`

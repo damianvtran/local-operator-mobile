@@ -18,8 +18,11 @@ import { COLOR_ROLES } from "@/ui/tokens.gen";
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
 const LINE_COMMENT = /^\s*\/\/.*$/gm;
 const NEXT_DECLARATION = /\n(?:export )?(?:const|function) [A-Z]/;
+/* Integration of #233 with #235: the user prompt's one-line condensed preview
+ * is gone (every prompt takes the Show-more clamp), so the mode is never
+ * disabled there; the pin is the same route without `disabled={clamp}`. */
 const USER_BUBBLE =
-	/<SelectableMessage\s+text=\{entry\.text\}\s+textClassName=\{userTextClass\}\s+disabled=\{clamp\}\s*>\s*<SelectableLeafText/;
+	/<SelectableMessage\s+text=\{entry\.text\}\s+textClassName=\{userTextClass\}\s*>\s*<SelectableLeafText/;
 const DIFF_BLOCK = /const DiffBlock = /;
 const TEXT_BLOCK = /const TextBlock = /;
 const OUTPUT_WELL =
@@ -62,7 +65,7 @@ const component = (source: string, name: RegExp): string => {
 };
 
 describe("every message surface routes through SelectableMessage", () => {
-	it("the user bubble selects its own prompt, with no mode for a clamped preview", () => {
+	it("the user bubble selects its own prompt, inside the Show-more clamp", () => {
 		const row = code("./transcript-row.tsx");
 		expect(row).toMatch(USER_BUBBLE);
 	});

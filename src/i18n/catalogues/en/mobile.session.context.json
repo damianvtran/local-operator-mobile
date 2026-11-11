@@ -71,6 +71,14 @@
 		"role": "button",
 		"note": "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop."
 	},
+	"mobile.session.user_message.show_more": {
+		"role": "button",
+		"note": "Centred control under the reader's own long message in the transcript, which is shown clipped to its first eight lines under a fade; activating it shows the whole message. Also its screen-reader label. Short, sentence case, no final full stop."
+	},
+	"mobile.session.user_message.show_less": {
+		"role": "button",
+		"note": "The same control once the reader's long message is shown in full; activating it clips the message back to its first eight lines. Also its screen-reader label. Short, sentence case, no final full stop."
+	},
 	"mobile.session.chip.model_resume_hint": {
 		"role": "help",
 		"note": "Accessibility hint on the model chip of an ENDED session: the chip shows the model it last ran with but is disabled, because nothing can change a model until the session is resumed. Imperative, no final full stop."

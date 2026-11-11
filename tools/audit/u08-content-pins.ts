@@ -1552,6 +1552,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// identity only, no rendered or native proof. Re-printed for PR #234 R1:
 	// blank rows pass through fold runs (live/reload parity), a table's seed
 	// loses the group inset, and the blank-row test renders. Same caveat.
+	// fix/user-message-show-more: a long user message clamps to eight lines
+	// under a bubble-fill fade with Show more / Show less (8 locales), on
+	// condensed turns too, replacing the condensed prompt's one-line clamp.
+	// --print over the staged tree; source identity only, no rendered proof.
+	// PR #235 round-1 remediation (R1-M1): the pending echo's prompt text
+	// rides the same clamp; re-printed with --print over the staged tree.
 	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
 };
 
