@@ -1500,7 +1500,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #229 merged with main 502945a6 (#228): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only, no rendered or native proof.
-	src: "b533d1206624f7d868c2eda8d8347c86ff840db6820709d6a4db197c06dcbe77",
+	// fix/silent-resume-reconnect: the session stream's resume hold
+	// (`resume-hold.ts`) and the Team Bridge thread's silent `unreachable`
+	// retries, with tests. Timers and state only — no rendered change. --print
+	// over the staged tree; source identity only.
+	src: "a44fb4b6a7f3067aaa53d6e192fd4bf08f544a00a4b0b27bab3854c4f14a5db3",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

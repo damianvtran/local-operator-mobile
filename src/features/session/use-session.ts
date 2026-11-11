@@ -30,6 +30,7 @@ import {
 	relaySource,
 	type SessionRelaySource,
 } from "@/features/session/relay-source";
+import { createResumeClock, heldTimer } from "@/features/session/resume-hold";
 import {
 	deviceOnline,
 	INITIAL_STREAM_FACTS,
@@ -227,22 +228,35 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		identity,
 		false,
 	);
-	const dropGraceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	/* The resume hold (`resume-hold.ts`, TestFlight 836): a drop seen while
+	 * backgrounded, or inside RESUME_GRACE_MS of a return, is held silent while
+	 * the stream retries, and a timer that slept through a suspension does not
+	 * count the time the phone was locked. Both report timers below go through it;
+	 * typed refusals never do (they reach `setError` directly). */
+	const resumeClock = useRef(createResumeClock());
+	/** Bumped on every return so the reconnect deadline re-arms for the fresh
+	 *  reopen even when the stream was already `connecting` before the lock. */
+	const [resumeEpoch, setResumeEpoch] = useState(0);
+	const dropGraceTimer = useRef<(() => void) | null>(null);
 	useEffect(() => {
 		if (!facts.droppedSinceFrame) {
 			// Recovery: cancel any pending report and clear at once.
-			if (dropGraceTimer.current !== null) clearTimeout(dropGraceTimer.current);
+			dropGraceTimer.current?.();
 			dropGraceTimer.current = null;
 			setDroppedGrace(false);
 			return;
 		}
 		if (dropGraceTimer.current !== null) return; // already armed
-		dropGraceTimer.current = setTimeout(() => {
-			dropGraceTimer.current = null;
-			setDroppedGrace(true);
-		}, OUTAGE_GRACE_MS);
+		dropGraceTimer.current = heldTimer(
+			resumeClock.current,
+			OUTAGE_GRACE_MS,
+			() => {
+				dropGraceTimer.current = null;
+				setDroppedGrace(true);
+			},
+		);
 		return () => {
-			if (dropGraceTimer.current !== null) clearTimeout(dropGraceTimer.current);
+			dropGraceTimer.current?.();
 			dropGraceTimer.current = null;
 		};
 	}, [facts.droppedSinceFrame, setDroppedGrace]);
@@ -475,12 +489,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	/* --------------------------------------------------- the reconnect deadline */
 	useEffect(() => {
 		if (facts.state !== "connecting") return;
-		const timer = setTimeout(
-			() => setFacts((current) => ({ ...current, overdue: true })),
-			RECONNECT_DEADLINE_MS,
+		// `resumeEpoch` is read so a return re-arms this for the new reopen.
+		void resumeEpoch;
+		return heldTimer(resumeClock.current, RECONNECT_DEADLINE_MS, () =>
+			setFacts((current) => ({ ...current, overdue: true })),
 		);
-		return () => clearTimeout(timer);
-	}, [facts.state, setFacts]);
+	}, [facts.state, resumeEpoch, setFacts]);
 
 	/* ---------------------------------------------------------- the age ticker */
 	useEffect(() => {
@@ -502,7 +516,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * contract's rule for the first frame of a connection. */
 	useEffect(() => {
 		const subscription = AppState.addEventListener("change", (state) => {
+			// Only "background" means the process may be suspended; "inactive" is
+			// also a system sheet over a running app, which must not hide a drop.
+			if (state === "background") resumeClock.current.background();
 			if (state !== "active") return;
+			// Open the silent window BEFORE anything below can report: the drop
+			// the lock caused, and any timer it armed, are expected, not news.
+			resumeClock.current.resume();
+			// A fresh start for the backoff too: a curve left at 15 s by the drop
+			// before the lock would push the first retry past the window.
+			retries.current = 0;
 			// A quick flick out and back, or a system sheet, reports "active"
 			// again within moments; the first signal's history read already
 			// covers it. ONLY that read is deduped: the gate is shared with the
@@ -513,7 +536,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 			// second resume.
 			recovering.current = false;
 			lastFrameAt.current = null;
-			setFacts((current) => ({ ...current, ageMs: null }));
+			// The drop and the overdue reopen are cleared, not just the age: before
+			// TestFlight 836 they survived the return and painted C2 on its first
+			// tick. If the reopen below fails, its own drop re-arms the (held) report.
+			setFacts((current) => ({
+				...current,
+				ageMs: null,
+				droppedSinceFrame: false,
+				overdue: false,
+			}));
+			setResumeEpoch((epoch) => epoch + 1);
 			// A return from the background is exactly a reload: re-open the stream (which
 			// re-syncs from a fresh snapshot) and re-read the requests that may have
 			// failed while the app was suspended.
