@@ -1504,7 +1504,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// under a bubble-fill fade with Show more / Show less (8 locales), on
 	// condensed turns too, replacing the condensed prompt's one-line clamp.
 	// --print over the staged tree; source identity only, no rendered proof.
-	src: "d44c1180c0ea655fa80f4a75333e5931cc99ab42fc596c6164042e7a79329099",
+	// PR #235 round-1 remediation (R1-M1): the pending echo's prompt text
+	// rides the same clamp; re-printed with --print over the staged tree.
+	src: "b180d9deaacc78ee40639314856120bb96a63429c8a04f058e1e847a4da3dc58",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

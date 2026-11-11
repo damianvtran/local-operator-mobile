@@ -37,6 +37,8 @@ const rig = vi.hoisted(() => ({
 	/** Every host element drawn in the latest render pass, in order. */
 	hosts: [] as { host: string; props: HostProps }[],
 	scale: 1,
+	/** Index into `THEMES` the mocked `useTheme` reports as active. */
+	theme: 0,
 }));
 
 vi.mock("@/ui/text-scale-provider", () => ({
@@ -45,7 +47,7 @@ vi.mock("@/ui/text-scale-provider", () => ({
 
 vi.mock("@/ui/appearance", async () => {
 	const { THEMES } = await import("@/ui/tokens.gen");
-	return { useTheme: () => ({ active: THEMES[0] }) };
+	return { useTheme: () => ({ active: THEMES[rig.theme] }) };
 });
 
 const host =
@@ -84,6 +86,9 @@ const { userBubbleFill } = await import("@/features/session/user-bubble");
 const { THEMES } = await import("@/ui/tokens.gen");
 const { TOUCH_FLOOR } = await import("@/ui/layout");
 
+/** An opaque fill: a full-opacity stop on it composites exactly to the bubble. */
+const OPAQUE_HEX = /^#[0-9a-f]{6}$/i;
+
 let dom: DomShim | null = null;
 let root: ReturnType<typeof createRoot> | null = null;
 
@@ -104,7 +109,8 @@ const render = async (controlled?: Controlled) => {
 	);
 };
 
-/** The latest pass's elements of one host kind. */
+/** Every recorded element of one host kind — the latest pass's only because
+ *  each driver (`render`, `press`, `layOut`) clears `rig.hosts` first. */
 const last = (name: string) => {
 	const all = rig.hosts.filter((h) => h.host === name);
 	return all;
@@ -132,6 +138,7 @@ const layOut = async (lines: number) => {
 
 beforeEach(() => {
 	rig.scale = 1;
+	rig.theme = 0;
 	dom = installDomShim();
 	root = createRoot(dom.container as Element);
 });
@@ -202,6 +209,26 @@ describe("the wrapper", () => {
 		]);
 	});
 
+	// Every palette, light and dark (review PR #235 R1 m2): the fade must end
+	// at full opacity on that palette's own bubble fill, or it shows as a band.
+	it.each(
+		THEMES.map(
+			(theme, index) => [`${theme.id} (${theme.mode})`, index, theme] as const,
+		),
+	)("fades into the bubble's fill in theme %s", async (_name, index, theme) => {
+		rig.theme = index;
+		await render();
+		await layOut(20);
+		const fill = userBubbleFill(theme).backgroundColor;
+		expect(fill).toMatch(OPAQUE_HEX);
+		expect(
+			last("Stop").map((s) => [s.props.stopColor, s.props.stopOpacity]),
+		).toEqual([
+			[fill, 0],
+			[fill, 1],
+		]);
+	});
+
 	it("Show more releases the clip and the fade; Show less restores both", async () => {
 		await render();
 		await layOut(20);
@@ -247,12 +274,38 @@ const code = (source: string): string =>
 	source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 const CLAMP_BY_STEER_ONLY =
 	/isSteer \? \(\s*text\s*\) : \(\s*<UserMessageClamp/;
+/** The echo's text: shown in full for a steer, behind the clamp otherwise. */
+const ECHO_CLAMP_BY_STEER_ONLY =
+	/echo\.op === "steer" \? \(\s*<Text[^>]*>\{echo\.text\}<\/Text>\s*\) : \(\s*<UserMessageClamp[^>]*>\s*<Text[^>]*>\{echo\.text\}<\/Text>\s*<\/UserMessageClamp>/;
 const CLAMP_GATED_ON_CONDENSED = /condensed[^;]*UserMessageClamp/;
 const ROW = code(read("./transcript-row.tsx"));
 const userArm = ROW.slice(
 	ROW.indexOf('if (kind === "user" || kind === "steer")'),
 	ROW.indexOf('if (kind === "reasoning")'),
 );
+
+const ECHO = code(read("./pending-echo-row.tsx"));
+
+describe("the pending echo (the same message in flight)", () => {
+	// The echo IS the settled message before the daemon echoes it
+	// (`user-bubble.ts`): a long prompt must be clipped in flight exactly as
+	// the settled row clips it, or it shrinks at handover (review R1-M1).
+	it("puts a prompt's text behind the same clamp, chosen by steer-or-not", () => {
+		expect(ECHO).toContain(
+			'import { UserMessageClamp } from "@/features/session/components/user-message-clamp";',
+		);
+		expect(ECHO).toMatch(ECHO_CLAMP_BY_STEER_ONLY);
+		// The settled arm chooses the same way.
+		expect(userArm).toMatch(CLAMP_BY_STEER_ONLY);
+	});
+
+	it("is uncontrolled: an echo has no row-open state to defer to", () => {
+		const clamp = ECHO.slice(ECHO.indexOf("<UserMessageClamp"));
+		const open = clamp.slice(0, clamp.indexOf(">"));
+		expect(open).not.toContain("expanded=");
+		expect(open).not.toContain("onToggle=");
+	});
+});
 
 describe("the user row (condensed or live)", () => {
 	it("never clamps the prompt to an unexpandable line", () => {
