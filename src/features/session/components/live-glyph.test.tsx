@@ -6,6 +6,7 @@ import type { TranscriptEntry } from "@/contracts";
 import { buildFoldRun, type FoldRun } from "@/features/session/fold-model";
 import { SURFACE } from "@/ui/a11y";
 import { FoldBar } from "./fold-bar";
+import { GroupGuides } from "./group-guides";
 import {
 	LIVE_PULSE_FLOOR,
 	LIVE_PULSE_PERIOD_MS,
@@ -14,6 +15,7 @@ import {
 	livePulseUsers,
 } from "./live-glyph";
 import { ToolRow } from "./tool-row";
+import { GROUP_STEP_PT, GroupInsetContext } from "./trace-rail";
 
 /**
  * The live-tool indicator's state → drawing contract (operator feedback: a
@@ -276,5 +278,46 @@ describe("FoldBar carries the indicator while it holds a running call", () => {
 
 	it("settled → still", () => {
 		expect(hasPulse(bar(fold(["done", "done", "done"])))).toBe(false);
+	});
+});
+
+/* Inside an opened group (operator report, iOS build 836): the members are
+ * indented and drawn beside a guide, and none of that may cost the running
+ * child its indicator — the open bar hands the live state to the row below. */
+describe("an expanded group keeps the live child indicator", () => {
+	const member = (entry: TranscriptEntry, depth: number) =>
+		html(
+			createElement(
+				GroupInsetContext.Provider,
+				{ value: depth * GROUP_STEP_PT },
+				createElement(GroupGuides, { depth }),
+				createElement(ToolRow, { entry, testID: `row-${entry.id}` }),
+			),
+		);
+
+	it("a running member pulses at depth 1 and depth 2", () => {
+		for (const depth of [1, 2]) {
+			const running = tool({
+				id: `t-${depth}`,
+				tool_state: "running",
+				final: false,
+			});
+			expect(hasPulse(member(running, depth))).toBe(true);
+		}
+		expect(hasPulse(member(tool({ id: "t-done" }), 1))).toBe(false);
+	});
+
+	it("draws one decorative guide per level, under each level's bar glyph", () => {
+		const markup = member(tool({ id: "t-g" }), 2);
+		expect(markup).toContain('data-testid="group-guide-1"');
+		expect(markup).toContain('data-testid="group-guide-2"');
+		expect(markup).not.toContain('data-testid="group-guide-3"');
+		expect(markup).toContain(
+			"absolute top-0 bottom-0 w-px bg-hairline start-5",
+		);
+		expect(markup).toContain(
+			"absolute top-0 bottom-0 w-px bg-hairline start-11",
+		);
+		expect(html(createElement(GroupGuides, { depth: 0 }))).toBe("");
 	});
 });

@@ -2149,6 +2149,11 @@ export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
  *  live-to-durable row replacement. */
 export const foldBarId = (foldKey: string): string => `fold-bar-${foldKey}`;
 
+/** One containment guide beside a row inside an opened turn or fold
+ *  (`GroupGuides`, `transcript-list.tsx`). Keyed by nesting level (1 =
+ *  directly under a bar), so a capture probe can read a member's depth. */
+export const groupGuideId = (level: number): string => `group-guide-${level}`;
+
 /** The pending row for an in-flight instruction, keyed by the retry envelope's
  *  `command_id` — the same id the session's real row will carry, so a flow can
  *  assert the hand-over from `pending-echo-<id>` to `transcript-row-<id>`. */

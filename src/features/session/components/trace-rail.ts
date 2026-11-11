@@ -19,7 +19,13 @@
  * by construction.
  */
 
+import { createContext } from "react";
+
 import type { TranscriptEntry } from "@/contracts";
+import {
+	isBlankAssistantEntry,
+	type TranscriptItem,
+} from "@/features/session/turn-condensing";
 
 /** Outer full-width horizontal inset (`16 pt` each side) shared by every transcript row. */
 export const TRACE_ROW_OUTER_CLASS = "px-4";
@@ -106,11 +112,19 @@ export const SPACING_TIER_CLASS: Record<TranscriptSpacingTier, string> = {
 	trace: "",
 };
 
-/** Visual register of a rendered transcript item for vertical rhythm calculation. */
-export type ItemRegister = "user" | "prose" | "trace";
+/** Visual register of a rendered transcript item for vertical rhythm calculation.
+ *  `none` is a row that paints nothing (`isBlankAssistantEntry`): it takes no
+ *  tier of its own and does not change the register its neighbours see. */
+export type ItemRegister = "user" | "prose" | "trace" | "none";
+
+/* `isBlankAssistantEntry` lives in the plan module (`turn-condensing.ts`)
+ * because the fold planner needs it too, and that module stays free of React;
+ * re-exported here so the render side keeps one import site. */
+export { isBlankAssistantEntry };
 
 /** Classify a raw entry into its vertical spacing register. */
 export function entryRegister(entry: TranscriptEntry): ItemRegister {
+	if (isBlankAssistantEntry(entry)) return "none";
 	if (entry.kind === "user" || entry.kind === "steer") return "user";
 	if (entry.kind === "assistant") return "prose";
 	// Unstamped parent/subagent rows that paint full prose blocks read as prose;
@@ -133,8 +147,90 @@ export function spacingTierBetween(
 	current: ItemRegister,
 	startsNewTurn: boolean,
 ): TranscriptSpacingTier {
+	if (current === "none") return "trace";
 	if (previous === null) return "first";
 	if (startsNewTurn) return "turn";
 	if (previous === "trace" && current === "trace") return "trace";
 	return "block";
 }
+
+/** The tier before every rendered item, in one pass over the plan. Bars,
+ *  folds and groups are trace lines. A `none` row (`isBlankAssistantEntry`)
+ *  gets no air and is skipped as the `previous` register, so the rows either
+ *  side of it meet exactly as if it were not there. */
+export function spacingTiersOf(
+	items: readonly TranscriptItem[],
+): ReadonlyMap<string, TranscriptSpacingTier> {
+	const tiers = new Map<string, TranscriptSpacingTier>();
+	let previous: ItemRegister | null = null;
+	for (const item of items) {
+		const register: ItemRegister =
+			item.kind === "entry" ? entryRegister(item.entry) : "trace";
+		tiers.set(
+			item.id,
+			spacingTierBetween(
+				previous,
+				register,
+				item.kind === "entry" && item.opensTurn === true,
+			),
+		);
+		if (register !== "none") previous = register;
+	}
+	return tiers;
+}
+
+/**
+ * Containment for rows inside an OPENED turn bar or run fold
+ * (`group-containment.ts` decides membership; this is the geometry).
+ *
+ * WHY. Opened, a bar's rows came back on the bar's own 16 pt glyph rail, so
+ * nothing on screen said which rows the bar had been standing for (operator
+ * report, iOS build 836). The mobile relay indents an opened group's body one
+ * step (`condense-rows.tsx`: `ps-[22px]`); this rail's step is 24 pt (`ps-6`,
+ * on `space.scale`), which puts a member's glyph exactly on the bar's 40 pt
+ * text rail. A 1 pt hairline guide per level, under the bar's glyph, carries
+ * the eye from the bar down its members. No card and no fill (visual audit D4):
+ * the guide is the only new ink.
+ *
+ * GEOMETRY. Level `d` (1-based) indents by `24 × d` pt and draws its guide at
+ * `x = 20 + 24 × (d − 1)` pt: the centre of a ✓ glyph that starts on its
+ * level's 16 pt rail. The guide is absolutely positioned inside the row's
+ * measured wrapper and spans its full height, so consecutive members join into
+ * one unbroken line and the guide adds nothing to any measured height.
+ * Depth is capped at `GROUP_MAX_DEPTH` (a fold inside a turn is 2; 3 covers a
+ * quiet group member inside both without walking off the narrow phone).
+ */
+export const GROUP_MAX_DEPTH = 3;
+
+/** Start padding per containment depth (index = depth); 0 is the page rail. */
+export const GROUP_INSET_CLASS: readonly string[] = [
+	"",
+	"ps-6",
+	"ps-12",
+	"ps-18",
+];
+
+/** Points of start inset per containment depth, for width arithmetic that
+ *  subtracts the row's chrome (`tool-row.tsx`'s chip layout). */
+export const GROUP_STEP_PT = 24;
+
+/** The guide for level `d` sits at `GROUP_GUIDE_START_CLASS[d - 1]`. */
+export const GROUP_GUIDE_START_CLASS: readonly string[] = [
+	"start-5",
+	"start-11",
+	"start-17",
+];
+
+/** The guide's ink: the 1 pt `hairline` token, the same ink as every divider. */
+export const GROUP_GUIDE_CLASS = "absolute top-0 bottom-0 w-px bg-hairline";
+
+/** Clamp a membership depth to what the rail can draw. */
+export const groupDepth = (depth: number | undefined): number =>
+	Math.min(GROUP_MAX_DEPTH, Math.max(0, depth ?? 0));
+
+/**
+ * Extra start inset (pt) the row is drawn under, beyond `TRACE_ROW_CHROME_PT`.
+ * Provided by the list around a member row so width arithmetic done from the
+ * window (not `onLayout`) still matches the narrower box; 0 everywhere else.
+ */
+export const GroupInsetContext = createContext(0);

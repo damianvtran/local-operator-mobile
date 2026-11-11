@@ -1545,6 +1545,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// scroll keeps the iOS mode): the web leaf's `selectionColor` is ignored by
 	// RNW `Text`, and the rest is iOS-mode or touch wiring, so again source
 	// identity only.
+	// fix/fold-group-spacing: blank live assistant rows paint nothing and skip
+	// the rhythm; rows inside an opened turn bar or fold are indented one
+	// 24 pt step per level beside a hairline guide (`group-containment.ts`,
+	// `group-guides.tsx`). Tests with it. --print over the staged tree; source
+	// identity only, no rendered or native proof. Re-printed for PR #234 R1:
+	// blank rows pass through fold runs (live/reload parity), a table's seed
+	// loses the group inset, and the blank-row test renders. Same caveat.
 	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
 };
 

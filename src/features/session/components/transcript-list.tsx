@@ -20,17 +20,19 @@ import {
 import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import { FoldBar } from "@/features/session/components/fold-bar";
+import { GroupGuides } from "@/features/session/components/group-guides";
 import { QuietGroupBar } from "@/features/session/components/quiet-group-bar";
 import {
 	SupplementBlock,
 	type SupplementClient,
 } from "@/features/session/components/supplement-block";
 import {
-	entryRegister,
-	type ItemRegister,
+	GROUP_INSET_CLASS,
+	GROUP_STEP_PT,
+	GroupInsetContext,
+	groupDepth,
 	SPACING_TIER_CLASS,
-	spacingTierBetween,
-	type TranscriptSpacingTier,
+	spacingTiersOf,
 } from "@/features/session/components/trace-rail";
 import {
 	TranscriptEdgeFades,
@@ -39,6 +41,7 @@ import {
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
+import { groupContainment } from "@/features/session/group-containment";
 import {
 	anchoredScrollTop,
 	historyTopReached,
@@ -595,24 +598,18 @@ export const TranscriptList = ({
 	 * nothing between trace lines that already carry the touch floor. Applied as
 	 * padding INSIDE each row's measured wrapper, so the measured heights the
 	 * offset table and the ack gate read already include it. */
-	const spacingTiers = useMemo(() => {
-		const tiers = new Map<string, TranscriptSpacingTier>();
-		let previous: ItemRegister | null = null;
-		for (const item of folded.items) {
-			const register: ItemRegister =
-				item.kind === "entry" ? entryRegister(item.entry) : "trace";
-			tiers.set(
-				item.id,
-				spacingTierBetween(
-					previous,
-					register,
-					item.kind === "entry" && item.opensTurn === true,
-				),
-			);
-			previous = register;
-		}
-		return tiers;
-	}, [folded.items]);
+	const spacingTiers = useMemo(
+		() => spacingTiersOf(folded.items),
+		[folded.items],
+	);
+	/* Which rows sit inside an opened turn bar or fold, and how deep
+	 * (`group-containment.ts`). Same lifetime as the tiers above: a function of
+	 * the plan, never of scroll, so it costs nothing per frame and a closed
+	 * bar leaves every row's wrapper byte-identical to before. */
+	const containment = useMemo(
+		() => groupContainment(folded.items, plan.turns, folded.folds),
+		[folded.items, folded.folds, plan.turns],
+	);
 	const toggleExpansion = useCallback((key: string, open: boolean) => {
 		setReaderExpanded((current) => {
 			const next = new Set(current);
@@ -1560,7 +1557,14 @@ export const TranscriptList = ({
 				item.kind === "entry" && item.entry.kind === "assistant"
 					? supplements?.[item.id]
 					: undefined;
-			const gap = SPACING_TIER_CLASS[spacingTiers.get(item.id) ?? "first"];
+			const depth = groupDepth(containment.get(item.id));
+			/* The row's outer box: its rhythm tier, plus one 24 pt step per opened
+			 * group around it (`GROUP_INSET_CLASS`, `trace-rail.ts`). */
+			const gap = cx(
+				SPACING_TIER_CLASS[spacingTiers.get(item.id) ?? "first"],
+				GROUP_INSET_CLASS[depth],
+			);
+			const guides = depth > 0 ? <GroupGuides depth={depth} /> : null;
 			return item.kind === "bar" ? (
 				/* The bar is measured like any row: it stands in the list, so the
 				 * anchor geometry (which walks the RENDERED items) must know its
@@ -1576,6 +1580,7 @@ export const TranscriptList = ({
 					className={cx(gap)}
 				>
 					{item.id === gapItemId ? gapMarker : null}
+					{guides}
 					<TurnBar
 						turnKey={item.turnKey}
 						facts={item.facts}
@@ -1598,6 +1603,7 @@ export const TranscriptList = ({
 					className={cx(gap)}
 				>
 					{item.id === gapItemId ? gapMarker : null}
+					{guides}
 					<QuietGroupBar
 						groupKey={item.groupKey}
 						group={item.group}
@@ -1619,6 +1625,7 @@ export const TranscriptList = ({
 					className={cx(gap)}
 				>
 					{item.id === gapItemId ? gapMarker : null}
+					{guides}
 					<FoldBar
 						foldKey={item.foldKey}
 						fold={item.fold}
@@ -1646,6 +1653,7 @@ export const TranscriptList = ({
 					)}
 				>
 					{item.id === gapItemId ? gapMarker : null}
+					{guides}
 					{/*
 					 * The find hit's own edge. The wash alone is `row-selected` on the row's
 					 * ground — a ~1.0x luminance step the kit's own contrast contract calls
@@ -1660,17 +1668,21 @@ export const TranscriptList = ({
 							aria-hidden
 						/>
 					) : null}
-					<TranscriptRow
-						entry={item.entry}
-						condensed={item.condensed === true}
-						streaming={streamingRowId !== null && item.id === streamingRowId}
-						loadImage={loadImage}
-						onOpenAgent={onOpenAgent}
-						onOpenVideo={onOpenVideo}
-						onCancelTurn={onCancelTurn}
-						open={rowOpen.get(canonicalRowKey(item.entry))}
-						onToggleOpen={toggleRowOpen}
-					/>
+					{/* Always provided (0 outside a group), so opening or closing a
+					 *  bar never changes the row's element tree and never remounts it. */}
+					<GroupInsetContext.Provider value={depth * GROUP_STEP_PT}>
+						<TranscriptRow
+							entry={item.entry}
+							condensed={item.condensed === true}
+							streaming={streamingRowId !== null && item.id === streamingRowId}
+							loadImage={loadImage}
+							onOpenAgent={onOpenAgent}
+							onOpenVideo={onOpenVideo}
+							onCancelTurn={onCancelTurn}
+							open={rowOpen.get(canonicalRowKey(item.entry))}
+							onToggleOpen={toggleRowOpen}
+						/>
+					</GroupInsetContext.Provider>
 					{/* The completion anchor: a zero-size sibling at the row's bottom edge
 					 * (an element carries one testID, so the anchor is its own element —
 					 * the streaming anchor's note), named by the attention's `anchor_id`
@@ -1712,6 +1724,7 @@ export const TranscriptList = ({
 			gapItemId,
 			gapMarker,
 			spacingTiers,
+			containment,
 		],
 	);
 

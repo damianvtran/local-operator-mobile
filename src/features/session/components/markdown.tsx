@@ -1,6 +1,14 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: every list in this file is regenerated from the same source on each render (a parsed string, a diff, a todo phase), so position IS the identity — the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 import * as Clipboard from "expo-clipboard";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	memo,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import {
 	Linking,
 	Platform,
@@ -16,6 +24,7 @@ import {
 	SelectableMessage,
 	useTextSelection,
 } from "@/features/session/components/selectable-message";
+import { GroupInsetContext } from "@/features/session/components/trace-rail";
 import {
 	blocksPlainText,
 	type InlineSpan,
@@ -342,8 +351,16 @@ function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 	 *  that the column is SEEDED from the window (`estimatedColumnWidth`, `column.ts`) so the
 	 *  first frame is the settled one (review m1 / design D2). Same single input
 	 *  downstream either way, so the no-feedback property above still holds. */
+	/* Inside an opened group the list indents the row (`GroupInsetContext`,
+	 *  24 pt a level), so the window-derived seed must lose that inset too, or
+	 *  a table there seeds too wide and the first frame is not the settled one
+	 *  (PR #234 R1-4; `tool-row.tsx` subtracts the same inset). */
+	const groupInsetPt = useContext(GroupInsetContext);
 	const [measured, setColumnWidth] = useState(0);
-	const columnWidth = measured > 0 ? measured : estimatedColumnWidth(viewport);
+	const columnWidth =
+		measured > 0
+			? measured
+			: Math.max(0, estimatedColumnWidth(viewport) - groupInsetPt);
 	const [scrollX, setScrollX] = useState(0);
 	const [atEnd, setAtEnd] = useState(false);
 	const scrollRef = useRef<ScrollView>(null);
