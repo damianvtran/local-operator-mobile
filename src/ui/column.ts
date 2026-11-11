@@ -29,3 +29,27 @@ export const maxColumnWidth = ({ width, height }: Viewport): number | null => {
 		? LAYOUT.contentMaxWidthTabletLandscape
 		: LAYOUT.contentMaxWidthTablet;
 };
+
+/**
+ * The content column's width, estimated from the window alone: the viewport,
+ * capped by `maxColumnWidth`'s device shapes, less the gutter on each side
+ * (the derivation `theme-picker.tsx` spells out for its grid).
+ *
+ * Exists so a markdown table can paint its FIRST frame at its settled width
+ * (PR #224 review m1 / design D2): without it the table's `available` was 0
+ * until `onLayout` reported, so a table that fits painted at its priced width
+ * (171 px) and snapped to the column (356 px at 390) 10–27 ms later on every
+ * mount. It is an ESTIMATE: the caller's measured width wins the moment layout
+ * reports, so a host narrower than the session column (a tool row's nested
+ * reply, a notification body) still corrects on its first layout. Horizontal
+ * safe-area insets are not read — `Markdown` mounts on surfaces without a
+ * `SafeAreaProvider`, and on a phone in portrait (the reported case) the
+ * insets are 0, so there the estimate equals the measurement.
+ */
+export const estimatedColumnWidth = (viewport: Viewport): number => {
+	const capped = Math.min(
+		viewport.width,
+		maxColumnWidth(viewport) ?? viewport.width,
+	);
+	return Math.max(0, capped - 2 * LAYOUT.gutter);
+};

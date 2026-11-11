@@ -8,6 +8,7 @@ import {
 	ScrollView,
 	Text,
 	type TextStyle,
+	useWindowDimensions,
 	View,
 } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
@@ -16,7 +17,8 @@ import {
 	type InlineSpan,
 	parseInline,
 	parseMarkdown,
-	TABLE_CELL_PADDING_X_PT,
+	TABLE_BORDER_PT,
+	tableColumnWidths,
 	tableFadeGeometry,
 	tablePricing,
 } from "@/features/session/markdown";
@@ -27,6 +29,7 @@ import {
 import { forcedTableScroll } from "@/features/session/table-scroll-hook";
 import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { estimatedColumnWidth } from "@/ui/column";
 import { LTR_TEXT, useIsRTL } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -62,9 +65,56 @@ import { cx } from "@/ui/variants";
  *  now the relay's 1.08x (review round 1, m1). */
 const MESSAGE_BODY_CLASS = "text-body-read text-ink";
 
+/**
+ * The mono face's NATIVE family name: the PostScript name of the bundled
+ * `design/fonts/JetBrainsMono-Regular.ttf` (iOS matches it) and that file's
+ * basename (the name `expo-font`'s config plugin registers on Android).
+ *
+ * WHY A STYLE AND NOT ONLY THE CLASS (operator report, iPhone build 773): the
+ * theme's `--font-mono` is a CSS fallback LIST (`'JetBrains Mono', ui-monospace,
+ * …`). The web resolves it; React Native has no fallback stacks and treats the
+ * whole string as one family name, finds none, and silently paints the system
+ * sans — so inline code read as "smaller plain text". Web keeps the class's
+ * stack (and its woff2), so this applies off-web only.
+ */
+const NATIVE_MONO_FAMILY = "JetBrainsMono-Regular";
+/* `no-contextual` turns off JetBrains Mono's `calt` ligatures natively (design
+ * D4): with the real face now resolving, `!=` would otherwise draw as `≠` in a
+ * listing the reader is meant to copy. Web keeps the theme's ligature setting
+ * (pre-existing there, and shared with the relay). */
+const nativeMono = (): TextStyle | undefined =>
+	Platform.OS === "web"
+		? undefined
+		: { fontFamily: NATIVE_MONO_FAMILY, fontVariant: ["no-contextual"] };
+/** A fenced block's body: its own LTR direction plus, natively, the bundled
+ *  mono face (the class's stack does not resolve there — see above). */
+const codeBodyStyle = (): TextStyle => ({ ...LTR_TEXT, ...nativeMono() });
+
+/** Inline code: the relay's chip (`rounded-xs px-0.5 font-mono text-mono-sm`,
+ *  local-operator `mobile/web/src/components/markdown.tsx`) — the mono step on
+ *  a wash so a command reads as a command mid-sentence.
+ *
+ *  NO HORIZONTAL PADDING, on any platform (CI run 42948464285): the relay's
+ *  `px-0.5` is 2pt, off `space.scale`, so U-42 failed every chip; and it is
+ *  unpriced width — `tablePricing` prices a code token at exactly
+ *  `TABLE_MONO_ADVANCE_PT` per glyph, so 4pt of chip padding broke a 64-char
+ *  sha256 in its own column by one glyph (U-39). The wash alone marks the
+ *  span, which is what native already drew.
+ *
+ *  WHY `elevated`, NOT `sunken` (PR #224 design D1 / review m2): `sunken` sits
+ *  at 1.035–1.165:1 against `canvas` across the shipped palettes, which reads
+ *  as no chip in a still, and it IS the table header's fill — so a backticked
+ *  header cell lost the chip entirely (1.000:1). `elevated` clears both: ≥1.124
+ *  on canvas and ≥1.164 on the sunken header across every palette, the same
+ *  move the relay made for its tiles. A nested `Text` cannot take padding or a
+ *  radius on native, so `rounded-xs` applies on web only; natively the chip
+ *  is the wash alone, still on the line's baseline (same line box). */
+const INLINE_CODE_CLASS =
+	"font-mono text-mono-sm bg-elevated text-ink web:rounded-xs";
+
 const spanClass = (span: InlineSpan): string =>
 	cx(
-		span.code && "text-mono-sm text-ink-muted",
+		span.code && INLINE_CODE_CLASS,
 		span.bold && "font-medium",
 		span.italic && "italic",
 		span.strike && "line-through",
@@ -95,7 +145,7 @@ const Inline = memo(function Inline({
 					// string on every frame, so position IS the identity.
 					key={index}
 					className={spanClass(span)}
-					style={span.italic ? ITALIC : undefined}
+					style={inlineSpanStyle(span)}
 					{...(Platform.OS === "web" && span.href && safeMarkdownHref(span.href)
 						? {
 								href: span.href,
@@ -126,6 +176,11 @@ const Inline = memo(function Inline({
 /** React Native has no `<i>`; the text style is the only italic it has, and it is
  *  declared once so the inline parser's `italic` is not a silent no-op. */
 const ITALIC: TextStyle = { fontStyle: "italic" };
+const inlineSpanStyle = (span: InlineSpan): TextStyle | undefined => {
+	const mono = span.code ? nativeMono() : undefined;
+	if (mono && span.italic) return { ...mono, ...ITALIC };
+	return mono ?? (span.italic ? ITALIC : undefined);
+};
 // Native Text wraps long runs itself. Web needs anywhere to prevent a URL from
 // widening the column; do not insert zero-width characters into copied text.
 const INLINE_WRAP: TextStyle =
@@ -139,12 +194,13 @@ const INLINE_WRAP: TextStyle =
  *
  * React Native has neither CSS auto table layout nor min-content, so the column
  * widths are PRICED from the parsed strings (`tablePricing`, one constant pinned
- * by a test) rather than measured: the scroll child is a row with
- * `minWidth: naturalWidth`, each cell carries `flexBasis`/`minWidth: minW(c)` and
- * `flexGrow: share(c)`, and the `ScrollView`'s content container carries
- * `minWidth: "100%"` — so a table that fits stretches to the column and
- * distributes its slack, and one that does not scrolls rather than squeezing any
- * column below its longest word.
+ * by a test) rather than measured, then resolved ONCE per table into one
+ * fixed width per column (`tableColumnWidths`) that every row — header
+ * included — receives: a table that fits stretches to the column and
+ * distributes its slack by share, and one that does not scrolls rather than
+ * squeezing any column below its longest word. Per-row flex sizing is gone on
+ * purpose: each row was its own flex container, and on iOS the rows settled on
+ * different column boundaries (operator report, build 773).
  */
 
 /** The rail every band in the session column sits on (`space.gutters.phone`), in
@@ -228,7 +284,23 @@ const TableFade = ({
 	);
 };
 
-const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
+const Table = memo(
+	TableView,
+	/* A streaming answer re-parses its whole text every token, which hands an
+	 *  already-finished table NEW arrays with the same cells. Comparing the cells
+	 *  keeps that table's pricing, widths and subtree untouched until a cell it
+	 *  owns actually changes — only the growing table pays per token. */
+	(before, after) =>
+		sameCells(before.header, after.header) &&
+		before.rows.length === after.rows.length &&
+		before.rows.every((row, index) => sameCells(row, after.rows[index] ?? [])),
+);
+
+function sameCells(a: string[], b: string[]): boolean {
+	return a.length === b.length && a.every((cell, index) => cell === b[index]);
+}
+
+function TableView({ header, rows }: { header: string[]; rows: string[][] }) {
 	const { effectiveScale } = useTextScale();
 	const canvas = useTokenColor("canvas");
 	/* Priced from the parsed strings — no measurement, no layout pass: this
@@ -254,7 +326,13 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	 * cannot move is the fix: the column is the same number whether or not the
 	 * bleed applies, so the classification is a pure function of it.
 	 */
-	const [columnWidth, setColumnWidth] = useState(0);
+	const viewport = useWindowDimensions();
+	/* `measured` is the wrapper's onLayout width (0 until it reports); before
+	 *  that the column is SEEDED from the window (`estimatedColumnWidth`, `column.ts`) so the
+	 *  first frame is the settled one (review m1 / design D2). Same single input
+	 *  downstream either way, so the no-feedback property above still holds. */
+	const [measured, setColumnWidth] = useState(0);
+	const columnWidth = measured > 0 ? measured : estimatedColumnWidth(viewport);
 	const [scrollX, setScrollX] = useState(0);
 	const [atEnd, setAtEnd] = useState(false);
 	const scrollRef = useRef<ScrollView>(null);
@@ -282,8 +360,30 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	 * gets neither — a cue on a table that does not scroll is the false
 	 * affordance the anti-pattern exists to prevent, inverted. */
 	const bleeds = columnWidth > 0 && pricing.naturalWidth > columnWidth + 0.5;
-	const scrolls =
-		bleeds && pricing.naturalWidth > columnWidth + TABLE_RAIL_PT - 0.5;
+
+	/* The row fills the scroll viewport's CONTENT width: the frame's two 1pt
+	 *  borders sit outside the ScrollView, and the viewport bleeds to the screen
+	 *  edge exactly when `bleeds`. Derived from `columnWidth` alone — the one
+	 *  measurement that cannot feed back (see above) — so no second measure
+	 *  pass, and a streaming token that changes no cell changes no width. */
+	const available =
+		columnWidth > 0
+			? columnWidth + (bleeds ? TABLE_RAIL_PT : 0) - 2 * TABLE_BORDER_PT
+			: 0;
+	const widths = useMemo(
+		() => tableColumnWidths(pricing, available),
+		[pricing, available],
+	);
+	const rowWidth = widths.reduce((sum, width) => sum + width, 0);
+	/* `scrolls` is read off the SAME geometry the row is laid out at (the row
+	 *  against the viewport's content width), not re-derived from
+	 *  `naturalWidth`: the two disagreed by the frame's 2pt of border once the
+	 *  row stopped carrying it, and the `- 0.5` tolerance then pointed the wrong
+	 *  way — a row exactly as wide as its viewport (302pt in 302pt, S5
+	 *  rich-rows on iphone-se at 100 %) drew the cue with nothing to scroll
+	 *  (CI run 42948464285, U-40). The tolerance now sits on the overflow side:
+	 *  sub-point float residue never manufactures a cue. */
+	const scrolls = bleeds && rowWidth > available + 0.5;
 	const forced = useMemo(() => forcedTableScroll(), []);
 
 	const onColumnLayout = useCallback(
@@ -390,21 +490,14 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 	const moreAhead = showRight;
 	const moreBehind = showLeft;
 
-	const cellStyle = (column: number) => {
-		// `box-sizing: border-box` (React Native's own default) means the cell's
-		// box must carry its padding and separator, or the priced text width would
-		// be eaten by the chrome and the longest word would break.
-		const box =
-			(pricing.minWidths[column] ?? 0) +
-			2 * TABLE_CELL_PADDING_X_PT +
-			(column > 0 ? 1 : 0);
-		return {
-			flexBasis: box,
-			flexGrow: pricing.shares[column] ?? 1,
-			flexShrink: 0,
-			minWidth: box,
-		};
-	};
+	const cellStyle = (column: number) => ({
+		// ONE fixed border-box width per column, identical in every row (header
+		// included): the cell carries its padding and separator inside it, and
+		// no row-local flex pass may grow or shrink it (`tableColumnWidths`).
+		width: widths[column] ?? 0,
+		flexGrow: 0,
+		flexShrink: 0,
+	});
 	const renderCell = (cell: string, column: number, head: boolean) => (
 		<View
 			key={column}
@@ -451,17 +544,14 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 						scrollEventThrottle={16}
 						contentContainerStyle={{ minWidth: "100%" }}
 					>
-						{/* `flexGrow: 1` is load-bearing on web, measured 2026-10-06: the
+						{/* An EXPLICIT width, the sum of the shared column widths: the
 				    horizontal ScrollView's content container is a ROW flex box, and a
-				    child with only `minWidth` sized to its min-content — the priced row
-				    rendered 216pt wide inside a 356pt viewport, so a table that the
-				    pricing says FITS never received its slack and its header cells
-				    wrapped (`outcome` → `outcom`/`e`, the U-39 failure the first
-				    after-capture caught). With the grow the row fills the container and
-				    the cells' own `flexGrow: share` distributes the slack as §1.3
-				    specifies; when `naturalWidth` exceeds the viewport the min-width
-				    still wins and the row scrolls as before. */}
-						<View style={{ minWidth: pricing.naturalWidth, flexGrow: 1 }}>
+				    child sized only by `minWidth` shrank to its min-content on web
+				    (measured 2026-10-06: 216pt in a 356pt viewport, header cells
+				    wrapping — U-39). With the slack already distributed into the
+				    columns, the row is exactly the viewport when it fits and the priced
+				    width when it scrolls; no flex pass can move a column. */}
+						<View style={{ width: rowWidth }}>
 							<View
 								testID={SURFACE.mdTableHead}
 								className="flex-row border-b border-border-control bg-sunken"
@@ -488,17 +578,26 @@ const Table = ({ header, rows }: { header: string[]; rows: string[][] }) => {
 			</View>
 		</View>
 	);
-};
+}
 
 /* --------------------------------------------------------------- the component */
 
-const CodeBlock = ({
+/* Memoised on the listing's CONTENT for the same reason as `Table`: a streamed
+ *  answer re-parses into new `lines` arrays every token, and a closed fence
+ *  above the growing tail should not re-render with it. */
+const CodeBlock = memo(
+	CodeBlockView,
+	(before, after) =>
+		before.language === after.language && sameCells(before.lines, after.lines),
+);
+
+function CodeBlockView({
 	lines,
 	language,
 }: {
 	lines: string[];
 	language: string;
-}) => {
+}) {
 	const [copied, setCopied] = useState(false);
 	const body = lines.join("\n");
 	return (
@@ -539,7 +638,7 @@ const CodeBlock = ({
 						 *  is the canonical mixed-content case — a bidi algorithm given no
 						 *  hint reorders the punctuation of `git commit -m "…"` and the
 						 *  listing stops being the code the reader must copy. */
-						style={LTR_TEXT}
+						style={codeBodyStyle()}
 					>
 						{copied && language.length === 0 ? "copied\n" : ""}
 						{body}
@@ -548,7 +647,7 @@ const CodeBlock = ({
 			</View>
 		</Pressable>
 	);
-};
+}
 
 /** Monotonic, and deliberately BELOW the screen's own `display` title: a heading
  *  inside a message must not outrank the chrome that says which session this is. */
