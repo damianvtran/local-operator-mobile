@@ -1388,7 +1388,23 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// so the node-loaded `markdown.ts` stays import-free), merged with main
 	// 56831114: only `src` moves, re-derived with --print over the merged
 	// tree. Source admission only, NOT a rendered geometry proof.
-	src: "83c95774b3e1160e434f6ca6a5f0a0b7cdc82e55b37620243a904545912bef81",
+	// fix/bridge-composer-keyboard-glass (TestFlight 800): the Bridge composer
+	// docks above the keyboard from #216's store (new composer-dock.tsx, no
+	// KeyboardAvoidingView) and its shell draws the agent's ChromeSurface glass
+	// layer. --print over the staged tree; source identity only, no rendered or
+	// native proof. Round-1 remediation: the dock test mounts with JSX (Biome
+	// noChildrenProp) and pins the thread's glass={chromeGlass} prop; a test
+	// file only, but `src` covers tests, so it moves. --print over the staged
+	// tree; source identity only, no rendered or native proof.
+	// PR #225 merged with main 56831114 (#220 refused-connect feedback): both
+	// sides' src carried, so neither parent's digest; re-derived with --print
+	// over the staged merged tree. Source identity only, no rendered or native
+	// proof.
+	// PR #224 merged with main 240362a6 (#225 composer keyboard glass): both
+	// sides' src carried, so neither parent's digest; re-derived with --print
+	// over the staged merged tree. Source identity only, no rendered or native
+	// proof.
+	src: "b05d294208fc89b9c40df331a642008d64344fc35ee4fa0376a3cb2aa69c60b3",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
