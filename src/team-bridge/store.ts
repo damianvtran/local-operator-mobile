@@ -926,6 +926,10 @@ export function createTeamBridgeStore(deps: {
 				muted: answer.muted,
 				notify: answer.notify ?? notify,
 			}));
+			// The hub's account total excludes muted conversations, so a policy
+			// change moves the drawer badge and the app icon badge: re-read the
+			// authoritative total instead of guessing the delta here.
+			void actions.refreshUnread();
 		},
 
 		/**
