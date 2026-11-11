@@ -654,7 +654,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// condensing): the startup and subagent screens pass `turnLive` to the
 	// list. Re-derived with --print over the staged tree; source identity
 	// only, no rendered or native proof.
-	app: "b3395f372c394955090686a8e26157c717ed28a3762f516466fdbdba34fe9c06",
+	/* Re-pinned 2026-11-11 for PR #227 (i18n app-scan English closure) rebased
+	 * onto main d458ecdf (#224, #226, #228, #229). Re-derived with
+	 * `--print` over the converged tree. `app` and `src` move because user-visible
+	 * literals in the session, subagent, not-found, computers and settings
+	 * screens are now keyed `t()` calls (English catalogue values are the same
+	 * words), plus the catalogues and generated projection under `src/i18n`. No
+	 * layout, token, instrument or fixture input changed. Source admission only,
+	 * NOT rendered U-08 evidence. */
+	app: "ba44b40368da37d77a6c34c6dae76252fabfc1b11862627bf0943759b08e6026",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1500,7 +1508,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #229 merged with main 502945a6 (#228): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only, no rendered or native proof.
-	src: "b533d1206624f7d868c2eda8d8347c86ff840db6820709d6a4db197c06dcbe77",
+	/* Re-pinned 2026-11-11 for PR #227 (i18n app-scan English closure) rebased
+	 * onto main d458ecdf: #224, #226, #228 and #229 src changes (and #223) are
+	 * carried with #227's, so this is no parent's digest; re-derived with
+	 * `--print` over the converged tree. Source admission only, NOT rendered
+	 * U-08 evidence. */
+	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
