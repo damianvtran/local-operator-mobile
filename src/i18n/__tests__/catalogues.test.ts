@@ -159,7 +159,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 47, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo
+		expected: 49, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +2: the user message's Show more / Show less (iOS build 836)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -306,7 +306,9 @@ describe("the English catalogues", () => {
 		 *  generated catalogue's own count over this tree. Round-1 remediation
 		 *  adds `mobile.team_bridge.thread.anchor_missing` (the "no longer
 		 *  available" toast): 597 + 1 = 598. */
-		expect(total).toBe(598);
+		/* fix/user-message-show-more: + `mobile.session.user_message.show_more`
+		 *  and `.show_less`: 598 + 2 = 600, the generated catalogue's own count. */
+		expect(total).toBe(600);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

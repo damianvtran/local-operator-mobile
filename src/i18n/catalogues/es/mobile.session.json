@@ -17,6 +17,8 @@
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.subagent_open": "Abrir {agent}",
 	"mobile.session.subagent_open_short": "abrir",
+	"mobile.session.user_message.show_more": "Mostrar más",
+	"mobile.session.user_message.show_less": "Mostrar menos",
 	"mobile.session.chip.model_resume_hint": "Reanuda esta sesión para cambiar el modelo",
 	"mobile.session.chip.effort_resume_hint": "Reanuda esta sesión para cambiar el esfuerzo",
 	"mobile.session.chip.model_unrecorded_hint": "Esta sesión no ha registrado ningún modelo",

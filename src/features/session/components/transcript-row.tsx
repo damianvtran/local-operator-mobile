@@ -17,6 +17,7 @@ import {
 	TRACE_ROW_OUTER_CLASS,
 } from "@/features/session/components/trace-rail";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
+import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import { imageGenView } from "@/features/session/imagegen";
 import {
 	bridgeReceiptLabel,
@@ -95,10 +96,10 @@ export type TranscriptRowProps = {
 	 *  frames: it is a prop of a memoised row. */
 	onToggleOpen?: (id: string, open: boolean) => void;
 	/** This row opens a turn the list currently shows CONDENSED behind its
-	 *  `TurnBar`. The prompt clamps to one line and its image strip waits for
-	 *  the bar to open — the relay's `transcript.tsx` treatment: a collapsed
-	 *  turn is one landmark line plus its bar, so a long prompt cannot undo the
-	 *  condensing it heads. Only meaningful on a `user` row. */
+	 *  `TurnBar`. Its image strip waits for the bar to open; its text keeps the
+	 *  same eight-line `Show more` clamp as every prompt (`UserMessageClamp`)
+	 *  rather than one unexpandable line, so the reader can always read what
+	 *  was asked. Only meaningful on a `user` row. */
 	condensed?: boolean;
 };
 
@@ -287,10 +288,26 @@ const TranscriptRowImpl = ({
 
 	if (kind === "user" || kind === "steer") {
 		const isSteer = kind === "steer";
-		/* Clamped, not folded: the prompt stays fully readable the moment the
-		 *  reader opens the turn's bar, and nothing is hidden that the bar does
-		 *  not also stand for. A steer never heads a turn, so it never clamps. */
-		const clamp = condensed && !isSteer;
+		/* A condensed turn's image strip waits for its bar to open, so a
+		 *  screenshot cannot undo the condensing the turn's bar stands for. The
+		 *  TEXT no longer clamps to one line there: that `numberOfLines={1}`
+		 *  left the operator unable to read what he had asked (iOS build 836).
+		 *  Every prompt, condensed or live, takes the desktop's eight-line clamp
+		 *  with `Show more` instead (`UserMessageClamp`). A steer is a quiet
+		 *  unfilled block with no bubble to fade into, and stays as it was. */
+		const holdImages = condensed && !isSteer;
+		const text = (
+			<Text
+				className={cx(
+					// `body-read` 14 / 1.55: the relay's own `--text-body` step and
+					// its reading leading (design item 11, round 1 type parity). It
+					// was `body` 16, one step above the reference.
+					isSteer ? "text-body-read text-ink-muted" : "text-body-read text-ink",
+				)}
+			>
+				{entry.text}
+			</Text>
+		);
 		/* NEVER COLLAPSIBLE, AT ANY LENGTH (review round 1, R1-2 / U1 / D2). The
 		 *  reader's own prompt is the turn's landmark: the relay and the desktop
 		 *  both keep it open, and folding it hid what was asked while the answer
@@ -300,22 +317,20 @@ const TranscriptRowImpl = ({
 		return (
 			<View className="items-end px-4 py-1" testID={testID}>
 				<UserBox isSteer={isSteer}>
-					{entry.text.length > 0 ? (
-						<Text
-							className={cx(
-								// `body-read` 14 / 1.55: the relay's own `--text-body` step and
-								// its reading leading (design item 11, round 1 type parity). It
-								// was `body` 16, one step above the reference.
-								isSteer
-									? "text-body-read text-ink-muted"
-									: "text-body-read text-ink",
-							)}
-							numberOfLines={clamp ? 1 : undefined}
+					{entry.text.length === 0 ? null : isSteer ? (
+						text
+					) : (
+						<UserMessageClamp
+							// The list's row-open map, as the folds use: survives
+							// windowing, and a find landing on this row opens it.
+							expanded={fold.open}
+							onToggle={fold.onToggle}
+							testID={`${testID}-more`}
 						>
-							{entry.text}
-						</Text>
-					) : null}
-					{!clamp && entry.images.length > 0 && loadImage ? (
+							{text}
+						</UserMessageClamp>
+					)}
+					{!holdImages && entry.images.length > 0 && loadImage ? (
 						<View className="flex-row flex-wrap gap-1.5 pt-1.5">
 							{entry.images.map((image) => (
 								<TranscriptImage

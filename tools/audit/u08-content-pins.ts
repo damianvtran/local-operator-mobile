@@ -1500,7 +1500,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #229 merged with main 502945a6 (#228): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only, no rendered or native proof.
-	src: "b533d1206624f7d868c2eda8d8347c86ff840db6820709d6a4db197c06dcbe77",
+	// fix/user-message-show-more: a long user message clamps to eight lines
+	// under a bubble-fill fade with Show more / Show less (8 locales), on
+	// condensed turns too, replacing the condensed prompt's one-line clamp.
+	// --print over the staged tree; source identity only, no rendered proof.
+	src: "d44c1180c0ea655fa80f4a75333e5931cc99ab42fc596c6164042e7a79329099",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

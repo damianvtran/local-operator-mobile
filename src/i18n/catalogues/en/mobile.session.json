@@ -15,6 +15,8 @@
 	"mobile.session.highlights.withheld_reasons_join": "{first}, {second}",
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
+	"mobile.session.user_message.show_more": "Show more",
+	"mobile.session.user_message.show_less": "Show less",
 	"mobile.session.chip.model_default": "Default",
 	"mobile.session.chip.model_unknown": "Unknown",
 	"mobile.session.chip.model_resume_hint": "Resume this session to change the model",
