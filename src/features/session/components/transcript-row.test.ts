@@ -200,3 +200,22 @@ describe("attached and generated images (D10, P1)", () => {
 		);
 	});
 });
+
+/* Operator report, iOS build 836: uneven gaps inside an expanded action
+ * group. The live projection carries a blank assistant row per tool batch;
+ * painted as prose (`px-4 py-1` around an empty Markdown) it opened a hole
+ * between two tool rows. It must render a zero-size box that still carries
+ * the row's testID and anchors, and it must be decided BEFORE the prose arm. */
+describe("a blank assistant row paints nothing", () => {
+	it("returns a bare box with the testID and anchors, ahead of the prose arm", () => {
+		const blankArm = ROW.indexOf(
+			'if (kind === "assistant" && isBlankAssistantEntry(entry))',
+		);
+		const proseArm = ROW.indexOf('if (kind === "assistant") {');
+		expect(blankArm).toBeGreaterThan(-1);
+		expect(proseArm).toBeGreaterThan(blankArm);
+		expect(ROW.slice(blankArm, proseArm)).toContain(
+			"return <View testID={testID}>{anchors}</View>;",
+		);
+	});
+});

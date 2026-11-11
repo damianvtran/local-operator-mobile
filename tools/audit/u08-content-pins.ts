@@ -1500,7 +1500,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// PR #229 merged with main 502945a6 (#228): both sides' src carried, so
 	// neither parent's digest; re-derived with --print over the staged merged
 	// tree. Source identity only, no rendered or native proof.
-	src: "b533d1206624f7d868c2eda8d8347c86ff840db6820709d6a4db197c06dcbe77",
+	// fix/fold-group-spacing: blank live assistant rows paint nothing and skip
+	// the rhythm; rows inside an opened turn bar or fold are indented one
+	// 24 pt step per level beside a hairline guide (`group-containment.ts`,
+	// `group-guides.tsx`). Tests with it. --print over the staged tree; source
+	// identity only, no rendered or native proof.
+	src: "360b4d49a9890ebe4d263144da75a68f708a4856cc75508a5e7d54d431948d1e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

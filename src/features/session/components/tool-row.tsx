@@ -4,7 +4,7 @@ import {
 	MessageSquareOff,
 	MessagesSquare,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useContext, useState } from "react";
 import {
 	Pressable,
 	ScrollView,
@@ -33,6 +33,7 @@ import {
 import { LiveGlyph } from "@/features/session/components/live-glyph";
 import { Markdown } from "@/features/session/components/markdown";
 import {
+	GroupInsetContext,
 	TRACE_BAR_PAD_CLASS,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_EXPANDED_INDENT_CLASS,
@@ -268,7 +269,13 @@ export const ToolRow = ({
 	 * guessed: the 320 pt frames put the pressable at x 24–296, i.e. 272 pt.
 	 * Chosen over `onLayout` because it is the same number on the first frame,
 	 * so a chip can never paint wide and then jump. */
-	const rowWidthPt = Math.max(0, useWindowDimensions().width - ROW_CHROME_PT);
+	/* Inside an opened group the list indents the row (`GroupInsetContext`),
+	 * so the window-derived width must lose that inset too. */
+	const groupInsetPt = useContext(GroupInsetContext);
+	const rowWidthPt = Math.max(
+		0,
+		useWindowDimensions().width - ROW_CHROME_PT - groupInsetPt,
+	);
 	const chipLayout = bridgeChipLayout(
 		rowWidthPt,
 		chipWord,

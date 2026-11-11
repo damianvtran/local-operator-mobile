@@ -12,6 +12,7 @@ import { ImageGenCard } from "@/features/session/components/imagegen-card";
 import { Markdown } from "@/features/session/components/markdown";
 import { ToolRow } from "@/features/session/components/tool-row";
 import {
+	isBlankAssistantEntry,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_GLYPH_BOX_CLASS,
 	TRACE_ROW_OUTER_CLASS,
@@ -253,6 +254,13 @@ const TranscriptRowImpl = ({
 				{anchors}
 			</View>
 		);
+	}
+
+	if (kind === "assistant" && isBlankAssistantEntry(entry)) {
+		/* A tool-only model message's live row (`isBlankAssistantEntry`,
+		 *  `trace-rail.ts`): zero size, so it no longer opens a 24 pt hole between
+		 *  two tool rows, but still present for its testID and anchors. */
+		return <View testID={testID}>{anchors}</View>;
 	}
 
 	if (kind === "assistant") {
