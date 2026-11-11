@@ -27,7 +27,7 @@
 	"mobile.computers.transport.custom": "Địa chỉ của bạn",
 	"mobile.computers.connect_refused.title": "Không thể kết nối",
 	"mobile.computers.connect_refused.generic": "Máy tính không chấp nhận kết nối. Địa chỉ và mật khẩu của bạn vẫn còn ở đây, hãy kiểm tra lại rồi thử lại.",
-	"mobile.computers.connect_refused.password": "Relay không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
+	"mobile.computers.connect_refused.password": "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
 	"mobile.computers.storage_refused.with_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu (mã {code}). Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 	"mobile.computers.storage_refused.no_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu. Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 	"mobile.computers.save_refused.title": "Đã kết nối nhưng chưa lưu",

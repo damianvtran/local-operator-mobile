@@ -277,4 +277,3 @@ there. Bundles for this audit: `audit_id` **`vi1111m1a`** under
 `i18n/audits/evidence/vi/{mobile.common,mobile.computers,mobile.session,mobile.settings}/`,
 each with `record.json`, `report.md` and the shared `audit.log`. If the manager wants a ledger-style
 row somewhere else, name the file and I will record it in that shape.
-
