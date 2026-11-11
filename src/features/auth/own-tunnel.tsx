@@ -9,6 +9,10 @@ import {
 } from "@/features/auth/computer-switcher-view";
 import { useConnection } from "@/features/auth/connection-provider";
 import {
+	connectRefusalSentence,
+	saveRefusalSentence,
+} from "@/features/auth/refusal";
+import {
 	COMPUTER_COMMANDS,
 	TUNNEL_COMMANDS,
 	TUNNEL_RULE,
@@ -19,7 +23,7 @@ import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
 import { t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
-import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
+import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
@@ -75,7 +79,7 @@ const StepHeader = ({ label }: { label: string }) => {
 
 export default function OwnTunnel() {
 	const router = useRouter();
-	const { saveCustomRoute, connectCustom } = useConnection();
+	const { saveCustomRoute, connectCustomOutcome } = useConnection();
 	const { savedTunnel: saved } = useConnection();
 	/* `?computer=<registry id>` is the computer switcher's hand-off for an
 	 *  own-address computer with no stored password: only one password slot exists
@@ -135,6 +139,41 @@ export default function OwnTunnel() {
 	const [testing, setTesting] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [verdict, setVerdict] = useState<TunnelTestVerdict | null>(null);
+	/* Why the last Save and connect was refused, as the reader's sentence. */
+	const [connectError, setConnectError] = useState<string | null>(null);
+	/* Connected, but the keystore refused to keep the route: the sentence to show
+	 *  before the reader moves on, since nothing on home would say it. */
+	const [unsaved, setUnsaved] = useState<string | null>(null);
+
+	/* An edit makes both the test result and the last refusal describe input that
+	 *  is no longer in the fields (design D1 / UX U4, PR #220): a green "Connected"
+	 *  for an address the reader has since changed, or a red reason for a password
+	 *  they have already corrected. Clearing the verdict also re-gates Save and
+	 *  connect on a test of what is actually typed, which is what `canSave` and its
+	 *  "Test the connection first" hint already promise. The prefill effect above
+	 *  uses the raw setters on purpose: loading the saved entry is not an edit. */
+	const edited = useCallback(() => {
+		setVerdict(null);
+		setConnectError(null);
+	}, []);
+	const editUrl = useCallback(
+		(value: string) => {
+			setUrl(value);
+			edited();
+		},
+		[edited],
+	);
+	const editPassword = useCallback(
+		(value: string) => {
+			setPassword(value);
+			edited();
+		},
+		[edited],
+	);
+	const toggleInsecure = useCallback(() => {
+		setAllowInsecure((value) => !value);
+		edited();
+	}, [edited]);
 
 	const test = useCallback(async () => {
 		setTesting(true);
@@ -144,25 +183,49 @@ export default function OwnTunnel() {
 		setTesting(false);
 	}, [allowInsecure, password, url]);
 
+	/* Home ONLY once the route is live. This used to `router.replace("/")` after
+	 *  every attempt, so a refused connect dropped the reader on home's "Not
+	 *  connected / Not answering" with no reason and with the address and password
+	 *  they had just typed gone from view (diagnostic run 42855980853, PR #216). A
+	 *  refusal now stays here: the fields keep their state (nothing below clears
+	 *  them), the reason is shown inline beside the button, and Retry re-runs the
+	 *  same draft. A superseded attempt says nothing — the newer action owns the
+	 *  screen.
+	 *
+	 *  The previous refusal is NOT cleared when the attempt starts, only replaced
+	 *  when its outcome arrives (UX U1, PR #220): clearing it first unmounted the
+	 *  alert under the reader's finger, so Retry's own spinner never showed and
+	 *  keyboard/screen-reader focus fell back to the top of the screen. */
 	const saveAndConnect = useCallback(async () => {
 		setSaving(true);
+		setUnsaved(null);
 		try {
-			await saveCustomRoute({ url, password, allowInsecure });
+			const stored = await saveCustomRoute({ url, password, allowInsecure });
 			/* A known computer reconnects as ITSELF: the registry id goes through, so
 			 *  the live route is recorded against this entry, not forked by address. */
-			await connectCustom({
+			const outcome = await connectCustomOutcome({
 				url,
 				password,
 				allowInsecure,
 				...(known ? { computerId: known.id } : {}),
 			});
+			if (outcome.status === "refused") {
+				setConnectError(connectRefusalSentence(outcome));
+				return;
+			}
+			setConnectError(null);
+			if (outcome.status === "superseded") return;
+			if (stored?.storageRefusal) {
+				setUnsaved(saveRefusalSentence(stored.storageRefusal));
+				return;
+			}
 			router.replace("/");
 		} finally {
 			setSaving(false);
 		}
 	}, [
 		allowInsecure,
-		connectCustom,
+		connectCustomOutcome,
 		known,
 		password,
 		router,
@@ -184,7 +247,12 @@ export default function OwnTunnel() {
 				disabled={testing || url.trim().length === 0}
 				testID={CONTROL.ownTunnelTest}
 			/>
-			{verdict ? <VerdictBlock verdict={verdict} /> : null}
+			{/* Hidden, not cleared, while a refusal is shown (design D1): a green
+			 *  "Connected" above a red "Couldn't connect" reads as two answers to one
+			 *  action. The verdict itself stays so Save and connect remains enabled —
+			 *  the tunnel DID answer the test; clearing it would swap the refusal's
+			 *  reason for a misleading "Test the connection first". */}
+			{verdict && !connectError ? <VerdictBlock verdict={verdict} /> : null}
 			<Button
 				label={saving ? "Saving…" : "Save and connect"}
 				onPress={() => void saveAndConnect()}
@@ -194,6 +262,35 @@ export default function OwnTunnel() {
 				 *  and a second identifier for one action is a second way to do it. */
 				testID={CONTROL.customConnect}
 			/>
+			{connectError ? (
+				<Alert
+					severity="error"
+					title={t("mobile.computers.connect_refused.title")}
+					testID={REGION.ownTunnelConnectRefused}
+					action={{
+						label: t("mobile.computers.retry"),
+						onPress: () => void saveAndConnect(),
+						loading: saving,
+						testID: CONTROL.ownTunnelConnectRetry,
+					}}
+				>
+					{connectError}
+				</Alert>
+			) : null}
+			{unsaved ? (
+				<Alert
+					severity="warning"
+					title={t("mobile.computers.save_refused.title")}
+					testID={REGION.ownTunnelUnsaved}
+					action={{
+						label: t("mobile.computers.save_refused.continue"),
+						onPress: () => router.replace("/"),
+						testID: CONTROL.ownTunnelUnsavedContinue,
+					}}
+				>
+					{unsaved}
+				</Alert>
+			) : null}
 			{!canSave ? (
 				<Text className="text-body-sm text-ink-dim">
 					{url.trim().length === 0
@@ -242,7 +339,7 @@ export default function OwnTunnel() {
 					<Input
 						label="Relay password"
 						value={password}
-						onChangeText={setPassword}
+						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
 						secureTextEntry
 						autoCapitalize="none"
@@ -314,7 +411,7 @@ export default function OwnTunnel() {
 					<Input
 						label="Public URL"
 						value={url}
-						onChangeText={setUrl}
+						onChangeText={editUrl}
 						placeholder="https://your-tunnel.example.com"
 						autoCapitalize="none"
 						testID={CONTROL.customUrlField}
@@ -322,7 +419,7 @@ export default function OwnTunnel() {
 					<Input
 						label="Relay password"
 						value={password}
-						onChangeText={setPassword}
+						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
 						secureTextEntry
 						autoCapitalize="none"
@@ -335,7 +432,7 @@ export default function OwnTunnel() {
 									? "Plain http:// is allowed"
 									: "Allow a plain http:// address"
 							}
-							onPress={() => setAllowInsecure((value) => !value)}
+							onPress={toggleInsecure}
 							variant={allowInsecure ? "outline" : "quiet"}
 							size="sm"
 							testID={CONTROL.customInsecureOptIn}

@@ -24,5 +24,14 @@
 	"mobile.computers.hide_details": "隐藏详细信息",
 	"mobile.computers.connection_response": "连接响应",
 	"mobile.computers.transport.radient": "Radient",
-	"mobile.computers.transport.custom": "你的地址"
+	"mobile.computers.transport.custom": "你的地址",
+	"mobile.computers.connect_refused.title": "无法连接",
+	"mobile.computers.connect_refused.generic": "计算机未接受连接。你的地址和密码仍保留在这里，请检查后重试。",
+	"mobile.computers.connect_refused.password": "中继未接受该密码。请检查后重试。",
+	"mobile.computers.storage_refused.with_code": "此设备的安全存储拒绝了该请求（代码 {code}）。请重试；如果问题持续出现，请重新安装应用。",
+	"mobile.computers.storage_refused.no_code": "此设备的安全存储拒绝了该请求。请重试；如果问题持续出现，请重新安装应用。",
+	"mobile.computers.save_refused.title": "已连接，但未保存",
+	"mobile.computers.save_refused.body": "此设备无法安全地保存地址和密码。连接目前可用，但应用重启后你需要重新输入它们。",
+	"mobile.computers.save_refused.body_with_code": "此设备无法安全地保存地址和密码（代码 {code}）。连接目前可用，但应用重启后你需要重新输入它们。",
+	"mobile.computers.save_refused.continue": "继续"
 }

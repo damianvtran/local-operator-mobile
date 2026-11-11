@@ -24,5 +24,14 @@
 	"mobile.computers.hide_details": "Hide details",
 	"mobile.computers.connection_response": "Connection response",
 	"mobile.computers.transport.radient": "Radient",
-	"mobile.computers.transport.custom": "Your address"
+	"mobile.computers.transport.custom": "Your address",
+	"mobile.computers.connect_refused.title": "Couldn't connect",
+	"mobile.computers.connect_refused.generic": "The computer didn't accept the connection. Your address and password are still here, so check them and try again.",
+	"mobile.computers.connect_refused.password": "The relay didn't accept that password. Check it and try again.",
+	"mobile.computers.storage_refused.with_code": "This device's secure storage refused the request (code {code}). Try again, or reinstall the app if it keeps happening.",
+	"mobile.computers.storage_refused.no_code": "This device's secure storage refused the request. Try again, or reinstall the app if it keeps happening.",
+	"mobile.computers.save_refused.title": "Connected, but not saved",
+	"mobile.computers.save_refused.body": "This device couldn't store the address and password securely. The connection works for now, but you'll need to enter them again after the app restarts.",
+	"mobile.computers.save_refused.body_with_code": "This device couldn't store the address and password securely (code {code}). The connection works for now, but you'll need to enter them again after the app restarts.",
+	"mobile.computers.save_refused.continue": "Continue"
 }

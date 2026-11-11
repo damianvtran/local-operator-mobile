@@ -1371,7 +1371,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// disjoint src files, so the merged tree has neither parent's digest;
 	// re-derived with --print over the staged merged tree. Source identity
 	// only, no rendered or native proof.
-	src: "4634366d3e9b1aa4b4bf42eea4f142c4acd2a017739dde0e49a1a87c0b139082",
+	// fix/refused-connect-feedback: own-tunnel stays on the form with the reason
+	// when Save and connect is refused, the keystore refusal's sanitised cause,
+	// seven catalogue keys and tests; only `src` moves, re-derived with --print
+	// over the staged tree. Source identity only, no rendered or native proof.
+	// PR #220 round-1 remediation (R1-m1/m2, D1-D3, U1/U2/U4, Q1): own-tunnel
+	// clears stale state on edit, keeps the refusal up during Retry, new copy
+	// and keys; only `src` moves, re-derived with --print over the staged tree.
+	// Source identity only, no rendered or native proof.
+	// PR #220 merged with main becb972b (#216, #219, #221): both sides'
+	// src carried, so neither parent's digest; re-derived with --print over the
+	// staged merged tree. Source identity only, no rendered or native proof.
+	src: "577bf6f14b078145ce1acc74442b6da11bc12bd69310946aa71f9b8044bfea07",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

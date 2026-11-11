@@ -16,6 +16,7 @@
  * is copy that sends the reader to a command that will not fix their problem.
  */
 
+import type { SecureStorageRefusal } from "@/connection/secure-storage-refusal";
 import type { TunnelSessionError } from "@/connection/tunnel-session";
 import { t } from "@/i18n";
 import { type ErrorSurface, RelayError } from "@/relay";
@@ -151,12 +152,68 @@ function refineConnectionKind(error: RelayError | null): RefusalKind | null {
 	return null;
 }
 
+/**
+ * The reader's sentence for a keystore refusal. The code is the sanitised one
+ * (`describeSecureStorageRefusal`: an Expo `ERR_*` identifier and/or a numeric
+ * status), shown because it is what support needs to tell a missing entitlement
+ * from a locked device; the step stays in the diagnostic line, since "read" vs
+ * "clear" changes nothing the reader can do. Reinstalling is named because a
+ * keychain entitlement or a corrupted keystore entry survives every retry.
+ */
+export function secureStorageRefusalSentence(
+	refusal: SecureStorageRefusal,
+): string {
+	return refusal.code
+		? t("mobile.computers.storage_refused.with_code", { code: refusal.code })
+		: t("mobile.computers.storage_refused.no_code");
+}
+
+/**
+ * What the own-tunnel screen says when Save and connect was refused: the
+ * keystore's sentence when that was the cause, else the relay's own sanitised
+ * sentence, else a generic one that still tells the reader their entries are
+ * kept. Never empty, so the inline alert cannot render a bare title.
+ */
+/**
+ * The "Connected, but not saved" body: the route is live, the keystore refused to
+ * keep it. Deliberately NOT `secureStorageRefusalSentence` (design D3 / UX U2 /
+ * QA Q1, PR #220): that sentence says "Try again, or reinstall the app", but this
+ * notice's only action is Continue, and the commonest web cause — a saved route
+ * over the keystore's size cap — fails identically on every retry. So it says
+ * what happened and what it costs, and keeps the platform code for support.
+ */
+export function saveRefusalSentence(refusal: SecureStorageRefusal): string {
+	return refusal.code
+		? t("mobile.computers.save_refused.body_with_code", { code: refusal.code })
+		: t("mobile.computers.save_refused.body");
+}
+
+export function connectRefusalSentence(input: {
+	detail: string | null;
+	storageRefusal: SecureStorageRefusal | null;
+	/** The store's surface for the refusal; `password` is the relay's 401. */
+	surface?: ErrorSurface | null;
+}): string {
+	if (input.storageRefusal)
+		return secureStorageRefusalSentence(input.storageRefusal);
+	/* A refusal whose cause is KNOWN gets the reader's sentence with its next step
+	 *  (design D2, PR #220): the relay's own detail for a 401 is the bare fragment
+	 *  "Authentication required", which names no fix. Every other surface keeps
+	 *  the relay's sanitised sentence, which is already written for the reader. */
+	if (input.surface === "password")
+		return t("mobile.computers.connect_refused.password");
+	const detail = input.detail?.trim();
+	return detail ? detail : t("mobile.computers.connect_refused.generic");
+}
+
 export function refusalFromError(input: {
 	error: RelayError | null;
 	surface: ErrorSurface;
 	detail: string | null;
 	retryAfterMs: number | null;
 	subject: string;
+	/** The store's keystore refusal, when that was the cause. */
+	storageRefusal?: SecureStorageRefusal | null;
 }): RefusalView | null {
 	if (input.surface === "none") return null;
 	if (input.error instanceof TunnelConnectionError) {
@@ -180,9 +237,14 @@ export function refusalFromError(input: {
 		 *  body a tunnel edge happily sends. `displayableMessage` is the accessor that
 		 *  refuses a runtime's own words, an empty body and markup, so the refinement is
 		 *  read from it and the surface cannot be handed markup by either path. */
+		/* A diagnostic surface shows its detail only behind "Show details"; a keystore
+		 *  refusal puts the reader's sentence (with the platform code) there instead of
+		 *  the bare `RelayError · rejected`, which named nothing they could act on. */
 		detail:
 			input.surface === "diagnostic"
-				? `RelayError · ${input.error?.kind ?? "connection-response"}`
+				? input.storageRefusal
+					? secureStorageRefusalSentence(input.storageRefusal)
+					: `RelayError · ${input.error?.kind ?? "connection-response"}`
 				: (input.detail ?? input.error?.displayableMessage ?? null),
 		remedy: REMEDY[input.surface] ?? null,
 		retryAfterMs: input.retryAfterMs,
