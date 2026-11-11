@@ -11,11 +11,20 @@ import {
 import { ImageGenCard } from "@/features/session/components/imagegen-card";
 import { Markdown } from "@/features/session/components/markdown";
 import { ToolRow } from "@/features/session/components/tool-row";
+import {
+	TRACE_COLUMN_GAP_CLASS,
+	TRACE_GLYPH_BOX_CLASS,
+	TRACE_ROW_OUTER_CLASS,
+} from "@/features/session/components/trace-rail";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
 import { imageGenView } from "@/features/session/imagegen";
 import {
+	bridgeReceiptLabel,
+	bridgeReceiptMeta,
+	canonicalRowKey,
 	classifyEntry,
 	hubLabel,
+	isBridgeReceipt,
 	isHubReceipt,
 	peerLabel,
 	transcriptRowTestID,
@@ -85,6 +94,12 @@ export type TranscriptRowProps = {
 	/** Asks the owner to open or close this row's fold. Must be stable across
 	 *  frames: it is a prop of a memoised row. */
 	onToggleOpen?: (id: string, open: boolean) => void;
+	/** This row opens a turn the list currently shows CONDENSED behind its
+	 *  `TurnBar`. The prompt clamps to one line and its image strip waits for
+	 *  the bar to open — the relay's `transcript.tsx` treatment: a collapsed
+	 *  turn is one landmark line plus its bar, so a long prompt cannot undo the
+	 *  condensing it heads. Only meaningful on a `user` row. */
+	condensed?: boolean;
 };
 
 const SEVERITY_CLASS: Record<string, string> = {
@@ -157,6 +172,7 @@ const TranscriptRowImpl = ({
 	onCancelTurn,
 	open,
 	onToggleOpen,
+	condensed = false,
 }: TranscriptRowProps) => {
 	const kind = classifyEntry(entry);
 	const testID = transcriptRowTestID(entry);
@@ -164,12 +180,16 @@ const TranscriptRowImpl = ({
 	 *  card instead of the generic tool row (`imagegen.ts` owns the set and the
 	 *  view-model; this file only chooses which treatment to hand it to). */
 	const imageGen = kind === "tool" ? imageGenView(entry) : null;
-	/* The fold's open state, owned by the list when it supplies both halves. */
+	/* The fold's open state, owned by the list when it supplies both halves.
+	 *  Keyed by the CANONICAL row key (`call:<tool_call_id>` for a tool), so a
+	 *  disclosure the reader opened on a live `tc-<call>` row is still open on
+	 *  the durable `<msg>:<call>` row that replaces it. Non-tool rows key by id. */
+	const rowKey = canonicalRowKey(entry);
 	const fold =
 		onToggleOpen !== undefined
 			? {
 					open: open === true,
-					onToggle: (next: boolean) => onToggleOpen(entry.id, next),
+					onToggle: (next: boolean) => onToggleOpen(rowKey, next),
 				}
 			: {};
 	/* The streaming anchor is an EXTRA id on the row it belongs to, so a flow can
@@ -197,7 +217,18 @@ const TranscriptRowImpl = ({
 						testID={testID}
 					/>
 				) : (
-					<ToolRow entry={entry} testID={testID} />
+					<ToolRow
+						entry={entry}
+						testID={testID}
+						{...(onToggleOpen !== undefined
+							? {
+									// Pass-through, not `=== true`: `undefined` is "untouched",
+									// which lets a bang-mode (`user_run`) row open itself (R1-1).
+									...(open !== undefined ? { open } : {}),
+									onToggleOpen: (next: boolean) => onToggleOpen(rowKey, next),
+								}
+							: {})}
+					/>
 				)}
 				{anchors}
 			</View>
@@ -231,6 +262,24 @@ const TranscriptRowImpl = ({
 		return (
 			<View className="px-4 py-1" testID={testID}>
 				<Markdown text={entry.text} />
+				{/* An answer can carry inline images (a pasted chart, a returned
+				 *  screenshot) exactly as a prompt can; without this strip they were
+				 *  on the wire and nowhere on screen. Same strip as the user row's,
+				 *  minus the bubble ground. */}
+				{entry.images.length > 0 && loadImage ? (
+					<View className="flex-row flex-wrap gap-2 pt-2">
+						{entry.images.map((image) => (
+							<TranscriptImage
+								key={image.index}
+								entryId={entry.id}
+								index={image.index}
+								mimeType={image.mime_type}
+								load={loadImage}
+								testID={transcriptImageId(entry.id, image.index)}
+							/>
+						))}
+					</View>
+				) : null}
 				{anchors}
 			</View>
 		);
@@ -238,6 +287,10 @@ const TranscriptRowImpl = ({
 
 	if (kind === "user" || kind === "steer") {
 		const isSteer = kind === "steer";
+		/* Clamped, not folded: the prompt stays fully readable the moment the
+		 *  reader opens the turn's bar, and nothing is hidden that the bar does
+		 *  not also stand for. A steer never heads a turn, so it never clamps. */
+		const clamp = condensed && !isSteer;
 		/* NEVER COLLAPSIBLE, AT ANY LENGTH (review round 1, R1-2 / U1 / D2). The
 		 *  reader's own prompt is the turn's landmark: the relay and the desktop
 		 *  both keep it open, and folding it hid what was asked while the answer
@@ -257,11 +310,12 @@ const TranscriptRowImpl = ({
 									? "text-body-read text-ink-muted"
 									: "text-body-read text-ink",
 							)}
+							numberOfLines={clamp ? 1 : undefined}
 						>
 							{entry.text}
 						</Text>
 					) : null}
-					{entry.images.length > 0 && loadImage ? (
+					{!clamp && entry.images.length > 0 && loadImage ? (
 						<View className="flex-row flex-wrap gap-1.5 pt-1.5">
 							{entry.images.map((image) => (
 								<TranscriptImage
@@ -298,7 +352,12 @@ const TranscriptRowImpl = ({
 					accessibilityLabel={t("mobile.session.reasoning_disclosure")}
 					{...fold}
 				>
-					<Text className="text-body-read text-ink-muted">{entry.text}</Text>
+					{/* A sunken well, not bare body text: opened reasoning is the
+					 *  model's scratch, and on the page's own ground it read as part of
+					 *  the answer beneath it. Muted small type for the same reason. */}
+					<View className="rounded-sm bg-sunken px-3 py-2">
+						<Text className="text-body-sm text-ink-muted">{entry.text}</Text>
+					</View>
 				</CollapsedRow>
 				{anchors}
 			</View>
@@ -311,6 +370,67 @@ const TranscriptRowImpl = ({
 			kind === "compaction" ? "≡" : severity === "error" ? "✗" : "•";
 		const ink = SEVERITY_CLASS[severity] ?? "text-info";
 		const woken = entry.details.notice_kind === "wake";
+		/* A Team Bridge receipt is a message FROM someone, not a status line: it
+		 *  leads with the sender (receiver-projected display name, sanitized in
+		 *  `bridgeReceiptLabel`) and the channel/DM + attachment facts, on the
+		 *  same rail as a peer message, rather than a bare `•` notice. */
+		if (isBridgeReceipt(entry)) {
+			const sender = bridgeReceiptLabel(entry);
+			const where = bridgeReceiptMeta(entry);
+			const summary = firstLine(entry.text);
+			if (shouldFold(entry.text)) {
+				return (
+					<View className={TRACE_ROW_OUTER_CLASS} testID={testID}>
+						<CollapsedRow
+							glyph="↔"
+							glyphClass="text-accent"
+							label={sender}
+							labelClass="text-ink-dim"
+							summary={summary}
+							meta={where}
+							accessibilityLabel={[`${sender}: ${summary}`, where]
+								.filter(Boolean)
+								.join(", ")}
+							{...fold}
+						>
+							<Text className="text-body-sm text-ink">{entry.text}</Text>
+						</CollapsedRow>
+						{anchors}
+					</View>
+				);
+			}
+			return (
+				<View
+					className={cx(
+						"flex-row items-start py-3",
+						TRACE_ROW_OUTER_CLASS,
+						TRACE_COLUMN_GAP_CLASS,
+					)}
+					testID={testID}
+				>
+					<Text
+						className={cx(TRACE_GLYPH_BOX_CLASS, "text-accent")}
+						aria-hidden
+					>
+						↔
+					</Text>
+					{/* Caption line, then the body on its own line — both on the 40 pt
+					 *  text rail (D2). Running the 12 pt caption into the 14 pt body
+					 *  started the body mid-line (x = 254 at 390 pt) and wrapped it
+					 *  back to 40; the folded Hub receipt beside it reads label-then-
+					 *  words on the same rail, so the two coordination rows match. */}
+					<View className="min-w-0 flex-1">
+						<Text className="text-meta text-ink-dim">
+							{where ? `${sender} · ${where}` : sender}
+						</Text>
+						{entry.text ? (
+							<Text className="text-body-sm text-ink">{entry.text}</Text>
+						) : null}
+					</View>
+					{anchors}
+				</View>
+			);
+		}
 		/* A LONG NOTICE FOLDS; AN ERROR NEVER DOES (review round 1, R1-2: the relay
 		 *  and the desktop both leave an error open — it is the fact the reader
 		 *  most needs, and a fold would cost exactly that). A folded wake notice
@@ -340,7 +460,17 @@ const TranscriptRowImpl = ({
 			);
 		}
 		return (
-			<View className="flex-row items-start gap-2 px-4 py-1" testID={testID}>
+			/* `py-3` puts a one-line notice (20 pt line + 24 pt) on the 44 pt
+			 *  trace rhythm the folded rows and tool rows keep, so a run of short
+			 *  notices beside folded ones no longer alternates 28 pt and 44 pt. */
+			<View
+				className={cx(
+					"flex-row items-start py-3",
+					TRACE_ROW_OUTER_CLASS,
+					TRACE_COLUMN_GAP_CLASS,
+				)}
+				testID={testID}
+			>
 				{/* A FIXED 16 pt mono box: the glyph-column recipe the tool row
 				 *  and the folded row already use (`w-4 … font-mono text-mono-sm`)
 				 *  and the relay's own notice recipe (visual audit D9). Sized to
@@ -351,10 +481,7 @@ const TranscriptRowImpl = ({
 				 *  which is exactly `CollapsedRow`'s rail, so an open notice and
 				 *  a folded one beside it now share both columns. LEFT-aligned
 				 *  for the reason the tool glyph is: the glyph is the rail. */}
-				<Text
-					className={cx("w-4 shrink-0 text-start font-mono text-mono-sm", ink)}
-					aria-hidden
-				>
+				<Text className={cx(TRACE_GLYPH_BOX_CLASS, ink)} aria-hidden>
 					{glyph}
 				</Text>
 				<Text className="min-w-0 flex-1 text-body-sm text-ink">
@@ -394,7 +521,7 @@ const TranscriptRowImpl = ({
 		(kind === "parent" || kind === "subagent") &&
 		entry.images.length > 0 &&
 		loadImage ? (
-			<View className="flex-row flex-wrap gap-1.5 pt-1.5">
+			<View className="flex-row flex-wrap gap-2 pt-2">
 				{entry.images.map((image) => (
 					<TranscriptImage
 						key={image.index}
@@ -457,30 +584,41 @@ const TranscriptRowImpl = ({
 				</Text>
 			</Pressable>
 		) : null;
+	/* The route line names the job only. The raw `to_child` / `to_parent`
+	 *  direction is a wire token: printed above 14 pt prose it read as the
+	 *  message's first words. The direction is already in the glyph and the
+	 *  `Hub · From …` label. */
 	const route =
-		hub && entry.details.direction ? (
+		hub && entry.details.job_id && entry.details.label ? (
 			<Text className="text-meta text-ink-muted">
-				{entry.details.direction}
-				{entry.details.job_id && entry.details.label
-					? ` · Job ${entry.details.job_id}`
-					: ""}
+				{`Job ${entry.details.job_id}`}
 			</Text>
 		) : null;
-	if (shouldFold(body)) {
+	/* EVERY HUB RECEIPT FOLDS, AT ANY LENGTH. A hub message is delegation
+	 *  traffic — a brief to a child, a report back — and it sits between the
+	 *  reader's prompt and the answer they are waiting for; a short one left
+	 *  open still interleaved an attribution strip and a prose block into the
+	 *  trace. One line (`Hub · From <label>` + its first line) on the trace rail
+	 *  is the relay's receipt treatment; the body is one tap away. */
+	if (hub || shouldFold(body)) {
 		const summary = firstLine(body);
 		/* Named by kind and sender and the summary, not the whole body (UX round
 		 *  1, U7): a screen reader reading every paragraph of a folded row gets
 		 *  nothing from the fold. The body is read from the expanded children. */
-		const named = who === label ? label : `${label} ${who}`;
+		const named = hub
+			? `Hub, from ${who}`
+			: who === label
+				? label
+				: `${label} ${who}`;
 		const spoken = [`${named}: ${summary}`, ...intent].join(", ");
 		return (
 			/* No `py-1`: the fold's touch-floor box is the line's vertical space
 			 *  (design round 3, D4 — see the folded notice above). */
-			<View className="px-4" testID={testID}>
+			<View className={TRACE_ROW_OUTER_CLASS} testID={testID}>
 				<CollapsedRow
 					glyph={kind === "peer" ? "↔" : "↳"}
 					glyphClass={kind === "subagent" ? "text-ink-dim" : "text-accent"}
-					label={who}
+					label={hub ? `Hub · From ${who}` : who}
 					summary={summary}
 					meta={intent.join(" · ")}
 					accessibilityLabel={spoken}
@@ -505,11 +643,11 @@ const TranscriptRowImpl = ({
 		 *  other row, so `↔` / `↳` stand on the glyph rail (x 16) and the sender
 		 *  on the text rail (x 40), and the body starts on the page's own edge
 		 *  like the answer it sits between. */
-		<View className="px-4 py-1" testID={testID}>
-			<View className="flex-row items-center gap-2">
+		<View className={cx(TRACE_ROW_OUTER_CLASS, "py-1")} testID={testID}>
+			<View className={cx("flex-row items-center", TRACE_COLUMN_GAP_CLASS)}>
 				<Text
 					className={cx(
-						"w-4 shrink-0 text-start font-mono text-mono-sm",
+						TRACE_GLYPH_BOX_CLASS,
 						// The folded bar's inks, so a message does not change colour
 						// when it grows past the fold threshold.
 						kind === "subagent" ? "text-ink-dim" : "text-accent",

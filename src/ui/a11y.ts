@@ -1205,6 +1205,7 @@ export const IDENTIFIER_FAMILIES: readonly string[] = [
 	 *  command_id (`features/session/pending-echo.ts`). */
 	"pending-echo-",
 	"turn-bar-",
+	"fold-bar-",
 	"quiet-group-",
 	"completion-anchor-",
 	"transcript-image-",
@@ -2128,6 +2129,11 @@ export const transcriptRowId = (rowId: string): string =>
  *  (`turn-condensing.ts`), so a bar is addressable by the message that started
  *  the turn — the same identity the reader's expansion and the latch use. */
 export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
+
+/** One tool/receipt fold bar (`FoldBar`, Tier A run folding). Keyed by the
+ *  run's canonical `fold:<first canonical row key>` so an open fold survives
+ *  live-to-durable row replacement. */
+export const foldBarId = (foldKey: string): string => `fold-bar-${foldKey}`;
 
 /** The pending row for an in-flight instruction, keyed by the retry envelope's
  *  `command_id` — the same id the session's real row will carry, so a flow can

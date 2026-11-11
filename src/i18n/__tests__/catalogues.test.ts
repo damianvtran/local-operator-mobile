@@ -52,6 +52,8 @@ import relayComposerContext from "@/i18n/catalogues/en/relay.composer.context.js
 import relayComposer from "@/i18n/catalogues/en/relay.composer.json";
 import healthContext from "@/i18n/catalogues/en/relay.health.context.json";
 import health from "@/i18n/catalogues/en/relay.health.json";
+import relayTranscriptContext from "@/i18n/catalogues/en/relay.transcript.context.json";
+import relayTranscript from "@/i18n/catalogues/en/relay.transcript.json";
 
 const ROLES = ["heading", "help", "status", "button", "confirm", "meta"];
 
@@ -182,6 +184,16 @@ const NAMESPACES = [
 		expected: 3,
 	},
 	{
+		/* The relay's transcript condensing and tool-fold vocabulary, mirrored key
+		 * for key from the core (`local_operator/i18n/catalogues/<locale>/relay.transcript.json`)
+		 * so completed-turn bars, tool folds and receipt labels speak the same words
+		 * on phone and relay web. */
+		name: "relay.transcript",
+		messages: relayTranscript,
+		context: relayTranscriptContext,
+		expected: 19,
+	},
+	{
 		/* This app's own chrome for the health surface: the control's labels, the
 		 *  Resume flow's sentences and the two reopen lines. APP-OWNED, in the
 		 *  `mobile.*` convention #112 established, because a later adoption of the
@@ -286,7 +298,10 @@ describe("the English catalogues", () => {
 		 * count. */
 		/* PR #220 merged with main becb972b (#219 retired one key): 568 + 9 (this
 		 * branch's net) = 577, verified by counting unique `en` keys over the merged tree. */
-		expect(total).toBe(577);
+		/* PR #223 merged with main 56831114 (#220): 568 + 19 (this branch's
+		 * relay.transcript keys) + 9 (#220's net) = 596, verified by the
+		 * generated catalogue's own count over the merged tree. */
+		expect(total).toBe(596);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -423,6 +438,8 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"French spells “session” the same way; equality is correct here, not a fallback.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
+		"relay.transcript.label.messages":
+			"« Messages » is the French plural of « message », mirrored verbatim from the core relay catalogue.",
 	},
 	/* Spanish preserves these placeholder-only templates: names and separators
 	 * have no English prose to translate. Each key remains explicitly listed. */
@@ -506,6 +523,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Hindi carries the separator unchanged; there is no prose to translate.",
+		"relay.transcript.fold.shell":
+			"Mirrored from the core relay catalogue: technical CLI/runtime token `shell` kept in Latin script beside the count.",
+		"relay.transcript.fold.python":
+			"Mirrored from the core relay catalogue: language/tool proper token `python` kept in Latin script beside the count.",
 	},
 	ur: {
 		"mobile.team_bridge.profile.name_with_owner":
@@ -521,6 +542,10 @@ const IDENTICAL_BY_DESIGN: Readonly<
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Urdu carries the separator unchanged; there is no prose to translate.",
+		"relay.transcript.fold.shell":
+			"Mirrored from the core relay catalogue: technical CLI/runtime token `shell` kept in Latin script beside the count.",
+		"relay.transcript.fold.python":
+			"Mirrored from the core relay catalogue: language/tool proper token `python` kept in Latin script beside the count.",
 	},
 };
 

@@ -1,11 +1,25 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import {
+	TRACE_COLUMN_GAP_CLASS,
+	TRACE_GLYPH_BOX_CLASS,
+	TRACE_GLYPH_ROW_CLASS,
+	TRACE_GLYPH_SLOT_CLASS,
+	TRACE_PRESS_WASH_CLASS,
+	TRACE_PRESSABLE_BESIDE_GLYPH_CLASS,
+	TRACE_ROW_OUTER_CLASS,
+	TRACE_TEXT_RAIL_INSET_CLASS,
+} from "@/features/session/components/trace-rail";
 import {
 	barAccessibleName,
 	barPhrases,
 	type TurnBarFacts,
 } from "@/features/session/turn-condensing";
 import { ROLE, turnBarId } from "@/ui/a11y";
+import { useComposedDir } from "@/ui/direction";
+import { TOUCH_FLOOR } from "@/ui/layout";
+import { cx } from "@/ui/variants";
 
 /**
  * The condensed turn's bar: one row standing in for a completed turn's work,
@@ -24,6 +38,8 @@ import { ROLE, turnBarId } from "@/ui/a11y";
  * **The glyph is a text glyph beside its word, never colour alone** (`U-03`):
  * the bar's whole job is that a condensed turn still shows it completed, and a
  * mark that only exists as green would fail the one reader this clause is for.
+ * The word itself is the accessible name's (`barAccessibleName`); the painted
+ * line carries the numbers beside the glyph.
  *
  * Like the quiet-group disclosure, this is a compact trace, not a card.
  * The completion mark, label and caret identify the control without adding
@@ -53,56 +69,94 @@ export const TurnBar = ({
 	open,
 	onToggle,
 }: TurnBarProps) => {
-	// The one copy function, shared with the tests: the first phrase is the
-	// completion, the rest are the counts. Splitting here keeps the string
-	// single-sourced rather than re-spelling "completed" at the render site.
-	const [outcome, ...details] = barPhrases(facts);
+	// The one copy function, shared with the tests. A steered turn's label
+	// leads in the muted ink; the counts follow in the dim detail ink. No
+	// painted outcome word (U1-3): `completed` beside a red `✗` read as a
+	// contradiction, so — as on Relay — only the accessible name says it.
+	const phrases = barPhrases(facts);
+	const [lead, ...details] = facts.steered ? phrases : ["", ...phrases];
+	const failedCount = facts.failed ?? 0;
+	const failed = failedCount > 0;
+	/* The words are composed copy (`9s لگے · 8 اعمال`) whose first strong
+	 * character is the Latin unit, so RN-web's `dir="auto"` would read them LTR
+	 * inside an Urdu page and push them off the 40 pt start rail (Q2-1).
+	 * `useComposedDir` states the page's base instead; see `@/ui/direction`. */
+	const composedDir = useComposedDir();
+	/* The press wash lives on the row holding the glyph AND the button
+	 * (`TRACE_PRESS_WASH_CLASS`, `trace-rail.ts`), so it is lifted here. */
+	const [pressed, setPressed] = useState(false);
 	return (
-		<View className="px-3 py-1">
-			<Pressable
-				testID={turnBarId(turnKey)}
-				accessibilityRole={ROLE.button}
-				accessibilityLabel={barAccessibleName(facts, headline)}
-				accessibilityState={{ expanded: open }}
-				onPress={() => onToggle(!open)}
-				// 48 = `min-h-12`, the strict platform of the two. Deliberately NOT
-				// `numberOfLines`-capped below: a clipped "42s" is a shorter string
-				// that is still a valid duration, which is how a truncated clock
-				// survives review (`components.md` § 7) — the bar wraps instead.
-				className="min-h-12 justify-center px-3 py-2"
+		/* Glyph outside the pressable, baseline-aligned (`TRACE_GLYPH_ROW_CLASS`
+		 * in `trace-rail.ts`): every text line the button owns starts on the
+		 * 40 pt rail, so a wrapped bar keeps one rail under U-41. */
+		<View className={TRACE_ROW_OUTER_CLASS}>
+			<View
+				className={cx(TRACE_GLYPH_ROW_CLASS, pressed && TRACE_PRESS_WASH_CLASS)}
 			>
-				{/* ONE RAIL, AND THE CARET RIDES THE FIRST LINE. The ✓ used to be its own
-				 *  flex column and the caret was centred on the whole row, so once the label
-				 *  wrapped (150 % on a phone) the first line sat 27.8 pt inside the row, the
-				 *  wrapped lines started under the glyph rather than beside it, and the caret
-				 *  floated 15.9 pt off line one — U-41's rail and caret rules. The glyph is
-				 *  now the first RUN of the label's own text, so every line shares the rail,
-				 *  and the row is `items-start` so the caret keys to line one at any scale.
-				 *  The outer Pressable centres this row vertically, which keeps a single-line
-				 *  bar optically centred inside its 48 pt target. */}
-				<View className="flex-row items-start gap-2">
-					<Text className="min-w-0 flex-1 text-body-sm text-ink">
-						<Text className="font-mono text-mono-sm text-success" aria-hidden>
-							{"✓ "}
-						</Text>
-						{outcome}
-						{details.length > 0 ? (
-							<Text className="font-mono text-mono-sm text-ink-dim tabular-nums">
-								{` · ${details.map(unbreakable).join(" · ")}`}
-							</Text>
-						) : null}
-					</Text>
-					{/* The caret is wrapped in the label's OWN type role, the way the label wraps
-					 *  its ✓: both lines then have the body-sm line box, and the caret's centre
-					 *  is the first line's centre by construction rather than 4 pt off at 200 %
-					 *  (a bare mono-sm caret has a shorter line box than the body-sm label). */}
-					<Text className="text-body-sm" aria-hidden>
-						<Text className="font-mono text-mono-sm text-ink-dim">
-							{open ? "▾" : "▸"}
-						</Text>
+				<View
+					className={TRACE_GLYPH_SLOT_CLASS}
+					pointerEvents="none"
+					aria-hidden
+				>
+					<Text
+						className={cx(
+							TRACE_GLYPH_BOX_CLASS,
+							failed ? "text-danger" : "text-success",
+						)}
+						aria-hidden
+					>
+						{failed ? "✗" : "✓"}
 					</Text>
 				</View>
-			</Pressable>
+				<Pressable
+					testID={turnBarId(turnKey)}
+					accessibilityRole={ROLE.button}
+					accessibilityLabel={barAccessibleName(facts, headline)}
+					accessibilityState={{ expanded: open }}
+					onPress={() => onToggle(!open)}
+					onPressIn={() => setPressed(true)}
+					onPressOut={() => setPressed(false)}
+					style={{ minHeight: TOUCH_FLOOR }}
+					className={cx(TRACE_PRESSABLE_BESIDE_GLYPH_CLASS, "justify-center")}
+				>
+					<View
+						className={cx(
+							"flex-row items-start py-2",
+							TRACE_TEXT_RAIL_INSET_CLASS,
+							TRACE_COLUMN_GAP_CLASS,
+						)}
+					>
+						<Text
+							className="min-w-0 flex-1 text-trace text-ink-muted"
+							{...composedDir}
+						>
+							{lead}
+							{details.length > 0 ? (
+								/* Proportional `text-meta`, not `font-mono` (Q1-3): the details
+								 * are translated words now, and the monospace stack draws Urdu's
+								 * cursive script as disconnected letters; `tabular-nums` keeps
+								 * the digits aligned, as Relay's `text-meta` units do. */
+								<Text className="text-meta text-ink-dim tabular-nums">
+									{`${lead ? " · " : ""}${details.map(unbreakable).join(" · ")}`}
+								</Text>
+							) : null}
+						</Text>
+						{failed ? (
+							<Text
+								className="shrink-0 font-mono text-mono-sm text-danger tabular-nums"
+								aria-hidden
+							>
+								{failedCount}
+							</Text>
+						) : null}
+						<Text className="text-trace" aria-hidden>
+							<Text className="font-mono text-mono-sm text-ink-dim">
+								{open ? "▾" : "▸"}
+							</Text>
+						</Text>
+					</View>
+				</Pressable>
+			</View>
 		</View>
 	);
 };

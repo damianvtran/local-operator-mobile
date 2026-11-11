@@ -77,6 +77,7 @@
 
 import type { TranscriptEntry } from "@/contracts";
 import type {
+	FoldView,
 	GroupView,
 	TranscriptItem,
 	TurnView,
@@ -698,6 +699,7 @@ export interface RevealSubject {
 	items: readonly TranscriptItem[];
 	turns: readonly TurnView[];
 	groups: readonly GroupView[];
+	folds?: readonly FoldView[];
 }
 
 /**
@@ -724,6 +726,7 @@ export type RevealPlan =
 	| { kind: "item"; index: number }
 	| { kind: "turn"; turnKey: string }
 	| { kind: "group"; groupKey: string }
+	| { kind: "fold"; foldKey: string }
 	| null;
 
 export const revealTarget = (
@@ -735,8 +738,8 @@ export const revealTarget = (
 		(item) => item.kind === "entry" && item.id === id,
 	);
 	if (index >= 0) return { kind: "item", index };
-	// Turns first: they sit OUTSIDE groups in the nesting, and the walk costs
-	// one pass per layer either way. `expandHookKeys` are part of the set the
+	// Turns first: they sit OUTSIDE groups and folds in the nesting, and the walk
+	// costs one pass per layer either way. `expandHookKeys` are part of the set the
 	// list passes, so a hook-opened fold is as open here as it renders.
 	for (const turn of plan.turns) {
 		if (expanded.has(turn.key)) continue;
@@ -746,6 +749,12 @@ export const revealTarget = (
 		if (expanded.has(group.key)) continue;
 		if (group.hiddenIds.includes(id)) {
 			return { kind: "group", groupKey: group.key };
+		}
+	}
+	for (const fold of plan.folds ?? []) {
+		if (expanded.has(fold.key)) continue;
+		if (fold.hiddenIds.includes(id)) {
+			return { kind: "fold", foldKey: fold.key };
 		}
 	}
 	return null;
