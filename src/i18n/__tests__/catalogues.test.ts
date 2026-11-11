@@ -147,7 +147,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 40, // +5: the add-a-computer wait panel's keyed lines (app/ scan)
+		expected: 41, // +6: the add-a-computer wait panel's keyed lines (app/ scan)
 	},
 	{
 		name: "mobile.notifications",
@@ -211,7 +211,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 44, // +26: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out)
+		expected: 45, // +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -306,10 +306,10 @@ describe("the English catalogues", () => {
 		 *  generated catalogue's own count over this tree. Round-1 remediation
 		 *  adds `mobile.team_bridge.thread.anchor_missing` (the "no longer
 		 *  available" toast): 597 + 1 = 598.
-		 * Plus 51 keyed by the app/ scan (the new `app/` coverage in
-		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 51
-		 * = 649, the generator's own count. */
-		expect(total).toBe(649);
+		 * Plus 53 keyed by the app/ scan (the new `app/` coverage in
+		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 53
+		 * = 651, the generator's own count. */
+		expect(total).toBe(651);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -380,7 +380,7 @@ const PROJECT_TAG_EXAMPLE = {
 /**
  * Keys whose shipped-locale value is TEMPORARILY the English source.
  *
- * WHY. The app/ scan keyed 51 user-visible literals as English keys. Generation
+ * WHY. The app/ scan keyed 53 user-visible literals as English keys. Generation
  * requires every shipped locale to carry every key, and the translator wave has
  * not run yet, so each locale holds the English string as a placeholder. This is
  * NOT a design judgement that English is right (unlike the entries below): it is
@@ -391,6 +391,7 @@ const PROJECT_TAG_EXAMPLE = {
  */
 const PENDING_TRANSLATION: readonly string[] = [
 	"mobile.computers.wait.nothing_answered",
+	"mobile.computers.wait.nothing_answered_help",
 	"mobile.computers.wait.paused",
 	"mobile.computers.wait.relay_version_sessions",
 	"mobile.computers.wait.relay_version",
@@ -410,6 +411,7 @@ const PENDING_TRANSLATION: readonly string[] = [
 	"mobile.settings.account.delete_help",
 	"mobile.settings.sign_out.title",
 	"mobile.settings.sign_out.body",
+	"mobile.settings.sign_out.confirm",
 	"mobile.settings.sign_out.done",
 	"mobile.settings.text_size.following",
 	"mobile.settings.text_size.overridden",
@@ -443,7 +445,7 @@ const PENDING_TRANSLATION: readonly string[] = [
 	"mobile.settings.diagnostics.privacy_note",
 ];
 const PENDING_TRANSLATION_REASON =
-	"Pending the translator wave: the English source is held as a placeholder so the catalogue stays in key parity; delete this entry when the key is translated.";
+	"Pending the translator wave (owner: i18n programme; expected date: not yet scheduled, docs/i18n.md names none): the English source is held as a placeholder so the catalogue stays in key parity; delete this entry when the key is translated.";
 
 const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	Record<ShippedLocale, Readonly<Record<string, string>>>

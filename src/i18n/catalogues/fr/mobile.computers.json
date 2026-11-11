@@ -35,6 +35,7 @@
 	"mobile.computers.save_refused.body_with_code": "Cet appareil n’a pas pu enregistrer l’adresse et le mot de passe de façon sécurisée (code {code}). La connexion fonctionne pour l’instant, mais vous devrez les saisir à nouveau après le redémarrage de l’app.",
 	"mobile.computers.save_refused.continue": "Continuer",
 	"mobile.computers.wait.nothing_answered": "Nothing answered.",
+	"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
 	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",

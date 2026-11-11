@@ -664,7 +664,7 @@ export default function Settings() {
 				visible={confirmSignOut}
 				title={t("mobile.settings.sign_out.title")}
 				body={t("mobile.settings.sign_out.body")}
-				confirmLabel="Sign out"
+				confirmLabel={t("mobile.settings.sign_out.confirm")}
 				onConfirm={() => void doSignOut()}
 				onCancel={() => setConfirmSignOut(false)}
 				destructive

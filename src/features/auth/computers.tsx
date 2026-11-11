@@ -281,8 +281,7 @@ const WaitPanel = ({
 						{t("mobile.computers.wait.nothing_answered")}
 					</Text>
 					<Text className="text-body-sm text-ink-muted">
-						Three minutes with no tunnel listed and no host answering. Check the
-						command ran on the computer, then start again.
+						{t("mobile.computers.wait.nothing_answered_help")}
 					</Text>
 				</>
 			) : null}

@@ -143,6 +143,10 @@
 		"role": "status",
 		"note": "Heading of the add-a-computer wait panel when the three-minute wait ended with no tunnel listed and no host answering. A short sentence with a final full stop; a follow-up help line sits under it."
 	},
+	"mobile.computers.wait.nothing_answered_help": {
+		"role": "help",
+		"note": "Continuation line under the \"Nothing answered.\" heading of the add-a-computer wait panel: explains that three minutes passed with no tunnel listed and no host answering, then tells the user to check the command ran on the computer and start again. Two sentences; the second is the instruction."
+	},
 	"mobile.computers.wait.paused": {
 		"role": "help",
 		"note": "Wait-panel line shown when the app was backgrounded during the add-a-computer wait and polling stopped. Two short sentences; the second is the instruction to reopen the app."

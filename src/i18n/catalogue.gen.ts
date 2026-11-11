@@ -133,6 +133,7 @@ export type CatalogueKey =
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
 	| "mobile.computers.wait.nothing_answered"
+	| "mobile.computers.wait.nothing_answered_help"
 	| "mobile.computers.wait.paused"
 	| "mobile.computers.wait.relay_sessions"
 	| "mobile.computers.wait.relay_version"
@@ -431,6 +432,7 @@ export type CatalogueKey =
 	| "mobile.settings.section.connection"
 	| "mobile.settings.section.diagnostics"
 	| "mobile.settings.sign_out.body"
+	| "mobile.settings.sign_out.confirm"
 	| "mobile.settings.sign_out.done"
 	| "mobile.settings.sign_out.title"
 	| "mobile.settings.text_size.following"
@@ -778,6 +780,7 @@ export type NoParamKey =
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
 	| "mobile.computers.wait.nothing_answered"
+	| "mobile.computers.wait.nothing_answered_help"
 	| "mobile.computers.wait.paused"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_default_short"
@@ -1035,6 +1038,7 @@ export type NoParamKey =
 	| "mobile.settings.section.connection"
 	| "mobile.settings.section.diagnostics"
 	| "mobile.settings.sign_out.body"
+	| "mobile.settings.sign_out.confirm"
 	| "mobile.settings.sign_out.done"
 	| "mobile.settings.sign_out.title"
 	| "mobile.settings.text_size.label"
@@ -1347,6 +1351,7 @@ export type MessageParams = {
 	"mobile.computers.transport.custom": NoParams;
 	"mobile.computers.transport.radient": NoParams;
 	"mobile.computers.wait.nothing_answered": NoParams;
+	"mobile.computers.wait.nothing_answered_help": NoParams;
 	"mobile.computers.wait.paused": NoParams;
 	"mobile.computers.wait.relay_sessions": { sessions: number };
 	"mobile.computers.wait.relay_version": { version: string | number };
@@ -1645,6 +1650,7 @@ export type MessageParams = {
 	"mobile.settings.section.connection": NoParams;
 	"mobile.settings.section.diagnostics": NoParams;
 	"mobile.settings.sign_out.body": NoParams;
+	"mobile.settings.sign_out.confirm": NoParams;
 	"mobile.settings.sign_out.done": NoParams;
 	"mobile.settings.sign_out.title": NoParams;
 	"mobile.settings.text_size.following": { percent: string | number };
@@ -2015,6 +2021,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.transport.custom": "Your address",
 	"mobile.computers.transport.radient": "Radient",
 	"mobile.computers.wait.nothing_answered": "Nothing answered.",
+	"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -2313,6 +2320,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.section.connection": "Connection",
 	"mobile.settings.section.diagnostics": "Diagnostics",
 	"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+	"mobile.settings.sign_out.confirm": "Sign out",
 	"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 	"mobile.settings.sign_out.title": "Sign out?",
 	"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
@@ -2668,6 +2676,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.transport.custom": { role: "meta", note: "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case." },
 	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written." },
 	"mobile.computers.wait.nothing_answered": { role: "status", note: "Heading of the add-a-computer wait panel when the three-minute wait ended with no tunnel listed and no host answering. A short sentence with a final full stop; a follow-up help line sits under it." },
+	"mobile.computers.wait.nothing_answered_help": { role: "help", note: "Continuation line under the \"Nothing answered.\" heading of the add-a-computer wait panel: explains that three minutes passed with no tunnel listed and no host answering, then tells the user to check the command ran on the computer and start again. Two sentences; the second is the instruction." },
 	"mobile.computers.wait.paused": { role: "help", note: "Wait-panel line shown when the app was backgrounded during the add-a-computer wait and polling stopped. Two short sentences; the second is the instruction to reopen the app." },
 	"mobile.computers.wait.relay_sessions": { role: "help", note: "Wait-panel line once the computer answered and only the running-session count is known. {sessions} is a count; preserve the ICU plural arms." },
 	"mobile.computers.wait.relay_version": { role: "help", note: "Wait-panel line once the computer answered and only the protocol version is known. {version} is a number; preserve the placeholder." },
@@ -2966,6 +2975,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.section.connection": { role: "heading", note: "Section header on Settings above the connection status and the computers list. One word." },
 	"mobile.settings.section.diagnostics": { role: "heading", note: "Section header on Settings above the read-only connection facts (route, stream, last error). One word." },
 	"mobile.settings.sign_out.body": { role: "confirm", note: "Body of the sign-out confirmation: signing out also ends the session on the control plane, so the tunnel stops accepting this phone, and the user's computer is untouched. 'Control plane' and 'tunnel' are product vocabulary." },
+	"mobile.settings.sign_out.confirm": { role: "button", note: "Confirm button of the sign-out dialog; it performs the sign-out, so it repeats the Sign out action verb. One or two words, sentence case." },
 	"mobile.settings.sign_out.done": { role: "status", note: "Toast shown after a successful sign-out, just before the welcome screen. Two short sentences; must fit a toast." },
 	"mobile.settings.sign_out.title": { role: "confirm", note: "Title of the confirmation dialog opened by Settings Sign out. A question; keep it short." },
 	"mobile.settings.text_size.following": { role: "help", note: "Help line under the text-size control when the app follows the phone's setting. {percent} is a whole number shown with a % sign; preserve the placeholder and the percent sign." },
@@ -3335,6 +3345,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.custom": "Tu dirección",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.wait.nothing_answered": "Nothing answered.",
+		"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 		"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 		"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 		"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -3633,6 +3644,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.connection": "Connection",
 		"mobile.settings.section.diagnostics": "Diagnostics",
 		"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+		"mobile.settings.sign_out.confirm": "Sign out",
 		"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 		"mobile.settings.sign_out.title": "Sign out?",
 		"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
@@ -3986,6 +3998,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.custom": "Votre adresse",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.wait.nothing_answered": "Nothing answered.",
+		"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 		"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 		"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 		"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -4284,6 +4297,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.connection": "Connection",
 		"mobile.settings.section.diagnostics": "Diagnostics",
 		"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+		"mobile.settings.sign_out.confirm": "Sign out",
 		"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 		"mobile.settings.sign_out.title": "Sign out?",
 		"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
@@ -4637,6 +4651,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.custom": "आपका पता",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.wait.nothing_answered": "Nothing answered.",
+		"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 		"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 		"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 		"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -4935,6 +4950,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.connection": "Connection",
 		"mobile.settings.section.diagnostics": "Diagnostics",
 		"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+		"mobile.settings.sign_out.confirm": "Sign out",
 		"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 		"mobile.settings.sign_out.title": "Sign out?",
 		"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
@@ -5288,6 +5304,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.custom": "Ваш адрес",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.wait.nothing_answered": "Nothing answered.",
+		"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 		"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 		"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 		"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -5586,6 +5603,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.connection": "Connection",
 		"mobile.settings.section.diagnostics": "Diagnostics",
 		"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+		"mobile.settings.sign_out.confirm": "Sign out",
 		"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 		"mobile.settings.sign_out.title": "Sign out?",
 		"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
@@ -5939,6 +5957,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.custom": "آپ کا پتہ",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.wait.nothing_answered": "Nothing answered.",
+		"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 		"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 		"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 		"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -6237,6 +6256,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.connection": "Connection",
 		"mobile.settings.section.diagnostics": "Diagnostics",
 		"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+		"mobile.settings.sign_out.confirm": "Sign out",
 		"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 		"mobile.settings.sign_out.title": "Sign out?",
 		"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
@@ -6590,6 +6610,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.custom": "Địa chỉ của bạn",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.wait.nothing_answered": "Nothing answered.",
+		"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 		"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 		"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 		"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -6888,6 +6909,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.connection": "Connection",
 		"mobile.settings.section.diagnostics": "Diagnostics",
 		"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+		"mobile.settings.sign_out.confirm": "Sign out",
 		"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 		"mobile.settings.sign_out.title": "Sign out?",
 		"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
@@ -7241,6 +7263,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.transport.custom": "你的地址",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.wait.nothing_answered": "Nothing answered.",
+		"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 		"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 		"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 		"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
@@ -7539,6 +7562,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.connection": "Connection",
 		"mobile.settings.section.diagnostics": "Diagnostics",
 		"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+		"mobile.settings.sign_out.confirm": "Sign out",
 		"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 		"mobile.settings.sign_out.title": "Sign out?",
 		"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",

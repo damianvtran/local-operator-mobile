@@ -35,6 +35,7 @@
 	"mobile.computers.save_refused.body_with_code": "此设备无法安全地保存地址和密码（代码 {code}）。连接目前可用，但应用重启后你需要重新输入它们。",
 	"mobile.computers.save_refused.continue": "继续",
 	"mobile.computers.wait.nothing_answered": "Nothing answered.",
+	"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
 	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",

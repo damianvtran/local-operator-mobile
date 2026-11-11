@@ -131,6 +131,10 @@
 		"role": "confirm",
 		"note": "Body of the sign-out confirmation: signing out also ends the session on the control plane, so the tunnel stops accepting this phone, and the user's computer is untouched. 'Control plane' and 'tunnel' are product vocabulary."
 	},
+	"mobile.settings.sign_out.confirm": {
+		"role": "button",
+		"note": "Confirm button of the sign-out dialog; it performs the sign-out, so it repeats the Sign out action verb. One or two words, sentence case."
+	},
 	"mobile.settings.sign_out.done": {
 		"role": "status",
 		"note": "Toast shown after a successful sign-out, just before the welcome screen. Two short sentences; must fit a toast."

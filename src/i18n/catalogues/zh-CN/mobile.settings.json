@@ -32,6 +32,7 @@
 	"mobile.settings.account.delete_help": "Deleting your account happens in the Radient console, in the browser — this app cannot do it for you. It deletes the account and every tunnel on it. Sessions on your computer are not touched.",
 	"mobile.settings.sign_out.title": "Sign out?",
 	"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
+	"mobile.settings.sign_out.confirm": "Sign out",
 	"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
 	"mobile.settings.text_size.following": "This phone's own text size is {percent}%. Following it.",
 	"mobile.settings.text_size.overridden": "This phone's own text size is {percent}%. Overridden above.",
