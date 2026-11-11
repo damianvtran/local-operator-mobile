@@ -11,7 +11,7 @@
  * it as a sheet, which brings its own dismiss (the Close control and the
  * scrim) and its own modal accessibility scope.
  */
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { Bot, Clock, MessageSquare } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -232,23 +232,69 @@ export function ProfileSubjectAvatar({
 /**
  * Navigation to a Team Bridge target: an existing conversation by id, or a
  * draft DM (`conversationId: "new"`) that the thread creates on first send.
- * The ONE spelling of that route, shared by the list rows and the card.
+ * The ONE spelling of that route, shared by the list rows, the drawer's Bridge
+ * pane and the card.
+ *
+ * PUSH OR REPLACE. From anywhere outside Team Bridge (Home, an agent chat) the
+ * thread is PUSHED, so back returns there. From a Team Bridge route — the
+ * channel list screen or another thread — it REPLACES: switching channels is
+ * not a deeper level (operator, TestFlight 773: the back button "makes it hard
+ * to switch channels"), so the thread never sits on a stack of earlier
+ * threads or on the list, and its back gesture returns to where Team Bridge
+ * was entered. Picking the thread already shown is a no-op (the caller has
+ * already closed the drawer), as the agent drawer treats the current chat.
+ *
+ * Remembering the last channel is a separate slice; it only needs to decide
+ * WHICH target to open and can call this unchanged.
  */
 export function useOpenTarget(): (target: model.Target) => void {
 	const router = useRouter();
+	const pathname = usePathname();
 	return useCallback(
 		(target: model.Target) => {
 			const params =
 				target.kind === "conversation"
 					? { tenantId: target.tenantId, conversationId: target.conversationId }
 					: { ...target, conversationId: "new" };
-			router.push({
-				pathname: "/team-bridge/[tenantId]/[conversationId]",
+			const destination = {
+				pathname: "/team-bridge/[tenantId]/[conversationId]" as const,
 				params,
-			});
+			};
+			const disposition = openDisposition(pathname, target);
+			if (disposition === "stay") return;
+			if (disposition === "replace") router.replace(destination);
+			else router.push(destination);
 		},
-		[router],
+		[router, pathname],
 	);
+}
+
+const BRIDGE_ROUTE = /^\/team-bridge(?:\/|$)/;
+
+/** Pure, so each route's disposition is testable without a router. */
+export function openDisposition(
+	pathname: string,
+	target: model.Target,
+): "push" | "replace" | "stay" {
+	if (
+		target.kind === "conversation" &&
+		pathname === `/team-bridge/${target.tenantId}/${target.conversationId}`
+	)
+		return "stay";
+	return bridgeRouteDisposition(pathname);
+}
+
+/**
+ * Push or replace for ANY Team Bridge destination opened from `pathname`,
+ * target-independent. Split out of `openDisposition` so the drawer's "Open
+ * Team Bridge" (shown while the gate is not open) follows the same rule as a
+ * row: from a thread whose admission gate is showing, a push would stack the
+ * list over that thread, and the next row pick would then leave
+ * `[…, threadA, threadB]` — back into the previous thread, which A7 forbids
+ * (round 1 R1-2 / U1-1). One function, so the two entry points cannot drift.
+ */
+export function bridgeRouteDisposition(pathname: string): "push" | "replace" {
+	return BRIDGE_ROUTE.test(pathname) ? "replace" : "push";
 }
 
 /**

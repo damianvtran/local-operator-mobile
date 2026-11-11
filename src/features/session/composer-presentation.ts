@@ -32,6 +32,10 @@ export const COMPOSER_EXPANDED_HEIGHT = 112;
  *
  *  The expanded card is untouched: 12 + h + 4 + h + 8 were already on-scale. */
 export const COMPOSER_REST_PAD = 4;
+/** The shell's side padding, both states: the record's 12 pt. Exported so the
+ *  Team Bridge composer (`features/team-bridge/thread-chrome.tsx`) insets its
+ *  text by the same amount as this one rather than restating the number. */
+export const COMPOSER_SIDE_PAD = 12;
 export const COMPOSER_REST_ROW = 48;
 /** Where the record's heights come from, so a test can assert the arithmetic
  *  rather than a class name: rest 4 + max(floor, 48) + 4 = 56; expanded 12 + 44
@@ -134,7 +138,7 @@ export const composerPresentation = (facts: ComposerPresentationFacts) => {
 		height: expanded ? composerPaintedHeight(true, floor) : idleHeight,
 		radius: expanded ? 24 : morphPillRadius(idleHeight),
 		gap: composerOuterGap(facts.inset, facts.keyboard),
-		side: 12,
+		side: COMPOSER_SIDE_PAD,
 	};
 };
 export const keyboardOverlap = (hostBottom: number, keyboardTop: number) =>

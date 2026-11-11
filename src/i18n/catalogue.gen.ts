@@ -100,6 +100,9 @@ export type CatalogueKey =
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
 	| "mobile.computers.billing_help"
+	| "mobile.computers.connect_refused.generic"
+	| "mobile.computers.connect_refused.password"
+	| "mobile.computers.connect_refused.title"
 	| "mobile.computers.connecting"
 	| "mobile.computers.connection_response"
 	| "mobile.computers.disabled_help"
@@ -109,6 +112,10 @@ export type CatalogueKey =
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.protected"
 	| "mobile.computers.retry"
+	| "mobile.computers.save_refused.body"
+	| "mobile.computers.save_refused.body_with_code"
+	| "mobile.computers.save_refused.continue"
+	| "mobile.computers.save_refused.title"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
 	| "mobile.computers.session_error"
@@ -116,6 +123,8 @@ export type CatalogueKey =
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
+	| "mobile.computers.storage_refused.no_code"
+	| "mobile.computers.storage_refused.with_code"
 	| "mobile.computers.switch"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
@@ -558,7 +567,6 @@ export type CatalogueKey =
 	| "mobile.team_bridge.thread.older_loading"
 	| "mobile.team_bridge.thread.older_retry"
 	| "mobile.team_bridge.thread.organization_unavailable"
-	| "mobile.team_bridge.thread.placeholder"
 	| "mobile.team_bridge.thread.preview_help"
 	| "mobile.team_bridge.thread.readonly"
 	| "mobile.team_bridge.thread.recipient_incomplete"
@@ -667,6 +675,9 @@ export type NoParamKey =
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
 	| "mobile.computers.billing_help"
+	| "mobile.computers.connect_refused.generic"
+	| "mobile.computers.connect_refused.password"
+	| "mobile.computers.connect_refused.title"
 	| "mobile.computers.connecting"
 	| "mobile.computers.connection_response"
 	| "mobile.computers.disabled_help"
@@ -676,6 +687,9 @@ export type NoParamKey =
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.protected"
 	| "mobile.computers.retry"
+	| "mobile.computers.save_refused.body"
+	| "mobile.computers.save_refused.continue"
+	| "mobile.computers.save_refused.title"
 	| "mobile.computers.section.not_connected"
 	| "mobile.computers.section.on_phone"
 	| "mobile.computers.session_error"
@@ -683,6 +697,7 @@ export type NoParamKey =
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
+	| "mobile.computers.storage_refused.no_code"
 	| "mobile.computers.switch"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
@@ -1168,6 +1183,9 @@ export type MessageParams = {
 	"mobile.computers.badge.active": NoParams;
 	"mobile.computers.badge.connecting": NoParams;
 	"mobile.computers.billing_help": NoParams;
+	"mobile.computers.connect_refused.generic": NoParams;
+	"mobile.computers.connect_refused.password": NoParams;
+	"mobile.computers.connect_refused.title": NoParams;
 	"mobile.computers.connecting": NoParams;
 	"mobile.computers.connection_response": NoParams;
 	"mobile.computers.disabled_help": NoParams;
@@ -1177,6 +1195,10 @@ export type MessageParams = {
 	"mobile.computers.password_placeholder": NoParams;
 	"mobile.computers.protected": NoParams;
 	"mobile.computers.retry": NoParams;
+	"mobile.computers.save_refused.body": NoParams;
+	"mobile.computers.save_refused.body_with_code": { code: string | number };
+	"mobile.computers.save_refused.continue": NoParams;
+	"mobile.computers.save_refused.title": NoParams;
 	"mobile.computers.section.not_connected": NoParams;
 	"mobile.computers.section.on_phone": NoParams;
 	"mobile.computers.session_error": NoParams;
@@ -1184,6 +1206,8 @@ export type MessageParams = {
 	"mobile.computers.show_details": NoParams;
 	"mobile.computers.sign_out": NoParams;
 	"mobile.computers.signing_out": NoParams;
+	"mobile.computers.storage_refused.no_code": NoParams;
+	"mobile.computers.storage_refused.with_code": { code: string | number };
 	"mobile.computers.switch": NoParams;
 	"mobile.computers.transport.custom": NoParams;
 	"mobile.computers.transport.radient": NoParams;
@@ -1626,7 +1650,6 @@ export type MessageParams = {
 	"mobile.team_bridge.thread.older_loading": NoParams;
 	"mobile.team_bridge.thread.older_retry": NoParams;
 	"mobile.team_bridge.thread.organization_unavailable": NoParams;
-	"mobile.team_bridge.thread.placeholder": { title: string | number };
 	"mobile.team_bridge.thread.preview_help": NoParams;
 	"mobile.team_bridge.thread.readonly": NoParams;
 	"mobile.team_bridge.thread.recipient_incomplete": NoParams;
@@ -1756,6 +1779,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.badge.active": "active",
 	"mobile.computers.badge.connecting": "connecting",
 	"mobile.computers.billing_help": "In the Radient console, open this tunnel's billing settings and activate remote access.",
+	"mobile.computers.connect_refused.generic": "The computer didn't accept the connection. Your address and password are still here, so check them and try again.",
+	"mobile.computers.connect_refused.password": "The relay didn't accept that password. Check it and try again.",
+	"mobile.computers.connect_refused.title": "Couldn't connect",
 	"mobile.computers.connecting": "Connecting…",
 	"mobile.computers.connection_response": "Connection response",
 	"mobile.computers.disabled_help": "Radient says this tunnel isn't active right now. Check its status in the Radient console.",
@@ -1765,6 +1791,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.password_placeholder": "The password from lop mobile",
 	"mobile.computers.protected": "Sign-in protected",
 	"mobile.computers.retry": "Retry",
+	"mobile.computers.save_refused.body": "This device couldn't store the address and password securely. The connection works for now, but you'll need to enter them again after the app restarts.",
+	"mobile.computers.save_refused.body_with_code": "This device couldn't store the address and password securely (code {code}). The connection works for now, but you'll need to enter them again after the app restarts.",
+	"mobile.computers.save_refused.continue": "Continue",
+	"mobile.computers.save_refused.title": "Connected, but not saved",
 	"mobile.computers.section.not_connected": "On your Radient account, not connected",
 	"mobile.computers.section.on_phone": "On this phone",
 	"mobile.computers.session_error": "The app couldn't connect to this computer.",
@@ -1772,6 +1802,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.show_details": "Show details",
 	"mobile.computers.sign_out": "Sign out",
 	"mobile.computers.signing_out": "Signing out…",
+	"mobile.computers.storage_refused.no_code": "This device's secure storage refused the request. Try again, or reinstall the app if it keeps happening.",
+	"mobile.computers.storage_refused.with_code": "This device's secure storage refused the request (code {code}). Try again, or reinstall the app if it keeps happening.",
 	"mobile.computers.switch": "Switch computer",
 	"mobile.computers.transport.custom": "Your address",
 	"mobile.computers.transport.radient": "Radient",
@@ -2214,7 +2246,6 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.thread.older_loading": "Loading older messages…",
 	"mobile.team_bridge.thread.older_retry": "Retry older messages",
 	"mobile.team_bridge.thread.organization_unavailable": "This organization is not available to this account.",
-	"mobile.team_bridge.thread.placeholder": "Message {title}",
 	"mobile.team_bridge.thread.preview_help": "Join this channel to read its history and send messages.",
 	"mobile.team_bridge.thread.readonly": "This organization is read only. You can read history, but cannot send messages.",
 	"mobile.team_bridge.thread.recipient_incomplete": "This message recipient is incomplete. Go back and choose a person or chief of staff.",
@@ -2329,6 +2360,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
 	"mobile.computers.badge.connecting": { role: "status", note: "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge." },
 	"mobile.computers.billing_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.connect_refused.generic": { role: "status", note: "Body of the \"Couldn't connect\" error when the computer gave no more specific reason. Reassures the user that what they typed is kept, and tells them to check it and retry (a Retry button follows)." },
+	"mobile.computers.connect_refused.password": { role: "status", note: "Body of the \"Couldn't connect\" error when the relay on the user's computer rejected the relay password (HTTP 401). Tells the user what was wrong and the next step; a Retry button follows. \"Relay\" is the program on the user's computer that the app connects to." },
+	"mobile.computers.connect_refused.title": { role: "heading", note: "Title of an inline error on the \"Your own tunnel\" screen, shown when Save and connect was refused. The screen stays open with the address and password still filled in. Short, sentence case, no final full stop." },
 	"mobile.computers.connecting": { role: "status", note: "Inline status beside a computer row while its connection is being made. Keep the ellipsis character; one word plus ellipsis." },
 	"mobile.computers.connection_response": { role: "meta", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.disabled_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
@@ -2338,6 +2372,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
 	"mobile.computers.protected": { role: "status", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.retry": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.save_refused.body": { role: "help", note: "Body of the \"Connected, but not saved\" warning: the connection succeeded, but the phone's own secure storage (iOS Keychain / Android Keystore) would not keep the address and password, so they must be typed again after the app restarts. The only button is Continue, so do not suggest trying again." },
+	"mobile.computers.save_refused.body_with_code": { role: "help", note: "Same message as mobile.computers.save_refused.body when the platform gave a code. {code} is a technical platform code such as \"ERR_KEY_CHAIN -34018\" for support: keep it exactly as written, untranslated, inside the parentheses." },
+	"mobile.computers.save_refused.continue": { role: "button", note: "Button in the \"Connected, but not saved\" warning that continues to the home screen. One word, sentence case." },
+	"mobile.computers.save_refused.title": { role: "heading", note: "Title of a warning on the \"Your own tunnel\" screen: the connection succeeded, but the phone's secure storage refused to save the address and password, so they are lost when the app restarts. Short, sentence case, no final full stop." },
 	"mobile.computers.section.not_connected": { role: "heading", note: "Section header for computers that belong to the reader's Radient account but are not paired on this phone. \"Radient\" is a product name: do not translate." },
 	"mobile.computers.section.on_phone": { role: "heading", note: "Section header for computers already paired on this phone." },
 	"mobile.computers.session_error": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
@@ -2345,6 +2383,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.sign_out": { role: "button", note: "Settings action opening the sign-out confirmation. Sentence case." },
 	"mobile.computers.signing_out": { role: "status", note: "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis." },
+	"mobile.computers.storage_refused.no_code": { role: "status", note: "Same message as mobile.computers.storage_refused.with_code when the platform gave no code: the phone's own secure storage (iOS Keychain / Android Keystore) refused the request." },
+	"mobile.computers.storage_refused.with_code": { role: "status", note: "Shown when the phone's own secure storage (iOS Keychain / Android Keystore) refused to read, delete or save the app's sign-in data. {code} is a technical platform code such as \"ERR_KEY_CHAIN -34018\" for support: keep it exactly as written, untranslated, inside the parentheses. \"Reinstall the app\" is the remedy when retrying keeps failing." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.computers.transport.custom": { role: "meta", note: "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case." },
 	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written." },
@@ -2787,7 +2827,6 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.thread.older_loading": { role: "button", note: "Team Bridge mobile UI: thread / older loading. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.older_retry": { role: "button", note: "Team Bridge mobile UI: thread / older retry. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.organization_unavailable": { role: "help", note: "Team Bridge mobile UI: thread / organization unavailable. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
-	"mobile.team_bridge.thread.placeholder": { role: "help", note: "Team Bridge mobile UI: thread / placeholder. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state. Parameters are caller-supplied names/counts or protocol selects; do not translate their identifiers. Preserve ICU plural/select syntax and all variants; names are not translated." },
 	"mobile.team_bridge.thread.preview_help": { role: "help", note: "Team Bridge mobile UI: thread / preview help. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.readonly": { role: "help", note: "Team Bridge mobile UI: thread / readonly. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
 	"mobile.team_bridge.thread.recipient_incomplete": { role: "help", note: "Team Bridge mobile UI: thread / recipient incomplete. Preserve the distinction between a temporary failure, unavailable access and a deliberate read-only state." },
@@ -2916,6 +2955,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "activa",
 		"mobile.computers.badge.connecting": "conectando",
 		"mobile.computers.billing_help": "En la consola de Radient, abre la facturación de este túnel y activa el acceso remoto.",
+		"mobile.computers.connect_refused.generic": "El ordenador no aceptó la conexión. Tu dirección y tu contraseña siguen aquí, así que revísalas y vuelve a intentarlo.",
+		"mobile.computers.connect_refused.password": "El relay no aceptó esa contraseña. Revísala y vuelve a intentarlo.",
+		"mobile.computers.connect_refused.title": "No se pudo conectar",
 		"mobile.computers.connecting": "Conectando…",
 		"mobile.computers.connection_response": "Respuesta de conexión",
 		"mobile.computers.disabled_help": "Radient indica que este túnel no está activo ahora. Comprueba su estado en la consola de Radient.",
@@ -2925,6 +2967,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
 		"mobile.computers.protected": "Protegido con inicio de sesión",
 		"mobile.computers.retry": "Reintentar",
+		"mobile.computers.save_refused.body": "Este dispositivo no pudo guardar la dirección y la contraseña de forma segura. La conexión funciona por ahora, pero tendrás que volver a introducirlas cuando se reinicie la app.",
+		"mobile.computers.save_refused.body_with_code": "Este dispositivo no pudo guardar la dirección y la contraseña de forma segura (código {code}). La conexión funciona por ahora, pero tendrás que volver a introducirlas cuando se reinicie la app.",
+		"mobile.computers.save_refused.continue": "Continuar",
+		"mobile.computers.save_refused.title": "Conectado, pero sin guardar",
 		"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
 		"mobile.computers.section.on_phone": "En este teléfono",
 		"mobile.computers.session_error": "La app no pudo conectarse a este equipo.",
@@ -2932,6 +2978,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.sign_out": "Cerrar sesión",
 		"mobile.computers.signing_out": "Cerrando sesión…",
+		"mobile.computers.storage_refused.no_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud. Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
+		"mobile.computers.storage_refused.with_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud (código {code}). Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
 		"mobile.computers.switch": "Cambiar de máquina",
 		"mobile.computers.transport.custom": "Tu dirección",
 		"mobile.computers.transport.radient": "Radient",
@@ -3374,7 +3422,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Cargando mensajes anteriores…",
 		"mobile.team_bridge.thread.older_retry": "Reintentar mensajes anteriores",
 		"mobile.team_bridge.thread.organization_unavailable": "Esta organización no está disponible para esta cuenta.",
-		"mobile.team_bridge.thread.placeholder": "Mensaje a {title}",
 		"mobile.team_bridge.thread.preview_help": "Únete a este canal para leer su historial y enviar mensajes.",
 		"mobile.team_bridge.thread.readonly": "Esta organización es de solo lectura. Puedes leer el historial, pero no enviar mensajes.",
 		"mobile.team_bridge.thread.recipient_incomplete": "El destinatario está incompleto. Vuelve atrás y elige una persona o un jefe de gabinete.",
@@ -3487,6 +3534,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "actif",
 		"mobile.computers.badge.connecting": "connexion",
 		"mobile.computers.billing_help": "Dans la console Radient, ouvrez la facturation de ce tunnel et activez l’accès à distance.",
+		"mobile.computers.connect_refused.generic": "L’ordinateur n’a pas accepté la connexion. Votre adresse et votre mot de passe sont toujours là : vérifiez-les et réessayez.",
+		"mobile.computers.connect_refused.password": "Le relais n’a pas accepté ce mot de passe. Vérifiez-le et réessayez.",
+		"mobile.computers.connect_refused.title": "Connexion impossible",
 		"mobile.computers.connecting": "Connexion…",
 		"mobile.computers.connection_response": "Réponse de connexion",
 		"mobile.computers.disabled_help": "Radient indique que ce tunnel n’est pas actif pour le moment. Vérifiez son état dans la console Radient.",
@@ -3496,6 +3546,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 		"mobile.computers.protected": "Protégé par connexion",
 		"mobile.computers.retry": "Réessayer",
+		"mobile.computers.save_refused.body": "Cet appareil n’a pas pu enregistrer l’adresse et le mot de passe de façon sécurisée. La connexion fonctionne pour l’instant, mais vous devrez les saisir à nouveau après le redémarrage de l’app.",
+		"mobile.computers.save_refused.body_with_code": "Cet appareil n’a pas pu enregistrer l’adresse et le mot de passe de façon sécurisée (code {code}). La connexion fonctionne pour l’instant, mais vous devrez les saisir à nouveau après le redémarrage de l’app.",
+		"mobile.computers.save_refused.continue": "Continuer",
+		"mobile.computers.save_refused.title": "Connecté, mais non enregistré",
 		"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 		"mobile.computers.section.on_phone": "Sur ce téléphone",
 		"mobile.computers.session_error": "L’app n’a pas pu se connecter à cet ordinateur.",
@@ -3503,6 +3557,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.sign_out": "Se déconnecter",
 		"mobile.computers.signing_out": "Déconnexion en cours…",
+		"mobile.computers.storage_refused.no_code": "Le stockage sécurisé de cet appareil a refusé la demande. Réessayez, ou réinstallez l’app si le problème persiste.",
+		"mobile.computers.storage_refused.with_code": "Le stockage sécurisé de cet appareil a refusé la demande (code {code}). Réessayez, ou réinstallez l’app si le problème persiste.",
 		"mobile.computers.switch": "Changer d’ordinateur",
 		"mobile.computers.transport.custom": "Votre adresse",
 		"mobile.computers.transport.radient": "Radient",
@@ -3945,7 +4001,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Chargement des anciens messages…",
 		"mobile.team_bridge.thread.older_retry": "Réessayer les anciens messages",
 		"mobile.team_bridge.thread.organization_unavailable": "Cette organisation n’est pas accessible depuis ce compte.",
-		"mobile.team_bridge.thread.placeholder": "Message à {title}",
 		"mobile.team_bridge.thread.preview_help": "Rejoignez ce canal pour lire son historique et envoyer des messages.",
 		"mobile.team_bridge.thread.readonly": "Cette organisation est en lecture seule. Vous pouvez lire l’historique, mais pas envoyer de messages.",
 		"mobile.team_bridge.thread.recipient_incomplete": "Le destinataire est incomplet. Revenez en arrière et choisissez une personne ou un chef de cabinet.",
@@ -4058,6 +4113,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "सक्रिय",
 		"mobile.computers.badge.connecting": "कनेक्ट हो रहा",
 		"mobile.computers.billing_help": "Radient कंसोल में इस टनल की बिलिंग सेटिंग खोलें और रिमोट ऐक्सेस चालू करें।",
+		"mobile.computers.connect_refused.generic": "कंप्यूटर ने कनेक्शन स्वीकार नहीं किया। आपका पता और पासवर्ड अभी भी यहाँ हैं, इसलिए उन्हें जाँचें और फिर से कोशिश करें।",
+		"mobile.computers.connect_refused.password": "रिले ने वह पासवर्ड स्वीकार नहीं किया। उसे जाँचें और फिर से कोशिश करें।",
+		"mobile.computers.connect_refused.title": "कनेक्ट नहीं हो सका",
 		"mobile.computers.connecting": "कनेक्ट हो रहा है…",
 		"mobile.computers.connection_response": "कनेक्शन की प्रतिक्रिया",
 		"mobile.computers.disabled_help": "Radient के अनुसार यह टनल अभी सक्रिय नहीं है। Radient कंसोल में इसकी स्थिति देखें।",
@@ -4067,6 +4125,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
 		"mobile.computers.protected": "साइन-इन से सुरक्षित",
 		"mobile.computers.retry": "दोबारा कोशिश करें",
+		"mobile.computers.save_refused.body": "यह डिवाइस पता और पासवर्ड सुरक्षित रूप से सहेज नहीं सका। कनेक्शन अभी काम कर रहा है, लेकिन ऐप दोबारा शुरू होने के बाद आपको उन्हें फिर से डालना होगा।",
+		"mobile.computers.save_refused.body_with_code": "यह डिवाइस पता और पासवर्ड सुरक्षित रूप से सहेज नहीं सका (कोड {code})। कनेक्शन अभी काम कर रहा है, लेकिन ऐप दोबारा शुरू होने के बाद आपको उन्हें फिर से डालना होगा।",
+		"mobile.computers.save_refused.continue": "जारी रखें",
+		"mobile.computers.save_refused.title": "कनेक्ट हो गया, पर सहेजा नहीं गया",
 		"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
 		"mobile.computers.section.on_phone": "इस फ़ोन पर",
 		"mobile.computers.session_error": "ऐप इस कंप्यूटर से कनेक्ट नहीं हो सका।",
@@ -4074,6 +4136,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.sign_out": "साइन आउट करें",
 		"mobile.computers.signing_out": "साइन आउट हो रहा है…",
+		"mobile.computers.storage_refused.no_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
+		"mobile.computers.storage_refused.with_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया (कोड {code})। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
 		"mobile.computers.transport.custom": "आपका पता",
 		"mobile.computers.transport.radient": "Radient",
@@ -4516,7 +4580,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "पुराने संदेश लोड हो रहे हैं…",
 		"mobile.team_bridge.thread.older_retry": "पुराने संदेश फिर लोड करें",
 		"mobile.team_bridge.thread.organization_unavailable": "यह संगठन इस खाते के लिए उपलब्ध नहीं है।",
-		"mobile.team_bridge.thread.placeholder": "{title} को संदेश भेजें",
 		"mobile.team_bridge.thread.preview_help": "इतिहास पढ़ने और संदेश भेजने के लिए इस चैनल से जुड़ें।",
 		"mobile.team_bridge.thread.readonly": "इस संगठन में केवल पढ़ने की अनुमति है। आप इतिहास पढ़ सकते हैं, लेकिन संदेश नहीं भेज सकते।",
 		"mobile.team_bridge.thread.recipient_incomplete": "प्राप्तकर्ता की जानकारी अधूरी है। वापस जाकर कोई व्यक्ति या चीफ़ ऑफ़ स्टाफ़ चुनें।",
@@ -4629,6 +4692,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "активен",
 		"mobile.computers.badge.connecting": "подключается",
 		"mobile.computers.billing_help": "В консоли Radient откройте настройки оплаты этого туннеля и включите удалённый доступ.",
+		"mobile.computers.connect_refused.generic": "Компьютер не принял подключение. Адрес и пароль сохранены на экране — проверьте их и попробуйте снова.",
+		"mobile.computers.connect_refused.password": "Ретранслятор не принял этот пароль. Проверьте его и попробуйте снова.",
+		"mobile.computers.connect_refused.title": "Не удалось подключиться",
 		"mobile.computers.connecting": "Подключение…",
 		"mobile.computers.connection_response": "Ответ подключения",
 		"mobile.computers.disabled_help": "По данным Radient, этот туннель сейчас неактивен. Проверьте его состояние в консоли Radient.",
@@ -4638,6 +4704,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "Пароль из lop mobile",
 		"mobile.computers.protected": "Защищено входом",
 		"mobile.computers.retry": "Повторить",
+		"mobile.computers.save_refused.body": "Этому устройству не удалось надёжно сохранить адрес и пароль. Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
+		"mobile.computers.save_refused.body_with_code": "Этому устройству не удалось надёжно сохранить адрес и пароль (код {code}). Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
+		"mobile.computers.save_refused.continue": "Продолжить",
+		"mobile.computers.save_refused.title": "Подключено, но не сохранено",
 		"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
 		"mobile.computers.section.on_phone": "На этом телефоне",
 		"mobile.computers.session_error": "Приложению не удалось подключиться к этому компьютеру.",
@@ -4645,6 +4715,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.sign_out": "Выйти",
 		"mobile.computers.signing_out": "Выход…",
+		"mobile.computers.storage_refused.no_code": "Защищённое хранилище этого устройства отклонило запрос. Попробуйте снова или переустановите приложение, если это повторяется.",
+		"mobile.computers.storage_refused.with_code": "Защищённое хранилище этого устройства отклонило запрос (код {code}). Попробуйте снова или переустановите приложение, если это повторяется.",
 		"mobile.computers.switch": "Сменить компьютер",
 		"mobile.computers.transport.custom": "Ваш адрес",
 		"mobile.computers.transport.radient": "Radient",
@@ -5087,7 +5159,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Загрузка предыдущих сообщений…",
 		"mobile.team_bridge.thread.older_retry": "Повторить загрузку предыдущих сообщений",
 		"mobile.team_bridge.thread.organization_unavailable": "Эта организация недоступна для данного аккаунта.",
-		"mobile.team_bridge.thread.placeholder": "Сообщение: {title}",
 		"mobile.team_bridge.thread.preview_help": "Вступите в канал, чтобы читать историю и отправлять сообщения.",
 		"mobile.team_bridge.thread.readonly": "В организации доступно только чтение. Историю можно читать, но отправлять сообщения нельзя.",
 		"mobile.team_bridge.thread.recipient_incomplete": "Получатель указан не полностью. Вернитесь и выберите человека или руководителя аппарата.",
@@ -5200,6 +5271,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "فعال",
 		"mobile.computers.badge.connecting": "منسلک ہو رہا",
 		"mobile.computers.billing_help": "Radient کنسول میں اس ٹنل کی بلنگ کی ترتیبات کھولیں اور ریموٹ رسائی فعال کریں۔",
+		"mobile.computers.connect_refused.generic": "کمپیوٹر نے کنکشن قبول نہیں کیا۔ آپ کا پتہ اور پاس ورڈ ابھی یہیں ہیں، اس لیے انہیں جانچیں اور دوبارہ کوشش کریں۔",
+		"mobile.computers.connect_refused.password": "ریلے نے وہ پاس ورڈ قبول نہیں کیا۔ اسے جانچیں اور دوبارہ کوشش کریں۔",
+		"mobile.computers.connect_refused.title": "منسلک نہیں ہو سکا",
 		"mobile.computers.connecting": "منسلک ہو رہا ہے…",
 		"mobile.computers.connection_response": "کنکشن کا جواب",
 		"mobile.computers.disabled_help": "Radient کے مطابق یہ ٹنل اس وقت فعال نہیں ہے۔ Radient کنسول میں اس کی حالت دیکھیں۔",
@@ -5209,6 +5283,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
 		"mobile.computers.protected": "سائن ان سے محفوظ",
 		"mobile.computers.retry": "دوبارہ کوشش کریں",
+		"mobile.computers.save_refused.body": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
+		"mobile.computers.save_refused.body_with_code": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی (کوڈ {code})۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
+		"mobile.computers.save_refused.continue": "جاری رکھیں",
+		"mobile.computers.save_refused.title": "منسلک ہو گیا، لیکن محفوظ نہیں ہوا",
 		"mobile.computers.section.not_connected": "آپ کے Radient اکاؤنٹ پر، منسلک نہیں",
 		"mobile.computers.section.on_phone": "اس فون پر",
 		"mobile.computers.session_error": "ایپ اس کمپیوٹر سے منسلک نہیں ہو سکی۔",
@@ -5216,6 +5294,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.sign_out": "سائن آؤٹ کریں",
 		"mobile.computers.signing_out": "سائن آؤٹ ہو رہا ہے…",
+		"mobile.computers.storage_refused.no_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
+		"mobile.computers.storage_refused.with_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی (کوڈ {code})۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
 		"mobile.computers.transport.custom": "آپ کا پتہ",
 		"mobile.computers.transport.radient": "Radient",
@@ -5658,7 +5738,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "پرانے پیغامات لوڈ ہو رہے ہیں…",
 		"mobile.team_bridge.thread.older_retry": "پرانے پیغامات دوبارہ لوڈ کریں",
 		"mobile.team_bridge.thread.organization_unavailable": "یہ تنظیم اس اکاؤنٹ کے لیے دستیاب نہیں ہے۔",
-		"mobile.team_bridge.thread.placeholder": "{title} کو پیغام بھیجیں",
 		"mobile.team_bridge.thread.preview_help": "تاریخ پڑھنے اور پیغامات بھیجنے کے لیے اس چینل میں شامل ہوں۔",
 		"mobile.team_bridge.thread.readonly": "یہ تنظیم صرف پڑھنے کے لیے ہے۔ آپ تاریخ پڑھ سکتے ہیں، لیکن پیغامات نہیں بھیج سکتے۔",
 		"mobile.team_bridge.thread.recipient_incomplete": "وصول کنندہ کی معلومات نامکمل ہیں۔ واپس جا کر کوئی شخص یا چیف آف اسٹاف منتخب کریں۔",
@@ -5771,6 +5850,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "hoạt động",
 		"mobile.computers.badge.connecting": "đang kết nối",
 		"mobile.computers.billing_help": "Trong bảng điều khiển Radient, mở cài đặt thanh toán của đường hầm này và bật truy cập từ xa.",
+		"mobile.computers.connect_refused.generic": "Máy tính không chấp nhận kết nối. Địa chỉ và mật khẩu của bạn vẫn còn ở đây, hãy kiểm tra lại rồi thử lại.",
+		"mobile.computers.connect_refused.password": "Relay không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
+		"mobile.computers.connect_refused.title": "Không thể kết nối",
 		"mobile.computers.connecting": "Đang kết nối…",
 		"mobile.computers.connection_response": "Phản hồi kết nối",
 		"mobile.computers.disabled_help": "Radient cho biết đường hầm này hiện chưa hoạt động. Hãy kiểm tra trạng thái trong bảng điều khiển Radient.",
@@ -5780,6 +5862,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
 		"mobile.computers.protected": "Được bảo vệ bằng đăng nhập",
 		"mobile.computers.retry": "Thử lại",
+		"mobile.computers.save_refused.body": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật. Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
+		"mobile.computers.save_refused.body_with_code": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật (mã {code}). Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
+		"mobile.computers.save_refused.continue": "Tiếp tục",
+		"mobile.computers.save_refused.title": "Đã kết nối nhưng chưa lưu",
 		"mobile.computers.section.not_connected": "Trong tài khoản Radient của bạn, chưa kết nối",
 		"mobile.computers.section.on_phone": "Trên điện thoại này",
 		"mobile.computers.session_error": "Ứng dụng không thể kết nối với máy tính này.",
@@ -5787,6 +5873,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.sign_out": "Đăng xuất",
 		"mobile.computers.signing_out": "Đang đăng xuất…",
+		"mobile.computers.storage_refused.no_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu. Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
+		"mobile.computers.storage_refused.with_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu (mã {code}). Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 		"mobile.computers.switch": "Chuyển máy tính",
 		"mobile.computers.transport.custom": "Địa chỉ của bạn",
 		"mobile.computers.transport.radient": "Radient",
@@ -6229,7 +6317,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "Đang tải tin nhắn cũ…",
 		"mobile.team_bridge.thread.older_retry": "Thử tải lại tin nhắn cũ",
 		"mobile.team_bridge.thread.organization_unavailable": "Tài khoản này không có quyền truy cập tổ chức này.",
-		"mobile.team_bridge.thread.placeholder": "Nhắn tin cho {title}",
 		"mobile.team_bridge.thread.preview_help": "Tham gia kênh này để đọc lịch sử và gửi tin nhắn.",
 		"mobile.team_bridge.thread.readonly": "Tổ chức này ở chế độ chỉ đọc. Bạn có thể đọc lịch sử nhưng không thể gửi tin nhắn.",
 		"mobile.team_bridge.thread.recipient_incomplete": "Thông tin người nhận chưa đầy đủ. Quay lại và chọn một người hoặc chánh văn phòng.",
@@ -6342,6 +6429,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "使用中",
 		"mobile.computers.badge.connecting": "连接中",
 		"mobile.computers.billing_help": "在 Radient 控制台中打开此隧道的账单设置，并启用远程访问。",
+		"mobile.computers.connect_refused.generic": "计算机未接受连接。你的地址和密码仍保留在这里，请检查后重试。",
+		"mobile.computers.connect_refused.password": "中继未接受该密码。请检查后重试。",
+		"mobile.computers.connect_refused.title": "无法连接",
 		"mobile.computers.connecting": "正在连接……",
 		"mobile.computers.connection_response": "连接响应",
 		"mobile.computers.disabled_help": "Radient 显示此隧道当前未处于活动状态。请在 Radient 控制台检查其状态。",
@@ -6351,6 +6441,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.password_placeholder": "来自lop mobile的密码",
 		"mobile.computers.protected": "受登录保护",
 		"mobile.computers.retry": "重试",
+		"mobile.computers.save_refused.body": "此设备无法安全地保存地址和密码。连接目前可用，但应用重启后你需要重新输入它们。",
+		"mobile.computers.save_refused.body_with_code": "此设备无法安全地保存地址和密码（代码 {code}）。连接目前可用，但应用重启后你需要重新输入它们。",
+		"mobile.computers.save_refused.continue": "继续",
+		"mobile.computers.save_refused.title": "已连接，但未保存",
 		"mobile.computers.section.not_connected": "Radient账户下，未连接",
 		"mobile.computers.section.on_phone": "此手机",
 		"mobile.computers.session_error": "应用无法连接到这台电脑。",
@@ -6358,6 +6452,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.sign_out": "退出登录",
 		"mobile.computers.signing_out": "正在退出登录…",
+		"mobile.computers.storage_refused.no_code": "此设备的安全存储拒绝了该请求。请重试；如果问题持续出现，请重新安装应用。",
+		"mobile.computers.storage_refused.with_code": "此设备的安全存储拒绝了该请求（代码 {code}）。请重试；如果问题持续出现，请重新安装应用。",
 		"mobile.computers.switch": "切换电脑",
 		"mobile.computers.transport.custom": "你的地址",
 		"mobile.computers.transport.radient": "Radient",
@@ -6800,7 +6896,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.thread.older_loading": "正在加载更早的消息…",
 		"mobile.team_bridge.thread.older_retry": "重试加载更早的消息",
 		"mobile.team_bridge.thread.organization_unavailable": "此账户无法访问该组织。",
-		"mobile.team_bridge.thread.placeholder": "给 {title} 发消息",
 		"mobile.team_bridge.thread.preview_help": "加入此频道即可阅读历史记录并发送消息。",
 		"mobile.team_bridge.thread.readonly": "此组织为只读，你可以阅读历史记录，但无法发送消息。",
 		"mobile.team_bridge.thread.recipient_incomplete": "收件人信息不完整，请返回并选择一位成员或幕僚长。",

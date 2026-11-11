@@ -35,6 +35,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import { probeNativeRelay } from "./native-relay-preflight.ts";
+import {
+	APPEARANCE_CAP_SECONDS,
+	appearanceArgs,
+	appearanceTimingLine,
+	type SimctlAppearance,
+} from "./simctl-appearance.ts";
 import { collectThemeFrames } from "./theme-proof-contract.ts";
 
 const env = process.env;
@@ -188,6 +194,27 @@ async function run(
 			`${name} failed rc=${code}: ${redact(output).trim().split("\n").at(-1)?.slice(0, 300)}`,
 		);
 	return output;
+}
+
+/** Switch the simulator's appearance under its own measured cap (see
+ *  simctl-appearance.ts), logging the duration even when the call fails or is
+ *  killed — that log line is the distribution the cap is tuned from. */
+async function setAppearance(
+	step: string,
+	udid: string,
+	theme: SimctlAppearance,
+): Promise<void> {
+	const t0 = Date.now();
+	try {
+		await run(
+			step,
+			"xcrun",
+			appearanceArgs(udid, theme),
+			APPEARANCE_CAP_SECONDS,
+		);
+	} finally {
+		note(appearanceTimingLine(step, Date.now() - t0));
+	}
 }
 
 type Slot = {
@@ -467,12 +494,7 @@ try {
 	// The OS on LIGHT, so the System-mode frames show the light slot and every
 	// dark frame is the app's own forced choice rather than the simulator's.
 	// The first maestro call pays the cold driver start; one walk, so one cap.
-	await run(
-		"appearance-light",
-		"xcrun",
-		["simctl", "ui", udid, "appearance", "light"],
-		60,
-	);
+	await setAppearance("appearance-light", udid, "light");
 	await flowRun("matrix", relay.origin, "theme-matrix.yaml", 2100);
 	receipt.verdict = "PASS (assertions only; reviewers must view the PNGs)";
 } catch (error) {

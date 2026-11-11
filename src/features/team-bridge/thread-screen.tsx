@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
+import { COMPOSER_SIDE_PAD } from "@/features/session/composer-presentation";
 import { t } from "@/i18n";
 import {
 	canSend,
@@ -36,9 +37,11 @@ import {
 	teamBridgeProfileOpenId,
 } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
+import { useKeyboardVisible } from "@/ui/components/chrome-surface";
 import { IconButton } from "@/ui/components/icon-button";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
+import { composerOuterGap } from "@/ui/device-corner";
 import { useCompactChrome } from "@/ui/layout";
 import {
 	addDraftImages,
@@ -55,7 +58,8 @@ import {
 	releaseTeamBridgeSource,
 } from "./attachment-source";
 import { ComposerAttachments, MessageAttachments } from "./attachment-views";
-import { BridgeBack, BridgeGate } from "./gate";
+import { BridgeThreadDrawerButton } from "./drawer-adapter";
+import { BridgeGate } from "./gate";
 import { MessageDelivery } from "./message-delivery";
 import { createMessageSender } from "./message-sender";
 import {
@@ -84,6 +88,7 @@ function ThreadContent({
 	const { actions, hub, store } = useTeamBridge();
 	const state = useTeamBridgeState((s) => s);
 	const insets = useSafeAreaInsets();
+	const keyboardVisible = useKeyboardVisible();
 	const compact = useCompactChrome();
 	const [createdId, setCreatedId] = useState<string | null>(null);
 	const conversationId = createdId ?? (routeId === "new" ? null : routeId);
@@ -564,7 +569,13 @@ function ThreadContent({
 			 *  instead of a third header row under the title (measured on the
 			 *  #208 build at 320: the bell alone on its own 48 pt row). */
 			stackedActionsBeside
-			headerLeading={<BridgeBack />}
+			/* The hamburger, never a back arrow (operator, TestFlight 773: "remove
+			 *  the back UX there and replace with the sidebar access"). The SAME
+			 *  control and unread badge the session header leads with
+			 *  (`app/(app)/session/[id].tsx`), opened straight into the drawer's
+			 *  Team Bridge mode so the channel list is one tap away; a channel
+			 *  picked there REPLACES this thread (`useOpenTarget`). */
+			headerLeading={<BridgeThreadDrawerButton />}
 			headerAction={
 				admitted ? (
 					// Icon-only so a 390 px header gives the channel name the width the
@@ -770,8 +781,23 @@ function ThreadContent({
 									}
 								/>
 								<View
-									className="gap-3 border-t border-hairline px-4 pt-3"
-									style={{ paddingBottom: Math.max(insets.bottom, 12) }}
+									/* The agent composer's dock clearance, not a footer bar
+									 *  (operator, TestFlight 773): NO top hairline rule — he
+									 *  had that line removed above the agent composer, and the
+									 *  shell's own border is the boundary; the agent dock's
+									 *  12 pt sides; and `composerOuterGap` below, the agent
+									 *  dock's rule — the safe-area inset plus 8 with the
+									 *  keyboard down, 8 alone above the keyboard (the old
+									 *  `max(inset, 12)` kept the home-indicator inset ABOVE the
+									 *  keyboard too). */
+									className="gap-3 pt-2"
+									style={{
+										paddingHorizontal: COMPOSER_SIDE_PAD,
+										paddingBottom: composerOuterGap(
+											insets.bottom,
+											keyboardVisible,
+										),
+									}}
 									testID={SURFACE.teamBridgeComposer}
 								>
 									{readOnly ? (
@@ -807,10 +833,10 @@ function ThreadContent({
 											)}
 											<BridgeComposerField
 												label={t("mobile.team_bridge.thread.message")}
-												placeholder={t(
-													"mobile.team_bridge.thread.placeholder",
-													{ title },
-												)}
+												/* The label, not "Message {channel}": the title above
+												 *  names the channel, and a one-line placeholder must
+												 *  never wrap or cut (`BridgeComposerField`). */
+												placeholder={t("mobile.team_bridge.thread.message")}
 												draft={draft}
 												onDraftChange={setDraft}
 												sending={sending}
@@ -968,7 +994,7 @@ export default function TeamBridgeThreadScreen() {
 		return null;
 	}, [kind, tenantId, accountId, ownerAccountId, endpointId, label]);
 	return (
-		<BridgeGate>
+		<BridgeGate headerLeading={<BridgeThreadDrawerButton />}>
 			<ThreadContent
 				key={`${selfAccountId}/${tenantId}/${routeId}/${kind}/${accountId}/${ownerAccountId}/${endpointId}`}
 				tenantId={tenantId}

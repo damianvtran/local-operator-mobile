@@ -87,7 +87,7 @@ describe("Team Bridge copy", () => {
 			k.startsWith("mobile.team_bridge."),
 		);
 		// Exact merged attachment + consent + established key union.
-		expect(keys).toHaveLength(158);
+		expect(keys).toHaveLength(157);
 		expect(keys.sort()).toEqual(
 			Object.keys(CATALOGUES.en)
 				.filter((key) => key.startsWith("mobile.team_bridge."))
@@ -144,13 +144,6 @@ describe("Team Bridge copy", () => {
 				expect(status).not.toMatch(/\{|undefined/);
 				expect(status.length).toBeGreaterThan(3);
 			}
-			expect(
-				renderFor(
-					"mobile.team_bridge.thread.placeholder",
-					{ title: "Aida" },
-					locale,
-				),
-			).toContain("Aida");
 		},
 	);
 	/* I1/I2: source-semantic regressions, not proof the longer Urdu labels fit.
@@ -231,7 +224,10 @@ describe("Team Bridge copy", () => {
 			[
 				"thread-screen",
 				[
-					"thread.placeholder",
+					// The composer's placeholder is the field's label since TestFlight
+					// 773 (the title names the channel; a one-line placeholder must
+					// not wrap), so the label key is what the composer must wire.
+					"thread.message",
 					"thread.notify_current",
 					"thread.archived",
 					"thread.readonly",
