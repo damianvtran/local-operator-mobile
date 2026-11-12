@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
+import { leaveScreen } from "@/features/auth/leave-screen";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { BackButton } from "@/ui/components/back-button";
@@ -53,7 +54,10 @@ export default function SignIn() {
 			title="Sign in"
 			testID={SCREEN.signIn}
 			headerLeading={
-				<BackButton testID={CONTROL.signInBack} onPress={() => router.back()} />
+				<BackButton
+					testID={CONTROL.signInBack}
+					onPress={() => leaveScreen(router)}
+				/>
 			}
 		>
 			<View className="gap-4 pt-2">
