@@ -48,6 +48,22 @@ export const IOS_EXCEPTION_DOMAINS = [
 	"192.168.0.0/16",
 ] as const;
 
+/**
+ * The home-screen name, exactly as the brand spells it. `expo prebuild` sanitises
+ * `name` into the Xcode target and `PRODUCT_NAME` (`LocalOperator`, no space), so
+ * `CFBundleName` is spaceless by construction; the label iOS shows comes from
+ * `CFBundleDisplayName`, which Expo's default `withDisplayName` plugin copies from
+ * `name`. Asserting it on the BUILT product catches a config or plugin change
+ * that drops it and lets the label fall back to the spaceless `CFBundleName`.
+ *
+ * It does not — and cannot — assert what SpringBoard renders: a label wider than
+ * the icon cell has its whitespace squeezed out before it is truncated, so even a
+ * correct "Local Operator" shows as "LocalOpera…" on a phone (seen on build 836,
+ * whose IPA carries the spaced display name). Duplicated from `app.config.ts` on
+ * purpose, for the same reason as `IOS_EXCEPTION_DOMAINS`.
+ */
+export const IOS_DISPLAY_NAME = "Local Operator";
+
 /** The Android permission the local-network enforcement (targetSdk 37) gates
  *  on; declared ahead of the bump so the manifest already carries it. */
 export const ANDROID_LOCAL_NETWORK_PERMISSION =
@@ -149,6 +165,13 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 		findings.push({
 			field: "ITSAppUsesNonExemptEncryption",
 			problem: "expected false after the OS-only cryptography dependency audit",
+		});
+	}
+
+	if (plist.CFBundleDisplayName !== IOS_DISPLAY_NAME) {
+		findings.push({
+			field: "CFBundleDisplayName",
+			problem: `expected ${JSON.stringify(IOS_DISPLAY_NAME)}, found ${JSON.stringify(plist.CFBundleDisplayName)} — the home screen would fall back to the sanitised CFBundleName`,
 		});
 	}
 
@@ -310,7 +333,7 @@ export function checkAndroidManifest(xml: string): Finding[] {
 /** One line for the CI step summary, naming what was asserted. */
 export const summarize = (platform: "ios" | "android"): string =>
 	platform === "ios"
-		? `built Info.plist carries ITSAppUsesNonExemptEncryption=false, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+		? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(IOS_DISPLAY_NAME)}, ITSAppUsesNonExemptEncryption=false, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
 		: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------

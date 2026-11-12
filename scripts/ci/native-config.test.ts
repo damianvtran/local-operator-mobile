@@ -45,6 +45,10 @@ const writeFixture = (name: string, contents: string): string => {
 const validPlist = (): Record<string, unknown> => ({
 	ITSAppUsesNonExemptEncryption: false,
 	CFBundleIdentifier: "com.localoperator.mobile",
+	// What build 836's IPA carries: the spaced display name beside the sanitised
+	// CFBundleName prebuild derives from the Xcode target.
+	CFBundleDisplayName: "Local Operator",
+	CFBundleName: "LocalOperator",
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
 	NSAppTransportSecurity: {
@@ -88,6 +92,18 @@ describe("checkIosInfoPlist", () => {
 	it("passes the configuration the app asks for", () => {
 		expect(checkIosInfoPlist(validPlist())).toEqual([]);
 	});
+
+	it.each([undefined, "LocalOperator", "Local Operator ", ""])(
+		"rejects a display name other than the spaced brand name: %s",
+		(value) => {
+			const plist = validPlist();
+			if (value === undefined) delete plist.CFBundleDisplayName;
+			else plist.CFBundleDisplayName = value;
+			expect(checkIosInfoPlist(plist)).toEqual([
+				expect.objectContaining({ field: "CFBundleDisplayName" }),
+			]);
+		},
+	);
 
 	it("names the missing usage description", () => {
 		const plist = validPlist();
@@ -321,6 +337,7 @@ describe("checkAndroidManifest", () => {
 describe("summarize", () => {
 	it("names the concrete things checked, not a generic pass", () => {
 		expect(summarize("ios")).toContain("NSAllowsLocalNetworking");
+		expect(summarize("ios")).toContain('CFBundleDisplayName="Local Operator"');
 		expect(summarize("android")).toContain(
 			'android:usesCleartextTraffic="true"',
 		);
