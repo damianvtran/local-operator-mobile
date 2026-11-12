@@ -1528,8 +1528,11 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
 	// --print re-pin: the Android `softwareKeyboardLayoutMode: "resize"` (Expo's
 	// default, stated with its why); not a U-08 web layout input.
+	// --print re-pin (PR #238): the native home-screen label (`LAUNCHER_LABEL`,
+	// `CFBundleDisplayName` and the Android launcher-label plugin entry); `name`
+	// and every web input are unchanged, so not a U-08 web layout input.
 	"app.config.ts":
-		"fbe62d79b01e3189a103fecf3cae02114e89f746ae36cf15546b68c7bd3f003b",
+		"d553537bd390d76d55018ec48e45dc3ea929e8e97a9f435c418b9fcbdce8032a",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

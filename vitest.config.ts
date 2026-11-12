@@ -27,6 +27,9 @@ export default defineConfig({
 			"src/**/*.test.tsx",
 			"scripts/**/*.test.ts",
 			"tools/**/*.test.ts",
+			// The config plugins' pure transforms (the plugins are CommonJS, the
+			// tests TypeScript like the rest).
+			"plugins/**/*.test.ts",
 		],
 		globals: false,
 		// react-native-web ships untranspiled ESM; Node must go through Vite for it.

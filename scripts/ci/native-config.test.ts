@@ -8,10 +8,12 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
 	ANDROID_FORBIDDEN_PERMISSIONS,
 	ANDROID_LOCAL_NETWORK_PERMISSION,
+	checkAndroidBadging,
 	checkAndroidManifest,
 	checkIosInfoPlist,
 	IOS_EXCEPTION_DOMAINS,
 	IOS_FORBIDDEN_KEYS,
+	LAUNCHER_LABEL,
 	summarize,
 } from "./native-config";
 
@@ -45,9 +47,9 @@ const writeFixture = (name: string, contents: string): string => {
 const validPlist = (): Record<string, unknown> => ({
 	ITSAppUsesNonExemptEncryption: false,
 	CFBundleIdentifier: "com.localoperator.mobile",
-	// What build 836's IPA carries: the spaced display name beside the sanitised
-	// CFBundleName prebuild derives from the Xcode target.
-	CFBundleDisplayName: "Local Operator",
+	// The short home-screen label (operator's decision, 2026-11-11) beside the
+	// sanitised CFBundleName prebuild still derives from `name`.
+	CFBundleDisplayName: "Operator",
 	CFBundleName: "LocalOperator",
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
@@ -93,8 +95,14 @@ describe("checkIosInfoPlist", () => {
 		expect(checkIosInfoPlist(validPlist())).toEqual([]);
 	});
 
-	it.each([undefined, "LocalOperator", "Local Operator ", ""])(
-		"rejects a display name other than the spaced brand name: %s",
+	it("pins the label the operator chose, not the app name", () => {
+		expect(LAUNCHER_LABEL).toBe("Operator");
+	});
+
+	// "Local Operator" is the previous value (build 836) and the one Expo would
+	// copy from `name` if the infoPlist key were dropped — it must FAIL now.
+	it.each([undefined, "Local Operator", "LocalOperator", "Operator ", ""])(
+		"rejects a display name other than the home-screen label: %s",
 		(value) => {
 			const plist = validPlist();
 			if (value === undefined) delete plist.CFBundleDisplayName;
@@ -334,10 +342,63 @@ describe("checkAndroidManifest", () => {
 	});
 });
 
+/* Shaped like the real `aapt2 dump badging` output: the label lines sit among
+ * the package, sdk and activity lines, and the version step reads only line 1. */
+const badging = (labels: string[]): string =>
+	[
+		"package: name='com.localoperator.mobile' versionCode='1' versionName='0.0.0'",
+		"minSdkVersion:'24'",
+		...labels,
+		"launchable-activity: name='com.localoperator.mobile.MainActivity'  label='' icon=''",
+	].join("\n");
+
+describe("checkAndroidBadging", () => {
+	it("accepts the short launcher label", () => {
+		expect(
+			checkAndroidBadging(badging(["application-label:'Operator'"])),
+		).toEqual([]);
+	});
+
+	it("rejects the previous label, the full app name that truncates", () => {
+		expect(
+			checkAndroidBadging(badging(["application-label:'Local Operator'"])),
+		).toEqual([
+			expect.objectContaining({
+				field: "application-label",
+				problem: expect.stringContaining('found "Local Operator"'),
+			}),
+		]);
+	});
+
+	it("rejects a badging with no label line, e.g. only its first line", () => {
+		expect(checkAndroidBadging(badging([]))).toEqual([
+			expect.objectContaining({
+				field: "application-label",
+				problem: expect.stringContaining("missing"),
+			}),
+		]);
+	});
+
+	it("rejects a locale override that differs, naming the locale", () => {
+		expect(
+			checkAndroidBadging(
+				badging([
+					"application-label:'Operator'",
+					"application-label-fr:'Opérateur local'",
+					"application-label-de:'Operator'",
+				]),
+			),
+		).toEqual([expect.objectContaining({ field: "application-label-fr" })]);
+	});
+});
+
 describe("summarize", () => {
 	it("names the concrete things checked, not a generic pass", () => {
 		expect(summarize("ios")).toContain("NSAllowsLocalNetworking");
-		expect(summarize("ios")).toContain('CFBundleDisplayName="Local Operator"');
+		expect(summarize("ios")).toContain('CFBundleDisplayName="Operator"');
+		expect(summarize("android-badging")).toContain(
+			'application-label="Operator"',
+		);
 		expect(summarize("android")).toContain(
 			'android:usesCleartextTraffic="true"',
 		);
@@ -372,6 +433,21 @@ describe("CLI", () => {
 		expect(run(["ios", plist]).status).toBe(0);
 		const manifest = writeFixture("AndroidManifest.xml", validManifest());
 		expect(run(["android", manifest]).status).toBe(0);
+		const apk = writeFixture(
+			"badging.txt",
+			badging(["application-label:'Operator'"]),
+		);
+		expect(run(["android-badging", apk]).status).toBe(0);
+	});
+
+	it("exits 1 on an APK still labelled with the full app name", () => {
+		const apk = writeFixture(
+			"badging-old.txt",
+			badging(["application-label:'Local Operator'"]),
+		);
+		const result = run(["android-badging", apk]);
+		expect(result.status).toBe(1);
+		expect(result.stderr).toContain("application-label");
 	});
 
 	it("exits 1 and names the field when an artefact has lost a declaration", () => {
