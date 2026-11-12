@@ -1,0 +1,80 @@
+# hi1111sm — execution log (actual commands run in session fdb967df951c)
+
+## 1. Repository facts (read-only git)
+$ cd ~/local-operator-mobile && git rev-parse origin/main
+fa2bc5e0b5f7b646e063890b1ec33279e2926cc0
+$ git cat-file -t 8fdfb2e9 && gh pr view 237 --json headRefOid,state
+commit ; {"headRefOid":"8fdfb2e970299a2c0947bf42ac6224ebacd97113","state":"OPEN"}
+$ git grep -l 'user_message.show_more' origin/main -- src/i18n/catalogues/
+(no output — key absent on origin/main)
+$ git grep -l 'user_message.show_more' 8fdfb2e9 -- src/i18n/catalogues/
+en, es, fr, hi, ru, ur, vi, zh-CN (all eight present at the PR head)
+$ git show 8fdfb2e9:src/i18n/catalogues/hi/mobile.session.json | grep show_more\|show_less
+	"mobile.session.user_message.show_more": "और दिखाएँ",
+	"mobile.session.user_message.show_less": "कम दिखाएँ",
+$ git log --oneline -S'user_message.show_more' 8fdfb2e9 -- src/i18n/catalogues/
+0beb4dd3 fix(transcript): show more/less with fade for long user messages, including condensed turns
+
+## 2. Key parity at the audited head
+en 653 keys / hi 653 keys, set(en) == set(hi) == True, symmetric difference {}
+hi values containing 'दिखाएँ': 12 ; English messages containing 'Show': 11, all rendered with दिखाएँ
+hi values containing 'देखें': 4 (2 view controls, 2 prose 'check in the console' sentences)
+
+## 3. Repo generator (scripts/i18n/generate.ts) — real execution, extracted head tree
+The shared working checkout is on branch pr92 and has no scripts/i18n/, so the audited head's
+src/i18n + scripts/i18n + scripts/lib + scripts/package.json were extracted with
+`git archive 8fdfb2e9 … | tar -x -C <scratchpad>/validator-head` (repo untouched).
+
+# 3a. pair A = the #237 bytes, unmodified
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/generate.ts
+Wrote src/i18n/catalogue.gen.ts (653 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+EXIT_A=0
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (653 keys, 21 namespaces, …)
+CHECK_A=0
+
+# 3b. pair B substituted into hi/mobile.session.json in that same scratch tree
+$ node … generate.ts        -> Wrote (653 keys …) EXIT_B=0
+$ node … generate.ts --check -> is current (653 keys …) CHECK_B=0
+
+# 3c. control: origin/main tree (keys absent)
+$ node … generate.ts        -> Wrote (651 keys …) EXIT=0
+                   proves the run is sensitive to exactly these two added keys.
+
+## 4. In-memory checker (python) — mechanical + negative controls
+checker covers: valid JSON, key set vs en, placeholders, ICU/markup chars ({ } < > `), Latin letters,
+ASCII digits, identical-to-English, NFC, bidi controls (200E 200F 202A-202E 2066-2069 061C),
+zero-width chars (200B 200C 200D FEFF), Devanagari-script range, leading/trailing whitespace,
+final punctuation, East-Asian-width cell count.
+pair A -> 0 findings            pair B -> 0 findings
+negative controls fired 11/11: empty value; whitespace-only; Latin left ("Show more");
+identical-to-English; U+202B…U+202C; injected {count}; missing key; extra key; non-NFC (e + U+0301);
+inserted ZWJ; ASCII digit.
+real pairs clean in the same run: A True, B True
+
+## 5. Width (CoreText advances, NSFont.systemFont(size, .medium) — Figtree has no Devanagari)
+$ swift -e '…CTLineGetTypographicBounds…'
+A show_more | और दिखाएँ | 12.0 pt -> 51.05 pt   | 24.0 pt -> 95.58 pt
+A show_less | कम दिखाएँ | 12.0 pt -> 51.47 pt   | 24.0 pt -> 96.43 pt
+B show_more | और देखें  | 12.0 pt -> 37.06 pt   | 24.0 pt -> 69.84 pt
+B show_less | कम देखें  | 12.0 pt -> 37.49 pt   | 24.0 pt -> 70.69 pt
+EN show_more | Show more | 12.0 pt -> 64.48 pt  | 24.0 pt -> 119.48 pt
+EN show_less | Show less | 12.0 pt -> 57.95 pt  | 24.0 pt -> 107.42 pt
+Available: 288 pt transcript column (px-4) − 12 pt bubble padding each side = 264 pt at a 320 pt screen;
+label token text-meta = 12 pt / 500 (src/ui/tokens.gen.ts). Cell counts: A 8/8, B 5/5.
+
+## 6. Hashes
+en pair   26d065694437406a3aebff2dd163d08f6d1b3afa1ad51701630f2e4ab6ec9022
+A  pair   3c6eabf9e2594b5394d748f22f8943329f743a38b7e3d92bf4208097802dbf6e
+B  pair   bd9832b746b29164d9acddfafffb73fbee2c7f13b9ed3d49f03013c62e8364f6
+en/mobile.session.json            143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0
+en/mobile.session.context.json    ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102
+hi/mobile.session.json (@8fdfb2e9) 7a6eb058ab1a10ee2acb04885f2ad6d204dcb4c313342707bc00f84e59e3f858
+followon-show-more/hi.json        4071bd636802575dd3ca4530f47f9fb569e4015affa4141c0cf79647695f84b4
+canonicalisation: json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",",":")).encode()
+
+## 7. Not run, and why
+- scripts/i18n/check-strings.ts: gates user-facing literals in code; this delta adds catalogue values
+  only, and the shared checkout predates scripts/i18n/.
+- no app run / no rendered frame: read-only lane; fit is measured advances plus component geometry.
+- no ledger write: the repository has no i18n ledger or ledger command (see record.json ledger block).

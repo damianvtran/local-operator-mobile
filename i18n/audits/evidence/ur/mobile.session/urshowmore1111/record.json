@@ -1,0 +1,100 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_followon_pair_audit",
+	"audit_id": "urshowmore1111",
+	"locale": "ur",
+	"namespace": "mobile.session",
+	"audit_date": "2026-11-11",
+	"wave": "follow-on slice mobile.session.user_message.show_more/show_less x 7 locales; keys shipped in PR #237 without a translator/audit pass",
+	"audited_revision": "8fdfb2e970299a2c0947bf42ac6224ebacd97113",
+	"audited_revision_note": "PR #237 head 8fdfb2e9 (integrate/mobile-batch-1111). The values are unchanged on origin/main 2b508d9d (merge of #237): whole-file bytes of ur/mobile.session.json are identical at both revisions.",
+	"key_count": {
+		"en": 2,
+		"target": 2,
+		"context": 2
+	},
+	"keys": [
+		"mobile.session.user_message.show_more",
+		"mobile.session.user_message.show_less"
+	],
+	"shipped_values": {
+		"mobile.session.user_message.show_more": "مزید دکھائیں",
+		"mobile.session.user_message.show_less": "کم دکھائیں"
+	},
+	"translator_candidate": {
+		"values": {
+			"mobile.session.user_message.show_more": "مزید دیکھیں",
+			"mobile.session.user_message.show_less": "کم دیکھیں"
+		},
+		"state": "REJECTED by the auditor (1 MAJOR UR-SM-1); not shipped"
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "ba46c71f2521",
+		"model": "deepseek/deepseek-flash",
+		"actual_model": "deepseek/deepseek-flash",
+		"actual_model_source": "as stated in the audit report header (session model; see report.md)",
+		"independent_from_translator_session": true,
+		"independence": "Different agent and session from the translator; the #237 values were authored by the #235 coder (commit 0beb4dd3), not a translator. No human native-speaker review and no rendered frame are claimed."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.session.json",
+			"sha256": "143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0",
+			"rev": "8fdfb2e9"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.session.context.json",
+			"sha256": "ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102",
+			"rev": "8fdfb2e9"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/ur/mobile.session.json",
+			"sha256": "06e6da40aa6a9819734af490f84acb9112e3ce8e75c80ba8daaa0975ffe6e89b",
+			"rev": "8fdfb2e9",
+			"also_identical_on": "origin/main 2b508d9d"
+		}
+	},
+	"current_report_verdict": {
+		"shipped_pair": "examined as the catalogue-consistent reference; the auditor's report calls it correct",
+		"candidate_pair": {
+			"status": "changes_requested",
+			"blocker": 0,
+			"major": 1,
+			"minor": 0,
+			"nit": 0,
+			"finding_ids": [
+				"UR-SM-1"
+			]
+		},
+		"recommendation": "do not ship the candidate; keep the shipped مزید دکھائیں / کم دکھائیں"
+	},
+	"status": "candidate rejected (changes_requested refers to the candidate); shipped values retained",
+	"route_disclosure": "Route and marker scan: not recorded in the source audit report; no read_public_copy receipt is claimed. The scan of this bundle's own files is reported in the PR description and is not attributed to the auditor.",
+	"audit_log": "audit.log not retained: no auditor execution log file was supplied for this audit, so none is written or fabricated. main-bytes-check.txt is the only executed output in this bundle and was produced by the coder that landed it.",
+	"notes": "the auditor's own record is preserved as auditor-record.original.json (its audit_id is sm-ur-1); its current_report_verdict.status changes_requested describes the translator candidate, not the shipped bytes.",
+	"source_provenance": "translator scratch notes, session d5aaf8ba6ba5 followon-show-more/<loc>.json (values transcribed by the lane owner from the translator's report; not independently audited; never applied to a catalogue)",
+	"catalogue_change": "none — zero catalogue/source lines in the PR carrying this bundle",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/ur/mobile.session/urshowmore1111/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/ur/mobile.session/urshowmore1111/report.md",
+			"sha256": "f8684f863df012d03a55c4721826adc4eced4676d91e468ea4d25f51dbbd5e83",
+			"note": "verbatim copy of the auditor's report; unmodified"
+		},
+		{
+			"path": "i18n/audits/evidence/ur/mobile.session/urshowmore1111/auditor-record.original.json",
+			"sha256": "1d0c26bfaa821e434c61b26a003963061ac41c889e1f1f8be2d1808983731518",
+			"note": "the auditor's own record, verbatim (its audit_id is sm-ur-1); record.json here re-keys it to this bundle's id"
+		},
+		{
+			"path": "i18n/audits/evidence/ur/mobile.session/urshowmore1111/main-bytes-check.txt",
+			"sha256": "db49a098112395cded6c7c44005b7e90dcd7ef2a56d06bce43b3bfc16efa6536",
+			"note": "coder-written comparison of audited bytes vs origin/main; not an auditor artifact"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement. Executed output exists only in audit.log (where retained) and main-bytes-check.txt."
+}

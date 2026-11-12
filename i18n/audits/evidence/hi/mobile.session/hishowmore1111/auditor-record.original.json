@@ -1,0 +1,205 @@
+{
+  "schema": 1,
+  "audit_kind": "followon_pair_audit",
+  "audit_id": "hi1111sm",
+  "locale": "hi",
+  "namespace": "mobile.session",
+  "file_group": "mobile.session",
+  "audit_date": "2026-11-11",
+  "wave": "follow-on slice mobile.session.user_message.show_more/show_less x 7 locales; hi lane (independent audit of both the #237-shipped pair and the translator candidate)",
+  "audited_revision": "8fdfb2e970299a2c0947bf42ac6224ebacd97113",
+  "audited_revision_note": "PR #237 head, branch integrate/mobile-batch-1111. The two keys do not exist on origin/main fa2bc5e0b5f7b646e063890b1ec33279e2926cc0. hi catalogue 653/653 keys in parity with en at this head.",
+  "audited_branch": "integrate/mobile-batch-1111",
+  "audited_worktree": "read-only `git show <rev>:<path>` only; repo working checkout is on pr92 and was not modified",
+  "key_count": { "en": 2, "target": 2, "context": 2 },
+  "pairs": {
+    "A_shipped_at_237": {
+      "authored_by": "the #235 coder (per the manager's correction); introduced in commit 0beb4dd3 on fix/user-message-show-more, not a translator, not previously audited",
+      "values": {
+        "mobile.session.user_message.show_more": "और दिखाएँ",
+        "mobile.session.user_message.show_less": "कम दिखाएँ"
+      },
+      "sha256": "3c6eabf9e2594b5394d748f22f8943329f743a38b7e3d92bf4208097802dbf6e",
+      "verdict": { "status": "passed", "blocker": 0, "major": 0, "minor": 0, "nit": 0, "finding_ids": [] }
+    },
+    "B_translator_candidate": {
+      "authored_by": "i18n-translator session 1c44531632d2 (anthropic/claude-sonnet-5-5 per the manager's brief, not observed by this auditor); values transcribed by lane d5aaf8ba6ba5 because a guardrail blocked the child's write",
+      "values": {
+        "mobile.session.user_message.show_more": "और देखें",
+        "mobile.session.user_message.show_less": "कम देखें"
+      },
+      "sha256": "bd9832b746b29164d9acddfafffb73fbee2c7f13b9ed3d49f03013c62e8364f6",
+      "verdict": { "status": "changes_requested", "blocker": 0, "major": 1, "minor": 0, "nit": 1, "finding_ids": ["B1", "B2"] }
+    }
+  },
+  "recommendation": {
+    "ship_pair": "A_shipped_at_237",
+    "replacement_needed_in_followon_pr": false,
+    "reason": "11/11 English messages containing 'Show' in the hi catalogue render with दिखाएँ, including the same key family mobile.schedules.show_more/show_less ('# और मॉनिटर दिखाएँ', 'कम मॉनिटर दिखाएँ', 'कम जागृतियाँ दिखाएँ'); देखें covers only view/see (2 controls plus 2 prose sentences). Candidate B swaps the house verb for the view/see verb.",
+    "precedent_keys": [
+      "mobile.schedules.show_more.monitors",
+      "mobile.schedules.show_more.wakes",
+      "mobile.schedules.show_less.monitors",
+      "mobile.schedules.show_less.wakes",
+      "mobile.computers.show_details",
+      "mobile.home.suggestion.last_turn",
+      "mobile.signin.show_diagnostics",
+      "mobile.notifications.filter_label",
+      "mobile.session.subagents_hint",
+      "mobile.home.queue.view (dekhẽ, view)",
+      "mobile.team_bridge.profile.open (dekhẽ, view)"
+    ]
+  },
+  "findings": [
+    {
+      "id": "B1",
+      "severity": "MAJOR",
+      "pair": "B_translator_candidate",
+      "keys": ["mobile.session.user_message.show_more", "mobile.session.user_message.show_less"],
+      "current": "और देखें / कम देखें",
+      "problem": "देखें is this catalogue's verb for view/see (opening something else: 'कतार के संदेश देखें', 'प्रोफ़ाइल देखें'); every show-family control, including mobile.schedules.show_more, uses दिखाएँ. Shipping B puts two verbs on one action family and would overwrite 'कम दिखाएँ' with 'कम देखें' inside the same file.",
+      "suggested": { "mobile.session.user_message.show_more": "और दिखाएँ", "mobile.session.user_message.show_less": "कम दिखाएँ" },
+      "code_path": "src/features/session/components/user-message-clamp.tsx — visible label and accessibilityLabel of the clamp toggle (role=button)",
+      "note": "Meaning is not wrong ('और देखें' is attested Hindi 'see more'), so MAJOR consistency, not BLOCKER."
+    },
+    {
+      "id": "B2",
+      "severity": "NIT",
+      "pair": "B_translator_candidate",
+      "keys": ["mobile.session.user_message.show_more"],
+      "problem": "The translator note rejects 'ज़्यादा दिखाएँ' for length; measured at the label token this is not a constraint (A 51.05/51.47 pt vs B 37.06/37.49 pt at 12 pt, ≤264 pt available at a 320 pt screen).",
+      "suggested": "n/a — record the real reason (verb consistency) if the note is reused."
+    }
+  ],
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "fdb967df951c",
+    "model": "deepseek/deepseek-flash",
+    "actual_model": "deepseek/deepseek-flash",
+    "actual_model_source": "this session's harness state line; no provider-side verification possible, no fallback switch observed during the run",
+    "independent_from_translator_session": true,
+    "independent_from_shipped_pair_author": true
+  },
+  "input_hashes": {
+    "en": {
+      "path": "src/i18n/catalogues/en/mobile.session.json",
+      "sha256": "143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0",
+      "pair_sha256": "26d065694437406a3aebff2dd163d08f6d1b3afa1ad51701630f2e4ab6ec9022"
+    },
+    "context": {
+      "path": "src/i18n/catalogues/en/mobile.session.context.json",
+      "sha256": "ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102"
+    },
+    "hi": {
+      "path": "src/i18n/catalogues/hi/mobile.session.json",
+      "sha256": "7a6eb058ab1a10ee2acb04885f2ad6d204dcb4c313342707bc00f84e59e3f858"
+    },
+    "candidate": {
+      "path": "followon-show-more/hi.json (lane scratch, values transcribed by d5aaf8ba6ba5)",
+      "sha256": "4071bd636802575dd3ca4530f47f9fb569e4015affa4141c0cf79647695f84b4"
+    }
+  },
+  "mechanical": {
+    "negative_controls": {
+      "command": "in-memory mutation suite (session eval kernel)",
+      "exit": 0,
+      "output": "11/11 controls fired (empty value, whitespace-only, Latin leftover, identical-to-English, bidi control, injected ICU brace, missing key, extra key, non-NFC, inserted ZWJ, ASCII digit); both real pairs 0 findings"
+    },
+    "generate_audited_head": {
+      "command": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/generate.ts && … --check",
+      "exit": 0,
+      "output": "Wrote src/i18n/catalogue.gen.ts (653 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN); --check: catalogue.gen.ts is current (653 keys, …)"
+    },
+    "generate_candidate_substituted": {
+      "command": "same, with pair B in hi/mobile.session.json",
+      "exit": 0,
+      "output": "Wrote src/i18n/catalogue.gen.ts (653 keys, …); --check current"
+    },
+    "generate_control_origin_main": {
+      "command": "same, on an extraction of origin/main",
+      "exit": 0,
+      "output": "Wrote src/i18n/catalogue.gen.ts (651 keys, 21 namespaces, …) — sensitive to exactly the two added keys"
+    },
+    "check_strings": {
+      "command": "node scripts/i18n/check-strings.ts",
+      "exit": null,
+      "output": "not applicable: gates user-facing literals in code; this delta adds catalogue values only. The shared checkout is on pr92, which predates scripts/i18n/, so generator runs used an extracted head tree."
+    },
+    "validator_tree": "scratch extraction of 8fdfb2e9 (src/i18n, scripts/i18n, scripts/lib, scripts/package.json) under this session's scratchpad; repo untouched"
+  },
+  "fit": {
+    "metric": "CoreText advances (CTLineGetTypographicBounds, NSFont.systemFont(size, .medium)) — Figtree carries no Devanagari, so the platform fallback face is measured at the label token text-meta (12 pt / 500)",
+    "no_rendered_frame": true,
+    "available_width_pt_at_320": 264,
+    "available_width_source": "288 pt transcript column (px-4) minus the user bubble's px-3 on both sides; the toggle is w-full inside the bubble",
+    "measurements": [
+      { "pair": "A", "text": "और दिखाएँ", "pt_12": 51.05, "pt_24": 95.58, "cells": 8 },
+      { "pair": "A", "text": "कम दिखाएँ", "pt_12": 51.47, "pt_24": 96.43, "cells": 8 },
+      { "pair": "B", "text": "और देखें", "pt_12": 37.06, "pt_24": 69.84, "cells": 5 },
+      { "pair": "B", "text": "कम देखें", "pt_12": 37.49, "pt_24": 70.69, "cells": 5 },
+      { "pair": "EN", "text": "Show more", "pt_12": 64.48, "pt_24": 119.48, "cells": 9 }
+    ],
+    "verdict": "no overflow or truncation risk for either pair; A is narrower than the English source"
+  },
+  "second_independent_pass": {
+    "requested": "yes by precedent for a high-visibility group (transcript control); this is the first pass for these keys",
+    "performed": false,
+    "note": "manager to dispatch a second independent hi pass if the group policy requires it"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "recommended_pair": "A_shipped_at_237",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "shipped_pair_verdict": "passed",
+    "candidate_pair_verdict": "changes_requested",
+    "candidate_finding_ids": ["B1", "B2"]
+  },
+  "score": {
+    "checklist_points_total": 6,
+    "score_total": 6,
+    "max_score": 6,
+    "checklist": {
+      "mechanical": 1,
+      "accuracy": 1,
+      "idiom_register": 1,
+      "terminology": 1,
+      "fit": 1,
+      "rtl_n_a_but_script_bidi_clean": 1
+    },
+    "note": "RTL checks N/A for hi; script/bidi/NFC checks passed, counted under the locale-script slot."
+  },
+  "ledger": {
+    "command": "absent",
+    "note": "No audit-ledger command and no i18n/ledger.json exist in this repository at this head (prior mobile audits record the same). A ledger-ready row is proposed and explicitly NOT written; the lane was read-only.",
+    "ledger_row_proposed": {
+      "locale": "hi",
+      "namespace": "mobile.session",
+      "status": "passed",
+      "auditor": "i18n-auditor",
+      "model": "deepseek/deepseek-flash",
+      "source_hash": "143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0",
+      "note": "hi1111sm (pair audit: #237 pair passed, translator candidate changes-requested): i18n/audits/evidence/hi/mobile.session/hi1111sm/record.json",
+      "written": false
+    }
+  },
+  "artifacts": {
+    "report": {
+      "path": "i18n/audits/evidence/hi/mobile.session/hi1111sm/report.md",
+      "sha256": "43f8c61881cd7ca5b5c532c328fd766a2fa2499f3242777f104e17a5ba3f1e61",
+      "scratch_source": "audit-showmore-hi.md (this session's scratchpad)"
+    },
+    "record": {
+      "path": "i18n/audits/evidence/hi/mobile.session/hi1111sm/record.json",
+      "sha256": "self — not self-reported"
+    },
+    "audit_log": {
+      "path": "i18n/audits/evidence/hi/mobile.session/hi1111sm/audit.log",
+      "sha256": "8806b10371b5291b090018e13ae8291509e8c938a079e45641bf087f9970d5c9",
+      "note": "audit.log companion in the same bundle"
+    }
+  },
+  "audit_notes_not_execution_log": "Every command in mechanical/fit was run in this session; outputs quoted are the actual ones, trimmed of repeated lines only. No rendered frame was captured.",
+  "original_lost_evidence": null,
+  "limits": "Read-only lane: nothing committed, no ledger write, no app run, no second independent pass. Hashes are of the values as transcribed in lane scratch; the translator's own report was not readable as a file."
+}

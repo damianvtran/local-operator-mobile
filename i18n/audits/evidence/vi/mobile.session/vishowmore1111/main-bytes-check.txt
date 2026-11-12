@@ -1,0 +1,15 @@
+# main-bytes-check — written by the coder session that landed this bundle (NOT by the auditor)
+# Compares the strings the audit examined against the bytes on origin/main at 2b508d9d (merge of #237).
+# Reproduce: git show 8fdfb2e9:src/i18n/catalogues/vi/mobile.session.json | shasum -a 256 ; git show origin/main:<same path> | shasum -a 256
+locale: vi
+path: src/i18n/catalogues/vi/mobile.session.json
+sha256 @8fdfb2e9 (PR #237 head): 2ec897dd985ff97cc6f7ba06dd6df5b2912f9be872eb0980c612fabf03e648ab
+sha256 @origin/main 2b508d9d:   2ec897dd985ff97cc6f7ba06dd6df5b2912f9be872eb0980c612fabf03e648ab
+whole-file bytes identical: True
+show_more: Xem thêm
+show_less: Thu gọn
+the two values equal at both revisions: True
+pair sha256 (json.dumps sort_keys, default separators, ensure_ascii=False) ce4f24388db3ee600b3fe9898df06829b69b48ad1876d70db9046a7ba1b92ea2
+pair sha256 (compact separators, ensure_ascii=False) 98e67e62e410a90457e119c5d6f22b6b57669ee7c38d80e5a1d42de6beb4421f
+audited-pair identity: see report.md hashes section; every pair hash quoted there was recomputed from the main bytes by the coder (all matched; serialisation differs per auditor).
+git merge-base --is-ancestor 8fdfb2e9 origin/main: exit 0 (the audited head is an ancestor of main)

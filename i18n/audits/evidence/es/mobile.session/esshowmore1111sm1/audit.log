@@ -1,0 +1,26 @@
+input candidate (target bytes): /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/followon-show-more/es.json sha256=45ce46ee87297c71cf83031d1ffc277f0848ef8b341ea328525ae3fc6eb95eee
+input en catalogue @8fdfb2e9: /Users/damian/.local-operator/sessions/d1d6f85b4577/scratchpad/en-mobile.session@8fdfb2e9.json sha256=143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0
+input en context @8fdfb2e9: /Users/damian/.local-operator/sessions/d1d6f85b4577/scratchpad/en-mobile.session.context@8fdfb2e9.json sha256=ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102
+candidate file: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/followon-show-more/es.json
+candidate bytes sha256: 45ce46ee87297c71cf83031d1ffc277f0848ef8b341ea328525ae3fc6eb95eee
+candidate parsed: {"mobile.session.user_message.show_less": "Ver menos", "mobile.session.user_message.show_more": "Ver más"}
+cells: {'mobile.session.user_message.show_more': 7, 'mobile.session.user_message.show_less': 9}
+codepoints mobile.session.user_message.show_more: U+0056 U+0065 U+0072 U+0020 U+006D U+00E1 U+0073
+codepoints mobile.session.user_message.show_less: U+0056 U+0065 U+0072 U+0020 U+006D U+0065 U+006E U+006F U+0073
+
+REAL CANDIDATE: PASS (0 problems)
+
+NEGATIVE CONTROLS (each must FAIL):
+  empty value: FAIL-as-required -> ["mobile.session.user_message.show_more: empty or non-string value ''"]
+  english leftover: FAIL-as-required -> ['mobile.session.user_message.show_more: identical to English source (untranslated)', "mobile.session.user_message.show_more: English leftover token(s) ['more', 'show']"]
+  identical to English (both): FAIL-as-required -> ['mobile.session.user_message.show_more: identical to English source (untranslated)', "mobile.session.user_message.show_more: English leftover token(s) ['more', 'show']"]
+  placeholder introduced: FAIL-as-required -> ["mobile.session.user_message.show_more: placeholder mismatch en=[] target=['count']", 'mobile.session.user_message.show_more: 15 cells > budget 14']
+  trailing full stop: FAIL-as-required -> ['mobile.session.user_message.show_less: trailing full stop']
+  bidi control: FAIL-as-required -> ["mobile.session.user_message.show_less: control/bidi character present ['0x202b']"]
+  NFD decomposed accent: FAIL-as-required -> ['mobile.session.user_message.show_more: not NFC (has combining sequence)']
+  overflow: FAIL-as-required -> ['mobile.session.user_message.show_less: 39 cells > budget 14']
+  ctrl-ws: FAIL-as-required -> ['mobile.session.user_message.show_more: leading/trailing whitespace']
+shipped candidate pair canonical-json sha256: b458a2d65b2f3fd31fbd3213866abaf7cf221b13d2427c90a04a5d3311988e37
+  canonical json: {"mobile.session.user_message.show_less":"Ver menos","mobile.session.user_message.show_more":"Ver más"}
+english pair canonical-json sha256: 26d065694437406a3aebff2dd163d08f6d1b3afa1ad51701630f2e4ab6ec9022
+  canonical json: {"mobile.session.user_message.show_less":"Show less","mobile.session.user_message.show_more":"Show more"}
