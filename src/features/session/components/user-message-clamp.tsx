@@ -1,5 +1,4 @@
 import {
-	createContext,
 	type RefObject,
 	useCallback,
 	useContext,
@@ -14,6 +13,7 @@ import {
 	needsUserMessageClamp,
 	nextUserMessageExpanded,
 	USER_MESSAGE_FADE_LINES,
+	UserMessageCollapseContext,
 	userMessageClipHeight,
 	userMessageControlMarginTop,
 	userMessageLineHeight,
@@ -49,20 +49,6 @@ import { useTextScale } from "@/ui/text-scale-provider";
  * row-open map, so windowing does not re-clamp a message the reader opened,
  * and a find landing on the row opens it); otherwise it is held here.
  */
-/**
- * How a clamp asks its scroller to keep a collapsing bubble's top in view
- * (design follow-up to PR #235, D2; `collapseScrollOffset` carries the why).
- * PROVIDED BY THE SCROLLER, not passed down as a prop: the transcript list
- * owns the scroll offset and its viewport, while the clamp sits two components
- * deep in a memoised row — and in the list's footer for a pending echo, which
- * is not a row at all. A context reaches both without threading a callback
- * through every row's props (and re-rendering every memoised row when it
- * changed). Absent (`null`), a clamp outside a scroller collapses in place.
- */
-export const UserMessageCollapseContext = createContext<
-	((anchor: View) => void) | null
->(null);
-
 export const UserMessageClamp = ({
 	expanded: controlledExpanded,
 	onToggle,

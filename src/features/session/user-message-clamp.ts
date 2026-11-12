@@ -1,3 +1,5 @@
+import { createContext } from "react";
+import type { View } from "react-native";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
@@ -132,3 +134,25 @@ export function collapseScrollOffset(input: {
 		),
 	);
 }
+
+/**
+ * How a clamp asks its scroller to keep a collapsing bubble's top in view
+ * (design follow-up to PR #235, D2; `collapseScrollOffset` carries the why).
+ * PROVIDED BY THE SCROLLER, not passed down as a prop: the transcript list
+ * owns the scroll offset and its viewport, while the clamp sits two components
+ * deep in a memoised row — and in the list's footer for a pending echo, which
+ * is not a row at all. A context reaches both without threading a callback
+ * through every row's props (and re-rendering every memoised row when it
+ * changed). Absent (`null`), a clamp outside a scroller collapses in place.
+ *
+ * LIVES HERE, NOT BESIDE THE COMPONENT. The transcript list provides it, and
+ * the list is loaded by node-environment tests (`transcript-footer.test.ts`)
+ * that stub `react-native` themselves. The clamp component imports
+ * `react-native-svg`, which pulls the real `react-native` Flow source
+ * (`import typeof`) past those stubs and fails the suite to parse. This
+ * module touches `react-native` only as an erased type import, so the
+ * provider side stays out of that import graph.
+ */
+export const UserMessageCollapseContext = createContext<
+	((anchor: View) => void) | null
+>(null);

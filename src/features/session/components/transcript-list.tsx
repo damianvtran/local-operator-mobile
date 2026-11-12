@@ -40,7 +40,6 @@ import {
 } from "@/features/session/components/transcript-edge-fades";
 import { TranscriptRow } from "@/features/session/components/transcript-row";
 import { TurnBar } from "@/features/session/components/turn-bar";
-import { UserMessageCollapseContext } from "@/features/session/components/user-message-clamp";
 import { type RevealSubject, revealTarget } from "@/features/session/find";
 import { groupContainment } from "@/features/session/group-containment";
 import {
@@ -74,7 +73,10 @@ import {
 	type QuietGroup,
 	type TranscriptItem,
 } from "@/features/session/turn-condensing";
-import { collapseScrollOffset } from "@/features/session/user-message-clamp";
+import {
+	collapseScrollOffset,
+	UserMessageCollapseContext,
+} from "@/features/session/user-message-clamp";
 import {
 	nextAtTail,
 	rowLayout,

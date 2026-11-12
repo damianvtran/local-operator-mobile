@@ -72,7 +72,7 @@ vi.mock("react-native-svg", () => ({
 	Stop: host("Stop"),
 }));
 
-const { UserMessageClamp, UserMessageCollapseContext } = await import(
+const { UserMessageClamp } = await import(
 	"@/features/session/components/user-message-clamp"
 );
 const {
@@ -85,6 +85,7 @@ const {
 	collapseScrollOffset,
 	USER_MESSAGE_MORE_GROWTH,
 	USER_MESSAGE_COLLAPSE_INSET,
+	UserMessageCollapseContext,
 } = await import("@/features/session/user-message-clamp");
 const { userBubbleFill } = await import("@/features/session/user-bubble");
 const { THEMES } = await import("@/ui/tokens.gen");
@@ -430,6 +431,8 @@ describe("opening before selection (R1-m1)", () => {
 	});
 });
 
+/** A value (non-`import type`) import of react-native or any react-native-* package. */
+const RUNTIME_RN_IMPORT = /^import (?!type )[^;]*from "react-native/m;
 const read = (file: string): string =>
 	readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
 const code = (source: string): string =>
@@ -489,6 +492,18 @@ describe("the user row (condensed or live)", () => {
 
 describe("the scroller and the bubbles it keeps in view (D2)", () => {
 	const LIST = code(read("./transcript-list.tsx"));
+
+	it("the list takes the context from the RN-free module, not the component", () => {
+		// The component imports react-native-svg, which drags the real
+		// react-native Flow source into node-env tests that load the list
+		// (transcript-footer.test.ts failed to parse: `import typeof`).
+		expect(LIST).not.toContain(
+			'from "@/features/session/components/user-message-clamp"',
+		);
+		const PURE = code(read("../user-message-clamp.ts"));
+		expect(PURE).toContain("export const UserMessageCollapseContext");
+		expect(PURE).not.toMatch(RUNTIME_RN_IMPORT);
+	});
 
 	it("the list provides the keep-in-view hook around its scroller", () => {
 		expect(LIST).toContain(

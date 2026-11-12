@@ -1590,9 +1590,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * converged tree. Source identity only, NOT rendered U-08 evidence. */
 	/* fix/show-more-polish (D1, D2, R1-m1 deferred from #235/#237): the
 	 * clamp's lighter collapsed control, keep-in-view on Show less, and
-	 * expand-before-select. Re-derived with --print over the staged tree;
+	 * expand-before-select; the collapse context moved to the RN-free module.
+	 * Re-derived with --print over the staged tree;
 	 * source identity only, NOT rendered U-08 evidence. */
-	src: "515cd4c7cb963109ecd62dd2c55550749d97a5fe622bb8cc585f2bdf07a88dd6",
+	src: "1ac72fb1a237ea008c88d5789599484ef26d520146ad150c1c191c8ce7691c94",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
