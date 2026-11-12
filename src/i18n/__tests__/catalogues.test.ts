@@ -147,7 +147,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 62, // M3 S1 +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 75, // M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.notifications",
@@ -323,8 +323,9 @@ describe("the English catalogues", () => {
 		/* M2 (#236) expression-literal keys (4 computers + 15 session + 14
 		 * settings = 33), rebased onto main 2b508d9d: 657 + 33 = 690. */
 		/* M3 slice S1 (sign-in & computers): +17 mobile.computers + 14 mobile.signin
-		 * = 31 English keys: 690 + 31 = 721, the generator's own count. */
-		expect(total).toBe(721);
+		 * = 31 English keys, plus 13 from the unflagged-literal sweep (status/reach
+		 * badges, row a11y, billing fallback, Try now, Remove): 690 + 44 = 734. */
+		expect(total).toBe(734);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

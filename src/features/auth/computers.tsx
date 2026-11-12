@@ -72,17 +72,20 @@ function statusLabel(status: ComputerStatus): {
 } {
 	switch (status) {
 		case "ready":
-			return { label: "route ready", tone: "success" };
+			return {
+				label: t("mobile.computers.status.route_ready"),
+				tone: "success",
+			};
 		case "provisioning":
-			return { label: "provisioning", tone: "info" };
+			return { label: t("mobile.computers.status.provisioning"), tone: "info" };
 		case "suspended":
-			return { label: "suspended", tone: "warning" };
+			return { label: t("mobile.computers.status.suspended"), tone: "warning" };
 		case "off":
-			return { label: "disabled", tone: "warning" };
+			return { label: t("mobile.computers.status.disabled"), tone: "warning" };
 		case "gone":
-			return { label: "revoked", tone: "danger" };
+			return { label: t("mobile.computers.status.revoked"), tone: "danger" };
 		case "unknown":
-			return { label: "unknown", tone: "neutral" };
+			return { label: t("mobile.computers.status.unknown"), tone: "neutral" };
 	}
 }
 
@@ -97,7 +100,7 @@ function reachabilityLabel(state: Reachability): {
 		case "protected":
 			return { label: t("mobile.computers.protected"), tone: "neutral" };
 		case "answered":
-			return { label: "answering", tone: "success" };
+			return { label: t("mobile.computers.reach.answering"), tone: "success" };
 	}
 }
 
@@ -126,9 +129,14 @@ const ComputerRow = ({
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityState={{ selected, busy: connecting }}
-			accessibilityLabel={`${computer.name}, ${status.label}, ${reach.label}${
-				selected ? ", active" : connecting ? ", connecting" : ""
-			}`}
+			accessibilityLabel={t(
+				selected
+					? "mobile.computers.row.a11y_active"
+					: connecting
+						? "mobile.computers.row.a11y_connecting"
+						: "mobile.computers.row.a11y",
+				{ name: computer.name, status: status.label, reach: reach.label },
+			)}
 			testID={ids.row}
 			/* A second tap while this row is minting would start a second route and
 			 *  retire the first mid-flight; the row says it is busy instead. */
@@ -152,7 +160,7 @@ const ComputerRow = ({
 								className="shrink-0 text-meta text-accent"
 								testID={CONTROL.computerSelectedMarker}
 							>
-								active
+								{t("mobile.computers.badge.active")}
 							</Text>
 						) : null}
 						{/* The pending state a pick needs (design round 1, D1): the list stays
@@ -204,7 +212,7 @@ const ComputerRow = ({
 					{computer.billing.eligible === false ? (
 						<Text className="text-body-sm text-warning">
 							{computer.billing.message ??
-								"Billing for this tunnel is inactive, so remote access will be refused."}
+								t("mobile.computers.billing_inactive")}
 						</Text>
 					) : null}
 				</View>
@@ -554,7 +562,7 @@ export default function Computers() {
 					tone="warning"
 					message={view.banner}
 					action={{
-						label: "Try now",
+						label: t("mobile.computers.try_now"),
 						onPress: () => void refreshComputers(),
 						loading: discovering,
 						testID: CONTROL.computersRetryAction,
@@ -653,7 +661,7 @@ export default function Computers() {
 				visible={removeTarget !== null}
 				title={t("mobile.computers.remove.title")}
 				body={t("mobile.computers.remove.body")}
-				confirmLabel="Remove"
+				confirmLabel={t("mobile.computers.remove.confirm")}
 				onConfirm={() => {
 					if (removeTarget) {
 						/* Persisting the removal so discovery cannot undo it is

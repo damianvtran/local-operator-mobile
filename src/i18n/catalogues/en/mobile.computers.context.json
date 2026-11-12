@@ -246,5 +246,57 @@
 	"mobile.computers.paths.own_action": {
 		"role": "button",
 		"note": "Outline button in the own-tunnel card that opens the own-tunnel setup. Short imperative; the computers screen has a separate 'Use my own tunnel instead'."
+	},
+	"mobile.computers.status.route_ready": {
+		"role": "meta",
+		"note": "Lower-case monospace badge on a computer row in the Your computers list: the control plane says the route to this computer is ready. Reads as a status of the route, not of the computer. Keep lower case; sibling of the other status.* badges."
+	},
+	"mobile.computers.status.provisioning": {
+		"role": "meta",
+		"note": "Lower-case badge on a computer row: the control plane is still setting the computer's route up. Keep lower case, one word or short phrase."
+	},
+	"mobile.computers.status.suspended": {
+		"role": "meta",
+		"note": "Lower-case badge on a computer row: Radient has suspended the tunnel (for example billing). Keep lower case."
+	},
+	"mobile.computers.status.disabled": {
+		"role": "meta",
+		"note": "Lower-case badge on a computer row: remote access for this tunnel is switched off. Keep lower case."
+	},
+	"mobile.computers.status.revoked": {
+		"role": "meta",
+		"note": "Lower-case badge on a computer row: the tunnel's access was revoked. Keep lower case."
+	},
+	"mobile.computers.status.unknown": {
+		"role": "meta",
+		"note": "Lower-case badge on a computer row: the status is not known. Keep lower case."
+	},
+	"mobile.computers.reach.answering": {
+		"role": "meta",
+		"note": "Lower-case badge on a computer row: this phone probed the computer and it answered. Distinct from status.*: it is the probe result. Keep lower case."
+	},
+	"mobile.computers.row.a11y": {
+		"role": "status",
+		"note": "Screen-reader label of a computer row (not visible). {name} is the computer's own name, {status} the status badge text (status.*), {reach} the reachability badge text. Keep the three comma-separated parts in this order; keep all placeholders unchanged."
+	},
+	"mobile.computers.row.a11y_active": {
+		"role": "status",
+		"note": "Screen-reader label of the computer row that is the connected one. Same placeholders as row.a11y; ends with the word for 'active' (same word as badge.active)."
+	},
+	"mobile.computers.row.a11y_connecting": {
+		"role": "status",
+		"note": "Screen-reader label of a computer row while its connection is being made. Same placeholders as row.a11y; ends with the word for 'connecting' (same word as badge.connecting)."
+	},
+	"mobile.computers.billing_inactive": {
+		"role": "help",
+		"note": "Warning line on a computer row when the account's billing for the tunnel is inactive and the server supplied no message of its own. Full sentence with a full stop."
+	},
+	"mobile.computers.try_now": {
+		"role": "button",
+		"note": "Action button inside the warning banner shown when computer discovery failed; re-runs discovery immediately. Short imperative."
+	},
+	"mobile.computers.remove.confirm": {
+		"role": "button",
+		"note": "Destructive confirm button of the 'Remove this computer?' dialog. One verb; the dialog also has the shared Cancel."
 	}
 }

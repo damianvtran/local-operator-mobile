@@ -60,5 +60,18 @@
 	"mobile.computers.paths.radient_body": "Needs a Radient account. Radient runs the tunnel for you and gives you a private, authenticated URL, so there is nothing to configure on this phone and no relay password to keep.",
 	"mobile.computers.paths.own_title": "Set up your own tunnel",
 	"mobile.computers.paths.own_body": "The advanced path: you publish your computer yourself, through a tunnel you run, and paste its address here. No Radient account is needed at any point, and you keep the password.",
-	"mobile.computers.paths.own_action": "Use my own tunnel"
+	"mobile.computers.paths.own_action": "Use my own tunnel",
+	"mobile.computers.status.route_ready": "route ready",
+	"mobile.computers.status.provisioning": "provisioning",
+	"mobile.computers.status.suspended": "suspended",
+	"mobile.computers.status.disabled": "disabled",
+	"mobile.computers.status.revoked": "revoked",
+	"mobile.computers.status.unknown": "unknown",
+	"mobile.computers.reach.answering": "answering",
+	"mobile.computers.row.a11y": "{name}, {status}, {reach}",
+	"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, active",
+	"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, connecting",
+	"mobile.computers.billing_inactive": "Billing for this tunnel is inactive, so remote access will be refused.",
+	"mobile.computers.try_now": "Try now",
+	"mobile.computers.remove.confirm": "Remove"
 }
