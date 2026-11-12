@@ -189,7 +189,7 @@
 	},
 	"mobile.computers.wait.tunnel_status": {
 		"role": "status",
-		"note": "Second step of the add-a-computer wait panel. {status} is Radient's own tunnel-status word (for example 'active'), inserted verbatim and NOT translated, so the sentence must stay grammatical around an untranslated English token. Ends with a full stop; keep {status} unchanged."
+		"note": "Second step of the add-a-computer wait panel. {status} is a LOCALISED status label chosen by tunnel-status-key.ts from Radient's own tunnel-status word (active -> mobile.computers.badge.active; provisioning, suspended, disabled, revoked and unknown -> mobile.computers.status.*). It is a lower-case predicate word placed after the dash, so the sentence must read naturally with a lower-case word or short phrase there. Ends with a full stop; keep {status} unchanged."
 	},
 	"mobile.computers.wait.answered": {
 		"role": "status",

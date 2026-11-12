@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "Вход выполнен",
 	"mobile.signin.stage_starting": "Начало входа",
 	"mobile.signin.stage_unavailable": "Вход недоступен",
-	"mobile.signin.superseded": "Начался другой вход."
+	"mobile.signin.superseded": "Начался другой вход.",
+	"mobile.signin.title": "Вход",
+	"mobile.signin.intro": "Вход завершается в вашем браузере, поэтому приложение не видит ваш пароль.",
+	"mobile.signin.start": "Войти через Radient",
+	"mobile.signin.use_address": "Войти по адресу и паролю",
+	"mobile.signin.panel.opening": "Открытие браузера…",
+	"mobile.signin.panel.waiting": "Ожидание браузера.",
+	"mobile.signin.panel.waiting_help": "Завершите вход в браузере и вернитесь в приложение.",
+	"mobile.signin.panel.cancelled": "Вход отменён.",
+	"mobile.signin.panel.cancelled_help": "В вашем аккаунте ничего не изменилось.",
+	"mobile.signin.panel.unavailable": "Эта сборка не может завершить вход через Radient.",
+	"mobile.signin.panel.unavailable_alt": "Подключиться всё равно можно — по адресу ретранслятора и паролю.",
+	"mobile.signin.try_anyway": "Всё равно попробовать",
+	"mobile.signin.welcome.headline": "Ваш агент работает на вашем компьютере.",
+	"mobile.signin.welcome.body": "Это приложение управляет сессиями на вашей машине и показывает, что было сделано. Ваш код её не покидает."
 }

@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "已登录",
 	"mobile.signin.stage_starting": "正在开始登录",
 	"mobile.signin.stage_unavailable": "无法登录",
-	"mobile.signin.superseded": "另一次登录已开始。"
+	"mobile.signin.superseded": "另一次登录已开始。",
+	"mobile.signin.title": "登录",
+	"mobile.signin.intro": "登录由你的浏览器完成，应用绝不会看到你的密码。",
+	"mobile.signin.start": "使用Radient登录",
+	"mobile.signin.use_address": "使用地址和密码",
+	"mobile.signin.panel.opening": "正在打开浏览器……",
+	"mobile.signin.panel.waiting": "正在等待你的浏览器。",
+	"mobile.signin.panel.waiting_help": "在那里完成登录，然后回到此应用。",
+	"mobile.signin.panel.cancelled": "本次登录已取消。",
+	"mobile.signin.panel.cancelled_help": "你的账户没有任何改动。",
+	"mobile.signin.panel.unavailable": "此版本无法完成Radient登录。",
+	"mobile.signin.panel.unavailable_alt": "你仍可使用中继的地址和密码连接。",
+	"mobile.signin.try_anyway": "仍要重试",
+	"mobile.signin.welcome.headline": "智能体运行在你的电脑上。",
+	"mobile.signin.welcome.body": "此应用在你的电脑上运行会话，并展示它做了什么。你的代码绝不会离开这台电脑。"
 }

@@ -431,6 +431,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Notifications is the French platform label too, matching the existing notifications screen title.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.row.a11y":
+			"Placeholder-only screen-reader label, `{name}, {status}, {reach}` — every part is a placeholder and the separators are commas; there is no prose to translate. The sibling a11y_active and a11y_connecting keys end in a translated word and are not identical.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -487,6 +489,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.row.a11y":
+			"Placeholder-only screen-reader label, `{name}, {status}, {reach}` — every part is a placeholder and the separators are commas; there is no prose to translate. The sibling a11y_active and a11y_connecting keys end in a translated word and are not identical.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -518,6 +522,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.row.a11y":
+			"Placeholder-only screen-reader label, `{name}, {status}, {reach}` — every part is a placeholder and the separators are commas; there is no prose to translate. The sibling a11y_active and a11y_connecting keys end in a translated word and are not identical.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -541,6 +547,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.row.a11y":
+			"Placeholder-only screen-reader label, `{name}, {status}, {reach}` — every part is a placeholder and the separators are commas; there is no prose to translate. The sibling a11y_active and a11y_connecting keys end in a translated word and are not identical.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
@@ -563,6 +571,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only identity template `{agent} ({owner})`: both arguments are current display names, which are never translated; the parentheses contain no prose.",
 		"mobile.team_bridge.title":
 			"Team Bridge is the unchanged product name in every locale, not an untranslated English sentence.",
+		"mobile.computers.row.a11y":
+			"Placeholder-only screen-reader label, `{name}, {status}, {reach}` — every part is a placeholder and the separators are commas; there is no prose to translate. The sibling a11y_active and a11y_connecting keys end in a translated word and are not identical.",
 		"mobile.computers.transport.radient":
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
