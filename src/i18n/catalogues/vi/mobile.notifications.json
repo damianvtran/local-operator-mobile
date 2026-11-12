@@ -24,6 +24,11 @@
 	"mobile.notifications.dismiss": "Bỏ qua",
 	"mobile.notifications.filter_label": "Hiển thị",
 	"mobile.notifications.load_failed": "Không thể tải thông báo",
+	"mobile.notifications.permission.denied": "Thông báo của ứng dụng này đang tắt trong cài đặt hệ thống. Hãy bật lại ở đó để nhận cảnh báo tin nhắn Team Bridge. Cảnh báo từ máy tính của bạn chưa được bật — cho đến khi bật, chúng chỉ hoạt động khi Local Operator đang mở.",
+	"mobile.notifications.permission.granted": "Đã cho phép. Tin nhắn Team Bridge sẽ báo trên điện thoại này khi dịch vụ gửi push của Radient sẵn sàng. Cảnh báo từ máy tính của bạn chưa được bật — cho đến khi bật, chúng chỉ hoạt động khi Local Operator đang mở.",
+	"mobile.notifications.permission.undetermined": "Xin phép điện thoại để nhận cảnh báo tin nhắn Team Bridge. Cảnh báo từ máy tính của bạn chưa được bật — cho đến khi bật, chúng chỉ hoạt động khi Local Operator đang mở.",
+	"mobile.notifications.permission.unknown": "Không thể kiểm tra thông báo trên điện thoại này. Đây không phải là từ chối — hãy mở lại Cài đặt để kiểm tra lần nữa.",
+	"mobile.notifications.permission.unsupported": "Bản dựng này không có thông báo.",
 	"mobile.notifications.priority_high": "Cao",
 	"mobile.notifications.title": "Thông báo"
 }

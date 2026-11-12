@@ -357,9 +357,12 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           PLAY_SERVICE_ACCOUNT_JSON_BASE64: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}
+          # Optional: reported by name, never gates the job (FCM push only).
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
           node scripts/ci/check-secrets.ts --mode internal --need \
-            ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64
+            ANDROID_KEYSTORE_BASE64,ANDROID_KEYSTORE_PASSWORD,ANDROID_KEY_ALIAS,ANDROID_KEY_PASSWORD,PLAY_SERVICE_ACCOUNT_JSON_BASE64 \
+            --optional GOOGLE_SERVICES_JSON_BASE64
 
   internal:
     name: Android internal release (signed AAB + APK, Play internal)
@@ -406,6 +409,16 @@ jobs:
 
       - name: Derive the version from the ref
         run: node scripts/ci/version.ts --write
+
+      - name: Materialise the FCM config (optional)
+        # Android Team Bridge push needs google-services.json; the build does not.
+        # Absent secret -> notice and a push-disabled build; present but wrong ->
+        # hard failure (scripts/ci/google-services.ts says why). Written under
+        # RUNNER_TEMP and exported as GOOGLE_SERVICES_JSON_PATH, which
+        # app.config.ts reads, so prebuild applies the Google Services plugin.
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: node scripts/ci/google-services.ts
 
       - name: Generate the native project
         run: pnpm exec expo prebuild --platform android --no-install

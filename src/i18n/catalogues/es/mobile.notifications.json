@@ -24,6 +24,11 @@
 	"mobile.notifications.dismiss": "Descartar",
 	"mobile.notifications.filter_label": "Mostrar",
 	"mobile.notifications.load_failed": "No se pudieron cargar las notificaciones",
+	"mobile.notifications.permission.denied": "Las notificaciones de esta app están desactivadas en los ajustes del sistema. Vuelve a activarlas allí para recibir avisos de mensajes de Team Bridge. Las alertas de tus computadoras aún no están activadas; hasta que lo estén, solo funcionan mientras Local Operator está abierto.",
+	"mobile.notifications.permission.granted": "Permitidas. Los mensajes de Team Bridge avisan en este teléfono cuando la entrega push de Radient está disponible. Las alertas de tus computadoras aún no están activadas; hasta que lo estén, solo funcionan mientras Local Operator está abierto.",
+	"mobile.notifications.permission.undetermined": "Pide permiso a tu teléfono para recibir avisos de mensajes de Team Bridge. Las alertas de tus computadoras aún no están activadas; hasta que lo estén, solo funcionan mientras Local Operator está abierto.",
+	"mobile.notifications.permission.unknown": "No se pudieron comprobar las notificaciones en este teléfono. No es un rechazo: vuelve a abrir Ajustes para comprobarlo de nuevo.",
+	"mobile.notifications.permission.unsupported": "Esta compilación no incluye notificaciones.",
 	"mobile.notifications.priority_high": "Alta",
 	"mobile.notifications.title": "Notificaciones"
 }

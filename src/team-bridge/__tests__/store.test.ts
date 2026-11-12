@@ -1103,3 +1103,54 @@ describe("thread refresh after a return to the foreground", () => {
 		expect(store.getState().gate).toBe("signed_out");
 	});
 });
+
+/*
+ * The per-conversation notification control (thread screen → notify sheet →
+ * `setNotify` → `POST /messaging/conversations/{id}/read {notify}`). The write is
+ * server-confirmed, not optimistic: the sheet shows busy until the hub answers,
+ * so a refusal needs no rollback — the stored policy never moved. Pinned here so
+ * that stays true, and so the badge follows a mute (the hub total excludes it).
+ */
+describe("notification policy round trip", () => {
+	const policy = (store: ReturnType<typeof setup>["store"]) =>
+		store
+			.getState()
+			.orgs[TENANT]?.conversations.find((c) => c.id === "bcv_channel_general")
+			?.notify;
+
+	it("stores the hub's answer and re-reads the account unread total", async () => {
+		const hub = fakeHub({
+			markRead: vi.fn(async () => ({
+				...receipt(4, 0, true),
+				notify: "mute" as const,
+			})),
+			accountUnread: vi.fn(async () => ({ total: 1, organizations: [] })),
+		});
+		const { store, actions } = setup(hub);
+		store.setState({ gate: "open", unreadKnown: true, totalUnread: 3 });
+		actions.adopt(conversation({ notify: "all" }));
+		await actions.setNotify(TENANT, "bcv_channel_general", "mute");
+		expect(hub.markRead).toHaveBeenCalledWith(TENANT, "bcv_channel_general", {
+			notify: "mute",
+		});
+		expect(policy(store)).toBe("mute");
+		await vi.waitFor(() => expect(store.getState().totalUnread).toBe(1));
+		expect(hub.accountUnread).toHaveBeenCalledTimes(1);
+	});
+
+	it("a refused write leaves the previous policy in place and throws for the sheet", async () => {
+		const hub = fakeHub({
+			markRead: vi.fn(async () => {
+				throw new HubError({ kind: "unreachable", message: "x" });
+			}),
+		});
+		const { store, actions } = setup(hub);
+		store.setState({ gate: "open" });
+		actions.adopt(conversation({ notify: "mention" }));
+		await expect(
+			actions.setNotify(TENANT, "bcv_channel_general", "mute"),
+		).rejects.toMatchObject({ kind: "unreachable" });
+		expect(policy(store)).toBe("mention");
+		expect(hub.accountUnread).not.toHaveBeenCalled();
+	});
+});

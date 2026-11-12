@@ -70,7 +70,7 @@ organization, body = short plain-text preview. This is a new privacy boundary:
 **APNs/FCM receive that preview**, unlike ADR 0006's content-free computer
 completion alerts. The hub's durable outbox holds identifiers only. Message
 bodies, device tokens and provider response bodies must not appear in logs.
-The icon badge remains app-managed; pushes never set `aps.badge`.
+The icon badge remains app-managed; pushes never set `aps.badge`. Its one writer is `src/notifications/app-badge.ts`, which shows the hub's account unread total (`src/team-bridge/badge.ts`).
 
 For expo-notifications 57 the APNs data object goes under top-level `body` (not
 `data`); Android uses a data-only FCM v1 message whose `body` value is the JSON

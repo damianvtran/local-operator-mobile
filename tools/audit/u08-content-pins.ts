@@ -1579,7 +1579,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	// standard placeholder; `mobile.session_health.ended_placeholder` retired
 	// from all 8 locales. --print over the staged tree; source identity only,
 	// no rendered or native proof.
-	src: "9a89a4a5f802e42153a7fada88301e9e692c922c0b7a09a3768fc95b4a60047a",
+	/* #231 (Team Bridge push readiness: icon-badge owner, badge source,
+	 * received-push listener, localized Settings permission sentences) merged
+	 * with main fa2bc5e0 (#227): both sides' src carried, so no parent's digest;
+	 * re-derived with --print over the merged tree. Source identity only, NOT a
+	 * rendered geometry proof. */
+	/* integrate/mobile-batch-1111 + #240, #239, #238 and main ecfa6987 (#231):
+	 * every side's src carried plus the regenerated `catalogue.gen.ts` (657
+	 * keys), so no parent's digest; re-derived once with --print over the
+	 * converged tree. Source identity only, NOT rendered U-08 evidence. */
+	src: "91088061d5ef2db9a5d006ed0c0735f1f9bb6cb7108acbeed9b96048d333f6e0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1597,8 +1606,12 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// --print re-pin (PR #238): the native home-screen label (`LAUNCHER_LABEL`,
 	// `CFBundleDisplayName` and the Android launcher-label plugin entry); `name`
 	// and every web input are unchanged, so not a U-08 web layout input.
+	// --print re-pin (#231): the optional Android `googleServicesFile` (FCM for
+	// Team Bridge push); native build config, not a U-08 web layout input.
+	// --print re-pin (integration of #238 with #231): both sides' native
+	// config carried — the home-screen label plugin and `googleServicesFile`.
 	"app.config.ts":
-		"d553537bd390d76d55018ec48e45dc3ea929e8e97a9f435c418b9fcbdce8032a",
+		"b186fadf5867c17b90e088b86815a6a7bd9869c979fe7e0e226e5392210848ed",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

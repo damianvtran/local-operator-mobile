@@ -153,7 +153,9 @@ const NAMESPACES = [
 		name: "mobile.notifications",
 		messages: notifications,
 		context: notificationsContext,
-		expected: 27,
+		// +5: the Settings permission sentences (`permission.*`), moved out of
+		// an English-only table in the Team Bridge push-readiness PR.
+		expected: 32,
 	},
 	{
 		name: "mobile.session",
@@ -315,7 +317,10 @@ describe("the English catalogues", () => {
 		/* Minus one: `mobile.session_health.ended_placeholder` retired — an ended
 		 * session's composer shows the standard placeholder (operator feedback,
 		 * 2026-11-11). 653 - 1 = 652 (integration of #239). */
-		expect(total).toBe(652);
+		/* feat/bridge-push-readiness (#231) merged with main fa2bc5e0 (#227): + the
+		 *  five `mobile.notifications.permission.*` Settings sentences: 651 + 5 = 656.
+		 *  Integrated with #235 (+2) and #239 (-1): 652 + 5 = 657. */
+		expect(total).toBe(657);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -194,6 +194,28 @@ export async function installTeamBridgeNotifications(): Promise<void> {
 }
 
 /**
+ * Team Bridge pushes delivered while JS runs (not taps). Used only to re-read
+ * unread for the icon badge; other push types are left alone. Never throws.
+ */
+export async function subscribeTeamBridgeReceived(
+	onPush: (push: TeamBridgePush) => void,
+): Promise<() => void> {
+	const module = await loadNotifications();
+	if (module === null) return () => {};
+	try {
+		const subscription = module.addNotificationReceivedListener(
+			(notification) => {
+				const push = teamBridgePushFromResponse({ notification });
+				if (push !== null) onPush(push);
+			},
+		);
+		return () => subscription.remove();
+	} catch {
+		return () => {};
+	}
+}
+
+/**
  * Route Team Bridge notification taps, cold and warm. A response that is not a
  * Team Bridge push is left alone: the relay's tap router owns it.
  */
