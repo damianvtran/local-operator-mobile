@@ -22,7 +22,7 @@ const NEXT_DECLARATION = /\n(?:export )?(?:const|function) [A-Z]/;
  * is gone (every prompt takes the Show-more clamp), so the mode is never
  * disabled there; the pin is the same route without `disabled={clamp}`. */
 const USER_BUBBLE =
-	/<SelectableMessage\s+text=\{entry\.text\}\s+textClassName=\{userTextClass\}\s*>\s*<SelectableLeafText/;
+	/<SelectableMessage\s+text=\{entry\.text\}\s+textClassName=\{userTextClass\}\s+onEnter=\{expand\}\s*>\s*<SelectableLeafText/;
 const DIFF_BLOCK = /const DiffBlock = /;
 const TEXT_BLOCK = /const TextBlock = /;
 const OUTPUT_WELL =

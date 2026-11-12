@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type RefObject, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { TranscriptEntry } from "@/contracts";
@@ -150,14 +150,24 @@ const BLOCK_LABEL: Record<string, string> = {
  * `user-bubble.ts` records what was ruled out). A separate component so the
  * theme hook runs only for the reader's own rows, never for every row kind.
  */
-const UserBox = ({ children }: { children: React.ReactNode }) => {
+const UserBox = ({
+	children,
+}: {
+	/** Handed the bubble's own node, so the clamp inside can keep the BUBBLE's
+	 *  top in view on `Show less` (D2) — a render function because the ref has
+	 *  to be created here: the row component returns early per kind, so it
+	 *  cannot hold a hook only the user arm needs. */
+	children: (bubble: RefObject<View | null>) => React.ReactNode;
+}) => {
 	const { active } = useTheme();
+	const bubble = useRef<View | null>(null);
 	return (
 		<View
+			ref={bubble}
 			className={cx("max-w-[85%]", USER_BUBBLE_BOX_CLASS)}
 			style={userBubbleFill(active)}
 		>
-			{children}
+			{children(bubble)}
 		</View>
 	);
 };
@@ -313,8 +323,16 @@ const TranscriptRowImpl = ({
 		 *  so a selection can always reach the whole prompt. With the old
 		 *  one-line preview gone there is no unreadable state left to disable
 		 *  the mode for, so it is always on (integration of #233 with #235). */
-		const text = (
-			<SelectableMessage text={entry.text} textClassName={userTextClass}>
+		/* A render function: the clamp hands it `expand`, so a long-press on a
+		 *  closed clamp opens it before the iOS selection view appears — that
+		 *  view grows to the full text, and clipped at eight lines its end
+		 *  handle was out of reach (PR #237 review, R1-m1; steers too, #240). */
+		const text = (expand: () => void) => (
+			<SelectableMessage
+				text={entry.text}
+				textClassName={userTextClass}
+				onEnter={expand}
+			>
 				<SelectableLeafText className={userTextClass}>
 					{entry.text}
 				</SelectableLeafText>
@@ -329,32 +347,37 @@ const TranscriptRowImpl = ({
 		return (
 			<View className="items-end px-4 py-1" testID={testID}>
 				<UserBox>
-					{entry.text.length === 0 ? null : (
-						<UserMessageClamp
-							// The list's row-open map, as the folds use: survives
-							// windowing, and a find landing on this row opens it.
-							expanded={fold.open}
-							onToggle={fold.onToggle}
-							testID={userMessageMoreId(testID)}
-						>
-							{text}
-						</UserMessageClamp>
+					{(bubble) => (
+						<>
+							{entry.text.length === 0 ? null : (
+								<UserMessageClamp
+									anchorRef={bubble}
+									// The list's row-open map, as the folds use: survives
+									// windowing, and a find landing on this row opens it.
+									expanded={fold.open}
+									onToggle={fold.onToggle}
+									testID={userMessageMoreId(testID)}
+								>
+									{text}
+								</UserMessageClamp>
+							)}
+							{!holdImages && entry.images.length > 0 && loadImage ? (
+								<View className="flex-row flex-wrap gap-1.5 pt-1.5">
+									{entry.images.map((image) => (
+										<TranscriptImage
+											key={image.index}
+											entryId={entry.id}
+											index={image.index}
+											mimeType={image.mime_type}
+											load={loadImage}
+											onBubble
+											testID={transcriptImageId(entry.id, image.index)}
+										/>
+									))}
+								</View>
+							) : null}
+						</>
 					)}
-					{!holdImages && entry.images.length > 0 && loadImage ? (
-						<View className="flex-row flex-wrap gap-1.5 pt-1.5">
-							{entry.images.map((image) => (
-								<TranscriptImage
-									key={image.index}
-									entryId={entry.id}
-									index={image.index}
-									mimeType={image.mime_type}
-									load={loadImage}
-									onBubble
-									testID={transcriptImageId(entry.id, image.index)}
-								/>
-							))}
-						</View>
-					) : null}
 				</UserBox>
 				{anchors}
 			</View>

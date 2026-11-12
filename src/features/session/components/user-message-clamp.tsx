@@ -1,4 +1,12 @@
-import { useId, useState } from "react";
+import {
+	createContext,
+	type RefObject,
+	useCallback,
+	useContext,
+	useId,
+	useRef,
+	useState,
+} from "react";
 import { type LayoutChangeEvent, Pressable, Text, View } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { userBubbleFill } from "@/features/session/user-bubble";
@@ -7,6 +15,7 @@ import {
 	nextUserMessageExpanded,
 	USER_MESSAGE_FADE_LINES,
 	userMessageClipHeight,
+	userMessageControlMarginTop,
 	userMessageLineHeight,
 } from "@/features/session/user-message-clamp";
 import { t } from "@/i18n";
@@ -40,16 +49,41 @@ import { useTextScale } from "@/ui/text-scale-provider";
  * row-open map, so windowing does not re-clamp a message the reader opened,
  * and a find landing on the row opens it); otherwise it is held here.
  */
+/**
+ * How a clamp asks its scroller to keep a collapsing bubble's top in view
+ * (design follow-up to PR #235, D2; `collapseScrollOffset` carries the why).
+ * PROVIDED BY THE SCROLLER, not passed down as a prop: the transcript list
+ * owns the scroll offset and its viewport, while the clamp sits two components
+ * deep in a memoised row — and in the list's footer for a pending echo, which
+ * is not a row at all. A context reaches both without threading a callback
+ * through every row's props (and re-rendering every memoised row when it
+ * changed). Absent (`null`), a clamp outside a scroller collapses in place.
+ */
+export const UserMessageCollapseContext = createContext<
+	((anchor: View) => void) | null
+>(null);
+
 export const UserMessageClamp = ({
 	expanded: controlledExpanded,
 	onToggle,
+	anchorRef,
 	testID,
 	children,
 }: {
 	expanded?: boolean;
 	onToggle?: (next: boolean) => void;
+	/** The bubble whose top `Show less` keeps in view (D2). The bubble, not this
+	 *  clamp: the clamp sits inside the bubble's padding (and under a pending
+	 *  echo's attachment count), and it is the bubble's edge the reader reads
+	 *  as "the message". Omitted, the clamp's own top is used. */
+	anchorRef?: RefObject<View | null>;
 	testID?: string;
-	children: React.ReactNode;
+	/** The message. A FUNCTION form is handed the clamp's open-if-closed
+	 *  action (`expand`, below) for a body that must open the clamp itself —
+	 *  the iOS selection mode (PR #237 review, R1-m1). A render function rather
+	 *  than a context because the row builds its body outside the clamp, where
+	 *  no hook can read one. */
+	children: React.ReactNode | ((expand: () => void) => React.ReactNode);
 }) => {
 	const [ownExpanded, setOwnExpanded] = useState(false);
 	const expanded =
@@ -63,26 +97,54 @@ export const UserMessageClamp = ({
 		contentHeight !== null &&
 		needsUserMessageClamp(contentHeight, effectiveScale);
 
+	const keepInView = useContext(UserMessageCollapseContext);
+	const ownRef = useRef<View | null>(null);
+	const controlled = controlledExpanded !== undefined && onToggle !== undefined;
+
 	const onContentLayout = (event: LayoutChangeEvent) => {
 		setContentHeight(event.nativeEvent.layout.height);
 	};
+	const setExpanded = useCallback(
+		(next: boolean) => {
+			if (controlled && onToggle) {
+				onToggle(next);
+				return;
+			}
+			setOwnExpanded(next);
+		},
+		[controlled, onToggle],
+	);
 	const toggle = () => {
 		const next = nextUserMessageExpanded(expanded);
-		if (controlledExpanded !== undefined && onToggle !== undefined) {
-			onToggle(next);
-			return;
+		setExpanded(next);
+		if (!next) {
+			const anchor = anchorRef?.current ?? ownRef.current;
+			if (anchor && keepInView) keepInView(anchor);
 		}
-		setOwnExpanded(next);
 	};
+	/* Opens the clamp if it is clamped and closed; a no-op otherwise (R1-m1).
+	 *  On iOS a long-press swaps the message for a read-only text view that
+	 *  selects everything, and inside a closed clamp that view was clipped at
+	 *  eight lines, so its END handle sat below the clip where no finger could
+	 *  reach it: the message has to open before the handles appear. A no-op
+	 *  when nothing is hidden, so an unclamped message never writes an "open"
+	 *  the list would then wait on as a resize that never comes
+	 *  (`toggleRowOpen`'s m-r2-1). */
+	const expand = useCallback(() => {
+		if (clamped && !expanded) setExpanded(true);
+	}, [clamped, expanded, setExpanded]);
 
 	return (
 		<>
 			<View
+				ref={ownRef}
 				style={
 					expanded ? undefined : { maxHeight: clipHeight, overflow: "hidden" }
 				}
 			>
-				<View onLayout={onContentLayout}>{children}</View>
+				<View onLayout={onContentLayout}>
+					{typeof children === "function" ? children(expand) : children}
+				</View>
 				{clamped && !expanded ? (
 					<BubbleFade
 						height={
@@ -106,7 +168,13 @@ export const UserMessageClamp = ({
 					 *  drops Pressable hitSlop (`ask-bar.tsx`). Full width inside the
 					 *  bubble and centred, the desktop's idiom (D2): the clamp and its
 					 *  release are one object, so no rule sits between them. */
-					style={{ minHeight: TOUCH_FLOOR }}
+					style={{
+						minHeight: TOUCH_FLOOR,
+						// Collapsed, pulled up over the fade so only 32 pt is new
+						// height; the floor stays whole (D1, `USER_MESSAGE_MORE_GROWTH`).
+						// Drawn after the clip, so it sits above the fade for touches.
+						marginTop: userMessageControlMarginTop(expanded, TOUCH_FLOOR),
+					}}
 					className="w-full items-center justify-center"
 				>
 					<Text className="text-meta text-ink-muted">

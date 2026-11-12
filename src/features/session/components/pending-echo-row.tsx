@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
@@ -45,9 +45,12 @@ const PendingEchoRowImpl = ({
 }) => {
 	const caption = pendingEchoCaption(echo, streaming);
 	const { active } = useTheme();
+	// The bubble `Show less` keeps in view inside the list's footer (D2).
+	const bubble = useRef<View | null>(null);
 	const body = (
 		<>
 			<View
+				ref={bubble}
 				className={pendingEchoBoxClass(echo.op)}
 				/* The settled bubble's fill as an explicit style too
 				 *  (`userBubbleFill`: the native fill did not paint from the class
@@ -76,6 +79,7 @@ const PendingEchoRowImpl = ({
 				 *  when the settled row takes over, which is the settled default. */}
 				{echo.text.length === 0 ? null : (
 					<UserMessageClamp
+						anchorRef={bubble}
 						testID={userMessageMoreId(pendingEchoId(echo.commandId))}
 					>
 						<Text className="text-body-read text-ink-muted">{echo.text}</Text>

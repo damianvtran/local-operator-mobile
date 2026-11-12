@@ -1588,7 +1588,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * every side's src carried plus the regenerated `catalogue.gen.ts` (657
 	 * keys), so no parent's digest; re-derived once with --print over the
 	 * converged tree. Source identity only, NOT rendered U-08 evidence. */
-	src: "91088061d5ef2db9a5d006ed0c0735f1f9bb6cb7108acbeed9b96048d333f6e0",
+	/* fix/show-more-polish (D1, D2, R1-m1 deferred from #235/#237): the
+	 * clamp's lighter collapsed control, keep-in-view on Show less, and
+	 * expand-before-select. Re-derived with --print over the staged tree;
+	 * source identity only, NOT rendered U-08 evidence. */
+	src: "515cd4c7cb963109ecd62dd2c55550749d97a5fe622bb8cc585f2bdf07a88dd6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

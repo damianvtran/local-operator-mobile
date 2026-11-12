@@ -73,8 +73,17 @@ vi.mock("@/ui/text-scale-provider", () => ({
 vi.mock("@/features/session/components/user-message-clamp", async () => {
 	const { createElement } = await import("react");
 	return {
-		UserMessageClamp: ({ children }: { children: React.ReactNode }) =>
-			createElement("section", { "data-clamp": "" }, children),
+		// The row's body is a render function handed the clamp's `expand`.
+		UserMessageClamp: ({
+			children,
+		}: {
+			children: React.ReactNode | ((expand: () => void) => React.ReactNode);
+		}) =>
+			createElement(
+				"section",
+				{ "data-clamp": "" },
+				typeof children === "function" ? children(() => {}) : children,
+			),
 	};
 });
 
