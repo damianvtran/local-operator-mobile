@@ -1611,7 +1611,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * sides' src carried, so neither parent's digest; re-derived once with
 	 * --print over the merged tree. Source identity only, NOT rendered U-08
 	 * evidence. */
-	src: "d82a271fed5ca6bb7710dca1512e0d1a2923c258e28f220dc712929bf912dd42",
+	/* fix/ola-feedback-1112 (#1): the Team Bridge provider no longer keys the
+	 * router on the account, and the own-tunnel guide's and sign-in's Back leave
+	 * for Home with no history (`leave-screen.ts`). Re-derived once with --print
+	 * over the staged tree. Source identity only, NOT rendered U-08 evidence. */
+	src: "acbc69b8ed9c9c70d042e2566a34b4123bcda96e99b6f1a4f08376ea0ef7a7d8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
