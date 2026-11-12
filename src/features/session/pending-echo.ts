@@ -390,11 +390,14 @@ export const earlierWentThroughNotice = (): string =>
  *  hairline), so the fill does not jump at handover (agent review round 1, M1;
  *  design D2). The pending signal stays in ink (`ink-muted`) and in the caption,
  *  which `pending-echo-row.tsx` renders BELOW the box, on canvas: `ink-dim` and
- *  `danger` are contracted on canvas but not on `user-bubble`. */
-export const pendingEchoBoxClass = (op: ContinuationOp): string =>
-	op === "steer"
-		? "max-w-[85%] items-end px-1"
-		: `max-w-[85%] items-end ${USER_BUBBLE_BOX_CLASS}`;
+ *  `danger` are contracted on canvas but not on `user-bubble`.
+ *
+ *  A steer takes the SAME box (operator report, iOS 2026-11-11): it used to be
+ *  an unfilled `px-1` block, which read as bare indented text rather than the
+ *  operator's own message. The `op` parameter stays so a caller still says
+ *  which command the row is, but the answer no longer depends on it. */
+export const pendingEchoBoxClass = (_op: ContinuationOp): string =>
+	`max-w-[85%] items-end ${USER_BUBBLE_BOX_CLASS}`;
 
 /** Drop every echo on this device — for the auth boundary: a signed-out user's
  *  words must not be shown to whoever signs in next. */

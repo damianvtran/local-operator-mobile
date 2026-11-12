@@ -1572,6 +1572,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * admission only, NOT rendered U-08 evidence. Re-printed again after the
 	 * user-message toggle's testID moved behind `userMessageMoreId` in
 	 * `src/ui/a11y.ts` (the integrated tree's literal-testID fix). */
+	// fix/steer-bubble: a steer takes the user bubble and its clamp, in flight
+	// and settled (operator report, iOS 2026-11-11), plus its rendered test.
+	// Re-derived with --print over the staged tree; source identity only.
 	src: "9a89a4a5f802e42153a7fada88301e9e692c922c0b7a09a3768fc95b4a60047a",
 };
 

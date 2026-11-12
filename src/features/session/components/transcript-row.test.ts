@@ -31,6 +31,8 @@ const INITIAL_STATE_FROM_CACHE =
 const LOAD_THROUGH_CACHE = /transcriptImages\s*\.load\(load, entryId, index\)/;
 const EXPLICIT_FILL =
 	/className=\{cx\("max-w-\[85%\]", USER_BUBBLE_BOX_CLASS\)\}\s*style=\{userBubbleFill\(active\)\}/;
+/** A steer's image sits on the bubble too: the prop is unconditional. */
+const ON_BUBBLE_ALWAYS = /\bonBubble\n/;
 const GLYPH_BOX = /w-4 shrink-0 text-start font-mono text-mono-sm/g;
 const TRACE_GLYPH_BOX_USE = /cx\(\s*TRACE_GLYPH_BOX_CLASS,/g;
 
@@ -90,9 +92,17 @@ describe("the reader's own message (D3)", () => {
 			`max-w-[85%] items-end ${USER_BUBBLE_BOX_CLASS}`,
 		);
 		expect(pendingEchoBoxClass("prompt")).not.toContain("border");
-		expect(PENDING).toContain(
-			'style={echo.op === "steer" ? undefined : userBubbleFill(active)}',
-		);
+		expect(PENDING).toContain("style={userBubbleFill(active)}");
+	});
+
+	/* Operator report, iOS 2026-11-11: a steer rendered as bare indented text.
+	 *  It takes the prompt's box exactly, in flight and settled, so the parity
+	 *  rule in `user-bubble.ts` holds for both ops (rendered proof:
+	 *  `steer-bubble.test.tsx`). */
+	it("gives a steer the same box as a prompt", () => {
+		expect(pendingEchoBoxClass("steer")).toBe(pendingEchoBoxClass("prompt"));
+		expect(ROW).not.toContain("isSteer={");
+		expect(PENDING).not.toContain('echo.op === "steer"');
 	});
 
 	/* Design round 1, D2: `ink-dim` and `danger` are contracted on canvas, not
@@ -110,7 +120,7 @@ describe("the reader's own message (D3)", () => {
 	 *  measured ~1.01:1 in the light themes; it steps up to `hairline-strong`
 	 *  there, and only there. */
 	it("frames an attached image with the strong hairline on the bubble", () => {
-		expect(ROW).toContain("onBubble={!isSteer}");
+		expect(ROW).toMatch(ON_BUBBLE_ALWAYS);
 		// Source-level: `transcript-image.tsx` reaches `expo-image`, which Node
 		// cannot load (see this file's header).
 		expect(IMAGE).toContain(
