@@ -1595,6 +1595,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * every side's src carried plus the regenerated `catalogue.gen.ts` (657
 	 * keys), so no parent's digest; re-derived once with --print over the
 	 * converged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* fix/show-more-polish (D1, D2, R1-m1 deferred from #235/#237): the
+	 * clamp's lighter collapsed control, keep-in-view on Show less, and
+	 * expand-before-select; the collapse context moved to the RN-free module.
+	 * Re-derived with --print over the staged tree;
+	 * source identity only, NOT rendered U-08 evidence. */
 	/* Re-pinned 2026-11-12 for PR #236 (M2 expression literals) rebased onto main
 	 * 2b508d9d: the 33 expression-literal keys (657 -> 690 in the regenerated
 	 * `catalogue.gen.ts`), the scanner and its tests, the es/vi short-context and
@@ -1602,7 +1607,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * main's #237 integration, so neither parent's digest. Re-derived once with
 	 * `--print` over the committed rebased tree. Source admission only, NOT
 	 * rendered U-08 evidence. */
-	src: "373f005c8f32138833fe20b65dfa4c9e187e01cc5f794a2fd5438b350d332589",
+	/* #241 (fix/show-more-polish) merged with main 9e193b57 (#236): both
+	 * sides' src carried, so neither parent's digest; re-derived once with
+	 * --print over the merged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "d82a271fed5ca6bb7710dca1512e0d1a2923c258e28f220dc712929bf912dd42",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

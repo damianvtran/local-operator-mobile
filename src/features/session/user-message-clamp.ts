@@ -1,3 +1,5 @@
+import { createContext } from "react";
+import type { View } from "react-native";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 
 /**
@@ -63,3 +65,94 @@ export function needsUserMessageClamp(
 export function nextUserMessageExpanded(expanded: boolean): boolean {
 	return !expanded;
 }
+
+/**
+ * How much the COLLAPSED control adds below the clipped text, in points
+ * (design follow-up to PR #235, D1). The control keeps its full touch floor —
+ * a thumb target is not negotiable — but a 48 pt band under every long prompt
+ * read as a second empty line, more chrome than the clamp saved. So the
+ * collapsed control is pulled up over the fade by the difference: its top part
+ * overlaps the fade (which is decorative and already says "this continues"),
+ * and only this much shows as new height. 32 pt still clears the meta line
+ * with air above and below it.
+ */
+export const USER_MESSAGE_MORE_GROWTH = 32;
+
+/**
+ * The control's top margin: negative while collapsed, so the touch floor
+ * overlaps the fade and only `USER_MESSAGE_MORE_GROWTH` is added; zero while
+ * expanded, because there is no fade to overlap and pulling `Show less` up
+ * would sit it on the message's last line of text. Never positive — on a
+ * floor already at or under the visible growth there is nothing to pull up.
+ */
+export function userMessageControlMarginTop(
+	expanded: boolean,
+	touchFloor: number,
+): number {
+	if (expanded) return 0;
+	return -Math.max(0, touchFloor - USER_MESSAGE_MORE_GROWTH);
+}
+
+/** Where the bubble's top lands after `Show less` brought it back into view:
+ *  this far below the list's top edge (design follow-up to PR #235, D2). Inside
+ *  the asked-for 8-12 pt band, clear of the top edge fade's hard edge, and
+ *  close enough that the reader sees the message they just closed first. */
+export const USER_MESSAGE_COLLAPSE_INSET = 10;
+
+/**
+ * The scroll offset that keeps a collapsing message's top in view, or `null`
+ * to leave the list where it is (D2).
+ *
+ * WHY. A reader who opened a long prompt and scrolled down through it presses
+ * `Show less` at its foot. The bubble shrinks by everything below the clamp,
+ * and the content under it slides up past the reader, who is left looking at
+ * the NEXT turn with the message they just closed somewhere above the screen.
+ * The fix is the desktop's own: bring the message's top back.
+ *
+ * ONLY WHEN ITS TOP IS ABOVE THE VIEWPORT. A bubble whose top is already on
+ * screen is left alone: moving a list the reader can already read is motion
+ * for nothing, and a `Show less` pressed with the whole message in view must
+ * not jump. The bubble's top does not move when the bubble itself shrinks
+ * (everything above it is unchanged), so measuring before or after the
+ * collapse gives the same answer.
+ *
+ * All three inputs are window/scroll points: `bubbleTop` and `viewportTop` from
+ * `measureInWindow`, `offsetY` the list's current content offset. Never
+ * negative — a message at the head of the content scrolls to the top.
+ */
+export function collapseScrollOffset(input: {
+	bubbleTop: number;
+	viewportTop: number;
+	offsetY: number;
+}): number | null {
+	const { bubbleTop, viewportTop, offsetY } = input;
+	if (bubbleTop >= viewportTop) return null;
+	return Math.max(
+		0,
+		Math.round(
+			offsetY - (viewportTop - bubbleTop) - USER_MESSAGE_COLLAPSE_INSET,
+		),
+	);
+}
+
+/**
+ * How a clamp asks its scroller to keep a collapsing bubble's top in view
+ * (design follow-up to PR #235, D2; `collapseScrollOffset` carries the why).
+ * PROVIDED BY THE SCROLLER, not passed down as a prop: the transcript list
+ * owns the scroll offset and its viewport, while the clamp sits two components
+ * deep in a memoised row — and in the list's footer for a pending echo, which
+ * is not a row at all. A context reaches both without threading a callback
+ * through every row's props (and re-rendering every memoised row when it
+ * changed). Absent (`null`), a clamp outside a scroller collapses in place.
+ *
+ * LIVES HERE, NOT BESIDE THE COMPONENT. The transcript list provides it, and
+ * the list is loaded by node-environment tests (`transcript-footer.test.ts`)
+ * that stub `react-native` themselves. The clamp component imports
+ * `react-native-svg`, which pulls the real `react-native` Flow source
+ * (`import typeof`) past those stubs and fails the suite to parse. This
+ * module touches `react-native` only as an erased type import, so the
+ * provider side stays out of that import graph.
+ */
+export const UserMessageCollapseContext = createContext<
+	((anchor: View) => void) | null
+>(null);

@@ -366,6 +366,52 @@ describe("iOS: long-press enters a read-only UITextView selection", () => {
 		expect(store.activeTextSelection()).toBeNull();
 	});
 
+	/* PR #237 review, R1-m1: inside a closed `Show more` clamp the selection
+	 *  view was clipped at eight lines, its end handle out of reach. `onEnter`
+	 *  lets the host open the clamp, and it must run IN the long-press, before
+	 *  the view mounts, so the first frame of the mode is already open. */
+	it("calls onEnter as the mode is entered, before the selection view mounts", async () => {
+		const { SelectableMessage, store } = await load("ios");
+		const seen: { inputs: number; active: string | null }[] = [];
+		const onEnter = vi.fn(() => {
+			seen.push({
+				inputs: host.inputs.length,
+				active: store.activeTextSelection(),
+			});
+		});
+		await act(async () =>
+			root.render(
+				message(
+					SelectableMessage,
+					{ text: "prompt", textClassName: "x", onEnter },
+					"prompt",
+				),
+			),
+		);
+		expect(onEnter).not.toHaveBeenCalled();
+		await act(async () => host.pressables.at(-1)?.onLongPress?.());
+		expect(onEnter).toHaveBeenCalledTimes(1);
+		// Not yet selecting, and no input mounted, when the host is asked.
+		expect(seen).toEqual([{ inputs: 0, active: null }]);
+		expect(host.inputs.length).toBeGreaterThan(0);
+	});
+
+	it("never calls onEnter where there is no mode to enter", async () => {
+		const { SelectableMessage } = await load("ios");
+		const onEnter = vi.fn();
+		await act(async () =>
+			root.render(
+				message(
+					SelectableMessage,
+					{ text: "prompt", textClassName: "x", disabled: true, onEnter },
+					"prompt",
+				),
+			),
+		);
+		expect(host.pressables).toHaveLength(0);
+		expect(onEnter).not.toHaveBeenCalled();
+	});
+
 	it("gives a clamped preview no mode", async () => {
 		const { SelectableMessage } = await load("ios");
 		await act(async () =>
