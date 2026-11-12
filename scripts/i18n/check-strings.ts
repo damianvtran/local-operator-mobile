@@ -12,7 +12,7 @@
  *   node scripts/i18n/check-strings.ts --update   # drop entries that are gone
  *   node scripts/i18n/check-strings.ts --base <ref>  # compare growth against <ref>
  *
- * The scan is heuristic — `scan-strings.ts` states exactly which three rules it
+ * The scan is heuristic — `scan-strings.ts` states exactly which four rules it
  * applies and what it cannot see. A finding is a prompt to look, not proof of a
  * defect; the baseline makes that judgement once, in review.
  */

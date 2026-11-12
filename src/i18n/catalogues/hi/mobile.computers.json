@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "ऐप बैकग्राउंड में है, इसलिए निगरानी रुकी हुई है। जारी रखने के लिए ऐप फिर खोलें।",
 	"mobile.computers.wait.relay_version_sessions": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है और {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।",
 	"mobile.computers.wait.relay_version": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है।",
-	"mobile.computers.wait.relay_sessions": "इसका रिले बताता है कि {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।"
+	"mobile.computers.wait.relay_sessions": "इसका रिले बताता है कि {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।",
+	"mobile.computers.wait.host_answering": "{host} पर मौजूद आपके कंप्यूटर के जवाब का इंतज़ार है। रूट बन जाने का मतलब यह नहीं है कि कंप्यूटर चालू है।",
+	"mobile.computers.wait.answering": "आपके कंप्यूटर के जवाब का इंतज़ार है।",
+	"mobile.computers.added.fallback_name": "आपके कंप्यूटर",
+	"mobile.computers.added.connected_to": "{name} से कनेक्ट हो गया।"
 }

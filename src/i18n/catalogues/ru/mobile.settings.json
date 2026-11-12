@@ -43,5 +43,19 @@
 	"mobile.settings.diagnostics.route_radient": "Туннель Radient",
 	"mobile.settings.diagnostics.route_direct": "Напрямую к ретранслятору",
 	"mobile.settings.diagnostics.none": "Нет",
-	"mobile.settings.diagnostics.privacy_note": "В этих строках никогда нет токенов, паролей или содержимого сессий."
+	"mobile.settings.diagnostics.privacy_note": "В этих строках никогда нет токенов, паролей или содержимого сессий.",
+	"mobile.settings.account.not_signed_in": "Вход в Radient не выполнен",
+	"mobile.settings.account.route_radient": "Через ваш туннель Radient",
+	"mobile.settings.account.route_direct": "Подключено напрямую к {baseUrl}",
+	"mobile.settings.status.no_connection": "Пока нет подключения",
+	"mobile.settings.status.not_connected": "Не подключён",
+	"mobile.settings.status.offline": "Вне сети",
+	"mobile.settings.status.not_answering": "Не отвечает",
+	"mobile.settings.status.connected": "Подключён",
+	"mobile.settings.diagnostics.stream_idle": "в простое",
+	"mobile.settings.diagnostics.stream_connecting": "подключается",
+	"mobile.settings.diagnostics.stream_live": "активен",
+	"mobile.settings.diagnostics.stream_degraded": "не отвечает",
+	"mobile.settings.diagnostics.stream_offline": "вне сети",
+	"mobile.settings.account.app_name": "Local Operator"
 }

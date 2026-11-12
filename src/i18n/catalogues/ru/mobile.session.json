@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "Ищет сообщения в транскрипте, загруженном на это устройство",
 	"mobile.session.chip.model_change_failed": "Не удалось сменить модель.",
 	"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
-	"mobile.session.composer.retained_instruction": "Предыдущее указание, возможно, уже доставлено. Отправьте это указание ещё раз, прежде чем отправлять текущий черновик."
+	"mobile.session.composer.retained_instruction": "Предыдущее указание, возможно, уже доставлено. Отправьте это указание ещё раз, прежде чем отправлять текущий черновик.",
+	"mobile.session.tray.context": "{percent}% контекста",
+	"mobile.session.tray.context_short": "{percent}% конт.",
+	"mobile.session.tray.context_estimate": "{percent}% контекста (прибл.)",
+	"mobile.session.tray.context_short_estimate": "{percent}% конт. (прибл.)",
+	"mobile.session.region.end": "конец · прокрутить ↑",
+	"mobile.session.region.below_labels": "ниже: {labels} · прокрутить ↓",
+	"mobile.session.region.more_below": "ещё ниже · прокрутить ↓",
+	"mobile.session.video.title_fallback": "Видео",
+	"mobile.session.fallback_name": "сессия",
+	"mobile.session.region.label_working": "активность",
+	"mobile.session.region.label_subagents": "агенты",
+	"mobile.session.region.label_todos": "задачи",
+	"mobile.session.region.label_strip": "статус",
+	"mobile.session.back_to": "Назад: {name}",
+	"mobile.session.back_to_session": "Назад к сессии"
 }

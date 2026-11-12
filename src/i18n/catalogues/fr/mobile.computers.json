@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "En pause tant que l’app est en arrière-plan. Rouvrez-la pour poursuivre la surveillance.",
 	"mobile.computers.wait.relay_version_sessions": "Son relais signale la version {version} du protocole et {sessions, plural, one {# session en cours} many {# de sessions en cours} other {# sessions en cours}}.",
 	"mobile.computers.wait.relay_version": "Son relais signale la version {version} du protocole.",
-	"mobile.computers.wait.relay_sessions": "Son relais signale {sessions, plural, one {# session en cours} many {# de sessions en cours} other {# sessions en cours}}."
+	"mobile.computers.wait.relay_sessions": "Son relais signale {sessions, plural, one {# session en cours} many {# de sessions en cours} other {# sessions en cours}}.",
+	"mobile.computers.wait.host_answering": "En attente d’une réponse de votre ordinateur à l’adresse {host}. Un acheminement configuré ne garantit pas que l’ordinateur fonctionne.",
+	"mobile.computers.wait.answering": "En attente d’une réponse de votre ordinateur.",
+	"mobile.computers.added.fallback_name": "votre ordinateur",
+	"mobile.computers.added.connected_to": "Connecté à {name}."
 }

@@ -1,0 +1,168 @@
+{
+  "locale": "ru",
+  "namespace": "m2-expression-literals",
+  "audit_kind": "delta",
+  "audit_date": "2026-11-11",
+  "audit_id": "ru-delta-c4024b49",
+  "pr": "https://github.com/damianvtran/local-operator-mobile/pull/236",
+  "scope": {
+    "base": "3af477ee5dd7eee5fe7b1fac36d5fd0d07918f3a",
+    "head": "c4024b497a4db3118aae70d8bb132301ea3ab097",
+    "round": 2,
+    "note": "round-1 remediation delta only; round-1-clean surfaces retained"
+  },
+  "key_count": 33,
+  "auditor": {
+    "agent": "i18n-auditor",
+    "session": "291074d0d436",
+    "team": "lopdev",
+    "model": "deepseek/deepseek-flash",
+    "actual_model_source": "harness session header of this run ('Model: deepseek/deepseek-flash'); no role/model pin set by the auditor; no fallback observed",
+    "independent_from_translator_session": true,
+    "translator": "i18n-translator openai/gpt-6.1-sol",
+    "independent_from_prior_ru_auditors": true,
+    "prior_ru_auditor_sessions": [
+      "2516ea781924",
+      "38b309c987d5",
+      "81c04d13bc66"
+    ],
+    "read_only": true,
+    "posted_on_pr": false
+  },
+  "input_hashes": {
+    "en": [
+      {
+        "path": "src/i18n/catalogues/en/mobile.settings.json",
+        "sha256": "d7e1d85b68773871a578791ad57e0a08e421a220738e561b9e09ce22f9aee23d"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.computers.json",
+        "sha256": "713827837aab9d75611441155d50522ccce9d8b410d88c1b7bd27e528776aff3"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.session.json",
+        "sha256": "8df14a0d12ef0386a3115c55dcdf7976e7234b9e82a79279741985e11aa716d3"
+      },
+      {
+        "path": "en 33 source values, canonical sorted-key JSON (base and head identical)",
+        "sha256": "c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528"
+      }
+    ],
+    "context": [
+      {
+        "path": "src/i18n/catalogues/en/mobile.settings.context.json",
+        "sha256": "67691ab95fba5cbcc86596899504ce2b9ba1acd518b3a9bdc1048dcc22b54c12"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+        "sha256": "cc2973003f79db729001df88189b1f1ba52a0609e117fe384396a406437637e0"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.session.context.json",
+        "sha256": "50d48c6a40d93d953bd649a6fed2a55998ad4f4075da940840ef9a2fbba394d5"
+      }
+    ],
+    "target": [
+      {
+        "path": "src/i18n/catalogues/ru/mobile.settings.json",
+        "sha256": "ef2a6da73608b6c28098e27aecaa87919f4c2174dd72237af6398bac165efd82"
+      },
+      {
+        "path": "src/i18n/catalogues/ru/mobile.computers.json",
+        "sha256": "d9301956dc6c06980bbd8b03ab4fb78d1b9ed99702a6a18a7d82f26376856521"
+      },
+      {
+        "path": "src/i18n/catalogues/ru/mobile.session.json",
+        "sha256": "f58ea87ef51c3df79663650283c464f92dde6756024578fda1b008ca4c73d878"
+      },
+      {
+        "path": "ru 33 target values, canonical sorted-key JSON at head",
+        "sha256": "794ce68d7fb53dbe4baf4ae77af896440915c1bc4a2447d986ce657f563f1469"
+      },
+      {
+        "path": "ru 33 target values, canonical sorted-key JSON at base (pre-image)",
+        "sha256": "4e76a2e0f98de6ab309777dceddd9556979c71754f3894b511a50cc8bb7c7dae"
+      }
+    ],
+    "prior_record": [
+      {
+        "path": "i18n/audits/evidence/ru/m2-expression-literals/final.json",
+        "sha256": "b6b8afeb87ec8f94d038628eaadabed1b2e1084ea09b9ac5cd2583025ab6f93d"
+      },
+      {
+        "path": "i18n/audits/evidence/NOTE-m2-expression-literals.md",
+        "sha256": "f50e6134da27f90f16246bb85c083725acef2ac85bf55a25fbeeb26ab678780d"
+      }
+    ]
+  },
+  "hash_convention": "sha256 over json.dumps({key: value} for the 33 keys, sort_keys=True, ensure_ascii=False, separators=(',', ':')) — the JS JSON.stringify compact form; convention proven by reproducing both prior digests (4e76a2e0 ru pre-image, c326a93f en) before use",
+  "artifacts": [
+    {
+      "path": "audit-delta-ru.md",
+      "sha256": "892d19a628f696f17286e90bdee4802b5ccfd150dd370e7189f672b33053e597"
+    },
+    {
+      "path": "record.json",
+      "note": "this file; its own hash is reported in the audit.log tail and the delivery message"
+    },
+    {
+      "path": "audit.log"
+    }
+  ],
+  "negative_controls": [
+    "restoring the single capital reproduces 4e76a2e0 (pre-image digest) exactly — delta is one code point, no rider",
+    "one trailing space added to fallback_name moves the digest to 3e330ae42aae70ef… — digest sensitive",
+    "argument checker flags in-memory {extra}/{baseurl} mutations and returns [] on the clean tree"
+  ],
+  "executed_checks": [
+    {
+      "cmd": "npm run -s i18n:catalogue:check",
+      "exit": 0,
+      "expected": "catalogue.gen.ts is current (684 keys, 21 namespaces …)"
+    },
+    {
+      "cmd": "npm run -s i18n:strings:check",
+      "exit": 0,
+      "expected": "212 findings, all baselined; 0 new"
+    },
+    {
+      "cmd": "node args.check.mjs (app parser src/i18n/messages.ts)",
+      "exit": 0,
+      "expected": "keys=33 withArgs=9 argFailures=0"
+    },
+    {
+      "cmd": "git diff 3af477ee..c4024b49 -- src/i18n/catalogues/ru/",
+      "exit": 0,
+      "expected": "1 line, case only"
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "blocker": 0,
+    "major": 0,
+    "minor": 0,
+    "nit": 2,
+    "finding_ids": [
+      "n-1",
+      "n-2"
+    ],
+    "resolved_by_this_delta": [
+      "ru m-1 (capital 'Не отвечает' in the Diagnostics column)"
+    ],
+    "retained_not_re_raised": [
+      "ru m-2 (конт. abbreviation) — pre-existing, minor, does not gate"
+    ]
+  },
+  "audit_notes_not_execution_log": [
+    "No native iOS/Android frame captured by me; copy judgement only.",
+    "Non-shipping artefacts (en context sidecars) judged at the freeze rule: no BLOCKER/MAJOR.",
+    "The bundle is NOT committed to i18n/audits/evidence/: the worktree is read-only for this auditor; the manager owns that commit."
+  ],
+  "companions": {
+    "audit_log": "audit.log — raw command transcripts (actual execution)",
+    "report": "audit-delta-ru.md"
+  },
+  "original_lost_evidence": null,
+  "backdated": false
+}

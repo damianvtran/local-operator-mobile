@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "audit_id": "r2delta",
+  "locale": "es",
+  "namespace": "m2-expression-literals",
+  "audit_date": "2026-11-11",
+  "round": 2,
+  "scope": "3af477ee5dd7eee5fe7b1fac36d5fd0d07918f3a..c4024b497a4db3118aae70d8bb132301ea3ab097",
+  "pr": "https://github.com/damianvtran/local-operator-mobile/pull/236",
+  "key_count": 33,
+  "delta_key_count": 3,
+  "auditor": {
+    "agent": "i18n-auditor",
+    "session": "460114b18e98",
+    "model": "deepseek/deepseek-flash",
+    "actual_model_source": "session header of this run; no switch, no fallback",
+    "independent_from_translator_session": true,
+    "translator": {
+      "agent": "i18n-translator",
+      "model": "openai/gpt-6.1-sol"
+    },
+    "not_an_earlier_es_auditor": [
+      "deepseek/deepseek-flash (R1-A)",
+      "anthropic/claude-sonnet-5-5 (R1-B/R2/R3)"
+    ]
+  },
+  "input_hashes": {
+    "en": [
+      {
+        "path": "src/i18n/catalogues/en/mobile.computers.json",
+        "sha256": "713827837aab9d75611441155d50522ccce9d8b410d88c1b7bd27e528776aff3"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.session.json",
+        "sha256": "8df14a0d12ef0386a3115c55dcdf7976e7234b9e82a79279741985e11aa716d3"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.settings.json",
+        "sha256": "d7e1d85b68773871a578791ad57e0a08e421a220738e561b9e09ce22f9aee23d"
+      },
+      {
+        "path": "en 33 values, sorted-key compact JSON",
+        "sha256": "c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528"
+      }
+    ],
+    "context": [
+      {
+        "path": "src/i18n/catalogues/en/mobile.session.context.json",
+        "sha256": "50d48c6a40d93d953bd649a6fed2a55998ad4f4075da940840ef9a2fbba394d5"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.settings.context.json",
+        "sha256": "67691ab95fba5cbcc86596899504ce2b9ba1acd518b3a9bdc1048dcc22b54c12"
+      }
+    ],
+    "es": [
+      {
+        "path": "src/i18n/catalogues/es/mobile.computers.json",
+        "sha256": "488e26a9ded297e526f53493b2e747ae52b317ed9464529d0b2b3da4db952070"
+      },
+      {
+        "path": "src/i18n/catalogues/es/mobile.session.json",
+        "sha256": "e1b5d4aa1303ee68348d0411ed69e999dd990efd88a3fae6cf5d94e9b3778b0c"
+      },
+      {
+        "path": "src/i18n/catalogues/es/mobile.settings.json",
+        "sha256": "0a7c7af6dfe8594fc91e24f8694e8c6ed2678e738e682a97a69c8762286a8a56"
+      },
+      {
+        "path": "es 33 values, sorted-key compact JSON",
+        "sha256": "987ad1d7457dfbf788d63c67ce77d4693cf79f397077806d4068d85da3422097"
+      },
+      {
+        "path": "i18n/audits/evidence/es/m2-expression-literals/final.json",
+        "sha256": "7141a06ff9921b541db5a9cd61af53a6da8aacb1347cb843199dcd4a3ff84388"
+      },
+      {
+        "path": "i18n/audits/evidence/es/m2-expression-literals/reaudit-shipped-3af477ee.md",
+        "sha256": "6812059386d93f3978b3432680ffa4a2a8040c64b5ea7992d79f60e4f344bdb4"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "i18n/audits/evidence/es/m2-expression-literals/delta-r2-c4024b49/audit-delta-es.md",
+      "sha256": "75ea1069b345f8d90d99842947e6414e295fc58fafb4d0477c7f68b1f7eeb493"
+    },
+    {
+      "path": "i18n/audits/evidence/es/m2-expression-literals/delta-r2-c4024b49/audit.log",
+      "sha256": "6561c2fa333a088fbc16c84ca656697a6b1bb02fbcb085a53f974dc21823a41a"
+    },
+    {
+      "path": "i18n/audits/evidence/es/m2-expression-literals/delta-r2-c4024b49/check-delta-es.mjs",
+      "sha256": "02176a8f14f75c9667d8ed13aedde278d0c686748a9215b200182519363058d9"
+    },
+    {
+      "path": "i18n/audits/evidence/es/m2-expression-literals/delta-r2-c4024b49/widths.py",
+      "sha256": "358b15a1ff1ce0ebb16a71424c98bc9b7bf1c4cc97ba5db32726dc528b90524a"
+    },
+    {
+      "path": "i18n/audits/evidence/es/m2-expression-literals/delta-r2-c4024b49/nfc33.mjs",
+      "sha256": "3a914648c655201f6094005c45fc2ea80579b479405ae048d009e7e87aa50d62"
+    }
+  ],
+  "artifacts_are_staged_in_auditor_scratchpad_pending_tracked_commit": true,
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "M2-es-R2D-01",
+      "n1"
+    ],
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 1,
+      "nit": 1
+    }
+  },
+  "contributing_findings_from_earlier_rounds": {
+    "fixed_by_this_delta": [
+      "M2-es-R3-01 (round-3 MINOR, stream_degraded casing)",
+      "designer D1 (es/vietnamese short form English 'ctx')",
+      "designer D4 (stream_degraded lower-casing, es row)"
+    ],
+    "not_re_raised": [
+      "n1 video/Vídeo (es catalogue-wide spelling)",
+      "n2 region.label_working",
+      "es R3 n1/n2"
+    ]
+  },
+  "audit_notes_not_execution_log": "audit-delta-es.md is the auditor's reasoning; audit.log is the verbatim output of the commands actually run in this session (npm run -s i18n:check, check-delta-es.mjs, nfc33.mjs, widths.py). Negative control: 7/7 mutations caught by check-delta-es.mjs.",
+  "ledger_note": "Round-2 es delta audit: 3 values (2 short context forms = audited full forms byte-for-byte, 1 case-only). 0B/0M/1 MINOR (200% text on 320pt elides in More sheet), 1 NIT. Verdict passed. Report: i18n/audits/evidence/es/m2-expression-literals/delta-r2-c4024b49/",
+  "ledger_note_chars": 249,
+  "ledger_status": "no audit-ledger command exists in this repository; record is the tracked evidence bundle plus the NOTE manifest row (docs/i18n.md step 3, PR body)",
+  "worktree": {
+    "path": "~/local-operator-mobile/.worktrees/i18n-m2-scanner",
+    "head": "c4024b497a4db3118aae70d8bb132301ea3ab097",
+    "read_only": true,
+    "edits_made": 0
+  }
+}

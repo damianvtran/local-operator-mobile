@@ -1,0 +1,212 @@
+M2 fr DELTA audit — PR #236 round 2 — 2026-11-12T01:37:21Z UTC
+scope: 3af477ee..c4024b49   worktree: /Users/damian/local-operator-mobile/.worktrees/i18n-m2-scanner
+auditor: i18n-auditor, session 413dca6f8baa, model deepseek/deepseek-flash (session header)
+
+$ git -C $WT rev-parse HEAD
+c4024b497a4db3118aae70d8bb132301ea3ab097
+
+$ git -C $WT status --porcelain   # must be empty: read-only lane
+
+$ git -C $WT log --oneline -3
+c4024b49 chore(audit): re-pin the U-08 src identity for the #236 round-1 remediation
+81d44fc5 fix(i18n): close design/review/QA findings on the M2 expression-literal slice
+3af477ee chore(audit): re-pin the U-08 app and src identity for the expression-literal slice
+
+$ git -C $WT diff --name-only 3af477ee5dd7eee5fe7b1fac36d5fd0d07918f3a..c4024b497a4db3118aae70d8bb132301ea3ab097
+i18n/audits/evidence/NOTE-m2-expression-literals.md
+i18n/audits/evidence/es/m2-expression-literals/reaudit-shipped-3af477ee.md
+i18n/audits/evidence/es/m2-expression-literals/translator-v2-changes.md
+i18n/audits/evidence/es/m2-expression-literals/translator-v3-changes.md
+i18n/audits/evidence/fr/m2-expression-literals/reaudit-shipped-3af477ee.md
+i18n/audits/evidence/hi/m2-expression-literals/reaudit-shipped-3af477ee.md
+i18n/audits/evidence/ru/m2-expression-literals/reaudit-shipped-3af477ee.md
+i18n/audits/evidence/ur/m2-expression-literals/reaudit-shipped-3af477ee.md
+i18n/audits/evidence/vi/m2-expression-literals/reaudit-shipped-3af477ee.md
+i18n/audits/evidence/zh-CN/m2-expression-literals/reaudit-shipped-3af477ee.md
+scripts/i18n/check-strings.test.ts
+scripts/i18n/scan-strings.ts
+src/features/auth/computers.tsx
+src/features/session/back-label.ts
+src/features/settings/settings.tsx
+src/i18n/__tests__/catalogues.test.ts
+src/i18n/__tests__/composed-dir-sites.test.ts
+src/i18n/catalogue.gen.ts
+src/i18n/catalogues/en/mobile.session.context.json
+src/i18n/catalogues/es/mobile.session.json
+src/i18n/catalogues/es/mobile.settings.json
+src/i18n/catalogues/fr/mobile.settings.json
+src/i18n/catalogues/ru/mobile.settings.json
+src/i18n/catalogues/vi/mobile.session.json
+src/i18n/catalogues/vi/mobile.settings.json
+tools/audit/u08-content-pins.ts
+
+$ git -C $WT diff 3af477ee5dd7eee5fe7b1fac36d5fd0d07918f3a..c4024b497a4db3118aae70d8bb132301ea3ab097 -- src/i18n/catalogues/fr/
+diff --git a/src/i18n/catalogues/fr/mobile.settings.json b/src/i18n/catalogues/fr/mobile.settings.json
+index c26a9945..cafaaf2b 100644
+--- a/src/i18n/catalogues/fr/mobile.settings.json
++++ b/src/i18n/catalogues/fr/mobile.settings.json
+@@ -55,7 +55,7 @@
+ 	"mobile.settings.diagnostics.stream_idle": "inactif",
+ 	"mobile.settings.diagnostics.stream_connecting": "connexion",
+ 	"mobile.settings.diagnostics.stream_live": "actif",
+-	"mobile.settings.diagnostics.stream_degraded": "Ne répond pas",
++	"mobile.settings.diagnostics.stream_degraded": "ne répond pas",
+ 	"mobile.settings.diagnostics.stream_offline": "hors ligne",
+ 	"mobile.settings.account.app_name": "Local Operator"
+ }
+
+$ git -C $WT diff 3af477ee5dd7eee5fe7b1fac36d5fd0d07918f3a..c4024b497a4db3118aae70d8bb132301ea3ab097 -- src/i18n/catalogues/en/mobile.session.context.json
+diff --git a/src/i18n/catalogues/en/mobile.session.context.json b/src/i18n/catalogues/en/mobile.session.context.json
+index 003ddd22..46be1984 100644
+--- a/src/i18n/catalogues/en/mobile.session.context.json
++++ b/src/i18n/catalogues/en/mobile.session.context.json
+@@ -257,7 +257,7 @@
+ 	},
+ 	"mobile.session.tray.context_short": {
+ 		"role": "meta",
+-		"note": "Narrow-screen form of the context-window fact (screens under 340 pt wide). \"ctx\" is a standard abbreviation of \"context\"; use the language's own short form or the full word if none exists."
++		"note": "Short form of the context-window fact. \"ctx\" is a standard abbreviation of \"context\"; use the language's own short form. Where the language has no native abbreviation, use the FULL form's wording unchanged rather than leaving the English \"ctx\": the short form only renders in full-width rows (the More sheet Context row and the status sheet, value cell 318 pt at 390 pt wide), so brevity is not needed. Shipped: es and vi reuse the full form; fr keeps \"ctx\", which reads as the French abbreviation of \"contexte\"."
+ 	},
+ 	"mobile.session.tray.context_estimate": {
+ 		"role": "meta",
+@@ -265,7 +265,7 @@
+ 	},
+ 	"mobile.session.tray.context_short_estimate": {
+ 		"role": "meta",
+-		"note": "Narrow-screen form of the estimated context-window fact. \"ctx\" and \"est.\" are abbreviations; keep the parentheses."
++		"note": "Short form of the estimated context-window fact. \"ctx\" and \"est.\" are abbreviations; keep the parentheses. Same rule as context_short: no English \"ctx\" left in a language that has no native abbreviation (es and vi reuse the full form)."
+ 	},
+ 	"mobile.session.region.end": {
+ 		"role": "meta",
+
+$ cross-locale stream_degraded + stream_offline values at c4024b497a4db3118aae70d8bb132301ea3ab097 (case/multi-word precedent)
+  en     idle='idle'  connecting='connecting'  live='live'  degraded='degraded'  offline='offline'
+  fr     idle='inactif'  connecting='connexion'  live='actif'  degraded='ne répond pas'  offline='hors ligne'
+  es     idle='inactivo'  connecting='conectando'  live='activo'  degraded='no responde'  offline='sin conexión'
+  ru     idle='в простое'  connecting='подключается'  live='активен'  degraded='не отвечает'  offline='вне сети'
+  vi     idle='rảnh'  connecting='đang kết nối'  live='hoạt động'  degraded='không phản hồi'  offline='ngoại tuyến'
+  ur     idle='فارغ'  connecting='منسلک ہو رہا'  live='آن لائن'  degraded='جواب نہیں دے رہا'  offline='آف لائن'
+  hi     idle='आइडल'  connecting='कनेक्ट हो रहा'  live='ऑनलाइन'  degraded='बाधित'  offline='ऑफ़लाइन'
+  zh-CN  idle='空闲'  connecting='连接中'  live='在线'  degraded='未响应'  offline='离线'
+
+$ narrow-slot selection at HEAD: the code path that picks the short form
+924:						viewportWidth < 340,
+1005:								viewportWidth < 340,
+141:			? t("mobile.session.tray.context_short_estimate", { percent })
+142:			: t("mobile.session.tray.context_short", { percent });
+145:		? t("mobile.session.tray.context_estimate", { percent })
+146:		: t("mobile.session.tray.context", { percent });
+							{/* `ctx` under 340 pt: `21% context (est.)` beside the cost and the
+						    subagents chip wraps to two lines inside the band, and the cost
+						    then floats between them (design round 2, D17). The abbreviation
+						    is the standard one and loses nothing; above 340 pt the word
+						    stays whole. */}
+						</Text>
+						<Text className="px-4 text-body-sm text-ink-muted">
+							{t("mobile.chrome.composer.queued", { count: queuedCount })}
+						</Text>
+					) : null}
+					{projection?.context_tokens != null ? (
+						<Text className="px-4 text-mono-sm text-ink-dim">
+							{trayFacts.context}
+							{projection.cumulative_parent_cost != null
+								? ` · $${projection.cumulative_parent_cost.toFixed(2)}`
+
+$ node scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (684 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+(node:93750) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m2-scanner/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m2-scanner/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ node scripts/i18n/check-strings.ts
+scanner sha256: base=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813 head=8bb99b7db236df384079e8f3fe872d2edabf571915c95b5352fd87f1385357b0
+check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs fa2bc5e0b5f7
+(node:93792) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/413dca6f8baa/scratchpad/i18n-base-ofIuGB/scripts/i18n/scan-strings.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+exit=0
+
+$ python3 checks.py   # this session's own checks (inventory, delta, hashes, mechanics, negative control)
+== inventory ==
+final.json keys: 33
+group counts: {'mobile.computers': 4, 'mobile.session': 15, 'mobile.settings': 14} expected: {'mobile.computers': 4, 'mobile.session': 15, 'mobile.settings': 14}
+3af477ee fr values collected: 33
+c4024b49 fr values collected: 33
+3af477ee en values / sidecar notes: 33 / 33
+c4024b49 en values / sidecar notes: 33 / 33
+
+== 1. delta over the 33 fr values (3af477ee -> c4024b49) ==
+changed: 1
+  mobile.settings.diagnostics.stream_degraded
+    old='Ne répond pas'
+    new='ne répond pas'
+    case-only (NFD-stripped lower equal): True, same length: True
+unchanged: 32 keys, byte-identical:
+  ok
+
+== 2. reversion proof ==
+reverting the changed keys reproduces the 3af477ee target hash: True
+en source values unchanged over the delta: True True
+sidecar notes changed: 2 -> ['mobile.session.tray.context_short', 'mobile.session.tray.context_short_estimate']
+
+== 3. SHA-256 ==
+target33 fr c4024b49 default separators: b9b0983185785a946c134b60994062a76bab8dfbd19cda325c9450bebf892860
+target33 fr c4024b49 compact           : d6e4a0db35ef13ebc181e1366762506fad333e94414996df475eff413db0392f
+target33 fr 3af477ee default separators: 9aecf8f17941b4a1a7dac4c363ba40d7ad82572b61a05f41b8ad1f9d9c18ae0f
+target33 fr 3af477ee compact           : 9cc6f790904f9d3ef302645c772a38888cd099fdba10c150a986d6f86090bb30
+source33 en c4024b49 default separators: 008f9a49490adbde68808c0db487a471f87d3236b79ab9282205796964ad8b98
+source33 en c4024b49 compact           : c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528
+source33 en 3af477ee default separators: 008f9a49490adbde68808c0db487a471f87d3236b79ab9282205796964ad8b98
+context33 en c4024b49 (role+note)      : 3227926233850015fd08bd75df7645d4b3f88c16e370eccdeb6497fc35523305
+context33 en 3af477ee (role+note)      : c08984e3269537e6c35bde77aff0d3754dd46ecb974c8e9d108df7c315dce2d4
+file fr computers  c4024b49: c3015755e033b3fca2236ffee8d967df3c25ccff96ee85aad0bd9457cd5b6135  (delta: c3015755e033b3fca2236ffee8d967df3c25ccff96ee85aad0bd9457cd5b6135)
+file en computers  c4024b49: 713827837aab9d75611441155d50522ccce9d8b410d88c1b7bd27e528776aff3  (delta: n/a)
+file fr session    c4024b49: 62ea762bca7f9b47a2c5fa02bdc30e97dc9f2755c00b5c6a7d4a6588875f8aa7  (delta: 62ea762bca7f9b47a2c5fa02bdc30e97dc9f2755c00b5c6a7d4a6588875f8aa7)
+file en session    c4024b49: 8df14a0d12ef0386a3115c55dcdf7976e7234b9e82a79279741985e11aa716d3  (delta: n/a)
+file fr settings   c4024b49: c21961f4c2f71587dfdfc6794c0a2c2429963e7fcfed3272d3686601aa247eff  (delta: cc56f6e0cd9193ef03076bca1b88842cfd3005528319a012680ac93408c19826)
+file en settings   c4024b49: d7e1d85b68773871a578791ad57e0a08e421a220738e561b9e09ce22f9aee23d  (delta: n/a)
+bundle final.json c4024b49: 1db648167ce217cbacc3cc35a805ffece233627141180c2813dd2a525ab7c0bf
+bundle final.json == 3af477ee (pre-delta) 33 values: True
+bundle final.json == c4024b49 (live) 33 values: False -> differs on: ['mobile.settings.diagnostics.stream_degraded']
+
+== 4. mechanical (placeholders, structure, glyphs, encoding) ==
+placeholder/ICU/glyph drift: none
+encoding/padding/bidi problems: none
+ASCII-only values: ['mobile.computers.added.fallback_name', 'mobile.session.fallback_name', 'mobile.session.region.label_strip', 'mobile.session.region.label_subagents', 'mobile.settings.account.app_name', 'mobile.settings.account.route_radient', 'mobile.settings.diagnostics.stream_connecting', 'mobile.settings.diagnostics.stream_idle', 'mobile.settings.diagnostics.stream_live', 'mobile.settings.diagnostics.stream_offline', 'mobile.settings.status.no_connection', 'mobile.settings.status.offline']
+ICU plural keys in group: none -> no CLDR arm question for fr
+
+== 5. sidecar note-driven constraints ==
+  mobile.settings.diagnostics.stream_degraded: 'ne répond pas' -> ['multi-word(3)']
+  mobile.settings.diagnostics.stream_offline: 'hors ligne' -> ['multi-word(2)']
+  mobile.settings.status.offline: 'Hors ligne' -> ['multi-word(2)']
+
+== 6. lowercase sibling control (diagnostics.stream_* column, fr) ==
+  mobile.settings.diagnostics.stream_connecting      'connexion'
+  mobile.settings.diagnostics.stream_degraded        'ne répond pas'
+  mobile.settings.diagnostics.stream_idle            'inactif'
+  mobile.settings.diagnostics.stream_live            'actif'
+  mobile.settings.diagnostics.stream_offline         'hors ligne'
+status column (different keys, sentence case):
+  mobile.settings.status.connected                   'Connecté'
+  mobile.settings.status.no_connection               'Pas encore de connexion'
+  mobile.settings.status.not_answering               'Ne répond pas'
+  mobile.settings.status.not_connected               'Non connecté'
+  mobile.settings.status.offline                     'Hors ligne'
+
+== 7. negative control (mutation in memory, nothing written) ==
+  FLAGGED   placeholder rename: 'Connecté à {nom}.'
+  FLAGGED   glyph dropped: 'fin · défiler'
+  FLAGGED   trailing pad: "'Connecté directement à {baseUrl} '"
+  FLAGGED   case regression (the delta undone): 'Ne répond pas'
+  FLAGGED   identical to en: 'Back to {name}'
+  FLAGGED   wrong percent spacing (U+202F dropped): "'{percent} % du ctx'"
+target hash of a mutated set differs from the real one: True
+
+done
+exit=0
+
+$ end of scripted run — hashes of inputs re-read at the end (tree unchanged?)
+(empty above = worktree untouched by this audit)

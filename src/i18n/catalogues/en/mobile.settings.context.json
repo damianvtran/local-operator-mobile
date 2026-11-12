@@ -178,5 +178,61 @@
 	"mobile.settings.diagnostics.privacy_note": {
 		"role": "help",
 		"note": "Reassurance under the Settings diagnostics rows: the lines shown never contain secrets or conversation content. One sentence."
+	},
+	"mobile.settings.account.not_signed_in": {
+		"role": "status",
+		"note": "Name line of the Settings account card when no Radient account name is known. Radient is the product name; keep it in Latin script. No final full stop."
+	},
+	"mobile.settings.account.route_radient": {
+		"role": "status",
+		"note": "Second line of the Settings account card when the active connection runs through the user's Radient tunnel. Radient is the product name. No final full stop."
+	},
+	"mobile.settings.account.route_direct": {
+		"role": "status",
+		"note": "Second line of the Settings account card when the phone talks to a computer directly. {baseUrl} is the computer's web address; keep it unchanged and left-to-right. No final full stop."
+	},
+	"mobile.settings.status.no_connection": {
+		"role": "status",
+		"note": "Connection status word, in the Settings status pill and the account card, when no computer has been chosen yet. No final full stop."
+	},
+	"mobile.settings.status.not_connected": {
+		"role": "status",
+		"note": "Value of the Settings Status row when the chosen computer refused the connection. Short pill text; no final full stop."
+	},
+	"mobile.settings.status.offline": {
+		"role": "status",
+		"note": "Value of the Settings Status row when the live stream to the computer is down. One word if the language allows; no final full stop."
+	},
+	"mobile.settings.status.not_answering": {
+		"role": "status",
+		"note": "Value of the Settings Status row when the computer is reachable but not responding. Matches the relay's \"Not answering\" wording; no final full stop."
+	},
+	"mobile.settings.status.connected": {
+		"role": "status",
+		"note": "Value of the Settings Status row when the live stream to the computer is healthy. One word if the language allows; no final full stop."
+	},
+	"mobile.settings.diagnostics.stream_idle": {
+		"role": "meta",
+		"note": "Value of the Diagnostics \"Stream\" row when no live stream has started. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop."
+	},
+	"mobile.settings.diagnostics.stream_connecting": {
+		"role": "meta",
+		"note": "Value of the Diagnostics \"Stream\" row when the stream is being opened. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop."
+	},
+	"mobile.settings.diagnostics.stream_live": {
+		"role": "meta",
+		"note": "Value of the Diagnostics \"Stream\" row when the stream is healthy. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop."
+	},
+	"mobile.settings.diagnostics.stream_degraded": {
+		"role": "meta",
+		"note": "Value of the Diagnostics \"Stream\" row when the stream is open but not answering. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop."
+	},
+	"mobile.settings.diagnostics.stream_offline": {
+		"role": "meta",
+		"note": "Value of the Diagnostics \"Stream\" row when the stream is down. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop."
+	},
+	"mobile.settings.account.app_name": {
+		"role": "meta",
+		"note": "The product name, used only to derive the avatar initials when the account has no name and no computer is listed. Never translated: keep it exactly as is, in Latin script."
 	}
 }

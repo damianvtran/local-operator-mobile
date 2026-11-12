@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "Tìm tin nhắn trong bản ghi đã tải trên thiết bị này",
 	"mobile.session.chip.model_change_failed": "Không thể đổi mô hình.",
 	"mobile.session.chip.effort_change_failed": "Không thể đổi mức suy luận.",
-	"mobile.session.composer.retained_instruction": "Chỉ dẫn trước đó có thể đã được chuyển đến. Hãy thử gửi lại chỉ dẫn đó trước khi gửi bản nháp hiện tại."
+	"mobile.session.composer.retained_instruction": "Chỉ dẫn trước đó có thể đã được chuyển đến. Hãy thử gửi lại chỉ dẫn đó trước khi gửi bản nháp hiện tại.",
+	"mobile.session.tray.context": "{percent}% ngữ cảnh",
+	"mobile.session.tray.context_short": "{percent}% ngữ cảnh",
+	"mobile.session.tray.context_estimate": "{percent}% ngữ cảnh (ước tính)",
+	"mobile.session.tray.context_short_estimate": "{percent}% ngữ cảnh (ước tính)",
+	"mobile.session.region.end": "hết · cuộn ↑",
+	"mobile.session.region.below_labels": "{labels} bên dưới · cuộn ↓",
+	"mobile.session.region.more_below": "còn thêm bên dưới · cuộn ↓",
+	"mobile.session.video.title_fallback": "Video",
+	"mobile.session.fallback_name": "phiên",
+	"mobile.session.region.label_working": "hoạt động",
+	"mobile.session.region.label_subagents": "tác nhân con",
+	"mobile.session.region.label_todos": "tác vụ",
+	"mobile.session.region.label_strip": "trạng thái",
+	"mobile.session.back_to": "Quay lại {name}",
+	"mobile.session.back_to_session": "Quay lại phiên"
 }

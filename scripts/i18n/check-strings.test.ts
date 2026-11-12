@@ -13,7 +13,12 @@ import {
 	unaccountable,
 	validateGrowth,
 } from "./ratchet.ts";
-import { scanSource, scanTree } from "./scan-strings.ts";
+import {
+	EXPRESSION_LITERAL_SCOPE,
+	expressionRuleActive,
+	scanSource,
+	scanTree,
+} from "./scan-strings.ts";
 
 /**
  * The scanner and the ratchet, on inputs small enough to read.
@@ -162,6 +167,163 @@ describe("the scanner", () => {
 		expect(scanSource(COPY_FILE, source)).toHaveLength(1);
 		expect(
 			scanSource(COPY_FILE, source, new Set(["Delete this project?"])),
+		).toHaveLength(0);
+	});
+});
+
+/**
+ * Rule 4 (`expression-literal`) is ACTIVATION-SCOPED: it fires only in the files
+ * listed in `EXPRESSION_LITERAL_SCOPE`. Both directions are controls — an
+ * unkeyed literal in an activated file must be found (and the ratchet must call
+ * it added), and the same literal elsewhere must NOT be, because widening the
+ * rule to the whole tree is a staged rollout that keys what it finds, never a
+ * baseline dump.
+ */
+describe("the expression-literal rule", () => {
+	const ACTIVATED = "src/features/settings/settings.tsx";
+	const ELSEWHERE = "src/features/example/example.tsx";
+	const APP = "app/(app)/session/[id]/video.tsx";
+	const SOURCE = [
+		'const a = ready ? "Not signed in with Radient" : "";',
+		'const b = name ?? "Not signed in yet";',
+		"function f(x: number) {",
+		'\tif (x > 0) return "Nothing is connected";',
+		"\treturn `Connected directly to ${x}`;",
+		"}",
+		"const c = ready",
+		'\t? "First line"',
+		'\t: "Second line";',
+	].join("\n");
+
+	it("finds literals in a conditional, a ?? fallback and function returns", () => {
+		const findings = scanSource(ACTIVATED, SOURCE).filter(
+			(finding) => finding.rule === "expression-literal",
+		);
+		expect(findings.map((finding) => finding.text)).toEqual([
+			"Not signed in with Radient",
+			"Not signed in yet",
+			"Nothing is connected",
+			"Connected directly to ${x}",
+			"First line",
+			"Second line",
+		]);
+	});
+
+	it("reads app/ files with rules 1-3 (since #227) plus this rule where activated", () => {
+		expect(expressionRuleActive("app/(app)/session/[id].tsx")).toBe(true);
+		const findings = scanSource(
+			APP,
+			[
+				'const t = row ? row.summary : "Video";',
+				"<Text>Plain prose here.</Text>",
+			].join("\n"),
+		);
+		expect(findings.map((finding) => finding.text).sort()).toEqual([
+			"Plain prose here.",
+			"Video",
+		]);
+		expect(findings.map((finding) => finding.rule)).toContain(
+			"expression-literal",
+		);
+		expect(findings.map((finding) => finding.rule)).toContain("jsx-text");
+	});
+
+	it("is NOT applied to a file outside the activation scope", () => {
+		expect(expressionRuleActive(ELSEWHERE)).toBe(false);
+		expect(scanSource(ELSEWHERE, SOURCE)).toHaveLength(0);
+		expect(EXPRESSION_LITERAL_SCOPE.some((entry) => entry === ELSEWHERE)).toBe(
+			false,
+		);
+	});
+
+	it("leaves classes, identifiers, optional chaining, keyed calls and object values alone", () => {
+		const findings = scanSource(
+			ACTIVATED,
+			[
+				'const a = wide ? "min-w-0 flex-1 gap-1" : "flex-row items-center";',
+				'const b = mode ? "primary" : "secondary";',
+				'const c = row?.name ?? t("mobile.settings.none");',
+				'const d = { title: "A property value" };',
+				"const e = ready ? `${count}` : `${a}-${b}`;",
+				"function g() { throw new RangeError(`Bad value ${x}`); }",
+			].join("\n"),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	/* QA Q1: the lookback used to stop at any line ending in `{`/`}`/`;`, so a
+	 * multi-line keyed `t(..., {...})` branch hid the `?` that opened the ternary
+	 * and an else-literal after it had 0 findings. These are the two shapes QA
+	 * reproduced (restoring the English in the session cue and in Settings). */
+	it("finds an else-literal after a multi-line keyed branch", () => {
+		const findings = scanSource(
+			ACTIVATED,
+			[
+				"<Text>",
+				"\t{regionAtBottom",
+				'\t\t? t("mobile.session.region.end")',
+				"\t\t: hiddenRegionLabels.length > 0",
+				'\t\t\t? t("mobile.session.region.below_labels", {',
+				'\t\t\t\t\tlabels: hiddenRegionLabels.join(" | "),',
+				"\t\t\t\t})",
+				'\t\t\t: "more below · scroll ↓"}',
+				"</Text>",
+				"<Text>",
+				"\t{route",
+				"\t\t? route.mode === 'radient'",
+				'\t\t\t? t("mobile.settings.account.route_radient")',
+				'\t\t\t: t("mobile.settings.account.route_direct", {',
+				"\t\t\t\t\tbaseUrl: route.baseUrl,",
+				"\t\t\t\t})",
+				'\t\t: "No connection yet"}',
+				"</Text>",
+			].join("\n"),
+		).filter((finding) => finding.rule === "expression-literal");
+		expect(findings.map((finding) => finding.text)).toEqual([
+			"more below · scroll ↓",
+			"No connection yet",
+		]);
+	});
+
+	it("does not read a later object property as the else of an earlier ternary", () => {
+		const findings = scanSource(
+			ACTIVATED,
+			[
+				"const row = {",
+				'\tlabel: ready ? t("mobile.settings.ready") : t("mobile.settings.idle", {',
+				"\t\tn: 1,",
+				"\t}),",
+				'\ttitle: "A property value",',
+				"};",
+			].join("\n"),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	it("activates rule 4 on the agent-job screen", () => {
+		expect(
+			expressionRuleActive("app/(app)/session/[id]/agent/[jobId].tsx"),
+		).toBe(true);
+	});
+
+	it("does not let a JSX apostrophe hide the literals below it", () => {
+		const findings = scanSource(
+			ACTIVATED,
+			[
+				"<Text>This phone's own size.</Text>",
+				'const a = x ? "After the apostrophe" : "";',
+			].join("\n"),
+		);
+		expect(findings.map((finding) => finding.text)).toContain(
+			"After the apostrophe",
+		);
+	});
+
+	it("is reported as added by the ratchet until it is keyed", () => {
+		const found = scanSource(ACTIVATED, SOURCE);
+		expect(ratchet([], found).added.length).toBeGreaterThan(0);
+		expect(
+			ratchet(buildBaseline(found, ACCOUNTABLE), found).added,
 		).toHaveLength(0);
 	});
 });

@@ -20,6 +20,7 @@ import {
 } from "@/features/auth/computers-view";
 import {
 	connectionStore,
+	type StreamHealth,
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
@@ -42,7 +43,7 @@ import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
-import { LTR_WRITING, TEXT_END_CLASS } from "@/ui/direction";
+import { LTR_WRITING, TEXT_END_CLASS, useComposedDir } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import { AccountRoutingSection } from "./account-routing-section";
@@ -99,6 +100,12 @@ export default function Settings() {
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const phase = useConnectionState((state) => state.phase);
 	const accountLabel = useConnectionState((state) => state.accountLabel);
+	/* The account title is the account label (a Latin email or name) OR the
+	 * translated "Not signed in with Radient", which in Urdu begins with the Latin
+	 * `Radient`. RN-web's `dir="auto"` then resolves the title LTR on an RTL page
+	 * and it sits on the wrong edge, away from its same-card subtitle (design
+	 * review D2). Both lines state the page's base so they share one edge. */
+	const composedDir = useComposedDir();
 	const discoveryFailure = useConnectionState(
 		(state) => state.discoveryFailure,
 	);
@@ -292,7 +299,9 @@ export default function Settings() {
 					>
 						<Avatar
 							initials={initialsOf(
-								accountLabel ?? computers[0]?.name ?? "Local Operator",
+								accountLabel ??
+									computers[0]?.name ??
+									t("mobile.settings.account.app_name"),
 							)}
 							size="md"
 							accessibilityLabel={t("mobile.settings.account.signed_in")}
@@ -302,19 +311,22 @@ export default function Settings() {
 								accountStacked ? "min-w-0 w-full gap-1" : "min-w-0 flex-1 gap-1"
 							}
 						>
-							<Text className="text-body text-ink">
-								{accountLabel ?? "Not signed in with Radient"}
+							<Text className="text-body text-ink" {...composedDir}>
+								{accountLabel ?? t("mobile.settings.account.not_signed_in")}
 							</Text>
 							<Text
 								className="text-body-sm text-ink-dim"
 								numberOfLines={1}
 								ellipsizeMode="tail"
+								{...composedDir}
 							>
 								{route
 									? route.mode === "radient"
-										? `Through your Radient tunnel`
-										: `Connected directly to ${route.baseUrl}`
-									: "No connection yet"}
+										? t("mobile.settings.account.route_radient")
+										: t("mobile.settings.account.route_direct", {
+												baseUrl: route.baseUrl,
+											})
+									: t("mobile.settings.status.no_connection")}
 							</Text>
 						</View>
 					</View>
@@ -592,7 +604,7 @@ export default function Settings() {
 					/>
 					<DiagnosticRow
 						label={t("mobile.settings.diagnostics.stream")}
-						value={streamHealth}
+						value={streamWord(streamHealth)}
 					/>
 					<DiagnosticRow
 						label={t("mobile.settings.diagnostics.last_error")}
@@ -714,20 +726,57 @@ function statusFor(input: {
 	state: ConnectionPillState;
 	message: string;
 } {
-	if (!input.routed) return { state: "inactive", message: "No connection yet" };
-	if (input.refused) return { state: "offline", message: "Not connected" };
+	if (!input.routed)
+		return {
+			state: "inactive",
+			message: t("mobile.settings.status.no_connection"),
+		};
+	if (input.refused)
+		return {
+			state: "offline",
+			message: t("mobile.settings.status.not_connected"),
+		};
 	/* No stream exists yet while a session is minted, and an idle stream fell
 	 *  through to "Connected" (U3). */
-	if (input.minting) return { state: "reconnecting", message: "Connecting…" };
+	if (input.minting) {
+		return { state: "reconnecting", message: t("mobile.computers.connecting") };
+	}
 	switch (input.health) {
 		case "connecting":
-			return { state: "reconnecting", message: "Connecting…" };
+			return {
+				state: "reconnecting",
+				message: t("mobile.computers.connecting"),
+			};
 		case "offline":
-			return { state: "offline", message: "Offline" };
+			return { state: "offline", message: t("mobile.settings.status.offline") };
 		case "degraded":
-			return { state: "degraded", message: "Not answering" };
+			return {
+				state: "degraded",
+				message: t("mobile.settings.status.not_answering"),
+			};
 		default:
-			return { state: "connected", message: "Connected" };
+			return {
+				state: "connected",
+				message: t("mobile.settings.status.connected"),
+			};
+	}
+}
+
+/** The Diagnostics "Stream" value: the stream health enum, as a keyed word. A
+ *  switch rather than a template key so the typed catalogue surface still
+ *  checks every key, and a new `StreamHealth` member fails to compile here. */
+function streamWord(health: StreamHealth): string {
+	switch (health) {
+		case "idle":
+			return t("mobile.settings.diagnostics.stream_idle");
+		case "connecting":
+			return t("mobile.settings.diagnostics.stream_connecting");
+		case "live":
+			return t("mobile.settings.diagnostics.stream_live");
+		case "degraded":
+			return t("mobile.settings.diagnostics.stream_degraded");
+		case "offline":
+			return t("mobile.settings.diagnostics.stream_offline");
 	}
 }
 

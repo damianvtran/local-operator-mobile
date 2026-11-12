@@ -43,5 +43,19 @@
 	"mobile.settings.diagnostics.route_radient": "Radient ٹنل",
 	"mobile.settings.diagnostics.route_direct": "براہ راست ریلے",
 	"mobile.settings.diagnostics.none": "کوئی نہیں",
-	"mobile.settings.diagnostics.privacy_note": "ان سطروں میں کبھی ٹوکن، پاس ورڈ یا سیشن کا مواد شامل نہیں ہوتا۔"
+	"mobile.settings.diagnostics.privacy_note": "ان سطروں میں کبھی ٹوکن، پاس ورڈ یا سیشن کا مواد شامل نہیں ہوتا۔",
+	"mobile.settings.account.not_signed_in": "Radient میں سائن ان نہیں ہے",
+	"mobile.settings.account.route_radient": "آپ کے Radient ٹنل کے ذریعے",
+	"mobile.settings.account.route_direct": "براہ راست {baseUrl} سے منسلک",
+	"mobile.settings.status.no_connection": "ابھی کنکشن نہیں",
+	"mobile.settings.status.not_connected": "منسلک نہیں",
+	"mobile.settings.status.offline": "آف لائن",
+	"mobile.settings.status.not_answering": "جواب نہیں دے رہا",
+	"mobile.settings.status.connected": "منسلک",
+	"mobile.settings.diagnostics.stream_idle": "فارغ",
+	"mobile.settings.diagnostics.stream_connecting": "منسلک ہو رہا",
+	"mobile.settings.diagnostics.stream_live": "آن لائن",
+	"mobile.settings.diagnostics.stream_degraded": "جواب نہیں دے رہا",
+	"mobile.settings.diagnostics.stream_offline": "آف لائن",
+	"mobile.settings.account.app_name": "Local Operator"
 }

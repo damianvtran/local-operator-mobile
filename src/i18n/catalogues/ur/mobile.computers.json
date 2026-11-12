@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "ایپ پس منظر میں ہونے کے باعث نگرانی رکی ہوئی ہے۔ نگرانی جاری رکھنے کے لیے ایپ دوبارہ کھولیں۔",
 	"mobile.computers.wait.relay_version_sessions": "اس کا ریلے پروٹوکول ورژن {version} اور {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔",
 	"mobile.computers.wait.relay_version": "اس کا ریلے پروٹوکول ورژن {version} کی اطلاع دے رہا ہے۔",
-	"mobile.computers.wait.relay_sessions": "اس کا ریلے {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔"
+	"mobile.computers.wait.relay_sessions": "اس کا ریلے {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔",
+	"mobile.computers.wait.host_answering": "آپ کے کمپیوٹر ({host}) سے جواب آنے کا انتظار ہے۔ راستہ تیار ہونے کا مطلب یہ نہیں کہ کمپیوٹر بھی چل رہا ہے۔",
+	"mobile.computers.wait.answering": "آپ کے کمپیوٹر سے جواب آنے کا انتظار ہے۔",
+	"mobile.computers.added.fallback_name": "آپ کے کمپیوٹر",
+	"mobile.computers.added.connected_to": "{name} سے منسلک ہو گیا۔"
 }

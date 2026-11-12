@@ -43,5 +43,19 @@
 	"mobile.settings.diagnostics.route_radient": "Radient隧道",
 	"mobile.settings.diagnostics.route_direct": "直连中继",
 	"mobile.settings.diagnostics.none": "无",
-	"mobile.settings.diagnostics.privacy_note": "这些信息绝不包含令牌、密码或会话内容。"
+	"mobile.settings.diagnostics.privacy_note": "这些信息绝不包含令牌、密码或会话内容。",
+	"mobile.settings.account.not_signed_in": "未登录Radient账户",
+	"mobile.settings.account.route_radient": "通过Radient隧道",
+	"mobile.settings.account.route_direct": "已直连{baseUrl}",
+	"mobile.settings.status.no_connection": "尚未连接",
+	"mobile.settings.status.not_connected": "未连接",
+	"mobile.settings.status.offline": "离线",
+	"mobile.settings.status.not_answering": "未响应",
+	"mobile.settings.status.connected": "已连接",
+	"mobile.settings.diagnostics.stream_idle": "空闲",
+	"mobile.settings.diagnostics.stream_connecting": "连接中",
+	"mobile.settings.diagnostics.stream_live": "在线",
+	"mobile.settings.diagnostics.stream_degraded": "未响应",
+	"mobile.settings.diagnostics.stream_offline": "离线",
+	"mobile.settings.account.app_name": "Local Operator"
 }
