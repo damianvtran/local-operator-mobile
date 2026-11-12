@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "साइन-इन हो गया",
 	"mobile.signin.stage_starting": "साइन-इन शुरू हो रहा है",
 	"mobile.signin.stage_unavailable": "साइन-इन उपलब्ध नहीं है",
-	"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।"
+	"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।",
+	"mobile.signin.title": "साइन इन करें",
+	"mobile.signin.intro": "आपका ब्राउज़र साइन-इन पूरा करता है, इसलिए ऐप को आपका पासवर्ड कभी दिखता ही नहीं।",
+	"mobile.signin.start": "Radient से साइन इन करें",
+	"mobile.signin.use_address": "पता और पासवर्ड से कनेक्ट करें",
+	"mobile.signin.panel.opening": "आपका ब्राउज़र खुल रहा है…",
+	"mobile.signin.panel.waiting": "आपके ब्राउज़र का इंतज़ार है।",
+	"mobile.signin.panel.waiting_help": "वहाँ साइन-इन पूरा करें, फिर इस ऐप पर वापस आएँ।",
+	"mobile.signin.panel.cancelled": "साइन-इन रद्द हो गया।",
+	"mobile.signin.panel.cancelled_help": "आपके खाते में कोई बदलाव नहीं हुआ।",
+	"mobile.signin.panel.unavailable": "यह बिल्ड Radient का साइन-इन पूरा नहीं कर सकता।",
+	"mobile.signin.panel.unavailable_alt": "आप रिले का पता और पासवर्ड डालकर भी कनेक्ट कर सकते हैं।",
+	"mobile.signin.try_anyway": "फिर भी कोशिश करें",
+	"mobile.signin.welcome.headline": "आपका एजेंट आपके कंप्यूटर पर चलता है।",
+	"mobile.signin.welcome.body": "यह ऐप आपकी अपनी मशीन पर सत्र चलाता है और दिखाता है कि क्या हुआ। आपका कोड उस मशीन से कभी बाहर नहीं जाता।"
 }

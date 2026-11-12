@@ -1616,7 +1616,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* #241 (fix/show-more-polish) merged with main 9e193b57 (#236): both
 	 * sides' src carried, so neither parent's digest; re-derived once with
 	 * --print over the merged tree. Source identity only, NOT rendered U-08
-	 * evidence. */
+	 * evidence.
+	 *
+	 * Re-pinned for PR #243 (M3 S1 sign-in/computers keys, 44 translations, Urdu
+	 * direction fix) merged with main e24de6cd (#241 show-more polish): both sides' src
+	 * carried, so neither parent's digest; re-derived last with --print. Source
+	 * identity only, NOT rendered U-08 evidence. */
 	/* --print re-pin for feat/background-push-clear: the background notification
 	 * task (module-scope `defineTask` imported first in app/_layout.tsx, the
 	 * signed-in scope registration in the Team Bridge provider) and the `body`
@@ -1628,7 +1633,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * connection provider, and the store's `unreadReads` counter. No rendered
 	 * component, style or token changed. Source identity only, NOT rendered
 	 * U-08 evidence. */
-	src: "fd7d19ec08585ab64666c2f913b6887c50ce2a67200fff521e339076babb6c9e",
+	/* PR #244 merged with main d33c46af (#243): both sides' src carried, so
+	 * neither parent's digest; re-derived once with --print over the merged
+	 * tree. Source identity only, NOT rendered U-08 evidence. */
+	src: "9c101abbc5c958a6078964317e59bdb7a3fb265d1de87a826fe8534a6f52bf23",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -1,0 +1,239 @@
+{
+  "auditor": "i18n-auditor",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "the session's own header ('Model: deepseek/deepseek-flash'); no model-switch notice appeared during this run, so the working model is the run's model",
+  "instance": "043c04cecaf3",
+  "status": "passed",
+  "locale": "ru",
+  "namespace": "mobile.computers+mobile.signin (M3 S1)",
+  "head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+  "base": "origin/main 9e193b57",
+  "audit_kind": "first",
+  "audit_date": "2026-11-12",
+  "keys_read": 44,
+  "independent_from_translator_session": true,
+  "translator_session": "4991a69dfc4d (holder of the draft; never contacted, no transcript compared)",
+  "independence": "Different agent role (i18n-auditor, not i18n-translator) and a different session (ce33b5a81024) from the draft's session; the translator's notes were read only AFTER every key had been judged independently, and are cited nowhere as authority.",
+  "sha256": {
+    "draft": "815be1ace06b0fe3ed87e8f86f352355f5962e57dcd063f449817a690bc71270",
+    "brief": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f",
+    "translator_notes_read_after_own_pass": "b4966864cb0870d0619f4b8197e6d04ebbf909853d27dd0738be53cee5e37f5b",
+    "en_mobile.computers": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109",
+    "en_mobile.computers.context": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a",
+    "en_mobile.signin": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252",
+    "en_mobile.signin.context": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56",
+    "src_i18n_messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+    "ru_mobile.computers_shipped": "d9301956dc6c06980bbd8b03ab4fb78d1b9ed99702a6a18a7d82f26376856521",
+    "ru_mobile.signin_shipped": "4699dde2ee237e86860a74823ab614d6984ec5a2da5092c2601617610a8dd81e",
+    "ru_mobile.common_shipped": "ed49861b15434ac7d71db29da4b163d0d51d147ed8fa39ed9757fc53676f64c7",
+    "ru_mobile.chrome_shipped": "fee534fd43b0a9c604eb329407232046cc84dbd967fb123c7a863e96c1149ea6",
+    "ru_mobile.settings_shipped": "ef2a6da73608b6c28098e27aecaa87919f4c2174dd72237af6398bac165efd82",
+    "core_style-guides_ru.md": "f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5",
+    "core_glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8",
+    "core_source_ref": "damianvtran/local-operator origin/main 8459804f56dd704d5c3a680ef68f53b7182786ab"
+  },
+  "input_hashes": {
+    "en": [
+      {
+        "path": "src/i18n/catalogues/en/mobile.computers.json",
+        "sha256": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.signin.json",
+        "sha256": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252"
+      }
+    ],
+    "context": [
+      {
+        "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+        "sha256": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a"
+      },
+      {
+        "path": "src/i18n/catalogues/en/mobile.signin.context.json",
+        "sha256": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56"
+      }
+    ],
+    "target": [
+      {
+        "path": "/Users/damian/.local-operator/sessions/4991a69dfc4d/scratchpad/draft-ru-s1.json",
+        "sha256": "815be1ace06b0fe3ed87e8f86f352355f5962e57dcd063f449817a690bc71270"
+      }
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "scratchpad/receipt.json",
+      "note": "this record"
+    },
+    {
+      "path": "scratchpad/report.md",
+      "sha256": "0f941f13ccc7898f74086abe95de0ff1ac53e77c3f9731256146c870b0692f7a"
+    },
+    {
+      "path": "scratchpad/audit.log",
+      "sha256": "b7a28ea8e9b26b7a5d93bd5309a29343d64e0164be21347766e0275392922e0c"
+    },
+    {
+      "path": "scratchpad/mech-ru-s1.mjs",
+      "sha256": "c1d63f7485fd99bb35f515916028817e205e12d0c48a751e5a1ccb014b0492de"
+    },
+    {
+      "path": "scratchpad/mech-ru-s1.out",
+      "sha256": "87b4dc4df97dda6927bccfe65408e18f1c8e10cba641b7790bf5133e279dffb3",
+      "note": "parser/parity report over all 44 keys"
+    },
+    {
+      "path": "scratchpad/brief-vs-en.mjs",
+      "sha256": "7b55736861865b75dc1d4d89691c14087f3562ecf2c8468fd9ab30c178cefb4b"
+    },
+    {
+      "path": "scratchpad/widths.mjs",
+      "sha256": "035eee4ffffba39d9d02ec0840b7b27c26a83f21311696c678f5086a9d0a63cb"
+    },
+    {
+      "path": "scratchpad/validate-ru/",
+      "note": "throwaway copy of src/i18n + scripts/i18n; the repo generator ran here (734 keys/21 namespaces, CHECK_EXIT=0). Not the served artifact; retained until the coordinator applies the tracked bundle."
+    }
+  ],
+  "mechanical": {
+    "repo_validator": "node scripts/i18n/generate.ts --check in scratchpad/validate-ru (draft merged into catalogues/ru, other locales filled with their English source so the fail-fast loop reaches ru): 'src/i18n/catalogue.gen.ts is current (734 keys, 21 namespaces, ...)', CHECK_EXIT=0",
+    "repo_validator_on_readonly_worktree": "node scripts/i18n/generate.ts --check in the worktree exits 1: es/mobile.computers.json is missing the 30 new computers keys — the English-first slice state, not a ru defect (ru's own parity was proved in the scratch copy)",
+    "brief_matches_catalogue": "44/44 english strings, roles and notes identical between the brief and the en catalogues at 1796c3a5",
+    "keys": {
+      "brief": 44,
+      "draft": 44,
+      "missing": 0,
+      "extra": 0,
+      "order_identical": true
+    },
+    "parse": "44/44 values parse with src/i18n/messages.ts parseMessage; 0 throws",
+    "placeholders": "name+kind identical to English on all 44 (3 keys carry name/status/reach, all text; 1 key carries status, text); no escalation, no downgrade",
+    "plurals": "none: no English message in this group takes plural/select, and no draft value introduces one, so no CLDR category set is exercised",
+    "tokens": "no backticks, %s/%d, markup tags or non-placeholder braces in any value; brace counts equal English per key",
+    "punctuation_parity": "ellipsis (… vs '...') and sentence-final full stop match English on all 44; no double spaces; no NBSP/NNBSP",
+    "english_leftovers": "only brand/technical tokens remain in Latin: Local Operator (1), Radient (8), URL (1), and the {name}/{status}/{reach} placeholders; no English prose in any ru value"
+  },
+  "fit": {
+    "method": "cell/point arithmetic with the repository's own mono-badge formula (2*1 border + 2*8 padding + len*11*0.6) from src/features/home/header-fit.test.ts:109, plus 0.06em tracking; no rendered frame, no native build",
+    "row_width_320pt": "Screen content container is px-4 (src/ui/components/screen.tsx:423) => 288 pt available",
+    "worst_badge_pair": "ru 'приостановлен'+'отвечает' = 182.6 pt (196.5 pt with tracking) vs en worst pair 182.6 pt; 91.5 pt headroom, badges wrap (no numberOfLines in ui/components/badge.tsx)",
+    "buttons": "no call site in this group passes Button labelLines (the prop is optional, ui/components/button.tsx:33), so labels wrap; longest new labels are 'Использовать этот компьютер' (27) and 'Использовать свой туннель' (25)",
+    "verdict": "no overflow risk introduced by ru at 1x"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "m3s1ru-F1",
+      "m3s1ru-F2",
+      "m3s1ru-F3",
+      "m3s1ru-F4",
+      "m3s1ru-F5",
+      "m3s1ru-F6"
+    ],
+    "severity_counts": {
+      "BLOCKER": 0,
+      "MAJOR": 0,
+      "MINOR": 4,
+      "NIT": 2
+    }
+  },
+  "findings": [
+    {
+      "id": "m3s1ru-F1",
+      "severity": "MINOR",
+      "key": "mobile.computers.wait.listing",
+      "current": "Ждём, пока Radient добавит ваш компьютер в список…",
+      "problem": "First-person plural «Ждём» where the style guide prefers impersonal constructions, and the same wait panel already ships the impersonal «Ожидание ответа компьютера по адресу {host}.» (wait.host_answering) — one panel now mixes two constructions. Meaning is correct; this is register/consistency, not accuracy.",
+      "suggestion": "Radient добавляет ваш компьютер в список…"
+    },
+    {
+      "id": "m3s1ru-F2",
+      "severity": "MINOR",
+      "key": "mobile.computers.paths.recommended",
+      "current": "Рекомендуем",
+      "problem": "1pl verb adds a 'we' the English participle ('Recommended') does not have; the guide's call is вы + impersonal. The recorded rationale cites cell length, but the badge sits in a flex-wrap row (tunnel-paths.tsx) where +2 chars costs nothing.",
+      "suggestion": "Рекомендуется"
+    },
+    {
+      "id": "m3s1ru-F3",
+      "severity": "MINOR",
+      "key": "mobile.computers.paths.radient_body",
+      "current": "Нужен аккаунт Radient. Radient обслуживает туннель за вас и выдаёт закрытый URL с аутентификацией, …",
+      "problem": "«обслуживать туннель» is not a settled Russian collocation (one serves clients or machinery); 'runs the tunnel for you' is «поднимает/держит туннель». The rest of the paragraph is accurate.",
+      "suggestion": "Нужен аккаунт Radient. Radient сам поднимает туннель и выдаёт закрытый URL с аутентификацией, так что настраивать на этом телефоне нечего и пароль от ретранслятора хранить не нужно."
+    },
+    {
+      "id": "m3s1ru-F4",
+      "severity": "MINOR",
+      "key": "mobile.computers.own_tunnel_instead",
+      "current": "Свой туннель вместо Radient",
+      "problem": "Verbless noun phrase used as a button label; every shipped ru button in this namespace is verb-initial («Добавить компьютер», «Сменить компьютер», «Выйти»). Width is not the constraint here: this call site passes no labelLines, so the Button wraps.",
+      "suggestion": "Использовать свой туннель вместо Radient"
+    },
+    {
+      "id": "m3s1ru-F5",
+      "severity": "NIT",
+      "key": "mobile.computers.paths.radient_title",
+      "current": "Подключение через Radient",
+      "problem": "The two sibling cards on the choose-a-path screen differ in form: this one is nominal, «Настроить свой туннель» is infinitival, and the sidecar asks for an imperative phrase. The divergence is forced by own_title also being a button label on the welcome screen, and the noun phrase is good Russian — recorded, not a blocker.",
+      "suggestion": "Подключиться через Radient"
+    },
+    {
+      "id": "m3s1ru-F6",
+      "severity": "NIT",
+      "key": "mobile.signin.panel.unavailable_alt",
+      "current": "Подключиться всё равно можно — по адресу ретранслятора и паролю.",
+      "problem": "Rendered directly above the quiet button «Всё равно попробовать» in the same 'unavailable' state (sign-in-panel.tsx), so «всё равно» appears twice within two lines.",
+      "suggestion": "Подключиться всё-таки можно — по адресу ретранслятора и паролю."
+    }
+  ],
+  "considered_and_accepted": [
+    {
+      "item": "translator's 'judged identical' list: mobile.computers.row.a11y kept as {name}, {status}, {reach}",
+      "ruling": "agreed — no prose word exists in the value; the commas are separators, and the same shape is required by row.a11y_active/_connecting"
+    },
+    {
+      "item": "translator's glossary proposals (tunnel→туннель, route→маршрут, sign-in→вход, harness→product name, computer→компьютер / machine→машина)",
+      "ruling": "all five accepted; each matches shipped ru usage in this repo (туннель/маршрут/вход repeated, «на этой машине» in relay/health copy). 'harness' elided to the product name is consistent with the shipped harness_help rendering and is disclosed in the notes."
+    },
+    {
+      "item": "not_harness drops 'harness'",
+      "ruling": "accepted — «не запущен Local Operator» states the observable fact and matches shipped harness_help; no «харнесс» calque, no second name for one concept"
+    },
+    {
+      "item": "wait.tunnel_status parked after a colon",
+      "ruling": "accepted and preferred — the {status} token is an untranslated English word, and a label:value colon keeps the sentence grammatical for any value Radient sends; the shipped relay_version string uses the same colon shape"
+    },
+    {
+      "item": "status.* badges lowercase, mixed word classes (маршрут готов / настраивается / приостановлен / отключён / отозван / неизвестно)",
+      "ruling": "accepted — 'отключён' and 'неизвестно' already exist as shipped ru status words, so the set is consistent with the catalogue even though the grammatical class varies; each agrees with its own noun"
+    },
+    {
+      "item": "row.a11y_active/_connecting end with 'активен'/'подключается'",
+      "ruling": "accepted — identical to shipped badge.active/badge.connecting, as the sidecar requires"
+    },
+    {
+      "item": "privacy/safety claims",
+      "ruling": "verified exact: signin.intro keeps 'the app never sees your password'; cancelled_help keeps 'nothing changed'; remove.body keeps all three negations; billing_inactive keeps 'will be refused'; welcome.body keeps 'your code never leaves it' (её = машина)"
+    }
+  ],
+  "second_pass": {
+    "scope": "the high-visibility keys: all 14 mobile.signin + the destructive/permission ones (remove.title/body/confirm, billing_inactive, panel.unavailable*), re-read after the first pass",
+    "result": "no BLOCKER or MAJOR found on the second read; F2/F5/F6 are the ones that only surfaced there",
+    "disclosure": "same instance, not a second independent auditor — a genuinely second independent pass is still the manager's to commission if the group is gated as high-visibility"
+  },
+  "ledger": {
+    "command": "absent",
+    "note": "No audit-ledger command and no i18n ledger exist in the mobile repository at this head: i18n/ holds only audits/evidence, and scripts/i18n has generate/check-strings/key-shape/ratchet/scan-strings with no ledger writer (matches the ru30a1 record's own 'command: absent'). This receipt is the record; the coordinator writes the tracked row.",
+    "suggested_tracked_path": "i18n/audits/evidence/ru/m3-s1/m3s1ru1/{record.json,report.md,audit.log} + scripts/mech-ru-s1.mjs + scripts/widths.mjs",
+    "suggested_note_under_280": "ru M3 S1 (mobile.computers+mobile.signin, 44 keys) first audit: passed, 0 blocker/major, 4 minor + 2 nit. Independent instance 043c04cecaf3, deepseek/deepseek-flash, head 1796c3a5. evidence/ru/m3-s1/m3s1ru1/record.json"
+  },
+  "audit_notes_not_execution_log": "The prose in report.md is reasoning; only audit.log's pasted command lines and their output are execution evidence. No translation service, SDK or MT site was used, and no back-translation was performed.",
+  "evidence_limitations": [
+    "No rendered frame and no native build: this is a copy audit. Fit is point arithmetic with the repo's own mono-badge formula and the px-4 content width, not measured pixels.",
+    "The repo validator ran in a throwaway scratch copy (src/i18n + scripts/i18n) because the worktree is read-only for this role and the slice is English-first; the non-ru locales were filled with their English source values in that copy only, so the run proves ru's parse/parity/projection, not those locales' translations.",
+    "No independent second auditor instance: my second pass over the high-visibility keys was the same instance (disclosed above).",
+    "Human native-speaker review is still not performed; findings are one auditor's reading of the copy."
+  ]
+}

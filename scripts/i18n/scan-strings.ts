@@ -80,6 +80,10 @@ export const EXPRESSION_LITERAL_SCOPE: readonly string[] = [
 	"app/(app)/session/[id]/agent/[jobId].tsx",
 	"app/(app)/session/[id]/video.tsx",
 	"src/features/auth/computers.tsx",
+	"src/features/auth/sign-in-panel.tsx",
+	"src/features/auth/sign-in.tsx",
+	"src/features/auth/tunnel-paths.tsx",
+	"src/features/auth/welcome.tsx",
 	"src/features/settings/settings.tsx",
 ];
 

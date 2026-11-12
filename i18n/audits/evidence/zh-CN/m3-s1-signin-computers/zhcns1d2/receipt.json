@@ -1,0 +1,203 @@
+{
+ "auditor": "i18n-auditor",
+ "instance_id": "475e8f60464f",
+ "model": "deepseek/deepseek-flash",
+ "actual_model_source": "session system-prompt header (Model: deepseek/deepseek-flash); no role pin, no fallback used or attempted",
+ "independent_from_translator_session": true,
+ "independent_from_first_round_auditor": true,
+ "status": "passed",
+ "verdict": "passed — 0 BLOCKER, 0 MAJOR, 2 MINOR (non-gating)",
+ "locale": "zh-CN",
+ "namespace": "mobile.computers+mobile.signin (M3 S1)",
+ "audit_kind": "delta",
+ "audit_date": "2026-11-12",
+ "head": "a5593a79ef8414cfa6af05dfbc151dd47ada6199",
+ "base": "9e193b57",
+ "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1",
+ "key_count": 44,
+ "sha256": {
+  "draft_v2": "007dc881078ff550bdcde01ffb6be7a3be8d31507f84a5b12ebbaeb53f9991b7",
+  "draft_v1": "6969215384e6841040121536acc8e2c510d25c4f73d3100a32fb5fa2bf3c629b",
+  "replacements": "c9ccace4f4f6ee9a572f4c5e10a95d11183158afd8514f6fcb831181361a35ed",
+  "brief": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f"
+ },
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/{mobile.computers,mobile.signin}.json",
+   "sha256": {
+    "mobile.computers.json": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109",
+    "mobile.signin.json": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252"
+   }
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/{mobile.computers,mobile.signin}.context.json",
+   "sha256": {
+    "mobile.computers.context.json": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a",
+    "mobile.signin.context.json": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56"
+   }
+  },
+  "target_locale": {
+   "path": "src/i18n/catalogues/zh-CN/{mobile.computers,mobile.signin}.json (shipped)",
+   "sha256": {
+    "mobile.computers.json": "b6f9e5bffbec5bb58ff3d1fb44bb592fd0779b312bec8655a1204348f45e0038",
+    "mobile.signin.json": "00d37fc3f73ac25efecbbaf9b1a16d673d56d1984cca5f9f01a044b6f95ee7fe"
+   }
+  },
+  "parser": {
+   "path": "src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "mapping_under_test": {
+   "path": "src/features/auth/tunnel-status-key.ts",
+   "sha256": "014f02a50dc826c56e7acf6439c6a098016db179c3cc5697e847e9d7c71cc5ec"
+  }
+ },
+ "integrity": {
+  "result": "pass",
+  "changed_keys_exactly_3": true,
+  "key_order_identical_to_brief": true,
+  "replacements_match_changed_set_and_are_non_noop": true,
+  "draft_covers_branch_gap_exactly": true,
+  "gap": "30 mobile.computers + 14 mobile.signin = 44 == draft key count"
+ },
+ "mechanical": {
+  "result": "pass",
+  "parser": "repo parseMessage (src/i18n/messages.ts)",
+  "keys_parsed": "44/44",
+  "placeholder_mismatches": 0,
+  "english_outside_allowlist": "none (only Radient, Local Operator, URL + placeholders)",
+  "negative_controls": "brace errors throw; renamed/dropped placeholders parse, caught by the against-English name comparison (mutants produced 4/4 expected mismatches)"
+ },
+ "slot_check": {
+  "call_site": "src/features/auth/computers.tsx:260 — status: t(tunnelStatusKey(state.tunnelStatus)) (localised label, not the raw English word)",
+  "rows": [
+   {
+    "label_key": "mobile.computers.badge.active",
+    "source": "shipped",
+    "value": "使用中",
+    "sentence": "Radient已有此隧道，状态：使用中。",
+    "reads_ok": false,
+    "note": "grammatical; 使用中 = 'in use', drifts from 'active/route provisioned' — see ZH2-01"
+   },
+   {
+    "label_key": "mobile.computers.status.provisioning",
+    "source": "draft",
+    "value": "配置中",
+    "sentence": "Radient已有此隧道，状态：配置中。",
+    "reads_ok": true
+   },
+   {
+    "label_key": "mobile.computers.status.suspended",
+    "source": "draft",
+    "value": "已暂停",
+    "sentence": "Radient已有此隧道，状态：已暂停。",
+    "reads_ok": true
+   },
+   {
+    "label_key": "mobile.computers.status.disabled",
+    "source": "draft",
+    "value": "已禁用",
+    "sentence": "Radient已有此隧道，状态：已禁用。",
+    "reads_ok": true
+   },
+   {
+    "label_key": "mobile.computers.status.revoked",
+    "source": "draft",
+    "value": "已撤销",
+    "sentence": "Radient已有此隧道，状态：已撤销。",
+    "reads_ok": true
+   },
+   {
+    "label_key": "mobile.computers.status.unknown",
+    "source": "draft",
+    "value": "未知",
+    "sentence": "Radient已有此隧道，状态：未知。",
+    "reads_ok": true
+   }
+  ],
+  "sentence_verdict": "all six grammatical; no contradiction survives the 已配置好→已有 fix; one sense drift on badge.active"
+ },
+ "findings": [
+  {
+   "id": "ZH2-01",
+   "severity": "MINOR",
+   "key": "mobile.computers.badge.active",
+   "current": "使用中 (shipped) → renders 'Radient已有此隧道，状态：使用中。' at mobile.computers.wait.tunnel_status",
+   "problem": "English 'active' in this slot means the cloud route is provisioned (computers.tsx:59, tunnel-status-key.ts); 使用中 means 'in use'. In the add-a-computer panel nothing is using the tunnel yet, and zh-CN's own tunnel-active wording is 活动 (disabled_help: 此隧道当前未处于活动状态). The badge value is right on a computer row; the collision comes from reusing that badge key for a tunnel-state sentence at a5593a79, not from the v2 draft.",
+   "suggestion": "Keep the sentence; give the wait panel its own tunnel-state label (已启用 or 活动) in code and leave 使用中 to the connected-row badge. Code-side — does not gate this draft.",
+   "gating": false
+  },
+  {
+   "id": "ZH2-02",
+   "severity": "MINOR",
+   "key": "mobile.computers.paths.radient_body",
+   "current": "…并提供私有且经过身份验证的URL，因此手机上无需任何配置，也无需保管中继密码。",
+   "problem": "The change resolves the 因此此手机 stumble but is now the only bare 手机上 in the catalogue (shipped uses 此手机 11×; this draft's remove.body keeps 此手机) and drops the deictic 'this' that the English 'on this phone' carries.",
+   "suggestion": "…URL，所以此手机无需任何配置，也无需保管中继密码。 (keeps 此手机 and removes the 此/此 contact) — or end the sentence and start 此手机无需任何配置，…",
+   "gating": false
+  }
+ ],
+ "unresolved_blocker_major_count": 0,
+ "finding_ids": [
+  "ZH2-01",
+  "ZH2-02"
+ ],
+ "keys_read": [
+  "mobile.computers.wait.tunnel_status",
+  "mobile.signin.welcome.headline",
+  "mobile.computers.paths.radient_body",
+  "mobile.computers.badge.active",
+  "mobile.computers.status.provisioning",
+  "mobile.computers.status.suspended",
+  "mobile.computers.status.disabled",
+  "mobile.computers.status.revoked",
+  "mobile.computers.status.unknown"
+ ],
+ "rejected_alternatives_adjudicated": {
+  "隧道已在Radient端": "rightly rejected — needs 服务端/一端 to stand, and the sentence is a wait-panel line, not a topology diagram",
+  "由Radient托管": "rightly rejected — adds hosting semantics the English does not state",
+  "你的智能体，就运行在你自己的电脑上。(ZH-02 alternative)": "rightly rejected — re-adds a pronoun the guide says to drop, a third longer, no extra claim",
+  "手机上 (chosen for ZH-03)": "resolves the stumble but costs register consistency — recorded as ZH2-02, non-gating"
+ },
+ "validator": {
+  "command": "node scripts/i18n/generate.ts --check",
+  "exit": 1,
+  "actual_output_summary": "es/mobile.computers.json disagrees with the English source — missing: 30 keys; unknown: none",
+  "reading": "fail() is console.error+process.exit(1) and locales sort es before zh-CN, so the run stops at es; zh-CN's own 30+14 gap is real but not reached. Branch-state (English-first) fact, not a draft defect. The validator cannot see an uncommitted draft."
+ },
+ "no_mt_used": true,
+ "artifacts": {
+  "report": {
+   "path": "/Users/damian/.local-operator/sessions/dccb6f359ecd/scratchpad/report.md",
+   "sha256": "b40b55f62d5bbad92edaa3de376df2fbfc684b78d7287301e6f2c057c3f7e053"
+  },
+  "audit_log": {
+   "path": "/Users/damian/.local-operator/sessions/dccb6f359ecd/scratchpad/audit.log",
+   "sha256": "254fb72a8fcd1619f7c40672f1c0a734c5ee7ca24c88da4e9c9c77888c5be86a"
+  },
+  "scripts": {
+   "integrity.mjs": {
+    "path": "/Users/damian/.local-operator/sessions/dccb6f359ecd/scratchpad/integrity.mjs",
+    "sha256": "a35fe5750ae252406f055937ad4d2beccb836c2def2b206097d3446e8e59163a"
+   },
+   "audit-zhCN-s1-delta.mjs": {
+    "path": "/Users/damian/.local-operator/sessions/dccb6f359ecd/scratchpad/audit-zhCN-s1-delta.mjs",
+    "sha256": "012fe0f7cce65c642f07f75ce767b47511cb3180e6d14f6425ca685dfff7ebf1"
+   },
+   "gap-and-slot.mjs": {
+    "path": "/Users/damian/.local-operator/sessions/dccb6f359ecd/scratchpad/gap-and-slot.mjs",
+    "sha256": "4da57b1a8115e67c97a0d22e7618365760f75644eda300b29b7b592999282074"
+   },
+   "negctl-zhCN-s1.mjs": {
+    "path": "/Users/damian/.local-operator/sessions/dccb6f359ecd/scratchpad/negctl-zhCN-s1.mjs",
+    "sha256": "6724e46ad6ae4939febbc92ab6fdc4056d35f10d473a94146c3d52c750621329"
+   },
+   "mutant-ctl.mjs": {
+    "path": "/Users/damian/.local-operator/sessions/dccb6f359ecd/scratchpad/mutant-ctl.mjs",
+    "sha256": "aed85791f24e72495cc77df83b9bf8dde150f416048558a71cb1d2d013958e55"
+   }
+  }
+ },
+ "worktree_untouched": true,
+ "note": "Delta audit of the revised draft at head a5593a79: 3 changed keys in full + 44-key integrity + new six-label slot check. Audit notes are not an execution log; the execution log is audit.log."
+}

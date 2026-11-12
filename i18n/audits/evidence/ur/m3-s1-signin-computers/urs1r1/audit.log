@@ -1,0 +1,197 @@
+ur (Urdu) — M3 slice S1 independent translation audit
+auditor: i18n-auditor, instance 5ac1a4a06448, model deepseek/deepseek-flash (session default, no fallback)
+audit kind: first (independent pass; different instance from the translator)
+date: 2026-11-12 06:34:02 EST
+worktree: /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1 @ 1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce  (base origin/main 9e193b57691e88d06bbb36cb694651ad69fef959)
+
+This is an EXECUTION log: each block is the command and its captured output.
+
+---- $ shasum -a 256 draft brief
+d1817d7bbef44516207eda3e4713058d4f5f21dd5bdc4aad11390ffda3b66bca  /Users/damian/.local-operator/sessions/5dd57cd8d43e/scratchpad/draft-ur-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+(exit: 0)
+
+---- $ shasum -a 256 (English catalogues + context sidecars)
+(cwd: /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1)
+f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109  src/i18n/catalogues/en/mobile.computers.json
+2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252  src/i18n/catalogues/en/mobile.signin.json
+93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a  src/i18n/catalogues/en/mobile.computers.context.json
+1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56  src/i18n/catalogues/en/mobile.signin.context.json
+(exit: 0)
+
+---- $ shasum -a 256 (shipped ur references + call sites + parser)
+(cwd: /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1)
+d0e22582731fcafc91aae4e817e4a77f7d486cadad4673c43f0dbef9b4c67db3  src/i18n/catalogues/ur/mobile.computers.json
+9a5e63d36b274f7b1921a48ad60db6c7ef6ad2d5c5db11df92926302531d7d81  src/i18n/catalogues/ur/mobile.signin.json
+e33734af422e0c1aeee7349fa73911e1980a99ab938e137e45368c699203e853  src/i18n/catalogues/ur/mobile.common.json
+bcc6bb23249e882ea40ef817a5af3117b8c398576ecaa8ddad2bc9a2e8d8dae9  src/i18n/catalogues/ur/mobile.chrome.json
+66378236b2e25b533ee032e70a966c4e4ff0fecc96724c45028fbbade8830da0  src/i18n/catalogues/ur/mobile.settings.json
+bc94070e70d3488ca5e394921089b2abbe5c001460bfd79954c3a80519c34538  src/i18n/catalogues/ur/mobile.notifications.json
+82fbec36d4dfb891d7e547656816f1ef1a3ff8274e08fd5f0944dd274f37ea41  src/i18n/catalogues/ur/mobile.composer_input.json
+74096d8e8b8630633345eab45c0cae88cb959e6edeaa0d74626b7f29de6689a5  src/i18n/catalogues/ur/mobile.team_bridge.json
+2b8a23f2009b31547ae5793fb44d40c4c4f802c992f032ef62955f0c87b99412  src/features/auth/computers.tsx
+b79c083e85ae639ac6a8ad273d0f6c0336f34acedebceede6c9789d07d0e93b7  src/features/auth/tunnel-paths.tsx
+5bcd93de30deae49e4d193d60a2f08f09a1520f132fa47ffc626a9b005fa07af  src/features/auth/sign-in.tsx
+f20a118af976df8541cbb433099c74ad3076e3798d0e31b850e11c36a2dbdfce  src/features/auth/sign-in-panel.tsx
+00463478805599bef7d43df972dd7d831339b20d626caff873ce5835b13a167a  src/features/auth/welcome.tsx
+89c57f6a5e10e413f55a3e9b8b81899fe108e4d4030e2cb883388648ad538872  src/ui/components/badge.tsx
+24435992934bd16ad2aa35de9bc3289759c35cfbe3a76298c5b8a64057972e41  src/ui/direction.tsx
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+5a1ef623a1c0327e50099fd2f447328c5302ce5920bb4eb19ed6c26a8ad2c6ba  src/i18n/direction.ts
+(exit: 0)
+
+---- $ git -C /Users/damian/local-operator show origin/main:i18n/style-guides/ur.md | shasum -a 256
+7276e96210fe5f23fd82a39ae4cc0c88b2c1009d3a551d914efc3f61516eddc4  -
+---- $ git -C /Users/damian/local-operator show origin/main:i18n/glossary.md | shasum -a 256
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  -
+---- $ git -C /Users/damian/local-operator rev-parse origin/main
+8459804f56dd704d5c3a680ef68f53b7182786ab
+
+---- $ node /Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/audit-ur.mts  (repo parser: key set, placeholders, ICU, chars, width)
+(cwd: /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1)
+(node:25154) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+== hashes ==
+d1817d7bbef44516207eda3e4713058d4f5f21dd5bdc4aad11390ffda3b66bca /Users/damian/.local-operator/sessions/5dd57cd8d43e/scratchpad/draft-ur-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109 /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/catalogues/en/mobile.computers.json
+2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252 /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/catalogues/en/mobile.signin.json
+93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/catalogues/en/mobile.computers.context.json
+1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56 /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/catalogues/en/mobile.signin.context.json
+
+== key set ==
+brief keys: 44 draft keys: 44
+missing vs brief: []
+extra vs brief: []
+draft order == brief order: true
+duplicate keys: []
+duplicate brief keys: []
+brief english != en catalogue: []
+draft keys absent from en catalogues: []
+en keys not in this slice: 63
+sliced keys missing an en context note: []
+
+== parse + placeholders (repo parser) ==
+  mobile.computers.wait.tunnel_status: params ur[status:text] en[status:text] OK
+  mobile.computers.row.a11y: params ur[name:text,reach:text,status:text] en[name:text,reach:text,status:text] OK
+  mobile.computers.row.a11y_active: params ur[name:text,reach:text,status:text] en[name:text,reach:text,status:text] OK
+  mobile.computers.row.a11y_connecting: params ur[name:text,reach:text,status:text] en[name:text,reach:text,status:text] OK
+placeholder problems: none
+
+== ICU features used in this slice ==
+keys using plural/select: none (no CLDR category requirement)
+
+== characters ==
+manual bidi control chars (forbidden by ur guide): none
+keys with … : [ 'mobile.computers.wait.listing', 'mobile.signin.panel.opening' ]
+double ellipsis …… : []
+ASCII ... : []
+trailing full stop ۔ : [
+  'mobile.computers.not_harness',
+  'mobile.computers.wait.tunnel_status',
+  'mobile.computers.wait.answered',
+  'mobile.computers.remove.body',
+  'mobile.computers.paths.radient_body',
+  'mobile.computers.paths.own_body',
+  'mobile.signin.intro',
+  'mobile.signin.panel.waiting',
+  'mobile.signin.panel.waiting_help',
+  'mobile.signin.panel.cancelled',
+  'mobile.signin.panel.cancelled_help',
+  'mobile.signin.panel.unavailable',
+  'mobile.signin.panel.unavailable_alt',
+  'mobile.signin.welcome.headline',
+  'mobile.signin.welcome.body',
+  'mobile.computers.billing_inactive'
+]
+ASCII period/parenthesis leakage: []
+
+== Latin tokens per string ==
+  mobile.computers.not_harness: ["Local","Operator"]
+  mobile.computers.wait.listing: ["Radient"]
+  mobile.computers.wait.tunnel_status: ["Radient","status"]
+  mobile.computers.paths.radient_title: ["Radient"]
+  mobile.computers.paths.radient_body: ["Radient","Radient","URL"]
+  mobile.computers.paths.own_body: ["Radient"]
+  mobile.signin.start: ["Radient"]
+  mobile.signin.panel.unavailable: ["Radient"]
+  mobile.computers.row.a11y: ["name","status","reach"]
+  mobile.computers.row.a11y_active: ["name","status","reach"]
+  mobile.computers.row.a11y_connecting: ["name","status","reach"]
+
+== width (guide: Arabic script ≈ 1 cell/char) ==
+  mobile.computers.wait.listing: 57 chars — انتظار ہے کہ Radient آپ کے کمپیوٹر کو فہرست میں شامل کرے…
+  mobile.computers.remove.body: 112 chars — یہ اس کمپیوٹر کو اس فون کی فہرست سے ہٹا دیتا ہے۔ اس سے کمپیوٹر، اس کی ٹنل یا آپ کے اکاؤنٹ پر کوئی اثر نہیں پڑتا۔
+  mobile.computers.paths.radient_body: 183 chars — Radient اکاؤنٹ درکار ہے۔ Radient آپ کے لیے ٹنل چلاتا ہے اور آپ کو نجی، تصدیق شدہ URL دیتا ہے، اس لیے اس فون پر کچھ ترتیب دینے کی ضرورت نہیں اور ریلے کا پاس ورڈ بھی نہیں سنبھالنا پڑتا۔
+  mobile.computers.paths.own_body: 192 chars — پیش رفتہ طریقہ: آپ اپنا کمپیوٹر خود دستیاب کرتے ہیں، اپنی چلائی ہوئی ٹنل کے ذریعے، اور اس کا پتہ یہاں چسپاں کرتے ہیں۔ کسی بھی مرحلے پر Radient اکاؤنٹ درکار نہیں، اور پاس ورڈ آپ کے پاس رہتا ہے۔
+  mobile.signin.intro: 81 chars — سائن ان آپ کا براؤزر مکمل کرتا ہے، اس لیے ایپ کو آپ کا پاس ورڈ کبھی نظر نہیں آتا۔
+  mobile.signin.panel.waiting_help: 49 chars — وہاں سائن ان مکمل کریں، پھر اس ایپ میں واپس آئیں۔
+  mobile.signin.panel.unavailable_alt: 50 chars — آپ پھر بھی ریلے کے پتہ اور پاس ورڈ سے جڑ سکتے ہیں۔
+  mobile.signin.welcome.body: 107 chars — یہ ایپ آپ کی اپنی مشین پر سیشن چلاتی ہے اور دکھاتی ہے کہ کیا ہوا۔ آپ کا کوڈ کبھی اس مشین سے باہر نہیں جاتا۔
+  mobile.computers.billing_inactive: 64 chars — اس ٹنل کی بلنگ غیر فعال ہے، اس لیے ریموٹ رسائی مسترد ہو جائے گی۔
+longest: [ 'mobile.computers.paths.own_body', 192 ]
+
+== duplicate values ==
+
+== tags/markup ==
+keys with < > backticks: []
+(exit: 0)
+
+---- $ node /Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/bidi-punct-ur.mts  (punctuation parity, NFC, Latin-initial bidi analysis)
+(cwd: /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1)
+PUNCT PARITY mismatches: none
+all values NFC: true
+
+draft values whose FIRST strong char is Latin (7):
+  mobile.computers.wait.tunnel_status :: Radient کے پاس ٹنل ہے — {status}۔
+  mobile.computers.paths.radient_title :: Radient سے جڑیں
+  mobile.computers.paths.radient_body :: Radient اکاؤنٹ درکار ہے۔ Radient آپ کے لیے ٹنل چلاتا ہے اور آپ کو نجی، تصدیق شدہ URL دیتا ہے، اس لیے اس فون پر کچھ ترتیب دینے کی ضرورت نہیں اور ریلے کا پاس ورڈ بھی نہیں سنبھالنا پڑتا۔
+  mobile.signin.start :: Radient کے ساتھ سائن ان کریں
+  mobile.computers.row.a11y :: {name}، {status}، {reach}
+  mobile.computers.row.a11y_active :: {name}، {status}، {reach}، فعال
+  mobile.computers.row.a11y_connecting :: {name}، {status}، {reach}، منسلک ہو رہا
+
+shipped ur values that are mixed AND Latin-initial: 87
+  mobile.chrome.composer.queued :: {count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}
+  mobile.chrome.home.connecting :: {host} سے رابطہ ہو رہا ہے…
+  mobile.chrome.home.reconnecting :: {host} سے دوبارہ رابطہ ہو رہا ہے…
+  mobile.computers.password_placeholder :: lop mobile سے ملنے والا پاس ورڈ
+  mobile.computers.billing_help :: Radient کنسول میں اس ٹنل کی بلنگ کی ترتیبات کھولیں اور ریموٹ رسائی فعال کریں۔
+  mobile.computers.disabled_help :: Radient کے مطابق یہ ٹنل اس وقت فعال نہیں ہے۔ Radient کنسول میں اس کی حالت دیکھیں۔
+  mobile.computers.harness_help :: Radient کنسول میں اس ٹنل کے لیے Local Operator فعال کریں۔
+  mobile.computers.added.connected_to :: {name} سے منسلک ہو گیا۔
+  mobile.home.suggestion.linear_mcp :: Linear MCP سیٹ اپ کریں
+  mobile.notifications.channel.description :: Local Operator کے الرٹس۔ آپ کے کمپیوٹر کی آواز کی سیٹنگ طے کرتی ہے کہ ان میں سے کون سا چینل بجے۔
+
+shipped ur values that are mixed-script: 139 of 690
+(exit: 0)
+
+---- $ node /Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/coverage-ur.mts  (per-namespace coverage after the slice)
+(cwd: /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1)
+mobile.computers: en=75 ur(shipped)=45 ur(slice)=30 -> missing after slice: 0
+   values identical to English (not translated): ["mobile.computers.transport.radient"]
+   ur keys unknown to en: ["mobile.signin.title","mobile.signin.intro","mobile.signin.start","mobile.signin.use_address","mobile.signin.panel.opening","mobile.signin.panel.waiting","mobile.signin.panel.waiting_help","mobile.signin.panel.cancelled","mobile.signin.panel.cancelled_help","mobile.signin.panel.unavailable","mobile.signin.panel.unavailable_alt","mobile.signin.try_anyway","mobile.signin.welcome.headline","mobile.signin.welcome.body"]
+mobile.signin: en=32 ur(shipped)=18 ur(slice)=14 -> missing after slice: 0
+   values identical to English (not translated): []
+   ur keys unknown to en: ["mobile.computers.not_harness","mobile.computers.wait.listing","mobile.computers.wait.tunnel_status","mobile.computers.wait.answered","mobile.computers.wait.use_computer","mobile.computers.wait.start_again","mobile.computers.refresh","mobile.computers.list.heading","mobile.computers.own_tunnel_instead","mobile.computers.remove.title","mobile.computers.remove.body","mobile.computers.paths.radient_title","mobile.computers.paths.recommended","mobile.computers.paths.radient_body","mobile.computers.paths.own_title","mobile.computers.paths.own_body","mobile.computers.paths.own_action","mobile.computers.status.route_ready","mobile.computers.status.provisioning","mobile.computers.status.suspended","mobile.computers.status.disabled","mobile.computers.status.revoked","mobile.computers.status.unknown","mobile.computers.reach.answering","mobile.computers.row.a11y","mobile.computers.row.a11y_active","mobile.computers.row.a11y_connecting","mobile.computers.billing_inactive","mobile.computers.try_now","mobile.computers.remove.confirm"]
+(exit: 0)
+
+---- $ node scripts/i18n/generate.ts --check  (repo catalogue validator)
+(cwd: /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1)
+es/mobile.computers.json disagrees with the English source — missing: mobile.computers.not_harness, mobile.computers.wait.listing, mobile.computers.wait.tunnel_status, mobile.computers.wait.answered, mobile.computers.wait.use_computer, mobile.computers.wait.start_again, mobile.computers.refresh, mobile.computers.list.heading, mobile.computers.own_tunnel_instead, mobile.computers.remove.title, mobile.computers.remove.body, mobile.computers.paths.radient_title, mobile.computers.paths.recommended, mobile.computers.paths.radient_body, mobile.computers.paths.own_title, mobile.computers.paths.own_body, mobile.computers.paths.own_action, mobile.computers.status.route_ready, mobile.computers.status.provisioning, mobile.computers.status.suspended, mobile.computers.status.disabled, mobile.computers.status.revoked, mobile.computers.status.unknown, mobile.computers.reach.answering, mobile.computers.row.a11y, mobile.computers.row.a11y_active, mobile.computers.row.a11y_connecting, mobile.computers.billing_inactive, mobile.computers.try_now, mobile.computers.remove.confirm; unknown: none
+(exit: 1)
+
+---- $ shasum -a 256 /Users/damian/.local-operator/sessions/5dd57cd8d43e/scratchpad/notes-ur-s1.md   (translator notes, read AFTER forming the audit view)
+19cf79f9a7c9a85864f23a4ccd81d632923e865d1fd56bf9086460b8f958971c  /Users/damian/.local-operator/sessions/5dd57cd8d43e/scratchpad/notes-ur-s1.md
+
+---- $ grep -oh 'سائن ان' *.json | wc -l   (cwd: ur catalogues)
+      21
+---- $ grep -oh 'سائن اِن' *.json | wc -l
+       6
+---- $ grep -c 'سائن اِن' *.json | grep -v ':0'
+mobile.home.json:1
+mobile.oauth.json:3
+mobile.signin.json:2
+

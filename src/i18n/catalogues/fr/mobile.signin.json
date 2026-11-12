@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "Connecté",
 	"mobile.signin.stage_starting": "Connexion en cours",
 	"mobile.signin.stage_unavailable": "Connexion indisponible",
-	"mobile.signin.superseded": "Une autre connexion a démarré."
+	"mobile.signin.superseded": "Une autre connexion a démarré.",
+	"mobile.signin.title": "Connexion",
+	"mobile.signin.intro": "La connexion se termine dans votre navigateur : l’app ne voit jamais votre mot de passe.",
+	"mobile.signin.start": "Se connecter avec Radient",
+	"mobile.signin.use_address": "Utiliser une adresse et un mot de passe",
+	"mobile.signin.panel.opening": "Ouverture de votre navigateur…",
+	"mobile.signin.panel.waiting": "En attente de votre navigateur.",
+	"mobile.signin.panel.waiting_help": "Finalisez la connexion dans le navigateur, puis revenez à cette app.",
+	"mobile.signin.panel.cancelled": "La connexion a été annulée.",
+	"mobile.signin.panel.cancelled_help": "Rien n’a été modifié sur votre compte.",
+	"mobile.signin.panel.unavailable": "Cette version de l’app ne peut pas terminer une connexion Radient.",
+	"mobile.signin.panel.unavailable_alt": "Vous pouvez toujours vous connecter avec l’adresse et le mot de passe du relais.",
+	"mobile.signin.try_anyway": "Réessayer quand même",
+	"mobile.signin.welcome.headline": "Votre agent s’exécute sur votre ordinateur.",
+	"mobile.signin.welcome.body": "Cette app pilote les sessions sur votre propre machine et en montre le résultat. Votre code ne la quitte jamais."
 }

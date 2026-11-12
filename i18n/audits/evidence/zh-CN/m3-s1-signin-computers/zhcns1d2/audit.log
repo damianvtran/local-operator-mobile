@@ -1,0 +1,158 @@
+# zh-CN M3 S1 delta audit — execution log (auditor i18n-auditor, instance 475e8f60464f, model deepseek/deepseek-flash, no fallback, 2026-11-12)
+
+$ cd ~/local-operator-mobile/.worktrees/i18n-m3-s1 && git rev-parse HEAD && git status --porcelain && git rev-parse --abbrev-ref HEAD
+a5593a79ef8414cfa6af05dfbc151dd47ada6199
+$ shasum -a 256 <v2> <replacements> <v1> <brief>
+feat/i18n-m3-s1-signin-computers
+
+007dc881078ff550bdcde01ffb6be7a3be8d31507f84a5b12ebbaeb53f9991b7  /Users/damian/.local-operator/sessions/7a547984994d/scratchpad/draft-zh-CN-s1-v2.json
+c9ccace4f4f6ee9a572f4c5e10a95d11183158afd8514f6fcb831181361a35ed  /Users/damian/.local-operator/sessions/7a547984994d/scratchpad/replacements-zh-CN-s1.json
+6969215384e6841040121536acc8e2c510d25c4f73d3100a32fb5fa2bf3c629b  /Users/damian/.local-operator/sessions/29c21686ee28/scratchpad/draft-zh-CN-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+
+$ node integrity.mjs
+draft_v1 6969215384e6841040121536acc8e2c510d25c4f73d3100a32fb5fa2bf3c629b
+draft_v2 007dc881078ff550bdcde01ffb6be7a3be8d31507f84a5b12ebbaeb53f9991b7
+replacements c9ccace4f4f6ee9a572f4c5e10a95d11183158afd8514f6fcb831181361a35ed
+brief 531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f
+key counts v1/v2: 44 44
+same order & same key set: true
+changed keys count: 3
+  CHANGED mobile.computers.wait.tunnel_status
+  CHANGED mobile.computers.paths.radient_body
+  CHANGED mobile.signin.welcome.headline
+replacements keys: 3
+replacements == changed set: true
+every replacement applied and non-noop: true
+brief keys: 44 brief order == v2 order: true
+extra in v2 not in brief: []
+missing from v2: []
+namespace counts: { 'mobile.computers': 30, 'mobile.signin': 14 }
+
+$ node gap-and-slot.mjs
+EN computers 75 zh-CN 45 -> missing 30
+EN signin 32 zh-CN 18 -> missing 14
+draft covers the gap exactly: true
+draft keys not in gap: []
+
+=== SLOT CHECK: mobile.computers.wait.tunnel_status ===
+mobile.computers.badge.active (shipped) = "使用中"
+   -> Radient已有此隧道，状态：使用中。   [cells=33]
+mobile.computers.status.provisioning (draft) = "配置中"
+   -> Radient已有此隧道，状态：配置中。   [cells=33]
+mobile.computers.status.suspended (draft) = "已暂停"
+   -> Radient已有此隧道，状态：已暂停。   [cells=33]
+mobile.computers.status.disabled (draft) = "已禁用"
+   -> Radient已有此隧道，状态：已禁用。   [cells=33]
+mobile.computers.status.revoked (draft) = "已撤销"
+   -> Radient已有此隧道，状态：已撤销。   [cells=33]
+mobile.computers.status.unknown (draft) = "未知"
+   -> Radient已有此隧道，状态：未知。   [cells=31]
+
+template: "Radient已有此隧道，状态：{status}。"
+
+$ node negctl-zhCN-s1.mjs
+(node:66743) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+NEGCTL placeholder renamed: PARSED (params=[sttaus])
+NEGCTL placeholder dropped: PARSED (params=[])
+NEGCTL unbalanced brace: THREW RangeError: Invalid message "Radient已有此隧道，状态：{status。": expected ',' or '}' (at offset 23)
+NEGCTL stray close brace: THREW RangeError: Invalid message "Radient已有此隧道，状态：{status}}。": unexpected '}' (at offset 24)
+NEGCTL quoted brace: THREW RangeError: Invalid message "Radient已有此隧道，状态：'{status}'。": ICU apostrophe quoting ('{) is not supporte
+NEGCTL control (true draft) params: [ [ 'status', 'text' ] ]
+
+$ node mutant-ctl.mjs
+(node:66765) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+REAL draft findings: 0
+MUTANT renamed placeholder -> [
+  'mobile.computers.wait.tunnel_status: placeholder mismatch zh=[sttaus:text] en=[status:text]'
+]
+MUTANT dropped placeholder -> [
+  'mobile.computers.wait.tunnel_status: placeholder mismatch zh=[] en=[status:text]'
+]
+MUTANT dropped reach -> [
+  'mobile.computers.row.a11y: placeholder mismatch zh=[name:text,status:text] en=[name:text,reach:text,status:text]'
+]
+MUTANT removed key -> [
+  'mobile.computers.wait.tunnel_status: placeholder mismatch zh=[] en=[status:text]'
+]
+
+$ node audit-zhCN-s1-delta.mjs   # repo parseMessage over all 44 values
+(node:66905) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[mobile.computers.not_harness] cells=30 en_cells=56 ratio=0.54 latin=[Local|Operator]
+[mobile.computers.wait.listing] cells=31 en_cells=43 ratio=0.72 latin=[Radient]
+[mobile.computers.wait.tunnel_status] cells=35 en_cells=35 ratio=1.00 latin=[Radient|status]
+[mobile.computers.wait.answered] cells=16 en_cells=23 ratio=0.70 latin=[]
+[mobile.computers.wait.use_computer] cells=10 en_cells=17 ratio=0.59 latin=[]
+[mobile.computers.wait.start_again] cells=8 en_cells=11 ratio=0.73 latin=[]
+[mobile.computers.refresh] cells=4 en_cells=7 ratio=0.57 latin=[]
+[mobile.computers.list.heading] cells=8 en_cells=14 ratio=0.57 latin=[]
+[mobile.computers.own_tunnel_instead] cells=16 en_cells=25 ratio=0.64 latin=[]
+[mobile.computers.remove.title] cells=12 en_cells=21 ratio=0.57 latin=[]
+[mobile.computers.remove.body] cells=70 en_cells=105 ratio=0.67 latin=[]
+[mobile.computers.paths.radient_title] cells=15 en_cells=20 ratio=0.75 latin=[Radient]
+[mobile.computers.paths.recommended] cells=4 en_cells=11 ratio=0.36 latin=[]
+[mobile.computers.paths.radient_body] cells=113 en_cells=178 ratio=0.63 latin=[Radient|URL]
+[mobile.computers.paths.own_title] cells=14 en_cells=22 ratio=0.64 latin=[]
+[mobile.computers.paths.own_body] cells=91 en_cells=178 ratio=0.51 latin=[Radient]
+[mobile.computers.paths.own_action] cells=16 en_cells=17 ratio=0.94 latin=[]
+[mobile.signin.title] cells=4 en_cells=7 ratio=0.57 latin=[]
+[mobile.signin.intro] cells=46 en_cells=71 ratio=0.65 latin=[]
+[mobile.signin.start] cells=15 en_cells=20 ratio=0.75 latin=[Radient]
+[mobile.signin.use_address] cells=14 en_cells=27 ratio=0.52 latin=[]
+[mobile.signin.panel.opening] cells=18 en_cells=22 ratio=0.82 latin=[]
+[mobile.signin.panel.waiting] cells=20 en_cells=25 ratio=0.80 latin=[]
+[mobile.signin.panel.waiting_help] cells=32 en_cells=52 ratio=0.62 latin=[]
+[mobile.signin.panel.cancelled] cells=16 en_cells=22 ratio=0.73 latin=[]
+[mobile.signin.panel.cancelled_help] cells=22 en_cells=36 ratio=0.61 latin=[]
+[mobile.signin.panel.unavailable] cells=27 en_cells=43 ratio=0.63 latin=[Radient]
+[mobile.signin.panel.unavailable_alt] cells=32 en_cells=60 ratio=0.53 latin=[]
+[mobile.signin.try_anyway] cells=8 en_cells=16 ratio=0.50 latin=[]
+[mobile.signin.welcome.headline] cells=24 en_cells=33 ratio=0.73 latin=[]
+[mobile.signin.welcome.body] cells=74 en_cells=98 ratio=0.76 latin=[]
+[mobile.computers.status.route_ready] cells=8 en_cells=11 ratio=0.73 latin=[]
+[mobile.computers.status.provisioning] cells=6 en_cells=12 ratio=0.50 latin=[]
+[mobile.computers.status.suspended] cells=6 en_cells=9 ratio=0.67 latin=[]
+[mobile.computers.status.disabled] cells=6 en_cells=8 ratio=0.75 latin=[]
+[mobile.computers.status.revoked] cells=6 en_cells=7 ratio=0.86 latin=[]
+[mobile.computers.status.unknown] cells=4 en_cells=7 ratio=0.57 latin=[]
+[mobile.computers.reach.answering] cells=6 en_cells=9 ratio=0.67 latin=[]
+[mobile.computers.row.a11y] cells=25 en_cells=25 ratio=1.00 latin=[name|status|reach]
+[mobile.computers.row.a11y_active] cells=33 en_cells=33 ratio=1.00 latin=[name|status|reach]
+[mobile.computers.row.a11y_connecting] cells=33 en_cells=37 ratio=0.89 latin=[name|status|reach]
+[mobile.computers.billing_inactive] cells=42 en_cells=70 ratio=0.60 latin=[]
+[mobile.computers.try_now] cells=8 en_cells=7 ratio=1.14 latin=[]
+[mobile.computers.remove.confirm] cells=4 en_cells=6 ratio=0.67 latin=[]
+---
+keys audited: 44 en source keys available: 107
+mechanical failures: 0
+
+=== LATIN RUNS IN WHOLE DRAFT (allowed = Radient, Local Operator, URL) ===
+  UNALLOWED TOKEN "status" in: mobile.computers.wait.tunnel_status, mobile.computers.row.a11y, mobile.computers.row.a11y_active, mobile.computers.row.a11y_connecting
+  UNALLOWED TOKEN "name" in: mobile.computers.row.a11y, mobile.computers.row.a11y_active, mobile.computers.row.a11y_connecting
+  UNALLOWED TOKEN "reach" in: mobile.computers.row.a11y, mobile.computers.row.a11y_active, mobile.computers.row.a11y_connecting
+
+$ cd ~/local-operator-mobile/.worktrees/i18n-m3-s1 && node scripts/i18n/generate.ts --check ; echo TRUE_EXIT=$?
+es/mobile.computers.json disagrees with the English source — missing: mobile.computers.not_harness, mobile.computers.wait.listing, mobile.computers.wait.tunnel_status, mobile.computers.wait.answered, mobile.computers.wait.use_computer, mobile.computers.wait.start_again, mobile.computers.refresh, mobile.computers.list.heading, mobile.computers.own_tunnel_instead, mobile.computers.remove.title, mobile.computers.remove.body, mobile.computers.paths.radient_title, mobile.computers.paths.recommended, mobile.computers.paths.radient_body, mobile.computers.paths.own_title, mobile.computers.paths.own_body, mobile.computers.paths.own_action, mobile.computers.status.route_ready, mobile.computers.status.provisioning, mobile.computers.status.suspended, mobile.computers.status.disabled, mobile.computers.status.revoked, mobile.computers.status.unknown, mobile.computers.reach.answering, mobile.computers.row.a11y, mobile.computers.row.a11y_active, mobile.computers.row.a11y_connecting, mobile.computers.billing_inactive, mobile.computers.try_now, mobile.computers.remove.confirm; unknown: none
+TRUE_EXIT=1
+
+$ cd ~/local-operator-mobile/.worktrees/i18n-m3-s1 && grep -n "status: t(tunnelStatusKey" src/features/auth/computers.tsx
+260:							status: t(tunnelStatusKey(state.tunnelStatus)),
+
+$ python3 <shipped zh-CN: 使用中 / 此隧道 / 此手机 / active renderings>
+badge.active EN/ZH: 'active' '使用中'
+values containing 使用中: ['mobile.computers.badge.active']
+values containing 此手机: 11
+values containing bare 手机上 (no 此 before): []
+tunnel-active vocab (disabled_help): 'Radient 显示此隧道当前未处于活动状态。请在 Radient 控制台检查其状态。'
+projects.status.active: '进行中'
+row.a11y_active EN: '{name}, {status}, {reach}, active'
+

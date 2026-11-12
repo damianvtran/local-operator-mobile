@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "Đã đăng nhập",
 	"mobile.signin.stage_starting": "Đang bắt đầu đăng nhập",
 	"mobile.signin.stage_unavailable": "Không thể đăng nhập",
-	"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu."
+	"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu.",
+	"mobile.signin.title": "Đăng nhập",
+	"mobile.signin.intro": "Trình duyệt của bạn hoàn tất bước đăng nhập, nên ứng dụng không bao giờ thấy mật khẩu của bạn.",
+	"mobile.signin.start": "Đăng nhập bằng Radient",
+	"mobile.signin.use_address": "Dùng địa chỉ và mật khẩu",
+	"mobile.signin.panel.opening": "Đang mở trình duyệt…",
+	"mobile.signin.panel.waiting": "Đang chờ trình duyệt của bạn.",
+	"mobile.signin.panel.waiting_help": "Hoàn tất đăng nhập ở đó, rồi quay lại ứng dụng này.",
+	"mobile.signin.panel.cancelled": "Đã hủy đăng nhập.",
+	"mobile.signin.panel.cancelled_help": "Không có gì thay đổi trên tài khoản của bạn.",
+	"mobile.signin.panel.unavailable": "Bản dựng này không thể hoàn tất đăng nhập Radient.",
+	"mobile.signin.panel.unavailable_alt": "Bạn vẫn có thể kết nối bằng địa chỉ và mật khẩu của máy chủ chuyển tiếp.",
+	"mobile.signin.try_anyway": "Cứ thử lại",
+	"mobile.signin.welcome.headline": "Tác nhân của bạn chạy trên máy tính của bạn.",
+	"mobile.signin.welcome.body": "Ứng dụng này điều khiển các phiên trên chính máy của bạn và hiển thị những gì nó đã làm. Mã nguồn của bạn không bao giờ rời khỏi máy."
 }

@@ -1,10 +1,11 @@
 import { Text, View } from "react-native";
-
+import { t } from "@/i18n";
 import { CONTROL, ROLE } from "@/ui/a11y";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
 import { Card } from "@/ui/components/card";
 import { SectionHeader } from "@/ui/components/section-header";
+import { useComposedDir } from "@/ui/direction";
 
 /**
  * The two ways to reach a computer, named on the screen where the choice is made.
@@ -30,46 +31,52 @@ export const TunnelPaths = ({
 }: {
 	children: React.ReactNode;
 	onOwnTunnel: () => void;
-}) => (
-	<View className="gap-4">
-		<Card testID={CONTROL.radientPath}>
-			<View className="gap-3">
-				{/* `flex-wrap`: the title and the badge scale independently, and at 200 %
-				 *  on a 320 pt phone they do not fit on one line — unwrapped, the row ran
-				 *  to 390 px (`U-06`). */}
-				<View className="flex-row flex-wrap items-center gap-2">
-					<Text className="text-title text-ink" accessibilityRole={ROLE.header}>
-						Connect with Radient
+}) => {
+	/* In Urdu the Radient card's title and body both OPEN with the Latin product
+	 * name, so `dir="auto"` gave them a left-to-right base on an RTL page (M3 S1
+	 * design D2). The own-tunnel card opens with Urdu and needs nothing. */
+	const composedDir = useComposedDir();
+	return (
+		<View className="gap-4">
+			<Card testID={CONTROL.radientPath}>
+				<View className="gap-3">
+					{/* `flex-wrap`: the title and the badge scale independently, and at 200 %
+					 *  on a 320 pt phone they do not fit on one line — unwrapped, the row ran
+					 *  to 390 px (`U-06`). */}
+					<View className="flex-row flex-wrap items-center gap-2">
+						<Text
+							{...composedDir}
+							className="text-title text-ink"
+							accessibilityRole={ROLE.header}
+						>
+							{t("mobile.computers.paths.radient_title")}
+						</Text>
+						{/* `neutral` because the tone vocabulary is the tokens' own
+						 *  (`variants.ts`: neutral/success/warning/danger) and "recommended" is
+						 *  not a status — the word carries it, not a colour invented here. */}
+						<Badge label={t("mobile.computers.paths.recommended")} />
+					</View>
+					<Text {...composedDir} className="text-body-sm text-ink-muted">
+						{t("mobile.computers.paths.radient_body")}
 					</Text>
-					{/* `neutral` because the tone vocabulary is the tokens' own
-					 *  (`variants.ts`: neutral/success/warning/danger) and "recommended" is
-					 *  not a status — the word carries it, not a colour invented here. */}
-					<Badge label="Recommended" />
+					{children}
 				</View>
-				<Text className="text-body-sm text-ink-muted">
-					Needs a Radient account. Radient runs the tunnel for you and gives you
-					a private, authenticated URL, so there is nothing to configure on this
-					phone and no relay password to keep.
-				</Text>
-				{children}
-			</View>
-		</Card>
+			</Card>
 
-		<Card testID={CONTROL.ownTunnelPath}>
-			<View className="gap-3">
-				<SectionHeader label="Set up your own tunnel" />
-				<Text className="text-body-sm text-ink-muted">
-					The advanced path: you publish your computer yourself, through a
-					tunnel you run, and paste its address here. No Radient account is
-					needed at any point, and you keep the password.
-				</Text>
-				<Button
-					label="Use my own tunnel"
-					onPress={onOwnTunnel}
-					variant="outline"
-					testID={CONTROL.ownTunnelPathAction}
-				/>
-			</View>
-		</Card>
-	</View>
-);
+			<Card testID={CONTROL.ownTunnelPath}>
+				<View className="gap-3">
+					<SectionHeader label={t("mobile.computers.paths.own_title")} />
+					<Text className="text-body-sm text-ink-muted">
+						{t("mobile.computers.paths.own_body")}
+					</Text>
+					<Button
+						label={t("mobile.computers.paths.own_action")}
+						onPress={onOwnTunnel}
+						variant="outline"
+						testID={CONTROL.ownTunnelPathAction}
+					/>
+				</View>
+			</Card>
+		</View>
+	);
+};

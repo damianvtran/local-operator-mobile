@@ -1,0 +1,87 @@
+# audit.log — fr / mobile.computers+mobile.signin (M3 S1) — i18n-auditor — 2026-11-12
+# actual commands and their actual output; nothing below is reconstructed
+
+$ sha256sum draft-fr-s1.json (translator scratchpad)
+07a54a5b9725f2d97f264e94b40eb2a5939e33f2a7d2e79187ffb41f5bf0c0bb  /Users/damian/.local-operator/sessions/4270cae4ed9c/scratchpad/draft-fr-s1.json
+
+$ node validate-fr.mjs   # imports parseMessage from the worktree src/i18n/messages.ts
+sha256 draft: 07a54a5b9725f2d97f264e94b40eb2a5939e33f2a7d2e79187ffb41f5bf0c0bb
+sha256 brief: 531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f
+sha256 en/mobile.computers.json: f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109
+sha256 en/mobile.computers.context.json: 93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a
+sha256 en/mobile.signin.json: 2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252
+sha256 en/mobile.signin.context.json: 1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56
+sha256 fr/mobile.computers.json: c3015755e033b3fca2236ffee8d967df3c25ccff96ee85aad0bd9457cd5b6135
+sha256 fr/mobile.signin.json: c44cf80d43eacbc6ea3a8d0dc4bbb8991e28fdc3298037a134d7eb15d2dadfee
+
+keys: brief= 44 draft= 44
+missing: []
+extra: []
+order identical to brief: true
+
+parse/param errors: none
+values byte-identical to English: [ 'mobile.computers.row.a11y' ]
+
+typography flags:
+none
+
+English residue candidates:
+mobile.computers.wait.tunnel_status: tunnel
+mobile.computers.own_tunnel_instead: tunnel
+mobile.computers.remove.body: tunnel
+mobile.computers.paths.radient_body: tunnel
+mobile.computers.paths.own_title: tunnel
+mobile.computers.paths.own_body: tunnel
+mobile.computers.paths.own_action: tunnel
+mobile.signin.welcome.headline: agent
+mobile.signin.welcome.body: code, machine, sessions
+mobile.computers.billing_inactive: tunnel
+(node:16358) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+$ node measure-fit.mjs
+advance px/glyph at 100%: 7.26
+EN rows (badge pair width, px): [
+  'route_ready=189.2',
+  'provisioning=196.5',
+  'suspended=174.7',
+  'disabled=167.4',
+  'revoked=160.2',
+  'unknown=160.2'
+]
+FR rows (badge pair width, px): [
+  'route_ready=211.0',
+  'provisioning=196.5',
+  'suspended=145.6',
+  'disabled=152.9',
+  'revoked=138.4',
+  'unknown=138.4'
+]
+worst EN: 196.5 | worst FR: 211.0 | delta: 14.5
+inner width 288 px (320 pt screen, px-4): EN 100% fits=true FR 100% fits=true | at 200% EN fits=false FR fits=false
+inner width 358 px (390 pt screen, px-4): EN 100% fits=true FR 100% fits=true | at 200% EN fits=false FR fits=false
+
+char counts (fr vs en) for the label keys:
+ mobile.computers.own_tunnel_instead: fr=33 en=25 (+32%)
+ mobile.signin.use_address: fr=39 en=27 (+44%)
+ mobile.signin.panel.unavailable: fr=66 en=43 (+53%)
+ mobile.computers.paths.own_title: fr=30 en=22 (+36%)
+ mobile.computers.paths.radient_title: fr=25 en=20 (+25%)
+
+$ cd ~/local-operator-mobile/.worktrees/i18n-m3-s1 && node scripts/i18n/generate.ts --check   # branch state, NOT a draft verdict
+es/mobile.computers.json disagrees with the English source — missing: mobile.computers.not_harness, mobile.computers.wait.listing, mobile.computers.wait.tunnel_status, mobile.computers.wait.answered, mobile.computers.wait.use_computer, mobile.computers.wait.start_again, mobile.computers.refresh, mobile.computers.list.heading, mobile.computers.own_tunnel_instead, mobile.computers.remove.title, mobi
+EXIT=1
+
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s1 status --porcelain   # worktree untouched by this audit
+(empty = no changes)
+
+$ git -C ~/local-operator show origin/main:i18n/style-guides/fr.md | shasum -a 256
+5315e1ac10c2ce57aac631ba653d08de680ee70c9a022ed3a8345ce2f9902ee7  -
+$ git -C ~/local-operator show origin/main:i18n/glossary.md | shasum -a 256
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  -
+mobile.computers.wait.tunnel_status | fr: status:text | en: status:text | match: true
+mobile.computers.row.a11y | fr: name:text, status:text, reach:text | en: name:text, status:text, reach:text | match: true
+mobile.computers.row.a11y_active | fr: name:text, status:text, reach:text | en: name:text, status:text, reach:text | match: true
+mobile.computers.row.a11y_connecting | fr: name:text, status:text, reach:text | en: name:text, status:text, reach:text | match: true
