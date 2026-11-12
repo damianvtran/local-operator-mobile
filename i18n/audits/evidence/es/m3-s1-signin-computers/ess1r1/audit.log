@@ -1,0 +1,79 @@
+# Audit execution log — es / mobile.computers+mobile.signin (M3 S1)
+# head 1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce · auditor instance 967cada7d16e · model deepseek/deepseek-flash
+# executed 2026-11-12 from /Users/damian/.local-operator/sessions/89450c856fcf/scratchpad; repo worktree read-only; no writes into it
+
+$ sha256sum /Users/damian/.local-operator/sessions/e8b188dd15b9/scratchpad/draft-es-s1.json /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+9ff88b2c3df3b4ce24a7a9ff615b48aa7002ee9160ae0ca4fea5a3745de125a3  /Users/damian/.local-operator/sessions/e8b188dd15b9/scratchpad/draft-es-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+
+$ (cd ~/local-operator-mobile/.worktrees/i18n-m3-s1 && git rev-parse HEAD)
+1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce
+
+$ node --experimental-strip-types audit-es-s1.mts   # parseMessage imported from src/i18n/messages.ts
+(node:23127) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+keys in brief: 44 · keys in draft: 44
+ICU/params/order: OK (44/44)
+  note draft: uses tab indentation (matches neighbours)
+  note draft: contains non-ASCII (expected: á í ó ñ ú ¿ ¡ … —)
+  note mobile.signin.welcome.headline: heading ends with a full stop (en: "Your agent runs on your computer.")
+byte-identical to English: mobile.computers.row.a11y
+plural-carrying keys: (none)
+
+$ # computer term counts, shipped es catalogues (substring match, case-insensitive)
+$ cd ~/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/catalogues/es
+ordenador: 7 occurrences in: mobile.chrome.json mobile.composer_input.json mobile.computers.json mobile.notifications.json mobile.team_bridge.json 
+computadora: 3 occurrences in: mobile.notifications.json 
+máquina: 54 occurrences in: mobile.account_routing.json mobile.computers.json mobile.home.json mobile.projects.json mobile.schedules.json mobile.session_health.json mobile.session.json mobile.settings.json mobile.signin.json relay.health.json 
+
+$ # same count restricted to the two namespaces this slice extends
+ordenador in mobile.computers+mobile.signin: 1
+computadora in mobile.computers+mobile.signin: 0
+máquina in mobile.computers+mobile.signin: 16
+
+$ git -C ~/local-operator grep -oi <term> origin/main -- local_operator/i18n/catalogues/es/*.json | wc -l
+core es ordenador: 4
+core es computadora: 0
+core es máquina: 77
+
+$ grep -n "ordenador\|computadora" *.json   # the minority forms, by key
+mobile.chrome.json:14:	"mobile.chrome.home.connect": "Conectar un ordenador",
+mobile.composer_input.json:2:	"mobile.composer_input.voice.setup_needed": "Configura la conversión de voz a texto en tu ordenador.",
+mobile.computers.json:29:	"mobile.computers.connect_refused.generic": "El ordenador no aceptó la conexión. Tu dirección y tu contraseña siguen aquí, así que revísalas y vuelve a intentarlo.",
+mobile.notifications.json:7:	"mobile.notifications.channel.description": "Alertas de Local Operator. La configuración de sonido de tu ordenador elige cuál de estos canales suena.",
+mobile.notifications.json:27:	"mobile.notifications.permission.denied": "Las notificaciones de esta app están desactivadas en los ajustes del sistema. Vuelve a activarlas allí para recibir avisos de mensajes de Team Bridge. Las alertas de tus computadoras aún no están activadas; hasta que lo estén, solo funcionan mientras Local Operator está abierto.",
+mobile.notifications.json:28:	"mobile.notifications.permission.granted": "Permitidas. Los mensajes de Team Bridge avisan en este teléfono cuando la entrega push de Radient está disponible. Las alertas de tus computadoras aún no están activadas; hasta que lo estén, solo funcionan mientras Local Operator está abierto.",
+mobile.notifications.json:29:	"mobile.notifications.permission.undetermined": "Pide permiso a tu teléfono para recibir avisos de mensajes de Team Bridge. Las alertas de tus computadoras aún no están activadas; hasta que lo estén, solo funcionan mientras Local Operator está abierto.",
+mobile.team_bridge.json:63:	"mobile.team_bridge.gate.connecting": "Conectando con Radient. Tu ordenador puede seguir cerrado.",
+mobile.team_bridge.json:73:	"mobile.team_bridge.gate.signed_out_help": "Conecta directamente con tu equipo, incluso con el ordenador cerrado.",
+mobile.team_bridge.json:106:	"mobile.team_bridge.navigation.caption": "Tu organización, incluso con tu ordenador en reposo",
+
+$ # shipped es values this slice must stay consistent with
+mobile.computers.badge.active = activa
+mobile.computers.badge.connecting = conectando
+mobile.computers.retry = Reintentar
+mobile.signin.retry = Reintentar
+mobile.signin.stage_browser = Esperando a tu navegador
+mobile.signin.stage_cancelled = Inicio de sesión cancelado
+
+$ jq -r "…notifications…" | grep compilación   # build term precedent
+Esta compilación no incluye notificaciones.
+
+# Second pass: independent Spanish-only reader dispatched as subagent (job f324c81526ca,
+# deepseek/deepseek-flash), English withheld; its suggestions were adjudicated against the
+# shipped catalogue and glossary in this session — see report-es-s1.md § "Second pass".
+
+$ # key-delta: which of the 44 brief keys already exist in the shipped es files
+$ cd src/i18n/catalogues && for k in $(jq -r ".[].key" brief); do jq -e --arg k "\$k" "has(\$k)" es/mobile.computers.json es/mobile.signin.json; done
+existing: 0 of 44
+
+$ # key counts: en vs es per namespace
+en computers 75 / es computers 45 / brief-computers 30
+en signin 32 / es signin 18 / brief-signin 14
+
+# CORRECTION recorded in this log: an earlier draft of report-es-s1.md claimed some of
+# these keys already existed in es/mobile.signin.json and would be replaced. The command
+# above ("existing: 0 of 44") disproves that; the report section was corrected to the
+# measured append-only delta. No translation value changed as a result.

@@ -1,0 +1,66 @@
+{
+	"schema": 1,
+	"audit_id": "vis1r1",
+	"audit_kind": "initial_translation_audit",
+	"locale": "vi",
+	"namespace": "mobile.computers+mobile.signin (M3 slice S1, 44 keys)",
+	"audit_date": "2026-11-12",
+	"key_count": {
+		"en": 44,
+		"target": 44
+	},
+	"auditor": {
+		"agent": "i18n-auditor",
+		"session": "675090271c24",
+		"instance": "767cf0660db6",
+		"model": "deepseek/deepseek-flash",
+		"actual_model_source": "session header 'Model: deepseek/deepseek-flash'; no model-switch or fallback notice observed in this session",
+		"independent_from_translator_session": true
+	},
+	"translator": {
+		"agent": "i18n-translator",
+		"session": null,
+		"model": "not recorded in the receipt"
+	},
+	"audited_head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+	"input_hashes": {
+		"audited_draft_sha256": "ee370439647b04e77654c7261dc2d8ed08034bef6396f9f20539a314265d8a4f",
+		"final_applied_draft_file_sha256": "ee370439647b04e77654c7261dc2d8ed08034bef6396f9f20539a314265d8a4f",
+		"final_applied_values_sha256_sorted_keys": "15235791cc9be52cd6ecbf5f802fcb0a141d6fb064e17c7195774b77fb57b9bd",
+		"applied_catalogue_sha256": {
+			"catalogues/vi/mobile.computers.json": "027158f79b987c422c51f813c1b1880a86c47221e5940266cf1678a716dc7f75",
+			"catalogues/vi/mobile.signin.json": "294be851168c7dbea9e27b926613c8e55167c9d1a03ab6e7c43a4de77a0668c7"
+		}
+	},
+	"current_report_verdict": {
+		"status": "passed",
+		"receipt_status": "passed",
+		"unresolved_blocker_major_count": 0,
+		"severity_counts": {
+			"BLOCKER": 0,
+			"MAJOR": 0,
+			"MINOR": 1,
+			"NIT": 4
+		},
+		"finding_ids": [
+			"m3s1-vi-r1-1",
+			"m3s1-vi-r1-2",
+			"m3s1-vi-r1-3",
+			"m3s1-vi-r1-4",
+			"m3s1-vi-r1-5"
+		]
+	},
+	"supersession": null,
+	"artifacts": [
+		"record.json",
+		"report.md",
+		"audit.log",
+		"receipt.json"
+	],
+	"route_disclosure": {
+		"read_route": "ordinary mobile git/worktree reads (no read_public_copy receipt)",
+		"english_context_sidecars": "nested-JSON context sidecars NOT routable through read_public_copy",
+		"redaction_scan": "0 redaction-marker hits across all copied bundle files (scanned when landed)"
+	},
+	"provenance_note": "receipt.json, report.md and audit.log are copied byte for byte from the audit run; this record.json is derived from the receipt (verdict, severity counts and ids are counted from its findings list). Audits ran at the pre-fix head 1796c3a5 (round 1) or a5593a79 (delta); a later commit changed the stale wait.tunnel_status context note and the status mapping, which the manager audit scope accounts for in the PR thread. No native-speaker review or rendered-frame claim is made."
+}

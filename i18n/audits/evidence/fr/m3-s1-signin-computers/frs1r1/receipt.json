@@ -1,0 +1,101 @@
+{
+  "auditor": "i18n-auditor",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "session runtime model (system-reported: Model: deepseek/deepseek-flash); no fallback used",
+  "session": "7d94e65185a6",
+  "independent_from_translator_session": true,
+  "translator_session": "4270cae4ed9c",
+  "instance": "d8edea3668da",
+  "audit_kind": "first",
+  "audit_date": "2026-11-12",
+  "status": "changes_requested",
+  "locale": "fr",
+  "namespace": "mobile.computers+mobile.signin (M3 S1)",
+  "head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+  "base": "9e193b57",
+  "keys_read": 44,
+  "sha256": {
+    "draft": "07a54a5b9725f2d97f264e94b40eb2a5939e33f2a7d2e79187ffb41f5bf0c0bb",
+    "brief": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f",
+    "en_mobile.computers.json": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109",
+    "en_mobile.computers.context.json": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a",
+    "en_mobile.signin.json": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252",
+    "en_mobile.signin.context.json": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56",
+    "fr_mobile.computers.json_shipped_pre_existing": "c3015755e033b3fca2236ffee8d967df3c25ccff96ee85aad0bd9457cd5b6135",
+    "fr_mobile.signin.json_shipped_pre_existing": "c44cf80d43eacbc6ea3a8d0dc4bbb8991e28fdc3298037a134d7eb15d2dadfee",
+    "style_guide_fr_i18n_style-guides/fr.md@origin/main": "5315e1ac10c2ce57aac631ba653d08de680ee70c9a022ed3a8345ce2f9902ee7",
+    "glossary_core_i18n_glossary.md@origin/main": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "mechanical": {
+    "parser": "src/i18n/messages.ts parseMessage (repo's own), imported by scratch script",
+    "keys_missing": [],
+    "keys_extra": [],
+    "order_matches_brief": true,
+    "placeholder_name_and_kind_parity": "44/44 identical to en",
+    "icu_plural_select_in_group": 0,
+    "clrd_categories_needed": "none (no plural/select in this group)",
+    "typography_flags": "none (U+202F before ? and :, U+2019, …, spaced em dash)",
+    "bidi_controls": "none",
+    "repo_gate_generate.ts--check": "red on this branch before landing (other locales lack the 30 new keys); not a draft verdict"
+  },
+  "findings": [
+    {
+      "id": "A-01",
+      "severity": "MAJOR",
+      "key": "mobile.computers.wait.listing",
+      "current": "En attente que Radient liste votre ordinateur…",
+      "problem": "« en attente que » + subjunctive is a calque; the locution « en attendant que » is the standard form, and « en attente de » takes a noun only (which the same draft does correctly in mobile.signin.panel.waiting).",
+      "suggestion": "En attendant que Radient liste votre ordinateur…"
+    },
+    {
+      "id": "A-02",
+      "severity": "MINOR",
+      "key": "mobile.signin.panel.waiting_help",
+      "current": "Terminez la connexion dans le navigateur, puis revenez à cette app.",
+      "problem": "« terminer une connexion » can read as ending it; the shipped corpus names the same step « Finalisation de la connexion dans le navigateur » (mobile.signin.stage_exchanging).",
+      "suggestion": "Finalisez la connexion dans le navigateur, puis revenez à cette app."
+    },
+    {
+      "id": "A-03",
+      "severity": "MINOR",
+      "key": "mobile.computers.remove.body",
+      "current": "Il est retiré de la liste de ce téléphone. Cela ne touche ni l’ordinateur, ni son tunnel, ni votre compte.",
+      "problem": "The opening present passive states the resulting state rather than the action the dialog confirms; « ne touche ni… » is looser than the explicit non-modification reassurance this confirm carries.",
+      "suggestion": "Il sera retiré de la liste de ce téléphone. Cela ne modifie ni l’ordinateur, ni son tunnel, ni votre compte."
+    },
+    {
+      "id": "A-04",
+      "severity": "NIT",
+      "key": "mobile.computers.status.provisioning",
+      "current": "provisionnement",
+      "problem": "Jargon noun with no precedent in the shipped fr corpus, 14 glyphs on a mono badge beside « acheminement prêt »; « mise en place » is plainer and shorter.",
+      "suggestion": "mise en place"
+    },
+    {
+      "id": "A-05",
+      "severity": "NIT",
+      "key": "mobile.computers.paths.own_body",
+      "current": "…puis vous collez son adresse ici.",
+      "problem": "« son » can attach to « votre ordinateur » (also masculine, and nearer the reader's eye) as easily as to « un tunnel »; English carries the same ambiguity, so this is clarity only.",
+      "suggestion": "…puis vous collez l’adresse de ce tunnel ici."
+    }
+  ],
+  "unresolved_blocker_major_count": 1,
+  "finding_ids": [
+    "A-01",
+    "A-02",
+    "A-03",
+    "A-04",
+    "A-05"
+  ],
+  "artifacts": {
+    "validate-fr.mjs": "be04eae105a52f85ab0f890baae2128859c25f18dbc8fa872140b2cfa7a34864",
+    "measure-fit.mjs": "1e28f7a51588ad8a952c80d8cf7ee16a7e35ccfd68c1f2db97d90003746388ac",
+    "kinds.mjs": "9c4292d6a4040b231a636a8df69d3257bde2387ad0f2122e7c62daa2882413a4",
+    "audit-mechanical.log": "c259f6baea850d205f0ebb10d3c28c636401a8b67f003fa71ea5d81146de32ca",
+    "fit.log": "88b70debaad32d4f752fe5a37afb6371d06bd6f24c9a4039cfe555422ecfe283",
+    "audit.log": "b1c56ffdacf8fe3769b67d797c9573010d73cf250c7d62878039599666024755",
+    "report.md": "7b26653d148710875482fc37f3401d3f6c06f2fb742a0d6f4f7597cca7646819"
+  },
+  "notes": "Single independent pass by this auditor; sign-in and the first-run welcome are high-visibility, so a second independent pass remains the manager's call. No ledger append performed: the mobile repo carries no i18n ledger; this receipt is for the tracked evidence bundle the coder lands."
+}

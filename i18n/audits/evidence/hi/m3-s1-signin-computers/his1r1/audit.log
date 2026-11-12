@@ -1,0 +1,213 @@
+# hi M3 S1 audit — execution log (commands + actual output)
+# auditor instance: i18n-auditor | session 91a41d00ad8f | 2026-11-12T11:34:39Z
+
+$ shasum -a 256 /Users/damian/.local-operator/sessions/fad0082b3b75/scratchpad/draft-hi-s1.json /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+768194117988c474607c705793c046c12217d1833d38c07a4ca9f9b42d1ce7d8  /Users/damian/.local-operator/sessions/fad0082b3b75/scratchpad/draft-hi-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/catalogues && shasum -a 256 en/mobile.computers.json en/mobile.signin.json en/mobile.computers.context.json en/mobile.signin.context.json hi/mobile.computers.json hi/mobile.signin.json hi/mobile.common.json hi/mobile.chrome.json hi/mobile.settings.json
+f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109  en/mobile.computers.json
+2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252  en/mobile.signin.json
+93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a  en/mobile.computers.context.json
+1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56  en/mobile.signin.context.json
+8f0280dfe5a4e8cc636ef6081215a3669c01f16d8837424e43f072688f973a36  hi/mobile.computers.json
+a6375bc7b7b8936d8b4742e426525afc59f74cdd807ab4a77e7c32bd672b5462  hi/mobile.signin.json
+b1a7a9897788a9e5bb8d6ec87c8cf929cb1cf20d04ed256202c7d2bb1ec1cc93  hi/mobile.common.json
+ad3922f8202056128f50e59318ebf3a5607e3caa193cb12e194641b16fe02df1  hi/mobile.chrome.json
+0b280b2a31908d2c80fce10440487d7e393350daf22ef32e5a775df0332c6a81  hi/mobile.settings.json
+
+$ git -C /Users/damian/local-operator show origin/main:i18n/style-guides/hi.md | shasum -a 256; git -C /Users/damian/local-operator show origin/main:i18n/glossary.md | shasum -a 256
+82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5  -
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  -
+
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1 && git rev-parse HEAD
+1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce
+
+$ node /Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/audit-hi-s1.mjs
+(node:26557) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+draft sha256: 768194117988c474607c705793c046c12217d1833d38c07a4ca9f9b42d1ce7d8
+brief sha256: 531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f
+draft keys: 44 brief keys: 44
+missing keys: none
+extra keys: none
+draft order vs brief order: n/a
+duplicate JSON keys: none
+parse failures: 0 | placeholder diffs: 0
+latin tokens in hi draft: [
+  [ 'Radient', 8 ],
+  [ 'status', 4 ],
+  [ 'name', 3 ],
+  [ 'reach', 3 ],
+  [ 'Local', 1 ],
+  [ 'Operator', 1 ],
+  [ 'URL', 1 ]
+]
+hygiene flags: [ [ 'mobile.computers.wait.tunnel_status', 'spaced em dash' ] ]
+length ratio > 1.6: [
+  [ 'mobile.computers.refresh', 7, 13, '1.86' ],
+  [ 'mobile.signin.title', 7, 12, '1.71' ],
+  [ 'mobile.computers.try_now', 7, 14, '2.00' ]
+]
+
+key | en | hi
+mobile.computers.not_harness | 56 | 53
+mobile.computers.wait.listing | 42 | 54
+mobile.computers.wait.tunnel_status | 34 | 33
+mobile.computers.wait.answered | 23 | 27
+mobile.computers.wait.use_computer | 17 | 25
+mobile.computers.wait.start_again | 11 | 16
+mobile.computers.refresh | 7 | 13
+mobile.computers.list.heading | 14 | 13
+mobile.computers.own_tunnel_instead | 25 | 29
+mobile.computers.remove.title | 21 | 18
+mobile.computers.remove.body | 105 | 98
+mobile.computers.paths.radient_title | 20 | 22
+mobile.computers.paths.recommended | 11 | 8
+mobile.computers.paths.radient_body | 178 | 180
+mobile.computers.paths.own_title | 22 | 20
+mobile.computers.paths.own_body | 178 | 190
+mobile.computers.paths.own_action | 17 | 19
+mobile.signin.title | 7 | 12
+mobile.signin.intro | 71 | 79
+mobile.signin.start | 20 | 23
+mobile.signin.use_address | 27 | 29
+mobile.signin.panel.opening | 21 | 25
+mobile.signin.panel.waiting | 25 | 28
+mobile.signin.panel.waiting_help | 52 | 46
+mobile.signin.panel.cancelled | 22 | 20
+mobile.signin.panel.cancelled_help | 36 | 33
+mobile.signin.panel.unavailable | 43 | 46
+mobile.signin.panel.unavailable_alt | 60 | 54
+mobile.signin.try_anyway | 16 | 17
+mobile.signin.welcome.headline | 33 | 36
+mobile.signin.welcome.body | 98 | 103
+mobile.computers.status.route_ready | 11 | 9
+mobile.computers.status.provisioning | 12 | 12
+mobile.computers.status.suspended | 9 | 7
+mobile.computers.status.disabled | 8 | 3
+mobile.computers.status.revoked | 7 | 6
+mobile.computers.status.unknown | 7 | 6
+mobile.computers.reach.answering | 9 | 11
+mobile.computers.row.a11y | 25 | 25
+mobile.computers.row.a11y_active | 33 | 33
+mobile.computers.row.a11y_connecting | 37 | 40
+mobile.computers.billing_inactive | 70 | 73
+mobile.computers.try_now | 7 | 14
+mobile.computers.remove.confirm | 6 | 5
+
+$ node /Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/verify2.mjs
+values byte-identical to English: [ 'mobile.computers.row.a11y' ]
+status   | end="।" | mobile.computers.not_harness
+status   | end="…" | mobile.computers.wait.listing
+status   | end="।" | mobile.computers.wait.tunnel_status
+status   | end="।" | mobile.computers.wait.answered
+button   | end="ं" | mobile.computers.wait.use_computer
+button   | end="ं" | mobile.computers.wait.start_again
+button   | end="ं" | mobile.computers.refresh
+heading  | end="र" | mobile.computers.list.heading
+button   | end="ं" | mobile.computers.own_tunnel_instead
+confirm  | end="?" | mobile.computers.remove.title
+confirm  | end="।" | mobile.computers.remove.body
+heading  | end="ं" | mobile.computers.paths.radient_title
+meta     | end="त" | mobile.computers.paths.recommended
+help     | end="।" | mobile.computers.paths.radient_body
+heading  | end="ं" | mobile.computers.paths.own_title
+help     | end="।" | mobile.computers.paths.own_body
+button   | end="ं" | mobile.computers.paths.own_action
+heading  | end="ं" | mobile.signin.title
+help     | end="।" | mobile.signin.intro
+button   | end="ं" | mobile.signin.start
+button   | end="ं" | mobile.signin.use_address
+status   | end="…" | mobile.signin.panel.opening
+status   | end="।" | mobile.signin.panel.waiting
+help     | end="।" | mobile.signin.panel.waiting_help
+status   | end="।" | mobile.signin.panel.cancelled
+help     | end="।" | mobile.signin.panel.cancelled_help
+status   | end="।" | mobile.signin.panel.unavailable
+help     | end="।" | mobile.signin.panel.unavailable_alt
+button   | end="ं" | mobile.signin.try_anyway
+heading  | end="।" | mobile.signin.welcome.headline
+help     | end="।" | mobile.signin.welcome.body
+meta     | end="र" | mobile.computers.status.route_ready
+meta     | end="ा" | mobile.computers.status.provisioning
+meta     | end="त" | mobile.computers.status.suspended
+meta     | end="द" | mobile.computers.status.disabled
+meta     | end="त" | mobile.computers.status.revoked
+meta     | end="त" | mobile.computers.status.unknown
+meta     | end="ा" | mobile.computers.reach.answering
+status   | end="}" | mobile.computers.row.a11y
+status   | end="य" | mobile.computers.row.a11y_active
+status   | end="ा" | mobile.computers.row.a11y_connecting
+help     | end="।" | mobile.computers.billing_inactive
+button   | end="ं" | mobile.computers.try_now
+button   | end="ँ" | mobile.computers.remove.confirm
+
+$ cd /Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad && swift measure.swift
+fonts: KohinoorDevanagari-Regular Menlo-Regular
+route ready | en mono 72.8 | hi deva 36.4 | hi-in-mono-run 39.9
+provisioning | en mono 79.5 | hi deva 48.2 | hi-in-mono-run 55.1
+suspended | en mono 59.6 | hi deva 31.8 | hi-in-mono-run 31.8
+disabled | en mono 53.0 | hi deva 12.0 | hi-in-mono-run 12.0
+revoked | en mono 46.4 | hi deva 23.8 | hi-in-mono-run 23.8
+unknown | en mono 46.4 | hi deva 24.8 | hi-in-mono-run 24.8
+answering | en mono 59.6 | hi deva 48.5 | hi-in-mono-run 55.4
+Sign-in protected | en mono 112.6 | hi deva 80.3 | hi-in-mono-run 90.1
+active | en mono 39.7 | hi deva 25.7 | hi-in-mono-run 25.7
+connecting | en mono 66.2 | hi deva 53.9 | hi-in-mono-run 60.8
+
+$ cd /Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad && swift measure2.swift
+Refresh | en 48.9px | hi 47.7px | ratio 1.0
+Switch computer | en 107.3px | hi 61.0px | ratio 0.6
+Use this computer | en 130.9px | hi 144.9px | ratio 1.1
+Start again | en 78.2px | hi 83.7px | ratio 1.1
+Use my own tunnel instead | en 169.3px | hi 169.8px | ratio 1.0
+Use my own tunnel | en 135.2px | hi 124.7px | ratio 0.9
+Set up your own tunnel | en 163.8px | hi 128.9px | ratio 0.8
+Use an address and password | en 213.3px | hi 165.8px | ratio 0.8
+Sign in with Radient | en 141.2px | hi 143.0px | ratio 1.0
+Try now | en 56.5px | hi 91.2px | ratio 1.6
+Sign in | en 48.3px | hi 71.8px | ratio 1.5
+Try again anyway | en 123.4px | hi 106.7px | ratio 0.9
+Remove | en 56.9px | hi 27.5px | ratio 0.5
+Remove this computer? | en 168.3px | hi 97.9px | ratio 0.6
+Recommended | en 107.3px | hi 52.0px | ratio 0.5
+Connect with Radient | en 153.2px | hi 128.5px | ratio 0.8
+--- available width on a 320pt phone: 320 - 2*16 screen padding = 288 (minus button paddingX 16*2 = 256 content)
+
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/src/i18n/catalogues/hi && for t in 'इंतज़ार' 'प्रतीक्षा' 'इस्तेमाल' 'उपयोग' 'सेट अप' 'सेटअप' 'हार्नेस' 'प्रकाशित' 'अनुशंसित' 'टनल' 'रिले' 'साइन-इन' 'साइन इन' 'कंप्यूटर'; do echo "mobile-hi $t : $(grep -ro "$t" . 2>/dev/null | wc -l | tr -d ' ')"; done
+mobile-hi इंतज़ार : 4
+mobile-hi प्रतीक्षा : 4
+mobile-hi इस्तेमाल : 5
+mobile-hi उपयोग : 4
+mobile-hi सेट अप : 0
+mobile-hi सेटअप : 0
+mobile-hi हार्नेस : 0
+mobile-hi प्रकाशित : 0
+mobile-hi अनुशंसित : 0
+mobile-hi टनल : 8
+mobile-hi रिले : 7
+mobile-hi साइन-इन : 18
+mobile-hi साइन इन : 9
+mobile-hi कंप्यूटर : 57
+
+$ cd /Users/damian/local-operator-ui/src/i18n/catalogues/hi && for t in 'टनल' 'कंप्यूटर' 'संगणक' 'इंतज़ार' 'प्रतीक्षा' 'इस्तेमाल' 'उपयोग' 'अनुशंसित' 'सेट अप' 'सेटअप' 'हार्नेस' 'प्रकाशित'; do echo "ui-hi $t : $(grep -ro "$t" . 2>/dev/null | wc -l | tr -d ' ')"; done
+ui-hi टनल : 1
+ui-hi कंप्यूटर : 19
+ui-hi संगणक : 0
+ui-hi इंतज़ार : 81
+ui-hi प्रतीक्षा : 0
+ui-hi इस्तेमाल : 130
+ui-hi उपयोग : 46
+ui-hi अनुशंसित : 0
+ui-hi सेट अप : 3
+ui-hi सेटअप : 24
+ui-hi हार्नेस : 1
+ui-hi प्रकाशित : 82
+
+$ cd /Users/damian/local-operator-ui && git rev-parse HEAD
+94d96837486c50f95ae21595bcca393590d4c9ed
+
+# end

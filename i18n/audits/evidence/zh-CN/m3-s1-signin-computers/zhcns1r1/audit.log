@@ -1,0 +1,123 @@
+=== audit transcript — zh-CN / M3 S1 — instance 076aa4e7f41e — 2026-11-12 ===
+Auditor model: deepseek/deepseek-flash (session model; no pin, no fallback).
+
+--- [1] input hashes (shasum -a 256) ---
+6969215384e6841040121536acc8e2c510d25c4f73d3100a32fb5fa2bf3c629b  /Users/damian/.local-operator/sessions/29c21686ee28/scratchpad/draft-zh-CN-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+103972f47256a567be116b78797e924c32fdf41597b406c9e7c8c38a5f9e9075  /Users/damian/.local-operator/sessions/29c21686ee28/scratchpad/notes-zh-CN-s1.md
+f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109  en/mobile.computers.json
+2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252  en/mobile.signin.json
+93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a  en/mobile.computers.context.json
+1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56  en/mobile.signin.context.json
+b6f9e5bffbec5bb58ff3d1fb44bb592fd0779b312bec8655a1204348f45e0038  zh-CN/mobile.computers.json
+00d37fc3f73ac25efecbbaf9b1a16d673d56d1984cca5f9f01a044b6f95ee7fe  zh-CN/mobile.signin.json
+-- style guide + glossary from origin/main --
+8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c  -
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  -
+
+--- [2] worktree head under audit ---
+1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce
+
+--- [3] repo's own catalogue validator (read-only) ---
+$ node scripts/i18n/generate.ts --check
+es/mobile.computers.json disagrees with the English source — missing: mobile.computers.not_harness, mobile.computers.wait.listing, mobile.computers.wait.tunnel_status, mobile.computers.wait.answered, mobile.computers.wait.use_computer, mobile.computers.wait.start_again, mobile.computers.refresh, mobile.computers.list.heading, mobile.computers.own_tunnel_instead, mobile.computers.remove.title, mobile.computers.remove.body, mobile.computers.paths.radient_title, mobile.computers.paths.recommended, mobile.computers.paths.radient_body, mobile.computers.paths.own_title, mobile.computers.paths.own_body, mobile.computers.paths.own_action, mobile.computers.status.route_ready, mobile.computers.status.provisioning, mobile.computers.status.suspended, mobile.computers.status.disabled, mobile.computers.status.revoked, mobile.computers.status.unknown, mobile.computers.reach.answering, mobile.computers.row.a11y, mobile.computers.row.a11y_active, mobile.computers.row.a11y_connecting, mobile.computers.billing_inactive, mobile.computers.try_now, mobile.computers.remove.confirm; unknown: none
+exit=1
+(Fails on the English-first branch state: the SHIPPED locales have not been given the 30 new computers keys yet. It reports the first locale alphabetically — es — and never reaches zh-CN. It cannot see an out-of-repo draft, so the draft itself was validated with the same parser, imported directly, in [4].)
+
+--- [4] independent checker against src/i18n/messages.ts parseMessage ---
+$ node /Users/damian/.local-operator/sessions/4fa2d8152a9f/scratchpad/audit-zhCN.mjs
+keys in brief: 44 | in draft: 44 | order matches: true
+parse errors / placeholder / style errors: 0
+warnings: 0
+
+width (cells) — only keys whose zh text exceeds the EN char count:
+    37c vs  34  mobile.computers.wait.tunnel_status
+     8c vs   7  mobile.computers.try_now
+
+badge widths (mono flex-row, no wrap):
+    4c  recommended = 推荐
+    8c  route_ready = 路径就绪
+    6c  provisioning = 配置中
+    6c  suspended = 已暂停
+    6c  disabled = 已禁用
+    6c  revoked = 已撤销
+    4c  unknown = 未知
+    6c  answering = 已响应
+
+sample cells: not_harness=30 listing=29 tunnel_status=37
+
+RESULT: mechanical clean
+exit=0
+
+--- [5] first checker run flagged two keys; VERIFIED as a bug in MY check, not in the draft ---
+first run output (recorded verbatim):
+  ERR  mobile.computers.wait.listing: single '…' — guide requires '……'
+  ERR  mobile.signin.panel.opening: single '…' — guide requires '……'
+  RESULT: MECHANICAL FAIL
+code-point inspection (python3, repr of the tail of each value):
+  mobile.computers.wait.listing '电脑……' ['0x8111', '0x2026', '0x2026']
+  mobile.signin.panel.opening '览器……' ['0x5668', '0x2026', '0x2026']
+→ both values end U+2026 U+2026 ('……'), which is the guide's form. My alternation regex /\u2026(?!\u2026)|(?<!\u2026)\u2026/ matched the second mark of a valid pair; replaced with a run-length test (every run of U+2026 must have even length) and re-run — see [4], clean.
+
+--- [6] shipped zh-CN conventions the draft is judged against (python3 census) ---
+ spaced CJK<->Latin adjacencies: 55 (CJK->Latin 29, Latin->CJK 26)
+ unspaced CJK<->Latin adjacencies: 19 (CJK->Latin 8, Latin->CJK 11)
+ ellipsis: single '-...' runs 17 | '......' runs 7
+ spaced values on the SAME screens this slice touches:
+    mobile.computers.account_mismatch = 这台电脑属于另一个 Radient 账户，或已被移除。
+    mobile.computers.billing_help = 在 Radient 控制台中打开此隧道的账单设置，并启用远程访问。
+    mobile.computers.disabled_help = Radient 显示此隧道当前未处于活动状态。请在 Radient 控制台检查其状态。
+    mobile.computers.harness_help = 在 Radient 控制台中为此隧道启用 Local Operator。
+
+--- [7] call-site evidence for ZH-01 (the tunnel_status value is the control plane's raw word) ---
+$ grep -n 'wait.tunnel_status' -A3 computers.tsx
+258:						{t("mobile.computers.wait.tunnel_status", {
+259-							status: state.tunnelStatus,
+260-						})}
+261-					</Text>
+$ grep -n 'rawStatus' computers.tsx
+418:	 *  this closure predates that render. `rawStatus` is Radient's own word, which
+426:		return found ? { hostname: found.hostname, status: found.rawStatus } : null;
+$ sed -n '176,183p' connector-wait.ts
+
+			if (found) {
+				/* Radient's own word for the row, as the control plane spells it — never
+				 * rewritten into "active", because `disabled` and `suspended` are statuses
+				 * this app must not call provisioned. */
+				setState({ kind: "w2", tunnelStatus: found.status });
+				/* `status: active` means the cloud route exists. It is NOT a heartbeat, so
+				 * the only thing that promotes this to `W3` is the machine answering. */
+$ sed -n '56,62p' computers.tsx
+ *
+ * The one thing this screen must never do is present the control plane's opinion
+ * as the machine's state. `status: active` means the CLOUD ROUTE IS PROVISIONED;
+ * `radient-ml`'s API cannot say whether the connector is running, and
+ * `docs/relay/tunnel-edge.md` § 4 states that a phone learns "the computer is
+ * offline" only by failing to reach it. So a row shows two facts separately and
+ * with two identifiers — `status` from the control plane, `reachability` from a
+$ grep -n 'status:' src/features/auth/computers.tsx (statusLabel arms)
+76:				label: t("mobile.computers.status.route_ready"),
+80:			return { label: t("mobile.computers.status.provisioning"), tone: "info" };
+82:			return { label: t("mobile.computers.status.suspended"), tone: "warning" };
+84:			return { label: t("mobile.computers.status.disabled"), tone: "warning" };
+86:			return { label: t("mobile.computers.status.revoked"), tone: "danger" };
+88:			return { label: t("mobile.computers.status.unknown"), tone: "neutral" };
+
+--- [8] encoding / control characters (python3) ---
+ control/format (bidi) chars: none
+ BOM: False | utf-8 decodes: True | values: 44
+
+--- [9] badge call site (width context for fit) ---
+					</Text>
+					{/* The two facts, each with its own identifier, so neither can be
+					 *  asserted in place of the other. */}
+					<View className="flex-row items-center gap-2 pt-1">
+						<View testID={ids.status}>
+							<Badge label={status.label} tone={status.tone} mono />
+						</View>
+						<View testID={ids.reachability}>
+							<View className="flex-row items-center gap-1">
+								<Badge label={reach.label} tone={reach.tone} mono />
+							</View>
+						</View>
+					</View>
