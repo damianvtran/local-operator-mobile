@@ -673,7 +673,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * carried with #227's, so this is neither parent's digest; re-derived with
 	 * `--print` over the staged integrated tree. Source admission only, NOT
 	 * rendered U-08 evidence. */
-	app: "da23213d3caa6a22566f638b008b148adc595a0f38113b79043665ace8ecac47",
+	/* Re-pinned 2026-11-12 for PR #236 (M2 expression literals) rebased onto main
+	 * 2b508d9d (#237 integration of #231, #235, #239 and the session-screen work):
+	 * the session route's keyed literals (context tray, scroll cues, video title,
+	 * fallback names, region labels, back-to labels) are carried with main's
+	 * session-screen change, so neither parent's digest. Re-derived with `--print`
+	 * over the committed rebased tree. Source admission only, NOT rendered U-08
+	 * evidence. */
+	app: "dc24ccf2aa7005ab8cc2da11b9b968320cc9f479a25096b7f67ee976cf780a60",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1588,7 +1595,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * every side's src carried plus the regenerated `catalogue.gen.ts` (657
 	 * keys), so no parent's digest; re-derived once with --print over the
 	 * converged tree. Source identity only, NOT rendered U-08 evidence. */
-	src: "91088061d5ef2db9a5d006ed0c0735f1f9bb6cb7108acbeed9b96048d333f6e0",
+	/* Re-pinned 2026-11-12 for PR #236 (M2 expression literals) rebased onto main
+	 * 2b508d9d: the 33 expression-literal keys (657 -> 690 in the regenerated
+	 * `catalogue.gen.ts`), the scanner and its tests, the es/vi short-context and
+	 * `stream_degraded` remediation and `useComposedDir()` spreads are carried with
+	 * main's #237 integration, so neither parent's digest. Re-derived once with
+	 * `--print` over the committed rebased tree. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	src: "373f005c8f32138833fe20b65dfa4c9e187e01cc5f794a2fd5438b350d332589",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
