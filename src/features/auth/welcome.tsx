@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
+import { t } from "@/i18n";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
+import { useComposedDir } from "@/ui/direction";
 import { signInPresentation } from "./sign-in-presentation";
-import { t } from "@/i18n";
 
 /**
  * First run (docs/ux/flows.md § 1, F-1).
@@ -32,6 +33,9 @@ import { t } from "@/i18n";
  */
 export default function Welcome() {
 	const router = useRouter();
+	/* `Radient …` leads the Urdu label, so `dir="auto"` would resolve it left-to-right
+	 * on an RTL page (M3 S1 design D2); the button states the page's base. */
+	const composedDir = useComposedDir();
 	const {
 		signInWithRadient,
 		signInState,
@@ -85,6 +89,7 @@ export default function Welcome() {
 					<View className="gap-3">
 						<Button
 							label={t("mobile.signin.start")}
+							labelDir={composedDir}
 							onPress={start}
 							loading={busy}
 							testID={CONTROL.welcomeConnect}

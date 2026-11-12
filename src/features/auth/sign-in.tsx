@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
+import { t } from "@/i18n";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
+import { useComposedDir } from "@/ui/direction";
 import { signInPresentation } from "./sign-in-presentation";
-import { t } from "@/i18n";
 
 /**
  * Radient sign-in as a screen of its own (docs/ux/flows.md § 1; `C5` re-auth).
@@ -27,6 +28,9 @@ import { t } from "@/i18n";
  */
 export default function SignIn() {
 	const router = useRouter();
+	/* `Radient …` leads the Urdu label, so `dir="auto"` would resolve it left-to-right
+	 * on an RTL page (M3 S1 design D2); the button states the page's base. */
+	const composedDir = useComposedDir();
 	const {
 		signInWithRadient,
 		signInState,
@@ -75,6 +79,7 @@ export default function SignIn() {
 				{presentation.state.kind === "idle" ? (
 					<Button
 						label={t("mobile.signin.start")}
+						labelDir={composedDir}
 						onPress={start}
 						loading={busy}
 						testID={CONTROL.signInStart}

@@ -2,6 +2,7 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiscoveredComputer } from "@/connection";
+import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
 import { createConnectionStore } from "@/state/connection-store";
 import { CONTROL } from "@/ui/a11y";
 
@@ -32,6 +33,8 @@ const host = vi.hoisted(() => ({
 	picked: [] as unknown[],
 	onWait: null as null | (() => void),
 	refusal: null as null | Record<string, unknown>,
+	/* Every Pressable's screen-reader label, in render order (review M1). */
+	labels: [] as string[],
 	surface: null as null | Props,
 }));
 
@@ -51,7 +54,18 @@ vi.mock("react-native", async () => {
 			return null;
 		},
 		ActivityIndicator: () => null,
-		Pressable: (props: Props) => (props.children ?? null) as React.ReactNode,
+		Pressable: (props: Props) => {
+			if (typeof props.accessibilityLabel === "string")
+				host.labels.push(props.accessibilityLabel);
+			/* The row's children are a render function when it styles on `pressed`. */
+			return (
+				typeof props.children === "function"
+					? (props.children as (s: { pressed: boolean }) => React.ReactNode)({
+							pressed: false,
+						})
+					: (props.children ?? null)
+			) as React.ReactNode;
+		},
 	};
 });
 vi.mock("expo-router", () => ({
@@ -206,6 +220,7 @@ const poll = () =>
 beforeEach(() => {
 	vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
 	host.texts.length = 0;
+	host.labels.length = 0;
 	host.presses.clear();
 	host.params = { add: "1" };
 	host.refreshes = 0;
@@ -338,5 +353,72 @@ describe("a console-side refusal on Computers offers the console (QA round 3, Q7
 		await render();
 		expect(host.surface?.kind).toBe("console");
 		expect(host.surface?.onOpenConsole).toBeTypeOf("function");
+	});
+});
+
+/**
+ * M3 S1 review M1: the picker row's screen-reader label moved from a concatenated
+ * template to `t(row.a11y | row.a11y_active | row.a11y_connecting, {name, status,
+ * reach})`. The trailing ", active" / ", connecting" now live INSIDE the catalogue
+ * value, so byte-identity with the old string depends on a ternary plus three
+ * placeholders — nothing else renders it. Same harness as above, list mode (no
+ * `add`), the `Pressable` mock records `accessibilityLabel`.
+ */
+describe("a computer row's screen-reader label (review M1)", () => {
+	const labelsFor = async () => {
+		host.params = {};
+		await render();
+		return host.labels.filter((label) => label.startsWith("Old Mac"));
+	};
+	/* The store's own pick sequence: route → pick (minting) → live. */
+	const route = () => {
+		const api = store.api?.getState();
+		api?.startRoute({
+			mode: "radient",
+			hostname: OLD.hostname,
+			tunnelId: OLD.tunnelId,
+		});
+		api?.selectComputer(OLD);
+	};
+
+	it("plain row: name, status, reachability", async () => {
+		expect(await labelsFor()).toEqual([
+			"Old Mac, route ready, Sign-in protected",
+		]);
+	});
+	it("connecting row ends in the connecting word", async () => {
+		route();
+		expect(await labelsFor()).toEqual([
+			"Old Mac, route ready, Sign-in protected, connecting",
+		]);
+	});
+	it("active row ends in the active word and reads answered", async () => {
+		route();
+		store.api?.getState().markLive();
+		expect(await labelsFor()).toEqual([
+			"Old Mac, route ready, answering, active",
+		]);
+	});
+	it("a non-English locale renders its own catalogue words with the real values", async () => {
+		setLocaleSource(() => "ur");
+		try {
+			route();
+			store.api?.getState().markLive();
+			const [label] = await labelsFor();
+			const expected = renderFor(
+				"mobile.computers.row.a11y_active",
+				{
+					name: "Old Mac",
+					status: renderFor("mobile.computers.status.route_ready", {}, "ur"),
+					reach: renderFor("mobile.computers.reach.answering", {}, "ur"),
+				},
+				"ur",
+			);
+			expect(label).toBe(expected);
+			expect(label).not.toContain("route ready");
+			expect(label).not.toContain("answering");
+		} finally {
+			resetLocaleSource();
+		}
 	});
 });

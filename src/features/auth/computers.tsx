@@ -244,6 +244,10 @@ const WaitPanel = ({
 	onStop: () => void;
 }) => {
 	const host = appeared?.hostname ?? null;
+	/* "Radient has the tunnel — {status}." starts with the Latin product name in Urdu,
+	 * so `dir="auto"` would lay it out left-to-right on an RTL page (M3 S1 design
+	 * D2); the page's base is stated instead. */
+	const composedDir = useComposedDir();
 	return (
 		<View className="gap-3 rounded-sm border border-hairline bg-surface p-4">
 			{state.kind === "w1" ? (
@@ -255,7 +259,7 @@ const WaitPanel = ({
 			) : null}
 			{state.kind === "w2" ? (
 				<>
-					<Text className="text-body text-ink">
+					<Text {...composedDir} className="text-body text-ink">
 						{t("mobile.computers.wait.tunnel_status", {
 							status: t(tunnelStatusKey(state.tunnelStatus)),
 						})}
