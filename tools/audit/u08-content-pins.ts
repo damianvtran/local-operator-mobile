@@ -250,6 +250,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 // hardened byte reads and exact-lock image-manipulator dependency. Identity only;
 // rendered and real-path evidence is recorded separately, not inferred from hashes.
 export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
+	/* PR #246: --print from bebded4b admits the semantic warm hydration,
+	 * resume, catalogue and cached interaction changes in app/src. Source
+	 * admission only, not unchanged pixels or historical reproduction;
+	 * fresh canonical measurement after admission is still pending. */
 	/* Re-pinned 2026-11-09 for PR #211's UX round-1 remediation, with --print from
 	 * the staged tree. `app` moves: the session screen tags the composer box with
 	 * the window it was measured in (U1). `src` moves: `heldComposerLimit`, the
@@ -680,7 +684,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * session-screen change, so neither parent's digest. Re-derived with `--print`
 	 * over the committed rebased tree. Source admission only, NOT rendered U-08
 	 * evidence. */
-	app: "dc24ccf2aa7005ab8cc2da11b9b968320cc9f479a25096b7f67ee976cf780a60",
+	app: "1b2b0aa6933a2a8000c647ef16616246be7feb9d8e38caaec2742d3d5889b932",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1615,8 +1619,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-pinned for PR #243 (M3 S1 sign-in/computers keys, 44 translations, Urdu
 	 * direction fix) merged with main e24de6cd (#241 show-more polish): both sides' src
 	 * carried, so neither parent's digest; re-derived last with --print. Source
-	 * identity only, NOT rendered U-08 evidence. */
-	src: "6bf4f9257413ac552eb73b1f20a07001f6ace65104917452514c21dda28185b5",
+	 * identity only, NOT rendered U-08 evidence.
+	 *
+	 * PR #246 converged onto d33c46af: upstream sign-in/computers i18n and the
+	 * reviewed background-sync source are both retained. Re-derived once with
+	 * --print over the final combined tracked app/src tree; neither parent's src
+	 * digest admits this tree. Source admission only, NOT visual/native proof;
+	 * canonical measurement remains pending. */
+	src: "c5a31ecc1a810c57cb527a7f918bc3ce0ac17eaa6f22fc9abbc28589f9953f6e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
