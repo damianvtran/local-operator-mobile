@@ -40,7 +40,7 @@ import {
 	userBubbleFill,
 } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
-import { ROLE, SURFACE, transcriptImageId } from "@/ui/a11y";
+import { ROLE, SURFACE, transcriptImageId, userMessageMoreId } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
@@ -345,7 +345,7 @@ const TranscriptRowImpl = ({
 							// windowing, and a find landing on this row opens it.
 							expanded={fold.open}
 							onToggle={fold.onToggle}
-							testID={`${testID}-more`}
+							testID={userMessageMoreId(testID)}
 						>
 							{text}
 						</UserMessageClamp>

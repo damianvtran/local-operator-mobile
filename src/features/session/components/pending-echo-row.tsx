@@ -9,7 +9,7 @@ import {
 } from "@/features/session/pending-echo";
 import { userBubbleFill } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
-import { pendingEchoId, ROLE } from "@/ui/a11y";
+import { pendingEchoId, ROLE, userMessageMoreId } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { cx } from "@/ui/variants";
 
@@ -78,7 +78,9 @@ const PendingEchoRowImpl = ({
 				{echo.text.length === 0 ? null : echo.op === "steer" ? (
 					<Text className="text-body-read text-ink-muted">{echo.text}</Text>
 				) : (
-					<UserMessageClamp testID={`${pendingEchoId(echo.commandId)}-more`}>
+					<UserMessageClamp
+						testID={userMessageMoreId(pendingEchoId(echo.commandId))}
+					>
 						<Text className="text-body-read text-ink-muted">{echo.text}</Text>
 					</UserMessageClamp>
 				)}

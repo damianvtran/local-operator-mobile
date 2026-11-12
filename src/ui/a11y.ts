@@ -2160,6 +2160,18 @@ export const groupGuideId = (level: number): string => `group-guide-${level}`;
 export const pendingEchoId = (commandId: string): string =>
 	`pending-echo-${commandId}`;
 
+/** A prompt's `Show more` / `Show less` toggle (`UserMessageClamp`, #235),
+ *  addressed as its row's own id plus `-more` — `transcript-row-<id>-more` on
+ *  a settled prompt, `pending-echo-<id>-more` on its in-flight echo. Deriving
+ *  it from the row id (rather than a family of its own) keeps the toggle
+ *  inside the row's declared family and carries the echo→row hand-over over
+ *  to the control: a flow that pressed `pending-echo-<id>-more` finds the same
+ *  control at `transcript-row-<id>-more` once the real row lands. It is built
+ *  here, not spelled at the call site, because a template `testID` is a second
+ *  spelling the identifier check cannot follow. */
+export const userMessageMoreId = (rowTestID: string): string =>
+	`${rowTestID}-more`;
+
 /** One quiet group's bar. The key is the group's own `qg:<first row id>`
  *  (`turn-condensing.ts`), so a group is addressable by the receipt that
  *  started it — the same identity the latch and the reader's expansion use. */

@@ -1569,8 +1569,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * and the user-row integration of #233's selectable text inside #235's
 	 * clamp, and the blank-row test's clamp stub, so this is no parent's digest;
 	 * re-derived with `--print` over the staged integrated tree. Source
-	 * admission only, NOT rendered U-08 evidence. */
-	src: "c3027605789d794d4a29a90280e5b37743a4912665e5bf9ea75866ea7deac915",
+	 * admission only, NOT rendered U-08 evidence. Re-printed again after the
+	 * user-message toggle's testID moved behind `userMessageMoreId` in
+	 * `src/ui/a11y.ts` (the integrated tree's literal-testID fix). */
+	src: "9a89a4a5f802e42153a7fada88301e9e692c922c0b7a09a3768fc95b4a60047a",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
