@@ -8,6 +8,5 @@
 	"mobile.session_health.resume_refused_title": "无法恢复",
 	"mobile.session_health.resume_refused": "此会话刚才无法恢复。重试即可。",
 	"mobile.session_health.resume_gone": "此会话已不存在。",
-	"mobile.session_health.resume_no_route": "连接电脑后才能恢复此会话。",
-	"mobile.session_health.ended_placeholder": "发送即可重新打开……"
+	"mobile.session_health.resume_no_route": "连接电脑后才能恢复此会话。"
 }

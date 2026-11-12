@@ -435,9 +435,6 @@ describe("the words", () => {
 		expect(healthLabel("not_answering")).toBe("Not answering");
 		expect(healthLabel("reconnecting")).toBe("Reconnecting");
 		expect(healthLabel("ended")).toBe("Ended");
-		expect(healthCopy()["mobile.session_health.ended_placeholder"]).toBe(
-			"Send to reopen in your home folder…",
-		);
 		expect(healthCopy()["relay.health.ended_send_failed"]).toContain(
 			"couldn't be reopened",
 		);

@@ -1513,7 +1513,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * carried with #227's, so this is no parent's digest; re-derived with
 	 * `--print` over the converged tree. Source admission only, NOT rendered
 	 * U-08 evidence. */
-	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
+	// fix/ended-session-placeholder: an ended session's composer shows the
+	// standard placeholder; `mobile.session_health.ended_placeholder` retired
+	// from all 8 locales. --print over the staged tree; source identity only,
+	// no rendered or native proof.
+	src: "1572627eaef067e16cecf0e94b23bb5f2203c994b165e598bf5222ade82323d8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

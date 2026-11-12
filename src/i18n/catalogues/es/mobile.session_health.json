@@ -8,6 +8,5 @@
 	"mobile.session_health.resume_refused_title": "No se pudo reanudar",
 	"mobile.session_health.resume_refused": "Esta sesión no se pudo reabrir en este momento. Vuelve a intentarlo.",
 	"mobile.session_health.resume_gone": "Esta sesión ya no está guardada.",
-	"mobile.session_health.resume_no_route": "Conecta una máquina para reanudar esta sesión.",
-	"mobile.session_health.ended_placeholder": "Envía para reabrir…"
+	"mobile.session_health.resume_no_route": "Conecta una máquina para reanudar esta sesión."
 }

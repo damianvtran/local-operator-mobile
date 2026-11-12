@@ -8,6 +8,5 @@
 	"mobile.session_health.resume_refused_title": "जारी नहीं रखा जा सका",
 	"mobile.session_health.resume_refused": "यह सत्र अभी दोबारा नहीं खोला जा सका। फिर से कोशिश करें।",
 	"mobile.session_health.resume_gone": "यह सत्र अब सहेजा हुआ नहीं है।",
-	"mobile.session_health.resume_no_route": "इस सत्र को जारी रखने के लिए कंप्यूटर से कनेक्ट करें।",
-	"mobile.session_health.ended_placeholder": "भेजने पर होम फ़ोल्डर में खुलेगा…"
+	"mobile.session_health.resume_no_route": "इस सत्र को जारी रखने के लिए कंप्यूटर से कनेक्ट करें।"
 }

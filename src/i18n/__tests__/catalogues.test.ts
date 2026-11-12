@@ -195,14 +195,14 @@ const NAMESPACES = [
 	},
 	{
 		/* This app's own chrome for the health surface: the control's labels, the
-		 *  Resume flow's sentences and the two reopen lines. APP-OWNED, in the
+		 *  Resume flow's sentences and the reopen line. APP-OWNED, in the
 		 *  `mobile.*` convention #112 established, because a later adoption of the
 		 *  core's locale files must not silently overwrite or orphan them (review
 		 *  round 3 m1 / UX U15 / design D13). */
 		name: "mobile.session_health",
 		messages: sessionHealth,
 		context: sessionHealthContext,
-		expected: 11,
+		expected: 10, // -1: `ended_placeholder` retired, the ended composer shows the standard placeholder
 	},
 	{
 		/* Settings → Appearance and the Theme screen (decision record
@@ -309,7 +309,10 @@ describe("the English catalogues", () => {
 		 * Plus 53 keyed by the app/ scan (the new `app/` coverage in
 		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 53
 		 * = 651, the generator's own count. */
-		expect(total).toBe(651);
+		/* Minus one: `mobile.session_health.ended_placeholder` retired — an ended
+		 * session's composer shows the standard placeholder (operator feedback,
+		 * 2026-11-11). 651 - 1. */
+		expect(total).toBe(650);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -522,7 +525,7 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 		/* The 2026-11-07 home-pickers audit (VI-H01, vi1107p1) chose the loanword. */
 		"mobile.home.picker.folder_home":
-			"Vietnamese names the home folder «thư mục home» across mobile and core (session_health.ended_placeholder, relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
+			"Vietnamese names the home folder «thư mục home» across mobile and core (relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
 	},
 	hi: {
 		"mobile.team_bridge.profile.name_with_owner":
