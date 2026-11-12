@@ -439,6 +439,32 @@ export const cardClasses = (options: { inList?: boolean } = {}): string =>
 		options.inList ? "p-3" : "p-4",
 	);
 
+/**
+ * A tappable card that navigates or selects: a computer on Computers, the Team
+ * Bridge entry. One family so the two read as the same kind of object, and both
+ * as something to press (TestFlight 883, Ola: "It was not obvious that this was
+ * clickable" — the row was text under a hairline and its pressed fill measured
+ * 1.01:1 against the canvas, while the only bordered shapes were inert chips).
+ *
+ * - `border-control`, not `hairline`: 3.42:1 on canvas clears the 3:1 non-text
+ *   floor; a hairline edge is 1.25:1 and does not read as a boundary.
+ * - Pressed is `sunken` (1.14:1 on `surface`, the largest step the palette has);
+ *   `row-hover` is 1.08:1 on surface and showed nothing under a finger.
+ * - Selected is `row-selected`, never alone: the caller adds the accent check.
+ * - 56 pt floor (`NAV_CARD_MIN_HEIGHT`), the switcher's two-line row height.
+ */
+export const navCardClasses = (state: ControlState = {}): string =>
+	cx(
+		"flex-row items-center gap-3 rounded-md border border-border-control px-3 py-3",
+		state.selected
+			? "bg-row-selected"
+			: state.pressed
+				? "bg-sunken"
+				: "bg-surface",
+	);
+
+export const NAV_CARD_MIN_HEIGHT = 56;
+
 /* -------------------------------------------------------------------------- */
 /* Badge and Chip                                                             */
 /* -------------------------------------------------------------------------- */

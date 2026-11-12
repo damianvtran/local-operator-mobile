@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import { Check, ChevronLeft, ChevronRight, Laptop } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import {
-	type ComputerStatus,
+	computerDisplayName,
 	type DiscoveredComputer,
 	RADIENT_CONSOLE_TUNNELS_URL,
 } from "@/connection";
@@ -14,9 +15,15 @@ import {
 } from "@/features/auth/computer-switcher-sheet";
 import {
 	backAction,
+	type ComputerFactTone,
+	computerReachabilityLabel,
+	computerRowTrailing,
+	computerStatusLabel,
 	computersView,
+	FACT_DOT_TOKEN,
 	landingAfterPick,
 	newlyListed,
+	type Reachability,
 	type RowState,
 	rowState,
 } from "@/features/auth/computers-view";
@@ -38,7 +45,6 @@ import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { BackButton } from "@/ui/components/back-button";
-import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
@@ -47,8 +53,13 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Shimmer } from "@/ui/components/shimmer";
 import { Skeleton } from "@/ui/components/skeleton";
-import { useComposedDir } from "@/ui/direction";
+import { useComposedDir, useIsRTL } from "@/ui/direction";
 import { computersHeaderStackWidth } from "@/ui/size-class";
+import {
+	avatarClasses,
+	NAV_CARD_MIN_HEIGHT,
+	navCardClasses,
+} from "@/ui/variants";
 
 /**
  * Computers: discovery, the picker, and the set-up path (docs/ux/flows.md § 2 and
@@ -65,42 +76,36 @@ import { computersHeaderStackWidth } from "@/ui/size-class";
  * exists to prevent.
  */
 
-/** The relay's own status vocabulary, in the reader's terms. */
-function statusLabel(status: ComputerStatus): {
+/** One fact on line 3: a 6 pt tone dot, then the word (never colour alone). */
+const Fact = ({
+	label,
+	tone,
+	testID,
+}: {
 	label: string;
-	tone: "neutral" | "success" | "warning" | "danger" | "info";
-} {
-	switch (status) {
-		case "ready":
-			return { label: "route ready", tone: "success" };
-		case "provisioning":
-			return { label: "provisioning", tone: "info" };
-		case "suspended":
-			return { label: "suspended", tone: "warning" };
-		case "off":
-			return { label: "disabled", tone: "warning" };
-		case "gone":
-			return { label: "revoked", tone: "danger" };
-		case "unknown":
-			return { label: "unknown", tone: "neutral" };
-	}
-}
+	tone: ComputerFactTone;
+	testID: string;
+}) => {
+	const dot = useTokenColor(FACT_DOT_TOKEN[tone]);
+	return (
+		<View className="flex-row items-center gap-1" testID={testID}>
+			<View
+				className="rounded-full"
+				style={{ width: 6, height: 6, backgroundColor: dot }}
+				aria-hidden
+			/>
+			<Text className="text-meta text-ink-muted">{label}</Text>
+		</View>
+	);
+};
 
-/** The probe's own answer, kept visibly separate from the row's status. */
-type Reachability = "protected" | "answered";
-
-function reachabilityLabel(state: Reachability): {
-	label: string;
-	tone: "neutral" | "success" | "warning";
-} {
-	switch (state) {
-		case "protected":
-			return { label: t("mobile.computers.protected"), tone: "neutral" };
-		case "answered":
-			return { label: "answering", tone: "success" };
-	}
-}
-
+/**
+ * A computer, as a card in the switcher sheet's row language (design D1): glyph,
+ * name, host, the two facts as text, and a reserved trailing slot with a chevron
+ * so the row reads as something to press. TestFlight 883 (Ola): the old row was
+ * text under a hairline whose pressed fill measured 1.01:1, and the only bordered
+ * shapes on the screen were the two inert status chips.
+ */
 const ComputerRow = ({
 	computer,
 	state,
@@ -115,17 +120,24 @@ const ComputerRow = ({
 	onRemove: () => void;
 }) => {
 	const ids = computerRowIds(computer.hostname);
-	const status = statusLabel(computer.status);
-	const reach = reachabilityLabel(reachability);
+	const status = computerStatusLabel(computer.status);
+	const reach = computerReachabilityLabel(reachability);
 
 	const spinnerColor = useTokenColor("ink-muted");
+	const accent = useTokenColor("accent");
+	const glyphInk = useTokenColor("ink");
+	const chevronInk = useTokenColor("ink-dim");
+	const rtl = useIsRTL();
 	const selected = state === "active";
 	const connecting = state === "connecting";
+	const trailing = computerRowTrailing(state);
 
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityState={{ selected, busy: connecting }}
+			/* The RAW name: the title may be shortened for display (D4), and a screen
+			 *  reader cannot see that it was. */
 			accessibilityLabel={`${computer.name}, ${status.label}, ${reach.label}${
 				selected ? ", active" : connecting ? ", connecting" : ""
 			}`}
@@ -138,75 +150,96 @@ const ComputerRow = ({
 		>
 			{({ pressed }) => (
 				<View
-					className={`gap-1 border-b border-hairline py-3 ${
-						pressed ? "bg-row-hover" : ""
-					}`}
+					className={navCardClasses({ pressed, selected })}
+					style={{ minHeight: NAV_CARD_MIN_HEIGHT }}
 				>
-					<View className="flex-row items-center gap-2">
-						<Text className="flex-1 text-body text-ink" numberOfLines={1}>
-							{computer.name}
-						</Text>
-						{/* Selection is never colour alone: the marker is a word. */}
-						{selected ? (
+					<View className={avatarClasses("sm")} aria-hidden>
+						<Laptop size={16} color={glyphInk} />
+					</View>
+					<View className="min-w-0 flex-1 gap-0.5">
+						<View className="flex-row items-center gap-2">
 							<Text
-								className="shrink-0 text-meta text-accent"
-								testID={CONTROL.computerSelectedMarker}
+								className="min-w-0 flex-1 text-label text-ink"
+								numberOfLines={1}
 							>
-								active
+								{computerDisplayName(computer.name)}
 							</Text>
-						) : null}
-						{/* The pending state a pick needs (design round 1, D1): the list stays
-						 *  and the tapped row says what it is doing, in a word as well as the
-						 *  kit's spinner, while the session is minted. */}
+							{/* Selection is never colour alone: the marker is a word. */}
+							{selected ? (
+								<Text
+									className="shrink-0 text-meta text-accent"
+									testID={CONTROL.computerSelectedMarker}
+								>
+									active
+								</Text>
+							) : null}
+						</View>
+						<Text
+							className="text-mono-sm text-ink-dim"
+							numberOfLines={1}
+							ellipsizeMode="head"
+						>
+							{computer.hostname}
+						</Text>
+						{/* The pending state a pick needs (design round 1, D1): the word
+						 *  takes line 3 while the session is minted, beside the trailing
+						 *  spinner. */}
 						{connecting ? (
-							<View
-								className="shrink-0 flex-row items-center gap-1"
-								testID={CONTROL.computerConnectingMarker}
-							>
-								{/* The quiet Button's own spinner: same token, hidden from
-								 *  assistive tech because the word beside it is the content. */}
-								<ActivityIndicator
-									size="small"
-									color={spinnerColor}
-									accessibilityElementsHidden
-									importantForAccessibility="no"
-								/>
+							<View testID={CONTROL.computerConnectingMarker}>
 								<Text className="text-meta text-ink-muted">
 									{t("mobile.computers.connecting")}
 								</Text>
 							</View>
+						) : (
+							/* The two facts as text, not bordered pills (D1: the pills read
+							 *  as buttons and are not), each with its own identifier so
+							 *  neither can be asserted in place of the other. */
+							<View className="flex-row flex-wrap items-center gap-x-1 gap-y-0.5">
+								<Fact
+									label={status.label}
+									tone={status.tone}
+									testID={ids.status}
+								/>
+								<Text className="text-meta text-ink-dim" aria-hidden>
+									·
+								</Text>
+								<Fact
+									label={reach.label}
+									tone={reach.tone}
+									testID={ids.reachability}
+								/>
+							</View>
+						)}
+						{!computer.supportsLocalOperator ? (
+							<Text className="text-body-sm text-ink-muted">
+								This computer is not running the Local Operator harness.
+							</Text>
+						) : null}
+						{computer.billing.eligible === false ? (
+							<Text className="text-body-sm text-warning">
+								{computer.billing.message ??
+									"Billing for this tunnel is inactive, so remote access will be refused."}
+							</Text>
 						) : null}
 					</View>
-					<Text
-						className="text-mono-sm text-ink-dim"
-						numberOfLines={1}
-						ellipsizeMode="head"
-					>
-						{computer.hostname}
-					</Text>
-					{/* The two facts, each with its own identifier, so neither can be
-					 *  asserted in place of the other. */}
-					<View className="flex-row items-center gap-2 pt-1">
-						<View testID={ids.status}>
-							<Badge label={status.label} tone={status.tone} mono />
-						</View>
-						<View testID={ids.reachability}>
-							<View className="flex-row items-center gap-1">
-								<Badge label={reach.label} tone={reach.tone} mono />
-							</View>
-						</View>
+					{/* Reserved in every state, as in the switcher, so line 1 never
+					 *  shifts when a row starts connecting or becomes active. */}
+					<View className="w-5 shrink-0 items-center">
+						{trailing === "spinner" ? (
+							<ActivityIndicator
+								size="small"
+								color={spinnerColor}
+								accessibilityElementsHidden
+								importantForAccessibility="no"
+							/>
+						) : trailing === "check" ? (
+							<Check size={18} color={accent} aria-hidden />
+						) : rtl ? (
+							<ChevronLeft size={18} color={chevronInk} aria-hidden />
+						) : (
+							<ChevronRight size={18} color={chevronInk} aria-hidden />
+						)}
 					</View>
-					{!computer.supportsLocalOperator ? (
-						<Text className="text-body-sm text-ink-muted">
-							This computer is not running the Local Operator harness.
-						</Text>
-					) : null}
-					{computer.billing.eligible === false ? (
-						<Text className="text-body-sm text-warning">
-							{computer.billing.message ??
-								"Billing for this tunnel is inactive, so remote access will be refused."}
-						</Text>
-					) : null}
 				</View>
 			)}
 		</Pressable>
@@ -485,7 +518,7 @@ export default function Computers() {
 								testID={CONTROL.computersSwitch}
 								label={t("mobile.computers.switch")}
 								onPress={switcher.open}
-								variant="quiet"
+								variant="outline"
 								size="sm"
 							/>
 						) : null}
@@ -494,7 +527,7 @@ export default function Computers() {
 								testID={CONTROL.computersRefresh}
 								label="Refresh"
 								onPress={() => void refreshComputers()}
-								variant="quiet"
+								variant="outline"
 								size="sm"
 								loading={discovering}
 							/>
@@ -568,7 +601,7 @@ export default function Computers() {
 			{/* The rows stay under a refusal too. A failed mint is about ONE computer;
 			 *  hiding the others left the reader nothing to pick instead (D1). */}
 			{view.list ? (
-				<View testID={REGION.computersList}>
+				<View testID={REGION.computersList} className="gap-2">
 					<SectionHeader label="Your computers" />
 					{computers.map((computer) => (
 						<ComputerRow

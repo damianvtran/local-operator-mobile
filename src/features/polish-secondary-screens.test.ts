@@ -123,13 +123,32 @@ describe("D11: the drawer footer is two rows and shared across Agents and Team B
 		const compact = flat(
 			entry.slice(
 				entry.indexOf('if (variant === "compact")'),
-				entry.indexOf('<View className="gap-1">'),
+				/* The block variant (a destination card since TestFlight 883, D2)
+				 *  starts at its own doc comment. */
+				entry.indexOf("The block variant is a DESTINATION"),
 			),
 		);
 		expect(compact).toContain("<IconButton");
 		expect(compact).toContain("testID={CONTROL.teamBridgeNavigation}");
 		expect(compact).toContain('t("mobile.team_bridge.navigation.entry"');
 		expect(compact).not.toContain("navigation.caption");
+	});
+
+	it("the block Team Bridge entry is one left-aligned button card with the caption as its hint (TestFlight 883, D2)", () => {
+		const entry = read("team-bridge/navigation.tsx");
+		const block = flat(
+			entry.slice(entry.indexOf("The block variant is a DESTINATION")),
+		);
+		expect(block).toContain("<Pressable");
+		expect(block).toContain("accessibilityRole={ROLE.button}");
+		expect(block).toContain("testID={CONTROL.teamBridgeNavigation}");
+		expect(block).toContain(
+			'accessibilityHint={t("mobile.team_bridge.navigation.caption")}',
+		);
+		expect(block).toContain("navCardClasses({ pressed })");
+		expect(block).toContain("<ChevronRight");
+		expect(block).not.toContain("text-center");
+		expect(block).not.toContain("<Button");
 	});
 
 	it("the drawer's mode selector uses a minimal sunken track, keeps the label and count apart, and never stacks bg-accent on bg-accent", () => {

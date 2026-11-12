@@ -13,7 +13,7 @@ import {
 } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
+import { computerDisplayName, RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
 import type { SavedComputer } from "@/connection/saved-computers";
 import {
 	addComputerTarget,
@@ -327,7 +327,11 @@ const SwitcherRowView = ({
 							numberOfLines={1}
 							ellipsizeMode={titledByHost(row) ? "middle" : "tail"}
 						>
-							{row.name}
+							{/* A Radient DNS host name is shown by its first label (D4); an
+							 *  own address keeps its port. The label above speaks it whole. */}
+							{row.transport.kind === "radient"
+								? computerDisplayName(row.name)
+								: row.name}
 						</Text>
 						<TransportLine row={row} now={now} healthTestID={ids.health} />
 						{hint !== null ? (

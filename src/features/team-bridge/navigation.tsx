@@ -4,16 +4,22 @@
  * hub-only architecture. The same entry lives in the drawer and computer picker.
  */
 import { useRouter } from "expo-router";
-import { MessagesSquare } from "lucide-react-native";
-import { Text, View } from "react-native";
+import { ChevronLeft, ChevronRight, MessagesSquare } from "lucide-react-native";
+import { Pressable, Text, View } from "react-native";
 import { countLabel } from "@/features/notifications/notifications-model";
 import { t } from "@/i18n";
 import { useTeamBridgeState } from "@/team-bridge/provider";
-import { CONTROL } from "@/ui/a11y";
+import { CONTROL, ROLE } from "@/ui/a11y";
+import { useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
-import { Button } from "@/ui/components/button";
 import { IconButton } from "@/ui/components/icon-button";
+import { useIsRTL } from "@/ui/direction";
 import { useTextScale } from "@/ui/text-scale-provider";
+import {
+	avatarClasses,
+	NAV_CARD_MIN_HEIGHT,
+	navCardClasses,
+} from "@/ui/variants";
 
 export function TeamBridgeEntry({
 	onNavigate,
@@ -37,6 +43,9 @@ export function TeamBridgeEntry({
 	const router = useRouter();
 	const unread = useTeamBridgeState((s) => s.totalUnread);
 	const { effectiveScale } = useTextScale();
+	const glyphInk = useTokenColor("ink");
+	const chevronInk = useTokenColor("ink-dim");
+	const rtl = useIsRTL();
 	const go = () => {
 		onNavigate?.();
 		router.push("/team-bridge" as never);
@@ -76,18 +85,60 @@ export function TeamBridgeEntry({
 				) : null}
 			</View>
 		);
+	/* The block variant is a DESTINATION, so it is drawn as one (design D2): a
+	 *  left-aligned card in the computer row's family (`navCardClasses`) with a
+	 *  glyph, the name, what it is for, the unread badge and a chevron.
+	 *  TestFlight 883 (Ola): the old quiet button was transparent `ink-muted` text
+	 *  centred over a centred caption, and read as a subtitle, not a control. */
 	return (
-		<View className="gap-1">
-			<Button
-				label={t("mobile.team_bridge.navigation.entry", { count: unread })}
-				variant="quiet"
-				size="sm"
+		/* `mb-2`: the "Your computers" header below must not crowd the card. */
+		<View className="mb-2">
+			<Pressable
+				accessibilityRole={ROLE.button}
+				/* Spoken as before ("Team Bridge · 2 unread"); the caption is the hint. */
+				accessibilityLabel={t("mobile.team_bridge.navigation.entry", {
+					count: unread,
+				})}
+				accessibilityHint={t("mobile.team_bridge.navigation.caption")}
 				testID={CONTROL.teamBridgeNavigation}
 				onPress={go}
-			/>
-			<Text className="text-meta text-center text-ink-dim">
-				{t("mobile.team_bridge.navigation.caption")}
-			</Text>
+			>
+				{({ pressed }) => (
+					<View
+						className={navCardClasses({ pressed })}
+						style={{ minHeight: NAV_CARD_MIN_HEIGHT }}
+					>
+						<View className={avatarClasses("sm")} aria-hidden>
+							<MessagesSquare size={16} color={glyphInk} />
+						</View>
+						<View className="min-w-0 flex-1 gap-0.5">
+							<Text className="text-label text-ink" numberOfLines={1}>
+								{t("mobile.team_bridge.title")}
+							</Text>
+							<Text className="text-body-sm text-ink-muted">
+								{t("mobile.team_bridge.navigation.caption")}
+							</Text>
+						</View>
+						{unread > 0 ? (
+							/* Hidden from assistive tech: the label already says the count. */
+							<View aria-hidden>
+								<Badge
+									label={countLabel(unread)}
+									scale={effectiveScale}
+									tone="warning"
+									emphasis
+									mono
+								/>
+							</View>
+						) : null}
+						{rtl ? (
+							<ChevronLeft size={18} color={chevronInk} aria-hidden />
+						) : (
+							<ChevronRight size={18} color={chevronInk} aria-hidden />
+						)}
+					</View>
+				)}
+			</Pressable>
 		</View>
 	);
 }
