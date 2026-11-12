@@ -2564,6 +2564,7 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 			initiated: false,
 			restoredAccount: latest.restoredAccount,
 			busy: latest.busy,
+			routed: connectionStore.getState().route !== null,
 			state: latest.signInState,
 		});
 		expect(latest.restoredAccount).toBe(true);
@@ -2576,6 +2577,7 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 			initiated: true,
 			restoredAccount: latest.restoredAccount,
 			busy: latest.busy,
+			routed: connectionStore.getState().route !== null,
 			state: latest.signInState,
 		});
 		expect(retried.navigate).toBe(true);
@@ -3319,6 +3321,16 @@ describe("the computer switcher's registry (M2a)", () => {
 			status: "active",
 			harnesses: [{ id: "local-operator", enabled: true }],
 		},
+		/* A second computer keeps the sign-in on the picker: with exactly one, the
+		 *  sign-in itself opens it (TestFlight 883), and this suite is about what
+		 *  a PICK records. */
+		{
+			id: "tun-synthetic-2",
+			name: "Synthetic computer 2",
+			hostname: `${"b".repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		},
 	];
 
 	it("remembers a live Radient route by tunnel id and marks it used", async () => {
@@ -3769,5 +3781,87 @@ describe("the cold start reopens the reader's computer (startup restore, PR H)",
 		await mount();
 		expect(latest.savedTunnel).not.toBeNull();
 		expect(connectionStore.getState().route).toBeNull();
+	});
+});
+describe("an interactive Radient sign-in opens the reader's computer (TestFlight 883)", () => {
+	/* The operator's rule, and the cold start's own decision (`coldStartComputer`):
+	 *  exactly one usable computer opens straight away; with several, the last one
+	 *  used opens; otherwise the picker. Before this, a fresh sign-in always parked
+	 *  the reader on Computers, even with one computer (Ola, build 883). */
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+	const used = (tunnelId: string, lastUsedAt: number): SavedComputer => ({
+		id: `saved-${tunnelId}`,
+		transport: "radient",
+		tunnelId,
+		hostname: `${tunnelId}.example.invalid`,
+		name: tunnelId,
+		account: null,
+		addedAt: 1,
+		lastUsedAt,
+		hidden: false,
+		identity: null,
+	});
+	const tunnelOf = () => {
+		const route = connectionStore.getState().route;
+		return route?.mode === "radient" ? route.tunnelId : null;
+	};
+	const landing = () =>
+		signInPresentation({
+			initiated: true,
+			restoredAccount: latest.restoredAccount,
+			busy: latest.busy,
+			routed: connectionStore.getState().route !== null,
+			state: latest.signInState,
+		});
+
+	it("opens the only computer and lands on the new-conversation home", async () => {
+		const mock = await relay({ tunnels: tunnels.slice(0, 1) });
+		transport(mock.origin);
+		await mount();
+		expect(connectionStore.getState().route).toBeNull();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(latest.signInState.kind).toBe("idle");
+		expect(tunnelOf()).toBe("tun-synthetic-1");
+		expect(landing()).toMatchObject({ navigate: true, destination: "/" });
+		await until(() => connectionStore.getState().phase === "live");
+	});
+
+	it("opens the last computer used when the account has several", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		durable.computers = [
+			used("tun-synthetic-1", 10),
+			used("tun-synthetic-2", 5),
+		];
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(tunnelOf()).toBe("tun-synthetic-1");
+		expect(landing()).toMatchObject({ navigate: true, destination: "/" });
+	});
+
+	it("shows Computers when there are several and none was used here", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(latest.signInState.kind).toBe("idle");
+		expect(connectionStore.getState().computers).toHaveLength(2);
+		expect(connectionStore.getState().route).toBeNull();
+		expect(landing()).toMatchObject({
+			navigate: true,
+			destination: "/tunnels",
+		});
 	});
 });

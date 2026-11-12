@@ -1,7 +1,10 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { useConnection } from "@/features/auth/connection-provider";
+import {
+	useConnection,
+	useConnectionState,
+} from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
@@ -38,6 +41,7 @@ export default function Welcome() {
 		restoredAccount,
 		busy,
 	} = useConnection();
+	const routed = useConnectionState((state) => state.route !== null);
 	const [initiated, setInitiated] = useState(false);
 	const start = () => {
 		setInitiated(true);
@@ -47,11 +51,13 @@ export default function Welcome() {
 		initiated,
 		restoredAccount,
 		busy,
+		routed,
 		state: signInState,
 	});
+	/* Home when the sign-in opened the reader's computer, else Computers. */
 	useEffect(() => {
-		if (presentation.navigate) router.replace("/tunnels");
-	}, [presentation.navigate, router]);
+		if (presentation.navigate) router.replace(presentation.destination);
+	}, [presentation.navigate, presentation.destination, router]);
 
 	return (
 		<Screen brand title="Local Operator" testID={SCREEN.welcome}>

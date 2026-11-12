@@ -42,7 +42,7 @@ import { SavedComputers } from "@/connection/saved-computers";
  *   behaviour). An own-tunnel entry whose slot was forgotten cannot be dialled, so
  *   it never counts as "last" here.
  * - **Pure.** Inputs are values so every branch is a test case; the provider only
- *   carries the answer out (`resumeComputerOnColdStart` below).
+ *   carries the answer out (`openUsualComputer` below).
  */
 export type ColdStartComputer =
 	| { kind: "last"; computer: DiscoveredComputer }
@@ -101,7 +101,14 @@ export function coldStartComputer(input: {
 }
 
 /**
- * Carries the decision out on a cold start. Injectable for the same reason as
+ * Carries the decision out. Two callers, ONE rule: the cold start (a restored
+ * account) and an interactive Radient sign-in (`signInWithRadient`, TestFlight
+ * 883: a fresh sign-in always parked the reader on Computers, even with one
+ * computer). The operator's rule is the same for both, so the sign-in does not
+ * get a fork of it. The sign-in passes `ownTunnelPending: () => false`: the reader
+ * has just chosen Radient, and the sign-in has already ended any route it had.
+ *
+ * Injectable for the same reason as
  * `carryOutRestore`: `connection-provider.tsx` does not load in every test host, and
  * the guards here are what keep the restore from fighting the paths around it.
  *
@@ -113,7 +120,7 @@ export function coldStartComputer(input: {
  * once per cold start, and a failed connect becomes the connection's own refusal
  * on Home, so a missing computer can never loop back into another attempt.
  */
-export async function resumeComputerOnColdStart(deps: {
+export async function openUsualComputer(deps: {
 	signedIn: () => boolean;
 	routed: () => boolean;
 	refused: () => boolean;
