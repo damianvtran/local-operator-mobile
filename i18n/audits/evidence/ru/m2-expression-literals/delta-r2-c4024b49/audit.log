@@ -1,0 +1,225 @@
+# audit.log — ru delta audit, PR #236 round 2
+# session 291074d0d436 · i18n-auditor · deepseek/deepseek-flash (session header) · 2026-11-11
+# Worktree: ~/local-operator-mobile/.worktrees/i18n-m2-scanner (READ-ONLY)
+# Every block below is actual execution output from this session, copied verbatim
+# Outputs are verbatim; the only edits are hard-wrapping of very long single lines and
+# (in §02) the removal of three duplicate per-namespace count lines. Nothing is a reconstruction.
+
+## 00 — head verification
+$ git rev-parse HEAD
+c4024b497a4db3118aae70d8bb132301ea3ab097
+$ git status --porcelain
+(empty)
+$ git log --oneline -5
+c4024b49 chore(audit): re-pin the U-08 src identity for the #236 round-1 remediation
+81d44fc5 fix(i18n): close design/review/QA findings on the M2 expression-literal slice
+3af477ee chore(audit): re-pin the U-08 app and src identity for the expression-literal slice
+17e9e0f6 docs(i18n): record the M2 audit rounds and the 33 applied values per locale
+6b539d7a feat(i18n): scan expression literals and translate the 33 newly keyed strings
+
+## 01 — the ru delta in the range (all catalogue files of every locale)
+$ git diff 3af477ee5dd7eee5fe7b1fac36d5fd0d07918f3a..c4024b49 -- src/i18n/catalogues/ru/
+diff --git a/src/i18n/catalogues/ru/mobile.settings.json b/src/i18n/catalogues/ru/mobile.settings.json
+index c0df3045..c75384a9 100644
+--- a/src/i18n/catalogues/ru/mobile.settings.json
++++ b/src/i18n/catalogues/ru/mobile.settings.json
+@@ -55,7 +55,7 @@
+ 	"mobile.settings.diagnostics.stream_idle": "в простое",
+ 	"mobile.settings.diagnostics.stream_connecting": "подключается",
+ 	"mobile.settings.diagnostics.stream_live": "активен",
+-	"mobile.settings.diagnostics.stream_degraded": "Не отвечает",
++	"mobile.settings.diagnostics.stream_degraded": "не отвечает",
+ 	"mobile.settings.diagnostics.stream_offline": "вне сети",
+ 	"mobile.settings.account.app_name": "Local Operator"
+ }
+
+## 02 — 33-key set derived from git (parent of the key-adding commit)
+$ python3 derive.py
+ru new keys: 33 | en new keys: 33
+ru-only: []
+en-only: []
+   mobile.computers.added.connected_to
+   mobile.computers.added.fallback_name
+   mobile.computers.wait.answering
+   mobile.computers.wait.host_answering
+   mobile.session.back_to
+   mobile.session.back_to_session
+   mobile.session.fallback_name
+   mobile.session.region.below_labels
+   mobile.session.region.end
+   mobile.session.region.label_strip
+   mobile.session.region.label_subagents
+   mobile.session.region.label_todos
+   mobile.session.region.label_working
+   mobile.session.region.more_below
+   mobile.session.tray.context
+   mobile.session.tray.context_estimate
+   mobile.session.tray.context_short
+   mobile.session.tray.context_short_estimate
+   mobile.session.video.title_fallback
+   mobile.settings.account.app_name
+   mobile.settings.account.not_signed_in
+   mobile.settings.account.route_direct
+   mobile.settings.account.route_radient
+   mobile.settings.diagnostics.stream_connecting
+   mobile.settings.diagnostics.stream_degraded
+   mobile.settings.diagnostics.stream_idle
+   mobile.settings.diagnostics.stream_live
+   mobile.settings.diagnostics.stream_offline
+   mobile.settings.status.connected
+   mobile.settings.status.no_connection
+   mobile.settings.status.not_answering
+   mobile.settings.status.not_connected
+   mobile.settings.status.offline
+final.json keys: 33
+set equal: True
+missing from final: []
+extra in final: []
+
+## 03 — hash canonicalisation pinned against TWO prior digests
+$ python3 hashconv.py
+MATCH ('ru_pre', "ea=False indent=None sep=(',', ':')", '4e76a2e0f98de6ab309777dceddd9556979c71754f3894b511a50cc8bb7c7dae')
+MATCH ('en_pre', "ea=False indent=None sep=(',', ':')", 'c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528')
+
+## 04 — the measured facts
+$ python3 audit.py
+ru  33-values hash PRE : 4e76a2e0f98de6ab309777dceddd9556979c71754f3894b511a50cc8bb7c7dae
+ru  33-values hash HEAD: 794ce68d7fb53dbe4baf4ae77af896440915c1bc4a2447d986ce657f563f1469
+en  33-values hash PRE : c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528
+en  33-values hash HEAD: c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528
+
+changed ru values in the 33: 1
+  key: mobile.settings.diagnostics.stream_degraded
+   pre : 'Не отвечает' | head: 'не отвечает'
+   casefold-equal: True | lower-only: False
+   codepoints equal count: True
+
+en changed values in the 33: 0
+
+NEG-CONTROL restore capital -> hash: 4e76a2e0f98de6ab309777dceddd9556979c71754f3894b511a50cc8bb7c7dae == OLD: True
+NEG-CONTROL trailing space  -> hash: 3e330ae42aae70ef changed: True
+
+--- Latin scan of the 33 ru values (placeholders & product names masked) ---
+keys with residual Latin letters: none
+
+--- tray short forms (ru) ---
+  mobile.session.tray.context: '{percent}% контекста'  cells=20 latin_letters=[]
+  mobile.session.tray.context_estimate: '{percent}% контекста (прибл.)'  cells=29 latin_letters=[]
+  mobile.session.tray.context_short: '{percent}% конт.'  cells=16 latin_letters=[]
+  mobile.session.tray.context_short_estimate: '{percent}% конт. (прибл.)'  cells=25 latin_letters=[]
+
+--- full ru catalogue delta  3af477ee .. c4024b49  ---
+ru keys total: 182 | added: [] | dropped: [] | changed: 1
+   changed: mobile.settings.diagnostics.stream_degraded 'Не отвечает' -> 'не отвечает'
+en/ru key parity: True 182 182
+
+whole-catalogue ru hash PRE: 4d254e78dadd5ad0d8528b4fb5c7164d4a60da4964e662204fd908a00d4c491c
+whole-catalogue ru hash HEAD: 39e3637cf20d182557982e66ae2b8b63fa11d806e98ee27c172b563d59bd6dda
+
+## 05 — repo validator (mechanical)
+$ npm run -s i18n:catalogue:check ; echo EXIT=$?
+src/i18n/catalogue.gen.ts is current (684 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+EXIT=0
+(stderr: MODULE_TYPELESS_PACKAGE_JSON warning from Node about src/i18n/messages.ts — pre-existing, not an error)
+
+## 06 — string scanner
+$ npm run -s i18n:strings:check ; echo EXIT=$?
+scanner sha256: base=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813 head=8bb99b7db236df384079e8f3fe872d2edabf571915c95b5352fd87f1385357b0
+check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs fa2bc5e0b5f7
+EXIT=0
+
+## 07 — argument parity through the app's own parser
+$ node args.check.mjs
+keys=33 withArgs=9 argFailures=0 (comparison: ordered [name:kind] via src/i18n/messages.ts parseMessage().params)
+changed value: "не отвечает" | params: [] | braces: false | final full stop: false
+missing keys vs final.json: []
+
+## 08 — negative control for that checker
+$ node negcontrol.mjs
+NEG-CONTROL mutated keys flagged: mobile.session.tray.context, mobile.settings.account.route_direct
+NEG-CONTROL clean run flagged: []
+
+## 09 — value hygiene (Unicode names, not eyeball)
+$ python3 - <<'PY'
+value: 'не отвечает' len 11
+NFC: True
+chars: [('н','0x43d','CYRILLIC SMALL LETTER EN','Ll'), ('е','0x435','CYRILLIC SMALL LETTER IE','Ll'),
+        (' ','0x20','SPACE','Zs'), ('о','0x43e','CYRILLIC SMALL LETTER O','Ll'),
+        ('т','0x442','CYRILLIC SMALL LETTER TE','Ll'), ('в','0x432','CYRILLIC SMALL LETTER VE','Ll'),
+        ('е','0x435','CYRILLIC SMALL LETTER IE','Ll'), ('ч','0x447','CYRILLIC SMALL LETTER CHE','Ll'),
+        ('а','0x430','CYRILLIC SMALL LETTER A','Ll'), ('е','0x435','CYRILLIC SMALL LETTER IE','Ll'),
+        ('т','0x442','CYRILLIC SMALL LETTER TE','Ll')]
+any latin: False
+any space/trailing: False
+PY
+
+## 10 — plurals (untouched by the range) carry all four ru arms
+$ python3 - <<'PY'
+mobile.computers.wait.relay_version_sessions -> ['one', 'few', 'many', 'other']
+mobile.computers.wait.relay_sessions -> ['one', 'few', 'many', 'other']
+mobile.session.highlights.withheld -> ['one', 'few', 'many', 'other']
+mobile.session.highlights.sounds_more -> ['one', 'few', 'many', 'other']
+mobile.session.pending_echo.images -> ['one', 'few', 'many', 'other']
+ru keys carrying plural: 5 | any changed: []
+PY
+
+## 11 — shipped head vs the audited record
+$ python3 - <<'PY'
+audited final.json vs shipped HEAD: differing keys = 1
+  mobile.settings.diagnostics.stream_degraded | 'Не отвечает' -> 'не отвечает'
+all 33 present at HEAD: True
+PY
+
+## 12 — raw file hashes
+en/mobile.settings.json                d7e1d85b68773871a578791ad57e0a08e421a220738e561b9e09ce22f9aee23d
+en/mobile.computers.json               713827837aab9d75611441155d50522ccce9d8b410d88c1b7bd27e528776aff3
+en/mobile.session.json                 8df14a0d12ef0386a3115c55dcdf7976e7234b9e82a79279741985e11aa716d3
+en/mobile.settings.context.json        67691ab95fba5cbcc86596899504ce2b9ba1acd518b3a9bdc1048dcc22b54c12
+en/mobile.computers.context.json       cc2973003f79db729001df88189b1f1ba52a0609e117fe384396a406437637e0
+en/mobile.session.context.json         50d48c6a40d93d953bd649a6fed2a55998ad4f4075da940840ef9a2fbba394d5
+ru/mobile.settings.json                ef2a6da73608b6c28098e27aecaa87919f4c2174dd72237af6398bac165efd82 (head)
+ru/mobile.settings.json                ca69c7f8b1694c98210ea14d9bd1567c064c2ec7504575be81a5625e8bf8dad8 (base)
+ru/mobile.computers.json               d9301956dc6c06980bbd8b03ab4fb78d1b9ed99702a6a18a7d82f26376856521
+ru/mobile.session.json                 f58ea87ef51c3df79663650283c464f92dde6756024578fda1b008ca4c73d878
+ru/m2-expression-literals/final.json   b6b8afeb87ec8f94d038628eaadabed1b2e1084ea09b9ac5cd2583025ab6f93d
+NOTE-m2-expression-literals.md         f50e6134da27f90f16246bb85c083725acef2ac85bf55a25fbeeb26ab678780d
+
+## 13 — generator carries the new value (runtime string, not just JSON)
+$ grep -n -B1 -A1 'не отвечает' src/i18n/catalogue.gen.ts
+5878-		"mobile.settings.diagnostics.stream_connecting": "подключается",
+5879:		"mobile.settings.diagnostics.stream_degraded": "не отвечает",
+5880-		"mobile.settings.diagnostics.stream_idle": "в простое",
+$ grep -n 'Не отвечает' src/i18n/catalogue.gen.ts
+5894:		"mobile.settings.status.not_answering": "Не отвечает",
+6108:		"relay.chrome.session.subtitle.not_answering": "Не отвечает",
+# (both are sentence-case surfaces whose English is "Not answering" — correct, not leftovers)
+
+## 14 — geometry check behind the new sidecar note (code at head, not the note)
+$ grep -n 'hasStatus\|statusStrip' 'app/(app)/session/[id].tsx'
+430:	const hasStatus =
+985:	const statusStrip =
+986:		hasStatus && (!compact || projection?.context_tokens != null) ? (
+1053:		strip: compact ? statusStrip : null,
+1293:				statusStrip
+$ sed -n '1282,1295p' 'app/(app)/session/[id].tsx'
+			{tray ? (
+				compact &&
+				statusTrayVisible(tray, compact, pendingViewProps !== null) ? (
+					<StatusTray facts={trayFacts} onOpen={() => setStatusSheetOpen(true)} />
+				) : null
+			) : (
+				statusStrip
+			)}
+$ grep -n 'tray: phone || compact' src/ui/size-class.ts
+676:		tray: phone || compact,
+# => statusStrip renders only when !tray, and tray is true for every phone (and short landscape),
+#    so at viewportWidth < 340 the strip cannot paint. The only reachable narrow renderer is
+#    trayFacts.context (status sheet line :1696, composer More sheet row :1635/:1288) — full-width rows.
+#    CONCLUSION: the NEW sidecar note is accurate; the shipped comments at :130-133 and :1005-1011
+#    are stale (finding n-1, non-gating, pre-existing bytes).
+
+## 15 — artifact hashes (written after this log)
+$ sha256sum audit-delta-ru.md record.json audit.log
+892d19a628f696f17286e90bdee4802b5ccfd150dd370e7189f672b33053e597
+a9bf642ad7ed94b6f907a52991d1ea3fed89973429cf459c09fbd145d0591361
+(self-referential — not embedded; see the delivery message / manifest)

@@ -1,0 +1,91 @@
+=== audit-delta-es execution log (this session, 460114b18e98, deepseek/deepseek-flash) ===
+
+--- worktree identity ---
+c4024b497a4db3118aae70d8bb132301ea3ab097
+untracked-or-dirty lines:        0
+
+--- npm run -s i18n:check ---
+src/i18n/catalogue.gen.ts is current (684 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+scanner sha256: base=cf05770fe3fa0ff57d974806f5eb48e0278e8e8785c7d785817548b7ce95b813 head=8bb99b7db236df384079e8f3fe872d2edabf571915c95b5352fd87f1385357b0
+check-strings: 212 finding(s), all baselined; 0 new; verified historical debt vs fa2bc5e0b5f7
+
+--- node check-delta-es.mjs ---
+ok    33 keys in the slice (got 33)
+ok    en 33 sorted-key hash = c326a93f… (c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528)
+ok    es 33 sorted-key hash = 987ad1d7… (987ad1d7457dfbf788d63c67ce77d4693cf79f397077806d4068d85da3422097)
+ok    context_short === context byte-for-byte ("{percent}% de contexto")
+ok    context_short_estimate === context_estimate byte-for-byte ("{percent}% de contexto (aprox.)")
+ok    audited es value was "No responde" ("No responde")
+ok    stream_degraded is the case-only lower-casing of the audited value ("no responde")
+ok    mobile.session.tray.context_short: arguments identical to en ({"percent":"text"})
+ok    mobile.session.tray.context_short_estimate: arguments identical to en ({"percent":"text"})
+ok    mobile.settings.diagnostics.stream_degraded: arguments identical to en ({})
+ok    {percent} parses as one text argument ({"percent":"text"})
+ok    mobile.session.tray.context_short: no plural/select arm (none in en either: true)
+ok    mobile.session.tray.context_short_estimate: no plural/select arm (none in en either: true)
+ok    mobile.settings.diagnostics.stream_degraded: no plural/select arm (none in en either: true)
+ok    formats as "21% de contexto"
+ok    formats as "100% de contexto"
+ok    formats as "7% de contexto (aprox.)"
+ok    mobile.session.tray.context_short: no edge whitespace
+ok    mobile.session.tray.context_short: NFC
+ok    mobile.session.tray.context_short: no bidi controls
+ok    mobile.session.tray.context_short: parenthesis count matches en
+ok    mobile.session.tray.context_short: terminal full stop matches en
+ok    mobile.session.tray.context_short: no stray space before punctuation
+ok    mobile.session.tray.context_short_estimate: no edge whitespace
+ok    mobile.session.tray.context_short_estimate: NFC
+ok    mobile.session.tray.context_short_estimate: no bidi controls
+ok    mobile.session.tray.context_short_estimate: parenthesis count matches en
+ok    mobile.session.tray.context_short_estimate: terminal full stop matches en
+ok    mobile.session.tray.context_short_estimate: no stray space before punctuation
+ok    mobile.settings.diagnostics.stream_degraded: no edge whitespace
+ok    mobile.settings.diagnostics.stream_degraded: NFC
+ok    mobile.settings.diagnostics.stream_degraded: no bidi controls
+ok    mobile.settings.diagnostics.stream_degraded: parenthesis count matches en
+ok    mobile.settings.diagnostics.stream_degraded: terminal full stop matches en
+ok    mobile.settings.diagnostics.stream_degraded: no stray space before punctuation
+ok    stream_degraded starts lower-case (sidecar: "Lower-case diagnostic word")
+ok    stream_degraded has no final full stop (sidecar)
+ok    "contexto" lower case (sidecar: 'Lower case "context"')
+ok    mobile.session.tray.context_short: no English token left ([])
+ok    mobile.session.tray.context_short_estimate: no English token left ([])
+ok    mobile.settings.diagnostics.stream_degraded: no English token left ([])
+ok    no es value in the 33 still contains "ctx" ([])
+
+negative control (each mutation must be CAUGHT):
+CAUGHT  es context_short back to `{percent}% ctx`
+CAUGHT  placeholder renamed to {pct}
+CAUGHT  placeholder dropped
+CAUGHT  diagnostics value re-capitalised
+CAUGHT  Aún shipped NFD
+CAUGHT  (aprox.) dropped
+CAUGHT  trailing space
+ok    all 7 negative-control mutations caught (7/7)
+
+PASS — 0 failing assertion(s)
+
+--- node nfc33.mjs ---
+en: 33 values, NFC/bidi/edge-whitespace problems: 0 []
+  distinct non-ASCII code points: ·=U+B7 ↑=U+2191 ↓=U+2193
+es: 33 values, NFC/bidi/edge-whitespace problems: 0 []
+  distinct non-ASCII code points: ó=U+F3 é=U+E9 ú=U+FA á=U+E1 ·=U+B7 ↑=U+2191 ↓=U+2193 í=U+ED
+
+--- python3 widths.py ---
+es label Contexto                      14px=  59.5  28px= 119.0  42px= 178.5
+es value 21% de contexto               14px= 104.6  28px= 209.1  42px= 313.7
+es value 100% de contexto              14px= 114.7  28px= 229.3  42px= 344.0
+es value 100% de contexto (aprox.)     14px= 166.7  28px= 333.3  42px= 500.0
+es old value 100% ctx                  14px=  58.2  28px= 116.4  42px= 174.6
+fr control 100 % du contexte           14px= 117.8  28px= 235.6  42px= 353.4
+es no responde                         14px=  78.7  28px= 157.3  42px= 236.0
+
+W=320 scale=100%: label=  59.5 valueCell= 216.5 | needs(100%)= 114.7 | fits=YES
+W=320 scale=200%: label= 119.0 valueCell= 157.0 | needs(100%)= 229.3 | fits=NO
+W=320 scale=300%: label= 178.5 valueCell=  97.5 | needs(100%)= 344.0 | fits=NO
+W=360 scale=100%: label=  59.5 valueCell= 256.5 | needs(100%)= 114.7 | fits=YES
+W=360 scale=200%: label= 119.0 valueCell= 197.0 | needs(100%)= 229.3 | fits=NO
+W=360 scale=300%: label= 178.5 valueCell= 137.5 | needs(100%)= 344.0 | fits=NO
+W=390 scale=100%: label=  59.5 valueCell= 286.5 | needs(100%)= 114.7 | fits=YES
+W=390 scale=200%: label= 119.0 valueCell= 227.0 | needs(100%)= 229.3 | fits=NO
+W=390 scale=300%: label= 178.5 valueCell= 167.5 | needs(100%)= 344.0 | fits=NO
