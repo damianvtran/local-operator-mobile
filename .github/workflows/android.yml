@@ -254,6 +254,19 @@ jobs:
             exit 1
           fi
 
+      - name: Assert the built APK's launcher label
+        # The home-screen label is "Operator" while `name` stays "Local Operator"
+        # (app.config.ts `LAUNCHER_LABEL`, plugins/with-android-launcher-label.js).
+        # The manifest says only `@string/app_name`, so the resolved label is
+        # read from the APK's badging — the FULL dump, because the per-locale
+        # `application-label-<locale>` lines are part of what is asserted.
+        run: |
+          set -euo pipefail
+          aapt2=$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" -name aapt2 -type f | sort | tail -1)
+          "$aapt2" dump badging android/app/build/outputs/apk/debug/app-debug.apk > "$RUNNER_TEMP/badging.txt"
+          grep '^application-label' "$RUNNER_TEMP/badging.txt" || true
+          node scripts/ci/native-config.ts android-badging "$RUNNER_TEMP/badging.txt"
+
       - name: Assert the release merged manifest keeps the local-network configuration
         # THE HALF THE DEBUG APK CANNOT PROVE. The template's `debug` and
         # `debugOptimized` overlays set `usesCleartextTraffic` themselves (for the

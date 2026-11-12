@@ -35,6 +35,20 @@ organization account, and the MIT-licensed product's public identity all point
 at anyway. It also needs the D-U-N-S number, which is the long pole (up to 30
 days).
 
+**App name vs home-screen label.** The App Store Connect app name stays
+**Local Operator** (as do `name` in `app.config.ts` and the name the app uses
+for itself). The bundle display name, `CFBundleDisplayName` — the label under
+the home-screen icon — is **Operator**, by the operator's decision of
+2026-11-11: "Local Operator" is wider than an icon cell, and iOS squeezes the
+space out before truncating, so the full name rendered as "LocalOpera…" (build
+836). Android's launcher label matches (`plugins/with-android-launcher-label.js`);
+the Play listing name stays Local Operator. CI asserts both labels on the built
+artefacts (`scripts/ci/native-config.ts`). Guideline 2.3.8 asks that the app
+name and icons "are similar to avoid creating confusion"; the label is the
+distinctive word of the store name, which is the usual short-label shape — if
+App Review ever objects, it cites 2.3.8, and the fix is a label change, not a
+store-name change.
+
 **Register the bundle ID before the first build.** `com.radienthq.localoperator`
 is the shape to use if the seller is Radient Inc.; changing it later means a new
 app record and losing the review history. This must be agreed before CI signs
