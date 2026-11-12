@@ -60,16 +60,18 @@ export const SignInPanel = ({
 			>
 				{state.kind === "starting" ? (
 					<Shimmer active>
-						<Text className="text-body text-ink">Opening your browser…</Text>
+						<Text className="text-body text-ink">
+							{t("mobile.signin.panel.opening")}
+						</Text>
 					</Shimmer>
 				) : null}
 				{state.kind === "waiting-for-browser" ? (
 					<>
 						<Text className="text-body text-ink">
-							Waiting for your browser.
+							{t("mobile.signin.panel.waiting")}
 						</Text>
 						<Text className="text-body-sm text-ink-muted">
-							Finish signing in there, then come back to this app.
+							{t("mobile.signin.panel.waiting_help")}
 						</Text>
 					</>
 				) : null}
@@ -82,20 +84,22 @@ export const SignInPanel = ({
 				) : null}
 				{state.kind === "cancelled" ? (
 					<>
-						<Text className="text-body text-ink">Sign-in was cancelled.</Text>
+						<Text className="text-body text-ink">
+							{t("mobile.signin.panel.cancelled")}
+						</Text>
 						<Text className="text-body-sm text-ink-muted">
-							Nothing was changed on your account.
+							{t("mobile.signin.panel.cancelled_help")}
 						</Text>
 					</>
 				) : null}
 				{state.kind === "unavailable" ? (
 					<>
 						<Text className="text-body text-ink">
-							This build cannot finish a Radient sign-in.
+							{t("mobile.signin.panel.unavailable")}
 						</Text>
 						<Text className="text-body-sm text-ink-muted">{state.detail}</Text>
 						<Text className="text-body-sm text-ink-muted">
-							You can still connect with the relay's address and password.
+							{t("mobile.signin.panel.unavailable_alt")}
 						</Text>
 					</>
 				) : null}
@@ -115,12 +119,12 @@ export const SignInPanel = ({
 			{state.kind === "unavailable" ? (
 				<>
 					<Button
-						label="Use an address and password"
+						label={t("mobile.signin.use_address")}
 						onPress={useAddress}
 						testID={CONTROL.signInUseAddress}
 					/>
 					<Button
-						label="Try again anyway"
+						label={t("mobile.signin.try_anyway")}
 						onPress={onStart}
 						variant="quiet"
 						testID={CONTROL.signInTryAnyway}

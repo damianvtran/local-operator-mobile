@@ -3,10 +3,12 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
+import { t } from "@/i18n";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
 import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
+import { useComposedDir } from "@/ui/direction";
 import { signInPresentation } from "./sign-in-presentation";
 
 /**
@@ -26,6 +28,9 @@ import { signInPresentation } from "./sign-in-presentation";
  */
 export default function SignIn() {
 	const router = useRouter();
+	/* `Radient …` leads the Urdu label, so `dir="auto"` would resolve it left-to-right
+	 * on an RTL page (M3 S1 design D2); the button states the page's base. */
+	const composedDir = useComposedDir();
 	const {
 		signInWithRadient,
 		signInState,
@@ -50,7 +55,7 @@ export default function SignIn() {
 
 	return (
 		<Screen
-			title="Sign in"
+			title={t("mobile.signin.title")}
 			testID={SCREEN.signIn}
 			headerLeading={
 				<BackButton testID={CONTROL.signInBack} onPress={() => router.back()} />
@@ -61,8 +66,7 @@ export default function SignIn() {
 					className="text-body text-ink-muted"
 					accessibilityRole={ROLE.text}
 				>
-					Your browser finishes the sign-in, so the app never sees your
-					password.
+					{t("mobile.signin.intro")}
 				</Text>
 
 				<SignInPanel
@@ -74,7 +78,8 @@ export default function SignIn() {
 
 				{presentation.state.kind === "idle" ? (
 					<Button
-						label="Sign in with Radient"
+						label={t("mobile.signin.start")}
+						labelDir={composedDir}
 						onPress={start}
 						loading={busy}
 						testID={CONTROL.signInStart}
@@ -82,7 +87,7 @@ export default function SignIn() {
 				) : null}
 
 				<Button
-					label="Use an address and password"
+					label={t("mobile.signin.use_address")}
 					onPress={() => router.push("/custom")}
 					variant="quiet"
 					testID={CONTROL.welcomeCustomUrl}

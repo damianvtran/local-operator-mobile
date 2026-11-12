@@ -1,0 +1,176 @@
+{
+  "schema": 1,
+  "audit_id": "m3s1-vi-r1",
+  "audit_kind": "first",
+  "audit_date": "2026-11-12",
+  "auditor": "i18n-auditor",
+  "model": "deepseek/deepseek-flash",
+  "instance": "767cf0660db6",
+  "session": "675090271c24",
+  "actual_model_source": "session header 'Model: deepseek/deepseek-flash'; no model-switch or fallback notice observed in this session",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "status": "passed",
+  "locale": "vi",
+  "namespace": "mobile.computers+mobile.signin (M3 S1)",
+  "head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+  "base": "origin/main 9e193b57",
+  "keys_read": 44,
+  "key_count": 44,
+  "verdict": {
+    "blocker": 0,
+    "major": 0,
+    "minor": 1,
+    "nit": 4,
+    "unresolved_blocker_major_count": 0,
+    "note": "One MINOR (relay named without 'máy chủ' in one string) and four NITs, none gating. No wrong meaning, no unsafe wording, no broken placeholder, no register violation, no overflow."
+  },
+  "sha256": {
+    "draft": "ee370439647b04e77654c7261dc2d8ed08034bef6396f9f20539a314265d8a4f",
+    "brief": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f",
+    "en_mobile_computers": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109",
+    "en_mobile_signin": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252",
+    "en_mobile_computers_context": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a",
+    "en_mobile_signin_context": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56",
+    "vi_mobile_computers_shipped_head": "daab971c3ae7b8a2e509d9e3383d3c0786cc54bd5f383255bb1f8c460e050aab",
+    "vi_mobile_signin_shipped_head": "446ee3bad9f5a033dea4d53608c08286e968faed751f6974f2a82e52020d38ca",
+    "style_guide_vi": "e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888",
+    "glossary": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8",
+    "parser_messages_ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "sources_read": {
+    "style_guide_vi": "git -C ~/local-operator show origin/main:i18n/style-guides/vi.md (origin/main 8459804f56dd704d5c3a680ef68f53b7182786ab)",
+    "glossary": "git -C ~/local-operator show origin/main:i18n/glossary.md (same ref)",
+    "call_sites": [
+      "src/features/auth/computers.tsx (sha256 2b8a23f2009b31547ae5793fb44d40c4c4f802c992f032ef62955f0c87b99412)",
+      "src/features/auth/tunnel-paths.tsx (b79c083e85ae639ac6a8ad273d0f6c0336f34acedebceede6c9789d07d0e93b7)",
+      "src/features/auth/sign-in.tsx (5bcd93de30deae49e4d193d60a2f08f09a1520f132fa47ffc626a9b005fa07af)",
+      "src/features/auth/welcome.tsx (00463478805599bef7d43df972dd7d831339b20d626caff873ce5835b13a167a)"
+    ],
+    "shipped_locale_copy_compared": [
+      "vi/mobile.computers.json (45 keys at head)",
+      "vi/mobile.signin.json (18 keys at head)",
+      "vi/mobile.common.json, vi/mobile.chrome.json, vi/mobile.settings.json, vi/mobile.notifications.json, vi/mobile.oauth.json, vi/mobile.agent_avatar.json"
+    ]
+  },
+  "mechanical": {
+    "repo_validator": {
+      "command": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/generate.ts --check",
+      "where": "scratch copy of src/i18n + scripts/i18n at /Users/damian/.local-operator/sessions/675090271c24/scratchpad/audit/repo-vi-only (English-first worktree untouched)",
+      "result": "Wrote/exists: 734 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN; --check exit 0",
+      "vi_block_assertion": "LOCALISED_MESSAGES.vi: 734 keys, audited 44, mismatches 0",
+      "negative_controls": [
+        "drop {reach} from row.a11y_connecting -> exit 1, 'does not carry the source's parameters — missing: reach'",
+        "break '{status' in wait.tunnel_status -> exit 1, 'is not a valid message'",
+        "add mobile.computers.zzz_audit_control -> exit 1, 'disagrees with the English source — unknown: …'"
+      ]
+    },
+    "own_parse": {
+      "command": "worktree/node_modules/.bin/tsx scratchpad/audit/vi-mech.mts (imports parseMessage from src/i18n/messages.ts)",
+      "result": "MECHANICAL: PASS (0 failures) — 44/44 values parse; parameter names AND kinds identical to en; ICU structure identical (0 plurals/selects in this slice); raw placeholder tokens byte-identical and in order; key set and order identical to brief; valid JSON; NFC; no ASCII '...'; no space before punctuation; no doubled spaces; full-stop and ellipsis parity; no English word from the source carried into a value",
+      "byte_identical_to_en": [
+        "mobile.computers.row.a11y"
+      ],
+      "kept_english_tokens_present": [
+        "Local Operator",
+        "Radient",
+        "URL",
+        "{status} runtime value"
+      ]
+    }
+  },
+  "fit": {
+    "maxCells_or_maxChars_hint": "none declared for these keys (en context sidecars carry role+note only)",
+    "longest_values": {
+      "mobile.computers.paths.radient_body": 184,
+      "mobile.computers.paths.own_body": 165
+    },
+    "badge_row_estimate_1x": "worst status+reach pair (đang thiết lập + đang phản hồi) ≈ 240 px at mono-label 11 px + 0.06 em tracking, against ~358 px content width on a 390 pt phone; en pair ≈ 196 px. Badges wrap rather than truncate (no numberOfLines), so no overflow",
+    "worst_ratio": {
+      "mobile.computers.paths.own_action": 1.65,
+      "mobile.computers.paths.own_title": 1.5,
+      "mobile.computers.reach.answering": 1.44
+    }
+  },
+  "rtl": "n/a (vi is LTR)",
+  "findings": [
+    {
+      "id": "m3s1-vi-r1-1",
+      "severity": "MINOR",
+      "key": "mobile.computers.paths.radient_body",
+      "current": "Cần có tài khoản Radient. Radient chạy đường hầm thay bạn, cấp một URL riêng tư có xác thực, nên không phải cấu hình gì trên điện thoại này và cũng không phải giữ mật khẩu chuyển tiếp.",
+      "problem": "The relay is named «chuyển tiếp» alone here and nowhere else in the wave: the shipped catalogue (mobile.computers.connect_refused.password, «Máy chủ chuyển tiếp không chấp nhận mật khẩu đó.») and this draft's own mobile.signin.panel.unavailable_alt («…mật khẩu của máy chủ chuyển tiếp.») both use «máy chủ chuyển tiếp». Bare «chuyển tiếp» can be read as the email-forwarding sense and gives the same referent two names inside one slice. Not a glossary violation (relay → chuyển tiếp), a consistency one.",
+      "suggestion": "…nên không phải cấu hình gì trên điện thoại này và cũng không phải giữ mật khẩu của máy chủ chuyển tiếp. (the added «của máy chủ» also lets «giữ» read naturally as “keep track of”, which is what “no password to keep” means)"
+    },
+    {
+      "id": "m3s1-vi-r1-2",
+      "severity": "NIT",
+      "key": "mobile.computers.not_harness",
+      "current": "Máy tính này không chạy Local Operator.",
+      "problem": "EN “This computer is not running the Local Operator harness” loses the noun «harness»: the line states the product is not running rather than the harness. No vi noun is settled and the shipped harness_help made the identical call, so the reader's takeaway is unchanged; the risk is that the omission stays unrecorded and a later surface invents «bộ khung chạy».",
+      "suggestion": "Ship as written and record the per-locale decision (the translator's glossary proposal 1) in the vi guide; do not invent a noun."
+    },
+    {
+      "id": "m3s1-vi-r1-3",
+      "severity": "NIT",
+      "key": "mobile.signin.intro",
+      "current": "Trình duyệt của bạn hoàn tất bước đăng nhập, nên ứng dụng không bao giờ thấy mật khẩu của bạn.",
+      "problem": "A privacy guarantee rendered with «thấy» (sees), a literal mirror of EN “sees”. The fact promised is that the app never receives the password; «thấy» is the colloquial verb for a security claim and slightly weakens it.",
+      "suggestion": "Trình duyệt của bạn hoàn tất bước đăng nhập, nên ứng dụng không bao giờ nhận được mật khẩu của bạn."
+    },
+    {
+      "id": "m3s1-vi-r1-4",
+      "severity": "NIT",
+      "key": "mobile.signin.welcome.body",
+      "current": "… Mã nguồn của bạn không bao giờ rời khỏi máy.",
+      "problem": "EN “Your code” becomes «mã nguồn» (source code), narrower than “code”. The promise itself (never leaves the machine) is intact; only the object narrows, and the narrower reading is the one this product means.",
+      "suggestion": "Keep as written. «Mã của bạn» would be the wider sense but is stilted in vi, so the narrowing is the better trade; note it rather than change it."
+    },
+    {
+      "id": "m3s1-vi-r1-5",
+      "severity": "NIT",
+      "key": "mobile.computers.own_tunnel_instead",
+      "current": "Chuyển sang đường hầm riêng của tôi",
+      "problem": "EN qualifies “Use … instead”; vi swaps the verb for «chuyển sang» (switch to). This button and paths.own_action («Dùng đường hầm riêng của tôi») open the same destination (router.push(\"/own-tunnel\")) and now name two different actions; «instead» survives only as positional contrast.",
+      "suggestion": "Either keep «Chuyển sang …» (it reads clearly where it sits) or align the verb with the card button — «Dùng đường hầm riêng của tôi» on both screens, with position carrying “instead”."
+    }
+  ],
+  "auditor_rulings": {
+    "judged_identical_list": "Correct and complete. Independently verified: exactly one of 44 values is byte-identical to English — mobile.computers.row.a11y, which is three placeholder substitutions plus two commas and has no translatable word. A reader hearing that label gets the computer's own name plus the already-translated badge words.",
+    "glossary_proposals": [
+      "harness — agreed: vi names the product instead of a noun, recorded as a per-locale decision; keep English «harness» if a future surface needs the noun (never «bộ khung chạy»).",
+      "billing → «thanh toán» — agreed, matches the shipped billing_help; record beside cost → «chi phí».",
+      "provisioning → «đang thiết lập» — agreed for a badge; record it so a later surface does not reach for «cấp phát» (the shipped wait.host_answering uses «Tuyến kết nối đã cấp» for a provisioned route, which is a different surface and stays)."
+    ],
+    "style_guide_conformance": "Em dash ' — ' with spaces (wait.tunnel_status) ✓; ellipsis '…' on both shimmering lines, never '...' ✓; «hủy»/«xóa» first-vowel orthography per the guide's wave-2 rule ✓; NFC throughout ✓; kept-English list respected (no English word outside Local Operator/Radient/URL) ✓; «bạn» used sparingly and never as «Quý khách»/«anh chị» ✓; sentence case, no '!' ✓; setup → «thiết lập», session → «phiên», agent → «tác nhân», remote access → «truy cập từ xa», refresh → «Làm mới», route → «tuyến» ✓."
+  },
+  "programme_note": "mobile.computers.wait.tunnel_status inserts {status}, Radient's own tunnel-status word (connector-wait.ts:181 passes found.status verbatim; e.g. 'active'). That English token will be visible in the wait panel in every locale, vi included. It is required by the brief (do not translate) and is therefore not a vi defect, but it does mean the operator's “no English anywhere” bar is not fully met by translation alone on this one surface.",
+  "evidence": {
+    "scratchpad": "/Users/damian/.local-operator/sessions/675090271c24/scratchpad/audit/",
+    "files": [
+      "receipt.json",
+      "report.md",
+      "audit.log",
+      "vi-mech.mts",
+      "merge-vi.py",
+      "control.py",
+      "draft-vi-s1.copy.json"
+    ],
+    "proposed_tracked_path": "i18n/audits/evidence/vi/mobile.computers+mobile.signin/m3s1-vi-r1/",
+    "repo_writes": "none — the lane brief makes the English-first worktree read-only for the auditor; the tracked bundle and the ledger row are the implementer/manager step",
+    "artifact_sha256": {
+      "report.md": "420ffe3755dd97317c3b7af453e4cf6bb407825d197605469d51732f5cd3fb81",
+      "audit.log": "707a5e1b7cbc932fc14d7421f62caae32dd78a97384f78719aca49d601a385c1",
+      "note": "record.json is this file and cannot carry its own hash; its identity is the draft sha256 above plus the auditor instance."
+    }
+  },
+  "ledger_row_to_land": {
+    "locale": "vi",
+    "namespace": "mobile.computers+mobile.signin (M3 S1)",
+    "status": "passed",
+    "auditor": "i18n-auditor",
+    "model": "deepseek/deepseek-flash",
+    "source_sha256": "ee370439647b04e77654c7261dc2d8ed08034bef6396f9f20539a314265d8a4f",
+    "note": "passed · m3s1-vi-r1 · independent audit, 44/44 keys, 0 blocker/major, 1 minor + 4 nits (relay «chuyển tiếp» vs «máy chủ chuyển tiếp»); draft sha256 ee370439…; record i18n/audits/evidence/vi/mobile.computers+mobile.signin/m3s1-vi-r1/record.json"
+  }
+}

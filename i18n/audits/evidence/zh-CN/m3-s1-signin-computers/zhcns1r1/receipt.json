@@ -1,0 +1,105 @@
+{
+  "auditor": "i18n-auditor",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "harness session model (system prompt 'Model: deepseek/deepseek-flash'); no role/tier pin, no fallback",
+  "instance": "076aa4e7f41e",
+  "status": "changes_requested",
+  "locale": "zh-CN",
+  "namespace": "mobile.computers+mobile.signin (M3 S1)",
+  "head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+  "sha256": {
+    "draft": "6969215384e6841040121536acc8e2c510d25c4f73d3100a32fb5fa2bf3c629b",
+    "brief": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f",
+    "notes": "103972f47256a567be116b78797e924c32fdf41597b406c9e7c8c38a5f9e9075",
+    "en_computers": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109",
+    "en_signin": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252",
+    "en_computers_context": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a",
+    "en_signin_context": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56",
+    "zh_computers_shipped": "b6f9e5bffbec5bb58ff3d1fb44bb592fd0779b312bec8655a1204348f45e0038",
+    "zh_signin_shipped": "00d37fc3f73ac25efecbbaf9b1a16d673d56d1984cca5f9f01a044b6f95ee7fe",
+    "style_guide_zhCN": "8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c",
+    "glossary": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "findings": [
+    {
+      "id": "ZH-01",
+      "severity": "MAJOR",
+      "key": "mobile.computers.wait.tunnel_status",
+      "current": "Radient已配置好隧道，状态：{status}。",
+      "problem": "EN 'Radient has the tunnel' is neutral possession; 已配置好 asserts completed provisioning. {status} is the control plane's raw word (computers.tsx:426 `found.rawStatus`), whose vocabulary includes provisioning/suspended/disabled/revoked (computers.tsx:73-88), so the line can render 'Radient已配置好隧道，状态：provisioning。' — self-contradictory. connector-wait.ts:178-181 records the invariant that disabled/suspended are 'statuses this app must not call provisioned'. It also collides with the badge 配置中 (provisioning).",
+      "suggestion": "Radient已有此隧道，状态：{status}。"
+    },
+    {
+      "id": "ZH-02",
+      "severity": "MINOR",
+      "key": "mobile.signin.welcome.headline",
+      "current": "你的智能体运行在你的电脑上。",
+      "problem": "Two 你的 inside one 13-character headline; the style guide's 'No 您/你 repetition … prefer verb-forward phrasing' rule. The second possessive carries the claim (your machine, not the cloud); the first does not.",
+      "suggestion": "智能体运行在你的电脑上。"
+    },
+    {
+      "id": "ZH-03",
+      "severity": "MINOR",
+      "key": "mobile.computers.paths.radient_body",
+      "current": "需要Radient账户。Radient为你运行隧道，并提供私有且经过身份验证的URL，因此此手机无需任何配置，也无需保管中继密码。",
+      "problem": "因此 + 此手机 puts 此此 adjacent ('因此此手机'), which stumbles when read; the demonstrative is redundant after 因此.",
+      "suggestion": "…并提供私有且经过身份验证的URL，因此手机上无需任何配置，也无需保管中继密码。"
+    },
+    {
+      "id": "ZH-04",
+      "severity": "NIT",
+      "key": "mobile.computers.not_harness",
+      "current": "这台电脑未运行Local Operator。",
+      "problem": "English names 'the Local Operator harness'; the noun is dropped. Follows the shipped precedent (harness_help = 在 Radient 控制台中为此隧道启用 Local Operator), so accepted — but the glossary has no row for harness and the translator's proposed 运行框架 is not endorsed here.",
+      "suggestion": "no change requested; add a glossary row for harness (or record the drop as the policy)."
+    },
+    {
+      "id": "ZH-05",
+      "severity": "NIT",
+      "key": "mobile.computers.try_now",
+      "current": "立即重试",
+      "problem": "Adds 重试 ('retry') to 'Try now'. Clearer than the source for a button that re-runs discovery and consistent with the 重试 family; recorded so a later literal pass does not 'correct' it.",
+      "suggestion": "keep as is"
+    },
+    {
+      "id": "ZH-06",
+      "severity": "NIT",
+      "key": "mobile.computers.paths.own_body",
+      "current": "进阶方式：自行运行隧道来发布电脑，并在此粘贴其地址。",
+      "problem": "发布电脑 as a bare object can be read as 'release a computer'; the direction of exposure is unstated. The following clause carries the meaning, so risk is low.",
+      "suggestion": "进阶方式：自行运行隧道，把电脑发布出去，并在此粘贴其地址。"
+    },
+    {
+      "id": "ZH-07",
+      "severity": "NIT",
+      "key": "(translator notes, not a shipped string)",
+      "current": "notes-zh-CN-s1.md:82 cites `mobile.signin.panel.try_anyway`",
+      "problem": "No such key; the slice's key is `mobile.signin.try_anyway` (only opening/waiting/cancelled/unavailable carry the panel prefix). Documentation only.",
+      "suggestion": "correct the key name in the notes"
+    },
+    {
+      "id": "ZH-08",
+      "severity": "NIT",
+      "key": "mobile.computers.paths.own_title",
+      "current": "设置自己的隧道",
+      "problem": "设置 is this product's word for Settings (mobile.settings namespace), so 'set up your own tunnel' on a heading and a welcome-screen button can read as 'settings for the tunnel'. 搭建 is the more specific verb for standing a tunnel up.",
+      "suggestion": "搭建自己的隧道 (recorded, not requested)"
+    }
+  ],
+  "keys_read": 44,
+  "audit_kind": "first",
+  "rulings": [
+    "ellipsis: ship '……' per the binding zh-CN guide; normalise the 17 single-'…' occurrences in the shipped catalogue (or amend the guide) — do not ship a per-string mix",
+    "Latin spacing: ship no space per the binding guide; independent recount 55 spaced / 19 unspaced (translator reported 54/19); normalise the shipped values in the same wave, or amend the guide and reissue the 8 affected keys",
+    "mono badge face + CJK: render note only, not a wording defect",
+    "{status} residual English: by brief design on every locale; localising control-plane status words is a code change"
+  ],
+  "independent_from_translator_session": true,
+  "artifacts": {
+    "receipt": "/Users/damian/.local-operator/sessions/4fa2d8152a9f/scratchpad/receipt-zhCN-m3s1.json",
+    "report": "/Users/damian/.local-operator/sessions/4fa2d8152a9f/scratchpad/report-zhCN-m3s1.md",
+    "audit_log": "/Users/damian/.local-operator/sessions/4fa2d8152a9f/scratchpad/audit-zhCN-m3s1.log",
+    "checker": "/Users/damian/.local-operator/sessions/4fa2d8152a9f/scratchpad/audit-zhCN.mjs"
+  },
+  "audit_notes_not_execution_log": "report-zhCN-m3s1.md prose; execution transcript is audit-zhCN-m3s1.log"
+}

@@ -49,6 +49,7 @@ import { Shimmer } from "@/ui/components/shimmer";
 import { Skeleton } from "@/ui/components/skeleton";
 import { useComposedDir } from "@/ui/direction";
 import { computersHeaderStackWidth } from "@/ui/size-class";
+import { tunnelStatusKey } from "./tunnel-status-key";
 
 /**
  * Computers: discovery, the picker, and the set-up path (docs/ux/flows.md § 2 and
@@ -72,17 +73,20 @@ function statusLabel(status: ComputerStatus): {
 } {
 	switch (status) {
 		case "ready":
-			return { label: "route ready", tone: "success" };
+			return {
+				label: t("mobile.computers.status.route_ready"),
+				tone: "success",
+			};
 		case "provisioning":
-			return { label: "provisioning", tone: "info" };
+			return { label: t("mobile.computers.status.provisioning"), tone: "info" };
 		case "suspended":
-			return { label: "suspended", tone: "warning" };
+			return { label: t("mobile.computers.status.suspended"), tone: "warning" };
 		case "off":
-			return { label: "disabled", tone: "warning" };
+			return { label: t("mobile.computers.status.disabled"), tone: "warning" };
 		case "gone":
-			return { label: "revoked", tone: "danger" };
+			return { label: t("mobile.computers.status.revoked"), tone: "danger" };
 		case "unknown":
-			return { label: "unknown", tone: "neutral" };
+			return { label: t("mobile.computers.status.unknown"), tone: "neutral" };
 	}
 }
 
@@ -97,7 +101,7 @@ function reachabilityLabel(state: Reachability): {
 		case "protected":
 			return { label: t("mobile.computers.protected"), tone: "neutral" };
 		case "answered":
-			return { label: "answering", tone: "success" };
+			return { label: t("mobile.computers.reach.answering"), tone: "success" };
 	}
 }
 
@@ -126,9 +130,14 @@ const ComputerRow = ({
 		<Pressable
 			accessibilityRole={ROLE.button}
 			accessibilityState={{ selected, busy: connecting }}
-			accessibilityLabel={`${computer.name}, ${status.label}, ${reach.label}${
-				selected ? ", active" : connecting ? ", connecting" : ""
-			}`}
+			accessibilityLabel={t(
+				selected
+					? "mobile.computers.row.a11y_active"
+					: connecting
+						? "mobile.computers.row.a11y_connecting"
+						: "mobile.computers.row.a11y",
+				{ name: computer.name, status: status.label, reach: reach.label },
+			)}
 			testID={ids.row}
 			/* A second tap while this row is minting would start a second route and
 			 *  retire the first mid-flight; the row says it is busy instead. */
@@ -152,7 +161,7 @@ const ComputerRow = ({
 								className="shrink-0 text-meta text-accent"
 								testID={CONTROL.computerSelectedMarker}
 							>
-								active
+								{t("mobile.computers.badge.active")}
 							</Text>
 						) : null}
 						{/* The pending state a pick needs (design round 1, D1): the list stays
@@ -198,13 +207,13 @@ const ComputerRow = ({
 					</View>
 					{!computer.supportsLocalOperator ? (
 						<Text className="text-body-sm text-ink-muted">
-							This computer is not running the Local Operator harness.
+							{t("mobile.computers.not_harness")}
 						</Text>
 					) : null}
 					{computer.billing.eligible === false ? (
 						<Text className="text-body-sm text-warning">
 							{computer.billing.message ??
-								"Billing for this tunnel is inactive, so remote access will be refused."}
+								t("mobile.computers.billing_inactive")}
 						</Text>
 					) : null}
 				</View>
@@ -235,19 +244,25 @@ const WaitPanel = ({
 	onStop: () => void;
 }) => {
 	const host = appeared?.hostname ?? null;
+	/* "Radient has the tunnel — {status}." starts with the Latin product name in Urdu,
+	 * so `dir="auto"` would lay it out left-to-right on an RTL page (M3 S1 design
+	 * D2); the page's base is stated instead. */
+	const composedDir = useComposedDir();
 	return (
 		<View className="gap-3 rounded-sm border border-hairline bg-surface p-4">
 			{state.kind === "w1" ? (
 				<Shimmer active>
 					<Text className="text-body text-ink">
-						Waiting for Radient to list your computer…
+						{t("mobile.computers.wait.listing")}
 					</Text>
 				</Shimmer>
 			) : null}
 			{state.kind === "w2" ? (
 				<>
-					<Text className="text-body text-ink">
-						Radient has the tunnel — {state.tunnelStatus}.
+					<Text {...composedDir} className="text-body text-ink">
+						{t("mobile.computers.wait.tunnel_status", {
+							status: t(tunnelStatusKey(state.tunnelStatus)),
+						})}
 					</Text>
 					<Text className="text-body-sm text-ink-muted">
 						{host
@@ -257,7 +272,9 @@ const WaitPanel = ({
 				</>
 			) : null}
 			{state.kind === "w3" ? (
-				<Text className="text-body text-ink">Your computer answered.</Text>
+				<Text className="text-body text-ink">
+					{t("mobile.computers.wait.answered")}
+				</Text>
 			) : null}
 			{state.kind === "w3" &&
 			(state.version !== null || state.sessions !== null) ? (
@@ -296,13 +313,13 @@ const WaitPanel = ({
 			<View className="gap-2">
 				{state.kind === "w3" ? (
 					<Button
-						label="Use this computer"
+						label={t("mobile.computers.wait.use_computer")}
 						onPress={onUse}
 						testID={CONTROL.computersUseThisComputer}
 					/>
 				) : null}
 				<Button
-					label="Start again"
+					label={t("mobile.computers.wait.start_again")}
 					onPress={onStop}
 					variant="quiet"
 					testID={CONTROL.computersStartAgain}
@@ -403,8 +420,8 @@ export default function Computers() {
 	/* Lists again, then answers with the computer that appeared since the wait
 	 *  started — the hook's only way past W1 (R3-M1/U17, `newlyListed`). Read from
 	 *  the store, not the render's `computers`: the refresh has just written it, and
-	 *  this closure predates that render. `rawStatus` is Radient's own word, which
-	 *  W2 shows verbatim. */
+	 *  this closure predates that render. `rawStatus` is Radient's own word; W2
+	 *  maps it to a translated label (`tunnelStatusKey`). */
 	const acquire = useCallback(async () => {
 		await refreshComputers();
 		const found = newlyListed(
@@ -492,7 +509,7 @@ export default function Computers() {
 						{showRefresh ? (
 							<Button
 								testID={CONTROL.computersRefresh}
-								label="Refresh"
+								label={t("mobile.computers.refresh")}
 								onPress={() => void refreshComputers()}
 								variant="quiet"
 								size="sm"
@@ -550,7 +567,7 @@ export default function Computers() {
 					tone="warning"
 					message={view.banner}
 					action={{
-						label: "Try now",
+						label: t("mobile.computers.try_now"),
 						onPress: () => void refreshComputers(),
 						loading: discovering,
 						testID: CONTROL.computersRetryAction,
@@ -569,7 +586,7 @@ export default function Computers() {
 			 *  hiding the others left the reader nothing to pick instead (D1). */}
 			{view.list ? (
 				<View testID={REGION.computersList}>
-					<SectionHeader label="Your computers" />
+					<SectionHeader label={t("mobile.computers.list.heading")} />
 					{computers.map((computer) => (
 						<ComputerRow
 							key={computer.tunnelId}
@@ -591,7 +608,7 @@ export default function Computers() {
 
 			{!empty && !waiting ? (
 				<Button
-					label="Use my own tunnel instead"
+					label={t("mobile.computers.own_tunnel_instead")}
 					onPress={() => router.push("/own-tunnel")}
 					variant="quiet"
 					size="sm"
@@ -647,9 +664,9 @@ export default function Computers() {
 
 			<Dialog
 				visible={removeTarget !== null}
-				title="Remove this computer?"
-				body="This removes it from the list on this phone. It does not touch the computer, its tunnel, or your account."
-				confirmLabel="Remove"
+				title={t("mobile.computers.remove.title")}
+				body={t("mobile.computers.remove.body")}
+				confirmLabel={t("mobile.computers.remove.confirm")}
 				onConfirm={() => {
 					if (removeTarget) {
 						/* Persisting the removal so discovery cannot undo it is

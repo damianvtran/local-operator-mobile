@@ -1,0 +1,244 @@
+# Independent fr delta audit — real commands and their actual output
+# auditor i18n-auditor · instance fdd48b3ce97c · model deepseek/deepseek-flash · 2026-11-12
+# head a5593a79ef8414cfa6af05dfbc151dd47ada6199 · locale fr · delta audit (round 2)
+# The worktree is READ-ONLY for this auditor. The two drafts were copied into this scratchpad
+# and the copies were hash-verified against the originals before analysis (see step 0).
+
+## 0. provenance of the analysed copies (originals vs scratchpad copies)
+$ shasum -a 256 /Users/damian/.local-operator/sessions/e79c854e0ab4/scratchpad/draft-fr-s1-v2.json /Users/damian/.local-operator/sessions/4270cae4ed9c/scratchpad/draft-fr-s1.json /Users/damian/.local-operator/sessions/e79c854e0ab4/scratchpad/replacements-fr-s1.json /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json; cd /Users/damian/.local-operator/sessions/112b2963371b/scratchpad/au2-fr && shasum -a 256 draft-fr-s1-v2.json draft-fr-s1.json replacements-fr-s1.json translation-brief-s1.json
+46dfc7cdcbe80e0afad9844df811e42d52d43748ed93219e567e1c33d95c48e7  /Users/damian/.local-operator/sessions/e79c854e0ab4/scratchpad/draft-fr-s1-v2.json
+07a54a5b9725f2d97f264e94b40eb2a5939e33f2a7d2e79187ffb41f5bf0c0bb  /Users/damian/.local-operator/sessions/4270cae4ed9c/scratchpad/draft-fr-s1.json
+62e4c906fe13407dea6afac4952ee24b7d41b00512ff64fb8523955d6c832c3a  /Users/damian/.local-operator/sessions/e79c854e0ab4/scratchpad/replacements-fr-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+46dfc7cdcbe80e0afad9844df811e42d52d43748ed93219e567e1c33d95c48e7  draft-fr-s1-v2.json
+07a54a5b9725f2d97f264e94b40eb2a5939e33f2a7d2e79187ffb41f5bf0c0bb  draft-fr-s1.json
+62e4c906fe13407dea6afac4952ee24b7d41b00512ff64fb8523955d6c832c3a  replacements-fr-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  translation-brief-s1.json
+[exit=0]
+
+## 1. head + worktree state (before any work)
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1 && git rev-parse HEAD && git status --porcelain | head -5 && echo '(nothing above = clean)'
+a5593a79ef8414cfa6af05dfbc151dd47ada6199
+(nothing above = clean)
+[exit=0]
+
+## 2. byte-level integrity: v1 vs v2
+$ cd /Users/damian/.local-operator/sessions/112b2963371b/scratchpad/au2-fr && diff draft-fr-s1.json draft-fr-s1-v2.json; echo 'diff exit above: 1 = differences present (expected)'; wc -l draft-fr-s1.json draft-fr-s1-v2.json; head -c 3 draft-fr-s1-v2.json | xxd; tail -c 6 draft-fr-s1-v2.json | xxd
+3c3
+< 	"mobile.computers.wait.listing": "En attente que Radient liste votre ordinateur…",
+---
+> 	"mobile.computers.wait.listing": "En attendant que Radient liste votre ordinateur…",
+12c12
+< 	"mobile.computers.remove.body": "Il est retiré de la liste de ce téléphone. Cela ne touche ni l’ordinateur, ni son tunnel, ni votre compte.",
+---
+> 	"mobile.computers.remove.body": "Il sera retiré de la liste de ce téléphone. Cela ne modifie ni l’ordinateur, ni son tunnel, ni votre compte.",
+17c17
+< 	"mobile.computers.paths.own_body": "Le parcours avancé : vous publiez vous-même votre ordinateur via un tunnel que vous exploitez, puis vous collez son adresse ici. Aucun compte Radient n’est nécessaire à aucun moment, et vous gardez le mot de passe.",
+---
+> 	"mobile.computers.paths.own_body": "Le parcours avancé : vous publiez vous-même votre ordinateur via un tunnel que vous exploitez, puis vous collez l’adresse de ce tunnel ici. Aucun compte Radient n’est nécessaire à aucun moment, et vous gardez le mot de passe.",
+25c25
+< 	"mobile.signin.panel.waiting_help": "Terminez la connexion dans le navigateur, puis revenez à cette app.",
+---
+> 	"mobile.signin.panel.waiting_help": "Finalisez la connexion dans le navigateur, puis revenez à cette app.",
+diff exit above: 1 = differences present (expected)
+      46 draft-fr-s1.json
+      46 draft-fr-s1-v2.json
+      92 total
+00000000: 7b0a 09                                  {..
+00000000: 6572 220a 7d0a                           er".}.
+[exit=0]
+
+## 3. mechanical + integrity + slot check, using the repo's own parseMessage
+$ /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/node_modules/.bin/tsx /Users/damian/.local-operator/sessions/112b2963371b/scratchpad/au2-fr/audit-fr.mjs
+## 1. INTEGRITY (v2 vs v1)
+v2 keys: 44  v1 keys: 44  brief entries: 44
+same key ORDER as v1: true
+brief order == v2 order: true
+keys changed v1->v2: 4 ["mobile.computers.wait.listing","mobile.computers.remove.body","mobile.computers.paths.own_body","mobile.signin.panel.waiting_help"]
+keys only in v2: []   only in v1: []
+replacement-file keys: 4 ["mobile.computers.wait.listing","mobile.computers.remove.body","mobile.computers.paths.own_body","mobile.signin.panel.waiting_help"]
+changed set === replacement set: true
+  repl[k] === v2[k] for mobile.computers.wait.listing: true  repl[k] === v1[k]: false
+  repl[k] === v2[k] for mobile.computers.remove.body: true  repl[k] === v1[k]: false
+  repl[k] === v2[k] for mobile.computers.paths.own_body: true  repl[k] === v1[k]: false
+  repl[k] === v2[k] for mobile.signin.panel.waiting_help: true  repl[k] === v1[k]: false
+untouched keys byte-identical: 40/40
+brief english text unchanged per key: n/a
+
+## 2. MECHANICAL (repo parser: parseMessage)
+mechanical FAILs: 0/44
+plurals/selects in this slice: 0
+braces unbalanced anywhere: 0 (all parsed above)
+
+placeholder presence (raw text check):
+  mobile.computers.wait.tunnel_status: en={status} fr={status} match=true literal=true
+  mobile.computers.row.a11y: en={name,status,reach} fr={name,status,reach} match=true literal=true
+  mobile.computers.row.a11y_active: en={name,status,reach} fr={name,status,reach} match=true literal=true
+  mobile.computers.row.a11y_connecting: en={name,status,reach} fr={name,status,reach} match=true literal=true
+
+protected-token check (backticks/flags/paths/identifiers):
+  FAIL mobile.signin.intro: tokens lost ["-in"]
+  FAIL mobile.signin.panel.cancelled: tokens lost ["-in"]
+  FAIL mobile.signin.panel.unavailable: tokens lost ["-in"]
+protected-token FAILs: 3
+
+key-set check:
+  draft keys absent from en source: []
+  draft keys: 44; en computers+signin keys: 107 (rest of en is other slices)
+
+## 3. TYPOGRAPHY (fr rules)
+  no typography defects
+
+espace fine insécable (U+202F) before colon/!? in the changed keys:
+  mobile.computers.wait.listing: U+202F=0 plain-space-before=0
+  mobile.computers.remove.body: U+202F=0 plain-space-before=0
+  mobile.computers.paths.own_body: U+202F=1 plain-space-before=0
+  mobile.signin.panel.waiting_help: U+202F=0 plain-space-before=0
+
+## 4. SLOT CHECK — mobile.computers.wait.tunnel_status
+template: "Radient dispose du tunnel — {status}."  params: [["status","text"]]
+  badge.active (SHIPPED fr)        "actif" -> "Radient dispose du tunnel — actif."
+  status.provisioning (DRAFT)      "provisionnement" -> "Radient dispose du tunnel — provisionnement."
+  status.suspended (DRAFT)         "suspendu" -> "Radient dispose du tunnel — suspendu."
+  status.disabled (DRAFT)          "désactivé" -> "Radient dispose du tunnel — désactivé."
+  status.revoked (DRAFT)           "révoqué" -> "Radient dispose du tunnel — révoqué."
+  status.unknown (DRAFT)           "inconnu" -> "Radient dispose du tunnel — inconnu."
+
+EN template for comparison: "Radient has the tunnel — {status}."
+EN would render: "Radient has the tunnel — active."
+
+other render sites of these labels in the draft (context for register):
+  mobile.computers.row.a11y: {name}, {status}, {reach}
+  mobile.computers.row.a11y_active: {name}, {status}, {reach}, actif
+
+## 5. TERMINOLOGY vs shipped fr corpus
+  shipped fr contains "ordinateur": 14 value(s)
+  shipped fr contains "app": 7 value(s)
+  shipped fr contains "relais": 4 value(s)
+  shipped fr contains "tunnel": 4 value(s)
+  shipped fr contains "mot de passe": 5 value(s)
+  shipped fr contains "navigateur": 2 value(s)
+  shipped fr contains "finalis": 0 value(s)
+  shipped fr contains "termine": 1 value(s)
+  shipped 'ordinateur' sample: ["Ajouter un ordinateur","Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.","Aucun ordinateur sur ce téléphone pour le moment."]
+  shipped 'app' (standalone) sample: ["L’app n’a pas pu se connecter à cet ordinateur.","Le stockage sécurisé de cet appareil a refusé la demande (code {code}). Réessayez, ou réinstallez l’app si le problème persiste.","Le stockage sécurisé de cet appareil a refusé la demande. Réessayez, ou réinstallez l’app si le problème persiste."]
+  shipped 'finalis' sample: ["Finalisation de la connexion dans le navigateur"]
+
+## 6. FIT
+brief entries carrying maxCells: 0 (0 => no declared budget; call-site geometry rules)
+  mobile.computers.wait.listing: en 42 chars / fr 48 chars = +14%
+  mobile.computers.remove.body: en 105 chars / fr 108 chars = +3%
+  mobile.computers.paths.own_body: en 178 chars / fr 225 chars = +26%
+  mobile.signin.panel.waiting_help: en 52 chars / fr 68 chars = +31%
+call sites: wait.listing + tunnel_status render in <Text className="text-body text-ink"> inside a p-4 card (wrapping, no numberOfLines); remove.body / paths.own_body are dialog/help text (wrapping). None is a fixed-width label.
+
+-- done --
+[exit=0]
+
+## 4. refined probes: codepoints, identifier protection, EN/FR structure, label sanity
+$ /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1/node_modules/.bin/tsx /Users/damian/.local-operator/sessions/112b2963371b/scratchpad/au2-fr/probe-fr.mjs
+## A. CODEPOINTS of changed keys (v2)
+
+mobile.computers.wait.listing
+  v1: "En attente que Radient liste votre ordinateur…"
+  v2: "En attendant que Radient liste votre ordinateur…"
+  non-ASCII: … U+2026
+  starts/ends: "E" … "…"
+
+mobile.computers.remove.body
+  v1: "Il est retiré de la liste de ce téléphone. Cela ne touche ni l’ordinateur, ni son tunnel, ni votre compte."
+  v2: "Il sera retiré de la liste de ce téléphone. Cela ne modifie ni l’ordinateur, ni son tunnel, ni votre compte."
+  non-ASCII: é U+00E9 é U+00E9 é U+00E9 ’ U+2019
+  starts/ends: "I" … "."
+
+mobile.computers.paths.own_body
+  v1: "Le parcours avancé : vous publiez vous-même votre ordinateur via un tunnel que vous exploitez, puis vous collez son adresse ici. Aucun compte Radient n’est nécessaire à aucun moment, et vous gardez le mot de passe."
+  v2: "Le parcours avancé : vous publiez vous-même votre ordinateur via un tunnel que vous exploitez, puis vous collez l’adresse de ce tunnel ici. Aucun compte Radient n’est nécessaire à aucun moment, et vous gardez le mot de passe."
+  non-ASCII: é U+00E9   U+202F ê U+00EA ’ U+2019 ’ U+2019 é U+00E9 à U+00E0
+  starts/ends: "L" … "."
+
+mobile.signin.panel.waiting_help
+  v1: "Terminez la connexion dans le navigateur, puis revenez à cette app."
+  v2: "Finalisez la connexion dans le navigateur, puis revenez à cette app."
+  non-ASCII: à U+00E0
+  starts/ends: "F" … "."
+
+## B. IDENTIFIER PROTECTION (code-like tokens only; english prose words excluded)
+  identifier FAILs: 0
+
+## C. STRUCTURE vs EN (negations, sentences, terminal punctuation)
+mobile.computers.wait.listing
+  en neg-markers=0 fr neg-markers=0 (fr splits "ne … ni" over the list)
+  en sentences=1 fr sentences=1
+  en ends="…" fr ends="…"
+  capital initial: true
+mobile.computers.remove.body
+  en neg-markers=1 fr neg-markers=4 (fr splits "ne … ni" over the list)
+  en sentences=2 fr sentences=2
+  en ends="." fr ends="."
+  capital initial: true
+mobile.computers.paths.own_body
+  en neg-markers=1 fr neg-markers=3 (fr splits "ne … ni" over the list)
+  en sentences=2 fr sentences=2
+  en ends="." fr ends="."
+  capital initial: true
+mobile.signin.panel.waiting_help
+  en neg-markers=0 fr neg-markers=0 (fr splits "ne … ni" over the list)
+  en sentences=1 fr sentences=1
+  en ends="." fr ends="."
+  capital initial: true
+
+  EN remove.body negations: "does not touch the computer, its tunnel, or your account."
+  FR remove.body: "Il sera retiré de la liste de ce téléphone. Cela ne modifie ni l’ordinateur, ni son tunnel, ni votre compte."
+
+## D. SLOT LABEL SANITY (lowercase, one word / short phrase, no full stop)
+  mobile.computers.badge.active          "actif (SHIPPED fr)" lower=true words=3 endsWithPeriod=false
+  mobile.computers.status.provisioning   "provisionnement" lower=true words=1 endsWithPeriod=false
+  mobile.computers.status.suspended      "suspendu" lower=true words=1 endsWithPeriod=false
+  mobile.computers.status.disabled       "désactivé" lower=true words=1 endsWithPeriod=false
+  mobile.computers.status.revoked        "révoqué" lower=true words=1 endsWithPeriod=false
+  mobile.computers.status.unknown        "inconnu" lower=true words=1 endsWithPeriod=false
+
+  EN label words for the same six: active, provisioning, suspended, disabled, revoked, unknown
+
+## E. TEMPLATE-LEVEL CHECK: parse the sentence, then substitute
+  parsed ok; params=[["status","text"]]; nodes=3
+  en params=[["status","text"]]
+  placeholder count fr=1 en=1
+[exit=0]
+
+## 5. repo catalogue validator at head (read-only check)
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1 && node scripts/i18n/generate.ts --check
+es/mobile.computers.json disagrees with the English source — missing: mobile.computers.not_harness, mobile.computers.wait.listing, mobile.computers.wait.tunnel_status, mobile.computers.wait.answered, mobile.computers.wait.use_computer, mobile.computers.wait.start_again, mobile.computers.refresh, mobile.computers.list.heading, mobile.computers.own_tunnel_instead, mobile.computers.remove.title, mobile.computers.remove.body, mobile.computers.paths.radient_title, mobile.computers.paths.recommended, mobile.computers.paths.radient_body, mobile.computers.paths.own_title, mobile.computers.paths.own_body, mobile.computers.paths.own_action, mobile.computers.status.route_ready, mobile.computers.status.provisioning, mobile.computers.status.suspended, mobile.computers.status.disabled, mobile.computers.status.revoked, mobile.computers.status.unknown, mobile.computers.reach.answering, mobile.computers.row.a11y, mobile.computers.row.a11y_active, mobile.computers.row.a11y_connecting, mobile.computers.billing_inactive, mobile.computers.try_now, mobile.computers.remove.confirm; unknown: none
+[exit=1]
+
+## 6. input hashes — english source, context sidecars, shipped fr
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1 && for f in src/i18n/catalogues/en/mobile.computers.json src/i18n/catalogues/en/mobile.computers.context.json src/i18n/catalogues/en/mobile.signin.json src/i18n/catalogues/en/mobile.signin.context.json src/i18n/catalogues/fr/mobile.computers.json src/i18n/catalogues/fr/mobile.signin.json; do shasum -a 256 "$f"; done
+f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109  src/i18n/catalogues/en/mobile.computers.json
+93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a  src/i18n/catalogues/en/mobile.computers.context.json
+2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252  src/i18n/catalogues/en/mobile.signin.json
+1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56  src/i18n/catalogues/en/mobile.signin.context.json
+c3015755e033b3fca2236ffee8d967df3c25ccff96ee85aad0bd9457cd5b6135  src/i18n/catalogues/fr/mobile.computers.json
+c44cf80d43eacbc6ea3a8d0dc4bbb8991e28fdc3298037a134d7eb15d2dadfee  src/i18n/catalogues/fr/mobile.signin.json
+[exit=0]
+
+## 7. binding style guide + glossary (core origin/main)
+$ cd /Users/damian/local-operator && git rev-parse origin/main && git show origin/main:i18n/style-guides/fr.md | shasum -a 256 && git show origin/main:i18n/glossary.md | shasum -a 256
+8459804f56dd704d5c3a680ef68f53b7182786ab
+5315e1ac10c2ce57aac631ba653d08de680ee70c9a022ed3a8345ce2f9902ee7  -
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  -
+[exit=0]
+
+## 8. english-residue probe over the 10 audited fr strings
+$ cd /Users/damian/.local-operator/sessions/112b2963371b/scratchpad/au2-fr && python3 residue.py
+kept-English tokens present: Radient (brand), app (settled fr usage in the shipped corpus)
+distinct non-kept word tokens: 59
+english probe hits: []
+words: ['Aucun', 'Cela', 'En', 'Finalisez', 'Il', 'Le', 'adresse', 'attendant', 'aucun', 'avancé', 'ce', 'cette', 'collez', 'compte', 'connexion', 'dans', 'de', 'dispose', 'du', 'désactivé', 'est', 'et', 'exploitez', 'gardez', 'ici', 'inconnu', 'l', 'la', 'le', 'liste', 'modifie', 'moment', 'mot', 'même', 'n', 'navigateur', 'ne', 'ni', 'nécessaire', 'ordinateur', 'parcours', 'passe', 'provisionnement', 'publiez', 'puis', 'que', 'retiré', 'revenez', 'révoqué', 'sera', 'son', 'suspendu', 'tunnel', 'téléphone', 'un', 'via', 'votre', 'vous', 'à']
+[exit=0]
+
+## 9. worktree state after every read (nothing written by me)
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s1 && git status --porcelain | head -5; git ls-files --others --exclude-standard | head -5; echo '(nothing above = clean, no untracked files)'
+(nothing above = clean, no untracked files)
+[exit=0]
+

@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "Signed in",
 	"mobile.signin.stage_starting": "Starting sign-in",
 	"mobile.signin.stage_unavailable": "Sign-in unavailable",
-	"mobile.signin.superseded": "Another sign-in started."
+	"mobile.signin.superseded": "Another sign-in started.",
+	"mobile.signin.title": "Sign in",
+	"mobile.signin.intro": "Your browser finishes the sign-in, so the app never sees your password.",
+	"mobile.signin.start": "Sign in with Radient",
+	"mobile.signin.use_address": "Use an address and password",
+	"mobile.signin.panel.opening": "Opening your browser…",
+	"mobile.signin.panel.waiting": "Waiting for your browser.",
+	"mobile.signin.panel.waiting_help": "Finish signing in there, then come back to this app.",
+	"mobile.signin.panel.cancelled": "Sign-in was cancelled.",
+	"mobile.signin.panel.cancelled_help": "Nothing was changed on your account.",
+	"mobile.signin.panel.unavailable": "This build cannot finish a Radient sign-in.",
+	"mobile.signin.panel.unavailable_alt": "You can still connect with the relay's address and password.",
+	"mobile.signin.try_anyway": "Try again anyway",
+	"mobile.signin.welcome.headline": "Your agent runs on your computer.",
+	"mobile.signin.welcome.body": "This app drives the sessions on your own machine and shows what it did. Your code never leaves it."
 }

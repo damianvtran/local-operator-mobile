@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import type { ComposedDirProps } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import {
 	BUTTON_VISUAL_HEIGHT,
@@ -31,6 +32,14 @@ export type ButtonProps = {
 	 *  text and the LABEL is the part that gives (code review round 10, m-5). The
 	 *  default is unchanged: a label wraps as it always has. */
 	labelLines?: 1;
+	/** The paragraph direction a label that STARTS with a Latin token has to state
+	 *  for itself, from `useComposedDir()` (`@/ui/direction`). Without it
+	 *  react-native-web's `dir="auto"` reads the first strong character, so an
+	 *  Urdu label opening with `Radient` lays out left-to-right on an RTL page and
+	 *  the postposition reads ahead of the noun. Opt-in exactly like
+	 *  `SectionHeader.labelDir`: omitted, the label keeps the inferred base and every
+	 *  other button is unchanged. */
+	labelDir?: ComposedDirProps;
 	onPress: () => void;
 	variant?: ButtonVariant;
 	size?: ButtonSize;
@@ -64,6 +73,7 @@ const ICON_SIZE: Record<ButtonSize, number> = {
 export const Button = ({
 	label,
 	labelLines,
+	labelDir = {},
 	onPress,
 	variant = "primary",
 	size = "md",
@@ -84,6 +94,9 @@ export const Button = ({
 	const spinnerColor = useTokenColor(
 		variant === "primary" ? "on-accent" : "ink-muted",
 	);
+	/* Widened to `object` for the reason `SectionHeader` gives: `dir` is a
+	 * react-native-web prop that React Native's `TextProps` does not declare. */
+	const web: object = labelDir;
 	const visualHeight = BUTTON_VISUAL_HEIGHT[size];
 
 	return (
@@ -142,6 +155,7 @@ export const Button = ({
 					) : null}
 					{size === "icon" || size === "fab" ? null : (
 						<Text
+							{...web}
 							className={buttonLabelClasses(size, disabled, variant)}
 							numberOfLines={labelLines}
 							ellipsizeMode={labelLines === 1 ? "tail" : undefined}

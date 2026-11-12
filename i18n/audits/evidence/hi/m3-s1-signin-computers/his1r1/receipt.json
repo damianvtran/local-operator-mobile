@@ -1,0 +1,202 @@
+{
+  "auditor": "i18n-auditor",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "session model header (this session 91a41d00ad8f); no fallback observed during the run",
+  "instance": "e97663964c5f",
+  "independent_from_translator_session": true,
+  "translator_session": "fad0082b3b75",
+  "auditor_session": "91a41d00ad8f",
+  "status": "passed",
+  "locale": "hi",
+  "namespace": "mobile.computers+mobile.signin (M3 S1)",
+  "head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+  "audit_kind": "first",
+  "audit_date": "2026-11-12",
+  "keys_read": 44,
+  "input_hashes": {
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/fad0082b3b75/scratchpad/draft-hi-s1.json",
+      "sha256": "768194117988c474607c705793c046c12217d1833d38c07a4ca9f9b42d1ce7d8"
+    },
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json",
+      "sha256": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f"
+    },
+    "en_mobile_computers": {
+      "path": "src/i18n/catalogues/en/mobile.computers.json",
+      "sha256": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109"
+    },
+    "en_mobile_signin": {
+      "path": "src/i18n/catalogues/en/mobile.signin.json",
+      "sha256": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252"
+    },
+    "en_mobile_computers_context": {
+      "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+      "sha256": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a"
+    },
+    "en_mobile_signin_context": {
+      "path": "src/i18n/catalogues/en/mobile.signin.context.json",
+      "sha256": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56"
+    },
+    "hi_mobile_computers": {
+      "path": "src/i18n/catalogues/hi/mobile.computers.json",
+      "sha256": "8f0280dfe5a4e8cc636ef6081215a3669c01f16d8837424e43f072688f973a36"
+    },
+    "hi_mobile_signin": {
+      "path": "src/i18n/catalogues/hi/mobile.signin.json",
+      "sha256": "a6375bc7b7b8936d8b4742e426525afc59f74cdd807ab4a77e7c32bd672b5462"
+    },
+    "hi_mobile_common": {
+      "path": "src/i18n/catalogues/hi/mobile.common.json",
+      "sha256": "b1a7a9897788a9e5bb8d6ec87c8cf929cb1cf20d04ed256202c7d2bb1ec1cc93"
+    },
+    "hi_mobile_chrome": {
+      "path": "src/i18n/catalogues/hi/mobile.chrome.json",
+      "sha256": "ad3922f8202056128f50e59318ebf3a5607e3caa193cb12e194641b16fe02df1"
+    },
+    "hi_mobile_settings": {
+      "path": "src/i18n/catalogues/hi/mobile.settings.json",
+      "sha256": "0b280b2a31908d2c80fce10440487d7e393350daf22ef32e5a775df0332c6a81"
+    },
+    "style_guide_hi": {
+      "path": "origin/main:i18n/style-guides/hi.md (core repo)",
+      "sha256": "82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5"
+    },
+    "glossary": {
+      "path": "origin/main:i18n/glossary.md (core repo)",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    }
+  },
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/report.md"
+    },
+    "audit_log": {
+      "path": "/Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/audit.log"
+    },
+    "parser_check_script": {
+      "path": "/Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/audit-hi-s1.mjs"
+    },
+    "secondary_check_script": {
+      "path": "/Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/verify2.mjs"
+    },
+    "width_measure_scripts": [
+      "/Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/measure.swift",
+      "/Users/damian/.local-operator/sessions/91a41d00ad8f/scratchpad/measure2.swift"
+    ]
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "hi-01",
+      "hi-02",
+      "hi-03",
+      "hi-04",
+      "hi-05",
+      "hi-06",
+      "hi-07",
+      "hi-08"
+    ]
+  },
+  "findings": [
+    {
+      "id": "hi-01",
+      "severity": "minor",
+      "key": "mobile.computers.paths.own_body",
+      "current": "उन्नत रास्ता: आप अपना कंप्यूटर ख़ुद प्रकाशित करते हैं, अपनी चलाई हुई टनल के ज़रिये, और उसका पता यहाँ चिपकाते हैं। किसी भी चरण में Radient खाते की ज़रूरत नहीं, और पासवर्ड आपके पास ही रहता है।",
+      "problem": "Mirrors the English comma-appositive ('..., through a tunnel you run, ...'), which reads inserted in Hindi; and प्रकाशित is this product's word for hub publishing (UI repo: 'कुछ भी प्रकाशित नहीं हुआ'), so 'अपना कंप्यूटर प्रकाशित करते हैं' can be read as publishing the computer rather than exposing it.",
+      "suggestion": "उन्नत रास्ता: आप अपनी चलाई हुई टनल के ज़रिये अपना कंप्यूटर ख़ुद एक्सपोज़ करते हैं और उसका पता यहाँ चिपकाते हैं। किसी भी चरण में Radient खाते की ज़रूरत नहीं, और पासवर्ड आपके पास ही रहता है।"
+    },
+    {
+      "id": "hi-02",
+      "severity": "minor",
+      "key": "mobile.computers.wait.use_computer / paths.own_action / own_tunnel_instead",
+      "current": "इस कंप्यूटर का उपयोग करें · अपनी टनल उपयोग करें · इसके बजाय अपनी टनल उपयोग करें",
+      "problem": "Shipped hi action labels for 'use X' are इस्तेमाल करें (mobile.settings.connection.use, mobile.home.options.default_model, mobile.home.picker.folder_use_path; UI repo 130 vs 46), while उपयोग is shipped for 'usage' prose. Three buttons in this slice switch verb against four shipped buttons of the same app.",
+      "suggestion": "इस कंप्यूटर का इस्तेमाल करें · अपनी टनल का इस्तेमाल करें · इसके बजाय अपनी टनल का इस्तेमाल करें"
+    },
+    {
+      "id": "hi-03",
+      "severity": "minor",
+      "key": "mobile.computers.wait.listing",
+      "current": "आपका कंप्यूटर Radient की सूची में दिखने का इंतज़ार है…",
+      "problem": "Topic-first order puts 'आपका कंप्यूटर' straight before the impersonal इंतज़ार है, so on first read the computer appears to be the one waiting. The namespace's shipped pattern keeps the awaited thing after the locative ('Radient की सूची में आपका कंप्यूटर दिखने का इंतज़ार है').",
+      "suggestion": "Radient की सूची में आपका कंप्यूटर दिखने का इंतज़ार है…"
+    },
+    {
+      "id": "hi-04",
+      "severity": "minor",
+      "key": "mobile.signin.panel.waiting (vs shipped mobile.signin.stage_browser)",
+      "current": "आपके ब्राउज़र का इंतज़ार है। vs shipped आपके ब्राउज़र की प्रतीक्षा है",
+      "problem": "One English phrase ('Waiting for your browser') now has two renderings inside mobile.signin, and both can be on screen at once. The draft's इंतज़ार is the product-dominant word (UI repo 81 इंतज़ार vs 0 प्रतीक्षा; mobile even at 4/4), so the shipped diagnostic line is the outlier, not this draft.",
+      "suggestion": "Keep the draft's आपके ब्राउज़र का इंतज़ार है। and align mobile.signin.stage_browser to it in a follow-up (out of this draft's scope, already-shipped copy)."
+    },
+    {
+      "id": "hi-05",
+      "severity": "minor",
+      "key": "mobile.computers.row.a11y",
+      "current": "{name}, {status}, {reach}",
+      "problem": "Translator notes claim 'judged identical to English: None' and 'every one of the 44 values differs from its English source'; this value is byte-identical to English by design (placeholders + commas only), so the judged-identical declaration is incomplete. The value itself is correct.",
+      "suggestion": "No draft change; add mobile.computers.row.a11y to the notes' 'judged identical' list so identity is declared, not inferred."
+    },
+    {
+      "id": "hi-06",
+      "severity": "nit",
+      "key": "mobile.signin.try_anyway",
+      "current": "फिर भी कोशिश करें",
+      "problem": "'again' is dropped; the button re-runs the hand-off, and shipped mobile.computers.retry words it दोबारा कोशिश करें.",
+      "suggestion": "फिर भी दोबारा कोशिश करें"
+    },
+    {
+      "id": "hi-07",
+      "severity": "nit",
+      "key": "mobile.computers.remove.body",
+      "current": "इससे यह इस फ़ोन की सूची से हट जाता है। इससे कंप्यूटर, उसकी टनल या आपके खाते पर कोई असर नहीं पड़ता।",
+      "problem": "Two sentences open with इससे; the second reads tighter with the fronted object that English has.",
+      "suggestion": "यह इसे इस फ़ोन की सूची से हटा देता है। कंप्यूटर, उसकी टनल या आपके खाते पर कोई असर नहीं पड़ता।"
+    },
+    {
+      "id": "hi-08",
+      "severity": "nit",
+      "key": "mobile.computers.remove.title",
+      "current": "यह कंप्यूटर हटाएँ?",
+      "problem": "Optional: without क्या the title reads as an imperative carrying a question mark; तerse UI Hindi commonly allows it, so this is polish, not a defect.",
+      "suggestion": "क्या यह कंप्यूटर हटाएँ?"
+    }
+  ],
+  "mechanical": {
+    "keys_checked": 44,
+    "missing": 0,
+    "extra": 0,
+    "key_order": "identical to brief",
+    "json_valid": true,
+    "duplicate_keys": 0,
+    "parse_failures_repo_parser": 0,
+    "placeholder_diffs": 0,
+    "plural_icu_used": false,
+    "format_characters": 0,
+    "ascii_full_stop_in_prose": 0,
+    "latin_outside_allowlist": 0,
+    "deviation_flags": "one spaced em dash in wait.tunnel_status, matching shipped hi usage and the English source"
+  },
+  "width": {
+    "maxCells_hints": "none for these keys (no maxCells in either en context sidecar)",
+    "method": "CoreText measurement at badge/label sizes (Kohinoor Devanagari 11px vs Menlo 11px; label 15px / meta 13px)",
+    "result": "every badge and button label narrower or equal to its English source at the same size; longest pair to watch: reach.answering जवाब दे रहा 48.5px vs answering 59.6px"
+  },
+  "settled_terms_verified": {
+    "computer": "कंप्यूटर (mobile 57, UI 19; no संगणक anywhere)",
+    "tunnel": "टनल, feminine agreement (शिप्ड 'इस टनल की बिलिंग'; draft 'अपनी टनल', 'इसकी टनल')",
+    "relay": "रिले (mobile 7)",
+    "sign_in": "verb साइन इन करें / noun साइन-इन (mobile 18/9, UI consistent)",
+    "route": "रूट (shipped wait.host_answering)",
+    "refresh": "रीफ़्रेश करें (shipped settings.connection.refresh)",
+    "disabled": "बंद (shipped mobile.schedules.state.disabled)",
+    "active_connecting": "सक्रिय / कनेक्ट हो रहा (shipped badge.*)",
+    "harness": "हार्नेस — already used once in the UI repo hi catalogue; mobile's harness_help sidesteps the word. Consistent, and the glossary row proposed in the notes should land.",
+    "build": "बिल्ड (shipped mobile.notifications.permission.unsupported, UI repo heavily)",
+    "new_terms_without_a_row": "अनुशंसित (recommended), निलंबित, निरस्त — standard words, proposed rows accepted"
+  },
+  "notes": "Independent pass: different instance and session from the translator (fad0082b3b75). Judged the translator's claims directly: the 'judged identical' list is incomplete (hi-05); the 'growth ≤1.29×' claim uses Devanagari cell counts, which is the guide's own metric — real CoreText width is also ≤ English, so fit holds either way. No translation/MT service was used. Read-only on the worktree; nothing written into the repo."
+}

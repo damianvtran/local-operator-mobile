@@ -1,0 +1,60 @@
+# m3s1-au-ru — execution log (commands actually run, output pasted verbatim)
+# auditor: i18n-auditor, instance 043c04cecaf3, session ce33b5a81024, model deepseek/deepseek-flash
+# date: 2026-11-12
+
+$ shasum -a 256 draft-ru-s1.json  # in the translator session scratchpad
+815be1ace06b0fe3ed87e8f86f352355f5962e57dcd063f449817a690bc71270  draft-ru-s1.json
+
+$ shasum -a 256 translation-brief-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  translation-brief-s1.json
+
+$ cd ~/local-operator && git show origin/main:i18n/style-guides/ru.md | shasum -a 256 ; git show origin/main:i18n/glossary.md | shasum -a 256
+f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5  style-guides/ru.md @ 8459804f56dd704d5c3a680ef68f53b7182786ab
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  glossary.md  @ 8459804f56dd704d5c3a680ef68f53b7182786ab
+
+$ shasum -a 256 src/i18n/catalogues/en/mobile.computers*.json src/i18n/catalogues/en/mobile.signin*.json src/i18n/messages.ts   # worktree 1796c3a5
+93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a  en/mobile.computers.context.json
+f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109  en/mobile.computers.json
+1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56  en/mobile.signin.context.json
+2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252  en/mobile.signin.json
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+
+$ node brief-vs-en.mjs   # is the brief really the catalogue?
+{
+ "briefKeys": 44,
+ "enComputerSigninKeys": 107,
+ "notInEn": [],
+ "diffEn": [],
+ "diffNote": [],
+ "diffRole": [],
+ "ctxMissing": []
+}
+
+$ node mech-ru-s1.mjs > mech-ru-s1.out   # repo parser + generate.ts parity rules over all 44 values
+{"keysBrief": 44, "keysDraft": 44, "orderSame": true, "problems": [{"check": "latin_identifiers", "key": "mobile.computers.own_tunnel_instead", "en": [], "ru": ["Radient"]}], "rows": ... 44 rows ...}
+# full output retained at scratchpad/mech-ru-s1.out (hash below). The single reported item is not a 
+# defect: the English has no brand word at that key, the ru names Radient — an addition, recorded as m3s1ru-F4 context.
+
+$ node widths.mjs
+badge pairs (row = badge1 + 8pt gap + badge2, mono-label 11px, repo formula 2*1 border + 2*8 pad + len*11*0.6):
+  ru 182.6pt (+tracking 196.5)   en worst 182.6pt   [приостановлен|отвечает] vs [provisioning|answering]
+  content width at 320pt = 320 - 2*16 (px-4) = 288pt; badge row has no numberOfLines and no flex-wrap,
+  so a ru pair overflows only where the English pair overflows too (both ~321pt at 200% text scale).
+
+$ cp -R worktree/{src/i18n,scripts} + package.json into scratchpad/validate-ru ; merge draft into catalogues/ru ;
+$ fill the other locales with their English source values in that copy only (fail-fast reaches ru)
+$ cd validate-ru && node scripts/i18n/generate.ts
+Wrote src/i18n/catalogue.gen.ts (734 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+$ node scripts/i18n/generate.ts --check ; echo CHECK_EXIT=$?
+src/i18n/catalogue.gen.ts is current (734 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+CHECK_EXIT=0
+
+$ grep -c "маршрут готов\|Вход отменён\|Свой туннель вместо Radient\|Использовать этот компьютер" src/i18n/catalogue.gen.ts
+5
+
+$ node scripts/i18n/generate.ts --check   # in the READ-ONLY worktree itself (no draft applied)
+es/mobile.computers.json disagrees with the English source — missing: mobile.computers.not_harness, ... 
+exit=1   # English-first slice state: no locale but en has the 44 new keys yet. Not a ru finding.
+
+# python scan for leftover English in ru values: only Local Operator, Radient, URL and the {name}/{status}/{reach}
+# placeholders remain Latin; the one Cyrillic-free value is row.a11y, pure placeholder structure (judged identical).
