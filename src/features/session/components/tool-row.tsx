@@ -4,7 +4,7 @@ import {
 	MessageSquareOff,
 	MessagesSquare,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 import {
 	Pressable,
 	ScrollView,
@@ -33,6 +33,11 @@ import {
 import { LiveGlyph } from "@/features/session/components/live-glyph";
 import { Markdown } from "@/features/session/components/markdown";
 import {
+	SelectableLeafText,
+	SelectableMessage,
+} from "@/features/session/components/selectable-message";
+import {
+	GroupInsetContext,
 	TRACE_BAR_PAD_CLASS,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_EXPANDED_INDENT_CLASS,
@@ -130,25 +135,41 @@ const DIFF_TONE_CLASS = {
 	plain: "text-ink-muted",
 } as const;
 
-const DiffBlock = ({ lines }: { lines: string[] }) => (
-	// `whitespace-pre-wrap` plus per-line block text: the wrap is what makes this
-	// readable on a phone, and the tint comes from the diff roles rather than from
-	// a colour chosen here.
-	<View className="max-h-64 overflow-hidden rounded-sm bg-sunken p-2">
-		<ScrollView>
-			<Text className="whitespace-pre-wrap font-mono text-mono-sm">
-				{lines.map((line, index) => (
-					<Text
-						key={index}
-						className={cx("block", DIFF_TONE_CLASS[diffLineTone(line)])}
-					>
-						{line}
-					</Text>
-				))}
-			</Text>
-		</ScrollView>
-	</View>
-);
+const MONO_CLASS = "whitespace-pre-wrap font-mono text-mono-sm";
+const DIFF_SELECTION_CLASS = cx(MONO_CLASS, "text-ink");
+
+const DiffBlock = ({ lines }: { lines: string[] }) => {
+	/* Memoised on `lines` (review R1, m1) and still lazy: the diff renders per
+	 *  line, so the joined copy is built only when the reader enters the mode. */
+	const joined = useCallback(() => lines.join("\n"), [lines]);
+	return (
+		// `whitespace-pre-wrap` plus per-line block text: the wrap is what makes this
+		// readable on a phone, and the tint comes from the diff roles rather than from
+		// a colour chosen here.
+		<View className="max-h-64 overflow-hidden rounded-sm bg-sunken p-2">
+			<ScrollView>
+				{/* Output is the thing a reader most often needs to paste elsewhere
+				 *  (a path, an error line): drag-select it like any message. The
+				 *  selection view takes ONE ink: a TextInput has no per-line spans,
+				 *  and RN iOS defaults input text to black (1.10–1.27:1 on `sunken`
+				 *  in every dark palette, design R1 D2). The diff tints return on
+				 *  exit, like every other dropped format. */}
+				<SelectableMessage text={joined} textClassName={DIFF_SELECTION_CLASS}>
+					<SelectableLeafText className={MONO_CLASS}>
+						{lines.map((line, index) => (
+							<Text
+								key={index}
+								className={cx("block", DIFF_TONE_CLASS[diffLineTone(line)])}
+							>
+								{line}
+							</Text>
+						))}
+					</SelectableLeafText>
+				</SelectableMessage>
+			</ScrollView>
+		</View>
+	);
+};
 
 /**
  * The raw output well's cap, as a LINE COUNT so it survives the text scale
@@ -180,21 +201,27 @@ const TextBlock = ({
 	 *  raw OUTPUT well — design round 1, D2). Unset keeps the fixed `max-h-48`
 	 *  the args block has always had. */
 	capPx?: number;
-}) => (
-	<View
-		className={cx(
-			"overflow-hidden rounded-sm bg-sunken p-2",
-			capPx === undefined && "max-h-48",
-		)}
-		style={capPx === undefined ? undefined : { maxHeight: capPx }}
-	>
-		<ScrollView>
-			<Text className={cx("whitespace-pre-wrap font-mono text-mono-sm", tone)}>
-				{lines.join("\n")}
-			</Text>
-		</ScrollView>
-	</View>
-);
+}) => {
+	/* One join per `lines` (review R1, m1), shared by the body and the mode. */
+	const joined = useMemo(() => lines.join("\n"), [lines]);
+	return (
+		<View
+			className={cx(
+				"overflow-hidden rounded-sm bg-sunken p-2",
+				capPx === undefined && "max-h-48",
+			)}
+			style={capPx === undefined ? undefined : { maxHeight: capPx }}
+		>
+			<ScrollView>
+				<SelectableMessage text={joined} textClassName={cx(MONO_CLASS, tone)}>
+					<SelectableLeafText className={cx(MONO_CLASS, tone)}>
+						{joined}
+					</SelectableLeafText>
+				</SelectableMessage>
+			</ScrollView>
+		</View>
+	);
+};
 
 export const ToolRow = ({
 	entry,
@@ -268,7 +295,13 @@ export const ToolRow = ({
 	 * guessed: the 320 pt frames put the pressable at x 24–296, i.e. 272 pt.
 	 * Chosen over `onLayout` because it is the same number on the first frame,
 	 * so a chip can never paint wide and then jump. */
-	const rowWidthPt = Math.max(0, useWindowDimensions().width - ROW_CHROME_PT);
+	/* Inside an opened group the list indents the row (`GroupInsetContext`),
+	 * so the window-derived width must lose that inset too. */
+	const groupInsetPt = useContext(GroupInsetContext);
+	const rowWidthPt = Math.max(
+		0,
+		useWindowDimensions().width - ROW_CHROME_PT - groupInsetPt,
+	);
 	const chipLayout = bridgeChipLayout(
 		rowWidthPt,
 		chipWord,
@@ -338,7 +371,9 @@ export const ToolRow = ({
 		bridgeOutcome !== null ||
 		cardTitle !== "" ||
 		(bridgeCopy !== null && bridgeCopy.outcomeSentence !== "");
-	const blocks = toolDetailBlocks(entry);
+	/* Memoised on the entry so the output wells' `lines` arrays (and the joins
+	 *  memoised on them, review R1 m1) survive an unrelated row re-render. */
+	const blocks = useMemo(() => toolDetailBlocks(entry), [entry]);
 	/* A bridge card also suppresses a lone RECEIPT token (`ok`): one word that
 	 * says nothing, sitting in a well heavier than the card's own sentence (QA
 	 * round 2, Q2). The no-copy card is the case this exists for — it has no

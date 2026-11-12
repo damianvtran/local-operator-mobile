@@ -95,6 +95,9 @@ vi.mock("@/features/session/components/ask-response-row", () => ({
  *  which Node cannot load. Same stub as `transcript-fold-state.test.ts`. */
 vi.mock("@/ui/appearance", () => ({
 	useTheme: () => ({ active: { colors: {} } }),
+	// The user bubble renders through `SelectableMessage` (PR #233), which reads
+	// the accent for its selection tint; its value is not under test here.
+	useTokenColor: () => "#000000",
 }));
 vi.mock("@/features/session/components/transcript-image", () => ({
 	TranscriptImage: () => null,
@@ -102,6 +105,21 @@ vi.mock("@/features/session/components/transcript-image", () => ({
 vi.mock("@/features/session/components/imagegen-card", () => ({
 	ImageGenCard: () => null,
 }));
+/* The prompt's `Show more` fade (`user-message-clamp.tsx`) draws with
+ *  `react-native-svg`, whose Flow source Node cannot parse. Same stub as
+ *  `transcript-fold-state.test.ts`. */
+vi.mock("react-native-svg", () => {
+	const passthrough = ({ children }: { children?: React.ReactNode }) =>
+		children ?? null;
+	return {
+		__esModule: true,
+		default: passthrough,
+		Defs: passthrough,
+		LinearGradient: passthrough,
+		Rect: passthrough,
+		Stop: passthrough,
+	};
+});
 
 const { TranscriptRow } = await import(
 	"@/features/session/components/transcript-row"

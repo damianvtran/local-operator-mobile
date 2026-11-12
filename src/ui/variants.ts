@@ -385,6 +385,45 @@ export const TEXTAREA_MAX_LINES = 6;
 export const TEXTAREA_LINE_PX = 22;
 export const TEXTAREA_MAX_PX = TEXTAREA_MAX_LINES * TEXTAREA_LINE_PX;
 
+/**
+ * The field's CONTENT ceiling (text + `py-2`), in px, before the border.
+ *
+ * Up to the shipped six the old rule stands, unchanged by construction:
+ * `maxLines × 22`, held under `TEXTAREA_MAX_PX`, both at the reader's scale.
+ * Note what that rule actually buys: it was measured on the 13 pt mono line
+ * (22) while the field's own text is `text-body` on a 24 pt line inside 16 pt
+ * of padding, so the "six-line" cap of 132 shows FOUR AND A BIT lines of a
+ * draft — and `maxLines` above six could never raise it, because the
+ * `TEXTAREA_MAX_PX` term clamped it straight back.
+ *
+ * TestFlight 836 ("I can only see a couple lines at a time"): the composer
+ * asks for more, and it is counted in the lines the reader actually sees —
+ * `maxLines × bodyLine + pad`, so eight means eight body lines. The keyboard-
+ * and chrome-aware budget (`maxHeightPx`, `composerBudget`) still wins
+ * wherever eight do not fit between the header and the keyboard; past the cap
+ * the field scrolls itself.
+ */
+export const textareaContentCap = (box: {
+	maxLines: number;
+	scale: number;
+	bodyLine: number;
+	pad: number;
+	maxHeightPx?: number;
+}): number => {
+	const hard = box.maxHeightPx ?? Number.POSITIVE_INFINITY;
+	if (box.maxLines > TEXTAREA_MAX_LINES)
+		return Math.min(box.maxLines * box.bodyLine * box.scale + box.pad, hard);
+	return Math.min(
+		box.maxLines * TEXTAREA_LINE_PX * box.scale,
+		TEXTAREA_MAX_PX * box.scale,
+		hard,
+	);
+};
+
+/** How many body lines the agent composer's field shows before it scrolls,
+ *  when the screen has the room (TestFlight 836). */
+export const COMPOSER_FIELD_MAX_LINES = 8;
+
 /* -------------------------------------------------------------------------- */
 /* Card                                                                       */
 /* -------------------------------------------------------------------------- */

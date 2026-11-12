@@ -8,6 +8,11 @@
  *
  *     node scripts/ci/native-config.ts ios "$RUNNER_TEMP/Info.json"
  *     node scripts/ci/native-config.ts android "$RUNNER_TEMP/release-merged/AndroidManifest.xml"
+ *     node scripts/ci/native-config.ts android-badging "$RUNNER_TEMP/badging.txt"
+ *
+ * The third form exists for the launcher label alone (`LAUNCHER_LABEL`): the
+ * manifest carries only `@string/app_name`, so the resolved label is visible in
+ * the built APK's `aapt2 dump badging` and nowhere else.
  *
  * WHY THE iOS SIDE READS THE PATH THAT IT DOES. `ios.yml` converts the
  * `Info.plist` of the app it just BUILT (not a source plist, not the generated
@@ -47,6 +52,27 @@ export const IOS_EXCEPTION_DOMAINS = [
 	"172.16.0.0/12",
 	"192.168.0.0/16",
 ] as const;
+
+/**
+ * The home-screen label, on BOTH platforms: "Operator", by the operator's
+ * decision of 2026-11-11. "Local Operator" is wider than an icon cell, and
+ * SpringBoard squeezes the whitespace out of a label before truncating it, so the
+ * spaced name rendered as "LocalOpera…" on a phone (build 836, whose IPA carried
+ * `CFBundleDisplayName: "Local Operator"`). Only the launcher label is short: the
+ * app's `name`, the in-app name and the store names stay "Local Operator", and
+ * `expo prebuild` still derives `CFBundleName` / `PRODUCT_NAME` (`LocalOperator`)
+ * from `name` — which is why the label is asserted rather than assumed: a config
+ * or plugin change that drops it falls back to that spaceless name, or to the
+ * truncating full one.
+ *
+ * Asserted on the BUILT products: `CFBundleDisplayName` in the built Info.plist,
+ * and `application-label` in the APK's `aapt2 dump badging` (the manifest only
+ * carries `@string/app_name`, so the resolved label exists in the APK alone).
+ * It still cannot assert what SpringBoard or a launcher renders. Duplicated from
+ * `app.config.ts` (`LAUNCHER_LABEL`) on purpose, for the same reason as
+ * `IOS_EXCEPTION_DOMAINS`.
+ */
+export const LAUNCHER_LABEL = "Operator";
 
 /** The Android permission the local-network enforcement (targetSdk 37) gates
  *  on; declared ahead of the bump so the manifest already carries it. */
@@ -149,6 +175,13 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 		findings.push({
 			field: "ITSAppUsesNonExemptEncryption",
 			problem: "expected false after the OS-only cryptography dependency audit",
+		});
+	}
+
+	if (plist.CFBundleDisplayName !== LAUNCHER_LABEL) {
+		findings.push({
+			field: "CFBundleDisplayName",
+			problem: `expected ${JSON.stringify(LAUNCHER_LABEL)}, found ${JSON.stringify(plist.CFBundleDisplayName)} — the home screen would show the sanitised CFBundleName or a truncated "Local Operator"`,
 		});
 	}
 
@@ -307,11 +340,59 @@ export function checkAndroidManifest(xml: string): Finding[] {
 	return findings;
 }
 
+// ---------------------------------------------------------------------------
+// Android APK badging (the launcher label)
+// ---------------------------------------------------------------------------
+
+/* `aapt2 dump badging` prints the resolved default label as
+ *     application-label:'Operator'
+ * and one `application-label-<qualifier>:'…'` line per locale that overrides
+ * it. Values are single-quoted with no escaping of an inner quote, so the
+ * value is everything up to the line's closing quote. */
+const BADGING_LABEL = /^application-label(?:-([^:]+))?:'(.*)'$/gm;
+
+/**
+ * Assert the APK's launcher label. The default label must be `LAUNCHER_LABEL`,
+ * and every locale override must be too: a translated `app_name` would put a
+ * different (possibly truncating) label on that locale's home screen, which is
+ * exactly the regression this guards, so it is a finding rather than a pass.
+ */
+export function checkAndroidBadging(badging: string): Finding[] {
+	const findings: Finding[] = [];
+	let defaultLabel: string | undefined;
+	for (const match of badging.matchAll(BADGING_LABEL)) {
+		const [, qualifier, value] = match;
+		if (qualifier === undefined) {
+			defaultLabel = value;
+		} else if (value !== LAUNCHER_LABEL) {
+			findings.push({
+				field: `application-label-${qualifier}`,
+				problem: `expected ${JSON.stringify(LAUNCHER_LABEL)}, found ${JSON.stringify(value)} — a locale override of app_name changes that locale's home-screen label`,
+			});
+		}
+	}
+	if (defaultLabel !== LAUNCHER_LABEL) {
+		findings.unshift({
+			field: "application-label",
+			problem:
+				defaultLabel === undefined
+					? "missing from the badging — pass the full `aapt2 dump badging` output, not its first line"
+					: `expected ${JSON.stringify(LAUNCHER_LABEL)}, found ${JSON.stringify(defaultLabel)} — the launcher would show the full app name, which truncates`,
+		});
+	}
+	return findings;
+}
+
 /** One line for the CI step summary, naming what was asserted. */
-export const summarize = (platform: "ios" | "android"): string =>
-	platform === "ios"
-		? `built Info.plist carries ITSAppUsesNonExemptEncryption=false, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
-		: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
+/** The artefact kinds the CLI checks. */
+export type Platform = "ios" | "android" | "android-badging";
+
+export const summarize = (platform: Platform): string =>
+	platform === "android-badging"
+		? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
+		: platform === "ios"
+			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+			: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------
 // CLI
@@ -320,14 +401,17 @@ export const summarize = (platform: "ios" | "android"): string =>
 const main = (): void => {
 	const [platform, path] = process.argv.slice(2);
 	if (
-		(platform !== "ios" && platform !== "android") ||
+		(platform !== "ios" &&
+			platform !== "android" &&
+			platform !== "android-badging") ||
 		typeof path !== "string" ||
 		path.length === 0
 	) {
 		console.error(
-			"usage: native-config.ts <ios|android> <path>\n" +
-				"  ios     path to the built Info.plist converted to JSON (plutil -convert json)\n" +
-				"  android path to the release merged AndroidManifest.xml",
+			"usage: native-config.ts <ios|android|android-badging> <path>\n" +
+				"  ios             path to the built Info.plist converted to JSON (plutil -convert json)\n" +
+				"  android         path to the release merged AndroidManifest.xml\n" +
+				"  android-badging path to the full `aapt2 dump badging` output of the built APK",
 		);
 		process.exit(2);
 	}
@@ -354,8 +438,10 @@ const main = (): void => {
 			process.exit(1);
 		}
 		findings = checkIosInfoPlist(parsed);
-	} else {
+	} else if (platform === "android") {
 		findings = checkAndroidManifest(raw);
+	} else {
+		findings = checkAndroidBadging(raw);
 	}
 
 	for (const finding of findings) {

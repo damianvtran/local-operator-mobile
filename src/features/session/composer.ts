@@ -70,20 +70,20 @@ export const composerCopy = () => ({
 	 *  `earlierWentThroughNotice` in `pending-echo.ts` (UX round 1, U2). */
 	/** An ended session is NOT a dead composer: a send REOPENS it (the daemon
 	 *  wakes a host for a prompt with no live entry), so the primary stays
-	 *  enabled. The placeholder and the failure sentence below are the web
-	 *  client's own `relay.health.*` strings (#3008), kept verbatim. The old
+	 *  enabled. The failure sentence below is the web client's own
+	 *  `relay.health.*` string (#3008), kept verbatim. The placeholder is the
+	 *  standard `placeholder` above in every state: the operator retired the
+	 *  ended-only "Send to reopen in your home folder…" (2026-11-11), since the
+	 *  header's status word already says the session ended. The old
 	 *  "Start a new one from the sessions list" sentence is gone: nothing reads
 	 *  it once the ended state stopped disabling (review round 1, n1). */
-	/** Placeholder for an ENDED conversation: sending reopens it in the home
-	 *  folder. READ FROM THE CATALOGUE, not restated (review round 3, M2 / QA
-	 *  Q12 / UX U14 / design D12): this file used to hold literal copies of the
-	 *  same three sentences, and the copies were what rendered — so a locale wave
-	 *  would have missed the two relay strings the composer actually shows, and
-	 *  "nothing is duplicated" was false. `check-strings` could not catch it
-	 *  either: it treats an exact mirror of a catalogue value as a deliberate
-	 *  one, and it scans only `-copy.ts` modules. Reading the value makes
-	 *  divergence impossible rather than merely detectable. */
-	endedPlaceholder: healthCopy()["mobile.session_health.ended_placeholder"],
+	/** The ended sentences below are READ FROM THE CATALOGUE, not restated
+	 *  (review round 3, M2 / QA Q12 / UX U14 / design D12): this file used to
+	 *  hold literal copies, and the copies were what rendered — so a locale wave
+	 *  would have missed them. `check-strings` could not catch it either: it
+	 *  treats an exact mirror of a catalogue value as a deliberate one, and it
+	 *  scans only `-copy.ts` modules. Reading the value makes divergence
+	 *  impossible rather than merely detectable. */
 	/** The send-failure sentence when reopening an ended session failed. The two
 	 *  honest remedies are send again, or Resume from the header's status sheet —
 	 *  the same sentence the sheet's own failure uses. */

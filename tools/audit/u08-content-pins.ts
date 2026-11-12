@@ -662,7 +662,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * words), plus the catalogues and generated projection under `src/i18n`. No
 	 * layout, token, instrument or fixture input changed. Source admission only,
 	 * NOT rendered U-08 evidence. */
-	app: "ba44b40368da37d77a6c34c6dae76252fabfc1b11862627bf0943759b08e6026",
+	// Composer growth / paste / Bridge gap (TestFlight 836): the session
+	// screen measures its transcript for the composer's ceiling. Re-derived
+	// with --print; source identity only, no rendered or native proof.
+	// PR #230 round-2 remediation (M2): the session screen holds the
+	// transcript slack through a keyboard lift (`onLift`). Re-derived with
+	// --print; source identity only, no rendered or native proof.
+	/* Re-pinned 2026-11-11 for integrate/mobile-batch-1111 (#230, #232, #233,
+	 * #234 and #235 merged onto main fa2bc5e0): #230's session-screen change is
+	 * carried with #227's, so this is neither parent's digest; re-derived with
+	 * `--print` over the staged integrated tree. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	app: "da23213d3caa6a22566f638b008b148adc595a0f38113b79043665ace8ecac47",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1513,12 +1524,71 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * carried with #227's, so this is no parent's digest; re-derived with
 	 * `--print` over the converged tree. Source admission only, NOT rendered
 	 * U-08 evidence. */
+	// Composer growth / paste / Bridge gap (TestFlight 836): heldComposerLimit's
+	// transcript slack, the 8-line composer cap, the icon-only paste control
+	// and the Bridge follower re-pin. Re-derived with --print; source
+	// identity only, no rendered or native proof.
+	// PR #230 round-1 remediation: the Bridge list's bottom padding (D1,
+	// pb-4 -> pb-2) and three unit tests. Re-derived with --print; source
+	// identity only, no rendered or native proof.
+	// PR #230 round-2 remediation (M2, m4): the through-the-lift branch
+	// ignores the slack, the composer reports `onLift`, and the lift tests.
+	// Re-derived with --print; source identity only, no rendered or native
+	// proof.
+	// fix/silent-resume-reconnect: the session stream's resume hold
+	// (`resume-hold.ts`) and the Team Bridge thread's silent `unreachable`
+	// retries, with tests. Timers and state only — no rendered change. --print
+	// over the staged tree; source identity only.
+	// Re-pinned 2026-11-11 for fix/native-text-selection with --print: the
+	// transcript's drag-to-select wrapper (`selectable-message.tsx`) — on web
+	// it renders its children unchanged and the leaf Text keeps `selectable`,
+	// so no measured web pixel moves. Source identity only. Re-printed for the
+	// PR #233 round-1 remediation (uncontrolled iOS selection, wrapper out of
+	// VoiceOver, memoised output joins): web renders the same children and
+	// leaves, so again source identity only. Re-printed for the PR #233 design
+	// R1 remediation (Android highlight derived per theme, diff selection ink,
+	// scroll keeps the iOS mode): the web leaf's `selectionColor` is ignored by
+	// RNW `Text`, and the rest is iOS-mode or touch wiring, so again source
+	// identity only.
+	// fix/fold-group-spacing: blank live assistant rows paint nothing and skip
+	// the rhythm; rows inside an opened turn bar or fold are indented one
+	// 24 pt step per level beside a hairline guide (`group-containment.ts`,
+	// `group-guides.tsx`). Tests with it. --print over the staged tree; source
+	// identity only, no rendered or native proof. Re-printed for PR #234 R1:
+	// blank rows pass through fold runs (live/reload parity), a table's seed
+	// loses the group inset, and the blank-row test renders. Same caveat.
+	// fix/user-message-show-more: a long user message clamps to eight lines
+	// under a bubble-fill fade with Show more / Show less (8 locales), on
+	// condensed turns too, replacing the condensed prompt's one-line clamp.
+	// --print over the staged tree; source identity only, no rendered proof.
+	// PR #235 round-1 remediation (R1-M1): the pending echo's prompt text
+	// rides the same clamp; re-printed with --print over the staged tree.
+	/* Re-pinned 2026-11-11 for integrate/mobile-batch-1111 (#230, #232, #233,
+	 * #234 and #235 merged onto main fa2bc5e0): all five PRs' src changes are
+	 * carried with #227's, plus the regenerated `catalogue.gen.ts` (653 keys)
+	 * and the user-row integration of #233's selectable text inside #235's
+	 * clamp, and the blank-row test's clamp stub, so this is no parent's digest;
+	 * re-derived with `--print` over the staged integrated tree. Source
+	 * admission only, NOT rendered U-08 evidence. Re-printed again after the
+	 * user-message toggle's testID moved behind `userMessageMoreId` in
+	 * `src/ui/a11y.ts` (the integrated tree's literal-testID fix). */
+	// fix/steer-bubble: a steer takes the user bubble and its clamp, in flight
+	// and settled (operator report, iOS 2026-11-11), plus its rendered test.
+	// Re-derived with --print over the staged tree; source identity only.
+	// fix/ended-session-placeholder: an ended session's composer shows the
+	// standard placeholder; `mobile.session_health.ended_placeholder` retired
+	// from all 8 locales. --print over the staged tree; source identity only,
+	// no rendered or native proof.
 	/* #231 (Team Bridge push readiness: icon-badge owner, badge source,
 	 * received-push listener, localized Settings permission sentences) merged
 	 * with main fa2bc5e0 (#227): both sides' src carried, so no parent's digest;
 	 * re-derived with --print over the merged tree. Source identity only, NOT a
 	 * rendered geometry proof. */
-	src: "8bab9569480e7bd8b0f2ef01cad7c3183c112157b40124325ea6a7a1828c5b7d",
+	/* integrate/mobile-batch-1111 + #240, #239, #238 and main ecfa6987 (#231):
+	 * every side's src carried plus the regenerated `catalogue.gen.ts` (657
+	 * keys), so no parent's digest; re-derived once with --print over the
+	 * converged tree. Source identity only, NOT rendered U-08 evidence. */
+	src: "91088061d5ef2db9a5d006ed0c0735f1f9bb6cb7108acbeed9b96048d333f6e0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1533,10 +1603,15 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
 	// --print re-pin: the Android `softwareKeyboardLayoutMode: "resize"` (Expo's
 	// default, stated with its why); not a U-08 web layout input.
+	// --print re-pin (PR #238): the native home-screen label (`LAUNCHER_LABEL`,
+	// `CFBundleDisplayName` and the Android launcher-label plugin entry); `name`
+	// and every web input are unchanged, so not a U-08 web layout input.
 	// --print re-pin (#231): the optional Android `googleServicesFile` (FCM for
 	// Team Bridge push); native build config, not a U-08 web layout input.
+	// --print re-pin (integration of #238 with #231): both sides' native
+	// config carried — the home-screen label plugin and `googleServicesFile`.
 	"app.config.ts":
-		"082b081d438fa47842e227be4d870f32fe5aa08f25860ae08813d70d01572cea",
+		"b186fadf5867c17b90e088b86815a6a7bd9869c979fe7e0e226e5392210848ed",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

@@ -404,8 +404,9 @@ export type CatalogueKey =
 	| "mobile.session.subagent_open"
 	| "mobile.session.subagent_open_short"
 	| "mobile.session.subagents_hint"
+	| "mobile.session.user_message.show_less"
+	| "mobile.session.user_message.show_more"
 	| "mobile.session_health.control_hint"
-	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
 	| "mobile.session_health.menu_label"
 	| "mobile.session_health.menu_title"
@@ -1015,8 +1016,9 @@ export type NoParamKey =
 	| "mobile.session.subagent.unavailable_next"
 	| "mobile.session.subagent_open_short"
 	| "mobile.session.subagents_hint"
+	| "mobile.session.user_message.show_less"
+	| "mobile.session.user_message.show_more"
 	| "mobile.session_health.control_hint"
-	| "mobile.session_health.ended_placeholder"
 	| "mobile.session_health.menu_hint"
 	| "mobile.session_health.menu_label"
 	| "mobile.session_health.menu_title"
@@ -1632,8 +1634,9 @@ export type MessageParams = {
 	"mobile.session.subagent_open": { agent: string | number };
 	"mobile.session.subagent_open_short": NoParams;
 	"mobile.session.subagents_hint": NoParams;
+	"mobile.session.user_message.show_less": NoParams;
+	"mobile.session.user_message.show_more": NoParams;
 	"mobile.session_health.control_hint": NoParams;
-	"mobile.session_health.ended_placeholder": NoParams;
 	"mobile.session_health.menu_hint": NoParams;
 	"mobile.session_health.menu_label": NoParams;
 	"mobile.session_health.menu_title": NoParams;
@@ -2307,8 +2310,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.subagent_open": "Open {agent}",
 	"mobile.session.subagent_open_short": "open",
 	"mobile.session.subagents_hint": "Show the subagents",
+	"mobile.session.user_message.show_less": "Show less",
+	"mobile.session.user_message.show_more": "Show more",
 	"mobile.session_health.control_hint": "Shows what this state means and what a send does now",
-	"mobile.session_health.ended_placeholder": "Send to reopen in your home folder…",
 	"mobile.session_health.menu_hint": "Opens the session menu",
 	"mobile.session_health.menu_label": "Session actions",
 	"mobile.session_health.menu_title": "Session",
@@ -2967,8 +2971,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
 	"mobile.session.subagent_open_short": { role: "button", note: "Visible text of the small control on a subagent's message in the transcript that opens that subagent's own view; screen readers hear mobile.session.subagent_open instead. Shown in lower case beside quiet meta text: keep it one short word, lower case where the script has case, no final full stop." },
 	"mobile.session.subagents_hint": { role: "help", note: "Accessibility hint of the control that reveals the subagents list; read after its name, never drawn. Imperative, no final full stop." },
+	"mobile.session.user_message.show_less": { role: "button", note: "The same control once the reader's long message is shown in full; activating it clips the message back to its first eight lines. Also its screen-reader label. Short, sentence case, no final full stop." },
+	"mobile.session.user_message.show_more": { role: "button", note: "Centred control under the reader's own long message in the transcript, which is shown clipped to its first eight lines under a fade; activating it shows the whole message. Also its screen-reader label. Short, sentence case, no final full stop." },
 	"mobile.session_health.control_hint": { role: "help", note: "Accessibility hint on the header's status control. It opens a sheet explaining the state; never promise an action the sheet does not offer." },
-	"mobile.session_health.ended_placeholder": { role: "help", note: "Placeholder inside the empty message field of an ENDED conversation, replacing the usual 'Message…'. Says, before they send, that sending reopens the session in their home folder on the computer. Keep the trailing ellipsis character (…). Translator budget: 36 cells (the core's former maxCells for this key at 24d328a19a); the native context schema has no maxCells field, so the number is recorded here. Mobile-local rather than shared: core deleted this key upstream (#3127), but this app still renders it as the ended composer placeholder. MEASURED FIT: the field holds ~348 px at 390 pt, and this sentence needs 569.6 px at 200 % text scale at the English length (590.9 px at the French one) — it clips there in both locales, which is an upstream copy-length issue rather than a translation one. French therefore ships the shortest honest form (\"Envoyer rouvre…\") and the destination lives in the health sheet's ended_detail sentence." },
 	"mobile.session_health.menu_hint": { role: "button", note: "Accessibility hint for the same overflow button." },
 	"mobile.session_health.menu_label": { role: "button", note: "Accessible name of the session header's overflow button (the ⋮). Present only when the menu has an item." },
 	"mobile.session_health.menu_title": { role: "heading", note: "Title of the overflow menu's sheet. One short noun; not the conversation's name." },
@@ -3641,8 +3646,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent_open": "Abrir {agent}",
 		"mobile.session.subagent_open_short": "abrir",
 		"mobile.session.subagents_hint": "Mostrar los subagentes",
+		"mobile.session.user_message.show_less": "Mostrar menos",
+		"mobile.session.user_message.show_more": "Mostrar más",
 		"mobile.session_health.control_hint": "Muestra qué significa este estado y qué hace un envío ahora",
-		"mobile.session_health.ended_placeholder": "Envía para reabrir…",
 		"mobile.session_health.menu_hint": "Abre el menú de la sesión",
 		"mobile.session_health.menu_label": "Acciones de la sesión",
 		"mobile.session_health.menu_title": "Sesión",
@@ -4299,8 +4305,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent_open": "Ouvrir {agent}",
 		"mobile.session.subagent_open_short": "ouvrir",
 		"mobile.session.subagents_hint": "Afficher les sous-agents",
+		"mobile.session.user_message.show_less": "Afficher moins",
+		"mobile.session.user_message.show_more": "Afficher plus",
 		"mobile.session_health.control_hint": "Affiche ce que signifie cet état et ce qu’un envoi fait maintenant.",
-		"mobile.session_health.ended_placeholder": "Envoyer rouvre…",
 		"mobile.session_health.menu_hint": "Ouvre le menu de la session",
 		"mobile.session_health.menu_label": "Actions de la session",
 		"mobile.session_health.menu_title": "Session",
@@ -4957,8 +4964,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent_open": "{agent} खोलें",
 		"mobile.session.subagent_open_short": "खोलें",
 		"mobile.session.subagents_hint": "उप-एजेंट दिखाएँ",
+		"mobile.session.user_message.show_less": "कम दिखाएँ",
+		"mobile.session.user_message.show_more": "और दिखाएँ",
 		"mobile.session_health.control_hint": "बताता है कि इस स्थिति का अर्थ क्या है और अभी भेजने पर क्या होगा",
-		"mobile.session_health.ended_placeholder": "भेजने पर होम फ़ोल्डर में खुलेगा…",
 		"mobile.session_health.menu_hint": "सत्र मेन्यू खोलता है",
 		"mobile.session_health.menu_label": "सत्र कार्रवाइयाँ",
 		"mobile.session_health.menu_title": "सत्र",
@@ -5615,8 +5623,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent_open": "Открыть {agent}",
 		"mobile.session.subagent_open_short": "открыть",
 		"mobile.session.subagents_hint": "Показать субагентов",
+		"mobile.session.user_message.show_less": "Показать меньше",
+		"mobile.session.user_message.show_more": "Показать больше",
 		"mobile.session_health.control_hint": "Показывает, что означает это состояние и что произойдёт при отправке",
-		"mobile.session_health.ended_placeholder": "Отправка возобновит её…",
 		"mobile.session_health.menu_hint": "Открывает меню сессии",
 		"mobile.session_health.menu_label": "Действия с сессией",
 		"mobile.session_health.menu_title": "Сессия",
@@ -6273,8 +6282,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent_open": "{agent} کھولیں",
 		"mobile.session.subagent_open_short": "کھولیں",
 		"mobile.session.subagents_hint": "ذیلی ایجنٹس دکھائیں",
+		"mobile.session.user_message.show_less": "کم دکھائیں",
+		"mobile.session.user_message.show_more": "مزید دکھائیں",
 		"mobile.session_health.control_hint": "بتاتا ہے کہ اس حالت کا مطلب کیا ہے اور اب بھیجنے پر کیا ہوگا",
-		"mobile.session_health.ended_placeholder": "بھیجنے پر ہوم فولڈر میں کھلے گا…",
 		"mobile.session_health.menu_hint": "سیشن مینو کھولتا ہے",
 		"mobile.session_health.menu_label": "سیشن کی کارروائیاں",
 		"mobile.session_health.menu_title": "سیشن",
@@ -6931,8 +6941,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent_open": "Mở {agent}",
 		"mobile.session.subagent_open_short": "mở",
 		"mobile.session.subagents_hint": "Hiện các tác nhân con",
+		"mobile.session.user_message.show_less": "Thu gọn",
+		"mobile.session.user_message.show_more": "Xem thêm",
 		"mobile.session_health.control_hint": "Cho biết trạng thái này nghĩa là gì và lần gửi tiếp theo sẽ ra sao",
-		"mobile.session_health.ended_placeholder": "Gửi để mở lại trong thư mục home…",
 		"mobile.session_health.menu_hint": "Mở menu phiên",
 		"mobile.session_health.menu_label": "Thao tác phiên",
 		"mobile.session_health.menu_title": "Phiên",
@@ -7589,8 +7600,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent_open": "打开{agent}",
 		"mobile.session.subagent_open_short": "打开",
 		"mobile.session.subagents_hint": "显示子智能体",
+		"mobile.session.user_message.show_less": "收起",
+		"mobile.session.user_message.show_more": "显示更多",
 		"mobile.session_health.control_hint": "说明此状态的含义，以及现在发送会怎样",
-		"mobile.session_health.ended_placeholder": "发送即可重新打开……",
 		"mobile.session_health.menu_hint": "打开会话菜单",
 		"mobile.session_health.menu_label": "会话操作",
 		"mobile.session_health.menu_title": "会话",

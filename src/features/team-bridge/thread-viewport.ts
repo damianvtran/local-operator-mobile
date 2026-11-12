@@ -181,9 +181,22 @@ export function createThreadViewport(options: ThreadViewportOptions) {
 		if (content === null || height <= 0 || !options.dataReady()) return;
 		if (!initial && !following) return;
 		const target = Math.max(0, content - height);
+		/* PAST the end is not AT the end (TestFlight 836: ~150 pt of empty
+		 *  canvas between the newest message and the Bridge composer with the
+		 *  keyboard down). When the viewport GROWS — the keyboard goes down, or a
+		 *  multi-line draft is sent and the dock shrinks back — the end moves up
+		 *  under a host that stays where it was: iOS's UIScrollView does not clamp
+		 *  its offset to the new content end on a frame change ("UIScrollView does
+		 *  not adjust its offset until user scrolls", React Native's own note in
+		 *  RCTScrollViewComponentView.mm), and with no movement no scroll event
+		 *  arrives either. Treating `lastY > target` as "already at max" left a
+		 *  follower parked over blank space by exactly the growth. A follower is
+		 *  brought back to the real end; at it (within slack), nothing moves. */
+		const pastEnd = lastY !== null && lastY > target + POSITION_SLACK;
 		if (
-			target <= POSITION_SLACK ||
-			(lastY !== null && lastY >= target - POSITION_SLACK)
+			!pastEnd &&
+			(target <= POSITION_SLACK ||
+				(lastY !== null && lastY >= target - POSITION_SLACK))
 		) {
 			// Content fits, or the host already reads at max scroll: no move
 			// would happen, so no scroll event would ever confirm one. Trusted

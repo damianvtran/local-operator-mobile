@@ -161,7 +161,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 63, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice)
+		expected: 65, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -197,14 +197,14 @@ const NAMESPACES = [
 	},
 	{
 		/* This app's own chrome for the health surface: the control's labels, the
-		 *  Resume flow's sentences and the two reopen lines. APP-OWNED, in the
+		 *  Resume flow's sentences and the reopen line. APP-OWNED, in the
 		 *  `mobile.*` convention #112 established, because a later adoption of the
 		 *  core's locale files must not silently overwrite or orphan them (review
 		 *  round 3 m1 / UX U15 / design D13). */
 		name: "mobile.session_health",
 		messages: sessionHealth,
 		context: sessionHealthContext,
-		expected: 11,
+		expected: 10, // -1: `ended_placeholder` retired, the ended composer shows the standard placeholder
 	},
 	{
 		/* Settings → Appearance and the Theme screen (decision record
@@ -311,9 +311,16 @@ describe("the English catalogues", () => {
 		 * Plus 53 keyed by the app/ scan (the new `app/` coverage in
 		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 53
 		 * = 651, the generator's own count. */
+		/* fix/user-message-show-more: + `mobile.session.user_message.show_more`
+		 *  and `.show_less`: 651 + 2 = 653, the generated catalogue's own count
+		 *  (integration of #235 onto #227). */
+		/* Minus one: `mobile.session_health.ended_placeholder` retired — an ended
+		 * session's composer shows the standard placeholder (operator feedback,
+		 * 2026-11-11). 653 - 1 = 652 (integration of #239). */
 		/* feat/bridge-push-readiness (#231) merged with main fa2bc5e0 (#227): + the
-		 *  five `mobile.notifications.permission.*` Settings sentences: 651 + 5 = 656. */
-		expect(total).toBe(656);
+		 *  five `mobile.notifications.permission.*` Settings sentences: 651 + 5 = 656.
+		 *  Integrated with #235 (+2) and #239 (-1): 652 + 5 = 657. */
+		expect(total).toBe(657);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -526,7 +533,7 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only template, `{head} · {label}` — Vietnamese carries the separator unchanged; there is no prose to translate.",
 		/* The 2026-11-07 home-pickers audit (VI-H01, vi1107p1) chose the loanword. */
 		"mobile.home.picker.folder_home":
-			"Vietnamese names the home folder «thư mục home» across mobile and core (session_health.ended_placeholder, relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
+			"Vietnamese names the home folder «thư mục home» across mobile and core (relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
 	},
 	hi: {
 		"mobile.team_bridge.profile.name_with_owner":

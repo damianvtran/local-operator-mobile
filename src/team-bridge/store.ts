@@ -170,6 +170,19 @@ export const PAGE_SIZE = 50;
 export const threadKey = (tenantId: string, conversationId: string): string =>
 	`${tenantId}/${conversationId}`;
 
+/**
+ * The silent retries a thread refresh gets when the hub gave NO answer
+ * (`unreachable`) before the refresh warning is shown.
+ *
+ * The session stream's resume budget, deliberately (`resume-hold.ts`'s
+ * `RESUME_GRACE_MS` and `reconnectDelay`'s 1 s → 2 s → 4 s curve): the first
+ * request plus three retries at t≈0, 1, 3 and 7 s, so the reader sees the
+ * warning after the same ~8 s on both surfaces, and only if every attempt
+ * failed. The thread's 20 s poll is longer than the whole budget, so a retry
+ * run never overlaps the next poll (`once` dedupes it if it did).
+ */
+export const THREAD_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
+
 export function createTeamBridgeStore(deps: {
 	hub: () => HubClient | null;
 	accessToken: () => Promise<string | null>;
@@ -667,79 +680,100 @@ export function createTeamBridgeStore(deps: {
 				const held = store.getState().threads[key];
 				if (held?.state !== "ready")
 					patchThread(key, { state: "loading", error: null });
-				try {
-					const page = await client.listMessages(tenantId, conversationId, {
-						limit: PAGE_SIZE,
-					});
-					if (!owned()) return;
-					let incoming = page.messages;
-					const heldTail = held?.messages.at(-1)?.seq;
-					let oldestIncoming = incoming.reduce(
-						(min, message) => Math.min(min, message.seq),
-						Infinity,
-					);
-					let more = page.has_more;
-					// A tail refresh can jump over multiple pages. Bridge before publishing,
-					// otherwise older pagination walks the held head and can never reach the hole.
-					for (
-						let bridge = 0;
-						heldTail !== undefined &&
-						oldestIncoming > heldTail &&
-						Number.isFinite(oldestIncoming) &&
-						more;
-						bridge += 1
-					) {
-						if (bridge === 10)
-							throw new HubError({
-								kind: "unavailable",
-								message:
-									"More messages arrived than could be refreshed. Please retry.",
-							});
-						const previous = await client.listMessages(
-							tenantId,
-							conversationId,
-							{ beforeSeq: oldestIncoming, limit: PAGE_SIZE },
-						);
+				for (let attempt = 0; ; attempt += 1) {
+					try {
+						const page = await client.listMessages(tenantId, conversationId, {
+							limit: PAGE_SIZE,
+						});
 						if (!owned()) return;
-						const nextOldest = previous.messages.reduce(
+						let incoming = page.messages;
+						const heldTail = held?.messages.at(-1)?.seq;
+						let oldestIncoming = incoming.reduce(
 							(min, message) => Math.min(min, message.seq),
 							Infinity,
 						);
-						if (nextOldest >= oldestIncoming)
+						let more = page.has_more;
+						// A tail refresh can jump over multiple pages. Bridge before publishing,
+						// otherwise older pagination walks the held head and can never reach the hole.
+						for (
+							let bridge = 0;
+							heldTail !== undefined &&
+							oldestIncoming > heldTail &&
+							Number.isFinite(oldestIncoming) &&
+							more;
+							bridge += 1
+						) {
+							if (bridge === 10)
+								throw new HubError({
+									kind: "unavailable",
+									message:
+										"More messages arrived than could be refreshed. Please retry.",
+								});
+							const previous = await client.listMessages(
+								tenantId,
+								conversationId,
+								{ beforeSeq: oldestIncoming, limit: PAGE_SIZE },
+							);
+							if (!owned()) return;
+							const nextOldest = previous.messages.reduce(
+								(min, message) => Math.min(min, message.seq),
+								Infinity,
+							);
+							if (nextOldest >= oldestIncoming)
+								throw new HubError({
+									kind: "malformed",
+									message: "Message history did not advance.",
+								});
+							incoming = mergeMessages(incoming, previous.messages);
+							oldestIncoming = nextOldest;
+							more = previous.has_more;
+						}
+						if (
+							heldTail !== undefined &&
+							Number.isFinite(oldestIncoming) &&
+							oldestIncoming > heldTail
+						)
 							throw new HubError({
-								kind: "malformed",
-								message: "Message history did not advance.",
+								kind: "unavailable",
+								message:
+									"Message history could not be connected. Please retry.",
 							});
-						incoming = mergeMessages(incoming, previous.messages);
-						oldestIncoming = nextOldest;
-						more = previous.has_more;
-					}
-					if (
-						heldTail !== undefined &&
-						Number.isFinite(oldestIncoming) &&
-						oldestIncoming > heldTail
-					)
-						throw new HubError({
-							kind: "unavailable",
-							message: "Message history could not be connected. Please retry.",
+						const current = store.getState().threads[key];
+						const first = !current || current.messages.length === 0;
+						patchThread(key, {
+							messages: mergeMessages(current?.messages ?? [], incoming),
+							state: "ready",
+							error: null,
+							/* Only the FIRST page decides whether older history exists; a
+							 *  refresh of the tail says nothing about the head. */
+							...(first ? { hasMore: page.has_more === true } : {}),
 						});
-					const current = store.getState().threads[key];
-					const first = !current || current.messages.length === 0;
-					patchThread(key, {
-						messages: mergeMessages(current?.messages ?? [], incoming),
-						state: "ready",
-						error: null,
-						/* Only the FIRST page decides whether older history exists; a
-						 *  refresh of the tail says nothing about the head. */
-						...(first ? { hasMore: page.has_more === true } : {}),
-					});
-				} catch (error) {
-					if (!owned()) return;
-					if (gateFailure(error)) return;
-					patchThread(key, {
-						state: "error",
-						error: isHubError(error) ? error : null,
-					});
+						return;
+					} catch (error) {
+						if (!owned()) return;
+						if (gateFailure(error)) return;
+						/* No answer at all is retried silently before it is shown: the
+						 *  thread screen reloads the moment the app returns to the
+						 *  foreground, which is exactly when the radio is still waking,
+						 *  and one failed request there painted the refresh warning over
+						 *  a thread the next attempt loaded (TestFlight 836). Refusals —
+						 *  sign-in, plan, revoked, malformed — still surface at once. */
+						const wait = THREAD_RETRY_DELAYS_MS[attempt];
+						if (
+							wait !== undefined &&
+							isHubError(error) &&
+							error.kind === "unreachable"
+						) {
+							await new Promise((resolve) => setTimeout(resolve, wait));
+							if (!owned()) return;
+							continue;
+						}
+						patchThread(key, {
+							state: "error",
+							error: isHubError(error) ? error : null,
+						});
+						return;
+					}
 				}
 			});
 		},

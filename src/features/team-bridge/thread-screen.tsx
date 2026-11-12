@@ -21,6 +21,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Markdown } from "@/features/session/components/markdown";
+import {
+	textSelectionContainerScroll,
+	textSelectionContainerTouch,
+	textSelectionContainerTouchCancel,
+	textSelectionContainerTouchEnd,
+} from "@/features/session/text-selection";
 import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import {
@@ -980,7 +986,13 @@ function ThreadContent({
 									data={items}
 									keyExtractor={(item) => item.key}
 									renderItem={renderItem}
-									contentContainerClassName="pb-4"
+									/* 8 pt here plus the dock's own 8 pt = a 16 pt rect gap
+									 *  (~22 pt of ink with the row's leading), the same rest
+									 *  the agent chat's last line has above the same dock
+									 *  (PR #230 design D1; `pb-4` read ~30 pt, a visible step
+									 *  when switching screens). Not tighter: 12 pt puts
+									 *  descenders against the card's rounded top. */
+									contentContainerClassName="pb-2"
 									keyboardShouldPersistTaps="handled"
 									onViewableItemsChanged={onViewableItemsChanged}
 									viewabilityConfig={viewabilityConfig}
@@ -998,6 +1010,18 @@ function ThreadContent({
 									// Every list callback is the viewport controller's, so the tests
 									// that drive these handlers drive the shipping wiring.
 									{...viewport.current.handlers}
+									/* Drag-to-select (iOS mode, `text-selection.ts`): a TAP
+									 *  outside the selecting message ends it, as in iMessage; a
+									 *  scroll keeps it so the reader can reach a long message's
+									 *  far handle (design R1, D3). Wraps — never replaces — the
+									 *  viewport's intent. */
+									onTouchStart={textSelectionContainerTouch}
+									onTouchEnd={textSelectionContainerTouchEnd}
+									onTouchCancel={textSelectionContainerTouchCancel}
+									onScrollBeginDrag={() => {
+										textSelectionContainerScroll();
+										viewport.current?.handlers.onScrollBeginDrag();
+									}}
 									onScrollToIndexFailed={onScrollToIndexFailed}
 									scrollEventThrottle={100}
 									refreshControl={

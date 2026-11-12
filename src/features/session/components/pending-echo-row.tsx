@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import {
 	type PendingEcho,
 	pendingEchoBoxClass,
@@ -8,7 +9,7 @@ import {
 } from "@/features/session/pending-echo";
 import { userBubbleFill } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
-import { pendingEchoId, ROLE } from "@/ui/a11y";
+import { pendingEchoId, ROLE, userMessageMoreId } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { cx } from "@/ui/variants";
 
@@ -16,10 +17,9 @@ import { cx } from "@/ui/variants";
  * The row for one instruction that is in flight — what the user just sent —
  * ported from the relay's `PendingEchoRow` (`components/transcript.tsx`).
  *
- * It takes the box of the row its OP settles into — the user bubble for a
- * prompt, the quieter steer block for a steer (`transcript-row.tsx`'s
- * `user`/`steer` arm) — so reconciliation is the caption leaving rather than a
- * row changing register. The two deliberate departures from a settled row are
+ * It takes the box of the row its OP settles into — the user bubble, for a
+ * prompt and a steer alike (`transcript-row.tsx`'s `user`/`steer` arm) — so
+ * reconciliation is the caption leaving rather than a row changing register. The two deliberate departures from a settled row are
  * the pending signal itself, as on the relay: no accent leading edge on a prompt
  * (the accent means "this is what the turn is on", and an unadmitted message is
  * not that yet) and dimmer ink.
@@ -49,11 +49,11 @@ const PendingEchoRowImpl = ({
 		<>
 			<View
 				className={pendingEchoBoxClass(echo.op)}
-				/* A prompt carries the settled bubble's fill as an explicit style too
+				/* The settled bubble's fill as an explicit style too
 				 *  (`userBubbleFill`: the native fill did not paint from the class
-				 *  alone on the operator's build; design round 1, D1). A steer stays
-				 *  unfilled, like its settled row. */
-				style={echo.op === "steer" ? undefined : userBubbleFill(active)}
+				 *  alone on the operator's build; design round 1, D1). A steer is
+				 *  filled like a prompt, as its settled row is. */
+				style={userBubbleFill(active)}
 			>
 				{/* Attachments ride as a count: the composer owns the image bytes,
 				 *  and the real row shows them once the transcript carries it.
@@ -66,9 +66,21 @@ const PendingEchoRowImpl = ({
 						})}
 					</Text>
 				) : null}
-				{echo.text.length > 0 ? (
-					<Text className="text-body-read text-ink-muted">{echo.text}</Text>
-				) : null}
+				{/* The SAME clamp as the settled row's `user`/`steer` arm: every
+				 *  message, steer or prompt, clips to eight lines with `Show more`.
+				 *  Without it a long send painted at full height
+				 *  in flight and then shrank to the clamp at handover — the jump the
+				 *  one-box rule in `user-bubble.ts` exists to prevent (agent review
+				 *  PR #235 round 1, R1-M1). Uncontrolled: an echo is not in the list's
+				 *  row-open map, and a reader who opens it mid-flight sees it re-clamp
+				 *  when the settled row takes over, which is the settled default. */}
+				{echo.text.length === 0 ? null : (
+					<UserMessageClamp
+						testID={userMessageMoreId(pendingEchoId(echo.commandId))}
+					>
+						<Text className="text-body-read text-ink-muted">{echo.text}</Text>
+					</UserMessageClamp>
+				)}
 			</View>
 			{/* The caption sits BELOW the box, on canvas (design round 1, D2):
 			 *  `ink-dim` and `danger` are contracted on canvas, and on `user-bubble`

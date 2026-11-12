@@ -130,6 +130,26 @@ const BUNDLE_ID = "com.localoperator.mobile";
 const MICROPHONE_USAGE =
 	"Record a voice message and transcribe it on your own computer. The recording is sent for one transcription and not kept.";
 
+/* THE HOME-SCREEN LABEL, deliberately shorter than the app's name.
+ *
+ * The operator's decision (2026-11-11): the label under the icon reads
+ * "Operator". "Local Operator" is 14 characters, wider than an iOS icon cell,
+ * and SpringBoard squeezes the whitespace out of a label before truncating it,
+ * so even a correct `CFBundleDisplayName: "Local Operator"` rendered as
+ * "LocalOpera…" on a phone (build 836). A label that fits is the only fix —
+ * there is no plist key that wraps or shrinks it.
+ *
+ * ONLY THE LAUNCHER LABEL CHANGES. `name` below stays "Local Operator": it is
+ * the in-app name, the Xcode target / `PRODUCT_NAME` prebuild derives, and the
+ * name App Store Connect and the Play listing carry (those are set in the
+ * stores, docs/publishing/apple-app-store.md). Two consumers read this value —
+ * `ios.infoPlist.CFBundleDisplayName` and the Android launcher-label plugin —
+ * and `scripts/ci/native-config.ts` asserts it on both built artefacts, with
+ * its own copy of the string on purpose (a gate must not import what it
+ * checks). No `locales` entry or InfoPlist.strings exists to override it per
+ * language; adding one must carry the same label. */
+const LAUNCHER_LABEL = "Operator";
+
 /* DERIVED, NOT REMEMBERED (ADR 0004, "Versioning").
  *
  * Every build path in `.github/workflows` runs `scripts/ci/version.ts --write`
@@ -209,6 +229,10 @@ const config: ExpoConfig = {
 		// unchanged. The string is the prompt iOS shows at the moment the reader
 		// presses the mic — never at first launch.
 		infoPlist: {
+			// The label under the home-screen icon — see `LAUNCHER_LABEL`. Set here
+			// rather than left to Expo's `withDisplayName`, which would copy `name`
+			// ("Local Operator") and truncate; the store name is unaffected.
+			CFBundleDisplayName: LAUNCHER_LABEL,
 			// Export compliance (§5 in docs/publishing/apple-app-store.md): native
 			// TLS, Keychain and expo-crypto use Apple's OS cryptography. The lockfile's
 			// node-forge belongs to Expo CLI tooling, not the shipped app. Reassess if
@@ -429,6 +453,10 @@ const config: ExpoConfig = {
 		// would promise something the platform refuses. Its comment has the why of
 		// the shape (app-wide; a user-typed host cannot be narrowed at build time).
 		"./plugins/with-android-local-network.js",
+		// The Android half of `LAUNCHER_LABEL`: Expo has no Android label separate
+		// from `name`, so this plugin rewrites the `app_name` string the template's
+		// `<application android:label>` points at. Its comment has the ordering why.
+		["./plugins/with-android-launcher-label.js", { label: LAUNCHER_LABEL }],
 	],
 	experiments: {
 		typedRoutes: true,

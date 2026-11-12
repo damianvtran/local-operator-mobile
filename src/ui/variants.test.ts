@@ -9,6 +9,7 @@ import {
 	BUTTON_VISUAL_HEIGHT,
 	badgeClasses,
 	buttonClasses,
+	COMPOSER_FIELD_MAX_LINES,
 	chipClasses,
 	emptyStateClasses,
 	FIELD_BORDER_Y,
@@ -21,6 +22,8 @@ import {
 	segmentedLabelWeight,
 	skeletonBarClasses,
 	skeletonClasses,
+	TEXTAREA_MAX_PX,
+	textareaContentCap,
 	touchFloorFor,
 	webFieldOverflow,
 } from "@/ui/variants";
@@ -401,5 +404,42 @@ describe("badge alignment (design D1)", () => {
 		expect(centred).toContain("self-center");
 		expect(centred).not.toContain("self-start");
 		expect(centred).toContain("bg-accent-muted");
+	});
+});
+
+/* TestFlight 836: "when I type the composer is not expanding in height properly
+ *  so I can only see a couple lines at a time". */
+describe("textareaContentCap", () => {
+	const body = { bodyLine: 24, pad: 16 };
+	it("keeps the shipped six-line rule for every field at or under six", () => {
+		expect(textareaContentCap({ maxLines: 6, scale: 1, ...body })).toBe(
+			TEXTAREA_MAX_PX,
+		);
+		expect(textareaContentCap({ maxLines: 3, scale: 1, ...body })).toBe(66);
+		expect(textareaContentCap({ maxLines: 6, scale: 2, ...body })).toBe(264);
+	});
+
+	it("shows the composer's eight BODY lines before it scrolls", () => {
+		const cap = textareaContentCap({
+			maxLines: COMPOSER_FIELD_MAX_LINES,
+			scale: 1,
+			...body,
+		});
+		expect(COMPOSER_FIELD_MAX_LINES).toBe(8);
+		expect(cap).toBe(8 * 24 + 16);
+		/* The old rule clamped any maxLines back to 132 = (132 - 16) / 24 = 4.8
+		 *  visible lines: the defect. */
+		expect((cap - body.pad) / body.bodyLine).toBe(8);
+	});
+
+	it("still yields to the screen's budget (header-to-keyboard room)", () => {
+		expect(
+			textareaContentCap({
+				maxLines: COMPOSER_FIELD_MAX_LINES,
+				scale: 1,
+				...body,
+				maxHeightPx: 90,
+			}),
+		).toBe(90);
 	});
 });

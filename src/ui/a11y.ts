@@ -2149,11 +2149,28 @@ export const turnBarId = (turnKey: string): string => `turn-bar-${turnKey}`;
  *  live-to-durable row replacement. */
 export const foldBarId = (foldKey: string): string => `fold-bar-${foldKey}`;
 
+/** One containment guide beside a row inside an opened turn or fold
+ *  (`GroupGuides`, `transcript-list.tsx`). Keyed by nesting level (1 =
+ *  directly under a bar), so a capture probe can read a member's depth. */
+export const groupGuideId = (level: number): string => `group-guide-${level}`;
+
 /** The pending row for an in-flight instruction, keyed by the retry envelope's
  *  `command_id` — the same id the session's real row will carry, so a flow can
  *  assert the hand-over from `pending-echo-<id>` to `transcript-row-<id>`. */
 export const pendingEchoId = (commandId: string): string =>
 	`pending-echo-${commandId}`;
+
+/** A prompt's `Show more` / `Show less` toggle (`UserMessageClamp`, #235),
+ *  addressed as its row's own id plus `-more` — `transcript-row-<id>-more` on
+ *  a settled prompt, `pending-echo-<id>-more` on its in-flight echo. Deriving
+ *  it from the row id (rather than a family of its own) keeps the toggle
+ *  inside the row's declared family and carries the echo→row hand-over over
+ *  to the control: a flow that pressed `pending-echo-<id>-more` finds the same
+ *  control at `transcript-row-<id>-more` once the real row lands. It is built
+ *  here, not spelled at the call site, because a template `testID` is a second
+ *  spelling the identifier check cannot follow. */
+export const userMessageMoreId = (rowTestID: string): string =>
+	`${rowTestID}-more`;
 
 /** One quiet group's bar. The key is the group's own `qg:<first row id>`
  *  (`turn-condensing.ts`), so a group is addressable by the receipt that

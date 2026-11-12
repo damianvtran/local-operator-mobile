@@ -10,13 +10,19 @@ import {
 } from "@/features/session/components/collapsed-row";
 import { ImageGenCard } from "@/features/session/components/imagegen-card";
 import { Markdown } from "@/features/session/components/markdown";
+import {
+	SelectableLeafText,
+	SelectableMessage,
+} from "@/features/session/components/selectable-message";
 import { ToolRow } from "@/features/session/components/tool-row";
 import {
+	isBlankAssistantEntry,
 	TRACE_COLUMN_GAP_CLASS,
 	TRACE_GLYPH_BOX_CLASS,
 	TRACE_ROW_OUTER_CLASS,
 } from "@/features/session/components/trace-rail";
 import { TranscriptImage } from "@/features/session/components/transcript-image";
+import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
 import { imageGenView } from "@/features/session/imagegen";
 import {
 	bridgeReceiptLabel,
@@ -34,7 +40,7 @@ import {
 	userBubbleFill,
 } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
-import { ROLE, SURFACE, transcriptImageId } from "@/ui/a11y";
+import { ROLE, SURFACE, transcriptImageId, userMessageMoreId } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
@@ -52,9 +58,12 @@ import { cx } from "@/ui/variants";
  *     answer is the page, and wrapping it in a container says it is one more item
  *     among several when it is the thing being read.
  *
- * A `steer` is the reader's turn read quietly: no fill and no accent edge, because
- * a mid-turn instruction is a side note to a turn already in flight, and painting
- * it like a fresh prompt would misreport what it did.
+ * A `steer` IS the reader's turn and takes the same bubble. It used to render
+ * as a quiet unfilled block ("a side note to a turn already in flight"), but on
+ * a phone that read as bare indented text the operator could not recognise as
+ * his own message (operator report on the iOS build, 2026-11-11). The desktop
+ * paints a steer as an ordinary user row (the durable wire does not even mark
+ * one), so the bubble with no extra marker is the reference behaviour.
  *
  * An unknown kind renders as a labelled generic row rather than vanishing: the
  * wire's `EntryKind` is open, and a row that silently disappeared would shorten the
@@ -95,10 +104,10 @@ export type TranscriptRowProps = {
 	 *  frames: it is a prop of a memoised row. */
 	onToggleOpen?: (id: string, open: boolean) => void;
 	/** This row opens a turn the list currently shows CONDENSED behind its
-	 *  `TurnBar`. The prompt clamps to one line and its image strip waits for
-	 *  the bar to open — the relay's `transcript.tsx` treatment: a collapsed
-	 *  turn is one landmark line plus its bar, so a long prompt cannot undo the
-	 *  condensing it heads. Only meaningful on a `user` row. */
+	 *  `TurnBar`. Its image strip waits for the bar to open; its text keeps the
+	 *  same eight-line `Show more` clamp as every prompt (`UserMessageClamp`)
+	 *  rather than one unexpandable line, so the reader can always read what
+	 *  was asked. Only meaningful on a `user` row. */
 	condensed?: boolean;
 };
 
@@ -118,8 +127,8 @@ const BLOCK_LABEL: Record<string, string> = {
 };
 
 /**
- * The box of the reader's own turn: the bubble for a prompt, a quiet block for a
- * steer.
+ * The box of the reader's own turn — a prompt and a steer alike (see the module
+ * comment: a steer is no longer an unfilled block).
  *
  * A prompt is a BORDERLESS FILL, the relay's own bubble box (its
  * `transcript.tsx`: `rounded-md bg-surface px-3 py-1.5`; visual audit D3). It
@@ -141,18 +150,8 @@ const BLOCK_LABEL: Record<string, string> = {
  * `user-bubble.ts` records what was ruled out). A separate component so the
  * theme hook runs only for the reader's own rows, never for every row kind.
  */
-const UserBox = ({
-	isSteer,
-	children,
-}: {
-	isSteer: boolean;
-	children: React.ReactNode;
-}) => {
+const UserBox = ({ children }: { children: React.ReactNode }) => {
 	const { active } = useTheme();
-	if (isSteer) {
-		// No fill, no accent edge: a quiet right-aligned block.
-		return <View className="max-w-[85%] px-1">{children}</View>;
-	}
 	return (
 		<View
 			className={cx("max-w-[85%]", USER_BUBBLE_BOX_CLASS)}
@@ -255,6 +254,13 @@ const TranscriptRowImpl = ({
 		);
 	}
 
+	if (kind === "assistant" && isBlankAssistantEntry(entry)) {
+		/* A tool-only model message's live row (`isBlankAssistantEntry`,
+		 *  `trace-rail.ts`): zero size, so it no longer opens a 24 pt hole between
+		 *  two tool rows, but still present for its testID and anchors. */
+		return <View testID={testID}>{anchors}</View>;
+	}
+
 	if (kind === "assistant") {
 		/* NEVER COLLAPSIBLE (design item 9). The answer is the page, not an event:
 		 *  folding it would hide the thing the reader came for, which is worse than
@@ -287,10 +293,33 @@ const TranscriptRowImpl = ({
 
 	if (kind === "user" || kind === "steer") {
 		const isSteer = kind === "steer";
-		/* Clamped, not folded: the prompt stays fully readable the moment the
-		 *  reader opens the turn's bar, and nothing is hidden that the bar does
-		 *  not also stand for. A steer never heads a turn, so it never clamps. */
-		const clamp = condensed && !isSteer;
+		/* A condensed turn's image strip waits for its bar to open, so a
+		 *  screenshot cannot undo the condensing the turn's bar stands for. The
+		 *  TEXT no longer clamps to one line there: that `numberOfLines={1}`
+		 *  left the operator unable to read what he had asked (iOS build 836).
+		 *  Every prompt, condensed or live, takes the desktop's eight-line clamp
+		 *  with `Show more` instead (`UserMessageClamp`). A steer takes the same
+		 *  bubble, so it takes the same clamp too: the only reason it stayed
+		 *  unclamped was that it had no bubble fill for the fade to match. */
+		const holdImages = condensed && !isSteer;
+		// `body-read` 14 / 1.55: the relay's own `--text-body` step and its
+		// reading leading (design item 11, round 1 type parity). It was `body`
+		// 16, one step above the reference.
+		const userTextClass = "text-body-read text-ink";
+		/* The reader's own prompt is as copyable as the answer: long-press
+		 *  selects on iOS, native `selectable` on Android (#233). It sits INSIDE
+		 *  the Show-more clamp (#235), which wraps this element untouched — the
+		 *  clamp clips a full-height view rather than setting `numberOfLines`,
+		 *  so a selection can always reach the whole prompt. With the old
+		 *  one-line preview gone there is no unreadable state left to disable
+		 *  the mode for, so it is always on (integration of #233 with #235). */
+		const text = (
+			<SelectableMessage text={entry.text} textClassName={userTextClass}>
+				<SelectableLeafText className={userTextClass}>
+					{entry.text}
+				</SelectableLeafText>
+			</SelectableMessage>
+		);
 		/* NEVER COLLAPSIBLE, AT ANY LENGTH (review round 1, R1-2 / U1 / D2). The
 		 *  reader's own prompt is the turn's landmark: the relay and the desktop
 		 *  both keep it open, and folding it hid what was asked while the answer
@@ -299,23 +328,19 @@ const TranscriptRowImpl = ({
 		 *  or peer receipt, below) folds. A steer is the same reader's voice. */
 		return (
 			<View className="items-end px-4 py-1" testID={testID}>
-				<UserBox isSteer={isSteer}>
-					{entry.text.length > 0 ? (
-						<Text
-							className={cx(
-								// `body-read` 14 / 1.55: the relay's own `--text-body` step and
-								// its reading leading (design item 11, round 1 type parity). It
-								// was `body` 16, one step above the reference.
-								isSteer
-									? "text-body-read text-ink-muted"
-									: "text-body-read text-ink",
-							)}
-							numberOfLines={clamp ? 1 : undefined}
+				<UserBox>
+					{entry.text.length === 0 ? null : (
+						<UserMessageClamp
+							// The list's row-open map, as the folds use: survives
+							// windowing, and a find landing on this row opens it.
+							expanded={fold.open}
+							onToggle={fold.onToggle}
+							testID={userMessageMoreId(testID)}
 						>
-							{entry.text}
-						</Text>
-					) : null}
-					{!clamp && entry.images.length > 0 && loadImage ? (
+							{text}
+						</UserMessageClamp>
+					)}
+					{!holdImages && entry.images.length > 0 && loadImage ? (
 						<View className="flex-row flex-wrap gap-1.5 pt-1.5">
 							{entry.images.map((image) => (
 								<TranscriptImage
@@ -324,7 +349,7 @@ const TranscriptRowImpl = ({
 									index={image.index}
 									mimeType={image.mime_type}
 									load={loadImage}
-									onBubble={!isSteer}
+									onBubble
 									testID={transcriptImageId(entry.id, image.index)}
 								/>
 							))}

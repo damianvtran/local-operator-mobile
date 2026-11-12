@@ -1017,6 +1017,93 @@ describe("terminal authorization refusals", () => {
 	});
 });
 
+/* TestFlight 836: the thread reloads the instant the app returns, while the radio
+ * is still waking, and one `unreachable` answer painted the refresh warning over a
+ * thread the next attempt loaded. No answer is retried silently on the session
+ * stream's budget (t≈0, 1, 3, 7 s); a refusal is not. */
+describe("thread refresh after a return to the foreground", () => {
+	const noAnswer = () => new HubError({ kind: "unreachable", message: "x" });
+	const page = { messages: [message(1, ADA, "x")], has_more: false };
+	const key = threadKey(TENANT, "c1");
+
+	it("an unreachable first attempt then success never shows the warning", async () => {
+		vi.useFakeTimers();
+		try {
+			const listMessages = vi
+				.fn<HubClient["listMessages"]>()
+				.mockResolvedValueOnce(page)
+				.mockRejectedValueOnce(noAnswer())
+				.mockRejectedValueOnce(noAnswer())
+				.mockResolvedValueOnce({
+					messages: [message(1, ADA, "x"), message(2, ADA, "y")],
+					has_more: false,
+				});
+			const { store, actions } = setup(fakeHub({ listMessages }));
+			await actions.loadThread(TENANT, "c1");
+			const states: string[] = [];
+			const unsubscribe = store.subscribe((s) => {
+				const state = s.threads[key]?.state;
+				if (state) states.push(state);
+			});
+			const resumed = actions.loadThread(TENANT, "c1");
+			await vi.advanceTimersByTimeAsync(3_000);
+			await resumed;
+			unsubscribe();
+			expect(states).not.toContain("error");
+			expect(listMessages).toHaveBeenCalledTimes(4);
+			expect(store.getState().threads[key]).toMatchObject({
+				state: "ready",
+				error: null,
+			});
+			expect(store.getState().threads[key]?.messages.map((m) => m.seq)).toEqual(
+				[1, 2],
+			);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("shows the warning once the budget is spent: 4 attempts, ~7 s", async () => {
+		vi.useFakeTimers();
+		try {
+			const listMessages = vi
+				.fn<HubClient["listMessages"]>()
+				.mockResolvedValueOnce(page)
+				.mockRejectedValue(noAnswer());
+			const { store, actions } = setup(fakeHub({ listMessages }));
+			await actions.loadThread(TENANT, "c1");
+			const resumed = actions.loadThread(TENANT, "c1");
+			await vi.advanceTimersByTimeAsync(6_999);
+			expect(store.getState().threads[key]?.state).toBe("ready");
+			await vi.advanceTimersByTimeAsync(1);
+			await resumed;
+			expect(listMessages).toHaveBeenCalledTimes(5);
+			expect(store.getState().threads[key]).toMatchObject({
+				state: "error",
+				error: { kind: "unreachable" },
+			});
+			// The held thread is not lost while the warning shows.
+			expect(store.getState().threads[key]?.messages).toHaveLength(1);
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("a sign-in refusal on return is not retried: the auth gate shows at once", async () => {
+		const listMessages = vi
+			.fn<HubClient["listMessages"]>()
+			.mockResolvedValueOnce(page)
+			.mockRejectedValueOnce(
+				new HubError({ kind: "sign_in", message: "x", status: 401 }),
+			);
+		const { store, actions } = setup(fakeHub({ listMessages }));
+		await actions.loadThread(TENANT, "c1");
+		await actions.loadThread(TENANT, "c1");
+		expect(listMessages).toHaveBeenCalledTimes(2);
+		expect(store.getState().gate).toBe("signed_out");
+	});
+});
+
 /*
  * The per-conversation notification control (thread screen → notify sheet →
  * `setNotify` → `POST /messaging/conversations/{id}/read {notify}`). The write is

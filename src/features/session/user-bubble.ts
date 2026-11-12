@@ -13,6 +13,10 @@ import type { ThemeEntry } from "@/ui/tokens.gen";
  * a hairline after the settled row moved to `bg-user-bubble`), every send
  * changed colour and lost its edge at handover — the jump the pending row's
  * own design rule (round 1, D1) calls a defect. Agent review round 1, M1.
+ *
+ * A STEER uses this box too, in both states: as an unfilled block it read as
+ * bare indented text, not the reader's own message (operator report, iOS
+ * 2026-11-11). Prompt and steer differ only in the pending caption.
  */
 
 /** The box's classes. `bg-user-bubble` is the role solved per palette to
