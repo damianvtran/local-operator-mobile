@@ -272,11 +272,12 @@ const read = (file: string): string =>
 	readFileSync(fileURLToPath(new URL(file, import.meta.url)), "utf8");
 const code = (source: string): string =>
 	source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-const CLAMP_BY_STEER_ONLY =
-	/isSteer \? \(\s*text\s*\) : \(\s*<UserMessageClamp/;
-/** The echo's text: shown in full for a steer, behind the clamp otherwise. */
-const ECHO_CLAMP_BY_STEER_ONLY =
-	/echo\.op === "steer" \? \(\s*<Text[^>]*>\{echo\.text\}<\/Text>\s*\) : \(\s*<UserMessageClamp[^>]*>\s*<Text[^>]*>\{echo\.text\}<\/Text>\s*<\/UserMessageClamp>/;
+/** Every non-empty message is clamped, steer or prompt (operator report, iOS
+ *  2026-11-11: a steer now takes the bubble, so it takes the clamp too). */
+const CLAMP_EVERY_MESSAGE =
+	/entry\.text\.length === 0 \? null : \(\s*<UserMessageClamp/;
+const ECHO_CLAMP_EVERY_MESSAGE =
+	/echo\.text\.length === 0 \? null : \(\s*<UserMessageClamp[^>]*>\s*<Text[^>]*>\{echo\.text\}<\/Text>\s*<\/UserMessageClamp>/;
 const CLAMP_GATED_ON_CONDENSED = /condensed[^;]*UserMessageClamp/;
 const ROW = code(read("./transcript-row.tsx"));
 const userArm = ROW.slice(
@@ -290,13 +291,13 @@ describe("the pending echo (the same message in flight)", () => {
 	// The echo IS the settled message before the daemon echoes it
 	// (`user-bubble.ts`): a long prompt must be clipped in flight exactly as
 	// the settled row clips it, or it shrinks at handover (review R1-M1).
-	it("puts a prompt's text behind the same clamp, chosen by steer-or-not", () => {
+	it("puts every message, steer or prompt, behind the same clamp", () => {
 		expect(ECHO).toContain(
 			'import { UserMessageClamp } from "@/features/session/components/user-message-clamp";',
 		);
-		expect(ECHO).toMatch(ECHO_CLAMP_BY_STEER_ONLY);
+		expect(ECHO).toMatch(ECHO_CLAMP_EVERY_MESSAGE);
 		// The settled arm chooses the same way.
-		expect(userArm).toMatch(CLAMP_BY_STEER_ONLY);
+		expect(userArm).toMatch(CLAMP_EVERY_MESSAGE);
 	});
 
 	it("is uncontrolled: an echo has no row-open state to defer to", () => {
@@ -314,9 +315,9 @@ describe("the user row (condensed or live)", () => {
 	});
 
 	it("puts every prompt behind the clamp, whatever `condensed` says", () => {
-		// The clamp is chosen by steer-or-not only; `condensed` reaches the
-		// image strip and nothing else.
-		expect(userArm).toMatch(CLAMP_BY_STEER_ONLY);
+		// Every message is clamped; `condensed` reaches the image strip and
+		// nothing else.
+		expect(userArm).toMatch(CLAMP_EVERY_MESSAGE);
 		expect(userArm).toContain("expanded={fold.open}");
 		expect(userArm).toContain("onToggle={fold.onToggle}");
 		expect(userArm).toContain("const holdImages = condensed && !isSteer;");

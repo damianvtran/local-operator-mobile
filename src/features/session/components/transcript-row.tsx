@@ -58,9 +58,12 @@ import { cx } from "@/ui/variants";
  *     answer is the page, and wrapping it in a container says it is one more item
  *     among several when it is the thing being read.
  *
- * A `steer` is the reader's turn read quietly: no fill and no accent edge, because
- * a mid-turn instruction is a side note to a turn already in flight, and painting
- * it like a fresh prompt would misreport what it did.
+ * A `steer` IS the reader's turn and takes the same bubble. It used to render
+ * as a quiet unfilled block ("a side note to a turn already in flight"), but on
+ * a phone that read as bare indented text the operator could not recognise as
+ * his own message (operator report on the iOS build, 2026-11-11). The desktop
+ * paints a steer as an ordinary user row (the durable wire does not even mark
+ * one), so the bubble with no extra marker is the reference behaviour.
  *
  * An unknown kind renders as a labelled generic row rather than vanishing: the
  * wire's `EntryKind` is open, and a row that silently disappeared would shorten the
@@ -124,8 +127,8 @@ const BLOCK_LABEL: Record<string, string> = {
 };
 
 /**
- * The box of the reader's own turn: the bubble for a prompt, a quiet block for a
- * steer.
+ * The box of the reader's own turn — a prompt and a steer alike (see the module
+ * comment: a steer is no longer an unfilled block).
  *
  * A prompt is a BORDERLESS FILL, the relay's own bubble box (its
  * `transcript.tsx`: `rounded-md bg-surface px-3 py-1.5`; visual audit D3). It
@@ -147,18 +150,8 @@ const BLOCK_LABEL: Record<string, string> = {
  * `user-bubble.ts` records what was ruled out). A separate component so the
  * theme hook runs only for the reader's own rows, never for every row kind.
  */
-const UserBox = ({
-	isSteer,
-	children,
-}: {
-	isSteer: boolean;
-	children: React.ReactNode;
-}) => {
+const UserBox = ({ children }: { children: React.ReactNode }) => {
 	const { active } = useTheme();
-	if (isSteer) {
-		// No fill, no accent edge: a quiet right-aligned block.
-		return <View className="max-w-[85%] px-1">{children}</View>;
-	}
 	return (
 		<View
 			className={cx("max-w-[85%]", USER_BUBBLE_BOX_CLASS)}
@@ -305,15 +298,14 @@ const TranscriptRowImpl = ({
 		 *  TEXT no longer clamps to one line there: that `numberOfLines={1}`
 		 *  left the operator unable to read what he had asked (iOS build 836).
 		 *  Every prompt, condensed or live, takes the desktop's eight-line clamp
-		 *  with `Show more` instead (`UserMessageClamp`). A steer is a quiet
-		 *  unfilled block with no bubble to fade into, and stays as it was. */
+		 *  with `Show more` instead (`UserMessageClamp`). A steer takes the same
+		 *  bubble, so it takes the same clamp too: the only reason it stayed
+		 *  unclamped was that it had no bubble fill for the fade to match. */
 		const holdImages = condensed && !isSteer;
 		// `body-read` 14 / 1.55: the relay's own `--text-body` step and its
 		// reading leading (design item 11, round 1 type parity). It was `body`
 		// 16, one step above the reference.
-		const userTextClass = isSteer
-			? "text-body-read text-ink-muted"
-			: "text-body-read text-ink";
+		const userTextClass = "text-body-read text-ink";
 		/* The reader's own prompt is as copyable as the answer: long-press
 		 *  selects on iOS, native `selectable` on Android (#233). It sits INSIDE
 		 *  the Show-more clamp (#235), which wraps this element untouched — the
@@ -336,10 +328,8 @@ const TranscriptRowImpl = ({
 		 *  or peer receipt, below) folds. A steer is the same reader's voice. */
 		return (
 			<View className="items-end px-4 py-1" testID={testID}>
-				<UserBox isSteer={isSteer}>
-					{entry.text.length === 0 ? null : isSteer ? (
-						text
-					) : (
+				<UserBox>
+					{entry.text.length === 0 ? null : (
 						<UserMessageClamp
 							// The list's row-open map, as the folds use: survives
 							// windowing, and a find landing on this row opens it.
@@ -359,7 +349,7 @@ const TranscriptRowImpl = ({
 									index={image.index}
 									mimeType={image.mime_type}
 									load={loadImage}
-									onBubble={!isSteer}
+									onBubble
 									testID={transcriptImageId(entry.id, image.index)}
 								/>
 							))}

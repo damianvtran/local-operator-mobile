@@ -1570,7 +1570,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * clamp, and the blank-row test's clamp stub, so this is no parent's digest;
 	 * re-derived with `--print` over the staged integrated tree. Source
 	 * admission only, NOT rendered U-08 evidence. */
-	src: "c3027605789d794d4a29a90280e5b37743a4912665e5bf9ea75866ea7deac915",
+	// fix/steer-bubble: a steer takes the user bubble and its clamp, in flight
+	// and settled (operator report, iOS 2026-11-11), plus its rendered test.
+	// Re-derived with --print over the staged tree; source identity only.
+	src: "b87260e369891431177e6d3aca3ab55ad38c8524ea0fba9db4ed2188ba0421cd",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
