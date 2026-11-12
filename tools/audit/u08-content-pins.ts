@@ -1623,7 +1623,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * payload envelope read. No rendered component, style or token changed;
 	 * re-derived over the staged tree. Source identity only, NOT rendered U-08
 	 * evidence. */
-	src: "d418605179ed4d8eed3af11ac5d6b5e2a3f3e004844e12681854d963ba76df8c",
+	/* --print re-pin for PR #244 review remediation round 1: lazy
+	 * expo-task-manager load, the background-launch restore retry in the
+	 * connection provider, and the store's `unreadReads` counter. No rendered
+	 * component, style or token changed. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	src: "fd7d19ec08585ab64666c2f913b6887c50ce2a67200fff521e339076babb6c9e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1648,8 +1653,10 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// --print re-pin (feat/background-push-clear): iOS `UIBackgroundModes:
 	// ["remote-notification"]` for the silent attention wake; native Info.plist
 	// config, not a U-08 web layout input.
+	// --print re-pin (PR #244 remediation round 1): comment-only edits — the
+	// Android warm-only claim and the exact-set native-config guard.
 	"app.config.ts":
-		"88bb28c41c2c0c9f90c8f2ba1b9ac42729c5b2c1ed4675b64503f9dc43e9e1f6",
+		"2b77ffa36a241ee1607ac5cb42582fdf07a683a7fe91f4b0050a2385758a5c4f",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	// --print re-pin (feat/background-push-clear): adds the native module

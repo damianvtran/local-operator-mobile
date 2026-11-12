@@ -248,14 +248,18 @@ const config: ExpoConfig = {
 			// the expo-notifications plugin's `enableBackgroundRemoteNotifications`
 			// so the one Info.plist list names every mode the app claims; a plugin
 			// that contributes another mode is merged into this array by prebuild,
-			// and `scripts/ci/native-config.ts` asserts the built plist keeps this one.
+			// and `scripts/ci/native-config.ts` pins the exact built set
+			// (`IOS_BACKGROUND_MODES`), so a new mode is a deliberate change.
 			// Measured with `expo config --type introspect`: the built list is
 			// ["remote-notification", "fetch"] — expo-task-manager's auto-applied
 			// prebuild plugin (`withTaskManager.js`) appends `fetch` unconditionally.
 			// Nothing here schedules a background fetch; the extra mode is that
 			// dependency's, not a capability this app relies on.
-			// Android needs no mode: a data-only FCM message always reaches
-			// `onMessageReceived`, which runs the registered task.
+			// Android needs no mode: a data-only FCM message reaches
+			// `onMessageReceived`, which runs the registered task. The clear happens
+			// only WARM (backgrounded, not killed): a killed app runs the task
+			// headless with no React root, so no signed-in scope exists and the task
+			// returns NoData; the next open corrects the badge as before.
 			UIBackgroundModes: ["remote-notification"],
 			// The local-network ACCESS declaration (ADR 0002 §5). iOS shows this
 			// string in its one-time "allow this app on your network" alert, which

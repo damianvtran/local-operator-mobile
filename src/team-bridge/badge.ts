@@ -74,10 +74,12 @@ export function followTeamBridgeBadge(store: {
  * generation check still decide whether a late answer may land, and the badge
  * still moves only through `followTeamBridgeBadge` → `app-badge.ts`.
  *
- * `refreshUnread` resolves to a snapshot only when THIS read's success path
- * published (it is the only writer that sets `unreadKnown` with a freshly mapped
- * `organizations` array while clearing `unreadFailed`). A dropped, failed or
- * gate-reset read resolves `null`, and the task dismisses nothing on it.
+ * `refreshUnread` resolves to a snapshot only when an account-unread read
+ * PUBLISHED during the call: `unreadReads` rises only on that read's success
+ * path. A conversation patch also replaces `organizations` and `totalUnread`
+ * while `unreadKnown` is already true, so the array alone cannot prove the
+ * read landed (review R1-m1). A dropped, failed or gate-reset read resolves
+ * `null`, and the task dismisses nothing on it.
  */
 export function backgroundUnreadScope(scope: {
 	store: {
@@ -101,7 +103,7 @@ export function backgroundUnreadScope(scope: {
 				if (
 					state.unreadKnown &&
 					!state.unreadFailed &&
-					state.organizations !== previous.organizations
+					state.unreadReads > previous.unreadReads
 				) {
 					landed = {
 						total: state.totalUnread,

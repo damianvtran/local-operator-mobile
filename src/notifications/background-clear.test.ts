@@ -372,6 +372,7 @@ describe("backgroundUnreadScope over the real badge source", () => {
 				async refreshUnread() {
 					store.publish({
 						totalUnread: 1,
+						unreadReads: 1,
 						organizations: [
 							{ tenantId: "t-1", unread: 0 },
 							{ tenantId: "t-2", unread: 1 },
@@ -394,6 +395,31 @@ describe("backgroundUnreadScope over the real badge source", () => {
 			store,
 			isActive: () => true,
 			actions: { refreshUnread: async () => undefined },
+		});
+		expect(await scope.refreshUnread()).toBeNull();
+	});
+
+	it("a conversation patch landing during a failed read is not that read's snapshot (R1-m1)", async () => {
+		// `patchConversationUnread` replaces `organizations` and `totalUnread`
+		// while `unreadKnown` is already true; only the read itself bumps
+		// `unreadReads`. Before the fix this resolved the patch as the read.
+		const store = storeOf(
+			state({ gate: "open", unreadKnown: true, unreadReads: 3 }),
+		);
+		const scope = backgroundUnreadScope({
+			store,
+			isActive: () => true,
+			actions: {
+				async refreshUnread() {
+					store.publish({
+						totalUnread: 0,
+						organizations: [
+							{ tenantId: "t-1", unread: 0 },
+						] as unknown as TeamBridgeState["organizations"],
+					});
+					// …and the read itself fails (or is dropped): no publication.
+				},
+			},
 		});
 		expect(await scope.refreshUnread()).toBeNull();
 	});
