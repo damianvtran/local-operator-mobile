@@ -198,7 +198,7 @@ const ComputerRow = ({
 					</View>
 					{!computer.supportsLocalOperator ? (
 						<Text className="text-body-sm text-ink-muted">
-							This computer is not running the Local Operator harness.
+							{t("mobile.computers.not_harness")}
 						</Text>
 					) : null}
 					{computer.billing.eligible === false ? (
@@ -240,14 +240,16 @@ const WaitPanel = ({
 			{state.kind === "w1" ? (
 				<Shimmer active>
 					<Text className="text-body text-ink">
-						Waiting for Radient to list your computer…
+						{t("mobile.computers.wait.listing")}
 					</Text>
 				</Shimmer>
 			) : null}
 			{state.kind === "w2" ? (
 				<>
 					<Text className="text-body text-ink">
-						Radient has the tunnel — {state.tunnelStatus}.
+						{t("mobile.computers.wait.tunnel_status", {
+							status: state.tunnelStatus,
+						})}
 					</Text>
 					<Text className="text-body-sm text-ink-muted">
 						{host
@@ -257,7 +259,9 @@ const WaitPanel = ({
 				</>
 			) : null}
 			{state.kind === "w3" ? (
-				<Text className="text-body text-ink">Your computer answered.</Text>
+				<Text className="text-body text-ink">
+					{t("mobile.computers.wait.answered")}
+				</Text>
 			) : null}
 			{state.kind === "w3" &&
 			(state.version !== null || state.sessions !== null) ? (
@@ -296,13 +300,13 @@ const WaitPanel = ({
 			<View className="gap-2">
 				{state.kind === "w3" ? (
 					<Button
-						label="Use this computer"
+						label={t("mobile.computers.wait.use_computer")}
 						onPress={onUse}
 						testID={CONTROL.computersUseThisComputer}
 					/>
 				) : null}
 				<Button
-					label="Start again"
+					label={t("mobile.computers.wait.start_again")}
 					onPress={onStop}
 					variant="quiet"
 					testID={CONTROL.computersStartAgain}
@@ -492,7 +496,7 @@ export default function Computers() {
 						{showRefresh ? (
 							<Button
 								testID={CONTROL.computersRefresh}
-								label="Refresh"
+								label={t("mobile.computers.refresh")}
 								onPress={() => void refreshComputers()}
 								variant="quiet"
 								size="sm"
@@ -569,7 +573,7 @@ export default function Computers() {
 			 *  hiding the others left the reader nothing to pick instead (D1). */}
 			{view.list ? (
 				<View testID={REGION.computersList}>
-					<SectionHeader label="Your computers" />
+					<SectionHeader label={t("mobile.computers.list.heading")} />
 					{computers.map((computer) => (
 						<ComputerRow
 							key={computer.tunnelId}
@@ -591,7 +595,7 @@ export default function Computers() {
 
 			{!empty && !waiting ? (
 				<Button
-					label="Use my own tunnel instead"
+					label={t("mobile.computers.own_tunnel_instead")}
 					onPress={() => router.push("/own-tunnel")}
 					variant="quiet"
 					size="sm"
@@ -647,8 +651,8 @@ export default function Computers() {
 
 			<Dialog
 				visible={removeTarget !== null}
-				title="Remove this computer?"
-				body="This removes it from the list on this phone. It does not touch the computer, its tunnel, or your account."
+				title={t("mobile.computers.remove.title")}
+				body={t("mobile.computers.remove.body")}
 				confirmLabel="Remove"
 				onConfirm={() => {
 					if (removeTarget) {

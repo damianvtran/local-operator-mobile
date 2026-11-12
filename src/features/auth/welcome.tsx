@@ -8,6 +8,7 @@ import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { signInPresentation } from "./sign-in-presentation";
+import { t } from "@/i18n";
 
 /**
  * First run (docs/ux/flows.md § 1, F-1).
@@ -62,11 +63,10 @@ export default function Welcome() {
 						accessibilityRole={ROLE.header}
 						testID={REGION.welcomeHeadline}
 					>
-						Your agent runs on your computer.
+						{t("mobile.signin.welcome.headline")}
 					</Text>
 					<Text className="text-center text-body text-ink-muted">
-						This app drives the sessions on your own machine and shows what it
-						did. Your code never leaves it.
+						{t("mobile.signin.welcome.body")}
 					</Text>
 				</View>
 
@@ -84,7 +84,7 @@ export default function Welcome() {
 				{presentation.state.kind === "idle" ? (
 					<View className="gap-3">
 						<Button
-							label="Sign in with Radient"
+							label={t("mobile.signin.start")}
 							onPress={start}
 							loading={busy}
 							testID={CONTROL.welcomeConnect}
@@ -94,7 +94,7 @@ export default function Welcome() {
 						 *  reader with no Radient account — and no intention of making one —
 						 *  has to be able to find from the first screen. */}
 						<Button
-							label="Set up your own tunnel"
+							label={t("mobile.computers.paths.own_title")}
 							onPress={() => router.push("/own-tunnel")}
 							variant="quiet"
 							testID={CONTROL.welcomeCustomUrl}

@@ -178,5 +178,73 @@
 	"mobile.computers.added.connected_to": {
 		"role": "status",
 		"note": "Status line in the add-a-computer panel once the new computer answers. {name} is the computer's own name, or the fallback_name noun phrase, which must fit after \"Connected to\". Ends with a full stop; keep {name} unchanged."
+	},
+	"mobile.computers.not_harness": {
+		"role": "status",
+		"note": "Muted line on a computer row in the Your computers list when the account lists the computer but it is not running the Local Operator harness. Full sentence with a full stop. 'Local Operator' is the product name: keep it in Latin script."
+	},
+	"mobile.computers.wait.listing": {
+		"role": "status",
+		"note": "First step of the add-a-computer wait panel (shimmering line): the app is waiting for Radient to show the new computer in the account. Ends with an ellipsis, no full stop."
+	},
+	"mobile.computers.wait.tunnel_status": {
+		"role": "status",
+		"note": "Second step of the add-a-computer wait panel. {status} is Radient's own tunnel-status word (for example 'active'), inserted verbatim and NOT translated, so the sentence must stay grammatical around an untranslated English token. Ends with a full stop; keep {status} unchanged."
+	},
+	"mobile.computers.wait.answered": {
+		"role": "status",
+		"note": "Third step of the add-a-computer wait panel: the computer responded. Full sentence with a full stop."
+	},
+	"mobile.computers.wait.use_computer": {
+		"role": "button",
+		"note": "Primary button under the add-a-computer wait panel once the computer answered; switches the app to it. Imperative, short."
+	},
+	"mobile.computers.wait.start_again": {
+		"role": "button",
+		"note": "Quiet button under the add-a-computer wait panel that abandons the wait and returns to the start of the setup. Short imperative."
+	},
+	"mobile.computers.refresh": {
+		"role": "button",
+		"note": "Small quiet button under the Your computers list that re-reads the account's computers. One verb. Same English as mobile.settings.connection.refresh but a separate key because the surface differs."
+	},
+	"mobile.computers.list.heading": {
+		"role": "heading",
+		"note": "Section header above the list of computers on the Radient account on the computers screen. Plural noun phrase, no punctuation."
+	},
+	"mobile.computers.own_tunnel_instead": {
+		"role": "button",
+		"note": "Small quiet button at the bottom of the computers screen that opens the own-tunnel (self-hosted) setup instead of Radient. 'instead' contrasts with the Radient list above it."
+	},
+	"mobile.computers.remove.title": {
+		"role": "confirm",
+		"note": "Title of the confirmation dialog for removing a computer from this phone. A question. Body and buttons are separate strings."
+	},
+	"mobile.computers.remove.body": {
+		"role": "confirm",
+		"note": "Body of the remove-computer confirmation, under 'Remove this computer?'. States the removal is local to this phone only; keep all three negations (the computer, its tunnel, the account). Two sentences, each with a full stop."
+	},
+	"mobile.computers.paths.radient_title": {
+		"role": "heading",
+		"note": "Title of the Radient card on the choose-a-path screen, followed on the same line by the 'Recommended' badge. Imperative phrase, no punctuation; 'Radient' is the brand: keep it in Latin script."
+	},
+	"mobile.computers.paths.recommended": {
+		"role": "meta",
+		"note": "Badge beside the Radient card title marking it as the suggested path. One word or short phrase; not a status."
+	},
+	"mobile.computers.paths.radient_body": {
+		"role": "help",
+		"note": "Description inside the Radient card on the choose-a-path screen. Three clauses: needs an account; Radient runs the tunnel and gives a private authenticated URL; nothing to configure on the phone and no relay password. Keep the honest cost (an account is needed). 'URL' stays as a technical token."
+	},
+	"mobile.computers.paths.own_title": {
+		"role": "heading",
+		"note": "Section header of the own-tunnel card on the choose-a-path screen, and the quiet button label on the first-run welcome screen that opens the same setup. Says what the reader gets, not what they type. No punctuation."
+	},
+	"mobile.computers.paths.own_body": {
+		"role": "help",
+		"note": "Description inside the own-tunnel card. It is the advanced, self-hosted path: the reader publishes the computer through their own tunnel, pastes its address, needs no Radient account and keeps the password. Keep the words 'advanced' and 'no account' clear."
+	},
+	"mobile.computers.paths.own_action": {
+		"role": "button",
+		"note": "Outline button in the own-tunnel card that opens the own-tunnel setup. Short imperative; the computers screen has a separate 'Use my own tunnel instead'."
 	}
 }

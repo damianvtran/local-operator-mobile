@@ -70,5 +70,61 @@
 	"mobile.signin.superseded": {
 		"role": "status",
 		"note": "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI."
+	},
+	"mobile.signin.title": {
+		"role": "heading",
+		"note": "Screen title of the Radient re-authentication route. Verb phrase, no punctuation."
+	},
+	"mobile.signin.intro": {
+		"role": "help",
+		"note": "Reassurance line at the top of the sign-in screen: the sign-in happens in the system browser, so the app never receives the password. Keep that guarantee exactly; full stop at the end."
+	},
+	"mobile.signin.start": {
+		"role": "button",
+		"note": "Primary button on the first-run welcome screen and the sign-in screen that starts the browser hand-off. 'Radient' is the brand: keep it in Latin script. Used at two call sites."
+	},
+	"mobile.signin.use_address": {
+		"role": "button",
+		"note": "Button that opens the manual connect screen where the reader types a relay address and password. Used on the sign-in screen and in the 'sign-in unavailable' panel; same wording at both."
+	},
+	"mobile.signin.panel.opening": {
+		"role": "status",
+		"note": "Shimmering status line while the system browser is being opened for Radient sign-in. Ends with an ellipsis, no full stop."
+	},
+	"mobile.signin.panel.waiting": {
+		"role": "status",
+		"note": "Headline of the sign-in hand-off region once the browser is open; announced by screen readers (polite live region). Full sentence with a full stop. A second line, 'panel.waiting_help', renders below it."
+	},
+	"mobile.signin.panel.waiting_help": {
+		"role": "help",
+		"note": "Instruction under 'Waiting for your browser.': 'there' means the browser that just opened. Full stop at the end."
+	},
+	"mobile.signin.panel.cancelled": {
+		"role": "status",
+		"note": "Headline of the hand-off region after the reader dismissed the browser sheet. Full sentence with a full stop. Different from the diagnostic stage word 'Sign-in cancelled' (mobile.signin.stage_cancelled)."
+	},
+	"mobile.signin.panel.cancelled_help": {
+		"role": "help",
+		"note": "Reassurance under 'Sign-in was cancelled.': the cancellation altered nothing. Full stop at the end."
+	},
+	"mobile.signin.panel.unavailable": {
+		"role": "status",
+		"note": "Headline when this app build cannot receive the browser callback at all. A technical detail line (not translated, from the runtime) renders below it. Full stop at the end; 'Radient' stays in Latin script."
+	},
+	"mobile.signin.panel.unavailable_alt": {
+		"role": "help",
+		"note": "Last line of the 'sign-in unavailable' state pointing at the route that works: the relay's address and password (the 'Use an address and password' button below). Full stop at the end."
+	},
+	"mobile.signin.try_anyway": {
+		"role": "button",
+		"note": "Quiet button in the 'sign-in unavailable' state that retries the browser hand-off even though this build probably cannot complete it. Short imperative."
+	},
+	"mobile.signin.welcome.headline": {
+		"role": "heading",
+		"note": "Headline of the first-run welcome screen (screen-reader header). One sentence with a full stop; 'agent' is the product's own word for the assistant."
+	},
+	"mobile.signin.welcome.body": {
+		"role": "help",
+		"note": "Supporting paragraph on the welcome screen under the headline: the app controls sessions on the reader's own machine and shows the results; code never leaves the machine ('it' = the machine). Keep the privacy promise exact."
 	}
 }

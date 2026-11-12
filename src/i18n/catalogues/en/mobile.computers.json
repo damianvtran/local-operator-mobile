@@ -43,5 +43,22 @@
 	"mobile.computers.wait.host_answering": "Waiting for your computer at {host} to answer. A provisioned route is not the same as a machine that is up.",
 	"mobile.computers.wait.answering": "Waiting for your computer to answer.",
 	"mobile.computers.added.fallback_name": "your computer",
-	"mobile.computers.added.connected_to": "Connected to {name}."
+	"mobile.computers.added.connected_to": "Connected to {name}.",
+	"mobile.computers.not_harness": "This computer is not running the Local Operator harness.",
+	"mobile.computers.wait.listing": "Waiting for Radient to list your computer…",
+	"mobile.computers.wait.tunnel_status": "Radient has the tunnel — {status}.",
+	"mobile.computers.wait.answered": "Your computer answered.",
+	"mobile.computers.wait.use_computer": "Use this computer",
+	"mobile.computers.wait.start_again": "Start again",
+	"mobile.computers.refresh": "Refresh",
+	"mobile.computers.list.heading": "Your computers",
+	"mobile.computers.own_tunnel_instead": "Use my own tunnel instead",
+	"mobile.computers.remove.title": "Remove this computer?",
+	"mobile.computers.remove.body": "This removes it from the list on this phone. It does not touch the computer, its tunnel, or your account.",
+	"mobile.computers.paths.radient_title": "Connect with Radient",
+	"mobile.computers.paths.recommended": "Recommended",
+	"mobile.computers.paths.radient_body": "Needs a Radient account. Radient runs the tunnel for you and gives you a private, authenticated URL, so there is nothing to configure on this phone and no relay password to keep.",
+	"mobile.computers.paths.own_title": "Set up your own tunnel",
+	"mobile.computers.paths.own_body": "The advanced path: you publish your computer yourself, through a tunnel you run, and paste its address here. No Radient account is needed at any point, and you keep the password.",
+	"mobile.computers.paths.own_action": "Use my own tunnel"
 }

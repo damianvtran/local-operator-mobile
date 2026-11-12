@@ -8,6 +8,7 @@ import { BackButton } from "@/ui/components/back-button";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
 import { signInPresentation } from "./sign-in-presentation";
+import { t } from "@/i18n";
 
 /**
  * Radient sign-in as a screen of its own (docs/ux/flows.md § 1; `C5` re-auth).
@@ -50,7 +51,7 @@ export default function SignIn() {
 
 	return (
 		<Screen
-			title="Sign in"
+			title={t("mobile.signin.title")}
 			testID={SCREEN.signIn}
 			headerLeading={
 				<BackButton testID={CONTROL.signInBack} onPress={() => router.back()} />
@@ -61,8 +62,7 @@ export default function SignIn() {
 					className="text-body text-ink-muted"
 					accessibilityRole={ROLE.text}
 				>
-					Your browser finishes the sign-in, so the app never sees your
-					password.
+					{t("mobile.signin.intro")}
 				</Text>
 
 				<SignInPanel
@@ -74,7 +74,7 @@ export default function SignIn() {
 
 				{presentation.state.kind === "idle" ? (
 					<Button
-						label="Sign in with Radient"
+						label={t("mobile.signin.start")}
 						onPress={start}
 						loading={busy}
 						testID={CONTROL.signInStart}
@@ -82,7 +82,7 @@ export default function SignIn() {
 				) : null}
 
 				<Button
-					label="Use an address and password"
+					label={t("mobile.signin.use_address")}
 					onPress={() => router.push("/custom")}
 					variant="quiet"
 					testID={CONTROL.welcomeCustomUrl}
