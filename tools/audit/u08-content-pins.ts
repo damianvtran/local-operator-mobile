@@ -1613,8 +1613,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-pinned again in the same PR (design D2 remediation): `Button` gains the
 	 * opt-in `labelDir`, four Urdu Latin-initial S1 sites spread `useComposedDir()`
 	 * (`TunnelPaths`, the wait panel, `sign-in`, `welcome`), plus two test files.
-	 * `dir` is a no-op in LTR catalogues; no className, token or geometry moved. */
-	src: "ce218cf1f10a4e58af3948d763215ac39e4a0f8d1ae76be2281cafb9efc4d304",
+	 * `dir` is a no-op in LTR catalogues; no className, token or geometry moved.
+	 * Re-pinned once more after QA r2 Q-01: only `ur-latin-initial-sites.test.ts`
+	 * changed (test-only), the digest covers it. */
+	src: "aa9406bf783c9ef03c5be2b81ea944c2ec4d84e667825e2280a9702ad59d624b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
