@@ -1610,8 +1610,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* #241 (fix/show-more-polish) merged with main 9e193b57 (#236): both
 	 * sides' src carried, so neither parent's digest; re-derived once with
 	 * --print over the merged tree. Source identity only, NOT rendered U-08
-	 * evidence. */
-	src: "d82a271fed5ca6bb7710dca1512e0d1a2923c258e28f220dc712929bf912dd42",
+	 * evidence.
+	 *
+	 * Re-pinned for PR #243 (M3 S1 sign-in/computers keys, 44 translations, Urdu
+	 * direction fix) merged with main e24de6cd (#241 show-more polish): both sides' src
+	 * carried, so neither parent's digest; re-derived last with --print. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	src: "6bf4f9257413ac552eb73b1f20a07001f6ace65104917452514c21dda28185b5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
