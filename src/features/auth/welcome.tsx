@@ -6,10 +6,12 @@ import {
 	useConnectionState,
 } from "@/features/auth/connection-provider";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
+import { t } from "@/i18n";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Screen } from "@/ui/components/screen";
+import { useComposedDir } from "@/ui/direction";
 import { signInPresentation } from "./sign-in-presentation";
 
 /**
@@ -34,6 +36,9 @@ import { signInPresentation } from "./sign-in-presentation";
  */
 export default function Welcome() {
 	const router = useRouter();
+	/* `Radient …` leads the Urdu label, so `dir="auto"` would resolve it left-to-right
+	 * on an RTL page (M3 S1 design D2); the button states the page's base. */
+	const composedDir = useComposedDir();
 	const {
 		signInWithRadient,
 		signInState,
@@ -68,11 +73,10 @@ export default function Welcome() {
 						accessibilityRole={ROLE.header}
 						testID={REGION.welcomeHeadline}
 					>
-						Your agent runs on your computer.
+						{t("mobile.signin.welcome.headline")}
 					</Text>
 					<Text className="text-center text-body text-ink-muted">
-						This app drives the sessions on your own machine and shows what it
-						did. Your code never leaves it.
+						{t("mobile.signin.welcome.body")}
 					</Text>
 				</View>
 
@@ -90,7 +94,8 @@ export default function Welcome() {
 				{presentation.state.kind === "idle" ? (
 					<View className="gap-3">
 						<Button
-							label="Sign in with Radient"
+							label={t("mobile.signin.start")}
+							labelDir={composedDir}
 							onPress={start}
 							loading={busy}
 							testID={CONTROL.welcomeConnect}
@@ -100,7 +105,7 @@ export default function Welcome() {
 						 *  reader with no Radient account — and no intention of making one —
 						 *  has to be able to find from the first screen. */}
 						<Button
-							label="Set up your own tunnel"
+							label={t("mobile.computers.paths.own_title")}
 							onPress={() => router.push("/own-tunnel")}
 							variant="quiet"
 							testID={CONTROL.welcomeCustomUrl}

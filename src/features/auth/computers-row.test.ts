@@ -2,6 +2,7 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiscoveredComputer } from "@/connection";
+import { t } from "@/i18n";
 import { createConnectionStore } from "@/state/connection-store";
 import { CONTROL, computerRowIds } from "@/ui/a11y";
 
@@ -319,13 +320,16 @@ describe("the Computers row reads as something to press (TestFlight 883)", () =>
 		);
 	});
 
-	it("titles the computer by its first DNS label and states both facts as sentence-case text", async () => {
+	/* The status word is the catalogue's `status.route_ready` (#243), which stays
+	 *  lower case because the same key is the wait panel's mid-sentence predicate;
+	 *  see `computerStatusLabel`. The pin is that both facts are text, from the
+	 *  catalogue, not hard-coded English. */
+	it("titles the computer by its first DNS label and states both facts as catalogue text", async () => {
 		await render();
 		expect(host.texts).toContain("ip-192-168-0-70");
 		expect(host.texts).not.toContain(OLA.name);
-		expect(words()).toContain("Route ready");
-		expect(words()).toContain("Sign-in protected");
-		expect(words()).not.toContain("route ready");
+		expect(words()).toContain(t("mobile.computers.status.route_ready"));
+		expect(words()).toContain(t("mobile.computers.protected"));
 	});
 
 	it("puts the check in the trailing slot for the computer in use, never a chevron", async () => {

@@ -1,0 +1,190 @@
+# Audit execution log — m3s1-vi-r1 (vi, mobile.computers + mobile.signin, M3 S1)
+
+This file records commands actually run by this auditor in session 675090271c24
+(instance 767cf0660db6) on 2026-11-12, with the output they actually produced.
+Nothing here is reconstructed. Where output was truncated by the harness, the
+truncation is stated rather than filled in.
+
+---
+
+## 0. Inputs verified
+
+$ sha256sum /Users/damian/.local-operator/sessions/b7ec0d6c43dd/scratchpad/draft-vi-s1.json
+ee370439647b04e77654c7261dc2d8ed08034bef6396f9f20539a314265d8a4f  .../draft-vi-s1.json
+
+$ sha256sum /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json
+531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f  .../translation-brief-s1.json
+
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s1 rev-parse HEAD
+1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s1 status --porcelain
+(no output — clean tree, nothing of mine written there)
+
+Style guide and glossary read at the freshest ref:
+
+$ git -C ~/local-operator rev-parse origin/main
+8459804f56dd704d5c3a680ef68f53b7182786ab
+$ git show origin/main:i18n/style-guides/vi.md | sha256sum
+e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888  -
+$ git show origin/main:i18n/glossary.md | sha256sum
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  -
+
+English + shipped-vi input hashes:
+
+f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109  en/mobile.computers.json
+2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252  en/mobile.signin.json
+93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a  en/mobile.computers.context.json
+1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56  en/mobile.signin.context.json
+daab971c3ae7b8a2e509d9e3383d3c0786cc54bd5f383255bb1f8c460e050aab  vi/mobile.computers.json (at head, 45 keys)
+446ee3bad9f5a033dea4d53608c08286e968faed751f6974f2a82e52020d38ca  vi/mobile.signin.json (at head, 18 keys)
+2b8a23f2009b31547ae5793fb44d40c4c4f802c992f032ef62955f0c87b99412  src/features/auth/computers.tsx
+b79c083e85ae639ac6a8ad273d0f6c0336f34acedebceede6c9789d07d0e93b7  src/features/auth/tunnel-paths.tsx
+5bcd93de30deae49e4d193d60a2f08f09a1520f132fa47ffc626a9b005fa07af  src/features/auth/sign-in.tsx
+00463478805599bef7d43df972dd7d831339b20d626caff873ce5835b13a167a  src/features/auth/welcome.tsx
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+
+Brief/draft structural check: 44 keys in the brief, 44 in the draft, 0 missing,
+0 extra, key order identical (Python `json.load` comparison, printed
+`missing in draft: []` / `extra in draft: []` / `order equal: True`).
+
+---
+
+## 1. Independent mechanical pass — the repo's own parser
+
+Harness: `/Users/damian/.local-operator/sessions/675090271c24/scratchpad/audit/vi-mech.mts`
+(imports `parseMessage` from the worktree's `src/i18n/messages.ts`; reads the
+brief, the draft and the English catalogues; writes nothing).
+
+$ cd $SCRATCH/audit && <worktree>/node_modules/.bin/tsx vi-mech.mts
+
+First run exited 1 with 207 failures — **all of them from my own Latin-residue
+heuristic**, which split Vietnamese words at their diacritics ("không" -> "kh",
+"ng") and flagged the fragments. That was a defect in my test, not in the draft;
+the check was rewritten to flag only pure-ASCII tokens that are also words of the
+English source. The control run above is preserved here because a passing
+harness that never failed is worth less than one whose failure was diagnosed.
+
+Second run (before the rewrite):
+
+FAIL mobile.computers.wait.listing: possible Latin residue "danh" ...
+FAIL mobile.computers.wait.tunnel_status: possible Latin residue "status" ...
+MECHANICAL: 23 FAILURE(S)   EXIT=1
+
+Third run, after tokenising on Unicode word boundaries with the English word
+list as the discriminator:
+
+$ <worktree>/node_modules/.bin/tsx vi-mech.mts
+keys: brief=44 draft=44 en=107
+placeholders seen: status, name, reach
+plurals in this slice: 0
+
+MECHANICAL: PASS (0 failures)
+EXIT=0
+
+What that PASS asserts, per value: parses under `parseMessage`; parameter names
+AND kinds identical to English; ICU structure identical; raw placeholder tokens
+byte-identical and in order; key set and order identical to the brief; valid
+JSON; NFC; no ASCII "..."; no space before punctuation; no doubled spaces;
+full-stop parity; ellipsis parity; no English source word carried into a value.
+
+Independent cross-check in Python (unicodedata + ASCII-word scan):
+
+NFC all: True | NFD any: True       (precomposed Vietnamese, as the guide requires)
+pure-ASCII words that are also English source words:
+  {'Local': ['not_harness'], 'Radient': [6 keys], 'status': [3 a11y keys],
+   'URL': ['radient_body'], 'name': [3 a11y keys], 'reach': [3 a11y keys]}
+all other pure-ASCII words are Vietnamese syllables without diacritics
+  (Thanh, Thao, bao, cao, cho, danh, do, khai, ngay, qua, quay, sang, thay, thu, truy, xa)
+
+Byte-identical-to-English values: exactly one, `mobile.computers.row.a11y`.
+
+---
+
+## 2. The repo's own validator (generate.ts), on a scratch copy
+
+The English-first worktree was never written to. Scratch copy:
+`$SCRATCH/audit/repo-vi-only` (copy of `src/i18n`, `scripts/i18n`, `scripts/lib`,
+`package.json`, `tsconfig.json`, with `node_modules` symlinked to the worktree's
+existing install — no dependency install performed).
+
+(a) Control on the unmodified copy, to prove the validator examines this locale:
+
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/generate.ts --check
+vi/mobile.computers.json disagrees with the English source — missing:
+mobile.computers.not_harness, mobile.computers.wait.listing, ... ,
+mobile.computers.remove.confirm; unknown: none
+EXIT=1
+
+(An earlier control on a full-tree copy stopped at `es/…` first, because in this
+English-first wave six locales also lack the 44 keys — recorded so the reader can
+see why the scratch copy was reduced to `en` + `vi`.)
+
+(b) Draft merged into the scratch `vi` catalogues, six other locales scaffolded
+with the English source value (scratch-only scaffolding, none of it an audit
+subject):
+
+mobile.computers: +30 keys, now 75
+mobile.signin: +14 keys, now 32
+merged 44
+
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/generate.ts
+Wrote src/i18n/catalogue.gen.ts (734 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+EXIT=0
+
+$ node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/i18n/generate.ts --check
+src/i18n/catalogue.gen.ts is current (734 keys, 21 namespaces, argument types from en, es, fr, hi, ru, ur, vi, zh-CN)
+EXIT=0
+
+(c) Generated-block assertion (the values must be in the runtime projection, not
+merely accepted by the authoring check):
+
+$ node --input-type=module -e '... import ./src/i18n/catalogue.gen.ts ...'
+vi block keys=734 audited=44 mismatches=0
+
+(d) Negative controls — each mutation exits 1 and names the `vi` file:
+
+drop {reach} from row.a11y_connecting:
+vi/mobile.computers.json: mobile.computers.row.a11y_connecting does not carry the source's parameters — missing: reach; unexpected: none (English: name:text, reach:text, status:text; vi: name:text, status:text)
+EXIT=1
+
+break `{status` in wait.tunnel_status:
+vi/mobile.computers.json: mobile.computers.wait.tunnel_status is not a valid message — Invalid message "Radient đã có đường hầm — {status.": expected ',' or '}' (at offset 33)
+EXIT=1
+
+add an unknown key:
+vi/mobile.computers.json disagrees with the English source — missing: none; unknown: mobile.computers.zzz_audit_control
+EXIT=1
+
+restored, then:
+src/i18n/catalogue.gen.ts is current (734 keys, 21 namespaces, …)
+EXIT=0
+
+---
+
+## 3. Linguistic pass
+
+No command produces this section: it is a reading of all 44 values against the
+English, the `vi` style guide, the glossary and the shipped `vi` copy, done twice
+(the second pass deliberately looking for what the first missed, since sign-in and
+the computer errors are a high-visibility group). Outcomes and reasoning are in
+`report.md` and `receipt.json`; the per-key verdicts that are not clean are the
+five findings there (1 MINOR, 4 NIT).
+
+Fit numbers used (not measured on a rendered frame, stated as arithmetic):
+mono-label is size 11 with 0.06 em tracking (src/ui/tokens.gen.ts:203); badge
+padding px-2 + 1 px border; worst `vi` pair «đang thiết lập» + «đang phản hồi»
+≈ 240 px against ≈ 358 px of content width on a 390 pt phone (English pair
+≈ 196 px); no `maxCells`/`maxChars` hint exists for these keys.
+
+---
+
+## 4. What was NOT done
+
+- No file in `~/local-operator-mobile/.worktrees/i18n-m3-s1` was written, staged
+  or committed (that tree is read-only for this lane).
+- No `i18n/ledger.json` row was written: the lane brief reserves repo writes for
+  the implementer/manager. The exact row text is in `receipt.json`
+  (`ledger_row_to_land`), note length 243 characters.
+- No rendered frame was captured: the audit brief asks for width judgement, not a
+  visual gate, and no simulator/browser was stood up for this lane.
+- No translation or MT service was used, in any form, at any point.

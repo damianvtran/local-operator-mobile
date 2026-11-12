@@ -1610,7 +1610,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* #241 (fix/show-more-polish) merged with main 9e193b57 (#236): both
 	 * sides' src carried, so neither parent's digest; re-derived once with
 	 * --print over the merged tree. Source identity only, NOT rendered U-08
-	 * evidence. */
+	 * evidence.
+	 *
+	 * Re-pinned for PR #243 (M3 S1 sign-in/computers keys, 44 translations, Urdu
+	 * direction fix) merged with main e24de6cd (#241 show-more polish): both sides' src
+	 * carried, so neither parent's digest; re-derived last with --print. Source
+	 * identity only, NOT rendered U-08 evidence. */
 	/* fix/ola-feedback-1112 (#1): the Team Bridge provider no longer keys the
 	 * router on the account, and the own-tunnel guide's and sign-in's Back leave
 	 * for Home with no history (`leave-screen.ts`). Re-derived once with --print
@@ -1623,7 +1628,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* fix/ola-feedback-1112: an interactive Radient sign-in opens the reader's
 	 * computer by the cold start's rule. Re-derived once with --print over the
 	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
-	src: "fa2b110a47e320b48788a684c591a547532da71939e03af528523fe285533114",
+	/* #245 (fix/ola-feedback-1112) merged with main d33c46af (#243): both
+	 * sides' src carried, so neither parent's digest; re-derived once with
+	 * --print over the merged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "a8d9037d58be5d003ca39730a5aad918cfb5de7181d4de53c79f40a998b7a6c9",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

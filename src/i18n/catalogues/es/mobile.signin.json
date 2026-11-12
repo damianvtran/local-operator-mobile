@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "Sesión iniciada",
 	"mobile.signin.stage_starting": "Iniciando sesión",
 	"mobile.signin.stage_unavailable": "Inicio de sesión no disponible",
-	"mobile.signin.superseded": "Se inició otro acceso."
+	"mobile.signin.superseded": "Se inició otro acceso.",
+	"mobile.signin.title": "Iniciar sesión",
+	"mobile.signin.intro": "Tu navegador completa el inicio de sesión, así que la app nunca ve tu contraseña.",
+	"mobile.signin.start": "Iniciar sesión con Radient",
+	"mobile.signin.use_address": "Usar una dirección y contraseña",
+	"mobile.signin.panel.opening": "Abriendo tu navegador…",
+	"mobile.signin.panel.waiting": "Esperando a tu navegador.",
+	"mobile.signin.panel.waiting_help": "Completa el inicio de sesión allí y vuelve a esta app.",
+	"mobile.signin.panel.cancelled": "Se canceló el inicio de sesión.",
+	"mobile.signin.panel.cancelled_help": "No se cambió nada en tu cuenta.",
+	"mobile.signin.panel.unavailable": "Esta compilación no puede completar el inicio de sesión con Radient.",
+	"mobile.signin.panel.unavailable_alt": "Aún puedes conectarte con la dirección y la contraseña del relé.",
+	"mobile.signin.try_anyway": "Reintentar de todos modos",
+	"mobile.signin.welcome.headline": "Tu agente se ejecuta en tu máquina.",
+	"mobile.signin.welcome.body": "Esta app dirige las sesiones de tu propia máquina y muestra lo que hizo. Tu código nunca sale de ella."
 }

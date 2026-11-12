@@ -1,0 +1,217 @@
+{
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "112b2963371b",
+  "instance": "fdd48b3ce97c",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "session runtime model reported by the harness (no fallback, no role/model pin, no tool restriction)",
+  "independent_from_translator_session": true,
+  "not_round1_auditor": "7d94e65185a6",
+  "not_v1_translator": "4270cae4ed9c",
+  "not_v2_revisor": "e79c854e0ab4"
+ },
+ "status": "passed",
+ "locale": "fr",
+ "namespace": "mobile.computers+mobile.signin (M3 S1)",
+ "audit_kind": "delta",
+ "audit_date": "2026-11-12",
+ "head": "a5593a79ef8414cfa6af05dfbc151dd47ada6199",
+ "round1_head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+ "base_origin_main": "9e193b57691e88d06bbb36cb694651ad69fef959",
+ "worktree": "~/local-operator-mobile/.worktrees/i18n-m3-s1 (read-only; git status clean before and after)",
+ "key_count": 44,
+ "keys_read": {
+  "changed": [
+   "mobile.computers.wait.listing",
+   "mobile.signin.panel.waiting_help",
+   "mobile.computers.remove.body",
+   "mobile.computers.paths.own_body"
+  ],
+  "slot_labels": [
+   "mobile.computers.wait.tunnel_status",
+   "mobile.computers.badge.active",
+   "mobile.computers.status.provisioning",
+   "mobile.computers.status.suspended",
+   "mobile.computers.status.disabled",
+   "mobile.computers.status.revoked",
+   "mobile.computers.status.unknown"
+  ],
+  "note": "10 strings read for language quality; the other 34 draft values re-proven byte-identical to v1 and mechanically valid, not linguistically re-judged"
+ },
+ "sha256": {
+  "draft_v2": "46dfc7cdcbe80e0afad9844df811e42d52d43748ed93219e567e1c33d95c48e7",
+  "draft_v1": "07a54a5b9725f2d97f264e94b40eb2a5939e33f2a7d2e79187ffb41f5bf0c0bb",
+  "replacements": "62e4c906fe13407dea6afac4952ee24b7d41b00512ff64fb8523955d6c832c3a",
+  "brief": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f"
+ },
+ "input_hashes": {
+  "en": [
+   {
+    "path": "src/i18n/catalogues/en/mobile.computers.json",
+    "sha256": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109"
+   },
+   {
+    "path": "src/i18n/catalogues/en/mobile.signin.json",
+    "sha256": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252"
+   }
+  ],
+  "context": [
+   {
+    "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+    "sha256": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a"
+   },
+   {
+    "path": "src/i18n/catalogues/en/mobile.signin.context.json",
+    "sha256": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56"
+   }
+  ],
+  "target_locale_shipped": [
+   {
+    "path": "src/i18n/catalogues/fr/mobile.computers.json",
+    "sha256": "c3015755e033b3fca2236ffee8d967df3c25ccff96ee85aad0bd9457cd5b6135"
+   },
+   {
+    "path": "src/i18n/catalogues/fr/mobile.signin.json",
+    "sha256": "c44cf80d43eacbc6ea3a8d0dc4bbb8991e28fdc3298037a134d7eb15d2dadfee"
+   }
+  ],
+  "style_guide": {
+   "path": "i18n/style-guides/fr.md",
+   "source": "~/local-operator origin/main 8459804f",
+   "sha256": "5315e1ac10c2ce57aac631ba653d08de680ee70c9a022ed3a8345ce2f9902ee7"
+  },
+  "glossary": {
+   "path": "i18n/glossary.md",
+   "source": "~/local-operator origin/main 8459804f",
+   "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  }
+ },
+ "integrity": {
+  "result": "passed",
+  "changed_keys": 4,
+  "changed_set_equals_replacements_set": true,
+  "untouched_keys_byte_identical": "40/40",
+  "line_level_diff": "4 changed lines, 46 lines both files, identical trailing bytes (no BOM), key order identical to brief",
+  "keys_added_or_dropped": 0
+ },
+ "mechanical": {
+  "parser": "src/i18n/messages.ts parseMessage (the parser generate.ts and the runtime use)",
+  "parsed": "44/44",
+  "placeholder_parity": "44/44 names and kinds identical to English",
+  "plural_select_in_group": 0,
+  "clldr_categories_required": "none — no plural message in this group (fr one/many/other + never few would apply only if one were added)",
+  "protected_tokens": "0 losses (no backticks/flags/paths/identifiers in this group; Local Operator/Radient/URL kept)",
+  "typography": "U+2019 apostrophes only, U+2026 ellipsis, spaced em dash, U+202F before every prose ':' — 0 deviations",
+  "repo_validator": {
+   "command": "node scripts/i18n/generate.ts --check",
+   "exit": 1,
+   "why": "aborts at the first locale (es) whose catalogue still lacks the 30 new keys — pre-landing state of a one-locale draft, not an fr verdict; it also cannot see an unlanded draft",
+   "claimed_as_fr_evidence": false
+  }
+ },
+ "slot_check": {
+  "sentence": "Radient dispose du tunnel — {status}.",
+  "params": {
+   "status": "text"
+  },
+  "labels": [
+   {
+    "label": "actif (badge.active, SHIPPED fr)",
+    "rendered": "Radient dispose du tunnel — actif.",
+    "reads_ok": true
+   },
+   {
+    "label": "provisionnement (status.provisioning, DRAFT)",
+    "rendered": "Radient dispose du tunnel — provisionnement.",
+    "reads_ok": true,
+    "note": "weakest of the six — a noun among five adjectives; see D-01"
+   },
+   {
+    "label": "suspendu (status.suspended, DRAFT)",
+    "rendered": "Radient dispose du tunnel — suspendu.",
+    "reads_ok": true
+   },
+   {
+    "label": "désactivé (status.disabled, DRAFT)",
+    "rendered": "Radient dispose du tunnel — désactivé.",
+    "reads_ok": true
+   },
+   {
+    "label": "révoqué (status.revoked, DRAFT)",
+    "rendered": "Radient dispose du tunnel — révoqué.",
+    "reads_ok": true
+   },
+   {
+    "label": "inconnu (status.unknown, DRAFT)",
+    "rendered": "Radient dispose du tunnel — inconnu.",
+    "reads_ok": true
+   }
+  ],
+  "agreement": "all six labels are masculine singular, agreeing with 'tunnel' (masc. sg.); no gender/number mismatch in any fill",
+  "verdict": "6/6 grammatical and truthful; no contradiction for provisioning/suspended/disabled/revoked"
+ },
+ "findings": [
+  {
+   "id": "D-01",
+   "severity": "NIT",
+   "key": "mobile.computers.status.provisioning",
+   "current": "provisionnement",
+   "problem": "The only noun among five adjectives in the {status} slot of « Radient dispose du tunnel — ... », so that one fill reads as a bare status label rather than the appositive adjective the other five give. Kept: the label's other consumers are mono badges, 'mise en place' is two words in a width-critical pill, and English has the same adjective/gerund mix — so this is a parallelism wart, not a defect.",
+   "suggestion": "No change required. If the sentence were ever to be re-cut, « statut : {status} » would accept both word classes; that is more words than the source has, so I do not recommend it."
+  }
+ ],
+ "observations": [
+  {
+   "id": "O-1",
+   "scope": "programme (en sidecar), not an fr finding",
+   "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+   "key": "mobile.computers.wait.tunnel_status",
+   "problem": "Stale note at head a5593a79: still says {status} is 'inserted verbatim and NOT translated', while the code now renders t(tunnelStatusKey(...)) — a translated label. The brief generator feeds this note to translators, so the other six locales are instructed against the shipped mechanism.",
+   "suggestion": "Fix the en context note with the head that changed the mechanism (no value in any catalogue changes)."
+  }
+ ],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "D-01"
+  ]
+ },
+ "round1_findings_disposition": {
+  "A-01": "resolved (MAJOR) — « en attendant que » + subjunctive is the correct locution",
+  "A-02": "resolved (MINOR)",
+  "A-03": "resolved (MINOR)",
+  "A-04": "rightly rejected — kept « provisionnement » (FranceTerme/Microsoft/IBM fr-fr precedent; one word in a width-critical mono badge)",
+  "A-05": "resolved (NIT)"
+ },
+ "fit": "no maxCells declared for any of the 44 keys (0/44); all four changed strings render in wrapping Text/dialog bodies with no numberOfLines; growth +14/+3/+26/+31 % by glyphs — height, not clipping; terminal wide-glyph risk N/A (React Native surface)",
+ "artifacts": {
+  "report.md": {
+   "path": "scratchpad/au2-fr/report.md",
+   "sha256": "3d093603cdf2d37ad4d1092ede8d03239cdecc6b5c6a2ee90d427a7c97d6687e"
+  },
+  "audit.log": {
+   "path": "scratchpad/au2-fr/audit.log",
+   "sha256": "0a74d2966113167d383c4360ac1439316c6cd9ef901165eb234669ed39a4cd63"
+  },
+  "audit-fr.mjs": {
+   "path": "scratchpad/au2-fr/audit-fr.mjs",
+   "sha256": "6aeab0d2680cf4ebc4e469b92492706982934c7db9f92640f4bbdeff403c8722"
+  },
+  "probe-fr.mjs": {
+   "path": "scratchpad/au2-fr/probe-fr.mjs",
+   "sha256": "ba27edd81e740849d3a9bb245c181f66da980ce96d6feee99830e453e45f2b20"
+  },
+  "residue.py": {
+   "path": "scratchpad/au2-fr/residue.py",
+   "sha256": "109c801532e67ce68d02ba1eb4b868a5c58733d3fa566c88e94a5d8a1796a44a"
+  },
+  "make-audit-log.sh": {
+   "path": "scratchpad/au2-fr/make-audit-log.sh",
+   "sha256": "4369c9a3ce6603dffe64e1aa3922cb322ade794c90ef60b39a61acee44b0e9f3"
+  }
+ },
+ "audit_notes_not_execution_log": "Analysis notes in report.md are not execution proof; audit.log carries the real commands with their actual output.",
+ "canonical_tracked_path_suggestion": "i18n/audits/evidence/fr/mobile.computers+mobile.signin/delta-fdd48b3ce97c/ (coder lands; this worktree is read-only for the auditor)",
+ "worktree_hygiene": "A helper function's cd leaked the first attempt at writing this log into the worktree (gitignored audit.log, 6122 B, 06:47). Detected in the same check, removed by exact path at 06:49; worktree verified clean before and after (git status --porcelain empty, no untracked files). No tracked file in the worktree was written, staged or committed."
+}

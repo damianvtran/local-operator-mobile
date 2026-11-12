@@ -1,0 +1,192 @@
+{
+  "auditor": "i18n-auditor",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "session default (system-prompt model header for session 1e150ddd75d3); no fallback used, no role or model pin",
+  "instance": "5ac1a4a06448",
+  "independent_from_translator_session": true,
+  "translator_session": "5dd57cd8d43e",
+  "status": "passed",
+  "locale": "ur",
+  "namespace": "mobile.computers+mobile.signin (M3 S1)",
+  "audit_kind": "first",
+  "audit_date": "2026-11-12",
+  "head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+  "base": "9e193b57691e88d06bbb36cb694651ad69fef959",
+  "keys_read": 44,
+  "input_hashes": {
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/5dd57cd8d43e/scratchpad/draft-ur-s1.json",
+      "sha256": "d1817d7bbef44516207eda3e4713058d4f5f21dd5bdc4aad11390ffda3b66bca"
+    },
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/translation-brief-s1.json",
+      "sha256": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f"
+    },
+    "translator_notes": {
+      "path": "/Users/damian/.local-operator/sessions/5dd57cd8d43e/scratchpad/notes-ur-s1.md",
+      "sha256": "19cf79f9a7c9a85864f23a4ccd81d632923e865d1fd56bf9086460b8f958971c",
+      "read_after": "first independent read of all 44 values"
+    },
+    "en_mobile.computers": {
+      "path": "src/i18n/catalogues/en/mobile.computers.json",
+      "sha256": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109"
+    },
+    "en_mobile.signin": {
+      "path": "src/i18n/catalogues/en/mobile.signin.json",
+      "sha256": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252"
+    },
+    "en_mobile.computers.context": {
+      "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+      "sha256": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a"
+    },
+    "en_mobile.signin.context": {
+      "path": "src/i18n/catalogues/en/mobile.signin.context.json",
+      "sha256": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56"
+    },
+    "ur_shipped_mobile.computers": {
+      "path": "src/i18n/catalogues/ur/mobile.computers.json",
+      "sha256": "d0e22582731fcafc91aae4e817e4a77f7d486cadad4673c43f0dbef9b4c67db3"
+    },
+    "ur_shipped_mobile.signin": {
+      "path": "src/i18n/catalogues/ur/mobile.signin.json",
+      "sha256": "9a5e63d36b274f7b1921a48ad60db6c7ef6ad2d5c5db11df92926302531d7d81"
+    },
+    "ur_shipped_mobile.common": {
+      "path": "src/i18n/catalogues/ur/mobile.common.json",
+      "sha256": "e33734af422e0c1aeee7349fa73911e1980a99ab938e137e45368c699203e853"
+    },
+    "ur_shipped_mobile.settings": {
+      "path": "src/i18n/catalogues/ur/mobile.settings.json",
+      "sha256": "66378236b2e25b533ee032e70a966c4e4ff0fecc96724c45028fbbade8830da0"
+    },
+    "ur_style_guide": {
+      "path": "~/local-operator i18n/style-guides/ur.md @ origin/main 8459804f56dd704d5c3a680ef68f53b7182786ab",
+      "sha256": "7276e96210fe5f23fd82a39ae4cc0c88b2c1009d3a551d914efc3f61516eddc4"
+    },
+    "glossary": {
+      "path": "~/local-operator i18n/glossary.md @ origin/main 8459804f56dd704d5c3a680ef68f53b7182786ab",
+      "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+    }
+  },
+  "artifacts": [
+    "/Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/receipt.json",
+    "/Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/report.md",
+    "/Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/audit.log",
+    "/Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/audit-ur.mts",
+    "/Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/bidi-punct-ur.mts",
+    "/Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/coverage-ur.mts",
+    "/Users/damian/.local-operator/sessions/1e150ddd75d3/scratchpad/build-audit-log.sh"
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "UR-S1-01",
+      "UR-S1-02",
+      "UR-S1-03",
+      "UR-S1-04",
+      "UR-S1-05",
+      "UR-S1-N1",
+      "UR-S1-N2",
+      "UR-S1-N3"
+    ]
+  },
+  "findings": [
+    {
+      "id": "UR-S1-01",
+      "severity": "MINOR",
+      "key": "mobile.computers.paths.own_body",
+      "current": "پیش رفتہ طریقہ: آپ اپنا کمپیوٹر خود دستیاب کرتے ہیں، اپنی چلائی ہوئی ٹنل کے ذریعے، اور اس کا پتہ یہاں چسپاں کرتے ہیں۔ کسی بھی مرحلے پر Radient اکاؤنٹ درکار نہیں، اور پاس ورڈ آپ کے پاس رہتا ہے۔",
+      "problem": "Meaning is intact, but two things read as translation. (a) The bracketed appositive «، اپنی چلائی ہوئی ٹنل کے ذریعے،» interrupts the verb phrase the way the English dash-clause does; Urdu takes the instrument inside the clause. (b) 'paste' is rendered «چسپاں کرتے ہیں» while shipped ur uses «پیسٹ کریں» for the same action in 3 keys (mobile.composer_input.paste.image, .paste.denied, mobile.team_bridge.attachment.paste) — a second word for one action.",
+      "suggestion": "پیش رفتہ طریقہ: آپ اپنا کمپیوٹر اپنی چلائی ہوئی ٹنل کے ذریعے خود دستیاب کرتے ہیں اور اس کا پتہ یہاں پیسٹ کرتے ہیں۔ کسی بھی مرحلے پر Radient اکاؤنٹ درکار نہیں، اور پاس ورڈ آپ کے پاس رہتا ہے۔"
+    },
+    {
+      "id": "UR-S1-02",
+      "severity": "MINOR",
+      "key": "mobile.computers.status.revoked",
+      "current": "منسوخ",
+      "problem": "Follows an existing shipped use of «منسوخ» for 'revoked' (mobile.settings.sign_out.done), so it is not a mistranslation — but the same word is the shipped word for Cancel (mobile.common.cancel «منسوخ کریں»), and the remove dialog that carries Cancel is rendered on the SAME screen as this badge (computers.tsx:662 confirm dialog; badges at :199/:203), opened by long-pressing that very row. The translator's note justifying the collision ('the two never share a screen') is factually wrong for this surface. State form also reads better than the bare verbal noun next to a Cancel button.",
+      "suggestion": "منسوخ شدہ (state form, keeps «منسوخ کریں» for Cancel) — or «کالعدم» (void/revoked, as in a revoked licence). Record the chosen word as a glossary row: this is the first surface in any locale that needs 'revoked', and six locales will otherwise diverge."
+    },
+    {
+      "id": "UR-S1-03",
+      "severity": "MINOR",
+      "key": "mobile.computers.refresh",
+      "current": "ریفریش کریں",
+      "problem": "A second rendering of the same English word already ships: mobile.settings.connection.refresh is «تازہ کریں». The brief says the key is separate because the SURFACE differs, not the wording. The draft's choice has more corpus behind it (ریفریش in mobile.team_bridge ×2), so it is defensible — but the split is unresolved and two renderings now ship for one action.",
+      "suggestion": "Keep «ریفریش کریں» (matches the shipped noun ریفریش and the loanword policy) and record it in the glossary; normalise mobile.settings.connection.refresh to it in a later wave — do not revert this key to «تازہ کریں»."
+    },
+    {
+      "id": "UR-S1-04",
+      "severity": "MINOR",
+      "key": "mobile.signin.panel.cancelled",
+      "current": "سائن ان منسوخ ہو گیا تھا۔",
+      "problem": "The past-perfect «تھا» was added to force a distinction from the shipped stage word (mobile.signin.stage_cancelled «سائن ان منسوخ ہو گیا»). As a headline shown the moment the reader dismisses the browser sheet, «تھا» reads as reporting an earlier completed cancellation, which is not what happened; English 'Sign-in was cancelled.' is simple past. The full stop already separates the two strings (the stage variant has none).",
+      "suggestion": "سائن ان منسوخ ہو گیا۔"
+    },
+    {
+      "id": "UR-S1-05",
+      "severity": "MINOR",
+      "key": "mobile.computers.paths.radient_title, mobile.signin.panel.unavailable_alt",
+      "current": "«Radient سے جڑیں» / «آپ پھر بھی ریلے کے پتہ اور پاس ورڈ سے جڑ سکتے ہیں۔»",
+      "problem": "Introduces جڑنا as a third verb for 'connect'. The shipped corpus settles on منسلک for exactly this relation (mobile.account_routing.disconnected «کسی کمپیوٹر سے منسلک ہو جائیں», mobile.home.connect_disabled_reason, mobile.session.not_connected.*, mobile.settings.status.connected «منسلک»), with رابطہ for an attempt in progress and جوڑیں only for pairing. Neither draft string is wrong Urdu; the issue is one concept gaining a second name.",
+      "suggestion": "Radient سے منسلک ہو جائیں · آپ پھر بھی ریلے کے پتہ اور پاس ورڈ سے منسلک ہو سکتے ہیں۔ (If brevity matters more than corpus consistency, keep جڑنا and record it in the glossary as the CTA verb — but decide once, in one place.)"
+    },
+    {
+      "id": "UR-S1-N1",
+      "severity": "NIT",
+      "key": "mobile.signin.intro",
+      "current": "سائن ان آپ کا براؤزر مکمل کرتا ہے، اس لیے ایپ کو آپ کا پاس ورڈ کبھی نظر نہیں آتا۔",
+      "problem": "Fronting «سائن ان» before the subject is a mild garden path in a reassuring privacy line — the reader parses the bare noun first. English fronts 'Your browser', not 'the sign-in'.",
+      "suggestion": "آپ کا براؤزر سائن ان مکمل کرتا ہے، اس لیے ایپ کو آپ کا پاس ورڈ کبھی نظر نہیں آتا۔"
+    },
+    {
+      "id": "UR-S1-N2",
+      "severity": "NIT",
+      "key": "mobile.computers.paths.own_title",
+      "current": "اپنی ٹنل خود ترتیب دیں",
+      "problem": "«اپنی» and «خود» both render 'own'; the title doubles it where English says it once ('Set up your own tunnel'). The reflexive belongs in the body, which has it.",
+      "suggestion": "اپنی ٹنل ترتیب دیں"
+    },
+    {
+      "id": "UR-S1-N3",
+      "severity": "NIT",
+      "key": "mobile.computers.status.provisioning",
+      "current": "تیار ہو رہا",
+      "problem": "Recorded so a later wave does not 'fix' it blindly: «تیار» appears in both this badge and route_ready «راستہ تیار». They are different fields and never render together, and each reads correctly on its own.",
+      "suggestion": "No change."
+    }
+  ],
+  "rulings": {
+    "sign_in_spelling": "Ship «سائن ان» (no diacritic). Measured in the shipped ur catalogues: 21 occurrences plain vs 6 with the kasra (mobile.home 1, mobile.oauth 3, mobile.signin 2 — not the 4-in-signin figure the translator's note claims). The plain form also carries every verb construction (سائن ان کریں, سائن ان ہو گیا). Normalise the 6 kasra instances in a later wave; do not reintroduce the diacritic here.",
+    "advanced": "Endorse «پیش رفتہ». «پیش رفتہ ٹیکنالوجی» / «پیش رفتہ ممالک» are everyday Urdu collocations for 'advanced', and «جدید» would say 'modern'. The translator's ruling stands.",
+    "path_vs_route": "Endorse طریقہ for path / راستہ for route. راستہ is already the shipped word for the control-plane route (mobile.settings.diagnostics.route «راستہ», mobile.computers.wait.host_answering «راستہ تیار»), and طریقہ is otherwise unused for anything that would collide (one shipped use, for 'how to'). The pair holds.",
+    "judged_identical_list": "Confirmed empty, correctly: no draft value is byte-identical to its English source. The Latin tokens inside values (Local Operator, Radient, URL, {status}/{name}/{reach}) are keep-as-is per glossary §1 and the ur guide, and none of them is an untranslated string.",
+    "zh_cn": "Out of scope for this locale's audit; the zh-CN spacing/ellipsis question is the zh-CN auditor's ruling."
+  },
+  "mechanical": {
+    "json": "valid, 44 keys, UTF-8, NFC everywhere",
+    "key_set": "44/44 vs brief — no key missing, none extra, order identical, no duplicates; brief English == en catalogue for all 44; every sliced key has an en context note",
+    "placeholders": "parseMessage (repo parser, src/i18n/messages.ts) on all 44 values: 4 keys carry params, names AND kinds identical to English (status:text; name/status/reach:text ×3); no mismatch",
+    "icu": "no plural/select in this slice, so no CLDR category requirement applies (ur is one/other where plurals do appear)",
+    "punctuation": "full stop parity with English 16/16, ellipsis parity 2/2 (U+2026, no ASCII '...', no double '……'), ASCII full stop/parenthesis leakage none",
+    "bidi": "no manual bidi control characters (U+200E/200F/202A-202E/2066-2069/061C) in any value — the ur guide forbids them",
+    "tags_code": "no markup, backticks, commands or flags in this slice; Latin tokens byte-identical",
+    "coverage": "after this slice both namespaces are complete in ur: 0 missing keys (computers 75/75, signin 32/32); the only value equal to English is mobile.computers.transport.radient = 'Radient' (brand)"
+  },
+  "render_notes_not_copy_defects": [
+    {
+      "id": "R1",
+      "topic": "badge monospace face + tracking on Arabic script",
+      "detail": "status.* and reach.* render through Badge with mono={true} → text-mono-label: JetBrains Mono 11px/1.2, weight 600, letter-spacing 0.06em, in a fixed leading-4 line box (src/ui/theme.css:137-140, src/ui/variants.ts:516). JetBrains Mono has no Arabic coverage, so every Urdu badge falls back to a system Arabic face — and tracking on joined Arabic script breaks the cursive joins a native reader depends on. src/ui/components/list-row-meta.ts already models this class of problem for CJK (WIDE_GLYPH + FALLBACK_ADVANCE_EM) but its WIDE_GLYPH range does not include U+0600-06FF, so any width estimate over Urdu text is measured at the Latin 0.6em advance.",
+      "action": "design/engineering for the ur frame: render these badges in the sans «meta» step for ur (or drop tracking), and either extend WIDE_GLYPH to Arabic or stop sizing Urdu strings with the mono advance. Not a translation defect; the words are right."
+    },
+    {
+      "id": "R2",
+      "topic": "strings that begin with a Latin token under the app's own bidi handling",
+      "detail": "4 draft values begin with the Latin brand «Radient» (wait.tunnel_status, paths.radient_title, paths.radient_body, signin.start), plus the 3 row.a11y* values which begin with {name} (a hostname may be Latin). There is no FSI/PDI isolation anywhere in src/ (grep for U+2066-2069 returns nothing); src/ui/direction.tsx documents that isolation is LTR_TEXT/LTR_WRITING for blocks that own their line, and that RN's default paragraph base on native is Natural (first strong character). Under that reading these strings take an LTR base on iOS/Android and lay the Urdu clause out from the wrong end. Locale-wide, not new: 87 of the 139 mixed-script shipped ur values are Latin-initial (e.g. mobile.computers.billing_help, mobile.computers.harness_help, mobile.chrome.home.connecting).",
+      "action": "The RTL design/QA round owns it either way: verify on a real ur frame. If the base direction is wrong, it is a render-layer fix for the whole locale (FSI/PDI in t(), or an explicit RTL writingDirection on translated prose), never a copy rewrite. Unverified here — this host cannot run a device frame."
+    }
+  ],
+  "operator_request_note": "The brief deliberately leaves {status} untranslated (Radient's own tunnel-status word), so mobile.computers.wait.tunnel_status will show one English token inside Urdu copy — «Radient کے پاس ٹنل ہے — active۔». That is the brief's intent, not a defect, but it is the one place an Urdu interface shows English, so it is worth an explicit confirmation against the operator's 'no English anywhere' bar."
+}

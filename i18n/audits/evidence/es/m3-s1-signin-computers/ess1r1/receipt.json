@@ -1,0 +1,168 @@
+{
+  "auditor": "i18n-auditor",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "session model header (deepseek/deepseek-flash); no fallback used, no role/default pin changed",
+  "instance": "967cada7d16e",
+  "independent_from_translator_session": true,
+  "translator_session": "e8b188dd15b9 (m3s1-tr-es)",
+  "status": "passed",
+  "locale": "es",
+  "namespace": "mobile.computers+mobile.signin (M3 S1)",
+  "head": "1796c3a5c46f5ecead1fa0abbb8c6eda36a7a9ce",
+  "audit_date": "2026-11-12",
+  "keys_read": 44,
+  "audit_kind": "first",
+  "sha256": {
+    "draft": "9ff88b2c3df3b4ce24a7a9ff615b48aa7002ee9160ae0ca4fea5a3745de125a3",
+    "brief": "531e6edd8e5f9af58d9bf2aa2b8b5d352da1f8fb27bac229213a549cb902487f",
+    "en_mobile.computers.json": "f0b7ee2800700254b8c2b90d1dac6811be79ec23ffdfd0f1460bba6accb40109",
+    "en_mobile.computers.context.json": "93a3f18eacd3985a65cef115e50dee5fdad9731b7692fccf4089e473723e6e6a",
+    "en_mobile.signin.json": "2fc23f0abea7d1be5a1679e4d73a08fa8787353a4aefe8764eed29cb88d20252",
+    "en_mobile.signin.context.json": "1e9dc9d97bd3c5733d6631530996acb56e318c6ed24ed245450eabff32996f56",
+    "es_shipped_mobile.computers.json": "488e26a9ded297e526f53493b2e747ae52b317ed9464529d0b2b3da4db952070",
+    "es_shipped_mobile.signin.json": "1ff460013c004c73a905f4c685ab5a7218f86b2de0ddb17d22ce5fa2f50ea486",
+    "es_shipped_mobile.common.json": "b49de650e59354e1401cd3e456553d7ef06015ccfebadff116c8165d00d58608",
+    "es_shipped_mobile.chrome.json": "a64e112049484e44dc3575bb1c2c1deb21cfeca86b450cc27157fb987ad6a2de",
+    "es_shipped_mobile.settings.json": "0a7c7af6dfe8594fc91e24f8694e8c6ed2678e738e682a97a69c8762286a8a56",
+    "core_style_guide_es.md@origin/main": "4a6f6270f028e5f5fbca7156a8f5099077f92585db94c14653482e9b188248a6",
+    "core_glossary.md@origin/main": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "findings": [
+    {
+      "id": "E-01",
+      "severity": "minor",
+      "key": "mobile.signin.welcome.body",
+      "current": "Esta app dirige las sesiones de tu propia máquina y muestra lo que hizo. Tu código nunca sale de ella.",
+      "problem": "The privacy claim's referent is ambiguous in Spanish: 'ella' can resolve to 'la app' (the sentence subject) or 'máquina'. The English context note fixes 'it' = the machine, and the promise must land on the machine. Same sentence shifts the source's 'on your machine' to 'de tu máquina'.",
+      "suggestion": "Esta app dirige las sesiones en tu propia máquina y muestra lo que hizo. Tu código nunca sale de tu máquina."
+    },
+    {
+      "id": "E-02",
+      "severity": "minor",
+      "key": "mobile.computers.paths.radient_body",
+      "current": "…Radient gestiona el túnel por ti y te da una URL privada y autenticada…",
+      "problem": "One English verb, 'run a tunnel', is rendered 'gestiona' here and 'ejecutas' in the card directly below (paths.own_body: 'un túnel que ejecutas tú'), on the same choose-a-path screen. 'gestiona' also drops 'runs' and makes Radient a manager rather than the runner.",
+      "suggestion": "Requiere una cuenta de Radient. Radient ejecuta el túnel por ti y te da una URL privada y autenticada, así que no hay nada que configurar en este teléfono ni ninguna contraseña del relé que guardar."
+    },
+    {
+      "id": "E-03",
+      "severity": "nit",
+      "key": "mobile.computers.wait.tunnel_status",
+      "current": "Radient ya tiene el túnel — {status}.",
+      "problem": "'ya' adds 'already', which the English does not say. Defensible as step-2 progress; the sentence stays grammatical around the untranslated {status} either way.",
+      "suggestion": "Radient tiene el túnel — {status}."
+    },
+    {
+      "id": "E-04",
+      "severity": "nit",
+      "key": "mobile.computers.own_tunnel_instead",
+      "current": "Usar mi propio túnel en su lugar",
+      "problem": "Trailing 'en su lugar' keeps the English 'instead' word order and reads stiff on a quiet text button; 'su' has no clean antecedent. Length constraint is real (own_action already reads 'Usar mi propio túnel'), so this is a nit, not a defect.",
+      "suggestion": "Usar mi propio túnel en vez de Radient"
+    },
+    {
+      "id": "E-05",
+      "severity": "nit",
+      "key": "mobile.computers.status.route_ready",
+      "current": "ruta lista",
+      "problem": "Momentary noun reading 'route list' (la lista) in a badge that otherwise holds bare adjectives. The English forces the noun ('route ready') and the sibling badges are feminine adjectives, so the wording is right; noted for the record only.",
+      "suggestion": "keep (alternatively 'ruta preparada', +4 glyphs)"
+    },
+    {
+      "id": "E-06",
+      "severity": "nit",
+      "key": "mobile.computers.remove.body",
+      "current": "La quita de la lista de este teléfono. No afecta a la máquina, a su túnel ni a tu cuenta.",
+      "problem": "Sentence-initial 'La' is briefly ambiguous between article and object pronoun, and 'quita' between noun and verb. Both readings carry the same meaning, so no harm is done; an explicit subject removes the double take.",
+      "suggestion": "Esto la quita de la lista de este teléfono. No afecta a la máquina, a su túnel ni a tu cuenta."
+    },
+    {
+      "id": "E-07",
+      "severity": "nit",
+      "key": "mobile.computers.paths.own_body",
+      "current": "…publicas tu máquina por tu cuenta, con un túnel que ejecutas tú… y la contraseña la guardas tú.",
+      "problem": "Three first-and-second-person emphases in two sentences is heavier in neutral Spanish than in English, though the source does carry all three ('yourself', 'you run', 'you keep').",
+      "suggestion": "keep; if the card is tight, drop the last emphasis: '…y tú guardas la contraseña.'"
+    }
+  ],
+  "unresolved_blocker_major_count": 0,
+  "mechanical": {
+    "validator": "parseMessage from src/i18n/messages.ts @1796c3a, run from this session's scratchpad against the draft (read-only import)",
+    "result": "44/44 keys parse; placeholder names and kinds identical to English; no key added/dropped/reordered; no plurals in this slice (0 plural-carrying keys); no manual bidi controls; no ASCII '...'; no straight quotes; no space before ? : ; !",
+    "note": "es plural categories one/many/other not exercised: no plural arm exists in these 44 keys"
+  },
+  "term_ruling": {
+    "term": "computer",
+    "draft_uses": "máquina",
+    "verdict": "correct — keep máquina",
+    "derived_counts": {
+      "mobile_es_máquina": "54 occurrences in 10 files",
+      "mobile_es_ordenador": "7 occurrences in 5 files",
+      "mobile_es_computadora": "3 occurrences in 1 file (mobile.notifications.permission.*)",
+      "core_es_máquina": "77 occurrences",
+      "core_es_ordenador": "4 occurrences",
+      "core_es_computadora": "0"
+    },
+    "note": "ordenador is Peninsular and computadora LatAm; the es style guide's neutral-Spanish rule plus the 131-to-11 shipped majority settle máquina. Glossary has no row for 'computer' and the es guide records no locale call — recommend adding computer → máquina so it is not reopened. Minority forms are pre-existing and outside these 44 keys; they do not gate this audit."
+  },
+  "second_pass": {
+    "required_because": "high-visibility group (onboarding/sign-in)",
+    "method": "independent Spanish-only reader subagent (deepseek/deepseek-flash, job f324c81526ca), English source withheld; this auditor adjudicated every suggestion against the shipped catalogue and the glossary",
+    "accepted": [
+      "welcome.body pronoun ambiguity (E-01)",
+      "own_tunnel_instead stiffness (E-04)",
+      "remove.body sentence-initial 'La' (E-06)"
+    ],
+    "rejected_with_reason": [
+      "'dirección' → 'correo': wrong; this is a relay host:port address, not an email (shipped es: 'Tu dirección y tu contraseña siguen aquí')",
+      "'relé' → 'relay': glossary §2 mandates relé; shipped es: 'El relé no aceptó esa contraseña'",
+      "'compilación' → 'versión de la app': shipped es already says 'Esta compilación no incluye notificaciones'",
+      "'esperar a' + browser called a calque: 'esperar a' with a thing is standard Spanish, and shipped es stage_browser is 'Esperando a tu navegador'",
+      "'Reintentar' → 'Intentar': 'Try again' presupposes a prior attempt; shipped es retry keys are all 'Reintentar'",
+      "intro 'tu navegador completa el inicio de sesión': faithful to the source and to shipped es stage_exchanging"
+    ]
+  },
+  "evidence_paths": {
+    "scratchpad": "/Users/damian/.local-operator/sessions/89450c856fcf/scratchpad",
+    "receipt": "receipt-es-s1.json",
+    "report": "report-es-s1.md",
+    "audit_log": "audit-es-s1.log",
+    "validator_script": "audit-es-s1.mts"
+  },
+  "repo_writes": "none — the worktree was read-only for this audit; no catalogue, ledger or evidence file was written into ~/local-operator-mobile",
+  "key_delta": {
+    "claim": "all 44 brief keys are NEW to es; none exists in es/mobile.computers.json or es/mobile.signin.json today (jq has($k) per key: 0/44 hits)",
+    "apply": "append-only in both files",
+    "expected_counts": {
+      "mobile.computers": "en 75 = es 45 + 30 brief",
+      "mobile.signin": "en 32 = es 18 + 14 brief"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "report-es-s1.md",
+      "sha256": "11382d93fadb71b238b97568d9c3a4ce2fcd2e24600db9ea03fe299bc346e592"
+    },
+    {
+      "path": "audit-es-s1.log",
+      "sha256": "f308204d556865634f1f53c9780a0027f0d454e1f0fed6d16f539c2c606cab72"
+    },
+    {
+      "path": "audit-es-s1.mts",
+      "note": "validator script; parseMessage imported from the worktree, no dependency install"
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "E-01",
+      "E-02",
+      "E-03",
+      "E-04",
+      "E-05",
+      "E-06",
+      "E-07"
+    ]
+  }
+}

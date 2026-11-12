@@ -106,6 +106,7 @@ export type CatalogueKey =
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
 	| "mobile.computers.billing_help"
+	| "mobile.computers.billing_inactive"
 	| "mobile.computers.connect_refused.generic"
 	| "mobile.computers.connect_refused.password"
 	| "mobile.computers.connect_refused.title"
@@ -114,10 +115,27 @@ export type CatalogueKey =
 	| "mobile.computers.disabled_help"
 	| "mobile.computers.harness_help"
 	| "mobile.computers.hide_details"
+	| "mobile.computers.list.heading"
 	| "mobile.computers.none_on_phone"
+	| "mobile.computers.not_harness"
+	| "mobile.computers.own_tunnel_instead"
 	| "mobile.computers.password_placeholder"
+	| "mobile.computers.paths.own_action"
+	| "mobile.computers.paths.own_body"
+	| "mobile.computers.paths.own_title"
+	| "mobile.computers.paths.radient_body"
+	| "mobile.computers.paths.radient_title"
+	| "mobile.computers.paths.recommended"
 	| "mobile.computers.protected"
+	| "mobile.computers.reach.answering"
+	| "mobile.computers.refresh"
+	| "mobile.computers.remove.body"
+	| "mobile.computers.remove.confirm"
+	| "mobile.computers.remove.title"
 	| "mobile.computers.retry"
+	| "mobile.computers.row.a11y"
+	| "mobile.computers.row.a11y_active"
+	| "mobile.computers.row.a11y_connecting"
 	| "mobile.computers.save_refused.body"
 	| "mobile.computers.save_refused.body_with_code"
 	| "mobile.computers.save_refused.continue"
@@ -129,19 +147,31 @@ export type CatalogueKey =
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
+	| "mobile.computers.status.disabled"
+	| "mobile.computers.status.provisioning"
+	| "mobile.computers.status.revoked"
+	| "mobile.computers.status.route_ready"
+	| "mobile.computers.status.suspended"
+	| "mobile.computers.status.unknown"
 	| "mobile.computers.storage_refused.no_code"
 	| "mobile.computers.storage_refused.with_code"
 	| "mobile.computers.switch"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
+	| "mobile.computers.try_now"
+	| "mobile.computers.wait.answered"
 	| "mobile.computers.wait.answering"
 	| "mobile.computers.wait.host_answering"
+	| "mobile.computers.wait.listing"
 	| "mobile.computers.wait.nothing_answered"
 	| "mobile.computers.wait.nothing_answered_help"
 	| "mobile.computers.wait.paused"
 	| "mobile.computers.wait.relay_sessions"
 	| "mobile.computers.wait.relay_version"
 	| "mobile.computers.wait.relay_version_sessions"
+	| "mobile.computers.wait.start_again"
+	| "mobile.computers.wait.tunnel_status"
+	| "mobile.computers.wait.use_computer"
 	| "mobile.home.chip.effort_chosen"
 	| "mobile.home.chip.effort_default"
 	| "mobile.home.chip.effort_default_unnamed"
@@ -497,6 +527,14 @@ export type CatalogueKey =
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
+	| "mobile.signin.intro"
+	| "mobile.signin.panel.cancelled"
+	| "mobile.signin.panel.cancelled_help"
+	| "mobile.signin.panel.opening"
+	| "mobile.signin.panel.unavailable"
+	| "mobile.signin.panel.unavailable_alt"
+	| "mobile.signin.panel.waiting"
+	| "mobile.signin.panel.waiting_help"
 	| "mobile.signin.progress"
 	| "mobile.signin.retry"
 	| "mobile.signin.show_diagnostics"
@@ -511,7 +549,13 @@ export type CatalogueKey =
 	| "mobile.signin.stage_signed_in"
 	| "mobile.signin.stage_starting"
 	| "mobile.signin.stage_unavailable"
+	| "mobile.signin.start"
 	| "mobile.signin.superseded"
+	| "mobile.signin.title"
+	| "mobile.signin.try_anyway"
+	| "mobile.signin.use_address"
+	| "mobile.signin.welcome.body"
+	| "mobile.signin.welcome.headline"
 	| "mobile.team_bridge.attachment.add"
 	| "mobile.team_bridge.attachment.attached_summary"
 	| "mobile.team_bridge.attachment.cannot_send"
@@ -793,6 +837,7 @@ export type NoParamKey =
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
 	| "mobile.computers.billing_help"
+	| "mobile.computers.billing_inactive"
 	| "mobile.computers.connect_refused.generic"
 	| "mobile.computers.connect_refused.password"
 	| "mobile.computers.connect_refused.title"
@@ -801,9 +846,23 @@ export type NoParamKey =
 	| "mobile.computers.disabled_help"
 	| "mobile.computers.harness_help"
 	| "mobile.computers.hide_details"
+	| "mobile.computers.list.heading"
 	| "mobile.computers.none_on_phone"
+	| "mobile.computers.not_harness"
+	| "mobile.computers.own_tunnel_instead"
 	| "mobile.computers.password_placeholder"
+	| "mobile.computers.paths.own_action"
+	| "mobile.computers.paths.own_body"
+	| "mobile.computers.paths.own_title"
+	| "mobile.computers.paths.radient_body"
+	| "mobile.computers.paths.radient_title"
+	| "mobile.computers.paths.recommended"
 	| "mobile.computers.protected"
+	| "mobile.computers.reach.answering"
+	| "mobile.computers.refresh"
+	| "mobile.computers.remove.body"
+	| "mobile.computers.remove.confirm"
+	| "mobile.computers.remove.title"
 	| "mobile.computers.retry"
 	| "mobile.computers.save_refused.body"
 	| "mobile.computers.save_refused.continue"
@@ -815,14 +874,25 @@ export type NoParamKey =
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
+	| "mobile.computers.status.disabled"
+	| "mobile.computers.status.provisioning"
+	| "mobile.computers.status.revoked"
+	| "mobile.computers.status.route_ready"
+	| "mobile.computers.status.suspended"
+	| "mobile.computers.status.unknown"
 	| "mobile.computers.storage_refused.no_code"
 	| "mobile.computers.switch"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
+	| "mobile.computers.try_now"
+	| "mobile.computers.wait.answered"
 	| "mobile.computers.wait.answering"
+	| "mobile.computers.wait.listing"
 	| "mobile.computers.wait.nothing_answered"
 	| "mobile.computers.wait.nothing_answered_help"
 	| "mobile.computers.wait.paused"
+	| "mobile.computers.wait.start_again"
+	| "mobile.computers.wait.use_computer"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_default_short"
 	| "mobile.home.chip.model_no_default"
@@ -1122,6 +1192,14 @@ export type NoParamKey =
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
+	| "mobile.signin.intro"
+	| "mobile.signin.panel.cancelled"
+	| "mobile.signin.panel.cancelled_help"
+	| "mobile.signin.panel.opening"
+	| "mobile.signin.panel.unavailable"
+	| "mobile.signin.panel.unavailable_alt"
+	| "mobile.signin.panel.waiting"
+	| "mobile.signin.panel.waiting_help"
 	| "mobile.signin.progress"
 	| "mobile.signin.retry"
 	| "mobile.signin.show_diagnostics"
@@ -1136,7 +1214,13 @@ export type NoParamKey =
 	| "mobile.signin.stage_signed_in"
 	| "mobile.signin.stage_starting"
 	| "mobile.signin.stage_unavailable"
+	| "mobile.signin.start"
 	| "mobile.signin.superseded"
+	| "mobile.signin.title"
+	| "mobile.signin.try_anyway"
+	| "mobile.signin.use_address"
+	| "mobile.signin.welcome.body"
+	| "mobile.signin.welcome.headline"
 	| "mobile.team_bridge.attachment.add"
 	| "mobile.team_bridge.attachment.cannot_send"
 	| "mobile.team_bridge.attachment.close"
@@ -1393,6 +1477,7 @@ export type MessageParams = {
 	"mobile.computers.badge.active": NoParams;
 	"mobile.computers.badge.connecting": NoParams;
 	"mobile.computers.billing_help": NoParams;
+	"mobile.computers.billing_inactive": NoParams;
 	"mobile.computers.connect_refused.generic": NoParams;
 	"mobile.computers.connect_refused.password": NoParams;
 	"mobile.computers.connect_refused.title": NoParams;
@@ -1401,10 +1486,27 @@ export type MessageParams = {
 	"mobile.computers.disabled_help": NoParams;
 	"mobile.computers.harness_help": NoParams;
 	"mobile.computers.hide_details": NoParams;
+	"mobile.computers.list.heading": NoParams;
 	"mobile.computers.none_on_phone": NoParams;
+	"mobile.computers.not_harness": NoParams;
+	"mobile.computers.own_tunnel_instead": NoParams;
 	"mobile.computers.password_placeholder": NoParams;
+	"mobile.computers.paths.own_action": NoParams;
+	"mobile.computers.paths.own_body": NoParams;
+	"mobile.computers.paths.own_title": NoParams;
+	"mobile.computers.paths.radient_body": NoParams;
+	"mobile.computers.paths.radient_title": NoParams;
+	"mobile.computers.paths.recommended": NoParams;
 	"mobile.computers.protected": NoParams;
+	"mobile.computers.reach.answering": NoParams;
+	"mobile.computers.refresh": NoParams;
+	"mobile.computers.remove.body": NoParams;
+	"mobile.computers.remove.confirm": NoParams;
+	"mobile.computers.remove.title": NoParams;
 	"mobile.computers.retry": NoParams;
+	"mobile.computers.row.a11y": { name: string | number; reach: string | number; status: string | number };
+	"mobile.computers.row.a11y_active": { name: string | number; reach: string | number; status: string | number };
+	"mobile.computers.row.a11y_connecting": { name: string | number; reach: string | number; status: string | number };
 	"mobile.computers.save_refused.body": NoParams;
 	"mobile.computers.save_refused.body_with_code": { code: string | number };
 	"mobile.computers.save_refused.continue": NoParams;
@@ -1416,19 +1518,31 @@ export type MessageParams = {
 	"mobile.computers.show_details": NoParams;
 	"mobile.computers.sign_out": NoParams;
 	"mobile.computers.signing_out": NoParams;
+	"mobile.computers.status.disabled": NoParams;
+	"mobile.computers.status.provisioning": NoParams;
+	"mobile.computers.status.revoked": NoParams;
+	"mobile.computers.status.route_ready": NoParams;
+	"mobile.computers.status.suspended": NoParams;
+	"mobile.computers.status.unknown": NoParams;
 	"mobile.computers.storage_refused.no_code": NoParams;
 	"mobile.computers.storage_refused.with_code": { code: string | number };
 	"mobile.computers.switch": NoParams;
 	"mobile.computers.transport.custom": NoParams;
 	"mobile.computers.transport.radient": NoParams;
+	"mobile.computers.try_now": NoParams;
+	"mobile.computers.wait.answered": NoParams;
 	"mobile.computers.wait.answering": NoParams;
 	"mobile.computers.wait.host_answering": { host: string | number };
+	"mobile.computers.wait.listing": NoParams;
 	"mobile.computers.wait.nothing_answered": NoParams;
 	"mobile.computers.wait.nothing_answered_help": NoParams;
 	"mobile.computers.wait.paused": NoParams;
 	"mobile.computers.wait.relay_sessions": { sessions: number };
 	"mobile.computers.wait.relay_version": { version: string | number };
 	"mobile.computers.wait.relay_version_sessions": { version: string | number; sessions: number };
+	"mobile.computers.wait.start_again": NoParams;
+	"mobile.computers.wait.tunnel_status": { status: string | number };
+	"mobile.computers.wait.use_computer": NoParams;
 	"mobile.home.chip.effort_chosen": { effort: string | number };
 	"mobile.home.chip.effort_default": { effort: string | number };
 	"mobile.home.chip.effort_default_unnamed": NoParams;
@@ -1784,6 +1898,14 @@ export type MessageParams = {
 	"mobile.signin.diagnostics": NoParams;
 	"mobile.signin.failed": NoParams;
 	"mobile.signin.hide_diagnostics": NoParams;
+	"mobile.signin.intro": NoParams;
+	"mobile.signin.panel.cancelled": NoParams;
+	"mobile.signin.panel.cancelled_help": NoParams;
+	"mobile.signin.panel.opening": NoParams;
+	"mobile.signin.panel.unavailable": NoParams;
+	"mobile.signin.panel.unavailable_alt": NoParams;
+	"mobile.signin.panel.waiting": NoParams;
+	"mobile.signin.panel.waiting_help": NoParams;
 	"mobile.signin.progress": NoParams;
 	"mobile.signin.retry": NoParams;
 	"mobile.signin.show_diagnostics": NoParams;
@@ -1798,7 +1920,13 @@ export type MessageParams = {
 	"mobile.signin.stage_signed_in": NoParams;
 	"mobile.signin.stage_starting": NoParams;
 	"mobile.signin.stage_unavailable": NoParams;
+	"mobile.signin.start": NoParams;
 	"mobile.signin.superseded": NoParams;
+	"mobile.signin.title": NoParams;
+	"mobile.signin.try_anyway": NoParams;
+	"mobile.signin.use_address": NoParams;
+	"mobile.signin.welcome.body": NoParams;
+	"mobile.signin.welcome.headline": NoParams;
 	"mobile.team_bridge.attachment.add": NoParams;
 	"mobile.team_bridge.attachment.attached_summary": { count: number };
 	"mobile.team_bridge.attachment.cannot_send": NoParams;
@@ -2102,6 +2230,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.badge.active": "active",
 	"mobile.computers.badge.connecting": "connecting",
 	"mobile.computers.billing_help": "In the Radient console, open this tunnel's billing settings and activate remote access.",
+	"mobile.computers.billing_inactive": "Billing for this tunnel is inactive, so remote access will be refused.",
 	"mobile.computers.connect_refused.generic": "The computer didn't accept the connection. Your address and password are still here, so check them and try again.",
 	"mobile.computers.connect_refused.password": "The relay didn't accept that password. Check it and try again.",
 	"mobile.computers.connect_refused.title": "Couldn't connect",
@@ -2110,10 +2239,27 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.disabled_help": "Radient says this tunnel isn't active right now. Check its status in the Radient console.",
 	"mobile.computers.harness_help": "In the Radient console, enable the Local Operator harness for this tunnel.",
 	"mobile.computers.hide_details": "Hide details",
+	"mobile.computers.list.heading": "Your computers",
 	"mobile.computers.none_on_phone": "No computers on this phone yet.",
+	"mobile.computers.not_harness": "This computer is not running the Local Operator harness.",
+	"mobile.computers.own_tunnel_instead": "Use my own tunnel instead",
 	"mobile.computers.password_placeholder": "The password from lop mobile",
+	"mobile.computers.paths.own_action": "Use my own tunnel",
+	"mobile.computers.paths.own_body": "The advanced path: you publish your computer yourself, through a tunnel you run, and paste its address here. No Radient account is needed at any point, and you keep the password.",
+	"mobile.computers.paths.own_title": "Set up your own tunnel",
+	"mobile.computers.paths.radient_body": "Needs a Radient account. Radient runs the tunnel for you and gives you a private, authenticated URL, so there is nothing to configure on this phone and no relay password to keep.",
+	"mobile.computers.paths.radient_title": "Connect with Radient",
+	"mobile.computers.paths.recommended": "Recommended",
 	"mobile.computers.protected": "Sign-in protected",
+	"mobile.computers.reach.answering": "answering",
+	"mobile.computers.refresh": "Refresh",
+	"mobile.computers.remove.body": "This removes it from the list on this phone. It does not touch the computer, its tunnel, or your account.",
+	"mobile.computers.remove.confirm": "Remove",
+	"mobile.computers.remove.title": "Remove this computer?",
 	"mobile.computers.retry": "Retry",
+	"mobile.computers.row.a11y": "{name}, {status}, {reach}",
+	"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, active",
+	"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, connecting",
 	"mobile.computers.save_refused.body": "This device couldn't store the address and password securely. The connection works for now, but you'll need to enter them again after the app restarts.",
 	"mobile.computers.save_refused.body_with_code": "This device couldn't store the address and password securely (code {code}). The connection works for now, but you'll need to enter them again after the app restarts.",
 	"mobile.computers.save_refused.continue": "Continue",
@@ -2125,19 +2271,31 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.show_details": "Show details",
 	"mobile.computers.sign_out": "Sign out",
 	"mobile.computers.signing_out": "Signing out…",
+	"mobile.computers.status.disabled": "disabled",
+	"mobile.computers.status.provisioning": "provisioning",
+	"mobile.computers.status.revoked": "revoked",
+	"mobile.computers.status.route_ready": "route ready",
+	"mobile.computers.status.suspended": "suspended",
+	"mobile.computers.status.unknown": "unknown",
 	"mobile.computers.storage_refused.no_code": "This device's secure storage refused the request. Try again, or reinstall the app if it keeps happening.",
 	"mobile.computers.storage_refused.with_code": "This device's secure storage refused the request (code {code}). Try again, or reinstall the app if it keeps happening.",
 	"mobile.computers.switch": "Switch computer",
 	"mobile.computers.transport.custom": "Your address",
 	"mobile.computers.transport.radient": "Radient",
+	"mobile.computers.try_now": "Try now",
+	"mobile.computers.wait.answered": "Your computer answered.",
 	"mobile.computers.wait.answering": "Waiting for your computer to answer.",
 	"mobile.computers.wait.host_answering": "Waiting for your computer at {host} to answer. A provisioned route is not the same as a machine that is up.",
+	"mobile.computers.wait.listing": "Waiting for Radient to list your computer…",
 	"mobile.computers.wait.nothing_answered": "Nothing answered.",
 	"mobile.computers.wait.nothing_answered_help": "Three minutes with no tunnel listed and no host answering. Check the command ran on the computer, then start again.",
 	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
 	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
 	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
+	"mobile.computers.wait.start_again": "Start again",
+	"mobile.computers.wait.tunnel_status": "Radient has the tunnel — {status}.",
+	"mobile.computers.wait.use_computer": "Use this computer",
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
 	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
@@ -2493,6 +2651,14 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.signin.diagnostics": "Sign-in diagnostics",
 	"mobile.signin.failed": "We could not finish signing in.",
 	"mobile.signin.hide_diagnostics": "Hide sign-in details",
+	"mobile.signin.intro": "Your browser finishes the sign-in, so the app never sees your password.",
+	"mobile.signin.panel.cancelled": "Sign-in was cancelled.",
+	"mobile.signin.panel.cancelled_help": "Nothing was changed on your account.",
+	"mobile.signin.panel.opening": "Opening your browser…",
+	"mobile.signin.panel.unavailable": "This build cannot finish a Radient sign-in.",
+	"mobile.signin.panel.unavailable_alt": "You can still connect with the relay's address and password.",
+	"mobile.signin.panel.waiting": "Waiting for your browser.",
+	"mobile.signin.panel.waiting_help": "Finish signing in there, then come back to this app.",
 	"mobile.signin.progress": "Signing in…",
 	"mobile.signin.retry": "Retry",
 	"mobile.signin.show_diagnostics": "Show sign-in details",
@@ -2507,7 +2673,13 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.signin.stage_signed_in": "Signed in",
 	"mobile.signin.stage_starting": "Starting sign-in",
 	"mobile.signin.stage_unavailable": "Sign-in unavailable",
+	"mobile.signin.start": "Sign in with Radient",
 	"mobile.signin.superseded": "Another sign-in started.",
+	"mobile.signin.title": "Sign in",
+	"mobile.signin.try_anyway": "Try again anyway",
+	"mobile.signin.use_address": "Use an address and password",
+	"mobile.signin.welcome.body": "This app drives the sessions on your own machine and shows what it did. Your code never leaves it.",
+	"mobile.signin.welcome.headline": "Your agent runs on your computer.",
 	"mobile.team_bridge.attachment.add": "Add image",
 	"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# image attached} other {# images attached}}",
 	"mobile.team_bridge.attachment.cannot_send": "Can't send",
@@ -2796,6 +2968,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
 	"mobile.computers.badge.connecting": { role: "status", note: "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge." },
 	"mobile.computers.billing_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.billing_inactive": { role: "help", note: "Warning line on a computer row when the account's billing for the tunnel is inactive and the server supplied no message of its own. Full sentence with a full stop." },
 	"mobile.computers.connect_refused.generic": { role: "status", note: "Body of the \"Couldn't connect\" error when the computer gave no more specific reason. Reassures the user that what they typed is kept, and tells them to check it and retry (a Retry button follows)." },
 	"mobile.computers.connect_refused.password": { role: "status", note: "Body of the \"Couldn't connect\" error when the relay on the user's computer rejected the relay password (HTTP 401). Tells the user what was wrong and the next step; a Retry button follows. \"Relay\" is the program on the user's computer that the app connects to." },
 	"mobile.computers.connect_refused.title": { role: "heading", note: "Title of an inline error on the \"Your own tunnel\" screen, shown when Save and connect was refused. The screen stays open with the address and password still filled in. Short, sentence case, no final full stop." },
@@ -2804,10 +2977,27 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.disabled_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.harness_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.hide_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.list.heading": { role: "heading", note: "Section header above the list of computers on the Radient account on the computers screen. Plural noun phrase, no punctuation." },
 	"mobile.computers.none_on_phone": { role: "status", note: "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop." },
+	"mobile.computers.not_harness": { role: "status", note: "Muted line on a computer row in the Your computers list when the account lists the computer but it is not running the Local Operator harness. Full sentence with a full stop. 'Local Operator' is the product name: keep it in Latin script." },
+	"mobile.computers.own_tunnel_instead": { role: "button", note: "Small quiet button at the bottom of the computers screen that opens the own-tunnel (self-hosted) setup instead of Radient. 'instead' contrasts with the Radient list above it." },
 	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
+	"mobile.computers.paths.own_action": { role: "button", note: "Outline button in the own-tunnel card that opens the own-tunnel setup. Short imperative; the computers screen has a separate 'Use my own tunnel instead'." },
+	"mobile.computers.paths.own_body": { role: "help", note: "Description inside the own-tunnel card. It is the advanced, self-hosted path: the reader publishes the computer through their own tunnel, pastes its address, needs no Radient account and keeps the password. Keep the words 'advanced' and 'no account' clear." },
+	"mobile.computers.paths.own_title": { role: "heading", note: "Section header of the own-tunnel card on the choose-a-path screen, and the quiet button label on the first-run welcome screen that opens the same setup. Says what the reader gets, not what they type. No punctuation." },
+	"mobile.computers.paths.radient_body": { role: "help", note: "Description inside the Radient card on the choose-a-path screen. Three clauses: needs an account; Radient runs the tunnel and gives a private authenticated URL; nothing to configure on the phone and no relay password. Keep the honest cost (an account is needed). 'URL' stays as a technical token." },
+	"mobile.computers.paths.radient_title": { role: "heading", note: "Title of the Radient card on the choose-a-path screen, followed on the same line by the 'Recommended' badge. Imperative phrase, no punctuation; 'Radient' is the brand: keep it in Latin script." },
+	"mobile.computers.paths.recommended": { role: "meta", note: "Badge beside the Radient card title marking it as the suggested path. One word or short phrase; not a status." },
 	"mobile.computers.protected": { role: "status", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.reach.answering": { role: "meta", note: "Lower-case badge on a computer row: this phone probed the computer and it answered. Distinct from status.*: it is the probe result. Keep lower case." },
+	"mobile.computers.refresh": { role: "button", note: "Small quiet button under the Your computers list that re-reads the account's computers. One verb. Same English as mobile.settings.connection.refresh but a separate key because the surface differs." },
+	"mobile.computers.remove.body": { role: "confirm", note: "Body of the remove-computer confirmation, under 'Remove this computer?'. States the removal is local to this phone only; keep all three negations (the computer, its tunnel, the account). Two sentences, each with a full stop." },
+	"mobile.computers.remove.confirm": { role: "button", note: "Destructive confirm button of the 'Remove this computer?' dialog. One verb; the dialog also has the shared Cancel." },
+	"mobile.computers.remove.title": { role: "confirm", note: "Title of the confirmation dialog for removing a computer from this phone. A question. Body and buttons are separate strings." },
 	"mobile.computers.retry": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.row.a11y": { role: "status", note: "Screen-reader label of a computer row (not visible). {name} is the computer's own name, {status} the status badge text (status.*), {reach} the reachability badge text. Keep the three comma-separated parts in this order; keep all placeholders unchanged." },
+	"mobile.computers.row.a11y_active": { role: "status", note: "Screen-reader label of the computer row that is the connected one. Same placeholders as row.a11y; ends with the word for 'active' (same word as badge.active)." },
+	"mobile.computers.row.a11y_connecting": { role: "status", note: "Screen-reader label of a computer row while its connection is being made. Same placeholders as row.a11y; ends with the word for 'connecting' (same word as badge.connecting)." },
 	"mobile.computers.save_refused.body": { role: "help", note: "Body of the \"Connected, but not saved\" warning: the connection succeeded, but the phone's own secure storage (iOS Keychain / Android Keystore) would not keep the address and password, so they must be typed again after the app restarts. The only button is Continue, so do not suggest trying again." },
 	"mobile.computers.save_refused.body_with_code": { role: "help", note: "Same message as mobile.computers.save_refused.body when the platform gave a code. {code} is a technical platform code such as \"ERR_KEY_CHAIN -34018\" for support: keep it exactly as written, untranslated, inside the parentheses." },
 	"mobile.computers.save_refused.continue": { role: "button", note: "Button in the \"Connected, but not saved\" warning that continues to the home screen. One word, sentence case." },
@@ -2819,19 +3009,31 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.sign_out": { role: "button", note: "Settings action opening the sign-out confirmation. Sentence case." },
 	"mobile.computers.signing_out": { role: "status", note: "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis." },
+	"mobile.computers.status.disabled": { role: "meta", note: "Lower-case badge on a computer row: remote access for this tunnel is switched off. Keep lower case." },
+	"mobile.computers.status.provisioning": { role: "meta", note: "Lower-case badge on a computer row: the control plane is still setting the computer's route up. Keep lower case, one word or short phrase." },
+	"mobile.computers.status.revoked": { role: "meta", note: "Lower-case badge on a computer row: the tunnel's access was revoked. Keep lower case." },
+	"mobile.computers.status.route_ready": { role: "meta", note: "Lower-case monospace badge on a computer row in the Your computers list: the control plane says the route to this computer is ready. Reads as a status of the route, not of the computer. Keep lower case; sibling of the other status.* badges." },
+	"mobile.computers.status.suspended": { role: "meta", note: "Lower-case badge on a computer row: Radient has suspended the tunnel (for example billing). Keep lower case." },
+	"mobile.computers.status.unknown": { role: "meta", note: "Lower-case badge on a computer row: the status is not known. Keep lower case." },
 	"mobile.computers.storage_refused.no_code": { role: "status", note: "Same message as mobile.computers.storage_refused.with_code when the platform gave no code: the phone's own secure storage (iOS Keychain / Android Keystore) refused the request." },
 	"mobile.computers.storage_refused.with_code": { role: "status", note: "Shown when the phone's own secure storage (iOS Keychain / Android Keystore) refused to read, delete or save the app's sign-in data. {code} is a technical platform code such as \"ERR_KEY_CHAIN -34018\" for support: keep it exactly as written, untranslated, inside the parentheses. \"Reinstall the app\" is the remedy when retrying keeps failing." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
 	"mobile.computers.transport.custom": { role: "meta", note: "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case." },
 	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written." },
+	"mobile.computers.try_now": { role: "button", note: "Action button inside the warning banner shown when computer discovery failed; re-runs discovery immediately. Short imperative." },
+	"mobile.computers.wait.answered": { role: "status", note: "Third step of the add-a-computer wait panel: the computer responded. Full sentence with a full stop." },
 	"mobile.computers.wait.answering": { role: "help", note: "Help line in the add-a-computer wait panel before a host name is known. Ends with a full stop." },
 	"mobile.computers.wait.host_answering": { role: "help", note: "Help line in the add-a-computer wait panel once Radient lists the computer's host name. {host} is a host name; keep it unchanged and left-to-right. The second sentence explains that a listed route does not prove the computer is running." },
+	"mobile.computers.wait.listing": { role: "status", note: "First step of the add-a-computer wait panel (shimmering line): the app is waiting for Radient to show the new computer in the account. Ends with an ellipsis, no full stop." },
 	"mobile.computers.wait.nothing_answered": { role: "status", note: "Heading of the add-a-computer wait panel when the three-minute wait ended with no tunnel listed and no host answering. A short sentence with a final full stop; a follow-up help line sits under it." },
 	"mobile.computers.wait.nothing_answered_help": { role: "help", note: "Continuation line under the \"Nothing answered.\" heading of the add-a-computer wait panel: explains that three minutes passed with no tunnel listed and no host answering, then tells the user to check the command ran on the computer and start again. Two sentences; the second is the instruction." },
 	"mobile.computers.wait.paused": { role: "help", note: "Wait-panel line shown when the app was backgrounded during the add-a-computer wait and polling stopped. Two short sentences; the second is the instruction to reopen the app." },
 	"mobile.computers.wait.relay_sessions": { role: "help", note: "Wait-panel line once the computer answered and only the running-session count is known. {sessions} is a count; preserve the ICU plural arms." },
 	"mobile.computers.wait.relay_version": { role: "help", note: "Wait-panel line once the computer answered and only the protocol version is known. {version} is a number; preserve the placeholder." },
 	"mobile.computers.wait.relay_version_sessions": { role: "help", note: "Wait-panel line once the computer answered: the relay's protocol version and its running-session count. {version} is a number, {sessions} a count; preserve the ICU plural arms and both placeholders. 'Relay' is the product's name for the program on the computer." },
+	"mobile.computers.wait.start_again": { role: "button", note: "Quiet button under the add-a-computer wait panel that abandons the wait and returns to the start of the setup. Short imperative." },
+	"mobile.computers.wait.tunnel_status": { role: "status", note: "Second step of the add-a-computer wait panel. {status} is a LOCALISED status label chosen by tunnel-status-key.ts from Radient's own tunnel-status word (active -> mobile.computers.badge.active; provisioning, suspended, disabled, revoked and unknown -> mobile.computers.status.*). It is a lower-case predicate word placed after the dash, so the sentence must read naturally with a lower-case word or short phrase there. Ends with a full stop; keep {status} unchanged." },
+	"mobile.computers.wait.use_computer": { role: "button", note: "Primary button under the add-a-computer wait panel once the computer answered; switches the app to it. Imperative, short." },
 	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -3187,6 +3389,14 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.signin.diagnostics": { role: "button", note: "Reveal a redacted in-memory log containing stage names and error classes only." },
 	"mobile.signin.failed": { role: "status", note: "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials." },
 	"mobile.signin.hide_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.intro": { role: "help", note: "Reassurance line at the top of the sign-in screen: the sign-in happens in the system browser, so the app never receives the password. Keep that guarantee exactly; full stop at the end." },
+	"mobile.signin.panel.cancelled": { role: "status", note: "Headline of the hand-off region after the reader dismissed the browser sheet. Full sentence with a full stop. Different from the diagnostic stage word 'Sign-in cancelled' (mobile.signin.stage_cancelled)." },
+	"mobile.signin.panel.cancelled_help": { role: "help", note: "Reassurance under 'Sign-in was cancelled.': the cancellation altered nothing. Full stop at the end." },
+	"mobile.signin.panel.opening": { role: "status", note: "Shimmering status line while the system browser is being opened for Radient sign-in. Ends with an ellipsis, no full stop." },
+	"mobile.signin.panel.unavailable": { role: "status", note: "Headline when this app build cannot receive the browser callback at all. A technical detail line (not translated, from the runtime) renders below it. Full stop at the end; 'Radient' stays in Latin script." },
+	"mobile.signin.panel.unavailable_alt": { role: "help", note: "Last line of the 'sign-in unavailable' state pointing at the route that works: the relay's address and password (the 'Use an address and password' button below). Full stop at the end." },
+	"mobile.signin.panel.waiting": { role: "status", note: "Headline of the sign-in hand-off region once the browser is open; announced by screen readers (polite live region). Full sentence with a full stop. A second line, 'panel.waiting_help', renders below it." },
+	"mobile.signin.panel.waiting_help": { role: "help", note: "Instruction under 'Waiting for your browser.': 'there' means the browser that just opened. Full stop at the end." },
 	"mobile.signin.progress": { role: "status", note: "Visible after the native browser returns, during token exchange and credential persistence." },
 	"mobile.signin.retry": { role: "button", note: "Retry a failed or cancelled sign-in." },
 	"mobile.signin.show_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
@@ -3201,7 +3411,13 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.signin.stage_signed_in": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.stage_starting": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
 	"mobile.signin.stage_unavailable": { role: "status", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
+	"mobile.signin.start": { role: "button", note: "Primary button on the first-run welcome screen and the sign-in screen that starts the browser hand-off. 'Radient' is the brand: keep it in Latin script. Used at two call sites." },
 	"mobile.signin.superseded": { role: "status", note: "The current user-initiated sign-in lost authorization ownership without a newer sign-in owning the UI." },
+	"mobile.signin.title": { role: "heading", note: "Screen title of the Radient re-authentication route. Verb phrase, no punctuation." },
+	"mobile.signin.try_anyway": { role: "button", note: "Quiet button in the 'sign-in unavailable' state that retries the browser hand-off even though this build probably cannot complete it. Short imperative." },
+	"mobile.signin.use_address": { role: "button", note: "Button that opens the manual connect screen where the reader types a relay address and password. Used on the sign-in screen and in the 'sign-in unavailable' panel; same wording at both." },
+	"mobile.signin.welcome.body": { role: "help", note: "Supporting paragraph on the welcome screen under the headline: the app controls sessions on the reader's own machine and shows the results; code never leaves the machine ('it' = the machine). Keep the privacy promise exact." },
+	"mobile.signin.welcome.headline": { role: "heading", note: "Headline of the first-run welcome screen (screen-reader header). One sentence with a full stop; 'agent' is the product's own word for the assistant." },
 	"mobile.team_bridge.attachment.add": { role: "button", note: "Team Bridge image attachments: add. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.attached_summary": { role: "status", note: "Team Bridge image attachments: attached_summary. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.cannot_send": { role: "status", note: "Team Bridge image attachments: cannot_send. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. Remove only the failing chip; retry is not available for final refusals." },
@@ -3504,6 +3720,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "activa",
 		"mobile.computers.badge.connecting": "conectando",
 		"mobile.computers.billing_help": "En la consola de Radient, abre la facturación de este túnel y activa el acceso remoto.",
+		"mobile.computers.billing_inactive": "La facturación de este túnel está inactiva, así que se denegará el acceso remoto.",
 		"mobile.computers.connect_refused.generic": "El ordenador no aceptó la conexión. Tu dirección y tu contraseña siguen aquí, así que revísalas y vuelve a intentarlo.",
 		"mobile.computers.connect_refused.password": "El relé no aceptó esa contraseña. Revísala y vuelve a intentarlo.",
 		"mobile.computers.connect_refused.title": "No se pudo conectar",
@@ -3512,10 +3729,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.disabled_help": "Radient indica que este túnel no está activo ahora. Comprueba su estado en la consola de Radient.",
 		"mobile.computers.harness_help": "En la consola de Radient, activa Local Operator para este túnel.",
 		"mobile.computers.hide_details": "Ocultar detalles",
+		"mobile.computers.list.heading": "Tus máquinas",
 		"mobile.computers.none_on_phone": "Aún no hay máquinas en este teléfono.",
+		"mobile.computers.not_harness": "Esta máquina no ejecuta el harness de Local Operator.",
+		"mobile.computers.own_tunnel_instead": "Usar mi propio túnel en su lugar",
 		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
+		"mobile.computers.paths.own_action": "Usar mi propio túnel",
+		"mobile.computers.paths.own_body": "La vía avanzada: publicas tu máquina por tu cuenta, con un túnel que ejecutas tú, y pegas aquí su dirección. No hace falta una cuenta de Radient en ningún momento, y la contraseña la guardas tú.",
+		"mobile.computers.paths.own_title": "Configura tu propio túnel",
+		"mobile.computers.paths.radient_body": "Requiere una cuenta de Radient. Radient gestiona el túnel por ti y te da una URL privada y autenticada, así que no hay nada que configurar en este teléfono ni ninguna contraseña del relé que guardar.",
+		"mobile.computers.paths.radient_title": "Conectar con Radient",
+		"mobile.computers.paths.recommended": "Recomendado",
 		"mobile.computers.protected": "Protegido con inicio de sesión",
+		"mobile.computers.reach.answering": "respondiendo",
+		"mobile.computers.refresh": "Actualizar",
+		"mobile.computers.remove.body": "La quita de la lista de este teléfono. No afecta a la máquina, a su túnel ni a tu cuenta.",
+		"mobile.computers.remove.confirm": "Quitar",
+		"mobile.computers.remove.title": "¿Quitar esta máquina?",
 		"mobile.computers.retry": "Reintentar",
+		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
+		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, activa",
+		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, conectando",
 		"mobile.computers.save_refused.body": "Este dispositivo no pudo guardar la dirección y la contraseña de forma segura. La conexión funciona por ahora, pero tendrás que volver a introducirlas cuando se reinicie la app.",
 		"mobile.computers.save_refused.body_with_code": "Este dispositivo no pudo guardar la dirección y la contraseña de forma segura (código {code}). La conexión funciona por ahora, pero tendrás que volver a introducirlas cuando se reinicie la app.",
 		"mobile.computers.save_refused.continue": "Continuar",
@@ -3527,19 +3761,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.sign_out": "Cerrar sesión",
 		"mobile.computers.signing_out": "Cerrando sesión…",
+		"mobile.computers.status.disabled": "desactivada",
+		"mobile.computers.status.provisioning": "aprovisionando",
+		"mobile.computers.status.revoked": "revocada",
+		"mobile.computers.status.route_ready": "ruta lista",
+		"mobile.computers.status.suspended": "suspendida",
+		"mobile.computers.status.unknown": "desconocida",
 		"mobile.computers.storage_refused.no_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud. Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
 		"mobile.computers.storage_refused.with_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud (código {code}). Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
 		"mobile.computers.switch": "Cambiar de máquina",
 		"mobile.computers.transport.custom": "Tu dirección",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.try_now": "Probar ahora",
+		"mobile.computers.wait.answered": "Tu máquina respondió.",
 		"mobile.computers.wait.answering": "Esperando a que tu máquina responda.",
 		"mobile.computers.wait.host_answering": "Esperando a que responda tu máquina en {host}. Que una ruta esté configurada no significa que la máquina esté en marcha.",
+		"mobile.computers.wait.listing": "Esperando a que Radient añada tu máquina a la lista…",
 		"mobile.computers.wait.nothing_answered": "Ninguna máquina respondió.",
 		"mobile.computers.wait.nothing_answered_help": "Tres minutos sin túneles en la lista ni máquinas que respondan. Comprueba que el comando se ejecutó en la máquina y vuelve a empezar.",
 		"mobile.computers.wait.paused": "En pausa mientras la app está en segundo plano. Vuelve a abrirla para que siga comprobando.",
 		"mobile.computers.wait.relay_sessions": "El relé indica {sessions, plural, one {# sesión en ejecución} many {# de sesiones en ejecución} other {# sesiones en ejecución}}.",
 		"mobile.computers.wait.relay_version": "El relé indica la versión {version} del protocolo.",
 		"mobile.computers.wait.relay_version_sessions": "El relé indica la versión {version} del protocolo y {sessions, plural, one {# sesión en ejecución} many {# de sesiones en ejecución} other {# sesiones en ejecución}}.",
+		"mobile.computers.wait.start_again": "Empezar de nuevo",
+		"mobile.computers.wait.tunnel_status": "Radient ya tiene el túnel — {status}.",
+		"mobile.computers.wait.use_computer": "Usar esta máquina",
 		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
 		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
@@ -3895,6 +4141,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
 		"mobile.signin.failed": "No pudimos iniciar sesión.",
 		"mobile.signin.hide_diagnostics": "Ocultar detalles del inicio de sesión",
+		"mobile.signin.intro": "Tu navegador completa el inicio de sesión, así que la app nunca ve tu contraseña.",
+		"mobile.signin.panel.cancelled": "Se canceló el inicio de sesión.",
+		"mobile.signin.panel.cancelled_help": "No se cambió nada en tu cuenta.",
+		"mobile.signin.panel.opening": "Abriendo tu navegador…",
+		"mobile.signin.panel.unavailable": "Esta compilación no puede completar el inicio de sesión con Radient.",
+		"mobile.signin.panel.unavailable_alt": "Aún puedes conectarte con la dirección y la contraseña del relé.",
+		"mobile.signin.panel.waiting": "Esperando a tu navegador.",
+		"mobile.signin.panel.waiting_help": "Completa el inicio de sesión allí y vuelve a esta app.",
 		"mobile.signin.progress": "Iniciando sesión…",
 		"mobile.signin.retry": "Reintentar",
 		"mobile.signin.show_diagnostics": "Mostrar detalles del inicio de sesión",
@@ -3909,7 +4163,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_signed_in": "Sesión iniciada",
 		"mobile.signin.stage_starting": "Iniciando sesión",
 		"mobile.signin.stage_unavailable": "Inicio de sesión no disponible",
+		"mobile.signin.start": "Iniciar sesión con Radient",
 		"mobile.signin.superseded": "Se inició otro acceso.",
+		"mobile.signin.title": "Iniciar sesión",
+		"mobile.signin.try_anyway": "Reintentar de todos modos",
+		"mobile.signin.use_address": "Usar una dirección y contraseña",
+		"mobile.signin.welcome.body": "Esta app dirige las sesiones de tu propia máquina y muestra lo que hizo. Tu código nunca sale de ella.",
+		"mobile.signin.welcome.headline": "Tu agente se ejecuta en tu máquina.",
 		"mobile.team_bridge.attachment.add": "Añadir imagen",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
 		"mobile.team_bridge.attachment.cannot_send": "No se puede enviar",
@@ -4196,6 +4456,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "actif",
 		"mobile.computers.badge.connecting": "connexion",
 		"mobile.computers.billing_help": "Dans la console Radient, ouvrez la facturation de ce tunnel et activez l’accès à distance.",
+		"mobile.computers.billing_inactive": "La facturation de ce tunnel est inactive : l’accès à distance sera refusé.",
 		"mobile.computers.connect_refused.generic": "L’ordinateur n’a pas accepté la connexion. Votre adresse et votre mot de passe sont toujours là : vérifiez-les et réessayez.",
 		"mobile.computers.connect_refused.password": "Le relais n’a pas accepté ce mot de passe. Vérifiez-le et réessayez.",
 		"mobile.computers.connect_refused.title": "Connexion impossible",
@@ -4204,10 +4465,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.disabled_help": "Radient indique que ce tunnel n’est pas actif pour le moment. Vérifiez son état dans la console Radient.",
 		"mobile.computers.harness_help": "Dans la console Radient, activez Local Operator pour ce tunnel.",
 		"mobile.computers.hide_details": "Masquer les détails",
+		"mobile.computers.list.heading": "Vos ordinateurs",
 		"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
+		"mobile.computers.not_harness": "Cet ordinateur n’exécute pas le harness Local Operator.",
+		"mobile.computers.own_tunnel_instead": "Utiliser plutôt mon propre tunnel",
 		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
+		"mobile.computers.paths.own_action": "Utiliser mon propre tunnel",
+		"mobile.computers.paths.own_body": "Le parcours avancé : vous publiez vous-même votre ordinateur via un tunnel que vous exploitez, puis vous collez l’adresse de ce tunnel ici. Aucun compte Radient n’est nécessaire à aucun moment, et vous gardez le mot de passe.",
+		"mobile.computers.paths.own_title": "Configurer votre propre tunnel",
+		"mobile.computers.paths.radient_body": "Nécessite un compte Radient. Radient gère le tunnel pour vous et vous fournit une URL privée et authentifiée : il n’y a donc rien à configurer sur ce téléphone, et aucun mot de passe de relais à conserver.",
+		"mobile.computers.paths.radient_title": "Se connecter avec Radient",
+		"mobile.computers.paths.recommended": "Recommandé",
 		"mobile.computers.protected": "Protégé par connexion",
+		"mobile.computers.reach.answering": "répond",
+		"mobile.computers.refresh": "Actualiser",
+		"mobile.computers.remove.body": "Il sera retiré de la liste de ce téléphone. Cela ne modifie ni l’ordinateur, ni son tunnel, ni votre compte.",
+		"mobile.computers.remove.confirm": "Retirer",
+		"mobile.computers.remove.title": "Retirer cet ordinateur ?",
 		"mobile.computers.retry": "Réessayer",
+		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
+		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, actif",
+		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, connexion",
 		"mobile.computers.save_refused.body": "Cet appareil n’a pas pu enregistrer l’adresse et le mot de passe de façon sécurisée. La connexion fonctionne pour l’instant, mais vous devrez les saisir à nouveau après le redémarrage de l’app.",
 		"mobile.computers.save_refused.body_with_code": "Cet appareil n’a pas pu enregistrer l’adresse et le mot de passe de façon sécurisée (code {code}). La connexion fonctionne pour l’instant, mais vous devrez les saisir à nouveau après le redémarrage de l’app.",
 		"mobile.computers.save_refused.continue": "Continuer",
@@ -4219,19 +4497,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.sign_out": "Se déconnecter",
 		"mobile.computers.signing_out": "Déconnexion en cours…",
+		"mobile.computers.status.disabled": "désactivé",
+		"mobile.computers.status.provisioning": "provisionnement",
+		"mobile.computers.status.revoked": "révoqué",
+		"mobile.computers.status.route_ready": "acheminement prêt",
+		"mobile.computers.status.suspended": "suspendu",
+		"mobile.computers.status.unknown": "inconnu",
 		"mobile.computers.storage_refused.no_code": "Le stockage sécurisé de cet appareil a refusé la demande. Réessayez, ou réinstallez l’app si le problème persiste.",
 		"mobile.computers.storage_refused.with_code": "Le stockage sécurisé de cet appareil a refusé la demande (code {code}). Réessayez, ou réinstallez l’app si le problème persiste.",
 		"mobile.computers.switch": "Changer d’ordinateur",
 		"mobile.computers.transport.custom": "Votre adresse",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.try_now": "Essayer maintenant",
+		"mobile.computers.wait.answered": "Votre ordinateur a répondu.",
 		"mobile.computers.wait.answering": "En attente d’une réponse de votre ordinateur.",
 		"mobile.computers.wait.host_answering": "En attente d’une réponse de votre ordinateur à l’adresse {host}. Un acheminement configuré ne garantit pas que l’ordinateur fonctionne.",
+		"mobile.computers.wait.listing": "En attendant que Radient liste votre ordinateur…",
 		"mobile.computers.wait.nothing_answered": "Aucune réponse.",
 		"mobile.computers.wait.nothing_answered_help": "Trois minutes sans aucun tunnel dans la liste ni réponse d’un hôte. Vérifiez que la commande s’est exécutée sur l’ordinateur, puis recommencez.",
 		"mobile.computers.wait.paused": "En pause tant que l’app est en arrière-plan. Rouvrez-la pour poursuivre la surveillance.",
 		"mobile.computers.wait.relay_sessions": "Son relais signale {sessions, plural, one {# session en cours} many {# de sessions en cours} other {# sessions en cours}}.",
 		"mobile.computers.wait.relay_version": "Son relais signale la version {version} du protocole.",
 		"mobile.computers.wait.relay_version_sessions": "Son relais signale la version {version} du protocole et {sessions, plural, one {# session en cours} many {# de sessions en cours} other {# sessions en cours}}.",
+		"mobile.computers.wait.start_again": "Recommencer",
+		"mobile.computers.wait.tunnel_status": "Radient dispose du tunnel — {status}.",
+		"mobile.computers.wait.use_computer": "Utiliser cet ordinateur",
 		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
 		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
 		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
@@ -4587,6 +4877,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.diagnostics": "Diagnostic de connexion",
 		"mobile.signin.failed": "Nous n’avons pas pu terminer la connexion.",
 		"mobile.signin.hide_diagnostics": "Masquer les détails de connexion",
+		"mobile.signin.intro": "La connexion se termine dans votre navigateur : l’app ne voit jamais votre mot de passe.",
+		"mobile.signin.panel.cancelled": "La connexion a été annulée.",
+		"mobile.signin.panel.cancelled_help": "Rien n’a été modifié sur votre compte.",
+		"mobile.signin.panel.opening": "Ouverture de votre navigateur…",
+		"mobile.signin.panel.unavailable": "Cette version de l’app ne peut pas terminer une connexion Radient.",
+		"mobile.signin.panel.unavailable_alt": "Vous pouvez toujours vous connecter avec l’adresse et le mot de passe du relais.",
+		"mobile.signin.panel.waiting": "En attente de votre navigateur.",
+		"mobile.signin.panel.waiting_help": "Finalisez la connexion dans le navigateur, puis revenez à cette app.",
 		"mobile.signin.progress": "Connexion en cours…",
 		"mobile.signin.retry": "Réessayer",
 		"mobile.signin.show_diagnostics": "Afficher les détails de connexion",
@@ -4601,7 +4899,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_signed_in": "Connecté",
 		"mobile.signin.stage_starting": "Connexion en cours",
 		"mobile.signin.stage_unavailable": "Connexion indisponible",
+		"mobile.signin.start": "Se connecter avec Radient",
 		"mobile.signin.superseded": "Une autre connexion a démarré.",
+		"mobile.signin.title": "Connexion",
+		"mobile.signin.try_anyway": "Réessayer quand même",
+		"mobile.signin.use_address": "Utiliser une adresse et un mot de passe",
+		"mobile.signin.welcome.body": "Cette app pilote les sessions sur votre propre machine et en montre le résultat. Votre code ne la quitte jamais.",
+		"mobile.signin.welcome.headline": "Votre agent s’exécute sur votre ordinateur.",
 		"mobile.team_bridge.attachment.add": "Ajouter une image",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# image jointe} other {# images jointes}}",
 		"mobile.team_bridge.attachment.cannot_send": "Envoi impossible",
@@ -4888,6 +5192,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "सक्रिय",
 		"mobile.computers.badge.connecting": "कनेक्ट हो रहा",
 		"mobile.computers.billing_help": "Radient कंसोल में इस टनल की बिलिंग सेटिंग खोलें और रिमोट ऐक्सेस चालू करें।",
+		"mobile.computers.billing_inactive": "इस टनल की बिलिंग निष्क्रिय है, इसलिए रिमोट ऐक्सेस अस्वीकार कर दिया जाएगा।",
 		"mobile.computers.connect_refused.generic": "कंप्यूटर ने कनेक्शन स्वीकार नहीं किया। आपका पता और पासवर्ड अभी भी यहाँ हैं, इसलिए उन्हें जाँचें और फिर से कोशिश करें।",
 		"mobile.computers.connect_refused.password": "रिले ने वह पासवर्ड स्वीकार नहीं किया। उसे जाँचें और फिर से कोशिश करें।",
 		"mobile.computers.connect_refused.title": "कनेक्ट नहीं हो सका",
@@ -4896,10 +5201,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.disabled_help": "Radient के अनुसार यह टनल अभी सक्रिय नहीं है। Radient कंसोल में इसकी स्थिति देखें।",
 		"mobile.computers.harness_help": "Radient कंसोल में इस टनल के लिए Local Operator चालू करें।",
 		"mobile.computers.hide_details": "विवरण छिपाएँ",
+		"mobile.computers.list.heading": "आपके कंप्यूटर",
 		"mobile.computers.none_on_phone": "इस फ़ोन पर अभी कोई कंप्यूटर नहीं।",
+		"mobile.computers.not_harness": "इस कंप्यूटर पर Local Operator हार्नेस नहीं चल रहा है।",
+		"mobile.computers.own_tunnel_instead": "इसके बजाय अपनी टनल उपयोग करें",
 		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
+		"mobile.computers.paths.own_action": "अपनी टनल उपयोग करें",
+		"mobile.computers.paths.own_body": "उन्नत रास्ता: आप अपना कंप्यूटर ख़ुद प्रकाशित करते हैं, अपनी चलाई हुई टनल के ज़रिये, और उसका पता यहाँ चिपकाते हैं। किसी भी चरण में Radient खाते की ज़रूरत नहीं, और पासवर्ड आपके पास ही रहता है।",
+		"mobile.computers.paths.own_title": "अपनी टनल सेट अप करें",
+		"mobile.computers.paths.radient_body": "इसके लिए एक Radient खाता चाहिए। Radient आपके लिए टनल चलाता है और एक निजी, प्रमाणित URL देता है, इसलिए इस फ़ोन पर कुछ कॉन्फ़िगर करना नहीं है और रिले पासवर्ड याद रखने की ज़रूरत नहीं।",
+		"mobile.computers.paths.radient_title": "Radient से कनेक्ट करें",
+		"mobile.computers.paths.recommended": "अनुशंसित",
 		"mobile.computers.protected": "साइन-इन से सुरक्षित",
+		"mobile.computers.reach.answering": "जवाब दे रहा",
+		"mobile.computers.refresh": "रीफ़्रेश करें",
+		"mobile.computers.remove.body": "इससे यह इस फ़ोन की सूची से हट जाता है। इससे कंप्यूटर, उसकी टनल या आपके खाते पर कोई असर नहीं पड़ता।",
+		"mobile.computers.remove.confirm": "हटाएँ",
+		"mobile.computers.remove.title": "यह कंप्यूटर हटाएँ?",
 		"mobile.computers.retry": "दोबारा कोशिश करें",
+		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
+		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, सक्रिय",
+		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, कनेक्ट हो रहा",
 		"mobile.computers.save_refused.body": "यह डिवाइस पता और पासवर्ड सुरक्षित रूप से सहेज नहीं सका। कनेक्शन अभी काम कर रहा है, लेकिन ऐप दोबारा शुरू होने के बाद आपको उन्हें फिर से डालना होगा।",
 		"mobile.computers.save_refused.body_with_code": "यह डिवाइस पता और पासवर्ड सुरक्षित रूप से सहेज नहीं सका (कोड {code})। कनेक्शन अभी काम कर रहा है, लेकिन ऐप दोबारा शुरू होने के बाद आपको उन्हें फिर से डालना होगा।",
 		"mobile.computers.save_refused.continue": "जारी रखें",
@@ -4911,19 +5233,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.sign_out": "साइन आउट करें",
 		"mobile.computers.signing_out": "साइन आउट हो रहा है…",
+		"mobile.computers.status.disabled": "बंद",
+		"mobile.computers.status.provisioning": "तैयार हो रहा",
+		"mobile.computers.status.revoked": "निरस्त",
+		"mobile.computers.status.route_ready": "रूट तैयार",
+		"mobile.computers.status.suspended": "निलंबित",
+		"mobile.computers.status.unknown": "अज्ञात",
 		"mobile.computers.storage_refused.no_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
 		"mobile.computers.storage_refused.with_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया (कोड {code})। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
 		"mobile.computers.transport.custom": "आपका पता",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.try_now": "अभी कोशिश करें",
+		"mobile.computers.wait.answered": "आपके कंप्यूटर ने जवाब दिया।",
 		"mobile.computers.wait.answering": "आपके कंप्यूटर के जवाब का इंतज़ार है।",
 		"mobile.computers.wait.host_answering": "{host} पर मौजूद आपके कंप्यूटर के जवाब का इंतज़ार है। रूट बन जाने का मतलब यह नहीं है कि कंप्यूटर चालू है।",
+		"mobile.computers.wait.listing": "आपका कंप्यूटर Radient की सूची में दिखने का इंतज़ार है…",
 		"mobile.computers.wait.nothing_answered": "कहीं से जवाब नहीं आया।",
 		"mobile.computers.wait.nothing_answered_help": "तीन मिनट तक न कोई टनल सूची में दिखी, न किसी होस्ट ने जवाब दिया। जाँच लें कि कंप्यूटर पर कमांड चली या नहीं। फिर दोबारा शुरू करें।",
 		"mobile.computers.wait.paused": "ऐप बैकग्राउंड में है, इसलिए निगरानी रुकी हुई है। जारी रखने के लिए ऐप फिर खोलें।",
 		"mobile.computers.wait.relay_sessions": "इसका रिले बताता है कि {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।",
 		"mobile.computers.wait.relay_version": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है।",
 		"mobile.computers.wait.relay_version_sessions": "इसका रिले बताता है कि प्रोटोकॉल संस्करण {version} है और {sessions, plural, one {# सत्र चल रहा है} other {# सत्र चल रहे हैं}}।",
+		"mobile.computers.wait.start_again": "फिर से शुरू करें",
+		"mobile.computers.wait.tunnel_status": "Radient के पास टनल है — {status}।",
+		"mobile.computers.wait.use_computer": "इस कंप्यूटर का उपयोग करें",
 		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
 		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
@@ -5279,6 +5613,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.diagnostics": "साइन-इन निदान",
 		"mobile.signin.failed": "हम साइन-इन पूरा नहीं कर सके।",
 		"mobile.signin.hide_diagnostics": "साइन-इन का विवरण छिपाएँ",
+		"mobile.signin.intro": "आपका ब्राउज़र साइन-इन पूरा करता है, इसलिए ऐप को आपका पासवर्ड कभी दिखता ही नहीं।",
+		"mobile.signin.panel.cancelled": "साइन-इन रद्द हो गया।",
+		"mobile.signin.panel.cancelled_help": "आपके खाते में कोई बदलाव नहीं हुआ।",
+		"mobile.signin.panel.opening": "आपका ब्राउज़र खुल रहा है…",
+		"mobile.signin.panel.unavailable": "यह बिल्ड Radient का साइन-इन पूरा नहीं कर सकता।",
+		"mobile.signin.panel.unavailable_alt": "आप रिले का पता और पासवर्ड डालकर भी कनेक्ट कर सकते हैं।",
+		"mobile.signin.panel.waiting": "आपके ब्राउज़र का इंतज़ार है।",
+		"mobile.signin.panel.waiting_help": "वहाँ साइन-इन पूरा करें, फिर इस ऐप पर वापस आएँ।",
 		"mobile.signin.progress": "साइन इन हो रहा है…",
 		"mobile.signin.retry": "फिर कोशिश करें",
 		"mobile.signin.show_diagnostics": "साइन-इन का विवरण दिखाएँ",
@@ -5293,7 +5635,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_signed_in": "साइन-इन हो गया",
 		"mobile.signin.stage_starting": "साइन-इन शुरू हो रहा है",
 		"mobile.signin.stage_unavailable": "साइन-इन उपलब्ध नहीं है",
+		"mobile.signin.start": "Radient से साइन इन करें",
 		"mobile.signin.superseded": "एक और साइन-इन शुरू हुआ।",
+		"mobile.signin.title": "साइन इन करें",
+		"mobile.signin.try_anyway": "फिर भी कोशिश करें",
+		"mobile.signin.use_address": "पता और पासवर्ड से कनेक्ट करें",
+		"mobile.signin.welcome.body": "यह ऐप आपकी अपनी मशीन पर सत्र चलाता है और दिखाता है कि क्या हुआ। आपका कोड उस मशीन से कभी बाहर नहीं जाता।",
+		"mobile.signin.welcome.headline": "आपका एजेंट आपके कंप्यूटर पर चलता है।",
 		"mobile.team_bridge.attachment.add": "चित्र जोड़ें",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# चित्र जोड़ा गया} other {# चित्र जोड़े गए}}",
 		"mobile.team_bridge.attachment.cannot_send": "भेज नहीं सकते",
@@ -5580,6 +5928,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "активен",
 		"mobile.computers.badge.connecting": "подключается",
 		"mobile.computers.billing_help": "В консоли Radient откройте настройки оплаты этого туннеля и включите удалённый доступ.",
+		"mobile.computers.billing_inactive": "Оплата этого туннеля неактивна, поэтому в удалённом доступе будет отказано.",
 		"mobile.computers.connect_refused.generic": "Компьютер не принял подключение. Адрес и пароль сохранены на экране — проверьте их и попробуйте снова.",
 		"mobile.computers.connect_refused.password": "Ретранслятор не принял этот пароль. Проверьте его и попробуйте снова.",
 		"mobile.computers.connect_refused.title": "Не удалось подключиться",
@@ -5588,10 +5937,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.disabled_help": "По данным Radient, этот туннель сейчас неактивен. Проверьте его состояние в консоли Radient.",
 		"mobile.computers.harness_help": "В консоли Radient включите Local Operator для этого туннеля.",
 		"mobile.computers.hide_details": "Скрыть сведения",
+		"mobile.computers.list.heading": "Ваши компьютеры",
 		"mobile.computers.none_on_phone": "На этом телефоне пока нет компьютеров.",
+		"mobile.computers.not_harness": "На этом компьютере не запущен Local Operator.",
+		"mobile.computers.own_tunnel_instead": "Свой туннель вместо Radient",
 		"mobile.computers.password_placeholder": "Пароль из lop mobile",
+		"mobile.computers.paths.own_action": "Использовать свой туннель",
+		"mobile.computers.paths.own_body": "Продвинутый путь: вы сами публикуете компьютер через свой туннель и вставляете сюда его адрес. Аккаунт Radient не понадобится ни на одном этапе, а пароль остаётся у вас.",
+		"mobile.computers.paths.own_title": "Настроить свой туннель",
+		"mobile.computers.paths.radient_body": "Нужен аккаунт Radient. Radient обслуживает туннель за вас и выдаёт закрытый URL с аутентификацией, так что настраивать на этом телефоне нечего и пароль от ретранслятора хранить не нужно.",
+		"mobile.computers.paths.radient_title": "Подключение через Radient",
+		"mobile.computers.paths.recommended": "Рекомендуем",
 		"mobile.computers.protected": "Защищено входом",
+		"mobile.computers.reach.answering": "отвечает",
+		"mobile.computers.refresh": "Обновить",
+		"mobile.computers.remove.body": "Компьютер исчезнет из списка на этом телефоне. Сам компьютер, его туннель и ваш аккаунт не изменятся.",
+		"mobile.computers.remove.confirm": "Удалить",
+		"mobile.computers.remove.title": "Удалить этот компьютер?",
 		"mobile.computers.retry": "Повторить",
+		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
+		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, активен",
+		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, подключается",
 		"mobile.computers.save_refused.body": "Этому устройству не удалось надёжно сохранить адрес и пароль. Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
 		"mobile.computers.save_refused.body_with_code": "Этому устройству не удалось надёжно сохранить адрес и пароль (код {code}). Подключение пока работает, но после перезапуска приложения их придётся ввести снова.",
 		"mobile.computers.save_refused.continue": "Продолжить",
@@ -5603,19 +5969,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.sign_out": "Выйти",
 		"mobile.computers.signing_out": "Выход…",
+		"mobile.computers.status.disabled": "отключён",
+		"mobile.computers.status.provisioning": "настраивается",
+		"mobile.computers.status.revoked": "отозван",
+		"mobile.computers.status.route_ready": "маршрут готов",
+		"mobile.computers.status.suspended": "приостановлен",
+		"mobile.computers.status.unknown": "неизвестно",
 		"mobile.computers.storage_refused.no_code": "Защищённое хранилище этого устройства отклонило запрос. Попробуйте снова или переустановите приложение, если это повторяется.",
 		"mobile.computers.storage_refused.with_code": "Защищённое хранилище этого устройства отклонило запрос (код {code}). Попробуйте снова или переустановите приложение, если это повторяется.",
 		"mobile.computers.switch": "Сменить компьютер",
 		"mobile.computers.transport.custom": "Ваш адрес",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.try_now": "Попробовать сейчас",
+		"mobile.computers.wait.answered": "Компьютер ответил.",
 		"mobile.computers.wait.answering": "Ожидание ответа компьютера.",
 		"mobile.computers.wait.host_answering": "Ожидание ответа компьютера по адресу {host}. Настроенный маршрут ещё не означает, что компьютер работает.",
+		"mobile.computers.wait.listing": "Ждём, пока Radient добавит ваш компьютер в список…",
 		"mobile.computers.wait.nothing_answered": "Ответа нет.",
 		"mobile.computers.wait.nothing_answered_help": "За три минуты туннель не появился в списке, а компьютер не ответил. Убедитесь, что команда выполнилась на компьютере, и начните снова.",
 		"mobile.computers.wait.paused": "Проверка приостановлена, пока приложение в фоновом режиме. Откройте его снова, чтобы продолжить проверку.",
 		"mobile.computers.wait.relay_sessions": "Его ретранслятор сообщает: {sessions, plural, one {# запущенная сессия} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.",
 		"mobile.computers.wait.relay_version": "Его ретранслятор сообщает версию протокола: {version}.",
 		"mobile.computers.wait.relay_version_sessions": "Его ретранслятор сообщает версию протокола {version} и {sessions, plural, one {# запущенную сессию} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.",
+		"mobile.computers.wait.start_again": "Начать заново",
+		"mobile.computers.wait.tunnel_status": "Туннель на стороне Radient: {status}.",
+		"mobile.computers.wait.use_computer": "Использовать этот компьютер",
 		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
 		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
@@ -5971,6 +6349,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.diagnostics": "Диагностика входа",
 		"mobile.signin.failed": "Не удалось завершить вход.",
 		"mobile.signin.hide_diagnostics": "Скрыть сведения о входе",
+		"mobile.signin.intro": "Вход завершается в вашем браузере, поэтому приложение не видит ваш пароль.",
+		"mobile.signin.panel.cancelled": "Вход отменён.",
+		"mobile.signin.panel.cancelled_help": "В вашем аккаунте ничего не изменилось.",
+		"mobile.signin.panel.opening": "Открытие браузера…",
+		"mobile.signin.panel.unavailable": "Эта сборка не может завершить вход через Radient.",
+		"mobile.signin.panel.unavailable_alt": "Подключиться всё равно можно — по адресу ретранслятора и паролю.",
+		"mobile.signin.panel.waiting": "Ожидание браузера.",
+		"mobile.signin.panel.waiting_help": "Завершите вход в браузере и вернитесь в приложение.",
 		"mobile.signin.progress": "Вход…",
 		"mobile.signin.retry": "Повторить",
 		"mobile.signin.show_diagnostics": "Показать сведения о входе",
@@ -5985,7 +6371,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_signed_in": "Вход выполнен",
 		"mobile.signin.stage_starting": "Начало входа",
 		"mobile.signin.stage_unavailable": "Вход недоступен",
+		"mobile.signin.start": "Войти через Radient",
 		"mobile.signin.superseded": "Начался другой вход.",
+		"mobile.signin.title": "Вход",
+		"mobile.signin.try_anyway": "Всё равно попробовать",
+		"mobile.signin.use_address": "Войти по адресу и паролю",
+		"mobile.signin.welcome.body": "Это приложение управляет сессиями на вашей машине и показывает, что было сделано. Ваш код её не покидает.",
+		"mobile.signin.welcome.headline": "Ваш агент работает на вашем компьютере.",
 		"mobile.team_bridge.attachment.add": "Добавить изображение",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {Прикреплено # изображение} few {Прикреплено # изображения} many {Прикреплено # изображений} other {Прикреплено # изображения}}",
 		"mobile.team_bridge.attachment.cannot_send": "Нельзя отправить",
@@ -6272,6 +6664,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "فعال",
 		"mobile.computers.badge.connecting": "منسلک ہو رہا",
 		"mobile.computers.billing_help": "Radient کنسول میں اس ٹنل کی بلنگ کی ترتیبات کھولیں اور ریموٹ رسائی فعال کریں۔",
+		"mobile.computers.billing_inactive": "اس ٹنل کی بلنگ غیر فعال ہے، اس لیے ریموٹ رسائی مسترد ہو جائے گی۔",
 		"mobile.computers.connect_refused.generic": "کمپیوٹر نے کنکشن قبول نہیں کیا۔ آپ کا پتہ اور پاس ورڈ ابھی یہیں ہیں، اس لیے انہیں جانچیں اور دوبارہ کوشش کریں۔",
 		"mobile.computers.connect_refused.password": "ریلے نے وہ پاس ورڈ قبول نہیں کیا۔ اسے جانچیں اور دوبارہ کوشش کریں۔",
 		"mobile.computers.connect_refused.title": "منسلک نہیں ہو سکا",
@@ -6280,10 +6673,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.disabled_help": "Radient کے مطابق یہ ٹنل اس وقت فعال نہیں ہے۔ Radient کنسول میں اس کی حالت دیکھیں۔",
 		"mobile.computers.harness_help": "Radient کنسول میں اس ٹنل کے لیے Local Operator فعال کریں۔",
 		"mobile.computers.hide_details": "تفصیلات چھپائیں",
+		"mobile.computers.list.heading": "آپ کے کمپیوٹرز",
 		"mobile.computers.none_on_phone": "اس فون پر ابھی کوئی کمپیوٹر نہیں۔",
+		"mobile.computers.not_harness": "یہ کمپیوٹر Local Operator کا ہارنس نہیں چلا رہا۔",
+		"mobile.computers.own_tunnel_instead": "اس کے بجائے اپنی ٹنل استعمال کریں",
 		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
+		"mobile.computers.paths.own_action": "اپنی ٹنل استعمال کریں",
+		"mobile.computers.paths.own_body": "پیش رفتہ طریقہ: آپ اپنا کمپیوٹر خود دستیاب کرتے ہیں، اپنی چلائی ہوئی ٹنل کے ذریعے، اور اس کا پتہ یہاں چسپاں کرتے ہیں۔ کسی بھی مرحلے پر Radient اکاؤنٹ درکار نہیں، اور پاس ورڈ آپ کے پاس رہتا ہے۔",
+		"mobile.computers.paths.own_title": "اپنی ٹنل خود ترتیب دیں",
+		"mobile.computers.paths.radient_body": "Radient اکاؤنٹ درکار ہے۔ Radient آپ کے لیے ٹنل چلاتا ہے اور آپ کو نجی، تصدیق شدہ URL دیتا ہے، اس لیے اس فون پر کچھ ترتیب دینے کی ضرورت نہیں اور ریلے کا پاس ورڈ بھی نہیں سنبھالنا پڑتا۔",
+		"mobile.computers.paths.radient_title": "Radient سے جڑیں",
+		"mobile.computers.paths.recommended": "تجویز کردہ",
 		"mobile.computers.protected": "سائن ان سے محفوظ",
+		"mobile.computers.reach.answering": "جواب دے رہا",
+		"mobile.computers.refresh": "ریفریش کریں",
+		"mobile.computers.remove.body": "یہ اس کمپیوٹر کو اس فون کی فہرست سے ہٹا دیتا ہے۔ اس سے کمپیوٹر، اس کی ٹنل یا آپ کے اکاؤنٹ پر کوئی اثر نہیں پڑتا۔",
+		"mobile.computers.remove.confirm": "ہٹائیں",
+		"mobile.computers.remove.title": "یہ کمپیوٹر ہٹائیں؟",
 		"mobile.computers.retry": "دوبارہ کوشش کریں",
+		"mobile.computers.row.a11y": "{name}، {status}، {reach}",
+		"mobile.computers.row.a11y_active": "{name}، {status}، {reach}، فعال",
+		"mobile.computers.row.a11y_connecting": "{name}، {status}، {reach}، منسلک ہو رہا",
 		"mobile.computers.save_refused.body": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
 		"mobile.computers.save_refused.body_with_code": "یہ ڈیوائس پتہ اور پاس ورڈ محفوظ طریقے سے محفوظ نہیں کر سکی (کوڈ {code})۔ کنکشن فی الحال کام کر رہا ہے، لیکن ایپ دوبارہ شروع ہونے کے بعد آپ کو انہیں دوبارہ درج کرنا ہوگا۔",
 		"mobile.computers.save_refused.continue": "جاری رکھیں",
@@ -6295,19 +6705,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.sign_out": "سائن آؤٹ کریں",
 		"mobile.computers.signing_out": "سائن آؤٹ ہو رہا ہے…",
+		"mobile.computers.status.disabled": "غیر فعال",
+		"mobile.computers.status.provisioning": "تیار ہو رہا",
+		"mobile.computers.status.revoked": "منسوخ",
+		"mobile.computers.status.route_ready": "راستہ تیار",
+		"mobile.computers.status.suspended": "معطل",
+		"mobile.computers.status.unknown": "نامعلوم",
 		"mobile.computers.storage_refused.no_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
 		"mobile.computers.storage_refused.with_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی (کوڈ {code})۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
 		"mobile.computers.transport.custom": "آپ کا پتہ",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.try_now": "ابھی کوشش کریں",
+		"mobile.computers.wait.answered": "آپ کے کمپیوٹر نے جواب دیا۔",
 		"mobile.computers.wait.answering": "آپ کے کمپیوٹر سے جواب آنے کا انتظار ہے۔",
 		"mobile.computers.wait.host_answering": "آپ کے کمپیوٹر ({host}) سے جواب آنے کا انتظار ہے۔ راستہ تیار ہونے کا مطلب یہ نہیں کہ کمپیوٹر بھی چل رہا ہے۔",
+		"mobile.computers.wait.listing": "انتظار ہے کہ Radient آپ کے کمپیوٹر کو فہرست میں شامل کرے…",
 		"mobile.computers.wait.nothing_answered": "کوئی جواب نہیں ملا۔",
 		"mobile.computers.wait.nothing_answered_help": "تین منٹ میں نہ کوئی ٹنل فہرست میں آیا، نہ کسی میزبان نے جواب دیا۔ جانچیں کہ کمپیوٹر پر کمانڈ چلی تھی، پھر دوبارہ شروع کریں۔",
 		"mobile.computers.wait.paused": "ایپ پس منظر میں ہونے کے باعث نگرانی رکی ہوئی ہے۔ نگرانی جاری رکھنے کے لیے ایپ دوبارہ کھولیں۔",
 		"mobile.computers.wait.relay_sessions": "اس کا ریلے {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔",
 		"mobile.computers.wait.relay_version": "اس کا ریلے پروٹوکول ورژن {version} کی اطلاع دے رہا ہے۔",
 		"mobile.computers.wait.relay_version_sessions": "اس کا ریلے پروٹوکول ورژن {version} اور {sessions, plural, one {# جاری سیشن} other {# جاری سیشنز}} کی اطلاع دے رہا ہے۔",
+		"mobile.computers.wait.start_again": "دوبارہ شروع کریں",
+		"mobile.computers.wait.tunnel_status": "Radient کے پاس ٹنل ہے — {status}۔",
+		"mobile.computers.wait.use_computer": "یہ کمپیوٹر استعمال کریں",
 		"mobile.home.chip.effort_chosen": "استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.effort_default": "استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ",
 		"mobile.home.chip.effort_default_unnamed": "استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح",
@@ -6663,6 +7085,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
 		"mobile.signin.failed": "ہم سائن ان مکمل نہیں کر سکے۔",
 		"mobile.signin.hide_diagnostics": "سائن ان کی تفصیلات چھپائیں",
+		"mobile.signin.intro": "سائن ان آپ کا براؤزر مکمل کرتا ہے، اس لیے ایپ کو آپ کا پاس ورڈ کبھی نظر نہیں آتا۔",
+		"mobile.signin.panel.cancelled": "سائن ان منسوخ ہو گیا تھا۔",
+		"mobile.signin.panel.cancelled_help": "آپ کے اکاؤنٹ میں کچھ نہیں بدلا۔",
+		"mobile.signin.panel.opening": "آپ کا براؤزر کھل رہا ہے…",
+		"mobile.signin.panel.unavailable": "اس بلڈ میں Radient کا سائن ان مکمل نہیں ہو سکتا۔",
+		"mobile.signin.panel.unavailable_alt": "آپ پھر بھی ریلے کے پتہ اور پاس ورڈ سے جڑ سکتے ہیں۔",
+		"mobile.signin.panel.waiting": "آپ کے براؤزر کا انتظار ہے۔",
+		"mobile.signin.panel.waiting_help": "وہاں سائن ان مکمل کریں، پھر اس ایپ میں واپس آئیں۔",
 		"mobile.signin.progress": "سائن اِن ہو رہا ہے…",
 		"mobile.signin.retry": "دوبارہ کوشش کریں",
 		"mobile.signin.show_diagnostics": "سائن ان کی تفصیلات دکھائیں",
@@ -6677,7 +7107,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_signed_in": "سائن ان ہو گیا",
 		"mobile.signin.stage_starting": "سائن ان شروع ہو رہا ہے",
 		"mobile.signin.stage_unavailable": "سائن ان دستیاب نہیں",
+		"mobile.signin.start": "Radient کے ساتھ سائن ان کریں",
 		"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔",
+		"mobile.signin.title": "سائن ان",
+		"mobile.signin.try_anyway": "پھر بھی دوبارہ کوشش کریں",
+		"mobile.signin.use_address": "پتہ اور پاس ورڈ استعمال کریں",
+		"mobile.signin.welcome.body": "یہ ایپ آپ کی اپنی مشین پر سیشن چلاتی ہے اور دکھاتی ہے کہ کیا ہوا۔ آپ کا کوڈ کبھی اس مشین سے باہر نہیں جاتا۔",
+		"mobile.signin.welcome.headline": "آپ کا ایجنٹ آپ کے کمپیوٹر پر چلتا ہے۔",
 		"mobile.team_bridge.attachment.add": "تصویر شامل کریں",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, one {# تصویر شامل کی گئی} other {# تصاویر شامل کی گئیں}}",
 		"mobile.team_bridge.attachment.cannot_send": "بھیج نہیں سکتے",
@@ -6964,6 +7400,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "hoạt động",
 		"mobile.computers.badge.connecting": "đang kết nối",
 		"mobile.computers.billing_help": "Trong bảng điều khiển Radient, mở cài đặt thanh toán của đường hầm này và bật truy cập từ xa.",
+		"mobile.computers.billing_inactive": "Thanh toán cho đường hầm này hiện không hoạt động, nên truy cập từ xa sẽ bị từ chối.",
 		"mobile.computers.connect_refused.generic": "Máy tính không chấp nhận kết nối. Địa chỉ và mật khẩu của bạn vẫn còn ở đây, hãy kiểm tra lại rồi thử lại.",
 		"mobile.computers.connect_refused.password": "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại.",
 		"mobile.computers.connect_refused.title": "Không thể kết nối",
@@ -6972,10 +7409,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.disabled_help": "Radient cho biết đường hầm này hiện chưa hoạt động. Hãy kiểm tra trạng thái trong bảng điều khiển Radient.",
 		"mobile.computers.harness_help": "Trong bảng điều khiển Radient, bật Local Operator cho đường hầm này.",
 		"mobile.computers.hide_details": "Ẩn chi tiết",
+		"mobile.computers.list.heading": "Máy tính của bạn",
 		"mobile.computers.none_on_phone": "Chưa có máy tính nào trên điện thoại này.",
+		"mobile.computers.not_harness": "Máy tính này không chạy Local Operator.",
+		"mobile.computers.own_tunnel_instead": "Chuyển sang đường hầm riêng của tôi",
 		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
+		"mobile.computers.paths.own_action": "Dùng đường hầm riêng của tôi",
+		"mobile.computers.paths.own_body": "Cách nâng cao: tự công khai máy tính của mình qua đường hầm do bạn chạy, rồi dán địa chỉ vào đây. Không cần tài khoản Radient ở bất kỳ bước nào, và bạn giữ mật khẩu.",
+		"mobile.computers.paths.own_title": "Thiết lập đường hầm riêng của bạn",
+		"mobile.computers.paths.radient_body": "Cần có tài khoản Radient. Radient chạy đường hầm thay bạn, cấp một URL riêng tư có xác thực, nên không phải cấu hình gì trên điện thoại này và cũng không phải giữ mật khẩu chuyển tiếp.",
+		"mobile.computers.paths.radient_title": "Kết nối với Radient",
+		"mobile.computers.paths.recommended": "Đề xuất",
 		"mobile.computers.protected": "Được bảo vệ bằng đăng nhập",
+		"mobile.computers.reach.answering": "đang phản hồi",
+		"mobile.computers.refresh": "Làm mới",
+		"mobile.computers.remove.body": "Thao tác này xóa máy tính khỏi danh sách trên điện thoại này. Máy tính, đường hầm của nó và tài khoản của bạn đều không bị ảnh hưởng.",
+		"mobile.computers.remove.confirm": "Xóa",
+		"mobile.computers.remove.title": "Xóa máy tính này?",
 		"mobile.computers.retry": "Thử lại",
+		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
+		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, hoạt động",
+		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, đang kết nối",
 		"mobile.computers.save_refused.body": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật. Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
 		"mobile.computers.save_refused.body_with_code": "Thiết bị này không thể lưu địa chỉ và mật khẩu một cách bảo mật (mã {code}). Kết nối hiện vẫn hoạt động, nhưng bạn sẽ phải nhập lại chúng sau khi ứng dụng khởi động lại.",
 		"mobile.computers.save_refused.continue": "Tiếp tục",
@@ -6987,19 +7441,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.sign_out": "Đăng xuất",
 		"mobile.computers.signing_out": "Đang đăng xuất…",
+		"mobile.computers.status.disabled": "đã tắt",
+		"mobile.computers.status.provisioning": "đang thiết lập",
+		"mobile.computers.status.revoked": "đã thu hồi",
+		"mobile.computers.status.route_ready": "tuyến sẵn sàng",
+		"mobile.computers.status.suspended": "tạm ngưng",
+		"mobile.computers.status.unknown": "không rõ",
 		"mobile.computers.storage_refused.no_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu. Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 		"mobile.computers.storage_refused.with_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu (mã {code}). Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 		"mobile.computers.switch": "Chuyển máy tính",
 		"mobile.computers.transport.custom": "Địa chỉ của bạn",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.try_now": "Thử ngay",
+		"mobile.computers.wait.answered": "Máy tính của bạn đã phản hồi.",
 		"mobile.computers.wait.answering": "Đang chờ máy tính phản hồi.",
 		"mobile.computers.wait.host_answering": "Đang chờ máy tính tại {host} phản hồi. Tuyến kết nối đã cấp không có nghĩa là máy tính đang chạy.",
+		"mobile.computers.wait.listing": "Đang chờ Radient đưa máy tính của bạn vào danh sách…",
 		"mobile.computers.wait.nothing_answered": "Không có phản hồi.",
 		"mobile.computers.wait.nothing_answered_help": "Đã ba phút mà danh sách vẫn không có đường hầm nào và không máy tính nào phản hồi. Kiểm tra xem lệnh đã chạy trên máy tính chưa, rồi bắt đầu lại.",
 		"mobile.computers.wait.paused": "Tạm dừng khi ứng dụng chạy nền. Mở lại ứng dụng để tiếp tục theo dõi.",
 		"mobile.computers.wait.relay_sessions": "Máy chủ chuyển tiếp trên máy tính báo có {sessions, plural, other {# phiên đang chạy}}.",
 		"mobile.computers.wait.relay_version": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version}.",
 		"mobile.computers.wait.relay_version_sessions": "Máy chủ chuyển tiếp trên máy tính báo phiên bản giao thức {version} và {sessions, plural, other {# phiên đang chạy}}.",
+		"mobile.computers.wait.start_again": "Bắt đầu lại",
+		"mobile.computers.wait.tunnel_status": "Radient đã có đường hầm — {status}.",
+		"mobile.computers.wait.use_computer": "Dùng máy tính này",
 		"mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
 		"mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
@@ -7355,6 +7821,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
 		"mobile.signin.failed": "Không thể hoàn tất đăng nhập.",
 		"mobile.signin.hide_diagnostics": "Ẩn chi tiết đăng nhập",
+		"mobile.signin.intro": "Trình duyệt của bạn hoàn tất bước đăng nhập, nên ứng dụng không bao giờ thấy mật khẩu của bạn.",
+		"mobile.signin.panel.cancelled": "Đã hủy đăng nhập.",
+		"mobile.signin.panel.cancelled_help": "Không có gì thay đổi trên tài khoản của bạn.",
+		"mobile.signin.panel.opening": "Đang mở trình duyệt…",
+		"mobile.signin.panel.unavailable": "Bản dựng này không thể hoàn tất đăng nhập Radient.",
+		"mobile.signin.panel.unavailable_alt": "Bạn vẫn có thể kết nối bằng địa chỉ và mật khẩu của máy chủ chuyển tiếp.",
+		"mobile.signin.panel.waiting": "Đang chờ trình duyệt của bạn.",
+		"mobile.signin.panel.waiting_help": "Hoàn tất đăng nhập ở đó, rồi quay lại ứng dụng này.",
 		"mobile.signin.progress": "Đang đăng nhập…",
 		"mobile.signin.retry": "Thử lại",
 		"mobile.signin.show_diagnostics": "Hiện chi tiết đăng nhập",
@@ -7369,7 +7843,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_signed_in": "Đã đăng nhập",
 		"mobile.signin.stage_starting": "Đang bắt đầu đăng nhập",
 		"mobile.signin.stage_unavailable": "Không thể đăng nhập",
+		"mobile.signin.start": "Đăng nhập bằng Radient",
 		"mobile.signin.superseded": "Một lần đăng nhập khác đã bắt đầu.",
+		"mobile.signin.title": "Đăng nhập",
+		"mobile.signin.try_anyway": "Cứ thử lại",
+		"mobile.signin.use_address": "Dùng địa chỉ và mật khẩu",
+		"mobile.signin.welcome.body": "Ứng dụng này điều khiển các phiên trên chính máy của bạn và hiển thị những gì nó đã làm. Mã nguồn của bạn không bao giờ rời khỏi máy.",
+		"mobile.signin.welcome.headline": "Tác nhân của bạn chạy trên máy tính của bạn.",
 		"mobile.team_bridge.attachment.add": "Thêm hình ảnh",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, other {Đã đính kèm # hình ảnh}}",
 		"mobile.team_bridge.attachment.cannot_send": "Không thể gửi",
@@ -7656,6 +8136,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.badge.active": "使用中",
 		"mobile.computers.badge.connecting": "连接中",
 		"mobile.computers.billing_help": "在 Radient 控制台中打开此隧道的账单设置，并启用远程访问。",
+		"mobile.computers.billing_inactive": "此隧道的账单未启用，因此远程访问将被拒绝。",
 		"mobile.computers.connect_refused.generic": "计算机未接受连接。你的地址和密码仍保留在这里，请检查后重试。",
 		"mobile.computers.connect_refused.password": "中继未接受该密码。请检查后重试。",
 		"mobile.computers.connect_refused.title": "无法连接",
@@ -7664,10 +8145,27 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.disabled_help": "Radient 显示此隧道当前未处于活动状态。请在 Radient 控制台检查其状态。",
 		"mobile.computers.harness_help": "在 Radient 控制台中为此隧道启用 Local Operator。",
 		"mobile.computers.hide_details": "隐藏详细信息",
+		"mobile.computers.list.heading": "你的电脑",
 		"mobile.computers.none_on_phone": "此手机尚未添加电脑。",
+		"mobile.computers.not_harness": "这台电脑未运行Local Operator。",
+		"mobile.computers.own_tunnel_instead": "改用我自己的隧道",
 		"mobile.computers.password_placeholder": "来自lop mobile的密码",
+		"mobile.computers.paths.own_action": "使用我自己的隧道",
+		"mobile.computers.paths.own_body": "进阶方式：自行运行隧道来发布电脑，并在此粘贴其地址。全程无需Radient账户，密码由你自己保管。",
+		"mobile.computers.paths.own_title": "设置自己的隧道",
+		"mobile.computers.paths.radient_body": "需要Radient账户。Radient为你运行隧道，并提供私有且经过身份验证的URL，因此手机上无需任何配置，也无需保管中继密码。",
+		"mobile.computers.paths.radient_title": "通过Radient连接",
+		"mobile.computers.paths.recommended": "推荐",
 		"mobile.computers.protected": "受登录保护",
+		"mobile.computers.reach.answering": "已响应",
+		"mobile.computers.refresh": "刷新",
+		"mobile.computers.remove.body": "此操作只将它从此手机的列表中移除。不会影响电脑本身、其隧道或你的账户。",
+		"mobile.computers.remove.confirm": "移除",
+		"mobile.computers.remove.title": "移除此电脑？",
 		"mobile.computers.retry": "重试",
+		"mobile.computers.row.a11y": "{name}，{status}，{reach}",
+		"mobile.computers.row.a11y_active": "{name}，{status}，{reach}，使用中",
+		"mobile.computers.row.a11y_connecting": "{name}，{status}，{reach}，连接中",
 		"mobile.computers.save_refused.body": "此设备无法安全地保存地址和密码。连接目前可用，但应用重启后你需要重新输入它们。",
 		"mobile.computers.save_refused.body_with_code": "此设备无法安全地保存地址和密码（代码 {code}）。连接目前可用，但应用重启后你需要重新输入它们。",
 		"mobile.computers.save_refused.continue": "继续",
@@ -7679,19 +8177,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.sign_out": "退出登录",
 		"mobile.computers.signing_out": "正在退出登录…",
+		"mobile.computers.status.disabled": "已禁用",
+		"mobile.computers.status.provisioning": "配置中",
+		"mobile.computers.status.revoked": "已撤销",
+		"mobile.computers.status.route_ready": "路径就绪",
+		"mobile.computers.status.suspended": "已暂停",
+		"mobile.computers.status.unknown": "未知",
 		"mobile.computers.storage_refused.no_code": "此设备的安全存储拒绝了该请求。请重试；如果问题持续出现，请重新安装应用。",
 		"mobile.computers.storage_refused.with_code": "此设备的安全存储拒绝了该请求（代码 {code}）。请重试；如果问题持续出现，请重新安装应用。",
 		"mobile.computers.switch": "切换电脑",
 		"mobile.computers.transport.custom": "你的地址",
 		"mobile.computers.transport.radient": "Radient",
+		"mobile.computers.try_now": "立即重试",
+		"mobile.computers.wait.answered": "你的电脑已响应。",
 		"mobile.computers.wait.answering": "正在等待电脑响应。",
 		"mobile.computers.wait.host_answering": "正在等待{host}上的电脑响应。连接路径已配置，不代表电脑正在运行。",
+		"mobile.computers.wait.listing": "正在等待Radient列出你的电脑……",
 		"mobile.computers.wait.nothing_answered": "没有响应。",
 		"mobile.computers.wait.nothing_answered_help": "三分钟内没有出现任何隧道，电脑也没有响应。确认命令已在电脑上运行，然后重新开始。",
 		"mobile.computers.wait.paused": "应用在后台时已暂停。重新打开应用以继续查看。",
 		"mobile.computers.wait.relay_sessions": "它的中继报告：{sessions, plural, other {# 个会话正在运行}}。",
 		"mobile.computers.wait.relay_version": "它的中继报告：协议版本为{version}。",
 		"mobile.computers.wait.relay_version_sessions": "它的中继报告：协议版本为{version}，{sessions, plural, other {# 个会话正在运行}}。",
+		"mobile.computers.wait.start_again": "重新开始",
+		"mobile.computers.wait.tunnel_status": "Radient已有此隧道，状态：{status}。",
+		"mobile.computers.wait.use_computer": "使用此电脑",
 		"mobile.home.chip.effort_chosen": "推理强度，{effort}，已为此对话选择",
 		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
 		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
@@ -8047,6 +8557,14 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.diagnostics": "登录诊断",
 		"mobile.signin.failed": "无法完成登录。",
 		"mobile.signin.hide_diagnostics": "隐藏登录详情",
+		"mobile.signin.intro": "登录由你的浏览器完成，应用绝不会看到你的密码。",
+		"mobile.signin.panel.cancelled": "本次登录已取消。",
+		"mobile.signin.panel.cancelled_help": "你的账户没有任何改动。",
+		"mobile.signin.panel.opening": "正在打开浏览器……",
+		"mobile.signin.panel.unavailable": "此版本无法完成Radient登录。",
+		"mobile.signin.panel.unavailable_alt": "你仍可使用中继的地址和密码连接。",
+		"mobile.signin.panel.waiting": "正在等待你的浏览器。",
+		"mobile.signin.panel.waiting_help": "在那里完成登录，然后回到此应用。",
 		"mobile.signin.progress": "正在登录…",
 		"mobile.signin.retry": "重试",
 		"mobile.signin.show_diagnostics": "显示登录详情",
@@ -8061,7 +8579,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.stage_signed_in": "已登录",
 		"mobile.signin.stage_starting": "正在开始登录",
 		"mobile.signin.stage_unavailable": "无法登录",
+		"mobile.signin.start": "使用Radient登录",
 		"mobile.signin.superseded": "另一次登录已开始。",
+		"mobile.signin.title": "登录",
+		"mobile.signin.try_anyway": "仍要重试",
+		"mobile.signin.use_address": "使用地址和密码",
+		"mobile.signin.welcome.body": "此应用在你的电脑上运行会话，并展示它做了什么。你的代码绝不会离开这台电脑。",
+		"mobile.signin.welcome.headline": "智能体运行在你的电脑上。",
 		"mobile.team_bridge.attachment.add": "添加图片",
 		"mobile.team_bridge.attachment.attached_summary": "{count, plural, other {已附加 # 张图片}}",
 		"mobile.team_bridge.attachment.cannot_send": "无法发送",

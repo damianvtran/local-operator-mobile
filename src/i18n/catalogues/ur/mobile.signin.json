@@ -16,5 +16,19 @@
 	"mobile.signin.stage_signed_in": "سائن ان ہو گیا",
 	"mobile.signin.stage_starting": "سائن ان شروع ہو رہا ہے",
 	"mobile.signin.stage_unavailable": "سائن ان دستیاب نہیں",
-	"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔"
+	"mobile.signin.superseded": "ایک اور سائن ان شروع ہوا۔",
+	"mobile.signin.title": "سائن ان",
+	"mobile.signin.intro": "سائن ان آپ کا براؤزر مکمل کرتا ہے، اس لیے ایپ کو آپ کا پاس ورڈ کبھی نظر نہیں آتا۔",
+	"mobile.signin.start": "Radient کے ساتھ سائن ان کریں",
+	"mobile.signin.use_address": "پتہ اور پاس ورڈ استعمال کریں",
+	"mobile.signin.panel.opening": "آپ کا براؤزر کھل رہا ہے…",
+	"mobile.signin.panel.waiting": "آپ کے براؤزر کا انتظار ہے۔",
+	"mobile.signin.panel.waiting_help": "وہاں سائن ان مکمل کریں، پھر اس ایپ میں واپس آئیں۔",
+	"mobile.signin.panel.cancelled": "سائن ان منسوخ ہو گیا تھا۔",
+	"mobile.signin.panel.cancelled_help": "آپ کے اکاؤنٹ میں کچھ نہیں بدلا۔",
+	"mobile.signin.panel.unavailable": "اس بلڈ میں Radient کا سائن ان مکمل نہیں ہو سکتا۔",
+	"mobile.signin.panel.unavailable_alt": "آپ پھر بھی ریلے کے پتہ اور پاس ورڈ سے جڑ سکتے ہیں۔",
+	"mobile.signin.try_anyway": "پھر بھی دوبارہ کوشش کریں",
+	"mobile.signin.welcome.headline": "آپ کا ایجنٹ آپ کے کمپیوٹر پر چلتا ہے۔",
+	"mobile.signin.welcome.body": "یہ ایپ آپ کی اپنی مشین پر سیشن چلاتی ہے اور دکھاتی ہے کہ کیا ہوا۔ آپ کا کوڈ کبھی اس مشین سے باہر نہیں جاتا۔"
 }

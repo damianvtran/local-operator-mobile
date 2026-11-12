@@ -211,9 +211,16 @@ export function backAction(input: {
 }
 
 /**
- * The control plane's status, in the reader's terms. Sentence case like every
- * other status word on the screen ("Sign-in protected"): the row used to show
- * "route ready" beside "Sign-in protected" (TestFlight 883, design D5).
+ * The control plane's status, in the reader's terms, through #243's catalogue keys.
+ *
+ * Design D5 (TestFlight 883) asked for sentence case beside "Sign-in protected".
+ * The `status.*` keys cannot carry that: they are ALSO the `{status}` predicate
+ * of the wait panel's "Radient has the tunnel — {status}." (`tunnelStatusKey`),
+ * where a capital would be wrong, and every locale's audited translation was
+ * written to the context note "keep lower case". Capitalising in code is not an
+ * answer either (no case in most shipped scripts, locale-specific rules in the
+ * rest). So the row shows the catalogue's words as they are; sentence case needs
+ * row-only keys translated in every locale, which is its own change.
  */
 export function computerStatusLabel(status: ComputerStatus): {
 	label: string;
@@ -221,17 +228,20 @@ export function computerStatusLabel(status: ComputerStatus): {
 } {
 	switch (status) {
 		case "ready":
-			return { label: "Route ready", tone: "success" };
+			return {
+				label: t("mobile.computers.status.route_ready"),
+				tone: "success",
+			};
 		case "provisioning":
-			return { label: "Provisioning", tone: "info" };
+			return { label: t("mobile.computers.status.provisioning"), tone: "info" };
 		case "suspended":
-			return { label: "Suspended", tone: "warning" };
+			return { label: t("mobile.computers.status.suspended"), tone: "warning" };
 		case "off":
-			return { label: "Disabled", tone: "warning" };
+			return { label: t("mobile.computers.status.disabled"), tone: "warning" };
 		case "gone":
-			return { label: "Revoked", tone: "danger" };
+			return { label: t("mobile.computers.status.revoked"), tone: "danger" };
 		case "unknown":
-			return { label: "Unknown", tone: "neutral" };
+			return { label: t("mobile.computers.status.unknown"), tone: "neutral" };
 	}
 }
 
@@ -246,7 +256,7 @@ export function computerReachabilityLabel(state: Reachability): {
 		case "protected":
 			return { label: t("mobile.computers.protected"), tone: "neutral" };
 		case "answered":
-			return { label: "Answering", tone: "success" };
+			return { label: t("mobile.computers.reach.answering"), tone: "success" };
 	}
 }
 
