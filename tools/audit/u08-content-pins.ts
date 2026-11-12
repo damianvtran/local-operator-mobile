@@ -1615,7 +1615,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * router on the account, and the own-tunnel guide's and sign-in's Back leave
 	 * for Home with no history (`leave-screen.ts`). Re-derived once with --print
 	 * over the staged tree. Source identity only, NOT rendered U-08 evidence. */
-	src: "acbc69b8ed9c9c70d042e2566a34b4123bcda96e99b6f1a4f08376ea0ef7a7d8",
+	/* fix/ola-feedback-1112 (#2/#3): the Computers row and Team Bridge entry as
+	 * nav cards, computerDisplayName, the drawer row's one-line state + meta,
+	 * hanging indicator, row-owned gutter and single-ellipsis selector. Re-derived
+	 * once with --print over the staged tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	src: "96216bd073eccbb411c553e1b703125d52958e7cf71087dcd334195acf370a11",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
