@@ -47,6 +47,7 @@ import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Shimmer } from "@/ui/components/shimmer";
 import { Skeleton } from "@/ui/components/skeleton";
+import { useComposedDir } from "@/ui/direction";
 import { computersHeaderStackWidth } from "@/ui/size-class";
 
 /**
@@ -325,6 +326,10 @@ export default function Computers() {
 		signInDiagnostics,
 	} = useConnection();
 
+	/* "Connected to {name}." puts the computer's Latin name first in English; in Urdu
+	 * the name still leads the sentence (`{name} سے منسلک ہو گیا۔`), so RN-web's
+	 * `dir="auto"` resolves it LTR on an RTL page (design review D2). */
+	const composedDir = useComposedDir();
 	const switcher = useComputerSwitcher();
 	const phoneKnowsComputers = usePhoneKnowsComputers();
 	const computers = useConnectionState((state) => state.computers);
@@ -626,13 +631,13 @@ export default function Computers() {
 					) : null}
 					{addedComputerLive ? (
 						<View className="gap-1 rounded-sm border border-hairline bg-surface p-4">
-							<Text className="text-body text-ink">
+							<Text className="text-body text-ink" {...composedDir}>
 								{t("mobile.computers.added.connected_to", {
 									name:
 										appeared?.name ?? t("mobile.computers.added.fallback_name"),
 								})}
 							</Text>
-							<Text className="text-body-sm text-ink-muted">
+							<Text className="text-body-sm text-ink-muted" {...composedDir}>
 								{t("mobile.computers.added.stays_listed")}
 							</Text>
 						</View>

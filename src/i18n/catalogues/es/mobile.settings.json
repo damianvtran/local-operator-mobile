@@ -55,7 +55,7 @@
 	"mobile.settings.diagnostics.stream_idle": "inactivo",
 	"mobile.settings.diagnostics.stream_connecting": "conectando",
 	"mobile.settings.diagnostics.stream_live": "activo",
-	"mobile.settings.diagnostics.stream_degraded": "No responde",
+	"mobile.settings.diagnostics.stream_degraded": "no responde",
 	"mobile.settings.diagnostics.stream_offline": "sin conexión",
 	"mobile.settings.account.app_name": "Local Operator"
 }

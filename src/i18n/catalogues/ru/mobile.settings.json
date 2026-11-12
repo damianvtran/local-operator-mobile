@@ -55,7 +55,7 @@
 	"mobile.settings.diagnostics.stream_idle": "в простое",
 	"mobile.settings.diagnostics.stream_connecting": "подключается",
 	"mobile.settings.diagnostics.stream_live": "активен",
-	"mobile.settings.diagnostics.stream_degraded": "Не отвечает",
+	"mobile.settings.diagnostics.stream_degraded": "не отвечает",
 	"mobile.settings.diagnostics.stream_offline": "вне сети",
 	"mobile.settings.account.app_name": "Local Operator"
 }

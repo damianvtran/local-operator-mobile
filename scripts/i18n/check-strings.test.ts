@@ -251,6 +251,61 @@ describe("the expression-literal rule", () => {
 		expect(findings).toHaveLength(0);
 	});
 
+	/* QA Q1: the lookback used to stop at any line ending in `{`/`}`/`;`, so a
+	 * multi-line keyed `t(..., {...})` branch hid the `?` that opened the ternary
+	 * and an else-literal after it had 0 findings. These are the two shapes QA
+	 * reproduced (restoring the English in the session cue and in Settings). */
+	it("finds an else-literal after a multi-line keyed branch", () => {
+		const findings = scanSource(
+			ACTIVATED,
+			[
+				"<Text>",
+				"\t{regionAtBottom",
+				'\t\t? t("mobile.session.region.end")',
+				"\t\t: hiddenRegionLabels.length > 0",
+				'\t\t\t? t("mobile.session.region.below_labels", {',
+				'\t\t\t\t\tlabels: hiddenRegionLabels.join(" | "),',
+				"\t\t\t\t})",
+				'\t\t\t: "more below · scroll ↓"}',
+				"</Text>",
+				"<Text>",
+				"\t{route",
+				"\t\t? route.mode === 'radient'",
+				'\t\t\t? t("mobile.settings.account.route_radient")',
+				'\t\t\t: t("mobile.settings.account.route_direct", {',
+				"\t\t\t\t\tbaseUrl: route.baseUrl,",
+				"\t\t\t\t})",
+				'\t\t: "No connection yet"}',
+				"</Text>",
+			].join("\n"),
+		).filter((finding) => finding.rule === "expression-literal");
+		expect(findings.map((finding) => finding.text)).toEqual([
+			"more below · scroll ↓",
+			"No connection yet",
+		]);
+	});
+
+	it("does not read a later object property as the else of an earlier ternary", () => {
+		const findings = scanSource(
+			ACTIVATED,
+			[
+				"const row = {",
+				'\tlabel: ready ? t("mobile.settings.ready") : t("mobile.settings.idle", {',
+				"\t\tn: 1,",
+				"\t}),",
+				'\ttitle: "A property value",',
+				"};",
+			].join("\n"),
+		);
+		expect(findings).toHaveLength(0);
+	});
+
+	it("activates rule 4 on the agent-job screen", () => {
+		expect(
+			expressionRuleActive("app/(app)/session/[id]/agent/[jobId].tsx"),
+		).toBe(true);
+	});
+
 	it("does not let a JSX apostrophe hide the literals below it", () => {
 		const findings = scanSource(
 			ACTIVATED,

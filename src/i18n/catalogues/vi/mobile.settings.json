@@ -55,7 +55,7 @@
 	"mobile.settings.diagnostics.stream_idle": "rảnh",
 	"mobile.settings.diagnostics.stream_connecting": "đang kết nối",
 	"mobile.settings.diagnostics.stream_live": "hoạt động",
-	"mobile.settings.diagnostics.stream_degraded": "Không phản hồi",
+	"mobile.settings.diagnostics.stream_degraded": "không phản hồi",
 	"mobile.settings.diagnostics.stream_offline": "ngoại tuyến",
 	"mobile.settings.account.app_name": "Local Operator"
 }

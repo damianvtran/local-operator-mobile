@@ -478,8 +478,6 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	es: {
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
-		"mobile.session.tray.context_short":
-			"`ctx` is the context-tray abbreviation the sidecar prescribes for the narrow (<340 pt) form; it is the same short token as the English source, judged by the M2 round-2 audit, not an English fallback.",
 		"mobile.session.subagent.prompt_label":
 			"`prompt` is the Spanish glossary-kept term for the model input (audited in the m1 translator wave); it is intentional, not an English fallback.",
 		"mobile.team_bridge.profile.name_with_owner":
@@ -532,8 +530,6 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 	vi: {
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
-		"mobile.session.tray.context_short":
-			"`ctx` is the context-tray abbreviation the sidecar prescribes for the narrow (<340 pt) form; it is the same short token as the English source, judged by the M2 round-2 audit, not an English fallback.",
 		"mobile.session.video.title_fallback":
 			"Video is the shipped Vietnamese term for the video screen title (M2 round-2 audit); identical spelling is idiomatic, not an English fallback.",
 		"mobile.session.subagent.prompt_label":

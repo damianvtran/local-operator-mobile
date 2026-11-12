@@ -43,7 +43,7 @@ import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
-import { LTR_WRITING, TEXT_END_CLASS } from "@/ui/direction";
+import { LTR_WRITING, TEXT_END_CLASS, useComposedDir } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import { AccountRoutingSection } from "./account-routing-section";
@@ -100,6 +100,12 @@ export default function Settings() {
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const phase = useConnectionState((state) => state.phase);
 	const accountLabel = useConnectionState((state) => state.accountLabel);
+	/* The account title is the account label (a Latin email or name) OR the
+	 * translated "Not signed in with Radient", which in Urdu begins with the Latin
+	 * `Radient`. RN-web's `dir="auto"` then resolves the title LTR on an RTL page
+	 * and it sits on the wrong edge, away from its same-card subtitle (design
+	 * review D2). Both lines state the page's base so they share one edge. */
+	const composedDir = useComposedDir();
 	const discoveryFailure = useConnectionState(
 		(state) => state.discoveryFailure,
 	);
@@ -305,13 +311,14 @@ export default function Settings() {
 								accountStacked ? "min-w-0 w-full gap-1" : "min-w-0 flex-1 gap-1"
 							}
 						>
-							<Text className="text-body text-ink">
+							<Text className="text-body text-ink" {...composedDir}>
 								{accountLabel ?? t("mobile.settings.account.not_signed_in")}
 							</Text>
 							<Text
 								className="text-body-sm text-ink-dim"
 								numberOfLines={1}
 								ellipsizeMode="tail"
+								{...composedDir}
 							>
 								{route
 									? route.mode === "radient"
