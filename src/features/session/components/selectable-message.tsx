@@ -112,6 +112,7 @@ export function SelectableMessage({
 	children,
 	textClassName,
 	disabled = false,
+	onEnter,
 	testID,
 }: {
 	/** The plain text the selection view shows and Copy writes. A function is
@@ -123,6 +124,12 @@ export function SelectableMessage({
 	textClassName: string;
 	/** A clamped one-line preview is not a reading surface; no mode for it. */
 	disabled?: boolean;
+	/** Runs as the mode is entered, BEFORE the read-only view replaces the
+	 *  body, so a host can make room for it first: a closed `Show more` clamp
+	 *  opens here, or the view would be clipped at eight lines with its end
+	 *  handle out of reach (PR #237 review, R1-m1). Not called when the mode is
+	 *  unavailable (disabled, or a platform that selects natively). */
+	onEnter?: () => void;
 	testID?: string;
 }) {
 	/* The selection colour per platform. iOS takes it as the input's
@@ -163,6 +170,8 @@ export function SelectableMessage({
 	 *  a caller hands a fresh function per render. */
 	const latestText = useRef(text);
 	latestText.current = text;
+	const latestOnEnter = useRef(onEnter);
+	latestOnEnter.current = onEnter;
 	/* The snapshot shown while selecting, taken once on entry (see the header:
 	 *  a streamed token must not reset the reader's range). */
 	const [plain, setPlain] = useState("");
@@ -170,6 +179,8 @@ export function SelectableMessage({
 	const enter = useCallback(() => {
 		if (disabled || !usesSelectionMode()) return;
 		sawRange.current = false;
+		// Same render batch as the swap below, so the view mounts already open.
+		latestOnEnter.current?.();
 		const current = latestText.current;
 		setPlain(typeof current === "function" ? current() : current);
 		enterTextSelection(id);

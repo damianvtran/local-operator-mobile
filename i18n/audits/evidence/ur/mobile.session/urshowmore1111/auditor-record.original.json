@@ -1,0 +1,68 @@
+{
+  "audit_id": "sm-ur-1",
+  "locale": "ur",
+  "namespace": "mobile.session",
+  "audit_date": "2026-11-11",
+  "key_count": 2,
+  "keys": [
+    "mobile.session.user_message.show_more",
+    "mobile.session.user_message.show_less"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor",
+    "session": "ba46c71f2521",
+    "model": "deepseek/deepseek-flash",
+    "actual_model_source": "harness system prompt (session model), no fallback, no pin override",
+    "independent_from_translator_session": true,
+    "translator": { "agent": "translator", "model": "anthropic/claude-sonnet-5-5", "session": "1c44531632d2" }
+  },
+  "source": { "rev": "8fdfb2e9", "pr": 237, "base": "fa2bc5e0" },
+  "input_hashes": {
+    "en": { "path": "src/i18n/catalogues/en/mobile.session.json", "rev": "8fdfb2e9", "sha256": "143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0" },
+    "context": { "path": "src/i18n/catalogues/en/mobile.session.context.json", "rev": "8fdfb2e9", "sha256": "ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102" },
+    "target": { "path": "src/i18n/catalogues/ur/mobile.session.json", "rev": "8fdfb2e9", "sha256": "06e6da40aa6a9819734af490f84acb9112e3ce8e75c80ba8daaa0975ffe6e89b" }
+  },
+  "value_hashes": {
+    "english_pair_sorted_json": "b285de7371f1a73b6c5adc4d70d999acbc7a6a8eea4a4057f2775c618aa5beef",
+    "candidate_pair_sorted_json": "71616db9a927f0a17877fdee72f7c1f34e515bb67ec11b99a3231a92eaf844cc",
+    "recommended_pair_sorted_json": "948d52d664df14605426241f518d89baa19f1d898be433e5cf3f80078a0a4050"
+  },
+  "candidate_values": {
+    "mobile.session.user_message.show_more": "مزید دیکھیں",
+    "mobile.session.user_message.show_less": "کم دیکھیں"
+  },
+  "shipped_values_at_head": {
+    "mobile.session.user_message.show_more": "مزید دکھائیں",
+    "mobile.session.user_message.show_less": "کم دکھائیں"
+  },
+  "artifacts": [
+    { "path": "audit-showmore-ur.md", "sha256": "f8684f863df012d03a55c4721826adc4eced4676d91e468ea4d25f51dbbd5e83", "role": "audit report (findings, evidence, negative control)" },
+    { "path": "audit-showmore-ur.record.json", "role": "this record (own hash not self-referential; see the manager's copy)" }
+  ],
+  "audit_notes_not_execution_log": "All commands quoted in audit-showmore-ur.md were run in this session against the read-only checkout; the transcript is the execution log. No repo validator (npm run -s i18n:check) was run: it compares catalogues inside a tree and cannot validate unmerged candidate values. No translation/MT service and no back-translation was used.",
+  "current_report_verdict": {
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 1,
+    "findings": [
+      {
+        "id": "UR-SM-1",
+        "severity": "major",
+        "keys": ["mobile.session.user_message.show_more", "mobile.session.user_message.show_less"],
+        "problem": "Verb دیکھیں (view/see) where this catalogue renders Show as دکھائیں; show_less's کم دیکھیں also invites the کم دیکھنا idiom in a context-free accessibility label.",
+        "replacement": {
+          "mobile.session.user_message.show_more": "مزید دکھائیں",
+          "mobile.session.user_message.show_less": "کم دکھائیں"
+        }
+      }
+    ],
+    "finding_ids": ["UR-SM-1"],
+    "counts": { "blocker": 0, "major": 1, "minor": 0, "nit": 0 }
+  },
+  "premise_correction": {
+    "claim_audited_against": "the two keys are English-only at PR #237 head 8fdfb2e9",
+    "finding": "false for ur and for all seven locales: commit 0beb4dd3 (the PR's own feature commit) added translated values to every locale catalogue",
+    "consequence": "the candidate pair would replace a shipped, catalogue-consistent value; no change is needed to the branch for ur"
+  },
+  "original_lost_evidence": null,
+  "backdated": false
+}

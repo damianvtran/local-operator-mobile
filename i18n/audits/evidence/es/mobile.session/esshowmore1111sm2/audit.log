@@ -1,0 +1,60 @@
+=== inputs (file bytes) ===
+  en catalogue @8fdfb2e9: /Users/damian/.local-operator/sessions/d1d6f85b4577/scratchpad/en-mobile.session@8fdfb2e9.json
+    sha256=143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0
+  en context @8fdfb2e9: /Users/damian/.local-operator/sessions/d1d6f85b4577/scratchpad/en-mobile.session.context@8fdfb2e9.json
+    sha256=ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102
+  es catalogue @8fdfb2e9 (pair A, shipped): /Users/damian/.local-operator/sessions/d1d6f85b4577/scratchpad/es@8fdfb2e9-mobile.session.json
+    sha256=8fd2e641ce1bc7c005dd8639eafe16f96882138395adb7b1ada28758e450bc7e
+  translator candidate (pair B): /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/followon-show-more/es.json
+    sha256=45ce46ee87297c71cf83031d1ffc277f0848ef8b341ea328525ae3fc6eb95eee
+
+=== values, cells, codepoints ===
+A shipped #237:
+  mobile.session.user_message.show_more = 'Mostrar más'  cells=11
+     U+004D U+006F U+0073 U+0074 U+0072 U+0061 U+0072 U+0020 U+006D U+00E1 U+0073
+  mobile.session.user_message.show_less = 'Mostrar menos'  cells=13
+     U+004D U+006F U+0073 U+0074 U+0072 U+0061 U+0072 U+0020 U+006D U+0065 U+006E U+006F U+0073
+B translator:
+  mobile.session.user_message.show_more = 'Ver más'  cells=7
+     U+0056 U+0065 U+0072 U+0020 U+006D U+00E1 U+0073
+  mobile.session.user_message.show_less = 'Ver menos'  cells=9
+     U+0056 U+0065 U+0072 U+0020 U+006D U+0065 U+006E U+006F U+0073
+
+=== mechanical checks ===
+A shipped #237: PASS (0 problems)
+B translator: PASS (0 problems)
+
+=== negative controls on BOTH pairs (each mutation must FAIL) ===
+  A/empty value: caught ["mobile.session.user_message.show_more: empty or non-string ''"]
+  A/english leftover: caught ['mobile.session.user_message.show_more: identical to English (untranslated)']
+  A/identical to English: caught ['mobile.session.user_message.show_more: identical to English (untranslated)']
+  A/introduced placeholder: caught ['mobile.session.user_message.show_more: placeholder mismatch']
+  A/trailing full stop: caught ['mobile.session.user_message.show_less: trailing full stop']
+  A/bidi control U+202B: caught ["mobile.session.user_message.show_less: control/bidi characters ['0x202b']"]
+  A/NFD accent: caught ['mobile.session.user_message.show_more: not NFC']
+  A/overflow: caught ['mobile.session.user_message.show_less: 35 cells > 14']
+  A/leading space: caught ['mobile.session.user_message.show_more: edge whitespace']
+  B/empty value: caught ["mobile.session.user_message.show_more: empty or non-string ''"]
+  B/english leftover: caught ['mobile.session.user_message.show_more: identical to English (untranslated)']
+  B/identical to English: caught ['mobile.session.user_message.show_more: identical to English (untranslated)']
+  B/introduced placeholder: caught ['mobile.session.user_message.show_more: placeholder mismatch']
+  B/trailing full stop: caught ['mobile.session.user_message.show_less: trailing full stop']
+  B/bidi control U+202B: caught ["mobile.session.user_message.show_less: control/bidi characters ['0x202b']"]
+  B/NFD accent: caught ['mobile.session.user_message.show_more: not NFC']
+  B/overflow: caught ['mobile.session.user_message.show_less: 31 cells > 14']
+  B/leading space: caught ['mobile.session.user_message.show_more: edge whitespace']
+
+=== canonical hashes ===
+A shipped #237
+  json={"mobile.session.user_message.show_less":"Mostrar menos","mobile.session.user_message.show_more":"Mostrar más"}
+  sha256=fdcc81fd3e63063234e0eb7a20265ecb937dfc1651314b53a7d4766104b85e4a
+B translator
+  json={"mobile.session.user_message.show_less":"Ver menos","mobile.session.user_message.show_more":"Ver más"}
+  sha256=b458a2d65b2f3fd31fbd3213866abaf7cf221b13d2427c90a04a5d3311988e37
+english source
+  json={"mobile.session.user_message.show_less":"Show less","mobile.session.user_message.show_more":"Show more"}
+  sha256=26d065694437406a3aebff2dd163d08f6d1b3afa1ad51701630f2e4ab6ec9022
+
+=== pair comparison ===
+  mobile.session.user_message.show_more: A='Mostrar más' B='Ver más' same=False
+  mobile.session.user_message.show_less: A='Mostrar menos' B='Ver menos' same=False
