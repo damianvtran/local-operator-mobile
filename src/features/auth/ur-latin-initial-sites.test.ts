@@ -29,6 +29,8 @@ import { TunnelPaths } from "./tunnel-paths";
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
 
 const STARTS_LATIN = /^[A-Za-z]/;
+const ICU_SLOT = /\{[^}]*\}/g;
+const FIRST_LETTER = /\p{L}/u;
 
 /** The S1 keys whose Urdu value begins with a Latin token and is rendered as
  *  visible text. `mobile.computers.row.a11y*` also begin with a `{name}` slot, but
@@ -49,20 +51,33 @@ const render = (children: ReactNode, direction: "ltr" | "rtl"): string =>
 	);
 
 describe("S1 Urdu values that start with a Latin token", () => {
-	it("the premise: exactly these four visible values start Latin in ur, none in en-only guesswork", () => {
+	it("the premise: the set of Latin-initial S1 ur values is EXACTLY the four fixed here", () => {
 		const catalogue = (namespace: string) =>
 			JSON.parse(
 				read(`../../i18n/catalogues/ur/mobile.${namespace}.json`),
 			) as Record<string, string>;
 		const ur = { ...catalogue("computers"), ...catalogue("signin") };
-		const brief = JSON.parse(
-			read("../../i18n/catalogues/en/mobile.computers.json"),
+		/* The S1 slice's own key list: the applied draft kept with its audit evidence
+		 * (44 keys), so the set cannot drift from what this PR shipped. */
+		const s1 = JSON.parse(
+			read(
+				"../../../i18n/audits/evidence/ur/m3-s1-signin-computers/draft-ur-s1.json",
+			),
 		) as Record<string, string>;
-		expect(Object.keys(brief).length).toBeGreaterThan(0);
-		for (const key of LATIN_INITIAL_UR_KEYS) {
-			expect(ur[key], key).toMatch(STARTS_LATIN);
-		}
-		expect(renderFor("mobile.signin.start", {}, "ur")).toMatch(STARTS_LATIN);
+		/* First LETTER after the ICU slots are dropped: `{name}، …` opens with a
+		 * placeholder, not with a script, and `dir="auto"` skips neutrals. */
+		const firstLetter = (value: string) =>
+			value.replace(ICU_SLOT, "").match(FIRST_LETTER)?.[0] ?? "";
+		const latinInitial = Object.keys(s1)
+			.filter((key) => STARTS_LATIN.test(firstLetter(ur[key] ?? "")))
+			.sort();
+		/* A fifth Latin-initial value is a new site that needs the same cure; this
+		 * fails with the key named instead of passing silently. */
+		expect(
+			latinInitial,
+			"S1 ur values whose first letter is Latin must each be listed in LATIN_INITIAL_UR_KEYS AND spread useComposedDir()",
+		).toEqual([...LATIN_INITIAL_UR_KEYS].sort());
+		expect(Object.keys(s1)).toHaveLength(44);
 	});
 });
 
@@ -105,15 +120,19 @@ describe("TunnelPaths (the Radient card): title and body state the base in ur", 
 	 * under ur — otherwise it would look up English strings and prove nothing. */
 	beforeEach(() => setLocaleSource(() => "ur"));
 	afterEach(() => resetLocaleSource());
-	it("rtl: both Texts carry dir=rtl, not the inferred base", () => {
+	it("rtl: the title and the body EACH carry dir=rtl, not the inferred base", () => {
 		const markup = render(paths(), "rtl");
-		const openingTagOf = (needle: string) => {
-			const at = markup.indexOf(needle);
-			expect(at, needle).toBeGreaterThan(-1);
+		/* Each value is located by its FULL text, never a shared prefix: title and
+		 * body both open with `Radient `, so a prefix anchor resolved both to the
+		 * title and a missing body spread went unnoticed (QA r2 Q-01). */
+		const openingTagOf = (value: string) => {
+			const at = markup.indexOf(value);
+			expect(at, `${value.slice(0, 20)}… is rendered`).toBeGreaterThan(-1);
 			return markup.slice(markup.lastIndexOf("<", at), at);
 		};
-		expect(openingTagOf(title.slice(0, 8))).toContain('dir="rtl"');
-		expect(openingTagOf(body.slice(0, 8))).toContain('dir="rtl"');
+		expect(openingTagOf(title)).toContain('dir="rtl"');
+		expect(openingTagOf(body)).toContain('dir="rtl"');
+		expect(openingTagOf(title)).not.toBe(openingTagOf(body));
 	});
 	it("ltr: those two Texts are unchanged (inferred base)", () => {
 		const markup = render(paths(), "ltr");
