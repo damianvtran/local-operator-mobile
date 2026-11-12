@@ -49,6 +49,7 @@ import { Shimmer } from "@/ui/components/shimmer";
 import { Skeleton } from "@/ui/components/skeleton";
 import { useComposedDir } from "@/ui/direction";
 import { computersHeaderStackWidth } from "@/ui/size-class";
+import { tunnelStatusKey } from "./tunnel-status-key";
 
 /**
  * Computers: discovery, the picker, and the set-up path (docs/ux/flows.md § 2 and
@@ -256,7 +257,7 @@ const WaitPanel = ({
 				<>
 					<Text className="text-body text-ink">
 						{t("mobile.computers.wait.tunnel_status", {
-							status: state.tunnelStatus,
+							status: t(tunnelStatusKey(state.tunnelStatus)),
 						})}
 					</Text>
 					<Text className="text-body-sm text-ink-muted">
@@ -415,8 +416,8 @@ export default function Computers() {
 	/* Lists again, then answers with the computer that appeared since the wait
 	 *  started — the hook's only way past W1 (R3-M1/U17, `newlyListed`). Read from
 	 *  the store, not the render's `computers`: the refresh has just written it, and
-	 *  this closure predates that render. `rawStatus` is Radient's own word, which
-	 *  W2 shows verbatim. */
+	 *  this closure predates that render. `rawStatus` is Radient's own word; W2
+	 *  maps it to a translated label (`tunnelStatusKey`). */
 	const acquire = useCallback(async () => {
 		await refreshComputers();
 		const found = newlyListed(

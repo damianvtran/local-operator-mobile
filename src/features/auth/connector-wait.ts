@@ -175,7 +175,8 @@ export function useConnectorWait(input: {
 			if (!isCurrent()) return;
 
 			if (found) {
-				/* Radient's own word for the row, as the control plane spells it — never
+				/* Radient's own word for the row, as the control plane spells it — kept
+				 * raw here (the panel localises it via `tunnelStatusKey`) and never
 				 * rewritten into "active", because `disabled` and `suspended` are statuses
 				 * this app must not call provisioned. */
 				setState({ kind: "w2", tunnelStatus: found.status });

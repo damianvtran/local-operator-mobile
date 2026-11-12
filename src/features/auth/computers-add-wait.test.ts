@@ -307,6 +307,16 @@ describe("adding a computer over a populated list finds the new one (R3-M1/U17)"
 		expect(words()).not.toContain("protocol version unknown");
 	});
 
+	it("shows W2's tunnel status as the mapped label, not the raw control-plane word", async () => {
+		/* A health probe that never answers keeps the panel in W2 once listed. */
+		vi.stubGlobal("fetch", async () => ({ ok: false, json: async () => ({}) }));
+		await render();
+		await act(async () => host.onWait?.());
+		for (let tick = 0; tick < 6; tick += 1) await poll();
+		await render();
+		expect(words()).toContain("Radient has the tunnel — active.");
+	});
+
 	it("keeps waiting while only the computers listed at the start are there", async () => {
 		host.listOnRefresh = Number.POSITIVE_INFINITY;
 		await render();
