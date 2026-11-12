@@ -1602,7 +1602,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * main's #237 integration, so neither parent's digest. Re-derived once with
 	 * `--print` over the committed rebased tree. Source admission only, NOT
 	 * rendered U-08 evidence. */
-	src: "373f005c8f32138833fe20b65dfa4c9e187e01cc5f794a2fd5438b350d332589",
+	/* Re-pinned 2026-11-12 for PR M3 S1 (sign-in and computers screens) on main
+	 * 9e193b57 (#236): the 44 keys in `mobile.computers` / `mobile.signin` with
+	 * their seven audited translations (690 -> 734 in the regenerated
+	 * `catalogue.gen.ts`), the call sites in `src/features/auth/*`, the new
+	 * `tunnel-status-key.ts` helper, four more `EXPRESSION_LITERAL_SCOPE` paths
+	 * and the catalogue test counts. Re-derived once with `--print` over the
+	 * committed tree. Source admission only, NOT rendered U-08 evidence. */
+	src: "1bb35e2e6fa83f6095b2cf4fa0e078ae67757c6037f6e648c3a849736d3d174f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
