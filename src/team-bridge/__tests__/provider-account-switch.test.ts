@@ -61,6 +61,7 @@ vi.mock("@/notifications/native", () => ({
 vi.mock("@/team-bridge/push", () => ({
 	installTeamBridgeNotifications: async () => undefined,
 	registerTeamBridgeDevice: async () => undefined,
+	subscribeTeamBridgeReceived: async () => () => undefined,
 	subscribeTeamBridgeTaps: async () => () => undefined,
 	unregisterTeamBridgeDevice: async () => undefined,
 }));
@@ -71,6 +72,7 @@ vi.mock("@/testing/team-bridge-fixture", () => ({
 const { TeamBridgeProvider, useTeamBridge } = await import(
 	"@/team-bridge/provider"
 );
+const { resetAppBadgeForTests } = await import("@/notifications/app-badge");
 let held: ReturnType<typeof useTeamBridge> | null = null;
 function captured() {
 	if (!held) throw new Error("Expected mounted Bridge context");
@@ -382,4 +384,48 @@ describe("Team Bridge provider account boundary", () => {
 		expect(connection.accessCalls).toBe(1);
 		expect(transport).toHaveBeenCalledTimes(1);
 	});
+});
+
+/*
+ * The icon badge across the same boundary (Team Bridge push readiness): the
+ * real provider follows the account's unread total into the ONE badge owner,
+ * and the account boundary (A→B, sign-out) drops A's number before B paints.
+ */
+describe("Team Bridge provider icon badge", () => {
+	it.each(["A→B", "A→null"])(
+		"%s: the badge follows A's unread and is cleared at the boundary",
+		async (transition) => {
+			const writes: number[] = [];
+			resetAppBadgeForTests(async (count) => {
+				writes.push(count);
+			});
+			vi.stubGlobal("fetch", vi.fn());
+			connection.radientAccountId = "acct_a";
+			root = createRoot(host());
+			await render();
+			const a = captured();
+			// Before any read: nothing written (unknown is not zero).
+			await Promise.resolve();
+			expect(writes).toEqual([]);
+			a.store.setState({ gate: "open", unreadKnown: true, totalUnread: 3 });
+			a.store.setState({ totalUnread: 5 });
+			await vi.waitFor(() => expect(writes).toEqual([3, 5]));
+			connection.radientAccountId = transition === "A→B" ? "acct_b" : null;
+			await render();
+			await vi.waitFor(() => expect(writes.at(-1)).toBe(0));
+			// A's retired store can no longer move the badge.
+			a.store.setState({ unreadKnown: true, totalUnread: 9 });
+			await Promise.resolve();
+			expect(writes).not.toContain(9);
+			if (transition === "A→B") {
+				captured().store.setState({
+					gate: "open",
+					unreadKnown: true,
+					totalUnread: 2,
+				});
+				await vi.waitFor(() => expect(writes.at(-1)).toBe(2));
+			}
+			resetAppBadgeForTests();
+		},
+	);
 });

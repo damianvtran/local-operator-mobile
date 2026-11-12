@@ -1,3 +1,5 @@
+import { type NoParamKey, t } from "@/i18n";
+
 /**
  * The permission vocabulary, and the one sentence each state gets.
  *
@@ -51,19 +53,30 @@ export function availabilityFromStatus(status: unknown): PushAvailability {
 	return "unknown";
 }
 
-/** The sentence each state renders, in the Local Operator voice (no
- *  contractions — the app's refusal copy carries none). */
-export const PUSH_COPY: Readonly<Record<PushAvailability, string>> = {
-	unsupported: "This build does not include notifications.",
-	granted:
-		"Allowed. Background alerts are not switched on for this computer yet — nothing will arrive until they are. Until then, alerts work only while Local Operator is open.",
-	denied:
-		"Notifications are turned off for this app in system settings. Turn them back on there. Background alerts are not switched on for this computer yet — until they are, alerts work only while Local Operator is open.",
-	undetermined:
-		"Ask your phone for permission. Background alerts are not switched on for this computer yet — until they are, alerts work only while Local Operator is open.",
-	unknown:
-		"Notifications could not be checked on this phone. This is not a refusal — reopen Settings to check again.",
+/** The catalogue key each state renders (`mobile.notifications.permission.*`,
+ *  in the Local Operator voice — no contractions).
+ *
+ *  WHAT IS TRUE NOW, and what the sentences say. Team Bridge push is built end
+ *  to end: the app registers this phone with Radient's hub, and the hub fans
+ *  out over APNs/FCM (since 2026-10-27). Whether a message actually arrives
+ *  still depends on Radient's push credentials being configured, which the app
+ *  cannot see, so the copy says "when Radient's push delivery is available"
+ *  rather than promising delivery. Computer (relay) background alerts are a
+ *  separate, still-unbuilt path (ADR 0006 S7), so every state that reads as
+ *  "on" keeps saying those work only while the app is open. A key map rather
+ *  than a frozen string table so a locale change re-renders the copy
+ *  (`src/i18n/runtime.ts`). */
+const PUSH_COPY_KEY: Readonly<Record<PushAvailability, NoParamKey>> = {
+	unsupported: "mobile.notifications.permission.unsupported",
+	granted: "mobile.notifications.permission.granted",
+	denied: "mobile.notifications.permission.denied",
+	undetermined: "mobile.notifications.permission.undetermined",
+	unknown: "mobile.notifications.permission.unknown",
 };
+
+/** The sentence one state renders, in the active locale. */
+export const pushCopy = (state: PushAvailability): string =>
+	t(PUSH_COPY_KEY[state]);
 
 /** Whether a state has a control to press. Only `undetermined` does: the
  *  prompt is an act a reader takes, never something a screen fires on mount. */

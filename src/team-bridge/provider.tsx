@@ -16,13 +16,16 @@ import {
 import { AppState } from "react-native";
 import { useStore } from "zustand";
 import { useConnection } from "@/features/auth/connection-provider";
+import { clearBadgeSource, reassertBadge } from "@/notifications/app-badge";
 import { loadNotifications } from "@/notifications/native";
 import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
+import { followTeamBridgeBadge, TEAM_BRIDGE_BADGE } from "@/team-bridge/badge";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import { deviceNoticeDismissals } from "@/team-bridge/notice-dismissals";
 import {
 	installTeamBridgeNotifications,
 	registerTeamBridgeDevice,
+	subscribeTeamBridgeReceived,
 	subscribeTeamBridgeTaps,
 	unregisterTeamBridgeDevice,
 } from "@/team-bridge/push";
@@ -66,6 +69,7 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	const connection = useConnection();
 	const router = useRouter();
+	const unreadRefresh = useRef<() => Promise<void>>(() => Promise.resolve());
 	const access = useRef(connection.radientAccessToken);
 	access.current = connection.radientAccessToken;
 	const retirementAccess = useRef(connection.radientRetirementAccessToken);
@@ -154,7 +158,14 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			value.actions.retire();
 			return retireTeamBridgeScope(value);
 		});
+		// The icon badge follows THIS account's unread total for exactly the
+		// provider's lifetime (`src/team-bridge/badge.ts`).
+		const stopBadge = followTeamBridgeBadge(value.store);
 		return () => {
+			// The account boundary: a retired store never publishes the reset that
+			// would clear the badge, so A's count is dropped here before B reads.
+			stopBadge();
+			void clearBadgeSource(TEAM_BRIDGE_BADGE);
 			/*
 			 * This provider is keyed by account (`TeamBridgeProvider`), so its
 			 * teardown IS the account boundary, including a direct A→B replacement
@@ -174,6 +185,8 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		if (!connection.radientSignedIn && !fixture) {
 			value.pushes.suspend();
 			value.actions.reset();
+			// Signed out: no Bridge count may stay on the icon.
+			void clearBadgeSource(TEAM_BRIDGE_BADGE);
 			value.avatars.clear();
 			void value.actions.checkStatus();
 			return;
@@ -185,7 +198,12 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 		};
 		void value.actions.checkStatus().then(refresh);
 		const subscription = AppState.addEventListener("change", (state) => {
-			if (state === "active") refresh();
+			if (state === "active") {
+				// Re-write the known number at once (the OS may hold another), then
+				// the refresh's answer moves it through the store subscription.
+				void reassertBadge();
+				refresh();
+			}
 		});
 		let disposed = false;
 		let tokenSubscription: { remove: () => void } | undefined;
@@ -213,6 +231,8 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			// The route owns admission. A cold tap can arrive before OAuth restore;
 			// routing now retains its destination while the gate waits for restore.
 			router.push(teamBridgeThreadPath(push) as never);
+			// The tap says the account's unread moved; re-read it for the badge.
+			void unreadRefresh.current();
 		}).then((stop) => {
 			if (disposed) stop();
 			else teardown = stop;
@@ -222,6 +242,26 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			teardown?.();
 		};
 	}, [router]);
+	useEffect(() => {
+		// The ref, not `value`, so the once-per-process tap effect above reaches
+		// the CURRENT account's store after an account switch.
+		unreadRefresh.current = () => value.actions.refreshUnread();
+		let disposed = false;
+		let teardown: (() => void) | undefined;
+		// A Team Bridge push arriving while the app runs (foreground, or a
+		// background delivery the OS hands to JS) means unread moved: re-read the
+		// authoritative total rather than counting pushes (ADR 0006 §1.4).
+		void subscribeTeamBridgeReceived(() => {
+			void value.actions.refreshUnread();
+		}).then((stop) => {
+			if (disposed) stop();
+			else teardown = stop;
+		});
+		return () => {
+			disposed = true;
+			teardown?.();
+		};
+	}, [value]);
 	return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 

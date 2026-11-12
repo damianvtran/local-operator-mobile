@@ -153,7 +153,9 @@ const NAMESPACES = [
 		name: "mobile.notifications",
 		messages: notifications,
 		context: notificationsContext,
-		expected: 27,
+		// +5: the Settings permission sentences (`permission.*`), moved out of
+		// an English-only table in the Team Bridge push-readiness PR.
+		expected: 32,
 	},
 	{
 		name: "mobile.session",
@@ -309,7 +311,9 @@ describe("the English catalogues", () => {
 		 * Plus 53 keyed by the app/ scan (the new `app/` coverage in
 		 * scan-strings.ts plus the Settings and add-a-computer literals): 598 + 53
 		 * = 651, the generator's own count. */
-		expect(total).toBe(651);
+		/* feat/bridge-push-readiness (#231) merged with main fa2bc5e0 (#227): + the
+		 *  five `mobile.notifications.permission.*` Settings sentences: 651 + 5 = 656. */
+		expect(total).toBe(656);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -4,8 +4,8 @@ import {
 	availabilityFromHook,
 	availabilityFromStatus,
 	canRequestPermission,
-	PUSH_COPY,
 	PUSH_ENABLE_LABEL,
+	pushCopy,
 } from "@/notifications/permission";
 
 /**
@@ -61,40 +61,44 @@ describe("the copy table", () => {
 			"undetermined",
 			"unknown",
 		] as const) {
-			expect(PUSH_COPY[state].length).toBeGreaterThan(0);
+			expect(pushCopy(state).length).toBeGreaterThan(0);
 		}
 	});
 
 	it("never promises a delivery that cannot happen", () => {
 		/* ADR 0006 §2.4's rule, applied to EVERY state that could be read as
-		 * "alerts are on": no sentence may claim alerts work while the cloud
-		 * forward is unbuilt — none ends on "to receive alerts" or "alerts
-		 * arrive once …" (design round 1, D5). */
+		 * "alerts are on". Team Bridge registration is wired now (it was not
+		 * when this table was first written), but delivery still hangs on
+		 * Radient's push credentials, so no sentence may say alerts WILL arrive;
+		 * computer alerts are still unbuilt and must keep saying so. */
 		for (const state of ["granted", "denied", "undetermined"] as const) {
-			expect(PUSH_COPY[state].toLowerCase()).toContain(
-				"not switched on for this computer yet",
+			const copy = pushCopy(state).toLowerCase();
+			expect(copy).toContain("team bridge message");
+			expect(copy).toContain(
+				"alerts from your computers are not switched on yet",
 			);
-			expect(PUSH_COPY[state].toLowerCase()).not.toContain(
-				"you will be notified",
-			);
-			expect(PUSH_COPY[state].toLowerCase()).not.toContain("receive alerts");
-			expect(PUSH_COPY[state].toLowerCase()).not.toContain("alerts arrive");
+			expect(copy).not.toContain("you will be notified");
+			expect(copy).not.toContain("receive alerts");
+			expect(copy).not.toContain("alerts arrive");
+			// The stale claim this PR removed: registration exists now.
+			expect(copy).not.toContain("for this computer yet");
 		}
+		expect(pushCopy("granted")).toContain(
+			"when Radient's push delivery is available",
+		);
 	});
 
 	it("names what works today in every state that reads as on", () => {
-		/* The workaround ADR 0006 §2.4's draft carries — the one thing a reader
-		 * can act on while the background half is unbuilt. */
 		for (const state of ["granted", "denied", "undetermined"] as const) {
-			expect(PUSH_COPY[state]).toContain(
-				"alerts work only while Local Operator is open",
+			expect(pushCopy(state)).toContain(
+				"those work only while Local Operator is open",
 			);
 		}
 	});
 
 	it("reads unknown as a failed check, not a refusal, and names the remedy", () => {
-		expect(PUSH_COPY.unknown).toContain("not a refusal");
-		expect(PUSH_COPY.unknown).toContain("reopen Settings");
+		expect(pushCopy("unknown")).toContain("not a refusal");
+		expect(pushCopy("unknown")).toContain("reopen Settings");
 	});
 });
 

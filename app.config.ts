@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
 import type { ExpoConfig } from "expo/config";
 
 /**
@@ -56,6 +56,63 @@ const notificationSoundFiles = (): string[] => {
 		(sound) => `./assets/notification-sounds/${sound.file}`,
 	);
 };
+
+/**
+ * The Android FCM client config (`google-services.json`), or `undefined`.
+ *
+ * WHY IT IS OPTIONAL. Team Bridge push on Android reaches the phone through FCM,
+ * and `getDevicePushTokenAsync` can only mint an FCM token in a build that
+ * carries this file (Expo prebuild copies it into `android/app/` and applies the
+ * Google Services Gradle plugin only when `android.googleServicesFile` is set).
+ * Every build that exists today — the debug APK, the PR CI jobs, the web
+ * export, a contributor's `expo start` — has no such file, and must keep
+ * building: without it the token read throws, `registerTeamBridgeDevice`
+ * answers `failed`, and the app stays push-disabled but otherwise whole.
+ *
+ * WHY IT IS NOT COMMITTED. Google does not treat the Firebase client config as
+ * a secret (it ships inside every APK), but `.gitignore` keeps it out of this
+ * public repository, and that decision stands: the project is FCM-only (the
+ * operator's 2026-10-29 decision — no Analytics, Crashlytics or any other
+ * Firebase product), and the file names a project that is the operator's to
+ * publish or not. CI materialises it from the `GOOGLE_SERVICES_JSON_BASE64`
+ * secret (`scripts/ci/google-services.ts`) and points this variable at it.
+ *
+ * Resolution, in order:
+ *  1. `GOOGLE_SERVICES_JSON_PATH` set → that file, which MUST exist. An explicit
+ *     path to nothing is a broken CI step, and silently building a
+ *     push-disabled release from it is the failure this refuses.
+ *  2. `./google-services.json` at the project root (a local release build) →
+ *     that file.
+ *  3. Otherwise `undefined`: no FCM, every other behaviour unchanged.
+ *
+ * Exported (and given its inputs) so the three branches are testable without
+ * touching the real filesystem (`scripts/google-services-config.test.ts`).
+ */
+export function resolveGoogleServicesFile(
+	env: Record<string, string | undefined>,
+	exists: (path: string) => boolean,
+	root: string,
+): string | undefined {
+	const explicit = env.GOOGLE_SERVICES_JSON_PATH?.trim();
+	if (explicit) {
+		const absolute = isAbsolute(explicit) ? explicit : join(root, explicit);
+		if (!exists(absolute)) {
+			throw new Error(
+				`app.config.ts: GOOGLE_SERVICES_JSON_PATH names ${explicit}, which does not exist`,
+			);
+		}
+		return explicit;
+	}
+	return exists(join(root, "google-services.json"))
+		? "./google-services.json"
+		: undefined;
+}
+
+const googleServicesFile = resolveGoogleServicesFile(
+	process.env,
+	existsSync,
+	__dirname,
+);
 
 // A placeholder reverse-DNS identity. Store submission needs a package name
 // registered to the publisher, which is an account decision rather than a code
@@ -215,6 +272,9 @@ const config: ExpoConfig = {
 		// ever resize, the overlap reads 0 against an already-shortened window, so
 		// the ceiling stays right either way.
 		softwareKeyboardLayoutMode: "resize",
+		// FCM for Team Bridge push; absent unless a config file exists (see
+		// `resolveGoogleServicesFile` for why absence is the safe default).
+		...(googleServicesFile ? { googleServicesFile } : {}),
 		// The permissions that may NEVER reach the manifest, whatever a dependency's
 		// library manifest declares. `expo-image-picker` ships CAMERA /
 		// READ_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE for camera-roll flows this

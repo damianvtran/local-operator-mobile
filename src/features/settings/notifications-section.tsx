@@ -8,9 +8,9 @@ import { readAvailability, requestPermission } from "@/notifications/native";
 import {
 	availabilityFromHook,
 	canRequestPermission,
-	PUSH_COPY,
 	PUSH_ENABLE_LABEL,
 	type PushAvailability,
+	pushCopy,
 } from "@/notifications/permission";
 import { isRelayMissing } from "@/relay";
 import { useTeamBridge } from "@/team-bridge/provider";
@@ -34,11 +34,15 @@ import { SectionHeader } from "@/ui/components/section-header";
  *     route answers a refusal, and that is rendered as its own sentence rather
  *     than as an empty list — "no devices" and "cannot read the list" are
  *     different facts, and the second must not borrow the first's words.
- *  3. **Nothing promised.** There is no registration call in this build (the
- *     cloud forward is S7, unbuilt; manager decision 2026-10-03), so no state
- *     here claims a delivery that cannot happen — the `granted` copy names the
- *     missing half instead ("Background alerts are not switched on for this
- *     computer yet").
+ *  3. **Nothing promised.** Team Bridge registration IS wired: the Team
+ *     Bridge provider registers this phone with Radient's hub on launch and
+ *     foreground once permission is granted, and the hub fans out over
+ *     APNs/FCM (app and cloud since 2026-10-27; `docs/publishing/push-setup.md`
+ *     has the operator-owned credential steps). Delivery still depends on
+ *     those credentials, which this screen cannot see, so the copy says
+ *     "when Radient's push delivery is available" rather than promising an
+ *     alert. Computer (relay) background alerts remain unbuilt (ADR 0006 S7),
+ *     and every "on" state still says those work only while the app is open.
  *
  * On the web target the permission read is the platform's `unsupported`, or —
  * for the harness only — the `lo-notifications` query value, the same
@@ -144,7 +148,7 @@ export const NotificationsSection = () => {
 				<Text className="min-w-0 flex-1 text-body-sm text-ink-muted">
 					{availability === null
 						? "Checking this phone's notification settings."
-						: PUSH_COPY[availability]}
+						: pushCopy(availability)}
 				</Text>
 			</View>
 			{availability !== null && canRequestPermission(availability) ? (

@@ -1513,7 +1513,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * carried with #227's, so this is no parent's digest; re-derived with
 	 * `--print` over the converged tree. Source admission only, NOT rendered
 	 * U-08 evidence. */
-	src: "f2741618f31dfea3a193af9fbe612d4ac2044dd05c51b1f9b1c6f212806eeab6",
+	/* #231 (Team Bridge push readiness: icon-badge owner, badge source,
+	 * received-push listener, localized Settings permission sentences) merged
+	 * with main fa2bc5e0 (#227): both sides' src carried, so no parent's digest;
+	 * re-derived with --print over the merged tree. Source identity only, NOT a
+	 * rendered geometry proof. */
+	src: "8bab9569480e7bd8b0f2ef01cad7c3183c112157b40124325ea6a7a1828c5b7d",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1528,8 +1533,10 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// declaration changed; it is not a U-08 web layout or rendered-geometry input.
 	// --print re-pin: the Android `softwareKeyboardLayoutMode: "resize"` (Expo's
 	// default, stated with its why); not a U-08 web layout input.
+	// --print re-pin (#231): the optional Android `googleServicesFile` (FCM for
+	// Team Bridge push); native build config, not a U-08 web layout input.
 	"app.config.ts":
-		"fbe62d79b01e3189a103fecf3cae02114e89f746ae36cf15546b68c7bd3f003b",
+		"082b081d438fa47842e227be4d870f32fe5aa08f25860ae08813d70d01572cea",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	"package.json":

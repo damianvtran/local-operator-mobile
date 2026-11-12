@@ -24,6 +24,11 @@
 	"mobile.notifications.dismiss": "Скрыть",
 	"mobile.notifications.filter_label": "Показать",
 	"mobile.notifications.load_failed": "Не удалось загрузить уведомления",
+	"mobile.notifications.permission.denied": "Уведомления для этого приложения отключены в настройках системы. Включите их там, чтобы получать оповещения о сообщениях Team Bridge. Оповещения с ваших компьютеров пока не включены — до тех пор они работают, только пока Local Operator открыт.",
+	"mobile.notifications.permission.granted": "Разрешено. Сообщения Team Bridge приходят на этот телефон, когда доступна push-доставка Radient. Оповещения с ваших компьютеров пока не включены — до тех пор они работают, только пока Local Operator открыт.",
+	"mobile.notifications.permission.undetermined": "Запросите у телефона разрешение, чтобы получать оповещения о сообщениях Team Bridge. Оповещения с ваших компьютеров пока не включены — до тех пор они работают, только пока Local Operator открыт.",
+	"mobile.notifications.permission.unknown": "Не удалось проверить уведомления на этом телефоне. Это не отказ — откройте Настройки снова, чтобы проверить ещё раз.",
+	"mobile.notifications.permission.unsupported": "Эта сборка не поддерживает уведомления.",
 	"mobile.notifications.priority_high": "Важно",
 	"mobile.notifications.title": "Уведомления"
 }

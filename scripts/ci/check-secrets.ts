@@ -16,6 +16,15 @@
  * required store upload by accident: `--mode release` is a hard failure, and it
  * names every absent variable so the fix is one visit to the settings page.
  *
+ * OPTIONAL NAMES (`--optional A,B`) are reported and NEVER fail, in either mode.
+ * They exist for a credential a build is complete without but a feature needs:
+ * `GOOGLE_SERVICES_JSON_BASE64` (Android FCM, Team Bridge push) is the first.
+ * A release without it ships a working app with push off, which is the state
+ * every build is in until the operator creates the Firebase project, so failing
+ * the release would block shipping on a console task. Reporting it by name in
+ * the same block as the required ones keeps "push is off on this build" visible
+ * in the release log instead of discoverable only on a device.
+ *
  * The values never touch stdout. A presence check prints a name and a byte
  * count, which is enough to tell "unset" from "set to an empty string" — the
  * latter being the failure that looks configured and behaves as absent.
@@ -40,10 +49,13 @@ const arg = (name: string, fallback: string): string => {
 };
 
 const rawMode = arg("mode", "");
-const need = arg("need", "")
-	.split(",")
-	.map((name) => name.trim())
-	.filter(Boolean);
+const names = (raw: string): string[] =>
+	raw
+		.split(",")
+		.map((name) => name.trim())
+		.filter(Boolean);
+const need = names(arg("need", ""));
+const optional = names(arg("optional", ""));
 
 if (!isMode(rawMode)) {
 	console.error(
@@ -80,6 +92,25 @@ for (const line of present) console.log(`present: ${line}`);
 for (const name of empty) console.log(`present-but-empty: ${name}`);
 for (const name of absent) console.log(`absent: ${name}`);
 
+const optionalMissing: string[] = [];
+for (const name of optional) {
+	const value = process.env[name];
+	if (value === undefined || value.trim() === "") {
+		optionalMissing.push(name);
+		console.log(
+			`optional-${value === undefined ? "absent" : "present-but-empty"}: ${name}`,
+		);
+	} else console.log(`optional-present: ${name} (${value.length} bytes)`);
+}
+if (optionalMissing.length > 0) {
+	// A notice, not a warning: nothing is broken, a feature is off.
+	console.log(
+		`::notice::optional secrets missing (${mode}): ${optionalMissing.join(", ")}. ` +
+			"The build is complete without them; the feature each one enables is off " +
+			'on this build (docs/ci.md, "Secrets").',
+	);
+}
+
 const missing = [...absent, ...empty];
 const summary =
 	`secrets (${mode}): ${present.length} present, ${missing.length} missing` +
@@ -113,7 +144,8 @@ if (missing.length > 0) {
 if (process.env.GITHUB_OUTPUT) {
 	appendFileSync(
 		process.env.GITHUB_OUTPUT,
-		`all_present=${missing.length === 0}\nmissing=${missing.join(" ")}\n`,
+		`all_present=${missing.length === 0}\nmissing=${missing.join(" ")}\n` +
+			`optional_missing=${optionalMissing.join(" ")}\n`,
 	);
 }
 

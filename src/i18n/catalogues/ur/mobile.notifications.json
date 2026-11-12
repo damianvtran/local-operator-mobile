@@ -24,6 +24,11 @@
 	"mobile.notifications.dismiss": "ہٹائیں",
 	"mobile.notifications.filter_label": "دکھائیں",
 	"mobile.notifications.load_failed": "اطلاعات لوڈ نہیں ہو سکیں",
+	"mobile.notifications.permission.denied": "اس ایپ کی اطلاعات سسٹم سیٹنگز میں بند ہیں۔ Team Bridge پیغامات کے الرٹ پانے کے لیے انہیں وہاں دوبارہ آن کریں۔ آپ کے کمپیوٹرز کے الرٹ ابھی آن نہیں ہیں — تب تک وہ صرف Local Operator کھلا ہونے پر کام کرتے ہیں۔",
+	"mobile.notifications.permission.granted": "اجازت ہے۔ Radient کی پش ڈیلیوری دستیاب ہونے پر Team Bridge پیغامات اس فون پر الرٹ دیتے ہیں۔ آپ کے کمپیوٹرز کے الرٹ ابھی آن نہیں ہیں — تب تک وہ صرف Local Operator کھلا ہونے پر کام کرتے ہیں۔",
+	"mobile.notifications.permission.undetermined": "Team Bridge پیغامات کے الرٹ پانے کے لیے اپنے فون سے اجازت مانگیں۔ آپ کے کمپیوٹرز کے الرٹ ابھی آن نہیں ہیں — تب تک وہ صرف Local Operator کھلا ہونے پر کام کرتے ہیں۔",
+	"mobile.notifications.permission.unknown": "اس فون پر اطلاعات کی جانچ نہیں ہو سکی۔ یہ انکار نہیں ہے — دوبارہ جانچنے کے لیے سیٹنگز پھر سے کھولیں۔",
+	"mobile.notifications.permission.unsupported": "اس بلڈ میں اطلاعات شامل نہیں ہیں۔",
 	"mobile.notifications.priority_high": "اعلیٰ",
 	"mobile.notifications.title": "اطلاعات"
 }
