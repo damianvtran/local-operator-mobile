@@ -51,6 +51,7 @@ const validPlist = (): Record<string, unknown> => ({
 	// sanitised CFBundleName prebuild still derives from `name`.
 	CFBundleDisplayName: "Operator",
 	CFBundleName: "LocalOperator",
+	UIBackgroundModes: ["remote-notification", "fetch"],
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
 	NSAppTransportSecurity: {
@@ -112,6 +113,29 @@ describe("checkIosInfoPlist", () => {
 			]);
 		},
 	);
+
+	it.each([
+		["absent", undefined],
+		["empty", []],
+		["another mode only", ["audio"]],
+		["a string, not the array", "remote-notification"],
+		["remote-notification without the measured fetch", ["remote-notification"]],
+		["an extra mode from a plugin", ["remote-notification", "fetch", "audio"]],
+	])(
+		"requires UIBackgroundModes to be exactly the pinned set (%s)",
+		(_label, value) => {
+			const plist = validPlist();
+			if (value === undefined) delete plist.UIBackgroundModes;
+			else plist.UIBackgroundModes = value;
+			expect(fields(checkIosInfoPlist(plist))).toContain("UIBackgroundModes");
+		},
+	);
+
+	it("accepts the pinned set in either order", () => {
+		const plist = validPlist();
+		plist.UIBackgroundModes = ["fetch", "remote-notification"];
+		expect(checkIosInfoPlist(plist)).toEqual([]);
+	});
 
 	it("names the missing usage description", () => {
 		const plist = validPlist();

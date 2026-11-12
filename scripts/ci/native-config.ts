@@ -99,6 +99,16 @@ export const ANDROID_LOCAL_NETWORK_PERMISSION =
  * silently in the other direction — nothing prompts, nothing crashes, the app
  * just declares more than it uses.
  */
+/**
+ * The built app's `UIBackgroundModes`, exactly (order-free). `remote-notification`
+ * is the app's own (app.config.ts, the silent attention push). `fetch` is
+ * expo-task-manager's: its auto-applied prebuild plugin (`withTaskManager.js`)
+ * appends it unconditionally, measured with `expo config --type introspect`.
+ * Nothing schedules a background fetch, so iOS never runs one; it is listed so
+ * that the measured set is the pinned set and anything else fails CI.
+ */
+export const IOS_BACKGROUND_MODES = ["remote-notification", "fetch"] as const;
+
 export const IOS_FORBIDDEN_KEYS = [
 	"NSPhotoLibraryUsageDescription",
 	"NSCameraUsageDescription",
@@ -191,6 +201,23 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 			field: "NSLocalNetworkUsageDescription",
 			problem:
 				"missing or empty — the local-network alert would have no rationale",
+		});
+	}
+
+	/* The silent-wake mode (ADR 0006 §1.5): without it iOS drops the cloud's
+	 * attention push before any app code runs, and the badge/banner clear on a
+	 * desktop ack silently stops working. Checked on the BUILT plist because a
+	 * plugin that rewrites the array would otherwise lose it without a sound.
+	 * The EXACT set is pinned (review R1-m3), not mere presence: a plugin that
+	 * adds a mode (`audio`, `location`) changes what App Review sees the app
+	 * claim, so it must arrive as a deliberate edit to IOS_BACKGROUND_MODES. */
+	const modes = plist.UIBackgroundModes;
+	const expected = [...IOS_BACKGROUND_MODES].sort();
+	const found = Array.isArray(modes) ? [...modes].sort() : null;
+	if (found === null || JSON.stringify(found) !== JSON.stringify(expected)) {
+		findings.push({
+			field: "UIBackgroundModes",
+			problem: `expected exactly ${JSON.stringify(expected)}, found ${JSON.stringify(modes)} — without "remote-notification" iOS never runs the background task for the silent attention push; any other mode is an undeclared capability`,
 		});
 	}
 
@@ -391,7 +418,7 @@ export const summarize = (platform: Platform): string =>
 	platform === "android-badging"
 		? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
 		: platform === "ios"
-			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
 			: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------

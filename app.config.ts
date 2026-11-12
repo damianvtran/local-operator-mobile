@@ -239,6 +239,28 @@ const config: ExpoConfig = {
 			// a dependency brings its own crypto rather than silently inheriting this.
 			ITSAppUsesNonExemptEncryption: false,
 			NSMicrophoneUsageDescription: MICROPHONE_USAGE,
+			// The silent-wake capability (ADR 0006 §1.5, §5). The cloud's attention
+			// push is `content-available: 1` with `apns-push-type: background` and no
+			// alert; without `remote-notification` here iOS never runs app code for it,
+			// so a conversation acknowledged on the desktop leaves the icon badge and
+			// its delivered banners stale until the next launch. The handler is
+			// `src/notifications/background-task.ts`. Declared HERE rather than via
+			// the expo-notifications plugin's `enableBackgroundRemoteNotifications`
+			// so the one Info.plist list names every mode the app claims; a plugin
+			// that contributes another mode is merged into this array by prebuild,
+			// and `scripts/ci/native-config.ts` pins the exact built set
+			// (`IOS_BACKGROUND_MODES`), so a new mode is a deliberate change.
+			// Measured with `expo config --type introspect`: the built list is
+			// ["remote-notification", "fetch"] — expo-task-manager's auto-applied
+			// prebuild plugin (`withTaskManager.js`) appends `fetch` unconditionally.
+			// Nothing here schedules a background fetch; the extra mode is that
+			// dependency's, not a capability this app relies on.
+			// Android needs no mode: a data-only FCM message reaches
+			// `onMessageReceived`, which runs the registered task. The clear happens
+			// only WARM (backgrounded, not killed): a killed app runs the task
+			// headless with no React root, so no signed-in scope exists and the task
+			// returns NoData; the next open corrects the badge as before.
+			UIBackgroundModes: ["remote-notification"],
 			// The local-network ACCESS declaration (ADR 0002 §5). iOS shows this
 			// string in its one-time "allow this app on your network" alert, which
 			// appears the first time the app reaches a local address — for this app,
@@ -432,11 +454,9 @@ const config: ExpoConfig = {
 				// catalog by sha256 (`scripts/sounds/export-mobile.ts`), so a
 				// sound added there cannot be half-registered here.
 				sounds: notificationSoundFiles(),
-				// `enableBackgroundRemoteNotifications` stays OFF, deliberately: the
-				// silent attention wake (ADR 0006 §1.5) is the one push that needs
-				// the mode, and its handler is S6/S7 work — declaring the mode
-				// before anything handles it would make this build claim more than
-				// it does, and it is a one-line flip when that handler lands.
+				// `enableBackgroundRemoteNotifications` stays OFF: the silent
+				// attention wake's `remote-notification` mode is declared once, in
+				// `ios.infoPlist.UIBackgroundModes` above, beside its handler.
 			},
 		],
 		// RELEASE SIGNING, and the only thing that makes `bundleRelease` produce a

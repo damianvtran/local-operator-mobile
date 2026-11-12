@@ -24,6 +24,8 @@ import {
 
 const connection = vi.hoisted(() => ({
 	radientAccountId: "acct_a" as string | null,
+	// False everywhere but the background-scope case: see `useConnection` below.
+	coldStartSettled: false,
 	accessCalls: 0,
 	forcedRefreshes: 0,
 	waitForAccess: null as Promise<void> | null,
@@ -42,7 +44,7 @@ vi.mock("@/features/auth/connection-provider", () => ({
 		radientAccountId: connection.radientAccountId,
 		// Not settled: the provider's status/push effect stays idle, so the only
 		// thing that can clear the cache is the account boundary under test.
-		coldStartSettled: false,
+		coldStartSettled: connection.coldStartSettled,
 		radientSignedIn: connection.radientAccountId !== null,
 		radientAccessToken: async (options?: { force?: boolean }) => {
 			connection.accessCalls += 1;
@@ -73,6 +75,8 @@ const { TeamBridgeProvider, useTeamBridge } = await import(
 	"@/team-bridge/provider"
 );
 const { resetAppBadgeForTests } = await import("@/notifications/app-badge");
+const { waitForBackgroundUnreadScope, resetBackgroundUnreadScopeForTests } =
+	await import("@/notifications/background-clear");
 let held: ReturnType<typeof useTeamBridge> | null = null;
 function captured() {
 	if (!held) throw new Error("Expected mounted Bridge context");
@@ -149,6 +153,8 @@ afterEach(async () => {
 	connection.accessCalls = 0;
 	connection.forcedRefreshes = 0;
 	connection.waitForAccess = null;
+	connection.coldStartSettled = false;
+	resetBackgroundUnreadScopeForTests();
 });
 
 describe("Team Bridge provider account boundary", () => {
@@ -428,4 +434,60 @@ describe("Team Bridge provider icon badge", () => {
 			resetAppBadgeForTests();
 		},
 	);
+});
+
+/*
+ * Review R1-M1: the background notification task re-reads unread through the
+ * scope the signed-in provider registers (`notifications/background-clear.ts`).
+ * Across a direct A→B replacement the registered scope must be B's, and A's
+ * must report inactive, so a task that captured A's scope before the switch
+ * writes nothing for A after it. Settled + signed in, so the provider's
+ * signed-in branch (where the scope is registered) actually runs.
+ */
+describe("Team Bridge provider background unread scope", () => {
+	it("A→B: the registered scope is B's and A's is inactive", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response("{}", { status: 503 })),
+		);
+		connection.coldStartSettled = true;
+		connection.radientAccountId = "acct_a";
+		root = createRoot(host());
+		await render();
+		const a = captured();
+		const scopeA = await waitForBackgroundUnreadScope(0);
+		expect(scopeA).not.toBeNull();
+		expect(scopeA?.isActive()).toBe(true);
+
+		connection.radientAccountId = "acct_b";
+		await render();
+		const b = captured();
+		expect(b).not.toBe(a);
+		const scopeB = await waitForBackgroundUnreadScope(0);
+		expect(scopeB).not.toBeNull();
+		expect(scopeB).not.toBe(scopeA);
+		// A retired at the keyed remount; its scope says so to any late task.
+		expect(a.isActive()).toBe(false);
+		expect(scopeA?.isActive()).toBe(false);
+		expect(scopeB?.isActive()).toBe(true);
+		// And scopeB is bound to B's store, not merely "some live scope":
+		// retiring B is what turns it off.
+		b.actions.retire();
+		expect(scopeB?.isActive()).toBe(false);
+	});
+
+	it("A→null: no scope stays registered once signed out", async () => {
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(async () => new Response("{}", { status: 503 })),
+		);
+		connection.coldStartSettled = true;
+		connection.radientAccountId = "acct_a";
+		root = createRoot(host());
+		await render();
+		expect(await waitForBackgroundUnreadScope(0)).not.toBeNull();
+		connection.radientAccountId = null;
+		await render();
+		expect(await waitForBackgroundUnreadScope(0)).toBeNull();
+	});
 });
