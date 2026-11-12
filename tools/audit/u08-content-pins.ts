@@ -1608,8 +1608,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `catalogue.gen.ts`), the call sites in `src/features/auth/*`, the new
 	 * `tunnel-status-key.ts` helper, four more `EXPRESSION_LITERAL_SCOPE` paths
 	 * and the catalogue test counts. Re-derived once with `--print` over the
-	 * committed tree. Source admission only, NOT rendered U-08 evidence. */
-	src: "1bb35e2e6fa83f6095b2cf4fa0e078ae67757c6037f6e648c3a849736d3d174f",
+	 * committed tree. Source admission only, NOT rendered U-08 evidence.
+	 *
+	 * Re-pinned again in the same PR (design D2 remediation): `Button` gains the
+	 * opt-in `labelDir`, four Urdu Latin-initial S1 sites spread `useComposedDir()`
+	 * (`TunnelPaths`, the wait panel, `sign-in`, `welcome`), plus two test files.
+	 * `dir` is a no-op in LTR catalogues; no className, token or geometry moved. */
+	src: "ce218cf1f10a4e58af3948d763215ac39e4a0f8d1ae76be2281cafb9efc4d304",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
