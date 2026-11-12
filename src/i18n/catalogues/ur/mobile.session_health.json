@@ -8,6 +8,5 @@
 	"mobile.session_health.resume_refused_title": "جاری نہیں رکھا جا سکا",
 	"mobile.session_health.resume_refused": "یہ سیشن ابھی دوبارہ کھولا نہیں جا سکا۔ دوبارہ کوشش کریں۔",
 	"mobile.session_health.resume_gone": "یہ سیشن اب محفوظ شدہ نہیں ہے۔",
-	"mobile.session_health.resume_no_route": "اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔",
-	"mobile.session_health.ended_placeholder": "بھیجنے پر ہوم فولڈر میں کھلے گا…"
+	"mobile.session_health.resume_no_route": "اس سیشن کو جاری رکھنے کے لیے کمپیوٹر سے منسلک ہو جائیں۔"
 }

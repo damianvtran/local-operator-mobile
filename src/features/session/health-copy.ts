@@ -45,9 +45,6 @@ export const healthCopy = () => ({
 	"relay.health.quiet_detail": t("relay.health.quiet_detail"),
 	"relay.health.ended_detail": t("relay.health.ended_detail"),
 	"relay.health.ended_send_failed": t("relay.health.ended_send_failed"),
-	"mobile.session_health.ended_placeholder": t(
-		"mobile.session_health.ended_placeholder",
-	),
 });
 
 /**

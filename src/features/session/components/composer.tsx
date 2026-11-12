@@ -291,8 +291,8 @@ export type ComposerProps = {
 	/** The resume affordance, driven by the wire's `stop_reason === "aborted"`. */
 	showResume: boolean;
 	onResume: () => void;
-	/** The session's health verdict is ENDED (from the header's dot). Changes the
-	 *  placeholder to "send to reopen", and suppresses the aborted-turn Resume —
+	/** The session's health verdict is ENDED (from the header's dot). Suppresses
+	 *  the aborted-turn Resume and shows the reopening line during a send —
 	 *  an ended session yields to the header's Resume, which is the same act. */
 	ended?: boolean;
 	/** A refused start or a failed steer, stated beside the control that caused it. */
@@ -2330,11 +2330,12 @@ export const Composer = ({
 						integrated
 						value={draft}
 						onChangeText={onDraftChange}
-						placeholder={
-							ended
-								? composerCopy().endedPlaceholder
-								: composerCopy().placeholder
-						}
+						/* One placeholder in every state. An ENDED session used to say
+						 * "Send to reopen in your home folder…" here; the operator asked
+						 * for the standard one (TestFlight feedback, 2026-11-11). The ended
+						 * state is the header's status word and its sheet's job, and a
+						 * send still reopens the session. */
+						placeholder={composerCopy().placeholder}
 						/* Eight body lines when the screen has them (TestFlight 836: the
 						 * old six-on-a-22-pt-ruler showed ~4); `maxHeightPx` below holds
 						 * it under the header/keyboard budget. */

@@ -8,6 +8,5 @@
 	"mobile.session_health.resume_refused_title": "Không thể mở lại",
 	"mobile.session_health.resume_refused": "Vừa rồi không mở lại được phiên này. Hãy thử lại.",
 	"mobile.session_health.resume_gone": "Phiên này không còn được lưu.",
-	"mobile.session_health.resume_no_route": "Kết nối máy tính để mở lại phiên này.",
-	"mobile.session_health.ended_placeholder": "Gửi để mở lại trong thư mục home…"
+	"mobile.session_health.resume_no_route": "Kết nối máy tính để mở lại phiên này."
 }

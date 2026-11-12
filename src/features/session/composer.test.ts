@@ -11,6 +11,7 @@ import {
 	receiptForError,
 } from "@/features/session/composer";
 import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
+import { ENGLISH_CATALOGUE } from "@/i18n";
 import { RelayError } from "@/relay";
 
 /**
@@ -163,7 +164,7 @@ describe("the send/steer morph", () => {
 		// A send to an ended session is itself resume-then-send (the daemon wakes a
 		// host for a prompt with no live entry), so the primary is the way back —
 		// disabling it would refuse the one action that revives the session. The
-		// placeholder, not a disabled reason, says what a send does.
+		// placeholder stays the standard one; the header's status says "Ended".
 		expect(ended.primary.disabled).toBe(false);
 		expect(ended.disabledReason).toBeNull();
 	});
@@ -336,10 +337,7 @@ describe("the composer's ended copy has ONE source", () => {
 		new URL("./composer.ts", import.meta.url),
 		"utf8",
 	);
-	it("reads the placeholder, the failure sentence and the reopening line from the catalogue", () => {
-		expect(composerCopy().endedPlaceholder).toBe(
-			healthCopy()["mobile.session_health.ended_placeholder"],
-		);
+	it("reads the failure sentence and the reopening line from the catalogue", () => {
 		expect(composerCopy().endedSendFailed).toBe(
 			healthCopy()["relay.health.ended_send_failed"],
 		);
@@ -347,11 +345,35 @@ describe("the composer's ended copy has ONE source", () => {
 	});
 	it("carries none of those sentences as a literal", () => {
 		for (const sentence of [
-			healthCopy()["mobile.session_health.ended_placeholder"],
 			healthCopy()["relay.health.ended_send_failed"],
 			healthResumeCopy().reopening,
 		])
 			expect(source).not.toContain(sentence);
+	});
+});
+
+describe("an ended session's composer shows the standard placeholder", () => {
+	/* Operator feedback (2026-11-11): an ended session's field read "Send to
+	 * reopen in your home folder…"; it must read like every other composer. The
+	 * placeholder is picked inline in the component, which has no render test,
+	 * so the component source is the oracle: one unconditional expression, and
+	 * neither the retired copy key nor its catalogue entry survives. */
+	const component = readFileSync(
+		new URL("./components/composer.tsx", import.meta.url),
+		"utf8",
+	);
+	it("passes the standard placeholder to the field in every state", () => {
+		expect(component).toContain("placeholder={composerCopy().placeholder}");
+		expect(component).not.toContain("endedPlaceholder");
+		expect(composerCopy()).not.toHaveProperty("endedPlaceholder");
+	});
+	it("retires the ended-only placeholder sentence from the catalogue", () => {
+		expect(ENGLISH_CATALOGUE).not.toHaveProperty(
+			"mobile.session_health.ended_placeholder",
+		);
+		expect(Object.values(ENGLISH_CATALOGUE)).not.toContain(
+			"Send to reopen in your home folder…",
+		);
 	});
 });
 
