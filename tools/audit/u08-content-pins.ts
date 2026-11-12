@@ -1620,7 +1620,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * hanging indicator, row-owned gutter and single-ellipsis selector. Re-derived
 	 * once with --print over the staged tree. Source identity only, NOT rendered
 	 * U-08 evidence. */
-	src: "96216bd073eccbb411c553e1b703125d52958e7cf71087dcd334195acf370a11",
+	/* fix/ola-feedback-1112: an interactive Radient sign-in opens the reader's
+	 * computer by the cold start's rule. Re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	src: "fa2b110a47e320b48788a684c591a547532da71939e03af528523fe285533114",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
