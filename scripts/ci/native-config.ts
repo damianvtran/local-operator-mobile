@@ -194,6 +194,18 @@ export function checkIosInfoPlist(plist: unknown): Finding[] {
 		});
 	}
 
+	/* The silent-wake mode (ADR 0006 §1.5): without it iOS drops the cloud's
+	 * attention push before any app code runs, and the badge/banner clear on a
+	 * desktop ack silently stops working. Checked on the BUILT plist because a
+	 * plugin that rewrites the array would otherwise lose it without a sound. */
+	const modes = plist.UIBackgroundModes;
+	if (!Array.isArray(modes) || !modes.includes("remote-notification")) {
+		findings.push({
+			field: "UIBackgroundModes",
+			problem: `expected to include "remote-notification", found ${JSON.stringify(modes)} — iOS would never run the background task for the silent attention push`,
+		});
+	}
+
 	const ats = plist.NSAppTransportSecurity;
 	if (!isRecord(ats)) {
 		findings.push({
@@ -391,7 +403,7 @@ export const summarize = (platform: Platform): string =>
 	platform === "android-badging"
 		? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
 		: platform === "ios"
-			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
+			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes including remote-notification, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions) and none of the ${IOS_FORBIDDEN_KEYS.length} photo/camera permission keys`
 			: `release merged manifest carries android:usesCleartextTraffic="true" and ${ANDROID_LOCAL_NETWORK_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} camera/media-library permissions`;
 
 // ---------------------------------------------------------------------------

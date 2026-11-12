@@ -35,6 +35,20 @@
   `sound_custom_ready` on **every** live device row; a built-in selection carries neither, so its
   shape is unchanged. S7's `extra="forbid"` validation must accept both from day one. `data.sound`
   stays required and unchanged.
+- **Amendment (2026-11-12): the §3.2 data object travels under the top-level `body` key.** The
+  cloud puts the §3.2 data object (every form: `completion`, `digest`, `attention`, and the
+  Team Bridge message) under the APNs payload's **top-level `body`** key, beside `aps`, and under
+  the FCM data map's `body` key as a JSON string. **Why:** expo-notifications 57 on iOS builds a
+  remote notification's `content.data` from `userInfo["body"]` and nothing else
+  (`ios/ExpoNotifications/Notifications/NotificationRecords.swift:331`,
+  `serializedNotificationData`), so an object under any other key — including `data` — reaches
+  tap handlers and `getPresentedNotificationsAsync` as nothing, and the silent `attention` wake's
+  background task (`BackgroundEventTransformer.swift`) also reads `body` (re-encoded as
+  `dataString`). The app reads `body` first and falls back to a bare `data`-shaped record only for
+  the pre-change payload (`src/notifications/payload.ts`, `pushDataObject`). **Do not move it
+  back to `data`:** that silently empties every tap destination, every presented-banner match and
+  the background clear on iOS, with no error anywhere. The object's fields, literals and P2 are
+  unchanged; only its envelope key is fixed here.
 - **Date:** 2026-09-30
 - **Deciders:** the maintaining team (manager call, 2026-09-30, on the product questions listed
   below) **and** Local Operator (core) maintainers — this record is deliberately cross-repository,

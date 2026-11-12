@@ -3,6 +3,10 @@ import {
 	clearBadgeSource,
 	setBadgeSource,
 } from "@/notifications/app-badge";
+import type {
+	BackgroundUnreadScope,
+	UnreadSnapshot,
+} from "@/notifications/background-clear";
 import type { TeamBridgeState } from "@/team-bridge/store";
 
 /**
@@ -61,4 +65,58 @@ export function followTeamBridgeBadge(store: {
 		last = next;
 		void applyTeamBridgeBadge(next);
 	});
+}
+
+/**
+ * The signed-in store as the background notification task sees it
+ * (`src/notifications/background-clear.ts`). The task re-reads unread through
+ * `refreshUnread` — never around it — so the store's single-flight and
+ * generation check still decide whether a late answer may land, and the badge
+ * still moves only through `followTeamBridgeBadge` → `app-badge.ts`.
+ *
+ * `refreshUnread` resolves to a snapshot only when THIS read's success path
+ * published (it is the only writer that sets `unreadKnown` with a freshly mapped
+ * `organizations` array while clearing `unreadFailed`). A dropped, failed or
+ * gate-reset read resolves `null`, and the task dismisses nothing on it.
+ */
+export function backgroundUnreadScope(scope: {
+	store: {
+		getState(): TeamBridgeState;
+		subscribe(
+			listener: (state: TeamBridgeState, previous: TeamBridgeState) => void,
+		): () => void;
+	};
+	actions: { refreshUnread(): Promise<void> };
+	isActive(): boolean;
+}): BackgroundUnreadScope {
+	return {
+		isActive: () => scope.isActive(),
+		async refreshUnread(): Promise<UnreadSnapshot | null> {
+			let landed: UnreadSnapshot | null = null;
+			const stop = scope.store.subscribe((state, previous) => {
+				if (state.gate === "signed_out" || state.gate === "plan_required") {
+					landed = null;
+					return;
+				}
+				if (
+					state.unreadKnown &&
+					!state.unreadFailed &&
+					state.organizations !== previous.organizations
+				) {
+					landed = {
+						total: state.totalUnread,
+						byTenant: new Map(
+							state.organizations.map((o) => [o.tenantId, o.unread]),
+						),
+					};
+				}
+			});
+			try {
+				await scope.actions.refreshUnread();
+			} finally {
+				stop();
+			}
+			return scope.isActive() ? landed : null;
+		},
+	};
 }
