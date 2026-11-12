@@ -1,0 +1,103 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_followon_pair_audit",
+	"audit_id": "frshowmore1111",
+	"locale": "fr",
+	"namespace": "mobile.session",
+	"audit_date": "2026-11-11",
+	"wave": "follow-on slice mobile.session.user_message.show_more/show_less x 7 locales; keys shipped in PR #237 without a translator/audit pass",
+	"audited_revision": "8fdfb2e970299a2c0947bf42ac6224ebacd97113",
+	"audited_revision_note": "PR #237 head 8fdfb2e9 (integrate/mobile-batch-1111). The values are unchanged on origin/main 2b508d9d (merge of #237): whole-file bytes of fr/mobile.session.json are identical at both revisions.",
+	"key_count": {
+		"en": 2,
+		"target": 2,
+		"context": 2
+	},
+	"keys": [
+		"mobile.session.user_message.show_more",
+		"mobile.session.user_message.show_less"
+	],
+	"shipped_values": {
+		"mobile.session.user_message.show_more": "Afficher plus",
+		"mobile.session.user_message.show_less": "Afficher moins"
+	},
+	"translator_candidate": {
+		"values": {
+			"mobile.session.user_message.show_more": "Voir plus",
+			"mobile.session.user_message.show_less": "Voir moins"
+		},
+		"state": "rejected — not shipped; auditor recommended keeping the shipped pair",
+		"note": "1 MINOR (corpus uses Afficher for Show x6, Voir for View)"
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "d31b329cb4f3",
+		"model": "deepseek/deepseek-flash",
+		"actual_model": "deepseek/deepseek-flash",
+		"actual_model_source": "as stated in the audit report header (session model; see report.md)",
+		"independent_from_translator_session": true,
+		"independence": "Different agent and session from the translator; the #237 values were authored by the #235 coder (commit 0beb4dd3), not a translator. No human native-speaker review and no rendered frame are claimed."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.session.json",
+			"sha256": "143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0",
+			"rev": "8fdfb2e9"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.session.context.json",
+			"sha256": "ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102",
+			"rev": "8fdfb2e9"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/fr/mobile.session.json",
+			"sha256": "a761ff1fb470a77cc1b53920fdb318ba727bb645ed3040802e3136cfc449fc95",
+			"rev": "8fdfb2e9",
+			"also_identical_on": "origin/main 2b508d9d"
+		}
+	},
+	"current_report_verdict": {
+		"shipped_pair": {
+			"status": "passed",
+			"blocker": 0,
+			"major": 0,
+			"minor": 0,
+			"nit": 0,
+			"finding_ids": []
+		},
+		"candidate_pair": {
+			"status": "clean-with-findings",
+			"blocker": 0,
+			"major": 0,
+			"minor": 1,
+			"nit": 0,
+			"finding_ids": [
+				"FR-SM-1"
+			]
+		},
+		"recommendation": "keep the shipped pair; fr is a no-op in the follow-on slice"
+	},
+	"status": "passed (shipped pair); candidate not adopted",
+	"route_disclosure": "Route and marker scan: not recorded in the source audit report; no read_public_copy receipt is claimed. The scan of this bundle's own files is reported in the PR description and is not attributed to the auditor.",
+	"audit_log": "audit.log not retained: no auditor execution log file was supplied for this audit, so none is written or fabricated. main-bytes-check.txt is the only executed output in this bundle and was produced by the coder that landed it.",
+	"notes": "Auditor's own audit id was fr-showmore-20261111; the retired id style is superseded by this bundle's directory name.",
+	"source_provenance": "translator scratch notes, session d5aaf8ba6ba5 followon-show-more/<loc>.json (values transcribed by the lane owner from the translator's report; not independently audited; never applied to a catalogue)",
+	"catalogue_change": "none — zero catalogue/source lines in the PR carrying this bundle",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/fr/mobile.session/frshowmore1111/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.session/frshowmore1111/report.md",
+			"sha256": "af7cfa529f38dc7a3cf23a3f28e6e4fb1bfc19be26966d6cf39faf18bbff865b",
+			"note": "verbatim copy of the auditor's report; unmodified"
+		},
+		{
+			"path": "i18n/audits/evidence/fr/mobile.session/frshowmore1111/main-bytes-check.txt",
+			"sha256": "8c1532f96317c369dce9ac3ae141f304fb5a308a4079f7ae1c0181e4e3a9cebf",
+			"note": "coder-written comparison of audited bytes vs origin/main; not an auditor artifact"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement. Executed output exists only in audit.log (where retained) and main-bytes-check.txt."
+}

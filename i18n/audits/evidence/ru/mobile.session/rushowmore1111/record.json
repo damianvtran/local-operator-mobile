@@ -1,0 +1,99 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_followon_pair_audit",
+	"audit_id": "rushowmore1111",
+	"locale": "ru",
+	"namespace": "mobile.session",
+	"audit_date": "2026-11-11",
+	"wave": "follow-on slice mobile.session.user_message.show_more/show_less x 7 locales; keys shipped in PR #237 without a translator/audit pass",
+	"audited_revision": "8fdfb2e970299a2c0947bf42ac6224ebacd97113",
+	"audited_revision_note": "PR #237 head 8fdfb2e9 (integrate/mobile-batch-1111). The values are unchanged on origin/main 2b508d9d (merge of #237): whole-file bytes of ru/mobile.session.json are identical at both revisions.",
+	"key_count": {
+		"en": 2,
+		"target": 2,
+		"context": 2
+	},
+	"keys": [
+		"mobile.session.user_message.show_more",
+		"mobile.session.user_message.show_less"
+	],
+	"shipped_values": {
+		"mobile.session.user_message.show_more": "Показать больше",
+		"mobile.session.user_message.show_less": "Показать меньше"
+	},
+	"translator_candidate": {
+		"values": {
+			"mobile.session.user_message.show_more": "Показать больше",
+			"mobile.session.user_message.show_less": "Показать меньше"
+		},
+		"state": "identical bytes to the shipped pair",
+		"note": "report states pair-sorted-key hash identical for both"
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "2a6ddfb9ed18",
+		"model": "deepseek/deepseek-flash",
+		"actual_model": "deepseek/deepseek-flash",
+		"actual_model_source": "as stated in the audit report header (session model; see report.md)",
+		"independent_from_translator_session": true,
+		"independence": "Different agent and session from the translator; the #237 values were authored by the #235 coder (commit 0beb4dd3), not a translator. No human native-speaker review and no rendered frame are claimed."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.session.json",
+			"sha256": "143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0",
+			"rev": "8fdfb2e9"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.session.context.json",
+			"sha256": "ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102",
+			"rev": "8fdfb2e9"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/ru/mobile.session.json",
+			"sha256": "1acba82d5cb86dfe129ab8dd6bb32131c5c0a6e91edc89fae49c324cc3b2c076",
+			"rev": "8fdfb2e9",
+			"also_identical_on": "origin/main 2b508d9d"
+		}
+	},
+	"current_report_verdict": {
+		"shipped_pair": {
+			"status": "clean-with-findings",
+			"blocker": 0,
+			"major": 0,
+			"minor": 1,
+			"nit": 2,
+			"finding_ids": []
+		},
+		"candidate_pair": "byte-identical to the shipped pair (same verdict)",
+		"recommendation": "ship Показать больше / Показать меньше; no replacement needed"
+	},
+	"status": "passed (0 blocker/major; 1 minor width note, 2 nit)",
+	"route_disclosure": "Route and marker scan: not recorded in the source audit report; no read_public_copy receipt is claimed. The scan of this bundle's own files is reported in the PR description and is not attributed to the auditor.",
+	"audit_log": "audit.log: auditor's own log, copied verbatim.",
+	"notes": "auditor's ru.log copied to audit.log (renamed so the repo's gitignore keeps it).",
+	"source_provenance": "translator scratch notes, session d5aaf8ba6ba5 followon-show-more/<loc>.json (values transcribed by the lane owner from the translator's report; not independently audited; never applied to a catalogue)",
+	"catalogue_change": "none — zero catalogue/source lines in the PR carrying this bundle",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/ru/mobile.session/rushowmore1111/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.session/rushowmore1111/report.md",
+			"sha256": "e29cbb496a0d5fbb81c0e6e62db45507b7789171814372b6023fcdaf10eb9231",
+			"note": "verbatim copy of the auditor's report; unmodified"
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.session/rushowmore1111/audit.log",
+			"sha256": "f1a889acf520136e2760fb0173bc1ae2fbae282815e485e08975df342ad0e991",
+			"note": "verbatim copy of the auditor's own log (actual command output)"
+		},
+		{
+			"path": "i18n/audits/evidence/ru/mobile.session/rushowmore1111/main-bytes-check.txt",
+			"sha256": "9b7edd71942b67cacef695854ba1288c0858731d47e46607a982537237b147f7",
+			"note": "coder-written comparison of audited bytes vs origin/main; not an auditor artifact"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement. Executed output exists only in audit.log (where retained) and main-bytes-check.txt."
+}

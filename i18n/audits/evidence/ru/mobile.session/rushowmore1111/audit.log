@@ -1,0 +1,51 @@
+== inputs ==
+repo /Users/damian/local-operator-mobile @ 8fdfb2e9
+en pair   {"mobile.session.user_message.show_less": "Show less", "mobile.session.user_message.show_more": "Show more"}
+ru pair   {"mobile.session.user_message.show_less": "Показать меньше", "mobile.session.user_message.show_more": "Показать больше"}
+context  mobile.session.user_message.show_more: role=button
+context  mobile.session.user_message.show_less: role=button
+
+== mechanical failures on the audited pair ==
+none
+
+== width ==
+show_more          chars=15 cells=15 ambiguous=14  Показать больше
+show_less          chars=15 cells=15 ambiguous=14  Показать меньше
+en show_more       chars= 9 cells= 9 ambiguous= 0  Show more
+en show_less       chars= 9 cells= 9 ambiguous= 0  Show less
+fallback show_more chars=10 cells=10 ambiguous=10  Развернуть
+fallback show_less chars= 8 cells= 8 ambiguous= 8  Свернуть
+
+== ru precedent in this repository's catalogues ==
+files scanned: 22
+counts: {"Показать": 17, "показать": 1, "Развернуть": 0, "Свернуть": 0, "больше": 9, "меньше": 3}
+  mobile.schedules.show_less.monitors = Показать меньше мониторов
+  mobile.schedules.show_less.wakes = Показать меньше пробуждений
+  mobile.schedules.show_more.monitors = {hidden, plural, one {Показать ещё # монитор} few {Показать ещё # монитора} many {Показать ещё # мониторов} other {Показать ещё # монитора}}
+  mobile.schedules.show_more.wakes = {hidden, plural, one {Показать ещё # пробуждение} few {Показать ещё # пробуждения} many {Показать ещё # пробуждений} other {Показать ещё # пробуждения}}
+  mobile.session.user_message.show_less = Показать меньше
+  mobile.session.user_message.show_more = Показать больше
+
+== hashes ==
+sha256 ru pair (sorted-key JSON): d0949d22d5cdd791242addac1e99b69e50d76e3521fd47f6df00b22e4ecde45f
+sha256 en pair (sorted-key JSON): b285de7371f1a73b6c5adc4d70d999acbc7a6a8eea4a4057f2775c618aa5beef
+sha256 en file: 143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0
+sha256 en context: ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102
+sha256 ru file: 1acba82d5cb86dfe129ab8dd6bb32131c5c0a6e91edc89fae49c324cc3b2c076
+
+== negative controls (each mutation MUST be caught) ==
+CAUGHT  empty value              rules=['empty']
+CAUGHT  Latin leftover           rules=['latin_leftover']
+CAUGHT  identical to English     rules=['latin_leftover', 'identical_to_english', 'no_target_script', 'latin_leftover', 'identical_to_english', 'no_target_script']
+CAUGHT  trailing space           rules=['whitespace_edges']
+CAUGHT  RLM inserted             rules=['bidi_or_invisible']
+CAUGHT  final full stop          rules=['terminal_punctuation']
+CAUGHT  NFD value                rules=['not_nfc']
+CAUGHT  dropped key              rules=['key_set']
+CAUGHT  same text both states    rules=['toggle_identical']
+CAUGHT  interior capital         rules=['sentence_case']
+CAUGHT  lowercase start          rules=['sentence_case', 'sentence_case', 'toggle_case']
+CAUGHT  placeholder smuggled in  rules=['placeholder_parity', 'markup', 'latin_leftover']
+CAUGHT  NFC rule itself          NFD('й')='й'
+
+RESULT: audited pair clean=True; every negative control bit=True

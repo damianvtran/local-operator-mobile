@@ -1,0 +1,113 @@
+{
+	"schema": 1,
+	"audit_kind": "independent_followon_pair_audit",
+	"audit_id": "esshowmore1111sm2",
+	"locale": "es",
+	"namespace": "mobile.session",
+	"audit_date": "2026-11-11",
+	"wave": "follow-on slice mobile.session.user_message.show_more/show_less x 7 locales; keys shipped in PR #237 without a translator/audit pass",
+	"audited_revision": "8fdfb2e970299a2c0947bf42ac6224ebacd97113",
+	"audited_revision_note": "PR #237 head 8fdfb2e9 (integrate/mobile-batch-1111). The values are unchanged on origin/main 2b508d9d (merge of #237): whole-file bytes of es/mobile.session.json are identical at both revisions.",
+	"key_count": {
+		"en": 2,
+		"target": 2,
+		"context": 2
+	},
+	"keys": [
+		"mobile.session.user_message.show_more",
+		"mobile.session.user_message.show_less"
+	],
+	"shipped_values": {
+		"mobile.session.user_message.show_more": "Mostrar más",
+		"mobile.session.user_message.show_less": "Mostrar menos"
+	},
+	"translator_candidate": {
+		"values": {
+			"mobile.session.user_message.show_more": "Ver más",
+			"mobile.session.user_message.show_less": "Ver menos"
+		},
+		"state": "not shipped; superseded as the audited target by the shipped pair",
+		"note": "1 MINOR (consistency); audited alongside the shipped pair in v2"
+	},
+	"auditor": {
+		"agent": "i18n-auditor (lopdev team)",
+		"session": "d1d6f85b4577",
+		"model": "deepseek/deepseek-flash",
+		"actual_model": "deepseek/deepseek-flash",
+		"actual_model_source": "as stated in the audit report header (session model; see report.md)",
+		"independent_from_translator_session": true,
+		"independence": "Different agent and session from the translator; the #237 values were authored by the #235 coder (commit 0beb4dd3), not a translator. No human native-speaker review and no rendered frame are claimed."
+	},
+	"input_hashes": {
+		"en": {
+			"path": "src/i18n/catalogues/en/mobile.session.json",
+			"sha256": "143508157b6d768367a4efe2a6edd41574dcd034bac5fa4aa879f3f70aab77b0",
+			"rev": "8fdfb2e9"
+		},
+		"context": {
+			"path": "src/i18n/catalogues/en/mobile.session.context.json",
+			"sha256": "ccfcb74f0e1a44c5ac1e2e45c02c5adea137bf4692c1567150124107ecb05102",
+			"rev": "8fdfb2e9"
+		},
+		"target": {
+			"path": "src/i18n/catalogues/es/mobile.session.json",
+			"sha256": "8fd2e641ce1bc7c005dd8639eafe16f96882138395adb7b1ada28758e450bc7e",
+			"rev": "8fdfb2e9",
+			"also_identical_on": "origin/main 2b508d9d"
+		}
+	},
+	"current_report_verdict": {
+		"shipped_pair": {
+			"status": "passed",
+			"blocker": 0,
+			"major": 0,
+			"minor": 0,
+			"nit": 0,
+			"finding_ids": []
+		},
+		"candidate_pair": {
+			"status": "clean-with-findings",
+			"blocker": 0,
+			"major": 0,
+			"minor": 1,
+			"nit": 0,
+			"finding_ids": []
+		},
+		"recommendation": "ship pair A (shipped) unchanged; no change to #237 values"
+	},
+	"status": "passed (shipped pair); FINAL es audit — supersedes esshowmore1111sm1",
+	"route_disclosure": "Route and marker scan: not recorded in the source audit report; no read_public_copy receipt is claimed. The scan of this bundle's own files is reported in the PR description and is not attributed to the auditor.",
+	"audit_log": "audit.log: auditor's own log, copied verbatim.",
+	"notes": "This is sm2, the final es audit. Auditor's report file: audit-showmore-es-v2.md. Supersedes sm1 (id esshowmore1111sm1).",
+	"source_provenance": "translator scratch notes, session d5aaf8ba6ba5 followon-show-more/<loc>.json (values transcribed by the lane owner from the translator's report; not independently audited; never applied to a catalogue)",
+	"catalogue_change": "none — zero catalogue/source lines in the PR carrying this bundle",
+	"artifacts": [
+		{
+			"path": "i18n/audits/evidence/es/mobile.session/esshowmore1111sm2/record.json",
+			"note": "this record; not self-hashed"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.session/esshowmore1111sm2/report.md",
+			"sha256": "caab77a20f8f1c45a0ec6c057c14bf5caf88e209b052da16833f996d75eff8b9",
+			"note": "verbatim copy of the auditor's report; unmodified"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.session/esshowmore1111sm2/audit.log",
+			"sha256": "38bbaceae451d32e84112c1198b9f1e24939a7bf7452e9f5eccbe81e99cd0d12",
+			"note": "verbatim copy of the auditor's own log (actual command output)"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.session/esshowmore1111sm2/tools/audit-showmore-es-both.py",
+			"sha256": "bc0d0ae226ec4a688765a45fd826701471c1ac4951da8aae5d2f8c9a4331308d",
+			"note": "verbatim copy of an auditor-written file"
+		},
+		{
+			"path": "i18n/audits/evidence/es/mobile.session/esshowmore1111sm2/main-bytes-check.txt",
+			"sha256": "a634d64169732fe915acf94fb7e6db2b603b9385bd54730467890288614662cb",
+			"note": "coder-written comparison of audited bytes vs origin/main; not an auditor artifact"
+		}
+	],
+	"audit_notes_not_execution_log": "report.md and the prose fields of this record are judgement. Executed output exists only in audit.log (where retained) and main-bytes-check.txt.",
+	"supersedes": "esshowmore1111sm1",
+	"final": true
+}
