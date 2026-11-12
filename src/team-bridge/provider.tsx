@@ -54,19 +54,23 @@ const Context = createContext<
 	| null
 >(null);
 
+/**
+ * The account boundary is the STORE's, never the children's.
+ *
+ * A different account still gets a fresh store BEFORE its children render: the
+ * value below is memoised on `radientAccountId`, so the render that sees the new
+ * id hands every reader the new store, and the `[value]` effects retire the old
+ * one (store, avatar cache, push registration) in the same commit.
+ *
+ * This provider used to get that by keying itself on the account id. It wraps the
+ * router (`app/_layout.tsx`), so the key remounted EVERY screen on every account
+ * change — a Radient sign-in included. Welcome lost the `initiated` flag that lets
+ * its own attempt navigate ("authorise does nothing"), and the (auth) stack was
+ * rebuilt on its first route, `custom`: a Radient user stranded on the own-tunnel
+ * guide with a Back that had nothing to pop (TestFlight 883, Ola). Pinned by
+ * `__tests__/provider-keeps-router.test.ts`.
+ */
 export function TeamBridgeProvider({ children }: { children: ReactNode }) {
-	const { radientAccountId } = useConnection();
-	// A different account gets a fresh store BEFORE its children render. A
-	// boolean signed-in effect would leave old messages visible for one paint
-	// when an already signed-in person replaces their account.
-	return (
-		<AccountTeamBridgeProvider key={radientAccountId ?? "signed-out"}>
-			{children}
-		</AccountTeamBridgeProvider>
-	);
-}
-
-function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 	const connection = useConnection();
 	const router = useRouter();
 	const unreadRefresh = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -96,7 +100,7 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			accessToken,
 			...(fixture ? { baseUrl: fixture.baseUrl } : {}),
 		});
-		// Captured by this account-keyed provider, not read from a later render.
+		// Captured by this account's value, not read from a later render.
 		let registeredHub: { hub: HubClient; token: string } | null = null;
 		const bindAccount = async (retiring = false) => {
 			const token = await (retiring && !fixture
@@ -167,13 +171,13 @@ function AccountTeamBridgeProvider({ children }: { children: ReactNode }) {
 			stopBadge();
 			void clearBadgeSource(TEAM_BRIDGE_BADGE);
 			/*
-			 * This provider is keyed by account (`TeamBridgeProvider`), so its
-			 * teardown IS the account boundary, including a direct A→B replacement
-			 * without signed-out. Permanently retire the store and clear decoded media:
+			 * `value` is memoised on the account id, so this teardown IS the account
+			 * boundary, including a direct A→B replacement without signed-out (and
+			 * provider unmount). Permanently retire the store and clear decoded media:
 			 * A's late upload refusal must not reset B's module-level image cache.
 			 */
 			value.actions.retire();
-			// Account replacement unmounts this provider; drop its photos now
+			// Account replacement retires this value; drop its photos now
 			// rather than waiting for the collector, and retire reads in flight.
 			value.avatars.clear();
 			remove();
