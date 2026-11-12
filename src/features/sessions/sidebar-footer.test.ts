@@ -27,7 +27,7 @@ const PANE = readFileSync(
  *  the count's out-of-flow offset from its icon. Top-level for biome's
  *  useTopLevelRegex; they scan the source text, not a frame. */
 const FOOTER_CLASS =
-	/className="gap-(\d+(?:\.5)?) border-t border-hairline[^"]*"\s*\n[^\n]*\n\s*testID=\{REGION\.sidebarFooter\}/;
+	/className="gap-(\d+(?:\.5)?) border-t border-hairline[^"]*"\s*\n(?:[^\n]*\n)?\s*testID=\{REGION\.sidebarFooter\}/;
 const BADGE_TOP = /style=\{\{ top: -(\d+), start: \d+ \}\}/;
 
 /* Tailwind's spacing scale: one step is 4 pt. */

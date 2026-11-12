@@ -26,8 +26,11 @@ import { useTextScale } from "@/ui/text-scale-provider";
 import {
 	cx,
 	LIST_ROW_INDICATOR_CLASS,
+	LIST_ROW_SPINNER_PT,
 	listRowClasses,
+	listRowHangingIndicator,
 	listRowIndicator,
+	listRowLine2,
 } from "@/ui/variants";
 
 /**
@@ -268,6 +271,125 @@ export const ListRow = ({
 		degraded,
 	});
 
+	/* Line 2's two halves (design D6, below): the marks and the meta. */
+	const hasMarks =
+		statusWord ||
+		unread ||
+		askCount > 0 ||
+		(!progressCountsYield && (subagentCount > 0 || todoCount > 0));
+	const line2 = listRowLine2({ hasMarks: Boolean(hasMarks), wrapMarks });
+	const marks = hasMarks ? (
+		<>
+			{/* One word slot. `approval`/`question` are danger; the two
+			 * receipts are muted, because neither is an error. */}
+			{statusWord ? (
+				<Text
+					testID={statusTestID}
+					className={`shrink-0 text-meta ${
+						pending ? "text-danger" : "text-ink-dim"
+					}`}
+				>
+					{statusWord}
+				</Text>
+			) : null}
+			{unread ? (
+				<Text className="shrink-0 text-meta text-accent">new</Text>
+			) : null}
+			{/* The asks count comes FIRST in the count strip (design E2 §2.1): a
+			 *  deadline outranks a progress count, so when the strip is under
+			 *  pressure it is the agents/todos counts that yield, never this one —
+			 *  and no count is ever truncated (a dropped count is ABSENT; a
+			 *  truncated one is a valid-looking lie).
+			 *
+			 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open only
+			 *  since local-operator #2388), so the chip says "asks" while the bar
+			 *  above a composer counts questions. The accessible name uses this
+			 *  surface's word for the set — "not a blocker" — because a queued ask
+			 *  is not a "waiting for you" state: the agent keeps working
+			 *  (design §5's header rule), and a reader who heard "waiting" beside a
+			 *  danger approval would rightly conclude the run was held. */}
+			{askCount > 0 ? (
+				<Text
+					className="shrink-0 text-mono-sm text-ink-dim"
+					testID={askBadgeTestID}
+					accessibilityLabel={`${countLabel(askCount, "ask")}, not a blocker`}
+				>
+					{countLabel(askCount, "ask")}
+				</Text>
+			) : null}
+			{subagentCount > 0 && !progressCountsYield ? (
+				<Text className="shrink-0 text-mono-sm text-ink-dim">
+					{countLabel(subagentCount, "agent")}
+				</Text>
+			) : null}
+			{todoCount > 0 && !progressCountsYield ? (
+				<Text className="shrink-0 text-mono-sm text-ink-dim">
+					{countLabel(todoCount, "todo")}
+				</Text>
+			) : null}
+		</>
+	) : null;
+	const metaLine =
+		remote !== undefined ? (
+			/* A remote row's device line, in place of the folder/model meta:
+			 * another device's conversation carries no cwd or model on this wire,
+			 * and the device is what the reader needs to know. Plain prose, not
+			 * the mono meta style — a device name is a name, not a path. The id
+			 * is the remote family's, so a marker can tell a mesh row from the
+			 * local rows that share this list. */
+			<Text
+				testID={remote.indicatorTestID}
+				className={cx(
+					"text-body-sm text-ink-dim",
+					line2 === "inline" && "min-w-0 flex-1",
+				)}
+				numberOfLines={1}
+				ellipsizeMode="tail"
+			>
+				On {remote.device}
+			</Text>
+		) : meta.cwd || meta.model ? (
+			<View
+				className={cx(
+					"flex-row items-center gap-2",
+					line2 === "inline" && "min-w-0 flex-1",
+				)}
+				onLayout={(event) => {
+					/* The line's own width, so the fit is decided from the space the layout
+					 *  actually gave the row rather than from a second derivation of the
+					 *  screen's padding, pane width and readable measure. Reported in dp. */
+					const { width } = event.nativeEvent.layout;
+					if (width !== metaWidth) setMetaWidth(width);
+				}}
+			>
+				{meta.cwd ? (
+					<Text
+						style={META_PATH_BOX(effectiveScale)}
+						className="text-mono-sm text-ink-dim"
+						numberOfLines={1}
+						// The path keeps its head (R-3), so the mop-up ellipsis is `tail`: it is the
+						// direction the painted string already has, and the end that can be spared if
+						// the arithmetic ever under-counts.
+						ellipsizeMode="tail"
+					>
+						{meta.cwd}
+					</Text>
+				) : (
+					<View className="flex-1" />
+				)}
+				{meta.model ? (
+					<Text
+						style={META_VALUE_BOX}
+						className="text-mono-sm text-ink-dim"
+						numberOfLines={1}
+						ellipsizeMode="head"
+					>
+						{meta.model}
+					</Text>
+				) : null}
+			</View>
+		) : null;
+
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -295,19 +417,16 @@ export const ListRow = ({
 					className={listRowClasses({ selected, pressed })}
 					style={ROW_FLOOR}
 				>
+					{/* The reserved slot, as a SPACER: the indicator itself hangs beside
+					 *  the title line (design D7, `listRowHangingIndicator`). Padded out to
+					 *  the picture's own width when the list has pictured rows, so this
+					 *  row's title starts where a pictured row's does; the dot keeps its
+					 *  left edge and what grows is the empty space after it. */}
 					{leading === undefined ? (
 						leadingSlotPt === undefined ? (
-							<Indicator attention={attention} />
+							<View className={LIST_ROW_INDICATOR_CLASS} />
 						) : (
-							/* The reserved slot, padded out to the picture's own width so this
-							 *  row's title starts where a pictured row's does. The dot keeps its
-							 *  left edge; what grows is the empty space after it. */
-							<View
-								className="justify-center"
-								style={{ width: leadingSlotPt, height: leadingSlotPt }}
-							>
-								<Indicator attention={attention} />
-							</View>
+							<View style={{ width: leadingSlotPt }} />
 						)
 					) : LIST_ROW_STATUS_PLACEMENT === "beside" ? (
 						<>
@@ -354,6 +473,21 @@ export const ListRow = ({
 								wrapMarks && "flex-wrap",
 							)}
 						>
+							{leading === undefined ? (
+								<View
+									className="absolute justify-center"
+									style={listRowHangingIndicator({
+										slotPt: leadingSlotPt,
+										scale: effectiveScale,
+									})}
+									pointerEvents="none"
+								>
+									<Indicator
+										attention={attention}
+										spinnerPt={LIST_ROW_SPINNER_PT}
+									/>
+								</View>
+							) : null}
 							{/* The title shares line 1 with the time alone, so it keeps the
 							 * row's width (D-B3). The shimmer wraps the Text rather
 							 * than the slot, because "working" belongs on the name
@@ -441,118 +575,31 @@ export const ListRow = ({
 						 *  and time only; the state words open line 2, before the folder and
 						 *  model, which already yield (`metaLineFor`). The marks keep their
 						 *  own order and the asks-first rule below. */}
-						{statusWord ||
-						unread ||
-						askCount > 0 ||
-						(!progressCountsYield && (subagentCount > 0 || todoCount > 0)) ? (
-							<View
-								className={cx(
-									"flex-row items-center gap-2",
-									wrapMarks && "flex-wrap",
-								)}
-							>
-								{/* One word slot. `approval`/`question` are danger; the two
-								 * receipts are muted, because neither is an error. */}
-								{statusWord ? (
-									<Text
-										testID={statusTestID}
-										className={`shrink-0 text-meta ${
-											pending ? "text-danger" : "text-ink-dim"
-										}`}
-									>
-										{statusWord}
-									</Text>
-								) : null}
-								{unread ? (
-									<Text className="shrink-0 text-meta text-accent">new</Text>
-								) : null}
-								{/* The asks count comes FIRST in the count strip (design E2 §2.1): a
-								 *  deadline outranks a progress count, so when the strip is under
-								 *  pressure it is the agents/todos counts that yield, never this one —
-								 *  and no count is ever truncated (a dropped count is ABSENT; a
-								 *  truncated one is a valid-looking lie).
-								 *
-								 *  THE UNIT IS THE FIELD'S OWN: `asks_open` counts ASKS (open only
-								 *  since local-operator #2388), so the chip says "asks" while the bar
-								 *  above a composer counts questions. The accessible name uses this
-								 *  surface's word for the set — "not a blocker" — because a queued ask
-								 *  is not a "waiting for you" state: the agent keeps working
-								 *  (design §5's header rule), and a reader who heard "waiting" beside a
-								 *  danger approval would rightly conclude the run was held. */}
-								{askCount > 0 ? (
-									<Text
-										className="shrink-0 text-mono-sm text-ink-dim"
-										testID={askBadgeTestID}
-										accessibilityLabel={`${countLabel(askCount, "ask")}, not a blocker`}
-									>
-										{countLabel(askCount, "ask")}
-									</Text>
-								) : null}
-								{subagentCount > 0 && !progressCountsYield ? (
-									<Text className="shrink-0 text-mono-sm text-ink-dim">
-										{countLabel(subagentCount, "agent")}
-									</Text>
-								) : null}
-								{todoCount > 0 && !progressCountsYield ? (
-									<Text className="shrink-0 text-mono-sm text-ink-dim">
-										{countLabel(todoCount, "todo")}
-									</Text>
-								) : null}
+						{/* ONE LINE FOR THE STATE AND THE META (TestFlight 883, design D6). The
+						 *  marks used to be a View of their own with the folder/model as a
+						 *  sibling below it, so any row with a mark grew a THIRD line (title /
+						 *  marks / cwd: 76.7 pt against 55.7) — the opposite of "the state
+						 *  words open line 2, before the folder and model" above. They now
+						 *  share line 2: the marks first, each `shrink-0`, then the meta in a
+						 *  `min-w-0 flex-1` box whose `onLayout` reports the width the marks
+						 *  left, so `metaLineFor` fits the path and model into exactly that.
+						 *  Above `LARGE_TEXT_SCALE` (`wrapMarks`) the stacked layout stays: the
+						 *  marks wrap on a line of their own there (D13/Q4-1). */}
+						{line2 === "inline" ? (
+							<View className="flex-row items-center gap-2">
+								{marks}
+								{metaLine}
 							</View>
-						) : null}
-						{remote !== undefined ? (
-							/* A remote row's device line, in place of the folder/model meta:
-							 * another device's conversation carries no cwd or model on this wire,
-							 * and the device is what the reader needs to know. Plain prose, not
-							 * the mono meta style — a device name is a name, not a path. The id
-							 * is the remote family's, so a marker can tell a mesh row from the
-							 * local rows that share this list. */
-							<Text
-								testID={remote.indicatorTestID}
-								className="text-body-sm text-ink-dim"
-								numberOfLines={1}
-								ellipsizeMode="tail"
-							>
-								On {remote.device}
-							</Text>
-						) : meta.cwd || meta.model ? (
-							<View
-								className="flex-row items-center gap-2"
-								onLayout={(event) => {
-									/* The line's own width, so the fit is decided from the space the layout
-									 *  actually gave the row rather than from a second derivation of the
-									 *  screen's padding, pane width and readable measure. Reported in dp. */
-									const { width } = event.nativeEvent.layout;
-									if (width !== metaWidth) setMetaWidth(width);
-								}}
-							>
-								{meta.cwd ? (
-									<Text
-										style={META_PATH_BOX(effectiveScale)}
-										className="text-mono-sm text-ink-dim"
-										numberOfLines={1}
-										// The path keeps its head (R-3), so the mop-up ellipsis is `tail`: it is the
-										// direction the painted string already has, and the end that can be spared if
-										// the arithmetic ever under-counts.
-										ellipsizeMode="tail"
-									>
-										{meta.cwd}
-									</Text>
-								) : (
-									<View className="flex-1" />
-								)}
-								{meta.model ? (
-									<Text
-										style={META_VALUE_BOX}
-										className="text-mono-sm text-ink-dim"
-										numberOfLines={1}
-										ellipsizeMode="head"
-									>
-										{meta.model}
-									</Text>
+						) : (
+							<>
+								{line2 === "stacked" ? (
+									<View className="flex-row flex-wrap items-center gap-2">
+										{marks}
+									</View>
 								) : null}
-							</View>
-						) : null}
+								{metaLine}
+							</>
+						)}
 						{tagLine}
 					</View>
 				</View>

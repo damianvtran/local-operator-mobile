@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DiscoveredComputer } from "@/connection";
 import { createConnectionStore } from "@/state/connection-store";
+import { sansTextWidthDp } from "@/ui/components/list-row-meta";
 
 /**
  * The two navigation entry points MOUNTED (M2b, ux-flows F5): the Home header
@@ -178,6 +179,7 @@ const { ComputerSwitcherProvider } = await import("./computer-switcher-sheet");
 const {
 	DrawerComputerRow,
 	drawerRowFit,
+	drawerRowName,
 	HeaderComputerChip,
 	headerChipFit,
 	switcherFocusReturn,
@@ -405,6 +407,37 @@ describe("the drawer footer's workspace row", () => {
 			expect(drawerRowFit("…", "· Checking…", 60, 2, 24)).toEqual({
 				name: "…",
 				word: null,
+			});
+		});
+		/* TestFlight 883 (Ola, 430 pt drawer, design D9): his EC2 name in the
+		 *  measured 281 pt slot painted `ip-192-16…ca-central-1.compute.inte…` —
+		 *  the fit's ellipsis, then the Text's own, because the advance table
+		 *  under-counts this string by ~14 % (`DRAWER_CUT_MARGIN`). */
+		const OLA = "ip-192-168-0-70.ca-central-1.compute.internal";
+		it("cuts a long DNS name with headroom, so the web paints one ellipsis", () => {
+			const fit = drawerRowFit(OLA, WORD, 281, 1, 12);
+			expect(fit.word).toBeNull();
+			expect(fit.name.split("…")).toHaveLength(2);
+			expect(sansTextWidthDp(fit.name, 14 / 12)).toBeLessThanOrEqual(
+				281 * 0.86,
+			);
+		});
+		it("hands native the raw name to truncate once in the middle; the web paints the fit", () => {
+			const fit = drawerRowFit(OLA, WORD, 281, 1, 12);
+			expect(drawerRowName(OLA, fit, "ios")).toEqual({
+				text: OLA,
+				ellipsizeMode: "middle",
+			});
+			expect(drawerRowName(OLA, fit, "android").text).toBe(OLA);
+			expect(drawerRowName(OLA, fit, "web")).toEqual({
+				text: fit.name,
+				ellipsizeMode: "tail",
+			});
+		});
+		it("keeps the health word for Ola's computer once its title is shortened (D4)", () => {
+			expect(drawerRowFit("ip-192-168-0-70", WORD, 281, 1, 12)).toEqual({
+				name: "ip-192-168-0-70",
+				word: WORD,
 			});
 		});
 		it("paints both before the slot is measured, so the common case never reflows", () => {

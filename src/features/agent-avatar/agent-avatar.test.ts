@@ -338,8 +338,10 @@ const RESERVE_WIRED =
 const RESERVE_DECIDED_ON_THE_WIRE =
 	/item\.kind === "row" && avatarRefOf\(item\.session\) !== null/;
 const RESERVE_PANE_PASSES = /reserveLeading=\{anyRowPictured\}/;
+/* The padded slot reserves the picture's WIDTH; since TestFlight 883 (design D7)
+ *  it is a spacer and the indicator hangs on the title line, so no height. */
 const RESERVE_SLOT_PADDED =
-	/leadingSlotPt === undefined \? \([\s\S]*width: leadingSlotPt, height: leadingSlotPt/;
+	/leadingSlotPt === undefined \? \([\s\S]*style=\{\{ width: leadingSlotPt \}\}/;
 const CORNER_DEFAULT =
 	/LIST_ROW_STATUS_PLACEMENT = "corner" as ListRowStatusPlacement/;
 /* The plain slot: 12 pt, padded out to the picture's width when the list has
