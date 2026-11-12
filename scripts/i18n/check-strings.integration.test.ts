@@ -231,6 +231,26 @@ describe("historical scanner migration in Git", () => {
 		expect(update(dir).status).toBe(0);
 		expect(baseline(dir).findings.length).toBe(count + 26);
 	}, 30_000);
+	it("fails an unkeyed expression literal in an activated file and ignores it elsewhere", () => {
+		const dir = fixture();
+		expect(update(dir).status).toBe(0);
+		expect(run(dir, "--base", "HEAD").status).toBe(0);
+		const literal =
+			'export const label = ready ? "Unkeyed expression words" : "";\n';
+		// Activated: the app/ session video screen is in EXPRESSION_LITERAL_SCOPE.
+		const activated = join(dir, "app/(app)/session/[id]");
+		mkdirSync(activated, { recursive: true });
+		writeFileSync(join(activated, "video.tsx"), literal);
+		const failed = run(dir, "--base", "HEAD");
+		expect(failed.status).not.toBe(0);
+		expect(failed.stderr).toContain("Unkeyed expression words");
+		writeFileSync(join(activated, "video.tsx"), "");
+		// Not activated: the same literal in an ordinary module is not scanned yet.
+		writeFileSync(join(dir, "src", "elsewhere.ts"), literal);
+		const passed = run(dir, "--base", "HEAD");
+		expect(passed.status, passed.stderr).toBe(0);
+		expect(passed.stdout).toContain("0 new");
+	}, 30_000);
 	it("fails closed on a missing ref and a broken snapshot scanner", () => {
 		const dir = fixture();
 		expect(run(dir, "--base", "missing-ref").status).not.toBe(0);

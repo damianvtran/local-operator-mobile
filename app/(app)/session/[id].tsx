@@ -127,6 +127,25 @@ import {
 } from "@/ui/size-class";
 import { useTextScale } from "@/ui/text-scale-provider";
 
+/** The context-window fact, keyed as whole strings. The old inline version
+ *  stitched `%` + "ctx"/"context" + "(est.)" onto a number, which no other
+ *  language can order. `narrow` is the under-340 pt form (design round 2, D17:
+ *  the full word wraps the activity band to two lines there). */
+function contextFact(
+	percent: number,
+	narrow: boolean,
+	estimate: boolean,
+): string {
+	if (narrow) {
+		return estimate
+			? t("mobile.session.tray.context_short_estimate", { percent })
+			: t("mobile.session.tray.context_short", { percent });
+	}
+	return estimate
+		? t("mobile.session.tray.context_estimate", { percent })
+		: t("mobile.session.tray.context", { percent });
+}
+
 /**
  * The session view (`docs/ux/flows.md` F-6): the product's core screen.
  *
@@ -678,7 +697,8 @@ export default function Session() {
 	 *  (a tail ellipsis on the line it actually has), and the character budgets
 	 *  that used to middle-truncate it here are identities kept only for callers
 	 *  not yet migrated (`features/session/header.ts`). */
-	const headerTitle = title.length > 0 ? title : "session";
+	const headerTitle =
+		title.length > 0 ? title : t("mobile.session.fallback_name");
 
 	/* The panels, in one place: they sit between the transcript and the composer.
 	 * One panel at a time, because a phone's column has room for one and a tablet's is
@@ -918,7 +938,13 @@ export default function Session() {
 				: null,
 		context:
 			projection?.context_tokens != null && projection?.context_window != null
-				? `${Math.round((projection.context_tokens / projection.context_window) * 100)}${viewportWidth < 340 ? "% ctx" : "% context"}${projection.context_is_estimate === true ? " (est.)" : ""}`
+				? contextFact(
+						Math.round(
+							(projection.context_tokens / projection.context_window) * 100,
+						),
+						viewportWidth < 340,
+						projection.context_is_estimate === true,
+					)
 				: null,
 	};
 	/* The activity line's trailing counts, rebuilt only when a NUMBER moves: the
@@ -993,16 +1019,18 @@ export default function Session() {
 							className="text-mono-sm text-ink-dim"
 							testID={SURFACE.sessionContext}
 						>
-							{Math.round(
-								(projection.context_tokens / projection.context_window) * 100,
+							{contextFact(
+								Math.round(
+									(projection.context_tokens / projection.context_window) * 100,
+								),
+								viewportWidth < 340,
+								projection.context_is_estimate === true,
 							)}
 							{/* `ctx` under 340 pt: `21% context (est.)` beside the cost and the
 						    subagents chip wraps to two lines inside the band, and the cost
 						    then floats between them (design round 2, D17). The abbreviation
 						    is the standard one and loses nothing; above 340 pt the word
 						    stays whole. */}
-							{viewportWidth < 340 ? "% ctx" : "% context"}
-							{projection.context_is_estimate === true ? " (est.)" : ""}
 						</Text>
 						{projection.cumulative_parent_cost != null ? (
 							<Text className="text-mono-sm text-ink-dim">
@@ -1090,10 +1118,10 @@ export default function Session() {
 	/* What the closed cut hides, by name. The shown rows are the longest prefix whose
 	 *  measured heights fit `regionSnap.height`. */
 	const REGION_LABEL: Record<RegionKey, string> = {
-		working: "activity",
-		subagents: "agents",
-		todos: "tasks",
-		strip: "status",
+		working: t("mobile.session.region.label_working"),
+		subagents: t("mobile.session.region.label_subagents"),
+		todos: t("mobile.session.region.label_todos"),
+		strip: t("mobile.session.region.label_strip"),
 	};
 	const hiddenRegionLabels = (() => {
 		if (!compact || panelOpen) return [];
@@ -1403,10 +1431,12 @@ export default function Session() {
 							testID={SURFACE.sessionSecondaryMore}
 						>
 							{regionAtBottom
-								? "end · scroll ↑"
+								? t("mobile.session.region.end")
 								: hiddenRegionLabels.length > 0
-									? `${hiddenRegionLabels.join(" · ")} below · scroll ↓`
-									: "more below · scroll ↓"}
+									? t("mobile.session.region.below_labels", {
+											labels: hiddenRegionLabels.join(" · "),
+										})
+									: t("mobile.session.region.more_below")}
 						</Text>
 					) : null}
 					{/* A way to CLOSE the open panel that is always on screen (UX U4). The panel's own

@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "Recherche les messages dans la transcription chargée sur cet appareil",
 	"mobile.session.chip.model_change_failed": "Impossible de changer de modèle.",
 	"mobile.session.chip.effort_change_failed": "Impossible de changer le niveau d’effort.",
-	"mobile.session.composer.retained_instruction": "Une instruction précédente a peut-être été transmise. Réessayez d’envoyer cette instruction avant de transmettre votre brouillon actuel."
+	"mobile.session.composer.retained_instruction": "Une instruction précédente a peut-être été transmise. Réessayez d’envoyer cette instruction avant de transmettre votre brouillon actuel.",
+	"mobile.session.tray.context": "{percent} % du contexte",
+	"mobile.session.tray.context_short": "{percent} % ctx",
+	"mobile.session.tray.context_estimate": "{percent} % du contexte (estim.)",
+	"mobile.session.tray.context_short_estimate": "{percent} % ctx (estim.)",
+	"mobile.session.region.end": "fin · défiler ↑",
+	"mobile.session.region.below_labels": "{labels} plus bas · défiler ↓",
+	"mobile.session.region.more_below": "la suite plus bas · défiler ↓",
+	"mobile.session.video.title_fallback": "Vidéo",
+	"mobile.session.fallback_name": "session",
+	"mobile.session.region.label_working": "activité",
+	"mobile.session.region.label_subagents": "agents",
+	"mobile.session.region.label_todos": "tâches",
+	"mobile.session.region.label_strip": "statut",
+	"mobile.session.back_to": "Retour à {name}",
+	"mobile.session.back_to_session": "Retour à la session"
 }

@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "Finds messages in the transcript loaded on this device",
 	"mobile.session.chip.model_change_failed": "Could not change the model.",
 	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
-	"mobile.session.composer.retained_instruction": "An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft."
+	"mobile.session.composer.retained_instruction": "An earlier instruction may have been delivered. Retry that earlier instruction before sending your current draft.",
+	"mobile.session.tray.context": "{percent}% context",
+	"mobile.session.tray.context_short": "{percent}% ctx",
+	"mobile.session.tray.context_estimate": "{percent}% context (est.)",
+	"mobile.session.tray.context_short_estimate": "{percent}% ctx (est.)",
+	"mobile.session.region.end": "end · scroll ↑",
+	"mobile.session.region.below_labels": "{labels} below · scroll ↓",
+	"mobile.session.region.more_below": "more below · scroll ↓",
+	"mobile.session.video.title_fallback": "Video",
+	"mobile.session.fallback_name": "session",
+	"mobile.session.region.label_working": "activity",
+	"mobile.session.region.label_subagents": "agents",
+	"mobile.session.region.label_todos": "tasks",
+	"mobile.session.region.label_strip": "status",
+	"mobile.session.back_to": "Back to {name}",
+	"mobile.session.back_to_session": "Back to session"
 }

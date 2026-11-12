@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "En pausa mientras la app está en segundo plano. Vuelve a abrirla para que siga comprobando.",
 	"mobile.computers.wait.relay_version_sessions": "El relé indica la versión {version} del protocolo y {sessions, plural, one {# sesión en ejecución} many {# de sesiones en ejecución} other {# sesiones en ejecución}}.",
 	"mobile.computers.wait.relay_version": "El relé indica la versión {version} del protocolo.",
-	"mobile.computers.wait.relay_sessions": "El relé indica {sessions, plural, one {# sesión en ejecución} many {# de sesiones en ejecución} other {# sesiones en ejecución}}."
+	"mobile.computers.wait.relay_sessions": "El relé indica {sessions, plural, one {# sesión en ejecución} many {# de sesiones en ejecución} other {# sesiones en ejecución}}.",
+	"mobile.computers.wait.host_answering": "Esperando a que responda tu máquina en {host}. Que una ruta esté configurada no significa que la máquina esté en marcha.",
+	"mobile.computers.wait.answering": "Esperando a que tu máquina responda.",
+	"mobile.computers.added.fallback_name": "tu máquina",
+	"mobile.computers.added.connected_to": "Conectado a {name}."
 }

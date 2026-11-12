@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "Busca mensajes en la transcripción cargada en este dispositivo",
 	"mobile.session.chip.model_change_failed": "No se pudo cambiar el modelo.",
 	"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
-	"mobile.session.composer.retained_instruction": "Puede que ya se haya entregado una instrucción anterior. Reintenta enviarla antes de enviar tu borrador actual."
+	"mobile.session.composer.retained_instruction": "Puede que ya se haya entregado una instrucción anterior. Reintenta enviarla antes de enviar tu borrador actual.",
+	"mobile.session.tray.context": "{percent}% de contexto",
+	"mobile.session.tray.context_short": "{percent}% de contexto",
+	"mobile.session.tray.context_estimate": "{percent}% de contexto (aprox.)",
+	"mobile.session.tray.context_short_estimate": "{percent}% de contexto (aprox.)",
+	"mobile.session.region.end": "fin · desplazar ↑",
+	"mobile.session.region.below_labels": "{labels} abajo · desplazar ↓",
+	"mobile.session.region.more_below": "más abajo · desplazar ↓",
+	"mobile.session.video.title_fallback": "Vídeo",
+	"mobile.session.fallback_name": "sesión",
+	"mobile.session.region.label_working": "actividad",
+	"mobile.session.region.label_subagents": "agentes",
+	"mobile.session.region.label_todos": "tareas",
+	"mobile.session.region.label_strip": "estado",
+	"mobile.session.back_to": "Volver a {name}",
+	"mobile.session.back_to_session": "Volver a la sesión"
 }

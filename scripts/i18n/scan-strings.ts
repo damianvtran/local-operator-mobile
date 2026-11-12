@@ -26,17 +26,68 @@
  *    a deliberate mirror (see `account-routing-copy.ts`, which cannot import the
  *    runtime), and `catalogues.test.ts` binds it to the catalogue key for key.
  *
+ * 4. `expression-literal` — a string or template literal that is the value of a
+ *    conditional (`cond ? "a" : "b"`), the right side of `??`, or a function
+ *    return (`return "..."`). These are the literals rules 1-3 cannot see: no tag
+ *    or attribute name precedes them, so `{x ?? "Not signed in"}` and a
+ *    `statusFor()` that returns sentences rendered English next to keyed text.
+ *    A literal qualifies only if it reads as prose: it has a space, or starts
+ *    with a capital letter (a lowercase one-word token such as `"primary"` or
+ *    `"session"` is indistinguishable from an enum/route id, so it is a stated
+ *    blind spot, not a finding), and it carries no `$/`-style path or
+ *    identifier shape.
+ *
+ *    ACTIVATION-SCOPED, ON PURPOSE. Rule 4 applies ONLY to the files in
+ *    `EXPRESSION_LITERAL_SCOPE` (the session screen, the agent-job screen, the
+ *    video screen, the add-a-computer wait panel and Settings). EVERY OTHER FILE IS NOT SCANNED BY
+ *    IT YET — including the rest of `app/`, `src/features/auth/` and
+ *    `src/features/settings/`, where ~90 further expression literals are known
+ *    (e.g. `computer-switcher-view.ts`, `tunnel-verdict.ts`, `own-tunnel.tsx`).
+ *    That is a deliberate staged rollout, not an oversight: the baseline is
+ *    shrink-only and must never become a dumping ground for them. Each slice adds
+ *    paths to the list in the SAME change that keys everything the rule then finds
+ *    there, so activation can only ever be green. `app/` is read by rules 1-3 too
+ *    (the tree walk has covered it since #227), so activation scopes only rule 4.
+ *
  * It does not understand JSX expressions inside template literals, and it does
  * not flag bare string literals in ordinary modules (a route name, a CSS class
- * and a sentence all look the same there). That is a stated limit rather than a
- * silent one: coverage grows by adding a NAMED rule, never by guessing at a
- * whole file.
+ * and a sentence all look the same there). The ternary-else case (`: "x"`) is
+ * recognised only when an unmatched `?` operator appears within the preceding
+ * few lines, so an object property (`{ title: "x" }`) is not mistaken for one.
+ * Arrow-expression bodies (`=> "x"`), `||` fallbacks and object-property values
+ * are NOT covered. Those are stated limits rather than silent ones: coverage
+ * grows by adding a NAMED rule, never by guessing at a whole file.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
-export type FindingRule = "jsx-text" | "jsx-attribute" | "copy-module-literal";
+export type FindingRule =
+	| "jsx-text"
+	| "jsx-attribute"
+	| "copy-module-literal"
+	| "expression-literal";
+
+/**
+ * Where rule 4 (`expression-literal`) is active. A path matches when it equals
+ * an entry or lies under an entry ending in `/` (a directory entry is supported
+ * for later slices; today every entry is a single file). See the header: widening
+ * this list is the ONLY way to extend the rule, and only together with keying
+ * what it newly finds.
+ */
+export const EXPRESSION_LITERAL_SCOPE: readonly string[] = [
+	"app/(app)/session/[id].tsx",
+	"app/(app)/session/[id]/agent/[jobId].tsx",
+	"app/(app)/session/[id]/video.tsx",
+	"src/features/auth/computers.tsx",
+	"src/features/settings/settings.tsx",
+];
+
+export function expressionRuleActive(file: string): boolean {
+	return EXPRESSION_LITERAL_SCOPE.some((entry) =>
+		entry.endsWith("/") ? file.startsWith(entry) : file === entry,
+	);
+}
 
 export interface Finding {
 	readonly rule: FindingRule;
@@ -81,6 +132,33 @@ const INLINE_JSX_TEXT =
 	/(?:^|[^A-Za-z0-9_$])<([A-Za-z][A-Za-z0-9._-]*)(?:\s[^<>]*)?>([^<>{}]+?)<\/\1>/g;
 
 const HAS_WORD = /[A-Za-z]/;
+
+/* Rule 4's small classifiers, hoisted so they compile once. */
+const WORD_CHAR_END = /[A-Za-z0-9_$]$/;
+const IDENTIFIER_SHAPE = /^[\w./:#@%-]+$/;
+const CAPITALISED_WORD = /^[A-Z][a-z]/;
+const WHITESPACE = /\s+/;
+const UTILITY_TOKEN = /^[a-z][a-z0-9:/[\].-]*$/;
+const QUALIFIED_TOKEN = /[-:]/;
+const HAS_SPACE = /\s/;
+const STARTS_UPPER = /^[A-Z]/;
+const OPENING_BRACKET = /[([{]/;
+const CLOSING_BRACKET = /[)\]}]/;
+const WORD_OR_QUESTION = /[\w?]/;
+const OPTIONAL_FOLLOWER = /[.?:]/;
+
+/** What may directly precede an expression literal: the true branch of `?:`, a
+ *  `??` fallback, or `return`. `?.` and `?:` (optional chaining / optional
+ *  property) never end a `before` that is followed by a quote. */
+const TERNARY_THEN = /(?<![?\w])\?\s*\(?\s*$/;
+const NULLISH = /\?\?\s*\(?\s*$/;
+const RETURN = /(?:^|[^A-Za-z0-9_$.])return\s*\(?\s*$/;
+const TERNARY_ELSE = /:\s*\(?\s*$/;
+/** How many earlier code lines may separate a `: "x"` from its `?`. A keyed
+ *  branch such as `t("key", {` + 3 argument lines + `})` is ~6 lines, so 4 was
+ *  too short (QA Q1); the bracket-aware walk below, not this cap, is what keeps
+ *  a longer window from reaching an unrelated `?`. */
+const TERNARY_LOOKBACK = 12;
 const COPIES_COPY = /-copy\.ts$/;
 
 /** Words after dropping `{placeholder}` and `${expression}` parts: `every ${x}`
@@ -110,7 +188,10 @@ function isBlankOrComment(line: string): boolean {
  *
  * Preserving offsets matters: a finding quotes a line number a reader can open.
  */
-function splitCodeAndLiterals(source: string): {
+function splitCodeAndLiterals(
+	source: string,
+	proseApostrophes = false,
+): {
 	codeByLine: string[];
 	literals: Literal[];
 } {
@@ -162,6 +243,21 @@ function splitCodeAndLiterals(source: string): {
 				if (character === "/" && next === "*") {
 					state = "block-comment";
 					index += 1;
+					continue;
+				}
+				/* An apostrophe glued to a word (`phone's`, `don't`) is JSX prose, not
+				 * a quote: no string literal opens directly after an identifier
+				 * character. Treating it as one swallowed the rest of the file in
+				 * `settings.tsx` and hid every literal below it from rule 4.
+				 * OPT-IN, rule 4 only: rules 1-3 have always run without it, and
+				 * turning it on for them would newly expose ~30 historical findings
+				 * the baseline must not absorb. */
+				if (
+					proseApostrophes &&
+					character === "'" &&
+					WORD_CHAR_END.test(buffer)
+				) {
+					buffer += character;
 					continue;
 				}
 				if (character === "'" || character === '"') {
@@ -295,6 +391,106 @@ function literalFindings(
 	return findings;
 }
 
+function isProse(raw: string): boolean {
+	/* Judge only the literal text, not the code interpolated into a template. */
+	const text = raw.replace(PLACEHOLDER_EXPRESSION, " ").trim();
+	if (!HAS_WORD.test(text)) return false;
+	/* A path, URL, CSS-ish token or identifier-shaped string is not copy. */
+	if (IDENTIFIER_SHAPE.test(text) && !CAPITALISED_WORD.test(text)) return false;
+	/* Utility-class lists (`"min-w-0 flex-1 gap-2"`) are whitespace-separated
+	 * lowercase tokens, at least one hyphenated or colon-qualified; no sentence
+	 * is written that way. */
+	const tokens = text.split(WHITESPACE);
+	if (
+		tokens.every((token) => UTILITY_TOKEN.test(token)) &&
+		tokens.some((token) => QUALIFIED_TOKEN.test(token))
+	) {
+		return false;
+	}
+	return HAS_SPACE.test(text) || STARTS_UPPER.test(text);
+}
+
+/**
+ * Does the expression that ends at the `:` closing `text` contain an unmatched
+ * ternary `?` — i.e. is the literal after that `:` an else-branch?
+ *
+ * Walks BACKWARDS over code (string contents are already blanked) keeping a
+ * bracket depth, so a whole earlier branch — including a multi-line
+ * `t("key", {\n  a,\n})` call — is skipped as one balanced group instead of
+ * ending the search at its `{` (QA Q1: `: "No connection yet"` after such a
+ * branch had 0 findings). The walk stops, with "not a ternary", at:
+ *  - an UNMATCHED opening bracket: the literal sits directly in an object or
+ *    argument list (`{ title: "x" }`), so a `?` before that bracket belongs to
+ *    some outer expression, not to this colon;
+ *  - a `;` or `,` at depth 0: the end of the previous statement, property or
+ *    argument, so an earlier property's ternary cannot make a later
+ *    `title: "x"` look like an else-branch.
+ * `?.`, `??` and an optional `?:` marker are not ternary operators.
+ *
+ * RESIDUAL REACH: a `?` is found only inside the TERNARY_LOOKBACK lines above;
+ * an else-literal whose condition begins further up is still missed, as is a
+ * comma operator or a `?` inside a regex literal. Both are rarer than the
+ * shapes this now catches, and activation-scoping keeps a miss a missed finding
+ * rather than a false failure.
+ */
+function opensTernary(text: string): boolean {
+	let depth = 0;
+	for (let at = text.length - 1; at >= 0; at -= 1) {
+		const character = text.charAt(at);
+		if (CLOSING_BRACKET.test(character)) {
+			depth += 1;
+		} else if (OPENING_BRACKET.test(character)) {
+			if (depth === 0) return false;
+			depth -= 1;
+		} else if (depth === 0) {
+			if (character === ";" || character === ",") return false;
+			if (
+				character === "?" &&
+				!WORD_OR_QUESTION.test(text.charAt(at - 1)) &&
+				!OPTIONAL_FOLLOWER.test(text.charAt(at + 1))
+			) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/** Rule 4. `index` of each literal is the position in `literals`; the code
+ *  lines let a `: "x"` look back for the `?` that opened its ternary. */
+function expressionFindings(
+	file: string,
+	literals: readonly Literal[],
+	codeByLine: readonly string[],
+): Finding[] {
+	const findings: Finding[] = [];
+	for (const entry of literals) {
+		const text = entry.text.trim();
+		if (!isProse(text) || DIAGNOSTIC.test(entry.before)) continue;
+		let hit =
+			TERNARY_THEN.test(entry.before) ||
+			NULLISH.test(entry.before) ||
+			RETURN.test(entry.before);
+		if (!hit && TERNARY_ELSE.test(entry.before)) {
+			/* Collect at most TERNARY_LOOKBACK earlier code lines; the bracket-aware
+			 * walk decides where the enclosing expression really begins. */
+			const earlier = codeByLine
+				.slice(Math.max(0, entry.line - 1 - TERNARY_LOOKBACK), entry.line - 1)
+				.concat(entry.before);
+			hit = opensTernary(earlier.join("\n"));
+		}
+		if (hit) {
+			findings.push({
+				rule: "expression-literal",
+				file,
+				line: entry.line,
+				text,
+			});
+		}
+	}
+	return findings;
+}
+
 /** Every un-keyed literal in one file. Exported so a test can drive the same
  *  rules on a string instead of on the tree.
  *
@@ -305,11 +501,26 @@ export function scanSource(
 	source: string,
 	owned: ReadonlySet<string> = new Set(),
 ): Finding[] {
+	let expression: Finding[] = [];
+	if (expressionRuleActive(file)) {
+		const strict = splitCodeAndLiterals(source, true);
+		expression = expressionFindings(file, strict.literals, strict.codeByLine);
+	}
+	/* `app/` is scanned by rules 1-3 too since #227 (fa2bc5e0); rule 4 stays
+	 * activation-scoped there, so `app/` files get rules 1-3 plus rule 4 only
+	 * where `EXPRESSION_LITERAL_SCOPE` names them. */
 	const { codeByLine, literals } = splitCodeAndLiterals(source);
-	return [
+	const base = [
 		...proseLineFindings(file, codeByLine),
 		...inlineJsxFindings(file, codeByLine),
 		...literalFindings(file, literals, owned),
+	];
+	/* Rule 1-3 findings win a line they already own (a `label="x"` is an
+	 * attribute, not an expression). */
+	const taken = new Set(base.map((f) => `${f.line}\0${f.text}`));
+	return [
+		...base,
+		...expression.filter((f) => !taken.has(`${f.line}\0${f.text}`)),
 	];
 }
 

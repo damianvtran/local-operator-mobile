@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "Paused while the app is in the background. Reopen it to keep watching.",
 	"mobile.computers.wait.relay_version_sessions": "Its relay reports protocol version {version} and {sessions, plural, one {# running session} other {# running sessions}}.",
 	"mobile.computers.wait.relay_version": "Its relay reports protocol version {version}.",
-	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}."
+	"mobile.computers.wait.relay_sessions": "Its relay reports {sessions, plural, one {# running session} other {# running sessions}}.",
+	"mobile.computers.wait.host_answering": "Waiting for your computer at {host} to answer. A provisioned route is not the same as a machine that is up.",
+	"mobile.computers.wait.answering": "Waiting for your computer to answer.",
+	"mobile.computers.added.fallback_name": "your computer",
+	"mobile.computers.added.connected_to": "Connected to {name}."
 }

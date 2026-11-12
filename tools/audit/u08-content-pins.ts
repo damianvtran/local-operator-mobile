@@ -673,7 +673,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * carried with #227's, so this is neither parent's digest; re-derived with
 	 * `--print` over the staged integrated tree. Source admission only, NOT
 	 * rendered U-08 evidence. */
-	app: "da23213d3caa6a22566f638b008b148adc595a0f38113b79043665ace8ecac47",
+	/* Re-pinned 2026-11-12 for PR #236 (M2 expression literals) rebased onto main
+	 * 2b508d9d (#237 integration of #231, #235, #239 and the session-screen work):
+	 * the session route's keyed literals (context tray, scroll cues, video title,
+	 * fallback names, region labels, back-to labels) are carried with main's
+	 * session-screen change, so neither parent's digest. Re-derived with `--print`
+	 * over the committed rebased tree. Source admission only, NOT rendered U-08
+	 * evidence. */
+	app: "dc24ccf2aa7005ab8cc2da11b9b968320cc9f479a25096b7f67ee976cf780a60",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1593,7 +1600,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * expand-before-select; the collapse context moved to the RN-free module.
 	 * Re-derived with --print over the staged tree;
 	 * source identity only, NOT rendered U-08 evidence. */
-	src: "1ac72fb1a237ea008c88d5789599484ef26d520146ad150c1c191c8ce7691c94",
+	/* Re-pinned 2026-11-12 for PR #236 (M2 expression literals) rebased onto main
+	 * 2b508d9d: the 33 expression-literal keys (657 -> 690 in the regenerated
+	 * `catalogue.gen.ts`), the scanner and its tests, the es/vi short-context and
+	 * `stream_degraded` remediation and `useComposedDir()` spreads are carried with
+	 * main's #237 integration, so neither parent's digest. Re-derived once with
+	 * `--print` over the committed rebased tree. Source admission only, NOT
+	 * rendered U-08 evidence. */
+	/* #241 (fix/show-more-polish) merged with main 9e193b57 (#236): both
+	 * sides' src carried, so neither parent's digest; re-derived once with
+	 * --print over the merged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "d82a271fed5ca6bb7710dca1512e0d1a2923c258e28f220dc712929bf912dd42",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

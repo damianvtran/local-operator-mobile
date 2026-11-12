@@ -169,8 +169,10 @@ describe("the session route no longer feeds the retired header inputs (#210)", (
 		 *  call here would only be a second, dead truncation rule. */
 		expect(route).not.toMatch(/headerTitleChars|compactTitleChars/);
 		expect(route).not.toContain("middleTruncate(");
-		expect(route).toContain(
-			'const headerTitle = title.length > 0 ? title : "session";',
+		/* The fallback is the keyed bare noun (M2), not a hard-coded English
+		 *  literal: `title` still passes through whole. */
+		expect(route).toMatch(
+			/const headerTitle =\s+title\.length > 0 \? title : t\("mobile\.session\.fallback_name"\);/,
 		);
 		/* `headerSubtitle` ignores `elapsed`, so the route neither computes a
 		 *  phase clock for the header nor re-renders it once a second. */

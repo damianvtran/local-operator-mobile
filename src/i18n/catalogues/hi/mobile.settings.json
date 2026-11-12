@@ -43,5 +43,19 @@
 	"mobile.settings.diagnostics.route_radient": "Radient टनल",
 	"mobile.settings.diagnostics.route_direct": "सीधा रिले",
 	"mobile.settings.diagnostics.none": "कोई नहीं",
-	"mobile.settings.diagnostics.privacy_note": "इन पंक्तियों में कभी टोकन, पासवर्ड या किसी सत्र की सामग्री शामिल नहीं होती।"
+	"mobile.settings.diagnostics.privacy_note": "इन पंक्तियों में कभी टोकन, पासवर्ड या किसी सत्र की सामग्री शामिल नहीं होती।",
+	"mobile.settings.account.not_signed_in": "Radient में साइन इन नहीं है",
+	"mobile.settings.account.route_radient": "आपकी Radient टनल से कनेक्ट है",
+	"mobile.settings.account.route_direct": "सीधे {baseUrl} से कनेक्ट है",
+	"mobile.settings.status.no_connection": "अभी तक कनेक्शन नहीं",
+	"mobile.settings.status.not_connected": "कनेक्ट नहीं",
+	"mobile.settings.status.offline": "ऑफ़लाइन",
+	"mobile.settings.status.not_answering": "उत्तर नहीं दे रहा",
+	"mobile.settings.status.connected": "कनेक्ट है",
+	"mobile.settings.diagnostics.stream_idle": "आइडल",
+	"mobile.settings.diagnostics.stream_connecting": "कनेक्ट हो रहा",
+	"mobile.settings.diagnostics.stream_live": "ऑनलाइन",
+	"mobile.settings.diagnostics.stream_degraded": "बाधित",
+	"mobile.settings.diagnostics.stream_offline": "ऑफ़लाइन",
+	"mobile.settings.account.app_name": "Local Operator"
 }

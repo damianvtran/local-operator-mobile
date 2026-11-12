@@ -1,0 +1,90 @@
+{
+ "schema": 1,
+ "audit_id": "m2d-vi-r2",
+ "locale": "vi",
+ "namespace": "m2-expression-literals",
+ "namespaces_covered": [
+  "src/i18n/catalogues/vi/mobile.computers.json (4 keys)",
+  "src/i18n/catalogues/vi/mobile.session.json (15 keys)",
+  "src/i18n/catalogues/vi/mobile.settings.json (14 keys)"
+ ],
+ "audit_date": "2026-11-11",
+ "kind": "round 2 DELTA audit - PR #236 M2 expression-literal slice, scope 3af477ee..c4024b49",
+ "key_count": 33,
+ "project": "damianvtran/local-operator-mobile",
+ "pr": 236,
+ "base_commit": "3af477ee5dd7eee5fe7b1fac36d5fd0d07918f3a",
+ "head_commit": "c4024b497a4db3118aae70d8bb132301ea3ab097",
+ "delta_statement": "Three vi values changed between base and head (git diff 3af477ee..c4024b49 -- src/i18n/catalogues/vi): mobile.session.tray.context_short '{percent}% ctx' -> '{percent}% ngữ cảnh'; mobile.session.tray.context_short_estimate '{percent}% ctx (ước tính)' -> '{percent}% ngữ cảnh (ước tính)'; mobile.settings.diagnostics.stream_degraded 'Không phản hồi' -> 'không phản hồi' (case only). Source: audit-delta-vi.md section 1.",
+ "keys_changed": [
+  "mobile.session.tray.context_short",
+  "mobile.session.tray.context_short_estimate",
+  "mobile.settings.diagnostics.stream_degraded"
+ ],
+ "input_hashes": {
+  "target": {
+   "sha256": "582f144d164294a9723535a3c2808f828b165c33c9e23f4e2e97fa160c5c9e5f",
+   "sha256_at_base": "3b48c60e64c1d896884a40dddd9d748e3bb3061d7bc15c4b45d4f9eaf570d009",
+   "form": "33 pairs, sorted-key JSON, compact, UTF-8 (per audit-delta-vi.md section 1 / 6)",
+   "file_sha256": {
+    "src/i18n/catalogues/vi/mobile.computers.json": "daab971c3ae7b8a2e509d9e3383d3c0786cc54bd5f383255bb1f8c460e050aab",
+    "src/i18n/catalogues/vi/mobile.session.json": "5b8dc4ccacda23e042da90bfcf7aef95618fbe0252609d637d02b2c79359deb7",
+    "src/i18n/catalogues/vi/mobile.settings.json": "af8d83d1167cf9355ad9d3458d3eeb069eba0b10e0fe4684907dee91796cde64"
+   }
+  },
+  "en": {
+   "sha256": "c326a93f9f2d61a15e4cd6a169e542ca22f0232504e75979b9a92458c29d3528",
+   "note": "unchanged at base and head"
+  }
+ },
+ "findings": [
+  {
+   "id": "vi-D2-01",
+   "severity": "NIT",
+   "gating": false,
+   "problem": "status-sheet context row at 200% text: '21% ngữ cảnh (ước tính)' 332.3 pt vs 326 pt row wraps to two lines; same property as es's shipped sibling.",
+   "recommendation": "accept as is"
+  }
+ ],
+ "round_1_findings_rechecked": {
+  "F1": "MAJOR - resolved",
+  "F2": "MINOR - resolved"
+ },
+ "artifacts": {
+  "audit-delta-vi.md": {
+   "path": "i18n/audits/evidence/vi/m2-expression-literals/delta-r2-c4024b49/audit-delta-vi.md",
+   "sha256": "2be3c0702ecb96e3574b00bbe4c96d8612a3256d67a06bd2e4f6cf43377d5f88"
+  },
+  "vi-delta-check.mjs": {
+   "path": "i18n/audits/evidence/vi/m2-expression-literals/delta-r2-c4024b49/vi-delta-check.mjs",
+   "sha256": "0eb8a2179ea21f84c5f8cd2eebb760e5a95220b0fdb9c40f38756e30b140063d"
+  },
+  "audit.log": "not retained - the vi auditor session (88793886ac28) produced no audit.log file; command output quoted in audit-delta-vi.md section 5 is the only execution record"
+ },
+ "auditor": {
+  "agent": "i18n-auditor",
+  "session": "88793886ac28",
+  "model": "deepseek/deepseek-flash",
+  "actual_model_source": "session model header per audit-delta-vi.md; no switch, no fallback",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "translator": "i18n-translator / openai/gpt-6.1-sol (per PR #236 ledger comment 6812359009)"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "detached_counts": {
+   "blocker": 0,
+   "major": 0,
+   "minor": 0,
+   "nit": 1
+  },
+  "finding_ids": [
+   "vi-D2-01"
+  ]
+ },
+ "route": "ordinary git/worktree read (no read_public_copy receipt)",
+ "ledger_command": "none exists in this repository (audit-delta-vi.md section 9); nothing written to any ledger",
+ "provenance_note": "record.json written by the PR #236 rebase coder on 2026-11-12 from audit-delta-vi.md and the PR ledger comment only; the vi auditor session produced no record.json of its own.",
+ "posted_to_pr": false
+}

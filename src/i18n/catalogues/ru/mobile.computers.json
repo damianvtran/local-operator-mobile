@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "Проверка приостановлена, пока приложение в фоновом режиме. Откройте его снова, чтобы продолжить проверку.",
 	"mobile.computers.wait.relay_version_sessions": "Его ретранслятор сообщает версию протокола {version} и {sessions, plural, one {# запущенную сессию} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.",
 	"mobile.computers.wait.relay_version": "Его ретранслятор сообщает версию протокола: {version}.",
-	"mobile.computers.wait.relay_sessions": "Его ретранслятор сообщает: {sessions, plural, one {# запущенная сессия} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}."
+	"mobile.computers.wait.relay_sessions": "Его ретранслятор сообщает: {sessions, plural, one {# запущенная сессия} few {# запущенные сессии} many {# запущенных сессий} other {# запущенной сессии}}.",
+	"mobile.computers.wait.host_answering": "Ожидание ответа компьютера по адресу {host}. Настроенный маршрут ещё не означает, что компьютер работает.",
+	"mobile.computers.wait.answering": "Ожидание ответа компьютера.",
+	"mobile.computers.added.fallback_name": "ваш компьютер",
+	"mobile.computers.added.connected_to": "Подключено: {name}."
 }

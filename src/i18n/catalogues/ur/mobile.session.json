@@ -63,5 +63,20 @@
 	"mobile.session.find.hint": "اس ڈیوائس پر لوڈ شدہ ٹرانسکرپٹ میں پیغامات تلاش کرتا ہے",
 	"mobile.session.chip.model_change_failed": "ماڈل تبدیل نہیں ہو سکا۔",
 	"mobile.session.chip.effort_change_failed": "استدلال کی شدت تبدیل نہیں ہو سکی۔",
-	"mobile.session.composer.retained_instruction": "ممکن ہے پچھلی ہدایت پہنچ چکی ہو۔ موجودہ مسودہ بھیجنے سے پہلے پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔"
+	"mobile.session.composer.retained_instruction": "ممکن ہے پچھلی ہدایت پہنچ چکی ہو۔ موجودہ مسودہ بھیجنے سے پہلے پچھلی ہدایت دوبارہ بھیجنے کی کوشش کریں۔",
+	"mobile.session.tray.context": "{percent}% سیاق",
+	"mobile.session.tray.context_short": "{percent}% سیاق",
+	"mobile.session.tray.context_estimate": "{percent}% سیاق (تخمینی)",
+	"mobile.session.tray.context_short_estimate": "{percent}% سیاق (تخمینی)",
+	"mobile.session.region.end": "آخر · اسکرول کریں ↑",
+	"mobile.session.region.below_labels": "{labels} نیچے · اسکرول کریں ↓",
+	"mobile.session.region.more_below": "مزید نیچے · اسکرول کریں ↓",
+	"mobile.session.video.title_fallback": "ویڈیو",
+	"mobile.session.fallback_name": "سیشن",
+	"mobile.session.region.label_working": "سرگرمی",
+	"mobile.session.region.label_subagents": "ایجنٹس",
+	"mobile.session.region.label_todos": "کام",
+	"mobile.session.region.label_strip": "حالت",
+	"mobile.session.back_to": "{name} پر واپس جائیں",
+	"mobile.session.back_to_session": "سیشن پر واپس جائیں"
 }

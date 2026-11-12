@@ -162,5 +162,21 @@
 	"mobile.computers.wait.relay_sessions": {
 		"role": "help",
 		"note": "Wait-panel line once the computer answered and only the running-session count is known. {sessions} is a count; preserve the ICU plural arms."
+	},
+	"mobile.computers.wait.host_answering": {
+		"role": "help",
+		"note": "Help line in the add-a-computer wait panel once Radient lists the computer's host name. {host} is a host name; keep it unchanged and left-to-right. The second sentence explains that a listed route does not prove the computer is running."
+	},
+	"mobile.computers.wait.answering": {
+		"role": "help",
+		"note": "Help line in the add-a-computer wait panel before a host name is known. Ends with a full stop."
+	},
+	"mobile.computers.added.fallback_name": {
+		"role": "meta",
+		"note": "Fallback name spliced into \"Connected to <name>.\" when the added computer's own name is unknown. Lower case, a noun phrase that fits after \"Connected to\"."
+	},
+	"mobile.computers.added.connected_to": {
+		"role": "status",
+		"note": "Status line in the add-a-computer panel once the new computer answers. {name} is the computer's own name, or the fallback_name noun phrase, which must fit after \"Connected to\". Ends with a full stop; keep {name} unchanged."
 	}
 }

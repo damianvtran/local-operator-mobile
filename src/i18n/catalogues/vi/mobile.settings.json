@@ -43,5 +43,19 @@
 	"mobile.settings.diagnostics.route_radient": "Đường hầm Radient",
 	"mobile.settings.diagnostics.route_direct": "Máy chủ chuyển tiếp trực tiếp",
 	"mobile.settings.diagnostics.none": "Không có",
-	"mobile.settings.diagnostics.privacy_note": "Các dòng này không bao giờ chứa token, mật khẩu hay nội dung phiên."
+	"mobile.settings.diagnostics.privacy_note": "Các dòng này không bao giờ chứa token, mật khẩu hay nội dung phiên.",
+	"mobile.settings.account.not_signed_in": "Chưa đăng nhập với Radient",
+	"mobile.settings.account.route_radient": "Qua đường hầm Radient của bạn",
+	"mobile.settings.account.route_direct": "Đã kết nối trực tiếp với {baseUrl}",
+	"mobile.settings.status.no_connection": "Chưa có kết nối",
+	"mobile.settings.status.not_connected": "Không kết nối được",
+	"mobile.settings.status.offline": "Ngoại tuyến",
+	"mobile.settings.status.not_answering": "Không phản hồi",
+	"mobile.settings.status.connected": "Đã kết nối",
+	"mobile.settings.diagnostics.stream_idle": "rảnh",
+	"mobile.settings.diagnostics.stream_connecting": "đang kết nối",
+	"mobile.settings.diagnostics.stream_live": "hoạt động",
+	"mobile.settings.diagnostics.stream_degraded": "không phản hồi",
+	"mobile.settings.diagnostics.stream_offline": "ngoại tuyến",
+	"mobile.settings.account.app_name": "Local Operator"
 }

@@ -39,5 +39,9 @@
 	"mobile.computers.wait.paused": "应用在后台时已暂停。重新打开应用以继续查看。",
 	"mobile.computers.wait.relay_version_sessions": "它的中继报告：协议版本为{version}，{sessions, plural, other {# 个会话正在运行}}。",
 	"mobile.computers.wait.relay_version": "它的中继报告：协议版本为{version}。",
-	"mobile.computers.wait.relay_sessions": "它的中继报告：{sessions, plural, other {# 个会话正在运行}}。"
+	"mobile.computers.wait.relay_sessions": "它的中继报告：{sessions, plural, other {# 个会话正在运行}}。",
+	"mobile.computers.wait.host_answering": "正在等待{host}上的电脑响应。连接路径已配置，不代表电脑正在运行。",
+	"mobile.computers.wait.answering": "正在等待电脑响应。",
+	"mobile.computers.added.fallback_name": "你的电脑",
+	"mobile.computers.added.connected_to": "已连接到{name}。"
 }
