@@ -40,6 +40,7 @@ import {
 	scopedStore,
 	withdrawPrivateWrites,
 } from "./scoped-storage";
+import { clearWarmCache } from "./warm-store";
 
 /** The port. Identical in shape to `retry-envelope.ts`'s `EnvelopeStore`, which
  *  is why the envelope store takes this object directly rather than an adapter. */
@@ -356,6 +357,10 @@ export const clearAuthorizationData = async (): Promise<void> => {
 	draftEdits.clear();
 	/* The in-memory pending rows hold what the signed-out user typed. */
 	clearPendingEchoes();
+	/* The warm cache holds the signed-out account's transcripts and list
+	 * (`state/warm-cache.ts`). Its own sealed family, so it goes whole; on web it
+	 * is memory only. Every sign-out, rejected login and owner change lands here. */
+	await clearWarmCache();
 	const privateKey = (key: string) =>
 		key.startsWith(DRAFT_KEY_PREFIX) ||
 		key.startsWith(DRAFT_RECORD_PREFIX) ||

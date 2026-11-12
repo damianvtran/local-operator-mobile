@@ -138,6 +138,41 @@ export class HistoryWindow {
 		return this.visible;
 	}
 
+	/**
+	 * Whether `projection` provably continues what this window already holds:
+	 * its transcript (the pinned opener of a capped frame excluded — Core
+	 * re-sends that at the head of every capped frame, so it is never evidence
+	 * of overlap, PR #207 Q2) contains the NEWEST journal-addressable row held.
+	 * A frame is the newest contiguous tail, so if it reaches back to that row
+	 * nothing newer can be missing and the resume's newest-page read is skipped
+	 * (`resume-plan.ts`). Nothing held, or no shared row, answers `false`, which
+	 * keeps the read — the conservative side.
+	 */
+	overlapsHeld(projection: SessionProjection): boolean {
+		const opener = headPinned(
+			projection.transcript,
+			projection.transcript_head_pinned,
+		)
+			? projection.transcript[0]
+			: undefined;
+		const openerId = opener ? rowIdentity(opener) : undefined;
+		const pinned = new Set(this.detached.map(rowIdentity));
+		let newest: string | undefined;
+		for (let index = this.rows.length - 1; index >= 0; index -= 1) {
+			const row = this.rows[index];
+			if (!row || !journalAddressableRow(row)) continue;
+			const id = rowIdentity(row);
+			if (pinned.has(id) || id === openerId) continue;
+			newest = id;
+			break;
+		}
+		if (newest === undefined) return false;
+		return projection.transcript.some(
+			(row, index) =>
+				!(opener !== undefined && index === 0) && rowIdentity(row) === newest,
+		);
+	}
+
 	accept(projection: SessionProjection | null): void {
 		if (!this.active || !projection || projection === this.projection) return;
 		this.projection = projection;

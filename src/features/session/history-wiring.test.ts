@@ -222,7 +222,14 @@ describe("history reader production wiring", () => {
 		expect(foreground).toContain("const readHistory = resumeGate.current();");
 		expect(foreground).not.toContain("if (!resumeGate.current()) return;");
 		expect(foreground).toContain("reconnectRef.current();");
-		expect(foreground).toContain("rereadRef.current(readHistory);");
+		/* Warm resume: the gate's verdict is carried to the first frame, which
+		 * reads the newest page only when it does not overlap what is held
+		 * (`resumeHistoryRead`); commands/models are not re-read on a return. */
+		expect(foreground).toContain("resumePending.current = readHistory;");
+		expect(foreground).not.toContain("rereadRef.current(readHistory);");
+		expect(runtime).toContain(
+			"frameOverlapsHeld: historyRef.current.overlapsHeld(frame.data),",
+		);
 		expect(runtime).toContain(
 			"const readHistory = history\n\t\t\t\t? historyWindow.load(true)\n\t\t\t\t: Promise.resolve();",
 		);

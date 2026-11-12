@@ -7,7 +7,9 @@ import { SealedValue } from "./sealed-value";
 const ROOT = "lo-mobile-sealed-v1";
 const SENTINEL = "lo-mobile-private-installation-v1";
 const HASH_NAME = /^[a-f0-9]{64}$/i;
-type Family = "device" | "startup" | "recovery";
+/* `warm` is the conversation/list cache (`state/warm-cache.ts`): its own family
+ * so the authorization purge can drop it whole without touching drafts. */
+type Family = "device" | "startup" | "recovery" | "warm";
 type StorageStage = "installation" | "encryption" | "commit";
 
 /** Fixed, content-free diagnostic metadata. Preserve the underlying exception

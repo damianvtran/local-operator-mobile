@@ -47,6 +47,13 @@
 /** The silent window after a return from the background. See the module note. */
 export const RESUME_GRACE_MS = 8_000;
 
+/** The relay's own outage grace, `OUTAGE_GRACE_MS` in `store.ts` at 24d328a1:
+ *  an outage is REPORTED only once it has stood this long, so a blip never
+ *  paints (or speaks) a state the reader would have to un-read. Shared by the
+ *  conversation stream (`use-session.ts`) and the list stream
+ *  (`connection-provider.tsx`) so the two hold a drop alike. */
+export const OUTAGE_GRACE_MS = 2500;
+
 /**
  * How late a timer may fire before it counts as having slept through a
  * suspension. A JS thread busy with a long render or a GC pause runs timers late

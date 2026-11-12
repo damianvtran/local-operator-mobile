@@ -262,9 +262,8 @@ describe("use-session wiring", () => {
 	});
 	it("the AppState handler opens the window and clears the drop before reopening", () => {
 		const handler = source.match(APPSTATE_HANDLER)?.[0] ?? "";
-		expect(handler).toContain(
-			'if (state === "background") resumeClock.current.background();',
-		);
+		expect(handler).toContain('if (state === "background") {');
+		expect(handler).toContain("resumeClock.current.background();");
 		const resume = handler.indexOf("resumeClock.current.resume();");
 		const cleared = handler.indexOf("droppedSinceFrame: false,");
 		const reopen = handler.indexOf("reconnectRef.current();");

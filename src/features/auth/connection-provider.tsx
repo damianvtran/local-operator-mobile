@@ -47,7 +47,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { useStore } from "zustand";
 import {
 	createRelayClient,
@@ -79,6 +79,7 @@ import {
 	registerStartupAuthorizationCleanup,
 	startupAuthorizationLifecycle,
 } from "@/connection/startup-authorization";
+import type { SessionListFrame } from "@/contracts";
 import { agentAvatarCache } from "@/features/agent-avatar/agent-avatar";
 import {
 	clearStoredCredentials,
@@ -103,6 +104,16 @@ import {
 } from "@/features/session/draft-recovery";
 import { clearNativePickerCache } from "@/features/session/picker-cache";
 import { pickerPrivacy } from "@/features/session/picker-privacy";
+import {
+	createResumeClock,
+	heldTimer,
+	OUTAGE_GRACE_MS,
+} from "@/features/session/resume-hold";
+import {
+	insideResumeWindow,
+	shouldWakeStream,
+} from "@/features/session/resume-plan";
+import { warmCache } from "@/features/session/warm-store";
 import { setLocaleSource, t } from "@/i18n";
 import {
 	type ErrorSurface,
@@ -118,6 +129,7 @@ import {
 	isUsable,
 } from "@/state/connection-store";
 import { createListStore, type ListSnapshot } from "@/state/list-store";
+import type { WarmScope } from "@/state/warm-cache";
 import { retireTeamBridgeDevice } from "@/team-bridge/retirement";
 import {
 	customRouteAuthentication,
@@ -160,6 +172,14 @@ export const configStore = createConfigStore();
 // Registration outlives route/provider mounts, just like the credential store.
 // Startup storage registers independently, avoiding an auth/coordinator cycle.
 registerStartupAuthorizationCleanup(clearAuthorizationData);
+
+/* The warm cache's owner key for the route in force (`state/warm-cache.ts`): the
+ * Radient account (null on a custom tunnel) plus the durable route key. Set when a
+ * route begins, so the cached list and conversation can paint before any network
+ * call; read by `use-session.ts` to hydrate and save a conversation. Module scope
+ * for the same reason the stores above are: one route at a time per process. */
+let warmScope: WarmScope | null = null;
+export const currentWarmScope = (): WarmScope | null => warmScope;
 type StartupRouteAdmission = RouteAdmission & {
 	authorizationRevision: number;
 	routeKey: string;
@@ -536,6 +556,19 @@ export const ConnectionProvider = ({
 	const clientRef = useRef<ReturnType<typeof createRelayClient> | null>(null);
 	const streamRef = useRef<RelayStream | null>(null);
 	const configRef = useRef<ConfigStreamHandle | null>(null);
+	/** The list loop in force: `wake` is the resume owner's handle on it and
+	 *  `cancel` retires it (including a queued backoff restart) when a new loop
+	 *  starts, so two loops can never share the list. */
+	const listLoopRef = useRef<{
+		cancel: () => void;
+		wake: (now?: number) => boolean;
+		lastFrame: () => SessionListFrame | null;
+	} | null>(null);
+	/** The admission `goLive` published, for the resume owner's reopen. */
+	const liveAdmissionRef = useRef<RouteAdmission | null>(null);
+	/** One resume clock for the route-level streams (`resume-hold.ts`, the same
+	 *  clock type `use-session.ts` holds for the conversation stream). */
+	const resumeClockRef = useRef(createResumeClock());
 	/* The in-memory grant every request path reads. Written ONLY through the
 	 *  accessor's `publish`, so the ref and the rendered `radientSignedIn` cannot
 	 *  disagree. */
@@ -768,6 +801,8 @@ export const ConnectionProvider = ({
 	);
 
 	const stopStream = useCallback(() => {
+		listLoopRef.current?.cancel();
+		listLoopRef.current = null;
 		streamRef.current?.stop();
 		streamRef.current = null;
 	}, []);
@@ -800,9 +835,64 @@ export const ConnectionProvider = ({
 			const listGeneration = listStore.getState().connectionGeneration;
 			let stopped = false;
 			let _attempt = 0;
+			/* Resume bookkeeping (the wake rule, `resume-plan.ts`). `runSeq` tags each
+			 * `run()`'s stream so the one a wake stops cannot report its own `closed`
+			 * as news; `backoff` is the queued restart a wake may cut short. */
+			let runSeq = 0;
+			let seenAt: number | null = null;
+			let backoff: ReturnType<typeof setTimeout> | undefined;
+			let lastFrame: SessionListFrame | null = null;
+			/* A stale/degraded paint held while the resume window is open; the next
+			 * frame cancels it (the #232 pattern, `use-session.ts`'s drop grace). */
+			let heldPaint: (() => void) | null = null;
+			const cancelHeld = () => {
+				heldPaint?.();
+				heldPaint = null;
+			};
+			const paintDegraded = () => {
+				listStore.getState().markStale();
+				if (mountedRef.current) setStreamHealth("degraded");
+			};
+			/* The cold-start REST read is now a FALLBACK. It used to run beside the
+			 * stream on every route start, so the list loaded twice (the read and the
+			 * stream's seed carry the same frame). The first paint is the warm cache
+			 * (`beginRoute`) or the seed; the REST read runs once only if the stream
+			 * fails before its first frame — the case it existed for. */
+			let restFallback = false;
+			const readListOnce = () => {
+				if (restFallback || lastFrame !== null) return;
+				restFallback = true;
+				void client
+					.sessions({ includePeers: true })
+					.then((frame) => {
+						if (stopped || !admission.isCurrent() || lastFrame !== null) return;
+						listStore.getState().applyFrame(
+							{
+								sessions: frame.sessions,
+								degraded: frame.degraded,
+								capabilities: frame.capabilities,
+								notifications: frame.notifications,
+								unread: frame.unread,
+							},
+							undefined,
+							listGeneration,
+						);
+					})
+					.catch((error: unknown) => {
+						if (!admission.isCurrent()) return;
+						console.warn(
+							"[sessions] the fallback list read could not be applied; the stream keeps retrying",
+							error,
+						);
+						listStore.getState().markStale();
+					});
+			};
 
 			const run = () => {
 				if (stopped || !admission.isCurrent()) return;
+				backoff = undefined;
+				const seq = ++runSeq;
+				const mine = () => !stopped && seq === runSeq && admission.isCurrent();
 				const stream = client.sessionsStream({
 					/* The flag goes to the STREAM as well as the REST read below, together:
 					 * the relay reads it once at connection open, so a repaint from a
@@ -810,7 +900,8 @@ export const ConnectionProvider = ({
 					 * GET painted — the flap the relay's contract warns about. */
 					includePeers: true,
 					onFrame: (frame) => {
-						if (!admission.isCurrent()) return;
+						if (!mine()) return;
+						seenAt = Date.now();
 						if (frame.kind === "malformed") {
 							/* NOT SILENT (round 1, R1-1). This handler used to fall through for a
 							 *  frame the schema refused, so a relay answer this build cannot read
@@ -829,6 +920,14 @@ export const ConnectionProvider = ({
 						}
 						if (frame.kind === "sessions") {
 							_attempt = 0;
+							cancelHeld();
+							const first = lastFrame === null;
+							lastFrame = frame.data;
+							/* The first frame of a route is saved at once, so a relaunch
+							 * after an OS kill paints a list even if the app never saw a
+							 * `background`; later frames are saved on `background` only. */
+							if (first && warmScope !== null)
+								void warmCache.saveList(warmScope, frame.data);
 							listStore.getState().applyFrame(
 								{
 									sessions: frame.data.sessions,
@@ -848,11 +947,31 @@ export const ConnectionProvider = ({
 						}
 					},
 					onState: (status) => {
-						if (!admission.isCurrent()) return;
-						if (mountedRef.current) setStreamHealth(healthFrom(status));
+						if (!mine()) return;
+						if (status.state === "open" || status.state === "rotating")
+							seenAt = Date.now();
+						const health = healthFrom(status);
+						/* A stall inside the resume window is the suspension's own socket
+						 * dying, not news: hold the degraded pill until the window closes
+						 * (or a frame lands first and cancels it). */
+						if (
+							health === "degraded" &&
+							insideResumeWindow(resumeClockRef.current)
+						) {
+							if (lastFrame === null) readListOnce();
+							if (heldPaint === null)
+								heldPaint = heldTimer(resumeClockRef.current, 0, () => {
+									heldPaint = null;
+									if (mine() && mountedRef.current) setStreamHealth("degraded");
+								});
+							return;
+						}
+						if (health === "degraded" && lastFrame === null) readListOnce();
+						if (health !== "degraded") cancelHeld();
+						if (mountedRef.current) setStreamHealth(health);
 					},
 					onError: (error) => {
-						if (stopped || !admission.isCurrent()) return;
+						if (!mine()) return;
 						/* A surface the reader must act on ends the loop: retrying a
 						 * 401 or a revoked tunnel in a tight cycle is how a phone
 						 * burns a battery to annoy a gateway. */
@@ -874,15 +993,30 @@ export const ConnectionProvider = ({
 							noteError(error);
 							return;
 						}
-						listStore.getState().markStale();
-						if (mountedRef.current) setStreamHealth("degraded");
+						/* Inside the resume window the stale mark and the degraded pill are
+						 * held (`heldTimer`, the #232 pattern): the failure is the
+						 * suspension's, and the restart below usually lands a frame — which
+						 * cancels the paint — before the window closes. Typed refusals never
+						 * reach this line; they surfaced above, at once. */
+						if (insideResumeWindow(resumeClockRef.current)) {
+							if (heldPaint === null)
+								heldPaint = heldTimer(
+									resumeClockRef.current,
+									OUTAGE_GRACE_MS,
+									() => {
+										heldPaint = null;
+										if (mine()) paintDegraded();
+									},
+								);
+						} else paintDegraded();
+						readListOnce();
 						_attempt += 1;
 						/* The conversation stream's policy (`reconnectDelay`), so the two
 						 * streams of one route back off alike: 2 s, doubling to a 15 s
 						 * ceiling, and a server Retry-After only ever lengthens a step. A
 						 * flat 2 s turned a Radient outage into a renewal POST every 2 s
 						 * per phone once a 5xx stopped being terminal (PR #178 R1-2/Q1). */
-						setTimeout(
+						backoff = setTimeout(
 							run,
 							reconnectDelay(_attempt, error.retryAfterMs ?? undefined),
 						);
@@ -910,11 +1044,39 @@ export const ConnectionProvider = ({
 				stream.connection.start();
 			};
 
+			const cancel = () => {
+				stopped = true;
+				cancelHeld();
+				if (backoff !== undefined) clearTimeout(backoff);
+				backoff = undefined;
+			};
+			listLoopRef.current = {
+				cancel,
+				lastFrame: () => lastFrame,
+				/* The wake rule (`shouldWakeStream`): silent ≥ 20 s, or waiting out a
+				 * backoff, reopens NOW rather than when the backoff timer says. */
+				wake: (now = Date.now()) => {
+					if (stopped || !admission.isCurrent()) return false;
+					if (
+						!shouldWakeStream({
+							silentMs: seenAt === null ? null : now - seenAt,
+							inBackoff: backoff !== undefined,
+						})
+					)
+						return false;
+					if (backoff !== undefined) clearTimeout(backoff);
+					backoff = undefined;
+					_attempt = 0;
+					seenAt = now;
+					runSeq += 1; // retire the old stream's callbacks before it stops
+					streamRef.current?.stop();
+					run();
+					return true;
+				},
+			};
 			run();
 			// A queued restart is inert once admission's revision has been revoked.
-			return () => {
-				stopped = true;
-			};
+			return cancel;
 		},
 		[noteError, stopStream],
 	);
@@ -934,6 +1096,51 @@ export const ConnectionProvider = ({
 		},
 		[stopConfig],
 	);
+
+	/**
+	 * THE RESUME OWNER for the route-level streams (the list and the config
+	 * stream). Before this, neither had any AppState handling: the OS killed
+	 * their sockets on suspension and they came back only when an error backoff
+	 * (up to 15 s) happened to fire, painting "Last updated…" and a degraded pill
+	 * on the way. The conversation stream has had the same rule since #232
+	 * (`use-session.ts`); this is its route-level twin, sharing the clock type.
+	 *
+	 * - `background`: start the clock's hold and save the list to the warm cache
+	 *   while the JS thread still runs — the moment that matters, since iOS may
+	 *   kill the process without another word.
+	 * - `active`: open the resume window, kick ONE tunnel-grant check so a due
+	 *   refresh overlaps the reopen instead of gating it (the manager is
+	 *   single-flight, so the streams' own grant reads join it), then wake both
+	 *   streams. Each reopens now only if silent ≥ 20 s or in backoff
+	 *   (`shouldWakeStream`): a quick app switch with a live stream costs nothing.
+	 *
+	 * No timers, no polling: everything here runs on an OS transition.
+	 */
+	useEffect(() => {
+		const subscription = AppState.addEventListener("change", (state) => {
+			const clock = resumeClockRef.current;
+			// "inactive" is also a system sheet over a running app; only
+			// "background" means the process may be suspended.
+			if (state === "background") {
+				clock.background();
+				const frame = listLoopRef.current?.lastFrame() ?? null;
+				if (frame !== null && warmScope !== null)
+					void warmCache.saveList(warmScope, frame);
+				return;
+			}
+			if (state !== "active" || !clock.backgrounded()) return;
+			clock.resume();
+			const admission = liveAdmissionRef.current;
+			if (admission === null || !admission.isCurrent()) return;
+			void managerRef.current?.usableSession().catch(() => {
+				/* The streams' own grant reads surface a real refusal through their
+				 * typed error path; this kick is only a head start. */
+			});
+			listLoopRef.current?.wake();
+			configRef.current?.wake();
+		});
+		return () => subscription.remove();
+	}, []);
 
 	/** Retire the old client before publishing a provisional route. Its address
 	 * is useful for loading/refusal UI, but must not carry protected requests. */
@@ -976,10 +1183,43 @@ export const ConnectionProvider = ({
 				connectionStore,
 				() => mountedRef.current,
 			);
+			liveAdmissionRef.current = null;
+			const routeKey = JSON.stringify(route);
+			/* The warm cache's owner for this route. The account is the one whose
+			 * token is in force NOW; a custom route has none. A cached list is only
+			 * ever read back under this exact pair, so a route or account switch
+			 * cannot paint another computer's rows. */
+			const scope: WarmScope = {
+				accountId:
+					route.mode === "radient"
+						? (tokensRef.current?.account_id ?? null)
+						: null,
+				routeKey,
+			};
+			warmScope = scope;
+			/* Paint the last-known list before any network call (the cold-start
+			 * rule, `docs/architecture.md` "rendered from cache, marked stale"). The
+			 * read is async and races the stream's seed: it applies only while the
+			 * list is still empty for this route's generation, so it can never
+			 * overwrite a live frame, and the stale mark says what it is. */
+			const listGeneration = listStore.getState().connectionGeneration;
+			void warmCache.loadList(scope).then((cached) => {
+				if (
+					!cached ||
+					warmScope !== scope ||
+					!admission.isCurrent() ||
+					listStore.getState().frameCount > 0
+				)
+					return;
+				listStore
+					.getState()
+					.applyFrame(cached.frame, cached.savedAt, listGeneration);
+				listStore.getState().markStale();
+			});
 			return {
 				...admission,
 				authorizationRevision,
-				routeKey: JSON.stringify(route),
+				routeKey,
 			};
 		},
 		[stopStream, stopConfig],
@@ -1010,6 +1250,7 @@ export const ConnectionProvider = ({
 				computerId,
 				tokensRef.current?.account_id ?? null,
 			);
+			liveAdmissionRef.current = admission;
 			startStream(client, admission);
 			startConfig(client);
 			/* Startup authorization is admitted by the AUTHENTICATED ROUTE, not by the
@@ -1086,43 +1327,11 @@ export const ConnectionProvider = ({
 							.getState()
 							.noteFailure({ surface: "diagnostic", displayableMessage: "" });
 				});
-			if (!admission.isCurrent()) return;
-			/* The first paint is the REST read, not the stream's seed: the cold-start
-			 * rule is that the list renders immediately, and a stream that opens in a
-			 * second must not be the reason the screen is empty. It asks for the
-			 * peers' rows exactly as the stream does — one list, one population. */
-			const listGeneration = listStore.getState().connectionGeneration;
-			const frame = await client.sessions({ includePeers: true }).catch(
-				/* NOT SILENT (round 1, R1-1): this used to be `.catch(() => null)`, so
-				 *  a cold-start answer the schema refused (or a transport that never
-				 *  answered) left an empty list with nothing on screen or in the log
-				 *  saying why. The stream's seed frame is the other carrier of the
-				 *  same list, so the read is not fatal — but the failure is said out
-				 *  loud and the list carries the same stale mark a dropped stream
-				 *  paints. */
-				(error: unknown) => {
-					if (!admission.isCurrent()) return null;
-					console.warn(
-						"[sessions] the cold-start list read could not be applied; the stream's seed frame is the fallback",
-						error,
-					);
-					listStore.getState().markStale();
-					return null;
-				},
-			);
-			if (frame && admission.isCurrent()) {
-				listStore.getState().applyFrame(
-					{
-						sessions: frame.sessions,
-						degraded: frame.degraded,
-						capabilities: frame.capabilities,
-						notifications: frame.notifications,
-						unread: frame.unread,
-					},
-					undefined,
-					listGeneration,
-				);
-			}
+			/* NO REST LIST READ HERE ANY MORE. It ran beside the stream's seed on
+			 * every route start, so a cold start loaded the list twice. The first
+			 * paint is now the warm cache (`beginRoute`), then the seed; the REST
+			 * read survives as `startStream`'s once-only fallback for a stream that
+			 * fails before its first frame — the case the read existed for. */
 		},
 		[startStream, startConfig],
 	);

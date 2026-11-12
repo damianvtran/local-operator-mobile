@@ -1405,3 +1405,86 @@ describe("a reconnect or foreground hole heals itself", () => {
 		expect(claimsBeginning(window)).toBe(true);
 	});
 });
+
+/**
+ * The warm-resume overlap proof (design "P1-B"): the newest-page read a return
+ * used to fire unconditionally is skipped when the first frame after the return
+ * overlaps what is held, and kept when it does not. These pin BOTH halves —
+ * the skip must never hide a hole the read would have found.
+ */
+describe("overlapsHeld: the resume read is skipped only when nothing can be missing", () => {
+	const journalPage = (journal: () => TranscriptEntry[], limit = 80) =>
+		vi.fn(async (before?: string): Promise<HistoryResponse> => {
+			const rows = journal();
+			const end =
+				before === undefined
+					? rows.length
+					: rows.findIndex((entry) => entry.id === before);
+			if (end < 0) return { entries: [], has_more: false };
+			const start = Math.max(0, end - limit);
+			return { entries: rows.slice(start, end), has_more: start > 0 };
+		});
+
+	it("a capped frame with a pinned opener and N < 79 missed rows overlaps: no gap without the read", async () => {
+		const journal = sequence(1500);
+		const fetch = journalPage(() => journal.slice(0, 1200));
+		const window = new HistoryWindow(fetch, vi.fn(), { autoHeal: true });
+		window.accept(capped(journal, 1200));
+		await window.load();
+		for (const missed of [1, 40, 78]) {
+			const resume = capped(journal, 1200 + missed);
+			expect(window.overlapsHeld(resume)).toBe(true);
+			const calls = fetch.mock.calls.length;
+			window.accept(resume);
+			// The read is not issued, and the accepted frame leaves no hole.
+			expect(window.hasGap).toBe(false);
+			expect(fetch.mock.calls.length).toBe(calls);
+			expect(ids(window.visibleRows).at(-1)).toBe(
+				rowIdentity(journal[1200 + missed - 1] as TranscriptEntry),
+			);
+		}
+	});
+
+	it("a frame past the held tail (≥ 79 missed rows) does NOT overlap, so the read still runs and finds the hole", async () => {
+		const journal = sequence(1500);
+		const fetch = journalPage(() => journal);
+		const window = new HistoryWindow(fetch, vi.fn());
+		window.accept(capped(journal, 1200));
+		await window.load();
+		const resume = capped(journal, 1200 + 79);
+		expect(window.overlapsHeld(resume)).toBe(false);
+		window.accept(resume);
+		// The gap the read exists for is real here.
+		expect(window.hasGap).toBe(true);
+	});
+
+	it("the pinned opener alone is never overlap evidence (PR #207 Q2)", async () => {
+		const journal = sequence(1500);
+		const window = new HistoryWindow(
+			journalPage(() => journal),
+			vi.fn(),
+		);
+		// Held: the opener plus rows 1121..1199. Frame: the opener plus 1421..1499.
+		window.accept(capped(journal, 1200));
+		await window.load();
+		expect(window.overlapsHeld(capped(journal, 1500))).toBe(false);
+	});
+
+	it("nothing held answers false, keeping the read", () => {
+		const window = new HistoryWindow(
+			journalPage(() => []),
+			vi.fn(),
+		);
+		expect(window.overlapsHeld(frame(row("a"), row("b")))).toBe(false);
+	});
+
+	it("an uncapped frame that repeats the newest held row overlaps", () => {
+		const window = new HistoryWindow(
+			journalPage(() => []),
+			vi.fn(),
+		);
+		window.accept(frame(row("a"), row("b")));
+		expect(window.overlapsHeld(frame(row("a"), row("b"), row("c")))).toBe(true);
+		expect(window.overlapsHeld(frame(row("c"), row("d")))).toBe(false);
+	});
+});
