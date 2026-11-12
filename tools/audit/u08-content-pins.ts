@@ -1632,7 +1632,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * sides' src carried, so neither parent's digest; re-derived once with
 	 * --print over the merged tree. Source identity only, NOT rendered U-08
 	 * evidence. */
-	src: "a8d9037d58be5d003ca39730a5aad918cfb5de7181d4de53c79f40a998b7a6c9",
+	/* #245 CI remediation: the Team Bridge destination's title/caption gap
+	 * uses the minimum 4 pt token instead of 2 pt (U-42). Re-derived with
+	 * --print after the final source edit; instrument and input pins unchanged.
+	 * Source identity only, NOT rendered U-08 evidence. */
+	src: "31c17f67de3fe2f5e8fe4870fc7f3d1930d5fbc87c486e04d4e2f054bdf04d63",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

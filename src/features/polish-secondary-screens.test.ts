@@ -146,6 +146,10 @@ describe("D11: the drawer footer is two rows and shared across Agents and Team B
 			'accessibilityHint={t("mobile.team_bridge.navigation.caption")}',
 		);
 		expect(block).toContain("navCardClasses({ pressed })");
+		/* CI U-42, S13/error: the caption stack's gap is measured on both
+		 * axes, even when there are no discovered computer rows below it. */
+		expect(block).toContain('className="min-w-0 flex-1 gap-1"');
+		expect(block).not.toContain("gap-0.5");
 		expect(block).toContain("<ChevronRight");
 		expect(block).not.toContain("text-center");
 		expect(block).not.toContain("<Button");

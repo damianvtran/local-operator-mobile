@@ -111,7 +111,9 @@ export function TeamBridgeEntry({
 						<View className={avatarClasses("sm")} aria-hidden>
 							<MessagesSquare size={16} color={glyphInk} />
 						</View>
-						<View className="min-w-0 flex-1 gap-0.5">
+						{/* The smallest space.scale step is 4 pt. A half-step gap
+						 *  renders 2 pt on both axes and fails the U-42 audit. */}
+						<View className="min-w-0 flex-1 gap-1">
 							<Text className="text-label text-ink" numberOfLines={1}>
 								{t("mobile.team_bridge.title")}
 							</Text>
