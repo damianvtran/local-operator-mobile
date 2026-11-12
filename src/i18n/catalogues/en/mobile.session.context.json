@@ -265,7 +265,7 @@
 	},
 	"mobile.session.tray.context_short": {
 		"role": "meta",
-		"note": "Short form of the context-window fact. \"ctx\" is a standard abbreviation of \"context\"; use the language's own short form. Where the language has no native abbreviation, use the FULL form's wording unchanged rather than leaving the English \"ctx\": the short form only renders in full-width rows (the More sheet Context row and the status sheet, value cell 318 pt at 390 pt wide), so brevity is not needed. Shipped: es and vi reuse the full form; fr keeps \"ctx\", which reads as the French abbreviation of \"contexte\"."
+		"note": "Short form of the context-window fact. \"ctx\" is a standard abbreviation of \"context\"; use the language's own short form. Where the language has no native abbreviation, use the FULL form's wording unchanged rather than leaving the English \"ctx\": the short form only renders in full-width rows (the More sheet Context row and the status sheet, value cell 318 pt at 390 pt wide), so brevity is not needed. Shipped: es and vi keep the short form a byte-copy of the full form; fr keeps \"ctx\", which reads as the French abbreviation of \"contexte\"."
 	},
 	"mobile.session.tray.context_estimate": {
 		"role": "meta",
