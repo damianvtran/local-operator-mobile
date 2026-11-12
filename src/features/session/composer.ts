@@ -205,6 +205,11 @@ export interface ComposerControls {
 export interface ComposerControlInput {
 	/** Drafts survive refusal; their presence must not authorize a write without admission. */
 	connected?: boolean;
+	/** The screen shows the warm-cache frame (`runtime.hydrated`), not a live
+	 *  one. A cached frame must never be sendable: the content may be minutes
+	 *  old, and its `streaming` is forced false, so a send would be `prompt`
+	 *  even while the desktop turn is still running (PR #246 R1/Q1-1). */
+	cached?: boolean;
 	streaming: boolean;
 	hasDraft: boolean;
 	hasImages: boolean;
@@ -247,8 +252,13 @@ export const composerControls = (
 	 *  daemon's prompt-wake path), so disabling the primary would refuse the one
 	 *  action that brings the session back. The reader is told what a send does
 	 *  by the placeholder, not by a dead control. */
+	const cached = input.cached === true;
 	const disabled =
-		input.connected === false || input.sending || blocked || !hasContent;
+		input.connected === false ||
+		cached ||
+		input.sending ||
+		blocked ||
+		!hasContent;
 	return {
 		primary: {
 			kind: input.streaming ? "steer" : "send",
@@ -265,14 +275,22 @@ export const composerControls = (
 					? "Steer the running turn"
 					: "Send message",
 		},
-		stopVisible: input.streaming && input.connected !== false,
+		stopVisible: input.streaming && input.connected !== false && !cached,
 		sending: input.sending,
 		/* On an ENDED session the retained card already carries the one sentence
 		 *  (the ended one) and its Retry; a third line saying "resolve the
 		 *  earlier instruction first" under it was the stack UX U7 / design D5
 		 *  measured. */
+		/* A cached frame says WHY the primary is dead (design D2): the same
+		 *  "Reconnecting" the header dot already reads, so the two never disagree
+		 *  and no new copy is minted. Only with a draft — an empty field is the
+		 *  self-evident case, and the hint would sit under every cold open. */
 		disabledReason:
-			blocked && !input.ended ? composerCopy().retryDisabledHint : null,
+			blocked && !input.ended
+				? composerCopy().retryDisabledHint
+				: cached && hasContent
+					? healthCopy()["relay.health.reconnecting"]
+					: null,
 		ended: input.ended,
 	};
 };

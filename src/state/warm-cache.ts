@@ -23,7 +23,9 @@
  *   paint another computer's transcript (`docs/architecture.md` "a route switch
  *   never shows another computer's projection").
  * - **Bounded.** At most {@link WARM_MAX_SESSIONS} conversations and
- *   {@link WARM_BUDGET_BYTES} serialized bytes across the whole family, LRU. The
+ *   {@link WARM_BUDGET_BYTES} STORED bytes across the whole family, LRU —
+ *   measured as the port writes them (sealed ciphertext on native, see
+ *   `WarmStorePort.storedBytes`), index included. The
  *   numbers come from the relay, not a guess: a projection frame is soft-capped
  *   at 700 KB (`local_operator/mobile/projection.py`), so 5 conversations at the
  *   cap plus a list fit in 4 MiB. Invariant: "the last-viewed conversation plus
@@ -49,7 +51,39 @@ export interface WarmStorePort {
 	set(key: string, value: string): Promise<void>;
 	remove(key: string): Promise<void>;
 	keys(): Promise<string[]>;
+	/** Bytes `value` occupies once THIS port has stored it under `key`. The
+	 *  budget is a disk bound, so it must count what the port writes, not the
+	 *  plaintext's UTF-16 length (PR #246 R6/Q1-5): the native port wraps and
+	 *  seals the value (`warm-store.ts`). Absent → the value's UTF-8 length. */
+	storedBytes?(key: string, value: string): number;
 }
+
+/** UTF-8 length of a string without allocating its encoding (a value can be
+ *  ~700 KB, and this runs on every save). Lone surrogates count as the 3-byte
+ *  U+FFFD `TextEncoder` would write. */
+export function utf8Bytes(text: string): number {
+	let bytes = 0;
+	for (let i = 0; i < text.length; i += 1) {
+		const code = text.charCodeAt(i);
+		if (code < 0x80) bytes += 1;
+		else if (code < 0x800) bytes += 2;
+		else if (
+			code >= 0xd800 &&
+			code <= 0xdbff &&
+			i + 1 < text.length &&
+			(text.charCodeAt(i + 1) & 0xfc00) === 0xdc00
+		) {
+			bytes += 4;
+			i += 1;
+		} else bytes += 3;
+	}
+	return bytes;
+}
+
+/** What one index row costs inside the index value: its JSON plus a comma.
+ *  The index is itself a stored value, so the budget counts it too. */
+const indexRowBytes = (entry: IndexEntry): number =>
+	utf8Bytes(JSON.stringify(entry)) + 1;
 
 /** Who a cached value belongs to: the Radient account (or `null` for a custom
  *  tunnel, which has no account) and the durable route identity
@@ -109,6 +143,15 @@ export function createWarmCache(
 	const warn =
 		options.warn ??
 		((message: string, cause?: unknown) => console.warn(message, cause));
+	const measure = (key: string, value: string): number =>
+		store.storedBytes?.(key, value) ?? utf8Bytes(value);
+	/* The source object each key was last saved FROM (PR #246 R7). Frames are
+	 * immutable in the stores, so the same reference means nothing changed since
+	 * that save; a quick flick out and back would otherwise re-seal and rewrite
+	 * up to ~700 KB plus the index each time — the battery and flash-wear cost
+	 * the warm-resume work exists to avoid. Dropped on forget/evict/clear, so a
+	 * removed entry is always written again. */
+	const savedFrom = new Map<string, object>();
 	/* Index mutations are read-modify-write over one key; two saves racing (a
 	 * turn end and a background in the same tick) would otherwise lose an entry
 	 * from the index and leak its bytes past the budget. One chain serialises
@@ -144,41 +187,59 @@ export function createWarmCache(
 
 	/** Writes `value` under `key` and records it most-recent-first, then evicts
 	 *  down to the bounds. The entry just written is never its own victim. */
-	function put(key: string, kind: IndexEntry["kind"], value: string) {
+	function put(
+		key: string,
+		kind: IndexEntry["kind"],
+		source: object,
+		value: () => string,
+	) {
 		return serial(async () => {
-			const bytes = value.length;
+			if (savedFrom.get(key) === source) return true;
+			const serialized = value();
+			const bytes = measure(key, serialized);
 			if (bytes > budget) {
 				warn(`[warm-cache] a ${kind} of ${bytes} bytes exceeds the budget`);
 				return false;
 			}
-			await store.set(key, value);
+			savedFrom.delete(key);
+			await store.set(key, serialized);
 			const index = (await readIndex()).filter((entry) => entry.key !== key);
 			index.unshift({ key, kind, bytes, at: now() });
 			const keep: IndexEntry[] = [];
 			const evict: IndexEntry[] = [];
 			let sessions = 0;
-			let total = 0;
+			/* The index's own envelope; each kept row adds `indexRowBytes`. */
+			let total = measure(
+				INDEX_KEY,
+				JSON.stringify({ schema: SCHEMA, entries: [] }),
+			);
 			for (const entry of index) {
 				const overCount = entry.kind === "session" && sessions >= maxSessions;
-				if (overCount || total + entry.bytes > budget) {
+				const cost = entry.bytes + indexRowBytes(entry);
+				if (overCount || total + cost > budget) {
 					evict.push(entry);
 					continue;
 				}
 				if (entry.kind === "session") sessions += 1;
-				total += entry.bytes;
+				total += cost;
 				keep.push(entry);
 			}
 			await store.set(
 				INDEX_KEY,
 				JSON.stringify({ schema: SCHEMA, entries: keep }),
 			);
-			for (const entry of evict) await store.remove(entry.key).catch(() => {});
+			for (const entry of evict) {
+				savedFrom.delete(entry.key);
+				await store.remove(entry.key).catch(() => {});
+			}
+			savedFrom.set(key, source);
 			return true;
 		});
 	}
 
 	async function forget(key: string): Promise<void> {
 		await serial(async () => {
+			savedFrom.delete(key);
 			await store.remove(key).catch(() => {});
 			const index = await readIndex();
 			const next = index.filter((entry) => entry.key !== key);
@@ -231,18 +292,17 @@ export function createWarmCache(
 			sessionId: string,
 			projection: SessionProjection,
 		): Promise<boolean> {
-			const { version: _version, ...rest } = projection;
-			const value = JSON.stringify({
-				schema: SCHEMA,
-				savedAt: now(),
-				projection: rest,
+			return put(sessionKey(scope, sessionId), "session", projection, () => {
+				const { version: _version, ...rest } = projection;
+				return JSON.stringify({
+					schema: SCHEMA,
+					savedAt: now(),
+					projection: rest,
+				});
+			}).catch((cause) => {
+				warn("[warm-cache] a conversation could not be saved", cause);
+				return false;
 			});
-			return put(sessionKey(scope, sessionId), "session", value).catch(
-				(cause) => {
-					warn("[warm-cache] a conversation could not be saved", cause);
-					return false;
-				},
-			);
 		},
 
 		async loadSession(
@@ -267,8 +327,9 @@ export function createWarmCache(
 			scope: WarmScope,
 			frame: SessionListFrame,
 		): Promise<boolean> {
-			const value = JSON.stringify({ schema: SCHEMA, savedAt: now(), frame });
-			return put(listKey(scope), "list", value).catch((cause) => {
+			return put(listKey(scope), "list", frame, () =>
+				JSON.stringify({ schema: SCHEMA, savedAt: now(), frame }),
+			).catch((cause) => {
 				warn("[warm-cache] the session list could not be saved", cause);
 				return false;
 			});
@@ -286,9 +347,17 @@ export function createWarmCache(
 		/** Every warm key, every scope. The sign-out / rejected-login purge. */
 		async clear(): Promise<void> {
 			await serial(async () => {
+				savedFrom.clear();
 				for (const key of await store.keys())
 					if (key.startsWith(WARM_KEY_PREFIX)) await store.remove(key);
 			});
+		},
+
+		/** Forgets which frames were already saved, so the next save of each is
+		 *  written. For a purge that empties the store BEHIND this cache
+		 *  (`clearWarmCache` on native clears the sealed family directly). */
+		forgetSaved(): void {
+			savedFrom.clear();
 		},
 
 		/** Resolves once every queued write has settled; tests and the purge use it. */

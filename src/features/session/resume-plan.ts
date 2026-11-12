@@ -46,13 +46,18 @@ export function resumeHistoryRead(input: {
  * (`local_operator/config_watch.py`), and no single registry key provably owns
  * the catalogues (providers, credentials and skills all move them), so ANY
  * named change re-reads. The seed frame every (re)connect sends carries
- * `changed_keys: []` and never re-reads: it announces nothing that changed.
- * A return from the background therefore costs no catalogue request at all.
+ * `changed_keys: []` and never re-reads on its own: it announces nothing that
+ * changed. The exception is a seed that replaced a DEAD stream (`resynced`):
+ * the relay never replays what changed while the phone was suspended, so that
+ * one seed re-reads once. A quick switch with a live stream costs nothing.
  */
 export function catalogueRereadOnConfig(
 	changedKeys: readonly string[],
+	/** The frame is a woken reopen's baseline: changes made while the stream
+	 *  was dead are unknown, so read once (PR #246 R3). */
+	resynced = false,
 ): boolean {
-	return changedKeys.length > 0;
+	return resynced || changedKeys.length > 0;
 }
 
 /**
@@ -109,22 +114,37 @@ export function holdResumeRead(input: {
 		void input.read();
 		return () => undefined;
 	}
+	/* Whether this read still holds the error; every release goes through
+	 * `release` so a cancel never writes over a hold another read now owns. */
+	let holding = true;
+	const release = () => {
+		if (!holding) return;
+		holding = false;
+		input.setHeld(false);
+	};
 	input.setHeld(true);
 	void input.read().then(() => {
 		if (cancelled) return;
 		if (!input.failed()) {
-			input.setHeld(false);
+			release();
 			return;
 		}
 		cancelTimer = hold(input.clock, 0, () => {
 			cancelTimer = null;
 			if (cancelled) return;
 			void input.retry().finally(() => {
-				if (!cancelled) input.setHeld(false);
+				if (!cancelled) release();
 			});
 		});
 	});
 	return () => {
+		/* Release the hold on cancel (PR #246 R4). A later return cancels this
+		 * read; when ITS read starts outside the window it never touches
+		 * `setHeld`, so a hold left at `true` here hid every later newest-page
+		 * error for the life of the screen. A later in-window read re-holds at
+		 * once (it calls `setHeld(true)` after this cancel), so releasing first
+		 * costs nothing. */
+		if (!cancelled) release();
 		cancelled = true;
 		cancelTimer?.();
 	};

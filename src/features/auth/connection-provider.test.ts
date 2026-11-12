@@ -21,11 +21,13 @@ import {
 	ConnectionProvider,
 	configStore,
 	connectionStore,
+	currentWarmScope,
 	listStore,
 	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
 import { headerHealth } from "@/features/session/health";
+import { OUTAGE_GRACE_MS } from "@/features/session/resume-hold";
 import { sessions as sessionProjections } from "@/features/session/runtime";
 import { scopedStore } from "@/features/session/scoped-storage";
 import {
@@ -33,6 +35,8 @@ import {
 	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { warmCache } from "@/features/session/warm-store";
+import { pillState } from "@/features/sessions/pill-state";
 import { activeLocale, preferredLocale } from "@/i18n";
 import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
@@ -340,6 +344,9 @@ async function relay(
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
 		serveCommands?: boolean;
+		/** Serve `/api/config/events` (a baseline `config` frame, then held
+		 *  open) instead of the older relay's 404. */
+		serveConfig?: boolean;
 		/** What the conversation seed frame's transcript carries. */
 		seedRows?: "fixture" | "history";
 		/** Edge re-auth signal, distinct from the custom relay's plain 401. */
@@ -587,7 +594,17 @@ async function relay(
 			return;
 		}
 		if (path === "/api/config/events") {
-			json({ detail: "Not Found" }, 404);
+			if (!options.serveConfig) {
+				json({ detail: "Not Found" }, 404);
+				return;
+			}
+			// The contract's baseline: `changed_keys: []`, never a replay.
+			response.writeHead(200, { "content-type": "text/event-stream" });
+			response.write(
+				`event: config\ndata: ${JSON.stringify({ changed_keys: [], language: "en" })}\n\n`,
+			);
+			openSession.add(response);
+			response.on("close", () => openSession.delete(response));
 			return;
 		}
 		if (path === "/api/sessions/events") {
@@ -3981,19 +3998,111 @@ describe("warm resume", () => {
 		expect(latest.streamHealth).toBe("degraded");
 	});
 
-	it("a cold start paints the cached list, marked stale, before the stream's seed", async () => {
-		const mock = await relay({});
+	/* A RELAUNCH is the path that hydrates (PR #246 Q1-4): an explicit
+	 *  `connectCustom` retires the old authorization, which purges the warm
+	 *  cache, so these cases restore the saved route on mount instead. */
+	const relaunch = async (mock: Awaited<ReturnType<typeof relay>>) => {
 		await live(mock);
 		// The first frame of a route is saved; let that sealed write settle.
 		await act(async () => {
 			await new Promise<void>((resolve) => setTimeout(resolve, 20));
 		});
+		durable.saved = {
+			baseUrl: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		};
 		await unmount();
 		mock.holdListStreams(true);
-		await live(mock).catch(() => undefined);
+		transport();
+		await mount();
 		await until(() => listStore.getState().frameCount > 0);
-		expect(listStore.getState().stale).toBe(true);
+	};
+	const sleep = (ms: number) =>
+		act(async () => {
+			await new Promise<void>((resolve) => setTimeout(resolve, ms));
+		});
+
+	it("a relaunch paints the cached list at once, NOT marked stale, and marks it only if no seed lands within the grace (D1)", async () => {
+		const mock = await relay({});
+		await relaunch(mock);
+		// The rows are up from the cache, with no "Last updated…" flash.
+		expect(listStore.getState().stale).toBe(false);
 		expect(mock.events).not.toContain("GET /api/sessions");
+		// A seed that is genuinely late still says so, after OUTAGE_GRACE_MS.
+		await sleep(OUTAGE_GRACE_MS + 400);
+		expect(listStore.getState().stale).toBe(true);
+	}, 10_000);
+
+	it("a relaunch whose seed lands inside the grace never paints stale (D1)", async () => {
+		const mock = await relay({});
+		await relaunch(mock);
+		const before = listStore.getState().frameCount;
+		mock.holdListStreams(false);
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		await until(() => listStore.getState().frameCount > before);
+		await sleep(OUTAGE_GRACE_MS + 400);
+		expect(listStore.getState().stale).toBe(false);
+	}, 10_000);
+
+	it("an explicit connect from Settings purges the cache instead of painting it (Q1-4)", async () => {
+		const mock = await relay({});
+		await live(mock);
+		const purges = privacy.calls;
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(privacy.calls).toBeGreaterThan(purges);
+	});
+
+	it("a woken reopen that fails at transport level shows no Offline pill inside the window (Q1-2)", async () => {
+		const mock = await relay({});
+		await live(mock);
+		await emitAppState("background");
+		const clock = awayFor(30_000);
+		const seen = new Set<string>();
+		try {
+			mock.failListStreams(503);
+			await emitAppState("active");
+			const deadline = Date.now() + 1_500;
+			while (Date.now() < deadline) {
+				seen.add(pillState(latest.streamHealth, listStore.getState().stale));
+				await sleep(25);
+			}
+		} finally {
+			clock.mockRestore();
+		}
+		// What the list pill actually renders, sampled through the window.
+		expect([...seen].every((state) => state === "connected")).toBe(true);
+	}, 10_000);
+
+	it("a resume reopen that lands quickly never shows Reconnecting… (Q1-3)", async () => {
+		const mock = await relay({});
+		await live(mock);
+		await emitAppState("background");
+		const clock = awayFor(30_000);
+		const seen = new Set<string>();
+		try {
+			const before = count(mock.events, "GET /api/sessions/events");
+			await emitAppState("active");
+			seen.add(pillState(latest.streamHealth, listStore.getState().stale));
+			await until(
+				() => count(mock.events, "GET /api/sessions/events") > before,
+			);
+			for (let i = 0; i < 10; i += 1) {
+				seen.add(pillState(latest.streamHealth, listStore.getState().stale));
+				await sleep(20);
+			}
+		} finally {
+			clock.mockRestore();
+		}
+		expect([...seen]).toEqual(["connected"]);
 	});
 
 	describe("the conversation's resume reads", () => {
@@ -4037,6 +4146,48 @@ describe("warm resume", () => {
 			expect(resumed).not.toContain("GET /api/commands");
 			expect(resumed).not.toContain("GET /api/models");
 			expect(resumed).toContain("GET /api/sessions/synthetic-session/events");
+		});
+
+		it("a return whose config stream was dead re-reads commands and models once (R3)", async () => {
+			/* The desktop may have changed providers/skills while the phone was
+			 * suspended; the woken config stream's baseline announces nothing
+			 * (`changed_keys: []`), so the resync itself is the re-read signal. */
+			const mock = await relay({ serveCommands: true, serveConfig: true });
+			const resumed = await resumeConversation(mock);
+			await until(() => mock.events.slice(-40).includes("GET /api/models"));
+			expect(resumed).toContain("GET /api/config/events");
+			expect(count(mock.events, "GET /api/models")).toBe(2);
+			expect(count(mock.events, "GET /api/commands")).toBe(2);
+		});
+
+		it("leaving a conversation on a route switch saves it under the route that showed it (R5)", async () => {
+			observedSession = "[redacted]-session";
+			const first = await relay({});
+			await live(first);
+			await until(() => sessionReading.projection !== null);
+			const firstRoute = currentWarmScope()?.routeKey;
+			expect(firstRoute).toBeTruthy();
+			const saves = vi.spyOn(warmCache, "saveSession");
+			try {
+				const second = await relay({});
+				await act(async () => {
+					await latest.connectCustom({
+						url: second.origin,
+						password: "test-only",
+						allowInsecure: true,
+					});
+				});
+				await until(() => currentWarmScope()?.routeKey !== firstRoute);
+				// Every save of the old conversation names the OLD route's key; the
+				// cleanup-time read named the new one.
+				const keys = saves.mock.calls
+					.filter((call) => call[1] === "[redacted]-session")
+					.map((call) => call[0].routeKey);
+				expect(keys.length).toBeGreaterThan(0);
+				expect(keys.every((key) => key === firstRoute)).toBe(true);
+			} finally {
+				saves.mockRestore();
+			}
 		});
 
 		it("a first frame that does not overlap what is held still reads the newest page", async () => {

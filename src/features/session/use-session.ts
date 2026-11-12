@@ -52,6 +52,7 @@ import {
 import type { ImageBytes, RelayError } from "@/relay";
 import { readEntry } from "@/state";
 import { isUsable } from "@/state/connection-store";
+import type { WarmScope } from "@/state/warm-cache";
 import { HistoryWindow } from "./history-window";
 import { createResumeGate } from "./resume-gate";
 import {
@@ -721,26 +722,38 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	 * turn ending (below, after the derivations), and leaving the conversation.
 	 * Only a LIVE frame of this owner is saved — re-saving a hydrated one would
 	 * stamp an old frame with a new `savedAt`. */
-	const saveWarmFor = useCallback((sid: string, owner: ProjectionOwner) => {
-		const scope = currentWarmScope();
-		const held = sessions.getState().entries[sid];
-		if (
-			scope === null ||
-			!held?.projection ||
-			held.hydrated === true ||
-			!sameProjectionOwner(projectionOwner.current, owner)
-		)
-			return;
-		void warmCache.saveSession(scope, sid, held.projection);
-	}, []);
+	const saveWarmFor = useCallback(
+		(
+			sid: string,
+			owner: ProjectionOwner,
+			scope: WarmScope | null = currentWarmScope(),
+		) => {
+			const held = sessions.getState().entries[sid];
+			if (
+				scope === null ||
+				!held?.projection ||
+				held.hydrated === true ||
+				!sameProjectionOwner(projectionOwner.current, owner)
+			)
+				return;
+			void warmCache.saveSession(scope, sid, held.projection);
+		},
+		[],
+	);
 	saveWarmRef.current = () => saveWarmFor(sessionId, identity);
 	useEffect(() => {
 		const sid = sessionId;
 		const owner = identity;
+		/* The scope is captured HERE, with the owner, not read at cleanup (PR #246
+		 * R5): on a route switch `beginRoute` publishes the new route's scope
+		 * before this cleanup runs, so a cleanup-time read wrote the old route's
+		 * transcript under the new route's key — breaking "only ever read back
+		 * under the account and computer that wrote it". */
+		const scope = currentWarmScope();
 		return () => {
 			heldHistoryRead.current?.();
 			heldHistoryRead.current = null;
-			if (hasSessionId(sid)) saveWarmFor(sid, owner);
+			if (hasSessionId(sid)) saveWarmFor(sid, owner, scope);
 		};
 	}, [sessionId, identity, saveWarmFor]);
 
@@ -753,7 +766,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		return configStore.subscribe((next) => {
 			if (next.frameCount === seen) return;
 			seen = next.frameCount;
-			if (catalogueRereadOnConfig(next.changedKeys)) rereadRef.current(false);
+			if (catalogueRereadOnConfig(next.changedKeys, next.resynced))
+				rereadRef.current(false);
 		});
 	}, []);
 

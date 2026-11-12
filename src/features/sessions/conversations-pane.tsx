@@ -31,6 +31,7 @@ import {
 	notificationsEnabled,
 } from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
+import { pillState } from "@/features/sessions/pill-state";
 import {
 	degradedNote,
 	degradedShortNote,
@@ -998,19 +999,6 @@ export const ConversationsPane = ({
 		</View>
 	);
 };
-
-/** The connection pill's state, from the stream's own status. A stale list reads
- *  as degraded even while the socket looks open: what the reader has is old. */
-function pillState(
-	health: ReturnType<typeof useConnection>["streamHealth"],
-	stale: boolean,
-): "connected" | "reconnecting" | "offline" | "degraded" {
-	if (stale) return "degraded";
-	if (health === "connecting") return "reconnecting";
-	if (health === "offline") return "offline";
-	if (health === "degraded") return "degraded";
-	return "connected";
-}
 
 /** True when the stream failed before any frame arrived: skeletons would be a
  *  promise, and an empty list would be a wrong answer. */

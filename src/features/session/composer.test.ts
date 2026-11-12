@@ -396,3 +396,75 @@ describe("the failure notice's short actions keep a whole accessible name (D6)",
 		);
 	});
 });
+
+describe("a warm-cache frame is never sendable (PR #246 R1/Q1-1, D2)", () => {
+	const base = {
+		connected: true,
+		streaming: false,
+		hasDraft: true,
+		hasImages: false,
+		sending: false,
+		envelopePending: false,
+		ended: false,
+	};
+
+	it("a hydrated frame disables the primary even with a route and a draft, and says why", () => {
+		const cached = composerControls({ ...base, cached: true });
+		expect(cached.primary.disabled).toBe(true);
+		expect(cached.disabledReason).toBe(
+			healthCopy()["relay.health.reconnecting"],
+		);
+		// No stop control for a turn the cached frame cannot know is running.
+		expect(
+			composerControls({ ...base, cached: true, streaming: true }).stopVisible,
+		).toBe(false);
+	});
+
+	it("the first live frame (cached → false) enables it again", () => {
+		const live = composerControls({ ...base, cached: false });
+		expect(live.primary.disabled).toBe(false);
+		expect(live.disabledReason).toBeNull();
+	});
+
+	it("an empty cached composer carries no hint: the dead control is self-evident", () => {
+		const empty = composerControls({ ...base, cached: true, hasDraft: false });
+		expect(empty.primary.disabled).toBe(true);
+		expect(empty.disabledReason).toBeNull();
+	});
+});
+
+const WHITESPACE = /\s+/g;
+
+describe("the cached-frame gate is wired end to end (PR #246 R1)", () => {
+	/* The defect was wiring, not arithmetic: `hydrated` existed on the runtime
+	 * and nothing passed it to the composer. Pin both hops and the hook's own
+	 * refusal, so a send path (keyboard submit, slash run, retry) cannot bypass
+	 * the disabled primary. */
+	const screen = readFileSync(
+		new URL("../../../app/(app)/session/[id].tsx", import.meta.url),
+		"utf8",
+	);
+	const hook = readFileSync(
+		new URL("./use-composer.ts", import.meta.url),
+		"utf8",
+	);
+
+	/* Whitespace-insensitive: a reformat must not fail these, a dropped gate must. */
+	const flat = (text: string) => text.replaceAll(WHITESPACE, " ");
+
+	it("the conversation screen passes runtime.hydrated as the composer's cached flag", () => {
+		expect(flat(screen)).toContain("cached: runtime.hydrated,");
+	});
+
+	it("a cached frame offers no pending approval card to answer", () => {
+		expect(flat(screen)).toContain("const pending = runtime.hydrated ? null");
+	});
+
+	it("every send path in the hook refuses while cached", () => {
+		const code = flat(hook);
+		expect(code).toContain("connected: endpoints !== null, cached, streaming,");
+		expect(code).toContain("if (cached) return; void runSend");
+		expect(code).toContain("held === null || endpoints === null || cached");
+		expect(code).toContain("!tap.submit || endpoints === null || cached");
+	});
+});

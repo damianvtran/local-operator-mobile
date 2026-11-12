@@ -221,6 +221,9 @@ export default function Session() {
 		sessionId,
 		source: runtime.source,
 		streaming: runtime.streaming,
+		/* A warm-cache frame is a picture, not a conversation: no send until the
+		 *  first live frame replaces it (PR #246 R1). */
+		cached: runtime.hydrated,
 		/* The ended verdict comes FROM THE DOT (`headerHealth`), not
 		 *  `projection.ended` alone: a history-only conversation (pid 0) is ended
 		 *  too, and a send to either REOPENS it. */
@@ -436,10 +439,12 @@ export default function Session() {
 	 *  present, a `pending` card of `kind == "ask"` is one of those rows mirrored
 	 *  for old clients and must be IGNORED here — rendering both would draw the
 	 *  same ask twice and collect a second answer. Approvals are unaffected. */
-	const pending = blockingPending(
-		projection?.pending ?? null,
-		projection?.asks,
-	);
+	/* A warm-cache frame's pending approval may already be answered on the
+	 *  desktop, and answering it is a send against a cached frame (PR #246 R1
+	 *  lead). No card until the first live frame says the ask still stands. */
+	const pending = runtime.hydrated
+		? null
+		: blockingPending(projection?.pending ?? null, projection?.asks);
 
 	/* The header dot's sheet + the session menu, held here (not in the control) so
 	 *  the acceptance line survives the sheet closing, and so the `S5/health-sheet`

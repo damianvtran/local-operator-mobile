@@ -65,3 +65,40 @@ describe("config stream wake", () => {
 		expect(opened).toHaveLength(1);
 	});
 });
+
+describe("a woken reopen's baseline is a resync (PR #246 R3)", () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+	const frame = {
+		kind: "config" as const,
+		data: { changed_keys: [] as string[], language: "en" },
+	};
+
+	it("the first frame after a wake that reopened is marked resynced; later frames and a plain seed are not", () => {
+		const { client, opened } = fakeClient();
+		const store = createConfigStore();
+		const handle = startConfigStream(client, store);
+		// The route's own first seed: not a resync (nothing was missed).
+		opened[0]?.onFrame?.(frame as never);
+		expect(store.getState().resynced).toBe(false);
+		// The phone was away; the wake replaced the dead stream.
+		expect(handle.wake(Date.now() + 25_000)).toBe(true);
+		opened[1]?.onFrame?.(frame as never);
+		expect(store.getState().resynced).toBe(true);
+		// The next frame on the same connection is an ordinary change frame.
+		opened[1]?.onFrame?.(frame as never);
+		expect(store.getState().resynced).toBe(false);
+		handle.stop();
+	});
+
+	it("a wake that reopens nothing does not mark the next frame", () => {
+		const { client, opened } = fakeClient();
+		const store = createConfigStore();
+		const handle = startConfigStream(client, store);
+		opened[0]?.onState?.({ state: "open", attempt: 1 });
+		expect(handle.wake(Date.now() + 1_000)).toBe(false);
+		opened[0]?.onFrame?.(frame as never);
+		expect(store.getState().resynced).toBe(false);
+		handle.stop();
+	});
+});

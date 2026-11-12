@@ -11,6 +11,7 @@ import { loadFixture } from "../../testing/fixtures";
 import {
 	createWarmCache,
 	memoryWarmStore,
+	utf8Bytes,
 	WARM_KEY_PREFIX,
 	type WarmScope,
 	type WarmStorePort,
@@ -106,7 +107,9 @@ describe("warm cache", () => {
 		const warn = quiet();
 		const cache = createWarmCache(store, {
 			warn,
-			budgetBytes: one * 2 + 10,
+			/* Two entries plus the index's own rows (the budget counts the index
+			 * too, PR #246 R6) fit; a third does not. */
+			budgetBytes: one * 2 + 1000,
 			maxSessions: 99,
 		});
 		await cache.saveSession(A, "s1", projection());
@@ -204,5 +207,87 @@ describe("warm cache", () => {
 			k.includes(":session:"),
 		);
 		expect(sessions).toHaveLength(2);
+	});
+});
+
+describe("warm cache: stored bytes and unchanged saves (PR #246 R6/R7)", () => {
+	it("utf8Bytes counts UTF-8 bytes, not UTF-16 units", () => {
+		expect(utf8Bytes("abc")).toBe(3);
+		expect(utf8Bytes("é")).toBe(2);
+		expect(utf8Bytes("€")).toBe(3);
+		expect(utf8Bytes("😀")).toBe(4); // one surrogate pair, two UTF-16 units
+		expect(utf8Bytes("\ud800")).toBe(3); // lone surrogate → U+FFFD
+	});
+
+	it("the budget counts what the port stores, so a sealing port evicts sooner", async () => {
+		const plain = memoryWarmStore();
+		const sealing = {
+			...memoryWarmStore(),
+			// A port that triples every value on disk (the native seal's shape).
+			storedBytes: (_key: string, value: string) => utf8Bytes(value) * 3,
+		};
+		const one = utf8Bytes(
+			JSON.stringify({ schema: 1, savedAt: 1, projection: projection() }),
+		);
+		const options = {
+			warn: quiet(),
+			budgetBytes: one * 2 + 1000,
+			maxSessions: 99,
+		};
+		const a = createWarmCache(plain, options);
+		const b = createWarmCache(sealing, options);
+		expect(await a.saveSession(A, "s1", projection())).toBe(true);
+		// Measured as stored (3×), one entry alone is over the budget.
+		expect(await b.saveSession(A, "s1", projection())).toBe(false);
+	});
+
+	it("non-ASCII text counts its UTF-8 bytes against the budget", async () => {
+		const store = memoryWarmStore();
+		const frame = projection();
+		const ascii = JSON.stringify({ schema: 1, savedAt: 1, projection: frame });
+		// Budget sized to the UTF-16 length: a value whose UTF-8 is twice that
+		// fits by `.length` but not by bytes.
+		const cache = createWarmCache(store, {
+			warn: quiet(),
+			budgetBytes: ascii.length * 1.5,
+		});
+		const wide = {
+			...frame,
+			title: "é".repeat(ascii.length),
+		} as SessionProjection;
+		expect(await cache.saveSession(A, "wide", wide)).toBe(false);
+	});
+
+	it("an unchanged frame is not written again; a new frame is", async () => {
+		const store = memoryWarmStore();
+		const sets: string[] = [];
+		const counting = {
+			...store,
+			set: async (key: string, value: string) => {
+				sets.push(key);
+				await store.set(key, value);
+			},
+		};
+		const cache = createWarmCache(counting, { warn: quiet() });
+		const frame = projection();
+		expect(await cache.saveSession(A, "s1", frame)).toBe(true);
+		const afterFirst = sets.length; // the value plus the index
+		expect(afterFirst).toBe(2);
+		// A quick flick out and back: the same frame object, nothing rewritten.
+		expect(await cache.saveSession(A, "s1", frame)).toBe(true);
+		expect(sets.length).toBe(afterFirst);
+		// A new frame (stores replace, never mutate) is written.
+		expect(await cache.saveSession(A, "s1", projection())).toBe(true);
+		expect(sets.length).toBe(afterFirst + 2);
+		// The list follows the same rule.
+		const list = listFrame();
+		await cache.saveList(A, list);
+		const afterList = sets.length;
+		await cache.saveList(A, list);
+		expect(sets.length).toBe(afterList);
+		// After a purge, the same object is written again.
+		await cache.clear();
+		await cache.saveList(A, list);
+		expect(sets.length).toBe(afterList + 2);
 	});
 });

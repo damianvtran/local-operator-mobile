@@ -19,6 +19,7 @@ import { Platform } from "react-native";
 import {
 	createWarmCache,
 	memoryWarmStore,
+	utf8Bytes,
 	WARM_KEY_PREFIX,
 	type WarmStorePort,
 } from "@/state/warm-cache";
@@ -32,6 +33,13 @@ const nativePort: WarmStorePort = {
 	set: (key, value) => runPrivateWrite(() => sealedWarm.set(key, value)),
 	remove: (key) => runPrivateWrite(() => sealedWarm.remove(key)),
 	keys: () => sealedWarm.keys(),
+	/* What `nativePrivateStore.set` actually writes (PR #246 R6): the value is
+	 * wrapped as `JSON.stringify({key, value})` (which escapes every quote of
+	 * the projection JSON), sealed with AES-GCM (+12 B nonce, +16 B tag) and
+	 * stored base64 (×4/3) inside the sealed-value envelope. 256 B covers that
+	 * envelope's fields with room to spare; an overestimate only evicts sooner. */
+	storedBytes: (key, value) =>
+		Math.ceil((utf8Bytes(JSON.stringify({ key, value })) + 28) / 3) * 4 + 256,
 };
 
 const webPort = memoryWarmStore();
@@ -54,6 +62,7 @@ export const warmCache = createWarmCache(
  * `runPrivateWrite` — the barrier is closed by then and would refuse it.
  */
 export async function clearWarmCache(): Promise<void> {
+	warmCache.forgetSaved();
 	if (Platform.OS === "web") {
 		for (const key of await webPort.keys())
 			if (key.startsWith(WARM_KEY_PREFIX)) await webPort.remove(key);

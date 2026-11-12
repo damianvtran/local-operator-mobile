@@ -122,24 +122,38 @@ export const heldTimer = (
 	fire: () => void,
 ): (() => void) => {
 	let handle: ReturnType<typeof setTimeout> | null = null;
-	const arm = () => {
-		const delay = clock.holdMs(minMs);
+	const arm = (delay: number) => {
 		const due = clock.now() + delay;
 		handle = setTimeout(() => {
 			handle = null;
 			if (clock.backgrounded()) {
-				arm();
+				/* FLOORED at SUSPEND_SLACK_MS (PR #246 review R2). A `minMs = 0` caller
+				 * (the list's stall hold, the held history retry) with no open window
+				 * re-armed at 0 ms here — a busy loop measured at 883 re-arms a second
+				 * for as long as JS ran in the background, which is exactly the
+				 * background work the warm-resume request forbids. One check a second
+				 * is enough: the return itself re-decides the report (below). */
+				arm(Math.max(clock.holdMs(minMs), SUSPEND_SLACK_MS));
 				return;
 			}
 			if (clock.now() - due > SUSPEND_SLACK_MS) {
 				clock.resume();
-				arm();
+				arm(clock.holdMs(minMs));
+				return;
+			}
+			/* A return that happened while this timer waited (a background re-arm
+			 * coming due just after `active`) opened a window this timer never
+			 * measured; the policy is that only a failure still standing when the
+			 * window closes is reported, so wait out the rest of it. */
+			const rest = clock.holdMs(0);
+			if (rest > 0) {
+				arm(rest);
 				return;
 			}
 			fire();
 		}, delay);
 	};
-	arm();
+	arm(clock.holdMs(minMs));
 	return () => {
 		if (handle !== null) clearTimeout(handle);
 		handle = null;

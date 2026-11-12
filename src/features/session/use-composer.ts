@@ -161,6 +161,11 @@ export const useComposer = (input: {
 	source: SessionRelaySource;
 	streaming: boolean;
 	ended: boolean;
+	/** The screen shows the warm-cache frame (`runtime.hydrated`). Every send
+	 *  path refuses while it is true, not just the primary's paint: a cached
+	 *  frame must never be sendable (PR #246 R1/Q1-1). Optional so hosts that
+	 *  never hydrate (the provisional editor) need not pass it. */
+	cached?: boolean;
 	/** The relay's capability block, off the list frame. Decides whether a mic
 	 *  exists at all (`capabilities.stt`, absence = unavailable). */
 	capabilities: Capabilities | null | undefined;
@@ -181,6 +186,7 @@ export const useComposer = (input: {
 	// dependency array is a new identity every render, which makes every
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
+	const cached = input.cached === true;
 	const endpoints = source.endpoints;
 	const authorization = useSyncExternalStore(
 		subscribeStartupAuthorization,
@@ -611,8 +617,11 @@ export const useComposer = (input: {
 	);
 
 	const send = useCallback(() => {
+		/* Belt and braces with the disabled primary: a keyboard submit or a stale
+		 * press handler must not reach the relay against a cached frame either. */
+		if (cached) return;
 		void runSend(chooseOp(streaming));
-	}, [runSend, streaming]);
+	}, [runSend, streaming, cached]);
 
 	const retry = useCallback(() => {
 		void (async () => {
@@ -623,7 +632,7 @@ export const useComposer = (input: {
 			cancelDictationForSend();
 			inFlight.current = true;
 			const held = await envelopeStore.peek(sessionId);
-			if (held === null || endpoints === null) {
+			if (held === null || endpoints === null || cached) {
 				/* Nothing to replay (the envelope was evicted, or its 24 h TTL expired) or
 				 * no route: the retry does not happen, so it must not HOLD the composer.
 				 * The guard is set above the `await` on purpose — a second retry could
@@ -740,6 +749,7 @@ export const useComposer = (input: {
 		setImages,
 		ended,
 		echoDraft,
+		cached,
 	]);
 
 	/**
@@ -901,7 +911,7 @@ export const useComposer = (input: {
 			// draft the successful first tap is about to clear.
 			if (inFlight.current) return;
 			setDraft(tap.fill);
-			if (!tap.submit || endpoints === null) return;
+			if (!tap.submit || endpoints === null || cached) return;
 			/* The run-immediately arm. Two things it must NOT do, both of which it did:
 			 *
 			 * - Derive the request from the DRAFT. The draft ref is assigned during
@@ -942,13 +952,14 @@ export const useComposer = (input: {
 				},
 			});
 		},
-		[endpoints, sessionId, setDraft, cancelDictationForSend],
+		[endpoints, sessionId, setDraft, cancelDictationForSend, cached],
 	);
 
 	const controls = useMemo(
 		() =>
 			composerControls({
 				connected: endpoints !== null,
+				cached,
 				streaming,
 				hasDraft: draft.trim().length > 0,
 				hasImages: images.length > 0,
@@ -956,7 +967,16 @@ export const useComposer = (input: {
 				envelopePending: retained !== null,
 				ended,
 			}),
-		[streaming, draft, images.length, sending, retained, ended, endpoints],
+		[
+			streaming,
+			draft,
+			images.length,
+			sending,
+			retained,
+			ended,
+			endpoints,
+			cached,
+		],
 	);
 
 	return {

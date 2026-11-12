@@ -70,6 +70,10 @@ export function startConfigStream(
 	/* Tags each `run()`'s stream so one a wake retired cannot schedule a
 	 * restart (or flip `terminal`) from a late callback. */
 	let runSeq = 0;
+	/* Set by a wake that actually reopened: the next config frame is the new
+	 * connection's baseline, and what changed while the old one was dead is
+	 * unknown (see `ConfigSnapshot.resynced`). */
+	let resync = false;
 
 	const run = (): void => {
 		if (stopped) return;
@@ -91,7 +95,8 @@ export function startConfigStream(
 				}
 				seenAt = Date.now();
 				if (frame.kind !== "config") return;
-				store.getState().applyFrame(frame.data);
+				store.getState().applyFrame(frame.data, undefined, resync);
+				resync = false;
 			},
 			onState: (status) => {
 				/* An OPEN is what proves the route served: `supported` answers
@@ -149,6 +154,7 @@ export function startConfigStream(
 			runSeq += 1;
 			stream?.stop();
 			seenAt = now;
+			resync = true;
 			run();
 			return true;
 		},

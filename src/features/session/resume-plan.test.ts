@@ -123,3 +123,55 @@ describe("holdResumeRead: a failure inside the resume window is held, retried on
 		expect(held).toEqual([]);
 	});
 });
+
+describe("PR #246 round-1 remediation: resume-plan regressions", () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+	const flush = async () => {
+		for (let i = 0; i < 5; i++) await Promise.resolve();
+	};
+
+	it("R4: cancelling a held read releases its hold, so a later outside-window error shows", async () => {
+		const clock = createResumeClock(() => Date.now());
+		clock.background();
+		clock.resume();
+		const held: boolean[] = [];
+		const cancel = holdResumeRead({
+			clock,
+			read: async () => undefined,
+			retry: async () => undefined,
+			failed: () => true,
+			setHeld: (h) => held.push(h),
+		});
+		await flush();
+		expect(held).toEqual([true]);
+		// A later return's read supersedes this one before its retry ran.
+		cancel();
+		expect(held).toEqual([true, false]);
+		// Cancelling twice (unmount after supersession) writes nothing more.
+		cancel();
+		expect(held).toEqual([true, false]);
+	});
+
+	it("R4: a read that already released is not released again on cancel", async () => {
+		const clock = createResumeClock(() => Date.now());
+		clock.resume();
+		const held: boolean[] = [];
+		const cancel = holdResumeRead({
+			clock,
+			read: async () => undefined,
+			retry: async () => undefined,
+			failed: () => false,
+			setHeld: (h) => held.push(h),
+		});
+		await flush();
+		cancel();
+		expect(held).toEqual([true, false]);
+	});
+
+	it("R3: a woken reopen's baseline frame re-reads the catalogues; a plain seed does not", () => {
+		expect(catalogueRereadOnConfig([], false)).toBe(false);
+		expect(catalogueRereadOnConfig([], true)).toBe(true);
+		expect(catalogueRereadOnConfig(["providers"], false)).toBe(true);
+	});
+});

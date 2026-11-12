@@ -108,6 +108,7 @@ import {
 	createResumeClock,
 	heldTimer,
 	OUTAGE_GRACE_MS,
+	type ResumeClock,
 } from "@/features/session/resume-hold";
 import {
 	insideResumeWindow,
@@ -375,6 +376,11 @@ export type Connection = {
 	/** Stable account owner; rotating the same account token does not change it. */
 	radientAccountId: string | null;
 	streamHealth: StreamHealth;
+	/** The route-level resume clock (the list/config streams' own). Screens
+	 *  whose one-off reads re-run around a return hold a transient failure
+	 *  inside its window, as the streams do (PR #246 QA: the home's folder and
+	 *  model banners on a resume blip). Stable for the provider's life. */
+	resumeClock: ResumeClock;
 	signInState: SignInState;
 	signInDiagnostics: readonly SignInDiagnostic[];
 	/** The last typed failure, for the diagnostics row. Never a status code on a
@@ -569,6 +575,18 @@ export const ConnectionProvider = ({
 	/** One resume clock for the route-level streams (`resume-hold.ts`, the same
 	 *  clock type `use-session.ts` holds for the conversation stream). */
 	const resumeClockRef = useRef(createResumeClock());
+	/* The cold-start stale mark on a warm-cache list paint, deferred (PR #246
+	 * D1/R8). Marking it at once flashed "Last updated…" (pill plus caption) on
+	 * every warm open and then jumped the list 67 px when the seed landed, a
+	 * frame later on loopback and hundreds of ms over a tunnel — the "catching
+	 * up" the operator asked to be rid of. The rows still paint at once; the
+	 * stale mark waits out `OUTAGE_GRACE_MS` and the first live list frame
+	 * cancels it, so a seed that is genuinely late still says so. */
+	const coldStaleRef = useRef<(() => void) | null>(null);
+	const cancelColdStale = useCallback(() => {
+		coldStaleRef.current?.();
+		coldStaleRef.current = null;
+	}, []);
 	/* The in-memory grant every request path reads. Written ONLY through the
 	 *  accessor's `publish`, so the ref and the rendered `radientSignedIn` cannot
 	 *  disagree. */
@@ -845,13 +863,44 @@ export const ConnectionProvider = ({
 			/* A stale/degraded paint held while the resume window is open; the next
 			 * frame cancels it (the #232 pattern, `use-session.ts`'s drop grace). */
 			let heldPaint: (() => void) | null = null;
+			/* The health the held paint will publish when it fires: the LATEST
+			 * held state, so a stall that becomes a failed reopen inside one window
+			 * reports what is actually standing at its end. */
+			let heldHealth: StreamHealth = "degraded";
+			/* A transient stream ERROR is among the held reports: when the paint
+			 * fires it is the stale mark plus `degraded`, exactly what the error
+			 * paints outside the window, whichever callback armed the timer. */
+			let heldStale = false;
+			/* A resume reopen's `connecting`, held for `OUTAGE_GRACE_MS` (PR #246
+			 * Q1-3): every return after ≥ 20 s away reopens, and its RTT painted
+			 * "Reconnecting…" each time. The pill appears only if the reopen has not
+			 * landed within the grace; any later state cancels it. */
+			let heldConnecting: ReturnType<typeof setTimeout> | null = null;
+			const cancelHeldConnecting = () => {
+				if (heldConnecting !== null) clearTimeout(heldConnecting);
+				heldConnecting = null;
+			};
 			const cancelHeld = () => {
 				heldPaint?.();
 				heldPaint = null;
+				heldStale = false;
+				cancelHeldConnecting();
 			};
 			const paintDegraded = () => {
 				listStore.getState().markStale();
 				if (mountedRef.current) setStreamHealth("degraded");
+			};
+			/* The held report, published once the window closes with it still
+			 * standing (see `heldHealth` / `heldStale`). Loop-level, not per-run:
+			 * the backoff restart that follows a held failure is a new run, and a
+			 * per-run check dropped the report the window was holding. */
+			const firePaint = () => {
+				heldPaint = null;
+				if (stopped || !admission.isCurrent()) return;
+				if (heldStale) {
+					heldStale = false;
+					paintDegraded();
+				} else if (mountedRef.current) setStreamHealth(heldHealth);
 			};
 			/* The cold-start REST read is now a FALLBACK. It used to run beside the
 			 * stream on every route start, so the list loaded twice (the read and the
@@ -921,6 +970,7 @@ export const ConnectionProvider = ({
 						if (frame.kind === "sessions") {
 							_attempt = 0;
 							cancelHeld();
+							cancelColdStale();
 							const first = lastFrame === null;
 							lastFrame = frame.data;
 							/* The first frame of a route is saved at once, so a relaunch
@@ -951,19 +1001,31 @@ export const ConnectionProvider = ({
 						if (status.state === "open" || status.state === "rotating")
 							seenAt = Date.now();
 						const health = healthFrom(status);
-						/* A stall inside the resume window is the suspension's own socket
-						 * dying, not news: hold the degraded pill until the window closes
-						 * (or a frame lands first and cancels it). */
-						if (
-							health === "degraded" &&
-							insideResumeWindow(resumeClockRef.current)
-						) {
+						const resuming = insideResumeWindow(resumeClockRef.current);
+						/* A stall, OR a reopen that failed at transport level (`closed` →
+						 * `offline`, PR #246 Q1-2), inside the resume window is the
+						 * suspension's own socket dying or the radio still waking, not
+						 * news: hold the paint until the window closes (or a frame lands
+						 * first and cancels it). Before, only `degraded` was held, so a
+						 * woken reopen whose first attempt failed painted the red
+						 * "Offline. Messages will send when you're back." pill for ~2 s.
+						 * Typed refusals (401, revoked device) never come through here as
+						 * news: `onError` below publishes `offline` and the refusal at once. */
+						if ((health === "degraded" || health === "offline") && resuming) {
 							if (lastFrame === null) readListOnce();
+							cancelHeldConnecting();
+							heldHealth = health;
 							if (heldPaint === null)
-								heldPaint = heldTimer(resumeClockRef.current, 0, () => {
-									heldPaint = null;
-									if (mine() && mountedRef.current) setStreamHealth("degraded");
-								});
+								heldPaint = heldTimer(resumeClockRef.current, 0, firePaint);
+							return;
+						}
+						if (health === "connecting" && resuming) {
+							if (heldConnecting === null && heldPaint === null)
+								heldConnecting = setTimeout(() => {
+									heldConnecting = null;
+									if (mine() && mountedRef.current)
+										setStreamHealth("connecting");
+								}, OUTAGE_GRACE_MS);
 							return;
 						}
 						if (health === "degraded" && lastFrame === null) readListOnce();
@@ -989,6 +1051,7 @@ export const ConnectionProvider = ({
 							 *  pill still read a healthy state 30 s after the relay went away (design
 							 *  round 2, D12 rider). The refusal surface below the row carried the
 							 *  cause; the health was simply never told. */
+							cancelHeld();
 							if (mountedRef.current) setStreamHealth("offline");
 							noteError(error);
 							return;
@@ -999,14 +1062,12 @@ export const ConnectionProvider = ({
 						 * cancels the paint — before the window closes. Typed refusals never
 						 * reach this line; they surfaced above, at once. */
 						if (insideResumeWindow(resumeClockRef.current)) {
+							heldStale = true;
 							if (heldPaint === null)
 								heldPaint = heldTimer(
 									resumeClockRef.current,
 									OUTAGE_GRACE_MS,
-									() => {
-										heldPaint = null;
-										if (mine()) paintDegraded();
-									},
+									firePaint,
 								);
 						} else paintDegraded();
 						readListOnce();
@@ -1078,7 +1139,7 @@ export const ConnectionProvider = ({
 			// A queued restart is inert once admission's revision has been revoked.
 			return cancel;
 		},
-		[noteError, stopStream],
+		[noteError, stopStream, cancelColdStale],
 	);
 
 	/**
@@ -1159,6 +1220,10 @@ export const ConnectionProvider = ({
 				setSignInState({ kind: "idle" });
 			}
 			signInAbortRef.current = null;
+			/* Not in `stopStream`: `goLive` restarts the stream right after the
+			 * cached paint, which must not cancel that paint's deferred mark. A
+			 * superseded route's timer is also fenced by its own scope check. */
+			cancelColdStale();
 			const authorizationRevision = startupAuthorizationLifecycle.suspend();
 			pendingSignOutRef.current = null;
 			revocationOwnerRef.current = null;
@@ -1214,7 +1279,16 @@ export const ConnectionProvider = ({
 				listStore
 					.getState()
 					.applyFrame(cached.frame, cached.savedAt, listGeneration);
-				listStore.getState().markStale();
+				cancelColdStale();
+				coldStaleRef.current = heldTimer(
+					resumeClockRef.current,
+					OUTAGE_GRACE_MS,
+					() => {
+						coldStaleRef.current = null;
+						if (warmScope === scope && admission.isCurrent())
+							listStore.getState().markStale();
+					},
+				);
 			});
 			return {
 				...admission,
@@ -1222,7 +1296,7 @@ export const ConnectionProvider = ({
 				routeKey,
 			};
 		},
-		[stopStream, stopConfig],
+		[stopStream, stopConfig, cancelColdStale],
 	);
 
 	/** Everything a route needs once its credentials are valid. */
@@ -2555,6 +2629,7 @@ export const ConnectionProvider = ({
 			busy,
 			coldStartSettled,
 			streamHealth,
+			resumeClock: resumeClockRef.current,
 			signInState,
 			signInDiagnostics,
 			lastError,

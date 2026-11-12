@@ -13,6 +13,8 @@
  */
 import type { ModelEntry, Payload } from "@/contracts";
 import type { ModelReading } from "@/features/session/chip-labels";
+import type { ResumeClock } from "@/features/session/resume-hold";
+import { insideResumeWindow } from "@/features/session/resume-plan";
 import type { StartSessionRequest } from "@/relay/endpoints";
 import {
 	isRelayError,
@@ -111,6 +113,21 @@ const AUTH_FAILURE_KINDS: readonly RelayErrorKind[] = [
 
 export const isAuthFailure = (error: RelayError | null): boolean =>
 	error !== null && AUTH_FAILURE_KINDS.includes(error.kind);
+
+/**
+ * Whether a failed home read (folders, models) is HELD rather than shown
+ * (PR #246, the QA round's resume blip): inside the route's resume window the
+ * radio or the tunnel may still be waking, so "We couldn't read this
+ * computer's folders / model list just now" painted for a read that one
+ * re-ask a few seconds later answers. A held failure is re-read once when the
+ * window closes, and only that re-read's failure shows — the same policy as
+ * the conversation's held history read (`holdResumeRead`). A credential
+ * failure is never held: its banner names a sign-in, which waiting cannot fix.
+ */
+export const holdReadFailure = (
+	error: RelayError | null,
+	clock: ResumeClock,
+): boolean => !isAuthFailure(error) && insideResumeWindow(clock);
 
 /**
  * The body `POST /api/sessions/start` receives.
