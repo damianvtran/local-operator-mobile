@@ -17,9 +17,15 @@ import { AppState } from "react-native";
 import { useStore } from "zustand";
 import { useConnection } from "@/features/auth/connection-provider";
 import { clearBadgeSource, reassertBadge } from "@/notifications/app-badge";
+import { registerBackgroundUnreadScope } from "@/notifications/background-clear";
+import { registerBackgroundNotificationTask } from "@/notifications/background-task";
 import { loadNotifications } from "@/notifications/native";
 import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
-import { followTeamBridgeBadge, TEAM_BRIDGE_BADGE } from "@/team-bridge/badge";
+import {
+	backgroundUnreadScope,
+	followTeamBridgeBadge,
+	TEAM_BRIDGE_BADGE,
+} from "@/team-bridge/badge";
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import { deviceNoticeDismissals } from "@/team-bridge/notice-dismissals";
 import {
@@ -196,6 +202,15 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			return;
 		}
 		value.pushes.activate();
+		// Signed in: the silent attention push may now re-read THIS account's
+		// unread from the background (`notifications/background-clear.ts`). The
+		// registration lasts exactly as long as this signed-in branch, so a task
+		// that runs signed out, or after the switch, finds no scope and writes
+		// nothing.
+		const stopBackground = registerBackgroundUnreadScope(
+			backgroundUnreadScope(value),
+		);
+		void registerBackgroundNotificationTask();
 		const refresh = () => {
 			void value.actions.refreshUnread();
 			void value.registerPush().catch(() => undefined);
@@ -222,6 +237,7 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			.catch(() => undefined);
 		return () => {
 			disposed = true;
+			stopBackground();
 			subscription.remove();
 			tokenSubscription?.remove();
 		};

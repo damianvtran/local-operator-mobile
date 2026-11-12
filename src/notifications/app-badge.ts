@@ -101,6 +101,17 @@ export function reassertBadge(): Promise<void> {
 	return flush(true);
 }
 
+/**
+ * Resolves once every write decided so far has reached the OS (or failed).
+ * The background notification task (`background-clear.ts`) awaits it before it
+ * reports done: iOS may suspend the process the moment the task returns, and a
+ * write still queued here would then land only at the next launch. It never
+ * writes anything itself, so it cannot paint a number nobody read.
+ */
+export function badgeWritesSettled(): Promise<void> {
+	return queue;
+}
+
 /** Test seam: swap the OS writer and reset all state. */
 export function resetAppBadgeForTests(next?: Writer): void {
 	writer = next ?? defaultWriter;

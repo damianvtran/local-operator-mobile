@@ -680,7 +680,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * session-screen change, so neither parent's digest. Re-derived with `--print`
 	 * over the committed rebased tree. Source admission only, NOT rendered U-08
 	 * evidence. */
-	app: "dc24ccf2aa7005ab8cc2da11b9b968320cc9f479a25096b7f67ee976cf780a60",
+	/* --print re-pin for feat/background-push-clear: the background notification
+	 * task (module-scope `defineTask` imported first in app/_layout.tsx, the
+	 * signed-in scope registration in the Team Bridge provider) and the `body`
+	 * payload envelope read. No rendered component, style or token changed;
+	 * re-derived over the staged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	app: "fc5d82455884b54194d0df37a4ef8dc809918af53b797e5c148e12cffb20de1a",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1636,7 +1642,25 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * uses the minimum 4 pt token instead of 2 pt (U-42). Re-derived with
 	 * --print after the final source edit; instrument and input pins unchanged.
 	 * Source identity only, NOT rendered U-08 evidence. */
-	src: "31c17f67de3fe2f5e8fe4870fc7f3d1930d5fbc87c486e04d4e2f054bdf04d63",
+	/* --print re-pin for feat/background-push-clear: the background notification
+	 * task (module-scope `defineTask` imported first in app/_layout.tsx, the
+	 * signed-in scope registration in the Team Bridge provider) and the `body`
+	 * payload envelope read. No rendered component, style or token changed;
+	 * re-derived over the staged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* --print re-pin for PR #244 review remediation round 1: lazy
+	 * expo-task-manager load, the background-launch restore retry in the
+	 * connection provider, and the store's `unreadReads` counter. No rendered
+	 * component, style or token changed. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #244 merged with main d33c46af (#243): both sides' src carried, so
+	 * neither parent's digest; re-derived once with --print over the merged
+	 * tree. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #245 convergence with #244 (14557e09): retain account-local state
+	 * isolation without remounting the router, background scope registration,
+	 * foreground restore retry and interactive sign-in auto-open. Re-derived
+	 * once with --print; source identity only, NOT new rendered evidence. */
+	src: "9fe6607266874bfb42eda6b2b06abd3747a56ff4d1e9622df2e35c87edc4fd2b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1658,14 +1682,21 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge push); native build config, not a U-08 web layout input.
 	// --print re-pin (integration of #238 with #231): both sides' native
 	// config carried — the home-screen label plugin and `googleServicesFile`.
+	// --print re-pin (feat/background-push-clear): iOS `UIBackgroundModes:
+	// ["remote-notification"]` for the silent attention wake; native Info.plist
+	// config, not a U-08 web layout input.
+	// --print re-pin (PR #244 remediation round 1): comment-only edits — the
+	// Android warm-only claim and the exact-set native-config guard.
 	"app.config.ts":
-		"b186fadf5867c17b90e088b86815a6a7bd9869c979fe7e0e226e5392210848ed",
+		"2b77ffa36a241ee1607ac5cb42582fdf07a683a7fe91f4b0050a2385758a5c4f",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
+	// --print re-pin (feat/background-push-clear): adds the native module
+	// `expo-task-manager` ~57.0.22, which the web bundle never renders.
 	"package.json":
-		"d9e51cb60408e70560c2c26dfcba24dd004b7e33dc474e01a7b156226944c137",
+		"c9011119d489c35125f16e87abbd0db196a3dabbca646dfc5c5d6aa3e47ebb0a",
 	"pnpm-lock.yaml":
-		"76e536b328a564df7e995ab00d9e661f6b9f08ca2ff3c9496a754253a7903312",
+		"c9ef7b9d08ab6f4389036570907591411b6104a9bfb2e6ae75bb101399348540",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };

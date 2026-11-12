@@ -47,7 +47,7 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { useStore } from "zustand";
 import {
 	createRelayClient,
@@ -2196,6 +2196,51 @@ export const ConnectionProvider = ({
 		const interrupted = () =>
 			cancelled || connectionStore.getState().revision !== revision;
 		cancelledRef.current = false;
+		/* WHY THE LAUNCH STATE IS READ HERE (review R1-M2). `UIBackgroundModes:
+		 * remote-notification` lets iOS launch a terminated app in the BACKGROUND
+		 * for the silent attention push, typically while the phone is locked. The
+		 * stored grant is a `WHEN_UNLOCKED_THIS_DEVICE_ONLY` keychain item
+		 * (`connection/storage.ts`), so a locked read throws, `readStoredOauth`
+		 * reports `null`, and this cold start ends signed out. Nothing deletes the
+		 * grant, but iOS RESUMES that same process when the user opens the app, so
+		 * without a second attempt they would stay signed out until the app is
+		 * killed. A launch that was not `active` and restored nothing therefore
+		 * re-runs the Radient restore ONCE, on the first transition to `active`
+		 * (when the device is necessarily unlocked).
+		 *
+		 * Deliberately NOT done: relaxing the keychain class to AFTER_FIRST_UNLOCK.
+		 * That widens when the access grant is readable, a security trade the owner
+		 * decides, not a side effect of this fix. Only the Radient restore is
+		 * retried; an own-tunnel password read the lock refused is not (the screen
+		 * still asks for it, as on any launch without one). */
+		const launchedInactive = AppState.currentState !== "active";
+		let resumeRetry: { remove: () => void } | null = null;
+		const retryRestoreOnFirstActive = () => {
+			/* `interrupted()`: the reader already acted during the cold start. */
+			if (!launchedInactive || interrupted()) return;
+			/* Restored something (a Radient grant, or a dialled own tunnel): there
+			 *  is nothing to retry. */
+			if (
+				tokensRef.current !== null ||
+				connectionStore.getState().route !== null
+			)
+				return;
+			const settledRevision = connectionStore.getState().revision;
+			resumeRetry = AppState.addEventListener("change", (state) => {
+				if (state !== "active") return;
+				resumeRetry?.remove();
+				resumeRetry = null;
+				/* The reader acted in the meantime (signed in, picked a route, signed
+				 *  out): their action wins over a replayed restore. */
+				if (
+					cancelled ||
+					tokensRef.current !== null ||
+					connectionStore.getState().revision !== settledRevision
+				)
+					return;
+				void restoreRef.current();
+			});
+		};
 		void (async () => {
 			try {
 				if (Platform.OS !== "web") {
@@ -2265,12 +2310,17 @@ export const ConnectionProvider = ({
 				});
 			} finally {
 				/* Settled either way: "nothing saved" is a decision, not a pending read. */
-				if (!cancelled) setColdStartSettled(true);
+				if (!cancelled) {
+					setColdStartSettled(true);
+					retryRestoreOnFirstActive();
+				}
 			}
 		})();
 		return () => {
 			cancelled = true;
 			cancelledRef.current = true;
+			resumeRetry?.remove();
+			resumeRetry = null;
 		};
 	}, [connectCustom, restoreRadient, restorePageRoute]);
 
