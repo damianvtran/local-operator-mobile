@@ -1688,7 +1688,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ed9db30622a256299aebf3bba946dafcaf94a349a771d3bbd3cb02aa2def4d86",
+	/* M3 S2b-2b (feat/i18n-m3-s2b2b, English-first): the dead ConnectorWaitPanel
+	 * deleted, the set-up-a-computer screen keyed, `profile.ts` returning
+	 * refused-address codes mapped to keys in `tunnel-verdict.ts`, the
+	 * "Your computer" refusal subject keyed, and their tests (839 en keys; no
+	 * `catalogue.gen.ts` regeneration yet). Re-derived last with --print over
+	 * the committed tree (cd053eff); only `src` moved. Source identity only,
+	 * NOT rendered U-08 evidence. */
+	src: "75370921bc7698ba8f49970b03d50129bbfa8c2ddceeeac0c7f1468dc06e4bf8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
