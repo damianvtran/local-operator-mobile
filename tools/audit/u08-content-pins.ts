@@ -1688,7 +1688,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ed9db30622a256299aebf3bba946dafcaf94a349a771d3bbd3cb02aa2def4d86",
+	/* M3 S2b-2a (feat/i18n-m3-s2b2): the refusal surface's keys (English-first;
+	 * `catalogue.gen.ts` is regenerated with the translations), the remedy line
+	 * via `own_tunnel.remedy`, `verdictSentence`'s caller-supplied action label
+	 * and their tests. Re-derived last with --print over the committed tree
+	 * (b3af2b96); only `src` moved. Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "1ebd1b57b7222f37c86b78a56f539c06ce6e84a908045f67b265c35d9703011f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
