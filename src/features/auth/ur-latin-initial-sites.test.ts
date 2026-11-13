@@ -256,6 +256,26 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		);
 	});
 
+	it("open_console: the real ur label opens with Latin `Radient`, and labelDir from the composed direction gives it dir=rtl", () => {
+		/* The premise behind the labelDir above, on the catalogue value itself. */
+		const label = renderFor("mobile.computers.refusal.open_console", {}, "ur");
+		expect(label.startsWith("Radient ")).toBe(true);
+		expect(label).toMatch(ARABIC_SCRIPT);
+		/* The site's own shape: the console Button passes `useComposedDir()`. */
+		const OpenConsole = () =>
+			h(Button, {
+				label,
+				labelDir: useComposedDir(),
+				onPress: () => undefined,
+				variant: "outline",
+				testID: "t",
+			});
+		const rtl = render(h(OpenConsole), "rtl");
+		expect(rtl).toContain('dir="rtl"');
+		expect(rtl).not.toContain('dir="auto"');
+		expect(render(h(OpenConsole), "ltr")).not.toContain('dir="rtl"');
+	});
+
 	it("computer switcher: the Radient transport word spreads the composed direction", () => {
 		const source = read("./computer-switcher-sheet.tsx");
 		const anchor = '{t("mobile.computers.transport.radient")}';
