@@ -213,7 +213,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 71, // +1 `diagnostics.reason` (the raw stream-health reason row, Sherman's report); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+		expected: 75, // +4 the account card's `account.signed_in_radient` and the `sign_in_confirm` dialog (PR #258 R1 B1/m1); +1 `diagnostics.reason` (the raw stream-health reason row, Sherman's report); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -334,8 +334,10 @@ describe("the English catalogues", () => {
 		 * counted over the en JSON. */
 		/* fix/settings-signin-status-badge: +1 mobile.settings
 		 * (`diagnostics.reason`, the label of the raw reason-code row; the code
-		 * itself is never a key): 812 + 1 = 813. */
-		expect(total).toBe(813);
+		 * itself is never a key): 812 + 1 = 813. Review round 1: +4 (the signed-in
+		 * account title and the sign-in confirm's title, body and button):
+		 * 813 + 4 = 817. */
+		expect(total).toBe(817);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

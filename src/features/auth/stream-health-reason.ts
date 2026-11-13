@@ -60,8 +60,13 @@ export function reasonCodeOf(
 }
 
 /** A bare identifier: what a machine-readable code looks like, as opposed to a
- *  sentence such as `authentication required`. 64 characters at most. */
-const IDENTIFIER = /^[a-z][a-z0-9_.-]{0,63}$/;
+ *  sentence such as `authentication required`. 64 characters at most, and NO
+ *  dot (R1 n1): every code this build knows — gateway reasons, relay codes,
+ *  `RelayErrorKind` — is `[a-z0-9_-]`, while a dotted lowercase string is the
+ *  shape of a host name (`my-mac.local`). Keeping the dot out makes the row's
+ *  "never a token, a password, or a session's content" structural rather than a
+ *  matter of what a responder puts in `error`/`code`. */
+const IDENTIFIER = /^[a-z][a-z0-9_-]{0,63}$/;
 const isIdentifier = (value: string | undefined): value is string =>
 	value !== undefined && IDENTIFIER.test(value);
 
@@ -71,8 +76,14 @@ const isIdentifier = (value: string | undefined): value is string =>
  * makes the switcher say "Asleep" goes through `noteError`, so it lives there),
  * else nothing.
  *
- * The health check matters: a reason left over from a stall that has since
- * recovered would be a stale fact presented as a current one.
+ * Both checks are about staleness — a fact from the past presented beside
+ * "Stream: live" as if it were current:
+ *  - a stall reason that has since recovered is dropped by the health check;
+ *  - `lastError` is NOT cleared when the stream recovers (only on a route
+ *    start, a URL validation failure and sign-out), so while the stream is
+ *    live it is shown only if a refusal is CURRENT (`refused`, the provider's
+ *    `refusal !== null`). PR #258 review R1 m2. The past error is still in the
+ *    "Last error" row, which is what that row is for.
  */
 export function diagnosticReason(input: {
 	health: "idle" | "connecting" | "live" | "degraded" | "offline";
@@ -81,13 +92,16 @@ export function diagnosticReason(input: {
 		RelayError,
 		"reasonRaw" | "reason" | "code" | "serverError" | "kind"
 	> | null;
+	/** A refusal is on screen now (the provider's `refusal !== null`). */
+	refused: boolean;
 }): StreamHealthReason | null {
 	const unhealthy =
 		input.health === "degraded" ||
 		input.health === "offline" ||
 		input.health === "connecting";
 	if (unhealthy && input.healthReason) return input.healthReason;
-	if (input.lastError) return reasonCodeOf(input.lastError);
+	if (input.lastError && (input.health !== "live" || input.refused))
+		return reasonCodeOf(input.lastError);
 	return null;
 }
 

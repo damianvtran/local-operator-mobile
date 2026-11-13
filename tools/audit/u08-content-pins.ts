@@ -1695,7 +1695,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * mobile.settings key (813 keys). Re-derived with --print over the staged
 	 * tree; only `src` moved. Source identity only, NOT rendered U-08 evidence:
 	 * the Settings and drawer cells must be re-captured against this tree. */
-	src: "e8c9feb0d8065849738769c791971d8353af6ddcca510b881a05a2bec4113c1e",
+	/* PR #258 agent review round-1 remediation: the account card moves to
+	 * `account-card.tsx`, gated on `radientSignedIn` with a confirm before it
+	 * ends a working direct route; Diagnostics' reason row ignores a past
+	 * `lastError` beside a live stream; the dot leaves the identifier rule; four
+	 * mobile.settings keys (817). Re-derived with --print over the staged tree;
+	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "a5dc045ac590dad5b06f3ae025384b8c2883a460aa983488b2a199a1cc2434c2",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

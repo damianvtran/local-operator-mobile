@@ -540,6 +540,7 @@ export type CatalogueKey =
 	| "mobile.settings.account.route_direct"
 	| "mobile.settings.account.route_radient"
 	| "mobile.settings.account.signed_in"
+	| "mobile.settings.account.signed_in_radient"
 	| "mobile.settings.connection.computers"
 	| "mobile.settings.connection.refresh"
 	| "mobile.settings.connection.status"
@@ -573,6 +574,9 @@ export type CatalogueKey =
 	| "mobile.settings.section.appearance"
 	| "mobile.settings.section.connection"
 	| "mobile.settings.section.diagnostics"
+	| "mobile.settings.sign_in_confirm.body"
+	| "mobile.settings.sign_in_confirm.confirm"
+	| "mobile.settings.sign_in_confirm.title"
 	| "mobile.settings.sign_out.body"
 	| "mobile.settings.sign_out.confirm"
 	| "mobile.settings.sign_out.done"
@@ -1279,6 +1283,7 @@ export type NoParamKey =
 	| "mobile.settings.account.not_signed_in"
 	| "mobile.settings.account.route_radient"
 	| "mobile.settings.account.signed_in"
+	| "mobile.settings.account.signed_in_radient"
 	| "mobile.settings.connection.computers"
 	| "mobile.settings.connection.refresh"
 	| "mobile.settings.connection.status"
@@ -1312,6 +1317,9 @@ export type NoParamKey =
 	| "mobile.settings.section.appearance"
 	| "mobile.settings.section.connection"
 	| "mobile.settings.section.diagnostics"
+	| "mobile.settings.sign_in_confirm.body"
+	| "mobile.settings.sign_in_confirm.confirm"
+	| "mobile.settings.sign_in_confirm.title"
 	| "mobile.settings.sign_out.body"
 	| "mobile.settings.sign_out.confirm"
 	| "mobile.settings.sign_out.done"
@@ -2052,6 +2060,7 @@ export type MessageParams = {
 	"mobile.settings.account.route_direct": { baseUrl: string | number };
 	"mobile.settings.account.route_radient": NoParams;
 	"mobile.settings.account.signed_in": NoParams;
+	"mobile.settings.account.signed_in_radient": NoParams;
 	"mobile.settings.connection.computers": NoParams;
 	"mobile.settings.connection.refresh": NoParams;
 	"mobile.settings.connection.status": NoParams;
@@ -2085,6 +2094,9 @@ export type MessageParams = {
 	"mobile.settings.section.appearance": NoParams;
 	"mobile.settings.section.connection": NoParams;
 	"mobile.settings.section.diagnostics": NoParams;
+	"mobile.settings.sign_in_confirm.body": NoParams;
+	"mobile.settings.sign_in_confirm.confirm": NoParams;
+	"mobile.settings.sign_in_confirm.title": NoParams;
 	"mobile.settings.sign_out.body": NoParams;
 	"mobile.settings.sign_out.confirm": NoParams;
 	"mobile.settings.sign_out.done": NoParams;
@@ -2884,6 +2896,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.account.route_direct": "Connected directly to {baseUrl}",
 	"mobile.settings.account.route_radient": "Through your Radient tunnel",
 	"mobile.settings.account.signed_in": "Signed in",
+	"mobile.settings.account.signed_in_radient": "Signed in with Radient",
 	"mobile.settings.connection.computers": "Computers",
 	"mobile.settings.connection.refresh": "Refresh",
 	"mobile.settings.connection.status": "Status",
@@ -2917,6 +2930,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.section.appearance": "Appearance",
 	"mobile.settings.section.connection": "Connection",
 	"mobile.settings.section.diagnostics": "Diagnostics",
+	"mobile.settings.sign_in_confirm.body": "This ends your current connection first. If you stop before sign-in finishes, you will need to connect to your computer again.",
+	"mobile.settings.sign_in_confirm.confirm": "Sign in",
+	"mobile.settings.sign_in_confirm.title": "Sign in with Radient?",
 	"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
 	"mobile.settings.sign_out.confirm": "Sign out",
 	"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
@@ -3701,6 +3717,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.account.route_direct": { role: "status", note: "Second line of the Settings account card when the phone talks to a computer directly. {baseUrl} is the computer's web address; keep it unchanged and left-to-right. No final full stop." },
 	"mobile.settings.account.route_radient": { role: "status", note: "Second line of the Settings account card when the active connection runs through the user's Radient tunnel. Radient is the product name. No final full stop." },
 	"mobile.settings.account.signed_in": { role: "status", note: "Accessible name of the account avatar on the Settings account card; read by a screen reader, never drawn. Short." },
+	"mobile.settings.account.signed_in_radient": { role: "status", note: "Name line of the Settings account card when the phone is signed in with a Radient account but no account name is known. Radient is the product name; keep it in Latin script. No final full stop." },
 	"mobile.settings.connection.computers": { role: "meta", note: "Small label above the list of computers on this account in Settings. Plural noun, no colon." },
 	"mobile.settings.connection.refresh": { role: "button", note: "Quiet button under the Settings computers list that re-reads the account's computers. One verb." },
 	"mobile.settings.connection.status": { role: "meta", note: "Small row label left of the connection state pill on Settings. One word, no colon." },
@@ -3734,6 +3751,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.section.appearance": { role: "heading", note: "Section header on Settings above the theme and text-size controls. One word." },
 	"mobile.settings.section.connection": { role: "heading", note: "Section header on Settings above the connection status and the computers list. One word." },
 	"mobile.settings.section.diagnostics": { role: "heading", note: "Section header on Settings above the read-only connection facts (route, stream, last error). One word." },
+	"mobile.settings.sign_in_confirm.body": { role: "confirm", note: "Body of that dialog: starting Radient sign-in ends the current connection before the browser opens, and if the user abandons sign-in they must connect to their computer again. State the consequence plainly; do not promise the connection comes back." },
+	"mobile.settings.sign_in_confirm.confirm": { role: "button", note: "Confirm button of that dialog; it starts Radient sign-in. One or two words, sentence case." },
+	"mobile.settings.sign_in_confirm.title": { role: "confirm", note: "Title of the confirmation dialog opened by tapping the signed-out Settings account card while the phone has a working (direct or own-tunnel) connection. A question; keep it short. Radient is the product name; keep it in Latin script." },
 	"mobile.settings.sign_out.body": { role: "confirm", note: "Body of the sign-out confirmation: signing out also ends the session on the control plane, so the tunnel stops accepting this phone, and the user's computer is untouched. 'Control plane' and 'tunnel' are product vocabulary." },
 	"mobile.settings.sign_out.confirm": { role: "button", note: "Confirm button of the sign-out dialog; it performs the sign-out, so it repeats the Sign out action verb. One or two words, sentence case." },
 	"mobile.settings.sign_out.done": { role: "status", note: "Toast shown after a successful sign-out, just before the welcome screen. Two short sentences; must fit a toast." },
@@ -4532,6 +4552,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Conectado directamente a {baseUrl}",
 		"mobile.settings.account.route_radient": "A través de tu túnel de Radient",
 		"mobile.settings.account.signed_in": "Sesión iniciada",
+		"mobile.settings.account.signed_in_radient": "Sesión iniciada con Radient",
 		"mobile.settings.connection.computers": "Máquinas",
 		"mobile.settings.connection.refresh": "Actualizar",
 		"mobile.settings.connection.status": "Estado",
@@ -4565,6 +4586,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Apariencia",
 		"mobile.settings.section.connection": "Conexión",
 		"mobile.settings.section.diagnostics": "Diagnóstico",
+		"mobile.settings.sign_in_confirm.body": "Esto cierra primero tu conexión actual. Si no terminas de iniciar sesión, tendrás que volver a conectarte a tu computadora.",
+		"mobile.settings.sign_in_confirm.confirm": "Iniciar sesión",
+		"mobile.settings.sign_in_confirm.title": "¿Iniciar sesión con Radient?",
 		"mobile.settings.sign_out.body": "Esto cierra tu sesión de acceso en el plano de control y la borra de este teléfono, por lo que el túnel deja de aceptar solicitudes de este teléfono. Tu máquina no se ve afectada.",
 		"mobile.settings.sign_out.confirm": "Cerrar sesión",
 		"mobile.settings.sign_out.done": "Sesión cerrada. Se revocó tu sesión de acceso en tu máquina.",
@@ -5347,6 +5371,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Connecté directement à {baseUrl}",
 		"mobile.settings.account.route_radient": "Via votre tunnel Radient",
 		"mobile.settings.account.signed_in": "Connecté",
+		"mobile.settings.account.signed_in_radient": "Connecté avec Radient",
 		"mobile.settings.connection.computers": "Ordinateurs",
 		"mobile.settings.connection.refresh": "Actualiser",
 		"mobile.settings.connection.status": "État",
@@ -5380,6 +5405,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Apparence",
 		"mobile.settings.section.connection": "Connexion",
 		"mobile.settings.section.diagnostics": "Diagnostic",
+		"mobile.settings.sign_in_confirm.body": "Cela met d'abord fin à votre connexion actuelle. Si vous n'allez pas au bout de la connexion, vous devrez vous reconnecter à votre ordinateur.",
+		"mobile.settings.sign_in_confirm.confirm": "Se connecter",
+		"mobile.settings.sign_in_confirm.title": "Se connecter avec Radient ?",
 		"mobile.settings.sign_out.body": "Votre session de connexion est fermée sur le plan de contrôle et oubliée sur ce téléphone : le tunnel n’accepte donc plus les requêtes de ce téléphone. Votre ordinateur reste intact.",
 		"mobile.settings.sign_out.confirm": "Se déconnecter",
 		"mobile.settings.sign_out.done": "Déconnecté. Votre session de connexion a été révoquée sur votre ordinateur.",
@@ -6162,6 +6190,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "सीधे {baseUrl} से कनेक्ट है",
 		"mobile.settings.account.route_radient": "आपकी Radient टनल से कनेक्ट है",
 		"mobile.settings.account.signed_in": "साइन इन है",
+		"mobile.settings.account.signed_in_radient": "Radient से साइन इन है",
 		"mobile.settings.connection.computers": "कंप्यूटर",
 		"mobile.settings.connection.refresh": "रीफ़्रेश करें",
 		"mobile.settings.connection.status": "स्थिति",
@@ -6195,6 +6224,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "रूप-रंग",
 		"mobile.settings.section.connection": "कनेक्शन",
 		"mobile.settings.section.diagnostics": "निदान",
+		"mobile.settings.sign_in_confirm.body": "इससे पहले आपका मौजूदा कनेक्शन बंद हो जाएगा। अगर आप साइन इन पूरा नहीं करते, तो आपको अपने कंप्यूटर से फिर से कनेक्ट करना होगा।",
+		"mobile.settings.sign_in_confirm.confirm": "साइन इन करें",
+		"mobile.settings.sign_in_confirm.title": "Radient से साइन इन करें?",
 		"mobile.settings.sign_out.body": "इससे आपका साइन-इन सत्र इस फ़ोन से हट जाता है और कंट्रोल प्लेन पर भी समाप्त हो जाता है। इसलिए टनल इस फ़ोन से अनुरोध स्वीकार करना बंद कर देती है। आपके कंप्यूटर में कोई बदलाव नहीं किया जाता।",
 		"mobile.settings.sign_out.confirm": "साइन आउट करें",
 		"mobile.settings.sign_out.done": "साइन आउट हो गया। आपके कंप्यूटर पर साइन-इन सत्र रद्द कर दिया गया।",
@@ -6977,6 +7009,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Подключено напрямую к {baseUrl}",
 		"mobile.settings.account.route_radient": "Через ваш туннель Radient",
 		"mobile.settings.account.signed_in": "Вход выполнен",
+		"mobile.settings.account.signed_in_radient": "Вход через Radient выполнен",
 		"mobile.settings.connection.computers": "Компьютеры",
 		"mobile.settings.connection.refresh": "Обновить",
 		"mobile.settings.connection.status": "Состояние",
@@ -7010,6 +7043,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Оформление",
 		"mobile.settings.section.connection": "Подключение",
 		"mobile.settings.section.diagnostics": "Диагностика",
+		"mobile.settings.sign_in_confirm.body": "Сначала текущее подключение будет завершено. Если вы не завершите вход, придётся снова подключиться к компьютеру.",
+		"mobile.settings.sign_in_confirm.confirm": "Войти",
+		"mobile.settings.sign_in_confirm.title": "Войти через Radient?",
 		"mobile.settings.sign_out.body": "Сессия входа с сервером управления будет завершена, а приложение забудет её, поэтому туннель перестанет принимать запросы с этого телефона. Ваш компьютер не затрагивается.",
 		"mobile.settings.sign_out.confirm": "Выйти",
 		"mobile.settings.sign_out.done": "Выход выполнен. Сессия входа отозвана на компьютере.",
@@ -7792,6 +7828,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "براہ راست {baseUrl} سے منسلک",
 		"mobile.settings.account.route_radient": "آپ کے Radient ٹنل کے ذریعے",
 		"mobile.settings.account.signed_in": "سائن ان شدہ",
+		"mobile.settings.account.signed_in_radient": "Radient کے ساتھ سائن ان ہے",
 		"mobile.settings.connection.computers": "کمپیوٹرز",
 		"mobile.settings.connection.refresh": "تازہ کریں",
 		"mobile.settings.connection.status": "حالت",
@@ -7825,6 +7862,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "ظاہری شکل",
 		"mobile.settings.section.connection": "کنکشن",
 		"mobile.settings.section.diagnostics": "تشخیص",
+		"mobile.settings.sign_in_confirm.body": "اس سے پہلے آپ کا موجودہ کنکشن ختم ہو جائے گا۔ اگر آپ سائن ان مکمل نہیں کرتے تو آپ کو اپنے کمپیوٹر سے دوبارہ جڑنا ہوگا۔",
+		"mobile.settings.sign_in_confirm.confirm": "سائن ان کریں",
+		"mobile.settings.sign_in_confirm.title": "کیا Radient کے ساتھ سائن ان کریں؟",
 		"mobile.settings.sign_out.body": "اس سے کنٹرول پلین پر سائن ان کا سیشن ختم ہو جاتا ہے اور اس فون سے بھی اس کی محفوظ معلومات ہٹ جاتی ہیں، اس لیے ٹنل اس فون سے درخواستیں قبول کرنا بند کر دیتا ہے۔ آپ کا کمپیوٹر متاثر نہیں ہوتا۔",
 		"mobile.settings.sign_out.confirm": "سائن آؤٹ کریں",
 		"mobile.settings.sign_out.done": "سائن آؤٹ ہو گیا۔ آپ کے کمپیوٹر پر سائن ان کا سیشن منسوخ کر دیا گیا۔",
@@ -8607,6 +8647,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Đã kết nối trực tiếp với {baseUrl}",
 		"mobile.settings.account.route_radient": "Qua đường hầm Radient của bạn",
 		"mobile.settings.account.signed_in": "Đã đăng nhập",
+		"mobile.settings.account.signed_in_radient": "Đã đăng nhập bằng Radient",
 		"mobile.settings.connection.computers": "Máy tính",
 		"mobile.settings.connection.refresh": "Làm mới",
 		"mobile.settings.connection.status": "Trạng thái",
@@ -8640,6 +8681,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Giao diện",
 		"mobile.settings.section.connection": "Kết nối",
 		"mobile.settings.section.diagnostics": "Chẩn đoán",
+		"mobile.settings.sign_in_confirm.body": "Thao tác này sẽ ngắt kết nối hiện tại trước. Nếu bạn không hoàn tất đăng nhập, bạn sẽ cần kết nối lại với máy tính của mình.",
+		"mobile.settings.sign_in_confirm.confirm": "Đăng nhập",
+		"mobile.settings.sign_in_confirm.title": "Đăng nhập bằng Radient?",
 		"mobile.settings.sign_out.body": "Thao tác này kết thúc phiên đăng nhập với lớp điều khiển và xóa thông tin phiên đó khỏi điện thoại, nên đường hầm sẽ ngừng nhận yêu cầu từ điện thoại này. Máy tính không bị ảnh hưởng.",
 		"mobile.settings.sign_out.confirm": "Đăng xuất",
 		"mobile.settings.sign_out.done": "Đã đăng xuất. Phiên đăng nhập đã bị thu hồi trên máy tính.",
@@ -9422,6 +9466,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "已直连{baseUrl}",
 		"mobile.settings.account.route_radient": "通过Radient隧道",
 		"mobile.settings.account.signed_in": "已登录",
+		"mobile.settings.account.signed_in_radient": "已使用Radient登录",
 		"mobile.settings.connection.computers": "电脑",
 		"mobile.settings.connection.refresh": "刷新",
 		"mobile.settings.connection.status": "状态",
@@ -9455,6 +9500,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "外观",
 		"mobile.settings.section.connection": "连接",
 		"mobile.settings.section.diagnostics": "诊断",
+		"mobile.settings.sign_in_confirm.body": "这会先结束你当前的连接。如果你没有完成登录，需要重新连接你的电脑。",
+		"mobile.settings.sign_in_confirm.confirm": "登录",
+		"mobile.settings.sign_in_confirm.title": "使用Radient登录？",
 		"mobile.settings.sign_out.body": "这会结束控制平面上的登录会话，并清除此手机上保存的登录信息，隧道将不再接受此手机的请求。不会影响你的电脑。",
 		"mobile.settings.sign_out.confirm": "退出登录",
 		"mobile.settings.sign_out.done": "已退出登录。已在你的电脑上撤销此手机的登录会话。",

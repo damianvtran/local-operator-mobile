@@ -381,6 +381,10 @@ export const CONTROL = {
 	settingsUseComputer: "settings-use-computer",
 	/** The signed-out account card: the whole card starts Radient sign-in. */
 	settingsAccountSignIn: "settings-account-sign-in",
+	/** The confirm before that sign-in ends a working direct route (R1 m1). */
+	settingsAccountSignInConfirm: "settings-account-sign-in-confirm",
+	/** The account card's name line (signed-in account or "Not signed in"). */
+	settingsAccountTitle: "settings-account-title",
 	/** Diagnostics › Reason: the raw degraded/health reason code. */
 	settingsDiagnosticsReason: "settings-diagnostics-reason",
 	settingsRefresh: "settings-refresh",

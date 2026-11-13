@@ -78,6 +78,21 @@ describe("reasonCodeOf: the most specific code an error carries", () => {
 			),
 		).toBe("rejected");
 	});
+	/* PR #258 R1 n1: a dotted lowercase string is the shape of a host name. */
+	it("refuses a dotted value, so a host name never passes as a code", () => {
+		expect(
+			reasonCodeOf(
+				new RelayError("relay-down", "x", {
+					reasonRaw: "my-mac.local",
+					code: "relay.unreachable",
+					serverError: "host.example.com",
+				}),
+			),
+		).toBe("relay-down");
+		expect(
+			reasonCodeOf(new RelayError("rejected", "x", { code: "rate-limit_2" })),
+		).toBe("rate-limit_2");
+	});
 });
 
 describe("reasonForStatus: the stream's own reason across transitions", () => {
@@ -100,20 +115,44 @@ describe("diagnosticReason: what the Diagnostics row shows", () => {
 	const offline = new RelayError("computer-offline", "x", {});
 	it("is the stream's reason while unhealthy", () => {
 		for (const health of ["degraded", "offline", "connecting"] as const)
+			for (const refused of [false, true])
+				expect(
+					diagnosticReason({
+						health,
+						healthReason: STREAM_STALLED_REASON,
+						lastError: offline,
+						refused,
+					}),
+				).toBe(STREAM_STALLED_REASON);
+	});
+	it("is the last error's code while the stream is not live (the path that makes the switcher say Asleep)", () => {
+		for (const health of ["idle", "offline", "degraded"] as const)
 			expect(
 				diagnosticReason({
 					health,
-					healthReason: STREAM_STALLED_REASON,
+					healthReason: null,
 					lastError: offline,
+					refused: false,
 				}),
-			).toBe(STREAM_STALLED_REASON);
+			).toBe("computer-offline");
 	});
-	it("is the last refusal's code otherwise (the path that makes the switcher say Asleep)", () => {
+	/* PR #258 R1 m2: `lastError` outlives the failure (it is not cleared when
+	 *  the stream recovers), so beside "Stream: live" it is a past fact. */
+	it("shows None beside a live stream unless a refusal is current", () => {
 		expect(
 			diagnosticReason({
 				health: "live",
 				healthReason: null,
 				lastError: offline,
+				refused: false,
+			}),
+		).toBeNull();
+		expect(
+			diagnosticReason({
+				health: "live",
+				healthReason: null,
+				lastError: offline,
+				refused: true,
 			}),
 		).toBe("computer-offline");
 	});
@@ -123,6 +162,7 @@ describe("diagnosticReason: what the Diagnostics row shows", () => {
 				health: "live",
 				healthReason: STREAM_STALLED_REASON,
 				lastError: null,
+				refused: false,
 			}),
 		).toBeNull();
 	});
@@ -176,7 +216,7 @@ describe("Settings › Diagnostics shows `reason: <code>`, monospace and copyabl
 		expect(lastError).toBeGreaterThan(reason);
 		const row = settings.slice(reason, lastError);
 		expect(row).toContain(
-			"diagnosticReason({ health: streamHealth, healthReason: streamHealthReason, lastError, })",
+			"diagnosticReason({ health: streamHealth, healthReason: streamHealthReason, lastError, refused: refusal !== null, })",
 		);
 		expect(row).toContain("? `reason: ${code}`");
 		expect(row).toContain("selectable");

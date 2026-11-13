@@ -187,6 +187,22 @@
 		"role": "status",
 		"note": "Name line of the Settings account card when no Radient account name is known. Radient is the product name; keep it in Latin script. No final full stop."
 	},
+	"mobile.settings.account.signed_in_radient": {
+		"role": "status",
+		"note": "Name line of the Settings account card when the phone is signed in with a Radient account but no account name is known. Radient is the product name; keep it in Latin script. No final full stop."
+	},
+	"mobile.settings.sign_in_confirm.title": {
+		"role": "confirm",
+		"note": "Title of the confirmation dialog opened by tapping the signed-out Settings account card while the phone has a working (direct or own-tunnel) connection. A question; keep it short. Radient is the product name; keep it in Latin script."
+	},
+	"mobile.settings.sign_in_confirm.body": {
+		"role": "confirm",
+		"note": "Body of that dialog: starting Radient sign-in ends the current connection before the browser opens, and if the user abandons sign-in they must connect to their computer again. State the consequence plainly; do not promise the connection comes back."
+	},
+	"mobile.settings.sign_in_confirm.confirm": {
+		"role": "button",
+		"note": "Confirm button of that dialog; it starts Radient sign-in. One or two words, sentence case."
+	},
 	"mobile.settings.account.route_radient": {
 		"role": "status",
 		"note": "Second line of the Settings account card when the active connection runs through the user's Radient tunnel. Radient is the product name. No final full stop."

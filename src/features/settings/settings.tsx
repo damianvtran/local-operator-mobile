@@ -1,13 +1,11 @@
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	AccessibilityInfo,
 	findNodeHandle,
 	Platform,
-	Pressable,
 	type ScrollView,
 	Text,
 	View,
@@ -26,19 +24,14 @@ import {
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
-import { SignInPanel } from "@/features/auth/sign-in-panel";
-import { signInPresentation } from "@/features/auth/sign-in-presentation";
 import { diagnosticReason } from "@/features/auth/stream-health-reason";
 import { t } from "@/i18n";
 import type { ThemeMode } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
-import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
-import { Card } from "@/ui/components/card";
 import {
 	ConnectionPill,
 	type ConnectionPillState,
@@ -63,7 +56,7 @@ import {
 } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
-import { NAV_CARD_MIN_HEIGHT, navCardClasses } from "@/ui/variants";
+import { AccountCard } from "./account-card";
 import { AccountRoutingSection } from "./account-routing-section";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
@@ -108,10 +101,6 @@ export default function Settings() {
 		refreshComputers,
 		refusal,
 		signInWithRadient,
-		signInState,
-		signInDiagnostics,
-		restoredAccount,
-		busy,
 		streamHealth,
 		streamHealthReason,
 		lastError,
@@ -122,13 +111,6 @@ export default function Settings() {
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const phase = useConnectionState((state) => state.phase);
-	const accountLabel = useConnectionState((state) => state.accountLabel);
-	/* The account title is the account label (a Latin email or name) OR the
-	 * translated "Not signed in with Radient", which in Urdu begins with the Latin
-	 * `Radient`. RN-web's `dir="auto"` then resolves the title LTR on an RTL page
-	 * and it sits on the wrong edge, away from its same-card subtitle (design
-	 * review D2). Both lines state the page's base so they share one edge. */
-	const composedDir = useComposedDir();
 	const discoveryFailure = useConnectionState(
 		(state) => state.discoveryFailure,
 	);
@@ -149,38 +131,10 @@ export default function Settings() {
 
 	/* The RENDERED text scale (`textScale.effectiveScale`): on the web the platform's
 	 * own signal multiplies through `rem`, so this is the number a reader perceives
-	 * and the one a layout decision has to be made against. */
-	const accountStacked = textScale.effectiveScale > LARGE_TEXT_SCALE;
-	/* The Status row stacks at the same threshold, for the same reason: side by
-	 *  side at 200 % a long locale's label leaves the pill a glyph or two. */
+	 * and the one a layout decision has to be made against. The Status row stacks
+	 * above LARGE_TEXT_SCALE, as the account card does: side by side at 200 % a
+	 * long locale's label leaves the pill a glyph or two. */
 	const statusStacked = statusRowStacked(textScale.effectiveScale);
-
-	/* The signed-out account card is the place a reader looks to sign in (it says
-	 *  "Not signed in with Radient"), and it had no onPress (Sherman's report via
-	 *  Aida). It starts the SAME sign-in as Welcome and Sign-in — the provider's
-	 *  `signInWithRadient`, which itself opens the usual computer
-	 *  (`openUsualComputer`) — and lands the same way through
-	 *  `signInPresentation`, so a third copy of the hand-off cannot drift from
-	 *  the other two. Keyed on the title's own condition: the card is a button
-	 *  exactly when it SAYS it is signed out. */
-	const accountSignedOut = accountLabel == null;
-	const [signInInitiated, setSignInInitiated] = useState(false);
-	const startSignIn = useCallback(() => {
-		setSignInInitiated(true);
-		void signInWithRadient();
-	}, [signInWithRadient]);
-	const signInLanding = signInPresentation({
-		initiated: signInInitiated,
-		restoredAccount,
-		busy,
-		routed: route !== null,
-		state: signInState,
-	});
-	useEffect(() => {
-		if (signInLanding.navigate) router.replace(signInLanding.destination);
-	}, [signInLanding.navigate, signInLanding.destination, router]);
-	const chevronInk = useTokenColor("ink-dim");
-	const rtl = useIsRTL();
 
 	/* The Status row's word AND colour, derived once from the state the account card
 	 *  above reads. See `statusFor` for why one derivation rather than two fields. */
@@ -323,52 +277,6 @@ export default function Settings() {
 		}
 	}, [router, showToast, signOut]);
 
-	/* A COLUMN above `LARGE_TEXT_SCALE`, not a `flex-wrap` — wrapping does
-	 *  nothing here, because the text beside the avatar is `flex-1` and will
-	 *  always take whatever width is left rather than move to a new line. At
-	 *  200 % on a 320 pt phone that left it a 180 pt column and "Radient"
-	 *  broke mid-word; stacking puts the identity under its own mark. */
-	const accountBody = (
-		<View
-			className={
-				accountStacked ? "items-start gap-2" : "flex-row items-center gap-3"
-			}
-		>
-			<Avatar
-				initials={initialsOf(
-					accountLabel ??
-						computers[0]?.name ??
-						t("mobile.settings.account.app_name"),
-				)}
-				size="md"
-				accessibilityLabel={t("mobile.settings.account.signed_in")}
-			/>
-			<View
-				className={
-					accountStacked ? "min-w-0 w-full gap-1" : "min-w-0 flex-1 gap-1"
-				}
-			>
-				<Text className="text-body text-ink" {...composedDir}>
-					{accountLabel ?? t("mobile.settings.account.not_signed_in")}
-				</Text>
-				<Text
-					className="text-body-sm text-ink-dim"
-					numberOfLines={1}
-					ellipsizeMode="tail"
-					{...composedDir}
-				>
-					{route
-						? route.mode === "radient"
-							? t("mobile.settings.account.route_radient")
-							: t("mobile.settings.account.route_direct", {
-									baseUrl: route.baseUrl,
-								})
-						: t("mobile.settings.status.no_connection")}
-				</Text>
-			</View>
-		</View>
-	);
-
 	return (
 		<Screen
 			title={t("mobile.settings.screen_title")}
@@ -383,62 +291,9 @@ export default function Settings() {
 		>
 			<View className="gap-4 pt-2">
 				{/* ---------------------------------------------------------- account */}
-				{accountSignedOut ? (
-					/* Signed out: the whole card is the sign-in button, in the nav-card
-					 *  family (`navCardClasses`) with its chevron, so it reads as a place
-					 *  to go rather than an inert panel. Signed in it stays a plain Card. */
-					<Pressable
-						accessibilityRole={ROLE.button}
-						/* Spoken as the action, with the state as the hint — the Team
-						 *  Bridge card's shape (label + caption-as-hint), so a VoiceOver
-						 *  reader hears both what pressing does and why it is offered. */
-						accessibilityLabel={t("mobile.signin.start")}
-						accessibilityHint={t("mobile.settings.account.not_signed_in")}
-						accessibilityState={{ busy, disabled: busy }}
-						disabled={busy}
-						onPress={startSignIn}
-						testID={CONTROL.settingsAccountSignIn}
-					>
-						{({ pressed }) => (
-							<View
-								className={navCardClasses({ pressed })}
-								style={{ minHeight: NAV_CARD_MIN_HEIGHT }}
-							>
-								<View className="min-w-0 flex-1 gap-2">
-									{accountBody}
-									{/* The visible label: the card must SAY it signs you in. A
-									 *  status line and a chevron alone read as "go and look",
-									 *  which is exactly how Sherman read the inert card. The
-									 *  Welcome button's own key, so the two doors match. */}
-									<Text className="text-label text-accent" {...composedDir}>
-										{t("mobile.signin.start")}
-									</Text>
-								</View>
-								{rtl ? (
-									<ChevronLeft size={18} color={chevronInk} aria-hidden />
-								) : (
-									<ChevronRight size={18} color={chevronInk} aria-hidden />
-								)}
-							</View>
-						)}
-					</Pressable>
-				) : (
-					<Card>{accountBody}</Card>
-				)}
-				{/* The SAME progress and failure surface Welcome and Sign-in render
-				 *  under their button: "Opening Radient…", waiting for the browser,
-				 *  a cancelled or failed hand-off with its diagnostics. Without it a
-				 *  failed sign-in started from here would end in silence. Gated on
-				 *  this screen's own attempt, so a sign-in state left by another
-				 *  screen is not narrated here; it renders nothing while idle. */}
-				{signInInitiated ? (
-					<SignInPanel
-						state={signInLanding.state}
-						diagnostics={signInDiagnostics}
-						onStart={startSignIn}
-						onUseAddress={() => undefined}
-					/>
-				) : null}
+				{/* The account card and its Radient sign-in: see `account-card.tsx`
+				 *  for why the button keys on `radientSignedIn` and confirms first. */}
+				<AccountCard />
 
 				{/* -------------------------------------------------------- connection */}
 				<View className="gap-2" testID={REGION.settingsConnection}>
@@ -741,6 +596,7 @@ export default function Settings() {
 								health: streamHealth,
 								healthReason: streamHealthReason,
 								lastError,
+								refused: refusal !== null,
 							});
 							return code
 								? `reason: ${code}`
