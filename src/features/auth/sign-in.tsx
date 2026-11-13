@@ -1,7 +1,11 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
-import { useConnection } from "@/features/auth/connection-provider";
+import {
+	useConnection,
+	useConnectionState,
+} from "@/features/auth/connection-provider";
+import { leaveScreen } from "@/features/auth/leave-screen";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { t } from "@/i18n";
 import { CONTROL, ROLE, SCREEN } from "@/ui/a11y";
@@ -38,6 +42,7 @@ export default function SignIn() {
 		restoredAccount,
 		busy,
 	} = useConnection();
+	const routed = useConnectionState((state) => state.route !== null);
 	const [initiated, setInitiated] = useState(false);
 	const start = () => {
 		setInitiated(true);
@@ -47,18 +52,23 @@ export default function SignIn() {
 		initiated,
 		restoredAccount,
 		busy,
+		routed,
 		state: signInState,
 	});
+	/* Home when the sign-in opened the reader's computer, else Computers. */
 	useEffect(() => {
-		if (presentation.navigate) router.replace("/tunnels");
-	}, [presentation.navigate, router]);
+		if (presentation.navigate) router.replace(presentation.destination);
+	}, [presentation.navigate, presentation.destination, router]);
 
 	return (
 		<Screen
 			title={t("mobile.signin.title")}
 			testID={SCREEN.signIn}
 			headerLeading={
-				<BackButton testID={CONTROL.signInBack} onPress={() => router.back()} />
+				<BackButton
+					testID={CONTROL.signInBack}
+					onPress={() => leaveScreen(router)}
+				/>
 			}
 		>
 			<View className="gap-4 pt-2">

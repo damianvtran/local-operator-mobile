@@ -1,4 +1,5 @@
-import type { DiscoveredComputer } from "@/connection";
+import type { ComputerStatus, DiscoveredComputer } from "@/connection";
+import { t } from "@/i18n";
 import type {
 	ConnectionPhase,
 	DiscoveryFailure,
@@ -207,4 +208,89 @@ export function backAction(input: {
 }): "pop" | "home" | null {
 	if (input.canGoBack) return "pop";
 	return input.routed ? "home" : null;
+}
+
+/**
+ * The control plane's status, in the reader's terms, through #243's catalogue keys.
+ *
+ * Design D5 (TestFlight 883) asked for sentence case beside "Sign-in protected".
+ * The `status.*` keys cannot carry that: they are ALSO the `{status}` predicate
+ * of the wait panel's "Radient has the tunnel — {status}." (`tunnelStatusKey`),
+ * where a capital would be wrong, and every locale's audited translation was
+ * written to the context note "keep lower case". Capitalising in code is not an
+ * answer either (no case in most shipped scripts, locale-specific rules in the
+ * rest). So the row shows the catalogue's words as they are; sentence case needs
+ * row-only keys translated in every locale, which is its own change.
+ */
+export function computerStatusLabel(status: ComputerStatus): {
+	label: string;
+	tone: ComputerFactTone;
+} {
+	switch (status) {
+		case "ready":
+			return {
+				label: t("mobile.computers.status.route_ready"),
+				tone: "success",
+			};
+		case "provisioning":
+			return { label: t("mobile.computers.status.provisioning"), tone: "info" };
+		case "suspended":
+			return { label: t("mobile.computers.status.suspended"), tone: "warning" };
+		case "off":
+			return { label: t("mobile.computers.status.disabled"), tone: "warning" };
+		case "gone":
+			return { label: t("mobile.computers.status.revoked"), tone: "danger" };
+		case "unknown":
+			return { label: t("mobile.computers.status.unknown"), tone: "neutral" };
+	}
+}
+
+/** The probe's own answer, kept visibly separate from the row's status. */
+export type Reachability = "protected" | "answered";
+
+export function computerReachabilityLabel(state: Reachability): {
+	label: string;
+	tone: ComputerFactTone;
+} {
+	switch (state) {
+		case "protected":
+			return { label: t("mobile.computers.protected"), tone: "neutral" };
+		case "answered":
+			return { label: t("mobile.computers.reach.answering"), tone: "success" };
+	}
+}
+
+export type ComputerFactTone =
+	| "neutral"
+	| "success"
+	| "warning"
+	| "danger"
+	| "info";
+
+/** The token a fact's 6 pt dot is painted in: the tone's own ink, and the dim
+ *  ink for a neutral fact (a dot is never the only signal — the word is). */
+export const FACT_DOT_TOKEN: Record<
+	ComputerFactTone,
+	"success" | "warning" | "danger" | "info" | "ink-dim"
+> = {
+	neutral: "ink-dim",
+	success: "success",
+	warning: "warning",
+	danger: "danger",
+	info: "info",
+};
+
+/**
+ * What a computer row's reserved trailing slot shows (design D1). The slot is
+ * there in every state so line 1 never shifts: a spinner while this row mints,
+ * the accent check when it is the computer in use, and otherwise a chevron —
+ * the "this goes somewhere" mark the row was missing (TestFlight 883, Ola: "It
+ * was not obvious that this was clickable").
+ */
+export function computerRowTrailing(
+	state: RowState,
+): "spinner" | "check" | "chevron" {
+	if (state === "connecting") return "spinner";
+	if (state === "active") return "check";
+	return "chevron";
 }

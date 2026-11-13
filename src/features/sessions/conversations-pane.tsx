@@ -188,14 +188,12 @@ const RailCount = ({ count }: { count: number }) => {
 export const WorkspaceSidebarFooter = ({
 	onNavigate,
 	hasModeHeader = false,
-	style,
 }: {
 	onNavigate?: () => void;
 	/** True when a labelled `WorkspaceModeBar` already sits at the top of this
 	 *  panel (either the phone drawer with a `bridgeAdapter` or the docked
 	 *  split pane with one), so the compact footer icon is not rendered a second time. */
 	hasModeHeader?: boolean;
-	style?: { marginHorizontal: number };
 }) => {
 	const router = useRouter();
 	const capabilities = useListState((state) => state.capabilities);
@@ -276,7 +274,6 @@ export const WorkspaceSidebarFooter = ({
 		<>
 			<View
 				className="gap-2 border-t border-hairline px-2 pt-1 pb-2"
-				style={style}
 				testID={REGION.sidebarFooter}
 			>
 				{/* The workspace row sits ABOVE the destinations (design spec 2026-11-06
@@ -628,7 +625,11 @@ export const ConversationsPane = ({
 	const renderItem = useCallback(
 		({ item }: { item: Item }) =>
 			item.kind === "header" ? (
-				<SectionHeader label={item.label} testID={item.testID} />
+				/* The ROW owns the gutter (design D8): the list has no padding of its
+				 *  own, so a header carries the same 16 pt the rows' `px-4` does. */
+				<View className="px-4">
+					<SectionHeader label={item.label} testID={item.testID} />
+				</View>
 			) : (
 				<SessionRow
 					session={item.session}
@@ -672,14 +673,14 @@ export const ConversationsPane = ({
 	 *  is a bottom bar rather than a stack of large buttons ("a bunch of large
 	 *  buttons taking up space", the operator, build 453).
 	 *
-	 *  Short landscape still scrolls the footer WITH the list (`scrollFooter`); the
-	 *  negative margin only cancels the list's px-4 there. */
+	 *  Short landscape still scrolls the footer WITH the list (`scrollFooter`). It
+	 *  used to carry a -16 margin there to cancel the list's `px-4`; the list has
+	 *  no padding since design D8, so it needs none. */
 	const hasModeHeader = Boolean(onClose || dockedBridgeAdapter);
 	const footer = (
 		<WorkspaceSidebarFooter
 			onNavigate={onNavigate}
 			hasModeHeader={hasModeHeader}
-			style={scrollFooter ? { marginHorizontal: -16 } : undefined}
 		/>
 	);
 
@@ -734,7 +735,9 @@ export const ConversationsPane = ({
 					accessibilityState={state({ expanded: searching })}
 					onPress={() => setSearching((value) => !value)}
 					testID={CONTROL.sidebarSearch}
-					className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full bg-elevated px-3"
+					/* `sunken`, the mode track's ground: `elevated` on the `elevated` panel
+					 *  measured 1.00:1, so "Search" floated as bare text (design D10). */
+					className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full bg-sunken px-3"
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
 					<Search size={18} color={destinationInk} aria-hidden />
@@ -841,7 +844,13 @@ export const ConversationsPane = ({
 				 * shares this scroller: handled taps must reach its navigation buttons
 				 * instead of being consumed solely to dismiss that keyboard. */
 				keyboardShouldPersistTaps="handled"
-				contentContainerClassName="grow px-4"
+				/* No horizontal padding: each row's own `px-4` is the gutter, so its
+				 *  pressed and selected fills run to the panel edges (the iOS list
+				 *  idiom). With the list ALSO padded `px-4` the gutter was doubled —
+				 *  headers at x 17, titles at 57 and the time 33 pt from the trailing
+				 *  edge on Ola's 430 pt drawer (TestFlight 883, design D8); now 16, 40
+				 *  and 16. Headers, the stale line and the empty state pad themselves. */
+				contentContainerClassName="grow"
 				ListFooterComponent={scrollFooter ? footer : null}
 				data={items}
 				keyExtractor={itemKey}
@@ -850,7 +859,7 @@ export const ConversationsPane = ({
 				}
 				ListHeaderComponent={
 					staleMessage ? (
-						<View className="pt-2">
+						<View className="px-4 pt-2">
 							<Text
 								className="text-body-sm text-ink-dim"
 								numberOfLines={largeText ? 1 : undefined}
@@ -869,7 +878,7 @@ export const ConversationsPane = ({
 					 *  `justify-center` overflows BOTH directions, riding up over the
 					 *  header it sits under — the measured U-08 at 320 pt. At large text
 					 *  the wrapper stops growing and the content flows naturally. */
-					<View className={largeText ? "flex-none" : "flex-1"}>
+					<View className={largeText ? "flex-none px-4" : "flex-1 px-4"}>
 						<PaneEmpty
 							waiting={routed && waiting}
 							hasRoute={hasRoute}

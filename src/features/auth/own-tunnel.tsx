@@ -8,6 +8,7 @@ import {
 	passwordEntryExplanation,
 } from "@/features/auth/computer-switcher-view";
 import { useConnection } from "@/features/auth/connection-provider";
+import { leaveScreen } from "@/features/auth/leave-screen";
 import {
 	connectRefusalSentence,
 	saveRefusalSentence,
@@ -315,7 +316,7 @@ export default function OwnTunnel() {
 				headerLeading={
 					<BackButton
 						testID={CONTROL.ownTunnelBack}
-						onPress={() => router.back()}
+						onPress={() => leaveScreen(router)}
 					/>
 				}
 			>
@@ -359,7 +360,7 @@ export default function OwnTunnel() {
 			headerLeading={
 				<BackButton
 					testID={CONTROL.ownTunnelBack}
-					onPress={() => router.back()}
+					onPress={() => leaveScreen(router)}
 				/>
 			}
 		>

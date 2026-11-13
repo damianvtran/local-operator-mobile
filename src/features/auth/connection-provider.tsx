@@ -123,7 +123,7 @@ import {
 	customRouteAuthentication,
 	nativeCredentialRetirement,
 } from "./authentication-lifecycle";
-import { resumeComputerOnColdStart } from "./cold-start-computer";
+import { openUsualComputer } from "./cold-start-computer";
 import { type ConfigStreamHandle, startConfigStream } from "./config-stream";
 import { createRadientAccess } from "./radient-access";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
@@ -1488,6 +1488,23 @@ export const ConnectionProvider = ({
 			if (ownsUI() && connectionStore.getState().surface === "sign-in")
 				throw new Error();
 			requireCurrent();
+			/* Open the reader's computer by the cold start's own rule (the only one;
+			 *  else the last one used; else stay for the picker), BEFORE the state
+			 *  returns to idle: the screen that started the sign-in reads the route
+			 *  when it leaves (`signInPresentation`), so it lands on Home with a
+			 *  computer opening, not on Computers (TestFlight 883). A failed connect
+			 *  is the connection's own refusal on Home, exactly as on a cold start. */
+			await openUsualComputer({
+				signedIn: () => tokensRef.current !== null,
+				routed: () => connectionStore.getState().route !== null,
+				refused: () => connectionStore.getState().surface !== null,
+				ownTunnelPending: () => false,
+				computers: () => connectionStore.getState().computers,
+				readSaved: readSavedComputers,
+				select: (computer) => selectRef.current(computer),
+				isCancelled: () => !isCurrent(),
+			});
+			requireCurrent();
 			trace("signed-in");
 			setSignInState({ kind: "idle" });
 		} catch (error) {
@@ -2255,7 +2272,7 @@ export const ConnectionProvider = ({
 				 *  Home keeps its restoring splash — no flash of the picker. Every guard
 				 *  and branch is in `./cold-start-computer`. */
 				if (!interrupted())
-					await resumeComputerOnColdStart({
+					await openUsualComputer({
 						signedIn: () => tokensRef.current !== null,
 						routed: () => connectionStore.getState().route !== null,
 						refused: () => connectionStore.getState().surface !== null,

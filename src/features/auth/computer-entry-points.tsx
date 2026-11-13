@@ -389,11 +389,53 @@ export const drawerRowFit = (
 		if (drawerNameWidthDp(label, scale) + DRAWER_ROW_GAP + wordDp <= slotDp)
 			return { name: label, word };
 	}
+	/* A whole name that fits is painted whole; the margin is for a CUT only. */
+	if (drawerNameWidthDp(label, scale) <= slotDp)
+		return { name: label, word: null };
 	return {
-		name: middleFit(label, slotDp, scale, drawerNameWidthDp),
+		name: middleFit(
+			label,
+			slotDp * (1 - DRAWER_CUT_MARGIN),
+			scale,
+			drawerNameWidthDp,
+		),
 		word: null,
 	};
 };
+
+/**
+ * Headroom a CUT name keeps inside its slot (it matters on the web, which paints
+ * the cut string; native truncates the raw name itself, `drawerRowName`).
+ *
+ * Measured on TestFlight 883 (Ola, 430 pt, design D9): in the 281 pt slot the
+ * fit produced `ip-192-16…ca-central-1.compute.internal`, which the shared sans
+ * advance table puts at 254.2 pt. It painted as
+ * `ip-192-16…ca-central-1.compute.inte…`, i.e. the full string needed the slot
+ * plus the dropped "rnal" net of the second ellipsis (14.2 pt by the same
+ * table): about 295 pt, so the table under-counts this hyphen- and digit-heavy
+ * string by ~14 % (254.2 / 295.2 = 0.86). The design asked for 6 %, which this
+ * measurement shows would still paint two ellipses. Only a CUT name gets the
+ * margin; a whole name that fits is painted whole.
+ */
+const DRAWER_CUT_MARGIN = 0.14;
+
+/**
+ * What the drawer row's name `Text` paints, by platform (design D9).
+ *
+ * Native truncates in the middle itself, once and from the real glyph widths,
+ * so it is handed the RAW name with `ellipsizeMode="middle"`; `drawerRowFit`
+ * still decides there whether the health word fits. The web ignores
+ * `ellipsizeMode`, which is the only reason the string fit exists, so the web
+ * paints the pre-fitted name.
+ */
+export const drawerRowName = (
+	label: string,
+	fit: { name: string },
+	os: string,
+): { text: string; ellipsizeMode: "middle" | "tail" } =>
+	os === "web"
+		? { text: fit.name, ellipsizeMode: "tail" }
+		: { text: label, ellipsizeMode: "middle" };
 
 /**
  * The drawer footer's workspace row: `● Mac mini · Online ⇅`.
@@ -435,6 +477,7 @@ export function DrawerComputerRow({
 		effectiveScale,
 		geometry.fontSize,
 	);
+	const painted = drawerRowName(label, fit, Platform.OS);
 	return (
 		<Pressable
 			accessibilityRole={ROLE.button}
@@ -466,8 +509,9 @@ export function DrawerComputerRow({
 				<Text
 					className="min-w-0 flex-1 text-body-sm font-medium text-ink"
 					numberOfLines={1}
+					ellipsizeMode={painted.ellipsizeMode}
 				>
-					{fit.name}
+					{painted.text}
 				</Text>
 				{fit.word !== null ? (
 					<Text

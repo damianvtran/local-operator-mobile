@@ -1622,6 +1622,26 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * direction fix) merged with main e24de6cd (#241 show-more polish): both sides' src
 	 * carried, so neither parent's digest; re-derived last with --print. Source
 	 * identity only, NOT rendered U-08 evidence. */
+	/* fix/ola-feedback-1112 (#1): the Team Bridge provider no longer keys the
+	 * router on the account, and the own-tunnel guide's and sign-in's Back leave
+	 * for Home with no history (`leave-screen.ts`). Re-derived once with --print
+	 * over the staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* fix/ola-feedback-1112 (#2/#3): the Computers row and Team Bridge entry as
+	 * nav cards, computerDisplayName, the drawer row's one-line state + meta,
+	 * hanging indicator, row-owned gutter and single-ellipsis selector. Re-derived
+	 * once with --print over the staged tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* fix/ola-feedback-1112: an interactive Radient sign-in opens the reader's
+	 * computer by the cold start's rule. Re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* #245 (fix/ola-feedback-1112) merged with main d33c46af (#243): both
+	 * sides' src carried, so neither parent's digest; re-derived once with
+	 * --print over the merged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* #245 CI remediation: the Team Bridge destination's title/caption gap
+	 * uses the minimum 4 pt token instead of 2 pt (U-42). Re-derived with
+	 * --print after the final source edit; instrument and input pins unchanged.
+	 * Source identity only, NOT rendered U-08 evidence. */
 	/* --print re-pin for feat/background-push-clear: the background notification
 	 * task (module-scope `defineTask` imported first in app/_layout.tsx, the
 	 * signed-in scope registration in the Team Bridge provider) and the `body`
@@ -1636,7 +1656,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* PR #244 merged with main d33c46af (#243): both sides' src carried, so
 	 * neither parent's digest; re-derived once with --print over the merged
 	 * tree. Source identity only, NOT rendered U-08 evidence. */
-	src: "9c101abbc5c958a6078964317e59bdb7a3fb265d1de87a826fe8534a6f52bf23",
+	/* PR #245 convergence with #244 (14557e09): retain account-local state
+	 * isolation without remounting the router, background scope registration,
+	 * foreground restore retry and interactive sign-in auto-open. Re-derived
+	 * once with --print; source identity only, NOT new rendered evidence. */
+	src: "9fe6607266874bfb42eda6b2b06abd3747a56ff4d1e9622df2e35c87edc4fd2b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

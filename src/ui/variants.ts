@@ -28,7 +28,7 @@
  * defect rather than a build failure.
  */
 
-import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
+import { LARGE_TEXT_SCALE, lineBoxPt } from "@/ui/text-scale";
 import { TOUCH_TARGET } from "@/ui/tokens.gen";
 
 /** Join class names, dropping falsy entries. Local by design: `clsx` is not in
@@ -439,6 +439,32 @@ export const cardClasses = (options: { inList?: boolean } = {}): string =>
 		options.inList ? "p-3" : "p-4",
 	);
 
+/**
+ * A tappable card that navigates or selects: a computer on Computers, the Team
+ * Bridge entry. One family so the two read as the same kind of object, and both
+ * as something to press (TestFlight 883, Ola: "It was not obvious that this was
+ * clickable" — the row was text under a hairline and its pressed fill measured
+ * 1.01:1 against the canvas, while the only bordered shapes were inert chips).
+ *
+ * - `border-control`, not `hairline`: 3.42:1 on canvas clears the 3:1 non-text
+ *   floor; a hairline edge is 1.25:1 and does not read as a boundary.
+ * - Pressed is `sunken` (1.14:1 on `surface`, the largest step the palette has);
+ *   `row-hover` is 1.08:1 on surface and showed nothing under a finger.
+ * - Selected is `row-selected`, never alone: the caller adds the accent check.
+ * - 56 pt floor (`NAV_CARD_MIN_HEIGHT`), the switcher's two-line row height.
+ */
+export const navCardClasses = (state: ControlState = {}): string =>
+	cx(
+		"flex-row items-center gap-3 rounded-md border border-border-control px-3 py-3",
+		state.selected
+			? "bg-row-selected"
+			: state.pressed
+				? "bg-sunken"
+				: "bg-surface",
+	);
+
+export const NAV_CARD_MIN_HEIGHT = 56;
+
 /* -------------------------------------------------------------------------- */
 /* Badge and Chip                                                             */
 /* -------------------------------------------------------------------------- */
@@ -631,6 +657,59 @@ export const listRowClasses = (state: ControlState = {}): string =>
 				? "bg-row-hover"
 				: "bg-transparent",
 	);
+
+/**
+ * How a list row's second line is laid out (TestFlight 883, design D6).
+ *
+ * - `inline`: the state marks ("ended", "new", asks, counts) and the folder/model
+ *   meta share ONE line, marks first. This is the default; before it, any row with
+ *   a mark grew a third line (title / marks / cwd), 76.7 pt against 55.7 for a
+ *   two-line row, and four of Ola's seven pinned rows paid it.
+ * - `stacked`: above `LARGE_TEXT_SCALE` the marks wrap on a line of their own and
+ *   the meta goes below them (design round 2, D13/Q4-1: a mark pushed past the
+ *   pane edge is worse than a second line).
+ * - `meta`: no marks, so line 2 is the meta alone.
+ */
+export type ListRowLine2 = "inline" | "stacked" | "meta";
+export const listRowLine2 = (input: {
+	hasMarks: boolean;
+	wrapMarks: boolean;
+}): ListRowLine2 =>
+	!input.hasMarks ? "meta" : input.wrapMarks ? "stacked" : "inline";
+
+/** `listRowClasses`' `gap-3`, in pt: the space between the slot and the title. */
+export const LIST_ROW_GAP_PT = 12;
+/** The reserved indicator slot's width in pt (`LIST_ROW_INDICATOR_CLASS`). */
+export const LIST_ROW_SLOT_PT = 12;
+/** The streaming spinner's diameter on a plain row: the slot's own 12 pt, as the
+ *  relay SPA's 12 px spinner. Unset, iOS paints `ActivityIndicator size="small"`
+ *  at its intrinsic 20 pt, measured 19.7 pt overhanging the slot by 4 pt on each
+ *  side (TestFlight 883, design D7). */
+export const LIST_ROW_SPINNER_PT = 12;
+
+/**
+ * Where a row WITHOUT a picture paints its indicator (TestFlight 883, design
+ * D7): hung in the gutter beside the TITLE line, not centred on the whole row.
+ *
+ * The row is `items-center`, so a slot that is a flex child of the row centres on
+ * the row's full height. On Ola's drawer that put the unread dot 20.3 pt below
+ * the title on a three-line row and the Aida spinner 11.3 pt low on a two-line
+ * one. A slot pinned to the top of the row instead misses a one-line row, whose
+ * content is centred inside the 44 pt touch floor. So the indicator is placed
+ * inside the title's own line: positioned back across the reserved slot and the
+ * gap (`start`), one title line box tall (`height`, the `label` step at the
+ * row's scale), and centred within it. The reserved slot stays in the row as a
+ * spacer, so the title's x never moves.
+ */
+export const listRowHangingIndicator = (input: {
+	/** The reserved slot's width: 12, or the picture width a padded row reserves. */
+	slotPt?: number;
+	scale: number;
+}): { start: number; top: 0; height: number } => ({
+	start: -((input.slotPt ?? LIST_ROW_SLOT_PT) + LIST_ROW_GAP_PT),
+	top: 0,
+	height: lineBoxPt("label", input.scale),
+});
 
 /** The one reserved indicator slot: 12×12, whatever the state. */
 export const LIST_ROW_INDICATOR_CLASS = "h-3 w-3 items-center justify-center";

@@ -8,9 +8,10 @@ describe("screen-owned sign-in handoff", () => {
 				initiated: false,
 				restoredAccount: true,
 				busy: false,
+				routed: false,
 				state: { kind: "idle" },
 			}),
-		).toEqual({ navigate: false, state: { kind: "idle" } });
+		).toMatchObject({ navigate: false, state: { kind: "idle" } });
 	});
 	it("keeps progress visible through the idle provider render and router effect", () => {
 		for (const busy of [true, false]) {
@@ -18,6 +19,7 @@ describe("screen-owned sign-in handoff", () => {
 				initiated: true,
 				restoredAccount: true,
 				busy,
+				routed: false,
 				state: { kind: "idle" },
 			});
 			expect(view.state.kind).toBe("exchanging");
@@ -31,16 +33,34 @@ describe("screen-owned sign-in handoff", () => {
 				initiated: true,
 				restoredAccount: true,
 				busy: false,
+				routed: false,
 				state: failure,
 			}),
-		).toEqual({ navigate: false, state: failure });
+		).toMatchObject({ navigate: false, state: failure });
 		expect(
 			signInPresentation({
 				initiated: false,
 				restoredAccount: false,
 				busy: false,
+				routed: false,
 				state: { kind: "idle" },
 			}).state.kind,
 		).toBe("idle");
+	});
+	it("leaves for Home when the sign-in opened a computer, else for Computers (TestFlight 883)", () => {
+		const done = {
+			initiated: true,
+			restoredAccount: true,
+			busy: false,
+			state: { kind: "idle" },
+		} as const;
+		expect(signInPresentation({ ...done, routed: true })).toMatchObject({
+			navigate: true,
+			destination: "/",
+		});
+		expect(signInPresentation({ ...done, routed: false })).toMatchObject({
+			navigate: true,
+			destination: "/tunnels",
+		});
 	});
 });

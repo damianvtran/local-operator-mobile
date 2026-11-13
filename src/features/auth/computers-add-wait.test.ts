@@ -84,6 +84,13 @@ const stub = (name: string) => ({ [name]: () => null });
  * its chevron reaches `lucide-react-native` (native SVG, Flow source Node cannot
  * parse) — the same reason the other leaf primitives here are stubs. */
 vi.mock("@/ui/components/back-button", () => stub("BackButton"));
+/* The computer row's glyph, check and chevron: same reason (TestFlight 883, D1). */
+vi.mock("lucide-react-native", () => ({
+	Check: () => null,
+	ChevronLeft: () => null,
+	ChevronRight: () => null,
+	Laptop: () => null,
+}));
 vi.mock("@/ui/components/badge", () => stub("Badge"));
 vi.mock("@/ui/components/banner", () => stub("Banner"));
 vi.mock("@/ui/components/dialog", () => stub("Dialog"));
