@@ -24,6 +24,7 @@ vi.mock("react-native", async (importOriginal) => {
 		accessibilityState?: { busy?: boolean };
 		disabled?: boolean;
 		hitSlop?: { top?: number; bottom?: number };
+		style?: { minHeight?: number };
 	};
 	const host =
 		(tag: string) =>
@@ -36,6 +37,7 @@ vi.mock("react-native", async (importOriginal) => {
 			accessibilityState,
 			disabled,
 			hitSlop,
+			style,
 		}: HostProps) =>
 			createElement(
 				tag,
@@ -47,6 +49,10 @@ vi.mock("react-native", async (importOriginal) => {
 					"data-busy": accessibilityState?.busy ? "true" : undefined,
 					"data-disabled": disabled ? "true" : undefined,
 					"data-hitslop": hitSlop ? JSON.stringify(hitSlop) : undefined,
+					"data-min-height":
+						style?.minHeight === undefined
+							? undefined
+							: String(style.minHeight),
 				},
 				children,
 			);
@@ -78,14 +84,23 @@ const render = (loading: boolean, retry: boolean, onPress = () => {}) =>
 describe("the older-history edge is quiet", () => {
 	/* Agent review round 1, M2: when the first window does not fill the screen
 	 *  auto-load cannot fire, and the 24 pt hairline is the only way in. */
-	it("at rest: the hairline's touch area reaches the floor; the retry needs no slop", () => {
-		const slop = /data-hitslop="([^"]*)"/.exec(render(false, false));
-		expect(slop).not.toBeNull();
-		const { top, bottom } = JSON.parse(
-			(slop?.[1] ?? "{}").replaceAll("&quot;", '"'),
-		) as { top: number; bottom: number };
-		expect(24 + top + bottom).toBeGreaterThanOrEqual(TOUCH_FLOOR);
-		expect(render(false, true)).not.toContain("data-hitslop");
+	/* CI web audit, run 43489920862: 218 U-01 FAILs, `button 64x24`. The
+	 *  earlier cut reached the floor through `hitSlop`, which react-native-web
+	 *  drops on `Pressable`, so the floor must be the BOX itself, in every state. */
+	it("the box itself is at least the touch floor tall in every state, with no hitSlop", () => {
+		for (const [loading, retry] of [
+			[false, false],
+			[true, false],
+			[false, true],
+		] as const) {
+			const markup = render(loading, retry);
+			const minHeight = Number(/data-min-height="([^"]*)"/.exec(markup)?.[1]);
+			expect(minHeight).toBeGreaterThanOrEqual(TOUCH_FLOOR);
+			expect(minHeight).toBeGreaterThanOrEqual(44);
+			expect(markup).not.toContain("data-hitslop");
+			// No fixed 24 pt height class may cap the box under the floor.
+			expect(/data-class="([^"]*)"/.exec(markup)?.[1]).not.toMatch(/\bh-6\b/);
+		}
 	});
 
 	it("at rest: no visible words and no border — a hairline, still an accessible button", () => {
@@ -99,7 +114,7 @@ describe("the older-history edge is quiet", () => {
 		expect(markup).not.toMatch(/\bborder\b/);
 	});
 
-	it("loading: a small spinner in the SAME 24 pt box, marked busy, never disabled", () => {
+	it("loading: a small spinner in the SAME box as the hairline, marked busy, never disabled", () => {
 		const idle = render(false, false);
 		const loading = render(true, false);
 		expect(loading).toContain("data-spinner");
@@ -107,7 +122,9 @@ describe("the older-history edge is quiet", () => {
 		expect(loading).not.toContain("data-disabled");
 		const box = (markup: string) => /data-class="([^"]*)"/.exec(markup)?.[1];
 		expect(box(loading)).toBe(box(idle));
-		expect(box(idle)).toContain("h-6");
+		const minHeight = (markup: string) =>
+			/data-min-height="([^"]*)"/.exec(markup)?.[1];
+		expect(minHeight(loading)).toBe(minHeight(idle));
 	});
 
 	it("failed: a small quiet text retry, the one visible tap target", () => {

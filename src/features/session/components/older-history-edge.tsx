@@ -34,16 +34,23 @@ import { cx } from "@/ui/variants";
  * out — so a reader who does not scroll by offset still has the action. Presses
  * while loading are ignored by the same guard `Button` uses.
  *
- * IDLE AND LOADING ARE THE SAME HEIGHT (24 pt), and that is load-bearing: a row
- * that changed height as a page started would move every row below it, and on
- * the relay that very shift re-armed the top trigger (23 of 27 transitions in
- * one open were a 1 px oscillation; 13 pages pulled unseen).
+ * IDLE AND LOADING ARE THE SAME HEIGHT, and that is load-bearing: a row that
+ * changed height as a page started would move every row below it, and on the
+ * relay that very shift re-armed the top trigger (23 of 27 transitions in one
+ * open were a 1 px oscillation; 13 pages pulled unseen).
+ *
+ * THE BOX IS THE TOUCH FLOOR IN EVERY STATE, as real geometry. An earlier cut
+ * kept a 24 pt box and reached the floor through `hitSlop`; react-native-web
+ * implements no `hitSlop` on `Pressable`, so the DOM button stayed 64x24 and
+ * the web audit's U-01 floor FAILed on S5 Session in every state, theme and
+ * scale (run 43489920862, 218 rows). The hairline, the small spinner and the
+ * "Try again" words keep their own sizes and sit centred in the taller box, so
+ * the only visual change is padding above and below. One `minHeight` shared by
+ * all three states also keeps idle and loading the same height (both contents
+ * are well under the floor), which is the invariant above.
  */
-/** (TOUCH_FLOOR - the idle box's 24 pt) / 2, above and below. */
-export const IDLE_EDGE_HIT_SLOP = {
-	top: (TOUCH_FLOOR - 24) / 2,
-	bottom: (TOUCH_FLOOR - 24) / 2,
-} as const;
+/** The edge's box: always at least the touch floor tall, in every state. */
+export const OLDER_EDGE_BOX_STYLE = { minHeight: TOUCH_FLOOR } as const;
 
 export const OlderHistoryEdge = ({
 	loading,
@@ -78,14 +85,14 @@ export const OlderHistoryEdge = ({
 			testID={testID}
 			className={cx(
 				"flex-row items-center justify-center self-center",
-				visibleRetry ? "px-3" : "h-6 w-16",
+				/* 64 pt wide at rest: wider than the floor, still a short centred
+				 *  mark rather than a full-width bar. */
+				visibleRetry ? "px-3" : "w-16",
 			)}
-			style={visibleRetry ? { minHeight: TOUCH_FLOOR } : undefined}
-			/* The idle hairline's box is 24 pt tall; when the first window does
-			 *  not fill the screen, auto-load cannot fire and this is the only way
-			 *  in, so its TOUCH area reaches the floor without moving the layout
-			 *  (agent review round 1, M2). */
-			hitSlop={visibleRetry ? undefined : IDLE_EDGE_HIT_SLOP}
+			/* When the first window does not fill the screen, auto-load cannot
+			 *  fire and the idle hairline is the only way in (agent review round 1,
+			 *  M2), so its BOX — not a slop the web build drops — meets the floor. */
+			style={OLDER_EDGE_BOX_STYLE}
 		>
 			{loading ? (
 				<ActivityIndicator size="small" color={dim} />
