@@ -90,7 +90,7 @@ const NAMESPACES = [
 		name: "mobile.common",
 		messages: common,
 		context: commonContext,
-		expected: 10, // +4: the not-found screen (app/ scan)
+		expected: 13, // M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan)
 	},
 	{
 		name: "mobile.composer_input",
@@ -149,7 +149,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 111, // M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 138, // M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.notifications",
@@ -215,7 +215,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 59, // +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+		expected: 70, // M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
 		/* The conversations drawer's View options (TestFlight 906): the desktop's
@@ -339,12 +339,18 @@ describe("the English catalogues", () => {
 		/* M3 slice S2a (English-first): +36 mobile.computers (titles, discovery
 		 * banners, the "Your own tunnel" screen) + 1 mobile.signin (loopback
 		 * unavailable detail) = 37: 734 + 37 = 771, counted over the en JSON. */
+		/* M3 slice S2b-1 (English-first): +27 mobile.computers (own-tunnel
+		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
+		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
+		 * counted over the en JSON. */
 		/* TestFlight 906 drawer View options: + the 21 `mobile.sidebar.*` keys
 		 * (order, grouping, clock, ended, sections, link, heading): 771 + 21 = 792,
 		 * the generator's own count. */
 		/* PR #255 review round 1: + "N sections hidden" and the emptied-by-view
 		 * state's headline, line and action (D2, M1): 792 + 4 = 796. */
-		expect(total).toBe(796);
+		/* Merge of origin/main (#254, d5831603) into #255: 771 + 41 (S2b-1)
+		 * + 25 (mobile.sidebar: 21 + 4) = 837. */
+		expect(total).toBe(837);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

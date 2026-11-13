@@ -1681,6 +1681,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * evidence. */
 	/* Merge of origin/main (#251, fb224cfe) into #252: both comments kept,
 	 * re-derived once with --print over the merged tree. */
+	/* M3 S2b-1 (feat/i18n-m3-s2b1): the own-tunnel command, verdict and
+	 * Settings-section keys (English-first, then the seven audited translations;
+	 * 812 keys in the regenerated `catalogue.gen.ts`), `Alert.bodyDir` with the
+	 * ur `{detail}`-initial offline-verdict spreads and their tests. Re-derived last with --print over the committed tree (b98f5395);
+	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
+	 * re-derived once with --print over the merged tree. */
 	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
 	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
 	 * with --print over the committed tree. Source identity only, NOT rendered
@@ -1688,7 +1695,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
 	 * view state, customised trigger fill): re-derived once with --print over the
 	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
-	src: "3e096fa06f963efc7a82e9dc3ee11291859868b74b26a046bf00c52d530e34b9",
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "4ab0f5e7a81fb20de3170e11e4b31047806a3ec1ca9a9e83bd82b437aab0d84e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

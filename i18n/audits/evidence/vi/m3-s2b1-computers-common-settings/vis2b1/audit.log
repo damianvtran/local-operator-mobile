@@ -1,0 +1,70 @@
+audit.log — vi m3s2b1, execution log (not notes). 2026-11-13T08:05:03-05:00
+$ shasum -a 256 brief-s2b1-v2.json vi/draft-vi.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+cfaa6ab8c3ea4077bdd161dab0d3e093c16954034218edabc51a153e3490e27c  vi/draft-vi.json
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s2a rev-parse --short HEAD
+254e6fba
+$ node --max-old-space-size=256 --experimental-strip-types --no-warnings <auditor scratchpad>/vi-mech.mts   (first attempt errored: formatMessage arg order in my script; fixed and rerun, exit 0)
+keys brief 41 draft 41 order-equal true missing [] extra []
+OK   mobile.computers.own_tunnel.install_label []  
+OK   mobile.computers.own_tunnel.foreground_label []  
+OK   mobile.computers.own_tunnel.check_label []  
+OK   mobile.computers.own_tunnel.rotate_label []  
+OK   mobile.computers.own_tunnel.install_note []  
+OK   mobile.computers.own_tunnel.foreground_note [["address","text"]]  
+OK   mobile.computers.own_tunnel.check_note []  
+OK   mobile.computers.own_tunnel.rotate_note []  
+OK   mobile.computers.own_tunnel.cloudflare_note [["scheme","text"]]  
+OK   mobile.computers.own_tunnel.ngrok_note [["scheme","text"]]  
+OK   mobile.computers.own_tunnel.tunnel_rule [["address","text"]]  
+OK   mobile.computers.own_tunnel.verdict_sessions [["sessions","plural"]]  
+OK   mobile.computers.own_tunnel.verdict_password []  
+OK   mobile.computers.own_tunnel.verdict_forbidden [["address","text"]]  
+OK   mobile.computers.own_tunnel.verdict_offline_detail [["command","text"],["detail","text"]]  
+OK   mobile.computers.own_tunnel.verdict_offline [["command","text"]]  
+OK   mobile.computers.own_tunnel.verdict_tls [["scheme","text"]]  
+OK   mobile.computers.own_tunnel.verdict_host []  
+OK   mobile.computers.own_tunnel.verdict_unreachable []  
+OK   mobile.computers.own_tunnel.verdict_timeout [["seconds","plural"]]  
+OK   mobile.computers.own_tunnel.verdict_local_network_ios [["action","text"]]  
+OK   mobile.computers.own_tunnel.verdict_local_network [["action","text"]]  
+OK   mobile.computers.own_tunnel.verdict_refused []  
+OK   mobile.computers.own_tunnel.remedy [["command","text"]]  
+OK   mobile.computers.own_tunnel.password_slot_other []  
+OK   mobile.computers.own_tunnel.password_slot_empty []  
+OK   mobile.computers.own_tunnel.password_slot_this []  
+OK   mobile.common.copy []  
+OK   mobile.common.copied []  
+OK   mobile.common.copy_command_hint [["label","text"]]  
+OK   mobile.settings.own_tunnel.not_saved []  
+OK   mobile.settings.own_tunnel.kept_secure []  
+OK   mobile.settings.own_tunnel.edit []  
+OK   mobile.settings.own_tunnel.test_again []  
+OK   mobile.settings.own_tunnel.remove []  
+OK   mobile.settings.own_tunnel.password_placeholder []  
+OK   mobile.settings.own_tunnel.runtime_title []  
+OK   mobile.settings.own_tunnel.runtime_body []  
+OK   mobile.settings.own_tunnel.before_saving []  
+OK   mobile.settings.own_tunnel.remove_title []  
+OK   mobile.settings.own_tunnel.remove_body []  
+vi categories 0:other 1:other 2:other 5:other 10:other 21:other 1000000:other 1.5:other
+verdict_sessions 0 => Đã kết nối — bạn có thể thấy 0 phiên.
+verdict_sessions 1 => Đã kết nối — bạn có thể thấy 1 phiên.
+verdict_sessions 2 => Đã kết nối — bạn có thể thấy 2 phiên.
+verdict_sessions 10 => Đã kết nối — bạn có thể thấy 10 phiên.
+verdict_timeout 0 => Địa chỉ đó không phản hồi trong vòng 10 giây. Hãy kiểm tra xem đường hầm có đang chạy và máy tính có đang thức không.
+verdict_timeout 1 => Địa chỉ đó không phản hồi trong vòng 1 giây. Hãy kiểm tra xem đường hầm có đang chạy và máy tính có đang thức không.
+verdict_timeout 2 => Địa chỉ đó không phản hồi trong vòng 2 giây. Hãy kiểm tra xem đường hầm có đang chạy và máy tính có đang thức không.
+verdict_timeout 10 => Địa chỉ đó không phản hồi trong vòng 10 giây. Hãy kiểm tra xem đường hầm có đang chạy và máy tính có đang thức không.
+verdict_offline_detail 0 => Tunnel temporarily unavailable. Trên máy tính đó: lop mobile status
+verdict_local_network 0 => Không có phản hồi tại địa chỉ đó trên mạng này. Hãy kiểm tra xem máy tính có đang thức và đang chạy máy chủ chuyển tiếp không, rồi nhấn “Kiểm tra kết nối”.
+foreground_note 0 => Cho mọi nền tảng khác, hoặc nếu bạn muốn theo dõi nhật ký. Phục vụ tại 127.0.0.1:4098, chỉ trên chính máy này (loopback).
+hint => Sao chép lệnh “Cài đặt trên máy tính”
+FAILS 0
+
+$ python cmap/hmtx parse (stdlib struct) design/fonts/*.ttf
+Figtree-Medium.ttf 58 non-ASCII chars, missing 36: ũưạảấầẩậẳặẽếềểễệỉịọỏốồổỗộớờởợụủứừửữự
+Figtree-Regular.ttf missing 36 (same)
+JetBrainsMono-Regular.ttf missing 0 (uppercase headings also 0 missing)
+Figtree-Medium advance @12pt: Copy 29.2, Copied 39.3, Sao chép 50.4, Đã sao chép 66.8 (token meta=12, sm paddingX=12)
+$ grep -c '[redacted]' brief, draft, notes -> 0, 0, 0 (on disk). One display-side harness mask appeared in the replayed echo of my own script line; that was not input data.

@@ -1,0 +1,530 @@
+{
+ "schema": 1,
+ "audit_id": "frs2b1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "fr",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.settings",
+  "mobile.common"
+ ],
+ "namespace": "mobile.computers+mobile.settings+mobile.common (M3 slice S2b-1, 41 keys)",
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "target": 41
+ },
+ "keys": 41,
+ "source_commit": "ce336e4af3dd72428d63c41dee4ed0c4baa28779",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "f4053bd15cda",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "id": "translator job d676bc7c4b78",
+  "model_per_notes": "anthropic/claude-opus-5-5"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1.json",
+   "sha256": "d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df",
+   "match": true
+  },
+  "draft_fr": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/fr/draft-fr.json",
+   "sha256": "44cf58ab8de006c34a751cba77da5b2b98d3647874112418315dd59d333b6aaa",
+   "match": true
+  },
+  "notes_fr": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/fr/notes-fr.md",
+   "sha256": "9e7cf00ce7a791423480e66765a70e4d678267d5876ec870a244151d4a564e07"
+  },
+  "glossary_fr_mobile.computers": {
+   "path": "ffbda180:src/i18n/catalogues/fr/mobile.computers.json",
+   "sha256": "9f10efecaa6935d6611c2b16753cee4e9d22b10f221349425d52cac4e5436e76"
+  },
+  "glossary_fr_mobile.settings": {
+   "path": "ffbda180:src/i18n/catalogues/fr/mobile.settings.json",
+   "sha256": "c21961f4c2f71587dfdfc6794c0a2c2429963e7fcfed3272d3686601aa247eff"
+  },
+  "glossary_fr_mobile.common": {
+   "path": "ffbda180:src/i18n/catalogues/fr/mobile.common.json",
+   "sha256": "00bd14e6b88253f3d246777a12a30fef614b2422439932508c82fd7d823b5c5c"
+  },
+  "style_guide_fr": {
+   "path": "~/local-operator/i18n/style-guides/fr.md",
+   "sha256": "ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226"
+  },
+  "messages.ts": {
+   "path": "ce336e4a:src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  }
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "brief": 0,
+   "draft": 0,
+   "repo_files_read": 0,
+   "note": "no [redacted] marker encountered"
+  }
+ },
+ "mechanical": {
+  "parser": "src/i18n/messages.ts@ce336e4a parseMessage/formatMessage/pluralCategory, node --experimental-strip-types, heap 256 MB",
+  "parse_failures": 0,
+  "placeholder_mismatches": 0,
+  "plural": "verdict_sessions, verdict_timeout: one/many/other, # in all arms, rendered OK",
+  "typography_issues": 0,
+  "bidi_controls": 0,
+  "keys_added_or_dropped": 0
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "verdict": "fail",
+  "unresolved_blocker_major_count": 1,
+  "severity_counts": {
+   "BLOCKER": 0,
+   "MAJOR": 1,
+   "MINOR": 4,
+   "NIT": 3
+  },
+  "finding_ids": [
+   "F-01",
+   "F-02",
+   "F-03",
+   "F-04",
+   "F-05",
+   "N-01",
+   "N-02",
+   "N-03"
+  ]
+ },
+ "findings": [
+  {
+   "id": "F-01",
+   "severity": "MAJOR",
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "current": "Ce tunnel a refusé l’app. Si vous avez placé une règle d’accès ou une page de connexion devant lui, laissez passer l’app ; le relais refuse lui aussi les requêtes qui ne viennent pas du tunnel : assurez-vous donc que le tunnel redirige directement vers {address}, et non vers un tableau de bord ou une autre app.",
+   "problem": "« les requêtes qui ne viennent pas du tunnel » asserts a mechanism the relay does not have. The verdict maps the relay's `origin-refused` refusal (tunnel-verdict.ts:241): it refuses requests from an origin it does not trust. The fr text tells the reader the relay authenticates the tunnel, misleading the diagnosis.",
+   "suggested": "Ce tunnel a refusé l’app. Si vous avez placé une règle d’accès ou une page de connexion devant lui, laissez passer l’app ; le relais refuse aussi les requêtes dont il ne reconnaît pas l’origine : assurez-vous donc que le tunnel redirige directement vers {address}, et non vers un tableau de bord ou une autre app."
+  },
+  {
+   "id": "F-02",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.foreground_note",
+   "current": "Toute autre plateforme, ou pour suivre le journal. Le relais écoute sur {address}, accessible depuis cet ordinateur seulement.",
+   "problem": "« Toute autre plateforme, ou pour suivre le journal » pairs a bare noun phrase with a purpose clause (reads broken) and drops the preference in 'would rather'.",
+   "suggested": "Pour toute autre plateforme, ou si vous préférez suivre le journal. Le relais écoute sur {address}, accessible depuis cet ordinateur seulement."
+  },
+  {
+   "id": "F-03",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.rotate_note",
+   "current": "La commande le demande de façon interactive : il n’apparaît jamais dans l’historique du shell ni dans la liste des processus. C’est le mot de passe que l’app demande ci-dessous.",
+   "problem": "« le » / « il » have no antecedent in the sentence (the password is only named in the heading above); 'so' causality and 'you' are lost.",
+   "suggested": "La commande vous le demande de façon interactive : la valeur n’apparaît donc jamais dans l’historique du shell ni dans la liste des processus. C’est le mot de passe que l’app demande ci-dessous."
+  },
+  {
+   "id": "F-04",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.verdict_tls",
+   "current": "Le certificat de ce tunnel a été refusé. Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez le certificat autosigné de celui que vous exploitez — l’app ne contournera pas la vérification.",
+   "problem": "« remplacez le certificat autosigné de celui que vous exploitez » presupposes the reader's tunnel IS self-signed; English 'replace a self-signed certificate' is conditional (rejection may be a hostname mismatch).",
+   "suggested": "Le certificat de ce tunnel a été refusé. Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné sur celui que vous exploitez — l’app ne contournera pas la vérification."
+  },
+  {
+   "id": "F-05",
+   "severity": "MINOR",
+   "key": "mobile.settings.own_tunnel.before_saving",
+   "current": "Testez l’adresse avant de l’enregistrer : un tunnel enregistré qui n’a jamais répondu laisse la liste vide, sans rien pour expliquer pourquoi.",
+   "problem": "« sans rien pour expliquer pourquoi » is a calque of 'with nothing to explain why'.",
+   "suggested": "Testez l’adresse avant de l’enregistrer : un tunnel enregistré qui n’a jamais répondu laisse la liste vide, sans aucune explication."
+  },
+  {
+   "id": "N-01",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.rotate_label",
+   "current": "Créer ou changer le mot de passe",
+   "problem": "« Créer » is acceptable for 'Set' (first-time set); « Définir » is the conventional fr term (Apple: « Définir un mot de passe ») and covers re-setting. +2 chars.",
+   "suggested": "Définir ou changer le mot de passe"
+  },
+  {
+   "id": "N-02",
+   "severity": "NIT",
+   "key": "mobile.settings.own_tunnel.test_again",
+   "current": "Retester",
+   "problem": "« Retester » is understood but colloquial; flex-wrap row of small buttons has room for the standard form.",
+   "suggested": "Tester à nouveau"
+  },
+  {
+   "id": "N-03",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.verdict_local_network",
+   "current": "Rien n’a répondu à cette adresse sur ce réseau. Vérifiez que l’ordinateur n’est pas en veille et qu’il exécute le relais, puis appuyez sur « {action} ».",
+   "problem": "« Rien n’a répondu à cette adresse » is slightly literal; same in verdict_local_network_ios.",
+   "suggested": "Aucune réponse à cette adresse sur ce réseau. (same opening in verdict_local_network_ios)"
+  }
+ ],
+ "translator_flag_rulings": {
+  "mobile.computers.own_tunnel.rotate_label": "ACCEPT « Créer » (correct meaning, natural with « ou changer »); NIT N-01 prefers « Définir ».",
+  "mobile.settings.own_tunnel.runtime_title": "ACCEPT « l’ » — masculine, matches « tunnel » (section « Votre propre tunnel »), mirrors the English 'it'; runtime kept English per fr style guide (Wave-1 addition).",
+  "mobile.computers.own_tunnel.install_note": "ACCEPT « démon » — settled fr term (Apple fr docs: « démons et agents »); « trousseau » is Apple's fr keychain term.",
+  "mobile.computers.own_tunnel.verdict_local_network": "ACCEPT « {action} » quoting — fr convention for naming a UI control; {action} is « Tester la connexion » (tunnel-verdict.ts:177/191). Same for _ios."
+ },
+ "source_notes": [
+  {
+   "id": "S-01",
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "kind": "SOURCE",
+   "note": "English 'the relay itself also refuses requests it did not come from' is garbled pre-existing source (tunnel-verdict.ts, since d1fd63d3, 2026-10-02). Intended: the relay refuses requests from an origin it does not trust (`origin-refused`). Suggested en: 'the relay itself also refuses requests from an origin it does not trust'. Not a translation fault."
+  }
+ ],
+ "per_key_results": [
+  {
+   "key": "mobile.computers.own_tunnel.install_label",
+   "role": "heading",
+   "en_chars": 23,
+   "fr_chars": 26,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_label",
+   "role": "heading",
+   "en_chars": 27,
+   "fr_chars": 29,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_label",
+   "role": "heading",
+   "en_chars": 8,
+   "fr_chars": 8,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_label",
+   "role": "heading",
+   "en_chars": 26,
+   "fr_chars": 32,
+   "mechanical": "pass",
+   "result": "finding N-01",
+   "ruling": "ACCEPT « Créer » (correct meaning, natural with « ou changer »); NIT N-01 prefers « Définir »."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.install_note",
+   "role": "help",
+   "en_chars": 97,
+   "fr_chars": 103,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "ACCEPT « démon » — settled fr term (Apple fr docs: « démons et agents »); « trousseau » is Apple's fr keychain term."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_note",
+   "role": "help",
+   "en_chars": 95,
+   "fr_chars": 126,
+   "mechanical": "pass",
+   "result": "finding F-02",
+   "note": "loopback correctly rendered as same-machine only."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_note",
+   "role": "help",
+   "en_chars": 72,
+   "fr_chars": 97,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_note",
+   "role": "help",
+   "en_chars": 130,
+   "fr_chars": 177,
+   "mechanical": "pass",
+   "result": "finding F-03"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.cloudflare_note",
+   "role": "help",
+   "en_chars": 88,
+   "fr_chars": 101,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.ngrok_note",
+   "role": "help",
+   "en_chars": 66,
+   "fr_chars": 82,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.tunnel_rule",
+   "role": "help",
+   "en_chars": 89,
+   "fr_chars": 114,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_sessions",
+   "role": "help",
+   "en_chars": 79,
+   "fr_chars": 113,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_password",
+   "role": "help",
+   "en_chars": 73,
+   "fr_chars": 89,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "role": "help",
+   "en_chars": 270,
+   "fr_chars": 312,
+   "mechanical": "pass",
+   "result": "finding F-01"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+   "role": "help",
+   "en_chars": 37,
+   "fr_chars": 40,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline",
+   "role": "help",
+   "en_chars": 80,
+   "fr_chars": 84,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_tls",
+   "role": "help",
+   "en_chars": 230,
+   "fr_chars": 271,
+   "mechanical": "pass",
+   "result": "finding F-04"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_host",
+   "role": "help",
+   "en_chars": 111,
+   "fr_chars": 122,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_unreachable",
+   "role": "help",
+   "en_chars": 124,
+   "fr_chars": 141,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_timeout",
+   "role": "help",
+   "en_chars": 142,
+   "fr_chars": 183,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "role": "help",
+   "en_chars": 251,
+   "fr_chars": 323,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "ACCEPT « {action} » quoting — fr convention for naming a UI control; {action} is « Tester la connexion » (tunnel-verdict.ts:177/191). Same for _ios.",
+   "note": "Settings path matches iOS fr labels; \"may\" kept as « peut-être »; N-03 applies to opening."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network",
+   "role": "help",
+   "en_chars": 119,
+   "fr_chars": 152,
+   "mechanical": "pass",
+   "result": "finding N-03",
+   "ruling": "ACCEPT « {action} » quoting — fr convention for naming a UI control; {action} is « Tester la connexion » (tunnel-verdict.ts:177/191). Same for _ios."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_refused",
+   "role": "help",
+   "en_chars": 61,
+   "fr_chars": 74,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.remedy",
+   "role": "help",
+   "en_chars": 27,
+   "fr_chars": 30,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_other",
+   "role": "help",
+   "en_chars": 150,
+   "fr_chars": 203,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_empty",
+   "role": "help",
+   "en_chars": 91,
+   "fr_chars": 121,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_this",
+   "role": "help",
+   "en_chars": 74,
+   "fr_chars": 100,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.common.copy",
+   "role": "button",
+   "en_chars": 4,
+   "fr_chars": 6,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.common.copied",
+   "role": "status",
+   "en_chars": 6,
+   "fr_chars": 5,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.common.copy_command_hint",
+   "role": "help",
+   "en_chars": 26,
+   "fr_chars": 29,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.not_saved",
+   "role": "help",
+   "en_chars": 65,
+   "fr_chars": 80,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.kept_secure",
+   "role": "help",
+   "en_chars": 67,
+   "fr_chars": 86,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.edit",
+   "role": "button",
+   "en_chars": 4,
+   "fr_chars": 8,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.test_again",
+   "role": "button",
+   "en_chars": 10,
+   "fr_chars": 8,
+   "mechanical": "pass",
+   "result": "finding N-02"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove",
+   "role": "button",
+   "en_chars": 6,
+   "fr_chars": 7,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.password_placeholder",
+   "role": "help",
+   "en_chars": 39,
+   "fr_chars": 46,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_title",
+   "role": "heading",
+   "en_chars": 28,
+   "fr_chars": 36,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "ACCEPT « l’ » — masculine, matches « tunnel » (section « Votre propre tunnel »), mirrors the English 'it'; runtime kept English per fr style guide (Wave-1 addition)."
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "role": "help",
+   "en_chars": 134,
+   "fr_chars": 179,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.before_saving",
+   "role": "help",
+   "en_chars": 124,
+   "fr_chars": 142,
+   "mechanical": "pass",
+   "result": "finding F-05"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_title",
+   "role": "heading",
+   "en_chars": 19,
+   "fr_chars": 19,
+   "mechanical": "pass",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_body",
+   "role": "help",
+   "en_chars": 125,
+   "fr_chars": 148,
+   "mechanical": "pass",
+   "result": "pass"
+  }
+ ],
+ "audit_notes_not_execution_log": "report.md is the audit report; audit.log is the execution log of commands actually run.",
+ "claims_not_made": "No rendered-frame measurement, no MT/translation service, no ledger command run; widths are estimates from call-site layout.",
+ "artifacts": {
+  "report.md": "5054bdc31162e02d05407fe37da26cc2841ccad86a66a7fdcc121fa1961fd1b4",
+  "audit.log": "cceaccf7fbb6bed70d3a6469ae48d53e1c1f3c018004b659309adf9747cf353f"
+ }
+}

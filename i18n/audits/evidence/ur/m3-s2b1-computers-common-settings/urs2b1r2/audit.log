@@ -1,0 +1,34 @@
+# audit.log — urS2b1r2 — session d01093cb1830 — 2026-11-13 (execution log; commands actually run)
+$ shasum -a 256 brief-s2b1-v2.json ur/draft-ur.json ur/draft-ur-v2.json   (cwd m3s2b1)
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+637ae2cae2fe99c23638222ae42946dc05caec25dfcda2829ccccd7256db4a34  ur/draft-ur.json
+9fa9f1df0ef4b612fdd71f30b486c7348e63ab2fb17fe1b90a6bab8838a73d07  ur/draft-ur-v2.json
+$ python3 diff v1/v2 (json.load; key order; per-key !=; bidi-control count; → / کی کی scan; latin-initial)
+41 41 order_equal=True order_eq_brief=True
+changed=['mobile.computers.own_tunnel.install_note', 'mobile.computers.own_tunnel.verdict_tls', 'mobile.computers.own_tunnel.verdict_local_network_ios', 'mobile.computers.own_tunnel.verdict_refused', 'mobile.common.copy_command_hint', 'mobile.settings.own_tunnel.runtime_body']
+ctrl 0 ; arrows → [] ; kiki [] ; latin-initial: mobile.computers.own_tunnel.verdict_offline_detail
+$ git show 254e6fba:src/i18n/messages.ts > <own scratchpad>/ur-r2/messages.ts  (sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0)
+$ node --max-old-space-size=256 --experimental-strip-types check.ts   (node v24.22.1; first attempt failed on a script bug [p.arguments undefined], fixed to p.params)
+CHANGED mobile.computers.own_tunnel.install_note args [] -> یہ کمانڈ macOS پر نگرانی میں چلنے والا ڈیمن انسٹال کرتی ہے جو رکنے پر خود دوبارہ شروع ہو جاتا ہے، ریلے کا پاس ورڈ بناتی ہے اور اسے Keychain میں رکھتی ہے۔
+CHANGED mobile.computers.own_tunnel.verdict_tls args [["scheme","text"]] -> اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔ ٹنل کا دکھایا ہوا https:// URL استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا اپنی چلائی ہوئی ٹنل کا خود دستخط شدہ سرٹیفکیٹ بدل دیں — ایپ یہ جانچ نہیں چھوڑے گی۔
+CHANGED mobile.computers.own_tunnel.verdict_local_network_ios args [["action","text"]] -> اس نیٹ ورک پر اس پتے سے کوئی جواب نہیں آیا۔ جانچیں کہ کمپیوٹر جاگ رہا ہے اور ریلے چلا رہا ہے۔ اگر دونوں باتیں درست ہیں تو ممکن ہے وجہ مقامی نیٹ ورک کی اجازت ہو: ترتیبات ← رازداری اور سیکیورٹی ← مقامی نیٹ ورک میں Local Operator کو اجازت دیں، پھر “دوبارہ جانچیں” پر ٹیپ کریں۔
+CHANGED mobile.computers.own_tunnel.verdict_refused args [] -> اس پتے نے جواب تو دیا، لیکن اس طرح نہیں جسے یہ ایپ سمجھ سکے۔
+CHANGED mobile.common.copy_command_hint args [["label","text"]] -> یہ “Cloudflare” والی کمانڈ کاپی کرتا ہے
+CHANGED mobile.settings.own_tunnel.runtime_body args [] -> اس بلڈ میں کوئی محفوظ اسٹوریج نہیں، اس لیے ٹنل صرف ایپ کے اس بار چلنے تک رکھی جاتی ہے۔ فون پر یہ معلومات پلیٹ فارم کے محفوظ اسٹوریج میں رکھی جاتی ہیں۔
+arg-signature match 41 / 41
+neg-control throws RangeError
+neg-control throws RangeError
+neg-control throws RangeError
+
+$ git grep (ur catalogues @254e6fba): URL 3 hits mobile.computers.json; محفوظ اسٹوریج 2 hits (storage_refused.*); Keychain/کی چین 0
+$ bash (cd m3s2b1 … | tee $LOCAL_OPERATOR_SCRATCHPAD/…) — BLOCKED by guardrail dangerous-delete; nothing ran
+$ python (eval kernel, read-only) unicodedata classes:
+TLS 'ا':AL ' ':WS 'h':L 't':L 't':L 'p':L 's':L ':':CS '/':CS '/':CS ' ':WS 'U':L 'R':L 'L':L ' ':WS 'ا':AL 'س':AL 'ت':AL
+ARROW 'ا':AL 'ت':AL ' ':WS '←':ON ' ':WS 'ر':AL 'ا':AL mirrored=0 count=2
+KC 'س':AL 'ے':AL ' ':WS 'K':L 'e':L 'y':L 'c':L 'h':L 'a':L 'i':L 'n':L ' ':WS 'م':AL 'ی':AL 'ں':AL
+first strong install_note AL
+redacted brief-s2b1-v2.json 0
+redacted ur/draft-ur.json 0
+redacted ur/draft-ur-v2.json 0
+redacted ur/notes-ur-v2.md 0
+hashes: {"brief-s2b1-v2.json": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9", "ur/draft-ur.json": "637ae2cae2fe99c23638222ae42946dc05caec25dfcda2829ccccd7256db4a34", "ur/draft-ur-v2.json": "9fa9f1df0ef4b612fdd71f30b486c7348e63ab2fb17fe1b90a6bab8838a73d07", "ur/notes-ur-v2.md": "c0b3d77314dee9b079bf94f98cc5a39d47b6a52c4a6181c4c6025d6c9963d7ca", "audits/ur/record.json": "56f11e846e935e8f1e7617d3d4c916a0d1e1de3fb163f4a86324e35edb9d5bcf", "audits/ur/report.md": "c4aab089e72c67c83678d48fc64251ed7f96517bfb2d558da536ab7129751733"}

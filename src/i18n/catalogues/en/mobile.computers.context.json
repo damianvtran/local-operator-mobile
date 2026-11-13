@@ -237,7 +237,7 @@
 	},
 	"mobile.computers.paths.own_title": {
 		"role": "heading",
-		"note": "Section header of the own-tunnel card on the choose-a-path screen, and the quiet button label on the first-run welcome screen that opens the same setup. Says what the reader gets, not what they type. No punctuation."
+		"note": "Section header of the own-tunnel card on the choose-a-path screen, and the quiet button label on the first-run welcome screen that opens the same setup, and the outline button in Settings that opens the own-tunnel editor when none is saved. Says what the reader gets, not what they type. No punctuation."
 	},
 	"mobile.computers.paths.own_body": {
 		"role": "help",
@@ -325,7 +325,7 @@
 	},
 	"mobile.computers.own_tunnel.title": {
 		"role": "heading",
-		"note": "Screen title on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Short: the header is narrow on phones. No final full stop."
+		"note": "Screen title on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Short: the header is narrow on phones. No final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.password_for": {
 		"role": "heading",
@@ -333,7 +333,7 @@
 	},
 	"mobile.computers.own_tunnel.password_label": {
 		"role": "meta",
-		"note": "Visible label and accessible name of the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). The relay is the small server on the reader's computer that the app talks to. Two or three words, no final full stop."
+		"note": "Visible label and accessible name of the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). The relay is the small server on the reader's computer that the app talks to. Two or three words, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.intro": {
 		"role": "help",
@@ -357,15 +357,15 @@
 	},
 	"mobile.computers.own_tunnel.url_label": {
 		"role": "meta",
-		"note": "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop."
+		"note": "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.insecure_allow": {
 		"role": "button",
-		"note": "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)."
+		"note": "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a). Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.insecure_allowed": {
 		"role": "status",
-		"note": "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)."
+		"note": "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a). Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.insecure_hint": {
 		"role": "help",
@@ -413,11 +413,11 @@
 	},
 	"mobile.computers.own_tunnel.test": {
 		"role": "button",
-		"note": "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that makes a real request through the tunnel. Sentence case, no final full stop."
+		"note": "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that makes a real request through the tunnel. Sentence case, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.testing": {
 		"role": "status",
-		"note": "The same button's label while the test request runs on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis."
+		"note": "The same button's label while the test request runs on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.save_connect": {
 		"role": "button",
@@ -437,10 +437,118 @@
 	},
 	"mobile.computers.own_tunnel.verdict_ok": {
 		"role": "heading",
-		"note": "Title of the success box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the relay answered. One word, no final full stop."
+		"note": "Title of the success box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the relay answered. One word, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
 	},
 	"mobile.computers.own_tunnel.verdict_not_yet": {
 		"role": "heading",
-		"note": "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop."
+		"note": "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)."
+	},
+	"mobile.computers.own_tunnel.install_label": {
+		"role": "heading",
+		"note": "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), step \"On the computer\". The command under it is `lop mobile install` (macOS). Under it the app shows the exact command, copied verbatim; the command is never translated. Short, no final full stop."
+	},
+	"mobile.computers.own_tunnel.foreground_label": {
+		"role": "heading",
+		"note": "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the alternative to installing, running the relay in a terminal window (\"foreground\" as opposed to a background service). Under it the app shows the exact command, copied verbatim; the command is never translated. No final full stop."
+	},
+	"mobile.computers.own_tunnel.check_label": {
+		"role": "heading",
+		"note": "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the command (`lop mobile status`) reports whether the relay is healthy. Under it the app shows the exact command, copied verbatim; the command is never translated. Short imperative, no final full stop."
+	},
+	"mobile.computers.own_tunnel.rotate_label": {
+		"role": "heading",
+		"note": "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the command (`lop mobile password`) sets a new relay password. \"Rotate\" means replace with a new one. Under it the app shows the exact command, copied verbatim; the command is never translated. No final full stop."
+	},
+	"mobile.computers.own_tunnel.install_note": {
+		"role": "help",
+		"note": "One sentence under the \"Install on the computer\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"macOS\" is the operating system name: keep it as is. \"Daemon\" is a background service that is restarted if it stops; \"keychain\" is the macOS password store (use the term Apple uses in your language)."
+	},
+	"mobile.computers.own_tunnel.foreground_note": {
+		"role": "help",
+		"note": "One sentence under the \"Or run it in the foreground\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right. \"Loopback only\" means reachable from this same computer only."
+	},
+	"mobile.computers.own_tunnel.check_note": {
+		"role": "help",
+		"note": "One phrase under the \"Check it\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), listing what the command reports. \"Auth gate\" is the password check in front of the relay."
+	},
+	"mobile.computers.own_tunnel.rotate_note": {
+		"role": "help",
+		"note": "Two sentences under the \"Set or rotate the password\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"Shell history\" and \"process list\" are the places a typed command line is recorded on a computer; use the usual technical terms in your language."
+	},
+	"mobile.computers.own_tunnel.cloudflare_note": {
+		"role": "help",
+		"note": "One sentence under the Cloudflare tunnel command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the block's label is the product name \"Cloudflare\" and stays untranslated. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right."
+	},
+	"mobile.computers.own_tunnel.ngrok_note": {
+		"role": "help",
+		"note": "One sentence under the ngrok tunnel command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"ngrok\" is a product name: keep it exactly, lower case, in Latin script. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right."
+	},
+	"mobile.computers.own_tunnel.tunnel_rule": {
+		"role": "help",
+		"note": "One sentence above the two example tunnel commands on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), for a reader who uses another tunnel provider. \"HTTPS\" is the protocol name: keep it. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right."
+	},
+	"mobile.computers.own_tunnel.verdict_sessions": {
+		"role": "help",
+		"note": "Body of the success box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay answered and {sessions} is how many conversations the phone can see. ICU plural: keep the {sessions, plural, ...} structure and the # in every arm; add the plural arms your language needs."
+	},
+	"mobile.computers.own_tunnel.verdict_password": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay refused the password. Plain, no apology."
+	},
+	"mobile.computers.own_tunnel.verdict_forbidden": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something in front of the relay refused the request. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right. Origin = the requesting site/app; the relay refuses cross-origin requests."
+	},
+	"mobile.computers.own_tunnel.verdict_offline_detail": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, when the relay's server sent its own reason. {detail} is that reason, sent by the server in English and shown as is (it has no final full stop, which is why the message adds one). {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right. Keep both sentences; adjust the separator to your language's punctuation."
+	},
+	"mobile.computers.own_tunnel.verdict_offline": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the public tunnel is up but the relay on the computer is not running. {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right."
+	},
+	"mobile.computers.own_tunnel.verdict_tls": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the HTTPS certificate failed verification. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right."
+	},
+	"mobile.computers.own_tunnel.verdict_host": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the address's host name does not resolve (DNS)."
+	},
+	"mobile.computers.own_tunnel.verdict_unreachable": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: no connection could be made to the address."
+	},
+	"mobile.computers.own_tunnel.verdict_timeout": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 10). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs."
+	},
+	"mobile.computers.own_tunnel.verdict_local_network_ios": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the \"Test the connection\" button, already translated."
+	},
+	"mobile.computers.own_tunnel.verdict_local_network": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the \"Test the connection\" button, already translated."
+	},
+	"mobile.computers.own_tunnel.verdict_refused": {
+		"role": "help",
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something answered, but it is not a Local Operator relay."
+	},
+	"mobile.computers.own_tunnel.remedy": {
+		"role": "help",
+		"note": "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right."
+	},
+	"mobile.computers.own_tunnel.password_slot_other": {
+		"role": "help",
+		"note": "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's single saved password belongs to a different computer."
+	},
+	"mobile.computers.own_tunnel.password_slot_empty": {
+		"role": "help",
+		"note": "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when no password is saved on the phone yet."
+	},
+	"mobile.computers.own_tunnel.password_slot_this": {
+		"role": "help",
+		"note": "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's saved password already belongs to this address."
 	}
 }

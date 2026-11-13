@@ -1,0 +1,174 @@
+{
+ "schema": 1,
+ "audit_id": "esS2b1r2",
+ "audit_kind": "delta_reaudit",
+ "round": 2,
+ "scope": "delta: v1→v2 changed keys + round-1 finding rulings; unchanged keys covered by byte-equality proof only",
+ "locale": "es",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.settings",
+  "mobile.common"
+ ],
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "v1": 41,
+  "v2": 41,
+  "changed": 5,
+  "unchanged_identical": 36
+ },
+ "source_commit": "254e6fba",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "d85b1c3efea2",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime system header (Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_from_round1_auditor": true
+ },
+ "translator": "translator jobs f0807e12fe32 (v1) / 718d61e6ffc9 (v2); notes-es-v2: agent translator (lopdev), anthropic/claude-opus-5-5",
+ "round1_auditor": "i18n-auditor job 34706765eb23 (session 2bfb4822f592)",
+ "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+   "expected": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+  },
+  "draft_es_v1": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/es/draft-es.json",
+   "sha256": "6c11a31f6320696e3b20917cce8ca1cf2476781bb1bd74f10b1cb331b04ff54b",
+   "expected": "6c11a31f6320696e3b20917cce8ca1cf2476781bb1bd74f10b1cb331b04ff54b"
+  },
+  "draft_es_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/es/draft-es-v2.json",
+   "sha256": "a4f22fb0c5c5e75f57c2d3e10e4607de074f2622f045e83fdde7afc1d154d3d1",
+   "expected": "a4f22fb0c5c5e75f57c2d3e10e4607de074f2622f045e83fdde7afc1d154d3d1"
+  },
+  "notes_es_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/es/notes-es-v2.md",
+   "sha256": "024b161d501f265f83a2fb0678be85f84c73f77352911dd67befe6d0ca6f8e5f"
+  },
+  "round1_record": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/es/record.json",
+   "sha256": "e097d7da0feeba247934841a2d391bc459d82ed7db80c5c5c4afa9f3a0b4db95"
+  },
+  "round1_report": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/es/report.md",
+   "sha256": "904c6d83cf75698c994a6cd9e678051b80eee5268c2e5ad23a8ae8886ee99d29"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/es.md",
+   "sha256": "77b9227213802d14c74d4298d6b346ad842bbf2a5ca3b9d46fc6144430d26c3e"
+  },
+  "messages_ts": {
+   "path": "src/i18n/messages.ts @ 254e6fba",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  }
+ },
+ "hash_check": "brief, v1, v2 sha256 all MATCH expected",
+ "changed_keys": [
+  "mobile.computers.own_tunnel.verdict_forbidden",
+  "mobile.computers.own_tunnel.verdict_timeout",
+  "mobile.computers.own_tunnel.verdict_local_network_ios",
+  "mobile.computers.own_tunnel.verdict_local_network",
+  "mobile.settings.own_tunnel.runtime_body"
+ ],
+ "changed_keys_equal_notes_list": true,
+ "redaction_hits": {
+  "brief": 0,
+  "draft_v1": 0,
+  "draft_v2": 0,
+  "notes_v2": 0,
+  "note": "count of literal '[redacted]' in files; none observed",
+  "written_artifacts": "report.md and audit.log each contain one intentional literal [redacted] (describing the redaction scan), not masking"
+ },
+ "round1_findings": {
+  "ES-01": "resolved",
+  "ES-02": "resolved",
+  "ES-03": "resolved (both keys)",
+  "ES-04": "resolved",
+  "ES-05": "rejection accepted — gloss is faithful to the brief note's definition of the supervised daemon (restarted if it stops); NIT, never gating"
+ },
+ "findings": [],
+ "observations_out_of_scope": [
+  "Source/code, not translation, pre-existing, non-gating: in Settings the button reads test_again ('Probar de nuevo') but verdict_local_network(_ios) {action} is always own_tunnel.test (tunnel-verdict.ts:176-191), so Settings copy says “Probar la conexión”. Same in English."
+ ],
+ "per_key": [
+  {
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "v1": "Ese túnel rechazó la app. Si has puesto delante una política de acceso o una página de inicio de sesión, deja pasar la app; además, el propio relé rechaza las solicitudes de cualquier otro origen, así que asegúrate de que el túnel reenvía directamente a {address} y no a un panel u otra app.",
+   "v2": "Ese túnel rechazó la app. Si has puesto delante una política de acceso o una página de inicio de sesión, deja pasar la app; además, el propio relé rechaza las solicitudes de cualquier otro origen, así que asegúrate de que el túnel reenvíe directamente a {address} y no a un panel u otra app.",
+   "placeholders_equal_to_en": true,
+   "parses": true,
+   "result": "pass",
+   "resolves": "ES-02",
+   "note": "subjunctive 'reenvíe' after 'asegúrate de que' — correct; rest byte-identical; {address} intact"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_timeout",
+   "v1": "Esa dirección no respondió en {seconds, plural, one {# segundo} many {# de segundos} other {# segundos}}. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.",
+   "v2": "Esa dirección no respondió en un plazo de {seconds, plural, one {# segundo} many {# de segundos} other {# segundos}}. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.",
+   "placeholders_equal_to_en": true,
+   "parses": true,
+   "result": "pass",
+   "resolves": "ES-04",
+   "note": "'en un plazo de' marks a time limit; plural one/many/other with # in every arm; rendered 0/2/10/1500000→other, 1→one, 1000000→many 'de'"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "v1": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé. Si ambas cosas se cumplen, puede deberse al permiso de red local: permite Local Operator en Ajustes → Privacidad y seguridad → Red local y después toca {action}.",
+   "v2": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé. Si ambas cosas se cumplen, puede deberse al permiso de red local: permite Local Operator en Ajustes → Privacidad y seguridad → Red local y después toca “{action}”.",
+   "placeholders_equal_to_en": true,
+   "parses": true,
+   "result": "pass",
+   "resolves": "ES-03",
+   "note": "“{action}” with es curly quotes per style guide; renders “Probar la conexión”; 'toca' and iOS Ajustes path unchanged"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network",
+   "v1": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé; después, pulsa {action}.",
+   "v2": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé; después, pulsa “{action}”.",
+   "placeholders_equal_to_en": true,
+   "parses": true,
+   "result": "pass",
+   "resolves": "ES-03",
+   "note": "“{action}” consistent with _ios and copy_command_hint; 'pulsa' unchanged"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "v1": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo dura esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.",
+   "v2": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo se conserva durante esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.",
+   "placeholders_equal_to_en": true,
+   "parses": true,
+   "result": "pass",
+   "resolves": "ES-01",
+   "note": "'solo se conserva durante esta ejecución' fixes the clipped 'dura'; accurate, idiomatic"
+  }
+ ],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": []
+ },
+ "check_script": {
+  "path": "/Users/damian/.local-operator/sessions/d85b1c3efea2/scratchpad/es-r2-check.mts",
+  "sha256": "e2aa77f8f4976595b669c916cbfef4b9a5ef0f1536a94c89f2221f187a6b79ce",
+  "output": "/Users/damian/.local-operator/sessions/d85b1c3efea2/scratchpad/es-r2-check.out",
+  "output_sha256": "bf814d5b5a5d46b699dfa0718ff375d929ba94b74c8c6c16ab051640682c7dbf"
+ },
+ "audit_notes_not_execution_log": "report.md is audit notes; audit.log is the execution log (commands actually run in session d85b1c3efea2)",
+ "artifacts": {
+  "report.md": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/es-r2/report.md",
+   "sha256": "105ff40a3f95597ca5777e6419d5d3786798b99bd689c04c4c7e55fb5cfa73e5"
+  },
+  "audit.log": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/es-r2/audit.log",
+   "sha256": "fd5b495f5d0e06c84f58fe9c7e38e20ecab83af017408154cab0f74b0056f957"
+  }
+ }
+}

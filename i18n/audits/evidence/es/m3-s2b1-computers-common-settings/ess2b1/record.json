@@ -1,0 +1,379 @@
+{
+ "schema": 1,
+ "audit_id": "esS2b1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "es",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.settings",
+  "mobile.common"
+ ],
+ "audit_date": "2026-11-13",
+ "keys": 41,
+ "key_count": {
+  "en": 41,
+  "target": 41
+ },
+ "source_commit": "254e6fba",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "2bfb4822f592",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime system header (Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": "translator job f0807e12fe32",
+ "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+   "match": true
+  },
+  "draft_es": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/es/draft-es.json",
+   "sha256": "6c11a31f6320696e3b20917cce8ca1cf2476781bb1bd74f10b1cb331b04ff54b",
+   "match": true
+  },
+  "notes_es": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/es/notes-es.md",
+   "sha256": "ef41a02de92f2e05391eef3fe63e843c4f314d30bd7e062de2c62925a71d0e95"
+  },
+  "glossary": {
+   "ffbda180:src/i18n/catalogues/es/mobile.computers.json": "336940880c517828111eec3961680fc73d3c536d21a230b27683aca5949a59f3",
+   "ffbda180:src/i18n/catalogues/es/mobile.settings.json": "0a7c7af6dfe8594fc91e24f8694e8c6ed2678e738e682a97a69c8762286a8a56",
+   "ffbda180:src/i18n/catalogues/es/mobile.common.json": "b49de650e59354e1401cd3e456553d7ef06015ccfebadff116c8165d00d58608",
+   "~/local-operator/i18n/style-guides/es.md": "77b9227213802d14c74d4298d6b346ad842bbf2a5ca3b9d46fc6144430d26c3e"
+  }
+ },
+ "redaction_hits": {
+  "brief": 0,
+  "draft": 0,
+  "notes": 1,
+  "note": "notes hit is the translator's own 'Redaction-marker scan' sentence; no [redacted] masking observed"
+ },
+ "artifacts": {
+  "report.md": "904c6d83cf75698c994a6cd9e678051b80eee5268c2e5ad23a8ae8886ee99d29",
+  "audit.log": "a554144991212f807998d8fd7d13f49331ee45ec4946db747904bbeed923f667",
+  "check_script": {
+   "path": "/Users/damian/.local-operator/sessions/2bfb4822f592/scratchpad/es-check.mts",
+   "sha256": "0a1f0ec2e7dcc7ae0877355b7c8d9c7c3a7b9205289fa6d66851df872fdf8d20"
+  }
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "counts": {
+   "BLOCKER": 0,
+   "MAJOR": 0,
+   "MINOR": 1,
+   "NIT": 4
+  },
+  "finding_ids": [
+   "ES-01",
+   "ES-02",
+   "ES-03",
+   "ES-04",
+   "ES-05"
+  ]
+ },
+ "findings": [
+  {
+   "id": "ES-01",
+   "severity": "MINOR",
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "current": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo dura esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.",
+   "problem": "“el túnel solo dura esta ejecución” is clipped (dura needs “durante”/“mientras”); reads as a calque of “lasts for this run”.",
+   "suggested": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo se conserva durante esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma."
+  },
+  {
+   "id": "ES-02",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "current": "Ese túnel rechazó la app. Si has puesto delante una política de acceso o una página de inicio de sesión, deja pasar la app; además, el propio relé rechaza las solicitudes de cualquier otro origen, así que asegúrate de que el túnel reenvía directamente a {address} y no a un panel u otra app.",
+   "problem": "Directive “asegúrate de que” reads more naturally with the subjunctive.",
+   "suggested": "…así que asegúrate de que el túnel reenvíe directamente a {address} y no a un panel u otra app."
+  },
+  {
+   "id": "ES-03",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.verdict_local_network",
+   "current": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé; después, pulsa {action}.",
+   "problem": "{action} renders “pulsa Probar la conexión.” unquoted; the draft itself quotes labels in copy_command_hint. Same in verdict_local_network_ios (“toca Probar la conexión”).",
+   "suggested": "…; después, pulsa “{action}”. (and _ios: …y después toca “{action}”.)"
+  },
+  {
+   "id": "ES-04",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.verdict_timeout",
+   "current": "Esa dirección no respondió en {seconds, plural, one {# segundo} many {# de segundos} other {# segundos}}. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.",
+   "problem": "“no respondió en 10 segundos” can read as a duration of the failure; a time limit is clearer.",
+   "suggested": "Esa dirección no respondió en un plazo de {seconds, plural, one {# segundo} many {# de segundos} other {# segundos}}. Comprueba que el túnel está en ejecución y que la máquina no está en reposo."
+  },
+  {
+   "id": "ES-05",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.install_note",
+   "current": "macOS: instala el daemon supervisado, que se reinicia solo, genera la contraseña del relé y la guarda en tu llavero.",
+   "problem": "Gloss “que se reinicia solo” is an addition (from the note's definition); harmless and helpful, optional to trim.",
+   "suggested": "macOS: instala el daemon supervisado, genera la contraseña del relé y la guarda en tu llavero."
+  }
+ ],
+ "rulings": {
+  "install_note 'contraseña del relé' for 'portal password'": "ACCEPT — same secret as rotate_note/password_label (“Contraseña del relé”); 'portal' has no catalogue term and would introduce a new concept.",
+  "check_label 'Comprobarlo'": "ACCEPT — infinitive per es style guide §action labels; parallels “O ejecutarlo en primer plano”; the English 'it' is equally implicit. Uppercase COMPROBARLO, 11 chars.",
+  "runtime_body implied subject": "ACCEPT — “se guarda” carries the previous sentence's subject (el túnel = address+password), matching the title “guardarlo”; see ES-01 for the separate 'dura' wording.",
+  "test_again 'Probar de nuevo' length": "ACCEPT — own-tunnel-settings.tsx:141-169: Editar/Probar de nuevo/Quitar are size=sm in a flex-row flex-wrap gap-2 row; estimate ~290 pt total vs ~310 pt usable at 375 pt width; at 320 pt or large text the row wraps, no clipping. Busy label “Probando…” is shorter. Estimate, not rendered."
+ },
+ "per_key": [
+  {
+   "key": "mobile.computers.own_tunnel.install_label",
+   "es": "Instalar en la máquina",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_label",
+   "es": "O ejecutarlo en primer plano",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_label",
+   "es": "Comprobarlo",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_label",
+   "es": "Definir o cambiar la contraseña",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.install_note",
+   "es": "macOS: instala el daemon supervisado, que se reinicia solo, genera la contraseña del relé y la guarda en tu llavero.",
+   "result": "pass_with_nit",
+   "finding": "ES-05"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_note",
+   "es": "Para otras plataformas, o si prefieres seguir el registro. Escucha en {address}, solo desde la propia máquina (loopback).",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_note",
+   "es": "El estado del relé, el de la comprobación de contraseña y las sesiones que verá el teléfono.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_note",
+   "es": "Te la pide de forma interactiva, así que nunca queda en el historial del shell ni en la lista de procesos. Es la contraseña que la app te pide abajo.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.cloudflare_note",
+   "es": "Es gratis y no necesita cuenta para un túnel rápido. Muestra la URL {scheme} que tienes que pegar abajo.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.ngrok_note",
+   "es": "Requiere una cuenta de ngrok. Muestra la URL {scheme} que tienes que pegar abajo.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.tunnel_rule",
+   "es": "Cualquier túnel sirve siempre que reenvíe una URL HTTPS pública a {address} en esa máquina.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_sessions",
+   "es": "Conectado — puedes ver {sessions, plural, one {# sesión} many {# de sesiones} other {# sesiones}}.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_password",
+   "es": "No se aceptó esa contraseña. Comprueba la contraseña del relé en la máquina.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "es": "Ese túnel rechazó la app. Si has puesto delante una política de acceso o una página de inicio de sesión, deja pasar la app; además, el propio relé rechaza las solicitudes de cualquier otro origen, así que asegúrate de que el túnel reenvía directamente a {address} y no a un panel u otra app.",
+   "result": "pass_with_nit",
+   "finding": "ES-02"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+   "es": "{detail}. En esa máquina: {command}",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline",
+   "es": "El túnel respondió, pero el relé que hay detrás no. En esa máquina: {command}",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_tls",
+   "es": "Se rechazó el certificado de ese túnel. Usa la dirección {scheme} que mostró el túnel, elige un túnel con un certificado en el que confíe un teléfono o sustituye el certificado autofirmado del que ejecutas tú — la app no se saltará la comprobación.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_host",
+   "es": "No se encontró ese nombre de host. Revisa que la dirección no tenga erratas y que el túnel siga publicando ese nombre.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_unreachable",
+   "es": "No se pudo contactar con la dirección. Comprueba que la URL es la pública que mostró tu túnel y que el túnel sigue en ejecución.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_timeout",
+   "es": "Esa dirección no respondió en {seconds, plural, one {# segundo} many {# de segundos} other {# segundos}}. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.",
+   "result": "pass_with_nit",
+   "finding": "ES-04"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "es": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé. Si ambas cosas se cumplen, puede deberse al permiso de red local: permite Local Operator en Ajustes → Privacidad y seguridad → Red local y después toca {action}.",
+   "result": "pass_with_nit",
+   "finding": "ES-03 (same)"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network",
+   "es": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé; después, pulsa {action}.",
+   "result": "pass_with_nit",
+   "finding": "ES-03"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_refused",
+   "es": "Esa dirección respondió, pero no de una forma que esta app entienda.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.remedy",
+   "es": "En esa máquina: {command}",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_other",
+   "es": "Este teléfono guarda una sola contraseña del relé, y es de otra dirección. Introduce la contraseña de esta máquina, pruébala y guárdala. Sustituirá a la otra.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_empty",
+   "es": "Este teléfono no tiene ninguna contraseña del relé guardada. Introduce la contraseña de esta máquina, pruébala y guárdala.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_this",
+   "es": "La contraseña del relé guardada en este teléfono es de esta dirección. Pruébala y guárdala.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.common.copy",
+   "es": "Copiar",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.common.copied",
+   "es": "Copiado",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.common.copy_command_hint",
+   "es": "Copia el comando “{label}”",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.not_saved",
+   "es": "La contraseña no está guardada, así que la app la pide en cada inicio.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.kept_secure",
+   "es": "La dirección y la contraseña se guardan en el almacenamiento seguro de este teléfono.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.edit",
+   "es": "Editar",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.test_again",
+   "es": "Probar de nuevo",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove",
+   "es": "Quitar",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.password_placeholder",
+   "es": "La contraseña con la que se inició el relé",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_title",
+   "es": "Este entorno no puede guardarlo",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "es": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo dura esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.",
+   "result": "pass_with_minor",
+   "finding": "ES-01"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.before_saving",
+   "es": "Prueba la dirección antes de guardarla: un túnel guardado que nunca ha respondido deja la lista vacía sin ninguna explicación.",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_title",
+   "es": "¿Quitar este túnel?",
+   "result": "pass",
+   "finding": null
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_body",
+   "es": "Borra la dirección y la contraseña de este teléfono. No afecta a tu máquina, al túnel que ejecutas ni a ninguna cuenta.",
+   "result": "pass",
+   "finding": null
+  }
+ ],
+ "audit_notes_not_execution_log": "report.md is analysis; audit.log records commands actually run"
+}

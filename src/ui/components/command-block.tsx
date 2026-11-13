@@ -2,6 +2,7 @@ import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import { Text, View } from "react-native";
 
+import { t } from "@/i18n";
 import { commandCopyId, ROLE, tunnelCommandCopyId } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { LTR_TEXT } from "@/ui/direction";
@@ -30,11 +31,16 @@ import { LTR_TEXT } from "@/ui/direction";
  */
 
 export const CommandBlock = ({
+	id,
 	label,
 	command,
 	note,
 	testID,
 }: {
+	/** The block's stable, never-translated identity (a lowercase slug). The test
+	 *  IDs derive from it, not from `label`: a translated label in a non-Latin
+	 *  script slugs to nothing, and every block would share one ID. */
+	id: string;
 	/** The machine's own name for the step ("Terminal", "Cloudflare"). */
 	label: string;
 	/** The exact text, copied verbatim. */
@@ -54,14 +60,14 @@ export const CommandBlock = ({
 					{label}
 				</Text>
 				<Button
-					label={copied ? "Copied" : "Copy"}
+					label={copied ? t("mobile.common.copied") : t("mobile.common.copy")}
 					onPress={() => {
 						void Clipboard.setStringAsync(command).then(() => setCopied(true));
 					}}
 					variant="quiet"
 					size="sm"
-					accessibilityHint={`Copies the ${label} command`}
-					testID={tunnelCommandCopyId(label)}
+					accessibilityHint={t("mobile.common.copy_command_hint", { label })}
+					testID={tunnelCommandCopyId(id)}
 				/>
 			</View>
 			{note ? <Text className="text-body-sm text-ink-dim">{note}</Text> : null}
@@ -76,7 +82,7 @@ export const CommandBlock = ({
 					 *  renders the value — never as a control character in the catalogue,
 					 *  which a translator cannot see and a formatter would strip. */
 					style={LTR_TEXT}
-					testID={testID ?? commandCopyId(label)}
+					testID={testID ?? commandCopyId(id)}
 				>
 					{command}
 				</Text>
