@@ -124,6 +124,39 @@ export const charWidthDp = (scale: number): number =>
 export const metaPathFloorDp = (scale: number): number =>
 	META_PATH_FLOOR_CHARS * charWidthDp(scale);
 
+/**
+ * The working directory's flex box. The cwd takes the remainder of its line and,
+ * on its OWN line, never gives up a dp of its floor (design round 5, D26): the
+ * floor is the basis and `flexShrink: 0`, so a shortfall falls on the model,
+ * which `metaLineFor` has already fitted to what the floor leaves.
+ *
+ * SHARING LINE 2 WITH THE MARKS (`inline`, TestFlight 883 D6) the floor can no
+ * longer be guaranteed: the marks are `shrink-0` and come first, so above 100 %
+ * text (inline runs up to `LARGE_TEXT_SCALE`, 1.4) a row with approval + agents +
+ * todos takes ~250 pt of a 320 pt drawer's ~264 pt line, and a floor of
+ * `metaPathFloorDp(1.4)` = 100.8 pt pushed the cwd past the pane edge (PR #245
+ * agent review R1-R1, design round 1 D13). So inline, the cwd SHRINKS
+ * (`flexShrink: 1`): it is the lowest-priority text on the row, and its painted
+ * string is already fitted to the measured line by `metaLineFor` (which drops
+ * the model first and, below one glyph, paints nothing), so the box can only
+ * clip what was going to be elided anyway. The basis stays the floor, so a line
+ * with room for it lays out exactly as before.
+ */
+export const metaPathBox = (
+	scale: number,
+	inline: boolean,
+): {
+	flexBasis: number;
+	flexGrow: 1;
+	flexShrink: 0 | 1;
+	minWidth: 0;
+} => ({
+	flexBasis: metaPathFloorDp(scale),
+	flexGrow: 1,
+	flexShrink: inline ? 1 : 0,
+	minWidth: 0,
+});
+
 /** One glyph, in dp: the Latin advance, or the fallback's for a wide script. */
 const glyphDp = (glyph: string, scale: number): number =>
 	charWidthDp(scale) *

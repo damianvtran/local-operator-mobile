@@ -15,7 +15,7 @@ import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import {
 	metaLineFor,
-	metaPathFloorDp,
+	metaPathBox,
 	rowAccessibilityLabel,
 } from "@/ui/components/list-row-meta";
 import { listRowStatus } from "@/ui/components/list-row-status";
@@ -364,7 +364,7 @@ export const ListRow = ({
 			>
 				{meta.cwd ? (
 					<Text
-						style={META_PATH_BOX(effectiveScale)}
+						style={metaPathBox(effectiveScale, line2 === "inline")}
 						className="text-mono-sm text-ink-dim"
 						numberOfLines={1}
 						// The path keeps its head (R-3), so the mop-up ellipsis is `tail`: it is the
@@ -556,7 +556,7 @@ export const ListRow = ({
 						 *  `~/…` beside `no…`, and in a split column at 100 % as a 26.02 pt model
 						 *  box beside a 236.98 pt path (design round 5, D26). The cwd is the field
 						 *  a reader scans for, so it holds a FLOOR and the model is the one that
-						 *  yields — see `META_PATH_BOX` and `metaLineFor`.
+						 *  yields — see `metaPathBox` and `metaLineFor`.
 						 *
 						 *  Which characters are painted is decided as a STRING in `metaLineFor`, not by
 						 *  `ellipsizeMode`: react-native-web ignores that prop, so the web build — the
@@ -635,9 +635,11 @@ const TITLE_BOX = {
 	minWidth: 0,
 } as const;
 
-/**
- * The working directory's box: the cwd takes the remainder, and it never gives up
- * a dp of the floor it is guaranteed (design round 5, D26).
+/* (Not a declaration's doc: the box is `metaPathBox` in `list-row-meta.ts`.)
+ * The working directory's box (`metaPathBox` in `list-row-meta.ts`): the cwd takes
+ * the remainder, and on its own line it never gives up a dp of the floor it is
+ * guaranteed (design round 5, D26). Inline with the marks it may shrink instead;
+ * see `metaPathBox` for why (design round 1 D13).
  *
  * The floor itself lives in `list-row-meta.ts` as `metaPathFloorDp`, because the
  * string painted into this box is fitted to exactly the same number: a floor
@@ -658,12 +660,6 @@ const TITLE_BOX = {
  * priority the design round asked for — and `flexGrow: 1` gives the cwd every
  * spare dp when there is no shortfall at all, so the model stays flush right.
  */
-const META_PATH_BOX = (scale: number) => ({
-	flexBasis: metaPathFloorDp(scale),
-	flexGrow: 1,
-	flexShrink: 0,
-	minWidth: 0,
-});
 
 /**
  * The second line's trailing value (the model label): the item that YIELDS.
