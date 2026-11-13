@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createElement as h, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Text } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
@@ -35,6 +36,7 @@ vi.mock("@/ui/appearance", () => ({
 const STARTS_LATIN = /^[A-Za-z]/;
 const ICU_SLOT = /\{[^}]*\}/g;
 const FIRST_LETTER = /\p{L}/u;
+const ARABIC_SCRIPT = /\p{Script=Arabic}/u;
 
 /** The S1 keys whose Urdu value begins with a Latin token and is rendered as
  *  visible text. `mobile.computers.row.a11y*` also begin with a `{name}` slot, but
@@ -289,5 +291,25 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
 			"{...composedDir}",
 		);
+	});
+
+	it("password_for: the real ur heading opens with a Latin {name}, and the composed spread gives it dir=rtl", () => {
+		/* The premise behind the spread above: the ur value is `{name}`-initial, so
+		 * a Latin computer name is the first strong letter `dir="auto"` would see. */
+		const heading = renderFor(
+			"mobile.computers.own_tunnel.password_for",
+			{ name: "Mac mini" },
+			"ur",
+		);
+		expect(heading.startsWith("Mac mini ")).toBe(true);
+		expect(heading).toMatch(ARABIC_SCRIPT);
+		/* The heading's own shape: a `Text` spreading `useComposedDir()` (widened to
+		 * `object` because `dir` is not in RN's `TextProps`, as in direction.test). */
+		const Heading = () => {
+			const dir: object = useComposedDir();
+			return h(Text, dir, heading);
+		};
+		expect(render(h(Heading), "rtl")).toContain('dir="rtl"');
+		expect(render(h(Heading), "ltr")).not.toContain('dir="rtl"');
 	});
 });
