@@ -1,0 +1,35 @@
+# audit.log — es S2a audit, i18n-auditor session 8e69a6afebfa, model anthropic/claude-opus-5-5, 2026-11-12
+# Execution log: commands actually run, outputs abridged where marked.
+
+$ cd .../d5aaf8ba6ba5/scratchpad/m3s2a && shasum -a 256 brief-59ec5184.json es/draft-es-s2a.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+4ae3777107e9cb804e331dcfc6f459a7b65d054820a03a0133ab057761903432  es/draft-es-s2a.json
+# match -> proceed
+
+[eval] len(brief)=37 len(draft)=37 key order identical: True
+[eval] wrote then os.remove()d own temp file m3s2a/audits_es_view.txt (disclosed)
+
+$ git -C ~/local-operator-mobile show 59ec5184:src/i18n/catalogues/es/{mobile.computers,mobile.signin}.json   # read (abridged)
+$ git -C ~/local-operator show origin/main:i18n/style-guides/es.md   # read; origin/main 73dc41570c94
+$ git -C ~/local-operator-mobile show 59ec5184:src/ui/size-class.ts | sed -n 420,475p   # computersHeaderStackWidth, HEADER_STACK_WIDTH=354
+$ git show 59ec5184:src/features/auth/computers.tsx | grep showSwitch/showRefresh
+435: const showSwitch = !empty || phoneKnowsComputers;   436: const showRefresh = !empty && !signedOut;   410: const empty = view.setup;
+
+[eval] Figtree-SemiBold.ttf@59ec5184 advances x28dp, -0.02em:
+{"Máquinas": 116.7, "Configura una máquina": 283.8, "Añade una máquina": 240.7, "Nueva máquina": 190.6, "Tu propio túnel": 184.7}; Computers 137.8, Set up a computer 226.2
+
+$ mkdir -p /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/es/
+BLOCKED by guardrail dangerous-delete (review): another session's scratchpad -> bundle written to /Users/damian/.local-operator/sessions/8e69a6afebfa/scratchpad/m3s2a-es-audit/
+
+$ bun /Users/damian/.local-operator/sessions/8e69a6afebfa/scratchpad/m3s2a-es-audit/check.ts     -> keys 37 bad 0
+$ bun /Users/damian/.local-operator/sessions/8e69a6afebfa/scratchpad/m3s2a-es-audit/check2.ts    -> params-mismatch 0
+[eval] redaction scan (brief, draft): [] ; length >1.3x: password_label 14->19 1.36, saving 7->10 1.43
+[eval] typography scan (trim, double space, final-period parity): []
+
+# artifacts
+89fdaf4f79cce153bd0b8c5c4fd4b5c506b9bec24282dbbe8a35c0adb288408b  record.json
+aaf53321e1534df686e8dfcd2637fbe2891d7aad7fb1a8d9cab9785d3027ebb2  report.md
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  messages-59ec5184.ts
+4a8a130c28febedfd6c3e39f14b1739eb723febd50dcad61d6f1e974d5e13644  check.ts
+f405a4c25f5fe935e14800bdc0f64a9a07e2e273a4f08412cf1120acfbad8a1d  check2.ts
+9e21258daf9e8ecfc14fb05953d3a36e33707d9df7f7cc019cdc6fb99f6e7d93  pairs.json

@@ -1,0 +1,245 @@
+{
+ "schema": 1,
+ "audit_id": "urs2a1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "ur",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.signin"
+ ],
+ "namespace": "mobile.computers+mobile.signin (M3 slice S2a, 37 keys)",
+ "audit_date": "2026-11-12",
+ "key_count": {
+  "en": 37,
+  "target": 37,
+  "by_namespace": {
+   "mobile.computers": 36,
+   "mobile.signin": 1
+  }
+ },
+ "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "a8e16e74ea5e",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "id": "translator job 0c099a230364",
+  "note": "auditor did not translate or edit the draft"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+   "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+   "recomputed": "match",
+   "contains": "en source + context notes"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/ur/draft-ur-s2a.json",
+   "sha256": "c19ceeb75f6b3172046d0c00a3022eb9df54ff0127a4d8fe26d892378e4af464",
+   "recomputed": "match"
+  },
+  "translator_notes": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/ur/notes-ur-s2a.md",
+   "sha256": "2ba0152e5a86670c29097b047042d29ff814f89946642103c096f39de21dcec6"
+  },
+  "glossary": {
+   "catalogue": [
+    "59ec5184:src/i18n/catalogues/ur/mobile.computers.json",
+    "59ec5184:src/i18n/catalogues/ur/mobile.signin.json"
+   ],
+   "repo_glossary": {
+    "path": "~/local-operator origin/main 73dc4157:i18n/glossary.md",
+    "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+   }
+  },
+  "style_guide": {
+   "path": "~/local-operator origin/main 73dc4157:i18n/style-guides/ur.md",
+   "sha256": "7276e96210fe5f23fd82a39ae4cc0c88b2c1009d3a551d914efc3f61516eddc4"
+  },
+  "parser": {
+   "path": "59ec5184:src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "direction_test": "b84517c0:src/features/auth/ur-latin-initial-sites.test.ts",
+  "render_site": ".worktrees/i18n-m3-s2a @ b84517c0 src/features/auth/own-tunnel.tsx, src/ui/size-class.ts (read-only)"
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "file_bytes": {
+    "brief": 0,
+    "draft": 0,
+    "translator_notes": "1 (textual mention of redaction in the notes header, not a mask)"
+   },
+   "tool_display_masks": 0
+  }
+ },
+ "mechanical": {
+  "parser": "parseMessage@59ec5184 (read-only copy in auditor scratch, run with repo tsx)",
+  "parse_failures": 0,
+  "placeholder_mismatches": 0,
+  "params_seen": {
+   "password_for": "name:text",
+   "security_body": "command:text",
+   "unavailable_detail": "module:text"
+  },
+  "protected_token_mismatches": 0,
+  "bidi_control_chars": 0,
+  "plural_select": "none in slice",
+  "end_punctuation": "۔ for every English full stop, … kept (testing/saving), none on headings",
+  "keys_added_or_dropped": 0,
+  "register": "آپ throughout; no تم/تو"
+ },
+ "latin_initial": {
+  "rule": "test rule: drop /\\{[^}]*\\}/g, first \\p{L}, /^[A-Za-z]/",
+  "result": [],
+  "translator_claim_none": "CONFIRMED (0 of 37)",
+  "placeholder_initial": [
+   "mobile.computers.own_tunnel.password_for (see R1)"
+  ]
+ },
+ "font": {
+  "figtree_arabic_glyphs": 0,
+  "figtree_codepoints": 392,
+  "fallback_faces_measured": [
+   "SF Arabic",
+   "Geeza Pro",
+   "Noto Nastaliq Urdu (+UI)"
+  ],
+  "method": "stdlib cmap+hmtx, unshaped isolated advances (upper bound)"
+ },
+ "findings": [
+  {
+   "id": "U1",
+   "severity": "MINOR",
+   "key": "mobile.computers.banner.unreachable_empty",
+   "current": "آپ کے کمپیوٹرز کی فہرست کے لیے Radient سے رابطہ نہیں ہو سکا۔ اس ڈیوائس کا کنکشن جانچیں۔",
+   "problem": "\"کی فہرست کے لیے ... رابطہ\" reads \"contact for the list\" — the purpose verb is missing, so the clause is slightly ungrammatical-sounding.",
+   "suggested": "آپ کے کمپیوٹرز کی فہرست لانے کے لیے Radient سے رابطہ نہیں ہو سکا۔ اس ڈیوائس کا کنکشن جانچیں۔"
+  },
+  {
+   "id": "U2",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.intro",
+   "current": "اس سب کے لیے Radient اکاؤنٹ درکار نہیں۔ آپ اپنے کمپیوٹر پر چلنے والے ریلے کو ایسی ٹنل کے ذریعے دستیاب کرتے ہیں جو آپ کے اپنے اختیار میں ہو، اور ایپ اس پتے کے ذریعے اس سے رابطہ کرتی ہے جو آپ نیچے چسپاں کریں گے۔",
+   "problem": "\"اس سب کے لیے\" is a calque of \"for any of this\"; \"اختیار\" (control) collides with the same word used two steps later for the plain-http opt-in (\"یہ اختیار\", \"اوپر والا اختیار\"); \"کے ذریعے\" twice in one sentence.",
+   "suggested": "اس میں کہیں بھی Radient اکاؤنٹ درکار نہیں۔ آپ اپنے کمپیوٹر پر چلنے والے ریلے کو ایسی ٹنل سے دستیاب کرتے ہیں جسے آپ خود چلاتے ہیں، اور ایپ اس سے اس پتے کے ذریعے رابطہ کرتی ہے جو آپ نیچے چسپاں کریں گے۔"
+  },
+  {
+   "id": "U3",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.step_publish",
+   "current": "اسے دستیاب کریں",
+   "problem": "Accepted (consistent with paths.own_body «دستیاب کرتے»); a bare «اسے» heading under numeral 2 does not say WHERE it becomes available.",
+   "suggested": "اسے انٹرنیٹ پر دستیاب کریں"
+  },
+  {
+   "id": "U4",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "current": "انٹرنیٹ پر لانے سے پہلے",
+   "problem": "Object (\"it\" = the computer) dropped; the heading reads \"before bringing onto the internet\" with no subject.",
+   "suggested": "اسے انٹرنیٹ پر لانے سے پہلے"
+  }
+ ],
+ "render_site_findings": [
+  {
+   "id": "R1",
+   "severity": "MAJOR (render site, not catalogue)",
+   "key": "mobile.computers.own_tunnel.password_for",
+   "site": "src/features/auth/own-tunnel.tsx:342 (heading Text, no dir)",
+   "problem": "Placeholder-initial: the first-letter rule in ur-latin-initial-sites.test.ts drops {name} so it cannot see this. With a Latin computer name the paragraph base resolves LTR (first strong char). Derived visual order (UBA, LTR base): \"Studio Mac ںیرک جرد ڈرو ساپ اک\" — an Urdu reader reads «کا پاس ورڈ درج کریں» first and the name last, the D2 class; heading ragged to the wrong edge. RTL base gives the correct order.",
+   "fix": "Spread {...composedDir} (useComposedDir, already in scope at own-tunnel.tsx:93) onto that Text; add the key to the test as a placeholder-initial site (own list), since the catalogue value is correct and must not change. Pre-existing same-class value (not this slice): added.connected_to «{name} سے منسلک ہو گیا۔»."
+  },
+  {
+   "id": "R2",
+   "severity": "MAJOR (render site, not catalogue)",
+   "key": [
+    "mobile.computers.own_tunnel.insecure_allow",
+    "mobile.computers.own_tunnel.insecure_allowed",
+    "mobile.computers.own_tunnel.insecure_off_help",
+    "mobile.computers.own_tunnel.unencrypted_body"
+   ],
+   "site": "own-tunnel.tsx:460-483 (Button label, help Text, Alert body)",
+   "problem": "Literal scheme followed by Urdu: the \"://\" neutrals sit between L (\"http\") and R (Urdu) and take the RTL paragraph direction (UBA N1/N2), so the token renders \"//:http\" / \"//:https\" (derived with a minimal UBA pass: insecure_allow -> \"//:http ہداس\", unencrypted_body -> \"//:https یئوک\"). Brief notes require these schemes \"unchanged and left-to-right\". No ur value at 59ec5184 contains \"://\", so this is new with S2a.",
+   "fix": "Isolate the scheme as an LTR island at the render site (nested Text with LTR_WRITING / web unicode-bidi isolate), per docs/i18n.md \"needs explicit isolation at the component\"; no bidi controls in the catalogue (ur style guide). Android ignores writingDirection — needs a device frame."
+  },
+  {
+   "id": "R3",
+   "severity": "MINOR-to-MAJOR (fit, estimate only; engineering)",
+   "key": [
+    "mobile.computers.title.set_up",
+    "mobile.computers.title.list"
+   ],
+   "site": "src/ui/size-class.ts:457 computersHeaderStackWidth uses English widths 227/138",
+   "problem": "Figtree (all 3 weights) has 0 Arabic-script glyphs (cmap parsed: 392 codepoints), so Urdu falls back to a system face. Unshaped isolated-form advance sums at 28 dp −0.02 em: set_up 242 (Geeza/Nastaliq UI) – 291 (SF Arabic) – 353/376 (Noto Nastaliq Urdu reg/bold) vs 227 budget; list 114–184 vs 138. Shaping narrows Naskh joins, so real widths are lower but likely at/over budget for set_up -> the D10 \"Comp…\" clip can recur. Nastaliq is also taller (line-height clip risk). Not measured on a device.",
+   "fix": "No copy change recommended (wording is natural and glossary-consistent with paths.own_title). Measure the title per locale (or stack on measured overflow) and take a ur device frame. Shorter fallback only if engineering declines: «کمپیوٹر جوڑیں» (est 152–274 dp) — weaker meaning."
+  }
+ ],
+ "rulings": {
+  "mobile.computers.title.list": "ACCEPT. Matches list.heading «آپ کے کمپیوٹرز». Fit: see R3.",
+  "mobile.computers.title.set_up": "ACCEPT copy (imperative, = paths.own_title «ترتیب دیں»). Fit risk R3 is engineering.",
+  "mobile.computers.banner.unreachable_stale": "ACCEPT. Reordered to open in Urdu; «شاید پرانی ہو» = may be out of date; no retry promise.",
+  "mobile.computers.banner.unreachable_empty": "U1 MINOR.",
+  "mobile.computers.banner.unreadable_stale": "ACCEPT.",
+  "mobile.computers.banner.unreadable_empty": "ACCEPT. «فہرست نہیں بن سکی» = could not be listed; no retry promise.",
+  "mobile.computers.own_tunnel.title": "ACCEPT. ٹنل feminine per catalogue («اپنی ٹنل»).",
+  "mobile.computers.own_tunnel.password_for": "ACCEPT copy; {name} intact (parseMessage name:text). Direction: R1 (render site).",
+  "mobile.computers.own_tunnel.password_label": "ACCEPT. = ریلے glossary.",
+  "mobile.computers.own_tunnel.intro": "ACCEPT meaning; U2 NIT.",
+  "mobile.computers.own_tunnel.step_computer": "ACCEPT. No numeral added.",
+  "mobile.computers.own_tunnel.step_computer_help": "ACCEPT. «صرف اپنے ہی کمپیوٹر سے کنکشن قبول کرتا ہے» = same machine only, not LAN; «سونے نہ دیں» = keep awake, object «اس کمپیوٹر».",
+  "mobile.computers.own_tunnel.step_publish": "RULING on translator uncertainty: ACCEPT «اسے دستیاب کریں» (glossary continuity with paths.own_body); optional U3 NIT. Wrapping step heading, width not a constraint.",
+  "mobile.computers.own_tunnel.step_app": "ACCEPT.",
+  "mobile.computers.own_tunnel.url_label": "ACCEPT. URL kept Latin per style guide; Urdu-initial.",
+  "mobile.computers.own_tunnel.insecure_allow": "ACCEPT copy; token intact. Bidi R2.",
+  "mobile.computers.own_tunnel.insecure_allowed": "ACCEPT copy. Bidi R2.",
+  "mobile.computers.own_tunnel.insecure_hint": "ACCEPT. «بغیر خفیہ کاری کے» = in the clear (avoids «غیر خفیہ»); http kept.",
+  "mobile.computers.own_tunnel.insecure_on_help": "ACCEPT. States «آن:» first; warning direct; nearest-conjunct agreement «ہر چیز … گزرتی ہے» is grammatical.",
+  "mobile.computers.own_tunnel.insecure_off_help": "ACCEPT. «تب تک بند رہتا ہے جب تک آپ اسے آن نہ کریں» is neutral (no nudge); «اسے» -> «یہ اختیار» (opt-in); «وہی» -> https://. Bidi R2 (two schemes).",
+  "mobile.computers.own_tunnel.unencrypted_title": "ACCEPT.",
+  "mobile.computers.own_tunnel.unencrypted_body": "ACCEPT. «اس پتے کو استعمال کرنے کے لیے» = it is the address; «اوپر والا اختیار» = the opt-in above; «دکھاتی» fem ٹنل. Bidi R2.",
+  "mobile.computers.own_tunnel.private_host": "RULING on translator uncertainty: ACCEPT «خطرہ» — in a warning line \"the exposure is limited to it\" is natively «خطرہ اسی نیٹ ورک تک محدود ہے»; scope (that network) preserved.",
+  "mobile.computers.own_tunnel.public_host": "ACCEPT. Strong: anything on the path phone->address can read the password.",
+  "mobile.computers.own_tunnel.step_test": "ACCEPT. «جانچ کریں» avoids repeating the button label.",
+  "mobile.computers.own_tunnel.step_test_help": "ACCEPT.",
+  "mobile.computers.own_tunnel.security_heading": "ACCEPT; U4 NIT.",
+  "mobile.computers.own_tunnel.security_body": "ACCEPT. Tunnel-auth clause conditional («اگر آپ کی ٹنل … دیتی ہے تو اسے بھی فعال کریں») = \"where yours does\"; `{command}` with backticks intact; HTTPS/URL Latin; «اس کمپیوٹر کے سیشن چلا سکتا ہے» = drive sessions.",
+  "mobile.computers.own_tunnel.test": "ACCEPT. Same wording reused in need_test.",
+  "mobile.computers.own_tunnel.testing": "ACCEPT. Full-row stacked button (own-tunnel.tsx:255), est 92–142 dp at 16 dp: no overflow.",
+  "mobile.computers.own_tunnel.save_connect": "ACCEPT. Full-row stacked button, est 163–257 dp unshaped vs ~343 dp column: fits. «منسلک ہوں» correct آپ imperative.",
+  "mobile.computers.own_tunnel.saving": "ACCEPT. = existing «محفوظ ہو رہا ہے»; est 96–150 dp: fits.",
+  "mobile.computers.own_tunnel.need_address": "ACCEPT.",
+  "mobile.computers.own_tunnel.need_test": "ACCEPT. Names the button «کنکشن جانچیں» identically; ergative «جس ٹنل نے … جواب نہ دیا ہو» correct.",
+  "mobile.computers.own_tunnel.verdict_ok": "ACCEPT. = existing value.",
+  "mobile.computers.own_tunnel.verdict_not_yet": "ACCEPT. Calm.",
+  "mobile.signin.panel.unavailable_detail": "ACCEPT. Urdu-initial; «لوپ بیک لسنر ({module})» keeps the id beside the listener term; parentheses resolve correctly around an LTR id (both brackets between L and R take R and mirror)."
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "scope": "catalogue copy",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "U1",
+   "U2",
+   "U3",
+   "U4"
+  ],
+  "render_site_major_ids": [
+   "R1",
+   "R2"
+  ],
+  "note": "Copy passes (1 MINOR, 3 NIT). R1/R2 are render-site MAJORs for the coder (no catalogue change); R3 fit is an estimate needing a ur device frame."
+ },
+ "artifacts": {
+  "report": "report.md",
+  "log": "audit.log"
+ },
+ "audit_notes_not_execution_log": "report.md rulings are judgement notes; audit.log lists commands actually run",
+ "ledger": "not written: task restricted writes to audits/ur/; the manager records the ledger row from this record"
+}

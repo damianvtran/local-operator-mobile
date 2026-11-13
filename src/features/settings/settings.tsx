@@ -15,7 +15,7 @@ import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
 import {
 	ADD_COMPUTER_HREF,
-	discoveryFailureMessage,
+	discoveryFailureKey,
 	rowState,
 } from "@/features/auth/computers-view";
 import {
@@ -448,7 +448,7 @@ export default function Settings() {
 							className="text-body-sm text-warning"
 							testID={REGION.settingsDiscoveryFailure}
 						>
-							{discoveryFailureMessage(discoveryFailure, computers.length > 0)}
+							{t(discoveryFailureKey(discoveryFailure, computers.length > 0))}
 						</Text>
 					) : null}
 					{/* `flex-wrap`: two controls side by side are 2 x (label + padding) wide,

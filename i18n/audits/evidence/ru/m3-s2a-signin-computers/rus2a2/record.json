@@ -1,0 +1,120 @@
+{
+  "locale": "ru",
+  "namespace": "mobile.computers+mobile.signin (M3 S2a)",
+  "round": 2,
+  "scope": "delta: v1..v2 changed keys + round-1 finding dispositions",
+  "audit_date": "2026-11-12",
+  "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+  "key_count": 37,
+  "changed_key_count": 5,
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "b2fc5336cf25",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session runtime model header; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "translator": {
+    "jobs": [
+      "68e31088b1a1",
+      "9c3158b5dcb8"
+    ],
+    "round1_auditor_job": "50d71c33ecdf"
+  },
+  "input_hashes": {
+    "brief": {
+      "path": "m3s2a/brief-59ec5184.json",
+      "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563"
+    },
+    "v1": {
+      "path": "m3s2a/ru/draft-ru-s2a.json",
+      "sha256": "f7aa4fb6c19541145a8c74abf4a55088d443aaf31b2a240b30e8d3f4d08633f6"
+    },
+    "v2": {
+      "path": "m3s2a/ru/draft-ru-s2a-v2.json",
+      "sha256": "b92e8628086d978ee9e488f94799899f9e513b7f49d79fe617d175f0a78416d7"
+    }
+  },
+  "hash_check": "all three recomputed and match the brief",
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "equality_proof": {
+    "v1_keys": 37,
+    "v2_keys": 37,
+    "key_set_symmetric_diff": [],
+    "changed_keys": [
+      "mobile.computers.own_tunnel.step_computer_help",
+      "mobile.computers.own_tunnel.insecure_hint",
+      "mobile.computers.own_tunnel.insecure_on_help",
+      "mobile.computers.own_tunnel.insecure_off_help",
+      "mobile.signin.panel.unavailable_detail"
+    ],
+    "unchanged_keys_byte_equal": 32
+  },
+  "redaction": {
+    "marker_bytes_in_v2": 0,
+    "display_masking_hits": [
+      "mobile.computers.own_tunnel.step_computer_help (opening word bytes U+0420.. «Ретранслятор», harness masking)"
+    ]
+  },
+  "mechanical": "repo parseMessage/formatMessage @59ec5184 (scratch copy): 5/5 parse, params equal to English, {module} renders; protected tokens http/http:///https:///Radient identical; «» only, no straight quotes, no double/edge spaces, final-stop parity",
+  "per_key": {
+    "mobile.computers.own_tunnel.step_computer_help": {
+      "disposition": "resolves M-01",
+      "result": "pass",
+      "v2": "Ретранслятор принимает подключения только с того же компьютера, поэтому запускать его нужно именно на нём. Не давайте компьютеру уснуть, пока пользуетесь приложением.",
+      "note": "«именно на нём» binds to «того же компьютера» (его = ретранслятор, нём = компьютер); the phone/computer ambiguity is gone. Loopback meaning kept; \"Leave it awake\" kept. вы register."
+    },
+    "mobile.computers.own_tunnel.insecure_hint": {
+      "disposition": "resolves N-01",
+      "result": "pass",
+      "v2": "Нужно только для адресов http — по ним пароль передаётся открытым текстом",
+      "note": "Plural «адресов http» + «по ним» agree; dash spaced; no final stop, matching English; \"http\" kept."
+    },
+    "mobile.computers.own_tunnel.insecure_on_help": {
+      "disposition": "resolves M-02",
+      "result": "pass",
+      "v2": "Включено: пароль от ретранслятора и всё, что вы отправляете, передаются по этой сети без шифрования. Делайте так только в сети, которой доверяете.",
+      "note": "Plural «передаются» agrees with compound subject; verb now matches siblings; warning stays direct."
+    },
+    "mobile.computers.own_tunnel.insecure_off_help": {
+      "disposition": "resolves N-02",
+      "result": "pass",
+      "v2": "Через http:// пароль от ретранслятора передаётся по сети открытым текстом, поэтому по умолчанию такие адреса запрещены. Используйте https:// везде, где адрес это поддерживает.",
+      "note": "«Через http://» removes doubled «по»; schemes kept unchanged; still no nudge to enable."
+    },
+    "mobile.signin.panel.unavailable_detail": {
+      "disposition": "resolves M-03",
+      "result": "pass",
+      "v2": "Для входа через Radient нужен локальный приёмник ответа браузера ({module}), которого нет в этой сборке.",
+      "note": "({module}) now follows the listener term; «которого» still refers to «приёмник» (masc. gen.); {module} exact, parenthesised; Radient kept."
+    }
+  },
+  "round1_rulings": {
+    "M-01": "resolved",
+    "M-02": "resolved",
+    "M-03": "resolved",
+    "N-01": "resolved",
+    "N-02": "resolved",
+    "N-03": "rejection accepted (nit; cannot gate). Fact check: suggested heading is 38 chars, not 37 (190% vs 20 en); current 25. Off by one, conclusion unaffected."
+  },
+  "findings": [
+    {
+      "id": "R2-N1",
+      "severity": "NIT",
+      "key": "mobile.computers.own_tunnel.security_heading",
+      "text": "Translator notes count 37 chars for the suggested heading; actual 38. Rejection still stands."
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "R2-N1"
+    ]
+  },
+  "artifacts": {
+    "report.md": "301016aaa2e4f6eae1d19f4bd94720524fa4ca1b87578efa59a1d8d36fad4dac",
+    "audit.log": "b99059a22a6fc7d06ddb892d9c479d17e462edfad35919f1acc8acca6f7c3a50"
+  }
+}

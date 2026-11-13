@@ -1660,13 +1660,28 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * isolation without remounting the router, background scope registration,
 	 * foreground restore retry and interactive sign-in auto-open. Re-derived
 	 * once with --print; source identity only, NOT new rendered evidence. */
+	/* M3 S2a (feat/i18n-m3-s2a): the Computers titles/banners, own-tunnel and
+	 * loopback-detail keys with their seven audited translations (771 keys in the
+	 * regenerated `catalogue.gen.ts`), the ur composed-direction spreads and
+	 * `Input.placeholderDir`, and the ur scheme-isolate bidi test. Re-derived
+	 * last with --print over the committed tree; only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence.
+	 * PR #251 round 1 remediation: `Screen.rowTitleLines` and
+	 * `rowTitleLinesFor` (translated Computers/own-tunnel titles wrap instead of
+	 * clipping), the single `ComputersTitleKey`, and the bidi test's header
+	 * sentence. Re-derived with --print; again only `src` moved.
+	 * PR #251 CI fix: biome formatting of the switcher transport `Text` and the
+	 * refusal-surface import order (no logic change). Re-derived with --print;
+	 * only `src` moved. */
 	/* fix/computers-drawer-polish-d11-d13: the Computers facts line without a
 	 * separator, the drawer row's word beside its name, and the inline cwd that
 	 * yields to the marks. Re-derived once with --print over the staged tree;
 	 * re-derived again for the round-1 remediation (no drawer spacer, the
 	 * inline cwd's 0.01 shrink). Source identity only, NOT rendered U-08
 	 * evidence. */
-	src: "421d33a0bc6e558469db478f9aedbae55c3bad7f3708cdad2f7c71b6afc18373",
+	/* Merge of origin/main (#251, fb224cfe) into #252: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "3fad51c8b8d67f9698a875ed7662ac34a45cd7a87770b0f6ba5b74760ffe2b28",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

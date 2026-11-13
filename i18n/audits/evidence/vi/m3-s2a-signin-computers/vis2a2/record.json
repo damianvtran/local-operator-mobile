@@ -1,0 +1,117 @@
+{
+  "audit_id": "vis2a2",
+  "locale": "vi",
+  "namespace": "mobile.computers + mobile.signin (M3 slice S2a)",
+  "round": 2,
+  "scope": "delta: v1→v2 remediation of round-1 audit vis2a1 (job 505168ab5fb0)",
+  "audit_date": "2026-11-12",
+  "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+  "key_count": 37,
+  "changed_key_count": 5,
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+      "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+      "recomputed_match": true
+    },
+    "v1": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/vi/draft-vi-s2a.json",
+      "sha256": "107beb9bf587f3c35d61511aa7244a72ea6b819185d5594901cb78d400272574",
+      "recomputed_match": true
+    },
+    "v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/vi/draft-vi-s2a-v2.json",
+      "sha256": "50d0e1a892c8d1d5e400edf621f2d19d780eef567647e31dabc8458f68414079",
+      "recomputed_match": true
+    }
+  },
+  "equality_proof": "parsed both JSON objects: 37 keys each, identical key order, no keys added/dropped; 32 values byte-equal; exactly the 5 keys below differ — matches translator notes",
+  "changed_keys": [
+    "mobile.computers.own_tunnel.intro",
+    "mobile.computers.own_tunnel.insecure_hint",
+    "mobile.computers.own_tunnel.insecure_off_help",
+    "mobile.computers.own_tunnel.unencrypted_body",
+    "mobile.computers.own_tunnel.verdict_not_yet"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "cabaf853b6b1",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session runtime header; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "translator": {
+    "jobs": [
+      "783840cce6ac",
+      "64bf00a33403"
+    ],
+    "model_per_notes": "anthropic/claude-opus-5-5"
+  },
+  "round1_auditor_job": "505168ab5fb0",
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "layout_check": {
+    "component": "src/features/auth/own-tunnel.tsx VerdictBlock → <Alert title>",
+    "refs": [
+      "59ec5184",
+      "b84517c0"
+    ],
+    "alert": "src/ui/components/alert.tsx@59ec5184 lines 88-98 (unchanged at b84517c0)",
+    "result": "wraps; not fixed width"
+  },
+  "redaction_hits": {
+    "[redacted]_in_inputs": 0,
+    "tool_display_masks": 0
+  },
+  "mt_service_used": false,
+  "per_key": {
+    "mobile.computers.own_tunnel.intro": {
+      "v1": "Bạn không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng sẽ kết nối với nó qua địa chỉ bạn dán bên dưới.",
+      "v2": "Không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng sẽ kết nối với nó qua địa chỉ bạn dán bên dưới.",
+      "result": "pass",
+      "note": "V2 resolved: leading \"Bạn\" dropped; impersonal \"Không cần tài khoản Radient…\" is natural. Remaining bạn ×3 acceptable (translator took the first half of the suggestion only; not a finding)."
+    },
+    "mobile.computers.own_tunnel.insecure_hint": {
+      "v1": "Chỉ cần cho địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa",
+      "v2": "Chỉ cần khi dùng địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa",
+      "result": "pass",
+      "note": "V3 resolved: \"Chỉ cần khi dùng địa chỉ http\" idiomatic; \"in the clear\"→\"không mã hóa\" accurate; no final stop as required; http literal kept."
+    },
+    "mobile.computers.own_tunnel.insecure_off_help": {
+      "v1": "Qua http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ.",
+      "v2": "Với http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ.",
+      "result": "pass",
+      "note": "V4 resolved: \"Với http://,\" removes qua…qua repetition; http:// and https:// literal; off-by-default meaning intact."
+    },
+    "mobile.computers.own_tunnel.unencrypted_body": {
+      "v1": "Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — đường hầm thường in sẵn một địa chỉ như vậy.",
+      "v2": "Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — thông thường, đường hầm sẽ in ra một địa chỉ như vậy.",
+      "result": "pass",
+      "note": "V1 resolved: \"thông thường, đường hầm sẽ in ra một địa chỉ như vậy\" = \"a tunnel normally prints one\"; \"in ra\" (outputs) replaces pre-printed \"in sẵn\"; thường no longer collides with \"http:// thường\"."
+    },
+    "mobile.computers.own_tunnel.verdict_not_yet": {
+      "v1": "Chưa được",
+      "v2": "Chưa kết nối được",
+      "result": "pass",
+      "note": "V5 resolved: \"Chưa kết nối được\" calm, accurate for both error and invalid verdicts, pairs with verdict_ok \"Đã kết nối\", distinct from connect_refused.title \"Không thể kết nối\". 17 vs 7 chars is not an overflow: Alert title is an unconstrained <Text> (no numberOfLines) inside a flex-1/flexShrink:1/minWidth:0 column with maxWidth 100% — it wraps; not fixed width. Same at b84517c0 (alert.tsx unchanged; own-tunnel.tsx delta only adds placeholderDir)."
+    }
+  },
+  "prior_findings_ruling": {
+    "V1": "resolved",
+    "V2": "resolved",
+    "V3": "resolved",
+    "V4": "resolved",
+    "V5": "resolved"
+  },
+  "new_findings": [],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": []
+  },
+  "artifacts": [
+    "report.md",
+    "audit.log"
+  ],
+  "ledger": "not written: writes restricted to this directory; manager records the ledger row citing this record"
+}

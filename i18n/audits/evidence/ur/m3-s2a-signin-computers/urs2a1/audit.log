@@ -1,0 +1,54 @@
+# audit.log — urs2a1 (commands actually run; outputs summarized verbatim where short)
+$ shasum -a 256 brief-59ec5184.json ur/draft-ur-s2a.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+c19ceeb75f6b3172046d0c00a3022eb9df54ff0127a4d8fe26d892378e4af464  ur/draft-ur-s2a.json
+$ python: 37 brief keys == 37 draft keys -> True
+$ git show 59ec5184:src/i18n/messages.ts > <auditor scratch>/messages.ts  (sha256 c1831406…dba0)
+$ tsx check.ts (parseMessage+formatMessage per key, params compared with English)
+OK  mobile.computers.title.list => کمپیوٹرز
+OK  mobile.computers.title.set_up => کمپیوٹر ترتیب دیں
+OK  mobile.computers.banner.unreachable_stale => یہ فہرست شاید پرانی ہو، کیونکہ Radient سے رابطہ نہیں ہو سکا۔
+OK  mobile.computers.banner.unreachable_empty => آپ کے کمپیوٹرز کی فہرست کے لیے Radient سے رابطہ نہیں ہو سکا۔ اس ڈیوائس کا کنکشن جانچیں۔
+OK  mobile.computers.banner.unreadable_stale => یہ فہرست شاید پرانی ہو، کیونکہ Radient کا جواب پڑھا نہیں جا سکا۔
+OK  mobile.computers.banner.unreadable_empty => آپ کے کمپیوٹرز کی فہرست نہیں بن سکی، کیونکہ Radient کا جواب پڑھا نہیں جا سکا۔
+OK  mobile.computers.own_tunnel.title => آپ کی اپنی ٹنل
+OK  mobile.computers.own_tunnel.password_for => Studio Mac کا پاس ورڈ درج کریں
+OK  mobile.computers.own_tunnel.password_label => ریلے کا پاس ورڈ
+OK  mobile.computers.own_tunnel.intro => اس سب کے لیے Radient اکاؤنٹ درکار نہیں۔ آپ اپنے کمپیوٹر پر چلنے والے ریلے کو ایسی ٹنل کے ذریعے دستیاب کرتے ہیں جو آپ کے اپنے اختیار میں ہو، اور ایپ اس پتے کے ذریعے اس سے رابطہ کرتی ہے جو آپ نیچے چسپاں کریں گے۔
+OK  mobile.computers.own_tunnel.step_computer => کمپیوٹر پر
+OK  mobile.computers.own_tunnel.step_computer_help => ریلے صرف اپنے ہی کمپیوٹر سے کنکشن قبول کرتا ہے، اس لیے اسے اسی کمپیوٹر پر چلانا ہوگا۔ ایپ استعمال کرتے وقت اس کمپیوٹر کو سونے نہ دیں۔
+OK  mobile.computers.own_tunnel.step_publish => اسے دستیاب کریں
+OK  mobile.computers.own_tunnel.step_app => ایپ میں
+OK  mobile.computers.own_tunnel.url_label => عوامی URL
+OK  mobile.computers.own_tunnel.insecure_allow => سادہ http:// پتے کی اجازت دیں
+OK  mobile.computers.own_tunnel.insecure_allowed => سادہ http:// کی اجازت ہے
+OK  mobile.computers.own_tunnel.insecure_hint => صرف http والے پتے کے لیے ضروری، جو پاس ورڈ بغیر خفیہ کاری کے بھیجتا ہے
+OK  mobile.computers.own_tunnel.insecure_on_help => آن: ریلے کا پاس ورڈ اور آپ کی بھیجی ہوئی ہر چیز اس نیٹ ورک سے بغیر خفیہ کاری کے گزرتی ہے۔ ایسا صرف اسی نیٹ ورک پر کریں جس پر آپ کو بھروسا ہو۔
+OK  mobile.computers.own_tunnel.insecure_off_help => ریلے کا پاس ورڈ http:// پر نیٹ ورک سے بغیر خفیہ کاری کے گزرتا ہے، اس لیے یہ اختیار تب تک بند رہتا ہے جب تک آپ اسے آن نہ کریں۔ جب بھی پتہ https:// پر دستیاب ہو، وہی استعمال کریں۔
+OK  mobile.computers.own_tunnel.unencrypted_title => اس پتے پر خفیہ کاری نہیں
+OK  mobile.computers.own_tunnel.unencrypted_body => اس پتے کو استعمال کرنے کے لیے اوپر والا اختیار آن کریں، یا کوئی https:// پتہ درج کریں — ٹنل عموماً ایسا پتہ دکھاتی ہے۔
+OK  mobile.computers.own_tunnel.private_host => یہ پتہ آپ کے اپنے نیٹ ورک پر ہے، اس لیے خطرہ اسی نیٹ ورک تک محدود ہے۔
+OK  mobile.computers.own_tunnel.public_host => یہ پتہ نجی نہیں — اس فون سے اس پتے تک کے راستے میں موجود کوئی بھی چیز پاس ورڈ پڑھ سکتی ہے۔
+OK  mobile.computers.own_tunnel.step_test => جانچ کریں
+OK  mobile.computers.own_tunnel.step_test_help => کچھ بھی محفوظ ہونے سے پہلے یہ آپ کی ٹنل کے ذریعے ایک حقیقی درخواست بھیجتا ہے۔
+OK  mobile.computers.own_tunnel.security_heading => انٹرنیٹ پر لانے سے پہلے
+OK  mobile.computers.own_tunnel.security_body => آپ اپنا کمپیوٹر انٹرنیٹ پر لا رہے ہیں، اور اس کی حفاظت صرف ریلے کا پاس ورڈ کرتا ہے۔ HTTPS کو ترجیح دیں، اگر آپ کی ٹنل اپنا تصدیقی نظام دیتی ہے تو اسے بھی فعال کریں، اور اگر پاس ورڈ کسی اور کے ساتھ شیئر ہو چکا ہو تو `lop mobile password` سے اسے بدل دیں۔ جس کے پاس بھی وہ پاس ورڈ اور آپ کا URL ہو، وہ اس کمپیوٹر کے سیشن چلا سکتا ہے۔
+OK  mobile.computers.own_tunnel.test => کنکشن جانچیں
+OK  mobile.computers.own_tunnel.testing => جانچ ہو رہی ہے…
+OK  mobile.computers.own_tunnel.save_connect => محفوظ کریں اور منسلک ہوں
+OK  mobile.computers.own_tunnel.saving => محفوظ ہو رہا ہے…
+OK  mobile.computers.own_tunnel.need_address => جاری رکھنے کے لیے اپنی ٹنل کا پتہ چسپاں کریں۔
+OK  mobile.computers.own_tunnel.need_test => پہلے کنکشن جانچیں — جس ٹنل نے ایک بار بھی جواب نہ دیا ہو، وہ محفوظ کرنے کے لائق نہیں۔
+OK  mobile.computers.own_tunnel.verdict_ok => منسلک ہو گیا
+OK  mobile.computers.own_tunnel.verdict_not_yet => ابھی نہیں
+OK  mobile.signin.panel.unavailable_detail => اس بلڈ میں وہ لوپ بیک لسنر (expo-auth-session) شامل نہیں جو Radient کے ساتھ سائن ان کے لیے درکار ہے۔
+failures 0
+$ tsx p2.ts -> [["name","text"]] for en and ur password_for
+$ python latin-initial (drop /\{[^}]*\}/g, first \p{L}, ^[A-Za-z]) + bidi-control scan + token counts -> latin=[] bidi=[] mismatches=[]
+$ python minimal UBA (W/N rules, no explicit embeddings):
+  insecure_allow visual -> ' //:http ہداس'; unencrypted_body visual -> ' //:https یئوک'
+  password_for('Studio Mac') LTR base -> 'Studio Mac ںیرک جرد ڈرو ساپ اک'; RTL base -> 'ںیرک جرد ڈرو ساپ اک Studio Mac'
+$ git grep '://' 59ec5184 -- src/i18n/catalogues/ur/*.json -> no catalogue hits
+$ python cmap reader: Figtree-{Regular,Medium,SemiBold}.ttf -> 392 codepoints, 0 Arabic-script
+$ python cmap+hmtx unshaped widths @28dp -0.02em (title) / 16dp (buttons): see record.json rulings for title.list, title.set_up, buttons
+$ grep -ci redact brief draft notes -> 0 / 0 / 1 (notes text, not a mask)

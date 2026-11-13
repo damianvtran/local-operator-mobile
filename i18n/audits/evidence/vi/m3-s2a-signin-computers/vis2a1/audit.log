@@ -1,0 +1,39 @@
+# Execution log: commands actually run in auditor session c7817cfa48d6, outputs abridged. Companion of record.json (audit_id vis2a1, same provenance).
+
+$ cd <m3s2a>; shasum -a 256 brief-59ec5184.json vi/draft-vi-s2a.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+107beb9bf587f3c35d61511aa7244a72ea6b819185d5594901cb78d400272574  vi/draft-vi-s2a.json
+# both match the task → proceed
+$ shasum -a 256 vi/notes-vi-s2a.md → 02cfac84aac755d245752a801bf55fb767cca9cfa72411a9b1ffc60741d81237
+$ grep -ci redact brief / draft / notes → 0 / 0 / 1 (notes: the phrase "Redaction-marker scan", not a mask)
+
+$ python3: len(brief)=37 len(draft)=37; key order equal True
+$ python3 typography: NFC all; no ASCII "...", no double space, no space-before-punct, no ASCII quotes, em dashes spaced, no oa/uy second-vowel tone (hoá/xoá/huỷ…), end punctuation matches English per key → [] (0 issues)
+$ python3: 'bạn' occurrences 15 (intro 4, security_body 3, insecure_on_help 2, others 1)
+
+$ git -C ~/local-operator-mobile show 59ec5184:<f> | shasum -a 256 ; grep -ci redact
+src/i18n/catalogues/vi/mobile.computers.json 027158f79b987c422c51f813c1b1880a86c47221e5940266cf1678a716dc7f75 0
+src/i18n/catalogues/vi/mobile.signin.json 294be851168c7dbea9e27b926613c8e55167c9d1a03ab6e7c43a4de77a0668c7 0
+src/i18n/catalogues/en/mobile.computers.json 280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151 0
+src/i18n/catalogues/en/mobile.signin.json 02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace 0
+src/features/auth/own-tunnel.tsx 7e6ed4ad902ba2004f18c1822b5a3d6d85646b4dd5b7478bf92e93d10b1c6967 0
+src/ui/size-class.ts 500d22f691381c908523c66172a996ea3ed5c9797ad8b91122e9ceced7781631 0
+src/i18n/messages.ts c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0 0
+src/ui/components/button.tsx 0d98eb4854277d6e009ed7c747c2820e80ff2e8dd565f8afc61d1c701e4743c6 0
+design/fonts/Figtree-SemiBold.ttf 35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74 0
+
+$ git -C ~/local-operator fetch origin main; rev-parse origin/main → 73dc41570c94ff22db15c4a6721f458614de2998
+$ git show origin/main:i18n/style-guides/vi.md | shasum -a 256 → e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888
+$ git show origin/main:i18n/glossary.md | shasum -a 256 → 0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8
+# translator notes say "no style guide for vi at 59ec5184" — true for the mobile repo; the core repo's vi guide was read and applied here.
+
+$ node --experimental-strip-types check.ts   # messages.ts@59ec5184 copied to auditor scratch $LOCAL_OPERATOR_SCRATCHPAD/vi-audit, not run in the repo
+keys 37 draftKeys 37 issues 0
+params: password_for [name:text], security_body [command:text], unavailable_detail [module:text] — param sets equal to English for all 37; protected tokens present (Radient, Local Operator, lop mobile, http://, https://, `{command}`, ({module}), HTTPS, …)
+# first run compared a non-existent .arguments field (trivially equal); corrected to ParsedMessage.params and re-run → result above
+
+$ python3 width.py   # stdlib TTF cmap/hmtx reader on Figtree-SemiBold@59ec5184; 28 dp, −0.02 em tracking (size-class.ts:452-453)
+'Computers' 137.8 (calibration = doc 137.8) · 'Set up a computer' 226.2 (doc 227)
+'Máy tính' 105.9 · 'Thêm máy tính' 181.7 · 'Thiết lập máy tính' 226.9 (ế, ậ not in Figtree)
+glyphs absent from Figtree across the draft: ũưạảấầẩậắằẵặẻẽếềểệỉịọốồổỗộớờởợụủứừửự (font coverage, pre-existing for all vi copy)
+# fontTools not installed; no dependency installed (rig hygiene) — reader written with struct only

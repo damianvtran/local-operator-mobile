@@ -30,5 +30,6 @@
 	"mobile.signin.panel.unavailable_alt": "你仍可使用中继的地址和密码连接。",
 	"mobile.signin.try_anyway": "仍要重试",
 	"mobile.signin.welcome.headline": "智能体运行在你的电脑上。",
-	"mobile.signin.welcome.body": "此应用在你的电脑上运行会话，并展示它做了什么。你的代码绝不会离开这台电脑。"
+	"mobile.signin.welcome.body": "此应用在你的电脑上运行会话，并展示它做了什么。你的代码绝不会离开这台电脑。",
+	"mobile.signin.panel.unavailable_detail": "此版本缺少使用Radient登录所需的本机回环监听器（{module}）。"
 }

@@ -1,0 +1,153 @@
+{
+  "locale": "zh-CN",
+  "namespace": "mobile.computers+mobile.signin (M3 S2a)",
+  "round": 2,
+  "scope": "delta: v1->v2, the 5 round-1 finding keys only; 32 unchanged keys equality-proved, not re-audited",
+  "audit_date": "2026-11-12",
+  "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+      "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563"
+    },
+    "v1": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/zh-CN/draft-zh-CN-s2a.json",
+      "sha256": "f38550f3bf07fccab7c04c35b62567d371fa2c60708be470bfacbe9a01979a68"
+    },
+    "v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/zh-CN/draft-zh-CN-s2a-v2.json",
+      "sha256": "f9bd1fed3bfeddc26d01c2f0e7e8c3ecde0dd47ff5a1833515f46e4b25fc1966"
+    }
+  },
+  "hash_check": "all three recomputed, all match",
+  "key_count": 37,
+  "changed_keys": [
+    "mobile.computers.own_tunnel.insecure_off_help",
+    "mobile.computers.own_tunnel.private_host",
+    "mobile.computers.own_tunnel.public_host",
+    "mobile.computers.own_tunnel.step_test_help",
+    "mobile.computers.own_tunnel.security_heading"
+  ],
+  "equality_proof": "Same 37 keys in the same order. A line diff shows 10 changed lines, 5 removed and 5 added, all for the 5 keys. Writing the 5 v2 values into the v1 text gives a result byte-identical to v2. So no other byte changed.",
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "18935f868a69",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system header; no fallback observed",
+    "independent_from_translator_session": true,
+    "not_round1_auditor": true
+  },
+  "translator": {
+    "jobs": [
+      "58e08aabd2d5",
+      "660497d4cc28"
+    ],
+    "session": "89bf28b0cac4 (per v2 notes)"
+  },
+  "round1_auditor": {
+    "job": "4584e10b4759",
+    "session": "466817b58ea5"
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "translation_tools": "none (no MT/API/SDK)",
+  "redaction_hits": {
+    "v1": 0,
+    "v2": 0
+  },
+  "glossary": "git show 59ec5184:src/i18n/catalogues/zh-CN/mobile.computers.json; plus own_tunnel.url_label/security_body in the draft",
+  "per_key": {
+    "mobile.computers.own_tunnel.insecure_off_help": {
+      "v1": "使用http://时，中继密码会以明文在网络中传输，因此默认关闭，需你手动开启。只要地址支持，请始终使用https://。",
+      "v2": "使用http://时，中继密码会以明文在网络中传输，因此除非你手动开启，否则此选项保持关闭。只要地址支持，请始终使用https://。",
+      "english": "Over http:// your relay password crosses the network in the clear, so it is off unless you turn it on. Use https:// whenever the address supports it.",
+      "round1_finding": "ZHS2A-03",
+      "finding_status": "resolved",
+      "placeholders": "none in source or target",
+      "register": "你",
+      "punctuation": "full-width ，。 and ——; no CJK/Latin spacing",
+      "cells_zh_v2": 119,
+      "chars_en": 149,
+      "maxCells_hint": null,
+      "result": "PASS",
+      "comment": "除非你手动开启，否则此选项保持关闭 correctly says \"off unless you turn it on\", and 此选项 correctly points to the opt-in. http:// and https:// are unchanged, with counts 1/1."
+    },
+    "mobile.computers.own_tunnel.private_host": {
+      "v1": "此地址位于你自己的网络内，因此风险仅限于该网络。",
+      "v2": "此地址位于你自己的网络内，因此暴露范围仅限于该网络。",
+      "english": "This address is on your own network, so the exposure is limited to it.",
+      "round1_finding": "ZHS2A-05",
+      "finding_status": "resolved",
+      "placeholders": "none in source or target",
+      "register": "你",
+      "punctuation": "full-width ，。 and ——; no CJK/Latin spacing",
+      "cells_zh_v2": 52,
+      "chars_en": 70,
+      "maxCells_hint": null,
+      "result": "PASS",
+      "comment": "暴露范围 translates \"exposure\" exactly and matches the security body."
+    },
+    "mobile.computers.own_tunnel.public_host": {
+      "v1": "此地址不是私有地址——此手机与它之间的任何一方都能读取密码。",
+      "v2": "此地址不是私有地址——从此手机到该地址途经的任何网络或设备都能读取密码。",
+      "english": "This address is not a private one — anything between this phone and it can read the password.",
+      "round1_finding": "ZHS2A-01",
+      "finding_status": "resolved",
+      "placeholders": "none in source or target",
+      "register": "你",
+      "punctuation": "full-width ，。 and ——; no CJK/Latin spacing",
+      "cells_zh_v2": 70,
+      "chars_en": 93,
+      "maxCells_hint": null,
+      "result": "PASS",
+      "comment": "Names the networks and devices on the path between the phone and the address (途经的任何网络或设备). The \"either party\" misreading is gone, the warning stays strong, and the paired dash —— is kept."
+    },
+    "mobile.computers.own_tunnel.step_test_help": {
+      "v1": "在保存任何内容之前，这会先通过你的隧道发送一次真实请求。",
+      "v2": "保存前，会先通过你的隧道发送一次真实请求。",
+      "english": "This makes a real request through your tunnel before anything is saved.",
+      "round1_finding": "ZHS2A-04",
+      "finding_status": "resolved",
+      "placeholders": "none in source or target",
+      "register": "你",
+      "punctuation": "full-width ，。 and ——; no CJK/Latin spacing",
+      "cells_zh_v2": 42,
+      "chars_en": 71,
+      "maxCells_hint": null,
+      "result": "PASS",
+      "comment": "The calqued subject is gone. 保存前 is accurate for \"before anything is saved\", and the subjectless 会先 reads naturally as UI help."
+    },
+    "mobile.computers.own_tunnel.security_heading": {
+      "v1": "公开电脑前须知",
+      "v2": "暴露到公网前须知",
+      "english": "Before you expose it",
+      "round1_finding": "ZHS2A-02",
+      "finding_status": "resolved",
+      "placeholders": "none in source or target",
+      "register": "你",
+      "punctuation": "full-width ，。 and ——; no CJK/Latin spacing",
+      "cells_zh_v2": 16,
+      "chars_en": 20,
+      "maxCells_hint": null,
+      "result": "PASS",
+      "comment": "暴露 now matches the body (暴露到互联网上) and 公网 matches url_label (公网URL). Leaving out the object 电脑 is fine in a heading, because the body directly below names the computer. No final full stop; 8 CJK characters."
+    }
+  },
+  "findings": [],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "round1_findings_resolved": [
+      "ZHS2A-01",
+      "ZHS2A-02",
+      "ZHS2A-03",
+      "ZHS2A-04",
+      "ZHS2A-05"
+    ]
+  },
+  "artifacts": {
+    "report": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/zh-CN-r2/report.md",
+    "audit_log": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/zh-CN-r2/audit.log"
+  },
+  "audit_notes_not_execution_log": "report.md holds the judgements. audit.log holds the commands that actually ran and their outputs."
+}

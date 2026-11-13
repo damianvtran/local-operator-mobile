@@ -1,0 +1,482 @@
+{
+ "schema": 1,
+ "audit_id": "vis2a1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "vi",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.signin"
+ ],
+ "namespace": "mobile.computers+mobile.signin (M3 slice S2a, 37 keys)",
+ "audit_date": "2026-11-12",
+ "key_count": {
+  "en": 37,
+  "target": 37,
+  "by_namespace": {
+   "mobile.computers": 36,
+   "mobile.signin": 1
+  }
+ },
+ "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "c7817cfa48d6",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "id": "translator job 783840cce6ac",
+  "model_per_notes": "anthropic/claude-opus-5-5",
+  "note": "auditor did not translate or edit the draft"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+   "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+   "recomputed": "match"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/vi/draft-vi-s2a.json",
+   "sha256": "107beb9bf587f3c35d61511aa7244a72ea6b819185d5594901cb78d400272574",
+   "recomputed": "match"
+  },
+  "translator_notes": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/vi/notes-vi-s2a.md",
+   "sha256": "02cfac84aac755d245752a801bf55fb767cca9cfa72411a9b1ffc60741d81237"
+  },
+  "references": {
+   "src/i18n/catalogues/vi/mobile.computers.json@59ec5184": "027158f79b987c422c51f813c1b1880a86c47221e5940266cf1678a716dc7f75",
+   "src/i18n/catalogues/vi/mobile.signin.json@59ec5184": "294be851168c7dbea9e27b926613c8e55167c9d1a03ab6e7c43a4de77a0668c7",
+   "src/i18n/catalogues/en/mobile.computers.json@59ec5184": "280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151",
+   "src/i18n/catalogues/en/mobile.signin.json@59ec5184": "02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace",
+   "src/features/auth/own-tunnel.tsx@59ec5184": "7e6ed4ad902ba2004f18c1822b5a3d6d85646b4dd5b7478bf92e93d10b1c6967",
+   "src/ui/size-class.ts@59ec5184": "500d22f691381c908523c66172a996ea3ed5c9797ad8b91122e9ceced7781631",
+   "src/i18n/messages.ts@59ec5184": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+   "src/ui/components/button.tsx@59ec5184": "0d98eb4854277d6e009ed7c747c2820e80ff2e8dd565f8afc61d1c701e4743c6",
+   "design/fonts/Figtree-SemiBold.ttf@59ec5184": "35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74",
+   "~/local-operator origin/main(73dc4157):i18n/style-guides/vi.md": "e4901497ed553e2b2ae4a2660bf776adb787b89e11d7eb0f8d08f3da4b227888",
+   "~/local-operator origin/main(73dc4157):i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "context_sidecar": "not read: brief notes carry the context; sidecars are nested JSON and not routable"
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "file_bytes": {
+    "brief": 0,
+    "draft": 0,
+    "repo_files_read": 0,
+    "translator_notes": "1 (the phrase 'Redaction-marker scan', not a mask)"
+   },
+   "tool_display_masks": 0
+  }
+ },
+ "mechanical": {
+  "parser": "src/i18n/messages.ts@59ec5184 parseMessage (read-only copy in auditor scratch, node 24 --experimental-strip-types); ParsedMessage.params compared",
+  "parse_failures": 0,
+  "placeholder_mismatches": 0,
+  "protected_token_mismatches": 0,
+  "plural_select": "none in slice",
+  "typography_issues": 0,
+  "nfc": true,
+  "keys_added_or_dropped": 0,
+  "key_order_matches_brief": true
+ },
+ "width": {
+  "method": "stdlib TTF reader on Figtree-SemiBold@59ec5184, 28 dp, -0.02 em tracking; calibration Computers=137.8 (doc 137.8)",
+  "title.list": {
+   "vi_dp": 105.9,
+   "en_budget_dp": 137.8
+  },
+  "title.set_up": {
+   "vi_dp": 181.7,
+   "en_budget_dp": 226.2
+  },
+  "font_coverage_note": "Figtree lacks the Vietnamese extended range; 34/37 strings partly use fallback font (pre-existing, out of scope)"
+ },
+ "findings": [
+  {
+   "id": "V1",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.unencrypted_body",
+   "problem": "“in sẵn” reads as ‘pre-printed’; and “đường hầm thường …” garden-paths as ‘an ordinary tunnel’ on the screen where “http:// thường” uses thường as the adjective ‘plain’.",
+   "suggested": "Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — thông thường, đường hầm sẽ in ra một địa chỉ như vậy."
+  },
+  {
+   "id": "V2",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.intro",
+   "problem": "4× bạn in two sentences; vi style guide: drop pronouns where verbs carry the sentence.",
+   "suggested": "Không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng kết nối với nó qua địa chỉ dán bên dưới."
+  },
+  {
+   "id": "V3",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.insecure_hint",
+   "problem": "“Chỉ cần cho địa chỉ http” is elliptical.",
+   "suggested": "Chỉ cần khi dùng địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa"
+  },
+  {
+   "id": "V4",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "problem": "“Qua http://, … truyền qua mạng” repeats qua.",
+   "suggested": "Với http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ."
+  },
+  {
+   "id": "V5",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.verdict_not_yet",
+   "problem": "“Chưa được” is fine and calm but can also read ‘not allowed yet’; optional more explicit form.",
+   "suggested": "Chưa kết nối được"
+  }
+ ],
+ "rulings": {
+  "mobile.signin.panel.unavailable_detail": "ACCEPT ‘trình lắng nghe loopback’: developer-facing detail beside {module}; listener→trình lắng nghe is understood, loopback kept as the recognised term.",
+  "mobile.computers.own_tunnel.insecure_allow": "ACCEPT ‘http:// thường’: understood as plain http in contrast to https://; pair consistent with insecure_allowed; hint/help lines carry the risk. Interaction with unencrypted_body handled by V1.",
+  "mobile.computers.own_tunnel.insecure_allowed": "ACCEPT (see insecure_allow).",
+  "mobile.computers.own_tunnel.step_test": "ACCEPT ‘Kiểm tra’: dropping the object is natural for a step heading; the button directly below says ‘Kiểm tra kết nối’.",
+  "mobile.computers.title.list": "ACCEPT; MEASURED 105.9 dp vs English 137.8 (Figtree SemiBold 28 dp, −0.02 em, same computation as size-class.ts doc; calibration reproduces Computers=137.8); all glyphs in Figtree.",
+  "mobile.computers.title.set_up": "ACCEPT ‘Thêm máy tính’ (= the Add a computer entry point, matches mobile.computers.add); MEASURED 181.7 dp vs 226.2 budget; all glyphs in Figtree. Literal ‘Thiết lập máy tính’ would be 226.9 dp with ế/ậ from fallback font.",
+  "mobile.computers.own_tunnel.step_publish": "ACCEPT 2.10x: StepHeader label is a wrapping Text in a flex-row beside the numeral (own-tunnel.tsx:76-85), no numberOfLines; ~21 chars fits a phone row.",
+  "mobile.computers.own_tunnel.testing": "ACCEPT 1.75x: same Button as ‘Kiểm tra kết nối’ (own-tunnel.tsx:250-260), shorter than that label; Button has no labelLines here so it may wrap.",
+  "mobile.computers.own_tunnel.public_host": "ACCEPT 1.48x: wrapping text-body-sm warning line (own-tunnel.tsx:479). Meaning: anyone/any device on the path can read the password — correct and strong.",
+  "mobile.computers.own_tunnel.password_label": "ACCEPT 1.43x: Input label (full width); established glossary term.",
+  "mobile.computers.own_tunnel.step_app": "ACCEPT 1.40x: StepHeader, wrapping.",
+  "mobile.computers.own_tunnel.unencrypted_body": "Length 1.38x ACCEPT (Alert body, wraps); ‘it’ correctly = the address (Để dùng địa chỉ này). Wording finding V1.",
+  "mobile.computers.own_tunnel.step_computer_help": "ACCEPT: loopback = from this same computer, not the local network.",
+  "mobile.computers.own_tunnel.insecure_off_help": "ACCEPT: ‘tắt theo mặc định’ states the default without nudging toward enabling (NIT V4 only).",
+  "mobile.computers.own_tunnel.security_body": "ACCEPT: ‘bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ’ is a single coherent conditional; `{command}` with backticks intact."
+ },
+ "per_key": [
+  {
+   "key": "mobile.computers.title.list",
+   "english": "Computers",
+   "vi": "Máy tính",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT; MEASURED 105.9 dp vs English 137.8 (Figtree SemiBold 28 dp, −0.02 em, same computation as size-class.ts doc; calibration reproduces Computers=137.8); all glyphs in Figtree."
+  },
+  {
+   "key": "mobile.computers.title.set_up",
+   "english": "Set up a computer",
+   "vi": "Thêm máy tính",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT ‘Thêm máy tính’ (= the Add a computer entry point, matches mobile.computers.add); MEASURED 181.7 dp vs 226.2 budget; all glyphs in Figtree. Literal ‘Thiết lập máy tính’ would be 226.9 dp with ế/ậ from fallback font."
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_stale",
+   "english": "Radient could not be reached, so this list may be out of date.",
+   "vi": "Không thể kết nối với Radient, nên danh sách này có thể đã cũ.",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_empty",
+   "english": "Radient could not be reached to list your computers. Check this device's connection.",
+   "vi": "Không thể kết nối với Radient để liệt kê máy tính của bạn. Hãy kiểm tra kết nối mạng của thiết bị này.",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_stale",
+   "english": "Radient's answer could not be read, so this list may be out of date.",
+   "vi": "Không đọc được phản hồi của Radient, nên danh sách này có thể đã cũ.",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_empty",
+   "english": "Radient's answer could not be read, so your computers could not be listed.",
+   "vi": "Không đọc được phản hồi của Radient, nên không thể liệt kê máy tính của bạn.",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.title",
+   "english": "Your own tunnel",
+   "vi": "Đường hầm riêng",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_for",
+   "english": "Enter the password for {name}",
+   "vi": "Nhập mật khẩu cho {name}",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_label",
+   "english": "Relay password",
+   "vi": "Mật khẩu chuyển tiếp",
+   "role": "meta",
+   "result": "pass",
+   "ruling": "ACCEPT 1.43x: Input label (full width); established glossary term."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.intro",
+   "english": "No Radient account is needed for any of this. You publish the relay on your own computer through a tunnel you control, and the app talks to it through the address you paste below.",
+   "vi": "Bạn không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng sẽ kết nối với nó qua địa chỉ bạn dán bên dưới.",
+   "role": "help",
+   "result": "finding V2",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer",
+   "english": "On the computer",
+   "vi": "Trên máy tính",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "english": "The relay binds loopback only, so this is the machine that has to run it. Leave it awake while you use the app.",
+   "vi": "Máy chủ chuyển tiếp chỉ nhận kết nối từ chính máy tính này, nên nó phải chạy ở đây. Đừng để máy ngủ trong lúc bạn dùng ứng dụng.",
+   "role": "help",
+   "result": "pass",
+   "ruling": "ACCEPT: loopback = from this same computer, not the local network."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_publish",
+   "english": "Publish it",
+   "vi": "Công khai ra internet",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT 2.10x: StepHeader label is a wrapping Text in a flex-row beside the numeral (own-tunnel.tsx:76-85), no numberOfLines; ~21 chars fits a phone row."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_app",
+   "english": "In the app",
+   "vi": "Trong ứng dụng",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT 1.40x: StepHeader, wrapping."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.url_label",
+   "english": "Public URL",
+   "vi": "URL công khai",
+   "role": "meta",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allow",
+   "english": "Allow a plain http:// address",
+   "vi": "Cho phép địa chỉ http:// thường",
+   "role": "button",
+   "result": "pass",
+   "ruling": "ACCEPT ‘http:// thường’: understood as plain http in contrast to https://; pair consistent with insecure_allowed; hint/help lines carry the risk. Interaction with unencrypted_body handled by V1."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allowed",
+   "english": "Plain http:// is allowed",
+   "vi": "Đã cho phép http:// thường",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT (see insecure_allow)."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_hint",
+   "english": "Needed only for an address over http, which sends the password in the clear",
+   "vi": "Chỉ cần cho địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa",
+   "role": "help",
+   "result": "finding V3",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_on_help",
+   "english": "On: the relay password and everything you send cross this network unencrypted. Only do this on a network you trust.",
+   "vi": "Bật: mật khẩu chuyển tiếp và mọi thứ bạn gửi đi đều truyền qua mạng này mà không được mã hóa. Chỉ làm vậy trên mạng bạn tin cậy.",
+   "role": "help",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "english": "Over http:// your relay password crosses the network in the clear, so it is off unless you turn it on. Use https:// whenever the address supports it.",
+   "vi": "Qua http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ.",
+   "role": "help",
+   "result": "finding V4",
+   "ruling": "ACCEPT: ‘tắt theo mặc định’ states the default without nudging toward enabling (NIT V4 only)."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_title",
+   "english": "This address is unencrypted",
+   "vi": "Địa chỉ này không được mã hóa",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_body",
+   "english": "Turn the opt-in on to use it, or give an https:// address — a tunnel normally prints one.",
+   "vi": "Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — đường hầm thường in sẵn một địa chỉ như vậy.",
+   "role": "help",
+   "result": "finding V1",
+   "ruling": "Length 1.38x ACCEPT (Alert body, wraps); ‘it’ correctly = the address (Để dùng địa chỉ này). Wording finding V1."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.private_host",
+   "english": "This address is on your own network, so the exposure is limited to it.",
+   "vi": "Địa chỉ này nằm trong mạng riêng của bạn, nên rủi ro chỉ giới hạn trong mạng đó.",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.public_host",
+   "english": "This address is not a private one — anything between this phone and it can read the password.",
+   "vi": "Đây không phải địa chỉ riêng — bất kỳ ai hay thiết bị nào trên đường truyền từ điện thoại này đến địa chỉ đó đều có thể đọc được mật khẩu.",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT 1.48x: wrapping text-body-sm warning line (own-tunnel.tsx:479). Meaning: anyone/any device on the path can read the password — correct and strong."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test",
+   "english": "Test it",
+   "vi": "Kiểm tra",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT ‘Kiểm tra’: dropping the object is natural for a step heading; the button directly below says ‘Kiểm tra kết nối’."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test_help",
+   "english": "This makes a real request through your tunnel before anything is saved.",
+   "vi": "Bước này gửi một yêu cầu thật qua đường hầm của bạn trước khi lưu bất cứ thứ gì.",
+   "role": "help",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "english": "Before you expose it",
+   "vi": "Trước khi công khai máy",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_body",
+   "english": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and rotate the password with `{command}` if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
+   "vi": "Bạn đang đưa chính máy tính của mình lên internet, và mật khẩu chuyển tiếp là thứ duy nhất bảo vệ nó. Hãy ưu tiên HTTPS, bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ, và đổi mật khẩu bằng `{command}` nếu mật khẩu đã từng bị chia sẻ. Bất kỳ ai có mật khẩu đó và URL của bạn đều có thể điều khiển các phiên trên máy đó.",
+   "role": "help",
+   "result": "pass",
+   "ruling": "ACCEPT: ‘bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ’ is a single coherent conditional; `{command}` with backticks intact."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.test",
+   "english": "Test the connection",
+   "vi": "Kiểm tra kết nối",
+   "role": "button",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.testing",
+   "english": "Testing…",
+   "vi": "Đang kiểm tra…",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT 1.75x: same Button as ‘Kiểm tra kết nối’ (own-tunnel.tsx:250-260), shorter than that label; Button has no labelLines here so it may wrap."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.save_connect",
+   "english": "Save and connect",
+   "vi": "Lưu và kết nối",
+   "role": "button",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.saving",
+   "english": "Saving…",
+   "vi": "Đang lưu…",
+   "role": "status",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_address",
+   "english": "Paste your tunnel's address to continue.",
+   "vi": "Dán địa chỉ đường hầm của bạn để tiếp tục.",
+   "role": "help",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_test",
+   "english": "Test the connection first — a tunnel that has not answered once is not one to save.",
+   "vi": "Hãy kiểm tra kết nối trước — đừng lưu một đường hầm chưa từng phản hồi lần nào.",
+   "role": "help",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_ok",
+   "english": "Connected",
+   "vi": "Đã kết nối",
+   "role": "heading",
+   "result": "pass",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_not_yet",
+   "english": "Not yet",
+   "vi": "Chưa được",
+   "role": "heading",
+   "result": "finding V5",
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.signin.panel.unavailable_detail",
+   "english": "Signing in with Radient needs a loopback listener this build does not include ({module}).",
+   "vi": "Đăng nhập bằng Radient cần một trình lắng nghe loopback mà bản dựng này không có ({module}).",
+   "role": "help",
+   "result": "pass",
+   "ruling": "ACCEPT ‘trình lắng nghe loopback’: developer-facing detail beside {module}; listener→trình lắng nghe is understood, loopback kept as the recognised term."
+  }
+ ],
+ "current_report_verdict": {
+  "status": "passed",
+  "verdict": "pass",
+  "unresolved_blocker_major_count": 0,
+  "severity_counts": {
+   "BLOCKER": 0,
+   "MAJOR": 0,
+   "MINOR": 1,
+   "NIT": 4
+  },
+  "finding_ids": [
+   "V1",
+   "V2",
+   "V3",
+   "V4",
+   "V5"
+  ]
+ },
+ "ledger": "not written by auditor (write scope limited to audits/vi/); manager records the row citing this record",
+ "audit_notes_not_execution_log": "report.md is audit notes; audit.log is the execution log",
+ "artifacts": {
+  "report.md": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/vi/report.md",
+   "sha256": "bb6beb56e9e937e41d84842eaa9b56bf339b1c4fc9b66b6993e6787488ec90d2"
+  },
+  "audit.log": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/vi/audit.log",
+   "sha256": "9e3471c99a69b20c8dad878197d0048220373c682da1a3c33e7615c5f8d75f32"
+  }
+ }
+}

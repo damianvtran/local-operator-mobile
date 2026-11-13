@@ -1,0 +1,15 @@
+audit.log — ru r2 delta, session b2fc5336cf25, 2026-11-12 (execution log)
+$ shasum -a 256 brief-59ec5184.json ru/draft-ru-s2a.json ru/draft-ru-s2a-v2.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+f7aa4fb6c19541145a8c74abf4a55088d443aaf31b2a240b30e8d3f4d08633f6  ru/draft-ru-s2a.json
+b92e8628086d978ee9e488f94799899f9e513b7f49d79fe617d175f0a78416d7  ru/draft-ru-s2a-v2.json
+$ python flatten+diff v1 v2 -> keys 37/37, symdiff set(), changed 5: mobile.computers.own_tunnel.step_computer_help, mobile.computers.own_tunnel.insecure_hint, mobile.computers.own_tunnel.insecure_on_help, mobile.computers.own_tunnel.insecure_off_help, mobile.signin.panel.unavailable_detail
+$ grep redact v2 -> 0 bytes; step_computer_help prefix unicode_escape \u0420\u0435\u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0442\u043e\u0440
+$ placeholder/protected-token regex check -> 5/5 equal
+$ len security_heading v2=25, suggested=38, en=20
+$ node --experimental-strip-types run.ts (messages.ts @59ec5184, git show)
+mobile.computers.own_tunnel.step_computer_help argsEqual=true [] -> но на нём. Не давайте компьютеру уснуть, пока пользуетесь приложением.
+mobile.computers.own_tunnel.insecure_hint argsEqual=true [] -> но только для адресов http — по ним пароль передаётся открытым текстом
+mobile.computers.own_tunnel.insecure_on_help argsEqual=true [] -> той сети без шифрования. Делайте так только в сети, которой доверяете.
+mobile.computers.own_tunnel.insecure_off_help argsEqual=true [] -> еса запрещены. Используйте https:// везде, где адрес это поддерживает.
+mobile.signin.panel.unavailable_detail argsEqual=true [["module","text"]] -> иёмник ответа браузера (expo-web-browser), которого нет в этой сборке.

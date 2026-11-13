@@ -1,0 +1,390 @@
+{
+ "schema": 1,
+ "audit_id": "zhcns2a1",
+ "audit_kind": "translation_audit",
+ "locale": "zh-CN",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.signin"
+ ],
+ "namespace": "mobile.computers+mobile.signin (M3 slice S2a, 37 keys)",
+ "audit_date": "2026-11-12",
+ "key_count": {
+  "en": 37,
+  "target": 37,
+  "mobile.computers": 36,
+  "mobile.signin": 1
+ },
+ "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "466817b58ea5",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session system-prompt header (Model: anthropic/claude-opus-5-5); no role pin, no fallback used or observed",
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "identity": "translator job 58e08aabd2d5",
+  "session_per_notes": "89bf28b0cac4",
+  "model_per_notes": "anthropic/claude-opus-5-5"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+   "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+   "expected": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/zh-CN/draft-zh-CN-s2a.json",
+   "sha256": "f38550f3bf07fccab7c04c35b62567d371fa2c60708be470bfacbe9a01979a68",
+   "expected": "f38550f3bf07fccab7c04c35b62567d371fa2c60708be470bfacbe9a01979a68"
+  },
+  "translator_notes": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/zh-CN/notes-zh-CN-s2a.md",
+   "sha256": "ea505cce31e4a401c93e20a20a7257184bd4f6a2c9fc0413d11f7229e01a886e"
+  },
+  "en_catalogues@59ec5184": {
+   "src/i18n/catalogues/en/mobile.computers.json": "280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151",
+   "src/i18n/catalogues/en/mobile.signin.json": "02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace"
+  },
+  "zh-CN_catalogues@59ec5184": {
+   "src/i18n/catalogues/zh-CN/mobile.computers.json": "859bb06f8ad77d052e16cb6a7c6cb22db1ad45676944ead054d7a9bf1cfdb251",
+   "src/i18n/catalogues/zh-CN/mobile.signin.json": "0066d5e7db1e1f75ca4ff686450bf4186cf144c1dfb8d383dbb52e91ea7fc96f"
+  },
+  "parser src/i18n/messages.ts@59ec5184": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+  "style_guide": "~/local-operator origin/main:i18n/style-guides/zh-CN.md"
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_marker_hits": {
+   "brief": 0,
+   "draft": 0,
+   "translator_notes": "5 literal mentions (redacted×3, masked×1, ***×1), all in the translator's own scan description; no masked value",
+   "note": "shipped zh-CN mobile.computers.connect_refused.password shows [redacted] only through harness masking (per manager it is a real 16-char value); not in this brief, not reported"
+  },
+  "mt_services": "none used; judgement by reasoning only"
+ },
+ "mechanical": {
+  "parser": "repo parseMessage (src/i18n/messages.ts @59ec5184) run under node v24.22.1",
+  "parse": "37/37 en+zh parse",
+  "placeholders": "name/command/module text args identical to en catalogue; 0 mismatches",
+  "en_brief_vs_catalogue": "37/37 brief english == en catalogue @59ec5184",
+  "key_set": "37 keys, order equals brief, none added/dropped, none already shipped in zh-CN",
+  "plural": "no plural/select in slice; zh other-only rule not exercised",
+  "punctuation": "no ASCII ...; no single …; no ASCII ,;!? outside code; no CJK–Latin space; no bidi controls",
+  "width": "no maxCells/maxChars hints in en sidecars; all values ≤ English cells except testing 10/8, saving 10/7, step_test 8/7, verdict_not_yet 8/7 — all short labels, no overflow risk",
+  "negative_controls": "{name→THREW; {command}}→THREW; renamed {nam} and dropped placeholder parse (hence comparison against en params)"
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "verdict": "fail",
+  "unresolved_blocker_major_count": 1,
+  "severity_counts": {
+   "BLOCKER": 0,
+   "MAJOR": 1,
+   "MINOR": 2,
+   "NIT": 2
+  },
+  "finding_ids": [
+   "ZHS2A-01",
+   "ZHS2A-02",
+   "ZHS2A-03",
+   "ZHS2A-04",
+   "ZHS2A-05"
+  ]
+ },
+ "findings": [
+  {
+   "key": "mobile.computers.own_tunnel.public_host",
+   "id": "ZHS2A-01",
+   "severity": "major",
+   "current": "此地址不是私有地址——此手机与它之间的任何一方都能读取密码。",
+   "problem": "“此手机与它之间的任何一方” is not idiomatic: “任何一方” evokes “either party” (of the phone and the address), so the warning about anything on the path in between can be misread and is weakened; “它” is also vague. The note asks for a strong warning.",
+   "suggested": "此地址不是私有地址——从此手机到该地址途经的任何网络或设备都能读取密码。"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "id": "ZHS2A-02",
+   "severity": "minor",
+   "current": "公开电脑前须知",
+   "problem": "“公开电脑” (publicise/disclose the computer) is an unusual collocation for “expose”; the body under it says 暴露到互联网上 and the URL label uses 公网. Understandable, but the heading and body use different terms.",
+   "suggested": "将电脑暴露到公网前须知"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "id": "ZHS2A-03",
+   "severity": "minor",
+   "current": "使用http://时，中继密码会以明文在网络中传输，因此默认关闭，需你手动开启。只要地址支持，请始终使用https://。",
+   "problem": "“需你手动开启” can be read as “you need to turn it on”, which nudges toward the unsafe option. The English says it stays off unless you turn it on.",
+   "suggested": "使用http://时，中继密码会以明文在网络中传输，因此除非你手动开启，否则此选项保持关闭。只要地址支持，请始终使用https://。"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test_help",
+   "id": "ZHS2A-04",
+   "severity": "nit",
+   "current": "在保存任何内容之前，这会先通过你的隧道发送一次真实请求。",
+   "problem": "The subject “这会先” is a calque of “This makes”. Chinese drops it.",
+   "suggested": "保存前，会先通过你的隧道发送一次真实请求。"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.private_host",
+   "id": "ZHS2A-05",
+   "severity": "nit",
+   "current": "此地址位于你自己的网络内，因此风险仅限于该网络。",
+   "problem": "“风险” generalises “exposure”. “暴露范围” is more exact and matches the security body.",
+   "suggested": "此地址位于你自己的网络内，因此暴露范围仅限于该网络。"
+  }
+ ],
+ "rulings_on_translator_flags": {
+  "mobile.computers.own_tunnel.title": "ACCEPT 自建隧道: idiomatic short title, accurate (paths.own_body: 自行运行隧道), shares 自/隧道 with entry points 设置自己的隧道 / 使用我自己的隧道. Not a finding.",
+  "mobile.computers.own_tunnel.step_test": "ACCEPT 测试连接 for both step heading and button: the English pair is near-identical too, the verb+object matches 发布中继, and need_test must name the button (it does). The repetition is harmless. Not a finding.",
+  "mobile.computers.own_tunnel.security_heading": "CHANGE suggested (ZHS2A-02, minor): 公开电脑 → 将电脑暴露到公网前须知."
+ },
+ "per_key_results": [
+  {
+   "key": "mobile.computers.title.list",
+   "english": "Computers",
+   "zh": "电脑",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.title.set_up",
+   "english": "Set up a computer",
+   "zh": "设置电脑",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_stale",
+   "english": "Radient could not be reached, so this list may be out of date.",
+   "zh": "无法连接Radient，此列表可能不是最新的。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_empty",
+   "english": "Radient could not be reached to list your computers. Check this device's connection.",
+   "zh": "无法连接Radient，未能列出你的电脑。请检查此设备的网络连接。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_stale",
+   "english": "Radient's answer could not be read, so this list may be out of date.",
+   "zh": "无法读取Radient的响应，此列表可能不是最新的。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_empty",
+   "english": "Radient's answer could not be read, so your computers could not be listed.",
+   "zh": "无法读取Radient的响应，未能列出你的电脑。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.title",
+   "english": "Your own tunnel",
+   "zh": "自建隧道",
+   "result": "ok",
+   "ruling": "ACCEPT 自建隧道: idiomatic short title, accurate (paths.own_body: 自行运行隧道), shares 自/隧道 with entry points 设置自己的隧道 / 使用我自己的隧道. Not a finding."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_for",
+   "english": "Enter the password for {name}",
+   "zh": "输入{name}的密码",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_label",
+   "english": "Relay password",
+   "zh": "中继密码",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.intro",
+   "english": "No Radient account is needed for any of this. You publish the relay on your own computer through a tunnel you control, and the app talks to it through the address you paste below.",
+   "zh": "全程无需Radient账户。你通过自己掌控的隧道，在自己的电脑上发布中继；应用则通过你在下方粘贴的地址与它通信。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer",
+   "english": "On the computer",
+   "zh": "在电脑上",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "english": "The relay binds loopback only, so this is the machine that has to run it. Leave it awake while you use the app.",
+   "zh": "中继只接受来自本机的连接，所以必须在这台电脑上运行它。使用应用期间，请勿让电脑休眠。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_publish",
+   "english": "Publish it",
+   "zh": "发布中继",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_app",
+   "english": "In the app",
+   "zh": "在应用中",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.url_label",
+   "english": "Public URL",
+   "zh": "公网URL",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allow",
+   "english": "Allow a plain http:// address",
+   "zh": "允许明文http://地址",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allowed",
+   "english": "Plain http:// is allowed",
+   "zh": "已允许明文http://",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_hint",
+   "english": "Needed only for an address over http, which sends the password in the clear",
+   "zh": "仅在地址使用http时需要，此时密码将以明文发送",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_on_help",
+   "english": "On: the relay password and everything you send cross this network unencrypted. Only do this on a network you trust.",
+   "zh": "已开启：中继密码及你发送的所有内容都将以未加密形式经过此网络。请仅在可信网络中开启。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "english": "Over http:// your relay password crosses the network in the clear, so it is off unless you turn it on. Use https:// whenever the address supports it.",
+   "zh": "使用http://时，中继密码会以明文在网络中传输，因此默认关闭，需你手动开启。只要地址支持，请始终使用https://。",
+   "result": "finding",
+   "finding_id": "ZHS2A-03",
+   "severity": "minor"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_title",
+   "english": "This address is unencrypted",
+   "zh": "此地址未加密",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_body",
+   "english": "Turn the opt-in on to use it, or give an https:// address — a tunnel normally prints one.",
+   "zh": "开启上方选项即可使用此地址，或改填https://地址——隧道通常会提供一个。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.private_host",
+   "english": "This address is on your own network, so the exposure is limited to it.",
+   "zh": "此地址位于你自己的网络内，因此风险仅限于该网络。",
+   "result": "finding",
+   "finding_id": "ZHS2A-05",
+   "severity": "nit"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.public_host",
+   "english": "This address is not a private one — anything between this phone and it can read the password.",
+   "zh": "此地址不是私有地址——此手机与它之间的任何一方都能读取密码。",
+   "result": "finding",
+   "finding_id": "ZHS2A-01",
+   "severity": "major"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test",
+   "english": "Test it",
+   "zh": "测试连接",
+   "result": "ok",
+   "ruling": "ACCEPT 测试连接 for both step heading and button: the English pair is near-identical too, the verb+object matches 发布中继, and need_test must name the button (it does). The repetition is harmless. Not a finding."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test_help",
+   "english": "This makes a real request through your tunnel before anything is saved.",
+   "zh": "在保存任何内容之前，这会先通过你的隧道发送一次真实请求。",
+   "result": "finding",
+   "finding_id": "ZHS2A-04",
+   "severity": "nit"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "english": "Before you expose it",
+   "zh": "公开电脑前须知",
+   "result": "finding",
+   "finding_id": "ZHS2A-02",
+   "severity": "minor",
+   "ruling": "CHANGE suggested (ZHS2A-02, minor): 公开电脑 → 将电脑暴露到公网前须知."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_body",
+   "english": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and rotate the password with `{command}` if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
+   "zh": "你正在把自己的电脑暴露到互联网上，而中继密码是挡在它前面的唯一屏障。请优先使用HTTPS；如果你的隧道自带身份验证，请一并启用；如果密码曾被分享，请用`{command}`更换密码。任何人只要拿到该密码和你的URL，就能操控那台电脑上的会话。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.test",
+   "english": "Test the connection",
+   "zh": "测试连接",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.testing",
+   "english": "Testing…",
+   "zh": "正在测试……",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.save_connect",
+   "english": "Save and connect",
+   "zh": "保存并连接",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.saving",
+   "english": "Saving…",
+   "zh": "正在保存……",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_address",
+   "english": "Paste your tunnel's address to continue.",
+   "zh": "粘贴隧道地址以继续。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_test",
+   "english": "Test the connection first — a tunnel that has not answered once is not one to save.",
+   "zh": "请先测试连接——从未成功响应过的隧道不应保存。",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_ok",
+   "english": "Connected",
+   "zh": "已连接",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_not_yet",
+   "english": "Not yet",
+   "zh": "尚未连通",
+   "result": "ok"
+  },
+  {
+   "key": "mobile.signin.panel.unavailable_detail",
+   "english": "Signing in with Radient needs a loopback listener this build does not include ({module}).",
+   "zh": "此版本缺少使用Radient登录所需的本机回环监听器（{module}）。",
+   "result": "ok"
+  }
+ ],
+ "artifacts": [
+  "record.json",
+  "report.md",
+  "audit.log"
+ ],
+ "audit_notes_not_execution_log": "report.md is the human-readable finding record; audit.log is the execution log of the commands actually run",
+ "non_gating_observations": [
+  "Pre-existing in the shipped zh-CN catalogue (not in this slice): 计算机 in connect_refused.generic vs glossary 电脑; spaces around Radient in account_mismatch/billing_help/disabled_help/harness_help; single … in signing_out and signin.progress. The draft follows the no-space and …… rulings."
+ ]
+}

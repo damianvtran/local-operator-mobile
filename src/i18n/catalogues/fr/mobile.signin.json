@@ -30,5 +30,6 @@
 	"mobile.signin.panel.unavailable_alt": "Vous pouvez toujours vous connecter avec l’adresse et le mot de passe du relais.",
 	"mobile.signin.try_anyway": "Réessayer quand même",
 	"mobile.signin.welcome.headline": "Votre agent s’exécute sur votre ordinateur.",
-	"mobile.signin.welcome.body": "Cette app pilote les sessions sur votre propre machine et en montre le résultat. Votre code ne la quitte jamais."
+	"mobile.signin.welcome.body": "Cette app pilote les sessions sur votre propre machine et en montre le résultat. Votre code ne la quitte jamais.",
+	"mobile.signin.panel.unavailable_detail": "La connexion avec Radient nécessite un écouteur local ({module}), absent de cette version."
 }
