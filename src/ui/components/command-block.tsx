@@ -30,11 +30,16 @@ import { LTR_TEXT } from "@/ui/direction";
  */
 
 export const CommandBlock = ({
+	id,
 	label,
 	command,
 	note,
 	testID,
 }: {
+	/** The block's stable, never-translated identity (a lowercase slug). The test
+	 *  IDs derive from it, not from `label`: a translated label in a non-Latin
+	 *  script slugs to nothing, and every block would share one ID. */
+	id: string;
 	/** The machine's own name for the step ("Terminal", "Cloudflare"). */
 	label: string;
 	/** The exact text, copied verbatim. */
@@ -61,7 +66,7 @@ export const CommandBlock = ({
 					variant="quiet"
 					size="sm"
 					accessibilityHint={`Copies the ${label} command`}
-					testID={tunnelCommandCopyId(label)}
+					testID={tunnelCommandCopyId(id)}
 				/>
 			</View>
 			{note ? <Text className="text-body-sm text-ink-dim">{note}</Text> : null}
@@ -76,7 +81,7 @@ export const CommandBlock = ({
 					 *  renders the value — never as a control character in the catalogue,
 					 *  which a translator cannot see and a formatter would strip. */
 					style={LTR_TEXT}
-					testID={testID ?? commandCopyId(label)}
+					testID={testID ?? commandCopyId(id)}
 				>
 					{command}
 				</Text>

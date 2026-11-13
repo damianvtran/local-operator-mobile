@@ -2098,15 +2098,22 @@ export const projectCreateStatusId = (status: string): string =>
  *  file for every name a flow may use). */
 export const pastRowId = (sessionId: string): string => `past-row-${sessionId}`;
 
-/** The copy action for one command block, by the step's label — declared here so the
- *  builder lives with the vocabulary rather than being spelled at the call site
+/** The copy action, and the command text, for one command block — declared here so
+ *  the builder lives with the vocabulary rather than being spelled at the call site
  *  (`command-block.tsx` had `` `command-${label}` `` inline, a second copy of an
- *  identifier the flows select). */
-export const commandCopyId = (label: string): string =>
-	`command-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+ *  identifier the flows select).
+ *
+ *  Keyed by the block's STABLE id, never by its label (M3 S2b-1): the label is
+ *  translated, and a slug of `[a-z0-9]` turns a zh-CN, ru, ur or hi label into
+ *  `tunnel-copy--`, so every block on a screen would share one ID. The ids the
+ *  callers pass are the slugs of the English labels the screens shipped with, so
+ *  the English IDs are byte-identical to the label-derived ones; the slug is
+ *  still applied so a caller cannot smuggle a character a flow cannot type. */
+export const commandCopyId = (id: string): string =>
+	`command-${id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
-export const tunnelCommandCopyId = (label: string): string =>
-	`tunnel-copy-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+export const tunnelCommandCopyId = (id: string): string =>
+	`tunnel-copy-${id.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
 /** A switcher row and its health word. The key is the row's stable key
  *  (`SwitcherRow.key`); `:` is not in the id alphabet a flow can type, so a

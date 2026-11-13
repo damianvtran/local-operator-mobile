@@ -412,7 +412,8 @@ export default function OwnTunnel() {
 					</Text>
 					{COMPUTER_COMMANDS.map((item) => (
 						<CommandBlock
-							key={item.command}
+							key={item.id}
+							id={item.id}
 							label={item.label}
 							note={item.note}
 							command={item.command}
@@ -431,7 +432,8 @@ export default function OwnTunnel() {
 					<Text className="text-body-sm text-ink-muted">{TUNNEL_RULE}</Text>
 					{TUNNEL_COMMANDS.map((item) => (
 						<CommandBlock
-							key={item.command}
+							key={item.id}
+							id={item.id}
 							label={item.label}
 							note={item.note}
 							command={item.command}

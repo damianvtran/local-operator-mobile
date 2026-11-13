@@ -20,6 +20,10 @@
  */
 
 export interface TunnelCommand {
+	/** Stable, never-translated identity: the copy control's test ID derives from
+	 *  it (`tunnelCommandCopyId`). It is the slug of the English label the screen
+	 *  first shipped with, which keeps those IDs byte-identical. */
+	id: string;
 	/** The step's own label, in the shortest true words. */
 	label: string;
 	/** One sentence about what it does, or what to expect. */
@@ -33,24 +37,28 @@ export interface TunnelCommand {
 /** Preparation on the computer, in the order it has to happen. */
 export const COMPUTER_COMMANDS: readonly TunnelCommand[] = [
 	{
+		id: "install-on-the-computer",
 		label: "Install on the computer",
 		note: "macOS: writes the supervised daemon, generates the portal password and keeps it in your keychain.",
 		command: "lop mobile install",
 		platform: "macos",
 	},
 	{
+		id: "or-run-it-in-the-foreground",
 		label: "Or run it in the foreground",
 		note: "Any other platform, or when you would rather watch the log. It serves 127.0.0.1:4098, loopback only.",
 		command: "LOP_MOBILE_PASSWORD=... lop mobile serve",
 		platform: "other",
 	},
 	{
+		id: "check-it",
 		label: "Check it",
 		note: "Health, the state of the auth gate, and the sessions the phone will see.",
 		command: "lop mobile status",
 		platform: "other",
 	},
 	{
+		id: "set-or-rotate-the-password",
 		label: "Set or rotate the password",
 		note: "Asks you interactively, so the value never reaches a shell history or a process list. This is the password the app asks for below.",
 		command: "lop mobile password",
@@ -61,12 +69,14 @@ export const COMPUTER_COMMANDS: readonly TunnelCommand[] = [
 /** The tunnel itself. Both examples forward a public HTTPS URL to loopback. */
 export const TUNNEL_COMMANDS: readonly TunnelCommand[] = [
 	{
+		id: "cloudflare",
 		label: "Cloudflare",
 		note: "Free and needs no account for a quick tunnel. It prints the https:// URL to paste below.",
 		command: "cloudflared tunnel --url http://127.0.0.1:4098",
 		platform: "other",
 	},
 	{
+		id: "ngrok",
 		label: "ngrok",
 		note: "Needs an ngrok account. It prints the https:// URL to paste below.",
 		command: "ngrok http 4098",
