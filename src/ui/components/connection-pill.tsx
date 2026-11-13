@@ -45,69 +45,10 @@ export type ConnectionPillProps = {
 	 *  name. For a pill that sits in a ROW beside other content (Settings ›
 	 *  Status, the Agents drawer header), where a wrapped or unbounded sentence
 	 *  pushed the pill past the right edge on an iPhone (Sherman's report via
-	 *  Aida). See `statusPillFit` for the geometry rule. */
+	 *  Aida). See `status-pill-layout.ts` for the geometry rule. */
 	singleLine?: boolean;
 	testID?: string;
 };
-
-/* ------------------------------------------------------------------------ */
-/* Row geometry                                                             */
-/* ------------------------------------------------------------------------ */
-
-/** The class of a label/value row whose value is this pill (Settings › Status).
- *  `min-w-0` is what lets the row's children shrink below their content width
- *  at all; without it Yoga sizes the row to its content and the pill leaves the
- *  screen. */
-export const STATUS_ROW_CLASS =
-	"min-w-0 flex-row items-center justify-between gap-3";
-/** `gap-3` above, in pt, for the geometry rule. */
-export const STATUS_ROW_GAP_PT = 12;
-/** The most of the row the pill may take, so the row's label always keeps the
- *  rest. A share rather than a pt width because the row's width is the
- *  viewport's (320 pt SE up to tablet split view). */
-export const STATUS_PILL_MAX_SHARE = 0.6;
-/** The pill's slot inside such a row: shrinkable, never wider than its share. */
-export const STATUS_PILL_SLOT_STYLE = {
-	flexShrink: 1,
-	minWidth: 0,
-	maxWidth: `${STATUS_PILL_MAX_SHARE * 100}%`,
-} as const;
-/** The row label's style: it may shrink (and wrap) too, so a long label in a
- *  long locale cannot push the pill out either. */
-export const STATUS_LABEL_STYLE = { flexShrink: 1, minWidth: 0 } as const;
-/** The pill's own horizontal chrome in pt: `px-2` both sides (16), the 6 pt dot,
- *  `gap-2` (8) and a 1 pt border each side (2). */
-export const STATUS_PILL_CHROME_PT = 32;
-
-/**
- * The status row's flex outcome, as a pure function of measured widths, so the
- * rule is testable in node (which has no layout engine) and the component is
- * checked to use the same constants.
- *
- * Both children shrink. When they fit side by side, both keep their natural
- * width. When they do not, the pill is capped at its share of the row and the
- * label takes what is left (wrapping if it must) — so `label + gap + pill` never
- * exceeds the row, and the pill's text is truncated exactly when its natural
- * width exceeds the box it was given.
- */
-export function statusPillFit(input: {
-	rowPt: number;
-	labelPt: number;
-	textPt: number;
-}): { pillPt: number; labelPt: number; truncated: boolean } {
-	const natural = input.textPt + STATUS_PILL_CHROME_PT;
-	const cap = input.rowPt * STATUS_PILL_MAX_SHARE;
-	if (input.labelPt + STATUS_ROW_GAP_PT + natural <= input.rowPt) {
-		const pillPt = Math.min(natural, cap);
-		return { pillPt, labelPt: input.labelPt, truncated: natural > pillPt };
-	}
-	const pillPt = Math.min(natural, cap);
-	return {
-		pillPt,
-		labelPt: Math.min(input.labelPt, input.rowPt - STATUS_ROW_GAP_PT - pillPt),
-		truncated: natural > pillPt,
-	};
-}
 
 /** The copy each state carries. Kept here so two screens cannot say the same
  *  state two ways. */

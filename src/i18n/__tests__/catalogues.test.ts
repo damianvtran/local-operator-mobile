@@ -213,7 +213,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 70, // M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+		expected: 71, // +1 `diagnostics.reason` (the raw stream-health reason row, Sherman's report); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -332,7 +332,10 @@ describe("the English catalogues", () => {
 		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
 		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
 		 * counted over the en JSON. */
-		expect(total).toBe(812);
+		/* fix/settings-signin-status-badge: +1 mobile.settings
+		 * (`diagnostics.reason`, the label of the raw reason-code row; the code
+		 * itself is never a key): 812 + 1 = 813. */
+		expect(total).toBe(813);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -30,15 +30,21 @@ export const STREAM_CLOSED_REASON = "stream_closed";
 
 /**
  * The most specific raw code a relay error carries, most specific first:
- *  1. `reasonRaw` — a gateway reason this build does not know (kept verbatim so a
- *     newer gateway's reason is visible rather than lost);
+ *  1. `reasonRaw` — the body's `reason` verbatim, including one this build does
+ *     not know (so a newer gateway's reason is visible rather than lost);
  *  2. `reason` — a known gateway reason (`control_plane_unreachable`, …);
  *  3. `code` — a relay/gateway typed `code` (`operator_authority_required`, …);
- *  4. `serverError` only when it is identifier-shaped (a free-text sentence is
- *     copy, not a code, and may be long);
+ *  4. `serverError` — the body's `error`, e.g. a relay's `relay_unreachable`;
  *  5. `kind` — the client's own taxonomy (`transport`, `computer-offline`,
  *     `relay-down`, …), which every `RelayError` has, so this never answers
  *     empty.
+ *
+ * Every value that came off the WIRE (1, 3, 4) must be identifier-shaped to be
+ * shown: a free-text sentence ("authentication required") is copy, not a code,
+ * and an unbounded body string is how a proxy's page or anything else a
+ * responder put there would reach a screen whose footer promises "never a token,
+ * a password, or a session's content". A value that fails the shape falls
+ * through to the next, ending at `kind`.
  */
 export function reasonCodeOf(
 	error: Pick<
@@ -46,17 +52,18 @@ export function reasonCodeOf(
 		"reasonRaw" | "reason" | "code" | "serverError" | "kind"
 	>,
 ): StreamHealthReason {
-	if (error.reasonRaw) return error.reasonRaw;
+	if (isIdentifier(error.reasonRaw)) return error.reasonRaw;
 	if (error.reason) return error.reason;
-	if (error.code) return error.code;
-	if (error.serverError && IDENTIFIER.test(error.serverError))
-		return error.serverError;
+	if (isIdentifier(error.code)) return error.code;
+	if (isIdentifier(error.serverError)) return error.serverError;
 	return error.kind;
 }
 
 /** A bare identifier: what a machine-readable code looks like, as opposed to a
- *  sentence such as `authentication required`. */
+ *  sentence such as `authentication required`. 64 characters at most. */
 const IDENTIFIER = /^[a-z][a-z0-9_.-]{0,63}$/;
+const isIdentifier = (value: string | undefined): value is string =>
+	value !== undefined && IDENTIFIER.test(value);
 
 /**
  * What the Diagnostics "Reason" row shows: the stream's own reason while the

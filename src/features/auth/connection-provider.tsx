@@ -806,6 +806,12 @@ export const ConnectionProvider = ({
 			admission: RouteAdmission,
 		) => {
 			stopStream();
+			/* A new stream is a new route (or a reader's retry): the previous
+			 *  stream's reason describes a failure this stream has not had, and
+			 *  `reasonForStatus` keeps a reason through `connecting`, so without this
+			 *  the first attempt on computer B would show computer A's code. A typed
+			 *  refusal still reaches Diagnostics through `lastError`. */
+			if (mountedRef.current) setStreamHealthReason(null);
 			// Capture before asynchronous delivery: a reset changes the inbox's
 			// watermark domain, even when a reconnect reuses the client object.
 			const listGeneration = listStore.getState().connectionGeneration;

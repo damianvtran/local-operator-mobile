@@ -26,6 +26,7 @@ import {
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
+import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { signInPresentation } from "@/features/auth/sign-in-presentation";
 import { diagnosticReason } from "@/features/auth/stream-health-reason";
 import { t } from "@/i18n";
@@ -41,9 +42,6 @@ import { Card } from "@/ui/components/card";
 import {
 	ConnectionPill,
 	type ConnectionPillState,
-	STATUS_LABEL_STYLE,
-	STATUS_PILL_SLOT_STYLE,
-	STATUS_ROW_CLASS,
 } from "@/ui/components/connection-pill";
 import { Dialog } from "@/ui/components/dialog";
 import { Divider } from "@/ui/components/divider";
@@ -51,6 +49,12 @@ import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
+import {
+	STATUS_LABEL_STYLE,
+	STATUS_PILL_SLOT_STYLE,
+	statusRowClass,
+	statusRowStacked,
+} from "@/ui/components/status-pill-layout";
 import {
 	LTR_WRITING,
 	TEXT_END_CLASS,
@@ -105,6 +109,7 @@ export default function Settings() {
 		refusal,
 		signInWithRadient,
 		signInState,
+		signInDiagnostics,
 		restoredAccount,
 		busy,
 		streamHealth,
@@ -146,6 +151,9 @@ export default function Settings() {
 	 * own signal multiplies through `rem`, so this is the number a reader perceives
 	 * and the one a layout decision has to be made against. */
 	const accountStacked = textScale.effectiveScale > LARGE_TEXT_SCALE;
+	/* The Status row stacks at the same threshold, for the same reason: side by
+	 *  side at 200 % a long locale's label leaves the pill a glyph or two. */
+	const statusStacked = statusRowStacked(textScale.effectiveScale);
 
 	/* The signed-out account card is the place a reader looks to sign in (it says
 	 *  "Not signed in with Radient"), and it had no onPress (Sherman's report via
@@ -381,8 +389,12 @@ export default function Settings() {
 					 *  to go rather than an inert panel. Signed in it stays a plain Card. */
 					<Pressable
 						accessibilityRole={ROLE.button}
+						/* Spoken as the action, with the state as the hint — the Team
+						 *  Bridge card's shape (label + caption-as-hint), so a VoiceOver
+						 *  reader hears both what pressing does and why it is offered. */
 						accessibilityLabel={t("mobile.signin.start")}
-						accessibilityState={{ busy }}
+						accessibilityHint={t("mobile.settings.account.not_signed_in")}
+						accessibilityState={{ busy, disabled: busy }}
 						disabled={busy}
 						onPress={startSignIn}
 						testID={CONTROL.settingsAccountSignIn}
@@ -392,7 +404,16 @@ export default function Settings() {
 								className={navCardClasses({ pressed })}
 								style={{ minHeight: NAV_CARD_MIN_HEIGHT }}
 							>
-								<View className="min-w-0 flex-1">{accountBody}</View>
+								<View className="min-w-0 flex-1 gap-2">
+									{accountBody}
+									{/* The visible label: the card must SAY it signs you in. A
+									 *  status line and a chevron alone read as "go and look",
+									 *  which is exactly how Sherman read the inert card. The
+									 *  Welcome button's own key, so the two doors match. */}
+									<Text className="text-label text-accent" {...composedDir}>
+										{t("mobile.signin.start")}
+									</Text>
+								</View>
 								{rtl ? (
 									<ChevronLeft size={18} color={chevronInk} aria-hidden />
 								) : (
@@ -404,6 +425,20 @@ export default function Settings() {
 				) : (
 					<Card>{accountBody}</Card>
 				)}
+				{/* The SAME progress and failure surface Welcome and Sign-in render
+				 *  under their button: "Opening Radient…", waiting for the browser,
+				 *  a cancelled or failed hand-off with its diagnostics. Without it a
+				 *  failed sign-in started from here would end in silence. Gated on
+				 *  this screen's own attempt, so a sign-in state left by another
+				 *  screen is not narrated here; it renders nothing while idle. */}
+				{signInInitiated ? (
+					<SignInPanel
+						state={signInLanding.state}
+						diagnostics={signInDiagnostics}
+						onStart={startSignIn}
+						onUseAddress={() => undefined}
+					/>
+				) : null}
 
 				{/* -------------------------------------------------------- connection */}
 				<View className="gap-2" testID={REGION.settingsConnection}>
@@ -413,11 +448,13 @@ export default function Settings() {
 						/* Programmatically focusable, never a Tab stop: the target of U18's
 						 *  focus move after Try now, and nothing else. */
 						tabIndex={-1}
-						/* `STATUS_ROW_CLASS` (min-w-0) + a shrinkable, capped pill slot +
-						 *  a shrinkable label: "Not answering" ran past the right edge on an
-						 *  iPhone (Sherman's report via Aida). `statusPillFit` is the rule;
+						/* `statusRowClass` (min-w-0) + a shrinkable pill slot capped
+						 *  relative to the row + a label that keeps its word: "Not
+						 *  answering" ran past the right edge on an iPhone (Sherman's
+						 *  report via Aida). Above LARGE_TEXT_SCALE the row stacks rather than cut
+						 *  the word to a glyph. `statusPillFit` is the rule;
 						 *  `status-pill-layout.test.ts` checks it at 320 pt / 200 %. */
-						className={STATUS_ROW_CLASS}
+						className={statusRowClass(statusStacked)}
 					>
 						<Text
 							className="text-body-sm text-ink-muted"
