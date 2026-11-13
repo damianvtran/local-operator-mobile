@@ -274,7 +274,6 @@ export const CONTROL = {
 	 * controls on one screen must not share an identifier (Maestro's `id:` matching
 	 * would pick arbitrarily), and `e2e/maestro/**` addresses the flow vocabulary
 	 * declared above. --- */
-	setupUseThisComputer: "setup-use-this-computer",
 	computersRetryAction: "computers-retry-action",
 	settingsThemeGroup: "settings-theme-group",
 	/** The Appearance row that opens the Theme picker; its value names the

@@ -51,13 +51,6 @@
 		},
 		{
 			"file": "src/features/auth/setup-computer.tsx",
-			"text": "Nothing has appeared yet. Nothing to do on this screen.",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/auth/setup-computer.tsx",
 			"text": "Or in the Local Operator TUI, in two commands:",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -97,20 +90,6 @@
 			"text": "Use an address instead",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/auth/setup-computer.tsx",
-			"text": "Use this computer",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
-		},
-		{
-			"file": "src/features/auth/setup-computer.tsx",
-			"text": "Waiting for Radient to list your computer…",
-			"owner": "Mobile i18n",
-			"payoff": "Key this literal in the catalogue",
-			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/auth/setup-computer.tsx",

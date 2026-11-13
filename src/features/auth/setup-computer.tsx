@@ -8,7 +8,6 @@ import { Button } from "@/ui/components/button";
 import { Card } from "@/ui/components/card";
 import { CommandBlock } from "@/ui/components/command-block";
 import { Input } from "@/ui/components/input";
-import { Shimmer } from "@/ui/components/shimmer";
 
 /**
  * Set up a computer — the flow that turns a signed-in account with no tunnel into
@@ -167,53 +166,6 @@ export const SetupComputer = ({
 					</Text>
 				</View>
 			</Card>
-		</View>
-	);
-};
-
-/** The wait panel (W1—W5). It is separate from the three routes above because it
- *  REPLACES them while it runs: offering the commands again while a connector is
- *  coming up is how a reader creates two tunnels. */
-export const ConnectorWaitPanel = ({
-	hostname,
-	status,
-	onUse,
-}: {
-	hostname: string | null;
-	status: string | null;
-	onUse: (() => void) | null;
-}) => {
-	if (status === null) {
-		return (
-			<View className="gap-2 rounded-sm border border-hairline bg-surface p-4">
-				<Shimmer active>
-					<Text className="text-body text-ink">
-						Waiting for Radient to list your computer…
-					</Text>
-				</Shimmer>
-				<Text className="text-body-sm text-ink-dim">
-					Nothing has appeared yet. Nothing to do on this screen.
-				</Text>
-			</View>
-		);
-	}
-	return (
-		<View className="gap-2 rounded-sm border border-hairline bg-surface p-4">
-			<Text className="text-body text-ink">
-				Radient has the tunnel — {status === "active" ? "provisioned" : status}.
-			</Text>
-			<Text className="text-body-sm text-ink-dim">
-				{hostname
-					? `Waiting for ${hostname.split("-")[0]}-lop to answer. The cloud route existing is not the same as your computer being up.`
-					: "Waiting for your computer to answer."}
-			</Text>
-			{onUse ? (
-				<Button
-					label="Use this computer"
-					onPress={onUse}
-					testID={CONTROL.setupUseThisComputer}
-				/>
-			) : null}
 		</View>
 	);
 };
