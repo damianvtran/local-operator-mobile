@@ -361,11 +361,11 @@
 	},
 	"mobile.computers.own_tunnel.insecure_allow": {
 		"role": "button",
-		"note": "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop."
+		"note": "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)."
 	},
 	"mobile.computers.own_tunnel.insecure_allowed": {
 		"role": "status",
-		"note": "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop."
+		"note": "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)."
 	},
 	"mobile.computers.own_tunnel.insecure_hint": {
 		"role": "help",
@@ -377,7 +377,7 @@
 	},
 	"mobile.computers.own_tunnel.insecure_off_help": {
 		"role": "help",
-		"note": "Line under the plain-http toggle while it is OFF on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" and \"https://\" are literal schemes: keep them unchanged and left-to-right. \"It\" is the opt-in."
+		"note": "Line under the plain-http toggle while it is OFF on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" and \"https://\" are literal schemes: keep them unchanged and left-to-right. \"It\" is the opt-in. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)."
 	},
 	"mobile.computers.own_tunnel.unencrypted_title": {
 		"role": "heading",
@@ -385,7 +385,7 @@
 	},
 	"mobile.computers.own_tunnel.unencrypted_body": {
 		"role": "help",
-		"note": "Body of the unencrypted-address warning on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"The opt-in\" is the plain-http toggle just above. \"https://\" is a literal scheme: keep it unchanged and left-to-right."
+		"note": "Body of the unencrypted-address warning on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"The opt-in\" is the plain-http toggle just above. \"https://\" is a literal scheme: keep it unchanged and left-to-right. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)."
 	},
 	"mobile.computers.own_tunnel.private_host": {
 		"role": "status",
