@@ -324,6 +324,10 @@ export const RefusalSurface = ({
 				{(kind === "console" || kind === "tunnel-gone") && onOpenConsole ? (
 					<Button
 						label={t("mobile.computers.refusal.open_console")}
+						/* ur `Radient کنسول کھولیں` opens with the Latin product name, so
+						 * `dir="auto"` would lay the label LTR on an RTL page (M3 S2b-2a
+						 * ur audit UR-C1); state the page's base, as sign-in does. */
+						labelDir={composedDir}
 						onPress={onOpenConsole}
 						variant="outline"
 						testID={REGION.connectionErrorConsoleLink}

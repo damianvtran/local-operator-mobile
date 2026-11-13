@@ -233,6 +233,22 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		);
 	});
 
+	it("RefusalSurface: the Open Radient console button passes labelDir={composedDir}", () => {
+		/* M3 S2b-2a ur audit UR-C1: the ur label `Radient کنسول کھولیں` opens with
+		 * the Latin product name, so without a stated base `dir="auto"` lays the
+		 * button label LTR on an RTL page. Same opt-in as the sign-in button above;
+		 * source-level because the surface's native stack does not import here. */
+		const source = read("../../ui/components/refusal-surface.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const at = source.indexOf(
+			'label={t("mobile.computers.refusal.open_console")}',
+		);
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(at, source.indexOf("/>", at))).toContain(
+			"labelDir={composedDir}",
+		);
+	});
+
 	it("computer switcher: the Radient transport word spreads the composed direction", () => {
 		const source = read("./computer-switcher-sheet.tsx");
 		const anchor = '{t("mobile.computers.transport.radient")}';
