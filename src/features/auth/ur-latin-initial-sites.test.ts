@@ -472,9 +472,14 @@ describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens wit
 		expect(without).toContain('dir="auto"');
 	});
 
-	/** The `<Alert` opening that renders a `verdictSentence(verdict…)` body. */
+	/**
+	 * The `<Alert` opening that renders a `verdictSentence(verdict…)` body.
+	 * Anchored on the call's opening only: the saved card passes a third
+	 * argument (its own "Test again" label) and biome wraps that call across
+	 * lines, so the full single-line call text is not a stable anchor.
+	 */
 	const verdictAlerts = (source: string): string[] => {
-		const anchor = "{verdictSentence(verdict, sentencePlatform())}";
+		const anchor = "{verdictSentence(";
 		const sites: string[] = [];
 		for (
 			let at = source.indexOf(anchor);
