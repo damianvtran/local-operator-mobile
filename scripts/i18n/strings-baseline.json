@@ -761,12 +761,6 @@
 		},
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Name, id or folder",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
 			"text": "No computer is connected yet.",
 			"owner": "Mobile i18n",
 			"payoff": "Key this literal in the catalogue",
@@ -789,12 +783,6 @@
 		{
 			"file": "src/features/sessions/conversations-pane.tsx",
 			"text": "Open",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/features/sessions/conversations-pane.tsx",
-			"text": "Search conversations",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},

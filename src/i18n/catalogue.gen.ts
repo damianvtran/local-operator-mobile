@@ -47,6 +47,7 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
 	| "mobile.chrome.composer.more"
@@ -272,6 +273,7 @@ export type CatalogueKey =
 	| "mobile.home.tip.parallel"
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
+	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
@@ -821,6 +823,7 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
 	| "mobile.chrome.composer.more"
@@ -1024,6 +1027,7 @@ export type NoParamKey =
 	| "mobile.home.tip.parallel"
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
+	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
@@ -1489,6 +1493,7 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.chrome.clear_search": NoParams;
 	"mobile.chrome.close_conversations": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
 	"mobile.chrome.composer.more": NoParams;
@@ -1714,6 +1719,7 @@ export type MessageParams = {
 	"mobile.home.tip.parallel": NoParams;
 	"mobile.home.tip.schedule": NoParams;
 	"mobile.home.tip.search": NoParams;
+	"mobile.home.transcript.needs_answer": NoParams;
 	"mobile.home.transcript.waiting": NoParams;
 	"mobile.library.action.add_tag": NoParams;
 	"mobile.library.action.edit": NoParams;
@@ -2279,6 +2285,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.close_conversations": "Close conversations",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
 	"mobile.chrome.composer.more": "More context",
@@ -2504,6 +2511,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.tip.parallel": "ask for parallel work to fan out subagents",
 	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
 	"mobile.home.tip.search": "search past conversations to reopen a session",
+	"mobile.home.transcript.needs_answer": "Needs your answer",
 	"mobile.home.transcript.waiting": "Waiting for the conversation…",
 	"mobile.library.action.add_tag": "Add",
 	"mobile.library.action.edit": "Edit",
@@ -3054,6 +3062,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.chrome.clear_search": { role: "button", note: "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -3279,6 +3288,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.tip.parallel": { role: "help", note: "Rotating tip fragment, lower case by design. A fragment, not a sentence: no final full stop, at most 48 characters at the source locale." },
 	"mobile.home.tip.schedule": { role: "help", note: "Rotating tip fragment, lower case by design. 'prompt' is the product's word for what a wake sends. No final full stop, at most 48 characters." },
 	"mobile.home.tip.search": { role: "help", note: "Rotating tip fragment, lower case by design. No final full stop, at most 48 characters at the source locale." },
+	"mobile.home.transcript.needs_answer": { role: "status", note: "Short line above a just-started conversation on the home screen when the agent is waiting for the reader to answer a question. Sits beside an \"Answer in conversation\" button, so keep it brief (a few words)." },
 	"mobile.home.transcript.waiting": { role: "status", note: "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character." },
 	"mobile.library.action.add_tag": { role: "button", note: "Button beside the 'New tag' field that creates the typed tag and selects it for this asset. A verb used as a label, no final full stop. It adds a tag, not a file or an asset." },
 	"mobile.library.action.edit": { role: "button", note: "Header button on an asset that opens the edit-details sheet. A verb used as a label, no final full stop. Edits only the asset's name, description and tags, never the file itself." },
@@ -3843,6 +3853,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.chrome.clear_search": "Borrar búsqueda",
 		"mobile.chrome.close_conversations": "Cerrar conversaciones",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
 		"mobile.chrome.composer.more": "Más contexto",
@@ -4068,6 +4079,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "pide varios subagentes en paralelo",
 		"mobile.home.tip.schedule": "programa un prompt para que se repita",
 		"mobile.home.tip.search": "busca una conversación pasada y reábrela",
+		"mobile.home.transcript.needs_answer": "Necesita tu respuesta",
 		"mobile.home.transcript.waiting": "Esperando la conversación…",
 		"mobile.library.action.add_tag": "Añadir",
 		"mobile.library.action.edit": "Editar",
@@ -4616,6 +4628,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.chrome.clear_search": "Effacer la recherche",
 		"mobile.chrome.close_conversations": "Fermer les conversations",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
 		"mobile.chrome.composer.more": "Plus de contexte",
@@ -4841,6 +4854,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "demandez plusieurs sous-agents en parallèle",
 		"mobile.home.tip.schedule": "planifiez un prompt à exécuter régulièrement",
 		"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
+		"mobile.home.transcript.needs_answer": "Attend votre réponse",
 		"mobile.home.transcript.waiting": "En attente de la conversation…",
 		"mobile.library.action.add_tag": "Ajouter",
 		"mobile.library.action.edit": "Modifier",
@@ -5389,6 +5403,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.chrome.clear_search": "खोज साफ़ करें",
 		"mobile.chrome.close_conversations": "बातचीत बंद करें",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
 		"mobile.chrome.composer.more": "अधिक संदर्भ",
@@ -5614,6 +5629,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं",
 		"mobile.home.tip.schedule": "टाइमर पर प्रॉम्प्ट चलाने के लिए शेड्यूल सेट करें",
 		"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
+		"mobile.home.transcript.needs_answer": "आपके जवाब की ज़रूरत है",
 		"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
 		"mobile.library.action.add_tag": "जोड़ें",
 		"mobile.library.action.edit": "संपादित करें",
@@ -6162,6 +6178,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.chrome.clear_search": "Очистить поиск",
 		"mobile.chrome.close_conversations": "Закрыть список бесед",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
 		"mobile.chrome.composer.more": "Дополнительный контекст",
@@ -6387,6 +6404,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "попросите раздать работу параллельно",
 		"mobile.home.tip.schedule": "настройте запуск промпта по расписанию",
 		"mobile.home.tip.search": "поищите сессию в прошлых беседах",
+		"mobile.home.transcript.needs_answer": "Нужен ваш ответ",
 		"mobile.home.transcript.waiting": "Ожидание беседы…",
 		"mobile.library.action.add_tag": "Добавить",
 		"mobile.library.action.edit": "Изменить",
@@ -6935,6 +6953,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.chrome.clear_search": "تلاش صاف کریں",
 		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
 		"mobile.chrome.composer.more": "مزید سیاق",
@@ -7160,6 +7179,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں",
 		"mobile.home.tip.schedule": "ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں",
 		"mobile.home.tip.search": "گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں",
+		"mobile.home.transcript.needs_answer": "آپ کے جواب کی ضرورت ہے",
 		"mobile.home.transcript.waiting": "گفتگو کا انتظار…",
 		"mobile.library.action.add_tag": "شامل کریں",
 		"mobile.library.action.edit": "ترمیم کریں",
@@ -7708,6 +7728,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.chrome.clear_search": "Xóa tìm kiếm",
 		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
 		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
@@ -7933,6 +7954,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "yêu cầu chạy song song để tách tác nhân con",
 		"mobile.home.tip.schedule": "lên lịch để chạy prompt theo hẹn giờ",
 		"mobile.home.tip.search": "tìm lại cuộc trò chuyện cũ để mở lại phiên",
+		"mobile.home.transcript.needs_answer": "Cần bạn trả lời",
 		"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…",
 		"mobile.library.action.add_tag": "Thêm",
 		"mobile.library.action.edit": "Chỉnh sửa",
@@ -8481,6 +8503,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.chrome.clear_search": "清除搜索",
 		"mobile.chrome.close_conversations": "关闭对话列表",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
 		"mobile.chrome.composer.more": "更多上下文",
@@ -8706,6 +8729,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "要求并行工作以展开多个子智能体",
 		"mobile.home.tip.schedule": "设置定时任务按时运行提示词",
 		"mobile.home.tip.search": "搜索过往对话以重新打开会话",
+		"mobile.home.transcript.needs_answer": "需要你的回答",
 		"mobile.home.transcript.waiting": "正在等待对话……",
 		"mobile.library.action.add_tag": "添加",
 		"mobile.library.action.edit": "编辑",

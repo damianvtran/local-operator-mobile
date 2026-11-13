@@ -63,5 +63,6 @@
 	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
 	"mobile.home.tip.search": "search past conversations to reopen a session",
 	"mobile.home.transcript.waiting": "Waiting for the conversation…",
+	"mobile.home.transcript.needs_answer": "Needs your answer",
 	"mobile.home.chip.model_default_short": "Default model"
 }

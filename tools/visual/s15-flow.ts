@@ -283,13 +283,17 @@ export async function runS15FlowProof({
 			`Boolean(${present(SURFACE.sidebar)} && document.querySelector('[data-testid^="session-row-"]'))`,
 			"returned list has no selectable conversations",
 		);
+		/* The search field IS the header pill now (TestFlight 906), always
+		 *  mounted: leaving search means blurring it, not toggling it away. */
 		if (
-			await page.evaluate(`Boolean(${present(CONTROL.sidebarSearchField)})`)
+			await page.evaluate(
+				`document.activeElement === ${present(CONTROL.sidebarSearchField)}`,
+			)
 		) {
-			await press(selector(CONTROL.sidebarSearch));
+			await page.evaluate("document.activeElement.blur()");
 			await wait(
-				`!${present(CONTROL.sidebarSearchField)}`,
-				"search toggle did not dismiss field",
+				`document.activeElement !== ${present(CONTROL.sidebarSearchField)}`,
+				"search field did not release focus",
 			);
 		}
 		await wheel(false);

@@ -6,6 +6,7 @@
 	"mobile.chrome.destinations": "目的地",
 	"mobile.chrome.new_chat": "新聊天",
 	"mobile.chrome.close_conversations": "关闭对话列表",
+	"mobile.chrome.clear_search": "清除搜索",
 	"mobile.chrome.composer.more": "更多上下文",
 	"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
 	"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",

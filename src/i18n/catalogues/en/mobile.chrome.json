@@ -6,6 +6,7 @@
 	"mobile.chrome.destinations": "Destinations",
 	"mobile.chrome.new_chat": "New chat",
 	"mobile.chrome.close_conversations": "Close conversations",
+	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.composer.more": "More context",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
 	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",

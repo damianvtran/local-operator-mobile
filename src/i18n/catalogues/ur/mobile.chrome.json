@@ -6,6 +6,7 @@
 	"mobile.chrome.destinations": "منزلیں",
 	"mobile.chrome.new_chat": "نئی چیٹ",
 	"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
+	"mobile.chrome.clear_search": "تلاش صاف کریں",
 	"mobile.chrome.composer.more": "مزید سیاق",
 	"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
 	"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",

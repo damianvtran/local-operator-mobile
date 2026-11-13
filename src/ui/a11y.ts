@@ -586,6 +586,8 @@ export const CONTROL = {
 	sidebarNewChat: "sidebar-new-chat",
 	sidebarSearch: "sidebar-search",
 	sidebarSearchField: "sidebar-search-field",
+	/** The `×` inside the search pill; present only while the field has text. */
+	sidebarSearchClear: "sidebar-search-clear",
 	sidebarClose: "sidebar-close",
 	sidebarPast: "sidebar-past",
 	/** At >= 200 % text the destinations strip collapses to ONE "More" row that
@@ -777,6 +779,15 @@ export const SURFACE = {
 	sessionStatusSheet: "session-status-sheet",
 	startupPending: "startup-pending",
 	startupTranscript: "startup-transcript",
+	/** The one-line "needs your answer" row above a just-started conversation;
+	 *  present only while the projection is pending (idle shows no row). */
+	startupNeedsAnswer: "startup-needs-answer",
+	/** The optimistic rows + working line under a just-sent first message. */
+	startupPendingTail: "startup-pending-tail",
+	/** The pre-session scroller that holds that tail before the start returns. */
+	startupPreview: "startup-preview",
+	/** The working line inside the startup tail. */
+	startupWorkingLine: "startup-working-line",
 	/** The Schedules screen's loading skeleton (S17). Its own id because the
 	 *  loading state must be distinguishable from the empty state — and on a
 	 *  320 pt phone the two frames once came out byte-identical on the

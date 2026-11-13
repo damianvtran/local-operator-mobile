@@ -63,5 +63,6 @@
 	"mobile.home.tip.schedule": "टाइमर पर प्रॉम्प्ट चलाने के लिए शेड्यूल सेट करें",
 	"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
 	"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
+	"mobile.home.transcript.needs_answer": "आपके जवाब की ज़रूरत है",
 	"mobile.home.chip.model_default_short": "डिफ़ॉल्ट मॉडल"
 }

@@ -63,5 +63,6 @@
 	"mobile.home.tip.schedule": "настройте запуск промпта по расписанию",
 	"mobile.home.tip.search": "поищите сессию в прошлых беседах",
 	"mobile.home.transcript.waiting": "Ожидание беседы…",
+	"mobile.home.transcript.needs_answer": "Нужен ваш ответ",
 	"mobile.home.chip.model_default_short": "Модель по умолчанию"
 }

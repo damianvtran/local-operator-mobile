@@ -110,8 +110,10 @@ const NAMESPACES = [
 		 *  computer's default" for the folder and for the model): 29 before them.
 		 *  65 with the three pickers (#182): 32 for the chips' spoken labels, the
 		 *  effort names and the pickers' copy, and 2 from its round-1 remediation
-		 *  ("Default effort" on the chip, "This computer's level" in the sheet). */
-		expected: 65,
+		 *  ("Default effort" on the chip, "This computer's level" in the sheet).
+		 *  66 with the startup transcript's compact "Needs your answer" row
+		 *  (TestFlight 906, replacing two hard-coded sentences). */
+		expected: 66,
 	},
 	{
 		name: "mobile.projects",
@@ -224,7 +226,9 @@ const NAMESPACES = [
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 26, // +5: the More sheet's row labels (visual audit D5); +1 its Questions row (build 753)
+		// +5: the More sheet's row labels (visual audit D5); +1 its Questions row
+		// (build 753); +1 the search pill's "Clear search" (TestFlight 906).
+		expected: 27,
 	},
 	{
 		name: "relay.chrome",
@@ -328,7 +332,9 @@ describe("the English catalogues", () => {
 		/* M3 slice S2a (English-first): +36 mobile.computers (titles, discovery
 		 * banners, the "Your own tunnel" screen) + 1 mobile.signin (loopback
 		 * unavailable detail) = 37: 734 + 37 = 771, counted over the en JSON. */
-		expect(total).toBe(771);
+		/* TestFlight 906 mobile fixes: + mobile.home.transcript.needs_answer and
+		 * mobile.chrome.clear_search = 2: 771 + 2 = 773. */
+		expect(total).toBe(773);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

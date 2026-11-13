@@ -63,5 +63,6 @@
 	"mobile.home.tip.schedule": "lên lịch để chạy prompt theo hẹn giờ",
 	"mobile.home.tip.search": "tìm lại cuộc trò chuyện cũ để mở lại phiên",
 	"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…",
+	"mobile.home.transcript.needs_answer": "Cần bạn trả lời",
 	"mobile.home.chip.model_default_short": "Mô hình mặc định"
 }

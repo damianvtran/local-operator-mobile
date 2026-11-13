@@ -62,6 +62,17 @@ export type ImageCache = {
 		entryId: string,
 		index: number,
 	) => Promise<CachedImage>;
+	/** Settle an image from a source the CALLER already holds, without asking
+	 *  the loader — for the reader's own just-sent attachment, whose bytes the
+	 *  phone has before the relay can serve them (`seedPendingEchoImages`). A
+	 *  key that is already settled is left alone: the relay's answer, once
+	 *  there, is the truth and must not be overwritten by a local copy. */
+	seed: (
+		loader: ImageLoader,
+		entryId: string,
+		index: number,
+		uri: string,
+	) => void;
 	/** Record the decoded aspect ratio against an already-settled image. */
 	noteAspectRatio: (
 		loader: ImageLoader,
@@ -208,6 +219,11 @@ export const createImageCache = (options?: {
 				});
 			inFlight.set(key, request);
 			return request;
+		},
+		seed: (loader, entryId, index, uri) => {
+			const key = keyOf(loader, entryId, index);
+			if (settled.has(key)) return;
+			store(key, { uri, aspectRatio: null });
 		},
 		noteAspectRatio: (loader, entryId, index, aspectRatio) => {
 			const key = keyOf(loader, entryId, index);

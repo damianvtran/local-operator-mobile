@@ -686,7 +686,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * payload envelope read. No rendered component, style or token changed;
 	 * re-derived over the staged tree. Source identity only, NOT rendered U-08
 	 * evidence. */
-	app: "fc5d82455884b54194d0df37a4ef8dc809918af53b797e5c148e12cffb20de1a",
+	/* fix/mobile-fast-start-search: the session screen passes its image loader
+	 * to the pending rows. --print over the staged tree; source identity only. */
+	app: "e39827b24fccec576c573ca4b1a62c8783828521cd355cc989750c5ab2f871e5",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1681,7 +1683,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * evidence. */
 	/* Merge of origin/main (#251, fb224cfe) into #252: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "3fad51c8b8d67f9698a875ed7662ac34a45cd7a87770b0f6ba5b74760ffe2b28",
+	/* fix/mobile-fast-start-search (TestFlight 906): optimistic first-send rows
+	 * and images, the in-place search pill, the quiet older-history edge and
+	 * the startup banner's removal. Re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	src: "0aa87079ccf749b7087604deffb5720fe957eae3adbd0a93f8da63862876d6a2",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

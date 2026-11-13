@@ -12,7 +12,15 @@ import {
 	X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import {
+	FlatList,
+	Pressable,
+	RefreshControl,
+	Text,
+	TextInput,
+	type TextStyle,
+	View,
+} from "react-native";
 import type { SessionSummary } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import {
@@ -51,26 +59,18 @@ import {
 import { t } from "@/i18n";
 import { useUiStore } from "@/state/ui-store";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
-import {
-	CONTROL,
-	EMPTY,
-	REGION,
-	ROLE,
-	STATE_MARKER,
-	SURFACE,
-	state,
-} from "@/ui/a11y";
-import { useTokenColor } from "@/ui/appearance";
+import { CONTROL, EMPTY, REGION, ROLE, STATE_MARKER, SURFACE } from "@/ui/a11y";
+import { useKeyboardAppearance, useTokenColor } from "@/ui/appearance";
 import { Badge } from "@/ui/components/badge";
 import { Banner } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
 import { ConnectionPill } from "@/ui/components/connection-pill";
 import { EmptyState } from "@/ui/components/empty-state";
 import { IconButton } from "@/ui/components/icon-button";
-import { Input } from "@/ui/components/input";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
+import { useComposedDir } from "@/ui/direction";
 import { sidebarFooterScrolls, TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -452,7 +452,11 @@ export const ConversationsPane = ({
 		? (workspaceDrawer?.mode ?? "agents")
 		: "agents";
 
-	const [searching, setSearching] = useState(false);
+	/* The header pill's field, focused by a tap anywhere on the capsule. */
+	const searchField = useRef<TextInput | null>(null);
+	const searchPlaceholderInk = useTokenColor("ink-dim");
+	const keyboardAppearance = useKeyboardAppearance();
+	const composedDir = useComposedDir();
 	const [query, setQuery] = useState("");
 	const [menuTarget, setMenuTarget] = useState<SessionSummary | null>(null);
 	/* The move/offload sheet's subject. A REMOTE row's tap opens it directly
@@ -729,24 +733,74 @@ export const ConversationsPane = ({
 			 *  list starts ~112 pt higher. The brand mark left too: the panel is for
 			 *  conversations, and the home already carries the identity. */}
 			<View className="flex-row items-center gap-1 px-2 py-1">
+				{/* THE PILL IS THE FIELD (operator, TestFlight 906: "The typing in the
+				 *  search is not in the part of the UI that is already the search bar,
+				 *  it creates a second uglier looking bar"). It used to be a button that
+				 *  toggled a second, labelled `Input` under the header. Now the text
+				 *  input lives inside the pill — same `sunken` capsule, same touch-floor
+				 *  height, same glyph and the same "Search" words as its placeholder —
+				 *  so the reader types where they tapped and nothing appears below.
+				 *
+				 *  - The whole capsule focuses the field (`onPress`), so a tap on the
+				 *    glyph or the padding still lands the caret; the outer Pressable is
+				 *    not itself accessible, so a screen reader meets ONE control, the
+				 *    field, named by `relay.chrome.list.search_label`.
+				 *  - `×` appears only with text, clears it and keeps focus (the reader
+				 *    is mid-search). Escape (web/hardware keyboard) clears first, then
+				 *    blurs — the conventional two-step. Blurring KEEPS the query: the
+				 *    filtered list is what they were looking for, and `×` or the empty
+				 *    state's "Clear the search" undoes it.
+				 *  - The empty field states the page's direction (`useComposedDir`) so
+				 *    an RTL locale's placeholder sits on the right, as `Input` does. */}
 				<Pressable
-					accessibilityRole={ROLE.button}
-					accessibilityLabel={t("relay.chrome.list.search_label")}
-					accessibilityState={state({ expanded: searching })}
-					onPress={() => setSearching((value) => !value)}
+					accessible={false}
+					onPress={() => searchField.current?.focus()}
 					testID={CONTROL.sidebarSearch}
 					/* `sunken`, the mode track's ground: `elevated` on the `elevated` panel
 					 *  measured 1.00:1, so "Search" floated as bare text (design D10). */
-					className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full bg-sunken px-3"
+					className="min-w-0 flex-1 flex-row items-center gap-2 rounded-full bg-sunken ps-3"
 					style={{ minHeight: TOUCH_FLOOR }}
 				>
 					<Search size={18} color={destinationInk} aria-hidden />
-					<Text
-						className="min-w-0 flex-1 text-body-sm text-ink-dim"
-						numberOfLines={1}
-					>
-						{t("relay.chrome.list.search_open")}
-					</Text>
+					<TextInput
+						ref={searchField}
+						value={query}
+						onChangeText={setQuery}
+						placeholder={t("relay.chrome.list.search_open")}
+						placeholderTextColor={searchPlaceholderInk}
+						{...(query === "" ? composedDir : {})}
+						accessibilityLabel={t("relay.chrome.list.search_label")}
+						keyboardAppearance={keyboardAppearance}
+						autoCapitalize="none"
+						autoCorrect={false}
+						returnKeyType="search"
+						onKeyPress={(event) => {
+							if (event.nativeEvent.key !== "Escape") return;
+							if (query !== "") setQuery("");
+							else searchField.current?.blur();
+						}}
+						/* The pill's own box is the height; the field fills it so the
+						 *  whole capsule is the caret target. No vertical padding: the
+						 *  platform default would push the pill past the touch floor. */
+						className="min-w-0 flex-1 text-body-sm text-ink"
+						style={SEARCH_FIELD_STYLE}
+						testID={CONTROL.sidebarSearchField}
+					/>
+					{query === "" ? (
+						/* Keeps the trailing edge of the empty pill where it was (`px-3`). */
+						<View className="w-3" />
+					) : (
+						<IconButton
+							accessibilityLabel={t("mobile.chrome.clear_search")}
+							onPress={() => {
+								setQuery("");
+								searchField.current?.focus();
+							}}
+							icon={({ color, size }) => <X color={color} size={size} />}
+							size={16}
+							testID={CONTROL.sidebarSearchClear}
+						/>
+					)}
 				</Pressable>
 				{/* Hidden while the empty state's own "New chat" is on screen — the
 				 *  same no-duplicate rule the old full-bleed row followed
@@ -781,19 +835,6 @@ export const ConversationsPane = ({
 					>
 						{notice}
 					</Text>
-				</View>
-			) : null}
-
-			{searching ? (
-				<View className="px-4 pb-2">
-					<Input
-						label="Search conversations"
-						value={query}
-						onChangeText={setQuery}
-						placeholder="Name, id or folder"
-						autoFocus
-						testID={CONTROL.sidebarSearchField}
-					/>
 				</View>
 			) : null}
 
@@ -840,7 +881,7 @@ export const ConversationsPane = ({
 				className="flex-1"
 				accessibilityRole="none"
 				testID={REGION.sidebarList}
-				/* Search autofocus can keep a native keyboard open. The footer now
+				/* A focused search field (the header pill) can keep a native keyboard open. The footer now
 				 * shares this scroller: handled taps must reach its navigation buttons
 				 * instead of being consumed solely to dismiss that keyboard. */
 				keyboardShouldPersistTaps="handled"
@@ -1034,6 +1075,14 @@ type Item =
 	| { kind: "row"; key: string; session: SessionSummary; section: string };
 
 /** Module-level so the list never sees a new extractor (perf audit P11). */
+/** The pill's field: fills the capsule's height (the capsule owns the touch
+ *  floor) with the platform's vertical padding removed, so typing in place
+ *  cannot grow the header. */
+const SEARCH_FIELD_STYLE: TextStyle = {
+	alignSelf: "stretch",
+	paddingVertical: 0,
+};
+
 const itemKey = (item: Item): string => item.key;
 
 /**

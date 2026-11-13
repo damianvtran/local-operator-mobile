@@ -39,6 +39,7 @@ const EMPTY: StartupSnapshot = {
 	queue: [],
 	error: null,
 	loaded: false,
+	delivered: [],
 };
 const noopSubscribe = () => () => undefined;
 const emptySnapshot = () => EMPTY;
@@ -200,6 +201,9 @@ export function useStartup(
 		},
 		/* UX U1 recovery: a queue that cannot drain is the reader's text, so it goes
 		 * back to the editor (or is discarded) on their word, never silently. */
+		/** Report the command ids the adopted transcript carries
+		 *  (`StartupCoordinator.witness`). */
+		witness: (ids: ReadonlySet<string>) => coordinator?.witness(ids),
 		restoreQueueToDraft: () =>
 			coordinator?.restoreQueueToDraft() ?? Promise.resolve(false),
 		discardQueue: () => coordinator?.discardQueue() ?? Promise.resolve(false),

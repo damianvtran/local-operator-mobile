@@ -59,6 +59,10 @@
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type { PromptImage, TranscriptEntry } from "@/contracts";
+import {
+	type ImageLoader,
+	transcriptImages,
+} from "@/features/session/image-cache";
 import { USER_BUBBLE_BOX_CLASS } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
 import type { ContinuationEnvelope, ContinuationOp } from "@/relay";
@@ -69,7 +73,7 @@ export interface PendingEcho {
 	commandId: string;
 	/** Exactly the body the envelope carries — never the live draft. */
 	text: string;
-	/** Attachment count only: the composer owns the image bytes. */
+	/** How many images the envelope carries. */
 	imageCount: number;
 	/** Which command this was: a steer settles into the transcript's steer row and
 	 *  a prompt into the user bubble, and the pending row takes that box so the
@@ -85,9 +89,22 @@ export interface PendingEcho {
 	 *  timeout or transport loss, and the retained envelope behind the composer's
 	 *  Retry still holds it. Absent while the send is live. */
 	failure?: "refused" | "unconfirmed";
-	/** The image objects a `refused` row hands back with its text. Only a refused
-	 *  row carries them: the composer has let go of them, and nothing else holds
-	 *  them once the envelope is discarded. */
+	/** The envelope's own image objects, in envelope order. Two jobs:
+	 *
+	 *  - DISPLAY (operator, TestFlight 906: "the image attachment doesn't appear
+	 *    optimistically with the user message so it can look like the image
+	 *    didn't send until it loads a few seconds later"). The row paints the
+	 *    bytes the phone already holds, rather than a count, and seeds the
+	 *    transcript image cache under the id the settled row will carry
+	 *    (`seedPendingEchoImages`), so handover paints the same picture with no
+	 *    skeleton between.
+	 *  - PUT-BACK: a `refused` row hands them back with its text
+	 *    (`putBackPendingEcho`), since nothing else holds them once the envelope
+	 *    is discarded.
+	 *
+	 *  Holding them here adds no new exposure: the envelope already holds the
+	 *  same bytes for the life of the send, and `clearPendingEchoes` drops them
+	 *  at the auth boundary with every other content-bearing store. */
 	images?: readonly PromptImage[];
 }
 
@@ -261,6 +278,7 @@ export function paintPendingEcho(
 		commandId: envelope.command_id,
 		text: envelope.text,
 		imageCount: envelope.images?.length ?? 0,
+		...(envelope.images?.length ? { images: envelope.images } : {}),
 		op: envelope.op,
 		accepted: false,
 	});
@@ -399,6 +417,34 @@ export const earlierWentThroughNotice = (): string =>
 export const pendingEchoBoxClass = (_op: ContinuationOp): string =>
 	`max-w-[85%] items-end ${USER_BUBBLE_BOX_CLASS}`;
 
+/** The loader a pending row paints its images under when there is no session
+ *  loader yet — the home's first send, before `POST /api/sessions/start` has
+ *  answered with an id. It never fetches: every image it is asked for was
+ *  seeded from the envelope first, and a miss is "not showable", the cache's
+ *  `null`. Module-level so its cache scope is one stable identity. */
+export const LOCAL_ECHO_IMAGES: ImageLoader = async () => null;
+
+/** A `data:` source for an envelope image. The bytes are already base64 in the
+ *  envelope, so this is a string join, not an encode. */
+export const echoImageUri = (image: PromptImage): string =>
+	`data:${image.mime_type};base64,${image.data_b64}`;
+
+/** Seed the transcript image cache with an echo's own bytes, under the entry id
+ *  and image index the SETTLED row will ask for. The id is the envelope's
+ *  `command_id` (see the header), and the relay numbers a message's images by
+ *  image block in order (`_image_refs_for_content`, `mobile/projection.py`),
+ *  which is the envelope's order. So when the real row replaces the echo, its
+ *  `TranscriptImage` peeks a settled source on its first frame: the picture
+ *  stays, no skeleton, no fetch. Idempotent; never overwrites a relay answer. */
+export function seedPendingEchoImages(
+	loader: ImageLoader,
+	echo: Pick<PendingEcho, "commandId" | "images">,
+): void {
+	echo.images?.forEach((image, index) => {
+		transcriptImages.seed(loader, echo.commandId, index, echoImageUri(image));
+	});
+}
+
 /** Drop every echo on this device — for the auth boundary: a signed-out user's
  *  words must not be shown to whoever signs in next. */
 export function clearPendingEchoes(): void {
@@ -407,8 +453,11 @@ export function clearPendingEchoes(): void {
 	emit();
 }
 
-/** The ids the transcript carries a user-authored row for. */
-function projectedCommandIds(entries: readonly TranscriptEntry[]): Set<string> {
+/** The ids the transcript carries a user-authored row for. Exported for the
+ *  home's startup rows, which reconcile against the same rule. */
+export function projectedCommandIds(
+	entries: readonly TranscriptEntry[],
+): Set<string> {
 	const ids = new Set<string>();
 	for (const entry of entries) {
 		if (COMMAND_ROW_KINDS.has(entry.kind)) ids.add(entry.id);
