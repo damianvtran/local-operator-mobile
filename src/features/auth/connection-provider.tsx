@@ -1176,8 +1176,35 @@ export const ConnectionProvider = ({
 	 *   (`shouldWakeStream`): a quick app switch with a live stream costs nothing.
 	 *
 	 * No timers, no polling: everything here runs on an OS transition.
+	 *
+	 * A BACKGROUND LAUNCH (PR #246 review R5-M1) has no `background` transition
+	 * to observe: `UIBackgroundModes: remote-notification` (#244) lets iOS start
+	 * the process already in the background for a silent push, and on an
+	 * unlocked phone the restore succeeds and both streams open there. iOS then
+	 * suspends the process and those sockets die silently. Without seeding, the
+	 * clock still believed the app was in the foreground, so the user's first
+	 * `active` hit the `!clock.backgrounded()` early return — no grant kick, no
+	 * wake — and the streams came back only on the error backoff (up to 15 s):
+	 * the slow sync on open the operator reported. So the clock starts from the
+	 * launch's real state.
+	 *
+	 * `=== "background"`, not `!== "active"` (unlike `launchedInactive` in the
+	 * cold start, whose false positive is a harmless no-op): React Native reads
+	 * `initialAppState` while iOS is still finishing the launch, so a FOREGROUND
+	 * cold launch can report `inactive` (or `unknown`) here and `active` a moment
+	 * later. Seeding on that would open an 8 s resume window over every cold
+	 * start and hold its real failures silent. Only `background` means the
+	 * process may be suspended — the same rule the listener below applies.
+	 *
+	 * The warm-cache save `background` does is NOT replayed here: no frame
+	 * exists yet at mount, and the list loop already saves a route's FIRST
+	 * frame at once (see `onFrame`), which is exactly the frame a background
+	 * launch receives before any kill. Later frames are saved on the next real
+	 * `background`, as on any launch.
 	 */
 	useEffect(() => {
+		if (AppState.currentState === "background")
+			resumeClockRef.current.background();
 		const subscription = AppState.addEventListener("change", (state) => {
 			const clock = resumeClockRef.current;
 			// "inactive" is also a system sheet over a running app; only

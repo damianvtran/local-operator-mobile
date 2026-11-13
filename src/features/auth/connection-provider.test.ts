@@ -28,6 +28,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { headerHealth } from "@/features/session/health";
 import { OUTAGE_GRACE_MS } from "@/features/session/resume-hold";
+import { insideResumeWindow } from "@/features/session/resume-plan";
 import { sessions as sessionProjections } from "@/features/session/runtime";
 import { scopedStore } from "@/features/session/scoped-storage";
 import {
@@ -3920,10 +3921,10 @@ describe("the cold start reopens the reader's computer (startup restore, PR H)",
  * through every production listener.
  */
 describe("warm resume", () => {
+	/* Through the mock's own `emit` (PR #246 R5-N1), so `currentState` tracks
+	 *  the transitions as React Native's does and a later mount reads it right. */
 	const emitAppState = async (state: "background" | "active") => {
-		await act(async () => {
-			for (const listener of [...appState.listeners]) listener(state);
-		});
+		await act(async () => appState.emit(state));
 	};
 	const awayFor = (ms: number) => {
 		const realNow = Date.now.bind(Date);
@@ -4140,6 +4141,99 @@ describe("warm resume", () => {
 			clock.mockRestore();
 		}
 		expect([...seen]).toEqual(["connected"]);
+	});
+
+	/* Review R5-M1. #244's silent push can start the process already in the
+	 *  BACKGROUND; on an unlocked phone the restore succeeds and both streams
+	 *  open there, then iOS suspends the process and their sockets die without
+	 *  a word (modelled, as above, by 30 s of silence). The user's first
+	 *  `active` must wake them at once, not leave them to the error backoff. */
+	describe("a background launch on an unlocked device (R5-M1)", () => {
+		const restoreAt = async (
+			mock: Awaited<ReturnType<typeof relay>>,
+			launchState: "background" | "inactive" | "active",
+		) => {
+			observedSession = "synthetic-session";
+			await live(mock);
+			durable.saved = {
+				baseUrl: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			};
+			await unmount();
+			const mounted = mock.events.length;
+			appState.currentState = launchState;
+			transport();
+			await mount();
+			// The restore succeeded and the route's streams and reads are up.
+			await until(() => {
+				const since = mock.events.slice(mounted);
+				return (
+					since.includes("GET /api/sessions/events") &&
+					since.includes("GET /api/config/events") &&
+					since.includes("GET /api/models") &&
+					since.includes("GET /api/commands")
+				);
+			});
+			await sleep(50);
+		};
+
+		it("the first foreground wakes the list and config streams at once and re-reads commands/models", async () => {
+			const mock = await relay({ serveCommands: true, serveConfig: true });
+			await restoreAt(mock, "background");
+			const before = mock.events.length;
+			const clock = awayFor(30_000);
+			try {
+				await emitAppState("active");
+				// `until` gives up after 1.5 s: well inside the first 2 s backoff
+				// step, so only a wake (not a backoff restart) passes.
+				await until(() => {
+					const resumed = mock.events.slice(before);
+					return (
+						resumed.includes("GET /api/sessions/events") &&
+						resumed.includes("GET /api/config/events") &&
+						resumed.includes("GET /api/models") &&
+						resumed.includes("GET /api/commands")
+					);
+				});
+			} finally {
+				clock.mockRestore();
+			}
+			const resumed = mock.events.slice(before);
+			expect(count(resumed, "GET /api/sessions/events")).toBe(1);
+			expect(count(resumed, "GET /api/config/events")).toBe(1);
+			expect(count(resumed, "GET /api/models")).toBe(1);
+			expect(count(resumed, "GET /api/commands")).toBe(1);
+		});
+
+		/* Negative controls: a FOREGROUND cold launch — including one whose
+		 *  `initialAppState` still read `inactive` while iOS finished launching —
+		 *  is not a return: its first `active` wakes nothing and opens no resume
+		 *  window, even with the streams silent long enough to qualify. */
+		for (const launchState of ["active", "inactive"] as const) {
+			it(`a foreground launch reporting "${launchState}" wakes nothing on its first active`, async () => {
+				const mock = await relay({ serveCommands: true, serveConfig: true });
+				await restoreAt(mock, launchState);
+				const before = mock.events.length;
+				const clock = awayFor(30_000);
+				try {
+					await emitAppState("active");
+					expect(insideResumeWindow(latest.resumeClock)).toBe(false);
+				} finally {
+					clock.mockRestore();
+				}
+				await sleep(200);
+				/* The open conversation's own resume (`use-session.ts`) runs on
+				 *  every `active` by design and is not the provider's; only the
+				 *  route-level reads count here. */
+				const routeLevel = mock.events
+					.slice(before)
+					.filter(
+						(entry) => !entry.includes("/api/sessions/synthetic-session"),
+					);
+				expect(routeLevel).toEqual([]);
+			});
+		}
 	});
 
 	describe("the conversation's resume reads", () => {

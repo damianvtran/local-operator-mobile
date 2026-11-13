@@ -1693,7 +1693,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * carried, so neither parent's digest. Re-derived once with --print over the
 	 * final merged tree; source identity of the #246 + main fb224cfe merge, NOT
 	 * rendered evidence. */
-	src: "fb84e73cdd5d8cd4fc03f6cc5bf03abdd95d5fca4d2f030a404344b4882cefe7",
+	/* PR #246 round-5 remediation (R5-M1): the connection provider seeds its
+	 * resume clock from a background launch, plus its regression tests. App,
+	 * layout, token, instrument and fixture inputs unchanged; only `src` moved.
+	 * Re-derived with --print; source identity, not rendered evidence. */
+	src: "133924beb9d28684d6eb0dc4c92102e3e6b401e0de2e0826306b3d24a8fec61c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
