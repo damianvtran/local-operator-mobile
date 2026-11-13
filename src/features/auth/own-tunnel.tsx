@@ -23,7 +23,10 @@ import {
 import { readSavedComputers } from "@/features/auth/tunnel-storage";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
-import { verdictSentence } from "@/features/auth/tunnel-verdict";
+import {
+	verdictOpensWithDetail,
+	verdictSentence,
+} from "@/features/auth/tunnel-verdict";
 import { activeLocale, t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
@@ -549,6 +552,7 @@ function hostOf(value: string): string {
 
 /** What the test found, in the taxonomy's own sentence. */
 const VerdictBlock = ({ verdict }: { verdict: TunnelTestVerdict }) => {
+	const composedDir = useComposedDir();
 	const remedy =
 		verdict.kind === "offline"
 			? t("mobile.computers.own_tunnel.remedy", { command: verdict.command })
@@ -568,6 +572,9 @@ const VerdictBlock = ({ verdict }: { verdict: TunnelTestVerdict }) => {
 						? t("mobile.computers.own_tunnel.verdict_ok")
 						: t("mobile.computers.own_tunnel.verdict_not_yet")
 				}
+				/* `{detail}`-initial in ur: a Latin relay detail would set the line's
+				 *  base LTR under `dir="auto"`, so it states the page direction. */
+				bodyDir={verdictOpensWithDetail(verdict) ? composedDir : undefined}
 			>
 				{verdictSentence(verdict, sentencePlatform())}
 			</Alert>

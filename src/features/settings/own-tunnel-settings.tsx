@@ -4,7 +4,10 @@ import { Text, View } from "react-native";
 import { useConnection } from "@/features/auth/connection-provider";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
-import { verdictSentence } from "@/features/auth/tunnel-verdict";
+import {
+	verdictOpensWithDetail,
+	verdictSentence,
+} from "@/features/auth/tunnel-verdict";
 import { t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL } from "@/ui/a11y";
@@ -13,6 +16,7 @@ import { Button } from "@/ui/components/button";
 import { Dialog } from "@/ui/components/dialog";
 import { Input } from "@/ui/components/input";
 import { SectionHeader } from "@/ui/components/section-header";
+import { useComposedDir } from "@/ui/direction";
 
 /**
  * The saved own-tunnel, under Settings: edit it, test it again, remove it.
@@ -30,6 +34,9 @@ import { SectionHeader } from "@/ui/components/section-header";
  * under test; the field is the only place the value is ever rendered.
  */
 export const OwnTunnelSettings = () => {
+	/* For the offline verdict with a relay detail (`{detail}`-initial in ur): see
+	 *  `verdictOpensWithDetail`. */
+	const composedDir = useComposedDir();
 	const { savedTunnel: saved } = useConnection();
 	const {
 		saveCustomRoute,
@@ -134,6 +141,9 @@ export const OwnTunnelSettings = () => {
 									? t("mobile.computers.own_tunnel.verdict_ok")
 									: t("mobile.computers.own_tunnel.verdict_not_yet")
 							}
+							bodyDir={
+								verdictOpensWithDetail(verdict) ? composedDir : undefined
+							}
 						>
 							{verdictSentence(verdict, sentencePlatform())}
 						</Alert>
@@ -232,6 +242,9 @@ export const OwnTunnelSettings = () => {
 								verdict.kind === "ok"
 									? t("mobile.computers.own_tunnel.verdict_ok")
 									: t("mobile.computers.own_tunnel.verdict_not_yet")
+							}
+							bodyDir={
+								verdictOpensWithDetail(verdict) ? composedDir : undefined
 							}
 						>
 							{verdictSentence(verdict, sentencePlatform())}

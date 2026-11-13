@@ -5,10 +5,12 @@ import { Text } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
+import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
 import { DirectionProvider, useComposedDir } from "@/ui/direction";
 import { TunnelPaths } from "./tunnel-paths";
+import { verdictOpensWithDetail } from "./tunnel-verdict";
 
 /**
  * M3 S1 design review D2 (MAJOR): in Urdu, four S1 values START with the Latin
@@ -31,6 +33,12 @@ import { TunnelPaths } from "./tunnel-paths";
 vi.mock("@/ui/appearance", () => ({
 	useTokenColor: () => "#000",
 	useKeyboardAppearance: () => "default",
+}));
+/* `Alert` reads the text scale through `uniwind`, which Node cannot parse; the
+ * scale only picks the action layout, irrelevant to the body's direction (same
+ * stub as ask-bar.test.ts). */
+vi.mock("@/ui/text-scale-provider", () => ({
+	useTextScale: () => ({ effectiveScale: 1 }),
 }));
 
 const STARTS_LATIN = /^[A-Za-z]/;
@@ -311,5 +319,90 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		};
 		expect(render(h(Heading), "rtl")).toContain('dir="rtl"');
 		expect(render(h(Heading), "ltr")).not.toContain('dir="rtl"');
+	});
+});
+
+describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens with {detail}", () => {
+	/* The ur value is `{detail}۔ اس کمپیوٹر پر چلائیں: {command}`: the relay's own
+	 * detail (server text, usually Latin — "Tunnel temporarily unavailable") is
+	 * its first strong run, so `dir="auto"` would lay the whole verdict line out
+	 * LTR on an RTL page and the Urdu remedy would read in the wrong order. The
+	 * premise test above strips ICU slots, so a SLOT-initial value is invisible to
+	 * it; this block is that case. The cure is the page's composed direction on the
+	 * verdict body — and only when the sentence is this one, because
+	 * `direction.tsx` forbids a blanket spread (an `invalid.reason` is pure server
+	 * text and must keep its own inferred base). */
+	it("verdictOpensWithDetail: true only for an offline verdict that carries a detail", () => {
+		expect(
+			verdictOpensWithDetail({
+				kind: "offline",
+				detail: "Tunnel temporarily unavailable",
+				command: "lop mobile status",
+			}),
+		).toBe(true);
+		expect(
+			verdictOpensWithDetail({
+				kind: "offline",
+				detail: "",
+				command: "lop mobile status",
+			}),
+		).toBe(false);
+		expect(verdictOpensWithDetail({ kind: "invalid", reason: "bad URL" })).toBe(
+			false,
+		);
+		expect(verdictOpensWithDetail({ kind: "password" })).toBe(false);
+	});
+
+	it("Alert: bodyDir reaches the body Text as an explicit dir; omitted, the body keeps the inferred base", () => {
+		/* Shorthand `children`, as `render` above passes it to DirectionProvider:
+		 * `AlertProps.children` is a required string, so it rides in the props. */
+		const children =
+			"Tunnel temporarily unavailable۔ اس کمپیوٹر پر چلائیں: lop";
+		const withDir = render(
+			h(Alert, { severity: "error", bodyDir: { dir: "rtl" }, children }),
+			"rtl",
+		);
+		expect(withDir).toMatch(/dir="rtl"[^>]*>Tunnel temporarily unavailable/);
+		const without = render(h(Alert, { severity: "error", children }), "rtl");
+		expect(without).not.toContain('dir="rtl"');
+		expect(without).toContain('dir="auto"');
+	});
+
+	/** The `<Alert` opening that renders a `verdictSentence(verdict…)` body. */
+	const verdictAlerts = (source: string): string[] => {
+		const anchor = "{verdictSentence(verdict, sentencePlatform())}";
+		const sites: string[] = [];
+		for (
+			let at = source.indexOf(anchor);
+			at > -1;
+			at = source.indexOf(anchor, at + 1)
+		) {
+			/* Whitespace-free, so biome's line wrapping of the prop is not a failure. */
+			sites.push(
+				source.slice(source.lastIndexOf("<Alert", at), at).replace(/\s+/g, ""),
+			);
+		}
+		return sites;
+	};
+	const SPREAD =
+		"bodyDir={verdictOpensWithDetail(verdict)?composedDir:undefined}";
+
+	it("own-tunnel.tsx VerdictBlock: the verdict Alert states the page direction for the detail-initial sentence", () => {
+		const source = read("./own-tunnel.tsx");
+		const block = source.slice(source.indexOf("const VerdictBlock"));
+		expect(block).toContain("const composedDir = useComposedDir();");
+		const sites = verdictAlerts(block);
+		expect(sites).toHaveLength(1);
+		expect(sites[0]).toContain(SPREAD);
+	});
+
+	it("own-tunnel-settings.tsx: BOTH verdict Alerts state the page direction for the detail-initial sentence", () => {
+		const source = read("../settings/own-tunnel-settings.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const sites = verdictAlerts(source);
+		expect(sites).toHaveLength(2);
+		for (const site of sites) {
+			expect(site).toContain(SPREAD);
+		}
 	});
 });

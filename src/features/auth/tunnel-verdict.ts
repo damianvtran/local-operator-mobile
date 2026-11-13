@@ -112,6 +112,18 @@ export function transportKind(
 	return "unreachable";
 }
 
+/** Whether `verdictSentence` OPENS with server text: the offline sentence with a
+ *  relay detail is `{detail}`-initial in every locale (ur: `{detail}۔ اس کمپیوٹر
+ *  پر چلائیں: {command}`), and that detail is usually Latin. On an RTL page the
+ *  render site must then state the page's direction (`useComposedDir`), or
+ *  `dir="auto"` lays the whole line out LTR. A predicate about the sentence's
+ *  shape, not a direction: the direction is the surface's fact, so the render
+ *  site applies it (`src/ui/direction.tsx`). Every other verdict either opens
+ *  with catalogue prose or IS server text (`invalid.reason`), which must keep
+ *  its own inferred base — hence no blanket spread. */
+export const verdictOpensWithDetail = (verdict: TunnelTestVerdict): boolean =>
+	verdict.kind === "offline" && Boolean(verdict.detail);
+
 /** The one-line sentence beside each verdict, in the app's voice: no status code,
  *  no apology, and a remedy where one exists. `platform` is required rather than
  *  defaulted: a wrong Settings path is worse than no Settings path, so every
