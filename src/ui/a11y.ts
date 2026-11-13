@@ -1429,6 +1429,15 @@ export const REGION = {
 	sidebarSectionToday: "sidebar-section-today",
 	sidebarSectionWeek: "sidebar-section-week",
 	sidebarSectionOlder: "sidebar-section-older",
+	/** The hairline after the pinned run in the `In one list` drawer (PR #255
+	 *  design D1): the flat list has no Pinned heading, so this is the cue. */
+	sidebarPinnedDivider: "sidebar-pinned-divider",
+	/** The drawer's quiet "N sections hidden" line (PR #255 design D2). */
+	sidebarHiddenSections: "sidebar-hidden-sections",
+	/** The drawer's empty state when the VIEW withholds every row (PR #255 M1). */
+	sidebarEmptyByView: "sidebar-empty-by-view",
+	/** That state's "Reset view" action. */
+	sidebarResetView: "sidebar-reset-view",
 	/** Marks a search hit that matched the conversation's BODY rather than its
 	 *  title: `docs/relay/contract.md` §3.3, and the reason a result can be a
 	 *  legitimate match with a title that does not contain the query. */

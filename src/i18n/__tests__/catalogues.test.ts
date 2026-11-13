@@ -224,7 +224,7 @@ const NAMESPACES = [
 		name: "mobile.sidebar",
 		messages: sidebar,
 		context: sidebarContext,
-		expected: 21,
+		expected: 25,
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -342,7 +342,9 @@ describe("the English catalogues", () => {
 		/* TestFlight 906 drawer View options: + the 21 `mobile.sidebar.*` keys
 		 * (order, grouping, clock, ended, sections, link, heading): 771 + 21 = 792,
 		 * the generator's own count. */
-		expect(total).toBe(792);
+		/* PR #255 review round 1: + "N sections hidden" and the emptied-by-view
+		 * state's headline, line and action (D2, M1): 792 + 4 = 796. */
+		expect(total).toBe(796);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -19,5 +19,9 @@
 	"mobile.sidebar.section.week": "На этой неделе",
 	"mobile.sidebar.section.older": "Раньше",
 	"mobile.sidebar.more_settings": "Другие настройки боковой панели",
-	"mobile.sidebar.settings_heading": "Боковая панель"
+	"mobile.sidebar.settings_heading": "Боковая панель",
+	"mobile.sidebar.hidden_sections": "{count, plural, one {скрыт # раздел} few {скрыто # раздела} many {скрыто # разделов} other {скрыто # раздела}}",
+	"mobile.sidebar.empty_by_view.headline": "Параметры вида скрывают все беседы.",
+	"mobile.sidebar.empty_by_view.next": "Снова включите разделы или завершённые сеансы либо сбросьте вид.",
+	"mobile.sidebar.empty_by_view.reset": "Сбросить вид"
 }

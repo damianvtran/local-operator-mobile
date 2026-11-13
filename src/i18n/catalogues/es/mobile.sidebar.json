@@ -19,5 +19,9 @@
 	"mobile.sidebar.section.week": "Esta semana",
 	"mobile.sidebar.section.older": "Anteriores",
 	"mobile.sidebar.more_settings": "Más ajustes de la barra lateral",
-	"mobile.sidebar.settings_heading": "Barra lateral"
+	"mobile.sidebar.settings_heading": "Barra lateral",
+	"mobile.sidebar.hidden_sections": "{count, plural, one {# sección oculta} many {# de secciones ocultas} other {# secciones ocultas}}",
+	"mobile.sidebar.empty_by_view.headline": "Tus opciones de vista ocultan todas las conversaciones.",
+	"mobile.sidebar.empty_by_view.next": "Vuelve a activar secciones o sesiones finalizadas, o restablece la vista.",
+	"mobile.sidebar.empty_by_view.reset": "Restablecer vista"
 }

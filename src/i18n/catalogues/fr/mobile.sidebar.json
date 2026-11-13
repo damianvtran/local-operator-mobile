@@ -19,5 +19,9 @@
 	"mobile.sidebar.section.week": "Cette semaine",
 	"mobile.sidebar.section.older": "Plus anciennes",
 	"mobile.sidebar.more_settings": "Plus de paramètres de la barre latérale",
-	"mobile.sidebar.settings_heading": "Barre latérale"
+	"mobile.sidebar.settings_heading": "Barre latérale",
+	"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
+	"mobile.sidebar.empty_by_view.headline": "Vos options d’affichage masquent toutes les conversations.",
+	"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
+	"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage"
 }

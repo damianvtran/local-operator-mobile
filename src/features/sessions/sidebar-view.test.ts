@@ -5,8 +5,12 @@ import {
 	arrangeRows,
 	arrangeSidebar,
 	DEFAULT_SIDEBAR_VIEW,
+	hiddenSectionCount,
+	isCustomSidebarView,
+	isEmptiedByView,
 	isHiddenAsEnded,
 	parseSidebarView,
+	runningOrderMs,
 	type SidebarView,
 	serializeSidebarView,
 	toggleSidebarSection,
@@ -282,5 +286,81 @@ describe("parseSidebarView / serializeSidebarView", () => {
 				}),
 			),
 		).toEqual({ ...DEFAULT_SIDEBAR_VIEW, hidden: ["older"] });
+	});
+});
+
+/* Review round 1 on PR #255: each case below failed on the round-1 head. */
+describe("review round 1 remediation", () => {
+	it("M3: a running row never keys on the activity clock, even on a relay without `created_at`", () => {
+		// The desktop's `runningOrderMs` chain is last_user_at → created_at → null;
+		// falling back to `mtime` would re-sort Running on every streamed reply.
+		const old = row("old-relay", { streaming: true, mtime: at(5) });
+		delete (old as { created_at?: number }).created_at;
+		expect(runningOrderMs(old)).toBeNull();
+		expect(
+			runningOrderMs(row("born", { streaming: true, created_at: at(HOUR) })),
+		).toBe(at(HOUR) * 1000);
+		// So a reply landing in `a` does not move it above `b`: both sort as no-clock,
+		// arrival order holds.
+		const a = row("a", { streaming: true, mtime: at(1) });
+		const b = row("b", { streaming: true, mtime: at(HOUR) });
+		for (const r of [a, b]) delete (r as { created_at?: number }).created_at;
+		expect(
+			ids(arrangeSidebar([b, a], DEFAULT_SIDEBAR_VIEW, NOON)[0]?.rows ?? []),
+		).toEqual(["b", "a"]);
+	});
+
+	it("D1: the flat list reports how many pinned rows lead it, so the drawer can mark the run", () => {
+		const flat = arrangeSidebar(
+			RELAY_ORDER,
+			{ ...DEFAULT_SIDEBAR_VIEW, groupBy: "flat" },
+			NOON,
+		);
+		expect(flat[0]?.pinnedLead).toBe(2);
+		const sectioned = arrangeSidebar(RELAY_ORDER, DEFAULT_SIDEBAR_VIEW, NOON);
+		expect(sectioned.every((g) => g.pinnedLead === undefined)).toBe(true);
+	});
+
+	it("D2: a view is custom when any field differs from the default, hidden compared as a set", () => {
+		expect(isCustomSidebarView(DEFAULT_SIDEBAR_VIEW)).toBe(false);
+		expect(isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW })).toBe(false);
+		expect(
+			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, showEnded: false }),
+		).toBe(true);
+		expect(
+			isCustomSidebarView({ ...DEFAULT_SIDEBAR_VIEW, basis: "created" }),
+		).toBe(true);
+		expect(
+			isCustomSidebarView(toggleSidebarSection(DEFAULT_SIDEBAR_VIEW, "older")),
+		).toBe(true);
+	});
+
+	it("D2: the hidden-section count is the time grouping's only — `In one list` hides nothing", () => {
+		const hidden = toggleSidebarSection(
+			toggleSidebarSection(DEFAULT_SIDEBAR_VIEW, "today"),
+			"week",
+		);
+		expect(hiddenSectionCount(DEFAULT_SIDEBAR_VIEW)).toBe(0);
+		expect(hiddenSectionCount(hidden)).toBe(2);
+		expect(hiddenSectionCount({ ...hidden, groupBy: "flat" })).toBe(0);
+	});
+
+	it("M1: a list emptied by the view is told apart from a catalogue with no sessions", () => {
+		const ended = [row("e1", { ended: true }), row("e2", { ended: true })];
+		const hideEnded = { ...DEFAULT_SIDEBAR_VIEW, showEnded: false };
+		expect(isEmptiedByView(ended, arrangeSidebar(ended, hideEnded, NOON))).toBe(
+			true,
+		);
+		const today = [row("t", { mtime: at(MIN) })];
+		let allHidden = DEFAULT_SIDEBAR_VIEW;
+		for (const key of ["today", "week", "older"] as const)
+			allHidden = toggleSidebarSection(allHidden, key);
+		expect(isEmptiedByView(today, arrangeSidebar(today, allHidden, NOON))).toBe(
+			true,
+		);
+		expect(isEmptiedByView([], [])).toBe(false);
+		expect(
+			isEmptiedByView(today, arrangeSidebar(today, DEFAULT_SIDEBAR_VIEW, NOON)),
+		).toBe(false);
 	});
 });

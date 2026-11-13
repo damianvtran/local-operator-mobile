@@ -204,9 +204,17 @@ export function isStoppedOnReader(session: SessionSummary): boolean {
  * relay does not publish (see the module header) — else the row's birth,
  * which does not move, so a response streaming into a running conversation
  * never reshuffles the Running section under the reader's thumb.
+ *
+ * `created_at` ONLY — not `rowTimeMs(…, "created")`, whose older-relay fallback
+ * is `mtime`, the very clock a streamed reply moves (review round 1, M3). A
+ * relay without the field gives `null`, so the row sorts last in its lane by
+ * arrival, as the desktop's chain ends in `null` too.
  */
 export function runningOrderMs(session: SessionSummary): number | null {
-	return rowTimeMs(session, "created");
+	const born = session.created_at;
+	return typeof born === "number" && Number.isFinite(born) && born > 0
+		? born * 1000
+		: null;
 }
 
 /** The lane a row occupies under `active-first`: stopped on the reader, then
@@ -271,6 +279,11 @@ export function isHiddenAsEnded(
 export type SidebarGroup = {
 	key: SidebarSectionKey | "all";
 	rows: SessionSummary[];
+	/** `all` only: how many pinned rows lead `rows`. The flat list has no
+	 *  Pinned heading, so without a mark its pins read as a mis-sorted head of a
+	 *  "Most recent" list (design review round 1, D1); the drawer draws a divider
+	 *  after this many rows. Absent on a section — its heading says it. */
+	pinnedLead?: number;
 };
 
 /**
@@ -297,7 +310,9 @@ export function arrangeSidebar(
 	);
 	if (view.groupBy === "flat") {
 		const rows = [...pinned, ...rest];
-		return rows.length === 0 ? [] : [{ key: "all", rows }];
+		return rows.length === 0
+			? []
+			: [{ key: "all", rows, pinnedLead: pinned.length }];
 	}
 	// Bins are a filter over the arranged list, so each section keeps its order.
 	const bins = splitSidebarSections(rest, now, view.basis);
@@ -311,4 +326,44 @@ export function arrangeSidebar(
 	return SIDEBAR_SECTIONS.filter(
 		(key) => !view.hidden.includes(key) && byKey[key].length > 0,
 	).map((key) => ({ key, rows: byKey[key] }));
+}
+
+/**
+ * Whether `view` differs from the default in any field (`hidden` compared as a
+ * set). The drawer's trigger fills when it does — the desktop's `viewIsCustom`
+ * cue on its View options button — so a reader whose list looks short has a
+ * visible reason, wherever the change was made (design review round 1, D2).
+ */
+export function isCustomSidebarView(view: SidebarView): boolean {
+	return (
+		view.orderBy !== DEFAULT_SIDEBAR_VIEW.orderBy ||
+		view.groupBy !== DEFAULT_SIDEBAR_VIEW.groupBy ||
+		view.basis !== DEFAULT_SIDEBAR_VIEW.basis ||
+		view.showEnded !== DEFAULT_SIDEBAR_VIEW.showEnded ||
+		view.hidden.length > 0
+	);
+}
+
+/**
+ * How many sections the view is actually withholding: the time grouping's
+ * `hidden`, and zero under `In one list`, which draws every row whatever is
+ * hidden (`arrangeSidebar`). The drawer's quiet "N sections hidden" line — the
+ * desktop's `ui.chat.sidebar_view.hidden` — reads this, so it never claims a
+ * section is hidden while its rows are on screen (D2).
+ */
+export function hiddenSectionCount(view: SidebarView): number {
+	return view.groupBy === "section" ? view.hidden.length : 0;
+}
+
+/**
+ * The catalogue has rows but the view draws none (every row ended with Show
+ * ended off, or every populated section switched off). The pane must not say
+ * "No sessions yet" then — that headline is false and points nowhere near the
+ * cause (agent review round 1, M1).
+ */
+export function isEmptiedByView(
+	sessions: readonly SessionSummary[],
+	groups: readonly SidebarGroup[],
+): boolean {
+	return sessions.length > 0 && groups.length === 0;
 }

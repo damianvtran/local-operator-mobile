@@ -82,5 +82,21 @@
 	"mobile.sidebar.settings_heading": {
 		"role": "heading",
 		"note": "Heading of the Settings section holding every drawer (sidebar) view option."
+	},
+	"mobile.sidebar.hidden_sections": {
+		"role": "status",
+		"note": "Quiet line at the top of the drawer's list when the reader has switched sections off in Settings → Sidebar; {count} is a number. Preserve ICU plural arms and #. Desktop: ui.chat.sidebar_view.hidden."
+	},
+	"mobile.sidebar.empty_by_view.headline": {
+		"role": "heading",
+		"note": "Empty-state headline in the drawer when conversations exist but the reader's view options (hidden sections, Show ended sessions off) hide every one of them. Not 'no conversations'."
+	},
+	"mobile.sidebar.empty_by_view.next": {
+		"role": "help",
+		"note": "Second line of that empty state: names the ways back. 'Sections' are Pinned/Running/Today/This week/Older; 'ended sessions' is the Show ended sessions switch."
+	},
+	"mobile.sidebar.empty_by_view.reset": {
+		"role": "button",
+		"note": "Action of that empty state: restores the default drawer view (every section shown, ended sessions shown, default order and grouping)."
 	}
 }

@@ -43,6 +43,9 @@ import {
 import { SessionRow } from "@/features/sessions/session-row";
 import {
 	arrangeSidebar,
+	DEFAULT_SIDEBAR_VIEW,
+	hiddenSectionCount,
+	isEmptiedByView,
 	type SidebarGroup,
 } from "@/features/sessions/sidebar-view";
 import { SIDEBAR_SECTION_LABEL } from "@/features/sessions/sidebar-view-controls";
@@ -537,12 +540,19 @@ export const ConversationsPane = ({
 
 	/* The desktop's arrangement (TestFlight 906): the reader's order, grouping and
 	 *  clock, applied to the search's result — `sidebar-view.ts` owns every rule. */
-	const { view: sidebarView } = useSidebarView();
+	const { view: sidebarView, setView: setSidebarView } = useSidebarView();
 	const groups = useMemo(
 		() => arrangeSidebar(filtered, sidebarView, now),
 		[filtered, sidebarView, now],
 	);
 	const items = useMemo(() => buildItems(groups), [groups]);
+	/* The view's own explanations (PR #255 review round 1). `emptiedByView`: rows
+	 *  exist but the view draws none, which must not read "No sessions yet" (M1).
+	 *  `hiddenSections`: the desktop's quiet "N sections hidden" line, so a
+	 *  section switched off in Settings does not just vanish (D2). Both read the
+	 *  search's result, so a search that matched nothing keeps its own state. */
+	const emptiedByView = isEmptiedByView(filtered, groups);
+	const hiddenSections = hiddenSectionCount(sidebarView);
 	/* Does any row in THIS list draw a picture? Then every row reserves the picture's
 	 *  width for its title, so the list's titles share one left edge instead of
 	 *  stepping in and out between pictured and plain rows (design review round 1,
@@ -639,6 +649,15 @@ export const ConversationsPane = ({
 				<View className="px-4">
 					<SectionHeader label={item.label} testID={item.testID} />
 				</View>
+			) : item.kind === "divider" ? (
+				/* A hairline inside the row gutter, not a heading: `In one list` stays one
+				 *  list, the reader just sees where the pins end (design D1). Decorative —
+				 *  each row already announces itself. */
+				<View
+					className="mx-4 my-1 h-px bg-hairline"
+					aria-hidden
+					testID={REGION.sidebarPinnedDivider}
+				/>
 			) : (
 				<SessionRow
 					session={item.session}
@@ -870,15 +889,31 @@ export const ConversationsPane = ({
 					<RefreshControl refreshing={busy} onRefresh={onRefresh} />
 				}
 				ListHeaderComponent={
-					staleMessage ? (
-						<View className="px-4 pt-2">
-							<Text
-								className="text-body-sm text-ink-dim"
-								numberOfLines={largeText ? 1 : undefined}
-								testID={STATE_MARKER.sidebar.stale}
-							>
-								{largeText ? staleShortMessage : staleMessage}
-							</Text>
+					staleMessage || (hiddenSections > 0 && !emptiedByView) ? (
+						<View className="gap-1 px-4 pt-2">
+							{staleMessage ? (
+								<Text
+									className="text-body-sm text-ink-dim"
+									numberOfLines={largeText ? 1 : undefined}
+									testID={STATE_MARKER.sidebar.stale}
+								>
+									{largeText ? staleShortMessage : staleMessage}
+								</Text>
+							) : null}
+							{/* A sentence, not a badge (the desktop's reasoning in
+							 *  `chat-sidebar-view-menu.tsx`): the count is not a thing to act
+							 *  on, it is the reason the list looks short. Withheld when the
+							 *  view emptied the list — that state says it, with a reset. */}
+							{hiddenSections > 0 && !emptiedByView ? (
+								<Text
+									className="text-body-sm text-ink-dim"
+									testID={REGION.sidebarHiddenSections}
+								>
+									{t("mobile.sidebar.hidden_sections", {
+										count: hiddenSections,
+									})}
+								</Text>
+							) : null}
 						</View>
 					) : null
 				}
@@ -892,6 +927,8 @@ export const ConversationsPane = ({
 					 *  the wrapper stops growing and the content flows naturally. */
 					<View className={largeText ? "flex-none px-4" : "flex-1 px-4"}>
 						<PaneEmpty
+							emptiedByView={emptiedByView}
+							onResetView={() => setSidebarView(DEFAULT_SIDEBAR_VIEW)}
 							waiting={routed && waiting}
 							hasRoute={hasRoute}
 							query={query}
@@ -1043,6 +1080,7 @@ function loadFailed(
 
 type Item =
 	| { kind: "header"; key: string; label: string; testID?: string }
+	| { kind: "divider"; key: string }
 	| { kind: "row"; key: string; session: SessionSummary; section: string };
 
 /** Module-level so the list never sees a new extractor (perf audit P11). */
@@ -1072,7 +1110,15 @@ function buildItems(groups: readonly SidebarGroup[]): Item[] {
 				testID: SECTION_TEST_ID[group.key],
 			});
 		}
-		for (const session of group.rows) {
+		group.rows.forEach((session, index) => {
+			/* After the flat list's pinned run, and only between two runs: a divider
+			 *  above or below nothing would mark nothing (design D1). */
+			if (
+				group.pinnedLead !== undefined &&
+				group.pinnedLead > 0 &&
+				index === group.pinnedLead
+			)
+				items.push({ kind: "divider", key: "d-pinned" });
 			items.push({
 				kind: "row",
 				key: session.session_id,
@@ -1081,7 +1127,7 @@ function buildItems(groups: readonly SidebarGroup[]): Item[] {
 				 *  time on a running row whatever the grouping. */
 				section: group.key,
 			});
-		}
+		});
 	}
 	return items;
 }
@@ -1096,6 +1142,8 @@ function buildItems(groups: readonly SidebarGroup[]): Item[] {
  * could tell them apart).
  */
 const PaneEmpty = ({
+	emptiedByView,
+	onResetView,
 	waiting,
 	hasRoute,
 	query,
@@ -1103,6 +1151,8 @@ const PaneEmpty = ({
 	onNew,
 	onConnect,
 }: {
+	emptiedByView: boolean;
+	onResetView: () => void;
 	waiting: boolean;
 	hasRoute: boolean;
 	query: string;
@@ -1121,6 +1171,26 @@ const PaneEmpty = ({
 				<Skeleton lines={1} ground="raised" />
 				<Skeleton lines={1} ground="raised" />
 			</View>
+		);
+	}
+	/* Before the search branch: `emptiedByView` is computed over the search's
+	 *  RESULT, so it is true only when the search matched rows and the view hid
+	 *  them all — "Nothing matches that" would be false then. A search that
+	 *  matched nothing leaves it false and keeps its own state. The no-route and
+	 *  no-sessions branches below are false whenever this holds: the catalogue
+	 *  has rows, the reader's view withholds all of them (agent review M1). */
+	if (emptiedByView) {
+		return (
+			<EmptyState
+				headline={t("mobile.sidebar.empty_by_view.headline")}
+				next={t("mobile.sidebar.empty_by_view.next")}
+				action={{
+					label: t("mobile.sidebar.empty_by_view.reset"),
+					onPress: onResetView,
+					testID: REGION.sidebarResetView,
+				}}
+				testID={REGION.sidebarEmptyByView}
+			/>
 		);
 	}
 	if (query.trim().length > 0) {

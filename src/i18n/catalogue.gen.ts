@@ -563,9 +563,13 @@ export type CatalogueKey =
 	| "mobile.sidebar.basis.created"
 	| "mobile.sidebar.basis.last_active"
 	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty_by_view.headline"
+	| "mobile.sidebar.empty_by_view.next"
+	| "mobile.sidebar.empty_by_view.reset"
 	| "mobile.sidebar.group.one_list"
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
+	| "mobile.sidebar.hidden_sections"
 	| "mobile.sidebar.more_settings"
 	| "mobile.sidebar.order.active_first"
 	| "mobile.sidebar.order.most_recent"
@@ -1284,6 +1288,9 @@ export type NoParamKey =
 	| "mobile.sidebar.basis.created"
 	| "mobile.sidebar.basis.last_active"
 	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty_by_view.headline"
+	| "mobile.sidebar.empty_by_view.next"
+	| "mobile.sidebar.empty_by_view.reset"
 	| "mobile.sidebar.group.one_list"
 	| "mobile.sidebar.group.time_section"
 	| "mobile.sidebar.group_by"
@@ -2047,9 +2054,13 @@ export type MessageParams = {
 	"mobile.sidebar.basis.created": NoParams;
 	"mobile.sidebar.basis.last_active": NoParams;
 	"mobile.sidebar.clock_hint": NoParams;
+	"mobile.sidebar.empty_by_view.headline": NoParams;
+	"mobile.sidebar.empty_by_view.next": NoParams;
+	"mobile.sidebar.empty_by_view.reset": NoParams;
 	"mobile.sidebar.group.one_list": NoParams;
 	"mobile.sidebar.group.time_section": NoParams;
 	"mobile.sidebar.group_by": NoParams;
+	"mobile.sidebar.hidden_sections": { count: number };
 	"mobile.sidebar.more_settings": NoParams;
 	"mobile.sidebar.order.active_first": NoParams;
 	"mobile.sidebar.order.most_recent": NoParams;
@@ -2858,9 +2869,13 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.sidebar.basis.created": "Created",
 	"mobile.sidebar.basis.last_active": "Last active",
 	"mobile.sidebar.clock_hint": "Dates and ordering follow the selected clock.",
+	"mobile.sidebar.empty_by_view.headline": "Your view options hide every conversation.",
+	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
+	"mobile.sidebar.empty_by_view.reset": "Reset view",
 	"mobile.sidebar.group.one_list": "In one list",
 	"mobile.sidebar.group.time_section": "Time section",
 	"mobile.sidebar.group_by": "Group by",
+	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
 	"mobile.sidebar.more_settings": "More sidebar settings",
 	"mobile.sidebar.order.active_first": "Active first",
 	"mobile.sidebar.order.most_recent": "Most recent",
@@ -3654,9 +3669,13 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.sidebar.basis.created": { role: "button", note: "Clock option: when the conversation was started. Desktop: ui.chat.sidebar_view.created." },
 	"mobile.sidebar.basis.last_active": { role: "button", note: "Clock option: when the conversation last had activity. Desktop: ui.chat.sidebar_view.last_active." },
 	"mobile.sidebar.clock_hint": { role: "help", note: "One sentence under the clock choice explaining that it changes both the dates shown and the order. Desktop: ui.chat.sidebar_view.clock_hint." },
+	"mobile.sidebar.empty_by_view.headline": { role: "heading", note: "Empty-state headline in the drawer when conversations exist but the reader's view options (hidden sections, Show ended sessions off) hide every one of them. Not 'no conversations'." },
+	"mobile.sidebar.empty_by_view.next": { role: "help", note: "Second line of that empty state: names the ways back. 'Sections' are Pinned/Running/Today/This week/Older; 'ended sessions' is the Show ended sessions switch." },
+	"mobile.sidebar.empty_by_view.reset": { role: "button", note: "Action of that empty state: restores the default drawer view (every section shown, ended sessions shown, default order and grouping)." },
 	"mobile.sidebar.group.one_list": { role: "button", note: "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list." },
 	"mobile.sidebar.group.time_section": { role: "button", note: "Grouping option: headed sections Pinned, Running, Today, This week, Older. Desktop: ui.chat.sidebar_view.time_section." },
 	"mobile.sidebar.group_by": { role: "heading", note: "Label of the choice of how the drawer groups conversations. Desktop: ui.chat.sidebar_view.group_by." },
+	"mobile.sidebar.hidden_sections": { role: "status", note: "Quiet line at the top of the drawer's list when the reader has switched sections off in Settings → Sidebar; {count} is a number. Preserve ICU plural arms and #. Desktop: ui.chat.sidebar_view.hidden." },
 	"mobile.sidebar.more_settings": { role: "button", note: "Link at the foot of the drawer's View options sheet that opens the full Sidebar section in Settings." },
 	"mobile.sidebar.order.active_first": { role: "button", note: "Order option: conversations with a turn running, or waiting on the reader, are lifted to the top; the rest follow newest first. Desktop: ui.chat.sidebar_view.active_first." },
 	"mobile.sidebar.order.most_recent": { role: "button", note: "Order option: one newest-first order over every conversation, nothing lifted. Desktop: ui.chat.sidebar_view.most_recent." },
@@ -4464,9 +4483,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Fecha de creación",
 		"mobile.sidebar.basis.last_active": "Última actividad",
 		"mobile.sidebar.clock_hint": "Las fechas y el orden siguen el reloj seleccionado.",
+		"mobile.sidebar.empty_by_view.headline": "Tus opciones de vista ocultan todas las conversaciones.",
+		"mobile.sidebar.empty_by_view.next": "Vuelve a activar secciones o sesiones finalizadas, o restablece la vista.",
+		"mobile.sidebar.empty_by_view.reset": "Restablecer vista",
 		"mobile.sidebar.group.one_list": "En una lista",
 		"mobile.sidebar.group.time_section": "Sección temporal",
 		"mobile.sidebar.group_by": "Agrupar por",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# sección oculta} many {# de secciones ocultas} other {# secciones ocultas}}",
 		"mobile.sidebar.more_settings": "Más ajustes de la barra lateral",
 		"mobile.sidebar.order.active_first": "Activos primero",
 		"mobile.sidebar.order.most_recent": "Más recientes",
@@ -5258,9 +5281,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Créée le",
 		"mobile.sidebar.basis.last_active": "Dernière activité",
 		"mobile.sidebar.clock_hint": "Les dates et l’ordre suivent l’horloge sélectionnée.",
+		"mobile.sidebar.empty_by_view.headline": "Vos options d’affichage masquent toutes les conversations.",
+		"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
+		"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage",
 		"mobile.sidebar.group.one_list": "Une seule liste",
 		"mobile.sidebar.group.time_section": "Section temporelle",
 		"mobile.sidebar.group_by": "Grouper par",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
 		"mobile.sidebar.more_settings": "Plus de paramètres de la barre latérale",
 		"mobile.sidebar.order.active_first": "Actives d’abord",
 		"mobile.sidebar.order.most_recent": "Plus récentes",
@@ -6052,9 +6079,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "बनने का समय",
 		"mobile.sidebar.basis.last_active": "आख़िरी गतिविधि",
 		"mobile.sidebar.clock_hint": "तारीख़ें और क्रम चुनी गई घड़ी के अनुसार हैं।",
+		"mobile.sidebar.empty_by_view.headline": "आपके दृश्य विकल्प सभी बातचीत छिपा रहे हैं।",
+		"mobile.sidebar.empty_by_view.next": "खंड या समाप्त सत्र फिर से चालू करें, या दृश्य रीसेट करें।",
+		"mobile.sidebar.empty_by_view.reset": "दृश्य रीसेट करें",
 		"mobile.sidebar.group.one_list": "एक सूची में",
 		"mobile.sidebar.group.time_section": "समय के खंड",
 		"mobile.sidebar.group_by": "समूह बनाएँ",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# खंड छिपा है} other {# खंड छिपे हैं}}",
 		"mobile.sidebar.more_settings": "साइडबार की और सेटिंग्स",
 		"mobile.sidebar.order.active_first": "सक्रिय पहले",
 		"mobile.sidebar.order.most_recent": "सबसे हाल के",
@@ -6846,9 +6877,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Создано",
 		"mobile.sidebar.basis.last_active": "Последняя активность",
 		"mobile.sidebar.clock_hint": "Даты и порядок зависят от выбранного отсчёта времени.",
+		"mobile.sidebar.empty_by_view.headline": "Параметры вида скрывают все беседы.",
+		"mobile.sidebar.empty_by_view.next": "Снова включите разделы или завершённые сеансы либо сбросьте вид.",
+		"mobile.sidebar.empty_by_view.reset": "Сбросить вид",
 		"mobile.sidebar.group.one_list": "Одним списком",
 		"mobile.sidebar.group.time_section": "По времени",
 		"mobile.sidebar.group_by": "Группировать по",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {скрыт # раздел} few {скрыто # раздела} many {скрыто # разделов} other {скрыто # раздела}}",
 		"mobile.sidebar.more_settings": "Другие настройки боковой панели",
 		"mobile.sidebar.order.active_first": "Сначала активные",
 		"mobile.sidebar.order.most_recent": "Сначала недавние",
@@ -7640,9 +7675,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "تخلیق کا وقت",
 		"mobile.sidebar.basis.last_active": "آخری سرگرمی",
 		"mobile.sidebar.clock_hint": "تاریخیں اور ترتیب منتخب گھڑی کے مطابق ہیں۔",
+		"mobile.sidebar.empty_by_view.headline": "آپ کے منظر کے اختیارات تمام گفتگوئیں چھپا رہے ہیں۔",
+		"mobile.sidebar.empty_by_view.next": "حصے یا ختم شدہ سیشن دوبارہ آن کریں، یا منظر ری سیٹ کریں۔",
+		"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں",
 		"mobile.sidebar.group.one_list": "ایک فہرست میں",
 		"mobile.sidebar.group.time_section": "وقت کا حصہ",
 		"mobile.sidebar.group_by": "گروہ بندی",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# حصہ پوشیدہ ہے} other {# حصے پوشیدہ ہیں}}",
 		"mobile.sidebar.more_settings": "سائیڈبار کی مزید ترتیبات",
 		"mobile.sidebar.order.active_first": "فعال پہلے",
 		"mobile.sidebar.order.most_recent": "تازہ ترین",
@@ -8434,9 +8473,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "Ngày tạo",
 		"mobile.sidebar.basis.last_active": "Hoạt động gần nhất",
 		"mobile.sidebar.clock_hint": "Ngày và thứ tự tuân theo mốc thời gian đã chọn.",
+		"mobile.sidebar.empty_by_view.headline": "Tùy chọn hiển thị đang ẩn mọi cuộc trò chuyện.",
+		"mobile.sidebar.empty_by_view.next": "Bật lại các mục hoặc phiên đã kết thúc, hoặc đặt lại chế độ xem.",
+		"mobile.sidebar.empty_by_view.reset": "Đặt lại chế độ xem",
 		"mobile.sidebar.group.one_list": "Trong một danh sách",
 		"mobile.sidebar.group.time_section": "Mục thời gian",
 		"mobile.sidebar.group_by": "Nhóm theo",
+		"mobile.sidebar.hidden_sections": "{count, plural, other {Đã ẩn # mục}}",
 		"mobile.sidebar.more_settings": "Thêm cài đặt thanh bên",
 		"mobile.sidebar.order.active_first": "Đang hoạt động trước",
 		"mobile.sidebar.order.most_recent": "Mới nhất",
@@ -9228,9 +9271,13 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.sidebar.basis.created": "创建时间",
 		"mobile.sidebar.basis.last_active": "最近活跃时间",
 		"mobile.sidebar.clock_hint": "日期与排序均以所选时间依据为准。",
+		"mobile.sidebar.empty_by_view.headline": "你的视图选项隐藏了所有对话。",
+		"mobile.sidebar.empty_by_view.next": "重新开启分区或已结束的会话，或重置视图。",
+		"mobile.sidebar.empty_by_view.reset": "重置视图",
 		"mobile.sidebar.group.one_list": "统一列表",
 		"mobile.sidebar.group.time_section": "时间分区",
 		"mobile.sidebar.group_by": "分组方式",
+		"mobile.sidebar.hidden_sections": "{count, plural, other {已隐藏#个分区}}",
 		"mobile.sidebar.more_settings": "更多侧边栏设置",
 		"mobile.sidebar.order.active_first": "活跃优先",
 		"mobile.sidebar.order.most_recent": "最近优先",

@@ -20,6 +20,7 @@ const host = vi.hoisted(() => ({
 	choices: new Map<string, () => void>(),
 	roles: new Map<string, string>(),
 	checked: new Map<string, boolean>(),
+	ariaChecked: new Map<string, boolean>(),
 }));
 
 vi.mock("react-native", () => ({
@@ -34,12 +35,15 @@ vi.mock("react-native", () => ({
 		onPress: () => void;
 		accessibilityRole?: string;
 		accessibilityState?: { checked?: boolean };
+		"aria-checked"?: boolean;
 	}) => {
 		host.presses.set(props.testID, props.onPress);
 		if (props.accessibilityRole)
 			host.roles.set(props.testID, props.accessibilityRole);
 		if (props.accessibilityState?.checked !== undefined)
 			host.checked.set(props.testID, props.accessibilityState.checked);
+		if (props["aria-checked"] !== undefined)
+			host.ariaChecked.set(props.testID, props["aria-checked"]);
 		return props.children ?? null;
 	},
 }));
@@ -101,6 +105,7 @@ beforeEach(() => {
 	host.choices.clear();
 	host.roles.clear();
 	host.checked.clear();
+	host.ariaChecked.clear();
 	current = DEFAULT_SIDEBAR_VIEW;
 });
 afterEach(() => {
@@ -158,5 +163,16 @@ describe("Settings → Sidebar", () => {
 
 		press(host.presses, CONTROL.settingsSidebarShowEnded);
 		expect(drawn()).toEqual(["today:open"]);
+	});
+});
+
+describe("review round 1 remediation", () => {
+	it("Q1: the switch row states its value to the web's tree as well as the native one", () => {
+		// react-native-web drops `accessibilityState.checked` for role `switch`, so a
+		// browser screen reader heard no on/off; `Segmented` sets `aria-checked` too.
+		act(() => root.render(createElement(Harness, { scope: "sheet" })));
+		expect(host.ariaChecked.get(CONTROL.sidebarViewShowEnded)).toBe(true);
+		press(host.presses, CONTROL.sidebarViewShowEnded);
+		expect(host.ariaChecked.get(CONTROL.sidebarViewShowEnded)).toBe(false);
 	});
 });

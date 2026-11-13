@@ -19,5 +19,9 @@
 	"mobile.sidebar.section.week": "本周",
 	"mobile.sidebar.section.older": "更早",
 	"mobile.sidebar.more_settings": "更多侧边栏设置",
-	"mobile.sidebar.settings_heading": "侧边栏"
+	"mobile.sidebar.settings_heading": "侧边栏",
+	"mobile.sidebar.hidden_sections": "{count, plural, other {已隐藏#个分区}}",
+	"mobile.sidebar.empty_by_view.headline": "你的视图选项隐藏了所有对话。",
+	"mobile.sidebar.empty_by_view.next": "重新开启分区或已结束的会话，或重置视图。",
+	"mobile.sidebar.empty_by_view.reset": "重置视图"
 }

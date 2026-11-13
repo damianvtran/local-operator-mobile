@@ -91,6 +91,10 @@ const SwitchRow = ({
 			accessibilityLabel={label}
 			accessibilityHint={hint}
 			accessibilityState={{ checked: value }}
+			// react-native-web does not read `accessibilityState`, so on the web the
+			// switch had no on/off for a screen reader (QA round 1, Q1). Written
+			// alongside the native state, as `Segmented` does for its radios.
+			aria-checked={value}
 			onPress={() => onChange(!value)}
 			testID={testID}
 			className="flex-row items-center gap-3"

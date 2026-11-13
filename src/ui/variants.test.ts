@@ -16,6 +16,7 @@ import {
 	fieldBoxHeight,
 	fieldClasses,
 	fieldScrollsWithContent,
+	iconButtonClasses,
 	listRowIndicator,
 	segmentedItemClasses,
 	segmentedLabelClasses,
@@ -441,5 +442,22 @@ describe("textareaContentCap", () => {
 				maxHeightPx: 90,
 			}),
 		).toBe(90);
+	});
+});
+
+describe("icon button", () => {
+	it("an `active` button is filled with the selected-row tint, and a press still reads", () => {
+		/* PR #255 design D2: the drawer's View options trigger shows a customised
+		 *  view the way the desktop's does (`bg-row-selected` when `viewIsCustom`). */
+		expect(iconButtonClasses({}, { active: true })).toContain(
+			"bg-row-selected",
+		);
+		expect(iconButtonClasses({})).not.toContain("bg-row-selected");
+		expect(iconButtonClasses({ pressed: true }, { active: true })).toContain(
+			"bg-elevated",
+		);
+		expect(
+			iconButtonClasses({ disabled: true }, { active: true }),
+		).not.toContain("bg-row-selected");
 	});
 });

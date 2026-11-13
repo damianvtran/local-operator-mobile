@@ -7,6 +7,7 @@ import {
 import { useState } from "react";
 import { Pressable, Text } from "react-native";
 
+import { isCustomSidebarView } from "@/features/sessions/sidebar-view";
 import { SidebarViewControls } from "@/features/sessions/sidebar-view-controls";
 import { useSidebarView } from "@/features/sessions/use-sidebar-view";
 import { t } from "@/i18n";
@@ -53,12 +54,19 @@ export const SidebarViewButton = ({
 					<SlidersHorizontal color={color} size={size} />
 				)}
 				size={20}
+				/* Filled while the view is not the default — keyed on the VIEW, not on
+				 *  the sheet being open — so content withheld by an option has a visible
+				 *  cause in the drawer (design review round 1, D2; the desktop's
+				 *  `viewIsCustom` trigger). */
+				active={isCustomSidebarView(view)}
 				testID={CONTROL.sidebarViewOptions}
 			/>
 			<Sheet
 				visible={open}
 				onClose={() => setOpen(false)}
 				title={t("mobile.sidebar.view_options")}
+				// Two lines, not an ellipsis, at 320 pt and 200 % text (QA round 1, Q2).
+				titleLines={2}
 				returnFocusTestID={CONTROL.sidebarViewOptions}
 				testID={SURFACE.sidebarViewSheet}
 				footer={

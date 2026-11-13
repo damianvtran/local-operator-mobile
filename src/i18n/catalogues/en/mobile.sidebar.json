@@ -19,5 +19,9 @@
 	"mobile.sidebar.section.week": "This week",
 	"mobile.sidebar.section.older": "Older",
 	"mobile.sidebar.more_settings": "More sidebar settings",
-	"mobile.sidebar.settings_heading": "Sidebar"
+	"mobile.sidebar.settings_heading": "Sidebar",
+	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
+	"mobile.sidebar.empty_by_view.headline": "Your view options hide every conversation.",
+	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
+	"mobile.sidebar.empty_by_view.reset": "Reset view"
 }

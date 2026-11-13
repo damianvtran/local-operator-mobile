@@ -50,7 +50,33 @@ describe("sidebar view persistence", () => {
 		const reading = store.getState().hydrate();
 		store.getState().setView(FLAT);
 		await reading;
-		expect(store.getState().view).toEqual(FLAT);
+		// The tap changed the grouping only; the stored order survives (M2).
+		expect(store.getState().view).toEqual({ ...FLAT, orderBy: "recent" });
+	});
+
+	it("M2: an early tap persists the stored view plus the tapped field, not defaults over it", async () => {
+		const disk = memoryStorage({
+			[SIDEBAR_VIEW_KEY]: JSON.stringify({
+				orderBy: "recent",
+				basis: "created",
+			}),
+		});
+		const store = createSidebarViewStore(() => disk.storage);
+		const reading = store.getState().hydrate();
+		// Built from the default the reader sees before the stored view lands.
+		store.getState().setView({ ...DEFAULT_SIDEBAR_VIEW, showEnded: false });
+		await reading;
+		await Promise.resolve();
+		const expected: SidebarView = {
+			...DEFAULT_SIDEBAR_VIEW,
+			orderBy: "recent",
+			basis: "created",
+			showEnded: false,
+		};
+		expect(store.getState().view).toEqual(expected);
+		const relaunched = createSidebarViewStore(() => disk.storage);
+		await relaunched.getState().hydrate();
+		expect(relaunched.getState().view).toEqual(expected);
 	});
 
 	it("an unreadable store keeps the default rather than failing the drawer", async () => {
