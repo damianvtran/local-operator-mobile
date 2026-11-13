@@ -8,5 +8,8 @@
 	"mobile.common.not_found.title": "पेज नहीं मिला",
 	"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
 	"mobile.common.not_found.next": "आगे बढ़ने के लिए अपने सत्रों पर लौटें।",
-	"mobile.common.not_found.action": "सत्रों पर लौटें"
+	"mobile.common.not_found.action": "सत्रों पर लौटें",
+	"mobile.common.copy": "कॉपी करें",
+	"mobile.common.copied": "कॉपी हो गया",
+	"mobile.common.copy_command_hint": "“{label}” वाली कमांड कॉपी करता है"
 }

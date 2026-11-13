@@ -8,5 +8,8 @@
 	"mobile.common.not_found.title": "Không tìm thấy trang",
 	"mobile.common.not_found.headline": "Trang đó không tồn tại.",
 	"mobile.common.not_found.next": "Quay lại danh sách phiên để tiếp tục.",
-	"mobile.common.not_found.action": "Về danh sách phiên"
+	"mobile.common.not_found.action": "Về danh sách phiên",
+	"mobile.common.copy": "Sao chép",
+	"mobile.common.copied": "Đã sao chép",
+	"mobile.common.copy_command_hint": "Sao chép lệnh “{label}”"
 }
