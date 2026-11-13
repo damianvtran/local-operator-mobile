@@ -33,6 +33,7 @@ import { Divider } from "@/ui/components/divider";
 import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
+import { useComposedDir } from "@/ui/direction";
 
 /**
  * Set up your own tunnel — the self-hosted path, with no Radient account anywhere
@@ -86,6 +87,10 @@ const StepHeader = ({ numeral, label }: { numeral: string; label: string }) => {
 
 export default function OwnTunnel() {
 	const router = useRouter();
+	/* The Urdu password placeholder opens with a Latin token, so the EMPTY field
+	 *  needs the page's direction stated (`Input.placeholderDir`); typed text keeps
+	 *  the field's own inferred base. */
+	const composedDir = useComposedDir();
 	const { saveCustomRoute, connectCustomOutcome } = useConnection();
 	const { savedTunnel: saved } = useConnection();
 	/* `?computer=<registry id>` is the computer switcher's hand-off for an
@@ -358,6 +363,7 @@ export default function OwnTunnel() {
 						value={password}
 						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
+						placeholderDir={composedDir}
 						secureTextEntry
 						autoCapitalize="none"
 						autoFocus
@@ -444,6 +450,7 @@ export default function OwnTunnel() {
 						value={password}
 						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
+						placeholderDir={composedDir}
 						secureTextEntry
 						autoCapitalize="none"
 						testID={CONTROL.customPasswordField}

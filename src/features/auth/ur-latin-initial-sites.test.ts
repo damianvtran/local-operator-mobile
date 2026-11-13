@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
 import { Button } from "@/ui/components/button";
-import { DirectionProvider } from "@/ui/direction";
+import { Input } from "@/ui/components/input";
+import { DirectionProvider, useComposedDir } from "@/ui/direction";
 import { TunnelPaths } from "./tunnel-paths";
 
 /**
@@ -26,7 +27,10 @@ import { TunnelPaths } from "./tunnel-paths";
  */
 /* `@/ui/appearance` reaches native token plumbing Node cannot parse; the colour
  * is irrelevant to the direction under test (same stub as computers-add-wait). */
-vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: () => "#000",
+	useKeyboardAppearance: () => "default",
+}));
 
 const STARTS_LATIN = /^[A-Za-z]/;
 const ICU_SLOT = /\{[^}]*\}/g;
@@ -54,11 +58,11 @@ const PRE_S1_LATIN_INITIAL_UR_KEYS = [
 	"mobile.computers.transport.radient",
 ] as const;
 
-/** Latin-initial too, and deliberately NOT fixed in S2a: it is a TextInput
- *  placeholder, and `Input` (`src/ui/components/input.tsx`) has no direction
- *  prop to carry `useComposedDir()` — a `dir` on the field would also set the
- *  base of the password the reader types, which is a design decision, not a
- *  mechanical spread. Listed so the premise below stays exact. */
+/** Latin-initial too, and a TextInput PLACEHOLDER: a plain `dir` on the field
+ *  would also set the base of the password the reader types, so the cure is the
+ *  opt-in `Input.placeholderDir`, which states the page direction only while the
+ *  value is empty (designer source preflight, M3 S2a). Kept as its own list
+ *  because its channel differs from the `Text` spreads above. */
 const OPEN_LATIN_INITIAL_UR_KEYS = [
 	"mobile.computers.password_placeholder",
 ] as const;
@@ -187,7 +191,7 @@ describe("screens: the Latin-initial values spread the composed direction", () =
 });
 
 describe("Q-02: every Latin-initial ur value in the computers and sign-in namespaces", () => {
-	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, and the one open placeholder", () => {
+	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, and the placeholder fixed via Input.placeholderDir", () => {
 		const catalogue = (namespace: string) =>
 			JSON.parse(
 				read(`../../i18n/catalogues/ur/mobile.${namespace}.json`),
@@ -229,7 +233,46 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		);
 	});
 
-	it.todo(
-		"own-tunnel.tsx: the password placeholder needs a direction channel on Input (open, see OPEN_LATIN_INITIAL_UR_KEYS)",
-	);
+	it("own-tunnel.tsx: BOTH password fields pass placeholderDir={composedDir}", () => {
+		const source = read("./own-tunnel.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const anchor = 'placeholder={t("mobile.computers.password_placeholder")}';
+		const sites: string[] = [];
+		for (
+			let at = source.indexOf(anchor);
+			at > -1;
+			at = source.indexOf(anchor, at + 1)
+		) {
+			sites.push(source.slice(at, source.indexOf("/>", at)));
+		}
+		expect(sites).toHaveLength(2);
+		for (const site of sites) {
+			expect(site).toContain("placeholderDir={composedDir}");
+		}
+	});
+
+	it("password_placeholder: the real ur hint gets dir=rtl only while the field is empty", () => {
+		const hint = renderFor("mobile.computers.password_placeholder", {}, "ur");
+		expect(STARTS_LATIN.test(hint.match(FIRST_LETTER)?.[0] ?? "")).toBe(true);
+		const Field = ({ value }: { value: string }) =>
+			h(Input, {
+				label: "password",
+				value,
+				onChangeText: () => {},
+				placeholder: hint,
+				placeholderDir: useComposedDir(),
+				secureTextEntry: true,
+				testID: "password",
+			});
+		const inputTag = (value: string) => {
+			const markup = render(h(Field, { value }), "rtl");
+			const at = markup.indexOf("<input");
+			expect(at).toBeGreaterThan(-1);
+			return markup.slice(at, markup.indexOf(">", at) + 1);
+		};
+		expect(inputTag("")).toContain('dir="rtl"');
+		expect(inputTag("hunter2")).not.toContain('dir="rtl"');
+		expect(inputTag("pass کلید")).not.toContain('dir="rtl"');
+		expect(inputTag("")).toContain('dir="rtl"');
+	});
 });
