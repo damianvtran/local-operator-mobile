@@ -1704,7 +1704,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * shared DIAGNOSTIC_FALLBACK module (N2) and their tests. Re-derived last
 	 * with --print over the committed tree (3121fd36); only `src` moved. Source
 	 * identity only, NOT rendered U-08 evidence. */
-	src: "40e65bd2c81e2c4e65bd32320cd72cc503546c598b574ea00f198aceec112d44",
+	/* #257 CI fix: the verdict-Alert site scan in ur-latin-initial-sites.test.ts
+	 * anchors on the call opening. Re-derived last with --print over the
+	 * committed tree (c1e52685); only `src` moved. Source identity only, NOT
+	 * rendered U-08 evidence. */
+	src: "717f0817fe7d20b710ffc0f802408f91688071c42dded2e4ee8992a10a096187",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
