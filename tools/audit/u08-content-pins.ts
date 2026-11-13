@@ -1688,7 +1688,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ed9db30622a256299aebf3bba946dafcaf94a349a771d3bbd3cb02aa2def4d86",
+	/* fix/settings-signin-status-badge: the signed-out account card as a
+	 * Radient sign-in nav card, the connection pill's one-line fit in the
+	 * Settings Status row and the drawer header (`status-pill-layout.ts`), and
+	 * the Diagnostics `reason:` row with its provider plumbing and the one new
+	 * mobile.settings key (813 keys). Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only, NOT rendered U-08 evidence:
+	 * the Settings and drawer cells must be re-captured against this tree. */
+	src: "e8c9feb0d8065849738769c791971d8353af6ddcca510b881a05a2bec4113c1e",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
