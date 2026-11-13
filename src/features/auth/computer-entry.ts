@@ -1,5 +1,5 @@
 import type { DiscoveredComputer, RouteProfile } from "@/connection";
-import { routeLabel } from "@/connection";
+import { computerDisplayName, routeLabel } from "@/connection";
 import type { SavedComputer } from "@/connection/saved-computers";
 import type { SwitcherHealth } from "@/features/auth/computer-switcher-view";
 import {
@@ -151,6 +151,13 @@ export function computerEntry(input: ComputerEntryInput): ComputerEntry {
 	// discovery is empty. A not-yet-saved route still has an honest address.
 	const name =
 		active?.name ?? (input.route ? routeLabel(input.route) : NO_COMPUTER_LABEL);
+	/* The title both entry points PAINT: a Radient computer's DNS host name cut to
+	 *  its first label (design D4, TestFlight 883 — Ola's EC2 name painted with two
+	 *  ellipses in the drawer and dropped its health word). Never an own address,
+	 *  whose port is the part that tells two apart; the spoken label keeps the raw
+	 *  name so nothing becomes ambiguous to a screen reader. */
+	const shown =
+		active?.transport.kind === "radient" ? computerDisplayName(name) : name;
 	const health = activeHealth({
 		phase: input.phase,
 		surface: input.surface,
@@ -159,7 +166,7 @@ export function computerEntry(input: ComputerEntryInput): ComputerEntry {
 	});
 	return {
 		kind: "computer",
-		name,
+		name: shown,
 		health,
 		/* "Computer: Mac mini, Online. Switch computer" — the word the dot stands
 		 *  for is always in the name, never colour alone (U-03). */

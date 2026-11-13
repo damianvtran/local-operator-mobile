@@ -1,0 +1,30 @@
+# audit.log — ur r2 delta, auditor session 878ef905a5e5 (actual execution, 2026-11-13 UTC)
+$ shasum -a 256 brief-59ec5184.json ur/draft-ur-s2a.json ur/draft-ur-s2a-v2.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+c19ceeb75f6b3172046d0c00a3022eb9df54ff0127a4d8fe26d892378e4af464  ur/draft-ur-s2a.json
+813cb4cddd2dadda568e57d42aae045874ccd9a20c6caf22f41e0ef4919455ff  ur/draft-ur-s2a-v2.json   -> MATCH
+[python] json.load v1/v2/brief OK; set(v1)==set(v2)==brief keys: True; order equal: True
+[python] changed keys (8): mobile.computers.banner.unreachable_empty, mobile.computers.own_tunnel.intro, mobile.computers.own_tunnel.step_publish, mobile.computers.own_tunnel.insecure_allow, mobile.computers.own_tunnel.insecure_allowed, mobile.computers.own_tunnel.insecure_off_help, mobile.computers.own_tunnel.unencrypted_body, mobile.computers.own_tunnel.security_heading
+[python] strip U+2066/U+2069 == v1 for: mobile.computers.own_tunnel.insecure_allow, mobile.computers.own_tunnel.insecure_allowed, mobile.computers.own_tunnel.insecure_off_help, mobile.computers.own_tunnel.unencrypted_body
+[python] Cf/bidi-control scan: only those 4 keys (2066,2069 pairs); latin-initial: [] ; '[redacted]' hits: 0
+$ grep src/i18n (excl. catalogue.gen) for u2066/u2068/u2069/u202x/u200e/f/bidi -> only runtime.test.ts:151 (U+202F NNBSP, French); no FSI/PDI wrapping in mobile render path
+$ grep scripts/i18n, src/i18n/__tests__ for bidi-control checks -> no matches (policy not enforced mechanically)
+$ swift bidi_order.swift bidi-cases.json   (Apple Swift 6.4, macOS 27.2, CoreText CTLine, base RTL, Geeza Pro 16)
+insecure_allow@v1	[('//:http', True)]
+insecure_allow@v2	[('http://', True)]
+insecure_allow@v1+FSI	[('//:http', True)]
+insecure_allow@v2+FSI	[('http://', True)]
+insecure_allowed@v1	[('//:http', True)]
+insecure_allowed@v2	[('http://', True)]
+insecure_allowed@v1+FSI	[('//:http', True)]
+insecure_allowed@v2+FSI	[('http://', True)]
+insecure_off_help@v1	[('//:http', True), ('//:https', True)]
+insecure_off_help@v2	[('http://', True), ('https://', True)]
+insecure_off_help@v1+FSI	[('//:http', True), ('//:https', True)]
+insecure_off_help@v2+FSI	[('http://', True), ('https://', True)]
+unencrypted_body@v1	[('//:https', True)]
+unencrypted_body@v2	[('https://', True)]
+unencrypted_body@v1+FSI	[('//:https', True)]
+unencrypted_body@v2+FSI	[('https://', True)]
+(tuple = visual LTR order of the scheme chars, contiguous)
+verdict: copy PASSED (0 findings); isolates technically effective; policy conflict escalated.

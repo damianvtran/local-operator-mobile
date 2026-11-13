@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
 import { createElement as h, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { Text } from "react-native";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
 import { Button } from "@/ui/components/button";
-import { DirectionProvider } from "@/ui/direction";
+import { Input } from "@/ui/components/input";
+import { DirectionProvider, useComposedDir } from "@/ui/direction";
 import { TunnelPaths } from "./tunnel-paths";
 
 /**
@@ -26,11 +28,15 @@ import { TunnelPaths } from "./tunnel-paths";
  */
 /* `@/ui/appearance` reaches native token plumbing Node cannot parse; the colour
  * is irrelevant to the direction under test (same stub as computers-add-wait). */
-vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: () => "#000",
+	useKeyboardAppearance: () => "default",
+}));
 
 const STARTS_LATIN = /^[A-Za-z]/;
 const ICU_SLOT = /\{[^}]*\}/g;
 const FIRST_LETTER = /\p{L}/u;
+const ARABIC_SCRIPT = /\p{Script=Arabic}/u;
 
 /** The S1 keys whose Urdu value begins with a Latin token and is rendered as
  *  visible text. `mobile.computers.row.a11y*` also begin with a `{name}` slot, but
@@ -40,6 +46,27 @@ const LATIN_INITIAL_UR_KEYS = [
 	"mobile.computers.paths.radient_title",
 	"mobile.computers.wait.tunnel_status",
 	"mobile.signin.start",
+] as const;
+
+/** M3 S2a (#243 QA Q-02): the same defect in values that PREDATE S1, on the
+ *  refusal paths. No catalogue change; the cure is again the page's direction at
+ *  the render site. The three console helps all render through
+ *  `RefusalSurface`'s detail line, `transport.radient` through the computer
+ *  switcher's transport line. */
+const PRE_S1_LATIN_INITIAL_UR_KEYS = [
+	"mobile.computers.billing_help",
+	"mobile.computers.disabled_help",
+	"mobile.computers.harness_help",
+	"mobile.computers.transport.radient",
+] as const;
+
+/** Latin-initial too, and a TextInput PLACEHOLDER: a plain `dir` on the field
+ *  would also set the base of the password the reader types, so the cure is the
+ *  opt-in `Input.placeholderDir`, which states the page direction only while the
+ *  value is empty (designer source preflight, M3 S2a). Kept as its own list
+ *  because its channel differs from the `Text` spreads above. */
+const OPEN_LATIN_INITIAL_UR_KEYS = [
+	"mobile.computers.password_placeholder",
 ] as const;
 
 const read = (relative: string): string =>
@@ -163,4 +190,126 @@ describe("screens: the Latin-initial values spread the composed direction", () =
 			expect(source.slice(at, at + 160)).toContain("labelDir={composedDir}");
 		},
 	);
+});
+
+describe("Q-02: every Latin-initial ur value in the computers and sign-in namespaces", () => {
+	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, and the placeholder fixed via Input.placeholderDir", () => {
+		const catalogue = (namespace: string) =>
+			JSON.parse(
+				read(`../../i18n/catalogues/ur/mobile.${namespace}.json`),
+			) as Record<string, string>;
+		const ur = { ...catalogue("computers"), ...catalogue("signin") };
+		const firstLetter = (value: string) =>
+			value.replace(ICU_SLOT, "").match(FIRST_LETTER)?.[0] ?? "";
+		/* The WHOLE namespaces this time, not S1's draft: Q-02's values predate it.
+		 * A new Latin-initial value fails here with its key named. */
+		const latinInitial = Object.keys(ur)
+			.filter((key) => STARTS_LATIN.test(firstLetter(ur[key] ?? "")))
+			.sort();
+		expect(latinInitial).toEqual(
+			[
+				...LATIN_INITIAL_UR_KEYS,
+				...PRE_S1_LATIN_INITIAL_UR_KEYS,
+				...OPEN_LATIN_INITIAL_UR_KEYS,
+			].sort(),
+		);
+	});
+
+	it("RefusalSurface: the detail line (billing/disabled/harness help) spreads the composed direction", () => {
+		const source = read("../../ui/components/refusal-surface.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const at = source.indexOf("{detail}\n");
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
+			"{...composedDir}",
+		);
+	});
+
+	it("computer switcher: the Radient transport word spreads the composed direction", () => {
+		const source = read("./computer-switcher-sheet.tsx");
+		const anchor = '{t("mobile.computers.transport.radient")}';
+		const at = source.indexOf(anchor);
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
+			"{...composedDir}",
+		);
+	});
+
+	it("own-tunnel.tsx: BOTH password fields pass placeholderDir={composedDir}", () => {
+		const source = read("./own-tunnel.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const anchor = 'placeholder={t("mobile.computers.password_placeholder")}';
+		const sites: string[] = [];
+		for (
+			let at = source.indexOf(anchor);
+			at > -1;
+			at = source.indexOf(anchor, at + 1)
+		) {
+			sites.push(source.slice(at, source.indexOf("/>", at)));
+		}
+		expect(sites).toHaveLength(2);
+		for (const site of sites) {
+			expect(site).toContain("placeholderDir={composedDir}");
+		}
+	});
+
+	it("password_placeholder: the real ur hint gets dir=rtl only while the field is empty", () => {
+		const hint = renderFor("mobile.computers.password_placeholder", {}, "ur");
+		expect(STARTS_LATIN.test(hint.match(FIRST_LETTER)?.[0] ?? "")).toBe(true);
+		const Field = ({ value }: { value: string }) =>
+			h(Input, {
+				label: "password",
+				value,
+				onChangeText: () => {},
+				placeholder: hint,
+				placeholderDir: useComposedDir(),
+				secureTextEntry: true,
+				testID: "password",
+			});
+		const inputTag = (value: string) => {
+			const markup = render(h(Field, { value }), "rtl");
+			const at = markup.indexOf("<input");
+			expect(at).toBeGreaterThan(-1);
+			return markup.slice(at, markup.indexOf(">", at) + 1);
+		};
+		expect(inputTag("")).toContain('dir="rtl"');
+		expect(inputTag("hunter2")).not.toContain('dir="rtl"');
+		expect(inputTag("pass کلید")).not.toContain('dir="rtl"');
+		expect(inputTag("")).toContain('dir="rtl"');
+	});
+
+	it("own-tunnel.tsx: the password_for heading ({name}-initial in ur) spreads the composed direction", () => {
+		/* M3 S2a R1: the ur value opens with the `{name}` slot, so a Latin computer
+		 * name is its first strong letter and `dir="auto"` would resolve the
+		 * heading LTR on an RTL page. Source-level: the screen's native stack does
+		 * not import under Node, and the ur value lands with the S2a catalogue. */
+		const source = read("./own-tunnel.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const anchor = '{t("mobile.computers.own_tunnel.password_for"';
+		const at = source.indexOf(anchor);
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
+			"{...composedDir}",
+		);
+	});
+
+	it("password_for: the real ur heading opens with a Latin {name}, and the composed spread gives it dir=rtl", () => {
+		/* The premise behind the spread above: the ur value is `{name}`-initial, so
+		 * a Latin computer name is the first strong letter `dir="auto"` would see. */
+		const heading = renderFor(
+			"mobile.computers.own_tunnel.password_for",
+			{ name: "Mac mini" },
+			"ur",
+		);
+		expect(heading.startsWith("Mac mini ")).toBe(true);
+		expect(heading).toMatch(ARABIC_SCRIPT);
+		/* The heading's own shape: a `Text` spreading `useComposedDir()` (widened to
+		 * `object` because `dir` is not in RN's `TextProps`, as in direction.test). */
+		const Heading = () => {
+			const dir: object = useComposedDir();
+			return h(Text, dir, heading);
+		};
+		expect(render(h(Heading), "rtl")).toContain('dir="rtl"');
+		expect(render(h(Heading), "ltr")).not.toContain('dir="rtl"');
+	});
 });

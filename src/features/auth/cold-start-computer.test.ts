@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DiscoveredComputer } from "@/connection";
 import type { SavedComputer } from "@/connection/saved-computers";
-import {
-	coldStartComputer,
-	resumeComputerOnColdStart,
-} from "./cold-start-computer";
+import { coldStartComputer, openUsualComputer } from "./cold-start-computer";
 
 /* Synthetic ids only. */
 const computer = (
@@ -174,9 +171,9 @@ describe("coldStartComputer", () => {
 	});
 });
 
-describe("resumeComputerOnColdStart", () => {
+describe("openUsualComputer", () => {
 	const deps = (
-		overrides: Partial<Parameters<typeof resumeComputerOnColdStart>[0]> = {},
+		overrides: Partial<Parameters<typeof openUsualComputer>[0]> = {},
 	) => {
 		const select = vi.fn(async () => undefined);
 		return {
@@ -197,7 +194,7 @@ describe("resumeComputerOnColdStart", () => {
 
 	it("selects the decided computer", async () => {
 		const { deps: input, select } = deps();
-		await expect(resumeComputerOnColdStart(input)).resolves.toEqual({
+		await expect(openUsualComputer(input)).resolves.toEqual({
 			kind: "only",
 			computer: computer("t1"),
 		});
@@ -206,7 +203,7 @@ describe("resumeComputerOnColdStart", () => {
 
 	it("selects nothing for the picker", async () => {
 		const { deps: input, select } = deps({ computers: () => [] });
-		await expect(resumeComputerOnColdStart(input)).resolves.toEqual({
+		await expect(openUsualComputer(input)).resolves.toEqual({
 			kind: "picker",
 		});
 		expect(select).not.toHaveBeenCalled();
@@ -221,7 +218,7 @@ describe("resumeComputerOnColdStart", () => {
 	])("does nothing when %s", async (_label, override) => {
 		const readSaved = vi.fn(async () => [] as SavedComputer[]);
 		const { deps: input, select } = deps({ ...override, readSaved });
-		await expect(resumeComputerOnColdStart(input)).resolves.toBeNull();
+		await expect(openUsualComputer(input)).resolves.toBeNull();
 		expect(readSaved).not.toHaveBeenCalled();
 		expect(select).not.toHaveBeenCalled();
 	});
@@ -235,7 +232,7 @@ describe("resumeComputerOnColdStart", () => {
 				return [];
 			},
 		});
-		await expect(resumeComputerOnColdStart(input)).resolves.toBeNull();
+		await expect(openUsualComputer(input)).resolves.toBeNull();
 		expect(select).not.toHaveBeenCalled();
 	});
 });

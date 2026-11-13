@@ -3,6 +3,7 @@ import { Text, TextInput, type TextInputProps, View } from "react-native";
 
 import { ROLE, state } from "@/ui/a11y";
 import { useKeyboardAppearance, useTokenColor } from "@/ui/appearance";
+import type { ComposedDirProps } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { type FieldState, fieldClasses } from "@/ui/variants";
 
@@ -26,6 +27,19 @@ export type InputProps = {
 	value: string;
 	onChangeText: (value: string) => void;
 	placeholder?: string;
+	/** The paragraph direction a placeholder that STARTS with a Latin token has to
+	 *  state for itself, from `useComposedDir()` (`@/ui/direction`) — opt-in like
+	 *  `Button.labelDir`; omitted, the field is unchanged.
+	 *
+	 *  WHY only while the value is empty: react-native-web renders the field with
+	 *  `dir="auto"`, and HTML `dir=auto` takes the direction from the field's VALUE,
+	 *  ignoring the placeholder. So an empty field on an RTL page whose placeholder
+	 *  opens with a Latin token (the Urdu password hint) lays the hint out
+	 *  left-to-right. Applied only while `value === ""`, it fixes the hint without
+	 *  touching what the reader types: once there is a value the prop emits NO
+	 *  `dir`, so typed bytes, caret and `secureTextEntry` behave exactly as before.
+	 *  Never pass a hard-coded `rtl` here — it states the page's direction. */
+	placeholderDir?: ComposedDirProps;
 	/** `invalid` adds `border-danger`; the adjacent message is the caller's, in
 	 * `body-sm`, because colour alone never carries failure. */
 	invalid?: boolean;
@@ -54,6 +68,7 @@ export const Input = ({
 	value,
 	onChangeText,
 	placeholder,
+	placeholderDir,
 	invalid = false,
 	disabled = false,
 	secureTextEntry,
@@ -77,6 +92,10 @@ export const Input = ({
 	// does — there is no class name to hang it on.
 	const placeholderColour = useTokenColor("ink-muted");
 	const keyboardAppearance = useKeyboardAppearance();
+	/* Widened to `object` for the reason `Button` gives: `dir` is a
+	 *  react-native-web prop that React Native's `TextInputProps` does not declare.
+	 *  Empty object once anything is typed — see `placeholderDir`. */
+	const emptyDir: object = value === "" ? (placeholderDir ?? {}) : {};
 	return (
 		<View className="gap-1.5">
 			{/* Visible label as well as the accessible name: a reader who can see the
@@ -99,6 +118,7 @@ export const Input = ({
 				onChangeText={onChangeText}
 				placeholder={placeholder}
 				placeholderTextColor={placeholderColour}
+				{...emptyDir}
 				keyboardAppearance={keyboardAppearance}
 				editable={!disabled}
 				secureTextEntry={secureTextEntry}

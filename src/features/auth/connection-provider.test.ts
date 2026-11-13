@@ -109,22 +109,40 @@ vi.mock("expo-file-system", () => ({
 vi.mock("@/features/session/picker-cache", () => ({
 	clearNativePickerCache: async () => {},
 }));
-/* AppState is captured, not inert, so the warm-resume tests can drive a real
- * background → active transition through every production listener. */
+/* `AppState` drives the background-launch restore retry (review R1-M2): the
+ *  launch state is read once at the cold start and `change` listeners are
+ *  captured so a case can deliver the user's first foreground. "active" by
+ *  default, which is what every other case was implicitly. */
 const appState = vi.hoisted(() => ({
+	currentState: "active" as string,
 	listeners: new Set<(state: string) => void>(),
+	emit(state: string) {
+		appState.currentState = state;
+		for (const listener of [...appState.listeners]) listener(state);
+	},
 }));
 vi.mock("react-native", () => ({
 	Platform: nativePlatform,
 	AppState: {
-		addEventListener: (_event: string, listener: (state: string) => void) => {
+		get currentState() {
+			return appState.currentState;
+		},
+		addEventListener: (_type: string, listener: (state: string) => void) => {
 			appState.listeners.add(listener);
-			return { remove: () => appState.listeners.delete(listener) };
+			return {
+				remove() {
+					appState.listeners.delete(listener);
+				},
+			};
 		},
 	},
 }));
 const durable = vi.hoisted(() => ({
 	oauth: null as RadientTokens | null,
+	/** A locked device: the keychain refuses the read, which the real
+	 *  `readStoredOauth` reports as `null` (its catch). */
+	locked: false,
+	oauthReads: 0,
 	saved: null as {
 		baseUrl: string;
 		password: string;
@@ -182,7 +200,10 @@ vi.mock("@/features/auth/tunnel-storage", () => ({
 	 *  earlier case's live computer reopen itself in the next one. */
 	readSavedComputers: async () => durable.computers,
 	readSavedTunnel: async () => durable.saved,
-	readStoredOauth: async () => durable.oauth,
+	readStoredOauth: async () => {
+		durable.oauthReads += 1;
+		return durable.locked ? null : durable.oauth;
+	},
 	readStoredTunnelSession: async () => durable.session,
 	writeStoredTunnelSession: async (session: TunnelSession) => {
 		durable.writesStarted += 1;
@@ -885,8 +906,12 @@ beforeEach(async () => {
 	wire.length = 0;
 	sessionProjections.getState().reset();
 	durable.oauth = null;
+	durable.locked = false;
+	durable.oauthReads = 0;
 	durable.session = null;
 	durable.events = [];
+	appState.currentState = "active";
+	appState.listeners.clear();
 	durable.writeBlock = null;
 	durable.writesStarted = 0;
 	durable.clearBlock = null;
@@ -2653,6 +2678,7 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 			initiated: false,
 			restoredAccount: latest.restoredAccount,
 			busy: latest.busy,
+			routed: connectionStore.getState().route !== null,
 			state: latest.signInState,
 		});
 		expect(latest.restoredAccount).toBe(true);
@@ -2665,6 +2691,7 @@ describe("Radient discovery before a route exists (PR #120 QA round 1, Q1)", () 
 			initiated: true,
 			restoredAccount: latest.restoredAccount,
 			busy: latest.busy,
+			routed: connectionStore.getState().route !== null,
 			state: latest.signInState,
 		});
 		expect(retried.navigate).toBe(true);
@@ -3411,6 +3438,16 @@ describe("the computer switcher's registry (M2a)", () => {
 			id: "tun-synthetic-1",
 			name: "Synthetic computer 1",
 			hostname: `${"a".repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		},
+		/* A second computer keeps the sign-in on the picker: with exactly one, the
+		 *  sign-in itself opens it (TestFlight 883), and this suite is about what
+		 *  a PICK records. */
+		{
+			id: "tun-synthetic-2",
+			name: "Synthetic computer 2",
+			hostname: `${"b".repeat(32)}-lop.radienthq.com`,
 			status: "active",
 			harnesses: [{ id: "local-operator", enabled: true }],
 		},
@@ -4198,5 +4235,163 @@ describe("warm resume", () => {
 			expect(resumed).toContain("GET /api/sessions/synthetic-session/history");
 			expect(resumed).not.toContain("GET /api/models");
 		});
+	});
+});
+
+describe("an interactive Radient sign-in opens the reader's computer (TestFlight 883)", () => {
+	/* The operator's rule, and the cold start's own decision (`coldStartComputer`):
+	 *  exactly one usable computer opens straight away; with several, the last one
+	 *  used opens; otherwise the picker. Before this, a fresh sign-in always parked
+	 *  the reader on Computers, even with one computer (Ola, build 883). */
+	const tunnels = ["a", "b"].map((letter, index) => ({
+		id: `tun-synthetic-${index + 1}`,
+		name: `Synthetic computer ${index + 1}`,
+		hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+		status: "active",
+		harnesses: [{ id: "local-operator", enabled: true }],
+	}));
+	const used = (tunnelId: string, lastUsedAt: number): SavedComputer => ({
+		id: `saved-${tunnelId}`,
+		transport: "radient",
+		tunnelId,
+		hostname: `${tunnelId}.example.invalid`,
+		name: tunnelId,
+		account: null,
+		addedAt: 1,
+		lastUsedAt,
+		hidden: false,
+		identity: null,
+	});
+	const tunnelOf = () => {
+		const route = connectionStore.getState().route;
+		return route?.mode === "radient" ? route.tunnelId : null;
+	};
+	const landing = () =>
+		signInPresentation({
+			initiated: true,
+			restoredAccount: latest.restoredAccount,
+			busy: latest.busy,
+			routed: connectionStore.getState().route !== null,
+			state: latest.signInState,
+		});
+
+	it("opens the only computer and lands on the new-conversation home", async () => {
+		const mock = await relay({ tunnels: tunnels.slice(0, 1) });
+		transport(mock.origin);
+		await mount();
+		expect(connectionStore.getState().route).toBeNull();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(latest.signInState.kind).toBe("idle");
+		expect(tunnelOf()).toBe("tun-synthetic-1");
+		expect(landing()).toMatchObject({ navigate: true, destination: "/" });
+		await until(() => connectionStore.getState().phase === "live");
+	});
+
+	it("opens the last computer used when the account has several", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		durable.computers = [
+			used("tun-synthetic-1", 10),
+			used("tun-synthetic-2", 5),
+		];
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(tunnelOf()).toBe("tun-synthetic-1");
+		expect(landing()).toMatchObject({ navigate: true, destination: "/" });
+	});
+
+	it("shows Computers when there are several and none was used here", async () => {
+		const mock = await relay({ tunnels });
+		transport(mock.origin);
+		await mount();
+		await act(async () => {
+			await latest.signInWithRadient();
+		});
+		expect(latest.signInState.kind).toBe("idle");
+		expect(connectionStore.getState().computers).toHaveLength(2);
+		expect(connectionStore.getState().route).toBeNull();
+		expect(landing()).toMatchObject({
+			navigate: true,
+			destination: "/tunnels",
+		});
+	});
+});
+
+/*
+ * Review R1-M2. `UIBackgroundModes: remote-notification` lets iOS launch the
+ * app in the background for the silent attention push, usually while locked;
+ * the keychain then refuses the grant read and the cold start ends signed out.
+ * iOS resumes THAT process when the user opens the app, so the restore must be
+ * re-run once on the first foreground, or the reader stays signed out until a
+ * kill. `durable.locked` stands in for the refused keychain read (the real
+ * `readStoredOauth` maps it to `null`).
+ */
+describe("a background launch on a locked device (R1-M2)", () => {
+	it("restores the account on the first foreground after a locked background cold start", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		durable.locked = true;
+		appState.currentState = "background";
+		await mount();
+		expect(latest.radientSignedIn).toBe(false);
+		expect(durable.oauthReads).toBe(1);
+		// Still locked and still in the background: an `inactive`/`background`
+		// transition is not the user opening the app.
+		await act(async () => appState.emit("inactive"));
+		expect(durable.oauthReads).toBe(1);
+		// The user unlocks and opens the app: iOS resumes the same process.
+		durable.locked = false;
+		await act(async () => appState.emit("active"));
+		await until(() => latest.radientSignedIn);
+		expect(latest.restoredAccount).toBe(true);
+		expect(durable.oauthReads).toBe(2);
+		// Once only: later foregrounds do not replay the restore.
+		await act(async () => appState.emit("background"));
+		await act(async () => appState.emit("active"));
+		expect(durable.oauthReads).toBe(2);
+	});
+
+	it("does not retry a foreground cold start that found nothing", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		durable.locked = true;
+		appState.currentState = "active";
+		await mount();
+		expect(latest.radientSignedIn).toBe(false);
+		durable.locked = false;
+		await act(async () => appState.emit("background"));
+		await act(async () => appState.emit("active"));
+		expect(durable.oauthReads).toBe(1);
+		expect(latest.radientSignedIn).toBe(false);
+	});
+
+	it("does not retry a background cold start that DID restore", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		appState.currentState = "background";
+		await mount();
+		await until(() => latest.radientSignedIn);
+		await act(async () => appState.emit("active"));
+		expect(durable.oauthReads).toBe(1);
+	});
+
+	it("does not retry after the provider unmounts", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = oauth;
+		durable.locked = true;
+		appState.currentState = "background";
+		await mount();
+		await unmount();
+		durable.locked = false;
+		await act(async () => appState.emit("active"));
+		expect(durable.oauthReads).toBe(1);
 	});
 });

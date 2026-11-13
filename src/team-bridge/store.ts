@@ -99,6 +99,15 @@ export interface TeamBridgeState {
 	 */
 	unreadFailed: boolean;
 	/**
+	 * How many account-unread reads have PUBLISHED on this store (0 after a
+	 * reset). Only `refreshUnread`'s success path increments it, so an observer
+	 * can tell that read's publication apart from a conversation patch, which
+	 * also replaces `organizations` and `totalUnread` while `unreadKnown` is
+	 * already true (review R1-m1). The background task's scope
+	 * (`team-bridge/badge.ts` `backgroundUnreadScope`) is that observer.
+	 */
+	unreadReads: number;
+	/**
 	 * What the composer may attach, from `status.attachments`. `null` until a
 	 * status read says otherwise, and whenever the hub has no attachment store:
 	 * no attach affordance is offered (`attachmentLimits`).
@@ -154,6 +163,7 @@ export const initialTeamBridgeState = (): TeamBridgeState => ({
 	totalUnread: 0,
 	unreadKnown: false,
 	unreadFailed: false,
+	unreadReads: 0,
 	attachments: null,
 	orgs: {},
 	threads: {},
@@ -545,6 +555,7 @@ export function createTeamBridgeStore(deps: {
 						totalUnread: answer.total,
 						unreadKnown: true,
 						unreadFailed: false,
+						unreadReads: s.unreadReads + 1,
 						organizations: s.organizations.map((o) => ({
 							...o,
 							unread: byTenant.get(o.tenantId) ?? o.unread,

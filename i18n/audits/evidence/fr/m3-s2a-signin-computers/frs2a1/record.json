@@ -1,0 +1,517 @@
+{
+	"schema": 1,
+	"audit_id": "frs2a1",
+	"audit_kind": "initial_translation_audit",
+	"locale": "fr",
+	"namespaces": [
+		"mobile.computers",
+		"mobile.signin"
+	],
+	"namespace": "mobile.computers+mobile.signin (M3 slice S2a, 37 keys)",
+	"audit_date": "2026-11-12",
+	"key_count": {
+		"en": 37,
+		"target": 37
+	},
+	"source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+	"auditor": {
+		"agent": "i18n-auditor",
+		"team": "lopdev",
+		"session": "3434906ff93a",
+		"model": "anthropic/claude-opus-5-5",
+		"actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+		"fallback_used": false,
+		"independent_from_translator_session": true
+	},
+	"translator": {
+		"id": "translator job 6fef051df5f7",
+		"session_per_notes": "7da932f15a0f",
+		"model_per_notes": "anthropic/claude-opus-5-5",
+		"note": "same model family, different agent instance"
+	},
+	"input_hashes": {
+		"brief": {
+			"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+			"sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563"
+		},
+		"draft": {
+			"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/fr/draft-fr-s2a.json",
+			"sha256": "b266a87a22185a96e1eb7987a2790d765486af7345a16f1c396573cf91380504"
+		},
+		"en_catalogues": {
+			"src/i18n/catalogues/en/mobile.computers.json@59ec5184": "280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151",
+			"src/i18n/catalogues/en/mobile.signin.json@59ec5184": "02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace"
+		},
+		"fr_glossary_catalogues": {
+			"src/i18n/catalogues/fr/mobile.computers.json@59ec5184": "0cebf9c66ee8dd134619e5446cb0097c9be4261c7cd23790adc1d14c43889c66",
+			"src/i18n/catalogues/fr/mobile.signin.json@59ec5184": "a642e974a03e2fdfe3817573d38eecfe6497ac55465a41d388e51fa53fe8b55a"
+		},
+		"style_guide": {
+			"~/local-operator origin/main(73dc4157):i18n/style-guides/fr.md": "5315e1ac10c2ce57aac631ba653d08de680ee70c9a022ed3a8345ce2f9902ee7"
+		},
+		"glossary": {
+			"~/local-operator origin/main(73dc4157):i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+		},
+		"context_sidecar": "not read: brief notes carry the context; nested-JSON sidecars not routable"
+	},
+	"route_disclosure": {
+		"read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+		"redaction_hits": {
+			"brief": 0,
+			"draft": 0,
+			"repo_files_read": 0,
+			"note": "no [redacted] marker encountered"
+		}
+	},
+	"mechanical": {
+		"parser": "src/i18n/messages.ts@59ec5184 parseMessage/formatMessage (copy in auditor scratch)",
+		"parse_failures": 0,
+		"placeholder_mismatches": 0,
+		"plural_select": "none in slice",
+		"typography_issues": 0,
+		"keys_added_or_dropped": 0
+	},
+	"current_report_verdict": {
+		"status": "changes_requested",
+		"verdict": "fail",
+		"unresolved_blocker_major_count": 1,
+		"severity_counts": {
+			"BLOCKER": 0,
+			"MAJOR": 1,
+			"MINOR": 4,
+			"NIT": 3
+		},
+		"finding_ids": [
+			"F-01",
+			"F-02",
+			"F-03",
+			"F-04",
+			"F-05",
+			"N-01",
+			"N-02",
+			"N-03"
+		]
+	},
+	"findings": [
+		{
+			"id": "F-01",
+			"severity": "MAJOR",
+			"key": "mobile.computers.title.set_up",
+			"current": "Configurer un ordinateur",
+			"problem": "Overflow risk. Header fit is decided by computersHeaderStackWidth (src/ui/size-class.ts:457-476 @59ec5184), which uses the ENGLISH title advance (227 pt) and does not measure translations (its own comment). With a back button and no cluster the header computes 32+227+60=319 → stays inline at 390 pt; 24 fr chars vs 17 en ≈ 320 pt by proportional estimate (not rendered) → ≈412 pt → title clips in the exact 'chose Add a computer' path.",
+			"suggestion": "Nouvel ordinateur",
+			"rationale": "17 chars, same length as the English, so it fits the reviewed English budget; nominal screen titles are the upheld fr precedent (S1 audit frs1r1: « Connexion »). « Ajouter un ordinateur » (21) is still over budget and repeats the button."
+		},
+		{
+			"id": "F-02",
+			"severity": "MINOR",
+			"key": "mobile.computers.own_tunnel.step_computer_help",
+			"current": "Le relais n’accepte que les connexions locales : c’est donc cet ordinateur qui doit l’exécuter. Empêchez sa mise en veille tant que vous utilisez l’app.",
+			"problem": "« connexions locales » is ambiguous in French networking: commonly read as local-network (LAN) connections, but the note says loopback = same computer only. A reader may think another machine on the LAN can run the relay.",
+			"suggestion": "Le relais n’accepte que les connexions venant de la même machine : c’est donc cet ordinateur qui doit l’exécuter. Empêchez sa mise en veille tant que vous utilisez l’app."
+		},
+		{
+			"id": "F-03",
+			"severity": "MINOR",
+			"key": "mobile.computers.own_tunnel.step_test",
+			"current": "Testez-le",
+			"problem": "The note fixes the antecedent of 'it' as the connection (feminine); « Testez-le » points back to the relay of step 2. Defensible, but drifts from the source and « Testez-la » would have no visible antecedent.",
+			"suggestion": "Testez la connexion",
+			"rationale": "Avoids the pronoun, names what the button below tests (« Tester la connexion ») and matches need_test « Testez d’abord la connexion ». 19 chars in a step heading that wraps."
+		},
+		{
+			"id": "F-04",
+			"severity": "MINOR",
+			"key": "mobile.computers.own_tunnel.public_host",
+			"current": "Cette adresse n’est pas privée — n’importe quel intermédiaire entre ce téléphone et elle peut lire le mot de passe.",
+			"problem": "« entre ce téléphone et elle » — a stressed pronoun for an inanimate address reads clumsy in product copy.",
+			"suggestion": "Cette adresse n’est pas privée — n’importe quel intermédiaire entre ce téléphone et cette adresse peut lire le mot de passe."
+		},
+		{
+			"id": "F-05",
+			"severity": "MINOR",
+			"key": "mobile.signin.panel.unavailable_detail",
+			"current": "La connexion avec Radient nécessite un écouteur local, absent de cette version ({module}).",
+			"problem": "« absent de cette version ({module}) » attaches the module id to « version », so it reads as the build's identifier; in the source {module} names the missing listener module.",
+			"suggestion": "La connexion avec Radient nécessite un écouteur local ({module}), absent de cette version."
+		},
+		{
+			"id": "N-01",
+			"severity": "NIT",
+			"key": "mobile.computers.own_tunnel.insecure_allow",
+			"current": "Autoriser le http:// en clair",
+			"problem": "« le http:// » nominalises the scheme; acceptable, slightly clipped. Optional pair if changed: insecure_allowed « Adresse http:// en clair autorisée ».",
+			"suggestion": "Autoriser une adresse http:// en clair"
+		},
+		{
+			"id": "N-02",
+			"severity": "NIT",
+			"key": "mobile.computers.own_tunnel.private_host",
+			"current": "Cette adresse se trouve sur votre propre réseau : l’exposition s’y limite.",
+			"problem": "« l’exposition s’y limite » is terse/literary for a warning line.",
+			"suggestion": "Cette adresse se trouve sur votre propre réseau : l’exposition reste limitée à ce réseau."
+		},
+		{
+			"id": "N-03",
+			"severity": "NIT",
+			"key": "mobile.computers.own_tunnel.save_connect",
+			"current": "Enregistrer et connecter",
+			"problem": "Objectless « connecter » is acceptable button French; the reflexive is the more natural reading. Width is NOT at risk: the buttons are stacked full-width (own-tunnel.tsx:250-277).",
+			"suggestion": "Enregistrer et se connecter"
+		}
+	],
+	"translator_flag_rulings": {
+		"mobile.computers.title.set_up": "+41% — MAJOR F-01 → « Nouvel ordinateur ».",
+		"mobile.computers.own_tunnel.password_label": "+57% — accepted: field label (full width), no shorter correct form; matches catalogue « mot de passe du relais » (signin.panel.unavailable_alt).",
+		"mobile.computers.own_tunnel.save_connect": "+50% — accepted for width: stacked full-width Button (own-tunnel.tsx:267); optional NIT N-03.",
+		"mobile.computers.own_tunnel.testing": "+75% — accepted: replaces the 19-char « Tester la connexion » in the same full-width button; « Test… » alone is not idiomatic; matches catalogue « … en cours… » pattern.",
+		"mobile.computers.own_tunnel.saving": "+114% — accepted: replaces a 24-char label in the same button; identical to the fr style-guide recorded width exception relay.chrome row.saving « Enregistrement… ».",
+		"mobile.computers.own_tunnel.verdict_not_yet": "+43% — accepted: 10 chars absolute, box title that wraps; calm and idiomatic.",
+		"mobile.computers.own_tunnel.step_computer_help": "+37% — accepted for width (wrapping help); wording MINOR F-02.",
+		"mobile.computers.own_tunnel.step_test": "uncertain — MINOR F-03 → « Testez la connexion ».",
+		"mobile.computers.own_tunnel.verdict_ok": "uncertain — upheld « Connecté »: same flow already ships « Connecté, mais non enregistré » (computers.save_refused.title) and signin.stage_signed_in « Connecté »; one word per note.",
+		"mobile.signin.panel.unavailable_detail": "uncertain « écouteur local » — upheld: « écouteur » is settled fr dev vocabulary for listener; plain per note. Placement MINOR F-05."
+	},
+	"per_key_results": [
+		{
+			"key": "mobile.computers.title.list",
+			"role": "heading",
+			"en_chars": 9,
+			"fr_chars": 11,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.title.set_up",
+			"role": "heading",
+			"en_chars": 17,
+			"fr_chars": 24,
+			"mechanical": "pass",
+			"result": "finding F-01",
+			"ruling": "+41% — MAJOR F-01 → « Nouvel ordinateur »."
+		},
+		{
+			"key": "mobile.computers.banner.unreachable_stale",
+			"role": "status",
+			"en_chars": 62,
+			"fr_chars": 72,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.banner.unreachable_empty",
+			"role": "status",
+			"en_chars": 84,
+			"fr_chars": 97,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.banner.unreadable_stale",
+			"role": "status",
+			"en_chars": 68,
+			"fr_chars": 78,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.banner.unreadable_empty",
+			"role": "status",
+			"en_chars": 74,
+			"fr_chars": 75,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.title",
+			"role": "heading",
+			"en_chars": 15,
+			"fr_chars": 19,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.password_for",
+			"role": "heading",
+			"en_chars": 29,
+			"fr_chars": 35,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.password_label",
+			"role": "meta",
+			"en_chars": 14,
+			"fr_chars": 22,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": "+57% — accepted: field label (full width), no shorter correct form; matches catalogue « mot de passe du relais » (signin.panel.unavailable_alt)."
+		},
+		{
+			"key": "mobile.computers.own_tunnel.intro",
+			"role": "help",
+			"en_chars": 179,
+			"fr_chars": 196,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.step_computer",
+			"role": "heading",
+			"en_chars": 15,
+			"fr_chars": 16,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.step_computer_help",
+			"role": "help",
+			"en_chars": 111,
+			"fr_chars": 152,
+			"mechanical": "pass",
+			"result": "finding F-02",
+			"ruling": "+37% — accepted for width (wrapping help); wording MINOR F-02."
+		},
+		{
+			"key": "mobile.computers.own_tunnel.step_publish",
+			"role": "heading",
+			"en_chars": 10,
+			"fr_chars": 10,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.step_app",
+			"role": "heading",
+			"en_chars": 10,
+			"fr_chars": 10,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.url_label",
+			"role": "meta",
+			"en_chars": 10,
+			"fr_chars": 12,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.insecure_allow",
+			"role": "button",
+			"en_chars": 29,
+			"fr_chars": 29,
+			"mechanical": "pass",
+			"result": "finding N-01",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.insecure_allowed",
+			"role": "status",
+			"en_chars": 24,
+			"fr_chars": 25,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.insecure_hint",
+			"role": "help",
+			"en_chars": 75,
+			"fr_chars": 85,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.insecure_on_help",
+			"role": "help",
+			"en_chars": 115,
+			"fr_chars": 149,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.insecure_off_help",
+			"role": "help",
+			"en_chars": 149,
+			"fr_chars": 187,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.unencrypted_title",
+			"role": "heading",
+			"en_chars": 27,
+			"fr_chars": 32,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.unencrypted_body",
+			"role": "help",
+			"en_chars": 89,
+			"fr_chars": 106,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.private_host",
+			"role": "status",
+			"en_chars": 70,
+			"fr_chars": 74,
+			"mechanical": "pass",
+			"result": "finding N-02",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.public_host",
+			"role": "status",
+			"en_chars": 93,
+			"fr_chars": 115,
+			"mechanical": "pass",
+			"result": "finding F-04",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.step_test",
+			"role": "heading",
+			"en_chars": 7,
+			"fr_chars": 9,
+			"mechanical": "pass",
+			"result": "finding F-03",
+			"ruling": "uncertain — MINOR F-03 → « Testez la connexion »."
+		},
+		{
+			"key": "mobile.computers.own_tunnel.step_test_help",
+			"role": "help",
+			"en_chars": 71,
+			"fr_chars": 67,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.security_heading",
+			"role": "heading",
+			"en_chars": 20,
+			"fr_chars": 18,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.security_body",
+			"role": "help",
+			"en_chars": 339,
+			"fr_chars": 371,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.test",
+			"role": "button",
+			"en_chars": 19,
+			"fr_chars": 19,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.testing",
+			"role": "status",
+			"en_chars": 8,
+			"fr_chars": 14,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": "+75% — accepted: replaces the 19-char « Tester la connexion » in the same full-width button; « Test… » alone is not idiomatic; matches catalogue « … en cours… » pattern."
+		},
+		{
+			"key": "mobile.computers.own_tunnel.save_connect",
+			"role": "button",
+			"en_chars": 16,
+			"fr_chars": 24,
+			"mechanical": "pass",
+			"result": "finding N-03",
+			"ruling": "+50% — accepted for width: stacked full-width Button (own-tunnel.tsx:267); optional NIT N-03."
+		},
+		{
+			"key": "mobile.computers.own_tunnel.saving",
+			"role": "status",
+			"en_chars": 7,
+			"fr_chars": 15,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": "+114% — accepted: replaces a 24-char label in the same button; identical to the fr style-guide recorded width exception relay.chrome row.saving « Enregistrement… »."
+		},
+		{
+			"key": "mobile.computers.own_tunnel.need_address",
+			"role": "help",
+			"en_chars": 40,
+			"fr_chars": 48,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.need_test",
+			"role": "help",
+			"en_chars": 83,
+			"fr_chars": 95,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": null
+		},
+		{
+			"key": "mobile.computers.own_tunnel.verdict_ok",
+			"role": "heading",
+			"en_chars": 9,
+			"fr_chars": 8,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": "uncertain — upheld « Connecté »: same flow already ships « Connecté, mais non enregistré » (computers.save_refused.title) and signin.stage_signed_in « Connecté »; one word per note."
+		},
+		{
+			"key": "mobile.computers.own_tunnel.verdict_not_yet",
+			"role": "heading",
+			"en_chars": 7,
+			"fr_chars": 10,
+			"mechanical": "pass",
+			"result": "pass",
+			"ruling": "+43% — accepted: 10 chars absolute, box title that wraps; calm and idiomatic."
+		},
+		{
+			"key": "mobile.signin.panel.unavailable_detail",
+			"role": "help",
+			"en_chars": 89,
+			"fr_chars": 90,
+			"mechanical": "pass",
+			"result": "finding F-05",
+			"ruling": "uncertain « écouteur local » — upheld: « écouteur » is settled fr dev vocabulary for listener; plain per note. Placement MINOR F-05."
+		}
+	],
+	"non_gating_observation": "computersHeaderStackWidth uses English title advances; fr « Ordinateurs » may also clip beside switcher+refresh at 390 pt — code/rendered check, not a translation finding.",
+	"audit_notes_not_execution_log": "report.md is the audit report; audit.log is the execution log of commands actually run.",
+	"claims_not_made": "No rendered-frame measurement, no native-speaker review, no MT/translation service used; widths are proportional estimates.",
+	"artifacts": {
+		"report.md": "ca6a72b60324ef8cf61cce875b72f0b47ffddae5ee736a27266a0a50de6229da",
+		"audit.log": "77b1bd46e479c61f78f32faccc9f91ff61d4cfaabd9263dc26bf1ab01ad83a32"
+	}
+}

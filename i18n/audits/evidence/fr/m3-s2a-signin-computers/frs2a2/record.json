@@ -1,0 +1,202 @@
+{
+  "schema": "i18n-audit-record/v1",
+  "audit_id": "fr-s2a-r2",
+  "audit_kind": "delta_reaudit",
+  "locale": "fr",
+  "round": 2,
+  "scope": "delta: keys changed v1→v2 plus a v1/v2 equality proof for unchanged keys",
+  "namespaces": [
+    "mobile.computers",
+    "mobile.signin"
+  ],
+  "audit_date": "2026-11-12",
+  "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+  "key_count": 37,
+  "changed_key_count": 7,
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "00e59c341341",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session runtime system header; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true,
+    "not_jobs": [
+      "6fef051df5f7",
+      "db13a4ce1741",
+      "429cade82cf1"
+    ]
+  },
+  "translator": {
+    "agent": "translator (lopdev)",
+    "jobs": [
+      "6fef051df5f7",
+      "db13a4ce1741"
+    ],
+    "session": "7da932f15a0f",
+    "model_per_notes": "anthropic/claude-opus-5-5"
+  },
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+      "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+      "expected_match": true
+    },
+    "v1": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/fr/draft-fr-s2a.json",
+      "sha256": "b266a87a22185a96e1eb7987a2790d765486af7345a16f1c396573cf91380504",
+      "expected_match": true
+    },
+    "v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/fr/draft-fr-s2a-v2.json",
+      "sha256": "ce805e01a480650fea0f0003abf48b55cc28b17a89ed13a3f48b321538da1f91",
+      "expected_match": true
+    },
+    "translator_notes_v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/fr/notes-fr-s2a-v2.md",
+      "sha256": "38f4068a6a3d315adf4b3681c660e21229c97c3ef02cd08496e3572d3162ac0b"
+    },
+    "round1_report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/fr/report.md",
+      "sha256": "ca6a72b60324ef8cf61cce875b72f0b47ffddae5ee736a27266a0a50de6229da"
+    },
+    "round1_record": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/fr/record.json",
+      "sha256": "b5820ced10e5fb50439e1ab34e1873208200871f6701438ed89e795917809d43"
+    },
+    "fr_glossary_catalogue": {
+      "path": "local-operator-mobile@59ec5184:src/i18n/catalogues/fr/mobile.computers.json",
+      "sha256_of_git_show_stdout": "0cebf9c66ee8dd134619e5446cb0097c9be4261c7cd23790adc1d14c43889c66"
+    }
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+    "count": 0,
+    "note": "regex /redact/i matched 3 times, all in the round-1 audit's own prose and fields describing the redaction check; no redaction marker in any content that was read"
+  },
+  "mechanical": {
+    "v1_v2_key_set_and_order_equal_brief": true,
+    "changed_keys": [
+      "mobile.computers.title.set_up",
+      "mobile.computers.own_tunnel.step_computer_help",
+      "mobile.computers.own_tunnel.private_host",
+      "mobile.computers.own_tunnel.public_host",
+      "mobile.computers.own_tunnel.step_test",
+      "mobile.computers.own_tunnel.save_connect",
+      "mobile.signin.panel.unavailable_detail"
+    ],
+    "changed_keys_equal_notes_list": true,
+    "unchanged_keys_byte_identical": 30,
+    "raw_line_diff_count": 7,
+    "valid_json": true,
+    "placeholders_changed_keys": {
+      "mobile.signin.panel.unavailable_detail": [
+        "{module}"
+      ]
+    },
+    "typography": "U+202F before « : » in step_computer_help and private_host (matches the catalogue majority); em dash in public_host with plain spaces is unchanged from v1 and matches catalogue wait.tunnel_status; typographic ’, no straight apostrophes; full stops consistent with source"
+  },
+  "per_key_results": {
+    "mobile.computers.title.set_up": {
+      "status": "pass",
+      "v1": "Configurer un ordinateur",
+      "v2": "Nouvel ordinateur",
+      "en": "Set up a computer",
+      "note": "F-01 resolved. « Nouvel ordinateur » 17 chars = en, fits the English header budget (32+227+60). Nominal title in the same pattern as « Nouveau contact », used on both entry paths (no computers yet / Add a computer), so it still names the set-up screen; no clash with button « Ajouter un ordinateur ». Deviation from the note's \"imperative\" is justified by width."
+    },
+    "mobile.computers.own_tunnel.step_computer_help": {
+      "status": "pass",
+      "v1": "Le relais n’accepte que les connexions locales : c’est donc cet ordinateur qui doit l’exécuter. Empêchez sa mise en veille tant que vous utilisez l’app.",
+      "v2": "Le relais n’accepte que les connexions venant de la même machine : c’est donc cet ordinateur qui doit l’exécuter. Empêchez sa mise en veille tant que vous utilisez l’app.",
+      "en": "The relay binds loopback only, so this is the machine that has to run it. Leave it awake while you use the app.",
+      "note": "F-02 resolved. « venant de la même machine » removes the LAN reading of « locales »; U+202F before « : » kept; ’ apostrophes; wrapping help text."
+    },
+    "mobile.computers.own_tunnel.private_host": {
+      "status": "pass_with_nit",
+      "v1": "Cette adresse se trouve sur votre propre réseau : l’exposition s’y limite.",
+      "v2": "Cette adresse se trouve sur votre propre réseau : l’exposition reste limitée à ce réseau.",
+      "en": "This address is on your own network, so the exposure is limited to it.",
+      "note": "N-02 applied. Accurate; U+202F kept. NIT R2-N1: « réseau » appears twice."
+    },
+    "mobile.computers.own_tunnel.public_host": {
+      "status": "pass_with_nit",
+      "v1": "Cette adresse n’est pas privée — n’importe quel intermédiaire entre ce téléphone et elle peut lire le mot de passe.",
+      "v2": "Cette adresse n’est pas privée — tout intermédiaire sur le trajet depuis ce téléphone peut lire le mot de passe.",
+      "en": "This address is not a private one — anything between this phone and it can read the password.",
+      "note": "F-04 resolved: the stressed pronoun « elle » is gone and « tout intermédiaire » keeps the warning strong. NIT R2-N2: « sur le trajet depuis ce téléphone » leaves the destination open."
+    },
+    "mobile.computers.own_tunnel.step_test": {
+      "status": "pass",
+      "v1": "Testez-le",
+      "v2": "Testez la connexion",
+      "en": "Test it",
+      "note": "F-03 resolved. Matches button « Tester la connexion » and need_test « Testez d’abord la connexion »; vous imperative; no number, no full stop."
+    },
+    "mobile.computers.own_tunnel.save_connect": {
+      "status": "pass",
+      "v1": "Enregistrer et connecter",
+      "v2": "Enregistrer et se connecter",
+      "en": "Save and connect",
+      "note": "N-03 applied. Idiomatic reflexive; full-width stacked button per round-1 code read (not re-rendered here)."
+    },
+    "mobile.signin.panel.unavailable_detail": {
+      "status": "pass",
+      "v1": "La connexion avec Radient nécessite un écouteur local, absent de cette version ({module}).",
+      "v2": "La connexion avec Radient nécessite un écouteur local ({module}), absent de cette version.",
+      "en": "Signing in with Radient needs a loopback listener this build does not include ({module}).",
+      "note": "F-05 resolved. {module} exactly once, byte-identical, now attached to « écouteur local » inside parentheses; Radient kept."
+    }
+  },
+  "round1_rulings": {
+    "F-01": "resolved",
+    "F-02": "resolved",
+    "F-03": "resolved",
+    "F-04": "resolved (translator wording accepted; see R2-N2 nit)",
+    "F-05": "resolved",
+    "N-01": "rejection acceptable — nit, non-gating; 38 vs 29 chars (+31%) on a toggle verified; « le http:// en clair » understandable dev usage; insecure_allowed pair stays consistent",
+    "N-02": "applied",
+    "N-03": "applied"
+  },
+  "findings": [
+    {
+      "id": "R2-N1",
+      "severity": "NIT",
+      "key": "mobile.computers.own_tunnel.private_host",
+      "current": "Cette adresse se trouve sur votre propre réseau : l’exposition reste limitée à ce réseau.",
+      "problem": "« réseau » appears twice in one short line (the same objection the translator raised against the F-04 suggestion).",
+      "suggested": "Cette adresse se trouve sur votre propre réseau : l’exposition reste limitée à celui-ci."
+    },
+    {
+      "id": "R2-N2",
+      "severity": "NIT",
+      "key": "mobile.computers.own_tunnel.public_host",
+      "current": "Cette adresse n’est pas privée — tout intermédiaire sur le trajet depuis ce téléphone peut lire le mot de passe.",
+      "problem": "« sur le trajet depuis ce téléphone » leaves the destination open and is slightly unusual for a network path; the meaning and the warning's strength are intact.",
+      "suggested": "Cette adresse n’est pas privée — tout intermédiaire sur le réseau entre ce téléphone et le relais peut lire le mot de passe."
+    }
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "R2-N1",
+      "R2-N2"
+    ]
+  },
+  "audit_notes_not_execution_log": "audit.log lists the checks performed by this session (python hashlib/json/difflib-equivalent comparisons, git show); report.md holds the editorial judgement",
+  "claims_not_made": [
+    "no rendered-frame check; width judged by character count against the round-1 header arithmetic",
+    "no native-speaker human review",
+    "no translation/MT service used",
+    "unchanged keys not re-audited beyond byte equality"
+  ],
+  "artifacts": {
+    "report.md": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/fr-r2/report.md",
+      "sha256": "e6ba3d7e048a2b214aaceb7fbe298387caf69bacc1f9eefcac9a1911d4868417"
+    },
+    "audit.log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/fr-r2/audit.log",
+      "sha256": "a92ce58b0ce80b990b2540735e6707393a3700aace71261e515a7b47dfe3f6c4"
+    }
+  }
+}

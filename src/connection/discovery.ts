@@ -157,6 +157,32 @@ export function supportsLocalOperator(tunnel: Tunnel): boolean {
 	return harness?.enabled === true;
 }
 
+/** A dotted DNS name with at least two labels and nothing else in it. */
+const DNS_NAME = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i;
+/** An IPv4 literal, which matches `DNS_NAME` but has no "first label" to keep. */
+const IPV4 = /^\d+(\.\d+){3}$/;
+
+/**
+ * The title a Radient computer is SHOWN under: a fully qualified host name cut
+ * to its first label, anything else unchanged.
+ *
+ * Why it exists: a tunnel's only name is `tunnel.name`, which `lop tunnels
+ * create` sets to `args.name or socket.gethostname()` — on EC2 the internal DNS
+ * name, `ip-192-168-0-70.ca-central-1.compute.internal`. Nothing richer exists in
+ * the account (TestFlight 883, Ola's only computer), and that 46-character
+ * string truncated twice in the drawer and filled the Computers row. The first
+ * label is the part that names the machine; the host line under every title
+ * still tells two such machines apart.
+ *
+ * Display only: `computer.name` and the saved registry keep the raw name, every
+ * accessibility label speaks it in full, and an address-titled custom row (whose
+ * port is the distinguishing part) must not be passed through this.
+ */
+export function computerDisplayName(name: string): string {
+	if (!DNS_NAME.test(name) || IPV4.test(name)) return name;
+	return name.slice(0, name.indexOf("."));
+}
+
 export function toComputer(tunnel: Tunnel): DiscoveredComputer {
 	const harness = (tunnel.harnesses ?? []).find(
 		(candidate) => candidate.id === LOCAL_OPERATOR_HARNESS,

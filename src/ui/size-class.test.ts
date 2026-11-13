@@ -20,6 +20,7 @@ import {
 	layoutFor,
 	pinnedRoutesPaneFloor,
 	regionOrder,
+	rowTitleLinesFor,
 	SIDEBAR_MIN_WIDTH,
 	SIDEBAR_TABLET_MAX,
 	SPLIT_MIN_HEIGHT,
@@ -1194,7 +1195,7 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 	/* Measured on the round-2 head with Back, "Switch computer" and Refresh: the
 	 *  title clipped at 360 (69/138) and 390 (99/138) and fit by 1 px at 430. */
 	const full = computersHeaderStackWidth({
-		title: "Computers",
+		title: "mobile.computers.title.list",
 		back: true,
 		switcher: true,
 		refresh: true,
@@ -1216,7 +1217,7 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 	it("moves with the controls actually rendered", () => {
 		/* Under a 401 Refresh is hidden: 390 measured 170/170, single line. */
 		const signedOut = computersHeaderStackWidth({
-			title: "Computers",
+			title: "mobile.computers.title.list",
 			back: true,
 			switcher: true,
 			refresh: false,
@@ -1226,7 +1227,7 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 		/* The longer set-up title needs more line. */
 		expect(
 			computersHeaderStackWidth({
-				title: "Set up a computer",
+				title: "mobile.computers.title.set_up",
 				back: true,
 				switcher: true,
 				refresh: false,
@@ -1235,12 +1236,63 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 		/* No controls and no Back: the kit floor, never lower. */
 		expect(
 			computersHeaderStackWidth({
-				title: "Computers",
+				title: "mobile.computers.title.list",
 				back: false,
 				switcher: false,
 				refresh: false,
 			}),
 		).toBe(HEADER_STACK_WIDTH);
+	});
+});
+
+const WHITESPACE = /\s+/g;
+
+describe("a translated header title wraps instead of clipping (PR #251 D1/D2)", () => {
+	/* The Computers fit above is English advances only: at 430 pt the list
+	 *  header does not stack and the title box is 139 pt for a 138 pt English
+	 *  title. A translation ("Ordinateurs", "Changer d’ordinateur") has no
+	 *  measured width, so the un-stacked row must not hold it to one line. */
+	const full = computersHeaderStackWidth({
+		title: "mobile.computers.title.list",
+		back: true,
+		switcher: true,
+		refresh: true,
+	});
+
+	it("keeps English on one line and unstacked at 430 pt (unchanged)", () => {
+		expect(headerStacks(1, 430, full)).toBe(false);
+		expect(rowTitleLinesFor("en")).toBe(1);
+	});
+
+	it("gives every other shipped locale two lines at 430 pt", () => {
+		expect(headerStacks(1, 430, full)).toBe(false);
+		for (const locale of ["fr", "es", "zh-CN", "ru", "vi", "hi", "ur"])
+			expect(rowTitleLinesFor(locale)).toBe(2);
+	});
+
+	/* The rule is only as good as its wiring: the un-stacked title rows read
+	 *  the prop, and both headers the review named pass the locale's decision. */
+	it("is how Screen, Computers and own-tunnel render the title row", () => {
+		const read = (path: string) =>
+			readFileSync(join(process.cwd(), path), "utf8").replace(WHITESPACE, " ");
+		const screen = read("src/ui/components/screen.tsx");
+		expect(screen).toContain("rowTitleLines = 1,");
+		expect(screen).not.toContain("numberOfLines={1}");
+		expect(screen.split("numberOfLines={rowTitleLines}")).toHaveLength(3);
+		/* Every `<Screen` in each file: own-tunnel renders the same header from
+		 *  its known-host branch and its set-up branch. */
+		for (const path of [
+			"src/features/auth/computers.tsx",
+			"src/features/auth/own-tunnel.tsx",
+		]) {
+			const source = read(path);
+			const screens = source.split("<Screen ").length - 1;
+			expect(screens).toBeGreaterThan(0);
+			expect(
+				source.split("rowTitleLines={rowTitleLinesFor(activeLocale())}")
+					.length - 1,
+			).toBe(screens);
+		}
 	});
 });
 

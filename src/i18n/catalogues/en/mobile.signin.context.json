@@ -126,5 +126,9 @@
 	"mobile.signin.welcome.body": {
 		"role": "help",
 		"note": "Supporting paragraph on the welcome screen under the headline: the app controls sessions on the reader's own machine and shows the results; code never leaves the machine ('it' = the machine). Keep the privacy promise exact."
+	},
+	"mobile.signin.panel.unavailable_detail": {
+		"role": "help",
+		"note": "Detail under \"This build cannot finish a Radient sign-in.\" on the sign-in screen. Radient is a brand name: keep it. {module} is a software module id for developers: keep it unchanged, left-to-right, inside the parentheses. A \"loopback listener\" receives the browser's sign-in reply on this device."
 	}
 }

@@ -4,6 +4,10 @@
 // file nothing imports yields an export with every token variable and no utility
 // class, which renders as an unstyled screen and reports success.
 import "../src/ui/theme.css";
+// Defines the background notification task at module scope, before anything
+// else runs: a silent push can launch the app for this task alone, and
+// expo-task-manager drops an event whose task is not yet defined.
+import "@/notifications/background-task";
 
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";

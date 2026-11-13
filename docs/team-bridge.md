@@ -148,7 +148,7 @@ do not carry them; the directory is the one source.
   that do not decode leave the initials in place, and a failure is remembered
   so a list never re-requests it per render (`src/team-bridge/avatars.ts`).
 - **The cache** is in memory, keyed by account + hash + size, bounded in
-  entries and bytes, and owned by the account-keyed provider: an account
+  entries and bytes, and owned by the provider's account-scoped value: an account
   change or sign-out drops it and retires reads still in flight.
 - **The profile card** opens from a person's photo, or from a message author's
   photo or name. It shows the photo, the hub-resolved name, a Person or Agent

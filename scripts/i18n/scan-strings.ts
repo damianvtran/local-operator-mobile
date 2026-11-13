@@ -42,7 +42,7 @@
  *    video screen, the add-a-computer wait panel and Settings). EVERY OTHER FILE IS NOT SCANNED BY
  *    IT YET — including the rest of `app/`, `src/features/auth/` and
  *    `src/features/settings/`, where ~90 further expression literals are known
- *    (e.g. `computer-switcher-view.ts`, `tunnel-verdict.ts`, `own-tunnel.tsx`).
+ *    (e.g. `computer-switcher-view.ts`, `tunnel-verdict.ts`).
  *    That is a deliberate staged rollout, not an oversight: the baseline is
  *    shrink-only and must never become a dumping ground for them. Each slice adds
  *    paths to the list in the SAME change that keys everything the rule then finds
@@ -80,6 +80,7 @@ export const EXPRESSION_LITERAL_SCOPE: readonly string[] = [
 	"app/(app)/session/[id]/agent/[jobId].tsx",
 	"app/(app)/session/[id]/video.tsx",
 	"src/features/auth/computers.tsx",
+	"src/features/auth/own-tunnel.tsx",
 	"src/features/auth/sign-in-panel.tsx",
 	"src/features/auth/sign-in.tsx",
 	"src/features/auth/tunnel-paths.tsx",

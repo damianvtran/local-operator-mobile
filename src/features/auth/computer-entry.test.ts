@@ -62,6 +62,21 @@ describe("computerEntry", () => {
 		);
 	});
 
+	it("paints a Radient computer's DNS host name by its first label and speaks it whole (TestFlight 883, D4)", () => {
+		const ec2 = "ip-192-168-0-70.ca-central-1.compute.internal";
+		const entry = computerEntry({
+			computers: [{ ...mac(), name: ec2 }],
+			tunnelId: "t1",
+			route: radientRoute,
+			phase: "live",
+			surface: null,
+		});
+		expect(entry).toMatchObject({ kind: "computer", name: "ip-192-168-0-70" });
+		expect(entry.accessibilityLabel).toBe(
+			`Computer: ${ec2}, Online. Switch computer`,
+		);
+	});
+
 	it("says 'Choose a computer' when none is picked or nothing is set up", () => {
 		for (const input of [
 			{ route: null, tunnelId: null, phase: "signed-out" as const },

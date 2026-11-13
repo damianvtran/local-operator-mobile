@@ -576,6 +576,28 @@ describe("account ownership and concurrent reconciliation", () => {
 		expect(store.getState().organizations[0]?.unread).toBe(3);
 	});
 
+	it("counts only the account-unread read's publication in unreadReads (R1-m1)", async () => {
+		// The background task's scope tells "my read landed" from "a conversation
+		// patch moved the counts" by this counter alone (`team-bridge/badge.ts`).
+		const { store, actions } = setup(
+			fakeHub({ markRead: async () => receipt(4, 6) }),
+		);
+		await actions.checkStatus();
+		expect(store.getState().unreadReads).toBe(0);
+		await actions.refreshUnread();
+		expect(store.getState().unreadReads).toBe(1);
+		actions.adopt(conversation({ latest_seq: 10, unread_count: 8 }));
+		const organizations = store.getState().organizations;
+		await actions.markRead(TENANT, "bcv_channel_general", 4);
+		// The receipt patch replaced the array and moved the total…
+		expect(store.getState().organizations).not.toBe(organizations);
+		expect(store.getState().totalUnread).toBe(3);
+		// …but it is not a read publication.
+		expect(store.getState().unreadReads).toBe(1);
+		actions.reset();
+		expect(store.getState().unreadReads).toBe(0);
+	});
+
 	it("keeps newer receipt and unread badges when older answer arrives last", async () => {
 		const first = deferred<Awaited<ReturnType<HubClient["markRead"]>>>();
 		const second = deferred<Awaited<ReturnType<HubClient["markRead"]>>>();

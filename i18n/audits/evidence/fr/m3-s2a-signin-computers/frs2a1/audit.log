@@ -1,0 +1,50 @@
+# audit.log — fr S2a audit, i18n-auditor session 3434906ff93a, model anthropic/claude-opus-5-5, 2026-11-12
+# Execution log: commands actually run in this session, with their outputs (abridged where marked).
+
+$ cd /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a; shasum -a 256 brief-59ec5184.json fr/draft-fr-s2a.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+b266a87a22185a96e1eb7987a2790d765486af7345a16f1c396573cf91380504  fr/draft-fr-s2a.json
+# both match the task → proceed
+
+$ grep -ci redact brief-59ec5184.json fr/draft-fr-s2a.json
+brief-59ec5184.json:0
+fr/draft-fr-s2a.json:0
+
+$ git -C ~/local-operator-mobile show 59ec5184:<file> | shasum -a 256 ; | grep -ci redact
+src/i18n/catalogues/fr/mobile.computers.json 0cebf9c66ee8dd134619e5446cb0097c9be4261c7cd23790adc1d14c43889c66 redact=0
+src/i18n/catalogues/fr/mobile.signin.json a642e974a03e2fdfe3817573d38eecfe6497ac55465a41d388e51fa53fe8b55a redact=0
+src/i18n/catalogues/en/mobile.computers.json 280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151 redact=0
+src/i18n/catalogues/en/mobile.signin.json 02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace redact=0
+src/features/auth/own-tunnel.tsx 7e6ed4ad902ba2004f18c1822b5a3d6d85646b4dd5b7478bf92e93d10b1c6967 redact=0
+src/ui/size-class.ts 500d22f691381c908523c66172a996ea3ed5c9797ad8b91122e9ceced7781631 redact=0
+
+$ git -C ~/local-operator rev-parse origin/main  → 73dc41570c94ff22db15c4a6721f458614de2998
+$ git -C ~/local-operator show origin/main:i18n/style-guides/fr.md | shasum -a 256 → 5315e1ac10c2ce57aac631ba653d08de680ee70c9a022ed3a8345ce2f9902ee7
+$ git -C ~/local-operator show origin/main:i18n/glossary.md | shasum -a 256 → 0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8
+
+$ git -C ~/local-operator-mobile ls-tree -r --name-only 59ec5184 | grep -i -E 'style-guide|glossary'
+(no output — no fr style guide in the mobile repo)
+
+# Python (eval kernel): load brief + draft → 37 37 True (same keys, same order); per-key checks
+# (placeholders, backticks, literal tokens, U+2019, U+2026, U+202F before : ; ! ?, final stop) → 0 issues;
+# U+202F count 7, U+2019 count 30.
+
+$ git show 59ec5184:src/i18n/messages.ts > <my scratch>/work/messages.ts  (sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0)
+$ node parse.mjs   (node v24.22.1; parse.mjs sha256 e0085e3746ac1d4f45b96eb7cfcddac576b1192c9c2fc2baeb2cd953afa96c98)
+# first attempt called formatMessage with the wrong argument order → 37 TypeErrors (harness bug, fixed; not a draft defect)
+(node:50174) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/3434906ff93a/scratchpad/fr-s2a-audit/work/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+SAMPLE mobile.computers.own_tunnel.password_for [["name","text"]] => Saisissez le mot de passe de Xname
+SAMPLE mobile.computers.own_tunnel.security_body [["command","text"]] => Vous mettez votre propre ordinateur sur Internet, et le mot de passe du relais est la seule chose qui le protège. Privilégiez HTTPS, activez l’authentification propre à votre tunnel s’il en propose une, et changez le mot de passe avec `Xcommand` s’il a été partagé. Toute personne disposant de ce mot de passe et de votre URL peut piloter les sessions sur cette machine.
+SAMPLE mobile.signin.panel.unavailable_detail [["module","text"]] => La connexion avec Radient nécessite un écouteur local, absent de cette version (Xmodule).
+parsed keys 37 failures 0
+
+$ git grep -n own_tunnel.(save_connect|test|testing|saving)|title.set_up 59ec5184 -- src
+src/features/auth/own-tunnel.tsx:253-271 (two Button components, stacked, separated by VerdictBlock)
+src/ui/size-class.ts:457-476 computersHeaderStackWidth: English advances (list 138, set_up 227), "a longer translation is not measured here"
+src/ui/size-class.ts:360 HEADER_STACK_WIDTH = 354
+
+# Note: an attempt to create work/ under the delegator's scratchpad audits/fr/ was BLOCKED by the dangerous-delete guardrail
+# (other session's scratchpad); scratch work moved to this session's scratchpad. No repo or git writes.

@@ -13,7 +13,7 @@ import {
 } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
-import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
+import { computerDisplayName, RADIENT_CONSOLE_TUNNELS_URL } from "@/connection";
 import type { SavedComputer } from "@/connection/saved-computers";
 import {
 	addComputerTarget,
@@ -48,6 +48,7 @@ import { CONTROL, REGION, ROLE, SURFACE, switcherRowIds } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
+import { useComposedDir } from "@/ui/direction";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { avatarClasses, cx } from "@/ui/variants";
 
@@ -233,39 +234,46 @@ const TransportLine = ({
 	row: SwitcherRow;
 	now: number;
 	healthTestID: string;
-}) => (
-	<View className="min-w-0 flex-row items-center gap-1">
-		{row.transport.kind === "radient" ? (
-			<Text className="shrink-0 text-meta text-ink-muted">
-				{t("mobile.computers.transport.radient")}
-			</Text>
-		) : titledByHost(row) ? (
-			<Text className="shrink-0 text-meta text-ink-muted">
-				{t("mobile.computers.transport.custom")}
-			</Text>
-		) : (
-			<Text
-				className="shrink text-mono-sm text-ink-muted"
-				numberOfLines={1}
-				ellipsizeMode="middle"
-			>
-				{row.transport.host}
-			</Text>
-		)}
-		{row.connecting ? (
-			<>
-				<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
-					·
+}) => {
+	/* `transport.radient` is the Latin brand word in every catalogue, Urdu
+	 *  included, so under RN-web's `dir="auto"` it resolved left-to-right on a
+	 *  right-to-left page (#243 QA Q-02). The page's direction, stated, keeps the
+	 *  line's base consistent with its Urdu siblings. */
+	const composedDir = useComposedDir();
+	return (
+		<View className="min-w-0 flex-row items-center gap-1">
+			{row.transport.kind === "radient" ? (
+				<Text {...composedDir} className="shrink-0 text-meta text-ink-muted">
+					{t("mobile.computers.transport.radient")}
 				</Text>
+			) : titledByHost(row) ? (
 				<Text className="shrink-0 text-meta text-ink-muted">
-					{t("mobile.computers.connecting")}
+					{t("mobile.computers.transport.custom")}
 				</Text>
-			</>
-		) : (
-			<HealthWord row={row} now={now} testID={healthTestID} />
-		)}
-	</View>
-);
+			) : (
+				<Text
+					className="shrink text-mono-sm text-ink-muted"
+					numberOfLines={1}
+					ellipsizeMode="middle"
+				>
+					{row.transport.host}
+				</Text>
+			)}
+			{row.connecting ? (
+				<>
+					<Text className="shrink-0 text-meta text-ink-dim" aria-hidden>
+						·
+					</Text>
+					<Text className="shrink-0 text-meta text-ink-muted">
+						{t("mobile.computers.connecting")}
+					</Text>
+				</>
+			) : (
+				<HealthWord row={row} now={now} testID={healthTestID} />
+			)}
+		</View>
+	);
+};
 
 const SwitcherRowView = ({
 	row,
@@ -327,7 +335,11 @@ const SwitcherRowView = ({
 							numberOfLines={1}
 							ellipsizeMode={titledByHost(row) ? "middle" : "tail"}
 						>
-							{row.name}
+							{/* A Radient DNS host name is shown by its first label (D4); an
+							 *  own address keeps its port. The label above speaks it whole. */}
+							{row.transport.kind === "radient"
+								? computerDisplayName(row.name)
+								: row.name}
 						</Text>
 						<TransportLine row={row} now={now} healthTestID={ids.health} />
 						{hint !== null ? (

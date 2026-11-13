@@ -1,0 +1,349 @@
+{
+ "schema": 1,
+ "audit_id": "ess2a1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "es",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.signin"
+ ],
+ "namespace": "mobile.computers+mobile.signin (M3 slice S2a, 37 keys)",
+ "audit_date": "2026-11-12",
+ "key_count": {
+  "en": 37,
+  "target": 37
+ },
+ "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "8e69a6afebfa",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "id": "translator job 651120615896",
+  "model_per_notes": "anthropic/claude-opus-5-5 (no fallback observed, per notes)",
+  "note": "same model family, different agent instance; auditor did not translate or edit the draft"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+   "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/es/draft-es-s2a.json",
+   "sha256": "4ae3777107e9cb804e331dcfc6f459a7b65d054820a03a0133ab057761903432"
+  },
+  "translator_notes": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/es/notes-es-s2a.md",
+  "repo_files": {
+   "src/i18n/catalogues/en/mobile.computers.json@59ec5184": "280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151",
+   "src/i18n/catalogues/en/mobile.signin.json@59ec5184": "02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace",
+   "src/i18n/catalogues/es/mobile.computers.json@59ec5184": "57e0ac27602f84b283896cf46f25b24523dbb73b72a5ebcf2498f951ef96677e",
+   "src/i18n/catalogues/es/mobile.signin.json@59ec5184": "af3aa230cf56c2376353b48b82908b3233d64a70ae5757052eb234a964b3dd22",
+   "src/ui/size-class.ts@59ec5184": "500d22f691381c908523c66172a996ea3ed5c9797ad8b91122e9ceced7781631",
+   "src/i18n/messages.ts@59ec5184": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+   "design/fonts/Figtree-SemiBold.ttf@59ec5184": "35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74",
+   "~/local-operator origin/main(73dc4157):i18n/style-guides/es.md": "4a6f6270f028e5f5fbca7156a8f5099077f92585db94c14653482e9b188248a6",
+   "~/local-operator origin/main(73dc4157):i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "context_sidecar": "not read: brief notes carry the context; nested-JSON sidecars not routable"
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "brief": 0,
+   "draft": 0,
+   "repo_files_read": 0,
+   "note": "no [redacted] marker encountered"
+  },
+  "write_location": {
+   "requested": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/es/",
+   "actual": "/Users/damian/.local-operator/sessions/8e69a6afebfa/scratchpad/m3s2a-es-audit/",
+   "reason": "guardrail dangerous-delete (review) BLOCKED `mkdir -p /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/es/` as another session's scratchpad; bundle written to auditor scratch instead; delegator must copy it",
+   "stray_temp": "auditor created and then removed its own temp file /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits_es_view.txt (eval, before the guardrail); no other writes there"
+  }
+ },
+ "mechanical": {
+  "parser": "src/i18n/messages.ts@59ec5184 parseMessage run with bun (copy in auditor scratch)",
+  "parse_failures": 0,
+  "param_set_mismatches": 0,
+  "placeholder_mismatches": 0,
+  "backtick_spans_mismatch": 0,
+  "brand_token_count_mismatch": 0,
+  "tokens_checked": [
+   "Radient",
+   "Local Operator",
+   "lop mobile",
+   "http://",
+   "https://",
+   "HTTPS",
+   "URL",
+   "…"
+  ],
+  "plural_select": "none in slice",
+  "keys_added_or_dropped": 0,
+  "key_order_matches_brief": true,
+  "valid_json": true
+ },
+ "width": {
+  "method": "Figtree-SemiBold.ttf@59ec5184 hmtx/cmap advances x 28 dp, -0.02 em tracking (stdlib parser, no font tools installed); calibration Computers 137.8 (code: 138), Set up a computer 226.2 (code: 227); estimates, not rendered",
+  "measured": {
+   "Máquinas": 116.7,
+   "Configura una máquina": 283.8,
+   "Añade una máquina": 240.7,
+   "Nueva máquina": 190.6,
+   "Tu propio túnel": 184.7
+  }
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "verdict": "fail",
+  "unresolved_blocker_major_count": 1,
+  "severity_counts": {
+   "BLOCKER": 0,
+   "MAJOR": 1,
+   "MINOR": 4,
+   "NIT": 2
+  },
+  "finding_ids": [
+   "F-01",
+   "F-02",
+   "F-03",
+   "F-04",
+   "F-05",
+   "N-01",
+   "N-02"
+  ]
+ },
+ "findings": [
+  {
+   "id": "F-01",
+   "severity": "MAJOR",
+   "key": "mobile.computers.title.set_up",
+   "current": "Configura una máquina",
+   "problem": "Width. computersHeaderStackWidth (src/ui/size-class.ts:457-476) budgets the ENGLISH 227 pt title. es measures 283.8 pt (Figtree SemiBold 28 dp, -0.02 em, from the bundled TTF's advances; calibration: 'Computers' 137.8 vs measured 138; not rendered). Set-up view hides Refresh; with Back and no switcher the header stays inline from 354 pt and needs 32+52+8+284=376 pt: fits at 390 (≈14 pt spare) but clips at 360-375 pt (iPhone SE/mini, common Android). With switcher it stacks at 390, no clip.",
+   "suggestion": "Añade una máquina",
+   "rationale": "240.7 pt → needs 333 pt, under the 354 floor, so it fits every inline width; still an imperative title per the note and matches the flow (reached via “Añadir una máquina”). Alternative “Nueva máquina” (190.6 pt)."
+  },
+  {
+   "id": "F-02",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "current": "El relé solo acepta conexiones locales (loopback), así que tiene que ejecutarse en esta máquina. Evita que entre en reposo mientras usas la app.",
+   "problem": "Ruling on translator's uncertainty: “conexiones locales” is readily read as local-network (cf. “red local”), the opposite of the note (same computer only); “(loopback)” helps only technical readers. Also “esta máquina” is read on the phone, where “esta” can point at the phone.",
+   "suggestion": "El relé solo acepta conexiones desde la propia máquina (loopback), así que tiene que ejecutarse en ella. Evita que entre en reposo mientras usas la app."
+  },
+  {
+   "id": "F-03",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "current": "Con http://, la contraseña del relé cruza la red sin cifrar, así que está desactivado salvo que lo actives. Usa https:// siempre que la dirección lo admita.",
+   "problem": "Subjectless masculine “está desactivado … lo actives” has no antecedent (English “it” = the opt-in) and can read as “http:// is disabled”; unencrypted_body calls the toggle “la opción” (feminine), so gender also disagrees.",
+   "suggestion": "Con http://, la contraseña del relé cruza la red sin cifrar, así que esta opción está desactivada salvo que la actives. Usa https:// siempre que la dirección lo admita."
+  },
+  {
+   "id": "F-04",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.unencrypted_body",
+   "current": "Activa la opción para usarla o indica una dirección https:// — los túneles suelen mostrar una.",
+   "problem": "“usarla” attaches to the nearest feminine noun, “la opción” (“turn the option on to use the option”); the intended object is the address.",
+   "suggestion": "Activa la opción de arriba para usar esta dirección o indica una dirección https:// — los túneles suelen mostrar una."
+  },
+  {
+   "id": "F-05",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.security_body",
+   "current": "… elige un túnel con autenticación propia si el tuyo la ofrece y cambia la contraseña con `{command}` si la has compartido. …",
+   "problem": "“choose a tunnel with its own authentication if yours offers it” is self-contradictory (if yours offers it, no choosing is needed); intent is to use your tunnel’s own authentication where available. “si la has compartido” narrows “if it has been shared” to sharing by the reader.",
+   "suggestion": "Estás poniendo tu propia máquina en internet, y la contraseña del relé es lo único que la protege. Usa HTTPS siempre que puedas, activa la autenticación propia de tu túnel si la ofrece y cambia la contraseña con `{command}` si se ha compartido. Cualquiera con esa contraseña y tu URL puede controlar las sesiones de esa máquina."
+  },
+  {
+   "id": "N-01",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.public_host",
+   "current": "Esta dirección no es privada: cualquiera entre este teléfono y ella puede leer la contraseña.",
+   "problem": "Colon instead of dash: accepted (idiomatic; ruling for translator). “cualquiera” reads as a person; English “anything” includes routers/networks.",
+   "suggestion": "Esta dirección no es privada: cualquier intermediario entre este teléfono y ella puede leer la contraseña."
+  },
+  {
+   "id": "N-02",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.step_test_help",
+   "current": "Esto hace una solicitud real a través de tu túnel antes de guardar nada.",
+   "problem": "“Esto hace una solicitud” is a calque of “This makes a request”.",
+   "suggestion": "Esta prueba envía una solicitud real a través de tu túnel antes de guardar nada."
+  }
+ ],
+ "uncertain_key_rulings": {
+  "mobile.computers.own_tunnel.step_computer_help": "changes requested (F-02)",
+  "mobile.computers.own_tunnel.public_host": "colon accepted; NIT N-01 on “cualquiera”",
+  "mobile.computers.own_tunnel.insecure_allowed": "accepted: “Dirección http:// permitida” is a clear state label, mirrors the toggle; “plain” is carried by the literal scheme",
+  "mobile.computers.own_tunnel.password_label": "accepted at 1.36x: full-width field label; “Contraseña del relé” is the shipped glossary form (paths.radient_body, signin.panel.unavailable_alt)",
+  "mobile.computers.own_tunnel.saving": "accepted at 1.43x: shares the button with “Guardar y conectar” (18 chars), so no new overflow; identical to shipped mobile.account_routing.saving",
+  "mobile.computers.title.list": "pass: “Máquinas” 116.7 pt vs English 137.8 pt budget"
+ },
+ "per_key_results": [
+  {
+   "key": "mobile.computers.title.list",
+   "result": "pass",
+   "ruling": "pass: “Máquinas” 116.7 pt vs English 137.8 pt budget"
+  },
+  {
+   "key": "mobile.computers.title.set_up",
+   "result": "finding F-01"
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_stale",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_empty",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_stale",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_empty",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.title",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_for",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_label",
+   "result": "pass",
+   "ruling": "accepted at 1.36x: full-width field label; “Contraseña del relé” is the shipped glossary form (paths.radient_body, signin.panel.unavailable_alt)"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.intro",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "result": "finding F-02",
+   "ruling": "changes requested (F-02)"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_publish",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_app",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.url_label",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allow",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allowed",
+   "result": "pass",
+   "ruling": "accepted: “Dirección http:// permitida” is a clear state label, mirrors the toggle; “plain” is carried by the literal scheme"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_hint",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_on_help",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "result": "finding F-03"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_title",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_body",
+   "result": "finding F-04"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.private_host",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.public_host",
+   "result": "finding N-01",
+   "ruling": "colon accepted; NIT N-01 on “cualquiera”"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test_help",
+   "result": "finding N-02"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_body",
+   "result": "finding F-05"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.test",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.testing",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.save_connect",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.saving",
+   "result": "pass",
+   "ruling": "accepted at 1.43x: shares the button with “Guardar y conectar” (18 chars), so no new overflow; identical to shipped mobile.account_routing.saving"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_address",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_test",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_ok",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_not_yet",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.signin.panel.unavailable_detail",
+   "result": "pass"
+  }
+ ],
+ "ledger": {
+  "recorded": false,
+  "reason": "task restricted writes to the audit bundle directory; ledger row left to the delegating session"
+ },
+ "artifacts_note": "report.md and audit.log in the same directory; hashes in audit.log footer of the delegator copy are not pre-computed here (see manifest in report)"
+}

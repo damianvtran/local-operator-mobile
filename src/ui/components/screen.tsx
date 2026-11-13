@@ -40,6 +40,12 @@ export type ScreenProps = {
 	 *  screen: the inbox did exactly that, and a global clamp altered the S5
 	 *  session title at 200 % (audit U-08 on an untouched screen). */
 	titleLines?: 1 | 2;
+	/** How many lines the title may take when the header does NOT stack. Defaults
+	 *  to 1 — every screen's single-row header as reviewed. A screen whose title
+	 *  is translated passes `rowTitleLinesFor(activeLocale())` (`size-class.ts`):
+	 *  its stack threshold was measured on English, so a longer translation wraps
+	 *  beside the controls instead of clipping (PR #251, D1/D2). */
+	rowTitleLines?: 1 | 2;
 	/** Explicit brand lockup; independent of the title's wording or locale. */
 	brand?: boolean;
 	/** Left-aligned header control (a back affordance). */
@@ -217,6 +223,7 @@ export const Screen = ({
 	headerDensity,
 	headerLeading,
 	titleLines = 2,
+	rowTitleLines = 1,
 	headerDetail,
 	titleNode,
 	stackedActionsBeside = false,
@@ -371,7 +378,7 @@ export const Screen = ({
 												? "flex-1 text-title text-ink"
 												: "flex-1 text-display text-ink"
 										}
-										numberOfLines={1}
+										numberOfLines={rowTitleLines}
 									>
 										{title}
 									</Heading>
@@ -397,7 +404,7 @@ export const Screen = ({
 															? "text-title text-ink"
 															: "text-display text-ink"
 													}
-													numberOfLines={1}
+													numberOfLines={rowTitleLines}
 												>
 													{title}
 												</Heading>

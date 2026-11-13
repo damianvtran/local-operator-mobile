@@ -1,0 +1,46 @@
+# es S2a round-2 delta audit — execution log (commands actually run in session f0770d338369, 2026-11-13 UTC)
+# M = /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a ; S = /Users/damian/.local-operator/sessions/f0770d338369/scratchpad
+
+$ shasum -a 256 M/brief-59ec5184.json M/es/draft-es-s2a.json M/es/draft-es-s2a-v2.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json        # matches brief
+4ae3777107e9cb804e331dcfc6f459a7b65d054820a03a0133ab057761903432  es/draft-es-s2a.json       # matches brief
+4cca2d626c167b2c1d2242a5eb489386290f364c5be5544da4070977b263e8e6  es/draft-es-s2a-v2.json    # matches brief
+
+$ python3 (flatten v1, v2; compare key lists and values)
+37 37 True set()          # same 37 keys, same order, no adds/drops
+CHG mobile.computers.title.set_up
+CHG mobile.computers.own_tunnel.step_computer_help
+CHG mobile.computers.own_tunnel.insecure_off_help
+CHG mobile.computers.own_tunnel.unencrypted_body
+CHG mobile.computers.own_tunnel.public_host
+CHG mobile.computers.own_tunnel.step_test_help
+CHG mobile.computers.own_tunnel.security_body
+# exactly 7 changed = the 7 keys listed in notes-es-s2a-v2.md; 30 unchanged byte-equal
+
+$ python3 (per changed key: {placeholders}, `code`, http(s)://, HTTPS/URL/Radient tokens en vs es)
+all 7: True ; security_body keeps {command} inside backticks; insecure_off_help keeps http:// + https://; unencrypted_body keeps https://
+
+$ git -C ~/local-operator-mobile show 59ec5184:src/i18n/messages.ts > S/messages-59ec.ts   # sha256 c1831406…bdba0 ; working tree lacks the file
+$ tsx S/pm.ts   # parseMessage(en) and parseMessage(es v2) for all 37 brief keys
+{ ok: 37, bad: 0, keys: 37 }
+
+$ git show 59ec5184:design/fonts/Figtree-SemiBold.ttf > S/fig.ttf ; shasum -a 256 -> 35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74 (= round-1 record)
+$ python3 stdlib TTF parser (own code, head/hhea/hmtx/cmap fmt4), advance x 28/upm - 0.02*28 per glyph, no kerning
+Computers 137.8 ; Set up a computer 226.2 ; Configura una máquina 283.8 ; Añade una máquina 240.7
+# independently reproduces round-1 calibration and figures; ESTIMATE, not rendered
+
+$ git show 59ec5184:src/ui/size-class.ts | sed -n 440,480p      # computersHeaderStackWidth: English 227 for set_up, floor 354; switcher 119, back 52+8, cluster gap 8
+$ git show 59ec5184:src/features/auth/computers.tsx (lines 410, 433-436, 476-500)  # empty = view.setup; showSwitch = !empty || phoneKnowsComputers; showRefresh = !empty && !signedOut
+$ git show 59ec5184:src/ui/components/screen.tsx (lines 320-345, 360-375)  # inline title numberOfLines={1} (ellipsis); stacked title numberOfLines=2
+$ git show 59ec5184:src/features/auth/computers-view.ts (80-150, 226-232)  # set_up when adding or Radient lists none; backAction null iff !canGoBack && !routed
+
+# Fit table for title.set_up v2 (Refresh never renders in set-up):
+#  no Back, no switcher : stack<354, inline needs 32+240.7=272.7     -> fits
+#  Back, no switcher    : stack<354, inline needs 332.7              -> fits (F-01 case resolved)
+#  Back + switcher      : stack<446, inline needs 459.7              -> ellipsis 446-459 pt (no portrait phone)
+#  switcher, no Back    : stack<386, inline needs 399.7              -> ellipsis 386-399 pt (390/393 iPhones) -> R2-01
+#  (v1 'Configura una máquina' in that last state needed 442.8 -> ellipsis 386-442; not raised in round 1)
+
+$ git grep usePhoneKnowsComputers (computer-switcher-sheet.tsx:133)  # true when any saved, non-hidden computer; reachability of no-Back+switcher+set_up not proven here
+
+Redaction scan of inputs/outputs: 0 hits (no secrets, tokens or .env reads involved).

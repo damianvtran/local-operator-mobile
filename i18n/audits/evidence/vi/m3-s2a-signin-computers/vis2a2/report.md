@@ -1,0 +1,21 @@
+# Independent i18n DELTA audit — vi / S2a, round 2 (`vis2a2`)
+- Date 2026-11-12 · source `59ec5184` · auditor `i18n-auditor` (lopdev), session `cabaf853b6b1`, model **anthropic/claude-opus-5-5** (runtime header; no fallback observed). Not the translator (783840cce6ac/64bf00a33403), not the round-1 auditor (505168ab5fb0). No MT used; no edits.
+- Hashes recomputed, all match: brief `e64f41af…ba563`, v1 `107beb9b…72574`, v2 `50d0e1a8…14079`.
+- Read route: ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable. Redaction hits: 0.
+
+## Verdict: **PASS** — 0 BLOCKER, 0 MAJOR, 0 MINOR, 0 NIT; V1 and V2–V5 resolved.
+
+## Equality proof
+v1 and v2 parsed: 37 keys each, same order, none added/dropped; 32 values identical; exactly 5 differ: `mobile.computers.own_tunnel.intro`, `mobile.computers.own_tunnel.insecure_hint`, `mobile.computers.own_tunnel.insecure_off_help`, `mobile.computers.own_tunnel.unencrypted_body`, `mobile.computers.own_tunnel.verdict_not_yet`. All 5 NFC, no placeholders (none in source), http:// / https:// literals intact.
+
+## Changed keys
+| Key | v1 | v2 | Result |
+|---|---|---|---|
+| `computers.own_tunnel.intro` | Bạn không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng sẽ kết nối với nó qua địa chỉ bạn dán bên dưới. | Không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng sẽ kết nối với nó qua địa chỉ bạn dán bên dưới. | pass — V2 resolved: leading "Bạn" dropped; impersonal "Không cần tài khoản Radient…" is natural. Remaining bạn ×3 acceptable (translator took the first half of the suggestion only; not a finding). |
+| `computers.own_tunnel.insecure_hint` | Chỉ cần cho địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa | Chỉ cần khi dùng địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa | pass — V3 resolved: "Chỉ cần khi dùng địa chỉ http" idiomatic; "in the clear"→"không mã hóa" accurate; no final stop as required; http literal kept. |
+| `computers.own_tunnel.insecure_off_help` | Qua http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ. | Với http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ. | pass — V4 resolved: "Với http://," removes qua…qua repetition; http:// and https:// literal; off-by-default meaning intact. |
+| `computers.own_tunnel.unencrypted_body` | Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — đường hầm thường in sẵn một địa chỉ như vậy. | Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — thông thường, đường hầm sẽ in ra một địa chỉ như vậy. | pass — V1 resolved: "thông thường, đường hầm sẽ in ra một địa chỉ như vậy" = "a tunnel normally prints one"; "in ra" (outputs) replaces pre-printed "in sẵn"; thường no longer collides with "http:// thường". |
+| `computers.own_tunnel.verdict_not_yet` | Chưa được | Chưa kết nối được | pass — V5 resolved: "Chưa kết nối được" calm, accurate for both error and invalid verdicts, pairs with verdict_ok "Đã kết nối", distinct from connect_refused.title "Không thể kết nối". 17 vs 7 chars is not an overflow: Alert title is an unconstrained <Text> (no numberOfLines) inside a flex-1/flexShrink:1/minWidth:0 column with maxWidth 100% — it wraps; not fixed width. Same at b84517c0 (alert.tsx unchanged; own-tunnel.tsx delta only adds placeholderDir). |
+
+## verdict_not_yet fit
+Rendered as `<Alert title>` from `VerdictBlock` (own-tunnel.tsx@59ec5184 ~L541-553; at b84517c0 L552, only placeholderDir lines added elsewhere). In alert.tsx the title is a `<Text className="text-body-sm font-semibold">` without `numberOfLines`, inside `View className="flex-1 gap-1"` with `flexShrink:1, minWidth:0` and parent `maxWidth:"100%"`: it **wraps**, not fixed width. 17 chars at body-sm is one line on any phone anyway. Translator's overflow flag: no risk.

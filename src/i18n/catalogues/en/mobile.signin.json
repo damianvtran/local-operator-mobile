@@ -30,5 +30,6 @@
 	"mobile.signin.panel.unavailable_alt": "You can still connect with the relay's address and password.",
 	"mobile.signin.try_anyway": "Try again anyway",
 	"mobile.signin.welcome.headline": "Your agent runs on your computer.",
-	"mobile.signin.welcome.body": "This app drives the sessions on your own machine and shows what it did. Your code never leaves it."
+	"mobile.signin.welcome.body": "This app drives the sessions on your own machine and shows what it did. Your code never leaves it.",
+	"mobile.signin.panel.unavailable_detail": "Signing in with Radient needs a loopback listener this build does not include ({module})."
 }

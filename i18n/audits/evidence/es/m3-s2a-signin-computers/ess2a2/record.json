@@ -1,0 +1,85 @@
+{
+  "locale": "es",
+  "namespace": "mobile.computers+mobile.signin (M3 S2a)",
+  "round": 2,
+  "scope": "delta: equality proof v1->v2, judgment of changed keys, ruling of round-1 findings; unchanged keys not re-audited",
+  "audit_date": "2026-11-13",
+  "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+  "key_count": 37,
+  "changed_key_count": 7,
+  "auditor": {
+    "agent": "i18n-auditor (lopdev)",
+    "session": "f0770d338369",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session header Model line; no fallback observed",
+    "fallback_used": false,
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "translator": {"jobs": ["651120615896", "b4cdc1ca4d11"]},
+  "round1_auditor": {"job": "0fb6ee83f154", "session": "8e69a6afebfa"},
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": 0,
+  "input_hashes": {
+    "brief": {"path": "m3s2a/brief-59ec5184.json", "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563"},
+    "v1": {"path": "m3s2a/es/draft-es-s2a.json", "sha256": "4ae3777107e9cb804e331dcfc6f459a7b65d054820a03a0133ab057761903432"},
+    "v2": {"path": "m3s2a/es/draft-es-s2a-v2.json", "sha256": "4cca2d626c167b2c1d2242a5eb489386290f364c5be5544da4070977b263e8e6"},
+    "round1_record": {"path": "m3s2a/audits/es/record.json", "sha256": "89fdaf4f79cce153bd0b8c5c4fd4b5c506b9bec24282dbbe8a35c0adb288408b"},
+    "round1_report": {"path": "m3s2a/audits/es/report.md", "sha256": "aaf53321e1534df686e8dfcd2637fbe2891d7aad7fb1a8d9cab9785d3027ebb2"},
+    "translator_notes_v2": {"path": "m3s2a/es/notes-es-s2a-v2.md", "sha256": "2d88dcba7b6c02682c6fb8e7dc21b526ef5887f673f41795a7d58a1272757ba3"},
+    "font": {"path": "design/fonts/Figtree-SemiBold.ttf@59ec5184", "sha256": "35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74"},
+    "parser": {"path": "src/i18n/messages.ts@59ec5184", "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"}
+  },
+  "glossary": "git -C ~/local-operator-mobile show 59ec5184:src/i18n/catalogues/es/mobile.computers.json",
+  "mechanical": {
+    "same_keys_same_order": true,
+    "keys_added": [],
+    "keys_dropped": [],
+    "unchanged_byte_equal": 30,
+    "changed_keys_match_translator_notes": true,
+    "placeholders_and_literals_identical": true,
+    "parseMessage": "37 ok / 0 failed (tsx, messages.ts@59ec5184)"
+  },
+  "width": {
+    "basis": "ESTIMATE: own stdlib parse of Figtree-SemiBold advances x 28 dp, -0.02 em, no kerning; calibration Computers 137.8 / Set up a computer 226.2 (code 138/227); not rendered; rendered check is a separate open row",
+    "pt": {"Añade una máquina": 240.7, "Configura una máquina": 283.8, "Nueva máquina": 190.6},
+    "states": {
+      "no_back_no_switcher": "fits (272.7 < 354)",
+      "back_no_switcher": "fits (332.7 < 354) — F-01 case",
+      "back_switcher": "ellipsis 446-459 pt (no portrait phone)",
+      "switcher_no_back": "ellipsis 386-399 pt est. — R2-01"
+    }
+  },
+  "per_key": {
+    "mobile.computers.title.set_up": {"v1": "Configura una máquina", "v2": "Añade una máquina", "result": "pass", "finding": "R2-01 MINOR (residual fit, estimate)"},
+    "mobile.computers.own_tunnel.step_computer_help": {"result": "pass"},
+    "mobile.computers.own_tunnel.insecure_off_help": {"result": "pass"},
+    "mobile.computers.own_tunnel.unencrypted_body": {"result": "pass", "finding": "N-01 NIT"},
+    "mobile.computers.own_tunnel.public_host": {"result": "pass"},
+    "mobile.computers.own_tunnel.step_test_help": {"result": "pass"},
+    "mobile.computers.own_tunnel.security_body": {"result": "pass"}
+  },
+  "round1_findings": {
+    "F-01": "resolved (Back, no switcher fits); residual other-state risk filed as R2-01",
+    "F-02": "resolved", "F-03": "resolved", "F-04": "resolved",
+    "F-05": "resolved (translator wording equivalent)",
+    "N-01": "resolved", "N-02": "resolved"
+  },
+  "findings": [
+    {"id": "R2-01", "severity": "MINOR", "key": "mobile.computers.title.set_up", "summary": "switcher shown, no Back: English-budget stack point 386 pt vs es inline need 399.7 pt -> est. ellipsis at 390/393 pt; escalates to MAJOR if rendered check shows that state clipping", "suggested": "code: per-locale measure/stack; copy fallback 'Nueva máquina'"},
+    {"id": "N-01", "severity": "NIT", "key": "mobile.computers.own_tunnel.unencrypted_body", "summary": "'dirección' repeated", "suggested": "… o indica una con https:// …"}
+  ],
+  "artifacts": {
+    "report": "m3s2a/audits/es-r2/report.md",
+    "log": "m3s2a/audits/es-r2/audit.log",
+    "log_kind": "execution log of commands actually run (not notes)"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": ["R2-01", "N-01"],
+    "condition": "rendered width check for title.set_up remains a separate open row; it decides R2-01"
+  },
+  "ledger_recorded": false,
+  "ledger_note": "audit-ledger command not run: scratchpad pre-merge audit; no repo ledger write requested in this brief"
+}

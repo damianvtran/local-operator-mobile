@@ -1,0 +1,15 @@
+# Execution log: commands actually run in auditor session 0716fa1a942c (audit_id his2a1, same provenance as record.json). Outputs abridged.
+$ shasum -a 256 brief-59ec5184.json hi/draft-hi-s2a.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+8f1e2d15f84028928eab1c04dcb6c356b9b3206d0c3e881f5d49ab954e12fce0  hi/draft-hi-s2a.json   # both match → proceed
+$ git -C ~/local-operator-mobile show 59ec5184:src/i18n/catalogues/hi/{mobile.computers,mobile.signin}.json | shasum -a 256 → 961a6099…74e0 / b387afd2…95f0; grep -ci redact → 0/0
+$ grep -ci redact hi/draft (0) hi/notes (1: phrase 'Redaction markers in brief: 0')
+$ git show 59ec5184:src/i18n/messages.ts > $LOCAL_OPERATOR_SCRATCHPAD/hiaudit/messages.ts (sha256 c1831406…bba0)
+$ node --experimental-strip-types check.ts  # first run compared JSON.stringify(Map) = always {} — invalid, discarded; rerun with [...params]
+PARAMS password_for [["name","text"]] == ; security_body [["command","text"]] == ; unavailable_detail [["module","text"]] ==
+{ keys: 37, draftKeys: 37, order: true, fail: 0, mism: 0 }
+$ python3 token/end-punct/NFC/dash/typography check → [] ; तुम/तू hits → []
+$ python3 stdlib TTF reader: Figtree-SemiBold@59ec5184 28dp −0.02em: Computers 137.816, Set up a computer 226.212; Devanagari glyphs 0
+$ Kohinoor.ttc face 'Kohinoor Devanagari Semibold' unshaped 28dp −0.02em: कंप्यूटर 77.868; नया कंप्यूटर 123.928; कंप्यूटर सेट अप करें 200.592; कंप्यूटर जोड़ें 126.756
+$ same 16dp no tracking: कनेक्शन जाँचें 86.4; जाँच हो रही है… 95.7; सहेजें और कनेक्ट करें 130.4; सहेजा जा रहा है… 108.4; रिले प्रकाशित करें 110.6; कनेक्ट हो गया 88.0
+# No MT/translation service used. No repo or draft file edited.

@@ -687,7 +687,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * session-screen change, so neither parent's digest. Re-derived with `--print`
 	 * over the committed rebased tree. Source admission only, NOT rendered U-08
 	 * evidence. */
-	app: "1b2b0aa6933a2a8000c647ef16616246be7feb9d8e38caaec2742d3d5889b932",
+	/* --print re-pin for feat/background-push-clear: the background notification
+	 * task (module-scope `defineTask` imported first in app/_layout.tsx, the
+	 * signed-in scope registration in the Team Bridge provider) and the `body`
+	 * payload envelope read. No rendered component, style or token changed;
+	 * re-derived over the staged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* PR #246 converged onto main fb224cfe (#244/#245/#251): both sides' app
+	 * source carried, so neither parent's digest. Re-derived once with --print
+	 * over the final merged tree; source identity of the #246 + main fb224cfe
+	 * merge, NOT rendered evidence. */
+	app: "06cb5c133c3ca4d083dcb213292860da3891c5227f4f75d86648ff3f9ff32de4",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1622,14 +1632,68 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-pinned for PR #243 (M3 S1 sign-in/computers keys, 44 translations, Urdu
 	 * direction fix) merged with main e24de6cd (#241 show-more polish): both sides' src
 	 * carried, so neither parent's digest; re-derived last with --print. Source
-	 * identity only, NOT rendered U-08 evidence.
-	 *
-	 * PR #246 converged onto d33c46af: upstream sign-in/computers i18n and the
+	 * identity only, NOT rendered U-08 evidence. */
+	/* PR #246 converged onto d33c46af: upstream sign-in/computers i18n and the
 	 * reviewed background-sync source are both retained. Re-derived once with
 	 * --print over the final combined tracked app/src tree; neither parent's src
 	 * digest admits this tree. Source admission only, NOT visual/native proof;
 	 * canonical measurement remains pending. */
-	src: "c5a31ecc1a810c57cb527a7f918bc3ce0ac17eaa6f22fc9abbc28589f9953f6e",
+	/* fix/ola-feedback-1112 (#1): the Team Bridge provider no longer keys the
+	 * router on the account, and the own-tunnel guide's and sign-in's Back leave
+	 * for Home with no history (`leave-screen.ts`). Re-derived once with --print
+	 * over the staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* fix/ola-feedback-1112 (#2/#3): the Computers row and Team Bridge entry as
+	 * nav cards, computerDisplayName, the drawer row's one-line state + meta,
+	 * hanging indicator, row-owned gutter and single-ellipsis selector. Re-derived
+	 * once with --print over the staged tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* fix/ola-feedback-1112: an interactive Radient sign-in opens the reader's
+	 * computer by the cold start's rule. Re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* #245 (fix/ola-feedback-1112) merged with main d33c46af (#243): both
+	 * sides' src carried, so neither parent's digest; re-derived once with
+	 * --print over the merged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* #245 CI remediation: the Team Bridge destination's title/caption gap
+	 * uses the minimum 4 pt token instead of 2 pt (U-42). Re-derived with
+	 * --print after the final source edit; instrument and input pins unchanged.
+	 * Source identity only, NOT rendered U-08 evidence. */
+	/* --print re-pin for feat/background-push-clear: the background notification
+	 * task (module-scope `defineTask` imported first in app/_layout.tsx, the
+	 * signed-in scope registration in the Team Bridge provider) and the `body`
+	 * payload envelope read. No rendered component, style or token changed;
+	 * re-derived over the staged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* --print re-pin for PR #244 review remediation round 1: lazy
+	 * expo-task-manager load, the background-launch restore retry in the
+	 * connection provider, and the store's `unreadReads` counter. No rendered
+	 * component, style or token changed. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #244 merged with main d33c46af (#243): both sides' src carried, so
+	 * neither parent's digest; re-derived once with --print over the merged
+	 * tree. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #245 convergence with #244 (14557e09): retain account-local state
+	 * isolation without remounting the router, background scope registration,
+	 * foreground restore retry and interactive sign-in auto-open. Re-derived
+	 * once with --print; source identity only, NOT new rendered evidence. */
+	/* M3 S2a (feat/i18n-m3-s2a): the Computers titles/banners, own-tunnel and
+	 * loopback-detail keys with their seven audited translations (771 keys in the
+	 * regenerated `catalogue.gen.ts`), the ur composed-direction spreads and
+	 * `Input.placeholderDir`, and the ur scheme-isolate bidi test. Re-derived
+	 * last with --print over the committed tree; only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence.
+	 * PR #251 round 1 remediation: `Screen.rowTitleLines` and
+	 * `rowTitleLinesFor` (translated Computers/own-tunnel titles wrap instead of
+	 * clipping), the single `ComputersTitleKey`, and the bidi test's header
+	 * sentence. Re-derived with --print; again only `src` moved.
+	 * PR #251 CI fix: biome formatting of the switcher transport `Text` and the
+	 * refusal-surface import order (no logic change). Re-derived with --print;
+	 * only `src` moved. */
+	/* PR #246 converged onto main fb224cfe (#244/#245/#251): both sides' src
+	 * carried, so neither parent's digest. Re-derived once with --print over the
+	 * final merged tree; source identity of the #246 + main fb224cfe merge, NOT
+	 * rendered evidence. */
+	src: "fb84e73cdd5d8cd4fc03f6cc5bf03abdd95d5fca4d2f030a404344b4882cefe7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1651,14 +1715,21 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// Team Bridge push); native build config, not a U-08 web layout input.
 	// --print re-pin (integration of #238 with #231): both sides' native
 	// config carried — the home-screen label plugin and `googleServicesFile`.
+	// --print re-pin (feat/background-push-clear): iOS `UIBackgroundModes:
+	// ["remote-notification"]` for the silent attention wake; native Info.plist
+	// config, not a U-08 web layout input.
+	// --print re-pin (PR #244 remediation round 1): comment-only edits — the
+	// Android warm-only claim and the exact-set native-config guard.
 	"app.config.ts":
-		"b186fadf5867c17b90e088b86815a6a7bd9869c979fe7e0e226e5392210848ed",
+		"2b77ffa36a241ee1607ac5cb42582fdf07a683a7fe91f4b0050a2385758a5c4f",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
+	// --print re-pin (feat/background-push-clear): adds the native module
+	// `expo-task-manager` ~57.0.22, which the web bundle never renders.
 	"package.json":
-		"d9e51cb60408e70560c2c26dfcba24dd004b7e33dc474e01a7b156226944c137",
+		"c9011119d489c35125f16e87abbd0db196a3dabbca646dfc5c5d6aa3e47ebb0a",
 	"pnpm-lock.yaml":
-		"76e536b328a564df7e995ab00d9e661f6b9f08ca2ff3c9496a754253a7903312",
+		"c9ef7b9d08ab6f4389036570907591411b6104a9bfb2e6ae75bb101399348540",
 	"pnpm-workspace.yaml":
 		"1457b9b1a5ad6f9f7adf765d6b3adbaca44c8c938f4e9ccd525579dadae34ba3",
 };
