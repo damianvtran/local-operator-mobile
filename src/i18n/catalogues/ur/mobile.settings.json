@@ -57,5 +57,16 @@
 	"mobile.settings.diagnostics.stream_live": "آن لائن",
 	"mobile.settings.diagnostics.stream_degraded": "جواب نہیں دے رہا",
 	"mobile.settings.diagnostics.stream_offline": "آف لائن",
-	"mobile.settings.account.app_name": "Local Operator"
+	"mobile.settings.account.app_name": "Local Operator",
+	"mobile.settings.own_tunnel.not_saved": "پاس ورڈ محفوظ نہیں، اس لیے ایپ ہر بار کھلنے پر اسے مانگتی ہے۔",
+	"mobile.settings.own_tunnel.kept_secure": "پتہ اور پاس ورڈ اس فون کے محفوظ اسٹوریج میں رکھے گئے ہیں۔",
+	"mobile.settings.own_tunnel.edit": "ترمیم کریں",
+	"mobile.settings.own_tunnel.test_again": "دوبارہ جانچیں",
+	"mobile.settings.own_tunnel.remove": "ہٹائیں",
+	"mobile.settings.own_tunnel.password_placeholder": "وہ پاس ورڈ جس سے ریلے شروع کیا گیا تھا",
+	"mobile.settings.own_tunnel.runtime_title": "یہ رن ٹائم ٹنل محفوظ نہیں کر سکتا",
+	"mobile.settings.own_tunnel.runtime_body": "اس بلڈ میں کوئی محفوظ اسٹوریج نہیں، اس لیے ٹنل صرف ایپ کے اس بار چلنے تک رکھی جاتی ہے۔ فون پر یہ معلومات پلیٹ فارم کے محفوظ اسٹوریج میں رکھی جاتی ہیں۔",
+	"mobile.settings.own_tunnel.before_saving": "محفوظ کرنے سے پہلے پتہ جانچ لیں: اگر محفوظ کی گئی ٹنل نے کبھی جواب نہ دیا ہو تو فہرست خالی رہتی ہے، بغیر کسی وضاحت کے۔",
+	"mobile.settings.own_tunnel.remove_title": "یہ ٹنل ہٹائیں؟",
+	"mobile.settings.own_tunnel.remove_body": "یہ اس فون سے پتہ اور پاس ورڈ ہٹا دیتا ہے۔ آپ کے کمپیوٹر، آپ کی چلائی ہوئی ٹنل یا کسی اکاؤنٹ پر اس کا کوئی اثر نہیں پڑتا۔"
 }

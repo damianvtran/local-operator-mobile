@@ -57,5 +57,16 @@
 	"mobile.settings.diagnostics.stream_live": "hoạt động",
 	"mobile.settings.diagnostics.stream_degraded": "không phản hồi",
 	"mobile.settings.diagnostics.stream_offline": "ngoại tuyến",
-	"mobile.settings.account.app_name": "Local Operator"
+	"mobile.settings.account.app_name": "Local Operator",
+	"mobile.settings.own_tunnel.not_saved": "Mật khẩu chưa được lưu, nên ứng dụng sẽ hỏi lại mỗi lần khởi động.",
+	"mobile.settings.own_tunnel.kept_secure": "Địa chỉ và mật khẩu được lưu trong bộ nhớ bảo mật của điện thoại này.",
+	"mobile.settings.own_tunnel.edit": "Sửa",
+	"mobile.settings.own_tunnel.test_again": "Kiểm tra lại",
+	"mobile.settings.own_tunnel.remove": "Xóa",
+	"mobile.settings.own_tunnel.password_placeholder": "Mật khẩu dùng khi chạy máy chủ chuyển tiếp",
+	"mobile.settings.own_tunnel.runtime_title": "Runtime này không lưu được đường hầm",
+	"mobile.settings.own_tunnel.runtime_body": "Bản dựng này không có kho khóa bảo mật, nên đường hầm chỉ được giữ trong lần chạy này. Trên điện thoại, giá trị này được lưu trong bộ nhớ bảo mật của nền tảng.",
+	"mobile.settings.own_tunnel.before_saving": "Hãy kiểm tra địa chỉ trước khi lưu: một đường hầm đã lưu nhưng chưa từng phản hồi sẽ khiến danh sách trống mà không có lời giải thích nào.",
+	"mobile.settings.own_tunnel.remove_title": "Xóa đường hầm này?",
+	"mobile.settings.own_tunnel.remove_body": "Thao tác này xóa địa chỉ và mật khẩu khỏi điện thoại này. Máy tính, đường hầm bạn chạy và mọi tài khoản đều không bị ảnh hưởng."
 }

@@ -38,5 +38,17 @@
 	"mobile.common.not_found.action": {
 		"role": "button",
 		"note": "Button on the not-found screen that goes to the session list. Short, no final full stop."
+	},
+	"mobile.common.copy": {
+		"role": "button",
+		"note": "Small button beside a command the reader runs on their computer (own-tunnel and Radient set-up screens): copies the command to the clipboard. One word, no final full stop."
+	},
+	"mobile.common.copied": {
+		"role": "status",
+		"note": "The same button's label right after the copy succeeded. One word, no final full stop."
+	},
+	"mobile.common.copy_command_hint": {
+		"role": "help",
+		"note": "Screen-reader hint on the Copy button beside a command block. {label} is the block's own label, already translated (e.g. \"Install on the computer\") or a product name (\"Cloudflare\", \"ngrok\"). No final full stop."
 	}
 }

@@ -1,0 +1,592 @@
+{
+  "schema": 1,
+  "audit_id": "zhcns2b1",
+  "audit_kind": "translation_audit",
+  "locale": "zh-CN",
+  "namespaces": [
+    "mobile.computers",
+    "mobile.common",
+    "mobile.settings"
+  ],
+  "namespace": "mobile.computers+mobile.common+mobile.settings (M3 slice S2b-1, 41 keys)",
+  "audit_date": "2026-11-13",
+  "key_count": {
+    "en": 41,
+    "target": 41,
+    "mobile.computers": 27,
+    "mobile.common": 3,
+    "mobile.settings": 11
+  },
+  "source_commit": "ce336e4a (feat/i18n-m3-s2b1, worktree ~/local-operator-mobile/.worktrees/i18n-m3-s2a)",
+  "auditor": {
+    "agent": "i18n-auditor",
+    "team": "lopdev",
+    "session": "a0c991a5009f",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system-prompt header (Model: anthropic/claude-opus-5-5); no fallback used or observed",
+    "independent_from_translator_session": true
+  },
+  "translator": {
+    "identity": "translator job 3ceed9e5fc3c",
+    "model_per_notes": "anthropic/claude-opus-5-5"
+  },
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1.json",
+      "sha256": "d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df",
+      "expected": "d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df"
+    },
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/zh-CN/draft-zh-CN.json",
+      "sha256": "83f029af21948f4c18c165e1470d6dc28e1c876bf7652042a1d80dd0f031afe8",
+      "expected": "83f029af21948f4c18c165e1470d6dc28e1c876bf7652042a1d80dd0f031afe8"
+    },
+    "notes": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/zh-CN/notes-zh-CN.md",
+      "sha256": "81d942064026d763bd061c61a665cc1ddd4a24a631e5736ca53f64e29bb4d7c8"
+    },
+    "parser": {
+      "path": "src/i18n/messages.ts @ce336e4a (worktree)",
+      "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+    },
+    "style_guide": {
+      "path": "~/local-operator/i18n/style-guides/zh-CN.md",
+      "sha256": "8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c"
+    },
+    "glossary": "git show ffbda180:src/i18n/catalogues/zh-CN/mobile.{computers,settings,common}.json"
+  },
+  "route_disclosure": {
+    "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+    "mt_services": "none",
+    "redaction_hits": {
+      "brief_literal": 0,
+      "draft_literal": 0,
+      "harness_display_masking": "verdict_password value (and the existing connect_refused.password glossary value) was shown as [redacted] by the harness display; the real verdict_password text was read via unicode escapes: 密码未被接受。检查电脑上设置的中继密码。"
+    }
+  },
+  "mechanical": {
+    "status": "PASS",
+    "parse": "41/41 en and zh parse with repo parseMessage; formatMessage renders all with sample args under zh-CN",
+    "placeholders": "names and kinds identical to English for every key",
+    "plurals": "verdict_sessions and verdict_timeout use other-only with #; zh-CN CLDR yields only 'other' (checked 0,1,2,10)",
+    "negative_controls": "unterminated plural, plural option without braces and unbalanced brace all throw RangeError",
+    "brief_vs_en_catalogue": "all 41 equal at ce336e4a",
+    "keys": "41 = brief order; none added, dropped or already shipped in zh-CN",
+    "punctuation": "no half-width punctuation adjacent to CJK, no CJK–Latin spaces, curly quotes only",
+    "bidi_controls": 0,
+    "tokens": "lop/macOS/Cloudflare/ngrok/HTTPS/URL/Local Operator/shell untouched; commands are placeholders",
+    "width": "no maxCells/maxChars in the brief; every button, heading and status is shorter than the English (max 10 CJK chars, runtime_title)"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "verdict": "pass",
+    "unresolved_blocker_major_count": 0,
+    "severity_counts": {
+      "BLOCKER": 0,
+      "MAJOR": 0,
+      "MINOR": 4,
+      "NIT": 2
+    },
+    "finding_ids": [
+      "ZHS2B1-01",
+      "ZHS2B1-02",
+      "ZHS2B1-03",
+      "ZHS2B1-04",
+      "ZHS2B1-05",
+      "ZHS2B1-06"
+    ],
+    "source_finding_ids": [
+      "ZHS2B1-S1"
+    ]
+  },
+  "findings": [
+    {
+      "id": "ZHS2B1-01",
+      "severity": "MINOR",
+      "key": "mobile.computers.own_tunnel.verdict_local_network",
+      "current": "此网络中该地址没有任何响应。检查电脑是否未休眠且正在运行中继，然后轻点“{action}”。",
+      "problem": "This key is shown on Android and the web (the iOS variant is a separate key). 轻点 is Apple's iOS verb; Android zh-CN uses 点按 and the web uses 点击, so the copy names the wrong platform's gesture.",
+      "suggested": "此网络中该地址没有任何响应。检查电脑是否未休眠且正在运行中继，然后点按“{action}”。"
+    },
+    {
+      "id": "ZHS2B1-02",
+      "severity": "MINOR",
+      "key": "mobile.computers.own_tunnel.check_note",
+      "current": "运行状况、身份验证门禁的状态，以及手机将看到的会话。",
+      "problem": "门禁 is a physical access-control gate, so 身份验证门禁 is a calque of 'auth gate' that reads oddly in software copy. The note defines it as the password check in front of the relay.",
+      "suggested": "运行状况、密码验证的状态，以及手机将看到的会话。"
+    },
+    {
+      "id": "ZHS2B1-03",
+      "severity": "MINOR",
+      "key": "mobile.computers.own_tunnel.install_note",
+      "current": "macOS：写入可自动重启的守护进程，生成中继密码并存入你的钥匙串。",
+      "problem": "写入…守护进程 is a literal rendering of 'writes the daemon'. Chinese installs or configures a daemon; it does not write one. 你的钥匙串 also breaks the style guide's pronoun-drop rule. The 中继密码 choice is correct (see the ruling).",
+      "suggested": "macOS：安装可自动重启的守护进程，生成中继密码并存入钥匙串。"
+    },
+    {
+      "id": "ZHS2B1-04",
+      "severity": "MINOR",
+      "key": "mobile.computers.own_tunnel.verdict_forbidden + verdict_tls",
+      "current": "…请放行本应用…请确保… / 请使用…请替换…",
+      "problem": "The zh-CN style guide uses 请 only where the English says please (blocking dialogs). These two verdicts add 请 while their sibling verdicts (host, unreachable, timeout, local_network, password) do not, so the same failure box shifts register. The meaning is correct.",
+      "suggested": "verdict_forbidden: …需放行本应用；中继本身也会拒绝来源不符的请求，因此须确保隧道直接转发到{address}，而不是转发到某个控制面板或其他应用。 verdict_tls: …改用隧道输出的{scheme}地址，或换用证书能被手机信任的隧道；如果隧道由你自己运行，则替换其自签名证书——应用不会跳过证书校验。"
+    },
+    {
+      "id": "ZHS2B1-05",
+      "severity": "NIT",
+      "key": "verdict_timeout, verdict_local_network_ios, verdict_local_network",
+      "current": "检查…电脑是否未休眠",
+      "problem": "是否未休眠 is a double negative ('whether it is not asleep') and is slightly clumsy.",
+      "suggested": "检查…电脑是否处于唤醒状态"
+    },
+    {
+      "id": "ZHS2B1-06",
+      "severity": "NIT",
+      "key": "mobile.computers.own_tunnel.verdict_password",
+      "current": "密码未被接受。检查电脑上设置的中继密码。",
+      "problem": "未被接受 is a passive calque. 被拒绝 is the natural verb and matches 证书被拒绝 in verdict_tls.",
+      "suggested": "密码被拒绝。检查电脑上设置的中继密码。"
+    }
+  ],
+  "source_findings": [
+    {
+      "id": "ZHS2B1-S1",
+      "severity": "MINOR",
+      "kind": "SOURCE",
+      "file": "src/i18n/catalogues/en/mobile.computers.json:126 (call site src/features/auth/tunnel-verdict.ts:133; text originates d1fd63d3)",
+      "key": "mobile.computers.own_tunnel.verdict_forbidden",
+      "problem": "'the relay itself also refuses requests it did not come from' is garbled: 'it' has no sensible referent. The relay's real behaviour (~/local-operator local_operator/mobile/daemon.py:5698-5715, cross_origin_mutation) is a same-origin check that returns 403 'same-origin request required'. The translator's 来源不符的请求 carries the intended meaning, so this is not a translation fault.",
+      "suggested_english": "…the relay itself also refuses requests from any other origin, so make sure the tunnel forwards straight to {address} rather than to a dashboard or another app."
+    }
+  ],
+  "rulings_on_translator_flags": {
+    "verdict_forbidden": "ACCEPT 来源不符的请求: it renders the intended same-origin rule faithfully. The English source is defective; see ZHS2B1-S1. The 请 register is covered by ZHS2B1-04.",
+    "install_note": "ACCEPT 'portal password' → 中继密码. It is the same secret the screen's password field labels 中继密码 (own_tunnel.password_label) and the one rotate_note says the app asks for. 'Portal password' is the daemon CLI's own wording (tunnel-commands.ts:7-8), so its English output will still say 'portal password'. A second Chinese term would add confusion, not clarity.",
+    "verdict_offline_detail": "ACCEPT {detail}。. The 。 is the Chinese message's own sentence separator, which the note asks to be localized, and {detail} carries no final stop. A half-width '. ' would put Latin punctuation and a space before CJK, against the style guide's punctuation and no-space rules. The rendered result is 'Tunnel temporarily unavailable。在该电脑上运行：lop mobile status'."
+  },
+  "per_key_results": [
+    {
+      "key": "mobile.computers.own_tunnel.install_label",
+      "role": "heading",
+      "english": "Install on the computer",
+      "zh": "在电脑上安装",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.foreground_label",
+      "role": "heading",
+      "english": "Or run it in the foreground",
+      "zh": "或在前台运行",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.check_label",
+      "role": "heading",
+      "english": "Check it",
+      "zh": "检查状态",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.rotate_label",
+      "role": "heading",
+      "english": "Set or rotate the password",
+      "zh": "设置或更换密码",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.install_note",
+      "role": "help",
+      "english": "macOS: writes the supervised daemon, generates the portal password and keeps it in your keychain.",
+      "zh": "macOS：写入可自动重启的守护进程，生成中继密码并存入你的钥匙串。",
+      "placeholders": [],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-03"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.foreground_note",
+      "role": "help",
+      "english": "Any other platform, or when you would rather watch the log. It serves {address}, loopback only.",
+      "zh": "适用于其他任何平台，或你更想直接查看日志时。它在{address}上提供服务，只接受来自本机的连接。",
+      "placeholders": [
+        "address"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.check_note",
+      "role": "help",
+      "english": "Health, the state of the auth gate, and the sessions the phone will see.",
+      "zh": "运行状况、身份验证门禁的状态，以及手机将看到的会话。",
+      "placeholders": [],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-02"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.rotate_note",
+      "role": "help",
+      "english": "Asks you interactively, so the value never reaches a shell history or a process list. This is the password the app asks for below.",
+      "zh": "以交互方式询问密码，因此它绝不会出现在shell历史记录或进程列表中。应用在下方要求输入的就是这个密码。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.cloudflare_note",
+      "role": "help",
+      "english": "Free and needs no account for a quick tunnel. It prints the {scheme} URL to paste below.",
+      "zh": "免费，使用快速隧道无需账户。它会输出一个{scheme}URL，将其粘贴到下方。",
+      "placeholders": [
+        "scheme"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.ngrok_note",
+      "role": "help",
+      "english": "Needs an ngrok account. It prints the {scheme} URL to paste below.",
+      "zh": "需要ngrok账户。它会输出一个{scheme}URL，将其粘贴到下方。",
+      "placeholders": [
+        "scheme"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.tunnel_rule",
+      "role": "help",
+      "english": "Any tunnel works as long as it forwards a public HTTPS URL to {address} on that computer.",
+      "zh": "任何隧道都可以，只要它能将公网HTTPS URL转发到那台电脑上的{address}。",
+      "placeholders": [
+        "address"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_sessions",
+      "role": "help",
+      "english": "Connected — you can see {sessions, plural, one {# session} other {# sessions}}.",
+      "zh": "已连接——可以看到{sessions, plural, other {# 个会话}}。",
+      "placeholders": [
+        "sessions"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_password",
+      "role": "help",
+      "english": "That password was not accepted. Check the relay password on the computer.",
+      "zh": "密码未被接受。检查电脑上设置的中继密码。",
+      "placeholders": [],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-06"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_forbidden",
+      "role": "help",
+      "english": "That tunnel refused the app. If you put an access policy or a login page in front of it, allow the app through; the relay itself also refuses requests it did not come from, so make sure the tunnel forwards straight to {address} rather than to a dashboard or another app.",
+      "zh": "该隧道拒绝了本应用。如果你在隧道前设置了访问策略或登录页面，请放行本应用；中继本身也会拒绝来源不符的请求，因此请确保隧道直接转发到{address}，而不是转发到某个控制面板或其他应用。",
+      "placeholders": [
+        "address"
+      ],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-04",
+        "ZHS2B1-S1(source)"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+      "role": "help",
+      "english": "{detail}. On that computer: {command}",
+      "zh": "{detail}。在该电脑上运行：{command}",
+      "placeholders": [
+        "command",
+        "detail"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_offline",
+      "role": "help",
+      "english": "The tunnel answered, but the relay behind it is not. On that computer: {command}",
+      "zh": "隧道有响应，但其后的中继没有响应。在该电脑上运行：{command}",
+      "placeholders": [
+        "command"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_tls",
+      "role": "help",
+      "english": "That tunnel's certificate was rejected. Use the {scheme} address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate on the one you run — the app will not skip the check.",
+      "zh": "该隧道的证书被拒绝。请使用隧道输出的{scheme}地址，或改用证书能被手机信任的隧道；如果隧道由你自己运行，请替换其自签名证书——应用不会跳过证书校验。",
+      "placeholders": [
+        "scheme"
+      ],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-04"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_host",
+      "role": "help",
+      "english": "That host name could not be found. Check the address for a typo, and that the tunnel still publishes that name.",
+      "zh": "找不到该主机名。检查地址是否有拼写错误，以及隧道是否仍在发布该名称。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_unreachable",
+      "role": "help",
+      "english": "The address could not be reached. Check the URL is the public one your tunnel printed, and that the tunnel is still running.",
+      "zh": "无法访问该地址。检查URL是否为隧道输出的公网地址，以及隧道是否仍在运行。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_timeout",
+      "role": "help",
+      "english": "That address did not answer within {seconds, plural, one {# second} other {# seconds}}. Check the tunnel is running and the computer is awake.",
+      "zh": "该地址在{seconds, plural, other {# 秒}}内没有响应。检查隧道是否正在运行，以及电脑是否未休眠。",
+      "placeholders": [
+        "seconds"
+      ],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-05"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+      "role": "help",
+      "english": "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, it may be the local-network permission: allow Local Operator under Settings → Privacy & Security → Local Network, then tap {action}.",
+      "zh": "此网络中该地址没有任何响应。检查电脑是否未休眠且正在运行中继。如果两者都没问题，可能是本地网络权限所致：前往“设置”→“隐私与安全性”→“本地网络”，允许Local Operator，然后轻点“{action}”。",
+      "placeholders": [
+        "action"
+      ],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-05"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_local_network",
+      "role": "help",
+      "english": "Nothing answered at that address on this network. Check the computer is awake and running the relay, then tap {action}.",
+      "zh": "此网络中该地址没有任何响应。检查电脑是否未休眠且正在运行中继，然后轻点“{action}”。",
+      "placeholders": [
+        "action"
+      ],
+      "result": "ok_with_findings",
+      "findings": [
+        "ZHS2B1-01",
+        "ZHS2B1-05"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_refused",
+      "role": "help",
+      "english": "That address answered, but not in a way this app understands.",
+      "zh": "该地址有响应，但本应用无法识别其响应内容。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.remedy",
+      "role": "help",
+      "english": "On that computer: {command}",
+      "zh": "在该电脑上运行：{command}",
+      "placeholders": [
+        "command"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_other",
+      "role": "help",
+      "english": "This phone keeps one relay password, and it belongs to another address. Enter this computer's password, test it, then save. It replaces the other one.",
+      "zh": "此手机只能保存一个中继密码，当前保存的属于另一个地址。输入这台电脑的密码，测试后再保存。保存后将替换原有密码。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_empty",
+      "role": "help",
+      "english": "This phone has no relay password saved. Enter this computer's password, test it, then save.",
+      "zh": "此手机尚未保存中继密码。输入这台电脑的密码，测试后再保存。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_this",
+      "role": "help",
+      "english": "This phone's saved relay password is for this address. Test it, then save.",
+      "zh": "此手机已保存的中继密码对应此地址。测试后再保存。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.common.copy",
+      "role": "button",
+      "english": "Copy",
+      "zh": "复制",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.common.copied",
+      "role": "status",
+      "english": "Copied",
+      "zh": "已复制",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.common.copy_command_hint",
+      "role": "help",
+      "english": "Copies the {label} command",
+      "zh": "复制“{label}”命令",
+      "placeholders": [
+        "label"
+      ],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.not_saved",
+      "role": "help",
+      "english": "The password is not saved, so the app asks for it on each launch.",
+      "zh": "密码未保存，因此应用每次启动时都会要求输入。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.kept_secure",
+      "role": "help",
+      "english": "The address and the password are kept in this phone's secure store.",
+      "zh": "地址和密码保存在此手机的安全存储中。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.edit",
+      "role": "button",
+      "english": "Edit",
+      "zh": "编辑",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.test_again",
+      "role": "button",
+      "english": "Test again",
+      "zh": "重新测试",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove",
+      "role": "button",
+      "english": "Remove",
+      "zh": "移除",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.password_placeholder",
+      "role": "help",
+      "english": "The password the relay was started with",
+      "zh": "启动中继时使用的密码",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.runtime_title",
+      "role": "heading",
+      "english": "This runtime cannot store it",
+      "zh": "当前环境无法保存隧道",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.runtime_body",
+      "role": "help",
+      "english": "This build has no secure keystore, so the tunnel lasts for this run only. On a phone the value is kept in the platform's secure store.",
+      "zh": "此版本没有安全密钥库，因此隧道仅在本次运行期间有效。在手机上，这些信息会保存在系统的安全存储中。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.before_saving",
+      "role": "help",
+      "english": "Test the address before saving it: a saved tunnel that has never answered leaves the list empty with nothing to explain why.",
+      "zh": "保存前先测试地址：从未响应过的隧道一旦保存，列表会一直为空，且无从得知原因。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove_title",
+      "role": "heading",
+      "english": "Remove this tunnel?",
+      "zh": "移除此隧道？",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove_body",
+      "role": "help",
+      "english": "This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account.",
+      "zh": "此操作会清除此手机上的地址和密码，不会影响你的电脑、你运行的隧道或任何账户。",
+      "placeholders": [],
+      "result": "ok",
+      "findings": []
+    }
+  ],
+  "artifacts": [
+    "record.json",
+    "report.md",
+    "audit.log"
+  ],
+  "audit_notes_not_execution_log": "report.md is the human-readable finding record; audit.log is the execution log of the commands actually run"
+}

@@ -1,0 +1,22 @@
+# audit.log — ru round 2 delta (rus2b1r2) — 2026-11-13 — execution log; commands actually run by i18n-auditor session cc90c83e0469, anthropic/claude-opus-5-5
+$ shasum -a 256 brief-s2b1-v2.json ru/draft-ru.json ru/draft-ru-v2.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+988c530ec3d6553103b592ab6eb53708884821d020cf4b1a78bd34e5cc61b550  ru/draft-ru.json
+fbc01f008951c271080826558befa4e7b74d8a5241abe7b918342271e4176b15  ru/draft-ru-v2.json   (all MATCH)
+$ cat ru/notes-ru-v2.md; cat audits/ru/report.md; head audits/ru/record.json, audits/ru/audit.log
+$ python (eval): key order v1/v2 == brief -> 41 True True
+  changed = [foreground_note, check_note, verdict_host, verdict_local_network_ios, settings.runtime_title] (== notes list)
+  difflib opcodes: foreground_note delete 'э'; check_note insert 'писок с' + 'и'->'й'; verdict_host moved/added 'по-прежнему', removed ' до сих пор'; ios 'разреш'->'включ'; runtime_title rewritten
+  foreground_note masked word code points: U+0420 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440
+  'redact' in v2 file -> False; Cc/Cf chars -> []
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a log -1 --format=%H -> 254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c
+$ node --max-old-space-size=256 --experimental-strip-types $SCRATCH/parse-ru-r2.mts (cwd worktree; MODULE_TYPELESS warnings filtered)
+RENDER foreground_note params address,text => …работает на 127.0.0.1:4098 и доступен только с того же компьютера.
+RENDER check_note params (none) => Работоспособность, состояние проверки пароля и список сессий, которые увидит телефон.
+RENDER verdict_host params (none) => Имя хоста не найдено. Проверьте, нет ли в адресе опечатки и по-прежнему ли туннель публикует это имя.
+RENDER verdict_local_network_ios params action,text => …включите его для Local Operator в разделе Настройки → Конфиденциальность и безопасность → Локальная сеть, затем нажмите «Проверить подключение».
+RENDER runtime_title params (none) => Эта сборка не сохраняет туннель
+verdict_sessions arms: one/few/many/other; verdict_timeout arms: one/few/many/other
+{"keys":41,"parse_failures":0,"placeholder_mismatches":0,"changed":[5 keys as above]}
+script sha256 b9d19fc63ae867bcb1b0541478ada052bf1f190e654637f4f02727b156a20665; output sha256 35c41b7517f2a50631d855f51df911d23f56dc578fdf7ec47eba9c13cb2d2917
+$ shasum audits/ru/record.json 9fc9db2e…, audits/ru/report.md 9ed30f3c…, ru/notes-ru-v2.md 701756f7…

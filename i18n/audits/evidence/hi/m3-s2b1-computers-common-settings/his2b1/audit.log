@@ -1,0 +1,25 @@
+# audit.log his2b1 — execution log of commands actually run by i18n-auditor session 3c631e8c8e6f, 2026-11-13T13:07:42Z
+$ shasum -a 256 brief-s2b1-v2.json hi/draft-hi.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+2ff6e86a39a38e670efd4266b809744e989b4a809f42a8a4f3dde395212b8d2c  hi/draft-hi.json
+$ git -C .worktrees/i18n-m3-s2a log -1 --format=%h
+254e6fba
+$ node --max-old-space-size=256 --experimental-strip-types hi-parse.mts (repo src/i18n/messages.ts)
+keys 41 41 missing [] extra [] order-same true
+verdict_sessions 0 one => कनेक्ट हो गया — आपको 0 सत्र दिख रहा है।
+verdict_sessions 1 one => कनेक्ट हो गया — आपको 1 सत्र दिख रहा है।
+verdict_sessions 2 other => कनेक्ट हो गया — आपको 2 सत्र दिख रहे हैं।
+verdict_sessions 10 other => कनेक्ट हो गया — आपको 10 सत्र दिख रहे हैं।
+verdict_timeout 0 one => उस पते ने 0 सेकंड के भीतर जवाब नहीं दिया। जाँचें कि टनल चल रही है और कंप्यूटर स्लीप में नहीं है।
+verdict_timeout 1 one => उस पते ने 1 सेकंड के भीतर जवाब नहीं दिया। जाँचें कि टनल चल रही है और कंप्यूटर स्लीप में नहीं है।
+verdict_timeout 2 other => उस पते ने 2 सेकंड के भीतर जवाब नहीं दिया। जाँचें कि टनल चल रही है और कंप्यूटर स्लीप में नहीं है।
+verdict_timeout 10 other => उस पते ने 10 सेकंड के भीतर जवाब नहीं दिया। जाँचें कि टनल चल रही है और कंप्यूटर स्लीप में नहीं है।
+fail 0
+$ node ... hi-neg.mts
+neg-control throws: RangeError
+neg-control throws: RangeError
+neg-control throws: RangeError
+brief==en 41 /41; already in hi catalogue 0
+$ git grep ऐक्सेस/एक्सेस ffbda180 hi catalogues: ऐक्सेस 2, एक्सेस 1
+$ grep -c redacted brief draft: 0 0
+# parse scripts retained at /Users/damian/.local-operator/sessions/3c631e8c8e6f/scratchpad/hi-parse.mts, hi-neg.mts

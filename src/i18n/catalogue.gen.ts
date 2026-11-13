@@ -76,6 +76,9 @@ export type CatalogueKey =
 	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
+	| "mobile.common.copied"
+	| "mobile.common.copy"
+	| "mobile.common.copy_command_hint"
 	| "mobile.common.done"
 	| "mobile.common.not_found.action"
 	| "mobile.common.not_found.headline"
@@ -123,18 +126,32 @@ export type CatalogueKey =
 	| "mobile.computers.list.heading"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.not_harness"
+	| "mobile.computers.own_tunnel.check_label"
+	| "mobile.computers.own_tunnel.check_note"
+	| "mobile.computers.own_tunnel.cloudflare_note"
+	| "mobile.computers.own_tunnel.foreground_label"
+	| "mobile.computers.own_tunnel.foreground_note"
 	| "mobile.computers.own_tunnel.insecure_allow"
 	| "mobile.computers.own_tunnel.insecure_allowed"
 	| "mobile.computers.own_tunnel.insecure_hint"
 	| "mobile.computers.own_tunnel.insecure_off_help"
 	| "mobile.computers.own_tunnel.insecure_on_help"
+	| "mobile.computers.own_tunnel.install_label"
+	| "mobile.computers.own_tunnel.install_note"
 	| "mobile.computers.own_tunnel.intro"
 	| "mobile.computers.own_tunnel.need_address"
 	| "mobile.computers.own_tunnel.need_test"
+	| "mobile.computers.own_tunnel.ngrok_note"
 	| "mobile.computers.own_tunnel.password_for"
 	| "mobile.computers.own_tunnel.password_label"
+	| "mobile.computers.own_tunnel.password_slot_empty"
+	| "mobile.computers.own_tunnel.password_slot_other"
+	| "mobile.computers.own_tunnel.password_slot_this"
 	| "mobile.computers.own_tunnel.private_host"
 	| "mobile.computers.own_tunnel.public_host"
+	| "mobile.computers.own_tunnel.remedy"
+	| "mobile.computers.own_tunnel.rotate_label"
+	| "mobile.computers.own_tunnel.rotate_note"
 	| "mobile.computers.own_tunnel.save_connect"
 	| "mobile.computers.own_tunnel.saving"
 	| "mobile.computers.own_tunnel.security_body"
@@ -148,11 +165,24 @@ export type CatalogueKey =
 	| "mobile.computers.own_tunnel.test"
 	| "mobile.computers.own_tunnel.testing"
 	| "mobile.computers.own_tunnel.title"
+	| "mobile.computers.own_tunnel.tunnel_rule"
 	| "mobile.computers.own_tunnel.unencrypted_body"
 	| "mobile.computers.own_tunnel.unencrypted_title"
 	| "mobile.computers.own_tunnel.url_label"
+	| "mobile.computers.own_tunnel.verdict_forbidden"
+	| "mobile.computers.own_tunnel.verdict_host"
+	| "mobile.computers.own_tunnel.verdict_local_network"
+	| "mobile.computers.own_tunnel.verdict_local_network_ios"
 	| "mobile.computers.own_tunnel.verdict_not_yet"
+	| "mobile.computers.own_tunnel.verdict_offline"
+	| "mobile.computers.own_tunnel.verdict_offline_detail"
 	| "mobile.computers.own_tunnel.verdict_ok"
+	| "mobile.computers.own_tunnel.verdict_password"
+	| "mobile.computers.own_tunnel.verdict_refused"
+	| "mobile.computers.own_tunnel.verdict_sessions"
+	| "mobile.computers.own_tunnel.verdict_timeout"
+	| "mobile.computers.own_tunnel.verdict_tls"
+	| "mobile.computers.own_tunnel.verdict_unreachable"
 	| "mobile.computers.own_tunnel_instead"
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.paths.own_action"
@@ -529,6 +559,17 @@ export type CatalogueKey =
 	| "mobile.settings.diagnostics.stream_idle"
 	| "mobile.settings.diagnostics.stream_live"
 	| "mobile.settings.diagnostics.stream_offline"
+	| "mobile.settings.own_tunnel.before_saving"
+	| "mobile.settings.own_tunnel.edit"
+	| "mobile.settings.own_tunnel.kept_secure"
+	| "mobile.settings.own_tunnel.not_saved"
+	| "mobile.settings.own_tunnel.password_placeholder"
+	| "mobile.settings.own_tunnel.remove"
+	| "mobile.settings.own_tunnel.remove_body"
+	| "mobile.settings.own_tunnel.remove_title"
+	| "mobile.settings.own_tunnel.runtime_body"
+	| "mobile.settings.own_tunnel.runtime_title"
+	| "mobile.settings.own_tunnel.test_again"
 	| "mobile.settings.screen_title"
 	| "mobile.settings.section.about"
 	| "mobile.settings.section.appearance"
@@ -848,6 +889,8 @@ export type NoParamKey =
 	| "mobile.chrome.new_chat"
 	| "mobile.common.back"
 	| "mobile.common.cancel"
+	| "mobile.common.copied"
+	| "mobile.common.copy"
 	| "mobile.common.done"
 	| "mobile.common.not_found.action"
 	| "mobile.common.not_found.headline"
@@ -894,17 +937,27 @@ export type NoParamKey =
 	| "mobile.computers.list.heading"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.not_harness"
+	| "mobile.computers.own_tunnel.check_label"
+	| "mobile.computers.own_tunnel.check_note"
+	| "mobile.computers.own_tunnel.foreground_label"
 	| "mobile.computers.own_tunnel.insecure_allow"
 	| "mobile.computers.own_tunnel.insecure_allowed"
 	| "mobile.computers.own_tunnel.insecure_hint"
 	| "mobile.computers.own_tunnel.insecure_off_help"
 	| "mobile.computers.own_tunnel.insecure_on_help"
+	| "mobile.computers.own_tunnel.install_label"
+	| "mobile.computers.own_tunnel.install_note"
 	| "mobile.computers.own_tunnel.intro"
 	| "mobile.computers.own_tunnel.need_address"
 	| "mobile.computers.own_tunnel.need_test"
 	| "mobile.computers.own_tunnel.password_label"
+	| "mobile.computers.own_tunnel.password_slot_empty"
+	| "mobile.computers.own_tunnel.password_slot_other"
+	| "mobile.computers.own_tunnel.password_slot_this"
 	| "mobile.computers.own_tunnel.private_host"
 	| "mobile.computers.own_tunnel.public_host"
+	| "mobile.computers.own_tunnel.rotate_label"
+	| "mobile.computers.own_tunnel.rotate_note"
 	| "mobile.computers.own_tunnel.save_connect"
 	| "mobile.computers.own_tunnel.saving"
 	| "mobile.computers.own_tunnel.security_heading"
@@ -920,8 +973,12 @@ export type NoParamKey =
 	| "mobile.computers.own_tunnel.unencrypted_body"
 	| "mobile.computers.own_tunnel.unencrypted_title"
 	| "mobile.computers.own_tunnel.url_label"
+	| "mobile.computers.own_tunnel.verdict_host"
 	| "mobile.computers.own_tunnel.verdict_not_yet"
 	| "mobile.computers.own_tunnel.verdict_ok"
+	| "mobile.computers.own_tunnel.verdict_password"
+	| "mobile.computers.own_tunnel.verdict_refused"
+	| "mobile.computers.own_tunnel.verdict_unreachable"
 	| "mobile.computers.own_tunnel_instead"
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.paths.own_action"
@@ -1243,6 +1300,17 @@ export type NoParamKey =
 	| "mobile.settings.diagnostics.stream_idle"
 	| "mobile.settings.diagnostics.stream_live"
 	| "mobile.settings.diagnostics.stream_offline"
+	| "mobile.settings.own_tunnel.before_saving"
+	| "mobile.settings.own_tunnel.edit"
+	| "mobile.settings.own_tunnel.kept_secure"
+	| "mobile.settings.own_tunnel.not_saved"
+	| "mobile.settings.own_tunnel.password_placeholder"
+	| "mobile.settings.own_tunnel.remove"
+	| "mobile.settings.own_tunnel.remove_body"
+	| "mobile.settings.own_tunnel.remove_title"
+	| "mobile.settings.own_tunnel.runtime_body"
+	| "mobile.settings.own_tunnel.runtime_title"
+	| "mobile.settings.own_tunnel.test_again"
 	| "mobile.settings.screen_title"
 	| "mobile.settings.section.about"
 	| "mobile.settings.section.appearance"
@@ -1524,6 +1592,9 @@ export type MessageParams = {
 	"mobile.chrome.new_chat": NoParams;
 	"mobile.common.back": NoParams;
 	"mobile.common.cancel": NoParams;
+	"mobile.common.copied": NoParams;
+	"mobile.common.copy": NoParams;
+	"mobile.common.copy_command_hint": { label: string | number };
 	"mobile.common.done": NoParams;
 	"mobile.common.not_found.action": NoParams;
 	"mobile.common.not_found.headline": NoParams;
@@ -1571,18 +1642,32 @@ export type MessageParams = {
 	"mobile.computers.list.heading": NoParams;
 	"mobile.computers.none_on_phone": NoParams;
 	"mobile.computers.not_harness": NoParams;
+	"mobile.computers.own_tunnel.check_label": NoParams;
+	"mobile.computers.own_tunnel.check_note": NoParams;
+	"mobile.computers.own_tunnel.cloudflare_note": { scheme: string | number };
+	"mobile.computers.own_tunnel.foreground_label": NoParams;
+	"mobile.computers.own_tunnel.foreground_note": { address: string | number };
 	"mobile.computers.own_tunnel.insecure_allow": NoParams;
 	"mobile.computers.own_tunnel.insecure_allowed": NoParams;
 	"mobile.computers.own_tunnel.insecure_hint": NoParams;
 	"mobile.computers.own_tunnel.insecure_off_help": NoParams;
 	"mobile.computers.own_tunnel.insecure_on_help": NoParams;
+	"mobile.computers.own_tunnel.install_label": NoParams;
+	"mobile.computers.own_tunnel.install_note": NoParams;
 	"mobile.computers.own_tunnel.intro": NoParams;
 	"mobile.computers.own_tunnel.need_address": NoParams;
 	"mobile.computers.own_tunnel.need_test": NoParams;
+	"mobile.computers.own_tunnel.ngrok_note": { scheme: string | number };
 	"mobile.computers.own_tunnel.password_for": { name: string | number };
 	"mobile.computers.own_tunnel.password_label": NoParams;
+	"mobile.computers.own_tunnel.password_slot_empty": NoParams;
+	"mobile.computers.own_tunnel.password_slot_other": NoParams;
+	"mobile.computers.own_tunnel.password_slot_this": NoParams;
 	"mobile.computers.own_tunnel.private_host": NoParams;
 	"mobile.computers.own_tunnel.public_host": NoParams;
+	"mobile.computers.own_tunnel.remedy": { command: string | number };
+	"mobile.computers.own_tunnel.rotate_label": NoParams;
+	"mobile.computers.own_tunnel.rotate_note": NoParams;
 	"mobile.computers.own_tunnel.save_connect": NoParams;
 	"mobile.computers.own_tunnel.saving": NoParams;
 	"mobile.computers.own_tunnel.security_body": { command: string | number };
@@ -1596,11 +1681,24 @@ export type MessageParams = {
 	"mobile.computers.own_tunnel.test": NoParams;
 	"mobile.computers.own_tunnel.testing": NoParams;
 	"mobile.computers.own_tunnel.title": NoParams;
+	"mobile.computers.own_tunnel.tunnel_rule": { address: string | number };
 	"mobile.computers.own_tunnel.unencrypted_body": NoParams;
 	"mobile.computers.own_tunnel.unencrypted_title": NoParams;
 	"mobile.computers.own_tunnel.url_label": NoParams;
+	"mobile.computers.own_tunnel.verdict_forbidden": { address: string | number };
+	"mobile.computers.own_tunnel.verdict_host": NoParams;
+	"mobile.computers.own_tunnel.verdict_local_network": { action: string | number };
+	"mobile.computers.own_tunnel.verdict_local_network_ios": { action: string | number };
 	"mobile.computers.own_tunnel.verdict_not_yet": NoParams;
+	"mobile.computers.own_tunnel.verdict_offline": { command: string | number };
+	"mobile.computers.own_tunnel.verdict_offline_detail": { command: string | number; detail: string | number };
 	"mobile.computers.own_tunnel.verdict_ok": NoParams;
+	"mobile.computers.own_tunnel.verdict_password": NoParams;
+	"mobile.computers.own_tunnel.verdict_refused": NoParams;
+	"mobile.computers.own_tunnel.verdict_sessions": { sessions: number };
+	"mobile.computers.own_tunnel.verdict_timeout": { seconds: number };
+	"mobile.computers.own_tunnel.verdict_tls": { scheme: string | number };
+	"mobile.computers.own_tunnel.verdict_unreachable": NoParams;
 	"mobile.computers.own_tunnel_instead": NoParams;
 	"mobile.computers.password_placeholder": NoParams;
 	"mobile.computers.paths.own_action": NoParams;
@@ -1977,6 +2075,17 @@ export type MessageParams = {
 	"mobile.settings.diagnostics.stream_idle": NoParams;
 	"mobile.settings.diagnostics.stream_live": NoParams;
 	"mobile.settings.diagnostics.stream_offline": NoParams;
+	"mobile.settings.own_tunnel.before_saving": NoParams;
+	"mobile.settings.own_tunnel.edit": NoParams;
+	"mobile.settings.own_tunnel.kept_secure": NoParams;
+	"mobile.settings.own_tunnel.not_saved": NoParams;
+	"mobile.settings.own_tunnel.password_placeholder": NoParams;
+	"mobile.settings.own_tunnel.remove": NoParams;
+	"mobile.settings.own_tunnel.remove_body": NoParams;
+	"mobile.settings.own_tunnel.remove_title": NoParams;
+	"mobile.settings.own_tunnel.runtime_body": NoParams;
+	"mobile.settings.own_tunnel.runtime_title": NoParams;
+	"mobile.settings.own_tunnel.test_again": NoParams;
 	"mobile.settings.screen_title": NoParams;
 	"mobile.settings.section.about": NoParams;
 	"mobile.settings.section.appearance": NoParams;
@@ -2317,6 +2426,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.new_chat": "New chat",
 	"mobile.common.back": "Back",
 	"mobile.common.cancel": "Cancel",
+	"mobile.common.copied": "Copied",
+	"mobile.common.copy": "Copy",
+	"mobile.common.copy_command_hint": "Copies the {label} command",
 	"mobile.common.done": "Done",
 	"mobile.common.not_found.action": "Back to sessions",
 	"mobile.common.not_found.headline": "That page does not exist.",
@@ -2364,18 +2476,32 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.list.heading": "Your computers",
 	"mobile.computers.none_on_phone": "No computers on this phone yet.",
 	"mobile.computers.not_harness": "This computer is not running the Local Operator harness.",
+	"mobile.computers.own_tunnel.check_label": "Check it",
+	"mobile.computers.own_tunnel.check_note": "Health, the state of the auth gate, and the sessions the phone will see.",
+	"mobile.computers.own_tunnel.cloudflare_note": "Free and needs no account for a quick tunnel. It prints the {scheme} URL to paste below.",
+	"mobile.computers.own_tunnel.foreground_label": "Or run it in the foreground",
+	"mobile.computers.own_tunnel.foreground_note": "Any other platform, or when you would rather watch the log. It serves {address}, loopback only.",
 	"mobile.computers.own_tunnel.insecure_allow": "Allow a plain http:// address",
 	"mobile.computers.own_tunnel.insecure_allowed": "Plain http:// is allowed",
 	"mobile.computers.own_tunnel.insecure_hint": "Needed only for an address over http, which sends the password in the clear",
 	"mobile.computers.own_tunnel.insecure_off_help": "Over http:// your relay password crosses the network in the clear, so it is off unless you turn it on. Use https:// whenever the address supports it.",
 	"mobile.computers.own_tunnel.insecure_on_help": "On: the relay password and everything you send cross this network unencrypted. Only do this on a network you trust.",
+	"mobile.computers.own_tunnel.install_label": "Install on the computer",
+	"mobile.computers.own_tunnel.install_note": "macOS: writes the supervised daemon, generates the portal password and keeps it in your keychain.",
 	"mobile.computers.own_tunnel.intro": "No Radient account is needed for any of this. You publish the relay on your own computer through a tunnel you control, and the app talks to it through the address you paste below.",
 	"mobile.computers.own_tunnel.need_address": "Paste your tunnel's address to continue.",
 	"mobile.computers.own_tunnel.need_test": "Test the connection first — a tunnel that has not answered once is not one to save.",
+	"mobile.computers.own_tunnel.ngrok_note": "Needs an ngrok account. It prints the {scheme} URL to paste below.",
 	"mobile.computers.own_tunnel.password_for": "Enter the password for {name}",
 	"mobile.computers.own_tunnel.password_label": "Relay password",
+	"mobile.computers.own_tunnel.password_slot_empty": "This phone has no relay password saved. Enter this computer's password, test it, then save.",
+	"mobile.computers.own_tunnel.password_slot_other": "This phone keeps one relay password, and it belongs to another address. Enter this computer's password, test it, then save. It replaces the other one.",
+	"mobile.computers.own_tunnel.password_slot_this": "This phone's saved relay password is for this address. Test it, then save.",
 	"mobile.computers.own_tunnel.private_host": "This address is on your own network, so the exposure is limited to it.",
 	"mobile.computers.own_tunnel.public_host": "This address is not a private one — anything between this phone and it can read the password.",
+	"mobile.computers.own_tunnel.remedy": "On that computer: {command}",
+	"mobile.computers.own_tunnel.rotate_label": "Set or rotate the password",
+	"mobile.computers.own_tunnel.rotate_note": "Asks you interactively, so the value never reaches a shell history or a process list. This is the password the app asks for below.",
 	"mobile.computers.own_tunnel.save_connect": "Save and connect",
 	"mobile.computers.own_tunnel.saving": "Saving…",
 	"mobile.computers.own_tunnel.security_body": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and rotate the password with `{command}` if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
@@ -2389,11 +2515,24 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.own_tunnel.test": "Test the connection",
 	"mobile.computers.own_tunnel.testing": "Testing…",
 	"mobile.computers.own_tunnel.title": "Your own tunnel",
+	"mobile.computers.own_tunnel.tunnel_rule": "Any tunnel works as long as it forwards a public HTTPS URL to {address} on that computer.",
 	"mobile.computers.own_tunnel.unencrypted_body": "Turn the opt-in on to use it, or give an https:// address — a tunnel normally prints one.",
 	"mobile.computers.own_tunnel.unencrypted_title": "This address is unencrypted",
 	"mobile.computers.own_tunnel.url_label": "Public URL",
+	"mobile.computers.own_tunnel.verdict_forbidden": "That tunnel refused the app. If you put an access policy or a login page in front of it, allow the app through; the relay itself also refuses requests from any other origin, so make sure the tunnel forwards straight to {address} rather than to a dashboard or another app.",
+	"mobile.computers.own_tunnel.verdict_host": "That host name could not be found. Check the address for a typo, and that the tunnel still publishes that name.",
+	"mobile.computers.own_tunnel.verdict_local_network": "Nothing answered at that address on this network. Check the computer is awake and running the relay, then tap {action}.",
+	"mobile.computers.own_tunnel.verdict_local_network_ios": "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, it may be the local-network permission: allow Local Operator under Settings → Privacy & Security → Local Network, then tap {action}.",
 	"mobile.computers.own_tunnel.verdict_not_yet": "Not yet",
+	"mobile.computers.own_tunnel.verdict_offline": "The tunnel answered, but the relay behind it is not. On that computer: {command}",
+	"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}. On that computer: {command}",
 	"mobile.computers.own_tunnel.verdict_ok": "Connected",
+	"mobile.computers.own_tunnel.verdict_password": "That password was not accepted. Check the relay password on the computer.",
+	"mobile.computers.own_tunnel.verdict_refused": "That address answered, but not in a way this app understands.",
+	"mobile.computers.own_tunnel.verdict_sessions": "Connected — you can see {sessions, plural, one {# session} other {# sessions}}.",
+	"mobile.computers.own_tunnel.verdict_timeout": "That address did not answer within {seconds, plural, one {# second} other {# seconds}}. Check the tunnel is running and the computer is awake.",
+	"mobile.computers.own_tunnel.verdict_tls": "That tunnel's certificate was rejected. Use the {scheme} address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate on the one you run — the app will not skip the check.",
+	"mobile.computers.own_tunnel.verdict_unreachable": "The address could not be reached. Check the URL is the public one your tunnel printed, and that the tunnel is still running.",
 	"mobile.computers.own_tunnel_instead": "Use my own tunnel instead",
 	"mobile.computers.password_placeholder": "The password from lop mobile",
 	"mobile.computers.paths.own_action": "Use my own tunnel",
@@ -2770,6 +2909,17 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.diagnostics.stream_idle": "idle",
 	"mobile.settings.diagnostics.stream_live": "live",
 	"mobile.settings.diagnostics.stream_offline": "offline",
+	"mobile.settings.own_tunnel.before_saving": "Test the address before saving it: a saved tunnel that has never answered leaves the list empty with nothing to explain why.",
+	"mobile.settings.own_tunnel.edit": "Edit",
+	"mobile.settings.own_tunnel.kept_secure": "The address and the password are kept in this phone's secure store.",
+	"mobile.settings.own_tunnel.not_saved": "The password is not saved, so the app asks for it on each launch.",
+	"mobile.settings.own_tunnel.password_placeholder": "The password the relay was started with",
+	"mobile.settings.own_tunnel.remove": "Remove",
+	"mobile.settings.own_tunnel.remove_body": "This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account.",
+	"mobile.settings.own_tunnel.remove_title": "Remove this tunnel?",
+	"mobile.settings.own_tunnel.runtime_body": "This build has no secure keystore, so the tunnel lasts for this run only. On a phone the value is kept in the platform's secure store.",
+	"mobile.settings.own_tunnel.runtime_title": "This runtime cannot store it",
+	"mobile.settings.own_tunnel.test_again": "Test again",
 	"mobile.settings.screen_title": "Settings",
 	"mobile.settings.section.about": "About",
 	"mobile.settings.section.appearance": "Appearance",
@@ -3095,6 +3245,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.new_chat": { role: "button", note: "Accessible name of the square-pen button in the sidebar header that starts a new conversation. No final full stop." },
 	"mobile.common.back": { role: "button", note: "Affordance label of a text button that returns to the previous screen. A verb used as a label, no final full stop. LIMIT: navigation only; never 'undo', never a step back inside a form, and never used where the destination is named (a button saying 'Back to the library' is its own string)." },
 	"mobile.common.cancel": { role: "button", note: "Aborts the current sheet or form without saving; a verb used as a label, no final full stop. LIMIT: never the confirm action of a destructive dialog and never a dialog's 'keep it' choice that needs its own wording; screens with different intent use their own key." },
+	"mobile.common.copied": { role: "status", note: "The same button's label right after the copy succeeded. One word, no final full stop." },
+	"mobile.common.copy": { role: "button", note: "Small button beside a command the reader runs on their computer (own-tunnel and Radient set-up screens): copies the command to the clipboard. One word, no final full stop." },
+	"mobile.common.copy_command_hint": { role: "help", note: "Screen-reader hint on the Copy button beside a command block. {label} is the block's own label, already translated (e.g. \"Install on the computer\") or a product name (\"Cloudflare\", \"ngrok\"). No final full stop." },
 	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
 	"mobile.common.not_found.action": { role: "button", note: "Button on the not-found screen that goes to the session list. Short, no final full stop." },
 	"mobile.common.not_found.headline": { role: "status", note: "Empty-state headline on the not-found screen. Sentence with a final full stop." },
@@ -3142,18 +3295,32 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.list.heading": { role: "heading", note: "Section header above the list of computers on the Radient account on the computers screen. Plural noun phrase, no punctuation." },
 	"mobile.computers.none_on_phone": { role: "status", note: "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop." },
 	"mobile.computers.not_harness": { role: "status", note: "Muted line on a computer row in the Your computers list when the account lists the computer but it is not running the Local Operator harness. Full sentence with a full stop. 'Local Operator' is the product name: keep it in Latin script." },
-	"mobile.computers.own_tunnel.insecure_allow": { role: "button", note: "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
-	"mobile.computers.own_tunnel.insecure_allowed": { role: "status", note: "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
+	"mobile.computers.own_tunnel.check_label": { role: "heading", note: "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the command (`lop mobile status`) reports whether the relay is healthy. Under it the app shows the exact command, copied verbatim; the command is never translated. Short imperative, no final full stop." },
+	"mobile.computers.own_tunnel.check_note": { role: "help", note: "One phrase under the \"Check it\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), listing what the command reports. \"Auth gate\" is the password check in front of the relay." },
+	"mobile.computers.own_tunnel.cloudflare_note": { role: "help", note: "One sentence under the Cloudflare tunnel command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the block's label is the product name \"Cloudflare\" and stays untranslated. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right." },
+	"mobile.computers.own_tunnel.foreground_label": { role: "heading", note: "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the alternative to installing, running the relay in a terminal window (\"foreground\" as opposed to a background service). Under it the app shows the exact command, copied verbatim; the command is never translated. No final full stop." },
+	"mobile.computers.own_tunnel.foreground_note": { role: "help", note: "One sentence under the \"Or run it in the foreground\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right. \"Loopback only\" means reachable from this same computer only." },
+	"mobile.computers.own_tunnel.insecure_allow": { role: "button", note: "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a). Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.insecure_allowed": { role: "status", note: "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a). Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
 	"mobile.computers.own_tunnel.insecure_hint": { role: "help", note: "Screen-reader hint (not shown on screen) of the plain-http toggle on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http\" is the protocol name: keep it. No final full stop." },
 	"mobile.computers.own_tunnel.insecure_off_help": { role: "help", note: "Line under the plain-http toggle while it is OFF on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" and \"https://\" are literal schemes: keep them unchanged and left-to-right. \"It\" is the opt-in. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
 	"mobile.computers.own_tunnel.insecure_on_help": { role: "help", note: "Line under the plain-http toggle while it is ON on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Starts by stating the toggle's state; a warning, keep it direct." },
+	"mobile.computers.own_tunnel.install_label": { role: "heading", note: "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), step \"On the computer\". The command under it is `lop mobile install` (macOS). Under it the app shows the exact command, copied verbatim; the command is never translated. Short, no final full stop." },
+	"mobile.computers.own_tunnel.install_note": { role: "help", note: "One sentence under the \"Install on the computer\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"macOS\" is the operating system name: keep it as is. \"Daemon\" is a background service that is restarted if it stops; \"keychain\" is the macOS password store (use the term Apple uses in your language)." },
 	"mobile.computers.own_tunnel.intro": { role: "help", note: "Opening paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Radient is a brand name: keep it. The relay is the small server on the reader's computer; a tunnel is a service that gives it a public address." },
 	"mobile.computers.own_tunnel.need_address": { role: "help", note: "Line under the buttons on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) while the address field is empty, explaining why Save and connect is disabled." },
 	"mobile.computers.own_tunnel.need_test": { role: "help", note: "Line under the buttons on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when an address is typed but no test has succeeded, explaining why Save and connect is disabled. \"Test the connection\" names the button above; translate it the same way." },
+	"mobile.computers.own_tunnel.ngrok_note": { role: "help", note: "One sentence under the ngrok tunnel command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"ngrok\" is a product name: keep it exactly, lower case, in Latin script. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.password_for": { role: "heading", note: "Heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the phone already knows the computer and only its password is missing. {name} is the computer's name as the reader saved it; keep it unchanged. No final full stop." },
-	"mobile.computers.own_tunnel.password_label": { role: "meta", note: "Visible label and accessible name of the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). The relay is the small server on the reader's computer that the app talks to. Two or three words, no final full stop." },
+	"mobile.computers.own_tunnel.password_label": { role: "meta", note: "Visible label and accessible name of the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). The relay is the small server on the reader's computer that the app talks to. Two or three words, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.password_slot_empty": { role: "help", note: "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when no password is saved on the phone yet." },
+	"mobile.computers.own_tunnel.password_slot_other": { role: "help", note: "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's single saved password belongs to a different computer." },
+	"mobile.computers.own_tunnel.password_slot_this": { role: "help", note: "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's saved password already belongs to this address." },
 	"mobile.computers.own_tunnel.private_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is a private (home or office network) one." },
 	"mobile.computers.own_tunnel.public_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is reachable on the public internet. Keep the warning strong." },
+	"mobile.computers.own_tunnel.remedy": { role: "help", note: "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right." },
+	"mobile.computers.own_tunnel.rotate_label": { role: "heading", note: "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the command (`lop mobile password`) sets a new relay password. \"Rotate\" means replace with a new one. Under it the app shows the exact command, copied verbatim; the command is never translated. No final full stop." },
+	"mobile.computers.own_tunnel.rotate_note": { role: "help", note: "Two sentences under the \"Set or rotate the password\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"Shell history\" and \"process list\" are the places a typed command line is recorded on a computer; use the usual technical terms in your language." },
 	"mobile.computers.own_tunnel.save_connect": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that stores the address and password on this phone and connects. Enabled only after a successful test. Sentence case, no final full stop." },
 	"mobile.computers.own_tunnel.saving": { role: "status", note: "The same button's label while saving and connecting on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis." },
 	"mobile.computers.own_tunnel.security_body": { role: "help", note: "Security advice paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). {command} is a terminal command (lop mobile password): keep the placeholder and its backticks unchanged. HTTPS and URL are technical terms; keep them recognisable." },
@@ -3164,19 +3331,32 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.step_publish": { role: "heading", note: "Step 2 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"2.\" is shown before it, so do not add a number. \"It\" is the relay: make it reachable from the internet through a tunnel. No final full stop." },
 	"mobile.computers.own_tunnel.step_test": { role: "heading", note: "Step 4 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"4.\" is shown before it, so do not add a number. \"It\" is the connection. No final full stop." },
 	"mobile.computers.own_tunnel.step_test_help": { role: "help", note: "Help under step 4 on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), above the Test the connection button." },
-	"mobile.computers.own_tunnel.test": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that makes a real request through the tunnel. Sentence case, no final full stop." },
-	"mobile.computers.own_tunnel.testing": { role: "status", note: "The same button's label while the test request runs on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis." },
-	"mobile.computers.own_tunnel.title": { role: "heading", note: "Screen title on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Short: the header is narrow on phones. No final full stop." },
+	"mobile.computers.own_tunnel.test": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that makes a real request through the tunnel. Sentence case, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.testing": { role: "status", note: "The same button's label while the test request runs on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.title": { role: "heading", note: "Screen title on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Short: the header is narrow on phones. No final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.tunnel_rule": { role: "help", note: "One sentence above the two example tunnel commands on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), for a reader who uses another tunnel provider. \"HTTPS\" is the protocol name: keep it. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.unencrypted_body": { role: "help", note: "Body of the unencrypted-address warning on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"The opt-in\" is the plain-http toggle just above. \"https://\" is a literal scheme: keep it unchanged and left-to-right. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
 	"mobile.computers.own_tunnel.unencrypted_title": { role: "heading", note: "Title of a warning box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the typed address starts with http:// and the opt-in is off. Short, no final full stop." },
-	"mobile.computers.own_tunnel.url_label": { role: "meta", note: "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop." },
-	"mobile.computers.own_tunnel.verdict_not_yet": { role: "heading", note: "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop." },
-	"mobile.computers.own_tunnel.verdict_ok": { role: "heading", note: "Title of the success box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the relay answered. One word, no final full stop." },
+	"mobile.computers.own_tunnel.url_label": { role: "meta", note: "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.verdict_forbidden": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something in front of the relay refused the request. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right. Origin = the requesting site/app; the relay refuses cross-origin requests." },
+	"mobile.computers.own_tunnel.verdict_host": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the address's host name does not resolve (DNS)." },
+	"mobile.computers.own_tunnel.verdict_local_network": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the \"Test the connection\" button, already translated." },
+	"mobile.computers.own_tunnel.verdict_local_network_ios": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the \"Test the connection\" button, already translated." },
+	"mobile.computers.own_tunnel.verdict_not_yet": { role: "heading", note: "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.verdict_offline": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the public tunnel is up but the relay on the computer is not running. {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right." },
+	"mobile.computers.own_tunnel.verdict_offline_detail": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, when the relay's server sent its own reason. {detail} is that reason, sent by the server in English and shown as is (it has no final full stop, which is why the message adds one). {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right. Keep both sentences; adjust the separator to your language's punctuation." },
+	"mobile.computers.own_tunnel.verdict_ok": { role: "heading", note: "Title of the success box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the relay answered. One word, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
+	"mobile.computers.own_tunnel.verdict_password": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay refused the password. Plain, no apology." },
+	"mobile.computers.own_tunnel.verdict_refused": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something answered, but it is not a Local Operator relay." },
+	"mobile.computers.own_tunnel.verdict_sessions": { role: "help", note: "Body of the success box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay answered and {sessions} is how many conversations the phone can see. ICU plural: keep the {sessions, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
+	"mobile.computers.own_tunnel.verdict_timeout": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 10). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
+	"mobile.computers.own_tunnel.verdict_tls": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the HTTPS certificate failed verification. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right." },
+	"mobile.computers.own_tunnel.verdict_unreachable": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: no connection could be made to the address." },
 	"mobile.computers.own_tunnel_instead": { role: "button", note: "Small quiet button at the bottom of the computers screen that opens the own-tunnel (self-hosted) setup instead of Radient. 'instead' contrasts with the Radient list above it." },
 	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
 	"mobile.computers.paths.own_action": { role: "button", note: "Outline button in the own-tunnel card that opens the own-tunnel setup. Short imperative; the computers screen has a separate 'Use my own tunnel instead'." },
 	"mobile.computers.paths.own_body": { role: "help", note: "Description inside the own-tunnel card. It is the advanced, self-hosted path: the reader publishes the computer through their own tunnel, pastes its address, needs no Radient account and keeps the password. Keep the words 'advanced' and 'no account' clear." },
-	"mobile.computers.paths.own_title": { role: "heading", note: "Section header of the own-tunnel card on the choose-a-path screen, and the quiet button label on the first-run welcome screen that opens the same setup. Says what the reader gets, not what they type. No punctuation." },
+	"mobile.computers.paths.own_title": { role: "heading", note: "Section header of the own-tunnel card on the choose-a-path screen, and the quiet button label on the first-run welcome screen that opens the same setup, and the outline button in Settings that opens the own-tunnel editor when none is saved. Says what the reader gets, not what they type. No punctuation." },
 	"mobile.computers.paths.radient_body": { role: "help", note: "Description inside the Radient card on the choose-a-path screen. Three clauses: needs an account; Radient runs the tunnel and gives a private authenticated URL; nothing to configure on the phone and no relay password. Keep the honest cost (an account is needed). 'URL' stays as a technical token." },
 	"mobile.computers.paths.radient_title": { role: "heading", note: "Title of the Radient card on the choose-a-path screen, followed on the same line by the 'Recommended' badge. Imperative phrase, no punctuation; 'Radient' is the brand: keep it in Latin script." },
 	"mobile.computers.paths.recommended": { role: "meta", note: "Badge beside the Radient card title marking it as the suggested path. One word or short phrase; not a status." },
@@ -3548,6 +3728,17 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.diagnostics.stream_idle": { role: "meta", note: "Value of the Diagnostics \"Stream\" row when no live stream has started. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop." },
 	"mobile.settings.diagnostics.stream_live": { role: "meta", note: "Value of the Diagnostics \"Stream\" row when the stream is healthy. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop." },
 	"mobile.settings.diagnostics.stream_offline": { role: "meta", note: "Value of the Diagnostics \"Stream\" row when the stream is down. Lower-case diagnostic word, shown in a monospace line; one word, no final full stop." },
+	"mobile.settings.own_tunnel.before_saving": { role: "help", note: "Help line under Save/Cancel in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it), shown until a test succeeds (Save stays disabled until then)." },
+	"mobile.settings.own_tunnel.edit": { role: "button", note: "Small button in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) that opens the saved tunnel's address and password for editing. One word, no final full stop." },
+	"mobile.settings.own_tunnel.kept_secure": { role: "help", note: "Status line in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it), under the saved address, when both are stored. \"Secure store\" is the platform's encrypted storage for secrets." },
+	"mobile.settings.own_tunnel.not_saved": { role: "help", note: "Status line in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it), under the saved address, when the relay password is not stored on the phone." },
+	"mobile.settings.own_tunnel.password_placeholder": { role: "help", note: "Placeholder inside the empty relay-password field in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it). No final full stop." },
+	"mobile.settings.own_tunnel.remove": { role: "button", note: "Small button in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) that asks to forget the saved tunnel on this phone, and the confirm button of that dialog. Removes it from this phone only. One word, no final full stop." },
+	"mobile.settings.own_tunnel.remove_body": { role: "help", note: "Body of the same confirmation dialog in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it): says what removing does and does not affect." },
+	"mobile.settings.own_tunnel.remove_title": { role: "heading", note: "Title of the confirmation dialog in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it). A question; keep the question mark." },
+	"mobile.settings.own_tunnel.runtime_body": { role: "help", note: "Body of the same information box in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it). \"Keystore\"/\"secure store\" are the platform's encrypted storage for secrets." },
+	"mobile.settings.own_tunnel.runtime_title": { role: "heading", note: "Title of an information box in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) on a build (for example the web preview) that has no secure storage. \"It\" is the tunnel. No final full stop." },
+	"mobile.settings.own_tunnel.test_again": { role: "button", note: "Small button in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) that re-tests the saved tunnel without opening the form. While the test runs it shows \"Testing…\". No final full stop." },
 	"mobile.settings.screen_title": { role: "heading", note: "Title of the Settings screen header. One word, no final full stop." },
 	"mobile.settings.section.about": { role: "heading", note: "Section header on Settings above the app version and the open-source note. One word." },
 	"mobile.settings.section.appearance": { role: "heading", note: "Section header on Settings above the theme and text-size controls. One word." },
@@ -3887,6 +4078,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.new_chat": "Nuevo chat",
 		"mobile.common.back": "Atrás",
 		"mobile.common.cancel": "Cancelar",
+		"mobile.common.copied": "Copiado",
+		"mobile.common.copy": "Copiar",
+		"mobile.common.copy_command_hint": "Copia el comando “{label}”",
 		"mobile.common.done": "Hecho",
 		"mobile.common.not_found.action": "Volver a las sesiones",
 		"mobile.common.not_found.headline": "Esa página no existe.",
@@ -3934,18 +4128,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Tus máquinas",
 		"mobile.computers.none_on_phone": "Aún no hay máquinas en este teléfono.",
 		"mobile.computers.not_harness": "Esta máquina no ejecuta el harness de Local Operator.",
+		"mobile.computers.own_tunnel.check_label": "Comprobarlo",
+		"mobile.computers.own_tunnel.check_note": "El estado del relé, el de la comprobación de contraseña y las sesiones que verá el teléfono.",
+		"mobile.computers.own_tunnel.cloudflare_note": "Es gratis y no necesita cuenta para un túnel rápido. Muestra la URL {scheme} que tienes que pegar abajo.",
+		"mobile.computers.own_tunnel.foreground_label": "O ejecutarlo en primer plano",
+		"mobile.computers.own_tunnel.foreground_note": "Para otras plataformas, o si prefieres seguir el registro. Escucha en {address}, solo desde la propia máquina (loopback).",
 		"mobile.computers.own_tunnel.insecure_allow": "Permitir una dirección http://",
 		"mobile.computers.own_tunnel.insecure_allowed": "Dirección http:// permitida",
 		"mobile.computers.own_tunnel.insecure_hint": "Solo hace falta para una dirección http, que envía la contraseña sin cifrar",
 		"mobile.computers.own_tunnel.insecure_off_help": "Con http://, la contraseña del relé cruza la red sin cifrar, así que esta opción está desactivada salvo que la actives. Usa https:// siempre que la dirección lo admita.",
 		"mobile.computers.own_tunnel.insecure_on_help": "Activado: la contraseña del relé y todo lo que envíes cruzan esta red sin cifrar. Hazlo solo en una red de confianza.",
+		"mobile.computers.own_tunnel.install_label": "Instalar en la máquina",
+		"mobile.computers.own_tunnel.install_note": "macOS: instala el daemon supervisado, que se reinicia solo, genera la contraseña del relé y la guarda en tu llavero.",
 		"mobile.computers.own_tunnel.intro": "Nada de esto requiere una cuenta de Radient. Publicas el relé en tu propia máquina mediante un túnel que controlas tú, y la app se comunica con él a través de la dirección que pegues abajo.",
 		"mobile.computers.own_tunnel.need_address": "Pega la dirección de tu túnel para continuar.",
 		"mobile.computers.own_tunnel.need_test": "Prueba la conexión primero — no vale la pena guardar un túnel que nunca ha respondido.",
+		"mobile.computers.own_tunnel.ngrok_note": "Requiere una cuenta de ngrok. Muestra la URL {scheme} que tienes que pegar abajo.",
 		"mobile.computers.own_tunnel.password_for": "Introduce la contraseña de {name}",
 		"mobile.computers.own_tunnel.password_label": "Contraseña del relé",
+		"mobile.computers.own_tunnel.password_slot_empty": "Este teléfono no tiene ninguna contraseña del relé guardada. Introduce la contraseña de esta máquina, pruébala y guárdala.",
+		"mobile.computers.own_tunnel.password_slot_other": "Este teléfono guarda una sola contraseña del relé, y es de otra dirección. Introduce la contraseña de esta máquina, pruébala y guárdala. Sustituirá a la otra.",
+		"mobile.computers.own_tunnel.password_slot_this": "La contraseña del relé guardada en este teléfono es de esta dirección. Pruébala y guárdala.",
 		"mobile.computers.own_tunnel.private_host": "Esta dirección está en tu propia red, así que la exposición se limita a ella.",
 		"mobile.computers.own_tunnel.public_host": "Esta dirección no es privada: cualquier intermediario entre este teléfono y ella puede leer la contraseña.",
+		"mobile.computers.own_tunnel.remedy": "En esa máquina: {command}",
+		"mobile.computers.own_tunnel.rotate_label": "Definir o cambiar la contraseña",
+		"mobile.computers.own_tunnel.rotate_note": "Te la pide de forma interactiva, así que nunca queda en el historial del shell ni en la lista de procesos. Es la contraseña que la app te pide abajo.",
 		"mobile.computers.own_tunnel.save_connect": "Guardar y conectar",
 		"mobile.computers.own_tunnel.saving": "Guardando…",
 		"mobile.computers.own_tunnel.security_body": "Estás poniendo tu propia máquina en internet, y la contraseña del relé es lo único que la protege. Usa HTTPS siempre que puedas, activa la autenticación propia de tu túnel si la ofrece y cambia la contraseña con `{command}` si se ha compartido. Cualquiera con esa contraseña y tu URL puede controlar las sesiones de esa máquina.",
@@ -3959,11 +4167,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.test": "Probar la conexión",
 		"mobile.computers.own_tunnel.testing": "Probando…",
 		"mobile.computers.own_tunnel.title": "Tu propio túnel",
+		"mobile.computers.own_tunnel.tunnel_rule": "Cualquier túnel sirve siempre que reenvíe una URL HTTPS pública a {address} en esa máquina.",
 		"mobile.computers.own_tunnel.unencrypted_body": "Activa la opción de arriba para usar esta dirección o indica una dirección https:// — los túneles suelen mostrar una.",
 		"mobile.computers.own_tunnel.unencrypted_title": "Esta dirección no está cifrada",
 		"mobile.computers.own_tunnel.url_label": "URL pública",
+		"mobile.computers.own_tunnel.verdict_forbidden": "Ese túnel rechazó la app. Si has puesto delante una política de acceso o una página de inicio de sesión, deja pasar la app; además, el propio relé rechaza las solicitudes de cualquier otro origen, así que asegúrate de que el túnel reenvíe directamente a {address} y no a un panel u otra app.",
+		"mobile.computers.own_tunnel.verdict_host": "No se encontró ese nombre de host. Revisa que la dirección no tenga erratas y que el túnel siga publicando ese nombre.",
+		"mobile.computers.own_tunnel.verdict_local_network": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé; después, pulsa “{action}”.",
+		"mobile.computers.own_tunnel.verdict_local_network_ios": "No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé. Si ambas cosas se cumplen, puede deberse al permiso de red local: permite Local Operator en Ajustes → Privacidad y seguridad → Red local y después toca “{action}”.",
 		"mobile.computers.own_tunnel.verdict_not_yet": "Aún no",
+		"mobile.computers.own_tunnel.verdict_offline": "El túnel respondió, pero el relé que hay detrás no. En esa máquina: {command}",
+		"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}. En esa máquina: {command}",
 		"mobile.computers.own_tunnel.verdict_ok": "Conectado",
+		"mobile.computers.own_tunnel.verdict_password": "No se aceptó esa contraseña. Comprueba la contraseña del relé en la máquina.",
+		"mobile.computers.own_tunnel.verdict_refused": "Esa dirección respondió, pero no de una forma que esta app entienda.",
+		"mobile.computers.own_tunnel.verdict_sessions": "Conectado — puedes ver {sessions, plural, one {# sesión} many {# de sesiones} other {# sesiones}}.",
+		"mobile.computers.own_tunnel.verdict_timeout": "Esa dirección no respondió en un plazo de {seconds, plural, one {# segundo} many {# de segundos} other {# segundos}}. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.",
+		"mobile.computers.own_tunnel.verdict_tls": "Se rechazó el certificado de ese túnel. Usa la dirección {scheme} que mostró el túnel, elige un túnel con un certificado en el que confíe un teléfono o sustituye el certificado autofirmado del que ejecutas tú — la app no se saltará la comprobación.",
+		"mobile.computers.own_tunnel.verdict_unreachable": "No se pudo contactar con la dirección. Comprueba que la URL es la pública que mostró tu túnel y que el túnel sigue en ejecución.",
 		"mobile.computers.own_tunnel_instead": "Usar mi propio túnel en su lugar",
 		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
 		"mobile.computers.paths.own_action": "Usar mi propio túnel",
@@ -4340,6 +4561,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.stream_idle": "inactivo",
 		"mobile.settings.diagnostics.stream_live": "activo",
 		"mobile.settings.diagnostics.stream_offline": "sin conexión",
+		"mobile.settings.own_tunnel.before_saving": "Prueba la dirección antes de guardarla: un túnel guardado que nunca ha respondido deja la lista vacía sin ninguna explicación.",
+		"mobile.settings.own_tunnel.edit": "Editar",
+		"mobile.settings.own_tunnel.kept_secure": "La dirección y la contraseña se guardan en el almacenamiento seguro de este teléfono.",
+		"mobile.settings.own_tunnel.not_saved": "La contraseña no está guardada, así que la app la pide en cada inicio.",
+		"mobile.settings.own_tunnel.password_placeholder": "La contraseña con la que se inició el relé",
+		"mobile.settings.own_tunnel.remove": "Quitar",
+		"mobile.settings.own_tunnel.remove_body": "Borra la dirección y la contraseña de este teléfono. No afecta a tu máquina, al túnel que ejecutas ni a ninguna cuenta.",
+		"mobile.settings.own_tunnel.remove_title": "¿Quitar este túnel?",
+		"mobile.settings.own_tunnel.runtime_body": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo se conserva durante esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.",
+		"mobile.settings.own_tunnel.runtime_title": "Este entorno no puede guardarlo",
+		"mobile.settings.own_tunnel.test_again": "Probar de nuevo",
 		"mobile.settings.screen_title": "Ajustes",
 		"mobile.settings.section.about": "Acerca de",
 		"mobile.settings.section.appearance": "Apariencia",
@@ -4663,6 +4895,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.new_chat": "Nouveau chat",
 		"mobile.common.back": "Retour",
 		"mobile.common.cancel": "Annuler",
+		"mobile.common.copied": "Copié",
+		"mobile.common.copy": "Copier",
+		"mobile.common.copy_command_hint": "Copie la commande « {label} »",
 		"mobile.common.done": "Terminé",
 		"mobile.common.not_found.action": "Retour aux sessions",
 		"mobile.common.not_found.headline": "Cette page n’existe pas.",
@@ -4710,18 +4945,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Vos ordinateurs",
 		"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
 		"mobile.computers.not_harness": "Cet ordinateur n’exécute pas le harness Local Operator.",
+		"mobile.computers.own_tunnel.check_label": "Vérifier",
+		"mobile.computers.own_tunnel.check_note": "La santé du relais, l’état du contrôle d’authentification et les sessions que le téléphone verra.",
+		"mobile.computers.own_tunnel.cloudflare_note": "Gratuit et sans compte pour un tunnel rapide. La commande affiche l’URL {scheme} à coller ci-dessous.",
+		"mobile.computers.own_tunnel.foreground_label": "Ou l’exécuter au premier plan",
+		"mobile.computers.own_tunnel.foreground_note": "Pour toute autre plateforme, ou si vous préférez suivre le journal. Le relais écoute sur {address}, accessible depuis cet ordinateur seulement.",
 		"mobile.computers.own_tunnel.insecure_allow": "Autoriser le http:// en clair",
 		"mobile.computers.own_tunnel.insecure_allowed": "http:// en clair autorisé",
 		"mobile.computers.own_tunnel.insecure_hint": "Nécessaire uniquement pour une adresse en http, qui transmet le mot de passe en clair",
 		"mobile.computers.own_tunnel.insecure_off_help": "En http://, le mot de passe de votre relais transite en clair sur le réseau : l’option reste donc désactivée tant que vous ne l’activez pas. Utilisez https:// dès que l’adresse le permet.",
 		"mobile.computers.own_tunnel.insecure_on_help": "Activé : le mot de passe du relais et tout ce que vous envoyez transitent sur ce réseau sans chiffrement. À n’activer que sur un réseau de confiance.",
+		"mobile.computers.own_tunnel.install_label": "Installer sur l’ordinateur",
+		"mobile.computers.own_tunnel.install_note": "macOS : crée le démon supervisé, génère le mot de passe du portail et le conserve dans votre trousseau.",
 		"mobile.computers.own_tunnel.intro": "Rien de tout cela ne nécessite de compte Radient. Vous publiez le relais sur votre propre ordinateur via un tunnel que vous contrôlez, et l’app s’y connecte à l’adresse que vous collez ci-dessous.",
 		"mobile.computers.own_tunnel.need_address": "Collez l’adresse de votre tunnel pour continuer.",
 		"mobile.computers.own_tunnel.need_test": "Testez d’abord la connexion — un tunnel qui n’a jamais répondu ne mérite pas d’être enregistré.",
+		"mobile.computers.own_tunnel.ngrok_note": "Nécessite un compte ngrok. La commande affiche l’URL {scheme} à coller ci-dessous.",
 		"mobile.computers.own_tunnel.password_for": "Saisissez le mot de passe de {name}",
 		"mobile.computers.own_tunnel.password_label": "Mot de passe du relais",
+		"mobile.computers.own_tunnel.password_slot_empty": "Aucun mot de passe de relais enregistré sur ce téléphone. Saisissez celui de cet ordinateur, testez-le, puis enregistrez.",
+		"mobile.computers.own_tunnel.password_slot_other": "Ce téléphone ne conserve qu’un seul mot de passe de relais, et il appartient à une autre adresse. Saisissez le mot de passe de cet ordinateur, testez-le, puis enregistrez. Le nouveau remplacera l’ancien.",
+		"mobile.computers.own_tunnel.password_slot_this": "Le mot de passe enregistré sur ce téléphone correspond à cette adresse. Testez-le, puis enregistrez.",
 		"mobile.computers.own_tunnel.private_host": "Cette adresse se trouve sur votre propre réseau : l’exposition reste limitée à ce réseau.",
 		"mobile.computers.own_tunnel.public_host": "Cette adresse n’est pas privée — tout intermédiaire sur le trajet depuis ce téléphone peut lire le mot de passe.",
+		"mobile.computers.own_tunnel.remedy": "Sur cet ordinateur : {command}",
+		"mobile.computers.own_tunnel.rotate_label": "Définir ou changer le mot de passe",
+		"mobile.computers.own_tunnel.rotate_note": "La commande vous le demande de façon interactive : la valeur n’apparaît donc jamais dans l’historique du shell ni dans la liste des processus. C’est le mot de passe que l’app demande ci-dessous.",
 		"mobile.computers.own_tunnel.save_connect": "Enregistrer et se connecter",
 		"mobile.computers.own_tunnel.saving": "Enregistrement…",
 		"mobile.computers.own_tunnel.security_body": "Vous mettez votre propre ordinateur sur Internet, et le mot de passe du relais est la seule chose qui le protège. Privilégiez HTTPS, activez l’authentification propre à votre tunnel s’il en propose une, et changez le mot de passe avec `{command}` s’il a été partagé. Toute personne disposant de ce mot de passe et de votre URL peut piloter les sessions sur cette machine.",
@@ -4735,11 +4984,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.test": "Tester la connexion",
 		"mobile.computers.own_tunnel.testing": "Test en cours…",
 		"mobile.computers.own_tunnel.title": "Votre propre tunnel",
+		"mobile.computers.own_tunnel.tunnel_rule": "N’importe quel tunnel convient, du moment qu’il redirige une URL HTTPS publique vers {address} sur cet ordinateur.",
 		"mobile.computers.own_tunnel.unencrypted_body": "Activez l’option pour l’utiliser, ou indiquez une adresse https:// — un tunnel en affiche normalement une.",
 		"mobile.computers.own_tunnel.unencrypted_title": "Cette adresse n’est pas chiffrée",
 		"mobile.computers.own_tunnel.url_label": "URL publique",
+		"mobile.computers.own_tunnel.verdict_forbidden": "Ce tunnel a refusé l’app. Si vous avez placé une règle d’accès ou une page de connexion devant lui, laissez passer l’app ; le relais refuse lui aussi les requêtes provenant de toute autre origine : assurez-vous donc que le tunnel redirige directement vers {address}, et non vers un tableau de bord ou une autre app.",
+		"mobile.computers.own_tunnel.verdict_host": "Nom d’hôte introuvable. Vérifiez que l’adresse ne contient pas de faute de frappe et que le tunnel publie toujours ce nom.",
+		"mobile.computers.own_tunnel.verdict_local_network": "Rien n’a répondu à cette adresse sur ce réseau. Vérifiez que l’ordinateur n’est pas en veille et qu’il exécute le relais, puis appuyez sur « {action} ».",
+		"mobile.computers.own_tunnel.verdict_local_network_ios": "Rien n’a répondu à cette adresse sur ce réseau. Vérifiez que l’ordinateur n’est pas en veille et qu’il exécute le relais. Si c’est bien le cas, l’autorisation d’accès au réseau local est peut-être en cause : autorisez Local Operator dans Réglages → Confidentialité et sécurité → Réseau local, puis appuyez sur « {action} ».",
 		"mobile.computers.own_tunnel.verdict_not_yet": "Pas encore",
+		"mobile.computers.own_tunnel.verdict_offline": "Le tunnel a répondu, mais pas le relais derrière lui. Sur cet ordinateur : {command}",
+		"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}. Sur cet ordinateur : {command}",
 		"mobile.computers.own_tunnel.verdict_ok": "Connecté",
+		"mobile.computers.own_tunnel.verdict_password": "Ce mot de passe n’a pas été accepté. Vérifiez le mot de passe du relais sur l’ordinateur.",
+		"mobile.computers.own_tunnel.verdict_refused": "Cette adresse a répondu, mais d’une manière que cette app ne comprend pas.",
+		"mobile.computers.own_tunnel.verdict_sessions": "Connecté — {sessions, plural, one {# session visible} many {# de sessions visibles} other {# sessions visibles}}.",
+		"mobile.computers.own_tunnel.verdict_timeout": "Cette adresse n’a pas répondu en {seconds, plural, one {# seconde} many {# de secondes} other {# secondes}}. Vérifiez que le tunnel fonctionne et que l’ordinateur n’est pas en veille.",
+		"mobile.computers.own_tunnel.verdict_tls": "Le certificat de ce tunnel a été refusé. Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné sur celui que vous exploitez — l’app ne contournera pas la vérification.",
+		"mobile.computers.own_tunnel.verdict_unreachable": "Impossible de joindre l’adresse. Vérifiez qu’il s’agit bien de l’URL publique affichée par votre tunnel, et que celui-ci fonctionne toujours.",
 		"mobile.computers.own_tunnel_instead": "Utiliser plutôt mon propre tunnel",
 		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 		"mobile.computers.paths.own_action": "Utiliser mon propre tunnel",
@@ -5116,6 +5378,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.stream_idle": "inactif",
 		"mobile.settings.diagnostics.stream_live": "actif",
 		"mobile.settings.diagnostics.stream_offline": "hors ligne",
+		"mobile.settings.own_tunnel.before_saving": "Testez l’adresse avant de l’enregistrer : un tunnel enregistré qui n’a jamais répondu laisse la liste vide, sans aucune explication.",
+		"mobile.settings.own_tunnel.edit": "Modifier",
+		"mobile.settings.own_tunnel.kept_secure": "L’adresse et le mot de passe sont conservés dans le stockage sécurisé de ce téléphone.",
+		"mobile.settings.own_tunnel.not_saved": "Le mot de passe n’est pas enregistré : l’app le demande donc à chaque lancement.",
+		"mobile.settings.own_tunnel.password_placeholder": "Le mot de passe utilisé au démarrage du relais",
+		"mobile.settings.own_tunnel.remove": "Retirer",
+		"mobile.settings.own_tunnel.remove_body": "L’adresse et le mot de passe seront oubliés sur ce téléphone. Cela ne modifie ni votre ordinateur, ni le tunnel que vous exploitez, ni aucun compte.",
+		"mobile.settings.own_tunnel.remove_title": "Retirer ce tunnel ?",
+		"mobile.settings.own_tunnel.runtime_body": "Cette version n’a pas de stockage sécurisé : le tunnel ne survit pas à la fermeture de l’app. Sur un téléphone, la valeur est conservée dans le stockage sécurisé de la plateforme.",
+		"mobile.settings.own_tunnel.runtime_title": "Ce runtime ne peut pas l’enregistrer",
+		"mobile.settings.own_tunnel.test_again": "Tester à nouveau",
 		"mobile.settings.screen_title": "Paramètres",
 		"mobile.settings.section.about": "À propos",
 		"mobile.settings.section.appearance": "Apparence",
@@ -5439,6 +5712,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.new_chat": "नई चैट",
 		"mobile.common.back": "वापस",
 		"mobile.common.cancel": "रद्द करें",
+		"mobile.common.copied": "कॉपी हो गया",
+		"mobile.common.copy": "कॉपी करें",
+		"mobile.common.copy_command_hint": "“{label}” वाली कमांड कॉपी करता है",
 		"mobile.common.done": "हो गया",
 		"mobile.common.not_found.action": "सत्रों पर लौटें",
 		"mobile.common.not_found.headline": "वह पेज मौजूद नहीं है।",
@@ -5486,18 +5762,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "आपके कंप्यूटर",
 		"mobile.computers.none_on_phone": "इस फ़ोन पर अभी कोई कंप्यूटर नहीं।",
 		"mobile.computers.not_harness": "इस कंप्यूटर पर Local Operator हार्नेस नहीं चल रहा है।",
+		"mobile.computers.own_tunnel.check_label": "जाँचें",
+		"mobile.computers.own_tunnel.check_note": "रिले ठीक चल रहा है या नहीं, पासवर्ड जाँच की स्थिति, और वे सत्र जो फ़ोन को दिखेंगे।",
+		"mobile.computers.own_tunnel.cloudflare_note": "मुफ़्त है, और क्विक टनल के लिए किसी खाते की ज़रूरत नहीं। यह कमांड {scheme} वाला URL दिखाती है, जिसे नीचे चिपकाएँ।",
+		"mobile.computers.own_tunnel.foreground_label": "या इसे फ़ोरग्राउंड में चलाएँ",
+		"mobile.computers.own_tunnel.foreground_note": "किसी और प्लेटफ़ॉर्म के लिए, या अगर आप लॉग देखते रहना चाहें। यह {address} पर चलता है, सिर्फ़ लूपबैक पर — यानी केवल इसी कंप्यूटर से।",
 		"mobile.computers.own_tunnel.insecure_allow": "सादे http:// पते की अनुमति दें",
 		"mobile.computers.own_tunnel.insecure_allowed": "सादे http:// की अनुमति है",
 		"mobile.computers.own_tunnel.insecure_hint": "सिर्फ़ http वाले पते के लिए ज़रूरी, जो पासवर्ड बिना एन्क्रिप्शन के भेजता है",
 		"mobile.computers.own_tunnel.insecure_off_help": "http:// पर आपका रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है, इसलिए यह विकल्प डिफ़ॉल्ट रूप से बंद रहता है। जब भी पता https:// सपोर्ट करे, उसी का उपयोग करें।",
 		"mobile.computers.own_tunnel.insecure_on_help": "चालू: रिले पासवर्ड और आपकी भेजी हर चीज़ इस नेटवर्क से बिना एन्क्रिप्शन के गुज़रती है। ऐसा सिर्फ़ भरोसेमंद नेटवर्क पर करें।",
+		"mobile.computers.own_tunnel.install_label": "कंप्यूटर पर इंस्टॉल करें",
+		"mobile.computers.own_tunnel.install_note": "macOS: अपने-आप दोबारा शुरू होने वाला डेमन सेट करता है, रिले पासवर्ड बनाता है और उसे आपके कीचेन में रखता है।",
 		"mobile.computers.own_tunnel.intro": "इसमें कहीं भी Radient खाते की ज़रूरत नहीं है। आप रिले को अपने कंप्यूटर पर, अपने नियंत्रण वाली टनल के ज़रिये प्रकाशित करते हैं, और ऐप उससे उसी पते से बात करता है जिसे आप नीचे चिपकाते हैं।",
 		"mobile.computers.own_tunnel.need_address": "जारी रखने के लिए अपनी टनल का पता चिपकाएँ।",
 		"mobile.computers.own_tunnel.need_test": "पहले कनेक्शन जाँचें — जिस टनल ने एक बार भी जवाब नहीं दिया, उसे सहेजना ठीक नहीं।",
+		"mobile.computers.own_tunnel.ngrok_note": "इसके लिए ngrok खाता चाहिए। यह कमांड {scheme} वाला URL दिखाती है, जिसे नीचे चिपकाएँ।",
 		"mobile.computers.own_tunnel.password_for": "{name} का पासवर्ड डालें",
 		"mobile.computers.own_tunnel.password_label": "रिले पासवर्ड",
+		"mobile.computers.own_tunnel.password_slot_empty": "इस फ़ोन पर कोई रिले पासवर्ड सहेजा नहीं गया है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें।",
+		"mobile.computers.own_tunnel.password_slot_other": "यह फ़ोन सिर्फ़ एक रिले पासवर्ड रखता है, और वह किसी दूसरे पते का है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें। नया पासवर्ड पुराने की जगह ले लेगा।",
+		"mobile.computers.own_tunnel.password_slot_this": "इस फ़ोन पर सहेजा गया रिले पासवर्ड इसी पते का है। उसे जाँचें, फिर सहेजें।",
 		"mobile.computers.own_tunnel.private_host": "यह पता आपके अपने नेटवर्क पर है, इसलिए जोखिम उसी नेटवर्क तक सीमित है।",
 		"mobile.computers.own_tunnel.public_host": "यह पता निजी नहीं है — इस फ़ोन से उस पते तक के रास्ते में मौजूद कोई भी चीज़ पासवर्ड पढ़ सकती है।",
+		"mobile.computers.own_tunnel.remedy": "उस कंप्यूटर पर: {command}",
+		"mobile.computers.own_tunnel.rotate_label": "पासवर्ड सेट करें या बदलें",
+		"mobile.computers.own_tunnel.rotate_note": "यह कमांड पासवर्ड टर्मिनल में आपसे पूछती है, ताकि वह कभी शेल हिस्ट्री या प्रोसेस लिस्ट में न पहुँचे। ऐप नीचे यही पासवर्ड माँगता है।",
 		"mobile.computers.own_tunnel.save_connect": "सहेजें और कनेक्ट करें",
 		"mobile.computers.own_tunnel.saving": "सहेजा जा रहा है…",
 		"mobile.computers.own_tunnel.security_body": "आप अपने ही कंप्यूटर को इंटरनेट पर खोल रहे हैं, और उसकी सुरक्षा में सिर्फ़ रिले पासवर्ड खड़ा है। HTTPS को प्राथमिकता दें, अगर आपकी टनल अपना प्रमाणीकरण देती है तो उसे चालू करें, और अगर पासवर्ड किसी के साथ साझा हुआ है तो उसे `{command}` से बदल दें। जिसके पास वह पासवर्ड और आपका URL है, वह उस मशीन के सत्र चला सकता है।",
@@ -5511,11 +5801,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.test": "कनेक्शन जाँचें",
 		"mobile.computers.own_tunnel.testing": "जाँच हो रही है…",
 		"mobile.computers.own_tunnel.title": "अपनी टनल",
+		"mobile.computers.own_tunnel.tunnel_rule": "कोई भी टनल चलेगी, बशर्ते वह एक सार्वजनिक HTTPS URL को उस कंप्यूटर पर {address} तक फ़ॉरवर्ड करे।",
 		"mobile.computers.own_tunnel.unencrypted_body": "इस पते का उपयोग करने के लिए ऊपर वाला विकल्प चालू करें, या https:// पता दें — टनल आम तौर पर ऐसा पता दिखाती है।",
 		"mobile.computers.own_tunnel.unencrypted_title": "यह पता एन्क्रिप्टेड नहीं है",
 		"mobile.computers.own_tunnel.url_label": "सार्वजनिक URL",
+		"mobile.computers.own_tunnel.verdict_forbidden": "उस टनल ने ऐप को अस्वीकार कर दिया। अगर आपने उसके आगे कोई ऐक्सेस पॉलिसी या लॉगिन पेज लगाया है, तो ऐप को गुज़रने दें; रिले ख़ुद भी किसी दूसरे ओरिजिन (साइट या ऐप) से आए अनुरोध अस्वीकार करता है, इसलिए पक्का करें कि टनल सीधे {address} पर फ़ॉरवर्ड करे, किसी डैशबोर्ड या दूसरे ऐप पर नहीं।",
+		"mobile.computers.own_tunnel.verdict_host": "वह होस्ट नाम नहीं मिला। पते में टाइपिंग की ग़लती जाँचें, और यह भी कि टनल अब भी वही नाम प्रकाशित कर रही है।",
+		"mobile.computers.own_tunnel.verdict_local_network": "इस नेटवर्क पर उस पते से कोई जवाब नहीं आया। जाँचें कि कंप्यूटर स्लीप में नहीं है और उस पर रिले चल रहा है, फिर “{action}” दबाएँ।",
+		"mobile.computers.own_tunnel.verdict_local_network_ios": "इस नेटवर्क पर उस पते से कोई जवाब नहीं आया। जाँचें कि कंप्यूटर स्लीप में नहीं है और उस पर रिले चल रहा है। अगर दोनों ठीक हैं, तो वजह लोकल नेटवर्क की अनुमति हो सकती है: सेटिंग्ज़ → गोपनीयता और सुरक्षा → स्थानीय नेटवर्क में Local Operator को अनुमति दें, फिर “{action}” पर टैप करें।",
 		"mobile.computers.own_tunnel.verdict_not_yet": "अभी नहीं",
+		"mobile.computers.own_tunnel.verdict_offline": "टनल ने जवाब दिया, लेकिन उसके पीछे का रिले जवाब नहीं दे रहा। उस कंप्यूटर पर: {command}",
+		"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}। उस कंप्यूटर पर: {command}",
 		"mobile.computers.own_tunnel.verdict_ok": "कनेक्ट हो गया",
+		"mobile.computers.own_tunnel.verdict_password": "वह पासवर्ड स्वीकार नहीं हुआ। कंप्यूटर पर रिले पासवर्ड जाँचें।",
+		"mobile.computers.own_tunnel.verdict_refused": "उस पते ने जवाब दिया, लेकिन ऐसा जवाब नहीं जिसे यह ऐप समझ सके।",
+		"mobile.computers.own_tunnel.verdict_sessions": "कनेक्ट हो गया — आपको {sessions, plural, one {# सत्र दिख रहा है} other {# सत्र दिख रहे हैं}}।",
+		"mobile.computers.own_tunnel.verdict_timeout": "उस पते ने {seconds, plural, one {# सेकंड} other {# सेकंड}} के भीतर जवाब नहीं दिया। जाँचें कि टनल चल रही है और कंप्यूटर स्लीप में नहीं है।",
+		"mobile.computers.own_tunnel.verdict_tls": "उस टनल का सर्टिफ़िकेट अस्वीकार कर दिया गया। टनल का दिखाया हुआ {scheme} पता उपयोग करें, ऐसी टनल चुनें जिसके सर्टिफ़िकेट पर फ़ोन भरोसा करे, या अपनी चलाई टनल का सेल्फ़-साइन्ड सर्टिफ़िकेट बदलें — ऐप यह जाँच नहीं छोड़ेगा।",
+		"mobile.computers.own_tunnel.verdict_unreachable": "उस पते तक नहीं पहुँचा जा सका। जाँचें कि URL वही सार्वजनिक URL है जो आपकी टनल ने दिखाया था, और टनल अब भी चल रही है।",
 		"mobile.computers.own_tunnel_instead": "इसके बजाय अपनी टनल उपयोग करें",
 		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
 		"mobile.computers.paths.own_action": "अपनी टनल उपयोग करें",
@@ -5892,6 +6195,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.stream_idle": "आइडल",
 		"mobile.settings.diagnostics.stream_live": "ऑनलाइन",
 		"mobile.settings.diagnostics.stream_offline": "ऑफ़लाइन",
+		"mobile.settings.own_tunnel.before_saving": "सहेजने से पहले पता जाँच लें: जिस सहेजी गई टनल ने कभी जवाब नहीं दिया, उससे सूची ख़ाली रह जाती है और कोई वजह नहीं बताई जाती।",
+		"mobile.settings.own_tunnel.edit": "बदलें",
+		"mobile.settings.own_tunnel.kept_secure": "पता और पासवर्ड इस फ़ोन के सुरक्षित स्टोरेज में रखे हैं।",
+		"mobile.settings.own_tunnel.not_saved": "पासवर्ड सहेजा नहीं गया है, इसलिए ऐप हर बार खुलने पर उसे माँगता है।",
+		"mobile.settings.own_tunnel.password_placeholder": "वह पासवर्ड जिससे रिले शुरू किया गया था",
+		"mobile.settings.own_tunnel.remove": "हटाएँ",
+		"mobile.settings.own_tunnel.remove_body": "इससे इस फ़ोन पर सहेजे गए पता और पासवर्ड, दोनों हट जाते हैं। आपके कंप्यूटर, आपकी चलाई टनल या किसी खाते पर इसका कोई असर नहीं पड़ता।",
+		"mobile.settings.own_tunnel.remove_title": "यह टनल हटाएँ?",
+		"mobile.settings.own_tunnel.runtime_body": "इस बिल्ड में कोई सुरक्षित कीस्टोर नहीं है, इसलिए टनल सिर्फ़ ऐप के इस बार चलने तक रहती है। फ़ोन पर इसे प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखा जाता है।",
+		"mobile.settings.own_tunnel.runtime_title": "यह रनटाइम टनल सहेज नहीं सकता",
+		"mobile.settings.own_tunnel.test_again": "फिर से जाँचें",
 		"mobile.settings.screen_title": "सेटिंग",
 		"mobile.settings.section.about": "जानकारी",
 		"mobile.settings.section.appearance": "रूप-रंग",
@@ -6215,6 +6529,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.new_chat": "Новый чат",
 		"mobile.common.back": "Назад",
 		"mobile.common.cancel": "Отмена",
+		"mobile.common.copied": "Скопировано",
+		"mobile.common.copy": "Копировать",
+		"mobile.common.copy_command_hint": "Копирует команду «{label}»",
 		"mobile.common.done": "Готово",
 		"mobile.common.not_found.action": "К сессиям",
 		"mobile.common.not_found.headline": "Этой страницы не существует.",
@@ -6262,18 +6579,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Ваши компьютеры",
 		"mobile.computers.none_on_phone": "На этом телефоне пока нет компьютеров.",
 		"mobile.computers.not_harness": "На этом компьютере не запущен Local Operator.",
+		"mobile.computers.own_tunnel.check_label": "Проверить",
+		"mobile.computers.own_tunnel.check_note": "Работоспособность, состояние проверки пароля и список сессий, которые увидит телефон.",
+		"mobile.computers.own_tunnel.cloudflare_note": "Бесплатно, а для быстрого туннеля аккаунт не нужен. Команда выведет URL {scheme}, который нужно вставить ниже.",
+		"mobile.computers.own_tunnel.foreground_label": "Или запустить в терминале",
+		"mobile.computers.own_tunnel.foreground_note": "Для любой другой платформы или если вы предпочитаете следить за журналом. Ретранслятор работает на {address} и доступен только с того же компьютера.",
 		"mobile.computers.own_tunnel.insecure_allow": "Разрешить адрес http://",
 		"mobile.computers.own_tunnel.insecure_allowed": "Адреса http:// разрешены",
 		"mobile.computers.own_tunnel.insecure_hint": "Нужно только для адресов http — по ним пароль передаётся открытым текстом",
 		"mobile.computers.own_tunnel.insecure_off_help": "Через http:// пароль от ретранслятора передаётся по сети открытым текстом, поэтому по умолчанию такие адреса запрещены. Используйте https:// везде, где адрес это поддерживает.",
 		"mobile.computers.own_tunnel.insecure_on_help": "Включено: пароль от ретранслятора и всё, что вы отправляете, передаются по этой сети без шифрования. Делайте так только в сети, которой доверяете.",
+		"mobile.computers.own_tunnel.install_label": "Установить на компьютер",
+		"mobile.computers.own_tunnel.install_note": "macOS: устанавливает службу с автоматическим перезапуском, создаёт пароль ретранслятора и сохраняет его в связке ключей.",
 		"mobile.computers.own_tunnel.intro": "Аккаунт Radient здесь не нужен ни на одном этапе. Вы публикуете ретранслятор на своём компьютере через туннель, которым управляете сами, а приложение подключается к нему по адресу, который вы вставите ниже.",
 		"mobile.computers.own_tunnel.need_address": "Чтобы продолжить, вставьте адрес туннеля.",
 		"mobile.computers.own_tunnel.need_test": "Сначала нажмите «Проверить подключение» — туннель, который ни разу не ответил, сохранять не стоит.",
+		"mobile.computers.own_tunnel.ngrok_note": "Нужен аккаунт ngrok. Команда выведет URL {scheme}, который нужно вставить ниже.",
 		"mobile.computers.own_tunnel.password_for": "Введите пароль для {name}",
 		"mobile.computers.own_tunnel.password_label": "Пароль ретранслятора",
+		"mobile.computers.own_tunnel.password_slot_empty": "На этом телефоне не сохранён пароль ретранслятора. Введите пароль этого компьютера, проверьте его и сохраните.",
+		"mobile.computers.own_tunnel.password_slot_other": "Телефон хранит только один пароль ретранслятора, и он относится к другому адресу. Введите пароль этого компьютера, проверьте его и сохраните. Новый пароль заменит прежний.",
+		"mobile.computers.own_tunnel.password_slot_this": "Сохранённый на телефоне пароль ретранслятора относится к этому адресу. Проверьте его и сохраните.",
 		"mobile.computers.own_tunnel.private_host": "Этот адрес находится в вашей собственной сети, так что риск не выходит за её пределы.",
 		"mobile.computers.own_tunnel.public_host": "Этот адрес не частный — пароль может прочитать кто угодно на пути от этого телефона до него.",
+		"mobile.computers.own_tunnel.remedy": "Выполните на том компьютере: {command}",
+		"mobile.computers.own_tunnel.rotate_label": "Задать или сменить пароль",
+		"mobile.computers.own_tunnel.rotate_note": "Команда запрашивает значение интерактивно, поэтому оно не попадает ни в историю команд shell, ни в список процессов. Именно этот пароль приложение запросит ниже.",
 		"mobile.computers.own_tunnel.save_connect": "Сохранить и подключиться",
 		"mobile.computers.own_tunnel.saving": "Сохранение…",
 		"mobile.computers.own_tunnel.security_body": "Вы выставляете свой компьютер в интернет, и защищает его только пароль от ретранслятора. По возможности используйте HTTPS, включите собственную аутентификацию туннеля, если он её поддерживает, и смените пароль командой `{command}`, если им с кем-то делились. Любой, у кого есть этот пароль и ваш URL, может управлять сессиями на этом компьютере.",
@@ -6287,11 +6618,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.test": "Проверить подключение",
 		"mobile.computers.own_tunnel.testing": "Проверка…",
 		"mobile.computers.own_tunnel.title": "Свой туннель",
+		"mobile.computers.own_tunnel.tunnel_rule": "Подойдёт любой туннель, который перенаправляет публичный HTTPS URL на {address} на том компьютере.",
 		"mobile.computers.own_tunnel.unencrypted_body": "Чтобы использовать его, включите переключатель выше или укажите адрес https:// — туннель обычно его выдаёт.",
 		"mobile.computers.own_tunnel.unencrypted_title": "Адрес без шифрования",
 		"mobile.computers.own_tunnel.url_label": "Публичный URL",
+		"mobile.computers.own_tunnel.verdict_forbidden": "Туннель отклонил запрос приложения. Если перед ним стоит политика доступа или страница входа, пропустите через неё приложение; сам ретранслятор тоже отклоняет запросы с любого другого источника (origin), поэтому убедитесь, что туннель ведёт напрямую на {address}, а не на панель управления или другое приложение.",
+		"mobile.computers.own_tunnel.verdict_host": "Имя хоста не найдено. Проверьте, нет ли в адресе опечатки и по-прежнему ли туннель публикует это имя.",
+		"mobile.computers.own_tunnel.verdict_local_network": "По этому адресу в данной сети никто не ответил. Убедитесь, что компьютер не спит и на нём запущен ретранслятор, затем нажмите «{action}».",
+		"mobile.computers.own_tunnel.verdict_local_network_ios": "По этому адресу в данной сети никто не ответил. Убедитесь, что компьютер не спит и на нём запущен ретранслятор. Если всё так, возможно, дело в разрешении на доступ к локальной сети: включите его для Local Operator в разделе Настройки → Конфиденциальность и безопасность → Локальная сеть, затем нажмите «{action}».",
 		"mobile.computers.own_tunnel.verdict_not_yet": "Пока нет",
+		"mobile.computers.own_tunnel.verdict_offline": "Туннель ответил, а ретранслятор за ним — нет. Выполните на том компьютере: {command}",
+		"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}. Выполните на том компьютере: {command}",
 		"mobile.computers.own_tunnel.verdict_ok": "Подключено",
+		"mobile.computers.own_tunnel.verdict_password": "Этот пароль не принят. Проверьте пароль ретранслятора на компьютере.",
+		"mobile.computers.own_tunnel.verdict_refused": "Адрес ответил, но приложение не понимает этот ответ.",
+		"mobile.computers.own_tunnel.verdict_sessions": "Подключено — вы видите {sessions, plural, one {# сессию} few {# сессии} many {# сессий} other {# сессии}}.",
+		"mobile.computers.own_tunnel.verdict_timeout": "Адрес не ответил за {seconds, plural, one {# секунду} few {# секунды} many {# секунд} other {# секунды}}. Убедитесь, что туннель работает, а компьютер не в спящем режиме.",
+		"mobile.computers.own_tunnel.verdict_tls": "Сертификат этого туннеля отклонён. Используйте адрес {scheme}, который вывел туннель, выберите туннель с сертификатом, которому доверяет телефон, или замените самоподписанный сертификат в своём туннеле — приложение не будет пропускать проверку.",
+		"mobile.computers.own_tunnel.verdict_unreachable": "Не удалось связаться с этим адресом. Убедитесь, что это публичный URL, который вывел ваш туннель, и что туннель всё ещё работает.",
 		"mobile.computers.own_tunnel_instead": "Свой туннель вместо Radient",
 		"mobile.computers.password_placeholder": "Пароль из lop mobile",
 		"mobile.computers.paths.own_action": "Использовать свой туннель",
@@ -6668,6 +7012,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.stream_idle": "в простое",
 		"mobile.settings.diagnostics.stream_live": "активен",
 		"mobile.settings.diagnostics.stream_offline": "вне сети",
+		"mobile.settings.own_tunnel.before_saving": "Проверьте адрес перед сохранением: сохранённый туннель, который ни разу не ответил, оставит список пустым без всякого объяснения.",
+		"mobile.settings.own_tunnel.edit": "Изменить",
+		"mobile.settings.own_tunnel.kept_secure": "Адрес и пароль хранятся в защищённом хранилище этого телефона.",
+		"mobile.settings.own_tunnel.not_saved": "Пароль не сохранён, поэтому приложение запрашивает его при каждом запуске.",
+		"mobile.settings.own_tunnel.password_placeholder": "Пароль, с которым запущен ретранслятор",
+		"mobile.settings.own_tunnel.remove": "Удалить",
+		"mobile.settings.own_tunnel.remove_body": "Приложение забудет адрес и пароль на этом телефоне. Ваш компьютер, ваш туннель и аккаунты останутся без изменений.",
+		"mobile.settings.own_tunnel.remove_title": "Удалить этот туннель?",
+		"mobile.settings.own_tunnel.runtime_body": "В этой сборке нет защищённого хранилища ключей, поэтому туннель действует только до закрытия приложения. На телефоне значение хранится в защищённом хранилище платформы.",
+		"mobile.settings.own_tunnel.runtime_title": "Эта сборка не сохраняет туннель",
+		"mobile.settings.own_tunnel.test_again": "Проверить снова",
 		"mobile.settings.screen_title": "Настройки",
 		"mobile.settings.section.about": "О приложении",
 		"mobile.settings.section.appearance": "Оформление",
@@ -6991,6 +7346,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.new_chat": "نئی چیٹ",
 		"mobile.common.back": "واپس",
 		"mobile.common.cancel": "منسوخ کریں",
+		"mobile.common.copied": "کاپی ہو گیا",
+		"mobile.common.copy": "کاپی کریں",
+		"mobile.common.copy_command_hint": "یہ “{label}” والی کمانڈ کاپی کرتا ہے",
 		"mobile.common.done": "ہو گیا",
 		"mobile.common.not_found.action": "سیشنز میں واپس جائیں",
 		"mobile.common.not_found.headline": "یہ صفحہ موجود نہیں ہے۔",
@@ -7038,18 +7396,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "آپ کے کمپیوٹرز",
 		"mobile.computers.none_on_phone": "اس فون پر ابھی کوئی کمپیوٹر نہیں۔",
 		"mobile.computers.not_harness": "یہ کمپیوٹر Local Operator کا ہارنس نہیں چلا رہا۔",
+		"mobile.computers.own_tunnel.check_label": "اسے جانچیں",
+		"mobile.computers.own_tunnel.check_note": "ریلے کی صحت، پاس ورڈ کی جانچ کی حالت، اور وہ سیشنز جو فون کو نظر آئیں گے۔",
+		"mobile.computers.own_tunnel.cloudflare_note": "مفت ہے، اور فوری ٹنل کے لیے اکاؤنٹ درکار نہیں۔ یہ کمانڈ وہ {scheme} URL دکھاتی ہے جو آپ نیچے چسپاں کریں گے۔",
+		"mobile.computers.own_tunnel.foreground_label": "یا اسے فورگراؤنڈ میں چلائیں",
+		"mobile.computers.own_tunnel.foreground_note": "کسی بھی دوسرے پلیٹ فارم کے لیے، یا اگر آپ لاگ خود دیکھتے رہنا چاہیں۔ یہ {address} پر چلتا ہے، صرف لوپ بیک پر — یعنی صرف اسی کمپیوٹر سے قابلِ رسائی۔",
 		"mobile.computers.own_tunnel.insecure_allow": "سادہ ⁦http://⁩ پتے کی اجازت دیں",
 		"mobile.computers.own_tunnel.insecure_allowed": "سادہ ⁦http://⁩ کی اجازت ہے",
 		"mobile.computers.own_tunnel.insecure_hint": "صرف http والے پتے کے لیے ضروری، جو پاس ورڈ بغیر خفیہ کاری کے بھیجتا ہے",
 		"mobile.computers.own_tunnel.insecure_off_help": "ریلے کا پاس ورڈ ⁦http://⁩ پر نیٹ ورک سے بغیر خفیہ کاری کے گزرتا ہے، اس لیے یہ اختیار تب تک بند رہتا ہے جب تک آپ اسے آن نہ کریں۔ جب بھی پتہ ⁦https://⁩ پر دستیاب ہو، وہی استعمال کریں۔",
 		"mobile.computers.own_tunnel.insecure_on_help": "آن: ریلے کا پاس ورڈ اور آپ کی بھیجی ہوئی ہر چیز اس نیٹ ورک سے بغیر خفیہ کاری کے گزرتی ہے۔ ایسا صرف اسی نیٹ ورک پر کریں جس پر آپ کو بھروسا ہو۔",
+		"mobile.computers.own_tunnel.install_label": "کمپیوٹر پر انسٹال کریں",
+		"mobile.computers.own_tunnel.install_note": "یہ کمانڈ macOS پر نگرانی میں چلنے والا ڈیمن انسٹال کرتی ہے جو رکنے پر خود دوبارہ شروع ہو جاتا ہے، ریلے کا پاس ورڈ بناتی ہے اور اسے Keychain میں رکھتی ہے۔",
 		"mobile.computers.own_tunnel.intro": "اس میں کہیں بھی Radient اکاؤنٹ درکار نہیں۔ آپ اپنے کمپیوٹر پر چلنے والے ریلے کو ایسی ٹنل سے دستیاب کرتے ہیں جسے آپ خود چلاتے ہیں، اور ایپ اس سے اس پتے کے ذریعے رابطہ کرتی ہے جو آپ نیچے چسپاں کریں گے۔",
 		"mobile.computers.own_tunnel.need_address": "جاری رکھنے کے لیے اپنی ٹنل کا پتہ چسپاں کریں۔",
 		"mobile.computers.own_tunnel.need_test": "پہلے کنکشن جانچیں — جس ٹنل نے ایک بار بھی جواب نہ دیا ہو، وہ محفوظ کرنے کے لائق نہیں۔",
+		"mobile.computers.own_tunnel.ngrok_note": "اس کے لیے ngrok اکاؤنٹ درکار ہے۔ یہ کمانڈ وہ {scheme} URL دکھاتی ہے جو آپ نیچے چسپاں کریں گے۔",
 		"mobile.computers.own_tunnel.password_for": "{name} کا پاس ورڈ درج کریں",
 		"mobile.computers.own_tunnel.password_label": "ریلے کا پاس ورڈ",
+		"mobile.computers.own_tunnel.password_slot_empty": "اس فون پر ریلے کا کوئی پاس ورڈ محفوظ نہیں۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔",
+		"mobile.computers.own_tunnel.password_slot_other": "یہ فون ریلے کا صرف ایک پاس ورڈ رکھتا ہے، اور وہ کسی دوسرے پتے کا ہے۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔ یہ پہلے والے پاس ورڈ کی جگہ لے لے گا۔",
+		"mobile.computers.own_tunnel.password_slot_this": "اس فون پر محفوظ ریلے کا پاس ورڈ اسی پتے کا ہے۔ اسے جانچیں، پھر محفوظ کریں۔",
 		"mobile.computers.own_tunnel.private_host": "یہ پتہ آپ کے اپنے نیٹ ورک پر ہے، اس لیے خطرہ اسی نیٹ ورک تک محدود ہے۔",
 		"mobile.computers.own_tunnel.public_host": "یہ پتہ نجی نہیں — اس فون سے اس پتے تک کے راستے میں موجود کوئی بھی چیز پاس ورڈ پڑھ سکتی ہے۔",
+		"mobile.computers.own_tunnel.remedy": "اس کمپیوٹر پر چلائیں: {command}",
+		"mobile.computers.own_tunnel.rotate_label": "پاس ورڈ مقرر کریں یا بدلیں",
+		"mobile.computers.own_tunnel.rotate_note": "یہ کمانڈ پاس ورڈ آپ سے الگ سے ٹائپ کرواتی ہے، اس لیے وہ کبھی شیل ہسٹری یا پراسیس لسٹ تک نہیں پہنچتا۔ ایپ نیچے یہی پاس ورڈ مانگتی ہے۔",
 		"mobile.computers.own_tunnel.save_connect": "محفوظ کریں اور منسلک ہوں",
 		"mobile.computers.own_tunnel.saving": "محفوظ ہو رہا ہے…",
 		"mobile.computers.own_tunnel.security_body": "آپ اپنا کمپیوٹر انٹرنیٹ پر لا رہے ہیں، اور اس کی حفاظت صرف ریلے کا پاس ورڈ کرتا ہے۔ HTTPS کو ترجیح دیں، اگر آپ کی ٹنل اپنا تصدیقی نظام دیتی ہے تو اسے بھی فعال کریں، اور اگر پاس ورڈ کسی اور کے ساتھ شیئر ہو چکا ہو تو `{command}` سے اسے بدل دیں۔ جس کے پاس بھی وہ پاس ورڈ اور آپ کا URL ہو، وہ اس کمپیوٹر کے سیشن چلا سکتا ہے۔",
@@ -7063,11 +7435,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.test": "کنکشن جانچیں",
 		"mobile.computers.own_tunnel.testing": "جانچ ہو رہی ہے…",
 		"mobile.computers.own_tunnel.title": "آپ کی اپنی ٹنل",
+		"mobile.computers.own_tunnel.tunnel_rule": "کوئی بھی ٹنل کام کرے گی، بشرطیکہ وہ ایک عوامی HTTPS URL کو اس کمپیوٹر پر {address} تک پہنچائے۔",
 		"mobile.computers.own_tunnel.unencrypted_body": "اس پتے کو استعمال کرنے کے لیے اوپر والا اختیار آن کریں، یا کوئی ⁦https://⁩ پتہ درج کریں — ٹنل عموماً ایسا پتہ دکھاتی ہے۔",
 		"mobile.computers.own_tunnel.unencrypted_title": "اس پتے پر خفیہ کاری نہیں",
 		"mobile.computers.own_tunnel.url_label": "عوامی URL",
+		"mobile.computers.own_tunnel.verdict_forbidden": "اس ٹنل نے ایپ کو مسترد کر دیا۔ اگر آپ نے اس کے آگے رسائی کی پالیسی یا سائن ان صفحہ لگایا ہے تو ایپ کو گزرنے کی اجازت دیں؛ ریلے خود بھی کسی دوسرے ماخذ (origin) سے آنے والی ہر درخواست مسترد کرتا ہے، اس لیے یقینی بنائیں کہ ٹنل درخواستیں سیدھی {address} تک پہنچائے، کسی ڈیش بورڈ یا دوسری ایپ تک نہیں۔",
+		"mobile.computers.own_tunnel.verdict_host": "میزبان کا یہ نام نہیں ملا۔ پتے میں ٹائپنگ کی غلطی جانچیں، اور یہ بھی کہ ٹنل اب بھی یہی نام شائع کر رہی ہے۔",
+		"mobile.computers.own_tunnel.verdict_local_network": "اس نیٹ ورک پر اس پتے سے کوئی جواب نہیں آیا۔ جانچیں کہ کمپیوٹر جاگ رہا ہے اور ریلے چلا رہا ہے، پھر “{action}” دبائیں۔",
+		"mobile.computers.own_tunnel.verdict_local_network_ios": "اس نیٹ ورک پر اس پتے سے کوئی جواب نہیں آیا۔ جانچیں کہ کمپیوٹر جاگ رہا ہے اور ریلے چلا رہا ہے۔ اگر دونوں باتیں درست ہیں تو ممکن ہے وجہ مقامی نیٹ ورک کی اجازت ہو: ترتیبات ← رازداری اور سیکیورٹی ← مقامی نیٹ ورک میں Local Operator کو اجازت دیں، پھر “{action}” پر ٹیپ کریں۔",
 		"mobile.computers.own_tunnel.verdict_not_yet": "ابھی نہیں",
+		"mobile.computers.own_tunnel.verdict_offline": "ٹنل نے جواب دیا، لیکن اس کے پیچھے ریلے جواب نہیں دے رہا۔ اس کمپیوٹر پر چلائیں: {command}",
+		"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}۔ اس کمپیوٹر پر چلائیں: {command}",
 		"mobile.computers.own_tunnel.verdict_ok": "منسلک ہو گیا",
+		"mobile.computers.own_tunnel.verdict_password": "وہ پاس ورڈ قبول نہیں ہوا۔ کمپیوٹر پر ریلے کا پاس ورڈ جانچیں۔",
+		"mobile.computers.own_tunnel.verdict_refused": "اس پتے نے جواب تو دیا، لیکن اس طرح نہیں جسے یہ ایپ سمجھ سکے۔",
+		"mobile.computers.own_tunnel.verdict_sessions": "منسلک ہو گیا — آپ {sessions, plural, one {# سیشن} other {# سیشنز}} دیکھ سکتے ہیں۔",
+		"mobile.computers.own_tunnel.verdict_timeout": "اس پتے نے {seconds, plural, one {# سیکنڈ} other {# سیکنڈ}} کے اندر جواب نہیں دیا۔ جانچیں کہ ٹنل چل رہی ہے اور کمپیوٹر جاگ رہا ہے۔",
+		"mobile.computers.own_tunnel.verdict_tls": "اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔ ٹنل کا دکھایا ہوا {scheme} URL استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا اپنی چلائی ہوئی ٹنل کا خود دستخط شدہ سرٹیفکیٹ بدل دیں — ایپ یہ جانچ نہیں چھوڑے گی۔",
+		"mobile.computers.own_tunnel.verdict_unreachable": "اس پتے تک رسائی نہیں ہو سکی۔ جانچیں کہ URL وہی عوامی URL ہے جو آپ کی ٹنل نے دکھایا تھا، اور یہ کہ ٹنل اب بھی چل رہی ہے۔",
 		"mobile.computers.own_tunnel_instead": "اس کے بجائے اپنی ٹنل استعمال کریں",
 		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
 		"mobile.computers.paths.own_action": "اپنی ٹنل استعمال کریں",
@@ -7444,6 +7829,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.stream_idle": "فارغ",
 		"mobile.settings.diagnostics.stream_live": "آن لائن",
 		"mobile.settings.diagnostics.stream_offline": "آف لائن",
+		"mobile.settings.own_tunnel.before_saving": "محفوظ کرنے سے پہلے پتہ جانچ لیں: اگر محفوظ کی گئی ٹنل نے کبھی جواب نہ دیا ہو تو فہرست خالی رہتی ہے، بغیر کسی وضاحت کے۔",
+		"mobile.settings.own_tunnel.edit": "ترمیم کریں",
+		"mobile.settings.own_tunnel.kept_secure": "پتہ اور پاس ورڈ اس فون کے محفوظ اسٹوریج میں رکھے گئے ہیں۔",
+		"mobile.settings.own_tunnel.not_saved": "پاس ورڈ محفوظ نہیں، اس لیے ایپ ہر بار کھلنے پر اسے مانگتی ہے۔",
+		"mobile.settings.own_tunnel.password_placeholder": "وہ پاس ورڈ جس سے ریلے شروع کیا گیا تھا",
+		"mobile.settings.own_tunnel.remove": "ہٹائیں",
+		"mobile.settings.own_tunnel.remove_body": "یہ اس فون سے پتہ اور پاس ورڈ ہٹا دیتا ہے۔ آپ کے کمپیوٹر، آپ کی چلائی ہوئی ٹنل یا کسی اکاؤنٹ پر اس کا کوئی اثر نہیں پڑتا۔",
+		"mobile.settings.own_tunnel.remove_title": "یہ ٹنل ہٹائیں؟",
+		"mobile.settings.own_tunnel.runtime_body": "اس بلڈ میں کوئی محفوظ اسٹوریج نہیں، اس لیے ٹنل صرف ایپ کے اس بار چلنے تک رکھی جاتی ہے۔ فون پر یہ معلومات پلیٹ فارم کے محفوظ اسٹوریج میں رکھی جاتی ہیں۔",
+		"mobile.settings.own_tunnel.runtime_title": "یہ رن ٹائم ٹنل محفوظ نہیں کر سکتا",
+		"mobile.settings.own_tunnel.test_again": "دوبارہ جانچیں",
 		"mobile.settings.screen_title": "ترتیبات",
 		"mobile.settings.section.about": "ایپ کے بارے میں",
 		"mobile.settings.section.appearance": "ظاہری شکل",
@@ -7767,6 +8163,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.new_chat": "Cuộc trò chuyện mới",
 		"mobile.common.back": "Quay lại",
 		"mobile.common.cancel": "Hủy",
+		"mobile.common.copied": "Đã sao chép",
+		"mobile.common.copy": "Sao chép",
+		"mobile.common.copy_command_hint": "Sao chép lệnh “{label}”",
 		"mobile.common.done": "Xong",
 		"mobile.common.not_found.action": "Về danh sách phiên",
 		"mobile.common.not_found.headline": "Trang đó không tồn tại.",
@@ -7814,18 +8213,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Máy tính của bạn",
 		"mobile.computers.none_on_phone": "Chưa có máy tính nào trên điện thoại này.",
 		"mobile.computers.not_harness": "Máy tính này không chạy Local Operator.",
+		"mobile.computers.own_tunnel.check_label": "Kiểm tra trạng thái",
+		"mobile.computers.own_tunnel.check_note": "Tình trạng hoạt động, trạng thái kiểm tra mật khẩu và các phiên mà điện thoại sẽ thấy.",
+		"mobile.computers.own_tunnel.cloudflare_note": "Miễn phí và không cần tài khoản khi dùng đường hầm nhanh (quick tunnel). Lệnh sẽ in ra URL {scheme} để bạn dán vào bên dưới.",
+		"mobile.computers.own_tunnel.foreground_label": "Hoặc chạy ở tiền cảnh",
+		"mobile.computers.own_tunnel.foreground_note": "Dành cho các nền tảng khác, hoặc khi bạn muốn theo dõi nhật ký. Chạy tại {address}, chỉ nhận kết nối từ chính máy này (loopback).",
 		"mobile.computers.own_tunnel.insecure_allow": "Cho phép địa chỉ http:// thường",
 		"mobile.computers.own_tunnel.insecure_allowed": "Đã cho phép http:// thường",
 		"mobile.computers.own_tunnel.insecure_hint": "Chỉ cần khi dùng địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa",
 		"mobile.computers.own_tunnel.insecure_off_help": "Với http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ.",
 		"mobile.computers.own_tunnel.insecure_on_help": "Bật: mật khẩu chuyển tiếp và mọi thứ bạn gửi đi đều truyền qua mạng này mà không được mã hóa. Chỉ làm vậy trên mạng bạn tin cậy.",
+		"mobile.computers.own_tunnel.install_label": "Cài đặt trên máy tính",
+		"mobile.computers.own_tunnel.install_note": "macOS: cài dịch vụ nền tự khởi động lại khi dừng, tạo mật khẩu chuyển tiếp và lưu vào Chuỗi khóa.",
 		"mobile.computers.own_tunnel.intro": "Không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng sẽ kết nối với nó qua địa chỉ bạn dán bên dưới.",
 		"mobile.computers.own_tunnel.need_address": "Dán địa chỉ đường hầm của bạn để tiếp tục.",
 		"mobile.computers.own_tunnel.need_test": "Hãy kiểm tra kết nối trước — đừng lưu một đường hầm chưa từng phản hồi lần nào.",
+		"mobile.computers.own_tunnel.ngrok_note": "Cần tài khoản ngrok. Lệnh sẽ in ra URL {scheme} để bạn dán vào bên dưới.",
 		"mobile.computers.own_tunnel.password_for": "Nhập mật khẩu cho {name}",
 		"mobile.computers.own_tunnel.password_label": "Mật khẩu chuyển tiếp",
+		"mobile.computers.own_tunnel.password_slot_empty": "Điện thoại này chưa lưu mật khẩu chuyển tiếp nào. Hãy nhập mật khẩu của máy tính này, kiểm tra, rồi lưu.",
+		"mobile.computers.own_tunnel.password_slot_other": "Điện thoại này chỉ giữ một mật khẩu chuyển tiếp, và mật khẩu đó thuộc về một địa chỉ khác. Hãy nhập mật khẩu của máy tính này, kiểm tra, rồi lưu. Mật khẩu mới sẽ thay thế mật khẩu cũ.",
+		"mobile.computers.own_tunnel.password_slot_this": "Mật khẩu chuyển tiếp đã lưu trên điện thoại này là của địa chỉ này. Hãy kiểm tra, rồi lưu.",
 		"mobile.computers.own_tunnel.private_host": "Địa chỉ này nằm trong mạng riêng của bạn, nên rủi ro chỉ giới hạn trong mạng đó.",
 		"mobile.computers.own_tunnel.public_host": "Đây không phải địa chỉ riêng — bất kỳ ai hay thiết bị nào trên đường truyền từ điện thoại này đến địa chỉ đó đều có thể đọc được mật khẩu.",
+		"mobile.computers.own_tunnel.remedy": "Trên máy tính đó: {command}",
+		"mobile.computers.own_tunnel.rotate_label": "Đặt hoặc đổi mật khẩu",
+		"mobile.computers.own_tunnel.rotate_note": "Lệnh sẽ hỏi bạn nhập giá trị, nên mật khẩu không bao giờ xuất hiện trong lịch sử shell hay danh sách tiến trình. Đây là mật khẩu mà ứng dụng yêu cầu ở bên dưới.",
 		"mobile.computers.own_tunnel.save_connect": "Lưu và kết nối",
 		"mobile.computers.own_tunnel.saving": "Đang lưu…",
 		"mobile.computers.own_tunnel.security_body": "Bạn đang đưa chính máy tính của mình lên internet, và mật khẩu chuyển tiếp là thứ duy nhất bảo vệ nó. Hãy ưu tiên HTTPS, bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ, và đổi mật khẩu bằng `{command}` nếu mật khẩu đã từng bị chia sẻ. Bất kỳ ai có mật khẩu đó và URL của bạn đều có thể điều khiển các phiên trên máy đó.",
@@ -7839,11 +8252,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.test": "Kiểm tra kết nối",
 		"mobile.computers.own_tunnel.testing": "Đang kiểm tra…",
 		"mobile.computers.own_tunnel.title": "Đường hầm riêng",
+		"mobile.computers.own_tunnel.tunnel_rule": "Dùng đường hầm nào cũng được, miễn là nó chuyển tiếp một URL HTTPS công khai tới {address} trên máy tính đó.",
 		"mobile.computers.own_tunnel.unencrypted_body": "Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — thông thường, đường hầm sẽ in ra một địa chỉ như vậy.",
 		"mobile.computers.own_tunnel.unencrypted_title": "Địa chỉ này không được mã hóa",
 		"mobile.computers.own_tunnel.url_label": "URL công khai",
+		"mobile.computers.own_tunnel.verdict_forbidden": "Đường hầm đó đã từ chối ứng dụng. Nếu bạn đặt chính sách truy cập hoặc trang đăng nhập phía trước đường hầm, hãy cho phép ứng dụng đi qua; bản thân máy chủ chuyển tiếp cũng từ chối yêu cầu từ mọi nguồn gốc (origin) khác, nên hãy đảm bảo đường hầm chuyển tiếp thẳng tới {address} chứ không phải tới một bảng điều khiển hay ứng dụng khác.",
+		"mobile.computers.own_tunnel.verdict_host": "Không tìm thấy tên miền đó. Hãy kiểm tra xem địa chỉ có bị gõ sai không, và đường hầm có còn công khai tên miền đó không.",
+		"mobile.computers.own_tunnel.verdict_local_network": "Không có phản hồi tại địa chỉ đó trên mạng này. Hãy kiểm tra xem máy tính có đang thức và đang chạy máy chủ chuyển tiếp không, rồi nhấn “{action}”.",
+		"mobile.computers.own_tunnel.verdict_local_network_ios": "Không có phản hồi tại địa chỉ đó trên mạng này. Hãy kiểm tra xem máy tính có đang thức và đang chạy máy chủ chuyển tiếp không. Nếu cả hai đều ổn, có thể là do quyền mạng cục bộ: hãy cho phép Local Operator trong Cài đặt → Quyền riêng tư & Bảo mật → Mạng cục bộ, rồi chạm vào “{action}”.",
 		"mobile.computers.own_tunnel.verdict_not_yet": "Chưa kết nối được",
+		"mobile.computers.own_tunnel.verdict_offline": "Đường hầm đã phản hồi, nhưng máy chủ chuyển tiếp phía sau thì không. Trên máy tính đó: {command}",
+		"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}. Trên máy tính đó: {command}",
 		"mobile.computers.own_tunnel.verdict_ok": "Đã kết nối",
+		"mobile.computers.own_tunnel.verdict_password": "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính.",
+		"mobile.computers.own_tunnel.verdict_refused": "Địa chỉ đó đã phản hồi, nhưng theo cách mà ứng dụng này không hiểu được.",
+		"mobile.computers.own_tunnel.verdict_sessions": "Đã kết nối — bạn có thể thấy {sessions, plural, other {# phiên}}.",
+		"mobile.computers.own_tunnel.verdict_timeout": "Địa chỉ đó không phản hồi trong vòng {seconds, plural, other {# giây}}. Hãy kiểm tra xem đường hầm có đang chạy và máy tính có đang thức không.",
+		"mobile.computers.own_tunnel.verdict_tls": "Chứng chỉ của đường hầm đó đã bị từ chối. Hãy dùng địa chỉ {scheme} mà đường hầm đã in ra, chọn đường hầm có chứng chỉ mà điện thoại tin cậy, hoặc thay chứng chỉ tự ký trên đường hầm bạn chạy — ứng dụng sẽ không bỏ qua bước kiểm tra này.",
+		"mobile.computers.own_tunnel.verdict_unreachable": "Không thể kết nối tới địa chỉ đó. Hãy kiểm tra xem URL có đúng là URL công khai mà đường hầm đã in ra không, và đường hầm có còn đang chạy không.",
 		"mobile.computers.own_tunnel_instead": "Chuyển sang đường hầm riêng của tôi",
 		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
 		"mobile.computers.paths.own_action": "Dùng đường hầm riêng của tôi",
@@ -8220,6 +8646,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.stream_idle": "rảnh",
 		"mobile.settings.diagnostics.stream_live": "hoạt động",
 		"mobile.settings.diagnostics.stream_offline": "ngoại tuyến",
+		"mobile.settings.own_tunnel.before_saving": "Hãy kiểm tra địa chỉ trước khi lưu: một đường hầm đã lưu nhưng chưa từng phản hồi sẽ khiến danh sách trống mà không có lời giải thích nào.",
+		"mobile.settings.own_tunnel.edit": "Sửa",
+		"mobile.settings.own_tunnel.kept_secure": "Địa chỉ và mật khẩu được lưu trong bộ nhớ bảo mật của điện thoại này.",
+		"mobile.settings.own_tunnel.not_saved": "Mật khẩu chưa được lưu, nên ứng dụng sẽ hỏi lại mỗi lần khởi động.",
+		"mobile.settings.own_tunnel.password_placeholder": "Mật khẩu dùng khi chạy máy chủ chuyển tiếp",
+		"mobile.settings.own_tunnel.remove": "Xóa",
+		"mobile.settings.own_tunnel.remove_body": "Thao tác này xóa địa chỉ và mật khẩu khỏi điện thoại này. Máy tính, đường hầm bạn chạy và mọi tài khoản đều không bị ảnh hưởng.",
+		"mobile.settings.own_tunnel.remove_title": "Xóa đường hầm này?",
+		"mobile.settings.own_tunnel.runtime_body": "Bản dựng này không có kho khóa bảo mật, nên đường hầm chỉ được giữ trong lần chạy này. Trên điện thoại, giá trị này được lưu trong bộ nhớ bảo mật của nền tảng.",
+		"mobile.settings.own_tunnel.runtime_title": "Runtime này không lưu được đường hầm",
+		"mobile.settings.own_tunnel.test_again": "Kiểm tra lại",
 		"mobile.settings.screen_title": "Cài đặt",
 		"mobile.settings.section.about": "Giới thiệu",
 		"mobile.settings.section.appearance": "Giao diện",
@@ -8543,6 +8980,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.new_chat": "新聊天",
 		"mobile.common.back": "返回",
 		"mobile.common.cancel": "取消",
+		"mobile.common.copied": "已复制",
+		"mobile.common.copy": "复制",
+		"mobile.common.copy_command_hint": "复制“{label}”命令",
 		"mobile.common.done": "完成",
 		"mobile.common.not_found.action": "返回会话列表",
 		"mobile.common.not_found.headline": "此页面不存在。",
@@ -8590,18 +9030,32 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "你的电脑",
 		"mobile.computers.none_on_phone": "此手机尚未添加电脑。",
 		"mobile.computers.not_harness": "这台电脑未运行Local Operator。",
+		"mobile.computers.own_tunnel.check_label": "检查状态",
+		"mobile.computers.own_tunnel.check_note": "运行状况、密码验证的状态，以及手机将看到的会话。",
+		"mobile.computers.own_tunnel.cloudflare_note": "免费，使用快速隧道无需账户。它会输出一个{scheme}URL，将其粘贴到下方。",
+		"mobile.computers.own_tunnel.foreground_label": "或在前台运行",
+		"mobile.computers.own_tunnel.foreground_note": "适用于其他任何平台，或你更想直接查看日志时。它在{address}上提供服务，只接受来自本机的连接。",
 		"mobile.computers.own_tunnel.insecure_allow": "允许明文http://地址",
 		"mobile.computers.own_tunnel.insecure_allowed": "已允许明文http://",
 		"mobile.computers.own_tunnel.insecure_hint": "仅在地址使用http时需要，此时密码将以明文发送",
 		"mobile.computers.own_tunnel.insecure_off_help": "使用http://时，中继密码会以明文在网络中传输，因此除非你手动开启，否则此选项保持关闭。只要地址支持，请始终使用https://。",
 		"mobile.computers.own_tunnel.insecure_on_help": "已开启：中继密码及你发送的所有内容都将以未加密形式经过此网络。请仅在可信网络中开启。",
+		"mobile.computers.own_tunnel.install_label": "在电脑上安装",
+		"mobile.computers.own_tunnel.install_note": "macOS：安装可自动重启的守护进程，生成中继密码并存入钥匙串。",
 		"mobile.computers.own_tunnel.intro": "全程无需Radient账户。你通过自己掌控的隧道，在自己的电脑上发布中继；应用则通过你在下方粘贴的地址与它通信。",
 		"mobile.computers.own_tunnel.need_address": "粘贴隧道地址以继续。",
 		"mobile.computers.own_tunnel.need_test": "请先测试连接——从未成功响应过的隧道不应保存。",
+		"mobile.computers.own_tunnel.ngrok_note": "需要ngrok账户。它会输出一个{scheme}URL，将其粘贴到下方。",
 		"mobile.computers.own_tunnel.password_for": "输入{name}的密码",
 		"mobile.computers.own_tunnel.password_label": "中继密码",
+		"mobile.computers.own_tunnel.password_slot_empty": "此手机尚未保存中继密码。输入这台电脑的密码，测试后再保存。",
+		"mobile.computers.own_tunnel.password_slot_other": "此手机只能保存一个中继密码，当前保存的属于另一个地址。输入这台电脑的密码，测试后再保存。保存后将替换原有密码。",
+		"mobile.computers.own_tunnel.password_slot_this": "此手机已保存的中继密码对应此地址。测试后再保存。",
 		"mobile.computers.own_tunnel.private_host": "此地址位于你自己的网络内，因此暴露范围仅限于该网络。",
 		"mobile.computers.own_tunnel.public_host": "此地址不是私有地址——从此手机到该地址途经的任何网络或设备都能读取密码。",
+		"mobile.computers.own_tunnel.remedy": "在该电脑上运行：{command}",
+		"mobile.computers.own_tunnel.rotate_label": "设置或更换密码",
+		"mobile.computers.own_tunnel.rotate_note": "以交互方式询问密码，因此它绝不会出现在shell历史记录或进程列表中。应用在下方要求输入的就是这个密码。",
 		"mobile.computers.own_tunnel.save_connect": "保存并连接",
 		"mobile.computers.own_tunnel.saving": "正在保存……",
 		"mobile.computers.own_tunnel.security_body": "你正在把自己的电脑暴露到互联网上，而中继密码是挡在它前面的唯一屏障。请优先使用HTTPS；如果你的隧道自带身份验证，请一并启用；如果密码曾被分享，请用`{command}`更换密码。任何人只要拿到该密码和你的URL，就能操控那台电脑上的会话。",
@@ -8615,11 +9069,24 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.test": "测试连接",
 		"mobile.computers.own_tunnel.testing": "正在测试……",
 		"mobile.computers.own_tunnel.title": "自建隧道",
+		"mobile.computers.own_tunnel.tunnel_rule": "任何隧道都可以，只要它能将公网HTTPS URL转发到那台电脑上的{address}。",
 		"mobile.computers.own_tunnel.unencrypted_body": "开启上方选项即可使用此地址，或改填https://地址——隧道通常会提供一个。",
 		"mobile.computers.own_tunnel.unencrypted_title": "此地址未加密",
 		"mobile.computers.own_tunnel.url_label": "公网URL",
+		"mobile.computers.own_tunnel.verdict_forbidden": "该隧道拒绝了本应用。如果你在隧道前设置了访问策略或登录页面，需放行本应用；中继本身也会拒绝来自其他来源的请求，因此务必确保隧道直接转发到{address}，而不是转发到某个控制面板或其他应用。",
+		"mobile.computers.own_tunnel.verdict_host": "找不到该主机名。检查地址是否有拼写错误，以及隧道是否仍在发布该名称。",
+		"mobile.computers.own_tunnel.verdict_local_network": "此网络中该地址没有任何响应。检查电脑是否处于唤醒状态且正在运行中继，然后点按“{action}”。",
+		"mobile.computers.own_tunnel.verdict_local_network_ios": "此网络中该地址没有任何响应。检查电脑是否处于唤醒状态且正在运行中继。如果两者都没问题，可能是本地网络权限所致：前往“设置”→“隐私与安全性”→“本地网络”，允许Local Operator，然后轻点“{action}”。",
 		"mobile.computers.own_tunnel.verdict_not_yet": "尚未连通",
+		"mobile.computers.own_tunnel.verdict_offline": "隧道有响应，但其后的中继没有响应。在该电脑上运行：{command}",
+		"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}。在该电脑上运行：{command}",
 		"mobile.computers.own_tunnel.verdict_ok": "已连接",
+		"mobile.computers.own_tunnel.verdict_password": "密码被拒绝。检查电脑上设置的中继密码。",
+		"mobile.computers.own_tunnel.verdict_refused": "该地址有响应，但本应用无法识别其响应内容。",
+		"mobile.computers.own_tunnel.verdict_sessions": "已连接——可以看到{sessions, plural, other {# 个会话}}。",
+		"mobile.computers.own_tunnel.verdict_timeout": "该地址在{seconds, plural, other {# 秒}}内没有响应。检查隧道是否正在运行，以及电脑是否处于唤醒状态。",
+		"mobile.computers.own_tunnel.verdict_tls": "该隧道的证书被拒绝。改用隧道输出的{scheme}地址，或换用证书能被手机信任的隧道；如果隧道由你自己运行，则需替换其自签名证书——应用不会跳过证书校验。",
+		"mobile.computers.own_tunnel.verdict_unreachable": "无法访问该地址。检查URL是否为隧道输出的公网地址，以及隧道是否仍在运行。",
 		"mobile.computers.own_tunnel_instead": "改用我自己的隧道",
 		"mobile.computers.password_placeholder": "来自lop mobile的密码",
 		"mobile.computers.paths.own_action": "使用我自己的隧道",
@@ -8996,6 +9463,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.stream_idle": "空闲",
 		"mobile.settings.diagnostics.stream_live": "在线",
 		"mobile.settings.diagnostics.stream_offline": "离线",
+		"mobile.settings.own_tunnel.before_saving": "保存前先测试地址：从未响应过的隧道一旦保存，列表会一直为空，且无从得知原因。",
+		"mobile.settings.own_tunnel.edit": "编辑",
+		"mobile.settings.own_tunnel.kept_secure": "地址和密码保存在此手机的安全存储中。",
+		"mobile.settings.own_tunnel.not_saved": "密码未保存，因此应用每次启动时都会要求输入。",
+		"mobile.settings.own_tunnel.password_placeholder": "启动中继时使用的密码",
+		"mobile.settings.own_tunnel.remove": "移除",
+		"mobile.settings.own_tunnel.remove_body": "此操作会清除此手机上的地址和密码，不会影响你的电脑、你运行的隧道或任何账户。",
+		"mobile.settings.own_tunnel.remove_title": "移除此隧道？",
+		"mobile.settings.own_tunnel.runtime_body": "此版本没有安全密钥库，因此隧道仅在本次运行期间有效。在手机上，这些信息会保存在系统的安全存储中。",
+		"mobile.settings.own_tunnel.runtime_title": "当前环境无法保存隧道",
+		"mobile.settings.own_tunnel.test_again": "重新测试",
 		"mobile.settings.screen_title": "设置",
 		"mobile.settings.section.about": "关于",
 		"mobile.settings.section.appearance": "外观",

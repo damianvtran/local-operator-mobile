@@ -234,5 +234,49 @@
 	"mobile.settings.account.app_name": {
 		"role": "meta",
 		"note": "The product name, used only to derive the avatar initials when the account has no name and no computer is listed. Never translated: keep it exactly as is, in Latin script."
+	},
+	"mobile.settings.own_tunnel.not_saved": {
+		"role": "help",
+		"note": "Status line in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it), under the saved address, when the relay password is not stored on the phone."
+	},
+	"mobile.settings.own_tunnel.kept_secure": {
+		"role": "help",
+		"note": "Status line in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it), under the saved address, when both are stored. \"Secure store\" is the platform's encrypted storage for secrets."
+	},
+	"mobile.settings.own_tunnel.edit": {
+		"role": "button",
+		"note": "Small button in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) that opens the saved tunnel's address and password for editing. One word, no final full stop."
+	},
+	"mobile.settings.own_tunnel.test_again": {
+		"role": "button",
+		"note": "Small button in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) that re-tests the saved tunnel without opening the form. While the test runs it shows \"Testing…\". No final full stop."
+	},
+	"mobile.settings.own_tunnel.remove": {
+		"role": "button",
+		"note": "Small button in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) that asks to forget the saved tunnel on this phone, and the confirm button of that dialog. Removes it from this phone only. One word, no final full stop."
+	},
+	"mobile.settings.own_tunnel.password_placeholder": {
+		"role": "help",
+		"note": "Placeholder inside the empty relay-password field in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it). No final full stop."
+	},
+	"mobile.settings.own_tunnel.runtime_title": {
+		"role": "heading",
+		"note": "Title of an information box in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it) on a build (for example the web preview) that has no secure storage. \"It\" is the tunnel. No final full stop."
+	},
+	"mobile.settings.own_tunnel.runtime_body": {
+		"role": "help",
+		"note": "Body of the same information box in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it). \"Keystore\"/\"secure store\" are the platform's encrypted storage for secrets."
+	},
+	"mobile.settings.own_tunnel.before_saving": {
+		"role": "help",
+		"note": "Help line under Save/Cancel in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it), shown until a test succeeds (Save stays disabled until then)."
+	},
+	"mobile.settings.own_tunnel.remove_title": {
+		"role": "heading",
+		"note": "Title of the confirmation dialog in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it). A question; keep the question mark."
+	},
+	"mobile.settings.own_tunnel.remove_body": {
+		"role": "help",
+		"note": "Body of the same confirmation dialog in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it): says what removing does and does not affect."
 	}
 }

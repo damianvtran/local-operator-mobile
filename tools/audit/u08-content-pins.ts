@@ -1691,7 +1691,16 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * alignment, startup caption, history/needs-answer polish, seeded-image
 	 * release). Re-derived once with --print over the staged tree. Source
 	 * identity only, NOT rendered U-08 evidence. */
-	src: "2089a51be235c518a4e5df12f4bc2280b5557b56169ddbb098e2c9b85045fb79",
+	/* M3 S2b-1 (feat/i18n-m3-s2b1): the own-tunnel command, verdict and
+	 * Settings-section keys (English-first, then the seven audited translations;
+	 * 812 keys in the regenerated `catalogue.gen.ts`), `Alert.bodyDir` with the
+	 * ur `{detail}`-initial offline-verdict spreads and their tests. Re-derived last with --print over the committed tree (b98f5395);
+	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
+	 * re-derived once with --print over the merged tree. */
+	/* Merge of origin/main (#254, d5831603) into #256: both sides' comments
+	 * kept, re-derived once with --print over the merged tree. */
+	src: "72258bfd4697523faf371076ed687343cce6cd6494487907965ead9ce01045bc",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

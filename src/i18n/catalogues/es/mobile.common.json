@@ -8,5 +8,8 @@
 	"mobile.common.not_found.title": "Página no encontrada",
 	"mobile.common.not_found.headline": "Esa página no existe.",
 	"mobile.common.not_found.next": "Vuelve a tus sesiones para continuar.",
-	"mobile.common.not_found.action": "Volver a las sesiones"
+	"mobile.common.not_found.action": "Volver a las sesiones",
+	"mobile.common.copy": "Copiar",
+	"mobile.common.copied": "Copiado",
+	"mobile.common.copy_command_hint": "Copia el comando “{label}”"
 }

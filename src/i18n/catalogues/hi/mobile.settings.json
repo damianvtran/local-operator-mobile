@@ -57,5 +57,16 @@
 	"mobile.settings.diagnostics.stream_live": "ऑनलाइन",
 	"mobile.settings.diagnostics.stream_degraded": "बाधित",
 	"mobile.settings.diagnostics.stream_offline": "ऑफ़लाइन",
-	"mobile.settings.account.app_name": "Local Operator"
+	"mobile.settings.account.app_name": "Local Operator",
+	"mobile.settings.own_tunnel.not_saved": "पासवर्ड सहेजा नहीं गया है, इसलिए ऐप हर बार खुलने पर उसे माँगता है।",
+	"mobile.settings.own_tunnel.kept_secure": "पता और पासवर्ड इस फ़ोन के सुरक्षित स्टोरेज में रखे हैं।",
+	"mobile.settings.own_tunnel.edit": "बदलें",
+	"mobile.settings.own_tunnel.test_again": "फिर से जाँचें",
+	"mobile.settings.own_tunnel.remove": "हटाएँ",
+	"mobile.settings.own_tunnel.password_placeholder": "वह पासवर्ड जिससे रिले शुरू किया गया था",
+	"mobile.settings.own_tunnel.runtime_title": "यह रनटाइम टनल सहेज नहीं सकता",
+	"mobile.settings.own_tunnel.runtime_body": "इस बिल्ड में कोई सुरक्षित कीस्टोर नहीं है, इसलिए टनल सिर्फ़ ऐप के इस बार चलने तक रहती है। फ़ोन पर इसे प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखा जाता है।",
+	"mobile.settings.own_tunnel.before_saving": "सहेजने से पहले पता जाँच लें: जिस सहेजी गई टनल ने कभी जवाब नहीं दिया, उससे सूची ख़ाली रह जाती है और कोई वजह नहीं बताई जाती।",
+	"mobile.settings.own_tunnel.remove_title": "यह टनल हटाएँ?",
+	"mobile.settings.own_tunnel.remove_body": "इससे इस फ़ोन पर सहेजे गए पता और पासवर्ड, दोनों हट जाते हैं। आपके कंप्यूटर, आपकी चलाई टनल या किसी खाते पर इसका कोई असर नहीं पड़ता।"
 }

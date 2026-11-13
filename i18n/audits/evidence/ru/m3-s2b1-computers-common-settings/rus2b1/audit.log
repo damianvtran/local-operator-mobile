@@ -1,0 +1,35 @@
+2026-11-13T07:54:03-05:00 audit.log — ru S2b-1 (execution log; commands actually run by i18n-auditor session 1e34afaf7f7e)
+shasum -a 256 brief-s2b1-v2.json draft-ru.json -> d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9 / 988c530ec3d6553103b592ab6eb53708884821d020cf4b1a78bd34e5cc61b550 (match)
+python3 key-set diff brief vs draft -> 41/41, symmetric difference empty
+python3 unicodedata scan Cc/Cf -> none; 'redact' in draft -> 0; foreground_note codepoints verified Cyrillic
+git show ffbda180:src/i18n/catalogues/ru/mobile.{computers,settings,common}.json -> read as glossary
+cat ~/local-operator/i18n/style-guides/ru.md -> read
+node --max-old-space-size=256 --experimental-strip-types /Users/damian/.local-operator/sessions/1e34afaf7f7e/scratchpad/parse-ru.mts -> 'parsed 41 param mismatches 0'; plural arms one/few/many/other for verdict_sessions, verdict_timeout
+--- parse output ---
+(node:53907) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+mobile.computers.own_tunnel.verdict_sessions arms: one/few/many/other
+   0 many -> Подключено — вы видите 0 сессий.
+   1 one -> Подключено — вы видите 1 сессию.
+   2 few -> Подключено — вы видите 2 сессии.
+   5 many -> Подключено — вы видите 5 сессий.
+   10 many -> Подключено — вы видите 10 сессий.
+   21 one -> Подключено — вы видите 21 сессию.
+   22 few -> Подключено — вы видите 22 сессии.
+   1.5 other -> Подключено — вы видите 1.5 сессии.
+mobile.computers.own_tunnel.verdict_timeout arms: one/few/many/other
+   0 many -> Адрес не ответил за 0 секунд. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+   1 one -> Адрес не ответил за 1 секунду. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+   2 few -> Адрес не ответил за 2 секунды. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+   5 many -> Адрес не ответил за 5 секунд. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+   10 many -> Адрес не ответил за 10 секунд. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+   21 one -> Адрес не ответил за 21 секунду. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+   22 few -> Адрес не ответил за 22 секунды. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+   1.5 other -> Адрес не ответил за 1.5 секунды. Убедитесь, что туннель работает, а компьютер не в спящем режиме.
+parsed 41 param mismatches 0
+
+--- end ---
+read call sites: command-block.tsx, own-tunnel-settings.tsx:140-170, tunnel-commands.ts, tunnel-verdict.ts (t() calls), theme.css (Figtree unicode-range latin-only), variants.ts (sm = min-h-8 px-3, text-meta 12px)
+fontTools unavailable -> JetBrains Mono Cyrillic coverage not verified

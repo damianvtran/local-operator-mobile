@@ -1,0 +1,594 @@
+{
+ "schema": 1,
+ "audit_id": "urs2b1",
+ "audit_kind": "translation_audit",
+ "locale": "ur",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.common",
+  "mobile.settings"
+ ],
+ "namespace": "mobile.computers+mobile.common+mobile.settings (M3 slice S2b-1, 41 keys)",
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "target": 41,
+  "mobile.computers": 27,
+  "mobile.common": 3,
+  "mobile.settings": 11
+ },
+ "source_commit": "254e6fba (feat/i18n-m3-s2b1, worktree ~/local-operator-mobile/.worktrees/i18n-m3-s2a)",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "b0aad2d5d851",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session system-prompt header (Model: anthropic/claude-opus-5-5); no fallback used or observed",
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "identity": "translator job 6923cbfd363b",
+  "model_per_notes": "anthropic/claude-opus-5-5"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+   "expected": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ur/draft-ur.json",
+   "sha256": "637ae2cae2fe99c23638222ae42946dc05caec25dfcda2829ccccd7256db4a34",
+   "expected": "637ae2cae2fe99c23638222ae42946dc05caec25dfcda2829ccccd7256db4a34"
+  },
+  "notes": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ur/notes-ur.md",
+   "sha256": "54a278de107b8cc1871358e685b7b8b66cdcd5b85ce9b92b937f9f926eb2ee9d"
+  },
+  "parser": {
+   "path": "src/i18n/messages.ts @254e6fba (worktree)",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/ur.md",
+   "sha256": "c0eecf7f7b5e89956b7de9ab7a9eb647ff1a7ef701ccf2a7f0264d5eea15ca60"
+  },
+  "glossary": "git show ffbda180:src/i18n/catalogues/ur/mobile.{computers,settings,common}.json"
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "mt_services": "none",
+  "redaction_hits": {
+   "brief_literal": 0,
+   "draft_literal": 0,
+   "harness_display_masking": "none observed"
+  },
+  "guardrail_note": "A script call that took the ancestor m3s2b1 directory as an argument was blocked by the dangerous-delete guardrail. The inputs were then copied into the auditor's own scratchpad with cat, the copies' sha256 values were re-verified as matching, and the mechanical checks ran on those copies."
+ },
+ "mechanical": {
+  "hashes": "brief and draft recomputed; both match",
+  "parse": "41/41 ur and en parse with the repo's parseMessage (an identical copy of src/i18n/messages.ts @254e6fba, sha256 c1831406…), run with node 24 type-stripping and --max-old-space-size=256 in 0.4 s; formatMessage renders all 41",
+  "placeholders": "names and kinds are identical to English for every key",
+  "plurals": "Intl.PluralRules('ur') returns [one, other]. verdict_sessions and verdict_timeout have exactly one/other with # in both arms; rendered for n=0,1,2,8. سیکنڈ is invariant, which the style guide allows",
+  "negative_controls": "an unterminated plural, an arm without braces and an unclosed placeholder each throw RangeError",
+  "keys": "41 = brief order; none added or dropped; none already in ur @254e6fba; the brief's English = en catalogue @254e6fba (41/41)",
+  "bidi_controls": "0 in all 41 values (U+200E U+200F U+202A–202E U+2066–2069 U+061C)",
+  "ascii_punct": "none outside ICU syntax; Urdu ۔ ، ؛ ؟ and “ ” used",
+  "latin_initial": "only verdict_offline_detail ({detail}); confirmed by script; agrees with the translator",
+  "bidi_hazard_scan": "after substituting sample values, the only L+neutral+AL sequence is verdict_tls 'https:// پتہ' (URS2B1-01); {address} digits become AN after AL (W2) and stay intact; {command} at line end is clean",
+  "redaction_hits": "0 literal in brief+draft; no harness masking seen in this session"
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 2,
+  "finding_ids": [
+   "URS2B1-01",
+   "URS2B1-02",
+   "URS2B1-03",
+   "URS2B1-04",
+   "URS2B1-05",
+   "URS2B1-06"
+  ],
+  "code_finding_ids": [
+   "URS2B1-C1"
+  ],
+  "counts": {
+   "BLOCKER": 0,
+   "MAJOR": 2,
+   "MINOR": 2,
+   "NIT": 2
+  }
+ },
+ "findings": [
+  {
+   "id": "URS2B1-01",
+   "severity": "MAJOR",
+   "key": "mobile.computers.own_tunnel.verdict_tls",
+   "current": "اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔ ٹنل کا دکھایا ہوا {scheme} پتہ استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا اپنی چلائی ہوئی ٹنل کا خود دستخط شدہ سرٹیفکیٹ بدل دیں — ایپ یہ جانچ نہیں چھوڑے گی۔",
+   "problem": "{scheme}='https://' is followed by a space and Urdu «پتہ». Under the UBA the neutrals '://' sit between L (https) and AL, so they take the RTL paragraph direction and render as '//:https' — the exact reorder the ur bidi-control exception records for http:// (bidi-controls.test.ts header). Controls are banned here, and {scheme} is not isolated at the call site (tunnel-verdict.ts:150, Alert body without dir). The reader is told to use the scheme they then see reversed.",
+   "suggested": "اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔ ٹنل کا دکھایا ہوا {scheme} URL استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا اپنی چلائی ہوئی ٹنل کا خود دستخط شدہ سرٹیفکیٹ بدل دیں — ایپ یہ جانچ نہیں چھوڑے گی۔",
+   "why_fix_works": "'https:// URL' keeps the neutrals between two L runs, so they resolve L; same shape as cloudflare_note/ngrok_note, which are clean, and URL is the catalogue's term in verdict_unreachable."
+  },
+  {
+   "id": "URS2B1-02",
+   "severity": "MAJOR",
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "current": "… ترتیبات → رازداری اور سیکیورٹی → مقامی نیٹ ورک …",
+   "problem": "U+2192 is bidi class ON and Bidi_Mirrored=No. In the RTL paragraph ترتیبات sits rightmost and each → points right, back at the item before it, so the arrows show the path backwards. This is the 'arrow mirrored wrongly' class from the RTL checklist. Apple's English source uses '>', which is mirrored; '→' is not.",
+   "suggested": "… ترتیبات ← رازداری اور سیکیورٹی ← مقامی نیٹ ورک میں Local Operator کو اجازت دیں، پھر “{action}” پر ٹیپ کریں۔",
+   "note": "iOS 26 added Urdu as a system language (source: netmag.pk, found by web search; the auditor has not checked it on a device). The three labels are plausible, but nobody has checked them against an Urdu iOS UI, so check them on a device. This does not gate."
+  },
+  {
+   "id": "URS2B1-03",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.install_note",
+   "current": "… اور اسے آپ کی کی چین میں رکھتی ہے۔",
+   "problem": "«آپ کی کی چین»: the genitive particle کی is directly followed by کی (key), so the phrase reads as a stutter and parses ambiguously. The auditor found no Urdu macOS UI term to match, so Apple's own Latin name is the recognisable choice, as with macOS in the same sentence.",
+   "suggested": "یہ کمانڈ macOS پر نگرانی میں چلنے والا ڈیمن انسٹال کرتی ہے جو رکنے پر خود دوبارہ شروع ہو جاتا ہے، ریلے کا پاس ورڈ بناتی ہے اور اسے Keychain میں رکھتی ہے۔"
+  },
+  {
+   "id": "URS2B1-04",
+   "severity": "MINOR",
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "current": "اس بلڈ میں کوئی محفوظ کی اسٹور نہیں، …",
+   "problem": "«محفوظ کی اسٹور» has the same particle collision: it can read as 'of the saved … store'. The note says keystore and secure store are one concept, and the catalogue term is محفوظ اسٹوریج.",
+   "suggested": "اس بلڈ میں کوئی محفوظ اسٹوریج نہیں، اس لیے ٹنل صرف ایپ کے اس بار چلنے تک رکھی جاتی ہے۔ فون پر یہ معلومات پلیٹ فارم کے محفوظ اسٹوریج میں رکھی جاتی ہیں۔"
+  },
+  {
+   "id": "URS2B1-05",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.verdict_refused",
+   "current": "اس پتے نے جواب تو دیا، لیکن اس طرح نہیں جو یہ ایپ سمجھ سکے۔",
+   "problem": "«اس طرح نہیں جو» is the wrong relative form; the natural form is جسے.",
+   "suggested": "اس پتے نے جواب تو دیا، لیکن اس طرح نہیں جسے یہ ایپ سمجھ سکے۔"
+  },
+  {
+   "id": "URS2B1-06",
+   "severity": "NIT",
+   "key": "mobile.common.copy_command_hint",
+   "current": "یہ {label} کی کمانڈ کاپی کرتا ہے",
+   "problem": "{label} is usually an imperative phrase, so the hint becomes «یہ کمپیوٹر پر انسٹال کریں کی کمانڈ…», which is clumsy. والی reads better with a phrase.",
+   "suggested": "یہ “{label}” والی کمانڈ کاپی کرتا ہے"
+  }
+ ],
+ "code_findings": [
+  {
+   "id": "URS2B1-C1",
+   "severity": "MAJOR (code, not translation; does not gate this locale's translation verdict)",
+   "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+   "current": "{detail}۔ اس کمپیوٹر پر چلائیں: {command}",
+   "problem": "This is the only Latin-initial value of the 41. {detail} is English server text, so dir=auto or natural resolves the paragraph LTR, and «۔ اس کمپیوٹر پر چلائیں:» then lands in the wrong place. There are three render sites and none spreads useComposedDir: own-tunnel.tsx:572 (VerdictBlock → Alert), own-tunnel-settings.tsx:138 and :237 (Alert). The Alert body Text (alert.tsx:100) takes no dir. The translation is correct and must keep {detail} first, because a prefix would invent copy. Fix: give the Alert a dir or labelDir pass-through from useComposedDir() at those three sites, and add offline_detail to the Q-02 Latin-initial premise in ur-latin-initial-sites.test.ts.",
+   "suggested": "(code) <Alert … bodyDir={composedDir}>; no catalogue change"
+  }
+ ],
+ "rulings_on_translator_flags": {
+  "verdict_local_network_ios arrows": "Change → to ←; see URS2B1-02. → is not bidi-mirrored, so it points backwards in an RTL paragraph.",
+  "کی چین (keychain)": "Replace it with Latin 'Keychain'; see URS2B1-03. The transliteration collides with the genitive کی, and no Urdu Apple term for keychain was found.",
+  "ماخذ (origin)": "Accept it. ماخذ = source/origin, and the Latin '(origin)' gloss pins the web sense. The brackets resolve RTL by UBA N0 because the context before them is AL, so they mirror correctly. The meaning matches the trap: «کسی دوسرے ماخذ (origin) سے آنے والی ہر درخواست مسترد کرتا ہے» = refuses requests from any other origin.",
+  "کاپی کریں / ترمیم کریں widths": "Keep both. These are estimates, not measurements: Figtree has no Arabic glyphs, so a system Arabic or Nastaliq fallback font draws them. At about 15 pt each label is roughly 55–70 pt plus 24 pt padding, so about 80–95 pt, against about 55 pt for 'Copy'. Both rows are flex-wrap (command-block.tsx:55; own-tunnel-settings.tsx button row), so they wrap rather than clip. «کاپی کریں» and «کاپی ہو گیا» are nearly the same width, so the copied-state swap barely reflows. The bare «کاپی» would grow by about 2x on press. The …کریں form is the catalogue convention (محفوظ کریں، منسوخ کریں، استعمال کریں). Shorter forms are not better. Check the Nastaliq line height on a device.",
+  "verdict_offline_detail Latin-initial": "Keep the translation. The fix belongs at the render site; see URS2B1-C1.",
+  "install_note 'portal password' → ریلے کا پاس ورڈ": "Accept it. It is the relay password, which is the catalogue term.",
+  "verdict_local_network دبائیں vs _ios ٹیپ کریں": "Accept it. The iOS-only verb appears only on the _ios key."
+ },
+ "per_key_results": [
+  {
+   "key": "mobile.computers.own_tunnel.install_label",
+   "role": "heading",
+   "english": "Install on the computer",
+   "ur": "کمپیوٹر پر انسٹال کریں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_label",
+   "role": "heading",
+   "english": "Or run it in the foreground",
+   "ur": "یا اسے فورگراؤنڈ میں چلائیں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_label",
+   "role": "heading",
+   "english": "Check it",
+   "ur": "اسے جانچیں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_label",
+   "role": "heading",
+   "english": "Set or rotate the password",
+   "ur": "پاس ورڈ مقرر کریں یا بدلیں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.install_note",
+   "role": "help",
+   "english": "macOS: writes the supervised daemon, generates the portal password and keeps it in your keychain.",
+   "ur": "یہ کمانڈ macOS پر نگرانی میں چلنے والا ڈیمن انسٹال کرتی ہے جو رکنے پر خود دوبارہ شروع ہو جاتا ہے، ریلے کا پاس ورڈ بناتی ہے اور اسے آپ کی کی چین میں رکھتی ہے۔",
+   "placeholders": [],
+   "result": "ok_with_minor",
+   "findings": [
+    "URS2B1-03"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_note",
+   "role": "help",
+   "english": "Any other platform, or when you would rather watch the log. It serves {address}, loopback only.",
+   "ur": "کسی بھی دوسرے پلیٹ فارم کے لیے، یا اگر آپ لاگ خود دیکھتے رہنا چاہیں۔ یہ {address} پر چلتا ہے، صرف لوپ بیک پر — یعنی صرف اسی کمپیوٹر سے قابلِ رسائی۔",
+   "placeholders": [
+    "address"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_note",
+   "role": "help",
+   "english": "Health, the state of the auth gate, and the sessions the phone will see.",
+   "ur": "ریلے کی صحت، پاس ورڈ کی جانچ کی حالت، اور وہ سیشنز جو فون کو نظر آئیں گے۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_note",
+   "role": "help",
+   "english": "Asks you interactively, so the value never reaches a shell history or a process list. This is the password the app asks for below.",
+   "ur": "یہ کمانڈ پاس ورڈ آپ سے الگ سے ٹائپ کرواتی ہے، اس لیے وہ کبھی شیل ہسٹری یا پراسیس لسٹ تک نہیں پہنچتا۔ ایپ نیچے یہی پاس ورڈ مانگتی ہے۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.cloudflare_note",
+   "role": "help",
+   "english": "Free and needs no account for a quick tunnel. It prints the {scheme} URL to paste below.",
+   "ur": "مفت ہے، اور فوری ٹنل کے لیے اکاؤنٹ درکار نہیں۔ یہ کمانڈ وہ {scheme} URL دکھاتی ہے جو آپ نیچے چسپاں کریں گے۔",
+   "placeholders": [
+    "scheme"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.ngrok_note",
+   "role": "help",
+   "english": "Needs an ngrok account. It prints the {scheme} URL to paste below.",
+   "ur": "اس کے لیے ngrok اکاؤنٹ درکار ہے۔ یہ کمانڈ وہ {scheme} URL دکھاتی ہے جو آپ نیچے چسپاں کریں گے۔",
+   "placeholders": [
+    "scheme"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.tunnel_rule",
+   "role": "help",
+   "english": "Any tunnel works as long as it forwards a public HTTPS URL to {address} on that computer.",
+   "ur": "کوئی بھی ٹنل کام کرے گی، بشرطیکہ وہ ایک عوامی HTTPS URL کو اس کمپیوٹر پر {address} تک پہنچائے۔",
+   "placeholders": [
+    "address"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_sessions",
+   "role": "help",
+   "english": "Connected — you can see {sessions, plural, one {# session} other {# sessions}}.",
+   "ur": "منسلک ہو گیا — آپ {sessions, plural, one {# سیشن} other {# سیشنز}} دیکھ سکتے ہیں۔",
+   "placeholders": [
+    "sessions"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_password",
+   "role": "help",
+   "english": "That password was not accepted. Check the relay password on the computer.",
+   "ur": "وہ پاس ورڈ قبول نہیں ہوا۔ کمپیوٹر پر ریلے کا پاس ورڈ جانچیں۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "role": "help",
+   "english": "That tunnel refused the app. If you put an access policy or a login page in front of it, allow the app through; the relay itself also refuses requests from any other origin, so make sure the tunnel forwards straight to {address} rather than to a dashboard or another app.",
+   "ur": "اس ٹنل نے ایپ کو مسترد کر دیا۔ اگر آپ نے اس کے آگے رسائی کی پالیسی یا سائن ان صفحہ لگایا ہے تو ایپ کو گزرنے کی اجازت دیں؛ ریلے خود بھی کسی دوسرے ماخذ (origin) سے آنے والی ہر درخواست مسترد کرتا ہے، اس لیے یقینی بنائیں کہ ٹنل درخواستیں سیدھی {address} تک پہنچائے، کسی ڈیش بورڈ یا دوسری ایپ تک نہیں۔",
+   "placeholders": [
+    "address"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+   "role": "help",
+   "english": "{detail}. On that computer: {command}",
+   "ur": "{detail}۔ اس کمپیوٹر پر چلائیں: {command}",
+   "placeholders": [
+    "command",
+    "detail"
+   ],
+   "result": "ok (render-site code finding C1)",
+   "findings": [
+    "URS2B1-C1"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline",
+   "role": "help",
+   "english": "The tunnel answered, but the relay behind it is not. On that computer: {command}",
+   "ur": "ٹنل نے جواب دیا، لیکن اس کے پیچھے ریلے جواب نہیں دے رہا۔ اس کمپیوٹر پر چلائیں: {command}",
+   "placeholders": [
+    "command"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_tls",
+   "role": "help",
+   "english": "That tunnel's certificate was rejected. Use the {scheme} address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate on the one you run — the app will not skip the check.",
+   "ur": "اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔ ٹنل کا دکھایا ہوا {scheme} پتہ استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا اپنی چلائی ہوئی ٹنل کا خود دستخط شدہ سرٹیفکیٹ بدل دیں — ایپ یہ جانچ نہیں چھوڑے گی۔",
+   "placeholders": [
+    "scheme"
+   ],
+   "result": "changes_requested",
+   "findings": [
+    "URS2B1-01"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_host",
+   "role": "help",
+   "english": "That host name could not be found. Check the address for a typo, and that the tunnel still publishes that name.",
+   "ur": "میزبان کا یہ نام نہیں ملا۔ پتے میں ٹائپنگ کی غلطی جانچیں، اور یہ بھی کہ ٹنل اب بھی یہی نام شائع کر رہی ہے۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_unreachable",
+   "role": "help",
+   "english": "The address could not be reached. Check the URL is the public one your tunnel printed, and that the tunnel is still running.",
+   "ur": "اس پتے تک رسائی نہیں ہو سکی۔ جانچیں کہ URL وہی عوامی URL ہے جو آپ کی ٹنل نے دکھایا تھا، اور یہ کہ ٹنل اب بھی چل رہی ہے۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_timeout",
+   "role": "help",
+   "english": "That address did not answer within {seconds, plural, one {# second} other {# seconds}}. Check the tunnel is running and the computer is awake.",
+   "ur": "اس پتے نے {seconds, plural, one {# سیکنڈ} other {# سیکنڈ}} کے اندر جواب نہیں دیا۔ جانچیں کہ ٹنل چل رہی ہے اور کمپیوٹر جاگ رہا ہے۔",
+   "placeholders": [
+    "seconds"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "role": "help",
+   "english": "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, it may be the local-network permission: allow Local Operator under Settings → Privacy & Security → Local Network, then tap {action}.",
+   "ur": "اس نیٹ ورک پر اس پتے سے کوئی جواب نہیں آیا۔ جانچیں کہ کمپیوٹر جاگ رہا ہے اور ریلے چلا رہا ہے۔ اگر دونوں باتیں درست ہیں تو ممکن ہے وجہ مقامی نیٹ ورک کی اجازت ہو: ترتیبات → رازداری اور سیکیورٹی → مقامی نیٹ ورک میں Local Operator کو اجازت دیں، پھر “{action}” پر ٹیپ کریں۔",
+   "placeholders": [
+    "action"
+   ],
+   "result": "changes_requested",
+   "findings": [
+    "URS2B1-02"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network",
+   "role": "help",
+   "english": "Nothing answered at that address on this network. Check the computer is awake and running the relay, then tap {action}.",
+   "ur": "اس نیٹ ورک پر اس پتے سے کوئی جواب نہیں آیا۔ جانچیں کہ کمپیوٹر جاگ رہا ہے اور ریلے چلا رہا ہے، پھر “{action}” دبائیں۔",
+   "placeholders": [
+    "action"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_refused",
+   "role": "help",
+   "english": "That address answered, but not in a way this app understands.",
+   "ur": "اس پتے نے جواب تو دیا، لیکن اس طرح نہیں جو یہ ایپ سمجھ سکے۔",
+   "placeholders": [],
+   "result": "ok_with_minor",
+   "findings": [
+    "URS2B1-05"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.remedy",
+   "role": "help",
+   "english": "On that computer: {command}",
+   "ur": "اس کمپیوٹر پر چلائیں: {command}",
+   "placeholders": [
+    "command"
+   ],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_other",
+   "role": "help",
+   "english": "This phone keeps one relay password, and it belongs to another address. Enter this computer's password, test it, then save. It replaces the other one.",
+   "ur": "یہ فون ریلے کا صرف ایک پاس ورڈ رکھتا ہے، اور وہ کسی دوسرے پتے کا ہے۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔ یہ پہلے والے پاس ورڈ کی جگہ لے لے گا۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_empty",
+   "role": "help",
+   "english": "This phone has no relay password saved. Enter this computer's password, test it, then save.",
+   "ur": "اس فون پر ریلے کا کوئی پاس ورڈ محفوظ نہیں۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_this",
+   "role": "help",
+   "english": "This phone's saved relay password is for this address. Test it, then save.",
+   "ur": "اس فون پر محفوظ ریلے کا پاس ورڈ اسی پتے کا ہے۔ اسے جانچیں، پھر محفوظ کریں۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.common.copy",
+   "role": "button",
+   "english": "Copy",
+   "ur": "کاپی کریں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.common.copied",
+   "role": "status",
+   "english": "Copied",
+   "ur": "کاپی ہو گیا",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.common.copy_command_hint",
+   "role": "help",
+   "english": "Copies the {label} command",
+   "ur": "یہ {label} کی کمانڈ کاپی کرتا ہے",
+   "placeholders": [
+    "label"
+   ],
+   "result": "ok_with_minor",
+   "findings": [
+    "URS2B1-06"
+   ]
+  },
+  {
+   "key": "mobile.settings.own_tunnel.not_saved",
+   "role": "help",
+   "english": "The password is not saved, so the app asks for it on each launch.",
+   "ur": "پاس ورڈ محفوظ نہیں، اس لیے ایپ ہر بار کھلنے پر اسے مانگتی ہے۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.kept_secure",
+   "role": "help",
+   "english": "The address and the password are kept in this phone's secure store.",
+   "ur": "پتہ اور پاس ورڈ اس فون کے محفوظ اسٹوریج میں رکھے گئے ہیں۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.edit",
+   "role": "button",
+   "english": "Edit",
+   "ur": "ترمیم کریں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.test_again",
+   "role": "button",
+   "english": "Test again",
+   "ur": "دوبارہ جانچیں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove",
+   "role": "button",
+   "english": "Remove",
+   "ur": "ہٹائیں",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.password_placeholder",
+   "role": "help",
+   "english": "The password the relay was started with",
+   "ur": "وہ پاس ورڈ جس سے ریلے شروع کیا گیا تھا",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_title",
+   "role": "heading",
+   "english": "This runtime cannot store it",
+   "ur": "یہ رن ٹائم ٹنل محفوظ نہیں کر سکتا",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "role": "help",
+   "english": "This build has no secure keystore, so the tunnel lasts for this run only. On a phone the value is kept in the platform's secure store.",
+   "ur": "اس بلڈ میں کوئی محفوظ کی اسٹور نہیں، اس لیے ٹنل صرف ایپ کے اس بار چلنے تک رکھی جاتی ہے۔ فون پر یہ معلومات پلیٹ فارم کے محفوظ اسٹوریج میں رکھی جاتی ہیں۔",
+   "placeholders": [],
+   "result": "ok_with_minor",
+   "findings": [
+    "URS2B1-04"
+   ]
+  },
+  {
+   "key": "mobile.settings.own_tunnel.before_saving",
+   "role": "help",
+   "english": "Test the address before saving it: a saved tunnel that has never answered leaves the list empty with nothing to explain why.",
+   "ur": "محفوظ کرنے سے پہلے پتہ جانچ لیں: اگر محفوظ کی گئی ٹنل نے کبھی جواب نہ دیا ہو تو فہرست خالی رہتی ہے، بغیر کسی وضاحت کے۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_title",
+   "role": "heading",
+   "english": "Remove this tunnel?",
+   "ur": "یہ ٹنل ہٹائیں؟",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_body",
+   "role": "help",
+   "english": "This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account.",
+   "ur": "یہ اس فون سے پتہ اور پاس ورڈ ہٹا دیتا ہے۔ آپ کے کمپیوٹر، آپ کی چلائی ہوئی ٹنل یا کسی اکاؤنٹ پر اس کا کوئی اثر نہیں پڑتا۔",
+   "placeholders": [],
+   "result": "ok",
+   "findings": []
+  }
+ ],
+ "ledger": "Not run. The task restricted writes to audits/ur/, so the manager records the ledger row when the bundle lands under i18n/audits/evidence/ur/.",
+ "artifacts": [
+  "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ur/record.json",
+  "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ur/report.md",
+  "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ur/audit.log"
+ ],
+ "audit_notes_not_execution_log": "report.md holds the reasoning. audit.log holds commands that were actually run and their real output."
+}

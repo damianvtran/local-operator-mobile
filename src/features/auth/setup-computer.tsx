@@ -102,7 +102,11 @@ export const SetupComputer = ({
 					<Text className="text-body-sm text-ink-muted">
 						In a terminal on the computer you want to control:
 					</Text>
-					<CommandBlock label="Terminal" command={createCommands()} />
+					<CommandBlock
+						id="terminal"
+						label="Terminal"
+						command={createCommands()}
+					/>
 					{/* The amount is a placeholder and the copy says where the real one
 					 *  is: this app no longer reads the quoted price (the merged client
 					 *  surfaces eligibility, not the amount), and inventing a number is
@@ -115,7 +119,7 @@ export const SetupComputer = ({
 					<Text className="text-body-sm text-ink-muted">
 						Or in the Local Operator TUI, in two commands:
 					</Text>
-					<CommandBlock label="TUI" command={tuiCommands()} />
+					<CommandBlock id="tui" label="TUI" command={tuiCommands()} />
 					<Button
 						testID={CONTROL.setupCreateTunnel}
 						label={waiting ? "Watching for it" : "I've run it — connect it"}
@@ -145,6 +149,7 @@ export const SetupComputer = ({
 						autoCapitalize="none"
 					/>
 					<CommandBlock
+						id="attach"
 						label="Attach"
 						command={`lop tunnel connect ${tunnelId.trim() || "<tunnel-id>"}`}
 					/>
