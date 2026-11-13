@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "Diagnóstico",
 	"mobile.settings.diagnostics.route": "Ruta",
 	"mobile.settings.diagnostics.stream": "Flujo",
+	"mobile.settings.diagnostics.reason": "Motivo",
 	"mobile.settings.diagnostics.last_error": "Último error",
 	"mobile.settings.diagnostics.route_radient": "Túnel de Radient",
 	"mobile.settings.diagnostics.route_direct": "Relé directo",

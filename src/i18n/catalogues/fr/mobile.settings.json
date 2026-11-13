@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "Diagnostic",
 	"mobile.settings.diagnostics.route": "Acheminement",
 	"mobile.settings.diagnostics.stream": "Flux",
+	"mobile.settings.diagnostics.reason": "Motif",
 	"mobile.settings.diagnostics.last_error": "Dernière erreur",
 	"mobile.settings.diagnostics.route_radient": "Tunnel Radient",
 	"mobile.settings.diagnostics.route_direct": "Relais direct",

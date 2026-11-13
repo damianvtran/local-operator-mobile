@@ -159,6 +159,10 @@
 		"role": "meta",
 		"note": "Label of the diagnostic row showing the live session stream's health word. One word."
 	},
+	"mobile.settings.diagnostics.reason": {
+		"role": "meta",
+		"note": "Label of the diagnostic row showing the raw machine reason code behind the connection's health (e.g. `reason: stream_stalled`). One word, no colon. The code itself is never translated."
+	},
 	"mobile.settings.diagnostics.last_error": {
 		"role": "meta",
 		"note": "Label of the diagnostic row showing the most recent connection error's summary. Two words, no colon."

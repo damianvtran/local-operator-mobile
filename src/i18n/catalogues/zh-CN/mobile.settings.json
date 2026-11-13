@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "诊断",
 	"mobile.settings.diagnostics.route": "连接路径",
 	"mobile.settings.diagnostics.stream": "数据流",
+	"mobile.settings.diagnostics.reason": "原因",
 	"mobile.settings.diagnostics.last_error": "最近错误",
 	"mobile.settings.diagnostics.route_radient": "Radient隧道",
 	"mobile.settings.diagnostics.route_direct": "直连中继",

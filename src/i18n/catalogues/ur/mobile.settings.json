@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "تشخیص",
 	"mobile.settings.diagnostics.route": "راستہ",
 	"mobile.settings.diagnostics.stream": "اسٹریم",
+	"mobile.settings.diagnostics.reason": "وجہ",
 	"mobile.settings.diagnostics.last_error": "آخری خرابی",
 	"mobile.settings.diagnostics.route_radient": "Radient ٹنل",
 	"mobile.settings.diagnostics.route_direct": "براہ راست ریلے",

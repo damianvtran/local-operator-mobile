@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "निदान",
 	"mobile.settings.diagnostics.route": "रूट",
 	"mobile.settings.diagnostics.stream": "स्ट्रीम",
+	"mobile.settings.diagnostics.reason": "कारण",
 	"mobile.settings.diagnostics.last_error": "पिछली त्रुटि",
 	"mobile.settings.diagnostics.route_radient": "Radient टनल",
 	"mobile.settings.diagnostics.route_direct": "सीधा रिले",

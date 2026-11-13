@@ -547,6 +547,7 @@ export type CatalogueKey =
 	| "mobile.settings.diagnostics.last_error"
 	| "mobile.settings.diagnostics.none"
 	| "mobile.settings.diagnostics.privacy_note"
+	| "mobile.settings.diagnostics.reason"
 	| "mobile.settings.diagnostics.route"
 	| "mobile.settings.diagnostics.route_direct"
 	| "mobile.settings.diagnostics.route_radient"
@@ -1285,6 +1286,7 @@ export type NoParamKey =
 	| "mobile.settings.diagnostics.last_error"
 	| "mobile.settings.diagnostics.none"
 	| "mobile.settings.diagnostics.privacy_note"
+	| "mobile.settings.diagnostics.reason"
 	| "mobile.settings.diagnostics.route"
 	| "mobile.settings.diagnostics.route_direct"
 	| "mobile.settings.diagnostics.route_radient"
@@ -2057,6 +2059,7 @@ export type MessageParams = {
 	"mobile.settings.diagnostics.last_error": NoParams;
 	"mobile.settings.diagnostics.none": NoParams;
 	"mobile.settings.diagnostics.privacy_note": NoParams;
+	"mobile.settings.diagnostics.reason": NoParams;
 	"mobile.settings.diagnostics.route": NoParams;
 	"mobile.settings.diagnostics.route_direct": NoParams;
 	"mobile.settings.diagnostics.route_radient": NoParams;
@@ -2888,6 +2891,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.diagnostics.last_error": "Last error",
 	"mobile.settings.diagnostics.none": "None",
 	"mobile.settings.diagnostics.privacy_note": "These lines never include a token, a password, or a session's content.",
+	"mobile.settings.diagnostics.reason": "Reason",
 	"mobile.settings.diagnostics.route": "Route",
 	"mobile.settings.diagnostics.route_direct": "Direct relay",
 	"mobile.settings.diagnostics.route_radient": "Radient tunnel",
@@ -3704,6 +3708,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.diagnostics.last_error": { role: "meta", note: "Label of the diagnostic row showing the most recent connection error's summary. Two words, no colon." },
 	"mobile.settings.diagnostics.none": { role: "status", note: "Value of a diagnostic row that has nothing to show (no route, no error). One word." },
 	"mobile.settings.diagnostics.privacy_note": { role: "help", note: "Reassurance under the Settings diagnostics rows: the lines shown never contain secrets or conversation content. One sentence." },
+	"mobile.settings.diagnostics.reason": { role: "meta", note: "Label of the diagnostic row showing the raw machine reason code behind the connection's health (e.g. `reason: stream_stalled`). One word, no colon. The code itself is never translated." },
 	"mobile.settings.diagnostics.route": { role: "meta", note: "Label of the diagnostic row naming how the phone reaches the computer (Radient tunnel or direct relay). One word." },
 	"mobile.settings.diagnostics.route_direct": { role: "status", note: "Value of the Route diagnostic row when the phone connects straight to the user's own relay. 'Relay' is the product's word for the program on the computer." },
 	"mobile.settings.diagnostics.route_radient": { role: "status", note: "Value of the Route diagnostic row when the phone connects through a Radient tunnel. 'Radient' is a product name." },
@@ -4534,6 +4539,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Último error",
 		"mobile.settings.diagnostics.none": "Nada",
 		"mobile.settings.diagnostics.privacy_note": "Estas líneas nunca incluyen tokens, contraseñas ni el contenido de una sesión.",
+		"mobile.settings.diagnostics.reason": "Motivo",
 		"mobile.settings.diagnostics.route": "Ruta",
 		"mobile.settings.diagnostics.route_direct": "Relé directo",
 		"mobile.settings.diagnostics.route_radient": "Túnel de Radient",
@@ -5348,6 +5354,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Dernière erreur",
 		"mobile.settings.diagnostics.none": "Rien",
 		"mobile.settings.diagnostics.privacy_note": "Ces lignes ne contiennent jamais de token, de mot de passe ni de contenu de session.",
+		"mobile.settings.diagnostics.reason": "Motif",
 		"mobile.settings.diagnostics.route": "Acheminement",
 		"mobile.settings.diagnostics.route_direct": "Relais direct",
 		"mobile.settings.diagnostics.route_radient": "Tunnel Radient",
@@ -6162,6 +6169,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "पिछली त्रुटि",
 		"mobile.settings.diagnostics.none": "कोई नहीं",
 		"mobile.settings.diagnostics.privacy_note": "इन पंक्तियों में कभी टोकन, पासवर्ड या किसी सत्र की सामग्री शामिल नहीं होती।",
+		"mobile.settings.diagnostics.reason": "कारण",
 		"mobile.settings.diagnostics.route": "रूट",
 		"mobile.settings.diagnostics.route_direct": "सीधा रिले",
 		"mobile.settings.diagnostics.route_radient": "Radient टनल",
@@ -6976,6 +6984,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Последняя ошибка",
 		"mobile.settings.diagnostics.none": "Нет",
 		"mobile.settings.diagnostics.privacy_note": "В этих строках никогда нет токенов, паролей или содержимого сессий.",
+		"mobile.settings.diagnostics.reason": "Причина",
 		"mobile.settings.diagnostics.route": "Маршрут",
 		"mobile.settings.diagnostics.route_direct": "Напрямую к ретранслятору",
 		"mobile.settings.diagnostics.route_radient": "Туннель Radient",
@@ -7790,6 +7799,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "آخری خرابی",
 		"mobile.settings.diagnostics.none": "کوئی نہیں",
 		"mobile.settings.diagnostics.privacy_note": "ان سطروں میں کبھی ٹوکن، پاس ورڈ یا سیشن کا مواد شامل نہیں ہوتا۔",
+		"mobile.settings.diagnostics.reason": "وجہ",
 		"mobile.settings.diagnostics.route": "راستہ",
 		"mobile.settings.diagnostics.route_direct": "براہ راست ریلے",
 		"mobile.settings.diagnostics.route_radient": "Radient ٹنل",
@@ -8604,6 +8614,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Lỗi gần nhất",
 		"mobile.settings.diagnostics.none": "Không có",
 		"mobile.settings.diagnostics.privacy_note": "Các dòng này không bao giờ chứa token, mật khẩu hay nội dung phiên.",
+		"mobile.settings.diagnostics.reason": "Lý do",
 		"mobile.settings.diagnostics.route": "Tuyến kết nối",
 		"mobile.settings.diagnostics.route_direct": "Máy chủ chuyển tiếp trực tiếp",
 		"mobile.settings.diagnostics.route_radient": "Đường hầm Radient",
@@ -9418,6 +9429,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "最近错误",
 		"mobile.settings.diagnostics.none": "无",
 		"mobile.settings.diagnostics.privacy_note": "这些信息绝不包含令牌、密码或会话内容。",
+		"mobile.settings.diagnostics.reason": "原因",
 		"mobile.settings.diagnostics.route": "连接路径",
 		"mobile.settings.diagnostics.route_direct": "直连中继",
 		"mobile.settings.diagnostics.route_radient": "Radient隧道",

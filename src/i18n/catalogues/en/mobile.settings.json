@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "Diagnostics",
 	"mobile.settings.diagnostics.route": "Route",
 	"mobile.settings.diagnostics.stream": "Stream",
+	"mobile.settings.diagnostics.reason": "Reason",
 	"mobile.settings.diagnostics.last_error": "Last error",
 	"mobile.settings.diagnostics.route_radient": "Radient tunnel",
 	"mobile.settings.diagnostics.route_direct": "Direct relay",

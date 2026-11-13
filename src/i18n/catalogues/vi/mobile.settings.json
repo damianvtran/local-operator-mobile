@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "Chẩn đoán",
 	"mobile.settings.diagnostics.route": "Tuyến kết nối",
 	"mobile.settings.diagnostics.stream": "Luồng",
+	"mobile.settings.diagnostics.reason": "Lý do",
 	"mobile.settings.diagnostics.last_error": "Lỗi gần nhất",
 	"mobile.settings.diagnostics.route_radient": "Đường hầm Radient",
 	"mobile.settings.diagnostics.route_direct": "Máy chủ chuyển tiếp trực tiếp",

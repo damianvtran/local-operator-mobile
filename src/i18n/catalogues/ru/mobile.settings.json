@@ -39,6 +39,7 @@
 	"mobile.settings.section.diagnostics": "Диагностика",
 	"mobile.settings.diagnostics.route": "Маршрут",
 	"mobile.settings.diagnostics.stream": "Поток",
+	"mobile.settings.diagnostics.reason": "Причина",
 	"mobile.settings.diagnostics.last_error": "Последняя ошибка",
 	"mobile.settings.diagnostics.route_radient": "Туннель Radient",
 	"mobile.settings.diagnostics.route_direct": "Напрямую к ретранслятору",
