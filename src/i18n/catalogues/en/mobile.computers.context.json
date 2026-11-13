@@ -497,7 +497,7 @@
 	},
 	"mobile.computers.own_tunnel.verdict_forbidden": {
 		"role": "help",
-		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something in front of the relay refused the request. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right."
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something in front of the relay refused the request. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right. Origin = the requesting site/app; the relay refuses cross-origin requests."
 	},
 	"mobile.computers.own_tunnel.verdict_offline_detail": {
 		"role": "help",

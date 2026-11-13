@@ -123,7 +123,7 @@
 	"mobile.computers.own_tunnel.tunnel_rule": "Any tunnel works as long as it forwards a public HTTPS URL to {address} on that computer.",
 	"mobile.computers.own_tunnel.verdict_sessions": "Connected — you can see {sessions, plural, one {# session} other {# sessions}}.",
 	"mobile.computers.own_tunnel.verdict_password": "That password was not accepted. Check the relay password on the computer.",
-	"mobile.computers.own_tunnel.verdict_forbidden": "That tunnel refused the app. If you put an access policy or a login page in front of it, allow the app through; the relay itself also refuses requests it did not come from, so make sure the tunnel forwards straight to {address} rather than to a dashboard or another app.",
+	"mobile.computers.own_tunnel.verdict_forbidden": "That tunnel refused the app. If you put an access policy or a login page in front of it, allow the app through; the relay itself also refuses requests from any other origin, so make sure the tunnel forwards straight to {address} rather than to a dashboard or another app.",
 	"mobile.computers.own_tunnel.verdict_offline_detail": "{detail}. On that computer: {command}",
 	"mobile.computers.own_tunnel.verdict_offline": "The tunnel answered, but the relay behind it is not. On that computer: {command}",
 	"mobile.computers.own_tunnel.verdict_tls": "That tunnel's certificate was rejected. Use the {scheme} address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate on the one you run — the app will not skip the check.",
