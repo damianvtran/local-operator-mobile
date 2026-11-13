@@ -1,0 +1,27 @@
+# audit.log — commands actually run (session 42a9d3be53a4, 2026-11-13)
+$ shasum -a 256 brief-s2b2a.json hi/draft-hi.json
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+e24b300418f841277a2d3c6cab80d3086a92ff3b765d2fe7eaaaf0a87a35dd03  hi/draft-hi.json
+$ python3 count '['+'redacted'+']' -> brief 0, draft 0
+$ git -C worktree rev-parse HEAD -> cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+$ python3 grep hi mobile.computers.json + mobile.common.json for try/sign/console/tunnel/verdict/relay/password terms -> try_now 'अभी कोशिश करें', retry 'दोबारा कोशिश करें', common.try_again 'फिर से कोशिश करें', verdict_tls/verdict_host/verdict_password wording; no prior quarantine term
+$ sed refusal-surface.tsx 85-130, 290-365 -> try_now only for kind=retry; try_again for offline/relay/password; diagnostic uses mobile.computers.retry
+$ read ~/local-operator/i18n/style-guides/hi.md; grep glossary.md -> session→सत्र, relay→रिले, hi plurals one/other (0 is one)
+$ cd worktree; env -u XPC_FLAGS NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx $SCRATCH/hi-icu-check.ts
+keys brief 24 draft 24 missing [] extra [] order_equal true
+0 one => दोबारा कोशिश करने से पहले लगभग 0 सेकंड रुकें।
+1 one => दोबारा कोशिश करने से पहले लगभग 1 सेकंड रुकें।
+2 other => दोबारा कोशिश करने से पहले लगभग 2 सेकंड रुकें।
+5 other => दोबारा कोशिश करने से पहले लगभग 5 सेकंड रुकें।
+30 other => दोबारा कोशिश करने से पहले लगभग 30 सेकंड रुकें।
+1.5 other => दोबारा कोशिश करने से पहले लगभग 1.5 सेकंड रुकें।
+offline_title => https://mac-studio.trycloudflare.com जवाब नहीं दे रहा है।
+relay_stopped_title => https://mac-studio.trycloudflare.com पर रिले नहीं चल रहा है।
+tunnel_gone_title => https://mac-studio.trycloudflare.com अब कोई टनल नहीं है।
+console_title => https://mac-studio.trycloudflare.com को Radient में ध्यान देने की ज़रूरत है।
+sign_in_title => आपका Radient साइन-इन समाप्त हो गया है। https://mac-studio.trycloudflare.com से फिर कनेक्ट करने के लिए साइन इन करें।
+retry_title => https://mac-studio.trycloudflare.com अभी तैयार नहीं है।
+टनल का दिखाया हुआ https:// पता उपयोग करें, ऐसी टनल चुनें जिसके सर्टिफ़िकेट पर फ़ोन भरोसा करे, या सेल्फ़-साइन्ड सर्टिफ़िकेट बदलें — यह ऐप सर्टिफ़िकेट की जाँच नहीं छोड़ेगा।
+HI plural categories: [ 'one', 'other' ]
+fail 0
+$ python3 len(button labels) -> try_now 14, try_again 17, sign_in_again 19, open_console 19, another_address 20

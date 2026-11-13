@@ -1,0 +1,44 @@
+# audit.log — commands actually run (zh-CN, m3-s2b2a)
+$ shasum -a 256 brief-s2b2a.json zh-CN/draft-zh-CN.json
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+04cc9ee2e3237467c9e542bf708820196bfd8a8308e3172f6592cff790f57bdd  zh-CN/draft-zh-CN.json
+$ grep -c '[redacted]' brief-s2b2a.json zh-CN/draft-zh-CN.json   -> 0 / 0
+$ cd /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/ && NODE_OPTIONS=--max-old-space-size=256 tsx $SCRATCH/zhcn-mech.ts
+zh plural categories: [ 'other' ]
+keys brief 24 draft 24 missing [] extra []
+OK  offline_title [["subject","text"]] len 14 => my-mac没有响应。
+OK  relay_stopped_title [["subject","text"]] len 18 => my-mac上的中继未在运行。
+OK  tunnel_gone_title [["subject","text"]] len 16 => my-mac已不再是隧道。
+OK  console_title [["subject","text"]] len 23 => my-mac需要在Radient中处理。
+OK  password_title [] len 8 => 该密码未被接受。
+OK  sign_in_title [["subject","text"]] len 34 => 你的Radient会话已过期。请登录以重新连接到my-mac。
+OK  retry_title [["subject","text"]] len 14 => my-mac尚未就绪。
+OK  certificate_title [] len 10 => 该隧道的证书被拒绝。
+OK  host_title [] len 8 => 找不到该主机名。
+OK  offline_next [] len 32 => 请唤醒那台电脑，并确认连接器正在运行。其最后已知状态显示在上方。
+OK  relay_stopped_next [] len 16 => 请重新启动中继，并让它保持运行。
+OK  tunnel_gone_next [] len 26 => 请在Radient中重新创建隧道，然后添加这台电脑。
+OK  console_next [] len 34 => 请打开Radient控制台进行处理。在此手机上登录无法解决这个问题。
+OK  password_next [] len 17 => 请在电脑上检查中继密码，然后重试。
+OK  sign_in_next [] len 28 => 请重新登录以恢复连接。此前输入的内容已被隔离，不会发送。
+OK  retry_next [] len 18 => 通常只是暂时的网络问题。请稍后再试。
+OK  certificate_next [["scheme","text"]] len 56 => 请改用隧道输出的https://地址，或换用证书能被手机信任的隧道，或替换自签名证书——本应用不会跳过证书校验。
+OK  host_next [] len 27 => 请检查地址是否有拼写错误，以及隧道是否仍在发布该名称。
+OK  wait_seconds [["seconds","plural"]] len 38 => 请等待约1 秒后再试。
+   n=0 请等待约0 秒后再试。
+   n=1 请等待约1 秒后再试。
+   n=2 请等待约2 秒后再试。
+   n=30 请等待约30 秒后再试。
+OK  try_now [] len 4 => 立即重试
+OK  try_again [] len 2 => 重试
+OK  sign_in_again [] len 4 => 重新登录
+OK  open_console [] len 12 => 打开Radient控制台
+OK  another_address [] len 6 => 使用其他地址
+bad 0
+
+$ python3 spacing count (Han<->[A-Za-z0-9{}] adjacency) in zh-CN catalogues
+mobile.computers.json spaced 12 unspaced 64
+all mobile.* spaced 71 unspaced 205
+$ grep -n '连接器' src/i18n/catalogues/zh-CN/*.json   -> no hits
+$ grep -c '会话' src/i18n/catalogues/zh-CN/*.json   -> 51 occurrences in 12 files (all agent sessions)
+Note: an earlier bash attempt was refused by the dangerous-delete guardrail (a temp-file rm in the worktree); nothing ran in that attempt and nothing was written to the worktree.

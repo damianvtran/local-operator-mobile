@@ -1,0 +1,113 @@
+{
+  "locale": "zh-CN",
+  "slice": "m3-s2b2a-computers-refusal",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/zh-CN/draft-zh-CN.json",
+    "sha256": "04cc9ee2e3237467c9e542bf708820196bfd8a8308e3172f6592cff790f57bdd"
+  },
+  "translator_job": "67e397a5ab7f",
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "e1685cdf64ae",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "independent_from_translator_session": true
+  },
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/",
+    "head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "zh_computers_sha256": "44bee1877db0e984b29312086ac90a7ca973e35857e9d7ef83064570cbccf71c",
+    "zh_common_sha256": "5b4c314924ccbe676c114ba3c79b2c4d64c21921d250f4e34acaabfaf066bc2c",
+    "messages_ts_sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_marker_hits": {
+    "brief": 0,
+    "draft": 0
+  },
+  "mechanical": {
+    "parser": "src/i18n/messages.ts parseMessage/formatMessage via tsx, node heap 256 MB",
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "placeholder_mismatch": 0,
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "cldr_zh_categories": [
+      "other"
+    ],
+    "wait_seconds_arms": [
+      "other"
+    ],
+    "result": "pass"
+  },
+  "verdict": "changes_requested",
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 2,
+    "MINOR": 2,
+    "NIT": 2
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "MAJOR",
+      "key": "mobile.computers.refusal.tunnel_gone_title",
+      "current": "{subject}已不再是隧道。",
+      "problem": "Calque of \"is no longer a tunnel\"; in Chinese an address (or a computer name, which {subject} may also be) \"已不再是隧道\" reads as if the thing changed type. The note gives the meaning: the address no longer belongs to any tunnel (deleted/replaced). Rules on the translator's open question.",
+      "suggested": "{subject}已不再对应任何隧道。"
+    },
+    {
+      "id": "F2",
+      "severity": "MAJOR",
+      "key": "mobile.computers.refusal.sign_in_title",
+      "current": "你的Radient会话已过期。请登录以重新连接到{subject}。",
+      "problem": "Terminology collision: 会话 is the zh-CN catalogue's term for agent sessions (51 occurrences across 12 namespaces, all agent sessions, e.g. \"# 个会话正在运行\", \"返回会话列表\"). On this screen a reader can take \"会话已过期\" as their agent session being lost. The source means the Radient sign-in expired.",
+      "suggested": "你的Radient登录已过期。请登录以重新连接到{subject}。"
+    },
+    {
+      "id": "F3",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.offline_next",
+      "current": "请唤醒那台电脑，并确认连接器正在运行。其最后已知状态显示在上方。",
+      "problem": "\"其最后已知状态显示在上方\" is stiff written register (其 + literal word order); the rest of the screen uses plain 它.",
+      "suggested": "请唤醒那台电脑，并确认连接器正在运行。上方显示的是它最后已知的状态。"
+    },
+    {
+      "id": "F4",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.console_next",
+      "current": "请打开Radient控制台进行处理。在此手机上登录无法解决这个问题。",
+      "problem": "Note: re-signing in on the phone does not help, say so plainly. \"在此手机上登录\" loses \"again\" and reads as if signing in were the action just offered; 重新…也 states the futility plainly.",
+      "suggested": "请打开Radient控制台进行处理。在此手机上重新登录也无法解决这个问题。"
+    },
+    {
+      "id": "F5",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.relay_stopped_title",
+      "current": "{subject}上的中继未在运行。",
+      "problem": "\"未在运行\" is slightly stiff; 没有运行 is the natural spoken-product form and matches 没有响应 in offline_title.",
+      "suggested": "{subject}上的中继没有运行。"
+    },
+    {
+      "id": "F6",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.another_address",
+      "current": "使用其他地址",
+      "problem": "The button switches away from the failed address; 改用 says \"use instead\" and matches the catalogue's \"改用我自己的隧道\".",
+      "suggested": "改用其他地址"
+    }
+  ],
+  "rulings": {
+    "tunnel_gone_title": "已不再对应任何隧道 (see F1); 已不再是隧道 is a calque.",
+    "try_again": "重试 accepted. English labels are identical too; the screen context disambiguates, password_next (\"然后重试\") points at this button, and the diagnostic kind on the same surface shows mobile.computers.retry=重试, so a different label would split one action into two words.",
+    "connector_连接器": "Accepted. grep of all zh-CN catalogues: 0 prior hits for 连接器, so no collision; it is the standard zh term for a tunnel connector program and reads naturally next to 中继/隧道.",
+    "spacing": "Unspaced is correct: Han<->Latin/digit/brace adjacency in zh-CN mobile.computers.json is 64 unspaced vs 12 spaced; across all zh-CN mobile.* 205 vs 71. wait_seconds \"# 秒\" keeps the space exactly like own_tunnel.verdict_timeout, consistent; no finding."
+  },
+  "translation_service_used": false
+}

@@ -1,0 +1,127 @@
+{
+  "locale": "es",
+  "slice": "m3-s2b2a-computers-refusal",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/es/draft-es.json",
+    "sha256": "d1d9734623f37ee5b093c1d6cad4904d5f348b605e84dcd7fb5191049f17fdb9"
+  },
+  "translator_job": "ba7a91cef29d",
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "57d45b0513a4",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt (Model: anthropic/claude-opus-5-5); no fallback observed",
+    "independent_from_translator_session": true
+  },
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "worktree_head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "style_guide": "~/local-operator/i18n/style-guides/es.md",
+    "glossary": "~/local-operator/i18n/glossary.md",
+    "catalogues": [
+      "src/i18n/catalogues/es/mobile.computers.json",
+      "src/i18n/catalogues/es/mobile.common.json"
+    ]
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_marker_hits": 0,
+  "mechanical": {
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "icu_parse_failures": 0,
+    "placeholder_mismatches": 0,
+    "bidi_controls": 0,
+    "plural_categories_es": [
+      "one",
+      "many",
+      "other"
+    ],
+    "parser": "src/i18n/messages.ts parseMessage/formatMessage via tsx, NODE_OPTIONS=--max-old-space-size=256",
+    "note": "checker's one 'PH MISMATCH' line on wait_seconds was a false positive of its naive \\{(\\w+) regex matching arm text inside plural branches; placeholder set is {seconds} in both"
+  },
+  "rulings": {
+    "retry_title_disponible": "ACCEPT — '{subject} aún no está disponible.' keeps the temporary, reassuring sense ('aún'), avoids gender agreement with a name/URL subject that listo/lista would force; no added cause.",
+    "wait_seconds_one_vs_other": "ACCEPT — arms are mutually exclusive (es one = 1 only); 'unos 1 segundo' is ungrammatical, so 'aproximadamente' in one and the more natural 'unos' in many/other is correct. many '# de segundos' matches style guide and catalogue (verdict_timeout).",
+    "try_again_equals_common": "ACCEPT — 'Reintentar' is the right label for a connection retry; identical copy to mobile.common.try_again and mobile.computers.retry is fine, keys stay distinct.",
+    "sign_in_title_two_sentences": "ACCEPT — English source is two sentences and the note says 'Two short sentences'; the trailing 'keep it one sentence' is boilerplate width text. Mirrors the source.",
+    "button_widths": "open_console 24 and sign_in_again 23 both fit: Button (src/ui/components/button.tsx) sets numberOfLines only when labelLines=1, which refusal-surface never passes, so labels WRAP, never clip; md size is min-h-11 px-4. 'Volver a iniciar sesión' accepted as is; open_console: see ES-1 (restore article, 27 chars, still fits)."
+  },
+  "key_reviews": {
+    "offline_title": "OK",
+    "relay_stopped_title": "OK (ES-3 nit)",
+    "tunnel_gone_title": "OK",
+    "console_title": "OK",
+    "password_title": "OK — identical to own_tunnel.verdict_password head",
+    "sign_in_title": "OK",
+    "retry_title": "OK",
+    "certificate_title": "OK — = verdict_tls head",
+    "host_title": "OK — = verdict_host head",
+    "offline_next": "OK — 'Despierta' matches style-guide wake → despertar; 'más arriba' keeps the 'above' pointer",
+    "relay_stopped_next": "OK — no command added",
+    "tunnel_gone_next": "OK",
+    "console_next": "OK — plainly says signing in on the phone won't change it",
+    "password_next": "OK",
+    "sign_in_next": "OK — 'queda en cuarentena y no se enviará' keeps the not-sent promise, not softened",
+    "retry_next": "OK — no automatic retry promised",
+    "certificate_next": "OK — mirrors verdict_tls; firm 'no se saltará la comprobación'; em dash with spaces per style guide",
+    "host_next": "OK — = verdict_host remedy",
+    "wait_seconds": "OK — one/many/other, # in every arm, advice only",
+    "try_now": "OK (ES-2 nit)",
+    "try_again": "OK",
+    "sign_in_again": "OK",
+    "open_console": "ES-1 minor",
+    "another_address": "OK"
+  },
+  "findings": [
+    {
+      "id": "ES-1",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.open_console",
+      "current": "Abrir consola de Radient",
+      "problem": "Dropped article reads telegraphic; the es catalogue always writes 'la consola de Radient' (mobile.computers.billing_help, disabled_help, 'No se pudo abrir la consola de Radient.') and articled button labels ('Abrir la cola', 'Abrir el menú de navegación'). The 24-char hint is not a clip: Button sets no labelLines (wraps, min-h grows) and a full-width md button (px-4) on 320 pt has ~256 pt of label width, so 27 chars fits one line.",
+      "suggested": "Abrir la consola de Radient"
+    },
+    {
+      "id": "ES-2",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.try_now",
+      "current": "Probar ahora",
+      "problem": "Acceptable and matches mobile.computers.try_now, but here the button retries a connection after '… aún no está disponible.'; 'Probar' leans toward 'test'. Optional sharper wording (16 chars).",
+      "suggested": "Reintentar ahora"
+    },
+    {
+      "id": "ES-3",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.relay_stopped_title",
+      "current": "El relé no está en ejecución en {subject}.",
+      "problem": "Double 'en … en' is slightly heavy; optional smoother verb form. Keeping 'en ejecución' for catalogue consistency is also fine.",
+      "suggested": "El relé no se está ejecutando en {subject}."
+    }
+  ],
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 1,
+    "NIT": 2
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "ES-1",
+      "ES-2",
+      "ES-3"
+    ]
+  },
+  "out_of_scope_observations": [
+    "messages.ts formats # without locale grouping ('1000000', '1.5') whereas the es style guide expects '1.000.000' — parser behaviour, not this draft",
+    "refusal-surface.tsx testIDs look swapped (retry button carries CONTROL.refusalSignIn, sign-in button CONTROL.refusalRetry) — code, not copy"
+  ],
+  "audit_notes_not_execution_log": "report.md is analysis; audit.log holds commands actually run"
+}
