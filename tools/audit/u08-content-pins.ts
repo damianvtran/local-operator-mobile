@@ -1673,7 +1673,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * PR #251 CI fix: biome formatting of the switcher transport `Text` and the
 	 * refusal-surface import order (no logic change). Re-derived with --print;
 	 * only `src` moved. */
-	src: "3cb2314b7aa9fe9a9814ce1d54ca14c09706ea817750bd8c09c0a1e84866e705",
+	/* fix/computers-drawer-polish-d11-d13: the Computers facts line without a
+	 * separator, the drawer row's word beside its name, and the inline cwd that
+	 * yields to the marks. Re-derived once with --print over the staged tree;
+	 * re-derived again for the round-1 remediation (no drawer spacer, the
+	 * inline cwd's 0.01 shrink). Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* Merge of origin/main (#251, fb224cfe) into #252: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "3fad51c8b8d67f9698a875ed7662ac34a45cd7a87770b0f6ba5b74760ffe2b28",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

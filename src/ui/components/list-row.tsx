@@ -15,7 +15,7 @@ import { ROLE, state } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import {
 	metaLineFor,
-	metaPathFloorDp,
+	metaPathBox,
 	rowAccessibilityLabel,
 } from "@/ui/components/list-row-meta";
 import { listRowStatus } from "@/ui/components/list-row-status";
@@ -364,7 +364,7 @@ export const ListRow = ({
 			>
 				{meta.cwd ? (
 					<Text
-						style={META_PATH_BOX(effectiveScale)}
+						style={metaPathBox(effectiveScale, line2 === "inline")}
 						className="text-mono-sm text-ink-dim"
 						numberOfLines={1}
 						// The path keeps its head (R-3), so the mop-up ellipsis is `tail`: it is the
@@ -556,7 +556,7 @@ export const ListRow = ({
 						 *  `~/…` beside `no…`, and in a split column at 100 % as a 26.02 pt model
 						 *  box beside a 236.98 pt path (design round 5, D26). The cwd is the field
 						 *  a reader scans for, so it holds a FLOOR and the model is the one that
-						 *  yields — see `META_PATH_BOX` and `metaLineFor`.
+						 *  yields — see `metaPathBox` and `metaLineFor`.
 						 *
 						 *  Which characters are painted is decided as a STRING in `metaLineFor`, not by
 						 *  `ellipsizeMode`: react-native-web ignores that prop, so the web build — the
@@ -635,35 +635,8 @@ const TITLE_BOX = {
 	minWidth: 0,
 } as const;
 
-/**
- * The working directory's box: the cwd takes the remainder, and it never gives up
- * a dp of the floor it is guaranteed (design round 5, D26).
- *
- * The floor itself lives in `list-row-meta.ts` as `metaPathFloorDp`, because the
- * string painted into this box is fitted to exactly the same number: a floor
- * defined twice is how a painted string and its box drift apart.
- *
- * **What it costs, measured.** On a 320 pt phone at 100 % the line is 232 dp, so
- * the model's room is 232 - 8 (gap) - 72 = 152 dp: enough for 21 characters of
- * `text-mono-sm`, which is not enough for the 23-character
- * `anthropic/claude-opus-5`. It paints `…claude-opus-5` instead — the provider
- * prefix, the part every row of that provider shares, is what yields — and the
- * cwd keeps 123 dp of the line. Every wider case fits both whole: 390 pt at
- * 100 % leaves the model 238 dp and a split pane 207 dp.
- *
- * It is the BASIS this box is built from, not a `minWidth`, because of how
- * flexbox distributes a deficit: `flex-shrink` is weighted by the base size, so
- * a floor expressed as the basis with `flexShrink: 0` makes the cwd the one item
- * that does NOT pay for a shortfall. The model pays all of it, which is the
- * priority the design round asked for — and `flexGrow: 1` gives the cwd every
- * spare dp when there is no shortfall at all, so the model stays flush right.
- */
-const META_PATH_BOX = (scale: number) => ({
-	flexBasis: metaPathFloorDp(scale),
-	flexGrow: 1,
-	flexShrink: 0,
-	minWidth: 0,
-});
+/* The cwd's box, its floor and their measured cost: `metaPathBox` and
+ *  `metaPathFloorDp` in `list-row-meta.ts`. */
 
 /**
  * The second line's trailing value (the model label): the item that YIELDS.
