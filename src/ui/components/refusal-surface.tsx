@@ -5,8 +5,8 @@ import { t } from "@/i18n";
 
 import { CONTROL, LIVE_REGION, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
-import { useComposedDir } from "@/ui/direction";
 import { Button } from "@/ui/components/button";
+import { useComposedDir } from "@/ui/direction";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
 

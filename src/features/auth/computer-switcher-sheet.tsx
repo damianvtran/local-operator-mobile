@@ -243,10 +243,7 @@ const TransportLine = ({
 	return (
 		<View className="min-w-0 flex-row items-center gap-1">
 			{row.transport.kind === "radient" ? (
-				<Text
-					{...composedDir}
-					className="shrink-0 text-meta text-ink-muted"
-				>
+				<Text {...composedDir} className="shrink-0 text-meta text-ink-muted">
 					{t("mobile.computers.transport.radient")}
 				</Text>
 			) : titledByHost(row) ? (
