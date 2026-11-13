@@ -1699,7 +1699,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * refusal surface's console button and its tests. Re-derived last with
 	 * --print over the committed tree (6efad9e8); only `src` moved. Source
 	 * identity only, NOT rendered U-08 evidence. */
-	src: "3f685f97cb368a660a35361d480babce4a0f7d9e8d8c63154d747e12dde7f67c",
+	/* #257 round-1 remediation: the native `writingDirection` channel of
+	 * `composedDirection` (D1), the refusal headline/next spreads (D2), the
+	 * shared DIAGNOSTIC_FALLBACK module (N2) and their tests. Re-derived last
+	 * with --print over the committed tree (3121fd36); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	src: "40e65bd2c81e2c4e65bd32320cd72cc503546c598b574ea00f198aceec112d44",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
