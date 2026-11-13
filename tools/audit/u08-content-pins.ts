@@ -1660,7 +1660,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * isolation without remounting the router, background scope registration,
 	 * foreground restore retry and interactive sign-in auto-open. Re-derived
 	 * once with --print; source identity only, NOT new rendered evidence. */
-	src: "9fe6607266874bfb42eda6b2b06abd3747a56ff4d1e9622df2e35c87edc4fd2b",
+	/* fix/computers-drawer-polish-d11-d13: the Computers facts line without a
+	 * separator, the drawer row's word beside its name, and the inline cwd that
+	 * yields to the marks. Re-derived once with --print over the staged tree.
+	 * Source identity only, NOT rendered U-08 evidence. */
+	src: "249a2c956f887208bf0a494ed37577cd843808debfe0e8bbed1e3bb2d1ed47c5",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
