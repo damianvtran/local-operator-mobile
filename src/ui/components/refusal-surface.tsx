@@ -6,6 +6,7 @@ import { t } from "@/i18n";
 import { CONTROL, LIVE_REGION, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
+import { DIAGNOSTIC_FALLBACK } from "@/ui/components/diagnostic-fallback";
 import { useComposedDir } from "@/ui/direction";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
@@ -166,13 +167,6 @@ const CAUSE_ID: Partial<Record<RefusalKind, string>> = {
 	"host-unresolved": REGION.connectionErrorHostUnresolved,
 };
 
-/** What "Show details" reveals when the caller passed no detail: the error class
- *  and kind, as `refusal.ts` composes them. Deliberately NOT in the catalogue: it
- *  is a developer diagnostic token a reader quotes back in a bug report, and a
- *  translated copy would no longer match the code that raised it. Named here so
- *  the exemption is a stated decision rather than an inline literal. */
-const DIAGNOSTIC_FALLBACK = "RelayError · connection-response";
-
 /** The mark beside the headline. */
 const ALERT_GLYPH_SIZE = 20;
 
@@ -250,6 +244,11 @@ export const RefusalSurface = ({
 					 *  the floor removed, react-native-web's own `overflow-wrap: break-word`
 					 *  breaks the address inside the box, so the reader keeps every character of
 					 *  the one name they have to act on. */
+					/* Six English titles OPEN with `{subject}` — a Latin URL or name — so
+					 *  a translation keeping that order would give the line an LTR base on
+					 *  an RTL page; state the page's base (#257 design D2). Emits nothing in
+					 *  an LTR catalogue. No `style` on this element: see `useComposedDir`. */
+					{...composedDir}
 					className="min-w-0 flex-1 text-heading text-ink"
 					accessibilityRole={ROLE.header}
 					testID={CAUSE_ID[kind]}
@@ -257,7 +256,10 @@ export const RefusalSurface = ({
 					{HEADLINE[kind](subject)}
 				</Text>
 			</View>
-			<Text className="text-body-sm text-ink-muted">{NEXT[kind]()}</Text>
+			{/* Same reason as the headline (#257 design D2). */}
+			<Text {...composedDir} className="text-body-sm text-ink-muted">
+				{NEXT[kind]()}
+			</Text>
 			{/* The gateway's own sentence sits UNDER the plain one: the reader gets the
 			 *  short version first, and the specific one when they want it. It is never
 			 *  the only line, because a gateway sentence assumes the relay's vocabulary. */}

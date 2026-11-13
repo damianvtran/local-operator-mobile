@@ -64,3 +64,44 @@ describe("the refusal surface's catalogue keys", () => {
 		}
 	});
 });
+
+describe("the refusal surface's composed lines", () => {
+	const surface = read("./refusal-surface.tsx");
+	/** The opening tag of the `Text` that renders `anchor`. */
+	const textOpeningBefore = (anchor: string): string => {
+		const at = surface.indexOf(anchor);
+		expect(at, `anchor ${anchor}`).toBeGreaterThan(-1);
+		return surface.slice(surface.lastIndexOf("<Text", at), at);
+	};
+
+	it("headline and next line state the page's base, like the detail line (#257 design D2)", () => {
+		/* Six English titles open with `{subject}`, a Latin token; without the
+		 * spread a translation keeping that order resolves an LTR base. */
+		expect(surface).toContain("const composedDir = useComposedDir();");
+		for (const anchor of [
+			"{HEADLINE[kind](subject)}",
+			"{NEXT[kind]()}",
+			"{detail}\n",
+		]) {
+			expect(textOpeningBefore(anchor)).toContain("{...composedDir}");
+		}
+	});
+});
+
+describe("the diagnostic fallback token (#257 review N2)", () => {
+	it("is defined once and imported by both the surface and the feature", () => {
+		const literal = '"RelayError · connection-response"';
+		const feature = read("../../features/auth/refusal.ts");
+		const surface = read("./refusal-surface.tsx");
+		expect(read("./diagnostic-fallback.ts")).toContain(
+			`export const DIAGNOSTIC_FALLBACK = ${literal};`,
+		);
+		for (const source of [feature, surface]) {
+			expect(source).toContain(
+				'import { DIAGNOSTIC_FALLBACK } from "@/ui/components/diagnostic-fallback";',
+			);
+			/* Neither keeps a private copy of the token. */
+			expect(source).not.toContain("connection-response");
+		}
+	});
+});

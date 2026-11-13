@@ -8,6 +8,7 @@ import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
+import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { DirectionProvider, useComposedDir } from "@/ui/direction";
 import { TunnelPaths } from "./tunnel-paths";
 import { verdictOpensWithDetail } from "./tunnel-verdict";
@@ -40,6 +41,11 @@ vi.mock("@/ui/appearance", () => ({
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: 1 }),
 }));
+
+/* `RefusalSurface`'s alert mark is a `lucide-react-native` icon (native SVG, Flow
+ * source Node cannot parse; same stub as computers-add-wait.test.ts). The mark is
+ * irrelevant to the label's direction. */
+vi.mock("lucide-react-native", () => ({ AlertTriangle: () => null }));
 
 const STARTS_LATIN = /^[A-Za-z]/;
 const ICU_SLOT = /\{[^}]*\}/g;
@@ -274,6 +280,61 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		expect(rtl).toContain('dir="rtl"');
 		expect(rtl).not.toContain('dir="auto"');
 		expect(render(h(OpenConsole), "ltr")).not.toContain('dir="rtl"');
+	});
+
+	describe("the real RefusalSurface, under the ur catalogue (#257 review N3)", () => {
+		/* The test above proves `Button.labelDir`; this one renders the SURFACE, so
+		 * the wiring (and the headline/next lines of design D2) is proved by markup
+		 * rather than by a source regex. */
+		beforeEach(() => setLocaleSource(() => "ur"));
+		afterEach(() => resetLocaleSource());
+		const SUBJECT = "https://mini.example.net";
+		/** The opening tag of the element whose text is exactly `text`. */
+		const tagOf = (markup: string, text: string): string => {
+			const at = markup.indexOf(`>${text}<`);
+			expect(at, `rendered: ${text}`).toBeGreaterThan(-1);
+			return markup.slice(markup.lastIndexOf("<", at), at + 1);
+		};
+		const surface = (kind: "console" | "tunnel-gone") =>
+			h(RefusalSurface, {
+				kind,
+				subject: SUBJECT,
+				onOpenConsole: () => undefined,
+			});
+
+		for (const kind of ["console", "tunnel-gone"] as const) {
+			it(`${kind}: the Open Radient console label, headline and next line carry dir=rtl`, () => {
+				const label = renderFor(
+					"mobile.computers.refusal.open_console",
+					{},
+					"ur",
+				);
+				const title = renderFor(
+					kind === "console"
+						? "mobile.computers.refusal.console_title"
+						: "mobile.computers.refusal.tunnel_gone_title",
+					{ subject: SUBJECT },
+					"ur",
+				);
+				const next = renderFor(
+					kind === "console"
+						? "mobile.computers.refusal.console_next"
+						: "mobile.computers.refusal.tunnel_gone_next",
+					{},
+					"ur",
+				);
+				const rtl = render(surface(kind), "rtl");
+				for (const text of [label, title, next]) {
+					expect(tagOf(rtl, text)).toContain('dir="rtl"');
+				}
+				/* Can fail, and LTR stays untouched: the same tree under an LTR page
+				 * falls back to the inferred base on every one of those lines. */
+				const ltr = render(surface(kind), "ltr");
+				for (const text of [label, title, next]) {
+					expect(tagOf(ltr, text)).toContain('dir="auto"');
+				}
+			});
+		}
 	});
 
 	it("computer switcher: the Radient transport word spreads the composed direction", () => {

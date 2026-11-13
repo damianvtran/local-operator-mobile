@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	classify,
+	TUNNEL_TEST_TIMEOUT_MS,
 	type TunnelTestVerdict,
 	transportKind,
 	verdictSentence,
@@ -368,5 +369,24 @@ describe("the rendered sentence, through the real classifier", () => {
 			expect(sentence).not.toContain(error.kind);
 			expect(sentence).not.toMatch(/\b[1-5]\d{2}\b/);
 		}
+	});
+});
+
+describe("the timeout's translator note", () => {
+	/* #257 review N5: the note tells translators the limit ("today N") while the
+	 * rendered `{seconds}` comes from TUNNEL_TEST_TIMEOUT_MS; nothing tied them, and
+	 * the note said 10 for a while after the constant moved. */
+	it("names the same seconds the sentence renders", () => {
+		const notes = JSON.parse(
+			readFileSync(
+				new URL(
+					"../../i18n/catalogues/en/mobile.computers.context.json",
+					import.meta.url,
+				),
+				"utf8",
+			),
+		) as Record<string, { note: string }>;
+		const note = notes["mobile.computers.own_tunnel.verdict_timeout"]?.note;
+		expect(note).toContain(`today ${TUNNEL_TEST_TIMEOUT_MS / 1000})`);
 	});
 });

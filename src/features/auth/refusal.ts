@@ -20,6 +20,7 @@ import type { SecureStorageRefusal } from "@/connection/secure-storage-refusal";
 import type { TunnelSessionError } from "@/connection/tunnel-session";
 import { t } from "@/i18n";
 import { type ErrorSurface, RelayError } from "@/relay";
+import { DIAGNOSTIC_FALLBACK } from "@/ui/components/diagnostic-fallback";
 import type { RefusalKind } from "@/ui/components/refusal-surface";
 
 // Keep the control-plane cause typed through the shared RelayError/store path.
@@ -254,7 +255,9 @@ export function refusalFromError(input: {
 			input.surface === "diagnostic"
 				? input.storageRefusal
 					? secureStorageRefusalSentence(input.storageRefusal)
-					: `RelayError · ${input.error?.kind ?? "connection-response"}`
+					: input.error?.kind != null
+						? `RelayError · ${input.error.kind}`
+						: DIAGNOSTIC_FALLBACK
 				: (input.detail ?? input.error?.displayableMessage ?? null),
 		remedy: remedyLine(input.surface),
 		retryAfterMs: input.retryAfterMs,
