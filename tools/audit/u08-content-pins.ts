@@ -1681,7 +1681,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * evidence. */
 	/* Merge of origin/main (#251, fb224cfe) into #252: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "3fad51c8b8d67f9698a875ed7662ac34a45cd7a87770b0f6ba5b74760ffe2b28",
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	src: "306d87779349e23a9d36b45463197d75e8b961fcf87606fc14103fcc6bdb1451",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
