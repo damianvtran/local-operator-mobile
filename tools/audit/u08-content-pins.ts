@@ -1662,9 +1662,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * once with --print; source identity only, NOT new rendered evidence. */
 	/* fix/computers-drawer-polish-d11-d13: the Computers facts line without a
 	 * separator, the drawer row's word beside its name, and the inline cwd that
-	 * yields to the marks. Re-derived once with --print over the staged tree.
-	 * Source identity only, NOT rendered U-08 evidence. */
-	src: "249a2c956f887208bf0a494ed37577cd843808debfe0e8bbed1e3bb2d1ed47c5",
+	 * yields to the marks. Re-derived once with --print over the staged tree;
+	 * re-derived again for the round-1 remediation (no drawer spacer, the
+	 * inline cwd's 0.01 shrink). Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "421d33a0bc6e558469db478f9aedbae55c3bad7f3708cdad2f7c71b6afc18373",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

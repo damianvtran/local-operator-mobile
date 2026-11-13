@@ -635,31 +635,8 @@ const TITLE_BOX = {
 	minWidth: 0,
 } as const;
 
-/* (Not a declaration's doc: the box is `metaPathBox` in `list-row-meta.ts`.)
- * The working directory's box (`metaPathBox` in `list-row-meta.ts`): the cwd takes
- * the remainder, and on its own line it never gives up a dp of the floor it is
- * guaranteed (design round 5, D26). Inline with the marks it may shrink instead;
- * see `metaPathBox` for why (design round 1 D13).
- *
- * The floor itself lives in `list-row-meta.ts` as `metaPathFloorDp`, because the
- * string painted into this box is fitted to exactly the same number: a floor
- * defined twice is how a painted string and its box drift apart.
- *
- * **What it costs, measured.** On a 320 pt phone at 100 % the line is 232 dp, so
- * the model's room is 232 - 8 (gap) - 72 = 152 dp: enough for 21 characters of
- * `text-mono-sm`, which is not enough for the 23-character
- * `anthropic/claude-opus-5`. It paints `…claude-opus-5` instead — the provider
- * prefix, the part every row of that provider shares, is what yields — and the
- * cwd keeps 123 dp of the line. Every wider case fits both whole: 390 pt at
- * 100 % leaves the model 238 dp and a split pane 207 dp.
- *
- * It is the BASIS this box is built from, not a `minWidth`, because of how
- * flexbox distributes a deficit: `flex-shrink` is weighted by the base size, so
- * a floor expressed as the basis with `flexShrink: 0` makes the cwd the one item
- * that does NOT pay for a shortfall. The model pays all of it, which is the
- * priority the design round asked for — and `flexGrow: 1` gives the cwd every
- * spare dp when there is no shortfall at all, so the model stays flush right.
- */
+/* The cwd's box, its floor and their measured cost: `metaPathBox` and
+ *  `metaPathFloorDp` in `list-row-meta.ts`. */
 
 /**
  * The second line's trailing value (the model label): the item that YIELDS.

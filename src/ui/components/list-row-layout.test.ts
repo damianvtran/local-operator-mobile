@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+	META_PATH_INLINE_SHRINK,
 	metaLineFor,
 	metaPathBox,
 	metaPathFloorDp,
@@ -59,10 +60,27 @@ describe("D13: an inline cwd yields to the marks instead of leaving the pane", (
 	const MARKS = 250;
 	const GAP = 8;
 	it("shrinks the cwd box when it shares line 2 with the marks", () => {
-		expect(metaPathBox(LARGE_TEXT_SCALE, true)).toMatchObject({
-			flexShrink: 1,
-			minWidth: 0,
-		});
+		const box = metaPathBox(LARGE_TEXT_SCALE, true);
+		expect(box.flexShrink).toBeGreaterThan(0);
+		expect(box.minWidth).toBe(0);
+	});
+	/* PR #252 agent review R1-2. Yoga sizes a shrinking child as
+	 *  basis + deficit × (flexShrink × basis) / Σ(flexShrink × basis). At 1 the
+	 *  cwd split a mis-estimated model's overflow with it by basis; at 0.01 the
+	 *  model pays almost all of it, and a cwd alone still pays its whole deficit. */
+	it("shrinks the inline cwd at 0.01, so the model absorbs a mis-estimate first", () => {
+		const share = (weight: number, total: number) => weight / total;
+		for (const scale of [1, 1.1, 1.2, 1.3, LARGE_TEXT_SCALE]) {
+			const box = metaPathBox(scale, true);
+			expect(box.flexShrink).toBe(META_PATH_INLINE_SHRINK);
+			expect(META_PATH_INLINE_SHRINK).toBe(0.01);
+			const cwd = box.flexShrink * box.flexBasis;
+			/* Alone on the line, the cwd takes the whole deficit. */
+			expect(share(cwd, cwd)).toBe(1);
+			/* Beside even a short 48 dp model, the model pays ≥ 97 % of it. */
+			const model = 48;
+			expect(share(model, model + cwd)).toBeGreaterThanOrEqual(0.97);
+		}
 	});
 	it("keeps the floor guaranteed when the cwd has its own line (D26)", () => {
 		for (const scale of [1, LARGE_TEXT_SCALE, 2]) {
@@ -77,7 +95,12 @@ describe("D13: an inline cwd yields to the marks instead of leaving the pane", (
 	it("keeps the floor as the basis inline, so a line with room is unchanged", () => {
 		expect(metaPathBox(1, true).flexBasis).toBe(metaPathFloorDp(1));
 	});
-	it("paints a string that fits what the marks leave, at every inline scale", () => {
+	/* A guard on metaLineFor's EXISTING fit, which this PR does not change (it
+	 *  passes on the base too; PR #252 agent review R1-3): the shrinking box only
+	 *  clips what the painted string already elides because metaLineFor fits it
+	 *  to the line the marks leave. The regression tests are the metaPathBox and
+	 *  source-pin cases. */
+	it("guard: metaLineFor already fits the cwd to what the marks leave, at every inline scale", () => {
 		for (const scale of [1.1, 1.2, 1.3, LARGE_TEXT_SCALE]) {
 			const left = LINE - MARKS - GAP;
 			/* The floor alone would not fit: the case the reviewer measured. */
