@@ -13,16 +13,30 @@ import { createPushGeneration } from "@/notifications/push-generation";
  * by the id that survives every re-registration — two items could disagree
  * about which device they describe.
  *
- * **Why this does NOT join `SecureStorage.clearAll()`.** Sign-out is a revoke
- * (the app calls `DELETE /api/push/devices/{id}` on the way out), and a revoke
- * must STICK for the same device: if signing out destroyed the install id, the
- * next launch would mint a fresh one, register a fresh row and quietly undo the
- * revoke — the exact bypass the tombstone exists to prevent (`push_devices
- * .revoke`'s docstring: "the row stays, which is what makes the revoke stick
- * for the same install_id instead of being undone by the app's next launch").
- * The device identity therefore outlives the credentials stored beside it, and
- * this module owns its key rather than reusing `SECURE_KEYS` — a name in that
- * table is a name `clearAll` promises to clear.
+ * **Why this does NOT join `SecureStorage.clearAll()`.** A revoke must STICK
+ * for the same device. The computer's operator can revoke this phone
+ * (`DELETE /api/push/devices/{id}`, `lop mobile devices revoke`), and if
+ * signing out destroyed the install id, the next launch would mint a fresh
+ * one, register a fresh row and quietly undo the revoke — the exact bypass the
+ * tombstone exists to prevent (`push_devices.revoke`'s docstring: "the row
+ * stays, which is what makes the revoke stick for the same install_id instead
+ * of being undone by the app's next launch"). A stable id is also what keeps
+ * one phone to one daemon row across sign-ins: registration upserts on
+ * `(install_id, platform)`. The device identity therefore outlives the
+ * credentials stored beside it, and this module owns its key rather than
+ * reusing `SECURE_KEYS` — a name in that table is a name `clearAll` promises
+ * to clear.
+ *
+ * **Sign-out does NOT revoke on the computer** (an earlier version of this
+ * comment said it did; no build ever sent that DELETE). The daemon's only
+ * removal verb is that sticky tombstone, so calling it on sign-out would make
+ * this install's next sign-in answer `403 device_revoked` forever — and the
+ * phone could not undo it. Sign-out therefore leaves the computer's row live
+ * until its credential lapses (`credential_expires_at`), so a signed-out phone
+ * may still get that computer's content-free session pushes meanwhile. The
+ * remedy is a non-tombstone daemon unregister verb; it is deferred (PR #259
+ * review round 1, R1-3). Sign-out does retire this phone from Team Bridge's
+ * hub (`team-bridge/retirement.ts`), whose DELETE is not a tombstone.
  *
  * **The web fallback is stated, not hidden** (the pattern
  * `features/auth/tunnel-storage.ts` sets): a browser runtime has no keystore,

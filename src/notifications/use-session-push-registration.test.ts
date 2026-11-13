@@ -1,37 +1,106 @@
 /** Wiring tests for session push registration: WHEN the app registers with the
- * routed computer, and that a foreground does not re-POST what the computer
- * already holds. The register module itself runs for real; only React, the
- * native notifications module, the keystore and the connection are seams.
- * What the body must look like ON THE WIRE is pinned separately against the
- * daemon's own bytes (`relay/__tests__/push-register-contract.test.ts`). */
+ * routed computer, and that nothing but a real change re-POSTs.
+ *
+ * THE HOOK RUNTIME HONOURS DEPS. Round 1 of the PR review (R1-1) found that the
+ * first version of this suite mocked `useEffect` as "run once, ignore deps",
+ * which hid the defect it should have caught: the effect re-ran (and
+ * force-POSTed) on every Connection context recompute, because the context's
+ * `relay` accessor is a fresh arrow each time. `hooks` below is a minimal
+ * React-shaped runtime — effects re-run only when a dep changes by `Object.is`,
+ * cleanups run before the re-run and on unmount, refs persist across renders —
+ * and `useConnection` hands out a NEW `relay` arrow on every render, exactly as
+ * `connection-provider.tsx`'s memo does. There is no React renderer in this
+ * repository's Node test setup (ADR 0003: renderer tests belong to the native
+ * E2E layer), so this is the smallest faithful stand-in.
+ *
+ * The register module itself runs for real; only React, the native
+ * notifications module, the keystore and the connection are seams. What the
+ * body must look like ON THE WIRE is pinned separately against the daemon's own
+ * bytes (`relay/__tests__/push-register-contract.test.ts`). */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const hooks = vi.hoisted(() => {
+	type Slot = {
+		deps?: readonly unknown[];
+		cleanup?: (() => void) | undefined;
+		ref?: { current: unknown };
+	};
+	let slots: Slot[] = [];
+	let index = 0;
+	const changed = (prev: readonly unknown[] | undefined, next?: unknown[]) =>
+		prev === undefined ||
+		next === undefined ||
+		prev.length !== next.length ||
+		next.some((dep, i) => !Object.is(dep, prev[i]));
+	return {
+		/** One render of `component`, then its changed effects, in order. */
+		render(component: () => void): void {
+			index = 0;
+			const queued: (() => void)[] = [];
+			const previous = this.useEffect;
+			this.useEffect = (
+				effect: () => (() => void) | undefined,
+				deps?: unknown[],
+			) => {
+				const slot = slots[index++] ?? {};
+				slots[index - 1] = slot;
+				if (!changed(slot.deps, deps)) return;
+				slot.deps = deps;
+				queued.push(() => {
+					slot.cleanup?.();
+					slot.cleanup = effect() ?? undefined;
+				});
+			};
+			try {
+				component();
+			} finally {
+				this.useEffect = previous;
+			}
+			for (const run of queued) run();
+		},
+		unmount(): void {
+			for (const slot of slots) slot.cleanup?.();
+			slots = [];
+		},
+		useEffect: (
+			_effect: () => (() => void) | undefined,
+			_deps?: unknown[],
+		): void => {
+			throw new Error("useEffect outside render");
+		},
+		useRef<T>(initial: T): { current: T } {
+			const slot = slots[index++] ?? {};
+			slots[index - 1] = slot;
+			slot.ref ??= { current: initial };
+			return slot.ref as { current: T };
+		},
+	};
+});
+
 const seam = vi.hoisted(() => ({
-	effects: [] as (() => (() => void) | undefined)[],
 	foreground: undefined as ((state: string) => void) | undefined,
 	rotate: undefined as (() => void) | undefined,
 	platform: "ios" as "ios" | "android",
 	phase: "live",
+	revision: 1,
 	route: { mode: "radient", tunnelId: "synthetic-tunnel" } as
 		| { mode: "radient"; tunnelId: string }
 		| { mode: "custom"; baseUrl: string }
 		| null,
 	permission: "granted",
 	token: "synthetic-token-1" as string | null,
-	register: vi.fn(async (_body: Record<string, unknown>) => ({
-		device_id: "synthetic-device",
-		device_key: "synthetic-device-key",
-	})),
+	register: vi.fn(),
 	recorded: vi.fn(async (_id: string, _key: string) => {}),
 	requestPermission: vi.fn(),
 	removeForeground: vi.fn(),
 	removeToken: vi.fn(),
+	relayIdentities: new Set<unknown>(),
 }));
 
 vi.mock("react", () => ({
-	useEffect: (effect: () => (() => void) | undefined) => {
-		seam.effects.push(effect);
-	},
+	useEffect: (effect: () => (() => void) | undefined, deps?: unknown[]) =>
+		hooks.useEffect(effect, deps),
+	useRef: <T>(initial: T) => hooks.useRef(initial),
 }));
 vi.mock("react-native", () => ({
 	Platform: {
@@ -50,11 +119,15 @@ vi.mock("expo-constants", () => ({
 	default: { expoConfig: { version: "1.4.0" } },
 }));
 vi.mock("@/features/auth/connection-provider", () => ({
-	useConnection: () => ({
-		relay: () => ({ registerDevice: seam.register }),
-	}),
+	// A NEW accessor on every render, as the provider's `useMemo` produces on
+	// every recompute (streamHealth, busy, computers, …).
+	useConnection: () => {
+		const relay = () => ({ registerDevice: seam.register });
+		seam.relayIdentities.add(relay);
+		return { relay };
+	},
 	useConnectionState: (select: (s: object) => unknown) =>
-		select({ route: seam.route, phase: seam.phase }),
+		select({ route: seam.route, phase: seam.phase, revision: seam.revision }),
 }));
 const notificationsModule = {
 	getPermissionsAsync: async () => ({ status: seam.permission }),
@@ -88,35 +161,42 @@ import {
 	useSessionPushRegistration,
 } from "./use-session-push-registration";
 
-let stops: ((() => void) | undefined)[] = [];
-/** The harness = render the hook once and run the effect it registered. */
-function RegistrationHarness(): void {
-	seam.effects = [];
-	useSessionPushRegistration();
-	stops.push(seam.effects.at(-1)?.());
-}
-const settle = () => new Promise((resolve) => setImmediate(resolve));
+/** One render of the app root's use of the hook (a Connection recompute). */
+const render = () => hooks.render(() => useSessionPushRegistration());
+const settle = async () => {
+	for (let i = 0; i < 4; i++)
+		await new Promise((resolve) => setImmediate(resolve));
+};
+
+/** The default daemon: accepts every register. Re-installed per test because
+ *  `clearAllMocks` keeps a test's own `mockImplementation`. */
+const accept = async (_body: Record<string, unknown>) => ({
+	device_id: "synthetic-device",
+	device_key: "synthetic-device-key",
+});
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	seam.register.mockImplementation(accept);
 	resetSessionPushRegistrationMemory();
 	seam.platform = "ios";
 	seam.phase = "live";
+	seam.revision = 1;
 	seam.route = { mode: "radient", tunnelId: "synthetic-tunnel" };
 	seam.permission = "granted";
 	seam.token = "synthetic-token-1";
 	seam.foreground = undefined;
 	seam.rotate = undefined;
+	seam.relayIdentities.clear();
 });
 afterEach(async () => {
-	for (const stop of stops) stop?.();
-	stops = [];
+	hooks.unmount();
 	await settle();
 });
 
 describe("session push registration lifecycle", () => {
 	it("granted + live route: exactly one POST, with the daemon's fields only", async () => {
-		RegistrationHarness();
+		render();
 		await vi.waitFor(() => expect(seam.recorded).toHaveBeenCalledTimes(1));
 		expect(seam.register).toHaveBeenCalledTimes(1);
 		expect(seam.register.mock.calls[0]?.[0]).toEqual({
@@ -139,9 +219,109 @@ describe("session push registration lifecycle", () => {
 		expect(seam.requestPermission).not.toHaveBeenCalled();
 	});
 
-	it("foreground is idempotent: the same registration is not re-sent", async () => {
-		RegistrationHarness();
+	it("R1-1: N Connection recomputes with the same route cause ONE POST", async () => {
+		render();
+		// The cold-start churn the review traced: stream idle → connecting → live,
+		// busy, the computers refresh — every one a new `relay` identity — and a
+		// stall/resume that moves the phase between live-like phases.
+		for (const phase of ["live", "live", "degraded", "live", "re-minting"]) {
+			seam.phase = phase;
+			render();
+			await settle();
+		}
+		seam.phase = "live";
+		for (let i = 0; i < 5; i++) render();
+		await settle();
+		expect(seam.relayIdentities.size).toBeGreaterThanOrEqual(10);
+		expect(seam.register).toHaveBeenCalledTimes(1);
+		expect(seam.recorded).toHaveBeenCalledTimes(1);
+	});
+
+	it("R1-1: a simulated cold start (signed-out → minting → live, with churn) POSTs once", async () => {
+		seam.route = null;
+		seam.phase = "signed-out";
+		render();
+		seam.route = { mode: "radient", tunnelId: "synthetic-tunnel" };
+		seam.revision = 2;
+		seam.phase = "minting";
+		render();
+		render();
+		seam.phase = "live";
+		render();
+		// The provider's post-admission churn lands asynchronously, while the
+		// first registration is in flight: streamHealth idle → connecting → live,
+		// busy → false, the computers refresh. Each is a new `relay` identity.
+		for (let i = 0; i < 4; i++) {
+			await new Promise((resolve) => setImmediate(resolve));
+			render();
+		}
+		await settle();
+		expect(seam.register).toHaveBeenCalledTimes(1);
+		expect(sessionPushRegistrationStore.getState().status).toBe("registered");
+	});
+
+	it("R1-1: a reconnect (live → not live → live) re-POSTs exactly once", async () => {
+		render();
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
+		seam.phase = "refused";
+		render();
+		await settle();
+		seam.phase = "minting";
+		render();
+		seam.phase = "live";
+		render();
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(2));
+		await settle();
+		expect(seam.register).toHaveBeenCalledTimes(2);
+	});
+
+	it("R1-1: a re-admission that bumps the route revision re-POSTs exactly once", async () => {
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
+		seam.revision = 2;
+		render();
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(2));
+		await settle();
+		expect(seam.register).toHaveBeenCalledTimes(2);
+	});
+
+	it("R1-2: an overlapping re-run waits for the in-flight POST, so the keystore keeps the daemon's last key", async () => {
+		// A fake daemon that mints key-N in the order it PROCESSES requests, and
+		// lets the test choose that order.
+		let daemonKey = "";
+		const answers: (() => void)[] = [];
+		let minted = 0;
+		seam.register.mockImplementation(
+			() =>
+				new Promise((resolve) => {
+					answers.push(() => {
+						minted += 1;
+						daemonKey = `key-${minted}`;
+						resolve({ device_id: "synthetic-device", device_key: daemonKey });
+					});
+				}),
+		);
+		render();
+		await vi.waitFor(() => expect(answers).toHaveLength(1));
+		// A reconnect while the first POST is still on the wire.
+		seam.revision = 2;
+		render();
+		await settle();
+		// Single-flight across effect instances: no parallel POST.
+		expect(seam.register).toHaveBeenCalledTimes(1);
+		answers[0]?.();
+		await vi.waitFor(() => expect(answers).toHaveLength(2));
+		answers[1]?.();
+		await vi.waitFor(() => expect(seam.recorded).toHaveBeenCalled());
+		await settle();
+		expect(seam.register).toHaveBeenCalledTimes(2);
+		expect(seam.recorded.mock.calls.at(-1)?.[1]).toBe(daemonKey);
+	});
+
+	it("foreground is idempotent: the same registration is not re-sent", async () => {
+		render();
 		await vi.waitFor(() =>
 			expect(sessionPushRegistrationStore.getState().status).toBe("registered"),
 		);
@@ -149,13 +329,12 @@ describe("session push registration lifecycle", () => {
 		seam.foreground?.("background");
 		seam.foreground?.("active");
 		await settle();
-		await settle();
 		expect(seam.register).toHaveBeenCalledTimes(1);
 		expect(sessionPushRegistrationStore.getState().status).toBe("registered");
 	});
 
 	it("token rotation re-POSTs the new token for the same install", async () => {
-		RegistrationHarness();
+		render();
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
 		await vi.waitFor(() => expect(seam.rotate).toBeDefined());
 		seam.token = "synthetic-token-2";
@@ -167,18 +346,16 @@ describe("session push registration lifecycle", () => {
 		// …and the rotated registration is itself idempotent on foreground.
 		seam.foreground?.("active");
 		await settle();
-		await settle();
 		expect(seam.register).toHaveBeenCalledTimes(2);
 	});
 
 	it("permission denied: no POST and no prompt", async () => {
 		seam.permission = "denied";
-		RegistrationHarness();
+		render();
 		await vi.waitFor(() =>
 			expect(sessionPushRegistrationStore.getState().status).toBe("permission"),
 		);
 		seam.foreground?.("active");
-		await settle();
 		await settle();
 		expect(seam.register).not.toHaveBeenCalled();
 		expect(seam.requestPermission).not.toHaveBeenCalled();
@@ -186,20 +363,19 @@ describe("session push registration lifecycle", () => {
 
 	it("a route that is not live yet does not POST", async () => {
 		seam.phase = "connecting";
-		RegistrationHarness();
+		render();
 		await settle();
 		expect(seam.register).not.toHaveBeenCalled();
 	});
 
-	it("a route change (re-mount) and a Settings grant are forced re-registrations", async () => {
-		RegistrationHarness();
+	it("a route change and a Settings grant are forced re-registrations", async () => {
+		render();
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
-		// Another computer: the effect re-runs, and the new computer must learn
-		// this phone even though nothing about the phone changed.
-		for (const stop of stops) stop?.();
-		stops = [];
+		// Another computer: the new computer must learn this phone even though
+		// nothing about the phone changed.
 		seam.route = { mode: "custom", baseUrl: "https://relay.example.invalid" };
-		RegistrationHarness();
+		seam.revision = 2;
+		render();
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(2));
 		await vi.waitFor(() =>
 			expect(sessionPushRegistrationStore.getState()).toMatchObject({
@@ -211,10 +387,34 @@ describe("session push registration lifecycle", () => {
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(3));
 	});
 
+	it("sign-out (no route) clears the Settings registration state", async () => {
+		render();
+		await vi.waitFor(() =>
+			expect(sessionPushRegistrationStore.getState().status).toBe("registered"),
+		);
+		seam.route = null;
+		seam.phase = "signed-out";
+		seam.revision = 2;
+		render();
+		await settle();
+		expect(sessionPushRegistrationStore.getState()).toEqual({
+			routeKey: null,
+			status: "idle",
+			code: null,
+			registeredAt: null,
+		});
+		// Signing back in to the same computer registers again (no stale cache).
+		seam.route = { mode: "radient", tunnelId: "synthetic-tunnel" };
+		seam.phase = "live";
+		seam.revision = 3;
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(2));
+	});
+
 	it("Android sends the FCM token as platform android, environment production", async () => {
 		seam.platform = "android";
 		seam.token = "synthetic-fcm-token";
-		RegistrationHarness();
+		render();
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
 		expect(seam.register.mock.calls[0]?.[0]).toMatchObject({
 			platform: "android",
@@ -226,7 +426,7 @@ describe("session push registration lifecycle", () => {
 	it("a failed POST is reported without the token, and the next foreground retries", async () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 		seam.register.mockRejectedValueOnce(new Error("boom synthetic-token-1"));
-		RegistrationHarness();
+		render();
 		await vi.waitFor(() =>
 			expect(sessionPushRegistrationStore.getState().status).toBe("failed"),
 		);
@@ -241,10 +441,9 @@ describe("session push registration lifecycle", () => {
 	});
 
 	it("tears down its foreground and token subscriptions", async () => {
-		RegistrationHarness();
+		render();
 		await vi.waitFor(() => expect(seam.rotate).toBeDefined());
-		for (const stop of stops) stop?.();
-		stops = [];
+		hooks.unmount();
 		expect(seam.removeForeground).toHaveBeenCalledTimes(1);
 		expect(seam.removeToken).toHaveBeenCalledTimes(1);
 	});

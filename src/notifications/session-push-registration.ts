@@ -95,7 +95,12 @@ export const REFRESH_MS = 12 * 60 * 60 * 1000;
  *  never belongs in the keystore. */
 const accepted = new Map<string, { fingerprint: string; at: number }>();
 
-/** Test seam: forget every accepted registration, as a cold start does. */
+/**
+ * Forget every accepted registration and the Settings state, as a cold start
+ * does. Called on sign-out (the hook sees the route go away, PR #259 R1-6), so
+ * a re-sign-in to the same computer neither shows the previous "registered"
+ * sentence nor skips its registration; tests call it between cases.
+ */
 export const resetSessionPushRegistrationMemory = (): void => {
 	accepted.clear();
 	sessionPushRegistrationStore.setState({
@@ -181,9 +186,43 @@ export type SessionPushResult = {
 };
 
 /**
- * Register this phone with one computer. Never prompts, never throws.
+ * The tail of each computer's attempt queue (PR #259 R1-2).
+ *
+ * WHY MODULE-LEVEL. Every register re-mints the device key, and the keystore
+ * holds the key of the LAST response it recorded. Two POSTs to one computer on
+ * the wire at once — an effect instance retiring mid-POST while its successor
+ * starts — can be processed by the daemon in either order across a tunnel, so
+ * the daemon could keep key-1 while the keystore keeps key-2, and every
+ * `X-Lop-Device-Key` the sound prefetch presents is then refused. Per-instance
+ * single-flight cannot see the other instance, so the queue lives here, keyed
+ * by computer: an attempt waits for the one before it to SETTLE, which makes
+ * the daemon's processing order the app's recording order.
  */
-export async function registerSessionPushDevice(
+const inflight = new Map<string, Promise<void>>();
+
+/**
+ * Register this phone with one computer. Never prompts, never throws.
+ * Attempts for the same computer run one at a time, in call order.
+ */
+export function registerSessionPushDevice(
+	client: RegisterClient,
+	attempt: SessionPushAttempt,
+): Promise<SessionPushResult> {
+	const previous = inflight.get(attempt.routeKey) ?? Promise.resolve();
+	const run = previous.then(() => attemptRegistration(client, attempt));
+	const tail = run.then(
+		() => undefined,
+		() => undefined,
+	);
+	inflight.set(attempt.routeKey, tail);
+	void tail.then(() => {
+		if (inflight.get(attempt.routeKey) === tail)
+			inflight.delete(attempt.routeKey);
+	});
+	return run;
+}
+
+async function attemptRegistration(
 	client: RegisterClient,
 	attempt: SessionPushAttempt,
 ): Promise<SessionPushResult> {
@@ -240,7 +279,12 @@ export async function registerSessionPushDevice(
 		// The daemon has the row either way; only the keystore write is fenced,
 		// because the record holds ONE device key and it must be the key of the
 		// computer the app is routed to (`use-custom-sound-prefetch` presents it).
-		if (!isCurrent()) return result("stale");
+		// The daemon now holds a key the keystore does not, so this computer's
+		// acceptance is forgotten: the next attempt for it must POST, not skip.
+		if (!isCurrent()) {
+			accepted.delete(attempt.routeKey);
+			return result("stale");
+		}
 		await recordRegistration(response.device_id, response.device_key);
 		const at = now();
 		accepted.set(attempt.routeKey, { fingerprint, at });

@@ -1694,7 +1694,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
 	 * a REGION id. Re-derived with --print over the staged tree; only `src`
 	 * moved. Source identity only, NOT rendered U-08 evidence. */
-	src: "423e2df5e395ec42b13844b73fee7c6f6e09552b607253f08495ca27d4386e31",
+	/* PR #259 review round 1 remediation: the registration hook keyed on
+	 * routeKey/live/revision with the relay accessor read through a ref, a
+	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
+	 * No rendered surface changed. Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only. */
+	src: "6960d337220a19fedb131a9651f848c553750680e8d2a8f0e3a216d45edd30f8",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
