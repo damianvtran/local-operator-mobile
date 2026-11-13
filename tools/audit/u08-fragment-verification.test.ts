@@ -17,6 +17,11 @@ import type { AuditNode, AuditState } from "./checks.ts";
 import {
 	ARTIFACT_LIMIT_BYTES,
 	assertCoverage,
+	assertSceneIdentity,
+	awaitSceneReady,
+	historicalAdmission,
+	SCENE_IDENTITY_SOURCE,
+	SCENE_MARKERS,
 	assertTurnControl,
 	evaluateRepairedCell,
 	FAILURE_RECEIPT_LIMIT_BYTES,
@@ -493,7 +498,7 @@ function incident(): AuditState {
 		{
 			index: 0,
 			tag: "button",
-			testId: "turn-bar-m-conv-03-user",
+			testId: TURN_CONTROL_ID,
 			interactive: true,
 			ownText: "",
 			ancestors: [],
@@ -504,7 +509,7 @@ function incident(): AuditState {
 			index,
 			tag: "span",
 			path: ORIGINAL_NODE_PATH,
-			ownText: String(index),
+			ownText: index === 1 ? "▸" : "38 actions",
 			ancestors: [0],
 			rect: index === 1 ? rect : { ...rect, w: 274, right: 299 },
 			visibleRect: index === 1 ? rect : { ...rect, w: 274, right: 299 },
@@ -526,6 +531,120 @@ function incident(): AuditState {
 		platform: "ios",
 	} as AuditState;
 }
+describe("affirmative current-scene contract (fixtures, not canonical geometry proof)", () => {
+	it("binds the requested session AND both synthetic transcript rows, not a loaded route", () => {
+		const collect = (
+			path = "/session/6714def86197",
+			text = SCENE_MARKERS.join("\n"),
+		) =>
+			runInNewContext(SCENE_IDENTITY_SOURCE, {
+				location: { pathname: path },
+				document: { body: { innerText: text } },
+			});
+		expect(() => assertSceneIdentity(cell, collect())).not.toThrow();
+		for (const reading of [
+			collect("/session/wrong"),
+			collect(undefined, "Loading…"),
+			collect(undefined, SCENE_MARKERS[0]),
+			collect(undefined, SCENE_MARKERS[1]),
+			null,
+			{ path: "/session/6714def86197", markers: [] },
+		])
+			expect(() => assertSceneIdentity(cell, reading)).toThrow(
+				"scene identity",
+			);
+	});
+	it("waits for affirmative scene and control facts within the shared deadline", async () => {
+		const good = controlFixture().collect().reading;
+		let frames = 0;
+		const page = {
+			evaluate: async (source: string) => {
+				if (source === SCENE_IDENTITY_SOURCE)
+					return {
+						path: "/session/6714def86197",
+						markers: frames ? [true, true] : [false, false],
+					};
+				if (source === TURN_CONTROL_SOURCE) return frames ? good : { count: 0 };
+				frames++;
+				return null;
+			},
+		};
+		await expect(
+			awaitSceneReady(page as never, cell, Date.now() + 1000),
+		).resolves.toMatchObject({ control: { count: 1 } });
+		expect(frames).toBe(1);
+		await expect(
+			awaitSceneReady(page as never, cell, Date.now() - 1),
+		).rejects.toThrow("not ready");
+	});
+	it("retains the strict historical matcher without making DOM/font drift historical reproduction", () => {
+		expect(historicalAdmission(incident(), ORIGINAL_NODE_PATH)).toMatchObject({
+			status: "EXACT-FAMILY-MATCH",
+			candidateCount: 1,
+		});
+		for (const change of ["path", "size", "coverage"] as const) {
+			const state = incident();
+			const a = state.nodes[1]!;
+			if (change === "path") a.path = "current-proportional-text";
+			if (change === "size") a.visibleRect = { ...a.visibleRect!, w: 21 };
+			if (change === "coverage") a.visibleRect = { ...a.visibleRect!, x: 24 };
+			expect(
+				historicalAdmission(state, ORIGINAL_NODE_PATH).status,
+				change,
+			).toBe("NOT-REPRODUCED");
+		}
+		const current = incident();
+		for (const n of current.nodes) n.path = `current/${n.index}`;
+		expect(evaluateRepairedCell(current, ORIGINAL_NODE_PATH)).toMatchObject({
+			historical: { status: "NOT-REPRODUCED" },
+			geometry: { area: 0 },
+		});
+	});
+	it("accepts current disjoint paint even without an envelope candidate, but rejects vacuity and real collision", () => {
+		const current = incident();
+		for (const n of current.nodes.filter((n) => n.ownText)) {
+			n.rect = { ...n.rect, x: n.index * 40, w: 22 };
+			n.visibleRect = n.rect;
+			n.u08PaintFragments = [{ x: n.rect.x, y: n.rect.y, w: 22, h: 18 }];
+		}
+		expect(evaluateRepairedCell(current, ORIGINAL_NODE_PATH)).toMatchObject({
+			verdict: "NO-LAYOUT-CANDIDATE",
+			historical: { status: "NOT-REPRODUCED" },
+		});
+		for (const mode of [
+			"missing-control",
+			"duplicate-control",
+			"missing-caret",
+			"missing-paint",
+			"empty-paint",
+		] as const) {
+			const state = structuredClone(current);
+			if (mode === "missing-control") state.nodes = state.nodes.slice(1);
+			if (mode === "duplicate-control")
+				state.nodes.push({ ...state.nodes[0]!, index: 9 });
+			if (mode === "missing-caret") state.nodes[1]!.ownText = "";
+			if (mode === "missing-paint") delete state.nodes[2]!.u08PaintFragments;
+			if (mode === "empty-paint") state.nodes[2]!.u08PaintFragments = [];
+			expect(
+				() => evaluateRepairedCell(state, ORIGINAL_NODE_PATH),
+				mode,
+			).toThrow();
+		}
+		const collision = incident();
+		collision.nodes[2]!.u08PaintFragments =
+			collision.nodes[1]!.u08PaintFragments;
+		expect(() => evaluateRepairedCell(collision, ORIGINAL_NODE_PATH)).toThrow(
+			"residual",
+		);
+	});
+	it("checks all target text pairs, not only the telemetry pair", () => {
+		const state = incident();
+		state.nodes.push({ ...state.nodes[2]!, index: 3, ownText: "extra label" });
+		expect(() => evaluateRepairedCell(state, ORIGINAL_NODE_PATH)).toThrow(
+			"residual",
+		);
+	});
+});
 describe("bounded corrected verification is not historical reproduction", () => {
 	it("derives exactly four canonical original matrix cells and no arbitrary new scene", () => {
 		const records = verificationRecords(RECORD);
@@ -549,7 +668,7 @@ describe("bounded corrected verification is not historical reproduction", () => 
 			"Original probe/policy changed",
 		);
 	});
-	it("requires actual original-family candidate, fragment data and DISJOINT policy decision", () => {
+	it("requires current semantic scope, actual fragments and unchanged U-08 decisions", () => {
 		expect(evaluateRepairedCell(incident(), ORIGINAL_NODE_PATH)).toMatchObject({
 			pair: [1, 2],
 			verdict: "EXCEPTION",

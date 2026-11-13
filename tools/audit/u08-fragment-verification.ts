@@ -1,5 +1,7 @@
 /** Corrected-instrument verification, never a claim to replay the old policy.
- * Four original matrix cells + one existing genuine collision, not a full audit. */
+ * Four original matrix cells + one existing genuine collision, not a full audit.
+ * Historical DOM admission and current semantic paint are separate evidence:
+ * DOM/font drift must not become either historical reproduction or a vacuous PASS. */
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -10,12 +12,7 @@ import { reDriveMismatch } from "../lib/readiness.ts";
 import { serveDir } from "../lib/static-server.ts";
 import { DEFAULT_PASSWORD } from "../mock-relay/relay.ts";
 import { type AuditRecord, auditCell } from "./audit.ts";
-import {
-	type AuditNode,
-	type AuditState,
-	runChecks,
-	U08_SUPPRESSION,
-} from "./checks.ts";
+import { type AuditNode, type AuditState, runChecks } from "./checks.ts";
 import { floorsFromTokens } from "./color.ts";
 import { type PaintRect, paintOverlap } from "./paint-fragments.ts";
 import { EXTRACT_PROBE, u08GeometryProbe } from "./probe.ts";
@@ -394,7 +391,58 @@ export function verificationRecords(base: AuditRecord): AuditRecord[] {
 		})),
 	);
 }
-const CONTROL = /^turn-bar-m-conv-(?:0[0-9]|1[0-2])-user$/;
+/** These two independently rendered rows come from longConversation() in the
+ * source-pinned relay. A route and an empty session root cannot prove hydration.
+ * Do not accept a generic session, nor substitute the scenario pin for content. */
+export const SCENE_MARKERS = [
+	"Reconcile last night's ledger and tell me what slipped.",
+	"Turn 1 done:",
+] as const;
+export const SCENE_IDENTITY_SOURCE = `(() => ({
+ path:location.pathname,
+ markers:${JSON.stringify(SCENE_MARKERS)}.map(text=>document.body.innerText.includes(text))
+}))()`;
+export function assertSceneIdentity(record: CellIdentity, reading: unknown) {
+	const r = reading as { path?: unknown; markers?: unknown } | null;
+	const expected = new URL(record.path, "http://fixture.invalid").pathname;
+	if (
+		!/^\/session\/[a-z0-9]+$/.test(expected) ||
+		r?.path !== expected ||
+		!Array.isArray(r.markers) ||
+		r.markers.length !== SCENE_MARKERS.length ||
+		!r.markers.every((value) => value === true)
+	)
+		throw new Error(
+			"Canonical scene identity not ready: requested session and synthetic transcript rows required",
+		);
+}
+/** Poll affirmative content/control facts inside the EXISTING cell deadline.
+ * Animation frames yield to hydration without a new sleep, retry allocation or
+ * timeout increase. The caller's deadline still bounds audit + readiness together. */
+export async function awaitSceneReady(
+	page: Pick<CdpPage, "evaluate">,
+	record: CellIdentity,
+	deadline: number,
+	onSample?: (identity: unknown, control: unknown) => void,
+) {
+	let last: unknown = new Error("Canonical scene identity not ready");
+	while (Date.now() < deadline) {
+		const identity = await page.evaluate(SCENE_IDENTITY_SOURCE);
+		const control = await page.evaluate(TURN_CONTROL_SOURCE);
+		onSample?.(identity, control);
+		try {
+			assertSceneIdentity(record, identity);
+			assertTurnControl(record, control);
+			return { identity, control };
+		} catch (error) {
+			last = error;
+		}
+		await page.evaluate(
+			"new Promise(resolve => requestAnimationFrame(() => resolve(null)))",
+		);
+	}
+	throw last;
+}
 /** The refusal has to name the gate's reason, not only its absence: the run this
  * check failed on reported "Missing actual own-text fragment measurement" and
  * nothing else, which cannot distinguish a react-native-web property the gate
@@ -419,6 +467,54 @@ function paintRefusalReason(node: AuditNode | undefined) {
 		return `node ${node.index}: certified pure, no positive own-text fragment (${node.u08PaintFragments.length} measured, none with positive area)`;
 	return `node ${node?.index ?? "unknown"}: no own-text purity record, conservative envelope retained`;
 }
+/** Historical admission only, NOT a replay of the source-pinned old instrument.
+ * Preserve exact path, 100% smaller-box coverage and 22x18 intersection. */
+export function historicalAdmission(
+	state: AuditState,
+	nodePath: string,
+	eligiblePairs?: readonly (readonly number[])[],
+) {
+	const eligible: readonly (readonly number[])[] =
+		eligiblePairs ??
+		(() => {
+			const pairs: number[][] = [];
+			runChecks(
+				{ ...state, onU08Decision: (a, b) => pairs.push([a, b]) },
+				{
+					floors: floorsFromTokens(null),
+					semantic: new Set(),
+					checks: ["U-08"],
+					scaleIsLive: true,
+				},
+			);
+			return pairs;
+		})();
+	const pairs = state.nodes.flatMap((a, i) =>
+		state.nodes.slice(i + 1).flatMap((b) => {
+			if (
+				!eligible.some(
+					(pair) => pair.includes(a.index) && pair.includes(b.index),
+				)
+			)
+				return [];
+			if (a.path !== nodePath || b.path !== nodePath) return [];
+			const legacy = paintOverlap(
+				{ visibleRect: a.visibleRect },
+				{ visibleRect: b.visibleRect },
+			);
+			return legacy.pct === 1 &&
+				legacy.intersections.some((r) => r.w === 22 && r.h === 18)
+				? [[a.index, b.index]]
+				: [];
+		}),
+	);
+	return {
+		status: pairs.length === 1 ? "EXACT-FAMILY-MATCH" : "NOT-REPRODUCED",
+		candidateCount: pairs.length,
+		pairs,
+		nodePath,
+	};
+}
 export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 	if (state.u08GeometryVersion !== 1)
 		throw new Error("Missing corrected fragment schema");
@@ -440,26 +536,51 @@ export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 			scaleIsLive: true,
 		},
 	);
-	const candidates = decisions.filter(({ pair }) => {
-		const a = state.nodes.find((n) => n.index === pair[0]),
-			b = state.nodes.find((n) => n.index === pair[1]);
-		if (!a || !b || a.path !== nodePath || b.path !== nodePath) return false;
-		const legacy = paintOverlap(
-			{ visibleRect: a.visibleRect },
-			{ visibleRect: b.visibleRect },
-		);
-		return (
-			legacy.pct === 1 &&
-			legacy.intersections.some((r) => r.w === 22 && r.h === 18)
-		);
-	});
-	if (candidates.length !== 1)
-		throw new Error("Missing/ambiguous original envelope-family candidate");
-	const candidate = candidates[0];
-	if (!candidate) throw new Error("Missing candidate");
-	const nodes = candidate.pair.map((index) =>
-		state.nodes.find((n) => n.index === index),
+	// Keep the exact historical predicate unchanged and report its result. It is
+	// NOT the admission predicate for today's DOM: a font/path change cannot
+	// turn a historical miss into reproduction or hide current paint collisions.
+	const historical = historicalAdmission(
+		state,
+		nodePath,
+		decisions.map((d) => d.pair),
 	);
+	const controls = state.nodes.filter((n) => n.testId === TURN_CONTROL_ID);
+	const control = controls[0];
+	if (
+		controls.length !== 1 ||
+		!control?.interactive ||
+		control.tag !== "button"
+	)
+		throw new Error("Missing/ambiguous current fixture control scope");
+	const nodes = state.nodes.filter(
+		(n) => n.ancestors.includes(control.index) && n.ownText.trim(),
+	);
+	const carets = nodes.filter((n) => ["▸", "▾"].includes(n.ownText.trim()));
+	if (nodes.length < 2 || carets.length !== 1)
+		throw new Error("Missing/ambiguous current TurnBar own-text/caret paint");
+	// Every text fragment under the uniquely identified TurnBar is checked, not
+	// just the convenient pair retained for atomic diagnostic telemetry below.
+	const comparisons = nodes.flatMap((a, i) =>
+		nodes.slice(i + 1).map((b) => ({
+			pair: [a.index, b.index] as [number, number],
+			geometry: paintOverlap(a, b),
+			policy:
+				decisions.find(
+					(d) => d.pair.includes(a.index) && d.pair.includes(b.index),
+				) ?? null,
+		})),
+	);
+	const pair = [nodes[0]!.index, nodes[1]!.index] as [number, number];
+	const decision = decisions.find(
+		(d) => d.pair.includes(pair[0]) && d.pair.includes(pair[1]),
+	);
+	const candidate = {
+		pair,
+		verdict: decision?.verdict ?? "NO-LAYOUT-CANDIDATE",
+		reason:
+			decision?.reason ??
+			"Actual text paint disjoint; pair did not enter U-08 layout admission",
+	};
 	for (const node of nodes) {
 		if (
 			!node ||
@@ -472,7 +593,7 @@ export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 		const control = node.ancestors
 			.map((index) => state.nodes.find((n) => n.index === index))
 			.find((n) => n?.tag === "button");
-		if (!control || !control.interactive || !CONTROL.test(control.testId ?? ""))
+		if (!control || !control.interactive || control.testId !== TURN_CONTROL_ID)
 			throw new Error("Wrong actual fixture control scope");
 	}
 	const a = nodes[0],
@@ -480,15 +601,13 @@ export function evaluateRepairedCell(state: AuditState, nodePath: string) {
 	if (!a || !b) throw new Error("Missing pair nodes");
 	const overlap = paintOverlap(a, b);
 	if (
-		candidate.verdict !== "EXCEPTION" ||
-		candidate.reason !== U08_SUPPRESSION.DISJOINT ||
-		overlap.intersections.length !== 0 ||
+		comparisons.some((c) => c.geometry.intersections.length !== 0) ||
 		rows.some((row) => row.verdict === "FAIL")
 	)
 		throw new Error(
 			"Unexpected residual U-08 collision or wrong policy outcome",
 		);
-	return { ...candidate, geometry: overlap, nodes };
+	return { ...candidate, geometry: overlap, nodes, comparisons, historical };
 }
 function fingerprint(state: AuditState, pair: readonly number[]) {
 	return JSON.stringify(
@@ -581,6 +700,8 @@ export async function verifyFragments(ctx: Context) {
 		page = fresh.page;
 		await page.send("Accessibility.enable");
 		failure.phase = "canonical-redrive";
+		const deadline = Date.now() + 45000;
+		const currentPage = page;
 		const attempted = await withDeadline(
 			auditCell(page, record, {
 				origin,
@@ -588,6 +709,22 @@ export async function verifyFragments(ctx: Context) {
 				seed: relay ? { route: origin, password: DEFAULT_PASSWORD } : null,
 				settleMs: 1200,
 				cellTimeoutMs: 45000,
+			}).then(async (state) => {
+				if (relay) {
+					failure.phase = "scene-readiness";
+					const ready = await awaitSceneReady(
+						currentPage,
+						record,
+						deadline,
+						(identity, control) => {
+							failure.readiness = identity as Record<string, unknown>;
+							failure.control = control;
+						},
+					);
+					failure.readiness = ready.identity as Record<string, unknown>;
+					failure.control = ready.control;
+				}
+				return state;
 			}),
 			45000,
 			"corrected verification cell",
@@ -609,6 +746,7 @@ export async function verifyFragments(ctx: Context) {
 				: [];
 		failure.readiness = reading
 			? {
+					identity: failure.readiness,
 					path:
 						typeof reading.path === "string"
 							? reading.path.split("?")[0]
@@ -671,6 +809,8 @@ export async function verifyFragments(ctx: Context) {
 		if (mismatch) throw new Error("Canonical state not reproduced");
 		if (relay) {
 			failure.phase = "control-state";
+			const identity = await page.evaluate(SCENE_IDENTITY_SOURCE);
+			assertSceneIdentity(record, identity);
 			failure.control = await page.evaluate(TURN_CONTROL_SOURCE);
 			assertTurnControl(record, failure.control);
 			// Persist readiness separately before geometry adjudication can fail. This
@@ -717,8 +857,14 @@ export async function verifyFragments(ctx: Context) {
 			const current = evaluateRepairedCell(state, ctx.nodePath);
 			if (
 				JSON.stringify(first.pair) !== JSON.stringify(current.pair) ||
-				fingerprint(observed.state, first.pair) !==
-					fingerprint(state, current.pair)
+				fingerprint(
+					observed.state,
+					first.nodes.map((n) => n.index),
+				) !==
+					fingerprint(
+						state,
+						current.nodes.map((n) => n.index),
+					)
 			)
 				throw new Error("Pair drift during geometry capture");
 			if (
@@ -765,8 +911,25 @@ export async function verifyFragments(ctx: Context) {
 				after.viewport.dpr !== 3
 			)
 				throw new Error("Actual cell environment drift around screenshot");
-			evaluateRepairedCell(after, ctx.nodePath);
-			if (fingerprint(state, current.pair) !== fingerprint(after, current.pair))
+			assertSceneIdentity(
+				record,
+				await observed.page.evaluate(SCENE_IDENTITY_SOURCE),
+			);
+			assertTurnControl(
+				record,
+				await observed.page.evaluate(TURN_CONTROL_SOURCE),
+			);
+			const settled = evaluateRepairedCell(after, ctx.nodePath);
+			if (
+				fingerprint(
+					state,
+					current.nodes.map((n) => n.index),
+				) !==
+				fingerprint(
+					after,
+					settled.nodes.map((n) => n.index),
+				)
+			)
 				throw new Error("Pair drift around screenshot");
 			const key = `${record.theme}-${record.state}`;
 			put(`${key}.png`, Buffer.from(screenshot.data, "base64"));
@@ -782,6 +945,8 @@ export async function verifyFragments(ctx: Context) {
 					textScale: state.textScale,
 					insetsOverride: state.insetsOverride,
 				},
+				historicalAdmission: current.historical,
+				semanticComparisons: current.comparisons,
 				pair: current.pair,
 				decision: current.verdict,
 				reason: current.reason,
@@ -901,7 +1066,7 @@ export async function verifyFragments(ctx: Context) {
 		failure.phase = "manifest-write";
 		put("verification.json", Buffer.from(JSON.stringify(receipt, null, 2)));
 		console.log(
-			"Corrected verification: four original-family cells disjoint; specific genuine collision remains FAIL. Not full audit PASS.",
+			"Corrected verification: four current-scene cells disjoint (historical admission reported separately); specific genuine collision remains FAIL. Not full audit PASS.",
 		);
 	} catch (error) {
 		const message = `${failure.phase} theme=${failure.cell?.theme ?? "unknown"} state=${failure.cell?.state ?? "unknown"} path=${failure.cell?.path ?? "unknown"}: ${error instanceof Error ? error.message : String(error)}`;
