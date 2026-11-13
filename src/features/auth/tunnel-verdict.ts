@@ -16,12 +16,20 @@
  * to the remedy is English punctuation, so the whole sentence is the translator's.
  * The loopback address, the URL scheme and the `lop` command are values, passed
  * as `{address}`/`{scheme}`/`{command}`, never copy. Server text (`detail`,
- * `refused.detail`, `invalid.reason`) passes through untranslated.
+ * `refused.detail`) passes through untranslated.
+ *
+ * **Refused addresses (M3 S2b-2b).** The validator in `src/connection/profile.ts`
+ * returns a `RouteInvalidCode`, not English, and `routeInvalidSentence` below is
+ * the one place a code becomes copy — for the `invalid` verdict and for the
+ * connect path in `connection-provider.tsx` alike.
  */
 
 /** The loopback address and port the relay serves; a value, never copy. */
 const RELAY_LOOPBACK = "127.0.0.1:4098";
 
+/* Type-only: `@/connection` (the barrel) imports `react-native`, which this
+ *  Node-tested module must not load; the import is erased at build time. */
+import type { RouteInvalidCode } from "@/connection/profile";
 import { t } from "@/i18n";
 import type { SentencePlatform } from "@/lib/platform";
 import { RelayError } from "@/relay";
@@ -34,7 +42,7 @@ export type TunnelTestVerdict =
 	/** The URL and password work; the relay answered with a session count. */
 	| { kind: "ok"; sessions: number }
 	/** The address the reader typed is not usable, before any request. */
-	| { kind: "invalid"; reason: string }
+	| { kind: "invalid"; code: RouteInvalidCode }
 	| { kind: "password" }
 	/** 403: something in front of the relay refused the request. */
 	| { kind: "forbidden"; detail: string | null }
@@ -112,6 +120,48 @@ export function transportKind(
 	return "unreachable";
 }
 
+/** The catalogue key for each refused-address code. Exhaustive over the union, so
+ *  a code added to `profile.ts` breaks this file's types until it has copy rather
+ *  than rendering `undefined`; exported so a test can prove every key exists. */
+export const ROUTE_INVALID_KEY = {
+	empty: "mobile.computers.route_invalid.empty",
+	"not-address": "mobile.computers.route_invalid.not_address",
+	scheme: "mobile.computers.route_invalid.scheme",
+	credentials: "mobile.computers.route_invalid.credentials",
+	query: "mobile.computers.route_invalid.query",
+	"http-public": "mobile.computers.route_invalid.http_public",
+	"insecure-off": "mobile.computers.route_invalid.insecure_off",
+	"not-radient": "mobile.computers.route_invalid.not_radient",
+	"no-tunnel-id": "mobile.computers.route_invalid.no_tunnel_id",
+} as const satisfies Record<RouteInvalidCode, string>;
+
+/** The URL schemes and the example private host the refusals name: values the
+ *  reader types or reads off a screen, never copy, so they are passed in rather
+ *  than written into each translation. */
+const HTTPS = "https://";
+const HTTP = "http://";
+const PRIVATE_HOST_EXAMPLE = "192.168.x.x";
+
+/** The sentence a reader gets for a refused address, in the active locale. A
+ *  switch rather than one `t(key, values)` call because `t` is typed per key: a
+ *  key with placeholders must be handed exactly its own, and one without any
+ *  takes none. */
+export function routeInvalidSentence(code: RouteInvalidCode): string {
+	switch (code) {
+		case "not-address":
+		case "scheme":
+			return t(ROUTE_INVALID_KEY[code], { scheme: HTTPS });
+		case "http-public":
+			return t(ROUTE_INVALID_KEY[code], {
+				insecure: HTTP,
+				scheme: HTTPS,
+				example: PRIVATE_HOST_EXAMPLE,
+			});
+		default:
+			return t(ROUTE_INVALID_KEY[code]);
+	}
+}
+
 /** Whether `verdictSentence` OPENS with server text: the offline sentence with a
  *  relay detail is `{detail}`-initial in every locale (ur: `{detail}۔ اس کمپیوٹر
  *  پر چلائیں: {command}`), and that detail is usually Latin. On an RTL page the
@@ -119,8 +169,8 @@ export function transportKind(
  *  `dir="auto"` lays the whole line out LTR. A predicate about the sentence's
  *  shape, not a direction: the direction is the surface's fact, so the render
  *  site applies it (`src/ui/direction.tsx`). Every other verdict either opens
- *  with catalogue prose or IS server text (`invalid.reason`), which must keep
- *  its own inferred base — hence no blanket spread. */
+ *  with catalogue prose (`invalid` too, since M3 S2b-2b) or IS server text,
+ *  which must keep its own inferred base — hence no blanket spread. */
 export const verdictOpensWithDetail = (verdict: TunnelTestVerdict): boolean =>
 	verdict.kind === "offline" && Boolean(verdict.detail);
 
@@ -138,7 +188,7 @@ export function verdictSentence(
 				sessions: verdict.sessions,
 			});
 		case "invalid":
-			return verdict.reason;
+			return routeInvalidSentence(verdict.code);
 		case "password":
 			return t("mobile.computers.own_tunnel.verdict_password");
 		case "forbidden":

@@ -550,5 +550,113 @@
 	"mobile.computers.own_tunnel.password_slot_this": {
 		"role": "help",
 		"note": "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's saved password already belongs to this address."
+	},
+	"mobile.computers.setup.intro": {
+		"role": "help",
+		"note": "Opening paragraph on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Explains why the computer must run a connector (a small background program that keeps the tunnel open) and stay awake, and reassures that code never leaves it. Full sentences."
+	},
+	"mobile.computers.setup.billing_title": {
+		"role": "heading",
+		"note": "Title of a warning box on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Shown when Radient says this account cannot start a tunnel (billing not active). Short, no final full stop."
+	},
+	"mobile.computers.setup.billing_fallback": {
+		"role": "help",
+		"note": "Body of the \"Remote access is not active\" warning on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Only shown when the Radient console sent no sentence of its own (its sentence, in English, is shown instead when present). 'The console' is the Radient web console. Full sentences."
+	},
+	"mobile.computers.setup.create_title": {
+		"role": "heading",
+		"note": "Card heading on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. First of three routes: create a new tunnel by running commands on the computer itself. 'One' is a tunnel. Short, no final full stop."
+	},
+	"mobile.computers.setup.create_help": {
+		"role": "help",
+		"note": "Lead-in line above a block of terminal commands on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Ends with a colon because the commands follow directly below; use your language's lead-in punctuation."
+	},
+	"mobile.computers.setup.terminal_label": {
+		"role": "meta",
+		"note": "Small upper-case label at the top of a copyable command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Names where the commands are typed (a command-line terminal). One word; it is also read in the copy button's accessibility hint. Narrow: label row of a 320 pt wide block."
+	},
+	"mobile.computers.setup.amount_note": {
+		"role": "help",
+		"note": "Small note under the create commands on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. {amount} is the literal placeholder `<amount>` that appears in the command above (the reader replaces it with a price); {command} is the command `lop tunnel create`. Both are values the reader types: never translate them, keep them left-to-right. The sentence may start with {amount} in English; reorder freely."
+	},
+	"mobile.computers.setup.tui_help": {
+		"role": "help",
+		"note": "Lead-in line above a second command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. The TUI is Local Operator's full-screen terminal app; 'Local Operator' is the product name (keep Latin). Ends with a colon because the commands follow."
+	},
+	"mobile.computers.setup.tui_label": {
+		"role": "meta",
+		"note": "Small upper-case label at the top of a copyable command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. TUI = text user interface (Local Operator's terminal app). Keep the acronym unless your language has an established one. Very short."
+	},
+	"mobile.computers.setup.watching": {
+		"role": "button",
+		"note": "Label of the primary button on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. while the app is checking for the newly created tunnel to appear (the button shows a spinner). 'It' is the tunnel. Short, no final full stop; sibling of mobile.computers.setup.ran_it, the same button before it is pressed."
+	},
+	"mobile.computers.setup.ran_it": {
+		"role": "button",
+		"note": "Label of the primary button on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. pressed after running the create commands: the app then watches for the tunnel and connects to it. First person (the reader speaking). Short enough for a full-width button on a 320 pt phone; no final full stop."
+	},
+	"mobile.computers.setup.attach_title": {
+		"role": "heading",
+		"note": "Card heading on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Second route: connect a tunnel the reader already created in the Radient console. 'One' is a tunnel. No final full stop."
+	},
+	"mobile.computers.setup.attach_help": {
+		"role": "help",
+		"note": "Help text in the attach card on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. 'Id' is the tunnel's identifier as printed in the console. The second sentence warns that the command below does not create a tunnel. Full sentences."
+	},
+	"mobile.computers.setup.tunnel_id_label": {
+		"role": "meta",
+		"note": "Visible label and accessible name of the text field where the reader types the tunnel's identifier on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Two words, no final full stop. The example in the field (0123…-lop) is not translated."
+	},
+	"mobile.computers.setup.attach_label": {
+		"role": "meta",
+		"note": "Small upper-case label at the top of the copyable attach command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. A verb or noun naming the action of connecting an existing tunnel. One word; it is also read in the copy button's accessibility hint."
+	},
+	"mobile.computers.setup.address_title": {
+		"role": "heading",
+		"note": "Card heading on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Third route: connect directly to a relay URL with its password, without Radient. No final full stop."
+	},
+	"mobile.computers.setup.address_help": {
+		"role": "help",
+		"note": "Help text in the address card on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. The relay is the small server on the reader's computer that the app talks to. Full sentences."
+	},
+	"mobile.computers.route_invalid.empty": {
+		"role": "help",
+		"note": "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the field is empty."
+	},
+	"mobile.computers.route_invalid.not_address": {
+		"role": "help",
+		"note": "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the text cannot be read as a web address. {scheme} is `https://`: never translated, keep it left-to-right."
+	},
+	"mobile.computers.route_invalid.scheme": {
+		"role": "help",
+		"note": "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the address uses another protocol (e.g. ftp://). {scheme} is `https://`: never translated, keep it left-to-right."
+	},
+	"mobile.computers.route_invalid.credentials": {
+		"role": "help",
+		"note": "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the address has a user name and password written into it (user:pass@host), which would leak into logs."
+	},
+	"mobile.computers.route_invalid.query": {
+		"role": "help",
+		"note": "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the address ends with ?… or #…. 'Query string' and 'fragment' are the technical names of those URL parts; use your language's usual technical terms."
+	},
+	"mobile.computers.route_invalid.http_public": {
+		"role": "help",
+		"note": "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: an unencrypted address on the public internet. {insecure} is `http://`, {scheme} is `https://`, {example} is `192.168.x.x` (a home-network address): none are translated, keep them left-to-right. The sentence may start with {insecure} in English; reorder freely."
+	},
+	"mobile.computers.route_invalid.insecure_off": {
+		"role": "help",
+		"note": "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: an unencrypted private address while the insecure-connection switch (a toggle on the same screen) is off. Name the switch the way the reader sees it on the screen."
+	},
+	"mobile.computers.route_invalid.not_radient": {
+		"role": "help",
+		"note": "Reserved reason for a Radient tunnel address the app refuses (today the app drops this reason silently and picks another route; it exists so a future surface is translated). Radient is the product name: keep it in Latin script. Full sentence(s). Case: the address is not in the form Radient's tunnels use."
+	},
+	"mobile.computers.route_invalid.no_tunnel_id": {
+		"role": "help",
+		"note": "Reserved reason for a Radient tunnel address the app refuses (today the app drops this reason silently and picks another route; it exists so a future surface is translated). Radient is the product name: keep it in Latin script. Full sentence(s). Case: the tunnel arrived without an identifier, so the app cannot renew its sign-in ('re-mint' = issue a new session token); 'discovery' is the app re-reading the account's computers."
+	},
+	"mobile.computers.your_computer": {
+		"role": "meta",
+		"note": "Names the reader's computer inside connection-failure headlines on the Computers screen when the failing computer has no name of its own (a Radient route, before the list knows it). The same text fills {subject} in headlines such as \"{subject} is not answering.\" and \"The relay is not running on {subject}.\", so it appears both at the start of a sentence and after a preposition: choose a form that reads in both places. Capitalised in English because it usually starts the sentence."
 	}
 }

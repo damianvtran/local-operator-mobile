@@ -94,6 +94,7 @@ import {
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { routeInvalidSentence } from "@/features/auth/tunnel-verdict";
 import { reconnectDelay } from "@/features/session/connection-view";
 import { clearAuthorizationData } from "@/features/session/device-storage";
 import {
@@ -1162,7 +1163,7 @@ export const ConnectionProvider = ({
 					setLastError(null);
 					connectionStore.getState().noteFailure({
 						surface: "none",
-						displayableMessage: validated.reason,
+						displayableMessage: routeInvalidSentence(validated.code),
 					});
 					retryRef.current = null;
 					return outcome();
@@ -2355,7 +2356,7 @@ export const ConnectionProvider = ({
 			: route === null
 				? "Radient"
 				: route.mode === "radient"
-					? "Your computer"
+					? t("mobile.computers.your_computer")
 					: route.baseUrl;
 		return refusalFromError({
 			error: lastError,

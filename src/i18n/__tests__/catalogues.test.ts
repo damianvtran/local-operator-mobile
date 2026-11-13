@@ -147,7 +147,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 138, // M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 165, // M3 S2b-2b +27: the set-up-a-computer screen (17), refused-address reasons (9), "Your computer" refusal subject (1) (138 + 27 = 165); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.notifications",
@@ -332,7 +332,10 @@ describe("the English catalogues", () => {
 		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
 		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
 		 * counted over the en JSON. */
-		expect(total).toBe(812);
+		/* M3 slice S2b-2b (English-first): +27 mobile.computers (set-up-a-computer
+		 * screen 17, refused-address reasons 9, "Your computer" subject 1):
+		 * 812 + 27 = 839, counted over the en JSON. */
+		expect(total).toBe(839);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

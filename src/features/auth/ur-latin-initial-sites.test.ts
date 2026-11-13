@@ -347,9 +347,9 @@ describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens wit
 				command: "lop mobile status",
 			}),
 		).toBe(false);
-		expect(verdictOpensWithDetail({ kind: "invalid", reason: "bad URL" })).toBe(
-			false,
-		);
+		expect(
+			verdictOpensWithDetail({ kind: "invalid", code: "not-address" }),
+		).toBe(false);
 		expect(verdictOpensWithDetail({ kind: "password" })).toBe(false);
 	});
 
