@@ -1688,7 +1688,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ed9db30622a256299aebf3bba946dafcaf94a349a771d3bbd3cb02aa2def4d86",
+	/* fix/session-push-register: the app now POSTs /api/push/register for the
+	 * routed computer (session-push-registration*, use-session-push-registration),
+	 * Settings › Notifications gains one registration sentence (+6
+	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
+	 * a REGION id. Re-derived with --print over the staged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "423e2df5e395ec42b13844b73fee7c6f6e09552b607253f08495ca27d4386e31",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
