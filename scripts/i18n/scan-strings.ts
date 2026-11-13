@@ -39,10 +39,11 @@
  *
  *    ACTIVATION-SCOPED, ON PURPOSE. Rule 4 applies ONLY to the files in
  *    `EXPRESSION_LITERAL_SCOPE` (the session screen, the agent-job screen, the
- *    video screen, the add-a-computer wait panel and Settings). EVERY OTHER FILE IS NOT SCANNED BY
+ *    video screen, the add-a-computer wait panel, Settings and its own-tunnel
+ *    section, the own-tunnel verdicts and the command block). EVERY OTHER FILE IS NOT SCANNED BY
  *    IT YET — including the rest of `app/`, `src/features/auth/` and
  *    `src/features/settings/`, where ~90 further expression literals are known
- *    (e.g. `computer-switcher-view.ts`, `tunnel-verdict.ts`).
+ *    (e.g. `computer-switcher-view.ts`, `setup-computer.tsx`).
  *    That is a deliberate staged rollout, not an oversight: the baseline is
  *    shrink-only and must never become a dumping ground for them. Each slice adds
  *    paths to the list in the SAME change that keys everything the rule then finds
@@ -52,9 +53,10 @@
  * TOKENISER. Strings are stripped by a small state machine. An apostrophe glued
  * to a word (`relay's`) is read as JSX prose, not a quote, for every rule:
  * before that, one in-word apostrophe in JSX text silently blinded the scanner
- * for the rest of the file. An apostrophe after a space or tag (`'quoted'` in
- * prose, or a lone `'` before a word) is still read as a quote — a stated
- * limit, since in code that position does open a string.
+ * for the rest of the file. An apostrophe after a space, a tag or a closing
+ * brace (`'quoted'` in prose, a lone `'` before a word, or `{name}'s` in JSX
+ * text) is still read as a quote — a stated limit, since in code those
+ * positions do open a string.
  *
  * It does not understand JSX expressions inside template literals, and it does
  * not flag bare string literals in ordinary modules (a route name, a CSS class
@@ -91,8 +93,11 @@ export const EXPRESSION_LITERAL_SCOPE: readonly string[] = [
 	"src/features/auth/sign-in-panel.tsx",
 	"src/features/auth/sign-in.tsx",
 	"src/features/auth/tunnel-paths.tsx",
+	"src/features/auth/tunnel-verdict.ts",
 	"src/features/auth/welcome.tsx",
+	"src/features/settings/own-tunnel-settings.tsx",
 	"src/features/settings/settings.tsx",
+	"src/ui/components/command-block.tsx",
 ];
 
 export function expressionRuleActive(file: string): boolean {
@@ -255,10 +260,12 @@ function splitCodeAndLiterals(source: string): {
 					continue;
 				}
 				/* An apostrophe glued to a word (`phone's`, `relay's`, `don't`) is JSX
-				 * prose — punctuation, not a quote delimiter. TypeScript never opens a
-				 * string literal directly after an identifier character, so this test
-				 * cannot swallow a real literal. Treating it as a quote opened a
-				 * "literal" that ran to the next apostrophe or end of file, blinding
+				 * prose — punctuation, not a quote delimiter. TypeScript CAN open a
+				 * string directly after an identifier character (`return'x'` is valid),
+				 * but Biome formats every such site to `return "x"` (checked with
+				 * `biome format`) and `biome check` gates this repo, so in formatted
+				 * source the test cannot swallow a real literal. Treating it as a
+				 * quote opened a "literal" that ran to the next apostrophe or end of file, blinding
 				 * every rule for the rest of it (own-tunnel-settings.tsx went dark
 				 * after :196). Applies to ALL rules since the scanner-blindness fix;
 				 * the debt it newly exposed was seeded via `check-strings --update

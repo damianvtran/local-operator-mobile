@@ -16,7 +16,9 @@ import {
 import {
 	COMPUTER_COMMANDS,
 	TUNNEL_COMMANDS,
-	TUNNEL_RULE,
+	tunnelCommandLabel,
+	tunnelCommandNote,
+	tunnelRule,
 } from "@/features/auth/tunnel-commands";
 import { readSavedComputers } from "@/features/auth/tunnel-storage";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
@@ -414,8 +416,8 @@ export default function OwnTunnel() {
 						<CommandBlock
 							key={item.id}
 							id={item.id}
-							label={item.label}
-							note={item.note}
+							label={tunnelCommandLabel(item)}
+							note={tunnelCommandNote(item)}
 							command={item.command}
 						/>
 					))}
@@ -429,13 +431,13 @@ export default function OwnTunnel() {
 						numeral="2."
 						label={t("mobile.computers.own_tunnel.step_publish")}
 					/>
-					<Text className="text-body-sm text-ink-muted">{TUNNEL_RULE}</Text>
+					<Text className="text-body-sm text-ink-muted">{tunnelRule()}</Text>
 					{TUNNEL_COMMANDS.map((item) => (
 						<CommandBlock
 							key={item.id}
 							id={item.id}
-							label={item.label}
-							note={item.note}
+							label={tunnelCommandLabel(item)}
+							note={tunnelCommandNote(item)}
 							command={item.command}
 						/>
 					))}
@@ -547,7 +549,10 @@ function hostOf(value: string): string {
 
 /** What the test found, in the taxonomy's own sentence. */
 const VerdictBlock = ({ verdict }: { verdict: TunnelTestVerdict }) => {
-	const remedy = verdict.kind === "offline" ? verdict.remedy : null;
+	const remedy =
+		verdict.kind === "offline"
+			? t("mobile.computers.own_tunnel.remedy", { command: verdict.command })
+			: null;
 	return (
 		<>
 			<Alert

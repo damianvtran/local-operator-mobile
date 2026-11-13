@@ -5,6 +5,7 @@ import { useConnection } from "@/features/auth/connection-provider";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
+import { t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -103,7 +104,7 @@ export const OwnTunnelSettings = () => {
 
 	return (
 		<View className="gap-2 pt-1">
-			<SectionHeader label="Your own tunnel" />
+			<SectionHeader label={t("mobile.computers.own_tunnel.title")} />
 			{saved && !editing ? (
 				<View className="gap-2">
 					{/* Mono: a host:port is exactly the voice brand-kit § 3.5 rations mono
@@ -114,8 +115,8 @@ export const OwnTunnelSettings = () => {
 					</Text>
 					<Text className="text-body-sm text-ink-dim">
 						{saved.password === null
-							? "The password is not saved, so the app asks for it on each launch."
-							: "The address and the password are kept in this phone's secure store."}
+							? t("mobile.settings.own_tunnel.not_saved")
+							: t("mobile.settings.own_tunnel.kept_secure")}
 					</Text>
 					{/* `flex-wrap`: three controls in a row overflow a 320 pt phone at
 					 *  200 % text (the `U-06` finding), so this row wraps instead. */}
@@ -128,21 +129,29 @@ export const OwnTunnelSettings = () => {
 										? "warning"
 										: "error"
 							}
-							title={verdict.kind === "ok" ? "Connected" : "Not yet"}
+							title={
+								verdict.kind === "ok"
+									? t("mobile.computers.own_tunnel.verdict_ok")
+									: t("mobile.computers.own_tunnel.verdict_not_yet")
+							}
 						>
 							{verdictSentence(verdict, sentencePlatform())}
 						</Alert>
 					) : null}
 					<View className="flex-row flex-wrap gap-2">
 						<Button
-							label="Edit"
+							label={t("mobile.settings.own_tunnel.edit")}
 							onPress={() => void beginEdit()}
 							variant="outline"
 							size="sm"
 							testID={CONTROL.settingsTunnelEdit}
 						/>
 						<Button
-							label={busy ? "Testing…" : "Test again"}
+							label={
+								busy
+									? t("mobile.computers.own_tunnel.testing")
+									: t("mobile.settings.own_tunnel.test_again")
+							}
 							onPress={() => void testSaved()}
 							loading={busy}
 							disabled={busy}
@@ -151,7 +160,7 @@ export const OwnTunnelSettings = () => {
 							testID={CONTROL.settingsTunnelTest}
 						/>
 						<Button
-							label="Remove"
+							label={t("mobile.settings.own_tunnel.remove")}
 							onPress={() => setRemoving(true)}
 							variant="quiet"
 							size="sm"
@@ -164,7 +173,7 @@ export const OwnTunnelSettings = () => {
 			{editing ? (
 				<View className="gap-3">
 					<Input
-						label="Public URL"
+						label={t("mobile.computers.own_tunnel.url_label")}
 						value={url}
 						onChangeText={setUrl}
 						placeholder="https://your-tunnel.example.com"
@@ -172,10 +181,10 @@ export const OwnTunnelSettings = () => {
 						testID={CONTROL.customUrlField}
 					/>
 					<Input
-						label="Relay password"
+						label={t("mobile.computers.own_tunnel.password_label")}
 						value={password}
 						onChangeText={setPassword}
-						placeholder="The password the relay was started with"
+						placeholder={t("mobile.settings.own_tunnel.password_placeholder")}
 						secureTextEntry
 						autoCapitalize="none"
 						testID={CONTROL.customPasswordField}
@@ -183,8 +192,8 @@ export const OwnTunnelSettings = () => {
 					<Button
 						label={
 							allowInsecure
-								? "Plain http:// is allowed"
-								: "Allow a plain http:// address"
+								? t("mobile.computers.own_tunnel.insecure_allowed")
+								: t("mobile.computers.own_tunnel.insecure_allow")
 						}
 						onPress={() => setAllowInsecure((value) => !value)}
 						variant={allowInsecure ? "outline" : "quiet"}
@@ -192,14 +201,19 @@ export const OwnTunnelSettings = () => {
 						testID={CONTROL.customInsecureOptIn}
 					/>
 					{persistent === false ? (
-						<Alert severity="info" title="This runtime cannot store it">
-							This build has no secure keystore, so the tunnel lasts for this
-							run only. On a phone the value is kept in the platform's secure
-							store.
+						<Alert
+							severity="info"
+							title={t("mobile.settings.own_tunnel.runtime_title")}
+						>
+							{t("mobile.settings.own_tunnel.runtime_body")}
 						</Alert>
 					) : null}
 					<Button
-						label={busy ? "Testing…" : "Test the connection"}
+						label={
+							busy
+								? t("mobile.computers.own_tunnel.testing")
+								: t("mobile.computers.own_tunnel.test")
+						}
 						onPress={() => void test()}
 						loading={busy}
 						disabled={busy || url.trim().length === 0}
@@ -214,29 +228,32 @@ export const OwnTunnelSettings = () => {
 										? "warning"
 										: "error"
 							}
-							title={verdict.kind === "ok" ? "Connected" : "Not yet"}
+							title={
+								verdict.kind === "ok"
+									? t("mobile.computers.own_tunnel.verdict_ok")
+									: t("mobile.computers.own_tunnel.verdict_not_yet")
+							}
 						>
 							{verdictSentence(verdict, sentencePlatform())}
 						</Alert>
 					) : null}
 					<View className="flex-row flex-wrap gap-2">
 						<Button
-							label="Save"
+							label={t("mobile.common.save")}
 							onPress={() => void save()}
 							disabled={verdict?.kind !== "ok" || busy}
 							testID={CONTROL.customConnect}
 						/>
 						<Button
 							testID={CONTROL.settingsTunnelCancel}
-							label="Cancel"
+							label={t("mobile.common.cancel")}
 							onPress={() => setEditing(false)}
 							variant="quiet"
 						/>
 					</View>
 					{verdict?.kind !== "ok" ? (
 						<Text className="text-body-sm text-ink-dim">
-							Test the address before saving it: a saved tunnel that has never
-							answered leaves the list empty with nothing to explain why.
+							{t("mobile.settings.own_tunnel.before_saving")}
 						</Text>
 					) : null}
 				</View>
@@ -248,7 +265,7 @@ export const OwnTunnelSettings = () => {
 				 *  pressable — while the row above it in the same surface shows what a
 				 *  control looks like (D10). */
 				<Button
-					label="Set up your own tunnel"
+					label={t("mobile.computers.paths.own_title")}
 					onPress={() => void beginEdit()}
 					variant="outline"
 					size="sm"
@@ -258,9 +275,9 @@ export const OwnTunnelSettings = () => {
 
 			<Dialog
 				visible={removing}
-				title="Remove this tunnel?"
-				body="This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account."
-				confirmLabel="Remove"
+				title={t("mobile.settings.own_tunnel.remove_title")}
+				body={t("mobile.settings.own_tunnel.remove_body")}
+				confirmLabel={t("mobile.settings.own_tunnel.remove")}
 				onConfirm={() => void remove()}
 				onCancel={() => setRemoving(false)}
 				destructive

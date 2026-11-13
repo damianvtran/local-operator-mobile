@@ -90,10 +90,8 @@ describe("CommandBlock test IDs do not depend on the translated label", () => {
 	}
 
 	it("the English IDs the screens shipped with are unchanged", () => {
-		const ids = testIdsOf(
-			ownTunnel,
-			ownTunnel.map((block) => block.label),
-		);
+		/* The labels are irrelevant to the IDs now; any stand-ins will do. */
+		const ids = testIdsOf(ownTunnel, standInLabels("en", ownTunnel.length));
 		expect(ids.filter((id) => id.startsWith("tunnel-copy-"))).toEqual([
 			"tunnel-copy-install-on-the-computer",
 			"tunnel-copy-or-run-it-in-the-foreground",

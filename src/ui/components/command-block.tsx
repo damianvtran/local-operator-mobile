@@ -2,6 +2,7 @@ import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import { Text, View } from "react-native";
 
+import { t } from "@/i18n";
 import { commandCopyId, ROLE, tunnelCommandCopyId } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { LTR_TEXT } from "@/ui/direction";
@@ -59,13 +60,13 @@ export const CommandBlock = ({
 					{label}
 				</Text>
 				<Button
-					label={copied ? "Copied" : "Copy"}
+					label={copied ? t("mobile.common.copied") : t("mobile.common.copy")}
 					onPress={() => {
 						void Clipboard.setStringAsync(command).then(() => setCopied(true));
 					}}
 					variant="quiet"
 					size="sm"
-					accessibilityHint={`Copies the ${label} command`}
+					accessibilityHint={t("mobile.common.copy_command_hint", { label })}
 					testID={tunnelCommandCopyId(id)}
 				/>
 			</View>
