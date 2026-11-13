@@ -1660,7 +1660,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * isolation without remounting the router, background scope registration,
 	 * foreground restore retry and interactive sign-in auto-open. Re-derived
 	 * once with --print; source identity only, NOT new rendered evidence. */
-	src: "9fe6607266874bfb42eda6b2b06abd3747a56ff4d1e9622df2e35c87edc4fd2b",
+	/* M3 S2a (feat/i18n-m3-s2a): the Computers titles/banners, own-tunnel and
+	 * loopback-detail keys with their seven audited translations (771 keys in the
+	 * regenerated `catalogue.gen.ts`), the ur composed-direction spreads and
+	 * `Input.placeholderDir`, and the ur scheme-isolate bidi test. Re-derived
+	 * last with --print over the committed tree; only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	src: "001d43d68c4d1de52f69c75d67fcf0b6f1ef13d0d0333bd2b2ebff34d74ee119",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
