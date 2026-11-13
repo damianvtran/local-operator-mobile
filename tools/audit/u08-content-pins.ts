@@ -1669,8 +1669,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * PR #251 round 1 remediation: `Screen.rowTitleLines` and
 	 * `rowTitleLinesFor` (translated Computers/own-tunnel titles wrap instead of
 	 * clipping), the single `ComputersTitleKey`, and the bidi test's header
-	 * sentence. Re-derived with --print; again only `src` moved. */
-	src: "865979d40e5c0ad33ef0c60d0d1fc2989b4501e74a2098b8e26ff0cb4838a163",
+	 * sentence. Re-derived with --print; again only `src` moved.
+	 * PR #251 CI fix: biome formatting of the switcher transport `Text` and the
+	 * refusal-surface import order (no logic change). Re-derived with --print;
+	 * only `src` moved. */
+	src: "3cb2314b7aa9fe9a9814ce1d54ca14c09706ea817750bd8c09c0a1e84866e705",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
