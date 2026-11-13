@@ -1665,8 +1665,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * regenerated `catalogue.gen.ts`), the ur composed-direction spreads and
 	 * `Input.placeholderDir`, and the ur scheme-isolate bidi test. Re-derived
 	 * last with --print over the committed tree; only `src` moved. Source
-	 * identity only, NOT rendered U-08 evidence. */
-	src: "001d43d68c4d1de52f69c75d67fcf0b6f1ef13d0d0333bd2b2ebff34d74ee119",
+	 * identity only, NOT rendered U-08 evidence.
+	 * PR #251 round 1 remediation: `Screen.rowTitleLines` and
+	 * `rowTitleLinesFor` (translated Computers/own-tunnel titles wrap instead of
+	 * clipping), the single `ComputersTitleKey`, and the bidi test's header
+	 * sentence. Re-derived with --print; again only `src` moved. */
+	src: "865979d40e5c0ad33ef0c60d0d1fc2989b4501e74a2098b8e26ff0cb4838a163",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
