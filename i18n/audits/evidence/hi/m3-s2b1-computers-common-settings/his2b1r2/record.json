@@ -1,0 +1,195 @@
+{
+ "schema": 1,
+ "audit_id": "hiS2b1r2",
+ "audit_kind": "delta_reaudit",
+ "round": 2,
+ "scope": "delta: v1→v2 changed keys + round-1 finding rulings; unchanged keys covered by byte-equality proof only",
+ "locale": "hi",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.settings",
+  "mobile.common"
+ ],
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "v1": 41,
+  "v2": 41,
+  "changed": 7,
+  "unchanged_identical": 34
+ },
+ "source_commit": "254e6fba",
+ "source_branch": "feat/i18n-m3-s2b1",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "b95f4f7d65fe",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime system header (Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_from_round1_auditor": true
+ },
+ "translator": "translator jobs 1cd7f1f0d760 (v1) / 7c5a1c345ae8 (v2); notes-hi-v2: agent translator (lopdev), anthropic/claude-opus-5-5",
+ "round1_auditor": "i18n-auditor job d41ab7e9ec52 (session 3c631e8c8e6f)",
+ "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+   "expected": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+  },
+  "draft_hi_v1": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/hi/draft-hi.json",
+   "sha256": "2ff6e86a39a38e670efd4266b809744e989b4a809f42a8a4f3dde395212b8d2c",
+   "expected": "2ff6e86a39a38e670efd4266b809744e989b4a809f42a8a4f3dde395212b8d2c"
+  },
+  "draft_hi_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/hi/draft-hi-v2.json",
+   "sha256": "fdcad45bdefbe989126bfb2fdde423baa61560882c845aa441bfe006df1fc6a1",
+   "expected": "fdcad45bdefbe989126bfb2fdde423baa61560882c845aa441bfe006df1fc6a1"
+  },
+  "notes_hi_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/hi/notes-hi-v2.md",
+   "sha256": "92a0d6351f93ddfb2ab71663ebd092a7abdadc89d0939834a8a77e7c3d5221dd"
+  },
+  "round1_record": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/hi/record.json",
+   "sha256": "f9f9afea5a50f8aa11f85bebe4c817fe3e9dc5205e51b8ba9dfc51d2814ce367"
+  },
+  "round1_report": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/hi/report.md",
+   "sha256": "58382cb314f63f2caf5453eb6d6f80b32ddd80b3a368f2bb912bd99e8cc0d85c"
+  }
+ },
+ "hash_check": "all three expected hashes MATCH",
+ "changed_keys": [
+  "mobile.computers.own_tunnel.rotate_note",
+  "mobile.computers.own_tunnel.verdict_forbidden",
+  "mobile.computers.own_tunnel.verdict_refused",
+  "mobile.computers.own_tunnel.password_slot_other",
+  "mobile.common.copy_command_hint",
+  "mobile.settings.own_tunnel.runtime_body",
+  "mobile.settings.own_tunnel.remove_body"
+ ],
+ "changed_equals_notes": true,
+ "redaction_hits": {
+  "v1": 0,
+  "v2": 0
+ },
+ "mechanical": {
+  "parser": "src/i18n/messages.ts parseMessage/formatMessage @254e6fba, node --max-old-space-size=256",
+  "placeholders_equal": true,
+  "hash_counts_equal": true,
+  "plurals_in_delta": 0,
+  "bidi_zw_controls": 0,
+  "negative_controls": "3/3 RangeError"
+ },
+ "per_key_results": [
+  {
+   "key": "mobile.computers.own_tunnel.rotate_note",
+   "v2": "यह कमांड पासवर्ड टर्मिनल में आपसे पूछती है, ताकि वह कभी शेल हिस्ट्री या प्रोसेस लिस्ट में न पहुँचे। ऐप नीचे यही पासवर्ड माँगता है।",
+   "result": "pass",
+   "notes": [
+    "HIS2B1-04 resolved"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "v2": "उस टनल ने ऐप को अस्वीकार कर दिया। अगर आपने उसके आगे कोई ऐक्सेस पॉलिसी या लॉगिन पेज लगाया है, तो ऐप को गुज़रने दें; रिले ख़ुद भी किसी दूसरे ओरिजिन (साइट या ऐप) से आए अनुरोध अस्वीकार करता है, इसलिए पक्का करें कि टनल सीधे {address} पर फ़ॉरवर्ड करे, किसी डैशबोर्ड या दूसरे ऐप पर नहीं।",
+   "result": "pass",
+   "notes": [
+    "HIS2B1-N1 resolved"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_refused",
+   "v2": "उस पते ने जवाब दिया, लेकिन ऐसा जवाब नहीं जिसे यह ऐप समझ सके।",
+   "result": "pass",
+   "notes": [
+    "HIS2B1-02 resolved"
+   ]
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_other",
+   "v2": "यह फ़ोन सिर्फ़ एक रिले पासवर्ड रखता है, और वह किसी दूसरे पते का है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें। नया पासवर्ड पुराने की जगह ले लेगा।",
+   "result": "pass",
+   "notes": [
+    "HIS2B1-N2 resolved"
+   ]
+  },
+  {
+   "key": "mobile.common.copy_command_hint",
+   "v2": "“{label}” वाली कमांड कॉपी करता है",
+   "result": "pass",
+   "notes": [
+    "HIS2B1-01 resolved"
+   ]
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "v2": "इस बिल्ड में कोई सुरक्षित कीस्टोर नहीं है, इसलिए टनल सिर्फ़ ऐप के इस बार चलने तक रहती है। फ़ोन पर इसे प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखा जाता है।",
+   "result": "pass",
+   "notes": [
+    "HIS2B1-05 resolved"
+   ]
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_body",
+   "v2": "इससे इस फ़ोन पर सहेजे गए पता और पासवर्ड, दोनों हट जाते हैं। आपके कंप्यूटर, आपकी चलाई टनल या किसी खाते पर इसका कोई असर नहीं पड़ता।",
+   "result": "pass_with_nit",
+   "notes": [
+    "HIS2B1-03 resolved",
+    "HIR2-N1 NIT open (optional)"
+   ]
+  }
+ ],
+ "round1_rulings": {
+  "HIS2B1-01": "resolved",
+  "HIS2B1-02": "resolved",
+  "HIS2B1-03": "resolved (translator wording accepted; residual NIT HIR2-N1)",
+  "HIS2B1-04": "resolved",
+  "HIS2B1-05": "resolved",
+  "HIS2B1-06": "acceptably kept; OPEN device-verification row (iOS Hindi menu path), non-gating",
+  "HIS2B1-N1": "resolved",
+  "HIS2B1-N2": "resolved"
+ },
+ "open_device_verification": [
+  {
+   "id": "HIS2B1-06",
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "check": "confirm सेटिंग्ज़ → गोपनीयता और सुरक्षा → स्थानीय नेटवर्क on a Hindi-locale iPhone before release"
+  }
+ ],
+ "artifacts": {
+  "report": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/hi-r2/report.md",
+   "sha256": "a0d4b3ad2d27f5c975b251b4f36029e8b69305d89b50447b9c5c36c691138763"
+  },
+  "audit_log": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/hi-r2/audit.log",
+   "sha256": "9d55e2f2b6073b58ab33ded6cc243a128ce11b988db0852006af95f4dc76597c"
+  },
+  "check_script": {
+   "path": "/Users/damian/.local-operator/sessions/b95f4f7d65fe/scratchpad/hi-r2-check.mts",
+   "sha256": "34d2bba9e1b7872c206aed0e5b72924b4392517d08b5f869b50ff3973542ac5c"
+  },
+  "check_output": {
+   "path": "/Users/damian/.local-operator/sessions/b95f4f7d65fe/scratchpad/hi-r2-check.out",
+   "sha256": "2af41de123f54b29be8ee7d3fa11a6965c6a4413e764e7a4f573568cb01e63cd"
+  }
+ },
+ "audit_notes_not_execution_log": "report.md is judgement; audit.log is the execution log",
+ "current_report_verdict": {
+  "status": "passed",
+  "verdict": "pass",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "HIR2-N1"
+  ],
+  "open_device_verification_ids": [
+   "HIS2B1-06"
+  ]
+ },
+ "ledger": "not run (writes restricted to this directory)"
+}

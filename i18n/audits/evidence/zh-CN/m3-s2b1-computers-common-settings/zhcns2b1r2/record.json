@@ -1,0 +1,178 @@
+{
+ "schema": 1,
+ "audit_id": "zhcns2b1-r2",
+ "audit_kind": "translation_audit",
+ "round": 2,
+ "scope": "delta (v1→v2 changed keys + brief diff + round-1 finding resolution); unchanged 33 keys covered by equality proof only",
+ "locale": "zh-CN",
+ "namespace": "mobile.computers+mobile.common+mobile.settings (M3 slice S2b-1, 41 keys)",
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "v1": 41,
+  "v2": 41,
+  "changed": 8
+ },
+ "source_commit": "254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c (feat/i18n-m3-s2b1, ~/local-operator-mobile/.worktrees/i18n-m3-s2a)",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "6c75aa81f382",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session system-prompt header (Model: anthropic/claude-opus-5-5); no fallback used or observed",
+  "independent_from_translator_session": true,
+  "independent_from_round1_auditor": true
+ },
+ "translator": {
+  "identity": "translator jobs 3ceed9e5fc3c (v1) / 02528922752a (v2)",
+  "model_per_notes": "anthropic/claude-opus-5-5"
+ },
+ "round1": {
+  "audit_id": "zhcns2b1",
+  "auditor_job": "13ed573c5a51 (session a0c991a5009f per record)",
+  "record_sha256": "879e60c901bc72c7fe74be1b9d74e97c57ad2f4cbeca9a1354f796f9a7ee43c4",
+  "report_sha256": "124c2332206aabfefc20d4a8e9a7acaec052d8a0112f3c4caea2cd3578e18016",
+  "audit_log_sha256": "a2e38f033be086b0f0ce18fadcacbcb56ea0cdee21f67521e166ecc9218e7918"
+ },
+ "input_hashes": {
+  "brief_v1": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1.json",
+   "sha256": "d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df",
+   "expected": "d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df"
+  },
+  "brief_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+   "expected": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+  },
+  "draft_v1": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/zh-CN/draft-zh-CN.json",
+   "sha256": "83f029af21948f4c18c165e1470d6dc28e1c876bf7652042a1d80dd0f031afe8",
+   "expected": "83f029af21948f4c18c165e1470d6dc28e1c876bf7652042a1d80dd0f031afe8"
+  },
+  "draft_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/zh-CN/draft-zh-CN-v2.json",
+   "sha256": "e602435212f98551878bde5fb4d96fb9d4c53cac368f3a25a4044190e9f549f4",
+   "expected": "e602435212f98551878bde5fb4d96fb9d4c53cac368f3a25a4044190e9f549f4"
+  },
+  "notes_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/zh-CN/notes-zh-CN-v2.md",
+   "sha256": "be32ebeea17d2942544058ce91a2de6f9f6f636445cc657714e15d7b76fbab61",
+   "expected": null
+  }
+ },
+ "tool_hashes": {
+  "parser": {
+   "path": "src/i18n/messages.ts @254e6fba",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/zh-CN.md",
+   "sha256": "8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c"
+  }
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "mt_services": "none"
+ },
+ "redaction_hits": {
+  "brief_v1_literal": 0,
+  "brief_v2_literal": 0,
+  "draft_v1_literal": 0,
+  "draft_v2_literal": 0,
+  "round1_bundle_literal": [
+   "audits/zh-CN/record.json:64 (route_disclosure.redaction_hits.harness_display_masking — auditor quote of v1 verdict_password text)",
+   "audits/zh-CN/audit.log:65 (description of a literal-[redacted] count check)"
+  ],
+  "display_masking_this_session": "v1 verdict_password value and its quotation in round-1 report.md:54 / audit.log render line are display-masked (0 literal hits in report.md); v1 value verified by codepoints (U+5BC6 U+7801 U+672A U+88AB U+63A5 U+53D7 U+3002 …, 20 chars, 密码未被接受。检查电脑上…).",
+  "effect_on_findings": "none — masked spans are quotations of v1 text recoverable from the hashed v1 draft; no problem statement, suggestion, key or verdict is masked."
+ },
+ "mechanical": {
+  "brief_diff": "41 entries both; only entry 13 (verdict_forbidden) differs, fields english+note only",
+  "draft_diff": "41 keys both, identical order; exactly 8 values changed = the 8 keys in notes-zh-CN-v2.md",
+  "parse": "8/8 changed values parse with repo parseMessage under node --max-old-space-size=256; param names/kinds identical to v2 English; formatMessage renders under zh-CN",
+  "plural": "verdict_timeout other-only with #; pluralCategory zh-CN 0,1,2,10 = other",
+  "punctuation": "no half-width punctuation adjacent to CJK, no CJK–Latin spaces, no bidi controls in changed values",
+  "register": "你-register; no 您; no 请 (only 请求)"
+ },
+ "per_key": {
+  "mobile.computers.own_tunnel.install_note": {
+   "v2": "macOS：安装可自动重启的守护进程，生成中继密码并存入钥匙串。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-03",
+   "note": "安装 is the natural verb for a daemon; pronoun dropped per style guide; 中继密码 retained (round-1 ruling)."
+  },
+  "mobile.computers.own_tunnel.check_note": {
+   "v2": "运行状况、密码验证的状态，以及手机将看到的会话。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-02",
+   "note": "密码验证 matches the note (auth gate = password check); calque 门禁 gone."
+  },
+  "mobile.computers.own_tunnel.verdict_password": {
+   "v2": "密码被拒绝。检查电脑上设置的中继密码。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-06",
+   "note": "被拒绝 natural and parallel to 证书被拒绝; meaning preserved; plain, no apology."
+  },
+  "mobile.computers.own_tunnel.verdict_forbidden": {
+   "v2": "该隧道拒绝了本应用。如果你在隧道前设置了访问策略或登录页面，需放行本应用；中继本身也会拒绝来自其他来源的请求，因此务必确保隧道直接转发到{address}，而不是转发到某个控制面板或其他应用。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-04 (forbidden half) and S1",
+   "note": "请 removed (需放行／务必确保; 请 remaining only inside 请求=request). 来自其他来源的请求 = requests from other origins, matching v2 English \"from any other origin\"; 任何 implied by 其他; 来源 is the readable lay term for origin per note. {address} intact."
+  },
+  "mobile.computers.own_tunnel.verdict_tls": {
+   "v2": "该隧道的证书被拒绝。改用隧道输出的{scheme}地址，或换用证书能被手机信任的隧道；如果隧道由你自己运行，则需替换其自签名证书——应用不会跳过证书校验。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-04 (tls half)",
+   "note": "请 removed (改用／换用／则需替换); three remedies preserved incl. \"will not skip the check\"; {scheme} intact, LTR, no space."
+  },
+  "mobile.computers.own_tunnel.verdict_timeout": {
+   "v2": "该地址在{seconds, plural, other {# 秒}}内没有响应。检查隧道是否正在运行，以及电脑是否处于唤醒状态。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-05",
+   "note": "处于唤醒状态 = awake, consistent with glossary wake→唤醒; plural unchanged other-only with #; zh-CN CLDR yields only other."
+  },
+  "mobile.computers.own_tunnel.verdict_local_network_ios": {
+   "v2": "此网络中该地址没有任何响应。检查电脑是否处于唤醒状态且正在运行中继。如果两者都没问题，可能是本地网络权限所致：前往“设置”→“隐私与安全性”→“本地网络”，允许Local Operator，然后轻点“{action}”。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-05",
+   "note": "Only 未休眠→处于唤醒状态 changed; 轻点 kept — correct for iOS-only call site (tunnel-verdict.ts:176, platform===\"ios\"): 轻点 is Apple zh-CN gesture term; \"may\" (可能) preserved."
+  },
+  "mobile.computers.own_tunnel.verdict_local_network": {
+   "v2": "此网络中该地址没有任何响应。检查电脑是否处于唤醒状态且正在运行中继，然后点按“{action}”。",
+   "result": "ok",
+   "round1": "resolves ZHS2B1-01, ZHS2B1-05",
+   "note": "轻点→点按: correct for Android/web call site (tunnel-verdict.ts:190, non-iOS). 点按 is Android zh-CN usage and already used in shipped mobile.composer_input.paste.denied; web on a phone is touch, desktop-web 点击 would be marginally better but one key serves both — not a finding."
+  }
+ },
+ "round1_resolution": {
+  "ZHS2B1-01": "resolved",
+  "ZHS2B1-02": "resolved",
+  "ZHS2B1-03": "resolved",
+  "ZHS2B1-04": "resolved (wording 务必确保 vs suggested 须确保: equivalent, no 请)",
+  "ZHS2B1-05": "resolved (3 keys)",
+  "ZHS2B1-06": "resolved (exact suggested text)",
+  "ZHS2B1-S1": "resolved by brief v2 source change 254e6fba; zh text matches"
+ },
+ "findings": [
+  {
+   "id": "ZHR2-N1",
+   "severity": "NIT",
+   "target": "notes-zh-CN-v2.md (process artifact, not catalogue)",
+   "text": "Notes claim every changed value is ≤ v1 length; false: verdict_forbidden, verdict_timeout, verdict_local_network_ios, verdict_local_network each +3 chars. No fit impact (body copy, no maxCells/maxChars hint)."
+  }
+ ],
+ "artifacts": {
+  "report": "audits/zh-CN-r2/report.md",
+  "audit_log": "audits/zh-CN-r2/audit.log",
+  "mech_script": "$LOCAL_OPERATOR_SCRATCHPAD(6c75aa81f382)/zhr2/mech.mts"
+ },
+ "audit_notes_not_execution_log": "report.md is reasoning; audit.log holds the commands actually run and their outputs",
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "ZHR2-N1"
+  ]
+ }
+}

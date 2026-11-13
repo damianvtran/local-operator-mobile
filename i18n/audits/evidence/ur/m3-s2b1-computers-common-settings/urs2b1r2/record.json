@@ -1,0 +1,149 @@
+{
+ "schema": 1,
+ "audit_id": "urS2b1r2",
+ "audit_kind": "delta_reaudit",
+ "round": 2,
+ "scope": "delta: v1→v2 changed keys + round-1 finding rulings; unchanged keys covered by byte-equality proof only",
+ "locale": "ur",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.settings",
+  "mobile.common"
+ ],
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "v1": 41,
+  "v2": 41,
+  "changed": 6,
+  "unchanged_identical": 35
+ },
+ "source_commit": "254e6fba",
+ "source_branch": "feat/i18n-m3-s2b1",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "d01093cb1830",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime system header (Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_from_round1_auditor": true
+ },
+ "translator": "translator jobs 6923cbfd363b (v1) / bc28c3249e3f (v2); notes-ur-v2: agent translator (lopdev), anthropic/claude-opus-5-5",
+ "round1_auditor": "i18n-auditor job 3548ebc82dc6 (session b0aad2d5d851)",
+ "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+ "mt_services": "none",
+ "input_hashes": {
+  "brief-s2b1-v2_json": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+  },
+  "ur_draft-ur_json": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ur/draft-ur.json",
+   "sha256": "637ae2cae2fe99c23638222ae42946dc05caec25dfcda2829ccccd7256db4a34"
+  },
+  "ur_draft-ur-v2_json": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ur/draft-ur-v2.json",
+   "sha256": "9fa9f1df0ef4b612fdd71f30b486c7348e63ab2fb17fe1b90a6bab8838a73d07"
+  },
+  "ur_notes-ur-v2_md": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ur/notes-ur-v2.md",
+   "sha256": "c0b3d77314dee9b079bf94f98cc5a39d47b6a52c4a6181c4c6025d6c9963d7ca"
+  },
+  "audits_ur_record_json": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ur/record.json",
+   "sha256": "56f11e846e935e8f1e7617d3d4c916a0d1e1de3fb163f4a86324e35edb9d5bcf"
+  },
+  "audits_ur_report_md": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ur/report.md",
+   "sha256": "c4aab089e72c67c83678d48fc64251ed7f96517bfb2d558da536ab7129751733"
+  }
+ },
+ "expected_hashes_matched": {
+  "brief": true,
+  "draft_ur_v1": true,
+  "draft_ur_v2": true
+ },
+ "style_guide": {
+  "path": "~/local-operator/i18n/style-guides/ur.md"
+ },
+ "parser": {
+  "path": "src/i18n/messages.ts @254e6fba",
+  "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+  "run": "node v24.22.1 --experimental-strip-types --max-old-space-size=256 (copy in auditor scratchpad)"
+ },
+ "redaction_hits": {
+  "literal_[redacted]_in_inputs": 0,
+  "harness_display_masking": "none observed"
+ },
+ "guardrail_note": "A bash call that cd'd into m3s2b1 and tee'd to a $LOCAL_OPERATOR_SCRATCHPAD path was blocked by the dangerous-delete guardrail (nothing ran). Reads were then done read-only from the persistent Python kernel; outputs were not written into m3s2b1 except these three files via the write tool.",
+ "mechanical": {
+  "key_order": "v1, v2 and brief key order identical (41)",
+  "changed_keys": [
+   "mobile.computers.own_tunnel.install_note",
+   "mobile.computers.own_tunnel.verdict_tls",
+   "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "mobile.computers.own_tunnel.verdict_refused",
+   "mobile.common.copy_command_hint",
+   "mobile.settings.own_tunnel.runtime_body"
+  ],
+  "changed_keys_match_notes": true,
+  "parse": "41/41 v2 parse; params map (name, kind) equal to English parse for 41/41; 6 changed values formatted with sample args",
+  "negative_controls": "3 malformed messages each throw RangeError",
+  "plurals": "unchanged keys only (verdict_sessions, verdict_timeout byte-identical to v1); no plural in changed keys",
+  "bidi_controls": "0 in all 41 v2 values (U+200E U+200F U+202A–202E U+2066–2069 U+061C)",
+  "arrows": "0 U+2192; 2 U+2190 in verdict_local_network_ios only",
+  "ki_ki": "0 occurrences of «کی کی»",
+  "latin_initial": "only verdict_offline_detail ({detail}); install_note first strong = AL"
+ },
+ "bidi_reasoning": {
+  "method": "reasoned through UBA with unicodedata.bidirectional classes; no layout engine (python-bidi absent, not installed)",
+  "verdict_tls": "AL WS [L×5 CS CS CS] WS [L×3] WS AL: W4 n/a (no EN/AN), W6 CS→ON; N1 neutrals '://' + WS between L and L → L; one LTR run 'https:// URL' displayed LTR inside RTL paragraph; WS at AL|L boundaries → N2 embedding R. https:// keeps logical order.",
+  "arrows": "AL WS ON(←) WS AL: N1 → R; U+2190 Bidi_Mirrored=No so glyph points left = toward the next item in RTL reading order (ترتیبات rightmost → رازداری اور سیکیورٹی → مقامی نیٹ ورک). Correct.",
+  "install_note": "AL WS [Keychain L] WS AL: isolated L run, no neutrals at risk; paragraph first strong AL so not Latin-initial."
+ },
+ "findings": [
+  {
+   "id": "URS2B1R2-N1",
+   "severity": "NIT",
+   "key": "mobile.common.copy_command_hint",
+   "gating": false
+  }
+ ],
+ "round1_rulings": {
+  "URS2B1-01": "resolved",
+  "URS2B1-02": "resolved",
+  "URS2B1-03": "resolved",
+  "URS2B1-04": "resolved",
+  "URS2B1-05": "resolved",
+  "URS2B1-06": "resolved (see N1 nit)",
+  "URS2B1-C1": "out of translation scope; code item remains open at render sites, value unchanged as required"
+ },
+ "per_key": {
+  "mobile.computers.own_tunnel.install_note": "pass",
+  "mobile.computers.own_tunnel.verdict_tls": "pass",
+  "mobile.computers.own_tunnel.verdict_local_network_ios": "pass",
+  "mobile.computers.own_tunnel.verdict_refused": "pass",
+  "mobile.common.copy_command_hint": "pass_with_nit (URS2B1R2-N1)",
+  "mobile.settings.own_tunnel.runtime_body": "pass"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "URS2B1R2-N1"
+  ]
+ },
+ "artifacts": {
+  "report": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ur-r2/report.md",
+   "sha256": "efef05206f1613a4adcddf7a6c04542bcda6f97d9a0228d60e1d42a89ec98cfd"
+  },
+  "audit_log": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ur-r2/audit.log",
+   "sha256": "5e9c5ba75f8375d54c936892c22faff9bb350218b85a54a8094b12ff75f056f9"
+  }
+ },
+ "audit_notes_not_execution_log": "report.md is analysis; audit.log records commands actually run and their output."
+}

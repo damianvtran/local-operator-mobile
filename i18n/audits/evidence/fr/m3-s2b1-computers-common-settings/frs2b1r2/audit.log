@@ -1,0 +1,22 @@
+# audit.log — fr round 2 delta (frs2b1r2) — 2026-11-13 — auditor i18n-auditor session 9679eedbe7ab, anthropic/claude-opus-5-5
+$ shasum -a 256 brief-s2b1.json brief-s2b1-v2.json fr/draft-fr.json fr/draft-fr-v2.json
+d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df  brief-s2b1.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+44cf58ab8de006c34a751cba77da5b2b98d3647874112418315dd59d333b6aaa  fr/draft-fr.json
+86b0fdf30daa8b94c0ae79b1ff3afa5e10c22f479a69f7c7bb958b721b60d0ce  fr/draft-fr-v2.json   (all MATCH)
+$ python (eval) diff brief v1→v2 / draft v1→v2
+41 41 41 41 ; key order equal: True True True
+brief diffs: [(verdict_forbidden, note), (verdict_forbidden, english)]
+draft diffs: ['mobile.computers.own_tunnel.verdict_forbidden', 'mobile.computers.own_tunnel.foreground_note', 'mobile.computers.own_tunnel.rotate_note', 'mobile.computers.own_tunnel.verdict_tls', 'mobile.settings.own_tunnel.before_saving', 'mobile.computers.own_tunnel.rotate_label', 'mobile.settings.own_tunnel.test_again']
+$ git -C local-operator-mobile/.worktrees/i18n-m3-s2a rev-parse HEAD -> 254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c
+$ grep -c '[redacted]' (5 inputs) -> 0 0 0 0 0
+$ node --max-old-space-size=256 --experimental-strip-types /Users/damian/.local-operator/sessions/9679eedbe7ab/scratchpad/parse-fr-r2.mts
+RENDER mobile.computers.own_tunnel.rotate_label => Définir ou changer le mot de passe
+RENDER mobile.computers.own_tunnel.foreground_note => Pour toute autre plateforme, ou si vous préférez suivre le journal. Le relais écoute sur 127.0.0.1:4098, accessible depuis cet ordinateur seulement.
+RENDER mobile.computers.own_tunnel.rotate_note => La commande vous le demande de façon interactive : la valeur n’apparaît donc jamais dans l’historique du shell ni dans la liste des processus. C’est le mot de passe que l’app demande ci-dessous.
+RENDER mobile.computers.own_tunnel.verdict_forbidden => Ce tunnel a refusé l’app. Si vous avez placé une règle d’accès ou une page de connexion devant lui, laissez passer l’app ; le relais refuse lui aussi les requêtes provenant de toute autre origine : assurez-vous donc que le tunnel redirige directement vers 127.0.0.1:4098, et non vers un tableau de bord ou une autre app.
+RENDER mobile.computers.own_tunnel.verdict_tls => Le certificat de ce tunnel a été refusé. Utilisez l’adresse HTTPS affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné sur celui que vous exploitez — l’app ne contournera pas la vérification.
+RENDER mobile.settings.own_tunnel.test_again => Tester à nouveau
+RENDER mobile.settings.own_tunnel.before_saving => Testez l’adresse avant de l’enregistrer : un tunnel enregistré qui n’a jamais répondu laisse la liste vide, sans aucune explication.
+{"keys":41,"parse_failures":0,"placeholder_mismatches":0,"changed":["mobile.computers.own_tunnel.rotate_label","mobile.computers.own_tunnel.foreground_note","mobile.computers.own_tunnel.rotate_note","mobile.computers.own_tunnel.verdict_forbidden","mobile.computers.own_tunnel.verdict_tls","mobile.settings.own_tunnel.test_again","mobile.settings.own_tunnel.before_saving"],"typography_issues":[],"heapLimitMB":448}
+$ call-site reads @254e6fba: command-block.tsx ll.55-61 label <Text> in 'flex-row flex-wrap', no numberOfLines; own-tunnel-settings.tsx l.141 'flex-row flex-wrap gap-2', test_again Button without labelLines; button.tsx l.160 numberOfLines={labelLines} (undefined → wraps)

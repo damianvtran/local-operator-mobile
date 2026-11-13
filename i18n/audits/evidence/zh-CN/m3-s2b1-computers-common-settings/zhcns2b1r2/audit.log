@@ -1,0 +1,44 @@
+# zh-CN S2b-1 round-2 delta audit zhcns2b1-r2 — execution log (i18n-auditor, session 6c75aa81f382, model anthropic/claude-opus-5-5, no fallback, 2026-11-13T12:45:39Z)
+$ shasum -a 256 brief-s2b1.json brief-s2b1-v2.json zh-CN/draft-zh-CN.json zh-CN/draft-zh-CN-v2.json
+d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df  brief-s2b1.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+83f029af21948f4c18c165e1470d6dc28e1c876bf7652042a1d80dd0f031afe8  zh-CN/draft-zh-CN.json
+e602435212f98551878bde5fb4d96fb9d4c53cac368f3a25a4044190e9f549f4  zh-CN/draft-zh-CN-v2.json
+$ git -C <worktree> rev-parse HEAD
+254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c
+$ shasum -a 256 messages.ts, zh-CN style guide, notes-zh-CN-v2.md, audits/zh-CN/*
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c  ~/local-operator/i18n/style-guides/zh-CN.md
+be32ebeea17d2942544058ce91a2de6f9f6f636445cc657714e15d7b76fbab61  zh-CN/notes-zh-CN-v2.md
+a2e38f033be086b0f0ce18fadcacbcb56ea0cdee21f67521e166ecc9218e7918  audits/zh-CN/audit.log
+879e60c901bc72c7fe74be1b9d74e97c57ad2f4cbeca9a1354f796f9a7ee43c4  audits/zh-CN/record.json
+124c2332206aabfefc20d4a8e9a7acaec052d8a0112f3c4caea2cd3578e18016  audits/zh-CN/report.md
+$ python3 (eval) brief v1/v2 per-field diff
+[(13, 'mobile.computers.own_tunnel.verdict_forbidden', 'note'), (13, 'mobile.computers.own_tunnel.verdict_forbidden', 'english')] 41 41
+$ python3 (eval) draft v1/v2 keys
+41 41 same-order True same-set True
+changed (8): install_note check_note verdict_password verdict_forbidden verdict_tls verdict_timeout verdict_local_network_ios verdict_local_network
+$ grep -c redacted (literal)
+brief v1 0, brief v2 0, draft v1 0, draft v2 0; audits/zh-CN: audit.log 1 (line 65), record.json 1 (line 64), report.md 0
+$ python3 v1 verdict_password codepoints (display-masked value)
+20 chars: U+5BC6 U+7801 U+672A U+88AB U+63A5 U+53D7 U+3002 U+68C0 U+67E5 U+7535 U+8111 U+4E0A ...
+$ node --max-old-space-size=256 --experimental-strip-types <scratch>/zhr2/mech.mts
+PASS mobile.computers.own_tunnel.install_note [] => 32 chars
+PASS mobile.computers.own_tunnel.check_note [] => 24 chars
+PASS mobile.computers.own_tunnel.verdict_password [] => 19 chars
+PASS mobile.computers.own_tunnel.verdict_forbidden [["address","text"]] => 101 chars
+PASS mobile.computers.own_tunnel.verdict_tls [["scheme","text"]] => 77 chars
+PASS mobile.computers.own_tunnel.verdict_timeout [["seconds","plural"]] => 38 chars
+  plural options [ 'other' ] renders [ '0 秒内没有', '1 秒内没有', '2 秒内没有', '10 秒内没' ]
+PASS mobile.computers.own_tunnel.verdict_local_network_ios [["action","text"]] => 106 chars
+PASS mobile.computers.own_tunnel.verdict_local_network [["action","text"]] => 45 chars
+cats other,other,other,other changed 8 fail 0
+$ python3 (eval) punctuation/CJK-Latin spacing/bidi/您/请 scan of the 8 changed values
+only hit: verdict_forbidden '请' — inside 请求 (request); after removing 请求: False
+$ python3 (eval) length delta v2-v1
+install_note -2, check_note -2, verdict_password -1, verdict_forbidden +3, verdict_tls 0, verdict_timeout +3, verdict_local_network_ios +3, verdict_local_network +3
+$ sed -n 120,200p src/features/auth/tunnel-verdict.ts
+verdict_local_network_ios returned only when platform === "ios"; otherwise verdict_local_network ("Web keeps this same sentence")
+$ grep -rn '点按|轻点|点击' src/i18n/catalogues/zh-CN/
+mobile.composer_input.paste.denied 点按; mobile.session.pending_echo.* 轻点; relay.health.* 点击
+$ python3 json.load(audits/zh-CN-r2/record.json) -> valid

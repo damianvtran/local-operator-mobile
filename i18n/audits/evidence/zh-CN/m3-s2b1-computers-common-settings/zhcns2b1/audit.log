@@ -1,0 +1,68 @@
+# zh-CN M3 S2b-1 audit zhcns2b1 — execution log (i18n-auditor, session a0c991a5009f, model anthropic/claude-opus-5-5, no fallback, 2026-11-13T12:36:56Z)
+$ shasum -a 256 brief-s2b1.json zh-CN/draft-zh-CN.json
+d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df  brief-s2b1.json
+83f029af21948f4c18c165e1470d6dc28e1c876bf7652042a1d80dd0f031afe8  zh-CN/draft-zh-CN.json
+$ git -C <worktree> rev-parse --short HEAD -> ce336e4a
+$ shasum -a 256 src/i18n/messages.ts notes-zh-CN.md style-guides/zh-CN.md
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  src/i18n/messages.ts
+81d942064026d763bd061c61a665cc1ddd4a24a631e5736ca53f64e29bb4d7c8  notes-zh-CN.md
+8f95d89debbd0af848e72e4805e256ef9566632e520a5c6d9b37928cd617142c  zh-CN.md
+$ node --max-old-space-size=256 --experimental-strip-types <scratch>/zh_mech.ts <m3s2b1>
+(node:27577) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/a0c991a5009f/scratchpad/zh_mech.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:27577) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/package.json.
+PASS mobile.computers.own_tunnel.install_label [] => 在电脑上安装
+PASS mobile.computers.own_tunnel.foreground_label [] => 或在前台运行
+PASS mobile.computers.own_tunnel.check_label [] => 检查状态
+PASS mobile.computers.own_tunnel.rotate_label [] => 设置或更换密码
+PASS mobile.computers.own_tunnel.install_note [] => macOS：写入可自动重启的守护进程，生成中继密码并存入你的钥匙串。
+PASS mobile.computers.own_tunnel.foreground_note [["address","text"]] => 适用于其他任何平台，或你更想直接查看日志时。它在127.0.0.1:4098上提供服务，只接受来自本机的连接。
+PASS mobile.computers.own_tunnel.check_note [] => 运行状况、身份验证门禁的状态，以及手机将看到的会话。
+PASS mobile.computers.own_tunnel.rotate_note [] => 以交互方式询问密码，因此它绝不会出现在shell历史记录或进程列表中。应用在下方要求输入的就是这个密码。
+PASS mobile.computers.own_tunnel.cloudflare_note [["scheme","text"]] => 免费，使用快速隧道无需账户。它会输出一个https://URL，将其粘贴到下方。
+PASS mobile.computers.own_tunnel.ngrok_note [["scheme","text"]] => 需要ngrok账户。它会输出一个https://URL，将其粘贴到下方。
+PASS mobile.computers.own_tunnel.tunnel_rule [["address","text"]] => 任何隧道都可以，只要它能将公网HTTPS URL转发到那台电脑上的127.0.0.1:4098。
+PASS mobile.computers.own_tunnel.verdict_sessions [["sessions","plural"]] => 已连接——可以看到3 个会话。
+PASS mobile.computers.own_tunnel.verdict_password [] => 密码未被接受。检查电脑上设置的中继密码。
+PASS mobile.computers.own_tunnel.verdict_forbidden [["address","text"]] => 该隧道拒绝了本应用。如果你在隧道前设置了访问策略或登录页面，请放行本应用；中继本身也会拒绝来源不符的请求，因此请确保隧道
+PASS mobile.computers.own_tunnel.verdict_offline_detail [["command","text"],["detail","text"]] => Tunnel temporarily unavailable。在该电脑上运行：lop mobile status
+PASS mobile.computers.own_tunnel.verdict_offline [["command","text"]] => 隧道有响应，但其后的中继没有响应。在该电脑上运行：lop mobile status
+PASS mobile.computers.own_tunnel.verdict_tls [["scheme","text"]] => 该隧道的证书被拒绝。请使用隧道输出的https://地址，或改用证书能被手机信任的隧道；如果隧道由你自己运行，请替换其自
+PASS mobile.computers.own_tunnel.verdict_host [] => 找不到该主机名。检查地址是否有拼写错误，以及隧道是否仍在发布该名称。
+PASS mobile.computers.own_tunnel.verdict_unreachable [] => 无法访问该地址。检查URL是否为隧道输出的公网地址，以及隧道是否仍在运行。
+PASS mobile.computers.own_tunnel.verdict_timeout [["seconds","plural"]] => 该地址在10 秒内没有响应。检查隧道是否正在运行，以及电脑是否未休眠。
+PASS mobile.computers.own_tunnel.verdict_local_network_ios [["action","text"]] => 此网络中该地址没有任何响应。检查电脑是否未休眠且正在运行中继。如果两者都没问题，可能是本地网络权限所致：前往“设置”→“
+PASS mobile.computers.own_tunnel.verdict_local_network [["action","text"]] => 此网络中该地址没有任何响应。检查电脑是否未休眠且正在运行中继，然后轻点“测试连接”。
+PASS mobile.computers.own_tunnel.verdict_refused [] => 该地址有响应，但本应用无法识别其响应内容。
+PASS mobile.computers.own_tunnel.remedy [["command","text"]] => 在该电脑上运行：lop mobile status
+PASS mobile.computers.own_tunnel.password_slot_other [] => 此手机只能保存一个中继密码，当前保存的属于另一个地址。输入这台电脑的密码，测试后再保存。保存后将替换原有密码。
+PASS mobile.computers.own_tunnel.password_slot_empty [] => 此手机尚未保存中继密码。输入这台电脑的密码，测试后再保存。
+PASS mobile.computers.own_tunnel.password_slot_this [] => 此手机已保存的中继密码对应此地址。测试后再保存。
+PASS mobile.common.copy [] => 复制
+PASS mobile.common.copied [] => 已复制
+PASS mobile.common.copy_command_hint [["label","text"]] => 复制“Cloudflare”命令
+PASS mobile.settings.own_tunnel.not_saved [] => 密码未保存，因此应用每次启动时都会要求输入。
+PASS mobile.settings.own_tunnel.kept_secure [] => 地址和密码保存在此手机的安全存储中。
+PASS mobile.settings.own_tunnel.edit [] => 编辑
+PASS mobile.settings.own_tunnel.test_again [] => 重新测试
+PASS mobile.settings.own_tunnel.remove [] => 移除
+PASS mobile.settings.own_tunnel.password_placeholder [] => 启动中继时使用的密码
+PASS mobile.settings.own_tunnel.runtime_title [] => 当前环境无法保存隧道
+PASS mobile.settings.own_tunnel.runtime_body [] => 此版本没有安全密钥库，因此隧道仅在本次运行期间有效。在手机上，这些信息会保存在系统的安全存储中。
+PASS mobile.settings.own_tunnel.before_saving [] => 保存前先测试地址：从未响应过的隧道一旦保存，列表会一直为空，且无从得知原因。
+PASS mobile.settings.own_tunnel.remove_title [] => 移除此隧道？
+PASS mobile.settings.own_tunnel.remove_body [] => 此操作会清除此手机上的地址和密码，不会影响你的电脑、你运行的隧道或任何账户。
+zh-CN categories for 0,1,2,10: other,other,other,other
+keys 41 41 failures 0
+$ node --max-old-space-size=256 --experimental-strip-types <scratch>/neg.ts
+THROWS {seconds, plural, other {# 秒}  RangeError: unterminated plural
+THROWS {seconds, plural, other 秒}  RangeError: expected '{'
+THROWS a {x  RangeError: expected ',' or '}'
+$ python3 (git show ce336e4a en/zh-CN catalogues): en mismatch [] ; already shipped in zh [] ; [redacted] literal draft/brief 0 0
+$ python3 punctuation/bidi/spacing scan over draft: []
+$ git show ffbda180:src/i18n/catalogues/zh-CN/mobile.{computers,settings,common}.json (glossary terms)
+$ grep 403/same-origin ~/local-operator/local_operator/mobile/daemon.py -> 5714 same-origin request required (source finding S1)

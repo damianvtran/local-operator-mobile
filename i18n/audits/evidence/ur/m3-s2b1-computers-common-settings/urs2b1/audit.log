@@ -1,0 +1,118 @@
+# ur M3 S2b-1 audit urs2b1 — execution log (i18n-auditor, session b0aad2d5d851, model anthropic/claude-opus-5-5, no fallback, 2026-11-13T13:23Z)
+$ shasum -a 256 brief-s2b1-v2.json ur/draft-ur.json   (in /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1)
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+637ae2cae2fe99c23638222ae42946dc05caec25dfcda2829ccccd7256db4a34  ur/draft-ur.json
+$ git -C <worktree> rev-parse HEAD -> 254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c (feat/i18n-m3-s2b1)
+$ (guardrail) node check.ts <ancestor m3s2b1 dir> -> BLOCKED by guardrail dangerous-delete; nothing ran
+$ cat inputs > <own scratch>/uraudit/in/... ; shasum -a 256 -> d694b10a…b88e9, 637ae2ca…b4a34 (match)
+$ cmp <own scratch>/uraudit/messages.ts <worktree>/src/i18n/messages.ts -> parser-copy-identical; sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0
+$ shasum -a 256 notes-ur.md style-guides/ur.md
+54a278de107b8cc1871358e685b7b8b66cdcd5b85ce9b92b937f9f926eb2ee9d  notes-ur.md
+c0eecf7f7b5e89956b7de9ab7a9eb647ff1a7ef701ccf2a7f0264d5eea15ca60  ur.md
+$ node --max-old-space-size=256 --experimental-strip-types check.ts ./in   (real 0.416s)
+ur plural categories: ["one","other"] pc(1)= one pc(8)= other
+keys brief/draft: 41 41 order-identical: true
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ک computers.own_tunnel.install_label args=[]
+   => کمپیوٹر پر انسٹال کریں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی computers.own_tunnel.foreground_label args=[]
+   => یا اسے فورگراؤنڈ میں چلائیں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.check_label args=[]
+   => اسے جانچیں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=پ computers.own_tunnel.rotate_label args=[]
+   => پاس ورڈ مقرر کریں یا بدلیں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی computers.own_tunnel.install_note args=[]
+   => یہ کمانڈ macOS پر نگرانی میں چلنے والا ڈیمن انسٹال کرتی ہے جو رکنے پر خود دوبارہ شروع ہو جاتا ہے، ریلے کا پاس ورڈ بناتی ہے اور اسے آپ کی کی چین میں رکھتی ہے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ک computers.own_tunnel.foreground_note args=[["address","text"]]
+   => کسی بھی دوسرے پلیٹ فارم کے لیے، یا اگر آپ لاگ خود دیکھتے رہنا چاہیں۔ یہ 127.0.0.1:4098 پر چلتا ہے، صرف لوپ بیک پر — یعنی صرف اسی کمپیوٹر سے قابلِ رسائی۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ر computers.own_tunnel.check_note args=[]
+   => ریلے کی صحت، پاس ورڈ کی جانچ کی حالت، اور وہ سیشنز جو فون کو نظر آئیں گے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی computers.own_tunnel.rotate_note args=[]
+   => یہ کمانڈ پاس ورڈ آپ سے الگ سے ٹائپ کرواتی ہے، اس لیے وہ کبھی شیل ہسٹری یا پراسیس لسٹ تک نہیں پہنچتا۔ ایپ نیچے یہی پاس ورڈ مانگتی ہے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=م computers.own_tunnel.cloudflare_note args=[["scheme","text"]]
+   => مفت ہے، اور فوری ٹنل کے لیے اکاؤنٹ درکار نہیں۔ یہ کمانڈ وہ https:// URL دکھاتی ہے جو آپ نیچے چسپاں کریں گے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.ngrok_note args=[["scheme","text"]]
+   => اس کے لیے ngrok اکاؤنٹ درکار ہے۔ یہ کمانڈ وہ https:// URL دکھاتی ہے جو آپ نیچے چسپاں کریں گے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ک computers.own_tunnel.tunnel_rule args=[["address","text"]]
+   => کوئی بھی ٹنل کام کرے گی، بشرطیکہ وہ ایک عوامی HTTPS URL کو اس کمپیوٹر پر 127.0.0.1:4098 تک پہنچائے۔
+OK  arms=[["sessions",["one","other"]]] enArms=[["sessions",["one","other"]]] bidi=0 asciiPunct=2 first=م computers.own_tunnel.verdict_sessions args=[["sessions","plural"]]
+   => منسلک ہو گیا — آپ 1 سیشن دیکھ سکتے ہیں۔
+   n=0 منسلک ہو گیا — آپ 0 سیشنز دیکھ سکتے ہیں۔
+   n=1 منسلک ہو گیا — آپ 1 سیشن دیکھ سکتے ہیں۔
+   n=2 منسلک ہو گیا — آپ 2 سیشنز دیکھ سکتے ہیں۔
+   n=8 منسلک ہو گیا — آپ 8 سیشنز دیکھ سکتے ہیں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=و computers.own_tunnel.verdict_password args=[]
+   => وہ پاس ورڈ قبول نہیں ہوا۔ کمپیوٹر پر ریلے کا پاس ورڈ جانچیں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.verdict_forbidden args=[["address","text"]]
+   => اس ٹنل نے ایپ کو مسترد کر دیا۔ اگر آپ نے اس کے آگے رسائی کی پالیسی یا سائن ان صفحہ لگایا ہے تو ایپ کو گزرنے کی اجازت دیں؛ ریلے خود بھی کسی دوسرے ماخذ (origin) سے آنے والی ہر درخواست مسترد کرتا ہے، اس لیے یقینی بنائیں کہ ٹنل درخواستیں سیدھی 127.0.0.1:4098 تک پہنچائے، کسی ڈیش بورڈ یا دوسری ایپ تک نہیں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first={ computers.own_tunnel.verdict_offline_detail args=[["command","text"],["detail","text"]]
+   => Tunnel temporarily unavailable۔ اس کمپیوٹر پر چلائیں: lop mobile status
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ٹ computers.own_tunnel.verdict_offline args=[["command","text"]]
+   => ٹنل نے جواب دیا، لیکن اس کے پیچھے ریلے جواب نہیں دے رہا۔ اس کمپیوٹر پر چلائیں: lop mobile status
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.verdict_tls args=[["scheme","text"]]
+   => اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔ ٹنل کا دکھایا ہوا https:// پتہ استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا اپنی چلائی ہوئی ٹنل کا خود دستخط شدہ سرٹیفکیٹ بدل دیں — ایپ یہ جانچ نہیں چھوڑے گی۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=م computers.own_tunnel.verdict_host args=[]
+   => میزبان کا یہ نام نہیں ملا۔ پتے میں ٹائپنگ کی غلطی جانچیں، اور یہ بھی کہ ٹنل اب بھی یہی نام شائع کر رہی ہے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.verdict_unreachable args=[]
+   => اس پتے تک رسائی نہیں ہو سکی۔ جانچیں کہ URL وہی عوامی URL ہے جو آپ کی ٹنل نے دکھایا تھا، اور یہ کہ ٹنل اب بھی چل رہی ہے۔
+OK  arms=[["seconds",["one","other"]]] enArms=[["seconds",["one","other"]]] bidi=0 asciiPunct=2 first=ا computers.own_tunnel.verdict_timeout args=[["seconds","plural"]]
+   => اس پتے نے 8 سیکنڈ کے اندر جواب نہیں دیا۔ جانچیں کہ ٹنل چل رہی ہے اور کمپیوٹر جاگ رہا ہے۔
+   n=0 اس پتے نے 0 سیکنڈ کے اندر جواب نہیں دیا۔ جانچیں کہ ٹنل چل رہی ہے اور کمپیوٹر جاگ رہا ہے۔
+   n=1 اس پتے نے 1 سیکنڈ کے اندر جواب نہیں دیا۔ جانچیں کہ ٹنل چل رہی ہے اور کمپیوٹر جاگ رہا ہے۔
+   n=2 اس پتے نے 2 سیکنڈ کے اندر جواب نہیں دیا۔ جانچیں کہ ٹنل چل رہی ہے اور کمپیوٹر جاگ رہا ہے۔
+   n=8 اس پتے نے 8 سیکنڈ کے اندر جواب نہیں دیا۔ جانچیں کہ ٹنل چل رہی ہے اور کمپیوٹر جاگ رہا ہے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.verdict_local_network_ios args=[["action","text"]]
+   => اس نیٹ ورک پر اس پتے سے کوئی جواب نہیں آیا۔ جانچیں کہ کمپیوٹر جاگ رہا ہے اور ریلے چلا رہا ہے۔ اگر دونوں باتیں درست ہیں تو ممکن ہے وجہ مقامی نیٹ ورک کی اجازت ہو: ترتیبات → رازداری اور سیکیورٹی → مقامی نیٹ ورک میں Local Operator کو اجازت دیں، پھر “کنکشن جانچیں” پر ٹیپ کریں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.verdict_local_network args=[["action","text"]]
+   => اس نیٹ ورک پر اس پتے سے کوئی جواب نہیں آیا۔ جانچیں کہ کمپیوٹر جاگ رہا ہے اور ریلے چلا رہا ہے، پھر “کنکشن جانچیں” دبائیں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.verdict_refused args=[]
+   => اس پتے نے جواب تو دیا، لیکن اس طرح نہیں جو یہ ایپ سمجھ سکے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.remedy args=[["command","text"]]
+   => اس کمپیوٹر پر چلائیں: lop mobile status
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی computers.own_tunnel.password_slot_other args=[]
+   => یہ فون ریلے کا صرف ایک پاس ورڈ رکھتا ہے، اور وہ کسی دوسرے پتے کا ہے۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔ یہ پہلے والے پاس ورڈ کی جگہ لے لے گا۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.password_slot_empty args=[]
+   => اس فون پر ریلے کا کوئی پاس ورڈ محفوظ نہیں۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا computers.own_tunnel.password_slot_this args=[]
+   => اس فون پر محفوظ ریلے کا پاس ورڈ اسی پتے کا ہے۔ اسے جانچیں، پھر محفوظ کریں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ک common.copy args=[]
+   => کاپی کریں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ک common.copied args=[]
+   => کاپی ہو گیا
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی common.copy_command_hint args=[["label","text"]]
+   => یہ Cloudflare کی کمانڈ کاپی کرتا ہے
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=پ settings.own_tunnel.not_saved args=[]
+   => پاس ورڈ محفوظ نہیں، اس لیے ایپ ہر بار کھلنے پر اسے مانگتی ہے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=پ settings.own_tunnel.kept_secure args=[]
+   => پتہ اور پاس ورڈ اس فون کے محفوظ اسٹوریج میں رکھے گئے ہیں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ت settings.own_tunnel.edit args=[]
+   => ترمیم کریں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=د settings.own_tunnel.test_again args=[]
+   => دوبارہ جانچیں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ہ settings.own_tunnel.remove args=[]
+   => ہٹائیں
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=و settings.own_tunnel.password_placeholder args=[]
+   => وہ پاس ورڈ جس سے ریلے شروع کیا گیا تھا
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی settings.own_tunnel.runtime_title args=[]
+   => یہ رن ٹائم ٹنل محفوظ نہیں کر سکتا
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ا settings.own_tunnel.runtime_body args=[]
+   => اس بلڈ میں کوئی محفوظ کی اسٹور نہیں، اس لیے ٹنل صرف ایپ کے اس بار چلنے تک رکھی جاتی ہے۔ فون پر یہ معلومات پلیٹ فارم کے محفوظ اسٹوریج میں رکھی جاتی ہیں۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=م settings.own_tunnel.before_saving args=[]
+   => محفوظ کرنے سے پہلے پتہ جانچ لیں: اگر محفوظ کی گئی ٹنل نے کبھی جواب نہ دیا ہو تو فہرست خالی رہتی ہے، بغیر کسی وضاحت کے۔
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی settings.own_tunnel.remove_title args=[]
+   => یہ ٹنل ہٹائیں؟
+OK  arms=[] enArms=[] bidi=0 asciiPunct=0 first=ی settings.own_tunnel.remove_body args=[]
+   => یہ اس فون سے پتہ اور پاس ورڈ ہٹا دیتا ہے۔ آپ کے کمپیوٹر، آپ کی چلائی ہوئی ٹنل یا کسی اکاؤنٹ پر اس کا کوئی اثر نہیں پڑتا۔
+fail 0
+$ node --max-old-space-size=256 --experimental-strip-types neg.ts
+THROWS RangeError "{n, plural, one {# سیشن} other {# سیشنز}"
+THROWS RangeError "{n, plural, one # other {#}"
+THROWS RangeError "اس {address"
+$ python3 (brief vs git show 254e6fba en/ur catalogues)
+brief==en@254e6fba: 41 /41
+already in ur@254e6fba: []
+redaction hits: 0
+$ python3 (Latin-initial + L/neutral/AL hazard scan, sample args substituted; plural rows are raw-ICU false positives)
+LATIN-INITIAL mobile.computers.own_tunnel.verdict_offline_detail
+HAZARD mobile.computers.own_tunnel.verdict_tls 'ہوا https:// پتہ' neutrals ':// '
+unicodedata: U+2192 → ON mirrored=0; U+2190 ← ON mirrored=0; U+06D4 ۔ AL; U+060C ، CS; U+061B ؛ AL
+$ web_search "iOS supported system languages list Urdu" -> netmag.pk: Urdu system language in iOS 26 (snippet)

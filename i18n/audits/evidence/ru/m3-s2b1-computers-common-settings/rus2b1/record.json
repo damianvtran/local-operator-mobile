@@ -1,0 +1,328 @@
+{
+  "schema": 1,
+  "audit_id": "rus2b1",
+  "audit_kind": "translation_audit",
+  "locale": "ru",
+  "namespaces": [
+    "mobile.computers",
+    "mobile.common",
+    "mobile.settings"
+  ],
+  "namespace": "mobile.computers+mobile.common+mobile.settings (M3 slice S2b-1, 41 keys)",
+  "audit_date": "2026-11-13",
+  "key_count": {
+    "en": 41,
+    "target": 41,
+    "mobile.computers": 27,
+    "mobile.common": 3,
+    "mobile.settings": 11
+  },
+  "keys": 41,
+  "source_commit": "254e6fba (feat/i18n-m3-s2b1, worktree ~/local-operator-mobile/.worktrees/i18n-m3-s2a)",
+  "auditor": {
+    "agent": "i18n-auditor",
+    "team": "lopdev",
+    "session": "1e34afaf7f7e",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system-prompt header (Model: anthropic/claude-opus-5-5); no fallback used or observed",
+    "independent_from_translator_session": true
+  },
+  "translator": {
+    "identity": "translator job 11dc69ef57cd"
+  },
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+      "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+      "expected": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+    },
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ru/draft-ru.json",
+      "sha256": "988c530ec3d6553103b592ab6eb53708884821d020cf4b1a78bd34e5cc61b550",
+      "expected": "988c530ec3d6553103b592ab6eb53708884821d020cf4b1a78bd34e5cc61b550"
+    },
+    "notes": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ru/notes-ru.md",
+      "sha256": "42dd224e6f84324057d79587f0a05f826a8fa4a9e3409f55bcbc1905883f572b"
+    },
+    "style_guide": {
+      "path": "~/local-operator/i18n/style-guides/ru.md",
+      "sha256": "f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5"
+    },
+    "glossary": "git ffbda180:src/i18n/catalogues/ru/mobile.{computers,settings,common}.json"
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction": {
+    "draft_redact_string_hits": 0,
+    "display_masking_keys": [
+      "mobile.computers.own_tunnel.foreground_note"
+    ],
+    "verified_by": "code points U+0420…U+0440 (Cyrillic word for relay)"
+  },
+  "mechanical": {
+    "parser": "src/i18n/messages.ts via node 24 --experimental-strip-types, heap 256 MB",
+    "parsed": 41,
+    "placeholder_mismatches": 0,
+    "plural_keys": {
+      "verdict_sessions": "one/few/many/other",
+      "verdict_timeout": "one/few/many/other"
+    },
+    "bidi_controls": 0
+  },
+  "fit_note": "estimates only: Figtree bundle is Latin-only subset, Cyrillic falls back to system font; small-button rows are flex-wrap; no overflow finding",
+  "uncertain_key_rulings": {
+    "foreground_label": "accepted",
+    "runtime_title": "accepted (nit RU-03 optional)",
+    "verdict_forbidden_origin_gloss": "accepted"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "counts": {
+      "blocker": 0,
+      "major": 0,
+      "minor": 2,
+      "nit": 3
+    },
+    "finding_ids": [
+      "RU-01",
+      "RU-02",
+      "RU-03",
+      "RU-04",
+      "RU-05"
+    ]
+  },
+  "per_key": [
+    {
+      "key": "mobile.computers.own_tunnel.install_label",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.foreground_label",
+      "result": "pass",
+      "note": "Uncertain key ruled ACCEPTED: matches note (terminal window vs background service); «в обычном режиме» would be vaguer."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.check_label",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.rotate_label",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.install_note",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.foreground_note",
+      "result": "minor",
+      "finding_id": "RU-01",
+      "current": "Для любой другой платформы или если вы предпочитаете следить за журналом. Ретранслятор работает на {address} и доступен только с этого же компьютера.",
+      "problem": "«доступен только с этого же компьютера»: on a phone screen «этого» can read as the phone; the note means the computer running the relay.",
+      "suggested": "Для любой другой платформы или если вы предпочитаете следить за журналом. Ретранслятор работает на {address} и доступен только с того же компьютера."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.check_note",
+      "result": "minor",
+      "finding_id": "RU-02",
+      "current": "Работоспособность, состояние проверки пароля и сессии, которые увидит телефон.",
+      "problem": "«состояние проверки пароля и сессии» first parses as genitive 'state of the password check and of the session'; only «которые» later disambiguates.",
+      "suggested": "Работоспособность, состояние проверки пароля, а также сессии, которые увидит телефон."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.rotate_note",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.cloudflare_note",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.ngrok_note",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.tunnel_rule",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_sessions",
+      "result": "pass",
+      "note": "ICU one/few/many/other, # in all arms; parsed+formatted 0,1,2,5,10,21,22,1.5 correctly."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_password",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_forbidden",
+      "result": "pass",
+      "note": "Ruled ACCEPTED incl. «(origin)» gloss: «с любого другого источника (origin)» carries 'any other origin' exactly; gloss aids the technical reader. No 'from the tunnel' mechanism error (cf. fr F-01)."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_offline",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_tls",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_host",
+      "result": "nit",
+      "finding_id": "RU-05",
+      "current": "Имя хоста не найдено. Проверьте, нет ли в адресе опечатки и публикует ли туннель это имя до сих пор.",
+      "problem": "«до сих пор» slightly colloquial here.",
+      "suggested": "Имя хоста не найдено. Проверьте, нет ли в адресе опечатки и по-прежнему ли туннель публикует это имя."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_unreachable",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_timeout",
+      "result": "pass",
+      "note": "ICU one/few/many/other, # in all arms; formatted correctly."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+      "result": "nit",
+      "finding_id": "RU-04",
+      "current": "По этому адресу в данной сети никто не ответил. Убедитесь, что компьютер не спит и на нём запущен ретранслятор. Если всё так, возможно, дело в разрешении на доступ к локальной сети: разрешите его для Local Operator в разделе Настройки → Конфиденциальность и безопасность → Локальная сеть, затем нажмите «{action}».",
+      "problem": "«разрешении… разрешите его» repeats the root; iOS shows a toggle.",
+      "suggested": "…возможно, дело в разрешении на доступ к локальной сети: включите его для Local Operator в разделе Настройки → Конфиденциальность и безопасность → Локальная сеть, затем нажмите «{action}»."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_local_network",
+      "result": "pass",
+      "note": "«нажмите» is platform-neutral in ru (tap/click); no iOS-only path on this key."
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_refused",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.remedy",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_other",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_empty",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_this",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.common.copy",
+      "result": "pass",
+      "note": "Width est. ~88 pt (system-font fallback, 12px/500 + px-3); label row flex-wraps."
+    },
+    {
+      "key": "mobile.common.copied",
+      "result": "pass",
+      "note": "Width est. ~96 pt; flex-wrap row, no overflow."
+    },
+    {
+      "key": "mobile.common.copy_command_hint",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.not_saved",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.kept_secure",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.edit",
+      "result": "pass",
+      "note": "Width est. ~76 pt."
+    },
+    {
+      "key": "mobile.settings.own_tunnel.test_again",
+      "result": "pass",
+      "note": "Width est. ~116 pt; edit+test_again+remove ≈ 278 pt incl. gaps — may wrap on a 320 pt phone (row is flex-wrap), fits 375+ pt."
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.password_placeholder",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.runtime_title",
+      "result": "nit",
+      "finding_id": "RU-03",
+      "current": "Здесь туннель не сохранить",
+      "problem": "Accepted (avoids jargon «рантайм» in an end-user title); «Здесь» is vague and colloquial; align with body's «сборка».",
+      "suggested": "Эта сборка не сохраняет туннель"
+    },
+    {
+      "key": "mobile.settings.own_tunnel.runtime_body",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.before_saving",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove_title",
+      "result": "pass",
+      "note": ""
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove_body",
+      "result": "pass",
+      "note": ""
+    }
+  ],
+  "audit_notes_not_execution_log": "report.md is audit notes; audit.log lists commands actually executed",
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ru/report.md",
+      "sha256": "9ed30f3ca7b26182260cb74f88659c5baf04d396ab8987d16d099bec8d2e3def"
+    },
+    "audit_log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ru/audit.log",
+      "sha256": "06e9304ba7ae854b914c5a464fd936f33d6d207aa99ea54a735be58adf3643c8"
+    }
+  }
+}
