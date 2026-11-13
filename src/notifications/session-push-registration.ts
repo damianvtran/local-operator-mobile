@@ -16,46 +16,62 @@
  * WHAT IT SENDS, AND WHY THOSE FIELDS. Exactly the register contract's keys
  * (local-operator `mobile/push_devices.py` `_REGISTER_FIELDS`): `platform`,
  * `token`, `environment`, `app_version`, `install_id`. The daemon REFUSES an
- * unknown key, so nothing else may ride along. `name` is optional and omitted:
- * the daemon treats an omitted name as "clear the label", and this build has
- * no label to own.
+ * unknown key (`422 unknown field(s)`), so nothing else may ride along. `name`
+ * is optional and omitted: the daemon treats an omitted name as "clear the
+ * label", and this build has no label to own.
  *
  * SAME TOKEN, SAME IDENTITY AS TEAM BRIDGE. The token is the OS device token
  * (`getDevicePushTokenAsync`), the install id is the keystore install record
  * (`install-id.ts`), and the APNs environment follows the same `__DEV__` rule
- * `registerTeamBridgeDevice` uses. Two registrations that disagreed about any
- * of these would address two different phones.
+ * `registerTeamBridgeDevice` uses (`pushEnvironment` below). Two registrations
+ * that disagreed about any of these would address two different phones.
  *
  * NEVER PROMPTS. Permission is only read here; the prompt stays the Settings
  * press (ADR 0006 §5). A phone that has not granted permission is not
  * registered, and the Settings "Allow" press re-triggers this once granted.
  *
- * IDEMPOTENT BY CONTRACT. The daemon upserts on `(install_id, platform)` and
- * keeps the `device_id`, so re-registering on every launch, foreground, route
- * change and token rotation cannot grow its registry; it is also what clears an
- * `expired` lapse and refreshes the presented cookie's expiry, which is why a
- * foreground re-POSTs rather than skipping.
+ * IDEMPOTENT TWICE. The daemon upserts on `(install_id, platform)` and keeps
+ * the `device_id`, so no number of POSTs can grow its registry. The client is
+ * idempotent as well: an identical registration this computer already accepted
+ * within `REFRESH_MS` is not re-sent on a mere foreground. That matters beyond
+ * traffic — every register RE-MINTS the device key (and forwards to the cloud),
+ * so re-POSTing on every foreground would rotate the key the sound prefetch
+ * presents and hit the cloud for nothing. A forced attempt (cold start, route
+ * change, reconnect, a Settings grant) always POSTs: that is the act that clears
+ * an `expired` lapse after a fresh sign-in and records the presented cookie's
+ * expiry, and nothing on the client can see either of those facts.
  *
- * NEVER LOGS THE TOKEN. Failures are logged with the outcome, HTTP status and
- * typed refusal code only — never the token, the device key, or a transport
- * error's message (which may echo a URL or header).
+ * NEVER LOGS THE TOKEN. Failures go to the device log (`console.warn` with a
+ * `[push]` tag, the app's diagnostics channel — see `use-completion-ack.ts`)
+ * with the outcome, HTTP status and typed refusal code only: never the token,
+ * the device key, or a transport error's message (which may echo a URL or
+ * header).
  */
 
 import Constants from "expo-constants";
-import { createStore } from "zustand/vanilla";
-
+import {
+	ensureInstallRecord,
+	recordRegistration,
+} from "@/notifications/install-id";
 import {
 	devicePushToken,
 	loadNotifications,
 	notificationsSupported,
 } from "@/notifications/native";
-import {
-	ensureInstallRecord,
-	recordRegistration,
-} from "@/notifications/install-id";
-import type { RouteProfile } from "@/connection/profile";
 import type { RegisterDeviceRequest } from "@/relay/endpoints";
 import { isRelayError, isRelayMissing } from "@/relay/errors";
+
+import {
+	type SessionPushOutcome,
+	sessionPushRegistrationStore,
+} from "./session-push-registration-state";
+
+export {
+	type SessionPushOutcome,
+	type SessionPushRegistrationState,
+	sessionPushRegistrationStore,
+	sessionPushRouteKey,
+} from "./session-push-registration-state";
 
 /** The one endpoint this module needs; a narrow seam so tests can supply it. */
 export type RegisterClient = {
@@ -64,65 +80,46 @@ export type RegisterClient = {
 	) => Promise<{ device_id: string; device_key: string }>;
 };
 
-export type SessionPushOutcome =
-	/** The daemon recorded this phone; its device id and key are in the keystore. */
-	| "registered"
-	/** No native notifications module (web, Expo Go, a build without it). */
-	| "unsupported"
-	/** OS permission is not granted. Not an error: the reader has not opted in. */
-	| "permission"
-	/** Permission granted but the OS gave no token. */
-	| "no-token"
-	/** The daemon refused this device (`device_revoked` / `device_unpaired`). */
-	| "refused"
-	/** The relay predates the register route (its own 404). */
-	| "relay-missing"
-	/** Any other failure: transport, 5xx, malformed response, keystore. */
-	| "failed"
-	/** The route changed or retired while this attempt was in flight. */
-	| "stale";
-
 /**
- * What Settings renders, per routed computer. `routeKey` names the computer the
- * outcome belongs to so a screen never shows computer A's result while routed
- * to computer B.
+ * How long an accepted registration counts as current for a NON-forced attempt
+ * (a foreground). Long enough that a phone opened fifty times a day POSTs about
+ * twice; short enough that the daemon's `last_seen_at` — which its bounded
+ * registry prunes by — keeps moving for a phone that is used but never
+ * restarted.
  */
-export type SessionPushRegistrationState = {
-	routeKey: string | null;
-	status: SessionPushOutcome | "registering" | "idle";
-	/** The typed refusal code, when `status` is `refused`. */
-	code: string | null;
-	/** Wall-clock ms of the last successful registration for `routeKey`. */
-	registeredAt: number | null;
-};
+export const REFRESH_MS = 12 * 60 * 60 * 1000;
 
-/** The computer identity a registration outcome belongs to: the same identity
- *  `use-custom-sound-prefetch` scopes by. Never a secret (a tunnel id, or the
- *  custom base URL the reader typed). */
-export const sessionPushRouteKey = (route: RouteProfile): string =>
-	route.mode === "radient"
-		? `radient:${route.tunnelId}`
-		: `custom:${route.baseUrl}`;
+/** The last registration each computer accepted, this app run. In memory on
+ *  purpose: a cold start must POST (the daemon may have restarted, been
+ *  re-paired, or marked the row expired while the app was gone), and the token
+ *  never belongs in the keystore. */
+const accepted = new Map<string, { fingerprint: string; at: number }>();
 
-export const sessionPushRegistrationStore =
-	createStore<SessionPushRegistrationState>(() => ({
+/** Test seam: forget every accepted registration, as a cold start does. */
+export const resetSessionPushRegistrationMemory = (): void => {
+	accepted.clear();
+	sessionPushRegistrationStore.setState({
 		routeKey: null,
 		status: "idle",
 		code: null,
 		registeredAt: null,
-	}));
+	});
+};
 
 /**
  * The APNs environment the daemon's cloud forward must use for this token.
  *
- * iOS: a development build (`__DEV__`, Metro bundle, development provisioning
- * profile) gets SANDBOX tokens; TestFlight and App Store builds are release
- * bundles with the production `aps-environment` entitlement and get PRODUCTION
- * tokens. This is the exact rule `registerTeamBridgeDevice` applies, kept the
- * same so both registrations describe one token one way.
+ * iOS: a development build (`__DEV__`: a Debug configuration, Metro bundle,
+ * development signing) carries `aps-environment=development`, so its token is a
+ * SANDBOX token; every archived build — internal, TestFlight, App Store — is
+ * signed with `aps-environment=production` (the expo-notifications plugin
+ * writes `development` and Xcode flips it in an archive, see
+ * `docs/publishing/push-setup.md`). Sending the wrong one is APNs
+ * `BadDeviceToken`/`BadEnvironmentKeyInToken`: a silent non-delivery. This is
+ * the rule `registerTeamBridgeDevice` uses; the two must not diverge.
  *
- * Android: FCM has no sandbox, but the daemon REQUIRES the field and accepts only
- * `sandbox` | `production`; `production` is the truthful value for FCM.
+ * Android: FCM has no sandbox, but the daemon REQUIRES the field to be one of
+ * `sandbox`/`production`, so Android always says `production`.
  */
 export const pushEnvironment = (
 	platform: "ios" | "android",
@@ -144,11 +141,12 @@ const appVersion = (): string => {
 		: "unknown";
 };
 
-/** Keys/fields that are safe to log: never the token, key or error message. */
+/** The device log line. Only the outcome and the relay's typed facts: never
+ *  the token, the device key or an error message. */
 const logFailure = (
 	outcome: SessionPushOutcome,
 	error: unknown,
-): { status: number | null; code: string | null } => {
+): { code: string | null } => {
 	const status = isRelayError(error) ? (error.status ?? null) : null;
 	const code = isRelayError(error) ? (error.code ?? null) : null;
 	console.warn("[push] session push registration did not complete", {
@@ -156,59 +154,102 @@ const logFailure = (
 		status,
 		code,
 	});
-	return { status, code };
+	return { code };
+};
+
+export type SessionPushAttempt = {
+	/** The routed computer (`sessionPushRouteKey`). */
+	routeKey: string;
+	/** POST even when this computer already accepted this exact registration. */
+	force: boolean;
+	/** The caller's lease on the route: the keystore, permission and token
+	 *  reads are async, and a route switch during them must neither start a POST
+	 *  to the old computer nor overwrite the keystore's device key with a key
+	 *  minted for a computer the app is no longer routed to. */
+	isCurrent?: () => boolean;
+	/** Called just before the POST goes out, so a UI can say "registering"
+	 *  only when something is actually being sent. */
+	onPosting?: () => void;
+	now?: () => number;
+};
+
+export type SessionPushResult = {
+	outcome: SessionPushOutcome;
+	code: string | null;
+	/** When this computer accepted the registration that is current now. */
+	registeredAt: number | null;
 };
 
 /**
  * Register this phone with one computer. Never prompts, never throws.
- *
- * `isCurrent` is the caller's lease on the route: the keystore, permission and
- * token reads are async, and a route switch during them must neither start a
- * POST to the old computer nor overwrite the keystore's device key with a key
- * minted for a computer the app is no longer routed to.
  */
 export async function registerSessionPushDevice(
 	client: RegisterClient,
-	isCurrent: () => boolean = () => true,
-): Promise<{ outcome: SessionPushOutcome; code: string | null }> {
-	if (!notificationsSupported()) return { outcome: "unsupported", code: null };
+	attempt: SessionPushAttempt,
+): Promise<SessionPushResult> {
+	const isCurrent = attempt.isCurrent ?? (() => true);
+	const now = attempt.now ?? Date.now;
+	const result = (
+		outcome: SessionPushOutcome,
+		code: string | null = null,
+	): SessionPushResult => ({ outcome, code, registeredAt: null });
+	if (!notificationsSupported()) return result("unsupported");
 	const module = await loadNotifications();
-	if (module === null) return { outcome: "unsupported", code: null };
+	if (module === null) return result("unsupported");
 	let granted = false;
 	try {
 		granted = (await module.getPermissionsAsync()).status === "granted";
 	} catch (error) {
 		logFailure("failed", error);
-		return { outcome: "failed", code: null };
+		return result("failed");
 	}
-	if (!granted) return { outcome: "permission", code: null };
+	// A revoked grant must not keep reading as registered on the next foreground.
+	if (!granted) {
+		accepted.delete(attempt.routeKey);
+		return result("permission");
+	}
 	const device = await devicePushToken();
 	if (device === null || device.token.length === 0) {
-		console.warn("[push] session push registration did not complete", {
-			outcome: "no-token",
-		});
-		return { outcome: "no-token", code: null };
+		logFailure("no-token", null);
+		return result("no-token");
 	}
 	try {
 		const install = await ensureInstallRecord();
-		if (!isCurrent()) return { outcome: "stale", code: null };
-		const response = await client.registerDevice({
+		if (!isCurrent()) return result("stale");
+		const request: RegisterDeviceRequest = {
 			platform: device.platform,
 			token: device.token,
 			environment: pushEnvironment(device.platform, isDevBuild()),
 			app_version: appVersion(),
 			install_id: install.install_id,
-		});
+		};
+		// In memory only and never logged: it holds the token, because a rotated
+		// token is exactly the change that must re-POST.
+		const fingerprint = JSON.stringify(request);
+		const previous = accepted.get(attempt.routeKey);
+		if (
+			!attempt.force &&
+			previous !== undefined &&
+			previous.fingerprint === fingerprint &&
+			now() - previous.at < REFRESH_MS
+		) {
+			return { outcome: "registered", code: null, registeredAt: previous.at };
+		}
+		attempt.onPosting?.();
+		const response = await client.registerDevice(request);
 		// The daemon has the row either way; only the keystore write is fenced,
 		// because the record holds ONE device key and it must be the key of the
 		// computer the app is routed to (`use-custom-sound-prefetch` presents it).
-		if (!isCurrent()) return { outcome: "stale", code: null };
+		if (!isCurrent()) return result("stale");
 		await recordRegistration(response.device_id, response.device_key);
-		return { outcome: "registered", code: null };
+		const at = now();
+		accepted.set(attempt.routeKey, { fingerprint, at });
+		return { outcome: "registered", code: null, registeredAt: at };
 	} catch (error) {
+		accepted.delete(attempt.routeKey);
 		if (isRelayMissing(error)) {
 			logFailure("relay-missing", error);
-			return { outcome: "relay-missing", code: null };
+			return result("relay-missing");
 		}
 		const code = isRelayError(error) ? (error.code ?? null) : null;
 		const outcome: SessionPushOutcome =
@@ -216,6 +257,6 @@ export async function registerSessionPushDevice(
 				? "refused"
 				: "failed";
 		logFailure(outcome, error);
-		return { outcome, code };
+		return result(outcome, code);
 	}
 }

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Platform, Text, View } from "react-native";
+import { useStore } from "zustand";
 
 import type { PushDeviceRow } from "@/contracts";
-import { useConnection } from "@/features/auth/connection-provider";
+import {
+	useConnection,
+	useConnectionState,
+} from "@/features/auth/connection-provider";
 import { deviceStateDescription, deviceTitle } from "@/notifications/devices";
 import { readAvailability, requestPermission } from "@/notifications/native";
 import {
@@ -12,6 +16,12 @@ import {
 	type PushAvailability,
 	pushCopy,
 } from "@/notifications/permission";
+import {
+	sessionPushRegistrationStore,
+	sessionPushRouteKey,
+} from "@/notifications/session-push-registration-state";
+import { sessionPushStatusCopy } from "@/notifications/session-push-status";
+import { requestSessionPushRegistration } from "@/notifications/use-session-push-registration";
 import { isRelayMissing } from "@/relay";
 import { useTeamBridge } from "@/team-bridge/provider";
 import { CONTROL, REGION } from "@/ui/a11y";
@@ -34,7 +44,13 @@ import { SectionHeader } from "@/ui/components/section-header";
  *     route answers a refusal, and that is rendered as its own sentence rather
  *     than as an empty list — "no devices" and "cannot read the list" are
  *     different facts, and the second must not borrow the first's words.
- *  3. **Nothing promised.** Team Bridge registration IS wired: the Team
+ *  3. **This phone's registration with THIS computer**
+ *     (`session-push-registration.ts`), one sentence from
+ *     `session-push-status.ts`, shown only for the routed computer and only
+ *     when it adds a fact the permission sentence does not already state. A
+ *     successful registration re-reads the device list, so the row it created
+ *     appears without leaving the screen.
+ *  4. **Nothing promised.** Team Bridge registration IS wired: the Team
  *     Bridge provider registers this phone with Radient's hub on launch and
  *     foreground once permission is granted, and the hub fans out over
  *     APNs/FCM (app and cloud since 2026-10-27; `docs/publishing/push-setup.md`
@@ -69,6 +85,14 @@ type DeviceListState =
 export const NotificationsSection = () => {
 	const { relay, radientSignedIn } = useConnection();
 	const { registerPush } = useTeamBridge();
+	const route = useConnectionState((s) => s.route);
+	const routeKey = route ? sessionPushRouteKey(route) : null;
+	const registration = useStore(sessionPushRegistrationStore);
+	const registrationCopy = sessionPushStatusCopy(registration, routeKey);
+	/* Re-read the list when THIS computer accepts a registration: the first one
+	 * creates the row the list would otherwise miss until Settings reopens. */
+	const registeredHere =
+		registration.routeKey === routeKey ? registration.registeredAt : null;
 	const [availability, setAvailability] = useState<PushAvailability | null>(
 		null,
 	);
@@ -112,9 +136,10 @@ export const NotificationsSection = () => {
 		}
 	}, [relay]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: registeredHere is the re-read trigger, not an input
 	useEffect(() => {
 		void loadDevices();
-	}, [loadDevices]);
+	}, [loadDevices, registeredHere]);
 
 	const onEnable = useCallback(async () => {
 		setRequesting(true);
@@ -122,7 +147,10 @@ export const NotificationsSection = () => {
 			const permission = await requestPermission();
 			setAvailability(permission);
 			// Permission is requested in context, not on mount. Once granted,
-			// register now rather than waiting for a subsequent app foreground.
+			// register now rather than waiting for a subsequent app foreground:
+			// with the routed computer (session pushes) and, when signed in to
+			// Radient, with Team Bridge's hub. Both reuse the one OS grant.
+			if (permission === "granted") requestSessionPushRegistration();
 			if (permission === "granted" && radientSignedIn) await registerPush();
 		} finally {
 			setRequesting(false);
@@ -160,6 +188,14 @@ export const NotificationsSection = () => {
 					variant="outline"
 					size="sm"
 				/>
+			) : null}
+			{registrationCopy !== null ? (
+				<Text
+					className="text-body-sm text-ink-muted"
+					testID={REGION.settingsNotificationsRegistration}
+				>
+					{registrationCopy}
+				</Text>
 			) : null}
 			{/* The registered-device lines. The list is read-only here; removing a
 			 *  device is a destructive act with its own confirm flow and is not

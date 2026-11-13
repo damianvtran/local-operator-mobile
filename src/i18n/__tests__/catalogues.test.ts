@@ -155,7 +155,9 @@ const NAMESPACES = [
 		context: notificationsContext,
 		// +5: the Settings permission sentences (`permission.*`), moved out of
 		// an English-only table in the Team Bridge push-readiness PR.
-		expected: 32,
+		// +6: the Settings registration sentences (`computer_registration.*`),
+		// fix/session-push-register.
+		expected: 38,
 	},
 	{
 		name: "mobile.session",
@@ -332,7 +334,10 @@ describe("the English catalogues", () => {
 		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
 		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
 		 * counted over the en JSON. */
-		expect(total).toBe(812);
+		/* fix/session-push-register: +6 mobile.notifications (the Settings
+		 * sentence for this phone's registration with the routed computer):
+		 * 812 + 6 = 818. */
+		expect(total).toBe(818);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

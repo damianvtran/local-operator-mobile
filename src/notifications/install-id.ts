@@ -173,8 +173,9 @@ export async function recordRegistration(
 		for (const listener of registrationListeners) listener();
 }
 
-/** Registration is still owned by S7. Observers prefetch only AFTER its
- * keystore write succeeds, never from a token/registration request in flight. */
+/** Registration is `session-push-registration.ts`'s. Observers prefetch only
+ * AFTER its keystore write succeeds, never from a token/registration request in
+ * flight. */
 const registrationListeners = new Set<() => void>();
 export function onPushRegistration(listener: () => void): () => void {
 	registrationListeners.add(listener);

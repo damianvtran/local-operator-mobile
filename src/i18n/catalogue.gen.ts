@@ -350,6 +350,12 @@ export type CatalogueKey =
 	| "mobile.notifications.channel.tape_warble"
 	| "mobile.notifications.channel.task_complete"
 	| "mobile.notifications.channel.two_note_chime"
+	| "mobile.notifications.computer_registration.failed"
+	| "mobile.notifications.computer_registration.no_token"
+	| "mobile.notifications.computer_registration.refused"
+	| "mobile.notifications.computer_registration.registered"
+	| "mobile.notifications.computer_registration.registering"
+	| "mobile.notifications.computer_registration.relay_missing"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -1127,6 +1133,12 @@ export type NoParamKey =
 	| "mobile.notifications.channel.tape_warble"
 	| "mobile.notifications.channel.task_complete"
 	| "mobile.notifications.channel.two_note_chime"
+	| "mobile.notifications.computer_registration.failed"
+	| "mobile.notifications.computer_registration.no_token"
+	| "mobile.notifications.computer_registration.refused"
+	| "mobile.notifications.computer_registration.registered"
+	| "mobile.notifications.computer_registration.registering"
+	| "mobile.notifications.computer_registration.relay_missing"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -1860,6 +1872,12 @@ export type MessageParams = {
 	"mobile.notifications.channel.tape_warble": NoParams;
 	"mobile.notifications.channel.task_complete": NoParams;
 	"mobile.notifications.channel.two_note_chime": NoParams;
+	"mobile.notifications.computer_registration.failed": NoParams;
+	"mobile.notifications.computer_registration.no_token": NoParams;
+	"mobile.notifications.computer_registration.refused": NoParams;
+	"mobile.notifications.computer_registration.registered": NoParams;
+	"mobile.notifications.computer_registration.registering": NoParams;
+	"mobile.notifications.computer_registration.relay_missing": NoParams;
 	"mobile.notifications.detail.answer_in_conversation": NoParams;
 	"mobile.notifications.detail.conversation_asks": NoParams;
 	"mobile.notifications.detail.earlier_updates": NoParams;
@@ -2691,6 +2709,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.channel.tape_warble": "Tape warble",
 	"mobile.notifications.channel.task_complete": "Task complete",
 	"mobile.notifications.channel.two_note_chime": "Two-note chime",
+	"mobile.notifications.computer_registration.failed": "Could not register this phone for alerts from this computer. It tries again when you reopen the app.",
+	"mobile.notifications.computer_registration.no_token": "This phone has no push address yet, so this computer cannot alert it. Reopen the app to try again.",
+	"mobile.notifications.computer_registration.refused": "This computer has turned off alerts for this phone. They stay off until they are allowed again on the computer.",
+	"mobile.notifications.computer_registration.registered": "This phone is registered for alerts from this computer.",
+	"mobile.notifications.computer_registration.registering": "Registering this phone for alerts from this computer.",
+	"mobile.notifications.computer_registration.relay_missing": "This computer needs a Local Operator update before it can alert this phone.",
 	"mobile.notifications.detail.answer_in_conversation": "Answer in conversation",
 	"mobile.notifications.detail.conversation_asks": "This conversation's asks",
 	"mobile.notifications.detail.earlier_updates": "Earlier updates",
@@ -3507,6 +3531,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.channel.tape_warble": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.channel.task_complete": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.channel.two_note_chime": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.computer_registration.failed": { role: "status", note: "Settings › Notifications, a status line: registering this phone for the computer's push notifications failed for a temporary reason; the app retries when it is opened again." },
+	"mobile.notifications.computer_registration.no_token": { role: "status", note: "Settings › Notifications, a status line: the phone's operating system has not given the app a push address (device token), so the computer cannot send push notifications to it. 'Reopen the app' is the remedy." },
+	"mobile.notifications.computer_registration.refused": { role: "status", note: "Settings › Notifications, a status line: the computer has revoked or unpaired this phone for push notifications; only the computer's owner can allow it again, from the computer." },
+	"mobile.notifications.computer_registration.registered": { role: "status", note: "Settings › Notifications, a status line: the computer the phone is connected to has accepted this phone as a place to send its push notifications. Must not promise that alerts will definitely arrive." },
+	"mobile.notifications.computer_registration.registering": { role: "status", note: "Settings › Notifications, a status line while the phone is sending its registration to the computer it is connected to. 'Alerts' are push notifications from that computer (an agent finished, a conversation needs attention)." },
+	"mobile.notifications.computer_registration.relay_missing": { role: "status", note: "Settings › Notifications, a status line: the computer runs an older Local Operator (product name, keep in Latin script) that cannot register phones for push notifications." },
 	"mobile.notifications.detail.answer_in_conversation": { role: "button", note: "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop." },
 	"mobile.notifications.detail.conversation_asks": { role: "heading", note: "Section header listing the asks raised in the notification's conversation. \"Ask\" is the product word for a question the agent puts to the reader." },
 	"mobile.notifications.detail.earlier_updates": { role: "heading", note: "Section header listing earlier revisions of the same notification." },
@@ -4337,6 +4367,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Cinta ondulante",
 		"mobile.notifications.channel.task_complete": "Tarea completada",
 		"mobile.notifications.channel.two_note_chime": "Campanilla de dos notas",
+		"mobile.notifications.computer_registration.failed": "No se pudo registrar este teléfono para recibir alertas de este ordenador. Se volverá a intentar cuando vuelvas a abrir la app.",
+		"mobile.notifications.computer_registration.no_token": "Este teléfono aún no tiene una dirección push, así que este ordenador no puede enviarle alertas. Vuelve a abrir la app para intentarlo de nuevo.",
+		"mobile.notifications.computer_registration.refused": "Este ordenador ha desactivado las alertas para este teléfono. Seguirán desactivadas hasta que se vuelvan a permitir en el ordenador.",
+		"mobile.notifications.computer_registration.registered": "Este teléfono está registrado para recibir alertas de este ordenador.",
+		"mobile.notifications.computer_registration.registering": "Registrando este teléfono para recibir alertas de este ordenador.",
+		"mobile.notifications.computer_registration.relay_missing": "Este ordenador necesita una actualización de Local Operator para poder enviar alertas a este teléfono.",
 		"mobile.notifications.detail.answer_in_conversation": "Responder en la conversación",
 		"mobile.notifications.detail.conversation_asks": "Preguntas de esta conversación",
 		"mobile.notifications.detail.earlier_updates": "Actualizaciones anteriores",
@@ -5151,6 +5187,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Bande ondulante",
 		"mobile.notifications.channel.task_complete": "Tâche terminée",
 		"mobile.notifications.channel.two_note_chime": "Carillon à deux notes",
+		"mobile.notifications.computer_registration.failed": "Impossible d’enregistrer ce téléphone pour les alertes de cet ordinateur. Une nouvelle tentative aura lieu à la réouverture de l’app.",
+		"mobile.notifications.computer_registration.no_token": "Ce téléphone n’a pas encore d’adresse push, cet ordinateur ne peut donc pas lui envoyer d’alertes. Rouvrez l’app pour réessayer.",
+		"mobile.notifications.computer_registration.refused": "Cet ordinateur a désactivé les alertes pour ce téléphone. Elles restent désactivées jusqu’à ce qu’elles soient de nouveau autorisées sur l’ordinateur.",
+		"mobile.notifications.computer_registration.registered": "Ce téléphone est enregistré pour recevoir les alertes de cet ordinateur.",
+		"mobile.notifications.computer_registration.registering": "Enregistrement de ce téléphone pour les alertes de cet ordinateur.",
+		"mobile.notifications.computer_registration.relay_missing": "Cet ordinateur doit mettre à jour Local Operator avant de pouvoir envoyer des alertes à ce téléphone.",
 		"mobile.notifications.detail.answer_in_conversation": "Répondre dans la conversation",
 		"mobile.notifications.detail.conversation_asks": "Questions de cette conversation",
 		"mobile.notifications.detail.earlier_updates": "Mises à jour précédentes",
@@ -5965,6 +6007,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "लहराती टेप",
 		"mobile.notifications.channel.task_complete": "काम पूरा",
 		"mobile.notifications.channel.two_note_chime": "दो सुरों वाली घंटी",
+		"mobile.notifications.computer_registration.failed": "इस कंप्यूटर से अलर्ट के लिए यह फ़ोन रजिस्टर नहीं हो सका। ऐप दोबारा खोलने पर फिर से कोशिश की जाएगी।",
+		"mobile.notifications.computer_registration.no_token": "इस फ़ोन का अभी कोई पुश पता नहीं है, इसलिए यह कंप्यूटर इसे अलर्ट नहीं भेज सकता। फिर से कोशिश करने के लिए ऐप दोबारा खोलें।",
+		"mobile.notifications.computer_registration.refused": "इस कंप्यूटर ने इस फ़ोन के लिए अलर्ट बंद कर दिए हैं। जब तक कंप्यूटर पर इन्हें फिर से अनुमति नहीं दी जाती, ये बंद रहेंगे।",
+		"mobile.notifications.computer_registration.registered": "यह फ़ोन इस कंप्यूटर से अलर्ट पाने के लिए रजिस्टर है।",
+		"mobile.notifications.computer_registration.registering": "इस कंप्यूटर से अलर्ट के लिए यह फ़ोन रजिस्टर किया जा रहा है।",
+		"mobile.notifications.computer_registration.relay_missing": "इस फ़ोन को अलर्ट भेजने से पहले इस कंप्यूटर पर Local Operator को अपडेट करना होगा।",
 		"mobile.notifications.detail.answer_in_conversation": "बातचीत में उत्तर दें",
 		"mobile.notifications.detail.conversation_asks": "इस बातचीत के सवाल",
 		"mobile.notifications.detail.earlier_updates": "पिछले अपडेट",
@@ -6779,6 +6827,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Плывущая плёнка",
 		"mobile.notifications.channel.task_complete": "Задача выполнена",
 		"mobile.notifications.channel.two_note_chime": "Двухнотный звон",
+		"mobile.notifications.computer_registration.failed": "Не удалось зарегистрировать этот телефон для оповещений с этого компьютера. Попытка повторится, когда вы снова откроете приложение.",
+		"mobile.notifications.computer_registration.no_token": "У этого телефона пока нет push-адреса, поэтому компьютер не может отправлять ему оповещения. Откройте приложение снова, чтобы повторить попытку.",
+		"mobile.notifications.computer_registration.refused": "Этот компьютер отключил оповещения для этого телефона. Они останутся отключёнными, пока их снова не разрешат на компьютере.",
+		"mobile.notifications.computer_registration.registered": "Этот телефон зарегистрирован для оповещений с этого компьютера.",
+		"mobile.notifications.computer_registration.registering": "Регистрируем этот телефон для оповещений с этого компьютера.",
+		"mobile.notifications.computer_registration.relay_missing": "Чтобы отправлять оповещения на этот телефон, на компьютере нужно обновить Local Operator.",
 		"mobile.notifications.detail.answer_in_conversation": "Ответить в беседе",
 		"mobile.notifications.detail.conversation_asks": "Вопросы этой беседы",
 		"mobile.notifications.detail.earlier_updates": "Прошлые обновления",
@@ -7593,6 +7647,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "لرزتی ٹیپ",
 		"mobile.notifications.channel.task_complete": "کام مکمل",
 		"mobile.notifications.channel.two_note_chime": "دو سُری گھنٹی",
+		"mobile.notifications.computer_registration.failed": "اس کمپیوٹر سے الرٹس کے لیے یہ فون رجسٹر نہیں ہو سکا۔ ایپ دوبارہ کھولنے پر پھر کوشش کی جائے گی۔",
+		"mobile.notifications.computer_registration.no_token": "اس فون کا ابھی کوئی پُش پتہ نہیں ہے، اس لیے یہ کمپیوٹر اسے الرٹ نہیں بھیج سکتا۔ دوبارہ کوشش کے لیے ایپ پھر سے کھولیں۔",
+		"mobile.notifications.computer_registration.refused": "اس کمپیوٹر نے اس فون کے لیے الرٹس بند کر دیے ہیں۔ جب تک کمپیوٹر پر انہیں دوبارہ اجازت نہ دی جائے، یہ بند رہیں گے۔",
+		"mobile.notifications.computer_registration.registered": "یہ فون اس کمپیوٹر سے الرٹس کے لیے رجسٹرڈ ہے۔",
+		"mobile.notifications.computer_registration.registering": "اس کمپیوٹر سے الرٹس کے لیے یہ فون رجسٹر کیا جا رہا ہے۔",
+		"mobile.notifications.computer_registration.relay_missing": "اس فون کو الرٹ بھیجنے سے پہلے اس کمپیوٹر پر Local Operator کو اپ ڈیٹ کرنا ہوگا۔",
 		"mobile.notifications.detail.answer_in_conversation": "گفتگو میں جواب دیں",
 		"mobile.notifications.detail.conversation_asks": "اس گفتگو کے سوالات",
 		"mobile.notifications.detail.earlier_updates": "پچھلی اپ ڈیٹس",
@@ -8407,6 +8467,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Băng rung",
 		"mobile.notifications.channel.task_complete": "Hoàn tất tác vụ",
 		"mobile.notifications.channel.two_note_chime": "Chuông hai nốt",
+		"mobile.notifications.computer_registration.failed": "Không thể đăng ký điện thoại này để nhận cảnh báo từ máy tính này. Ứng dụng sẽ thử lại khi bạn mở lại.",
+		"mobile.notifications.computer_registration.no_token": "Điện thoại này chưa có địa chỉ push, nên máy tính này không thể gửi cảnh báo đến nó. Hãy mở lại ứng dụng để thử lại.",
+		"mobile.notifications.computer_registration.refused": "Máy tính này đã tắt cảnh báo cho điện thoại này. Cảnh báo sẽ vẫn tắt cho đến khi được cho phép lại trên máy tính.",
+		"mobile.notifications.computer_registration.registered": "Điện thoại này đã được đăng ký để nhận cảnh báo từ máy tính này.",
+		"mobile.notifications.computer_registration.registering": "Đang đăng ký điện thoại này để nhận cảnh báo từ máy tính này.",
+		"mobile.notifications.computer_registration.relay_missing": "Máy tính này cần cập nhật Local Operator trước khi có thể gửi cảnh báo đến điện thoại này.",
 		"mobile.notifications.detail.answer_in_conversation": "Trả lời trong cuộc trò chuyện",
 		"mobile.notifications.detail.conversation_asks": "Câu hỏi trong cuộc trò chuyện này",
 		"mobile.notifications.detail.earlier_updates": "Cập nhật trước đó",
@@ -9221,6 +9287,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "磁带颤音",
 		"mobile.notifications.channel.task_complete": "任务完成",
 		"mobile.notifications.channel.two_note_chime": "双音钟声",
+		"mobile.notifications.computer_registration.failed": "无法为此手机注册来自这台电脑的提醒。重新打开应用时会再次尝试。",
+		"mobile.notifications.computer_registration.no_token": "此手机还没有推送地址，因此这台电脑无法向它发送提醒。请重新打开应用再试一次。",
+		"mobile.notifications.computer_registration.refused": "这台电脑已关闭此手机的提醒。在电脑上重新允许之前，提醒将保持关闭。",
+		"mobile.notifications.computer_registration.registered": "此手机已注册接收来自这台电脑的提醒。",
+		"mobile.notifications.computer_registration.registering": "正在为此手机注册来自这台电脑的提醒。",
+		"mobile.notifications.computer_registration.relay_missing": "这台电脑需要先更新 Local Operator，才能向此手机发送提醒。",
 		"mobile.notifications.detail.answer_in_conversation": "在对话中回答",
 		"mobile.notifications.detail.conversation_asks": "此对话的问题",
 		"mobile.notifications.detail.earlier_updates": "较早的更新",
