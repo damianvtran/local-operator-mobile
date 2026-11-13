@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -200,6 +201,19 @@ describe("1 — no 'Conversation started' banner", () => {
 		expect(markup).toContain(t("mobile.home.transcript.needs_answer"));
 		expect(markup).not.toContain("This conversation needs your answer.");
 		expect(markup).toContain('data-testid="startup-open-conversation"');
+		/* Design round 1, D2: the one action on the row reads as a button (the
+		 *  outline variant's control border), not as the label's quiet ink.
+		 *  Source-level: this file's host mocks do not render Button's frame. */
+		const source = readFileSync(
+			new URL("./startup-transcript.tsx", import.meta.url),
+			"utf8",
+		);
+		const action = source.slice(
+			source.indexOf("answer_in_conversation"),
+			source.indexOf("testID={CONTROL.startupOpenConversation}"),
+		);
+		expect(action).toContain('variant="outline"');
+		expect(action).not.toContain('variant="quiet"');
 	});
 });
 
@@ -221,7 +235,14 @@ describe("2 — the first message is on screen before the start returns", () => 
 				echoes: [echo({ failure: "unconfirmed" })],
 			}),
 		);
-		expect(markup).toContain(t("mobile.session.pending_echo.not_confirmed"));
+		/* QA round 1, Q3: this screen has no Retry (a start is never resent),
+		 *  so the caption states the fact and points at nothing. */
+		expect(markup).toContain(
+			t("mobile.session.pending_echo.not_confirmed_plain"),
+		);
+		expect(markup).not.toContain(
+			t("mobile.session.pending_echo.not_confirmed"),
+		);
 		expect(markup).not.toContain('data-testid="startup-working-line"');
 	});
 
@@ -298,6 +319,36 @@ describe("4 — the image is in the optimistic bubble, and stays at handover", (
 		);
 		expect(transcriptImages.peek(loader, "cmd-known", 0)?.uri).toBe(
 			"relay-answer",
+		);
+	});
+
+	/* Agent review round 1, M1: each seed is a whole file as a `data:` string,
+	 *  so it is held under the ONE loader the settled row asks, and it leaves
+	 *  at the auth boundary with the echoes. */
+	it("seeds under the session's loader only, and the auth boundary drops it", async () => {
+		const { clearPendingEchoes } = await import(
+			"@/features/session/pending-echo"
+		);
+		const loader = async () => "x";
+		transcriptImages.seed(loader, "relay-row", 0, "blob:relay");
+		renderToStaticMarkup(
+			createElement(PendingEchoRow, {
+				echo: echo({ commandId: "cmd-session" }),
+				streaming: false,
+				loadImage: loader,
+			}),
+		);
+		expect(transcriptImages.peek(loader, "cmd-session", 0)?.uri).toBe(
+			echoImageUri(IMAGE),
+		);
+		expect(
+			transcriptImages.peek(LOCAL_ECHO_IMAGES, "cmd-session", 0),
+		).toBeUndefined();
+		clearPendingEchoes();
+		expect(transcriptImages.peek(loader, "cmd-session", 0)).toBeUndefined();
+		// A relay answer is not a seed and stays.
+		expect(transcriptImages.peek(loader, "relay-row", 0)?.uri).toBe(
+			"blob:relay",
 		);
 	});
 });

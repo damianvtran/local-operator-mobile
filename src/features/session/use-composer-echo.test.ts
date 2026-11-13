@@ -369,10 +369,13 @@ describe("useComposer's pending echo", () => {
 });
 
 describe("the pending row's box", () => {
+	/* QA round 1, Q2 (PR #256): `items-end` inside the box pushed a short text
+	 *  to the right of an image strip, 181 pt from the settled row's text. The
+	 *  caption lives below the box now, so nothing inside needs it. */
 	it.each(["prompt", "steer"] as const)(
-		"hugs the end edge for a %s, so a short text does not jump at handover (D1)",
+		"aligns a %s's contents as the settled bubble does (no items-end)",
 		(op) => {
-			expect(pendingEchoBoxClass(op).split(" ")).toContain("items-end");
+			expect(pendingEchoBoxClass(op).split(" ")).not.toContain("items-end");
 		},
 	);
 

@@ -610,6 +610,14 @@ describe("history controls keep focus while loading (PR #207 U1)", () => {
 		expect(control).not.toMatch(/\bdisabled=/);
 	});
 
+	/* Design round 1, D1 (PR #256): the edge is `self-center`, so the failure
+	 *  sentence above it centres whenever the edge is drawn. */
+	it("centres the failure sentence over the centred older edge", () => {
+		expect(list).toMatch(
+			/"text-body-sm text-ink-muted",\s*\(hasOlder \|\| olderRetry\) && "text-center",\s*\)\}\s*>\s*\{t\(\s*historyError === "stalled"/,
+		);
+	});
+
 	it("a loading Button stays focusable and ignores presses through its own guard", () => {
 		const onPress = vi.fn();
 		const markup = renderToStaticMarkup(

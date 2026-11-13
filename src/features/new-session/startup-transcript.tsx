@@ -58,6 +58,7 @@ export const StartupPendingTail = memo(function StartupPendingTail({
 				streaming={running}
 				onPutBack={onPutBack}
 				loadImage={loadImage}
+				surface="startup"
 			/>
 			{working ? (
 				<View className="px-2 py-1">
@@ -191,7 +192,10 @@ export function StartupTranscript({
 			 *  question is different: the answer surface (the decision card) lives
 			 *  on the session screen, not here, so without this line the reader
 			 *  would see a stalled turn and no way to unblock it. Kept to one
-			 *  compact line (`py-1`, small quiet button). */}
+			 *  compact line (`py-1`, small button). The action is an `outline`
+			 *  button, not `quiet`: quiet drew it in the label's own ink and size,
+			 *  so the one row that asks the reader to act read as passive chrome
+			 *  (design round 1, D2). */}
 			{runtime.projection?.pending ? (
 				<View
 					className="flex-row items-center justify-between gap-2 px-4 py-1"
@@ -206,7 +210,7 @@ export function StartupTranscript({
 					</Text>
 					<Button
 						label={t("mobile.notifications.detail.answer_in_conversation")}
-						variant="quiet"
+						variant="outline"
 						size="sm"
 						testID={CONTROL.startupOpenConversation}
 						onPress={() => router.push(`/session/${sessionId}`)}

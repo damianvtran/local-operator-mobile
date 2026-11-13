@@ -29,6 +29,7 @@
 	"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
 	"mobile.session.pending_echo.not_sent": "no enviado — toca para recuperarlo",
 	"mobile.session.pending_echo.not_confirmed": "sin confirmar — reintenta abajo",
+	"mobile.session.pending_echo.not_confirmed_plain": "sin confirmar",
 	"mobile.session.pending_echo.earlier_not_sent": "Tu mensaje anterior no se envió ({reason}). Tócalo arriba para recuperarlo.",
 	"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
 	"mobile.session.composer.not_sent_storage": "No enviado. No se pudo guardar este mensaje de forma segura para reintentarlo. El texto y las imágenes siguen aquí. Vuelve a intentarlo.",

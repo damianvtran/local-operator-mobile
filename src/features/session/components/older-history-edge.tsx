@@ -39,6 +39,12 @@ import { cx } from "@/ui/variants";
  * the relay that very shift re-armed the top trigger (23 of 27 transitions in
  * one open were a 1 px oscillation; 13 pages pulled unseen).
  */
+/** (TOUCH_FLOOR - the idle box's 24 pt) / 2, above and below. */
+export const IDLE_EDGE_HIT_SLOP = {
+	top: (TOUCH_FLOOR - 24) / 2,
+	bottom: (TOUCH_FLOOR - 24) / 2,
+} as const;
+
 export const OlderHistoryEdge = ({
 	loading,
 	retry,
@@ -75,6 +81,11 @@ export const OlderHistoryEdge = ({
 				visibleRetry ? "px-3" : "h-6 w-16",
 			)}
 			style={visibleRetry ? { minHeight: TOUCH_FLOOR } : undefined}
+			/* The idle hairline's box is 24 pt tall; when the first window does
+			 *  not fill the screen, auto-load cannot fire and this is the only way
+			 *  in, so its TOUCH area reaches the floor without moving the layout
+			 *  (agent review round 1, M2). */
+			hitSlop={visibleRetry ? undefined : IDLE_EDGE_HIT_SLOP}
 		>
 			{loading ? (
 				<ActivityIndicator size="small" color={dim} />

@@ -6,6 +6,7 @@ import { TRACE_GLYPH_BOX_CLASS } from "@/features/session/components/trace-rail"
 import { pendingEchoBoxClass } from "@/features/session/pending-echo";
 import {
 	USER_BUBBLE_BOX_CLASS,
+	USER_BUBBLE_FRAME_CLASS,
 	userBubbleFill,
 } from "@/features/session/user-bubble";
 import { THEMES } from "@/ui/tokens.gen";
@@ -30,7 +31,7 @@ const INITIAL_STATE_FROM_CACHE =
 	/useState<Shown>\(\(\) => \(\{\s*image: transcriptImages\.peek\(load, entryId, index\),/;
 const LOAD_THROUGH_CACHE = /transcriptImages\s*\.load\(load, entryId, index\)/;
 const EXPLICIT_FILL =
-	/className=\{cx\("max-w-\[85%\]", USER_BUBBLE_BOX_CLASS\)\}\s*style=\{userBubbleFill\(active\)\}/;
+	/className=\{USER_BUBBLE_FRAME_CLASS\}\s*style=\{userBubbleFill\(active\)\}/;
 /** A steer's image sits on the bubble too: the prop is unconditional. */
 const ON_BUBBLE_ALWAYS = /\bonBubble\n/;
 const GLYPH_BOX = /w-4 shrink-0 text-start font-mono text-mono-sm/g;
@@ -51,7 +52,7 @@ const CARD = code(read("./imagegen-card.tsx"));
 describe("the reader's own message (D3)", () => {
 	it("is the relay's borderless box, filled with the solved bubble role", () => {
 		expect(USER_BUBBLE_BOX_CLASS).toBe("rounded-md bg-user-bubble px-3 py-1.5");
-		expect(ROW).toContain('cx("max-w-[85%]", USER_BUBBLE_BOX_CLASS)');
+		expect(ROW).toContain("className={USER_BUBBLE_FRAME_CLASS}");
 	});
 
 	/* The regression the operator reported on the iOS build (2026-11-09): the
@@ -88,9 +89,14 @@ describe("the reader's own message (D3)", () => {
 	 *  settled box exactly, explicit fill included, so a send does not change
 	 *  colour or lose an edge at handover. */
 	it("is the same box while the message is in flight", () => {
-		expect(pendingEchoBoxClass("prompt")).toBe(
-			`max-w-[85%] items-end ${USER_BUBBLE_BOX_CLASS}`,
+		expect(pendingEchoBoxClass("prompt")).toBe(USER_BUBBLE_FRAME_CLASS);
+		/* QA round 1, Q2: the frame is the settled box plus its cap and nothing
+		 *  that moves the contents (an `items-end` here put a short text 181 pt
+		 *  right of the settled row's, beside an image strip). */
+		expect(USER_BUBBLE_FRAME_CLASS).toBe(
+			`max-w-[85%] ${USER_BUBBLE_BOX_CLASS}`,
 		);
+		expect(USER_BUBBLE_FRAME_CLASS).not.toMatch(/\b(items|self|justify)-/);
 		expect(pendingEchoBoxClass("prompt")).not.toContain("border");
 		expect(PENDING).toContain("style={userBubbleFill(active)}");
 	});

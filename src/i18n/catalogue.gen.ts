@@ -460,6 +460,7 @@ export type CatalogueKey =
 	| "mobile.session.pending_echo.earlier_went_through"
 	| "mobile.session.pending_echo.images"
 	| "mobile.session.pending_echo.not_confirmed"
+	| "mobile.session.pending_echo.not_confirmed_plain"
 	| "mobile.session.pending_echo.not_sent"
 	| "mobile.session.pending_echo.queued_next"
 	| "mobile.session.pending_echo.queued_step"
@@ -1180,6 +1181,7 @@ export type NoParamKey =
 	| "mobile.session.not_connected.next"
 	| "mobile.session.pending_echo.earlier_went_through"
 	| "mobile.session.pending_echo.not_confirmed"
+	| "mobile.session.pending_echo.not_confirmed_plain"
 	| "mobile.session.pending_echo.not_sent"
 	| "mobile.session.pending_echo.queued_next"
 	| "mobile.session.pending_echo.queued_step"
@@ -1906,6 +1908,7 @@ export type MessageParams = {
 	"mobile.session.pending_echo.earlier_went_through": NoParams;
 	"mobile.session.pending_echo.images": { count: number };
 	"mobile.session.pending_echo.not_confirmed": NoParams;
+	"mobile.session.pending_echo.not_confirmed_plain": NoParams;
 	"mobile.session.pending_echo.not_sent": NoParams;
 	"mobile.session.pending_echo.queued_next": NoParams;
 	"mobile.session.pending_echo.queued_step": NoParams;
@@ -2698,6 +2701,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet.",
 	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}",
 	"mobile.session.pending_echo.not_confirmed": "not confirmed — retry below",
+	"mobile.session.pending_echo.not_confirmed_plain": "not confirmed",
 	"mobile.session.pending_echo.not_sent": "not sent — tap to put back",
 	"mobile.session.pending_echo.queued_next": "queued — sends with your next message",
 	"mobile.session.pending_echo.queued_step": "queued — sends when this step finishes",
@@ -3475,6 +3479,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.pending_echo.earlier_went_through": { role: "status", note: "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)." },
 	"mobile.session.pending_echo.images": { role: "meta", note: "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop." },
 	"mobile.session.pending_echo.not_confirmed": { role: "meta", note: "Caption, in danger colour, under a message whose delivery is uncertain (the computer did not answer); the Retry button below the message box resends it. Lower case, em dash, no full stop." },
+	"mobile.session.pending_echo.not_confirmed_plain": { role: "meta", note: "Caption, in danger colour, under the first message of a NEW conversation whose start the computer never confirmed. Unlike not_confirmed there is no Retry button on this screen (a start is never resent automatically), so it states the fact only. Lower case, no full stop." },
 	"mobile.session.pending_echo.not_sent": { role: "meta", note: "Caption, in danger colour, under a message the user sent that the computer definitively refused, kept on screen because the user had already typed something new. Tapping the message puts it back in the message box. Lower case, em dash, no full stop; same register as the other pending_echo captions." },
 	"mobile.session.pending_echo.queued_next": { role: "meta", note: "Caption under a steering message the computer accepted after the turn ended: it will ride along with the next message the user sends. Lower case, em dash, no full stop." },
 	"mobile.session.pending_echo.queued_step": { role: "meta", note: "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer." },
@@ -4266,6 +4271,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
 		"mobile.session.pending_echo.not_confirmed": "sin confirmar — reintenta abajo",
+		"mobile.session.pending_echo.not_confirmed_plain": "sin confirmar",
 		"mobile.session.pending_echo.not_sent": "no enviado — toca para recuperarlo",
 		"mobile.session.pending_echo.queued_next": "en cola — se envía con tu próximo mensaje",
 		"mobile.session.pending_echo.queued_step": "en cola — se envía cuando termine este paso",
@@ -5041,6 +5047,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}",
 		"mobile.session.pending_echo.not_confirmed": "non confirmé — réessayez ci-dessous",
+		"mobile.session.pending_echo.not_confirmed_plain": "non confirmé",
 		"mobile.session.pending_echo.not_sent": "non envoyé — touchez pour le récupérer",
 		"mobile.session.pending_echo.queued_next": "en file — part avec votre prochain message",
 		"mobile.session.pending_echo.queued_step": "en file — part à la fin de cette étape",
@@ -5816,6 +5823,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "आपका पिछला संदेश भेज दिया गया। नीचे का टेक्स्ट अभी नहीं भेजा गया है।",
 		"mobile.session.pending_echo.images": "{count, plural, one {# छवि संलग्न} other {# छवियाँ संलग्न}}",
 		"mobile.session.pending_echo.not_confirmed": "पुष्टि नहीं हुई — नीचे फिर से कोशिश करें",
+		"mobile.session.pending_echo.not_confirmed_plain": "पुष्टि नहीं हुई",
 		"mobile.session.pending_echo.not_sent": "नहीं भेजा गया — वापस लाने के लिए टैप करें",
 		"mobile.session.pending_echo.queued_next": "कतार में — आपके अगले संदेश के साथ भेजा जाएगा",
 		"mobile.session.pending_echo.queued_step": "कतार में — यह चरण पूरा होने पर भेजा जाएगा",
@@ -6591,6 +6599,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# изображение прикреплено} few {# изображения прикреплены} many {# изображений прикреплено} other {# изображения прикреплено}}",
 		"mobile.session.pending_echo.not_confirmed": "не подтверждено — повторите ниже",
+		"mobile.session.pending_echo.not_confirmed_plain": "не подтверждено",
 		"mobile.session.pending_echo.not_sent": "не отправлено — нажмите, чтобы вернуть",
 		"mobile.session.pending_echo.queued_next": "в очереди — отправится с вашим следующим сообщением",
 		"mobile.session.pending_echo.queued_step": "в очереди — отправится после этого шага",
@@ -7366,6 +7375,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "آپ کا پچھلا پیغام چلا گیا۔ نیچے والا متن ابھی نہیں بھیجا گیا۔",
 		"mobile.session.pending_echo.images": "{count, plural, one {# تصویر منسلک} other {# تصاویر منسلک}}",
 		"mobile.session.pending_echo.not_confirmed": "تصدیق نہیں ہوئی — نیچے دوبارہ کوشش کریں",
+		"mobile.session.pending_echo.not_confirmed_plain": "تصدیق نہیں ہوئی",
 		"mobile.session.pending_echo.not_sent": "نہیں بھیجا گیا — واپس لانے کے لیے ٹیپ کریں",
 		"mobile.session.pending_echo.queued_next": "قطار میں — آپ کے اگلے پیغام کے ساتھ بھیجا جائے گا",
 		"mobile.session.pending_echo.queued_step": "قطار میں — یہ مرحلہ ختم ہونے پر بھیجا جائے گا",
@@ -8141,6 +8151,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
 		"mobile.session.pending_echo.images": "{count, plural, other {đã đính kèm # hình ảnh}}",
 		"mobile.session.pending_echo.not_confirmed": "chưa xác nhận — thử lại bên dưới",
+		"mobile.session.pending_echo.not_confirmed_plain": "chưa xác nhận",
 		"mobile.session.pending_echo.not_sent": "chưa gửi — chạm để đưa lại",
 		"mobile.session.pending_echo.queued_next": "đang chờ — sẽ gửi cùng tin nhắn tiếp theo của bạn",
 		"mobile.session.pending_echo.queued_step": "đang chờ — sẽ gửi khi bước này xong",
@@ -8916,6 +8927,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",
 		"mobile.session.pending_echo.images": "{count, plural, other {已附加 # 张图片}}",
 		"mobile.session.pending_echo.not_confirmed": "未确认——请在下方重试",
+		"mobile.session.pending_echo.not_confirmed_plain": "未确认",
 		"mobile.session.pending_echo.not_sent": "未发送——轻点放回",
 		"mobile.session.pending_echo.queued_next": "已排队——将随你的下一条消息发送",
 		"mobile.session.pending_echo.queued_step": "已排队——此步骤完成后发送",

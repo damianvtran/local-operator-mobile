@@ -73,6 +73,10 @@ export type ImageCache = {
 		index: number,
 		uri: string,
 	) => void;
+	/** Drop every settled entry whose source matches — for the auth boundary,
+	 *  which must not leave the reader's own seeded `data:` images (whole files,
+	 *  inline) in memory for whoever signs in next (`clearPendingEchoes`). */
+	forgetWhere: (match: (uri: string) => boolean) => void;
 	/** Record the decoded aspect ratio against an already-settled image. */
 	noteAspectRatio: (
 		loader: ImageLoader,
@@ -99,9 +103,12 @@ export type ImageCache = {
  * time it mounts. On native that "fetch" is a stat of the cache file
  * (`loadAttachments`), not a request. On web the evicted Blob URL is revoked;
  * a view still showing it keeps its decoded pixels, and its next mount
- * requests the bytes again. What an entry costs is a string and a number — the
- * bytes live in the OS cache directory or the browser's blob store — so the
- * cap bounds object URLs on web, not JS memory.
+ * requests the bytes again. What a FETCHED entry costs is a string and a
+ * number — the bytes live in the OS cache directory or the browser's blob
+ * store — so for those the cap bounds object URLs on web, not JS memory. A
+ * SEEDED entry (`seed`, the reader's just-sent attachment) is the exception:
+ * its string is a `data:` URI holding the whole file, so it does cost heap
+ * until it is evicted or `forgetWhere` drops it at the auth boundary.
  */
 export const IMAGE_CACHE_CAPACITY = 96;
 
@@ -224,6 +231,13 @@ export const createImageCache = (options?: {
 			const key = keyOf(loader, entryId, index);
 			if (settled.has(key)) return;
 			store(key, { uri, aspectRatio: null });
+		},
+		forgetWhere: (match) => {
+			for (const [key, image] of [...settled]) {
+				if (image.uri == null || !match(image.uri)) continue;
+				settled.delete(key);
+				release?.(image.uri);
+			}
 		},
 		noteAspectRatio: (loader, entryId, index, aspectRatio) => {
 			const key = keyOf(loader, entryId, index);

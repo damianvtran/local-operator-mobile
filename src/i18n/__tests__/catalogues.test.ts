@@ -163,7 +163,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 80, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels)
+		expected: 81, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -334,7 +334,9 @@ describe("the English catalogues", () => {
 		 * unavailable detail) = 37: 734 + 37 = 771, counted over the en JSON. */
 		/* TestFlight 906 mobile fixes: + mobile.home.transcript.needs_answer and
 		 * mobile.chrome.clear_search = 2: 771 + 2 = 773. */
-		expect(total).toBe(773);
+		/* PR #256 QA round 1, Q3: + mobile.session.pending_echo.not_confirmed_plain
+		 * (the new-conversation caption with no retry to point at) = 774. */
+		expect(total).toBe(774);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -1687,7 +1687,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * and images, the in-place search pill, the quiet older-history edge and
 	 * the startup banner's removal. Re-derived once with --print over the
 	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
-	src: "0aa87079ccf749b7087604deffb5720fe957eae3adbd0a93f8da63862876d6a2",
+	/* #256 review round 1 remediation (search Escape guard, pending bubble
+	 * alignment, startup caption, history/needs-answer polish, seeded-image
+	 * release). Re-derived once with --print over the staged tree. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	src: "2089a51be235c518a4e5df12f4bc2280b5557b56169ddbb098e2c9b85045fb79",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -23,6 +23,7 @@ vi.mock("react-native", async (importOriginal) => {
 		accessibilityRole?: string;
 		accessibilityState?: { busy?: boolean };
 		disabled?: boolean;
+		hitSlop?: { top?: number; bottom?: number };
 	};
 	const host =
 		(tag: string) =>
@@ -34,6 +35,7 @@ vi.mock("react-native", async (importOriginal) => {
 			accessibilityRole,
 			accessibilityState,
 			disabled,
+			hitSlop,
 		}: HostProps) =>
 			createElement(
 				tag,
@@ -44,6 +46,7 @@ vi.mock("react-native", async (importOriginal) => {
 					"data-role": accessibilityRole,
 					"data-busy": accessibilityState?.busy ? "true" : undefined,
 					"data-disabled": disabled ? "true" : undefined,
+					"data-hitslop": hitSlop ? JSON.stringify(hitSlop) : undefined,
 				},
 				children,
 			);
@@ -59,6 +62,7 @@ vi.mock("@/ui/appearance", () => ({
 	useTokenColor: (role: string) => `token:${role}`,
 }));
 
+import { TOUCH_FLOOR } from "@/ui/layout";
 import { OlderHistoryEdge } from "./older-history-edge";
 
 const render = (loading: boolean, retry: boolean, onPress = () => {}) =>
@@ -72,6 +76,18 @@ const render = (loading: boolean, retry: boolean, onPress = () => {}) =>
 	);
 
 describe("the older-history edge is quiet", () => {
+	/* Agent review round 1, M2: when the first window does not fill the screen
+	 *  auto-load cannot fire, and the 24 pt hairline is the only way in. */
+	it("at rest: the hairline's touch area reaches the floor; the retry needs no slop", () => {
+		const slop = /data-hitslop="([^"]*)"/.exec(render(false, false));
+		expect(slop).not.toBeNull();
+		const { top, bottom } = JSON.parse(
+			(slop?.[1] ?? "{}").replaceAll("&quot;", '"'),
+		) as { top: number; bottom: number };
+		expect(24 + top + bottom).toBeGreaterThanOrEqual(TOUCH_FLOOR);
+		expect(render(false, true)).not.toContain("data-hitslop");
+	});
+
 	it("at rest: no visible words and no border — a hairline, still an accessible button", () => {
 		const markup = render(false, false);
 		expect(markup).not.toContain(`>${t("mobile.session.history.load")}<`);

@@ -63,7 +63,7 @@ import {
 	type ImageLoader,
 	transcriptImages,
 } from "@/features/session/image-cache";
-import { USER_BUBBLE_BOX_CLASS } from "@/features/session/user-bubble";
+import { USER_BUBBLE_FRAME_CLASS } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
 import type { ContinuationEnvelope, ContinuationOp } from "@/relay";
 
@@ -104,7 +104,8 @@ export interface PendingEcho {
 	 *
 	 *  Holding them here adds no new exposure: the envelope already holds the
 	 *  same bytes for the life of the send, and `clearPendingEchoes` drops them
-	 *  at the auth boundary with every other content-bearing store. */
+	 *  — and their seeded `data:` copies in the image cache — at the auth
+	 *  boundary with every other content-bearing store. */
 	images?: readonly PromptImage[];
 }
 
@@ -131,6 +132,10 @@ const COMMAND_ROW_KINDS: ReadonlySet<TranscriptEntry["kind"]> = new Set([
 export function pendingEchoCaption(
 	echo: PendingEcho,
 	streaming: boolean,
+	/** Where the row is drawn. On the new-conversation home (`startup`) an
+	 *  unconfirmed start has NO retry below it — by design nothing re-POSTs a
+	 *  start — so its caption must not point at one (QA round 1, Q3). */
+	surface: "session" | "startup" = "session",
 ): string {
 	/* The failure captions name the remedy where the eye already is: the row is
 	 *  what the reader watched go out, so it is where they look for what became
@@ -138,7 +143,11 @@ export function pendingEchoCaption(
 	if (echo.failure === "refused")
 		return t("mobile.session.pending_echo.not_sent");
 	if (echo.failure === "unconfirmed")
-		return t("mobile.session.pending_echo.not_confirmed");
+		return t(
+			surface === "startup"
+				? "mobile.session.pending_echo.not_confirmed_plain"
+				: "mobile.session.pending_echo.not_confirmed",
+		);
 	if (!echo.accepted) return t("mobile.session.pending_echo.sending");
 	if (echo.op !== "steer") return t("mobile.session.pending_echo.sent");
 	return streaming
@@ -397,17 +406,20 @@ export const earlierNotSentMessage = (reason: string): string =>
 export const earlierWentThroughNotice = (): string =>
 	t("mobile.session.pending_echo.earlier_went_through");
 
-/** The pending row's inner box, per op. Kept here, in a plain module, so a
- *  Node test can pin it. `items-end` is load-bearing: without it the block is as
- *  wide as its widest child, and under a caption wider than a short steer the
- *  steer's text sat left-aligned, then jumped ~77 px right when the caption
- *  left at handover (design round 1, D1). Hugging the end edge keeps the text's
- *  right edge where the settled row puts it.
+/** The pending row's inner box, per op: the settled bubble's frame EXACTLY
+ *  (`USER_BUBBLE_FRAME_CLASS`), inner alignment included. Kept here, in a
+ *  plain module, so a Node test can pin it.
  *
- *  A prompt takes the settled bubble's box EXACTLY (`USER_BUBBLE_BOX_CLASS`, no
- *  hairline), so the fill does not jump at handover (agent review round 1, M1;
- *  design D2). The pending signal stays in ink (`ink-muted`) and in the caption,
- *  which `pending-echo-row.tsx` renders BELOW the box, on canvas: `ink-dim` and
+ *  NO `items-end` (QA round 1, Q2, PR #256). It once kept a short steer's
+ *  right edge still while a wider caption sat INSIDE the box (design round 1,
+ *  D1); the caption has since moved below the box, and once the box carried
+ *  an image strip the class pushed a short text to the box's end edge — 181 pt
+ *  right of where the settled row draws it, a jump at handover. The row
+ *  around the box (`items-end`) is what aligns the bubble.
+ *
+ *  No hairline, the settled fill (agent review round 1, M1; design D2). The
+ *  pending signal stays in ink (`ink-muted`) and in the caption, which
+ *  `pending-echo-row.tsx` renders BELOW the box, on canvas: `ink-dim` and
  *  `danger` are contracted on canvas but not on `user-bubble`.
  *
  *  A steer takes the SAME box (operator report, iOS 2026-11-11): it used to be
@@ -415,7 +427,7 @@ export const earlierWentThroughNotice = (): string =>
  *  operator's own message. The `op` parameter stays so a caller still says
  *  which command the row is, but the answer no longer depends on it. */
 export const pendingEchoBoxClass = (_op: ContinuationOp): string =>
-	`max-w-[85%] items-end ${USER_BUBBLE_BOX_CLASS}`;
+	USER_BUBBLE_FRAME_CLASS;
 
 /** The loader a pending row paints its images under when there is no session
  *  loader yet — the home's first send, before `POST /api/sessions/start` has
@@ -441,6 +453,10 @@ export function seedPendingEchoImages(
 	echo: Pick<PendingEcho, "commandId" | "images">,
 ): void {
 	echo.images?.forEach((image, index) => {
+		/* Seeding runs on every render of the row; the URI is a copy of the whole
+		 *  file, so build it only on a miss (agent review round 1, M1). */
+		if (transcriptImages.peek(loader, echo.commandId, index) !== undefined)
+			return;
 		transcriptImages.seed(loader, echo.commandId, index, echoImageUri(image));
 	});
 }
@@ -448,6 +464,10 @@ export function seedPendingEchoImages(
 /** Drop every echo on this device — for the auth boundary: a signed-out user's
  *  words must not be shown to whoever signs in next. */
 export function clearPendingEchoes(): void {
+	/* The seeded copies of sent images outlive their echo (they are what the
+	 *  settled row paints from), so they leave here even when no echo is left.
+	 *  Only seeds are `data:`; a relay answer is a file or Blob URL. */
+	transcriptImages.forgetWhere((uri) => uri.startsWith("data:"));
 	if (echoes.size === 0) return;
 	echoes.clear();
 	emit();

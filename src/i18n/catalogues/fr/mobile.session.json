@@ -29,6 +29,7 @@
 	"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}",
 	"mobile.session.pending_echo.not_sent": "non envoyé — touchez pour le récupérer",
 	"mobile.session.pending_echo.not_confirmed": "non confirmé — réessayez ci-dessous",
+	"mobile.session.pending_echo.not_confirmed_plain": "non confirmé",
 	"mobile.session.pending_echo.earlier_not_sent": "Votre message précédent n’a pas été envoyé ({reason}). Touchez-le ci-dessus pour le récupérer.",
 	"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé.",
 	"mobile.session.composer.not_sent_storage": "Non envoyé. Impossible d’enregistrer ce message de façon sûre pour réessayer. Votre texte et vos images sont toujours là. Réessayez.",

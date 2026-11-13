@@ -70,9 +70,20 @@ describe("the search pill is the search field", () => {
 		expect(pill).toMatch(
 			/\{query === "" \?[\s\S]*?testID=\{CONTROL\.sidebarSearchClear\}/,
 		);
-		expect(pill).toContain('if (event.nativeEvent.key !== "Escape") return;');
-		expect(pill).toContain('if (query !== "") setQuery("");');
-		expect(pill).toContain("else searchField.current?.blur();");
+		// The behaviour itself — clear, blur, then the drawer's — is driven
+		// against the real Modal keyup listener in `search-escape.test.tsx`;
+		// here, that the pill routes through it and the web guard is installed.
+		expect(pill).toContain("searchEscape.keyDown(event.nativeEvent.key);");
+		expect(PANE).toContain('clear: () => setQuery("")');
+		expect(PANE).toContain("blur: () => searchField.current?.blur()");
+		expect(PANE).toMatch(
+			/Platform\.OS !== "web"[\s\S]{0,80}searchEscape\.guard\(window/,
+		);
+	});
+
+	it("suppresses the browser's square focus ring inside the capsule (D3)", () => {
+		expect(pill).toContain("web:outline-none");
+		expect(pill).toMatch(/className="[^"]*\bpx-1\b[^"]*web:outline-none"/);
 	});
 
 	it("keeps the RTL placeholder direction and the empty-search Clear path", () => {

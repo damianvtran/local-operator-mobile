@@ -48,6 +48,7 @@ const PendingEchoRowImpl = ({
 	streaming,
 	onPutBack,
 	loadImage,
+	surface,
 }: {
 	echo: PendingEcho;
 	streaming: boolean;
@@ -55,19 +56,19 @@ const PendingEchoRowImpl = ({
 	/** The session's image loader, when there is a session. The echo's images
 	 *  are seeded under it so the settled row paints them on its first frame. */
 	loadImage?: ImageLoader;
+	/** Where the row is drawn; picks the failure caption (`pendingEchoCaption`). */
+	surface?: "session" | "startup";
 }) => {
-	const caption = pendingEchoCaption(echo, streaming);
+	const caption = pendingEchoCaption(echo, streaming, surface);
 	/* Seeded DURING render, before `TranscriptImage`'s lazy initialiser peeks:
 	 *  an effect would run after that first frame and show the skeleton once.
 	 *  `seed` is idempotent and never overwrites, so a re-render costs a map
 	 *  lookup. With no session yet the row paints under `LOCAL_ECHO_IMAGES`;
-	 *  the session's own loader is seeded too, once it exists, for handover. */
+	 *  once the session exists, under its loader only — the one the settled
+	 *  row asks — since a second copy under the local loader is a whole file
+	 *  of heap nothing reads (agent review round 1, M1). */
 	const imageLoader = loadImage ?? LOCAL_ECHO_IMAGES;
-	if (echo.images?.length) {
-		seedPendingEchoImages(imageLoader, echo);
-		if (imageLoader !== LOCAL_ECHO_IMAGES)
-			seedPendingEchoImages(LOCAL_ECHO_IMAGES, echo);
-	}
+	if (echo.images?.length) seedPendingEchoImages(imageLoader, echo);
 	const { active } = useTheme();
 	// The bubble `Show less` keeps in view inside the list's footer (D2).
 	const bubble = useRef<View | null>(null);
@@ -174,6 +175,7 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 	streaming,
 	onPutBack,
 	loadImage,
+	surface,
 }: {
 	echoes: readonly PendingEcho[];
 	streaming: boolean;
@@ -182,6 +184,8 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 	onPutBack?: (commandId: string) => void;
 	/** The session's image loader (see `PendingEchoRow`); must be stable. */
 	loadImage?: ImageLoader;
+	/** Where the rows are drawn (see `PendingEchoRow`). */
+	surface?: "session" | "startup";
 }) {
 	if (echoes.length === 0) return null;
 	return (
@@ -193,6 +197,7 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 					streaming={streaming}
 					onPutBack={onPutBack}
 					loadImage={loadImage}
+					surface={surface}
 				/>
 			))}
 		</>

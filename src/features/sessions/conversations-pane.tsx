@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	FlatList,
+	Platform,
 	Pressable,
 	RefreshControl,
 	Text,
@@ -39,6 +40,10 @@ import {
 	notificationsEnabled,
 } from "@/features/notifications/notifications-model";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
+import {
+	createSearchEscape,
+	type KeyEventTarget,
+} from "@/features/sessions/search-escape";
 import {
 	degradedNote,
 	degradedShortNote,
@@ -458,6 +463,27 @@ export const ConversationsPane = ({
 	const keyboardAppearance = useKeyboardAppearance();
 	const composedDir = useComposedDir();
 	const [query, setQuery] = useState("");
+	/* Escape: clear, then blur, then the drawer's (QA round 1, Q1). The
+	 *  drawer's react-native-web `Modal` closes on a document keyup Escape, so
+	 *  the keyup of an Escape the field already acted on is stopped by a
+	 *  window capture listener (`search-escape.ts`). Read through a ref so the
+	 *  handler and its listener stay one identity for the pane's life. */
+	const queryRef = useRef(query);
+	queryRef.current = query;
+	const searchEscape = useMemo(
+		() =>
+			createSearchEscape({
+				query: () => queryRef.current,
+				clear: () => setQuery(""),
+				blur: () => searchField.current?.blur(),
+			}),
+		[],
+	);
+	useEffect(() => {
+		// Native has no document keyup; Android back stays the Modal's own.
+		if (Platform.OS !== "web" || typeof window === "undefined") return;
+		return searchEscape.guard(window as unknown as KeyEventTarget);
+	}, [searchEscape]);
 	const [menuTarget, setMenuTarget] = useState<SessionSummary | null>(null);
 	/* The move/offload sheet's subject. A REMOTE row's tap opens it directly
 	 *  (that IS its detail affordance — there is no local session screen for
@@ -747,7 +773,8 @@ export const ConversationsPane = ({
 				 *    field, named by `relay.chrome.list.search_label`.
 				 *  - `×` appears only with text, clears it and keeps focus (the reader
 				 *    is mid-search). Escape (web/hardware keyboard) clears first, then
-				 *    blurs — the conventional two-step. Blurring KEEPS the query: the
+				 *    blurs, and only an Escape on an empty, unfocused field closes the
+				 *    drawer (`search-escape.ts`, Q1). Blurring KEEPS the query: the
 				 *    filtered list is what they were looking for, and `×` or the empty
 				 *    state's "Clear the search" undoes it.
 				 *  - The empty field states the page's direction (`useComposedDir`) so
@@ -775,14 +802,15 @@ export const ConversationsPane = ({
 						autoCorrect={false}
 						returnKeyType="search"
 						onKeyPress={(event) => {
-							if (event.nativeEvent.key !== "Escape") return;
-							if (query !== "") setQuery("");
-							else searchField.current?.blur();
+							searchEscape.keyDown(event.nativeEvent.key);
 						}}
 						/* The pill's own box is the height; the field fills it so the
 						 *  whole capsule is the caret target. No vertical padding: the
-						 *  platform default would push the pill past the touch floor. */
-						className="min-w-0 flex-1 text-body-sm text-ink"
+						 *  platform default would push the pill past the touch floor.
+						 *  `web:outline-none` as `fieldClasses` does: the browser's square
+						 *  focus ring drew a second box inside the capsule, and `px-1` keeps
+						 *  the glyphs off the field's edge (design round 1, D3). */
+						className="min-w-0 flex-1 px-1 text-body-sm text-ink web:outline-none"
 						style={SEARCH_FIELD_STYLE}
 						testID={CONTROL.sidebarSearchField}
 					/>

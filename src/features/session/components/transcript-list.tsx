@@ -1858,7 +1858,14 @@ export const TranscriptList = ({
 						{historyError && !newestFailed ? (
 							<Text
 								accessibilityLiveRegion="polite"
-								className="text-body-sm text-ink-muted"
+								/* Centred over the centred edge below, so the sentence and
+								 *  its "Try again" read as one unit (design round 1, D1); a
+								 *  start-aligned sentence over a centred control read as two
+								 *  unrelated items. With no edge, it stays start-aligned. */
+								className={cx(
+									"text-body-sm text-ink-muted",
+									(hasOlder || olderRetry) && "text-center",
+								)}
 							>
 								{t(
 									historyError === "stalled"

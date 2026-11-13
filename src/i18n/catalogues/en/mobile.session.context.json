@@ -119,6 +119,10 @@
 		"role": "meta",
 		"note": "Caption, in danger colour, under a message whose delivery is uncertain (the computer did not answer); the Retry button below the message box resends it. Lower case, em dash, no full stop."
 	},
+	"mobile.session.pending_echo.not_confirmed_plain": {
+		"role": "meta",
+		"note": "Caption, in danger colour, under the first message of a NEW conversation whose start the computer never confirmed. Unlike not_confirmed there is no Retry button on this screen (a start is never resent automatically), so it states the fact only. Lower case, no full stop."
+	},
 	"mobile.session.pending_echo.earlier_not_sent": {
 		"role": "status",
 		"note": "Error line above the message box when an earlier message was refused while the user was already typing the next one: it must be clear the EARLIER message failed, not the text in the box. {reason} is the relay's own short reason, in English. Points at the kept message above, which puts itself back on a tap."
