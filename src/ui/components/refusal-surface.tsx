@@ -83,20 +83,32 @@ export type RefusalSurfaceProps = {
 	testID?: string;
 };
 
-/** The headline. It names the cause in the reader's terms, never the transport's. */
+/** The headline. It names the cause in the reader's terms, never the transport's.
+ *
+ *  Each entry renders a catalogue message at CALL time, never at module load, so
+ *  a locale change re-renders the right language. `{subject}` stays a parameter
+ *  of the message rather than a concatenation, because word order around the
+ *  computer's name differs by language ("{subject} is not answering." opens with
+ *  the name in English and ends with it elsewhere). These arrow bodies are
+ *  invisible to the string scanner, so `refusal-surface.test.ts` asserts every
+ *  key they return exists in the English catalogue (M3 S2b-2a). */
 const HEADLINE: Record<RefusalKind, (subject: string) => string> = {
-	"computer-offline": (subject) => `${subject} is not answering.`,
-	"relay-stopped": (subject) => `The relay is not running on ${subject}.`,
-	"tunnel-gone": (subject) => `${subject} is no longer a tunnel.`,
-	console: (subject) => `${subject} needs attention in Radient.`,
-	password: () => "That password was not accepted.",
+	"computer-offline": (subject) =>
+		t("mobile.computers.refusal.offline_title", { subject }),
+	"relay-stopped": (subject) =>
+		t("mobile.computers.refusal.relay_stopped_title", { subject }),
+	"tunnel-gone": (subject) =>
+		t("mobile.computers.refusal.tunnel_gone_title", { subject }),
+	console: (subject) =>
+		t("mobile.computers.refusal.console_title", { subject }),
+	password: () => t("mobile.computers.refusal.password_title"),
 	"sign-in": (subject) =>
-		`Your Radient session expired. Sign in to reconnect to ${subject}.`,
-	retry: (subject) => `${subject} is not ready yet.`,
+		t("mobile.computers.refusal.sign_in_title", { subject }),
+	retry: (subject) => t("mobile.computers.refusal.retry_title", { subject }),
 	diagnostic: () => t("mobile.computers.session_error"),
 	"account-mismatch": () => t("mobile.computers.account_mismatch"),
-	"certificate-rejected": () => "That tunnel's certificate was rejected.",
-	"host-unresolved": () => "That host name could not be found.",
+	"certificate-rejected": () => t("mobile.computers.refusal.certificate_title"),
+	"host-unresolved": () => t("mobile.computers.refusal.host_title"),
 };
 
 /** The second line: what to do. One idea, on whose machine.
@@ -112,37 +124,34 @@ const HEADLINE: Record<RefusalKind, (subject: string) => string> = {
  *  which read as a dependency the copy might use and could not (review round 6,
  *  N-B); a parameter nothing reads is a promise a reader has to disprove. */
 const NEXT: Record<RefusalKind, () => string> = {
-	"computer-offline": () =>
-		"Wake that computer, and check the connector is running. Its last known state is above.",
+	"computer-offline": () => t("mobile.computers.refusal.offline_next"),
 	/* The command lives ONLY in the chip below. Naming it here too made the same
 	 *  instruction appear twice in two consecutive lines — "On that computer, run
 	 *  `lop mobile`…" above "On that computer: lop mobile" — which the design round
 	 *  ruled an echo rather than emphasis (D27). The line keeps the ADVICE and the
 	 *  chip keeps the WHERE and the WHAT, which is how `computer-offline` is
 	 *  already shaped. */
-	"relay-stopped": () => "Start the relay again and leave it running.",
-	"tunnel-gone": () =>
-		"Create a tunnel again in Radient, then add this computer.",
-	console: () =>
-		"Open the Radient console to fix it there. Signing in on this phone will not change it.",
-	password: () => "Check the relay password on the computer, then try again.",
+	"relay-stopped": () => t("mobile.computers.refusal.relay_stopped_next"),
+	"tunnel-gone": () => t("mobile.computers.refusal.tunnel_gone_next"),
+	console: () => t("mobile.computers.refusal.console_next"),
+	password: () => t("mobile.computers.refusal.password_next"),
 	/* R1-5: a 401 revokes the authorization generation, so unfinished work is
 	 *  quarantined — not sent, not adopted again by signing back in. The sentence
 	 *  has to say that, because "we kept your draft" would be a promise the storage
 	 *  scoping cannot keep. */
-	"sign-in": () =>
-		"Sign in again to reconnect. Anything typed before this is quarantined, not sent.",
+	"sign-in": () => t("mobile.computers.refusal.sign_in_next"),
 	/* No promise of an automatic retry: nothing on the paths that raise this
 	 *  surface (a cold-start restore that could not reach Radient, a mint's network
 	 *  failure) schedules one, and a driven wait saw ONE request in 30 s (PR #121
 	 *  design round 1, D2/D3). The button below is the retry. */
-	retry: () => "Usually a passing network problem. Try again in a moment.",
+	retry: () => t("mobile.computers.refusal.retry_next"),
 	diagnostic: () => t("mobile.computers.session_error_help"),
 	"account-mismatch": () => t("mobile.computers.account_help"),
+	/* `https://` is a protocol token, not prose: it is passed in as `{scheme}` so
+	 *  no translation can localise or reorder it (same rule as `verdict_tls`). */
 	"certificate-rejected": () =>
-		"Use the https:// address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate — this app will not skip the check.",
-	"host-unresolved": () =>
-		"Check the address for a typo, and that the tunnel still publishes that name.",
+		t("mobile.computers.refusal.certificate_next", { scheme: "https://" }),
+	"host-unresolved": () => t("mobile.computers.refusal.host_next"),
 };
 
 /** The identifier each cause carries, so a flow asserts a CAUSE by name rather
@@ -156,6 +165,13 @@ const CAUSE_ID: Partial<Record<RefusalKind, string>> = {
 	"certificate-rejected": REGION.connectionErrorCertificate,
 	"host-unresolved": REGION.connectionErrorHostUnresolved,
 };
+
+/** What "Show details" reveals when the caller passed no detail: the error class
+ *  and kind, as `refusal.ts` composes them. Deliberately NOT in the catalogue: it
+ *  is a developer diagnostic token a reader quotes back in a bug report, and a
+ *  translated copy would no longer match the code that raised it. Named here so
+ *  the exemption is a stated decision rather than an inline literal. */
+const DIAGNOSTIC_FALLBACK = "RelayError · connection-response";
 
 /** The mark beside the headline. */
 const ALERT_GLYPH_SIZE = 20;
@@ -266,7 +282,11 @@ export const RefusalSurface = ({
 						className="text-body-sm text-ink-dim"
 						testID={REGION.connectionErrorClearsByItself}
 					>
-						{`Wait about ${waitSeconds}s before trying again.`}
+						{/* An ICU plural, not "{n}s": the bare unit suffix read as
+						 *  apparatus in English and has no equivalent in most locales. */}
+						{t("mobile.computers.refusal.wait_seconds", {
+							seconds: waitSeconds,
+						})}
 					</Text>
 				</View>
 			) : null}
@@ -287,8 +307,8 @@ export const RefusalSurface = ({
 								kind === "diagnostic"
 									? t("mobile.computers.retry")
 									: kind === "retry"
-										? "Try now"
-										: "Try again"
+										? t("mobile.computers.refusal.try_now")
+										: t("mobile.computers.refusal.try_again")
 							}
 							onPress={onRetry}
 						/>
@@ -296,14 +316,14 @@ export const RefusalSurface = ({
 				) : null}
 				{(kind === "sign-in" || kind === "account-mismatch") && onSignIn ? (
 					<Button
-						label="Sign in again"
+						label={t("mobile.computers.refusal.sign_in_again")}
 						onPress={onSignIn}
 						testID={CONTROL.refusalRetry}
 					/>
 				) : null}
 				{(kind === "console" || kind === "tunnel-gone") && onOpenConsole ? (
 					<Button
-						label="Open the Radient console"
+						label={t("mobile.computers.refusal.open_console")}
 						onPress={onOpenConsole}
 						variant="outline"
 						testID={REGION.connectionErrorConsoleLink}
@@ -327,7 +347,7 @@ export const RefusalSurface = ({
 								testID={REGION.connectionDetails}
 								className="text-center text-caption text-ink-dim"
 							>
-								{detail ?? "RelayError · connection-response"}
+								{detail ?? DIAGNOSTIC_FALLBACK}
 							</Text>
 						) : null}
 					</>
@@ -335,7 +355,7 @@ export const RefusalSurface = ({
 				{onUseAnotherAddress ? (
 					<Button
 						testID={CONTROL.refusalAnotherAddress}
-						label="Use another address"
+						label={t("mobile.computers.refusal.another_address")}
 						onPress={onUseAnotherAddress}
 						variant="quiet"
 					/>

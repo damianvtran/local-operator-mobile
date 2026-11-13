@@ -93,11 +93,21 @@ export type RefusalView = {
  * specific command for an unspecific cause is how a reader ends up running
  * `lop tunnel connect` against a machine that merely went to sleep.
  */
-const REMEDY: Partial<Record<ErrorSurface, string>> = {
-	console: "On that computer: lop login radient",
-	"tunnel-gone": "On that computer: lop tunnel connect <tunnel-id>",
-	"relay-stopped": "On that computer: lop mobile",
-	"computer-offline": "On that computer: lop tunnel status",
+const REMEDY_COMMAND: Partial<Record<ErrorSurface, string>> = {
+	console: "lop login radient",
+	"tunnel-gone": "lop tunnel connect <tunnel-id>",
+	"relay-stopped": "lop mobile",
+	"computer-offline": "lop tunnel status",
+};
+
+/** The remedy line around a command. The map holds bare COMMANDS (never
+ *  translated) and the sentence is the catalogue's, rendered per call so the
+ *  current locale wins. It reuses `own_tunnel.remedy`: the same English ("On that
+ *  computer: {command}") with the same meaning — the command to run on the
+ *  machine — so one translation serves both surfaces (M3 S2b-2a). */
+const remedyLine = (surface: ErrorSurface): string | null => {
+	const command = REMEDY_COMMAND[surface];
+	return command ? t("mobile.computers.own_tunnel.remedy", { command }) : null;
 };
 
 /**
@@ -246,7 +256,7 @@ export function refusalFromError(input: {
 					? secureStorageRefusalSentence(input.storageRefusal)
 					: `RelayError · ${input.error?.kind ?? "connection-response"}`
 				: (input.detail ?? input.error?.displayableMessage ?? null),
-		remedy: REMEDY[input.surface] ?? null,
+		remedy: remedyLine(input.surface),
 		retryAfterMs: input.retryAfterMs,
 	};
 }
