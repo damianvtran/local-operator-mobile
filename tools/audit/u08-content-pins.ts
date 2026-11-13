@@ -97,8 +97,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * live-fold prefix, which the history pager refuses as a cursor), so the
 	 * fixture-control ids this instrument names moved with them. A rename of
 	 * the same rows; what the proof measures is unchanged. `--print`, staged. */
+	/* PR #250: --print admits affirmative readiness and current-scene admission,
+	 * reviewed in Agent review round 1 (6841333661). The exact historical matcher
+	 * is retained; absent/ambiguous historical evidence stays NOT-REPRODUCED. */
 	"tools/audit/u08-fragment-verification.ts":
-		"21e0c079b0572599e10bef7f640214835dbe30ee96c0710104e702caad6d8055",
+		"6957ec079cdfaa752568491d50e1c728db084ef3af5809fa1318f27b33425be9",
 	// PR #207 CI remediation: same `m-conv-…` fixture-id rename as above.
 	"tools/audit/u08-geometry-proof.ts":
 		"dac279b1e8d6fbe728d44d96505c9a2c72c192c2be71c950bcffc23ba5ffef49",
