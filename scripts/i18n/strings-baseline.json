@@ -51,6 +51,13 @@
 		},
 		{
 			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Nothing has appeared yet. Nothing to do on this screen.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
 			"text": "Or in the Local Operator TUI, in two commands:",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -90,6 +97,20 @@
 			"text": "Use an address instead",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Use this computer",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/auth/setup-computer.tsx",
+			"text": "Waiting for Radient to list your computer…",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/auth/setup-computer.tsx",
@@ -175,6 +196,48 @@
 		{
 			"file": "src/features/library/library-screen.tsx",
 			"text": "Your library is empty.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notification-detail.tsx",
+			"text": "Back",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notification-detail.tsx",
+			"text": "Couldn't reach your computer.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notification-detail.tsx",
+			"text": "Links",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notification-detail.tsx",
+			"text": "Message",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notification-detail.tsx",
+			"text": "Notification",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/notifications/notification-detail.tsx",
+			"text": "This item's message is no longer in the conversation.",
 			"owner": "Mobile i18n",
 			"payoff": "Key this literal in the catalogue",
 			"ruleVersion": "copy-props-v1"
@@ -340,9 +403,23 @@
 		},
 		{
 			"file": "src/features/projects/projects.tsx",
+			"text": "No projects yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/projects/projects.tsx",
 			"text": "Projects",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/projects/projects.tsx",
+			"text": "Start one with New project, or ask an agent to open one.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/projects/projects.tsx",
@@ -352,9 +429,10 @@
 		},
 		{
 			"file": "src/features/projects/projects.tsx",
-			"text": "We couldn",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+			"text": "We couldn't read your projects just now.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/schedules/schedules-copy.ts",
@@ -856,9 +934,10 @@
 		},
 		{
 			"file": "src/features/sessions/tags-sheet.tsx",
-			"text": "We couldn",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+			"text": "We couldn't read the list of categories just now. Try again in a",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/sessions/tags-sheet.tsx",
@@ -868,21 +947,44 @@
 		},
 		{
 			"file": "src/features/settings/notifications-section.tsx",
-			"text": "Checking this computer",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+			"text": "Checking this computer's registered devices.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/settings/notifications-section.tsx",
-			"text": "Could not read this computer",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+			"text": "Could not read this computer's registered devices.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/settings/notifications-section.tsx",
+			"text": "No devices are registered with this computer yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/settings/notifications-section.tsx",
 			"text": "Notifications",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/settings/notifications-section.tsx",
+			"text": "This computer's relay does not support notifications yet.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Cancel",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/settings/own-tunnel-settings.tsx",
@@ -910,6 +1012,34 @@
 		},
 		{
 			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Remove this tunnel?",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Save",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Set up your own tunnel",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "Test the address before saving it: a saved tunnel that has never",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
 			"text": "The password the relay was started with",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
@@ -919,6 +1049,13 @@
 			"text": "This build has no secure keystore, so the tunnel lasts for this",
 			"owner": "damianvtran",
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
+		},
+		{
+			"file": "src/features/settings/own-tunnel-settings.tsx",
+			"text": "This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account.",
+			"owner": "Mobile i18n",
+			"payoff": "Key this literal in the catalogue",
+			"ruleVersion": "copy-props-v1"
 		},
 		{
 			"file": "src/features/settings/own-tunnel-settings.tsx",

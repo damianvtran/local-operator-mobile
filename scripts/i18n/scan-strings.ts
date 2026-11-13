@@ -49,6 +49,13 @@
  *    there, so activation can only ever be green. `app/` is read by rules 1-3 too
  *    (the tree walk has covered it since #227), so activation scopes only rule 4.
  *
+ * TOKENISER. Strings are stripped by a small state machine. An apostrophe glued
+ * to a word (`relay's`) is read as JSX prose, not a quote, for every rule:
+ * before that, one in-word apostrophe in JSX text silently blinded the scanner
+ * for the rest of the file. An apostrophe after a space or tag (`'quoted'` in
+ * prose, or a lone `'` before a word) is still read as a quote — a stated
+ * limit, since in code that position does open a string.
+ *
  * It does not understand JSX expressions inside template literals, and it does
  * not flag bare string literals in ordinary modules (a route name, a CSS class
  * and a sentence all look the same there). The ternary-else case (`: "x"`) is
@@ -193,10 +200,7 @@ function isBlankOrComment(line: string): boolean {
  *
  * Preserving offsets matters: a finding quotes a line number a reader can open.
  */
-function splitCodeAndLiterals(
-	source: string,
-	proseApostrophes = false,
-): {
+function splitCodeAndLiterals(source: string): {
 	codeByLine: string[];
 	literals: Literal[];
 } {
@@ -250,18 +254,17 @@ function splitCodeAndLiterals(
 					index += 1;
 					continue;
 				}
-				/* An apostrophe glued to a word (`phone's`, `don't`) is JSX prose, not
-				 * a quote: no string literal opens directly after an identifier
-				 * character. Treating it as one swallowed the rest of the file in
-				 * `settings.tsx` and hid every literal below it from rule 4.
-				 * OPT-IN, rule 4 only: rules 1-3 have always run without it, and
-				 * turning it on for them would newly expose ~30 historical findings
-				 * the baseline must not absorb. */
-				if (
-					proseApostrophes &&
-					character === "'" &&
-					WORD_CHAR_END.test(buffer)
-				) {
+				/* An apostrophe glued to a word (`phone's`, `relay's`, `don't`) is JSX
+				 * prose — punctuation, not a quote delimiter. TypeScript never opens a
+				 * string literal directly after an identifier character, so this test
+				 * cannot swallow a real literal. Treating it as a quote opened a
+				 * "literal" that ran to the next apostrophe or end of file, blinding
+				 * every rule for the rest of it (own-tunnel-settings.tsx went dark
+				 * after :196). Applies to ALL rules since the scanner-blindness fix;
+				 * the debt it newly exposed was seeded via `check-strings --update
+				 * --base`, never by hand. Backticks in JSX text never blinded (a
+				 * stray one closes on the next) so they are left alone. */
+				if (character === "'" && WORD_CHAR_END.test(buffer)) {
 					buffer += character;
 					continue;
 				}
@@ -506,15 +509,15 @@ export function scanSource(
 	source: string,
 	owned: ReadonlySet<string> = new Set(),
 ): Finding[] {
-	let expression: Finding[] = [];
-	if (expressionRuleActive(file)) {
-		const strict = splitCodeAndLiterals(source, true);
-		expression = expressionFindings(file, strict.literals, strict.codeByLine);
-	}
+	/* One tokenisation serves every rule now that prose apostrophes are handled
+	 * for rules 1-3 as well as rule 4 (previously rule 4 alone had them). */
+	const { codeByLine, literals } = splitCodeAndLiterals(source);
+	const expression = expressionRuleActive(file)
+		? expressionFindings(file, literals, codeByLine)
+		: [];
 	/* `app/` is scanned by rules 1-3 too since #227 (fa2bc5e0); rule 4 stays
 	 * activation-scoped there, so `app/` files get rules 1-3 plus rule 4 only
 	 * where `EXPRESSION_LITERAL_SCOPE` names them. */
-	const { codeByLine, literals } = splitCodeAndLiterals(source);
 	const base = [
 		...proseLineFindings(file, codeByLine),
 		...inlineJsxFindings(file, codeByLine),
