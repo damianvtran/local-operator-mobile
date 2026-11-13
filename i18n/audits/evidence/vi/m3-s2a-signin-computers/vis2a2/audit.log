@@ -1,0 +1,9 @@
+2026-11-12T23:44:46 vis2a2 execution log (commands actually run this session)
+shasum -a 256 brief/v1/v2 -> 3/3 match expected
+python3 json flat diff v1 vs v2 -> 37/37 keys, same order, 5 changed, symmetric diff empty, NFC True x5
+python3 brief lookup -> English + notes for 6 keys (5 changed + verdict_ok)
+git -C .../.worktrees/i18n-m3-s2a rev-parse b84517c0 59ec5184 -> resolved
+git show 59ec5184:src/features/auth/own-tunnel.tsx (VerdictBlock); git diff 59ec5184 b84517c0 -- own-tunnel.tsx (placeholderDir only); alert.tsx diff --stat empty
+git show 59ec5184:src/ui/components/alert.tsx L60-102 -> title Text no numberOfLines, flex-1 shrink column
+git show 59ec5184:src/i18n/catalogues/vi/mobile.computers.json -> glossary terms (kết nối, đường hầm, máy chủ chuyển tiếp)
+python3 rehash + assertions + write record.json/report.md/audit.log

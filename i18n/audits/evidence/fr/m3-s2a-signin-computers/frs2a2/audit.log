@@ -1,0 +1,10 @@
+2026-11-12 fr-s2a-r2 audit.log (session 00e59c341341, anthropic/claude-opus-5-5)
+shasum -a 256 brief/v1/v2 -> e64f41af7e26..., b266a87a2218..., ce805e01a480... (all match brief)
+python json.load v1,v2 -> dict, 37 keys each; key order == brief order: True/True
+value diff v1 vs v2 -> 7 keys: ['mobile.computers.title.set_up', 'mobile.computers.own_tunnel.step_computer_help', 'mobile.computers.own_tunnel.private_host', 'mobile.computers.own_tunnel.public_host', 'mobile.computers.own_tunnel.step_test', 'mobile.computers.own_tunnel.save_connect', 'mobile.signin.panel.unavailable_detail']
+raw line diff -> 39 lines each, 7 differing
+notes-fr-s2a-v2.md dispositions list the same 7 keys -> equal
+codepoint scan of the changed values -> U+202F x2 before ':', U+2014 x1 (space-flanked), no U+0027, placeholders ['{module}'] in unavailable_detail only
+git -C ~/local-operator-mobile show 59ec5184:src/i18n/catalogues/fr/mobile.computers.json -> 75 keys, sha256(stdout) 0cebf9c66ee8dd134619e5446cb0097c9be4261c7cd23790adc1d14c43889c66
+redaction regex over inputs -> 3 prose matches in round-1 artifacts, 0 markers
+wrote record.json, report.md, audit.log to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/fr-r2/

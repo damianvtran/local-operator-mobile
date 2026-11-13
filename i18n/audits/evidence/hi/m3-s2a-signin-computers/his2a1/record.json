@@ -1,0 +1,531 @@
+{
+ "schema": 1,
+ "audit_id": "his2a1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "hi",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.signin"
+ ],
+ "namespace": "mobile.computers+mobile.signin (M3 slice S2a, 37 keys)",
+ "audit_date": "2026-11-12",
+ "key_count": {
+  "en": 37,
+  "target": 37,
+  "by_namespace": {
+   "mobile.computers": 36,
+   "mobile.signin": 1
+  }
+ },
+ "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "0716fa1a942c",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "id": "translator job 4753e146fd04",
+  "model_per_notes": "anthropic/claude-opus-5-5",
+  "note": "auditor did not translate or edit the draft"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+   "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+   "recomputed": "match",
+   "contains": "en source + context notes"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/hi/draft-hi-s2a.json",
+   "sha256": "8f1e2d15f84028928eab1c04dcb6c356b9b3206d0c3e881f5d49ab954e12fce0",
+   "recomputed": "match"
+  },
+  "translator_notes": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/hi/notes-hi-s2a.md",
+   "sha256": "28da5892c719ec6def47d162a7e90bcfd78f01c49ecbe999dd4219b9704c4f2d"
+  },
+  "glossary": [
+   {
+    "path": "59ec5184:src/i18n/catalogues/hi/mobile.computers.json",
+    "sha256": "961a6099fc607da80c71219e42d48fe255dac4e0f4bb30028d311b933cdd74e0"
+   },
+   {
+    "path": "59ec5184:src/i18n/catalogues/hi/mobile.signin.json",
+    "sha256": "b387afd2ca1db37e5935be250863c7d02bfebd14453707f24209fd0bace595f0"
+   }
+  ],
+  "parser": {
+   "path": "59ec5184:src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "fonts": [
+   {
+    "path": "59ec5184:design/fonts/Figtree-SemiBold.ttf",
+    "sha256": "35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74"
+   },
+   {
+    "path": "/System/Library/Fonts/Kohinoor.ttc (face Kohinoor Devanagari Semibold)",
+    "sha256": "8d3cac28dc2be8e4b7ea63216d01f3d69e4ea52a97f9a9fcba4c390d36cdcece"
+   }
+  ]
+ },
+ "style_guide": "none for hi at 59ec5184; catalogue continuity used as glossary",
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "file_bytes": {
+    "brief": 0,
+    "draft": 0,
+    "repo_files_read": 0,
+    "translator_notes": "1 (the phrase 'Redaction markers in brief: 0', not a mask)"
+   },
+   "tool_display_masks": 0
+  }
+ },
+ "mechanical": {
+  "parser": "src/i18n/messages.ts@59ec5184 parseMessage (read-only copy in auditor scratch, node 24 --experimental-strip-types); [...ParsedMessage.params] compared",
+  "parse_failures": 0,
+  "placeholder_mismatches": 0,
+  "params_seen": {
+   "password_for": "name:text",
+   "security_body": "command:text",
+   "unavailable_detail": "module:text"
+  },
+  "protected_token_mismatches": 0,
+  "plural_select": "none in slice",
+  "end_punctuation": "। for every English full stop, … kept, none on headings; 0 issues",
+  "nfc": true,
+  "keys_added_or_dropped": 0,
+  "key_order_matches_brief": true,
+  "register": "आप throughout, no तुम/तू"
+ },
+ "width": {
+  "method": "stdlib TTF reader (cmap+hmtx). Figtree-SemiBold@59ec5184 28 dp −0.02 em calibration: Computers=137.8, Set up a computer=226.2 (doc 138/227). Figtree has 0 glyphs in U+0900–097F, so every Devanagari glyph renders in the platform fallback; estimated with Kohinoor Devanagari Semibold (iOS system Devanagari) UNSHAPED advance sums — an estimate, not a shaped measurement; conjunct half-forms make shaped text narrower. Android (Noto Sans Devanagari) not measured.",
+  "title.list": {
+   "hi": "कंप्यूटर",
+   "est_dp": 77.9,
+   "en_budget_dp": 137.8
+  },
+  "title.set_up": {
+   "hi": "नया कंप्यूटर",
+   "est_dp": 123.9,
+   "en_budget_dp": 226.2,
+   "alternatives_est_dp": {
+    "कंप्यूटर जोड़ें": 126.8,
+    "कंप्यूटर सेट अप करें": 200.6
+   }
+  },
+  "buttons_16dp_est": {
+   "कनेक्शन जाँचें": 86.4,
+   "जाँच हो रही है…": 95.7,
+   "सहेजें और कनेक्ट करें": 130.4,
+   "सहेजा जा रहा है…": 108.4
+  }
+ },
+ "findings": [
+  {
+   "id": "H1",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "current": "http:// पर आपका रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है, इसलिए यह विकल्प डिफ़ॉल्ट रूप से बंद रहता है। जब भी पता इसे सपोर्ट करे, https:// का ही उपयोग करें।",
+   "problem": "In \"जब भी पता इसे सपोर्ट करे, https:// का ही उपयोग करें\" the fronted clause puts इसे before its referent, so it first reads as \"this option\" (the http opt-in) from the previous sentence.",
+   "suggested": "http:// पर आपका रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है, इसलिए यह विकल्प डिफ़ॉल्ट रूप से बंद रहता है। जब भी पता https:// सपोर्ट करे, उसी का उपयोग करें।"
+  },
+  {
+   "id": "H2",
+   "severity": "MINOR",
+   "key": "mobile.computers.title.set_up",
+   "current": "नया कंप्यूटर",
+   "problem": "Note asks for an imperative title; \"New computer\" is a noun phrase and reads oddly when the account has no computers. Width is not the constraint: imperative options fit.",
+   "suggested": "कंप्यूटर जोड़ें (= mobile.computers.add; est 126.8 dp vs 226.2) — or कंप्यूटर सेट अप करें (est 200.6 dp, unshaped upper bound)"
+  },
+  {
+   "id": "H3",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.intro",
+   "current": "…टनल के ज़रिये प्रकाशित करते हैं, और ऐप उससे उसी पते के ज़रिये बात करता है…",
+   "problem": "ज़रिये repeated within one sentence.",
+   "suggested": "…और ऐप उससे उस पते से बात करता है जिसे आप नीचे चिपकाते हैं।"
+  },
+  {
+   "id": "H4",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "current": "ऐप इस्तेमाल करते समय…",
+   "problem": "Catalogue and this draft elsewhere use उपयोग.",
+   "suggested": "ऐप का उपयोग करते समय कंप्यूटर को स्लीप में न जाने दें।"
+  }
+ ],
+ "rulings": {
+  "mobile.computers.title.list": "ACCEPT. Kohinoor Devanagari Semibold (iOS fallback; Figtree has 0 Devanagari glyphs) unshaped estimate 77.9 dp vs 137.8 budget.",
+  "mobile.computers.title.set_up": "H2 MINOR: noun phrase \"New computer\" where the note asks for an imperative; fits (123.9 dp est vs 226.2).",
+  "mobile.computers.own_tunnel.intro": "H3 NIT: ज़रिये twice in one sentence.",
+  "mobile.computers.own_tunnel.step_computer_help": "ACCEPT meaning: loopback = connections from its own (same) computer, not LAN; 1.37x is wrapping help text. H4 NIT: इस्तेमाल vs catalogue/draft उपयोग.",
+  "mobile.computers.own_tunnel.step_publish": "ACCEPT 1.80x: explicit object रिले resolves \"it\"; wrapping step heading; ~110.6 dp at 16 dp est.",
+  "mobile.computers.own_tunnel.insecure_off_help": "Ruling: \"डिफ़ॉल्ट रूप से बंद रहता है\" ACCEPT — no nudge; the only action changing it is the user's toggle, so off-by-default = off unless you turn it on. H1 MINOR: fronted clause makes इसे cataphoric and briefly readable as the http opt-in.",
+  "mobile.computers.own_tunnel.unencrypted_body": "ACCEPT: \"इस पते का उपयोग\" = it is the address; ऊपर वाला विकल्प = the opt-in; टनल fem agreement दिखाती ✓.",
+  "mobile.computers.own_tunnel.public_host": "ACCEPT: names the whole path phone→address; anything on it can read the password; strong.",
+  "mobile.computers.own_tunnel.step_test": "Ruling ACCEPT जाँच करें: natural step heading; distinct from button like English; need_test reuses the button wording as required.",
+  "mobile.computers.own_tunnel.security_body": "ACCEPT: tunnel-auth clause = turn on your tunnel's own authentication if it offers one; consistent; `{command}` intact.",
+  "mobile.computers.own_tunnel.testing": "ACCEPT 1.88x: busy label of the same button, 95.7 vs idle कनेक्शन जाँचें 86.4 (16 dp est).",
+  "mobile.computers.own_tunnel.saving": "ACCEPT 2.29x: matches catalogue सहेजा जा रहा है; 108.4 < idle सहेजें और कनेक्ट करें 130.4 (16 dp est).",
+  "mobile.computers.own_tunnel.save_connect": "ACCEPT 1.31x: button label, same width class as catalogue buttons.",
+  "mobile.computers.own_tunnel.verdict_ok": "ACCEPT 1.44x: wrapping box title; matches catalogue कनेक्ट हो गया.",
+  "mobile.signin.panel.unavailable_detail": "ACCEPT: ({module}) directly after लूपबैक लिसनर; Radient kept."
+ },
+ "per_key": [
+  {
+   "key": "mobile.computers.title.list",
+   "english": "Computers",
+   "hi": "कंप्यूटर",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT. Kohinoor Devanagari Semibold (iOS fallback; Figtree has 0 Devanagari glyphs) unshaped estimate 77.9 dp vs 137.8 budget."
+  },
+  {
+   "key": "mobile.computers.title.set_up",
+   "english": "Set up a computer",
+   "hi": "नया कंप्यूटर",
+   "role": "heading",
+   "result": "pass_with_minor",
+   "finding": "H2",
+   "ruling": "H2 MINOR: noun phrase \"New computer\" where the note asks for an imperative; fits (123.9 dp est vs 226.2)."
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_stale",
+   "english": "Radient could not be reached, so this list may be out of date.",
+   "hi": "Radient से संपर्क नहीं हो सका, इसलिए यह सूची पुरानी हो सकती है।",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_empty",
+   "english": "Radient could not be reached to list your computers. Check this device's connection.",
+   "hi": "आपके कंप्यूटरों की सूची लाने के लिए Radient से संपर्क नहीं हो सका। इस डिवाइस का कनेक्शन जाँचें।",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_stale",
+   "english": "Radient's answer could not be read, so this list may be out of date.",
+   "hi": "Radient का जवाब पढ़ा नहीं जा सका, इसलिए यह सूची पुरानी हो सकती है।",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_empty",
+   "english": "Radient's answer could not be read, so your computers could not be listed.",
+   "hi": "Radient का जवाब पढ़ा नहीं जा सका, इसलिए आपके कंप्यूटरों की सूची नहीं बन सकी।",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.title",
+   "english": "Your own tunnel",
+   "hi": "अपनी टनल",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_for",
+   "english": "Enter the password for {name}",
+   "hi": "{name} का पासवर्ड डालें",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_label",
+   "english": "Relay password",
+   "hi": "रिले पासवर्ड",
+   "role": "meta",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.intro",
+   "english": "No Radient account is needed for any of this. You publish the relay on your own computer through a tunnel you control, and the app talks to it through the address you paste below.",
+   "hi": "इसमें कहीं भी Radient खाते की ज़रूरत नहीं है। आप रिले को अपने कंप्यूटर पर, अपने नियंत्रण वाली टनल के ज़रिये प्रकाशित करते हैं, और ऐप उससे उसी पते के ज़रिये बात करता है जिसे आप नीचे चिपकाते हैं।",
+   "role": "help",
+   "result": "pass_with_nit",
+   "finding": "H3",
+   "ruling": "H3 NIT: ज़रिये twice in one sentence."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer",
+   "english": "On the computer",
+   "hi": "कंप्यूटर पर",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "english": "The relay binds loopback only, so this is the machine that has to run it. Leave it awake while you use the app.",
+   "hi": "रिले सिर्फ़ अपने ही कंप्यूटर से आए कनेक्शन स्वीकार करता है, इसलिए उसे इसी कंप्यूटर पर चलाना होगा। ऐप इस्तेमाल करते समय कंप्यूटर को स्लीप में न जाने दें।",
+   "role": "help",
+   "result": "pass_with_nit",
+   "finding": "H4",
+   "ruling": "ACCEPT meaning: loopback = connections from its own (same) computer, not LAN; 1.37x is wrapping help text. H4 NIT: इस्तेमाल vs catalogue/draft उपयोग."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_publish",
+   "english": "Publish it",
+   "hi": "रिले प्रकाशित करें",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT 1.80x: explicit object रिले resolves \"it\"; wrapping step heading; ~110.6 dp at 16 dp est."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_app",
+   "english": "In the app",
+   "hi": "ऐप में",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.url_label",
+   "english": "Public URL",
+   "hi": "सार्वजनिक URL",
+   "role": "meta",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allow",
+   "english": "Allow a plain http:// address",
+   "hi": "सादे http:// पते की अनुमति दें",
+   "role": "button",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allowed",
+   "english": "Plain http:// is allowed",
+   "hi": "सादे http:// की अनुमति है",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_hint",
+   "english": "Needed only for an address over http, which sends the password in the clear",
+   "hi": "सिर्फ़ http वाले पते के लिए ज़रूरी, जो पासवर्ड बिना एन्क्रिप्शन के भेजता है",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_on_help",
+   "english": "On: the relay password and everything you send cross this network unencrypted. Only do this on a network you trust.",
+   "hi": "चालू: रिले पासवर्ड और आपकी भेजी हर चीज़ इस नेटवर्क से बिना एन्क्रिप्शन के गुज़रती है। ऐसा सिर्फ़ भरोसेमंद नेटवर्क पर करें।",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "english": "Over http:// your relay password crosses the network in the clear, so it is off unless you turn it on. Use https:// whenever the address supports it.",
+   "hi": "http:// पर आपका रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है, इसलिए यह विकल्प डिफ़ॉल्ट रूप से बंद रहता है। जब भी पता इसे सपोर्ट करे, https:// का ही उपयोग करें।",
+   "role": "help",
+   "result": "pass_with_minor",
+   "finding": "H1",
+   "ruling": "Ruling: \"डिफ़ॉल्ट रूप से बंद रहता है\" ACCEPT — no nudge; the only action changing it is the user's toggle, so off-by-default = off unless you turn it on. H1 MINOR: fronted clause makes इसे cataphoric and briefly readable as the http opt-in."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_title",
+   "english": "This address is unencrypted",
+   "hi": "यह पता एन्क्रिप्टेड नहीं है",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_body",
+   "english": "Turn the opt-in on to use it, or give an https:// address — a tunnel normally prints one.",
+   "hi": "इस पते का उपयोग करने के लिए ऊपर वाला विकल्प चालू करें, या https:// पता दें — टनल आम तौर पर ऐसा पता दिखाती है।",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT: \"इस पते का उपयोग\" = it is the address; ऊपर वाला विकल्प = the opt-in; टनल fem agreement दिखाती ✓."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.private_host",
+   "english": "This address is on your own network, so the exposure is limited to it.",
+   "hi": "यह पता आपके अपने नेटवर्क पर है, इसलिए जोखिम उसी नेटवर्क तक सीमित है।",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.public_host",
+   "english": "This address is not a private one — anything between this phone and it can read the password.",
+   "hi": "यह पता निजी नहीं है — इस फ़ोन से उस पते तक के रास्ते में मौजूद कोई भी चीज़ पासवर्ड पढ़ सकती है।",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT: names the whole path phone→address; anything on it can read the password; strong."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test",
+   "english": "Test it",
+   "hi": "जाँच करें",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "Ruling ACCEPT जाँच करें: natural step heading; distinct from button like English; need_test reuses the button wording as required."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test_help",
+   "english": "This makes a real request through your tunnel before anything is saved.",
+   "hi": "कुछ भी सहेजने से पहले यह आपकी टनल के ज़रिये एक असली अनुरोध भेजता है।",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "english": "Before you expose it",
+   "hi": "इंटरनेट पर खोलने से पहले",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_body",
+   "english": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and rotate the password with `{command}` if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
+   "hi": "आप अपने ही कंप्यूटर को इंटरनेट पर खोल रहे हैं, और उसकी सुरक्षा में सिर्फ़ रिले पासवर्ड खड़ा है। HTTPS को प्राथमिकता दें, अगर आपकी टनल अपना प्रमाणीकरण देती है तो उसे चालू करें, और अगर पासवर्ड किसी के साथ साझा हुआ है तो उसे `{command}` से बदल दें। जिसके पास वह पासवर्ड और आपका URL है, वह उस मशीन के सत्र चला सकता है।",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT: tunnel-auth clause = turn on your tunnel's own authentication if it offers one; consistent; `{command}` intact."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.test",
+   "english": "Test the connection",
+   "hi": "कनेक्शन जाँचें",
+   "role": "button",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.testing",
+   "english": "Testing…",
+   "hi": "जाँच हो रही है…",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT 1.88x: busy label of the same button, 95.7 vs idle कनेक्शन जाँचें 86.4 (16 dp est)."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.save_connect",
+   "english": "Save and connect",
+   "hi": "सहेजें और कनेक्ट करें",
+   "role": "button",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT 1.31x: button label, same width class as catalogue buttons."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.saving",
+   "english": "Saving…",
+   "hi": "सहेजा जा रहा है…",
+   "role": "status",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT 2.29x: matches catalogue सहेजा जा रहा है; 108.4 < idle सहेजें और कनेक्ट करें 130.4 (16 dp est)."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_address",
+   "english": "Paste your tunnel's address to continue.",
+   "hi": "जारी रखने के लिए अपनी टनल का पता चिपकाएँ।",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_test",
+   "english": "Test the connection first — a tunnel that has not answered once is not one to save.",
+   "hi": "पहले कनेक्शन जाँचें — जिस टनल ने एक बार भी जवाब नहीं दिया, उसे सहेजना ठीक नहीं।",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_ok",
+   "english": "Connected",
+   "hi": "कनेक्ट हो गया",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT 1.44x: wrapping box title; matches catalogue कनेक्ट हो गया."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_not_yet",
+   "english": "Not yet",
+   "hi": "अभी नहीं",
+   "role": "heading",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT"
+  },
+  {
+   "key": "mobile.signin.panel.unavailable_detail",
+   "english": "Signing in with Radient needs a loopback listener this build does not include ({module}).",
+   "hi": "Radient से साइन इन करने के लिए एक लूपबैक लिसनर ({module}) चाहिए, जो इस बिल्ड में शामिल नहीं है।",
+   "role": "help",
+   "result": "pass",
+   "finding": null,
+   "ruling": "ACCEPT: ({module}) directly after लूपबैक लिसनर; Radient kept."
+  }
+ ],
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "H1",
+   "H2",
+   "H3",
+   "H4"
+  ],
+  "note": "2 MINOR + 2 NIT, non-gating; replacements suggested"
+ },
+ "artifacts": {
+  "report": "report.md",
+  "log": "audit.log"
+ },
+ "audit_notes_not_execution_log": "report.md rulings are judgement notes; audit.log lists commands actually run"
+}
