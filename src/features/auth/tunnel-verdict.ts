@@ -10,8 +10,19 @@
  * decides which KIND a failure is; this module turns that kind into something a
  * reader can act on, exactly as `refusal.ts` does for the surfaces. Nobody is told
  * "HTTP 503".
+ *
+ * **Catalogue sentences (M3 S2b-1).** Each sentence is one catalogue message,
+ * including the two-part offline sentences: the ". " that joined a relay's detail
+ * to the remedy is English punctuation, so the whole sentence is the translator's.
+ * The loopback address, the URL scheme and the `lop` command are values, passed
+ * as `{address}`/`{scheme}`/`{command}`, never copy. Server text (`detail`,
+ * `refused.detail`, `invalid.reason`) passes through untranslated.
  */
 
+/** The loopback address and port the relay serves; a value, never copy. */
+const RELAY_LOOPBACK = "127.0.0.1:4098";
+
+import { t } from "@/i18n";
 import type { SentencePlatform } from "@/lib/platform";
 import { RelayError } from "@/relay";
 
@@ -28,7 +39,9 @@ export type TunnelTestVerdict =
 	/** 403: something in front of the relay refused the request. */
 	| { kind: "forbidden"; detail: string | null }
 	/** 503 / 502: the tunnel exists but nothing is answering behind it. */
-	| { kind: "offline"; detail: string | null; remedy: string }
+	/** `command` is the CLI command that diagnoses it, never translated; the
+	 *  sentence around it is the catalogue's ("On that computer: {command}"). */
+	| { kind: "offline"; detail: string | null; command: string }
 	/** The certificate was rejected: a self-signed provider edge, or a certificate
 	 *  that does not cover this hostname. */
 	| { kind: "tls"; detail: string | null }
@@ -99,6 +112,18 @@ export function transportKind(
 	return "unreachable";
 }
 
+/** Whether `verdictSentence` OPENS with server text: the offline sentence with a
+ *  relay detail is `{detail}`-initial in every locale (ur: `{detail}۔ اس کمپیوٹر
+ *  پر چلائیں: {command}`), and that detail is usually Latin. On an RTL page the
+ *  render site must then state the page's direction (`useComposedDir`), or
+ *  `dir="auto"` lays the whole line out LTR. A predicate about the sentence's
+ *  shape, not a direction: the direction is the surface's fact, so the render
+ *  site applies it (`src/ui/direction.tsx`). Every other verdict either opens
+ *  with catalogue prose or IS server text (`invalid.reason`), which must keep
+ *  its own inferred base — hence no blanket spread. */
+export const verdictOpensWithDetail = (verdict: TunnelTestVerdict): boolean =>
+	verdict.kind === "offline" && Boolean(verdict.detail);
+
 /** The one-line sentence beside each verdict, in the app's voice: no status code,
  *  no apology, and a remedy where one exists. `platform` is required rather than
  *  defaulted: a wrong Settings path is worse than no Settings path, so every
@@ -109,30 +134,42 @@ export function verdictSentence(
 ): string {
 	switch (verdict.kind) {
 		case "ok":
-			return verdict.sessions === 1
-				? "Connected — you can see 1 session."
-				: `Connected — you can see ${verdict.sessions} sessions.`;
+			return t("mobile.computers.own_tunnel.verdict_sessions", {
+				sessions: verdict.sessions,
+			});
 		case "invalid":
 			return verdict.reason;
 		case "password":
-			return "That password was not accepted. Check the relay password on the computer.";
+			return t("mobile.computers.own_tunnel.verdict_password");
 		case "forbidden":
-			return "That tunnel refused the app. If you put an access policy or a login page in front of it, allow the app through; the relay itself also refuses requests it did not come from, so make sure the tunnel forwards straight to 127.0.0.1:4098 rather than to a dashboard or another app.";
+			return t("mobile.computers.own_tunnel.verdict_forbidden", {
+				address: RELAY_LOOPBACK,
+			});
 		case "offline":
 			/* Two sentences, so two separators: the relay's own line ends without
 			 *  punctuation and used to run straight into the remedy
-			 *  ("Tunnel temporarily unavailable On that computer: lop mobile status"). */
+			 *  ("Tunnel temporarily unavailable On that computer: lop mobile status").
+			 *  The separator now lives in the message, where a locale can change it. */
 			return verdict.detail
-				? `${verdict.detail}. ${verdict.remedy}`
-				: `The tunnel answered, but the relay behind it is not. ${verdict.remedy}`;
+				? t("mobile.computers.own_tunnel.verdict_offline_detail", {
+						detail: verdict.detail,
+						command: verdict.command,
+					})
+				: t("mobile.computers.own_tunnel.verdict_offline", {
+						command: verdict.command,
+					});
 		case "tls":
-			return "That tunnel's certificate was rejected. Use the https:// address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate on the one you run — the app will not skip the check.";
+			return t("mobile.computers.own_tunnel.verdict_tls", {
+				scheme: "https://",
+			});
 		case "host":
-			return "That host name could not be found. Check the address for a typo, and that the tunnel still publishes that name.";
+			return t("mobile.computers.own_tunnel.verdict_host");
 		case "unreachable":
-			return "The address could not be reached. Check the URL is the public one your tunnel printed, and that the tunnel is still running.";
+			return t("mobile.computers.own_tunnel.verdict_unreachable");
 		case "timeout":
-			return `That address did not answer within ${Math.round(TUNNEL_TEST_TIMEOUT_MS / 1000)} seconds. Check the tunnel is running and the computer is awake.`;
+			return t("mobile.computers.own_tunnel.verdict_timeout", {
+				seconds: Math.round(TUNNEL_TEST_TIMEOUT_MS / 1000),
+			});
 		case "local-network":
 			/* The machine-side check leads; the OS gate follows as a possibility,
 			 *  never as the diagnosed cause (see the kind's comment above). The retry is
@@ -148,7 +185,9 @@ export function verdictSentence(
 				 *  attempt. The permission stays a POSSIBILITY: whether a denial is
 				 *  even distinguishable from an unreachable computer is what S10
 				 *  measures, so the copy must not assert it (see the kind above). */
-				return "Nothing answered at that address on this network. Check the computer is awake and running the relay. If both are true, it may be the local-network permission: allow Local Operator under Settings → Privacy & Security → Local Network, then tap Test the connection.";
+				return t("mobile.computers.own_tunnel.verdict_local_network_ios", {
+					action: t("mobile.computers.own_tunnel.test"),
+				});
 			}
 			/* Android carries the machine-side half only while the build targets 36:
 			 *  local network is open there (legacy apps receive an implicit grant)
@@ -158,12 +197,13 @@ export function verdictSentence(
 			 *  Google's own path names the group: "Settings > Apps > [App Name] >
 			 *  Permissions > Nearby devices". Web keeps this same sentence: a browser
 			 *  has no such permission to grant. */
-			return "Nothing answered at that address on this network. Check the computer is awake and running the relay, then tap Test the connection.";
+			/* `{action}` is the button's own key, so the sentence names the control by
+			 *  the label it carries in every locale. */
+			return t("mobile.computers.own_tunnel.verdict_local_network", {
+				action: t("mobile.computers.own_tunnel.test"),
+			});
 		case "refused":
-			return (
-				verdict.detail ??
-				"That address answered, but not in a way this app understands."
-			);
+			return verdict.detail ?? t("mobile.computers.own_tunnel.verdict_refused");
 	}
 }
 
@@ -218,7 +258,7 @@ function verdictForError(error: unknown): TunnelTestVerdict {
 				return {
 					kind: "offline",
 					detail,
-					remedy: "On that computer: lop mobile status",
+					command: "lop mobile status",
 				};
 			case "unknown-tunnel":
 				return { kind: "unreachable", detail };

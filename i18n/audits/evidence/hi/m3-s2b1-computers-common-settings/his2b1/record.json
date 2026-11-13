@@ -1,0 +1,336 @@
+{
+ "schema": 1,
+ "audit_id": "his2b1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "hi",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.settings",
+  "mobile.common"
+ ],
+ "namespace": "mobile.computers+mobile.settings+mobile.common (M3 slice S2b-1, 41 keys)",
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "target": 41
+ },
+ "keys": 41,
+ "source_commit": "254e6fba",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "3c631e8c8e6f",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "id": "translator job 1cd7f1f0d760",
+  "model_per_notes": "anthropic/claude-opus-5-5"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/hi/draft-hi.json",
+   "sha256": "2ff6e86a39a38e670efd4266b809744e989b4a809f42a8a4f3dde395212b8d2c"
+  },
+  "notes": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/hi/notes-hi.md",
+   "sha256": "f50f206bae8d11e95637ff66b2e1acd47ed444283405ecdb82eacc59c8e418d5"
+  },
+  "glossary": "git ffbda180:src/i18n/catalogues/hi/mobile.{computers,settings,common}.json",
+  "style_guide": {
+   "path": "~/local-operator/i18n/style-guides/hi.md",
+   "sha256": "82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5"
+  }
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "brief": 0,
+   "draft": 0,
+   "repo_files_read": 0,
+   "note": "no [redacted] marker encountered"
+  }
+ },
+ "mechanical": {
+  "parse": "41/41 en+hi parse with repo parseMessage (node 24 strip-types, heap 256MB)",
+  "placeholders": "identical per key",
+  "plurals": "one/other present; rendered at 0,1,2,10 with locale hi",
+  "negative_controls": "3/3 malformed throw RangeError",
+  "brief_vs_en_catalogue": "41/41 equal at 254e6fba",
+  "keys": "41, brief order, none pre-existing in hi",
+  "bidi_controls": 0,
+  "latin_tokens": "macOS, ngrok, HTTPS, URL, Local Operator intact"
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "verdict": "pass",
+  "unresolved_blocker_major_count": 0,
+  "severity_counts": {
+   "BLOCKER": 0,
+   "MAJOR": 0,
+   "MINOR": 6,
+   "NIT": 2
+  },
+  "finding_ids": [
+   "HIS2B1-01",
+   "HIS2B1-02",
+   "HIS2B1-03",
+   "HIS2B1-04",
+   "HIS2B1-05",
+   "HIS2B1-06",
+   "HIS2B1-N1",
+   "HIS2B1-N2"
+  ]
+ },
+ "findings": [
+  {
+   "id": "HIS2B1-01",
+   "severity": "MINOR",
+   "key": "mobile.common.copy_command_hint",
+   "current": "{label} वाली कमांड कॉपी करता है",
+   "problem": "Translator flag confirmed: with an imperative label the hint reads as two run-together verbs ('कंप्यूटर पर इंस्टॉल करें वाली कमांड कॉपी करता है'). Quoting the label marks it as a name; works for product names too.",
+   "suggested": "“{label}” वाली कमांड कॉपी करता है"
+  },
+  {
+   "id": "HIS2B1-02",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.verdict_refused",
+   "current": "उस पते ने जवाब दिया, लेकिन इस तरह नहीं जिसे यह ऐप समझ सके।",
+   "problem": "Mismatched correlative: 'इस तरह नहीं जिसे' (तरह … जिसे) is ungrammatical/stiff.",
+   "suggested": "उस पते ने जवाब दिया, लेकिन ऐसा जवाब नहीं जिसे यह ऐप समझ सके।"
+  },
+  {
+   "id": "HIS2B1-03",
+   "severity": "MINOR",
+   "key": "mobile.settings.own_tunnel.remove_body",
+   "current": "इससे इस फ़ोन पर सहेजा गया पता और पासवर्ड हट जाता है। आपके कंप्यूटर, आपकी चलाई टनल या किसी खाते पर इसका कोई असर नहीं पड़ता।",
+   "problem": "Agreement: conjoined subject 'पता और पासवर्ड' takes plural; draft has singular 'हट जाता है' while kept_secure uses plural 'रखे हैं' for the same pair.",
+   "suggested": "इससे इस फ़ोन से पता और पासवर्ड, दोनों हट जाते हैं। आपके कंप्यूटर, आपकी चलाई टनल या किसी खाते पर इसका कोई असर नहीं पड़ता।"
+  },
+  {
+   "id": "HIS2B1-04",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.rotate_note",
+   "current": "यह कमांड पासवर्ड आपसे अलग से पूछती है, ताकि वह कभी शेल हिस्ट्री या प्रोसेस सूची में न पहुँचे। ऐप नीचे यही पासवर्ड माँगता है।",
+   "problem": "'अलग से पूछती है' (asks separately) blurs 'interactively' — the point is the command prompts in the terminal rather than taking the value on the command line. Also 'प्रोसेस सूची' half-translates next to the loan 'शेल हिस्ट्री'.",
+   "suggested": "यह कमांड पासवर्ड टर्मिनल में आपसे पूछती है, ताकि वह कभी शेल हिस्ट्री या प्रोसेस लिस्ट में न पहुँचे। ऐप नीचे यही पासवर्ड माँगता है।"
+  },
+  {
+   "id": "HIS2B1-05",
+   "severity": "MINOR",
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "current": "इस बिल्ड में कोई सुरक्षित कीस्टोर नहीं है, इसलिए टनल सिर्फ़ इसी रन के लिए रखी जाती है। फ़ोन पर यह मान प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखा जाता है।",
+   "problem": "'इसी रन के लिए' is a calque of 'this run'; 'रन' is not a settled loan in this catalogue. 'यह मान' (value) is technical where the subject is the saved tunnel.",
+   "suggested": "इस बिल्ड में कोई सुरक्षित कीस्टोर नहीं है, इसलिए टनल सिर्फ़ ऐप के इस बार चलने तक रहती है। फ़ोन पर इसे प्लेटफ़ॉर्म के सुरक्षित स्टोरेज में रखा जाता है।"
+  },
+  {
+   "id": "HIS2B1-06",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "current": "इस नेटवर्क पर उस पते से कोई जवाब नहीं आया। जाँचें कि कंप्यूटर स्लीप में नहीं है और उस पर रिले चल रहा है। अगर दोनों ठीक हैं, तो वजह लोकल नेटवर्क की अनुमति हो सकती है: सेटिंग्ज़ → गोपनीयता और सुरक्षा → स्थानीय नेटवर्क में Local Operator को अनुमति दें, फिर “{action}” पर टैप करें।",
+   "problem": "Menu path 'सेटिंग्ज़ → गोपनीयता और सुरक्षा → स्थानीय नेटवर्क' matches my best knowledge of iOS Hindi labels (Apple writes सेटिंग्ज़ with nukta, not the app's own 'सेटिंग'), but I cannot verify on a device or Apple glossary here: UNVERIFIED, non-gating. Rest of sentence correct: 'हो सकती है' keeps 'may'; टैप only here.",
+   "suggested": "Keep as drafted; verify the three labels on a Hindi-locale iPhone (or Apple's hi glossary) before release."
+  },
+  {
+   "id": "HIS2B1-N1",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "current": "उस टनल ने ऐप को अस्वीकार कर दिया। अगर आपने उसके आगे कोई एक्सेस पॉलिसी या लॉगिन पेज लगाया है, तो ऐप को गुज़रने दें; रिले ख़ुद भी किसी दूसरे ओरिजिन (साइट या ऐप) से आए अनुरोध अस्वीकार करता है, इसलिए पक्का करें कि टनल सीधे {address} पर फ़ॉरवर्ड करे, किसी डैशबोर्ड या दूसरे ऐप पर नहीं।",
+   "problem": "'एक्सेस' — catalogue has both spellings, majority 'ऐक्सेस' (रिमोट ऐक्सेस ×2 vs एक्सेस ×1).",
+   "suggested": "…कोई ऐक्सेस पॉलिसी या लॉगिन पेज लगाया है…"
+  },
+  {
+   "id": "HIS2B1-N2",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.password_slot_other",
+   "current": "यह फ़ोन एक ही रिले पासवर्ड रखता है, और वह किसी दूसरे पते का है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें। यह पुराने पासवर्ड की जगह ले लेगा।",
+   "problem": "'एक ही' can read as 'the same'; final 'यह' is ambiguous (phone vs new password).",
+   "suggested": "यह फ़ोन सिर्फ़ एक रिले पासवर्ड रखता है, और वह किसी दूसरे पते का है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें। नया पासवर्ड पुराने की जगह ले लेगा।"
+  }
+ ],
+ "translator_flag_rulings": {
+  "mobile.computers.own_tunnel.verdict_local_network_ios": "Plausible and matches my knowledge; unverified on device -> HIS2B1-06 (MINOR, non-gating).",
+  "mobile.computers.own_tunnel.install_note": "ACCEPT 'रिले पासवर्ड' for 'portal password': it is the same secret the app asks for (catalogue password_label = रिले पासवर्ड; rotate_note 'the password the app asks for below'); 'portal' is internal jargon. 'कीचेन' matches Apple's hi term (कीचेन ऐक्सेस) to my knowledge.",
+  "mobile.computers.own_tunnel.verdict_forbidden": "ACCEPT 'ओरिजिन (साइट या ऐप)': living web-dev loan, gloss makes it readable; polarity correct (relay refuses requests from any OTHER origin). Only the ऐक्सेस spelling nit.",
+  "mobile.common.copy_command_hint": "Stiffness confirmed -> HIS2B1-01 (MINOR).",
+  "mobile.common.copy/copied": "ACCEPT widths. Estimate (not measured): Figtree has no Devanagari glyphs, so system fallback (iOS Kohinoor Devanagari / Android Noto Sans Devanagari). At the sm label size ~14pt: 'Copy' ~33pt, 'कॉपी करें' ~60-65pt, 'कॉपी हो गया' ~75-80pt, plus padding; the label row is flex-wrap with no fixed button width, so no overflow even at 200% on 320pt. Visual check of matra/ascender clipping in the sm button is a design item, not a copy finding."
+ },
+ "per_key_results": [
+  {
+   "key": "mobile.computers.own_tunnel.install_label",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_label",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_label",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_label",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.install_note",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.foreground_note",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.check_note",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.rotate_note",
+   "result": "finding HIS2B1-04"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.cloudflare_note",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.ngrok_note",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.tunnel_rule",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_sessions",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_password",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_forbidden",
+   "result": "finding HIS2B1-N1"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_offline",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_tls",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_host",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_unreachable",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_timeout",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "result": "finding HIS2B1-06"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_local_network",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_refused",
+   "result": "finding HIS2B1-02"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.remedy",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_other",
+   "result": "finding HIS2B1-N2"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_empty",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_slot_this",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.common.copy",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.common.copied",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.common.copy_command_hint",
+   "result": "finding HIS2B1-01"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.not_saved",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.kept_secure",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.edit",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.test_again",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.password_placeholder",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_title",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.runtime_body",
+   "result": "finding HIS2B1-05"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.before_saving",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_title",
+   "result": "pass"
+  },
+  {
+   "key": "mobile.settings.own_tunnel.remove_body",
+   "result": "finding HIS2B1-03"
+  }
+ ],
+ "audit_notes_not_execution_log": "report.md is the audit report; audit.log is the execution log of commands actually run.",
+ "claims_not_made": "No rendered-frame measurement, no device check of iOS Hindi labels, no MT/translation service, no ledger command run (writes restricted to this directory); widths are estimates from call-site layout.",
+ "artifacts": {
+  "report.md": "58382cb314f63f2caf5453eb6d6f80b32ddd80b3a368f2bb912bd99e8cc0d85c",
+  "audit.log": "f42441a8f1ee6d8f6db20a1b9dd1399d2d06d19d51cf9de8ddbf3655fe9a411f"
+ }
+}

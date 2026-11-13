@@ -8,5 +8,8 @@
 	"mobile.common.not_found.title": "找不到页面",
 	"mobile.common.not_found.headline": "此页面不存在。",
 	"mobile.common.not_found.next": "返回会话列表即可继续。",
-	"mobile.common.not_found.action": "返回会话列表"
+	"mobile.common.not_found.action": "返回会话列表",
+	"mobile.common.copy": "复制",
+	"mobile.common.copied": "已复制",
+	"mobile.common.copy_command_hint": "复制“{label}”命令"
 }

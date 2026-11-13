@@ -58,6 +58,9 @@ vi.mock("@/features/auth/tunnel-test", () => ({
 }));
 vi.mock("@/features/auth/tunnel-verdict", () => ({
 	verdictSentence: () => "It answered.",
+	/* VerdictBlock asks whether the sentence opens with the relay's detail (to
+	 *  state the page direction); the stubbed sentence does not. */
+	verdictOpensWithDetail: () => false,
 }));
 vi.mock("@/features/auth/connection-provider", () => ({
 	useConnection: () => ({

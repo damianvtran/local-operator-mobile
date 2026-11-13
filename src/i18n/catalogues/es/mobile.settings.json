@@ -57,5 +57,16 @@
 	"mobile.settings.diagnostics.stream_live": "activo",
 	"mobile.settings.diagnostics.stream_degraded": "no responde",
 	"mobile.settings.diagnostics.stream_offline": "sin conexión",
-	"mobile.settings.account.app_name": "Local Operator"
+	"mobile.settings.account.app_name": "Local Operator",
+	"mobile.settings.own_tunnel.not_saved": "La contraseña no está guardada, así que la app la pide en cada inicio.",
+	"mobile.settings.own_tunnel.kept_secure": "La dirección y la contraseña se guardan en el almacenamiento seguro de este teléfono.",
+	"mobile.settings.own_tunnel.edit": "Editar",
+	"mobile.settings.own_tunnel.test_again": "Probar de nuevo",
+	"mobile.settings.own_tunnel.remove": "Quitar",
+	"mobile.settings.own_tunnel.password_placeholder": "La contraseña con la que se inició el relé",
+	"mobile.settings.own_tunnel.runtime_title": "Este entorno no puede guardarlo",
+	"mobile.settings.own_tunnel.runtime_body": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo se conserva durante esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.",
+	"mobile.settings.own_tunnel.before_saving": "Prueba la dirección antes de guardarla: un túnel guardado que nunca ha respondido deja la lista vacía sin ninguna explicación.",
+	"mobile.settings.own_tunnel.remove_title": "¿Quitar este túnel?",
+	"mobile.settings.own_tunnel.remove_body": "Borra la dirección y la contraseña de este teléfono. No afecta a tu máquina, al túnel que ejecutas ni a ninguna cuenta."
 }

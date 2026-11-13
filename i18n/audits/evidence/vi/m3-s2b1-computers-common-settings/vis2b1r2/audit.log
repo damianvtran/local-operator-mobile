@@ -1,0 +1,50 @@
+audit.log — vi m3s2b1 round 2 (delta), execution log (not notes). 2026-11-13T08:10:45-05:00
+$ shasum -a 256 brief-s2b1-v2.json vi/draft-vi.json vi/draft-vi-v2.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json
+cfaa6ab8c3ea4077bdd161dab0d3e093c16954034218edabc51a153e3490e27c  vi/draft-vi.json
+b0307e5a3829989ff0621369aaa86b2d6501e405e5ce7d8f42b147d05a5e1002  vi/draft-vi-v2.json
+(all three match the brief; no STOP)
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s2a rev-parse HEAD; branch
+254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c  feat/i18n-m3-s2b1
+$ node --max-old-space-size=256 --experimental-strip-types --no-warnings <auditor scratchpad>/vi-r2-mech.mts   (exit 0; imports parseMessage/formatMessage from src/i18n/messages.ts @254e6fba)
+keys brief 41 v1 41 v2 41 order brief=v1=v2 true
+changed 5 ["mobile.computers.own_tunnel.check_label","mobile.computers.own_tunnel.install_note","mobile.computers.own_tunnel.foreground_note","mobile.computers.own_tunnel.cloudflare_note","mobile.computers.own_tunnel.verdict_password"]
+OK   mobile.computers.own_tunnel.check_label [] nfc true bidi false len en/vi 8 19 2.38
+     => Kiểm tra trạng thái
+OK   mobile.computers.own_tunnel.install_note [] nfc true bidi false len en/vi 97 97 1.00
+     => macOS: cài dịch vụ nền tự khởi động lại khi dừng, tạo mật khẩu chuyển tiếp và lưu vào Chuỗi khóa.
+OK   mobile.computers.own_tunnel.foreground_note [["address","text"]] nfc true bidi false len en/vi 95 129 1.36
+     => Dành cho các nền tảng khác, hoặc khi bạn muốn theo dõi nhật ký. Chạy tại 127.0.0.1:4098, chỉ nhận kết nối từ chính máy này (loopback).
+OK   mobile.computers.own_tunnel.cloudflare_note [["scheme","text"]] nfc true bidi false len en/vi 88 124 1.41
+     => Miễn phí và không cần tài khoản khi dùng đường hầm nhanh (quick tunnel). Lệnh sẽ in ra URL https:// để bạn dán vào bên dưới.
+OK   mobile.computers.own_tunnel.verdict_password [] nfc true bidi false len en/vi 73 97 1.33
+     => Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính.
+failures 0
+
+$ python (eval kernel): compare each round-1 'Suggested:' line in audits/vi/report.md with the v2 value of its key
+VIS2B1-01 True
+VIS2B1-02 True
+VIS2B1-03 True
+VIS2B1-04 True
+VIS2B1-05 True
+
+$ python (eval kernel): parse design/fonts/JetBrainsMono-SemiBold.ttf cmap+hmtx (upm 1000); mono-label = 11 px, weight 600, letter-spacing 0.06em, uppercase (src/ui/tokens.gen.ts:203, theme.css:137-140)
+'KIỂM TRA TRẠNG THÁI' missing glyphs [] ; width 137.9 pt @100% ; 275.9 pt @200% ; EN 'CHECK IT' 58.1 pt @100% ; v1 'KIỂM TRA' 116.2 pt @200%
+
+$ grep (tracing check_label at 254e6fba)
+src/features/auth/tunnel-commands.ts:41 and :88 (only code references; plus en catalogue/context)
+src/features/auth/own-tunnel.tsx:415  COMPUTER_COMMANDS.map -> <CommandBlock label={tunnelCommandLabel(item)} …>
+src/features/settings/own-tunnel-settings.tsx: imports neither tunnel-commands nor CommandBlock (imports listed lines 1-15); check_label is not rendered there
+src/ui/components/command-block.tsx: label row "flex-row flex-wrap items-center justify-between gap-2"; label <Text className="text-mono-label uppercase …">
+src/ui/components/screen.tsx:303 content inset px-4 (16 pt per side)
+
+$ grep src/i18n/catalogues/vi/mobile.computers.json @254e6fba
+l.30  connect_refused.password = "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra lại rồi thử lại."
+l.88  own_tunnel.step_computer_help = "Máy chủ chuyển tiếp chỉ nhận kết nối từ chính máy tính này, …"
+l.101 own_tunnel.step_test = "Kiểm tra"
+l.?   common.copy_command_hint (v2 draft) = "Sao chép lệnh “{label}”"
+
+$ shasum -a 256 (eval kernel) vi/notes-vi-v2.md audits/vi/record.json audits/vi/report.md
+b878a7d6ba6e2f17e45e413541b92310e34e3164589e5745ee5157288bdede32  vi/notes-vi-v2.md
+ea08e12d7ef38a2d7c396c34535f74d3b5af8b98022001e4e210b4b7cd4fc0ba  audits/vi/record.json
+47e3983054ebef48df213270e7d91251767b055c41f9748605a30cfc13d514ec  audits/vi/report.md
