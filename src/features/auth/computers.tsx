@@ -481,7 +481,7 @@ export default function Computers() {
 
 	return (
 		<Screen
-			title={view.title}
+			title={t(view.title)}
 			testID={SCREEN.computers}
 			/* This header's own fit, from the controls it is rendering now: "Switch
 			 *  computer" made the cluster heavier than the kit floor allows for, and the
@@ -595,7 +595,7 @@ export default function Computers() {
 				<Banner
 					testID={CONTROL.computersBanner}
 					tone="warning"
-					message={view.banner}
+					message={t(view.banner)}
 					action={{
 						label: t("mobile.computers.try_now"),
 						onPress: () => void refreshComputers(),

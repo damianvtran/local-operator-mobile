@@ -68,10 +68,14 @@ export function needsDeviceListener(): boolean {
 }
 
 /** The sentence the unavailable state shows. It names the module, because the
- *  fix is a dependency decision and a vague message would hide that. */
-export const LOOPBACK_UNAVAILABLE_DETAIL =
-	"Signing in with Radient needs a loopback listener this build does not include " +
-	`(${DEVICE_LOOPBACK_MODULE_REQUEST}).`;
+ *  fix is a dependency decision and a vague message would hide that. The module id
+ *  is a `{module}` placeholder, never translated: it is what a developer searches
+ *  for. A function, not a constant, so the sentence is read from the catalogue
+ *  that is active when the failure happens rather than at import time. */
+export const loopbackUnavailableDetail = (): string =>
+	t("mobile.signin.panel.unavailable_detail", {
+		module: DEVICE_LOOPBACK_MODULE_REQUEST,
+	});
 
 /**
  * A dismissal, which is not a failure.
@@ -102,7 +106,7 @@ export async function beginRadientSignIn(
 			if (error instanceof LoopbackUnavailableError) {
 				const state: SignInState = {
 					kind: "unavailable",
-					detail: LOOPBACK_UNAVAILABLE_DETAIL,
+					detail: loopbackUnavailableDetail(),
 				};
 				report(state);
 				return { ok: false, state, retryable: false };

@@ -42,6 +42,27 @@ const LATIN_INITIAL_UR_KEYS = [
 	"mobile.signin.start",
 ] as const;
 
+/** M3 S2a (#243 QA Q-02): the same defect in values that PREDATE S1, on the
+ *  refusal paths. No catalogue change; the cure is again the page's direction at
+ *  the render site. The three console helps all render through
+ *  `RefusalSurface`'s detail line, `transport.radient` through the computer
+ *  switcher's transport line. */
+const PRE_S1_LATIN_INITIAL_UR_KEYS = [
+	"mobile.computers.billing_help",
+	"mobile.computers.disabled_help",
+	"mobile.computers.harness_help",
+	"mobile.computers.transport.radient",
+] as const;
+
+/** Latin-initial too, and deliberately NOT fixed in S2a: it is a TextInput
+ *  placeholder, and `Input` (`src/ui/components/input.tsx`) has no direction
+ *  prop to carry `useComposedDir()` — a `dir` on the field would also set the
+ *  base of the password the reader types, which is a design decision, not a
+ *  mechanical spread. Listed so the premise below stays exact. */
+const OPEN_LATIN_INITIAL_UR_KEYS = [
+	"mobile.computers.password_placeholder",
+] as const;
+
 const read = (relative: string): string =>
 	readFileSync(new URL(relative, import.meta.url), "utf8");
 
@@ -162,5 +183,53 @@ describe("screens: the Latin-initial values spread the composed direction", () =
 			expect(at).toBeGreaterThan(-1);
 			expect(source.slice(at, at + 160)).toContain("labelDir={composedDir}");
 		},
+	);
+});
+
+describe("Q-02: every Latin-initial ur value in the computers and sign-in namespaces", () => {
+	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, and the one open placeholder", () => {
+		const catalogue = (namespace: string) =>
+			JSON.parse(
+				read(`../../i18n/catalogues/ur/mobile.${namespace}.json`),
+			) as Record<string, string>;
+		const ur = { ...catalogue("computers"), ...catalogue("signin") };
+		const firstLetter = (value: string) =>
+			value.replace(ICU_SLOT, "").match(FIRST_LETTER)?.[0] ?? "";
+		/* The WHOLE namespaces this time, not S1's draft: Q-02's values predate it.
+		 * A new Latin-initial value fails here with its key named. */
+		const latinInitial = Object.keys(ur)
+			.filter((key) => STARTS_LATIN.test(firstLetter(ur[key] ?? "")))
+			.sort();
+		expect(latinInitial).toEqual(
+			[
+				...LATIN_INITIAL_UR_KEYS,
+				...PRE_S1_LATIN_INITIAL_UR_KEYS,
+				...OPEN_LATIN_INITIAL_UR_KEYS,
+			].sort(),
+		);
+	});
+
+	it("RefusalSurface: the detail line (billing/disabled/harness help) spreads the composed direction", () => {
+		const source = read("../../ui/components/refusal-surface.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const at = source.indexOf("{detail}\n");
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
+			"{...composedDir}",
+		);
+	});
+
+	it("computer switcher: the Radient transport word spreads the composed direction", () => {
+		const source = read("./computer-switcher-sheet.tsx");
+		const anchor = '{t("mobile.computers.transport.radient")}';
+		const at = source.indexOf(anchor);
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
+			"{...composedDir}",
+		);
+	});
+
+	it.todo(
+		"own-tunnel.tsx: the password placeholder needs a direction channel on Input (open, see OPEN_LATIN_INITIAL_UR_KEYS)",
 	);
 });

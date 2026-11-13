@@ -298,5 +298,149 @@
 	"mobile.computers.remove.confirm": {
 		"role": "button",
 		"note": "Destructive confirm button of the 'Remove this computer?' dialog. One verb; the dialog also has the shared Cancel."
+	},
+	"mobile.computers.title.list": {
+		"role": "heading",
+		"note": "Screen title of the Computers screen when it lists the account's computers (or is loading or showing an error). One or two words; the header is narrow on phones, so keep it short. No final full stop."
+	},
+	"mobile.computers.title.set_up": {
+		"role": "heading",
+		"note": "Screen title of the Computers screen when it shows how to add a computer (the account has none, or the reader chose Add a computer). Imperative, sentence case, short: the header is narrow on phones. No final full stop."
+	},
+	"mobile.computers.banner.unreachable_stale": {
+		"role": "status",
+		"note": "Warning banner above the computer list when Radient (the account service, a brand name: keep it) did not answer and the list shown is from before. Also shown under the computers in Settings. Never promises an automatic retry; a Try now button sits beside it."
+	},
+	"mobile.computers.banner.unreachable_empty": {
+		"role": "status",
+		"note": "Warning banner on the Computers screen when Radient (brand name: keep it) did not answer and no computers are known yet. Points the reader at this phone's network. Never promises an automatic retry; a Try now button sits beside it."
+	},
+	"mobile.computers.banner.unreadable_stale": {
+		"role": "status",
+		"note": "Warning banner above the computer list when Radient (brand name: keep it) answered with something the app could not understand, and the list shown is from before. Also shown in Settings. Never promises an automatic retry."
+	},
+	"mobile.computers.banner.unreadable_empty": {
+		"role": "status",
+		"note": "Warning banner on the Computers screen when Radient (brand name: keep it) answered with something the app could not understand and no computers are known yet. Never promises an automatic retry."
+	},
+	"mobile.computers.own_tunnel.title": {
+		"role": "heading",
+		"note": "Screen title on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Short: the header is narrow on phones. No final full stop."
+	},
+	"mobile.computers.own_tunnel.password_for": {
+		"role": "heading",
+		"note": "Heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the phone already knows the computer and only its password is missing. {name} is the computer's name as the reader saved it; keep it unchanged. No final full stop."
+	},
+	"mobile.computers.own_tunnel.password_label": {
+		"role": "meta",
+		"note": "Visible label and accessible name of the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). The relay is the small server on the reader's computer that the app talks to. Two or three words, no final full stop."
+	},
+	"mobile.computers.own_tunnel.intro": {
+		"role": "help",
+		"note": "Opening paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Radient is a brand name: keep it. The relay is the small server on the reader's computer; a tunnel is a service that gives it a public address."
+	},
+	"mobile.computers.own_tunnel.step_computer": {
+		"role": "heading",
+		"note": "Step 1 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"1.\" is shown before it, so do not add a number. Says this step happens on the reader's computer, not the phone. No final full stop."
+	},
+	"mobile.computers.own_tunnel.step_computer_help": {
+		"role": "help",
+		"note": "Help under step 1 on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), above terminal commands. \"Binds loopback only\" means the relay accepts connections from the same computer only. Keep it plain."
+	},
+	"mobile.computers.own_tunnel.step_publish": {
+		"role": "heading",
+		"note": "Step 2 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"2.\" is shown before it, so do not add a number. \"It\" is the relay: make it reachable from the internet through a tunnel. No final full stop."
+	},
+	"mobile.computers.own_tunnel.step_app": {
+		"role": "heading",
+		"note": "Step 3 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"3.\" is shown before it, so do not add a number. This step is the address and password fields in this app. No final full stop."
+	},
+	"mobile.computers.own_tunnel.url_label": {
+		"role": "meta",
+		"note": "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop."
+	},
+	"mobile.computers.own_tunnel.insecure_allow": {
+		"role": "button",
+		"note": "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop."
+	},
+	"mobile.computers.own_tunnel.insecure_allowed": {
+		"role": "status",
+		"note": "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop."
+	},
+	"mobile.computers.own_tunnel.insecure_hint": {
+		"role": "help",
+		"note": "Screen-reader hint (not shown on screen) of the plain-http toggle on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http\" is the protocol name: keep it. No final full stop."
+	},
+	"mobile.computers.own_tunnel.insecure_on_help": {
+		"role": "help",
+		"note": "Line under the plain-http toggle while it is ON on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Starts by stating the toggle's state; a warning, keep it direct."
+	},
+	"mobile.computers.own_tunnel.insecure_off_help": {
+		"role": "help",
+		"note": "Line under the plain-http toggle while it is OFF on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" and \"https://\" are literal schemes: keep them unchanged and left-to-right. \"It\" is the opt-in."
+	},
+	"mobile.computers.own_tunnel.unencrypted_title": {
+		"role": "heading",
+		"note": "Title of a warning box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the typed address starts with http:// and the opt-in is off. Short, no final full stop."
+	},
+	"mobile.computers.own_tunnel.unencrypted_body": {
+		"role": "help",
+		"note": "Body of the unencrypted-address warning on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"The opt-in\" is the plain-http toggle just above. \"https://\" is a literal scheme: keep it unchanged and left-to-right."
+	},
+	"mobile.computers.own_tunnel.private_host": {
+		"role": "status",
+		"note": "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is a private (home or office network) one."
+	},
+	"mobile.computers.own_tunnel.public_host": {
+		"role": "status",
+		"note": "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is reachable on the public internet. Keep the warning strong."
+	},
+	"mobile.computers.own_tunnel.step_test": {
+		"role": "heading",
+		"note": "Step 4 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"4.\" is shown before it, so do not add a number. \"It\" is the connection. No final full stop."
+	},
+	"mobile.computers.own_tunnel.step_test_help": {
+		"role": "help",
+		"note": "Help under step 4 on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), above the Test the connection button."
+	},
+	"mobile.computers.own_tunnel.security_heading": {
+		"role": "heading",
+		"note": "Section heading of the security advice at the end on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"It\" is the reader's computer. No final full stop."
+	},
+	"mobile.computers.own_tunnel.security_body": {
+		"role": "help",
+		"note": "Security advice paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). {command} is a terminal command (lop mobile password): keep the placeholder and its backticks unchanged. HTTPS and URL are technical terms; keep them recognisable."
+	},
+	"mobile.computers.own_tunnel.test": {
+		"role": "button",
+		"note": "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that makes a real request through the tunnel. Sentence case, no final full stop."
+	},
+	"mobile.computers.own_tunnel.testing": {
+		"role": "status",
+		"note": "The same button's label while the test request runs on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis."
+	},
+	"mobile.computers.own_tunnel.save_connect": {
+		"role": "button",
+		"note": "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that stores the address and password on this phone and connects. Enabled only after a successful test. Sentence case, no final full stop."
+	},
+	"mobile.computers.own_tunnel.saving": {
+		"role": "status",
+		"note": "The same button's label while saving and connecting on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis."
+	},
+	"mobile.computers.own_tunnel.need_address": {
+		"role": "help",
+		"note": "Line under the buttons on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) while the address field is empty, explaining why Save and connect is disabled."
+	},
+	"mobile.computers.own_tunnel.need_test": {
+		"role": "help",
+		"note": "Line under the buttons on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when an address is typed but no test has succeeded, explaining why Save and connect is disabled. \"Test the connection\" names the button above; translate it the same way."
+	},
+	"mobile.computers.own_tunnel.verdict_ok": {
+		"role": "heading",
+		"note": "Title of the success box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the relay answered. One word, no final full stop."
+	},
+	"mobile.computers.own_tunnel.verdict_not_yet": {
+		"role": "heading",
+		"note": "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop."
 	}
 }

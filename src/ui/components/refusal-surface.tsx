@@ -5,6 +5,7 @@ import { t } from "@/i18n";
 
 import { CONTROL, LIVE_REGION, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
+import { useComposedDir } from "@/ui/direction";
 import { Button } from "@/ui/components/button";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
@@ -197,6 +198,11 @@ export const RefusalSurface = ({
 }: RefusalSurfaceProps) => {
 	const [showDetails, setShowDetails] = useState(false);
 	const danger = useTokenColor("danger");
+	/* The console-side help (`mobile.computers.billing_help`, `disabled_help`,
+	 *  `harness_help`) starts with "Radient" in Urdu, so RN-web's `dir="auto"`
+	 *  laid an Urdu sentence out left-to-right on a right-to-left page (#243 QA
+	 *  Q-02). The page's direction, stated, is the fix S1 applied elsewhere. */
+	const composedDir = useComposedDir();
 	const waitSeconds = retryAfterMs ? Math.round(retryAfterMs / 1000) : null;
 	const { effectiveScale } = useTextScale();
 
@@ -240,7 +246,9 @@ export const RefusalSurface = ({
 			 *  short version first, and the specific one when they want it. It is never
 			 *  the only line, because a gateway sentence assumes the relay's vocabulary. */}
 			{detail && kind !== "diagnostic" ? (
-				<Text className="text-body-sm text-ink-dim">{detail}</Text>
+				<Text {...composedDir} className="text-body-sm text-ink-dim">
+					{detail}
+				</Text>
 			) : null}
 			{remedy ? (
 				<View

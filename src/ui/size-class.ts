@@ -455,13 +455,18 @@ export function headerStackWidth(
  * lighter header stacks earlier than the reviewed behaviour.
  */
 export function computersHeaderStackWidth(input: {
-	title: "Computers" | "Set up a computer";
+	/* The title's catalogue KEY (`ComputersTitleKey` in computers-view.ts, kept
+	 *  inline because `src/ui` does not import features): the branch is WHICH
+	 *  title, so it must not compare rendered text, which is English only in `en`.
+	 *  The widths below are still the English advances; a longer translation is
+	 *  not measured here (M3 S2a keeps the reviewed numbers unchanged). */
+	title: "mobile.computers.title.list" | "mobile.computers.title.set_up";
 	back: boolean;
 	switcher: boolean;
 	refresh: boolean;
 }): number {
 	const GAP = 8;
-	let width = 32 + (input.title === "Computers" ? 138 : 227);
+	let width = 32 + (input.title === "mobile.computers.title.list" ? 138 : 227);
 	if (input.back) width += 52 + GAP;
 	/* The cluster, when it renders, is one more header child: one more gap. */
 	if (input.switcher || input.refresh) width += GAP;

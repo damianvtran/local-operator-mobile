@@ -24,18 +24,29 @@ import type {
  *  and naming the first row's machine pinned an outage on a computer the probe
  *  had just reported answering (design round 1, D2; review R1-m2). Neither
  *  sentence promises an automatic retry — nothing schedules one, so the action
- *  is the reader's (D2's "this will keep trying" was false: one request in 30 s). */
-export function discoveryFailureMessage(
+ *  is the reader's (D2's "this will keep trying" was false: one request in 30 s).
+ *
+ *  It returns a catalogue KEY, not text (M3 S2a, the `tunnel-status-key.ts`
+ *  pattern): the caller's `t(key)` stays the single typed path, so a locale change
+ *  re-renders the banner instead of freezing the sentence this pure module built,
+ *  and the view's decision stays testable without a catalogue. */
+export type DiscoveryFailureKey =
+	| "mobile.computers.banner.unreachable_stale"
+	| "mobile.computers.banner.unreachable_empty"
+	| "mobile.computers.banner.unreadable_stale"
+	| "mobile.computers.banner.unreadable_empty";
+
+export function discoveryFailureKey(
 	failure: DiscoveryFailure,
 	hasRows: boolean,
-): string {
+): DiscoveryFailureKey {
 	if (failure === "unreachable")
 		return hasRows
-			? "Radient could not be reached, so this list may be out of date."
-			: "Radient could not be reached to list your computers. Check this device's connection.";
+			? "mobile.computers.banner.unreachable_stale"
+			: "mobile.computers.banner.unreachable_empty";
 	return hasRows
-		? "Radient's answer could not be read, so this list may be out of date."
-		: "Radient's answer could not be read, so your computers could not be listed.";
+		? "mobile.computers.banner.unreadable_stale"
+		: "mobile.computers.banner.unreadable_empty";
 }
 
 /** A row's own state. `connecting` is the pending state a tap needs: the row is
@@ -71,15 +82,23 @@ export const ADD_COMPUTER_HREF = {
 	params: { add: "1" },
 } as const;
 
+/** The screen title's catalogue key. A key rather than the English words because
+ *  `computersHeaderStackWidth` branches on WHICH title it is; comparing the
+ *  rendered text would take the wrong branch in every non-English locale. */
+export type ComputersTitleKey =
+	| "mobile.computers.title.list"
+	| "mobile.computers.title.set_up";
+
 export type ComputersView = {
-	title: "Computers" | "Set up a computer";
+	/** A catalogue key; the screen renders `t(title)`. */
+	title: ComputersTitleKey;
 	/** The loading skeleton: a discovery pass is in flight and nothing is cached. */
 	skeleton: boolean;
 	/** The rows, which render whenever there are any — under a refusal too. */
 	list: boolean;
 	/** The discovery failure's banner, above the rows or alone; never over the
-	 *  set-up tutorial. */
-	banner: string | null;
+	 *  set-up tutorial. A catalogue key; the screen renders `t(banner)`. */
+	banner: DiscoveryFailureKey | null;
 	/** The set-up path (F-2): only for an account Radient said has no computers. */
 	setup: boolean;
 };
@@ -104,7 +123,7 @@ export function computersView(input: {
 	 *  wins — an add with a refused grant would only be refused again. */
 	if (input.adding && !input.signedOut)
 		return {
-			title: "Set up a computer",
+			title: "mobile.computers.title.set_up",
 			skeleton: false,
 			list: false,
 			banner: null,
@@ -123,7 +142,9 @@ export function computersView(input: {
 		input.discoveryFailure === null &&
 		!input.signedOut;
 	return {
-		title: setup ? "Set up a computer" : "Computers",
+		title: setup
+			? "mobile.computers.title.set_up"
+			: "mobile.computers.title.list",
 		/* Gated on the provider's `discovering` flag, which every discovery pass sets.
 		 *  The store's `discovering` PHASE, which this used to read, describes a route
 		 *  and is never set by a route-less discovery, so loading painted a blank
@@ -133,7 +154,7 @@ export function computersView(input: {
 		banner:
 			input.discoveryFailure === null
 				? null
-				: discoveryFailureMessage(input.discoveryFailure, rows),
+				: discoveryFailureKey(input.discoveryFailure, rows),
 		setup,
 	};
 }

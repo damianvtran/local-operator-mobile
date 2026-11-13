@@ -1194,7 +1194,7 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 	/* Measured on the round-2 head with Back, "Switch computer" and Refresh: the
 	 *  title clipped at 360 (69/138) and 390 (99/138) and fit by 1 px at 430. */
 	const full = computersHeaderStackWidth({
-		title: "Computers",
+		title: "mobile.computers.title.list",
 		back: true,
 		switcher: true,
 		refresh: true,
@@ -1216,7 +1216,7 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 	it("moves with the controls actually rendered", () => {
 		/* Under a 401 Refresh is hidden: 390 measured 170/170, single line. */
 		const signedOut = computersHeaderStackWidth({
-			title: "Computers",
+			title: "mobile.computers.title.list",
 			back: true,
 			switcher: true,
 			refresh: false,
@@ -1226,7 +1226,7 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 		/* The longer set-up title needs more line. */
 		expect(
 			computersHeaderStackWidth({
-				title: "Set up a computer",
+				title: "mobile.computers.title.set_up",
 				back: true,
 				switcher: true,
 				refresh: false,
@@ -1235,7 +1235,7 @@ describe("the Computers header stacks before its title clips (PR #122 D10/U13)",
 		/* No controls and no Back: the kit floor, never lower. */
 		expect(
 			computersHeaderStackWidth({
-				title: "Computers",
+				title: "mobile.computers.title.list",
 				back: false,
 				switcher: false,
 				refresh: false,
