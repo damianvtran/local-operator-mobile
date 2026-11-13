@@ -405,4 +405,30 @@ describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens wit
 			expect(site).toContain(SPREAD);
 		}
 	});
+	it("verdict_offline_detail: the real ur sentence opens with a Latin {detail}, and the composed body direction gives it dir=rtl", () => {
+		/* The premise behind the spread above, on the catalogue value itself. */
+		const sentence = renderFor(
+			"mobile.computers.own_tunnel.verdict_offline_detail",
+			{
+				detail: "Tunnel temporarily unavailable",
+				command: "lop mobile status",
+			},
+			"ur",
+		);
+		expect(sentence.startsWith("Tunnel temporarily unavailable")).toBe(true);
+		expect(sentence).toMatch(ARABIC_SCRIPT);
+		/* The site's own shape: the verdict Alert passes `useComposedDir()`
+		 * (shorthand `children`, as in the Alert test above). */
+		const children = sentence;
+		const Verdict = () =>
+			h(Alert, {
+				severity: "error",
+				bodyDir: useComposedDir(),
+				children,
+			});
+		expect(render(h(Verdict), "rtl")).toMatch(
+			/dir="rtl"[^>]*>Tunnel temporarily unavailable/,
+		);
+		expect(render(h(Verdict), "ltr")).not.toContain('dir="rtl"');
+	});
 });
