@@ -77,6 +77,12 @@ const OPEN_LATIN_INITIAL_UR_KEYS = [
 	"mobile.computers.password_placeholder",
 ] as const;
 
+/** M3 S2b-2a (ur audit UR-C1): a BUTTON label, so its channel is `Button.labelDir`
+ *  (as `mobile.signin.start`), on `RefusalSurface`'s console button. */
+const S2B2A_LATIN_INITIAL_UR_KEYS = [
+	"mobile.computers.refusal.open_console",
+] as const;
+
 const read = (relative: string): string =>
 	readFileSync(new URL(relative, import.meta.url), "utf8");
 
@@ -201,7 +207,7 @@ describe("screens: the Latin-initial values spread the composed direction", () =
 });
 
 describe("Q-02: every Latin-initial ur value in the computers and sign-in namespaces", () => {
-	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, and the placeholder fixed via Input.placeholderDir", () => {
+	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, the placeholder fixed via Input.placeholderDir, and S2b-2a's console button", () => {
 		const catalogue = (namespace: string) =>
 			JSON.parse(
 				read(`../../i18n/catalogues/ur/mobile.${namespace}.json`),
@@ -219,6 +225,7 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 				...LATIN_INITIAL_UR_KEYS,
 				...PRE_S1_LATIN_INITIAL_UR_KEYS,
 				...OPEN_LATIN_INITIAL_UR_KEYS,
+				...S2B2A_LATIN_INITIAL_UR_KEYS,
 			].sort(),
 		);
 	});

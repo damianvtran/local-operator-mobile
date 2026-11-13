@@ -193,6 +193,30 @@ export type CatalogueKey =
 	| "mobile.computers.protected"
 	| "mobile.computers.reach.answering"
 	| "mobile.computers.refresh"
+	| "mobile.computers.refusal.another_address"
+	| "mobile.computers.refusal.certificate_next"
+	| "mobile.computers.refusal.certificate_title"
+	| "mobile.computers.refusal.console_next"
+	| "mobile.computers.refusal.console_title"
+	| "mobile.computers.refusal.host_next"
+	| "mobile.computers.refusal.host_title"
+	| "mobile.computers.refusal.offline_next"
+	| "mobile.computers.refusal.offline_title"
+	| "mobile.computers.refusal.open_console"
+	| "mobile.computers.refusal.password_next"
+	| "mobile.computers.refusal.password_title"
+	| "mobile.computers.refusal.relay_stopped_next"
+	| "mobile.computers.refusal.relay_stopped_title"
+	| "mobile.computers.refusal.retry_next"
+	| "mobile.computers.refusal.retry_title"
+	| "mobile.computers.refusal.sign_in_again"
+	| "mobile.computers.refusal.sign_in_next"
+	| "mobile.computers.refusal.sign_in_title"
+	| "mobile.computers.refusal.try_again"
+	| "mobile.computers.refusal.try_now"
+	| "mobile.computers.refusal.tunnel_gone_next"
+	| "mobile.computers.refusal.tunnel_gone_title"
+	| "mobile.computers.refusal.wait_seconds"
 	| "mobile.computers.remove.body"
 	| "mobile.computers.remove.confirm"
 	| "mobile.computers.remove.title"
@@ -986,6 +1010,22 @@ export type NoParamKey =
 	| "mobile.computers.protected"
 	| "mobile.computers.reach.answering"
 	| "mobile.computers.refresh"
+	| "mobile.computers.refusal.another_address"
+	| "mobile.computers.refusal.certificate_title"
+	| "mobile.computers.refusal.console_next"
+	| "mobile.computers.refusal.host_next"
+	| "mobile.computers.refusal.host_title"
+	| "mobile.computers.refusal.offline_next"
+	| "mobile.computers.refusal.open_console"
+	| "mobile.computers.refusal.password_next"
+	| "mobile.computers.refusal.password_title"
+	| "mobile.computers.refusal.relay_stopped_next"
+	| "mobile.computers.refusal.retry_next"
+	| "mobile.computers.refusal.sign_in_again"
+	| "mobile.computers.refusal.sign_in_next"
+	| "mobile.computers.refusal.try_again"
+	| "mobile.computers.refusal.try_now"
+	| "mobile.computers.refusal.tunnel_gone_next"
 	| "mobile.computers.remove.body"
 	| "mobile.computers.remove.confirm"
 	| "mobile.computers.remove.title"
@@ -1703,6 +1743,30 @@ export type MessageParams = {
 	"mobile.computers.protected": NoParams;
 	"mobile.computers.reach.answering": NoParams;
 	"mobile.computers.refresh": NoParams;
+	"mobile.computers.refusal.another_address": NoParams;
+	"mobile.computers.refusal.certificate_next": { scheme: string | number };
+	"mobile.computers.refusal.certificate_title": NoParams;
+	"mobile.computers.refusal.console_next": NoParams;
+	"mobile.computers.refusal.console_title": { subject: string | number };
+	"mobile.computers.refusal.host_next": NoParams;
+	"mobile.computers.refusal.host_title": NoParams;
+	"mobile.computers.refusal.offline_next": NoParams;
+	"mobile.computers.refusal.offline_title": { subject: string | number };
+	"mobile.computers.refusal.open_console": NoParams;
+	"mobile.computers.refusal.password_next": NoParams;
+	"mobile.computers.refusal.password_title": NoParams;
+	"mobile.computers.refusal.relay_stopped_next": NoParams;
+	"mobile.computers.refusal.relay_stopped_title": { subject: string | number };
+	"mobile.computers.refusal.retry_next": NoParams;
+	"mobile.computers.refusal.retry_title": { subject: string | number };
+	"mobile.computers.refusal.sign_in_again": NoParams;
+	"mobile.computers.refusal.sign_in_next": NoParams;
+	"mobile.computers.refusal.sign_in_title": { subject: string | number };
+	"mobile.computers.refusal.try_again": NoParams;
+	"mobile.computers.refusal.try_now": NoParams;
+	"mobile.computers.refusal.tunnel_gone_next": NoParams;
+	"mobile.computers.refusal.tunnel_gone_title": { subject: string | number };
+	"mobile.computers.refusal.wait_seconds": { seconds: number };
 	"mobile.computers.remove.body": NoParams;
 	"mobile.computers.remove.confirm": NoParams;
 	"mobile.computers.remove.title": NoParams;
@@ -2534,6 +2598,30 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.protected": "Sign-in protected",
 	"mobile.computers.reach.answering": "answering",
 	"mobile.computers.refresh": "Refresh",
+	"mobile.computers.refusal.another_address": "Use another address",
+	"mobile.computers.refusal.certificate_next": "Use the {scheme} address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate — this app will not skip the check.",
+	"mobile.computers.refusal.certificate_title": "That tunnel's certificate was rejected.",
+	"mobile.computers.refusal.console_next": "Open the Radient console to fix it there. Signing in on this phone will not change it.",
+	"mobile.computers.refusal.console_title": "{subject} needs attention in Radient.",
+	"mobile.computers.refusal.host_next": "Check the address for a typo, and that the tunnel still publishes that name.",
+	"mobile.computers.refusal.host_title": "That host name could not be found.",
+	"mobile.computers.refusal.offline_next": "Wake that computer, and check the connector is running. Its last known state is above.",
+	"mobile.computers.refusal.offline_title": "{subject} is not answering.",
+	"mobile.computers.refusal.open_console": "Open the Radient console",
+	"mobile.computers.refusal.password_next": "Check the relay password on the computer, then try again.",
+	"mobile.computers.refusal.password_title": "That password was not accepted.",
+	"mobile.computers.refusal.relay_stopped_next": "Start the relay again and leave it running.",
+	"mobile.computers.refusal.relay_stopped_title": "The relay is not running on {subject}.",
+	"mobile.computers.refusal.retry_next": "Usually a passing network problem. Try again in a moment.",
+	"mobile.computers.refusal.retry_title": "{subject} is not ready yet.",
+	"mobile.computers.refusal.sign_in_again": "Sign in again",
+	"mobile.computers.refusal.sign_in_next": "Sign in again to reconnect. Anything typed before this is quarantined, not sent.",
+	"mobile.computers.refusal.sign_in_title": "Your Radient session expired. Sign in to reconnect to {subject}.",
+	"mobile.computers.refusal.try_again": "Try again",
+	"mobile.computers.refusal.try_now": "Try now",
+	"mobile.computers.refusal.tunnel_gone_next": "Create a tunnel again in Radient, then add this computer.",
+	"mobile.computers.refusal.tunnel_gone_title": "{subject} is no longer a tunnel.",
+	"mobile.computers.refusal.wait_seconds": "Wait about {seconds, plural, one {# second} other {# seconds}} before trying again.",
 	"mobile.computers.remove.body": "This removes it from the list on this phone. It does not touch the computer, its tunnel, or your account.",
 	"mobile.computers.remove.confirm": "Remove",
 	"mobile.computers.remove.title": "Remove this computer?",
@@ -3305,7 +3393,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.password_slot_this": { role: "help", note: "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's saved password already belongs to this address." },
 	"mobile.computers.own_tunnel.private_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is a private (home or office network) one." },
 	"mobile.computers.own_tunnel.public_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is reachable on the public internet. Keep the warning strong." },
-	"mobile.computers.own_tunnel.remedy": { role: "help", note: "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right." },
+	"mobile.computers.own_tunnel.remedy": { role: "help", note: "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running, and in a box on the connection-failure screen (shown when a computer cannot be reached) for a machine-side cause: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.rotate_label": { role: "heading", note: "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the command (`lop mobile password`) sets a new relay password. \"Rotate\" means replace with a new one. Under it the app shows the exact command, copied verbatim; the command is never translated. No final full stop." },
 	"mobile.computers.own_tunnel.rotate_note": { role: "help", note: "Two sentences under the \"Set or rotate the password\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"Shell history\" and \"process list\" are the places a typed command line is recorded on a computer; use the usual technical terms in your language." },
 	"mobile.computers.own_tunnel.save_connect": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that stores the address and password on this phone and connects. Enabled only after a successful test. Sentence case, no final full stop." },
@@ -3327,8 +3415,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.url_label": { role: "meta", note: "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
 	"mobile.computers.own_tunnel.verdict_forbidden": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something in front of the relay refused the request. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right. Origin = the requesting site/app; the relay refuses cross-origin requests." },
 	"mobile.computers.own_tunnel.verdict_host": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the address's host name does not resolve (DNS)." },
-	"mobile.computers.own_tunnel.verdict_local_network": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the \"Test the connection\" button, already translated." },
-	"mobile.computers.own_tunnel.verdict_local_network_ios": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the \"Test the connection\" button, already translated." },
+	"mobile.computers.own_tunnel.verdict_local_network": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the test button shown beside the box, already translated: \"Test the connection\" (mobile.computers.own_tunnel.test), or \"Test again\" (mobile.settings.own_tunnel.test_again) on the saved card in Settings." },
+	"mobile.computers.own_tunnel.verdict_local_network_ios": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the test button shown beside the box, already translated: \"Test the connection\" (mobile.computers.own_tunnel.test), or \"Test again\" (mobile.settings.own_tunnel.test_again) on the saved card in Settings." },
 	"mobile.computers.own_tunnel.verdict_not_yet": { role: "heading", note: "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
 	"mobile.computers.own_tunnel.verdict_offline": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the public tunnel is up but the relay on the computer is not running. {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.verdict_offline_detail": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, when the relay's server sent its own reason. {detail} is that reason, sent by the server in English and shown as is (it has no final full stop, which is why the message adds one). {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right. Keep both sentences; adjust the separator to your language's punctuation." },
@@ -3336,7 +3424,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.verdict_password": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay refused the password. Plain, no apology." },
 	"mobile.computers.own_tunnel.verdict_refused": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something answered, but it is not a Local Operator relay." },
 	"mobile.computers.own_tunnel.verdict_sessions": { role: "help", note: "Body of the success box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay answered and {sessions} is how many conversations the phone can see. ICU plural: keep the {sessions, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
-	"mobile.computers.own_tunnel.verdict_timeout": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 10). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
+	"mobile.computers.own_tunnel.verdict_timeout": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 8). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
 	"mobile.computers.own_tunnel.verdict_tls": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the HTTPS certificate failed verification. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.verdict_unreachable": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: no connection could be made to the address." },
 	"mobile.computers.own_tunnel_instead": { role: "button", note: "Small quiet button at the bottom of the computers screen that opens the own-tunnel (self-hosted) setup instead of Radient. 'instead' contrasts with the Radient list above it." },
@@ -3350,6 +3438,30 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.protected": { role: "status", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.reach.answering": { role: "meta", note: "Lower-case badge on a computer row: this phone probed the computer and it answered. Distinct from status.*: it is the probe result. Keep lower case." },
 	"mobile.computers.refresh": { role: "button", note: "Small quiet button under the Your computers list that re-reads the account's computers. One verb. Same English as mobile.settings.connection.refresh but a separate key because the surface differs." },
+	"mobile.computers.refusal.another_address": { role: "button", note: "Quiet button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) that goes back to enter or pick a different tunnel address. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.certificate_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the tunnel's certificate was rejected: three alternatives, then a firm statement that the app will not bypass certificate checking. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right. \"self-signed\" is the standard technical term for such certificates in your language. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.certificate_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the tunnel's HTTPS certificate failed the phone's check. Its own cause because the fix is the certificate, not the address or the network. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.console_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"… needs attention in Radient.\": the fix is in the Radient console (a web page), and re-signing in on the phone does not help, so say so plainly. \"Radient\" is a product name: do not translate. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.console_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the fix is in the Radient console or on the computer, not on this phone. \"Radient\" is a product name: do not translate. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.host_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the host name could not be found. \"publishes that name\" means the tunnel still serves that host name. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.host_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the address's host name does not resolve (a typo, or a tunnel that stopped publishing that name). Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.offline_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"{subject} is not answering.\": what to do. \"connector\" is the tunnel program on the computer. \"above\" points at the computer's last known state shown higher on the same screen; in a right-to-left or vertical layout keep the meaning \"earlier on this screen\". Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.offline_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the computer is asleep, or its connector is stopped. Plain statement, ends with a full stop. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.open_console": { role: "button", note: "Outline button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) that opens the Radient console (a web page) in the system browser. \"Radient\" is a product name: do not translate. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.password_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"That password was not accepted.\": the password is set on the computer; a \"Try again\" button follows. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.password_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the relay rejected the relay password stored on this phone. Calm, not blaming. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.relay_stopped_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"The relay is not running on …\": the advice. The exact command is shown separately below this line (\"On that computer: …\"), so do not add one here. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.relay_stopped_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the tunnel answered but the relay program behind it is not running. \"relay\" is the program on the computer that the phone talks to. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.retry_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) for a temporary condition. Nothing retries automatically: do not promise an automatic retry. A \"Try now\" button follows. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.retry_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): a temporary condition that clears by itself (the service is still warming up). Reassuring, not alarming. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.sign_in_again": { role: "button", note: "Button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the Radient session expired or the phone is signed into a different account: starts Radient sign-in. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.sign_in_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the Radient session expired. \"quarantined\" is a promise about unsent text: it is kept aside and will NOT be sent, even after signing back in. Keep that meaning exactly; do not soften it into \"saved\" or \"kept for you\". Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.sign_in_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the reader's Radient sign-in expired. Two short sentences. \"Radient\" is a product name: do not translate. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.try_again": { role: "button", note: "Prominent button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the computer is offline, the relay is stopped or the password was rejected: retries the CONNECTION. Different from the generic \"Try again\" (mobile.common.try_again), which retries a failed read or write. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.try_now": { role: "button", note: "Prominent button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) for a temporary condition (\"… is not ready yet.\"): retries the connection immediately instead of waiting. Not the same as the discovery banner's \"Try now\" (mobile.computers.try_now). Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.tunnel_gone_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"… is no longer a tunnel.\": the only fix is a new tunnel. \"Radient\" is a product name: do not translate. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.tunnel_gone_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the address no longer belongs to any tunnel (it was deleted or replaced). Terminal: retrying cannot fix it. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.wait_seconds": { role: "status", note: "Line on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the server said to wait before retrying. Advice only: the app does NOT retry by itself. {seconds} is a whole number of seconds from the server. ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs. Width: wraps freely; keep it to the sentences given." },
 	"mobile.computers.remove.body": { role: "confirm", note: "Body of the remove-computer confirmation, under 'Remove this computer?'. States the removal is local to this phone only; keep all three negations (the computer, its tunnel, the account). Two sentences, each with a full stop." },
 	"mobile.computers.remove.confirm": { role: "button", note: "Destructive confirm button of the 'Remove this computer?' dialog. One verb; the dialog also has the shared Cancel." },
 	"mobile.computers.remove.title": { role: "confirm", note: "Title of the confirmation dialog for removing a computer from this phone. A question. Body and buttons are separate strings." },
@@ -4180,6 +4292,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Protegido con inicio de sesión",
 		"mobile.computers.reach.answering": "respondiendo",
 		"mobile.computers.refresh": "Actualizar",
+		"mobile.computers.refusal.another_address": "Usar otra dirección",
+		"mobile.computers.refusal.certificate_next": "Usa la dirección {scheme} que mostró el túnel, elige un túnel con un certificado en el que confíe un teléfono o sustituye el certificado autofirmado — esta app no se saltará la comprobación.",
+		"mobile.computers.refusal.certificate_title": "Se rechazó el certificado de ese túnel.",
+		"mobile.computers.refusal.console_next": "Abre la consola de Radient para solucionarlo allí. Iniciar sesión en este teléfono no lo cambiará.",
+		"mobile.computers.refusal.console_title": "{subject} requiere atención en Radient.",
+		"mobile.computers.refusal.host_next": "Revisa que la dirección no tenga erratas y que el túnel siga publicando ese nombre.",
+		"mobile.computers.refusal.host_title": "No se encontró ese nombre de host.",
+		"mobile.computers.refusal.offline_next": "Despierta esa máquina y comprueba que el conector está en ejecución. Su último estado conocido aparece más arriba.",
+		"mobile.computers.refusal.offline_title": "{subject} no responde.",
+		"mobile.computers.refusal.open_console": "Abrir la consola de Radient",
+		"mobile.computers.refusal.password_next": "Comprueba la contraseña del relé en la máquina y vuelve a intentarlo.",
+		"mobile.computers.refusal.password_title": "No se aceptó esa contraseña.",
+		"mobile.computers.refusal.relay_stopped_next": "Vuelve a iniciar el relé y déjalo en ejecución.",
+		"mobile.computers.refusal.relay_stopped_title": "El relé no se está ejecutando en {subject}.",
+		"mobile.computers.refusal.retry_next": "Suele ser un problema de red pasajero. Vuelve a intentarlo en un momento.",
+		"mobile.computers.refusal.retry_title": "{subject} aún no está disponible.",
+		"mobile.computers.refusal.sign_in_again": "Volver a iniciar sesión",
+		"mobile.computers.refusal.sign_in_next": "Vuelve a iniciar sesión para reconectarte. Lo que escribiste antes queda en cuarentena y no se enviará.",
+		"mobile.computers.refusal.sign_in_title": "Tu sesión de Radient ha caducado. Inicia sesión para volver a conectarte a {subject}.",
+		"mobile.computers.refusal.try_again": "Reintentar",
+		"mobile.computers.refusal.try_now": "Reintentar ahora",
+		"mobile.computers.refusal.tunnel_gone_next": "Vuelve a crear un túnel en Radient y después añade esta máquina.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} ya no es un túnel.",
+		"mobile.computers.refusal.wait_seconds": "Espera {seconds, plural, one {aproximadamente # segundo} many {unos # de segundos} other {unos # segundos}} antes de volver a intentarlo.",
 		"mobile.computers.remove.body": "La quita de la lista de este teléfono. No afecta a la máquina, a su túnel ni a tu cuenta.",
 		"mobile.computers.remove.confirm": "Quitar",
 		"mobile.computers.remove.title": "¿Quitar esta máquina?",
@@ -4994,6 +5130,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Protégé par connexion",
 		"mobile.computers.reach.answering": "répond",
 		"mobile.computers.refresh": "Actualiser",
+		"mobile.computers.refusal.another_address": "Utiliser une autre adresse",
+		"mobile.computers.refusal.certificate_next": "Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné — cette app ne contournera pas la vérification.",
+		"mobile.computers.refusal.certificate_title": "Le certificat de ce tunnel a été refusé.",
+		"mobile.computers.refusal.console_next": "Ouvrez la console Radient pour y régler le problème. Se reconnecter sur ce téléphone n’y changera rien.",
+		"mobile.computers.refusal.console_title": "{subject} nécessite une intervention dans Radient.",
+		"mobile.computers.refusal.host_next": "Vérifiez que l’adresse ne contient pas de faute de frappe et que le tunnel publie toujours ce nom.",
+		"mobile.computers.refusal.host_title": "Ce nom d’hôte est introuvable.",
+		"mobile.computers.refusal.offline_next": "Réveillez cet ordinateur et vérifiez que le connecteur est lancé. Le dernier état connu de l’ordinateur figure ci-dessus.",
+		"mobile.computers.refusal.offline_title": "{subject} ne répond pas.",
+		"mobile.computers.refusal.open_console": "Ouvrir la console Radient",
+		"mobile.computers.refusal.password_next": "Vérifiez le mot de passe du relais sur l’ordinateur, puis réessayez.",
+		"mobile.computers.refusal.password_title": "Ce mot de passe n’a pas été accepté.",
+		"mobile.computers.refusal.relay_stopped_next": "Relancez le relais et laissez-le en marche.",
+		"mobile.computers.refusal.relay_stopped_title": "Le relais n’est pas lancé sur {subject}.",
+		"mobile.computers.refusal.retry_next": "Il s’agit généralement d’un problème réseau passager. Réessayez dans un instant.",
+		"mobile.computers.refusal.retry_title": "{subject} n’est pas encore disponible.",
+		"mobile.computers.refusal.sign_in_again": "Se reconnecter",
+		"mobile.computers.refusal.sign_in_next": "Reconnectez-vous pour rétablir la connexion. Tout ce que vous avez saisi auparavant est mis en quarantaine et ne sera pas envoyé.",
+		"mobile.computers.refusal.sign_in_title": "Votre session Radient a expiré. Reconnectez-vous pour accéder à {subject}.",
+		"mobile.computers.refusal.try_again": "Réessayer",
+		"mobile.computers.refusal.try_now": "Essayer maintenant",
+		"mobile.computers.refusal.tunnel_gone_next": "Créez un nouveau tunnel dans Radient, puis ajoutez cet ordinateur.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} ne correspond plus à aucun tunnel.",
+		"mobile.computers.refusal.wait_seconds": "Attendez environ {seconds, plural, one {# seconde} many {# de secondes} other {# secondes}} avant de réessayer.",
 		"mobile.computers.remove.body": "Il sera retiré de la liste de ce téléphone. Cela ne modifie ni l’ordinateur, ni son tunnel, ni votre compte.",
 		"mobile.computers.remove.confirm": "Retirer",
 		"mobile.computers.remove.title": "Retirer cet ordinateur ?",
@@ -5808,6 +5968,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "साइन-इन से सुरक्षित",
 		"mobile.computers.reach.answering": "जवाब दे रहा",
 		"mobile.computers.refresh": "रीफ़्रेश करें",
+		"mobile.computers.refusal.another_address": "दूसरा पता उपयोग करें",
+		"mobile.computers.refusal.certificate_next": "टनल का दिखाया हुआ {scheme} पता उपयोग करें, ऐसी टनल चुनें जिसके सर्टिफ़िकेट पर फ़ोन भरोसा करे, या सेल्फ़-साइन्ड सर्टिफ़िकेट बदलें — यह ऐप सर्टिफ़िकेट की जाँच नहीं छोड़ेगा।",
+		"mobile.computers.refusal.certificate_title": "उस टनल का सर्टिफ़िकेट अस्वीकार कर दिया गया।",
+		"mobile.computers.refusal.console_next": "इसे ठीक करने के लिए Radient कंसोल खोलें। इस फ़ोन पर साइन इन करने से यह नहीं बदलेगा।",
+		"mobile.computers.refusal.console_title": "{subject} को Radient में आपके ध्यान की ज़रूरत है।",
+		"mobile.computers.refusal.host_next": "पते में टाइपिंग की ग़लती जाँचें, और यह भी कि टनल अब भी वही नाम प्रकाशित कर रही है।",
+		"mobile.computers.refusal.host_title": "वह होस्ट नाम नहीं मिला।",
+		"mobile.computers.refusal.offline_next": "उस कंप्यूटर को स्लीप से जगाएँ, और जाँचें कि कनेक्टर चल रहा है। उसकी आख़िरी ज्ञात स्थिति ऊपर दी गई है।",
+		"mobile.computers.refusal.offline_title": "{subject} जवाब नहीं दे रहा है।",
+		"mobile.computers.refusal.open_console": "Radient कंसोल खोलें",
+		"mobile.computers.refusal.password_next": "कंप्यूटर पर रिले पासवर्ड जाँचें और फिर से कोशिश करें।",
+		"mobile.computers.refusal.password_title": "वह पासवर्ड स्वीकार नहीं हुआ।",
+		"mobile.computers.refusal.relay_stopped_next": "रिले फिर से शुरू करें और उसे चलता रहने दें।",
+		"mobile.computers.refusal.relay_stopped_title": "{subject} पर रिले नहीं चल रहा है।",
+		"mobile.computers.refusal.retry_next": "आम तौर पर यह नेटवर्क की कोई अस्थायी समस्या होती है। थोड़ी देर में फिर से कोशिश करें।",
+		"mobile.computers.refusal.retry_title": "{subject} अभी तैयार नहीं है।",
+		"mobile.computers.refusal.sign_in_again": "फिर से साइन इन करें",
+		"mobile.computers.refusal.sign_in_next": "फिर से कनेक्ट करने के लिए दोबारा साइन इन करें। इससे पहले टाइप किया गया सब कुछ अलग रोक दिया गया है और भेजा नहीं जाएगा।",
+		"mobile.computers.refusal.sign_in_title": "आपका Radient साइन-इन समाप्त हो गया है। {subject} से फिर कनेक्ट करने के लिए साइन इन करें।",
+		"mobile.computers.refusal.try_again": "फिर से कोशिश करें",
+		"mobile.computers.refusal.try_now": "अभी कोशिश करें",
+		"mobile.computers.refusal.tunnel_gone_next": "Radient में नई टनल बनाएँ, फिर यह कंप्यूटर जोड़ें।",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} अब कोई टनल नहीं है।",
+		"mobile.computers.refusal.wait_seconds": "दोबारा कोशिश करने से पहले लगभग {seconds, plural, one {# सेकंड} other {# सेकंड}} रुकें।",
 		"mobile.computers.remove.body": "इससे यह इस फ़ोन की सूची से हट जाता है। इससे कंप्यूटर, उसकी टनल या आपके खाते पर कोई असर नहीं पड़ता।",
 		"mobile.computers.remove.confirm": "हटाएँ",
 		"mobile.computers.remove.title": "यह कंप्यूटर हटाएँ?",
@@ -6622,6 +6806,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Защищено входом",
 		"mobile.computers.reach.answering": "отвечает",
 		"mobile.computers.refresh": "Обновить",
+		"mobile.computers.refusal.another_address": "Указать другой адрес",
+		"mobile.computers.refusal.certificate_next": "Используйте адрес {scheme}, который вывел туннель, выберите туннель с сертификатом, которому доверяет телефон, или замените самоподписанный сертификат — приложение не будет пропускать проверку.",
+		"mobile.computers.refusal.certificate_title": "Сертификат этого туннеля отклонён.",
+		"mobile.computers.refusal.console_next": "Откройте консоль Radient и устраните проблему там. Повторный вход на этом телефоне ничего не изменит.",
+		"mobile.computers.refusal.console_title": "{subject} требует внимания в Radient.",
+		"mobile.computers.refusal.host_next": "Проверьте, нет ли в адресе опечатки и по-прежнему ли туннель публикует это имя.",
+		"mobile.computers.refusal.host_title": "Имя хоста не найдено.",
+		"mobile.computers.refusal.offline_next": "Выведите этот компьютер из спящего режима и убедитесь, что коннектор запущен. Его последнее известное состояние показано выше.",
+		"mobile.computers.refusal.offline_title": "{subject} не отвечает.",
+		"mobile.computers.refusal.open_console": "Открыть консоль Radient",
+		"mobile.computers.refusal.password_next": "Проверьте пароль ретранслятора на компьютере и подключитесь снова.",
+		"mobile.computers.refusal.password_title": "Этот пароль не принят.",
+		"mobile.computers.refusal.relay_stopped_next": "Снова запустите ретранслятор и не останавливайте его.",
+		"mobile.computers.refusal.relay_stopped_title": "Ретранслятор на {subject} не запущен.",
+		"mobile.computers.refusal.retry_next": "Обычно это временный сбой сети. Повторите попытку чуть позже.",
+		"mobile.computers.refusal.retry_title": "{subject} пока не готов.",
+		"mobile.computers.refusal.sign_in_again": "Войти снова",
+		"mobile.computers.refusal.sign_in_next": "Войдите снова, чтобы восстановить подключение. Всё, что было введено до этого, помещено в карантин и не будет отправлено.",
+		"mobile.computers.refusal.sign_in_title": "Сессия входа в Radient истекла. Войдите, чтобы снова подключиться к {subject}.",
+		"mobile.computers.refusal.try_again": "Подключиться снова",
+		"mobile.computers.refusal.try_now": "Подключиться сейчас",
+		"mobile.computers.refusal.tunnel_gone_next": "Создайте туннель в Radient заново, затем добавьте этот компьютер.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} больше не является туннелем.",
+		"mobile.computers.refusal.wait_seconds": "Подождите около {seconds, plural, one {# секунды} few {# секунд} many {# секунд} other {# секунды}}, прежде чем повторить попытку.",
 		"mobile.computers.remove.body": "Компьютер исчезнет из списка на этом телефоне. Сам компьютер, его туннель и ваш аккаунт не изменятся.",
 		"mobile.computers.remove.confirm": "Удалить",
 		"mobile.computers.remove.title": "Удалить этот компьютер?",
@@ -7436,6 +7644,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "سائن ان سے محفوظ",
 		"mobile.computers.reach.answering": "جواب دے رہا",
 		"mobile.computers.refresh": "ریفریش کریں",
+		"mobile.computers.refusal.another_address": "دوسرا پتہ استعمال کریں",
+		"mobile.computers.refusal.certificate_next": "ٹنل کا دکھایا ہوا {scheme} URL استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا خود دستخط شدہ سرٹیفکیٹ بدل دیں — یہ ایپ جانچ نہیں چھوڑے گی۔",
+		"mobile.computers.refusal.certificate_title": "اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔",
+		"mobile.computers.refusal.console_next": "اسے ٹھیک کرنے کے لیے Radient کنسول کھولیں۔ اس فون پر سائن ان کرنے سے یہ نہیں بدلے گا۔",
+		"mobile.computers.refusal.console_title": "آپ کو Radient میں {subject} پر توجہ دینی ہوگی۔",
+		"mobile.computers.refusal.host_next": "پتے میں ٹائپنگ کی غلطی جانچیں، اور یہ بھی کہ ٹنل اب بھی یہی نام شائع کر رہی ہے۔",
+		"mobile.computers.refusal.host_title": "میزبان کا یہ نام نہیں ملا۔",
+		"mobile.computers.refusal.offline_next": "اس کمپیوٹر کو جگائیں، اور جانچیں کہ کنیکٹر چل رہا ہے۔ کمپیوٹر کی آخری معلوم حالت اوپر دی گئی ہے۔",
+		"mobile.computers.refusal.offline_title": "اس وقت {subject} سے کوئی جواب نہیں مل رہا۔",
+		"mobile.computers.refusal.open_console": "Radient کنسول کھولیں",
+		"mobile.computers.refusal.password_next": "کمپیوٹر پر ریلے کا پاس ورڈ جانچیں، پھر دوبارہ کوشش کریں۔",
+		"mobile.computers.refusal.password_title": "وہ پاس ورڈ قبول نہیں ہوا۔",
+		"mobile.computers.refusal.relay_stopped_next": "ریلے دوبارہ شروع کریں اور اسے چلتا رہنے دیں۔",
+		"mobile.computers.refusal.relay_stopped_title": "ریلے {subject} پر نہیں چل رہا۔",
+		"mobile.computers.refusal.retry_next": "عموماً یہ نیٹ ورک کا عارضی مسئلہ ہوتا ہے۔ ذرا دیر بعد دوبارہ کوشش کریں۔",
+		"mobile.computers.refusal.retry_title": "ابھی {subject} تیار نہیں ہے۔",
+		"mobile.computers.refusal.sign_in_again": "دوبارہ سائن ان کریں",
+		"mobile.computers.refusal.sign_in_next": "دوبارہ منسلک ہونے کے لیے پھر سے سائن ان کریں۔ اس سے پہلے ٹائپ کیا گیا سب کچھ قرنطینہ میں رکھ دیا گیا ہے اور بھیجا نہیں جائے گا۔",
+		"mobile.computers.refusal.sign_in_title": "آپ کے Radient سیشن کی میعاد ختم ہو گئی ہے۔ {subject} سے دوبارہ رابطے کے لیے سائن ان کریں۔",
+		"mobile.computers.refusal.try_again": "دوبارہ کوشش کریں",
+		"mobile.computers.refusal.try_now": "ابھی کوشش کریں",
+		"mobile.computers.refusal.tunnel_gone_next": "دوبارہ Radient میں ٹنل بنائیں، پھر یہ کمپیوٹر شامل کریں۔",
+		"mobile.computers.refusal.tunnel_gone_title": "اب {subject} پر کوئی ٹنل موجود نہیں۔",
+		"mobile.computers.refusal.wait_seconds": "دوبارہ کوشش کرنے سے پہلے تقریباً {seconds, plural, one {# سیکنڈ} other {# سیکنڈ}} انتظار کریں۔",
 		"mobile.computers.remove.body": "یہ اس کمپیوٹر کو اس فون کی فہرست سے ہٹا دیتا ہے۔ اس سے کمپیوٹر، اس کی ٹنل یا آپ کے اکاؤنٹ پر کوئی اثر نہیں پڑتا۔",
 		"mobile.computers.remove.confirm": "ہٹائیں",
 		"mobile.computers.remove.title": "یہ کمپیوٹر ہٹائیں؟",
@@ -8250,6 +8482,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Được bảo vệ bằng đăng nhập",
 		"mobile.computers.reach.answering": "đang phản hồi",
 		"mobile.computers.refresh": "Làm mới",
+		"mobile.computers.refusal.another_address": "Dùng địa chỉ khác",
+		"mobile.computers.refusal.certificate_next": "Hãy dùng địa chỉ {scheme} mà đường hầm đã in ra, chọn đường hầm có chứng chỉ mà điện thoại tin cậy, hoặc thay chứng chỉ tự ký — ứng dụng này sẽ không bỏ qua bước kiểm tra.",
+		"mobile.computers.refusal.certificate_title": "Chứng chỉ của đường hầm đó đã bị từ chối.",
+		"mobile.computers.refusal.console_next": "Hãy mở bảng điều khiển Radient để khắc phục. Đăng nhập lại trên điện thoại này sẽ không giải quyết được vấn đề.",
+		"mobile.computers.refusal.console_title": "{subject} cần được xử lý trong Radient.",
+		"mobile.computers.refusal.host_next": "Hãy kiểm tra xem địa chỉ có bị gõ sai không, và đường hầm có còn công khai tên miền đó không.",
+		"mobile.computers.refusal.host_title": "Không tìm thấy tên miền đó.",
+		"mobile.computers.refusal.offline_next": "Hãy đánh thức máy tính đó và kiểm tra xem trình kết nối có đang chạy không. Trạng thái gần nhất của máy được hiển thị ở trên.",
+		"mobile.computers.refusal.offline_title": "{subject} không phản hồi.",
+		"mobile.computers.refusal.open_console": "Mở bảng điều khiển Radient",
+		"mobile.computers.refusal.password_next": "Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính, rồi thử lại.",
+		"mobile.computers.refusal.password_title": "Mật khẩu đó không được chấp nhận.",
+		"mobile.computers.refusal.relay_stopped_next": "Hãy khởi động lại máy chủ chuyển tiếp và để nó chạy liên tục.",
+		"mobile.computers.refusal.relay_stopped_title": "Máy chủ chuyển tiếp hiện không chạy trên {subject}.",
+		"mobile.computers.refusal.retry_next": "Thường chỉ là sự cố mạng tạm thời. Hãy thử lại sau giây lát.",
+		"mobile.computers.refusal.retry_title": "{subject} chưa sẵn sàng.",
+		"mobile.computers.refusal.sign_in_again": "Đăng nhập lại",
+		"mobile.computers.refusal.sign_in_next": "Hãy đăng nhập lại để kết nối. Những gì bạn đã nhập trước đó được cách ly và sẽ không được gửi.",
+		"mobile.computers.refusal.sign_in_title": "Phiên đăng nhập Radient của bạn đã hết hạn. Đăng nhập để kết nối lại với {subject}.",
+		"mobile.computers.refusal.try_again": "Thử lại",
+		"mobile.computers.refusal.try_now": "Thử ngay",
+		"mobile.computers.refusal.tunnel_gone_next": "Hãy tạo một đường hầm mới trong Radient, rồi thêm máy tính này.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} không còn là đường hầm nữa.",
+		"mobile.computers.refusal.wait_seconds": "Hãy đợi khoảng {seconds, plural, other {# giây}} trước khi thử lại.",
 		"mobile.computers.remove.body": "Thao tác này xóa máy tính khỏi danh sách trên điện thoại này. Máy tính, đường hầm của nó và tài khoản của bạn đều không bị ảnh hưởng.",
 		"mobile.computers.remove.confirm": "Xóa",
 		"mobile.computers.remove.title": "Xóa máy tính này?",
@@ -9064,6 +9320,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "受登录保护",
 		"mobile.computers.reach.answering": "已响应",
 		"mobile.computers.refresh": "刷新",
+		"mobile.computers.refusal.another_address": "改用其他地址",
+		"mobile.computers.refusal.certificate_next": "请改用隧道输出的{scheme}地址，或换用证书能被手机信任的隧道，或替换自签名证书——本应用不会跳过证书校验。",
+		"mobile.computers.refusal.certificate_title": "该隧道的证书被拒绝。",
+		"mobile.computers.refusal.console_next": "请打开Radient控制台进行处理。在此手机上重新登录也无法解决这个问题。",
+		"mobile.computers.refusal.console_title": "{subject}需要在Radient中处理。",
+		"mobile.computers.refusal.host_next": "请检查地址是否有拼写错误，以及隧道是否仍在发布该名称。",
+		"mobile.computers.refusal.host_title": "找不到该主机名。",
+		"mobile.computers.refusal.offline_next": "请唤醒那台电脑，并确认连接器正在运行。上方显示的是它最后已知的状态。",
+		"mobile.computers.refusal.offline_title": "{subject}没有响应。",
+		"mobile.computers.refusal.open_console": "打开Radient控制台",
+		"mobile.computers.refusal.password_next": "请在电脑上检查中继密码，然后重试。",
+		"mobile.computers.refusal.password_title": "该密码未被接受。",
+		"mobile.computers.refusal.relay_stopped_next": "请重新启动中继，并让它保持运行。",
+		"mobile.computers.refusal.relay_stopped_title": "{subject}上的中继没有运行。",
+		"mobile.computers.refusal.retry_next": "通常只是暂时的网络问题。请稍后再试。",
+		"mobile.computers.refusal.retry_title": "{subject}尚未就绪。",
+		"mobile.computers.refusal.sign_in_again": "重新登录",
+		"mobile.computers.refusal.sign_in_next": "请重新登录以恢复连接。此前输入的内容已被隔离，不会发送。",
+		"mobile.computers.refusal.sign_in_title": "你的Radient登录已过期。请登录以重新连接到{subject}。",
+		"mobile.computers.refusal.try_again": "重试",
+		"mobile.computers.refusal.try_now": "立即重试",
+		"mobile.computers.refusal.tunnel_gone_next": "请在Radient中重新创建隧道，然后添加这台电脑。",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject}已不再对应任何隧道。",
+		"mobile.computers.refusal.wait_seconds": "请等待约{seconds, plural, other {# 秒}}后再试。",
 		"mobile.computers.remove.body": "此操作只将它从此手机的列表中移除。不会影响电脑本身、其隧道或你的账户。",
 		"mobile.computers.remove.confirm": "移除",
 		"mobile.computers.remove.title": "移除此电脑？",
