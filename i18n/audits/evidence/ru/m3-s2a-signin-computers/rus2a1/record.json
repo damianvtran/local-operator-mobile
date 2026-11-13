@@ -1,0 +1,513 @@
+{
+ "schema": 1,
+ "audit_id": "rus2a1",
+ "audit_kind": "initial_translation_audit",
+ "locale": "ru",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.signin"
+ ],
+ "namespace": "mobile.computers+mobile.signin (M3 slice S2a, 37 keys)",
+ "audit_date": "2026-11-12",
+ "key_count": {
+  "en": 37,
+  "target": 37,
+  "by_namespace": {
+   "mobile.computers": 36,
+   "mobile.signin": 1
+  }
+ },
+ "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "b42780e9df74",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime model (system header: Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true
+ },
+ "translator": {
+  "id": "translator job 68e31088b1a1",
+  "model_per_notes": "anthropic/claude-opus-5-5",
+  "note": "same model family, different agent instance; auditor did not translate or edit the draft"
+ },
+ "input_hashes": {
+  "brief": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+   "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+   "recomputed": "match"
+  },
+  "draft": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/ru/draft-ru-s2a.json",
+   "sha256": "f7aa4fb6c19541145a8c74abf4a55088d443aaf31b2a240b30e8d3f4d08633f6",
+   "recomputed": "match"
+  },
+  "translator_notes": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/ru/notes-ru-s2a.md",
+   "sha256": "b6def48108a3133e3e970308feb31b06a023c1b795f56157cf8e030fdb06b01a"
+  },
+  "references": {
+   "src/i18n/catalogues/ru/mobile.computers.json@59ec5184": "b9e860e940573c2bf62279410cbfa9109f46bc7475c2d8f338b53533129b1d63",
+   "src/i18n/catalogues/ru/mobile.signin.json@59ec5184": "2168d262403cf88f7d8bdaf39d5c5a7286edc42292c2eb407d6f358ffaa58c31",
+   "src/i18n/catalogues/en/mobile.computers.json@59ec5184": "280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151",
+   "src/i18n/catalogues/en/mobile.signin.json@59ec5184": "02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace",
+   "src/features/auth/own-tunnel.tsx@59ec5184": "7e6ed4ad902ba2004f18c1822b5a3d6d85646b4dd5b7478bf92e93d10b1c6967",
+   "src/ui/size-class.ts@59ec5184": "500d22f691381c908523c66172a996ea3ed5c9797ad8b91122e9ceced7781631",
+   "src/i18n/messages.ts@59ec5184": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+   "design/fonts/Figtree-SemiBold.ttf@59ec5184": "35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74",
+   "~/local-operator origin/main(73dc4157):i18n/style-guides/ru.md": "f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5",
+   "~/local-operator origin/main(73dc4157):i18n/glossary.md": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"
+  },
+  "context_sidecar": "not read: brief notes carry the context; sidecars are nested JSON and not routable"
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "file_bytes": {
+    "brief": 0,
+    "draft": 0,
+    "repo_files_read": 0
+   },
+   "tool_display_masks": 2,
+   "note": "harness displayed [redacted] for draft step_computer_help (bytes begin U+0420 «Ретранслятор», confirmed by unicode_escape) and for ru catalogue connect_refused.password; grep -ci redact = 0 on all files — harness masking, not a defect"
+  }
+ },
+ "mechanical": {
+  "parser": "src/i18n/messages.ts@59ec5184 parseMessage/formatMessage (read-only copy in auditor scratch, run with node 24 --experimental-strip-types)",
+  "parse_failures": 0,
+  "placeholder_mismatches": 0,
+  "protected_token_mismatches": 0,
+  "plural_select": "none in slice",
+  "typography_issues": 0,
+  "keys_added_or_dropped": 0,
+  "key_order_matches_brief": true
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "verdict": "pass",
+  "unresolved_blocker_major_count": 0,
+  "severity_counts": {
+   "BLOCKER": 0,
+   "MAJOR": 0,
+   "MINOR": 3,
+   "NIT": 3
+  },
+  "finding_ids": [
+   "M-01",
+   "M-02",
+   "M-03",
+   "N-01",
+   "N-02",
+   "N-03"
+  ],
+  "recommendation": "apply M-01..M-03 before landing (cheap, one-line each); NITs optional"
+ },
+ "findings": [
+  {
+   "id": "M-01",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "current": "Ретранслятор принимает подключения только с этого же компьютера, поэтому запускать его нужно здесь. Не давайте компьютеру уснуть, пока пользуетесь приложением.",
+   "problem": "Deixis: the reader is on the PHONE, so «запускать его нужно здесь» can read as 'run it here, on this phone'. «с этого же компьютера» is also deictic. Loopback meaning (same machine, not LAN) is otherwise correct.",
+   "suggested": "Ретранслятор принимает подключения только с того же компьютера, поэтому запускать его нужно на этом компьютере. Не давайте компьютеру уснуть, пока пользуетесь приложением."
+  },
+  {
+   "id": "M-02",
+   "severity": "MINOR",
+   "key": "mobile.computers.own_tunnel.insecure_on_help",
+   "current": "Включено: пароль от ретранслятора и всё, что вы отправляете, идёт по этой сети без шифрования. Делайте так только в сети, которой доверяете.",
+   "problem": "Translator's flag confirmed: compound subject «пароль … и всё, что вы отправляете» with a following predicate takes the plural by the standard norm; singular «идёт» reads as a slip. «идти по сети» is also colloquial next to «передаётся» used in insecure_hint/insecure_off_help.",
+   "suggested": "Включено: пароль от ретранслятора и всё, что вы отправляете, передаются по этой сети без шифрования. Делайте так только в сети, которой доверяете."
+  },
+  {
+   "id": "M-03",
+   "severity": "MINOR",
+   "key": "mobile.signin.panel.unavailable_detail",
+   "current": "Для входа через Radient нужен локальный приёмник ответа браузера, которого нет в этой сборке ({module}).",
+   "problem": "Coined term «локальный приёмник ответа браузера» accepted: accurate to the note (receives the browser's sign-in reply on this device) and plainer than «loopback-слушатель». But «…нет в этой сборке ({module})» attaches the module id to «сборке», reading as the build's identifier; {module} names the missing listener module.",
+   "suggested": "Для входа через Radient нужен локальный приёмник ответа браузера ({module}), которого нет в этой сборке."
+  },
+  {
+   "id": "N-01",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.insecure_hint",
+   "current": "Нужно только для адреса по http, при котором пароль передаётся открытым текстом",
+   "problem": "«для адреса по http, при котором…» is slightly stiff (relative clause on «адреса» via «при котором»). Screen-reader only.",
+   "suggested": "Нужно только для адресов http — по ним пароль передаётся открытым текстом"
+  },
+  {
+   "id": "N-02",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "current": "По http:// пароль от ретранслятора передаётся по сети открытым текстом, поэтому по умолчанию такие адреса запрещены. Используйте https:// везде, где адрес это поддерживает.",
+   "problem": "Double «по» («По http:// … по сети») is a little clumsy. Meaning is right and does NOT nudge toward enabling (states the default, recommends https://).",
+   "suggested": "Через http:// пароль от ретранслятора передаётся по сети открытым текстом, поэтому по умолчанию такие адреса запрещены. Используйте https:// везде, где адрес это поддерживает."
+  },
+  {
+   "id": "N-03",
+   "severity": "NIT",
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "current": "Прежде чем открыть доступ",
+   "problem": "«открыть доступ» leaves the object implicit; 'it' is the computer. Heading wraps, so the longer form fits.",
+   "suggested": "Прежде чем открыть доступ к компьютеру"
+  }
+ ],
+ "translator_flag_rulings": {
+  "mobile.computers.title.set_up": "«Новый компьютер» accepted (nominal title, fr precedent). Figtree has NO Cyrillic glyphs (cmap check), so Cyrillic renders in the system fallback; estimated by system-font ratio ≈234–241 pt vs the 227 pt English budget (+3–6%, ESTIMATE). Back-only header has ≥262 pt at the 354 floor: fits. No shorter natural form.",
+  "mobile.computers.title.list": "«Компьютеры» accepted; no shorter correct word. ESTIMATE ≈167–171 pt vs 138 pt budget (+21–24%) — see non-gating code observation.",
+  "mobile.computers.own_tunnel.step_computer_help": "143% accepted for width (wrapping help paragraph); M-01 is about deixis, and its replacement is about the same length.",
+  "mobile.computers.own_tunnel.password_label": "142% accepted: field label above a full-width input (own-tunnel.tsx:357/443); 20 chars, no shorter correct form. Genitive without «от» is the normal label form; body copy's «пароль от ретранслятора» (catalogue radient_body) is consistent enough.",
+  "mobile.computers.own_tunnel.save_connect": "150% accepted: full-width stacked Button (own-tunnel.tsx:267-279); standard phrase.",
+  "mobile.computers.own_tunnel.saving": "157% accepted: 11 chars on the same full-width Button; standard busy label.",
+  "mobile.computers.own_tunnel.unencrypted_body": "«переключатель выше» accepted: the warning box (own-tunnel.tsx:473) renders below the toggle (:452-467), so «выше» is literally true and names the visible control.",
+  "mobile.signin.panel.unavailable_detail": "Coined «локальный приёмник ответа браузера» accepted as a term; see M-03 for placeholder placement.",
+  "mobile.computers.own_tunnel.insecure_on_help": "Translator's self-flag verified: plural is the norm → M-02."
+ },
+ "per_key_results": [
+  {
+   "key": "mobile.computers.title.list",
+   "role": "heading",
+   "en_chars": 9,
+   "ru_chars": 10,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "«Компьютеры» accepted; no shorter correct word. ESTIMATE ≈167–171 pt vs 138 pt budget (+21–24%) — see non-gating code observation."
+  },
+  {
+   "key": "mobile.computers.title.set_up",
+   "role": "heading",
+   "en_chars": 17,
+   "ru_chars": 15,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "«Новый компьютер» accepted (nominal title, fr precedent). Figtree has NO Cyrillic glyphs (cmap check), so Cyrillic renders in the system fallback; estimated by system-font ratio ≈234–241 pt vs the 227 pt English budget (+3–6%, ESTIMATE). Back-only header has ≥262 pt at the 354 floor: fits. No shorter natural form."
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_stale",
+   "role": "status",
+   "en_chars": 62,
+   "ru_chars": 71,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.banner.unreachable_empty",
+   "role": "status",
+   "en_chars": 84,
+   "ru_chars": 101,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_stale",
+   "role": "status",
+   "en_chars": 68,
+   "ru_chars": 75,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.banner.unreadable_empty",
+   "role": "status",
+   "en_chars": 74,
+   "ru_chars": 74,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.title",
+   "role": "heading",
+   "en_chars": 15,
+   "ru_chars": 12,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_for",
+   "role": "heading",
+   "en_chars": 29,
+   "ru_chars": 25,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.password_label",
+   "role": "meta",
+   "en_chars": 14,
+   "ru_chars": 20,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "142% accepted: field label above a full-width input (own-tunnel.tsx:357/443); 20 chars, no shorter correct form. Genitive without «от» is the normal label form; body copy's «пароль от ретранслятора» (catalogue radient_body) is consistent enough."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.intro",
+   "role": "help",
+   "en_chars": 179,
+   "ru_chars": 206,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer",
+   "role": "heading",
+   "en_chars": 15,
+   "ru_chars": 13,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_computer_help",
+   "role": "help",
+   "en_chars": 111,
+   "ru_chars": 159,
+   "mechanical": "pass",
+   "result": "finding M-01",
+   "ruling": "143% accepted for width (wrapping help paragraph); M-01 is about deixis, and its replacement is about the same length."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_publish",
+   "role": "heading",
+   "en_chars": 10,
+   "ru_chars": 10,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_app",
+   "role": "heading",
+   "en_chars": 10,
+   "ru_chars": 12,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.url_label",
+   "role": "meta",
+   "en_chars": 10,
+   "ru_chars": 13,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allow",
+   "role": "button",
+   "en_chars": 29,
+   "ru_chars": 23,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_allowed",
+   "role": "status",
+   "en_chars": 24,
+   "ru_chars": 24,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_hint",
+   "role": "help",
+   "en_chars": 75,
+   "ru_chars": 79,
+   "mechanical": "pass",
+   "result": "finding N-01",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_on_help",
+   "role": "help",
+   "en_chars": 115,
+   "ru_chars": 140,
+   "mechanical": "pass",
+   "result": "finding M-02",
+   "ruling": "Translator's self-flag verified: plural is the norm → M-02."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.insecure_off_help",
+   "role": "help",
+   "en_chars": 149,
+   "ru_chars": 172,
+   "mechanical": "pass",
+   "result": "finding N-02",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_title",
+   "role": "heading",
+   "en_chars": 27,
+   "ru_chars": 20,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.unencrypted_body",
+   "role": "help",
+   "en_chars": 89,
+   "ru_chars": 107,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "«переключатель выше» accepted: the warning box (own-tunnel.tsx:473) renders below the toggle (:452-467), so «выше» is literally true and names the visible control."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.private_host",
+   "role": "status",
+   "en_chars": 70,
+   "ru_chars": 85,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.public_host",
+   "role": "status",
+   "en_chars": 93,
+   "ru_chars": 92,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test",
+   "role": "heading",
+   "en_chars": 7,
+   "ru_chars": 8,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.step_test_help",
+   "role": "help",
+   "en_chars": 71,
+   "ru_chars": 73,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_heading",
+   "role": "heading",
+   "en_chars": 20,
+   "ru_chars": 25,
+   "mechanical": "pass",
+   "result": "finding N-03",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.security_body",
+   "role": "help",
+   "en_chars": 339,
+   "ru_chars": 345,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.test",
+   "role": "button",
+   "en_chars": 19,
+   "ru_chars": 21,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.testing",
+   "role": "status",
+   "en_chars": 8,
+   "ru_chars": 9,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.save_connect",
+   "role": "button",
+   "en_chars": 16,
+   "ru_chars": 24,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "150% accepted: full-width stacked Button (own-tunnel.tsx:267-279); standard phrase."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.saving",
+   "role": "status",
+   "en_chars": 7,
+   "ru_chars": 11,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": "157% accepted: 11 chars on the same full-width Button; standard busy label."
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_address",
+   "role": "help",
+   "en_chars": 40,
+   "ru_chars": 41,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.need_test",
+   "role": "help",
+   "en_chars": 83,
+   "ru_chars": 98,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_ok",
+   "role": "heading",
+   "en_chars": 9,
+   "ru_chars": 10,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.computers.own_tunnel.verdict_not_yet",
+   "role": "heading",
+   "en_chars": 7,
+   "ru_chars": 8,
+   "mechanical": "pass",
+   "result": "pass",
+   "ruling": null
+  },
+  {
+   "key": "mobile.signin.panel.unavailable_detail",
+   "role": "help",
+   "en_chars": 89,
+   "ru_chars": 104,
+   "mechanical": "pass",
+   "result": "finding M-03",
+   "ruling": "Coined «локальный приёмник ответа браузера» accepted as a term; see M-03 for placeholder placement."
+  }
+ ],
+ "non_gating_observations": [
+  "computersHeaderStackWidth (size-class.ts:457-476) uses English advances (138/227 pt). Figtree ships no Cyrillic glyphs, so ru titles render in the system fallback. ESTIMATE «Компьютеры» ≈167–171 pt: with Back+Switch, Refresh hidden (fit 357), a 375 pt phone leaves ≈156 pt → likely clipped «Компьют…»; also the 429–~462 band with Refresh. Code fix (measure localized title), not a translation finding.",
+  "Mixed-font headings (Latin in Figtree, Cyrillic in system font) are a design observation, not a translation finding."
+ ],
+ "audit_notes_not_execution_log": "report.md is the audit report; audit.log is the execution log of commands actually run.",
+ "claims_not_made": "No rendered-frame measurement, no native-speaker human review, no MT/translation service used; widths are font-metric ESTIMATES (system-font ratio), not renders.",
+ "artifacts": {
+  "report.md": "28342b467709ce85d950c9f094c17f82f71d3e66922b0192f2d6e1263ef6a535",
+  "audit.log": "75a9500715188ba652e0b32574fe01ea86182dfc9deb27ea06a991a569b09ab5",
+  "record.json": "self (not hashed)"
+ }
+}

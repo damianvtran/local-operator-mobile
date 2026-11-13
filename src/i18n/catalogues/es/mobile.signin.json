@@ -30,5 +30,6 @@
 	"mobile.signin.panel.unavailable_alt": "Aún puedes conectarte con la dirección y la contraseña del relé.",
 	"mobile.signin.try_anyway": "Reintentar de todos modos",
 	"mobile.signin.welcome.headline": "Tu agente se ejecuta en tu máquina.",
-	"mobile.signin.welcome.body": "Esta app dirige las sesiones de tu propia máquina y muestra lo que hizo. Tu código nunca sale de ella."
+	"mobile.signin.welcome.body": "Esta app dirige las sesiones de tu propia máquina y muestra lo que hizo. Tu código nunca sale de ella.",
+	"mobile.signin.panel.unavailable_detail": "Iniciar sesión con Radient requiere un receptor loopback que esta compilación no incluye ({module})."
 }

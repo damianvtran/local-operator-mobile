@@ -76,7 +76,7 @@ const NAMESPACES = [
 		name: "mobile.signin",
 		messages: signin,
 		context: signinContext,
-		expected: 32, // 18 + 14: S1 sign-in panel, sign-in/welcome screens (M3 slice S1)
+		expected: 33, // M3 S2a +1: the loopback-unavailable detail (32 + 1 = 33); 18 + 14: S1 sign-in panel, sign-in/welcome screens (M3 slice S1)
 	},
 	{
 		name: "mobile.oauth",
@@ -147,7 +147,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 75, // M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 111, // M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.notifications",
@@ -325,7 +325,10 @@ describe("the English catalogues", () => {
 		/* M3 slice S1 (sign-in & computers): +17 mobile.computers + 14 mobile.signin
 		 * = 31 English keys, plus 13 from the unflagged-literal sweep (status/reach
 		 * badges, row a11y, billing fallback, Try now, Remove): 690 + 44 = 734. */
-		expect(total).toBe(734);
+		/* M3 slice S2a (English-first): +36 mobile.computers (titles, discovery
+		 * banners, the "Your own tunnel" screen) + 1 mobile.signin (loopback
+		 * unavailable detail) = 37: 734 + 37 = 771, counted over the en JSON. */
+		expect(total).toBe(771);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

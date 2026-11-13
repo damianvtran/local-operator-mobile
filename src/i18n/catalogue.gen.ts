@@ -105,6 +105,10 @@ export type CatalogueKey =
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
+	| "mobile.computers.banner.unreachable_empty"
+	| "mobile.computers.banner.unreachable_stale"
+	| "mobile.computers.banner.unreadable_empty"
+	| "mobile.computers.banner.unreadable_stale"
 	| "mobile.computers.billing_help"
 	| "mobile.computers.billing_inactive"
 	| "mobile.computers.connect_refused.generic"
@@ -118,6 +122,36 @@ export type CatalogueKey =
 	| "mobile.computers.list.heading"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.not_harness"
+	| "mobile.computers.own_tunnel.insecure_allow"
+	| "mobile.computers.own_tunnel.insecure_allowed"
+	| "mobile.computers.own_tunnel.insecure_hint"
+	| "mobile.computers.own_tunnel.insecure_off_help"
+	| "mobile.computers.own_tunnel.insecure_on_help"
+	| "mobile.computers.own_tunnel.intro"
+	| "mobile.computers.own_tunnel.need_address"
+	| "mobile.computers.own_tunnel.need_test"
+	| "mobile.computers.own_tunnel.password_for"
+	| "mobile.computers.own_tunnel.password_label"
+	| "mobile.computers.own_tunnel.private_host"
+	| "mobile.computers.own_tunnel.public_host"
+	| "mobile.computers.own_tunnel.save_connect"
+	| "mobile.computers.own_tunnel.saving"
+	| "mobile.computers.own_tunnel.security_body"
+	| "mobile.computers.own_tunnel.security_heading"
+	| "mobile.computers.own_tunnel.step_app"
+	| "mobile.computers.own_tunnel.step_computer"
+	| "mobile.computers.own_tunnel.step_computer_help"
+	| "mobile.computers.own_tunnel.step_publish"
+	| "mobile.computers.own_tunnel.step_test"
+	| "mobile.computers.own_tunnel.step_test_help"
+	| "mobile.computers.own_tunnel.test"
+	| "mobile.computers.own_tunnel.testing"
+	| "mobile.computers.own_tunnel.title"
+	| "mobile.computers.own_tunnel.unencrypted_body"
+	| "mobile.computers.own_tunnel.unencrypted_title"
+	| "mobile.computers.own_tunnel.url_label"
+	| "mobile.computers.own_tunnel.verdict_not_yet"
+	| "mobile.computers.own_tunnel.verdict_ok"
 	| "mobile.computers.own_tunnel_instead"
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.paths.own_action"
@@ -156,6 +190,8 @@ export type CatalogueKey =
 	| "mobile.computers.storage_refused.no_code"
 	| "mobile.computers.storage_refused.with_code"
 	| "mobile.computers.switch"
+	| "mobile.computers.title.list"
+	| "mobile.computers.title.set_up"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
 	| "mobile.computers.try_now"
@@ -533,6 +569,7 @@ export type CatalogueKey =
 	| "mobile.signin.panel.opening"
 	| "mobile.signin.panel.unavailable"
 	| "mobile.signin.panel.unavailable_alt"
+	| "mobile.signin.panel.unavailable_detail"
 	| "mobile.signin.panel.waiting"
 	| "mobile.signin.panel.waiting_help"
 	| "mobile.signin.progress"
@@ -836,6 +873,10 @@ export type NoParamKey =
 	| "mobile.computers.added.stays_listed"
 	| "mobile.computers.badge.active"
 	| "mobile.computers.badge.connecting"
+	| "mobile.computers.banner.unreachable_empty"
+	| "mobile.computers.banner.unreachable_stale"
+	| "mobile.computers.banner.unreadable_empty"
+	| "mobile.computers.banner.unreadable_stale"
 	| "mobile.computers.billing_help"
 	| "mobile.computers.billing_inactive"
 	| "mobile.computers.connect_refused.generic"
@@ -849,6 +890,34 @@ export type NoParamKey =
 	| "mobile.computers.list.heading"
 	| "mobile.computers.none_on_phone"
 	| "mobile.computers.not_harness"
+	| "mobile.computers.own_tunnel.insecure_allow"
+	| "mobile.computers.own_tunnel.insecure_allowed"
+	| "mobile.computers.own_tunnel.insecure_hint"
+	| "mobile.computers.own_tunnel.insecure_off_help"
+	| "mobile.computers.own_tunnel.insecure_on_help"
+	| "mobile.computers.own_tunnel.intro"
+	| "mobile.computers.own_tunnel.need_address"
+	| "mobile.computers.own_tunnel.need_test"
+	| "mobile.computers.own_tunnel.password_label"
+	| "mobile.computers.own_tunnel.private_host"
+	| "mobile.computers.own_tunnel.public_host"
+	| "mobile.computers.own_tunnel.save_connect"
+	| "mobile.computers.own_tunnel.saving"
+	| "mobile.computers.own_tunnel.security_heading"
+	| "mobile.computers.own_tunnel.step_app"
+	| "mobile.computers.own_tunnel.step_computer"
+	| "mobile.computers.own_tunnel.step_computer_help"
+	| "mobile.computers.own_tunnel.step_publish"
+	| "mobile.computers.own_tunnel.step_test"
+	| "mobile.computers.own_tunnel.step_test_help"
+	| "mobile.computers.own_tunnel.test"
+	| "mobile.computers.own_tunnel.testing"
+	| "mobile.computers.own_tunnel.title"
+	| "mobile.computers.own_tunnel.unencrypted_body"
+	| "mobile.computers.own_tunnel.unencrypted_title"
+	| "mobile.computers.own_tunnel.url_label"
+	| "mobile.computers.own_tunnel.verdict_not_yet"
+	| "mobile.computers.own_tunnel.verdict_ok"
 	| "mobile.computers.own_tunnel_instead"
 	| "mobile.computers.password_placeholder"
 	| "mobile.computers.paths.own_action"
@@ -882,6 +951,8 @@ export type NoParamKey =
 	| "mobile.computers.status.unknown"
 	| "mobile.computers.storage_refused.no_code"
 	| "mobile.computers.switch"
+	| "mobile.computers.title.list"
+	| "mobile.computers.title.set_up"
 	| "mobile.computers.transport.custom"
 	| "mobile.computers.transport.radient"
 	| "mobile.computers.try_now"
@@ -1476,6 +1547,10 @@ export type MessageParams = {
 	"mobile.computers.added.stays_listed": NoParams;
 	"mobile.computers.badge.active": NoParams;
 	"mobile.computers.badge.connecting": NoParams;
+	"mobile.computers.banner.unreachable_empty": NoParams;
+	"mobile.computers.banner.unreachable_stale": NoParams;
+	"mobile.computers.banner.unreadable_empty": NoParams;
+	"mobile.computers.banner.unreadable_stale": NoParams;
 	"mobile.computers.billing_help": NoParams;
 	"mobile.computers.billing_inactive": NoParams;
 	"mobile.computers.connect_refused.generic": NoParams;
@@ -1489,6 +1564,36 @@ export type MessageParams = {
 	"mobile.computers.list.heading": NoParams;
 	"mobile.computers.none_on_phone": NoParams;
 	"mobile.computers.not_harness": NoParams;
+	"mobile.computers.own_tunnel.insecure_allow": NoParams;
+	"mobile.computers.own_tunnel.insecure_allowed": NoParams;
+	"mobile.computers.own_tunnel.insecure_hint": NoParams;
+	"mobile.computers.own_tunnel.insecure_off_help": NoParams;
+	"mobile.computers.own_tunnel.insecure_on_help": NoParams;
+	"mobile.computers.own_tunnel.intro": NoParams;
+	"mobile.computers.own_tunnel.need_address": NoParams;
+	"mobile.computers.own_tunnel.need_test": NoParams;
+	"mobile.computers.own_tunnel.password_for": { name: string | number };
+	"mobile.computers.own_tunnel.password_label": NoParams;
+	"mobile.computers.own_tunnel.private_host": NoParams;
+	"mobile.computers.own_tunnel.public_host": NoParams;
+	"mobile.computers.own_tunnel.save_connect": NoParams;
+	"mobile.computers.own_tunnel.saving": NoParams;
+	"mobile.computers.own_tunnel.security_body": { command: string | number };
+	"mobile.computers.own_tunnel.security_heading": NoParams;
+	"mobile.computers.own_tunnel.step_app": NoParams;
+	"mobile.computers.own_tunnel.step_computer": NoParams;
+	"mobile.computers.own_tunnel.step_computer_help": NoParams;
+	"mobile.computers.own_tunnel.step_publish": NoParams;
+	"mobile.computers.own_tunnel.step_test": NoParams;
+	"mobile.computers.own_tunnel.step_test_help": NoParams;
+	"mobile.computers.own_tunnel.test": NoParams;
+	"mobile.computers.own_tunnel.testing": NoParams;
+	"mobile.computers.own_tunnel.title": NoParams;
+	"mobile.computers.own_tunnel.unencrypted_body": NoParams;
+	"mobile.computers.own_tunnel.unencrypted_title": NoParams;
+	"mobile.computers.own_tunnel.url_label": NoParams;
+	"mobile.computers.own_tunnel.verdict_not_yet": NoParams;
+	"mobile.computers.own_tunnel.verdict_ok": NoParams;
 	"mobile.computers.own_tunnel_instead": NoParams;
 	"mobile.computers.password_placeholder": NoParams;
 	"mobile.computers.paths.own_action": NoParams;
@@ -1527,6 +1632,8 @@ export type MessageParams = {
 	"mobile.computers.storage_refused.no_code": NoParams;
 	"mobile.computers.storage_refused.with_code": { code: string | number };
 	"mobile.computers.switch": NoParams;
+	"mobile.computers.title.list": NoParams;
+	"mobile.computers.title.set_up": NoParams;
 	"mobile.computers.transport.custom": NoParams;
 	"mobile.computers.transport.radient": NoParams;
 	"mobile.computers.try_now": NoParams;
@@ -1904,6 +2011,7 @@ export type MessageParams = {
 	"mobile.signin.panel.opening": NoParams;
 	"mobile.signin.panel.unavailable": NoParams;
 	"mobile.signin.panel.unavailable_alt": NoParams;
+	"mobile.signin.panel.unavailable_detail": { module: string | number };
 	"mobile.signin.panel.waiting": NoParams;
 	"mobile.signin.panel.waiting_help": NoParams;
 	"mobile.signin.progress": NoParams;
@@ -2229,6 +2337,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.added.stays_listed": "It stays listed on this phone, so you can switch back from the computer list.",
 	"mobile.computers.badge.active": "active",
 	"mobile.computers.badge.connecting": "connecting",
+	"mobile.computers.banner.unreachable_empty": "Radient could not be reached to list your computers. Check this device's connection.",
+	"mobile.computers.banner.unreachable_stale": "Radient could not be reached, so this list may be out of date.",
+	"mobile.computers.banner.unreadable_empty": "Radient's answer could not be read, so your computers could not be listed.",
+	"mobile.computers.banner.unreadable_stale": "Radient's answer could not be read, so this list may be out of date.",
 	"mobile.computers.billing_help": "In the Radient console, open this tunnel's billing settings and activate remote access.",
 	"mobile.computers.billing_inactive": "Billing for this tunnel is inactive, so remote access will be refused.",
 	"mobile.computers.connect_refused.generic": "The computer didn't accept the connection. Your address and password are still here, so check them and try again.",
@@ -2242,6 +2354,36 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.list.heading": "Your computers",
 	"mobile.computers.none_on_phone": "No computers on this phone yet.",
 	"mobile.computers.not_harness": "This computer is not running the Local Operator harness.",
+	"mobile.computers.own_tunnel.insecure_allow": "Allow a plain http:// address",
+	"mobile.computers.own_tunnel.insecure_allowed": "Plain http:// is allowed",
+	"mobile.computers.own_tunnel.insecure_hint": "Needed only for an address over http, which sends the password in the clear",
+	"mobile.computers.own_tunnel.insecure_off_help": "Over http:// your relay password crosses the network in the clear, so it is off unless you turn it on. Use https:// whenever the address supports it.",
+	"mobile.computers.own_tunnel.insecure_on_help": "On: the relay password and everything you send cross this network unencrypted. Only do this on a network you trust.",
+	"mobile.computers.own_tunnel.intro": "No Radient account is needed for any of this. You publish the relay on your own computer through a tunnel you control, and the app talks to it through the address you paste below.",
+	"mobile.computers.own_tunnel.need_address": "Paste your tunnel's address to continue.",
+	"mobile.computers.own_tunnel.need_test": "Test the connection first — a tunnel that has not answered once is not one to save.",
+	"mobile.computers.own_tunnel.password_for": "Enter the password for {name}",
+	"mobile.computers.own_tunnel.password_label": "Relay password",
+	"mobile.computers.own_tunnel.private_host": "This address is on your own network, so the exposure is limited to it.",
+	"mobile.computers.own_tunnel.public_host": "This address is not a private one — anything between this phone and it can read the password.",
+	"mobile.computers.own_tunnel.save_connect": "Save and connect",
+	"mobile.computers.own_tunnel.saving": "Saving…",
+	"mobile.computers.own_tunnel.security_body": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and rotate the password with `{command}` if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
+	"mobile.computers.own_tunnel.security_heading": "Before you expose it",
+	"mobile.computers.own_tunnel.step_app": "In the app",
+	"mobile.computers.own_tunnel.step_computer": "On the computer",
+	"mobile.computers.own_tunnel.step_computer_help": "The relay binds loopback only, so this is the machine that has to run it. Leave it awake while you use the app.",
+	"mobile.computers.own_tunnel.step_publish": "Publish it",
+	"mobile.computers.own_tunnel.step_test": "Test it",
+	"mobile.computers.own_tunnel.step_test_help": "This makes a real request through your tunnel before anything is saved.",
+	"mobile.computers.own_tunnel.test": "Test the connection",
+	"mobile.computers.own_tunnel.testing": "Testing…",
+	"mobile.computers.own_tunnel.title": "Your own tunnel",
+	"mobile.computers.own_tunnel.unencrypted_body": "Turn the opt-in on to use it, or give an https:// address — a tunnel normally prints one.",
+	"mobile.computers.own_tunnel.unencrypted_title": "This address is unencrypted",
+	"mobile.computers.own_tunnel.url_label": "Public URL",
+	"mobile.computers.own_tunnel.verdict_not_yet": "Not yet",
+	"mobile.computers.own_tunnel.verdict_ok": "Connected",
 	"mobile.computers.own_tunnel_instead": "Use my own tunnel instead",
 	"mobile.computers.password_placeholder": "The password from lop mobile",
 	"mobile.computers.paths.own_action": "Use my own tunnel",
@@ -2280,6 +2422,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.storage_refused.no_code": "This device's secure storage refused the request. Try again, or reinstall the app if it keeps happening.",
 	"mobile.computers.storage_refused.with_code": "This device's secure storage refused the request (code {code}). Try again, or reinstall the app if it keeps happening.",
 	"mobile.computers.switch": "Switch computer",
+	"mobile.computers.title.list": "Computers",
+	"mobile.computers.title.set_up": "Set up a computer",
 	"mobile.computers.transport.custom": "Your address",
 	"mobile.computers.transport.radient": "Radient",
 	"mobile.computers.try_now": "Try now",
@@ -2657,6 +2801,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.signin.panel.opening": "Opening your browser…",
 	"mobile.signin.panel.unavailable": "This build cannot finish a Radient sign-in.",
 	"mobile.signin.panel.unavailable_alt": "You can still connect with the relay's address and password.",
+	"mobile.signin.panel.unavailable_detail": "Signing in with Radient needs a loopback listener this build does not include ({module}).",
 	"mobile.signin.panel.waiting": "Waiting for your browser.",
 	"mobile.signin.panel.waiting_help": "Finish signing in there, then come back to this app.",
 	"mobile.signin.progress": "Signing in…",
@@ -2967,6 +3112,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.added.stays_listed": { role: "help", note: "Follows \"Connected to <computer>.\" after a newly added computer comes online. Reassures that the previous computer is still listed." },
 	"mobile.computers.badge.active": { role: "status", note: "Lower-case monospace badge on a Settings computer row that is the connected one. Keep it lower case and one word to match the sibling badge." },
 	"mobile.computers.badge.connecting": { role: "status", note: "Lower-case monospace badge on a Settings computer row whose connection is being made. Keep it lower case and one word to match the sibling badge." },
+	"mobile.computers.banner.unreachable_empty": { role: "status", note: "Warning banner on the Computers screen when Radient (brand name: keep it) did not answer and no computers are known yet. Points the reader at this phone's network. Never promises an automatic retry; a Try now button sits beside it." },
+	"mobile.computers.banner.unreachable_stale": { role: "status", note: "Warning banner above the computer list when Radient (the account service, a brand name: keep it) did not answer and the list shown is from before. Also shown under the computers in Settings. Never promises an automatic retry; a Try now button sits beside it." },
+	"mobile.computers.banner.unreadable_empty": { role: "status", note: "Warning banner on the Computers screen when Radient (brand name: keep it) answered with something the app could not understand and no computers are known yet. Never promises an automatic retry." },
+	"mobile.computers.banner.unreadable_stale": { role: "status", note: "Warning banner above the computer list when Radient (brand name: keep it) answered with something the app could not understand, and the list shown is from before. Also shown in Settings. Never promises an automatic retry." },
 	"mobile.computers.billing_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.billing_inactive": { role: "help", note: "Warning line on a computer row when the account's billing for the tunnel is inactive and the server supplied no message of its own. Full sentence with a full stop." },
 	"mobile.computers.connect_refused.generic": { role: "status", note: "Body of the \"Couldn't connect\" error when the computer gave no more specific reason. Reassures the user that what they typed is kept, and tells them to check it and retry (a Retry button follows)." },
@@ -2980,6 +3129,36 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.list.heading": { role: "heading", note: "Section header above the list of computers on the Radient account on the computers screen. Plural noun phrase, no punctuation." },
 	"mobile.computers.none_on_phone": { role: "status", note: "Empty state of the computer switcher when no computer has been paired on this phone. Ends with a full stop." },
 	"mobile.computers.not_harness": { role: "status", note: "Muted line on a computer row in the Your computers list when the account lists the computer but it is not running the Local Operator harness. Full sentence with a full stop. 'Local Operator' is the product name: keep it in Latin script." },
+	"mobile.computers.own_tunnel.insecure_allow": { role: "button", note: "Toggle button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that opts in to an unencrypted address. \"http://\" is the literal scheme: keep it unchanged and left-to-right. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
+	"mobile.computers.own_tunnel.insecure_allowed": { role: "status", note: "Label of the same toggle once the opt-in is on on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" is the literal scheme: keep it unchanged. No final full stop. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
+	"mobile.computers.own_tunnel.insecure_hint": { role: "help", note: "Screen-reader hint (not shown on screen) of the plain-http toggle on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http\" is the protocol name: keep it. No final full stop." },
+	"mobile.computers.own_tunnel.insecure_off_help": { role: "help", note: "Line under the plain-http toggle while it is OFF on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"http://\" and \"https://\" are literal schemes: keep them unchanged and left-to-right. \"It\" is the opt-in. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
+	"mobile.computers.own_tunnel.insecure_on_help": { role: "help", note: "Line under the plain-http toggle while it is ON on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Starts by stating the toggle's state; a warning, keep it direct." },
+	"mobile.computers.own_tunnel.intro": { role: "help", note: "Opening paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Radient is a brand name: keep it. The relay is the small server on the reader's computer; a tunnel is a service that gives it a public address." },
+	"mobile.computers.own_tunnel.need_address": { role: "help", note: "Line under the buttons on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) while the address field is empty, explaining why Save and connect is disabled." },
+	"mobile.computers.own_tunnel.need_test": { role: "help", note: "Line under the buttons on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when an address is typed but no test has succeeded, explaining why Save and connect is disabled. \"Test the connection\" names the button above; translate it the same way." },
+	"mobile.computers.own_tunnel.password_for": { role: "heading", note: "Heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the phone already knows the computer and only its password is missing. {name} is the computer's name as the reader saved it; keep it unchanged. No final full stop." },
+	"mobile.computers.own_tunnel.password_label": { role: "meta", note: "Visible label and accessible name of the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). The relay is the small server on the reader's computer that the app talks to. Two or three words, no final full stop." },
+	"mobile.computers.own_tunnel.private_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is a private (home or office network) one." },
+	"mobile.computers.own_tunnel.public_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is reachable on the public internet. Keep the warning strong." },
+	"mobile.computers.own_tunnel.save_connect": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that stores the address and password on this phone and connects. Enabled only after a successful test. Sentence case, no final full stop." },
+	"mobile.computers.own_tunnel.saving": { role: "status", note: "The same button's label while saving and connecting on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis." },
+	"mobile.computers.own_tunnel.security_body": { role: "help", note: "Security advice paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). {command} is a terminal command (lop mobile password): keep the placeholder and its backticks unchanged. HTTPS and URL are technical terms; keep them recognisable." },
+	"mobile.computers.own_tunnel.security_heading": { role: "heading", note: "Section heading of the security advice at the end on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"It\" is the reader's computer. No final full stop." },
+	"mobile.computers.own_tunnel.step_app": { role: "heading", note: "Step 3 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"3.\" is shown before it, so do not add a number. This step is the address and password fields in this app. No final full stop." },
+	"mobile.computers.own_tunnel.step_computer": { role: "heading", note: "Step 1 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"1.\" is shown before it, so do not add a number. Says this step happens on the reader's computer, not the phone. No final full stop." },
+	"mobile.computers.own_tunnel.step_computer_help": { role: "help", note: "Help under step 1 on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), above terminal commands. \"Binds loopback only\" means the relay accepts connections from the same computer only. Keep it plain." },
+	"mobile.computers.own_tunnel.step_publish": { role: "heading", note: "Step 2 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"2.\" is shown before it, so do not add a number. \"It\" is the relay: make it reachable from the internet through a tunnel. No final full stop." },
+	"mobile.computers.own_tunnel.step_test": { role: "heading", note: "Step 4 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"4.\" is shown before it, so do not add a number. \"It\" is the connection. No final full stop." },
+	"mobile.computers.own_tunnel.step_test_help": { role: "help", note: "Help under step 4 on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), above the Test the connection button." },
+	"mobile.computers.own_tunnel.test": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that makes a real request through the tunnel. Sentence case, no final full stop." },
+	"mobile.computers.own_tunnel.testing": { role: "status", note: "The same button's label while the test request runs on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis." },
+	"mobile.computers.own_tunnel.title": { role: "heading", note: "Screen title on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Short: the header is narrow on phones. No final full stop." },
+	"mobile.computers.own_tunnel.unencrypted_body": { role: "help", note: "Body of the unencrypted-address warning on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"The opt-in\" is the plain-http toggle just above. \"https://\" is a literal scheme: keep it unchanged and left-to-right. In ur the http(s) scheme token is wrapped in LRI…PDI (U+2066/U+2069), because without it the RTL paragraph reorders it to \"//:http\"; this is a recorded mobile-only exception to the no-bidi-controls rule (programme manager ruling, M3 S2a)." },
+	"mobile.computers.own_tunnel.unencrypted_title": { role: "heading", note: "Title of a warning box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the typed address starts with http:// and the opt-in is off. Short, no final full stop." },
+	"mobile.computers.own_tunnel.url_label": { role: "meta", note: "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop." },
+	"mobile.computers.own_tunnel.verdict_not_yet": { role: "heading", note: "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop." },
+	"mobile.computers.own_tunnel.verdict_ok": { role: "heading", note: "Title of the success box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the relay answered. One word, no final full stop." },
 	"mobile.computers.own_tunnel_instead": { role: "button", note: "Small quiet button at the bottom of the computers screen that opens the own-tunnel (self-hosted) setup instead of Radient. 'instead' contrasts with the Radient list above it." },
 	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
 	"mobile.computers.paths.own_action": { role: "button", note: "Outline button in the own-tunnel card that opens the own-tunnel setup. Short imperative; the computers screen has a separate 'Use my own tunnel instead'." },
@@ -3018,6 +3197,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.storage_refused.no_code": { role: "status", note: "Same message as mobile.computers.storage_refused.with_code when the platform gave no code: the phone's own secure storage (iOS Keychain / Android Keystore) refused the request." },
 	"mobile.computers.storage_refused.with_code": { role: "status", note: "Shown when the phone's own secure storage (iOS Keychain / Android Keystore) refused to read, delete or save the app's sign-in data. {code} is a technical platform code such as \"ERR_KEY_CHAIN -34018\" for support: keep it exactly as written, untranslated, inside the parentheses. \"Reinstall the app\" is the remedy when retrying keeps failing." },
 	"mobile.computers.switch": { role: "button", note: "Button (and the title of the sheet it opens) that lets the reader pick a different computer. Sentence case, no final full stop." },
+	"mobile.computers.title.list": { role: "heading", note: "Screen title of the Computers screen when it lists the account's computers (or is loading or showing an error). One or two words; the header is narrow on phones, so keep it short. No final full stop." },
+	"mobile.computers.title.set_up": { role: "heading", note: "Screen title of the Computers screen when it shows how to add a computer (the account has none, or the reader chose Add a computer). Imperative, sentence case, short: the header is narrow on phones. No final full stop." },
 	"mobile.computers.transport.custom": { role: "meta", note: "How a computer is reached when the user typed its address themselves (not through Radient). Shown on the switcher row's second line before the health dot, under a title that is the address itself, e.g. \"127.0.0.1:18961\" over \"Your address ● Online\"; also spoken as \"Your address, <host>\". Short noun phrase, sentence case." },
 	"mobile.computers.transport.radient": { role: "meta", note: "Brand name for how a computer is reached, shown before its health word in the computer switcher as \"Radient ● Online\" (the status dot follows it). A product name: keep it as written." },
 	"mobile.computers.try_now": { role: "button", note: "Action button inside the warning banner shown when computer discovery failed; re-runs discovery immediately. Short imperative." },
@@ -3395,6 +3576,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.signin.panel.opening": { role: "status", note: "Shimmering status line while the system browser is being opened for Radient sign-in. Ends with an ellipsis, no full stop." },
 	"mobile.signin.panel.unavailable": { role: "status", note: "Headline when this app build cannot receive the browser callback at all. A technical detail line (not translated, from the runtime) renders below it. Full stop at the end; 'Radient' stays in Latin script." },
 	"mobile.signin.panel.unavailable_alt": { role: "help", note: "Last line of the 'sign-in unavailable' state pointing at the route that works: the relay's address and password (the 'Use an address and password' button below). Full stop at the end." },
+	"mobile.signin.panel.unavailable_detail": { role: "help", note: "Detail under \"This build cannot finish a Radient sign-in.\" on the sign-in screen. Radient is a brand name: keep it. {module} is a software module id for developers: keep it unchanged, left-to-right, inside the parentheses. A \"loopback listener\" receives the browser's sign-in reply on this device." },
 	"mobile.signin.panel.waiting": { role: "status", note: "Headline of the sign-in hand-off region once the browser is open; announced by screen readers (polite live region). Full sentence with a full stop. A second line, 'panel.waiting_help', renders below it." },
 	"mobile.signin.panel.waiting_help": { role: "help", note: "Instruction under 'Waiting for your browser.': 'there' means the browser that just opened. Full stop at the end." },
 	"mobile.signin.progress": { role: "status", note: "Visible after the native browser returns, during token exchange and credential persistence." },
@@ -3719,6 +3901,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.added.stays_listed": "No desaparece de este teléfono: puedes volver a esa máquina desde la lista.",
 		"mobile.computers.badge.active": "activa",
 		"mobile.computers.badge.connecting": "conectando",
+		"mobile.computers.banner.unreachable_empty": "No se pudo contactar con Radient para mostrar tus máquinas. Comprueba la conexión de este dispositivo.",
+		"mobile.computers.banner.unreachable_stale": "No se pudo contactar con Radient, así que esta lista puede estar desactualizada.",
+		"mobile.computers.banner.unreadable_empty": "No se pudo leer la respuesta de Radient, así que no se pudieron mostrar tus máquinas.",
+		"mobile.computers.banner.unreadable_stale": "No se pudo leer la respuesta de Radient, así que esta lista puede estar desactualizada.",
 		"mobile.computers.billing_help": "En la consola de Radient, abre la facturación de este túnel y activa el acceso remoto.",
 		"mobile.computers.billing_inactive": "La facturación de este túnel está inactiva, así que se denegará el acceso remoto.",
 		"mobile.computers.connect_refused.generic": "El ordenador no aceptó la conexión. Tu dirección y tu contraseña siguen aquí, así que revísalas y vuelve a intentarlo.",
@@ -3732,6 +3918,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Tus máquinas",
 		"mobile.computers.none_on_phone": "Aún no hay máquinas en este teléfono.",
 		"mobile.computers.not_harness": "Esta máquina no ejecuta el harness de Local Operator.",
+		"mobile.computers.own_tunnel.insecure_allow": "Permitir una dirección http://",
+		"mobile.computers.own_tunnel.insecure_allowed": "Dirección http:// permitida",
+		"mobile.computers.own_tunnel.insecure_hint": "Solo hace falta para una dirección http, que envía la contraseña sin cifrar",
+		"mobile.computers.own_tunnel.insecure_off_help": "Con http://, la contraseña del relé cruza la red sin cifrar, así que esta opción está desactivada salvo que la actives. Usa https:// siempre que la dirección lo admita.",
+		"mobile.computers.own_tunnel.insecure_on_help": "Activado: la contraseña del relé y todo lo que envíes cruzan esta red sin cifrar. Hazlo solo en una red de confianza.",
+		"mobile.computers.own_tunnel.intro": "Nada de esto requiere una cuenta de Radient. Publicas el relé en tu propia máquina mediante un túnel que controlas tú, y la app se comunica con él a través de la dirección que pegues abajo.",
+		"mobile.computers.own_tunnel.need_address": "Pega la dirección de tu túnel para continuar.",
+		"mobile.computers.own_tunnel.need_test": "Prueba la conexión primero — no vale la pena guardar un túnel que nunca ha respondido.",
+		"mobile.computers.own_tunnel.password_for": "Introduce la contraseña de {name}",
+		"mobile.computers.own_tunnel.password_label": "Contraseña del relé",
+		"mobile.computers.own_tunnel.private_host": "Esta dirección está en tu propia red, así que la exposición se limita a ella.",
+		"mobile.computers.own_tunnel.public_host": "Esta dirección no es privada: cualquier intermediario entre este teléfono y ella puede leer la contraseña.",
+		"mobile.computers.own_tunnel.save_connect": "Guardar y conectar",
+		"mobile.computers.own_tunnel.saving": "Guardando…",
+		"mobile.computers.own_tunnel.security_body": "Estás poniendo tu propia máquina en internet, y la contraseña del relé es lo único que la protege. Usa HTTPS siempre que puedas, activa la autenticación propia de tu túnel si la ofrece y cambia la contraseña con `{command}` si se ha compartido. Cualquiera con esa contraseña y tu URL puede controlar las sesiones de esa máquina.",
+		"mobile.computers.own_tunnel.security_heading": "Antes de exponerla",
+		"mobile.computers.own_tunnel.step_app": "En la app",
+		"mobile.computers.own_tunnel.step_computer": "En la máquina",
+		"mobile.computers.own_tunnel.step_computer_help": "El relé solo acepta conexiones desde la propia máquina (loopback), así que tiene que ejecutarse en ella. Evita que entre en reposo mientras usas la app.",
+		"mobile.computers.own_tunnel.step_publish": "Publícalo",
+		"mobile.computers.own_tunnel.step_test": "Pruébala",
+		"mobile.computers.own_tunnel.step_test_help": "Esta prueba envía una solicitud real a través de tu túnel antes de guardar nada.",
+		"mobile.computers.own_tunnel.test": "Probar la conexión",
+		"mobile.computers.own_tunnel.testing": "Probando…",
+		"mobile.computers.own_tunnel.title": "Tu propio túnel",
+		"mobile.computers.own_tunnel.unencrypted_body": "Activa la opción de arriba para usar esta dirección o indica una dirección https:// — los túneles suelen mostrar una.",
+		"mobile.computers.own_tunnel.unencrypted_title": "Esta dirección no está cifrada",
+		"mobile.computers.own_tunnel.url_label": "URL pública",
+		"mobile.computers.own_tunnel.verdict_not_yet": "Aún no",
+		"mobile.computers.own_tunnel.verdict_ok": "Conectado",
 		"mobile.computers.own_tunnel_instead": "Usar mi propio túnel en su lugar",
 		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
 		"mobile.computers.paths.own_action": "Usar mi propio túnel",
@@ -3770,6 +3986,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.storage_refused.no_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud. Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
 		"mobile.computers.storage_refused.with_code": "El almacenamiento seguro de este dispositivo rechazó la solicitud (código {code}). Vuelve a intentarlo o reinstala la app si sigue ocurriendo.",
 		"mobile.computers.switch": "Cambiar de máquina",
+		"mobile.computers.title.list": "Máquinas",
+		"mobile.computers.title.set_up": "Añade una máquina",
 		"mobile.computers.transport.custom": "Tu dirección",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.try_now": "Probar ahora",
@@ -4147,6 +4365,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.panel.opening": "Abriendo tu navegador…",
 		"mobile.signin.panel.unavailable": "Esta compilación no puede completar el inicio de sesión con Radient.",
 		"mobile.signin.panel.unavailable_alt": "Aún puedes conectarte con la dirección y la contraseña del relé.",
+		"mobile.signin.panel.unavailable_detail": "Iniciar sesión con Radient requiere un receptor loopback que esta compilación no incluye ({module}).",
 		"mobile.signin.panel.waiting": "Esperando a tu navegador.",
 		"mobile.signin.panel.waiting_help": "Completa el inicio de sesión allí y vuelve a esta app.",
 		"mobile.signin.progress": "Iniciando sesión…",
@@ -4455,6 +4674,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.added.stays_listed": "Il reste dans la liste de ce téléphone : vous pouvez y revenir depuis la liste des ordinateurs.",
 		"mobile.computers.badge.active": "actif",
 		"mobile.computers.badge.connecting": "connexion",
+		"mobile.computers.banner.unreachable_empty": "Impossible de joindre Radient pour lister vos ordinateurs. Vérifiez la connexion de cet appareil.",
+		"mobile.computers.banner.unreachable_stale": "Impossible de joindre Radient : cette liste n’est peut-être plus à jour.",
+		"mobile.computers.banner.unreadable_empty": "La réponse de Radient est illisible : impossible de lister vos ordinateurs.",
+		"mobile.computers.banner.unreadable_stale": "La réponse de Radient est illisible : cette liste n’est peut-être plus à jour.",
 		"mobile.computers.billing_help": "Dans la console Radient, ouvrez la facturation de ce tunnel et activez l’accès à distance.",
 		"mobile.computers.billing_inactive": "La facturation de ce tunnel est inactive : l’accès à distance sera refusé.",
 		"mobile.computers.connect_refused.generic": "L’ordinateur n’a pas accepté la connexion. Votre adresse et votre mot de passe sont toujours là : vérifiez-les et réessayez.",
@@ -4468,6 +4691,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Vos ordinateurs",
 		"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
 		"mobile.computers.not_harness": "Cet ordinateur n’exécute pas le harness Local Operator.",
+		"mobile.computers.own_tunnel.insecure_allow": "Autoriser le http:// en clair",
+		"mobile.computers.own_tunnel.insecure_allowed": "http:// en clair autorisé",
+		"mobile.computers.own_tunnel.insecure_hint": "Nécessaire uniquement pour une adresse en http, qui transmet le mot de passe en clair",
+		"mobile.computers.own_tunnel.insecure_off_help": "En http://, le mot de passe de votre relais transite en clair sur le réseau : l’option reste donc désactivée tant que vous ne l’activez pas. Utilisez https:// dès que l’adresse le permet.",
+		"mobile.computers.own_tunnel.insecure_on_help": "Activé : le mot de passe du relais et tout ce que vous envoyez transitent sur ce réseau sans chiffrement. À n’activer que sur un réseau de confiance.",
+		"mobile.computers.own_tunnel.intro": "Rien de tout cela ne nécessite de compte Radient. Vous publiez le relais sur votre propre ordinateur via un tunnel que vous contrôlez, et l’app s’y connecte à l’adresse que vous collez ci-dessous.",
+		"mobile.computers.own_tunnel.need_address": "Collez l’adresse de votre tunnel pour continuer.",
+		"mobile.computers.own_tunnel.need_test": "Testez d’abord la connexion — un tunnel qui n’a jamais répondu ne mérite pas d’être enregistré.",
+		"mobile.computers.own_tunnel.password_for": "Saisissez le mot de passe de {name}",
+		"mobile.computers.own_tunnel.password_label": "Mot de passe du relais",
+		"mobile.computers.own_tunnel.private_host": "Cette adresse se trouve sur votre propre réseau : l’exposition reste limitée à ce réseau.",
+		"mobile.computers.own_tunnel.public_host": "Cette adresse n’est pas privée — tout intermédiaire sur le trajet depuis ce téléphone peut lire le mot de passe.",
+		"mobile.computers.own_tunnel.save_connect": "Enregistrer et se connecter",
+		"mobile.computers.own_tunnel.saving": "Enregistrement…",
+		"mobile.computers.own_tunnel.security_body": "Vous mettez votre propre ordinateur sur Internet, et le mot de passe du relais est la seule chose qui le protège. Privilégiez HTTPS, activez l’authentification propre à votre tunnel s’il en propose une, et changez le mot de passe avec `{command}` s’il a été partagé. Toute personne disposant de ce mot de passe et de votre URL peut piloter les sessions sur cette machine.",
+		"mobile.computers.own_tunnel.security_heading": "Avant de l’exposer",
+		"mobile.computers.own_tunnel.step_app": "Dans l’app",
+		"mobile.computers.own_tunnel.step_computer": "Sur l’ordinateur",
+		"mobile.computers.own_tunnel.step_computer_help": "Le relais n’accepte que les connexions venant de la même machine : c’est donc cet ordinateur qui doit l’exécuter. Empêchez sa mise en veille tant que vous utilisez l’app.",
+		"mobile.computers.own_tunnel.step_publish": "Publiez-le",
+		"mobile.computers.own_tunnel.step_test": "Testez la connexion",
+		"mobile.computers.own_tunnel.step_test_help": "Une vraie requête passe par votre tunnel avant tout enregistrement.",
+		"mobile.computers.own_tunnel.test": "Tester la connexion",
+		"mobile.computers.own_tunnel.testing": "Test en cours…",
+		"mobile.computers.own_tunnel.title": "Votre propre tunnel",
+		"mobile.computers.own_tunnel.unencrypted_body": "Activez l’option pour l’utiliser, ou indiquez une adresse https:// — un tunnel en affiche normalement une.",
+		"mobile.computers.own_tunnel.unencrypted_title": "Cette adresse n’est pas chiffrée",
+		"mobile.computers.own_tunnel.url_label": "URL publique",
+		"mobile.computers.own_tunnel.verdict_not_yet": "Pas encore",
+		"mobile.computers.own_tunnel.verdict_ok": "Connecté",
 		"mobile.computers.own_tunnel_instead": "Utiliser plutôt mon propre tunnel",
 		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 		"mobile.computers.paths.own_action": "Utiliser mon propre tunnel",
@@ -4506,6 +4759,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.storage_refused.no_code": "Le stockage sécurisé de cet appareil a refusé la demande. Réessayez, ou réinstallez l’app si le problème persiste.",
 		"mobile.computers.storage_refused.with_code": "Le stockage sécurisé de cet appareil a refusé la demande (code {code}). Réessayez, ou réinstallez l’app si le problème persiste.",
 		"mobile.computers.switch": "Changer d’ordinateur",
+		"mobile.computers.title.list": "Ordinateurs",
+		"mobile.computers.title.set_up": "Nouvel ordinateur",
 		"mobile.computers.transport.custom": "Votre adresse",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.try_now": "Essayer maintenant",
@@ -4883,6 +5138,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.panel.opening": "Ouverture de votre navigateur…",
 		"mobile.signin.panel.unavailable": "Cette version de l’app ne peut pas terminer une connexion Radient.",
 		"mobile.signin.panel.unavailable_alt": "Vous pouvez toujours vous connecter avec l’adresse et le mot de passe du relais.",
+		"mobile.signin.panel.unavailable_detail": "La connexion avec Radient nécessite un écouteur local ({module}), absent de cette version.",
 		"mobile.signin.panel.waiting": "En attente de votre navigateur.",
 		"mobile.signin.panel.waiting_help": "Finalisez la connexion dans le navigateur, puis revenez à cette app.",
 		"mobile.signin.progress": "Connexion en cours…",
@@ -5191,6 +5447,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.added.stays_listed": "यह इस फ़ोन पर सूची में बना रहता है, ताकि आप कंप्यूटर सूची से वापस स्विच कर सकें।",
 		"mobile.computers.badge.active": "सक्रिय",
 		"mobile.computers.badge.connecting": "कनेक्ट हो रहा",
+		"mobile.computers.banner.unreachable_empty": "आपके कंप्यूटरों की सूची लाने के लिए Radient से संपर्क नहीं हो सका। इस डिवाइस का कनेक्शन जाँचें।",
+		"mobile.computers.banner.unreachable_stale": "Radient से संपर्क नहीं हो सका, इसलिए यह सूची पुरानी हो सकती है।",
+		"mobile.computers.banner.unreadable_empty": "Radient का जवाब पढ़ा नहीं जा सका, इसलिए आपके कंप्यूटरों की सूची नहीं बन सकी।",
+		"mobile.computers.banner.unreadable_stale": "Radient का जवाब पढ़ा नहीं जा सका, इसलिए यह सूची पुरानी हो सकती है।",
 		"mobile.computers.billing_help": "Radient कंसोल में इस टनल की बिलिंग सेटिंग खोलें और रिमोट ऐक्सेस चालू करें।",
 		"mobile.computers.billing_inactive": "इस टनल की बिलिंग निष्क्रिय है, इसलिए रिमोट ऐक्सेस अस्वीकार कर दिया जाएगा।",
 		"mobile.computers.connect_refused.generic": "कंप्यूटर ने कनेक्शन स्वीकार नहीं किया। आपका पता और पासवर्ड अभी भी यहाँ हैं, इसलिए उन्हें जाँचें और फिर से कोशिश करें।",
@@ -5204,6 +5464,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "आपके कंप्यूटर",
 		"mobile.computers.none_on_phone": "इस फ़ोन पर अभी कोई कंप्यूटर नहीं।",
 		"mobile.computers.not_harness": "इस कंप्यूटर पर Local Operator हार्नेस नहीं चल रहा है।",
+		"mobile.computers.own_tunnel.insecure_allow": "सादे http:// पते की अनुमति दें",
+		"mobile.computers.own_tunnel.insecure_allowed": "सादे http:// की अनुमति है",
+		"mobile.computers.own_tunnel.insecure_hint": "सिर्फ़ http वाले पते के लिए ज़रूरी, जो पासवर्ड बिना एन्क्रिप्शन के भेजता है",
+		"mobile.computers.own_tunnel.insecure_off_help": "http:// पर आपका रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है, इसलिए यह विकल्प डिफ़ॉल्ट रूप से बंद रहता है। जब भी पता https:// सपोर्ट करे, उसी का उपयोग करें।",
+		"mobile.computers.own_tunnel.insecure_on_help": "चालू: रिले पासवर्ड और आपकी भेजी हर चीज़ इस नेटवर्क से बिना एन्क्रिप्शन के गुज़रती है। ऐसा सिर्फ़ भरोसेमंद नेटवर्क पर करें।",
+		"mobile.computers.own_tunnel.intro": "इसमें कहीं भी Radient खाते की ज़रूरत नहीं है। आप रिले को अपने कंप्यूटर पर, अपने नियंत्रण वाली टनल के ज़रिये प्रकाशित करते हैं, और ऐप उससे उसी पते से बात करता है जिसे आप नीचे चिपकाते हैं।",
+		"mobile.computers.own_tunnel.need_address": "जारी रखने के लिए अपनी टनल का पता चिपकाएँ।",
+		"mobile.computers.own_tunnel.need_test": "पहले कनेक्शन जाँचें — जिस टनल ने एक बार भी जवाब नहीं दिया, उसे सहेजना ठीक नहीं।",
+		"mobile.computers.own_tunnel.password_for": "{name} का पासवर्ड डालें",
+		"mobile.computers.own_tunnel.password_label": "रिले पासवर्ड",
+		"mobile.computers.own_tunnel.private_host": "यह पता आपके अपने नेटवर्क पर है, इसलिए जोखिम उसी नेटवर्क तक सीमित है।",
+		"mobile.computers.own_tunnel.public_host": "यह पता निजी नहीं है — इस फ़ोन से उस पते तक के रास्ते में मौजूद कोई भी चीज़ पासवर्ड पढ़ सकती है।",
+		"mobile.computers.own_tunnel.save_connect": "सहेजें और कनेक्ट करें",
+		"mobile.computers.own_tunnel.saving": "सहेजा जा रहा है…",
+		"mobile.computers.own_tunnel.security_body": "आप अपने ही कंप्यूटर को इंटरनेट पर खोल रहे हैं, और उसकी सुरक्षा में सिर्फ़ रिले पासवर्ड खड़ा है। HTTPS को प्राथमिकता दें, अगर आपकी टनल अपना प्रमाणीकरण देती है तो उसे चालू करें, और अगर पासवर्ड किसी के साथ साझा हुआ है तो उसे `{command}` से बदल दें। जिसके पास वह पासवर्ड और आपका URL है, वह उस मशीन के सत्र चला सकता है।",
+		"mobile.computers.own_tunnel.security_heading": "इंटरनेट पर खोलने से पहले",
+		"mobile.computers.own_tunnel.step_app": "ऐप में",
+		"mobile.computers.own_tunnel.step_computer": "कंप्यूटर पर",
+		"mobile.computers.own_tunnel.step_computer_help": "रिले सिर्फ़ अपने ही कंप्यूटर से आए कनेक्शन स्वीकार करता है, इसलिए उसे इसी कंप्यूटर पर चलाना होगा। ऐप का उपयोग करते समय कंप्यूटर को स्लीप में न जाने दें।",
+		"mobile.computers.own_tunnel.step_publish": "रिले प्रकाशित करें",
+		"mobile.computers.own_tunnel.step_test": "जाँच करें",
+		"mobile.computers.own_tunnel.step_test_help": "कुछ भी सहेजने से पहले यह आपकी टनल के ज़रिये एक असली अनुरोध भेजता है।",
+		"mobile.computers.own_tunnel.test": "कनेक्शन जाँचें",
+		"mobile.computers.own_tunnel.testing": "जाँच हो रही है…",
+		"mobile.computers.own_tunnel.title": "अपनी टनल",
+		"mobile.computers.own_tunnel.unencrypted_body": "इस पते का उपयोग करने के लिए ऊपर वाला विकल्प चालू करें, या https:// पता दें — टनल आम तौर पर ऐसा पता दिखाती है।",
+		"mobile.computers.own_tunnel.unencrypted_title": "यह पता एन्क्रिप्टेड नहीं है",
+		"mobile.computers.own_tunnel.url_label": "सार्वजनिक URL",
+		"mobile.computers.own_tunnel.verdict_not_yet": "अभी नहीं",
+		"mobile.computers.own_tunnel.verdict_ok": "कनेक्ट हो गया",
 		"mobile.computers.own_tunnel_instead": "इसके बजाय अपनी टनल उपयोग करें",
 		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
 		"mobile.computers.paths.own_action": "अपनी टनल उपयोग करें",
@@ -5242,6 +5532,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.storage_refused.no_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
 		"mobile.computers.storage_refused.with_code": "इस डिवाइस के सुरक्षित स्टोरेज ने अनुरोध अस्वीकार कर दिया (कोड {code})। फिर से कोशिश करें, या बार-बार ऐसा हो तो ऐप दोबारा इंस्टॉल करें।",
 		"mobile.computers.switch": "कंप्यूटर बदलें",
+		"mobile.computers.title.list": "कंप्यूटर",
+		"mobile.computers.title.set_up": "कंप्यूटर जोड़ें",
 		"mobile.computers.transport.custom": "आपका पता",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.try_now": "अभी कोशिश करें",
@@ -5619,6 +5911,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.panel.opening": "आपका ब्राउज़र खुल रहा है…",
 		"mobile.signin.panel.unavailable": "यह बिल्ड Radient का साइन-इन पूरा नहीं कर सकता।",
 		"mobile.signin.panel.unavailable_alt": "आप रिले का पता और पासवर्ड डालकर भी कनेक्ट कर सकते हैं।",
+		"mobile.signin.panel.unavailable_detail": "Radient से साइन इन करने के लिए एक लूपबैक लिसनर ({module}) चाहिए, जो इस बिल्ड में शामिल नहीं है।",
 		"mobile.signin.panel.waiting": "आपके ब्राउज़र का इंतज़ार है।",
 		"mobile.signin.panel.waiting_help": "वहाँ साइन-इन पूरा करें, फिर इस ऐप पर वापस आएँ।",
 		"mobile.signin.progress": "साइन इन हो रहा है…",
@@ -5927,6 +6220,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.added.stays_listed": "Он останется в списке на этом телефоне — переключиться обратно можно из списка компьютеров.",
 		"mobile.computers.badge.active": "активен",
 		"mobile.computers.badge.connecting": "подключается",
+		"mobile.computers.banner.unreachable_empty": "Не удалось связаться с Radient и получить список компьютеров. Проверьте подключение этого устройства.",
+		"mobile.computers.banner.unreachable_stale": "Не удалось связаться с Radient, поэтому список может быть неактуальным.",
+		"mobile.computers.banner.unreadable_empty": "Ответ Radient не удалось разобрать, поэтому список компьютеров недоступен.",
+		"mobile.computers.banner.unreadable_stale": "Ответ Radient не удалось разобрать, поэтому список может быть неактуальным.",
 		"mobile.computers.billing_help": "В консоли Radient откройте настройки оплаты этого туннеля и включите удалённый доступ.",
 		"mobile.computers.billing_inactive": "Оплата этого туннеля неактивна, поэтому в удалённом доступе будет отказано.",
 		"mobile.computers.connect_refused.generic": "Компьютер не принял подключение. Адрес и пароль сохранены на экране — проверьте их и попробуйте снова.",
@@ -5940,6 +6237,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Ваши компьютеры",
 		"mobile.computers.none_on_phone": "На этом телефоне пока нет компьютеров.",
 		"mobile.computers.not_harness": "На этом компьютере не запущен Local Operator.",
+		"mobile.computers.own_tunnel.insecure_allow": "Разрешить адрес http://",
+		"mobile.computers.own_tunnel.insecure_allowed": "Адреса http:// разрешены",
+		"mobile.computers.own_tunnel.insecure_hint": "Нужно только для адресов http — по ним пароль передаётся открытым текстом",
+		"mobile.computers.own_tunnel.insecure_off_help": "Через http:// пароль от ретранслятора передаётся по сети открытым текстом, поэтому по умолчанию такие адреса запрещены. Используйте https:// везде, где адрес это поддерживает.",
+		"mobile.computers.own_tunnel.insecure_on_help": "Включено: пароль от ретранслятора и всё, что вы отправляете, передаются по этой сети без шифрования. Делайте так только в сети, которой доверяете.",
+		"mobile.computers.own_tunnel.intro": "Аккаунт Radient здесь не нужен ни на одном этапе. Вы публикуете ретранслятор на своём компьютере через туннель, которым управляете сами, а приложение подключается к нему по адресу, который вы вставите ниже.",
+		"mobile.computers.own_tunnel.need_address": "Чтобы продолжить, вставьте адрес туннеля.",
+		"mobile.computers.own_tunnel.need_test": "Сначала нажмите «Проверить подключение» — туннель, который ни разу не ответил, сохранять не стоит.",
+		"mobile.computers.own_tunnel.password_for": "Введите пароль для {name}",
+		"mobile.computers.own_tunnel.password_label": "Пароль ретранслятора",
+		"mobile.computers.own_tunnel.private_host": "Этот адрес находится в вашей собственной сети, так что риск не выходит за её пределы.",
+		"mobile.computers.own_tunnel.public_host": "Этот адрес не частный — пароль может прочитать кто угодно на пути от этого телефона до него.",
+		"mobile.computers.own_tunnel.save_connect": "Сохранить и подключиться",
+		"mobile.computers.own_tunnel.saving": "Сохранение…",
+		"mobile.computers.own_tunnel.security_body": "Вы выставляете свой компьютер в интернет, и защищает его только пароль от ретранслятора. По возможности используйте HTTPS, включите собственную аутентификацию туннеля, если он её поддерживает, и смените пароль командой `{command}`, если им с кем-то делились. Любой, у кого есть этот пароль и ваш URL, может управлять сессиями на этом компьютере.",
+		"mobile.computers.own_tunnel.security_heading": "Прежде чем открыть доступ",
+		"mobile.computers.own_tunnel.step_app": "В приложении",
+		"mobile.computers.own_tunnel.step_computer": "На компьютере",
+		"mobile.computers.own_tunnel.step_computer_help": "Ретранслятор принимает подключения только с того же компьютера, поэтому запускать его нужно именно на нём. Не давайте компьютеру уснуть, пока пользуетесь приложением.",
+		"mobile.computers.own_tunnel.step_publish": "Публикация",
+		"mobile.computers.own_tunnel.step_test": "Проверка",
+		"mobile.computers.own_tunnel.step_test_help": "Перед сохранением приложение отправит через ваш туннель настоящий запрос.",
+		"mobile.computers.own_tunnel.test": "Проверить подключение",
+		"mobile.computers.own_tunnel.testing": "Проверка…",
+		"mobile.computers.own_tunnel.title": "Свой туннель",
+		"mobile.computers.own_tunnel.unencrypted_body": "Чтобы использовать его, включите переключатель выше или укажите адрес https:// — туннель обычно его выдаёт.",
+		"mobile.computers.own_tunnel.unencrypted_title": "Адрес без шифрования",
+		"mobile.computers.own_tunnel.url_label": "Публичный URL",
+		"mobile.computers.own_tunnel.verdict_not_yet": "Пока нет",
+		"mobile.computers.own_tunnel.verdict_ok": "Подключено",
 		"mobile.computers.own_tunnel_instead": "Свой туннель вместо Radient",
 		"mobile.computers.password_placeholder": "Пароль из lop mobile",
 		"mobile.computers.paths.own_action": "Использовать свой туннель",
@@ -5978,6 +6305,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.storage_refused.no_code": "Защищённое хранилище этого устройства отклонило запрос. Попробуйте снова или переустановите приложение, если это повторяется.",
 		"mobile.computers.storage_refused.with_code": "Защищённое хранилище этого устройства отклонило запрос (код {code}). Попробуйте снова или переустановите приложение, если это повторяется.",
 		"mobile.computers.switch": "Сменить компьютер",
+		"mobile.computers.title.list": "Компьютеры",
+		"mobile.computers.title.set_up": "Новый компьютер",
 		"mobile.computers.transport.custom": "Ваш адрес",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.try_now": "Попробовать сейчас",
@@ -6355,6 +6684,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.panel.opening": "Открытие браузера…",
 		"mobile.signin.panel.unavailable": "Эта сборка не может завершить вход через Radient.",
 		"mobile.signin.panel.unavailable_alt": "Подключиться всё равно можно — по адресу ретранслятора и паролю.",
+		"mobile.signin.panel.unavailable_detail": "Для входа через Radient нужен локальный приёмник ответа браузера ({module}), которого нет в этой сборке.",
 		"mobile.signin.panel.waiting": "Ожидание браузера.",
 		"mobile.signin.panel.waiting_help": "Завершите вход в браузере и вернитесь в приложение.",
 		"mobile.signin.progress": "Вход…",
@@ -6663,6 +6993,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.added.stays_listed": "پچھلا کمپیوٹر اس فون پر فہرست میں رہتا ہے، اس لیے آپ کمپیوٹر کی فہرست سے واپس اس پر جا سکتے ہیں۔",
 		"mobile.computers.badge.active": "فعال",
 		"mobile.computers.badge.connecting": "منسلک ہو رہا",
+		"mobile.computers.banner.unreachable_empty": "آپ کے کمپیوٹرز کی فہرست لانے کے لیے Radient سے رابطہ نہیں ہو سکا۔ اس ڈیوائس کا کنکشن جانچیں۔",
+		"mobile.computers.banner.unreachable_stale": "یہ فہرست شاید پرانی ہو، کیونکہ Radient سے رابطہ نہیں ہو سکا۔",
+		"mobile.computers.banner.unreadable_empty": "آپ کے کمپیوٹرز کی فہرست نہیں بن سکی، کیونکہ Radient کا جواب پڑھا نہیں جا سکا۔",
+		"mobile.computers.banner.unreadable_stale": "یہ فہرست شاید پرانی ہو، کیونکہ Radient کا جواب پڑھا نہیں جا سکا۔",
 		"mobile.computers.billing_help": "Radient کنسول میں اس ٹنل کی بلنگ کی ترتیبات کھولیں اور ریموٹ رسائی فعال کریں۔",
 		"mobile.computers.billing_inactive": "اس ٹنل کی بلنگ غیر فعال ہے، اس لیے ریموٹ رسائی مسترد ہو جائے گی۔",
 		"mobile.computers.connect_refused.generic": "کمپیوٹر نے کنکشن قبول نہیں کیا۔ آپ کا پتہ اور پاس ورڈ ابھی یہیں ہیں، اس لیے انہیں جانچیں اور دوبارہ کوشش کریں۔",
@@ -6676,6 +7010,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "آپ کے کمپیوٹرز",
 		"mobile.computers.none_on_phone": "اس فون پر ابھی کوئی کمپیوٹر نہیں۔",
 		"mobile.computers.not_harness": "یہ کمپیوٹر Local Operator کا ہارنس نہیں چلا رہا۔",
+		"mobile.computers.own_tunnel.insecure_allow": "سادہ ⁦http://⁩ پتے کی اجازت دیں",
+		"mobile.computers.own_tunnel.insecure_allowed": "سادہ ⁦http://⁩ کی اجازت ہے",
+		"mobile.computers.own_tunnel.insecure_hint": "صرف http والے پتے کے لیے ضروری، جو پاس ورڈ بغیر خفیہ کاری کے بھیجتا ہے",
+		"mobile.computers.own_tunnel.insecure_off_help": "ریلے کا پاس ورڈ ⁦http://⁩ پر نیٹ ورک سے بغیر خفیہ کاری کے گزرتا ہے، اس لیے یہ اختیار تب تک بند رہتا ہے جب تک آپ اسے آن نہ کریں۔ جب بھی پتہ ⁦https://⁩ پر دستیاب ہو، وہی استعمال کریں۔",
+		"mobile.computers.own_tunnel.insecure_on_help": "آن: ریلے کا پاس ورڈ اور آپ کی بھیجی ہوئی ہر چیز اس نیٹ ورک سے بغیر خفیہ کاری کے گزرتی ہے۔ ایسا صرف اسی نیٹ ورک پر کریں جس پر آپ کو بھروسا ہو۔",
+		"mobile.computers.own_tunnel.intro": "اس میں کہیں بھی Radient اکاؤنٹ درکار نہیں۔ آپ اپنے کمپیوٹر پر چلنے والے ریلے کو ایسی ٹنل سے دستیاب کرتے ہیں جسے آپ خود چلاتے ہیں، اور ایپ اس سے اس پتے کے ذریعے رابطہ کرتی ہے جو آپ نیچے چسپاں کریں گے۔",
+		"mobile.computers.own_tunnel.need_address": "جاری رکھنے کے لیے اپنی ٹنل کا پتہ چسپاں کریں۔",
+		"mobile.computers.own_tunnel.need_test": "پہلے کنکشن جانچیں — جس ٹنل نے ایک بار بھی جواب نہ دیا ہو، وہ محفوظ کرنے کے لائق نہیں۔",
+		"mobile.computers.own_tunnel.password_for": "{name} کا پاس ورڈ درج کریں",
+		"mobile.computers.own_tunnel.password_label": "ریلے کا پاس ورڈ",
+		"mobile.computers.own_tunnel.private_host": "یہ پتہ آپ کے اپنے نیٹ ورک پر ہے، اس لیے خطرہ اسی نیٹ ورک تک محدود ہے۔",
+		"mobile.computers.own_tunnel.public_host": "یہ پتہ نجی نہیں — اس فون سے اس پتے تک کے راستے میں موجود کوئی بھی چیز پاس ورڈ پڑھ سکتی ہے۔",
+		"mobile.computers.own_tunnel.save_connect": "محفوظ کریں اور منسلک ہوں",
+		"mobile.computers.own_tunnel.saving": "محفوظ ہو رہا ہے…",
+		"mobile.computers.own_tunnel.security_body": "آپ اپنا کمپیوٹر انٹرنیٹ پر لا رہے ہیں، اور اس کی حفاظت صرف ریلے کا پاس ورڈ کرتا ہے۔ HTTPS کو ترجیح دیں، اگر آپ کی ٹنل اپنا تصدیقی نظام دیتی ہے تو اسے بھی فعال کریں، اور اگر پاس ورڈ کسی اور کے ساتھ شیئر ہو چکا ہو تو `{command}` سے اسے بدل دیں۔ جس کے پاس بھی وہ پاس ورڈ اور آپ کا URL ہو، وہ اس کمپیوٹر کے سیشن چلا سکتا ہے۔",
+		"mobile.computers.own_tunnel.security_heading": "اسے انٹرنیٹ پر لانے سے پہلے",
+		"mobile.computers.own_tunnel.step_app": "ایپ میں",
+		"mobile.computers.own_tunnel.step_computer": "کمپیوٹر پر",
+		"mobile.computers.own_tunnel.step_computer_help": "ریلے صرف اپنے ہی کمپیوٹر سے کنکشن قبول کرتا ہے، اس لیے اسے اسی کمپیوٹر پر چلانا ہوگا۔ ایپ استعمال کرتے وقت اس کمپیوٹر کو سونے نہ دیں۔",
+		"mobile.computers.own_tunnel.step_publish": "اسے انٹرنیٹ پر دستیاب کریں",
+		"mobile.computers.own_tunnel.step_test": "جانچ کریں",
+		"mobile.computers.own_tunnel.step_test_help": "کچھ بھی محفوظ ہونے سے پہلے یہ آپ کی ٹنل کے ذریعے ایک حقیقی درخواست بھیجتا ہے۔",
+		"mobile.computers.own_tunnel.test": "کنکشن جانچیں",
+		"mobile.computers.own_tunnel.testing": "جانچ ہو رہی ہے…",
+		"mobile.computers.own_tunnel.title": "آپ کی اپنی ٹنل",
+		"mobile.computers.own_tunnel.unencrypted_body": "اس پتے کو استعمال کرنے کے لیے اوپر والا اختیار آن کریں، یا کوئی ⁦https://⁩ پتہ درج کریں — ٹنل عموماً ایسا پتہ دکھاتی ہے۔",
+		"mobile.computers.own_tunnel.unencrypted_title": "اس پتے پر خفیہ کاری نہیں",
+		"mobile.computers.own_tunnel.url_label": "عوامی URL",
+		"mobile.computers.own_tunnel.verdict_not_yet": "ابھی نہیں",
+		"mobile.computers.own_tunnel.verdict_ok": "منسلک ہو گیا",
 		"mobile.computers.own_tunnel_instead": "اس کے بجائے اپنی ٹنل استعمال کریں",
 		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
 		"mobile.computers.paths.own_action": "اپنی ٹنل استعمال کریں",
@@ -6714,6 +7078,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.storage_refused.no_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
 		"mobile.computers.storage_refused.with_code": "اس ڈیوائس کے محفوظ اسٹوریج نے درخواست مسترد کر دی (کوڈ {code})۔ دوبارہ کوشش کریں، یا اگر ایسا بار بار ہو تو ایپ دوبارہ انسٹال کریں۔",
 		"mobile.computers.switch": "کمپیوٹر بدلیں",
+		"mobile.computers.title.list": "کمپیوٹرز",
+		"mobile.computers.title.set_up": "کمپیوٹر ترتیب دیں",
 		"mobile.computers.transport.custom": "آپ کا پتہ",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.try_now": "ابھی کوشش کریں",
@@ -7091,6 +7457,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.panel.opening": "آپ کا براؤزر کھل رہا ہے…",
 		"mobile.signin.panel.unavailable": "اس بلڈ میں Radient کا سائن ان مکمل نہیں ہو سکتا۔",
 		"mobile.signin.panel.unavailable_alt": "آپ پھر بھی ریلے کے پتہ اور پاس ورڈ سے جڑ سکتے ہیں۔",
+		"mobile.signin.panel.unavailable_detail": "اس بلڈ میں وہ لوپ بیک لسنر ({module}) شامل نہیں جو Radient کے ساتھ سائن ان کے لیے درکار ہے۔",
 		"mobile.signin.panel.waiting": "آپ کے براؤزر کا انتظار ہے۔",
 		"mobile.signin.panel.waiting_help": "وہاں سائن ان مکمل کریں، پھر اس ایپ میں واپس آئیں۔",
 		"mobile.signin.progress": "سائن اِن ہو رہا ہے…",
@@ -7399,6 +7766,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.added.stays_listed": "Máy tính trước vẫn được giữ trên điện thoại này, nên bạn có thể chuyển lại từ danh sách máy tính.",
 		"mobile.computers.badge.active": "hoạt động",
 		"mobile.computers.badge.connecting": "đang kết nối",
+		"mobile.computers.banner.unreachable_empty": "Không thể kết nối với Radient để liệt kê máy tính của bạn. Hãy kiểm tra kết nối mạng của thiết bị này.",
+		"mobile.computers.banner.unreachable_stale": "Không thể kết nối với Radient, nên danh sách này có thể đã cũ.",
+		"mobile.computers.banner.unreadable_empty": "Không đọc được phản hồi của Radient, nên không thể liệt kê máy tính của bạn.",
+		"mobile.computers.banner.unreadable_stale": "Không đọc được phản hồi của Radient, nên danh sách này có thể đã cũ.",
 		"mobile.computers.billing_help": "Trong bảng điều khiển Radient, mở cài đặt thanh toán của đường hầm này và bật truy cập từ xa.",
 		"mobile.computers.billing_inactive": "Thanh toán cho đường hầm này hiện không hoạt động, nên truy cập từ xa sẽ bị từ chối.",
 		"mobile.computers.connect_refused.generic": "Máy tính không chấp nhận kết nối. Địa chỉ và mật khẩu của bạn vẫn còn ở đây, hãy kiểm tra lại rồi thử lại.",
@@ -7412,6 +7783,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "Máy tính của bạn",
 		"mobile.computers.none_on_phone": "Chưa có máy tính nào trên điện thoại này.",
 		"mobile.computers.not_harness": "Máy tính này không chạy Local Operator.",
+		"mobile.computers.own_tunnel.insecure_allow": "Cho phép địa chỉ http:// thường",
+		"mobile.computers.own_tunnel.insecure_allowed": "Đã cho phép http:// thường",
+		"mobile.computers.own_tunnel.insecure_hint": "Chỉ cần khi dùng địa chỉ http — giao thức này gửi mật khẩu mà không mã hóa",
+		"mobile.computers.own_tunnel.insecure_off_help": "Với http://, mật khẩu chuyển tiếp truyền qua mạng mà không được mã hóa, nên tùy chọn này tắt theo mặc định. Hãy dùng https:// bất cứ khi nào địa chỉ hỗ trợ.",
+		"mobile.computers.own_tunnel.insecure_on_help": "Bật: mật khẩu chuyển tiếp và mọi thứ bạn gửi đi đều truyền qua mạng này mà không được mã hóa. Chỉ làm vậy trên mạng bạn tin cậy.",
+		"mobile.computers.own_tunnel.intro": "Không cần tài khoản Radient cho bất kỳ bước nào ở đây. Bạn tự công khai máy chủ chuyển tiếp trên máy tính của mình qua một đường hầm do bạn kiểm soát, và ứng dụng sẽ kết nối với nó qua địa chỉ bạn dán bên dưới.",
+		"mobile.computers.own_tunnel.need_address": "Dán địa chỉ đường hầm của bạn để tiếp tục.",
+		"mobile.computers.own_tunnel.need_test": "Hãy kiểm tra kết nối trước — đừng lưu một đường hầm chưa từng phản hồi lần nào.",
+		"mobile.computers.own_tunnel.password_for": "Nhập mật khẩu cho {name}",
+		"mobile.computers.own_tunnel.password_label": "Mật khẩu chuyển tiếp",
+		"mobile.computers.own_tunnel.private_host": "Địa chỉ này nằm trong mạng riêng của bạn, nên rủi ro chỉ giới hạn trong mạng đó.",
+		"mobile.computers.own_tunnel.public_host": "Đây không phải địa chỉ riêng — bất kỳ ai hay thiết bị nào trên đường truyền từ điện thoại này đến địa chỉ đó đều có thể đọc được mật khẩu.",
+		"mobile.computers.own_tunnel.save_connect": "Lưu và kết nối",
+		"mobile.computers.own_tunnel.saving": "Đang lưu…",
+		"mobile.computers.own_tunnel.security_body": "Bạn đang đưa chính máy tính của mình lên internet, và mật khẩu chuyển tiếp là thứ duy nhất bảo vệ nó. Hãy ưu tiên HTTPS, bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ, và đổi mật khẩu bằng `{command}` nếu mật khẩu đã từng bị chia sẻ. Bất kỳ ai có mật khẩu đó và URL của bạn đều có thể điều khiển các phiên trên máy đó.",
+		"mobile.computers.own_tunnel.security_heading": "Trước khi công khai máy",
+		"mobile.computers.own_tunnel.step_app": "Trong ứng dụng",
+		"mobile.computers.own_tunnel.step_computer": "Trên máy tính",
+		"mobile.computers.own_tunnel.step_computer_help": "Máy chủ chuyển tiếp chỉ nhận kết nối từ chính máy tính này, nên nó phải chạy ở đây. Đừng để máy ngủ trong lúc bạn dùng ứng dụng.",
+		"mobile.computers.own_tunnel.step_publish": "Công khai ra internet",
+		"mobile.computers.own_tunnel.step_test": "Kiểm tra",
+		"mobile.computers.own_tunnel.step_test_help": "Bước này gửi một yêu cầu thật qua đường hầm của bạn trước khi lưu bất cứ thứ gì.",
+		"mobile.computers.own_tunnel.test": "Kiểm tra kết nối",
+		"mobile.computers.own_tunnel.testing": "Đang kiểm tra…",
+		"mobile.computers.own_tunnel.title": "Đường hầm riêng",
+		"mobile.computers.own_tunnel.unencrypted_body": "Để dùng địa chỉ này, hãy bật tùy chọn ở trên, hoặc nhập một địa chỉ https:// — thông thường, đường hầm sẽ in ra một địa chỉ như vậy.",
+		"mobile.computers.own_tunnel.unencrypted_title": "Địa chỉ này không được mã hóa",
+		"mobile.computers.own_tunnel.url_label": "URL công khai",
+		"mobile.computers.own_tunnel.verdict_not_yet": "Chưa kết nối được",
+		"mobile.computers.own_tunnel.verdict_ok": "Đã kết nối",
 		"mobile.computers.own_tunnel_instead": "Chuyển sang đường hầm riêng của tôi",
 		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
 		"mobile.computers.paths.own_action": "Dùng đường hầm riêng của tôi",
@@ -7450,6 +7851,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.storage_refused.no_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu. Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 		"mobile.computers.storage_refused.with_code": "Bộ nhớ bảo mật của thiết bị này đã từ chối yêu cầu (mã {code}). Hãy thử lại, hoặc cài đặt lại ứng dụng nếu lỗi vẫn tiếp diễn.",
 		"mobile.computers.switch": "Chuyển máy tính",
+		"mobile.computers.title.list": "Máy tính",
+		"mobile.computers.title.set_up": "Thêm máy tính",
 		"mobile.computers.transport.custom": "Địa chỉ của bạn",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.try_now": "Thử ngay",
@@ -7827,6 +8230,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.panel.opening": "Đang mở trình duyệt…",
 		"mobile.signin.panel.unavailable": "Bản dựng này không thể hoàn tất đăng nhập Radient.",
 		"mobile.signin.panel.unavailable_alt": "Bạn vẫn có thể kết nối bằng địa chỉ và mật khẩu của máy chủ chuyển tiếp.",
+		"mobile.signin.panel.unavailable_detail": "Đăng nhập bằng Radient cần một trình lắng nghe loopback mà bản dựng này không có ({module}).",
 		"mobile.signin.panel.waiting": "Đang chờ trình duyệt của bạn.",
 		"mobile.signin.panel.waiting_help": "Hoàn tất đăng nhập ở đó, rồi quay lại ứng dụng này.",
 		"mobile.signin.progress": "Đang đăng nhập…",
@@ -8135,6 +8539,10 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.added.stays_listed": "它仍会保留在此手机的列表中，可从电脑列表中切回。",
 		"mobile.computers.badge.active": "使用中",
 		"mobile.computers.badge.connecting": "连接中",
+		"mobile.computers.banner.unreachable_empty": "无法连接Radient，未能列出你的电脑。请检查此设备的网络连接。",
+		"mobile.computers.banner.unreachable_stale": "无法连接Radient，此列表可能不是最新的。",
+		"mobile.computers.banner.unreadable_empty": "无法读取Radient的响应，未能列出你的电脑。",
+		"mobile.computers.banner.unreadable_stale": "无法读取Radient的响应，此列表可能不是最新的。",
 		"mobile.computers.billing_help": "在 Radient 控制台中打开此隧道的账单设置，并启用远程访问。",
 		"mobile.computers.billing_inactive": "此隧道的账单未启用，因此远程访问将被拒绝。",
 		"mobile.computers.connect_refused.generic": "计算机未接受连接。你的地址和密码仍保留在这里，请检查后重试。",
@@ -8148,6 +8556,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.list.heading": "你的电脑",
 		"mobile.computers.none_on_phone": "此手机尚未添加电脑。",
 		"mobile.computers.not_harness": "这台电脑未运行Local Operator。",
+		"mobile.computers.own_tunnel.insecure_allow": "允许明文http://地址",
+		"mobile.computers.own_tunnel.insecure_allowed": "已允许明文http://",
+		"mobile.computers.own_tunnel.insecure_hint": "仅在地址使用http时需要，此时密码将以明文发送",
+		"mobile.computers.own_tunnel.insecure_off_help": "使用http://时，中继密码会以明文在网络中传输，因此除非你手动开启，否则此选项保持关闭。只要地址支持，请始终使用https://。",
+		"mobile.computers.own_tunnel.insecure_on_help": "已开启：中继密码及你发送的所有内容都将以未加密形式经过此网络。请仅在可信网络中开启。",
+		"mobile.computers.own_tunnel.intro": "全程无需Radient账户。你通过自己掌控的隧道，在自己的电脑上发布中继；应用则通过你在下方粘贴的地址与它通信。",
+		"mobile.computers.own_tunnel.need_address": "粘贴隧道地址以继续。",
+		"mobile.computers.own_tunnel.need_test": "请先测试连接——从未成功响应过的隧道不应保存。",
+		"mobile.computers.own_tunnel.password_for": "输入{name}的密码",
+		"mobile.computers.own_tunnel.password_label": "中继密码",
+		"mobile.computers.own_tunnel.private_host": "此地址位于你自己的网络内，因此暴露范围仅限于该网络。",
+		"mobile.computers.own_tunnel.public_host": "此地址不是私有地址——从此手机到该地址途经的任何网络或设备都能读取密码。",
+		"mobile.computers.own_tunnel.save_connect": "保存并连接",
+		"mobile.computers.own_tunnel.saving": "正在保存……",
+		"mobile.computers.own_tunnel.security_body": "你正在把自己的电脑暴露到互联网上，而中继密码是挡在它前面的唯一屏障。请优先使用HTTPS；如果你的隧道自带身份验证，请一并启用；如果密码曾被分享，请用`{command}`更换密码。任何人只要拿到该密码和你的URL，就能操控那台电脑上的会话。",
+		"mobile.computers.own_tunnel.security_heading": "暴露到公网前须知",
+		"mobile.computers.own_tunnel.step_app": "在应用中",
+		"mobile.computers.own_tunnel.step_computer": "在电脑上",
+		"mobile.computers.own_tunnel.step_computer_help": "中继只接受来自本机的连接，所以必须在这台电脑上运行它。使用应用期间，请勿让电脑休眠。",
+		"mobile.computers.own_tunnel.step_publish": "发布中继",
+		"mobile.computers.own_tunnel.step_test": "测试连接",
+		"mobile.computers.own_tunnel.step_test_help": "保存前，会先通过你的隧道发送一次真实请求。",
+		"mobile.computers.own_tunnel.test": "测试连接",
+		"mobile.computers.own_tunnel.testing": "正在测试……",
+		"mobile.computers.own_tunnel.title": "自建隧道",
+		"mobile.computers.own_tunnel.unencrypted_body": "开启上方选项即可使用此地址，或改填https://地址——隧道通常会提供一个。",
+		"mobile.computers.own_tunnel.unencrypted_title": "此地址未加密",
+		"mobile.computers.own_tunnel.url_label": "公网URL",
+		"mobile.computers.own_tunnel.verdict_not_yet": "尚未连通",
+		"mobile.computers.own_tunnel.verdict_ok": "已连接",
 		"mobile.computers.own_tunnel_instead": "改用我自己的隧道",
 		"mobile.computers.password_placeholder": "来自lop mobile的密码",
 		"mobile.computers.paths.own_action": "使用我自己的隧道",
@@ -8186,6 +8624,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.storage_refused.no_code": "此设备的安全存储拒绝了该请求。请重试；如果问题持续出现，请重新安装应用。",
 		"mobile.computers.storage_refused.with_code": "此设备的安全存储拒绝了该请求（代码 {code}）。请重试；如果问题持续出现，请重新安装应用。",
 		"mobile.computers.switch": "切换电脑",
+		"mobile.computers.title.list": "电脑",
+		"mobile.computers.title.set_up": "设置电脑",
 		"mobile.computers.transport.custom": "你的地址",
 		"mobile.computers.transport.radient": "Radient",
 		"mobile.computers.try_now": "立即重试",
@@ -8563,6 +9003,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.signin.panel.opening": "正在打开浏览器……",
 		"mobile.signin.panel.unavailable": "此版本无法完成Radient登录。",
 		"mobile.signin.panel.unavailable_alt": "你仍可使用中继的地址和密码连接。",
+		"mobile.signin.panel.unavailable_detail": "此版本缺少使用Radient登录所需的本机回环监听器（{module}）。",
 		"mobile.signin.panel.waiting": "正在等待你的浏览器。",
 		"mobile.signin.panel.waiting_help": "在那里完成登录，然后回到此应用。",
 		"mobile.signin.progress": "正在登录…",

@@ -1,0 +1,45 @@
+# audit.log — ru S2a audit (rus2a1), i18n-auditor session b42780e9df74, model anthropic/claude-opus-5-5, 2026-11-12
+# Execution log: commands actually run in this session, with outputs (abridged where marked). Companion of record.json (same provenance).
+
+$ cd <m3s2a>; shasum -a 256 brief-59ec5184.json ru/draft-ru-s2a.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+f7aa4fb6c19541145a8c74abf4a55088d443aaf31b2a240b30e8d3f4d08633f6  ru/draft-ru-s2a.json
+# both match the task → proceed
+
+$ python3: len(draft)=37; set(draft)==set(brief keys) True; order equal True
+$ grep -c -i redact brief-59ec5184.json ru/draft-ru-s2a.json → 0 / 0
+$ python3: draft step_computer_help[:20].encode('unicode_escape') → \u0420\u0435\u0442\u0440\u0430\u043d\u0441\u043b\u044f\u0442\u043e\u0440 ... (tool display showed [redacted]; harness mask)
+
+$ git -C ~/local-operator-mobile show 59ec5184:<file> | shasum -a 256 ; | grep -ci redact
+src/i18n/catalogues/ru/mobile.computers.json b9e860e940573c2bf62279410cbfa9109f46bc7475c2d8f338b53533129b1d63 redact=0
+src/i18n/catalogues/ru/mobile.signin.json 2168d262403cf88f7d8bdaf39d5c5a7286edc42292c2eb407d6f358ffaa58c31 redact=0
+src/i18n/catalogues/en/mobile.computers.json 280e54d0425a602bc17b72b887ab2f0841cbb5f7d6abf6ed0f772c1038965151 redact=0
+src/i18n/catalogues/en/mobile.signin.json 02758ac464696c2c7d2f6f234b0f93d04ea5679fdd26610487036b5d2090aace redact=0
+src/features/auth/own-tunnel.tsx 7e6ed4ad902ba2004f18c1822b5a3d6d85646b4dd5b7478bf92e93d10b1c6967 redact=0
+src/ui/size-class.ts 500d22f691381c908523c66172a996ea3ed5c9797ad8b91122e9ceced7781631 redact=0
+src/i18n/messages.ts c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0 redact=0
+design/fonts/Figtree-SemiBold.ttf 35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74 redact=0
+# ru catalogue connect_refused.password displayed as [redacted] by the tool; bytes are not the marker (grep 0)
+
+$ git -C ~/local-operator rev-parse origin/main → 73dc41570c94ff22db15c4a6721f458614de2998
+$ git show origin/main:i18n/style-guides/ru.md | shasum -a 256 → f20e1cafaf70578c17ce072c71725628808d228e4be5604329f8da30386f1fb5
+$ git show origin/main:i18n/glossary.md | shasum -a 256 → 0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8
+$ git -C ~/local-operator-mobile ls-tree -r --name-only 59ec5184 -- i18n/audits/evidence/ru | head → NOTE-m1-slice-r2.md, m2-expression-literals/... (bundle shape reference)
+
+$ node --experimental-strip-types check.mts   # messages.ts@59ec5184 copied to $LOCAL_OPERATOR_SCRATCHPAD/ru-s2a, not run in the repo
+ok x37 (param sets equal; protected-token multiset equal: backticks, http(s)://, Radient, HTTPS, URL, lop mobile*)
+password_for => Введите пароль для <name>
+security_body => ... смените пароль командой `<command>`, ...
+unavailable_detail => ... которого нет в этой сборке (<module>).
+keys 37 failures 0
+
+$ python3 typography scan (final stop parity, straight quotes, '...', spacing, em-dash spacing, ' - ') → 0 issues; ё count 9
+
+$ python3 TTF parse (cmap fmt4 + hmtx; no fontTools installed, none added)
+Figtree-SemiBold @28, -0.02em: Computers 137.8 · Set up a computer 226.2 (reproduce size-class.ts 138/227); Cyrillic: ALL glyphs missing from cmap
+SFNS.ttf ratio:      list 1.23 set_up 1.06 → est 169 / 241 pt
+Arial.ttf ratio:     list 1.21 set_up 1.03 → est 167 / 234 pt
+Helvetica.ttc ratio: list 1.24 set_up 1.06 → est 171 / 240 pt
+
+$ git show 59ec5184:src/features/auth/own-tunnel.tsx | sed -n 245,280p; 385,400p; grep insecure_|unencrypted_
+# Test / Save-and-connect are stacked Buttons (250-277); toggle at 452-467, unencrypted box at 473-475 (below the toggle → «выше» correct)

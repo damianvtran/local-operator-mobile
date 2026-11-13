@@ -1,0 +1,161 @@
+{
+  "locale": "ur",
+  "direction": "rtl",
+  "round": 2,
+  "scope": "delta (v1->v2): 8 changed keys only; unchanged keys covered by equality proof, not re-audited",
+  "namespace": "mobile.computers (M3 S2a)",
+  "audit_date": "2026-11-13",
+  "key_count_file": 37,
+  "key_count_audited": 8,
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "878ef905a5e5",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system header 'Model: anthropic/claude-opus-5-5'; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "translator": {
+    "agent": "lopdev translator",
+    "jobs": [
+      "0c099a230364",
+      "2d6ccc470551"
+    ],
+    "model_claimed": "anthropic/claude-opus-5-5 (per notes-ur-s2a-v2.md)"
+  },
+  "round1_audit": {
+    "job": "2789360243a7",
+    "path": "m3s2a/audits/ur/record.json + report.md"
+  },
+  "input_hashes": {
+    "brief": {
+      "path": "m3s2a/brief-59ec5184.json",
+      "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+      "source_commit": "59ec51843f05f93706492756b1a89ef53004179a"
+    },
+    "v1": {
+      "path": "m3s2a/ur/draft-ur-s2a.json",
+      "sha256": "c19ceeb75f6b3172046d0c00a3022eb9df54ff0127a4d8fe26d892378e4af464"
+    },
+    "v2": {
+      "path": "m3s2a/ur/draft-ur-s2a-v2.json",
+      "sha256": "813cb4cddd2dadda568e57d42aae045874ccd9a20c6caf22f41e0ef4919455ff"
+    },
+    "hash_check": "all three recomputed with shasum -a 256: MATCH"
+  },
+  "reference_hashes": {
+    "core_style_guide ~/local-operator/i18n/style-guides/ur.md": "c0eecf7f7b5e89956b7de9ab7a9eb647ff1a7ef701ccf2a7f0264d5eea15ca60",
+    "mobile docs/i18n.md @b84517c0": "e27c2a881b5d1ad3232af7e046f8b5d2a7fa26b389dcf1f6da9d79d7f3f9f827",
+    "mobile src/ui/direction.tsx": "24435992934bd16ad2aa35de9bc3289759c35cfbe3a76298c5b8a64057972e41",
+    "mobile src/i18n/direction.ts": "5a1ef623a1c0327e50099fd2f447328c5302ce5920bb4eb19ed6c26a8ad2c6ba"
+  },
+  "mobile_worktree": "~/local-operator-mobile/.worktrees/i18n-m3-s2a @ b84517c07544751b165c0df5b4809e1e1c5d80f9 (read-only)",
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": 1,
+  "mechanical": {
+    "valid_json": true,
+    "key_set_equal_v1_v2_brief": true,
+    "key_order_equal": true,
+    "changed_keys": [
+      "mobile.computers.banner.unreachable_empty",
+      "mobile.computers.own_tunnel.intro",
+      "mobile.computers.own_tunnel.step_publish",
+      "mobile.computers.own_tunnel.insecure_allow",
+      "mobile.computers.own_tunnel.insecure_allowed",
+      "mobile.computers.own_tunnel.insecure_off_help",
+      "mobile.computers.own_tunnel.unencrypted_body",
+      "mobile.computers.own_tunnel.security_heading"
+    ],
+    "changed_count": 8,
+    "copy_change_keys": [
+      "mobile.computers.banner.unreachable_empty",
+      "mobile.computers.own_tunnel.intro",
+      "mobile.computers.own_tunnel.step_publish",
+      "mobile.computers.own_tunnel.security_heading"
+    ],
+    "isolate_keys": [
+      "mobile.computers.own_tunnel.insecure_allow",
+      "mobile.computers.own_tunnel.insecure_allowed",
+      "mobile.computers.own_tunnel.insecure_off_help",
+      "mobile.computers.own_tunnel.unencrypted_body"
+    ],
+    "isolate_keys_equal_v1_after_stripping_U+2066_U+2069": true,
+    "bidi_controls_elsewhere": "none (Cf scan of all 37 values)",
+    "placeholders_in_changed_keys": "none in source, none in target",
+    "latin_initial": "0 of 37 (ICU slots dropped; first letter-category char)"
+  },
+  "per_key": {
+    "mobile.computers.banner.unreachable_empty": {
+      "result": "accept",
+      "resolves": "U1",
+      "note": "«فہرست لانے کے لیے» supplies the purpose verb; meaning, آپ, Radient kept, ۔ terminal."
+    },
+    "mobile.computers.own_tunnel.intro": {
+      "result": "accept",
+      "resolves": "U2",
+      "note": "calque removed («اس میں کہیں بھی»); «اختیار» now only names the opt-in; single «کے ذریعے». 'you control'→'you run yourself' acceptable for a tunnel client."
+    },
+    "mobile.computers.own_tunnel.step_publish": {
+      "result": "accept",
+      "resolves": "U3",
+      "note": "says where («انٹرنیٹ پر»); no numeral, no full stop."
+    },
+    "mobile.computers.own_tunnel.security_heading": {
+      "result": "accept",
+      "resolves": "U4",
+      "note": "object «اسے» restored; parallel with step_publish; no full stop."
+    },
+    "mobile.computers.own_tunnel.insecure_allow": {
+      "result": "copy equal to v1 (accepted R1); isolates only — see isolate_ruling"
+    },
+    "mobile.computers.own_tunnel.insecure_allowed": {
+      "result": "copy equal to v1 (accepted R1); isolates only — see isolate_ruling"
+    },
+    "mobile.computers.own_tunnel.insecure_off_help": {
+      "result": "copy equal to v1 (accepted R1); isolates only — see isolate_ruling"
+    },
+    "mobile.computers.own_tunnel.unencrypted_body": {
+      "result": "copy equal to v1 (accepted R1); isolates only — see isolate_ruling"
+    }
+  },
+  "findings": [],
+  "round1_dispositions": {
+    "U1": "resolved",
+    "U2": "resolved",
+    "U3": "resolved",
+    "U4": "resolved",
+    "R1": "code-side, out of copy scope (value unchanged)",
+    "R2": "addressed in catalogue via isolates — technical ruling below; policy open",
+    "R3": "code-side, out of scope"
+  },
+  "isolate_ruling": {
+    "technically_effective": true,
+    "evidence": "CoreText (macOS 27.2, same text engine family as iOS) RTL-base CTLine visual order: v1 renders '//:http'/'//:https' in all 4 keys; v2 renders 'http://'/'https://' in all 4. Whole-string FSI/PDI around v1 does NOT fix it (still '//:http'); FSI around v2 stays correct (nested isolates valid).",
+    "mobile_wraps_whole_strings_in_FSI_PDI": false,
+    "mobile_wrap_evidence": "no U+2066-2069 handling in src/i18n runtime.ts/messages.ts/index.ts/direction.ts; direction is a Yoga/dir property (src/ui/direction.tsx), isolation for LTR content is component-level LTR_TEXT/LTR_WRITING",
+    "double_application_harm": "none in mobile (no outer wrap); even under an outer FSI the LRI..PDI nests correctly (measured)",
+    "android": "not measured; reasoned: platform ICU bidi honours isolates on modern Android",
+    "policy_conflict": "conflicts with core ur.md '## RTL & bidi' AND mobile docs/i18n.md:107 ('No manual bidi control characters in a catalogue value, in any locale'); not mechanically enforced (no check in scripts/i18n or src/i18n/__tests__). POLICY QUESTION for programme manager — not decided here.",
+    "cleaner_alternative": "render-side: wrap URL-scheme/LTR runs in LRI..PDI programmatically in the RTL format path (one place, catalogue untouched, no re-translation); or make the scheme a {scheme} placeholder supplied isolated by the call site (needs re-translation of 4 keys in all locales). Nested <Text dir='ltr'> works on web only (RNW span dir=ltr) and not for Button's string label; LTR_WRITING is paragraph-level on native (reasoned)."
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "scope": "copy",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "isolate_policy": "open — escalated to programme manager"
+  },
+  "artifacts": {
+    "report": "report.md",
+    "log": "audit.log",
+    "scratch_rig (auditor session scratchpad, not served)": {
+      "bidi_order.swift": "f23a8e0abb02a20be4ca9b98f3ec96063cc55439a8261a31883686def7fd83b0",
+      "bidi-cases.json": "579b66d7250392e3c21d80c3754f807b936838f88cb281160b0ff3f0a86c08a7",
+      "bidi-ct.tsv": "588e29139e4c108c453f033719e4f07e26a96f6c71fd74b738fc8bec96a26025"
+    }
+  },
+  "no_mt_service_used": true,
+  "ledger_row": "not written: draft is not a repo catalogue yet; manager records ledger when catalogue lands",
+  "redaction_note": "1 harness display mask on the auditor's own eval echo (record field 'mechanical'); re-read showed data intact. 0 hits on any input read."
+}

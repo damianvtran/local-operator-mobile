@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { DiscoveredComputer } from "@/connection";
+import { t } from "@/i18n";
 import {
 	ADD_COMPUTER_HREF,
 	backAction,
 	computersView,
-	discoveryFailureMessage,
+	discoveryFailureKey,
 	landingAfterPick,
 	rowState,
 } from "./computers-view";
@@ -39,7 +40,7 @@ describe("computersView", () => {
 			setup: false,
 			list: false,
 			banner: null,
-			title: "Computers",
+			title: "mobile.computers.title.list",
 		});
 	});
 
@@ -51,12 +52,14 @@ describe("computersView", () => {
 		});
 		expect(view.list).toBe(true);
 		expect(view.setup).toBe(false);
-		expect(view.banner).toBe(
+		expect(view.banner).toBe("mobile.computers.banner.unreachable_stale");
+		/* The headline blames Radient, never the first computer (R1-m2). The view
+		 *  returns a key, so the sentence is read through the catalogue. */
+		expect(t(view.banner!)).toBe(
 			"Radient could not be reached, so this list may be out of date.",
 		);
-		/* The headline blames Radient, never the first computer (R1-m2). */
-		expect(view.banner).not.toContain("Studio Mac");
-		expect(view.banner).not.toMatch(/keep trying/);
+		expect(t(view.banner!)).not.toContain("Studio Mac");
+		expect(t(view.banner!)).not.toMatch(/keep trying/);
 	});
 
 	it("keeps the banner and the rows while a retry is in flight", () => {
@@ -66,7 +69,8 @@ describe("computersView", () => {
 			discoveryFailure: "rejected",
 		});
 		expect(view).toMatchObject({ list: true, skeleton: false, setup: false });
-		expect(view.banner).toContain("may be out of date");
+		expect(view.banner).toBe("mobile.computers.banner.unreadable_stale");
+		expect(t(view.banner!)).toContain("may be out of date");
 	});
 
 	it("does not stack a discovery error over the set-up tutorial (D3)", () => {
@@ -76,11 +80,12 @@ describe("computersView", () => {
 			discoveryFailure: "unreachable",
 		});
 		expect(view.setup).toBe(false);
-		expect(view.title).toBe("Computers");
-		expect(view.banner).toBe(
+		expect(view.title).toBe("mobile.computers.title.list");
+		expect(view.banner).toBe("mobile.computers.banner.unreachable_empty");
+		expect(t(view.banner!)).toBe(
 			"Radient could not be reached to list your computers. Check this device's connection.",
 		);
-		expect(view.banner).not.toContain("That address");
+		expect(t(view.banner!)).not.toContain("That address");
 	});
 
 	it("offers set-up only when Radient answered with no computers", () => {
@@ -90,7 +95,11 @@ describe("computersView", () => {
 				discovering: false,
 				discoveryFailure: null,
 			}),
-		).toMatchObject({ setup: true, title: "Set up a computer", banner: null });
+		).toMatchObject({
+			setup: true,
+			title: "mobile.computers.title.set_up",
+			banner: null,
+		});
 	});
 
 	it("clears the banner once a discovery succeeds", () => {
@@ -106,11 +115,11 @@ describe("computersView", () => {
 	});
 });
 
-describe("discoveryFailureMessage", () => {
+describe("discoveryFailureKey", () => {
 	it("never promises an automatic retry", () => {
 		for (const failure of ["unreachable", "rejected"] as const)
 			for (const rows of [true, false])
-				expect(discoveryFailureMessage(failure, rows)).not.toMatch(
+				expect(t(discoveryFailureKey(failure, rows))).not.toMatch(
 					/keep trying|by itself/,
 				);
 	});
@@ -144,7 +153,7 @@ describe("signed out (PR #121 QA round 2, Q-r2-1)", () => {
 				signedOut: true,
 			}),
 		).toMatchObject({
-			title: "Computers",
+			title: "mobile.computers.title.list",
 			setup: false,
 			skeleton: false,
 			banner: null,
@@ -207,7 +216,7 @@ describe("Add a computer opens the set-up paths over a populated list (PR #122 U
 			adding: true,
 		});
 		expect(view).toMatchObject({
-			title: "Set up a computer",
+			title: "mobile.computers.title.set_up",
 			setup: true,
 			list: false,
 			banner: null,

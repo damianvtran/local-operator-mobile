@@ -1,0 +1,151 @@
+{
+  "audit_id": "his2a2",
+  "locale": "hi",
+  "namespace": "m3s2a (mobile.computers + mobile.signin subset, 37 keys)",
+  "round": 2,
+  "scope": "delta: v1->v2 changed keys only; unchanged keys covered by equality proof",
+  "audit_date": "2026-11-12",
+  "source_commit": "59ec51843f05f93706492756b1a89ef53004179a",
+  "key_count": 37,
+  "changed_key_count": 4,
+  "changed_keys": [
+    "mobile.computers.title.set_up",
+    "mobile.computers.own_tunnel.intro",
+    "mobile.computers.own_tunnel.step_computer_help",
+    "mobile.computers.own_tunnel.insecure_off_help"
+  ],
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/brief-59ec5184.json",
+      "sha256": "e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563",
+      "recomputed_match": true
+    },
+    "v1": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/hi/draft-hi-s2a.json",
+      "sha256": "8f1e2d15f84028928eab1c04dcb6c356b9b3206d0c3e881f5d49ab954e12fce0",
+      "recomputed_match": true
+    },
+    "v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/hi/draft-hi-s2a-v2.json",
+      "sha256": "aadaa64be9fff741254607f7fa34c1aaf8145190844cdd509d75970f1362d30e",
+      "recomputed_match": true
+    },
+    "translator_notes_v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/hi/notes-hi-s2a-v2.md",
+      "sha256": "5d3f9d5a30842d69ef1de23762796111ce20ca645115e7a5ec3f9b42e196bda0"
+    },
+    "round1_record": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/hi/record.json",
+      "sha256": "4506208265af3c8fb8502130f8d7fc60610beb1049d09a203faac163a759e8d8"
+    },
+    "round1_report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/hi/report.md",
+      "sha256": "f2312736a97ba60dc60fb0daf798893255f92c40e8425f9f92e461c993f3b8ac"
+    },
+    "glossary": "git -C ~/local-operator-mobile show 59ec5184:src/i18n/catalogues/hi/mobile.computers.json"
+  },
+  "equality_proof": {
+    "key_sets_equal": true,
+    "key_order_equal": true,
+    "keys_v1": 37,
+    "keys_v2": 37,
+    "unchanged_byte_identical": 33,
+    "changed": [
+      "mobile.computers.title.set_up",
+      "mobile.computers.own_tunnel.intro",
+      "mobile.computers.own_tunnel.step_computer_help",
+      "mobile.computers.own_tunnel.insecure_off_help"
+    ],
+    "added": [],
+    "dropped": []
+  },
+  "mechanical": {
+    "placeholder_and_literal_tokens_match_english": true,
+    "tokens_checked": "{…}, `…`, http://, https://, Radient",
+    "nfc": true,
+    "sentence_stops": "। where English has .; none on heading"
+  },
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "d94f1cd57c7d",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt Model line; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "translator": {
+    "agent": "translator (lopdev)",
+    "jobs": [
+      "4753e146fd04",
+      "b4311682e916"
+    ],
+    "model_per_notes": "anthropic/claude-opus-5-5"
+  },
+  "round1_auditor": {
+    "job": "81e809611cf1",
+    "session": "0716fa1a942c"
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": 0,
+  "mt_service_used": false,
+  "width": {
+    "key": "mobile.computers.title.set_up",
+    "method": "CoreText CTLine typographic width, KohinoorDevanagari-Semibold 28pt, kern -0.56 (shaped)",
+    "value_dp": 123.7,
+    "budget_dp": 226.2,
+    "status": "estimate; iOS fallback only; Android not measured"
+  },
+  "per_key": {
+    "mobile.computers.title.set_up": {
+      "v1": "नया कंप्यूटर",
+      "v2": "कंप्यूटर जोड़ें",
+      "result": "pass",
+      "resolves": "H2",
+      "ruling": "Imperative per note; byte-identical to glossary mobile.computers.add (the button that opens this screen); आप imperative -ें; no stop. Width: CoreText shaped, KohinoorDevanagari-Semibold 28pt, -0.02em tracking = 123.7 dp vs ~226.2 budget (fits, ~55%). ESTIMATE: iOS fallback font only; Android Noto not measured. \"Add\" vs \"Set up\" is an accepted, catalogue-consistent narrowing."
+    },
+    "mobile.computers.own_tunnel.intro": {
+      "v1": "इसमें कहीं भी Radient खाते की ज़रूरत नहीं है। आप रिले को अपने कंप्यूटर पर, अपने नियंत्रण वाली टनल के ज़रिये प्रकाशित करते हैं, और ऐप उससे उसी पते के ज़रिये बात करता है जिसे आप नीचे चिपकाते हैं।",
+      "v2": "इसमें कहीं भी Radient खाते की ज़रूरत नहीं है। आप रिले को अपने कंप्यूटर पर, अपने नियंत्रण वाली टनल के ज़रिये प्रकाशित करते हैं, और ऐप उससे उसी पते से बात करता है जिसे आप नीचे चिपकाते हैं।",
+      "result": "pass",
+      "resolves": "H3",
+      "ruling": "Only change: second के ज़रिये -> से; ज़रिये now once. उसी पते से ... जिसे is a natural correlative; meaning intact; Radient kept; ends ।."
+    },
+    "mobile.computers.own_tunnel.step_computer_help": {
+      "v1": "रिले सिर्फ़ अपने ही कंप्यूटर से आए कनेक्शन स्वीकार करता है, इसलिए उसे इसी कंप्यूटर पर चलाना होगा। ऐप इस्तेमाल करते समय कंप्यूटर को स्लीप में न जाने दें।",
+      "v2": "रिले सिर्फ़ अपने ही कंप्यूटर से आए कनेक्शन स्वीकार करता है, इसलिए उसे इसी कंप्यूटर पर चलाना होगा। ऐप का उपयोग करते समय कंप्यूटर को स्लीप में न जाने दें।",
+      "result": "pass",
+      "resolves": "H4",
+      "ruling": "इस्तेमाल करते समय -> का उपयोग करते समय; postposition का correctly added; matches catalogue उपयोग (wait.use_computer). Rest unchanged."
+    },
+    "mobile.computers.own_tunnel.insecure_off_help": {
+      "v1": "http:// पर आपका रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है, इसलिए यह विकल्प डिफ़ॉल्ट रूप से बंद रहता है। जब भी पता इसे सपोर्ट करे, https:// का ही उपयोग करें।",
+      "v2": "http:// पर आपका रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है, इसलिए यह विकल्प डिफ़ॉल्ट रूप से बंद रहता है। जब भी पता https:// सपोर्ट करे, उसी का उपयोग करें।",
+      "result": "pass",
+      "resolves": "H1",
+      "ruling": "Referent now precedes pronoun: पता https:// सपोर्ट करे, उसी का उपयोग करें — no cataphoric इसे, no misreading as the http opt-in. http:// and https:// literal, once each as in English, LTR-safe (Devanagari LTR). Off-by-default sentence unchanged (round-1 ACCEPT)."
+    }
+  },
+  "round1_findings_resolution": {
+    "H1": "resolved",
+    "H2": "resolved",
+    "H3": "resolved",
+    "H4": "resolved"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "new_findings": 0
+  },
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/hi-r2/report.md",
+      "sha256": "8f84b3c543d0b9584a6ba23ef94237f75bb55a71f9d4c328a4a3b139f3ff8be4"
+    },
+    "log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2a/audits/hi-r2/audit.log",
+      "sha256": "02422634f7440bb500b707ebd6a5e731bacaa5db033cfcada35d9ff67791607e"
+    }
+  },
+  "output_location_note": "written to requested hi-r2 dir via write tool; an earlier bash mkdir/ls there was refused by guardrail, write tool succeeded"
+}

@@ -40,7 +40,7 @@ import { removeComputer } from "@/features/auth/saved-computers-sync";
 import { SetupComputer } from "@/features/auth/setup-computer";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
-import { t } from "@/i18n";
+import { activeLocale, t } from "@/i18n";
 import { TeamBridgeEntry } from "@/team-bridge/navigation";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
@@ -54,7 +54,7 @@ import { SectionHeader } from "@/ui/components/section-header";
 import { Shimmer } from "@/ui/components/shimmer";
 import { Skeleton } from "@/ui/components/skeleton";
 import { useComposedDir, useIsRTL } from "@/ui/direction";
-import { computersHeaderStackWidth } from "@/ui/size-class";
+import { computersHeaderStackWidth, rowTitleLinesFor } from "@/ui/size-class";
 import {
 	avatarClasses,
 	NAV_CARD_MIN_HEIGHT,
@@ -481,7 +481,7 @@ export default function Computers() {
 
 	return (
 		<Screen
-			title={view.title}
+			title={t(view.title)}
 			testID={SCREEN.computers}
 			/* This header's own fit, from the controls it is rendering now: "Switch
 			 *  computer" made the cluster heavier than the kit floor allows for, and the
@@ -493,6 +493,9 @@ export default function Computers() {
 				switcher: showSwitch,
 				refresh: showRefresh,
 			})}
+			/* That fit is English advances; a translated title wraps rather than
+			 *  clipping where English fits by one pixel (PR #251 D1). */
+			rowTitleLines={rowTitleLinesFor(activeLocale())}
 			/* The way back. Every sibling screen in this flow has one (`own-tunnel`,
 			 *  `sign-in`, `settings`), and "Set up a computer" is reachable from the list,
 			 *  from Settings and from a refusal surface — arriving from any of them with
@@ -595,7 +598,7 @@ export default function Computers() {
 				<Banner
 					testID={CONTROL.computersBanner}
 					tone="warning"
-					message={view.banner}
+					message={t(view.banner)}
 					action={{
 						label: t("mobile.computers.try_now"),
 						onPress: () => void refreshComputers(),

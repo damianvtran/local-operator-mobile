@@ -30,5 +30,6 @@
 	"mobile.signin.panel.unavailable_alt": "آپ پھر بھی ریلے کے پتہ اور پاس ورڈ سے جڑ سکتے ہیں۔",
 	"mobile.signin.try_anyway": "پھر بھی دوبارہ کوشش کریں",
 	"mobile.signin.welcome.headline": "آپ کا ایجنٹ آپ کے کمپیوٹر پر چلتا ہے۔",
-	"mobile.signin.welcome.body": "یہ ایپ آپ کی اپنی مشین پر سیشن چلاتی ہے اور دکھاتی ہے کہ کیا ہوا۔ آپ کا کوڈ کبھی اس مشین سے باہر نہیں جاتا۔"
+	"mobile.signin.welcome.body": "یہ ایپ آپ کی اپنی مشین پر سیشن چلاتی ہے اور دکھاتی ہے کہ کیا ہوا۔ آپ کا کوڈ کبھی اس مشین سے باہر نہیں جاتا۔",
+	"mobile.signin.panel.unavailable_detail": "اس بلڈ میں وہ لوپ بیک لسنر ({module}) شامل نہیں جو Radient کے ساتھ سائن ان کے لیے درکار ہے۔"
 }

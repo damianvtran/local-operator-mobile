@@ -1660,7 +1660,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * isolation without remounting the router, background scope registration,
 	 * foreground restore retry and interactive sign-in auto-open. Re-derived
 	 * once with --print; source identity only, NOT new rendered evidence. */
-	src: "9fe6607266874bfb42eda6b2b06abd3747a56ff4d1e9622df2e35c87edc4fd2b",
+	/* M3 S2a (feat/i18n-m3-s2a): the Computers titles/banners, own-tunnel and
+	 * loopback-detail keys with their seven audited translations (771 keys in the
+	 * regenerated `catalogue.gen.ts`), the ur composed-direction spreads and
+	 * `Input.placeholderDir`, and the ur scheme-isolate bidi test. Re-derived
+	 * last with --print over the committed tree; only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence.
+	 * PR #251 round 1 remediation: `Screen.rowTitleLines` and
+	 * `rowTitleLinesFor` (translated Computers/own-tunnel titles wrap instead of
+	 * clipping), the single `ComputersTitleKey`, and the bidi test's header
+	 * sentence. Re-derived with --print; again only `src` moved.
+	 * PR #251 CI fix: biome formatting of the switcher transport `Text` and the
+	 * refusal-surface import order (no logic change). Re-derived with --print;
+	 * only `src` moved. */
+	src: "3cb2314b7aa9fe9a9814ce1d54ca14c09706ea817750bd8c09c0a1e84866e705",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

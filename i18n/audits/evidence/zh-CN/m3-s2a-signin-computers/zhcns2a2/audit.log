@@ -1,0 +1,23 @@
+# audit.log — zh-CN S2a round 2, session 18935f868a69, 2026-11-12
+$ shasum -a 256 brief-59ec5184.json zh-CN/draft-zh-CN-s2a.json zh-CN/draft-zh-CN-s2a-v2.json
+e64f41af7e262a49a92ddf6a2f9fe519bc046c771833ca58a2d622dfeeeba563  brief-59ec5184.json
+f38550f3bf07fccab7c04c35b62567d371fa2c60708be470bfacbe9a01979a68  zh-CN/draft-zh-CN-s2a.json
+f9bd1fed3bfeddc26d01c2f0e7e8c3ecde0dd47ff5a1833515f46e4b25fc1966  zh-CN/draft-zh-CN-s2a-v2.json
+[python] keys: v1 37, v2 37, same order True; added keys: none
+[python] changed keys: ['mobile.computers.own_tunnel.insecure_off_help', 'mobile.computers.own_tunnel.private_host', 'mobile.computers.own_tunnel.public_host', 'mobile.computers.own_tunnel.step_test_help', 'mobile.computers.own_tunnel.security_heading']
+[python] difflib changed lines: 10
+-	"mobile.computers.own_tunnel.insecure_off_help": "使用http://时，中继密码会以明文在网络中传输，因此默认关闭，需你手动开启。只要地址支持，请始终使用https://。",
++	"mobile.computers.own_tunnel.insecure_off_help": "使用http://时，中继密码会以明文在网络中传输，因此除非你手动开启，否则此选项保持关闭。只要地址支持，请始终使用https://。",
+-	"mobile.computers.own_tunnel.private_host": "此地址位于你自己的网络内，因此风险仅限于该网络。",
+-	"mobile.computers.own_tunnel.public_host": "此地址不是私有地址——此手机与它之间的任何一方都能读取密码。",
++	"mobile.computers.own_tunnel.private_host": "此地址位于你自己的网络内，因此暴露范围仅限于该网络。",
++	"mobile.computers.own_tunnel.public_host": "此地址不是私有地址——从此手机到该地址途经的任何网络或设备都能读取密码。",
+-	"mobile.computers.own_tunnel.step_test_help": "在保存任何内容之前，这会先通过你的隧道发送一次真实请求。",
+-	"mobile.computers.own_tunnel.security_heading": "公开电脑前须知",
++	"mobile.computers.own_tunnel.step_test_help": "保存前，会先通过你的隧道发送一次真实请求。",
++	"mobile.computers.own_tunnel.security_heading": "暴露到公网前须知",
+[python] v1 with the 5 v2 values substituted == v2 bytes: True
+[python] redaction regex (REDACT|[redacted|⟦|█|***|<secret) hits: v1 0, v2 0
+[python] placeholders/backticks in changed v2 values: none; scheme counts (http,en,https,en): insecure_off_help 1,1,1,1; others 0
+[python] cells (zh v2 / en chars): insecure_off_help 119/149; private_host 52/70; public_host 70/93; step_test_help 42/71; security_heading 16/20
+$ git -C ~/local-operator-mobile show 59ec5184:src/i18n/catalogues/zh-CN/mobile.computers.json   (glossary: no 暴露/公网 there; draft url_label 公网URL and security_body 暴露到互联网上)

@@ -22,7 +22,7 @@ import { readSavedComputers } from "@/features/auth/tunnel-storage";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
-import { t } from "@/i18n";
+import { activeLocale, t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -33,6 +33,8 @@ import { Divider } from "@/ui/components/divider";
 import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
+import { useComposedDir } from "@/ui/direction";
+import { rowTitleLinesFor } from "@/ui/size-class";
 
 /**
  * Set up your own tunnel — the self-hosted path, with no Radient account anywhere
@@ -66,13 +68,19 @@ import { SectionHeader } from "@/ui/components/section-header";
  * The numeral stays mono — it is a machine-side marker — and the words take the
  * heading step, which is the level the command labels sit under.
  */
-const StepHeader = ({ label }: { label: string }) => {
-	const [numeral, ...rest] = label.split(" ");
+/*
+ * The numeral and the words arrive SEPARATELY (M3 S2a): the header used to split
+ * one English string on its first space, which has no meaning in a language
+ * written without spaces, and would hand a translator a numeral to preserve
+ * inside the sentence. The numeral is a fixed machine-side marker, so it stays a
+ * literal; only the words are catalogue copy.
+ */
+const StepHeader = ({ numeral, label }: { numeral: string; label: string }) => {
 	return (
 		<View className="flex-row items-baseline gap-2">
 			<Text className="text-mono-sm text-ink-dim">{numeral}</Text>
 			<Text className="text-heading text-ink" accessibilityRole={ROLE.header}>
-				{rest.join(" ")}
+				{label}
 			</Text>
 		</View>
 	);
@@ -80,6 +88,10 @@ const StepHeader = ({ label }: { label: string }) => {
 
 export default function OwnTunnel() {
 	const router = useRouter();
+	/* The Urdu password placeholder opens with a Latin token, so the EMPTY field
+	 *  needs the page's direction stated (`Input.placeholderDir`); typed text keeps
+	 *  the field's own inferred base. */
+	const composedDir = useComposedDir();
 	const { saveCustomRoute, connectCustomOutcome } = useConnection();
 	const { savedTunnel: saved } = useConnection();
 	/* `?computer=<registry id>` is the computer switcher's hand-off for an
@@ -242,7 +254,11 @@ export default function OwnTunnel() {
 	const testAndSave = (
 		<>
 			<Button
-				label={testing ? "Testing…" : "Test the connection"}
+				label={
+					testing
+						? t("mobile.computers.own_tunnel.testing")
+						: t("mobile.computers.own_tunnel.test")
+				}
 				onPress={() => void test()}
 				loading={testing}
 				disabled={testing || url.trim().length === 0}
@@ -255,7 +271,11 @@ export default function OwnTunnel() {
 			 *  reason for a misleading "Test the connection first". */}
 			{verdict && !connectError ? <VerdictBlock verdict={verdict} /> : null}
 			<Button
-				label={saving ? "Saving…" : "Save and connect"}
+				label={
+					saving
+						? t("mobile.computers.own_tunnel.saving")
+						: t("mobile.computers.own_tunnel.save_connect")
+				}
 				onPress={() => void saveAndConnect()}
 				disabled={!canSave || saving}
 				/* `custom-connect` rather than a new name: this IS the act the
@@ -295,8 +315,8 @@ export default function OwnTunnel() {
 			{!canSave ? (
 				<Text className="text-body-sm text-ink-dim">
 					{url.trim().length === 0
-						? "Paste your tunnel's address to continue."
-						: "Test the connection first — a tunnel that has not answered once is not one to save."}
+						? t("mobile.computers.own_tunnel.need_address")
+						: t("mobile.computers.own_tunnel.need_test")}
 				</Text>
 			) : null}
 		</>
@@ -311,8 +331,11 @@ export default function OwnTunnel() {
 	if (known) {
 		return (
 			<Screen
-				title="Your own tunnel"
+				title={t("mobile.computers.own_tunnel.title")}
 				testID={SCREEN.ownTunnel}
+				/* No measured fit for this header: a translated title (fr "Votre
+				 *  propre tunnel") wraps beside Back instead of clipping (PR #251 D2). */
+				rowTitleLines={rowTitleLinesFor(activeLocale())}
 				headerLeading={
 					<BackButton
 						testID={CONTROL.ownTunnelBack}
@@ -321,11 +344,17 @@ export default function OwnTunnel() {
 				}
 			>
 				<View className="gap-4 pt-2">
+					{/* `{name}`-initial in ur (`{name} کا پاس ورڈ …`): with a Latin
+					 * computer name, `dir="auto"` would lay the heading out LTR on an
+					 * RTL page, so it states the page's composed direction instead. */}
 					<Text
 						className="text-heading text-ink"
 						accessibilityRole={ROLE.header}
+						{...composedDir}
 					>
-						{`Enter the password for ${known.name}`}
+						{t("mobile.computers.own_tunnel.password_for", {
+							name: known.name,
+						})}
 					</Text>
 					<Text className="text-body-sm text-ink-muted">
 						{passwordEntryExplanation(saved?.baseUrl ?? null, url)}
@@ -338,10 +367,11 @@ export default function OwnTunnel() {
 						{url}
 					</Text>
 					<Input
-						label="Relay password"
+						label={t("mobile.computers.own_tunnel.password_label")}
 						value={password}
 						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
+						placeholderDir={composedDir}
 						secureTextEntry
 						autoCapitalize="none"
 						autoFocus
@@ -355,8 +385,10 @@ export default function OwnTunnel() {
 
 	return (
 		<Screen
-			title="Your own tunnel"
+			title={t("mobile.computers.own_tunnel.title")}
 			testID={SCREEN.ownTunnel}
+			/* The same header as the known-host branch above: wraps, never clips. */
+			rowTitleLines={rowTitleLinesFor(activeLocale())}
 			headerLeading={
 				<BackButton
 					testID={CONTROL.ownTunnelBack}
@@ -366,17 +398,17 @@ export default function OwnTunnel() {
 		>
 			<View className="gap-4 pt-2">
 				<Text className="text-body text-ink">
-					No Radient account is needed for any of this. You publish the relay on
-					your own computer through a tunnel you control, and the app talks to
-					it through the address you paste below.
+					{t("mobile.computers.own_tunnel.intro")}
 				</Text>
 
 				{/* ------------------------------------------------ 1. the computer */}
 				<View className="gap-2">
-					<StepHeader label="1. On the computer" />
+					<StepHeader
+						numeral="1."
+						label={t("mobile.computers.own_tunnel.step_computer")}
+					/>
 					<Text className="text-body-sm text-ink-muted">
-						The relay binds loopback only, so this is the machine that has to
-						run it. Leave it awake while you use the app.
+						{t("mobile.computers.own_tunnel.step_computer_help")}
 					</Text>
 					{COMPUTER_COMMANDS.map((item) => (
 						<CommandBlock
@@ -392,7 +424,10 @@ export default function OwnTunnel() {
 
 				{/* -------------------------------------------------- 2. the tunnel */}
 				<View className="gap-2">
-					<StepHeader label="2. Publish it" />
+					<StepHeader
+						numeral="2."
+						label={t("mobile.computers.own_tunnel.step_publish")}
+					/>
 					<Text className="text-body-sm text-ink-muted">{TUNNEL_RULE}</Text>
 					{TUNNEL_COMMANDS.map((item) => (
 						<CommandBlock
@@ -408,9 +443,12 @@ export default function OwnTunnel() {
 
 				{/* ------------------------------------------------- 3. the address */}
 				<View className="gap-3">
-					<StepHeader label="3. In the app" />
+					<StepHeader
+						numeral="3."
+						label={t("mobile.computers.own_tunnel.step_app")}
+					/>
 					<Input
-						label="Public URL"
+						label={t("mobile.computers.own_tunnel.url_label")}
 						value={url}
 						onChangeText={editUrl}
 						placeholder="https://your-tunnel.example.com"
@@ -418,10 +456,11 @@ export default function OwnTunnel() {
 						testID={CONTROL.customUrlField}
 					/>
 					<Input
-						label="Relay password"
+						label={t("mobile.computers.own_tunnel.password_label")}
 						value={password}
 						onChangeText={editPassword}
 						placeholder={t("mobile.computers.password_placeholder")}
+						placeholderDir={composedDir}
 						secureTextEntry
 						autoCapitalize="none"
 						testID={CONTROL.customPasswordField}
@@ -430,32 +469,34 @@ export default function OwnTunnel() {
 						<Button
 							label={
 								allowInsecure
-									? "Plain http:// is allowed"
-									: "Allow a plain http:// address"
+									? t("mobile.computers.own_tunnel.insecure_allowed")
+									: t("mobile.computers.own_tunnel.insecure_allow")
 							}
 							onPress={toggleInsecure}
 							variant={allowInsecure ? "outline" : "quiet"}
 							size="sm"
 							testID={CONTROL.customInsecureOptIn}
-							accessibilityHint="Needed only for an address over http, which sends the password in the clear"
+							accessibilityHint={t("mobile.computers.own_tunnel.insecure_hint")}
 						/>
 						<Text className="text-body-sm text-ink-dim">
 							{allowInsecure
-								? "On: the relay password and everything you send cross this network unencrypted. Only do this on a network you trust."
-								: "Over http:// your relay password crosses the network in the clear, so it is off unless you turn it on. Use https:// whenever the address supports it."}
+								? t("mobile.computers.own_tunnel.insecure_on_help")
+								: t("mobile.computers.own_tunnel.insecure_off_help")}
 						</Text>
 						<View>
 							{!allowInsecure && url.trim().startsWith("http://") ? (
-								<Alert severity="warning" title="This address is unencrypted">
-									Turn the opt-in on to use it, or give an https:// address — a
-									tunnel normally prints one.
+								<Alert
+									severity="warning"
+									title={t("mobile.computers.own_tunnel.unencrypted_title")}
+								>
+									{t("mobile.computers.own_tunnel.unencrypted_body")}
 								</Alert>
 							) : null}
 							{allowInsecure && url.trim().startsWith("http://") ? (
 								<Text className="pt-1 text-body-sm text-warning">
 									{isPrivateHost(hostOf(url))
-										? "This address is on your own network, so the exposure is limited to it."
-										: "This address is not a private one — anything between this phone and it can read the password."}
+										? t("mobile.computers.own_tunnel.private_host")
+										: t("mobile.computers.own_tunnel.public_host")}
 								</Text>
 							) : null}
 						</View>
@@ -464,10 +505,12 @@ export default function OwnTunnel() {
 
 				{/* ---------------------------------------------------- 4. the test */}
 				<View className="gap-3">
-					<StepHeader label="4. Test it" />
+					<StepHeader
+						numeral="4."
+						label={t("mobile.computers.own_tunnel.step_test")}
+					/>
 					<Text className="text-body-sm text-ink-muted">
-						This makes a real request through your tunnel before anything is
-						saved.
+						{t("mobile.computers.own_tunnel.step_test_help")}
 					</Text>
 					{testAndSave}
 				</View>
@@ -476,14 +519,13 @@ export default function OwnTunnel() {
 
 				{/* ------------------------------------------------------- security */}
 				<View className="gap-2">
-					<SectionHeader label="Before you expose it" />
+					<SectionHeader
+						label={t("mobile.computers.own_tunnel.security_heading")}
+					/>
 					<Text className="text-body-sm text-ink-dim">
-						You are putting your own computer on the internet, and the relay
-						password is the only thing standing in front of it. Prefer HTTPS,
-						use a tunnel that offers its own authentication where yours does,
-						and rotate the password with `lop mobile password` if it has been
-						shared. Anyone with that password and your URL can drive the
-						sessions on that machine.
+						{t("mobile.computers.own_tunnel.security_body", {
+							command: "lop mobile password",
+						})}
 					</Text>
 				</View>
 			</View>
@@ -514,7 +556,11 @@ const VerdictBlock = ({ verdict }: { verdict: TunnelTestVerdict }) => {
 							? "warning"
 							: "error"
 				}
-				title={verdict.kind === "ok" ? "Connected" : "Not yet"}
+				title={
+					verdict.kind === "ok"
+						? t("mobile.computers.own_tunnel.verdict_ok")
+						: t("mobile.computers.own_tunnel.verdict_not_yet")
+				}
 			>
 				{verdictSentence(verdict, sentencePlatform())}
 			</Alert>

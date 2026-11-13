@@ -30,5 +30,6 @@
 	"mobile.signin.panel.unavailable_alt": "आप रिले का पता और पासवर्ड डालकर भी कनेक्ट कर सकते हैं।",
 	"mobile.signin.try_anyway": "फिर भी कोशिश करें",
 	"mobile.signin.welcome.headline": "आपका एजेंट आपके कंप्यूटर पर चलता है।",
-	"mobile.signin.welcome.body": "यह ऐप आपकी अपनी मशीन पर सत्र चलाता है और दिखाता है कि क्या हुआ। आपका कोड उस मशीन से कभी बाहर नहीं जाता।"
+	"mobile.signin.welcome.body": "यह ऐप आपकी अपनी मशीन पर सत्र चलाता है और दिखाता है कि क्या हुआ। आपका कोड उस मशीन से कभी बाहर नहीं जाता।",
+	"mobile.signin.panel.unavailable_detail": "Radient से साइन इन करने के लिए एक लूपबैक लिसनर ({module}) चाहिए, जो इस बिल्ड में शामिल नहीं है।"
 }
