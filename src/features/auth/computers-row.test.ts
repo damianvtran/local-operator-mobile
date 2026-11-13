@@ -232,7 +232,9 @@ const NEW = listed(
 	"New Mini",
 );
 
-const { default: Computers } = await import("./computers");
+const { default: Computers, COMPUTER_FACTS_CLASS } = await import(
+	"./computers"
+);
 
 /* Placeholder tunnel host (AGENTS.md: never a real tunnel hostname); the NAME is
  * the shape `socket.gethostname()` gives on EC2, which is what Ola's is. */
@@ -251,6 +253,8 @@ async function render() {
 	await act(async () => root?.render(createElement(Computers)));
 }
 const words = () => host.texts.join(" | ");
+/* A 2 pt (`*.5`) spacing step, which the U-42 audit refuses. */
+const HALF_STEP_GAP = /gap-(?:[xy]-)?\d*\.5/;
 const ids = computerRowIds(OLA.hostname);
 
 beforeEach(() => {
@@ -330,6 +334,19 @@ describe("the Computers row reads as something to press (TestFlight 883)", () =>
 		expect(host.texts).not.toContain(OLA.name);
 		expect(words()).toContain(t("mobile.computers.status.route_ready"));
 		expect(words()).toContain(t("mobile.computers.protected"));
+	});
+
+	/* Design round 1, D11: at 320 pt the line wrapped as "● Route ready ·" /
+	 *  "● Sign-in protected". Each fact has its own dot, so no separator glyph is
+	 *  painted, and the line breaks only between whole facts. */
+	it("parts the two facts by space alone, so a wrap leaves no dangling separator", async () => {
+		await render();
+		expect(host.texts.some((text) => text.trim() === "·")).toBe(false);
+		expect(host.classNames).toContain(COMPUTER_FACTS_CLASS);
+		expect(COMPUTER_FACTS_CLASS).toContain("flex-wrap");
+		expect(COMPUTER_FACTS_CLASS).toContain("gap-x-3");
+		/* U-42: no half-step (2 pt) spacing on the line. */
+		expect(COMPUTER_FACTS_CLASS).not.toMatch(HALF_STEP_GAP);
 	});
 
 	it("puts the check in the trailing slot for the computer in use, never a chevron", async () => {

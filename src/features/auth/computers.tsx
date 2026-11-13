@@ -77,6 +77,11 @@ import { tunnelStatusKey } from "./tunnel-status-key";
  * exists to prevent.
  */
 
+/** The facts line's box (design round 1, D11): wraps between facts, never
+ *  inside one, on the 4 pt scale. Exported so the row test pins it. */
+export const COMPUTER_FACTS_CLASS =
+	"flex-row flex-wrap items-center gap-x-3 gap-y-1";
+
 /** One fact on line 3: a 6 pt tone dot, then the word (never colour alone). */
 const Fact = ({
 	label,
@@ -199,16 +204,20 @@ const ComputerRow = ({
 						) : (
 							/* The two facts as text, not bordered pills (D1: the pills read
 							 *  as buttons and are not), each with its own identifier so
-							 *  neither can be asserted in place of the other. */
-							<View className="flex-row flex-wrap items-center gap-x-1 gap-y-0.5">
+							 *  neither can be asserted in place of the other.
+							 *
+							 *  NO separator glyph between them (design round 1, D11): each fact
+							 *  already opens with its own tone dot, so a `·` added nothing and,
+							 *  at 320 pt, the line wrapped as "● Route ready ·" / "● Sign-in
+							 *  protected" with the separator dangling. Each `Fact` now wraps as
+							 *  a unit; the 12 pt `gap-x-3` alone parts them. `gap-y-1`, not the
+							 *  2 pt `gap-y-0.5`, keeps the wrap on the 4 pt scale (U-42). */
+							<View className={COMPUTER_FACTS_CLASS}>
 								<Fact
 									label={status.label}
 									tone={status.tone}
 									testID={ids.status}
 								/>
-								<Text className="text-meta text-ink-dim" aria-hidden>
-									·
-								</Text>
 								<Fact
 									label={reach.label}
 									tone={reach.tone}
