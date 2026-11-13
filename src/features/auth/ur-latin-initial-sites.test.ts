@@ -275,4 +275,19 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		expect(inputTag("pass کلید")).not.toContain('dir="rtl"');
 		expect(inputTag("")).toContain('dir="rtl"');
 	});
+
+	it("own-tunnel.tsx: the password_for heading ({name}-initial in ur) spreads the composed direction", () => {
+		/* M3 S2a R1: the ur value opens with the `{name}` slot, so a Latin computer
+		 * name is its first strong letter and `dir="auto"` would resolve the
+		 * heading LTR on an RTL page. Source-level: the screen's native stack does
+		 * not import under Node, and the ur value lands with the S2a catalogue. */
+		const source = read("./own-tunnel.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const anchor = '{t("mobile.computers.own_tunnel.password_for"';
+		const at = source.indexOf(anchor);
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
+			"{...composedDir}",
+		);
+	});
 });

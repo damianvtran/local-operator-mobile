@@ -340,9 +340,13 @@ export default function OwnTunnel() {
 				}
 			>
 				<View className="gap-4 pt-2">
+					{/* `{name}`-initial in ur (`{name} کا پاس ورڈ …`): with a Latin
+					 * computer name, `dir="auto"` would lay the heading out LTR on an
+					 * RTL page, so it states the page's composed direction instead. */}
 					<Text
 						className="text-heading text-ink"
 						accessibilityRole={ROLE.header}
+						{...composedDir}
 					>
 						{t("mobile.computers.own_tunnel.password_for", {
 							name: known.name,
