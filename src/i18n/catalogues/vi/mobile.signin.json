@@ -30,5 +30,6 @@
 	"mobile.signin.panel.unavailable_alt": "Bạn vẫn có thể kết nối bằng địa chỉ và mật khẩu của máy chủ chuyển tiếp.",
 	"mobile.signin.try_anyway": "Cứ thử lại",
 	"mobile.signin.welcome.headline": "Tác nhân của bạn chạy trên máy tính của bạn.",
-	"mobile.signin.welcome.body": "Ứng dụng này điều khiển các phiên trên chính máy của bạn và hiển thị những gì nó đã làm. Mã nguồn của bạn không bao giờ rời khỏi máy."
+	"mobile.signin.welcome.body": "Ứng dụng này điều khiển các phiên trên chính máy của bạn và hiển thị những gì nó đã làm. Mã nguồn của bạn không bao giờ rời khỏi máy.",
+	"mobile.signin.panel.unavailable_detail": "Đăng nhập bằng Radient cần một trình lắng nghe loopback mà bản dựng này không có ({module})."
 }
