@@ -1673,7 +1673,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * PR #251 CI fix: biome formatting of the switcher transport `Text` and the
 	 * refusal-surface import order (no logic change). Re-derived with --print;
 	 * only `src` moved. */
-	src: "3cb2314b7aa9fe9a9814ce1d54ca14c09706ea817750bd8c09c0a1e84866e705",
+	/* M3 S2b-1 (feat/i18n-m3-s2b1): the own-tunnel command, verdict and
+	 * Settings-section keys (English-first, then the seven audited translations;
+	 * 812 keys in the regenerated `catalogue.gen.ts`), `Alert.bodyDir` with the
+	 * ur `{detail}`-initial offline-verdict spreads and their tests. Re-derived last with --print over the committed tree (b98f5395);
+	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "69a24a2e6a6056e1b8401f55a584588ed989dffa1c891b1dafae012cb7f3c4b1",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
