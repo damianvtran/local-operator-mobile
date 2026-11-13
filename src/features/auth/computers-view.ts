@@ -4,6 +4,7 @@ import type {
 	ConnectionPhase,
 	DiscoveryFailure,
 } from "@/state/connection-store";
+import type { ComputersTitleKey } from "@/ui/size-class";
 
 /**
  * What the Computers screen shows, decided from state alone.
@@ -85,9 +86,7 @@ export const ADD_COMPUTER_HREF = {
 /** The screen title's catalogue key. A key rather than the English words because
  *  `computersHeaderStackWidth` branches on WHICH title it is; comparing the
  *  rendered text would take the wrong branch in every non-English locale. */
-export type ComputersTitleKey =
-	| "mobile.computers.title.list"
-	| "mobile.computers.title.set_up";
+export type { ComputersTitleKey };
 
 export type ComputersView = {
 	/** A catalogue key; the screen renders `t(title)`. */

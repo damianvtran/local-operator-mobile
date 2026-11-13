@@ -422,6 +422,11 @@ export function headerStackWidth(
 	return Math.max(HEADER_STACK_WIDTH, Math.ceil(width));
 }
 
+/** The Computers screen title's catalogue key (re-exported by computers-view.ts). */
+export type ComputersTitleKey =
+	| "mobile.computers.title.list"
+	| "mobile.computers.title.set_up";
+
 /**
  * The width below which the COMPUTERS header stacks, for the controls it carries.
  *
@@ -455,12 +460,13 @@ export function headerStackWidth(
  * lighter header stacks earlier than the reviewed behaviour.
  */
 export function computersHeaderStackWidth(input: {
-	/* The title's catalogue KEY (`ComputersTitleKey` in computers-view.ts, kept
-	 *  inline because `src/ui` does not import features): the branch is WHICH
+	/* The title's catalogue KEY (`ComputersTitleKey`, declared here because
+	 *  `src/ui` does not import features; computers-view.ts re-exports it): the branch is WHICH
 	 *  title, so it must not compare rendered text, which is English only in `en`.
 	 *  The widths below are still the English advances; a longer translation is
-	 *  not measured here (M3 S2a keeps the reviewed numbers unchanged). */
-	title: "mobile.computers.title.list" | "mobile.computers.title.set_up";
+	 *  not measured here (M3 S2a keeps the reviewed numbers unchanged), which is
+	 *  why the un-stacked title row wraps for non-English (`rowTitleLinesFor`). */
+	title: ComputersTitleKey;
 	back: boolean;
 	switcher: boolean;
 	refresh: boolean;
@@ -473,6 +479,25 @@ export function computersHeaderStackWidth(input: {
 	if (input.switcher) width += 119;
 	if (input.refresh) width += input.switcher ? 72 : 68;
 	return Math.max(HEADER_STACK_WIDTH, Math.ceil(width));
+}
+
+/**
+ * How many lines a header title may take when the header does NOT stack
+ * (PR #251 design round 1, D1/D2). Every stack threshold in this file —
+ * `computersHeaderStackWidth`'s pieces, the kit floor — was measured on English
+ * frames: at 430 pt the Computers list header leaves its 138 pt English title
+ * one pixel of slack, and a translated title, switcher or Refresh label has no
+ * measured width at all. The un-stacked title is `flex-1` beside a cluster that
+ * cannot shrink, so on one line any growth became an ellipsis (`Ordina…`).
+ * Allowing a second line is the fit that needs no unmeasured number: the title
+ * keeps its width and grows down instead of being cut.
+ *
+ * English keeps 1, so its header is exactly the reviewed layout. Inventing
+ * per-locale advances to move the stack threshold would be guessing widths
+ * nobody has rendered; when those frames exist, they replace this rule.
+ */
+export function rowTitleLinesFor(locale: string): 1 | 2 {
+	return locale === "en" ? 1 : 2;
 }
 
 /** The pure decision, so it is testable and is not a rendering side effect. */

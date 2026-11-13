@@ -15,7 +15,9 @@ import { describe, expect, it } from "vitest";
  * inside them the only permitted controls are an LRI immediately before
  * `http://` / `https://` and a PDI immediately after it. Scope is `ur` only, as
  * ruled; the mutated-copy cases below are permanent negative controls proving
- * the checker would see a violation.
+ * the checker would see a violation. `own_tunnel.insecure_hint` names `http` too
+ * but is deliberately NOT a fifth key: its bare `http` has no `://` to reorder, so
+ * a copy change that gives it `http://` must add it here (with its isolate).
  */
 
 /** LRM, RLM, LRE/RLE/PDF/LRO/RLO, LRI/RLI/FSI/PDI, ALM. */

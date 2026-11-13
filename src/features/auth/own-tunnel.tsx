@@ -22,7 +22,7 @@ import { readSavedComputers } from "@/features/auth/tunnel-storage";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
 import { verdictSentence } from "@/features/auth/tunnel-verdict";
-import { t } from "@/i18n";
+import { activeLocale, t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
@@ -34,6 +34,7 @@ import { Input } from "@/ui/components/input";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { useComposedDir } from "@/ui/direction";
+import { rowTitleLinesFor } from "@/ui/size-class";
 
 /**
  * Set up your own tunnel — the self-hosted path, with no Radient account anywhere
@@ -332,6 +333,9 @@ export default function OwnTunnel() {
 			<Screen
 				title={t("mobile.computers.own_tunnel.title")}
 				testID={SCREEN.ownTunnel}
+				/* No measured fit for this header: a translated title (fr "Votre
+				 *  propre tunnel") wraps beside Back instead of clipping (PR #251 D2). */
+				rowTitleLines={rowTitleLinesFor(activeLocale())}
 				headerLeading={
 					<BackButton
 						testID={CONTROL.ownTunnelBack}
@@ -383,6 +387,8 @@ export default function OwnTunnel() {
 		<Screen
 			title={t("mobile.computers.own_tunnel.title")}
 			testID={SCREEN.ownTunnel}
+			/* The same header as the known-host branch above: wraps, never clips. */
+			rowTitleLines={rowTitleLinesFor(activeLocale())}
 			headerLeading={
 				<BackButton
 					testID={CONTROL.ownTunnelBack}
