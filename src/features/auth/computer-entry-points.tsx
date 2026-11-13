@@ -453,6 +453,11 @@ export const drawerRowName = (
  * that is the shipped face the shared sans advance table was measured from,
  * scaled from its meta size to body-sm rather than charged the mono advance.
  */
+/** The drawer row's name box (design round 1, D12): sized to its text and
+ *  shrinkable, never growing, so the health word sits right after it. */
+export const DRAWER_ROW_NAME_CLASS =
+	"min-w-0 shrink text-body-sm font-medium text-ink";
+
 export function DrawerComputerRow({
 	testID,
 	onNavigate,
@@ -506,8 +511,16 @@ export function DrawerComputerRow({
 				className="min-w-0 flex-1 flex-row items-center gap-2"
 				onLayout={(event) => setNameWidth(event.nativeEvent.layout.width)}
 			>
+				{/* `min-w-0 shrink`, NOT `flex-1` (design round 1, D12). A growing name
+				 *  box pushed the health word to the slot's far end: on Ola's 430 pt
+				 *  frame, once D4/D9 let the word show, the name's ink ended at x 139
+				 *  and "· Online" began at x 249, a ~110 pt gap with a leading `·`
+				 *  that belonged to nothing. The name now takes only its own width,
+				 *  so the word follows it as one phrase, and still shrinks (and
+				 *  ellipsizes, middle on native) when the slot is short. The spacer
+				 *  after the word holds ⇅ at the trailing edge. */}
 				<Text
-					className="min-w-0 flex-1 text-body-sm font-medium text-ink"
+					className={DRAWER_ROW_NAME_CLASS}
 					numberOfLines={1}
 					ellipsizeMode={painted.ellipsizeMode}
 				>
@@ -525,6 +538,7 @@ export function DrawerComputerRow({
 						{fit.word}
 					</Text>
 				) : null}
+				<View className="flex-1" aria-hidden />
 			</View>
 			<ChevronsUpDown size={16} strokeWidth={2} color={ink} aria-hidden />
 		</Pressable>

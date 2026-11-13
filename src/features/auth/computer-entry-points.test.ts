@@ -34,6 +34,9 @@ const host = vi.hoisted(() => ({
 	/* Each brand mark painted, by the testID of the Pressable it sits in
 	 *  (null = outside every pressable, the dead strip UX U2 measured). */
 	marks: [] as (string | null)[],
+	/* Every View and Text in render order, with its class, so a test can read
+	 *  the drawer row's left-to-right structure (design round 1, D12). */
+	nodes: [] as { kind: "View" | "Text"; className: string; text?: string }[],
 }));
 
 vi.mock("react-native", async () => {
@@ -49,6 +52,10 @@ vi.mock("react-native", async () => {
 	return {
 		Platform: { OS: "web" },
 		View: (props: Props) => {
+			host.nodes.push({
+				kind: "View",
+				className: String(props.className ?? ""),
+			});
 			if (host.layoutWidth > 0 && typeof props.onLayout === "function") {
 				const width = host.layoutWidth;
 				host.layoutWidth = 0;
@@ -64,6 +71,11 @@ vi.mock("react-native", async () => {
 			// Negative control: a Text measurement would recreate the shrink loop.
 			expect(props.onLayout).toBeUndefined();
 			host.texts.push(flatten(props.children));
+			host.nodes.push({
+				kind: "Text",
+				className: String(props.className ?? ""),
+				text: flatten(props.children),
+			});
 			return null;
 		},
 		ActivityIndicator: () => null,
@@ -177,6 +189,7 @@ vi.mock("@/features/auth/connection-provider", async () => {
 
 const { ComputerSwitcherProvider } = await import("./computer-switcher-sheet");
 const {
+	DRAWER_ROW_NAME_CLASS,
 	DrawerComputerRow,
 	drawerRowFit,
 	drawerRowName,
@@ -228,6 +241,7 @@ const sheetUp = () => host.sheetVisible.at(-1) === true;
 
 beforeEach(() => {
 	host.texts.length = 0;
+	host.nodes.length = 0;
 	host.labels.clear();
 	host.presses.clear();
 	host.sheetVisible.length = 0;
@@ -461,6 +475,32 @@ describe("the drawer footer's workspace row", () => {
 			expect(host.labels.get(ROW)).toBe(
 				"Computer: Mac mini, Online. Switch computer",
 			);
+		});
+	});
+
+	/* Design round 1, D12: the name was `flex-1`, so "· Online" sat ~110 pt
+	 *  from it against ⇅. Read the painted structure left to right: the name
+	 *  is a shrinkable box that never grows, the word follows it directly, and
+	 *  a growing spacer comes after the word. */
+	it("keeps the health word beside the name, with the free space after it", async () => {
+		await mount(createElement(DrawerComputerRow, { testID: ROW }));
+		host.nodes.length = 0;
+		await live("Mac mini");
+		const word = "· Online";
+		const last = (predicate: (n: (typeof host.nodes)[number]) => boolean) =>
+			host.nodes.map(predicate).lastIndexOf(true);
+		const name = last((n) => n.kind === "Text" && n.text === "Mac mini");
+		const after = last((n) => n.kind === "Text" && n.text === word);
+		expect(name).toBeGreaterThanOrEqual(0);
+		expect(after).toBe(name + 1);
+		expect(host.nodes[name]?.className).toBe(DRAWER_ROW_NAME_CLASS);
+		expect(DRAWER_ROW_NAME_CLASS.split(" ")).toEqual(
+			expect.arrayContaining(["min-w-0", "shrink"]),
+		);
+		expect(DRAWER_ROW_NAME_CLASS.split(" ")).not.toContain("flex-1");
+		expect(host.nodes[after + 1]).toEqual({
+			kind: "View",
+			className: "flex-1",
 		});
 	});
 
