@@ -42,6 +42,8 @@ import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.con
 import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
 import settingsContext from "@/i18n/catalogues/en/mobile.settings.context.json";
 import settings from "@/i18n/catalogues/en/mobile.settings.json";
+import sidebarContext from "@/i18n/catalogues/en/mobile.sidebar.context.json";
+import sidebar from "@/i18n/catalogues/en/mobile.sidebar.json";
 import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import teamBridgeContext from "@/i18n/catalogues/en/mobile.team_bridge.context.json";
@@ -216,6 +218,15 @@ const NAMESPACES = [
 		expected: 59, // +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
+		/* The conversations drawer's View options (TestFlight 906): the desktop's
+		 *  `ui.chat.sidebar_view.*` words mirrored, plus the phone's ended switch,
+		 *  its hint, the "More sidebar settings" link and the Settings heading. */
+		name: "mobile.sidebar",
+		messages: sidebar,
+		context: sidebarContext,
+		expected: 21,
+	},
+	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
 		 *  destinations' one-word labels, the More sheet's title, and (from the
 		 *  2026-11-05 build389 pass) the composer's context strip plus the home's
@@ -328,7 +339,10 @@ describe("the English catalogues", () => {
 		/* M3 slice S2a (English-first): +36 mobile.computers (titles, discovery
 		 * banners, the "Your own tunnel" screen) + 1 mobile.signin (loopback
 		 * unavailable detail) = 37: 734 + 37 = 771, counted over the en JSON. */
-		expect(total).toBe(771);
+		/* TestFlight 906 drawer View options: + the 21 `mobile.sidebar.*` keys
+		 * (order, grouping, clock, ended, sections, link, heading): 771 + 21 = 792,
+		 * the generator's own count. */
+		expect(total).toBe(792);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -402,6 +416,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.sidebar.sections":
+			"« Sections » is the French word for the drawer's sections, spelled as in English; the desktop's French catalogue uses the same word (`ui.chat.sidebar_view.sections`).",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.session.fallback_name":

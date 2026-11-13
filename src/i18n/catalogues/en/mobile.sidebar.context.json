@@ -1,0 +1,86 @@
+{
+	"mobile.sidebar.view_options": {
+		"role": "button",
+		"note": "Accessible name of the small sliders icon beside the drawer's search pill, and the title of the compact sheet it opens. Mirrors the desktop's 'View options' (ui.chat.sidebar.header.view_options)."
+	},
+	"mobile.sidebar.order_by": {
+		"role": "heading",
+		"note": "Label of the choice of how conversations are ordered in the drawer. Desktop: ui.chat.sidebar_view.order_by."
+	},
+	"mobile.sidebar.order.active_first": {
+		"role": "button",
+		"note": "Order option: conversations with a turn running, or waiting on the reader, are lifted to the top; the rest follow newest first. Desktop: ui.chat.sidebar_view.active_first."
+	},
+	"mobile.sidebar.order.most_recent": {
+		"role": "button",
+		"note": "Order option: one newest-first order over every conversation, nothing lifted. Desktop: ui.chat.sidebar_view.most_recent."
+	},
+	"mobile.sidebar.group_by": {
+		"role": "heading",
+		"note": "Label of the choice of how the drawer groups conversations. Desktop: ui.chat.sidebar_view.group_by."
+	},
+	"mobile.sidebar.group.time_section": {
+		"role": "button",
+		"note": "Grouping option: headed sections Pinned, Running, Today, This week, Older. Desktop: ui.chat.sidebar_view.time_section."
+	},
+	"mobile.sidebar.group.one_list": {
+		"role": "button",
+		"note": "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list."
+	},
+	"mobile.sidebar.time_basis": {
+		"role": "heading",
+		"note": "Label of the choice of which clock the sections, the row times and the order read. Desktop: ui.chat.sidebar_view.time_basis."
+	},
+	"mobile.sidebar.basis.last_active": {
+		"role": "button",
+		"note": "Clock option: when the conversation last had activity. Desktop: ui.chat.sidebar_view.last_active."
+	},
+	"mobile.sidebar.basis.created": {
+		"role": "button",
+		"note": "Clock option: when the conversation was started. Desktop: ui.chat.sidebar_view.created."
+	},
+	"mobile.sidebar.clock_hint": {
+		"role": "help",
+		"note": "One sentence under the clock choice explaining that it changes both the dates shown and the order. Desktop: ui.chat.sidebar_view.clock_hint."
+	},
+	"mobile.sidebar.show_ended": {
+		"role": "button",
+		"note": "Switch label: whether conversations whose session has ended stay in the drawer. Phone-only setting; on by default."
+	},
+	"mobile.sidebar.show_ended_hint": {
+		"role": "help",
+		"note": "One sentence under the 'Show ended sessions' switch: turning it off never hides a pinned or running conversation."
+	},
+	"mobile.sidebar.sections": {
+		"role": "heading",
+		"note": "Label of the list of switches that show or hide each drawer section. Desktop: ui.chat.sidebar_view.sections."
+	},
+	"mobile.sidebar.section.pinned": {
+		"role": "heading",
+		"note": "Drawer section heading for conversations the reader pinned; also the switch label that shows or hides it. Desktop: ui.chat.sidebar_view.section.pinned."
+	},
+	"mobile.sidebar.section.running": {
+		"role": "heading",
+		"note": "Drawer section heading for conversations with a turn in flight or waiting on the reader. Desktop: ui.chat.sidebar_view.section.running."
+	},
+	"mobile.sidebar.section.today": {
+		"role": "heading",
+		"note": "Drawer section heading for conversations from this local calendar day. Desktop: ui.chat.sidebar_view.section.today."
+	},
+	"mobile.sidebar.section.week": {
+		"role": "heading",
+		"note": "Drawer section heading for conversations from the last six calendar days, not today. Desktop: ui.chat.sidebar_view.section.week."
+	},
+	"mobile.sidebar.section.older": {
+		"role": "heading",
+		"note": "Drawer section heading for everything older than this week. Desktop: ui.chat.sidebar_view.section.older."
+	},
+	"mobile.sidebar.more_settings": {
+		"role": "button",
+		"note": "Link at the foot of the drawer's View options sheet that opens the full Sidebar section in Settings."
+	},
+	"mobile.sidebar.settings_heading": {
+		"role": "heading",
+		"note": "Heading of the Settings section holding every drawer (sidebar) view option."
+	}
+}

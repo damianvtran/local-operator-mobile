@@ -36,14 +36,20 @@ import {
 	degradedShortNote,
 	inboxBadgeCount,
 	isRemoteRow,
-	splitSidebarSections,
 	staleNote,
 	staleShortNote,
 	visiblePeers,
 } from "@/features/sessions/session-projection";
 import { SessionRow } from "@/features/sessions/session-row";
+import {
+	arrangeSidebar,
+	type SidebarGroup,
+} from "@/features/sessions/sidebar-view";
+import { SIDEBAR_SECTION_LABEL } from "@/features/sessions/sidebar-view-controls";
+import { SidebarViewButton } from "@/features/sessions/sidebar-view-sheet";
 import { canAssignSessionTags } from "@/features/sessions/tags";
 import { SessionTagsSheet } from "@/features/sessions/tags-sheet";
+import { useSidebarView } from "@/features/sessions/use-sidebar-view";
 import {
 	useOptionalWorkspaceDrawer,
 	WorkspaceModeBar,
@@ -529,11 +535,14 @@ export const ConversationsPane = ({
 		);
 	}, [query, sessions]);
 
-	const sections = useMemo(
-		() => splitSidebarSections(filtered, now),
-		[filtered, now],
+	/* The desktop's arrangement (TestFlight 906): the reader's order, grouping and
+	 *  clock, applied to the search's result — `sidebar-view.ts` owns every rule. */
+	const { view: sidebarView } = useSidebarView();
+	const groups = useMemo(
+		() => arrangeSidebar(filtered, sidebarView, now),
+		[filtered, sidebarView, now],
 	);
-	const items = useMemo(() => buildItems(sections), [sections]);
+	const items = useMemo(() => buildItems(groups), [groups]);
 	/* Does any row in THIS list draw a picture? Then every row reserves the picture's
 	 *  width for its title, so the list's titles share one left edge instead of
 	 *  stepping in and out between pictured and plain rows (design review round 1,
@@ -636,6 +645,7 @@ export const ConversationsPane = ({
 					section={item.section}
 					selected={item.session.session_id === currentSessionId}
 					now={now}
+					basis={sidebarView.basis}
 					reserveLeading={anyRowPictured}
 					surfaceClassName={surfaceClassName}
 					homeDirectory={homeDirectory}
@@ -651,6 +661,7 @@ export const ConversationsPane = ({
 			now,
 			onRowActivate,
 			onRowLongPress,
+			sidebarView.basis,
 			surfaceClassName,
 			tagsAssignable,
 		],
@@ -763,6 +774,7 @@ export const ConversationsPane = ({
 						testID={CONTROL.sidebarNewChat}
 					/>
 				)}
+				<SidebarViewButton onNavigate={onNavigate} />
 				{onClose && !hideCloseButton ? (
 					<IconButton
 						accessibilityLabel={t("mobile.chrome.close_conversations")}
@@ -1037,35 +1049,40 @@ type Item =
 const itemKey = (item: Item): string => item.key;
 
 /**
- * The flat list the pane renders: section headings and rows, in the relay's own
- * order (bucketing preserves it — nothing here re-sorts).
- *
- * A section is emitted only when it has rows, EXCEPT that Pinned always heads
- * the list and Running follows it. The old screen emitted Active and Previous
- * together including the empty one, because a reader whose conversations have
- * all ended should see where live ones will appear; the time-based sections do
- * that job here, and an empty "Today" heading above an empty list would be four
- * headings and no rows.
+ * The flat list the pane renders: section headings and rows, in the order
+ * `arrangeSidebar` decided (this function never re-sorts). An empty section
+ * contributes no heading; the flat grouping is one list with no heading at all.
  */
-function buildItems(sections: ReturnType<typeof splitSidebarSections>): Item[] {
+const SECTION_TEST_ID: Record<Exclude<SidebarGroup["key"], "all">, string> = {
+	pinned: REGION.sidebarSectionPinned,
+	running: REGION.sidebarSectionRunning,
+	today: REGION.sidebarSectionToday,
+	week: REGION.sidebarSectionWeek,
+	older: REGION.sidebarSectionOlder,
+};
+
+function buildItems(groups: readonly SidebarGroup[]): Item[] {
 	const items: Item[] = [];
-	const push = (
-		label: string,
-		testID: string,
-		rows: SessionSummary[],
-		section: string,
-	) => {
-		if (rows.length === 0) return;
-		items.push({ kind: "header", key: `h-${label}`, label, testID });
-		for (const session of rows) {
-			items.push({ kind: "row", key: session.session_id, session, section });
+	for (const group of groups) {
+		if (group.key !== "all") {
+			items.push({
+				kind: "header",
+				key: `h-${group.key}`,
+				label: t(SIDEBAR_SECTION_LABEL[group.key]),
+				testID: SECTION_TEST_ID[group.key],
+			});
 		}
-	};
-	push("Pinned", REGION.sidebarSectionPinned, sections.pinned, "pinned");
-	push("Running", REGION.sidebarSectionRunning, sections.running, "running");
-	push("Today", REGION.sidebarSectionToday, sections.today, "today");
-	push("This week", REGION.sidebarSectionWeek, sections.week, "week");
-	push("Older", REGION.sidebarSectionOlder, sections.older, "older");
+		for (const session of group.rows) {
+			items.push({
+				kind: "row",
+				key: session.session_id,
+				session,
+				/* A flat row still carries its own Running-ness: `SessionRow` paints no
+				 *  time on a running row whatever the grouping. */
+				section: group.key,
+			});
+		}
+	}
 	return items;
 }
 

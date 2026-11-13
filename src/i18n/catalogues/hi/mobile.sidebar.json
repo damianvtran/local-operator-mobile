@@ -1,0 +1,23 @@
+{
+	"mobile.sidebar.view_options": "दृश्य विकल्प",
+	"mobile.sidebar.order_by": "क्रम चुनें",
+	"mobile.sidebar.order.active_first": "सक्रिय पहले",
+	"mobile.sidebar.order.most_recent": "सबसे हाल के",
+	"mobile.sidebar.group_by": "समूह बनाएँ",
+	"mobile.sidebar.group.time_section": "समय के खंड",
+	"mobile.sidebar.group.one_list": "एक सूची में",
+	"mobile.sidebar.time_basis": "समय का आधार",
+	"mobile.sidebar.basis.last_active": "आख़िरी गतिविधि",
+	"mobile.sidebar.basis.created": "बनने का समय",
+	"mobile.sidebar.clock_hint": "तारीख़ें और क्रम चुनी गई घड़ी के अनुसार हैं।",
+	"mobile.sidebar.show_ended": "समाप्त सत्र दिखाएँ",
+	"mobile.sidebar.show_ended_hint": "पिन की हुई और चल रही बातचीत हमेशा दिखती हैं।",
+	"mobile.sidebar.sections": "खंड",
+	"mobile.sidebar.section.pinned": "पिन किए हुए",
+	"mobile.sidebar.section.running": "चल रहे",
+	"mobile.sidebar.section.today": "आज",
+	"mobile.sidebar.section.week": "इस हफ़्ते",
+	"mobile.sidebar.section.older": "पुराने",
+	"mobile.sidebar.more_settings": "साइडबार की और सेटिंग्स",
+	"mobile.sidebar.settings_heading": "साइडबार"
+}

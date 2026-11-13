@@ -1,0 +1,23 @@
+{
+	"mobile.sidebar.view_options": "视图选项",
+	"mobile.sidebar.order_by": "排序方式",
+	"mobile.sidebar.order.active_first": "活跃优先",
+	"mobile.sidebar.order.most_recent": "最近优先",
+	"mobile.sidebar.group_by": "分组方式",
+	"mobile.sidebar.group.time_section": "时间分区",
+	"mobile.sidebar.group.one_list": "统一列表",
+	"mobile.sidebar.time_basis": "时间依据",
+	"mobile.sidebar.basis.last_active": "最近活跃时间",
+	"mobile.sidebar.basis.created": "创建时间",
+	"mobile.sidebar.clock_hint": "日期与排序均以所选时间依据为准。",
+	"mobile.sidebar.show_ended": "显示已结束的会话",
+	"mobile.sidebar.show_ended_hint": "已置顶和运行中的对话始终显示。",
+	"mobile.sidebar.sections": "分区",
+	"mobile.sidebar.section.pinned": "已置顶",
+	"mobile.sidebar.section.running": "运行中",
+	"mobile.sidebar.section.today": "今天",
+	"mobile.sidebar.section.week": "本周",
+	"mobile.sidebar.section.older": "更早",
+	"mobile.sidebar.more_settings": "更多侧边栏设置",
+	"mobile.sidebar.settings_heading": "侧边栏"
+}

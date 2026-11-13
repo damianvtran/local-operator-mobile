@@ -1,0 +1,23 @@
+{
+	"mobile.sidebar.view_options": "Opciones de vista",
+	"mobile.sidebar.order_by": "Ordenar por",
+	"mobile.sidebar.order.active_first": "Activos primero",
+	"mobile.sidebar.order.most_recent": "Más recientes",
+	"mobile.sidebar.group_by": "Agrupar por",
+	"mobile.sidebar.group.time_section": "Sección temporal",
+	"mobile.sidebar.group.one_list": "En una lista",
+	"mobile.sidebar.time_basis": "Base temporal",
+	"mobile.sidebar.basis.last_active": "Última actividad",
+	"mobile.sidebar.basis.created": "Fecha de creación",
+	"mobile.sidebar.clock_hint": "Las fechas y el orden siguen el reloj seleccionado.",
+	"mobile.sidebar.show_ended": "Mostrar sesiones finalizadas",
+	"mobile.sidebar.show_ended_hint": "Las conversaciones fijadas y en curso siempre se muestran.",
+	"mobile.sidebar.sections": "Secciones",
+	"mobile.sidebar.section.pinned": "Fijadas",
+	"mobile.sidebar.section.running": "En curso",
+	"mobile.sidebar.section.today": "Hoy",
+	"mobile.sidebar.section.week": "Esta semana",
+	"mobile.sidebar.section.older": "Anteriores",
+	"mobile.sidebar.more_settings": "Más ajustes de la barra lateral",
+	"mobile.sidebar.settings_heading": "Barra lateral"
+}
