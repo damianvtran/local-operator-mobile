@@ -1694,7 +1694,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * and their tests. Re-derived last with --print over the committed tree
 	 * (b3af2b96); only `src` moved. Source identity only, NOT rendered U-08
 	 * evidence. */
-	src: "1ebd1b57b7222f37c86b78a56f539c06ce6e84a908045f67b265c35d9703011f",
+	/* M3 S2b-2a translations: the six LTR locales' and ur's 24 refusal values,
+	 * the regenerated `catalogue.gen.ts`, the ur UR-C1 `labelDir` on the
+	 * refusal surface's console button and its tests. Re-derived last with
+	 * --print over the committed tree (6efad9e8); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	src: "3f685f97cb368a660a35361d480babce4a0f7d9e8d8c63154d747e12dde7f67c",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
