@@ -1726,7 +1726,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * remediation (U3-1: a failed refresh keeps the route retry): re-derived
 	 * with --print over the staged round-3 tree. Source identity only, NOT
 	 * rendered U-08 evidence. */
-	src: "e463c60ee20a7c28b7ebf3227e5545c4e34c93811694fc7f19e208b7a39db35b",
+	/* Merge of origin/main (#259, 9ef19ccd) into #261: both comment blocks
+	 * kept, re-derived once with --print over the merged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "3bb8f5e59483b4028fbc55bdeb4adeb3f258b7b3e7fbde50698bd077ebc85017",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
