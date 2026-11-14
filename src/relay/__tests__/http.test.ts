@@ -146,6 +146,51 @@ describe("timeouts and transport failures are never a success", () => {
 		expect(error.envelope).toBe("keep");
 	});
 
+	it("names its own deadline in Last error, and a cut connection as a reset (PR #261 U2-2)", async () => {
+		const neverSettles = ((_: RequestInfo | URL, init?: RequestInit) =>
+			new Promise<Response>((_resolve, reject) => {
+				init?.signal?.addEventListener("abort", () =>
+					reject(new Error("The operation was aborted.")),
+				);
+			})) as unknown as typeof globalThis.fetch;
+		const timedOut = (await client(neverSettles, { timeoutMs: 20 })
+			.json("healthz", { method: "GET", path: "/healthz" })
+			.catch((caught: unknown) => caught)) as RelayError;
+		/* 20 ms rounds to 0 s; the 20 s production default reads "timeout 20s". */
+		expect(timedOut.summary).toBe("transport timeout 0s");
+		const cut = (async () => {
+			throw new TypeError("Failed to fetch");
+		}) as unknown as typeof globalThis.fetch;
+		const reset = (await client(cut, { timeoutMs: 20_000 })
+			.json("healthz", { method: "GET", path: "/healthz" })
+			.catch((caught: unknown) => caught)) as RelayError;
+		expect(reset.summary).toBe("transport reset");
+		/* A fixed identifier, never the runtime's own words. */
+		expect(reset.summary).not.toContain("Failed");
+	});
+
+	it("names a deadline that fires during the body read as a timeout", async () => {
+		const stalledBody = ((_: RequestInfo | URL, init?: RequestInit) =>
+			Promise.resolve({
+				ok: true,
+				status: 200,
+				type: "basic",
+				headers: new Headers({ "content-type": "application/json" }),
+				body: null,
+				text: () =>
+					new Promise<string>((_resolve, reject) =>
+						init?.signal?.addEventListener("abort", () =>
+							reject(new Error("aborted")),
+						),
+					),
+			})) as unknown as typeof globalThis.fetch;
+		const error = (await client(stalledBody, { timeoutMs: 1_000 })
+			.json("healthz", { method: "GET", path: "/healthz" })
+			.catch((caught: unknown) => caught)) as RelayError;
+		expect(error).toBeInstanceOf(RelayError);
+		expect(error.summary).toBe("transport timeout 1s");
+	});
+
 	it("covers credential renewal with the request's own deadline", async () => {
 		// Review round 1, R1-M2: on the tunnel route `auth()` renews an expiring
 		// grant, so it is a network round trip. The deadline used to be armed AFTER

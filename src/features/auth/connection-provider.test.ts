@@ -4162,3 +4162,153 @@ describe("PR #261 round-1 remediation: the provider's side", () => {
 		expect(durable.oauth).not.toBeNull();
 	}, 20_000);
 });
+
+/* PR #261 round 2: Retry on a refusal raised by the LIVE list stream (Q7/U1),
+ *  and Diagnostics' Last error outliving the stream's frames (R2-2). */
+describe("PR #261 round-2 remediation: the provider's side", () => {
+	async function eventually(test: () => boolean, ms = 8_000) {
+		const deadline = Date.now() + ms;
+		while (!test()) {
+			if (Date.now() > deadline)
+				throw new Error("Provider did not reach the expected state");
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 20));
+			});
+		}
+	}
+
+	/** A live Radient route whose list-stream REOPEN answers `failure` once;
+	 *  every later open is healthy, as when the cause has been fixed. */
+	async function liveRadient(failure: {
+		status: number;
+		body: unknown;
+		headers?: Record<string, string>;
+	}) {
+		/* Two computers, so the cold start does not open one by itself. */
+		const tunnels = ["a", "b"].map((letter, index) => ({
+			id: `tun-synthetic-${index + 1}`,
+			name: `Synthetic computer ${index + 1}`,
+			hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		}));
+		const mock = await relay({ tunnels, catalogueFailures: [failure] });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(
+			() =>
+				latest.restoredAccount &&
+				connectionStore.getState().computers.length === 2,
+		);
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("Expected discovered computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		return mock;
+	}
+
+	it.each([
+		{
+			name: "relay 503 billing_inactive",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "billing_inactive", kind: "accept_quote" },
+			},
+		},
+		{
+			name: "relay 503 billing_lapsed",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "billing_lapsed", kind: "add_credit" },
+			},
+		},
+		{
+			name: "relay 503 tunnel_disabled",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "tunnel_disabled", kind: "open_console" },
+			},
+		},
+		{
+			name: "relay 503 tunnel_inactive",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "tunnel_inactive", kind: "check_status" },
+			},
+		},
+		{
+			name: "Radient-route 401 without X-Radient-Login",
+			failure: { status: 401, body: { error: "unauthorized" } },
+		},
+		{
+			name: "relay_stopped 502 local harness unavailable",
+			failure: { status: 502, body: { error: "local harness unavailable" } },
+		},
+	])(
+		"Q7/U1: Retry on a stream-raised $name re-runs the pick, reconnects and clears the refusal",
+		async ({ failure }) => {
+			const mock = await liveRadient(failure);
+			await act(async () => {
+				mock.endCatalogueStreams();
+			});
+			/* The reopen's answer is terminal: the stream stops and the surface shows. */
+			await eventually(() => connectionStore.getState().surface !== null);
+			expect(latest.refusal).not.toBeNull();
+			const eventsBefore = mock.events.length;
+			const streamsBefore = mock.catalogueStreams();
+			/* The cause is fixed (the mock answers healthy from now on). */
+			await act(async () => {
+				await latest.retry();
+			});
+			await eventually(
+				() =>
+					connectionStore.getState().phase === "live" &&
+					connectionStore.getState().surface === null,
+			);
+			/* The pick re-ran: a new route whose list stream reopened (the stored,
+			 *  still-valid tunnel session is adopted the way a switcher re-pick adopts
+			 *  it, so a mint is not required) — not the one `GET /api/sessions` the
+			 *  old fallback sent while the refusal stayed. */
+			const after = mock.events.slice(eventsBefore);
+			expect(after).toContain("GET /api/sessions/events");
+			expect(mock.catalogueStreams()).toBeGreaterThan(streamsBefore);
+			expect(latest.refusal).toBeNull();
+			expect(latest.lastError).toBeNull();
+		},
+		20_000,
+	);
+
+	it("R2-2: a failed manual refresh's Last error survives the stream's next good frame", async () => {
+		const mock = await relay({ sessionsFailure: true });
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		await act(async () => {
+			await latest.refreshList();
+		});
+		const recorded = latest.diagnosticError;
+		expect(recorded?.summary).toContain("503");
+		expect(recorded?.source).toBe("action");
+		/* The list stream rotates and its first frame lands. */
+		const opened = mock.catalogueStreams();
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		await eventually(() => mock.catalogueStreams() > opened);
+		await act(async () => {
+			await new Promise<void>((resolve) => setTimeout(resolve, 500));
+		});
+		expect(latest.diagnosticError).toEqual(recorded);
+	}, 20_000);
+});

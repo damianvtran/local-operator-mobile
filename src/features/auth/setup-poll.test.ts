@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSetupPoller, SETUP_POLL_MS } from "./setup-poll";
 
 /* The cadence these timelines are written in (15 s). */
@@ -147,5 +147,157 @@ describe("the set-up screen's re-listing", () => {
 		r.poller.dispose();
 		await r.advance(60_000);
 		expect(r.started.length).toBeLessThanOrEqual(1);
+	});
+});
+
+/* PR #261 R2-1 (MAJOR). The fake clock above steps in 1 s and fires each due
+ *  timer once per step, which hid a poller that re-armed a 0 ms timer whenever
+ *  a poll was due but could not start (QA: ~242 arms a second on the real path).
+ *  These run on REAL timers and count every arm, so a re-arm spin shows up as
+ *  hundreds of calls however the clock is stepped. */
+describe("the set-up poll never spins its timer (real timers)", () => {
+	afterEach(() => vi.restoreAllMocks());
+
+	/** Run `body` for `ms` of real time and count the poller's setTimeout arms. */
+	async function countArms(
+		deps: Parameters<typeof createSetupPoller>[0],
+		ms: number,
+		body: (poller: ReturnType<typeof createSetupPoller>) => void,
+	) {
+		const delays: number[] = [];
+		const realSetTimeout = globalThis.setTimeout;
+		const poller = createSetupPoller({
+			...deps,
+			timers: {
+				now: () => Date.now(),
+				setTimeout: (run, wait) => {
+					delays.push(wait);
+					return realSetTimeout(run, wait);
+				},
+				clearTimeout: (handle) =>
+					clearTimeout(handle as ReturnType<typeof setTimeout>),
+			},
+		});
+		body(poller);
+		await new Promise((resolve) => realSetTimeout(resolve, ms));
+		poller.dispose();
+		return delays;
+	}
+
+	const never = () => new Promise<void>(() => {});
+
+	it("a focused poll-off screen (populated list, waiting, signed out, discovery failure) arms at most a handful", async () => {
+		let refreshes = 0;
+		const delays = await countArms(
+			{
+				refresh: async () => {
+					refreshes += 1;
+				},
+				isEnabled: () => false,
+				intervalMs: 100,
+			},
+			1_000,
+			(poller) => poller.focus(),
+		);
+		/* One arm per interval: ~10 in a second at 100 ms (the old code: 878). */
+		expect(delays.length).toBeLessThanOrEqual(12);
+		expect(delays.every((wait) => wait > 0)).toBe(true);
+		expect(refreshes).toBe(0);
+	});
+
+	it("a request hung past the interval arms at most a handful while it runs", async () => {
+		let refreshes = 0;
+		const delays = await countArms(
+			{
+				refresh: () => {
+					refreshes += 1;
+					return never();
+				},
+				isEnabled: () => true,
+				intervalMs: 100,
+			},
+			1_000,
+			(poller) => poller.focus(),
+		);
+		/* The old code: 824 arms in this second. */
+		expect(delays.length).toBeLessThanOrEqual(12);
+		expect(delays.every((wait) => wait > 0)).toBe(true);
+		expect(refreshes).toBe(1);
+	});
+
+	it("at the shipped cadence, a focused poll-off second arms ONE timer", async () => {
+		const delays = await countArms(
+			{ refresh: async () => {}, isEnabled: () => false },
+			1_000,
+			(poller) => poller.focus(),
+		);
+		expect(delays).toEqual([SETUP_POLL_MS]);
+	});
+
+	it("control: a healthy poll still lists every interval", async () => {
+		let refreshes = 0;
+		await countArms(
+			{
+				refresh: async () => {
+					refreshes += 1;
+				},
+				isEnabled: () => true,
+				intervalMs: 100,
+			},
+			1_000,
+			(poller) => poller.focus(),
+		);
+		expect(refreshes).toBeGreaterThanOrEqual(8);
+		expect(refreshes).toBeLessThanOrEqual(11);
+	});
+
+	it("Q9: a listing someone else just made (sign-in's discovery) counts as the last start", async () => {
+		const started: number[] = [];
+		const t0 = Date.now();
+		await countArms(
+			{
+				refresh: async () => {
+					started.push(Date.now() - t0);
+				},
+				isEnabled: () => true,
+				/* Sign-in listed the account a moment before the screen's focus
+				 *  and the popup's return to the foreground. */
+				listedAt: () => t0,
+				intervalMs: 300,
+			},
+			450,
+			(poller) => {
+				poller.focus();
+				poller.foreground(true);
+			},
+		);
+		/* The real path, before: GETs at 0.00 s and 0.17 s. Now the poll's first
+		 *  start is one interval after sign-in's listing. */
+		expect(started.length).toBe(1);
+		expect(started[0]).toBeGreaterThanOrEqual(290);
+	});
+
+	it("a screen that becomes eligible is listed on the next tick, not by a 0 ms spin the instant it settles", async () => {
+		let enabled = false;
+		const started: number[] = [];
+		const t0 = Date.now();
+		await countArms(
+			{
+				refresh: async () => {
+					started.push(Date.now() - t0);
+				},
+				isEnabled: () => enabled,
+				intervalMs: 200,
+			},
+			300,
+			(poller) => {
+				/* Focus lands while the poll is still off (sign-in running). */
+				poller.focus();
+				enabled = true;
+			},
+		);
+		/* Not the instant it became eligible: one interval later. */
+		expect(started.length).toBe(1);
+		expect(started[0]).toBeGreaterThanOrEqual(190);
 	});
 });

@@ -214,6 +214,14 @@ export type DiagnosticError = {
 	/** Epoch ms. */
 	at: number;
 	error: RelayError | null;
+	/** Who wrote it. Only a `stream` record — the list stream retrying through a
+	 *  blip, or stalling — is the stream's to clear on its next good frame. An
+	 *  `action` record (a refusal raised by `noteError`, a failed manual
+	 *  `refreshList`, the 401 hook, the cold start) outlives the stream's frames:
+	 *  a refresh can fail while the stream keeps delivering, and clearing its
+	 *  cause left Settings showing the refusal beside "Last error: None"
+	 *  (PR #261 R2-2). */
+	source: "stream" | "action";
 };
 
 /** A stalled stream's cause for Diagnostics, when `sse.ts` reported no error
@@ -573,14 +581,28 @@ export const ConnectionProvider = ({
 	const [diagnosticError, setDiagnosticError] =
 		useState<DiagnosticError | null>(null);
 	/** Records Diagnostics' cause; see `Connection.diagnosticError`. */
-	const recordDiagnostic = useCallback((cause: RelayError | string) => {
-		if (!mountedRef.current) return;
-		setDiagnosticError({
-			summary: typeof cause === "string" ? cause : cause.summary,
-			at: Date.now(),
-			error: typeof cause === "string" ? null : cause,
-		});
-	}, []);
+	const recordDiagnostic = useCallback(
+		(
+			cause: RelayError | string,
+			source: DiagnosticError["source"] = "action",
+		) => {
+			if (!mountedRef.current) return;
+			const next: DiagnosticError = {
+				summary: typeof cause === "string" ? cause : cause.summary,
+				at: Date.now(),
+				error: typeof cause === "string" ? null : cause,
+				source,
+			};
+			/* A stream blip never overwrites an `action` record: that one names the
+			 *  refusal on screen, which stays until the route restarts
+			 *  (`beginRoute`), and a stall recorded over it was then cleared by the
+			 *  reopen's first frame — Last error "None" beside a refusal (R2-2). */
+			setDiagnosticError((current) =>
+				source === "stream" && current?.source === "action" ? current : next,
+			);
+		},
+		[],
+	);
 	/** Reopens the list stream now (`retryTransient`); set by `startStream`. */
 	const streamKickRef = useRef<(() => void) | null>(null);
 
@@ -631,6 +653,16 @@ export const ConnectionProvider = ({
 
 	const managerRef = useRef<TunnelSessionManager | null>(null);
 	const retryRef = useRef<(() => Promise<void>) | null>(null);
+	/* Re-establishes the CURRENT route from the top: a Radient pick re-mints and
+	 *  reconnects, a custom route re-authenticates. Set by whatever began the
+	 *  route (`selectComputer`, `connectCustom`), cleared by `beginRoute`. It is
+	 *  the retry for a refusal the LIVE list stream raises (PR #261 Q7/U1): the
+	 *  stream has stopped and will not come back by itself, so `refreshList`
+	 *  (one `GET /api/sessions`) neither reopened it nor cleared the surface, and
+	 *  "then tap Retry" did nothing for billing, console, suspended, the Radient
+	 *  401 and `relay_stopped`. Re-running the route is what the mint path's
+	 *  Retry already did for the same causes. */
+	const routeRetryRef = useRef<(() => Promise<void>) | null>(null);
 	// Readiness is withdrawn before remote revocation. Keep the unresolved
 	// operation independently so ordinary Sign out and diagnostic retry share
 	// the same origin even though the selected route has already become null.
@@ -895,11 +927,14 @@ export const ConnectionProvider = ({
 							_attempt = 0;
 							/* A good frame ends whatever the stream was retrying through:
 							 *  Diagnostics stops showing it and the transient notice
-							 *  goes (PR #261 R1). A terminal error stops this loop, so
-							 *  it can never be cleared from here. */
+							 *  goes (PR #261 R1). Only the stream's OWN record: a
+							 *  refusal or a failed manual refresh is not this loop's to
+							 *  clear (R2-2, `DiagnosticError.source`). */
 							if (mountedRef.current)
 								setDiagnosticError((current) =>
-									current === null ? current : null,
+									current === null || current.source !== "stream"
+										? current
+										: null,
 								);
 							listStore.getState().applyFrame(
 								{
@@ -927,7 +962,10 @@ export const ConnectionProvider = ({
 						 *  EOF, the silence watchdog): record its cause so Diagnostics
 						 *  never pairs "Not answering" with "None" (U3, Q4). */
 						if (status.state === "stalled")
-							recordDiagnostic(status.lastError ?? stalledSummary(status));
+							recordDiagnostic(
+								status.lastError ?? stalledSummary(status),
+								"stream",
+							);
 					},
 					onError: (error) => {
 						if (stopped || !admission.isCurrent()) return;
@@ -949,7 +987,7 @@ export const ConnectionProvider = ({
 							 *  round 2, D12 rider). The refusal surface below the row carried the
 							 *  cause; the health was simply never told. */
 							if (mountedRef.current) setStreamHealth("offline");
-							noteError(error);
+							noteError(error, routeRetryRef.current ?? undefined);
 							return;
 						}
 						listStore.getState().markStale();
@@ -962,7 +1000,7 @@ export const ConnectionProvider = ({
 						 *  and a blip turned the open session into a refusal that never
 						 *  cleared (PR #261 R1). The diagnostics-only record also feeds the
 						 *  transient notice when the computer named the wait (Q3). */
-						recordDiagnostic(error);
+						recordDiagnostic(error, "stream");
 						_attempt += 1;
 						/* The conversation stream's policy (`reconnectDelay`), so the two
 						 * streams of one route back off alike: 2 s, doubling to a 15 s
@@ -1070,6 +1108,7 @@ export const ConnectionProvider = ({
 			setLastError(null);
 			setDiagnosticError(null);
 			retryRef.current = null;
+			routeRetryRef.current = null;
 			connectionStore.getState().startRoute(route);
 			// Keep route ownership independent from the dispatch generation: a 401
 			// closes dispatch immediately, but its typed onError must still reach
@@ -1274,6 +1313,11 @@ export const ConnectionProvider = ({
 					? Promise.resolve()
 					: verifiedRetirement(retireAuthorization(true));
 				admission = beginRoute(route);
+				/* The live stream's refusal re-runs this connect, as this
+				 *  function's own catch below does (`routeRetryRef`, Q7). */
+				routeRetryRef.current = async () => {
+					await connectCustom({ url, password, allowInsecure, computerId });
+				};
 				await privacy;
 				await nativeCredentialRetirement.settled();
 				if (!admission.isCurrent()) return outcome();
@@ -1700,6 +1744,11 @@ export const ConnectionProvider = ({
 					return;
 				}
 				admission = beginRoute(route);
+				/* A refusal the live stream raises later (billing, console,
+				 *  suspended, the Radient 401, `relay_stopped`) re-runs this pick:
+				 *  a fresh mint and a new stream, the same Retry this function's
+				 *  catch offers for a mint refusal (`routeRetryRef`, Q7/U1). */
+				routeRetryRef.current = () => selectComputer(computer);
 				connectionStore.getState().selectComputer(computer);
 				await nativeCredentialRetirement.settled();
 				if (!admission.isCurrent()) return;

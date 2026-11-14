@@ -446,12 +446,22 @@ export default function Computers() {
 	pollEnabledRef.current = empty && !waiting && !signedOut;
 	const refreshRef = useRef(refreshComputers);
 	refreshRef.current = refreshComputers;
+	/* When a listing last STARTED, whoever started it (sign-in's discovery, the
+	 *  Refresh button, the poll): observed as `discovering` rising, read by the
+	 *  poller at trigger time (`listedAt`, PR #261 Q9). */
+	const listedAtRef = useRef(Number.NEGATIVE_INFINITY);
+	/* `false`, so a mount DURING a listing records it too. */
+	const wasDiscoveringRef = useRef(false);
+	if (discovering && !wasDiscoveringRef.current)
+		listedAtRef.current = Date.now();
+	wasDiscoveringRef.current = discovering;
 	const [checking, setChecking] = useState(false);
 	const pollerRef = useRef<SetupPoller | null>(null);
 	useEffect(() => {
 		const poller = createSetupPoller({
 			refresh: () => refreshRef.current(),
 			isEnabled: () => pollEnabledRef.current,
+			listedAt: () => listedAtRef.current,
 			onChecking: setChecking,
 		});
 		pollerRef.current = poller;

@@ -74,6 +74,13 @@ const defaultTimers: SetupPollTimers = {
 export function createSetupPoller(deps: {
 	refresh: () => Promise<void>;
 	isEnabled: () => boolean;
+	/** When the account was last listed by ANYONE (epoch ms, from `now()`'s
+	 *  clock): sign-in's own discovery, the Refresh button. An automatic start
+	 *  counts from the later of this and its own last start, so landing on the
+	 *  set-up screen straight from sign-in does not list the account a second
+	 *  time 0.2 s later (PR #261 Q9: sign-in's GET, then the poll's start on
+	 *  the foreground event the sign-in popup's return raises). */
+	listedAt?: () => number;
 	/** Told when a request starts (`true`) and settles (`false`). */
 	onChecking?: (checking: boolean) => void;
 	intervalMs?: number;
@@ -111,22 +118,39 @@ export function createSetupPoller(deps: {
 			});
 	};
 
-	/** Arm the next automatic tick at `lastStart + interval`. */
-	const schedule = () => {
+	/** Arm the next automatic tick `wait` ms from now. */
+	const schedule = (wait: number) => {
 		clear();
 		if (!running()) return;
-		const wait = Math.max(0, lastStart + interval - timers.now());
 		timer = timers.setTimeout(() => {
 			timer = null;
 			automatic();
 		}, wait);
 	};
 
+	/* Every path arms a POSITIVE delay (PR #261 R2-1). The first version armed
+	 *  `max(0, lastStart + interval - now)` on every tick, and a tick that was due
+	 *  but could not start (`isEnabled()` false — the populated list, waiting,
+	 *  signed out, a discovery failure — or a request still in flight past the
+	 *  interval) left `lastStart` where it was, so the next wait was 0 again: QA
+	 *  measured ~242 zero-delay arms a second on the real path, for as long as the
+	 *  Computers screen was in front. A blocked tick now looks again a full
+	 *  interval later.
+	 *  Cost of the trade: a screen that BECOMES eligible waits up to one interval
+	 *  for its first automatic list — "Check again" still starts at once. */
 	const automatic = () => {
 		if (!running()) return;
-		const due = timers.now() - lastStart >= interval;
-		if (due && !inFlight && deps.isEnabled()) start();
-		schedule();
+		const listed = Math.max(
+			lastStart,
+			deps.listedAt?.() ?? Number.NEGATIVE_INFINITY,
+		);
+		const remaining = listed + interval - timers.now();
+		if (remaining > 0) {
+			schedule(remaining);
+			return;
+		}
+		if (!inFlight && deps.isEnabled()) start();
+		schedule(interval);
 	};
 
 	return {
@@ -146,7 +170,7 @@ export function createSetupPoller(deps: {
 		checkNow: () => {
 			if (!running() || inFlight || !deps.isEnabled()) return;
 			start();
-			schedule();
+			schedule(interval);
 		},
 		dispose: () => {
 			disposed = true;

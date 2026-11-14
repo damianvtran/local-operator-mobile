@@ -49,6 +49,7 @@ import {
 	RelayError,
 	type RelayResponseFacts,
 	relayErrorFromResponse,
+	type TransportCause,
 	transportError,
 } from "./errors";
 import { resolveFetch } from "./platform-fetch";
@@ -225,7 +226,7 @@ export class RelayHttpClient {
 		 *  decides what that means; see `endpoints.login`. */
 		redirectHidden: boolean;
 	}> {
-		const { response, release } = await this.open(request);
+		const { response, release, timeoutCause } = await this.open(request);
 		try {
 			const text = await response.text();
 			return {
@@ -244,6 +245,7 @@ export class RelayHttpClient {
 			throw transportError(
 				cause,
 				`${this.diagnostic} ${request.method} ${redactPath(request.path)} body`,
+				timeoutCause(),
 			);
 		} finally {
 			await release();
@@ -260,9 +262,13 @@ export class RelayHttpClient {
 	 * "successful" 401 response to a stream reader is exactly how an
 	 * `EventSource`-shaped client retries forever on a stale session.
 	 */
-	async open(
-		request: RelayRequest,
-	): Promise<{ response: Response; release: () => Promise<void> }> {
+	async open(request: RelayRequest): Promise<{
+		response: Response;
+		release: () => Promise<void>;
+		/** `timeout <N>s` once this request's own deadline has fired: a body read
+		 *  still runs inside it (see below). */
+		timeoutCause: () => TransportCause | undefined;
+	}> {
 		const controller = new AbortController();
 		/* One deadline, and WHO it covers differs by response class — the distinction
 		 * is the whole point of this option:
@@ -286,10 +292,19 @@ export class RelayHttpClient {
 		 * for both classes: it is a short read, and it is what turns a 503 into the
 		 * gateway's own sentence. */
 		const deadlineMs = request.timeoutMs ?? this.timeoutMs;
+		/* Raised BEFORE the abort, so a failure it causes is named
+		 *  `timeout <N>s` in Last error rather than a bare `transport` (PR #261
+		 *  U2-2: a hang and a reset read the same). */
+		let timedOut = false;
 		const deadline =
 			deadlineMs > 0
-				? setTimeout(() => controller.abort(), deadlineMs)
+				? setTimeout(() => {
+						timedOut = true;
+						controller.abort();
+					}, deadlineMs)
 				: undefined;
+		const timeoutCause = (): TransportCause | undefined =>
+			timedOut ? `timeout ${Math.round(deadlineMs / 1000)}s` : undefined;
 		/* The caller's signal wins: a route switch must be able to abort an in-flight
 		 * request — including its BODY, which is why this listener now outlives the
 		 * response and is removed by `release()` rather than here. */
@@ -321,6 +336,7 @@ export class RelayHttpClient {
 			throw transportError(
 				cause,
 				`${this.diagnostic} ${request.method} ${redactPath(request.path)} (credentials)`,
+				timeoutCause(),
 			);
 		}
 		const headers = buildHeaders(auth, request);
@@ -346,6 +362,7 @@ export class RelayHttpClient {
 			throw transportError(
 				cause,
 				`${this.diagnostic} ${request.method} ${redactPath(request.path)}`,
+				timeoutCause(),
 			);
 		}
 
@@ -405,7 +422,7 @@ export class RelayHttpClient {
 		 * attached so a route switch still tears the stream down. */
 		if (request.streaming) clearDeadline();
 
-		return { response, release };
+		return { response, release, timeoutCause };
 	}
 
 	/** Parses a `2xx` JSON body against its schema. A body that does not match is
@@ -457,7 +474,7 @@ export class RelayHttpClient {
 		request: RelayRequest,
 		maxBytes?: number,
 	): Promise<{ status: number; mimeType: string | null; bytes: Uint8Array }> {
-		const { response, release } = await this.open(request);
+		const { response, release, timeoutCause } = await this.open(request);
 		try {
 			const buffer =
 				maxBytes === undefined
@@ -474,6 +491,7 @@ export class RelayHttpClient {
 			throw transportError(
 				cause,
 				`${this.diagnostic} ${request.method} ${redactPath(request.path)} body`,
+				timeoutCause(),
 			);
 		} finally {
 			await release();

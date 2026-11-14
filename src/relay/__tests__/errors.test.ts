@@ -381,6 +381,16 @@ describe("transport errors name the failure without leaking a URL", () => {
 		);
 		expect(aborted.kind).toBe("transport");
 		expect(refused.kind).toBe("transport");
+		/* PR #261 U2-2: one fixed sub-cause each, so Last error tells them apart. */
+		expect(aborted.summary).toBe("transport aborted");
+		expect(refused.summary).toBe("transport reset");
+		expect(
+			transportError(Object.assign(new Error("x"), { code: "ECONNREFUSED" }))
+				.summary,
+		).toBe("transport refused");
+		expect(transportError(new Error("x"), "d", "timeout 20s").summary).toBe(
+			"transport timeout 20s",
+		);
 		expect(aborted.envelope).toBe("keep");
 		expect(aborted.retry).toBe("same-id");
 		expect(refused.diagnostic).toContain("/healthz");
