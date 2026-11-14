@@ -5,7 +5,7 @@
 	"mobile.computers.badge.connecting": "подключается",
 	"mobile.computers.connecting": "Подключение…",
 	"mobile.computers.none_on_phone": "На этом телефоне пока нет компьютеров.",
-	"mobile.computers.password_placeholder": "Пароль из lop mobile",
+	"mobile.computers.password_placeholder": "Пароль из настроек «Доступ с телефона» на компьютере",
 	"mobile.computers.section.not_connected": "В вашем аккаунте Radient — не подключены",
 	"mobile.computers.section.on_phone": "На этом телефоне",
 	"mobile.computers.sign_out": "Выйти",
@@ -101,7 +101,7 @@
 	"mobile.computers.own_tunnel.step_test": "Проверка",
 	"mobile.computers.own_tunnel.step_test_help": "Перед сохранением приложение отправит через ваш туннель настоящий запрос.",
 	"mobile.computers.own_tunnel.security_heading": "Прежде чем открыть доступ",
-	"mobile.computers.own_tunnel.security_body": "Вы выставляете свой компьютер в интернет, и защищает его только пароль от ретранслятора. По возможности используйте HTTPS, включите собственную аутентификацию туннеля, если он её поддерживает, и смените пароль командой `{command}`, если им с кем-то делились. Любой, у кого есть этот пароль и ваш URL, может управлять сессиями на этом компьютере.",
+	"mobile.computers.own_tunnel.security_body": "Вы выставляете свой компьютер в интернет, и защищает его только пароль от ретранслятора. По возможности используйте HTTPS, включите собственную аутентификацию туннеля, если он её поддерживает, и смените пароль в настройках «Доступ с телефона» на компьютере, если им с кем-то делились. Любой, у кого есть этот пароль и ваш URL, может управлять сессиями на этом компьютере.",
 	"mobile.computers.own_tunnel.test": "Проверить подключение",
 	"mobile.computers.own_tunnel.testing": "Проверка…",
 	"mobile.computers.own_tunnel.save_connect": "Сохранить и подключиться",
@@ -136,5 +136,7 @@
 	"mobile.computers.own_tunnel.remedy": "Выполните на том компьютере: {command}",
 	"mobile.computers.own_tunnel.password_slot_other": "Телефон хранит только один пароль ретранслятора, и он относится к другому адресу. Введите пароль этого компьютера, проверьте его и сохраните. Новый пароль заменит прежний.",
 	"mobile.computers.own_tunnel.password_slot_empty": "На этом телефоне не сохранён пароль ретранслятора. Введите пароль этого компьютера, проверьте его и сохраните.",
-	"mobile.computers.own_tunnel.password_slot_this": "Сохранённый на телефоне пароль ретранслятора относится к этому адресу. Проверьте его и сохраните."
+	"mobile.computers.own_tunnel.password_slot_this": "Сохранённый на телефоне пароль ретранслятора относится к этому адресу. Проверьте его и сохраните.",
+	"mobile.computers.setup.open_settings": "На компьютере откройте Local Operator → Настройки → Доступ с телефона → Настроить доступ с телефона.",
+	"mobile.computers.setup.list_updates": "Когда закончите, вернитесь сюда — список обновится сам."
 }

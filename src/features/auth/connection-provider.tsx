@@ -2364,6 +2364,9 @@ export const ConnectionProvider = ({
 			retryAfterMs,
 			subject,
 			storageRefusal,
+			/* The row's live billing/status split a tunnel 403 into a cause the
+			 *  reader can fix (`tunnelRefusalCopy`); a custom route has no row. */
+			computer: chosen ?? null,
 		});
 	}, [
 		computers,

@@ -46,6 +46,8 @@ describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 			"subject={refusal.subject}",
 			"detail={refusal.detail}",
 			"remedy={refusal.remedy}",
+			/* M1: the named cause's plain copy and actions. */
+			"copy={refusal.copy}",
 		])
 			expect(block?.[1]).toContain(prop);
 	});

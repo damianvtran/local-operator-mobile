@@ -1,8 +1,14 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Check, ChevronLeft, ChevronRight, Laptop } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import {
+	ActivityIndicator,
+	AppState,
+	Pressable,
+	Text,
+	View,
+} from "react-native";
 
 import {
 	computerDisplayName,
@@ -417,6 +423,28 @@ export default function Computers() {
 		adding: add === "1",
 	});
 	const empty = view.setup;
+	/* The set-up path tells the reader to finish on their COMPUTER and promises
+	 *  this list "updates by itself". Coming back to this screen (focus) or to the
+	 *  app (foreground) is exactly when a new computer can have appeared, so both
+	 *  list again — without it the reader had to find Refresh after every trip to
+	 *  the desktop. Only on the set-up path, so a populated list is not re-fetched
+	 *  on every tab switch; the ref keeps the provider's callback identity out of
+	 *  the effects' dependencies, so a re-render cannot become a request loop. */
+	const refreshOnReturn = empty && !waiting && !signedOut;
+	const refreshRef = useRef(refreshComputers);
+	refreshRef.current = refreshComputers;
+	useFocusEffect(
+		useCallback(() => {
+			if (refreshOnReturn) void refreshRef.current();
+		}, [refreshOnReturn]),
+	);
+	useEffect(() => {
+		if (!refreshOnReturn) return;
+		const subscription = AppState.addEventListener("change", (state) => {
+			if (state === "active") void refreshRef.current();
+		});
+		return () => subscription.remove();
+	}, [refreshOnReturn]);
 	/* The tunnel tapped on THIS screen, so arriving with a route already live is
 	 *  not mistaken for a pick that just landed (U1). */
 	const [picked, setPicked] = useState<string | null>(null);
@@ -569,6 +597,9 @@ export default function Computers() {
 					subject={refusal.subject}
 					detail={refusal.detail}
 					remedy={refusal.remedy}
+					copy={refusal.copy}
+					/* Tunnel gone: a fresh list, not the same refused address again. */
+					onRefreshList={() => void refreshComputers()}
 					retryAfterMs={refusal.retryAfterMs}
 					onRetry={() => void retry()}
 					/* The existing sign-in action, in place: it ends the refused route,

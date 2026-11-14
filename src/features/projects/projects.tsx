@@ -178,6 +178,7 @@ export default function Projects() {
 					subject={refusal.subject}
 					detail={refusal.detail}
 					remedy={refusal.remedy}
+					copy={refusal.copy}
 					retryAfterMs={refusal.retryAfterMs}
 					onRetry={() => void load()}
 					onUseAnotherAddress={() => router.push("/custom")}

@@ -390,6 +390,19 @@ export const CONTROL = {
 	refusalDetailsToggle: "connection-details-toggle",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
+	/** "Using a terminal?" — the ONE place a refusal shows a command. */
+	refusalTerminalToggle: "refusal-terminal-toggle",
+	/** The plain-copy actions (`RefusalCopy.actions`), one id each. */
+	refusalHowTo: "refusal-how-to",
+	refusalOpenBilling: "refusal-open-billing",
+	refusalAddCredit: "refusal-add-credit",
+	refusalRefreshList: "refusal-refresh-list",
+	refusalActionRetry: "refusal-action-retry",
+	/** The "How to turn it on" help sheet. */
+	refusalHowToSheet: "refusal-how-to-sheet",
+	/** Set-up screen: "Using a terminal?", which reveals the create/attach
+	 *  commands that used to be the screen's first instruction. */
+	setupTerminalToggle: "setup-terminal-toggle",
 	/* --- the controls this slice's screens render, named one by one. A screen with
 	 * two controls cannot share an identifier: Maestro's `id:` matching would pick one
 	 * arbitrarily and the failure would read as a flaky flow. --- */

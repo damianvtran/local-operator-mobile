@@ -5,7 +5,7 @@
 	"mobile.computers.badge.connecting": "connecting",
 	"mobile.computers.connecting": "Connecting…",
 	"mobile.computers.none_on_phone": "No computers on this phone yet.",
-	"mobile.computers.password_placeholder": "The password from lop mobile",
+	"mobile.computers.password_placeholder": "Password from your computer's Phone access settings",
 	"mobile.computers.section.not_connected": "On your Radient account, not connected",
 	"mobile.computers.section.on_phone": "On this phone",
 	"mobile.computers.sign_out": "Sign out",
@@ -101,7 +101,7 @@
 	"mobile.computers.own_tunnel.step_test": "Test it",
 	"mobile.computers.own_tunnel.step_test_help": "This makes a real request through your tunnel before anything is saved.",
 	"mobile.computers.own_tunnel.security_heading": "Before you expose it",
-	"mobile.computers.own_tunnel.security_body": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and rotate the password with `{command}` if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
+	"mobile.computers.own_tunnel.security_body": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and change the password in your computer's Phone access settings if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
 	"mobile.computers.own_tunnel.test": "Test the connection",
 	"mobile.computers.own_tunnel.testing": "Testing…",
 	"mobile.computers.own_tunnel.save_connect": "Save and connect",
@@ -136,5 +136,7 @@
 	"mobile.computers.own_tunnel.remedy": "On that computer: {command}",
 	"mobile.computers.own_tunnel.password_slot_other": "This phone keeps one relay password, and it belongs to another address. Enter this computer's password, test it, then save. It replaces the other one.",
 	"mobile.computers.own_tunnel.password_slot_empty": "This phone has no relay password saved. Enter this computer's password, test it, then save.",
-	"mobile.computers.own_tunnel.password_slot_this": "This phone's saved relay password is for this address. Test it, then save."
+	"mobile.computers.own_tunnel.password_slot_this": "This phone's saved relay password is for this address. Test it, then save.",
+	"mobile.computers.setup.open_settings": "On your computer, open Local Operator → Settings → Phone access → Set up.",
+	"mobile.computers.setup.list_updates": "Come back here when it's done — this list updates by itself."
 }

@@ -377,6 +377,7 @@ export default function Settings() {
 								subject={refusal.subject}
 								detail={refusal.detail}
 								remedy={refusal.remedy}
+								copy={refusal.copy}
 								retryAfterMs={refusal.retryAfterMs}
 								/* The provider's retry re-runs what failed — for a pick, that
 								 *  same computer (`noteError`'s closure in `selectComputer`). */

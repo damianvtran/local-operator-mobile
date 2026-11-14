@@ -14,19 +14,37 @@
  * `authorization_refused`, `lop tunnel connect` for `tunnel_not_authorized`,
  * "sign in again on that computer" for `login_required`. Copy that guesses here
  * is copy that sends the reader to a command that will not fix their problem.
+ *
+ * **No terminal outside "Using a terminal?".** The reader of these surfaces is
+ * usually not a terminal user: a teammate's phone answered an inactive-billing
+ * 403 with "Radient says this tunnel isn't active right now" beside
+ * `lop login radient`, a command that cannot fix billing. So every command here
+ * is rendered ONLY behind the surface's "Using a terminal?" disclosure, and the
+ * common connect failures carry plain copy and a button that can act on the
+ * cause (`RefusalCopy`, below). The commands stay, sourced as above, for the
+ * readers who do use one.
  */
 
+import type { DiscoveredComputer } from "@/connection/discovery";
+import { RADIENT_CONSOLE_TUNNELS_URL } from "@/connection/discovery";
 import type { SecureStorageRefusal } from "@/connection/secure-storage-refusal";
 import type { TunnelSessionError } from "@/connection/tunnel-session";
 import { t } from "@/i18n";
 import { type ErrorSurface, RelayError } from "@/relay";
-import type { RefusalKind } from "@/ui/components/refusal-surface";
+import type {
+	RefusalKind,
+	RefusalSurfaceAction,
+	RefusalSurfaceCopy,
+} from "@/ui/components/refusal-surface";
 
 // Keep the control-plane cause typed through the shared RelayError/store path.
 // A 200/schema failure is not a gateway authorization refusal and must never
 // inherit the generic console/`lop login` remedy. Only server-owned changes do.
 class TunnelConnectionError extends RelayError {
 	readonly refusalKind: RefusalKind;
+	/** The mint's own classification, kept so the copy can split a 403/402 by the
+	 *  discovery row's live billing and status (`tunnelRefusalCopy`). */
+	readonly failure: TunnelSessionError["failure"];
 	constructor(error: TunnelSessionError) {
 		const kind: RefusalKind =
 			error.failure === "oauth"
@@ -66,6 +84,7 @@ class TunnelConnectionError extends RelayError {
 			retryAfterMs: error.retryAfterMs,
 		});
 		this.refusalKind = kind;
+		this.failure = error.failure;
 	}
 }
 export const tunnelSessionRelayError = (
@@ -78,11 +97,240 @@ export type RefusalView = {
 	subject: string;
 	/** The gateway's or relay's own sentence, when it sent one. */
 	detail: string | null;
-	/** The exact local command for a machine-side cause, when one exists. */
+	/** The exact local command for a machine-side cause, when one exists. Shown
+	 *  only behind "Using a terminal?", never as the surface's instruction. */
 	remedy: string | null;
 	/** A server-supplied backoff. */
 	retryAfterMs: number | null;
+	/** Plain-language copy and actions for a cause this module can name exactly.
+	 *  `null` keeps the surface's per-kind default copy. */
+	copy: RefusalCopy | null;
 };
+
+/** A button the surface can act on without the screen knowing the cause.
+ *  Link actions carry their URL so every screen gets them, not only the two that
+ *  happened to wire a console handler. The shape is the surface's own. */
+export type RefusalAction = RefusalSurfaceAction;
+
+/** Stable cause ids: tests and flows assert the CAUSE, not the prose. */
+export type RefusalCause =
+	| "phone-access-off"
+	| "balance-out"
+	| "suspended"
+	| "console-disabled"
+	| "provisioning"
+	| "refused"
+	| "computer-offline"
+	| "relay-stopped"
+	| "tunnel-gone"
+	| "radient-unreachable"
+	| "relay-wait";
+
+export type RefusalCopy = RefusalSurfaceCopy & { cause: RefusalCause };
+
+/** Radient billing, where credit is added and phone access is paid for. The
+ *  console path is the one the core app already links (`dashboard/billing`). */
+export const RADIENT_CONSOLE_BILLING_URL =
+	"https://console.radienthq.com/dashboard/billing";
+
+const action = {
+	retry: (): RefusalAction => ({
+		id: "retry",
+		label: t("mobile.refusal.action.retry"),
+	}),
+	refreshList: (): RefusalAction => ({
+		id: "refresh-list",
+		label: t("mobile.refusal.action.refresh_list"),
+	}),
+	howTo: (): RefusalAction => ({
+		id: "how-to",
+		label: t("mobile.refusal.action.how_to"),
+	}),
+	openBilling: (): RefusalAction => ({
+		id: "open-billing",
+		label: t("mobile.refusal.action.open_billing"),
+		url: RADIENT_CONSOLE_BILLING_URL,
+	}),
+	addCredit: (): RefusalAction => ({
+		id: "add-credit",
+		label: t("mobile.refusal.action.add_credit"),
+		url: RADIENT_CONSOLE_BILLING_URL,
+	}),
+	openConsole: (): RefusalAction => ({
+		id: "open-console",
+		label: t("mobile.refusal.action.open_console"),
+		url: RADIENT_CONSOLE_TUNNELS_URL,
+	}),
+};
+
+/** The fields of the CHOSEN computer's discovery row that decide a refusal. */
+export type RefusalComputer = Pick<DiscoveredComputer, "billing" | "rawStatus">;
+
+/**
+ * Split a tunnel refusal (session-mint 403/402, or a gateway `console` refusal)
+ * by the discovery row's LIVE billing and status (`GET /v1/tunnels`).
+ *
+ * Why the row and not the status code: the cloud answers 403 for ANY non-active
+ * tunnel before it would answer 402, so the code cannot tell "phone access was
+ * never turned on" from "balance ran out" from "turned off in the console" — and
+ * each needs a different fix. The order below is the decision:
+ *
+ *  1. `billing.active === false` — never turned on: the fix is the desktop's
+ *     Phone access set-up, which shows the price first.
+ *  2. `billing.eligible === false` (active, or unknown) — out of credit.
+ *  3. status `suspended` (billing fine) — clears by itself.
+ *  4. status `disabled` — turned off in the console.
+ *  5. status `error` / `reconciling` / `pending` — Radient is still setting up.
+ *  6. status `revoking` / `deleted` — the tunnel is going away.
+ *
+ * Absent fields are UNKNOWN, never a cause: with no row (or a row that names
+ * none of the above) the answer is the neutral `refused` copy, which still never
+ * names a command and still offers the console and a retry.
+ */
+export function tunnelRefusalCopy(
+	computer: RefusalComputer | null | undefined,
+	subject: string,
+): RefusalCopy {
+	const billing = computer?.billing;
+	const status = (computer?.rawStatus ?? "").toLowerCase();
+	if (billing?.active === false)
+		return {
+			cause: "phone-access-off",
+			title: t("mobile.refusal.phone_access_off.title"),
+			body: t("mobile.refusal.phone_access_off.body"),
+			actions: [action.howTo(), action.openBilling()],
+			help: t("mobile.refusal.how_to.body"),
+		};
+	if (billing?.eligible === false)
+		return {
+			cause: "balance-out",
+			title: t("mobile.refusal.balance_out.title"),
+			body: t("mobile.refusal.balance_out.body"),
+			/* Retry is for the return from paying: the reconnect is automatic on
+			 *  the computer's side, but this screen does not poll (U10). */
+			actions: [action.addCredit(), action.retry()],
+			help: null,
+		};
+	switch (status) {
+		case "suspended":
+			return {
+				cause: "suspended",
+				title: t("mobile.refusal.suspended.title"),
+				body: null,
+				actions: [action.retry()],
+				help: null,
+			};
+		case "disabled":
+			return {
+				cause: "console-disabled",
+				title: t("mobile.refusal.console_disabled.title"),
+				body: null,
+				actions: [action.openConsole()],
+				help: null,
+			};
+		case "error":
+		case "reconciling":
+		case "pending":
+			return {
+				cause: "provisioning",
+				title: t("mobile.refusal.provisioning.title"),
+				body: t("mobile.refusal.provisioning.body"),
+				actions: [action.retry()],
+				help: null,
+			};
+		case "revoking":
+		case "deleted":
+			return tunnelGoneCopy(subject);
+		default:
+			return {
+				cause: "refused",
+				title: t("mobile.refusal.refused.title", { computer: subject }),
+				body: t("mobile.refusal.refused.body"),
+				actions: [action.openConsole(), action.retry()],
+				help: null,
+			};
+	}
+}
+
+const tunnelGoneCopy = (subject: string): RefusalCopy => ({
+	cause: "tunnel-gone",
+	title: t("mobile.refusal.tunnel_gone.title", { computer: subject }),
+	body: t("mobile.refusal.tunnel_gone.body"),
+	/* Refresh, not Retry: the same address will be refused again, and a fresh
+	 *  list is what shows whether the computer was set up again. */
+	actions: [action.refreshList()],
+	help: null,
+});
+
+/**
+ * The plain copy for a refusal, or `null` to keep the surface's per-kind copy
+ * (sign-in, password, certificate, … — causes this change does not touch).
+ *
+ * A relay `503` naming a `wait_*` state is checked first: it is the relay
+ * itself saying "still starting", and must read as a wait with a Retry, never
+ * as an offline computer or a bare spinner. The field is feature-detected: a
+ * relay that sends no `kind` lands on the surface rows below exactly as before.
+ */
+export function refusalCopy(input: {
+	error: RelayError | null;
+	surface: ErrorSurface;
+	subject: string;
+	computer?: RefusalComputer | null;
+}): RefusalCopy | null {
+	const { error, surface, subject, computer } = input;
+	if (error instanceof TunnelConnectionError) {
+		if (error.failure === "disabled" || error.failure === "billing")
+			return tunnelRefusalCopy(computer, subject);
+		if (error.failure === "network" || error.failure === "unavailable")
+			return {
+				cause: "radient-unreachable",
+				title: t("mobile.refusal.radient_unreachable.title"),
+				body: t("mobile.refusal.radient_unreachable.body"),
+				actions: [action.retry()],
+				help: null,
+			};
+		return null;
+	}
+	if (error?.relayStateKind?.startsWith("wait_"))
+		return {
+			cause: "relay-wait",
+			title: t("mobile.refusal.relay_wait.title", { computer: subject }),
+			body: t("mobile.refusal.relay_wait.body"),
+			actions: [action.retry()],
+			help: null,
+		};
+	switch (surface) {
+		case "computer-offline":
+			return {
+				cause: "computer-offline",
+				title: t("mobile.refusal.offline.title", { computer: subject }),
+				body: t("mobile.refusal.offline.body"),
+				actions: [action.retry()],
+				help: null,
+			};
+		case "relay-stopped":
+			return {
+				cause: "relay-stopped",
+				title: t("mobile.refusal.relay_stopped.title"),
+				body: t("mobile.refusal.relay_stopped.body"),
+				actions: [action.retry()],
+				help: null,
+			};
+		case "tunnel-gone":
+			return tunnelGoneCopy(subject);
+		case "console": {
+			/* A gateway console refusal on a Radient computer is the same family as
+			 *  the mint's 403, and the row can usually name it. With no row, or a row
+			 *  naming no cause, the existing console copy stays (its command now sits
+			 *  behind the disclosure). */
+			if (!computer) return null;
+			const split = tunnelRefusalCopy(computer, subject);
+			return split.cause === "refused" ? null : split;
+		}
+		default:
+			return null;
+	}
+}
 
 /**
  * The machine-side remedy for each surface, where one exists.
@@ -94,11 +342,22 @@ export type RefusalView = {
  * `lop tunnel connect` against a machine that merely went to sleep.
  */
 const REMEDY: Partial<Record<ErrorSurface, string>> = {
-	console: "On that computer: lop login radient",
-	"tunnel-gone": "On that computer: lop tunnel connect <tunnel-id>",
-	"relay-stopped": "On that computer: lop mobile",
-	"computer-offline": "On that computer: lop tunnel status",
+	/* Bare commands: the surface labels the block "On that computer" (keyed
+	 *  copy) and offers Copy, so the string is exactly what a terminal takes. */
+	console: "lop login radient",
+	"tunnel-gone": "lop tunnel connect <tunnel-id>",
+	"relay-stopped": "lop mobile",
+	"computer-offline": "lop tunnel status",
 };
+
+/** The terminal alternative for a split tunnel cause. `lop tunnel status` reads
+ *  the same billing and status the split used, so it is honest for every row;
+ *  `lop login radient` (the old remedy) fixes none of them. */
+const TUNNEL_STATUS_COMMAND = "lop tunnel status";
+const splitRemedy = (copy: RefusalCopy): string =>
+	copy.cause === "tunnel-gone"
+		? (REMEDY["tunnel-gone"] ?? TUNNEL_STATUS_COMMAND)
+		: TUNNEL_STATUS_COMMAND;
 
 /**
  * `ErrorSurface` → `RefusalKind`, exhaustively over the CURRENT union: a surface
@@ -214,15 +473,22 @@ export function refusalFromError(input: {
 	subject: string;
 	/** The store's keystore refusal, when that was the cause. */
 	storageRefusal?: SecureStorageRefusal | null;
+	/** The chosen computer's discovery row, when there is one: its live billing
+	 *  and status are what split a tunnel 403 into a fixable cause. */
+	computer?: RefusalComputer | null;
 }): RefusalView | null {
 	if (input.surface === "none") return null;
+	const copy = refusalCopy(input);
 	if (input.error instanceof TunnelConnectionError) {
 		return {
 			kind: input.error.refusalKind,
 			subject: input.subject,
 			detail: input.error.detail ?? null,
+			/* Null, as before: the mint's 403/402 has no command that fixes it, and
+			 *  the split copy's own buttons are the remedy. */
 			remedy: null,
 			retryAfterMs: input.retryAfterMs,
+			copy,
 		};
 	}
 	return {
@@ -246,7 +512,11 @@ export function refusalFromError(input: {
 					? secureStorageRefusalSentence(input.storageRefusal)
 					: `RelayError · ${input.error?.kind ?? "connection-response"}`
 				: (input.detail ?? input.error?.displayableMessage ?? null),
-		remedy: REMEDY[input.surface] ?? null,
+		remedy:
+			copy && input.surface === "console"
+				? splitRemedy(copy)
+				: (REMEDY[input.surface] ?? null),
 		retryAfterMs: input.retryAfterMs,
+		copy,
 	};
 }

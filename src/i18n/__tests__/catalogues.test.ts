@@ -34,6 +34,8 @@ import oauthContext from "@/i18n/catalogues/en/mobile.oauth.context.json";
 import oauth from "@/i18n/catalogues/en/mobile.oauth.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
+import refusalContext from "@/i18n/catalogues/en/mobile.refusal.context.json";
+import refusal from "@/i18n/catalogues/en/mobile.refusal.json";
 import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
 import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
 import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
@@ -147,7 +149,16 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 138, // M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 140, // M1 no-terminal +2: set-up's Settings → Phone access line and its "list updates by itself" line (138 + 2 = 140); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+	},
+	{
+		name: "mobile.refusal",
+		messages: refusal,
+		context: refusalContext,
+		/* M1 no-terminal: the refusal surface's named causes (11 titles, 9 bodies),
+		 *  their six actions, the "How to turn it on" sheet (2) and the "Using a
+		 *  terminal?" disclosure with its block label (2). */
+		expected: 30,
 	},
 	{
 		name: "mobile.notifications",
@@ -332,7 +343,10 @@ describe("the English catalogues", () => {
 		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
 		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
 		 * counted over the en JSON. */
-		expect(total).toBe(812);
+		/* M1 no-terminal: +2 mobile.computers (set-up's two lines) + 30
+		 * mobile.refusal (new namespace) = 32: 812 + 32 = 844, counted over the
+		 * en JSON. */
+		expect(total).toBe(844);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

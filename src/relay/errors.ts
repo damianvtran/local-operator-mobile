@@ -119,6 +119,11 @@ export interface RelayErrorInit {
 	/** A `reason` the client does NOT recognise; surfaced so a future gateway
 	 *  reason falls back to `detail` instead of vanishing. */
 	reasonRaw?: string;
+	/** The relay's own machine-readable state on a `503`, when its body names one
+	 *  (`{"kind": "wait_…"}`). Feature-detected: a relay from before that field
+	 *  existed sends none, and every path must behave exactly as it did then. A
+	 *  `wait_*` kind means "still starting, clears by itself" (`refusal.ts`). */
+	relayStateKind?: string;
 	retryAfterMs?: number;
 	envelope?: EnvelopeDirective;
 	retry?: RetryDirective;
@@ -300,6 +305,7 @@ export class RelayError extends Error {
 	readonly code: string | undefined;
 	readonly reason: GatewayReason | undefined;
 	readonly reasonRaw: string | undefined;
+	readonly relayStateKind: string | undefined;
 	readonly retryAfterMs: number | undefined;
 	readonly envelope: EnvelopeDirective;
 	readonly retry: RetryDirective;
@@ -319,6 +325,7 @@ export class RelayError extends Error {
 		this.code = init.code;
 		this.reason = init.reason;
 		this.reasonRaw = init.reasonRaw;
+		this.relayStateKind = init.relayStateKind;
 		this.retryAfterMs = init.retryAfterMs;
 		this.envelope = init.envelope ?? defaultEnvelopeFor(kind);
 		this.retry = init.retry ?? defaultRetryFor(kind);
@@ -685,6 +692,20 @@ export function relayErrorFromResponse(
 				common,
 			);
 		case 503: {
+			/* A relay that names its own state (`kind`) is answering, and saying why it
+			 * cannot serve yet. A `wait_*` state clears by itself, so it is the `retry`
+			 * surface with a backoff rather than "computer offline". Any other kind keeps
+			 * the classification below and only carries the kind for the copy. */
+			const relayStateKind = nonEmpty(
+				typeof objectBody?.kind === "string" ? objectBody.kind : undefined,
+			);
+			if (relayStateKind?.startsWith("wait_")) {
+				return new RelayError(
+					"gateway-refused",
+					detail ?? serverError ?? "relay is not ready yet",
+					{ ...common, relayStateKind, surface: "retry" },
+				);
+			}
 			/* Two very different machines answer 503 through the same status:
 			 * the edge's plain-text "Tunnel temporarily unavailable" (the connector is
 			 * not there) and the gateway's JSON `{detail, reason}` (the connector is
@@ -697,6 +718,7 @@ export function relayErrorFromResponse(
 					detail ?? serverError ?? "Tunnel authorization unavailable",
 					{
 						...common,
+						relayStateKind,
 						reason,
 						reasonRaw,
 						surface: policy?.surface,
@@ -708,7 +730,7 @@ export function relayErrorFromResponse(
 			return new RelayError(
 				"computer-offline",
 				readableBodyText(text) ?? "Tunnel temporarily unavailable",
-				common,
+				{ ...common, relayStateKind },
 			);
 		}
 		case 502: {

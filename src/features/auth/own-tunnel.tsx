@@ -530,9 +530,9 @@ export default function OwnTunnel() {
 						label={t("mobile.computers.own_tunnel.security_heading")}
 					/>
 					<Text className="text-body-sm text-ink-dim">
-						{t("mobile.computers.own_tunnel.security_body", {
-							command: "lop mobile password",
-						})}
+						{/* No command here any more: the password is changed from the
+						 *  computer's Phone access settings, which the sentence names. */}
+						{t("mobile.computers.own_tunnel.security_body")}
 					</Text>
 				</View>
 			</View>

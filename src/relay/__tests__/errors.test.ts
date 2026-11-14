@@ -124,6 +124,46 @@ describe("the edge and the relay, split by the one header that discriminates the
 });
 
 describe("the 503s, which are three different machines", () => {
+	it("reads a relay 503 naming a wait_* kind as a wait with Retry, not offline", () => {
+		const error = relayErrorFromResponse(
+			facts(
+				503,
+				{ "content-type": "application/json" },
+				JSON.stringify({ kind: "wait_relay_starting" }),
+			),
+		);
+		expect(error.surface).toBe("retry");
+		expect(error.retry).toBe("after-backoff");
+		expect(error.relayStateKind).toBe("wait_relay_starting");
+	});
+
+	it("feature-detects kind: a 503 without one classifies exactly as before", () => {
+		const plain = relayErrorFromResponse(
+			facts(
+				503,
+				{ "content-type": "text/plain" },
+				"Tunnel temporarily unavailable",
+			),
+		);
+		expect(plain.relayStateKind).toBeUndefined();
+		expect(plain.surface).toBe("computer-offline");
+		/* A non-wait kind keeps the gateway classification and only carries the kind. */
+		const other = relayErrorFromResponse(
+			facts(
+				503,
+				{ "content-type": "application/json" },
+				JSON.stringify({
+					kind: "stopped",
+					reason: "authorization_refused",
+					detail: "x",
+				}),
+			),
+		);
+		expect(other.kind).toBe("gateway-refused");
+		expect(other.reason).toBe("authorization_refused");
+		expect(other.relayStateKind).toBe("stopped");
+	});
+
 	it("reads the edge's plain-text 503 as a computer that is offline", () => {
 		const error = relayErrorFromResponse(
 			facts(

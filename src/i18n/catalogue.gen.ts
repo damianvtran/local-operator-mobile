@@ -208,6 +208,8 @@ export type CatalogueKey =
 	| "mobile.computers.section.on_phone"
 	| "mobile.computers.session_error"
 	| "mobile.computers.session_error_help"
+	| "mobile.computers.setup.list_updates"
+	| "mobile.computers.setup.open_settings"
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
@@ -403,6 +405,36 @@ export type CatalogueKey =
 	| "mobile.projects.status.validation"
 	| "mobile.projects.write_receipt"
 	| "mobile.projects.write_unknown_note"
+	| "mobile.refusal.action.add_credit"
+	| "mobile.refusal.action.how_to"
+	| "mobile.refusal.action.open_billing"
+	| "mobile.refusal.action.open_console"
+	| "mobile.refusal.action.refresh_list"
+	| "mobile.refusal.action.retry"
+	| "mobile.refusal.balance_out.body"
+	| "mobile.refusal.balance_out.title"
+	| "mobile.refusal.console_disabled.title"
+	| "mobile.refusal.how_to.body"
+	| "mobile.refusal.how_to.title"
+	| "mobile.refusal.offline.body"
+	| "mobile.refusal.offline.title"
+	| "mobile.refusal.phone_access_off.body"
+	| "mobile.refusal.phone_access_off.title"
+	| "mobile.refusal.provisioning.body"
+	| "mobile.refusal.provisioning.title"
+	| "mobile.refusal.radient_unreachable.body"
+	| "mobile.refusal.radient_unreachable.title"
+	| "mobile.refusal.refused.body"
+	| "mobile.refusal.refused.title"
+	| "mobile.refusal.relay_stopped.body"
+	| "mobile.refusal.relay_stopped.title"
+	| "mobile.refusal.relay_wait.body"
+	| "mobile.refusal.relay_wait.title"
+	| "mobile.refusal.suspended.title"
+	| "mobile.refusal.terminal.label"
+	| "mobile.refusal.terminal.toggle"
+	| "mobile.refusal.tunnel_gone.body"
+	| "mobile.refusal.tunnel_gone.title"
 	| "mobile.schedules.cadence.every"
 	| "mobile.schedules.cadence.left"
 	| "mobile.schedules.cadence.once"
@@ -956,6 +988,7 @@ export type NoParamKey =
 	| "mobile.computers.own_tunnel.rotate_note"
 	| "mobile.computers.own_tunnel.save_connect"
 	| "mobile.computers.own_tunnel.saving"
+	| "mobile.computers.own_tunnel.security_body"
 	| "mobile.computers.own_tunnel.security_heading"
 	| "mobile.computers.own_tunnel.step_app"
 	| "mobile.computers.own_tunnel.step_computer"
@@ -997,6 +1030,8 @@ export type NoParamKey =
 	| "mobile.computers.section.on_phone"
 	| "mobile.computers.session_error"
 	| "mobile.computers.session_error_help"
+	| "mobile.computers.setup.list_updates"
+	| "mobile.computers.setup.open_settings"
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
@@ -1174,6 +1209,32 @@ export type NoParamKey =
 	| "mobile.projects.status.qa"
 	| "mobile.projects.status.validation"
 	| "mobile.projects.write_unknown_note"
+	| "mobile.refusal.action.add_credit"
+	| "mobile.refusal.action.how_to"
+	| "mobile.refusal.action.open_billing"
+	| "mobile.refusal.action.open_console"
+	| "mobile.refusal.action.refresh_list"
+	| "mobile.refusal.action.retry"
+	| "mobile.refusal.balance_out.body"
+	| "mobile.refusal.balance_out.title"
+	| "mobile.refusal.console_disabled.title"
+	| "mobile.refusal.how_to.body"
+	| "mobile.refusal.how_to.title"
+	| "mobile.refusal.offline.body"
+	| "mobile.refusal.phone_access_off.body"
+	| "mobile.refusal.phone_access_off.title"
+	| "mobile.refusal.provisioning.body"
+	| "mobile.refusal.provisioning.title"
+	| "mobile.refusal.radient_unreachable.body"
+	| "mobile.refusal.radient_unreachable.title"
+	| "mobile.refusal.refused.body"
+	| "mobile.refusal.relay_stopped.body"
+	| "mobile.refusal.relay_stopped.title"
+	| "mobile.refusal.relay_wait.body"
+	| "mobile.refusal.suspended.title"
+	| "mobile.refusal.terminal.label"
+	| "mobile.refusal.terminal.toggle"
+	| "mobile.refusal.tunnel_gone.body"
 	| "mobile.schedules.cadence.once"
 	| "mobile.schedules.empty.body"
 	| "mobile.schedules.empty.title"
@@ -1663,7 +1724,7 @@ export type MessageParams = {
 	"mobile.computers.own_tunnel.rotate_note": NoParams;
 	"mobile.computers.own_tunnel.save_connect": NoParams;
 	"mobile.computers.own_tunnel.saving": NoParams;
-	"mobile.computers.own_tunnel.security_body": { command: string | number };
+	"mobile.computers.own_tunnel.security_body": NoParams;
 	"mobile.computers.own_tunnel.security_heading": NoParams;
 	"mobile.computers.own_tunnel.step_app": NoParams;
 	"mobile.computers.own_tunnel.step_computer": NoParams;
@@ -1718,6 +1779,8 @@ export type MessageParams = {
 	"mobile.computers.section.on_phone": NoParams;
 	"mobile.computers.session_error": NoParams;
 	"mobile.computers.session_error_help": NoParams;
+	"mobile.computers.setup.list_updates": NoParams;
+	"mobile.computers.setup.open_settings": NoParams;
 	"mobile.computers.show_details": NoParams;
 	"mobile.computers.sign_out": NoParams;
 	"mobile.computers.signing_out": NoParams;
@@ -1913,6 +1976,36 @@ export type MessageParams = {
 	"mobile.projects.status.validation": NoParams;
 	"mobile.projects.write_receipt": { subject: string | number; action: string; kind: string };
 	"mobile.projects.write_unknown_note": NoParams;
+	"mobile.refusal.action.add_credit": NoParams;
+	"mobile.refusal.action.how_to": NoParams;
+	"mobile.refusal.action.open_billing": NoParams;
+	"mobile.refusal.action.open_console": NoParams;
+	"mobile.refusal.action.refresh_list": NoParams;
+	"mobile.refusal.action.retry": NoParams;
+	"mobile.refusal.balance_out.body": NoParams;
+	"mobile.refusal.balance_out.title": NoParams;
+	"mobile.refusal.console_disabled.title": NoParams;
+	"mobile.refusal.how_to.body": NoParams;
+	"mobile.refusal.how_to.title": NoParams;
+	"mobile.refusal.offline.body": NoParams;
+	"mobile.refusal.offline.title": { computer: string | number };
+	"mobile.refusal.phone_access_off.body": NoParams;
+	"mobile.refusal.phone_access_off.title": NoParams;
+	"mobile.refusal.provisioning.body": NoParams;
+	"mobile.refusal.provisioning.title": NoParams;
+	"mobile.refusal.radient_unreachable.body": NoParams;
+	"mobile.refusal.radient_unreachable.title": NoParams;
+	"mobile.refusal.refused.body": NoParams;
+	"mobile.refusal.refused.title": { computer: string | number };
+	"mobile.refusal.relay_stopped.body": NoParams;
+	"mobile.refusal.relay_stopped.title": NoParams;
+	"mobile.refusal.relay_wait.body": NoParams;
+	"mobile.refusal.relay_wait.title": { computer: string | number };
+	"mobile.refusal.suspended.title": NoParams;
+	"mobile.refusal.terminal.label": NoParams;
+	"mobile.refusal.terminal.toggle": NoParams;
+	"mobile.refusal.tunnel_gone.body": NoParams;
+	"mobile.refusal.tunnel_gone.title": { computer: string | number };
 	"mobile.schedules.cadence.every": { duration: string | number };
 	"mobile.schedules.cadence.left": { cadence: string | number; remaining: number };
 	"mobile.schedules.cadence.once": NoParams;
@@ -2494,7 +2587,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.own_tunnel.rotate_note": "Asks you interactively, so the value never reaches a shell history or a process list. This is the password the app asks for below.",
 	"mobile.computers.own_tunnel.save_connect": "Save and connect",
 	"mobile.computers.own_tunnel.saving": "Saving…",
-	"mobile.computers.own_tunnel.security_body": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and rotate the password with `{command}` if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
+	"mobile.computers.own_tunnel.security_body": "You are putting your own computer on the internet, and the relay password is the only thing standing in front of it. Prefer HTTPS, use a tunnel that offers its own authentication where yours does, and change the password in your computer's Phone access settings if it has been shared. Anyone with that password and your URL can drive the sessions on that machine.",
 	"mobile.computers.own_tunnel.security_heading": "Before you expose it",
 	"mobile.computers.own_tunnel.step_app": "In the app",
 	"mobile.computers.own_tunnel.step_computer": "On the computer",
@@ -2524,7 +2617,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.own_tunnel.verdict_tls": "That tunnel's certificate was rejected. Use the {scheme} address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate on the one you run — the app will not skip the check.",
 	"mobile.computers.own_tunnel.verdict_unreachable": "The address could not be reached. Check the URL is the public one your tunnel printed, and that the tunnel is still running.",
 	"mobile.computers.own_tunnel_instead": "Use my own tunnel instead",
-	"mobile.computers.password_placeholder": "The password from lop mobile",
+	"mobile.computers.password_placeholder": "Password from your computer's Phone access settings",
 	"mobile.computers.paths.own_action": "Use my own tunnel",
 	"mobile.computers.paths.own_body": "The advanced path: you publish your computer yourself, through a tunnel you run, and paste its address here. No Radient account is needed at any point, and you keep the password.",
 	"mobile.computers.paths.own_title": "Set up your own tunnel",
@@ -2549,6 +2642,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.section.on_phone": "On this phone",
 	"mobile.computers.session_error": "The app couldn't connect to this computer.",
 	"mobile.computers.session_error_help": "Your computer does not need to be reconfigured. Retry, or show the details for support.",
+	"mobile.computers.setup.list_updates": "Come back here when it's done — this list updates by itself.",
+	"mobile.computers.setup.open_settings": "On your computer, open Local Operator → Settings → Phone access → Set up.",
 	"mobile.computers.show_details": "Show details",
 	"mobile.computers.sign_out": "Sign out",
 	"mobile.computers.signing_out": "Signing out…",
@@ -2744,6 +2839,36 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.projects.status.validation": "validation",
 	"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.} milestone {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} milestone {subject}.} other {{action, select, created {Created} completed {Completed} reopened {Reopened} added {Added} updated {Updated} removed {Removed} deleted {Deleted} other {Updated}} {subject}.}}",
 	"mobile.projects.write_unknown_note": "We couldn't reach your computer, so we can't tell whether that was saved. Check the project before trying again.",
+	"mobile.refusal.action.add_credit": "Add credit",
+	"mobile.refusal.action.how_to": "How to turn it on",
+	"mobile.refusal.action.open_billing": "Open Radient billing",
+	"mobile.refusal.action.open_console": "Open Radient console",
+	"mobile.refusal.action.refresh_list": "Refresh list",
+	"mobile.refusal.action.retry": "Retry",
+	"mobile.refusal.balance_out.body": "Add credit and your computer reconnects by itself.",
+	"mobile.refusal.balance_out.title": "Your Radient balance has run out.",
+	"mobile.refusal.console_disabled.title": "Phone access for this computer is turned off in your Radient console.",
+	"mobile.refusal.how_to.body": "On your computer, open Local Operator → Settings → Phone access and choose Set up. You'll see the price first, before anything is turned on.",
+	"mobile.refusal.how_to.title": "Turn on phone access",
+	"mobile.refusal.offline.body": "Wake it and make sure it's online.",
+	"mobile.refusal.offline.title": "{computer} is asleep or offline.",
+	"mobile.refusal.phone_access_off.body": "Turn it on from Local Operator on your computer.",
+	"mobile.refusal.phone_access_off.title": "Phone access isn't turned on for your Radient account yet.",
+	"mobile.refusal.provisioning.body": "This usually takes under a minute.",
+	"mobile.refusal.provisioning.title": "Radient is still setting up this computer.",
+	"mobile.refusal.radient_unreachable.body": "We'll keep trying.",
+	"mobile.refusal.radient_unreachable.title": "Radient isn't responding right now.",
+	"mobile.refusal.refused.body": "Check it in your Radient console, or try again.",
+	"mobile.refusal.refused.title": "Radient didn't allow phone access to {computer} right now.",
+	"mobile.refusal.relay_stopped.body": "Open it there and this reconnects by itself.",
+	"mobile.refusal.relay_stopped.title": "Local Operator isn't running on your computer.",
+	"mobile.refusal.relay_wait.body": "Try again in a moment.",
+	"mobile.refusal.relay_wait.title": "{computer} is still starting up.",
+	"mobile.refusal.suspended.title": "Your computer will reconnect by itself — open Local Operator on it if this lasts.",
+	"mobile.refusal.terminal.label": "On that computer",
+	"mobile.refusal.terminal.toggle": "Using a terminal?",
+	"mobile.refusal.tunnel_gone.body": "Turn it on in Local Operator → Settings → Phone access.",
+	"mobile.refusal.tunnel_gone.title": "Phone access is turned off on {computer}.",
 	"mobile.schedules.cadence.every": "every {duration}",
 	"mobile.schedules.cadence.left": "{cadence} · {remaining} left",
 	"mobile.schedules.cadence.once": "once",
@@ -3310,7 +3435,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.rotate_note": { role: "help", note: "Two sentences under the \"Set or rotate the password\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"Shell history\" and \"process list\" are the places a typed command line is recorded on a computer; use the usual technical terms in your language." },
 	"mobile.computers.own_tunnel.save_connect": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that stores the address and password on this phone and connects. Enabled only after a successful test. Sentence case, no final full stop." },
 	"mobile.computers.own_tunnel.saving": { role: "status", note: "The same button's label while saving and connecting on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). Keep the ellipsis character; one word plus ellipsis." },
-	"mobile.computers.own_tunnel.security_body": { role: "help", note: "Security advice paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). {command} is a terminal command (lop mobile password): keep the placeholder and its backticks unchanged. HTTPS and URL are technical terms; keep them recognisable." },
+	"mobile.computers.own_tunnel.security_body": { role: "help", note: "Security advice paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"Phone access\" is the name of the settings page in the Local Operator desktop app; use the desktop app's translation. HTTPS and URL are technical terms; keep them recognisable." },
 	"mobile.computers.own_tunnel.security_heading": { role: "heading", note: "Section heading of the security advice at the end on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"It\" is the reader's computer. No final full stop." },
 	"mobile.computers.own_tunnel.step_app": { role: "heading", note: "Step 3 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"3.\" is shown before it, so do not add a number. This step is the address and password fields in this app. No final full stop." },
 	"mobile.computers.own_tunnel.step_computer": { role: "heading", note: "Step 1 heading on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); a fixed numeral \"1.\" is shown before it, so do not add a number. Says this step happens on the reader's computer, not the phone. No final full stop." },
@@ -3340,7 +3465,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.verdict_tls": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the HTTPS certificate failed verification. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.verdict_unreachable": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: no connection could be made to the address." },
 	"mobile.computers.own_tunnel_instead": { role: "button", note: "Small quiet button at the bottom of the computers screen that opens the own-tunnel (self-hosted) setup instead of Radient. 'instead' contrasts with the Radient list above it." },
-	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language." },
+	"mobile.computers.password_placeholder": { role: "help", note: "Placeholder of the password field on the \"Your own tunnel\" screen. \"Phone access\" is the name of the settings page in the Local Operator desktop app; use the same translation as the desktop app. Never name a terminal command here." },
 	"mobile.computers.paths.own_action": { role: "button", note: "Outline button in the own-tunnel card that opens the own-tunnel setup. Short imperative; the computers screen has a separate 'Use my own tunnel instead'." },
 	"mobile.computers.paths.own_body": { role: "help", note: "Description inside the own-tunnel card. It is the advanced, self-hosted path: the reader publishes the computer through their own tunnel, pastes its address, needs no Radient account and keeps the password. Keep the words 'advanced' and 'no account' clear." },
 	"mobile.computers.paths.own_title": { role: "heading", note: "Section header of the own-tunnel card on the choose-a-path screen, and the quiet button label on the first-run welcome screen that opens the same setup, and the outline button in Settings that opens the own-tunnel editor when none is saved. Says what the reader gets, not what they type. No punctuation." },
@@ -3365,6 +3490,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.section.on_phone": { role: "heading", note: "Section header for computers already paired on this phone." },
 	"mobile.computers.session_error": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.session_error_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.setup.list_updates": { role: "help", note: "Follows the set-up instruction. The computer list on this phone is refreshed when the reader returns to this screen or to the app." },
+	"mobile.computers.setup.open_settings": { role: "help", note: "First line of the set-up screen for a signed-in account with no computer yet. The arrows are a menu path in the desktop app; translate \"Settings\", \"Phone access\" and \"Set up\" exactly as the desktop app does." },
 	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.sign_out": { role: "button", note: "Settings action opening the sign-out confirmation. Sentence case." },
 	"mobile.computers.signing_out": { role: "status", note: "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis." },
@@ -3560,6 +3687,36 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.projects.status.validation": { role: "status", note: "Display label for the project status code validation; translate the label, not the underlying code. Shown in the create sheet as a selectable chip." },
 	"mobile.projects.write_receipt": { role: "status", note: "One-line success receipt. THREE PARAMETERS, all supplied by the screen: {action} is a stable CODE (created, completed, reopened, added, updated, removed, deleted) and never a rendered word — the catalogue turns it into the verb; {subject} is the BARE NAME of the thing acted on (user text, never a phrase such as 'milestone X', because a phrase composed in one language cannot be ordered or inflected by another); {kind} is a stable CODE for WHAT the subject names (project, milestone, other). Each locale supplies its own noun and its own word order — English verb-first, French naming the thing first with the participle last — which is why the action arms are repeated inside every kind arm: a locale has to be free to move the verb. other catches an unknown kind or an unknown action code. Ends with a full stop." },
 	"mobile.projects.write_unknown_note": { role: "status", note: "Shown when a write got no answer. Must state that the outcome is UNKNOWN, never that nothing was saved." },
+	"mobile.refusal.action.add_credit": { role: "button", note: "Button that opens the Radient billing page where the reader tops up their balance. No final full stop." },
+	"mobile.refusal.action.how_to": { role: "button", note: "Button that opens a short help sheet explaining how to turn on phone access from the desktop app. Sentence case, no final full stop." },
+	"mobile.refusal.action.open_billing": { role: "button", note: "Button that opens the billing page of the Radient web console in the browser. No final full stop." },
+	"mobile.refusal.action.open_console": { role: "button", note: "Button that opens the Radient web console in the browser. No final full stop." },
+	"mobile.refusal.action.refresh_list": { role: "button", note: "Button that asks Radient again for the list of the reader's computers. No final full stop." },
+	"mobile.refusal.action.retry": { role: "button", note: "Button that tries the connection again now. No final full stop." },
+	"mobile.refusal.balance_out.body": { role: "help", note: "Follows the empty-balance headline. Once credit is added the connection comes back without further steps." },
+	"mobile.refusal.balance_out.title": { role: "heading", note: "Headline when phone access is turned on but the Radient account's prepaid balance is empty, so the computer cannot be reached." },
+	"mobile.refusal.console_disabled.title": { role: "heading", note: "Shown when the account owner switched phone access off for this one computer in the Radient web console. The fix is in that console, which a button below opens." },
+	"mobile.refusal.how_to.body": { role: "help", note: "Body of the help sheet. The arrows are a menu path in the desktop app; translate \"Settings\", \"Phone access\" and \"Set up\" exactly as the desktop app does. It must say the price is shown before anything is turned on." },
+	"mobile.refusal.how_to.title": { role: "heading", note: "Title of the short help sheet opened by \"How to turn it on\"." },
+	"mobile.refusal.offline.body": { role: "help", note: "Follows the asleep-or-offline headline. \"It\" is the computer." },
+	"mobile.refusal.offline.title": { role: "heading", note: "Shown when the computer does not answer at all. {computer} is the computer's name, \"Your computer\", or an address the reader typed." },
+	"mobile.refusal.phone_access_off.body": { role: "help", note: "Follows the headline that phone access is not turned on. The reader turns it on from the Local Operator desktop app on their computer, not from this phone." },
+	"mobile.refusal.phone_access_off.title": { role: "heading", note: "Headline when the phone cannot reach a computer because phone access (the paid Radient feature that lets this app reach the computer) has never been turned on for the account. \"Phone access\" is the feature's name in the desktop app's Settings; use the same term as the desktop translation. Never name a command." },
+	"mobile.refusal.provisioning.body": { role: "help", note: "Follows the still-setting-up headline." },
+	"mobile.refusal.provisioning.title": { role: "heading", note: "Shown while Radient is still preparing this computer's connection (a few seconds to a minute). Nothing is wrong." },
+	"mobile.refusal.radient_unreachable.body": { role: "help", note: "Follows the not-responding headline: the app keeps retrying in the background, and a Retry button is also offered." },
+	"mobile.refusal.radient_unreachable.title": { role: "heading", note: "Shown when Radient's servers do not answer (a network problem or an outage), not a problem with the reader's computer." },
+	"mobile.refusal.refused.body": { role: "help", note: "Follows the fallback refusal headline. Buttons below open the Radient console and retry." },
+	"mobile.refusal.refused.title": { role: "heading", note: "Fallback when Radient refused phone access to a computer and its listing does not say why. {computer} is the computer's name as the reader named it, or \"Your computer\"." },
+	"mobile.refusal.relay_stopped.body": { role: "help", note: "Follows the not-running headline. \"There\" is the computer; the phone reconnects on its own once the app is open." },
+	"mobile.refusal.relay_stopped.title": { role: "heading", note: "Shown when the computer is reachable but the Local Operator app is not running on it." },
+	"mobile.refusal.relay_wait.body": { role: "help", note: "Follows the still-starting headline; a Retry button sits below." },
+	"mobile.refusal.relay_wait.title": { role: "heading", note: "Shown when Local Operator on the computer answered but is still starting up. {computer} is the computer's name, \"Your computer\", or an address." },
+	"mobile.refusal.suspended.title": { role: "heading", note: "Shown when Radient has paused the computer's phone access for a moment although billing is fine; it normally clears on its own. Keep the dash or use your language's equivalent pause." },
+	"mobile.refusal.terminal.label": { role: "meta", note: "Small upper-case label above a copyable terminal command shown inside the \"Using a terminal?\" disclosure. The command itself is never translated." },
+	"mobile.refusal.terminal.toggle": { role: "button", note: "Disclosure button that reveals the equivalent terminal commands for readers who use a command line. Ends with a question mark; keep it a short question." },
+	"mobile.refusal.tunnel_gone.body": { role: "help", note: "Follows the phone-access-off headline. The arrows are a menu path in the desktop app; translate \"Settings\" and \"Phone access\" exactly as the desktop app does." },
+	"mobile.refusal.tunnel_gone.title": { role: "heading", note: "Shown when the computer's phone access was turned off or removed. {computer} is the computer's name or \"Your computer\"." },
 	"mobile.schedules.cadence.every": { role: "meta", note: "Cadence phrase for a repeating schedule. {duration} is a formatted interval such as '1d' or '1h30m'; it is formatting, not prose, and is not translated in this slice." },
 	"mobile.schedules.cadence.left": { role: "meta", note: "Cadence with a bounded delivery budget. {cadence} is the already-rendered 'every …' phrase; {remaining} is a positive integer. The middle dot is a separator, keep it." },
 	"mobile.schedules.cadence.once": { role: "meta", note: "A schedule that fires once. One lower-case word; it replaces the whole cadence phrase." },
@@ -4140,7 +4297,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.rotate_note": "Te la pide de forma interactiva, así que nunca queda en el historial del shell ni en la lista de procesos. Es la contraseña que la app te pide abajo.",
 		"mobile.computers.own_tunnel.save_connect": "Guardar y conectar",
 		"mobile.computers.own_tunnel.saving": "Guardando…",
-		"mobile.computers.own_tunnel.security_body": "Estás poniendo tu propia máquina en internet, y la contraseña del relé es lo único que la protege. Usa HTTPS siempre que puedas, activa la autenticación propia de tu túnel si la ofrece y cambia la contraseña con `{command}` si se ha compartido. Cualquiera con esa contraseña y tu URL puede controlar las sesiones de esa máquina.",
+		"mobile.computers.own_tunnel.security_body": "Estás poniendo tu propia máquina en internet, y la contraseña del relé es lo único que la protege. Usa HTTPS siempre que puedas, activa la autenticación propia de tu túnel si la ofrece y cambia la contraseña en Acceso desde el teléfono, en los ajustes de tu computadora, si se ha compartido. Cualquiera con esa contraseña y tu URL puede controlar las sesiones de esa máquina.",
 		"mobile.computers.own_tunnel.security_heading": "Antes de exponerla",
 		"mobile.computers.own_tunnel.step_app": "En la app",
 		"mobile.computers.own_tunnel.step_computer": "En la máquina",
@@ -4170,7 +4327,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.verdict_tls": "Se rechazó el certificado de ese túnel. Usa la dirección {scheme} que mostró el túnel, elige un túnel con un certificado en el que confíe un teléfono o sustituye el certificado autofirmado del que ejecutas tú — la app no se saltará la comprobación.",
 		"mobile.computers.own_tunnel.verdict_unreachable": "No se pudo contactar con la dirección. Comprueba que la URL es la pública que mostró tu túnel y que el túnel sigue en ejecución.",
 		"mobile.computers.own_tunnel_instead": "Usar mi propio túnel en su lugar",
-		"mobile.computers.password_placeholder": "La contraseña de lop mobile",
+		"mobile.computers.password_placeholder": "Contraseña de Acceso desde el teléfono en los ajustes de tu computadora",
 		"mobile.computers.paths.own_action": "Usar mi propio túnel",
 		"mobile.computers.paths.own_body": "La vía avanzada: publicas tu máquina por tu cuenta, con un túnel que ejecutas tú, y pegas aquí su dirección. No hace falta una cuenta de Radient en ningún momento, y la contraseña la guardas tú.",
 		"mobile.computers.paths.own_title": "Configura tu propio túnel",
@@ -4195,6 +4352,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "En este teléfono",
 		"mobile.computers.session_error": "La app no pudo conectarse a esta máquina.",
 		"mobile.computers.session_error_help": "No hace falta reconfigurar la máquina. Reintenta o muestra los detalles para soporte.",
+		"mobile.computers.setup.list_updates": "Vuelve aquí cuando termines; esta lista se actualiza sola.",
+		"mobile.computers.setup.open_settings": "En tu computadora, abre Local Operator → Ajustes → Acceso desde el teléfono → Configurar el acceso desde el teléfono.",
 		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.sign_out": "Cerrar sesión",
 		"mobile.computers.signing_out": "Cerrando sesión…",
@@ -4390,6 +4549,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.status.validation": "validación",
 		"mobile.projects.write_receipt": "{kind, select, project {Proyecto {subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.} milestone {Hito {subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.} other {{subject} {action, select, created {creado} completed {completado} reopened {reabierto} added {añadido} updated {actualizado} removed {quitado} deleted {eliminado} other {actualizado}}.}}",
 		"mobile.projects.write_unknown_note": "No pudimos llegar a tu máquina, así que no sabemos si se guardó. Revisa el proyecto antes de volver a intentarlo.",
+		"mobile.refusal.action.add_credit": "Añadir saldo",
+		"mobile.refusal.action.how_to": "Cómo activarlo",
+		"mobile.refusal.action.open_billing": "Abrir la facturación de Radient",
+		"mobile.refusal.action.open_console": "Abrir la consola de Radient",
+		"mobile.refusal.action.refresh_list": "Actualizar lista",
+		"mobile.refusal.action.retry": "Reintentar",
+		"mobile.refusal.balance_out.body": "Añade saldo y tu computadora se volverá a conectar sola.",
+		"mobile.refusal.balance_out.title": "Se agotó el saldo de tu cuenta de Radient.",
+		"mobile.refusal.console_disabled.title": "El acceso desde el teléfono a esta computadora está desactivado en tu consola de Radient.",
+		"mobile.refusal.how_to.body": "En tu computadora, abre Local Operator → Ajustes → Acceso desde el teléfono y elige Configurar el acceso desde el teléfono. Primero verás el precio, antes de que se active nada.",
+		"mobile.refusal.how_to.title": "Activar el acceso desde el teléfono",
+		"mobile.refusal.offline.body": "Actívala y asegúrate de que tenga conexión.",
+		"mobile.refusal.offline.title": "{computer} está en reposo o sin conexión.",
+		"mobile.refusal.phone_access_off.body": "Actívalo desde Local Operator en tu computadora.",
+		"mobile.refusal.phone_access_off.title": "El acceso desde el teléfono aún no está activado en tu cuenta de Radient.",
+		"mobile.refusal.provisioning.body": "Esto suele tardar menos de un minuto.",
+		"mobile.refusal.provisioning.title": "Radient todavía está preparando esta computadora.",
+		"mobile.refusal.radient_unreachable.body": "Seguiremos intentándolo.",
+		"mobile.refusal.radient_unreachable.title": "Radient no responde en este momento.",
+		"mobile.refusal.refused.body": "Revísalo en tu consola de Radient o vuelve a intentarlo.",
+		"mobile.refusal.refused.title": "Radient no permitió el acceso desde el teléfono a {computer} en este momento.",
+		"mobile.refusal.relay_stopped.body": "Ábrelo allí y esto se volverá a conectar solo.",
+		"mobile.refusal.relay_stopped.title": "Local Operator no se está ejecutando en tu computadora.",
+		"mobile.refusal.relay_wait.body": "Vuelve a intentarlo en un momento.",
+		"mobile.refusal.relay_wait.title": "{computer} todavía se está iniciando.",
+		"mobile.refusal.suspended.title": "Tu computadora se volverá a conectar sola; si esto continúa, abre Local Operator en ella.",
+		"mobile.refusal.terminal.label": "En esa computadora",
+		"mobile.refusal.terminal.toggle": "¿Usas una terminal?",
+		"mobile.refusal.tunnel_gone.body": "Actívalo en Local Operator → Ajustes → Acceso desde el teléfono.",
+		"mobile.refusal.tunnel_gone.title": "El acceso desde el teléfono está desactivado en {computer}.",
 		"mobile.schedules.cadence.every": "cada {duration}",
 		"mobile.schedules.cadence.left": "{cadence} · {remaining} por enviar",
 		"mobile.schedules.cadence.once": "una vez",
@@ -4954,7 +5143,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.rotate_note": "La commande vous le demande de façon interactive : la valeur n’apparaît donc jamais dans l’historique du shell ni dans la liste des processus. C’est le mot de passe que l’app demande ci-dessous.",
 		"mobile.computers.own_tunnel.save_connect": "Enregistrer et se connecter",
 		"mobile.computers.own_tunnel.saving": "Enregistrement…",
-		"mobile.computers.own_tunnel.security_body": "Vous mettez votre propre ordinateur sur Internet, et le mot de passe du relais est la seule chose qui le protège. Privilégiez HTTPS, activez l’authentification propre à votre tunnel s’il en propose une, et changez le mot de passe avec `{command}` s’il a été partagé. Toute personne disposant de ce mot de passe et de votre URL peut piloter les sessions sur cette machine.",
+		"mobile.computers.own_tunnel.security_body": "Vous mettez votre propre ordinateur sur Internet, et le mot de passe du relais est la seule chose qui le protège. Privilégiez HTTPS, activez l’authentification propre à votre tunnel s’il en propose une, et changez le mot de passe dans les paramètres Accès depuis un téléphone de votre ordinateur s’il a été partagé. Toute personne disposant de ce mot de passe et de votre URL peut piloter les sessions sur cette machine.",
 		"mobile.computers.own_tunnel.security_heading": "Avant de l’exposer",
 		"mobile.computers.own_tunnel.step_app": "Dans l’app",
 		"mobile.computers.own_tunnel.step_computer": "Sur l’ordinateur",
@@ -4984,7 +5173,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.verdict_tls": "Le certificat de ce tunnel a été refusé. Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné sur celui que vous exploitez — l’app ne contournera pas la vérification.",
 		"mobile.computers.own_tunnel.verdict_unreachable": "Impossible de joindre l’adresse. Vérifiez qu’il s’agit bien de l’URL publique affichée par votre tunnel, et que celui-ci fonctionne toujours.",
 		"mobile.computers.own_tunnel_instead": "Utiliser plutôt mon propre tunnel",
-		"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
+		"mobile.computers.password_placeholder": "Mot de passe indiqué dans les paramètres Accès depuis un téléphone de votre ordinateur",
 		"mobile.computers.paths.own_action": "Utiliser mon propre tunnel",
 		"mobile.computers.paths.own_body": "Le parcours avancé : vous publiez vous-même votre ordinateur via un tunnel que vous exploitez, puis vous collez l’adresse de ce tunnel ici. Aucun compte Radient n’est nécessaire à aucun moment, et vous gardez le mot de passe.",
 		"mobile.computers.paths.own_title": "Configurer votre propre tunnel",
@@ -5009,6 +5198,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "Sur ce téléphone",
 		"mobile.computers.session_error": "L’app n’a pas pu se connecter à cet ordinateur.",
 		"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",
+		"mobile.computers.setup.list_updates": "Revenez ici une fois terminé — cette liste se met à jour toute seule.",
+		"mobile.computers.setup.open_settings": "Sur votre ordinateur, ouvrez Local Operator → Paramètres → Accès depuis un téléphone → Configurer l’accès depuis un téléphone.",
 		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.sign_out": "Se déconnecter",
 		"mobile.computers.signing_out": "Déconnexion en cours…",
@@ -5204,6 +5395,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.status.validation": "validation",
 		"mobile.projects.write_receipt": "{kind, select, project {Projet {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} milestone {Jalon {subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.} other {{subject} {action, select, created {créé} completed {terminé} reopened {rouvert} added {ajouté} updated {mis à jour} removed {retiré} deleted {supprimé} other {mis à jour}}.}}",
 		"mobile.projects.write_unknown_note": "Impossible de joindre votre ordinateur : nous ne savons pas si la modification a été enregistrée. Vérifiez le projet avant de réessayer.",
+		"mobile.refusal.action.add_credit": "Ajouter du crédit",
+		"mobile.refusal.action.how_to": "Comment l’activer",
+		"mobile.refusal.action.open_billing": "Ouvrir la facturation Radient",
+		"mobile.refusal.action.open_console": "Ouvrir la console Radient",
+		"mobile.refusal.action.refresh_list": "Actualiser la liste",
+		"mobile.refusal.action.retry": "Réessayer",
+		"mobile.refusal.balance_out.body": "Ajoutez du crédit et votre ordinateur se reconnectera tout seul.",
+		"mobile.refusal.balance_out.title": "Votre solde Radient est épuisé.",
+		"mobile.refusal.console_disabled.title": "L’accès depuis le téléphone à cet ordinateur est désactivé dans votre console Radient.",
+		"mobile.refusal.how_to.body": "Sur votre ordinateur, ouvrez Local Operator → Paramètres → Accès depuis un téléphone et choisissez Configurer l’accès depuis un téléphone. Le prix s’affiche d’abord, avant toute activation.",
+		"mobile.refusal.how_to.title": "Activer l’accès depuis le téléphone",
+		"mobile.refusal.offline.body": "Réveillez-le et vérifiez qu’il est en ligne.",
+		"mobile.refusal.offline.title": "{computer} est en veille ou hors ligne.",
+		"mobile.refusal.phone_access_off.body": "Activez-le depuis Local Operator sur votre ordinateur.",
+		"mobile.refusal.phone_access_off.title": "L’accès depuis le téléphone n’est pas encore activé pour votre compte Radient.",
+		"mobile.refusal.provisioning.body": "Cela prend généralement moins d’une minute.",
+		"mobile.refusal.provisioning.title": "Radient est encore en train de configurer cet ordinateur.",
+		"mobile.refusal.radient_unreachable.body": "Nous continuons d’essayer.",
+		"mobile.refusal.radient_unreachable.title": "Radient ne répond pas pour le moment.",
+		"mobile.refusal.refused.body": "Vérifiez-le dans votre console Radient, ou réessayez.",
+		"mobile.refusal.refused.title": "Radient n’autorise pas l’accès depuis le téléphone à {computer} pour le moment.",
+		"mobile.refusal.relay_stopped.body": "Ouvrez-le sur l’ordinateur et la connexion reviendra toute seule.",
+		"mobile.refusal.relay_stopped.title": "Local Operator n’est pas ouvert sur votre ordinateur.",
+		"mobile.refusal.relay_wait.body": "Réessayez dans un instant.",
+		"mobile.refusal.relay_wait.title": "{computer} est encore en train de démarrer.",
+		"mobile.refusal.suspended.title": "Votre ordinateur va se reconnecter tout seul — ouvrez Local Operator dessus si cela dure.",
+		"mobile.refusal.terminal.label": "Sur cet ordinateur",
+		"mobile.refusal.terminal.toggle": "Vous utilisez un terminal ?",
+		"mobile.refusal.tunnel_gone.body": "Activez-le dans Local Operator → Paramètres → Accès depuis un téléphone.",
+		"mobile.refusal.tunnel_gone.title": "L’accès depuis le téléphone est désactivé sur {computer}.",
 		"mobile.schedules.cadence.every": "tous les {duration}",
 		"mobile.schedules.cadence.left": "{cadence} · {remaining, plural, one {# envoi restant} many {# d’envois restants} other {# envois restants}}",
 		"mobile.schedules.cadence.once": "une fois",
@@ -5768,7 +5989,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.rotate_note": "यह कमांड पासवर्ड टर्मिनल में आपसे पूछती है, ताकि वह कभी शेल हिस्ट्री या प्रोसेस लिस्ट में न पहुँचे। ऐप नीचे यही पासवर्ड माँगता है।",
 		"mobile.computers.own_tunnel.save_connect": "सहेजें और कनेक्ट करें",
 		"mobile.computers.own_tunnel.saving": "सहेजा जा रहा है…",
-		"mobile.computers.own_tunnel.security_body": "आप अपने ही कंप्यूटर को इंटरनेट पर खोल रहे हैं, और उसकी सुरक्षा में सिर्फ़ रिले पासवर्ड खड़ा है। HTTPS को प्राथमिकता दें, अगर आपकी टनल अपना प्रमाणीकरण देती है तो उसे चालू करें, और अगर पासवर्ड किसी के साथ साझा हुआ है तो उसे `{command}` से बदल दें। जिसके पास वह पासवर्ड और आपका URL है, वह उस मशीन के सत्र चला सकता है।",
+		"mobile.computers.own_tunnel.security_body": "आप अपने ही कंप्यूटर को इंटरनेट पर खोल रहे हैं, और उसकी सुरक्षा में सिर्फ़ रिले पासवर्ड खड़ा है। HTTPS को प्राथमिकता दें, अगर आपकी टनल अपना प्रमाणीकरण देती है तो उसे चालू करें, और अगर पासवर्ड किसी के साथ साझा हुआ है तो उसे अपने कंप्यूटर की फ़ोन एक्सेस सेटिंग्स में बदल दें। जिसके पास वह पासवर्ड और आपका URL है, वह उस मशीन के सत्र चला सकता है।",
 		"mobile.computers.own_tunnel.security_heading": "इंटरनेट पर खोलने से पहले",
 		"mobile.computers.own_tunnel.step_app": "ऐप में",
 		"mobile.computers.own_tunnel.step_computer": "कंप्यूटर पर",
@@ -5798,7 +6019,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.verdict_tls": "उस टनल का सर्टिफ़िकेट अस्वीकार कर दिया गया। टनल का दिखाया हुआ {scheme} पता उपयोग करें, ऐसी टनल चुनें जिसके सर्टिफ़िकेट पर फ़ोन भरोसा करे, या अपनी चलाई टनल का सेल्फ़-साइन्ड सर्टिफ़िकेट बदलें — ऐप यह जाँच नहीं छोड़ेगा।",
 		"mobile.computers.own_tunnel.verdict_unreachable": "उस पते तक नहीं पहुँचा जा सका। जाँचें कि URL वही सार्वजनिक URL है जो आपकी टनल ने दिखाया था, और टनल अब भी चल रही है।",
 		"mobile.computers.own_tunnel_instead": "इसके बजाय अपनी टनल उपयोग करें",
-		"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
+		"mobile.computers.password_placeholder": "आपके कंप्यूटर की फ़ोन एक्सेस सेटिंग्स से मिला पासवर्ड",
 		"mobile.computers.paths.own_action": "अपनी टनल उपयोग करें",
 		"mobile.computers.paths.own_body": "उन्नत रास्ता: आप अपना कंप्यूटर ख़ुद प्रकाशित करते हैं, अपनी चलाई हुई टनल के ज़रिये, और उसका पता यहाँ चिपकाते हैं। किसी भी चरण में Radient खाते की ज़रूरत नहीं, और पासवर्ड आपके पास ही रहता है।",
 		"mobile.computers.paths.own_title": "अपनी टनल सेट अप करें",
@@ -5823,6 +6044,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "इस फ़ोन पर",
 		"mobile.computers.session_error": "ऐप इस कंप्यूटर से कनेक्ट नहीं हो सका।",
 		"mobile.computers.session_error_help": "कंप्यूटर को फिर से कॉन्फ़िगर करने की ज़रूरत नहीं है। दोबारा कोशिश करें या सहायता के लिए विवरण दिखाएँ।",
+		"mobile.computers.setup.list_updates": "काम पूरा होने पर यहाँ लौटें — यह सूची अपने आप अपडेट हो जाती है।",
+		"mobile.computers.setup.open_settings": "अपने कंप्यूटर पर Local Operator खोलें और सेटिंग्स → फ़ोन एक्सेस → फ़ोन एक्सेस सेट करें चुनें।",
 		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.sign_out": "साइन आउट करें",
 		"mobile.computers.signing_out": "साइन आउट हो रहा है…",
@@ -6018,6 +6241,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.status.validation": "सत्यापन",
 		"mobile.projects.write_receipt": "{kind, select, project {“{subject}” प्रोजेक्ट {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।} milestone {“{subject}” पड़ाव {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।} other {“{subject}” {action, select, created {बनाया गया} completed {पूरा किया गया} reopened {फिर खोला गया} added {जोड़ा गया} updated {अपडेट किया गया} removed {हटाया गया} deleted {मिटाया गया} other {अपडेट किया गया}}।}}",
 		"mobile.projects.write_unknown_note": "आपके कंप्यूटर तक नहीं पहुँच सके, इसलिए यह नहीं बता सकते कि वह सहेजा गया या नहीं। दोबारा कोशिश करने से पहले प्रोजेक्ट जाँच लें।",
+		"mobile.refusal.action.add_credit": "क्रेडिट जोड़ें",
+		"mobile.refusal.action.how_to": "इसे कैसे चालू करें",
+		"mobile.refusal.action.open_billing": "Radient बिलिंग खोलें",
+		"mobile.refusal.action.open_console": "Radient कंसोल खोलें",
+		"mobile.refusal.action.refresh_list": "सूची रीफ़्रेश करें",
+		"mobile.refusal.action.retry": "फिर से कोशिश करें",
+		"mobile.refusal.balance_out.body": "क्रेडिट जोड़ें, आपका कंप्यूटर अपने आप फिर से जुड़ जाएगा।",
+		"mobile.refusal.balance_out.title": "आपका Radient बैलेंस खत्म हो गया है।",
+		"mobile.refusal.console_disabled.title": "इस कंप्यूटर के लिए फ़ोन एक्सेस आपके Radient कंसोल में बंद है।",
+		"mobile.refusal.how_to.body": "अपने कंप्यूटर पर Local Operator → सेटिंग्स → फ़ोन एक्सेस खोलें और फ़ोन एक्सेस सेट करें चुनें। कुछ भी चालू होने से पहले आपको कीमत दिखाई जाएगी।",
+		"mobile.refusal.how_to.title": "फ़ोन एक्सेस चालू करें",
+		"mobile.refusal.offline.body": "उसे जगाएँ और पक्का करें कि वह ऑनलाइन है।",
+		"mobile.refusal.offline.title": "{computer} स्लीप में है या ऑफ़लाइन है।",
+		"mobile.refusal.phone_access_off.body": "इसे अपने कंप्यूटर पर Local Operator से चालू करें।",
+		"mobile.refusal.phone_access_off.title": "आपके Radient खाते के लिए फ़ोन एक्सेस अभी चालू नहीं है।",
+		"mobile.refusal.provisioning.body": "इसमें आमतौर पर एक मिनट से कम लगता है।",
+		"mobile.refusal.provisioning.title": "Radient अभी भी इस कंप्यूटर को सेट अप कर रहा है।",
+		"mobile.refusal.radient_unreachable.body": "हम कोशिश करते रहेंगे।",
+		"mobile.refusal.radient_unreachable.title": "Radient अभी जवाब नहीं दे रहा है।",
+		"mobile.refusal.refused.body": "इसे अपने Radient कंसोल में जाँचें, या फिर से कोशिश करें।",
+		"mobile.refusal.refused.title": "Radient ने अभी {computer} तक फ़ोन एक्सेस की अनुमति नहीं दी।",
+		"mobile.refusal.relay_stopped.body": "उसे वहाँ खोलें, यह अपने आप फिर से जुड़ जाएगा।",
+		"mobile.refusal.relay_stopped.title": "आपके कंप्यूटर पर Local Operator नहीं चल रहा है।",
+		"mobile.refusal.relay_wait.body": "थोड़ी देर में फिर से कोशिश करें।",
+		"mobile.refusal.relay_wait.title": "{computer} अभी शुरू हो रहा है।",
+		"mobile.refusal.suspended.title": "आपका कंप्यूटर अपने आप फिर से जुड़ जाएगा — अगर ऐसा बना रहे, तो उस पर Local Operator खोलें।",
+		"mobile.refusal.terminal.label": "उस कंप्यूटर पर",
+		"mobile.refusal.terminal.toggle": "टर्मिनल इस्तेमाल करते हैं?",
+		"mobile.refusal.tunnel_gone.body": "इसे Local Operator → सेटिंग्स → फ़ोन एक्सेस में चालू करें।",
+		"mobile.refusal.tunnel_gone.title": "{computer} पर फ़ोन एक्सेस बंद है।",
 		"mobile.schedules.cadence.every": "हर {duration}",
 		"mobile.schedules.cadence.left": "{cadence} · {remaining} शेष",
 		"mobile.schedules.cadence.once": "एक बार",
@@ -6582,7 +6835,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.rotate_note": "Команда запрашивает значение интерактивно, поэтому оно не попадает ни в историю команд shell, ни в список процессов. Именно этот пароль приложение запросит ниже.",
 		"mobile.computers.own_tunnel.save_connect": "Сохранить и подключиться",
 		"mobile.computers.own_tunnel.saving": "Сохранение…",
-		"mobile.computers.own_tunnel.security_body": "Вы выставляете свой компьютер в интернет, и защищает его только пароль от ретранслятора. По возможности используйте HTTPS, включите собственную аутентификацию туннеля, если он её поддерживает, и смените пароль командой `{command}`, если им с кем-то делились. Любой, у кого есть этот пароль и ваш URL, может управлять сессиями на этом компьютере.",
+		"mobile.computers.own_tunnel.security_body": "Вы выставляете свой компьютер в интернет, и защищает его только пароль от ретранслятора. По возможности используйте HTTPS, включите собственную аутентификацию туннеля, если он её поддерживает, и смените пароль в настройках «Доступ с телефона» на компьютере, если им с кем-то делились. Любой, у кого есть этот пароль и ваш URL, может управлять сессиями на этом компьютере.",
 		"mobile.computers.own_tunnel.security_heading": "Прежде чем открыть доступ",
 		"mobile.computers.own_tunnel.step_app": "В приложении",
 		"mobile.computers.own_tunnel.step_computer": "На компьютере",
@@ -6612,7 +6865,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.verdict_tls": "Сертификат этого туннеля отклонён. Используйте адрес {scheme}, который вывел туннель, выберите туннель с сертификатом, которому доверяет телефон, или замените самоподписанный сертификат в своём туннеле — приложение не будет пропускать проверку.",
 		"mobile.computers.own_tunnel.verdict_unreachable": "Не удалось связаться с этим адресом. Убедитесь, что это публичный URL, который вывел ваш туннель, и что туннель всё ещё работает.",
 		"mobile.computers.own_tunnel_instead": "Свой туннель вместо Radient",
-		"mobile.computers.password_placeholder": "Пароль из lop mobile",
+		"mobile.computers.password_placeholder": "Пароль из настроек «Доступ с телефона» на компьютере",
 		"mobile.computers.paths.own_action": "Использовать свой туннель",
 		"mobile.computers.paths.own_body": "Продвинутый путь: вы сами публикуете компьютер через свой туннель и вставляете сюда его адрес. Аккаунт Radient не понадобится ни на одном этапе, а пароль остаётся у вас.",
 		"mobile.computers.paths.own_title": "Настроить свой туннель",
@@ -6637,6 +6890,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "На этом телефоне",
 		"mobile.computers.session_error": "Приложению не удалось подключиться к этому компьютеру.",
 		"mobile.computers.session_error_help": "Перенастраивать компьютер не нужно. Повторите попытку или откройте сведения для поддержки.",
+		"mobile.computers.setup.list_updates": "Когда закончите, вернитесь сюда — список обновится сам.",
+		"mobile.computers.setup.open_settings": "На компьютере откройте Local Operator → Настройки → Доступ с телефона → Настроить доступ с телефона.",
 		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.sign_out": "Выйти",
 		"mobile.computers.signing_out": "Выход…",
@@ -6832,6 +7087,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.status.validation": "проверка",
 		"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Создан проект} completed {Завершён проект} reopened {Возобновлён проект} added {Добавлен проект} updated {Обновлён проект} removed {Удалён проект} deleted {Удалён проект} other {Обновлён проект}} «{subject}».} milestone {{action, select, created {Создана веха} completed {Завершена веха} reopened {Возобновлена веха} added {Добавлена веха} updated {Обновлена веха} removed {Удалена веха} deleted {Удалена веха} other {Обновлена веха}} «{subject}».} other {{action, select, created {Создано} completed {Завершено} reopened {Возобновлено} added {Добавлено} updated {Обновлено} removed {Удалено} deleted {Удалено} other {Обновлено}} «{subject}».}}",
 		"mobile.projects.write_unknown_note": "Не удалось связаться с компьютером, поэтому неизвестно, сохранилось ли изменение. Проверьте проект, прежде чем повторять попытку.",
+		"mobile.refusal.action.add_credit": "Пополнить баланс",
+		"mobile.refusal.action.how_to": "Как включить",
+		"mobile.refusal.action.open_billing": "Открыть оплату Radient",
+		"mobile.refusal.action.open_console": "Открыть консоль Radient",
+		"mobile.refusal.action.refresh_list": "Обновить список",
+		"mobile.refusal.action.retry": "Повторить",
+		"mobile.refusal.balance_out.body": "Пополните баланс, и компьютер переподключится сам.",
+		"mobile.refusal.balance_out.title": "На вашем балансе Radient закончились средства.",
+		"mobile.refusal.console_disabled.title": "Доступ с телефона к этому компьютеру отключён в вашей консоли Radient.",
+		"mobile.refusal.how_to.body": "На компьютере откройте Local Operator → Настройки → Доступ с телефона и выберите «Настроить доступ с телефона». Сначала вы увидите цену — до того, как что-либо будет включено.",
+		"mobile.refusal.how_to.title": "Включение доступа с телефона",
+		"mobile.refusal.offline.body": "Выведите его из сна и проверьте подключение к сети.",
+		"mobile.refusal.offline.title": "{computer}: спящий режим или нет сети.",
+		"mobile.refusal.phone_access_off.body": "Включите его в Local Operator на своём компьютере.",
+		"mobile.refusal.phone_access_off.title": "Доступ с телефона для вашего аккаунта Radient ещё не включён.",
+		"mobile.refusal.provisioning.body": "Обычно это занимает меньше минуты.",
+		"mobile.refusal.provisioning.title": "Radient ещё настраивает этот компьютер.",
+		"mobile.refusal.radient_unreachable.body": "Мы продолжим попытки.",
+		"mobile.refusal.radient_unreachable.title": "Radient сейчас не отвечает.",
+		"mobile.refusal.refused.body": "Проверьте это в консоли Radient или попробуйте ещё раз.",
+		"mobile.refusal.refused.title": "Radient сейчас не разрешил доступ с телефона к {computer}.",
+		"mobile.refusal.relay_stopped.body": "Откройте его там, и подключение восстановится само.",
+		"mobile.refusal.relay_stopped.title": "Local Operator не запущен на вашем компьютере.",
+		"mobile.refusal.relay_wait.body": "Попробуйте ещё раз через минуту.",
+		"mobile.refusal.relay_wait.title": "{computer} ещё запускается.",
+		"mobile.refusal.suspended.title": "Компьютер переподключится сам — если это затянется, откройте на нём Local Operator.",
+		"mobile.refusal.terminal.label": "На том компьютере",
+		"mobile.refusal.terminal.toggle": "Пользуетесь терминалом?",
+		"mobile.refusal.tunnel_gone.body": "Включите его в Local Operator → Настройки → Доступ с телефона.",
+		"mobile.refusal.tunnel_gone.title": "Доступ с телефона на {computer} выключен.",
 		"mobile.schedules.cadence.every": "раз в {duration}",
 		"mobile.schedules.cadence.left": "{cadence} · {remaining, plural, one {осталось #} few {осталось #} many {осталось #} other {осталось #}}",
 		"mobile.schedules.cadence.once": "однократно",
@@ -7396,7 +7681,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.rotate_note": "یہ کمانڈ پاس ورڈ آپ سے الگ سے ٹائپ کرواتی ہے، اس لیے وہ کبھی شیل ہسٹری یا پراسیس لسٹ تک نہیں پہنچتا۔ ایپ نیچے یہی پاس ورڈ مانگتی ہے۔",
 		"mobile.computers.own_tunnel.save_connect": "محفوظ کریں اور منسلک ہوں",
 		"mobile.computers.own_tunnel.saving": "محفوظ ہو رہا ہے…",
-		"mobile.computers.own_tunnel.security_body": "آپ اپنا کمپیوٹر انٹرنیٹ پر لا رہے ہیں، اور اس کی حفاظت صرف ریلے کا پاس ورڈ کرتا ہے۔ HTTPS کو ترجیح دیں، اگر آپ کی ٹنل اپنا تصدیقی نظام دیتی ہے تو اسے بھی فعال کریں، اور اگر پاس ورڈ کسی اور کے ساتھ شیئر ہو چکا ہو تو `{command}` سے اسے بدل دیں۔ جس کے پاس بھی وہ پاس ورڈ اور آپ کا URL ہو، وہ اس کمپیوٹر کے سیشن چلا سکتا ہے۔",
+		"mobile.computers.own_tunnel.security_body": "آپ اپنا کمپیوٹر انٹرنیٹ پر لا رہے ہیں، اور اس کی حفاظت صرف ریلے کا پاس ورڈ کرتا ہے۔ HTTPS کو ترجیح دیں، اگر آپ کی ٹنل اپنا تصدیقی نظام دیتی ہے تو اسے بھی فعال کریں، اور اگر پاس ورڈ کسی اور کے ساتھ شیئر ہو چکا ہو تو اسے اپنے کمپیوٹر کی فون کی رسائی کی ترتیبات میں بدل دیں۔ جس کے پاس بھی وہ پاس ورڈ اور آپ کا URL ہو، وہ اس کمپیوٹر کے سیشن چلا سکتا ہے۔",
 		"mobile.computers.own_tunnel.security_heading": "اسے انٹرنیٹ پر لانے سے پہلے",
 		"mobile.computers.own_tunnel.step_app": "ایپ میں",
 		"mobile.computers.own_tunnel.step_computer": "کمپیوٹر پر",
@@ -7426,7 +7711,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.verdict_tls": "اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔ ٹنل کا دکھایا ہوا {scheme} URL استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا اپنی چلائی ہوئی ٹنل کا خود دستخط شدہ سرٹیفکیٹ بدل دیں — ایپ یہ جانچ نہیں چھوڑے گی۔",
 		"mobile.computers.own_tunnel.verdict_unreachable": "اس پتے تک رسائی نہیں ہو سکی۔ جانچیں کہ URL وہی عوامی URL ہے جو آپ کی ٹنل نے دکھایا تھا، اور یہ کہ ٹنل اب بھی چل رہی ہے۔",
 		"mobile.computers.own_tunnel_instead": "اس کے بجائے اپنی ٹنل استعمال کریں",
-		"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
+		"mobile.computers.password_placeholder": "آپ کے کمپیوٹر کی فون کی رسائی کی ترتیبات سے ملنے والا پاس ورڈ",
 		"mobile.computers.paths.own_action": "اپنی ٹنل استعمال کریں",
 		"mobile.computers.paths.own_body": "پیش رفتہ طریقہ: آپ اپنا کمپیوٹر خود دستیاب کرتے ہیں، اپنی چلائی ہوئی ٹنل کے ذریعے، اور اس کا پتہ یہاں چسپاں کرتے ہیں۔ کسی بھی مرحلے پر Radient اکاؤنٹ درکار نہیں، اور پاس ورڈ آپ کے پاس رہتا ہے۔",
 		"mobile.computers.paths.own_title": "اپنی ٹنل خود ترتیب دیں",
@@ -7451,6 +7736,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "اس فون پر",
 		"mobile.computers.session_error": "ایپ اس کمپیوٹر سے منسلک نہیں ہو سکی۔",
 		"mobile.computers.session_error_help": "کمپیوٹر کی ترتیب بدلنے کی ضرورت نہیں۔ دوبارہ کوشش کریں یا مدد کے لیے تفصیلات دکھائیں۔",
+		"mobile.computers.setup.list_updates": "کام مکمل ہونے پر یہاں واپس آئیں — یہ فہرست خود بخود اپ ڈیٹ ہو جاتی ہے۔",
+		"mobile.computers.setup.open_settings": "اپنے کمپیوٹر پر Local Operator کھولیں اور ترتیبات → فون کی رسائی → فون کی رسائی ترتیب دیں منتخب کریں۔",
 		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.sign_out": "سائن آؤٹ کریں",
 		"mobile.computers.signing_out": "سائن آؤٹ ہو رہا ہے…",
@@ -7646,6 +7933,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.status.validation": "توثیق",
 		"mobile.projects.write_receipt": "{kind, select, project {پروجیکٹ “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} milestone {سنگ میل “{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔} other {“{subject}” {action, select, created {بنایا گیا} completed {مکمل کیا گیا} reopened {دوبارہ کھولا گیا} added {شامل کیا گیا} updated {اپ ڈیٹ کیا گیا} removed {ہٹایا گیا} deleted {حذف کیا گیا} other {اپ ڈیٹ کیا گیا}}۔}}",
 		"mobile.projects.write_unknown_note": "ہم آپ کے کمپیوٹر تک نہیں پہنچ سکے، اس لیے نہیں بتا سکتے کہ یہ محفوظ ہوا یا نہیں۔ دوبارہ کوشش کرنے سے پہلے پروجیکٹ دیکھ لیں۔",
+		"mobile.refusal.action.add_credit": "کریڈٹ شامل کریں",
+		"mobile.refusal.action.how_to": "اسے کیسے آن کریں",
+		"mobile.refusal.action.open_billing": "Radient بلنگ کھولیں",
+		"mobile.refusal.action.open_console": "Radient کنسول کھولیں",
+		"mobile.refusal.action.refresh_list": "فہرست تازہ کریں",
+		"mobile.refusal.action.retry": "دوبارہ کوشش کریں",
+		"mobile.refusal.balance_out.body": "کریڈٹ شامل کریں، آپ کا کمپیوٹر خود بخود دوبارہ جڑ جائے گا۔",
+		"mobile.refusal.balance_out.title": "آپ کا Radient بیلنس ختم ہو گیا ہے۔",
+		"mobile.refusal.console_disabled.title": "اس کمپیوٹر کے لیے فون کی رسائی آپ کے Radient کنسول میں بند ہے۔",
+		"mobile.refusal.how_to.body": "اپنے کمپیوٹر پر Local Operator → ترتیبات → فون کی رسائی کھولیں اور فون کی رسائی ترتیب دیں منتخب کریں۔ کچھ بھی آن ہونے سے پہلے آپ کو قیمت دکھائی جائے گی۔",
+		"mobile.refusal.how_to.title": "فون کی رسائی آن کریں",
+		"mobile.refusal.offline.body": "اسے جگائیں اور یقینی بنائیں کہ وہ آن لائن ہے۔",
+		"mobile.refusal.offline.title": "{computer} سلیپ میں ہے یا آف لائن ہے۔",
+		"mobile.refusal.phone_access_off.body": "اسے اپنے کمپیوٹر پر Local Operator سے آن کریں۔",
+		"mobile.refusal.phone_access_off.title": "آپ کے Radient اکاؤنٹ کے لیے فون کی رسائی ابھی آن نہیں ہے۔",
+		"mobile.refusal.provisioning.body": "اس میں عام طور پر ایک منٹ سے کم لگتا ہے۔",
+		"mobile.refusal.provisioning.title": "Radient ابھی اس کمپیوٹر کو سیٹ اپ کر رہا ہے۔",
+		"mobile.refusal.radient_unreachable.body": "ہم کوشش جاری رکھیں گے۔",
+		"mobile.refusal.radient_unreachable.title": "Radient ابھی جواب نہیں دے رہا۔",
+		"mobile.refusal.refused.body": "اسے اپنے Radient کنسول میں چیک کریں، یا دوبارہ کوشش کریں۔",
+		"mobile.refusal.refused.title": "Radient نے ابھی {computer} تک فون کی رسائی کی اجازت نہیں دی۔",
+		"mobile.refusal.relay_stopped.body": "اسے وہاں کھولیں، یہ خود بخود دوبارہ جڑ جائے گا۔",
+		"mobile.refusal.relay_stopped.title": "آپ کے کمپیوٹر پر Local Operator نہیں چل رہا۔",
+		"mobile.refusal.relay_wait.body": "تھوڑی دیر میں دوبارہ کوشش کریں۔",
+		"mobile.refusal.relay_wait.title": "{computer} ابھی شروع ہو رہا ہے۔",
+		"mobile.refusal.suspended.title": "آپ کا کمپیوٹر خود بخود دوبارہ جڑ جائے گا — اگر یہ برقرار رہے تو اس پر Local Operator کھولیں۔",
+		"mobile.refusal.terminal.label": "اس کمپیوٹر پر",
+		"mobile.refusal.terminal.toggle": "ٹرمینل استعمال کرتے ہیں؟",
+		"mobile.refusal.tunnel_gone.body": "اسے Local Operator → ترتیبات → فون کی رسائی میں آن کریں۔",
+		"mobile.refusal.tunnel_gone.title": "{computer} پر فون کی رسائی بند ہے۔",
 		"mobile.schedules.cadence.every": "ہر {duration}",
 		"mobile.schedules.cadence.left": "{cadence} · {remaining} باقی",
 		"mobile.schedules.cadence.once": "ایک بار",
@@ -8210,7 +8527,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.rotate_note": "Lệnh sẽ hỏi bạn nhập giá trị, nên mật khẩu không bao giờ xuất hiện trong lịch sử shell hay danh sách tiến trình. Đây là mật khẩu mà ứng dụng yêu cầu ở bên dưới.",
 		"mobile.computers.own_tunnel.save_connect": "Lưu và kết nối",
 		"mobile.computers.own_tunnel.saving": "Đang lưu…",
-		"mobile.computers.own_tunnel.security_body": "Bạn đang đưa chính máy tính của mình lên internet, và mật khẩu chuyển tiếp là thứ duy nhất bảo vệ nó. Hãy ưu tiên HTTPS, bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ, và đổi mật khẩu bằng `{command}` nếu mật khẩu đã từng bị chia sẻ. Bất kỳ ai có mật khẩu đó và URL của bạn đều có thể điều khiển các phiên trên máy đó.",
+		"mobile.computers.own_tunnel.security_body": "Bạn đang đưa chính máy tính của mình lên internet, và mật khẩu chuyển tiếp là thứ duy nhất bảo vệ nó. Hãy ưu tiên HTTPS, bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ, và đổi mật khẩu trong phần cài đặt Truy cập từ điện thoại trên máy tính nếu mật khẩu đã từng bị chia sẻ. Bất kỳ ai có mật khẩu đó và URL của bạn đều có thể điều khiển các phiên trên máy đó.",
 		"mobile.computers.own_tunnel.security_heading": "Trước khi công khai máy",
 		"mobile.computers.own_tunnel.step_app": "Trong ứng dụng",
 		"mobile.computers.own_tunnel.step_computer": "Trên máy tính",
@@ -8240,7 +8557,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.verdict_tls": "Chứng chỉ của đường hầm đó đã bị từ chối. Hãy dùng địa chỉ {scheme} mà đường hầm đã in ra, chọn đường hầm có chứng chỉ mà điện thoại tin cậy, hoặc thay chứng chỉ tự ký trên đường hầm bạn chạy — ứng dụng sẽ không bỏ qua bước kiểm tra này.",
 		"mobile.computers.own_tunnel.verdict_unreachable": "Không thể kết nối tới địa chỉ đó. Hãy kiểm tra xem URL có đúng là URL công khai mà đường hầm đã in ra không, và đường hầm có còn đang chạy không.",
 		"mobile.computers.own_tunnel_instead": "Chuyển sang đường hầm riêng của tôi",
-		"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
+		"mobile.computers.password_placeholder": "Mật khẩu trong phần cài đặt Truy cập từ điện thoại trên máy tính",
 		"mobile.computers.paths.own_action": "Dùng đường hầm riêng của tôi",
 		"mobile.computers.paths.own_body": "Cách nâng cao: tự công khai máy tính của mình qua đường hầm do bạn chạy, rồi dán địa chỉ vào đây. Không cần tài khoản Radient ở bất kỳ bước nào, và bạn giữ mật khẩu.",
 		"mobile.computers.paths.own_title": "Thiết lập đường hầm riêng của bạn",
@@ -8265,6 +8582,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "Trên điện thoại này",
 		"mobile.computers.session_error": "Ứng dụng không thể kết nối với máy tính này.",
 		"mobile.computers.session_error_help": "Bạn không cần cấu hình lại máy tính. Hãy thử lại hoặc mở chi tiết để gửi bộ phận hỗ trợ.",
+		"mobile.computers.setup.list_updates": "Quay lại đây khi xong — danh sách này sẽ tự cập nhật.",
+		"mobile.computers.setup.open_settings": "Trên máy tính, mở Local Operator → Cài đặt → Truy cập từ điện thoại → Thiết lập truy cập từ điện thoại.",
 		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.sign_out": "Đăng xuất",
 		"mobile.computers.signing_out": "Đang đăng xuất…",
@@ -8460,6 +8779,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.status.validation": "xác thực",
 		"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.} milestone {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} mốc {subject}.} other {{action, select, created {Đã tạo} completed {Đã hoàn thành} reopened {Đã mở lại} added {Đã thêm} updated {Đã cập nhật} removed {Đã xóa} deleted {Đã xóa} other {Đã cập nhật}} {subject}.}}",
 		"mobile.projects.write_unknown_note": "Không kết nối được với máy tính của bạn nên chưa biết thay đổi đã được lưu hay chưa. Hãy kiểm tra dự án trước khi thử lại.",
+		"mobile.refusal.action.add_credit": "Nạp tiền",
+		"mobile.refusal.action.how_to": "Cách bật",
+		"mobile.refusal.action.open_billing": "Mở trang thanh toán Radient",
+		"mobile.refusal.action.open_console": "Mở bảng điều khiển Radient",
+		"mobile.refusal.action.refresh_list": "Làm mới danh sách",
+		"mobile.refusal.action.retry": "Thử lại",
+		"mobile.refusal.balance_out.body": "Hãy nạp thêm tiền, máy tính của bạn sẽ tự kết nối lại.",
+		"mobile.refusal.balance_out.title": "Số dư Radient của bạn đã hết.",
+		"mobile.refusal.console_disabled.title": "Quyền truy cập từ điện thoại vào máy tính này đang tắt trong bảng điều khiển Radient của bạn.",
+		"mobile.refusal.how_to.body": "Trên máy tính, mở Local Operator → Cài đặt → Truy cập từ điện thoại rồi chọn Thiết lập truy cập từ điện thoại. Bạn sẽ thấy giá trước, trước khi bất cứ thứ gì được bật.",
+		"mobile.refusal.how_to.title": "Bật quyền truy cập từ điện thoại",
+		"mobile.refusal.offline.body": "Hãy đánh thức máy và đảm bảo máy đang trực tuyến.",
+		"mobile.refusal.offline.title": "{computer} đang ngủ hoặc ngoại tuyến.",
+		"mobile.refusal.phone_access_off.body": "Hãy bật nó từ Local Operator trên máy tính của bạn.",
+		"mobile.refusal.phone_access_off.title": "Quyền truy cập từ điện thoại chưa được bật cho tài khoản Radient của bạn.",
+		"mobile.refusal.provisioning.body": "Việc này thường mất chưa đến một phút.",
+		"mobile.refusal.provisioning.title": "Radient vẫn đang thiết lập máy tính này.",
+		"mobile.refusal.radient_unreachable.body": "Chúng tôi sẽ tiếp tục thử.",
+		"mobile.refusal.radient_unreachable.title": "Radient hiện không phản hồi.",
+		"mobile.refusal.refused.body": "Hãy kiểm tra trong bảng điều khiển Radient, hoặc thử lại.",
+		"mobile.refusal.refused.title": "Radient hiện chưa cho phép truy cập từ điện thoại vào {computer}.",
+		"mobile.refusal.relay_stopped.body": "Hãy mở nó trên máy đó, kết nối sẽ tự khôi phục.",
+		"mobile.refusal.relay_stopped.title": "Local Operator không chạy trên máy tính của bạn.",
+		"mobile.refusal.relay_wait.body": "Hãy thử lại sau giây lát.",
+		"mobile.refusal.relay_wait.title": "{computer} vẫn đang khởi động.",
+		"mobile.refusal.suspended.title": "Máy tính của bạn sẽ tự kết nối lại — nếu tình trạng này kéo dài, hãy mở Local Operator trên máy đó.",
+		"mobile.refusal.terminal.label": "Trên máy tính đó",
+		"mobile.refusal.terminal.toggle": "Bạn dùng terminal?",
+		"mobile.refusal.tunnel_gone.body": "Hãy bật trong Local Operator → Cài đặt → Truy cập từ điện thoại.",
+		"mobile.refusal.tunnel_gone.title": "Quyền truy cập từ điện thoại đang tắt trên {computer}.",
 		"mobile.schedules.cadence.every": "mỗi {duration}",
 		"mobile.schedules.cadence.left": "{cadence} · còn {remaining}",
 		"mobile.schedules.cadence.once": "không lặp",
@@ -9024,7 +9373,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.rotate_note": "以交互方式询问密码，因此它绝不会出现在shell历史记录或进程列表中。应用在下方要求输入的就是这个密码。",
 		"mobile.computers.own_tunnel.save_connect": "保存并连接",
 		"mobile.computers.own_tunnel.saving": "正在保存……",
-		"mobile.computers.own_tunnel.security_body": "你正在把自己的电脑暴露到互联网上，而中继密码是挡在它前面的唯一屏障。请优先使用HTTPS；如果你的隧道自带身份验证，请一并启用；如果密码曾被分享，请用`{command}`更换密码。任何人只要拿到该密码和你的URL，就能操控那台电脑上的会话。",
+		"mobile.computers.own_tunnel.security_body": "你正在把自己的电脑暴露到互联网上，而中继密码是挡在它前面的唯一屏障。请优先使用HTTPS；如果你的隧道自带身份验证，请一并启用；如果密码曾被分享，请在电脑的“手机访问”设置中更换密码。任何人只要拿到该密码和你的URL，就能操控那台电脑上的会话。",
 		"mobile.computers.own_tunnel.security_heading": "暴露到公网前须知",
 		"mobile.computers.own_tunnel.step_app": "在应用中",
 		"mobile.computers.own_tunnel.step_computer": "在电脑上",
@@ -9054,7 +9403,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.own_tunnel.verdict_tls": "该隧道的证书被拒绝。改用隧道输出的{scheme}地址，或换用证书能被手机信任的隧道；如果隧道由你自己运行，则需替换其自签名证书——应用不会跳过证书校验。",
 		"mobile.computers.own_tunnel.verdict_unreachable": "无法访问该地址。检查URL是否为隧道输出的公网地址，以及隧道是否仍在运行。",
 		"mobile.computers.own_tunnel_instead": "改用我自己的隧道",
-		"mobile.computers.password_placeholder": "来自lop mobile的密码",
+		"mobile.computers.password_placeholder": "电脑上“手机访问”设置中的密码",
 		"mobile.computers.paths.own_action": "使用我自己的隧道",
 		"mobile.computers.paths.own_body": "进阶方式：自行运行隧道来发布电脑，并在此粘贴其地址。全程无需Radient账户，密码由你自己保管。",
 		"mobile.computers.paths.own_title": "设置自己的隧道",
@@ -9079,6 +9428,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "此手机",
 		"mobile.computers.session_error": "应用无法连接到这台电脑。",
 		"mobile.computers.session_error_help": "无需重新配置电脑。请重试，或显示详细信息以联系支持。",
+		"mobile.computers.setup.list_updates": "完成后回到这里——此列表会自动更新。",
+		"mobile.computers.setup.open_settings": "在你的电脑上，打开 Local Operator → 设置 → 手机访问 → 设置手机访问。",
 		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.sign_out": "退出登录",
 		"mobile.computers.signing_out": "正在退出登录…",
@@ -9274,6 +9625,36 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.projects.status.validation": "验证中",
 		"mobile.projects.write_receipt": "{kind, select, project {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}项目“{subject}”。} milestone {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}里程碑“{subject}”。} other {{action, select, created {已创建} completed {已完成} reopened {已重新打开} added {已添加} updated {已更新} removed {已移除} deleted {已删除} other {已更新}}“{subject}”。}}",
 		"mobile.projects.write_unknown_note": "无法连接此电脑，因此无法确认是否已保存。重试前先检查项目。",
+		"mobile.refusal.action.add_credit": "充值",
+		"mobile.refusal.action.how_to": "如何开通",
+		"mobile.refusal.action.open_billing": "打开 Radient 账单",
+		"mobile.refusal.action.open_console": "打开 Radient 控制台",
+		"mobile.refusal.action.refresh_list": "刷新列表",
+		"mobile.refusal.action.retry": "重试",
+		"mobile.refusal.balance_out.body": "充值后，你的电脑会自动重新连接。",
+		"mobile.refusal.balance_out.title": "你的 Radient 余额已用完。",
+		"mobile.refusal.console_disabled.title": "此电脑的手机访问已在你的 Radient 控制台中关闭。",
+		"mobile.refusal.how_to.body": "在你的电脑上，打开 Local Operator → 设置 → 手机访问，然后选择“设置手机访问”。在开通任何功能之前，你会先看到价格。",
+		"mobile.refusal.how_to.title": "开通手机访问",
+		"mobile.refusal.offline.body": "请唤醒它，并确认它已联网。",
+		"mobile.refusal.offline.title": "{computer} 处于睡眠状态或已离线。",
+		"mobile.refusal.phone_access_off.body": "请在你电脑上的 Local Operator 中开通。",
+		"mobile.refusal.phone_access_off.title": "你的 Radient 账户尚未开通手机访问。",
+		"mobile.refusal.provisioning.body": "通常不到一分钟即可完成。",
+		"mobile.refusal.provisioning.title": "Radient 仍在设置这台电脑。",
+		"mobile.refusal.radient_unreachable.body": "我们会继续尝试。",
+		"mobile.refusal.radient_unreachable.title": "Radient 目前没有响应。",
+		"mobile.refusal.refused.body": "请在 Radient 控制台中查看，或重试。",
+		"mobile.refusal.refused.title": "Radient 目前不允许通过手机访问 {computer}。",
+		"mobile.refusal.relay_stopped.body": "在电脑上打开它，这里会自动重新连接。",
+		"mobile.refusal.relay_stopped.title": "你的电脑上没有运行 Local Operator。",
+		"mobile.refusal.relay_wait.body": "请稍后重试。",
+		"mobile.refusal.relay_wait.title": "{computer} 仍在启动。",
+		"mobile.refusal.suspended.title": "你的电脑会自动重新连接——如果一直这样，请在电脑上打开 Local Operator。",
+		"mobile.refusal.terminal.label": "在那台电脑上",
+		"mobile.refusal.terminal.toggle": "使用终端？",
+		"mobile.refusal.tunnel_gone.body": "请在 Local Operator → 设置 → 手机访问 中开启。",
+		"mobile.refusal.tunnel_gone.title": "{computer} 上的手机访问已关闭。",
 		"mobile.schedules.cadence.every": "每{duration}",
 		"mobile.schedules.cadence.left": "{cadence} · 剩余{remaining}次",
 		"mobile.schedules.cadence.once": "单次",

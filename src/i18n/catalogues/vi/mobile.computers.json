@@ -5,7 +5,7 @@
 	"mobile.computers.badge.connecting": "đang kết nối",
 	"mobile.computers.connecting": "Đang kết nối…",
 	"mobile.computers.none_on_phone": "Chưa có máy tính nào trên điện thoại này.",
-	"mobile.computers.password_placeholder": "Mật khẩu từ lop mobile",
+	"mobile.computers.password_placeholder": "Mật khẩu trong phần cài đặt Truy cập từ điện thoại trên máy tính",
 	"mobile.computers.section.not_connected": "Trong tài khoản Radient của bạn, chưa kết nối",
 	"mobile.computers.section.on_phone": "Trên điện thoại này",
 	"mobile.computers.sign_out": "Đăng xuất",
@@ -101,7 +101,7 @@
 	"mobile.computers.own_tunnel.step_test": "Kiểm tra",
 	"mobile.computers.own_tunnel.step_test_help": "Bước này gửi một yêu cầu thật qua đường hầm của bạn trước khi lưu bất cứ thứ gì.",
 	"mobile.computers.own_tunnel.security_heading": "Trước khi công khai máy",
-	"mobile.computers.own_tunnel.security_body": "Bạn đang đưa chính máy tính của mình lên internet, và mật khẩu chuyển tiếp là thứ duy nhất bảo vệ nó. Hãy ưu tiên HTTPS, bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ, và đổi mật khẩu bằng `{command}` nếu mật khẩu đã từng bị chia sẻ. Bất kỳ ai có mật khẩu đó và URL của bạn đều có thể điều khiển các phiên trên máy đó.",
+	"mobile.computers.own_tunnel.security_body": "Bạn đang đưa chính máy tính của mình lên internet, và mật khẩu chuyển tiếp là thứ duy nhất bảo vệ nó. Hãy ưu tiên HTTPS, bật xác thực riêng của đường hầm nếu đường hầm của bạn có hỗ trợ, và đổi mật khẩu trong phần cài đặt Truy cập từ điện thoại trên máy tính nếu mật khẩu đã từng bị chia sẻ. Bất kỳ ai có mật khẩu đó và URL của bạn đều có thể điều khiển các phiên trên máy đó.",
 	"mobile.computers.own_tunnel.test": "Kiểm tra kết nối",
 	"mobile.computers.own_tunnel.testing": "Đang kiểm tra…",
 	"mobile.computers.own_tunnel.save_connect": "Lưu và kết nối",
@@ -136,5 +136,7 @@
 	"mobile.computers.own_tunnel.remedy": "Trên máy tính đó: {command}",
 	"mobile.computers.own_tunnel.password_slot_other": "Điện thoại này chỉ giữ một mật khẩu chuyển tiếp, và mật khẩu đó thuộc về một địa chỉ khác. Hãy nhập mật khẩu của máy tính này, kiểm tra, rồi lưu. Mật khẩu mới sẽ thay thế mật khẩu cũ.",
 	"mobile.computers.own_tunnel.password_slot_empty": "Điện thoại này chưa lưu mật khẩu chuyển tiếp nào. Hãy nhập mật khẩu của máy tính này, kiểm tra, rồi lưu.",
-	"mobile.computers.own_tunnel.password_slot_this": "Mật khẩu chuyển tiếp đã lưu trên điện thoại này là của địa chỉ này. Hãy kiểm tra, rồi lưu."
+	"mobile.computers.own_tunnel.password_slot_this": "Mật khẩu chuyển tiếp đã lưu trên điện thoại này là của địa chỉ này. Hãy kiểm tra, rồi lưu.",
+	"mobile.computers.setup.open_settings": "Trên máy tính, mở Local Operator → Cài đặt → Truy cập từ điện thoại → Thiết lập truy cập từ điện thoại.",
+	"mobile.computers.setup.list_updates": "Quay lại đây khi xong — danh sách này sẽ tự cập nhật."
 }

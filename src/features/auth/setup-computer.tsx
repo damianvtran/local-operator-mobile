@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 
 import { useConnectorWait } from "@/features/auth/connector-wait";
+import { t } from "@/i18n";
 import { CONTROL } from "@/ui/a11y";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
@@ -30,7 +31,15 @@ import { Shimmer } from "@/ui/components/shimmer";
  *     run the billing step has no other way to know it. A placeholder in a
  *     command the reader is told to run is a command that fails.
  *
- *  3. **Waiting names what was observed, never "setting up…".** The two signals
+ *  3. **No terminal unless asked for.** The reader of this screen is usually a
+ *     Radient user who has never opened a terminal: the desktop app's Settings →
+ *     Phone access → Set up does the whole lifecycle (and shows the price first).
+ *     So that instruction leads, and the commands below sit behind "Using a
+ *     terminal?", closed by default. The list behind this screen re-fetches when
+ *     the reader comes back (`computers.tsx`), which is what the second line
+ *     promises.
+ *
+ *  4. **Waiting names what was observed, never "setting up…".** The two signals
  *     are the control-plane row (the cloud route is provisioned) and
  *     `/healthz` answering (the machine is up). `status: active` is NOT a
  *     heartbeat, so this screen never promotes it to "connected".
@@ -71,29 +80,20 @@ export type SetupComputerProps = {
 	waiting: boolean;
 };
 
-export const SetupComputer = ({
-	billing,
+/** The create and attach routes, for a reader who uses a terminal. Its own
+ *  component (rather than inline under the disclosure) so the cards keep the
+ *  nesting depth they had, and the copy inside them its line breaks: the
+ *  strings baseline records each literal's first line, and a reflow would read
+ *  as new, un-keyed copy. The tunnel id lives here because only this half
+ *  needs it. */
+const TerminalRoutes = ({
 	onWaitForConnector,
 	waiting,
-}: SetupComputerProps) => {
+}: Pick<SetupComputerProps, "onWaitForConnector" | "waiting">) => {
 	const [tunnelId, setTunnelId] = useState("");
-	const billingInactive = billing?.eligible === false;
-
 	return (
-		<View className="gap-4 pt-2">
-			<Text className="text-body text-ink">
-				This app drives the sessions on your own computer, so that computer has
-				to run a connector and stay awake. Your code stays on it.
-			</Text>
-
-			{billingInactive ? (
-				<Alert severity="warning" title="Remote access is not active">
-					{billing?.message ??
-						"Radient says this account cannot start a tunnel yet. Check billing in the console, then try again."}
-				</Alert>
-			) : null}
-
-			{/* (a) Create — recommended, and the one that needs no console. */}
+		<>
+			{/* (a) Create — recommended for terminal users; needs no console. */}
 			<Card>
 				<View className="gap-3">
 					<Text className="text-heading text-ink">
@@ -155,6 +155,56 @@ export const SetupComputer = ({
 					/>
 				</View>
 			</Card>
+		</>
+	);
+};
+
+export const SetupComputer = ({
+	billing,
+	onWaitForConnector,
+	waiting,
+}: SetupComputerProps) => {
+	const [showTerminal, setShowTerminal] = useState(false);
+	const billingInactive = billing?.eligible === false;
+
+	return (
+		<View className="gap-4 pt-2">
+			<Text className="text-body text-ink">
+				This app drives the sessions on your own computer, so that computer has
+				to run a connector and stay awake. Your code stays on it.
+			</Text>
+
+			{billingInactive ? (
+				<Alert severity="warning" title="Remote access is not active">
+					{billing?.message ??
+						"Radient says this account cannot start a tunnel yet. Check billing in the console, then try again."}
+				</Alert>
+			) : null}
+
+			<Card>
+				<View className="gap-2">
+					<Text className="text-body text-ink">
+						{t("mobile.computers.setup.open_settings")}
+					</Text>
+					<Text className="text-body-sm text-ink-muted">
+						{t("mobile.computers.setup.list_updates")}
+					</Text>
+				</View>
+			</Card>
+
+			<Button
+				testID={CONTROL.setupTerminalToggle}
+				label={t("mobile.refusal.terminal.toggle")}
+				variant="quiet"
+				expanded={showTerminal}
+				onPress={() => setShowTerminal((open) => !open)}
+			/>
+			{showTerminal ? (
+				<TerminalRoutes
+					onWaitForConnector={onWaitForConnector}
+					waiting={waiting}
+				/>
+			) : null}
 
 			{/* (c) Neither — a machine Radient does not know about. */}
 			<Card>

@@ -73,9 +73,11 @@ const PRE_S1_LATIN_INITIAL_UR_KEYS = [
  *  opt-in `Input.placeholderDir`, which states the page direction only while the
  *  value is empty (designer source preflight, M3 S2a). Kept as its own list
  *  because its channel differs from the `Text` spreads above. */
-const OPEN_LATIN_INITIAL_UR_KEYS = [
-	"mobile.computers.password_placeholder",
-] as const;
+const OPEN_LATIN_INITIAL_UR_KEYS = [] as const;
+/* M1 no-terminal: `password_placeholder` left this list when it stopped naming
+ *  `lop mobile` — the ur value now opens in Urdu. The field keeps
+ *  `placeholderDir` (asserted below), which is harmless for an Urdu-initial
+ *  hint and still right for any locale whose hint opens with a Latin name. */
 
 const read = (relative: string): string =>
 	readFileSync(new URL(relative, import.meta.url), "utf8");
@@ -263,7 +265,9 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 
 	it("password_placeholder: the real ur hint gets dir=rtl only while the field is empty", () => {
 		const hint = renderFor("mobile.computers.password_placeholder", {}, "ur");
-		expect(STARTS_LATIN.test(hint.match(FIRST_LETTER)?.[0] ?? "")).toBe(true);
+		/* The hint no longer opens with `lop mobile` (M1), so it is Urdu-initial;
+		 *  the direction guard below is what this test pins either way. */
+		expect(STARTS_LATIN.test(hint.match(FIRST_LETTER)?.[0] ?? "")).toBe(false);
 		const Field = ({ value }: { value: string }) =>
 			h(Input, {
 				label: "password",

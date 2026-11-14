@@ -80,7 +80,9 @@ final class SignInAppUITests: XCTestCase {
     _ = try control("/control?session=inactive")
     computer.tap()
     try visible("connection-error-console-link")
-    try text("Radient says this tunnel isn't active right now. Check its status in the Radient console.")
+    // The mock lists this computer with no billing and status active, so the
+    // 403 cannot be split by cause: the neutral copy, still no command.
+    try text("Radient didn't allow phone access to OAuth proof computer right now.")
     attach("tunnel-inactive-status-guidance")
     _ = try control("/control?session=malformed")
     computer.tap()

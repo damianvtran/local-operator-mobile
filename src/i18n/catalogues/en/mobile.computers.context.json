@@ -25,7 +25,7 @@
 	},
 	"mobile.computers.password_placeholder": {
 		"role": "help",
-		"note": "Placeholder of the password field. \"lop mobile\" is a command typed in a terminal: keep it verbatim in every language."
+		"note": "Placeholder of the password field on the \"Your own tunnel\" screen. \"Phone access\" is the name of the settings page in the Local Operator desktop app; use the same translation as the desktop app. Never name a terminal command here."
 	},
 	"mobile.computers.section.not_connected": {
 		"role": "heading",
@@ -409,7 +409,7 @@
 	},
 	"mobile.computers.own_tunnel.security_body": {
 		"role": "help",
-		"note": "Security advice paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). {command} is a terminal command (lop mobile password): keep the placeholder and its backticks unchanged. HTTPS and URL are technical terms; keep them recognisable."
+		"note": "Security advice paragraph on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"Phone access\" is the name of the settings page in the Local Operator desktop app; use the desktop app's translation. HTTPS and URL are technical terms; keep them recognisable."
 	},
 	"mobile.computers.own_tunnel.test": {
 		"role": "button",
@@ -550,5 +550,13 @@
 	"mobile.computers.own_tunnel.password_slot_this": {
 		"role": "help",
 		"note": "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's saved password already belongs to this address."
+	},
+	"mobile.computers.setup.open_settings": {
+		"role": "help",
+		"note": "First line of the set-up screen for a signed-in account with no computer yet. The arrows are a menu path in the desktop app; translate \"Settings\", \"Phone access\" and \"Set up\" exactly as the desktop app does."
+	},
+	"mobile.computers.setup.list_updates": {
+		"role": "help",
+		"note": "Follows the set-up instruction. The computer list on this phone is refreshed when the reader returns to this screen or to the app."
 	}
 }
