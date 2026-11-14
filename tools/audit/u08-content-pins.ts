@@ -1766,7 +1766,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the single-token `setup.tui_label`. Re-derived last with --print over the
 	 * committed tree (10530706); only `src` moved. Source identity
 	 * only, NOT rendered U-08 evidence. */
-	src: "PLACEHOLDER-until-step-C",
+	/* Convergence of #260 onto main caae98bc (#257) + round-1 remediation (D2,
+	 * Q-02, identical-by-design TUI/Terminal): both comment chains kept;
+	 * re-derived once with --print over the committed tree. */
+	src: "7e1c01106452f38c7c989236332fbead23f17eb2331bc4a19351026eb55ab579",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
