@@ -1,0 +1,24 @@
+# audit.log — commands actually run (session 57d45b0513a4, 2026-11-13)
+$ shasum -a 256 brief-s2b2a.json es/draft-es.json
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+d1d9734623f37ee5b093c1d6cad4904d5f348b605e84dcd7fb5191049f17fdb9  es/draft-es.json
+$ python3 count '['+'redacted'+']' in brief -> redacted hits 0; draft is dict of 24
+$ git -C worktree log -1 --format=%H -> cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+$ python3 flatten es mobile.computers.json (138 keys) + mobile.common.json (13) and grep terms -> relé, túnel, máquina, consola de Radient, Probar ahora, Reintentar (mobile.common.try_again)
+$ sed refusal-surface.tsx 295-365; grep button.tsx -> numberOfLines={labelLines} only when labelLines=1; refusal-surface passes none; variants.ts md = 'min-h-11 px-4 gap-2'
+$ cd worktree; NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx $SCRATCH/es-icu-check.ts
+(first attempt `node --max-old-space-size=256 node_modules/.bin/tsx` failed: SyntaxError, the .bin entry is a shell shim)
+keys brief 24 draft 24 missing [] extra []
+PH MISMATCH mobile.computers.refusal.wait_seconds aproximadamente,seconds,unos seconds
+0 other => Espera unos 0 segundos antes de volver a intentarlo.
+1 one => Espera aproximadamente 1 segundo antes de volver a intentarlo.
+2 other => Espera unos 2 segundos antes de volver a intentarlo.
+5 other => Espera unos 5 segundos antes de volver a intentarlo.
+21 other => Espera unos 21 segundos antes de volver a intentarlo.
+1000000 many => Espera unos 1000000 de segundos antes de volver a intentarlo.
+1.5 other => Espera unos 1.5 segundos antes de volver a intentarlo.
+Tu sesión de Radient ha caducado. Inicia sesión para volver a conectarte a https://mac-studio.trycloudflare.com.
+Usa la dirección https:// que mostró el túnel, elige un túnel con un certificado en el que confíe un teléfono o sustituye el certificado autofirmado — esta app no se saltará la comprobación.
+ES plural categories: [ 'one', 'many', 'other' ]
+fail 1
+$ sed ~/local-operator/i18n/style-guides/es.md 1-110; grep glossary.md relay -> relé

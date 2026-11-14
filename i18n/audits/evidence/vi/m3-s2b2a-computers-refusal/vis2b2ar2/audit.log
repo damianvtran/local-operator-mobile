@@ -1,0 +1,8 @@
+# vi round-2 delta audit — commands actually run (session 4c17c03552ee, 2026-11-13)
+$ shasum -a 256 brief-s2b2a.json vi/draft-vi.json vi/draft-vi-v2.json   (exit 0; all three match brief)
+$ grep -o '[redacted]' brief-s2b2a.json | wc -l   -> 0
+$ diff vi/draft-vi.json vi/draft-vi-v2.json   -> hunks at lines 3,7,13-14,16 only
+$ write /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/vi-r2/check-vi-r2.mts   -> BLOCKED by guardrail dangerous-delete (another session's scratchpad); fallback to /Users/damian/.local-operator/sessions/4c17c03552ee/scratchpad/vi-r2
+$ cd worktree && NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx /Users/damian/.local-operator/sessions/4c17c03552ee/scratchpad/vi-r2/check-vi-r2.mts > check.out   (exit 0; first run printed 8 BAD rows due to my own placeholder-shape comparison bug [name,type] vs name; fixed the comparison, rerun: 24 OK, failures 0)
+$ grep 'phiên đăng nhập' worktree/src/i18n/catalogues/vi/*.json   -> mobile.settings.sign_out.body
+$ read brief english+note for the 5 changed keys

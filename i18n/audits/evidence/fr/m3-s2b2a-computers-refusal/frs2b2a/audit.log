@@ -1,0 +1,67 @@
+# audit.log — fr, m3-s2b2a-computers-refusal — auditor session 41808e7144c1 (anthropic/claude-opus-5-5) — 2026-11-13T19:23:34+00:00
+# Execution log of commands actually run in this session, with their outputs.
+
+$ shasum -a 256 brief-s2b2a.json fr/draft-fr.json   (cwd /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/)
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+f772103e61bbe87e18603b57b5152d360cf48a999a8fc04bafc96a8a192985f4  fr/draft-fr.json
+-> both match the frozen expected hashes.
+
+$ python3: count of "["+"redacted"+"]" in brief / draft
+brief 0 / draft 0
+
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a log -1 --format=%H
+cd249ed158dcf6a4965cf7c9f9ad950981e61df9   (matches brief sourceSha)
+
+$ env -u NO_COLOR NODE_OPTIONS=--max-old-space-size=256 ./node_modules/.bin/tsx /Users/damian/.local-operator/sessions/41808e7144c1/scratchpad/icu-fr.ts
+  (imports parseMessage/formatMessage/pluralCategory from src/i18n/messages.ts; script retained at /Users/damian/.local-operator/sessions/41808e7144c1/scratchpad/icu-fr.ts)
+fr categories reached: one,other,many | fr CLDR resolved: one,many,other
+OK   offline_title en[subject,text] fr[subject,text]
+OK   relay_stopped_title en[subject,text] fr[subject,text]
+OK   tunnel_gone_title en[subject,text] fr[subject,text]
+OK   console_title en[subject,text] fr[subject,text]
+OK   password_title en[] fr[]
+OK   sign_in_title en[subject,text] fr[subject,text]
+OK   retry_title en[subject,text] fr[subject,text]
+OK   certificate_title en[] fr[]
+OK   host_title en[] fr[]
+OK   offline_next en[] fr[]
+OK   relay_stopped_next en[] fr[]
+OK   tunnel_gone_next en[] fr[]
+OK   console_next en[] fr[]
+OK   password_next en[] fr[]
+OK   sign_in_next en[] fr[]
+OK   retry_next en[] fr[]
+OK   certificate_next en[scheme,text] fr[scheme,text]
+OK   host_next en[] fr[]
+OK   wait_seconds en[seconds,plural] fr[seconds,plural]
+OK   try_now en[] fr[]
+OK   try_again en[] fr[]
+OK   sign_in_again en[] fr[]
+OK   open_console en[] fr[]
+OK   another_address en[] fr[]
+0 => one | Attendez environ 0 seconde avant de réessayer.
+1 => one | Attendez environ 1 seconde avant de réessayer.
+2 => other | Attendez environ 2 secondes avant de réessayer.
+5 => other | Attendez environ 5 secondes avant de réessayer.
+30 => other | Attendez environ 30 secondes avant de réessayer.
+1000000 => many | Attendez environ 1000000 de secondes avant de réessayer.
+Votre session Radient a expiré. Reconnectez-vous pour accéder à https://abc.trycloudflare.com.
+param mismatches: 0
+
+$ python3 code-point scan (bidi U+200E/F,U+061C,U+202A-E,U+2066-9; NFC; ASCII apostrophe; space before : ; ! ? »)
+issues: []   non-letter non-ASCII present: U+2019 (apostrophe, 8 keys), U+2014 (certificate_next, spaced as in own_tunnel.verdict_tls)
+
+$ osascript -l JavaScript /Users/damian/.local-operator/sessions/41808e7144c1/scratchpad/measure.js ...   (NSFont systemFont 15 pt weight 0.3 = semibold, token 'label' size 15/600)
+Ouvrir la console Radient	178.7	chars=25
+Utiliser une autre adresse	182.9	chars=26
+Essayer maintenant	140.3	chars=18
+Se reconnecter	109.0	chars=14
+Réessayer	73.7	chars=9
+Open the Radient console	183.4	chars=24
+Use another address	148.1	chars=19
+
+$ grep/sed src/ui/components/refusal-surface.tsx (lines 293-362) and button.tsx
+buttons stacked vertically in <View className="gap-2 pt-1">; no labelLines passed -> Text numberOfLines undefined -> wraps; button md = "min-h-11 px-4".
+
+$ grep fr catalogue terms: relais, tunnel, ordinateur, mot de passe, console Radient, Se reconnecter/vous reconnecter, Essayer maintenant, Réessayer, many arm "# de secondes" (own_tunnel.verdict_timeout), verdict_password / verdict_tls / verdict_host wording.
+No translation/MT service used.
