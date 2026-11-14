@@ -1797,7 +1797,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * kept (the session-row `last_user_at` contract from #263; the M1 refusal
 	 * work from #261). Re-derived once with --print over the merged tree; only
 	 * `src` moved. Source identity only, NOT rendered U-08 evidence. */
-	src: "92fde1587f4957e787ecd3934090ee77acbf005837cf3e8bcdcd9b6485fbe802",
+	src: "1ccea71b34b69f589d4d4c9bb43329e5ea6f1fba8ce94dc8f1d7b245064461c0",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
