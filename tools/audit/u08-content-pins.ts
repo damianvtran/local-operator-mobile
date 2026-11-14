@@ -1694,8 +1694,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * Re-derived with --print over the committed tree (dc89dbd7); only `src`
 	 * moved. Then the M1 scope additions (core C1 reasons/kinds, Last error on
 	 * the retry branch, Copy diagnostics, the Radient 401 split): re-derived
-	 * again over 58b41133. Source identity only, NOT rendered U-08 evidence. */
-	src: "a1d6ef49e6c50370efede4af139c4505c53c0a99774a8a5e878ff4d1a160f2ca",
+	 * again over 58b41133. Then the PR #261 round-1 remediation (set-up poll,
+	 * diagnostics-only Last error, transient notice, Home's named refusal,
+	 * redaction, copy fixes in 8 locales): re-derived with --print over the
+	 * staged remediation tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "d82e9e6263bd6101dbcc9029668c6023728c512b2916a70e2189e3b9c143abce",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

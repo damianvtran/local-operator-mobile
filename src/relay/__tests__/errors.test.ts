@@ -626,13 +626,31 @@ describe("core C1 reasons and kinds land on their own surfaces (M1)", () => {
 		expect(error.surface).toBe("retry");
 	});
 
-	it("keeps a known reason beside a wait_* kind, which decides the surface", () => {
-		const error = gateway503({
-			detail: "d",
-			reason: "control_plane_unreachable",
-			kind: "wait_network",
-		});
-		expect(error.reason).toBe("control_plane_unreachable");
-		expect(error.surface).toBe("retry");
+	/* PR #261 R6: the documented precedence is reason → kind. A known reason
+	 *  beside a `wait_*` kind used to take the kind's `retry` surface while the
+	 *  copy took the reason's — a `retry` surface reading "Add credit". */
+	it.each([
+		["control_plane_unreachable", "wait_network", "computer-offline"],
+		["billing_lapsed", "wait_radient", "console"],
+		["tunnel_disabled", "wait_reconnect", "console"],
+		["server_unavailable", "wait_radient", "retry"],
+	] as const)(
+		"lets a known reason %s beside kind %s decide the surface (%s)",
+		(reason, kind, surface) => {
+			const error = gateway503({ detail: "d", reason, kind });
+			expect(error.reason).toBe(reason);
+			expect(error.relayStateKind).toBe(kind);
+			expect(error.surface).toBe(surface);
+		},
+	);
+
+	it("still lets a wait_* kind decide when the reason is unknown or absent", () => {
+		expect(gateway503({ detail: "d", kind: "wait_network" }).surface).toBe(
+			"retry",
+		);
+		expect(
+			gateway503({ detail: "d", reason: "a_future_reason", kind: "wait_x" })
+				.surface,
+		).toBe("retry");
 	});
 });

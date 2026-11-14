@@ -5,7 +5,7 @@
 	"mobile.computers.badge.connecting": "منسلک ہو رہا",
 	"mobile.computers.connecting": "منسلک ہو رہا ہے…",
 	"mobile.computers.none_on_phone": "اس فون پر ابھی کوئی کمپیوٹر نہیں۔",
-	"mobile.computers.password_placeholder": "آپ کے کمپیوٹر کی فون کی رسائی کی ترتیبات سے ملنے والا پاس ورڈ",
+	"mobile.computers.password_placeholder": "lop mobile سے ملنے والا پاس ورڈ",
 	"mobile.computers.section.not_connected": "آپ کے Radient اکاؤنٹ پر، منسلک نہیں",
 	"mobile.computers.section.on_phone": "اس فون پر",
 	"mobile.computers.sign_out": "سائن آؤٹ کریں",
@@ -101,7 +101,7 @@
 	"mobile.computers.own_tunnel.step_test": "جانچ کریں",
 	"mobile.computers.own_tunnel.step_test_help": "کچھ بھی محفوظ ہونے سے پہلے یہ آپ کی ٹنل کے ذریعے ایک حقیقی درخواست بھیجتا ہے۔",
 	"mobile.computers.own_tunnel.security_heading": "اسے انٹرنیٹ پر لانے سے پہلے",
-	"mobile.computers.own_tunnel.security_body": "آپ اپنا کمپیوٹر انٹرنیٹ پر لا رہے ہیں، اور اس کی حفاظت صرف ریلے کا پاس ورڈ کرتا ہے۔ HTTPS کو ترجیح دیں، اگر آپ کی ٹنل اپنا تصدیقی نظام دیتی ہے تو اسے بھی فعال کریں، اور اگر پاس ورڈ کسی اور کے ساتھ شیئر ہو چکا ہو تو اسے اپنے کمپیوٹر کی فون کی رسائی کی ترتیبات میں بدل دیں۔ جس کے پاس بھی وہ پاس ورڈ اور آپ کا URL ہو، وہ اس کمپیوٹر کے سیشن چلا سکتا ہے۔",
+	"mobile.computers.own_tunnel.security_body": "آپ اپنا کمپیوٹر انٹرنیٹ پر لا رہے ہیں، اور اس کی حفاظت صرف ریلے کا پاس ورڈ کرتا ہے۔ HTTPS کو ترجیح دیں، اگر آپ کی ٹنل اپنا تصدیقی نظام دیتی ہے تو اسے بھی فعال کریں، اور اگر پاس ورڈ کسی اور کے ساتھ شیئر ہو چکا ہو تو `{command}` سے اسے بدل دیں۔ جس کے پاس بھی وہ پاس ورڈ اور آپ کا URL ہو، وہ اس کمپیوٹر کے سیشن چلا سکتا ہے۔",
 	"mobile.computers.own_tunnel.test": "کنکشن جانچیں",
 	"mobile.computers.own_tunnel.testing": "جانچ ہو رہی ہے…",
 	"mobile.computers.own_tunnel.save_connect": "محفوظ کریں اور منسلک ہوں",
@@ -137,7 +137,9 @@
 	"mobile.computers.own_tunnel.password_slot_other": "یہ فون ریلے کا صرف ایک پاس ورڈ رکھتا ہے، اور وہ کسی دوسرے پتے کا ہے۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔ یہ پہلے والے پاس ورڈ کی جگہ لے لے گا۔",
 	"mobile.computers.own_tunnel.password_slot_empty": "اس فون پر ریلے کا کوئی پاس ورڈ محفوظ نہیں۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔",
 	"mobile.computers.own_tunnel.password_slot_this": "اس فون پر محفوظ ریلے کا پاس ورڈ اسی پتے کا ہے۔ اسے جانچیں، پھر محفوظ کریں۔",
-	"mobile.computers.setup.open_settings": "اپنے کمپیوٹر پر Local Operator کھولیں اور ترتیبات → فون کی رسائی → فون کی رسائی ترتیب دیں منتخب کریں۔",
+	"mobile.computers.setup.open_settings": "اپنے کمپیوٹر پر Local Operator کھولیں اور ترتیبات → Radient اکاؤنٹ → فون کی رسائی → فون کی رسائی ترتیب دیں منتخب کریں۔",
 	"mobile.computers.setup.list_updates": "کام مکمل ہونے پر یہاں واپس آئیں — یہ فہرست خود بخود اپ ڈیٹ ہو جاتی ہے۔",
+	"mobile.computers.setup.check_again": "دوبارہ دیکھیں",
+	"mobile.computers.setup.checking": "دیکھا جا رہا ہے…",
 	"mobile.computers.hint.radient_unreachable": "اس وقت Radient تک رسائی نہیں ہو پا رہی"
 }

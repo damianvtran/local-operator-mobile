@@ -841,3 +841,36 @@ describe("a Radient or network failure is named as such, not as a sleeping compu
 		);
 	});
 });
+
+/* PR #261 Q3: a live route whose list stream is retrying through a wait the
+ *  computer NAMED stays phase `live` for the whole backoff, and the switcher
+ *  said "Online" beside a computer saying "I can't reach Radient". */
+describe("a named wait on a live route reads Not connected (PR #261 Q3)", () => {
+	const live = (transientCause: string | null) =>
+		switcherSections(
+			input({
+				saved: [radient("r1", "t1", HOST_A)],
+				discovered: [discovered("t1", HOST_A)],
+				route: { phase: "live", tunnelId: "t1" },
+				activeComputerId: "r1",
+				surface: null,
+				transientCause,
+			}),
+		).onPhone[0];
+
+	it("is Online with no notice (negative control)", () => {
+		expect(live(null)?.health.kind).toBe("online");
+	});
+
+	it.each([
+		["radient-unreachable", "Can't reach Radient right now"],
+		["wait-network", "Open Settings to fix the connection"],
+		["relay-wait", "Open Settings to fix the connection"],
+	])("%s → Not connected, hint %j", (cause, hint) => {
+		const row = live(cause);
+		if (!row) throw new Error("no row");
+		expect(row.health).toMatchObject({ kind: "refused", surface: "retry" });
+		expect(healthLabel(row.health, NOW)).toBe("Not connected");
+		expect(rowHint(row, "on-phone")).toBe(hint);
+	});
+});

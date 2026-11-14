@@ -72,5 +72,6 @@
 	"mobile.settings.diagnostics.tunnel": "ٹنل آئی ڈی",
 	"mobile.settings.diagnostics.address": "ٹنل کا پتہ",
 	"mobile.settings.diagnostics.copy": "تشخیص کاپی کریں",
-	"mobile.settings.diagnostics.copied": "تشخیص کاپی ہو گئی"
+	"mobile.settings.diagnostics.copied": "تشخیص کاپی ہو گئی",
+	"mobile.settings.diagnostics.copy_failed": "کاپی نہیں ہو سکا۔ دوبارہ کوشش کریں۔"
 }

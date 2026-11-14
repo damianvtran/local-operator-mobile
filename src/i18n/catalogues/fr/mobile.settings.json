@@ -72,5 +72,6 @@
 	"mobile.settings.diagnostics.tunnel": "ID du tunnel",
 	"mobile.settings.diagnostics.address": "Adresse du tunnel",
 	"mobile.settings.diagnostics.copy": "Copier le diagnostic",
-	"mobile.settings.diagnostics.copied": "Diagnostic copié"
+	"mobile.settings.diagnostics.copied": "Diagnostic copié",
+	"mobile.settings.diagnostics.copy_failed": "Copie impossible. Réessayez."
 }

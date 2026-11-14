@@ -72,5 +72,6 @@
 	"mobile.settings.diagnostics.tunnel": "ID đường hầm",
 	"mobile.settings.diagnostics.address": "Địa chỉ đường hầm",
 	"mobile.settings.diagnostics.copy": "Sao chép thông tin chẩn đoán",
-	"mobile.settings.diagnostics.copied": "Đã sao chép thông tin chẩn đoán"
+	"mobile.settings.diagnostics.copied": "Đã sao chép thông tin chẩn đoán",
+	"mobile.settings.diagnostics.copy_failed": "Không sao chép được. Hãy thử lại."
 }

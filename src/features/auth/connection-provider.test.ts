@@ -21,7 +21,6 @@ import {
 	ConnectionProvider,
 	configStore,
 	connectionStore,
-	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
 import { headerHealth } from "@/features/session/health";
@@ -388,9 +387,20 @@ async function relay(
 		failCode?: boolean;
 		/** Drops the session code request's connection: a pick made offline. */
 		dropCode?: boolean;
+		/** Drops the account token refresh's connection: Radient unreachable on
+		 *  a cold start (PR #261 U9). */
+		dropOauthRefresh?: boolean;
+		/** Answers for list-stream REOPENS (the first open always succeeds), one
+		 *  per reopen, in order (PR #261 R1/Q3). */
+		catalogueFailures?: Array<{
+			status: number;
+			body: unknown;
+			headers?: Record<string, string>;
+		}>;
 	} = {},
 ) {
 	const events: string[] = [];
+	const catalogueFailures = [...(options.catalogueFailures ?? [])];
 	let failLogout = options.failLogout;
 	let oauthRefreshed = false;
 	let oauthIssued = 0;
@@ -439,6 +449,10 @@ async function relay(
 			response.writeHead(status, { "content-type": "application/json" });
 			response.end(JSON.stringify(value));
 		};
+		if (path === "/v1/auth/oauth/token" && options.dropOauthRefresh) {
+			request.socket.destroy();
+			return;
+		}
 		if (path === "/v1/auth/oauth/token" && options.refreshOauth) {
 			json({
 				access_token: "fresh-retirement",
@@ -605,6 +619,15 @@ async function relay(
 		}
 		if (path === "/api/sessions/events") {
 			catalogueStreams += 1;
+			const failure = catalogueStreams > 1 ? catalogueFailures.shift() : null;
+			if (failure) {
+				response.writeHead(failure.status, {
+					"content-type": "application/json",
+					...failure.headers,
+				});
+				response.end(JSON.stringify(failure.body));
+				return;
+			}
 			if (options.refuseCatalogue && catalogueStreams > 1) {
 				if (options.edgeCatalogue)
 					response.setHeader("x-radient-login", "required");
@@ -752,6 +775,8 @@ async function relay(
 		failRefreshAfter: (status: number, retryAfter: number) => {
 			refreshFailures.push({ status, retryAfter });
 		},
+		/** How many list streams have been opened so far. */
+		catalogueStreams: () => catalogueStreams,
 		/** Ends every open list stream cleanly — the gateway's 60 s stream cap. */
 		endCatalogueStreams: () => {
 			for (const open of openCatalogue) open.end();
@@ -3323,12 +3348,23 @@ describe("a pick and a Refresh do not leave each other's state behind (PR #121 r
 			await latest.selectComputer(second);
 		});
 		expect(connectionStore.getState().phase).toBe("refused");
+		/* PR #261 Q6: the mint's network failure stays TYPED, so the copy is
+		 *  "Radient isn't responding" (the phone's side), not the generic
+		 *  "{computer} is not ready yet" that blamed the computer. */
 		expect(latest.refusal).toMatchObject({
 			kind: "retry",
 			subject: "Synthetic computer 2",
-			detail: PICK_UNREACHABLE_DETAIL,
 			remedy: null,
+			copy: {
+				cause: "radient-unreachable",
+				title: "Radient isn't responding right now.",
+				body: "Try again in a moment.",
+			},
 		});
+		expect(latest.refusal?.copy?.actions.map((item) => item.id)).toEqual([
+			"retry",
+		]);
+		expect(latest.lastError?.surface).toBe("retry");
 		expect(JSON.stringify(latest.refusal)).not.toMatch(CONSOLE_COPY);
 	});
 });
@@ -3974,4 +4010,155 @@ describe("a background launch on a locked device (R1-M2)", () => {
 		await act(async () => appState.emit("active"));
 		expect(durable.oauthReads).toBe(1);
 	});
+});
+
+/* --- PR #261 round-1 remediation, driven through the real provider -------- */
+describe("PR #261 round-1 remediation: the provider's side", () => {
+	/** Waits for `test` in real time (the stream's backoff is real timers). */
+	async function eventually(test: () => boolean, ms = 6_000) {
+		const deadline = Date.now() + ms;
+		while (!test()) {
+			if (Date.now() > deadline)
+				throw new Error("Provider did not reach the expected state");
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 20));
+			});
+		}
+	}
+	async function liveCustom(options: Parameters<typeof relay>[0]) {
+		const mock = await relay(options);
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => sessionReading.projection !== null);
+		return mock;
+	}
+
+	it("R1/Q3: a retried 503 is a diagnostics-only cause and a notice, never a stopped session, and clears on the next good frame", async () => {
+		const mock = await liveCustom({
+			catalogueFailures: [
+				{ status: 503, body: { detail: "d", reason: "server_unavailable" } },
+			],
+		});
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		/* The clean end is first recorded as the stalled stream's own cause —
+		 *  Q4: "Not answering" never sits beside "None", even for that moment —
+		 *  then the reopen's 503 replaces it. */
+		await eventually(
+			() =>
+				latest.diagnosticError?.summary ===
+				"gateway-refused 503 server_unavailable",
+		);
+		expect(latest.transient).toMatchObject({
+			cause: "radient-unreachable",
+			title: "Radient isn't responding right now.",
+		});
+		/* …and NOT in the field `use-session` reads: no refusal, no stopped
+		 *  session, the transcript stays (the round-1 defect). */
+		expect(latest.lastError).toBeNull();
+		expect(latest.refusal).toBeNull();
+		expect(sessionReading.error).toBeNull();
+		expect(sessionReading.content).toBe("transcript");
+		/* The backoff reopens the stream; its first frame clears both. */
+		await eventually(
+			() => latest.diagnosticError === null && latest.transient === null,
+		);
+		expect(latest.lastError).toBeNull();
+	}, 20_000);
+
+	it("Q3: the notice's Retry reopens the stream now, not after the backoff", async () => {
+		const mock = await liveCustom({
+			catalogueFailures: [
+				{ status: 503, body: { detail: "d", kind: "wait_network" } },
+				{ status: 503, body: { detail: "d", kind: "wait_network" } },
+			],
+		});
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		await eventually(() => latest.transient?.cause === "wait-network");
+		const opened = mock.catalogueStreams();
+		const pressedAt = Date.now();
+		await act(async () => {
+			latest.retryTransient();
+		});
+		await eventually(() => mock.catalogueStreams() > opened, 1_500);
+		/* Well inside the 2 s first backoff step: the press started it. */
+		expect(Date.now() - pressedAt).toBeLessThan(1_500);
+	}, 20_000);
+
+	it("U4: a Radient-route 401 without X-Radient-Login keeps the sign-in, says so in Radient words, and records it", async () => {
+		/* Two computers, so the cold start does not open one by itself; the
+		 *  same shape as the edge-401 test above, minus `X-Radient-Login`. */
+		const tunnels = ["a", "b"].map((letter, index) => ({
+			id: `tun-synthetic-${index + 1}`,
+			name: `Synthetic computer ${index + 1}`,
+			hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		}));
+		const mock = await relay({ tunnels, refuseCatalogue: true });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(
+			() =>
+				latest.restoredAccount &&
+				connectionStore.getState().computers.length === 2,
+		);
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("Expected discovered computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		const revoke = vi.spyOn(startupAuthorizationLifecycle, "revoke");
+		try {
+			mock.refuseCatalogue.resolve();
+			await eventually(() => connectionStore.getState().surface === "password");
+			await eventually(() => latest.lastError !== null);
+			expect(latest.refusal?.copy).toMatchObject({
+				cause: "relay-refused",
+				title:
+					"Local Operator on Synthetic computer 1 didn't accept this phone.",
+			});
+			expect(JSON.stringify(latest.refusal?.copy)).not.toMatch(/password/i);
+			expect(latest.lastError?.kind).toBe("relay-unauthorized");
+			expect(latest.diagnosticError?.summary).toBe("relay-unauthorized 401");
+			/* The follow-on `noteError` used to revoke on "password" (U4). */
+			expect(revoke).not.toHaveBeenCalled();
+			expect(latest.radientSignedIn).toBe(true);
+		} finally {
+			revoke.mockRestore();
+		}
+	}, 20_000);
+
+	it("U9: a cold start that cannot reach Radient says so in the mint path's words, with a Last error", async () => {
+		const mock = await relay({ dropOauthRefresh: true });
+		transport(mock.origin);
+		durable.oauth = {
+			...oauth,
+			refresh: "synthetic-refresh",
+			expires_at: Date.now() - 60_000,
+		};
+		await mount();
+		await eventually(() => connectionStore.getState().surface === "retry");
+		expect(latest.refusal?.copy).toMatchObject({
+			cause: "radient-unreachable",
+			body: "Try again in a moment.",
+		});
+		expect(latest.lastError?.kind).toBe("transport");
+		expect(latest.diagnosticError?.summary).toBe("transport");
+		/* The grant was not deleted: nothing here is the reader's to fix. */
+		expect(durable.oauth).not.toBeNull();
+	}, 20_000);
 });

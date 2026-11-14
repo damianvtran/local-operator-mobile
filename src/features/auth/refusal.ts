@@ -104,6 +104,23 @@ export const tunnelSessionRelayError = (
 	error: TunnelSessionError,
 ): RelayError => new TunnelConnectionError(error);
 
+/**
+ * The phone could not reach Radient's API at all (a cold-start restore whose
+ * token refresh never got an answer). Typed, rather than a bare `retry`
+ * surface with no error, for two reasons (PR #261 U9): the copy is then the
+ * same "Radient isn't responding" sentence the mint path shows for the same
+ * cause, instead of the generic `retry` headline; and Diagnostics' Last error
+ * has something to say instead of "None" beside a refusal.
+ */
+class RadientUnreachableError extends RelayError {
+	constructor(message: string) {
+		super("transport", message, { surface: "retry", retry: "never" });
+	}
+}
+
+export const radientUnreachableError = (message: string): RelayError =>
+	new RadientUnreachableError(message);
+
 export type RefusalView = {
 	kind: RefusalKind;
 	/** What was being reached, named for the reader. */
@@ -143,9 +160,32 @@ export type RefusalCause =
 	| "wait-reconnect"
 	| "computer-sign-in"
 	| "computer-attention"
-	| "open-console";
+	| "open-console"
+	/* A Radient-route 401 WITHOUT `X-Radient-Login`: the relay behind the tunnel
+	 *  refused this phone. A Radient reader never set or saw a relay password, so
+	 *  the password surface's "check the relay password" was a dead end (U4). */
+	| "relay-refused";
 
 export type RefusalCopy = RefusalSurfaceCopy & { cause: RefusalCause };
+
+/** Causes fixed in the reader's Radient ACCOUNT (billing, the console). Under
+ *  these, "Use another address" points a non-technical reader at the own-relay
+ *  password route, which cannot fix any of them (U10), and the terminal
+ *  disclosure's `lop tunnel status` only reads the state back (D6). */
+const ACCOUNT_CAUSES: ReadonlySet<RefusalCause> = new Set<RefusalCause>([
+	"phone-access-off",
+	"balance-out",
+	"console-disabled",
+	"open-console",
+	"refused",
+]);
+
+/** The billing causes: no terminal disclosure, so the 403 split and the
+ *  gateway's `billing_*` reasons render the same screen (D6). */
+const BILLING_CAUSES: ReadonlySet<RefusalCause> = new Set<RefusalCause>([
+	"phone-access-off",
+	"balance-out",
+]);
 
 /** Radient billing, where credit is added and phone access is paid for. The
  *  console path is the one the core app already links (`dashboard/billing`). */
@@ -239,31 +279,45 @@ function copyFor(cause: RefusalCause, subject: string): RefusalCopy {
 		title: string,
 		body: string | null,
 		actions: RefusalAction[],
-	): RefusalCopy => ({ cause, title, body, actions, help: null });
+	): RefusalCopy => ({
+		cause,
+		title,
+		body,
+		actions,
+		help: null,
+		accountCause: ACCOUNT_CAUSES.has(cause),
+	});
+	/* Every action list ends in Retry wherever the fix happens somewhere else
+	 *  (the desktop, the console, billing): nothing on this phone polls while a
+	 *  refusal shows, so the return trip needs a button (U6, D1, D4). */
 	switch (cause) {
 		case "phone-access-off":
 			return {
 				...plain(
 					t("mobile.refusal.phone_access_off.title"),
 					t("mobile.refusal.phone_access_off.body"),
-					[action.howTo(), action.openBilling()],
+					[action.howTo(), action.openBilling(), action.retry()],
 				),
 				help: t("mobile.refusal.how_to.body"),
 			};
 		case "balance-out":
-			/* Retry is for the return from paying: the reconnect is automatic on
-			 *  the computer's side, but this screen does not poll (U10). */
 			return plain(
 				t("mobile.refusal.balance_out.title"),
 				t("mobile.refusal.balance_out.body"),
 				[action.addCredit(), action.retry()],
 			);
 		case "suspended":
-			return plain(t("mobile.refusal.suspended.title"), null, [action.retry()]);
+			return plain(
+				t("mobile.refusal.suspended.title", { computer: subject }),
+				t("mobile.refusal.suspended.body"),
+				[action.retry()],
+			);
 		case "console-disabled":
-			return plain(t("mobile.refusal.console_disabled.title"), null, [
-				action.openConsole(),
-			]);
+			return plain(
+				t("mobile.refusal.console_disabled.title", { computer: subject }),
+				null,
+				[action.openConsole(), action.retry()],
+			);
 		case "provisioning":
 			return plain(
 				t("mobile.refusal.provisioning.title"),
@@ -282,9 +336,15 @@ function copyFor(cause: RefusalCause, subject: string): RefusalCopy {
 				t("mobile.refusal.offline.body"),
 				[action.retry()],
 			);
+		case "relay-refused":
+			return plain(
+				t("mobile.refusal.relay_refused.title", { computer: subject }),
+				t("mobile.refusal.relay_refused.body"),
+				[action.retry()],
+			);
 		case "relay-stopped":
 			return plain(
-				t("mobile.refusal.relay_stopped.title"),
+				t("mobile.refusal.relay_stopped.title", { computer: subject }),
 				t("mobile.refusal.relay_stopped.body"),
 				[action.retry()],
 			);
@@ -383,6 +443,47 @@ function causeForKind(kind: string | undefined): RefusalCause | undefined {
 	}
 }
 
+/** Surfaces whose copy is the surface's own, whatever error sits beside them.
+ *  (An account mismatch is a `diagnostic` surface carrying the mint's
+ *  `account` failure, for which `refusalCopy` returns no copy either.) */
+const OWN_COPY_SURFACES: ReadonlySet<ErrorSurface> = new Set<ErrorSurface>([
+	"sign-in",
+	"password",
+]);
+
+/** The computer's own answer (C1 `reason`, then `kind`) → cause. */
+function causeForError(error: RelayError | null): RefusalCause | undefined {
+	if (!error) return undefined;
+	if (error.reasonRaw && Object.hasOwn(REASON_CAUSE, error.reasonRaw))
+		return REASON_CAUSE[error.reasonRaw];
+	return causeForKind(error.relayStateKind);
+}
+
+/** Causes that clear by themselves while the list stream keeps retrying. */
+const TRANSIENT_CAUSES: ReadonlySet<RefusalCause> = new Set<RefusalCause>([
+	"radient-unreachable",
+	"wait-network",
+	"wait-reconnect",
+	"relay-wait",
+]);
+
+/**
+ * The non-blocking notice for a failure the list stream is RETRYING (PR #261
+ * Q3): a relay `503` with C1's `server_unavailable` or a `wait_*` /
+ * `check_status` kind. That path deliberately raises no refusal — the stream
+ * comes back by itself — and so the phone used to show a green check and
+ * "Online" for a computer saying \"I can't reach Radient\". This returns the
+ * cause's own sentence for a banner (with Retry), or `null` for anything the
+ * computer did not name as a self-clearing wait.
+ */
+export function transientCopy(
+	error: RelayError | null,
+	subject: string,
+): RefusalCopy | null {
+	const cause = causeForError(error);
+	return cause && TRANSIENT_CAUSES.has(cause) ? copyFor(cause, subject) : null;
+}
+
 /**
  * The plain copy for a refusal, or `null` to keep the surface's per-kind copy
  * (sign-in, password, certificate, … — causes this change does not touch).
@@ -392,14 +493,38 @@ function causeForKind(kind: string | undefined): RefusalCause | undefined {
  * then the surface. Every field is feature-detected: a relay that sends none
  * of them lands on the surface rows exactly as before, and an unknown value is
  * never a crash and never a guess.
+ *
+ * **The error is read only when it belongs to the surface being shown**
+ * (`error.surface === surface`), and never for the account surfaces (PR #261
+ * R2). The store's surface and the provider's last error are two fields
+ * written by different paths: `noteFailure({surface: "sign-in"})` from the
+ * pick or the edge-401 hook leaves `lastError` alone, so an older error's
+ * `wait_radient` kind used to turn a real sign-out into "Radient isn't
+ * responding" — and, because a named cause's actions replace the kind's
+ * buttons, \"Sign in again\" disappeared with it.
  */
 export function refusalCopy(input: {
 	error: RelayError | null;
 	surface: ErrorSurface;
 	subject: string;
 	computer?: RefusalComputer | null;
+	/** True on a Radient route: the password surface there is the relay behind
+	 *  the tunnel refusing this phone, not a password the reader ever typed. */
+	radientRoute?: boolean;
 }): RefusalCopy | null {
-	const { error, surface, subject, computer } = input;
+	const { surface, subject, computer } = input;
+	if (OWN_COPY_SURFACES.has(surface)) {
+		/* Surface-only copy, never the error's reason/kind/row: the Radient-route
+		 *  401 without `X-Radient-Login` (U4). Sign-in and account-mismatch keep
+		 *  the surface's own copy and its \"Sign in again\". */
+		return surface === "password" && input.radientRoute
+			? copyFor("relay-refused", subject)
+			: null;
+	}
+	const error =
+		input.error !== null && input.error.surface === surface
+			? input.error
+			: null;
 	if (error instanceof TunnelConnectionError) {
 		if (error.failure === "disabled" || error.failure === "billing")
 			return tunnelRefusalCopy(computer, subject);
@@ -407,13 +532,10 @@ export function refusalCopy(input: {
 			return copyFor("radient-unreachable", subject);
 		return null;
 	}
-	const fromReason = error?.reasonRaw
-		? REASON_CAUSE[error.reasonRaw]
-		: undefined;
-	if (fromReason && Object.hasOwn(REASON_CAUSE, error?.reasonRaw ?? ""))
-		return copyFor(fromReason, subject);
-	const fromKind = causeForKind(error?.relayStateKind);
-	if (fromKind) return copyFor(fromKind, subject);
+	if (error instanceof RadientUnreachableError)
+		return copyFor("radient-unreachable", subject);
+	const fromError = causeForError(error);
+	if (fromError) return copyFor(fromError, subject);
 	switch (surface) {
 		case "computer-offline":
 		case "relay-stopped":
@@ -579,14 +701,26 @@ export function refusalFromError(input: {
 	/** The chosen computer's discovery row, when there is one: its live billing
 	 *  and status are what split a tunnel 403 into a fixable cause. */
 	computer?: RefusalComputer | null;
+	/** The route is a Radient tunnel (see `refusalCopy`). */
+	radientRoute?: boolean;
 }): RefusalView | null {
 	if (input.surface === "none") return null;
 	const copy = refusalCopy(input);
-	if (input.error instanceof TunnelConnectionError) {
+	/* The error describes THIS refusal only when it raised this surface (R2): a
+	 *  stale mint error must not lend its kind to a later sign-out, or the
+	 *  surface loses "Sign in again". */
+	const own =
+		input.error !== null && input.error.surface === input.surface
+			? input.error
+			: null;
+	if (own instanceof TunnelConnectionError) {
 		return {
-			kind: input.error.refusalKind,
+			kind: own.refusalKind,
 			subject: input.subject,
-			detail: input.error.detail ?? null,
+			/* A named cause says it in the reader's words; the mint's
+			 *  `disabled_help` ("this tunnel isn't active right now") was the line
+			 *  Home's Show details still printed under it (PR #261 Q2). */
+			detail: copy ? null : (own.detail ?? null),
 			/* Null, as before: the mint's 403/402 has no command that fixes it, and
 			 *  the split copy's own buttons are the remedy. */
 			remedy: null,
@@ -595,7 +729,7 @@ export function refusalFromError(input: {
 		};
 	}
 	return {
-		kind: refineConnectionKind(input.error) ?? KIND[input.surface],
+		kind: refineConnectionKind(own) ?? KIND[input.surface],
 		subject: input.subject,
 		/* The relay's own sentence wins when it has one, and reaches the surface only
 		 *  through the taxonomy's ONE copy accessor.
@@ -616,10 +750,30 @@ export function refusalFromError(input: {
 					: `RelayError · ${input.error?.kind ?? "connection-response"}`
 				: (input.detail ?? input.error?.displayableMessage ?? null),
 		remedy:
-			copy && input.surface === "console"
-				? splitRemedy(copy)
-				: (REMEDY[input.surface] ?? null),
+			copy && BILLING_CAUSES.has(copy.cause)
+				? null
+				: copy && input.surface === "console"
+					? splitRemedy(copy)
+					: (REMEDY[input.surface] ?? null),
 		retryAfterMs: input.retryAfterMs,
 		copy,
 	};
+}
+
+/**
+ * Home's landing recovery for a refusal (PR #261 Q2). Home is where a
+ * signed-in reader lands after auto-connect, and its generic recovery said
+ * "The app couldn't connect to this computer." with only Retry — and Show
+ * details still read "Radient says this tunnel isn't active right now", the
+ * sentence the operator asked to remove. A refusal whose cause this module
+ * NAMED (a C1 reason, a kind, a 403 split) renders the same refusal surface
+ * Settings and Computers show: title, body and buttons. Sign-in and the
+ * offline/restoring states keep Home's own recovery, which already acts on
+ * them.
+ */
+export function homeNamedRefusal(
+	recovery: "restoring" | "no-host" | "auth" | "offline" | "error" | null,
+	refusal: RefusalView | null,
+): RefusalView | null {
+	return recovery === "error" && refusal?.copy ? refusal : null;
 }

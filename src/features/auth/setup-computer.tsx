@@ -9,7 +9,9 @@ import { Button } from "@/ui/components/button";
 import { Card } from "@/ui/components/card";
 import { CommandBlock } from "@/ui/components/command-block";
 import { Input } from "@/ui/components/input";
+import { disclosureIcon } from "@/ui/components/refusal-surface";
 import { Shimmer } from "@/ui/components/shimmer";
+import { tunnelRefusalCopy } from "./refusal";
 
 /**
  * Set up a computer — the flow that turns a signed-in account with no tunnel into
@@ -32,12 +34,14 @@ import { Shimmer } from "@/ui/components/shimmer";
  *     command the reader is told to run is a command that fails.
  *
  *  3. **No terminal unless asked for.** The reader of this screen is usually a
- *     Radient user who has never opened a terminal: the desktop app's Settings →
- *     Phone access → Set up does the whole lifecycle (and shows the price first).
- *     So that instruction leads, and the commands below sit behind "Using a
- *     terminal?", closed by default. The list behind this screen re-fetches when
- *     the reader comes back (`computers.tsx`), which is what the second line
- *     promises.
+ *     Radient user who has never opened a terminal: the desktop app's Phone
+ *     access block (Settings → Radient account → Phone access; the desktop has
+ *     no Settings item of that name yet, PR #261 U5) does the whole lifecycle
+ *     and shows the price first. So that instruction leads, and the commands
+ *     below sit behind "Using a terminal?", closed by default. The list behind
+ *     this screen re-fetches on focus, on return to the app, on a slow poll
+ *     while it is in front, and on "Check again" (`setup-poll.ts`), which is
+ *     what the second line promises.
  *
  *  4. **Waiting names what was observed, never "setting up…".** The two signals
  *     are the control-plane row (the cloud route is provisioned) and
@@ -75,9 +79,18 @@ export function tuiCommands(): string {
 export type SetupComputerProps = {
 	/** What the console says about billing, from discovery: `eligible` and its own
 	 *  sentence. `null` before any computer is known. */
-	billing: { eligible: boolean | null; message: string | null } | null;
+	billing: {
+		active?: boolean | null;
+		eligible: boolean | null;
+		message: string | null;
+	} | null;
 	onWaitForConnector: () => void;
 	waiting: boolean;
+	/** Lists the account again now (PR #261 U2): the reader who just finished on
+	 *  the desktop needs a control outside the terminal disclosure. */
+	onCheckAgain?: () => void;
+	/** A list request is in flight (the poll's or the button's). */
+	checking?: boolean;
 };
 
 /** The create and attach routes, for a reader who uses a terminal. Its own
@@ -163,9 +176,27 @@ export const SetupComputer = ({
 	billing,
 	onWaitForConnector,
 	waiting,
+	onCheckAgain,
+	checking = false,
 }: SetupComputerProps) => {
 	const [showTerminal, setShowTerminal] = useState(false);
-	const billingInactive = billing?.eligible === false;
+	/* The 403 split's own words for the account's billing (PR #261 R5): "phone
+	 *  access" vocabulary, keyed, and the never-turned-on vs out-of-credit split
+	 *  instead of the console's one English sentence. */
+	const billingCopy =
+		billing?.active === false || billing?.eligible === false
+			? tunnelRefusalCopy(
+					{
+						billing: {
+							active: billing.active ?? null,
+							eligible: billing.eligible,
+							message: billing.message,
+						},
+						rawStatus: "",
+					},
+					"",
+				)
+			: null;
 
 	return (
 		<View className="gap-4 pt-2">
@@ -174,10 +205,9 @@ export const SetupComputer = ({
 				to run a connector and stay awake. Your code stays on it.
 			</Text>
 
-			{billingInactive ? (
-				<Alert severity="warning" title="Remote access is not active">
-					{billing?.message ??
-						"Radient says this account cannot start a tunnel yet. Check billing in the console, then try again."}
+			{billingCopy ? (
+				<Alert severity="warning" title={billingCopy.title}>
+					{billingCopy.body ?? ""}
 				</Alert>
 			) : null}
 
@@ -189,6 +219,19 @@ export const SetupComputer = ({
 					<Text className="text-body-sm text-ink-muted">
 						{t("mobile.computers.setup.list_updates")}
 					</Text>
+					{onCheckAgain ? (
+						<Button
+							testID={CONTROL.setupCheckAgain}
+							label={t(
+								checking
+									? "mobile.computers.setup.checking"
+									: "mobile.computers.setup.check_again",
+							)}
+							variant="outline"
+							loading={checking}
+							onPress={onCheckAgain}
+						/>
+					) : null}
 				</View>
 			</Card>
 
@@ -197,6 +240,7 @@ export const SetupComputer = ({
 				label={t("mobile.refusal.terminal.toggle")}
 				variant="quiet"
 				expanded={showTerminal}
+				trailingIcon={disclosureIcon(showTerminal)}
 				onPress={() => setShowTerminal((open) => !open)}
 			/>
 			{showTerminal ? (

@@ -1,13 +1,14 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { TunnelSessionError } from "@/connection/tunnel-session";
 import { RelayError, relayErrorFromResponse } from "@/relay";
 import {
+	homeNamedRefusal,
 	type RefusalComputer,
 	type RefusalView,
 	radientUnauthorizedSurface,
+	radientUnreachableError,
 	refusalFromError,
+	transientCopy,
 	tunnelSessionRelayError,
 } from "./refusal";
 
@@ -51,10 +52,20 @@ describe("tunnel ownership and app-side failure remedies", () => {
 		(failure, status, instruction) => {
 			const refusal = view(failure, status);
 			expect(refusal?.kind).toBe("console");
+			expect(refusal?.remedy).toBeNull();
+			if (refusal?.copy) {
+				/* A named cause carries the console as a BUTTON and drops the mint's
+				 *  own sentence ("this tunnel isn't active right now"), which Home's
+				 *  Show details still printed (PR #261 Q2). */
+				expect(refusal.detail).toBeNull();
+				expect(refusal.copy.actions.map((item) => item.id)).toContain(
+					"open-console",
+				);
+				return;
+			}
 			expect(refusal?.detail?.toLowerCase()).toContain(
 				instruction.toLowerCase(),
 			);
-			expect(refusal?.remedy).toBeNull();
 		},
 	);
 	it("does not invent device approval or direct an unavailable owner-scoped record to the console", () => {
@@ -105,7 +116,7 @@ describe("tunnel 403 split by the discovery row (M1)", () => {
 		[
 			row({ active: false, eligible: false }),
 			"phone-access-off",
-			["how-to", "open-billing"],
+			["how-to", "open-billing", "retry"],
 		],
 		[
 			row({ active: true, eligible: false }),
@@ -121,7 +132,7 @@ describe("tunnel 403 split by the discovery row (M1)", () => {
 		[
 			row({ active: true, eligible: true }, "disabled"),
 			"console-disabled",
-			["open-console"],
+			["open-console", "retry"],
 		],
 		[row({ active: true, eligible: true }, "error"), "provisioning", ["retry"]],
 		[
@@ -148,7 +159,9 @@ describe("tunnel 403 split by the discovery row (M1)", () => {
 
 	it("names where to turn it on and that the price comes first (N2)", () => {
 		const help = minted(row({ active: false }))?.copy?.help ?? "";
-		expect(help).toContain("Settings → Phone access");
+		/* The desktop's real path (U5): Phone access is a block inside
+		 *  Settings → Radient account, not a Settings item of its own. */
+		expect(help).toContain("Settings → Radient account → Phone access");
 		expect(help).toContain("price first");
 	});
 
@@ -201,7 +214,7 @@ describe("relay surfaces: plain copy first, the command only behind the disclosu
 		[
 			"relay-down",
 			"relay-stopped",
-			"Local Operator isn't running on your computer.",
+			"Local Operator isn't running on Studio Mac.",
 			["retry"],
 			"lop mobile",
 		],
@@ -240,7 +253,14 @@ describe("relay surfaces: plain copy first, the command only behind the disclosu
 		});
 		const split = fromSurface(refused, row({ active: true, eligible: false }));
 		expect(split?.copy?.cause).toBe("balance-out");
-		expect(split?.remedy).toBe("lop tunnel status");
+		/* Billing causes carry no terminal disclosure (D6): `lop tunnel status`
+		 *  only reads the state back, and the 403 split shows none either. */
+		expect(split?.remedy).toBeNull();
+		const suspended = fromSurface(
+			refused,
+			row({ active: true, eligible: true }, "suspended"),
+		);
+		expect(suspended?.remedy).toBe("lop tunnel status");
 		const unsplit = fromSurface(refused, row({}));
 		expect(unsplit?.copy).toBeNull();
 		expect(unsplit?.remedy).toBe("lop login radient");
@@ -295,7 +315,7 @@ describe("core C1 reasons and kinds get their own plain copy (M1 additions)", ()
 		["sign_in", "computer-sign-in", ["retry"]],
 		["run", "computer-attention", ["retry"]],
 		["restore_owner", "computer-attention", ["retry"]],
-		["accept_quote", "phone-access-off", ["how-to", "open-billing"]],
+		["accept_quote", "phone-access-off", ["how-to", "open-billing", "retry"]],
 		["add_credit", "balance-out", ["add-credit", "retry"]],
 		["open_console", "open-console", ["open-console", "retry"]],
 	] as const)("kind %s → %s", (kind, cause, actions) => {
@@ -337,30 +357,270 @@ describe("a Radient-route 401 without X-Radient-Login is the relay, not a sign-i
 		);
 		expect(radientUnauthorizedSurface(facts({}))).toBe("password");
 	});
-	it("is what the Radient route's response hook uses, revoking only for sign-in", () => {
-		const provider = readFileSync(
-			fileURLToPath(new URL("./connection-provider.tsx", import.meta.url)),
-			"utf8",
-		);
-		expect(provider).toContain(
-			'const surface = radientUnauthorizedSurface(facts);\n\t\t\t\t\t\t\tif (surface === "sign-in") void revokeAuthorization();',
-		);
+	/* The provider half (no revoke for it, its Last error) is driven end to end
+	 *  in `connection-provider.test.ts`, "PR #261 round-1 remediation". */
+	it("tells a Radient reader about the computer, never a relay password (U4)", () => {
+		const error = relayErrorFromResponse({
+			status: 401,
+			/* No `X-Radient-Login`: the relay's 401, not the edge's. */
+			header: (name) =>
+				name.toLowerCase() === "content-type" ? "application/json" : null,
+			text: JSON.stringify({ error: "authentication required" }),
+		});
+		expect(error.surface).toBe("password");
+		const radient = refusalFromError({
+			error,
+			surface: "password",
+			detail: null,
+			retryAfterMs: null,
+			subject: "Studio Mac",
+			radientRoute: true,
+		});
+		expect(radient?.copy).toMatchObject({
+			cause: "relay-refused",
+			title: "Local Operator on Studio Mac didn't accept this phone.",
+			body: "Open Local Operator there and check that phone access is on, then tap Retry.",
+		});
+		expect(radient?.copy?.actions.map((item) => item.id)).toEqual(["retry"]);
+		expect(visible(radient)).not.toMatch(/password/i);
+		/* Negative control: a custom route keeps the password surface's own copy. */
+		const custom = refusalFromError({
+			error,
+			surface: "password",
+			detail: null,
+			retryAfterMs: null,
+			subject: "https://relay.example.com",
+			radientRoute: false,
+		});
+		expect(custom?.copy).toBeNull();
+		expect(custom?.kind).toBe("password");
 	});
 });
 
-describe("Diagnostics' Last error is never None while the stream retries (M1)", () => {
-	it("records the error in the retry branch without raising a refusal", () => {
-		const provider = readFileSync(
-			fileURLToPath(new URL("./connection-provider.tsx", import.meta.url)),
-			"utf8",
+describe("a stale error never names the cause of another surface (PR #261 R2)", () => {
+	const stale = relayErrorFromResponse({
+		status: 503,
+		header: () => "application/json",
+		text: JSON.stringify({ detail: "d", kind: "wait_radient" }),
+	});
+	it.each(["sign-in", "password"] as const)(
+		"a %s surface keeps its own copy and buttons beside a wait_radient error",
+		(surface) => {
+			const refusal = refusalFromError({
+				error: stale,
+				surface,
+				detail: null,
+				retryAfterMs: null,
+				subject: "Studio Mac",
+			});
+			expect(refusal?.copy).toBeNull();
+			expect(refusal?.kind).toBe(surface);
+		},
+	);
+	it("a stale mint error does not lend its kind to a real sign-out", () => {
+		const mint = tunnelSessionRelayError(
+			new TunnelSessionError("billing", "x", 403),
 		);
-		const degraded = provider.indexOf('setStreamHealth("degraded");');
-		const next = provider.indexOf("_attempt += 1;", degraded);
-		expect(degraded).toBeGreaterThan(-1);
-		const branch = provider.slice(degraded, next);
-		expect(branch).toContain("setLastError(error)");
-		/* No noteError/noteFailure here: those move the phase to refused. */
-		expect(branch).not.toContain("noteError(");
-		expect(branch).not.toContain("noteFailure(");
+		const refusal = refusalFromError({
+			error: mint,
+			surface: "sign-in",
+			detail: null,
+			retryAfterMs: null,
+			subject: "Studio Mac",
+			computer: row({ active: false }),
+		});
+		expect(refusal?.kind).toBe("sign-in");
+		expect(refusal?.copy).toBeNull();
+	});
+	it("an error for ANOTHER surface is not read (console surface, retry error)", () => {
+		const refusal = refusalFromError({
+			error: stale,
+			surface: "computer-offline",
+			detail: null,
+			retryAfterMs: null,
+			subject: "Studio Mac",
+		});
+		expect(refusal?.copy?.cause).toBe("computer-offline");
+	});
+});
+
+describe("copy promises no retry the phone does not make (PR #261 D1/U1/D4)", () => {
+	const copyOf = (
+		kind: Parameters<typeof relayErrorFromResponse>[0]["status"],
+		body: string,
+	) =>
+		refusalFromError({
+			error: relayErrorFromResponse({
+				status: kind,
+				header: () => "application/json",
+				text: body,
+			}),
+			surface: relayErrorFromResponse({
+				status: kind,
+				header: () => "application/json",
+				text: body,
+			}).surface,
+			detail: null,
+			retryAfterMs: null,
+			subject: "Studio Mac",
+		})?.copy;
+	it("Radient unreachable says try again, never 'we'll keep trying'", () => {
+		const copy = copyOf(
+			503,
+			JSON.stringify({ detail: "d", reason: "server_unavailable" }),
+		);
+		expect(copy?.body).toBe("Try again in a moment.");
+	});
+	it("relay stopped hands the return trip to Retry, and names the computer (D7)", () => {
+		const copy = copyOf(
+			502,
+			JSON.stringify({ error: "local harness unavailable" }),
+		);
+		expect(copy).toMatchObject({
+			title: "Local Operator isn't running on Studio Mac.",
+			body: "Open it there, then tap Retry.",
+		});
+	});
+	it("balance out ends with 'Then tap Retry.' (D4)", () => {
+		const copy = copyOf(
+			503,
+			JSON.stringify({ detail: "d", reason: "billing_lapsed" }),
+		);
+		expect(copy?.body).toBe(
+			"Add credit — your computer reconnects by itself. Then tap Retry.",
+		);
+	});
+	it("suspended leads with what happened (U11), and console-off names the computer (D8)", () => {
+		expect(
+			copyOf(503, JSON.stringify({ detail: "d", reason: "tunnel_inactive" }))
+				?.title,
+		).toBe("Radient paused phone access for Studio Mac.");
+		expect(
+			copyOf(503, JSON.stringify({ detail: "d", reason: "tunnel_disabled" }))
+				?.title,
+		).toBe(
+			"Phone access for Studio Mac is turned off in your Radient console.",
+		);
+	});
+	it("asleep allows for Local Operator not running (U8)", () => {
+		const copy = refusalFromError({
+			error: new RelayError("computer-offline", "x"),
+			surface: "computer-offline",
+			detail: null,
+			retryAfterMs: null,
+			subject: "Studio Mac",
+		})?.copy;
+		expect(copy?.body).toBe(
+			"Wake it, and make sure Local Operator is open on it.",
+		);
+	});
+	it("no phone-path body anywhere says it reconnects 'by itself' without a Retry beside it", () => {
+		const all = [
+			copyOf(
+				503,
+				JSON.stringify({ detail: "d", reason: "server_unavailable" }),
+			),
+			copyOf(502, JSON.stringify({ error: "local harness unavailable" })),
+			copyOf(503, JSON.stringify({ detail: "d", reason: "billing_lapsed" })),
+			copyOf(503, JSON.stringify({ detail: "d", reason: "tunnel_inactive" })),
+			copyOf(503, JSON.stringify({ detail: "d", kind: "wait_network" })),
+		];
+		for (const copy of all) {
+			const text = `${copy?.title} ${copy?.body ?? ""}`;
+			expect(text).not.toMatch(/keep trying/i);
+			if (/by itself/i.test(text))
+				expect(copy?.actions.map((item) => item.id)).toContain("retry");
+		}
+	});
+});
+
+describe("account causes hide the own-relay route and billing hides the terminal (U10, D6)", () => {
+	it.each([
+		[row({ active: false }), true, null],
+		[row({ active: true, eligible: false }), true, null],
+		[row({ active: true, eligible: true }, "disabled"), true, null],
+		[row({ active: true, eligible: true }, "suspended"), false, null],
+	] as const)("%j → accountCause %s", (computer, account, remedy) => {
+		const refusal = minted(computer);
+		expect(refusal?.copy?.accountCause).toBe(account);
+		expect(refusal?.remedy).toBe(remedy);
+	});
+});
+
+describe("a cold start that cannot reach Radient (PR #261 U9)", () => {
+	it("uses the mint path's Radient-unreachable copy and carries a Last error", () => {
+		const error = radientUnreachableError("Radient could not be reached.");
+		const refusal = refusalFromError({
+			error,
+			surface: "retry",
+			detail: null,
+			retryAfterMs: null,
+			subject: "Radient",
+		});
+		expect(refusal?.copy).toMatchObject({
+			cause: "radient-unreachable",
+			title: "Radient isn't responding right now.",
+			body: "Try again in a moment.",
+		});
+		expect(error.summary).toBe("transport");
+		/* Negative control: the same surface with no error keeps the generic copy. */
+		expect(
+			refusalFromError({
+				error: null,
+				surface: "retry",
+				detail: null,
+				retryAfterMs: null,
+				subject: "Radient",
+			})?.copy,
+		).toBeNull();
+	});
+});
+
+describe("a retrying stream's named wait becomes a notice, not silence (PR #261 Q3)", () => {
+	const error = (body: Record<string, string>) =>
+		relayErrorFromResponse({
+			status: 503,
+			header: () => "application/json",
+			text: JSON.stringify(body),
+		});
+	it.each([
+		[{ detail: "d", reason: "server_unavailable" }, "radient-unreachable"],
+		[{ detail: "d", kind: "wait_network" }, "wait-network"],
+		[{ detail: "d", kind: "wait_radient" }, "radient-unreachable"],
+		[{ detail: "d", kind: "wait_reconnect" }, "wait-reconnect"],
+		[{ detail: "d", kind: "check_status" }, "relay-wait"],
+		[{ detail: "d", kind: "wait_future_thing" }, "relay-wait"],
+	] as const)("%j → %s with Retry", (body, cause) => {
+		const copy = transientCopy(error(body), "Studio Mac");
+		expect(copy?.cause).toBe(cause);
+		expect(copy?.actions.map((item) => item.id)).toEqual(["retry"]);
+	});
+	it("says nothing for a cause that is not a wait, or no cause", () => {
+		expect(
+			transientCopy(error({ detail: "d", reason: "billing_lapsed" }), "x"),
+		).toBeNull();
+		expect(transientCopy(new RelayError("transport", "x"), "x")).toBeNull();
+		expect(transientCopy(null, "x")).toBeNull();
+	});
+});
+
+describe("Home lands on the named cause, not 'couldn't connect' (PR #261 Q2)", () => {
+	it.each([
+		[row({ active: false }), "phone-access-off"],
+		[row({ active: true, eligible: false }), "balance-out"],
+		[row({ active: true, eligible: true }, "disabled"), "console-disabled"],
+	] as const)("%j → %s, with no 'isn't active' detail", (computer, cause) => {
+		const refusal = minted(computer);
+		const named = homeNamedRefusal("error", refusal);
+		expect(named?.copy?.cause).toBe(cause);
+		expect(named?.detail).toBeNull();
+		expect(JSON.stringify(named)).not.toContain("isn't active");
+	});
+	it("keeps Home's own recovery for sign-in, offline and an unnamed cause", () => {
+		expect(homeNamedRefusal("auth", minted(row({ active: false })))).toBeNull();
+		expect(
+			homeNamedRefusal("offline", minted(row({ active: false }))),
+		).toBeNull();
+		expect(homeNamedRefusal("error", view("contract"))).toBeNull();
 	});
 });

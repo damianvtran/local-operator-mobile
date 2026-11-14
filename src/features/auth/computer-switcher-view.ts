@@ -53,7 +53,14 @@ export type SwitcherHealth =
 	| { kind: "paused" }
 	| { kind: "checking" }
 	| { kind: "protected" }
-	| { kind: "refused"; surface?: ErrorSurface | null };
+	| {
+			kind: "refused";
+			surface?: ErrorSurface | null;
+			/** The cause of a wait the computer named while the list stream
+			 *  retries (`Connection.transient`, PR #261 Q3), e.g.
+			 *  `radient-unreachable` or `wait-network`. */
+			transientCause?: string;
+	  };
 
 export type SwitcherTransport =
 	| { kind: "radient"; tunnelId: string; hostname: string }
@@ -106,6 +113,8 @@ export type SwitcherInput = {
 	/** When this phone last saw each origin answer during this app run. */
 	answeredAt?: Readonly<Record<string, number>>;
 	route: { phase: ConnectionPhase; tunnelId: string | null };
+	/** The transient notice's cause, when one shows (`Connection.transient`). */
+	transientCause?: string | null;
 	/** The configured route also names an own-address attempt before it has ever
 	 * gone live. A unique registry match is a fallback, never an identity merge. */
 	routeProfile?: RouteProfile | null;
@@ -383,6 +392,7 @@ export function switcherSections(input: SwitcherInput): SwitcherSections {
 					surface: input.surface,
 					billingEligible: row.discovered?.billing.eligible ?? null,
 					radient: row.transport.kind === "radient",
+					transientCause: input.transientCause ?? null,
 				});
 		}
 	}
@@ -694,7 +704,10 @@ export function rowHint(
 	if (row.health.kind === "refused")
 		return row.health.surface === "password" && row.transport.kind === "custom"
 			? "Enter the password again"
-			: row.health.surface === "retry" && row.transport.kind === "radient"
+			: row.health.surface === "retry" &&
+					row.transport.kind === "radient" &&
+					(row.health.transientCause === undefined ||
+						row.health.transientCause === "radient-unreachable")
 				? t("mobile.computers.hint.radient_unreachable")
 				: "Open Settings to fix the connection";
 	if (row.hidden) return "Removed from this phone. Tap to bring it back.";
@@ -818,10 +831,23 @@ export function activeHealth(input: {
 	surface: ErrorSurface | null;
 	billingEligible: boolean | null;
 	radient: boolean;
+	/** `Connection.transient`'s cause: the computer named a wait while the
+	 *  list stream retries. */
+	transientCause?: string | null;
 }): SwitcherHealth {
 	if (input.radient && input.surface === "sign-in") return { kind: "sign-in" };
 	if (input.radient && input.billingEligible === false)
 		return { kind: "paused" };
+	/* A live route whose stream is retrying through a wait the computer NAMED
+	 *  is not "Online" (PR #261 Q3): the phase stays `live` for the whole
+	 *  backoff, and the green word sat beside a computer saying "I can't reach
+	 *  Radient". "Not connected", with the cause's hint. */
+	if (input.transientCause)
+		return {
+			kind: "refused",
+			surface: "retry",
+			transientCause: input.transientCause,
+		};
 	if (ANSWERED.includes(input.phase)) return { kind: "online" };
 	/* Degraded: live, but the relay stopped answering — the switcher's probe would
 	 *  call that silence Asleep, so the entry points do too. */

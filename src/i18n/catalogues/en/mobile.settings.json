@@ -72,5 +72,6 @@
 	"mobile.settings.diagnostics.tunnel": "Tunnel id",
 	"mobile.settings.diagnostics.address": "Tunnel address",
 	"mobile.settings.diagnostics.copy": "Copy diagnostics",
-	"mobile.settings.diagnostics.copied": "Diagnostics copied"
+	"mobile.settings.diagnostics.copied": "Diagnostics copied",
+	"mobile.settings.diagnostics.copy_failed": "Couldn't copy. Try again."
 }

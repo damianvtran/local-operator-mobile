@@ -5,7 +5,7 @@
 	"mobile.computers.badge.connecting": "conectando",
 	"mobile.computers.connecting": "Conectando…",
 	"mobile.computers.none_on_phone": "Aún no hay máquinas en este teléfono.",
-	"mobile.computers.password_placeholder": "Contraseña de Acceso desde el teléfono en los ajustes de tu computadora",
+	"mobile.computers.password_placeholder": "La contraseña de lop mobile",
 	"mobile.computers.section.not_connected": "En tu cuenta de Radient, sin conectar",
 	"mobile.computers.section.on_phone": "En este teléfono",
 	"mobile.computers.sign_out": "Cerrar sesión",
@@ -101,7 +101,7 @@
 	"mobile.computers.own_tunnel.step_test": "Pruébala",
 	"mobile.computers.own_tunnel.step_test_help": "Esta prueba envía una solicitud real a través de tu túnel antes de guardar nada.",
 	"mobile.computers.own_tunnel.security_heading": "Antes de exponerla",
-	"mobile.computers.own_tunnel.security_body": "Estás poniendo tu propia máquina en internet, y la contraseña del relé es lo único que la protege. Usa HTTPS siempre que puedas, activa la autenticación propia de tu túnel si la ofrece y cambia la contraseña en Acceso desde el teléfono, en los ajustes de tu computadora, si se ha compartido. Cualquiera con esa contraseña y tu URL puede controlar las sesiones de esa máquina.",
+	"mobile.computers.own_tunnel.security_body": "Estás poniendo tu propia máquina en internet, y la contraseña del relé es lo único que la protege. Usa HTTPS siempre que puedas, activa la autenticación propia de tu túnel si la ofrece y cambia la contraseña con `{command}` si se ha compartido. Cualquiera con esa contraseña y tu URL puede controlar las sesiones de esa máquina.",
 	"mobile.computers.own_tunnel.test": "Probar la conexión",
 	"mobile.computers.own_tunnel.testing": "Probando…",
 	"mobile.computers.own_tunnel.save_connect": "Guardar y conectar",
@@ -137,7 +137,9 @@
 	"mobile.computers.own_tunnel.password_slot_other": "Este teléfono guarda una sola contraseña del relé, y es de otra dirección. Introduce la contraseña de esta máquina, pruébala y guárdala. Sustituirá a la otra.",
 	"mobile.computers.own_tunnel.password_slot_empty": "Este teléfono no tiene ninguna contraseña del relé guardada. Introduce la contraseña de esta máquina, pruébala y guárdala.",
 	"mobile.computers.own_tunnel.password_slot_this": "La contraseña del relé guardada en este teléfono es de esta dirección. Pruébala y guárdala.",
-	"mobile.computers.setup.open_settings": "En tu computadora, abre Local Operator → Ajustes → Acceso desde el teléfono → Configurar el acceso desde el teléfono.",
+	"mobile.computers.setup.open_settings": "En tu computadora, abre Local Operator → Ajustes → Cuenta de Radient → Acceso desde el teléfono → Configurar el acceso desde el teléfono.",
 	"mobile.computers.setup.list_updates": "Vuelve aquí cuando termines; esta lista se actualiza sola.",
+	"mobile.computers.setup.check_again": "Comprobar de nuevo",
+	"mobile.computers.setup.checking": "Comprobando…",
 	"mobile.computers.hint.radient_unreachable": "No se puede conectar con Radient ahora"
 }

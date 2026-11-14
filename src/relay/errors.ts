@@ -753,17 +753,21 @@ export function relayErrorFromResponse(
 			const relayStateKind = nonEmpty(
 				typeof objectBody?.kind === "string" ? objectBody.kind : undefined,
 			);
-			if (relayStateKind?.startsWith("wait_")) {
+			/* Only when the reason is not one this build knows (PR #261 R6): the
+			 * documented precedence is reason → kind (`KIND_SURFACE`), and a known
+			 * terminal reason beside a `wait_*` kind took the `retry` surface here
+			 * while `refusalCopy` showed the reason's copy — a `retry` surface
+			 * saying "Add credit". A known reason falls through to its policy. */
+			if (relayStateKind?.startsWith("wait_") && !isGatewayReason(reasonRaw)) {
 				return new RelayError(
 					"gateway-refused",
 					detail ?? serverError ?? "relay is not ready yet",
 					{
 						...common,
 						relayStateKind,
-						/* Keep a known reason for the copy and diagnostics; the KIND
-						 *  decides the surface, because it is the computer saying
-						 *  "this clears by itself" (`WAITING_KINDS`). */
-						reason: isGatewayReason(reasonRaw) ? reasonRaw : undefined,
+						/* The KIND decides the surface: the computer is saying "this
+						 *  clears by itself" (`WAITING_KINDS`), and no known reason
+						 *  overrides it on this branch. */
 						surface: "retry",
 						retry: "after-backoff",
 					},

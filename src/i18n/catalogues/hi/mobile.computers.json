@@ -5,7 +5,7 @@
 	"mobile.computers.badge.connecting": "कनेक्ट हो रहा",
 	"mobile.computers.connecting": "कनेक्ट हो रहा है…",
 	"mobile.computers.none_on_phone": "इस फ़ोन पर अभी कोई कंप्यूटर नहीं।",
-	"mobile.computers.password_placeholder": "आपके कंप्यूटर की फ़ोन एक्सेस सेटिंग्स से मिला पासवर्ड",
+	"mobile.computers.password_placeholder": "lop mobile से मिला पासवर्ड",
 	"mobile.computers.section.not_connected": "आपके Radient खाते पर, कनेक्ट नहीं",
 	"mobile.computers.section.on_phone": "इस फ़ोन पर",
 	"mobile.computers.sign_out": "साइन आउट करें",
@@ -101,7 +101,7 @@
 	"mobile.computers.own_tunnel.step_test": "जाँच करें",
 	"mobile.computers.own_tunnel.step_test_help": "कुछ भी सहेजने से पहले यह आपकी टनल के ज़रिये एक असली अनुरोध भेजता है।",
 	"mobile.computers.own_tunnel.security_heading": "इंटरनेट पर खोलने से पहले",
-	"mobile.computers.own_tunnel.security_body": "आप अपने ही कंप्यूटर को इंटरनेट पर खोल रहे हैं, और उसकी सुरक्षा में सिर्फ़ रिले पासवर्ड खड़ा है। HTTPS को प्राथमिकता दें, अगर आपकी टनल अपना प्रमाणीकरण देती है तो उसे चालू करें, और अगर पासवर्ड किसी के साथ साझा हुआ है तो उसे अपने कंप्यूटर की फ़ोन एक्सेस सेटिंग्स में बदल दें। जिसके पास वह पासवर्ड और आपका URL है, वह उस मशीन के सत्र चला सकता है।",
+	"mobile.computers.own_tunnel.security_body": "आप अपने ही कंप्यूटर को इंटरनेट पर खोल रहे हैं, और उसकी सुरक्षा में सिर्फ़ रिले पासवर्ड खड़ा है। HTTPS को प्राथमिकता दें, अगर आपकी टनल अपना प्रमाणीकरण देती है तो उसे चालू करें, और अगर पासवर्ड किसी के साथ साझा हुआ है तो उसे `{command}` से बदल दें। जिसके पास वह पासवर्ड और आपका URL है, वह उस मशीन के सत्र चला सकता है।",
 	"mobile.computers.own_tunnel.test": "कनेक्शन जाँचें",
 	"mobile.computers.own_tunnel.testing": "जाँच हो रही है…",
 	"mobile.computers.own_tunnel.save_connect": "सहेजें और कनेक्ट करें",
@@ -137,7 +137,9 @@
 	"mobile.computers.own_tunnel.password_slot_other": "यह फ़ोन सिर्फ़ एक रिले पासवर्ड रखता है, और वह किसी दूसरे पते का है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें। नया पासवर्ड पुराने की जगह ले लेगा।",
 	"mobile.computers.own_tunnel.password_slot_empty": "इस फ़ोन पर कोई रिले पासवर्ड सहेजा नहीं गया है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें।",
 	"mobile.computers.own_tunnel.password_slot_this": "इस फ़ोन पर सहेजा गया रिले पासवर्ड इसी पते का है। उसे जाँचें, फिर सहेजें।",
-	"mobile.computers.setup.open_settings": "अपने कंप्यूटर पर Local Operator खोलें और सेटिंग्स → फ़ोन एक्सेस → फ़ोन एक्सेस सेट करें चुनें।",
+	"mobile.computers.setup.open_settings": "अपने कंप्यूटर पर Local Operator खोलें और सेटिंग्स → Radient खाता → फ़ोन एक्सेस → फ़ोन एक्सेस सेट करें चुनें।",
 	"mobile.computers.setup.list_updates": "काम पूरा होने पर यहाँ लौटें — यह सूची अपने आप अपडेट हो जाती है।",
+	"mobile.computers.setup.check_again": "फिर से जाँचें",
+	"mobile.computers.setup.checking": "जाँच हो रही है…",
 	"mobile.computers.hint.radient_unreachable": "अभी Radient तक नहीं पहुँच पा रहे"
 }

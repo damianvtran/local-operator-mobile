@@ -294,5 +294,9 @@
 	"mobile.settings.diagnostics.copied": {
 		"role": "status",
 		"note": "Replaces the \"Copy diagnostics\" button label after the text was copied to the clipboard."
+	},
+	"mobile.settings.diagnostics.copy_failed": {
+		"role": "status",
+		"note": "Replaces the 'Copy diagnostics' button label for about two seconds when the phone's clipboard refused the text."
 	}
 }

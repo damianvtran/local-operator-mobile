@@ -72,5 +72,6 @@
 	"mobile.settings.diagnostics.tunnel": "ID туннеля",
 	"mobile.settings.diagnostics.address": "Адрес туннеля",
 	"mobile.settings.diagnostics.copy": "Копировать диагностику",
-	"mobile.settings.diagnostics.copied": "Диагностика скопирована"
+	"mobile.settings.diagnostics.copied": "Диагностика скопирована",
+	"mobile.settings.diagnostics.copy_failed": "Не удалось скопировать. Попробуйте ещё раз."
 }

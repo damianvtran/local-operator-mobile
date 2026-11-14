@@ -1,5 +1,5 @@
 import * as WebBrowser from "expo-web-browser";
-import { AlertTriangle } from "lucide-react-native";
+import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react-native";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { t } from "@/i18n";
@@ -84,7 +84,22 @@ export type RefusalSurfaceCopy = {
 	body: string | null;
 	actions: RefusalSurfaceAction[];
 	help: string | null;
+	/** The cause is fixed in the reader's Radient account (billing, the
+	 *  console): "Use another address" is hidden under it, because the
+	 *  own-relay password route it opens cannot fix any of them (PR #261 U10). */
+	accountCause?: boolean;
 };
+
+/** The open/closed mark for a disclosure button (PR #261 D3). Up/down rather
+ *  than a side-pointing chevron, so it needs no mirroring on an RTL page. */
+export const disclosureIcon =
+	(expanded: boolean) =>
+	({ color, size }: { color: string; size: number }) =>
+		expanded ? (
+			<ChevronUp color={color} size={size} />
+		) : (
+			<ChevronDown color={color} size={size} />
+		);
 
 const ACTION_ID: Record<RefusalSurfaceAction["id"], string> = {
 	retry: CONTROL.refusalActionRetry,
@@ -364,7 +379,7 @@ export const RefusalSurface = ({
 							/>
 						),
 					)}
-					{onUseAnotherAddress ? (
+					{onUseAnotherAddress && !copy.accountCause ? (
 						<Button
 							testID={CONTROL.refusalAnotherAddress}
 							label="Use another address"
@@ -455,6 +470,7 @@ export const RefusalSurface = ({
 						label={t("mobile.refusal.terminal.toggle")}
 						variant="quiet"
 						expanded={showTerminal}
+						trailingIcon={disclosureIcon(showTerminal)}
 						onPress={() => setShowTerminal((open) => !open)}
 					/>
 					{showTerminal ? (

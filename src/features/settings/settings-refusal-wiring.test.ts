@@ -68,8 +68,16 @@ describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 		expect(SETTINGS).toContain("value={route.tunnelId}");
 		expect(SETTINGS).toContain("value={route.hostname}");
 		expect(SETTINGS).toContain("testID={CONTROL.settingsCopyDiagnostics}");
-		/* The clipboard gets the redacting builder's output, never raw fields. */
-		expect(SETTINGS).toMatch(/Clipboard\.setStringAsync\(\s*diagnosticsText\(/);
+		/* The clipboard gets the redacting builder's output, never raw fields:
+		 *  the copier is the only writer, and its one caller passes the builder.
+		 *  (The copier's reset/failure behaviour is `copy-feedback.test.ts`.) */
+		expect(SETTINGS.match(/Clipboard\.setStringAsync\(/g)).toHaveLength(1);
+		expect(SETTINGS).toMatch(
+			/write: \(text\) => Clipboard\.setStringAsync\(text\)/,
+		);
+		expect(SETTINGS).toMatch(
+			/copierRef\.current\?\.copy\(\s*diagnosticsText\(/,
+		);
 	});
 
 	it("sits above the fold: under Status, before the computer list and Switch computer", () => {

@@ -1,58 +1,184 @@
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { createElement as h } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 
-/**
+/*
  * The refusal surface shows a terminal command ONLY behind "Using a terminal?"
- * (M1: a non-technical reader connects with no terminal commands).
+ * (M1), asserted on RENDERED markup rather than source strings (PR #261 R8:
+ * the round-1 version matched exact whitespace, so a reformat broke it while
+ * a real regression in a sibling branch passed).
  *
- * Asserted over the SOURCE, as `settings-refusal-wiring.test.ts` does and for
- * the reason it records: the surface reaches `uniwind` through `@/ui`, which the
- * Node test environment cannot import. The rendered states are the screenshot
- * round's job.
+ * Node renders the web build's primitives (react-native → react-native-web,
+ * `vitest.config.ts`). The stubs below are the modules Node cannot import —
+ * `uniwind` behind the text scale and the appearance, Expo's native modules,
+ * and `react-native-svg` behind the icons — each replaced by the smallest
+ * thing that keeps the asserted structure: the command block renders its
+ * command as text, an icon renders its name.
  */
-const SURFACE = readFileSync(
-	fileURLToPath(new URL("./refusal-surface.tsx", import.meta.url)),
-	"utf8",
+vi.mock("expo-web-browser", () => ({ openBrowserAsync: vi.fn() }));
+vi.mock("@/ui/appearance", () => ({
+	useTokenColor: () => "#000",
+	useKeyboardAppearance: () => "default",
+}));
+vi.mock("@/ui/text-scale-provider", () => ({
+	useTextScale: () => ({ effectiveScale: 1 }),
+}));
+vi.mock("@/ui/components/sheet", () => ({ Sheet: () => null }));
+vi.mock("@/ui/components/command-block", async () => {
+	const { createElement } = await import("react");
+	return {
+		CommandBlock: ({ command }: { command: string }) =>
+			createElement("code", null, command),
+	};
+});
+vi.mock("lucide-react-native", async () => {
+	const { createElement } = await import("react");
+	const mark = (name: string) => () =>
+		createElement("i", { "data-icon": name });
+	return {
+		AlertTriangle: mark("alert"),
+		ChevronDown: mark("chevron-down"),
+		ChevronUp: mark("chevron-up"),
+	};
+});
+
+const { RefusalSurface, disclosureIcon } = await import(
+	"@/ui/components/refusal-surface"
 );
-const SETUP = readFileSync(
-	fileURLToPath(
-		new URL("../../features/auth/setup-computer.tsx", import.meta.url),
-	),
-	"utf8",
-);
+const { SetupComputer } = await import("@/features/auth/setup-computer");
+const { CONTROL } = await import("@/ui/a11y");
+
+const render = (props: Parameters<typeof RefusalSurface>[0]) =>
+	renderToStaticMarkup(h(RefusalSurface, props));
+
+/** The toggle's own element, found by its testID. */
+const toggle = (html: string, id: string) =>
+	html.match(new RegExp(`<[^>]*data-testid="${id}"[^>]*>`))?.[0] ?? "";
 
 describe("commands live only behind the terminal disclosure", () => {
-	it("renders the remedy block only while the disclosure is open", () => {
-		const remedyUses = SURFACE.match(/\{remedy\}|command=\{remedy\}/g) ?? [];
-		expect(remedyUses).toEqual(["command={remedy}"]);
-		const disclosure = SURFACE.indexOf("{showTerminal ? (");
-		expect(disclosure).toBeGreaterThan(-1);
-		expect(SURFACE.indexOf("command={remedy}")).toBeGreaterThan(disclosure);
-		expect(SURFACE).toContain("useState(false);\n\tconst [showHowTo");
-		expect(SURFACE).toContain('label={t("mobile.refusal.terminal.toggle")}');
+	it("renders closed by default: no command, a collapsed toggle, a down chevron", () => {
+		const html = render({
+			kind: "computer-offline",
+			subject: "Studio Mac",
+			remedy: "lop tunnel status",
+			onRetry: () => {},
+		});
+		expect(html).not.toContain("lop tunnel status");
+		/* react-native-web omits `aria-expanded` for a false state, so "closed"
+		 *  is the toggle present without `aria-expanded="true"`. */
+		const button = toggle(html, CONTROL.refusalTerminalToggle);
+		expect(button).not.toBe("");
+		expect(button).not.toContain('aria-expanded="true"');
+		expect(html).toContain("Using a terminal?");
+		expect(html).toContain('data-icon="chevron-down"');
 	});
 
-	it("drops the gateway sentence and the kind's buttons when a cause is named", () => {
-		expect(SURFACE).toContain('{detail && kind !== "diagnostic" && !copy ? (');
-		expect(SURFACE).toContain("{copy ? copy.title : HEADLINE[kind](subject)}");
+	it("draws the open/closed mark from the same state (D3)", () => {
+		const icon = (open: boolean) =>
+			renderToStaticMarkup(
+				h(() => disclosureIcon(open)({ color: "#000", size: 14 })),
+			);
+		expect(icon(false)).toContain("chevron-down");
+		expect(icon(true)).toContain("chevron-up");
 	});
 
-	it("keeps set-up's commands behind the same disclosure, closed by default", () => {
-		expect(SETUP).toContain(
-			"const [showTerminal, setShowTerminal] = useState(false);",
+	it("shows a named cause's own words and buttons, never the gateway sentence", () => {
+		const html = render({
+			kind: "console",
+			subject: "Studio Mac",
+			detail: "Radient says this tunnel isn't active right now.",
+			remedy: null,
+			copy: {
+				cause: "balance-out",
+				title: "Your Radient balance has run out.",
+				body: "Add credit — your computer reconnects by itself. Then tap Retry.",
+				actions: [
+					{ id: "add-credit", label: "Add credit", url: "https://x.example" },
+					{ id: "retry", label: "Retry" },
+				],
+				help: null,
+				accountCause: true,
+			},
+			onRetry: () => {},
+			onUseAnotherAddress: () => {},
+		});
+		expect(html).toContain("Your Radient balance has run out.");
+		expect(html).not.toContain("isn't active");
+		expect(html).toContain(`data-testid="${CONTROL.refusalActionRetry}"`);
+		/* U10: the own-relay route cannot fix an account cause. */
+		expect(html).not.toContain(
+			`data-testid="${CONTROL.refusalAnotherAddress}"`,
 		);
-		const toggle = SETUP.indexOf("CONTROL.setupTerminalToggle");
-		const routes = SETUP.indexOf("<TerminalRoutes");
-		expect(toggle).toBeGreaterThan(-1);
-		expect(routes).toBeGreaterThan(toggle);
+		expect(html).not.toContain(
+			`data-testid="${CONTROL.refusalTerminalToggle}"`,
+		);
+	});
+
+	it("renders Sign in again for a real sign-out, whatever error sat beside it (R2)", () => {
+		/* `refusalFromError` now returns `copy: null` for the sign-in surface
+		 *  (tunnel-refusal.test.ts); this is what that renders. */
+		const html = render({
+			kind: "sign-in",
+			subject: "Studio Mac",
+			copy: null,
+			onSignIn: () => {},
+		});
+		expect(html).toContain("Sign in again");
+	});
+
+	it("keeps Use another address where the cause is not the account (negative control)", () => {
+		const html = render({
+			kind: "computer-offline",
+			subject: "Studio Mac",
+			copy: {
+				cause: "computer-offline",
+				title: "Studio Mac is asleep or offline.",
+				body: null,
+				actions: [{ id: "retry", label: "Retry" }],
+				help: null,
+				accountCause: false,
+			},
+			onRetry: () => {},
+			onUseAnotherAddress: () => {},
+		});
+		expect(html).toContain(`data-testid="${CONTROL.refusalAnotherAddress}"`);
+	});
+});
+
+describe("the set-up screen", () => {
+	const setup = (
+		billing: Parameters<typeof SetupComputer>[0]["billing"] = null,
+	) =>
+		renderToStaticMarkup(
+			h(SetupComputer, {
+				billing,
+				onWaitForConnector: () => {},
+				waiting: false,
+				onCheckAgain: () => {},
+				checking: false,
+			}),
+		);
+
+	it("keeps every command behind its closed disclosure, and Check again outside it (U2)", () => {
+		const html = setup();
+		expect(html).not.toMatch(/lop (login|tunnel)/);
+		const button = toggle(html, CONTROL.setupTerminalToggle);
+		expect(button).not.toBe("");
+		expect(button).not.toContain('aria-expanded="true"');
+		expect(html).toContain(`data-testid="${CONTROL.setupCheckAgain}"`);
+		expect(html).toContain("Settings → Radient account → Phone access");
+	});
+
+	it("says what is wrong with billing in phone-access words, keyed (R5)", () => {
+		const off = setup({ active: false, eligible: false, message: "x" });
+		expect(off).toContain(
+			"Phone access isn&#x27;t turned on for your Radient account yet.",
+		);
+		expect(off).not.toContain("Remote access");
+		const out = setup({ active: true, eligible: false, message: "x" });
+		expect(out).toContain("Your Radient balance has run out.");
 		expect(
-			SETUP.indexOf('t("mobile.computers.setup.open_settings")'),
-		).toBeLessThan(toggle);
-		/* Every command-bearing block is inside `TerminalRoutes`, never the screen. */
-		const screen = SETUP.slice(SETUP.indexOf("export const SetupComputer = ("));
-		expect(
-			screen.slice(0, screen.indexOf("export const ConnectorWaitPanel")),
-		).not.toContain("<CommandBlock");
+			setup({ active: true, eligible: true, message: null }),
+		).not.toContain("balance");
 	});
 });

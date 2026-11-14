@@ -113,6 +113,11 @@ export function computersView(input: {
 	/** The reader asked to ADD a computer (`ADD_COMPUTER_HREF`): the set-up paths,
 	 *  whatever the account already lists. */
 	adding?: boolean;
+	/** The last SETTLED discovery answered "no computers" (PR #261 Q1). A
+	 *  re-check of that answer keeps the set-up path on screen instead of the
+	 *  skeleton: the reader is mid-instruction, and the flip was what made the
+	 *  old focus effect re-fire on every pass. */
+	settledEmpty?: boolean;
 }): ComputersView {
 	const rows = input.computers.length > 0;
 	/* An explicit "Add a computer" is the set-up path even over a populated list:
@@ -137,7 +142,7 @@ export function computersView(input: {
 	 *  round 2, Q-r2-1). */
 	const setup =
 		!rows &&
-		!input.discovering &&
+		(!input.discovering || input.settledEmpty === true) &&
 		input.discoveryFailure === null &&
 		!input.signedOut;
 	return {
@@ -148,7 +153,8 @@ export function computersView(input: {
 		 *  The store's `discovering` PHASE, which this used to read, describes a route
 		 *  and is never set by a route-less discovery, so loading painted a blank
 		 *  screen (D4). A failure already on screen keeps its banner instead. */
-		skeleton: input.discovering && !rows && input.discoveryFailure === null,
+		skeleton:
+			input.discovering && !rows && input.discoveryFailure === null && !setup,
 		list: rows,
 		banner:
 			input.discoveryFailure === null

@@ -5,7 +5,7 @@
 	"mobile.computers.badge.connecting": "connexion",
 	"mobile.computers.connecting": "Connexion…",
 	"mobile.computers.none_on_phone": "Aucun ordinateur sur ce téléphone pour le moment.",
-	"mobile.computers.password_placeholder": "Mot de passe indiqué dans les paramètres Accès depuis un téléphone de votre ordinateur",
+	"mobile.computers.password_placeholder": "Le mot de passe fourni par lop mobile",
 	"mobile.computers.section.not_connected": "Sur votre compte Radient, non connectés",
 	"mobile.computers.section.on_phone": "Sur ce téléphone",
 	"mobile.computers.sign_out": "Se déconnecter",
@@ -101,7 +101,7 @@
 	"mobile.computers.own_tunnel.step_test": "Testez la connexion",
 	"mobile.computers.own_tunnel.step_test_help": "Une vraie requête passe par votre tunnel avant tout enregistrement.",
 	"mobile.computers.own_tunnel.security_heading": "Avant de l’exposer",
-	"mobile.computers.own_tunnel.security_body": "Vous mettez votre propre ordinateur sur Internet, et le mot de passe du relais est la seule chose qui le protège. Privilégiez HTTPS, activez l’authentification propre à votre tunnel s’il en propose une, et changez le mot de passe dans les paramètres Accès depuis un téléphone de votre ordinateur s’il a été partagé. Toute personne disposant de ce mot de passe et de votre URL peut piloter les sessions sur cette machine.",
+	"mobile.computers.own_tunnel.security_body": "Vous mettez votre propre ordinateur sur Internet, et le mot de passe du relais est la seule chose qui le protège. Privilégiez HTTPS, activez l’authentification propre à votre tunnel s’il en propose une, et changez le mot de passe avec `{command}` s’il a été partagé. Toute personne disposant de ce mot de passe et de votre URL peut piloter les sessions sur cette machine.",
 	"mobile.computers.own_tunnel.test": "Tester la connexion",
 	"mobile.computers.own_tunnel.testing": "Test en cours…",
 	"mobile.computers.own_tunnel.save_connect": "Enregistrer et se connecter",
@@ -137,7 +137,9 @@
 	"mobile.computers.own_tunnel.password_slot_other": "Ce téléphone ne conserve qu’un seul mot de passe de relais, et il appartient à une autre adresse. Saisissez le mot de passe de cet ordinateur, testez-le, puis enregistrez. Le nouveau remplacera l’ancien.",
 	"mobile.computers.own_tunnel.password_slot_empty": "Aucun mot de passe de relais enregistré sur ce téléphone. Saisissez celui de cet ordinateur, testez-le, puis enregistrez.",
 	"mobile.computers.own_tunnel.password_slot_this": "Le mot de passe enregistré sur ce téléphone correspond à cette adresse. Testez-le, puis enregistrez.",
-	"mobile.computers.setup.open_settings": "Sur votre ordinateur, ouvrez Local Operator → Paramètres → Accès depuis un téléphone → Configurer l’accès depuis un téléphone.",
+	"mobile.computers.setup.open_settings": "Sur votre ordinateur, ouvrez Local Operator → Paramètres → Compte Radient → Accès depuis un téléphone → Configurer l’accès depuis un téléphone.",
 	"mobile.computers.setup.list_updates": "Revenez ici une fois terminé — cette liste se met à jour toute seule.",
+	"mobile.computers.setup.check_again": "Vérifier à nouveau",
+	"mobile.computers.setup.checking": "Vérification…",
 	"mobile.computers.hint.radient_unreachable": "Impossible de joindre Radient pour le moment"
 }

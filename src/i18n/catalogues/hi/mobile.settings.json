@@ -72,5 +72,6 @@
 	"mobile.settings.diagnostics.tunnel": "टनल आईडी",
 	"mobile.settings.diagnostics.address": "टनल पता",
 	"mobile.settings.diagnostics.copy": "डायग्नोस्टिक्स कॉपी करें",
-	"mobile.settings.diagnostics.copied": "डायग्नोस्टिक्स कॉपी हो गए"
+	"mobile.settings.diagnostics.copied": "डायग्नोस्टिक्स कॉपी हो गए",
+	"mobile.settings.diagnostics.copy_failed": "कॉपी नहीं हो सका। फिर से कोशिश करें।"
 }

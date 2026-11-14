@@ -25,6 +25,7 @@ import {
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
+import { TransientNotice } from "@/features/auth/transient-notice";
 import { diagnosticsText } from "@/features/settings/diagnostics-text";
 import { t } from "@/i18n";
 import type { ThemeMode } from "@/state/theme-preference";
@@ -49,6 +50,7 @@ import { LTR_WRITING, TEXT_END_CLASS, useComposedDir } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import { AccountRoutingSection } from "./account-routing-section";
+import { type CopyFeedback, createCopyFeedback } from "./copy-feedback";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
 import {
@@ -93,7 +95,8 @@ export default function Settings() {
 		refusal,
 		signInWithRadient,
 		streamHealth,
-		lastError,
+		diagnosticError,
+		transient,
 		discovering,
 	} = useConnection();
 	const switcher = useComputerSwitcher();
@@ -118,7 +121,18 @@ export default function Settings() {
 
 	const [confirmSignOut, setConfirmSignOut] = useState(false);
 	const [signingOut, setSigningOut] = useState(false);
-	const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
+	/* "Copy diagnostics" feedback: shows for ~2 s, then the label returns, and a
+	 *  refused clipboard says so (PR #261 R7/U7/D9; `copy-feedback.ts`). */
+	const [copyFeedback, setCopyFeedback] = useState<CopyFeedback>("idle");
+	const copierRef = useRef<ReturnType<typeof createCopyFeedback> | null>(null);
+	useEffect(() => {
+		const copier = createCopyFeedback({
+			write: (text) => Clipboard.setStringAsync(text),
+			onChange: setCopyFeedback,
+		});
+		copierRef.current = copier;
+		return () => copier.dispose();
+	}, []);
 	/* This is SETTINGS's action, not global connection busy (which also covers
 	 * discovery/picks). Keep the screen responsive and the pending explanation
 	 * visible while bounded push retirement runs. The ref closes the same-tick
@@ -393,6 +407,9 @@ export default function Settings() {
 							/>
 						</View>
 					) : null}
+					{/* A wait the computer named while the stream retries (Q3): said,
+					 *  not blocking. Renders nothing while a refusal shows. */}
+					<TransientNotice />
 					{computers.length > 0 ? (
 						<View className="gap-2 pt-1">
 							<Text className="text-body-sm text-ink-muted">
@@ -612,14 +629,17 @@ export default function Settings() {
 					/>
 					<DiagnosticRow
 						label={t("mobile.settings.diagnostics.last_error")}
+						/* The diagnostics-only record (PR #261 R1/U3): a retrying or
+						 *  stalled stream's cause as well as a terminal one, so "Not
+						 *  answering" is never next to "None". */
 						value={
-							lastError
-								? lastError.summary
+							diagnosticError
+								? diagnosticError.summary
 								: t("mobile.settings.diagnostics.none")
 						}
 					/>
 					{/* WHICH tunnel this phone is on, so whoever is helping can compare
-					 *  it with the computer's own Phone access settings — no terminal on
+					 *  it with the computer's Phone access block (Settings → Radient account) — no terminal on
 					 *  either side. A wrong id here is the "phone on the old tunnel"
 					 *  case that otherwise reads as a sleeping computer. */}
 					{route?.mode === "radient" ? (
@@ -634,28 +654,36 @@ export default function Settings() {
 							/>
 						</>
 					) : null}
+					{/* Full size, not `sm` (PR #261 D5): this is the one control a
+					 *  helper asks the reader to tap, and `sm` drew a 32 pt pill. */}
 					<Button
 						testID={CONTROL.settingsCopyDiagnostics}
 						label={t(
-							diagnosticsCopied
+							copyFeedback === "copied"
 								? "mobile.settings.diagnostics.copied"
-								: "mobile.settings.diagnostics.copy",
+								: copyFeedback === "failed"
+									? "mobile.settings.diagnostics.copy_failed"
+									: "mobile.settings.diagnostics.copy",
 						)}
 						variant="outline"
-						size="sm"
 						onPress={() =>
-							void Clipboard.setStringAsync(
+							void copierRef.current?.copy(
 								diagnosticsText({
 									route,
 									computerName:
 										computers.find((computer) => computer.tunnelId === tunnelId)
 											?.name ?? null,
+									/* What the reader SEES, so a helper on a call reads the same
+									 *  words (U7): the Status word and the cause on screen. */
+									status: status.message,
+									cause: refusal?.copy?.cause ?? transient?.cause ?? null,
 									stream: streamWord(streamHealth),
-									lastError: lastError ? lastError.summary : null,
+									lastError: diagnosticError?.summary ?? null,
+									lastErrorAt: diagnosticError?.at ?? null,
 									version,
 									platform: Platform.OS,
 								}),
-							).then(() => setDiagnosticsCopied(true))
+							)
 						}
 					/>
 					<Text className="text-body-sm text-ink-dim">

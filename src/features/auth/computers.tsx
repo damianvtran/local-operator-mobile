@@ -44,6 +44,10 @@ import {
 } from "@/features/auth/connector-wait";
 import { removeComputer } from "@/features/auth/saved-computers-sync";
 import { SetupComputer } from "@/features/auth/setup-computer";
+import {
+	createSetupPoller,
+	type SetupPoller,
+} from "@/features/auth/setup-poll";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
 import { activeLocale, t } from "@/i18n";
@@ -415,36 +419,60 @@ export default function Computers() {
 	const [waiting, setWaiting] = useState(false);
 	/* `?add=1` is the "Add a computer" hand-off (`ADD_COMPUTER_HREF`). */
 	const { add } = useLocalSearchParams<{ add?: string }>();
+	/* The set-up answer stays on screen while a re-check is in flight (PR #261
+	 *  Q1): it is an answer Radient already gave, and flipping to the skeleton on
+	 *  every poll is both a flicker and what made the old focus effect loop.
+	 *  Updated only from a SETTLED pass, so it never invents an empty account. */
+	const settledEmptyRef = useRef(false);
+	if (!discovering)
+		settledEmptyRef.current =
+			computers.length === 0 && discoveryFailure === null && !signedOut;
 	const view = computersView({
 		computers,
 		discovering,
 		discoveryFailure,
 		signedOut,
 		adding: add === "1",
+		settledEmpty: settledEmptyRef.current,
 	});
 	const empty = view.setup;
-	/* The set-up path tells the reader to finish on their COMPUTER and promises
-	 *  this list "updates by itself". Coming back to this screen (focus) or to the
-	 *  app (foreground) is exactly when a new computer can have appeared, so both
-	 *  list again — without it the reader had to find Refresh after every trip to
-	 *  the desktop. Only on the set-up path, so a populated list is not re-fetched
-	 *  on every tab switch; the ref keeps the provider's callback identity out of
-	 *  the effects' dependencies, so a re-render cannot become a request loop. */
-	const refreshOnReturn = empty && !waiting && !signedOut;
+	/* Re-listing for the set-up path: focus, return to the app, a slow tick while
+	 *  in front, and "Check again" — all events, never a render (`setup-poll.ts`
+	 *  owns the invariant: one request in flight, automatic starts 15 s apart).
+	 *  Only on the set-up path, so a populated list is not re-fetched on every tab
+	 *  switch; `isEnabled` is read through a ref at trigger time, so the flag
+	 *  changing cannot start a request by itself. */
+	const pollEnabledRef = useRef(false);
+	pollEnabledRef.current = empty && !waiting && !signedOut;
 	const refreshRef = useRef(refreshComputers);
 	refreshRef.current = refreshComputers;
+	const [checking, setChecking] = useState(false);
+	const pollerRef = useRef<SetupPoller | null>(null);
+	useEffect(() => {
+		const poller = createSetupPoller({
+			refresh: () => refreshRef.current(),
+			isEnabled: () => pollEnabledRef.current,
+			onChecking: setChecking,
+		});
+		pollerRef.current = poller;
+		const subscription = AppState.addEventListener("change", (state) =>
+			poller.foreground(state === "active"),
+		);
+		return () => {
+			subscription.remove();
+			poller.dispose();
+			pollerRef.current = null;
+		};
+	}, []);
+	/* Empty deps: the callback identity never changes, so the navigator runs it
+	 *  once per focus TRANSITION — the property the old effect lacked. */
 	useFocusEffect(
 		useCallback(() => {
-			if (refreshOnReturn) void refreshRef.current();
-		}, [refreshOnReturn]),
+			pollerRef.current?.focus();
+			return () => pollerRef.current?.blur();
+		}, []),
 	);
-	useEffect(() => {
-		if (!refreshOnReturn) return;
-		const subscription = AppState.addEventListener("change", (state) => {
-			if (state === "active") void refreshRef.current();
-		});
-		return () => subscription.remove();
-	}, [refreshOnReturn]);
+	const checkAgain = useCallback(() => pollerRef.current?.checkNow(), []);
 	/* The tunnel tapped on THIS screen, so arriving with a route already live is
 	 *  not mistaken for a pick that just landed (U1). */
 	const [picked, setPicked] = useState<string | null>(null);
@@ -702,6 +730,8 @@ export default function Computers() {
 								billing={billing}
 								onWaitForConnector={startWaiting}
 								waiting={false}
+								onCheckAgain={checkAgain}
+								checking={checking}
 							/>
 						</TunnelPaths>
 					)}

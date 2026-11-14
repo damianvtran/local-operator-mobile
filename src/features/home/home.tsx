@@ -21,6 +21,8 @@ import {
 	useListState,
 	useLocaleFrame,
 } from "@/features/auth/connection-provider";
+import { homeNamedRefusal } from "@/features/auth/refusal";
+import { TransientNotice } from "@/features/auth/transient-notice";
 import { NOTICE_STACK_STYLE } from "@/features/home/composer-stack";
 import { NO_PRESS, pressAnswered } from "@/features/home/hero-focus";
 import {
@@ -90,6 +92,7 @@ import { ReadableColumn, SplitView } from "@/ui/components/adaptive";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { useChromeGlass } from "@/ui/components/chrome-surface";
+import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { Sheet } from "@/ui/components/sheet";
 import { TOUCH_FLOOR, useLayout } from "@/ui/layout";
@@ -165,6 +168,9 @@ export default function Home({
 	const {
 		relay,
 		refusal,
+		refreshComputers,
+		signInWithRadient,
+		transient,
 		retry,
 		busy,
 		coldStartSettled,
@@ -384,6 +390,7 @@ export default function Home({
 						: !connected
 							? "no-host"
 							: null;
+	const namedRefusal = homeNamedRefusal(homeRecovery, refusal);
 
 	/* The computer's two reads, each kept as the state it really is.
 	 *
@@ -774,7 +781,27 @@ export default function Home({
 			{/* One exclusive recovery story; a cached transcript is not an empty home.
 			 * Restoring is not evidence of expiry. No token/provider decisions here. */}
 			<View className="flex-1">
-				{homeRecovery ? (
+				{namedRefusal ? (
+					/* A cause the taxonomy named gets its own words and buttons here
+					 *  too, not "couldn't connect" + Retry (PR #261 Q2,
+					 *  `homeNamedRefusal`). The draft line stays: it is Home's. */
+					<View className="px-4" testID={SURFACE.homeRecovery}>
+						<RefusalSurface
+							kind={namedRefusal.kind}
+							subject={namedRefusal.subject}
+							detail={namedRefusal.detail}
+							remedy={namedRefusal.remedy}
+							copy={namedRefusal.copy}
+							retryAfterMs={namedRefusal.retryAfterMs}
+							onRetry={() => void retry()}
+							onRefreshList={() => void refreshComputers()}
+							onSignIn={() => void signInWithRadient()}
+						/>
+						<Text className="text-body-sm text-ink-muted">
+							{t("mobile.chrome.home.saved_draft")}
+						</Text>
+					</View>
+				) : homeRecovery ? (
 					<HomeRecovery
 						kind={homeRecovery}
 						host={listLabel(computers, tunnelId, route)}
@@ -864,6 +891,15 @@ export default function Home({
 				 *  keeps the retry, which is a real answer for a read that only raced something.
 				 *  A successful read clears the row; a retry that fails again keeps it, which is
 				 *  the honest state. */}
+				{/* A wait the computer named while the list stream retries (PR #261
+				 *  Q3): Home is where the reader is, and it showed a green check.
+				 *  Inset in this stack like the folder notice below, so it never
+				 *  moves the composer. */}
+				{transient ? (
+					<View className="px-4 pb-2">
+						<TransientNotice />
+					</View>
+				) : null}
 				{directoriesError !== null ? (
 					<View className="px-4 pb-2">
 						<Alert
