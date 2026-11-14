@@ -1769,7 +1769,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Convergence of #260 onto main caae98bc (#257) + round-1 remediation (D2,
 	 * Q-02, identical-by-design TUI/Terminal): both comment chains kept;
 	 * re-derived once with --print over the committed tree. */
-	src: "7e1c01106452f38c7c989236332fbead23f17eb2331bc4a19351026eb55ab579",
+	/* CI remediation of #260 (d90f49d7): one new test file,
+	 * `src/connection/__tests__/route-validation-decisions.test.ts`, and nothing
+	 * else under `src`. Re-derived with --print over the committed tree; only
+	 * `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "e3972a5e239f735822c2dd5d19e0b29ff4bf0cb34d767726e5f8bb5d3af36e54",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
