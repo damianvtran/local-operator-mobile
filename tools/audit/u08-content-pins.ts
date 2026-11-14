@@ -1692,8 +1692,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * terminal commands only behind "Using a terminal?", the set-up screen's
 	 * Phone access instruction and the new `mobile.refusal` namespace (844 keys).
 	 * Re-derived with --print over the committed tree (dc89dbd7); only `src`
-	 * moved. Source identity only, NOT rendered U-08 evidence. */
-	src: "9a1b4f739fdc687c63c98da755ca5688d8a1c367816a52f1a5cd6ffc7c40b2d7",
+	 * moved. Then the M1 scope additions (core C1 reasons/kinds, Last error on
+	 * the retry branch, Copy diagnostics, the Radient 401 split): re-derived
+	 * again over 58b41133. Source identity only, NOT rendered U-08 evidence. */
+	src: "a1d6ef49e6c50370efede4af139c4505c53c0a99774a8a5e878ff4d1a160f2ca",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
