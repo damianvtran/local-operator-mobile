@@ -242,3 +242,43 @@ describe("Add a computer opens the set-up paths over a populated list (PR #122 U
 		});
 	});
 });
+
+/* PR #261 Q1: a re-check of an account Radient already said is empty keeps the
+ *  set-up path on screen. The flip to the skeleton on every pass was both a
+ *  flicker and what made the old focus effect fire again on every render. */
+describe("the set-up answer survives its own re-check", () => {
+	it("keeps setup, not the skeleton, while a settled-empty account is re-listed", () => {
+		const view = computersView({
+			computers: [],
+			discovering: true,
+			discoveryFailure: null,
+			settledEmpty: true,
+		});
+		expect(view.setup).toBe(true);
+		expect(view.skeleton).toBe(false);
+		expect(view.title).toBe("mobile.computers.title.set_up");
+	});
+
+	it("still shows the skeleton for a first load (negative control)", () => {
+		const view = computersView({
+			computers: [],
+			discovering: true,
+			discoveryFailure: null,
+			settledEmpty: false,
+		});
+		expect(view.setup).toBe(false);
+		expect(view.skeleton).toBe(true);
+	});
+
+	it("never keeps setup for a signed-out reader or under a failure", () => {
+		expect(
+			computersView({
+				computers: [],
+				discovering: true,
+				discoveryFailure: null,
+				signedOut: true,
+				settledEmpty: true,
+			}).setup,
+		).toBe(false);
+	});
+});

@@ -218,7 +218,9 @@ describe("Settings › Diagnostics shows `reason: <code>`, monospace and copyabl
 		expect(row).toContain(
 			"diagnosticReason({ health: streamHealth, healthReason: streamHealthReason, lastError, refused: refusal !== null, })",
 		);
-		expect(row).toContain("? `reason: ${code}`");
+		/* Merge of #261: the value goes through Copy diagnostics' redaction
+		 *  (`diagnosticsReasonValue`, pinned in diagnostics-text.test.ts). */
+		expect(row).toContain("? diagnosticsReasonValue(code)");
 		expect(row).toContain("selectable");
 		expect(row).toContain("testID={CONTROL.settingsDiagnosticsReason}");
 	});

@@ -150,6 +150,17 @@ describe("activeHealth", () => {
 			activeHealth({ ...base, phase: "refused", surface: "password" }).kind,
 		).toBe("refused");
 		expect(entryHealthWord({ kind: "refused" })).toBe(REFUSED_WORD);
+	});
+	it("does not call a Radient or network failure Asleep (M1, field report)", () => {
+		/* `retry` is a mint 5xx, a network failure or a 429: the computer may be
+		 *  healthy, so it is "Not connected", never "Asleep". */
+		expect(
+			activeHealth({ ...base, phase: "refused", surface: "retry" }),
+		).toEqual({ kind: "refused", surface: "retry" });
+		expect(
+			activeHealth({ ...base, phase: "refused", surface: "relay-stopped" })
+				.kind,
+		).toBe("asleep");
 		expect(ENTRY_DOT_TOKEN.refused).toBe("warning");
 	});
 });

@@ -119,14 +119,44 @@ export interface RelayErrorInit {
 	/** A `reason` the client does NOT recognise; surfaced so a future gateway
 	 *  reason falls back to `detail` instead of vanishing. */
 	reasonRaw?: string;
+	/** The relay's own machine-readable state on a `503`, when its body names one
+	 *  (`{"kind": "wait_…"}`). Feature-detected: a relay from before that field
+	 *  existed sends none, and every path must behave exactly as it did then. A
+	 *  `wait_*` kind means "still starting, clears by itself" (`refusal.ts`). */
+	relayStateKind?: string;
 	retryAfterMs?: number;
 	envelope?: EnvelopeDirective;
 	retry?: RetryDirective;
 	surface?: ErrorSurface;
 	/** Extra context for logs and the diagnostics screen. Never user-facing copy. */
 	diagnostic?: string;
+	/** A `transport` failure's fixed sub-cause (`TransportCause`), appended to
+	 *  `summary`. */
+	transportCause?: TransportCause;
 	cause?: unknown;
 }
+
+/**
+ * Which way a `transport` failure went, as a FIXED technical identifier for
+ * Diagnostics' Last error — never the runtime's own words, which can carry a
+ * URL. "Last error: transport" alone could not tell a helper whether the
+ * computer never answered, the connection was cut or refused, or the request
+ * was cancelled — the facts that send them to the Mac or to the network
+ * (PR #261 U2-2). A stalled stream already has its own line
+ * (`stalledSummary`: "stream stalled: no data after N s").
+ *
+ *  - `timeout <N>s`: this client's own deadline fired (`http.ts` `open`).
+ *  - `refused`: the runtime reported ECONNREFUSED.
+ *  - `aborted`: an abort this module did not cause as a deadline (a route
+ *    switch, a caller's signal).
+ *  - `reset`: anything else that ended without an answer — a cut or failed
+ *    connection; phones' runtimes report these without a code.
+ */
+export type TransportCause =
+	| `timeout ${number}s`
+	| "refused"
+	| "aborted"
+	| "reset";
 
 /**
  * The gateway's refusal vocabulary (`gateway.py:66-95` at `52c1df35`, the ref the
@@ -149,6 +179,16 @@ export const GATEWAY_REASONS = [
 	"login_required",
 	"local_prerequisite",
 	"reenrolment_required",
+	/* Core C1 (local-operator PR #3945, `gateway.py` at 7c0fc7bf, :159 and
+	 * :217-220): the connector's REFINED answer for a cloud refusal. Before them a
+	 * 5xx from Radient and every non-active tunnel arrived as
+	 * `authorization_refused`, whose only remedy is a sign-in that cannot clear
+	 * billing or a console toggle. Each now maps to its own surface and copy. */
+	"server_unavailable",
+	"tunnel_inactive",
+	"tunnel_disabled",
+	"billing_inactive",
+	"billing_lapsed",
 ] as const;
 
 export type GatewayReason = (typeof GATEWAY_REASONS)[number];
@@ -195,7 +235,51 @@ const REASON_POLICY: Record<
 	 * still parses and is not mistaken for a reason this build understands. */
 	local_prerequisite: { surface: "console", retry: "never" },
 	reenrolment_required: { surface: "console", retry: "never" },
+	/* Radient answered with its own error: nothing on the computer or the phone
+	 *  is wrong, so this is the self-clearing `retry` surface (the copy says
+	 *  "Radient isn't responding", `refusal.ts`) — never "computer offline". No
+	 *  Retry-After: the gateway sends none for it, and no number was measured. */
+	server_unavailable: { surface: "retry", retry: "after-backoff" },
+	/* The four inactive-tunnel causes are fixed OUTSIDE this phone (a top-up, a
+	 *  console toggle, the desktop's set-up), so they are the `console` surface
+	 *  and this layer never retries them; the copy names the one fix and offers
+	 *  a Retry button for the return trip (`refusal.ts`). */
+	tunnel_inactive: { surface: "console", retry: "never" },
+	tunnel_disabled: { surface: "console", retry: "never" },
+	billing_inactive: { surface: "console", retry: "never" },
+	billing_lapsed: { surface: "console", retry: "never" },
 };
+
+/**
+ * The relay's 503 `kind` (core C1's `REMEDY_KIND`, `gateway.py:450-470` at
+ * 7c0fc7bf): the action the computer says fixes its state. Read only when the
+ * `reason` is one this build does not know, so a newer gateway still lands on
+ * the right surface; an unknown kind keeps the classification it had before.
+ * `wait_*` kinds clear by themselves (`WAITING_KINDS`), as does `check_status`
+ * (a busy credential store, a lease still pending).
+ */
+const KIND_SURFACE: Readonly<Record<string, ErrorSurface>> = {
+	wait_network: "retry",
+	wait_radient: "retry",
+	wait_reconnect: "retry",
+	check_status: "retry",
+	sign_in: "console",
+	restore_owner: "console",
+	run: "console",
+	accept_quote: "console",
+	add_credit: "console",
+	open_console: "console",
+};
+
+/** The surface a relay `kind` implies, or `undefined` for a kind this build
+ *  does not know (feature detection: never a guess). */
+export function surfaceForRelayKind(
+	kind: string | undefined,
+): ErrorSurface | undefined {
+	if (kind === undefined) return undefined;
+	if (Object.hasOwn(KIND_SURFACE, kind)) return KIND_SURFACE[kind];
+	return kind.startsWith("wait_") ? "retry" : undefined;
+}
 
 function defaultEnvelopeFor(kind: RelayErrorKind): EnvelopeDirective {
 	switch (kind) {
@@ -300,11 +384,13 @@ export class RelayError extends Error {
 	readonly code: string | undefined;
 	readonly reason: GatewayReason | undefined;
 	readonly reasonRaw: string | undefined;
+	readonly relayStateKind: string | undefined;
 	readonly retryAfterMs: number | undefined;
 	readonly envelope: EnvelopeDirective;
 	readonly retry: RetryDirective;
 	readonly surface: ErrorSurface;
 	readonly diagnostic: string | undefined;
+	readonly transportCause: TransportCause | undefined;
 
 	constructor(
 		kind: RelayErrorKind,
@@ -319,11 +405,13 @@ export class RelayError extends Error {
 		this.code = init.code;
 		this.reason = init.reason;
 		this.reasonRaw = init.reasonRaw;
+		this.relayStateKind = init.relayStateKind;
 		this.retryAfterMs = init.retryAfterMs;
 		this.envelope = init.envelope ?? defaultEnvelopeFor(kind);
 		this.retry = init.retry ?? defaultRetryFor(kind);
 		this.surface = init.surface ?? defaultSurfaceFor(kind);
 		this.diagnostic = init.diagnostic;
+		this.transportCause = init.transportCause;
 		if (init.cause !== undefined) this.cause = init.cause;
 	}
 
@@ -354,6 +442,8 @@ export class RelayError extends Error {
 		if (this.status !== undefined) parts.push(String(this.status));
 		if (this.reasonRaw) parts.push(this.reasonRaw);
 		else if (this.reason) parts.push(this.reason);
+		if (this.kind === "transport" && this.transportCause)
+			parts.push(this.transportCause);
 		return parts.join(" ");
 	}
 }
@@ -456,6 +546,9 @@ function causeCodes(cause: unknown): string[] {
 export function transportError(
 	cause: unknown,
 	diagnostic?: string,
+	/** Set by the caller that KNOWS why (`http.ts`: its own deadline fired);
+	 *  otherwise derived from the cause. */
+	known?: TransportCause,
 ): RelayError {
 	const codes = causeCodes(cause);
 	const message =
@@ -485,7 +578,18 @@ export function transportError(
 			},
 		);
 	}
-	return new RelayError("transport", message, { cause, diagnostic });
+	const transportCause: TransportCause =
+		known ??
+		(codes.includes("ECONNREFUSED")
+			? "refused"
+			: cause instanceof Error && cause.name === "AbortError"
+				? "aborted"
+				: "reset");
+	return new RelayError("transport", message, {
+		cause,
+		diagnostic,
+		transportCause,
+	});
 }
 
 /** The sentence for a failure whose message is the RUNTIME's own words rather than
@@ -685,18 +789,61 @@ export function relayErrorFromResponse(
 				common,
 			);
 		case 503: {
+			/* A relay that names its own state (`kind`) is answering, and saying why it
+			 * cannot serve yet. A `wait_*` state clears by itself, so it is the `retry`
+			 * surface with a backoff rather than "computer offline". Any other kind keeps
+			 * the classification below and only carries the kind for the copy. */
+			const relayStateKind = nonEmpty(
+				typeof objectBody?.kind === "string" ? objectBody.kind : undefined,
+			);
+			/* Only when the reason is not one this build knows (PR #261 R6): the
+			 * documented precedence is reason → kind (`KIND_SURFACE`), and a known
+			 * terminal reason beside a `wait_*` kind took the `retry` surface here
+			 * while `refusalCopy` showed the reason's copy — a `retry` surface
+			 * saying "Add credit". A known reason falls through to its policy. */
+			if (relayStateKind?.startsWith("wait_") && !isGatewayReason(reasonRaw)) {
+				return new RelayError(
+					"gateway-refused",
+					detail ?? serverError ?? "relay is not ready yet",
+					{
+						...common,
+						relayStateKind,
+						/* The KIND decides the surface: the computer is saying "this
+						 *  clears by itself" (`WAITING_KINDS`), and no known reason
+						 *  overrides it on this branch. */
+						surface: "retry",
+						retry: "after-backoff",
+					},
+				);
+			}
 			/* Two very different machines answer 503 through the same status:
 			 * the edge's plain-text "Tunnel temporarily unavailable" (the connector is
 			 * not there) and the gateway's JSON `{detail, reason}` (the connector is
 			 * there and refusing). A JSON body with a `reason` is the gateway. */
 			if (reasonRaw !== undefined || detail !== undefined) {
 				const reason = isGatewayReason(reasonRaw) ? reasonRaw : undefined;
-				const policy = reason ? REASON_POLICY[reason] : undefined;
+				/* A known reason decides; otherwise the computer's own `kind` does,
+				 *  so an unknown reason with a known kind is not left to the generic
+				 *  fallback. Neither known: unchanged. */
+				const kindSurface = surfaceForRelayKind(relayStateKind);
+				const policy = reason
+					? REASON_POLICY[reason]
+					: kindSurface
+						? {
+								surface: kindSurface,
+								retry:
+									kindSurface === "retry"
+										? ("after-backoff" as const)
+										: ("never" as const),
+								retryAfterMs: undefined,
+							}
+						: undefined;
 				return new RelayError(
 					"gateway-refused",
 					detail ?? serverError ?? "Tunnel authorization unavailable",
 					{
 						...common,
+						relayStateKind,
 						reason,
 						reasonRaw,
 						surface: policy?.surface,
@@ -708,7 +855,7 @@ export function relayErrorFromResponse(
 			return new RelayError(
 				"computer-offline",
 				readableBodyText(text) ?? "Tunnel temporarily unavailable",
-				common,
+				{ ...common, relayStateKind },
 			);
 		}
 		case 502: {

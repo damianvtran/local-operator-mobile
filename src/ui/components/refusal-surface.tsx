@@ -1,4 +1,5 @@
-import { AlertTriangle } from "lucide-react-native";
+import * as WebBrowser from "expo-web-browser";
+import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react-native";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { t } from "@/i18n";
@@ -6,7 +7,9 @@ import { t } from "@/i18n";
 import { CONTROL, LIVE_REGION, REGION, ROLE, SURFACE } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
+import { CommandBlock } from "@/ui/components/command-block";
 import { DIAGNOSTIC_FALLBACK } from "@/ui/components/diagnostic-fallback";
+import { Sheet } from "@/ui/components/sheet";
 import { useComposedDir } from "@/ui/direction";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { TYPE_STEPS } from "@/ui/tokens.gen";
@@ -62,6 +65,53 @@ export type RefusalKind =
 	 *  publishes that name. */
 	| "host-unresolved";
 
+/** One action of a cause the feature layer named exactly. Declared here,
+ *  structurally, so the design system still does not import the protocol layer;
+ *  `src/features/auth/refusal.ts` builds values of this shape. */
+export type RefusalSurfaceAction =
+	| { id: "retry" | "refresh-list" | "how-to"; label: string }
+	| {
+			id: "open-billing" | "add-credit" | "open-console";
+			label: string;
+			url: string;
+	  };
+
+/** Plain-language copy that REPLACES the per-kind headline, next line and
+ *  gateway detail, and the kind's default buttons. Present only for causes the
+ *  feature layer can name (billing, offline, relay stopped, …). */
+export type RefusalSurfaceCopy = {
+	cause: string;
+	title: string;
+	body: string | null;
+	actions: RefusalSurfaceAction[];
+	help: string | null;
+	/** The cause is fixed in the reader's Radient account (billing, the
+	 *  console): "Use another address" is hidden under it, because the
+	 *  own-relay password route it opens cannot fix any of them (PR #261 U10). */
+	accountCause?: boolean;
+};
+
+/** The open/closed mark for a disclosure button (PR #261 D3). Up/down rather
+ *  than a side-pointing chevron, so it needs no mirroring on an RTL page. */
+export const disclosureIcon =
+	(expanded: boolean) =>
+	({ color, size }: { color: string; size: number }) =>
+		expanded ? (
+			<ChevronUp color={color} size={size} />
+		) : (
+			<ChevronDown color={color} size={size} />
+		);
+
+const ACTION_ID: Record<RefusalSurfaceAction["id"], string> = {
+	retry: CONTROL.refusalActionRetry,
+	"refresh-list": CONTROL.refusalRefreshList,
+	"how-to": CONTROL.refusalHowTo,
+	"open-billing": CONTROL.refusalOpenBilling,
+	"add-credit": CONTROL.refusalAddCredit,
+	/* The id the sign-in proof and S13 flow already assert for "the console". */
+	"open-console": REGION.connectionErrorConsoleLink,
+};
+
 export type RefusalSurfaceProps = {
 	kind: RefusalKind;
 	/** What was being reached, named for the reader ("Your computer", the URL).
@@ -71,8 +121,18 @@ export type RefusalSurfaceProps = {
 	 *  — that copy is written for a phone and is more specific than anything this
 	 *  component could invent. */
 	detail?: string | null;
-	/** The local command that fixes a machine-side cause, when one exists. */
+	/** The local command that fixes a machine-side cause, when one exists. Shown
+	 *  only behind "Using a terminal?": most readers of this surface never open a
+	 *  terminal, and a command as the instruction was a dead end for them. */
 	remedy?: string | null;
+	/** Plain copy and actions for a named cause; replaces the kind's defaults. */
+	copy?: RefusalSurfaceCopy | null;
+	/** "Refresh list" (tunnel gone). Falls back to `onRetry` on screens with no
+	 *  list of their own. */
+	onRefreshList?: () => void;
+	/** Opens a link action. Defaults to the in-app browser, as the console
+	 *  handlers on Computers and Settings already do. */
+	onOpenUrl?: (url: string) => void;
 	/** A server-supplied backoff, in ms, when the failure said to wait. */
 	retryAfterMs?: number | null;
 	onRetry?: () => void;
@@ -204,9 +264,29 @@ export const RefusalSurface = ({
 	onSignIn,
 	onUseAnotherAddress,
 	onOpenConsole,
+	copy,
+	onRefreshList,
+	onOpenUrl = (url) => void WebBrowser.openBrowserAsync(url),
 	testID = SURFACE.refusalSurface,
 }: RefusalSurfaceProps) => {
 	const [showDetails, setShowDetails] = useState(false);
+	const [showTerminal, setShowTerminal] = useState(false);
+	const [showHowTo, setShowHowTo] = useState(false);
+	const runAction = (item: RefusalSurfaceAction) => {
+		switch (item.id) {
+			case "retry":
+				onRetry?.();
+				return;
+			case "refresh-list":
+				(onRefreshList ?? onRetry)?.();
+				return;
+			case "how-to":
+				setShowHowTo(true);
+				return;
+			default:
+				onOpenUrl(item.url);
+		}
+	};
 	const danger = useTokenColor("danger");
 	/* The console-side help (`mobile.computers.billing_help`, `disabled_help`,
 	 *  `harness_help`) starts with "Radient" in Urdu, so RN-web's `dir="auto"`
@@ -253,28 +333,31 @@ export const RefusalSurface = ({
 					accessibilityRole={ROLE.header}
 					testID={CAUSE_ID[kind]}
 				>
-					{HEADLINE[kind](subject)}
+					{copy ? copy.title : HEADLINE[kind](subject)}
 				</Text>
 			</View>
-			{/* Same reason as the headline (#257 design D2). */}
-			<Text {...composedDir} className="text-body-sm text-ink-muted">
-				{NEXT[kind]()}
-			</Text>
+			{copy ? (
+				copy.body ? (
+					<Text {...composedDir} className="text-body-sm text-ink-muted">
+						{copy.body}
+					</Text>
+				) : null
+			) : (
+				/* Same reason as the headline (#257 design D2). */
+				<Text {...composedDir} className="text-body-sm text-ink-muted">
+					{NEXT[kind]()}
+				</Text>
+			)}
 			{/* The gateway's own sentence sits UNDER the plain one: the reader gets the
 			 *  short version first, and the specific one when they want it. It is never
 			 *  the only line, because a gateway sentence assumes the relay's vocabulary. */}
-			{detail && kind !== "diagnostic" ? (
+			{/* A named cause's copy already says it in the reader's words; the
+			 *  gateway's sentence beside it was the "tunnel isn't active" line that
+			 *  sent a billing problem to a terminal. */}
+			{detail && kind !== "diagnostic" && !copy ? (
 				<Text {...composedDir} className="text-body-sm text-ink-dim">
 					{detail}
 				</Text>
-			) : null}
-			{remedy ? (
-				<View
-					className="rounded-sm border border-hairline bg-sunken p-3"
-					testID={REGION.connectionErrorMachineRemedy}
-				>
-					<Text className="text-mono-sm text-ink-muted">{remedy}</Text>
-				</View>
 			) : null}
 			{/* Only the server's own backoff is worth a line, and it is stated as
 			 *  advice, not as a retry this screen schedules — none is scheduled (D2). */}
@@ -293,80 +376,159 @@ export const RefusalSurface = ({
 				</View>
 			) : null}
 
-			<View className="gap-2 pt-1">
-				{/* Retry is prominent only where retrying can work. `tunnel-gone` and
-				 *  `console` deliberately have no primary action: the fix is elsewhere. */}
-				{(kind === "computer-offline" ||
-					kind === "relay-stopped" ||
-					kind === "retry" ||
-					kind === "password" ||
-					kind === "diagnostic") &&
-				onRetry ? (
-					<View testID={REGION.connectionErrorRetryProminent}>
+			{copy ? (
+				<View className="gap-2 pt-1">
+					{/* The named cause's own actions, first one primary. Each can act on
+					 *  the cause from this phone (a link, a retry, a help sheet) — none
+					 *  of them is "run this command". Every one passes `labelDir`: ur
+					 *  `open_billing` and `open_console` open with the Latin `Radient`, the
+					 *  UR-C1 defect #257 fixed on the kind's console button (it emits
+					 *  nothing in an LTR catalogue). */}
+					{copy.actions.map((item, index) =>
+						item.id === "retry" ? (
+							<View key={item.id} testID={REGION.connectionErrorRetryProminent}>
+								<Button
+									testID={ACTION_ID[item.id]}
+									label={item.label}
+									labelDir={composedDir}
+									onPress={() => runAction(item)}
+									variant={index === 0 ? "primary" : "outline"}
+								/>
+							</View>
+						) : (
+							<Button
+								key={item.id}
+								testID={ACTION_ID[item.id]}
+								label={item.label}
+								labelDir={composedDir}
+								onPress={() => runAction(item)}
+								variant={index === 0 ? "primary" : "outline"}
+							/>
+						),
+					)}
+					{onUseAnotherAddress && !copy.accountCause ? (
 						<Button
-							testID={CONTROL.refusalSignIn}
-							label={
-								kind === "diagnostic"
-									? t("mobile.computers.retry")
-									: kind === "retry"
-										? t("mobile.computers.refusal.try_now")
-										: t("mobile.computers.refusal.try_again")
-							}
-							onPress={onRetry}
-						/>
-					</View>
-				) : null}
-				{(kind === "sign-in" || kind === "account-mismatch") && onSignIn ? (
-					<Button
-						label={t("mobile.computers.refusal.sign_in_again")}
-						onPress={onSignIn}
-						testID={CONTROL.refusalRetry}
-					/>
-				) : null}
-				{(kind === "console" || kind === "tunnel-gone") && onOpenConsole ? (
-					<Button
-						label={t("mobile.computers.refusal.open_console")}
-						/* ur `Radient کنسول کھولیں` opens with the Latin product name, so
-						 * `dir="auto"` would lay the label LTR on an RTL page (M3 S2b-2a
-						 * ur audit UR-C1); state the page's base, as sign-in does. */
-						labelDir={composedDir}
-						onPress={onOpenConsole}
-						variant="outline"
-						testID={REGION.connectionErrorConsoleLink}
-					/>
-				) : null}
-				{kind === "diagnostic" ? (
-					<>
-						<Button
-							label={t(
-								showDetails
-									? "mobile.computers.hide_details"
-									: "mobile.computers.show_details",
-							)}
-							testID={CONTROL.refusalDetailsToggle}
+							testID={CONTROL.refusalAnotherAddress}
+							label={t("mobile.computers.refusal.another_address")}
+							onPress={onUseAnotherAddress}
 							variant="quiet"
-							expanded={showDetails}
-							onPress={() => setShowDetails((open) => !open)}
 						/>
-						{showDetails ? (
-							<Text
-								testID={REGION.connectionDetails}
-								className="text-center text-caption text-ink-dim"
-							>
-								{detail ?? DIAGNOSTIC_FALLBACK}
-							</Text>
-						) : null}
-					</>
-				) : null}
-				{onUseAnotherAddress ? (
+					) : null}
+				</View>
+			) : (
+				<View className="gap-2 pt-1">
+					{/* Retry is prominent only where retrying can work. `tunnel-gone` and
+					 *  `console` deliberately have no primary action: the fix is elsewhere. */}
+					{(kind === "computer-offline" ||
+						kind === "relay-stopped" ||
+						kind === "retry" ||
+						kind === "password" ||
+						kind === "diagnostic") &&
+					onRetry ? (
+						<View testID={REGION.connectionErrorRetryProminent}>
+							<Button
+								testID={CONTROL.refusalSignIn}
+								label={
+									kind === "diagnostic"
+										? t("mobile.computers.retry")
+										: kind === "retry"
+											? t("mobile.computers.refusal.try_now")
+											: t("mobile.computers.refusal.try_again")
+								}
+								onPress={onRetry}
+							/>
+						</View>
+					) : null}
+					{(kind === "sign-in" || kind === "account-mismatch") && onSignIn ? (
+						<Button
+							label={t("mobile.computers.refusal.sign_in_again")}
+							onPress={onSignIn}
+							testID={CONTROL.refusalRetry}
+						/>
+					) : null}
+					{(kind === "console" || kind === "tunnel-gone") && onOpenConsole ? (
+						<Button
+							label={t("mobile.computers.refusal.open_console")}
+							/* ur `Radient کنسول کھولیں` opens with the Latin product name, so
+							 * `dir="auto"` would lay the label LTR on an RTL page (M3 S2b-2a
+							 * ur audit UR-C1); state the page's base, as sign-in does. */
+							labelDir={composedDir}
+							onPress={onOpenConsole}
+							variant="outline"
+							testID={REGION.connectionErrorConsoleLink}
+						/>
+					) : null}
+					{kind === "diagnostic" ? (
+						<>
+							<Button
+								label={t(
+									showDetails
+										? "mobile.computers.hide_details"
+										: "mobile.computers.show_details",
+								)}
+								testID={CONTROL.refusalDetailsToggle}
+								variant="quiet"
+								expanded={showDetails}
+								onPress={() => setShowDetails((open) => !open)}
+							/>
+							{showDetails ? (
+								<Text
+									testID={REGION.connectionDetails}
+									className="text-center text-caption text-ink-dim"
+								>
+									{detail ?? DIAGNOSTIC_FALLBACK}
+								</Text>
+							) : null}
+						</>
+					) : null}
+					{onUseAnotherAddress ? (
+						<Button
+							testID={CONTROL.refusalAnotherAddress}
+							label={t("mobile.computers.refusal.another_address")}
+							onPress={onUseAnotherAddress}
+							variant="quiet"
+						/>
+					) : null}
+				</View>
+			)}
+			{/* Commands live ONLY here, closed by default: a reader who does not use
+			 *  a terminal never meets one, and a reader who does gets the exact,
+			 *  copyable command rather than prose that paraphrases it. */}
+			{remedy ? (
+				<View className="gap-2">
 					<Button
-						testID={CONTROL.refusalAnotherAddress}
-						label={t("mobile.computers.refusal.another_address")}
-						onPress={onUseAnotherAddress}
+						testID={CONTROL.refusalTerminalToggle}
+						label={t("mobile.refusal.terminal.toggle")}
 						variant="quiet"
+						expanded={showTerminal}
+						trailingIcon={disclosureIcon(showTerminal)}
+						onPress={() => setShowTerminal((open) => !open)}
 					/>
-				) : null}
-			</View>
+					{showTerminal ? (
+						<View testID={REGION.connectionErrorMachineRemedy}>
+							<CommandBlock
+								id="refusal-remedy"
+								label={t("mobile.refusal.terminal.label")}
+								command={remedy}
+							/>
+						</View>
+					) : null}
+				</View>
+			) : null}
+			{copy?.help ? (
+				<Sheet
+					visible={showHowTo}
+					onClose={() => setShowHowTo(false)}
+					title={t("mobile.refusal.how_to.title")}
+					titleLines={2}
+					returnFocusTestID={CONTROL.refusalHowTo}
+					testID={CONTROL.refusalHowToSheet}
+				>
+					<Text {...composedDir} className="text-body text-ink">
+						{copy.help}
+					</Text>
+				</Sheet>
+			) : null}
 		</View>
 	);
 };

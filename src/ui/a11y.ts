@@ -394,10 +394,27 @@ export const CONTROL = {
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
 	settingsAccountRoutingRetry: "settings-account-routing-retry",
+	/** Diagnostics: copies the section as redacted plain text for a helper. */
+	settingsCopyDiagnostics: "settings-copy-diagnostics",
 	refusalSignIn: "refusal-sign-in",
 	refusalDetailsToggle: "connection-details-toggle",
 	refusalRetry: "refusal-retry",
 	refusalAnotherAddress: "refusal-another-address",
+	/** "Using a terminal?" — the ONE place a refusal shows a command. */
+	refusalTerminalToggle: "refusal-terminal-toggle",
+	/** The plain-copy actions (`RefusalCopy.actions`), one id each. */
+	refusalHowTo: "refusal-how-to",
+	refusalOpenBilling: "refusal-open-billing",
+	refusalAddCredit: "refusal-add-credit",
+	refusalRefreshList: "refusal-refresh-list",
+	refusalActionRetry: "refusal-action-retry",
+	/** The "How to turn it on" help sheet. */
+	refusalHowToSheet: "refusal-how-to-sheet",
+	/** Set-up screen: "Using a terminal?", which reveals the create/attach
+	 *  commands that used to be the screen's first instruction. */
+	setupTerminalToggle: "setup-terminal-toggle",
+	/** "Check again" on the empty-account set-up path (PR #261 U2). */
+	setupCheckAgain: "setup-check-again",
 	/* --- the controls this slice's screens render, named one by one. A screen with
 	 * two controls cannot share an identifier: Maestro's `id:` matching would pick one
 	 * arbitrarily and the failure would read as a flaky flow. --- */
@@ -566,6 +583,8 @@ export const CONTROL = {
 	homeFoldersBanner: "home-folders-banner",
 	homeFoldersRetry: "home-folders-retry",
 	homeFoldersSignIn: "home-folders-sign-in",
+	/** Retry on the transient connection notice (PR #261 Q3). */
+	transientRetry: "transient-retry",
 	/** The home's model-list failure and its own retry: a read that failed used to be
 	 *  swallowed into an empty catalogue, which read as "connected, no model". */
 	homeModelsBanner: "home-models-banner",
@@ -925,6 +944,8 @@ export const SURFACE = {
 	sessionTranscript: "session-transcript",
 	sessionComposer: "session-composer",
 	homeRecovery: "home-recovery",
+	/** The non-blocking notice for a wait the computer named (PR #261 Q3). */
+	transientNotice: "transient-notice",
 	homeRecoveryAction: "home-recovery-action",
 	homeRecoveryDetails: "home-recovery-details",
 	/** The panels + working line, bounded and internally scrolling in short landscape

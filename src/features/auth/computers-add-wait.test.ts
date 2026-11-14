@@ -76,6 +76,7 @@ vi.mock("expo-router", () => ({
 		canGoBack: () => true,
 	}),
 	useLocalSearchParams: () => host.params,
+	useFocusEffect: () => undefined,
 }));
 vi.mock("expo-web-browser", () => ({ openBrowserAsync: async () => ({}) }));
 vi.mock("@/ui/appearance", () => ({ useTokenColor: () => "#000" }));

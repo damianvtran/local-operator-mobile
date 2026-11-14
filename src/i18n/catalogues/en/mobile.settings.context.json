@@ -298,5 +298,25 @@
 	"mobile.settings.own_tunnel.remove_body": {
 		"role": "help",
 		"note": "Body of the same confirmation dialog in the \"Your own tunnel\" section of Settings (the saved own-tunnel: edit it, test it again, remove it): says what removing does and does not affect."
+	},
+	"mobile.settings.diagnostics.tunnel": {
+		"role": "meta",
+		"note": "Label of a Diagnostics row showing the Radient tunnel id this phone is using, so a helper can compare it with the computer. The value is an identifier, never translated."
+	},
+	"mobile.settings.diagnostics.address": {
+		"role": "meta",
+		"note": "Label of a Diagnostics row showing the tunnel's host name this phone connects to. The value is a host name, never translated."
+	},
+	"mobile.settings.diagnostics.copy": {
+		"role": "button",
+		"note": "Button in Diagnostics that copies the diagnostic lines (no passwords or tokens) as plain text, to paste to whoever is helping."
+	},
+	"mobile.settings.diagnostics.copied": {
+		"role": "status",
+		"note": "Replaces the \"Copy diagnostics\" button label after the text was copied to the clipboard."
+	},
+	"mobile.settings.diagnostics.copy_failed": {
+		"role": "status",
+		"note": "Replaces the 'Copy diagnostics' button label for about two seconds when the phone's clipboard refused the text."
 	}
 }

@@ -34,6 +34,8 @@ import oauthContext from "@/i18n/catalogues/en/mobile.oauth.context.json";
 import oauth from "@/i18n/catalogues/en/mobile.oauth.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
+import refusalContext from "@/i18n/catalogues/en/mobile.refusal.context.json";
+import refusal from "@/i18n/catalogues/en/mobile.refusal.json";
 import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
 import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
 import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
@@ -149,7 +151,16 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 162, // M3 S2b-2a +24: the connection-failure (refusal) surface: 9 headlines, 9 next lines, wait line, 5 buttons (138 + 24 = 162); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 167, // Merge of origin/main (#257, caae98bc) into #261: main's 162 + the branch's 5 (143 - 138) = 167; M3 S2b-2a +24: the connection-failure (refusal) surface: 9 headlines, 9 next lines, wait line, 5 buttons (138 + 24 = 162); PR #261 round-1 remediation +2: set-up's "Check again" and its "Checking…" state (141 + 2 = 143); M1 scope additions +1: the switcher's "Can't reach Radient right now" hint (140 + 1 = 141); M1 no-terminal +2: set-up's Settings → Phone access line and its "list updates by itself" line (138 + 2 = 140); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+	},
+	{
+		name: "mobile.refusal",
+		messages: refusal,
+		context: refusalContext,
+		/* M1 no-terminal: the refusal surface's named causes (11 titles, 9 bodies),
+		 *  their six actions, the "How to turn it on" sheet (2) and the "Using a
+		 *  terminal?" disclosure with its block label (2). */
+		expected: 42, // PR #261 round-1 remediation +3: the suspended body, the relay-refused title and body (39 + 3 = 42); M1 scope additions +9: core C1 kinds (wait_network and wait_reconnect title/body, the computer's sign-in and attention title/body, open_console title) (30 + 9 = 39)
 	},
 	{
 		name: "mobile.notifications",
@@ -217,7 +228,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 75, // +4 the account card's `account.signed_in_radient` and the `sign_in_confirm` dialog (PR #258 R1 B1/m1); +1 `diagnostics.reason` (the raw stream-health reason row, Sherman's report); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+		expected: 80, // Merge of origin/main (#258, 8ca71d54) into #261: the branch's 75 + main's 5 (80, counted over the merged en JSON). Branch: PR #261 round-1 remediation +1: Copy diagnostics' "Couldn't copy" state (74 + 1 = 75); M1 scope additions +4: Diagnostics tunnel id, tunnel address, Copy diagnostics and its copied state (70 + 4 = 74). Main: +4 the account card's `account.signed_in_radient` and the `sign_in_confirm` dialog (PR #258 R1 B1/m1); +1 `diagnostics.reason` (the raw stream-health reason row, Sherman's report). M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
 		/* The conversations drawer's View options (TestFlight 906): the desktop's
@@ -362,6 +373,16 @@ describe("the English catalogues", () => {
 		 * 812 + 6 = 818. */
 		/* Merge of origin/main (#255, f8d0d8dd) into #259: 837 on main + 6
 		 * mobile.notifications = 843. */
+		/* M1 no-terminal: +2 mobile.computers (set-up's two lines) + 30
+		 * mobile.refusal (new namespace) = 32: 812 + 32 = 844, counted over the
+		 * en JSON. */
+		/* M1 scope additions: +9 mobile.refusal, +1 mobile.computers, +4
+		 * mobile.settings = 14: 844 + 14 = 858. */
+		/* PR #261 round-1 remediation: +3 mobile.refusal (the suspended body,
+		 * the relay-refused title and body), +2 mobile.computers (Check again,
+		 * Checking…), +1 mobile.settings (Couldn't copy) = 6: 858 + 6 = 864. */
+		/* Merge of origin/main (#259, 9ef19ccd) into #261: 843 on main + the
+		 * branch's 52 (864 - 812) = 895. */
 		/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
 		 * 861 + 6 (mobile.notifications) = 867, counted over the en JSON. */
 		/* fix/settings-signin-status-badge: +1 mobile.settings
@@ -373,9 +394,13 @@ describe("the English catalogues", () => {
 		 * mobile.settings = 842. */
 		/* Merge of origin/main (#259, 9ef19ccd) into #258: 843 on main + 5
 		 * mobile.settings = 848. */
+		/* Merge of origin/main (#258, 8ca71d54) into #261: 848 on main + the
+		 * branch's 52 (895 - 843) = 900, counted over the merged en JSON. */
 		/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 		 * 867 + 5 (mobile.settings) = 872, counted over the en JSON. */
-		expect(total).toBe(872);
+		/* Merge of origin/main (#257, caae98bc) into #261: 872 on main + the
+		 * branch's 52 (900 - 848) = 924, counted over the merged en JSON. */
+		expect(total).toBe(924);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

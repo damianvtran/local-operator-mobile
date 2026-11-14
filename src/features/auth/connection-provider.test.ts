@@ -21,7 +21,6 @@ import {
 	ConnectionProvider,
 	configStore,
 	connectionStore,
-	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
 import { headerHealth } from "@/features/session/health";
@@ -388,9 +387,20 @@ async function relay(
 		failCode?: boolean;
 		/** Drops the session code request's connection: a pick made offline. */
 		dropCode?: boolean;
+		/** Drops the account token refresh's connection: Radient unreachable on
+		 *  a cold start (PR #261 U9). */
+		dropOauthRefresh?: boolean;
+		/** Answers for list-stream REOPENS (the first open always succeeds), one
+		 *  per reopen, in order (PR #261 R1/Q3). */
+		catalogueFailures?: Array<{
+			status: number;
+			body: unknown;
+			headers?: Record<string, string>;
+		}>;
 	} = {},
 ) {
 	const events: string[] = [];
+	const catalogueFailures = [...(options.catalogueFailures ?? [])];
 	let failLogout = options.failLogout;
 	let oauthRefreshed = false;
 	let oauthIssued = 0;
@@ -418,6 +428,15 @@ async function relay(
 	const releaseNextTunnels = deferred();
 	let historyReads = 0;
 	let catalogueStreams = 0;
+	/* The relay behind the tunnel refusing this phone: a 401 WITHOUT
+	 *  `X-Radient-Login` on the list stream, the list read and `/api/models`,
+	 *  switched on and off mid-run so a test can fix the cause (PR #261 U3-1). */
+	let relayRefuses = false;
+	/* Holds the NEXT list-stream open / list read until released, so a test can
+	 *  order the stream's refusal against a refresh's (U3-1's early-tap order). */
+	let catalogueHold: ReturnType<typeof deferred> | null = null;
+	let sessionsHold: ReturnType<typeof deferred> | null = null;
+	let response401 = 0;
 	let loginCount = 0;
 	let tokenCount = 0;
 	let codeCount = 0;
@@ -439,6 +458,10 @@ async function relay(
 			response.writeHead(status, { "content-type": "application/json" });
 			response.end(JSON.stringify(value));
 		};
+		if (path === "/v1/auth/oauth/token" && options.dropOauthRefresh) {
+			request.socket.destroy();
+			return;
+		}
 		if (path === "/v1/auth/oauth/token" && options.refreshOauth) {
 			json({
 				access_token: "fresh-retirement",
@@ -605,6 +628,26 @@ async function relay(
 		}
 		if (path === "/api/sessions/events") {
 			catalogueStreams += 1;
+			if (catalogueHold) {
+				const hold = catalogueHold;
+				catalogueHold = null;
+				await hold.promise;
+				if (response.destroyed) return;
+			}
+			if (relayRefuses) {
+				response401 += 1;
+				json({ error: "unauthorized" }, 401);
+				return;
+			}
+			const failure = catalogueStreams > 1 ? catalogueFailures.shift() : null;
+			if (failure) {
+				response.writeHead(failure.status, {
+					"content-type": "application/json",
+					...failure.headers,
+				});
+				response.end(JSON.stringify(failure.body));
+				return;
+			}
 			if (options.refuseCatalogue && catalogueStreams > 1) {
 				if (options.edgeCatalogue)
 					response.setHeader("x-radient-login", "required");
@@ -675,6 +718,17 @@ async function relay(
 			return;
 		}
 		if (path.startsWith("/api/sessions") && !path.endsWith("/history")) {
+			if (sessionsHold) {
+				const hold = sessionsHold;
+				sessionsHold = null;
+				await hold.promise;
+				if (response.destroyed) return;
+			}
+			if (relayRefuses) {
+				response401 += 1;
+				json({ error: "unauthorized" }, 401);
+				return;
+			}
 			if (options.sessionsFailure) {
 				json({ detail: "Sessions unavailable", reason: "connector" }, 503);
 				return;
@@ -708,6 +762,11 @@ async function relay(
 			return;
 		}
 		if (path === "/api/models") {
+			if (relayRefuses) {
+				response401 += 1;
+				json({ error: "unauthorized" }, 401);
+				return;
+			}
 			json(body("models"));
 			return;
 		}
@@ -720,6 +779,8 @@ async function relay(
 		refuseCatalogue.resolve();
 		releaseHistory.resolve();
 		releaseTunnels.resolve();
+		catalogueHold?.resolve();
+		sessionsHold?.resolve();
 		releaseOauth.resolve();
 		oauthWriteHold.releaseNow();
 		server.closeAllConnections();
@@ -752,6 +813,8 @@ async function relay(
 		failRefreshAfter: (status: number, retryAfter: number) => {
 			refreshFailures.push({ status, retryAfter });
 		},
+		/** How many list streams have been opened so far. */
+		catalogueStreams: () => catalogueStreams,
 		/** Ends every open list stream cleanly — the gateway's 60 s stream cap. */
 		endCatalogueStreams: () => {
 			for (const open of openCatalogue) open.end();
@@ -785,6 +848,22 @@ async function relay(
 		},
 		allowCode: () => {
 			failCode = false;
+		},
+		/** The relay refuses (`true`) or accepts (`false`) this phone from now on. */
+		refuseRelay: (refuses: boolean) => {
+			relayRefuses = refuses;
+		},
+		/** How many relay 401s (no `X-Radient-Login`) have been answered. */
+		relay401s: () => response401,
+		/** Holds the next list-stream open; resolve the result to answer it. */
+		holdNextCatalogue: () => {
+			catalogueHold = deferred();
+			return catalogueHold;
+		},
+		/** Holds the next list read (`GET /api/sessions`); resolve to answer it. */
+		holdNextSessions: () => {
+			sessionsHold = deferred();
+			return sessionsHold;
 		},
 	};
 }
@@ -3323,12 +3402,23 @@ describe("a pick and a Refresh do not leave each other's state behind (PR #121 r
 			await latest.selectComputer(second);
 		});
 		expect(connectionStore.getState().phase).toBe("refused");
+		/* PR #261 Q6: the mint's network failure stays TYPED, so the copy is
+		 *  "Radient isn't responding" (the phone's side), not the generic
+		 *  "{computer} is not ready yet" that blamed the computer. */
 		expect(latest.refusal).toMatchObject({
 			kind: "retry",
 			subject: "Synthetic computer 2",
-			detail: PICK_UNREACHABLE_DETAIL,
 			remedy: null,
+			copy: {
+				cause: "radient-unreachable",
+				title: "Radient isn't responding right now.",
+				body: "Try again in a moment.",
+			},
 		});
+		expect(latest.refusal?.copy?.actions.map((item) => item.id)).toEqual([
+			"retry",
+		]);
+		expect(latest.lastError?.surface).toBe("retry");
 		expect(JSON.stringify(latest.refusal)).not.toMatch(CONSOLE_COPY);
 	});
 });
@@ -3974,4 +4064,428 @@ describe("a background launch on a locked device (R1-M2)", () => {
 		await act(async () => appState.emit("active"));
 		expect(durable.oauthReads).toBe(1);
 	});
+});
+
+/* --- PR #261 round-1 remediation, driven through the real provider -------- */
+describe("PR #261 round-1 remediation: the provider's side", () => {
+	/** Waits for `test` in real time (the stream's backoff is real timers). */
+	async function eventually(test: () => boolean, ms = 6_000) {
+		const deadline = Date.now() + ms;
+		while (!test()) {
+			if (Date.now() > deadline)
+				throw new Error("Provider did not reach the expected state");
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 20));
+			});
+		}
+	}
+	async function liveCustom(options: Parameters<typeof relay>[0]) {
+		const mock = await relay(options);
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => sessionReading.projection !== null);
+		return mock;
+	}
+
+	it("R1/Q3: a retried 503 is a diagnostics-only cause and a notice, never a stopped session, and clears on the next good frame", async () => {
+		const mock = await liveCustom({
+			catalogueFailures: [
+				{ status: 503, body: { detail: "d", reason: "server_unavailable" } },
+			],
+		});
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		/* The clean end is first recorded as the stalled stream's own cause —
+		 *  Q4: "Not answering" never sits beside "None", even for that moment —
+		 *  then the reopen's 503 replaces it. */
+		await eventually(
+			() =>
+				latest.diagnosticError?.summary ===
+				"gateway-refused 503 server_unavailable",
+		);
+		expect(latest.transient).toMatchObject({
+			cause: "radient-unreachable",
+			title: "Radient isn't responding right now.",
+		});
+		/* …and NOT in the field `use-session` reads: no refusal, no stopped
+		 *  session, the transcript stays (the round-1 defect). */
+		expect(latest.lastError).toBeNull();
+		expect(latest.refusal).toBeNull();
+		expect(sessionReading.error).toBeNull();
+		expect(sessionReading.content).toBe("transcript");
+		/* The backoff reopens the stream; its first frame clears both. */
+		await eventually(
+			() => latest.diagnosticError === null && latest.transient === null,
+		);
+		expect(latest.lastError).toBeNull();
+	}, 20_000);
+
+	it("Q3: the notice's Retry reopens the stream now, not after the backoff", async () => {
+		const mock = await liveCustom({
+			catalogueFailures: [
+				{ status: 503, body: { detail: "d", kind: "wait_network" } },
+				{ status: 503, body: { detail: "d", kind: "wait_network" } },
+			],
+		});
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		await eventually(() => latest.transient?.cause === "wait-network");
+		const opened = mock.catalogueStreams();
+		const pressedAt = Date.now();
+		await act(async () => {
+			latest.retryTransient();
+		});
+		await eventually(() => mock.catalogueStreams() > opened, 1_500);
+		/* Well inside the 2 s first backoff step: the press started it. */
+		expect(Date.now() - pressedAt).toBeLessThan(1_500);
+	}, 20_000);
+
+	it("U4: a Radient-route 401 without X-Radient-Login keeps the sign-in, says so in Radient words, and records it", async () => {
+		/* Two computers, so the cold start does not open one by itself; the
+		 *  same shape as the edge-401 test above, minus `X-Radient-Login`. */
+		const tunnels = ["a", "b"].map((letter, index) => ({
+			id: `tun-synthetic-${index + 1}`,
+			name: `Synthetic computer ${index + 1}`,
+			hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		}));
+		const mock = await relay({ tunnels, refuseCatalogue: true });
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(
+			() =>
+				latest.restoredAccount &&
+				connectionStore.getState().computers.length === 2,
+		);
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("Expected discovered computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		const revoke = vi.spyOn(startupAuthorizationLifecycle, "revoke");
+		try {
+			mock.refuseCatalogue.resolve();
+			await eventually(() => connectionStore.getState().surface === "password");
+			await eventually(() => latest.lastError !== null);
+			expect(latest.refusal?.copy).toMatchObject({
+				cause: "relay-refused",
+				title:
+					"Local Operator on Synthetic computer 1 didn't accept this phone.",
+			});
+			expect(JSON.stringify(latest.refusal?.copy)).not.toMatch(/password/i);
+			expect(latest.lastError?.kind).toBe("relay-unauthorized");
+			expect(latest.diagnosticError?.summary).toBe("relay-unauthorized 401");
+			/* The follow-on `noteError` used to revoke on "password" (U4). */
+			expect(revoke).not.toHaveBeenCalled();
+			expect(latest.radientSignedIn).toBe(true);
+		} finally {
+			revoke.mockRestore();
+		}
+	}, 20_000);
+
+	it("U9: a cold start that cannot reach Radient says so in the mint path's words, with a Last error", async () => {
+		const mock = await relay({ dropOauthRefresh: true });
+		transport(mock.origin);
+		durable.oauth = {
+			...oauth,
+			refresh: "synthetic-refresh",
+			expires_at: Date.now() - 60_000,
+		};
+		await mount();
+		await eventually(() => connectionStore.getState().surface === "retry");
+		expect(latest.refusal?.copy).toMatchObject({
+			cause: "radient-unreachable",
+			body: "Try again in a moment.",
+		});
+		expect(latest.lastError?.kind).toBe("transport");
+		expect(latest.diagnosticError?.summary).toBe("transport");
+		/* The grant was not deleted: nothing here is the reader's to fix. */
+		expect(durable.oauth).not.toBeNull();
+	}, 20_000);
+});
+
+/* PR #261 round 2: Retry on a refusal raised by the LIVE list stream (Q7/U1),
+ *  and Diagnostics' Last error outliving the stream's frames (R2-2). */
+describe("PR #261 round-2 remediation: the provider's side", () => {
+	async function eventually(test: () => boolean, ms = 8_000) {
+		const deadline = Date.now() + ms;
+		while (!test()) {
+			if (Date.now() > deadline)
+				throw new Error("Provider did not reach the expected state");
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 20));
+			});
+		}
+	}
+
+	/** A live Radient route whose list-stream REOPEN answers `failure` once;
+	 *  every later open is healthy, as when the cause has been fixed. With no
+	 *  `failure`, the test drives the relay with `refuseRelay` (U3-1). */
+	async function liveRadient(failure?: {
+		status: number;
+		body: unknown;
+		headers?: Record<string, string>;
+	}) {
+		/* Two computers, so the cold start does not open one by itself. */
+		const tunnels = ["a", "b"].map((letter, index) => ({
+			id: `tun-synthetic-${index + 1}`,
+			name: `Synthetic computer ${index + 1}`,
+			hostname: `${letter.repeat(32)}-lop.radienthq.com`,
+			status: "active",
+			harnesses: [{ id: "local-operator", enabled: true }],
+		}));
+		const mock = await relay({
+			tunnels,
+			catalogueFailures: failure ? [failure] : [],
+		});
+		transport(mock.origin);
+		durable.oauth = oauth;
+		await mount();
+		await until(
+			() =>
+				latest.restoredAccount &&
+				connectionStore.getState().computers.length === 2,
+		);
+		const computer = connectionStore.getState().computers[0];
+		if (!computer) throw new Error("Expected discovered computer");
+		await act(async () => {
+			await latest.selectComputer(computer);
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		return mock;
+	}
+
+	it.each([
+		{
+			name: "relay 503 billing_inactive",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "billing_inactive", kind: "accept_quote" },
+			},
+		},
+		{
+			name: "relay 503 billing_lapsed",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "billing_lapsed", kind: "add_credit" },
+			},
+		},
+		{
+			name: "relay 503 tunnel_disabled",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "tunnel_disabled", kind: "open_console" },
+			},
+		},
+		{
+			name: "relay 503 tunnel_inactive",
+			failure: {
+				status: 503,
+				body: { detail: "d", reason: "tunnel_inactive", kind: "check_status" },
+			},
+		},
+		{
+			name: "Radient-route 401 without X-Radient-Login",
+			failure: { status: 401, body: { error: "unauthorized" } },
+		},
+		{
+			name: "relay_stopped 502 local harness unavailable",
+			failure: { status: 502, body: { error: "local harness unavailable" } },
+		},
+	])(
+		"Q7/U1: Retry on a stream-raised $name re-runs the pick, reconnects and clears the refusal",
+		async ({ failure }) => {
+			const mock = await liveRadient(failure);
+			await act(async () => {
+				mock.endCatalogueStreams();
+			});
+			/* The reopen's answer is terminal: the stream stops and the surface shows. */
+			await eventually(() => connectionStore.getState().surface !== null);
+			expect(latest.refusal).not.toBeNull();
+			const eventsBefore = mock.events.length;
+			const streamsBefore = mock.catalogueStreams();
+			/* The cause is fixed (the mock answers healthy from now on). */
+			await act(async () => {
+				await latest.retry();
+			});
+			await eventually(
+				() =>
+					connectionStore.getState().phase === "live" &&
+					connectionStore.getState().surface === null,
+			);
+			/* The pick re-ran: a new route whose list stream reopened (the stored,
+			 *  still-valid tunnel session is adopted the way a switcher re-pick adopts
+			 *  it, so a mint is not required) — not the one `GET /api/sessions` the
+			 *  old fallback sent while the refusal stayed. */
+			const after = mock.events.slice(eventsBefore);
+			expect(after).toContain("GET /api/sessions/events");
+			expect(mock.catalogueStreams()).toBeGreaterThan(streamsBefore);
+			expect(latest.refusal).toBeNull();
+			expect(latest.lastError).toBeNull();
+		},
+		20_000,
+	);
+
+	/* U3-1 (UX round 3): the Radient 401 (no `X-Radient-Login`) raised by the
+	 *  response hook BEFORE the list stream's own refusal sets the route retry.
+	 *  A Retry tapped then falls back to `refreshList`; when that refresh's 401
+	 *  lands after the stream's refusal, its catch replaced the route retry and
+	 *  Retry stayed a `GET /api/sessions` for good, even after the fix. Each
+	 *  case drives the real provider through a loopback relay, ordering the
+	 *  responses with holds rather than reading source. */
+	it.each([
+		{
+			order:
+				"early tap: the stream's refusal lands while the refresh is in flight",
+			streamFirst: true,
+			pullToRefresh: false,
+		},
+		{
+			order: "early tap: the refresh fails before the stream's refusal lands",
+			streamFirst: false,
+			pullToRefresh: false,
+		},
+		{
+			order: "a refresh made after the stream's refusal fails too",
+			streamFirst: true,
+			pullToRefresh: true,
+		},
+	])(
+		"U3-1: Retry after a hook-raised Radient 401 re-runs the pick once fixed ($order)",
+		async ({ streamFirst, pullToRefresh }) => {
+			const mock = await liveRadient();
+			const listReads = () =>
+				mock.events.filter((event) => event === "GET /api/sessions").length;
+			mock.refuseRelay(true);
+			/* The stream's reopen is held: its refusal has not landed yet. */
+			const reopen = mock.holdNextCatalogue();
+			const opened = mock.catalogueStreams();
+			await act(async () => {
+				mock.endCatalogueStreams();
+			});
+			await eventually(() => mock.catalogueStreams() > opened);
+			/* 1. The hook raises the surface first, from another request on the
+			 *  route (Home's model read), with no retry set. */
+			await act(async () => {
+				await latest
+					.relay()
+					?.models()
+					.catch(() => undefined);
+			});
+			expect(connectionStore.getState().surface).toBe("password");
+			expect(latest.lastError).toBeNull();
+			const readsBefore = listReads();
+			if (pullToRefresh) {
+				/* The stream's refusal lands, then a refresh (pull-to-refresh, or
+				 *  Retry's fallback) is refused for the same cause. */
+				await act(async () => {
+					reopen.resolve();
+				});
+				await eventually(() => latest.streamHealth === "offline");
+				await act(async () => {
+					await latest.refreshList();
+				});
+			} else if (streamFirst) {
+				/* 2. Retry, tapped at once, falls back to the refresh; its read is
+				 *  held while the stream's refusal lands and sets the route retry. */
+				const read = mock.holdNextSessions();
+				let tap: Promise<void> = Promise.resolve();
+				await act(async () => {
+					tap = latest.retry();
+				});
+				await eventually(() => listReads() > readsBefore);
+				await act(async () => {
+					reopen.resolve();
+				});
+				await eventually(() => latest.streamHealth === "offline");
+				/* 3. The refresh's 401 lands last: this used to overwrite the
+				 *  route retry with `refreshList`. */
+				await act(async () => {
+					read.resolve();
+					await tap;
+				});
+			} else {
+				await act(async () => {
+					await latest.retry();
+				});
+				expect(listReads()).toBe(readsBefore + 1);
+				await act(async () => {
+					reopen.resolve();
+				});
+				await eventually(() => latest.streamHealth === "offline");
+			}
+			expect(latest.refusal).not.toBeNull();
+			expect(connectionStore.getState().surface).toBe("password");
+			/* No loop while the refusal shows: nothing reopens without a tap. */
+			const quietStreams = mock.catalogueStreams();
+			const quietReads = listReads();
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 300));
+			});
+			expect(mock.catalogueStreams()).toBe(quietStreams);
+			expect(listReads()).toBe(quietReads);
+			/* 4. The cause is fixed; Retry re-runs the pick and reopens the stream. */
+			mock.refuseRelay(false);
+			const eventsBefore = mock.events.length;
+			await act(async () => {
+				await latest.retry();
+			});
+			await eventually(
+				() =>
+					connectionStore.getState().phase === "live" &&
+					connectionStore.getState().surface === null,
+			);
+			expect(mock.events.slice(eventsBefore)).toContain(
+				"GET /api/sessions/events",
+			);
+			expect(mock.catalogueStreams()).toBeGreaterThan(quietStreams);
+			expect(latest.refusal).toBeNull();
+			expect(latest.lastError).toBeNull();
+		},
+		20_000,
+	);
+
+	it("R2-2: a failed manual refresh's Last error survives the stream's next good frame", async () => {
+		const mock = await relay({ sessionsFailure: true });
+		observedSession = "synthetic-session";
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		await act(async () => {
+			await latest.refreshList();
+		});
+		const recorded = latest.diagnosticError;
+		expect(recorded?.summary).toContain("503");
+		expect(recorded?.source).toBe("action");
+		/* The list stream rotates and its first frame lands. */
+		const opened = mock.catalogueStreams();
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		await eventually(() => mock.catalogueStreams() > opened);
+		await act(async () => {
+			await new Promise<void>((resolve) => setTimeout(resolve, 500));
+		});
+		expect(latest.diagnosticError).toEqual(recorded);
+	}, 20_000);
 });

@@ -1,0 +1,170 @@
+{
+	"mobile.refusal.phone_access_off.title": {
+		"role": "heading",
+		"note": "Headline when the phone cannot reach a computer because phone access (the paid Radient feature that lets this app reach the computer) has never been turned on for the account. \"Phone access\" is the feature's name in the desktop app's Settings; use the same term as the desktop translation. Never name a command."
+	},
+	"mobile.refusal.phone_access_off.body": {
+		"role": "help",
+		"note": "Follows the headline that phone access is not turned on. The reader turns it on from the Local Operator desktop app on their computer, not from this phone."
+	},
+	"mobile.refusal.balance_out.title": {
+		"role": "heading",
+		"note": "Headline when phone access is turned on but the Radient account's prepaid balance is empty, so the computer cannot be reached."
+	},
+	"mobile.refusal.balance_out.body": {
+		"role": "help",
+		"note": "Follows 'Your Radient balance has run out.' After adding credit the computer reconnects on its own, but this phone screen does not refresh by itself, so the reader taps Retry (same word as mobile.refusal.action.retry)."
+	},
+	"mobile.refusal.suspended.title": {
+		"role": "heading",
+		"note": "Shown when Radient has paused this computer's phone access for a moment although billing is fine; it normally clears on its own. {computer} is the computer's name. Lead with what happened."
+	},
+	"mobile.refusal.suspended.body": {
+		"role": "help",
+		"note": "Follows the paused-phone-access headline. The computer side reconnects on its own; the phone does not retry by itself, so the reader taps the Retry button (use the same word as mobile.refusal.action.retry). Keep the dash or your language's equivalent pause."
+	},
+	"mobile.refusal.console_disabled.title": {
+		"role": "heading",
+		"note": "Shown when phone access for this computer was switched off in the Radient web console. {computer} is the computer's name. \"Phone access\" is the feature's name in the desktop app; use the same term."
+	},
+	"mobile.refusal.provisioning.title": {
+		"role": "heading",
+		"note": "Shown while Radient is still preparing this computer's connection (a few seconds to a minute). Nothing is wrong."
+	},
+	"mobile.refusal.provisioning.body": {
+		"role": "help",
+		"note": "Follows the still-setting-up headline."
+	},
+	"mobile.refusal.refused.title": {
+		"role": "heading",
+		"note": "Fallback when Radient refused phone access to a computer and its listing does not say why. {computer} is the computer's name as the reader named it, or \"Your computer\"."
+	},
+	"mobile.refusal.refused.body": {
+		"role": "help",
+		"note": "Follows the fallback refusal headline. Buttons below open the Radient console and retry."
+	},
+	"mobile.refusal.offline.title": {
+		"role": "heading",
+		"note": "Shown when the computer does not answer at all. {computer} is the computer's name, \"Your computer\", or an address the reader typed."
+	},
+	"mobile.refusal.offline.body": {
+		"role": "help",
+		"note": "Follows the asleep-or-offline headline. \"It\" is the computer."
+	},
+	"mobile.refusal.relay_stopped.title": {
+		"role": "heading",
+		"note": "Shown when the computer is reachable but the Local Operator app is not running on it. {computer} is the computer's name."
+	},
+	"mobile.refusal.relay_stopped.body": {
+		"role": "help",
+		"note": "Follows the 'Local Operator isn't running' headline. The phone does not reconnect by itself: the reader opens Local Operator on the computer, then taps the Retry button (same word as mobile.refusal.action.retry)."
+	},
+	"mobile.refusal.relay_refused.title": {
+		"role": "heading",
+		"note": "Shown on a Radient connection when Local Operator on the computer refused this phone (an authentication answer from the computer, not from Radient). {computer} is the computer's name. Never mention a password: Radient users never set one."
+	},
+	"mobile.refusal.relay_refused.body": {
+		"role": "help",
+		"note": "Follows the 'didn't accept this phone' headline. The reader opens Local Operator on the computer, checks that phone access is on, then taps Retry (same word as mobile.refusal.action.retry). \"Phone access\" is the desktop feature's name."
+	},
+	"mobile.refusal.tunnel_gone.title": {
+		"role": "heading",
+		"note": "Shown when the computer's phone access was turned off or removed. {computer} is the computer's name or \"Your computer\"."
+	},
+	"mobile.refusal.tunnel_gone.body": {
+		"role": "help",
+		"note": "Follows the phone-access-off headline. The arrows are a menu path in the desktop app; translate \"Settings\" and \"Phone access\" exactly as the desktop app does."
+	},
+	"mobile.refusal.radient_unreachable.title": {
+		"role": "heading",
+		"note": "Shown when Radient's servers do not answer (a network problem or an outage), not a problem with the reader's computer."
+	},
+	"mobile.refusal.radient_unreachable.body": {
+		"role": "help",
+		"note": "Follows 'Radient isn't responding right now.' Nothing retries automatically from this screen; the reader taps Retry. Do not promise an automatic retry."
+	},
+	"mobile.refusal.relay_wait.title": {
+		"role": "heading",
+		"note": "Shown when Local Operator on the computer answered but is still starting up. {computer} is the computer's name, \"Your computer\", or an address."
+	},
+	"mobile.refusal.relay_wait.body": {
+		"role": "help",
+		"note": "Follows the still-starting headline; a Retry button sits below."
+	},
+	"mobile.refusal.action.how_to": {
+		"role": "button",
+		"note": "Button that opens a short help sheet explaining how to turn on phone access from the desktop app. Sentence case, no final full stop."
+	},
+	"mobile.refusal.action.open_billing": {
+		"role": "button",
+		"note": "Button that opens the billing page of the Radient web console in the browser. No final full stop."
+	},
+	"mobile.refusal.action.add_credit": {
+		"role": "button",
+		"note": "Button that opens the Radient billing page where the reader tops up their balance. No final full stop."
+	},
+	"mobile.refusal.action.open_console": {
+		"role": "button",
+		"note": "Button that opens the Radient web console in the browser. No final full stop."
+	},
+	"mobile.refusal.action.refresh_list": {
+		"role": "button",
+		"note": "Button that asks Radient again for the list of the reader's computers. No final full stop."
+	},
+	"mobile.refusal.action.retry": {
+		"role": "button",
+		"note": "Button that tries the connection again now. No final full stop."
+	},
+	"mobile.refusal.how_to.title": {
+		"role": "heading",
+		"note": "Title of the short help sheet opened by \"How to turn it on\"."
+	},
+	"mobile.refusal.how_to.body": {
+		"role": "help",
+		"note": "Body of the help sheet. The arrows are a menu path in the desktop app; translate \"Settings\", \"Phone access\" and \"Set up\" exactly as the desktop app does. It must say the price is shown before anything is turned on."
+	},
+	"mobile.refusal.terminal.toggle": {
+		"role": "button",
+		"note": "Disclosure button that reveals the equivalent terminal commands for readers who use a command line. Ends with a question mark; keep it a short question."
+	},
+	"mobile.refusal.terminal.label": {
+		"role": "meta",
+		"note": "Small upper-case label above a copyable terminal command shown inside the \"Using a terminal?\" disclosure. The command itself is never translated."
+	},
+	"mobile.refusal.wait_network.title": {
+		"role": "heading",
+		"note": "Headline when the computer itself cannot reach Radient (its internet connection may be down). {computer} is the computer's name or \"Your computer\". It clears by itself."
+	},
+	"mobile.refusal.wait_network.body": {
+		"role": "help",
+		"note": "Follows the headline that the computer cannot reach Radient. Nothing to do on the phone: it reconnects by itself when the computer's network is back."
+	},
+	"mobile.refusal.wait_reconnect.title": {
+		"role": "heading",
+		"note": "Headline while the computer is re-establishing its connection to Radient. {computer} is the computer's name or \"Your computer\"."
+	},
+	"mobile.refusal.wait_reconnect.body": {
+		"role": "help",
+		"note": "Follows the reconnecting headline. A short, honest expectation; no action needed."
+	},
+	"mobile.refusal.computer_sign_in.title": {
+		"role": "heading",
+		"note": "Headline when the COMPUTER's own Radient sign-in has expired (not this phone's). {computer} is the computer's name or \"Your computer\". \"Local Operator\" and \"Radient\" are product names."
+	},
+	"mobile.refusal.computer_sign_in.body": {
+		"role": "help",
+		"note": "Follows the computer-sign-in headline. The fix is on the computer; it must say plainly that signing in on this phone will not fix it."
+	},
+	"mobile.refusal.computer_attention.title": {
+		"role": "heading",
+		"note": "Headline when Local Operator on the computer must finish a repair or set-up step itself (for example its tunnel login moved). {computer} is the computer's name or \"Your computer\"."
+	},
+	"mobile.refusal.computer_attention.body": {
+		"role": "help",
+		"note": "Follows the needs-attention headline. Opening the desktop app there finishes the step; uses the desktop's name \"Phone access\" for the feature."
+	},
+	"mobile.refusal.open_console.title": {
+		"role": "heading",
+		"note": "Headline when phone access for the computer needs a setting changed in the Radient web console. {computer} is the computer's name or \"Your computer\"."
+	}
+}

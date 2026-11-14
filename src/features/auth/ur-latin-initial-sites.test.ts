@@ -45,7 +45,18 @@ vi.mock("@/ui/text-scale-provider", () => ({
 /* `RefusalSurface`'s alert mark is a `lucide-react-native` icon (native SVG, Flow
  * source Node cannot parse; same stub as computers-add-wait.test.ts). The mark is
  * irrelevant to the label's direction. */
-vi.mock("lucide-react-native", () => ({ AlertTriangle: () => null }));
+vi.mock("lucide-react-native", () => ({
+	AlertTriangle: () => null,
+	ChevronDown: () => null,
+	ChevronUp: () => null,
+}));
+/* PR #261 (merged with #257 in round 7) gave the surface link actions, a help
+ * sheet and a copyable command block; their Expo native modules do not load in
+ * Node (`__DEV__` is undefined), and none of them carries the direction under
+ * test. Same stubs as refusal-surface-terminal.test.ts. */
+vi.mock("expo-web-browser", () => ({ openBrowserAsync: vi.fn() }));
+vi.mock("@/ui/components/sheet", () => ({ Sheet: () => null }));
+vi.mock("@/ui/components/command-block", () => ({ CommandBlock: () => null }));
 
 const STARTS_LATIN = /^[A-Za-z]/;
 const ICU_SLOT = /\{[^}]*\}/g;

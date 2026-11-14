@@ -124,6 +124,46 @@ describe("the edge and the relay, split by the one header that discriminates the
 });
 
 describe("the 503s, which are three different machines", () => {
+	it("reads a relay 503 naming a wait_* kind as a wait with Retry, not offline", () => {
+		const error = relayErrorFromResponse(
+			facts(
+				503,
+				{ "content-type": "application/json" },
+				JSON.stringify({ kind: "wait_relay_starting" }),
+			),
+		);
+		expect(error.surface).toBe("retry");
+		expect(error.retry).toBe("after-backoff");
+		expect(error.relayStateKind).toBe("wait_relay_starting");
+	});
+
+	it("feature-detects kind: a 503 without one classifies exactly as before", () => {
+		const plain = relayErrorFromResponse(
+			facts(
+				503,
+				{ "content-type": "text/plain" },
+				"Tunnel temporarily unavailable",
+			),
+		);
+		expect(plain.relayStateKind).toBeUndefined();
+		expect(plain.surface).toBe("computer-offline");
+		/* A non-wait kind keeps the gateway classification and only carries the kind. */
+		const other = relayErrorFromResponse(
+			facts(
+				503,
+				{ "content-type": "application/json" },
+				JSON.stringify({
+					kind: "stopped",
+					reason: "authorization_refused",
+					detail: "x",
+				}),
+			),
+		);
+		expect(other.kind).toBe("gateway-refused");
+		expect(other.reason).toBe("authorization_refused");
+		expect(other.relayStateKind).toBe("stopped");
+	});
+
 	it("reads the edge's plain-text 503 as a computer that is offline", () => {
 		const error = relayErrorFromResponse(
 			facts(
@@ -341,6 +381,16 @@ describe("transport errors name the failure without leaking a URL", () => {
 		);
 		expect(aborted.kind).toBe("transport");
 		expect(refused.kind).toBe("transport");
+		/* PR #261 U2-2: one fixed sub-cause each, so Last error tells them apart. */
+		expect(aborted.summary).toBe("transport aborted");
+		expect(refused.summary).toBe("transport reset");
+		expect(
+			transportError(Object.assign(new Error("x"), { code: "ECONNREFUSED" }))
+				.summary,
+		).toBe("transport refused");
+		expect(transportError(new Error("x"), "d", "timeout 20s").summary).toBe(
+			"transport timeout 20s",
+		);
 		expect(aborted.envelope).toBe("keep");
 		expect(aborted.retry).toBe("same-id");
 		expect(refused.diagnostic).toContain("/healthz");
@@ -534,5 +584,83 @@ describe("Retry-After", () => {
 		expect(parseRetryAfter("soon")).toBeUndefined();
 		expect(parseRetryAfter(null)).toBeUndefined();
 		expect(parseRetryAfter("")).toBeUndefined();
+	});
+});
+
+describe("core C1 reasons and kinds land on their own surfaces (M1)", () => {
+	const gateway503 = (body: Record<string, string>) =>
+		relayErrorFromResponse(
+			facts(503, { "content-type": "application/json" }, JSON.stringify(body)),
+		);
+
+	it.each([
+		["server_unavailable", "retry"],
+		["tunnel_inactive", "console"],
+		["tunnel_disabled", "console"],
+		["billing_inactive", "console"],
+		["billing_lapsed", "console"],
+	] as const)(
+		"maps reason %s to %s, not the generic fallback",
+		(reason, surface) => {
+			const error = gateway503({ detail: "d", reason, error: "e" });
+			expect(error.reason).toBe(reason);
+			expect(error.surface).toBe(surface);
+		},
+	);
+
+	it.each([
+		["sign_in", "console"],
+		["run", "console"],
+		["restore_owner", "console"],
+		["accept_quote", "console"],
+		["add_credit", "console"],
+		["open_console", "console"],
+		["check_status", "retry"],
+		["wait_network", "retry"],
+		["wait_radient", "retry"],
+		["wait_reconnect", "retry"],
+	] as const)("an unknown reason with kind %s reads as %s", (kind, surface) => {
+		const error = gateway503({ detail: "d", reason: "a_future_reason", kind });
+		expect(error.surface).toBe(surface);
+		expect(error.relayStateKind).toBe(kind);
+	});
+
+	it("treats an unknown reason AND an unknown kind as before, never a crash", () => {
+		const error = gateway503({
+			detail: "d",
+			reason: "later",
+			kind: "later_kind",
+		});
+		expect(error.kind).toBe("gateway-refused");
+		expect(error.relayStateKind).toBe("later_kind");
+		expect(error.surface).toBe("retry");
+	});
+
+	/* PR #261 R6: the documented precedence is reason → kind. A known reason
+	 *  beside a `wait_*` kind used to take the kind's `retry` surface while the
+	 *  copy took the reason's — a `retry` surface reading "Add credit". */
+	it.each([
+		["control_plane_unreachable", "wait_network", "computer-offline"],
+		["billing_lapsed", "wait_radient", "console"],
+		["tunnel_disabled", "wait_reconnect", "console"],
+		["server_unavailable", "wait_radient", "retry"],
+	] as const)(
+		"lets a known reason %s beside kind %s decide the surface (%s)",
+		(reason, kind, surface) => {
+			const error = gateway503({ detail: "d", reason, kind });
+			expect(error.reason).toBe(reason);
+			expect(error.relayStateKind).toBe(kind);
+			expect(error.surface).toBe(surface);
+		},
+	);
+
+	it("still lets a wait_* kind decide when the reason is unknown or absent", () => {
+		expect(gateway503({ detail: "d", kind: "wait_network" }).surface).toBe(
+			"retry",
+		);
+		expect(
+			gateway503({ detail: "d", reason: "a_future_reason", kind: "wait_x" })
+				.surface,
+		).toBe("retry");
 	});
 });

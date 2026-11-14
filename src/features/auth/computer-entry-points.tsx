@@ -12,7 +12,10 @@ import {
 	headerChipShowsChevron,
 } from "@/features/auth/computer-entry";
 import { useComputerSwitcher } from "@/features/auth/computer-switcher-sheet";
-import { useConnectionState } from "@/features/auth/connection-provider";
+import {
+	useConnection,
+	useConnectionState,
+} from "@/features/auth/connection-provider";
 import {
 	ENTRY_HEALTH_MARK,
 	type EntryHealthMark,
@@ -54,6 +57,7 @@ export function useComputerEntry(): ComputerEntry {
 	const surface = useConnectionState((state) => state.surface);
 	const computerId = useConnectionState((state) => state.computerId);
 	const hidden = useConnectionState((state) => state.hiddenTunnelIds);
+	const { transient } = useConnection();
 	const [registry, setRegistry] = useState<{
 		saved: SavedComputer[];
 		account: string | null;
@@ -92,6 +96,7 @@ export function useComputerEntry(): ComputerEntry {
 		route,
 		phase,
 		surface,
+		transientCause: transient?.cause ?? null,
 		saved: registry.route === route ? registry.saved : [],
 		computerId,
 		radientAccount: registry.route === route ? registry.account : null,

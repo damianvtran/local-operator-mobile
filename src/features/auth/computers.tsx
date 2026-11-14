@@ -1,8 +1,14 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { Check, ChevronLeft, ChevronRight, Laptop } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import {
+	ActivityIndicator,
+	AppState,
+	Pressable,
+	Text,
+	View,
+} from "react-native";
 
 import {
 	computerDisplayName,
@@ -38,6 +44,10 @@ import {
 } from "@/features/auth/connector-wait";
 import { removeComputer } from "@/features/auth/saved-computers-sync";
 import { SetupComputer } from "@/features/auth/setup-computer";
+import {
+	createSetupPoller,
+	type SetupPoller,
+} from "@/features/auth/setup-poll";
 import { SignInPanel } from "@/features/auth/sign-in-panel";
 import { TunnelPaths } from "@/features/auth/tunnel-paths";
 import { activeLocale, t } from "@/i18n";
@@ -409,14 +419,70 @@ export default function Computers() {
 	const [waiting, setWaiting] = useState(false);
 	/* `?add=1` is the "Add a computer" hand-off (`ADD_COMPUTER_HREF`). */
 	const { add } = useLocalSearchParams<{ add?: string }>();
+	/* The set-up answer stays on screen while a re-check is in flight (PR #261
+	 *  Q1): it is an answer Radient already gave, and flipping to the skeleton on
+	 *  every poll is both a flicker and what made the old focus effect loop.
+	 *  Updated only from a SETTLED pass, so it never invents an empty account. */
+	const settledEmptyRef = useRef(false);
+	if (!discovering)
+		settledEmptyRef.current =
+			computers.length === 0 && discoveryFailure === null && !signedOut;
 	const view = computersView({
 		computers,
 		discovering,
 		discoveryFailure,
 		signedOut,
 		adding: add === "1",
+		settledEmpty: settledEmptyRef.current,
 	});
 	const empty = view.setup;
+	/* Re-listing for the set-up path: focus, return to the app, a slow tick while
+	 *  in front, and "Check again" — all events, never a render (`setup-poll.ts`
+	 *  owns the invariant: one request in flight, automatic starts 15 s apart).
+	 *  Only on the set-up path, so a populated list is not re-fetched on every tab
+	 *  switch; `isEnabled` is read through a ref at trigger time, so the flag
+	 *  changing cannot start a request by itself. */
+	const pollEnabledRef = useRef(false);
+	pollEnabledRef.current = empty && !waiting && !signedOut;
+	const refreshRef = useRef(refreshComputers);
+	refreshRef.current = refreshComputers;
+	/* When a listing last STARTED, whoever started it (sign-in's discovery, the
+	 *  Refresh button, the poll): observed as `discovering` rising, read by the
+	 *  poller at trigger time (`listedAt`, PR #261 Q9). */
+	const listedAtRef = useRef(Number.NEGATIVE_INFINITY);
+	/* `false`, so a mount DURING a listing records it too. */
+	const wasDiscoveringRef = useRef(false);
+	if (discovering && !wasDiscoveringRef.current)
+		listedAtRef.current = Date.now();
+	wasDiscoveringRef.current = discovering;
+	const [checking, setChecking] = useState(false);
+	const pollerRef = useRef<SetupPoller | null>(null);
+	useEffect(() => {
+		const poller = createSetupPoller({
+			refresh: () => refreshRef.current(),
+			isEnabled: () => pollEnabledRef.current,
+			listedAt: () => listedAtRef.current,
+			onChecking: setChecking,
+		});
+		pollerRef.current = poller;
+		const subscription = AppState.addEventListener("change", (state) =>
+			poller.foreground(state === "active"),
+		);
+		return () => {
+			subscription.remove();
+			poller.dispose();
+			pollerRef.current = null;
+		};
+	}, []);
+	/* Empty deps: the callback identity never changes, so the navigator runs it
+	 *  once per focus TRANSITION — the property the old effect lacked. */
+	useFocusEffect(
+		useCallback(() => {
+			pollerRef.current?.focus();
+			return () => pollerRef.current?.blur();
+		}, []),
+	);
+	const checkAgain = useCallback(() => pollerRef.current?.checkNow(), []);
 	/* The tunnel tapped on THIS screen, so arriving with a route already live is
 	 *  not mistaken for a pick that just landed (U1). */
 	const [picked, setPicked] = useState<string | null>(null);
@@ -569,6 +635,9 @@ export default function Computers() {
 					subject={refusal.subject}
 					detail={refusal.detail}
 					remedy={refusal.remedy}
+					copy={refusal.copy}
+					/* Tunnel gone: a fresh list, not the same refused address again. */
+					onRefreshList={() => void refreshComputers()}
 					retryAfterMs={refusal.retryAfterMs}
 					onRetry={() => void retry()}
 					/* The existing sign-in action, in place: it ends the refused route,
@@ -671,6 +740,8 @@ export default function Computers() {
 								billing={billing}
 								onWaitForConnector={startWaiting}
 								waiting={false}
+								onCheckAgain={checkAgain}
+								checking={checking}
 							/>
 						</TunnelPaths>
 					)}

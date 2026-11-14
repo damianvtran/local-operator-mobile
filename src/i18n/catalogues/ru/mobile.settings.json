@@ -73,5 +73,10 @@
 	"mobile.settings.own_tunnel.runtime_body": "В этой сборке нет защищённого хранилища ключей, поэтому туннель действует только до закрытия приложения. На телефоне значение хранится в защищённом хранилище платформы.",
 	"mobile.settings.own_tunnel.before_saving": "Проверьте адрес перед сохранением: сохранённый туннель, который ни разу не ответил, оставит список пустым без всякого объяснения.",
 	"mobile.settings.own_tunnel.remove_title": "Удалить этот туннель?",
-	"mobile.settings.own_tunnel.remove_body": "Приложение забудет адрес и пароль на этом телефоне. Ваш компьютер, ваш туннель и аккаунты останутся без изменений."
+	"mobile.settings.own_tunnel.remove_body": "Приложение забудет адрес и пароль на этом телефоне. Ваш компьютер, ваш туннель и аккаунты останутся без изменений.",
+	"mobile.settings.diagnostics.tunnel": "ID туннеля",
+	"mobile.settings.diagnostics.address": "Адрес туннеля",
+	"mobile.settings.diagnostics.copy": "Копировать диагностику",
+	"mobile.settings.diagnostics.copied": "Диагностика скопирована",
+	"mobile.settings.diagnostics.copy_failed": "Не удалось скопировать. Попробуйте ещё раз."
 }

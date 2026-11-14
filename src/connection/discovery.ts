@@ -67,6 +67,13 @@ export const harnessSchema = z.looseObject({
  * banner.
  */
 export const billingSchema = z.looseObject({
+	/* Whether phone access (the tunnel's paid remote access) has been turned on for
+	 *  the account at all. Distinct from `eligible`: an ACTIVE account whose balance
+	 *  ran out is `active: true, eligible: false`, and the two need different fixes
+	 *  (turn it on from the desktop vs. add credit). The cloud answers a session
+	 *  mint for any non-active tunnel with 403 before it would say 402, so this row
+	 *  is the only place the phone can tell those cases apart (`refusal.ts`). */
+	active: z.boolean().optional(),
 	eligible: z.boolean().optional(),
 	status: z.string().optional(),
 	plan: z.string().optional(),
@@ -113,7 +120,13 @@ export interface DiscoveredComputer {
 	/** False when the Local Operator harness is absent or disabled on this tunnel. */
 	supportsLocalOperator: boolean;
 	/** What the console says about billing, when it says anything. */
-	billing: { eligible: boolean | null; message: string | null };
+	billing: {
+		/** Optional so an older row (or a fixture) without it still type-checks;
+		 *  absent and `null` both read as UNKNOWN, never as "not turned on". */
+		active?: boolean | null;
+		eligible: boolean | null;
+		message: string | null;
+	};
 	/** Epoch ms, for the "most recently updated first" ordering. */
 	updatedAt: number;
 }
@@ -201,7 +214,8 @@ export function toComputer(tunnel: Tunnel): DiscoveredComputer {
 		rawStatus: tunnel.status ?? "",
 		supportsLocalOperator: supportsLocalOperator(tunnel),
 		billing: {
-			/* Absent is UNKNOWN, never "not eligible". */
+			/* Absent is UNKNOWN, never "not eligible" (or "not turned on"). */
+			active: tunnel.billing?.active ?? null,
 			eligible: tunnel.billing?.eligible ?? null,
 			message: tunnel.billing?.message ?? tunnel.billing?.quote ?? null,
 		},

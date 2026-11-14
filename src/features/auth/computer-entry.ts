@@ -63,6 +63,8 @@ export type ComputerEntryInput = {
 	route: RouteProfile | null;
 	phase: ConnectionPhase;
 	surface: ErrorSurface | null;
+	/** `Connection.transient`'s cause, when one shows (PR #261 Q3). */
+	transientCause?: string | null;
 };
 
 export type ComputerEntry =
@@ -163,6 +165,7 @@ export function computerEntry(input: ComputerEntryInput): ComputerEntry {
 		surface: input.surface,
 		billingEligible: active?.discovered?.billing.eligible ?? null,
 		radient: input.route?.mode === "radient",
+		transientCause: input.transientCause ?? null,
 	});
 	return {
 		kind: "computer",

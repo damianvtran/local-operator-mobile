@@ -78,12 +78,73 @@ describe("the refusal surface's composed lines", () => {
 		/* Six English titles open with `{subject}`, a Latin token; without the
 		 * spread a translation keeping that order resolves an LTR base. */
 		expect(surface).toContain("const composedDir = useComposedDir();");
+		/* `HEADLINE[kind](subject)}` without the opening brace: since the merge
+		 *  with #261 the headline Text renders `copy ? copy.title : HEADLINE…`, and
+		 *  the copy title shares that Text and therefore its spread. */
 		for (const anchor of [
-			"{HEADLINE[kind](subject)}",
+			"HEADLINE[kind](subject)}",
 			"{NEXT[kind]()}",
 			"{detail}\n",
 		]) {
 			expect(textOpeningBefore(anchor)).toContain("{...composedDir}");
+		}
+	});
+});
+
+/**
+ * PR #261 (M1) moved every terminal command behind "Using a terminal?", where
+ * the command is a bare, untranslated TS string in a copy block. After #257
+ * keyed the surface, the CATALOGUES are where a command could creep back into
+ * an instruction line: a translator's paraphrase, or an English value written
+ * as "run `lop mobile`". So every refusal-surface string, in every locale with
+ * a catalogue, is scanned for command shapes.
+ */
+/** Command shapes: `lop …`, `sudo`, a `$ ` prompt, a backticked command, a
+ *  package manager, a long flag. */
+const COMMAND = /(\blop\s|\bsudo\b|\$ |`[^`]+`|\bnpm\b|\bbrew\b|(^|\s)--[a-z])/;
+
+describe("no refusal-surface string carries a command, in any locale (#261 M1)", () => {
+	const locales = readdirSync(
+		new URL("../../i18n/catalogues/", import.meta.url),
+	);
+	const refusalStrings = (locale: string): [string, string][] => {
+		const load = (namespace: string) =>
+			Object.entries(
+				JSON.parse(
+					read(`../../i18n/catalogues/${locale}/${namespace}.json`),
+				) as Record<string, string>,
+			);
+		return [
+			...load("mobile.refusal"),
+			...load("mobile.computers").filter(([key]) =>
+				key.startsWith("mobile.computers.refusal."),
+			),
+		];
+	};
+
+	it("the pattern catches the shapes it is for (negative control)", () => {
+		for (const sample of [
+			"On that computer: lop mobile",
+			"Run `lop tunnel status`.",
+			"$ lop login radient",
+			"sudo launchctl kickstart",
+		]) {
+			expect(sample).toMatch(COMMAND);
+		}
+		expect("Open Local Operator there, then tap Retry.").not.toMatch(COMMAND);
+	});
+
+	it("holds for every catalogue locale", () => {
+		/* en plus the seven translations; a smaller set means a directory moved. */
+		expect(locales.length).toBeGreaterThanOrEqual(8);
+		for (const locale of locales) {
+			const strings = refusalStrings(locale);
+			// mobile.refusal (42) + mobile.computers.refusal.* (24).
+			expect(strings, locale).toHaveLength(66);
+			expect(
+				strings.filter(([, value]) => COMMAND.test(value)),
+				locale,
+			).toEqual([]);
 		}
 	});
 });

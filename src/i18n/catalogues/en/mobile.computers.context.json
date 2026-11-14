@@ -551,6 +551,26 @@
 		"role": "help",
 		"note": "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's saved password already belongs to this address."
 	},
+	"mobile.computers.setup.open_settings": {
+		"role": "help",
+		"note": "First line of the set-up screen for a signed-in account with no computer yet. The arrows are a menu path in the desktop app (Settings, then the Radient account section, then its Phone access block); translate \"Settings\", \"Radient account\", \"Phone access\" and \"Set up\" exactly as the desktop app does."
+	},
+	"mobile.computers.setup.list_updates": {
+		"role": "help",
+		"note": "Follows the set-up instruction. While this screen is open the phone checks for the new computer every few seconds, and again when the reader returns to the screen or the app; a 'Check again' button sits below."
+	},
+	"mobile.computers.setup.check_again": {
+		"role": "button",
+		"note": "Button on the 'Set up a computer' screen. Lists the account's computers again right now, for a reader who just finished phone-access set-up on their computer."
+	},
+	"mobile.computers.setup.checking": {
+		"role": "status",
+		"note": "Replaces the 'Check again' button label while the phone asks Radient for the account's computers."
+	},
+	"mobile.computers.hint.radient_unreachable": {
+		"role": "help",
+		"note": "Hint under a computer row in the switcher when the phone could not reach Radient (Radient's error, the phone's network, or rate limiting). It must not suggest the computer is asleep."
+	},
 	"mobile.computers.refusal.offline_title": {
 		"role": "heading",
 		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the computer is asleep, or its connector is stopped. Plain statement, ends with a full stop. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."

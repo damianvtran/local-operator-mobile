@@ -73,5 +73,10 @@
 	"mobile.settings.own_tunnel.runtime_body": "Cette version n’a pas de stockage sécurisé : le tunnel ne survit pas à la fermeture de l’app. Sur un téléphone, la valeur est conservée dans le stockage sécurisé de la plateforme.",
 	"mobile.settings.own_tunnel.before_saving": "Testez l’adresse avant de l’enregistrer : un tunnel enregistré qui n’a jamais répondu laisse la liste vide, sans aucune explication.",
 	"mobile.settings.own_tunnel.remove_title": "Retirer ce tunnel ?",
-	"mobile.settings.own_tunnel.remove_body": "L’adresse et le mot de passe seront oubliés sur ce téléphone. Cela ne modifie ni votre ordinateur, ni le tunnel que vous exploitez, ni aucun compte."
+	"mobile.settings.own_tunnel.remove_body": "L’adresse et le mot de passe seront oubliés sur ce téléphone. Cela ne modifie ni votre ordinateur, ni le tunnel que vous exploitez, ni aucun compte.",
+	"mobile.settings.diagnostics.tunnel": "ID du tunnel",
+	"mobile.settings.diagnostics.address": "Adresse du tunnel",
+	"mobile.settings.diagnostics.copy": "Copier le diagnostic",
+	"mobile.settings.diagnostics.copied": "Diagnostic copié",
+	"mobile.settings.diagnostics.copy_failed": "Copie impossible. Réessayez."
 }

@@ -435,6 +435,7 @@ export function ComputerSwitcherSheet({
 		refusal,
 		discovering,
 		signInState,
+		transient,
 	} = useConnection();
 	const discovered = useConnectionState((state) => state.discoveredComputers);
 	const routeProfile = useConnectionState((state) => state.route);
@@ -515,6 +516,7 @@ export function ComputerSwitcherSheet({
 		probes,
 		answeredAt,
 		route: { phase, tunnelId },
+		transientCause: transient?.cause ?? null,
 		routeProfile,
 		surface,
 		activeComputerId: computerId,

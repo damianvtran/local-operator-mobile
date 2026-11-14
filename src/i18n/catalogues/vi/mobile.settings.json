@@ -73,5 +73,10 @@
 	"mobile.settings.own_tunnel.runtime_body": "Bản dựng này không có kho khóa bảo mật, nên đường hầm chỉ được giữ trong lần chạy này. Trên điện thoại, giá trị này được lưu trong bộ nhớ bảo mật của nền tảng.",
 	"mobile.settings.own_tunnel.before_saving": "Hãy kiểm tra địa chỉ trước khi lưu: một đường hầm đã lưu nhưng chưa từng phản hồi sẽ khiến danh sách trống mà không có lời giải thích nào.",
 	"mobile.settings.own_tunnel.remove_title": "Xóa đường hầm này?",
-	"mobile.settings.own_tunnel.remove_body": "Thao tác này xóa địa chỉ và mật khẩu khỏi điện thoại này. Máy tính, đường hầm bạn chạy và mọi tài khoản đều không bị ảnh hưởng."
+	"mobile.settings.own_tunnel.remove_body": "Thao tác này xóa địa chỉ và mật khẩu khỏi điện thoại này. Máy tính, đường hầm bạn chạy và mọi tài khoản đều không bị ảnh hưởng.",
+	"mobile.settings.diagnostics.tunnel": "ID đường hầm",
+	"mobile.settings.diagnostics.address": "Địa chỉ đường hầm",
+	"mobile.settings.diagnostics.copy": "Sao chép thông tin chẩn đoán",
+	"mobile.settings.diagnostics.copied": "Đã sao chép thông tin chẩn đoán",
+	"mobile.settings.diagnostics.copy_failed": "Không sao chép được. Hãy thử lại."
 }

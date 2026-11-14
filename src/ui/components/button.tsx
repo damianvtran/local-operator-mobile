@@ -45,6 +45,10 @@ export type ButtonProps = {
 	size?: ButtonSize;
 	/** Leading icon slot: `size.controls.*.icon`, `pointer-events: none`. */
 	leadingIcon?: (props: { color: string; size: number }) => ReactNode;
+	/** Trailing icon slot, same contract. For a disclosure's open/closed mark
+	 *  (PR #261 D3): `expanded` is announced, but a sighted reader saw the same
+	 *  label whether the section was open or shut. */
+	trailingIcon?: (props: { color: string; size: number }) => ReactNode;
 	loading?: boolean;
 	disabled?: boolean;
 	/** Short visual labels may need a more descriptive screen-reader name. */
@@ -78,6 +82,7 @@ export const Button = ({
 	variant = "primary",
 	size = "md",
 	leadingIcon,
+	trailingIcon,
 	loading = false,
 	disabled = false,
 	accessibilityLabel,
@@ -165,6 +170,11 @@ export const Button = ({
 							{label}
 						</Text>
 					)}
+					{trailingIcon && !loading ? (
+						<View pointerEvents="none">
+							{trailingIcon({ color: iconColor, size: ICON_SIZE[size] })}
+						</View>
+					) : null}
 				</View>
 			)}
 		</Pressable>

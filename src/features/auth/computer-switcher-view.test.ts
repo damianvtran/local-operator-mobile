@@ -17,6 +17,7 @@ import {
 	rowHint,
 	type SwitcherDeps,
 	type SwitcherInput,
+	type SwitcherRow,
 	stableSections,
 	switcherHealth,
 	switcherSections,
@@ -805,5 +806,71 @@ describe("in-use refusal is not an online probe", () => {
 			.onPhone[0];
 		if (!row) throw new Error("missing row");
 		expect(switcherTap(row, null)).toEqual({ kind: "settings" });
+	});
+});
+
+describe("a Radient or network failure is named as such, not as a sleeping computer (M1)", () => {
+	/* Only the fields `rowHint` reads: a refused ACTIVE row on each transport. */
+	const refused = (transport: "radient" | "custom"): SwitcherRow =>
+		({
+			connecting: false,
+			hidden: false,
+			health: { kind: "refused", surface: "retry" },
+			transport:
+				transport === "radient"
+					? { kind: "radient", tunnelId: "t1", hostname: HOST_A }
+					: {
+							kind: "custom",
+							baseUrl: "https://relay.example.com",
+							allowInsecure: false,
+						},
+		}) as unknown as SwitcherRow;
+
+	it("says Can't reach Radient under a Radient row whose route hit `retry`", () => {
+		expect(rowHint(refused("radient"), "on-phone")).toBe(
+			"Can't reach Radient right now",
+		);
+		expect(healthLabel({ kind: "refused", surface: "retry" }, 0)).toBe(
+			"Not connected",
+		);
+	});
+
+	it("keeps the Settings hint for a custom route, which has no Radient in it", () => {
+		expect(rowHint(refused("custom"), "on-phone")).toBe(
+			"Open Settings to fix the connection",
+		);
+	});
+});
+
+/* PR #261 Q3: a live route whose list stream is retrying through a wait the
+ *  computer NAMED stays phase `live` for the whole backoff, and the switcher
+ *  said "Online" beside a computer saying "I can't reach Radient". */
+describe("a named wait on a live route reads Not connected (PR #261 Q3)", () => {
+	const live = (transientCause: string | null) =>
+		switcherSections(
+			input({
+				saved: [radient("r1", "t1", HOST_A)],
+				discovered: [discovered("t1", HOST_A)],
+				route: { phase: "live", tunnelId: "t1" },
+				activeComputerId: "r1",
+				surface: null,
+				transientCause,
+			}),
+		).onPhone[0];
+
+	it("is Online with no notice (negative control)", () => {
+		expect(live(null)?.health.kind).toBe("online");
+	});
+
+	it.each([
+		["radient-unreachable", "Can't reach Radient right now"],
+		["wait-network", "Open Settings to fix the connection"],
+		["relay-wait", "Open Settings to fix the connection"],
+	])("%s → Not connected, hint %j", (cause, hint) => {
+		const row = live(cause);
+		if (!row) throw new Error("no row");
+		expect(row.health).toMatchObject({ kind: "refused", surface: "retry" });
+		expect(healthLabel(row.health, NOW)).toBe("Not connected");
+		expect(rowHint(row, "on-phone")).toBe(hint);
 	});
 });

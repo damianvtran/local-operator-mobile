@@ -129,8 +129,12 @@ import { createRadientAccess } from "./radient-access";
 import { adoptableSession, carryOutRestore } from "./radient-restore";
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
 import {
+	type RefusalCopy,
 	type RefusalView,
+	radientUnauthorizedSurface,
+	radientUnreachableError,
 	refusalFromError,
+	transientCopy,
 	tunnelSessionRelayError,
 } from "./refusal";
 import {
@@ -207,10 +211,37 @@ export const useLocaleFrame = (): string | null =>
  *  end-of-body is NOT this path — the connection layer rotates on its own. */
 const RESTART_MS = 2_000;
 
-/** The body of a pick that never reached Radient (U5/D11): about THIS phone's
- *  connection, because that is the one thing the failure tells us. */
-export const PICK_UNREACHABLE_DETAIL =
-	"This phone could not reach Radient. Check its connection, then try again.";
+/** See `Connection.diagnosticError`. `error` is kept when the cause was a typed
+ *  failure (the transient notice reads its reason/kind); a stalled stream's
+ *  synthetic cause has only its summary. */
+export type DiagnosticError = {
+	summary: string;
+	/** Epoch ms. */
+	at: number;
+	error: RelayError | null;
+	/** Who wrote it. Only a `stream` record — the list stream retrying through a
+	 *  blip, or stalling — is the stream's to clear on its next good frame. An
+	 *  `action` record (a refusal raised by `noteError`, a failed manual
+	 *  `refreshList`, the 401 hook, the cold start) outlives the stream's frames:
+	 *  a refresh can fail while the stream keeps delivering, and clearing its
+	 *  cause left Settings showing the refusal beside "Last error: None"
+	 *  (PR #261 R2-2). */
+	source: "stream" | "action";
+};
+
+/** A stalled stream's cause for Diagnostics, when `sse.ts` reported no error
+ *  (an early EOF, or the 35 s silence watchdog's teardown): never "None"
+ *  beside "Not answering" (PR #261 U3/Q4). Technical text, English by design. */
+export function stalledSummary(status: StreamStatus): string {
+	if (status.lastError) return status.lastError.summary;
+	const open =
+		status.lastOpenMs === undefined
+			? ""
+			: ` after ${Math.round(status.lastOpenMs / 1000)} s`;
+	return status.lastEnd === "eof"
+		? `stream ended early${open}`
+		: `stream stalled: no data${open}`;
+}
 
 /** What the connection pill shows, derived from the stream's own status. */
 export type StreamHealth =
@@ -366,9 +397,24 @@ export type Connection = {
 	streamHealthReason: StreamHealthReason | null;
 	signInState: SignInState;
 	signInDiagnostics: readonly SignInDiagnostic[];
-	/** The last typed failure, for the diagnostics row. Never a status code on a
-	 *  screen; this is the one place a diagnostic is allowed. */
+	/** The last TERMINAL typed failure: the one that raised the refusal on
+	 *  screen. `use-session` reads it to decide a session is stopped, so a
+	 *  failure the list stream is still retrying never lands here (PR #261 R1);
+	 *  that one is `diagnosticError`. */
 	lastError: RelayError | null;
+	/** Diagnostics' "Last error": the latest cause of ANY kind — terminal, a
+	 *  retrying stream's, a stalled stream's synthetic cause — with when it was
+	 *  recorded. Read only by Diagnostics and Copy diagnostics, never by a
+	 *  phase, so recording it cannot move a screen (R1). Cleared by the next
+	 *  good frame and by a route start. */
+	diagnosticError: DiagnosticError | null;
+	/** A non-blocking notice for a failure the list stream is retrying and the
+	 *  computer NAMED (`server_unavailable`, `wait_*`, `check_status`), with
+	 *  that cause's sentence (PR #261 Q3). `null` while a refusal shows. */
+	transient: RefusalCopy | null;
+	/** The notice's Retry: reopen the list stream now instead of waiting out
+	 *  its backoff. */
+	retryTransient: () => void;
 	/** The refusal to render, or null. Decided from the store's surface. */
 	refusal: RefusalView | null;
 };
@@ -543,6 +589,33 @@ export const ConnectionProvider = ({
 		SignInDiagnostic[]
 	>([]);
 	const [lastError, setLastError] = useState<RelayError | null>(null);
+	const [diagnosticError, setDiagnosticError] =
+		useState<DiagnosticError | null>(null);
+	/** Records Diagnostics' cause; see `Connection.diagnosticError`. */
+	const recordDiagnostic = useCallback(
+		(
+			cause: RelayError | string,
+			source: DiagnosticError["source"] = "action",
+		) => {
+			if (!mountedRef.current) return;
+			const next: DiagnosticError = {
+				summary: typeof cause === "string" ? cause : cause.summary,
+				at: Date.now(),
+				error: typeof cause === "string" ? null : cause,
+				source,
+			};
+			/* A stream blip never overwrites an `action` record: that one names the
+			 *  refusal on screen, which stays until the route restarts
+			 *  (`beginRoute`), and a stall recorded over it was then cleared by the
+			 *  reopen's first frame — Last error "None" beside a refusal (R2-2). */
+			setDiagnosticError((current) =>
+				source === "stream" && current?.source === "action" ? current : next,
+			);
+		},
+		[],
+	);
+	/** Reopens the list stream now (`retryTransient`); set by `startStream`. */
+	const streamKickRef = useRef<(() => void) | null>(null);
 
 	const clientRef = useRef<ReturnType<typeof createRelayClient> | null>(null);
 	const streamRef = useRef<RelayStream | null>(null);
@@ -591,6 +664,16 @@ export const ConnectionProvider = ({
 
 	const managerRef = useRef<TunnelSessionManager | null>(null);
 	const retryRef = useRef<(() => Promise<void>) | null>(null);
+	/* Re-establishes the CURRENT route from the top: a Radient pick re-mints and
+	 *  reconnects, a custom route re-authenticates. Set by whatever began the
+	 *  route (`selectComputer`, `connectCustom`), cleared by `beginRoute`. It is
+	 *  the retry for a refusal the LIVE list stream raises (PR #261 Q7/U1): the
+	 *  stream has stopped and will not come back by itself, so `refreshList`
+	 *  (one `GET /api/sessions`) neither reopened it nor cleared the surface, and
+	 *  "then tap Retry" did nothing for billing, console, suspended, the Radient
+	 *  401 and `relay_stopped`. Re-running the route is what the mint path's
+	 *  Retry already did for the same causes. */
+	const routeRetryRef = useRef<(() => Promise<void>) | null>(null);
 	// Readiness is withdrawn before remote revocation. Keep the unresolved
 	// operation independently so ordinary Sign out and diagnostic retry share
 	// the same origin even though the selected route has already become null.
@@ -753,9 +836,19 @@ export const ConnectionProvider = ({
 	 *  is what the refusal surface's button re-runs. */
 	const noteError = useCallback(
 		(error: RelayError, retry?: () => Promise<void>) => {
-			if (error.surface === "password" || error.surface === "sign-in")
+			/* A `password` refusal on a RADIENT route is the relay behind the tunnel
+			 *  refusing this phone (a 401 without `X-Radient-Login`), and the
+			 *  response hook already decided not to revoke for it: revoking here
+			 *  undid that and threw away a working Radient sign-in (PR #261 U4). Only
+			 *  a custom route's password refusal, and every sign-in refusal, revoke. */
+			const radientRoute = connectionStore.getState().route?.mode === "radient";
+			if (
+				error.surface === "sign-in" ||
+				(error.surface === "password" && !radientRoute)
+			)
 				void revokeAuthorization();
 			setLastError(error);
+			recordDiagnostic(error);
 			retryRef.current = retry ?? null;
 			connectionStore.getState().noteFailure({
 				surface: error.surface,
@@ -775,7 +868,7 @@ export const ConnectionProvider = ({
 				storageRefusal: storageRefusalOf(error),
 			});
 		},
-		[revokeAuthorization],
+		[recordDiagnostic, revokeAuthorization],
 	);
 
 	const stopStream = useCallback(() => {
@@ -817,6 +910,9 @@ export const ConnectionProvider = ({
 			const listGeneration = listStore.getState().connectionGeneration;
 			let stopped = false;
 			let _attempt = 0;
+			/* The ONE pending restart, so a Retry from the transient notice
+			 *  replaces the backoff rather than adding a second loop. */
+			let pending: ReturnType<typeof setTimeout> | null = null;
 
 			const run = () => {
 				if (stopped || !admission.isCurrent()) return;
@@ -846,6 +942,17 @@ export const ConnectionProvider = ({
 						}
 						if (frame.kind === "sessions") {
 							_attempt = 0;
+							/* A good frame ends whatever the stream was retrying through:
+							 *  Diagnostics stops showing it and the transient notice
+							 *  goes (PR #261 R1). Only the stream's OWN record: a
+							 *  refusal or a failed manual refresh is not this loop's to
+							 *  clear (R2-2, `DiagnosticError.source`). */
+							if (mountedRef.current)
+								setDiagnosticError((current) =>
+									current === null || current.source !== "stream"
+										? current
+										: null,
+								);
 							listStore.getState().applyFrame(
 								{
 									sessions: frame.data.sessions,
@@ -871,6 +978,15 @@ export const ConnectionProvider = ({
 						setStreamHealthReason((previous) =>
 							reasonForStatus(status.state, previous),
 						);
+						/* `stalled` reaches the pill as "Not answering" WITHOUT an
+						 *  `onError` (a mid-body failure under the retry cap, an early
+						 *  EOF, the silence watchdog): record its cause so Diagnostics
+						 *  never pairs "Not answering" with "None" (U3, Q4). */
+						if (status.state === "stalled")
+							recordDiagnostic(
+								status.lastError ?? stalledSummary(status),
+								"stream",
+							);
 					},
 					onError: (error) => {
 						if (stopped || !admission.isCurrent()) return;
@@ -895,7 +1011,7 @@ export const ConnectionProvider = ({
 								setStreamHealth("offline");
 								setStreamHealthReason(reasonCodeOf(error));
 							}
-							noteError(error);
+							noteError(error, routeRetryRef.current ?? undefined);
 							return;
 						}
 						listStore.getState().markStale();
@@ -907,13 +1023,23 @@ export const ConnectionProvider = ({
 							setStreamHealth("degraded");
 							setStreamHealthReason(reasonCodeOf(error));
 						}
+						/* Record the cause WITHOUT moving the phase: this branch retries by
+						 *  itself, so it must not raise a refusal, but Diagnostics' "Last
+						 *  error" read "None" while the pill said "Not answering" (a field
+						 *  report: a healthy Mac, an "Asleep" phone and nothing to say why).
+						 *  NOT `setLastError`: `use-session` reads that one as "stopped",
+						 *  and a blip turned the open session into a refusal that never
+						 *  cleared (PR #261 R1). The diagnostics-only record also feeds the
+						 *  transient notice when the computer named the wait (Q3). */
+						recordDiagnostic(error, "stream");
 						_attempt += 1;
 						/* The conversation stream's policy (`reconnectDelay`), so the two
 						 * streams of one route back off alike: 2 s, doubling to a 15 s
 						 * ceiling, and a server Retry-After only ever lengthens a step. A
 						 * flat 2 s turned a Radient outage into a renewal POST every 2 s
 						 * per phone once a 5xx stopped being terminal (PR #178 R1-2/Q1). */
-						setTimeout(
+						if (pending !== null) clearTimeout(pending);
+						pending = setTimeout(
 							run,
 							reconnectDelay(_attempt, error.retryAfterMs ?? undefined),
 						);
@@ -942,12 +1068,25 @@ export const ConnectionProvider = ({
 			};
 
 			run();
+			/* The transient notice's Retry: drop the pending backoff and reopen
+			 *  now. A no-op once this loop is stopped or superseded. */
+			const kick = () => {
+				if (stopped || !admission.isCurrent()) return;
+				if (pending !== null) clearTimeout(pending);
+				pending = null;
+				streamRef.current?.stop();
+				run();
+			};
+			streamKickRef.current = kick;
 			// A queued restart is inert once admission's revision has been revoked.
 			return () => {
 				stopped = true;
+				if (pending !== null) clearTimeout(pending);
+				pending = null;
+				if (streamKickRef.current === kick) streamKickRef.current = null;
 			};
 		},
-		[noteError, stopStream],
+		[noteError, recordDiagnostic, stopStream],
 	);
 
 	/**
@@ -998,7 +1137,9 @@ export const ConnectionProvider = ({
 			listStore.getState().reset();
 			configStore.getState().reset();
 			setLastError(null);
+			setDiagnosticError(null);
 			retryRef.current = null;
+			routeRetryRef.current = null;
 			connectionStore.getState().startRoute(route);
 			// Keep route ownership independent from the dispatch generation: a 401
 			// closes dispatch immediately, but its typed onError must still reach
@@ -1203,6 +1344,11 @@ export const ConnectionProvider = ({
 					? Promise.resolve()
 					: verifiedRetirement(retireAuthorization(true));
 				admission = beginRoute(route);
+				/* The live stream's refusal re-runs this connect, as this
+				 *  function's own catch below does (`routeRetryRef`, Q7). */
+				routeRetryRef.current = async () => {
+					await connectCustom({ url, password, allowInsecure, computerId });
+				};
 				await privacy;
 				await nativeCredentialRetirement.settled();
 				if (!admission.isCurrent()) return outcome();
@@ -1629,6 +1775,11 @@ export const ConnectionProvider = ({
 					return;
 				}
 				admission = beginRoute(route);
+				/* A refusal the live stream raises later (billing, console,
+				 *  suspended, the Radient 401, `relay_stopped`) re-runs this pick:
+				 *  a fresh mint and a new stream, the same Retry this function's
+				 *  catch offers for a mint refusal (`routeRetryRef`, Q7/U1). */
+				routeRetryRef.current = () => selectComputer(computer);
 				connectionStore.getState().selectComputer(computer);
 				await nativeCredentialRetirement.settled();
 				if (!admission.isCurrent()) return;
@@ -1750,10 +1901,29 @@ export const ConnectionProvider = ({
 						 * signal; the connection layer types it as `sign-in`, and this
 						 * only records it so the surface is decided once. */
 						if (admission?.isCurrent() && facts.status === 401) {
-							void revokeAuthorization();
+							/* Only the EDGE's 401 carries `X-Radient-Login`, and only it means
+							 *  this phone's Radient grant is gone. A 401 without it is the relay
+							 *  behind the tunnel refusing the request: signing in again on the
+							 *  phone cannot fix that, and revoking the grant would throw away a
+							 *  working sign-in, so it is the relay/password surface instead
+							 *  (`radientUnauthorizedSurface`). */
+							const surface = radientUnauthorizedSurface(facts);
+							if (surface === "sign-in") void revokeAuthorization();
+							/* Diagnostics' cause from the first moment the surface shows,
+							 *  not only once the thrown error reaches `noteError` (PR #261
+							 *  U3): the same kinds `relayErrorFromResponse` gives a 401. */
+							recordDiagnostic(
+								new RelayError(
+									surface === "sign-in"
+										? "radiant-login-required"
+										: "relay-unauthorized",
+									"unauthorized",
+									{ status: 401, surface },
+								),
+							);
 							setBusy(false);
 							connectionStore.getState().noteFailure({
-								surface: "sign-in",
+								surface,
 								displayableMessage: "",
 							});
 						}
@@ -1769,20 +1939,14 @@ export const ConnectionProvider = ({
 					noteError(
 						error instanceof RelayError
 							? error
-							: error.failure === "network"
-								? /* The phone could not reach Radient at all: nothing on the
-									 * computer or in the console is wrong, and the `console` surface
-									 * sent an offline reader to the Radient console and a terminal
-									 * command (PR #121 UX round 1, U5; design D11). `retry` is the
-									 * surface whose button re-runs this pick. The sentence is ours,
-									 * not the session client's developer string, and it is passed as
-									 * `detail` because `transport`'s fixed copy names the relay, which
-									 * this request never reached. */
-									new RelayError("rejected", error.message, {
-										surface: "retry",
-										detail: PICK_UNREACHABLE_DETAIL,
-									})
-								: tunnelSessionRelayError(error),
+							: /* Typed, network failures included (PR #261 Q6): wrapping
+								 * a mint `network` failure in a plain RelayError left
+								 * `refusal.ts`'s `failure === "network"` branch dead, so a
+								 * pick made offline read "{computer} is not ready yet" —
+								 * blaming the computer — instead of "Radient isn't
+								 * responding". The typed error keeps the `retry` surface
+								 * whose button re-runs this pick (U5/D11). */
+								tunnelSessionRelayError(error),
 						() => selectComputer(computer),
 					);
 					return;
@@ -1798,6 +1962,7 @@ export const ConnectionProvider = ({
 			goLive,
 			loadStoredRadient,
 			noteError,
+			recordDiagnostic,
 			revokeAuthorization,
 			usableOauth,
 		],
@@ -1823,7 +1988,28 @@ export const ConnectionProvider = ({
 			);
 		} catch (error) {
 			if (error instanceof RelayError) {
-				noteError(error, refreshList);
+				/* Keep the ROUTE retry when the route has one (PR #261 U3-1). A
+				 *  refresh fails for the same cause the live list stream refuses on
+				 *  (the Radient 401, billing, console, `relay_stopped`), and its 401
+				 *  can land AFTER the stream's `onError` set `routeRetryRef` as the
+				 *  surface's retry. Passing `refreshList` here replaced that closure:
+				 *  the stream had stopped and nothing re-set it, so every later Retry
+				 *  was one `GET /api/sessions` that never reopened the stream nor
+				 *  cleared the refusal, even once the cause was fixed. That is the
+				 *  early-tap order on a slow network: the 401 hook raises the surface
+				 *  with no retry set, Retry falls back to this refresh, and the
+				 *  stream's refusal lands while it is in flight.
+				 *
+				 *  Fixed here rather than in the 401 hook because this catch is the
+				 *  site that overwrites: setting the retry from the hook would still
+				 *  lose it to any refresh failing later (Retry's own fallback, a
+				 *  pull-to-refresh while refused). Re-running the route is also what
+				 *  the stream's refusal and the pick's own catch already offer, so
+				 *  every Retry on a route converges on the one action that reopens
+				 *  the stream and clears the surface on success. It is still one
+				 *  attempt per tap, so no loop. With no route (nothing to re-run),
+				 *  the refresh remains the retry. */
+				noteError(error, routeRetryRef.current ?? refreshList);
 				return;
 			}
 			throw error;
@@ -1863,6 +2049,7 @@ export const ConnectionProvider = ({
 						setStreamHealth("idle");
 						setStreamHealthReason(null);
 						setLastError(null);
+						setDiagnosticError(null);
 						setSignInState({ kind: "idle" });
 						retryRef.current = null;
 						if (pendingSignOutRef.current === attempt)
@@ -2134,6 +2321,16 @@ export const ConnectionProvider = ({
 		 *  later arrival at `/` cannot inherit a stale "signed in" landing. */
 		if (!outcome.restored && mountedRef.current) setRestoredAccount(false);
 		if (outcome.refusal === null) return;
+		/* Radient unreachable on a cold start is a typed failure (PR #261 U9): the
+		 *  same "Radient isn't responding" copy the mint path shows for the same
+		 *  cause, and a Last error instead of "None". Recorded with
+		 *  `setLastError`, not `noteError`: there is no route or session yet, and
+		 *  `noteError` would also replace the retry closure set below. */
+		if (outcome.refusal.surface === "retry" && mountedRef.current) {
+			const unreachable = radientUnreachableError(outcome.refusal.message);
+			setLastError(unreachable);
+			recordDiagnostic(unreachable);
+		}
 		connectionStore.getState().noteFailure({
 			surface: outcome.refusal.surface,
 			displayableMessage: outcome.refusal.message,
@@ -2149,6 +2346,7 @@ export const ConnectionProvider = ({
 		revokeRadientGrant,
 		holdRadientTokens,
 		refreshAccountTokens,
+		recordDiagnostic,
 	]);
 
 	/* The restore function is stable (its only dependency is `refreshComputers`), but
@@ -2396,6 +2594,10 @@ export const ConnectionProvider = ({
 			retryAfterMs,
 			subject,
 			storageRefusal,
+			/* The row's live billing/status split a tunnel 403 into a cause the
+			 *  reader can fix (`tunnelRefusalCopy`); a custom route has no row. */
+			computer: chosen ?? null,
+			radientRoute: route?.mode === "radient",
 		});
 	}, [
 		computers,
@@ -2407,6 +2609,21 @@ export const ConnectionProvider = ({
 		surface,
 		tunnelId,
 	]);
+
+	/* The transient notice (Q3): only while no refusal shows — a refusal is the
+	 *  louder, terminal fact — and only for a cause the computer named. */
+	const transient = useMemo<RefusalCopy | null>(() => {
+		if (surface && surface !== "none") return null;
+		if (!diagnosticError?.error) return null;
+		const chosen = computers.find((computer) => computer.tunnelId === tunnelId);
+		const subject = chosen
+			? chosen.name
+			: route?.mode === "custom"
+				? route.baseUrl
+				: "Your computer";
+		return transientCopy(diagnosticError.error, subject);
+	}, [computers, diagnosticError, route, surface, tunnelId]);
+	const retryTransient = useCallback(() => streamKickRef.current?.(), []);
 
 	const connectCustomQuiet = useCallback(
 		async (input: ConnectCustomInput): Promise<void> => {
@@ -2449,6 +2666,9 @@ export const ConnectionProvider = ({
 			signInState,
 			signInDiagnostics,
 			lastError,
+			diagnosticError,
+			transient,
+			retryTransient,
 			refusal,
 		}),
 		[
@@ -2478,6 +2698,9 @@ export const ConnectionProvider = ({
 			signInState,
 			signInDiagnostics,
 			lastError,
+			diagnosticError,
+			transient,
+			retryTransient,
 			refusal,
 		],
 	);

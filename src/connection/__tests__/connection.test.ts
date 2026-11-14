@@ -819,6 +819,20 @@ describe("discovery turns tunnels into computers, honestly", () => {
 		expect(ineligible.billing.eligible).toBe(false);
 		expect(ineligible.billing.message).toBe("Add a payment method.");
 	});
+
+	it("carries billing.active separately from eligible, absent as unknown", () => {
+		/* The refusal split needs both: never turned on (`active: false`) and out
+		 *  of credit (`active: true, eligible: false`) have different fixes. */
+		expect(toComputer(tunnel() as never).billing.active).toBeNull();
+		const off = toComputer(
+			tunnel({ billing: { active: false, eligible: false } }) as never,
+		);
+		expect(off.billing.active).toBe(false);
+		const broke = toComputer(
+			tunnel({ billing: { active: true, eligible: false } }) as never,
+		);
+		expect(broke.billing).toMatchObject({ active: true, eligible: false });
+	});
 });
 
 /* --------------------------------------------------------------- tunnel session */

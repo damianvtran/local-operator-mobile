@@ -73,5 +73,10 @@
 	"mobile.settings.own_tunnel.runtime_body": "Esta compilación no tiene un almacén de claves seguro, así que el túnel solo se conserva durante esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.",
 	"mobile.settings.own_tunnel.before_saving": "Prueba la dirección antes de guardarla: un túnel guardado que nunca ha respondido deja la lista vacía sin ninguna explicación.",
 	"mobile.settings.own_tunnel.remove_title": "¿Quitar este túnel?",
-	"mobile.settings.own_tunnel.remove_body": "Borra la dirección y la contraseña de este teléfono. No afecta a tu máquina, al túnel que ejecutas ni a ninguna cuenta."
+	"mobile.settings.own_tunnel.remove_body": "Borra la dirección y la contraseña de este teléfono. No afecta a tu máquina, al túnel que ejecutas ni a ninguna cuenta.",
+	"mobile.settings.diagnostics.tunnel": "ID del túnel",
+	"mobile.settings.diagnostics.address": "Dirección del túnel",
+	"mobile.settings.diagnostics.copy": "Copiar diagnóstico",
+	"mobile.settings.diagnostics.copied": "Diagnóstico copiado",
+	"mobile.settings.diagnostics.copy_failed": "No se pudo copiar. Inténtalo de nuevo."
 }
