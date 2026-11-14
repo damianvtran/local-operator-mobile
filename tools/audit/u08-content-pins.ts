@@ -1710,7 +1710,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * tree; only `src` moved. Source identity only. */
 	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "e463c60ee20a7c28b7ebf3227e5545c4e34c93811694fc7f19e208b7a39db35b",
+	/* fix/radient-account-label: the Radient route admits with the grant's
+	 * account label (read from the id_token's email/name), and Settings' account
+	 * title moves into `account-title.ts`. No copy or layout changed. Re-derived
+	 * with --print over the tree merged with origin/main 9ef19ccd (#259); only
+	 * `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "26e2b3af787a0459262e10bfec2427ae0ee1403d9e6246256e8edaf5ca431bdf",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
