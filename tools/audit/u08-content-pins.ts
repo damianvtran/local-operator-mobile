@@ -1688,7 +1688,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ed9db30622a256299aebf3bba946dafcaf94a349a771d3bbd3cb02aa2def4d86",
+	/* fix/no-terminal-refusals (M1): plain-language refusal copy and actions,
+	 * terminal commands only behind "Using a terminal?", the set-up screen's
+	 * Phone access instruction and the new `mobile.refusal` namespace (844 keys).
+	 * Re-derived with --print over the committed tree (dc89dbd7); only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "9a1b4f739fdc687c63c98da755ca5688d8a1c367816a52f1a5cd6ffc7c40b2d7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
