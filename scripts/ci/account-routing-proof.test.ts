@@ -230,9 +230,18 @@ function evaluate(expression: string, event: string, mode: string): boolean {
 }
 
 describe("staged proof source contract — mocks only, no mDNS/native/CI execution", () => {
-	it("retains the actual BASE/c67 public route validator bytes", () => {
+	/* Re-pinned for PR #260 (cd053eff): 28396184… -> f5e729d8…. The BASE/c67
+	 * validator's DECISION logic is retained line for line; the one change is that a
+	 * refusal returns a `RouteInvalidCode` instead of an English sentence, so the
+	 * render site can translate it (`routeInvalidSentence`, tunnel-verdict.ts). A
+	 * byte pin cannot tell that apart from a change to which inputs are refused, so
+	 * `src/connection/__tests__/route-validation-decisions.test.ts` is what proves
+	 * the decisions unchanged: a decision table generated from the BASE blob, with a
+	 * one-to-one sentence -> code mapping, replayed against this validator. Any
+	 * further byte change must re-derive both. */
+	it("retains the BASE/c67 route validator decisions, refusals as codes (#260)", () => {
 		expect(sha(source("src/connection/profile.ts"))).toBe(
-			"283961844829832e854ac98c72bf3f9405f0fc5212ab356a6393559ac8f25993",
+			"f5e729d860015d750de39b58a063814c5a7b6de67b137e57ae784df1a9c68f05",
 		);
 	});
 	it("rejects unknown modes/stages and targeted non-manual events", () => {
