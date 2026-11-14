@@ -364,3 +364,92 @@ describe("review round 1 remediation", () => {
 		).toBe(false);
 	});
 });
+
+/*
+ * `last_user_at` parity (local-operator #3923, v0.102.5). The relay now
+ * publishes the person's last message on RUNNING rows, epoch SECONDS (possibly
+ * fractional), `null` when unknown; older daemons omit it. The desktop's
+ * `runningOrderMs` chain is last_user_at × 1000 → created_at → null
+ * (`local-operator-ui` `chat-list-sections.ts`), and the phone must agree.
+ */
+describe("running rows order by the person's last message (last_user_at)", () => {
+	const running = (id: string, overrides: Partial<SessionSummary> = {}) =>
+		row(id, { streaming: true, ...overrides });
+	const runningIds = (rows: SessionSummary[]) =>
+		ids(
+			arrangeSidebar(rows, DEFAULT_SIDEBAR_VIEW, NOON).find(
+				(g) => g.key === "running",
+			)?.rows ?? [],
+		);
+
+	it("ranks an older-born session the person just spoke in above a newer one", () => {
+		// Relay order is newest birth first: `newer` arrives ahead of `older`.
+		const newer = running("newer", {
+			created_at: at(10 * MIN),
+			last_user_at: at(9 * MIN),
+		});
+		const older = running("older", {
+			created_at: at(2 * DAY),
+			last_user_at: at(30),
+		});
+		expect(runningOrderMs(older)).toBe(at(30) * 1000);
+		expect(runningIds([newer, older])).toEqual(["older", "newer"]);
+	});
+
+	it("does not move a row when the assistant replies — only last_user_at counts", () => {
+		// `replying` just streamed a response (fresh mtime) but the person last
+		// spoke an hour ago; `asked` got the person's message five minutes ago.
+		const replying = running("replying", {
+			created_at: at(3 * HOUR),
+			last_user_at: at(HOUR),
+			mtime: at(1),
+		});
+		const asked = running("asked", {
+			created_at: at(4 * HOUR),
+			last_user_at: at(5 * MIN),
+			mtime: at(4 * MIN),
+		});
+		expect(runningOrderMs(replying)).toBe(at(HOUR) * 1000);
+		expect(runningIds([replying, asked])).toEqual(["asked", "replying"]);
+	});
+
+	it("reads fractional seconds without rounding them away", () => {
+		const a = running("a", {
+			created_at: at(DAY),
+			last_user_at: 1_762_500_000.75,
+		});
+		const b = running("b", {
+			created_at: at(DAY),
+			last_user_at: 1_762_500_000.25,
+		});
+		expect(runningOrderMs(a)).toBe(1_762_500_000_750);
+		expect(runningIds([b, a])).toEqual(["a", "b"]);
+	});
+
+	it("falls back to created_at when last_user_at is null, absent or no claim", () => {
+		const born = at(2 * HOUR);
+		expect(
+			runningOrderMs(running("null", { created_at: born, last_user_at: null })),
+		).toBe(born * 1000);
+		expect(runningOrderMs(running("absent", { created_at: born }))).toBe(
+			born * 1000,
+		);
+		expect(
+			runningOrderMs(running("zero", { created_at: born, last_user_at: 0 })),
+		).toBe(born * 1000);
+		// A null row keys on its birth, so a newer-born null row still ranks above
+		// an older one whose person spoke before that birth.
+		const nullNew = running("null-new", {
+			created_at: at(10 * MIN),
+			last_user_at: null,
+		});
+		const spokeEarlier = running("spoke-earlier", {
+			created_at: at(DAY),
+			last_user_at: at(HOUR),
+		});
+		expect(runningIds([spokeEarlier, nullNew])).toEqual([
+			"null-new",
+			"spoke-earlier",
+		]);
+	});
+});

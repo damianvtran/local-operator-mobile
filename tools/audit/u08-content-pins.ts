@@ -1784,7 +1784,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * named-cause actions carrying #257's UR-C1 `labelDir`). Re-derived once
 	 * with --print over the merged tree (d0fc164b); only `src` moved. Source
 	 * identity only, NOT rendered U-08 evidence. */
-	src: "20226f8f615c1b9bcb71c1008c2d69477ac32329844db982f863f86037ed914b",
+	/* feat/sidebar-last-user-at: the session-row contract declares the relay's
+	 * `last_user_at` (local-operator #3923, v0.102.5) and the drawer's
+	 * `runningOrderMs` reads it before `created_at`. No rendered surface changed.
+	 * Re-derived with --print over the working tree; only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#258, 8ca71d54) into #263: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Merge of origin/main (#257, caae98bc) into #263: both comment chains
+	 * kept, re-derived once with --print over the merged tree. */
+	/* Merge of origin/main (#263, d92515ff) into #261: both comment blocks
+	 * kept (the session-row `last_user_at` contract from #263; the M1 refusal
+	 * work from #261). Re-derived once with --print over the merged tree; only
+	 * `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "92fde1587f4957e787ecd3934090ee77acbf005837cf3e8bcdcd9b6485fbe802",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
