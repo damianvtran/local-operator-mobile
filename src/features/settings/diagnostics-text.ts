@@ -144,6 +144,24 @@ export function redact(value: string): string {
 	return decoded === once ? once : redactOnce(decoded);
 }
 
+/**
+ * The Diagnostics "Reason" row's value: `reason: <code>` (PR #258), redacted
+ * with the same rules as Copy diagnostics.
+ *
+ * Why redact a code: `reasonCodeOf` admits a wire value only when it is
+ * identifier-shaped (`[a-z][a-z0-9_-]{0,63}`, no dot), which keeps URLs, hosts
+ * and sentences out, but a 48-64 character lowercase opaque run (a hex secret a
+ * responder echoed into `code` or `error`) is identifier-shaped too. The row is
+ * selectable, so whatever it shows can leave the app by hand; routing it through
+ * `redact` keeps one redaction for everything Diagnostics shows or copies, with
+ * no second rule set to drift. Every code this build knows is well under 48
+ * characters and has no `=`/`:`, so none is altered. The `reason:` prefix stays
+ * outside the redaction because it is the row's grep anchor, not wire data.
+ */
+export function diagnosticsReasonValue(code: string): string {
+	return `reason: ${redact(code)}`;
+}
+
 function safeOrigin(url: string): string {
 	try {
 		const parsed = new URL(url);

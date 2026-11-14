@@ -1,5 +1,14 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { diagnosticsText, REDACT_MAX_CHARS, redact } from "./diagnostics-text";
+import { reasonCodeOf } from "@/features/auth/stream-health-reason";
+import { RelayError } from "@/relay/errors";
+import {
+	diagnosticsReasonValue,
+	diagnosticsText,
+	REDACT_MAX_CHARS,
+	redact,
+} from "./diagnostics-text";
 
 /**
  * "Copy diagnostics" leaves the app (clipboard → chat with a helper), so the
@@ -283,5 +292,57 @@ describe("Copy diagnostics redaction, round 2", () => {
 		const out = redact(value);
 		expect(out).not.toContain(tok);
 		expect(out).not.toContain("[truncated]");
+	});
+});
+
+/* The PR #258 Reason row met PR #261's redaction in the merge of main (round 6):
+ *  the code is identifier-shaped by construction, so a URL or host cannot reach
+ *  the row, but an opaque identifier-shaped run can, and the row is selectable. */
+describe("Diagnostics Reason row goes through the same redaction", () => {
+	/* Fabricated at run time: lowercase hex-like, starts with a letter, 61
+	 *  characters, so it passes `reasonCodeOf`'s identifier shape. */
+	const opaque = `a${"0f".repeat(30)}`;
+
+	it("a URL, host or bearer on the wire never becomes the shown code", () => {
+		const error = new RelayError("rejected", "x", {
+			reasonRaw: "https://relay.example.com/x?token=abc",
+			code: "my-mac.local",
+			serverError: `Bearer ${opaque}`,
+		});
+		expect(diagnosticsReasonValue(reasonCodeOf(error))).toBe(
+			"reason: rejected",
+		);
+	});
+
+	it("an identifier-shaped opaque token that passes the shape is redacted", () => {
+		const code = reasonCodeOf(
+			new RelayError("rejected", "x", { serverError: opaque }),
+		);
+		/* The negative control: the shape alone lets it through. */
+		expect(code).toBe(opaque);
+		const shown = diagnosticsReasonValue(code);
+		expect(shown).not.toContain(opaque);
+		expect(shown).toBe("reason: [redacted]");
+	});
+
+	it("leaves every ordinary code as it is", () => {
+		for (const code of [
+			"stream_stalled",
+			"control_plane_unreachable",
+			"operator_authority_required",
+			"relay_unreachable",
+			"computer-offline",
+			"rate-limit_2",
+		])
+			expect(diagnosticsReasonValue(code)).toBe(`reason: ${code}`);
+	});
+
+	it("Settings renders the row through it, with no raw template left", () => {
+		const settings = readFileSync(
+			fileURLToPath(new URL("./settings.tsx", import.meta.url)),
+			"utf8",
+		);
+		expect(settings).toContain("diagnosticsReasonValue(code)");
+		expect(settings).not.toMatch(/`reason: \$\{/);
 	});
 });

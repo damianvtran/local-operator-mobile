@@ -25,17 +25,19 @@ import {
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
+import { diagnosticReason } from "@/features/auth/stream-health-reason";
 import { TransientNotice } from "@/features/auth/transient-notice";
-import { diagnosticsText } from "@/features/settings/diagnostics-text";
+import {
+	diagnosticsReasonValue,
+	diagnosticsText,
+} from "@/features/settings/diagnostics-text";
 import { t } from "@/i18n";
 import type { ThemeMode } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
 import { CONTROL, computerRowIds, REGION, ROLE, SCREEN } from "@/ui/a11y";
-import { Avatar, initialsOf } from "@/ui/components/avatar";
 import { BackButton } from "@/ui/components/back-button";
 import { Badge } from "@/ui/components/badge";
 import { Button } from "@/ui/components/button";
-import { Card } from "@/ui/components/card";
 import {
 	ConnectionPill,
 	type ConnectionPillState,
@@ -46,9 +48,21 @@ import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { Screen } from "@/ui/components/screen";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Segmented } from "@/ui/components/segmented";
-import { LTR_WRITING, TEXT_END_CLASS, useComposedDir } from "@/ui/direction";
+import {
+	STATUS_LABEL_STYLE,
+	STATUS_PILL_SLOT_STYLE,
+	statusRowClass,
+	statusRowStacked,
+} from "@/ui/components/status-pill-layout";
+import {
+	LTR_WRITING,
+	TEXT_END_CLASS,
+	useComposedDir,
+	useIsRTL,
+} from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
+import { AccountCard } from "./account-card";
 import { AccountRoutingSection } from "./account-routing-section";
 import { type CopyFeedback, createCopyFeedback } from "./copy-feedback";
 import { NotificationsSection } from "./notifications-section";
@@ -96,6 +110,8 @@ export default function Settings() {
 		refusal,
 		signInWithRadient,
 		streamHealth,
+		streamHealthReason,
+		lastError,
 		diagnosticError,
 		transient,
 		discovering,
@@ -105,13 +121,6 @@ export default function Settings() {
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
 	const phase = useConnectionState((state) => state.phase);
-	const accountLabel = useConnectionState((state) => state.accountLabel);
-	/* The account title is the account label (a Latin email or name) OR the
-	 * translated "Not signed in with Radient", which in Urdu begins with the Latin
-	 * `Radient`. RN-web's `dir="auto"` then resolves the title LTR on an RTL page
-	 * and it sits on the wrong edge, away from its same-card subtitle (design
-	 * review D2). Both lines state the page's base so they share one edge. */
-	const composedDir = useComposedDir();
 	const discoveryFailure = useConnectionState(
 		(state) => state.discoveryFailure,
 	);
@@ -144,8 +153,10 @@ export default function Settings() {
 
 	/* The RENDERED text scale (`textScale.effectiveScale`): on the web the platform's
 	 * own signal multiplies through `rem`, so this is the number a reader perceives
-	 * and the one a layout decision has to be made against. */
-	const accountStacked = textScale.effectiveScale > LARGE_TEXT_SCALE;
+	 * and the one a layout decision has to be made against. The Status row stacks
+	 * above LARGE_TEXT_SCALE, as the account card does: side by side at 200 % a
+	 * long locale's label leaves the pill a glyph or two. */
+	const statusStacked = statusRowStacked(textScale.effectiveScale);
 
 	/* The Status row's word AND colour, derived once from the state the account card
 	 *  above reads. See `statusFor` for why one derivation rather than two fields. */
@@ -317,53 +328,9 @@ export default function Settings() {
 		>
 			<View className="gap-4 pt-2">
 				{/* ---------------------------------------------------------- account */}
-				<Card>
-					{/* A COLUMN above `LARGE_TEXT_SCALE`, not a `flex-wrap` — wrapping does
-					 *  nothing here, because the text beside the avatar is `flex-1` and will
-					 *  always take whatever width is left rather than move to a new line. At
-					 *  200 % on a 320 pt phone that left it a 180 pt column and "Radient"
-					 *  broke mid-word; stacking puts the identity under its own mark. */}
-					<View
-						className={
-							accountStacked
-								? "items-start gap-2"
-								: "flex-row items-center gap-3"
-						}
-					>
-						<Avatar
-							initials={initialsOf(
-								accountLabel ??
-									computers[0]?.name ??
-									t("mobile.settings.account.app_name"),
-							)}
-							size="md"
-							accessibilityLabel={t("mobile.settings.account.signed_in")}
-						/>
-						<View
-							className={
-								accountStacked ? "min-w-0 w-full gap-1" : "min-w-0 flex-1 gap-1"
-							}
-						>
-							<Text className="text-body text-ink" {...composedDir}>
-								{accountLabel ?? t("mobile.settings.account.not_signed_in")}
-							</Text>
-							<Text
-								className="text-body-sm text-ink-dim"
-								numberOfLines={1}
-								ellipsizeMode="tail"
-								{...composedDir}
-							>
-								{route
-									? route.mode === "radient"
-										? t("mobile.settings.account.route_radient")
-										: t("mobile.settings.account.route_direct", {
-												baseUrl: route.baseUrl,
-											})
-									: t("mobile.settings.status.no_connection")}
-							</Text>
-						</View>
-					</View>
-				</Card>
+				{/* The account card and its Radient sign-in: see `account-card.tsx`
+				 *  for why the button keys on `radientSignedIn` and confirms first. */}
+				<AccountCard />
 
 				{/* -------------------------------------------------------- connection */}
 				<View className="gap-2" testID={REGION.settingsConnection}>
@@ -373,9 +340,18 @@ export default function Settings() {
 						/* Programmatically focusable, never a Tab stop: the target of U18's
 						 *  focus move after Try now, and nothing else. */
 						tabIndex={-1}
-						className="flex-row items-center justify-between"
+						/* `statusRowClass` (min-w-0) + a shrinkable pill slot capped
+						 *  relative to the row + a label that keeps its word: "Not
+						 *  answering" ran past the right edge on an iPhone (Sherman's
+						 *  report via Aida). Above LARGE_TEXT_SCALE the row stacks rather than cut
+						 *  the word to a glyph. `statusPillFit` is the rule;
+						 *  `status-pill-layout.test.ts` checks it at 320 pt / 200 %. */
+						className={statusRowClass(statusStacked)}
 					>
-						<Text className="text-body-sm text-ink-muted">
+						<Text
+							className="text-body-sm text-ink-muted"
+							style={STATUS_LABEL_STYLE}
+						>
 							{t("mobile.settings.connection.status")}
 						</Text>
 						{/* The WORD, not just the dot. In the list the connected state is
@@ -391,7 +367,13 @@ export default function Settings() {
 						 *  dot and the word "Connected" (design round 2, D12, frame
 						 *  `dark390-surface`: pill 90x25, dot rgb(87,199,133)). Splitting the two
 						 *  was the defect; one derivation is the fix. */}
-						<ConnectionPill state={status.state} message={status.message} />
+						<View style={STATUS_PILL_SLOT_STYLE}>
+							<ConnectionPill
+								state={status.state}
+								message={status.message}
+								singleLine
+							/>
+						</View>
 					</View>
 					{/* The route's refusal, under the Status it explains and above the list.
 					 *  The switcher opens from here and CLOSES on a failed pick so the reason
@@ -648,6 +630,31 @@ export default function Settings() {
 						label={t("mobile.settings.diagnostics.stream")}
 						value={streamWord(streamHealth)}
 					/>
+					{/* The raw code behind "Not answering"/"Asleep" — which degraded input
+					 *  the app actually received (a stall, a gateway reason, a relay code,
+					 *  a transport failure). Shown as `reason: <code>`, untranslated and
+					 *  selectable, because it is what a support thread greps for; only the
+					 *  label is keyed. See `stream-health-reason.ts`. */}
+					<DiagnosticRow
+						label={t("mobile.settings.diagnostics.reason")}
+						value={(() => {
+							const code = diagnosticReason({
+								health: streamHealth,
+								healthReason: streamHealthReason,
+								lastError,
+								refused: refusal !== null,
+							});
+							/* Through Copy diagnostics' `redact` (PR #261): the code is
+							 *  identifier-shaped by construction, but a 48-64 character
+							 *  opaque identifier still passes that shape, and this row is
+							 *  selectable, so it is copied out by hand. */
+							return code
+								? diagnosticsReasonValue(code)
+								: t("mobile.settings.diagnostics.none");
+						})()}
+						selectable
+						testID={CONTROL.settingsDiagnosticsReason}
+					/>
 					<DiagnosticRow
 						label={t("mobile.settings.diagnostics.last_error")}
 						/* The diagnostics-only record (PR #261 R1/U3): a retrying or
@@ -875,13 +882,26 @@ function streamWord(health: StreamHealth): string {
 
 /** One line of the diagnostics block. A label and a value, never only a value:
  *  "degraded" alone tells a reader nothing to act on. */
-const DiagnosticRow = ({ label, value }: { label: string; value: string }) => (
+const DiagnosticRow = ({
+	label,
+	value,
+	selectable = false,
+	testID,
+}: {
+	label: string;
+	value: string;
+	/** Long-press copy, for a value a reader pastes into a support thread. */
+	selectable?: boolean;
+	testID?: string;
+}) => (
 	<View className="flex-row items-start justify-between gap-4">
 		<Text className="text-body-sm text-ink-muted">{label}</Text>
 		<Text
 			className={`flex-1 ${TEXT_END_CLASS} text-mono-sm text-ink-dim`}
 			accessibilityRole={ROLE.text}
 			numberOfLines={2}
+			selectable={selectable}
+			testID={testID}
 			/* `minWidth: 0` lets this column shrink below its content's width — the
 			 *  one lever RN-web honours on every platform for a flex child (`overflow-
 			 *  Wrap` is web-only and is not in the `TextStyle` type). */

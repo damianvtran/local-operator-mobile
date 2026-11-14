@@ -187,10 +187,13 @@ export function staleNote(input: StaleNoteInput): string | null {
  * configuration gets an age-only sentence that fits whole: one line holds about
  * twelve characters at that size.
  *
- * The connection pill directly above states the CONDITION (`Not answering`) with
- * the long sentence as its message, so the short form drops the verb and keeps
- * the number — the reader has the sentence and the number on screen, and neither
- * is truncated.
+ * The connection pill directly above carries the long sentence as its message,
+ * so the short form drops the verb and keeps the number. That pill is ONE line
+ * (`singleLine`, so it cannot run past the drawer's edge — Sherman's "Not
+ * answering" report, PR #258), and at 320 pt / 200 % the long sentence
+ * tail-truncates there; its whole text stays the pill's accessible name. This
+ * short line is therefore where the AGE is guaranteed visible at large text, and
+ * it must keep fitting whole.
  */
 export function staleShortNote(input: StaleNoteInput): string | null {
 	const phrase = stalePhrase(input);

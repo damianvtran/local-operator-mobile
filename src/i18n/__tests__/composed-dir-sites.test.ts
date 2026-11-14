@@ -42,16 +42,19 @@ describe("sentences that start with a Latin token state the page's base", () => 
 		expect(connected).toMatch(STARTS_LATIN);
 	});
 
-	it("Settings: the account title and its subtitle both spread useComposedDir()", () => {
-		const source = read("../../features/settings/settings.tsx");
+	/* The account card moved out of settings.tsx into account-card.tsx (PR #258
+	 *  review R1, B1); its title is now one `{title}` derived from
+	 *  `radientSignedIn`, and both its values (ur "Radient میں…" and
+	 *  "Radient کے ساتھ…") still start with the Latin product name. The visible
+	 *  sign-in label ("Radient کے ساتھ سائن ان کریں") does too. */
+	it("Settings: the account title, its subtitle and the sign-in label all spread useComposedDir()", () => {
+		const source = read("../../features/settings/account-card.tsx");
 		expect(source).toContain("const composedDir = useComposedDir();");
-		expect(
-			textOpeningBefore(
-				source,
-				'{accountLabel ?? t("mobile.settings.account.not_signed_in")}',
-			),
-		).toContain("{...composedDir}");
+		expect(textOpeningBefore(source, "{title}")).toContain("{...composedDir}");
 		expect(textOpeningBefore(source, "{route\n")).toContain("{...composedDir}");
+		expect(textOpeningBefore(source, '{t("mobile.signin.start")}\n')).toContain(
+			"{...composedDir}",
+		);
 	});
 
 	it("Add a computer: the connected sentence and its subtitle both spread useComposedDir()", () => {
