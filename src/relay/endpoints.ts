@@ -188,6 +188,21 @@ export interface RegisterDeviceRequest {
 	environment: "sandbox" | "production";
 	app_version: string;
 	install_id: string;
+	/** Which session pushes this phone wants (core PR C). Sent ONLY to a daemon
+	 *  whose `capabilities` advertise `push_preferences`: an older daemon
+	 *  refuses unknown fields with 422 and the whole registration fails.
+	 *  Omitted means everything on. See `notifications/notification-preferences.ts`. */
+	preferences?: RegisterPushPreferences;
+}
+
+/** The daemon's `preferences` shape: these three booleans, plus `previews`
+ *  only for a daemon that advertises `push_previews` — it refuses unknown
+ *  keys, and reads an absent `previews` as true. */
+export interface RegisterPushPreferences {
+	enabled: boolean;
+	completions: boolean;
+	errors: boolean;
+	previews?: boolean;
 }
 
 /**

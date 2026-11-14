@@ -4,10 +4,14 @@ import { type NoParamKey, t } from "@/i18n";
  * The permission vocabulary, and the one sentence each state gets.
  *
  * The OS permission prompt is not a side effect of installing an app: ADR 0006
- * §5 requires it "in context, with the §2.4 copy already on screen", so the
- * ONLY surface that asks is the Settings section, from a control the reader
- * presses, and every state below is written to be true at the moment it
- * renders. Two rules shape the table:
+ * §5 requires it "in context, with the §2.4 copy already on screen", so it is
+ * raised only from a control the reader presses, on one of TWO surfaces: the
+ * first-run primer sheet (`permission-primer.ts` — offered on Home once a
+ * computer is live, at most twice, never after `denied`; added at the
+ * operator's request on 2026-11-14 because a Settings-only prompt left most
+ * users without notifications) and, always, the Settings section, which stays
+ * the fallback and the remedy path. Every state below is written to be true at
+ * the moment it renders. Two rules shape the table:
  *
  * - **Never claim a capability the binary lacks.** A build without the
  *   notifications module (`unsupported`) or a platform that never delivers

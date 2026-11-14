@@ -20,6 +20,10 @@ import { clearBadgeSource, reassertBadge } from "@/notifications/app-badge";
 import { registerBackgroundUnreadScope } from "@/notifications/background-clear";
 import { registerBackgroundNotificationTask } from "@/notifications/background-task";
 import { loadNotifications } from "@/notifications/native";
+import {
+	loadNotificationPreferences,
+	teamBridgeWanted,
+} from "@/notifications/notification-preferences";
 import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
 import {
 	backgroundUnreadScope,
@@ -55,6 +59,7 @@ const Context = createContext<
 			hub: HubClient;
 			avatars: AvatarCache;
 			registerPush: () => Promise<void>;
+			withdrawPush: () => Promise<void>;
 			pushes: ReturnType<typeof createPushLifecycle>;
 	  })
 	| null
@@ -127,6 +132,11 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 		};
 		const pushes = createPushLifecycle({
 			register: async (isCurrent) => {
+				/* The Team Bridge switch (Settings → Notifications) is app-only:
+				 * the hub has no per-type filter, so "off" means this phone is not
+				 * registered with it at all. Checked here, after the stored choice
+				 * is read, so launch and foreground re-registration honour it too. */
+				if (!teamBridgeWanted(await loadNotificationPreferences())) return;
 				const bound = await bindAccount();
 				if (!bound || !isCurrent()) return;
 				registeredHub = bound;
@@ -161,6 +171,9 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			avatars: createAvatarCache(),
 			pushes,
 			registerPush: () => pushes.register(),
+			/** The Team Bridge switch turned off: DELETE this phone's hub
+			 *  registration, ordered after any PUT already in flight. */
+			withdrawPush: () => pushes.withdraw(),
 		};
 	}, [fixture, connection.radientAccountId]);
 	useEffect(() => {

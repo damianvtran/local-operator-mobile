@@ -16,7 +16,9 @@
  * WHAT IT SENDS, AND WHY THOSE FIELDS. Exactly the register contract's keys
  * (local-operator `mobile/push_devices.py` `_REGISTER_FIELDS`): `platform`,
  * `token`, `environment`, `app_version`, `install_id`. The daemon REFUSES an
- * unknown key (`422 unknown field(s)`), so nothing else may ride along. `name`
+ * unknown key (`422 unknown field(s)`), so nothing else may ride along — with
+ * one gated exception: `preferences`, sent only to a daemon whose capabilities
+ * advertise `push_preferences` (core PR C; `notification-preferences.ts`). `name`
  * is optional and omitted: the daemon treats an omitted name as "clear the
  * label", and this build has no label to own.
  *
@@ -26,9 +28,10 @@
  * `registerTeamBridgeDevice` uses (`pushEnvironment` below). Two registrations
  * that disagreed about any of these would address two different phones.
  *
- * NEVER PROMPTS. Permission is only read here; the prompt stays the Settings
- * press (ADR 0006 §5). A phone that has not granted permission is not
- * registered, and the Settings "Allow" press re-triggers this once granted.
+ * NEVER PROMPTS. Permission is only read here; the prompt is an in-context
+ * press — the first-run primer sheet or the Settings control (ADR 0006 §5, as
+ * amended 2026-11-14). A phone that has not granted permission is not
+ * registered, and either press re-triggers this once granted.
  *
  * IDEMPOTENT TWICE. The daemon upserts on `(install_id, platform)` and keeps
  * the `device_id`, so no number of POSTs can grow its registry. The client is
@@ -58,7 +61,10 @@ import {
 	loadNotifications,
 	notificationsSupported,
 } from "@/notifications/native";
-import type { RegisterDeviceRequest } from "@/relay/endpoints";
+import type {
+	RegisterDeviceRequest,
+	RegisterPushPreferences,
+} from "@/relay/endpoints";
 import { isRelayError, isRelayMissing } from "@/relay/errors";
 
 import {
@@ -137,13 +143,50 @@ export const pushEnvironment = (
 const isDevBuild = (): boolean =>
 	typeof __DEV__ !== "undefined" && __DEV__ === true;
 
-/** The daemon requires a non-empty `app_version`; an unreadable manifest must
- *  not cost the registration, so it says so instead of omitting the field. */
-const appVersion = (): string => {
-	const version = Constants.expoConfig?.version;
-	return typeof version === "string" && version.trim().length > 0
-		? version
-		: "unknown";
+/** The slice of the embedded app config `appVersionFrom` reads. */
+type VersionConfig = {
+	version?: string | null;
+	ios?: { buildNumber?: string | null } | null;
+	android?: { versionCode?: number | null } | null;
+} | null;
+
+/**
+ * The `app_version` this phone reports to the daemon: `<version> (<build>)`.
+ *
+ * WHY THE BUILD NUMBER. Every internal build (TestFlight, internal Play track)
+ * carries the placeholder version `0.0.0` by design — only a tagged ref gets a
+ * real one (docs/ci.md, "Versioning") — so the version alone told the daemon's
+ * device list nothing: TestFlight build 953 registered as `"0.0.0"` (operator's
+ * `mobile-push-devices.json`, 2026-11-14). The build number is the value that
+ * identifies the binary; CI exports it before `expo prebuild`, and app.config.ts
+ * writes it as `ios.buildNumber` / `android.versionCode`, which is the config
+ * `expo-constants` embeds. A local build has no build number and reports the
+ * version alone, as before.
+ *
+ * The daemon requires a non-empty string and stores it as free text
+ * (local-operator `mobile/push_devices.py`); an unreadable version must not cost
+ * the registration, so it says `unknown` instead of omitting the field.
+ */
+export const appVersionFrom = (
+	config: VersionConfig | undefined,
+	platform: "ios" | "android",
+): string => {
+	const raw = config?.version;
+	const version =
+		typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : "unknown";
+	const build =
+		platform === "ios"
+			? config?.ios?.buildNumber
+			: config?.android?.versionCode;
+	const buildText =
+		typeof build === "number"
+			? build > 0
+				? String(build)
+				: ""
+			: typeof build === "string"
+				? build.trim()
+				: "";
+	return buildText.length > 0 ? `${version} (${buildText})` : version;
 };
 
 /** The device log line. Only the outcome and the relay's typed facts: never
@@ -176,6 +219,11 @@ export type SessionPushAttempt = {
 	 *  only when something is actually being sent. */
 	onPosting?: () => void;
 	now?: () => number;
+	/** The `preferences` to send, or `undefined` to omit the field. The caller
+	 *  owns the capability gate (`notification-preferences.ts`): only a daemon
+	 *  advertising `push_preferences` may receive it. A function so the stored
+	 *  choice is read when the body is built, not when the attempt was queued. */
+	preferences?: () => Promise<RegisterPushPreferences | undefined>;
 };
 
 export type SessionPushResult = {
@@ -254,13 +302,17 @@ async function attemptRegistration(
 	}
 	try {
 		const install = await ensureInstallRecord();
+		const preferences = await attempt.preferences?.();
 		if (!isCurrent()) return result("stale");
 		const request: RegisterDeviceRequest = {
 			platform: device.platform,
 			token: device.token,
 			environment: pushEnvironment(device.platform, isDevBuild()),
-			app_version: appVersion(),
+			app_version: appVersionFrom(Constants.expoConfig, device.platform),
 			install_id: install.install_id,
+			// Absent unless the daemon advertised `push_preferences`: an older
+			// one refuses the unknown field and the whole registration fails.
+			...(preferences !== undefined ? { preferences } : {}),
 		};
 		// In memory only and never logged: it holds the token, because a rotated
 		// token is exactly the change that must re-POST.

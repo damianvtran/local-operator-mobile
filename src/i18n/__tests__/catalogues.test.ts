@@ -159,7 +159,14 @@ const NAMESPACES = [
 		// an English-only table in the Team Bridge push-readiness PR.
 		// +6: the Settings registration sentences (`computer_registration.*`),
 		// fix/session-push-register.
-		expected: 38,
+		// +5: the first-run notification primer (`primer.*`),
+		// feat/notification-onboarding (38 + 5 = 43).
+		// +5: the Settings preference switches (`preferences.*`), same branch
+		// (43 + 5 = 48).
+		// PR #264 R1: −1 `primer.settings_hint` (one-line primer), +3 the
+		// previews switch and its iOS/Android notes, +3 the denied nudge
+		// (`off_nudge.*`): 48 − 1 + 3 + 3 = 53.
+		expected: 53,
 	},
 	{
 		name: "mobile.session",
@@ -375,7 +382,13 @@ describe("the English catalogues", () => {
 		 * mobile.settings = 848. */
 		/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 		 * 867 + 5 (mobile.settings) = 872, counted over the en JSON. */
-		expect(total).toBe(872);
+		/* feat/notification-onboarding: +5 mobile.notifications (the first-run
+		 * primer sheet's title, body, settings hint and its two buttons):
+		 * 872 + 5 = 877, the generator's own count. Plus the five Settings
+		 * notification preference keys (`preferences.*`: master, completions,
+		 * errors, Team Bridge, update note): 877 + 5 = 882. PR #264 R1:
+		 * 882 − 1 + 3 + 3 = 887 (same keys as the namespace count above). */
+		expect(total).toBe(887);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -521,6 +534,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"« Effort » is the French word; the sheet's title is that one noun.",
 		"mobile.notifications.title":
 			"French spells this one the same: 'Notifications' is the platform's own word for the screen, not an English sentence left behind.",
+		"mobile.notifications.preferences.master":
+			"The master switch is labelled with the same platform word as the screen title: 'Notifications' in French too.",
 		/* French « session » is the same word as English "session": identical
 		 * bytes here are the correct translation, not a value nobody translated. */
 		"mobile.session_health.menu_title":

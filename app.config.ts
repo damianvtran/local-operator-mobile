@@ -353,7 +353,13 @@ const config: ExpoConfig = {
 		// makes http:// to a private address possible at all) is
 		// `plugins/with-android-local-network.js`, because no app.config field
 		// writes it.
-		permissions: ["RECORD_AUDIO", "ACCESS_LOCAL_NETWORK"],
+		//
+		// POST_NOTIFICATIONS is Android 13+'s runtime notification permission, the
+		// one `requestPermissionsAsync` raises from the first-run primer and
+		// Settings. expo-notifications' library manifest already declares it and
+		// the manifest merger carries it; declared here for the same visibility
+		// reason as RECORD_AUDIO (Android 12 and below grant it at install).
+		permissions: ["RECORD_AUDIO", "ACCESS_LOCAL_NETWORK", "POST_NOTIFICATIONS"],
 		adaptiveIcon: {
 			foregroundImage:
 				"./design/app-icon/android/ic_launcher_foreground-432.png",

@@ -74,8 +74,9 @@ export async function readAvailability(): Promise<PushAvailability> {
 }
 
 /**
- * Ask the OS for permission — the act behind the Settings control, never a
- * mount effect (ADR 0006 §5: the prompt is requested in context).
+ * Ask the OS for permission — the act behind the first-run primer's "Turn on
+ * notifications" and the Settings control, never a mount effect (ADR 0006 §5:
+ * the prompt is requested in context).
  *
  * On Android 13+ this is the call that raises `POST_NOTIFICATIONS`; on iOS it
  * is the standard authorization dialog. The answer is mapped through the same

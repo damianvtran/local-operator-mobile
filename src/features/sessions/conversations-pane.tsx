@@ -30,6 +30,7 @@ import {
 	countLabel,
 	notificationsEnabled,
 } from "@/features/notifications/notifications-model";
+import { NotificationsOffRow } from "@/features/notifications/notifications-off-row";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
 	degradedNote,
@@ -874,6 +875,10 @@ export const ConversationsPane = ({
 					/>
 				</View>
 			) : null}
+
+			{/* A denied notification permission's nudge (self-contained; renders
+			 *  nothing unless due — `notifications/denied-nudge.ts`). */}
+			<NotificationsOffRow />
 
 			<FlatList
 				className="flex-1"

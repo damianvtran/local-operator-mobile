@@ -117,8 +117,34 @@ function daemonRefusal(body: Record<string, unknown>): string | null {
 	return null;
 }
 
+/** Core PR C (contract relayed by the daemon owner, 2026-11-14): a daemon that
+ *  advertises `push_preferences` also accepts `preferences`, exactly
+ *  `{enabled, completions, errors}` booleans; an unknown key inside it is
+ *  refused like any other. */
+function preferencesDaemonRefusal(
+	body: Record<string, unknown>,
+	withPreviews = false,
+): string | null {
+	const { preferences, ...rest } = body;
+	if (preferences !== undefined) {
+		if (typeof preferences !== "object" || preferences === null)
+			return "preferences must be an object";
+		const keys = Object.keys(preferences).sort();
+		/* A `push_previews` daemon also accepts `previews` (optional: absent
+		 * reads as true); a #3991-only daemon refuses it like any unknown key. */
+		const allowed = withPreviews
+			? ["completions,enabled,errors", "completions,enabled,errors,previews"]
+			: ["completions,enabled,errors"];
+		if (!allowed.includes(keys.join(",")))
+			return `preferences: unexpected keys ${keys.join(", ")}`;
+		if (Object.values(preferences).some((value) => typeof value !== "boolean"))
+			return "preferences values must be booleans";
+	}
+	return daemonRefusal(rest);
+}
+
 let origin = "";
-let mode: "ok" | "revoked" | "malformed" = "ok";
+let mode: "ok" | "revoked" | "malformed" | "preferences" | "previews" = "ok";
 const seen: { method: string; url: string; body: Record<string, unknown> }[] =
 	[];
 const server = createServer(async (req, res) => {
@@ -135,7 +161,10 @@ const server = createServer(async (req, res) => {
 		res.writeHead(405).end('{"error":"method not allowed"}');
 		return;
 	}
-	const refusal = daemonRefusal(body);
+	const refusal =
+		mode === "preferences" || mode === "previews"
+			? preferencesDaemonRefusal(body, mode === "previews")
+			: daemonRefusal(body);
 	if (refusal !== null) {
 		res.writeHead(422).end(JSON.stringify({ error: refusal }));
 		return;
@@ -254,5 +283,94 @@ describe("POST /api/push/register against the daemon contract", () => {
 				install_id: "5a1b2c3d-4e5f-4061-8273-8495a6b7c8d9",
 			}),
 		).toContain("environment must be");
+	});
+
+	it("an older daemon (no push_preferences): the body carries no `preferences`, and is accepted", async () => {
+		const result = await registerSessionPushDevice(relay(), {
+			...attempt,
+			preferences: async () => undefined,
+		});
+		expect(result.outcome).toBe("registered");
+		expect(Object.keys(seen[0]?.body ?? {}).sort()).toEqual(DAEMON.required);
+	});
+
+	it("an older daemon refuses `preferences` outright — why the capability gate exists", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const result = await registerSessionPushDevice(relay(), {
+			...attempt,
+			preferences: async () => ({
+				enabled: true,
+				completions: true,
+				errors: true,
+			}),
+		});
+		expect(result.outcome).toBe("failed");
+		expect(recorded).not.toHaveBeenCalled();
+		warn.mockRestore();
+	});
+
+	it("a push_preferences daemon accepts exactly {enabled, completions, errors}", async () => {
+		mode = "preferences";
+		const result = await registerSessionPushDevice(relay(), {
+			...attempt,
+			preferences: async () => ({
+				enabled: false,
+				completions: true,
+				errors: false,
+			}),
+		});
+		expect(result.outcome).toBe("registered");
+		expect(seen[0]?.body.preferences).toEqual({
+			enabled: false,
+			completions: true,
+			errors: false,
+		});
+		expect(
+			preferencesDaemonRefusal({
+				...(seen[0]?.body ?? {}),
+				preferences: {
+					enabled: true,
+					completions: true,
+					errors: true,
+					attention: true,
+				},
+			}),
+		).toContain("unexpected keys");
+	});
+
+	it("a #3991-only daemon refuses `previews` — why push_previews is a separate gate", async () => {
+		mode = "preferences";
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const result = await registerSessionPushDevice(relay(), {
+			...attempt,
+			preferences: async () => ({
+				enabled: true,
+				completions: true,
+				errors: true,
+				previews: true,
+			}),
+		});
+		expect(result.outcome).toBe("failed");
+		warn.mockRestore();
+	});
+
+	it("a push_previews daemon accepts `previews` beside the three", async () => {
+		mode = "previews";
+		const result = await registerSessionPushDevice(relay(), {
+			...attempt,
+			preferences: async () => ({
+				enabled: true,
+				completions: true,
+				errors: true,
+				previews: false,
+			}),
+		});
+		expect(result.outcome).toBe("registered");
+		expect(seen[0]?.body.preferences).toEqual({
+			enabled: true,
+			completions: true,
+			errors: true,
+			previews: false,
+		});
 	});
 });
