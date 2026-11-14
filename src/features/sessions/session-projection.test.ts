@@ -197,11 +197,11 @@ describe("splitSidebarSections", () => {
 		expect(sections.week.map((s) => s.session_id)).toEqual(["late"]);
 	});
 
-	it("reads `created_at` before `mtime`, and the seven-day edge is held", () => {
-		// The wire's two clocks: `created_at` is the basis when a relay sends it
-		// (older relays omit it). At exactly seven days the row is Older — "within
-		// seven days" is strict, and a row that flips on a rounding error is worse
-		// than one that flips a second early.
+	it("bins by the reader's clock: `mtime` by default, `created_at` on Created", () => {
+		// TestFlight 906: the desktop's default basis is LAST ACTIVE (`mtime`),
+		// so a conversation born 6 days ago but last touched 90 days ago is Older
+		// by default — and This week only when the reader picks Created, where
+		// `created_at` is read before `mtime` (older relays omit it).
 		const sixDays = session({
 			session_id: "six",
 			mtime: NOON / 1000 - (90 * DAY_MS_T) / 1000,
@@ -211,9 +211,14 @@ describe("splitSidebarSections", () => {
 			session_id: "seven",
 			mtime: NOON / 1000 - (7 * DAY_MS_T) / 1000,
 		});
-		const sections = splitSidebarSections([sixDays, sevenDays], NOON);
-		expect(sections.week.map((s) => s.session_id)).toEqual(["six"]);
-		expect(sections.older.map((s) => s.session_id)).toEqual(["seven"]);
+		const active = splitSidebarSections([sixDays, sevenDays], NOON);
+		expect(active.week).toEqual([]);
+		expect(active.older.map((s) => s.session_id)).toEqual(["six", "seven"]);
+		const created = splitSidebarSections([sixDays, sevenDays], NOON, "created");
+		expect(created.week.map((s) => s.session_id)).toEqual(["six"]);
+		expect(created.older.map((s) => s.session_id)).toEqual(["seven"]);
+		expect(relativeTimeFor(sixDays, NOON)).toBe("12w");
+		expect(relativeTimeFor(sixDays, NOON, "created")).toBe("6d");
 	});
 });
 

@@ -1716,7 +1716,33 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * sides' comments and src kept, so neither parent's digest. Re-derived once
 	 * with --print over the merged tree; source identity only, NOT rendered
 	 * U-08 or native evidence. */
-	src: "498126d9802789966dc6c20f6283ceeea946223fd9bfca5f90943893ad77e140",
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
+	 * view state, customised trigger fill): re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* fix/session-push-register: the app now POSTs /api/push/register for the
+	 * routed computer (session-push-registration*, use-session-push-registration),
+	 * Settings › Notifications gains one registration sentence (+6
+	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
+	 * a REGION id. Re-derived with --print over the staged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #259 review round 1 remediation: the registration hook keyed on
+	 * routeKey/live/revision with the relay accessor read through a ref, a
+	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
+	 * No rendered surface changed. Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of PR #246 onto main 9ef19ccd (#255 sidebar view, #259 push
+	 * registration): both sides' comments and src kept, so neither parent's
+	 * digest. Re-derived once with --print over the merged tree; source identity
+	 * of the merge, NOT rendered evidence. */
+	src: "629343de4c474c69c1d3b9c8a5868823e2a9ce3162eaca089cbe932d16c8eb55",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

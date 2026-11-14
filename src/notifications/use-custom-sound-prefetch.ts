@@ -40,7 +40,7 @@ export const useCustomSoundPrefetch = (): void => {
 					if (stopped) return;
 					const client = relay();
 					const record = await readInstallRecord();
-					// No speculative registration: S7 owns it. Without THIS computer's
+					// No registration here: `use-session-push-registration` owns it. Without THIS computer's
 					// valid key the daemon refuses readiness; failure leaves fallback.
 					const deviceKey = record?.device_key;
 					if (!client || !record || !deviceKey) return;
