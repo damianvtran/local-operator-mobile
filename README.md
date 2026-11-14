@@ -16,3 +16,12 @@ The 403 rows use a session-mint `TunnelSessionError("disabled")` with the
 chosen computer's discovery row: active=false (phone access off),
 active+!eligible (balance out), suspended+eligible, status disabled, status
 reconciling.
+
+## Scope additions (head 58b41133, re-pinned at aef48d84)
+
+`*reason-*`, `*kind-*` and `*settings-diagnostics*` frames: gateway 503 bodies in
+core C1's shape (`{detail, reason, kind, error}`) through each tree's
+`relayErrorFromResponse` → `refusalFromError` → `RefusalSurface`, and the real
+Settings screen with only `route`/`tunnelId` seeded into the connection store.
+`rig/capture-additions.ts` drove them; the scratch route in `rig/` is the
+updated one.
