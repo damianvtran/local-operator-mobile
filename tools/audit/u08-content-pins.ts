@@ -1695,7 +1695,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `catalogue.gen.ts` regeneration yet). Re-derived last with --print over
 	 * the committed tree (cd053eff); only `src` moved. Source identity only,
 	 * NOT rendered U-08 evidence. */
-	src: "75370921bc7698ba8f49970b03d50129bbfa8c2ddceeeac0c7f1468dc06e4bf8",
+	/* M3 S2b-2b integration: the six LTR locales' and ur's 27 audited values
+	 * (setup.*, route_invalid.*, your_computer), the regenerated
+	 * `catalogue.gen.ts` (839 keys), and the ur whole-namespace premise listing
+	 * the single-token `setup.tui_label`. Re-derived last with --print over the
+	 * committed tree (10530706); only `src` moved. Source identity
+	 * only, NOT rendered U-08 evidence. */
+	src: "0fcbf2963cbb24919cf50e11b17beb4d790b7de85a6b8b0633cc6aeeda4e6847",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
