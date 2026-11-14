@@ -16,8 +16,10 @@ import {
 	devicePrimerRecords,
 	dismissPrimer,
 	evaluatePrimer,
+	HOME_PATH,
 	markPrimerMoment,
 	primerMomentStore,
+	primerSheetVisible,
 } from "@/notifications/permission-primer";
 import {
 	LIVE_PHASES,
@@ -28,11 +30,10 @@ import { CONTROL } from "@/ui/a11y";
 import { Button } from "@/ui/components/button";
 import { Sheet } from "@/ui/components/sheet";
 
-/** Home's route. The primer is offered only there: it is where a usable
- *  computer is first reached (after sign-in or a cold-start restore), and
- *  keeping it off the session screen means it never stacks on that screen's
- *  own sheets. */
-const HOME_PATH = "/";
+/* The primer is offered, and shown, only on Home (`HOME_PATH`): it is where a
+ * usable computer is first reached (after sign-in or a cold-start restore),
+ * and keeping it off the session screen means it never stacks on that
+ * screen's own sheets (`primerSheetVisible`). */
 
 const PRIMER_DEPS = {
 	platform: Platform.OS,
@@ -131,7 +132,7 @@ export const NotificationPermissionPrimer = () => {
 
 	return (
 		<Sheet
-			visible={visible}
+			visible={primerSheetVisible(visible, pathname)}
 			onClose={onNotNow}
 			title={t("mobile.notifications.primer.title")}
 			titleLines={2}
@@ -154,12 +155,12 @@ export const NotificationPermissionPrimer = () => {
 				</View>
 			}
 		>
-			<View className="gap-3 py-2">
+			{/* One short line, then the buttons (operator, 2026-11-14): most
+			 *  readers never open Settings, so the sheet sells the default and
+			 *  explains nothing else. */}
+			<View className="py-2">
 				<Text className="text-body text-ink">
 					{t("mobile.notifications.primer.body")}
-				</Text>
-				<Text className="text-body-sm text-ink-muted">
-					{t("mobile.notifications.primer.settings_hint")}
 				</Text>
 			</View>
 		</Sheet>

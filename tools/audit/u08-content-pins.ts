@@ -1753,7 +1753,10 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "96a8a303c872d0973bfa201f2da506da179ad89cb417e3ea62a1f72cbcd20447",
+	/* PR #264 remediation round 1: registration held for the first list frame,
+	 * the previews switch, the denied-permission nudge row, the one-line primer
+	 * and catalogue copy. Re-derived once with --print; only `src` moved. */
+	src: "51f8ab5fceea214127bd9a8b23dc3350cf07a6e679cdf1ce222f8a501dbf8998",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

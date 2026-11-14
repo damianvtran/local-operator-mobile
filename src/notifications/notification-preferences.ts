@@ -12,6 +12,13 @@
  *    daemon owner (core PR C, cloud lane 58a2fbc134c9, relayed 2026-11-14):
  *    exactly those three booleans, nothing else — the daemon refuses unknown
  *    keys.
+ *  - `previews` ("Show conversation name and preview") rides in the same
+ *    object, but only to a daemon that ALSO advertises `push_previews`
+ *    (operator decision, 2026-11-14; ADR 0006 §2 amendment): a daemon with
+ *    `push_preferences` alone (core #3991) refuses the unknown key with 422.
+ *    Default ON, like every switch here — the operator's standing rule is that
+ *    a default-off feature is one most readers never find. The daemon reads
+ *    an absent `previews` as true, so omitting it never mutes anything.
  *  - `teamBridge` never reaches the daemon. Team Bridge pushes come from
  *    Radient's hub, so the switch is app-only: off DELETEs this phone's hub
  *    registration, on PUTs it again (`team-bridge/push.ts`, through the
@@ -53,6 +60,8 @@ export type NotificationPreferences = {
 	completions: boolean;
 	/** "Agent hit an error". */
 	errors: boolean;
+	/** "Show conversation name and preview" — default ON. */
+	previews: boolean;
 	/** "Team Bridge messages" — app-only, never sent to the daemon. */
 	teamBridge: boolean;
 };
@@ -62,6 +71,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: Readonly<NotificationPreferences>
 		enabled: true,
 		completions: true,
 		errors: true,
+		previews: true,
 		teamBridge: true,
 	});
 
@@ -84,6 +94,11 @@ export const parsePreferences = (
 				enabled: value.enabled as boolean,
 				completions: value.completions as boolean,
 				errors: value.errors as boolean,
+				/* Optional, NOT in KEYS: a record written before this switch
+				 * existed has no `previews`, and requiring it would read the
+				 * whole record as unreadable — resetting a stored "off" master
+				 * to all-on. Absent is the default, ON. */
+				previews: typeof value.previews === "boolean" ? value.previews : true,
 				teamBridge: value.teamBridge as boolean,
 			};
 		}
@@ -101,10 +116,9 @@ export const parsePreferences = (
  * Anything else, including absence, is "not supported" — and an unsupported
  * daemon is never sent the field.
  */
-export const pushPreferencesSupported = (capabilities: unknown): boolean => {
+const capabilityAvailable = (capabilities: unknown, name: string): boolean => {
 	if (typeof capabilities !== "object" || capabilities === null) return false;
-	const capability = (capabilities as { push_preferences?: unknown })
-		.push_preferences;
+	const capability = (capabilities as Record<string, unknown>)[name];
 	return (
 		typeof capability === "object" &&
 		capability !== null &&
@@ -112,18 +126,61 @@ export const pushPreferencesSupported = (capabilities: unknown): boolean => {
 	);
 };
 
+export const pushPreferencesSupported = (capabilities: unknown): boolean =>
+	capabilityAvailable(capabilities, "push_preferences");
+
+/** What the routed daemon accepts in the register body. Two SEPARATE
+ *  capabilities: `previews` extends `preferences`, and a daemon with
+ *  `push_preferences` alone refuses it as an unknown key. */
+export type PushCapabilities = { preferences: boolean; previews: boolean };
+
+export const pushCapabilities = (capabilities: unknown): PushCapabilities => ({
+	preferences: capabilityAvailable(capabilities, "push_preferences"),
+	previews: capabilityAvailable(capabilities, "push_previews"),
+});
+
 /** The register body's `preferences`, or `undefined` to omit the field. */
 export const wirePreferences = (
 	preferences: NotificationPreferences,
-	supported: boolean,
+	capabilities: PushCapabilities,
 ): RegisterPushPreferences | undefined =>
-	supported
+	capabilities.preferences
 		? {
 				enabled: preferences.enabled,
 				completions: preferences.completions,
 				errors: preferences.errors,
+				...(capabilities.previews ? { previews: preferences.previews } : {}),
 			}
 		: undefined;
+
+/**
+ * The register body's `preferences`, read for one registration.
+ *
+ * An older daemon needs no stored choice, so it is not read at all and a
+ * broken keystore cannot cost that registration. For a daemon that filters,
+ * a failed read REJECTS (PR #264 R1 m-read): the attempt then fails and the
+ * next trigger retries, because sending the defaults as if they were the
+ * reader's choice would reset a stored "off" to all-on on the daemon.
+ */
+export const preferencesForRegistration = async (
+	capabilities: PushCapabilities,
+	load: () => Promise<NotificationPreferences> = loadNotificationPreferences,
+): Promise<RegisterPushPreferences | undefined> =>
+	capabilities.preferences
+		? wirePreferences(await load(), capabilities)
+		: undefined;
+
+/** Whether a change touches what the daemon filters on, i.e. whether it must
+ *  re-register with the computer (PR #264 R1 m2). `teamBridge` never reaches
+ *  the daemon, and every register re-mints the device key and forwards to the
+ *  cloud, so toggling it alone must not POST. */
+export const registrationAffected = (
+	patch: Partial<NotificationPreferences>,
+): boolean =>
+	"enabled" in patch ||
+	"completions" in patch ||
+	"errors" in patch ||
+	"previews" in patch;
 
 type PreferenceStorage = Pick<
 	SecureStoreAdapter,
@@ -193,8 +250,13 @@ let hydration: Promise<NotificationPreferences> | null = null;
 /**
  * The stored preferences, read from the keystore once per run. Registration
  * awaits this before building a body, so a cold-start POST never sends the
- * defaults over a choice the reader already made. A failed read keeps the
- * defaults (the pre-feature behaviour) rather than blocking registration.
+ * defaults over a choice the reader already made.
+ *
+ * A failed read REJECTS and is not cached (PR #264 R1 m-read): caching the
+ * defaults would make every later read — and Settings' next write, which
+ * spreads over the store — treat all-on as the reader's choice, overwriting
+ * a stored "off". The store stays unhydrated (Settings keeps its switches
+ * hidden) and the next call reads the keystore again.
  */
 export const loadNotificationPreferences = (
 	records: PreferenceRecords = devicePreferenceRecords,
@@ -203,7 +265,10 @@ export const loadNotificationPreferences = (
 		return Promise.resolve(notificationPreferencesStore.getState().preferences);
 	hydration ??= records
 		.get()
-		.catch(() => ({ ...DEFAULT_NOTIFICATION_PREFERENCES }))
+		.catch((error: unknown) => {
+			hydration = null;
+			throw error;
+		})
 		.then((preferences) => {
 			const state = notificationPreferencesStore.getState();
 			// A change made while the read was in flight wins over the read.
@@ -256,21 +321,31 @@ export const teamBridgeWanted = (
  *    remedy stands in its place — a switch the OS overrides would be a lie),
  *    never where alerts are not an app capability (`unsupported`: web, a build
  *    without the module), and not before the permission read answers.
- *  - `sessionDisabled` + `updateNote`: the daemon lacks `push_preferences`, so
- *    the master and session switches cannot be honoured and are shown
- *    disabled with the note to update the computer (core PR C contract).
- *  - `types`: the per-type switches, hidden while the master switch is off.
+ *  - `capability`: what the routed daemon's LIVE list frame advertises, or
+ *    `null` when unknown — no computer connected, or this route's first frame
+ *    not applied yet. Unknown is not "absent": nothing is disabled and no
+ *    update note shows (PR #264 R1 m1).
+ *  - The master switch is NEVER disabled: it also gates Team Bridge, so a
+ *    reader who turned it off on an updated computer must be able to turn it
+ *    back on from an older one (R1 m1, QA Q1). There is no field for it.
+ *  - `sessionDisabled`: "Agent finished" / "Agent hit an error", disabled
+ *    only when a live frame says `push_preferences` is absent.
+ *    `previewsDisabled`: the same for `push_previews`. `updateNote` names the
+ *    remedy whenever either is disabled.
+ *  - `types`: the session-type switches (previews included), hidden while
+ *    the master switch is off.
  *  - `teamBridge`: app-only and works on any daemon, but needs a Radient
  *    sign-in to have a hub registration to add or remove.
  */
 export const preferenceView = (input: {
 	availability: PushAvailability | null;
-	supported: boolean;
+	capability: PushCapabilities | null;
 	preferences: NotificationPreferences;
 	radientSignedIn: boolean;
 }): {
 	show: boolean;
 	sessionDisabled: boolean;
+	previewsDisabled: boolean;
 	updateNote: boolean;
 	types: boolean;
 	teamBridge: boolean;
@@ -279,10 +354,15 @@ export const preferenceView = (input: {
 		input.availability !== null &&
 		input.availability !== "denied" &&
 		input.availability !== "unsupported";
+	const sessionDisabled =
+		input.capability !== null && !input.capability.preferences;
+	const previewsDisabled =
+		input.capability !== null && !input.capability.previews;
 	return {
 		show,
-		sessionDisabled: !input.supported,
-		updateNote: show && !input.supported,
+		sessionDisabled,
+		previewsDisabled,
+		updateNote: show && (sessionDisabled || previewsDisabled),
 		types: show && input.preferences.enabled,
 		teamBridge: show && input.preferences.enabled && input.radientSignedIn,
 	};

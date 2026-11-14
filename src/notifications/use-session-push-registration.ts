@@ -3,7 +3,8 @@
  * route is live, on every event that can change what the daemon should hold.
  *
  * TRIGGERS, and why each one:
- *  - effect start — FORCED: cold start, route change, and a reconnect. The new
+ *  - effect start — FORCED: cold start, route change, and a reconnect, once
+ *    this route generation's FIRST LIST FRAME has applied (see below). The new
  *    computer must learn this phone, and a re-established route may follow a
  *    fresh sign-in whose register is what clears the daemon's `expired` lapse.
  *    The PREVIOUS computer's registration is deliberately left alone (no DELETE
@@ -34,6 +35,19 @@
  * `live` for the same reason: a stream stall and resume is churn, not a new
  * credential the daemon needs to see.
  *
+ * HELD FOR THE FIRST LIST FRAME (PR #264 R1 M1). Whether the daemon accepts
+ * `preferences` is only known from the list frame's `capabilities`, and
+ * `listStore.reset()` (run before every `startRoute`) nulls `lastFrameAt` and
+ * empties `capabilities`. A register sent before the frame would omit
+ * `preferences`, and on a `push_preferences` daemon (core #3991) a body
+ * without them is declarative: it RESETS the device to all-on — the reader's
+ * mute lost on every cold start and computer switch, with pushes leaking in
+ * the gap. So the effect does not start (no forced POST, no foreground or
+ * token trigger, no `activeTrigger`) until `lastFrameAt !== null`, then POSTs
+ * ONCE with the capability it now knows; an older daemon's first frame simply
+ * lacks it and the POST omits the field. A Settings press before the frame is
+ * a no-op: the held effect-start registers with the stored choice anyway.
+ *
  * Gated on a LIVE route the same way `use-custom-sound-prefetch` is (`live`,
  * `degraded`, `re-minting`): a POST to a route that is still connecting would
  * fail and log for nothing. Native only; web has no device token.
@@ -60,8 +74,9 @@ import {
 import { loadNotifications } from "@/notifications/native";
 import {
 	loadNotificationPreferences,
-	pushPreferencesSupported,
-	wirePreferences,
+	type PushCapabilities,
+	preferencesForRegistration,
+	pushCapabilities,
 } from "@/notifications/notification-preferences";
 import {
 	registerSessionPushDevice,
@@ -95,16 +110,30 @@ export const useSessionPushRegistration = (): void => {
 	relayRef.current = relay;
 	const route = useConnectionState((s) => s.route);
 	const live = useConnectionState((s) => LIVE_PHASES.includes(s.phase));
-	/* Whether this computer's daemon accepts `preferences` (core PR C). Read
-	 * through a ref at body-build time, so a capability frame never restarts
-	 * the registration effect; its own edge, below, forces one re-POST. */
-	const preferencesSupported = useListState((s) =>
-		pushPreferencesSupported(s.capabilities),
-	);
-	const supportedRef = useRef(preferencesSupported);
-	supportedRef.current = preferencesSupported;
+	/* What this computer's daemon accepts in the body (`push_preferences`,
+	 * `push_previews`), as one primitive key so a re-render with the same
+	 * answer is not a change. Read through a ref at body-build time, so a
+	 * capability frame never restarts the registration effect; its own edge,
+	 * below, forces one re-POST. */
+	const capabilityKey = useListState((s) => {
+		const caps = pushCapabilities(s.capabilities);
+		return `${caps.preferences ? 1 : 0}${caps.previews ? 1 : 0}`;
+	});
+	const capabilitiesRef = useRef<PushCapabilities>({
+		preferences: false,
+		previews: false,
+	});
+	capabilitiesRef.current = {
+		preferences: capabilityKey[0] === "1",
+		previews: capabilityKey[1] === "1",
+	};
+	/** The capability key the running effect last registered with. */
+	const registeredKey = useRef<string | null>(null);
+	// This route generation's first list frame has applied (M1, header).
+	const framed = useListState((s) => s.lastFrameAt !== null);
 	const revision = useConnectionState((s) => s.revision);
 	const routeKey = route ? sessionPushRouteKey(route) : null;
+	// biome-ignore lint/correctness/useExhaustiveDependencies: capabilityKey is recorded at start only; a later change is the edge effect's re-POST, not a restart
 	useEffect(() => {
 		// `revision` is read so the effect re-runs on a route (re)start; see header.
 		void revision;
@@ -113,7 +142,7 @@ export const useSessionPushRegistration = (): void => {
 			return;
 		}
 		if (Platform.OS !== "ios" && Platform.OS !== "android") return;
-		if (!live) return;
+		if (!live || !framed) return;
 		let stopped = false;
 		let pending = false;
 		/** The queued re-run: `null` none, else whether it must be forced. */
@@ -143,10 +172,12 @@ export const useSessionPushRegistration = (): void => {
 				routeKey,
 				force,
 				isCurrent,
-				preferences: async () =>
-					wirePreferences(
-						await loadNotificationPreferences(),
-						supportedRef.current,
+				// Rejects when the stored choice cannot be read: the attempt
+				// fails rather than sending defaults (R1 m-read); next trigger retries.
+				preferences: () =>
+					preferencesForRegistration(
+						capabilitiesRef.current,
+						loadNotificationPreferences,
 					),
 				onPosting: () => {
 					if (stopped) return;
@@ -181,6 +212,7 @@ export const useSessionPushRegistration = (): void => {
 				});
 		};
 		activeTrigger = trigger;
+		registeredKey.current = capabilityKey;
 		trigger(true);
 		const foreground = AppState.addEventListener("change", (state) => {
 			if (state === "active") trigger(false);
@@ -198,16 +230,16 @@ export const useSessionPushRegistration = (): void => {
 			foreground.remove();
 			tokenSubscription?.remove();
 		};
-	}, [routeKey, live, revision]);
+	}, [routeKey, live, revision, framed]);
 
-	/* The list frame (and so the capability) usually lands just AFTER the route
-	 * goes live, so the first POST went without `preferences`. When the daemon
-	 * turns out to accept them, register once more so it filters from now on.
-	 * Only the false → true edge: the initial `true` is covered by the forced
-	 * effect-start POST above. */
-	const seenSupported = useRef(preferencesSupported);
+	/* A LATER frame that changes what the daemon accepts (it gained
+	 * `push_previews`, say, after an update while connected) changes the body,
+	 * so register once more. Not on the first frame: the effect above started
+	 * on it with this very key, so a cold start stays one POST. */
 	useEffect(() => {
-		if (preferencesSupported && !seenSupported.current) activeTrigger?.(true);
-		seenSupported.current = preferencesSupported;
-	}, [preferencesSupported]);
+		if (activeTrigger === null || registeredKey.current === null) return;
+		if (registeredKey.current === capabilityKey) return;
+		registeredKey.current = capabilityKey;
+		activeTrigger(true);
+	}, [capabilityKey]);
 };

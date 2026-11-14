@@ -16,8 +16,10 @@ import {
 	loadNotificationPreferences,
 	type NotificationPreferences,
 	notificationPreferencesStore,
+	type PushCapabilities,
 	preferenceView,
-	pushPreferencesSupported,
+	pushCapabilities,
+	registrationAffected,
 	teamBridgeWanted,
 	updateNotificationPreferences,
 } from "@/notifications/notification-preferences";
@@ -167,12 +169,27 @@ export const NotificationsSection = () => {
 	useEffect(() => {
 		void loadNotificationPreferences();
 	}, []);
-	const preferencesSupported = useListState((s) =>
-		pushPreferencesSupported(s.capabilities),
-	);
+	/* What the routed daemon accepts, from a LIVE frame only (PR #264 R1 m1):
+	 * no computer, or this route's first frame not applied yet, is UNKNOWN —
+	 * nothing disabled and no "update your computer" note, which would be
+	 * false with no computer at all. One primitive key so the selector is
+	 * stable across re-renders. */
+	const routed = useConnectionState((s) => s.route !== null);
+	const capabilityKey = useListState((s) => {
+		if (s.lastFrameAt === null) return null;
+		const caps = pushCapabilities(s.capabilities);
+		return `${caps.preferences ? 1 : 0}${caps.previews ? 1 : 0}`;
+	});
+	const capability: PushCapabilities | null =
+		routed && capabilityKey !== null
+			? {
+					preferences: capabilityKey[0] === "1",
+					previews: capabilityKey[1] === "1",
+				}
+			: null;
 	const view = preferenceView({
 		availability,
-		supported: preferencesSupported,
+		capability,
 		preferences,
 		radientSignedIn,
 	});
@@ -188,7 +205,9 @@ export const NotificationsSection = () => {
 			const next = await updateNotificationPreferences(patch).catch(
 				() => notificationPreferencesStore.getState().preferences,
 			);
-			requestSessionPushRegistration();
+			// Only a switch the daemon filters on re-registers (R1 m2): every
+			// register re-mints the device key and forwards to the cloud.
+			if (registrationAffected(patch)) requestSessionPushRegistration();
 			const after = teamBridgeWanted(next);
 			if (radientSignedIn && before !== after) {
 				await (after ? registerPush() : withdrawPush()).catch(() => undefined);
@@ -254,7 +273,6 @@ export const NotificationsSection = () => {
 					<SwitchRow
 						label={t("mobile.notifications.preferences.master")}
 						value={preferences.enabled}
-						disabled={view.sessionDisabled}
 						onChange={(enabled) => void onPreference({ enabled })}
 						testID={CONTROL.settingsNotificationsMaster}
 					/>
@@ -274,6 +292,21 @@ export const NotificationsSection = () => {
 								onChange={(errors) => void onPreference({ errors })}
 								testID={CONTROL.settingsNotificationsErrors}
 							/>
+							<SwitchRow
+								label={t("mobile.notifications.preferences.previews")}
+								value={preferences.previews}
+								disabled={view.previewsDisabled}
+								onChange={(previews) => void onPreference({ previews })}
+								testID={CONTROL.settingsNotificationsPreviews}
+							/>
+							{/* One plain line on where the text travels — the
+							 *  provider named per platform, no lecture (operator,
+							 *  2026-11-14: default on, "as easy as possible"). */}
+							<Text className="text-body-sm text-ink-dim">
+								{Platform.OS === "android"
+									? t("mobile.notifications.preferences.previews_note_android")
+									: t("mobile.notifications.preferences.previews_note_ios")}
+							</Text>
 						</>
 					) : null}
 					{view.teamBridge ? (

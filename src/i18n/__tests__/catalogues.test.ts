@@ -163,7 +163,10 @@ const NAMESPACES = [
 		// feat/notification-onboarding (38 + 5 = 43).
 		// +5: the Settings preference switches (`preferences.*`), same branch
 		// (43 + 5 = 48).
-		expected: 48,
+		// PR #264 R1: −1 `primer.settings_hint` (one-line primer), +3 the
+		// previews switch and its iOS/Android notes, +3 the denied nudge
+		// (`off_nudge.*`): 48 − 1 + 3 + 3 = 53.
+		expected: 53,
 	},
 	{
 		name: "mobile.session",
@@ -383,8 +386,9 @@ describe("the English catalogues", () => {
 		 * primer sheet's title, body, settings hint and its two buttons):
 		 * 872 + 5 = 877, the generator's own count. Plus the five Settings
 		 * notification preference keys (`preferences.*`: master, completions,
-		 * errors, Team Bridge, update note): 877 + 5 = 882. */
-		expect(total).toBe(882);
+		 * errors, Team Bridge, update note): 877 + 5 = 882. PR #264 R1:
+		 * 882 − 1 + 3 + 3 = 887 (same keys as the namespace count above). */
+		expect(total).toBe(887);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

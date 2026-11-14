@@ -46,6 +46,18 @@ import {
 } from "@/connection/storage";
 import type { PushAvailability } from "@/notifications/permission";
 
+/** The composer home: the one screen the primer may sit over. */
+export const HOME_PATH = "/";
+
+/** Whether the sheet renders. It is root-mounted, so without the pathname
+ *  check a navigation right after the offer (a deep link resolving to a
+ *  session) would leave it stacked over that screen (PR #264 R1 m3). The
+ *  offer is already recorded when shown, so leaving Home spends it. */
+export const primerSheetVisible = (
+	visible: boolean,
+	pathname: string,
+): boolean => visible && pathname === HOME_PATH;
+
 /** Three days between a dismissal and the single re-offer. Not a measured
  *  bound: it is the operator's stated product rule (2026-11-14 request). */
 export const PRIMER_REOFFER_AFTER_MS = 3 * 24 * 60 * 60 * 1000;

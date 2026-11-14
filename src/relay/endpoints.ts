@@ -195,12 +195,14 @@ export interface RegisterDeviceRequest {
 	preferences?: RegisterPushPreferences;
 }
 
-/** The daemon's `preferences` shape: exactly these three booleans — it refuses
- *  unknown keys. */
+/** The daemon's `preferences` shape: these three booleans, plus `previews`
+ *  only for a daemon that advertises `push_previews` — it refuses unknown
+ *  keys, and reads an absent `previews` as true. */
 export interface RegisterPushPreferences {
 	enabled: boolean;
 	completions: boolean;
 	errors: boolean;
+	previews?: boolean;
 }
 
 /**

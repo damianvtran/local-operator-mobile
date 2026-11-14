@@ -100,11 +100,38 @@ implemented as stated below, and each site says so:
 | # | Decision | Where it lands |
 |---|---|---|
 | **P1** | **The badge population is the app's own list**, not the store's census: user-facing sessions, excluding agent/subagent and scheduled origins and deleted sessions. The aggregate must return that population, and a test asserts the aggregate equals the in-app count. | §1.2, §1.4 |
-| **P2** | **No conversation name ever reaches the cloud**, regardless of the machine's local `session_names_in_notifications()` flag. | §3.2, §4 |
+| **P2** | **No conversation name ever reaches the cloud**, regardless of the machine's local `session_names_in_notifications()` flag. *Superseded in part on 2026-11-14 (previews, default on): see "Amendment, 2026-11-14 — conversation name and preview" below the table.* | §3.2, §4 |
 | **P3** | **The cloud never sets `aps.badge`.** The badge is app-managed from the daemon's count on connect/foreground, cleared on ack; a push may carry the count for the notification's *body*. | §1.5, §3.2 |
 | **P4** | **Registration and revocation go through the machine**, with an account-side revocation path that does not need the machine, and Settings showing the devices paired to that computer with a working unpair. | §3.1, §4 |
 | **P5** | **A heal is a distinct delivery**: the emit key carries the record's content, so idempotency cannot swallow a correction. | §3.4 |
 | **P6** | **The deep link must exist as code**, named to a slice, or be described as unimplemented — never asserted as an existing tier. | §6 |
+
+**Amendment, 2026-11-14 — conversation name and preview (supersedes P2 to this extent).** The
+operator decided that a push may carry the conversation's name and a preview, on by default, in
+these words: "if it makes sense to be default on we should do that. All the other apps like
+ChatGPT, Claude on mobile, show descriptive information in the notifications without the user
+needing to turn that on ... make it as easy for users to use as possible ... unless they really
+care about that then they can configure and turn certain things off". Decided:
+
+- **A per-phone switch, "Show conversation name and preview", default ON** (Settings →
+  Notifications, under the master switch beside the other session-push types). Its one secondary
+  line says only that the text is sent through Radient and Apple (Google on Android) to reach the
+  phone; no security explainer.
+- **The wire.** The phone sends `preferences.previews: bool` in `POST /api/push/register` ONLY when
+  the daemon's list frame advertises `capabilities.push_previews.available === true`. That is a
+  capability SEPARATE from `push_preferences`: a daemon with `push_preferences` alone (core #3991)
+  refuses the unknown key with 422, which would cost the whole registration. With
+  `push_preferences` but not `push_previews`, the body carries exactly `{enabled, completions,
+  errors}`. The daemon reads an absent `previews` as `true`.
+- **When the daemon includes them.** The cloud cannot exclude one device from a completion, so the
+  daemon includes the session name and preview only when EVERY live device registered on that
+  computer has `previews=true` AND the desktop's `display.notification_session_name` setting is on.
+  Either is a way to turn them off: this switch on any device on that computer, or that desktop
+  setting.
+- **Retention.** The cloud retains its emit records, which now may hold the name and preview, for
+  14 days.
+- Implementation: `src/notifications/notification-preferences.ts` (`pushCapabilities`,
+  `wirePreferences`) and `src/features/settings/notifications-section.tsx`.
 
 **Why 0006 and not 0005.** The request that produced this note named
 `docs/adr/0005-push-and-ack-sync.md`. That number is taken: ADR 0005 (queued asks) was merged as PR
@@ -1816,8 +1843,11 @@ nothing is marked or acked that the machine does not already say.
   get notifications". Decided:
   - **Primer, then the OS prompt.** The first time the reader is on Home with a live computer
     (after sign-in or a cold-start restore) and the OS permission is `undetermined`, the app shows
-    one sheet that says what notifications bring (a turn finished, an approval or question waiting,
-    a Team Bridge message) with "Turn on notifications" and "Not now". Only the primary button
+    one sheet with a single short line ("Get a notification when an agent finishes or needs you";
+    PR #264 review round 1 dropped a separate approval/question category the app has no switch
+    for, and the operator asked for one line and no explainer) with "Turn on notifications" as the
+    primary button and "Not now". The sheet is shown only while Home is the screen; the offer is
+    spent once shown. Only the primary button
     raises the OS dialog, so the copy is on screen before the OS asks, which is the requirement
     above. A grant registers immediately with the routed computer and, when signed in, with Team
     Bridge, through the same entry points the Settings control uses.
@@ -1827,6 +1857,15 @@ nothing is marked or acked that the machine does not already say.
     is final: the app never asks again and the primer never reappears. Web never shows it.
   - **Settings remains the fallback.** Settings → Notifications keeps its enable control while the
     permission is `undetermined`, and its system-settings remedy for `denied`.
+  - **A gentle nudge for `denied`.** The operator's standing rule: "the vast majority of users
+    don't interact heavily with settings nor want to, so the first impression would be that
+    'Notifications don't work'". While the native permission is `denied`, a small dismissible row
+    ("Notifications are off · Turn on") sits at the top of the session list; "Turn on" opens this
+    app's OS settings (`Linking.openSettings()`), the only place a denial can be reversed. A
+    dismissal hides it for 14 days, three dismissals hide it for good, and it is re-checked on every
+    foreground so it disappears once permission is granted. Never on web, `granted` or
+    `undetermined`. Implementation: `src/notifications/denied-nudge.ts` and
+    `src/features/notifications/notifications-off-row.tsx`.
   - Implementation: `src/notifications/permission-primer.ts` (policy) and
     `src/features/notifications/permission-primer-sheet.tsx` (host).
 

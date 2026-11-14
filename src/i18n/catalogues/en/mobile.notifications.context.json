@@ -123,6 +123,18 @@
 		"role": "heading",
 		"note": "Title of the error alert when the inbox could not be loaded. The relay's own sentence follows as the alert body."
 	},
+	"mobile.notifications.off_nudge.dismiss": {
+		"role": "button",
+		"note": "Button on the 'Notifications are off' row: hides the row (it may return after two weeks). Short."
+	},
+	"mobile.notifications.off_nudge.message": {
+		"role": "status",
+		"note": "A small row at the top of the conversation list when this phone's notification permission is turned off in the system settings. A short statement, no blame."
+	},
+	"mobile.notifications.off_nudge.turn_on": {
+		"role": "button",
+		"note": "Button on the 'Notifications are off' row: opens this app's page in the phone's system settings, where notifications can be allowed. Short."
+	},
 	"mobile.notifications.permission.denied": {
 		"role": "status",
 		"note": "Settings › Notifications, the state sentence when the OS refused notifications for the app. Names the remedy (system settings) and what it enables (Team Bridge message alerts), then that computer alerts are not switched on yet. Team Bridge is a brand."
@@ -155,6 +167,18 @@
 		"role": "button",
 		"note": "Settings › Notifications, the master switch row that turns all of this phone's notifications on or off. One word, the same as the section title."
 	},
+	"mobile.notifications.preferences.previews": {
+		"role": "button",
+		"note": "Settings › Notifications, a switch row (on by default): show the conversation's name and a short preview of the text in each notification, instead of a generic one. Short."
+	},
+	"mobile.notifications.preferences.previews_note_android": {
+		"role": "help",
+		"note": "The same line as previews_note_ios, on Android: through Radient's servers and Google's push service. Radient and Google are brands; keep them in Latin script. Informative, not alarming."
+	},
+	"mobile.notifications.preferences.previews_note_ios": {
+		"role": "help",
+		"note": "Settings › Notifications, one plain line under the previews switch on iPhone: the name and preview travel through Radient's servers and Apple's push service to reach the phone. Radient and Apple are brands; keep them in Latin script. Informative, not alarming."
+	},
 	"mobile.notifications.preferences.team_bridge": {
 		"role": "button",
 		"note": "Settings › Notifications, a switch row: notify about new Team Bridge messages. Team Bridge is a brand; keep it in Latin script."
@@ -165,7 +189,7 @@
 	},
 	"mobile.notifications.primer.body": {
 		"role": "help",
-		"note": "Body of the first-run notifications sheet: what notifications bring. Names three events: an agent finished a turn, an approval or question is waiting, a Team Bridge message arrived. Team Bridge is a brand. Says \"can\": delivery is not promised."
+		"note": "The one line of the first-run notifications sheet: notifications arrive when an AI agent on the computer finishes its work or needs the reader (an approval or a question). Short; no promise of other categories."
 	},
 	"mobile.notifications.primer.enable": {
 		"role": "button",
@@ -174,10 +198,6 @@
 	"mobile.notifications.primer.not_now": {
 		"role": "button",
 		"note": "Secondary button of the first-run notifications sheet: declines for now. The sheet may be offered once more later. Short."
-	},
-	"mobile.notifications.primer.settings_hint": {
-		"role": "help",
-		"note": "Small line under the first-run notifications sheet's body: the choice can be changed later in the app's Settings screen."
 	},
 	"mobile.notifications.primer.title": {
 		"role": "heading",

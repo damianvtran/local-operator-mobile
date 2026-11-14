@@ -7,6 +7,9 @@
  * the same functions to the live route, the permission read and the keystore,
  * so what is asserted here is what ships. Storage runs through the real
  * `memorySecureStore` adapter the other device-only records are tested with. */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { memorySecureStore } from "@/connection/storage";
@@ -17,11 +20,13 @@ import {
 	createPrimerRecords,
 	dismissPrimer,
 	evaluatePrimer,
+	HOME_PATH,
 	markPrimerMoment,
 	PRIMER_RECORD_KEY,
 	PRIMER_REOFFER_AFTER_MS,
 	type PrimerDeps,
 	primerMomentStore,
+	primerSheetVisible,
 	resetPrimerMoment,
 } from "@/notifications/permission-primer";
 
@@ -250,5 +255,27 @@ describe("the completed-turn moment", () => {
 		markPrimerMoment();
 		markPrimerMoment();
 		expect(primerMomentStore.getState().turnCompleted).toBe(true);
+	});
+});
+
+describe("PR #264 R1 m3: the sheet belongs to Home", () => {
+	it("is visible only while Home is the screen; the offer stays spent", () => {
+		expect(primerSheetVisible(true, HOME_PATH)).toBe(true);
+		// A deep link resolving right after the offer pushes a session screen:
+		// the root-mounted sheet must not stack over it.
+		expect(primerSheetVisible(true, "/session/synthetic-session")).toBe(false);
+		expect(primerSheetVisible(false, HOME_PATH)).toBe(false);
+	});
+
+	it("is the rule the root-mounted sheet renders with", () => {
+		const sheet = readFileSync(
+			join(
+				process.cwd(),
+				"src/features/notifications/permission-primer-sheet.tsx",
+			),
+			"utf8",
+		);
+		expect(sheet).toContain("visible={primerSheetVisible(visible, pathname)}");
+		expect(sheet).not.toMatch(/visible=\{visible\}/);
 	});
 });

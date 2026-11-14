@@ -402,6 +402,14 @@ export const CONTROL = {
 	notificationPrimer: "notification-primer",
 	notificationPrimerEnable: "notification-primer-enable",
 	notificationPrimerNotNow: "notification-primer-not-now",
+	/** The "Notifications are off" row atop the drawer's session list
+	 *  (`notifications-off-row.tsx`): the row, its "Turn on" (opens the OS
+	 *  settings) and its dismiss. */
+	notificationsOffRow: "notifications-off-row",
+	notificationsOffTurnOn: "notifications-off-turn-on",
+	notificationsOffDismiss: "notifications-off-dismiss",
+	/** Settings → Notifications' "Show conversation name and preview". */
+	settingsNotificationsPreviews: "settings-notifications-previews",
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
 	settingsAccountRoutingRetry: "settings-account-routing-retry",
