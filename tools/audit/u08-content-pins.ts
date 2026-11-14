@@ -1688,6 +1688,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
+	 * view state, customised trigger fill): re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
 	/* fix/session-push-register: the app now POSTs /api/push/register for the
 	 * routed computer (session-push-registration*, use-session-push-registration),
 	 * Settings › Notifications gains one registration sentence (+6
@@ -1699,7 +1708,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
 	 * No rendered surface changed. Re-derived with --print over the staged
 	 * tree; only `src` moved. Source identity only. */
-	src: "6960d337220a19fedb131a9651f848c553750680e8d2a8f0e3a216d45edd30f8",
+	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "e463c60ee20a7c28b7ebf3227e5545c4e34c93811694fc7f19e208b7a39db35b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

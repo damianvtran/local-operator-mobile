@@ -9,6 +9,7 @@ import {
 	remoteAttention,
 	remoteDeviceLabel,
 } from "@/features/sessions/session-projection";
+import type { SidebarBasis } from "@/features/sessions/sidebar-view";
 import { SessionTagLine } from "@/features/sessions/tag-line";
 import { tagAnnouncement } from "@/features/sessions/tags";
 import { homeShortened } from "@/lib/format";
@@ -27,6 +28,10 @@ export type SessionRowProps = {
 	selected: boolean;
 	/** The pane's minute clock, so relative times age without a frame. */
 	now: number;
+	/** The clock the row's time reads — the drawer's own `basis`, so the label
+	 *  and the section it sits in are readings of one clock. Defaults to the
+	 *  desktop's default, `active`. */
+	basis?: SidebarBasis;
 	/** Some row in this list has a picture; see `AgentListRow.reserveLeading`. */
 	reserveLeading: boolean;
 	surfaceClassName?: string;
@@ -71,6 +76,7 @@ export const SessionRow = memo(function SessionRow({
 	section,
 	selected,
 	now,
+	basis = "active",
 	reserveLeading,
 	surfaceClassName,
 	homeDirectory,
@@ -99,7 +105,7 @@ export const SessionRow = memo(function SessionRow({
 			time={
 				section === "running"
 					? undefined
-					: (relativeTimeFor(session, now) ?? undefined)
+					: (relativeTimeFor(session, now, basis) ?? undefined)
 			}
 			pending={
 				remote ? remoteAttention(session) !== null : session.needs_attention

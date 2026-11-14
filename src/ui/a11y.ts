@@ -587,6 +587,28 @@ export const CONTROL = {
 	sidebarSearch: "sidebar-search",
 	sidebarSearchField: "sidebar-search-field",
 	sidebarClose: "sidebar-close",
+	/** The drawer's quiet "View options" icon (TestFlight 906) and the compact
+	 *  sheet's controls. The Settings section's twins are `settingsSidebar*`:
+	 *  a docked drawer and Settings can share a screen, and an id is declared once. */
+	sidebarViewOptions: "sidebar-view-options",
+	sidebarViewOrder: "sidebar-view-order",
+	sidebarViewOrderActiveFirst: "sidebar-view-order-active-first",
+	sidebarViewOrderRecent: "sidebar-view-order-recent",
+	sidebarViewGroup: "sidebar-view-group",
+	sidebarViewGroupSection: "sidebar-view-group-section",
+	sidebarViewGroupFlat: "sidebar-view-group-flat",
+	sidebarViewShowEnded: "sidebar-view-show-ended",
+	sidebarViewMore: "sidebar-view-more",
+	settingsSidebarOrder: "settings-sidebar-order",
+	settingsSidebarOrderActiveFirst: "settings-sidebar-order-active-first",
+	settingsSidebarOrderRecent: "settings-sidebar-order-recent",
+	settingsSidebarGroup: "settings-sidebar-group",
+	settingsSidebarGroupSection: "settings-sidebar-group-section",
+	settingsSidebarGroupFlat: "settings-sidebar-group-flat",
+	settingsSidebarBasis: "settings-sidebar-basis",
+	settingsSidebarBasisActive: "settings-sidebar-basis-active",
+	settingsSidebarBasisCreated: "settings-sidebar-basis-created",
+	settingsSidebarShowEnded: "settings-sidebar-show-ended",
 	sidebarPast: "sidebar-past",
 	/** At >= 200 % text the destinations strip collapses to ONE "More" row that
 	 *  opens a sheet with the same destinations (record §3) — labels are never
@@ -737,6 +759,8 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** The drawer's compact View options sheet (TestFlight 906). */
+	sidebarViewSheet: "sidebar-view-sheet",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
 	teamBridgeAttachSheet: "team-bridge-attach-sheet",
 	teamBridgeImageViewer: "team-bridge-image-viewer",
@@ -1172,6 +1196,8 @@ export const SURFACE = {
  * renderer is the drift the families exist to prevent.
  */
 export const IDENTIFIER_FAMILIES: readonly string[] = [
+	// One show/hide switch per drawer section, keyed by the section's own key.
+	"settings-sidebar-section-",
 	// Hub identities, never list indices, keep directory and thread selectors stable across refreshes.
 	"team-bridge-gate-",
 	"team-bridge-conversation-",
@@ -1403,6 +1429,15 @@ export const REGION = {
 	sidebarSectionToday: "sidebar-section-today",
 	sidebarSectionWeek: "sidebar-section-week",
 	sidebarSectionOlder: "sidebar-section-older",
+	/** The hairline after the pinned run in the `In one list` drawer (PR #255
+	 *  design D1): the flat list has no Pinned heading, so this is the cue. */
+	sidebarPinnedDivider: "sidebar-pinned-divider",
+	/** The drawer's quiet "N sections hidden" line (PR #255 design D2). */
+	sidebarHiddenSections: "sidebar-hidden-sections",
+	/** The drawer's empty state when the VIEW withholds every row (PR #255 M1). */
+	sidebarEmptyByView: "sidebar-empty-by-view",
+	/** That state's "Reset view" action. */
+	sidebarResetView: "sidebar-reset-view",
 	/** Marks a search hit that matched the conversation's BODY rather than its
 	 *  title: `docs/relay/contract.md` §3.3, and the reason a result can be a
 	 *  legitimate match with a title that does not contain the query. */
@@ -1427,6 +1462,8 @@ export const REGION = {
 	 *  not a route refusal (PR #121, D2). */
 	settingsDiscoveryFailure: "settings-discovery-failure",
 	settingsAppearance: "settings-section-appearance",
+	/** The Settings section holding every drawer view option (TestFlight 906). */
+	settingsSidebar: "settings-section-sidebar",
 	/** The Theme picker's two grids and their empty-search line. */
 	themePickerDark: "theme-picker-section-dark",
 	themePickerLight: "theme-picker-section-light",
@@ -1926,6 +1963,11 @@ export const themeCardId = (themeId: string): string => `theme-card-${themeId}`;
  *  row without the screen inventing a second naming scheme. */
 export const sessionRowId = (sessionId: string): string =>
 	`session-row-${sessionId}`;
+
+/** Settings → Sidebar's show/hide switch for one drawer section, keyed by the
+ *  section's own key (`pinned`, `running`, …). Family `settings-sidebar-section-`. */
+export const sidebarSectionSwitchId = (section: string): string =>
+	`settings-sidebar-section-${section}`;
 
 /** One conversation row's tag line (LOH-11 S3). The row's identity is the
  *  session's, so a capture or flow addresses the line by the row it belongs to
