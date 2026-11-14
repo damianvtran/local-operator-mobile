@@ -1710,7 +1710,24 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * tree; only `src` moved. Source identity only. */
 	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "e463c60ee20a7c28b7ebf3227e5545c4e34c93811694fc7f19e208b7a39db35b",
+	/* fix/settings-signin-status-badge: the signed-out account card as a
+	 * Radient sign-in nav card, the connection pill's one-line fit in the
+	 * Settings Status row and the drawer header (`status-pill-layout.ts`), and
+	 * the Diagnostics `reason:` row with its provider plumbing and the one new
+	 * mobile.settings key (813 keys). Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only, NOT rendered U-08 evidence:
+	 * the Settings and drawer cells must be re-captured against this tree. */
+	/* PR #258 agent review round-1 remediation: the account card moves to
+	 * `account-card.tsx`, gated on `radientSignedIn` with a confirm before it
+	 * ends a working direct route; Diagnostics' reason row ignores a past
+	 * `lastError` beside a live stream; the dot leaves the identifier rule; four
+	 * mobile.settings keys (817). Re-derived with --print over the staged tree;
+	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Merge of origin/main (#259, 9ef19ccd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "916f38333b2293f9c8e048f84bcc50d43c944a9f7b732e9c6d62cc5ce2c28a94",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
