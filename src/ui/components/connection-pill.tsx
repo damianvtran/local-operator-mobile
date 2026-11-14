@@ -41,6 +41,12 @@ export type ConnectionPillProps = {
 	/** Overrides the default sentence. Used where the pill must name the machine
 	 *  ("Your computer is not answering") rather than the transport. */
 	message?: string;
+	/** One line, tail-truncated, with the whole message kept as the accessible
+	 *  name. For a pill that sits in a ROW beside other content (Settings ›
+	 *  Status, the Agents drawer header), where a wrapped or unbounded sentence
+	 *  pushed the pill past the right edge on an iPhone (Sherman's report via
+	 *  Aida). See `status-pill-layout.ts` for the geometry rule. */
+	singleLine?: boolean;
 	testID?: string;
 };
 
@@ -94,6 +100,7 @@ const DOT_ROLE: Record<
 export const ConnectionPill = ({
 	state,
 	message,
+	singleLine = false,
 	testID = SURFACE.connectionPill,
 }: ConnectionPillProps) => {
 	const dotColor = useTokenColor(DOT_ROLE[state]);
@@ -144,6 +151,11 @@ export const ConnectionPill = ({
 					style={{ flexShrink: 1, minWidth: 0 }}
 					className={`min-w-0 flex-1 text-meta ${INK_CLASS[state]}`}
 					accessibilityRole={ROLE.text}
+					/* Truncation hides words from sight only: the accessible name is the
+					 *  whole message, so a screen reader never hears "Не отвеч…". */
+					accessibilityLabel={text}
+					numberOfLines={singleLine ? 1 : undefined}
+					ellipsizeMode={singleLine ? "tail" : undefined}
 				>
 					{text}
 				</Text>
