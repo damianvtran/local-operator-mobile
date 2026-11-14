@@ -81,21 +81,31 @@ export interface RadientTokens {
 }
 
 /**
- * The `sub` claim of an `id_token`, or `null` for anything that is not a readable
- * JWT carrying one. Best effort by design: a missing or malformed token changes
- * nothing about sign-in, it only leaves the account unknown.
+ * The payload claims of an `id_token`, or `null` for anything that is not a
+ * readable JWT. Decoded WITHOUT verifying the signature: the token comes straight
+ * from Radient's own token endpoint over TLS, and every claim read from it is a
+ * label or a scoping key, never an authorization input.
  */
-export function accountIdFromIdToken(token: unknown): string | null {
+function idTokenClaims(token: unknown): Record<string, unknown> | null {
 	if (typeof token !== "string") return null;
 	const parts = token.split(".");
 	if (parts.length !== 3 || !parts[1]) return null;
 	try {
 		const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
 		const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+		/* JWT payloads are UTF-8 JSON, but `atob` returns one Latin-1 char per BYTE:
+		 * fed straight to `JSON.parse`, "José Müller" read back as "JosÃ© MÃ¼ller"
+		 * (PR #262 review m1). Hermes ships `atob`, so devices took that branch.
+		 * The bytes go through `TextDecoder`, which the relay's SSE reader already
+		 * relies on at runtime (`relay/sse.ts`); were it ever missing, the throw is
+		 * caught below and the account is merely unlabelled, never unsigned-in. */
 		const json =
 			typeof atob === "function"
-				? atob(padded)
-				: /* Hermes without `atob`: the same fallback `pkce.ts` uses for `btoa`. */
+				? new TextDecoder("utf-8").decode(
+						Uint8Array.from(atob(padded), (char) => char.charCodeAt(0)),
+					)
+				: /* Hermes without `atob`: the same fallback `pkce.ts` uses for `btoa`;
+					 * `Buffer#toString()` already decodes UTF-8. */
 					(
 						globalThis as unknown as {
 							Buffer: {
@@ -103,13 +113,90 @@ export function accountIdFromIdToken(token: unknown): string | null {
 							};
 						}
 					).Buffer.from(padded, "base64").toString();
-		const claims = JSON.parse(json) as { sub?: unknown };
-		return typeof claims.sub === "string" && claims.sub.trim().length > 0
-			? claims.sub.trim()
+		const claims: unknown = JSON.parse(json);
+		return claims !== null && typeof claims === "object"
+			? (claims as Record<string, unknown>)
 			: null;
 	} catch {
 		return null;
 	}
+}
+
+const nonBlank = (value: unknown): string | null =>
+	typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
+/** An email's maximum length (RFC 5321 path limit), so no real address is cut. */
+export const ACCOUNT_LABEL_MAX_CODE_POINTS = 254;
+
+/* Line breaks and other whitespace controls read as one space, not as a glued
+ * word: "A\nB" shows "A B" on Settings' single-identity line. */
+const LABEL_WHITESPACE = /[\s\u0085\u2028\u2029]+/gu;
+/* Every remaining C0/C1 control (`Cc`) and invisible format character (`Cf`:
+ * the bidi embeddings/overrides/isolates U+202A–202E and U+2066–2069, the
+ * LRM/RLM/ALM marks, zero-width space/non-joiner, soft hyphen, BOM, tags) —
+ * except U+200D ZERO WIDTH JOINER, which composes family/profession emoji a
+ * display name may legitimately carry. The same discipline as `displayText` in
+ * `features/session/supplements.ts`, which strips ZWJ too; that one renders
+ * model-authored text, this one the user's own IdP profile. `\p{…}` is already
+ * relied on under Hermes there. */
+const LABEL_INVISIBLE = /(?!\u200d)[\p{Cc}\p{Cf}]/gu;
+
+/**
+ * A claim made safe to SHOW and to PERSIST: invisible and control characters
+ * stripped, whitespace collapsed, trimmed, and clamped to
+ * {@link ACCOUNT_LABEL_MAX_CODE_POINTS} code points (with a trailing "…" when
+ * cut), or `null` when nothing visible is left.
+ *
+ * Why the clamp matters beyond layout (PR #262 review m2): the label is stored
+ * inside the oauth keystore item, which `SecureStorage` refuses above
+ * `MAX_SECURE_VALUE_CHARS` (2,048). An oversized `name` claim made
+ * `writeStoredOauth` report `persistent: false`, so a sign-in that looked fine
+ * silently did not survive a restart, all because of a display string. 254 code
+ * points is at most 254 UTF-16 pairs plus JSON escaping — well inside that cap
+ * beside a real access and refresh token.
+ */
+export function accountDisplayLabel(value: unknown): string | null {
+	if (typeof value !== "string") return null;
+	const visible = value
+		.replace(LABEL_WHITESPACE, " ")
+		.replace(LABEL_INVISIBLE, "")
+		.trim();
+	if (visible.length === 0) return null;
+	/* Code points, not UTF-16 units, so the cut never splits a surrogate pair. */
+	const points = Array.from(visible);
+	if (points.length <= ACCOUNT_LABEL_MAX_CODE_POINTS) return visible;
+	return `${points
+		.slice(0, ACCOUNT_LABEL_MAX_CODE_POINTS - 1)
+		.join("")
+		.trimEnd()}…`;
+}
+
+/**
+ * The `sub` claim of an `id_token`, or `null` for anything that is not a readable
+ * JWT carrying one. Best effort by design: a missing or malformed token changes
+ * nothing about sign-in, it only leaves the account unknown.
+ */
+export function accountIdFromIdToken(token: unknown): string | null {
+	return nonBlank(idTokenClaims(token)?.sub);
+}
+
+/**
+ * The signed-in identity to SHOW (Settings' account title): the `id_token`'s
+ * `email`, else its `name`, else `null`.
+ *
+ * Why the id_token: Radient's token endpoint does not put `email`/`name` at the
+ * top level of the token response; they ride in the `id_token` it mints on both
+ * grants because the scope asks for `openid profile email` (`agent-server`
+ * `idTokenClaims`; the desktop client reads the same claims in
+ * `identity_from_token_response`). Reading only the top level left
+ * `account_label` null for every real sign-in, so Settings told a signed-in
+ * Radient user "Not signed in with Radient" (PR #261 design round 2).
+ */
+export function accountLabelFromIdToken(token: unknown): string | null {
+	const claims = idTokenClaims(token);
+	return (
+		accountDisplayLabel(claims?.email) ?? accountDisplayLabel(claims?.name)
+	);
 }
 
 export type RadientAuthFailure =
@@ -182,6 +269,7 @@ function tokensFromResponse(
 	now: () => number,
 	previousRefresh: string | null,
 	previousAccount: string | null = null,
+	previousLabel: string | null = null,
 ): RadientTokens {
 	const access = body.access_token;
 	if (typeof access !== "string" || access.length === 0) {
@@ -198,12 +286,14 @@ function tokensFromResponse(
 		typeof body.refresh_token === "string" && body.refresh_token.trim() !== ""
 			? body.refresh_token
 			: previousRefresh;
+	/* A top-level `email`/`name` still wins if a server ever sends one; otherwise
+	 * the id_token's claims, and a refresh without an id_token keeps the label the
+	 * grant already had — the same rule `account_id` follows. */
 	const labelSource =
-		typeof body.email === "string"
-			? body.email
-			: typeof body.name === "string"
-				? body.name
-				: null;
+		accountDisplayLabel(body.email) ??
+		accountDisplayLabel(body.name) ??
+		accountLabelFromIdToken(body.id_token) ??
+		previousLabel;
 	return {
 		access,
 		refresh,
@@ -441,6 +531,7 @@ export async function refreshRadientTokens(
 		now,
 		tokens.refresh,
 		tokens.account_id ?? null,
+		tokens.account_label,
 	);
 }
 

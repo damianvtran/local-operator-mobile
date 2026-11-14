@@ -47,6 +47,10 @@ import { LTR_WRITING, TEXT_END_CLASS, useComposedDir } from "@/ui/direction";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { TEXT_SCALE_OPTIONS, useTextScale } from "@/ui/text-scale-provider";
 import { AccountRoutingSection } from "./account-routing-section";
+import {
+	settingsAccountInitialsSource,
+	settingsAccountTitle,
+} from "./account-title";
 import { NotificationsSection } from "./notifications-section";
 import { OwnTunnelSettings } from "./own-tunnel-settings";
 import {
@@ -315,9 +319,10 @@ export default function Settings() {
 					>
 						<Avatar
 							initials={initialsOf(
-								accountLabel ??
-									computers[0]?.name ??
-									t("mobile.settings.account.app_name"),
+								accountLabel !== null
+									? settingsAccountInitialsSource(accountLabel)
+									: (computers[0]?.name ??
+											t("mobile.settings.account.app_name")),
 							)}
 							size="md"
 							accessibilityLabel={t("mobile.settings.account.signed_in")}
@@ -328,7 +333,7 @@ export default function Settings() {
 							}
 						>
 							<Text className="text-body text-ink" {...composedDir}>
-								{accountLabel ?? t("mobile.settings.account.not_signed_in")}
+								{settingsAccountTitle(accountLabel)}
 							</Text>
 							<Text
 								className="text-body-sm text-ink-dim"

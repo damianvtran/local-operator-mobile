@@ -46,10 +46,7 @@ describe("sentences that start with a Latin token state the page's base", () => 
 		const source = read("../../features/settings/settings.tsx");
 		expect(source).toContain("const composedDir = useComposedDir();");
 		expect(
-			textOpeningBefore(
-				source,
-				'{accountLabel ?? t("mobile.settings.account.not_signed_in")}',
-			),
+			textOpeningBefore(source, "{settingsAccountTitle(accountLabel)}"),
 		).toContain("{...composedDir}");
 		expect(textOpeningBefore(source, "{route\n")).toContain("{...composedDir}");
 	});
