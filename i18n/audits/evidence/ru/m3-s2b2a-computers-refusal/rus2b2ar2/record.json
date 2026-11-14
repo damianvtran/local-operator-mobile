@@ -1,0 +1,153 @@
+{
+  "locale": "ru",
+  "slice": "m3-s2b2a-computers-refusal",
+  "namespace": "mobile.computers.refusal.*",
+  "round": 2,
+  "round_kind": "delta",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40",
+    "expected": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft_v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/ru/draft-ru.json",
+    "sha256": "ccbafb2df76eb2d73c7509394eadd268e886988f59b456c4df252c0e7d448f36",
+    "expected": "ccbafb2df76eb2d73c7509394eadd268e886988f59b456c4df252c0e7d448f36"
+  },
+  "draft_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/ru/draft-ru-v2.json",
+    "sha256": "c393839d825ac456eb6c0f730db0fdaa1369382ad8827f0b667bec44daaf6d4d",
+    "expected": "c393839d825ac456eb6c0f730db0fdaa1369382ad8827f0b667bec44daaf6d4d"
+  },
+  "translator_notes_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/ru/notes-ru-v2.md",
+    "sha256": "922535294573648ac91f85596d5e90c5379ffb9cc5f0619a97e83cc49bc7e314"
+  },
+  "round1": {
+    "audit_job": "0c2019891e7c",
+    "auditor_session": "476cde7c4696",
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/ru/report.md",
+      "sha256": "b47772fc550922765d85924e551023ba79e45d95c1c1db08da0e6f22035561b9"
+    },
+    "record": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/ru/record.json",
+      "sha256": "4f399717b537688a8586b7afab26707718fa95b13fcd7e985f563ab40d981812"
+    },
+    "log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/ru/audit.log",
+      "sha256": "e4ee611780c2aebc59d1ca8026c7163d80d8ca8aad86451eb89d219dcc276a94"
+    }
+  },
+  "translator_jobs": [
+    "332734020f56",
+    "7cc5dbc90b02"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "28e3915989d0",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor_session": true
+  },
+  "input_hashes": {
+    "en": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json (english field per key)",
+      "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+    },
+    "context": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json (note field per key)",
+      "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+    },
+    "ru": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/ru/draft-ru-v2.json",
+      "sha256": "c393839d825ac456eb6c0f730db0fdaa1369382ad8827f0b667bec44daaf6d4d"
+    }
+  },
+  "reference_worktree": {
+    "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "files": [
+      "src/i18n/messages.ts",
+      "src/ui/components/refusal-surface.tsx L296-312"
+    ]
+  },
+  "redaction_hits": {
+    "brief": 0,
+    "draft_v1": 0,
+    "draft_v2": 0,
+    "marker": "\"[\" + \"redacted\" + \"]\""
+  },
+  "delta": {
+    "changed_keys": [
+      "mobile.computers.refusal.console_next",
+      "mobile.computers.refusal.password_next"
+    ],
+    "matches_notes": true,
+    "unchanged_values_identical": 22,
+    "raw_diff_changed_lines": 6,
+    "key_order_match_brief": true
+  },
+  "mechanical": {
+    "keys_match_brief": true,
+    "placeholder_mismatches": 0,
+    "icu_parse_errors": 0,
+    "ru_plural_categories_required": [
+      "one",
+      "few",
+      "many",
+      "other"
+    ],
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "relay_word_codepoints_password_next": "U+0440 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440 U+0430",
+    "translation_service_used": false,
+    "parser_script": {
+      "path": "/Users/damian/.local-operator/sessions/28e3915989d0/scratchpad/icu-ru-r2.ts",
+      "sha256": "9e63862531271405b38839973de0c0a6dbd2c8c7c675d8aa4f22f3d0436c71f7"
+    }
+  },
+  "round1_findings_disposition": {
+    "RU-1": "RESOLVED (accepted as suggested)",
+    "RU-2": "RESOLVED (accepted as suggested; try_again button echo confirmed in refusal-surface.tsx)"
+  },
+  "findings": [],
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 0
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "round1_finding_ids_resolved": [
+      "RU-1",
+      "RU-2"
+    ]
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "note": "ru R2 delta passed: v1->v2 changes exactly 2 noted keys (console_next, password_next), 22 identical; messages.ts parses 24, params=EN; R1 RU-1/RU-2 resolved; 0 new findings. Record audits/ru-r2/record.json."
+  },
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/28e3915989d0/scratchpad/audits-ru-r2/report.md",
+      "sha256": "86f8f86212f40da338ada2ebc5187d155c992461c94ce6f87ff9002858c70941"
+    },
+    "log": {
+      "path": "/Users/damian/.local-operator/sessions/28e3915989d0/scratchpad/audits-ru-r2/audit.log",
+      "sha256": "482c5c32dd897472ee7803a9a29b42234954b5c4ab9420fffb052021065d49e1",
+      "kind": "execution_log"
+    }
+  },
+  "write_location_note": "Brief target dir /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/ru-r2/ refused by guardrail dangerous-delete (review) on mkdir; artifacts written to auditor's own scratchpad per brief fallback; lane copies them.",
+  "audit_notes_not_execution_log": false,
+  "writes": "own scratchpad only; no ledger, no repo writes"
+}

@@ -1,0 +1,149 @@
+{
+  "locale": "fr",
+  "slice": "m3-s2b2a-computers-refusal",
+  "namespace": "mobile.computers.refusal.*",
+  "audit_date": "2026-11-13",
+  "audited_at": "2026-11-13T19:23:34+00:00",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40",
+    "expected": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/fr/draft-fr.json",
+    "sha256": "f772103e61bbe87e18603b57b5152d360cf48a999a8fc04bafc96a8a192985f4",
+    "expected": "f772103e61bbe87e18603b57b5152d360cf48a999a8fc04bafc96a8a192985f4"
+  },
+  "translator_notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/fr/notes-fr.md",
+    "sha256": "b407bcd101bf29ee28a25cf83e85b57a1b6ee367e88c436618d7fea4e7a76a83"
+  },
+  "translator_job": "9fb915e773aa",
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "41808e7144c1",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true
+  },
+  "reference_worktree": {
+    "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "files": [
+      "docs/i18n.md",
+      "src/i18n/messages.ts",
+      "src/i18n/catalogues/fr/*.json (term grep)",
+      "src/ui/components/refusal-surface.tsx",
+      "src/ui/components/button.tsx",
+      "src/ui/variants.ts",
+      "src/ui/tokens.gen.ts"
+    ]
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+    "brief": 0,
+    "draft": 0,
+    "marker": "\"[\" + \"redacted\" + \"]\""
+  },
+  "mechanical": {
+    "keys_match_brief": true,
+    "key_order_match": true,
+    "placeholder_mismatches": 0,
+    "icu_parse_errors": 0,
+    "fr_plural_categories_required": [
+      "one",
+      "many",
+      "other"
+    ],
+    "fr_plural_categories_present": [
+      "one",
+      "many",
+      "other"
+    ],
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "ascii_apostrophes": 0,
+    "translation_service_used": false
+  },
+  "rulings": {
+    "tunnel_gone_title": "ACCEPT. « ne correspond plus à aucun tunnel » renders the note's meaning (address no longer belongs to any tunnel); literal « n’est plus un tunnel » would be a calque. Terminal sense preserved by tunnel_gone_next.",
+    "retry_title": "ACCEPT. « disponible » is epicene, correct for {subject} as masculine ordinateur name or feminine adresse; « prêt/prête » would force gender. 'not ready yet' vs 'not yet available' is an acceptable shift for a temporary condition; « encore » keeps 'yet'.",
+    "console_title": "ACCEPT (NIT F3 optional). « requiert votre attention dans Radient » is grammatical, keeps Radient untranslated, vous register.",
+    "sign_in_title": "ACCEPT. « Reconnectez-vous pour accéder à {subject} » avoids « Reconnectez-vous pour vous reconnecter »; expired session makes re-sign-in natural; consistent with mobile.home.folders_read_sign_in « vous reconnecter » and sign_in_again « Se reconnecter ».",
+    "button_widths": "PASS. refusal-surface.tsx renders all buttons in a vertical stack (<View className=\"gap-2 pt-1\">), Button passes no labelLines, so numberOfLines is undefined: labels WRAP (min-h-11 grows), never clip/ellipsize. Measured SF semibold 15 pt (token 'label'): « Ouvrir la console Radient » 178.7 pt (English 183.4), « Utiliser une autre adresse » 182.9 pt; budget ≈ 320 − 2×16 screen − 2×16 button padding = 256 pt. Both fit one line at default size.",
+    "wait_seconds_many": "PASS. fr CLDR categories one,many,other all present; many → « # de secondes » (1000000 de secondes) is correct French and matches own_tunnel.verdict_timeout; 0 and 1 → one (« 0 seconde ») correct."
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.offline_next",
+      "current": "Réveillez cet ordinateur et vérifiez que le connecteur est lancé. Son dernier état connu figure ci-dessus.",
+      "problem": "« Son dernier état connu » directly follows « le connecteur », so the possessive reads as the connector's state; the English 'Its' and the note mean the computer's last known state shown above.",
+      "suggested": "Réveillez cet ordinateur et vérifiez que le connecteur est lancé. Le dernier état connu de l’ordinateur figure ci-dessus."
+    },
+    {
+      "id": "F2",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.relay_stopped_title",
+      "current": "Le relais ne fonctionne pas sur {subject}.",
+      "problem": "« ne fonctionne pas » reads as 'is broken/malfunctioning'; the cause is that the relay program is not running (stopped). « lancé » matches the remedy « Relancez le relais » and offline_next's « est lancé ».",
+      "suggested": "Le relais n’est pas lancé sur {subject}."
+    },
+    {
+      "id": "F3",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.console_title",
+      "current": "{subject} requiert votre attention dans Radient.",
+      "problem": "Acceptable and understood; « nécessite » is the more common product-French verb and « une intervention » makes explicit that the fix is an action taken in Radient rather than mere attention.",
+      "suggested": "{subject} nécessite une intervention dans Radient."
+    },
+    {
+      "id": "F4",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.console_next",
+      "current": "Ouvrez la console Radient pour régler le problème. Se reconnecter sur ce téléphone n’y changera rien.",
+      "problem": "English 'to fix it there' locates the fix in the console; « y » restores 'there' at no cost.",
+      "suggested": "Ouvrez la console Radient pour y régler le problème. Se reconnecter sur ce téléphone n’y changera rien."
+    },
+    {
+      "id": "F5",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.certificate_next",
+      "current": "Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez le certificat autosigné — cette app ne contournera pas la vérification.",
+      "problem": "English 'replace a self-signed certificate' is indefinite; « le certificat autosigné » presupposes one exists. Existing verdict_tls uses « tout certificat autosigné ».",
+      "suggested": "Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné — cette app ne contournera pas la vérification."
+    }
+  ],
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 2,
+    "NIT": 3
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5"
+    ],
+    "note": "passed: no BLOCKER/MAJOR; 2 MINOR (F1 offline_next possessive ambiguity, F2 relay_stopped_title 'ne fonctionne pas') recommended; 3 NIT optional."
+  },
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/fr/report.md",
+      "sha256": "335723c5f1af9fc85385bae5dd467cbf75d494b907e6486242f7249197367203"
+    },
+    "log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/fr/audit.log",
+      "sha256": "af2090b6092ad2b781d880076d74b230c54342572780ab1ce8c40155bb4adea6"
+    }
+  },
+  "writes": "scratchpad only; no ledger, no repo writes"
+}

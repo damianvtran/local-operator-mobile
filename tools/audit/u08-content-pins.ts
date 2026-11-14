@@ -1688,6 +1688,26 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
+	/* M3 S2b-2a (feat/i18n-m3-s2b2): the refusal surface's keys (English-first;
+	 * `catalogue.gen.ts` is regenerated with the translations), the remedy line
+	 * via `own_tunnel.remedy`, `verdictSentence`'s caller-supplied action label
+	 * and their tests. Re-derived last with --print over the committed tree
+	 * (b3af2b96); only `src` moved. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* M3 S2b-2a translations: the six LTR locales' and ur's 24 refusal values,
+	 * the regenerated `catalogue.gen.ts`, the ur UR-C1 `labelDir` on the
+	 * refusal surface's console button and its tests. Re-derived last with
+	 * --print over the committed tree (6efad9e8); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* #257 round-1 remediation: the native `writingDirection` channel of
+	 * `composedDirection` (D1), the refusal headline/next spreads (D2), the
+	 * shared DIAGNOSTIC_FALLBACK module (N2) and their tests. Re-derived last
+	 * with --print over the committed tree (3121fd36); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* #257 CI fix: the verdict-Alert site scan in ur-latin-initial-sites.test.ts
+	 * anchors on the call opening. Re-derived last with --print over the
+	 * committed tree (c1e52685); only `src` moved. Source identity only, NOT
+	 * rendered U-08 evidence. */
 	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
 	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
 	 * with --print over the committed tree. Source identity only, NOT rendered
@@ -1696,6 +1716,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * view state, customised trigger fill): re-derived once with --print over the
 	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
 	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
 	/* fix/session-push-register: the app now POSTs /api/push/register for the
 	 * routed computer (session-push-registration*, use-session-push-registration),
@@ -1709,6 +1731,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * No rendered surface changed. Re-derived with --print over the staged
 	 * tree; only `src` moved. Source identity only. */
 	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
 	/* fix/settings-signin-status-badge: the signed-out account card as a
 	 * Radient sign-in nav card, the connection pill's one-line fit in the
@@ -1727,7 +1751,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Merge of origin/main (#259, 9ef19ccd) into #258: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "916f38333b2293f9c8e048f84bcc50d43c944a9f7b732e9c6d62cc5ce2c28a94",
+	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
+	src: "ef63d8dad550b79f77c32681d84de6e3b1ea8022f89c6bee0089b787517cc9e2",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

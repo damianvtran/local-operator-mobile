@@ -1,0 +1,103 @@
+{
+  "locale": "hi",
+  "slice": "m3-s2b2a-computers-refusal",
+  "round": 2,
+  "audit_kind": "delta",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft_v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/hi/draft-hi.json",
+    "sha256": "e24b300418f841277a2d3c6cab80d3086a92ff3b765d2fe7eaaaf0a87a35dd03"
+  },
+  "draft_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/hi/draft-hi-v2.json",
+    "sha256": "9cc1892c9da83f945aa8fe8af90d9f57dde0462ecd8dcf6d8f086ebd8c2be5b7"
+  },
+  "translator_notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/hi/notes-hi-v2.md",
+    "sha256": "e15fee0e674e187ccd72f0faa9273305cd1fee783a64f256e7a7e4d5b0963929"
+  },
+  "round1_report": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/hi/report.md",
+    "sha256": "d04728f4b96124cc96e793c500f139e90cfeb2b7d8f074f799d3a7c316a99a74",
+    "record_path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/hi/record.json",
+    "record_sha256": "37767fff14e349473e59f475629463dbe1ab721f4c672c3c26a6154f8c255c57",
+    "job": "accb079fa58e"
+  },
+  "translator_jobs": ["ee0b2003be8e", "35d709c49b96"],
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "fdb2ce531d10",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt (Model: anthropic/claude-opus-5-5); no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "worktree_head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "style_guide": {"path": "~/local-operator/i18n/style-guides/hi.md", "sha256": "82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5"},
+    "glossary": {"path": "~/local-operator/i18n/glossary.md", "sha256": "0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8"},
+    "catalogues": ["src/i18n/catalogues/hi/mobile.computers.json"],
+    "icu_parser": "src/i18n/messages.ts"
+  },
+  "redaction_marker_hits": {"brief": 0, "draft_v2": 0},
+  "delta": {
+    "changed_keys": [
+      "mobile.computers.refusal.console_title",
+      "mobile.computers.refusal.tunnel_gone_next",
+      "mobile.computers.refusal.password_next",
+      "mobile.computers.refusal.sign_in_next"
+    ],
+    "matches_notes": true,
+    "unchanged_byte_identical": 20,
+    "raw_lines_v1_v2": [26, 26],
+    "raw_lines_differing": 4,
+    "order_preserved": true
+  },
+  "mechanical": {
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "icu_parse_failures": 0,
+    "icu_parsed": 24,
+    "placeholder_mismatches": 0,
+    "bidi_or_zw_controls": 0,
+    "non_nfc": 0,
+    "plural_categories_hi_0_1_5": ["one", "one", "other"],
+    "buttons_changed": false
+  },
+  "round1_resolution": [
+    {"id": "HI-1", "severity": "MAJOR", "status": "resolved", "value": "{subject} को Radient में आपके ध्यान की ज़रूरत है।"},
+    {"id": "HI-2", "severity": "MINOR", "status": "resolved", "value": "फिर से कनेक्ट करने के लिए दोबारा साइन इन करें। इससे पहले टाइप किया गया सब कुछ अलग रोक दिया गया है और भेजा नहीं जाएगा।"},
+    {"id": "HI-N1", "severity": "NIT", "status": "resolved", "value": "कंप्यूटर पर रिले पासवर्ड जाँचें और फिर से कोशिश करें।"},
+    {"id": "HI-N2", "severity": "NIT", "status": "resolved", "value": "Radient में नई टनल बनाएँ, फिर यह कंप्यूटर जोड़ें।"}
+  ],
+  "findings": [
+    {
+      "id": "HI-R2-N1",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.sign_in_next",
+      "current": "…इससे पहले टाइप किया गया सब कुछ अलग रोक दिया गया है और भेजा नहीं जाएगा।",
+      "problem": "'अलग रोक दिया गया है' is slightly unusual collocation (रोक देना = stop/block); meaning intact via 'भेजा नहीं जाएगा'. Non-gating.",
+      "suggested": "…इससे पहले टाइप किया गया सब कुछ रोककर अलग रखा गया है और भेजा नहीं जाएगा।"
+    }
+  ],
+  "counts": {"BLOCKER": 0, "MAJOR": 0, "MINOR": 0, "NIT": 1},
+  "write_location": "lane-designated audits/hi-r2 (direct write succeeded)",
+  "artifacts": [
+    {"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/hi-r2/report.md", "sha256": "13b1fa085abfa6387291dcd378a32de8a46850f46975a0492a6218eb914bb1e8"},
+    {"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/hi-r2/audit.log", "sha256": "e72d8f167dd47e44646d8d7429da5bd163262c61b7b9f8694fedb2232885c30c"},
+    {"path": "/Users/damian/.local-operator/sessions/fdb2ce531d10/scratchpad/hi-r2-icu.ts", "sha256": "19ba92ab68e9a5eb97215f29fbb73d6e5eea59a1c2294bd3f864b4c77292bcc0"},
+    {"path": "/Users/damian/.local-operator/sessions/fdb2ce531d10/scratchpad/hi-r2-icu-out.txt", "sha256": "c3e60943309019b1a9632d684721e71cb64f30ad4cf89577f1363e76c638f817"}
+  ],
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": ["HI-R2-N1"]
+  },
+  "audit_notes_not_execution_log": "round1_resolution/findings are auditor judgement; executed commands and their outputs are in audit.log."
+}

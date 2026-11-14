@@ -1,0 +1,174 @@
+{
+  "locale": "zh-CN",
+  "slice": "m3-s2b2a-computers-refusal",
+  "round": 2,
+  "audit_kind": "delta",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft_v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/zh-CN/draft-zh-CN.json",
+    "sha256": "04cc9ee2e3237467c9e542bf708820196bfd8a8308e3172f6592cff790f57bdd"
+  },
+  "draft_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/zh-CN/draft-zh-CN-v2.json",
+    "sha256": "4b5cd4b6c1b532d9921c1d847b8b4caeaf12ec8e60da2d1eedfeb166827c2cbd"
+  },
+  "translator_notes_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/zh-CN/notes-zh-CN-v2.md",
+    "sha256": "a0d409f1cc0f56fbd25fd3caaac59dcc208724c5f173836bc88b673906dc9384"
+  },
+  "round1": {
+    "job": "93350949de5b",
+    "auditor_session": "e1685cdf64ae",
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/zh-CN/report.md",
+      "sha256": "bd9fa3639d627a8ad00136a772fbe36767e87893c98487caf17abf10dc911f14"
+    },
+    "record": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/zh-CN/record.json",
+      "sha256": "93d2bacb5d825befca5d72a08532fa5c58c1d36b7184efc09092e2f0f59e26cc"
+    },
+    "verdict": "changes_requested"
+  },
+  "translator_sessions": [
+    "67e397a5ab7f",
+    "26a9563a2aca"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "ace3569ca688",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor_session": true
+  },
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/",
+    "head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "zh_computers_sha256": "44bee1877db0e984b29312086ac90a7ca973e35857e9d7ef83064570cbccf71c",
+    "zh_common_sha256": "5b4c314924ccbe676c114ba3c79b2c4d64c21921d250f4e34acaabfaf066bc2c",
+    "messages_ts_sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "redaction_marker_hits": {
+    "brief": 0,
+    "v1": 0,
+    "v2": 0
+  },
+  "delta": {
+    "changed_keys": [
+      "mobile.computers.refusal.relay_stopped_title",
+      "mobile.computers.refusal.tunnel_gone_title",
+      "mobile.computers.refusal.sign_in_title",
+      "mobile.computers.refusal.offline_next",
+      "mobile.computers.refusal.console_next",
+      "mobile.computers.refusal.another_address"
+    ],
+    "changed_count": 6,
+    "matches_notes": true,
+    "unchanged_byte_identical": true,
+    "key_order_equals_brief": true,
+    "line_count_v1_v2": "26/26"
+  },
+  "mechanical": {
+    "parser": "src/i18n/messages.ts parseMessage/formatMessage via tsx, node heap 256 MB",
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "placeholder_mismatch": 0,
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "cldr_zh_categories": [
+      "other"
+    ],
+    "wait_seconds_arms": [
+      "other"
+    ],
+    "result": "pass",
+    "applies_to": "v2"
+  },
+  "round1_findings_resolution": [
+    {
+      "id": "F1",
+      "severity": "MAJOR",
+      "key": "mobile.computers.refusal.tunnel_gone_title",
+      "v1": "{subject}已不再是隧道。",
+      "v2": "{subject}已不再对应任何隧道。",
+      "resolved": true,
+      "disposition": "fixed (suggested wording applied verbatim)"
+    },
+    {
+      "id": "F2",
+      "severity": "MAJOR",
+      "key": "mobile.computers.refusal.sign_in_title",
+      "v1": "你的Radient会话已过期。请登录以重新连接到{subject}。",
+      "v2": "你的Radient登录已过期。请登录以重新连接到{subject}。",
+      "resolved": true,
+      "disposition": "fixed (suggested wording applied verbatim)"
+    },
+    {
+      "id": "F3",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.offline_next",
+      "v1": "请唤醒那台电脑，并确认连接器正在运行。其最后已知状态显示在上方。",
+      "v2": "请唤醒那台电脑，并确认连接器正在运行。上方显示的是它最后已知的状态。",
+      "resolved": true,
+      "disposition": "fixed (suggested wording applied verbatim)"
+    },
+    {
+      "id": "F4",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.console_next",
+      "v1": "请打开Radient控制台进行处理。在此手机上登录无法解决这个问题。",
+      "v2": "请打开Radient控制台进行处理。在此手机上重新登录也无法解决这个问题。",
+      "resolved": true,
+      "disposition": "fixed (suggested wording applied verbatim)"
+    },
+    {
+      "id": "F5",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.relay_stopped_title",
+      "v1": "{subject}上的中继未在运行。",
+      "v2": "{subject}上的中继没有运行。",
+      "resolved": true,
+      "disposition": "fixed (suggested wording applied verbatim)"
+    },
+    {
+      "id": "F6",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.another_address",
+      "v1": "使用其他地址",
+      "v2": "改用其他地址",
+      "resolved": true,
+      "disposition": "fixed (suggested wording applied verbatim)"
+    }
+  ],
+  "new_findings": [],
+  "verdict": "passed",
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 0
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": []
+  },
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/ace3569ca688/scratchpad/audits/zh-CN-r2/report.md",
+      "sha256": "244f63f06d4ef74373861f99f534ee6b64c21f1af8ef06c0a4d30aa168e07adc"
+    },
+    "audit_log": {
+      "path": "/Users/damian/.local-operator/sessions/ace3569ca688/scratchpad/audits/zh-CN-r2/audit.log",
+      "sha256": "6f8cdd5fd1ddda5346646dff5a9fbbeaaf2e31c8bed34525bd210c1b969abb04"
+    }
+  },
+  "write_location_note": "Requested /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/zh-CN-r2/ refused by guardrail dangerous-delete (ancestor-session scratchpad); written to auditor scratchpad.",
+  "audit_notes_not_execution_log": "report.md is audit notes; audit.log holds commands actually run with output.",
+  "translation_service_used": false
+}

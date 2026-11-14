@@ -1,0 +1,29 @@
+# audit.log — commands actually run (session fdb2ce531d10, 2026-11-13), cwd = .../d5aaf8ba6ba5/scratchpad/m3s2b2 unless noted
+$ shasum -a 256 brief-s2b2a.json hi/draft-hi.json hi/draft-hi-v2.json
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+e24b300418f841277a2d3c6cab80d3086a92ff3b765d2fe7eaaaf0a87a35dd03  hi/draft-hi.json
+9cc1892c9da83f945aa8fe8af90d9f57dde0462ecd8dcf6d8f086ebd8c2be5b7  hi/draft-hi-v2.json
+$ grep -o '\[redacted\]' brief-s2b2a.json | wc -l -> 0
+$ python3 (json load v1/v2; key lists; value diff; raw line diff; bidi/ZW regex [U+200E U+200F U+202A-202E U+2066-2069 U+061C U+200B-200D U+FEFF]; NFC; redaction count)
+24 24 True   (key count v1, v2, order equal)
+changed: console_title, tunnel_gone_next, password_next, sign_in_next
+raw lines 26 26, differing 4
+bidi 0 nfc True red 0   (v2)
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a rev-parse HEAD -> cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+$ cd worktree; env -u XPC_FLAGS NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx $SCRATCH(fdb2ce531d10)/hi-r2-icu.ts
+console_title => https://mac-studio.trycloudflare.com को Radient में आपके ध्यान की ज़रूरत है। | ph en=[subject] hi=[subject]
+tunnel_gone_next => Radient में नई टनल बनाएँ, फिर यह कंप्यूटर जोड़ें। | ph en=[] hi=[]
+password_next => कंप्यूटर पर रिले पासवर्ड जाँचें और फिर से कोशिश करें। | ph en=[] hi=[]
+sign_in_next => फिर से कनेक्ट करने के लिए दोबारा साइन इन करें। इससे पहले टाइप किया गया सब कुछ अलग रोक दिया गया है और भेजा नहीं जाएगा। | ph en=[] hi=[]
+parsed 24 fail 0 hi cats 0/1/5: one/one/other
+$ grep -n "try_again|try_now" hi/draft-hi-v2.json -> 21 try_now "अभी कोशिश करें"; 22 try_again "फिर से कोशिश करें"
+$ grep catalogues/hi/mobile.computers.json for टनल -> feminine agreement throughout (अपनी टनल, चलाई हुई टनल, टनल … दिखाती)
+$ shasum -a 256 audits/hi/report.md audits/hi/record.json hi/notes-hi-v2.md hi-r2-icu.ts hi-r2-icu-out.txt style-guides/hi.md glossary.md
+d04728f4b96124cc96e793c500f139e90cfeb2b7d8f074f799d3a7c316a99a74  audits/hi/report.md
+37767fff14e349473e59f475629463dbe1ab721f4c672c3c26a6154f8c255c57  audits/hi/record.json
+e15fee0e674e187ccd72f0faa9273305cd1fee783a64f256e7a7e4d5b0963929  hi/notes-hi-v2.md
+19ba92ab68e9a5eb97215f29fbb73d6e5eea59a1c2294bd3f864b4c77292bcc0  hi-r2-icu.ts
+c3e60943309019b1a9632d684721e71cb64f30ad4cf89577f1363e76c638f817  hi-r2-icu-out.txt
+82292dc8d13fcc93dc752457719264aed3cc20bb65ecfaba0f0e5a31f4cb40d5  ~/local-operator/i18n/style-guides/hi.md
+0eb34437a8c3d6f564f278ef957a603b1d9f51bb07d5ddae5ea8f37deba962f8  ~/local-operator/i18n/glossary.md
+# note: an earlier mkdir+touch+rm write probe of audits/hi-r2 was refused by guardrail dangerous-delete (nothing ran); files then written directly via the write tool.

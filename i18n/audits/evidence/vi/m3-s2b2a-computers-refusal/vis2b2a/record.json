@@ -1,0 +1,111 @@
+{
+  "locale": "vi",
+  "slice": "m3-s2b2a-computers-refusal",
+  "namespace": "mobile.computers (refusal.* 24 keys)",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/vi/draft-vi.json",
+    "sha256": "6bcbba45988d6560a60bfe91fd629ce77331411277a943417d58e8787abe8c0d"
+  },
+  "translator_job": "1f94f733895a",
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "e4feb0b40788",
+    "model": "anthropic/claude-opus-5-5",
+    "independent_from_translator_session": true,
+    "actual_model_source": "session system prompt 'Model:' line; no fallback observed"
+  },
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "worktree_head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "style_guide": "~/local-operator/i18n/style-guides/vi.md",
+    "glossary": "~/local-operator/i18n/glossary.md"
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+    "brief": 0,
+    "draft": 0
+  },
+  "mechanical": [
+    "key set equal: True; order equal: True; count 24",
+    "bidi controls: 0",
+    "non-NFC values: []",
+    "redaction marker in draft: 0; in brief: 0",
+    "Radient preserved where in en: True",
+    "non-ASCII-letter scan for mask chars (*,•,U+FFFD): []",
+    "button try_now: 8 chars (en 7)",
+    "button try_again: 7 chars (en 9)",
+    "button sign_in_again: 13 chars (en 13)",
+    "button open_console: 26 chars (en 24)",
+    "button another_address: 17 chars (en 19)",
+    "messages.ts parse+format all 24 OK, placeholder params identical to English (0 mismatches); pluralCategory(vi, 0/1/2/5/21/100)=other; wait_seconds has only 'other' with '#'"
+  ],
+  "verdict": "passed",
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 4,
+    "NIT": 1
+  },
+  "unresolved_blocker_major_count": 0,
+  "findings": [
+    {
+      "id": "VI-F1",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.sign_in_title",
+      "current": "Phiên Radient của bạn đã hết hạn. Đăng nhập để kết nối lại với {subject}.",
+      "problem": "'Phiên Radient' collides with glossary session→phiên (agent sessions; catalogue uses '# phiên'); the shipped vi catalogue calls a sign-in session 'phiên đăng nhập' (mobile.settings.sign_out.*). Reader may think an agent session expired.",
+      "suggested": "Phiên đăng nhập Radient của bạn đã hết hạn. Đăng nhập để kết nối lại với {subject}."
+    },
+    {
+      "id": "VI-F2",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.relay_stopped_title",
+      "current": "Máy chủ chuyển tiếp không chạy trên {subject}.",
+      "problem": "'X không chạy trên Y' is the usual Vietnamese phrasing for incompatibility ('does not run on Y'); the English states a current state (stopped).",
+      "suggested": "Máy chủ chuyển tiếp hiện không chạy trên {subject}."
+    },
+    {
+      "id": "VI-F3",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.tunnel_gone_next",
+      "current": "Hãy tạo lại đường hầm trong Radient, rồi thêm máy tính này.",
+      "problem": "'tạo lại đường hầm' reads as re-creating the same (deleted) tunnel; context says the only fix is a NEW tunnel.",
+      "suggested": "Hãy tạo một đường hầm mới trong Radient, rồi thêm máy tính này."
+    },
+    {
+      "id": "VI-F4",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.console_next",
+      "current": "Hãy mở bảng điều khiển Radient để khắc phục ở đó. Đăng nhập trên điện thoại này sẽ không thay đổi được điều đó.",
+      "problem": "Second sentence is a calque with a vague referent ('thay đổi được điều đó'), and plain 'Đăng nhập' loses the 're-sign-in' sense the note asks to say plainly; 'khắc phục ở đó' is redundant.",
+      "suggested": "Hãy mở bảng điều khiển Radient để khắc phục. Đăng nhập lại trên điện thoại này sẽ không giải quyết được vấn đề."
+    },
+    {
+      "id": "VI-N1",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.sign_in_next",
+      "current": "Hãy đăng nhập lần nữa để kết nối lại. Những gì bạn đã nhập trước đó được cách ly và sẽ không được gửi.",
+      "problem": "'lần nữa' is acceptable (avoids double 'lại'), but can read as 'one more time' as if a sign-in just failed; mirroring the button label is tighter. Optional.",
+      "suggested": "Hãy đăng nhập lại để kết nối. Những gì bạn đã nhập trước đó được cách ly và sẽ không được gửi."
+    }
+  ],
+  "rulings": {
+    "sign_in_next_lan_nua": "Accepted as-is (NIT VI-N1 optional). Quarantine sentence accepted: 'được cách ly và sẽ không được gửi' keeps the not-sent promise, not softened.",
+    "console_next_second_sentence": "Literal; MINOR VI-F4 with replacement.",
+    "trinh_ket_noi": "Accepted: natural for the tunnel program, no conflict with existing catalogue (no prior 'connector' term).",
+    "cach_ly": "Accepted: established vi security-software term for quarantined items; meaning exact.",
+    "open_console_width": "Not a finding: 26 chars vs English 24 (itself at the hint). refusal-surface.tsx passes no labelLines to Button, so Text numberOfLines is undefined (wraps, never clipped/ellipsized); md button is min-h-11 px-4 (grows). Phrase is the established catalogue term."
+  },
+  "artifacts": [
+    "report.md",
+    "audit.log",
+    "check-vi.mts"
+  ],
+  "audit_notes_not_execution_log": "report.md is notes; audit.log holds the commands actually run and their output"
+}

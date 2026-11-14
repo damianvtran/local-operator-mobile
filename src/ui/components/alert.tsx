@@ -69,7 +69,9 @@ export const Alert = ({
 	const layout = alertActionLayout(action !== undefined, effectiveScale);
 	const placed = alertActionClasses(layout);
 	/* Widened to `object` for the reason `Button` gives: `dir` is a
-	 * react-native-web prop that React Native's `TextProps` does not declare. */
+	 * react-native-web prop that React Native's `TextProps` does not declare.
+	 * On native it is a `writingDirection` style instead, so the body `Text`
+	 * keeps no `style` of its own. */
 	const bodyWeb: object = bodyDir;
 	return (
 		<View
