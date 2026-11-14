@@ -446,8 +446,10 @@ describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens wit
 	 * premise test above strips ICU slots, so a SLOT-initial value is invisible to
 	 * it; this block is that case. The cure is the page's composed direction on the
 	 * verdict body — and only when the sentence is this one, because
-	 * `direction.tsx` forbids a blanket spread (an `invalid.reason` is pure server
-	 * text and must keep its own inferred base). */
+	 * `direction.tsx` forbids a blanket spread (a verdict that IS server text must
+	 * keep its own inferred base; since M3 S2b-2b the `invalid` verdict is catalogue
+	 * prose via `routeInvalidSentence`, which opens with an Urdu strong character
+	 * in ur, so `dir="auto"` already resolves it RTL). */
 	it("verdictOpensWithDetail: true only for an offline verdict that carries a detail", () => {
 		expect(
 			verdictOpensWithDetail({

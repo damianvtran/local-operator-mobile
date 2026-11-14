@@ -534,6 +534,11 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Placeholder-only template, `{head} · {label}` — the two arguments are pre-rendered sentences and the middle dot is a separator.",
 		"relay.transcript.label.messages":
 			"« Messages » is the French plural of « message », mirrored verbatim from the core relay catalogue.",
+		/* M3 S2b-2b (set-up-a-computer screen): command-block labels kept as audited. */
+		"mobile.computers.setup.tui_label":
+			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the fr audit accepted it as kept Latin (i18n/audits/evidence/fr/m3-s2b2b-computers-setup/).",
+		"mobile.computers.setup.terminal_label":
+			"« Terminal » is the French word for the terminal, spelled as in English (as « Sections » for mobile.sidebar.sections); the fr audit accepted the set-up screen's command-block label (i18n/audits/evidence/fr/m3-s2b2b-computers-setup/).",
 	},
 	/* Spanish preserves these placeholder-only templates: names and separators
 	 * have no English prose to translate. Each key remains explicitly listed. */
@@ -556,6 +561,11 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 		...PROJECT_TAG_EXAMPLE,
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — the separator is the same in Spanish; there is no prose to translate.",
+		/* M3 S2b-2b (set-up-a-computer screen): command-block labels kept as audited. */
+		"mobile.computers.setup.tui_label":
+			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the es audit accepted it as kept Latin (i18n/audits/evidence/es/m3-s2b2b-computers-setup/).",
+		"mobile.computers.setup.terminal_label":
+			"«Terminal» is the Spanish word for the terminal, spelled as in English; the es audit accepted the set-up screen's command-block label, which has no article to agree (i18n/audits/evidence/es/m3-s2b2b-computers-setup/).",
 	},
 	"zh-CN": {
 		"mobile.settings.account.app_name":
@@ -571,6 +581,9 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Chinese carries the separator unchanged; there is no prose to translate.",
+		/* M3 S2b-2b (set-up-a-computer screen): command-block labels kept as audited. */
+		"mobile.computers.setup.tui_label":
+			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the zh-CN audit accepted it as kept Latin (i18n/audits/evidence/zh-CN/m3-s2b2b-computers-setup/).",
 	},
 	ru: {
 		"mobile.settings.account.app_name":
@@ -592,6 +605,9 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"The server accepts only ASCII slug tags (`^[a-z0-9][a-z0-9_-]{0,23}$`), so the placeholder example stays ASCII here; a localised example is refused when used as a tag.",
 		"mobile.schedules.head.overdue":
 			"Placeholder-only template, `{head} · {label}` — Russian carries the separator unchanged; there is no prose to translate.",
+		/* M3 S2b-2b (set-up-a-computer screen): command-block labels kept as audited. */
+		"mobile.computers.setup.tui_label":
+			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the ru audit accepted it as kept Latin (i18n/audits/evidence/ru/m3-s2b2b-computers-setup/).",
 	},
 	vi: {
 		"mobile.settings.account.app_name":
@@ -620,6 +636,11 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 		/* The 2026-11-07 home-pickers audit (VI-H01, vi1107p1) chose the loanword. */
 		"mobile.home.picker.folder_home":
 			"Vietnamese names the home folder «thư mục home» across mobile and core (relay.chrome.session.ended_hint); the folder badge is its short form «Home», which matches the English spelling. «Thư mục chính» reads as 'main folder'.",
+		/* M3 S2b-2b (set-up-a-computer screen): command-block labels kept as audited. */
+		"mobile.computers.setup.tui_label":
+			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the vi audit accepted it as kept Latin (i18n/audits/evidence/vi/m3-s2b2b-computers-setup/).",
+		"mobile.computers.setup.terminal_label":
+			"Vietnamese developers say `Terminal`: a standard loanword, as the vi catalogue already keeps shell and loopback; the vi audit ruled terminal_label ACCEPT (i18n/audits/evidence/vi/m3-s2b2b-computers-setup/).",
 	},
 	hi: {
 		"mobile.settings.account.app_name":
@@ -645,6 +666,9 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Mirrored from the core relay catalogue: technical CLI/runtime token `shell` kept in Latin script beside the count.",
 		"relay.transcript.fold.python":
 			"Mirrored from the core relay catalogue: language/tool proper token `python` kept in Latin script beside the count.",
+		/* M3 S2b-2b (set-up-a-computer screen): command-block labels kept as audited. */
+		"mobile.computers.setup.tui_label":
+			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the hi audit accepted it as kept Latin (i18n/audits/evidence/hi/m3-s2b2b-computers-setup/).",
 	},
 	ur: {
 		"mobile.settings.account.app_name":
@@ -666,6 +690,9 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Mirrored from the core relay catalogue: technical CLI/runtime token `shell` kept in Latin script beside the count.",
 		"relay.transcript.fold.python":
 			"Mirrored from the core relay catalogue: language/tool proper token `python` kept in Latin script beside the count.",
+		/* M3 S2b-2b (set-up-a-computer screen): command-block labels kept as audited. */
+		"mobile.computers.setup.tui_label":
+			"TUI is an acronym on the style guide's keep-in-English list, the label of the set-up screen's TUI command block; the ur audit accepted it as kept Latin (i18n/audits/evidence/ur/m3-s2b2b-computers-setup/).",
 	},
 };
 
