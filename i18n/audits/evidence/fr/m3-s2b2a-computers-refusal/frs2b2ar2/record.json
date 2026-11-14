@@ -1,0 +1,127 @@
+{
+  "locale": "fr",
+  "slice": "m3-s2b2a-computers-refusal",
+  "namespace": "mobile.computers.refusal.*",
+  "round": 2,
+  "round_kind": "delta",
+  "audit_date": "2026-11-13",
+  "audited_at": "2026-11-13T19:30:00+00:00",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40",
+    "expected": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft_v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/fr/draft-fr.json",
+    "sha256": "f772103e61bbe87e18603b57b5152d360cf48a999a8fc04bafc96a8a192985f4",
+    "expected": "f772103e61bbe87e18603b57b5152d360cf48a999a8fc04bafc96a8a192985f4"
+  },
+  "draft_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/fr/draft-fr-v2.json",
+    "sha256": "68e4448105633f3c82444a58def0f0fa94c3f7e2e93ed1dbe8909663df32a44b",
+    "expected": "68e4448105633f3c82444a58def0f0fa94c3f7e2e93ed1dbe8909663df32a44b"
+  },
+  "translator_notes_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/fr/notes-fr-v2.md",
+    "sha256": "c5604cac5df004a8accbcd1b5fae15d6f7788b1169fe1ba74c464c56c73924f8"
+  },
+  "round1": {
+    "audit_job": "bf2eea2fca3f",
+    "auditor_session": "41808e7144c1",
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/fr/report.md",
+      "sha256": "335723c5f1af9fc85385bae5dd467cbf75d494b907e6486242f7249197367203"
+    },
+    "record": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/fr/record.json",
+      "sha256": "0155c2361680b13687aa4b48b90421e2f46ad14d62ad35326f49993f2064b27f"
+    }
+  },
+  "translator_jobs": ["9fb915e773aa", "229d22205b83"],
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "c64a4d591431",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor_session": true
+  },
+  "reference_worktree": {
+    "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "files": [
+      "src/i18n/messages.ts",
+      "src/i18n/catalogues/fr/*.json (term grep)"
+    ]
+  },
+  "read_route": "ordinary scratchpad/worktree reads; read_public_copy not used (core route refuses mobile catalogue paths)",
+  "redaction_hits": {
+    "brief": 0,
+    "draft_v1": 0,
+    "draft_v2": 0,
+    "marker": "\"[\" + \"redacted\" + \"]\""
+  },
+  "delta": {
+    "changed_keys": [
+      "mobile.computers.refusal.relay_stopped_title",
+      "mobile.computers.refusal.console_title",
+      "mobile.computers.refusal.offline_next",
+      "mobile.computers.refusal.console_next",
+      "mobile.computers.refusal.certificate_next"
+    ],
+    "matches_notes": true,
+    "unchanged_values_identical": 19,
+    "raw_diff_changed_lines": 10,
+    "key_order_match_brief": true
+  },
+  "mechanical": {
+    "keys_match_brief": true,
+    "key_order_match": true,
+    "placeholder_mismatches": 0,
+    "icu_parse_errors": 0,
+    "fr_plural_categories_required": ["one", "many", "other"],
+    "fr_plural_categories_present": ["one", "many", "other"],
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "ascii_apostrophes": 0,
+    "translation_service_used": false,
+    "parser_script": {
+      "path": "/Users/damian/.local-operator/sessions/c64a4d591431/scratchpad/icu-fr-v2.ts",
+      "sha256": "380830f296965c7a88d1ba046ef34d68889766a618484b94f3826c867757586f"
+    }
+  },
+  "round1_findings_disposition": {
+    "F1": "RESOLVED (accepted as suggested)",
+    "F2": "RESOLVED (accepted as suggested)",
+    "F3": "RESOLVED (accepted as suggested)",
+    "F4": "RESOLVED (accepted as suggested)",
+    "F5": "RESOLVED (accepted as suggested)"
+  },
+  "findings": [],
+  "counts": { "BLOCKER": 0, "MAJOR": 0, "MINOR": 0, "NIT": 0 },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [],
+    "round1_finding_ids_resolved": ["F1", "F2", "F3", "F4", "F5"]
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "note": "fr R2 delta passed: v1->v2 changes exactly 5 noted keys, 19 identical; messages.ts parses all 24, params=EN; R1 F1-F5 resolved; 0 new findings. Record audits/fr-r2/record.json."
+  },
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/fr-r2/report.md",
+      "sha256": "98e33b22f42b8566d6401f4478e5068728fc302a6708f18607bcdde099bf4f13"
+    },
+    "log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/fr-r2/audit.log",
+      "sha256": "632cae484e78937cbeb966d778817faa7504253712a6b4b0ef0e834d26618d19",
+      "kind": "execution_log"
+    }
+  },
+  "writes": "scratchpad audits/fr-r2/ only; no ledger, no repo writes"
+}

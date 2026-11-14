@@ -46,7 +46,8 @@ const { RefusalSurface, disclosureIcon } = await import(
 	"@/ui/components/refusal-surface"
 );
 const { SetupComputer } = await import("@/features/auth/setup-computer");
-const { CONTROL } = await import("@/ui/a11y");
+const { CONTROL, REGION } = await import("@/ui/a11y");
+const { DirectionProvider } = await import("@/ui/direction");
 
 const render = (props: Parameters<typeof RefusalSurface>[0]) =>
 	renderToStaticMarkup(h(RefusalSurface, props));
@@ -142,6 +143,112 @@ describe("commands live only behind the terminal disclosure", () => {
 			onUseAnotherAddress: () => {},
 		});
 		expect(html).toContain(`data-testid="${CONTROL.refusalAnotherAddress}"`);
+	});
+});
+
+/*
+ * Merge of #257 into #261 (round 7): #257 keyed the kind-default buttons and
+ * #261 added the named-cause actions beside them. These pin that the merge kept
+ * BOTH: the Retry button on every retry-capable kind, now with #257's keyed
+ * label, and #257's UR-C1 direction carried onto #261's own action buttons.
+ */
+describe("Retry and keyed labels after the #257 merge", () => {
+	const RETRY_LABEL = {
+		"computer-offline": "Try again",
+		"relay-stopped": "Try again",
+		password: "Try again",
+		retry: "Try now",
+		diagnostic: "Retry",
+	} as const;
+
+	it.each(Object.entries(RETRY_LABEL) as [keyof typeof RETRY_LABEL, string][])(
+		"%s without named copy: the prominent Retry renders, keyed",
+		(kind, label) => {
+			const html = render({
+				kind,
+				subject: "Studio Mac",
+				copy: null,
+				onRetry: () => {},
+			});
+			expect(html).toContain(
+				`data-testid="${REGION.connectionErrorRetryProminent}"`,
+			);
+			expect(html).toContain(`>${label}<`);
+		},
+	);
+
+	it("a named cause with a retry action renders it in the prominent region", () => {
+		const html = render({
+			kind: "computer-offline",
+			subject: "Studio Mac",
+			copy: {
+				cause: "computer-offline",
+				title: "Studio Mac is asleep or offline.",
+				body: null,
+				actions: [{ id: "retry", label: "Retry" }],
+				help: null,
+			},
+			onRetry: () => {},
+		});
+		expect(html).toContain(`data-testid="${CONTROL.refusalActionRetry}"`);
+		expect(html).toContain(
+			`data-testid="${REGION.connectionErrorRetryProminent}"`,
+		);
+	});
+
+	it("the kind defaults render #257's keys, not the English literals they replaced", () => {
+		const html = render({
+			kind: "console",
+			subject: "Studio Mac",
+			copy: null,
+			onOpenConsole: () => {},
+			onUseAnotherAddress: () => {},
+		});
+		expect(html).toContain(">Open the Radient console<");
+		expect(html).toContain(">Use another address<");
+	});
+
+	it("a named cause's action labels state the page's base on an RTL page (UR-C1)", () => {
+		/* ur `Radient بلنگ کھولیں` / `Radient کنسول کھولیں` open with Latin, so
+		 *  without `labelDir` `dir="auto"` lays them LTR on an RTL page. */
+		const children = h(RefusalSurface, {
+			kind: "console",
+			subject: "Studio Mac",
+			copy: {
+				cause: "balance-out",
+				title: "t",
+				body: null,
+				actions: [
+					{
+						id: "open-billing",
+						label: "BILLING",
+						url: "https://x.example",
+					},
+					{ id: "retry", label: "RETRY" },
+				],
+				help: null,
+			},
+			onRetry: () => {},
+		});
+		const surface = (direction: "ltr" | "rtl") =>
+			renderToStaticMarkup(
+				h(DirectionProvider, {
+					direction,
+					locale: direction === "rtl" ? "ur" : "en",
+					children,
+				}),
+			);
+		const tagOf = (markup: string, text: string) => {
+			const at = markup.indexOf(`>${text}<`);
+			expect(at, text).toBeGreaterThan(-1);
+			return markup.slice(markup.lastIndexOf("<", at), at + 1);
+		};
+		const rtl = surface("rtl");
+		for (const label of ["BILLING", "RETRY"]) {
+			expect(tagOf(rtl, label)).toContain('dir="rtl"');
+			// LTR emits nothing: the inferred base is kept (negative control).
+			expect(tagOf(surface("ltr"), label)).not.toContain('dir="rtl"');
+		}
 	});
 });
 

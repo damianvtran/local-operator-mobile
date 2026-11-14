@@ -31,6 +31,7 @@ import type { SecureStorageRefusal } from "@/connection/secure-storage-refusal";
 import type { TunnelSessionError } from "@/connection/tunnel-session";
 import { t } from "@/i18n";
 import { type ErrorSurface, RelayError } from "@/relay";
+import { DIAGNOSTIC_FALLBACK } from "@/ui/components/diagnostic-fallback";
 import type {
 	RefusalKind,
 	RefusalSurfaceAction,
@@ -566,7 +567,11 @@ export function refusalCopy(input: {
  */
 const REMEDY: Partial<Record<ErrorSurface, string>> = {
 	/* Bare commands: the surface labels the block "On that computer" (keyed
-	 *  copy) and offers Copy, so the string is exactly what a terminal takes. */
+	 *  copy) and offers Copy, so the string is exactly what a terminal takes.
+	 *  #257 wrapped these in `own_tunnel.remedy` ("On that computer: {command}")
+	 *  for the old always-visible chip; that wrapper is not used here, because
+	 *  the disclosure's `mobile.refusal.terminal.label` already says WHERE and a
+	 *  Copy of "On that computer: lop mobile" is not a command a terminal runs. */
 	console: "lop login radient",
 	"tunnel-gone": "lop tunnel connect <tunnel-id>",
 	"relay-stopped": "lop mobile",
@@ -747,7 +752,9 @@ export function refusalFromError(input: {
 			input.surface === "diagnostic"
 				? input.storageRefusal
 					? secureStorageRefusalSentence(input.storageRefusal)
-					: `RelayError · ${input.error?.kind ?? "connection-response"}`
+					: input.error?.kind != null
+						? `RelayError · ${input.error.kind}`
+						: DIAGNOSTIC_FALLBACK
 				: (input.detail ?? input.error?.displayableMessage ?? null),
 		remedy:
 			copy && BILLING_CAUSES.has(copy.cause)

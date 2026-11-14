@@ -1,0 +1,33 @@
+# audit.log — actual commands run (session 476cde7c4696, 2026-11-13)
+shasum -a 256 brief-s2b2a.json ru/draft-ru.json -> d151df76…0e40, ccbafb2d…8f36 (match)
+grep -o '\['"redacted"'\]' brief-s2b2a.json | wc -l -> 0; draft raw count -> 0
+python: code points of relay_stopped_title[:12] -> U+0420 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440
+python: bidi scan -> []; key set == brief keys (24) -> True; NFC -> True
+git rev-parse HEAD (worktree) -> cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+mkdir -p .../d5aaf8ba6ba5/scratchpad/m3s2b2/audits/ru -> BLOCKED by guardrail dangerous-delete (review); fallback to own scratchpad
+copied draft to audits-ru/draft-ru.copy.json, sha256 ccbafb2df76eb2d73c7509394eadd268e886988f59b456c4df252c0e7d448f36
+node --max-old-space-size=256 --experimental-strip-types ru-icu.mts audits-ru/draft-ru.copy.json ->
+(node:76404) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+parsed 24 problems 0
+0 many => Подождите около 0 секунд, прежде чем повторить попытку.
+1 one => Подождите около 1 секунды, прежде чем повторить попытку.
+2 few => Подождите около 2 секунд, прежде чем повторить попытку.
+4 few => Подождите около 4 секунд, прежде чем повторить попытку.
+5 many => Подождите около 5 секунд, прежде чем повторить попытку.
+11 many => Подождите около 11 секунд, прежде чем повторить попытку.
+14 many => Подождите около 14 секунд, прежде чем повторить попытку.
+21 one => Подождите около 21 секунды, прежде чем повторить попытку.
+22 few => Подождите около 22 секунд, прежде чем повторить попытку.
+25 many => Подождите около 25 секунд, прежде чем повторить попытку.
+101 one => Подождите около 101 секунды, прежде чем повторить попытку.
+111 many => Подождите около 111 секунд, прежде чем повторить попытку.
+1.5 other => Подождите около 1.5 секунды, прежде чем повторить попытку.
+https://abc.trycloudflare.com не отвечает.
+Ретранслятор на https://abc.trycloudflare.com не запущен.
+https://abc.trycloudflare.com пока не готов.
+Сессия входа в Radient истекла. Войдите, чтобы снова подключиться к https://abc.trycloudflare.com.
+Используйте адрес https://, который вывел туннель, выберите туннель с сертификатом, которому доверяет телефон, или замените самоподписанный сертификат — приложение не будет пропускать проверку.
+note: icu.out raw bytes contain the Cyrillic relay word (marker count 0); the tool display masked it.

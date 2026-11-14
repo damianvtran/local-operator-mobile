@@ -151,7 +151,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 143, // PR #261 round-1 remediation +2: set-up's "Check again" and its "Checking…" state (141 + 2 = 143); M1 scope additions +1: the switcher's "Can't reach Radient right now" hint (140 + 1 = 141); M1 no-terminal +2: set-up's Settings → Phone access line and its "list updates by itself" line (138 + 2 = 140); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 167, // Merge of origin/main (#257, caae98bc) into #261: main's 162 + the branch's 5 (143 - 138) = 167; M3 S2b-2a +24: the connection-failure (refusal) surface: 9 headlines, 9 next lines, wait line, 5 buttons (138 + 24 = 162); PR #261 round-1 remediation +2: set-up's "Check again" and its "Checking…" state (141 + 2 = 143); M1 scope additions +1: the switcher's "Can't reach Radient right now" hint (140 + 1 = 141); M1 no-terminal +2: set-up's Settings → Phone access line and its "list updates by itself" line (138 + 2 = 140); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.refusal",
@@ -356,6 +356,9 @@ describe("the English catalogues", () => {
 		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
 		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
 		 * counted over the en JSON. */
+		/* M3 slice S2b-2a (English-first): +24 mobile.computers (the refusal
+		 * surface's headlines, next lines, wait line and buttons): 812 + 24 = 836,
+		 * counted over the en JSON. */
 		/* TestFlight 906 drawer View options: + the 21 `mobile.sidebar.*` keys
 		 * (order, grouping, clock, ended, sections, link, heading): 771 + 21 = 792,
 		 * the generator's own count. */
@@ -363,6 +366,8 @@ describe("the English catalogues", () => {
 		 * state's headline, line and action (D2, M1): 792 + 4 = 796. */
 		/* Merge of origin/main (#254, d5831603) into #255: 771 + 41 (S2b-1)
 		 * + 25 (mobile.sidebar: 21 + 4) = 837. */
+		/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
+		 * 812 + 24 (S2b-2a) + 25 (mobile.sidebar) = 861, counted over the en JSON. */
 		/* fix/session-push-register: +6 mobile.notifications (the Settings
 		 * sentence for this phone's registration with the routed computer):
 		 * 812 + 6 = 818. */
@@ -378,6 +383,8 @@ describe("the English catalogues", () => {
 		 * Checking…), +1 mobile.settings (Couldn't copy) = 6: 858 + 6 = 864. */
 		/* Merge of origin/main (#259, 9ef19ccd) into #261: 843 on main + the
 		 * branch's 52 (864 - 812) = 895. */
+		/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
+		 * 861 + 6 (mobile.notifications) = 867, counted over the en JSON. */
 		/* fix/settings-signin-status-badge: +1 mobile.settings
 		 * (`diagnostics.reason`, the label of the raw reason-code row; the code
 		 * itself is never a key): 812 + 1 = 813. Review round 1: +4 (the signed-in
@@ -389,7 +396,11 @@ describe("the English catalogues", () => {
 		 * mobile.settings = 848. */
 		/* Merge of origin/main (#258, 8ca71d54) into #261: 848 on main + the
 		 * branch's 52 (895 - 843) = 900, counted over the merged en JSON. */
-		expect(total).toBe(900);
+		/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
+		 * 867 + 5 (mobile.settings) = 872, counted over the en JSON. */
+		/* Merge of origin/main (#257, caae98bc) into #261: 872 on main + the
+		 * branch's 52 (900 - 848) = 924, counted over the merged en JSON. */
+		expect(total).toBe(924);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

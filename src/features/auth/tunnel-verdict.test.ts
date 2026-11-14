@@ -1,12 +1,20 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	classify,
+	TUNNEL_TEST_TIMEOUT_MS,
 	type TunnelTestVerdict,
 	transportKind,
 	verdictSentence,
 } from "@/features/auth/tunnel-verdict";
 import type { SentencePlatform } from "@/lib/platform";
 import { RelayError } from "@/relay";
+
+/** The Settings saved card's verdict call, carrying its own "Test again" label. */
+const SAVED_CARD_SENTENCE =
+	/verdictSentence\(\s*verdict,\s*sentencePlatform\(\),\s*t\("mobile\.settings\.own_tunnel\.test_again"\),?\s*\)/;
+/** The Settings edit form's verdict call, on the default "Test the connection". */
+const EDIT_FORM_SENTENCE = /verdictSentence\(verdict, sentencePlatform\(\)\)/;
 
 /**
  * The own-tunnel verdict taxonomy.
@@ -279,6 +287,33 @@ describe("the local-network verdict", () => {
 			verdictSentence({ kind: "unreachable", detail: null }, "web"),
 		);
 	});
+
+	/* #254 deferred finding: Settings' saved card shows a "Test again" button, yet
+	 *  the local-network sentence always named "Test the connection" — a control
+	 *  that is not on that card. The caller now passes the label it shows. */
+	it("names the test button the caller actually shows", () => {
+		for (const platform of ["ios", "android", "web"] as const) {
+			const sentence = verdictSentence(
+				{ kind: "local-network" },
+				platform,
+				"Test again",
+			);
+			expect(sentence).toContain("Test again");
+			expect(sentence).not.toContain("Test the connection");
+		}
+	});
+
+	it("has the Settings saved card pass its own Test again label", () => {
+		const source = readFileSync(
+			new URL("../settings/own-tunnel-settings.tsx", import.meta.url),
+			"utf8",
+		);
+		// The saved card is the block before `{editing ?`; its verdict sentence must
+		// carry the saved card's button label, and the edit form's must not.
+		const [savedCard, editForm] = source.split("{editing ? (");
+		expect(savedCard).toMatch(SAVED_CARD_SENTENCE);
+		expect(editForm).toMatch(EDIT_FORM_SENTENCE);
+	});
 });
 
 describe("the rendered sentence, through the real classifier", () => {
@@ -334,5 +369,24 @@ describe("the rendered sentence, through the real classifier", () => {
 			expect(sentence).not.toContain(error.kind);
 			expect(sentence).not.toMatch(/\b[1-5]\d{2}\b/);
 		}
+	});
+});
+
+describe("the timeout's translator note", () => {
+	/* #257 review N5: the note tells translators the limit ("today N") while the
+	 * rendered `{seconds}` comes from TUNNEL_TEST_TIMEOUT_MS; nothing tied them, and
+	 * the note said 10 for a while after the constant moved. */
+	it("names the same seconds the sentence renders", () => {
+		const notes = JSON.parse(
+			readFileSync(
+				new URL(
+					"../../i18n/catalogues/en/mobile.computers.context.json",
+					import.meta.url,
+				),
+				"utf8",
+			),
+		) as Record<string, { note: string }>;
+		const note = notes["mobile.computers.own_tunnel.verdict_timeout"]?.note;
+		expect(note).toContain(`today ${TUNNEL_TEST_TIMEOUT_MS / 1000})`);
 	});
 });

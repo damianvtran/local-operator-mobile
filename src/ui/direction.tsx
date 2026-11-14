@@ -174,14 +174,40 @@ export const DirectionView = ({
  * `direction`, which is what `text-align: start` and the bidi base resolve
  * against.
  *
- * WHY `{}` ON NATIVE AND `{}` IN AN LTR CATALOGUE. Native paragraph direction
- * comes from Yoga's layout direction, which the root view and every
- * `Sheet`/`Dialog` already carry, so a native `<Text>` resolves exactly as this
- * helper would and `dir` is a web-only prop. In `en`/`fr`/`hi` the browser's
- * inference is already the correct base for these lines — no composed value
- * begins with a right-to-left character — so the helper emits NO prop at all
- * rather than restating what the document implies, which is what keeps those
- * three catalogues byte-identical to the pre-Urdu build.
+ * NATIVE NEEDS ITS OWN CHANNEL: A `writingDirection` STYLE. Yoga's layout
+ * direction (the root view's `direction` style) does NOT set a native paragraph's
+ * base, though an earlier version of this comment claimed it did (#257 design
+ * round 1, D1). Read from react-native 0.86.3:
+ *   - iOS: the paragraph style sets `baseWritingDirection` ONLY inside
+ *     `if (textAttributes.baseWritingDirection.has_value())`
+ *     (`ReactCommon/react/renderer/textlayoutmanager/platform/ios/react/renderer/
+ *     textlayoutmanager/RCTAttributedTextUtils.mm:212-216`), and that attribute
+ *     is parsed from the `writingDirection` style alone
+ *     (`ReactCommon/react/renderer/components/text/BaseTextProps.cpp:115-120`).
+ *     `layoutDirection` is consulted only to swap left/right ALIGNMENT
+ *     (`RCTAttributedTextUtils.mm:198-207`). With no `writingDirection` the base
+ *     stays `NSWritingDirectionNatural`, resolved from the first strong character,
+ *     so `Radient کنسول کھولیں` lays out with an LTR base and the brand lands at
+ *     the END of the right-to-left reading. Hence `{style: {writingDirection}}`.
+ *   - ANDROID IS NOT ESTABLISHED, and probably not fixed by this. Nothing under
+ *     `ReactAndroid/src/main/java/com/facebook/react/views/text/` reads
+ *     `writingDirection`; `TextLayoutManager.kt` measures with
+ *     `TextDirectionHeuristics.FIRSTSTRONG_LTR` (`:194`, `:223`, `:1350`) and
+ *     carries `TODO(5578671): Handle text direction` (`:1058`). The style is
+ *     emitted there too (inert, harmless), but an Android RTL frame is what
+ *     would settle it.
+ * The style rides `Text`'s own `style` prop: uniwind's `Text` merges it AFTER
+ * the className style (`[style, props.style]`), so it composes with classes.
+ * It must never meet a caller `style` on the same element — one would clobber
+ * the other — which `src/i18n/__tests__/composed-dir-sites.test.ts` pins for
+ * every bare spread site; a component that owns a style takes the value as a
+ * named prop and merges (or declines) it itself.
+ *
+ * `{}` IN AN LTR CATALOGUE, ON BOTH PLATFORMS. In `en`/`fr`/`hi` the inferred
+ * base is already correct for these lines — no composed value begins with a
+ * right-to-left character — so the helper emits NOTHING rather than restating
+ * what the page implies, which is what keeps those catalogues byte-identical to
+ * the pre-Urdu build.
  *
  * THE CONSTRAINT. It states the PAGE's direction, never a script's: it is for a
  * composed value whose base must not depend on its first token, so it may not
@@ -191,13 +217,23 @@ export const DirectionView = ({
  * counterpart case — a value that must keep a direction OPPOSITE to the page,
  * like a command or a hostname — is `LTR_TEXT` below, not this.
  */
-export type ComposedDirProps = { readonly dir?: TextDirection };
+export type ComposedDirProps = {
+	/** web: the react-native-web `dir` prop. */
+	readonly dir?: TextDirection;
+	/** native: the only input iOS reads for the paragraph base. */
+	readonly style?: { readonly writingDirection: TextDirection };
+};
 
-/** The pure half: `{dir}` on web for an RTL page, nothing otherwise. */
+/** The pure half: for an RTL page `{dir}` on web and a `writingDirection` style
+ *  on native; nothing in an LTR one. */
 export const composedDirection = (
 	direction: TextDirection,
-): ComposedDirProps =>
-	Platform.OS === "web" && direction === "rtl" ? { dir: "rtl" } : {};
+): ComposedDirProps => {
+	if (direction !== "rtl") return {};
+	return Platform.OS === "web"
+		? { dir: "rtl" }
+		: { style: { writingDirection: "rtl" } };
+};
 
 /**
  * `composedDirection` of the active page. Use it in the component that renders

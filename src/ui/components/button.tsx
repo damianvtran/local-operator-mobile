@@ -100,7 +100,9 @@ export const Button = ({
 		variant === "primary" ? "on-accent" : "ink-muted",
 	);
 	/* Widened to `object` for the reason `SectionHeader` gives: `dir` is a
-	 * react-native-web prop that React Native's `TextProps` does not declare. */
+	 * react-native-web prop that React Native's `TextProps` does not declare.
+	 * On native the same value is a `writingDirection` style (`@/ui/direction`),
+	 * so the label `Text` it lands on must keep no `style` of its own. */
 	const web: object = labelDir;
 	const visualHeight = BUTTON_VISUAL_HEIGHT[size];
 

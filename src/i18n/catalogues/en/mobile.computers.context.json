@@ -521,15 +521,15 @@
 	},
 	"mobile.computers.own_tunnel.verdict_timeout": {
 		"role": "help",
-		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 10). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs."
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 8). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs."
 	},
 	"mobile.computers.own_tunnel.verdict_local_network_ios": {
 		"role": "help",
-		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the \"Test the connection\" button, already translated."
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the test button shown beside the box, already translated: \"Test the connection\" (mobile.computers.own_tunnel.test), or \"Test again\" (mobile.settings.own_tunnel.test_again) on the saved card in Settings."
 	},
 	"mobile.computers.own_tunnel.verdict_local_network": {
 		"role": "help",
-		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the \"Test the connection\" button, already translated."
+		"note": "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the test button shown beside the box, already translated: \"Test the connection\" (mobile.computers.own_tunnel.test), or \"Test again\" (mobile.settings.own_tunnel.test_again) on the saved card in Settings."
 	},
 	"mobile.computers.own_tunnel.verdict_refused": {
 		"role": "help",
@@ -537,7 +537,7 @@
 	},
 	"mobile.computers.own_tunnel.remedy": {
 		"role": "help",
-		"note": "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right."
+		"note": "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running, and in a box on the connection-failure screen (shown when a computer cannot be reached) for a machine-side cause: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right."
 	},
 	"mobile.computers.own_tunnel.password_slot_other": {
 		"role": "help",
@@ -570,5 +570,101 @@
 	"mobile.computers.hint.radient_unreachable": {
 		"role": "help",
 		"note": "Hint under a computer row in the switcher when the phone could not reach Radient (Radient's error, the phone's network, or rate limiting). It must not suggest the computer is asleep."
+	},
+	"mobile.computers.refusal.offline_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the computer is asleep, or its connector is stopped. Plain statement, ends with a full stop. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.relay_stopped_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the tunnel answered but the relay program behind it is not running. \"relay\" is the program on the computer that the phone talks to. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.tunnel_gone_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the address no longer belongs to any tunnel (it was deleted or replaced). Terminal: retrying cannot fix it. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.console_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the fix is in the Radient console or on the computer, not on this phone. \"Radient\" is a product name: do not translate. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.password_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the relay rejected the relay password stored on this phone. Calm, not blaming. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.sign_in_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the reader's Radient sign-in expired. Two short sentences. \"Radient\" is a product name: do not translate. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.retry_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): a temporary condition that clears by itself (the service is still warming up). Reassuring, not alarming. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.certificate_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the tunnel's HTTPS certificate failed the phone's check. Its own cause because the fix is the certificate, not the address or the network. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.host_title": {
+		"role": "heading",
+		"note": "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the address's host name does not resolve (a typo, or a tunnel that stopped publishing that name). Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence."
+	},
+	"mobile.computers.refusal.offline_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"{subject} is not answering.\": what to do. \"connector\" is the tunnel program on the computer. \"above\" points at the computer's last known state shown higher on the same screen; in a right-to-left or vertical layout keep the meaning \"earlier on this screen\". Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.relay_stopped_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"The relay is not running on …\": the advice. The exact command is shown separately below this line (\"On that computer: …\"), so do not add one here. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.tunnel_gone_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"… is no longer a tunnel.\": the only fix is a new tunnel. \"Radient\" is a product name: do not translate. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.console_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"… needs attention in Radient.\": the fix is in the Radient console (a web page), and re-signing in on the phone does not help, so say so plainly. \"Radient\" is a product name: do not translate. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.password_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"That password was not accepted.\": the password is set on the computer; a \"Try again\" button follows. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.sign_in_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the Radient session expired. \"quarantined\" is a promise about unsent text: it is kept aside and will NOT be sent, even after signing back in. Keep that meaning exactly; do not soften it into \"saved\" or \"kept for you\". Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.retry_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) for a temporary condition. Nothing retries automatically: do not promise an automatic retry. A \"Try now\" button follows. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.certificate_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the tunnel's certificate was rejected: three alternatives, then a firm statement that the app will not bypass certificate checking. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right. \"self-signed\" is the standard technical term for such certificates in your language. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.host_next": {
+		"role": "help",
+		"note": "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the host name could not be found. \"publishes that name\" means the tunnel still serves that host name. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.wait_seconds": {
+		"role": "status",
+		"note": "Line on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the server said to wait before retrying. Advice only: the app does NOT retry by itself. {seconds} is a whole number of seconds from the server. ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs. Width: wraps freely; keep it to the sentences given."
+	},
+	"mobile.computers.refusal.try_now": {
+		"role": "button",
+		"note": "Prominent button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) for a temporary condition (\"… is not ready yet.\"): retries the connection immediately instead of waiting. Not the same as the discovery banner's \"Try now\" (mobile.computers.try_now). Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters."
+	},
+	"mobile.computers.refusal.try_again": {
+		"role": "button",
+		"note": "Prominent button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the computer is offline, the relay is stopped or the password was rejected: retries the CONNECTION. Different from the generic \"Try again\" (mobile.common.try_again), which retries a failed read or write. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters."
+	},
+	"mobile.computers.refusal.sign_in_again": {
+		"role": "button",
+		"note": "Button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the Radient session expired or the phone is signed into a different account: starts Radient sign-in. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters."
+	},
+	"mobile.computers.refusal.open_console": {
+		"role": "button",
+		"note": "Outline button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) that opens the Radient console (a web page) in the system browser. \"Radient\" is a product name: do not translate. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters."
+	},
+	"mobile.computers.refusal.another_address": {
+		"role": "button",
+		"note": "Quiet button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) that goes back to enter or pick a different tunnel address. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters."
 	}
 }
