@@ -20,6 +20,13 @@ export interface ConfigSnapshot {
 	/** The last frame's invalidation keys; sound prefetch consumes these without
 	 * opening a duplicate SSE connection. Selection itself remains on the relay. */
 	changedKeys: string[];
+	/** The last frame is the BASELINE of a reopen that replaced a dead stream
+	 *  (a return from the background, `config-stream.ts` `wake`). Its
+	 *  `changed_keys` is `[]` by contract — "nothing historical is ever
+	 *  announced" (`docs/relay/contract.md`) — so a change made while the phone
+	 *  was suspended is unknown, not absent. Consumers that cache config-derived
+	 *  reads (commands, models) re-read once on it (PR #246 R3). */
+	resynced: boolean;
 	/** The RESOLVED locale tag the last frame carried, or `null` before the
 	 *  first. Never the raw setting: the relay resolves `auto` before it is
 	 *  sent, and an unshipped configured tag arrives as `en`. */
@@ -40,6 +47,7 @@ export interface ConfigActions {
 	applyFrame: (
 		payload: { changed_keys: string[]; language: string },
 		at?: number,
+		resynced?: boolean,
 	) => void;
 	/** The stream opened: this relay serves the route. */
 	markSupported: () => void;
@@ -56,6 +64,7 @@ export type ConfigStoreApi = ReturnType<typeof createConfigStore>;
 
 const INITIAL: ConfigSnapshot = {
 	changedKeys: [],
+	resynced: false,
 	language: null,
 	supported: null,
 	frameCount: 0,
@@ -66,10 +75,11 @@ export function createConfigStore(deps: { now?: () => number } = {}) {
 	const now = deps.now ?? (() => Date.now());
 	return createStore<ConfigStore>()((set, get) => ({
 		...INITIAL,
-		applyFrame(payload, at) {
+		applyFrame(payload, at, resynced = false) {
 			set({
 				language: payload.language,
 				changedKeys: payload.changed_keys,
+				resynced,
 				/* A frame can only arrive on an open stream; recording that here as
 				 * well keeps `supported` true for a consumer that missed the open. */
 				supported: true,

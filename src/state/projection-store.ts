@@ -40,6 +40,13 @@ export interface ProjectionEntry {
 	/** How many frames were dropped as older. Surfaced so a bug is visible rather
 	 *  than silent. */
 	droppedFrames: number;
+	/** True while the projection on hand came from the warm cache
+	 *  (`warm-cache.ts`) rather than from any connection of this process. It is
+	 *  cleared by the first accepted live frame, and only by that: a reader uses
+	 *  it to keep the composer and the "live" readings gated exactly as they are
+	 *  before a session's first frame. Optional so existing entry literals stay
+	 *  valid; absent means `false`. */
+	hydrated?: boolean;
 }
 
 export interface ProjectionSnapshot {
@@ -55,6 +62,13 @@ export interface ProjectionActions {
 		sessionId: string,
 		projection: SessionProjection,
 	) => "accepted-snapshot" | "accepted-newer" | "dropped-older";
+	/** Paints a cached frame (the warm cache) for a session this process holds
+	 *  nothing for. A no-op when the entry already has a projection: a live or
+	 *  leftover frame of this process is always fresher than a saved one. The
+	 *  fence is not consulted or touched — `beginStream` already makes the next
+	 *  connection's first frame authoritative whatever its version, so a hydrated
+	 *  entry can never block a live frame. Returns whether it painted. */
+	hydrate: (sessionId: string, projection: SessionProjection) => boolean;
 	/** The stream closed. Keeps the projection and marks it not connected. */
 	endStream: (sessionId: string) => void;
 	/** Forgets one session, e.g. when the relay reports a new epoch. */
@@ -96,7 +110,14 @@ export function createProjectionStore() {
 			set((state) => ({
 				entries: {
 					...state.entries,
-					[sessionId]: { ...current, connected: true, awaitingSnapshot: true },
+					/* A hydrated (warm-cache) entry stays NOT connected until its first
+					 * live frame: an opened socket is not a reading, and painting the
+					 * cached frame as live would be the lie the flag exists to stop. */
+					[sessionId]: {
+						...current,
+						connected: current.hydrated !== true,
+						awaitingSnapshot: true,
+					},
 				},
 			}));
 		},
@@ -135,6 +156,27 @@ export function createProjectionStore() {
 				},
 			}));
 			return decision;
+		},
+
+		hydrate(sessionId, projection) {
+			const current = get().entries[sessionId];
+			if (current?.projection) return false;
+			set((state) => ({
+				entries: {
+					...state.entries,
+					[sessionId]: {
+						projection,
+						/* Not live, and waiting for a seed — the same flags a session
+						 * shows before its first frame, so every existing gate holds. */
+						connected: false,
+						awaitingSnapshot: true,
+						version: null,
+						droppedFrames: current?.droppedFrames ?? 0,
+						hydrated: true,
+					},
+				},
+			}));
+			return true;
 		},
 
 		endStream(sessionId) {

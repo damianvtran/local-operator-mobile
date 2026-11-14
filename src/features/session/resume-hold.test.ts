@@ -262,9 +262,8 @@ describe("use-session wiring", () => {
 	});
 	it("the AppState handler opens the window and clears the drop before reopening", () => {
 		const handler = source.match(APPSTATE_HANDLER)?.[0] ?? "";
-		expect(handler).toContain(
-			'if (state === "background") resumeClock.current.background();',
-		);
+		expect(handler).toContain('if (state === "background") {');
+		expect(handler).toContain("resumeClock.current.background();");
 		const resume = handler.indexOf("resumeClock.current.resume();");
 		const cleared = handler.indexOf("droppedSinceFrame: false,");
 		const reopen = handler.indexOf("reconnectRef.current();");
@@ -272,5 +271,41 @@ describe("use-session wiring", () => {
 		expect(cleared).toBeGreaterThan(resume);
 		expect(reopen).toBeGreaterThan(cleared);
 		expect(handler).toContain("retries.current = 0;");
+	});
+});
+
+describe("heldTimer while backgrounded (PR #246 R2)", () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+
+	it("a minMs = 0 report re-arms at most once a second in the background, not in a 0 ms loop", async () => {
+		const clock = createResumeClock(() => Date.now());
+		clock.background();
+		const timers = vi.spyOn(globalThis, "setTimeout");
+		const fire = vi.fn();
+		const cancel = heldTimer(clock, 0, fire);
+		await vi.advanceTimersByTimeAsync(10_000);
+		const armed = timers.mock.calls.length;
+		// The initial 0 ms arm, then one re-arm per second (t = 0, 1, … 10 s):
+		// 12. Before the floor this was a 0 ms busy loop (883 re-arms per second).
+		expect(armed).toBeLessThanOrEqual(12);
+		expect(fire).not.toHaveBeenCalled();
+		cancel();
+		timers.mockRestore();
+	});
+
+	it("after the return, a background re-arm waits out the window before it reports", async () => {
+		const clock = createResumeClock(() => Date.now());
+		clock.background();
+		const fire = vi.fn();
+		heldTimer(clock, 0, fire);
+		await vi.advanceTimersByTimeAsync(2_500);
+		clock.resume();
+		// The pending background re-arm comes due within a second of the return;
+		// it must not report inside the window it never measured.
+		await vi.advanceTimersByTimeAsync(SUSPEND_SLACK_MS + 50);
+		expect(fire).not.toHaveBeenCalled();
+		await vi.advanceTimersByTimeAsync(RESUME_GRACE_MS);
+		expect(fire).toHaveBeenCalledTimes(1);
 	});
 });

@@ -176,11 +176,33 @@ describe("the provider carries the code from the stream to Connection", () => {
 		);
 		/* The retryable branch never reaches `noteError`, which is why "Last error"
 		 *  was empty for exactly the case Sherman hit. */
+		/* Since the PR #246 convergence the degraded paint is `paintDegraded`,
+		 *  shared by the error branch and the resume hold's deferred paint, so the
+		 *  error's code reaches it as an argument. */
 		expect(provider).toContain(
-			'setStreamHealth("degraded"); setStreamHealthReason(reasonCodeOf(error));',
+			'setStreamHealth("degraded"); setStreamHealthReason(reason);',
 		);
+		expect(provider).toContain("} else paintDegraded(reasonCodeOf(error));");
 		expect(provider).toContain(
 			'setStreamHealth("offline"); setStreamHealthReason(reasonCodeOf(error));',
+		);
+	});
+	/* PR #246's resume window holds a transient failure's paint; the reason is
+	 *  held WITH it. Diagnostics shows the reason whenever health is `connecting`,
+	 *  and the hold publishes a deferred `connecting`, so a reason published at
+	 *  once would surface `stream_stalled` for a blip the pill deliberately hid. */
+	it("holds the reason with the resume window's held paint, and drops it on cancel", () => {
+		expect(provider).toContain(
+			"heldStale = true; heldReason = reasonCodeOf(error);",
+		);
+		expect(provider).toContain(
+			"heldHealth = health; heldReason = reasonForStatus(status.state, heldReason);",
+		);
+		expect(provider).toContain(
+			"setStreamHealth(heldHealth); setStreamHealthReason(reason);",
+		);
+		expect(provider).toContain(
+			"heldStale = false; heldReason = null; cancelHeldConnecting();",
 		);
 	});
 	it("clears it for a new stream and on sign-out, and publishes it", () => {

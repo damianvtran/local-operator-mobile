@@ -7,6 +7,7 @@ import {
 	foldersFailure,
 	foldersFrom,
 	heldOn,
+	holdReadFailure,
 	homeModelReading,
 	homeModelRows,
 	homeStartSelection,
@@ -18,6 +19,10 @@ import {
 	type StartupRecord,
 } from "@/features/new-session/startup-coordinator";
 import { composerChipLabels } from "@/features/session/chip-labels";
+import {
+	createResumeClock,
+	RESUME_GRACE_MS,
+} from "@/features/session/resume-hold";
 import type { StartSessionRequest } from "@/relay/endpoints";
 import { RelayError } from "@/relay/errors";
 
@@ -755,5 +760,36 @@ describe("the home's wiring across a computer switch and an Apply (review round 
 		expect(a.started).toStrictEqual([
 			{ cwd: "/Users/reader/src/local-operator" },
 		]);
+	});
+});
+
+describe("holdReadFailure: the home's reads on a resume blip (PR #246, QA outside-PR banners)", () => {
+	const transient = new RelayError(
+		"computer-offline",
+		"Tunnel temporarily unavailable",
+	);
+	let now = 1_000_000;
+	const clock = createResumeClock(() => now);
+
+	it("holds a transient failure inside the resume window", () => {
+		clock.background();
+		clock.resume();
+		expect(holdReadFailure(transient, clock)).toBe(true);
+		// An untyped failure (a network TypeError) is held too.
+		expect(holdReadFailure(null, clock)).toBe(true);
+	});
+
+	it("never holds a credential failure: its banner names a sign-in", () => {
+		expect(
+			holdReadFailure(
+				new RelayError("relay-unauthorized", "authentication required"),
+				clock,
+			),
+		).toBe(false);
+	});
+
+	it("shows a failure at once outside the window", () => {
+		now += RESUME_GRACE_MS + 1;
+		expect(holdReadFailure(transient, clock)).toBe(false);
 	});
 });

@@ -47,6 +47,13 @@
 /** The silent window after a return from the background. See the module note. */
 export const RESUME_GRACE_MS = 8_000;
 
+/** The relay's own outage grace, `OUTAGE_GRACE_MS` in `store.ts` at 24d328a1:
+ *  an outage is REPORTED only once it has stood this long, so a blip never
+ *  paints (or speaks) a state the reader would have to un-read. Shared by the
+ *  conversation stream (`use-session.ts`) and the list stream
+ *  (`connection-provider.tsx`) so the two hold a drop alike. */
+export const OUTAGE_GRACE_MS = 2500;
+
 /**
  * How late a timer may fire before it counts as having slept through a
  * suspension. A JS thread busy with a long render or a GC pause runs timers late
@@ -115,24 +122,38 @@ export const heldTimer = (
 	fire: () => void,
 ): (() => void) => {
 	let handle: ReturnType<typeof setTimeout> | null = null;
-	const arm = () => {
-		const delay = clock.holdMs(minMs);
+	const arm = (delay: number) => {
 		const due = clock.now() + delay;
 		handle = setTimeout(() => {
 			handle = null;
 			if (clock.backgrounded()) {
-				arm();
+				/* FLOORED at SUSPEND_SLACK_MS (PR #246 review R2). A `minMs = 0` caller
+				 * (the list's stall hold, the held history retry) with no open window
+				 * re-armed at 0 ms here — a busy loop measured at 883 re-arms a second
+				 * for as long as JS ran in the background, which is exactly the
+				 * background work the warm-resume request forbids. One check a second
+				 * is enough: the return itself re-decides the report (below). */
+				arm(Math.max(clock.holdMs(minMs), SUSPEND_SLACK_MS));
 				return;
 			}
 			if (clock.now() - due > SUSPEND_SLACK_MS) {
 				clock.resume();
-				arm();
+				arm(clock.holdMs(minMs));
+				return;
+			}
+			/* A return that happened while this timer waited (a background re-arm
+			 * coming due just after `active`) opened a window this timer never
+			 * measured; the policy is that only a failure still standing when the
+			 * window closes is reported, so wait out the rest of it. */
+			const rest = clock.holdMs(0);
+			if (rest > 0) {
+				arm(rest);
 				return;
 			}
 			fire();
 		}, delay);
 	};
-	arm();
+	arm(clock.holdMs(minMs));
 	return () => {
 		if (handle !== null) clearTimeout(handle);
 		handle = null;

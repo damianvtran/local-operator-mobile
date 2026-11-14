@@ -21,10 +21,14 @@ import {
 	ConnectionProvider,
 	configStore,
 	connectionStore,
+	currentWarmScope,
+	listStore,
 	PICK_UNREACHABLE_DETAIL,
 	useConnection,
 } from "@/features/auth/connection-provider";
 import { headerHealth } from "@/features/session/health";
+import { OUTAGE_GRACE_MS } from "@/features/session/resume-hold";
+import { insideResumeWindow } from "@/features/session/resume-plan";
 import { sessions as sessionProjections } from "@/features/session/runtime";
 import { scopedStore } from "@/features/session/scoped-storage";
 import {
@@ -32,6 +36,8 @@ import {
 	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
+import { warmCache } from "@/features/session/warm-store";
+import { pillState } from "@/features/sessions/pill-state";
 import { activeLocale, preferredLocale } from "@/i18n";
 import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
@@ -359,6 +365,12 @@ async function relay(
 		failStream?: boolean;
 		failLogout?: boolean;
 		refuseCatalogue?: boolean;
+		serveCommands?: boolean;
+		/** Serve `/api/config/events` (a baseline `config` frame, then held
+		 *  open) instead of the older relay's 404. */
+		serveConfig?: boolean;
+		/** What the conversation seed frame's transcript carries. */
+		seedRows?: "fixture" | "history";
 		/** Edge re-auth signal, distinct from the custom relay's plain 401. */
 		edgeCatalogue?: boolean;
 		/** Seed one session frame, tear the stream, then refuse every reopen 401 —
@@ -418,6 +430,10 @@ async function relay(
 	const releaseNextTunnels = deferred();
 	let historyReads = 0;
 	let catalogueStreams = 0;
+	/** Statuses the NEXT list-stream opens answer with, in order. */
+	const listStreamFailures: number[] = [];
+	let holdListStreams = false;
+	const seedRows: "fixture" | "history" = options.seedRows ?? "fixture";
 	let loginCount = 0;
 	let tokenCount = 0;
 	let codeCount = 0;
@@ -600,11 +616,37 @@ async function relay(
 			return;
 		}
 		if (path === "/api/config/events") {
-			json({ detail: "Not Found" }, 404);
+			if (!options.serveConfig) {
+				json({ detail: "Not Found" }, 404);
+				return;
+			}
+			// The contract's baseline: `changed_keys: []`, never a replay.
+			response.writeHead(200, { "content-type": "text/event-stream" });
+			response.write(
+				`event: config\ndata: ${JSON.stringify({ changed_keys: [], language: "en" })}\n\n`,
+			);
+			openSession.add(response);
+			response.on("close", () => openSession.delete(response));
 			return;
 		}
 		if (path === "/api/sessions/events") {
 			catalogueStreams += 1;
+			if (listStreamFailures.length > 0) {
+				const status = listStreamFailures.shift() ?? 503;
+				if (status === 401) json({ detail: "Authentication required" }, 401);
+				else {
+					response.writeHead(status, { "content-type": "text/plain" });
+					response.end("Tunnel temporarily unavailable");
+				}
+				return;
+			}
+			if (holdListStreams) {
+				response.writeHead(200, { "content-type": "text/event-stream" });
+				response.write(": held\n\n");
+				openCatalogue.add(response);
+				response.on("close", () => openCatalogue.delete(response));
+				return;
+			}
 			if (options.refuseCatalogue && catalogueStreams > 1) {
 				if (options.edgeCatalogue)
 					response.setHeader("x-radient-login", "required");
@@ -659,6 +701,9 @@ async function relay(
 				),
 			).data;
 			if (options.emptyFrame) seed.entries = [];
+			/* The warm-resume overlap case: the seed carries the same rows the
+			 * history page serves, as a frame that reaches back to the held tail. */
+			if (seedRows === "history") seed.transcript = body("history-ok").entries;
 			if (options.frameTitle) seed.conversation_name = options.frameTitle;
 			if (options.frameActivity) seed.activity = options.frameActivity;
 			response.writeHead(200, { "content-type": "text/event-stream" });
@@ -711,6 +756,12 @@ async function relay(
 			json(body("models"));
 			return;
 		}
+		/* Served so a mount's catalogue read fully succeeds: a FAILED catalogue
+		 * read is the one case a return re-reads it (warm resume). */
+		if (path === "/api/commands" && options.serveCommands) {
+			json(body("commands"));
+			return;
+		}
 		json({ detail: "Unknown synthetic route" }, 404);
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -751,6 +802,14 @@ async function relay(
 		/** One renewal answered `status` with `Retry-After: <seconds>`. */
 		failRefreshAfter: (status: number, retryAfter: number) => {
 			refreshFailures.push({ status, retryAfter });
+		},
+		/** The next list-stream opens answer these statuses (503 transient, 401). */
+		failListStreams: (...statuses: number[]) => {
+			listStreamFailures.push(...statuses);
+		},
+		/** List streams open but never send a frame. */
+		holdListStreams: (hold: boolean) => {
+			holdListStreams = hold;
 		},
 		/** Ends every open list stream cleanly — the gateway's 60 s stream cap. */
 		endCatalogueStreams: () => {
@@ -927,7 +986,7 @@ describe("startup authorization is admitted by the route (R1-1)", () => {
 			nativePlatform.OS = "web";
 		}
 	});
-	it("survives a failed cold-start list read with a healthy stream", async () => {
+	it("survives a failing list REST endpoint with a healthy stream", async () => {
 		const mock = await relay({ sessionsFailure: true });
 		transport();
 		await mount();
@@ -938,11 +997,32 @@ describe("startup authorization is admitted by the route (R1-1)", () => {
 				allowInsecure: true,
 			});
 		});
-		// The read failed: the list says so ...
-		expect(mock.events).toContain("GET /api/sessions");
+		await until(() => listStore.getState().frameCount > 0);
+		/* Warm resume (P1-C): a healthy stream's seed IS the cold-start list, so
+		 * the REST read that used to load the same list beside it is not made at
+		 * all — the double load is gone ... */
+		expect(mock.events).not.toContain("GET /api/sessions");
+		expect(mock.events).toContain("GET /api/sessions/events");
 		// ... and the route is still authorized to start work, which is what the
 		// startup coordinator opens on.
 		expect(getStartupAuthorization()).not.toBeNull();
+	});
+	it("falls back to ONE list REST read when the stream fails before its first frame", async () => {
+		const mock = await relay({ failStream: true });
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => mock.events.includes("GET /api/sessions"));
+		await until(() => listStore.getState().frameCount > 0);
+		expect(
+			mock.events.filter((event) => event === "GET /api/sessions"),
+		).toHaveLength(1);
 	});
 });
 
@@ -3074,6 +3154,12 @@ describe("the account's computers outlive a pick and a failed refresh (PR #121 r
 			await latest.selectComputer(computer);
 		});
 		await until(() => connectionStore.getState().phase === "live");
+		/* The list stream is the list's only first read now (the cold-start REST
+		 * read that used to hold `goLive` open until the stream was up is gone),
+		 * so wait for it to be OPEN: ending streams before one is open ends
+		 * nothing. Not `frameCount`: a warm-cache list from an earlier test on the
+		 * same synthetic route paints before any stream opens. */
+		await until(() => latest.streamHealth === "live");
 		/* A pass-through spy (no replacement): Node's own timers must keep their
 		 * receiver and arguments. Only the provider's `run` restarts are read. */
 		const timers = vi.spyOn(globalThis, "setTimeout");
@@ -3690,6 +3776,14 @@ describe("an unnamed session asks the relay nothing (QA round 5, Q10)", () => {
 			});
 		});
 		await until(() => sessionReading.projection !== null);
+		/* The mount's own history read races the seed frame (nothing holds
+		 * `connectCustom` open behind a cold-start list read any more), so wait
+		 * for the request rather than assuming it already landed. */
+		await until(() =>
+			wire.some(
+				(entry) => entry.path === "/api/sessions/synthetic-session/history",
+			),
+		);
 		expect(wire).toContainEqual({
 			method: "GET",
 			path: "/api/sessions/synthetic-session/history",
@@ -3818,6 +3912,426 @@ describe("the cold start reopens the reader's computer (startup restore, PR H)",
 		expect(connectionStore.getState().route).toBeNull();
 	});
 });
+
+/**
+ * WARM RESUME (P1-B/C): the route-level resume owner and the trimmed
+ * conversation resume, through the real provider, the real hook and a loopback
+ * relay. Time away is simulated by moving `Date.now` (the resume clock, the
+ * stream wake rule and the age all read it); the AppState transitions go
+ * through every production listener.
+ */
+describe("warm resume", () => {
+	/* Through the mock's own `emit` (PR #246 R5-N1), so `currentState` tracks
+	 *  the transitions as React Native's does and a later mount reads it right. */
+	const emitAppState = async (state: "background" | "active") => {
+		await act(async () => appState.emit(state));
+	};
+	const awayFor = (ms: number) => {
+		const realNow = Date.now.bind(Date);
+		return vi.spyOn(Date, "now").mockImplementation(() => realNow() + ms);
+	};
+	const count = (events: string[], event: string) =>
+		events.filter((entry) => entry === event).length;
+	const live = async (mock: Awaited<ReturnType<typeof relay>>) => {
+		transport();
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		await until(() => listStore.getState().frameCount > 0);
+	};
+
+	it("a return after > 20 s of silence reopens the list stream at once, not on a backoff", async () => {
+		const mock = await relay({});
+		await live(mock);
+		const before = count(mock.events, "GET /api/sessions/events");
+		await emitAppState("background");
+		const clock = awayFor(30_000);
+		try {
+			await emitAppState("active");
+			await until(
+				() => count(mock.events, "GET /api/sessions/events") > before,
+			);
+		} finally {
+			clock.mockRestore();
+		}
+		// Woken, not polled: one reopen, and the REST list is never re-read.
+		expect(count(mock.events, "GET /api/sessions/events")).toBe(before + 1);
+		expect(mock.events).not.toContain("GET /api/sessions");
+	});
+
+	it("a quick switch with a live list stream reopens nothing", async () => {
+		const mock = await relay({});
+		await live(mock);
+		const before = mock.events.length;
+		await emitAppState("background");
+		await emitAppState("active");
+		await act(async () => {
+			await new Promise<void>((resolve) => setTimeout(resolve, 50));
+		});
+		expect(mock.events.slice(before)).toEqual([]);
+	});
+
+	it("holds the list's stale mark and degraded pill inside the resume window, and paints them once it closes", async () => {
+		const mock = await relay({});
+		await live(mock);
+		await emitAppState("background");
+		const clock = awayFor(30_000);
+		const timers = vi.spyOn(globalThis, "setTimeout");
+		try {
+			// The woken stream's reopens keep failing transiently (the route is
+			// still waking): 503 → `computer-offline`, the retry class.
+			mock.failListStreams(...Array.from({ length: 20 }, () => 503));
+			await emitAppState("active");
+			// The failure reached the transient arm: its 2 s backoff restart is armed ...
+			await until(() => timers.mock.calls.some((call) => call[1] === 2000));
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 100));
+			});
+			// ... and nothing is painted while the window is open.
+			expect(listStore.getState().stale).toBe(false);
+			expect(latest.streamHealth).not.toBe("degraded");
+			expect(latest.lastError).toBeNull();
+		} finally {
+			clock.mockRestore();
+		}
+		// The window is 8 s of real time (RESUME_GRACE_MS); a failure still
+		// standing when it closes is news and paints.
+		const deadline = Date.now() + 12_000;
+		while (!listStore.getState().stale && Date.now() < deadline)
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 100));
+			});
+		expect(listStore.getState().stale).toBe(true);
+		expect(latest.streamHealth).toBe("degraded");
+	}, 20_000);
+
+	it("a typed refusal inside the window is NOT held", async () => {
+		const mock = await relay({});
+		await live(mock);
+		await emitAppState("background");
+		const clock = awayFor(30_000);
+		try {
+			mock.failListStreams(401);
+			await emitAppState("active");
+			await until(() => latest.lastError !== null);
+			expect(latest.streamHealth).toBe("offline");
+		} finally {
+			clock.mockRestore();
+		}
+	});
+
+	it("outside any resume window a transient failure paints stale and degraded at once", async () => {
+		const mock = await relay({});
+		await live(mock);
+		mock.failListStreams(503, 503, 503);
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		await until(() => listStore.getState().stale);
+		expect(latest.streamHealth).toBe("degraded");
+	});
+
+	/* A RELAUNCH is the path that hydrates (PR #246 Q1-4): an explicit
+	 *  `connectCustom` retires the old authorization, which purges the warm
+	 *  cache, so these cases restore the saved route on mount instead. */
+	const relaunch = async (mock: Awaited<ReturnType<typeof relay>>) => {
+		await live(mock);
+		// The first frame of a route is saved; let that sealed write settle.
+		await act(async () => {
+			await new Promise<void>((resolve) => setTimeout(resolve, 20));
+		});
+		durable.saved = {
+			baseUrl: mock.origin,
+			password: "test-only",
+			allowInsecure: true,
+		};
+		await unmount();
+		mock.holdListStreams(true);
+		transport();
+		await mount();
+		await until(() => listStore.getState().frameCount > 0);
+	};
+	const sleep = (ms: number) =>
+		act(async () => {
+			await new Promise<void>((resolve) => setTimeout(resolve, ms));
+		});
+
+	it("a relaunch paints the cached list at once, NOT marked stale, and marks it only if no seed lands within the grace (D1)", async () => {
+		const mock = await relay({});
+		await relaunch(mock);
+		// The rows are up from the cache, with no "Last updated…" flash.
+		expect(listStore.getState().stale).toBe(false);
+		expect(mock.events).not.toContain("GET /api/sessions");
+		// A seed that is genuinely late still says so, after OUTAGE_GRACE_MS.
+		await sleep(OUTAGE_GRACE_MS + 400);
+		expect(listStore.getState().stale).toBe(true);
+	}, 10_000);
+
+	it("a relaunch whose seed lands inside the grace never paints stale (D1)", async () => {
+		const mock = await relay({});
+		await relaunch(mock);
+		const before = listStore.getState().frameCount;
+		mock.holdListStreams(false);
+		await act(async () => {
+			mock.endCatalogueStreams();
+		});
+		await until(() => listStore.getState().frameCount > before);
+		await sleep(OUTAGE_GRACE_MS + 400);
+		expect(listStore.getState().stale).toBe(false);
+	}, 10_000);
+
+	it("an explicit connect from Settings purges the cache instead of painting it (Q1-4)", async () => {
+		const mock = await relay({});
+		await live(mock);
+		const purges = privacy.calls;
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(privacy.calls).toBeGreaterThan(purges);
+	});
+
+	it("a woken reopen that fails at transport level shows no Offline pill inside the window (Q1-2)", async () => {
+		const mock = await relay({});
+		await live(mock);
+		await emitAppState("background");
+		const clock = awayFor(30_000);
+		const seen = new Set<string>();
+		try {
+			mock.failListStreams(503);
+			await emitAppState("active");
+			const deadline = Date.now() + 1_500;
+			while (Date.now() < deadline) {
+				seen.add(pillState(latest.streamHealth, listStore.getState().stale));
+				await sleep(25);
+			}
+		} finally {
+			clock.mockRestore();
+		}
+		// What the list pill actually renders, sampled through the window.
+		expect([...seen].every((state) => state === "connected")).toBe(true);
+	}, 10_000);
+
+	it("a resume reopen that lands quickly never shows Reconnecting… (Q1-3)", async () => {
+		const mock = await relay({});
+		await live(mock);
+		await emitAppState("background");
+		const clock = awayFor(30_000);
+		const seen = new Set<string>();
+		try {
+			const before = count(mock.events, "GET /api/sessions/events");
+			await emitAppState("active");
+			seen.add(pillState(latest.streamHealth, listStore.getState().stale));
+			await until(
+				() => count(mock.events, "GET /api/sessions/events") > before,
+			);
+			for (let i = 0; i < 10; i += 1) {
+				seen.add(pillState(latest.streamHealth, listStore.getState().stale));
+				await sleep(20);
+			}
+		} finally {
+			clock.mockRestore();
+		}
+		expect([...seen]).toEqual(["connected"]);
+	});
+
+	/* Review R5-M1. #244's silent push can start the process already in the
+	 *  BACKGROUND; on an unlocked phone the restore succeeds and both streams
+	 *  open there, then iOS suspends the process and their sockets die without
+	 *  a word (modelled, as above, by 30 s of silence). The user's first
+	 *  `active` must wake them at once, not leave them to the error backoff. */
+	describe("a background launch on an unlocked device (R5-M1)", () => {
+		const restoreAt = async (
+			mock: Awaited<ReturnType<typeof relay>>,
+			launchState: "background" | "inactive" | "active",
+		) => {
+			observedSession = "synthetic-session";
+			await live(mock);
+			durable.saved = {
+				baseUrl: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			};
+			await unmount();
+			const mounted = mock.events.length;
+			appState.currentState = launchState;
+			transport();
+			await mount();
+			// The restore succeeded and the route's streams and reads are up.
+			await until(() => {
+				const since = mock.events.slice(mounted);
+				return (
+					since.includes("GET /api/sessions/events") &&
+					since.includes("GET /api/config/events") &&
+					since.includes("GET /api/models") &&
+					since.includes("GET /api/commands")
+				);
+			});
+			await sleep(50);
+		};
+
+		it("the first foreground wakes the list and config streams at once and re-reads commands/models", async () => {
+			const mock = await relay({ serveCommands: true, serveConfig: true });
+			await restoreAt(mock, "background");
+			const before = mock.events.length;
+			const clock = awayFor(30_000);
+			try {
+				await emitAppState("active");
+				// `until` gives up after 1.5 s: well inside the first 2 s backoff
+				// step, so only a wake (not a backoff restart) passes.
+				await until(() => {
+					const resumed = mock.events.slice(before);
+					return (
+						resumed.includes("GET /api/sessions/events") &&
+						resumed.includes("GET /api/config/events") &&
+						resumed.includes("GET /api/models") &&
+						resumed.includes("GET /api/commands")
+					);
+				});
+			} finally {
+				clock.mockRestore();
+			}
+			const resumed = mock.events.slice(before);
+			expect(count(resumed, "GET /api/sessions/events")).toBe(1);
+			expect(count(resumed, "GET /api/config/events")).toBe(1);
+			expect(count(resumed, "GET /api/models")).toBe(1);
+			expect(count(resumed, "GET /api/commands")).toBe(1);
+		});
+
+		/* Negative controls: a FOREGROUND cold launch — including one whose
+		 *  `initialAppState` still read `inactive` while iOS finished launching —
+		 *  is not a return: its first `active` wakes nothing and opens no resume
+		 *  window, even with the streams silent long enough to qualify. */
+		for (const launchState of ["active", "inactive"] as const) {
+			it(`a foreground launch reporting "${launchState}" wakes nothing on its first active`, async () => {
+				const mock = await relay({ serveCommands: true, serveConfig: true });
+				await restoreAt(mock, launchState);
+				const before = mock.events.length;
+				const clock = awayFor(30_000);
+				try {
+					await emitAppState("active");
+					expect(insideResumeWindow(latest.resumeClock)).toBe(false);
+				} finally {
+					clock.mockRestore();
+				}
+				await sleep(200);
+				/* The open conversation's own resume (`use-session.ts`) runs on
+				 *  every `active` by design and is not the provider's; only the
+				 *  route-level reads count here. */
+				const routeLevel = mock.events
+					.slice(before)
+					.filter(
+						(entry) => !entry.includes("/api/sessions/synthetic-session"),
+					);
+				expect(routeLevel).toEqual([]);
+			});
+		}
+	});
+
+	describe("the conversation's resume reads", () => {
+		const resumeConversation = async (
+			mock: Awaited<ReturnType<typeof relay>>,
+		) => {
+			observedSession = "synthetic-session";
+			await live(mock);
+			await until(() => sessionReading.projection !== null);
+			await until(
+				() =>
+					mock.events.includes("GET /api/models") &&
+					mock.events.includes("GET /api/commands") &&
+					mock.events.includes("GET /api/sessions/synthetic-session/history"),
+			);
+			const before = mock.events.length;
+			await emitAppState("background");
+			const clock = awayFor(30_000);
+			try {
+				await emitAppState("active");
+				await until(() =>
+					mock.events
+						.slice(before)
+						.includes("GET /api/sessions/synthetic-session/events"),
+				);
+				await act(async () => {
+					await new Promise<void>((resolve) => setTimeout(resolve, 150));
+				});
+			} finally {
+				clock.mockRestore();
+			}
+			return mock.events.slice(before);
+		};
+
+		it("an overlapping first frame drops the duplicate newest page, and commands/models are not re-read", async () => {
+			const mock = await relay({ seedRows: "history", serveCommands: true });
+			const resumed = await resumeConversation(mock);
+			expect(resumed).not.toContain(
+				"GET /api/sessions/synthetic-session/history",
+			);
+			expect(resumed).not.toContain("GET /api/commands");
+			expect(resumed).not.toContain("GET /api/models");
+			expect(resumed).toContain("GET /api/sessions/synthetic-session/events");
+		});
+
+		it("a return whose config stream was dead re-reads commands and models once (R3)", async () => {
+			/* The desktop may have changed providers/skills while the phone was
+			 * suspended; the woken config stream's baseline announces nothing
+			 * (`changed_keys: []`), so the resync itself is the re-read signal. */
+			const mock = await relay({ serveCommands: true, serveConfig: true });
+			const resumed = await resumeConversation(mock);
+			await until(() => mock.events.slice(-40).includes("GET /api/models"));
+			expect(resumed).toContain("GET /api/config/events");
+			expect(count(mock.events, "GET /api/models")).toBe(2);
+			expect(count(mock.events, "GET /api/commands")).toBe(2);
+		});
+
+		it("leaving a conversation on a route switch saves it under the route that showed it (R5)", async () => {
+			observedSession = "[redacted]-session";
+			const first = await relay({});
+			await live(first);
+			await until(() => sessionReading.projection !== null);
+			const firstRoute = currentWarmScope()?.routeKey;
+			expect(firstRoute).toBeTruthy();
+			const saves = vi.spyOn(warmCache, "saveSession");
+			try {
+				const second = await relay({});
+				await act(async () => {
+					await latest.connectCustom({
+						url: second.origin,
+						password: "test-only",
+						allowInsecure: true,
+					});
+				});
+				await until(() => currentWarmScope()?.routeKey !== firstRoute);
+				// Every save of the old conversation names the OLD route's key; the
+				// cleanup-time read named the new one.
+				const keys = saves.mock.calls
+					.filter((call) => call[1] === "[redacted]-session")
+					.map((call) => call[0].routeKey);
+				expect(keys.length).toBeGreaterThan(0);
+				expect(keys.every((key) => key === firstRoute)).toBe(true);
+			} finally {
+				saves.mockRestore();
+			}
+		});
+
+		it("a first frame that does not overlap what is held still reads the newest page", async () => {
+			/* Held: the history page's rows (the mount's read). The seed frame
+			 * carries none of them, so nothing proves the gap is closed. */
+			const mock = await relay({ serveCommands: true });
+			const resumed = await resumeConversation(mock);
+			expect(resumed).toContain("GET /api/sessions/synthetic-session/history");
+			expect(resumed).not.toContain("GET /api/models");
+		});
+	});
+});
+
 describe("an interactive Radient sign-in opens the reader's computer (TestFlight 883)", () => {
 	/* The operator's rule, and the cold start's own decision (`coldStartComputer`):
 	 *  exactly one usable computer opens straight away; with several, the last one

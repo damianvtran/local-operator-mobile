@@ -8,6 +8,8 @@ import type {
 	TranscriptEntry,
 } from "@/contracts";
 import {
+	configStore,
+	currentWarmScope,
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
@@ -30,7 +32,11 @@ import {
 	relaySource,
 	type SessionRelaySource,
 } from "@/features/session/relay-source";
-import { createResumeClock, heldTimer } from "@/features/session/resume-hold";
+import {
+	createResumeClock,
+	heldTimer,
+	OUTAGE_GRACE_MS,
+} from "@/features/session/resume-hold";
 import {
 	deviceOnline,
 	INITIAL_STREAM_FACTS,
@@ -46,13 +52,20 @@ import {
 import type { ImageBytes, RelayError } from "@/relay";
 import { readEntry } from "@/state";
 import { isUsable } from "@/state/connection-store";
+import type { WarmScope } from "@/state/warm-cache";
 import { HistoryWindow } from "./history-window";
 import { createResumeGate } from "./resume-gate";
+import {
+	catalogueRereadOnConfig,
+	holdResumeRead,
+	resumeHistoryRead,
+} from "./resume-plan";
 import {
 	type ProjectionOwner,
 	sameProjectionOwner,
 	sessionContent,
 } from "./session-content";
+import { warmCache } from "./warm-store";
 
 /**
  * Everything a session screen reads: the relay client, the projection stream, the
@@ -93,6 +106,9 @@ export interface SessionRuntime {
 	historyErrorScope: "newest" | "older" | null;
 	streaming: boolean;
 	streamingRowId: string | null;
+	/** True while the frame on screen came from the warm cache and no live frame
+	 *  has arrived yet: the conversation is shown as it was when saved, not live. */
+	hydrated: boolean;
 	connection: ConnectionView;
 	/** The session stream's own liveness (the store's flag). */
 	connected: boolean;
@@ -152,10 +168,6 @@ export interface SessionRuntime {
  * and reconnecting through it would both hide that sentence and fight a relay
  * that is refusing on purpose. `after-backoff` is true for a plain transport
  * drop AND for `authorization_deferred`; only the first is silent. */
-/** The relay's own outage grace, `OUTAGE_GRACE_MS` in `store.ts` at 24d328a1:
- *  an outage is REPORTED only once it has stood this long, so a blip never
- *  paints (or speaks) a state the reader would have to un-read. */
-const OUTAGE_GRACE_MS = 2500;
 
 const isTransient = (error: RelayError): boolean =>
 	error.kind === "transport" ||
@@ -330,6 +342,22 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	const currentIdentity = useRef(identity);
 	currentIdentity.current = identity;
 	const projectionOwner = useRef<ProjectionOwner | null>(null);
+	/** Set by a return to the foreground to the resume gate's verdict; the first
+	 *  frame after it decides whether the newest history page is read at all
+	 *  (`resumeHistoryRead`: only when that frame does not overlap what is held).
+	 *  `null` when no return is pending. */
+	const resumePending = useRef<boolean | null>(null);
+	/** Whether the last commands/models read answered both. */
+	const catalogueLoaded = useRef(false);
+	/** Saves this conversation's live frame to the warm cache; replaced per
+	 *  render so the AppState handler always reaches the current owner. */
+	const saveWarmRef = useRef<() => void>(() => undefined);
+	/** Cancels a held resume history read (`holdResumeRead`) on unmount. */
+	const heldHistoryRead = useRef<(() => void) | null>(null);
+	const [historyErrorHeld, setHistoryErrorHeld] = useSessionValue<boolean>(
+		identity,
+		false,
+	);
 
 	/* ------------------------------------------------------------- the stream */
 	useEffect(() => {
@@ -375,7 +403,31 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					projectionOwner.current = owner;
 					lastFrameAt.current = Date.now();
 					retries.current = 0;
+					/* The first frame after a return. Decided BEFORE the frame is
+					 * applied, against what the reader holds: a frame that reaches back
+					 * to the newest held row proves there is no hole, and the newest
+					 * page it would re-download is the same rows (`resume-plan.ts`). */
+					const resumeGateOpen = resumePending.current;
+					resumePending.current = null;
+					const readOnResume =
+						resumeGateOpen !== null &&
+						resumeHistoryRead({
+							gateOpen: resumeGateOpen,
+							frameOverlapsHeld: historyRef.current.overlapsHeld(frame.data),
+						});
 					sessions.getState().applyFrame(sessionId, frame.data);
+					if (readOnResume) {
+						const reader = historyRef.current;
+						heldHistoryRead.current?.();
+						heldHistoryRead.current = holdResumeRead({
+							clock: resumeClock.current,
+							read: () => reader.load(true),
+							retry: () => reader.retry(),
+							failed: () =>
+								reader.error !== null && reader.errorScope === "newest",
+							setHeld: setHistoryErrorHeld,
+						});
+					}
 					// First frame after a drop/stall (a network change lands here too:
 					// native has no route signal, see deviceOnline): re-read the newest
 					// page so a hole the capped frame cannot reveal is found and filled.
@@ -480,6 +532,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		setLoading,
 		setError,
 		setFacts,
+		setHistoryErrorHeld,
 	]);
 
 	/** Consecutive failed reconnects, for the backoff. Reset by any delivered frame,
@@ -518,7 +571,12 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		const subscription = AppState.addEventListener("change", (state) => {
 			// Only "background" means the process may be suspended; "inactive" is
 			// also a system sheet over a running app, which must not hide a drop.
-			if (state === "background") resumeClock.current.background();
+			if (state === "background") {
+				resumeClock.current.background();
+				// The moment that matters for the warm cache: the JS thread still
+				// runs now, and iOS may end the process without another word.
+				saveWarmRef.current();
+			}
 			if (state !== "active") return;
 			// Open the silent window BEFORE anything below can report: the drop
 			// the lock caused, and any timer it armed, are expected, not news.
@@ -546,11 +604,16 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				overdue: false,
 			}));
 			setResumeEpoch((epoch) => epoch + 1);
-			// A return from the background is exactly a reload: re-open the stream (which
-			// re-syncs from a fresh snapshot) and re-read the requests that may have
-			// failed while the app was suspended.
+			// Re-open the stream: its seed frame re-syncs the conversation. The
+			// newest history page is NOT read here any more — the seed carries the
+			// same rows, so the read is deferred to that first frame and runs only
+			// when the frame does not overlap what is held (the hole case #217
+			// heals; `resumeHistoryRead`). Commands and models are not re-read on a
+			// return either: they move on a config change (`catalogueRereadOnConfig`
+			// below), not on a phone being pocketed — unless the last read failed.
+			resumePending.current = readHistory;
 			reconnectRef.current();
-			rereadRef.current(readHistory);
+			if (!catalogueLoaded.current) rereadRef.current(false);
 		});
 		return () => subscription.remove();
 		// The reload refs are current, but the setter also has an identity lease.
@@ -585,6 +648,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 					if (cancelled) return;
 					if (commandList) setCommands(commandList.commands);
 					if (modelList) setModels(modelList.models);
+					/* A failed catalogue read is the one reason a RETURN re-reads
+					 * them (the AppState handler above); a good read waits for a
+					 * config change. */
+					catalogueLoaded.current = commandList !== null && modelList !== null;
 				})
 				.finally(() => {
 					if (!cancelled) setLoading(false);
@@ -608,6 +675,102 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		setModels,
 	]);
 
+	/* ---------------------------------------------------------- the warm cache */
+	/* HYDRATE ON OPEN (`state/warm-cache.ts`). A conversation this process holds
+	 * nothing for — a relaunch after the OS killed the app, or a conversation not
+	 * opened since launch — paints its last saved frame at once instead of a
+	 * blank screen. The entry is `hydrated`, not connected and awaiting its
+	 * snapshot, so every gate that holds before a first frame still holds; the
+	 * seeded age (`savedAt`) makes the age machinery say how old it is rather
+	 * than "live". The first live frame replaces it exactly as it replaces any
+	 * frame of a previous connection. */
+	useEffect(() => {
+		if (!hasSessionId(sessionId)) return;
+		const scope = currentWarmScope();
+		if (scope === null || sessions.getState().entries[sessionId]?.projection)
+			return;
+		const owner = identity;
+		let active = true;
+		void warmCache.loadSession(scope, sessionId).then((cached) => {
+			if (
+				!active ||
+				cached === null ||
+				currentWarmScope() !== scope ||
+				!sameProjectionOwner(owner, currentIdentity.current) ||
+				sessions.getState().entries[sessionId]?.projection
+			)
+				return;
+			// The cache is keyed by account and computer, so this owner IS the
+			// frame's owner; `ownsProjection` needs to know before the store
+			// update re-renders.
+			projectionOwner.current = owner;
+			if (!sessions.getState().hydrate(sessionId, cached.projection)) return;
+			ageOwner.current = owner;
+			lastFrameAt.current = cached.savedAt;
+			setFacts((current) => ({
+				...current,
+				ageMs: Math.max(0, Date.now() - cached.savedAt),
+			}));
+		});
+		return () => {
+			active = false;
+		};
+	}, [identity, sessionId, setFacts]);
+
+	/* SAVE, on three moments and never per frame (frames arrive at up to 10/s and
+	 * a save is one sealed write of up to 700 KB): going to the background, a
+	 * turn ending (below, after the derivations), and leaving the conversation.
+	 * Only a LIVE frame of this owner is saved — re-saving a hydrated one would
+	 * stamp an old frame with a new `savedAt`. */
+	const saveWarmFor = useCallback(
+		(
+			sid: string,
+			owner: ProjectionOwner,
+			scope: WarmScope | null = currentWarmScope(),
+		) => {
+			const held = sessions.getState().entries[sid];
+			if (
+				scope === null ||
+				!held?.projection ||
+				held.hydrated === true ||
+				!sameProjectionOwner(projectionOwner.current, owner)
+			)
+				return;
+			void warmCache.saveSession(scope, sid, held.projection);
+		},
+		[],
+	);
+	saveWarmRef.current = () => saveWarmFor(sessionId, identity);
+	useEffect(() => {
+		const sid = sessionId;
+		const owner = identity;
+		/* The scope is captured HERE, with the owner, not read at cleanup (PR #246
+		 * R5): on a route switch `beginRoute` publishes the new route's scope
+		 * before this cleanup runs, so a cleanup-time read wrote the old route's
+		 * transcript under the new route's key — breaking "only ever read back
+		 * under the account and computer that wrote it". */
+		const scope = currentWarmScope();
+		return () => {
+			heldHistoryRead.current?.();
+			heldHistoryRead.current = null;
+			if (hasSessionId(sid)) saveWarmFor(sid, owner, scope);
+		};
+	}, [sessionId, identity, saveWarmFor]);
+
+	/* CATALOGUES FOLLOW THE CONFIG STREAM, not the AppState. A config frame
+	 * that names any changed key re-reads commands and models; the seed frame
+	 * every (re)connect sends names none and costs nothing
+	 * (`catalogueRereadOnConfig`). */
+	useEffect(() => {
+		let seen = configStore.getState().frameCount;
+		return configStore.subscribe((next) => {
+			if (next.frameCount === seen) return;
+			seen = next.frameCount;
+			if (catalogueRereadOnConfig(next.changedKeys, next.resynced))
+				rereadRef.current(false);
+		});
+	}, []);
+
 	/* ------------------------------------------------------------- derivations */
 	// A cached entry is private to the frame owner. Filtering HERE protects the
 	// header, panels, pending/working facts and composer as well as the row list.
@@ -617,7 +780,18 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		? cachedEntry
 		: readEntry({ entries: {} }, sessionId);
 	const projection = entry.projection;
+	/** The frame on screen is the warm cache's, not a live one. */
+	const hydrated = entry.hydrated === true;
 	if (ownsProjection) historyWindow.accept(projection);
+	/* Turn end is a save moment: the conversation's shape just settled. A
+	 * hydrated frame never counts as running, so it can neither trigger this nor
+	 * offer the composer a "steer" for a turn that may long be over. */
+	const running = !hydrated && projection !== null && turnRunning(projection);
+	const wasRunning = useRef(false);
+	useEffect(() => {
+		if (wasRunning.current && !running) saveWarmRef.current();
+		wasRunning.current = running;
+	}, [running]);
 	const entries = ownsProjection ? historyWindow.visibleRows : EMPTY_HISTORY;
 	const olderRowClaim =
 		historyWindow.read !== "ok" ||
@@ -813,10 +987,10 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	}, []);
 
 	const streamingRowId = useMemo(() => {
-		if (projection?.streaming !== true) return null;
+		if (hydrated || projection?.streaming !== true) return null;
 		const tail = entries[entries.length - 1];
 		return tail ? tail.id : null;
-	}, [projection?.streaming, entries]);
+	}, [hydrated, projection?.streaming, entries]);
 
 	return {
 		source,
@@ -831,8 +1005,9 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		/* `turnRunning`, not the raw flag: the composer's op and the header's
 		 *  "Working" must be one reading (see the predicate). `streamingRowId`
 		 *  above stays on the raw flag — it marks where streamed TEXT lands. */
-		streaming: projection !== null && turnRunning(projection),
+		streaming: running,
 		streamingRowId,
+		hydrated,
 		connection,
 		/** The session stream's own liveness, for the header's status dot
 		 *  (`sessionHealth`: a down link reads "reconnecting", and every frame
@@ -851,7 +1026,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		// re-reads the newest page and must not claim that (PR #207 D1).
 		loadingOlder:
 			historyWindow.loading && historyWindow.loadingScope === "older",
-		historyError: historyWindow.error,
+		/* A newest-page failure inside the resume window is held (one silent
+		 * retry at the window's end, `holdResumeRead`); only what is left after
+		 * that retry is shown. */
+		historyError:
+			historyErrorHeld && historyWindow.errorScope === "newest"
+				? null
+				: historyWindow.error,
 		hasOlder: historyWindow.hasMore,
 		// The notice is for a hole the automatic fill could not close; while the
 		// fill runs the list shows nothing (no flash, no layout jump).

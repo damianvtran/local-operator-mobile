@@ -151,3 +151,32 @@ describe("the purge waits for dispatch as well as storage", () => {
 		expect([...values.keys()]).toEqual([]);
 	});
 });
+
+/** The warm cache (`state/warm-cache.ts`) holds the signed-out account's
+ *  transcripts: every sign-out / rejected login / owner change purges it. */
+describe("the warm cache is wiped by authorization retirement", () => {
+	it("clearAuthorizationData leaves no cached conversation or list behind", async () => {
+		vi.stubGlobal("localStorage", {
+			length: 0,
+			key: () => null,
+			removeItem: () => undefined,
+		});
+		const { warmCache } = await import("./warm-store");
+		const scope = { accountId: "acct", routeKey: "route" };
+		const { loadFixture } = await import("@/testing/fixtures");
+		const { parsePayload } = await import("@/contracts");
+		const frame = parsePayload(
+			"sessionProjection",
+			loadFixture<{ data: unknown }>("sse/sse-projection-live-idle.json").data,
+		);
+		expect(await warmCache.saveSession(scope, "s1", frame)).toBe(true);
+		expect(await warmCache.loadSession(scope, "s1")).not.toBeNull();
+		await clearAuthorizationData();
+		expect(await warmCache.loadSession(scope, "s1")).toBeNull();
+		// And a save attempted while retirement holds the barrier closed is
+		// refused (a cold cache, not an error), so it cannot repopulate.
+		withdrawPrivateWrites();
+		expect(await warmCache.saveSession(scope, "s2", frame)).toBe(false);
+		expect(await warmCache.loadSession(scope, "s2")).toBeNull();
+	});
+});

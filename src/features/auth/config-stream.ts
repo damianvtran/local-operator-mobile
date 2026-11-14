@@ -28,6 +28,8 @@
  * the schema refuses is DROPPED with a warning — the last good value stays,
  * and the drop is never silent.
  */
+
+import { shouldWakeStream } from "@/features/session/resume-plan";
 import { isRelayMissing, type RelayEndpoints, type RelayStream } from "@/relay";
 import type { ConfigStoreApi } from "@/state/config-store";
 
@@ -39,6 +41,12 @@ const DEFAULT_RESTART_MS = 2_000;
 
 export interface ConfigStreamHandle {
 	stop: () => void;
+	/** A return to the foreground (`connection-provider.tsx`'s resume owner).
+	 *  Reopens at once when the stream has been silent past the wake threshold or
+	 *  is waiting out its restart delay; a stream that is terminal (an older
+	 *  relay's 404, or a refusal the reader must act on) stays stopped. Returns
+	 *  whether it reopened. */
+	wake: (now?: number) => boolean;
 }
 
 /**
@@ -54,9 +62,22 @@ export function startConfigStream(
 	let stopped = false;
 	let stream: RelayStream | null = null;
 	let timer: ReturnType<typeof setTimeout> | undefined;
+	/* Wake bookkeeping: when the stream last showed a sign of life, and whether
+	 * it ended for good. A suspended phone's socket dies without a word, so
+	 * silence — not an error — is what a return has to read. */
+	let seenAt: number | null = null;
+	let terminal = false;
+	/* Tags each `run()`'s stream so one a wake retired cannot schedule a
+	 * restart (or flip `terminal`) from a late callback. */
+	let runSeq = 0;
+	/* Set by a wake that actually reopened: the next config frame is the new
+	 * connection's baseline, and what changed while the old one was dead is
+	 * unknown (see `ConfigSnapshot.resynced`). */
+	let resync = false;
 
 	const run = (): void => {
 		if (stopped) return;
+		const seq = ++runSeq;
 		stream = client.configStream({
 			onFrame: (frame) => {
 				if (frame.kind === "malformed") {
@@ -72,18 +93,23 @@ export function startConfigStream(
 					);
 					return;
 				}
+				seenAt = Date.now();
 				if (frame.kind !== "config") return;
-				store.getState().applyFrame(frame.data);
+				store.getState().applyFrame(frame.data, undefined, resync);
+				resync = false;
 			},
 			onState: (status) => {
 				/* An OPEN is what proves the route served: `supported` answers
 				 * "does this relay speak the config stream", and a `404` can never
 				 * open. Frames then carry the value. */
+				if (status.state === "open" || status.state === "rotating")
+					seenAt = Date.now();
 				if (status.state === "open") store.getState().markSupported();
 			},
 			onError: (error) => {
-				if (stopped) return;
+				if (stopped || seq !== runSeq) return;
 				if (isRelayMissing(error)) {
+					terminal = true;
 					store.getState().markAbsent();
 					return;
 				}
@@ -93,9 +119,13 @@ export function startConfigStream(
 					error.surface !== "retry" &&
 					error.surface !== "computer-offline"
 				) {
+					terminal = true;
 					return;
 				}
-				timer = setTimeout(run, restartMs);
+				timer = setTimeout(() => {
+					timer = undefined;
+					run();
+				}, restartMs);
 			},
 		});
 		/* START IT: `SseConnection` is inert until `start()` — the constructor
@@ -110,6 +140,24 @@ export function startConfigStream(
 	run();
 
 	return {
+		wake: (now = Date.now()) => {
+			if (stopped || terminal) return false;
+			if (
+				!shouldWakeStream({
+					silentMs: seenAt === null ? null : now - seenAt,
+					inBackoff: timer !== undefined,
+				})
+			)
+				return false;
+			if (timer !== undefined) clearTimeout(timer);
+			timer = undefined;
+			runSeq += 1;
+			stream?.stop();
+			seenAt = now;
+			resync = true;
+			run();
+			return true;
+		},
 		stop: () => {
 			stopped = true;
 			if (timer !== undefined) clearTimeout(timer);
