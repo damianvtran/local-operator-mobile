@@ -536,6 +536,11 @@ export interface SessionSummary {
 	 *  last rather than render it as an ancient date (the desktop sidebar's rule,
 	 *  #903). */
 	created_at?: number;
+	/** The person's own last message, epoch seconds (possibly fractional),
+	 *  local-operator #3923 / v0.102.5 (`daemon.py` `_merge_summaries`). `null`
+	 *  when unknown, which includes every non-running row; absent on an older
+	 *  daemon. Running rows order by it, falling back to `created_at`. */
+	last_user_at?: number | null;
 	completion_kind: string;
 	/**
 	 * The conversation's tags (`local-operator` PR #2625, v0.82.3). ALWAYS present
