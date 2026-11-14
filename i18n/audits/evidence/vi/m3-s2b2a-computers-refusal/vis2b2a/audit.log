@@ -1,0 +1,52 @@
+$ shasum -a 256 brief-s2b2a.json vi/draft-vi.json
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+6bcbba45988d6560a60bfe91fd629ce77331411277a943417d58e8787abe8c0d  vi/draft-vi.json
+$ python: count '[redacted]' in brief -> 0
+$ git -C worktree log -1 --format=%H -> cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+$ cd worktree && NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/vi/check-vi.mts  (exit 0)
+OK  mobile.computers.refusal.offline_title params=[["subject","text"]] -> studio-mac không phản hồi.
+OK  mobile.computers.refusal.relay_stopped_title params=[["subject","text"]] -> Máy chủ chuyển tiếp không chạy trên studio-mac.
+OK  mobile.computers.refusal.tunnel_gone_title params=[["subject","text"]] -> studio-mac không còn là đường hầm nữa.
+OK  mobile.computers.refusal.console_title params=[["subject","text"]] -> studio-mac cần được xử lý trong Radient.
+OK  mobile.computers.refusal.password_title params=[] -> Mật khẩu đó không được chấp nhận.
+OK  mobile.computers.refusal.sign_in_title params=[["subject","text"]] -> Phiên Radient của bạn đã hết hạn. Đăng nhập để kết nối lại với studio-mac.
+OK  mobile.computers.refusal.retry_title params=[["subject","text"]] -> studio-mac chưa sẵn sàng.
+OK  mobile.computers.refusal.certificate_title params=[] -> Chứng chỉ của đường hầm đó đã bị từ chối.
+OK  mobile.computers.refusal.host_title params=[] -> Không tìm thấy tên miền đó.
+OK  mobile.computers.refusal.offline_next params=[] -> Hãy đánh thức máy tính đó và kiểm tra xem trình kết nối có đang chạy không. Trạng thái gần nhất của máy được hiển thị ở trên.
+OK  mobile.computers.refusal.relay_stopped_next params=[] -> Hãy khởi động lại máy chủ chuyển tiếp và để nó chạy liên tục.
+OK  mobile.computers.refusal.tunnel_gone_next params=[] -> Hãy tạo lại đường hầm trong Radient, rồi thêm máy tính này.
+OK  mobile.computers.refusal.console_next params=[] -> Hãy mở bảng điều khiển Radient để khắc phục ở đó. Đăng nhập trên điện thoại này sẽ không thay đổi được điều đó.
+OK  mobile.computers.refusal.password_next params=[] -> Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính, rồi thử lại.
+OK  mobile.computers.refusal.sign_in_next params=[] -> Hãy đăng nhập lần nữa để kết nối lại. Những gì bạn đã nhập trước đó được cách ly và sẽ không được gửi.
+OK  mobile.computers.refusal.retry_next params=[] -> Thường chỉ là sự cố mạng tạm thời. Hãy thử lại sau giây lát.
+OK  mobile.computers.refusal.certificate_next params=[["scheme","text"]] -> Hãy dùng địa chỉ https:// mà đường hầm đã in ra, chọn đường hầm có chứng chỉ mà điện thoại tin cậy, hoặc thay chứng chỉ tự ký — ứng dụng này sẽ không bỏ qua bước kiểm tra.
+OK  mobile.computers.refusal.host_next params=[] -> Hãy kiểm tra xem địa chỉ có bị gõ sai không, và đường hầm có còn công khai tên miền đó không.
+OK  mobile.computers.refusal.wait_seconds params=[["seconds","plural"]] -> Hãy đợi khoảng 5 giây trước khi thử lại.
+OK  mobile.computers.refusal.try_now params=[] -> Thử ngay
+OK  mobile.computers.refusal.try_again params=[] -> Thử lại
+OK  mobile.computers.refusal.sign_in_again params=[] -> Đăng nhập lại
+OK  mobile.computers.refusal.open_console params=[] -> Mở bảng điều khiển Radient
+OK  mobile.computers.refusal.another_address params=[] -> Dùng địa chỉ khác
+pluralCategory(vi,0)=other
+pluralCategory(vi,1)=other
+pluralCategory(vi,2)=other
+pluralCategory(vi,5)=other
+pluralCategory(vi,21)=other
+pluralCategory(vi,100)=other
+vi wait_seconds n=1: Hãy đợi khoảng 1 giây trước khi thử lại.
+param mismatches: 0
+$ python mechanical checks:
+key set equal: True; order equal: True; count 24
+bidi controls: 0
+non-NFC values: []
+redaction marker in draft: 0; in brief: 0
+Radient preserved where in en: True
+non-ASCII-letter scan for mask chars (*,•,U+FFFD): []
+button try_now: 8 chars (en 7)
+button try_again: 7 chars (en 9)
+button sign_in_again: 13 chars (en 13)
+button open_console: 26 chars (en 24)
+button another_address: 17 chars (en 19)
+$ grep catalogues/vi for phiên đăng nhập / bảng điều khiển / try_now (term precedent)
+$ read refusal-surface.tsx:290-360, button.tsx (labelLines optional, default wraps), variants.ts BUTTON_SIZES md=min-h-11 px-4

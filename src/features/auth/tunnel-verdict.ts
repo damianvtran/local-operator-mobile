@@ -181,6 +181,12 @@ export const verdictOpensWithDetail = (verdict: TunnelTestVerdict): boolean =>
 export function verdictSentence(
 	verdict: TunnelTestVerdict,
 	platform: SentencePlatform,
+	/** The label of the test button ACTUALLY shown beside this verdict, which the
+	 *  local-network sentences name as the control to tap. Defaults to the "Test
+	 *  the connection" button of the own-tunnel screen and the Settings edit form;
+	 *  the Settings saved card passes its own "Test again", or the sentence would
+	 *  point at a button the reader cannot see (#254 deferred finding). */
+	action: string = t("mobile.computers.own_tunnel.test"),
 ): string {
 	switch (verdict.kind) {
 		case "ok":
@@ -236,7 +242,7 @@ export function verdictSentence(
 				 *  even distinguishable from an unreachable computer is what S10
 				 *  measures, so the copy must not assert it (see the kind above). */
 				return t("mobile.computers.own_tunnel.verdict_local_network_ios", {
-					action: t("mobile.computers.own_tunnel.test"),
+					action,
 				});
 			}
 			/* Android carries the machine-side half only while the build targets 36:
@@ -250,7 +256,7 @@ export function verdictSentence(
 			/* `{action}` is the button's own key, so the sentence names the control by
 			 *  the label it carries in every locale. */
 			return t("mobile.computers.own_tunnel.verdict_local_network", {
-				action: t("mobile.computers.own_tunnel.test"),
+				action,
 			});
 		case "refused":
 			return verdict.detail ?? t("mobile.computers.own_tunnel.verdict_refused");

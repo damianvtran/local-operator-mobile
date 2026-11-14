@@ -1,0 +1,139 @@
+{
+ "locale": "ur",
+ "slice": "m3-s2b2a-computers-refusal",
+ "namespace": "mobile.computers.refusal.*",
+ "audit_date": "2026-11-13",
+ "key_count": 24,
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+  "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/ur/draft-ur.json",
+  "sha256": "46211c4e2757deca94e7eab22fd61c95c49f20a83e419929d71d2b5ea7e1233b"
+ },
+ "translator_notes": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/ur/notes-ur.md",
+  "sha256": "37ac053dee05b758e33002dfe43a3e5088c6d2b10bc3339ccb6cda91f0b408ed"
+ },
+ "translator_job": "3e9cacebe527",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "ae9561e2347a",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session system prompt model line; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "reference_worktree": {
+  "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+  "head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+  "messages_ts_sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+ },
+ "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+ "redaction_marker_hits_in_brief": 0,
+ "mechanical": {
+  "keys_match_and_order": true,
+  "placeholders_match_all_24": true,
+  "parse_errors": 0,
+  "ur_cldr_plural_categories": [
+   "one",
+   "other"
+  ],
+  "wait_seconds_arms": [
+   "one",
+   "other"
+  ],
+  "hash_in_every_arm": true,
+  "bidi_controls_found": 0,
+  "nfc": true,
+  "arabic_variant_letters": 0,
+  "devanagari": 0,
+  "ascii_sentence_punct_in_urdu": 0
+ },
+ "verdict": "changes_requested",
+ "counts": {
+  "BLOCKER": 0,
+  "MAJOR": 1,
+  "MINOR": 1,
+  "NIT": 2,
+  "CODE": 2
+ },
+ "current_report_verdict": {
+  "status": "changes_requested",
+  "unresolved_blocker_major_count": 1,
+  "finding_ids": [
+   "UR-F1",
+   "UR-F2",
+   "UR-F3",
+   "UR-F4"
+  ]
+ },
+ "findings": [
+  {
+   "id": "UR-F1",
+   "severity": "MAJOR",
+   "key": "mobile.computers.refusal.sign_in_next",
+   "current": "دوبارہ منسلک ہونے کے لیے پھر سے سائن ان کریں۔ اس سے پہلے ٹائپ کیا گیا سب کچھ قرنطینہ میں رکھ دیا گیا ہے، بھیجا نہیں گیا۔",
+   "problem": "Accuracy on a data-safety promise. 'بھیجا نہیں گیا' (past: 'has not been sent') states only what has happened so far. Right after 'sign in again to reconnect', an Urdu reader can take it as 'not sent yet, it will go once you reconnect'. The context note forbids exactly that reading: the text is held aside and will NOT be sent, even after signing back in.",
+   "suggested": "دوبارہ منسلک ہونے کے لیے پھر سے سائن ان کریں۔ اس سے پہلے ٹائپ کیا گیا سب کچھ قرنطینہ میں رکھ دیا گیا ہے اور بھیجا نہیں جائے گا۔"
+  },
+  {
+   "id": "UR-F2",
+   "severity": "MINOR",
+   "key": "mobile.computers.refusal.console_title",
+   "current": "اس وقت Radient میں {subject} پر توجہ درکار ہے۔",
+   "problem": "The 'اس وقت' (at the moment) opener was added only so the line does not start with Latin. It brings in a sense of something temporary that the source and context lack: the fix is in the console and does not clear on its own. The retry/offline titles mean temporary; this one does not.",
+   "suggested": "آپ کو Radient میں {subject} پر توجہ دینی ہوگی۔"
+  },
+  {
+   "id": "UR-F3",
+   "severity": "NIT",
+   "key": "mobile.computers.refusal.sign_in_title",
+   "current": "… {subject} سے دوبارہ منسلک ہونے کے لیے سائن ان کریں۔",
+   "problem": "The existing catalogue translates the same English phrase 'Sign in to reconnect' (mobile.chrome.home.sign_in) as 'دوبارہ رابطے کے لیے سائن ان کریں'. Both terms are idiomatic, so aligning on one is optional.",
+   "suggested": "آپ کے Radient سیشن کی میعاد ختم ہو گئی ہے۔ {subject} سے دوبارہ رابطے کے لیے سائن ان کریں۔"
+  },
+  {
+   "id": "UR-F4",
+   "severity": "NIT",
+   "key": "mobile.computers.refusal.offline_next",
+   "current": "… جانچیں کہ کنیکٹر چل رہا ہے۔ اس کی آخری معلوم حالت اوپر دی گئی ہے۔",
+   "problem": "'اس کی' directly follows کنیکٹر, so it reads as the connector's state. The context says it is the computer's last known state.",
+   "suggested": "اس کمپیوٹر کو جگائیں، اور جانچیں کہ کنیکٹر چل رہا ہے۔ کمپیوٹر کی آخری معلوم حالت اوپر دی گئی ہے۔"
+  }
+ ],
+ "code_items": [
+  {
+   "id": "UR-C1",
+   "kind": "CODE",
+   "file": "src/ui/components/refusal-surface.tsx (open_console <Button>, component lines ~162-168)",
+   "problem": "The value 'Radient کنسول کھولیں' starts with Latin, and the Button is rendered without labelDir. RN-web dir=\"auto\" takes the first strong character (R) and lays the label out LTR. 'کنسول کھولیں' then sits to the right of 'Radient', so read right-to-left it comes out as 'کنسول کھولیں Radient'. Button.labelDir exists for exactly this case.",
+   "fix": "Pass labelDir={composedDir} to the open_console Button. composedDir is already in scope through useComposedDir(); sign-in.tsx:92 and welcome.tsx:98 do the same. Verify with an Urdu RTL frame."
+  },
+  {
+   "id": "UR-C2",
+   "kind": "CODE",
+   "file": "src/features/auth/connection-provider.tsx:2358",
+   "problem": "The {subject} fallback 'Your computer' is a hard-coded English literal. Six of these Urdu headlines would render e.g. 'اس وقت Your computer سے کوئی جواب نہیں مل رہا۔'. The translated surface is incomplete no matter how good the catalogue values are.",
+   "fix": "Move 'Your computer' into a catalogue key (e.g. mobile.computers.refusal.subject_your_computer; ur suggestion 'آپ کا کمپیوٹر') and resolve it with t(). Out of this translation slice; it is on the operator's 'entire UI' path."
+  }
+ ],
+ "rulings": {
+  "connector_term": "کنیکٹر accepted. It is a standard Urdu tech transliteration (a parallel spelling کنکٹر also exists), the catalogue has no prior term, and the context sentence makes it clear.",
+  "console_title_opener": "'اس وقت' is acceptable mechanically, but it adds a sense of temporariness (UR-F2, MINOR). A Latin opener with no code change on the headline <Text> would flip the line LTR, so the fix is the آپ-led wording, not removing the opener.",
+  "try_again_same_as_common": "Accepted. The English strings are identical too. The separate key allows the two to diverge later, and the screen context makes clear it retries the connection. A longer button text would gain nothing.",
+  "sign_in_next_past": "Rejected as written (UR-F1, MAJOR). The past tense 'بھیجا نہیں گیا' does not carry the 'will not be sent' promise. Use the future 'بھیجا نہیں جائے گا'."
+ },
+ "bidi_analysis": {
+  "values_starting_latin_or_placeholder": [
+   "mobile.computers.refusal.open_console"
+  ],
+  "render_site_dir": "Headline <Text> (HEADLINE[kind](subject)), NEXT <Text> and the wait_seconds <Text> set no dir, so RN-web dir=auto applies. All of their ur values start with an Urdu letter (checked by code point), so each resolves RTL. Only `detail` gets {...composedDir}. The open_console Button has no labelDir → UR-C1.",
+  "certificate_next": "Rendered: '…دکھایا ہوا https:// URL استعمال کریں…'. Paragraph level is RTL (first strong ٹ). In 'https:// URL', ':' and '/' are CS and the space is WS. W4 does not apply (no numbers), so W6 makes them ON. N1: ON between L(s) and L(U) → L. 'https:// URL' is therefore one LTR run, and the spaces between it and the Urdu (R…L, L…R) resolve to the embedding level (N2). Visual order is correct. If {scheme} were followed directly by Urdu, '://' would sit between L and R, resolve R, and display as '//:https'. The 'URL' token prevents that. Same structure as the shipped verdict_tls.",
+  "subject_titles_with_url": "For example offline_title with 'https://abc.trycloudflare.com': paragraph RTL (first strong ا). The CS characters inside the URL (: / .) sit between L characters, so N1 → L and the URL is one LTR run, placed between Urdu runs in correct logical order. A trailing slash would be a hazard, but base URLs are normalized without it (src/connection/profile.ts:54). A port or IP digit run follows L (W7 → L) or forms an EN CS EN chain, which displays correctly. No hazard found in the six {subject} titles."
+ },
+ "observations_non_gating": [
+  "The existing ur catalogue (mobile.computers.own_tunnel.insecure_allow / insecure_off_help) contains U+2066/U+2069 isolates around http:// and https://, contrary to the no-bidi-control rule and docs/direction.ts ('never a control character in the catalogue'). This predates the slice and is outside its scope."
+ ],
+ "audit_notes_not_execution_log": "Findings and rulings are auditor reasoning; command executions are in audit.log."
+}

@@ -59,6 +59,30 @@
 		"role": "meta",
 		"note": "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop."
 	},
+	"mobile.notifications.computer_registration.failed": {
+		"role": "status",
+		"note": "Settings › Notifications, a status line: registering this phone for the computer's push notifications failed for a temporary reason; the app retries when it is opened again."
+	},
+	"mobile.notifications.computer_registration.no_token": {
+		"role": "status",
+		"note": "Settings › Notifications, a status line: the phone's operating system has not given the app a push address (device token), so the computer cannot send push notifications to it. 'Reopen the app' is the remedy."
+	},
+	"mobile.notifications.computer_registration.refused": {
+		"role": "status",
+		"note": "Settings › Notifications, a status line: the computer has revoked or unpaired this phone for push notifications; only the computer's owner can allow it again, from the computer."
+	},
+	"mobile.notifications.computer_registration.registered": {
+		"role": "status",
+		"note": "Settings › Notifications, a status line: the computer the phone is connected to has accepted this phone as a place to send its push notifications. Must not promise that alerts will definitely arrive."
+	},
+	"mobile.notifications.computer_registration.registering": {
+		"role": "status",
+		"note": "Settings › Notifications, a status line while the phone is sending its registration to the computer it is connected to. 'Alerts' are push notifications from that computer (an agent finished, a conversation needs attention)."
+	},
+	"mobile.notifications.computer_registration.relay_missing": {
+		"role": "status",
+		"note": "Settings › Notifications, a status line: the computer runs an older Local Operator (product name, keep in Latin script) that cannot register phones for push notifications."
+	},
 	"mobile.notifications.detail.answer_in_conversation": {
 		"role": "button",
 		"note": "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop."

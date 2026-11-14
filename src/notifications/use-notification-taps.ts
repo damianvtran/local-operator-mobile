@@ -16,8 +16,12 @@ import {
 	subscribeNotificationTaps,
 } from "@/notifications/native";
 import { useCustomSoundPrefetch } from "./use-custom-sound-prefetch";
+import { useSessionPushRegistration } from "./use-session-push-registration";
 
 export const useNotificationTapRouting = (): void => {
+	// Registration first: the prefetch needs the device key a registration
+	// mints, and re-runs on `onPushRegistration` once it lands.
+	useSessionPushRegistration();
 	useCustomSoundPrefetch();
 	useEffect(() => {
 		let cancelled = false;

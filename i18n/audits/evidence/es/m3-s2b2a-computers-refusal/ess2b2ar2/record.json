@@ -1,0 +1,107 @@
+{
+  "locale": "es",
+  "slice": "m3-s2b2a-computers-refusal",
+  "round": 2,
+  "audit_kind": "delta",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft_v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/es/draft-es.json",
+    "sha256": "d1d9734623f37ee5b093c1d6cad4904d5f348b605e84dcd7fb5191049f17fdb9"
+  },
+  "draft_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/es/draft-es-v2.json",
+    "sha256": "7fd8d7014664c96481b7dd9193301b0dcbd907de32630cfa299982ce571d03a7"
+  },
+  "translator_notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/es/notes-es-v2.md",
+    "sha256": "c3e95bb7bd0c96fce8371ff097a4ee61dda70e5008e2b3554ec299f1331c98b9"
+  },
+  "round1_report": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/es/report.md",
+    "sha256": "1433e06b6cf5965bade410dee439ee495e0cce015020d84a69397e85b509bbf0",
+    "auditor_session": "57d45b0513a4",
+    "job": "77bdc3cde194"
+  },
+  "translator_jobs": [
+    "ba7a91cef29d",
+    "825860dfb698"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "b29128e837d8",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt (Model: anthropic/claude-opus-5-5); no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "worktree_head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "catalogues": [
+      "src/i18n/catalogues/es/mobile.computers.json"
+    ],
+    "call_site": "src/ui/components/refusal-surface.tsx:310-326"
+  },
+  "redaction_marker_hits": 0,
+  "delta": {
+    "changed_keys": [
+      "mobile.computers.refusal.relay_stopped_title",
+      "mobile.computers.refusal.try_now",
+      "mobile.computers.refusal.open_console"
+    ],
+    "matches_notes": true,
+    "unchanged_byte_identical": 21,
+    "order_preserved": true
+  },
+  "mechanical": {
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "icu_parse_failures": 0,
+    "placeholder_mismatches": 0,
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "parser": "src/i18n/messages.ts parseMessage params vs English, via tsx, NODE_OPTIONS=--max-old-space-size=256"
+  },
+  "round1_resolution": {
+    "ES-1": "resolved — 'Abrir la consola de Radient'",
+    "ES-2": "resolved — 'Reintentar ahora'; ternary with try_again, never co-rendered",
+    "ES-3": "resolved — 'El relé no se está ejecutando en {subject}.'"
+  },
+  "findings": [],
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 0
+  },
+  "write_location": {
+    "intended": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/es-r2/",
+    "actual": "/Users/damian/.local-operator/sessions/b29128e837d8/scratchpad/es-r2/out",
+    "reason": "guardrail dangerous-delete refused writes in another session's state root"
+  },
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/b29128e837d8/scratchpad/es-r2/out/report.md",
+      "sha256": "750c5406936f29739ac8f9ac96b2bf6b0b4cdf521d4f5100034bd87a26379970"
+    },
+    "audit_log": {
+      "path": "/Users/damian/.local-operator/sessions/b29128e837d8/scratchpad/es-r2/out/audit.log",
+      "sha256": "caa33ddbd6db0d83a7bf61396a350b38fda1f2446516db5efa2012b29397a9f6"
+    },
+    "check_script": {
+      "path": "/Users/damian/.local-operator/sessions/b29128e837d8/scratchpad/es-r2/check.ts",
+      "sha256": "d9c9e9c0b7ea707c1347d001dc202b434c86abecdece431a9705054bf171e041"
+    }
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": []
+  },
+  "audit_notes_not_execution_log": "report.md is analysis; audit.log holds commands actually run"
+}

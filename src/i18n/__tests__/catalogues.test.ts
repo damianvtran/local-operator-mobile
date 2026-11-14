@@ -42,6 +42,8 @@ import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.con
 import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
 import settingsContext from "@/i18n/catalogues/en/mobile.settings.context.json";
 import settings from "@/i18n/catalogues/en/mobile.settings.json";
+import sidebarContext from "@/i18n/catalogues/en/mobile.sidebar.context.json";
+import sidebar from "@/i18n/catalogues/en/mobile.sidebar.json";
 import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import teamBridgeContext from "@/i18n/catalogues/en/mobile.team_bridge.context.json";
@@ -147,7 +149,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 165, // M3 S2b-2b +27: the set-up-a-computer screen (17), refused-address reasons (9), "Your computer" refusal subject (1) (138 + 27 = 165); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 189, // Convergence of #260 onto main caae98bc (#257): 138 + 24 (S2b-2a) + 27 (S2b-2b) = 189, counted over the en JSON; M3 S2b-2b +27: the set-up-a-computer screen (17), refused-address reasons (9), "Your computer" refusal subject (1) (138 + 27 = 165); M3 S2b-2a +24: the connection-failure (refusal) surface: 9 headlines, 9 next lines, wait line, 5 buttons (138 + 24 = 162); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.notifications",
@@ -155,7 +157,9 @@ const NAMESPACES = [
 		context: notificationsContext,
 		// +5: the Settings permission sentences (`permission.*`), moved out of
 		// an English-only table in the Team Bridge push-readiness PR.
-		expected: 32,
+		// +6: the Settings registration sentences (`computer_registration.*`),
+		// fix/session-push-register.
+		expected: 38,
 	},
 	{
 		name: "mobile.session",
@@ -213,7 +217,16 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 70, // M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+		expected: 75, // +4 the account card's `account.signed_in_radient` and the `sign_in_confirm` dialog (PR #258 R1 B1/m1); +1 `diagnostics.reason` (the raw stream-health reason row, Sherman's report); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+	},
+	{
+		/* The conversations drawer's View options (TestFlight 906): the desktop's
+		 *  `ui.chat.sidebar_view.*` words mirrored, plus the phone's ended switch,
+		 *  its hint, the "More sidebar settings" link and the Settings heading. */
+		name: "mobile.sidebar",
+		messages: sidebar,
+		context: sidebarContext,
+		expected: 25,
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -335,7 +348,39 @@ describe("the English catalogues", () => {
 		/* M3 slice S2b-2b (English-first): +27 mobile.computers (set-up-a-computer
 		 * screen 17, refused-address reasons 9, "Your computer" subject 1):
 		 * 812 + 27 = 839, counted over the en JSON. */
-		expect(total).toBe(839);
+		/* M3 slice S2b-2a (English-first): +24 mobile.computers (the refusal
+		 * surface's headlines, next lines, wait line and buttons): 812 + 24 = 836,
+		 * counted over the en JSON. */
+		/* TestFlight 906 drawer View options: + the 21 `mobile.sidebar.*` keys
+		 * (order, grouping, clock, ended, sections, link, heading): 771 + 21 = 792,
+		 * the generator's own count. */
+		/* PR #255 review round 1: + "N sections hidden" and the emptied-by-view
+		 * state's headline, line and action (D2, M1): 792 + 4 = 796. */
+		/* Merge of origin/main (#254, d5831603) into #255: 771 + 41 (S2b-1)
+		 * + 25 (mobile.sidebar: 21 + 4) = 837. */
+		/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
+		 * 812 + 24 (S2b-2a) + 25 (mobile.sidebar) = 861, counted over the en JSON. */
+		/* fix/session-push-register: +6 mobile.notifications (the Settings
+		 * sentence for this phone's registration with the routed computer):
+		 * 812 + 6 = 818. */
+		/* Merge of origin/main (#255, f8d0d8dd) into #259: 837 on main + 6
+		 * mobile.notifications = 843. */
+		/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
+		 * 861 + 6 (mobile.notifications) = 867, counted over the en JSON. */
+		/* fix/settings-signin-status-badge: +1 mobile.settings
+		 * (`diagnostics.reason`, the label of the raw reason-code row; the code
+		 * itself is never a key): 812 + 1 = 813. Review round 1: +4 (the signed-in
+		 * account title and the sign-in confirm's title, body and button):
+		 * 813 + 4 = 817. */
+		/* Merge of origin/main (#255, f8d0d8dd) into #258: 837 on main + 5
+		 * mobile.settings = 842. */
+		/* Merge of origin/main (#259, 9ef19ccd) into #258: 843 on main + 5
+		 * mobile.settings = 848. */
+		/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
+		 * 867 + 5 (mobile.settings) = 872, counted over the en JSON. */
+		/* Convergence of #260 onto main caae98bc (#257): both comment chains kept;
+		 * 872 + 27 (S2b-2b) = 899, counted over the en JSON. */
+		expect(total).toBe(899);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -409,6 +454,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.sidebar.sections":
+			"« Sections » is the French word for the drawer's sections, spelled as in English; the desktop's French catalogue uses the same word (`ui.chat.sidebar_view.sections`).",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.session.fallback_name":

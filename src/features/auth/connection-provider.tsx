@@ -145,6 +145,11 @@ import {
 	SignInSupersededError,
 	signInErrorClass,
 } from "./sign-in-diagnostics";
+import {
+	reasonCodeOf,
+	reasonForStatus,
+	type StreamHealthReason,
+} from "./stream-health-reason";
 
 /**
  * The three stores, as process-wide singletons.
@@ -356,6 +361,10 @@ export type Connection = {
 	/** Stable account owner; rotating the same account token does not change it. */
 	radientAccountId: string | null;
 	streamHealth: StreamHealth;
+	/** The raw code behind `streamHealth` (`stream_stalled`, a gateway reason, a
+	 *  relay code or a `RelayErrorKind`), or null while healthy. Diagnostics only:
+	 *  see `stream-health-reason.ts` for why it is carried and never translated. */
+	streamHealthReason: StreamHealthReason | null;
 	signInState: SignInState;
 	signInDiagnostics: readonly SignInDiagnostic[];
 	/** The last typed failure, for the diagnostics row. Never a status code on a
@@ -528,6 +537,8 @@ export const ConnectionProvider = ({
 	/* See `Connection.restoredAccount`. */
 	const [restoredAccount, setRestoredAccount] = useState(false);
 	const [streamHealth, setStreamHealth] = useState<StreamHealth>("idle");
+	const [streamHealthReason, setStreamHealthReason] =
+		useState<StreamHealthReason | null>(null);
 	const [signInState, setSignInState] = useState<SignInState>({ kind: "idle" });
 	const [signInDiagnostics, setSignInDiagnostics] = useState<
 		SignInDiagnostic[]
@@ -796,6 +807,12 @@ export const ConnectionProvider = ({
 			admission: RouteAdmission,
 		) => {
 			stopStream();
+			/* A new stream is a new route (or a reader's retry): the previous
+			 *  stream's reason describes a failure this stream has not had, and
+			 *  `reasonForStatus` keeps a reason through `connecting`, so without this
+			 *  the first attempt on computer B would show computer A's code. A typed
+			 *  refusal still reaches Diagnostics through `lastError`. */
+			if (mountedRef.current) setStreamHealthReason(null);
 			// Capture before asynchronous delivery: a reset changes the inbox's
 			// watermark domain, even when a reconnect reuses the client object.
 			const listGeneration = listStore.getState().connectionGeneration;
@@ -850,7 +867,11 @@ export const ConnectionProvider = ({
 					},
 					onState: (status) => {
 						if (!admission.isCurrent()) return;
-						if (mountedRef.current) setStreamHealth(healthFrom(status));
+						if (!mountedRef.current) return;
+						setStreamHealth(healthFrom(status));
+						setStreamHealthReason((previous) =>
+							reasonForStatus(status.state, previous),
+						);
 					},
 					onError: (error) => {
 						if (stopped || !admission.isCurrent()) return;
@@ -871,12 +892,22 @@ export const ConnectionProvider = ({
 							 *  pill still read a healthy state 30 s after the relay went away (design
 							 *  round 2, D12 rider). The refusal surface below the row carried the
 							 *  cause; the health was simply never told. */
-							if (mountedRef.current) setStreamHealth("offline");
+							if (mountedRef.current) {
+								setStreamHealth("offline");
+								setStreamHealthReason(reasonCodeOf(error));
+							}
 							noteError(error);
 							return;
 						}
 						listStore.getState().markStale();
-						if (mountedRef.current) setStreamHealth("degraded");
+						/* The retryable branch never reaches `noteError` (it must not raise a
+						 *  refusal surface for a blip), so without this line the code that made
+						 *  the pill say "Not answering" was dropped here and Diagnostics had
+						 *  nothing to show for it. */
+						if (mountedRef.current) {
+							setStreamHealth("degraded");
+							setStreamHealthReason(reasonCodeOf(error));
+						}
 						_attempt += 1;
 						/* The conversation stream's policy (`reconnectDelay`), so the two
 						 * streams of one route back off alike: 2 s, doubling to a 15 s
@@ -1831,6 +1862,7 @@ export const ConnectionProvider = ({
 						await Promise.all([retired, loggedOut]);
 						if (!isCurrent()) return false;
 						setStreamHealth("idle");
+						setStreamHealthReason(null);
 						setLastError(null);
 						setSignInState({ kind: "idle" });
 						retryRef.current = null;
@@ -2414,6 +2446,7 @@ export const ConnectionProvider = ({
 			busy,
 			coldStartSettled,
 			streamHealth,
+			streamHealthReason,
 			signInState,
 			signInDiagnostics,
 			lastError,
@@ -2442,6 +2475,7 @@ export const ConnectionProvider = ({
 			busy,
 			coldStartSettled,
 			streamHealth,
+			streamHealthReason,
 			signInState,
 			signInDiagnostics,
 			lastError,

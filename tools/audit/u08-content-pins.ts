@@ -1688,6 +1688,71 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
+	/* M3 S2b-2a (feat/i18n-m3-s2b2): the refusal surface's keys (English-first;
+	 * `catalogue.gen.ts` is regenerated with the translations), the remedy line
+	 * via `own_tunnel.remedy`, `verdictSentence`'s caller-supplied action label
+	 * and their tests. Re-derived last with --print over the committed tree
+	 * (b3af2b96); only `src` moved. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* M3 S2b-2a translations: the six LTR locales' and ur's 24 refusal values,
+	 * the regenerated `catalogue.gen.ts`, the ur UR-C1 `labelDir` on the
+	 * refusal surface's console button and its tests. Re-derived last with
+	 * --print over the committed tree (6efad9e8); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* #257 round-1 remediation: the native `writingDirection` channel of
+	 * `composedDirection` (D1), the refusal headline/next spreads (D2), the
+	 * shared DIAGNOSTIC_FALLBACK module (N2) and their tests. Re-derived last
+	 * with --print over the committed tree (3121fd36); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* #257 CI fix: the verdict-Alert site scan in ur-latin-initial-sites.test.ts
+	 * anchors on the call opening. Re-derived last with --print over the
+	 * committed tree (c1e52685); only `src` moved. Source identity only, NOT
+	 * rendered U-08 evidence. */
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
+	 * view state, customised trigger fill): re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
+	/* fix/session-push-register: the app now POSTs /api/push/register for the
+	 * routed computer (session-push-registration*, use-session-push-registration),
+	 * Settings › Notifications gains one registration sentence (+6
+	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
+	 * a REGION id. Re-derived with --print over the staged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #259 review round 1 remediation: the registration hook keyed on
+	 * routeKey/live/revision with the relay accessor read through a ref, a
+	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
+	 * No rendered surface changed. Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
+	/* fix/settings-signin-status-badge: the signed-out account card as a
+	 * Radient sign-in nav card, the connection pill's one-line fit in the
+	 * Settings Status row and the drawer header (`status-pill-layout.ts`), and
+	 * the Diagnostics `reason:` row with its provider plumbing and the one new
+	 * mobile.settings key (813 keys). Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only, NOT rendered U-08 evidence:
+	 * the Settings and drawer cells must be re-captured against this tree. */
+	/* PR #258 agent review round-1 remediation: the account card moves to
+	 * `account-card.tsx`, gated on `radientSignedIn` with a confirm before it
+	 * ends a working direct route; Diagnostics' reason row ignores a past
+	 * `lastError` beside a live stream; the dot leaves the identifier rule; four
+	 * mobile.settings keys (817). Re-derived with --print over the staged tree;
+	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Merge of origin/main (#259, 9ef19ccd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
 	/* M3 S2b-2b (feat/i18n-m3-s2b2b, English-first): the dead ConnectorWaitPanel
 	 * deleted, the set-up-a-computer screen keyed, `profile.ts` returning
 	 * refused-address codes mapped to keys in `tunnel-verdict.ts`, the
@@ -1701,7 +1766,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * the single-token `setup.tui_label`. Re-derived last with --print over the
 	 * committed tree (10530706); only `src` moved. Source identity
 	 * only, NOT rendered U-08 evidence. */
-	src: "0fcbf2963cbb24919cf50e11b17beb4d790b7de85a6b8b0633cc6aeeda4e6847",
+	src: "PLACEHOLDER-until-step-C",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

@@ -94,8 +94,16 @@ export const Input = ({
 	const keyboardAppearance = useKeyboardAppearance();
 	/* Widened to `object` for the reason `Button` gives: `dir` is a
 	 *  react-native-web prop that React Native's `TextInputProps` does not declare.
-	 *  Empty object once anything is typed — see `placeholderDir`. */
-	const emptyDir: object = value === "" ? (placeholderDir ?? {}) : {};
+	 *  Empty object once anything is typed — see `placeholderDir`.
+	 *
+	 *  ONLY the web `dir` is forwarded. On native `useComposedDir()` answers with a
+	 *  `writingDirection` style (`@/ui/direction`), and spread here it would replace
+	 *  this field's own `style` (the touch floor). Whether a native TextInput's
+	 *  placeholder honours `writingDirection` at all is not established, so the
+	 *  native placeholder keeps its pre-#257 behaviour rather than gain an
+	 *  unmeasured style on a password field. */
+	const emptyDir: object =
+		value === "" && placeholderDir?.dir ? { dir: placeholderDir.dir } : {};
 	return (
 		<View className="gap-1.5">
 			{/* Visible label as well as the accessible name: a reader who can see the

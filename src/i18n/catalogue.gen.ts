@@ -193,6 +193,30 @@ export type CatalogueKey =
 	| "mobile.computers.protected"
 	| "mobile.computers.reach.answering"
 	| "mobile.computers.refresh"
+	| "mobile.computers.refusal.another_address"
+	| "mobile.computers.refusal.certificate_next"
+	| "mobile.computers.refusal.certificate_title"
+	| "mobile.computers.refusal.console_next"
+	| "mobile.computers.refusal.console_title"
+	| "mobile.computers.refusal.host_next"
+	| "mobile.computers.refusal.host_title"
+	| "mobile.computers.refusal.offline_next"
+	| "mobile.computers.refusal.offline_title"
+	| "mobile.computers.refusal.open_console"
+	| "mobile.computers.refusal.password_next"
+	| "mobile.computers.refusal.password_title"
+	| "mobile.computers.refusal.relay_stopped_next"
+	| "mobile.computers.refusal.relay_stopped_title"
+	| "mobile.computers.refusal.retry_next"
+	| "mobile.computers.refusal.retry_title"
+	| "mobile.computers.refusal.sign_in_again"
+	| "mobile.computers.refusal.sign_in_next"
+	| "mobile.computers.refusal.sign_in_title"
+	| "mobile.computers.refusal.try_again"
+	| "mobile.computers.refusal.try_now"
+	| "mobile.computers.refusal.tunnel_gone_next"
+	| "mobile.computers.refusal.tunnel_gone_title"
+	| "mobile.computers.refusal.wait_seconds"
 	| "mobile.computers.remove.body"
 	| "mobile.computers.remove.confirm"
 	| "mobile.computers.remove.title"
@@ -377,6 +401,12 @@ export type CatalogueKey =
 	| "mobile.notifications.channel.tape_warble"
 	| "mobile.notifications.channel.task_complete"
 	| "mobile.notifications.channel.two_note_chime"
+	| "mobile.notifications.computer_registration.failed"
+	| "mobile.notifications.computer_registration.no_token"
+	| "mobile.notifications.computer_registration.refused"
+	| "mobile.notifications.computer_registration.registered"
+	| "mobile.notifications.computer_registration.registering"
+	| "mobile.notifications.computer_registration.relay_missing"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -567,6 +597,7 @@ export type CatalogueKey =
 	| "mobile.settings.account.route_direct"
 	| "mobile.settings.account.route_radient"
 	| "mobile.settings.account.signed_in"
+	| "mobile.settings.account.signed_in_radient"
 	| "mobile.settings.connection.computers"
 	| "mobile.settings.connection.refresh"
 	| "mobile.settings.connection.status"
@@ -574,6 +605,7 @@ export type CatalogueKey =
 	| "mobile.settings.diagnostics.last_error"
 	| "mobile.settings.diagnostics.none"
 	| "mobile.settings.diagnostics.privacy_note"
+	| "mobile.settings.diagnostics.reason"
 	| "mobile.settings.diagnostics.route"
 	| "mobile.settings.diagnostics.route_direct"
 	| "mobile.settings.diagnostics.route_radient"
@@ -599,6 +631,9 @@ export type CatalogueKey =
 	| "mobile.settings.section.appearance"
 	| "mobile.settings.section.connection"
 	| "mobile.settings.section.diagnostics"
+	| "mobile.settings.sign_in_confirm.body"
+	| "mobile.settings.sign_in_confirm.confirm"
+	| "mobile.settings.sign_in_confirm.title"
 	| "mobile.settings.sign_out.body"
 	| "mobile.settings.sign_out.confirm"
 	| "mobile.settings.sign_out.done"
@@ -628,6 +663,31 @@ export type CatalogueKey =
 	| "mobile.settings.theme.section_dark"
 	| "mobile.settings.theme.section_light"
 	| "mobile.settings.theme.title"
+	| "mobile.sidebar.basis.created"
+	| "mobile.sidebar.basis.last_active"
+	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty_by_view.headline"
+	| "mobile.sidebar.empty_by_view.next"
+	| "mobile.sidebar.empty_by_view.reset"
+	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.time_section"
+	| "mobile.sidebar.group_by"
+	| "mobile.sidebar.hidden_sections"
+	| "mobile.sidebar.more_settings"
+	| "mobile.sidebar.order.active_first"
+	| "mobile.sidebar.order.most_recent"
+	| "mobile.sidebar.order_by"
+	| "mobile.sidebar.section.older"
+	| "mobile.sidebar.section.pinned"
+	| "mobile.sidebar.section.running"
+	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.week"
+	| "mobile.sidebar.sections"
+	| "mobile.sidebar.settings_heading"
+	| "mobile.sidebar.show_ended"
+	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.time_basis"
+	| "mobile.sidebar.view_options"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
@@ -1013,6 +1073,22 @@ export type NoParamKey =
 	| "mobile.computers.protected"
 	| "mobile.computers.reach.answering"
 	| "mobile.computers.refresh"
+	| "mobile.computers.refusal.another_address"
+	| "mobile.computers.refusal.certificate_title"
+	| "mobile.computers.refusal.console_next"
+	| "mobile.computers.refusal.host_next"
+	| "mobile.computers.refusal.host_title"
+	| "mobile.computers.refusal.offline_next"
+	| "mobile.computers.refusal.open_console"
+	| "mobile.computers.refusal.password_next"
+	| "mobile.computers.refusal.password_title"
+	| "mobile.computers.refusal.relay_stopped_next"
+	| "mobile.computers.refusal.retry_next"
+	| "mobile.computers.refusal.sign_in_again"
+	| "mobile.computers.refusal.sign_in_next"
+	| "mobile.computers.refusal.try_again"
+	| "mobile.computers.refusal.try_now"
+	| "mobile.computers.refusal.tunnel_gone_next"
 	| "mobile.computers.remove.body"
 	| "mobile.computers.remove.confirm"
 	| "mobile.computers.remove.title"
@@ -1177,6 +1253,12 @@ export type NoParamKey =
 	| "mobile.notifications.channel.tape_warble"
 	| "mobile.notifications.channel.task_complete"
 	| "mobile.notifications.channel.two_note_chime"
+	| "mobile.notifications.computer_registration.failed"
+	| "mobile.notifications.computer_registration.no_token"
+	| "mobile.notifications.computer_registration.refused"
+	| "mobile.notifications.computer_registration.registered"
+	| "mobile.notifications.computer_registration.registering"
+	| "mobile.notifications.computer_registration.relay_missing"
 	| "mobile.notifications.detail.answer_in_conversation"
 	| "mobile.notifications.detail.conversation_asks"
 	| "mobile.notifications.detail.earlier_updates"
@@ -1328,6 +1410,7 @@ export type NoParamKey =
 	| "mobile.settings.account.not_signed_in"
 	| "mobile.settings.account.route_radient"
 	| "mobile.settings.account.signed_in"
+	| "mobile.settings.account.signed_in_radient"
 	| "mobile.settings.connection.computers"
 	| "mobile.settings.connection.refresh"
 	| "mobile.settings.connection.status"
@@ -1335,6 +1418,7 @@ export type NoParamKey =
 	| "mobile.settings.diagnostics.last_error"
 	| "mobile.settings.diagnostics.none"
 	| "mobile.settings.diagnostics.privacy_note"
+	| "mobile.settings.diagnostics.reason"
 	| "mobile.settings.diagnostics.route"
 	| "mobile.settings.diagnostics.route_direct"
 	| "mobile.settings.diagnostics.route_radient"
@@ -1360,6 +1444,9 @@ export type NoParamKey =
 	| "mobile.settings.section.appearance"
 	| "mobile.settings.section.connection"
 	| "mobile.settings.section.diagnostics"
+	| "mobile.settings.sign_in_confirm.body"
+	| "mobile.settings.sign_in_confirm.confirm"
+	| "mobile.settings.sign_in_confirm.title"
 	| "mobile.settings.sign_out.body"
 	| "mobile.settings.sign_out.confirm"
 	| "mobile.settings.sign_out.done"
@@ -1378,6 +1465,30 @@ export type NoParamKey =
 	| "mobile.settings.theme.search_label"
 	| "mobile.settings.theme.search_placeholder"
 	| "mobile.settings.theme.title"
+	| "mobile.sidebar.basis.created"
+	| "mobile.sidebar.basis.last_active"
+	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty_by_view.headline"
+	| "mobile.sidebar.empty_by_view.next"
+	| "mobile.sidebar.empty_by_view.reset"
+	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.time_section"
+	| "mobile.sidebar.group_by"
+	| "mobile.sidebar.more_settings"
+	| "mobile.sidebar.order.active_first"
+	| "mobile.sidebar.order.most_recent"
+	| "mobile.sidebar.order_by"
+	| "mobile.sidebar.section.older"
+	| "mobile.sidebar.section.pinned"
+	| "mobile.sidebar.section.running"
+	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.week"
+	| "mobile.sidebar.sections"
+	| "mobile.sidebar.settings_heading"
+	| "mobile.sidebar.show_ended"
+	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.time_basis"
+	| "mobile.sidebar.view_options"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
@@ -1753,6 +1864,30 @@ export type MessageParams = {
 	"mobile.computers.protected": NoParams;
 	"mobile.computers.reach.answering": NoParams;
 	"mobile.computers.refresh": NoParams;
+	"mobile.computers.refusal.another_address": NoParams;
+	"mobile.computers.refusal.certificate_next": { scheme: string | number };
+	"mobile.computers.refusal.certificate_title": NoParams;
+	"mobile.computers.refusal.console_next": NoParams;
+	"mobile.computers.refusal.console_title": { subject: string | number };
+	"mobile.computers.refusal.host_next": NoParams;
+	"mobile.computers.refusal.host_title": NoParams;
+	"mobile.computers.refusal.offline_next": NoParams;
+	"mobile.computers.refusal.offline_title": { subject: string | number };
+	"mobile.computers.refusal.open_console": NoParams;
+	"mobile.computers.refusal.password_next": NoParams;
+	"mobile.computers.refusal.password_title": NoParams;
+	"mobile.computers.refusal.relay_stopped_next": NoParams;
+	"mobile.computers.refusal.relay_stopped_title": { subject: string | number };
+	"mobile.computers.refusal.retry_next": NoParams;
+	"mobile.computers.refusal.retry_title": { subject: string | number };
+	"mobile.computers.refusal.sign_in_again": NoParams;
+	"mobile.computers.refusal.sign_in_next": NoParams;
+	"mobile.computers.refusal.sign_in_title": { subject: string | number };
+	"mobile.computers.refusal.try_again": NoParams;
+	"mobile.computers.refusal.try_now": NoParams;
+	"mobile.computers.refusal.tunnel_gone_next": NoParams;
+	"mobile.computers.refusal.tunnel_gone_title": { subject: string | number };
+	"mobile.computers.refusal.wait_seconds": { seconds: number };
 	"mobile.computers.remove.body": NoParams;
 	"mobile.computers.remove.confirm": NoParams;
 	"mobile.computers.remove.title": NoParams;
@@ -1937,6 +2072,12 @@ export type MessageParams = {
 	"mobile.notifications.channel.tape_warble": NoParams;
 	"mobile.notifications.channel.task_complete": NoParams;
 	"mobile.notifications.channel.two_note_chime": NoParams;
+	"mobile.notifications.computer_registration.failed": NoParams;
+	"mobile.notifications.computer_registration.no_token": NoParams;
+	"mobile.notifications.computer_registration.refused": NoParams;
+	"mobile.notifications.computer_registration.registered": NoParams;
+	"mobile.notifications.computer_registration.registering": NoParams;
+	"mobile.notifications.computer_registration.relay_missing": NoParams;
 	"mobile.notifications.detail.answer_in_conversation": NoParams;
 	"mobile.notifications.detail.conversation_asks": NoParams;
 	"mobile.notifications.detail.earlier_updates": NoParams;
@@ -2127,6 +2268,7 @@ export type MessageParams = {
 	"mobile.settings.account.route_direct": { baseUrl: string | number };
 	"mobile.settings.account.route_radient": NoParams;
 	"mobile.settings.account.signed_in": NoParams;
+	"mobile.settings.account.signed_in_radient": NoParams;
 	"mobile.settings.connection.computers": NoParams;
 	"mobile.settings.connection.refresh": NoParams;
 	"mobile.settings.connection.status": NoParams;
@@ -2134,6 +2276,7 @@ export type MessageParams = {
 	"mobile.settings.diagnostics.last_error": NoParams;
 	"mobile.settings.diagnostics.none": NoParams;
 	"mobile.settings.diagnostics.privacy_note": NoParams;
+	"mobile.settings.diagnostics.reason": NoParams;
 	"mobile.settings.diagnostics.route": NoParams;
 	"mobile.settings.diagnostics.route_direct": NoParams;
 	"mobile.settings.diagnostics.route_radient": NoParams;
@@ -2159,6 +2302,9 @@ export type MessageParams = {
 	"mobile.settings.section.appearance": NoParams;
 	"mobile.settings.section.connection": NoParams;
 	"mobile.settings.section.diagnostics": NoParams;
+	"mobile.settings.sign_in_confirm.body": NoParams;
+	"mobile.settings.sign_in_confirm.confirm": NoParams;
+	"mobile.settings.sign_in_confirm.title": NoParams;
 	"mobile.settings.sign_out.body": NoParams;
 	"mobile.settings.sign_out.confirm": NoParams;
 	"mobile.settings.sign_out.done": NoParams;
@@ -2188,6 +2334,31 @@ export type MessageParams = {
 	"mobile.settings.theme.section_dark": { count: string | number };
 	"mobile.settings.theme.section_light": { count: string | number };
 	"mobile.settings.theme.title": NoParams;
+	"mobile.sidebar.basis.created": NoParams;
+	"mobile.sidebar.basis.last_active": NoParams;
+	"mobile.sidebar.clock_hint": NoParams;
+	"mobile.sidebar.empty_by_view.headline": NoParams;
+	"mobile.sidebar.empty_by_view.next": NoParams;
+	"mobile.sidebar.empty_by_view.reset": NoParams;
+	"mobile.sidebar.group.one_list": NoParams;
+	"mobile.sidebar.group.time_section": NoParams;
+	"mobile.sidebar.group_by": NoParams;
+	"mobile.sidebar.hidden_sections": { count: number };
+	"mobile.sidebar.more_settings": NoParams;
+	"mobile.sidebar.order.active_first": NoParams;
+	"mobile.sidebar.order.most_recent": NoParams;
+	"mobile.sidebar.order_by": NoParams;
+	"mobile.sidebar.section.older": NoParams;
+	"mobile.sidebar.section.pinned": NoParams;
+	"mobile.sidebar.section.running": NoParams;
+	"mobile.sidebar.section.today": NoParams;
+	"mobile.sidebar.section.week": NoParams;
+	"mobile.sidebar.sections": NoParams;
+	"mobile.sidebar.settings_heading": NoParams;
+	"mobile.sidebar.show_ended": NoParams;
+	"mobile.sidebar.show_ended_hint": NoParams;
+	"mobile.sidebar.time_basis": NoParams;
+	"mobile.sidebar.view_options": NoParams;
 	"mobile.signin.diagnostics": NoParams;
 	"mobile.signin.failed": NoParams;
 	"mobile.signin.hide_diagnostics": NoParams;
@@ -2611,6 +2782,30 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.protected": "Sign-in protected",
 	"mobile.computers.reach.answering": "answering",
 	"mobile.computers.refresh": "Refresh",
+	"mobile.computers.refusal.another_address": "Use another address",
+	"mobile.computers.refusal.certificate_next": "Use the {scheme} address the tunnel printed, choose a tunnel with a certificate a phone will trust, or replace a self-signed certificate — this app will not skip the check.",
+	"mobile.computers.refusal.certificate_title": "That tunnel's certificate was rejected.",
+	"mobile.computers.refusal.console_next": "Open the Radient console to fix it there. Signing in on this phone will not change it.",
+	"mobile.computers.refusal.console_title": "{subject} needs attention in Radient.",
+	"mobile.computers.refusal.host_next": "Check the address for a typo, and that the tunnel still publishes that name.",
+	"mobile.computers.refusal.host_title": "That host name could not be found.",
+	"mobile.computers.refusal.offline_next": "Wake that computer, and check the connector is running. Its last known state is above.",
+	"mobile.computers.refusal.offline_title": "{subject} is not answering.",
+	"mobile.computers.refusal.open_console": "Open the Radient console",
+	"mobile.computers.refusal.password_next": "Check the relay password on the computer, then try again.",
+	"mobile.computers.refusal.password_title": "That password was not accepted.",
+	"mobile.computers.refusal.relay_stopped_next": "Start the relay again and leave it running.",
+	"mobile.computers.refusal.relay_stopped_title": "The relay is not running on {subject}.",
+	"mobile.computers.refusal.retry_next": "Usually a passing network problem. Try again in a moment.",
+	"mobile.computers.refusal.retry_title": "{subject} is not ready yet.",
+	"mobile.computers.refusal.sign_in_again": "Sign in again",
+	"mobile.computers.refusal.sign_in_next": "Sign in again to reconnect. Anything typed before this is quarantined, not sent.",
+	"mobile.computers.refusal.sign_in_title": "Your Radient session expired. Sign in to reconnect to {subject}.",
+	"mobile.computers.refusal.try_again": "Try again",
+	"mobile.computers.refusal.try_now": "Try now",
+	"mobile.computers.refusal.tunnel_gone_next": "Create a tunnel again in Radient, then add this computer.",
+	"mobile.computers.refusal.tunnel_gone_title": "{subject} is no longer a tunnel.",
+	"mobile.computers.refusal.wait_seconds": "Wait about {seconds, plural, one {# second} other {# seconds}} before trying again.",
 	"mobile.computers.remove.body": "This removes it from the list on this phone. It does not touch the computer, its tunnel, or your account.",
 	"mobile.computers.remove.confirm": "Remove",
 	"mobile.computers.remove.title": "Remove this computer?",
@@ -2795,6 +2990,12 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.channel.tape_warble": "Tape warble",
 	"mobile.notifications.channel.task_complete": "Task complete",
 	"mobile.notifications.channel.two_note_chime": "Two-note chime",
+	"mobile.notifications.computer_registration.failed": "Could not register this phone for alerts from this computer. It tries again when you reopen the app.",
+	"mobile.notifications.computer_registration.no_token": "This phone has no push address yet, so this computer cannot alert it. Reopen the app to try again.",
+	"mobile.notifications.computer_registration.refused": "This computer has turned off alerts for this phone. They stay off until they are allowed again on the computer.",
+	"mobile.notifications.computer_registration.registered": "This phone is registered for alerts from this computer.",
+	"mobile.notifications.computer_registration.registering": "Registering this phone for alerts from this computer.",
+	"mobile.notifications.computer_registration.relay_missing": "This computer needs a Local Operator update before it can alert this phone.",
 	"mobile.notifications.detail.answer_in_conversation": "Answer in conversation",
 	"mobile.notifications.detail.conversation_asks": "This conversation's asks",
 	"mobile.notifications.detail.earlier_updates": "Earlier updates",
@@ -2985,6 +3186,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.account.route_direct": "Connected directly to {baseUrl}",
 	"mobile.settings.account.route_radient": "Through your Radient tunnel",
 	"mobile.settings.account.signed_in": "Signed in",
+	"mobile.settings.account.signed_in_radient": "Signed in with Radient",
 	"mobile.settings.connection.computers": "Computers",
 	"mobile.settings.connection.refresh": "Refresh",
 	"mobile.settings.connection.status": "Status",
@@ -2992,6 +3194,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.diagnostics.last_error": "Last error",
 	"mobile.settings.diagnostics.none": "None",
 	"mobile.settings.diagnostics.privacy_note": "These lines never include a token, a password, or a session's content.",
+	"mobile.settings.diagnostics.reason": "Reason",
 	"mobile.settings.diagnostics.route": "Route",
 	"mobile.settings.diagnostics.route_direct": "Direct relay",
 	"mobile.settings.diagnostics.route_radient": "Radient tunnel",
@@ -3017,6 +3220,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.section.appearance": "Appearance",
 	"mobile.settings.section.connection": "Connection",
 	"mobile.settings.section.diagnostics": "Diagnostics",
+	"mobile.settings.sign_in_confirm.body": "This ends your current connection first. If you stop before sign-in finishes, you will need to connect to your computer again.",
+	"mobile.settings.sign_in_confirm.confirm": "Sign in",
+	"mobile.settings.sign_in_confirm.title": "Sign in with Radient?",
 	"mobile.settings.sign_out.body": "This ends the session with the control plane as well as forgetting it here, so the tunnel stops accepting requests from this phone. Your computer is not touched.",
 	"mobile.settings.sign_out.confirm": "Sign out",
 	"mobile.settings.sign_out.done": "Signed out. The session was revoked on your computer.",
@@ -3046,6 +3252,31 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.theme.section_dark": "Dark ({count})",
 	"mobile.settings.theme.section_light": "Light ({count})",
 	"mobile.settings.theme.title": "Theme",
+	"mobile.sidebar.basis.created": "Created",
+	"mobile.sidebar.basis.last_active": "Last active",
+	"mobile.sidebar.clock_hint": "Dates and ordering follow the selected clock.",
+	"mobile.sidebar.empty_by_view.headline": "Your view options hide every conversation.",
+	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
+	"mobile.sidebar.empty_by_view.reset": "Reset view",
+	"mobile.sidebar.group.one_list": "In one list",
+	"mobile.sidebar.group.time_section": "Time section",
+	"mobile.sidebar.group_by": "Group by",
+	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
+	"mobile.sidebar.more_settings": "More sidebar settings",
+	"mobile.sidebar.order.active_first": "Active first",
+	"mobile.sidebar.order.most_recent": "Most recent",
+	"mobile.sidebar.order_by": "Order by",
+	"mobile.sidebar.section.older": "Older",
+	"mobile.sidebar.section.pinned": "Pinned",
+	"mobile.sidebar.section.running": "Running",
+	"mobile.sidebar.section.today": "Today",
+	"mobile.sidebar.section.week": "This week",
+	"mobile.sidebar.sections": "Sections",
+	"mobile.sidebar.settings_heading": "Sidebar",
+	"mobile.sidebar.show_ended": "Show ended sessions",
+	"mobile.sidebar.show_ended_hint": "Pinned and running conversations always show.",
+	"mobile.sidebar.time_basis": "Time basis",
+	"mobile.sidebar.view_options": "View options",
 	"mobile.signin.diagnostics": "Sign-in diagnostics",
 	"mobile.signin.failed": "We could not finish signing in.",
 	"mobile.signin.hide_diagnostics": "Hide sign-in details",
@@ -3409,7 +3640,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.password_slot_this": { role: "help", note: "Help under the password field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account), when the phone's saved password already belongs to this address." },
 	"mobile.computers.own_tunnel.private_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is a private (home or office network) one." },
 	"mobile.computers.own_tunnel.public_host": { role: "status", note: "Warning line on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when plain http is allowed and the address is reachable on the public internet. Keep the warning strong." },
-	"mobile.computers.own_tunnel.remedy": { role: "help", note: "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right." },
+	"mobile.computers.own_tunnel.remedy": { role: "help", note: "A separate line under the failure box on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) when the relay is not running, and in a box on the connection-failure screen (shown when a computer cannot be reached) for a machine-side cause: what to run on the computer. {command} is a command (`lop mobile status`): never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.rotate_label": { role: "heading", note: "Small upper-case label above a copyable command block on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account); the command (`lop mobile password`) sets a new relay password. \"Rotate\" means replace with a new one. Under it the app shows the exact command, copied verbatim; the command is never translated. No final full stop." },
 	"mobile.computers.own_tunnel.rotate_note": { role: "help", note: "Two sentences under the \"Set or rotate the password\" command on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account). \"Shell history\" and \"process list\" are the places a typed command line is recorded on a computer; use the usual technical terms in your language." },
 	"mobile.computers.own_tunnel.save_connect": { role: "button", note: "Button on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) that stores the address and password on this phone and connects. Enabled only after a successful test. Sentence case, no final full stop." },
@@ -3431,8 +3662,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.url_label": { role: "meta", note: "Visible label and accessible name of the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the tunnel's public web address. The example placeholder inside the field is not translated. No final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
 	"mobile.computers.own_tunnel.verdict_forbidden": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something in front of the relay refused the request. {address} is a fixed local network address and port (127.0.0.1:4098): never translated, keep it left-to-right. Origin = the requesting site/app; the relay refuses cross-origin requests." },
 	"mobile.computers.own_tunnel.verdict_host": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the address's host name does not resolve (DNS)." },
-	"mobile.computers.own_tunnel.verdict_local_network": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the \"Test the connection\" button, already translated." },
-	"mobile.computers.own_tunnel.verdict_local_network_ios": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the \"Test the connection\" button, already translated." },
+	"mobile.computers.own_tunnel.verdict_local_network": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on Android and the web, for an address on the reader's own network. {action} is the label of the test button shown beside the box, already translated: \"Test the connection\" (mobile.computers.own_tunnel.test), or \"Test again\" (mobile.settings.own_tunnel.test_again) on the saved card in Settings." },
+	"mobile.computers.own_tunnel.verdict_local_network_ios": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, on iPhone, for an address on the reader's own network. The permission is a POSSIBILITY, not the diagnosed cause: keep \"may\". \"Local Operator\" is the app's name: keep it exactly, in Latin script. \"Settings → Privacy & Security → Local Network\" is Apple's own menu path: use the labels iOS itself shows in your language, keeping the arrows. {action} is the label of the test button shown beside the box, already translated: \"Test the connection\" (mobile.computers.own_tunnel.test), or \"Test again\" (mobile.settings.own_tunnel.test_again) on the saved card in Settings." },
 	"mobile.computers.own_tunnel.verdict_not_yet": { role: "heading", note: "Title of the failure box after Test the connection on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account): the test did not reach a working relay; the sentence below names which step is wrong. Short and calm, no final full stop. Also used, with the same meaning, in the \"Your own tunnel\" section of Settings (editing the saved own-tunnel)." },
 	"mobile.computers.own_tunnel.verdict_offline": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the public tunnel is up but the relay on the computer is not running. {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.verdict_offline_detail": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings, when the relay's server sent its own reason. {detail} is that reason, sent by the server in English and shown as is (it has no final full stop, which is why the message adds one). {command} is a command to run on the computer (`lop mobile status`): never translated, keep it left-to-right. Keep both sentences; adjust the separator to your language's punctuation." },
@@ -3440,7 +3671,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.own_tunnel.verdict_password": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay refused the password. Plain, no apology." },
 	"mobile.computers.own_tunnel.verdict_refused": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: something answered, but it is not a Local Operator relay." },
 	"mobile.computers.own_tunnel.verdict_sessions": { role: "help", note: "Body of the success box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the relay answered and {sessions} is how many conversations the phone can see. ICU plural: keep the {sessions, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
-	"mobile.computers.own_tunnel.verdict_timeout": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 10). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
+	"mobile.computers.own_tunnel.verdict_timeout": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the request timed out. {seconds} is the time limit (today 8). ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs." },
 	"mobile.computers.own_tunnel.verdict_tls": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: the HTTPS certificate failed verification. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right." },
 	"mobile.computers.own_tunnel.verdict_unreachable": { role: "help", note: "Body of the failure box after \"Test the connection\" on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in Settings: no connection could be made to the address." },
 	"mobile.computers.own_tunnel_instead": { role: "button", note: "Small quiet button at the bottom of the computers screen that opens the own-tunnel (self-hosted) setup instead of Radient. 'instead' contrasts with the Radient list above it." },
@@ -3454,6 +3685,30 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.protected": { role: "status", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.reach.answering": { role: "meta", note: "Lower-case badge on a computer row: this phone probed the computer and it answered. Distinct from status.*: it is the probe result. Keep lower case." },
 	"mobile.computers.refresh": { role: "button", note: "Small quiet button under the Your computers list that re-reads the account's computers. One verb. Same English as mobile.settings.connection.refresh but a separate key because the surface differs." },
+	"mobile.computers.refusal.another_address": { role: "button", note: "Quiet button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) that goes back to enter or pick a different tunnel address. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.certificate_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the tunnel's certificate was rejected: three alternatives, then a firm statement that the app will not bypass certificate checking. {scheme} is the literal URL scheme \"https://\": never translated, keep it left-to-right. \"self-signed\" is the standard technical term for such certificates in your language. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.certificate_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the tunnel's HTTPS certificate failed the phone's check. Its own cause because the fix is the certificate, not the address or the network. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.console_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"… needs attention in Radient.\": the fix is in the Radient console (a web page), and re-signing in on the phone does not help, so say so plainly. \"Radient\" is a product name: do not translate. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.console_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the fix is in the Radient console or on the computer, not on this phone. \"Radient\" is a product name: do not translate. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.host_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the host name could not be found. \"publishes that name\" means the tunnel still serves that host name. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.host_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the address's host name does not resolve (a typo, or a tunnel that stopped publishing that name). Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.offline_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"{subject} is not answering.\": what to do. \"connector\" is the tunnel program on the computer. \"above\" points at the computer's last known state shown higher on the same screen; in a right-to-left or vertical layout keep the meaning \"earlier on this screen\". Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.offline_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the computer is asleep, or its connector is stopped. Plain statement, ends with a full stop. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.open_console": { role: "button", note: "Outline button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) that opens the Radient console (a web page) in the system browser. \"Radient\" is a product name: do not translate. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.password_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"That password was not accepted.\": the password is set on the computer; a \"Try again\" button follows. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.password_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the relay rejected the relay password stored on this phone. Calm, not blaming. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.relay_stopped_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"The relay is not running on …\": the advice. The exact command is shown separately below this line (\"On that computer: …\"), so do not add one here. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.relay_stopped_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the tunnel answered but the relay program behind it is not running. \"relay\" is the program on the computer that the phone talks to. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.retry_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) for a temporary condition. Nothing retries automatically: do not promise an automatic retry. A \"Try now\" button follows. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.retry_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): a temporary condition that clears by itself (the service is still warming up). Reassuring, not alarming. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.sign_in_again": { role: "button", note: "Button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the Radient session expired or the phone is signed into a different account: starts Radient sign-in. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.sign_in_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) after the Radient session expired. \"quarantined\" is a promise about unsent text: it is kept aside and will NOT be sent, even after signing back in. Keep that meaning exactly; do not soften it into \"saved\" or \"kept for you\". Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.sign_in_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the reader's Radient sign-in expired. Two short sentences. \"Radient\" is a product name: do not translate. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.try_again": { role: "button", note: "Prominent button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the computer is offline, the relay is stopped or the password was rejected: retries the CONNECTION. Different from the generic \"Try again\" (mobile.common.try_again), which retries a failed read or write. Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.try_now": { role: "button", note: "Prominent button on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) for a temporary condition (\"… is not ready yet.\"): retries the connection immediately instead of waiting. Not the same as the discovery banner's \"Try now\" (mobile.computers.try_now). Sentence case, no final full stop. Width: a full-width button on a 320 pt phone; keep it under ~24 characters." },
+	"mobile.computers.refusal.tunnel_gone_next": { role: "help", note: "Second line of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code), under \"… is no longer a tunnel.\": the only fix is a new tunnel. \"Radient\" is a product name: do not translate. Width: wraps freely; keep it to the sentences given." },
+	"mobile.computers.refusal.tunnel_gone_title": { role: "heading", note: "Headline of the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code): the address no longer belongs to any tunnel (it was deleted or replaced). Terminal: retrying cannot fix it. {subject} is what was being reached: a computer's name or a tunnel address (URL); never translated, and it may be long and unbreakable, so keep it a separate word the line can wrap around. Width: one heading line of ~40 characters at 320 pt; wrapping to two or three lines is fine, but keep it one sentence." },
+	"mobile.computers.refusal.wait_seconds": { role: "status", note: "Line on the connection-failure screen (shown when a computer cannot be reached; it names a cause and a remedy, never a status code) when the server said to wait before retrying. Advice only: the app does NOT retry by itself. {seconds} is a whole number of seconds from the server. ICU plural: keep the {seconds, plural, ...} structure and the # in every arm; add the plural arms your language needs. Width: wraps freely; keep it to the sentences given." },
 	"mobile.computers.remove.body": { role: "confirm", note: "Body of the remove-computer confirmation, under 'Remove this computer?'. States the removal is local to this phone only; keep all three negations (the computer, its tunnel, the account). Two sentences, each with a full stop." },
 	"mobile.computers.remove.confirm": { role: "button", note: "Destructive confirm button of the 'Remove this computer?' dialog. One verb; the dialog also has the shared Cancel." },
 	"mobile.computers.remove.title": { role: "confirm", note: "Title of the confirmation dialog for removing a computer from this phone. A question. Body and buttons are separate strings." },
@@ -3638,6 +3893,12 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.channel.tape_warble": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.channel.task_complete": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
 	"mobile.notifications.channel.two_note_chime": { role: "meta", note: "Name of an Android notification channel, shown in the system's app notification settings. It is the name of one of Local Operator's built-in notification sounds; use the same translation as the desktop app's sound picker (wire.notification_sound.sound.*). Sentence case, no final full stop." },
+	"mobile.notifications.computer_registration.failed": { role: "status", note: "Settings › Notifications, a status line: registering this phone for the computer's push notifications failed for a temporary reason; the app retries when it is opened again." },
+	"mobile.notifications.computer_registration.no_token": { role: "status", note: "Settings › Notifications, a status line: the phone's operating system has not given the app a push address (device token), so the computer cannot send push notifications to it. 'Reopen the app' is the remedy." },
+	"mobile.notifications.computer_registration.refused": { role: "status", note: "Settings › Notifications, a status line: the computer has revoked or unpaired this phone for push notifications; only the computer's owner can allow it again, from the computer." },
+	"mobile.notifications.computer_registration.registered": { role: "status", note: "Settings › Notifications, a status line: the computer the phone is connected to has accepted this phone as a place to send its push notifications. Must not promise that alerts will definitely arrive." },
+	"mobile.notifications.computer_registration.registering": { role: "status", note: "Settings › Notifications, a status line while the phone is sending its registration to the computer it is connected to. 'Alerts' are push notifications from that computer (an agent finished, a conversation needs attention)." },
+	"mobile.notifications.computer_registration.relay_missing": { role: "status", note: "Settings › Notifications, a status line: the computer runs an older Local Operator (product name, keep in Latin script) that cannot register phones for push notifications." },
 	"mobile.notifications.detail.answer_in_conversation": { role: "button", note: "Primary button on an ask's detail view that opens the conversation where the ask can be answered. Sentence case, no final full stop." },
 	"mobile.notifications.detail.conversation_asks": { role: "heading", note: "Section header listing the asks raised in the notification's conversation. \"Ask\" is the product word for a question the agent puts to the reader." },
 	"mobile.notifications.detail.earlier_updates": { role: "heading", note: "Section header listing earlier revisions of the same notification." },
@@ -3828,6 +4089,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.account.route_direct": { role: "status", note: "Second line of the Settings account card when the phone talks to a computer directly. {baseUrl} is the computer's web address; keep it unchanged and left-to-right. No final full stop." },
 	"mobile.settings.account.route_radient": { role: "status", note: "Second line of the Settings account card when the active connection runs through the user's Radient tunnel. Radient is the product name. No final full stop." },
 	"mobile.settings.account.signed_in": { role: "status", note: "Accessible name of the account avatar on the Settings account card; read by a screen reader, never drawn. Short." },
+	"mobile.settings.account.signed_in_radient": { role: "status", note: "Name line of the Settings account card when the phone is signed in with a Radient account but no account name is known. Radient is the product name; keep it in Latin script. No final full stop." },
 	"mobile.settings.connection.computers": { role: "meta", note: "Small label above the list of computers on this account in Settings. Plural noun, no colon." },
 	"mobile.settings.connection.refresh": { role: "button", note: "Quiet button under the Settings computers list that re-reads the account's computers. One verb." },
 	"mobile.settings.connection.status": { role: "meta", note: "Small row label left of the connection state pill on Settings. One word, no colon." },
@@ -3835,6 +4097,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.diagnostics.last_error": { role: "meta", note: "Label of the diagnostic row showing the most recent connection error's summary. Two words, no colon." },
 	"mobile.settings.diagnostics.none": { role: "status", note: "Value of a diagnostic row that has nothing to show (no route, no error). One word." },
 	"mobile.settings.diagnostics.privacy_note": { role: "help", note: "Reassurance under the Settings diagnostics rows: the lines shown never contain secrets or conversation content. One sentence." },
+	"mobile.settings.diagnostics.reason": { role: "meta", note: "Label of the diagnostic row showing the raw machine reason code behind the connection's health (e.g. `reason: stream_stalled`). One word, no colon. The code itself is never translated." },
 	"mobile.settings.diagnostics.route": { role: "meta", note: "Label of the diagnostic row naming how the phone reaches the computer (Radient tunnel or direct relay). One word." },
 	"mobile.settings.diagnostics.route_direct": { role: "status", note: "Value of the Route diagnostic row when the phone connects straight to the user's own relay. 'Relay' is the product's word for the program on the computer." },
 	"mobile.settings.diagnostics.route_radient": { role: "status", note: "Value of the Route diagnostic row when the phone connects through a Radient tunnel. 'Radient' is a product name." },
@@ -3860,6 +4123,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.section.appearance": { role: "heading", note: "Section header on Settings above the theme and text-size controls. One word." },
 	"mobile.settings.section.connection": { role: "heading", note: "Section header on Settings above the connection status and the computers list. One word." },
 	"mobile.settings.section.diagnostics": { role: "heading", note: "Section header on Settings above the read-only connection facts (route, stream, last error). One word." },
+	"mobile.settings.sign_in_confirm.body": { role: "confirm", note: "Body of that dialog: starting Radient sign-in ends the current connection before the browser opens, and if the user abandons sign-in they must connect to their computer again. State the consequence plainly; do not promise the connection comes back." },
+	"mobile.settings.sign_in_confirm.confirm": { role: "button", note: "Confirm button of that dialog; it starts Radient sign-in. One or two words, sentence case." },
+	"mobile.settings.sign_in_confirm.title": { role: "confirm", note: "Title of the confirmation dialog opened by tapping the signed-out Settings account card while the phone has a working (direct or own-tunnel) connection. A question; keep it short. Radient is the product name; keep it in Latin script." },
 	"mobile.settings.sign_out.body": { role: "confirm", note: "Body of the sign-out confirmation: signing out also ends the session on the control plane, so the tunnel stops accepting this phone, and the user's computer is untouched. 'Control plane' and 'tunnel' are product vocabulary." },
 	"mobile.settings.sign_out.confirm": { role: "button", note: "Confirm button of the sign-out dialog; it performs the sign-out, so it repeats the Sign out action verb. One or two words, sentence case." },
 	"mobile.settings.sign_out.done": { role: "status", note: "Toast shown after a successful sign-out, just before the welcome screen. Two short sentences; must fit a toast." },
@@ -3889,6 +4155,31 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.theme.section_dark": { role: "heading", note: "Section heading over the grid of dark themes. {count} is how many dark themes the section currently lists (after search). Rendered in uppercase in some scripts. No final full stop." },
 	"mobile.settings.theme.section_light": { role: "heading", note: "Section heading over the grid of light themes. {count} is how many light themes the section currently lists (after search). No final full stop." },
 	"mobile.settings.theme.title": { role: "heading", note: "Title of the Theme screen and the label of the Settings row that opens it. \"Theme\" means a colour scheme for the whole app. No final full stop." },
+	"mobile.sidebar.basis.created": { role: "button", note: "Clock option: when the conversation was started. Desktop: ui.chat.sidebar_view.created." },
+	"mobile.sidebar.basis.last_active": { role: "button", note: "Clock option: when the conversation last had activity. Desktop: ui.chat.sidebar_view.last_active." },
+	"mobile.sidebar.clock_hint": { role: "help", note: "One sentence under the clock choice explaining that it changes both the dates shown and the order. Desktop: ui.chat.sidebar_view.clock_hint." },
+	"mobile.sidebar.empty_by_view.headline": { role: "heading", note: "Empty-state headline in the drawer when conversations exist but the reader's view options (hidden sections, Show ended sessions off) hide every one of them. Not 'no conversations'." },
+	"mobile.sidebar.empty_by_view.next": { role: "help", note: "Second line of that empty state: names the ways back. 'Sections' are Pinned/Running/Today/This week/Older; 'ended sessions' is the Show ended sessions switch." },
+	"mobile.sidebar.empty_by_view.reset": { role: "button", note: "Action of that empty state: restores the default drawer view (every section shown, ended sessions shown, default order and grouping)." },
+	"mobile.sidebar.group.one_list": { role: "button", note: "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list." },
+	"mobile.sidebar.group.time_section": { role: "button", note: "Grouping option: headed sections Pinned, Running, Today, This week, Older. Desktop: ui.chat.sidebar_view.time_section." },
+	"mobile.sidebar.group_by": { role: "heading", note: "Label of the choice of how the drawer groups conversations. Desktop: ui.chat.sidebar_view.group_by." },
+	"mobile.sidebar.hidden_sections": { role: "status", note: "Quiet line at the top of the drawer's list when the reader has switched sections off in Settings → Sidebar; {count} is a number. Preserve ICU plural arms and #. Desktop: ui.chat.sidebar_view.hidden." },
+	"mobile.sidebar.more_settings": { role: "button", note: "Link at the foot of the drawer's View options sheet that opens the full Sidebar section in Settings." },
+	"mobile.sidebar.order.active_first": { role: "button", note: "Order option: conversations with a turn running, or waiting on the reader, are lifted to the top; the rest follow newest first. Desktop: ui.chat.sidebar_view.active_first." },
+	"mobile.sidebar.order.most_recent": { role: "button", note: "Order option: one newest-first order over every conversation, nothing lifted. Desktop: ui.chat.sidebar_view.most_recent." },
+	"mobile.sidebar.order_by": { role: "heading", note: "Label of the choice of how conversations are ordered in the drawer. Desktop: ui.chat.sidebar_view.order_by." },
+	"mobile.sidebar.section.older": { role: "heading", note: "Drawer section heading for everything older than this week. Desktop: ui.chat.sidebar_view.section.older." },
+	"mobile.sidebar.section.pinned": { role: "heading", note: "Drawer section heading for conversations the reader pinned; also the switch label that shows or hides it. Desktop: ui.chat.sidebar_view.section.pinned." },
+	"mobile.sidebar.section.running": { role: "heading", note: "Drawer section heading for conversations with a turn in flight or waiting on the reader. Desktop: ui.chat.sidebar_view.section.running." },
+	"mobile.sidebar.section.today": { role: "heading", note: "Drawer section heading for conversations from this local calendar day. Desktop: ui.chat.sidebar_view.section.today." },
+	"mobile.sidebar.section.week": { role: "heading", note: "Drawer section heading for conversations from the last six calendar days, not today. Desktop: ui.chat.sidebar_view.section.week." },
+	"mobile.sidebar.sections": { role: "heading", note: "Label of the list of switches that show or hide each drawer section. Desktop: ui.chat.sidebar_view.sections." },
+	"mobile.sidebar.settings_heading": { role: "heading", note: "Heading of the Settings section holding every drawer (sidebar) view option." },
+	"mobile.sidebar.show_ended": { role: "button", note: "Switch label: whether conversations whose session has ended stay in the drawer. Phone-only setting; on by default." },
+	"mobile.sidebar.show_ended_hint": { role: "help", note: "One sentence under the 'Show ended sessions' switch: turning it off never hides a pinned or running conversation." },
+	"mobile.sidebar.time_basis": { role: "heading", note: "Label of the choice of which clock the sections, the row times and the order read. Desktop: ui.chat.sidebar_view.time_basis." },
+	"mobile.sidebar.view_options": { role: "button", note: "Accessible name of the small sliders icon beside the drawer's search pill, and the title of the compact sheet it opens. Mirrors the desktop's 'View options' (ui.chat.sidebar.header.view_options)." },
 	"mobile.signin.diagnostics": { role: "button", note: "Reveal a redacted in-memory log containing stage names and error classes only." },
 	"mobile.signin.failed": { role: "status", note: "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials." },
 	"mobile.signin.hide_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
@@ -4311,6 +4602,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Protegido con inicio de sesión",
 		"mobile.computers.reach.answering": "respondiendo",
 		"mobile.computers.refresh": "Actualizar",
+		"mobile.computers.refusal.another_address": "Usar otra dirección",
+		"mobile.computers.refusal.certificate_next": "Usa la dirección {scheme} que mostró el túnel, elige un túnel con un certificado en el que confíe un teléfono o sustituye el certificado autofirmado — esta app no se saltará la comprobación.",
+		"mobile.computers.refusal.certificate_title": "Se rechazó el certificado de ese túnel.",
+		"mobile.computers.refusal.console_next": "Abre la consola de Radient para solucionarlo allí. Iniciar sesión en este teléfono no lo cambiará.",
+		"mobile.computers.refusal.console_title": "{subject} requiere atención en Radient.",
+		"mobile.computers.refusal.host_next": "Revisa que la dirección no tenga erratas y que el túnel siga publicando ese nombre.",
+		"mobile.computers.refusal.host_title": "No se encontró ese nombre de host.",
+		"mobile.computers.refusal.offline_next": "Despierta esa máquina y comprueba que el conector está en ejecución. Su último estado conocido aparece más arriba.",
+		"mobile.computers.refusal.offline_title": "{subject} no responde.",
+		"mobile.computers.refusal.open_console": "Abrir la consola de Radient",
+		"mobile.computers.refusal.password_next": "Comprueba la contraseña del relé en la máquina y vuelve a intentarlo.",
+		"mobile.computers.refusal.password_title": "No se aceptó esa contraseña.",
+		"mobile.computers.refusal.relay_stopped_next": "Vuelve a iniciar el relé y déjalo en ejecución.",
+		"mobile.computers.refusal.relay_stopped_title": "El relé no se está ejecutando en {subject}.",
+		"mobile.computers.refusal.retry_next": "Suele ser un problema de red pasajero. Vuelve a intentarlo en un momento.",
+		"mobile.computers.refusal.retry_title": "{subject} aún no está disponible.",
+		"mobile.computers.refusal.sign_in_again": "Volver a iniciar sesión",
+		"mobile.computers.refusal.sign_in_next": "Vuelve a iniciar sesión para reconectarte. Lo que escribiste antes queda en cuarentena y no se enviará.",
+		"mobile.computers.refusal.sign_in_title": "Tu sesión de Radient ha caducado. Inicia sesión para volver a conectarte a {subject}.",
+		"mobile.computers.refusal.try_again": "Reintentar",
+		"mobile.computers.refusal.try_now": "Reintentar ahora",
+		"mobile.computers.refusal.tunnel_gone_next": "Vuelve a crear un túnel en Radient y después añade esta máquina.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} ya no es un túnel.",
+		"mobile.computers.refusal.wait_seconds": "Espera {seconds, plural, one {aproximadamente # segundo} many {unos # de segundos} other {unos # segundos}} antes de volver a intentarlo.",
 		"mobile.computers.remove.body": "La quita de la lista de este teléfono. No afecta a la máquina, a su túnel ni a tu cuenta.",
 		"mobile.computers.remove.confirm": "Quitar",
 		"mobile.computers.remove.title": "¿Quitar esta máquina?",
@@ -4495,6 +4810,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Cinta ondulante",
 		"mobile.notifications.channel.task_complete": "Tarea completada",
 		"mobile.notifications.channel.two_note_chime": "Campanilla de dos notas",
+		"mobile.notifications.computer_registration.failed": "No se pudo registrar este teléfono para recibir alertas de este ordenador. Se volverá a intentar cuando vuelvas a abrir la app.",
+		"mobile.notifications.computer_registration.no_token": "Este teléfono aún no tiene una dirección push, así que este ordenador no puede enviarle alertas. Vuelve a abrir la app para intentarlo de nuevo.",
+		"mobile.notifications.computer_registration.refused": "Este ordenador ha desactivado las alertas para este teléfono. Seguirán desactivadas hasta que se vuelvan a permitir en el ordenador.",
+		"mobile.notifications.computer_registration.registered": "Este teléfono está registrado para recibir alertas de este ordenador.",
+		"mobile.notifications.computer_registration.registering": "Registrando este teléfono para recibir alertas de este ordenador.",
+		"mobile.notifications.computer_registration.relay_missing": "Este ordenador necesita una actualización de Local Operator para poder enviar alertas a este teléfono.",
 		"mobile.notifications.detail.answer_in_conversation": "Responder en la conversación",
 		"mobile.notifications.detail.conversation_asks": "Preguntas de esta conversación",
 		"mobile.notifications.detail.earlier_updates": "Actualizaciones anteriores",
@@ -4685,6 +5006,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Conectado directamente a {baseUrl}",
 		"mobile.settings.account.route_radient": "A través de tu túnel de Radient",
 		"mobile.settings.account.signed_in": "Sesión iniciada",
+		"mobile.settings.account.signed_in_radient": "Sesión iniciada con Radient",
 		"mobile.settings.connection.computers": "Máquinas",
 		"mobile.settings.connection.refresh": "Actualizar",
 		"mobile.settings.connection.status": "Estado",
@@ -4692,6 +5014,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Último error",
 		"mobile.settings.diagnostics.none": "Nada",
 		"mobile.settings.diagnostics.privacy_note": "Estas líneas nunca incluyen tokens, contraseñas ni el contenido de una sesión.",
+		"mobile.settings.diagnostics.reason": "Motivo",
 		"mobile.settings.diagnostics.route": "Ruta",
 		"mobile.settings.diagnostics.route_direct": "Relé directo",
 		"mobile.settings.diagnostics.route_radient": "Túnel de Radient",
@@ -4717,6 +5040,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Apariencia",
 		"mobile.settings.section.connection": "Conexión",
 		"mobile.settings.section.diagnostics": "Diagnóstico",
+		"mobile.settings.sign_in_confirm.body": "Esto cierra primero tu conexión actual. Si no terminas de iniciar sesión, tendrás que volver a conectarte a tu computadora.",
+		"mobile.settings.sign_in_confirm.confirm": "Iniciar sesión",
+		"mobile.settings.sign_in_confirm.title": "¿Iniciar sesión con Radient?",
 		"mobile.settings.sign_out.body": "Esto cierra tu sesión de acceso en el plano de control y la borra de este teléfono, por lo que el túnel deja de aceptar solicitudes de este teléfono. Tu máquina no se ve afectada.",
 		"mobile.settings.sign_out.confirm": "Cerrar sesión",
 		"mobile.settings.sign_out.done": "Sesión cerrada. Se revocó tu sesión de acceso en tu máquina.",
@@ -4746,6 +5072,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Oscuros ({count})",
 		"mobile.settings.theme.section_light": "Claros ({count})",
 		"mobile.settings.theme.title": "Tema",
+		"mobile.sidebar.basis.created": "Fecha de creación",
+		"mobile.sidebar.basis.last_active": "Última actividad",
+		"mobile.sidebar.clock_hint": "Las fechas y el orden siguen el reloj seleccionado.",
+		"mobile.sidebar.empty_by_view.headline": "Tus opciones de vista ocultan todas las conversaciones.",
+		"mobile.sidebar.empty_by_view.next": "Vuelve a activar secciones o sesiones finalizadas, o restablece la vista.",
+		"mobile.sidebar.empty_by_view.reset": "Restablecer vista",
+		"mobile.sidebar.group.one_list": "En una lista",
+		"mobile.sidebar.group.time_section": "Sección temporal",
+		"mobile.sidebar.group_by": "Agrupar por",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# sección oculta} many {# de secciones ocultas} other {# secciones ocultas}}",
+		"mobile.sidebar.more_settings": "Más ajustes de la barra lateral",
+		"mobile.sidebar.order.active_first": "Activos primero",
+		"mobile.sidebar.order.most_recent": "Más recientes",
+		"mobile.sidebar.order_by": "Ordenar por",
+		"mobile.sidebar.section.older": "Anteriores",
+		"mobile.sidebar.section.pinned": "Fijadas",
+		"mobile.sidebar.section.running": "En curso",
+		"mobile.sidebar.section.today": "Hoy",
+		"mobile.sidebar.section.week": "Esta semana",
+		"mobile.sidebar.sections": "Secciones",
+		"mobile.sidebar.settings_heading": "Barra lateral",
+		"mobile.sidebar.show_ended": "Mostrar sesiones finalizadas",
+		"mobile.sidebar.show_ended_hint": "Las conversaciones fijadas y en curso siempre se muestran.",
+		"mobile.sidebar.time_basis": "Base temporal",
+		"mobile.sidebar.view_options": "Opciones de vista",
 		"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
 		"mobile.signin.failed": "No pudimos iniciar sesión.",
 		"mobile.signin.hide_diagnostics": "Ocultar detalles del inicio de sesión",
@@ -5152,6 +5503,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Protégé par connexion",
 		"mobile.computers.reach.answering": "répond",
 		"mobile.computers.refresh": "Actualiser",
+		"mobile.computers.refusal.another_address": "Utiliser une autre adresse",
+		"mobile.computers.refusal.certificate_next": "Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné — cette app ne contournera pas la vérification.",
+		"mobile.computers.refusal.certificate_title": "Le certificat de ce tunnel a été refusé.",
+		"mobile.computers.refusal.console_next": "Ouvrez la console Radient pour y régler le problème. Se reconnecter sur ce téléphone n’y changera rien.",
+		"mobile.computers.refusal.console_title": "{subject} nécessite une intervention dans Radient.",
+		"mobile.computers.refusal.host_next": "Vérifiez que l’adresse ne contient pas de faute de frappe et que le tunnel publie toujours ce nom.",
+		"mobile.computers.refusal.host_title": "Ce nom d’hôte est introuvable.",
+		"mobile.computers.refusal.offline_next": "Réveillez cet ordinateur et vérifiez que le connecteur est lancé. Le dernier état connu de l’ordinateur figure ci-dessus.",
+		"mobile.computers.refusal.offline_title": "{subject} ne répond pas.",
+		"mobile.computers.refusal.open_console": "Ouvrir la console Radient",
+		"mobile.computers.refusal.password_next": "Vérifiez le mot de passe du relais sur l’ordinateur, puis réessayez.",
+		"mobile.computers.refusal.password_title": "Ce mot de passe n’a pas été accepté.",
+		"mobile.computers.refusal.relay_stopped_next": "Relancez le relais et laissez-le en marche.",
+		"mobile.computers.refusal.relay_stopped_title": "Le relais n’est pas lancé sur {subject}.",
+		"mobile.computers.refusal.retry_next": "Il s’agit généralement d’un problème réseau passager. Réessayez dans un instant.",
+		"mobile.computers.refusal.retry_title": "{subject} n’est pas encore disponible.",
+		"mobile.computers.refusal.sign_in_again": "Se reconnecter",
+		"mobile.computers.refusal.sign_in_next": "Reconnectez-vous pour rétablir la connexion. Tout ce que vous avez saisi auparavant est mis en quarantaine et ne sera pas envoyé.",
+		"mobile.computers.refusal.sign_in_title": "Votre session Radient a expiré. Reconnectez-vous pour accéder à {subject}.",
+		"mobile.computers.refusal.try_again": "Réessayer",
+		"mobile.computers.refusal.try_now": "Essayer maintenant",
+		"mobile.computers.refusal.tunnel_gone_next": "Créez un nouveau tunnel dans Radient, puis ajoutez cet ordinateur.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} ne correspond plus à aucun tunnel.",
+		"mobile.computers.refusal.wait_seconds": "Attendez environ {seconds, plural, one {# seconde} many {# de secondes} other {# secondes}} avant de réessayer.",
 		"mobile.computers.remove.body": "Il sera retiré de la liste de ce téléphone. Cela ne modifie ni l’ordinateur, ni son tunnel, ni votre compte.",
 		"mobile.computers.remove.confirm": "Retirer",
 		"mobile.computers.remove.title": "Retirer cet ordinateur ?",
@@ -5336,6 +5711,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Bande ondulante",
 		"mobile.notifications.channel.task_complete": "Tâche terminée",
 		"mobile.notifications.channel.two_note_chime": "Carillon à deux notes",
+		"mobile.notifications.computer_registration.failed": "Impossible d’enregistrer ce téléphone pour les alertes de cet ordinateur. Une nouvelle tentative aura lieu à la réouverture de l’app.",
+		"mobile.notifications.computer_registration.no_token": "Ce téléphone n’a pas encore d’adresse push, cet ordinateur ne peut donc pas lui envoyer d’alertes. Rouvrez l’app pour réessayer.",
+		"mobile.notifications.computer_registration.refused": "Cet ordinateur a désactivé les alertes pour ce téléphone. Elles restent désactivées jusqu’à ce qu’elles soient de nouveau autorisées sur l’ordinateur.",
+		"mobile.notifications.computer_registration.registered": "Ce téléphone est enregistré pour recevoir les alertes de cet ordinateur.",
+		"mobile.notifications.computer_registration.registering": "Enregistrement de ce téléphone pour les alertes de cet ordinateur.",
+		"mobile.notifications.computer_registration.relay_missing": "Cet ordinateur doit mettre à jour Local Operator avant de pouvoir envoyer des alertes à ce téléphone.",
 		"mobile.notifications.detail.answer_in_conversation": "Répondre dans la conversation",
 		"mobile.notifications.detail.conversation_asks": "Questions de cette conversation",
 		"mobile.notifications.detail.earlier_updates": "Mises à jour précédentes",
@@ -5526,6 +5907,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Connecté directement à {baseUrl}",
 		"mobile.settings.account.route_radient": "Via votre tunnel Radient",
 		"mobile.settings.account.signed_in": "Connecté",
+		"mobile.settings.account.signed_in_radient": "Connecté avec Radient",
 		"mobile.settings.connection.computers": "Ordinateurs",
 		"mobile.settings.connection.refresh": "Actualiser",
 		"mobile.settings.connection.status": "État",
@@ -5533,6 +5915,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Dernière erreur",
 		"mobile.settings.diagnostics.none": "Rien",
 		"mobile.settings.diagnostics.privacy_note": "Ces lignes ne contiennent jamais de token, de mot de passe ni de contenu de session.",
+		"mobile.settings.diagnostics.reason": "Motif",
 		"mobile.settings.diagnostics.route": "Acheminement",
 		"mobile.settings.diagnostics.route_direct": "Relais direct",
 		"mobile.settings.diagnostics.route_radient": "Tunnel Radient",
@@ -5558,6 +5941,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Apparence",
 		"mobile.settings.section.connection": "Connexion",
 		"mobile.settings.section.diagnostics": "Diagnostic",
+		"mobile.settings.sign_in_confirm.body": "Cela met d'abord fin à votre connexion actuelle. Si vous n'allez pas au bout de la connexion, vous devrez vous reconnecter à votre ordinateur.",
+		"mobile.settings.sign_in_confirm.confirm": "Se connecter",
+		"mobile.settings.sign_in_confirm.title": "Se connecter avec Radient ?",
 		"mobile.settings.sign_out.body": "Votre session de connexion est fermée sur le plan de contrôle et oubliée sur ce téléphone : le tunnel n’accepte donc plus les requêtes de ce téléphone. Votre ordinateur reste intact.",
 		"mobile.settings.sign_out.confirm": "Se déconnecter",
 		"mobile.settings.sign_out.done": "Déconnecté. Votre session de connexion a été révoquée sur votre ordinateur.",
@@ -5587,6 +5973,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Sombres ({count})",
 		"mobile.settings.theme.section_light": "Clairs ({count})",
 		"mobile.settings.theme.title": "Thème",
+		"mobile.sidebar.basis.created": "Créée le",
+		"mobile.sidebar.basis.last_active": "Dernière activité",
+		"mobile.sidebar.clock_hint": "Les dates et l’ordre suivent l’horloge sélectionnée.",
+		"mobile.sidebar.empty_by_view.headline": "Vos options d’affichage masquent toutes les conversations.",
+		"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
+		"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage",
+		"mobile.sidebar.group.one_list": "Une seule liste",
+		"mobile.sidebar.group.time_section": "Section temporelle",
+		"mobile.sidebar.group_by": "Grouper par",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
+		"mobile.sidebar.more_settings": "Plus de paramètres de la barre latérale",
+		"mobile.sidebar.order.active_first": "Actives d’abord",
+		"mobile.sidebar.order.most_recent": "Plus récentes",
+		"mobile.sidebar.order_by": "Trier par",
+		"mobile.sidebar.section.older": "Plus anciennes",
+		"mobile.sidebar.section.pinned": "Épinglées",
+		"mobile.sidebar.section.running": "En cours",
+		"mobile.sidebar.section.today": "Aujourd’hui",
+		"mobile.sidebar.section.week": "Cette semaine",
+		"mobile.sidebar.sections": "Sections",
+		"mobile.sidebar.settings_heading": "Barre latérale",
+		"mobile.sidebar.show_ended": "Afficher les sessions terminées",
+		"mobile.sidebar.show_ended_hint": "Les conversations épinglées et en cours restent toujours visibles.",
+		"mobile.sidebar.time_basis": "Base temporelle",
+		"mobile.sidebar.view_options": "Options d’affichage",
 		"mobile.signin.diagnostics": "Diagnostic de connexion",
 		"mobile.signin.failed": "Nous n’avons pas pu terminer la connexion.",
 		"mobile.signin.hide_diagnostics": "Masquer les détails de connexion",
@@ -5993,6 +6404,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "साइन-इन से सुरक्षित",
 		"mobile.computers.reach.answering": "जवाब दे रहा",
 		"mobile.computers.refresh": "रीफ़्रेश करें",
+		"mobile.computers.refusal.another_address": "दूसरा पता उपयोग करें",
+		"mobile.computers.refusal.certificate_next": "टनल का दिखाया हुआ {scheme} पता उपयोग करें, ऐसी टनल चुनें जिसके सर्टिफ़िकेट पर फ़ोन भरोसा करे, या सेल्फ़-साइन्ड सर्टिफ़िकेट बदलें — यह ऐप सर्टिफ़िकेट की जाँच नहीं छोड़ेगा।",
+		"mobile.computers.refusal.certificate_title": "उस टनल का सर्टिफ़िकेट अस्वीकार कर दिया गया।",
+		"mobile.computers.refusal.console_next": "इसे ठीक करने के लिए Radient कंसोल खोलें। इस फ़ोन पर साइन इन करने से यह नहीं बदलेगा।",
+		"mobile.computers.refusal.console_title": "{subject} को Radient में आपके ध्यान की ज़रूरत है।",
+		"mobile.computers.refusal.host_next": "पते में टाइपिंग की ग़लती जाँचें, और यह भी कि टनल अब भी वही नाम प्रकाशित कर रही है।",
+		"mobile.computers.refusal.host_title": "वह होस्ट नाम नहीं मिला।",
+		"mobile.computers.refusal.offline_next": "उस कंप्यूटर को स्लीप से जगाएँ, और जाँचें कि कनेक्टर चल रहा है। उसकी आख़िरी ज्ञात स्थिति ऊपर दी गई है।",
+		"mobile.computers.refusal.offline_title": "{subject} जवाब नहीं दे रहा है।",
+		"mobile.computers.refusal.open_console": "Radient कंसोल खोलें",
+		"mobile.computers.refusal.password_next": "कंप्यूटर पर रिले पासवर्ड जाँचें और फिर से कोशिश करें।",
+		"mobile.computers.refusal.password_title": "वह पासवर्ड स्वीकार नहीं हुआ।",
+		"mobile.computers.refusal.relay_stopped_next": "रिले फिर से शुरू करें और उसे चलता रहने दें।",
+		"mobile.computers.refusal.relay_stopped_title": "{subject} पर रिले नहीं चल रहा है।",
+		"mobile.computers.refusal.retry_next": "आम तौर पर यह नेटवर्क की कोई अस्थायी समस्या होती है। थोड़ी देर में फिर से कोशिश करें।",
+		"mobile.computers.refusal.retry_title": "{subject} अभी तैयार नहीं है।",
+		"mobile.computers.refusal.sign_in_again": "फिर से साइन इन करें",
+		"mobile.computers.refusal.sign_in_next": "फिर से कनेक्ट करने के लिए दोबारा साइन इन करें। इससे पहले टाइप किया गया सब कुछ अलग रोक दिया गया है और भेजा नहीं जाएगा।",
+		"mobile.computers.refusal.sign_in_title": "आपका Radient साइन-इन समाप्त हो गया है। {subject} से फिर कनेक्ट करने के लिए साइन इन करें।",
+		"mobile.computers.refusal.try_again": "फिर से कोशिश करें",
+		"mobile.computers.refusal.try_now": "अभी कोशिश करें",
+		"mobile.computers.refusal.tunnel_gone_next": "Radient में नई टनल बनाएँ, फिर यह कंप्यूटर जोड़ें।",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} अब कोई टनल नहीं है।",
+		"mobile.computers.refusal.wait_seconds": "दोबारा कोशिश करने से पहले लगभग {seconds, plural, one {# सेकंड} other {# सेकंड}} रुकें।",
 		"mobile.computers.remove.body": "इससे यह इस फ़ोन की सूची से हट जाता है। इससे कंप्यूटर, उसकी टनल या आपके खाते पर कोई असर नहीं पड़ता।",
 		"mobile.computers.remove.confirm": "हटाएँ",
 		"mobile.computers.remove.title": "यह कंप्यूटर हटाएँ?",
@@ -6177,6 +6612,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "लहराती टेप",
 		"mobile.notifications.channel.task_complete": "काम पूरा",
 		"mobile.notifications.channel.two_note_chime": "दो सुरों वाली घंटी",
+		"mobile.notifications.computer_registration.failed": "इस कंप्यूटर से अलर्ट के लिए यह फ़ोन रजिस्टर नहीं हो सका। ऐप दोबारा खोलने पर फिर से कोशिश की जाएगी।",
+		"mobile.notifications.computer_registration.no_token": "इस फ़ोन का अभी कोई पुश पता नहीं है, इसलिए यह कंप्यूटर इसे अलर्ट नहीं भेज सकता। फिर से कोशिश करने के लिए ऐप दोबारा खोलें।",
+		"mobile.notifications.computer_registration.refused": "इस कंप्यूटर ने इस फ़ोन के लिए अलर्ट बंद कर दिए हैं। जब तक कंप्यूटर पर इन्हें फिर से अनुमति नहीं दी जाती, ये बंद रहेंगे।",
+		"mobile.notifications.computer_registration.registered": "यह फ़ोन इस कंप्यूटर से अलर्ट पाने के लिए रजिस्टर है।",
+		"mobile.notifications.computer_registration.registering": "इस कंप्यूटर से अलर्ट के लिए यह फ़ोन रजिस्टर किया जा रहा है।",
+		"mobile.notifications.computer_registration.relay_missing": "इस फ़ोन को अलर्ट भेजने से पहले इस कंप्यूटर पर Local Operator को अपडेट करना होगा।",
 		"mobile.notifications.detail.answer_in_conversation": "बातचीत में उत्तर दें",
 		"mobile.notifications.detail.conversation_asks": "इस बातचीत के सवाल",
 		"mobile.notifications.detail.earlier_updates": "पिछले अपडेट",
@@ -6367,6 +6808,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "सीधे {baseUrl} से कनेक्ट है",
 		"mobile.settings.account.route_radient": "आपकी Radient टनल से कनेक्ट है",
 		"mobile.settings.account.signed_in": "साइन इन है",
+		"mobile.settings.account.signed_in_radient": "Radient से साइन इन है",
 		"mobile.settings.connection.computers": "कंप्यूटर",
 		"mobile.settings.connection.refresh": "रीफ़्रेश करें",
 		"mobile.settings.connection.status": "स्थिति",
@@ -6374,6 +6816,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "पिछली त्रुटि",
 		"mobile.settings.diagnostics.none": "कोई नहीं",
 		"mobile.settings.diagnostics.privacy_note": "इन पंक्तियों में कभी टोकन, पासवर्ड या किसी सत्र की सामग्री शामिल नहीं होती।",
+		"mobile.settings.diagnostics.reason": "कारण",
 		"mobile.settings.diagnostics.route": "रूट",
 		"mobile.settings.diagnostics.route_direct": "सीधा रिले",
 		"mobile.settings.diagnostics.route_radient": "Radient टनल",
@@ -6399,6 +6842,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "रूप-रंग",
 		"mobile.settings.section.connection": "कनेक्शन",
 		"mobile.settings.section.diagnostics": "निदान",
+		"mobile.settings.sign_in_confirm.body": "इससे पहले आपका मौजूदा कनेक्शन बंद हो जाएगा। अगर आप साइन इन पूरा नहीं करते, तो आपको अपने कंप्यूटर से फिर से कनेक्ट करना होगा।",
+		"mobile.settings.sign_in_confirm.confirm": "साइन इन करें",
+		"mobile.settings.sign_in_confirm.title": "Radient से साइन इन करें?",
 		"mobile.settings.sign_out.body": "इससे आपका साइन-इन सत्र इस फ़ोन से हट जाता है और कंट्रोल प्लेन पर भी समाप्त हो जाता है। इसलिए टनल इस फ़ोन से अनुरोध स्वीकार करना बंद कर देती है। आपके कंप्यूटर में कोई बदलाव नहीं किया जाता।",
 		"mobile.settings.sign_out.confirm": "साइन आउट करें",
 		"mobile.settings.sign_out.done": "साइन आउट हो गया। आपके कंप्यूटर पर साइन-इन सत्र रद्द कर दिया गया।",
@@ -6428,6 +6874,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "गहरी ({count})",
 		"mobile.settings.theme.section_light": "हल्की ({count})",
 		"mobile.settings.theme.title": "थीम",
+		"mobile.sidebar.basis.created": "बनने का समय",
+		"mobile.sidebar.basis.last_active": "आख़िरी गतिविधि",
+		"mobile.sidebar.clock_hint": "तारीख़ें और क्रम चुनी गई घड़ी के अनुसार हैं।",
+		"mobile.sidebar.empty_by_view.headline": "आपके दृश्य विकल्प सभी बातचीत छिपा रहे हैं।",
+		"mobile.sidebar.empty_by_view.next": "खंड या समाप्त सत्र फिर से चालू करें, या दृश्य रीसेट करें।",
+		"mobile.sidebar.empty_by_view.reset": "दृश्य रीसेट करें",
+		"mobile.sidebar.group.one_list": "एक सूची में",
+		"mobile.sidebar.group.time_section": "समय के खंड",
+		"mobile.sidebar.group_by": "समूह बनाएँ",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# खंड छिपा है} other {# खंड छिपे हैं}}",
+		"mobile.sidebar.more_settings": "साइडबार की और सेटिंग्स",
+		"mobile.sidebar.order.active_first": "सक्रिय पहले",
+		"mobile.sidebar.order.most_recent": "सबसे हाल के",
+		"mobile.sidebar.order_by": "क्रम चुनें",
+		"mobile.sidebar.section.older": "पुराने",
+		"mobile.sidebar.section.pinned": "पिन किए हुए",
+		"mobile.sidebar.section.running": "चल रहे",
+		"mobile.sidebar.section.today": "आज",
+		"mobile.sidebar.section.week": "इस हफ़्ते",
+		"mobile.sidebar.sections": "खंड",
+		"mobile.sidebar.settings_heading": "साइडबार",
+		"mobile.sidebar.show_ended": "समाप्त सत्र दिखाएँ",
+		"mobile.sidebar.show_ended_hint": "पिन की हुई और चल रही बातचीत हमेशा दिखती हैं।",
+		"mobile.sidebar.time_basis": "समय का आधार",
+		"mobile.sidebar.view_options": "दृश्य विकल्प",
 		"mobile.signin.diagnostics": "साइन-इन निदान",
 		"mobile.signin.failed": "हम साइन-इन पूरा नहीं कर सके।",
 		"mobile.signin.hide_diagnostics": "साइन-इन का विवरण छिपाएँ",
@@ -6834,6 +7305,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Защищено входом",
 		"mobile.computers.reach.answering": "отвечает",
 		"mobile.computers.refresh": "Обновить",
+		"mobile.computers.refusal.another_address": "Указать другой адрес",
+		"mobile.computers.refusal.certificate_next": "Используйте адрес {scheme}, который вывел туннель, выберите туннель с сертификатом, которому доверяет телефон, или замените самоподписанный сертификат — приложение не будет пропускать проверку.",
+		"mobile.computers.refusal.certificate_title": "Сертификат этого туннеля отклонён.",
+		"mobile.computers.refusal.console_next": "Откройте консоль Radient и устраните проблему там. Повторный вход на этом телефоне ничего не изменит.",
+		"mobile.computers.refusal.console_title": "{subject} требует внимания в Radient.",
+		"mobile.computers.refusal.host_next": "Проверьте, нет ли в адресе опечатки и по-прежнему ли туннель публикует это имя.",
+		"mobile.computers.refusal.host_title": "Имя хоста не найдено.",
+		"mobile.computers.refusal.offline_next": "Выведите этот компьютер из спящего режима и убедитесь, что коннектор запущен. Его последнее известное состояние показано выше.",
+		"mobile.computers.refusal.offline_title": "{subject} не отвечает.",
+		"mobile.computers.refusal.open_console": "Открыть консоль Radient",
+		"mobile.computers.refusal.password_next": "Проверьте пароль ретранслятора на компьютере и подключитесь снова.",
+		"mobile.computers.refusal.password_title": "Этот пароль не принят.",
+		"mobile.computers.refusal.relay_stopped_next": "Снова запустите ретранслятор и не останавливайте его.",
+		"mobile.computers.refusal.relay_stopped_title": "Ретранслятор на {subject} не запущен.",
+		"mobile.computers.refusal.retry_next": "Обычно это временный сбой сети. Повторите попытку чуть позже.",
+		"mobile.computers.refusal.retry_title": "{subject} пока не готов.",
+		"mobile.computers.refusal.sign_in_again": "Войти снова",
+		"mobile.computers.refusal.sign_in_next": "Войдите снова, чтобы восстановить подключение. Всё, что было введено до этого, помещено в карантин и не будет отправлено.",
+		"mobile.computers.refusal.sign_in_title": "Сессия входа в Radient истекла. Войдите, чтобы снова подключиться к {subject}.",
+		"mobile.computers.refusal.try_again": "Подключиться снова",
+		"mobile.computers.refusal.try_now": "Подключиться сейчас",
+		"mobile.computers.refusal.tunnel_gone_next": "Создайте туннель в Radient заново, затем добавьте этот компьютер.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} больше не является туннелем.",
+		"mobile.computers.refusal.wait_seconds": "Подождите около {seconds, plural, one {# секунды} few {# секунд} many {# секунд} other {# секунды}}, прежде чем повторить попытку.",
 		"mobile.computers.remove.body": "Компьютер исчезнет из списка на этом телефоне. Сам компьютер, его туннель и ваш аккаунт не изменятся.",
 		"mobile.computers.remove.confirm": "Удалить",
 		"mobile.computers.remove.title": "Удалить этот компьютер?",
@@ -7018,6 +7513,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Плывущая плёнка",
 		"mobile.notifications.channel.task_complete": "Задача выполнена",
 		"mobile.notifications.channel.two_note_chime": "Двухнотный звон",
+		"mobile.notifications.computer_registration.failed": "Не удалось зарегистрировать этот телефон для оповещений с этого компьютера. Попытка повторится, когда вы снова откроете приложение.",
+		"mobile.notifications.computer_registration.no_token": "У этого телефона пока нет push-адреса, поэтому компьютер не может отправлять ему оповещения. Откройте приложение снова, чтобы повторить попытку.",
+		"mobile.notifications.computer_registration.refused": "Этот компьютер отключил оповещения для этого телефона. Они останутся отключёнными, пока их снова не разрешат на компьютере.",
+		"mobile.notifications.computer_registration.registered": "Этот телефон зарегистрирован для оповещений с этого компьютера.",
+		"mobile.notifications.computer_registration.registering": "Регистрируем этот телефон для оповещений с этого компьютера.",
+		"mobile.notifications.computer_registration.relay_missing": "Чтобы отправлять оповещения на этот телефон, на компьютере нужно обновить Local Operator.",
 		"mobile.notifications.detail.answer_in_conversation": "Ответить в беседе",
 		"mobile.notifications.detail.conversation_asks": "Вопросы этой беседы",
 		"mobile.notifications.detail.earlier_updates": "Прошлые обновления",
@@ -7208,6 +7709,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Подключено напрямую к {baseUrl}",
 		"mobile.settings.account.route_radient": "Через ваш туннель Radient",
 		"mobile.settings.account.signed_in": "Вход выполнен",
+		"mobile.settings.account.signed_in_radient": "Вход через Radient выполнен",
 		"mobile.settings.connection.computers": "Компьютеры",
 		"mobile.settings.connection.refresh": "Обновить",
 		"mobile.settings.connection.status": "Состояние",
@@ -7215,6 +7717,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Последняя ошибка",
 		"mobile.settings.diagnostics.none": "Нет",
 		"mobile.settings.diagnostics.privacy_note": "В этих строках никогда нет токенов, паролей или содержимого сессий.",
+		"mobile.settings.diagnostics.reason": "Причина",
 		"mobile.settings.diagnostics.route": "Маршрут",
 		"mobile.settings.diagnostics.route_direct": "Напрямую к ретранслятору",
 		"mobile.settings.diagnostics.route_radient": "Туннель Radient",
@@ -7240,6 +7743,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Оформление",
 		"mobile.settings.section.connection": "Подключение",
 		"mobile.settings.section.diagnostics": "Диагностика",
+		"mobile.settings.sign_in_confirm.body": "Сначала текущее подключение будет завершено. Если вы не завершите вход, придётся снова подключиться к компьютеру.",
+		"mobile.settings.sign_in_confirm.confirm": "Войти",
+		"mobile.settings.sign_in_confirm.title": "Войти через Radient?",
 		"mobile.settings.sign_out.body": "Сессия входа с сервером управления будет завершена, а приложение забудет её, поэтому туннель перестанет принимать запросы с этого телефона. Ваш компьютер не затрагивается.",
 		"mobile.settings.sign_out.confirm": "Выйти",
 		"mobile.settings.sign_out.done": "Выход выполнен. Сессия входа отозвана на компьютере.",
@@ -7269,6 +7775,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Тёмные ({count})",
 		"mobile.settings.theme.section_light": "Светлые ({count})",
 		"mobile.settings.theme.title": "Тема",
+		"mobile.sidebar.basis.created": "Создано",
+		"mobile.sidebar.basis.last_active": "Последняя активность",
+		"mobile.sidebar.clock_hint": "Даты и порядок зависят от выбранного отсчёта времени.",
+		"mobile.sidebar.empty_by_view.headline": "Параметры вида скрывают все беседы.",
+		"mobile.sidebar.empty_by_view.next": "Снова включите разделы или завершённые сеансы либо сбросьте вид.",
+		"mobile.sidebar.empty_by_view.reset": "Сбросить вид",
+		"mobile.sidebar.group.one_list": "Одним списком",
+		"mobile.sidebar.group.time_section": "По времени",
+		"mobile.sidebar.group_by": "Группировать по",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {скрыт # раздел} few {скрыто # раздела} many {скрыто # разделов} other {скрыто # раздела}}",
+		"mobile.sidebar.more_settings": "Другие настройки боковой панели",
+		"mobile.sidebar.order.active_first": "Сначала активные",
+		"mobile.sidebar.order.most_recent": "Сначала недавние",
+		"mobile.sidebar.order_by": "Сортировать по",
+		"mobile.sidebar.section.older": "Раньше",
+		"mobile.sidebar.section.pinned": "Закреплённые",
+		"mobile.sidebar.section.running": "В работе",
+		"mobile.sidebar.section.today": "Сегодня",
+		"mobile.sidebar.section.week": "На этой неделе",
+		"mobile.sidebar.sections": "Разделы",
+		"mobile.sidebar.settings_heading": "Боковая панель",
+		"mobile.sidebar.show_ended": "Показывать завершённые сеансы",
+		"mobile.sidebar.show_ended_hint": "Закреплённые и выполняющиеся беседы показываются всегда.",
+		"mobile.sidebar.time_basis": "Отсчёт времени",
+		"mobile.sidebar.view_options": "Параметры вида",
 		"mobile.signin.diagnostics": "Диагностика входа",
 		"mobile.signin.failed": "Не удалось завершить вход.",
 		"mobile.signin.hide_diagnostics": "Скрыть сведения о входе",
@@ -7675,6 +8206,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "سائن ان سے محفوظ",
 		"mobile.computers.reach.answering": "جواب دے رہا",
 		"mobile.computers.refresh": "ریفریش کریں",
+		"mobile.computers.refusal.another_address": "دوسرا پتہ استعمال کریں",
+		"mobile.computers.refusal.certificate_next": "ٹنل کا دکھایا ہوا {scheme} URL استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا خود دستخط شدہ سرٹیفکیٹ بدل دیں — یہ ایپ جانچ نہیں چھوڑے گی۔",
+		"mobile.computers.refusal.certificate_title": "اس ٹنل کا سرٹیفکیٹ مسترد ہو گیا۔",
+		"mobile.computers.refusal.console_next": "اسے ٹھیک کرنے کے لیے Radient کنسول کھولیں۔ اس فون پر سائن ان کرنے سے یہ نہیں بدلے گا۔",
+		"mobile.computers.refusal.console_title": "آپ کو Radient میں {subject} پر توجہ دینی ہوگی۔",
+		"mobile.computers.refusal.host_next": "پتے میں ٹائپنگ کی غلطی جانچیں، اور یہ بھی کہ ٹنل اب بھی یہی نام شائع کر رہی ہے۔",
+		"mobile.computers.refusal.host_title": "میزبان کا یہ نام نہیں ملا۔",
+		"mobile.computers.refusal.offline_next": "اس کمپیوٹر کو جگائیں، اور جانچیں کہ کنیکٹر چل رہا ہے۔ کمپیوٹر کی آخری معلوم حالت اوپر دی گئی ہے۔",
+		"mobile.computers.refusal.offline_title": "اس وقت {subject} سے کوئی جواب نہیں مل رہا۔",
+		"mobile.computers.refusal.open_console": "Radient کنسول کھولیں",
+		"mobile.computers.refusal.password_next": "کمپیوٹر پر ریلے کا پاس ورڈ جانچیں، پھر دوبارہ کوشش کریں۔",
+		"mobile.computers.refusal.password_title": "وہ پاس ورڈ قبول نہیں ہوا۔",
+		"mobile.computers.refusal.relay_stopped_next": "ریلے دوبارہ شروع کریں اور اسے چلتا رہنے دیں۔",
+		"mobile.computers.refusal.relay_stopped_title": "ریلے {subject} پر نہیں چل رہا۔",
+		"mobile.computers.refusal.retry_next": "عموماً یہ نیٹ ورک کا عارضی مسئلہ ہوتا ہے۔ ذرا دیر بعد دوبارہ کوشش کریں۔",
+		"mobile.computers.refusal.retry_title": "ابھی {subject} تیار نہیں ہے۔",
+		"mobile.computers.refusal.sign_in_again": "دوبارہ سائن ان کریں",
+		"mobile.computers.refusal.sign_in_next": "دوبارہ منسلک ہونے کے لیے پھر سے سائن ان کریں۔ اس سے پہلے ٹائپ کیا گیا سب کچھ قرنطینہ میں رکھ دیا گیا ہے اور بھیجا نہیں جائے گا۔",
+		"mobile.computers.refusal.sign_in_title": "آپ کے Radient سیشن کی میعاد ختم ہو گئی ہے۔ {subject} سے دوبارہ رابطے کے لیے سائن ان کریں۔",
+		"mobile.computers.refusal.try_again": "دوبارہ کوشش کریں",
+		"mobile.computers.refusal.try_now": "ابھی کوشش کریں",
+		"mobile.computers.refusal.tunnel_gone_next": "دوبارہ Radient میں ٹنل بنائیں، پھر یہ کمپیوٹر شامل کریں۔",
+		"mobile.computers.refusal.tunnel_gone_title": "اب {subject} پر کوئی ٹنل موجود نہیں۔",
+		"mobile.computers.refusal.wait_seconds": "دوبارہ کوشش کرنے سے پہلے تقریباً {seconds, plural, one {# سیکنڈ} other {# سیکنڈ}} انتظار کریں۔",
 		"mobile.computers.remove.body": "یہ اس کمپیوٹر کو اس فون کی فہرست سے ہٹا دیتا ہے۔ اس سے کمپیوٹر، اس کی ٹنل یا آپ کے اکاؤنٹ پر کوئی اثر نہیں پڑتا۔",
 		"mobile.computers.remove.confirm": "ہٹائیں",
 		"mobile.computers.remove.title": "یہ کمپیوٹر ہٹائیں؟",
@@ -7859,6 +8414,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "لرزتی ٹیپ",
 		"mobile.notifications.channel.task_complete": "کام مکمل",
 		"mobile.notifications.channel.two_note_chime": "دو سُری گھنٹی",
+		"mobile.notifications.computer_registration.failed": "اس کمپیوٹر سے الرٹس کے لیے یہ فون رجسٹر نہیں ہو سکا۔ ایپ دوبارہ کھولنے پر پھر کوشش کی جائے گی۔",
+		"mobile.notifications.computer_registration.no_token": "اس فون کا ابھی کوئی پُش پتہ نہیں ہے، اس لیے یہ کمپیوٹر اسے الرٹ نہیں بھیج سکتا۔ دوبارہ کوشش کے لیے ایپ پھر سے کھولیں۔",
+		"mobile.notifications.computer_registration.refused": "اس کمپیوٹر نے اس فون کے لیے الرٹس بند کر دیے ہیں۔ جب تک کمپیوٹر پر انہیں دوبارہ اجازت نہ دی جائے، یہ بند رہیں گے۔",
+		"mobile.notifications.computer_registration.registered": "یہ فون اس کمپیوٹر سے الرٹس کے لیے رجسٹرڈ ہے۔",
+		"mobile.notifications.computer_registration.registering": "اس کمپیوٹر سے الرٹس کے لیے یہ فون رجسٹر کیا جا رہا ہے۔",
+		"mobile.notifications.computer_registration.relay_missing": "اس فون کو الرٹ بھیجنے سے پہلے اس کمپیوٹر پر Local Operator کو اپ ڈیٹ کرنا ہوگا۔",
 		"mobile.notifications.detail.answer_in_conversation": "گفتگو میں جواب دیں",
 		"mobile.notifications.detail.conversation_asks": "اس گفتگو کے سوالات",
 		"mobile.notifications.detail.earlier_updates": "پچھلی اپ ڈیٹس",
@@ -8049,6 +8610,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "براہ راست {baseUrl} سے منسلک",
 		"mobile.settings.account.route_radient": "آپ کے Radient ٹنل کے ذریعے",
 		"mobile.settings.account.signed_in": "سائن ان شدہ",
+		"mobile.settings.account.signed_in_radient": "Radient کے ساتھ سائن ان ہے",
 		"mobile.settings.connection.computers": "کمپیوٹرز",
 		"mobile.settings.connection.refresh": "تازہ کریں",
 		"mobile.settings.connection.status": "حالت",
@@ -8056,6 +8618,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "آخری خرابی",
 		"mobile.settings.diagnostics.none": "کوئی نہیں",
 		"mobile.settings.diagnostics.privacy_note": "ان سطروں میں کبھی ٹوکن، پاس ورڈ یا سیشن کا مواد شامل نہیں ہوتا۔",
+		"mobile.settings.diagnostics.reason": "وجہ",
 		"mobile.settings.diagnostics.route": "راستہ",
 		"mobile.settings.diagnostics.route_direct": "براہ راست ریلے",
 		"mobile.settings.diagnostics.route_radient": "Radient ٹنل",
@@ -8081,6 +8644,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "ظاہری شکل",
 		"mobile.settings.section.connection": "کنکشن",
 		"mobile.settings.section.diagnostics": "تشخیص",
+		"mobile.settings.sign_in_confirm.body": "اس سے پہلے آپ کا موجودہ کنکشن ختم ہو جائے گا۔ اگر آپ سائن ان مکمل نہیں کرتے تو آپ کو اپنے کمپیوٹر سے دوبارہ جڑنا ہوگا۔",
+		"mobile.settings.sign_in_confirm.confirm": "سائن ان کریں",
+		"mobile.settings.sign_in_confirm.title": "کیا Radient کے ساتھ سائن ان کریں؟",
 		"mobile.settings.sign_out.body": "اس سے کنٹرول پلین پر سائن ان کا سیشن ختم ہو جاتا ہے اور اس فون سے بھی اس کی محفوظ معلومات ہٹ جاتی ہیں، اس لیے ٹنل اس فون سے درخواستیں قبول کرنا بند کر دیتا ہے۔ آپ کا کمپیوٹر متاثر نہیں ہوتا۔",
 		"mobile.settings.sign_out.confirm": "سائن آؤٹ کریں",
 		"mobile.settings.sign_out.done": "سائن آؤٹ ہو گیا۔ آپ کے کمپیوٹر پر سائن ان کا سیشن منسوخ کر دیا گیا۔",
@@ -8110,6 +8676,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "گہرے ({count})",
 		"mobile.settings.theme.section_light": "روشن ({count})",
 		"mobile.settings.theme.title": "تھیم",
+		"mobile.sidebar.basis.created": "تخلیق کا وقت",
+		"mobile.sidebar.basis.last_active": "آخری سرگرمی",
+		"mobile.sidebar.clock_hint": "تاریخیں اور ترتیب منتخب گھڑی کے مطابق ہیں۔",
+		"mobile.sidebar.empty_by_view.headline": "آپ کے منظر کے اختیارات تمام گفتگوئیں چھپا رہے ہیں۔",
+		"mobile.sidebar.empty_by_view.next": "حصے یا ختم شدہ سیشن دوبارہ آن کریں، یا منظر ری سیٹ کریں۔",
+		"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں",
+		"mobile.sidebar.group.one_list": "ایک فہرست میں",
+		"mobile.sidebar.group.time_section": "وقت کا حصہ",
+		"mobile.sidebar.group_by": "گروہ بندی",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# حصہ پوشیدہ ہے} other {# حصے پوشیدہ ہیں}}",
+		"mobile.sidebar.more_settings": "سائیڈبار کی مزید ترتیبات",
+		"mobile.sidebar.order.active_first": "فعال پہلے",
+		"mobile.sidebar.order.most_recent": "تازہ ترین",
+		"mobile.sidebar.order_by": "ترتیب کی بنیاد",
+		"mobile.sidebar.section.older": "پرانے",
+		"mobile.sidebar.section.pinned": "پن شدہ",
+		"mobile.sidebar.section.running": "جاری",
+		"mobile.sidebar.section.today": "آج",
+		"mobile.sidebar.section.week": "اس ہفتے",
+		"mobile.sidebar.sections": "حصے",
+		"mobile.sidebar.settings_heading": "سائیڈبار",
+		"mobile.sidebar.show_ended": "ختم شدہ سیشن دکھائیں",
+		"mobile.sidebar.show_ended_hint": "پن شدہ اور جاری گفتگو ہمیشہ دکھائی دیتی ہیں۔",
+		"mobile.sidebar.time_basis": "وقت کی بنیاد",
+		"mobile.sidebar.view_options": "دیکھنے کے اختیارات",
 		"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
 		"mobile.signin.failed": "ہم سائن ان مکمل نہیں کر سکے۔",
 		"mobile.signin.hide_diagnostics": "سائن ان کی تفصیلات چھپائیں",
@@ -8516,6 +9107,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "Được bảo vệ bằng đăng nhập",
 		"mobile.computers.reach.answering": "đang phản hồi",
 		"mobile.computers.refresh": "Làm mới",
+		"mobile.computers.refusal.another_address": "Dùng địa chỉ khác",
+		"mobile.computers.refusal.certificate_next": "Hãy dùng địa chỉ {scheme} mà đường hầm đã in ra, chọn đường hầm có chứng chỉ mà điện thoại tin cậy, hoặc thay chứng chỉ tự ký — ứng dụng này sẽ không bỏ qua bước kiểm tra.",
+		"mobile.computers.refusal.certificate_title": "Chứng chỉ của đường hầm đó đã bị từ chối.",
+		"mobile.computers.refusal.console_next": "Hãy mở bảng điều khiển Radient để khắc phục. Đăng nhập lại trên điện thoại này sẽ không giải quyết được vấn đề.",
+		"mobile.computers.refusal.console_title": "{subject} cần được xử lý trong Radient.",
+		"mobile.computers.refusal.host_next": "Hãy kiểm tra xem địa chỉ có bị gõ sai không, và đường hầm có còn công khai tên miền đó không.",
+		"mobile.computers.refusal.host_title": "Không tìm thấy tên miền đó.",
+		"mobile.computers.refusal.offline_next": "Hãy đánh thức máy tính đó và kiểm tra xem trình kết nối có đang chạy không. Trạng thái gần nhất của máy được hiển thị ở trên.",
+		"mobile.computers.refusal.offline_title": "{subject} không phản hồi.",
+		"mobile.computers.refusal.open_console": "Mở bảng điều khiển Radient",
+		"mobile.computers.refusal.password_next": "Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính, rồi thử lại.",
+		"mobile.computers.refusal.password_title": "Mật khẩu đó không được chấp nhận.",
+		"mobile.computers.refusal.relay_stopped_next": "Hãy khởi động lại máy chủ chuyển tiếp và để nó chạy liên tục.",
+		"mobile.computers.refusal.relay_stopped_title": "Máy chủ chuyển tiếp hiện không chạy trên {subject}.",
+		"mobile.computers.refusal.retry_next": "Thường chỉ là sự cố mạng tạm thời. Hãy thử lại sau giây lát.",
+		"mobile.computers.refusal.retry_title": "{subject} chưa sẵn sàng.",
+		"mobile.computers.refusal.sign_in_again": "Đăng nhập lại",
+		"mobile.computers.refusal.sign_in_next": "Hãy đăng nhập lại để kết nối. Những gì bạn đã nhập trước đó được cách ly và sẽ không được gửi.",
+		"mobile.computers.refusal.sign_in_title": "Phiên đăng nhập Radient của bạn đã hết hạn. Đăng nhập để kết nối lại với {subject}.",
+		"mobile.computers.refusal.try_again": "Thử lại",
+		"mobile.computers.refusal.try_now": "Thử ngay",
+		"mobile.computers.refusal.tunnel_gone_next": "Hãy tạo một đường hầm mới trong Radient, rồi thêm máy tính này.",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject} không còn là đường hầm nữa.",
+		"mobile.computers.refusal.wait_seconds": "Hãy đợi khoảng {seconds, plural, other {# giây}} trước khi thử lại.",
 		"mobile.computers.remove.body": "Thao tác này xóa máy tính khỏi danh sách trên điện thoại này. Máy tính, đường hầm của nó và tài khoản của bạn đều không bị ảnh hưởng.",
 		"mobile.computers.remove.confirm": "Xóa",
 		"mobile.computers.remove.title": "Xóa máy tính này?",
@@ -8700,6 +9315,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "Băng rung",
 		"mobile.notifications.channel.task_complete": "Hoàn tất tác vụ",
 		"mobile.notifications.channel.two_note_chime": "Chuông hai nốt",
+		"mobile.notifications.computer_registration.failed": "Không thể đăng ký điện thoại này để nhận cảnh báo từ máy tính này. Ứng dụng sẽ thử lại khi bạn mở lại.",
+		"mobile.notifications.computer_registration.no_token": "Điện thoại này chưa có địa chỉ push, nên máy tính này không thể gửi cảnh báo đến nó. Hãy mở lại ứng dụng để thử lại.",
+		"mobile.notifications.computer_registration.refused": "Máy tính này đã tắt cảnh báo cho điện thoại này. Cảnh báo sẽ vẫn tắt cho đến khi được cho phép lại trên máy tính.",
+		"mobile.notifications.computer_registration.registered": "Điện thoại này đã được đăng ký để nhận cảnh báo từ máy tính này.",
+		"mobile.notifications.computer_registration.registering": "Đang đăng ký điện thoại này để nhận cảnh báo từ máy tính này.",
+		"mobile.notifications.computer_registration.relay_missing": "Máy tính này cần cập nhật Local Operator trước khi có thể gửi cảnh báo đến điện thoại này.",
 		"mobile.notifications.detail.answer_in_conversation": "Trả lời trong cuộc trò chuyện",
 		"mobile.notifications.detail.conversation_asks": "Câu hỏi trong cuộc trò chuyện này",
 		"mobile.notifications.detail.earlier_updates": "Cập nhật trước đó",
@@ -8890,6 +9511,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "Đã kết nối trực tiếp với {baseUrl}",
 		"mobile.settings.account.route_radient": "Qua đường hầm Radient của bạn",
 		"mobile.settings.account.signed_in": "Đã đăng nhập",
+		"mobile.settings.account.signed_in_radient": "Đã đăng nhập bằng Radient",
 		"mobile.settings.connection.computers": "Máy tính",
 		"mobile.settings.connection.refresh": "Làm mới",
 		"mobile.settings.connection.status": "Trạng thái",
@@ -8897,6 +9519,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "Lỗi gần nhất",
 		"mobile.settings.diagnostics.none": "Không có",
 		"mobile.settings.diagnostics.privacy_note": "Các dòng này không bao giờ chứa token, mật khẩu hay nội dung phiên.",
+		"mobile.settings.diagnostics.reason": "Lý do",
 		"mobile.settings.diagnostics.route": "Tuyến kết nối",
 		"mobile.settings.diagnostics.route_direct": "Máy chủ chuyển tiếp trực tiếp",
 		"mobile.settings.diagnostics.route_radient": "Đường hầm Radient",
@@ -8922,6 +9545,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "Giao diện",
 		"mobile.settings.section.connection": "Kết nối",
 		"mobile.settings.section.diagnostics": "Chẩn đoán",
+		"mobile.settings.sign_in_confirm.body": "Thao tác này sẽ ngắt kết nối hiện tại trước. Nếu bạn không hoàn tất đăng nhập, bạn sẽ cần kết nối lại với máy tính của mình.",
+		"mobile.settings.sign_in_confirm.confirm": "Đăng nhập",
+		"mobile.settings.sign_in_confirm.title": "Đăng nhập bằng Radient?",
 		"mobile.settings.sign_out.body": "Thao tác này kết thúc phiên đăng nhập với lớp điều khiển và xóa thông tin phiên đó khỏi điện thoại, nên đường hầm sẽ ngừng nhận yêu cầu từ điện thoại này. Máy tính không bị ảnh hưởng.",
 		"mobile.settings.sign_out.confirm": "Đăng xuất",
 		"mobile.settings.sign_out.done": "Đã đăng xuất. Phiên đăng nhập đã bị thu hồi trên máy tính.",
@@ -8951,6 +9577,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Tối ({count})",
 		"mobile.settings.theme.section_light": "Sáng ({count})",
 		"mobile.settings.theme.title": "Giao diện",
+		"mobile.sidebar.basis.created": "Ngày tạo",
+		"mobile.sidebar.basis.last_active": "Hoạt động gần nhất",
+		"mobile.sidebar.clock_hint": "Ngày và thứ tự tuân theo mốc thời gian đã chọn.",
+		"mobile.sidebar.empty_by_view.headline": "Tùy chọn hiển thị đang ẩn mọi cuộc trò chuyện.",
+		"mobile.sidebar.empty_by_view.next": "Bật lại các mục hoặc phiên đã kết thúc, hoặc đặt lại chế độ xem.",
+		"mobile.sidebar.empty_by_view.reset": "Đặt lại chế độ xem",
+		"mobile.sidebar.group.one_list": "Trong một danh sách",
+		"mobile.sidebar.group.time_section": "Mục thời gian",
+		"mobile.sidebar.group_by": "Nhóm theo",
+		"mobile.sidebar.hidden_sections": "{count, plural, other {Đã ẩn # mục}}",
+		"mobile.sidebar.more_settings": "Thêm cài đặt thanh bên",
+		"mobile.sidebar.order.active_first": "Đang hoạt động trước",
+		"mobile.sidebar.order.most_recent": "Mới nhất",
+		"mobile.sidebar.order_by": "Sắp xếp theo",
+		"mobile.sidebar.section.older": "Cũ hơn",
+		"mobile.sidebar.section.pinned": "Đã ghim",
+		"mobile.sidebar.section.running": "Đang chạy",
+		"mobile.sidebar.section.today": "Hôm nay",
+		"mobile.sidebar.section.week": "Tuần này",
+		"mobile.sidebar.sections": "Các mục",
+		"mobile.sidebar.settings_heading": "Thanh bên",
+		"mobile.sidebar.show_ended": "Hiện các phiên đã kết thúc",
+		"mobile.sidebar.show_ended_hint": "Các cuộc trò chuyện đã ghim và đang chạy luôn hiển thị.",
+		"mobile.sidebar.time_basis": "Mốc thời gian",
+		"mobile.sidebar.view_options": "Tùy chọn hiển thị",
 		"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
 		"mobile.signin.failed": "Không thể hoàn tất đăng nhập.",
 		"mobile.signin.hide_diagnostics": "Ẩn chi tiết đăng nhập",
@@ -9357,6 +10008,30 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.protected": "受登录保护",
 		"mobile.computers.reach.answering": "已响应",
 		"mobile.computers.refresh": "刷新",
+		"mobile.computers.refusal.another_address": "改用其他地址",
+		"mobile.computers.refusal.certificate_next": "请改用隧道输出的{scheme}地址，或换用证书能被手机信任的隧道，或替换自签名证书——本应用不会跳过证书校验。",
+		"mobile.computers.refusal.certificate_title": "该隧道的证书被拒绝。",
+		"mobile.computers.refusal.console_next": "请打开Radient控制台进行处理。在此手机上重新登录也无法解决这个问题。",
+		"mobile.computers.refusal.console_title": "{subject}需要在Radient中处理。",
+		"mobile.computers.refusal.host_next": "请检查地址是否有拼写错误，以及隧道是否仍在发布该名称。",
+		"mobile.computers.refusal.host_title": "找不到该主机名。",
+		"mobile.computers.refusal.offline_next": "请唤醒那台电脑，并确认连接器正在运行。上方显示的是它最后已知的状态。",
+		"mobile.computers.refusal.offline_title": "{subject}没有响应。",
+		"mobile.computers.refusal.open_console": "打开Radient控制台",
+		"mobile.computers.refusal.password_next": "请在电脑上检查中继密码，然后重试。",
+		"mobile.computers.refusal.password_title": "该密码未被接受。",
+		"mobile.computers.refusal.relay_stopped_next": "请重新启动中继，并让它保持运行。",
+		"mobile.computers.refusal.relay_stopped_title": "{subject}上的中继没有运行。",
+		"mobile.computers.refusal.retry_next": "通常只是暂时的网络问题。请稍后再试。",
+		"mobile.computers.refusal.retry_title": "{subject}尚未就绪。",
+		"mobile.computers.refusal.sign_in_again": "重新登录",
+		"mobile.computers.refusal.sign_in_next": "请重新登录以恢复连接。此前输入的内容已被隔离，不会发送。",
+		"mobile.computers.refusal.sign_in_title": "你的Radient登录已过期。请登录以重新连接到{subject}。",
+		"mobile.computers.refusal.try_again": "重试",
+		"mobile.computers.refusal.try_now": "立即重试",
+		"mobile.computers.refusal.tunnel_gone_next": "请在Radient中重新创建隧道，然后添加这台电脑。",
+		"mobile.computers.refusal.tunnel_gone_title": "{subject}已不再对应任何隧道。",
+		"mobile.computers.refusal.wait_seconds": "请等待约{seconds, plural, other {# 秒}}后再试。",
 		"mobile.computers.remove.body": "此操作只将它从此手机的列表中移除。不会影响电脑本身、其隧道或你的账户。",
 		"mobile.computers.remove.confirm": "移除",
 		"mobile.computers.remove.title": "移除此电脑？",
@@ -9541,6 +10216,12 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.channel.tape_warble": "磁带颤音",
 		"mobile.notifications.channel.task_complete": "任务完成",
 		"mobile.notifications.channel.two_note_chime": "双音钟声",
+		"mobile.notifications.computer_registration.failed": "无法为此手机注册来自这台电脑的提醒。重新打开应用时会再次尝试。",
+		"mobile.notifications.computer_registration.no_token": "此手机还没有推送地址，因此这台电脑无法向它发送提醒。请重新打开应用再试一次。",
+		"mobile.notifications.computer_registration.refused": "这台电脑已关闭此手机的提醒。在电脑上重新允许之前，提醒将保持关闭。",
+		"mobile.notifications.computer_registration.registered": "此手机已注册接收来自这台电脑的提醒。",
+		"mobile.notifications.computer_registration.registering": "正在为此手机注册来自这台电脑的提醒。",
+		"mobile.notifications.computer_registration.relay_missing": "这台电脑需要先更新 Local Operator，才能向此手机发送提醒。",
 		"mobile.notifications.detail.answer_in_conversation": "在对话中回答",
 		"mobile.notifications.detail.conversation_asks": "此对话的问题",
 		"mobile.notifications.detail.earlier_updates": "较早的更新",
@@ -9731,6 +10412,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.account.route_direct": "已直连{baseUrl}",
 		"mobile.settings.account.route_radient": "通过Radient隧道",
 		"mobile.settings.account.signed_in": "已登录",
+		"mobile.settings.account.signed_in_radient": "已使用Radient登录",
 		"mobile.settings.connection.computers": "电脑",
 		"mobile.settings.connection.refresh": "刷新",
 		"mobile.settings.connection.status": "状态",
@@ -9738,6 +10420,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.diagnostics.last_error": "最近错误",
 		"mobile.settings.diagnostics.none": "无",
 		"mobile.settings.diagnostics.privacy_note": "这些信息绝不包含令牌、密码或会话内容。",
+		"mobile.settings.diagnostics.reason": "原因",
 		"mobile.settings.diagnostics.route": "连接路径",
 		"mobile.settings.diagnostics.route_direct": "直连中继",
 		"mobile.settings.diagnostics.route_radient": "Radient隧道",
@@ -9763,6 +10446,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.section.appearance": "外观",
 		"mobile.settings.section.connection": "连接",
 		"mobile.settings.section.diagnostics": "诊断",
+		"mobile.settings.sign_in_confirm.body": "这会先结束你当前的连接。如果你没有完成登录，需要重新连接你的电脑。",
+		"mobile.settings.sign_in_confirm.confirm": "登录",
+		"mobile.settings.sign_in_confirm.title": "使用Radient登录？",
 		"mobile.settings.sign_out.body": "这会结束控制平面上的登录会话，并清除此手机上保存的登录信息，隧道将不再接受此手机的请求。不会影响你的电脑。",
 		"mobile.settings.sign_out.confirm": "退出登录",
 		"mobile.settings.sign_out.done": "已退出登录。已在你的电脑上撤销此手机的登录会话。",
@@ -9792,6 +10478,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "深色（{count}）",
 		"mobile.settings.theme.section_light": "浅色（{count}）",
 		"mobile.settings.theme.title": "主题",
+		"mobile.sidebar.basis.created": "创建时间",
+		"mobile.sidebar.basis.last_active": "最近活跃时间",
+		"mobile.sidebar.clock_hint": "日期与排序均以所选时间依据为准。",
+		"mobile.sidebar.empty_by_view.headline": "你的视图选项隐藏了所有对话。",
+		"mobile.sidebar.empty_by_view.next": "重新开启分区或已结束的会话，或重置视图。",
+		"mobile.sidebar.empty_by_view.reset": "重置视图",
+		"mobile.sidebar.group.one_list": "统一列表",
+		"mobile.sidebar.group.time_section": "时间分区",
+		"mobile.sidebar.group_by": "分组方式",
+		"mobile.sidebar.hidden_sections": "{count, plural, other {已隐藏#个分区}}",
+		"mobile.sidebar.more_settings": "更多侧边栏设置",
+		"mobile.sidebar.order.active_first": "活跃优先",
+		"mobile.sidebar.order.most_recent": "最近优先",
+		"mobile.sidebar.order_by": "排序方式",
+		"mobile.sidebar.section.older": "更早",
+		"mobile.sidebar.section.pinned": "已置顶",
+		"mobile.sidebar.section.running": "运行中",
+		"mobile.sidebar.section.today": "今天",
+		"mobile.sidebar.section.week": "本周",
+		"mobile.sidebar.sections": "分区",
+		"mobile.sidebar.settings_heading": "侧边栏",
+		"mobile.sidebar.show_ended": "显示已结束的会话",
+		"mobile.sidebar.show_ended_hint": "已置顶和运行中的对话始终显示。",
+		"mobile.sidebar.time_basis": "时间依据",
+		"mobile.sidebar.view_options": "视图选项",
 		"mobile.signin.diagnostics": "登录诊断",
 		"mobile.signin.failed": "无法完成登录。",
 		"mobile.signin.hide_diagnostics": "隐藏登录详情",
