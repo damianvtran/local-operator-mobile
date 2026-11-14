@@ -96,4 +96,36 @@ describe("push registration retirement ordering", () => {
 		await lifecycle.retire();
 		expect(unregister).toHaveBeenCalledTimes(1);
 	});
+
+	it("withdraw (the Team Bridge switch turned off) drains a PUT, then DELETEs, and stays registrable", async () => {
+		const accepted = deferred();
+		const calls: string[] = [];
+		const lifecycle = createPushLifecycle({
+			register: async () => {
+				calls.push("PUT started");
+				await accepted.promise;
+				calls.push("PUT committed");
+			},
+			unregister: async () => {
+				calls.push("DELETE");
+			},
+		});
+		lifecycle.activate();
+		const put = lifecycle.register();
+		await Promise.resolve();
+		const withdrawal = lifecycle.withdraw();
+		accepted.resolve();
+		await Promise.all([put, withdrawal]);
+		expect(calls).toEqual(["PUT started", "PUT committed", "DELETE"]);
+		// Unlike retire (sign-out), the account is still signed in: turning the
+		// switch back on registers again.
+		await lifecycle.register();
+		expect(calls).toEqual([
+			"PUT started",
+			"PUT committed",
+			"DELETE",
+			"PUT started",
+			"PUT committed",
+		]);
+	});
 });

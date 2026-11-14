@@ -35,6 +35,16 @@
 	"mobile.notifications.permission.undetermined": "Team Bridge संदेशों के अलर्ट पाने के लिए अपने फ़ोन से अनुमति माँगें। आपके कंप्यूटरों के अलर्ट अभी चालू नहीं हैं — तब तक वे केवल Local Operator खुला रहने पर काम करते हैं।",
 	"mobile.notifications.permission.unknown": "इस फ़ोन पर सूचनाओं की जाँच नहीं हो सकी। यह इनकार नहीं है — फिर से जाँचने के लिए सेटिंग्स दोबारा खोलें।",
 	"mobile.notifications.permission.unsupported": "इस बिल्ड में सूचनाएँ शामिल नहीं हैं।",
+	"mobile.notifications.preferences.completions": "एजेंट ने काम पूरा किया",
+	"mobile.notifications.preferences.errors": "एजेंट को त्रुटि मिली",
+	"mobile.notifications.preferences.master": "सूचनाएँ",
+	"mobile.notifications.preferences.team_bridge": "Team Bridge संदेश",
+	"mobile.notifications.preferences.update_computer": "कौन-सी सूचनाएँ मिलें, यह चुनने के लिए अपने कंप्यूटर पर Local Operator अपडेट करें।",
+	"mobile.notifications.primer.body": "जब कोई एजेंट अपना टर्न पूरा करे, जब कोई स्वीकृति या प्रश्न आपकी प्रतीक्षा कर रहा हो, और जब कोई Team Bridge संदेश आए, तब आपका फ़ोन आपको अलर्ट कर सकता है।",
+	"mobile.notifications.primer.enable": "सूचनाएँ चालू करें",
+	"mobile.notifications.primer.not_now": "अभी नहीं",
+	"mobile.notifications.primer.settings_hint": "आप इसे कभी भी सेटिंग में बदल सकते हैं।",
+	"mobile.notifications.primer.title": "जब आपके एजेंट काम पूरा करें, तब सूचना पाएँ",
 	"mobile.notifications.priority_high": "उच्च",
 	"mobile.notifications.title": "सूचनाएँ"
 }

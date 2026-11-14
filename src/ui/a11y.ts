@@ -391,6 +391,17 @@ export const CONTROL = {
 	settingsAddComputer: "settings-add-computer",
 	settingsTextScaleGroup: "settings-text-scale-group",
 	settingsNotificationsEnable: "settings-notifications-enable",
+	/** Settings › Notifications preference switches (the master switch and the
+	 *  three types; `notification-preferences.ts`). */
+	settingsNotificationsMaster: "settings-notifications-master",
+	settingsNotificationsCompletions: "settings-notifications-completions",
+	settingsNotificationsErrors: "settings-notifications-errors",
+	settingsNotificationsTeamBridge: "settings-notifications-team-bridge",
+	/** The first-run notification primer (`permission-primer-sheet.tsx`): the
+	 *  sheet, its "Turn on notifications" primary and its "Not now". */
+	notificationPrimer: "notification-primer",
+	notificationPrimerEnable: "notification-primer-enable",
+	notificationPrimerNotNow: "notification-primer-not-now",
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
 	settingsAccountRoutingRetry: "settings-account-routing-retry",
@@ -1485,6 +1496,7 @@ export const REGION = {
 	 *  one sentence `session-push-status.ts` renders (absent when it adds no
 	 *  fact), so a capture can assert which state the screen is in. */
 	settingsNotificationsRegistration: "settings-notifications-registration",
+	settingsNotificationsPreferences: "settings-notifications-preferences",
 	settingsAccountRouting: "settings-section-account-routing",
 
 	/** The refusal surfaces (`docs/ux/flows.md` § 9, C5/C6/C7). Each id names a

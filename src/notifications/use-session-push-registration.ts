@@ -55,8 +55,14 @@ import { AppState, Platform } from "react-native";
 import {
 	useConnection,
 	useConnectionState,
+	useListState,
 } from "@/features/auth/connection-provider";
 import { loadNotifications } from "@/notifications/native";
+import {
+	loadNotificationPreferences,
+	pushPreferencesSupported,
+	wirePreferences,
+} from "@/notifications/notification-preferences";
 import {
 	registerSessionPushDevice,
 	resetSessionPushRegistrationMemory,
@@ -64,13 +70,20 @@ import {
 	sessionPushRouteKey,
 } from "@/notifications/session-push-registration";
 
-const LIVE_PHASES = ["live", "degraded", "re-minting"];
+/** The connection phases in which a route is usable. Exported so the
+ *  notification primer reads "a live computer" by the same rule. */
+export const LIVE_PHASES: readonly string[] = [
+	"live",
+	"degraded",
+	"re-minting",
+];
 
 /** The mounted hook's trigger; `null` while no live route is mounted. */
 let activeTrigger: ((force: boolean) => void) | null = null;
 
-/** Ask the mounted hook to register now (Settings, after a permission grant).
- *  A no-op without a live route: the next route start registers anyway. */
+/** Ask the mounted hook to register now (a permission grant, or a changed
+ *  notification preference). A no-op without a live route: the next route
+ *  start registers anyway, with the stored preferences. */
 export const requestSessionPushRegistration = (): void => {
 	activeTrigger?.(true);
 };
@@ -82,6 +95,14 @@ export const useSessionPushRegistration = (): void => {
 	relayRef.current = relay;
 	const route = useConnectionState((s) => s.route);
 	const live = useConnectionState((s) => LIVE_PHASES.includes(s.phase));
+	/* Whether this computer's daemon accepts `preferences` (core PR C). Read
+	 * through a ref at body-build time, so a capability frame never restarts
+	 * the registration effect; its own edge, below, forces one re-POST. */
+	const preferencesSupported = useListState((s) =>
+		pushPreferencesSupported(s.capabilities),
+	);
+	const supportedRef = useRef(preferencesSupported);
+	supportedRef.current = preferencesSupported;
 	const revision = useConnectionState((s) => s.revision);
 	const routeKey = route ? sessionPushRouteKey(route) : null;
 	useEffect(() => {
@@ -122,6 +143,11 @@ export const useSessionPushRegistration = (): void => {
 				routeKey,
 				force,
 				isCurrent,
+				preferences: async () =>
+					wirePreferences(
+						await loadNotificationPreferences(),
+						supportedRef.current,
+					),
 				onPosting: () => {
 					if (stopped) return;
 					const previous = sessionPushRegistrationStore.getState();
@@ -173,4 +199,15 @@ export const useSessionPushRegistration = (): void => {
 			tokenSubscription?.remove();
 		};
 	}, [routeKey, live, revision]);
+
+	/* The list frame (and so the capability) usually lands just AFTER the route
+	 * goes live, so the first POST went without `preferences`. When the daemon
+	 * turns out to accept them, register once more so it filters from now on.
+	 * Only the false → true edge: the initial `true` is covered by the forced
+	 * effect-start POST above. */
+	const seenSupported = useRef(preferencesSupported);
+	useEffect(() => {
+		if (preferencesSupported && !seenSupported.current) activeTrigger?.(true);
+		seenSupported.current = preferencesSupported;
+	}, [preferencesSupported]);
 };

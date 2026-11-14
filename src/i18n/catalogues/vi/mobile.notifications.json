@@ -35,6 +35,16 @@
 	"mobile.notifications.permission.undetermined": "Xin phép điện thoại để nhận cảnh báo tin nhắn Team Bridge. Cảnh báo từ máy tính của bạn chưa được bật — cho đến khi bật, chúng chỉ hoạt động khi Local Operator đang mở.",
 	"mobile.notifications.permission.unknown": "Không thể kiểm tra thông báo trên điện thoại này. Đây không phải là từ chối — hãy mở lại Cài đặt để kiểm tra lần nữa.",
 	"mobile.notifications.permission.unsupported": "Bản dựng này không có thông báo.",
+	"mobile.notifications.preferences.completions": "Agent đã hoàn tất",
+	"mobile.notifications.preferences.errors": "Agent gặp lỗi",
+	"mobile.notifications.preferences.master": "Thông báo",
+	"mobile.notifications.preferences.team_bridge": "Tin nhắn Team Bridge",
+	"mobile.notifications.preferences.update_computer": "Hãy cập nhật Local Operator trên máy tính để chọn loại thông báo bạn nhận.",
+	"mobile.notifications.primer.body": "Điện thoại có thể báo cho bạn khi một agent hoàn tất một lượt, khi có yêu cầu phê duyệt hoặc câu hỏi đang chờ bạn, và khi có tin nhắn Team Bridge.",
+	"mobile.notifications.primer.enable": "Bật thông báo",
+	"mobile.notifications.primer.not_now": "Để sau",
+	"mobile.notifications.primer.settings_hint": "Bạn có thể thay đổi điều này bất cứ lúc nào trong Cài đặt.",
+	"mobile.notifications.primer.title": "Nhận thông báo khi các agent của bạn hoàn tất",
 	"mobile.notifications.priority_high": "Cao",
 	"mobile.notifications.title": "Thông báo"
 }

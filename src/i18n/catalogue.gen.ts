@@ -395,6 +395,16 @@ export type CatalogueKey =
 	| "mobile.notifications.permission.undetermined"
 	| "mobile.notifications.permission.unknown"
 	| "mobile.notifications.permission.unsupported"
+	| "mobile.notifications.preferences.completions"
+	| "mobile.notifications.preferences.errors"
+	| "mobile.notifications.preferences.master"
+	| "mobile.notifications.preferences.team_bridge"
+	| "mobile.notifications.preferences.update_computer"
+	| "mobile.notifications.primer.body"
+	| "mobile.notifications.primer.enable"
+	| "mobile.notifications.primer.not_now"
+	| "mobile.notifications.primer.settings_hint"
+	| "mobile.notifications.primer.title"
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.title"
 	| "mobile.oauth.failed"
@@ -1224,6 +1234,16 @@ export type NoParamKey =
 	| "mobile.notifications.permission.undetermined"
 	| "mobile.notifications.permission.unknown"
 	| "mobile.notifications.permission.unsupported"
+	| "mobile.notifications.preferences.completions"
+	| "mobile.notifications.preferences.errors"
+	| "mobile.notifications.preferences.master"
+	| "mobile.notifications.preferences.team_bridge"
+	| "mobile.notifications.preferences.update_computer"
+	| "mobile.notifications.primer.body"
+	| "mobile.notifications.primer.enable"
+	| "mobile.notifications.primer.not_now"
+	| "mobile.notifications.primer.settings_hint"
+	| "mobile.notifications.primer.title"
 	| "mobile.notifications.priority_high"
 	| "mobile.notifications.title"
 	| "mobile.oauth.failed"
@@ -2016,6 +2036,16 @@ export type MessageParams = {
 	"mobile.notifications.permission.undetermined": NoParams;
 	"mobile.notifications.permission.unknown": NoParams;
 	"mobile.notifications.permission.unsupported": NoParams;
+	"mobile.notifications.preferences.completions": NoParams;
+	"mobile.notifications.preferences.errors": NoParams;
+	"mobile.notifications.preferences.master": NoParams;
+	"mobile.notifications.preferences.team_bridge": NoParams;
+	"mobile.notifications.preferences.update_computer": NoParams;
+	"mobile.notifications.primer.body": NoParams;
+	"mobile.notifications.primer.enable": NoParams;
+	"mobile.notifications.primer.not_now": NoParams;
+	"mobile.notifications.primer.settings_hint": NoParams;
+	"mobile.notifications.primer.title": NoParams;
 	"mobile.notifications.priority_high": NoParams;
 	"mobile.notifications.title": NoParams;
 	"mobile.oauth.failed": NoParams;
@@ -2907,6 +2937,16 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.notifications.permission.undetermined": "Ask your phone for permission to get Team Bridge message alerts. Alerts from your computers are not switched on yet — until they are, those work only while Local Operator is open.",
 	"mobile.notifications.permission.unknown": "Notifications could not be checked on this phone. This is not a refusal — reopen Settings to check again.",
 	"mobile.notifications.permission.unsupported": "This build does not include notifications.",
+	"mobile.notifications.preferences.completions": "Agent finished",
+	"mobile.notifications.preferences.errors": "Agent hit an error",
+	"mobile.notifications.preferences.master": "Notifications",
+	"mobile.notifications.preferences.team_bridge": "Team Bridge messages",
+	"mobile.notifications.preferences.update_computer": "Update Local Operator on your computer to choose which notifications you get.",
+	"mobile.notifications.primer.body": "Your phone can alert you when an agent finishes a turn, when an approval or question is waiting for you, and when a Team Bridge message arrives.",
+	"mobile.notifications.primer.enable": "Turn on notifications",
+	"mobile.notifications.primer.not_now": "Not now",
+	"mobile.notifications.primer.settings_hint": "You can change this at any time in Settings.",
+	"mobile.notifications.primer.title": "Get notified when your agents finish",
 	"mobile.notifications.priority_high": "High",
 	"mobile.notifications.title": "Notifications",
 	"mobile.oauth.failed": "Sign-in could not finish. Try again.",
@@ -3783,6 +3823,16 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.permission.undetermined": { role: "status", note: "Settings › Notifications, the state sentence before the OS has been asked; an 'Enable notifications' button sits under it. Team Bridge is a brand. Must not promise that alerts will definitely arrive." },
 	"mobile.notifications.permission.unknown": { role: "status", note: "Settings › Notifications, the state sentence when the permission read failed. Must read as 'could not check', never as a refusal, and name the remedy (reopen Settings)." },
 	"mobile.notifications.permission.unsupported": { role: "status", note: "Settings › Notifications, the state sentence when this app build or platform has no notification support (e.g. web). States a fact; offers no action." },
+	"mobile.notifications.preferences.completions": { role: "button", note: "Settings › Notifications, a switch row: notify when an AI agent on the computer finishes its turn. Short, past tense." },
+	"mobile.notifications.preferences.errors": { role: "button", note: "Settings › Notifications, a switch row: notify when an AI agent on the computer stops because of an error. Short." },
+	"mobile.notifications.preferences.master": { role: "button", note: "Settings › Notifications, the master switch row that turns all of this phone's notifications on or off. One word, the same as the section title." },
+	"mobile.notifications.preferences.team_bridge": { role: "button", note: "Settings › Notifications, a switch row: notify about new Team Bridge messages. Team Bridge is a brand; keep it in Latin script." },
+	"mobile.notifications.preferences.update_computer": { role: "help", note: "Settings › Notifications, shown under the switches when the connected computer runs an older Local Operator that cannot filter notifications, so the switches are disabled. Local Operator is a brand." },
+	"mobile.notifications.primer.body": { role: "help", note: "Body of the first-run notifications sheet: what notifications bring. Names three events: an agent finished a turn, an approval or question is waiting, a Team Bridge message arrived. Team Bridge is a brand. Says \"can\": delivery is not promised." },
+	"mobile.notifications.primer.enable": { role: "button", note: "Primary button of the first-run notifications sheet. Pressing it raises the phone's own permission dialog." },
+	"mobile.notifications.primer.not_now": { role: "button", note: "Secondary button of the first-run notifications sheet: declines for now. The sheet may be offered once more later. Short." },
+	"mobile.notifications.primer.settings_hint": { role: "help", note: "Small line under the first-run notifications sheet's body: the choice can be changed later in the app's Settings screen." },
+	"mobile.notifications.primer.title": { role: "heading", note: "Title of the first-run sheet that asks the reader to turn on notifications. Shown once on Home after a computer is first reached. \"Agents\" are the AI agents running on the reader's computer." },
 	"mobile.notifications.priority_high": { role: "status", note: "Badge on a notification the sender marked high priority. One word." },
 	"mobile.notifications.title": { role: "heading", note: "Title of the notifications inbox screen." },
 	"mobile.oauth.failed": { role: "status", note: "App sign-in failure when Android native transport or browser cannot complete. Cancellation is a separate existing state. No native error/URL/code is shown." },
@@ -4673,6 +4723,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.permission.undetermined": "Pide permiso a tu teléfono para recibir avisos de mensajes de Team Bridge. Las alertas de tus computadoras aún no están activadas; hasta que lo estén, solo funcionan mientras Local Operator está abierto.",
 		"mobile.notifications.permission.unknown": "No se pudieron comprobar las notificaciones en este teléfono. No es un rechazo: vuelve a abrir Ajustes para comprobarlo de nuevo.",
 		"mobile.notifications.permission.unsupported": "Esta compilación no incluye notificaciones.",
+		"mobile.notifications.preferences.completions": "El agente terminó",
+		"mobile.notifications.preferences.errors": "El agente tuvo un error",
+		"mobile.notifications.preferences.master": "Notificaciones",
+		"mobile.notifications.preferences.team_bridge": "Mensajes de Team Bridge",
+		"mobile.notifications.preferences.update_computer": "Actualiza Local Operator en tu computadora para elegir qué notificaciones recibes.",
+		"mobile.notifications.primer.body": "Tu teléfono puede avisarte cuando un agente termina un turno, cuando una aprobación o una pregunta te espera y cuando llega un mensaje de Team Bridge.",
+		"mobile.notifications.primer.enable": "Activar notificaciones",
+		"mobile.notifications.primer.not_now": "Ahora no",
+		"mobile.notifications.primer.settings_hint": "Puedes cambiarlo en cualquier momento en Ajustes.",
+		"mobile.notifications.primer.title": "Recibe avisos cuando tus agentes terminen",
 		"mobile.notifications.priority_high": "Alta",
 		"mobile.notifications.title": "Notificaciones",
 		"mobile.oauth.failed": "No se pudo completar el inicio de sesión. Inténtalo de nuevo.",
@@ -5547,6 +5607,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.permission.undetermined": "Demandez l'autorisation à votre téléphone pour recevoir les alertes de messages Team Bridge. Les alertes de vos ordinateurs ne sont pas encore activées ; d'ici là, elles ne fonctionnent que lorsque Local Operator est ouvert.",
 		"mobile.notifications.permission.unknown": "Impossible de vérifier les notifications sur ce téléphone. Ce n'est pas un refus : rouvrez les Réglages pour vérifier à nouveau.",
 		"mobile.notifications.permission.unsupported": "Cette version n'inclut pas les notifications.",
+		"mobile.notifications.preferences.completions": "L'agent a terminé",
+		"mobile.notifications.preferences.errors": "L'agent a rencontré une erreur",
+		"mobile.notifications.preferences.master": "Notifications",
+		"mobile.notifications.preferences.team_bridge": "Messages Team Bridge",
+		"mobile.notifications.preferences.update_computer": "Mettez à jour Local Operator sur votre ordinateur pour choisir les notifications que vous recevez.",
+		"mobile.notifications.primer.body": "Votre téléphone peut vous alerter quand un agent termine un tour, quand une approbation ou une question vous attend, et quand un message Team Bridge arrive.",
+		"mobile.notifications.primer.enable": "Activer les notifications",
+		"mobile.notifications.primer.not_now": "Plus tard",
+		"mobile.notifications.primer.settings_hint": "Vous pouvez modifier ce choix à tout moment dans les Réglages.",
+		"mobile.notifications.primer.title": "Soyez averti quand vos agents ont terminé",
 		"mobile.notifications.priority_high": "Élevée",
 		"mobile.notifications.title": "Notifications",
 		"mobile.oauth.failed": "La connexion n’a pas pu aboutir. Réessayez.",
@@ -6421,6 +6491,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.permission.undetermined": "Team Bridge संदेशों के अलर्ट पाने के लिए अपने फ़ोन से अनुमति माँगें। आपके कंप्यूटरों के अलर्ट अभी चालू नहीं हैं — तब तक वे केवल Local Operator खुला रहने पर काम करते हैं।",
 		"mobile.notifications.permission.unknown": "इस फ़ोन पर सूचनाओं की जाँच नहीं हो सकी। यह इनकार नहीं है — फिर से जाँचने के लिए सेटिंग्स दोबारा खोलें।",
 		"mobile.notifications.permission.unsupported": "इस बिल्ड में सूचनाएँ शामिल नहीं हैं।",
+		"mobile.notifications.preferences.completions": "एजेंट ने काम पूरा किया",
+		"mobile.notifications.preferences.errors": "एजेंट को त्रुटि मिली",
+		"mobile.notifications.preferences.master": "सूचनाएँ",
+		"mobile.notifications.preferences.team_bridge": "Team Bridge संदेश",
+		"mobile.notifications.preferences.update_computer": "कौन-सी सूचनाएँ मिलें, यह चुनने के लिए अपने कंप्यूटर पर Local Operator अपडेट करें।",
+		"mobile.notifications.primer.body": "जब कोई एजेंट अपना टर्न पूरा करे, जब कोई स्वीकृति या प्रश्न आपकी प्रतीक्षा कर रहा हो, और जब कोई Team Bridge संदेश आए, तब आपका फ़ोन आपको अलर्ट कर सकता है।",
+		"mobile.notifications.primer.enable": "सूचनाएँ चालू करें",
+		"mobile.notifications.primer.not_now": "अभी नहीं",
+		"mobile.notifications.primer.settings_hint": "आप इसे कभी भी सेटिंग में बदल सकते हैं।",
+		"mobile.notifications.primer.title": "जब आपके एजेंट काम पूरा करें, तब सूचना पाएँ",
 		"mobile.notifications.priority_high": "उच्च",
 		"mobile.notifications.title": "सूचनाएँ",
 		"mobile.oauth.failed": "साइन-इन पूरा नहीं हो सका। फिर से कोशिश करें।",
@@ -7295,6 +7375,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.permission.undetermined": "Запросите у телефона разрешение, чтобы получать оповещения о сообщениях Team Bridge. Оповещения с ваших компьютеров пока не включены — до тех пор они работают, только пока Local Operator открыт.",
 		"mobile.notifications.permission.unknown": "Не удалось проверить уведомления на этом телефоне. Это не отказ — откройте Настройки снова, чтобы проверить ещё раз.",
 		"mobile.notifications.permission.unsupported": "Эта сборка не поддерживает уведомления.",
+		"mobile.notifications.preferences.completions": "Агент закончил",
+		"mobile.notifications.preferences.errors": "У агента ошибка",
+		"mobile.notifications.preferences.master": "Уведомления",
+		"mobile.notifications.preferences.team_bridge": "Сообщения Team Bridge",
+		"mobile.notifications.preferences.update_computer": "Обновите Local Operator на компьютере, чтобы выбирать, какие уведомления получать.",
+		"mobile.notifications.primer.body": "Телефон может оповещать вас, когда агент завершает ход, когда вас ждёт одобрение или вопрос и когда приходит сообщение Team Bridge.",
+		"mobile.notifications.primer.enable": "Включить уведомления",
+		"mobile.notifications.primer.not_now": "Не сейчас",
+		"mobile.notifications.primer.settings_hint": "Это можно изменить в любой момент в настройках.",
+		"mobile.notifications.primer.title": "Узнавайте, когда агенты закончат",
 		"mobile.notifications.priority_high": "Важно",
 		"mobile.notifications.title": "Уведомления",
 		"mobile.oauth.failed": "Не удалось завершить вход. Попробуйте ещё раз.",
@@ -8169,6 +8259,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.permission.undetermined": "Team Bridge پیغامات کے الرٹ پانے کے لیے اپنے فون سے اجازت مانگیں۔ آپ کے کمپیوٹرز کے الرٹ ابھی آن نہیں ہیں — تب تک وہ صرف Local Operator کھلا ہونے پر کام کرتے ہیں۔",
 		"mobile.notifications.permission.unknown": "اس فون پر اطلاعات کی جانچ نہیں ہو سکی۔ یہ انکار نہیں ہے — دوبارہ جانچنے کے لیے سیٹنگز پھر سے کھولیں۔",
 		"mobile.notifications.permission.unsupported": "اس بلڈ میں اطلاعات شامل نہیں ہیں۔",
+		"mobile.notifications.preferences.completions": "ایجنٹ نے کام مکمل کیا",
+		"mobile.notifications.preferences.errors": "ایجنٹ کو خرابی پیش آئی",
+		"mobile.notifications.preferences.master": "اطلاعات",
+		"mobile.notifications.preferences.team_bridge": "Team Bridge پیغامات",
+		"mobile.notifications.preferences.update_computer": "کون سی اطلاعات ملیں، یہ چننے کے لیے اپنے کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔",
+		"mobile.notifications.primer.body": "جب کوئی ایجنٹ اپنی باری مکمل کرے، جب کوئی منظوری یا سوال آپ کا منتظر ہو، اور جب Team Bridge کا کوئی پیغام آئے، تو آپ کا فون آپ کو الرٹ کر سکتا ہے۔",
+		"mobile.notifications.primer.enable": "اطلاعات آن کریں",
+		"mobile.notifications.primer.not_now": "ابھی نہیں",
+		"mobile.notifications.primer.settings_hint": "آپ اسے کسی بھی وقت سیٹنگز میں بدل سکتے ہیں۔",
+		"mobile.notifications.primer.title": "جب آپ کے ایجنٹ کام مکمل کریں تو اطلاع پائیں",
 		"mobile.notifications.priority_high": "اعلیٰ",
 		"mobile.notifications.title": "اطلاعات",
 		"mobile.oauth.failed": "سائن اِن مکمل نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
@@ -9043,6 +9143,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.permission.undetermined": "Xin phép điện thoại để nhận cảnh báo tin nhắn Team Bridge. Cảnh báo từ máy tính của bạn chưa được bật — cho đến khi bật, chúng chỉ hoạt động khi Local Operator đang mở.",
 		"mobile.notifications.permission.unknown": "Không thể kiểm tra thông báo trên điện thoại này. Đây không phải là từ chối — hãy mở lại Cài đặt để kiểm tra lần nữa.",
 		"mobile.notifications.permission.unsupported": "Bản dựng này không có thông báo.",
+		"mobile.notifications.preferences.completions": "Agent đã hoàn tất",
+		"mobile.notifications.preferences.errors": "Agent gặp lỗi",
+		"mobile.notifications.preferences.master": "Thông báo",
+		"mobile.notifications.preferences.team_bridge": "Tin nhắn Team Bridge",
+		"mobile.notifications.preferences.update_computer": "Hãy cập nhật Local Operator trên máy tính để chọn loại thông báo bạn nhận.",
+		"mobile.notifications.primer.body": "Điện thoại có thể báo cho bạn khi một agent hoàn tất một lượt, khi có yêu cầu phê duyệt hoặc câu hỏi đang chờ bạn, và khi có tin nhắn Team Bridge.",
+		"mobile.notifications.primer.enable": "Bật thông báo",
+		"mobile.notifications.primer.not_now": "Để sau",
+		"mobile.notifications.primer.settings_hint": "Bạn có thể thay đổi điều này bất cứ lúc nào trong Cài đặt.",
+		"mobile.notifications.primer.title": "Nhận thông báo khi các agent của bạn hoàn tất",
 		"mobile.notifications.priority_high": "Cao",
 		"mobile.notifications.title": "Thông báo",
 		"mobile.oauth.failed": "Không thể hoàn tất đăng nhập. Hãy thử lại.",
@@ -9917,6 +10027,16 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.notifications.permission.undetermined": "向手机请求权限，以接收 Team Bridge 消息提醒。来自你电脑的提醒尚未开启——在开启之前，只有 Local Operator 处于打开状态时才会提醒。",
 		"mobile.notifications.permission.unknown": "无法检查此手机上的通知。这不是拒绝——请重新打开设置再检查一次。",
 		"mobile.notifications.permission.unsupported": "此版本不包含通知功能。",
+		"mobile.notifications.preferences.completions": "智能体已完成",
+		"mobile.notifications.preferences.errors": "智能体出错",
+		"mobile.notifications.preferences.master": "通知",
+		"mobile.notifications.preferences.team_bridge": "Team Bridge 消息",
+		"mobile.notifications.preferences.update_computer": "在电脑上更新 Local Operator，即可选择接收哪些通知。",
+		"mobile.notifications.primer.body": "当智能体完成一轮、有审批或问题在等你、以及收到 Team Bridge 消息时，手机可以提醒你。",
+		"mobile.notifications.primer.enable": "开启通知",
+		"mobile.notifications.primer.not_now": "以后再说",
+		"mobile.notifications.primer.settings_hint": "你可以随时在设置中更改。",
+		"mobile.notifications.primer.title": "在你的智能体完成时收到通知",
 		"mobile.notifications.priority_high": "高",
 		"mobile.notifications.title": "通知",
 		"mobile.oauth.failed": "无法完成登录。请重试。",

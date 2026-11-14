@@ -35,6 +35,16 @@
 	"mobile.notifications.permission.undetermined": "Запросите у телефона разрешение, чтобы получать оповещения о сообщениях Team Bridge. Оповещения с ваших компьютеров пока не включены — до тех пор они работают, только пока Local Operator открыт.",
 	"mobile.notifications.permission.unknown": "Не удалось проверить уведомления на этом телефоне. Это не отказ — откройте Настройки снова, чтобы проверить ещё раз.",
 	"mobile.notifications.permission.unsupported": "Эта сборка не поддерживает уведомления.",
+	"mobile.notifications.preferences.completions": "Агент закончил",
+	"mobile.notifications.preferences.errors": "У агента ошибка",
+	"mobile.notifications.preferences.master": "Уведомления",
+	"mobile.notifications.preferences.team_bridge": "Сообщения Team Bridge",
+	"mobile.notifications.preferences.update_computer": "Обновите Local Operator на компьютере, чтобы выбирать, какие уведомления получать.",
+	"mobile.notifications.primer.body": "Телефон может оповещать вас, когда агент завершает ход, когда вас ждёт одобрение или вопрос и когда приходит сообщение Team Bridge.",
+	"mobile.notifications.primer.enable": "Включить уведомления",
+	"mobile.notifications.primer.not_now": "Не сейчас",
+	"mobile.notifications.primer.settings_hint": "Это можно изменить в любой момент в настройках.",
+	"mobile.notifications.primer.title": "Узнавайте, когда агенты закончат",
 	"mobile.notifications.priority_high": "Важно",
 	"mobile.notifications.title": "Уведомления"
 }

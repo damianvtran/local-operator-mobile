@@ -20,6 +20,7 @@ import {
 } from "@/features/auth/connection-provider";
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
+import { NotificationPermissionPrimer } from "@/features/notifications/permission-primer-sheet";
 import { WorkspaceDrawerProvider } from "@/features/sessions/workspace-drawer";
 import { useTeamBridgeDrawerAdapter } from "@/features/team-bridge/drawer-adapter";
 import { activeDirection, activeLocale } from "@/i18n";
@@ -70,6 +71,11 @@ export default function RootLayout() {
 										<Stack screenOptions={{ headerShown: false }} />
 									</BridgeWorkspaceDrawer>
 								</ComputerSwitcherProvider>
+								{/* The first-run notification primer: one in-context sheet that
+								 *  asks before the OS does (ADR 0006 §5 as amended 2026-11-14).
+								 *  Root-mounted like the switcher so it reads the route and list
+								 *  without touching a screen; it offers itself on Home only. */}
+								<NotificationPermissionPrimer />
 								<ToastHost />
 							</TeamBridgeProvider>
 						</DirectionRoot>

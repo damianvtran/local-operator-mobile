@@ -143,6 +143,46 @@
 		"role": "status",
 		"note": "Settings › Notifications, the state sentence when this app build or platform has no notification support (e.g. web). States a fact; offers no action."
 	},
+	"mobile.notifications.preferences.completions": {
+		"role": "button",
+		"note": "Settings › Notifications, a switch row: notify when an AI agent on the computer finishes its turn. Short, past tense."
+	},
+	"mobile.notifications.preferences.errors": {
+		"role": "button",
+		"note": "Settings › Notifications, a switch row: notify when an AI agent on the computer stops because of an error. Short."
+	},
+	"mobile.notifications.preferences.master": {
+		"role": "button",
+		"note": "Settings › Notifications, the master switch row that turns all of this phone's notifications on or off. One word, the same as the section title."
+	},
+	"mobile.notifications.preferences.team_bridge": {
+		"role": "button",
+		"note": "Settings › Notifications, a switch row: notify about new Team Bridge messages. Team Bridge is a brand; keep it in Latin script."
+	},
+	"mobile.notifications.preferences.update_computer": {
+		"role": "help",
+		"note": "Settings › Notifications, shown under the switches when the connected computer runs an older Local Operator that cannot filter notifications, so the switches are disabled. Local Operator is a brand."
+	},
+	"mobile.notifications.primer.body": {
+		"role": "help",
+		"note": "Body of the first-run notifications sheet: what notifications bring. Names three events: an agent finished a turn, an approval or question is waiting, a Team Bridge message arrived. Team Bridge is a brand. Says \"can\": delivery is not promised."
+	},
+	"mobile.notifications.primer.enable": {
+		"role": "button",
+		"note": "Primary button of the first-run notifications sheet. Pressing it raises the phone's own permission dialog."
+	},
+	"mobile.notifications.primer.not_now": {
+		"role": "button",
+		"note": "Secondary button of the first-run notifications sheet: declines for now. The sheet may be offered once more later. Short."
+	},
+	"mobile.notifications.primer.settings_hint": {
+		"role": "help",
+		"note": "Small line under the first-run notifications sheet's body: the choice can be changed later in the app's Settings screen."
+	},
+	"mobile.notifications.primer.title": {
+		"role": "heading",
+		"note": "Title of the first-run sheet that asks the reader to turn on notifications. Shown once on Home after a computer is first reached. \"Agents\" are the AI agents running on the reader's computer."
+	},
 	"mobile.notifications.priority_high": {
 		"role": "status",
 		"note": "Badge on a notification the sender marked high priority. One word."

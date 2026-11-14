@@ -11,8 +11,11 @@
  * closed.
  *
  * WHEN IT REGISTERS. Only while signed in to Radient, only once the OS
- * permission is ALREADY granted (the prompt stays the Settings press, ADR 0006
- * §5: never from a mount), and only on a native build that carries the module.
+ * permission is ALREADY granted (the prompt is an in-context press — the
+ * first-run primer or Settings, ADR 0006 §5 as amended: never from a mount),
+ * only while the reader's "Team Bridge messages" preference is on (the
+ * provider's gate; `notification-preferences.ts`), and only on a native build
+ * that carries the module.
  * The call is idempotent on the install id, so re-registering on every launch is
  * how a rotated APNs/FCM token replaces the old one.
  *

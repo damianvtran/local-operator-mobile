@@ -95,6 +95,7 @@ const seam = vi.hoisted(() => ({
 	removeForeground: vi.fn(),
 	removeToken: vi.fn(),
 	relayIdentities: new Set<unknown>(),
+	capabilities: {} as Record<string, unknown>,
 }));
 
 vi.mock("react", () => ({
@@ -116,7 +117,15 @@ vi.mock("react-native", () => ({
 	},
 }));
 vi.mock("expo-constants", () => ({
-	default: { expoConfig: { version: "1.4.0" } },
+	// An internal build: the placeholder version CI writes for an untagged ref,
+	// plus the build number that actually tells two TestFlight builds apart.
+	default: {
+		expoConfig: {
+			version: "0.0.0",
+			ios: { buildNumber: "953" },
+			android: { versionCode: 953 },
+		},
+	},
 }));
 vi.mock("@/features/auth/connection-provider", () => ({
 	// A NEW accessor on every render, as the provider's `useMemo` produces on
@@ -128,7 +137,21 @@ vi.mock("@/features/auth/connection-provider", () => ({
 	},
 	useConnectionState: (select: (s: object) => unknown) =>
 		select({ route: seam.route, phase: seam.phase, revision: seam.revision }),
+	useListState: (select: (s: object) => unknown) =>
+		select({ capabilities: seam.capabilities }),
 }));
+// The real gate and wire shape; only the keystore read is a seam.
+vi.mock("@/notifications/notification-preferences", async (importActual) => {
+	const actual =
+		await importActual<
+			typeof import("@/notifications/notification-preferences")
+		>();
+	return {
+		...actual,
+		loadNotificationPreferences: async () =>
+			actual.notificationPreferencesStore.getState().preferences,
+	};
+});
 const notificationsModule = {
 	getPermissionsAsync: async () => ({ status: seam.permission }),
 	requestPermissionsAsync: seam.requestPermission,
@@ -152,6 +175,7 @@ vi.mock("@/notifications/install-id", () => ({
 }));
 
 import {
+	appVersionFrom,
 	pushEnvironment,
 	resetSessionPushRegistrationMemory,
 	sessionPushRegistrationStore,
@@ -188,6 +212,7 @@ beforeEach(() => {
 	seam.foreground = undefined;
 	seam.rotate = undefined;
 	seam.relayIdentities.clear();
+	seam.capabilities = {};
 });
 afterEach(async () => {
 	hooks.unmount();
@@ -204,7 +229,7 @@ describe("session push registration lifecycle", () => {
 			token: "synthetic-token-1",
 			// Node has no `__DEV__`: a release build, so APNs production.
 			environment: "production",
-			app_version: "1.4.0",
+			app_version: "0.0.0 (953)",
 			install_id: "5a1b2c3d-4e5f-4061-8273-8495a6b7c8d9",
 		});
 		expect(seam.recorded).toHaveBeenCalledWith(
@@ -449,11 +474,73 @@ describe("session push registration lifecycle", () => {
 	});
 });
 
+describe("notification preferences in the register body", () => {
+	it("omits `preferences` for a daemon without push_preferences", async () => {
+		seam.capabilities = { features: {} };
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
+		expect(seam.register.mock.calls[0]?.[0]).not.toHaveProperty("preferences");
+	});
+
+	it("sends {enabled, completions, errors} to a daemon that advertises it", async () => {
+		seam.capabilities = { push_preferences: { available: true } };
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
+		expect(seam.register.mock.calls[0]?.[0].preferences).toEqual({
+			enabled: true,
+			completions: true,
+			errors: true,
+		});
+	});
+
+	it("re-registers, with preferences, when the capability arrives after the first POST", async () => {
+		render();
+		await vi.waitFor(() => expect(seam.recorded).toHaveBeenCalledTimes(1));
+		expect(seam.register.mock.calls[0]?.[0]).not.toHaveProperty("preferences");
+		seam.capabilities = { push_preferences: true };
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(2));
+		expect(seam.register.mock.calls[1]?.[0].preferences).toEqual({
+			enabled: true,
+			completions: true,
+			errors: true,
+		});
+	});
+});
+
 describe("APNs environment rule", () => {
 	it("is sandbox only for an iOS development build", () => {
 		expect(pushEnvironment("ios", true)).toBe("sandbox");
 		expect(pushEnvironment("ios", false)).toBe("production");
 		expect(pushEnvironment("android", true)).toBe("production");
 		expect(pushEnvironment("android", false)).toBe("production");
+	});
+});
+
+describe("app_version", () => {
+	/* TestFlight build 953 registered as "0.0.0" (the operator's
+	 * mobile-push-devices.json, 2026-11-14): an internal build's version is the
+	 * untagged-ref placeholder by design (docs/ci.md, "Versioning"), so only the
+	 * build number identifies the binary in the daemon's device list. */
+	it("carries the platform build number beside the version", () => {
+		const config = {
+			version: "0.0.0",
+			ios: { buildNumber: "953" },
+			android: { versionCode: 954 },
+		};
+		expect(appVersionFrom(config, "ios")).toBe("0.0.0 (953)");
+		expect(appVersionFrom(config, "android")).toBe("0.0.0 (954)");
+		expect(appVersionFrom({ version: "1.2.3" }, "ios")).toBe("1.2.3");
+		expect(
+			appVersionFrom(
+				{ version: "1.2.3", android: { versionCode: 0 } },
+				"android",
+			),
+		).toBe("1.2.3");
+		expect(appVersionFrom({ version: " " }, "ios")).toBe("unknown");
+		expect(appVersionFrom(null, "android")).toBe("unknown");
+		expect(appVersionFrom({ ios: { buildNumber: "7" } }, "ios")).toBe(
+			"unknown (7)",
+		);
 	});
 });

@@ -35,6 +35,16 @@
 	"mobile.notifications.permission.undetermined": "Ask your phone for permission to get Team Bridge message alerts. Alerts from your computers are not switched on yet — until they are, those work only while Local Operator is open.",
 	"mobile.notifications.permission.unknown": "Notifications could not be checked on this phone. This is not a refusal — reopen Settings to check again.",
 	"mobile.notifications.permission.unsupported": "This build does not include notifications.",
+	"mobile.notifications.preferences.completions": "Agent finished",
+	"mobile.notifications.preferences.errors": "Agent hit an error",
+	"mobile.notifications.preferences.master": "Notifications",
+	"mobile.notifications.preferences.team_bridge": "Team Bridge messages",
+	"mobile.notifications.preferences.update_computer": "Update Local Operator on your computer to choose which notifications you get.",
+	"mobile.notifications.primer.body": "Your phone can alert you when an agent finishes a turn, when an approval or question is waiting for you, and when a Team Bridge message arrives.",
+	"mobile.notifications.primer.enable": "Turn on notifications",
+	"mobile.notifications.primer.not_now": "Not now",
+	"mobile.notifications.primer.settings_hint": "You can change this at any time in Settings.",
+	"mobile.notifications.primer.title": "Get notified when your agents finish",
 	"mobile.notifications.priority_high": "High",
 	"mobile.notifications.title": "Notifications"
 }

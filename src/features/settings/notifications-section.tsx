@@ -6,9 +6,21 @@ import type { PushDeviceRow } from "@/contracts";
 import {
 	useConnection,
 	useConnectionState,
+	useListState,
 } from "@/features/auth/connection-provider";
+import { SwitchRow } from "@/features/sessions/sidebar-view-controls";
+import { t } from "@/i18n";
 import { deviceStateDescription, deviceTitle } from "@/notifications/devices";
 import { readAvailability, requestPermission } from "@/notifications/native";
+import {
+	loadNotificationPreferences,
+	type NotificationPreferences,
+	notificationPreferencesStore,
+	preferenceView,
+	pushPreferencesSupported,
+	teamBridgeWanted,
+	updateNotificationPreferences,
+} from "@/notifications/notification-preferences";
 import {
 	availabilityFromHook,
 	canRequestPermission,
@@ -50,6 +62,14 @@ import { SectionHeader } from "@/ui/components/section-header";
  *     when it adds a fact the permission sentence does not already state. A
  *     successful registration re-reads the device list, so the row it created
  *     appears without leaving the screen.
+ *  3b. **What this phone wants** (operator request, 2026-11-14): a master
+ *     switch, "Agent finished", "Agent hit an error" and "Team Bridge
+ *     messages". The first three ride to the computer's daemon in the register
+ *     body, gated on its `push_preferences` capability (an older daemon would
+ *     refuse the field and the whole registration); without it they show
+ *     disabled with a note to update the computer. Team Bridge is app-only: it
+ *     adds or removes the hub registration. `notification-preferences.ts` has
+ *     the contract and the rules.
  *  4. **Nothing promised.** Team Bridge registration IS wired: the Team
  *     Bridge provider registers this phone with Radient's hub on launch and
  *     foreground once permission is granted, and the hub fans out over
@@ -84,7 +104,7 @@ type DeviceListState =
 
 export const NotificationsSection = () => {
 	const { relay, radientSignedIn } = useConnection();
-	const { registerPush } = useTeamBridge();
+	const { registerPush, withdrawPush } = useTeamBridge();
 	const route = useConnectionState((s) => s.route);
 	const routeKey = route ? sessionPushRouteKey(route) : null;
 	const registration = useStore(sessionPushRegistrationStore);
@@ -141,6 +161,42 @@ export const NotificationsSection = () => {
 		void loadDevices();
 	}, [loadDevices, registeredHere]);
 
+	const preferencesState = useStore(notificationPreferencesStore);
+	const preferences = preferencesState.preferences;
+	const preferencesHydrated = preferencesState.hydrated;
+	useEffect(() => {
+		void loadNotificationPreferences();
+	}, []);
+	const preferencesSupported = useListState((s) =>
+		pushPreferencesSupported(s.capabilities),
+	);
+	const view = preferenceView({
+		availability,
+		supported: preferencesSupported,
+		preferences,
+		radientSignedIn,
+	});
+	/* One change: stored, then re-registered AT ONCE so the daemon filters
+	 * from now on (a forced POST; the body carries `preferences` only to a
+	 * daemon that advertises them), and Team Bridge's hub registration added or
+	 * removed when its effective state moved — off DELETEs, on PUTs. */
+	const onPreference = useCallback(
+		async (patch: Partial<NotificationPreferences>) => {
+			const before = teamBridgeWanted(
+				notificationPreferencesStore.getState().preferences,
+			);
+			const next = await updateNotificationPreferences(patch).catch(
+				() => notificationPreferencesStore.getState().preferences,
+			);
+			requestSessionPushRegistration();
+			const after = teamBridgeWanted(next);
+			if (radientSignedIn && before !== after) {
+				await (after ? registerPush() : withdrawPush()).catch(() => undefined);
+			}
+		},
+		[radientSignedIn, registerPush, withdrawPush],
+	);
+
 	const onEnable = useCallback(async () => {
 		setRequesting(true);
 		try {
@@ -188,6 +244,52 @@ export const NotificationsSection = () => {
 					variant="outline"
 					size="sm"
 				/>
+			) : null}
+			{/* The preference switches (operator request, 2026-11-14). Absent when
+			 *  the OS denied: the sentence above already names the system-settings
+			 *  remedy, and a switch the OS overrides would claim a control the
+			 *  reader does not have. */}
+			{view.show && preferencesHydrated ? (
+				<View testID={REGION.settingsNotificationsPreferences}>
+					<SwitchRow
+						label={t("mobile.notifications.preferences.master")}
+						value={preferences.enabled}
+						disabled={view.sessionDisabled}
+						onChange={(enabled) => void onPreference({ enabled })}
+						testID={CONTROL.settingsNotificationsMaster}
+					/>
+					{view.types ? (
+						<>
+							<SwitchRow
+								label={t("mobile.notifications.preferences.completions")}
+								value={preferences.completions}
+								disabled={view.sessionDisabled}
+								onChange={(completions) => void onPreference({ completions })}
+								testID={CONTROL.settingsNotificationsCompletions}
+							/>
+							<SwitchRow
+								label={t("mobile.notifications.preferences.errors")}
+								value={preferences.errors}
+								disabled={view.sessionDisabled}
+								onChange={(errors) => void onPreference({ errors })}
+								testID={CONTROL.settingsNotificationsErrors}
+							/>
+						</>
+					) : null}
+					{view.teamBridge ? (
+						<SwitchRow
+							label={t("mobile.notifications.preferences.team_bridge")}
+							value={preferences.teamBridge}
+							onChange={(teamBridge) => void onPreference({ teamBridge })}
+							testID={CONTROL.settingsNotificationsTeamBridge}
+						/>
+					) : null}
+					{view.updateNote ? (
+						<Text className="text-body-sm text-ink-dim">
+							{t("mobile.notifications.preferences.update_computer")}
+						</Text>
+					) : null}
+				</View>
 			) : null}
 			{registrationCopy !== null ? (
 				<Text

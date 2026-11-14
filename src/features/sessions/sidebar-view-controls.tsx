@@ -69,19 +69,25 @@ const GroupLabel = ({ label }: { label: string }) => (
  * the label as its name); the platform `Switch` inside is its picture, kept out
  * of the accessibility tree and out of hit-testing so a press anywhere on the
  * row toggles exactly once and a screen reader hears one control, not two.
+ *
+ * Exported for Settings → Notifications' preference switches, so the app has
+ * one switch row rather than two. `disabled` (a preference this computer
+ * cannot honour yet) steps the label to `ink-dim`, announces it, and presses do nothing.
  */
-const SwitchRow = ({
+export const SwitchRow = ({
 	label,
 	hint,
 	value,
 	onChange,
 	testID,
+	disabled = false,
 }: {
 	label: string;
 	hint?: string;
 	value: boolean;
 	onChange: (next: boolean) => void;
 	testID: string;
+	disabled?: boolean;
 }) => {
 	const accent = useTokenColor("accent");
 	const track = useTokenColor("border-control");
@@ -90,7 +96,9 @@ const SwitchRow = ({
 			accessibilityRole={ROLE.switch}
 			accessibilityLabel={label}
 			accessibilityHint={hint}
-			accessibilityState={{ checked: value }}
+			accessibilityState={{ checked: value, disabled }}
+			disabled={disabled}
+			aria-disabled={disabled}
 			// react-native-web does not read `accessibilityState`, so on the web the
 			// switch had no on/off for a screen reader (QA round 1, Q1). Written
 			// alongside the native state, as `Segmented` does for its radios.
@@ -101,7 +109,12 @@ const SwitchRow = ({
 			style={{ minHeight: TOUCH_FLOOR }}
 		>
 			<View className="min-w-0 flex-1 gap-1">
-				<Text className="text-body text-ink">{label}</Text>
+				{/* Disabled is a colour step, never an opacity (variants.ts § 0). */}
+				<Text
+					className={disabled ? "text-body text-ink-dim" : "text-body text-ink"}
+				>
+					{label}
+				</Text>
 				{hint ? (
 					<Text className="text-body-sm text-ink-dim">{hint}</Text>
 				) : null}
@@ -113,6 +126,7 @@ const SwitchRow = ({
 			>
 				<Switch
 					value={value}
+					disabled={disabled}
 					onValueChange={onChange}
 					trackColor={{ true: accent, false: track }}
 				/>

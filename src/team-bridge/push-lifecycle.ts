@@ -44,6 +44,18 @@ export function createPushLifecycle(deps: {
 				.catch(() => undefined);
 			return work;
 		},
+		/**
+		 * The Team Bridge switch turned off while signed in: drain an admitted
+		 * PUT (it could otherwise resurrect the row after the DELETE, the same
+		 * race `retire` closes), then DELETE — but stay ACTIVE, because the
+		 * account is still signed in and turning the switch back on registers
+		 * again through `register()`.
+		 */
+		withdraw(): Promise<void> {
+			epoch++;
+			pending = null;
+			return append(deps.unregister);
+		},
 		retire(): Promise<void> {
 			active = false;
 			epoch++;

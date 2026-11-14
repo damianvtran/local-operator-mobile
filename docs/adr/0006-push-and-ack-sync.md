@@ -1805,6 +1805,30 @@ nothing is marked or acked that the machine does not already say.
   exists in `docs/design`, `docs/ux`, `docs/adr` or `AGENTS.md` (QA round 1 Q8b). It is a
   requirement this ADR sets: the permission is requested in context, with the §2.4 copy already on
   screen, reviewed by the designer in the app slice.
+- **Amendment, 2026-11-14 — a first-run primer is the primary surface; Settings is the fallback.**
+  The first implementation read "in context" as "only from Settings → Notifications", so a user
+  who never opened Settings never granted permission, session push registration stopped at
+  `permission`, and the phone never registered with its computer. That is what happened on
+  TestFlight build 953, and the operator asked for the fix in these words: "It looks like the issue
+  was that notifications weren't turned on, most users wouldn't realize this. Make sure that the
+  app requests to turn on notifications for new users that download it, instead of having
+  notifications be a poorly discoverable feature, I didn't realize I had to do that for example to
+  get notifications". Decided:
+  - **Primer, then the OS prompt.** The first time the reader is on Home with a live computer
+    (after sign-in or a cold-start restore) and the OS permission is `undetermined`, the app shows
+    one sheet that says what notifications bring (a turn finished, an approval or question waiting,
+    a Team Bridge message) with "Turn on notifications" and "Not now". Only the primary button
+    raises the OS dialog, so the copy is on screen before the OS asks, which is the requirement
+    above. A grant registers immediately with the routed computer and, when signed in, with Team
+    Bridge, through the same entry points the Settings control uses.
+  - **No nagging.** "Not now" is stored on the device with its time. The sheet is offered at most
+    once more: after the reader has seen an agent turn complete in the current run, and only when 3
+    days or more have passed since the dismissal. There is never a third offer. A `denied` answer
+    is final: the app never asks again and the primer never reappears. Web never shows it.
+  - **Settings remains the fallback.** Settings → Notifications keeps its enable control while the
+    permission is `undetermined`, and its system-settings remedy for `denied`.
+  - Implementation: `src/notifications/permission-primer.ts` (policy) and
+    `src/features/notifications/permission-primer-sheet.tsx` (host).
 
 ### 6. Navigation contract: the composer home, the cold-start override, and the deep link that must exist
 

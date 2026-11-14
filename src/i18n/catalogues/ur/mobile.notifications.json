@@ -35,6 +35,16 @@
 	"mobile.notifications.permission.undetermined": "Team Bridge پیغامات کے الرٹ پانے کے لیے اپنے فون سے اجازت مانگیں۔ آپ کے کمپیوٹرز کے الرٹ ابھی آن نہیں ہیں — تب تک وہ صرف Local Operator کھلا ہونے پر کام کرتے ہیں۔",
 	"mobile.notifications.permission.unknown": "اس فون پر اطلاعات کی جانچ نہیں ہو سکی۔ یہ انکار نہیں ہے — دوبارہ جانچنے کے لیے سیٹنگز پھر سے کھولیں۔",
 	"mobile.notifications.permission.unsupported": "اس بلڈ میں اطلاعات شامل نہیں ہیں۔",
+	"mobile.notifications.preferences.completions": "ایجنٹ نے کام مکمل کیا",
+	"mobile.notifications.preferences.errors": "ایجنٹ کو خرابی پیش آئی",
+	"mobile.notifications.preferences.master": "اطلاعات",
+	"mobile.notifications.preferences.team_bridge": "Team Bridge پیغامات",
+	"mobile.notifications.preferences.update_computer": "کون سی اطلاعات ملیں، یہ چننے کے لیے اپنے کمپیوٹر پر Local Operator اپ ڈیٹ کریں۔",
+	"mobile.notifications.primer.body": "جب کوئی ایجنٹ اپنی باری مکمل کرے، جب کوئی منظوری یا سوال آپ کا منتظر ہو، اور جب Team Bridge کا کوئی پیغام آئے، تو آپ کا فون آپ کو الرٹ کر سکتا ہے۔",
+	"mobile.notifications.primer.enable": "اطلاعات آن کریں",
+	"mobile.notifications.primer.not_now": "ابھی نہیں",
+	"mobile.notifications.primer.settings_hint": "آپ اسے کسی بھی وقت سیٹنگز میں بدل سکتے ہیں۔",
+	"mobile.notifications.primer.title": "جب آپ کے ایجنٹ کام مکمل کریں تو اطلاع پائیں",
 	"mobile.notifications.priority_high": "اعلیٰ",
 	"mobile.notifications.title": "اطلاعات"
 }

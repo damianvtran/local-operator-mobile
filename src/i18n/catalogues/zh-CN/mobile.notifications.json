@@ -35,6 +35,16 @@
 	"mobile.notifications.permission.undetermined": "向手机请求权限，以接收 Team Bridge 消息提醒。来自你电脑的提醒尚未开启——在开启之前，只有 Local Operator 处于打开状态时才会提醒。",
 	"mobile.notifications.permission.unknown": "无法检查此手机上的通知。这不是拒绝——请重新打开设置再检查一次。",
 	"mobile.notifications.permission.unsupported": "此版本不包含通知功能。",
+	"mobile.notifications.preferences.completions": "智能体已完成",
+	"mobile.notifications.preferences.errors": "智能体出错",
+	"mobile.notifications.preferences.master": "通知",
+	"mobile.notifications.preferences.team_bridge": "Team Bridge 消息",
+	"mobile.notifications.preferences.update_computer": "在电脑上更新 Local Operator，即可选择接收哪些通知。",
+	"mobile.notifications.primer.body": "当智能体完成一轮、有审批或问题在等你、以及收到 Team Bridge 消息时，手机可以提醒你。",
+	"mobile.notifications.primer.enable": "开启通知",
+	"mobile.notifications.primer.not_now": "以后再说",
+	"mobile.notifications.primer.settings_hint": "你可以随时在设置中更改。",
+	"mobile.notifications.primer.title": "在你的智能体完成时收到通知",
 	"mobile.notifications.priority_high": "高",
 	"mobile.notifications.title": "通知"
 }
