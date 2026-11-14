@@ -1,0 +1,43 @@
+# es audit log — esS2b1 — 2026-11-13 — execution log (commands actually run in session 2bfb4822f592)
+$ shasum -a 256 brief-s2b1-v2.json es/draft-es.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json   MATCH
+6c11a31f6320696e3b20917cce8ca1cf2476781bb1bd74f10b1cb331b04ff54b  es/draft-es.json      MATCH
+$ git -C local-operator-mobile/.worktrees/i18n-m3-s2a log --oneline -1 -> 254e6fba fix(i18n): say the relay refuses requests from any other origin (verdict_forbidden source)
+$ grep -ci redact brief draft notes -> 0 / 0 / 1 (the notes' own 'Redaction-marker scan' sentence; no [redacted] masking seen)
+$ timeout 60 node --max-old-space-size=256 --experimental-strip-types es-check.mts (imports src/i18n/messages.ts parseMessage/formatMessage/pluralCategory)
+(node:52551) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+keys brief 41 draft 41 missing [] extra [] order_same true
+   foreground_note 0 | Para otras plataformas, o si prefieres seguir el registro. Escucha en <address>, solo desde la propia máquina (loopback).
+   cloudflare_note 0 | Es gratis y no necesita cuenta para un túnel rápido. Muestra la URL <scheme> que tienes que pegar abajo.
+   ngrok_note 0 | Requiere una cuenta de ngrok. Muestra la URL <scheme> que tienes que pegar abajo.
+   tunnel_rule 0 | Cualquier túnel sirve siempre que reenvíe una URL HTTPS pública a <address> en esa máquina.
+PLURAL mobile.computers.own_tunnel.verdict_sessions one,many,other
+   verdict_sessions 0 | Conectado — puedes ver 0 sesiones.
+   verdict_sessions 1 | Conectado — puedes ver 1 sesión.
+   verdict_sessions 2 | Conectado — puedes ver 2 sesiones.
+   verdict_sessions 10 | Conectado — puedes ver 10 sesiones.
+   verdict_sessions 1000000 | Conectado — puedes ver 1000000 de sesiones.
+   verdict_sessions 1500000 | Conectado — puedes ver 1500000 sesiones.
+   verdict_forbidden 0 | Ese túnel rechazó la app. Si has puesto delante una política de acceso o una página de inicio de sesión, deja pasar la app; además, el propio relé rechaza las solicitudes de cualquier otro origen, así que asegúrate de que el túnel reenvía directamente a <address> y no a un panel u otra app.
+   verdict_offline_detail 0 | <detail>. En esa máquina: <command>
+   verdict_offline 0 | El túnel respondió, pero el relé que hay detrás no. En esa máquina: <command>
+   verdict_tls 0 | Se rechazó el certificado de ese túnel. Usa la dirección <scheme> que mostró el túnel, elige un túnel con un certificado en el que confíe un teléfono o sustituye el certificado autofirmado del que ejecutas tú — la app no se saltará la comprobación.
+PLURAL mobile.computers.own_tunnel.verdict_timeout one,many,other
+   verdict_timeout 0 | Esa dirección no respondió en 0 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   verdict_timeout 1 | Esa dirección no respondió en 1 segundo. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   verdict_timeout 2 | Esa dirección no respondió en 2 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   verdict_timeout 10 | Esa dirección no respondió en 10 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   verdict_timeout 1000000 | Esa dirección no respondió en 1000000 de segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   verdict_timeout 1500000 | Esa dirección no respondió en 1500000 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   verdict_local_network_ios 0 | No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé. Si ambas cosas se cumplen, puede deberse al permiso de red local: permite Local Operator en Ajustes → Privacidad y seguridad → Red local y después toca <action>.
+   verdict_local_network 0 | No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé; después, pulsa <action>.
+   remedy 0 | En esa máquina: <command>
+   copy_command_hint 0 | Copia el comando “<label>”
+cats 0:other 1:one 2:other 1000000:many 1500000:other
+param/bidi mismatches 0
+
+Glossary reads: git show ffbda180:src/i18n/catalogues/es/mobile.{computers,settings,common}.json (sha256 3369408…, 0a7c7af…, b49de65…); ~/local-operator/i18n/style-guides/es.md (77b9227…).
+Call sites read: own-tunnel-settings.tsx:125-170, command-block.tsx (uppercase label, copy_command_hint), tunnel-commands.ts:30-130, tunnel-verdict.ts:132-242.

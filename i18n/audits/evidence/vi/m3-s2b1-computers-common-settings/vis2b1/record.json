@@ -1,0 +1,344 @@
+{
+  "locale": "vi",
+  "namespaces": [
+    "mobile.computers",
+    "mobile.settings",
+    "mobile.common"
+  ],
+  "key_count": 41,
+  "keys": 41,
+  "source_commit": "254e6fba",
+  "audit_date": "2026-11-13",
+  "auditor": {
+    "agent": "i18n-auditor",
+    "team": "lopdev",
+    "session": "caaf0d418c9d",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system header; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true
+  },
+  "translator": "translator job d80b97aa3618",
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+      "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"
+    },
+    "draft": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/vi/draft-vi.json",
+      "sha256": "cfaa6ab8c3ea4077bdd161dab0d3e093c16954034218edabc51a153e3490e27c"
+    },
+    "glossary": "git ffbda180:src/i18n/catalogues/vi/mobile.{computers,settings,common}.json; ~/local-operator/i18n/style-guides/vi.md"
+  },
+  "redaction_hits": {
+    "inputs_on_disk": 0,
+    "display_masking_events": 1,
+    "note": "one harness mask in the replayed echo of the auditor's own script; no input value affected"
+  },
+  "mechanical": {
+    "parser": "src/i18n/messages.ts parseMessage",
+    "placeholder_mismatches": 0,
+    "parse_failures": 0,
+    "vi_plural_categories": [
+      "other"
+    ],
+    "nfc": true,
+    "bidi_controls": 0
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "counts": {
+      "BLOCKER": 0,
+      "MAJOR": 0,
+      "MINOR": 3,
+      "NIT": 2
+    },
+    "finding_ids": [
+      "VIS2B1-01",
+      "VIS2B1-02",
+      "VIS2B1-03",
+      "VIS2B1-04",
+      "VIS2B1-05"
+    ]
+  },
+  "findings": [
+    {
+      "id": "VIS2B1-01",
+      "sev": "MINOR",
+      "key": "mobile.computers.own_tunnel.check_label",
+      "current": "Kiểm tra",
+      "problem": "English distinguishes 'Check it' (lop mobile status) from the step heading 'Test it' on the same screen (own-tunnel.tsx:514). vi renders both as 'Kiểm tra', so two headings on one screen read identically, and the copy hint becomes 'Sao chép lệnh “Kiểm tra”', which does not say what is checked.",
+      "suggested": "Kiểm tra trạng thái"
+    },
+    {
+      "id": "VIS2B1-02",
+      "sev": "MINOR",
+      "key": "mobile.computers.own_tunnel.foreground_note",
+      "current": "Cho mọi nền tảng khác, hoặc nếu bạn muốn theo dõi nhật ký. Phục vụ tại {address}, chỉ trên chính máy này (loopback).",
+      "problem": "'Phục vụ tại {address}' is a calque of 'serves' with no subject; 'Cho mọi nền tảng khác' is stiff. Loopback meaning is right but the catalogue already says it as 'chỉ nhận kết nối từ chính máy tính này' (step_computer_help).",
+      "suggested": "Dành cho các nền tảng khác, hoặc khi bạn muốn theo dõi nhật ký. Chạy tại {address}, chỉ nhận kết nối từ chính máy này (loopback)."
+    },
+    {
+      "id": "VIS2B1-03",
+      "sev": "MINOR",
+      "key": "mobile.computers.own_tunnel.cloudflare_note",
+      "current": "Miễn phí, không cần tài khoản với đường hầm nhanh. Lệnh sẽ in ra URL {scheme} để bạn dán vào bên dưới.",
+      "problem": "'quick tunnel' is Cloudflare's feature name (Quick Tunnels: ad-hoc, no account). 'đường hầm nhanh' reads as 'a fast tunnel' (speed), and 'với' is a loose scope link.",
+      "suggested": "Miễn phí và không cần tài khoản khi dùng đường hầm nhanh (quick tunnel). Lệnh sẽ in ra URL {scheme} để bạn dán vào bên dưới."
+    },
+    {
+      "id": "VIS2B1-04",
+      "sev": "NIT",
+      "key": "mobile.computers.own_tunnel.verdict_password",
+      "current": "Mật khẩu đó không được chấp nhận. Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính.",
+      "problem": "Passive 'không được chấp nhận' is a mild calque; the existing catalogue says it actively (connect_refused.password: 'Máy chủ chuyển tiếp không chấp nhận mật khẩu đó.').",
+      "suggested": "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính."
+    },
+    {
+      "id": "VIS2B1-05",
+      "sev": "NIT",
+      "key": "mobile.computers.own_tunnel.install_note",
+      "current": "macOS: cài dịch vụ nền có giám sát (tự khởi động lại khi dừng), tạo mật khẩu chuyển tiếp và lưu vào Chuỗi khóa.",
+      "problem": "'dịch vụ nền có giám sát (tự khởi động lại khi dừng)' says the same thing twice; the parenthetical already explains 'supervised'.",
+      "suggested": "macOS: cài dịch vụ nền tự khởi động lại khi dừng, tạo mật khẩu chuyển tiếp và lưu vào Chuỗi khóa."
+    }
+  ],
+  "rulings": [
+    "foreground_label 'Hoặc chạy ở tiền cảnh': ACCEPT. 'tiền cảnh' is the settled vi term for foreground (vs 'nền' for background, which install_note uses), this is the advanced path, and foreground_note right below ('theo dõi nhật ký') makes the meaning clear. No change.",
+    "copy_command_hint “{label}” quoting: ACCEPT. vi typography uses “ ”, as the catalogue does for {action}. It renders 'Sao chép lệnh “Cài đặt trên máy tính”' / '“Cloudflare”'. VoiceOver and TalkBack do not voice curly quotes. The imperative form is the norm for vi hints.",
+    "copy/copied widths: ACCEPT. Measured from the Figtree-Medium hmtx at the token 'meta' size of 12 (sm button, paddingX 12): Copy 29→'Sao chép' 50 pt, Copied 39→'Đã sao chép' 67 pt, so 74/91 pt including padding. The label row is flex-wrap (command-block.tsx), so it fits 320 pt. The button grows 17 pt on copy, against 10 pt in English. That is not a defect.",
+    "Figtree glyph gap: the cmap check of Figtree Regular and Medium finds 36 of the draft's 58 non-ASCII characters missing (ũưạảấầ…ự), so body text falls back per glyph to the system font. This affects every vi string in the app, not this draft, and does not gate. 'Sao chép' and 'Đã sao chép' are fully covered. The command-block headings are JetBrains Mono uppercase, which has 0 missing.",
+    "install_note 'portal password' → 'mật khẩu chuyển tiếp': ACCEPT. It is the same secret as password_label 'Mật khẩu chuyển tiếp'."
+  ],
+  "per_key": [
+    {
+      "key": "mobile.computers.own_tunnel.install_label",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.foreground_label",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.check_label",
+      "result": "ok_with_findings",
+      "findings": [
+        "VIS2B1-01"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.rotate_label",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.install_note",
+      "result": "ok_with_findings",
+      "findings": [
+        "VIS2B1-05"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.foreground_note",
+      "result": "ok_with_findings",
+      "findings": [
+        "VIS2B1-02"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.check_note",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.rotate_note",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.cloudflare_note",
+      "result": "ok_with_findings",
+      "findings": [
+        "VIS2B1-03"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.ngrok_note",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.tunnel_rule",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_sessions",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_password",
+      "result": "ok_with_findings",
+      "findings": [
+        "VIS2B1-04"
+      ]
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_forbidden",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_offline_detail",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_offline",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_tls",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_host",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_unreachable",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_timeout",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_local_network_ios",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_local_network",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.verdict_refused",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.remedy",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_other",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_empty",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.computers.own_tunnel.password_slot_this",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.common.copy",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.common.copied",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.common.copy_command_hint",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.not_saved",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.kept_secure",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.edit",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.test_again",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.password_placeholder",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.runtime_title",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.runtime_body",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.before_saving",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove_title",
+      "result": "ok",
+      "findings": []
+    },
+    {
+      "key": "mobile.settings.own_tunnel.remove_body",
+      "result": "ok",
+      "findings": []
+    }
+  ],
+  "artifacts": {
+    "report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/vi/report.md",
+      "sha256": "47e3983054ebef48df213270e7d91251767b055c41f9748605a30cfc13d514ec"
+    },
+    "log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/vi/audit.log",
+      "sha256": "e1aafcc71599dd6eb4c6a41f70a3c56ff01a3dc0f21e8f5d60e3664e7e01cf19"
+    }
+  },
+  "write_route": "report.md via write tool; audit.log and record.json via eval kernel into the same directory",
+  "audit_notes_not_execution_log": "report.md is audit notes; audit.log holds executed command output"
+}

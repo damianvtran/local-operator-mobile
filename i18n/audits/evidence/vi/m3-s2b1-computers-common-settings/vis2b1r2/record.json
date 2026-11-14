@@ -1,0 +1,72 @@
+{
+  "locale": "vi",
+  "round": 2,
+  "scope": "delta: v1->v2 changed keys only; 36 unchanged keys proved byte-equal to round-1-passed v1, not re-audited",
+  "namespaces": ["mobile.computers", "mobile.settings", "mobile.common"],
+  "key_count": 41,
+  "changed_key_count": 5,
+  "source_commit": "254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c",
+  "source_branch": "feat/i18n-m3-s2b1",
+  "audit_date": "2026-11-13",
+  "auditor": {
+    "agent": "i18n-auditor",
+    "team": "lopdev",
+    "session": "e23e709d05bd",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system header; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "translator": "translator jobs d80b97aa3618 (v1) / e3845b29c3ef (v2)",
+  "round1_auditor": "job bf6ecb5a2e64 (session caaf0d418c9d)",
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "input_hashes": {
+    "brief": {"path": "m3s2b1/brief-s2b1-v2.json", "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9"},
+    "draft_v1": {"path": "m3s2b1/vi/draft-vi.json", "sha256": "cfaa6ab8c3ea4077bdd161dab0d3e093c16954034218edabc51a153e3490e27c"},
+    "draft_v2": {"path": "m3s2b1/vi/draft-vi-v2.json", "sha256": "b0307e5a3829989ff0621369aaa86b2d6501e405e5ce7d8f42b147d05a5e1002"},
+    "notes_v2": {"path": "m3s2b1/vi/notes-vi-v2.md", "sha256": "b878a7d6ba6e2f17e45e413541b92310e34e3164589e5745ee5157288bdede32"},
+    "round1_record": {"path": "m3s2b1/audits/vi/record.json", "sha256": "ea08e12d7ef38a2d7c396c34535f74d3b5af8b98022001e4e210b4b7cd4fc0ba"},
+    "round1_report": {"path": "m3s2b1/audits/vi/report.md", "sha256": "47e3983054ebef48df213270e7d91251767b055c41f9748605a30cfc13d514ec"},
+    "hash_check": "all three required hashes recomputed and matched"
+  },
+  "redaction_hits": {
+    "inputs_on_disk": 0,
+    "display_masking_events": 0,
+    "write_notices": 1,
+    "note": "report.md first draft quoted the masking marker literally; reworded. No input value affected."
+  },
+  "mechanical": {
+    "parser": "src/i18n/messages.ts parseMessage/formatMessage @254e6fba",
+    "runtime": "node --max-old-space-size=256 --experimental-strip-types",
+    "keys_order_equal_brief_v1_v2": true,
+    "keys_added": [],
+    "keys_dropped": [],
+    "changed_keys_match_notes": true,
+    "v2_equals_round1_suggestion": {"VIS2B1-01": true, "VIS2B1-02": true, "VIS2B1-03": true, "VIS2B1-04": true, "VIS2B1-05": true},
+    "placeholder_failures": 0,
+    "nfc": true,
+    "bidi_controls": false
+  },
+  "changed_keys": {
+    "mobile.computers.own_tunnel.check_label": {"v1": "Kiểm tra", "v2": "Kiểm tra trạng thái", "params": [], "result": "pass", "finding_resolved": "VIS2B1-01", "fit": "rendered only in own-tunnel.tsx:415 via CommandBlock (not own-tunnel-settings.tsx); mono-label 137.9pt@100%, 275.9pt@200%; flex-wrap row -> wraps, never clips; 0 missing glyphs"},
+    "mobile.computers.own_tunnel.install_note": {"v2": "macOS: cài dịch vụ nền tự khởi động lại khi dừng, tạo mật khẩu chuyển tiếp và lưu vào Chuỗi khóa.", "params": [], "result": "pass", "finding_resolved": "VIS2B1-05"},
+    "mobile.computers.own_tunnel.foreground_note": {"v2": "Dành cho các nền tảng khác, hoặc khi bạn muốn theo dõi nhật ký. Chạy tại {address}, chỉ nhận kết nối từ chính máy này (loopback).", "params": [["address", "text"]], "result": "pass", "finding_resolved": "VIS2B1-02"},
+    "mobile.computers.own_tunnel.cloudflare_note": {"v2": "Miễn phí và không cần tài khoản khi dùng đường hầm nhanh (quick tunnel). Lệnh sẽ in ra URL {scheme} để bạn dán vào bên dưới.", "params": [["scheme", "text"]], "result": "pass", "finding_resolved": "VIS2B1-03"},
+    "mobile.computers.own_tunnel.verdict_password": {"v2": "Máy chủ chuyển tiếp không chấp nhận mật khẩu đó. Hãy kiểm tra mật khẩu chuyển tiếp trên máy tính.", "params": [], "result": "pass", "finding_resolved": "VIS2B1-04"}
+  },
+  "round1_findings": {
+    "VIS2B1-01": "resolved", "VIS2B1-02": "resolved", "VIS2B1-03": "resolved", "VIS2B1-04": "resolved", "VIS2B1-05": "resolved"
+  },
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": []
+  },
+  "artifacts": {
+    "report": "m3s2b1/audits/vi-r2/report.md",
+    "audit_log": "m3s2b1/audits/vi-r2/audit.log",
+    "audit_notes_not_execution_log": "report.md is notes; audit.log is the execution log"
+  },
+  "claims_not_made": ["no rendered device frames (font-metric widths only)", "no MT/back-translation", "36 unchanged keys not re-judged"]
+}

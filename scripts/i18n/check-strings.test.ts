@@ -169,6 +169,66 @@ describe("the scanner", () => {
 			scanSource(COPY_FILE, source, new Set(["Delete this project?"])),
 		).toHaveLength(0);
 	});
+
+	/* Rules 1-3 outside rule 4's activation scope: an in-word apostrophe in JSX
+	 * prose used to open a single-quoted "literal" that never closed, so every
+	 * finding below it vanished (own-tunnel-settings.tsx went blind after :196).
+	 * ONE apostrophe on purpose: two would pair up and hide only the text
+	 * between them, which understates the bug. */
+	it("does not let a JSX-text apostrophe blind the rest of the file", () => {
+		const findings = scanSource(
+			FILE,
+			[
+				"<Text>Uses the platform's relay.</Text>",
+				"<View>",
+				"\t<Text>",
+				"\t\tThe address is private",
+				"\t</Text>",
+				"</View>",
+				"<Text>Read this later.</Text>",
+				'<Button label="Copy the address" />',
+			].join("\n"),
+		);
+		expect(findings.map((finding) => [finding.line, finding.text])).toEqual([
+			[4, "The address is private"],
+			[1, "Uses the platform's relay."],
+			[7, "Read this later."],
+			[8, "Copy the address"],
+		]);
+	});
+
+	it("still finds literals after backticks in JSX text (guard)", () => {
+		const findings = scanSource(
+			FILE,
+			[
+				"<Text>Run `lop serve` on the computer.</Text>",
+				"<Text>Then scan the code.</Text>",
+			].join("\n"),
+		);
+		expect(findings.map((finding) => finding.text)).toContain(
+			"Then scan the code.",
+		);
+	});
+
+	it("keeps real quoted and template literals in code as literals", () => {
+		const source = [
+			"const mode = 'primary';",
+			"const path = `/session/${id}`;",
+			"<Text style={styles.x}>Plain body text</Text>",
+			"<Input placeholder='Your name' />",
+			"<Input placeholder={`Hello ${name}`} />",
+		].join("\n");
+		expect(
+			scanSource(FILE, source).map((finding) => [
+				finding.rule,
+				finding.line,
+				finding.text,
+			]),
+		).toEqual([
+			["jsx-text", 3, "Plain body text"],
+			["jsx-attribute", 4, "Your name"],
+		]);
+	});
 });
 
 /**

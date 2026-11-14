@@ -124,6 +124,71 @@ export const charWidthDp = (scale: number): number =>
 export const metaPathFloorDp = (scale: number): number =>
 	META_PATH_FLOOR_CHARS * charWidthDp(scale);
 
+/** The inline cwd's shrink factor: small, so the model yields first (see
+ *  `metaPathBox`, PR #252 agent review R1-2). */
+export const META_PATH_INLINE_SHRINK = 0.01;
+
+/**
+ * The working directory's flex box. The cwd takes the remainder of its line and,
+ * on its OWN line, never gives up a dp of its floor (design round 5, D26): the
+ * floor is the basis and `flexShrink: 0`, so a shortfall falls on the model,
+ * which `metaLineFor` has already fitted to what the floor leaves.
+ *
+ * SHARING LINE 2 WITH THE MARKS (`inline`, TestFlight 883 D6) the floor can no
+ * longer be guaranteed: the marks are `shrink-0` and come first, so above 100 %
+ * text (inline runs up to `LARGE_TEXT_SCALE`, 1.4) a row with approval + agents +
+ * todos takes ~250 pt of a 320 pt drawer's ~264 pt line, and a floor of
+ * `metaPathFloorDp(1.4)` = 100.8 pt pushed the cwd past the pane edge (PR #245
+ * agent review R1-R1, design round 1 D13). So inline, the cwd SHRINKS
+ * (`flexShrink` > 0, weighed below): it is the lowest-priority text on the row, and its painted
+ * string is already fitted to the measured line by `metaLineFor` (which drops
+ * the model first and, below one glyph, paints nothing), so the box can only
+ * clip what was going to be elided anyway. The basis stays the floor, so a line
+ * with room for it lays out exactly as before.
+ *
+ * HOW MUCH it shrinks (PR #252 agent review R1-2). Yoga splits a deficit by
+ * `flexShrink × basis`, so at `flexShrink: 1` a model whose width the advance
+ * table under-counted (the drawer measured a 14 % miss on hostnames) would share
+ * the overflow with the cwd by basis, when the model is the item that yields
+ * first. At `META_PATH_INLINE_SHRINK` (0.01) the cwd weighs ~1 dp against the
+ * model's whole basis, so the model absorbs a mis-estimate almost entirely.
+ * A cwd ALONE on the line still takes all of its deficit: Yoga sizes a shrinking
+ * child as `basis + deficit × (its weight / the line's total weight)`, and its
+ * "floor the total to 1" clamp never fires for shrink because the total is
+ * accumulated negated (`FlexLine.cpp`, `totalFlexShrinkScaledFactors`). On web,
+ * where CSS scales a deficit by a factor sum below 1, RN-web caps a
+ * `numberOfLines` Text at `max-width: 100%`, so the lone case has no deficit.
+ *
+ * **What it costs, measured.** On a 320 pt phone at 100 % the line is 232 dp, so
+ * the model's room is 232 - 8 (gap) - 72 = 152 dp: enough for 21 characters of
+ * `text-mono-sm`, which is not enough for the 23-character
+ * `anthropic/claude-opus-5`. It paints `…claude-opus-5` instead — the provider
+ * prefix, the part every row of that provider shares, is what yields — and the
+ * cwd keeps 123 dp of the line. Every wider case fits both whole: 390 pt at
+ * 100 % leaves the model 238 dp and a split pane 207 dp.
+ *
+ * It is the BASIS this box is built from, not a `minWidth`, because of how
+ * flexbox distributes a deficit: `flex-shrink` is weighted by the base size, so
+ * a floor expressed as the basis with `flexShrink: 0` makes the cwd the one item
+ * that does NOT pay for a shortfall. The model pays all of it, which is the
+ * priority the design round asked for — and `flexGrow: 1` gives the cwd every
+ * spare dp when there is no shortfall at all, so the model stays flush right.
+ */
+export const metaPathBox = (
+	scale: number,
+	inline: boolean,
+): {
+	flexBasis: number;
+	flexGrow: 1;
+	flexShrink: typeof META_PATH_INLINE_SHRINK | 0;
+	minWidth: 0;
+} => ({
+	flexBasis: metaPathFloorDp(scale),
+	flexGrow: 1,
+	flexShrink: inline ? META_PATH_INLINE_SHRINK : 0,
+	minWidth: 0,
+});
+
 /** One glyph, in dp: the Latin advance, or the fallback's for a wide script. */
 const glyphDp = (glyph: string, scale: number): number =>
 	charWidthDp(scale) *

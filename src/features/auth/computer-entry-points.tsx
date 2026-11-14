@@ -453,6 +453,17 @@ export const drawerRowName = (
  * that is the shipped face the shared sans advance table was measured from,
  * scaled from its meta size to body-sm rather than charged the mono advance.
  */
+/** The drawer row's name box (design round 1, D12): sized to its text and
+ *  shrinkable, never growing, so the health word sits right after it. */
+export const DRAWER_ROW_NAME_CLASS =
+	"min-w-0 shrink text-body-sm font-medium text-ink";
+
+/** The drawer row's measured slot (name + word). Exported so the D12 test can
+ *  find the box and prove it holds ONLY the name and the word: its `gap-2` is
+ *  the `DRAWER_ROW_GAP` that `drawerRowFit` budgets, once (PR #252 R1-1). */
+export const DRAWER_ROW_SLOT_CLASS =
+	"min-w-0 flex-1 flex-row items-center gap-2";
+
 export function DrawerComputerRow({
 	testID,
 	onNavigate,
@@ -503,11 +514,25 @@ export function DrawerComputerRow({
 			 * ellipsis back into the next layout and shrinks it, and measuring only
 			 * the name's share would let the word's presence decide its own fit. */}
 			<View
-				className="min-w-0 flex-1 flex-row items-center gap-2"
+				className={DRAWER_ROW_SLOT_CLASS}
 				onLayout={(event) => setNameWidth(event.nativeEvent.layout.width)}
 			>
+				{/* `min-w-0 shrink`, NOT `flex-1` (design round 1, D12). A growing name
+				 *  box pushed the health word to the slot's far end: on Ola's 430 pt
+				 *  frame, once D4/D9 let the word show, the name's ink ended at x 139
+				 *  and "· Online" began at x 249, a ~110 pt gap with a leading `·`
+				 *  that belonged to nothing. The name now takes only its own width,
+				 *  so the word follows it as one phrase, and still shrinks (and
+				 *  ellipsizes, middle on native) when the slot is short.
+				 *  NOTHING may follow the word in this box (PR #252 agent review
+				 *  R1-1): the box is already `flex-1`, so ⇅ stays at the trailing
+				 *  edge and the free space falls after the word on its own. A third
+				 *  child, even an empty spacer, is charged this box's `gap-2` by Yoga
+				 *  (and CSS `gap`), so the name and word would get 8 dp less than the
+				 *  slot `drawerRowFit` measured, and a name it judged whole would be
+				 *  cut. */}
 				<Text
-					className="min-w-0 flex-1 text-body-sm font-medium text-ink"
+					className={DRAWER_ROW_NAME_CLASS}
 					numberOfLines={1}
 					ellipsizeMode={painted.ellipsizeMode}
 				>

@@ -57,5 +57,16 @@
 	"mobile.settings.diagnostics.stream_live": "在线",
 	"mobile.settings.diagnostics.stream_degraded": "未响应",
 	"mobile.settings.diagnostics.stream_offline": "离线",
-	"mobile.settings.account.app_name": "Local Operator"
+	"mobile.settings.account.app_name": "Local Operator",
+	"mobile.settings.own_tunnel.not_saved": "密码未保存，因此应用每次启动时都会要求输入。",
+	"mobile.settings.own_tunnel.kept_secure": "地址和密码保存在此手机的安全存储中。",
+	"mobile.settings.own_tunnel.edit": "编辑",
+	"mobile.settings.own_tunnel.test_again": "重新测试",
+	"mobile.settings.own_tunnel.remove": "移除",
+	"mobile.settings.own_tunnel.password_placeholder": "启动中继时使用的密码",
+	"mobile.settings.own_tunnel.runtime_title": "当前环境无法保存隧道",
+	"mobile.settings.own_tunnel.runtime_body": "此版本没有安全密钥库，因此隧道仅在本次运行期间有效。在手机上，这些信息会保存在系统的安全存储中。",
+	"mobile.settings.own_tunnel.before_saving": "保存前先测试地址：从未响应过的隧道一旦保存，列表会一直为空，且无从得知原因。",
+	"mobile.settings.own_tunnel.remove_title": "移除此隧道？",
+	"mobile.settings.own_tunnel.remove_body": "此操作会清除此手机上的地址和密码，不会影响你的电脑、你运行的隧道或任何账户。"
 }

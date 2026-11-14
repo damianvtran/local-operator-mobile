@@ -57,5 +57,16 @@
 	"mobile.settings.diagnostics.stream_live": "live",
 	"mobile.settings.diagnostics.stream_degraded": "degraded",
 	"mobile.settings.diagnostics.stream_offline": "offline",
-	"mobile.settings.account.app_name": "Local Operator"
+	"mobile.settings.account.app_name": "Local Operator",
+	"mobile.settings.own_tunnel.not_saved": "The password is not saved, so the app asks for it on each launch.",
+	"mobile.settings.own_tunnel.kept_secure": "The address and the password are kept in this phone's secure store.",
+	"mobile.settings.own_tunnel.edit": "Edit",
+	"mobile.settings.own_tunnel.test_again": "Test again",
+	"mobile.settings.own_tunnel.remove": "Remove",
+	"mobile.settings.own_tunnel.password_placeholder": "The password the relay was started with",
+	"mobile.settings.own_tunnel.runtime_title": "This runtime cannot store it",
+	"mobile.settings.own_tunnel.runtime_body": "This build has no secure keystore, so the tunnel lasts for this run only. On a phone the value is kept in the platform's secure store.",
+	"mobile.settings.own_tunnel.before_saving": "Test the address before saving it: a saved tunnel that has never answered leaves the list empty with nothing to explain why.",
+	"mobile.settings.own_tunnel.remove_title": "Remove this tunnel?",
+	"mobile.settings.own_tunnel.remove_body": "This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account."
 }

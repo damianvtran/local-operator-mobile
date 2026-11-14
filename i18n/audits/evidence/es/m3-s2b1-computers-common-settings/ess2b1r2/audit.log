@@ -1,0 +1,34 @@
+# es delta audit log — esS2b1r2 — 2026-11-13 — execution log (commands actually run in session d85b1c3efea2)
+$ shasum -a 256 brief-s2b1-v2.json es/draft-es.json es/draft-es-v2.json
+d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9  brief-s2b1-v2.json   MATCH
+6c11a31f6320696e3b20917cce8ca1cf2476781bb1bd74f10b1cb331b04ff54b  es/draft-es.json      MATCH
+a4f22fb0c5c5e75f57c2d3e10e4607de074f2622f045e83fdde7afc1d154d3d1  es/draft-es-v2.json   MATCH
+$ git -C ~/local-operator-mobile/.worktrees/i18n-m3-s2a log --oneline -1 -> 254e6fba fix(i18n): say the relay refuses requests from any other origin (verdict_forbidden source)
+$ python3 diff v1/v2 + count('[redacted]') -> 41 41 41; order equal; changed 5; redacted 0/0/0/0
+$ cd $LOCAL_OPERATOR_SCRATCHPAD && timeout 60 node --max-old-space-size=256 --experimental-strip-types es-r2-check.mts   (node MODULE_TYPELESS_PACKAGE_JSON warnings filtered)
+sha256 brief-s2b1-v2.json d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9
+sha256 es/draft-es.json 6c11a31f6320696e3b20917cce8ca1cf2476781bb1bd74f10b1cb331b04ff54b
+sha256 es/draft-es-v2.json a4f22fb0c5c5e75f57c2d3e10e4607de074f2622f045e83fdde7afc1d154d3d1
+sha256 es/notes-es-v2.md 024b161d501f265f83a2fb0678be85f84c73f77352911dd67befe6d0ca6f8e5f
+keys 41 41 41 v1order==brief true v2order==brief true
+changed 5 ["mobile.computers.own_tunnel.verdict_forbidden","mobile.computers.own_tunnel.verdict_timeout","mobile.computers.own_tunnel.verdict_local_network_ios","mobile.computers.own_tunnel.verdict_local_network","mobile.settings.own_tunnel.runtime_body"]
+changed==notes true
+unchanged identical 36
+PH mobile.computers.own_tunnel.verdict_forbidden [["address","text"]] [["address","text"]] EQUAL bidi/zw false redacted false
+   Ese túnel rechazó la app. Si has puesto delante una política de acceso o una página de inicio de sesión, deja pasar la app; además, el propio relé rechaza las solicitudes de cualquier otro origen, así que asegúrate de que el túnel reenvíe directamente a 127.0.0.1:4098 y no a un panel u otra app.
+PH mobile.computers.own_tunnel.verdict_timeout [["seconds","plural"]] [["seconds","plural"]] EQUAL bidi/zw false redacted false
+   0 other | Esa dirección no respondió en un plazo de 0 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   1 one | Esa dirección no respondió en un plazo de 1 segundo. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   2 other | Esa dirección no respondió en un plazo de 2 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   10 other | Esa dirección no respondió en un plazo de 10 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   1000000 many | Esa dirección no respondió en un plazo de 1000000 de segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+   1500000 other | Esa dirección no respondió en un plazo de 1500000 segundos. Comprueba que el túnel está en ejecución y que la máquina no está en reposo.
+PH mobile.computers.own_tunnel.verdict_local_network_ios [["action","text"]] [["action","text"]] EQUAL bidi/zw false redacted false
+   No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé. Si ambas cosas se cumplen, puede deberse al permiso de red local: permite Local Operator en Ajustes → Privacidad y seguridad → Red local y después toca “Probar la conexión”.
+PH mobile.computers.own_tunnel.verdict_local_network [["action","text"]] [["action","text"]] EQUAL bidi/zw false redacted false
+   No respondió nada en esa dirección dentro de esta red. Comprueba que la máquina no está en reposo y que ejecuta el relé; después, pulsa “Probar la conexión”.
+PH mobile.settings.own_tunnel.runtime_body [] [] EQUAL bidi/zw false redacted false
+   Esta compilación no tiene un almacén de claves seguro, así que el túnel solo se conserva durante esta ejecución. En un teléfono, se guarda en el almacenamiento seguro de la plataforma.
+$ grep catalogues/es: own_tunnel.test = "Probar la conexión" (mobile.computers.json:105); tunnel-verdict.ts:176-191 passes own_tunnel.test as {action}
+$ shasum style-guides/es.md -> 77b9227213802d14c74d4298d6b346ad842bbf2a5ca3b9d46fc6144430d26c3e
+# Note: bash writes into this directory were refused by a guardrail; artifacts written with the write tool. Check script + raw output retained at $LOCAL_OPERATOR_SCRATCHPAD (session d85b1c3efea2): es-r2-check.mts, es-r2-check.out.

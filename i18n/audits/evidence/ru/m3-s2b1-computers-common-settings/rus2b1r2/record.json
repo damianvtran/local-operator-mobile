@@ -1,0 +1,79 @@
+{
+ "schema": 1,
+ "audit_id": "rus2b1r2",
+ "audit_kind": "delta_re_audit",
+ "round": 2,
+ "scope": "delta: 5 changed keys + v1->v2 byte-equality proof for the other 36; unchanged keys not re-audited",
+ "locale": "ru",
+ "namespaces": ["mobile.computers", "mobile.settings", "mobile.common"],
+ "audit_date": "2026-11-13",
+ "key_count": {"en": 41, "target": 41, "changed": 5, "byte_identical": 36},
+ "source_commit": "254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c",
+ "source_branch": "feat/i18n-m3-s2b1",
+ "source_worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "cc90c83e0469",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime header (Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_from_round1_auditor": true
+ },
+ "translator": {
+  "ids": ["job 11dc69ef57cd", "job d61c27f0aaa7"],
+  "model_per_notes": "anthropic/claude-opus-5-5"
+ },
+ "round1_auditor": {
+  "id": "job 63f0cd2abdc5 (session 1e34afaf7f7e)",
+  "record": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ru/record.json",
+  "record_sha256": "9fc9db2ec1a5bb986f76e3d8add83ed07919df28ab44f9095e1866112b627fc0",
+  "report_sha256": "9ed30f3ca7b26182260cb74f88659c5baf04d396ab8987d16d099bec8d2e3def"
+ },
+ "input_hashes": {
+  "brief_v2": {"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json", "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9", "expected": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9", "match": true},
+  "draft_ru_v1": {"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ru/draft-ru.json", "sha256": "988c530ec3d6553103b592ab6eb53708884821d020cf4b1a78bd34e5cc61b550", "expected": "988c530ec3d6553103b592ab6eb53708884821d020cf4b1a78bd34e5cc61b550", "match": true},
+  "draft_ru_v2": {"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ru/draft-ru-v2.json", "sha256": "fbc01f008951c271080826558befa4e7b74d8a5241abe7b918342271e4176b15", "expected": "fbc01f008951c271080826558befa4e7b74d8a5241abe7b918342271e4176b15", "match": true},
+  "notes_ru_v2": {"path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/ru/notes-ru-v2.md", "sha256": "701756f762e8f18a3effa26b58b964823dd6b52d69e866a4612585f25894f4f5"}
+ },
+ "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+ "mechanical": {
+  "key_order_equals_brief": {"v1": true, "v2": true},
+  "changed_keys_computed": [
+   "mobile.computers.own_tunnel.foreground_note",
+   "mobile.computers.own_tunnel.check_note",
+   "mobile.computers.own_tunnel.verdict_host",
+   "mobile.computers.own_tunnel.verdict_local_network_ios",
+   "mobile.settings.own_tunnel.runtime_title"
+  ],
+  "changed_keys_match_notes": true,
+  "parser": "src/i18n/messages.ts @254e6fba via node --max-old-space-size=256 --experimental-strip-types",
+  "parse_failures": 0,
+  "placeholder_mismatches_all_41": 0,
+  "plural_arms": {"verdict_sessions": "one/few/many/other (unchanged key)", "verdict_timeout": "one/few/many/other (unchanged key)"},
+  "cc_cf_chars": 0,
+  "redact_literal_in_v2": 0
+ },
+ "redaction_hits": [
+  {"key": "mobile.computers.own_tunnel.foreground_note", "display": "[redacted]", "code_points": "U+0420 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440", "meaning": "Cyrillic word for relay, sentence-initial capital; harness masking only"}
+ ],
+ "per_key": [
+  {"key": "mobile.computers.own_tunnel.foreground_note", "change": "с этого же компьютера -> с того же компьютера", "placeholders": "address", "result": "pass", "resolves": "RU-01"},
+  {"key": "mobile.computers.own_tunnel.check_note", "change": "и сессии -> и список сессий", "placeholders": "none", "result": "pass", "resolves": "RU-02 (own wording; accepted)"},
+  {"key": "mobile.computers.own_tunnel.verdict_host", "change": "публикует ли туннель это имя до сих пор -> по-прежнему ли туннель публикует это имя", "placeholders": "none", "result": "pass", "resolves": "RU-05"},
+  {"key": "mobile.computers.own_tunnel.verdict_local_network_ios", "change": "разрешите его -> включите его", "placeholders": "action", "result": "pass", "resolves": "RU-04"},
+  {"key": "mobile.settings.own_tunnel.runtime_title", "change": "Здесь туннель не сохранить -> Эта сборка не сохраняет туннель", "placeholders": "none", "result": "pass", "resolves": "RU-03"}
+ ],
+ "round1_findings": {"RU-01": "resolved", "RU-02": "resolved (alternative wording)", "RU-03": "resolved", "RU-04": "resolved", "RU-05": "resolved"},
+ "new_findings": [],
+ "artifacts": {
+  "report": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ru-r2/report.md",
+  "audit_log": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/ru-r2/audit.log",
+  "parse_script": {"path": "/Users/damian/.local-operator/sessions/cc90c83e0469/scratchpad/parse-ru-r2.mts", "sha256": "b9d19fc63ae867bcb1b0541478ada052bf1f190e654637f4f02727b156a20665"},
+  "parse_output": {"path": "/Users/damian/.local-operator/sessions/cc90c83e0469/scratchpad/parse-ru-r2.out", "sha256": "35c41b7517f2a50631d855f51df911d23f56dc578fdf7ec47eba9c13cb2d2917"}
+ },
+ "current_report_verdict": {"status": "passed", "unresolved_blocker_major_count": 0, "finding_ids": []},
+ "ledger_recorded": false,
+ "ledger_note": "No ledger row written: scratch-stage delta audit; the manager records the ledger when the catalogue lands."
+}

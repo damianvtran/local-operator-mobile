@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { lineBoxPt } from "@/ui/text-scale";
+import {
+	META_PATH_INLINE_SHRINK,
+	metaLineFor,
+	metaPathBox,
+	metaPathFloorDp,
+	textWidthDp,
+} from "@/ui/components/list-row-meta";
+import { LARGE_TEXT_SCALE, lineBoxPt } from "@/ui/text-scale";
 import {
 	LIST_ROW_GAP_PT,
 	LIST_ROW_SLOT_PT,
@@ -40,6 +47,80 @@ describe("D6: state marks and folder/model share line 2", () => {
 		expect(row).toContain(
 			'{line2 === "inline" ? ( <View className="flex-row items-center gap-2"> {marks} {metaLine} </View>',
 		);
+	});
+});
+
+/* PR #245 agent review R1-R1 / design round 1 D13. Inline runs up to
+ *  LARGE_TEXT_SCALE, and on a 320 pt drawer at 1.4 the reviewer's case
+ *  (approval + 2 agents + 5 todos, ~250 pt of shrink-0 marks) leaves the meta
+ *  ~6 pt of a ~264 pt line. A 100.8 pt cwd floor with flexShrink 0 overflowed
+ *  the pane; the cwd must shrink into what the marks leave instead. */
+describe("D13: an inline cwd yields to the marks instead of leaving the pane", () => {
+	const LINE = 264;
+	const MARKS = 250;
+	const GAP = 8;
+	it("shrinks the cwd box when it shares line 2 with the marks", () => {
+		const box = metaPathBox(LARGE_TEXT_SCALE, true);
+		expect(box.flexShrink).toBeGreaterThan(0);
+		expect(box.minWidth).toBe(0);
+	});
+	/* PR #252 agent review R1-2. Yoga sizes a shrinking child as
+	 *  basis + deficit × (flexShrink × basis) / Σ(flexShrink × basis). At 1 the
+	 *  cwd split a mis-estimated model's overflow with it by basis; at 0.01 the
+	 *  model pays almost all of it, and a cwd alone still pays its whole deficit. */
+	it("shrinks the inline cwd at 0.01, so the model absorbs a mis-estimate first", () => {
+		const share = (weight: number, total: number) => weight / total;
+		for (const scale of [1, 1.1, 1.2, 1.3, LARGE_TEXT_SCALE]) {
+			const box = metaPathBox(scale, true);
+			expect(box.flexShrink).toBe(META_PATH_INLINE_SHRINK);
+			expect(META_PATH_INLINE_SHRINK).toBe(0.01);
+			const cwd = box.flexShrink * box.flexBasis;
+			/* Alone on the line, the cwd takes the whole deficit. */
+			expect(share(cwd, cwd)).toBe(1);
+			/* Beside even a short 48 dp model, the model pays ≥ 97 % of it. */
+			const model = 48;
+			expect(share(model, model + cwd)).toBeGreaterThanOrEqual(0.97);
+		}
+	});
+	it("keeps the floor guaranteed when the cwd has its own line (D26)", () => {
+		for (const scale of [1, LARGE_TEXT_SCALE, 2]) {
+			expect(metaPathBox(scale, false)).toEqual({
+				flexBasis: metaPathFloorDp(scale),
+				flexGrow: 1,
+				flexShrink: 0,
+				minWidth: 0,
+			});
+		}
+	});
+	it("keeps the floor as the basis inline, so a line with room is unchanged", () => {
+		expect(metaPathBox(1, true).flexBasis).toBe(metaPathFloorDp(1));
+	});
+	/* A guard on metaLineFor's EXISTING fit, which this PR does not change (it
+	 *  passes on the base too; PR #252 agent review R1-3): the shrinking box only
+	 *  clips what the painted string already elides because metaLineFor fits it
+	 *  to the line the marks leave. The regression tests are the metaPathBox and
+	 *  source-pin cases. */
+	it("guard: metaLineFor already fits the cwd to what the marks leave, at every inline scale", () => {
+		for (const scale of [1.1, 1.2, 1.3, LARGE_TEXT_SCALE]) {
+			const left = LINE - MARKS - GAP;
+			/* The floor alone would not fit: the case the reviewer measured. */
+			expect(metaPathFloorDp(scale)).toBeGreaterThan(left);
+			const painted = metaLineFor({
+				cwd: "/Users/ola/work_folder/minervaai",
+				model: "anthropic/claude-opus-5",
+				widthDp: left,
+				scale,
+			});
+			expect(painted.model).toBeNull();
+			expect(textWidthDp(painted.cwd ?? "", scale)).toBeLessThanOrEqual(left);
+		}
+	});
+	it("ListRow takes the box from that rule, by its line-2 layout", () => {
+		const row = flat("ui/components/list-row.tsx");
+		expect(row).toContain(
+			'style={metaPathBox(effectiveScale, line2 === "inline")}',
+		);
+		expect(row).not.toContain("META_PATH_BOX");
 	});
 });
 

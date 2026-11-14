@@ -745,11 +745,11 @@ export function passwordEntryExplanation(
 				: "another-address";
 	switch (slot) {
 		case "another-address":
-			return "This phone keeps one relay password, and it belongs to another address. Enter this computer's password, test it, then save. It replaces the other one.";
+			return t("mobile.computers.own_tunnel.password_slot_other");
 		case "empty":
-			return "This phone has no relay password saved. Enter this computer's password, test it, then save.";
+			return t("mobile.computers.own_tunnel.password_slot_empty");
 		case "this-address":
-			return "This phone's saved relay password is for this address. Test it, then save.";
+			return t("mobile.computers.own_tunnel.password_slot_this");
 	}
 }
 

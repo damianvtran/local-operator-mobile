@@ -1,0 +1,183 @@
+{
+ "schema": 1,
+ "audit_id": "frs2b1r2",
+ "audit_kind": "delta_re_audit",
+ "round": 2,
+ "scope": "delta: 7 changed keys + v1→v2 equality proof for the other 34",
+ "locale": "fr",
+ "namespaces": [
+  "mobile.computers",
+  "mobile.settings",
+  "mobile.common"
+ ],
+ "audit_date": "2026-11-13",
+ "key_count": {
+  "en": 41,
+  "target": 41,
+  "changed": 7,
+  "byte_identical": 34
+ },
+ "source_commit": "254e6fbac364c2fcb8e5cc5bee73094b4c7bd84c",
+ "source_branch": "feat/i18n-m3-s2b1",
+ "auditor": {
+  "agent": "i18n-auditor",
+  "team": "lopdev",
+  "session": "9679eedbe7ab",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session runtime header (Model: anthropic/claude-opus-5-5); no fallback observed",
+  "fallback_used": false,
+  "independent_from_translator_session": true,
+  "independent_from_round1_auditor": true
+ },
+ "translator": {
+  "ids": [
+   "job d676bc7c4b78",
+   "job 0d15f1a2975a"
+  ],
+  "model_per_notes": "anthropic/claude-opus-5-5"
+ },
+ "round1_auditor": {
+  "id": "job ae20f99bf5e3 (session f4053bd15cda)",
+  "record": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/fr/record.json",
+  "record_sha256": "4f1d9bfc0a9f026bad425610c7b3b9756337f516ec399b8e95292d136a6175ee",
+  "report_sha256": "5054bdc31162e02d05407fe37da26cc2841ccad86a66a7fdcc121fa1961fd1b4"
+ },
+ "input_hashes": {
+  "brief_v1": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1.json",
+   "sha256": "d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df",
+   "expected": "d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df",
+   "match": true
+  },
+  "brief_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/brief-s2b1-v2.json",
+   "sha256": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+   "expected": "d694b10abcfb07f94aebdaca55fb5a80929575f90282661f20cfae4f1b0b88e9",
+   "match": true
+  },
+  "draft_fr_v1": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/fr/draft-fr.json",
+   "sha256": "44cf58ab8de006c34a751cba77da5b2b98d3647874112418315dd59d333b6aaa",
+   "expected": "44cf58ab8de006c34a751cba77da5b2b98d3647874112418315dd59d333b6aaa",
+   "match": true
+  },
+  "draft_fr_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/fr/draft-fr-v2.json",
+   "sha256": "86b0fdf30daa8b94c0ae79b1ff3afa5e10c22f479a69f7c7bb958b721b60d0ce",
+   "expected": "86b0fdf30daa8b94c0ae79b1ff3afa5e10c22f479a69f7c7bb958b721b60d0ce",
+   "match": true
+  }
+ },
+ "other_inputs": {
+  "notes_fr_v2": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/fr/notes-fr-v2.md",
+   "sha256": "340c92cf421ec4e9bb255686ddb1590bd6f8358fd964a960ae3b0d275bdc16c5"
+  },
+  "messages.ts": {
+   "path": "254e6fba:src/i18n/messages.ts",
+   "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "command-block.tsx": {
+   "path": "254e6fba:src/ui/components/command-block.tsx",
+   "sha256": "c5f63fd8824e3e15c10a7e07b029d4ea9772080602650df8fcf34fa351e5b0bb"
+  },
+  "own-tunnel-settings.tsx": {
+   "path": "254e6fba:src/features/settings/own-tunnel-settings.tsx",
+   "sha256": "a49fd5b7207e84e854e78b2bba411b518a6f7f24fd58b568c9a071271a108e5b"
+  },
+  "button.tsx": {
+   "path": "254e6fba:src/ui/components/button.tsx",
+   "sha256": "0d98eb4854277d6e009ed7c747c2820e80ff2e8dd565f8afc61d1c701e4743c6"
+  }
+ },
+ "route_disclosure": {
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used: mobile catalogue paths are refused by the core route; context sidecars are nested JSON and not routable",
+  "redaction_hits": {
+   "brief_v1": 0,
+   "brief_v2": 0,
+   "draft_v1": 0,
+   "draft_v2": 0,
+   "notes_v2": 0,
+   "note": "grep -c \"[redacted]\" on all inputs = 0"
+  }
+ },
+ "mechanical": {
+  "brief_diff": "41/41 entries, identical key order; only verdict_forbidden.english and .note differ",
+  "draft_diff": "41/41 keys, identical order (= brief v2 order); exactly the 7 keys listed in notes-fr-v2.md differ; 34 byte-identical",
+  "parser": "src/i18n/messages.ts@254e6fba parseMessage/formatMessage, node v24.22.1 --experimental-strip-types --max-old-space-size=256 (v8 heap_size_limit reported 448 MB incl. young gen; old space capped 256 MB)",
+  "parse_failures": 0,
+  "placeholder_mismatches": 0,
+  "typography_issues_in_changed_keys": [],
+  "typography_checks": "no ASCII apostrophe, no bidi controls, no ordinary space before : ; ? ! » or after «, NNBSP present before high punctuation",
+  "script": "/Users/damian/.local-operator/sessions/9679eedbe7ab/scratchpad/parse-fr-r2.mts",
+  "script_sha256": "2f997d1a15b2b4ed88c8fd71c165fa1f44a2cc2684759179c979e2e5bb643777"
+ },
+ "round1_findings": {
+  "F-01": "resolved",
+  "F-02": "resolved",
+  "F-03": "resolved",
+  "F-04": "resolved",
+  "F-05": "resolved",
+  "N-01": "resolved",
+  "N-02": "resolved",
+  "N-03": "rejected — rejection accepted: « Rien n’a répondu à cette adresse » is idiomatic, keeps the agent, consistent across _ios; NIT only"
+ },
+ "per_key": {
+  "mobile.computers.own_tunnel.verdict_forbidden": {
+   "v2": "Ce tunnel a refusé l’app. Si vous avez placé une règle d’accès ou une page de connexion devant lui, laissez passer l’app ; le relais refuse lui aussi les requêtes provenant de toute autre origine : assurez-vous donc que le tunnel redirige directement vers {address}, et non vers un tableau de bord ou une autre app.",
+   "result": "PASS",
+   "note": "F-01 resolved: « provenant de toute autre origine » = v2 English \"from any other origin\"; false \"not from the tunnel\" mechanism gone; {address} kept; NNBSP before ; and :."
+  },
+  "mobile.computers.own_tunnel.foreground_note": {
+   "v2": "Pour toute autre plateforme, ou si vous préférez suivre le journal. Le relais écoute sur {address}, accessible depuis cet ordinateur seulement.",
+   "result": "PASS",
+   "note": "F-02 resolved verbatim; parallel « Pour … ou si vous préférez … » restores preference."
+  },
+  "mobile.computers.own_tunnel.rotate_note": {
+   "v2": "La commande vous le demande de façon interactive : la valeur n’apparaît donc jamais dans l’historique du shell ni dans la liste des processus. C’est le mot de passe que l’app demande ci-dessous.",
+   "result": "PASS",
+   "note": "F-03 resolved verbatim; « vous », « la valeur », « donc » restored; « le » refers to the heading's « mot de passe », as English \"Asks you\" elides the object too."
+  },
+  "mobile.computers.own_tunnel.verdict_tls": {
+   "v2": "Le certificat de ce tunnel a été refusé. Utilisez l’adresse {scheme} affichée par le tunnel, choisissez un tunnel dont le certificat est reconnu par un téléphone, ou remplacez tout certificat autosigné sur celui que vous exploitez — l’app ne contournera pas la vérification.",
+   "result": "PASS",
+   "note": "F-04 resolved verbatim; « tout certificat autosigné » is conditional like English \"a self-signed certificate\"; {scheme} kept; em-dash spacing unchanged from v1."
+  },
+  "mobile.settings.own_tunnel.before_saving": {
+   "v2": "Testez l’adresse avant de l’enregistrer : un tunnel enregistré qui n’a jamais répondu laisse la liste vide, sans aucune explication.",
+   "result": "PASS",
+   "note": "F-05 resolved verbatim; calque removed."
+  },
+  "mobile.computers.own_tunnel.rotate_label": {
+   "v2": "Définir ou changer le mot de passe",
+   "result": "PASS",
+   "note": "N-01 resolved. 34 chars (+31% vs EN 26). Call site: CommandBlock label = <Text> header in flex-row flex-wrap row, no numberOfLines → wraps, never clips (command-block.tsx@254e6fba ll.55-61)."
+  },
+  "mobile.settings.own_tunnel.test_again": {
+   "v2": "Tester à nouveau",
+   "result": "PASS",
+   "note": "N-02 resolved. Button in flex-row flex-wrap gap-2 row, no labelLines passed → label wraps (own-tunnel-settings.tsx@254e6fba l.141; button.tsx l.160)."
+  }
+ },
+ "artifacts": {
+  "report.md": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/fr-r2/report.md",
+   "sha256": "1ca2a5b8e7d5461e8f6108682b5efb2757fb89b6d28840d4c10f1a02ecebe83c"
+  },
+  "audit.log": {
+   "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b1/audits/fr-r2/audit.log",
+   "sha256": "5626b33de6496c2def92d2e9d53a6c99488d6e968f84683ed1e38c24cc828d96"
+  }
+ },
+ "current_report_verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": []
+ },
+ "audit_notes_not_execution_log": "report.md is reasoning; audit.log holds executed commands and actual outputs",
+ "claims_not_made": [
+  "no rendered-frame measurement",
+  "no MT/translation service used",
+  "no ledger command run (writes restricted to this directory)"
+ ]
+}

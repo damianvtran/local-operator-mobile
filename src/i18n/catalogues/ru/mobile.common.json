@@ -8,5 +8,8 @@
 	"mobile.common.not_found.title": "Страница не найдена",
 	"mobile.common.not_found.headline": "Этой страницы не существует.",
 	"mobile.common.not_found.next": "Вернитесь к сессиям, чтобы продолжить.",
-	"mobile.common.not_found.action": "К сессиям"
+	"mobile.common.not_found.action": "К сессиям",
+	"mobile.common.copy": "Копировать",
+	"mobile.common.copied": "Скопировано",
+	"mobile.common.copy_command_hint": "Копирует команду «{label}»"
 }

@@ -16,12 +16,17 @@ import {
 import {
 	COMPUTER_COMMANDS,
 	TUNNEL_COMMANDS,
-	TUNNEL_RULE,
+	tunnelCommandLabel,
+	tunnelCommandNote,
+	tunnelRule,
 } from "@/features/auth/tunnel-commands";
 import { readSavedComputers } from "@/features/auth/tunnel-storage";
 import { runTunnelTest } from "@/features/auth/tunnel-test";
 import type { TunnelTestVerdict } from "@/features/auth/tunnel-verdict";
-import { verdictSentence } from "@/features/auth/tunnel-verdict";
+import {
+	verdictOpensWithDetail,
+	verdictSentence,
+} from "@/features/auth/tunnel-verdict";
 import { activeLocale, t } from "@/i18n";
 import { sentencePlatform } from "@/lib/platform";
 import { CONTROL, REGION, ROLE, SCREEN } from "@/ui/a11y";
@@ -412,9 +417,10 @@ export default function OwnTunnel() {
 					</Text>
 					{COMPUTER_COMMANDS.map((item) => (
 						<CommandBlock
-							key={item.command}
-							label={item.label}
-							note={item.note}
+							key={item.id}
+							id={item.id}
+							label={tunnelCommandLabel(item)}
+							note={tunnelCommandNote(item)}
 							command={item.command}
 						/>
 					))}
@@ -428,12 +434,13 @@ export default function OwnTunnel() {
 						numeral="2."
 						label={t("mobile.computers.own_tunnel.step_publish")}
 					/>
-					<Text className="text-body-sm text-ink-muted">{TUNNEL_RULE}</Text>
+					<Text className="text-body-sm text-ink-muted">{tunnelRule()}</Text>
 					{TUNNEL_COMMANDS.map((item) => (
 						<CommandBlock
-							key={item.command}
-							label={item.label}
-							note={item.note}
+							key={item.id}
+							id={item.id}
+							label={tunnelCommandLabel(item)}
+							note={tunnelCommandNote(item)}
 							command={item.command}
 						/>
 					))}
@@ -545,7 +552,11 @@ function hostOf(value: string): string {
 
 /** What the test found, in the taxonomy's own sentence. */
 const VerdictBlock = ({ verdict }: { verdict: TunnelTestVerdict }) => {
-	const remedy = verdict.kind === "offline" ? verdict.remedy : null;
+	const composedDir = useComposedDir();
+	const remedy =
+		verdict.kind === "offline"
+			? t("mobile.computers.own_tunnel.remedy", { command: verdict.command })
+			: null;
 	return (
 		<>
 			<Alert
@@ -561,6 +572,9 @@ const VerdictBlock = ({ verdict }: { verdict: TunnelTestVerdict }) => {
 						? t("mobile.computers.own_tunnel.verdict_ok")
 						: t("mobile.computers.own_tunnel.verdict_not_yet")
 				}
+				/* `{detail}`-initial in ur: a Latin relay detail would set the line's
+				 *  base LTR under `dir="auto"`, so it states the page direction. */
+				bodyDir={verdictOpensWithDetail(verdict) ? composedDir : undefined}
 			>
 				{verdictSentence(verdict, sentencePlatform())}
 			</Alert>

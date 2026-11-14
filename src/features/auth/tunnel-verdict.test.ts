@@ -104,7 +104,7 @@ describe("classify", () => {
 		const verdict = classify(new RelayError("computer-offline", "unavailable"));
 		expect(verdict).toMatchObject({
 			kind: "offline",
-			remedy: "On that computer: lop mobile status",
+			command: "lop mobile status",
 		});
 	});
 
@@ -164,7 +164,7 @@ describe("verdictSentence", () => {
 			{
 				kind: "offline",
 				detail: "Tunnel temporarily unavailable",
-				remedy: "lop mobile status",
+				command: "lop mobile status",
 			},
 			{ kind: "tls", detail: "unable to verify the first certificate" },
 			{ kind: "host", detail: "ENOTFOUND" },
@@ -203,7 +203,7 @@ describe("verdictSentence", () => {
 				{
 					kind: "offline",
 					detail: null,
-					remedy: "lop mobile status",
+					command: "lop mobile status",
 				},
 				"ios",
 			),

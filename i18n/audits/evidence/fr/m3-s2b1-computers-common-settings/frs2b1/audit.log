@@ -1,0 +1,98 @@
+# audit.log — fr S2b-1 audit, i18n-auditor (team lopdev) session f4053bd15cda, model anthropic/claude-opus-5-5, 2026-11-13
+# Execution log: commands actually run in this session, with their outputs (abridged where marked).
+
+$ cd /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad; shasum -a 256 m3s2b1/brief-s2b1.json m3s2b1/fr/draft-fr.json
+d46b2d448e668e778935279b3d9ec2cae4552c2fa74da49f3255852f087dc4df  m3s2b1/brief-s2b1.json
+44cf58ab8de006c34a751cba77da5b2b98d3647874112418315dd59d333b6aaa  m3s2b1/fr/draft-fr.json
+# both match the task → proceed
+
+$ grep -ci redact brief-s2b1.json draft-fr.json   → 0 / 0
+$ git -C ~/local-operator-mobile show ffbda180:src/i18n/catalogues/fr/mobile.<ns>.json | shasum -a 256
+computers 9f10efecaa6935d6611c2b16753cee4e9d22b10f221349425d52cac4e5436e76
+settings  c21961f4c2f71587dfdfc6794c0a2c2429963e7fcfed3272d3686601aa247eff
+common    00bd14e6b88253f3d246777a12a30fef614b2422439932508c82fd7d823b5c5c
+$ git show ce336e4a:<file> | shasum -a 256 ; grep -ci redacted <file>  (worktree clean except one untracked docs/evidence file)
+src/i18n/messages.ts c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0 redact=0
+src/features/auth/tunnel-verdict.ts b53053a1ed70d0a3fe74292aaff7757a1499322e1e669147de6241b49d3be687 redact=0
+src/features/auth/tunnel-commands.ts 6cef6a62855fd31c1946863950818d66c65001f7d213eaf5a4482dfcd05c3b92 redact=0
+src/features/settings/own-tunnel-settings.tsx a49fd5b7207e84e854e78b2bba411b518a6f7f24fd58b568c9a071271a108e5b redact=0
+src/ui/components/command-block.tsx c5f63fd8824e3e15c10a7e07b029d4ea9772080602650df8fcf34fa351e5b0bb redact=0
+src/ui/size-class.ts 7e067cee3d6d7f50b196305dfd67a5444f7f9bf7224d371fc614bfa857816231 redact=0
+~/local-operator/i18n/style-guides/fr.md ae1519ab7617d19aa826918d607de1d018595094166edbc18aa58f6a8f0a4226
+notes-fr.md 9e7cf00ce7a791423480e66765a70e4d678267d5876ec870a244151d4a564e07
+
+$ timeout 60 node --max-old-space-size=256 --experimental-strip-types parse.mts
+# imports src/i18n/messages.ts (worktree @ce336e4a) parseMessage/formatMessage/pluralCategory; checks key set, param maps en vs fr, renders plurals in fr
+# (first run used formatMessage(locale,msg,args) — wrong signature in MY rig, 2 TypeErrors; fixed to formatMessage(parsed,args,"fr") and re-run:)
+mobile.computers.own_tunnel.verdict_sessions 0 one => Connecté — 0 session visible.
+mobile.computers.own_tunnel.verdict_sessions 1 one => Connecté — 1 session visible.
+mobile.computers.own_tunnel.verdict_sessions 2 other => Connecté — 2 sessions visibles.
+mobile.computers.own_tunnel.verdict_sessions 10 other => Connecté — 10 sessions visibles.
+mobile.computers.own_tunnel.verdict_sessions 1000000 many => Connecté — 1000000 de sessions visibles.
+mobile.computers.own_tunnel.verdict_sessions 1500000 other => Connecté — 1500000 sessions visibles.
+mobile.computers.own_tunnel.verdict_timeout 0 one => Cette adresse n’a pas répondu en 0 seconde. Vérifiez que le tunnel fonctionne et que l’ordinateur n’est pas en veille.
+mobile.computers.own_tunnel.verdict_timeout 1 one => Cette adresse n’a pas répondu en 1 seconde. Vérifiez que le tunnel fonctionne et que l’ordinateur n’est pas en veille.
+mobile.computers.own_tunnel.verdict_timeout 2 other => Cette adresse n’a pas répondu en 2 secondes. Vérifiez que le tunnel fonctionne et que l’ordinateur n’est pas en veille.
+mobile.computers.own_tunnel.verdict_timeout 10 other => Cette adresse n’a pas répondu en 10 secondes. Vérifiez que le tunnel fonctionne et que l’ordinateur n’est pas en veille.
+mobile.computers.own_tunnel.verdict_timeout 1000000 many => Cette adresse n’a pas répondu en 1000000 de secondes. Vérifiez que le tunnel fonctionne et que l’ordinateur n’est pas en veille.
+mobile.computers.own_tunnel.verdict_timeout 1500000 other => Cette adresse n’a pas répondu en 1500000 secondes. Vérifiez que le tunnel fonctionne et que l’ordinateur n’est pas en veille.
+checked 41 bad 0
+
+$ python3 typography scan (U+202F before : ; ? ! and inside « », straight ' ", dash spacing, bidi U+200E/F,202A-E,2066-9,FEFF, redaction, final-stop parity, char ratios)
+install_label                    heading  en= 23 fr= 26 1.13
+foreground_label                 heading  en= 27 fr= 29 1.07
+check_label                      heading  en=  8 fr=  8 1.00
+rotate_label                     heading  en= 26 fr= 32 1.23
+install_note                     help     en= 97 fr=103 1.06
+foreground_note                  help     en= 95 fr=126 1.33
+check_note                       help     en= 72 fr= 97 1.35
+rotate_note                      help     en=130 fr=177 1.36
+cloudflare_note                  help     en= 88 fr=101 1.15
+ngrok_note                       help     en= 66 fr= 82 1.24
+tunnel_rule                      help     en= 89 fr=114 1.28
+verdict_sessions                 help     en= 79 fr=113 1.43
+verdict_password                 help     en= 73 fr= 89 1.22
+verdict_forbidden                help     en=270 fr=312 1.16
+verdict_offline_detail           help     en= 37 fr= 40 1.08
+verdict_offline                  help     en= 80 fr= 84 1.05
+verdict_tls                      help     en=230 fr=271 1.18
+verdict_host                     help     en=111 fr=122 1.10
+verdict_unreachable              help     en=124 fr=141 1.14
+verdict_timeout                  help     en=142 fr=183 1.29
+verdict_local_network_ios        help     en=251 fr=323 1.29
+verdict_local_network            help     en=119 fr=152 1.28
+verdict_refused                  help     en= 61 fr= 74 1.21
+remedy                           help     en= 27 fr= 30 1.11
+password_slot_other              help     en=150 fr=203 1.35
+password_slot_empty              help     en= 91 fr=121 1.33
+password_slot_this               help     en= 74 fr=100 1.35
+copy                             button   en=  4 fr=  6 1.50
+copied                           status   en=  6 fr=  5 0.83
+copy_command_hint                help     en= 26 fr= 29 1.12
+not_saved                        help     en= 65 fr= 80 1.23
+kept_secure                      help     en= 67 fr= 86 1.28
+edit                             button   en=  4 fr=  8 2.00
+test_again                       button   en= 10 fr=  8 0.80
+remove                           button   en=  6 fr=  7 1.17
+password_placeholder             help     en= 39 fr= 46 1.18
+runtime_title                    heading  en= 28 fr= 36 1.29
+runtime_body                     help     en=134 fr=179 1.34
+before_saving                    help     en=124 fr=142 1.15
+remove_title                     heading  en= 19 fr= 19 1.00
+remove_body                      help     en=125 fr=148 1.18
+ISSUE ('verdict_sessions', 'dash spacing 0x20 0x20')
+ISSUE ('verdict_tls', 'dash spacing 0x20 0x20')
+catdash 'l '
+catdash '/ '
+catdash 'e '
+redact brief 0
+# dash ISSUE rows = " — " with U+0020 both sides: matches style guide and ffbda180 catalogue → not a finding.
+
+$ node --experimental-strip-types sug.mts   # auditor's suggested replacements: parseMessage + param parity
+verdict_forbidden params-match [["address","text"]]
+foreground_note params-match [["address","text"]]
+rotate_note params-match []
+verdict_tls params-match [["scheme","text"]]
+before_saving params-match []
+rotate_label params-match []
+test_again params-match []

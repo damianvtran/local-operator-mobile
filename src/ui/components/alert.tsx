@@ -2,6 +2,7 @@ import { Text, View } from "react-native";
 
 import type { BannerProps } from "@/ui/components/banner";
 import { Button } from "@/ui/components/button";
+import type { ComposedDirProps } from "@/ui/direction";
 import { useTextScale } from "@/ui/text-scale-provider";
 import {
 	alertActionClasses,
@@ -30,6 +31,12 @@ export type AlertProps = {
 	/** Optional short lead-in, in the severity's colour. */
 	title?: string;
 	children: string;
+	/** The body's base direction, for a composed body whose first strong run is
+	 *  not the page's script — e.g. an Urdu verdict that opens with a Latin relay
+	 *  detail, which react-native-web's `dir="auto"` would lay out LTR on an RTL
+	 *  page. Opt-in exactly like `Button.labelDir`: omitted, the body keeps the
+	 *  inferred base and every other alert is unchanged. */
+	bodyDir?: ComposedDirProps;
 	/** One trailing remedy, the Banner's own shape and rule (exactly one action,
 	 *  never a dismiss — a dismiss would let a reader hide a real failure). It
 	 *  exists so a page-status failure that must sit INSET beside the control it
@@ -46,6 +53,7 @@ export const Alert = ({
 	severity,
 	title,
 	children,
+	bodyDir = {},
 	action,
 	testID,
 }: AlertProps) => {
@@ -60,6 +68,9 @@ export const Alert = ({
 	const { effectiveScale } = useTextScale();
 	const layout = alertActionLayout(action !== undefined, effectiveScale);
 	const placed = alertActionClasses(layout);
+	/* Widened to `object` for the reason `Button` gives: `dir` is a
+	 * react-native-web prop that React Native's `TextProps` does not declare. */
+	const bodyWeb: object = bodyDir;
 	return (
 		<View
 			className={alertClasses(tone)}
@@ -97,7 +108,9 @@ export const Alert = ({
 							{title}
 						</Text>
 					) : null}
-					<Text className="text-body-sm text-ink">{children}</Text>
+					<Text className="text-body-sm text-ink" {...bodyWeb}>
+						{children}
+					</Text>
 				</View>
 			</View>
 			{action ? (
