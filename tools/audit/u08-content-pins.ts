@@ -686,7 +686,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * payload envelope read. No rendered component, style or token changed;
 	 * re-derived over the staged tree. Source identity only, NOT rendered U-08
 	 * evidence. */
-	app: "fc5d82455884b54194d0df37a4ef8dc809918af53b797e5c148e12cffb20de1a",
+	app: "be8f661a9e6f8103946ae3a1cd083c07a68c3fff7638b2c6f5aeb979d81637d4",
 
 	"design/fonts":
 		"4d6a0f23c57ed6adff8ef353abe22c2208e802b70a961d4c8996aff3bae6b2fb",
@@ -1753,7 +1753,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ef63d8dad550b79f77c32681d84de6e3b1ea8022f89c6bee0089b787517cc9e2",
+	src: "451351f4038a1c0947a6d7f62538350756a2125dd8b90ca589d5047fe41a7cf7",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -1781,7 +1781,7 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// --print re-pin (PR #244 remediation round 1): comment-only edits — the
 	// Android warm-only claim and the exact-set native-config guard.
 	"app.config.ts":
-		"2b77ffa36a241ee1607ac5cb42582fdf07a683a7fe91f4b0050a2385758a5c4f",
+		"c4b2be52f8a2802eda590a10971a2a624128b86e363f49bfd14ffe611a607d49",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	// --print re-pin (feat/background-push-clear): adds the native module
