@@ -1,0 +1,22 @@
+# audit.log — commands actually run (session b29128e837d8, 2026-11-13)
+$ shasum -a 256 brief-s2b2a.json es/draft-es.json es/draft-es-v2.json
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+d1d9734623f37ee5b093c1d6cad4904d5f348b605e84dcd7fb5191049f17fdb9  es/draft-es.json
+7fd8d7014664c96481b7dd9193301b0dcbd907de32630cfa299982ce571d03a7  es/draft-es-v2.json
+$ grep -o '\[redacted\]' brief-s2b2a.json | wc -l -> 0
+$ diff es/draft-es.json es/draft-es-v2.json -> 3c3 relay_stopped_title, 21c21 try_now, 24c24 open_console (only)
+$ git -C worktree log -1 --format=%H -> cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+$ grep -n try_now|try_again|open_console refusal-surface.tsx -> 310 try_now : 311 try_again (ternary), 326 open_console
+$ python3 flatten es mobile.computers.json, grep jecu|Reintentar|Probar -> retry=Reintentar, try_now=Probar ahora, many 'en ejecución'
+$ cd worktree; NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx /Users/damian/.local-operator/sessions/b29128e837d8/scratchpad/es-r2/check.ts
+order brief==v1 true brief==v2 true n 24
+changed [
+  'mobile.computers.refusal.relay_stopped_title',
+  'mobile.computers.refusal.try_now',
+  'mobile.computers.refusal.open_console'
+]
+mobile.computers.refusal.relay_stopped_title => El relé no se está ejecutando en Mac Studio.
+mobile.computers.refusal.try_now => Reintentar ahora
+mobile.computers.refusal.open_console => Abrir la consola de Radient
+fails 0
+# write to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/es-r2/ refused by guardrail dangerous-delete; nothing written there; outputs written to /Users/damian/.local-operator/sessions/b29128e837d8/scratchpad/es-r2/out

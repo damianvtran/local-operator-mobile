@@ -1716,6 +1716,26 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * sides' comments and src kept, so neither parent's digest. Re-derived once
 	 * with --print over the merged tree; source identity only, NOT rendered
 	 * U-08 or native evidence. */
+	/* M3 S2b-2a (feat/i18n-m3-s2b2): the refusal surface's keys (English-first;
+	 * `catalogue.gen.ts` is regenerated with the translations), the remedy line
+	 * via `own_tunnel.remedy`, `verdictSentence`'s caller-supplied action label
+	 * and their tests. Re-derived last with --print over the committed tree
+	 * (b3af2b96); only `src` moved. Source identity only, NOT rendered U-08
+	 * evidence. */
+	/* M3 S2b-2a translations: the six LTR locales' and ur's 24 refusal values,
+	 * the regenerated `catalogue.gen.ts`, the ur UR-C1 `labelDir` on the
+	 * refusal surface's console button and its tests. Re-derived last with
+	 * --print over the committed tree (6efad9e8); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* #257 round-1 remediation: the native `writingDirection` channel of
+	 * `composedDirection` (D1), the refusal headline/next spreads (D2), the
+	 * shared DIAGNOSTIC_FALLBACK module (N2) and their tests. Re-derived last
+	 * with --print over the committed tree (3121fd36); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* #257 CI fix: the verdict-Alert site scan in ur-latin-initial-sites.test.ts
+	 * anchors on the call opening. Re-derived last with --print over the
+	 * committed tree (c1e52685); only `src` moved. Source identity only, NOT
+	 * rendered U-08 evidence. */
 	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
 	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
 	 * with --print over the committed tree. Source identity only, NOT rendered
@@ -1724,6 +1744,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * view state, customised trigger fill): re-derived once with --print over the
 	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
 	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
 	/* fix/session-push-register: the app now POSTs /api/push/register for the
 	 * routed computer (session-push-registration*, use-session-push-registration),
@@ -1742,6 +1764,8 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * registration): both sides' comments and src kept, so neither parent's
 	 * digest. Re-derived once with --print over the merged tree; source identity
 	 * of the merge, NOT rendered evidence. */
+	/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
 	/* fix/settings-signin-status-badge: the signed-out account card as a
 	 * Radient sign-in nav card, the connection pill's one-line fit in the
 	 * Settings Status row and the drawer header (`status-pill-layout.ts`), and
@@ -1763,7 +1787,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * status pill fit, Diagnostics stream-health reason): both sides' comments
 	 * and src kept, so neither parent's digest. Re-derived once with --print
 	 * over the merged tree; source identity, NOT rendered evidence. */
-	src: "6835c16c6045b64c9c494ad098bacf755acfd2619dfad82eff80da663b364099",
+	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of PR #246 onto main caae98bc (#257 i18n connection-failure
+	 * screen): both sides' comments and src kept, so neither parent's digest.
+	 * Re-derived once with --print over the merged tree; source identity of the
+	 * merge, NOT rendered evidence. */
+	src: "d8df0b0fa1c42b7d1ccc8b6d291cd6a8876b060aef9945a540fb97cd04b2d7be",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

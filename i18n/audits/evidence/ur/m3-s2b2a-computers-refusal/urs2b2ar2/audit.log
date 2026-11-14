@@ -1,0 +1,72 @@
+# audit.log — ur round 2 delta, m3-s2b2a-computers-refusal, auditor session 75699937d8a2, commands actually run 2026-11-13 (UTC ~20:10)
+$ cd $B && shasum -a 256 brief-s2b2a.json ur/draft-ur.json ur/draft-ur-v2.json ur/notes-ur-v2.md audits/ur/report.md
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+46211c4e2757deca94e7eab22fd61c95c49f20a83e419929d71d2b5ea7e1233b  ur/draft-ur.json
+635d03a2df1490804485455d07522192a9e29c09b17c65975447798520166c20  ur/draft-ur-v2.json
+e8eceb8dfd43e80a18e439ee6258b47bc35109220b6fcd1c69f0f3f1ec4194d2  ur/notes-ur-v2.md
+e9e8fe88886f519de8cb0952d6812560f0403a1e3f966917d04cb744d1216736  audits/ur/report.md
+$ grep -c "[redacted]" (escaped) brief-s2b2a.json
+0
+$ git -C <worktree> rev-parse HEAD
+cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+$ cp <worktree>/src/i18n/messages.ts $S && shasum -a 256 messages.ts check.ts
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  messages.ts
+dfe6c8cd757d301a69a16bec13f538041f0edf70b0ef4a8eb99f219cebeef013  check.ts
+$ diff ur/draft-ur.json ur/draft-ur-v2.json; wc -l
+5c5
+< 	"mobile.computers.refusal.console_title": "اس وقت Radient میں {subject} پر توجہ درکار ہے۔",
+---
+> 	"mobile.computers.refusal.console_title": "آپ کو Radient میں {subject} پر توجہ دینی ہوگی۔",
+7c7
+< 	"mobile.computers.refusal.sign_in_title": "آپ کے Radient سیشن کی میعاد ختم ہو گئی ہے۔ {subject} سے دوبارہ منسلک ہونے کے لیے سائن ان کریں۔",
+---
+> 	"mobile.computers.refusal.sign_in_title": "آپ کے Radient سیشن کی میعاد ختم ہو گئی ہے۔ {subject} سے دوبارہ رابطے کے لیے سائن ان کریں۔",
+11c11
+< 	"mobile.computers.refusal.offline_next": "اس کمپیوٹر کو جگائیں، اور جانچیں کہ کنیکٹر چل رہا ہے۔ اس کی آخری معلوم حالت اوپر دی گئی ہے۔",
+---
+> 	"mobile.computers.refusal.offline_next": "اس کمپیوٹر کو جگائیں، اور جانچیں کہ کنیکٹر چل رہا ہے۔ کمپیوٹر کی آخری معلوم حالت اوپر دی گئی ہے۔",
+16c16
+< 	"mobile.computers.refusal.sign_in_next": "دوبارہ منسلک ہونے کے لیے پھر سے سائن ان کریں۔ اس سے پہلے ٹائپ کیا گیا سب کچھ قرنطینہ میں رکھ دیا گیا ہے، بھیجا نہیں گیا۔",
+---
+> 	"mobile.computers.refusal.sign_in_next": "دوبارہ منسلک ہونے کے لیے پھر سے سائن ان کریں۔ اس سے پہلے ٹائپ کیا گیا سب کچھ قرنطینہ میں رکھ دیا گیا ہے اور بھیجا نہیں جائے گا۔",
+      26 ur/draft-ur.json
+      26 ur/draft-ur-v2.json
+      52 total
+$ cd <worktree> && NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx $S/check.ts   (note: first two runs had a script bug — Map params stringified to {} / wrong formatMessage arg order; this is the corrected run, output verbatim)
+order brief==v1 true brief==v2 true n 24
+changed mobile.computers.refusal.console_title,mobile.computers.refusal.sign_in_title,mobile.computers.refusal.offline_next,mobile.computers.refusal.sign_in_next unchanged 20
+offline_title params OK ["subject:text"] bidi 0 firstStrong ا  nfc true len 42 U+0627/0622 check 627
+relay_stopped_title params OK ["subject:text"] bidi 0 firstStrong ر  nfc true len 30 U+0627/0622 check 631
+tunnel_gone_title params OK ["subject:text"] bidi 0 firstStrong ا  nfc true len 36 U+0627/0622 check 627
+console_title params OK ["subject:text"] bidi 0 firstStrong آ  nfc true len 46 U+0627/0622 check 622
+password_title params OK [] bidi 0 firstStrong و  nfc true len 25 U+0627/0622 check 648
+sign_in_title params OK ["subject:text"] bidi 0 firstStrong آ  nfc true len 89 U+0627/0622 check 622
+retry_title params OK ["subject:text"] bidi 0 firstStrong ا  nfc true len 28 U+0627/0622 check 627
+certificate_title params OK [] bidi 0 firstStrong ا  nfc true len 32 U+0627/0622 check 627
+host_title params OK [] bidi 0 firstStrong م  nfc true len 26 U+0627/0622 check 645
+offline_next params OK [] bidi 0 firstStrong ا  nfc true len 96 U+0627/0622 check 627
+relay_stopped_next params OK [] bidi 0 firstStrong ر  nfc true len 44 U+0627/0622 check 631
+tunnel_gone_next params OK [] bidi 0 firstStrong د  nfc true len 56 U+0627/0622 check 62f
+console_next params OK [] bidi 0 firstStrong ا  nfc true len 85 U+0627/0622 check 627
+password_next params OK [] bidi 0 firstStrong ک  nfc true len 56 U+0627/0622 check 6a9
+sign_in_next params OK [] bidi 0 firstStrong د  nfc true len 127 U+0627/0622 check 62f
+retry_next params OK [] bidi 0 firstStrong ع  nfc true len 71 U+0627/0622 check 639
+certificate_next params OK ["scheme:text"] bidi 0 firstStrong ٹ  nfc true len 161 U+0627/0622 check 679
+host_next params OK [] bidi 0 firstStrong پ  nfc true len 79 U+0627/0622 check 67e
+wait_seconds params OK ["seconds:plural"] bidi 0 firstStrong د  nfc true len 94 U+0627/0622 check 62f
+try_now params OK [] bidi 0 firstStrong ا  nfc true len 14 U+0627/0622 check 627
+try_again params OK [] bidi 0 firstStrong د  nfc true len 16 U+0627/0622 check 62f
+sign_in_again params OK [] bidi 0 firstStrong د  nfc true len 19 U+0627/0622 check 62f
+open_console params OK [] bidi 0 firstStrong R LATIN/PH-START nfc true len 20 U+0627/0622 check 52
+another_address params OK [] bidi 0 firstStrong د  nfc true len 22 U+0627/0622 check 62f
+mobile.computers.refusal.console_title => آپ کو Radient میں https://abc.trycloudflare.com پر توجہ دینی ہوگی۔
+mobile.computers.refusal.sign_in_title => آپ کے Radient سیشن کی میعاد ختم ہو گئی ہے۔ https://abc.trycloudflare.com سے دوبارہ رابطے کے لیے سائن ان کریں۔
+mobile.computers.refusal.offline_next => اس کمپیوٹر کو جگائیں، اور جانچیں کہ کنیکٹر چل رہا ہے۔ کمپیوٹر کی آخری معلوم حالت اوپر دی گئی ہے۔
+mobile.computers.refusal.sign_in_next => دوبارہ منسلک ہونے کے لیے پھر سے سائن ان کریں۔ اس سے پہلے ٹائپ کیا گیا سب کچھ قرنطینہ میں رکھ دیا گیا ہے اور بھیجا نہیں جائے گا۔
+wait 0 other => دوبارہ کوشش کرنے سے پہلے تقریباً 0 سیکنڈ انتظار کریں۔
+wait 1 one => دوبارہ کوشش کرنے سے پہلے تقریباً 1 سیکنڈ انتظار کریں۔
+wait 2 other => دوبارہ کوشش کرنے سے پہلے تقریباً 2 سیکنڈ انتظار کریں۔
+wait 21 other => دوبارہ کوشش کرنے سے پہلے تقریباً 21 سیکنڈ انتظار کریں۔
+fails 0
+$ python3 unicodedata.bidirectional: U+06D4 AL, U+060C CS, : / . CS, U+0622 AL, space WS
+$ grep ur catalogues: رابطے only in mobile.chrome.home.sign_in; منسلک in 20+ strings; future fem. "ہو گی" 15 hits, "ہوگی" 0 hits; "ہوگا" 4 hits

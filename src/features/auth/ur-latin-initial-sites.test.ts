@@ -8,6 +8,7 @@ import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
 import { Alert } from "@/ui/components/alert";
 import { Button } from "@/ui/components/button";
 import { Input } from "@/ui/components/input";
+import { RefusalSurface } from "@/ui/components/refusal-surface";
 import { DirectionProvider, useComposedDir } from "@/ui/direction";
 import { TunnelPaths } from "./tunnel-paths";
 import { verdictOpensWithDetail } from "./tunnel-verdict";
@@ -40,6 +41,11 @@ vi.mock("@/ui/appearance", () => ({
 vi.mock("@/ui/text-scale-provider", () => ({
 	useTextScale: () => ({ effectiveScale: 1 }),
 }));
+
+/* `RefusalSurface`'s alert mark is a `lucide-react-native` icon (native SVG, Flow
+ * source Node cannot parse; same stub as computers-add-wait.test.ts). The mark is
+ * irrelevant to the label's direction. */
+vi.mock("lucide-react-native", () => ({ AlertTriangle: () => null }));
 
 const STARTS_LATIN = /^[A-Za-z]/;
 const ICU_SLOT = /\{[^}]*\}/g;
@@ -75,6 +81,12 @@ const PRE_S1_LATIN_INITIAL_UR_KEYS = [
  *  because its channel differs from the `Text` spreads above. */
 const OPEN_LATIN_INITIAL_UR_KEYS = [
 	"mobile.computers.password_placeholder",
+] as const;
+
+/** M3 S2b-2a (ur audit UR-C1): a BUTTON label, so its channel is `Button.labelDir`
+ *  (as `mobile.signin.start`), on `RefusalSurface`'s console button. */
+const S2B2A_LATIN_INITIAL_UR_KEYS = [
+	"mobile.computers.refusal.open_console",
 ] as const;
 
 const read = (relative: string): string =>
@@ -201,7 +213,7 @@ describe("screens: the Latin-initial values spread the composed direction", () =
 });
 
 describe("Q-02: every Latin-initial ur value in the computers and sign-in namespaces", () => {
-	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, and the placeholder fixed via Input.placeholderDir", () => {
+	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, the placeholder fixed via Input.placeholderDir, and S2b-2a's console button", () => {
 		const catalogue = (namespace: string) =>
 			JSON.parse(
 				read(`../../i18n/catalogues/ur/mobile.${namespace}.json`),
@@ -219,6 +231,7 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 				...LATIN_INITIAL_UR_KEYS,
 				...PRE_S1_LATIN_INITIAL_UR_KEYS,
 				...OPEN_LATIN_INITIAL_UR_KEYS,
+				...S2B2A_LATIN_INITIAL_UR_KEYS,
 			].sort(),
 		);
 	});
@@ -231,6 +244,97 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 		expect(source.slice(source.lastIndexOf("<Text", at), at)).toContain(
 			"{...composedDir}",
 		);
+	});
+
+	it("RefusalSurface: the Open Radient console button passes labelDir={composedDir}", () => {
+		/* M3 S2b-2a ur audit UR-C1: the ur label `Radient کنسول کھولیں` opens with
+		 * the Latin product name, so without a stated base `dir="auto"` lays the
+		 * button label LTR on an RTL page. Same opt-in as the sign-in button above;
+		 * source-level because the surface's native stack does not import here. */
+		const source = read("../../ui/components/refusal-surface.tsx");
+		expect(source).toContain("const composedDir = useComposedDir();");
+		const at = source.indexOf(
+			'label={t("mobile.computers.refusal.open_console")}',
+		);
+		expect(at).toBeGreaterThan(-1);
+		expect(source.slice(at, source.indexOf("/>", at))).toContain(
+			"labelDir={composedDir}",
+		);
+	});
+
+	it("open_console: the real ur label opens with Latin `Radient`, and labelDir from the composed direction gives it dir=rtl", () => {
+		/* The premise behind the labelDir above, on the catalogue value itself. */
+		const label = renderFor("mobile.computers.refusal.open_console", {}, "ur");
+		expect(label.startsWith("Radient ")).toBe(true);
+		expect(label).toMatch(ARABIC_SCRIPT);
+		/* The site's own shape: the console Button passes `useComposedDir()`. */
+		const OpenConsole = () =>
+			h(Button, {
+				label,
+				labelDir: useComposedDir(),
+				onPress: () => undefined,
+				variant: "outline",
+				testID: "t",
+			});
+		const rtl = render(h(OpenConsole), "rtl");
+		expect(rtl).toContain('dir="rtl"');
+		expect(rtl).not.toContain('dir="auto"');
+		expect(render(h(OpenConsole), "ltr")).not.toContain('dir="rtl"');
+	});
+
+	describe("the real RefusalSurface, under the ur catalogue (#257 review N3)", () => {
+		/* The test above proves `Button.labelDir`; this one renders the SURFACE, so
+		 * the wiring (and the headline/next lines of design D2) is proved by markup
+		 * rather than by a source regex. */
+		beforeEach(() => setLocaleSource(() => "ur"));
+		afterEach(() => resetLocaleSource());
+		const SUBJECT = "https://mini.example.net";
+		/** The opening tag of the element whose text is exactly `text`. */
+		const tagOf = (markup: string, text: string): string => {
+			const at = markup.indexOf(`>${text}<`);
+			expect(at, `rendered: ${text}`).toBeGreaterThan(-1);
+			return markup.slice(markup.lastIndexOf("<", at), at + 1);
+		};
+		const surface = (kind: "console" | "tunnel-gone") =>
+			h(RefusalSurface, {
+				kind,
+				subject: SUBJECT,
+				onOpenConsole: () => undefined,
+			});
+
+		for (const kind of ["console", "tunnel-gone"] as const) {
+			it(`${kind}: the Open Radient console label, headline and next line carry dir=rtl`, () => {
+				const label = renderFor(
+					"mobile.computers.refusal.open_console",
+					{},
+					"ur",
+				);
+				const title = renderFor(
+					kind === "console"
+						? "mobile.computers.refusal.console_title"
+						: "mobile.computers.refusal.tunnel_gone_title",
+					{ subject: SUBJECT },
+					"ur",
+				);
+				const next = renderFor(
+					kind === "console"
+						? "mobile.computers.refusal.console_next"
+						: "mobile.computers.refusal.tunnel_gone_next",
+					{},
+					"ur",
+				);
+				const rtl = render(surface(kind), "rtl");
+				for (const text of [label, title, next]) {
+					expect(tagOf(rtl, text)).toContain('dir="rtl"');
+				}
+				/* Can fail, and LTR stays untouched: the same tree under an LTR page
+				 * falls back to the inferred base on every one of those lines. */
+				const ltr = render(surface(kind), "ltr");
+				for (const text of [label, title, next]) {
+					expect(tagOf(ltr, text)).toContain('dir="auto"');
+				}
+			});
+		}
 	});
 
 	it("computer switcher: the Radient transport word spreads the composed direction", () => {
@@ -368,9 +472,14 @@ describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens wit
 		expect(without).toContain('dir="auto"');
 	});
 
-	/** The `<Alert` opening that renders a `verdictSentence(verdict…)` body. */
+	/**
+	 * The `<Alert` opening that renders a `verdictSentence(verdict…)` body.
+	 * Anchored on the call's opening only: the saved card passes a third
+	 * argument (its own "Test again" label) and biome wraps that call across
+	 * lines, so the full single-line call text is not a stable anchor.
+	 */
 	const verdictAlerts = (source: string): string[] => {
-		const anchor = "{verdictSentence(verdict, sentencePlatform())}";
+		const anchor = "{verdictSentence(";
 		const sites: string[] = [];
 		for (
 			let at = source.indexOf(anchor);

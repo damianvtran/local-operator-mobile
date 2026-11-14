@@ -34,7 +34,9 @@ export const SectionHeader = ({
 	/* Widened to `object` for the reason `DirectionView` gives in
 	 * `src/ui/direction.tsx`: `dir` is a react-native-web prop that React Native's
 	 * `TextProps` does not declare, and a precise `{ dir }` type is rejected by
-	 * TypeScript's weak-type check when it meets an all-optional prop type. */
+	 * TypeScript's weak-type check when it meets an all-optional prop type. On
+	 * native the value is a `writingDirection` style, so the label `Text` keeps
+	 * no `style` of its own. */
 	const web: object = labelDir;
 	return (
 		<View className="pb-1 pt-4" testID={testID}>
