@@ -1,0 +1,43 @@
+# audit.log — commands actually run (session ca31bb01f337, 2026-11-13)
+$ shasum -a 256 brief-s2b2b.json ru/draft-ru.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+28bfa56580a845402811ab27f6a2ee08ed52d94cfd665c11c46174727f1e8b6a  ru/draft-ru.json
+$ grep -c '<marker>' brief-s2b2b.json ru/draft-ru.json -> 0 / 0
+$ git -C <worktree> show e0027e61:src/features/auth/setup-computer.tsx | e0027e61:src/ui/components/command-block.tsx | e0027e61:src/i18n/catalogues/ru/mobile.computers.json | ru/mobile.common.json | en/mobile.computers.json (reads)
+$ cd /Users/damian/.local-operator/sessions/ca31bb01f337/scratchpad && NODE_OPTIONS=--max-old-space-size=256 <worktree>/node_modules/.bin/tsx check.ts brief draft   # messages.ts = git show e0027e61:src/i18n/messages.ts
+ok mobile.computers.setup.intro []  179
+ok mobile.computers.setup.billing_title []  26
+ok mobile.computers.setup.billing_fallback []  119
+ok mobile.computers.setup.create_title []  29
+ok mobile.computers.setup.create_help []  52
+ok mobile.computers.setup.terminal_label []  8
+ok mobile.computers.setup.amount_note []  182
+ok mobile.computers.setup.tui_help []  42
+ok mobile.computers.setup.tui_label []  3
+ok mobile.computers.setup.watching []  12
+ok mobile.computers.setup.ran_it []  19
+ok mobile.computers.setup.attach_title []  31
+ok mobile.computers.setup.attach_help []  177
+ok mobile.computers.setup.tunnel_id_label []  10
+ok mobile.computers.setup.attach_label []  11
+ok mobile.computers.setup.address_title []  22
+ok mobile.computers.setup.address_help []  169
+ok mobile.computers.route_invalid.empty []  35
+ok mobile.computers.route_invalid.not_address []  56
+ok mobile.computers.route_invalid.scheme []  38
+ok mobile.computers.route_invalid.credentials []  44
+ok mobile.computers.route_invalid.query []  44
+ok mobile.computers.route_invalid.http_public []  107
+ok mobile.computers.route_invalid.insecure_off []  162
+ok mobile.computers.route_invalid.not_radient []  105
+ok mobile.computers.route_invalid.no_tunnel_id []  107
+ok mobile.computers.your_computer []  13
+ru plural cats 1,2,5,21,1.5: one few many one other
+bad 0
+$ python checks (placeholders/bidi/NFC/mixed-script/product names/key order/code points/marker count):
+keys: brief=27 draft=27 same_order=True same_set=True
+placeholder/bidi/nfc/mixed-script/product-name issues: []
+relay word occurrences: 4 ['ретранслятор', 'ретранслятора']
+code points of first: U+0440 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440
+redaction marker count: brief=0 draft=0
+brief sha256=9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67 draft sha256=28bfa56580a845402811ab27f6a2ee08ed52d94cfd665c11c46174727f1e8b6a

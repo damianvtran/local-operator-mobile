@@ -1,0 +1,88 @@
+{
+  "locale": "es",
+  "slice": "m3-s2b2b-computers-setup",
+  "round": 2,
+  "audit_kind": "delta v1..v2",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/es/draft-es.json",
+    "sha256": "f262c2deb8e5e32c9dd1f41e3ca1d55ee1440985ec98d5bb86aa21f32589677a"
+  },
+  "v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/es/draft-es-v2.json",
+    "sha256": "25282ad118814e73f09f36d4da4bb90bb3dbb85be5b1ec1872054667404c5552"
+  },
+  "notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/es/notes-es-v2.md",
+    "sha256": "f67837193ea37e852604b966c950c3f27a4b4e749873a180cf2eaa7b4717d21f"
+  },
+  "round1_report": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/es/report.md",
+    "sha256": "afcfef0205f1a69bfcb915d5bbce1bd4eeb0a26a3909577544a248522cf55150",
+    "job": "eaed592c630b"
+  },
+  "translator_jobs": [
+    "0bd7a05014d5",
+    "17e3058aff61"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor",
+    "team": "lopdev",
+    "session": "ca3b41d58102",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt 'Model:' line; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor_session": true
+  },
+  "verdict": "passed",
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": []
+  },
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 0
+  },
+  "round1_resolution": {
+    "ES-S2B2B-01": "resolved (as suggested)",
+    "ES-S2B2B-02": "resolved (as suggested)",
+    "ES-S2B2B-03": "resolved (as suggested)"
+  },
+  "changed_keys": [
+    "mobile.computers.setup.intro",
+    "mobile.computers.setup.create_title",
+    "mobile.computers.setup.create_help"
+  ],
+  "mechanical": {
+    "changed_keys_match_notes": true,
+    "unchanged_byte_identical": 24,
+    "order_matches_brief": true,
+    "icu_parse_ok_changed": 3,
+    "placeholder_mismatches": 0,
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "parser": "e0027e61:src/i18n/messages.ts blob 354697cf294fd04b42bf8eb5ef6cc5761451f942 sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "redaction_hits": {
+    "brief": 0,
+    "v2": 0
+  },
+  "no_mt_service": true,
+  "write_location": {
+    "intended": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/es-r2/",
+    "actual": "/Users/damian/.local-operator/sessions/ca3b41d58102/scratchpad/es-r2/out/",
+    "reason": "dangerous-delete guardrail refused writes to the lane path"
+  },
+  "artifacts": {
+    "report": "report.md",
+    "audit_log": "audit.log"
+  }
+}

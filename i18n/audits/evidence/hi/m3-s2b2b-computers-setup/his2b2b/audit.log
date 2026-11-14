@@ -1,0 +1,21 @@
+# hi audit log — M3 S2b-2b (auditor session 49ff9c33b2d7)
+$ shasum -a 256 brief-s2b2b.json hi/draft-hi.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json   (matches frozen)
+702c6790308cf7636023d13b7724fc86e995af476ce120e07875ec15860d5cc4  hi/draft-hi.json   (matches frozen)
+$ grep -c '[redacted]' brief-s2b2b.json hi/draft-hi.json
+brief-s2b2b.json:0
+hi/draft-hi.json:0
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a show e0027e61:src/i18n/messages.ts > /Users/damian/.local-operator/sessions/49ff9c33b2d7/scratchpad/hi-audit/messages.ts
+sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0
+$ cd /Users/damian/.local-operator/sessions/49ff9c33b2d7/scratchpad/hi-audit/ && node --max-old-space-size=256 check.mts   (node v24.22.1; check.mts sha256 13410c66b6190644b947634ee8fccca16ffe518759cef1b7901a0ebb513eb14e)
+(stderr: MODULE_TYPELESS_PACKAGE_JSON warning only)
+keys brief 27 draft 27 missing [] extra [] orderSame true
+FMT mobile.computers.setup.amount_note => <amount> वह कीमत है जो Radient कंसोल इस खाते के लिए दिखाता है — <command> इसके अलावा कोई और रकम स्वीकार नहीं करती, और टनल गाइड के चरण 1 में उस जगह का लिंक है जहाँ यह कीमत दिखती है।
+FMT mobile.computers.route_invalid.not_address => यह पता जैसा नहीं लगता। इसकी शुरुआत <scheme> से होनी चाहिए।
+FMT mobile.computers.route_invalid.scheme => सिर्फ़ <scheme> पते सपोर्ट किए जाते हैं।
+FMT mobile.computers.route_invalid.http_public => <insecure> की अनुमति सिर्फ़ निजी पते के लिए है। <scheme> का उपयोग करें, या <example> जैसा कोई निजी होस्ट।
+ok 27 issues 0 plural cats hi: 0:one 1:one 2:other 5:other
+$ git -C <wt> show origin/feat/i18n-m3-s2b2:src/i18n/catalogues/hi/mobile.computers.json  (refusal.*_title, own_tunnel.* terms read)
+$ git -C <wt> show origin/feat/i18n-m3-s2b2:src/i18n/catalogues/hi/mobile.common.json | grep copy  -> copy_command_hint “{label}” वाली कमांड कॉपी करता है
+$ git -C <wt> show e0027e61:src/features/auth/setup-computer.tsx (lines 100-175) ; connection-provider.tsx 2345-2370 (subject = name | 'Radient' | your_computer | baseUrl)
+$ git -C <wt> grep insecure_allow e0027e61 -- src  -> own-tunnel.tsx:480 shows insecure_allow while the switch is off (matches insecure_off quote)

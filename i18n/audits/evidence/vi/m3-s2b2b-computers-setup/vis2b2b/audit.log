@@ -1,0 +1,41 @@
+# audit.log vi m3-s2b2b (2026-11-13T21:44:12+00:00) — actual commands run by auditor session 3c4d0d641ed3
+$ shasum -a 256 brief-s2b2b.json vi/draft-vi.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+1c68a37a66d0442e774bd0081314503a4d0d1c341cedada3637174536abfd359  vi/draft-vi.json
+$ grep -c '[redacted]' brief-s2b2b.json vi/draft-vi.json
+brief-s2b2b.json:0
+vi/draft-vi.json:0
+$ git -C <worktree> log -1 --format=%h  -> 4e3b0415
+$ git show e0027e61:src/features/auth/setup-computer.tsx | grep (call sites lines 111,133,140-141,170); git grep textTransform e0027e61 -- src -> no hits
+$ NODE_OPTIONS=--max-old-space-size=256 node_modules/.bin/tsx vi_mech.mts
+brief keys 27 draft keys 27 extra [] missing []
+order identical true
+OK  mobile.computers.setup.intro ph=[] len 150 en 129 | fmt: Ứng dụng này điều khiển các phiên trên chính máy tính của bạ
+OK  mobile.computers.setup.billing_title ph=[] len 29 en 27 | fmt: Truy cập từ xa chưa hoạt động
+OK  mobile.computers.setup.billing_fallback ph=[] len 126 en 98 | fmt: Radient cho biết tài khoản này chưa thể khởi tạo đường hầm. 
+OK  mobile.computers.setup.create_title ph=[] len 27 en 26 | fmt: Tạo đường hầm trên máy tính
+OK  mobile.computers.setup.create_help ph=[] len 49 en 50 | fmt: Trong terminal trên máy tính bạn muốn điều khiển:
+OK  mobile.computers.setup.terminal_label ph=[] len 8 en 8 | fmt: Terminal
+OK  mobile.computers.setup.amount_note ph=[amount,command] len 189 en 158 | fmt: <amount> là mức giá mà bảng điều khiển Radient hiển thị cho 
+OK  mobile.computers.setup.tui_help ph=[] len 52 en 46 | fmt: Hoặc trong TUI của Local Operator, chỉ với hai lệnh:
+OK  mobile.computers.setup.tui_label ph=[] len 3 en 3 | fmt: TUI
+OK  mobile.computers.setup.watching ph=[] len 18 en 15 | fmt: Đang chờ đường hầm
+OK  mobile.computers.setup.ran_it ph=[] len 26 en 24 | fmt: Tôi đã chạy lệnh — kết nối
+OK  mobile.computers.setup.attach_title ph=[] len 20 en 30 | fmt: Gắn đường hầm có sẵn
+OK  mobile.computers.setup.attach_help ph=[] len 174 en 163 | fmt: Nếu bạn đã tạo đường hầm trong bảng điều khiển Radient, hãy 
+OK  mobile.computers.setup.tunnel_id_label ph=[] len 12 en 9 | fmt: ID đường hầm
+OK  mobile.computers.setup.attach_label ph=[] len 3 en 6 | fmt: Gắn
+OK  mobile.computers.setup.address_title ph=[] len 20 en 22 | fmt: Kết nối bằng địa chỉ
+OK  mobile.computers.setup.address_help ph=[] len 189 en 161 | fmt: Nếu máy chủ chuyển tiếp của bạn truy cập được qua một URL bạ
+OK  mobile.computers.route_invalid.empty ph=[] len 45 en 32 | fmt: Hãy nhập địa chỉ máy chủ chuyển tiếp của bạn.
+OK  mobile.computers.route_invalid.not_address ph=[scheme] len 72 en 66 | fmt: Đây có vẻ không phải là một địa chỉ. Địa chỉ phải bắt đầu bằ
+OK  mobile.computers.route_invalid.scheme ph=[scheme] len 28 en 38 | fmt: Chỉ hỗ trợ địa chỉ <scheme>.
+OK  mobile.computers.route_invalid.credentials ph=[] len 48 en 50 | fmt: Hãy xóa tên người dùng và mật khẩu khỏi địa chỉ.
+OK  mobile.computers.route_invalid.query ph=[] len 75 en 54 | fmt: Hãy xóa chuỗi truy vấn (query string) và phân đoạn (fragment
+OK  mobile.computers.route_invalid.http_public ph=[example,insecure,scheme] len 112 en 100 | fmt: <insecure> chỉ được phép với địa chỉ mạng riêng. Hãy dùng <s
+OK  mobile.computers.route_invalid.insecure_off ph=[] len 152 en 136 | fmt: Địa chỉ này không được mã hóa, nên mật khẩu chuyển tiếp sẽ t
+OK  mobile.computers.route_invalid.not_radient ph=[] len 115 en 98 | fmt: Đây không phải là địa chỉ đường hầm Radient. Hãy dùng địa ch
+OK  mobile.computers.route_invalid.no_tunnel_id ph=[] len 104 en 76 | fmt: Đường hầm này không có ID, nên không thể cấp lại phiên đăng 
+OK  mobile.computers.your_computer ph=[] len 16 en 13 | fmt: Máy tính của bạn
+vi plural categories 1: other 5: other
+FAILS 0

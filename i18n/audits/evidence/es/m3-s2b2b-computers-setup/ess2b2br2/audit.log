@@ -1,0 +1,17 @@
+# es round-2 delta audit execution log. Session ca3b41d58102, 2026-11-13. These are commands actually run, with their output abbreviated.
+$ shasum -a 256 brief-s2b2b.json es/draft-es.json es/draft-es-v2.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief (MATCH)
+f262c2deb8e5e32c9dd1f41e3ca1d55ee1440985ec98d5bb86aa21f32589677a  v1 (MATCH)
+25282ad118814e73f09f36d4da4bb90bb3dbb85be5b1ec1872054667404c5552  v2 (MATCH)
+$ grep -c "[redacted]" brief -> 0 ; python count in v2 -> 0
+$ python3 diff v1/v2: keys 27 27, order equal True, order==brief True
+changed ['mobile.computers.setup.intro', 'mobile.computers.setup.create_title', 'mobile.computers.setup.create_help']
+raw line diff indexes (0-based) [1, 4, 5]; lines 29/29; bidi 0; nonNFC []
+$ git show e0027e61:src/i18n/messages.ts -> blob 354697cf294fd04b42bf8eb5ef6cc5761451f942 sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0
+$ node --max-old-space-size=256 --experimental-strip-types check.ts
+OK   mobile.computers.setup.intro [] [] => Esta app controla las sesiones de tu propia máquina, así que esa máquina tiene que ejecutar un conector y no entrar en reposo. Tu código no sale de ella.
+OK   mobile.computers.setup.create_title [] [] => Crear uno en la máquina
+OK   mobile.computers.setup.create_help [] [] => En una terminal de la máquina que quieres controlar:
+fail 0
+$ grep es catalogue for terminal|reposo -> "Evita que entre en reposo", "no está en reposo" (x2)
+# write to lane audits/es-r2/ refused by dangerous-delete guardrail; files written here instead.

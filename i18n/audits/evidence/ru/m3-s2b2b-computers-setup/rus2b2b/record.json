@@ -1,0 +1,85 @@
+{
+  "locale": "ru",
+  "slice": "m3-s2b2b-computers-setup",
+  "key_count": 27,
+  "audit_date": "2026-11-13",
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67",
+    "recomputed_match": true
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/ru/draft-ru.json",
+    "sha256": "28bfa56580a845402811ab27f6a2ee08ed52d94cfd665c11c46174727f1e8b6a",
+    "recomputed_match": true
+  },
+  "translator_job": "d6471ba1d021",
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "ca31bb01f337",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt 'Model:' line; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true
+  },
+  "source_tree": "git show e0027e61:<path> in /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_marker_hits": {
+    "brief": 0,
+    "draft": 0,
+    "note": "counted on raw file bytes; tool output display masks some words (e.g. ретранслятор shown as the marker), verified by code points U+0440 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440"
+  },
+  "mechanical": {
+    "repo_parser": "src/i18n/messages.ts parseMessage+formatMessage via tsx, NODE_OPTIONS=--max-old-space-size=256: 27/27 ok, 0 leftover braces, all placeholders rendered",
+    "icu_plural_select": "none in this slice (ru CLDR one/few/many/other confirmed by pluralCategory)",
+    "placeholders_exact": true,
+    "bidi_controls": 0,
+    "nfc": true,
+    "mixed_script_words": 0,
+    "keys_added_or_dropped": 0,
+    "product_names_kept": true
+  },
+  "verdict": "passed",
+  "unresolved_blocker_major_count": 0,
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 1,
+    "NIT": 2
+  },
+  "findings": [
+    {
+      "id": "RU-1",
+      "severity": "MINOR",
+      "key": "mobile.computers.route_invalid.no_tunnel_id",
+      "current": "У этого туннеля нет идентификатора, поэтому его сессию нельзя обновить. Запустите поиск компьютеров заново.",
+      "problem": "'Запустите поиск компьютеров заново' names an action the app never shows: no control is called 'поиск'. 'Discovery' is the app re-reading the account's computers; the visible control for that on the Computers screen is 'Обновить' (mobile.computers.refresh). Reserved string, so not gating.",
+      "suggested": "У этого туннеля нет идентификатора, поэтому его сессию нельзя обновить. Обновите список компьютеров."
+    },
+    {
+      "id": "RU-2",
+      "severity": "NIT",
+      "key": "mobile.computers.setup.address_help",
+      "current": "Если ваш ретранслятор доступен по известному вам URL, подключитесь к нему с паролем самого ретранслятора. Этот путь — для компьютера, который вообще не связан с Radient.",
+      "problem": "'подключитесь к нему с паролем самого ретранслятора' reads a little literal; 'с паролем' sounds as if the password goes along with you rather than being entered.",
+      "suggested": "Если ваш ретранслятор доступен по известному вам URL, подключитесь к нему, указав пароль самого ретранслятора. Этот путь — для компьютера, который вообще не связан с Radient."
+    },
+    {
+      "id": "RU-3",
+      "severity": "NIT",
+      "key": "mobile.computers.setup.attach_label",
+      "current": "Подключение",
+      "problem": "Same word as the connecting status 'Подключение…' (mobile.computers.connecting), but that one sits on another surface and has an ellipsis, and here the label is an upper-case mono header. Keeping it is fine. Optional verb form if a later pass wants the label to match its imperative card title.",
+      "suggested": "Подключение (keep) — optional alternative: Подключить"
+    }
+  ],
+  "rulings": {
+    "setup.attach_label 'Подключение'": "ACCEPT. A noun naming the command block, and it reads correctly in the copy hint: «Копирует команду «Подключение»». Width: shown upper-case (ПОДКЛЮЧЕНИЕ, 11 glyphs) in CommandBlock's flex-row flex-wrap label row next to a quiet sm 'Копировать'/'Скопировано' button. The same component already ships 'ИЛИ ЗАПУСТИТЬ В ТЕРМИНАЛЕ' (25) on own_tunnel, and flex-wrap prevents overflow, so it fits at 320 pt with no clipping risk.",
+    "setup.watching 'Ждём туннель'": "ACCEPT. Natural spinner-button copy, with the tunnel made explicit. The accusative with ждать is correct for a specific expected object. No ellipsis needed because the button shows a spinner.",
+    "setup.ran_it 'Готово — подключить'": "ACCEPT. It avoids a gendered past verb (выполнил/а), 'Готово' carries 'I have run it', and the dash plus infinitive is the standard Russian button pattern. At 19 chars it is shorter than the English.",
+    "route_invalid.no_tunnel_id 'сессию нельзя обновить'": "ACCEPT. 'Re-mint' means issue a new session token, and 'обновить сессию' is the standard user-facing wording for that. Literal 'перевыпустить токен' would be jargon.",
+    "route_invalid.no_tunnel_id 'Запустите поиск компьютеров заново'": "CHANGE (MINOR RU-1): point to the visible 'Обновить' control instead: 'Обновите список компьютеров.'",
+    "your_computer 'Ваш компьютер'": "ACCEPT as the nominative fallback. Initial capital fits sentence-initial slots. Case agreement in the prepositional and dative headlines (relay_stopped_title, sign_in_title) is the known code item and out of scope."
+  },
+  "translation_service_used": false
+}

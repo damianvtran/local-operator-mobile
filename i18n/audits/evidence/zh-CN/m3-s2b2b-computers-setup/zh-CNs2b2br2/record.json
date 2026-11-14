@@ -1,0 +1,102 @@
+{
+  "locale": "zh-CN",
+  "slice": "m3-s2b2b-computers-setup",
+  "namespace": "mobile.computers",
+  "round": 2,
+  "audit_kind": "delta",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "source_commit": "e0027e61",
+  "written_location_note": "auditor scratchpad; guardrail refused writes to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/zh-CN-r2 (brief fallback)",
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "draft_v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/zh-CN/draft-zh-CN.json",
+    "sha256": "b53ea37786ad51ed7a5fa8a992eb093fc9ddddc8cd1bea553feb8425bef6b99c"
+  },
+  "draft_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/zh-CN/draft-zh-CN-v2.json",
+    "sha256": "6abc5a181d3b63a312273af4e0b4ec15dbed81abda17503655aa337299e63d23"
+  },
+  "notes_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/zh-CN/notes-zh-CN-v2.md",
+    "sha256": "ef7f438da414d1a9d3a8cc664236c4e6aa59e69d8b52b2e38dd96c0974b212f3"
+  },
+  "input_hashes": {
+    "en": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json (english field)",
+      "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+    },
+    "context": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json (note/role/callSite)",
+      "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+    },
+    "zh-CN": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/zh-CN/draft-zh-CN-v2.json",
+      "sha256": "6abc5a181d3b63a312273af4e0b4ec15dbed81abda17503655aa337299e63d23"
+    }
+  },
+  "round1_report": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/zh-CN/report.md",
+    "sha256": "289e711ce91defe168ff69b88c548da092b10c51182b5d44b1d138ca9d68fee9",
+    "record_sha256": "72a5c83114c32e40acc31f695a485354ee8929900a828a58f4dc5963692f7f90",
+    "auditor_session": "6877c6310b02"
+  },
+  "translator_jobs": [
+    "40852865913c",
+    "dc349a33aded"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "a7ef3ef01f5e",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "verdict": "passed",
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": []
+  },
+  "round1_findings_disposition": {
+    "ZH-F1": "resolved (suggested wording applied verbatim)",
+    "ZH-N1": "resolved (suggested wording applied verbatim)"
+  },
+  "counts_new": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 0
+  },
+  "mechanical": {
+    "changed_keys": [
+      "mobile.computers.setup.watching",
+      "mobile.computers.setup.address_help"
+    ],
+    "changed_keys_match_notes": true,
+    "unchanged_keys_byte_identical": true,
+    "order_matches_brief_and_v1": true,
+    "parse_failures": 0,
+    "placeholder_mismatches": 0,
+    "bidi_control_hits": 0,
+    "icu_plurals": 0,
+    "messages_ts_sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "redaction_hits": {
+    "brief": 0,
+    "v2": 0
+  },
+  "artifacts": {
+    "report.md": "70c2b22e9c06527c7bf91a2ae19863a8469cc44a8dcc0e48a2719492e181a8b8",
+    "audit.log": "19334d182c00d787b8c8b2f11dbab01791e18220f84a747ade616e3aa105b7dc",
+    "check-r2.mts": {
+      "path": "/Users/damian/.local-operator/sessions/a7ef3ef01f5e/scratchpad/zhcn-r2/check-r2.mts",
+      "sha256": "e74598a1532339b06fc32a6fbb199337663bad5ff077ad9b82508383125b23b2"
+    }
+  },
+  "audit_notes_not_execution_log": "report.md is audit notes; audit.log records commands actually run."
+}

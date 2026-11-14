@@ -1,0 +1,91 @@
+{
+  "locale": "es",
+  "slice": "m3-s2b2b-computers-setup",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/es/draft-es.json",
+    "sha256": "f262c2deb8e5e32c9dd1f41e3ca1d55ee1440985ec98d5bb86aa21f32589677a"
+  },
+  "translator_job": "0bd7a05014d5",
+  "auditor": {
+    "agent": "i18n-auditor",
+    "team": "lopdev",
+    "session": "6f3c42e4c00a",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt 'Model:' line; no fallback observed",
+    "independent_from_translator_session": true
+  },
+  "verdict": "passed",
+  "unresolved_blocker_major_count": 0,
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 2,
+    "NIT": 1
+  },
+  "findings": [
+    {
+      "id": "ES-S2B2B-01",
+      "severity": "MINOR",
+      "key": "mobile.computers.setup.create_title",
+      "current": "Créalo en la máquina",
+      "problem": "Imperative with a definite clitic (Créa-lo) has no antecedent in a card heading; the two sibling route headings are infinitives (\"Vincular uno que ya existe\", \"Usar una dirección\"), so the three routes read in different moods. English 'one' is indefinite.",
+      "suggested": "Crear uno en la máquina"
+    },
+    {
+      "id": "ES-S2B2B-02",
+      "severity": "MINOR",
+      "key": "mobile.computers.setup.intro",
+      "current": "Esta app controla las sesiones de tu propia máquina, así que esa máquina tiene que ejecutar un conector y mantenerse activa. Tu código no sale de ella.",
+      "problem": "'stay awake' rendered 'mantenerse activa'; 'activa' is the catalogue's connected-status badge (mobile.computers.badge.active) and the billing state word, and the catalogue already renders 'stay awake' as not entering sleep (own_tunnel.step_computer_help 'Evita que entre en reposo').",
+      "suggested": "Esta app controla las sesiones de tu propia máquina, así que esa máquina tiene que ejecutar un conector y no entrar en reposo. Tu código no sale de ella."
+    },
+    {
+      "id": "ES-S2B2B-03",
+      "severity": "NIT",
+      "key": "mobile.computers.setup.create_help",
+      "current": "En un terminal de la máquina que quieres controlar:",
+      "problem": "'un terminal' (masculine) is correct but the core es catalogue uses feminine 'la terminal' 7 times vs 'un terminal' once; feminine also reads more neutral across LatAm.",
+      "suggested": "En una terminal de la máquina que quieres controlar:"
+    }
+  ],
+  "rulings": {
+    "Vincular (attach_label, attach_title, attach_help)": "ACCEPT — natural for joining an existing resource; avoids colliding with 'conectar' used on ran_it; also reads well in copy hint 'Copia el comando “Vincular”'.",
+    "ID del túnel": "ACCEPT — 'ID' is the settled es UI term; 12 chars in a field label is fine.",
+    "cadena de consulta": "ACCEPT — standard Spanish web term for query string; 'fragmento' likewise.",
+    "la TUI": "ACCEPT — TUI is on the style guide's kept-English list; feminine matches core es catalogue (9 occurrences of la/de la TUI, none masculine).",
+    "«Vuelve a buscar tus máquinas»": "ACCEPT — describes what discovery does (re-reading the account's computers) in plain words; no settled es term for 'discovery' in the catalogues.",
+    "«renovar su sesión»": "ACCEPT — 're-mint' = issue a new session token; 'renovar la sesión' is the faithful plain rendering; 'su' mirrors English 'its'.",
+    "ran_it past tense «Ya lo ejecuté: conectar»": "ACCEPT — pretérito is the neutral choice (LatAm standard, fully natural in Spain); 23 chars < English 24; colon is cleaner than an em dash in a button.",
+    "your_computer «Tu máquina»": "ACCEPT value — matches catalogue term 'máquina'; mid-sentence lowercase is a known CODE item, not ruled against the draft."
+  },
+  "mechanical": {
+    "icu_parse_ok": 27,
+    "placeholder_mismatches": 0,
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "plural_messages": 0,
+    "parser": "e0027e61:src/i18n/messages.ts blob 354697cf294fd04b42bf8eb5ef6cc5761451f942"
+  },
+  "redaction_hits": {
+    "brief": 0,
+    "draft": 0
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "audit_notes_not_execution_log": "report.md is notes; audit.log records commands actually run",
+  "artifacts": {
+    "report.md": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/es/report.md",
+      "sha256": "afcfef0205f1a69bfcb915d5bbce1bd4eeb0a26a3909577544a248522cf55150"
+    },
+    "audit.log": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/es/audit.log",
+      "sha256": "1d782c8a94537c401979e2e1908747644e2d9dd2746fb494033f2a8d0b7c5cbf"
+    }
+  }
+}

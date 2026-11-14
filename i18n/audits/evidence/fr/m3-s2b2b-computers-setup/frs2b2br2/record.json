@@ -1,0 +1,140 @@
+{
+  "locale": "fr",
+  "slice": "m3-s2b2b-computers-setup",
+  "round": 2,
+  "audit_kind": "delta",
+  "namespace": "mobile.computers (setup.*, route_invalid.*, your_computer)",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "4ea18dfd629a",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+    "fallback_used": false,
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor_session": true,
+    "translator_sessions": [
+      "3855e519638f",
+      "be835a5ba56f"
+    ],
+    "round1_auditor": {
+      "job": "bf50e3f03b14",
+      "session": "354214f74cea"
+    }
+  },
+  "input_hashes": {
+    "brief": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+      "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67",
+      "expected": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+    },
+    "v1": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/fr/draft-fr.json",
+      "sha256": "8166df188a62a69a94e540c68589a8095286c8e6d483cb1c817cb5948310729a",
+      "expected": "8166df188a62a69a94e540c68589a8095286c8e6d483cb1c817cb5948310729a"
+    },
+    "v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/fr/draft-fr-v2.json",
+      "sha256": "860ee7c42a4e96e2d71c5e5756c7501fd801c4850d70e6c715f2a6f19dc151b5",
+      "expected": "860ee7c42a4e96e2d71c5e5756c7501fd801c4850d70e6c715f2a6f19dc151b5"
+    },
+    "translator_notes_v2": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/fr/notes-fr-v2.md",
+      "sha256": "d95e8b664caeadf782b5ad26f95194624bd0d2361912fa02412af19f7707fe2a"
+    },
+    "round1_report": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/fr/report.md",
+      "sha256": "78e18dee0f69a38390e8df0705a01b5a42489982919a21093392c42a413f5c21"
+    },
+    "round1_record": {
+      "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/fr/record.json",
+      "sha256": "efab0b2ce1f8d6c22e7c965b07b5f07643d93e0544f7d55855ddcab75a1435ce"
+    },
+    "messages_ts": {
+      "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/src/i18n/messages.ts",
+      "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+      "equals_e0027e61": true
+    }
+  },
+  "redaction_marker_hits_in_brief": 0,
+  "mechanical": {
+    "keys_v1": 27,
+    "keys_v2": 27,
+    "order_identical": true,
+    "changed_keys": [
+      "mobile.computers.setup.intro",
+      "mobile.computers.setup.create_title",
+      "mobile.computers.setup.amount_note",
+      "mobile.computers.setup.attach_help",
+      "mobile.computers.route_invalid.not_address",
+      "mobile.computers.route_invalid.http_public"
+    ],
+    "changed_count": 6,
+    "changed_matches_notes": true,
+    "unchanged_byte_identical": 21,
+    "raw_file_diff_lines": 12,
+    "line_count_v1_v2": [
+      29,
+      29
+    ],
+    "parse_fail": 0,
+    "placeholder_mismatch": 0,
+    "bidi_controls": 0,
+    "u0027": 0,
+    "nfc": true
+  },
+  "round1_dispositions": {
+    "FR-1": {
+      "key": "mobile.computers.setup.create_title",
+      "severity": "MINOR",
+      "status": "resolved — v2 equals suggested wording"
+    },
+    "FR-2": {
+      "key": "mobile.computers.setup.attach_help",
+      "severity": "MINOR",
+      "status": "resolved — v2 equals suggested wording"
+    },
+    "FR-3": {
+      "key": "mobile.computers.setup.amount_note",
+      "severity": "MINOR",
+      "status": "resolved — v2 equals suggested wording"
+    },
+    "FR-4": {
+      "key": "mobile.computers.your_computer",
+      "severity": "MINOR",
+      "status": "kept as source-side code item per round-1 ruling; accepted (value unchanged, byte-identical)"
+    },
+    "FR-5": {
+      "key": "mobile.computers.route_invalid.not_address",
+      "severity": "NIT",
+      "status": "resolved — v2 equals suggested wording"
+    },
+    "FR-6": {
+      "key": "mobile.computers.route_invalid.http_public",
+      "severity": "NIT",
+      "status": "resolved — v2 equals suggested wording"
+    },
+    "FR-7": {
+      "key": "mobile.computers.setup.intro",
+      "severity": "NIT",
+      "status": "resolved — v2 equals suggested wording except U+202F before \":\" (record suggestion had U+0020); U+202F matches catalogue convention"
+    }
+  },
+  "findings": [],
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 0
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": []
+  },
+  "write_location_note": "Guardrail dangerous-delete refused writing to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/fr-r2/ (another session's scratchpad); files written to this auditor's own scratchpad per brief fallback.",
+  "audit_notes_not_execution_log": "record.json and report.md are audit notes; audit.log holds commands actually run and their outputs.",
+  "ledger_written": false,
+  "repo_writes": false
+}

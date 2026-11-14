@@ -1,0 +1,96 @@
+{
+  "locale": "ru",
+  "slice": "m3-s2b2b-computers-setup",
+  "round": 2,
+  "audit_kind": "delta",
+  "key_count": 27,
+  "audit_date": "2026-11-13",
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67",
+    "recomputed_match": true
+  },
+  "draft_v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/ru/draft-ru.json",
+    "sha256": "28bfa56580a845402811ab27f6a2ee08ed52d94cfd665c11c46174727f1e8b6a",
+    "recomputed_match": true
+  },
+  "draft_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/ru/draft-ru-v2.json",
+    "sha256": "c3fca87183de74c51b7cff563e166fb97a7af2c71bfefe847b43f5ebf89bc9d0",
+    "recomputed_match": true
+  },
+  "notes_v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/ru/notes-ru-v2.md",
+    "sha256": "40111c58ca5cccd62f41d95db278f61d382e6cded2219a7e3da0d78e3e380211"
+  },
+  "round1_report": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/ru/report.md",
+    "sha256": "2292ed8c1b6faed2f7f2fd10de87233ab1edf49ecccc2123a7dafe5c76f74ec8",
+    "auditor_session": "ca31bb01f337",
+    "job": "ab38068f9a62"
+  },
+  "translator_jobs": [
+    "d6471ba1d021",
+    "526f25a44b25"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "77cafd2f0293",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt 'Model:' line; no fallback observed",
+    "fallback": null,
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor": true
+  },
+  "source_tree": "git show e0027e61:<path> in /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+  "redaction_marker_hits": {
+    "brief": 0,
+    "draft_v2": 0,
+    "note": "relay word verified by code points U+0440 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440"
+  },
+  "delta": {
+    "changed_keys": [
+      "mobile.computers.setup.address_help",
+      "mobile.computers.route_invalid.no_tunnel_id"
+    ],
+    "matches_notes": true,
+    "unchanged_keys_byte_identical": 25,
+    "key_order_equals_brief": true,
+    "raw_diff_hunks": [
+      "@@ -18 +18 @@",
+      "@@ -27 +27 @@"
+    ]
+  },
+  "mechanical": {
+    "repo_parser": "messages.ts (e0027e61, cmp-identical to round 1) via tsx 256MB on byte-identical copies in session 77cafd2f0293 scratchpad (guardrail refused cross-session path): 27/27 ok, bad 0",
+    "parse_output": {
+      "path": "/Users/damian/.local-operator/sessions/77cafd2f0293/scratchpad/ru-r2/parse-v2.out",
+      "sha256": "4999036c42b5aa94909cf9b45dd47138ca26775e269353b0e39f9923d1720bd8"
+    },
+    "placeholders_exact": true,
+    "bidi_controls": 0,
+    "nfc": true,
+    "keys_added_or_dropped": 0
+  },
+  "round1_dispositions": {
+    "RU-1": "resolved — 'Обновите список компьютеров.' points to mobile.computers.refresh 'Обновить' (computers.tsx:554, re-reads account's computers)",
+    "RU-2": "resolved — 'подключитесь к нему, указав пароль самого ретранслятора'",
+    "RU-3": "rejection acceptable — round 1 itself ruled keep; alternative was optional"
+  },
+  "new_findings": [],
+  "verdict": "passed",
+  "unresolved_blocker_major_count": 0,
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 0
+  },
+  "artifacts": {
+    "report.md": "a5a8751d2231815e491415d73c16cc71cfd5fd0f49ef8aafda8c239652c880b5",
+    "audit.log": "fea33316fe6ceb4bb5e46263a52ec133f51205fccbc5553ddc9f549b478d33ea"
+  },
+  "audit_notes_not_execution_log": "report.md is notes; audit.log lists commands actually run",
+  "translation_service_used": false
+}

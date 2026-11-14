@@ -1,0 +1,87 @@
+{
+  "locale": "hi",
+  "slice": "m3-s2b2b-computers-setup",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/hi/draft-hi.json",
+    "sha256": "702c6790308cf7636023d13b7724fc86e995af476ce120e07875ec15860d5cc4"
+  },
+  "translator_job": "b8d8cd17b9d9",
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "49ff9c33b2d7",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "independent_from_translator_session": true
+  },
+  "verdict": "passed",
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 2,
+    "NIT": 1
+  },
+  "findings": [
+    {
+      "id": "HI-1",
+      "severity": "MINOR",
+      "key": "mobile.computers.route_invalid.http_public",
+      "current": "{insecure} की अनुमति सिर्फ़ निजी पते के लिए है। {scheme} का उपयोग करें, या {example} जैसा कोई निजी होस्ट।",
+      "problem": "Second sentence leaves 'या {example} जैसा कोई निजी होस्ट' dangling after the verb; reads as an unfinished clause in Hindi.",
+      "suggested": "{insecure} की अनुमति सिर्फ़ निजी पते के लिए है। {scheme} का उपयोग करें, या {example} जैसे किसी निजी होस्ट का।"
+    },
+    {
+      "id": "HI-2",
+      "severity": "MINOR",
+      "key": "mobile.computers.route_invalid.no_tunnel_id",
+      "current": "इस टनल की कोई आईडी नहीं है, इसलिए इसका साइन-इन दोबारा जारी नहीं किया जा सकता। कंप्यूटर फिर से खोजें।",
+      "problem": "'साइन-इन दोबारा जारी' is an awkward collocation (a sign-in is not 'issued'), and जारी also reads as 'continued'. Reserved string, meaning still recoverable.",
+      "suggested": "इस टनल की कोई आईडी नहीं है, इसलिए इसका साइन-इन नए सिरे से नहीं बनाया जा सकता। कंप्यूटर फिर से खोजें।"
+    },
+    {
+      "id": "HI-3",
+      "severity": "NIT",
+      "key": "mobile.computers.setup.watching",
+      "current": "टनल का इंतज़ार है",
+      "problem": "Acceptable colloquially; a progressive form matches the catalogue's in-progress labels (जाँच हो रही है…, सहेजा जा रहा है…).",
+      "suggested": "टनल का इंतज़ार हो रहा है"
+    }
+  ],
+  "rulings": {
+    "mobile.computers.your_computer": "ACCEPT bare 'कंप्यूटर'. Verified against the six hi refusal headlines on origin/feat/i18n-m3-s2b2 (offline, relay_stopped +पर, tunnel_gone, console +को, sign_in +से, retry): all grammatical. 'आपका' would break the postposition headlines. Other {subject} values (computer name, base URL, 'Radient') are also bare nouns, so it is consistent. Pre-existing tunnel_gone_title mirrors odd English ('is no longer a tunnel') — out of scope, known CODE item.",
+    "mobile.computers.setup.attach_label": "ACCEPT जोड़ें. Matches attach_title and tunnel_gone_next (यह कंप्यूटर जोड़ें); copy hint renders “जोड़ें” वाली कमांड कॉपी करता है, which reads fine.",
+    "आईडी": "ACCEPT — standard Hindi UI rendering; consistent across attach_help, tunnel_id_label, no_tunnel_id.",
+    "क्वेरी स्ट्रिंग / फ़्रैगमेंट": "ACCEPT — usual transliterated technical terms; no native equivalent in use.",
+    "re-mint": "CHANGE wording, see HI-2 (MINOR).",
+    "discovery (कंप्यूटर फिर से खोजें)": "ACCEPT — describes what discovery does (re-reading the account's computers) in reader terms."
+  },
+  "mechanical": {
+    "parse_ok": 27,
+    "placeholder_mismatch": 0,
+    "bidi_controls": 0,
+    "nfc": true,
+    "plural_messages": 0,
+    "keys_missing": 0,
+    "keys_extra": 0
+  },
+  "redaction_hits": {
+    "brief": 0,
+    "draft": 0
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "parser": {
+    "source": "git show e0027e61:src/i18n/messages.ts",
+    "sha256": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+    "script": "/Users/damian/.local-operator/sessions/49ff9c33b2d7/scratchpad/hi-audit/check.mts",
+    "script_sha256": "13410c66b6190644b947634ee8fccca16ffe518759cef1b7901a0ebb513eb14e"
+  },
+  "artifacts": {
+    "report.md": "d22eb0e8fef61255e1fd7153370b43c2ab6c8f8bf2c123f6476f792f472cfb71",
+    "audit.log": "47c302f413ca31682baa46ddfb5e18cbceb1aace9b66de0e19cd11ba97f7e612"
+  }
+}

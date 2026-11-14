@@ -1,0 +1,84 @@
+{
+  "locale": "ur",
+  "slice": "m3-s2b2b-computers-setup",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/ur/draft-ur.json",
+    "sha256": "aa7a5029f089a8920eb21700b64f01b8a45ee492fce87f4f845a10a1fd121c63"
+  },
+  "translator_job": "21e12a3778c1",
+  "auditor": {
+    "agent": "i18n-auditor (lopdev)",
+    "session": "e12483c5cbc6",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt model line; no fallback observed",
+    "independent_from_translator_session": true
+  },
+  "verdict": "passed",
+  "unresolved_blocker_major_count": 0,
+  "findings": [
+    {
+      "id": "UR-S2B2B-1",
+      "severity": "MINOR",
+      "key": "mobile.computers.route_invalid.not_address",
+      "current": "یہ پتہ نہیں لگتا۔ یہ {scheme} URL ہونا چاہیے۔",
+      "problem": "'یہ پتہ نہیں لگتا' collides with the very common idiom 'پتہ نہیں لگتا' (= 'one can't tell / can't make out'); a native reader can first parse it as 'this can't be figured out'. Context recovers the meaning, so not MAJOR. Second sentence ('should be a {scheme} URL' for 'should start with {scheme}') is an acceptable, bidi-driven equivalent.",
+      "replacement": "یہ کسی پتے جیسا نہیں لگتا۔ یہ {scheme} URL ہونا چاہیے۔"
+    },
+    {
+      "id": "UR-S2B2B-2",
+      "severity": "MINOR",
+      "key": "mobile.computers.setup.address_help",
+      "current": "اگر آپ کا ریلے کسی ایسے URL پر دستیاب ہے جو آپ پہلے سے جانتے ہیں، تو ریلے کے اپنے پاس ورڈ سے اس سے منسلک ہوں۔ یہ اس مشین کا راستہ ہے جو Radient پر بالکل نہیں ہے۔",
+      "problem": "'یہ اس مشین کا راستہ ہے' reads as 'this is that (specific) machine's path/way', not 'this is the route for a machine that…'; and 'پاس ورڈ سے اس سے منسلک ہوں' stacks two سے and is clunky.",
+      "replacement": "اگر آپ کا ریلے کسی ایسے URL پر دستیاب ہے جو آپ پہلے سے جانتے ہیں، تو ریلے کے اپنے پاس ورڈ کے ساتھ اس سے منسلک ہوں۔ یہ طریقہ ایسی مشین کے لیے ہے جو Radient پر بالکل نہیں ہے۔"
+    },
+    {
+      "id": "UR-S2B2B-3",
+      "severity": "NIT",
+      "key": "mobile.computers.route_invalid.insecure_off",
+      "current": "یہ پتہ خفیہ کاری کے بغیر ہے، اس لیے ریلے کا پاس ورڈ نیٹ ورک پر کھلے عام جاتا ہے۔ جاری رکھنے کے لیے سادہ http کی اجازت والا اختیار آن کریں۔",
+      "problem": "Switch naming is acceptable (bare 'http' renders as one LTR run; the on-screen label needs isolates this key may not carry). Adding 'پتے' tracks the visible label 'سادہ http:// پتے کی اجازت دیں' more closely.",
+      "replacement": "یہ پتہ خفیہ کاری کے بغیر ہے، اس لیے ریلے کا پاس ورڈ نیٹ ورک پر کھلے عام جاتا ہے۔ جاری رکھنے کے لیے سادہ http پتے کی اجازت والا اختیار آن کریں۔"
+    }
+  ],
+  "rulings": {
+    "http_public_IP_addition": "ACCEPTED. 'IP' is meaning-exact (192.168.x.x is an IP address) and necessary: CoreText probe shows 'مثلاً IP 192.168.x.x' renders as one LTR run, while the control without 'IP' renders the digits as AN and displays 'x.x.192.168'.",
+    "scheme_URL_pattern": "ACCEPTED. '{scheme} URL' / 'سادہ {insecure} URL' keep '://' between two L runs → resolved L; CoreText shows 'https:// URL' and 'http:// URL' intact. Control 'یہ https:// سے…' displays '://' as an RTL run left of 'https' (i.e. //:https).",
+    "amount_placeholder": "OK. '<amount>' angle brackets resolve R and are glyph-mirrored → displays '<amount>'; 'lop tunnel create' one LTR run.",
+    "insecure_off_switch_name": "ACCEPTED (see NIT UR-S2B2B-3).",
+    "your_computer": "ACCEPTED. Bare 'کمپیوٹر' is invariant direct/oblique singular and reads grammatically in all six ur refusal headlines at origin/feat/i18n-m3-s2b2; loss of 'your' is the stated trade-off. Headline {subject} grammar is a known CODE item, not judged here.",
+    "tui_label": "Only Latin-initial value. setup-computer.tsx@e0027e61 sets no direction on the CommandBlock label (command-block.tsx label Text has no LTR_TEXT); a single strong-L token has nothing to reorder (CoreText: one LTR run) and aligns to the row start under the RTL root. No CODE item needed. Android native unverified (docs/i18n.md known gap).",
+    "billing_fallback_reorder": "ACCEPTED: reorder avoids a Latin-initial paragraph. Observation (pre-existing, out of slice, non-gating): existing ur mobile.computers.disabled_help starts with 'Radient'; on native iOS an un-directed Text with natural base direction would take an LTR paragraph from it — unverified on device."
+  },
+  "counts": {
+    "keys": 27,
+    "blocker": 0,
+    "major": 0,
+    "minor": 2,
+    "nit": 1,
+    "bidi_controls": 0,
+    "redaction_hits_brief": 0,
+    "redaction_hits_draft": 0,
+    "latin_initial_values": [
+      "mobile.computers.setup.tui_label"
+    ],
+    "placeholder_mismatches": 0,
+    "parse_failures": 0,
+    "plural_select_messages": 0
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "source_commit": "e0027e61",
+    "headlines_ref": "origin/feat/i18n-m3-s2b2:src/i18n/catalogues/ur/mobile.computers.json",
+    "parser": "e0027e61:src/i18n/messages.ts (node 24, --max-old-space-size=256)",
+    "bidi_probe": "CoreText CTLine, baseWritingDirection RTL (swiftc), macOS host — iOS-equivalent shaping engine, not a device capture"
+  },
+  "audit_notes_not_execution_log": "report.md is analysis; audit.log holds actual commands and outputs."
+}

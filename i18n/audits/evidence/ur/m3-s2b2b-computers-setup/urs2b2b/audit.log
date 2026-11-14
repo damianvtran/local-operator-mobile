@@ -1,0 +1,181 @@
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a show e0027e61:src/i18n/messages.ts > /Users/damian/.local-operator/sessions/e12483c5cbc6/scratchpad/ur-audit-tmp/messages.ts
+[exit 0]
+
+
+$ cd /Users/damian/.local-operator/sessions/e12483c5cbc6/scratchpad/ur-audit-tmp && node --max-old-space-size=256 --experimental-strip-types check.mts
+[exit 0]
+PARSE FAIL mobile.computers.setup.amount_note nodes is not iterable
+PARSE FAIL mobile.computers.route_invalid.not_address nodes is not iterable
+PARSE FAIL mobile.computers.route_invalid.scheme nodes is not iterable
+PARSE FAIL mobile.computers.route_invalid.http_public nodes is not iterable
+parsed 27 of 27
+(node:44317) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/.local-operator/sessions/e12483c5cbc6/scratchpad/ur-audit-tmp/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+$ cd /Users/damian/.local-operator/sessions/e12483c5cbc6/scratchpad/ur-audit-tmp && node --max-old-space-size=256 --experimental-strip-types --no-warnings check.mts
+[exit 0]
+ARGS mobile.computers.setup.intro ["source","params","nodes"]
+ARGS mobile.computers.setup.billing_title ["source","params","nodes"]
+ARGS mobile.computers.setup.billing_fallback ["source","params","nodes"]
+ARGS mobile.computers.setup.create_title ["source","params","nodes"]
+ARGS mobile.computers.setup.create_help ["source","params","nodes"]
+ARGS mobile.computers.setup.terminal_label ["source","params","nodes"]
+ARGS mobile.computers.setup.amount_note ["source","params","nodes"]
+mobile.computers.setup.amount_note "یہاں <amount> کی جگہ وہ قیمت لکھیں جو Radient کنسول اس اکاؤنٹ کے لیے دکھاتا ہے — lop tunnel create اس کے علاوہ کچھ قبول نہیں کرتی، اور ٹنل گائیڈ کے پہلے مرحلے میں اس جگہ کا لنک ہے جہاں یہ قیمت دکھائی جاتی ہے۔"
+ARGS mobile.computers.setup.tui_help ["source","params","nodes"]
+ARGS mobile.computers.setup.tui_label ["source","params","nodes"]
+ARGS mobile.computers.setup.watching ["source","params","nodes"]
+ARGS mobile.computers.setup.ran_it ["source","params","nodes"]
+ARGS mobile.computers.setup.attach_title ["source","params","nodes"]
+ARGS mobile.computers.setup.attach_help ["source","params","nodes"]
+ARGS mobile.computers.setup.tunnel_id_label ["source","params","nodes"]
+ARGS mobile.computers.setup.attach_label ["source","params","nodes"]
+ARGS mobile.computers.setup.address_title ["source","params","nodes"]
+ARGS mobile.computers.setup.address_help ["source","params","nodes"]
+ARGS mobile.computers.route_invalid.empty ["source","params","nodes"]
+ARGS mobile.computers.route_invalid.not_address ["source","params","nodes"]
+mobile.computers.route_invalid.not_address "یہ پتہ نہیں لگتا۔ یہ https:// URL ہونا چاہیے۔"
+ARGS mobile.computers.route_invalid.scheme ["source","params","nodes"]
+mobile.computers.route_invalid.scheme "صرف https:// URL ہی قابلِ استعمال ہیں۔"
+ARGS mobile.computers.route_invalid.credentials ["source","params","nodes"]
+ARGS mobile.computers.route_invalid.query ["source","params","nodes"]
+ARGS mobile.computers.route_invalid.http_public ["source","params","nodes"]
+mobile.computers.route_invalid.http_public "سادہ http:// URL کی اجازت صرف نجی پتے کے لیے ہے۔ اس کے بجائے https:// URL استعمال کریں، یا کوئی نجی میزبان، مثلاً IP 192.168.x.x۔"
+ARGS mobile.computers.route_invalid.insecure_off ["source","params","nodes"]
+ARGS mobile.computers.route_invalid.not_radient ["source","params","nodes"]
+ARGS mobile.computers.route_invalid.no_tunnel_id ["source","params","nodes"]
+ARGS mobile.computers.your_computer ["source","params","nodes"]
+parsed 27 of 27
+
+
+$ cd /Users/damian/.local-operator/sessions/e12483c5cbc6/scratchpad/ur-audit-tmp && node --max-old-space-size=256 --experimental-strip-types --no-warnings check.mts
+[exit 0]
+PARAMS mobile.computers.setup.intro {}
+PARAMS mobile.computers.setup.billing_title {}
+PARAMS mobile.computers.setup.billing_fallback {}
+PARAMS mobile.computers.setup.create_title {}
+PARAMS mobile.computers.setup.create_help {}
+PARAMS mobile.computers.setup.terminal_label {}
+PARAMS mobile.computers.setup.amount_note {}
+mobile.computers.setup.amount_note "یہاں <amount> کی جگہ وہ قیمت لکھیں جو Radient کنسول اس اکاؤنٹ کے لیے دکھاتا ہے — lop tunnel create اس کے علاوہ کچھ قبول نہیں کرتی، اور ٹنل گائیڈ کے پہلے مرحلے میں اس جگہ کا لنک ہے جہاں یہ قیمت دکھائی جاتی ہے۔"
+PARAMS mobile.computers.setup.tui_help {}
+PARAMS mobile.computers.setup.tui_label {}
+PARAMS mobile.computers.setup.watching {}
+PARAMS mobile.computers.setup.ran_it {}
+PARAMS mobile.computers.setup.attach_title {}
+PARAMS mobile.computers.setup.attach_help {}
+PARAMS mobile.computers.setup.tunnel_id_label {}
+PARAMS mobile.computers.setup.attach_label {}
+PARAMS mobile.computers.setup.address_title {}
+PARAMS mobile.computers.setup.address_help {}
+PARAMS mobile.computers.route_invalid.empty {}
+PARAMS mobile.computers.route_invalid.not_address {}
+mobile.computers.route_invalid.not_address "یہ پتہ نہیں لگتا۔ یہ https:// URL ہونا چاہیے۔"
+PARAMS mobile.computers.route_invalid.scheme {}
+mobile.computers.route_invalid.scheme "صرف https:// URL ہی قابلِ استعمال ہیں۔"
+PARAMS mobile.computers.route_invalid.credentials {}
+PARAMS mobile.computers.route_invalid.query {}
+PARAMS mobile.computers.route_invalid.http_public {}
+mobile.computers.route_invalid.http_public "سادہ http:// URL کی اجازت صرف نجی پتے کے لیے ہے۔ اس کے بجائے https:// URL استعمال کریں، یا کوئی نجی میزبان، مثلاً IP 192.168.x.x۔"
+PARAMS mobile.computers.route_invalid.insecure_off {}
+PARAMS mobile.computers.route_invalid.not_radient {}
+PARAMS mobile.computers.route_invalid.no_tunnel_id {}
+PARAMS mobile.computers.your_computer {}
+parsed 27 of 27
+
+
+$ cd /Users/damian/.local-operator/sessions/e12483c5cbc6/scratchpad/ur-audit-tmp && swiftc -O bidi.swift -o bidi 2>&1 && ./bidi cases.json
+[exit 1]
+bidi.swift:7:12: error: cannot find 'NSMutableParagraphStyle' in scope
+ 5 | let cases = try! JSONSerialization.jsonObject(with: data) as! [String:String]
+ 6 | for (name, s) in cases.sorted(by: {$0.key < $1.key}) {
+ 7 |   let ps = NSMutableParagraphStyle(); ps.baseWritingDirection = .rightToLeft
+   |            `- error: cannot find 'NSMutableParagraphStyle' in scope
+ 8 |   let font = CTFontCreateWithName("Geeza Pro" as CFString, 14, nil)
+ 9 |   let a = NSAttributedString(string: s, attributes: [.paragraphStyle: ps, NSAttributedString.Key(kCTFontAttributeName as String): font])
+
+bidi.swift:7:66: error: cannot infer contextual base in reference to member 'rightToLeft'
+ 5 | let cases = try! JSONSerialization.jsonObject(with: data) as! [String:String]
+ 6 | for (name, s) in cases.sorted(by: {$0.key < $1.key}) {
+ 7 |   let ps = NSMutableParagraphStyle(); ps.baseWritingDirection = .rightToLeft
+   |                                                                  `- error: cannot infer contextual base in reference to member 'rightToLeft'
+ 8 |   let font = CTFontCreateWithName("Geeza Pro" as CFString, 14, nil)
+ 9 |   let a = NSAttributedString(string: s, attributes: [.paragraphStyle: ps, NSAttributedString.Key(kCTFontAttributeName as String): font])
+
+bidi.swift:9:55: error: type 'NSAttributedString.Key' has no member 'paragraphStyle'
+ 7 |   let ps = NSMutableParagraphStyle(); ps.baseWritingDirection = .rightToLeft
+ 8 |   let font = CTFontCreateWithName("Geeza Pro" as CFString, 14, nil)
+ 9 |   let a = NSAttributedString(string: s, attributes: [.paragraphStyle: ps, NSAttributedString.Key(kCTFontAttributeName as String): font])
+   |                                                       `- error: type 'NSAttributedString.Key' has no member 'paragraphStyle'
+10 |   let line = CTLineCreateWithAttributedString(a)
+11 |   let runs = CTLineGetGlyphRuns(line) as! [CTRun]
+
+
+$ cd /Users/damian/.local-operator/sessions/e12483c5cbc6/scratchpad/ur-audit-tmp && swiftc -O bidi.swift -o bidi 2>&1 && ./bidi cases.json
+[exit 0]
+== amount_note
+  x=0 RTL [ اس کے علاوہ کچھ قبول نہیں کرتی،]
+  x=181 LTR [lop]
+  x=200 LTR [ ]
+  x=204 LTR [tunnel]
+  x=242 LTR [ ]
+  x=247 LTR [create]
+  x=286 RTL [ ]
+  x=290 RTL [—]
+  x=304 RTL [ کنسول اس اکاؤنٹ کے لیے دکھاتا ہے ]
+  x=495 LTR [Radient]
+  x=543 RTL [ کی جگہ وہ قیمت لکھیں جو ]
+  x=689 RTL [>]
+  x=697 LTR [amount]
+  x=743 RTL [<]
+  x=752 RTL [یہاں ]
+== control_example_without_IP
+  x=0 RTL [۔]
+  x=4 LTR [x]
+  x=11 LTR [.]
+  x=15 LTR [x]
+  x=22 RTL [.]
+  x=26 LTR [192]
+  x=50 LTR [.]
+  x=54 LTR [168]
+  x=77 RTL [یا کوئی نجی میزبان، مثلاً ]
+== control_scheme_before_se
+  x=0 RTL [ سے شروع ہونا چاہیے۔]
+  x=114 RTL [://]
+  x=126 LTR [https]
+  x=156 RTL [یہ ]
+== http_public
+  x=0 RTL [۔]
+  x=4 LTR [IP]
+  x=17 LTR [ ]
+  x=22 LTR [192]
+  x=45 LTR [.]
+  x=49 LTR [168]
+  x=72 LTR [.]
+  x=76 LTR [x]
+  x=83 LTR [.]
+  x=88 LTR [x]
+  x=95 RTL [ استعمال کریں، یا کوئی نجی میزبان، مثلاً ]
+  x=307 LTR [https://]
+  x=349 LTR [ ]
+  x=354 LTR [URL]
+  x=382 RTL [ کی اجازت صرف نجی پتے کے لیے ہے۔ اس کے بجائے ]
+  x=654 LTR [http://]
+  x=689 LTR [ ]
+  x=694 LTR [URL]
+  x=722 RTL [سادہ ]
+== insecure_off
+  x=0 RTL [ کی اجازت والا اختیار آن کریں۔]
+  x=158 LTR [http]
+  x=182 RTL [جاری رکھنے کے لیے سادہ ]
+== not_address
+  x=0 RTL [ ہونا چاہیے۔]
+  x=59 LTR [https://]
+  x=101 LTR [ ]
+  x=105 LTR [URL]
+  x=133 RTL [یہ پتہ نہیں لگتا۔ یہ ]
+== tui_label
+  x=0 LTR [TUI]

@@ -1,0 +1,21 @@
+# hi round-2 delta audit log — M3 S2b-2b (auditor session b5334e435051)
+# cwd for relative paths: /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b ; S=/Users/damian/.local-operator/sessions/b5334e435051/scratchpad/hi-r2
+$ shasum -a 256 brief-s2b2b.json hi/draft-hi.json hi/draft-hi-v2.json hi/notes-hi-v2.md audits/hi/report.md
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json (matches frozen)
+702c6790308cf7636023d13b7724fc86e995af476ce120e07875ec15860d5cc4  hi/draft-hi.json (matches frozen)
+2beb40d0d7ae4676c036a3387a746fcd0b36fb597c63f48035a78375d14d1a5d  hi/draft-hi-v2.json (matches frozen)
+4248f26896a9f3c631404dd66d10d8a7b0e6d342925ff7d612827db263445dc7  hi/notes-hi-v2.md
+d22eb0e8fef61255e1fd7153370b43c2ab6c8f8bf2c123f6476f792f472cfb71  audits/hi/report.md
+$ grep -c '[redacted]' brief-s2b2b.json -> 0
+$ diff hi/draft-hi.json hi/draft-hi-v2.json -> 3 hunks: 11c11 setup.watching, 24c24 route_invalid.http_public, 27c27 route_invalid.no_tunnel_id
+$ python3 (json load + line compare) -> same key order True, 27 keys, 29/29 lines, 3 differ; changed values NFC, no bidi controls
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a show e0027e61:src/i18n/messages.ts > $S/messages.ts   sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0
+$ check.mts = round-1 script (49ff9c33b2d7 hi-audit/check.mts) with draft path -> hi/draft-hi-v2.json; sha256 425314bba9f037ba0efdf86c42fe4b3b54a253e06a7b6d7cc6d36e1c00f59de4
+$ cd $S && node --max-old-space-size=256 check.mts   (node v24.22.1; stderr discarded: MODULE_TYPELESS_PACKAGE_JSON warning)
+keys brief 27 draft 27 missing [] extra [] orderSame true
+FMT mobile.computers.setup.amount_note => <amount> वह कीमत है जो Radient कंसोल इस खाते के लिए दिखाता है — <command> इसके अलावा कोई और रकम स्वीकार नहीं करती, और टनल गाइड के चरण 1 में उस जगह का लिंक है जहाँ यह कीमत दिखती है।
+FMT mobile.computers.route_invalid.not_address => यह पता जैसा नहीं लगता। इसकी शुरुआत <scheme> से होनी चाहिए।
+FMT mobile.computers.route_invalid.scheme => सिर्फ़ <scheme> पते सपोर्ट किए जाते हैं।
+FMT mobile.computers.route_invalid.http_public => <insecure> की अनुमति सिर्फ़ निजी पते के लिए है। <scheme> का उपयोग करें, या <example> जैसे किसी निजी होस्ट का।
+ok 27 issues 0 plural cats hi: 0:one 1:one 2:other 5:other
+# write to lane dir audits/hi-r2/ refused by guardrail (dangerous-delete review: another session's scratchpad); files written here instead
