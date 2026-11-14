@@ -1481,6 +1481,10 @@ export const REGION = {
 	 *  (ADR 0006 §2.4, §5). The marker is the section's own region id so the
 	 *  capture can assert the section rendered. */
 	settingsNotifications: "settings-section-notifications",
+	/** This phone's session-push registration with the ROUTED computer, the
+	 *  one sentence `session-push-status.ts` renders (absent when it adds no
+	 *  fact), so a capture can assert which state the screen is in. */
+	settingsNotificationsRegistration: "settings-notifications-registration",
 	settingsAccountRouting: "settings-section-account-routing",
 
 	/** The refusal surfaces (`docs/ux/flows.md` § 9, C5/C6/C7). Each id names a

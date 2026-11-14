@@ -157,7 +157,9 @@ const NAMESPACES = [
 		context: notificationsContext,
 		// +5: the Settings permission sentences (`permission.*`), moved out of
 		// an English-only table in the Team Bridge push-readiness PR.
-		expected: 32,
+		// +6: the Settings registration sentences (`computer_registration.*`),
+		// fix/session-push-register.
+		expected: 38,
 	},
 	{
 		name: "mobile.session",
@@ -350,6 +352,11 @@ describe("the English catalogues", () => {
 		 * state's headline, line and action (D2, M1): 792 + 4 = 796. */
 		/* Merge of origin/main (#254, d5831603) into #255: 771 + 41 (S2b-1)
 		 * + 25 (mobile.sidebar: 21 + 4) = 837. */
+		/* fix/session-push-register: +6 mobile.notifications (the Settings
+		 * sentence for this phone's registration with the routed computer):
+		 * 812 + 6 = 818. */
+		/* Merge of origin/main (#255, f8d0d8dd) into #259: 837 on main + 6
+		 * mobile.notifications = 843. */
 		/* fix/settings-signin-status-badge: +1 mobile.settings
 		 * (`diagnostics.reason`, the label of the raw reason-code row; the code
 		 * itself is never a key): 812 + 1 = 813. Review round 1: +4 (the signed-in
@@ -357,7 +364,9 @@ describe("the English catalogues", () => {
 		 * 813 + 4 = 817. */
 		/* Merge of origin/main (#255, f8d0d8dd) into #258: 837 on main + 5
 		 * mobile.settings = 842. */
-		expect(total).toBe(842);
+		/* Merge of origin/main (#259, 9ef19ccd) into #258: 843 on main + 5
+		 * mobile.settings = 848. */
+		expect(total).toBe(848);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

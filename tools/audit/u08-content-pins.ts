@@ -1697,6 +1697,19 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
 	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
 	 * re-derived once with --print over the merged tree. */
+	/* fix/session-push-register: the app now POSTs /api/push/register for the
+	 * routed computer (session-push-registration*, use-session-push-registration),
+	 * Settings › Notifications gains one registration sentence (+6
+	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
+	 * a REGION id. Re-derived with --print over the staged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #259 review round 1 remediation: the registration hook keyed on
+	 * routeKey/live/revision with the relay accessor read through a ref, a
+	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
+	 * No rendered surface changed. Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
 	/* fix/settings-signin-status-badge: the signed-out account card as a
 	 * Radient sign-in nav card, the connection pill's one-line fit in the
 	 * Settings Status row and the drawer header (`status-pill-layout.ts`), and
@@ -1712,7 +1725,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Merge of origin/main (#255, f8d0d8dd) into #258: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "00cedf60eb194f3f61c67e1beb56105fa7a762895f951f4a18a9e11c02f7f659",
+	/* Merge of origin/main (#259, 9ef19ccd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "916f38333b2293f9c8e048f84bcc50d43c944a9f7b732e9c6d62cc5ce2c28a94",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
