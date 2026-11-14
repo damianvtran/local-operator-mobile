@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "इस फ़ोन पर कोई रिले पासवर्ड सहेजा नहीं गया है। इस कंप्यूटर का पासवर्ड डालें, उसे जाँचें, फिर सहेजें।",
 	"mobile.computers.own_tunnel.password_slot_this": "इस फ़ोन पर सहेजा गया रिले पासवर्ड इसी पते का है। उसे जाँचें, फिर सहेजें।",
 	"mobile.computers.setup.open_settings": "अपने कंप्यूटर पर Local Operator खोलें और सेटिंग्स → फ़ोन एक्सेस → फ़ोन एक्सेस सेट करें चुनें।",
-	"mobile.computers.setup.list_updates": "काम पूरा होने पर यहाँ लौटें — यह सूची अपने आप अपडेट हो जाती है।"
+	"mobile.computers.setup.list_updates": "काम पूरा होने पर यहाँ लौटें — यह सूची अपने आप अपडेट हो जाती है।",
+	"mobile.computers.hint.radient_unreachable": "अभी Radient तक नहीं पहुँच पा रहे"
 }

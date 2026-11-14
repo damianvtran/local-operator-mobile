@@ -28,5 +28,14 @@
 	"mobile.refusal.how_to.title": "फ़ोन एक्सेस चालू करें",
 	"mobile.refusal.how_to.body": "अपने कंप्यूटर पर Local Operator → सेटिंग्स → फ़ोन एक्सेस खोलें और फ़ोन एक्सेस सेट करें चुनें। कुछ भी चालू होने से पहले आपको कीमत दिखाई जाएगी।",
 	"mobile.refusal.terminal.toggle": "टर्मिनल इस्तेमाल करते हैं?",
-	"mobile.refusal.terminal.label": "उस कंप्यूटर पर"
+	"mobile.refusal.terminal.label": "उस कंप्यूटर पर",
+	"mobile.refusal.wait_network.title": "{computer} अभी Radient तक नहीं पहुँच पा रहा है।",
+	"mobile.refusal.wait_network.body": "नेटवर्क लौटते ही यह अपने आप फिर से जुड़ जाएगा।",
+	"mobile.refusal.wait_reconnect.title": "{computer} फिर से जुड़ रहा है।",
+	"mobile.refusal.wait_reconnect.body": "इसमें आमतौर पर कुछ सेकंड लगते हैं।",
+	"mobile.refusal.computer_sign_in.title": "{computer} पर Local Operator के लिए आपको Radient में फिर से साइन इन करना होगा।",
+	"mobile.refusal.computer_sign_in.body": "वहाँ Local Operator खोलें और साइन इन करें। इस फ़ोन पर साइन इन करने से यह ठीक नहीं होगा।",
+	"mobile.refusal.computer_attention.title": "{computer} पर Local Operator पर ध्यान देने की ज़रूरत है।",
+	"mobile.refusal.computer_attention.body": "फ़ोन एक्सेस सेट करना पूरा करने के लिए उसे वहाँ खोलें।",
+	"mobile.refusal.open_console.title": "{computer} के फ़ोन एक्सेस के लिए आपके Radient कंसोल में एक बदलाव ज़रूरी है।"
 }

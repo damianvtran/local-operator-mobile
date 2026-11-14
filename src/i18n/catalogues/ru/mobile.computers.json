@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "На этом телефоне не сохранён пароль ретранслятора. Введите пароль этого компьютера, проверьте его и сохраните.",
 	"mobile.computers.own_tunnel.password_slot_this": "Сохранённый на телефоне пароль ретранслятора относится к этому адресу. Проверьте его и сохраните.",
 	"mobile.computers.setup.open_settings": "На компьютере откройте Local Operator → Настройки → Доступ с телефона → Настроить доступ с телефона.",
-	"mobile.computers.setup.list_updates": "Когда закончите, вернитесь сюда — список обновится сам."
+	"mobile.computers.setup.list_updates": "Когда закончите, вернитесь сюда — список обновится сам.",
+	"mobile.computers.hint.radient_unreachable": "Сейчас не удаётся связаться с Radient"
 }

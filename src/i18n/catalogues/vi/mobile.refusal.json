@@ -28,5 +28,14 @@
 	"mobile.refusal.how_to.title": "Bật quyền truy cập từ điện thoại",
 	"mobile.refusal.how_to.body": "Trên máy tính, mở Local Operator → Cài đặt → Truy cập từ điện thoại rồi chọn Thiết lập truy cập từ điện thoại. Bạn sẽ thấy giá trước, trước khi bất cứ thứ gì được bật.",
 	"mobile.refusal.terminal.toggle": "Bạn dùng terminal?",
-	"mobile.refusal.terminal.label": "Trên máy tính đó"
+	"mobile.refusal.terminal.label": "Trên máy tính đó",
+	"mobile.refusal.wait_network.title": "{computer} hiện không kết nối được với Radient.",
+	"mobile.refusal.wait_network.body": "Máy sẽ tự kết nối lại khi có mạng trở lại.",
+	"mobile.refusal.wait_reconnect.title": "{computer} đang kết nối lại.",
+	"mobile.refusal.wait_reconnect.body": "Việc này thường chỉ mất vài giây.",
+	"mobile.refusal.computer_sign_in.title": "Local Operator trên {computer} cần bạn đăng nhập lại Radient.",
+	"mobile.refusal.computer_sign_in.body": "Hãy mở Local Operator trên máy đó và đăng nhập. Đăng nhập trên điện thoại này sẽ không khắc phục được.",
+	"mobile.refusal.computer_attention.title": "Local Operator trên {computer} cần bạn xử lý.",
+	"mobile.refusal.computer_attention.body": "Hãy mở ứng dụng trên máy đó để hoàn tất thiết lập truy cập từ điện thoại.",
+	"mobile.refusal.open_console.title": "Quyền truy cập từ điện thoại tới {computer} cần được thay đổi trong bảng điều khiển Radient."
 }

@@ -694,7 +694,9 @@ export function rowHint(
 	if (row.health.kind === "refused")
 		return row.health.surface === "password" && row.transport.kind === "custom"
 			? "Enter the password again"
-			: "Open Settings to fix the connection";
+			: row.health.surface === "retry" && row.transport.kind === "radient"
+				? t("mobile.computers.hint.radient_unreachable")
+				: "Open Settings to fix the connection";
 	if (row.hidden) return "Removed from this phone. Tap to bring it back.";
 	if (row.health.kind === "paused") return "Add credit in Radient";
 	return section === "not-connected" ? "Tap to connect" : null;
@@ -797,11 +799,16 @@ export function ownTunnelPrefill(
 const ANSWERED: readonly ConnectionPhase[] = ["live", "re-minting"];
 
 /** Refusals that mean "the computer did not answer", which the switcher calls
- *  Asleep; every other refusal is about the route, not the machine. */
+ *  Asleep; every other refusal is about the route, not the machine.
+ *
+ *  `retry` is NOT one of them any more: it is a mint 5xx, a network failure or
+ *  a 429 — Radient (or this phone's network) not answering, while the computer
+ *  may be perfectly healthy. Calling that "Asleep" sent a teammate to wake a Mac
+ *  that was awake; it now reads "Not connected", with "Can't reach Radient right
+ *  now" as the row's hint (`rowHint`). */
 const SILENT_SURFACES: readonly ErrorSurface[] = [
 	"computer-offline",
 	"relay-stopped",
-	"retry",
 ];
 
 /** The active computer's health, from the route's state. `null` input never

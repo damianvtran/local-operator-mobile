@@ -386,6 +386,8 @@ export const CONTROL = {
 	settingsAccountRoutingGroup: "settings-account-routing-group",
 	settingsAccountRoutingSave: "settings-account-routing-save",
 	settingsAccountRoutingRetry: "settings-account-routing-retry",
+	/** Diagnostics: copies the section as redacted plain text for a helper. */
+	settingsCopyDiagnostics: "settings-copy-diagnostics",
 	refusalSignIn: "refusal-sign-in",
 	refusalDetailsToggle: "connection-details-toggle",
 	refusalRetry: "refusal-retry",

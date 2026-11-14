@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "This phone has no relay password saved. Enter this computer's password, test it, then save.",
 	"mobile.computers.own_tunnel.password_slot_this": "This phone's saved relay password is for this address. Test it, then save.",
 	"mobile.computers.setup.open_settings": "On your computer, open Local Operator → Settings → Phone access → Set up.",
-	"mobile.computers.setup.list_updates": "Come back here when it's done — this list updates by itself."
+	"mobile.computers.setup.list_updates": "Come back here when it's done — this list updates by itself.",
+	"mobile.computers.hint.radient_unreachable": "Can't reach Radient right now"
 }

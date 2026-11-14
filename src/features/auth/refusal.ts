@@ -87,6 +87,19 @@ class TunnelConnectionError extends RelayError {
 		this.failure = error.failure;
 	}
 }
+/**
+ * Which surface a 401 on the RADIENT route belongs to. The edge's 401 carries
+ * `X-Radient-Login` and means this phone's grant is gone (`sign-in`); a 401
+ * without it came from the relay behind the tunnel, which no phone-side sign-in
+ * can fix (`password`, the relay-auth surface). Same discriminator as
+ * `relayErrorFromResponse`, so the two paths cannot disagree.
+ */
+export function radientUnauthorizedSurface(facts: {
+	header: (name: string) => string | null;
+}): "sign-in" | "password" {
+	return facts.header("x-radient-login") ? "sign-in" : "password";
+}
+
 export const tunnelSessionRelayError = (
 	error: TunnelSessionError,
 ): RelayError => new TunnelConnectionError(error);
@@ -124,7 +137,13 @@ export type RefusalCause =
 	| "relay-stopped"
 	| "tunnel-gone"
 	| "radient-unreachable"
-	| "relay-wait";
+	| "relay-wait"
+	/* Core C1's relay `kind`s (`gateway.py` REMEDY_KIND at 7c0fc7bf). */
+	| "wait-network"
+	| "wait-reconnect"
+	| "computer-sign-in"
+	| "computer-attention"
+	| "open-console";
 
 export type RefusalCopy = RefusalSurfaceCopy & { cause: RefusalCause };
 
@@ -193,83 +212,186 @@ export function tunnelRefusalCopy(
 ): RefusalCopy {
 	const billing = computer?.billing;
 	const status = (computer?.rawStatus ?? "").toLowerCase();
-	if (billing?.active === false)
-		return {
-			cause: "phone-access-off",
-			title: t("mobile.refusal.phone_access_off.title"),
-			body: t("mobile.refusal.phone_access_off.body"),
-			actions: [action.howTo(), action.openBilling()],
-			help: t("mobile.refusal.how_to.body"),
-		};
-	if (billing?.eligible === false)
-		return {
-			cause: "balance-out",
-			title: t("mobile.refusal.balance_out.title"),
-			body: t("mobile.refusal.balance_out.body"),
-			/* Retry is for the return from paying: the reconnect is automatic on
-			 *  the computer's side, but this screen does not poll (U10). */
-			actions: [action.addCredit(), action.retry()],
-			help: null,
-		};
+	if (billing?.active === false) return copyFor("phone-access-off", subject);
+	if (billing?.eligible === false) return copyFor("balance-out", subject);
 	switch (status) {
 		case "suspended":
-			return {
-				cause: "suspended",
-				title: t("mobile.refusal.suspended.title"),
-				body: null,
-				actions: [action.retry()],
-				help: null,
-			};
+			return copyFor("suspended", subject);
 		case "disabled":
-			return {
-				cause: "console-disabled",
-				title: t("mobile.refusal.console_disabled.title"),
-				body: null,
-				actions: [action.openConsole()],
-				help: null,
-			};
+			return copyFor("console-disabled", subject);
 		case "error":
 		case "reconciling":
 		case "pending":
-			return {
-				cause: "provisioning",
-				title: t("mobile.refusal.provisioning.title"),
-				body: t("mobile.refusal.provisioning.body"),
-				actions: [action.retry()],
-				help: null,
-			};
+			return copyFor("provisioning", subject);
 		case "revoking":
 		case "deleted":
-			return tunnelGoneCopy(subject);
+			return copyFor("tunnel-gone", subject);
 		default:
-			return {
-				cause: "refused",
-				title: t("mobile.refusal.refused.title", { computer: subject }),
-				body: t("mobile.refusal.refused.body"),
-				actions: [action.openConsole(), action.retry()],
-				help: null,
-			};
+			return copyFor("refused", subject);
 	}
 }
 
-const tunnelGoneCopy = (subject: string): RefusalCopy => ({
-	cause: "tunnel-gone",
-	title: t("mobile.refusal.tunnel_gone.title", { computer: subject }),
-	body: t("mobile.refusal.tunnel_gone.body"),
-	/* Refresh, not Retry: the same address will be refused again, and a fresh
-	 *  list is what shows whether the computer was set up again. */
-	actions: [action.refreshList()],
-	help: null,
-});
+/** One cause → its copy and actions, in ONE table, so the 403 split, the
+ *  gateway's reasons and the relay's kinds cannot give one cause two wordings
+ *  or two different buttons. */
+function copyFor(cause: RefusalCause, subject: string): RefusalCopy {
+	const plain = (
+		title: string,
+		body: string | null,
+		actions: RefusalAction[],
+	): RefusalCopy => ({ cause, title, body, actions, help: null });
+	switch (cause) {
+		case "phone-access-off":
+			return {
+				...plain(
+					t("mobile.refusal.phone_access_off.title"),
+					t("mobile.refusal.phone_access_off.body"),
+					[action.howTo(), action.openBilling()],
+				),
+				help: t("mobile.refusal.how_to.body"),
+			};
+		case "balance-out":
+			/* Retry is for the return from paying: the reconnect is automatic on
+			 *  the computer's side, but this screen does not poll (U10). */
+			return plain(
+				t("mobile.refusal.balance_out.title"),
+				t("mobile.refusal.balance_out.body"),
+				[action.addCredit(), action.retry()],
+			);
+		case "suspended":
+			return plain(t("mobile.refusal.suspended.title"), null, [action.retry()]);
+		case "console-disabled":
+			return plain(t("mobile.refusal.console_disabled.title"), null, [
+				action.openConsole(),
+			]);
+		case "provisioning":
+			return plain(
+				t("mobile.refusal.provisioning.title"),
+				t("mobile.refusal.provisioning.body"),
+				[action.retry()],
+			);
+		case "refused":
+			return plain(
+				t("mobile.refusal.refused.title", { computer: subject }),
+				t("mobile.refusal.refused.body"),
+				[action.openConsole(), action.retry()],
+			);
+		case "computer-offline":
+			return plain(
+				t("mobile.refusal.offline.title", { computer: subject }),
+				t("mobile.refusal.offline.body"),
+				[action.retry()],
+			);
+		case "relay-stopped":
+			return plain(
+				t("mobile.refusal.relay_stopped.title"),
+				t("mobile.refusal.relay_stopped.body"),
+				[action.retry()],
+			);
+		case "tunnel-gone":
+			/* Refresh, not Retry: the same address will be refused again, and a
+			 *  fresh list is what shows whether the computer was set up again. */
+			return plain(
+				t("mobile.refusal.tunnel_gone.title", { computer: subject }),
+				t("mobile.refusal.tunnel_gone.body"),
+				[action.refreshList()],
+			);
+		case "radient-unreachable":
+			return plain(
+				t("mobile.refusal.radient_unreachable.title"),
+				t("mobile.refusal.radient_unreachable.body"),
+				[action.retry()],
+			);
+		case "relay-wait":
+			return plain(
+				t("mobile.refusal.relay_wait.title", { computer: subject }),
+				t("mobile.refusal.relay_wait.body"),
+				[action.retry()],
+			);
+		case "wait-network":
+			return plain(
+				t("mobile.refusal.wait_network.title", { computer: subject }),
+				t("mobile.refusal.wait_network.body"),
+				[action.retry()],
+			);
+		case "wait-reconnect":
+			return plain(
+				t("mobile.refusal.wait_reconnect.title", { computer: subject }),
+				t("mobile.refusal.wait_reconnect.body"),
+				[action.retry()],
+			);
+		case "computer-sign-in":
+			/* The COMPUTER's Radient login, not this phone's: no "Sign in again"
+			 *  button here, because signing in on the phone cannot clear it. */
+			return plain(
+				t("mobile.refusal.computer_sign_in.title", { computer: subject }),
+				t("mobile.refusal.computer_sign_in.body"),
+				[action.retry()],
+			);
+		case "computer-attention":
+			return plain(
+				t("mobile.refusal.computer_attention.title", { computer: subject }),
+				t("mobile.refusal.computer_attention.body"),
+				[action.retry()],
+			);
+		case "open-console":
+			return plain(
+				t("mobile.refusal.open_console.title", { computer: subject }),
+				null,
+				[action.openConsole(), action.retry()],
+			);
+	}
+}
+
+/** Core C1's reason codes → cause. The computer's refined answer, so it wins
+ *  over the phone's own reading of the discovery row. */
+const REASON_CAUSE: Readonly<Record<string, RefusalCause>> = {
+	server_unavailable: "radient-unreachable",
+	tunnel_inactive: "suspended",
+	tunnel_disabled: "console-disabled",
+	billing_inactive: "phone-access-off",
+	billing_lapsed: "balance-out",
+};
+
+/** Core C1's relay `kind`s → cause, used when the reason is not one above. An
+ *  unknown kind returns `undefined` (a `wait_*` one still reads as a wait). */
+function causeForKind(kind: string | undefined): RefusalCause | undefined {
+	switch (kind) {
+		case undefined:
+			return undefined;
+		case "wait_network":
+			return "wait-network";
+		case "wait_radient":
+			return "radient-unreachable";
+		case "wait_reconnect":
+			return "wait-reconnect";
+		case "check_status":
+			return "relay-wait";
+		case "sign_in":
+			return "computer-sign-in";
+		case "restore_owner":
+		case "run":
+			return "computer-attention";
+		case "accept_quote":
+			return "phone-access-off";
+		case "add_credit":
+			return "balance-out";
+		case "open_console":
+			return "open-console";
+		default:
+			return kind.startsWith("wait_") ? "relay-wait" : undefined;
+	}
+}
 
 /**
  * The plain copy for a refusal, or `null` to keep the surface's per-kind copy
  * (sign-in, password, certificate, … — causes this change does not touch).
  *
- * A relay `503` naming a `wait_*` state is checked first: it is the relay
- * itself saying "still starting", and must read as a wait with a Retry, never
- * as an offline computer or a bare spinner. The field is feature-detected: a
- * relay that sends no `kind` lands on the surface rows below exactly as before.
+ * Precedence, most specific first: the computer's own refined `reason`
+ * (core C1), then its `kind`, then the phone's reading of the discovery row,
+ * then the surface. Every field is feature-detected: a relay that sends none
+ * of them lands on the surface rows exactly as before, and an unknown value is
+ * never a crash and never a guess.
  */
 export function refusalCopy(input: {
 	error: RelayError | null;
@@ -282,42 +404,21 @@ export function refusalCopy(input: {
 		if (error.failure === "disabled" || error.failure === "billing")
 			return tunnelRefusalCopy(computer, subject);
 		if (error.failure === "network" || error.failure === "unavailable")
-			return {
-				cause: "radient-unreachable",
-				title: t("mobile.refusal.radient_unreachable.title"),
-				body: t("mobile.refusal.radient_unreachable.body"),
-				actions: [action.retry()],
-				help: null,
-			};
+			return copyFor("radient-unreachable", subject);
 		return null;
 	}
-	if (error?.relayStateKind?.startsWith("wait_"))
-		return {
-			cause: "relay-wait",
-			title: t("mobile.refusal.relay_wait.title", { computer: subject }),
-			body: t("mobile.refusal.relay_wait.body"),
-			actions: [action.retry()],
-			help: null,
-		};
+	const fromReason = error?.reasonRaw
+		? REASON_CAUSE[error.reasonRaw]
+		: undefined;
+	if (fromReason && Object.hasOwn(REASON_CAUSE, error?.reasonRaw ?? ""))
+		return copyFor(fromReason, subject);
+	const fromKind = causeForKind(error?.relayStateKind);
+	if (fromKind) return copyFor(fromKind, subject);
 	switch (surface) {
 		case "computer-offline":
-			return {
-				cause: "computer-offline",
-				title: t("mobile.refusal.offline.title", { computer: subject }),
-				body: t("mobile.refusal.offline.body"),
-				actions: [action.retry()],
-				help: null,
-			};
 		case "relay-stopped":
-			return {
-				cause: "relay-stopped",
-				title: t("mobile.refusal.relay_stopped.title"),
-				body: t("mobile.refusal.relay_stopped.body"),
-				actions: [action.retry()],
-				help: null,
-			};
 		case "tunnel-gone":
-			return tunnelGoneCopy(subject);
+			return copyFor(surface, subject);
 		case "console": {
 			/* A gateway console refusal on a Radient computer is the same family as
 			 *  the mint's 403, and the row can usually name it. With no row, or a row
@@ -355,9 +456,11 @@ const REMEDY: Partial<Record<ErrorSurface, string>> = {
  *  `lop login radient` (the old remedy) fixes none of them. */
 const TUNNEL_STATUS_COMMAND = "lop tunnel status";
 const splitRemedy = (copy: RefusalCopy): string =>
-	copy.cause === "tunnel-gone"
-		? (REMEDY["tunnel-gone"] ?? TUNNEL_STATUS_COMMAND)
-		: TUNNEL_STATUS_COMMAND;
+	copy.cause === "computer-sign-in"
+		? (REMEDY.console ?? TUNNEL_STATUS_COMMAND)
+		: copy.cause === "tunnel-gone"
+			? (REMEDY["tunnel-gone"] ?? TUNNEL_STATUS_COMMAND)
+			: TUNNEL_STATUS_COMMAND;
 
 /**
  * `ErrorSurface` → `RefusalKind`, exhaustively over the CURRENT union: a surface

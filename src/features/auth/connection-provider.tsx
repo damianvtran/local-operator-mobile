@@ -130,6 +130,7 @@ import { adoptableSession, carryOutRestore } from "./radient-restore";
 import { beginRadientSignIn, type SignInState } from "./radient-sign-in";
 import {
 	type RefusalView,
+	radientUnauthorizedSurface,
 	refusalFromError,
 	tunnelSessionRelayError,
 } from "./refusal";
@@ -876,6 +877,13 @@ export const ConnectionProvider = ({
 						}
 						listStore.getState().markStale();
 						if (mountedRef.current) setStreamHealth("degraded");
+						/* Record the cause WITHOUT moving the phase: this branch retries by
+						 *  itself, so it must not raise a refusal, but Diagnostics' "Last
+						 *  error" read "None" while the pill said "Not answering" (a field
+						 *  report: a healthy Mac, an "Asleep" phone and nothing to say why).
+						 *  `setLastError` alone feeds Diagnostics and Copy diagnostics; the
+						 *  refusal surface still keys on the store's surface, untouched here. */
+						if (mountedRef.current) setLastError(error);
 						_attempt += 1;
 						/* The conversation stream's policy (`reconnectDelay`), so the two
 						 * streams of one route back off alike: 2 s, doubling to a 15 s
@@ -1719,10 +1727,17 @@ export const ConnectionProvider = ({
 						 * signal; the connection layer types it as `sign-in`, and this
 						 * only records it so the surface is decided once. */
 						if (admission?.isCurrent() && facts.status === 401) {
-							void revokeAuthorization();
+							/* Only the EDGE's 401 carries `X-Radient-Login`, and only it means
+							 *  this phone's Radient grant is gone. A 401 without it is the relay
+							 *  behind the tunnel refusing the request: signing in again on the
+							 *  phone cannot fix that, and revoking the grant would throw away a
+							 *  working sign-in, so it is the relay/password surface instead
+							 *  (`radientUnauthorizedSurface`). */
+							const surface = radientUnauthorizedSurface(facts);
+							if (surface === "sign-in") void revokeAuthorization();
 							setBusy(false);
 							connectionStore.getState().noteFailure({
-								surface: "sign-in",
+								surface,
 								displayableMessage: "",
 							});
 						}

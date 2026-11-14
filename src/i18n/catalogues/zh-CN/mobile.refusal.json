@@ -28,5 +28,14 @@
 	"mobile.refusal.how_to.title": "开通手机访问",
 	"mobile.refusal.how_to.body": "在你的电脑上，打开 Local Operator → 设置 → 手机访问，然后选择“设置手机访问”。在开通任何功能之前，你会先看到价格。",
 	"mobile.refusal.terminal.toggle": "使用终端？",
-	"mobile.refusal.terminal.label": "在那台电脑上"
+	"mobile.refusal.terminal.label": "在那台电脑上",
+	"mobile.refusal.wait_network.title": "{computer} 目前无法连接 Radient。",
+	"mobile.refusal.wait_network.body": "网络恢复后，它会自动重新连接。",
+	"mobile.refusal.wait_reconnect.title": "{computer} 正在重新连接。",
+	"mobile.refusal.wait_reconnect.body": "这通常只需几秒钟。",
+	"mobile.refusal.computer_sign_in.title": "{computer} 上的 Local Operator 需要你重新登录 Radient。",
+	"mobile.refusal.computer_sign_in.body": "请在那台电脑上打开 Local Operator 并登录。在这部手机上登录无法解决此问题。",
+	"mobile.refusal.computer_attention.title": "{computer} 上的 Local Operator 需要处理。",
+	"mobile.refusal.computer_attention.body": "请在那台电脑上打开它，完成手机访问的设置。",
+	"mobile.refusal.open_console.title": "{computer} 的手机访问需要在你的 Radient 控制台中进行更改。"
 }

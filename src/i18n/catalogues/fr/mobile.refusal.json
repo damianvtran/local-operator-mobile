@@ -28,5 +28,14 @@
 	"mobile.refusal.how_to.title": "Activer l’accès depuis le téléphone",
 	"mobile.refusal.how_to.body": "Sur votre ordinateur, ouvrez Local Operator → Paramètres → Accès depuis un téléphone et choisissez Configurer l’accès depuis un téléphone. Le prix s’affiche d’abord, avant toute activation.",
 	"mobile.refusal.terminal.toggle": "Vous utilisez un terminal ?",
-	"mobile.refusal.terminal.label": "Sur cet ordinateur"
+	"mobile.refusal.terminal.label": "Sur cet ordinateur",
+	"mobile.refusal.wait_network.title": "{computer} ne parvient pas à joindre Radient pour le moment.",
+	"mobile.refusal.wait_network.body": "Il se reconnectera tout seul dès que son réseau sera rétabli.",
+	"mobile.refusal.wait_reconnect.title": "{computer} est en train de se reconnecter.",
+	"mobile.refusal.wait_reconnect.body": "Cela prend généralement quelques secondes.",
+	"mobile.refusal.computer_sign_in.title": "Local Operator sur {computer} a besoin que vous vous reconnectiez à Radient.",
+	"mobile.refusal.computer_sign_in.body": "Ouvrez Local Operator sur cet ordinateur et connectez-vous. Se connecter sur ce téléphone ne résoudra pas le problème.",
+	"mobile.refusal.computer_attention.title": "Local Operator sur {computer} nécessite votre attention.",
+	"mobile.refusal.computer_attention.body": "Ouvrez-le sur cet ordinateur pour terminer la configuration de l’accès depuis un téléphone.",
+	"mobile.refusal.open_console.title": "L’accès depuis un téléphone à {computer} nécessite une modification dans votre console Radient."
 }

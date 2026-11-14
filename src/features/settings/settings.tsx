@@ -1,3 +1,4 @@
+import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -24,6 +25,7 @@ import {
 	useConnection,
 	useConnectionState,
 } from "@/features/auth/connection-provider";
+import { diagnosticsText } from "@/features/settings/diagnostics-text";
 import { t } from "@/i18n";
 import type { ThemeMode } from "@/state/theme-preference";
 import { useUiStore } from "@/state/ui-store";
@@ -116,6 +118,7 @@ export default function Settings() {
 
 	const [confirmSignOut, setConfirmSignOut] = useState(false);
 	const [signingOut, setSigningOut] = useState(false);
+	const [diagnosticsCopied, setDiagnosticsCopied] = useState(false);
 	/* This is SETTINGS's action, not global connection busy (which also covers
 	 * discovery/picks). Keep the screen responsive and the pending explanation
 	 * visible while bounded push retirement runs. The ref closes the same-tick
@@ -613,6 +616,46 @@ export default function Settings() {
 							lastError
 								? lastError.summary
 								: t("mobile.settings.diagnostics.none")
+						}
+					/>
+					{/* WHICH tunnel this phone is on, so whoever is helping can compare
+					 *  it with the computer's own Phone access settings — no terminal on
+					 *  either side. A wrong id here is the "phone on the old tunnel"
+					 *  case that otherwise reads as a sleeping computer. */}
+					{route?.mode === "radient" ? (
+						<>
+							<DiagnosticRow
+								label={t("mobile.settings.diagnostics.tunnel")}
+								value={route.tunnelId}
+							/>
+							<DiagnosticRow
+								label={t("mobile.settings.diagnostics.address")}
+								value={route.hostname}
+							/>
+						</>
+					) : null}
+					<Button
+						testID={CONTROL.settingsCopyDiagnostics}
+						label={t(
+							diagnosticsCopied
+								? "mobile.settings.diagnostics.copied"
+								: "mobile.settings.diagnostics.copy",
+						)}
+						variant="outline"
+						size="sm"
+						onPress={() =>
+							void Clipboard.setStringAsync(
+								diagnosticsText({
+									route,
+									computerName:
+										computers.find((computer) => computer.tunnelId === tunnelId)
+											?.name ?? null,
+									stream: streamWord(streamHealth),
+									lastError: lastError ? lastError.summary : null,
+									version,
+									platform: Platform.OS,
+								}),
+							).then(() => setDiagnosticsCopied(true))
 						}
 					/>
 					<Text className="text-body-sm text-ink-dim">

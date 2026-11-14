@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "Aucun mot de passe de relais enregistré sur ce téléphone. Saisissez celui de cet ordinateur, testez-le, puis enregistrez.",
 	"mobile.computers.own_tunnel.password_slot_this": "Le mot de passe enregistré sur ce téléphone correspond à cette adresse. Testez-le, puis enregistrez.",
 	"mobile.computers.setup.open_settings": "Sur votre ordinateur, ouvrez Local Operator → Paramètres → Accès depuis un téléphone → Configurer l’accès depuis un téléphone.",
-	"mobile.computers.setup.list_updates": "Revenez ici une fois terminé — cette liste se met à jour toute seule."
+	"mobile.computers.setup.list_updates": "Revenez ici une fois terminé — cette liste se met à jour toute seule.",
+	"mobile.computers.hint.radient_unreachable": "Impossible de joindre Radient pour le moment"
 }

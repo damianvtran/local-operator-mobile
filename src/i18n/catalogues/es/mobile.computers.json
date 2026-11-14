@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "Este teléfono no tiene ninguna contraseña del relé guardada. Introduce la contraseña de esta máquina, pruébala y guárdala.",
 	"mobile.computers.own_tunnel.password_slot_this": "La contraseña del relé guardada en este teléfono es de esta dirección. Pruébala y guárdala.",
 	"mobile.computers.setup.open_settings": "En tu computadora, abre Local Operator → Ajustes → Acceso desde el teléfono → Configurar el acceso desde el teléfono.",
-	"mobile.computers.setup.list_updates": "Vuelve aquí cuando termines; esta lista se actualiza sola."
+	"mobile.computers.setup.list_updates": "Vuelve aquí cuando termines; esta lista se actualiza sola.",
+	"mobile.computers.hint.radient_unreachable": "No se puede conectar con Radient ahora"
 }

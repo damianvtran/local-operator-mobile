@@ -154,6 +154,16 @@ export const GATEWAY_REASONS = [
 	"login_required",
 	"local_prerequisite",
 	"reenrolment_required",
+	/* Core C1 (local-operator PR #3945, `gateway.py` at 7c0fc7bf, :159 and
+	 * :217-220): the connector's REFINED answer for a cloud refusal. Before them a
+	 * 5xx from Radient and every non-active tunnel arrived as
+	 * `authorization_refused`, whose only remedy is a sign-in that cannot clear
+	 * billing or a console toggle. Each now maps to its own surface and copy. */
+	"server_unavailable",
+	"tunnel_inactive",
+	"tunnel_disabled",
+	"billing_inactive",
+	"billing_lapsed",
 ] as const;
 
 export type GatewayReason = (typeof GATEWAY_REASONS)[number];
@@ -200,7 +210,51 @@ const REASON_POLICY: Record<
 	 * still parses and is not mistaken for a reason this build understands. */
 	local_prerequisite: { surface: "console", retry: "never" },
 	reenrolment_required: { surface: "console", retry: "never" },
+	/* Radient answered with its own error: nothing on the computer or the phone
+	 *  is wrong, so this is the self-clearing `retry` surface (the copy says
+	 *  "Radient isn't responding", `refusal.ts`) — never "computer offline". No
+	 *  Retry-After: the gateway sends none for it, and no number was measured. */
+	server_unavailable: { surface: "retry", retry: "after-backoff" },
+	/* The four inactive-tunnel causes are fixed OUTSIDE this phone (a top-up, a
+	 *  console toggle, the desktop's set-up), so they are the `console` surface
+	 *  and this layer never retries them; the copy names the one fix and offers
+	 *  a Retry button for the return trip (`refusal.ts`). */
+	tunnel_inactive: { surface: "console", retry: "never" },
+	tunnel_disabled: { surface: "console", retry: "never" },
+	billing_inactive: { surface: "console", retry: "never" },
+	billing_lapsed: { surface: "console", retry: "never" },
 };
+
+/**
+ * The relay's 503 `kind` (core C1's `REMEDY_KIND`, `gateway.py:450-470` at
+ * 7c0fc7bf): the action the computer says fixes its state. Read only when the
+ * `reason` is one this build does not know, so a newer gateway still lands on
+ * the right surface; an unknown kind keeps the classification it had before.
+ * `wait_*` kinds clear by themselves (`WAITING_KINDS`), as does `check_status`
+ * (a busy credential store, a lease still pending).
+ */
+const KIND_SURFACE: Readonly<Record<string, ErrorSurface>> = {
+	wait_network: "retry",
+	wait_radient: "retry",
+	wait_reconnect: "retry",
+	check_status: "retry",
+	sign_in: "console",
+	restore_owner: "console",
+	run: "console",
+	accept_quote: "console",
+	add_credit: "console",
+	open_console: "console",
+};
+
+/** The surface a relay `kind` implies, or `undefined` for a kind this build
+ *  does not know (feature detection: never a guess). */
+export function surfaceForRelayKind(
+	kind: string | undefined,
+): ErrorSurface | undefined {
+	if (kind === undefined) return undefined;
+	if (Object.hasOwn(KIND_SURFACE, kind)) return KIND_SURFACE[kind];
+	return kind.startsWith("wait_") ? "retry" : undefined;
+}
 
 function defaultEnvelopeFor(kind: RelayErrorKind): EnvelopeDirective {
 	switch (kind) {
@@ -703,7 +757,16 @@ export function relayErrorFromResponse(
 				return new RelayError(
 					"gateway-refused",
 					detail ?? serverError ?? "relay is not ready yet",
-					{ ...common, relayStateKind, surface: "retry" },
+					{
+						...common,
+						relayStateKind,
+						/* Keep a known reason for the copy and diagnostics; the KIND
+						 *  decides the surface, because it is the computer saying
+						 *  "this clears by itself" (`WAITING_KINDS`). */
+						reason: isGatewayReason(reasonRaw) ? reasonRaw : undefined,
+						surface: "retry",
+						retry: "after-backoff",
+					},
 				);
 			}
 			/* Two very different machines answer 503 through the same status:
@@ -712,7 +775,22 @@ export function relayErrorFromResponse(
 			 * there and refusing). A JSON body with a `reason` is the gateway. */
 			if (reasonRaw !== undefined || detail !== undefined) {
 				const reason = isGatewayReason(reasonRaw) ? reasonRaw : undefined;
-				const policy = reason ? REASON_POLICY[reason] : undefined;
+				/* A known reason decides; otherwise the computer's own `kind` does,
+				 *  so an unknown reason with a known kind is not left to the generic
+				 *  fallback. Neither known: unchanged. */
+				const kindSurface = surfaceForRelayKind(relayStateKind);
+				const policy = reason
+					? REASON_POLICY[reason]
+					: kindSurface
+						? {
+								surface: kindSurface,
+								retry:
+									kindSurface === "retry"
+										? ("after-backoff" as const)
+										: ("never" as const),
+								retryAfterMs: undefined,
+							}
+						: undefined;
 				return new RelayError(
 					"gateway-refused",
 					detail ?? serverError ?? "Tunnel authorization unavailable",

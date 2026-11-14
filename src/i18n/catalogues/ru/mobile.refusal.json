@@ -28,5 +28,14 @@
 	"mobile.refusal.how_to.title": "Включение доступа с телефона",
 	"mobile.refusal.how_to.body": "На компьютере откройте Local Operator → Настройки → Доступ с телефона и выберите «Настроить доступ с телефона». Сначала вы увидите цену — до того, как что-либо будет включено.",
 	"mobile.refusal.terminal.toggle": "Пользуетесь терминалом?",
-	"mobile.refusal.terminal.label": "На том компьютере"
+	"mobile.refusal.terminal.label": "На том компьютере",
+	"mobile.refusal.wait_network.title": "{computer} сейчас не может связаться с Radient.",
+	"mobile.refusal.wait_network.body": "Он переподключится сам, как только сеть восстановится.",
+	"mobile.refusal.wait_reconnect.title": "{computer} переподключается.",
+	"mobile.refusal.wait_reconnect.body": "Обычно это занимает несколько секунд.",
+	"mobile.refusal.computer_sign_in.title": "Local Operator на {computer} просит снова войти в Radient.",
+	"mobile.refusal.computer_sign_in.body": "Откройте там Local Operator и войдите. Вход на этом телефоне не поможет.",
+	"mobile.refusal.computer_attention.title": "Local Operator на {computer} требует внимания.",
+	"mobile.refusal.computer_attention.body": "Откройте его там, чтобы завершить настройку доступа с телефона.",
+	"mobile.refusal.open_console.title": "Для доступа с телефона к {computer} нужно изменить настройку в консоли Radient."
 }

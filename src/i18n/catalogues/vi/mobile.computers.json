@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "Điện thoại này chưa lưu mật khẩu chuyển tiếp nào. Hãy nhập mật khẩu của máy tính này, kiểm tra, rồi lưu.",
 	"mobile.computers.own_tunnel.password_slot_this": "Mật khẩu chuyển tiếp đã lưu trên điện thoại này là của địa chỉ này. Hãy kiểm tra, rồi lưu.",
 	"mobile.computers.setup.open_settings": "Trên máy tính, mở Local Operator → Cài đặt → Truy cập từ điện thoại → Thiết lập truy cập từ điện thoại.",
-	"mobile.computers.setup.list_updates": "Quay lại đây khi xong — danh sách này sẽ tự cập nhật."
+	"mobile.computers.setup.list_updates": "Quay lại đây khi xong — danh sách này sẽ tự cập nhật.",
+	"mobile.computers.hint.radient_unreachable": "Hiện không kết nối được với Radient"
 }

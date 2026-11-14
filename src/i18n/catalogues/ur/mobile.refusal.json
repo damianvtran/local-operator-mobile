@@ -28,5 +28,14 @@
 	"mobile.refusal.how_to.title": "فون کی رسائی آن کریں",
 	"mobile.refusal.how_to.body": "اپنے کمپیوٹر پر Local Operator → ترتیبات → فون کی رسائی کھولیں اور فون کی رسائی ترتیب دیں منتخب کریں۔ کچھ بھی آن ہونے سے پہلے آپ کو قیمت دکھائی جائے گی۔",
 	"mobile.refusal.terminal.toggle": "ٹرمینل استعمال کرتے ہیں؟",
-	"mobile.refusal.terminal.label": "اس کمپیوٹر پر"
+	"mobile.refusal.terminal.label": "اس کمپیوٹر پر",
+	"mobile.refusal.wait_network.title": "{computer} اس وقت Radient تک نہیں پہنچ پا رہا۔",
+	"mobile.refusal.wait_network.body": "نیٹ ورک بحال ہوتے ہی یہ خود بخود دوبارہ جڑ جائے گا۔",
+	"mobile.refusal.wait_reconnect.title": "{computer} دوبارہ جڑ رہا ہے۔",
+	"mobile.refusal.wait_reconnect.body": "اس میں عموماً چند سیکنڈ لگتے ہیں۔",
+	"mobile.refusal.computer_sign_in.title": "{computer} پر Local Operator کے لیے آپ کو Radient میں دوبارہ سائن ان کرنا ہوگا۔",
+	"mobile.refusal.computer_sign_in.body": "وہاں Local Operator کھولیں اور سائن ان کریں۔ اس فون پر سائن ان کرنے سے یہ ٹھیک نہیں ہوگا۔",
+	"mobile.refusal.computer_attention.title": "{computer} پر Local Operator کو توجہ کی ضرورت ہے۔",
+	"mobile.refusal.computer_attention.body": "فون کی رسائی کا سیٹ اپ مکمل کرنے کے لیے اسے وہاں کھولیں۔",
+	"mobile.refusal.open_console.title": "{computer} کی فون کی رسائی کے لیے آپ کے Radient کنسول میں ایک تبدیلی ضروری ہے۔"
 }

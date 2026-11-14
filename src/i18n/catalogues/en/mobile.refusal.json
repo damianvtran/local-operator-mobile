@@ -28,5 +28,14 @@
 	"mobile.refusal.how_to.title": "Turn on phone access",
 	"mobile.refusal.how_to.body": "On your computer, open Local Operator → Settings → Phone access and choose Set up. You'll see the price first, before anything is turned on.",
 	"mobile.refusal.terminal.toggle": "Using a terminal?",
-	"mobile.refusal.terminal.label": "On that computer"
+	"mobile.refusal.terminal.label": "On that computer",
+	"mobile.refusal.wait_network.title": "{computer} can't reach Radient right now.",
+	"mobile.refusal.wait_network.body": "It reconnects by itself once its network is back.",
+	"mobile.refusal.wait_reconnect.title": "{computer} is reconnecting.",
+	"mobile.refusal.wait_reconnect.body": "This usually takes a few seconds.",
+	"mobile.refusal.computer_sign_in.title": "Local Operator on {computer} needs you to sign in to Radient again.",
+	"mobile.refusal.computer_sign_in.body": "Open Local Operator there and sign in. Signing in on this phone won't fix it.",
+	"mobile.refusal.computer_attention.title": "Local Operator on {computer} needs attention.",
+	"mobile.refusal.computer_attention.body": "Open it there to finish setting up phone access.",
+	"mobile.refusal.open_console.title": "Phone access for {computer} needs a change in your Radient console."
 }

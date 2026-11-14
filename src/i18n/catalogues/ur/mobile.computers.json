@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "اس فون پر ریلے کا کوئی پاس ورڈ محفوظ نہیں۔ اس کمپیوٹر کا پاس ورڈ درج کریں، اسے جانچیں، پھر محفوظ کریں۔",
 	"mobile.computers.own_tunnel.password_slot_this": "اس فون پر محفوظ ریلے کا پاس ورڈ اسی پتے کا ہے۔ اسے جانچیں، پھر محفوظ کریں۔",
 	"mobile.computers.setup.open_settings": "اپنے کمپیوٹر پر Local Operator کھولیں اور ترتیبات → فون کی رسائی → فون کی رسائی ترتیب دیں منتخب کریں۔",
-	"mobile.computers.setup.list_updates": "کام مکمل ہونے پر یہاں واپس آئیں — یہ فہرست خود بخود اپ ڈیٹ ہو جاتی ہے۔"
+	"mobile.computers.setup.list_updates": "کام مکمل ہونے پر یہاں واپس آئیں — یہ فہرست خود بخود اپ ڈیٹ ہو جاتی ہے۔",
+	"mobile.computers.hint.radient_unreachable": "اس وقت Radient تک رسائی نہیں ہو پا رہی"
 }

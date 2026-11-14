@@ -68,5 +68,9 @@
 	"mobile.settings.own_tunnel.runtime_body": "此版本没有安全密钥库，因此隧道仅在本次运行期间有效。在手机上，这些信息会保存在系统的安全存储中。",
 	"mobile.settings.own_tunnel.before_saving": "保存前先测试地址：从未响应过的隧道一旦保存，列表会一直为空，且无从得知原因。",
 	"mobile.settings.own_tunnel.remove_title": "移除此隧道？",
-	"mobile.settings.own_tunnel.remove_body": "此操作会清除此手机上的地址和密码，不会影响你的电脑、你运行的隧道或任何账户。"
+	"mobile.settings.own_tunnel.remove_body": "此操作会清除此手机上的地址和密码，不会影响你的电脑、你运行的隧道或任何账户。",
+	"mobile.settings.diagnostics.tunnel": "隧道 ID",
+	"mobile.settings.diagnostics.address": "隧道地址",
+	"mobile.settings.diagnostics.copy": "复制诊断信息",
+	"mobile.settings.diagnostics.copied": "已复制诊断信息"
 }

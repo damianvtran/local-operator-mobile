@@ -138,5 +138,6 @@
 	"mobile.computers.own_tunnel.password_slot_empty": "此手机尚未保存中继密码。输入这台电脑的密码，测试后再保存。",
 	"mobile.computers.own_tunnel.password_slot_this": "此手机已保存的中继密码对应此地址。测试后再保存。",
 	"mobile.computers.setup.open_settings": "在你的电脑上，打开 Local Operator → 设置 → 手机访问 → 设置手机访问。",
-	"mobile.computers.setup.list_updates": "完成后回到这里——此列表会自动更新。"
+	"mobile.computers.setup.list_updates": "完成后回到这里——此列表会自动更新。",
+	"mobile.computers.hint.radient_unreachable": "目前无法连接 Radient"
 }

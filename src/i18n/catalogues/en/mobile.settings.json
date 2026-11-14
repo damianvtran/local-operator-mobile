@@ -68,5 +68,9 @@
 	"mobile.settings.own_tunnel.runtime_body": "This build has no secure keystore, so the tunnel lasts for this run only. On a phone the value is kept in the platform's secure store.",
 	"mobile.settings.own_tunnel.before_saving": "Test the address before saving it: a saved tunnel that has never answered leaves the list empty with nothing to explain why.",
 	"mobile.settings.own_tunnel.remove_title": "Remove this tunnel?",
-	"mobile.settings.own_tunnel.remove_body": "This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account."
+	"mobile.settings.own_tunnel.remove_body": "This forgets the address and the password on this phone. It does not touch your computer, the tunnel you run, or any account.",
+	"mobile.settings.diagnostics.tunnel": "Tunnel id",
+	"mobile.settings.diagnostics.address": "Tunnel address",
+	"mobile.settings.diagnostics.copy": "Copy diagnostics",
+	"mobile.settings.diagnostics.copied": "Diagnostics copied"
 }

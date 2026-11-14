@@ -17,6 +17,7 @@ import {
 	rowHint,
 	type SwitcherDeps,
 	type SwitcherInput,
+	type SwitcherRow,
 	stableSections,
 	switcherHealth,
 	switcherSections,
@@ -805,5 +806,38 @@ describe("in-use refusal is not an online probe", () => {
 			.onPhone[0];
 		if (!row) throw new Error("missing row");
 		expect(switcherTap(row, null)).toEqual({ kind: "settings" });
+	});
+});
+
+describe("a Radient or network failure is named as such, not as a sleeping computer (M1)", () => {
+	/* Only the fields `rowHint` reads: a refused ACTIVE row on each transport. */
+	const refused = (transport: "radient" | "custom"): SwitcherRow =>
+		({
+			connecting: false,
+			hidden: false,
+			health: { kind: "refused", surface: "retry" },
+			transport:
+				transport === "radient"
+					? { kind: "radient", tunnelId: "t1", hostname: HOST_A }
+					: {
+							kind: "custom",
+							baseUrl: "https://relay.example.com",
+							allowInsecure: false,
+						},
+		}) as unknown as SwitcherRow;
+
+	it("says Can't reach Radient under a Radient row whose route hit `retry`", () => {
+		expect(rowHint(refused("radient"), "on-phone")).toBe(
+			"Can't reach Radient right now",
+		);
+		expect(healthLabel({ kind: "refused", surface: "retry" }, 0)).toBe(
+			"Not connected",
+		);
+	});
+
+	it("keeps the Settings hint for a custom route, which has no Radient in it", () => {
+		expect(rowHint(refused("custom"), "on-phone")).toBe(
+			"Open Settings to fix the connection",
+		);
 	});
 });

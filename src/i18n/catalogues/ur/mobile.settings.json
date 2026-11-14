@@ -68,5 +68,9 @@
 	"mobile.settings.own_tunnel.runtime_body": "اس بلڈ میں کوئی محفوظ اسٹوریج نہیں، اس لیے ٹنل صرف ایپ کے اس بار چلنے تک رکھی جاتی ہے۔ فون پر یہ معلومات پلیٹ فارم کے محفوظ اسٹوریج میں رکھی جاتی ہیں۔",
 	"mobile.settings.own_tunnel.before_saving": "محفوظ کرنے سے پہلے پتہ جانچ لیں: اگر محفوظ کی گئی ٹنل نے کبھی جواب نہ دیا ہو تو فہرست خالی رہتی ہے، بغیر کسی وضاحت کے۔",
 	"mobile.settings.own_tunnel.remove_title": "یہ ٹنل ہٹائیں؟",
-	"mobile.settings.own_tunnel.remove_body": "یہ اس فون سے پتہ اور پاس ورڈ ہٹا دیتا ہے۔ آپ کے کمپیوٹر، آپ کی چلائی ہوئی ٹنل یا کسی اکاؤنٹ پر اس کا کوئی اثر نہیں پڑتا۔"
+	"mobile.settings.own_tunnel.remove_body": "یہ اس فون سے پتہ اور پاس ورڈ ہٹا دیتا ہے۔ آپ کے کمپیوٹر، آپ کی چلائی ہوئی ٹنل یا کسی اکاؤنٹ پر اس کا کوئی اثر نہیں پڑتا۔",
+	"mobile.settings.diagnostics.tunnel": "ٹنل آئی ڈی",
+	"mobile.settings.diagnostics.address": "ٹنل کا پتہ",
+	"mobile.settings.diagnostics.copy": "تشخیص کاپی کریں",
+	"mobile.settings.diagnostics.copied": "تشخیص کاپی ہو گئی"
 }

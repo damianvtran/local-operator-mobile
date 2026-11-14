@@ -558,5 +558,9 @@
 	"mobile.computers.setup.list_updates": {
 		"role": "help",
 		"note": "Follows the set-up instruction. The computer list on this phone is refreshed when the reader returns to this screen or to the app."
+	},
+	"mobile.computers.hint.radient_unreachable": {
+		"role": "help",
+		"note": "Hint under a computer row in the switcher when the phone could not reach Radient (Radient's error, the phone's network, or rate limiting). It must not suggest the computer is asleep."
 	}
 }

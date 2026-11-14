@@ -61,6 +61,17 @@ describe("Settings shows a refused switch where the reader is (Q6/U11)", () => {
 		expect(block?.[1]).toContain("onUseAnotherAddress=");
 	});
 
+	it("shows the active tunnel and offers Copy diagnostics (M1)", () => {
+		expect(SETTINGS).toContain(
+			'label={t("mobile.settings.diagnostics.tunnel")}',
+		);
+		expect(SETTINGS).toContain("value={route.tunnelId}");
+		expect(SETTINGS).toContain("value={route.hostname}");
+		expect(SETTINGS).toContain("testID={CONTROL.settingsCopyDiagnostics}");
+		/* The clipboard gets the redacting builder's output, never raw fields. */
+		expect(SETTINGS).toMatch(/Clipboard\.setStringAsync\(\s*diagnosticsText\(/);
+	});
+
 	it("sits above the fold: under Status, before the computer list and Switch computer", () => {
 		const at = (needle: string) => SETTINGS.indexOf(needle);
 		const surface = at("<RefusalSurface");

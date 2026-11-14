@@ -118,5 +118,41 @@
 	"mobile.refusal.terminal.label": {
 		"role": "meta",
 		"note": "Small upper-case label above a copyable terminal command shown inside the \"Using a terminal?\" disclosure. The command itself is never translated."
+	},
+	"mobile.refusal.wait_network.title": {
+		"role": "heading",
+		"note": "Headline when the computer itself cannot reach Radient (its internet connection may be down). {computer} is the computer's name or \"Your computer\". It clears by itself."
+	},
+	"mobile.refusal.wait_network.body": {
+		"role": "help",
+		"note": "Follows the headline that the computer cannot reach Radient. Nothing to do on the phone: it reconnects by itself when the computer's network is back."
+	},
+	"mobile.refusal.wait_reconnect.title": {
+		"role": "heading",
+		"note": "Headline while the computer is re-establishing its connection to Radient. {computer} is the computer's name or \"Your computer\"."
+	},
+	"mobile.refusal.wait_reconnect.body": {
+		"role": "help",
+		"note": "Follows the reconnecting headline. A short, honest expectation; no action needed."
+	},
+	"mobile.refusal.computer_sign_in.title": {
+		"role": "heading",
+		"note": "Headline when the COMPUTER's own Radient sign-in has expired (not this phone's). {computer} is the computer's name or \"Your computer\". \"Local Operator\" and \"Radient\" are product names."
+	},
+	"mobile.refusal.computer_sign_in.body": {
+		"role": "help",
+		"note": "Follows the computer-sign-in headline. The fix is on the computer; it must say plainly that signing in on this phone will not fix it."
+	},
+	"mobile.refusal.computer_attention.title": {
+		"role": "heading",
+		"note": "Headline when Local Operator on the computer must finish a repair or set-up step itself (for example its tunnel login moved). {computer} is the computer's name or \"Your computer\"."
+	},
+	"mobile.refusal.computer_attention.body": {
+		"role": "help",
+		"note": "Follows the needs-attention headline. Opening the desktop app there finishes the step; uses the desktop's name \"Phone access\" for the feature."
+	},
+	"mobile.refusal.open_console.title": {
+		"role": "heading",
+		"note": "Headline when phone access for the computer needs a setting changed in the Radient web console. {computer} is the computer's name or \"Your computer\"."
 	}
 }

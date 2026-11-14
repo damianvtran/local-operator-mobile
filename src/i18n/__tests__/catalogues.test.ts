@@ -149,7 +149,7 @@ const NAMESPACES = [
 		 * "Couldn't connect" with its generic and wrong-password bodies, the
 		 * secure-storage refusal, "Connected, but not saved" with its body with and
 		 * without a code, and Continue). */
-		expected: 140, // M1 no-terminal +2: set-up's Settings → Phone access line and its "list updates by itself" line (138 + 2 = 140); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
+		expected: 141, // M1 scope additions +1: the switcher's "Can't reach Radient right now" hint (140 + 1 = 141); M1 no-terminal +2: set-up's Settings → Phone access line and its "list updates by itself" line (138 + 2 = 140); M3 S2b-1 +27: own-tunnel command labels/notes and tunnel rule (11), verdict sentences (12), offline remedy (1), password-slot explanations (3) (111 + 27 = 138); M3 S2a +36: Computers titles (2), discovery banners (4), "Your own tunnel" screen (30) (75 + 36 = 111); M3 S1 +30 (17 + 13 sweep: status/reach badges, row a11y, billing, Try now, Remove; 45 + 30 = 75); +17: computers list/remove/paths/wait lines (45 + 17 = 62); earlier: +6: the add-a-computer wait panel's keyed lines (app/ scan); +4: the wait panel's remaining expression literals (host/answering lines, fallback name, connected-to line)
 	},
 	{
 		name: "mobile.refusal",
@@ -158,7 +158,7 @@ const NAMESPACES = [
 		/* M1 no-terminal: the refusal surface's named causes (11 titles, 9 bodies),
 		 *  their six actions, the "How to turn it on" sheet (2) and the "Using a
 		 *  terminal?" disclosure with its block label (2). */
-		expected: 30,
+		expected: 39, // M1 scope additions +9: core C1 kinds (wait_network and wait_reconnect title/body, the computer's sign-in and attention title/body, open_console title) (30 + 9 = 39)
 	},
 	{
 		name: "mobile.notifications",
@@ -224,7 +224,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 70, // M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+		expected: 74, // M1 scope additions +4: Diagnostics tunnel id, tunnel address, Copy diagnostics and its copied state (70 + 4 = 74); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -346,7 +346,9 @@ describe("the English catalogues", () => {
 		/* M1 no-terminal: +2 mobile.computers (set-up's two lines) + 30
 		 * mobile.refusal (new namespace) = 32: 812 + 32 = 844, counted over the
 		 * en JSON. */
-		expect(total).toBe(844);
+		/* M1 scope additions: +9 mobile.refusal, +1 mobile.computers, +4
+		 * mobile.settings = 14: 844 + 14 = 858. */
+		expect(total).toBe(858);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

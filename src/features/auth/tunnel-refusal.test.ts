@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { TunnelSessionError } from "@/connection/tunnel-session";
 import { RelayError, relayErrorFromResponse } from "@/relay";
 import {
 	type RefusalComputer,
 	type RefusalView,
+	radientUnauthorizedSurface,
 	refusalFromError,
 	tunnelSessionRelayError,
 } from "./refusal";
@@ -241,5 +244,123 @@ describe("relay surfaces: plain copy first, the command only behind the disclosu
 		const unsplit = fromSurface(refused, row({}));
 		expect(unsplit?.copy).toBeNull();
 		expect(unsplit?.remedy).toBe("lop login radient");
+	});
+});
+
+describe("core C1 reasons and kinds get their own plain copy (M1 additions)", () => {
+	const gateway = (
+		body: Record<string, string>,
+		computer: RefusalComputer | null = null,
+	) => {
+		const error = relayErrorFromResponse({
+			status: 503,
+			header: () => "application/json",
+			text: JSON.stringify(body),
+		});
+		return refusalFromError({
+			error,
+			surface: error.surface,
+			detail: error.detail ?? null,
+			retryAfterMs: null,
+			subject: "Studio Mac",
+			computer,
+		});
+	};
+
+	it.each([
+		["server_unavailable", "radient-unreachable"],
+		["tunnel_inactive", "suspended"],
+		["tunnel_disabled", "console-disabled"],
+		["billing_inactive", "phone-access-off"],
+		["billing_lapsed", "balance-out"],
+	] as const)("reason %s → %s", (reason, cause) => {
+		const refusal = gateway({ detail: "d", reason, error: "e" });
+		expect(refusal?.copy?.cause).toBe(cause);
+		expect(visible(refusal)).not.toMatch(/\blop\b/);
+	});
+
+	it("lets the computer's own reason win over the phone's reading of the row", () => {
+		const refusal = gateway(
+			{ detail: "d", reason: "billing_lapsed" },
+			row({ active: false }),
+		);
+		expect(refusal?.copy?.cause).toBe("balance-out");
+	});
+
+	it.each([
+		["wait_network", "wait-network", ["retry"]],
+		["wait_radient", "radient-unreachable", ["retry"]],
+		["wait_reconnect", "wait-reconnect", ["retry"]],
+		["check_status", "relay-wait", ["retry"]],
+		["sign_in", "computer-sign-in", ["retry"]],
+		["run", "computer-attention", ["retry"]],
+		["restore_owner", "computer-attention", ["retry"]],
+		["accept_quote", "phone-access-off", ["how-to", "open-billing"]],
+		["add_credit", "balance-out", ["add-credit", "retry"]],
+		["open_console", "open-console", ["open-console", "retry"]],
+	] as const)("kind %s → %s", (kind, cause, actions) => {
+		const refusal = gateway({ detail: "d", reason: "a_future_reason", kind });
+		expect(refusal?.copy?.cause).toBe(cause);
+		expect(refusal?.copy?.actions.map((item) => item.id)).toEqual(actions);
+		expect(visible(refusal)).not.toMatch(/\blop\b/);
+	});
+
+	it("the computer's sign-in never offers a phone sign-in, and its terminal remedy is the login", () => {
+		const refusal = gateway({
+			detail: "d",
+			reason: "login_required",
+			kind: "sign_in",
+		});
+		expect(refusal?.kind).toBe("console");
+		expect(refusal?.copy?.body).toContain("won't fix it");
+		expect(refusal?.remedy).toBe("lop login radient");
+	});
+
+	it("an unknown reason and kind fall back without crashing", () => {
+		const refusal = gateway({
+			detail: "d",
+			reason: "later",
+			kind: "later_kind",
+		});
+		expect(refusal?.kind).toBe("retry");
+		expect(refusal?.copy).toBeNull();
+	});
+});
+
+describe("a Radient-route 401 without X-Radient-Login is the relay, not a sign-in (M1)", () => {
+	const facts = (headers: Record<string, string>) => ({
+		header: (name: string) => headers[name.toLowerCase()] ?? null,
+	});
+	it("maps the edge's 401 (with the header) to sign-in, and any other to password", () => {
+		expect(radientUnauthorizedSurface(facts({ "x-radient-login": "1" }))).toBe(
+			"sign-in",
+		);
+		expect(radientUnauthorizedSurface(facts({}))).toBe("password");
+	});
+	it("is what the Radient route's response hook uses, revoking only for sign-in", () => {
+		const provider = readFileSync(
+			fileURLToPath(new URL("./connection-provider.tsx", import.meta.url)),
+			"utf8",
+		);
+		expect(provider).toContain(
+			'const surface = radientUnauthorizedSurface(facts);\n\t\t\t\t\t\t\tif (surface === "sign-in") void revokeAuthorization();',
+		);
+	});
+});
+
+describe("Diagnostics' Last error is never None while the stream retries (M1)", () => {
+	it("records the error in the retry branch without raising a refusal", () => {
+		const provider = readFileSync(
+			fileURLToPath(new URL("./connection-provider.tsx", import.meta.url)),
+			"utf8",
+		);
+		const degraded = provider.indexOf('setStreamHealth("degraded");');
+		const next = provider.indexOf("_attempt += 1;", degraded);
+		expect(degraded).toBeGreaterThan(-1);
+		const branch = provider.slice(degraded, next);
+		expect(branch).toContain("setLastError(error)");
+		/* No noteError/noteFailure here: those move the phase to refused. */
+		expect(branch).not.toContain("noteError(");
+		expect(branch).not.toContain("noteFailure(");
 	});
 });
