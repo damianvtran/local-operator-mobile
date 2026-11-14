@@ -1688,6 +1688,15 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
+	 * view state, customised trigger fill): re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
 	/* fix/settings-signin-status-badge: the signed-out account card as a
 	 * Radient sign-in nav card, the connection pill's one-line fit in the
 	 * Settings Status row and the drawer header (`status-pill-layout.ts`), and
@@ -1701,7 +1710,9 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * `lastError` beside a live stream; the dot leaves the identifier rule; four
 	 * mobile.settings keys (817). Re-derived with --print over the staged tree;
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
-	src: "a5dc045ac590dad5b06f3ae025384b8c2883a460aa983488b2a199a1cc2434c2",
+	/* Merge of origin/main (#255, f8d0d8dd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "00cedf60eb194f3f61c67e1beb56105fa7a762895f951f4a18a9e11c02f7f659",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

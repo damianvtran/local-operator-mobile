@@ -606,6 +606,31 @@ export type CatalogueKey =
 	| "mobile.settings.theme.section_dark"
 	| "mobile.settings.theme.section_light"
 	| "mobile.settings.theme.title"
+	| "mobile.sidebar.basis.created"
+	| "mobile.sidebar.basis.last_active"
+	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty_by_view.headline"
+	| "mobile.sidebar.empty_by_view.next"
+	| "mobile.sidebar.empty_by_view.reset"
+	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.time_section"
+	| "mobile.sidebar.group_by"
+	| "mobile.sidebar.hidden_sections"
+	| "mobile.sidebar.more_settings"
+	| "mobile.sidebar.order.active_first"
+	| "mobile.sidebar.order.most_recent"
+	| "mobile.sidebar.order_by"
+	| "mobile.sidebar.section.older"
+	| "mobile.sidebar.section.pinned"
+	| "mobile.sidebar.section.running"
+	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.week"
+	| "mobile.sidebar.sections"
+	| "mobile.sidebar.settings_heading"
+	| "mobile.sidebar.show_ended"
+	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.time_basis"
+	| "mobile.sidebar.view_options"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
@@ -1338,6 +1363,30 @@ export type NoParamKey =
 	| "mobile.settings.theme.search_label"
 	| "mobile.settings.theme.search_placeholder"
 	| "mobile.settings.theme.title"
+	| "mobile.sidebar.basis.created"
+	| "mobile.sidebar.basis.last_active"
+	| "mobile.sidebar.clock_hint"
+	| "mobile.sidebar.empty_by_view.headline"
+	| "mobile.sidebar.empty_by_view.next"
+	| "mobile.sidebar.empty_by_view.reset"
+	| "mobile.sidebar.group.one_list"
+	| "mobile.sidebar.group.time_section"
+	| "mobile.sidebar.group_by"
+	| "mobile.sidebar.more_settings"
+	| "mobile.sidebar.order.active_first"
+	| "mobile.sidebar.order.most_recent"
+	| "mobile.sidebar.order_by"
+	| "mobile.sidebar.section.older"
+	| "mobile.sidebar.section.pinned"
+	| "mobile.sidebar.section.running"
+	| "mobile.sidebar.section.today"
+	| "mobile.sidebar.section.week"
+	| "mobile.sidebar.sections"
+	| "mobile.sidebar.settings_heading"
+	| "mobile.sidebar.show_ended"
+	| "mobile.sidebar.show_ended_hint"
+	| "mobile.sidebar.time_basis"
+	| "mobile.sidebar.view_options"
 	| "mobile.signin.diagnostics"
 	| "mobile.signin.failed"
 	| "mobile.signin.hide_diagnostics"
@@ -2126,6 +2175,31 @@ export type MessageParams = {
 	"mobile.settings.theme.section_dark": { count: string | number };
 	"mobile.settings.theme.section_light": { count: string | number };
 	"mobile.settings.theme.title": NoParams;
+	"mobile.sidebar.basis.created": NoParams;
+	"mobile.sidebar.basis.last_active": NoParams;
+	"mobile.sidebar.clock_hint": NoParams;
+	"mobile.sidebar.empty_by_view.headline": NoParams;
+	"mobile.sidebar.empty_by_view.next": NoParams;
+	"mobile.sidebar.empty_by_view.reset": NoParams;
+	"mobile.sidebar.group.one_list": NoParams;
+	"mobile.sidebar.group.time_section": NoParams;
+	"mobile.sidebar.group_by": NoParams;
+	"mobile.sidebar.hidden_sections": { count: number };
+	"mobile.sidebar.more_settings": NoParams;
+	"mobile.sidebar.order.active_first": NoParams;
+	"mobile.sidebar.order.most_recent": NoParams;
+	"mobile.sidebar.order_by": NoParams;
+	"mobile.sidebar.section.older": NoParams;
+	"mobile.sidebar.section.pinned": NoParams;
+	"mobile.sidebar.section.running": NoParams;
+	"mobile.sidebar.section.today": NoParams;
+	"mobile.sidebar.section.week": NoParams;
+	"mobile.sidebar.sections": NoParams;
+	"mobile.sidebar.settings_heading": NoParams;
+	"mobile.sidebar.show_ended": NoParams;
+	"mobile.sidebar.show_ended_hint": NoParams;
+	"mobile.sidebar.time_basis": NoParams;
+	"mobile.sidebar.view_options": NoParams;
 	"mobile.signin.diagnostics": NoParams;
 	"mobile.signin.failed": NoParams;
 	"mobile.signin.hide_diagnostics": NoParams;
@@ -2962,6 +3036,31 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.settings.theme.section_dark": "Dark ({count})",
 	"mobile.settings.theme.section_light": "Light ({count})",
 	"mobile.settings.theme.title": "Theme",
+	"mobile.sidebar.basis.created": "Created",
+	"mobile.sidebar.basis.last_active": "Last active",
+	"mobile.sidebar.clock_hint": "Dates and ordering follow the selected clock.",
+	"mobile.sidebar.empty_by_view.headline": "Your view options hide every conversation.",
+	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
+	"mobile.sidebar.empty_by_view.reset": "Reset view",
+	"mobile.sidebar.group.one_list": "In one list",
+	"mobile.sidebar.group.time_section": "Time section",
+	"mobile.sidebar.group_by": "Group by",
+	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
+	"mobile.sidebar.more_settings": "More sidebar settings",
+	"mobile.sidebar.order.active_first": "Active first",
+	"mobile.sidebar.order.most_recent": "Most recent",
+	"mobile.sidebar.order_by": "Order by",
+	"mobile.sidebar.section.older": "Older",
+	"mobile.sidebar.section.pinned": "Pinned",
+	"mobile.sidebar.section.running": "Running",
+	"mobile.sidebar.section.today": "Today",
+	"mobile.sidebar.section.week": "This week",
+	"mobile.sidebar.sections": "Sections",
+	"mobile.sidebar.settings_heading": "Sidebar",
+	"mobile.sidebar.show_ended": "Show ended sessions",
+	"mobile.sidebar.show_ended_hint": "Pinned and running conversations always show.",
+	"mobile.sidebar.time_basis": "Time basis",
+	"mobile.sidebar.view_options": "View options",
 	"mobile.signin.diagnostics": "Sign-in diagnostics",
 	"mobile.signin.failed": "We could not finish signing in.",
 	"mobile.signin.hide_diagnostics": "Hide sign-in details",
@@ -3783,6 +3882,31 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.settings.theme.section_dark": { role: "heading", note: "Section heading over the grid of dark themes. {count} is how many dark themes the section currently lists (after search). Rendered in uppercase in some scripts. No final full stop." },
 	"mobile.settings.theme.section_light": { role: "heading", note: "Section heading over the grid of light themes. {count} is how many light themes the section currently lists (after search). No final full stop." },
 	"mobile.settings.theme.title": { role: "heading", note: "Title of the Theme screen and the label of the Settings row that opens it. \"Theme\" means a colour scheme for the whole app. No final full stop." },
+	"mobile.sidebar.basis.created": { role: "button", note: "Clock option: when the conversation was started. Desktop: ui.chat.sidebar_view.created." },
+	"mobile.sidebar.basis.last_active": { role: "button", note: "Clock option: when the conversation last had activity. Desktop: ui.chat.sidebar_view.last_active." },
+	"mobile.sidebar.clock_hint": { role: "help", note: "One sentence under the clock choice explaining that it changes both the dates shown and the order. Desktop: ui.chat.sidebar_view.clock_hint." },
+	"mobile.sidebar.empty_by_view.headline": { role: "heading", note: "Empty-state headline in the drawer when conversations exist but the reader's view options (hidden sections, Show ended sessions off) hide every one of them. Not 'no conversations'." },
+	"mobile.sidebar.empty_by_view.next": { role: "help", note: "Second line of that empty state: names the ways back. 'Sections' are Pinned/Running/Today/This week/Older; 'ended sessions' is the Show ended sessions switch." },
+	"mobile.sidebar.empty_by_view.reset": { role: "button", note: "Action of that empty state: restores the default drawer view (every section shown, ended sessions shown, default order and grouping)." },
+	"mobile.sidebar.group.one_list": { role: "button", note: "Grouping option: one list with no section headings. Desktop: ui.chat.sidebar_view.one_list." },
+	"mobile.sidebar.group.time_section": { role: "button", note: "Grouping option: headed sections Pinned, Running, Today, This week, Older. Desktop: ui.chat.sidebar_view.time_section." },
+	"mobile.sidebar.group_by": { role: "heading", note: "Label of the choice of how the drawer groups conversations. Desktop: ui.chat.sidebar_view.group_by." },
+	"mobile.sidebar.hidden_sections": { role: "status", note: "Quiet line at the top of the drawer's list when the reader has switched sections off in Settings → Sidebar; {count} is a number. Preserve ICU plural arms and #. Desktop: ui.chat.sidebar_view.hidden." },
+	"mobile.sidebar.more_settings": { role: "button", note: "Link at the foot of the drawer's View options sheet that opens the full Sidebar section in Settings." },
+	"mobile.sidebar.order.active_first": { role: "button", note: "Order option: conversations with a turn running, or waiting on the reader, are lifted to the top; the rest follow newest first. Desktop: ui.chat.sidebar_view.active_first." },
+	"mobile.sidebar.order.most_recent": { role: "button", note: "Order option: one newest-first order over every conversation, nothing lifted. Desktop: ui.chat.sidebar_view.most_recent." },
+	"mobile.sidebar.order_by": { role: "heading", note: "Label of the choice of how conversations are ordered in the drawer. Desktop: ui.chat.sidebar_view.order_by." },
+	"mobile.sidebar.section.older": { role: "heading", note: "Drawer section heading for everything older than this week. Desktop: ui.chat.sidebar_view.section.older." },
+	"mobile.sidebar.section.pinned": { role: "heading", note: "Drawer section heading for conversations the reader pinned; also the switch label that shows or hides it. Desktop: ui.chat.sidebar_view.section.pinned." },
+	"mobile.sidebar.section.running": { role: "heading", note: "Drawer section heading for conversations with a turn in flight or waiting on the reader. Desktop: ui.chat.sidebar_view.section.running." },
+	"mobile.sidebar.section.today": { role: "heading", note: "Drawer section heading for conversations from this local calendar day. Desktop: ui.chat.sidebar_view.section.today." },
+	"mobile.sidebar.section.week": { role: "heading", note: "Drawer section heading for conversations from the last six calendar days, not today. Desktop: ui.chat.sidebar_view.section.week." },
+	"mobile.sidebar.sections": { role: "heading", note: "Label of the list of switches that show or hide each drawer section. Desktop: ui.chat.sidebar_view.sections." },
+	"mobile.sidebar.settings_heading": { role: "heading", note: "Heading of the Settings section holding every drawer (sidebar) view option." },
+	"mobile.sidebar.show_ended": { role: "button", note: "Switch label: whether conversations whose session has ended stay in the drawer. Phone-only setting; on by default." },
+	"mobile.sidebar.show_ended_hint": { role: "help", note: "One sentence under the 'Show ended sessions' switch: turning it off never hides a pinned or running conversation." },
+	"mobile.sidebar.time_basis": { role: "heading", note: "Label of the choice of which clock the sections, the row times and the order read. Desktop: ui.chat.sidebar_view.time_basis." },
+	"mobile.sidebar.view_options": { role: "button", note: "Accessible name of the small sliders icon beside the drawer's search pill, and the title of the compact sheet it opens. Mirrors the desktop's 'View options' (ui.chat.sidebar.header.view_options)." },
 	"mobile.signin.diagnostics": { role: "button", note: "Reveal a redacted in-memory log containing stage names and error classes only." },
 	"mobile.signin.failed": { role: "status", note: "Unexpected sign-in or credential persistence failure; never show runtime messages or credentials." },
 	"mobile.signin.hide_diagnostics": { role: "button", note: "Sign-in support disclosure. Human-readable stage or show/hide control; no credential, URL, token, code or state value." },
@@ -4618,6 +4742,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Oscuros ({count})",
 		"mobile.settings.theme.section_light": "Claros ({count})",
 		"mobile.settings.theme.title": "Tema",
+		"mobile.sidebar.basis.created": "Fecha de creación",
+		"mobile.sidebar.basis.last_active": "Última actividad",
+		"mobile.sidebar.clock_hint": "Las fechas y el orden siguen el reloj seleccionado.",
+		"mobile.sidebar.empty_by_view.headline": "Tus opciones de vista ocultan todas las conversaciones.",
+		"mobile.sidebar.empty_by_view.next": "Vuelve a activar secciones o sesiones finalizadas, o restablece la vista.",
+		"mobile.sidebar.empty_by_view.reset": "Restablecer vista",
+		"mobile.sidebar.group.one_list": "En una lista",
+		"mobile.sidebar.group.time_section": "Sección temporal",
+		"mobile.sidebar.group_by": "Agrupar por",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# sección oculta} many {# de secciones ocultas} other {# secciones ocultas}}",
+		"mobile.sidebar.more_settings": "Más ajustes de la barra lateral",
+		"mobile.sidebar.order.active_first": "Activos primero",
+		"mobile.sidebar.order.most_recent": "Más recientes",
+		"mobile.sidebar.order_by": "Ordenar por",
+		"mobile.sidebar.section.older": "Anteriores",
+		"mobile.sidebar.section.pinned": "Fijadas",
+		"mobile.sidebar.section.running": "En curso",
+		"mobile.sidebar.section.today": "Hoy",
+		"mobile.sidebar.section.week": "Esta semana",
+		"mobile.sidebar.sections": "Secciones",
+		"mobile.sidebar.settings_heading": "Barra lateral",
+		"mobile.sidebar.show_ended": "Mostrar sesiones finalizadas",
+		"mobile.sidebar.show_ended_hint": "Las conversaciones fijadas y en curso siempre se muestran.",
+		"mobile.sidebar.time_basis": "Base temporal",
+		"mobile.sidebar.view_options": "Opciones de vista",
 		"mobile.signin.diagnostics": "Diagnóstico de inicio de sesión",
 		"mobile.signin.failed": "No pudimos iniciar sesión.",
 		"mobile.signin.hide_diagnostics": "Ocultar detalles del inicio de sesión",
@@ -5437,6 +5586,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Sombres ({count})",
 		"mobile.settings.theme.section_light": "Clairs ({count})",
 		"mobile.settings.theme.title": "Thème",
+		"mobile.sidebar.basis.created": "Créée le",
+		"mobile.sidebar.basis.last_active": "Dernière activité",
+		"mobile.sidebar.clock_hint": "Les dates et l’ordre suivent l’horloge sélectionnée.",
+		"mobile.sidebar.empty_by_view.headline": "Vos options d’affichage masquent toutes les conversations.",
+		"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
+		"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage",
+		"mobile.sidebar.group.one_list": "Une seule liste",
+		"mobile.sidebar.group.time_section": "Section temporelle",
+		"mobile.sidebar.group_by": "Grouper par",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
+		"mobile.sidebar.more_settings": "Plus de paramètres de la barre latérale",
+		"mobile.sidebar.order.active_first": "Actives d’abord",
+		"mobile.sidebar.order.most_recent": "Plus récentes",
+		"mobile.sidebar.order_by": "Trier par",
+		"mobile.sidebar.section.older": "Plus anciennes",
+		"mobile.sidebar.section.pinned": "Épinglées",
+		"mobile.sidebar.section.running": "En cours",
+		"mobile.sidebar.section.today": "Aujourd’hui",
+		"mobile.sidebar.section.week": "Cette semaine",
+		"mobile.sidebar.sections": "Sections",
+		"mobile.sidebar.settings_heading": "Barre latérale",
+		"mobile.sidebar.show_ended": "Afficher les sessions terminées",
+		"mobile.sidebar.show_ended_hint": "Les conversations épinglées et en cours restent toujours visibles.",
+		"mobile.sidebar.time_basis": "Base temporelle",
+		"mobile.sidebar.view_options": "Options d’affichage",
 		"mobile.signin.diagnostics": "Diagnostic de connexion",
 		"mobile.signin.failed": "Nous n’avons pas pu terminer la connexion.",
 		"mobile.signin.hide_diagnostics": "Masquer les détails de connexion",
@@ -6256,6 +6430,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "गहरी ({count})",
 		"mobile.settings.theme.section_light": "हल्की ({count})",
 		"mobile.settings.theme.title": "थीम",
+		"mobile.sidebar.basis.created": "बनने का समय",
+		"mobile.sidebar.basis.last_active": "आख़िरी गतिविधि",
+		"mobile.sidebar.clock_hint": "तारीख़ें और क्रम चुनी गई घड़ी के अनुसार हैं।",
+		"mobile.sidebar.empty_by_view.headline": "आपके दृश्य विकल्प सभी बातचीत छिपा रहे हैं।",
+		"mobile.sidebar.empty_by_view.next": "खंड या समाप्त सत्र फिर से चालू करें, या दृश्य रीसेट करें।",
+		"mobile.sidebar.empty_by_view.reset": "दृश्य रीसेट करें",
+		"mobile.sidebar.group.one_list": "एक सूची में",
+		"mobile.sidebar.group.time_section": "समय के खंड",
+		"mobile.sidebar.group_by": "समूह बनाएँ",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# खंड छिपा है} other {# खंड छिपे हैं}}",
+		"mobile.sidebar.more_settings": "साइडबार की और सेटिंग्स",
+		"mobile.sidebar.order.active_first": "सक्रिय पहले",
+		"mobile.sidebar.order.most_recent": "सबसे हाल के",
+		"mobile.sidebar.order_by": "क्रम चुनें",
+		"mobile.sidebar.section.older": "पुराने",
+		"mobile.sidebar.section.pinned": "पिन किए हुए",
+		"mobile.sidebar.section.running": "चल रहे",
+		"mobile.sidebar.section.today": "आज",
+		"mobile.sidebar.section.week": "इस हफ़्ते",
+		"mobile.sidebar.sections": "खंड",
+		"mobile.sidebar.settings_heading": "साइडबार",
+		"mobile.sidebar.show_ended": "समाप्त सत्र दिखाएँ",
+		"mobile.sidebar.show_ended_hint": "पिन की हुई और चल रही बातचीत हमेशा दिखती हैं।",
+		"mobile.sidebar.time_basis": "समय का आधार",
+		"mobile.sidebar.view_options": "दृश्य विकल्प",
 		"mobile.signin.diagnostics": "साइन-इन निदान",
 		"mobile.signin.failed": "हम साइन-इन पूरा नहीं कर सके।",
 		"mobile.signin.hide_diagnostics": "साइन-इन का विवरण छिपाएँ",
@@ -7075,6 +7274,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Тёмные ({count})",
 		"mobile.settings.theme.section_light": "Светлые ({count})",
 		"mobile.settings.theme.title": "Тема",
+		"mobile.sidebar.basis.created": "Создано",
+		"mobile.sidebar.basis.last_active": "Последняя активность",
+		"mobile.sidebar.clock_hint": "Даты и порядок зависят от выбранного отсчёта времени.",
+		"mobile.sidebar.empty_by_view.headline": "Параметры вида скрывают все беседы.",
+		"mobile.sidebar.empty_by_view.next": "Снова включите разделы или завершённые сеансы либо сбросьте вид.",
+		"mobile.sidebar.empty_by_view.reset": "Сбросить вид",
+		"mobile.sidebar.group.one_list": "Одним списком",
+		"mobile.sidebar.group.time_section": "По времени",
+		"mobile.sidebar.group_by": "Группировать по",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {скрыт # раздел} few {скрыто # раздела} many {скрыто # разделов} other {скрыто # раздела}}",
+		"mobile.sidebar.more_settings": "Другие настройки боковой панели",
+		"mobile.sidebar.order.active_first": "Сначала активные",
+		"mobile.sidebar.order.most_recent": "Сначала недавние",
+		"mobile.sidebar.order_by": "Сортировать по",
+		"mobile.sidebar.section.older": "Раньше",
+		"mobile.sidebar.section.pinned": "Закреплённые",
+		"mobile.sidebar.section.running": "В работе",
+		"mobile.sidebar.section.today": "Сегодня",
+		"mobile.sidebar.section.week": "На этой неделе",
+		"mobile.sidebar.sections": "Разделы",
+		"mobile.sidebar.settings_heading": "Боковая панель",
+		"mobile.sidebar.show_ended": "Показывать завершённые сеансы",
+		"mobile.sidebar.show_ended_hint": "Закреплённые и выполняющиеся беседы показываются всегда.",
+		"mobile.sidebar.time_basis": "Отсчёт времени",
+		"mobile.sidebar.view_options": "Параметры вида",
 		"mobile.signin.diagnostics": "Диагностика входа",
 		"mobile.signin.failed": "Не удалось завершить вход.",
 		"mobile.signin.hide_diagnostics": "Скрыть сведения о входе",
@@ -7894,6 +8118,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "گہرے ({count})",
 		"mobile.settings.theme.section_light": "روشن ({count})",
 		"mobile.settings.theme.title": "تھیم",
+		"mobile.sidebar.basis.created": "تخلیق کا وقت",
+		"mobile.sidebar.basis.last_active": "آخری سرگرمی",
+		"mobile.sidebar.clock_hint": "تاریخیں اور ترتیب منتخب گھڑی کے مطابق ہیں۔",
+		"mobile.sidebar.empty_by_view.headline": "آپ کے منظر کے اختیارات تمام گفتگوئیں چھپا رہے ہیں۔",
+		"mobile.sidebar.empty_by_view.next": "حصے یا ختم شدہ سیشن دوبارہ آن کریں، یا منظر ری سیٹ کریں۔",
+		"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں",
+		"mobile.sidebar.group.one_list": "ایک فہرست میں",
+		"mobile.sidebar.group.time_section": "وقت کا حصہ",
+		"mobile.sidebar.group_by": "گروہ بندی",
+		"mobile.sidebar.hidden_sections": "{count, plural, one {# حصہ پوشیدہ ہے} other {# حصے پوشیدہ ہیں}}",
+		"mobile.sidebar.more_settings": "سائیڈبار کی مزید ترتیبات",
+		"mobile.sidebar.order.active_first": "فعال پہلے",
+		"mobile.sidebar.order.most_recent": "تازہ ترین",
+		"mobile.sidebar.order_by": "ترتیب کی بنیاد",
+		"mobile.sidebar.section.older": "پرانے",
+		"mobile.sidebar.section.pinned": "پن شدہ",
+		"mobile.sidebar.section.running": "جاری",
+		"mobile.sidebar.section.today": "آج",
+		"mobile.sidebar.section.week": "اس ہفتے",
+		"mobile.sidebar.sections": "حصے",
+		"mobile.sidebar.settings_heading": "سائیڈبار",
+		"mobile.sidebar.show_ended": "ختم شدہ سیشن دکھائیں",
+		"mobile.sidebar.show_ended_hint": "پن شدہ اور جاری گفتگو ہمیشہ دکھائی دیتی ہیں۔",
+		"mobile.sidebar.time_basis": "وقت کی بنیاد",
+		"mobile.sidebar.view_options": "دیکھنے کے اختیارات",
 		"mobile.signin.diagnostics": "سائن اِن کی تشخیص",
 		"mobile.signin.failed": "ہم سائن ان مکمل نہیں کر سکے۔",
 		"mobile.signin.hide_diagnostics": "سائن ان کی تفصیلات چھپائیں",
@@ -8713,6 +8962,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "Tối ({count})",
 		"mobile.settings.theme.section_light": "Sáng ({count})",
 		"mobile.settings.theme.title": "Giao diện",
+		"mobile.sidebar.basis.created": "Ngày tạo",
+		"mobile.sidebar.basis.last_active": "Hoạt động gần nhất",
+		"mobile.sidebar.clock_hint": "Ngày và thứ tự tuân theo mốc thời gian đã chọn.",
+		"mobile.sidebar.empty_by_view.headline": "Tùy chọn hiển thị đang ẩn mọi cuộc trò chuyện.",
+		"mobile.sidebar.empty_by_view.next": "Bật lại các mục hoặc phiên đã kết thúc, hoặc đặt lại chế độ xem.",
+		"mobile.sidebar.empty_by_view.reset": "Đặt lại chế độ xem",
+		"mobile.sidebar.group.one_list": "Trong một danh sách",
+		"mobile.sidebar.group.time_section": "Mục thời gian",
+		"mobile.sidebar.group_by": "Nhóm theo",
+		"mobile.sidebar.hidden_sections": "{count, plural, other {Đã ẩn # mục}}",
+		"mobile.sidebar.more_settings": "Thêm cài đặt thanh bên",
+		"mobile.sidebar.order.active_first": "Đang hoạt động trước",
+		"mobile.sidebar.order.most_recent": "Mới nhất",
+		"mobile.sidebar.order_by": "Sắp xếp theo",
+		"mobile.sidebar.section.older": "Cũ hơn",
+		"mobile.sidebar.section.pinned": "Đã ghim",
+		"mobile.sidebar.section.running": "Đang chạy",
+		"mobile.sidebar.section.today": "Hôm nay",
+		"mobile.sidebar.section.week": "Tuần này",
+		"mobile.sidebar.sections": "Các mục",
+		"mobile.sidebar.settings_heading": "Thanh bên",
+		"mobile.sidebar.show_ended": "Hiện các phiên đã kết thúc",
+		"mobile.sidebar.show_ended_hint": "Các cuộc trò chuyện đã ghim và đang chạy luôn hiển thị.",
+		"mobile.sidebar.time_basis": "Mốc thời gian",
+		"mobile.sidebar.view_options": "Tùy chọn hiển thị",
 		"mobile.signin.diagnostics": "Chẩn đoán đăng nhập",
 		"mobile.signin.failed": "Không thể hoàn tất đăng nhập.",
 		"mobile.signin.hide_diagnostics": "Ẩn chi tiết đăng nhập",
@@ -9532,6 +9806,31 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.settings.theme.section_dark": "深色（{count}）",
 		"mobile.settings.theme.section_light": "浅色（{count}）",
 		"mobile.settings.theme.title": "主题",
+		"mobile.sidebar.basis.created": "创建时间",
+		"mobile.sidebar.basis.last_active": "最近活跃时间",
+		"mobile.sidebar.clock_hint": "日期与排序均以所选时间依据为准。",
+		"mobile.sidebar.empty_by_view.headline": "你的视图选项隐藏了所有对话。",
+		"mobile.sidebar.empty_by_view.next": "重新开启分区或已结束的会话，或重置视图。",
+		"mobile.sidebar.empty_by_view.reset": "重置视图",
+		"mobile.sidebar.group.one_list": "统一列表",
+		"mobile.sidebar.group.time_section": "时间分区",
+		"mobile.sidebar.group_by": "分组方式",
+		"mobile.sidebar.hidden_sections": "{count, plural, other {已隐藏#个分区}}",
+		"mobile.sidebar.more_settings": "更多侧边栏设置",
+		"mobile.sidebar.order.active_first": "活跃优先",
+		"mobile.sidebar.order.most_recent": "最近优先",
+		"mobile.sidebar.order_by": "排序方式",
+		"mobile.sidebar.section.older": "更早",
+		"mobile.sidebar.section.pinned": "已置顶",
+		"mobile.sidebar.section.running": "运行中",
+		"mobile.sidebar.section.today": "今天",
+		"mobile.sidebar.section.week": "本周",
+		"mobile.sidebar.sections": "分区",
+		"mobile.sidebar.settings_heading": "侧边栏",
+		"mobile.sidebar.show_ended": "显示已结束的会话",
+		"mobile.sidebar.show_ended_hint": "已置顶和运行中的对话始终显示。",
+		"mobile.sidebar.time_basis": "时间依据",
+		"mobile.sidebar.view_options": "视图选项",
 		"mobile.signin.diagnostics": "登录诊断",
 		"mobile.signin.failed": "无法完成登录。",
 		"mobile.signin.hide_diagnostics": "隐藏登录详情",

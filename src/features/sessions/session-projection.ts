@@ -13,6 +13,7 @@ import type {
 	SessionSummary,
 	UnreadBlock,
 } from "@/contracts";
+import type { SidebarBasis } from "@/features/sessions/sidebar-view";
 
 /**
  * The one state mark a row shows (docs/ux/flows.md § 5 step 2).
@@ -276,17 +277,27 @@ export function degradedNote(degraded: readonly string[]): string | null {
  * PINNED outranks the binning — the app's existing rule (a pinned previous
  * conversation belongs with the pinned ones, or pinning appears to do nothing).
  *
- * **Nothing here re-sorts.** The relay's order holds inside each bucket, exactly
- * as it did in the old sections; bucketing is `filter`.
+ * **Nothing here re-sorts.** Bucketing is a `filter`: the order the reader sees
+ * is decided BEFORE this call by the one arrangement (`sidebar-view.ts`
+ * `arrangeRows`, the desktop's `pageOrder`), which reads the same clock this
+ * function bins by — so a row's bin, its label and its position are three
+ * readings of one clock, and a section cannot draw a row its label contradicts.
  *
- * The time basis is `(created_at ?? mtime) × 1000` — both are epoch SECONDS on
- * the wire (`SessionSummary`), and `created_at` is absent on older relays. A
- * REMOTE row's two clocks are the same number (the peer's `started` claim), so
- * the basis is that claim either way. A basis of `<= 0` is the relay's NO CLAIM
- * — an old-build peer's non-number birth stamp arrives as `0.0` — and such a
- * row bins by the time branch below (→ Older) with NO label (`relativeTimeFor`),
- * exactly where the relay ranked it last; never as a 1970 date (the desktop
- * sidebar's rule, `local-operator-ui` #903).
+ * WHICH CLOCK is the reader's `basis` (TestFlight 906, 2026-11-13: the drawer
+ * must order the way the desktop does). The desktop's default is `active` —
+ * the catalogue's `mtime`, its `updated_at` — and `created` is the birth
+ * (`created_at`, falling back to `mtime` on a relay that predates it; a REMOTE
+ * row's two clocks are the same number, the peer's `started` claim). Until
+ * 2026-11-13 this panel binned by birth only, which is why a conversation used
+ * a minute ago could sit under "Older". A clock of `<= 0` is the relay's NO
+ * CLAIM — an old-build peer's non-number birth stamp arrives as `0.0` — and
+ * such a row bins as Older with NO label (`relativeTimeFor`) and sorts after
+ * every row with a clock; never as a 1970 date (the desktop sidebar's rule,
+ * `local-operator-ui` #903).
+ *
+ * THIS WEEK is the desktop's calendar rule (`chat-list-sections.ts`
+ * `sectionOf`): on or after local midnight six days before today. A rolling
+ * "under seven days" disagreed with it for rows late on the seventh evening.
  */
 export type SidebarSections = {
 	pinned: SessionSummary[];
@@ -298,18 +309,24 @@ export type SidebarSections = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** A row's time in epoch MILLISECONDS: the activity clock, or the conversation's
- *  birth when a relay predates `created_at` — or `null` when the row carries NO
- *  usable clock.
+/** A row's time in epoch MILLISECONDS on the reader's `basis` — `active` reads
+ *  the activity clock (`mtime`), `created` the birth (`created_at`, else `mtime`
+ *  on a relay that predates it) — or `null` when the row carries NO usable clock.
  *
- * `null` is a REAL reading here, not an error: `created_at`/`mtime` `<= 0` is
- * the relay's no-claim (a non-number birth stamp — an old-build peer's — is read
- * as `0.0` at the relay's own boundary), and no surface may render a no-claim as
- * an ancient date. The row paints no label and the relay's own ranking has
- * already placed it last inside its bin. */
-export function rowTimeMs(session: SessionSummary): number | null {
-	const stamp = session.created_at ?? session.mtime;
-	return typeof stamp === "number" && stamp > 0 ? stamp * 1000 : null;
+ * `null` is a REAL reading here, not an error: a stamp `<= 0` is the relay's
+ * no-claim (a non-number birth stamp — an old-build peer's — is read as `0.0`
+ * at the relay's own boundary), and no surface may render a no-claim as an
+ * ancient date. The row paints no label and the arrangement places it after
+ * every row that has a clock. */
+export function rowTimeMs(
+	session: SessionSummary,
+	basis: SidebarBasis = "active",
+): number | null {
+	const stamp =
+		basis === "created" ? (session.created_at ?? session.mtime) : session.mtime;
+	return typeof stamp === "number" && Number.isFinite(stamp) && stamp > 0
+		? stamp * 1000
+		: null;
 }
 
 /** Local midnight for `now` — the boundary "Today" means. */
@@ -322,6 +339,7 @@ const startOfDayMs = (now: number): number => {
 export function splitSidebarSections(
 	sessions: readonly SessionSummary[],
 	now: number = Date.now(),
+	basis: SidebarBasis = "active",
 ): SidebarSections {
 	const out: SidebarSections = {
 		pinned: [],
@@ -340,9 +358,10 @@ export function splitSidebarSections(
 			out.running.push(session);
 			continue;
 		}
-		const at = rowTimeMs(session);
+		const at = rowTimeMs(session, basis);
 		if (at !== null && at >= startOfDay) out.today.push(session);
-		else if (at !== null && now - at < 7 * DAY_MS) out.week.push(session);
+		else if (at !== null && at >= startOfDay - 6 * DAY_MS)
+			out.week.push(session);
 		else out.older.push(session);
 	}
 	return out;
@@ -364,9 +383,10 @@ export function splitSidebarSections(
 export function relativeTimeFor(
 	session: SessionSummary,
 	now: number = Date.now(),
+	basis: SidebarBasis = "active",
 ): string | null {
 	if (rowIsRunning(session)) return null;
-	const at = rowTimeMs(session);
+	const at = rowTimeMs(session, basis);
 	if (at === null) return null;
 	const minutes = Math.floor(Math.max(0, now - at) / 60_000);
 	if (minutes < 1) return "now";
