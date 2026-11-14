@@ -986,24 +986,6 @@
 			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
 		},
 		{
-			"file": "src/ui/components/refusal-surface.tsx",
-			"text": "Open the Radient console",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/ui/components/refusal-surface.tsx",
-			"text": "Sign in again",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
-			"file": "src/ui/components/refusal-surface.tsx",
-			"text": "Use another address",
-			"owner": "damianvtran",
-			"payoff": "Key the literal under src/i18n/catalogues/en and render it through t(); `check-strings --update` then drops the entry."
-		},
-		{
 			"file": "src/ui/components/sheet.tsx",
 			"text": "Close",
 			"owner": "damianvtran",

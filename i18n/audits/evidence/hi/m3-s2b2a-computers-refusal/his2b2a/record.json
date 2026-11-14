@@ -1,0 +1,149 @@
+{
+  "locale": "hi",
+  "slice": "m3-s2b2a-computers-refusal",
+  "audit_date": "2026-11-13",
+  "key_count": 24,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+    "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/hi/draft-hi.json",
+    "sha256": "e24b300418f841277a2d3c6cab80d3086a92ff3b765d2fe7eaaaf0a87a35dd03"
+  },
+  "translator_notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/hi/notes-hi.md",
+    "sha256": "2adc8601b548f08a0464f54e796c7c9d671d4b5b17badd921c8e2df1aee005a6"
+  },
+  "translator_job": "ee0b2003be8e",
+  "auditor": {
+    "agent": "i18n-auditor (lopdev team)",
+    "session": "42a9d3be53a4",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt (Model: anthropic/claude-opus-5-5); no fallback observed",
+    "independent_from_translator_session": true
+  },
+  "references": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "worktree_head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9",
+    "style_guide": "~/local-operator/i18n/style-guides/hi.md",
+    "glossary": "~/local-operator/i18n/glossary.md",
+    "catalogues": [
+      "src/i18n/catalogues/hi/mobile.computers.json",
+      "src/i18n/catalogues/hi/mobile.common.json"
+    ],
+    "call_site": "src/ui/components/refusal-surface.tsx"
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_marker_hits": {
+    "brief": 0,
+    "draft": 0
+  },
+  "mechanical": {
+    "keys_missing": 0,
+    "keys_extra": 0,
+    "key_order_equal": true,
+    "icu_parse_failures": 0,
+    "placeholder_mismatches": 0,
+    "bidi_or_zw_controls": 0,
+    "non_nfc": 0,
+    "plural_categories_hi": [
+      "one",
+      "other"
+    ],
+    "wait_seconds_samples": "0→one,1→one,2/5/30/1.5→other; '#' in every arm",
+    "button_char_lengths": {
+      "try_now": 14,
+      "try_again": 17,
+      "sign_in_again": 19,
+      "open_console": 19,
+      "another_address": 20
+    },
+    "button_budget": 24
+  },
+  "rulings": {
+    "tunnel_gone_title": "Accepted. '{subject} अब कोई टनल नहीं है।' needs no gender agreement (copula है only), works for a name or a URL, and कोई carries 'no longer ANY tunnel'.",
+    "console_title": "Tone is calm and appropriate once fixed; current construction inverts agency → HI-1 MAJOR.",
+    "sign_in_next": "क्वारंटीन is not wrong (accurate, widely understood) so not MAJOR; native 'अलग रोक दिया गया है … भेजा नहीं जाएगा' preferred → HI-2 MINOR. Do NOT use सहेजा/रखा गया alone (softens to 'saved').",
+    "try_now_try_again": "Accepted reusing 'अभी कोशिश करें' / 'फिर से कोशिश करें'. Separate keys allow divergent wording but do not require it; on this screen each label sits under copy that names the connection, so the shared text is unambiguous. Note sibling diagnostic button mobile.computers.retry='दोबारा कोशिश करें' mirrors English Retry≠Try again — fine.",
+    "sign_in_title_session": "Accepted साइन-इन instead of glossary सत्र: here 'session' is the Radient auth sign-in, while सत्र on this surface means agent sessions (wait.relay_sessions). Justified, documented deviation; not a glossary violation of the agent-session concept."
+  },
+  "key_reviews": {
+    "mobile.computers.refusal.offline_title": "OK",
+    "mobile.computers.refusal.relay_stopped_title": "OK",
+    "mobile.computers.refusal.tunnel_gone_title": "OK",
+    "mobile.computers.refusal.console_title": "MAJOR HI-1",
+    "mobile.computers.refusal.password_title": "OK",
+    "mobile.computers.refusal.sign_in_title": "OK",
+    "mobile.computers.refusal.retry_title": "OK",
+    "mobile.computers.refusal.certificate_title": "OK",
+    "mobile.computers.refusal.host_title": "OK",
+    "mobile.computers.refusal.offline_next": "OK",
+    "mobile.computers.refusal.relay_stopped_next": "OK",
+    "mobile.computers.refusal.tunnel_gone_next": "NIT HI-N2",
+    "mobile.computers.refusal.console_next": "OK",
+    "mobile.computers.refusal.password_next": "NIT HI-N1",
+    "mobile.computers.refusal.sign_in_next": "MINOR HI-2",
+    "mobile.computers.refusal.retry_next": "OK",
+    "mobile.computers.refusal.certificate_next": "OK",
+    "mobile.computers.refusal.host_next": "OK",
+    "mobile.computers.refusal.wait_seconds": "OK",
+    "mobile.computers.refusal.try_now": "OK",
+    "mobile.computers.refusal.try_again": "OK",
+    "mobile.computers.refusal.sign_in_again": "OK",
+    "mobile.computers.refusal.open_console": "OK",
+    "mobile.computers.refusal.another_address": "OK"
+  },
+  "findings": [
+    {
+      "id": "HI-1",
+      "severity": "MAJOR",
+      "key": "mobile.computers.refusal.console_title",
+      "current": "{subject} को Radient में ध्यान देने की ज़रूरत है।",
+      "problem": "'X को [verb]-ने की ज़रूरत है' makes X the agent: this reads 'X needs to pay attention in Radient' (the computer/address must attend), not 'X needs (your) attention'. Agency inverted; unidiomatic for the intended meaning.",
+      "suggested": "{subject} को Radient में आपके ध्यान की ज़रूरत है।",
+      "alternative": "{subject} पर Radient में ध्यान देना ज़रूरी है।"
+    },
+    {
+      "id": "HI-2",
+      "severity": "MINOR",
+      "key": "mobile.computers.refusal.sign_in_next",
+      "current": "फिर से कनेक्ट करने के लिए दोबारा साइन इन करें। इससे पहले टाइप किया गया सब कुछ क्वारंटीन में है, भेजा नहीं गया।",
+      "problem": "क्वारंटीन is understood but carries a medical (COVID) connotation and reads as a calque for text; 'भेजा नहीं गया' (was not sent) states only the past, while the note's promise is that it will NOT be sent even after signing in. A native phrase keeps the strong 'held aside' sense without softening to 'saved'.",
+      "suggested": "फिर से कनेक्ट करने के लिए दोबारा साइन इन करें। इससे पहले टाइप किया गया सब कुछ अलग रोक दिया गया है और भेजा नहीं जाएगा।"
+    },
+    {
+      "id": "HI-N1",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.password_next",
+      "current": "कंप्यूटर पर रिले पासवर्ड जाँचें, फिर दोबारा कोशिश करें।",
+      "problem": "The button that follows says 'फिर से कोशिश करें' (try_again); echoing its exact wording ties the advice to the button, as the English does. 'फिर … फिर से' would double, so join with और.",
+      "suggested": "कंप्यूटर पर रिले पासवर्ड जाँचें और फिर से कोशिश करें।"
+    },
+    {
+      "id": "HI-N2",
+      "severity": "NIT",
+      "key": "mobile.computers.refusal.tunnel_gone_next",
+      "current": "Radient में फिर से टनल बनाएँ, फिर यह कंप्यूटर जोड़ें।",
+      "problem": "'फिर से … फिर' repeats फिर in one short sentence; the only fix is a new tunnel, which 'नई टनल' says directly.",
+      "suggested": "Radient में नई टनल बनाएँ, फिर यह कंप्यूटर जोड़ें।"
+    }
+  ],
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 1,
+    "MINOR": 1,
+    "NIT": 2
+  },
+  "verdict": {
+    "status": "changes_requested",
+    "unresolved_blocker_major_count": 1,
+    "finding_ids": [
+      "HI-1",
+      "HI-2",
+      "HI-N1",
+      "HI-N2"
+    ]
+  },
+  "audit_notes_not_execution_log": "rulings/key_reviews are auditor judgement; executed commands and their outputs are in audit.log."
+}

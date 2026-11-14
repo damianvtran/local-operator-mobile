@@ -1,0 +1,101 @@
+{
+ "locale": "ru",
+ "slice": "m3-s2b2a-computers-refusal",
+ "namespace": "mobile.computers.refusal.*",
+ "audit_date": "2026-11-13",
+ "key_count": 24,
+ "brief": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/brief-s2b2a.json",
+  "sha256": "d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40"
+ },
+ "draft": {
+  "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/ru/draft-ru.json",
+  "sha256": "ccbafb2df76eb2d73c7509394eadd268e886988f59b456c4df252c0e7d448f36"
+ },
+ "worktree": {
+  "path": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/",
+  "head": "cd249ed158dcf6a4965cf7c9f9ad950981e61df9"
+ },
+ "input_hashes": {
+  "en": {
+   "path": "src/i18n/catalogues/en/mobile.computers.json",
+   "sha256": "0ff742871ae29bf53b3fbbb70d8baa1a0d01ab5bb2c4998188391be2992690d3"
+  },
+  "context": {
+   "path": "src/i18n/catalogues/en/mobile.computers.context.json",
+   "sha256": "37014a17c5d3fc7e2c0b24a860e6c40ca09022b7121516d9a5506beb7aeb8258"
+  },
+  "ru_catalogue": {
+   "path": "src/i18n/catalogues/ru/mobile.computers.json",
+   "sha256": "359144239aaadaab9ff7957063143181f05d1a7c6af14ac7aba03ec05aab1f09"
+  }
+ },
+ "translator_job": "332734020f56",
+ "auditor": {
+  "agent": "i18n-auditor (team lopdev)",
+  "session": "476cde7c4696",
+  "model": "anthropic/claude-opus-5-5",
+  "actual_model_source": "session system prompt 'Model:' line; no fallback observed",
+  "independent_from_translator_session": true
+ },
+ "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+ "redaction_hits": {
+  "brief": 0,
+  "draft": 0
+ },
+ "bidi_control_hits": 0,
+ "nfc": true,
+ "mechanical": {
+  "parse_ok": 24,
+  "placeholder_mismatches": 0,
+  "keys_added_or_dropped": 0,
+  "plural_categories": [
+   "one",
+   "few",
+   "many",
+   "other"
+  ],
+  "parser": "src/i18n/messages.ts via node 24.22.1 --experimental-strip-types --max-old-space-size=256"
+ },
+ "rulings": {
+  "tunnel_gone_title": "KEEP «{subject} больше не является туннелем.» — «является» is standard in RU UI error headlines; «{subject} больше не туннель.» reads clipped when {subject} is a URL (the usual case per refusal-surface.tsx D23). No finding.",
+  "console_title": "KEEP «{subject} требует внимания в Radient.» — «требует внимания» is native RU UI idiom (cf. OS notifications), not a calque. No finding.",
+  "retry_title": "KEEP «{subject} пока не готов.» — masculine is the default agreement for Latin-script names/URLs in Russian (implicit «адрес/компьютер»); a neutral rewrite would add words or change meaning. No finding.",
+  "try_now/try_again": "KEEP «Подключиться сейчас»/«Подключиться снова» — context notes say both retry the CONNECTION and must differ from mobile.computers.try_now «Попробовать сейчас» and mobile.common.try_again «Повторить»; 19/18 chars ≤24. No finding.",
+  "relay_term": "Verified by code points U+0420 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440 = «Ретранслятор» (relay_stopped_title); display masking only, the redaction-marker substring absent from value and raw file (count 0). Matches catalogue term."
+ },
+ "findings": [
+  {
+   "id": "RU-1",
+   "severity": "MINOR",
+   "key": "mobile.computers.refusal.console_next",
+   "current": "Откройте консоль Radient и исправьте всё там. Повторный вход на этом телефоне ничего не изменит.",
+   "problem": "«исправьте всё там» over-generalises EN 'fix it there' (it = the one issue) and reads colloquially.",
+   "suggested": "Откройте консоль Radient и устраните проблему там. Повторный вход на этом телефоне ничего не изменит."
+  },
+  {
+   "id": "RU-2",
+   "severity": "NIT",
+   "key": "mobile.computers.refusal.password_next",
+   "current": "Проверьте пароль ретранслятора на компьютере и попробуйте снова.",
+   "problem": "Optional: the button below now reads «Подключиться снова»; echoing it ties instruction to action. Current text is correct and matches own_tunnel/connect_refused wording, so keep if consistency with those is preferred.",
+   "suggested": "Проверьте пароль ретранслятора на компьютере и подключитесь снова."
+  }
+ ],
+ "counts": {
+  "BLOCKER": 0,
+  "MAJOR": 0,
+  "MINOR": 1,
+  "NIT": 1
+ },
+ "verdict": {
+  "status": "passed",
+  "unresolved_blocker_major_count": 0,
+  "finding_ids": [
+   "RU-1",
+   "RU-2"
+  ]
+ },
+ "write_location_note": "Brief target dir .../d5aaf8ba6ba5/scratchpad/m3s2b2/audits/ru/ refused by guardrail dangerous-delete (review) for a mkdir there; artifacts written to auditor's own scratchpad per brief fallback.",
+ "audit_notes_not_execution_log": false
+}

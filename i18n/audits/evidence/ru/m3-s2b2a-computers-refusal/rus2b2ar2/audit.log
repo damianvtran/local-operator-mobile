@@ -1,0 +1,22 @@
+# audit.log — actual commands run (session 28e3915989d0, 2026-11-13)
+shasum -a 256 brief-s2b2a.json ru/draft-ru.json ru/draft-ru-v2.json ru/notes-ru-v2.md audits/ru/* ->
+  d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40 brief (match)
+  ccbafb2df76eb2d73c7509394eadd268e886988f59b456c4df252c0e7d448f36 v1 (match)
+  c393839d825ac456eb6c0f730db0fdaa1369382ad8827f0b667bec44daaf6d4d v2 (match)
+  922535294573648ac91f85596d5e90c5379ffb9cc5f0619a97e83cc49bc7e314 notes-ru-v2.md
+  b47772fc550922765d85924e551023ba79e45d95c1c1db08da0e6f22035561b9 audits/ru/report.md; 4f399717b537688a8586b7afab26707718fa95b13fcd7e985f563ab40d981812 audits/ru/record.json; e4ee611780c2aebc59d1ca8026c7163d80d8ca8aad86451eb89d219dcc276a94 audits/ru/audit.log
+git -C <worktree> rev-parse HEAD -> cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+(cd worktree) node --max-old-space-size=256 --experimental-strip-types $SCRATCH/icu-ru-r2.ts (sha256 9e63862531271405b38839973de0c0a6dbd2c8c7c675d8aa4f22f3d0436c71f7; Node module-type warnings filtered) ->
+  brief keys 24 v2 order==brief true v1 order==v2 true
+  changed: mobile.computers.refusal.console_next,mobile.computers.refusal.password_next unchanged identical: 22
+  marker brief 0 / v1 0 / v2 0
+  bidi v2 0 nonNFC 0
+  ru CLDR one,few,many,other
+  parsed 24 param mismatches 0 errors 0
+  V2 console_next: Откройте консоль Radient и устраните проблему там. Повторный вход на этом телефоне ничего не изменит.
+  V2 password_next: Проверьте пароль ретранслятора на компьютере и подключитесь снова.
+  CTX try_again = Подключиться снова; try_now = Подключиться сейчас
+diff ru/draft-ru.json ru/draft-ru-v2.json | wc -l -> 6
+read refusal-surface.tsx L296-312 -> kind "password" renders t("mobile.computers.refusal.try_again")
+python: code points password_next word[2] -> U+0440 U+0435 U+0442 U+0440 U+0430 U+043D U+0441 U+043B U+044F U+0442 U+043E U+0440 U+0430
+mkdir -p /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2/audits/ru-r2 -> BLOCKED by guardrail dangerous-delete (review); fallback to own scratchpad /Users/damian/.local-operator/sessions/28e3915989d0/scratchpad/audits-ru-r2

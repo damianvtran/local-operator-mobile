@@ -253,6 +253,8 @@ describe("composed copy: the base comes from the page, not from its first strong
 		);
 
 	it("is `{dir}` on web for rtl and nothing else", () => {
+		/* Exactly `{dir}` — the native `style` channel must not reach web, where a
+		 * style spread would be a needless second statement of the same base. */
 		expect(composedDirection("rtl")).toEqual({ dir: "rtl" });
 		expect(composedDirection("ltr")).toEqual({});
 	});
@@ -317,17 +319,25 @@ describe("the native half of the per-platform constants", () => {
 		vi.resetModules();
 	});
 
-	/* The composed line's other half, pinned the same way: `dir` is a
-	 * react-native-web prop, and native needs nothing from it because Yoga's layout
-	 * direction (the root view's `direction` style) already resolves the paragraph. */
-	it("composedDirection is a no-op on native, where Yoga already resolves the paragraph", async () => {
+	/* The composed line's other half, pinned the same way. Design review #257
+	 * round 1, D1: this asserted `{}` on native on the belief that Yoga's layout
+	 * direction sets the paragraph base. It does not — iOS sets
+	 * `NSParagraphStyle.baseWritingDirection` only from the `writingDirection`
+	 * style, so `Radient کنسول کھولیں` laid out with an LTR base under the Urdu
+	 * root. Native RTL must therefore carry `writingDirection: "rtl"`, and LTR
+	 * must still emit nothing (en/fr/... unchanged). */
+	it("composedDirection states writingDirection on native for rtl, and nothing for ltr", async () => {
 		vi.resetModules();
 		vi.doMock("react-native", async () => ({
 			...(await vi.importActual<object>("react-native")),
 			Platform: { OS: "ios" },
 		}));
 		const native = await import("@/ui/direction");
-		expect(native.composedDirection("rtl")).toEqual({});
+		expect(native.composedDirection("rtl")).toEqual({
+			style: { writingDirection: "rtl" },
+		});
+		/* No web-only prop leaks onto a native Text. */
+		expect(native.composedDirection("rtl")).not.toHaveProperty("dir");
 		expect(native.composedDirection("ltr")).toEqual({});
 		vi.doUnmock("react-native");
 		vi.resetModules();

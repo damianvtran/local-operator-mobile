@@ -145,7 +145,13 @@ export const OwnTunnelSettings = () => {
 								verdictOpensWithDetail(verdict) ? composedDir : undefined
 							}
 						>
-							{verdictSentence(verdict, sentencePlatform())}
+							{/* The saved card's test button reads "Test again", so the
+							 *  sentence names that label rather than the edit form's. */}
+							{verdictSentence(
+								verdict,
+								sentencePlatform(),
+								t("mobile.settings.own_tunnel.test_again"),
+							)}
 						</Alert>
 					) : null}
 					<View className="flex-row flex-wrap gap-2">

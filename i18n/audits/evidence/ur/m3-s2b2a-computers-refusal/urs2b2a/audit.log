@@ -1,0 +1,70 @@
+# audit.log — ur, m3-s2b2a-computers-refusal, auditor session ae9561e2347a, 2026-11-13T15:05:51
+$ shasum -a 256 brief-s2b2a.json ur/draft-ur.json
+d151df76aab223cc1b5f481813b7256977338a8c7cdcfb5bce68106faa8a0e40  brief-s2b2a.json
+46211c4e2757deca94e7eab22fd61c95c49f20a83e419929d71d2b5ea7e1233b  ur/draft-ur.json
+$ grep -o '[redacted]' brief-s2b2a.json | wc -l
+       0
+$ git -C <worktree> rev-parse HEAD
+cd249ed158dcf6a4965cf7c9f9ad950981e61df9
+$ cp <worktree>/src/i18n/messages.ts $SCRATCH/ur-audit/ && shasum -a 256 messages.ts
+c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0  messages.ts
+$ NODE_OPTIONS=--max-old-space-size=256 <worktree>/node_modules/.bin/tsx check.ts
+keys 24 24 sameOrder true
+offline_title params OK bidi 0 firstStrong ا  len 42
+relay_stopped_title params OK bidi 0 firstStrong ر  len 30
+tunnel_gone_title params OK bidi 0 firstStrong ا  len 36
+console_title params OK bidi 0 firstStrong ا  len 46
+password_title params OK bidi 0 firstStrong و  len 25
+sign_in_title params OK bidi 0 firstStrong آ  len 94
+retry_title params OK bidi 0 firstStrong ا  len 28
+certificate_title params OK bidi 0 firstStrong ا  len 32
+host_title params OK bidi 0 firstStrong م  len 26
+offline_next params OK bidi 0 firstStrong ا  len 91
+relay_stopped_next params OK bidi 0 firstStrong ر  len 44
+tunnel_gone_next params OK bidi 0 firstStrong د  len 56
+console_next params OK bidi 0 firstStrong ا  len 85
+password_next params OK bidi 0 firstStrong ک  len 56
+sign_in_next params OK bidi 0 firstStrong د  len 120
+retry_next params OK bidi 0 firstStrong ع  len 71
+certificate_next params OK bidi 0 firstStrong ٹ  len 161
+host_next params OK bidi 0 firstStrong پ  len 79
+wait_seconds params OK bidi 0 firstStrong د  len 94
+try_now params OK bidi 0 firstStrong ا  len 14
+try_again params OK bidi 0 firstStrong د  len 16
+sign_in_again params OK bidi 0 firstStrong د  len 19
+open_console params OK bidi 0 firstStrong R LATIN/PH-START len 20
+another_address params OK bidi 0 firstStrong د  len 22
+wait 0 other => دوبارہ کوشش کرنے سے پہلے تقریباً 0 سیکنڈ انتظار کریں۔
+wait 1 one => دوبارہ کوشش کرنے سے پہلے تقریباً 1 سیکنڈ انتظار کریں۔
+wait 2 other => دوبارہ کوشش کرنے سے پہلے تقریباً 2 سیکنڈ انتظار کریں۔
+wait 5 other => دوبارہ کوشش کرنے سے پہلے تقریباً 5 سیکنڈ انتظار کریں۔
+wait 21 other => دوبارہ کوشش کرنے سے پہلے تقریباً 21 سیکنڈ انتظار کریں۔
+ur CLDR categories [ 'one', 'other' ]
+certificate_next => ٹنل کا دکھایا ہوا https:// URL استعمال کریں، ایسی ٹنل منتخب کریں جس کے سرٹیفکیٹ پر فون بھروسا کرے، یا خود دستخط شدہ سرٹیفکیٹ بدل دیں — یہ ایپ جانچ نہیں چھوڑے گی۔
+fail 0
+$ python3 (NFC / Arabic-variant / Devanagari / ASCII-punctuation scan)
+offline_title clean ends '۔'
+relay_stopped_title clean ends '۔'
+tunnel_gone_title clean ends '۔'
+console_title clean ends '۔'
+password_title clean ends '۔'
+sign_in_title clean ends '۔'
+retry_title clean ends '۔'
+certificate_title clean ends '۔'
+host_title clean ends '۔'
+offline_next clean ends '۔'
+relay_stopped_next clean ends '۔'
+tunnel_gone_next clean ends '۔'
+console_next clean ends '۔'
+password_next clean ends '۔'
+sign_in_next clean ends '۔'
+retry_next clean ends '۔'
+certificate_next clean ends '۔'
+host_next clean ends '۔'
+wait_seconds clean ends '۔'
+try_now clean ends 'ں'
+try_again clean ends 'ں'
+sign_in_again clean ends 'ں'
+open_console clean ends 'ں'
+another_address clean ends 'ں'
+$ reads: refusal-surface.tsx, button.tsx (labelDir), direction.tsx (useComposedDir), connection-provider.tsx:2335-2368 (subject), ur+en catalogues (term grep)
