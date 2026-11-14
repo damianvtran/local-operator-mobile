@@ -1719,7 +1719,22 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "30659c950e404d9a164845cc1ec6b5940c4aca64a4a50544612214722bd35bcf",
+	/* fix/session-push-register: the app now POSTs /api/push/register for the
+	 * routed computer (session-push-registration*, use-session-push-registration),
+	 * Settings › Notifications gains one registration sentence (+6
+	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
+	 * a REGION id. Re-derived with --print over the staged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #259 review round 1 remediation: the registration hook keyed on
+	 * routeKey/live/revision with the relay accessor read through a ref, a
+	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
+	 * No rendered surface changed. Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main 9ef19ccd (#259): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
+	src: "d07b28ea4208c53bcbdddbf68a34a6b95ddb9e326d5040b40c239f0ea86861aa",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
