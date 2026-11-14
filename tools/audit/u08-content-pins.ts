@@ -1746,7 +1746,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Merge of origin/main (#259, 9ef19ccd) into #258: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "916f38333b2293f9c8e048f84bcc50d43c944a9f7b732e9c6d62cc5ce2c28a94",
+	/* Merge of origin/main (#258, 8ca71d54) into #261: both comment blocks
+	 * kept (the account card, pill fit and Diagnostics `reason:` row from #258;
+	 * the M1 refusal work from #261), plus the Reason row routed through Copy
+	 * diagnostics' `redact`. Re-derived once with --print over the merged tree
+	 * (dfd4dfaf); only `src` moved. Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "3cb03dcd5bdd7f20046b5f287fed4a79bf508e2cc683bc7d94951c76aca14747",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
