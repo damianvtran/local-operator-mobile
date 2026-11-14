@@ -428,6 +428,15 @@ async function relay(
 	const releaseNextTunnels = deferred();
 	let historyReads = 0;
 	let catalogueStreams = 0;
+	/* The relay behind the tunnel refusing this phone: a 401 WITHOUT
+	 *  `X-Radient-Login` on the list stream, the list read and `/api/models`,
+	 *  switched on and off mid-run so a test can fix the cause (PR #261 U3-1). */
+	let relayRefuses = false;
+	/* Holds the NEXT list-stream open / list read until released, so a test can
+	 *  order the stream's refusal against a refresh's (U3-1's early-tap order). */
+	let catalogueHold: ReturnType<typeof deferred> | null = null;
+	let sessionsHold: ReturnType<typeof deferred> | null = null;
+	let response401 = 0;
 	let loginCount = 0;
 	let tokenCount = 0;
 	let codeCount = 0;
@@ -619,6 +628,17 @@ async function relay(
 		}
 		if (path === "/api/sessions/events") {
 			catalogueStreams += 1;
+			if (catalogueHold) {
+				const hold = catalogueHold;
+				catalogueHold = null;
+				await hold.promise;
+				if (response.destroyed) return;
+			}
+			if (relayRefuses) {
+				response401 += 1;
+				json({ error: "unauthorized" }, 401);
+				return;
+			}
 			const failure = catalogueStreams > 1 ? catalogueFailures.shift() : null;
 			if (failure) {
 				response.writeHead(failure.status, {
@@ -698,6 +718,17 @@ async function relay(
 			return;
 		}
 		if (path.startsWith("/api/sessions") && !path.endsWith("/history")) {
+			if (sessionsHold) {
+				const hold = sessionsHold;
+				sessionsHold = null;
+				await hold.promise;
+				if (response.destroyed) return;
+			}
+			if (relayRefuses) {
+				response401 += 1;
+				json({ error: "unauthorized" }, 401);
+				return;
+			}
 			if (options.sessionsFailure) {
 				json({ detail: "Sessions unavailable", reason: "connector" }, 503);
 				return;
@@ -731,6 +762,11 @@ async function relay(
 			return;
 		}
 		if (path === "/api/models") {
+			if (relayRefuses) {
+				response401 += 1;
+				json({ error: "unauthorized" }, 401);
+				return;
+			}
 			json(body("models"));
 			return;
 		}
@@ -743,6 +779,8 @@ async function relay(
 		refuseCatalogue.resolve();
 		releaseHistory.resolve();
 		releaseTunnels.resolve();
+		catalogueHold?.resolve();
+		sessionsHold?.resolve();
 		releaseOauth.resolve();
 		oauthWriteHold.releaseNow();
 		server.closeAllConnections();
@@ -810,6 +848,22 @@ async function relay(
 		},
 		allowCode: () => {
 			failCode = false;
+		},
+		/** The relay refuses (`true`) or accepts (`false`) this phone from now on. */
+		refuseRelay: (refuses: boolean) => {
+			relayRefuses = refuses;
+		},
+		/** How many relay 401s (no `X-Radient-Login`) have been answered. */
+		relay401s: () => response401,
+		/** Holds the next list-stream open; resolve the result to answer it. */
+		holdNextCatalogue: () => {
+			catalogueHold = deferred();
+			return catalogueHold;
+		},
+		/** Holds the next list read (`GET /api/sessions`); resolve to answer it. */
+		holdNextSessions: () => {
+			sessionsHold = deferred();
+			return sessionsHold;
 		},
 	};
 }
@@ -4178,8 +4232,9 @@ describe("PR #261 round-2 remediation: the provider's side", () => {
 	}
 
 	/** A live Radient route whose list-stream REOPEN answers `failure` once;
-	 *  every later open is healthy, as when the cause has been fixed. */
-	async function liveRadient(failure: {
+	 *  every later open is healthy, as when the cause has been fixed. With no
+	 *  `failure`, the test drives the relay with `refuseRelay` (U3-1). */
+	async function liveRadient(failure?: {
 		status: number;
 		body: unknown;
 		headers?: Record<string, string>;
@@ -4192,7 +4247,10 @@ describe("PR #261 round-2 remediation: the provider's side", () => {
 			status: "active",
 			harnesses: [{ id: "local-operator", enabled: true }],
 		}));
-		const mock = await relay({ tunnels, catalogueFailures: [failure] });
+		const mock = await relay({
+			tunnels,
+			catalogueFailures: failure ? [failure] : [],
+		});
 		transport(mock.origin);
 		durable.oauth = oauth;
 		await mount();
@@ -4275,6 +4333,125 @@ describe("PR #261 round-2 remediation: the provider's side", () => {
 			const after = mock.events.slice(eventsBefore);
 			expect(after).toContain("GET /api/sessions/events");
 			expect(mock.catalogueStreams()).toBeGreaterThan(streamsBefore);
+			expect(latest.refusal).toBeNull();
+			expect(latest.lastError).toBeNull();
+		},
+		20_000,
+	);
+
+	/* U3-1 (UX round 3): the Radient 401 (no `X-Radient-Login`) raised by the
+	 *  response hook BEFORE the list stream's own refusal sets the route retry.
+	 *  A Retry tapped then falls back to `refreshList`; when that refresh's 401
+	 *  lands after the stream's refusal, its catch replaced the route retry and
+	 *  Retry stayed a `GET /api/sessions` for good, even after the fix. Each
+	 *  case drives the real provider through a loopback relay, ordering the
+	 *  responses with holds rather than reading source. */
+	it.each([
+		{
+			order:
+				"early tap: the stream's refusal lands while the refresh is in flight",
+			streamFirst: true,
+			pullToRefresh: false,
+		},
+		{
+			order: "early tap: the refresh fails before the stream's refusal lands",
+			streamFirst: false,
+			pullToRefresh: false,
+		},
+		{
+			order: "a refresh made after the stream's refusal fails too",
+			streamFirst: true,
+			pullToRefresh: true,
+		},
+	])(
+		"U3-1: Retry after a hook-raised Radient 401 re-runs the pick once fixed ($order)",
+		async ({ streamFirst, pullToRefresh }) => {
+			const mock = await liveRadient();
+			const listReads = () =>
+				mock.events.filter((event) => event === "GET /api/sessions").length;
+			mock.refuseRelay(true);
+			/* The stream's reopen is held: its refusal has not landed yet. */
+			const reopen = mock.holdNextCatalogue();
+			const opened = mock.catalogueStreams();
+			await act(async () => {
+				mock.endCatalogueStreams();
+			});
+			await eventually(() => mock.catalogueStreams() > opened);
+			/* 1. The hook raises the surface first, from another request on the
+			 *  route (Home's model read), with no retry set. */
+			await act(async () => {
+				await latest
+					.relay()
+					?.models()
+					.catch(() => undefined);
+			});
+			expect(connectionStore.getState().surface).toBe("password");
+			expect(latest.lastError).toBeNull();
+			const readsBefore = listReads();
+			if (pullToRefresh) {
+				/* The stream's refusal lands, then a refresh (pull-to-refresh, or
+				 *  Retry's fallback) is refused for the same cause. */
+				await act(async () => {
+					reopen.resolve();
+				});
+				await eventually(() => latest.streamHealth === "offline");
+				await act(async () => {
+					await latest.refreshList();
+				});
+			} else if (streamFirst) {
+				/* 2. Retry, tapped at once, falls back to the refresh; its read is
+				 *  held while the stream's refusal lands and sets the route retry. */
+				const read = mock.holdNextSessions();
+				let tap: Promise<void> = Promise.resolve();
+				await act(async () => {
+					tap = latest.retry();
+				});
+				await eventually(() => listReads() > readsBefore);
+				await act(async () => {
+					reopen.resolve();
+				});
+				await eventually(() => latest.streamHealth === "offline");
+				/* 3. The refresh's 401 lands last: this used to overwrite the
+				 *  route retry with `refreshList`. */
+				await act(async () => {
+					read.resolve();
+					await tap;
+				});
+			} else {
+				await act(async () => {
+					await latest.retry();
+				});
+				expect(listReads()).toBe(readsBefore + 1);
+				await act(async () => {
+					reopen.resolve();
+				});
+				await eventually(() => latest.streamHealth === "offline");
+			}
+			expect(latest.refusal).not.toBeNull();
+			expect(connectionStore.getState().surface).toBe("password");
+			/* No loop while the refusal shows: nothing reopens without a tap. */
+			const quietStreams = mock.catalogueStreams();
+			const quietReads = listReads();
+			await act(async () => {
+				await new Promise<void>((resolve) => setTimeout(resolve, 300));
+			});
+			expect(mock.catalogueStreams()).toBe(quietStreams);
+			expect(listReads()).toBe(quietReads);
+			/* 4. The cause is fixed; Retry re-runs the pick and reopens the stream. */
+			mock.refuseRelay(false);
+			const eventsBefore = mock.events.length;
+			await act(async () => {
+				await latest.retry();
+			});
+			await eventually(
+				() =>
+					connectionStore.getState().phase === "live" &&
+					connectionStore.getState().surface === null,
+			);
+			expect(mock.events.slice(eventsBefore)).toContain(
+				"GET /api/sessions/events",
+			);
+			expect(mock.catalogueStreams()).toBeGreaterThan(quietStreams);
 			expect(latest.refusal).toBeNull();
 			expect(latest.lastError).toBeNull();
 		},

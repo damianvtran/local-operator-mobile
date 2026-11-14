@@ -1957,7 +1957,28 @@ export const ConnectionProvider = ({
 			);
 		} catch (error) {
 			if (error instanceof RelayError) {
-				noteError(error, refreshList);
+				/* Keep the ROUTE retry when the route has one (PR #261 U3-1). A
+				 *  refresh fails for the same cause the live list stream refuses on
+				 *  (the Radient 401, billing, console, `relay_stopped`), and its 401
+				 *  can land AFTER the stream's `onError` set `routeRetryRef` as the
+				 *  surface's retry. Passing `refreshList` here replaced that closure:
+				 *  the stream had stopped and nothing re-set it, so every later Retry
+				 *  was one `GET /api/sessions` that never reopened the stream nor
+				 *  cleared the refusal, even once the cause was fixed. That is the
+				 *  early-tap order on a slow network: the 401 hook raises the surface
+				 *  with no retry set, Retry falls back to this refresh, and the
+				 *  stream's refusal lands while it is in flight.
+				 *
+				 *  Fixed here rather than in the 401 hook because this catch is the
+				 *  site that overwrites: setting the retry from the hook would still
+				 *  lose it to any refresh failing later (Retry's own fallback, a
+				 *  pull-to-refresh while refused). Re-running the route is also what
+				 *  the stream's refusal and the pick's own catch already offer, so
+				 *  every Retry on a route converges on the one action that reopens
+				 *  the stream and clears the surface on success. It is still one
+				 *  attempt per tap, so no loop. With no route (nothing to re-run),
+				 *  the refresh remains the retry. */
+				noteError(error, routeRetryRef.current ?? refreshList);
 				return;
 			}
 			throw error;

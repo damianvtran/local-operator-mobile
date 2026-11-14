@@ -1700,9 +1700,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * staged remediation tree. Then the round-2 remediation (no zero-delay
 	 * poll re-arm, Retry re-runs the route on a stream-raised refusal, Last
 	 * error sources and transport sub-causes, redaction cap and shapes):
-	 * re-derived with --print over the staged round-2 tree. Source identity
-	 * only, NOT rendered U-08 evidence. */
-	src: "ef85f6ddb3e360f827d17799ef528153d0c71e4df6349f6eb2d348f7c9da7500",
+	 * re-derived with --print over the staged round-2 tree. Then the round-3
+	 * remediation (U3-1: a failed refresh keeps the route retry): re-derived
+	 * with --print over the staged round-3 tree. Source identity only, NOT
+	 * rendered U-08 evidence. */
+	src: "fbaadd3011ca03761a41d38293e2d132262d9c1c74b5487b665192379dba041b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
