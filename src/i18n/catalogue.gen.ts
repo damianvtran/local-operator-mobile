@@ -197,6 +197,15 @@ export type CatalogueKey =
 	| "mobile.computers.remove.confirm"
 	| "mobile.computers.remove.title"
 	| "mobile.computers.retry"
+	| "mobile.computers.route_invalid.credentials"
+	| "mobile.computers.route_invalid.empty"
+	| "mobile.computers.route_invalid.http_public"
+	| "mobile.computers.route_invalid.insecure_off"
+	| "mobile.computers.route_invalid.no_tunnel_id"
+	| "mobile.computers.route_invalid.not_address"
+	| "mobile.computers.route_invalid.not_radient"
+	| "mobile.computers.route_invalid.query"
+	| "mobile.computers.route_invalid.scheme"
 	| "mobile.computers.row.a11y"
 	| "mobile.computers.row.a11y_active"
 	| "mobile.computers.row.a11y_connecting"
@@ -208,6 +217,23 @@ export type CatalogueKey =
 	| "mobile.computers.section.on_phone"
 	| "mobile.computers.session_error"
 	| "mobile.computers.session_error_help"
+	| "mobile.computers.setup.address_help"
+	| "mobile.computers.setup.address_title"
+	| "mobile.computers.setup.amount_note"
+	| "mobile.computers.setup.attach_help"
+	| "mobile.computers.setup.attach_label"
+	| "mobile.computers.setup.attach_title"
+	| "mobile.computers.setup.billing_fallback"
+	| "mobile.computers.setup.billing_title"
+	| "mobile.computers.setup.create_help"
+	| "mobile.computers.setup.create_title"
+	| "mobile.computers.setup.intro"
+	| "mobile.computers.setup.ran_it"
+	| "mobile.computers.setup.terminal_label"
+	| "mobile.computers.setup.tui_help"
+	| "mobile.computers.setup.tui_label"
+	| "mobile.computers.setup.tunnel_id_label"
+	| "mobile.computers.setup.watching"
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
@@ -238,6 +264,7 @@ export type CatalogueKey =
 	| "mobile.computers.wait.start_again"
 	| "mobile.computers.wait.tunnel_status"
 	| "mobile.computers.wait.use_computer"
+	| "mobile.computers.your_computer"
 	| "mobile.home.chip.effort_chosen"
 	| "mobile.home.chip.effort_default"
 	| "mobile.home.chip.effort_default_unnamed"
@@ -990,6 +1017,12 @@ export type NoParamKey =
 	| "mobile.computers.remove.confirm"
 	| "mobile.computers.remove.title"
 	| "mobile.computers.retry"
+	| "mobile.computers.route_invalid.credentials"
+	| "mobile.computers.route_invalid.empty"
+	| "mobile.computers.route_invalid.insecure_off"
+	| "mobile.computers.route_invalid.no_tunnel_id"
+	| "mobile.computers.route_invalid.not_radient"
+	| "mobile.computers.route_invalid.query"
 	| "mobile.computers.save_refused.body"
 	| "mobile.computers.save_refused.continue"
 	| "mobile.computers.save_refused.title"
@@ -997,6 +1030,22 @@ export type NoParamKey =
 	| "mobile.computers.section.on_phone"
 	| "mobile.computers.session_error"
 	| "mobile.computers.session_error_help"
+	| "mobile.computers.setup.address_help"
+	| "mobile.computers.setup.address_title"
+	| "mobile.computers.setup.attach_help"
+	| "mobile.computers.setup.attach_label"
+	| "mobile.computers.setup.attach_title"
+	| "mobile.computers.setup.billing_fallback"
+	| "mobile.computers.setup.billing_title"
+	| "mobile.computers.setup.create_help"
+	| "mobile.computers.setup.create_title"
+	| "mobile.computers.setup.intro"
+	| "mobile.computers.setup.ran_it"
+	| "mobile.computers.setup.terminal_label"
+	| "mobile.computers.setup.tui_help"
+	| "mobile.computers.setup.tui_label"
+	| "mobile.computers.setup.tunnel_id_label"
+	| "mobile.computers.setup.watching"
 	| "mobile.computers.show_details"
 	| "mobile.computers.sign_out"
 	| "mobile.computers.signing_out"
@@ -1021,6 +1070,7 @@ export type NoParamKey =
 	| "mobile.computers.wait.paused"
 	| "mobile.computers.wait.start_again"
 	| "mobile.computers.wait.use_computer"
+	| "mobile.computers.your_computer"
 	| "mobile.home.chip.effort_default_unnamed"
 	| "mobile.home.chip.model_default_short"
 	| "mobile.home.chip.model_no_default"
@@ -1707,6 +1757,15 @@ export type MessageParams = {
 	"mobile.computers.remove.confirm": NoParams;
 	"mobile.computers.remove.title": NoParams;
 	"mobile.computers.retry": NoParams;
+	"mobile.computers.route_invalid.credentials": NoParams;
+	"mobile.computers.route_invalid.empty": NoParams;
+	"mobile.computers.route_invalid.http_public": { example: string | number; insecure: string | number; scheme: string | number };
+	"mobile.computers.route_invalid.insecure_off": NoParams;
+	"mobile.computers.route_invalid.no_tunnel_id": NoParams;
+	"mobile.computers.route_invalid.not_address": { scheme: string | number };
+	"mobile.computers.route_invalid.not_radient": NoParams;
+	"mobile.computers.route_invalid.query": NoParams;
+	"mobile.computers.route_invalid.scheme": { scheme: string | number };
 	"mobile.computers.row.a11y": { name: string | number; reach: string | number; status: string | number };
 	"mobile.computers.row.a11y_active": { name: string | number; reach: string | number; status: string | number };
 	"mobile.computers.row.a11y_connecting": { name: string | number; reach: string | number; status: string | number };
@@ -1718,6 +1777,23 @@ export type MessageParams = {
 	"mobile.computers.section.on_phone": NoParams;
 	"mobile.computers.session_error": NoParams;
 	"mobile.computers.session_error_help": NoParams;
+	"mobile.computers.setup.address_help": NoParams;
+	"mobile.computers.setup.address_title": NoParams;
+	"mobile.computers.setup.amount_note": { amount: string | number; command: string | number };
+	"mobile.computers.setup.attach_help": NoParams;
+	"mobile.computers.setup.attach_label": NoParams;
+	"mobile.computers.setup.attach_title": NoParams;
+	"mobile.computers.setup.billing_fallback": NoParams;
+	"mobile.computers.setup.billing_title": NoParams;
+	"mobile.computers.setup.create_help": NoParams;
+	"mobile.computers.setup.create_title": NoParams;
+	"mobile.computers.setup.intro": NoParams;
+	"mobile.computers.setup.ran_it": NoParams;
+	"mobile.computers.setup.terminal_label": NoParams;
+	"mobile.computers.setup.tui_help": NoParams;
+	"mobile.computers.setup.tui_label": NoParams;
+	"mobile.computers.setup.tunnel_id_label": NoParams;
+	"mobile.computers.setup.watching": NoParams;
 	"mobile.computers.show_details": NoParams;
 	"mobile.computers.sign_out": NoParams;
 	"mobile.computers.signing_out": NoParams;
@@ -1748,6 +1824,7 @@ export type MessageParams = {
 	"mobile.computers.wait.start_again": NoParams;
 	"mobile.computers.wait.tunnel_status": { status: string | number };
 	"mobile.computers.wait.use_computer": NoParams;
+	"mobile.computers.your_computer": NoParams;
 	"mobile.home.chip.effort_chosen": { effort: string | number };
 	"mobile.home.chip.effort_default": { effort: string | number };
 	"mobile.home.chip.effort_default_unnamed": NoParams;
@@ -2538,6 +2615,15 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.remove.confirm": "Remove",
 	"mobile.computers.remove.title": "Remove this computer?",
 	"mobile.computers.retry": "Retry",
+	"mobile.computers.route_invalid.credentials": "Remove the username and password from the address.",
+	"mobile.computers.route_invalid.empty": "Enter the address of your relay.",
+	"mobile.computers.route_invalid.http_public": "{insecure} is only allowed for a private address. Use {scheme}, or a private host such as {example}.",
+	"mobile.computers.route_invalid.insecure_off": "This address is unencrypted, so the relay password crosses the network in the clear. Turn on the insecure-connection switch to continue.",
+	"mobile.computers.route_invalid.no_tunnel_id": "This tunnel has no id, so its session cannot be re-minted. Re-run discovery.",
+	"mobile.computers.route_invalid.not_address": "That does not look like an address. It should start with {scheme}.",
+	"mobile.computers.route_invalid.not_radient": "That is not a Radient tunnel address. Use the address the Radient console shows for this computer.",
+	"mobile.computers.route_invalid.query": "Remove the query string and fragment from the address.",
+	"mobile.computers.route_invalid.scheme": "Only {scheme} addresses are supported.",
 	"mobile.computers.row.a11y": "{name}, {status}, {reach}",
 	"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, active",
 	"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, connecting",
@@ -2549,6 +2635,23 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.section.on_phone": "On this phone",
 	"mobile.computers.session_error": "The app couldn't connect to this computer.",
 	"mobile.computers.session_error_help": "Your computer does not need to be reconfigured. Retry, or show the details for support.",
+	"mobile.computers.setup.address_help": "If your relay is reachable at a URL you already know, connect to it with the relay's own password. This is the route for a machine that is not on Radient at all.",
+	"mobile.computers.setup.address_title": "Use an address instead",
+	"mobile.computers.setup.amount_note": "{amount} is the price the Radient console shows for this account — {command} refuses anything else, and step 1 of the tunnel guide links to where it is shown.",
+	"mobile.computers.setup.attach_help": "If you created the tunnel in the Radient console, attach it by the id the console shows. This command is for a tunnel that already exists — it will not create one.",
+	"mobile.computers.setup.attach_label": "Attach",
+	"mobile.computers.setup.attach_title": "Attach one that already exists",
+	"mobile.computers.setup.billing_fallback": "Radient says this account cannot start a tunnel yet. Check billing in the console, then try again.",
+	"mobile.computers.setup.billing_title": "Remote access is not active",
+	"mobile.computers.setup.create_help": "In a terminal on the computer you want to control:",
+	"mobile.computers.setup.create_title": "Create one on the computer",
+	"mobile.computers.setup.intro": "This app drives the sessions on your own computer, so that computer has to run a connector and stay awake. Your code stays on it.",
+	"mobile.computers.setup.ran_it": "I've run it — connect it",
+	"mobile.computers.setup.terminal_label": "Terminal",
+	"mobile.computers.setup.tui_help": "Or in the Local Operator TUI, in two commands:",
+	"mobile.computers.setup.tui_label": "TUI",
+	"mobile.computers.setup.tunnel_id_label": "Tunnel id",
+	"mobile.computers.setup.watching": "Watching for it",
 	"mobile.computers.show_details": "Show details",
 	"mobile.computers.sign_out": "Sign out",
 	"mobile.computers.signing_out": "Signing out…",
@@ -2579,6 +2682,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.computers.wait.start_again": "Start again",
 	"mobile.computers.wait.tunnel_status": "Radient has the tunnel — {status}.",
 	"mobile.computers.wait.use_computer": "Use this computer",
+	"mobile.computers.your_computer": "Your computer",
 	"mobile.home.chip.effort_chosen": "Effort, {effort}, chosen for this conversation",
 	"mobile.home.chip.effort_default": "Effort, {effort}, this computer's default",
 	"mobile.home.chip.effort_default_unnamed": "Effort, this computer's configured level",
@@ -3354,6 +3458,15 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.remove.confirm": { role: "button", note: "Destructive confirm button of the 'Remove this computer?' dialog. One verb; the dialog also has the shared Cancel." },
 	"mobile.computers.remove.title": { role: "confirm", note: "Title of the confirmation dialog for removing a computer from this phone. A question. Body and buttons are separate strings." },
 	"mobile.computers.retry": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.route_invalid.credentials": { role: "help", note: "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the address has a user name and password written into it (user:pass@host), which would leak into logs." },
+	"mobile.computers.route_invalid.empty": { role: "help", note: "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the field is empty." },
+	"mobile.computers.route_invalid.http_public": { role: "help", note: "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: an unencrypted address on the public internet. {insecure} is `http://`, {scheme} is `https://`, {example} is `192.168.x.x` (a home-network address): none are translated, keep them left-to-right. The sentence may start with {insecure} in English; reorder freely." },
+	"mobile.computers.route_invalid.insecure_off": { role: "help", note: "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: an unencrypted private address while the insecure-connection switch (a toggle on the same screen) is off. Name the switch the way the reader sees it on the screen." },
+	"mobile.computers.route_invalid.no_tunnel_id": { role: "help", note: "Reserved reason for a Radient tunnel address the app refuses (today the app drops this reason silently and picks another route; it exists so a future surface is translated). Radient is the product name: keep it in Latin script. Full sentence(s). Case: the tunnel arrived without an identifier, so the app cannot renew its sign-in ('re-mint' = issue a new session token); 'discovery' is the app re-reading the account's computers." },
+	"mobile.computers.route_invalid.not_address": { role: "help", note: "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the text cannot be read as a web address. {scheme} is `https://`: never translated, keep it left-to-right." },
+	"mobile.computers.route_invalid.not_radient": { role: "help", note: "Reserved reason for a Radient tunnel address the app refuses (today the app drops this reason silently and picks another route; it exists so a future surface is translated). Radient is the product name: keep it in Latin script. Full sentence(s). Case: the address is not in the form Radient's tunnels use." },
+	"mobile.computers.route_invalid.query": { role: "help", note: "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the address ends with ?… or #…. 'Query string' and 'fragment' are the technical names of those URL parts; use your language's usual technical terms." },
+	"mobile.computers.route_invalid.scheme": { role: "help", note: "Shown beside the address field on the \"Your own tunnel\" screen (connect to a relay you publish yourself, no Radient account) and in the failure box after \"Test the connection\", when the typed address is refused before any request is sent. The relay is the small server on the reader's computer that the app talks to. Full sentence(s) ending with a full stop. Case: the address uses another protocol (e.g. ftp://). {scheme} is `https://`: never translated, keep it left-to-right." },
 	"mobile.computers.row.a11y": { role: "status", note: "Screen-reader label of a computer row (not visible). {name} is the computer's own name, {status} the status badge text (status.*), {reach} the reachability badge text. Keep the three comma-separated parts in this order; keep all placeholders unchanged." },
 	"mobile.computers.row.a11y_active": { role: "status", note: "Screen-reader label of the computer row that is the connected one. Same placeholders as row.a11y; ends with the word for 'active' (same word as badge.active)." },
 	"mobile.computers.row.a11y_connecting": { role: "status", note: "Screen-reader label of a computer row while its connection is being made. Same placeholders as row.a11y; ends with the word for 'connecting' (same word as badge.connecting)." },
@@ -3365,6 +3478,23 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.section.on_phone": { role: "heading", note: "Section header for computers already paired on this phone." },
 	"mobile.computers.session_error": { role: "heading", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.session_error_help": { role: "help", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
+	"mobile.computers.setup.address_help": { role: "help", note: "Help text in the address card on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. The relay is the small server on the reader's computer that the app talks to. Full sentences." },
+	"mobile.computers.setup.address_title": { role: "heading", note: "Card heading on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Third route: connect directly to a relay URL with its password, without Radient. No final full stop." },
+	"mobile.computers.setup.amount_note": { role: "help", note: "Small note under the create commands on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. {amount} is the literal placeholder `<amount>` that appears in the command above (the reader replaces it with a price); {command} is the command `lop tunnel create`. Both are values the reader types: never translate them, keep them left-to-right. The sentence may start with {amount} in English; reorder freely." },
+	"mobile.computers.setup.attach_help": { role: "help", note: "Help text in the attach card on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. 'Id' is the tunnel's identifier as printed in the console. The second sentence warns that the command below does not create a tunnel. Full sentences." },
+	"mobile.computers.setup.attach_label": { role: "meta", note: "Small upper-case label at the top of the copyable attach command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. A verb or noun naming the action of connecting an existing tunnel. One word; it is also read in the copy button's accessibility hint." },
+	"mobile.computers.setup.attach_title": { role: "heading", note: "Card heading on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Second route: connect a tunnel the reader already created in the Radient console. 'One' is a tunnel. No final full stop." },
+	"mobile.computers.setup.billing_fallback": { role: "help", note: "Body of the \"Remote access is not active\" warning on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Only shown when the Radient console sent no sentence of its own (its sentence, in English, is shown instead when present). 'The console' is the Radient web console. Full sentences." },
+	"mobile.computers.setup.billing_title": { role: "heading", note: "Title of a warning box on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Shown when Radient says this account cannot start a tunnel (billing not active). Short, no final full stop." },
+	"mobile.computers.setup.create_help": { role: "help", note: "Lead-in line above a block of terminal commands on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Ends with a colon because the commands follow directly below; use your language's lead-in punctuation." },
+	"mobile.computers.setup.create_title": { role: "heading", note: "Card heading on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. First of three routes: create a new tunnel by running commands on the computer itself. 'One' is a tunnel. Short, no final full stop." },
+	"mobile.computers.setup.intro": { role: "help", note: "Opening paragraph on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Explains why the computer must run a connector (a small background program that keeps the tunnel open) and stay awake, and reassures that code never leaves it. Full sentences." },
+	"mobile.computers.setup.ran_it": { role: "button", note: "Label of the primary button on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. pressed after running the create commands: the app then watches for the tunnel and connects to it. First person (the reader speaking). Short enough for a full-width button on a 320 pt phone; no final full stop." },
+	"mobile.computers.setup.terminal_label": { role: "meta", note: "Small upper-case label at the top of a copyable command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Names where the commands are typed (a command-line terminal). One word; it is also read in the copy button's accessibility hint. Narrow: label row of a 320 pt wide block." },
+	"mobile.computers.setup.tui_help": { role: "help", note: "Lead-in line above a second command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. The TUI is Local Operator's full-screen terminal app; 'Local Operator' is the product name (keep Latin). Ends with a colon because the commands follow." },
+	"mobile.computers.setup.tui_label": { role: "meta", note: "Small upper-case label at the top of a copyable command block on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. TUI = text user interface (Local Operator's terminal app). Keep the acronym unless your language has an established one. Very short." },
+	"mobile.computers.setup.tunnel_id_label": { role: "meta", note: "Visible label and accessible name of the text field where the reader types the tunnel's identifier on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. Two words, no final full stop. The example in the field (0123…-lop) is not translated." },
+	"mobile.computers.setup.watching": { role: "button", note: "Label of the primary button on the \"Set up a computer\" screen (Computers → add a computer through Radient, the hosted service that publishes a tunnel to the reader's own computer). Radient is the product name: keep it in Latin script. while the app is checking for the newly created tunnel to appear (the button shows a spinner). 'It' is the tunnel. Short, no final full stop; sibling of mobile.computers.setup.ran_it, the same button before it is pressed." },
 	"mobile.computers.show_details": { role: "button", note: "Tunnel connection failure or protected reachability. App response-contract failures stay in-app; only explicit billing/disabled/harness server refusals direct the reader to a concrete console setting. Account404 cannot distinguish another owner from a deleted record; never invent device approval. Technical class names are redacted support data, not translated." },
 	"mobile.computers.sign_out": { role: "button", note: "Settings action opening the sign-out confirmation. Sentence case." },
 	"mobile.computers.signing_out": { role: "status", note: "Pending label on the disabled Settings sign-out button while device removal and credential cleanup finish; may last up to 35 seconds. Keep the ellipsis." },
@@ -3395,6 +3525,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.computers.wait.start_again": { role: "button", note: "Quiet button under the add-a-computer wait panel that abandons the wait and returns to the start of the setup. Short imperative." },
 	"mobile.computers.wait.tunnel_status": { role: "status", note: "Second step of the add-a-computer wait panel. {status} is a LOCALISED status label chosen by tunnel-status-key.ts from Radient's own tunnel-status word (active -> mobile.computers.badge.active; provisioning, suspended, disabled, revoked and unknown -> mobile.computers.status.*). It is a lower-case predicate word placed after the dash, so the sentence must read naturally with a lower-case word or short phrase there. Ends with a full stop; keep {status} unchanged." },
 	"mobile.computers.wait.use_computer": { role: "button", note: "Primary button under the add-a-computer wait panel once the computer answered; switches the app to it. Imperative, short." },
+	"mobile.computers.your_computer": { role: "meta", note: "Names the reader's computer inside connection-failure headlines on the Computers screen when the failing computer has no name of its own (a Radient route, before the list knows it). The same text fills {subject} in headlines such as \"{subject} is not answering.\" and \"The relay is not running on {subject}.\", so it appears both at the start of a sentence and after a preposition: choose a form that reads in both places. Capitalised in English because it usually starts the sentence." },
 	"mobile.home.chip.effort_chosen": { role: "meta", note: "Spoken label of the effort chip when the reader chose a level. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies. {effort} is the translated level name. New in the three-pickers change; the non-English text awaits the translation audit." },
 	"mobile.home.chip.effort_default_unnamed": { role: "meta", note: "Spoken label of the effort chip when the computer's configured level applies but the app cannot name it (another model than the default). New in the three-pickers change; the non-English text awaits the translation audit." },
@@ -4184,6 +4315,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.remove.confirm": "Quitar",
 		"mobile.computers.remove.title": "¿Quitar esta máquina?",
 		"mobile.computers.retry": "Reintentar",
+		"mobile.computers.route_invalid.credentials": "Quita el usuario y la contraseña de la dirección.",
+		"mobile.computers.route_invalid.empty": "Introduce la dirección de tu relé.",
+		"mobile.computers.route_invalid.http_public": "{insecure} solo se permite para una dirección privada. Usa {scheme} o un host privado como {example}.",
+		"mobile.computers.route_invalid.insecure_off": "Esta dirección no está cifrada, así que la contraseña del relé cruza la red sin cifrar. Activa “Permitir una dirección http://” para continuar.",
+		"mobile.computers.route_invalid.no_tunnel_id": "Este túnel no tiene ID, así que no se puede renovar su sesión. Vuelve a buscar tus máquinas.",
+		"mobile.computers.route_invalid.not_address": "Eso no parece una dirección. Debe empezar por {scheme}.",
+		"mobile.computers.route_invalid.not_radient": "Esa no es una dirección de túnel de Radient. Usa la dirección que muestra la consola de Radient para esta máquina.",
+		"mobile.computers.route_invalid.query": "Quita la cadena de consulta y el fragmento de la dirección.",
+		"mobile.computers.route_invalid.scheme": "Solo se admiten direcciones {scheme}.",
 		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
 		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, activa",
 		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, conectando",
@@ -4195,6 +4335,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "En este teléfono",
 		"mobile.computers.session_error": "La app no pudo conectarse a esta máquina.",
 		"mobile.computers.session_error_help": "No hace falta reconfigurar la máquina. Reintenta o muestra los detalles para soporte.",
+		"mobile.computers.setup.address_help": "Si tu relé es accesible en una URL que ya conoces, conéctate a ella con la contraseña del propio relé. Esta es la vía para una máquina que no usa Radient en absoluto.",
+		"mobile.computers.setup.address_title": "Usar una dirección",
+		"mobile.computers.setup.amount_note": "Sustituye {amount} por el precio que muestra la consola de Radient para esta cuenta: {command} rechaza cualquier otro valor, y el paso 1 de la guía del túnel enlaza con el lugar donde aparece.",
+		"mobile.computers.setup.attach_help": "Si creaste el túnel en la consola de Radient, vincúlalo con el ID que muestra la consola. Este comando es para un túnel que ya existe: no crea uno nuevo.",
+		"mobile.computers.setup.attach_label": "Vincular",
+		"mobile.computers.setup.attach_title": "Vincular uno que ya existe",
+		"mobile.computers.setup.billing_fallback": "Radient indica que esta cuenta aún no puede iniciar un túnel. Revisa la facturación en la consola de Radient y vuelve a intentarlo.",
+		"mobile.computers.setup.billing_title": "El acceso remoto no está activo",
+		"mobile.computers.setup.create_help": "En una terminal de la máquina que quieres controlar:",
+		"mobile.computers.setup.create_title": "Crear uno en la máquina",
+		"mobile.computers.setup.intro": "Esta app controla las sesiones de tu propia máquina, así que esa máquina tiene que ejecutar un conector y no entrar en reposo. Tu código no sale de ella.",
+		"mobile.computers.setup.ran_it": "Ya lo ejecuté: conectar",
+		"mobile.computers.setup.terminal_label": "Terminal",
+		"mobile.computers.setup.tui_help": "O en la TUI de Local Operator, con dos comandos:",
+		"mobile.computers.setup.tui_label": "TUI",
+		"mobile.computers.setup.tunnel_id_label": "ID del túnel",
+		"mobile.computers.setup.watching": "Esperando el túnel",
 		"mobile.computers.show_details": "Mostrar detalles",
 		"mobile.computers.sign_out": "Cerrar sesión",
 		"mobile.computers.signing_out": "Cerrando sesión…",
@@ -4225,6 +4382,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.start_again": "Empezar de nuevo",
 		"mobile.computers.wait.tunnel_status": "Radient ya tiene el túnel — {status}.",
 		"mobile.computers.wait.use_computer": "Usar esta máquina",
+		"mobile.computers.your_computer": "Tu máquina",
 		"mobile.home.chip.effort_chosen": "Esfuerzo, {effort}, elegido para esta conversación",
 		"mobile.home.chip.effort_default": "Esfuerzo, {effort}, predeterminado de esta máquina",
 		"mobile.home.chip.effort_default_unnamed": "Esfuerzo, el nivel configurado en esta máquina",
@@ -4998,6 +5156,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.remove.confirm": "Retirer",
 		"mobile.computers.remove.title": "Retirer cet ordinateur ?",
 		"mobile.computers.retry": "Réessayer",
+		"mobile.computers.route_invalid.credentials": "Retirez le nom d’utilisateur et le mot de passe de l’adresse.",
+		"mobile.computers.route_invalid.empty": "Saisissez l’adresse de votre relais.",
+		"mobile.computers.route_invalid.http_public": "{insecure} n’est autorisé que pour une adresse privée. Utilisez {scheme} ou un hôte privé tel que {example}.",
+		"mobile.computers.route_invalid.insecure_off": "Cette adresse n’est pas chiffrée : le mot de passe du relais transiterait donc en clair sur le réseau. Activez l’option « Autoriser le http:// en clair » pour continuer.",
+		"mobile.computers.route_invalid.no_tunnel_id": "Ce tunnel n’a pas d’identifiant : sa session ne peut donc pas être renouvelée. Relancez la détection des ordinateurs.",
+		"mobile.computers.route_invalid.not_address": "Cela ne ressemble pas à une adresse. L’adresse doit commencer par {scheme}.",
+		"mobile.computers.route_invalid.not_radient": "Ce n’est pas une adresse de tunnel Radient. Utilisez l’adresse affichée dans la console Radient pour cet ordinateur.",
+		"mobile.computers.route_invalid.query": "Retirez les paramètres de requête et le fragment de l’adresse.",
+		"mobile.computers.route_invalid.scheme": "Seules les adresses {scheme} sont prises en charge.",
 		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
 		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, actif",
 		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, connexion",
@@ -5009,6 +5176,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "Sur ce téléphone",
 		"mobile.computers.session_error": "L’app n’a pas pu se connecter à cet ordinateur.",
 		"mobile.computers.session_error_help": "Il n’est pas nécessaire de reconfigurer l’ordinateur. Réessayez ou affichez les détails pour l’assistance.",
+		"mobile.computers.setup.address_help": "Si votre relais est joignable à une URL que vous connaissez déjà, connectez-vous-y avec le mot de passe propre au relais. C’est la marche à suivre pour une machine qui n’utilise pas du tout Radient.",
+		"mobile.computers.setup.address_title": "Utiliser plutôt une adresse",
+		"mobile.computers.setup.amount_note": "{amount} correspond au prix affiché dans la console Radient pour ce compte — {command} refuse toute autre valeur, et l’étape 1 du guide des tunnels indique où trouver ce prix.",
+		"mobile.computers.setup.attach_help": "Si vous avez créé le tunnel dans la console Radient, associez-le à l’aide de l’identifiant qu’elle affiche. Cette commande est réservée à un tunnel existant — elle n’en crée pas.",
+		"mobile.computers.setup.attach_label": "Associer",
+		"mobile.computers.setup.attach_title": "Associer un tunnel existant",
+		"mobile.computers.setup.billing_fallback": "Radient indique que ce compte ne peut pas encore démarrer de tunnel. Vérifiez la facturation dans la console, puis réessayez.",
+		"mobile.computers.setup.billing_title": "L’accès à distance n’est pas actif",
+		"mobile.computers.setup.create_help": "Dans un terminal, sur l’ordinateur que vous voulez piloter :",
+		"mobile.computers.setup.create_title": "Créer un tunnel sur l’ordinateur",
+		"mobile.computers.setup.intro": "Cette app pilote les sessions qui tournent sur votre propre ordinateur : celui-ci doit donc exécuter un connecteur et ne pas se mettre en veille. Votre code ne le quitte jamais.",
+		"mobile.computers.setup.ran_it": "C’est fait — connecter",
+		"mobile.computers.setup.terminal_label": "Terminal",
+		"mobile.computers.setup.tui_help": "Ou, dans la TUI de Local Operator, en deux commandes :",
+		"mobile.computers.setup.tui_label": "TUI",
+		"mobile.computers.setup.tunnel_id_label": "Identifiant du tunnel",
+		"mobile.computers.setup.watching": "En attente du tunnel…",
 		"mobile.computers.show_details": "Afficher les détails",
 		"mobile.computers.sign_out": "Se déconnecter",
 		"mobile.computers.signing_out": "Déconnexion en cours…",
@@ -5039,6 +5223,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.start_again": "Recommencer",
 		"mobile.computers.wait.tunnel_status": "Radient dispose du tunnel — {status}.",
 		"mobile.computers.wait.use_computer": "Utiliser cet ordinateur",
+		"mobile.computers.your_computer": "Votre ordinateur",
 		"mobile.home.chip.effort_chosen": "Effort, {effort}, choisi pour cette conversation",
 		"mobile.home.chip.effort_default": "Effort, {effort}, par défaut sur cet ordinateur",
 		"mobile.home.chip.effort_default_unnamed": "Effort, le niveau configuré sur cet ordinateur",
@@ -5812,6 +5997,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.remove.confirm": "हटाएँ",
 		"mobile.computers.remove.title": "यह कंप्यूटर हटाएँ?",
 		"mobile.computers.retry": "दोबारा कोशिश करें",
+		"mobile.computers.route_invalid.credentials": "पते से यूज़रनेम और पासवर्ड हटाएँ।",
+		"mobile.computers.route_invalid.empty": "अपने रिले का पता डालें।",
+		"mobile.computers.route_invalid.http_public": "{insecure} की अनुमति सिर्फ़ निजी पते के लिए है। {scheme} का उपयोग करें, या {example} जैसे किसी निजी होस्ट का।",
+		"mobile.computers.route_invalid.insecure_off": "यह पता एन्क्रिप्टेड नहीं है, इसलिए रिले पासवर्ड नेटवर्क से बिना एन्क्रिप्शन के गुज़रता है। जारी रखने के लिए “सादे http:// पते की अनुमति दें” विकल्प चालू करें।",
+		"mobile.computers.route_invalid.no_tunnel_id": "इस टनल की कोई आईडी नहीं है, इसलिए इसका साइन-इन नए सिरे से नहीं बनाया जा सकता। कंप्यूटर फिर से खोजें।",
+		"mobile.computers.route_invalid.not_address": "यह पता जैसा नहीं लगता। इसकी शुरुआत {scheme} से होनी चाहिए।",
+		"mobile.computers.route_invalid.not_radient": "यह Radient टनल का पता नहीं है। Radient कंसोल में इस कंप्यूटर के लिए दिखाया गया पता उपयोग करें।",
+		"mobile.computers.route_invalid.query": "पते से क्वेरी स्ट्रिंग और फ़्रैगमेंट हटाएँ।",
+		"mobile.computers.route_invalid.scheme": "सिर्फ़ {scheme} पते सपोर्ट किए जाते हैं।",
 		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
 		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, सक्रिय",
 		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, कनेक्ट हो रहा",
@@ -5823,6 +6017,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "इस फ़ोन पर",
 		"mobile.computers.session_error": "ऐप इस कंप्यूटर से कनेक्ट नहीं हो सका।",
 		"mobile.computers.session_error_help": "कंप्यूटर को फिर से कॉन्फ़िगर करने की ज़रूरत नहीं है। दोबारा कोशिश करें या सहायता के लिए विवरण दिखाएँ।",
+		"mobile.computers.setup.address_help": "अगर आपका रिले किसी ऐसे URL पर उपलब्ध है जिसे आप पहले से जानते हैं, तो रिले के अपने पासवर्ड से उससे कनेक्ट करें। यह रास्ता उस मशीन के लिए है जो Radient पर है ही नहीं।",
+		"mobile.computers.setup.address_title": "इसके बजाय पते का उपयोग करें",
+		"mobile.computers.setup.amount_note": "{amount} वह कीमत है जो Radient कंसोल इस खाते के लिए दिखाता है — {command} इसके अलावा कोई और रकम स्वीकार नहीं करती, और टनल गाइड के चरण 1 में उस जगह का लिंक है जहाँ यह कीमत दिखती है।",
+		"mobile.computers.setup.attach_help": "अगर आपने टनल Radient कंसोल में बनाई है, तो कंसोल में दिखने वाली आईडी से उसे जोड़ें। यह कमांड पहले से मौजूद टनल के लिए है — इससे नई टनल नहीं बनेगी।",
+		"mobile.computers.setup.attach_label": "जोड़ें",
+		"mobile.computers.setup.attach_title": "मौजूदा टनल जोड़ें",
+		"mobile.computers.setup.billing_fallback": "Radient के अनुसार यह खाता अभी टनल शुरू नहीं कर सकता। कंसोल में बिलिंग जाँचें, फिर दोबारा कोशिश करें।",
+		"mobile.computers.setup.billing_title": "रिमोट ऐक्सेस सक्रिय नहीं है",
+		"mobile.computers.setup.create_help": "जिस कंप्यूटर को आप नियंत्रित करना चाहते हैं, उसके टर्मिनल में:",
+		"mobile.computers.setup.create_title": "कंप्यूटर पर नई टनल बनाएँ",
+		"mobile.computers.setup.intro": "यह ऐप आपके अपने कंप्यूटर पर सत्र चलाता है, इसलिए उस कंप्यूटर पर कनेक्टर चलता रहना चाहिए और उसे स्लीप में नहीं जाना चाहिए। आपका कोड उसी कंप्यूटर पर रहता है।",
+		"mobile.computers.setup.ran_it": "मैंने चला दिया — कनेक्ट करें",
+		"mobile.computers.setup.terminal_label": "टर्मिनल",
+		"mobile.computers.setup.tui_help": "या Local Operator TUI में, दो कमांड से:",
+		"mobile.computers.setup.tui_label": "TUI",
+		"mobile.computers.setup.tunnel_id_label": "टनल आईडी",
+		"mobile.computers.setup.watching": "टनल का इंतज़ार हो रहा है",
 		"mobile.computers.show_details": "विवरण दिखाएँ",
 		"mobile.computers.sign_out": "साइन आउट करें",
 		"mobile.computers.signing_out": "साइन आउट हो रहा है…",
@@ -5853,6 +6064,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.start_again": "फिर से शुरू करें",
 		"mobile.computers.wait.tunnel_status": "Radient के पास टनल है — {status}।",
 		"mobile.computers.wait.use_computer": "इस कंप्यूटर का उपयोग करें",
+		"mobile.computers.your_computer": "कंप्यूटर",
 		"mobile.home.chip.effort_chosen": "प्रयास, {effort}, इस बातचीत के लिए चुना गया",
 		"mobile.home.chip.effort_default": "प्रयास, {effort}, इस कंप्यूटर का डिफ़ॉल्ट",
 		"mobile.home.chip.effort_default_unnamed": "प्रयास, इस कंप्यूटर पर कॉन्फ़िगर किया गया स्तर",
@@ -6626,6 +6838,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.remove.confirm": "Удалить",
 		"mobile.computers.remove.title": "Удалить этот компьютер?",
 		"mobile.computers.retry": "Повторить",
+		"mobile.computers.route_invalid.credentials": "Уберите из адреса имя пользователя и пароль.",
+		"mobile.computers.route_invalid.empty": "Введите адрес вашего ретранслятора.",
+		"mobile.computers.route_invalid.http_public": "Адрес {insecure} допустим только в частной сети. Используйте {scheme} или частный хост, например {example}.",
+		"mobile.computers.route_invalid.insecure_off": "Этот адрес не зашифрован, поэтому пароль от ретранслятора передаётся по сети открытым текстом. Чтобы продолжить, включите переключатель «Разрешить адрес http://».",
+		"mobile.computers.route_invalid.no_tunnel_id": "У этого туннеля нет идентификатора, поэтому его сессию нельзя обновить. Обновите список компьютеров.",
+		"mobile.computers.route_invalid.not_address": "Это не похоже на адрес. Он должен начинаться с {scheme}.",
+		"mobile.computers.route_invalid.not_radient": "Это не адрес туннеля Radient. Используйте адрес, который консоль Radient показывает для этого компьютера.",
+		"mobile.computers.route_invalid.query": "Уберите из адреса строку запроса и фрагмент.",
+		"mobile.computers.route_invalid.scheme": "Поддерживаются только адреса {scheme}.",
 		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
 		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, активен",
 		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, подключается",
@@ -6637,6 +6858,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "На этом телефоне",
 		"mobile.computers.session_error": "Приложению не удалось подключиться к этому компьютеру.",
 		"mobile.computers.session_error_help": "Перенастраивать компьютер не нужно. Повторите попытку или откройте сведения для поддержки.",
+		"mobile.computers.setup.address_help": "Если ваш ретранслятор доступен по известному вам URL, подключитесь к нему, указав пароль самого ретранслятора. Этот путь — для компьютера, который вообще не связан с Radient.",
+		"mobile.computers.setup.address_title": "Подключиться по адресу",
+		"mobile.computers.setup.amount_note": "Вместо {amount} подставьте цену, которую консоль Radient показывает для этого аккаунта: другие значения {command} не примет. Где её найти, подсказывает шаг 1 руководства по туннелям.",
+		"mobile.computers.setup.attach_help": "Если вы создали туннель в консоли Radient, подключите его по идентификатору, который показывает консоль. Эта команда только для уже существующего туннеля — новый она не создаст.",
+		"mobile.computers.setup.attach_label": "Подключение",
+		"mobile.computers.setup.attach_title": "Подключить существующий туннель",
+		"mobile.computers.setup.billing_fallback": "По данным Radient, этот аккаунт пока не может запустить туннель. Проверьте оплату в консоли Radient и попробуйте снова.",
+		"mobile.computers.setup.billing_title": "Удалённый доступ неактивен",
+		"mobile.computers.setup.create_help": "В терминале на компьютере, которым хотите управлять:",
+		"mobile.computers.setup.create_title": "Создать туннель на компьютере",
+		"mobile.computers.setup.intro": "Приложение управляет сессиями на вашем собственном компьютере, поэтому на нём должен работать коннектор, а сам компьютер не должен уходить в спящий режим. Ваш код остаётся на нём.",
+		"mobile.computers.setup.ran_it": "Готово — подключить",
+		"mobile.computers.setup.terminal_label": "Терминал",
+		"mobile.computers.setup.tui_help": "Или в TUI Local Operator, двумя командами:",
+		"mobile.computers.setup.tui_label": "TUI",
+		"mobile.computers.setup.tunnel_id_label": "ID туннеля",
+		"mobile.computers.setup.watching": "Ждём туннель",
 		"mobile.computers.show_details": "Показать сведения",
 		"mobile.computers.sign_out": "Выйти",
 		"mobile.computers.signing_out": "Выход…",
@@ -6667,6 +6905,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.start_again": "Начать заново",
 		"mobile.computers.wait.tunnel_status": "Туннель на стороне Radient: {status}.",
 		"mobile.computers.wait.use_computer": "Использовать этот компьютер",
+		"mobile.computers.your_computer": "Ваш компьютер",
 		"mobile.home.chip.effort_chosen": "Усилие, {effort}, выбрано для этой беседы",
 		"mobile.home.chip.effort_default": "Усилие, {effort}, по умолчанию на этом компьютере",
 		"mobile.home.chip.effort_default_unnamed": "Усилие, уровень, настроенный на этом компьютере",
@@ -7440,6 +7679,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.remove.confirm": "ہٹائیں",
 		"mobile.computers.remove.title": "یہ کمپیوٹر ہٹائیں؟",
 		"mobile.computers.retry": "دوبارہ کوشش کریں",
+		"mobile.computers.route_invalid.credentials": "پتے سے صارف نام اور پاس ورڈ ہٹا دیں۔",
+		"mobile.computers.route_invalid.empty": "اپنے ریلے کا پتہ درج کریں۔",
+		"mobile.computers.route_invalid.http_public": "سادہ {insecure} URL کی اجازت صرف نجی پتے کے لیے ہے۔ اس کے بجائے {scheme} URL استعمال کریں، یا کوئی نجی میزبان، مثلاً IP {example}۔",
+		"mobile.computers.route_invalid.insecure_off": "یہ پتہ خفیہ کاری کے بغیر ہے، اس لیے ریلے کا پاس ورڈ نیٹ ورک پر کھلے عام جاتا ہے۔ جاری رکھنے کے لیے سادہ http پتے کی اجازت والا اختیار آن کریں۔",
+		"mobile.computers.route_invalid.no_tunnel_id": "اس ٹنل کی کوئی آئی ڈی نہیں، اس لیے اس کے لیے نیا سیشن جاری نہیں کیا جا سکتا۔ کمپیوٹرز کی تلاش دوبارہ چلائیں۔",
+		"mobile.computers.route_invalid.not_address": "یہ کسی پتے جیسا نہیں لگتا۔ یہ {scheme} URL ہونا چاہیے۔",
+		"mobile.computers.route_invalid.not_radient": "یہ Radient ٹنل کا پتہ نہیں ہے۔ وہ پتہ استعمال کریں جو Radient کنسول اس کمپیوٹر کے لیے دکھاتا ہے۔",
+		"mobile.computers.route_invalid.query": "پتے سے کوئری اسٹرنگ اور فریگمنٹ ہٹا دیں۔",
+		"mobile.computers.route_invalid.scheme": "صرف {scheme} URL ہی قابلِ استعمال ہیں۔",
 		"mobile.computers.row.a11y": "{name}، {status}، {reach}",
 		"mobile.computers.row.a11y_active": "{name}، {status}، {reach}، فعال",
 		"mobile.computers.row.a11y_connecting": "{name}، {status}، {reach}، منسلک ہو رہا",
@@ -7451,6 +7699,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "اس فون پر",
 		"mobile.computers.session_error": "ایپ اس کمپیوٹر سے منسلک نہیں ہو سکی۔",
 		"mobile.computers.session_error_help": "کمپیوٹر کی ترتیب بدلنے کی ضرورت نہیں۔ دوبارہ کوشش کریں یا مدد کے لیے تفصیلات دکھائیں۔",
+		"mobile.computers.setup.address_help": "اگر آپ کا ریلے کسی ایسے URL پر دستیاب ہے جو آپ پہلے سے جانتے ہیں، تو ریلے کے اپنے پاس ورڈ کے ساتھ اس سے منسلک ہوں۔ یہ طریقہ ایسی مشین کے لیے ہے جو Radient پر بالکل نہیں ہے۔",
+		"mobile.computers.setup.address_title": "اس کے بجائے پتہ استعمال کریں",
+		"mobile.computers.setup.amount_note": "یہاں {amount} کی جگہ وہ قیمت لکھیں جو Radient کنسول اس اکاؤنٹ کے لیے دکھاتا ہے — {command} اس کے علاوہ کچھ قبول نہیں کرتی، اور ٹنل گائیڈ کے پہلے مرحلے میں اس جگہ کا لنک ہے جہاں یہ قیمت دکھائی جاتی ہے۔",
+		"mobile.computers.setup.attach_help": "اگر آپ نے ٹنل Radient کنسول میں بنائی تھی، تو کنسول میں دکھائی گئی آئی ڈی سے اسے جوڑیں۔ یہ کمانڈ پہلے سے موجود ٹنل کے لیے ہے — یہ نئی ٹنل نہیں بنائے گی۔",
+		"mobile.computers.setup.attach_label": "جوڑیں",
+		"mobile.computers.setup.attach_title": "پہلے سے موجود ٹنل جوڑیں",
+		"mobile.computers.setup.billing_fallback": "یہ اکاؤنٹ ابھی ٹنل شروع نہیں کر سکتا — Radient نے یہی بتایا ہے۔ Radient کنسول میں بلنگ جانچیں، پھر دوبارہ کوشش کریں۔",
+		"mobile.computers.setup.billing_title": "ریموٹ رسائی فعال نہیں ہے",
+		"mobile.computers.setup.create_help": "جس کمپیوٹر کو آپ کنٹرول کرنا چاہتے ہیں، اس کے ٹرمینل میں:",
+		"mobile.computers.setup.create_title": "کمپیوٹر پر نئی ٹنل بنائیں",
+		"mobile.computers.setup.intro": "یہ ایپ آپ کے اپنے کمپیوٹر پر چلنے والے سیشنز کو کنٹرول کرتی ہے، اس لیے اس کمپیوٹر پر کنیکٹر کا چلنا اور اس کا جاگتے رہنا ضروری ہے۔ آپ کا کوڈ اسی کمپیوٹر پر رہتا ہے۔",
+		"mobile.computers.setup.ran_it": "میں نے چلا دیا — منسلک کریں",
+		"mobile.computers.setup.terminal_label": "ٹرمینل",
+		"mobile.computers.setup.tui_help": "یا Local Operator کے TUI میں، دو کمانڈز سے:",
+		"mobile.computers.setup.tui_label": "TUI",
+		"mobile.computers.setup.tunnel_id_label": "ٹنل آئی ڈی",
+		"mobile.computers.setup.watching": "ٹنل کا انتظار ہے",
 		"mobile.computers.show_details": "تفصیلات دکھائیں",
 		"mobile.computers.sign_out": "سائن آؤٹ کریں",
 		"mobile.computers.signing_out": "سائن آؤٹ ہو رہا ہے…",
@@ -7481,6 +7746,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.start_again": "دوبارہ شروع کریں",
 		"mobile.computers.wait.tunnel_status": "Radient کے پاس ٹنل ہے — {status}۔",
 		"mobile.computers.wait.use_computer": "یہ کمپیوٹر استعمال کریں",
+		"mobile.computers.your_computer": "کمپیوٹر",
 		"mobile.home.chip.effort_chosen": "استدلال کی شدت، {effort}، اس گفتگو کے لیے منتخب",
 		"mobile.home.chip.effort_default": "استدلال کی شدت، {effort}، اس کمپیوٹر کا ڈیفالٹ",
 		"mobile.home.chip.effort_default_unnamed": "استدلال کی شدت، اس کمپیوٹر پر ترتیب شدہ سطح",
@@ -8254,6 +8520,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.remove.confirm": "Xóa",
 		"mobile.computers.remove.title": "Xóa máy tính này?",
 		"mobile.computers.retry": "Thử lại",
+		"mobile.computers.route_invalid.credentials": "Hãy xóa tên người dùng và mật khẩu khỏi địa chỉ.",
+		"mobile.computers.route_invalid.empty": "Hãy nhập địa chỉ máy chủ chuyển tiếp của bạn.",
+		"mobile.computers.route_invalid.http_public": "{insecure} chỉ được phép với địa chỉ mạng riêng. Hãy dùng {scheme}, hoặc một máy trong mạng riêng như {example}.",
+		"mobile.computers.route_invalid.insecure_off": "Địa chỉ này không được mã hóa, nên mật khẩu chuyển tiếp sẽ truyền qua mạng ở dạng văn bản thường. Hãy bật công tắc “Cho phép địa chỉ http:// thường” để tiếp tục.",
+		"mobile.computers.route_invalid.no_tunnel_id": "Đường hầm này không có ID, nên không thể cấp lại phiên đăng nhập của nó. Hãy làm mới danh sách máy tính.",
+		"mobile.computers.route_invalid.not_address": "Đây có vẻ không phải là một địa chỉ. Địa chỉ phải bắt đầu bằng {scheme}.",
+		"mobile.computers.route_invalid.not_radient": "Đây không phải là địa chỉ đường hầm Radient. Hãy dùng địa chỉ mà bảng điều khiển Radient hiển thị cho máy tính này.",
+		"mobile.computers.route_invalid.query": "Hãy xóa chuỗi truy vấn (query string) và phân đoạn (fragment) khỏi địa chỉ.",
+		"mobile.computers.route_invalid.scheme": "Chỉ hỗ trợ địa chỉ {scheme}.",
 		"mobile.computers.row.a11y": "{name}, {status}, {reach}",
 		"mobile.computers.row.a11y_active": "{name}, {status}, {reach}, hoạt động",
 		"mobile.computers.row.a11y_connecting": "{name}, {status}, {reach}, đang kết nối",
@@ -8265,6 +8540,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "Trên điện thoại này",
 		"mobile.computers.session_error": "Ứng dụng không thể kết nối với máy tính này.",
 		"mobile.computers.session_error_help": "Bạn không cần cấu hình lại máy tính. Hãy thử lại hoặc mở chi tiết để gửi bộ phận hỗ trợ.",
+		"mobile.computers.setup.address_help": "Nếu máy chủ chuyển tiếp của bạn có thể truy cập qua một URL mà bạn đã biết, hãy kết nối tới đó bằng mật khẩu riêng của nó. Đây là cách dành cho máy hoàn toàn không dùng Radient.",
+		"mobile.computers.setup.address_title": "Kết nối bằng địa chỉ",
+		"mobile.computers.setup.amount_note": "{amount} là mức giá mà bảng điều khiển Radient hiển thị cho tài khoản này — {command} sẽ từ chối mọi giá trị khác, và bước 1 của hướng dẫn đường hầm có liên kết tới nơi hiển thị mức giá đó.",
+		"mobile.computers.setup.attach_help": "Nếu bạn đã tạo đường hầm trong bảng điều khiển Radient, hãy gắn nó bằng ID mà bảng điều khiển hiển thị. Lệnh này dành cho đường hầm đã có sẵn — nó sẽ không tạo đường hầm mới.",
+		"mobile.computers.setup.attach_label": "Gắn",
+		"mobile.computers.setup.attach_title": "Gắn đường hầm có sẵn",
+		"mobile.computers.setup.billing_fallback": "Radient cho biết tài khoản này chưa thể khởi tạo đường hầm. Hãy kiểm tra thanh toán trong bảng điều khiển Radient rồi thử lại.",
+		"mobile.computers.setup.billing_title": "Truy cập từ xa chưa hoạt động",
+		"mobile.computers.setup.create_help": "Trong terminal trên máy tính bạn muốn điều khiển:",
+		"mobile.computers.setup.create_title": "Tạo đường hầm trên máy tính",
+		"mobile.computers.setup.intro": "Ứng dụng này điều khiển các phiên trên chính máy tính của bạn, nên máy tính đó cần chạy trình kết nối và luôn thức. Mã nguồn của bạn không rời khỏi máy đó.",
+		"mobile.computers.setup.ran_it": "Tôi đã chạy lệnh — kết nối",
+		"mobile.computers.setup.terminal_label": "Terminal",
+		"mobile.computers.setup.tui_help": "Hoặc trong TUI của Local Operator, chỉ với hai lệnh:",
+		"mobile.computers.setup.tui_label": "TUI",
+		"mobile.computers.setup.tunnel_id_label": "ID đường hầm",
+		"mobile.computers.setup.watching": "Đang chờ đường hầm",
 		"mobile.computers.show_details": "Hiện chi tiết",
 		"mobile.computers.sign_out": "Đăng xuất",
 		"mobile.computers.signing_out": "Đang đăng xuất…",
@@ -8295,6 +8587,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.start_again": "Bắt đầu lại",
 		"mobile.computers.wait.tunnel_status": "Radient đã có đường hầm — {status}.",
 		"mobile.computers.wait.use_computer": "Dùng máy tính này",
+		"mobile.computers.your_computer": "Máy tính của bạn",
 		"mobile.home.chip.effort_chosen": "Mức suy luận, {effort}, đã chọn cho cuộc trò chuyện này",
 		"mobile.home.chip.effort_default": "Mức suy luận, {effort}, mặc định của máy tính này",
 		"mobile.home.chip.effort_default_unnamed": "Mức suy luận, mức đã cấu hình trên máy tính này",
@@ -9068,6 +9361,15 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.remove.confirm": "移除",
 		"mobile.computers.remove.title": "移除此电脑？",
 		"mobile.computers.retry": "重试",
+		"mobile.computers.route_invalid.credentials": "请从地址中删除用户名和密码。",
+		"mobile.computers.route_invalid.empty": "请输入你的中继地址。",
+		"mobile.computers.route_invalid.http_public": "{insecure}仅允许用于私有地址。请改用{scheme}，或使用{example}之类的私有主机。",
+		"mobile.computers.route_invalid.insecure_off": "此地址未加密，中继密码将以明文在网络中传输。开启“允许明文http://地址”开关即可继续。",
+		"mobile.computers.route_invalid.no_tunnel_id": "此隧道没有ID，因此无法为其重新签发登录凭据。请重新获取电脑列表。",
+		"mobile.computers.route_invalid.not_address": "这看起来不像地址。地址应以{scheme}开头。",
+		"mobile.computers.route_invalid.not_radient": "这不是Radient隧道地址。请使用Radient控制台为此电脑显示的地址。",
+		"mobile.computers.route_invalid.query": "请从地址中删除查询字符串和片段标识符。",
+		"mobile.computers.route_invalid.scheme": "仅支持{scheme}地址。",
 		"mobile.computers.row.a11y": "{name}，{status}，{reach}",
 		"mobile.computers.row.a11y_active": "{name}，{status}，{reach}，使用中",
 		"mobile.computers.row.a11y_connecting": "{name}，{status}，{reach}，连接中",
@@ -9079,6 +9381,23 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.section.on_phone": "此手机",
 		"mobile.computers.session_error": "应用无法连接到这台电脑。",
 		"mobile.computers.session_error_help": "无需重新配置电脑。请重试，或显示详细信息以联系支持。",
+		"mobile.computers.setup.address_help": "如果你已知道可访问中继的URL，请使用中继自己的密码连接。这种方式适用于完全不使用Radient的电脑。",
+		"mobile.computers.setup.address_title": "改用地址连接",
+		"mobile.computers.setup.amount_note": "{amount}是Radient控制台为此账户显示的价格——{command}不接受其他金额；隧道指南第1步提供了查看价格的链接。",
+		"mobile.computers.setup.attach_help": "如果你是在Radient控制台中创建的隧道，请使用控制台显示的ID关联它。此命令仅适用于已存在的隧道——它不会新建隧道。",
+		"mobile.computers.setup.attach_label": "关联",
+		"mobile.computers.setup.attach_title": "关联已有隧道",
+		"mobile.computers.setup.billing_fallback": "Radient表示此账户暂时无法启动隧道。请在控制台中检查账单，然后重试。",
+		"mobile.computers.setup.billing_title": "远程访问未启用",
+		"mobile.computers.setup.create_help": "在你要控制的电脑上打开终端，运行：",
+		"mobile.computers.setup.create_title": "在电脑上新建隧道",
+		"mobile.computers.setup.intro": "此应用操控的是你自己电脑上的会话，因此那台电脑需要运行连接器并保持唤醒。你的代码始终留在电脑上。",
+		"mobile.computers.setup.ran_it": "已运行，开始连接",
+		"mobile.computers.setup.terminal_label": "终端",
+		"mobile.computers.setup.tui_help": "或者在Local Operator TUI中运行以下两条命令：",
+		"mobile.computers.setup.tui_label": "TUI",
+		"mobile.computers.setup.tunnel_id_label": "隧道ID",
+		"mobile.computers.setup.watching": "正在等待隧道",
 		"mobile.computers.show_details": "显示详细信息",
 		"mobile.computers.sign_out": "退出登录",
 		"mobile.computers.signing_out": "正在退出登录…",
@@ -9109,6 +9428,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.computers.wait.start_again": "重新开始",
 		"mobile.computers.wait.tunnel_status": "Radient已有此隧道，状态：{status}。",
 		"mobile.computers.wait.use_computer": "使用此电脑",
+		"mobile.computers.your_computer": "你的电脑",
 		"mobile.home.chip.effort_chosen": "推理强度，{effort}，已为此对话选择",
 		"mobile.home.chip.effort_default": "推理强度，{effort}，此电脑的默认设置",
 		"mobile.home.chip.effort_default_unnamed": "推理强度，此电脑已配置的级别",
