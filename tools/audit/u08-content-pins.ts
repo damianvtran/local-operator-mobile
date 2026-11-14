@@ -1707,11 +1707,26 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
 	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
 	 * re-derived once with --print over the merged tree. */
+	/* fix/session-push-register: the app now POSTs /api/push/register for the
+	 * routed computer (session-push-registration*, use-session-push-registration),
+	 * Settings › Notifications gains one registration sentence (+6
+	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
+	 * a REGION id. Re-derived with --print over the staged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #259 review round 1 remediation: the registration hook keyed on
+	 * routeKey/live/revision with the relay accessor read through a ref, a
+	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
+	 * No rendered surface changed. Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
 	/* Merge of origin/main (#254, d5831603) into #256: both sides' comments
 	 * kept, re-derived once with --print over the merged tree. */
 	/* Merge of origin/main (#255, f8d0d8dd) into #256: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "a8ba55baecdbeab925d7062d32971047df516791d591612bb41cc67e9e7d3c55",
+	/* Merge of origin/main (#259, 9ef19ccd) into #256: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "8837c63a7145d6f546a899e3237e9212b6c574448db636e4f2686534bc38760f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

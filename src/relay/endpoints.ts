@@ -1289,11 +1289,15 @@ export class RelayEndpoints {
 	 * before it is used again; refusals (a revoked or unpaired row) arrive as the
 	 * relay's own typed error bodies.
 	 *
-	 * BUILT AND TESTED, DELIBERATELY NOT CALLED from the app yet: the cloud
-	 * forward (S7) is unbuilt, so a registration today writes a row no push can
-	 * use — the manager decision of 2026-10-03 records "DON'T register
-	 * pre-cloud". The call site lands when S7 does; the mock relay serves the
-	 * route, so the client half is exercised by the e2e suite now.
+	 * CALLED by `notifications/session-push-registration.ts` for the routed
+	 * computer (cold start, route change, foreground, token rotation). It was
+	 * held back until the daemon's cloud forward (S7, `_forward_registration`)
+	 * existed — the 2026-10-03 "DON'T register pre-cloud" decision — and that
+	 * forward has shipped since, so leaving this uncalled meant the daemon never
+	 * created its device store and no session push ever fired. The body is the
+	 * daemon's `_REGISTER_FIELDS` exactly (an unknown key is a 422); the
+	 * response is validated by `pushRegisterResponseSchema`, and
+	 * `push-register-contract.test.ts` pins both against the daemon's bytes.
 	 */
 	async registerDevice(
 		request: RegisterDeviceRequest,
