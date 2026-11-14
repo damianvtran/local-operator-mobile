@@ -85,6 +85,7 @@ import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
 import { Skeleton } from "@/ui/components/skeleton";
 import { useComposedDir } from "@/ui/direction";
+import { DRAWER_PILL_ROW_CLASS } from "@/ui/components/status-pill-layout";
 import { sidebarFooterScrolls, TOUCH_FLOOR, useLayout } from "@/ui/layout";
 import { LARGE_TEXT_SCALE } from "@/ui/text-scale";
 import { useTextScale } from "@/ui/text-scale-provider";
@@ -904,10 +905,17 @@ export const ConversationsPane = ({
 			 *  overlap by construction. It appears only when it has something to
 			 *  say: a permanent "Connected" dot is furniture the eye skips. */}
 			{routed && pillState(streamHealth, stale) !== "connected" ? (
-				<View className="px-4 pb-1 pt-2">
+				/* `min-w-0` + `singleLine`: on an iPhone the pill ran past the drawer's
+				 *  right edge ("Not answering", Sherman's report via Aida). One
+				 *  tail-truncated line, capped at this line by the pill's own
+				 *  `maxWidth: 100%`, keeps it inside the pane at any text size; the
+				 *  whole message stays the accessible name. `drawerPillFit` is the
+				 *  rule, `status-pill-layout.test.ts` checks it at 320 pt / 200 %. */
+				<View className={DRAWER_PILL_ROW_CLASS}>
 					<ConnectionPill
 						state={pillState(streamHealth, stale)}
 						message={staleNote({ stale, lastFrameAt }) ?? undefined}
+						singleLine
 					/>
 				</View>
 			) : null}

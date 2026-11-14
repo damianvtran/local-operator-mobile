@@ -219,7 +219,7 @@ const NAMESPACES = [
 		name: "mobile.settings",
 		messages: settings,
 		context: settingsContext,
-		expected: 70, // M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+		expected: 75, // +4 the account card's `account.signed_in_radient` and the `sign_in_confirm` dialog (PR #258 R1 B1/m1); +1 `diagnostics.reason` (the raw stream-health reason row, Sherman's report); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
 	},
 	{
 		/* The conversations drawer's View options (TestFlight 906): the desktop's
@@ -365,11 +365,22 @@ describe("the English catalogues", () => {
 		 * 812 + 6 = 818. */
 		/* Merge of origin/main (#255, f8d0d8dd) into #259: 837 on main + 6
 		 * mobile.notifications = 843. */
+		/* fix/settings-signin-status-badge: +1 mobile.settings
+		 * (`diagnostics.reason`, the label of the raw reason-code row; the code
+		 * itself is never a key): 812 + 1 = 813. Review round 1: +4 (the signed-in
+		 * account title and the sign-in confirm's title, body and button):
+		 * 813 + 4 = 817. */
+		/* Merge of origin/main (#255, f8d0d8dd) into #258: 837 on main + 5
+		 * mobile.settings = 842. */
+		/* Merge of origin/main (#259, 9ef19ccd) into #258: 843 on main + 5
+		 * mobile.settings = 848. */
 		/* Merge of origin/main (#255, f8d0d8dd) into #256: 837 on main + 3
 		 * (mobile.home, mobile.chrome, mobile.session) = 840. */
 		/* Merge of origin/main (#259, 9ef19ccd) into #256: 843 on main + 3
 		 * (mobile.home, mobile.chrome, mobile.session) = 846. */
-		expect(total).toBe(846);
+		/* Merge of origin/main (#258, 8ca71d54) into #256: 848 on main + 3
+		 * (mobile.home, mobile.chrome, mobile.session) = 851. */
+		expect(total).toBe(851);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
