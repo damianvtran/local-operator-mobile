@@ -1698,9 +1698,20 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
+	 * view state, customised trigger fill): re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
 	/* Merge of origin/main (#254, d5831603) into #256: both sides' comments
 	 * kept, re-derived once with --print over the merged tree. */
-	src: "60c30d16500297f6ba96d584dbd1638ec53d37ae80f00bad84e5b2e8a4de9cf3",
+	/* Merge of origin/main (#255, f8d0d8dd) into #256: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	src: "a8ba55baecdbeab925d7062d32971047df516791d591612bb41cc67e9e7d3c55",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

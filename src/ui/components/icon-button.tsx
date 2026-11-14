@@ -29,6 +29,9 @@ export type IconButtonProps = {
 	disabled?: boolean;
 	/** Adds `border-control` where the icon alone does not carry the affordance. */
 	outlined?: boolean;
+	/** A quiet fill for a control whose subject is not at its default (the
+	 *  drawer's customised View options); never a selection or pressed state. */
+	active?: boolean;
 	accessibilityHint?: string;
 	testID: string;
 };
@@ -40,6 +43,7 @@ export const IconButton = ({
 	size = 20,
 	disabled = false,
 	outlined = false,
+	active = false,
 	accessibilityHint,
 	testID,
 }: IconButtonProps) => {
@@ -76,7 +80,10 @@ export const IconButton = ({
 		>
 			{({ pressed }) => (
 				<View
-					className={iconButtonClasses({ pressed, disabled }, { outlined })}
+					className={iconButtonClasses(
+						{ pressed, disabled },
+						{ outlined, active },
+					)}
 				>
 					<View pointerEvents="none">{icon({ color, size })}</View>
 				</View>

@@ -183,7 +183,7 @@ export const buttonClasses = (
  */
 export const iconButtonClasses = (
 	state: ControlState = {},
-	options: { outlined?: boolean } = {},
+	options: { outlined?: boolean; active?: boolean } = {},
 ): string =>
 	cx(
 		"h-11 w-11 items-center justify-center rounded-sm border",
@@ -195,7 +195,12 @@ export const iconButtonClasses = (
 			? `bg-transparent ${CONTROL_DISABLED_INK}`
 			: state.pressed
 				? "bg-elevated text-ink"
-				: "bg-transparent text-ink-muted",
+				: // `active`: a quiet "this is not at its default" fill, the desktop's
+					// `bg-row-selected` on a customised View options trigger (PR #255,
+					// design D2). A fill, not a dot, so it needs no extra box.
+					options.active
+					? "bg-row-selected text-ink-muted"
+					: "bg-transparent text-ink-muted",
 	);
 
 /* -------------------------------------------------------------------------- */
