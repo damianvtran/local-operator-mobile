@@ -1688,6 +1688,28 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
 	/* Convergence of #254 onto main b254ae63 (#252): both comments kept;
 	 * re-derived once with --print over the merged tree. */
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
+	 * view state, customised trigger fill): re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* fix/session-push-register: the app now POSTs /api/push/register for the
+	 * routed computer (session-push-registration*, use-session-push-registration),
+	 * Settings › Notifications gains one registration sentence (+6
+	 * mobile.notifications keys in every locale, 818 in `catalogue.gen.ts`) and
+	 * a REGION id. Re-derived with --print over the staged tree; only `src`
+	 * moved. Source identity only, NOT rendered U-08 evidence. */
+	/* PR #259 review round 1 remediation: the registration hook keyed on
+	 * routeKey/live/revision with the relay accessor read through a ref, a
+	 * per-computer attempt queue, sign-out reset, the install-id.ts docstring.
+	 * No rendered surface changed. Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #259: both comments kept,
+	 * re-derived once with --print over the merged tree. */
 	/* fix/no-terminal-refusals (M1): plain-language refusal copy and actions,
 	 * terminal commands only behind "Using a terminal?", the set-up screen's
 	 * Phone access instruction and the new `mobile.refusal` namespace (844 keys).
@@ -1704,7 +1726,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * remediation (U3-1: a failed refresh keeps the route retry): re-derived
 	 * with --print over the staged round-3 tree. Source identity only, NOT
 	 * rendered U-08 evidence. */
-	src: "fbaadd3011ca03761a41d38293e2d132262d9c1c74b5487b665192379dba041b",
+	src: "e463c60ee20a7c28b7ebf3227e5545c4e34c93811694fc7f19e208b7a39db35b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

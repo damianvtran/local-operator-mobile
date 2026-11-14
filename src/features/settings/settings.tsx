@@ -1,6 +1,6 @@
 import * as Clipboard from "expo-clipboard";
 import Constants from "expo-constants";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -60,6 +60,7 @@ import {
 	retryStillOwned,
 	retryTargetMatches,
 } from "./refusal-in-view";
+import { SidebarSettingsSection } from "./sidebar-section";
 import { ThemeRow } from "./theme-row";
 import { useRefusalReveal } from "./use-refusal-reveal";
 
@@ -162,6 +163,21 @@ export default function Settings() {
 	 *  off-screen. Measuring on dismissal is the ordering contract; no timer can
 	 *  provide it. Native has no dismissal event and uses close. */
 	const scrollRef = useRef<ScrollView | null>(null);
+	/* The drawer's "More sidebar settings" link lands here with
+	 *  `?section=sidebar`; scroll that section into view once, on its first
+	 *  layout, and never again (a later relayout must not yank the reader). */
+	const { section: landingSection } = useLocalSearchParams<{
+		section?: string;
+	}>();
+	const landed = useRef(false);
+	const onSidebarLayout = useCallback(
+		(y: number) => {
+			if (landingSection !== "sidebar" || landed.current) return;
+			landed.current = true;
+			scrollRef.current?.scrollTo({ y, animated: false });
+		},
+		[landingSection],
+	);
 	const refusalRef = useRef<View | null>(null);
 	const statusRef = useRef<View | null>(null);
 	/* The arm / disarm / dismissal wait lives in `useRefusalReveal`, so the Node
@@ -602,6 +618,11 @@ export default function Settings() {
 								})}
 					</Text>
 				</View>
+
+				<Divider />
+
+				{/* ------------------------------------------------------------ sidebar */}
+				<SidebarSettingsSection onLayoutY={onSidebarLayout} />
 
 				<Divider />
 

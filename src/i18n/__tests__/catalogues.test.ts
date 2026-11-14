@@ -44,6 +44,8 @@ import sessionHealthContext from "@/i18n/catalogues/en/mobile.session_health.con
 import sessionHealth from "@/i18n/catalogues/en/mobile.session_health.json";
 import settingsContext from "@/i18n/catalogues/en/mobile.settings.context.json";
 import settings from "@/i18n/catalogues/en/mobile.settings.json";
+import sidebarContext from "@/i18n/catalogues/en/mobile.sidebar.context.json";
+import sidebar from "@/i18n/catalogues/en/mobile.sidebar.json";
 import signinContext from "@/i18n/catalogues/en/mobile.signin.context.json";
 import signin from "@/i18n/catalogues/en/mobile.signin.json";
 import teamBridgeContext from "@/i18n/catalogues/en/mobile.team_bridge.context.json";
@@ -166,7 +168,9 @@ const NAMESPACES = [
 		context: notificationsContext,
 		// +5: the Settings permission sentences (`permission.*`), moved out of
 		// an English-only table in the Team Bridge push-readiness PR.
-		expected: 32,
+		// +6: the Settings registration sentences (`computer_registration.*`),
+		// fix/session-push-register.
+		expected: 38,
 	},
 	{
 		name: "mobile.session",
@@ -225,6 +229,15 @@ const NAMESPACES = [
 		messages: settings,
 		context: settingsContext,
 		expected: 75, // PR #261 round-1 remediation +1: Copy diagnostics' "Couldn't copy" state (74 + 1 = 75); M1 scope additions +4: Diagnostics tunnel id, tunnel address, Copy diagnostics and its copied state (70 + 4 = 74); M3 S2b-1 +11: the own-tunnel section of Settings (59 + 11 = 70); +27: Settings screen literals keyed by the app/ scan (title, sections, rows, diagnostics, sign-out); +14: Settings expression literals (account card, status words, stream words, relay words)
+	},
+	{
+		/* The conversations drawer's View options (TestFlight 906): the desktop's
+		 *  `ui.chat.sidebar_view.*` words mirrored, plus the phone's ended switch,
+		 *  its hint, the "More sidebar settings" link and the Settings heading. */
+		name: "mobile.sidebar",
+		messages: sidebar,
+		context: sidebarContext,
+		expected: 25,
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -343,6 +356,18 @@ describe("the English catalogues", () => {
 		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
 		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
 		 * counted over the en JSON. */
+		/* TestFlight 906 drawer View options: + the 21 `mobile.sidebar.*` keys
+		 * (order, grouping, clock, ended, sections, link, heading): 771 + 21 = 792,
+		 * the generator's own count. */
+		/* PR #255 review round 1: + "N sections hidden" and the emptied-by-view
+		 * state's headline, line and action (D2, M1): 792 + 4 = 796. */
+		/* Merge of origin/main (#254, d5831603) into #255: 771 + 41 (S2b-1)
+		 * + 25 (mobile.sidebar: 21 + 4) = 837. */
+		/* fix/session-push-register: +6 mobile.notifications (the Settings
+		 * sentence for this phone's registration with the routed computer):
+		 * 812 + 6 = 818. */
+		/* Merge of origin/main (#255, f8d0d8dd) into #259: 837 on main + 6
+		 * mobile.notifications = 843. */
 		/* M1 no-terminal: +2 mobile.computers (set-up's two lines) + 30
 		 * mobile.refusal (new namespace) = 32: 812 + 32 = 844, counted over the
 		 * en JSON. */
@@ -351,7 +376,9 @@ describe("the English catalogues", () => {
 		/* PR #261 round-1 remediation: +3 mobile.refusal (the suspended body,
 		 * the relay-refused title and body), +2 mobile.computers (Check again,
 		 * Checking…), +1 mobile.settings (Couldn't copy) = 6: 858 + 6 = 864. */
-		expect(total).toBe(864);
+		/* Merge of origin/main (#259, 9ef19ccd) into #261: 843 on main + the
+		 * branch's 52 (864 - 812) = 895. */
+		expect(total).toBe(895);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -425,6 +452,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 > = {
 	en: {},
 	fr: {
+		"mobile.sidebar.sections":
+			"« Sections » is the French word for the drawer's sections, spelled as in English; the desktop's French catalogue uses the same word (`ui.chat.sidebar_view.sections`).",
 		"mobile.settings.account.app_name":
 			"Local Operator is the product name, kept in Latin script in every locale (glossary: never translated); audited as required in the M2 expression-literal wave.",
 		"mobile.session.fallback_name":
