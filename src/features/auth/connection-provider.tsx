@@ -975,6 +975,12 @@ export const ConnectionProvider = ({
 			const admission = routeAdmission(
 				connectionStore,
 				() => mountedRef.current,
+				/* The Radient grant owns the signed-in identity; read it through the ref
+				 *  at publish time so a sign-in or refresh that lands after this route
+				 *  began still names the account. A custom route has none. */
+				route.mode === "radient"
+					? () => tokensRef.current?.account_label ?? null
+					: undefined,
 			);
 			return {
 				...admission,

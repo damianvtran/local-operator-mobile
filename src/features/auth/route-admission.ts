@@ -18,9 +18,18 @@ export interface RouteAdmission {
 	publish: (accept: () => void) => boolean;
 }
 
+/**
+ * `accountLabel` is read at PUBLISH time, not when the route starts: a Radient
+ * route is often begun before its sign-in or refresh lands, and the label rides
+ * on the grant that admission proves. It is the identity Settings shows as the
+ * account title, so a Radient route that admitted with `null` told a signed-in
+ * user "Not signed in with Radient" (PR #261 design round 2). A custom route has
+ * no Radient identity, so the default stays `null`.
+ */
 export const routeAdmission = (
 	store: ConnectionStoreApi,
 	isMounted: () => boolean,
+	accountLabel: () => string | null = () => null,
 ): RouteAdmission => {
 	const revision = store.getState().revision;
 	const isCurrent = () => isMounted() && store.getState().revision === revision;
@@ -29,7 +38,7 @@ export const routeAdmission = (
 		publish(accept) {
 			if (!isCurrent()) return false;
 			accept();
-			store.getState().markLive({ accountLabel: null });
+			store.getState().markLive({ accountLabel: accountLabel() });
 			return true;
 		},
 	};

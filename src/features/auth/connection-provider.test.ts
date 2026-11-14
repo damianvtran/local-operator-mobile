@@ -32,7 +32,8 @@ import {
 	sessionStateFlags,
 } from "@/features/session/state-marker";
 import { useSessionRuntime } from "@/features/session/use-session";
-import { activeLocale, preferredLocale } from "@/i18n";
+import { settingsAccountTitle } from "@/features/settings/account-title";
+import { activeLocale, preferredLocale, t } from "@/i18n";
 import { registerTeamBridgeRetirement } from "@/team-bridge/retirement";
 import { nativeCredentialRetirement } from "./authentication-lifecycle";
 import {
@@ -3973,5 +3974,55 @@ describe("a background launch on a locked device (R1-M2)", () => {
 		durable.locked = false;
 		await act(async () => appState.emit("active"));
 		expect(durable.oauthReads).toBe(1);
+	});
+});
+
+describe("Settings names the Radient account the route admitted (PR #261 design round 2)", () => {
+	/* Settings' account title is `settingsAccountTitle(state.accountLabel)`. On
+	 * origin/main `routeAdmission` published every route with `accountLabel: null`,
+	 * so a reader live on their own Radient computer was told "Not signed in with
+	 * Radient". A placeholder address, never a real one (AGENTS.md). */
+	const READER = "reader@example.com";
+	const NOT_SIGNED_IN = t("mobile.settings.account.not_signed_in");
+	const title = () =>
+		settingsAccountTitle(connectionStore.getState().accountLabel);
+
+	it("a Radient route goes live with the grant's account label; signing out returns the fallback", async () => {
+		const mock = await relay();
+		transport(mock.origin);
+		durable.oauth = { ...oauth, account_label: READER };
+		await mount();
+		await act(async () => {
+			await latest.selectComputer(computer("a"));
+		});
+		await until(() => connectionStore.getState().phase === "live");
+		expect(connectionStore.getState().route?.mode).toBe("radient");
+		expect(connectionStore.getState().accountLabel).toBe(READER);
+		expect(title()).toBe(READER);
+		expect(title()).not.toBe(NOT_SIGNED_IN);
+
+		await act(async () => {
+			expect(await latest.signOut()).toBe(true);
+		});
+		expect(connectionStore.getState().accountLabel).toBeNull();
+		expect(title()).toBe(NOT_SIGNED_IN);
+	});
+
+	it("a custom route is unaffected: it carries no Radient identity even with a grant held", async () => {
+		const mock = await relay();
+		transport();
+		durable.oauth = { ...oauth, account_label: READER };
+		await mount();
+		await act(async () => {
+			await latest.connectCustom({
+				url: mock.origin,
+				password: "test-only",
+				allowInsecure: true,
+			});
+		});
+		expect(connectionStore.getState().phase).toBe("live");
+		expect(connectionStore.getState().route?.mode).toBe("custom");
+		expect(connectionStore.getState().accountLabel).toBeNull();
+		expect(title()).toBe(NOT_SIGNED_IN);
 	});
 });

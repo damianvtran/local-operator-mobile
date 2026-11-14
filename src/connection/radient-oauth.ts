@@ -81,11 +81,12 @@ export interface RadientTokens {
 }
 
 /**
- * The `sub` claim of an `id_token`, or `null` for anything that is not a readable
- * JWT carrying one. Best effort by design: a missing or malformed token changes
- * nothing about sign-in, it only leaves the account unknown.
+ * The payload claims of an `id_token`, or `null` for anything that is not a
+ * readable JWT. Decoded WITHOUT verifying the signature: the token comes straight
+ * from Radient's own token endpoint over TLS, and every claim read from it is a
+ * label or a scoping key, never an authorization input.
  */
-export function accountIdFromIdToken(token: unknown): string | null {
+function idTokenClaims(token: unknown): Record<string, unknown> | null {
 	if (typeof token !== "string") return null;
 	const parts = token.split(".");
 	if (parts.length !== 3 || !parts[1]) return null;
@@ -103,13 +104,42 @@ export function accountIdFromIdToken(token: unknown): string | null {
 							};
 						}
 					).Buffer.from(padded, "base64").toString();
-		const claims = JSON.parse(json) as { sub?: unknown };
-		return typeof claims.sub === "string" && claims.sub.trim().length > 0
-			? claims.sub.trim()
+		const claims: unknown = JSON.parse(json);
+		return claims !== null && typeof claims === "object"
+			? (claims as Record<string, unknown>)
 			: null;
 	} catch {
 		return null;
 	}
+}
+
+const nonBlank = (value: unknown): string | null =>
+	typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
+/**
+ * The `sub` claim of an `id_token`, or `null` for anything that is not a readable
+ * JWT carrying one. Best effort by design: a missing or malformed token changes
+ * nothing about sign-in, it only leaves the account unknown.
+ */
+export function accountIdFromIdToken(token: unknown): string | null {
+	return nonBlank(idTokenClaims(token)?.sub);
+}
+
+/**
+ * The signed-in identity to SHOW (Settings' account title): the `id_token`'s
+ * `email`, else its `name`, else `null`.
+ *
+ * Why the id_token: Radient's token endpoint does not put `email`/`name` at the
+ * top level of the token response; they ride in the `id_token` it mints on both
+ * grants because the scope asks for `openid profile email` (`agent-server`
+ * `idTokenClaims`; the desktop client reads the same claims in
+ * `identity_from_token_response`). Reading only the top level left
+ * `account_label` null for every real sign-in, so Settings told a signed-in
+ * Radient user "Not signed in with Radient" (PR #261 design round 2).
+ */
+export function accountLabelFromIdToken(token: unknown): string | null {
+	const claims = idTokenClaims(token);
+	return nonBlank(claims?.email) ?? nonBlank(claims?.name);
 }
 
 export type RadientAuthFailure =
@@ -182,6 +212,7 @@ function tokensFromResponse(
 	now: () => number,
 	previousRefresh: string | null,
 	previousAccount: string | null = null,
+	previousLabel: string | null = null,
 ): RadientTokens {
 	const access = body.access_token;
 	if (typeof access !== "string" || access.length === 0) {
@@ -198,12 +229,14 @@ function tokensFromResponse(
 		typeof body.refresh_token === "string" && body.refresh_token.trim() !== ""
 			? body.refresh_token
 			: previousRefresh;
+	/* A top-level `email`/`name` still wins if a server ever sends one; otherwise
+	 * the id_token's claims, and a refresh without an id_token keeps the label the
+	 * grant already had — the same rule `account_id` follows. */
 	const labelSource =
-		typeof body.email === "string"
-			? body.email
-			: typeof body.name === "string"
-				? body.name
-				: null;
+		nonBlank(body.email) ??
+		nonBlank(body.name) ??
+		accountLabelFromIdToken(body.id_token) ??
+		previousLabel;
 	return {
 		access,
 		refresh,
@@ -441,6 +474,7 @@ export async function refreshRadientTokens(
 		now,
 		tokens.refresh,
 		tokens.account_id ?? null,
+		tokens.account_label,
 	);
 }
 

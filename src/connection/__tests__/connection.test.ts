@@ -22,6 +22,7 @@ import { readWithDeadline } from "../../relay/platform-fetch";
 import {
 	accessTokenNeedsRefresh,
 	accountIdFromIdToken,
+	accountLabelFromIdToken,
 	authorizationUrl,
 	base64Url,
 	CALLBACK_PORT,
@@ -641,6 +642,86 @@ describe("the Radient account id comes from the id_token's sub (PR #122 M2)", ()
 	it("reads nothing from a malformed token rather than failing sign-in", () => {
 		for (const bad of [undefined, 42, "", "a.b", "a.!!!.c", jwt({ sub: "  " })])
 			expect(accountIdFromIdToken(bad)).toBeNull();
+	});
+});
+
+describe("the Radient account label comes from the id_token (PR #261 design round 2)", () => {
+	/* Radient puts email/name in the id_token, not at the top of the token
+	 * response; reading only the top level left every real sign-in unlabelled and
+	 * Settings showed "Not signed in with Radient". Placeholder values only. */
+	const jwt = (claims: object) =>
+		`e30.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.sig`;
+
+	it("labels a code-grant sign-in with the id_token's email, else its name", async () => {
+		for (const [claims, label] of [
+			[
+				{
+					sub: "acct_placeholder",
+					email: "reader@example.com",
+					name: "Reader",
+				},
+				"reader@example.com",
+			],
+			[{ sub: "acct_placeholder", name: "Reader" }, "Reader"],
+			[{ sub: "acct_placeholder" }, null],
+		] as const) {
+			const { fetchImpl } = recordingFetch(() =>
+				jsonResponse({
+					access_token: "at1",
+					expires_in: 3600,
+					id_token: jwt(claims),
+				}),
+			);
+			const tokens = await exchangeCode("c", "http://127.0.0.1/callback", "v", {
+				fetchImpl,
+				now: () => 0,
+			});
+			expect(tokens.account_label).toBe(label);
+		}
+	});
+
+	it("keeps the grant's label when a refresh carries no id_token, and takes a new one when it does", async () => {
+		const bare = recordingFetch(() =>
+			jsonResponse({ access_token: "at2", expires_in: 3600 }),
+		);
+		expect(
+			(
+				await refreshRadientTokens(
+					{ ...TOKENS, refresh: "rt1", account_label: "reader@example.com" },
+					{ fetchImpl: bare.fetchImpl, now: () => 0 },
+				)
+			).account_label,
+		).toBe("reader@example.com");
+		const minted = recordingFetch(() =>
+			jsonResponse({
+				access_token: "at2",
+				expires_in: 3600,
+				id_token: jwt({
+					sub: "acct_placeholder",
+					email: "renamed@example.com",
+				}),
+			}),
+		);
+		expect(
+			(
+				await refreshRadientTokens(
+					{ ...TOKENS, refresh: "rt1", account_label: null },
+					{ fetchImpl: minted.fetchImpl, now: () => 0 },
+				)
+			).account_label,
+		).toBe("renamed@example.com");
+	});
+
+	it("reads no label from a malformed token rather than failing sign-in", () => {
+		for (const bad of [
+			undefined,
+			42,
+			"",
+			"a.b",
+			"a.!!!.c",
+			jwt({ email: "  " }),
+		])
+			expect(accountLabelFromIdToken(bad)).toBeNull();
 	});
 });
 
