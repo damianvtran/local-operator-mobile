@@ -1745,7 +1745,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Merge of origin/main (#258, 8ca71d54) into #256: both comments kept,
 	 * re-derived once with --print over the merged tree. */
-	src: "65bafba801faf741f58f519bf5bcd9378808fd8a8fe57fd845b3e5b85b17213c",
+	src: "bd81d86317b44a106bbdc2b5b5b277fa1e01309067d74706c6b7a3f29337f89f",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
