@@ -1753,7 +1753,7 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "451351f4038a1c0947a6d7f62538350756a2125dd8b90ca589d5047fe41a7cf7",
+	src: "96a8a303c872d0973bfa201f2da506da179ad89cb417e3ea62a1f72cbcd20447",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
