@@ -1742,7 +1742,28 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * registration): both sides' comments and src kept, so neither parent's
 	 * digest. Re-derived once with --print over the merged tree; source identity
 	 * of the merge, NOT rendered evidence. */
-	src: "629343de4c474c69c1d3b9c8a5868823e2a9ce3162eaca089cbe932d16c8eb55",
+	/* fix/settings-signin-status-badge: the signed-out account card as a
+	 * Radient sign-in nav card, the connection pill's one-line fit in the
+	 * Settings Status row and the drawer header (`status-pill-layout.ts`), and
+	 * the Diagnostics `reason:` row with its provider plumbing and the one new
+	 * mobile.settings key (813 keys). Re-derived with --print over the staged
+	 * tree; only `src` moved. Source identity only, NOT rendered U-08 evidence:
+	 * the Settings and drawer cells must be re-captured against this tree. */
+	/* PR #258 agent review round-1 remediation: the account card moves to
+	 * `account-card.tsx`, gated on `radientSignedIn` with a confirm before it
+	 * ends a working direct route; Diagnostics' reason row ignores a past
+	 * `lastError` beside a live stream; the dot leaves the identifier rule; four
+	 * mobile.settings keys (817). Re-derived with --print over the staged tree;
+	 * only `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#255, f8d0d8dd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Merge of origin/main (#259, 9ef19ccd) into #258: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of PR #246 onto main 8ca71d54 (#258 settings sign-in card,
+	 * status pill fit, Diagnostics stream-health reason): both sides' comments
+	 * and src kept, so neither parent's digest. Re-derived once with --print
+	 * over the merged tree; source identity, NOT rendered evidence. */
+	src: "6835c16c6045b64c9c494ad098bacf755acfd2619dfad82eff80da663b364099",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

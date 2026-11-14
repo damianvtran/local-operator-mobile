@@ -157,6 +157,11 @@ import {
 	SignInSupersededError,
 	signInErrorClass,
 } from "./sign-in-diagnostics";
+import {
+	reasonCodeOf,
+	reasonForStatus,
+	type StreamHealthReason,
+} from "./stream-health-reason";
 
 /**
  * The three stores, as process-wide singletons.
@@ -381,6 +386,10 @@ export type Connection = {
 	 *  inside its window, as the streams do (PR #246 QA: the home's folder and
 	 *  model banners on a resume blip). Stable for the provider's life. */
 	resumeClock: ResumeClock;
+	/** The raw code behind `streamHealth` (`stream_stalled`, a gateway reason, a
+	 *  relay code or a `RelayErrorKind`), or null while healthy. Diagnostics only:
+	 *  see `stream-health-reason.ts` for why it is carried and never translated. */
+	streamHealthReason: StreamHealthReason | null;
 	signInState: SignInState;
 	signInDiagnostics: readonly SignInDiagnostic[];
 	/** The last typed failure, for the diagnostics row. Never a status code on a
@@ -553,6 +562,8 @@ export const ConnectionProvider = ({
 	/* See `Connection.restoredAccount`. */
 	const [restoredAccount, setRestoredAccount] = useState(false);
 	const [streamHealth, setStreamHealth] = useState<StreamHealth>("idle");
+	const [streamHealthReason, setStreamHealthReason] =
+		useState<StreamHealthReason | null>(null);
 	const [signInState, setSignInState] = useState<SignInState>({ kind: "idle" });
 	const [signInDiagnostics, setSignInDiagnostics] = useState<
 		SignInDiagnostic[]
@@ -848,6 +859,12 @@ export const ConnectionProvider = ({
 			admission: RouteAdmission,
 		) => {
 			stopStream();
+			/* A new stream is a new route (or a reader's retry): the previous
+			 *  stream's reason describes a failure this stream has not had, and
+			 *  `reasonForStatus` keeps a reason through `connecting`, so without this
+			 *  the first attempt on computer B would show computer A's code. A typed
+			 *  refusal still reaches Diagnostics through `lastError`. */
+			if (mountedRef.current) setStreamHealthReason(null);
 			// Capture before asynchronous delivery: a reset changes the inbox's
 			// watermark domain, even when a reconnect reuses the client object.
 			const listGeneration = listStore.getState().connectionGeneration;
@@ -871,6 +888,13 @@ export const ConnectionProvider = ({
 			 * fires it is the stale mark plus `degraded`, exactly what the error
 			 * paints outside the window, whichever callback armed the timer. */
 			let heldStale = false;
+			/* The raw reason behind the held report (main's `streamHealthReason`,
+			 * PR #258). It is held WITH the health and published with it: the
+			 * Diagnostics row reads the reason, so publishing it at once would
+			 * leak the very resume blip the window holds back (a `stream_stalled`
+			 * beside a "Connected" pill), and a frame that cancels the hold must
+			 * cancel its reason too. Typed refusals still publish theirs at once. */
+			let heldReason: StreamHealthReason | null = null;
 			/* A resume reopen's `connecting`, held for `OUTAGE_GRACE_MS` (PR #246
 			 * Q1-3): every return after ≥ 20 s away reopens, and its RTT painted
 			 * "Reconnecting…" each time. The pill appears only if the reopen has not
@@ -884,11 +908,18 @@ export const ConnectionProvider = ({
 				heldPaint?.();
 				heldPaint = null;
 				heldStale = false;
+				heldReason = null;
 				cancelHeldConnecting();
 			};
-			const paintDegraded = () => {
+			/* The retryable error branch never reaches `noteError` (a blip must not
+			 * raise a refusal surface), so this is where its raw reason reaches
+			 * Diagnostics (PR #258) — at once outside the resume window, or when the
+			 * held paint fires inside it. */
+			const paintDegraded = (reason: StreamHealthReason | null) => {
 				listStore.getState().markStale();
-				if (mountedRef.current) setStreamHealth("degraded");
+				if (!mountedRef.current) return;
+				setStreamHealth("degraded");
+				setStreamHealthReason(reason);
 			};
 			/* The held report, published once the window closes with it still
 			 * standing (see `heldHealth` / `heldStale`). Loop-level, not per-run:
@@ -897,10 +928,15 @@ export const ConnectionProvider = ({
 			const firePaint = () => {
 				heldPaint = null;
 				if (stopped || !admission.isCurrent()) return;
+				const reason = heldReason;
+				heldReason = null;
 				if (heldStale) {
 					heldStale = false;
-					paintDegraded();
-				} else if (mountedRef.current) setStreamHealth(heldHealth);
+					paintDegraded(reason);
+				} else if (mountedRef.current) {
+					setStreamHealth(heldHealth);
+					setStreamHealthReason(reason);
+				}
 			};
 			/* The cold-start REST read is now a FALLBACK. It used to run beside the
 			 * stream on every route start, so the list loaded twice (the read and the
@@ -1015,6 +1051,7 @@ export const ConnectionProvider = ({
 							if (lastFrame === null) readListOnce();
 							cancelHeldConnecting();
 							heldHealth = health;
+							heldReason = reasonForStatus(status.state, heldReason);
 							if (heldPaint === null)
 								heldPaint = heldTimer(resumeClockRef.current, 0, firePaint);
 							return;
@@ -1030,7 +1067,11 @@ export const ConnectionProvider = ({
 						}
 						if (health === "degraded" && lastFrame === null) readListOnce();
 						if (health !== "degraded") cancelHeld();
-						if (mountedRef.current) setStreamHealth(health);
+						if (!mountedRef.current) return;
+						setStreamHealth(health);
+						setStreamHealthReason((previous) =>
+							reasonForStatus(status.state, previous),
+						);
 					},
 					onError: (error) => {
 						if (!mine()) return;
@@ -1052,7 +1093,10 @@ export const ConnectionProvider = ({
 							 *  round 2, D12 rider). The refusal surface below the row carried the
 							 *  cause; the health was simply never told. */
 							cancelHeld();
-							if (mountedRef.current) setStreamHealth("offline");
+							if (mountedRef.current) {
+								setStreamHealth("offline");
+								setStreamHealthReason(reasonCodeOf(error));
+							}
 							noteError(error);
 							return;
 						}
@@ -1063,13 +1107,14 @@ export const ConnectionProvider = ({
 						 * reach this line; they surfaced above, at once. */
 						if (insideResumeWindow(resumeClockRef.current)) {
 							heldStale = true;
+							heldReason = reasonCodeOf(error);
 							if (heldPaint === null)
 								heldPaint = heldTimer(
 									resumeClockRef.current,
 									OUTAGE_GRACE_MS,
 									firePaint,
 								);
-						} else paintDegraded();
+						} else paintDegraded(reasonCodeOf(error));
 						readListOnce();
 						_attempt += 1;
 						/* The conversation stream's policy (`reconnectDelay`), so the two
@@ -2140,6 +2185,7 @@ export const ConnectionProvider = ({
 						await Promise.all([retired, loggedOut]);
 						if (!isCurrent()) return false;
 						setStreamHealth("idle");
+						setStreamHealthReason(null);
 						setLastError(null);
 						setSignInState({ kind: "idle" });
 						retryRef.current = null;
@@ -2724,6 +2770,7 @@ export const ConnectionProvider = ({
 			coldStartSettled,
 			streamHealth,
 			resumeClock: resumeClockRef.current,
+			streamHealthReason,
 			signInState,
 			signInDiagnostics,
 			lastError,
@@ -2752,6 +2799,7 @@ export const ConnectionProvider = ({
 			busy,
 			coldStartSettled,
 			streamHealth,
+			streamHealthReason,
 			signInState,
 			signInDiagnostics,
 			lastError,
