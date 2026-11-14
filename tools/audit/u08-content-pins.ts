@@ -1708,7 +1708,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * anchors on the call opening. Re-derived last with --print over the
 	 * committed tree (c1e52685); only `src` moved. Source identity only, NOT
 	 * rendered U-08 evidence. */
-	src: "717f0817fe7d20b710ffc0f802408f91688071c42dded2e4ee8992a10a096187",
+	/* feat/sidebar-recency-order (TestFlight 906): the drawer's desktop-parity
+	 * arrangement, its View options sheet and Settings → Sidebar. Re-derived once
+	 * with --print over the committed tree. Source identity only, NOT rendered
+	 * U-08 evidence. */
+	/* PR #255 review round 1 (pinned divider, hidden-sections line, emptied-by-
+	 * view state, customised trigger fill): re-derived once with --print over the
+	 * staged tree. Source identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#254, d5831603) into #255: both comments kept,
+	 * re-derived once with --print over the merged tree. */
+	/* Convergence of #257 onto main f8d0d8dd (#255): both comment chains kept;
+	 * re-derived once with --print over the merged tree. */
+	src: "30659c950e404d9a164845cc1ec6b5940c4aca64a4a50544612214722bd35bcf",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
