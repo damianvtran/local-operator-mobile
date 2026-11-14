@@ -47,6 +47,7 @@ export type CatalogueKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
 	| "mobile.chrome.composer.more"
@@ -326,6 +327,7 @@ export type CatalogueKey =
 	| "mobile.home.tip.parallel"
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
+	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
@@ -518,6 +520,7 @@ export type CatalogueKey =
 	| "mobile.session.pending_echo.earlier_went_through"
 	| "mobile.session.pending_echo.images"
 	| "mobile.session.pending_echo.not_confirmed"
+	| "mobile.session.pending_echo.not_confirmed_plain"
 	| "mobile.session.pending_echo.not_sent"
 	| "mobile.session.pending_echo.queued_next"
 	| "mobile.session.pending_echo.queued_step"
@@ -922,6 +925,7 @@ export type NoParamKey =
 	| "mobile.account_routing.unsaved"
 	| "mobile.agent_avatar.edit_hint"
 	| "mobile.agent_avatar.label"
+	| "mobile.chrome.clear_search"
 	| "mobile.chrome.close_conversations"
 	| "mobile.chrome.composer.dismiss_keyboard"
 	| "mobile.chrome.composer.more"
@@ -1157,6 +1161,7 @@ export type NoParamKey =
 	| "mobile.home.tip.parallel"
 	| "mobile.home.tip.schedule"
 	| "mobile.home.tip.search"
+	| "mobile.home.transcript.needs_answer"
 	| "mobile.home.transcript.waiting"
 	| "mobile.library.action.add_tag"
 	| "mobile.library.action.edit"
@@ -1315,6 +1320,7 @@ export type NoParamKey =
 	| "mobile.session.not_connected.next"
 	| "mobile.session.pending_echo.earlier_went_through"
 	| "mobile.session.pending_echo.not_confirmed"
+	| "mobile.session.pending_echo.not_confirmed_plain"
 	| "mobile.session.pending_echo.not_sent"
 	| "mobile.session.pending_echo.queued_next"
 	| "mobile.session.pending_echo.queued_step"
@@ -1668,6 +1674,7 @@ export type MessageParams = {
 	"mobile.account_routing.unsaved": NoParams;
 	"mobile.agent_avatar.edit_hint": NoParams;
 	"mobile.agent_avatar.label": NoParams;
+	"mobile.chrome.clear_search": NoParams;
 	"mobile.chrome.close_conversations": NoParams;
 	"mobile.chrome.composer.dismiss_keyboard": NoParams;
 	"mobile.chrome.composer.more": NoParams;
@@ -1947,6 +1954,7 @@ export type MessageParams = {
 	"mobile.home.tip.parallel": NoParams;
 	"mobile.home.tip.schedule": NoParams;
 	"mobile.home.tip.search": NoParams;
+	"mobile.home.transcript.needs_answer": NoParams;
 	"mobile.home.transcript.waiting": NoParams;
 	"mobile.library.action.add_tag": NoParams;
 	"mobile.library.action.edit": NoParams;
@@ -2139,6 +2147,7 @@ export type MessageParams = {
 	"mobile.session.pending_echo.earlier_went_through": NoParams;
 	"mobile.session.pending_echo.images": { count: number };
 	"mobile.session.pending_echo.not_confirmed": NoParams;
+	"mobile.session.pending_echo.not_confirmed_plain": NoParams;
 	"mobile.session.pending_echo.not_sent": NoParams;
 	"mobile.session.pending_echo.queued_next": NoParams;
 	"mobile.session.pending_echo.queued_step": NoParams;
@@ -2559,6 +2568,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.account_routing.unsaved": "Not saved yet.",
 	"mobile.agent_avatar.edit_hint": "Change this picture in the desktop app",
 	"mobile.agent_avatar.label": "Agent picture",
+	"mobile.chrome.clear_search": "Clear search",
 	"mobile.chrome.close_conversations": "Close conversations",
 	"mobile.chrome.composer.dismiss_keyboard": "Dismiss keyboard",
 	"mobile.chrome.composer.more": "More context",
@@ -2838,6 +2848,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.home.tip.parallel": "ask for parallel work to fan out subagents",
 	"mobile.home.tip.schedule": "set a schedule to run a prompt on a timer",
 	"mobile.home.tip.search": "search past conversations to reopen a session",
+	"mobile.home.transcript.needs_answer": "Needs your answer",
 	"mobile.home.transcript.waiting": "Waiting for the conversation…",
 	"mobile.library.action.add_tag": "Add",
 	"mobile.library.action.edit": "Edit",
@@ -3030,6 +3041,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.pending_echo.earlier_went_through": "Your earlier message went through. The text below hasn’t been sent yet.",
 	"mobile.session.pending_echo.images": "{count, plural, one {# image attached} other {# images attached}}",
 	"mobile.session.pending_echo.not_confirmed": "not confirmed — retry below",
+	"mobile.session.pending_echo.not_confirmed_plain": "not confirmed",
 	"mobile.session.pending_echo.not_sent": "not sent — tap to put back",
 	"mobile.session.pending_echo.queued_next": "queued — sends with your next message",
 	"mobile.session.pending_echo.queued_step": "queued — sends when this step finishes",
@@ -3435,6 +3447,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
+	"mobile.chrome.clear_search": { role: "button", note: "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -3714,6 +3727,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.home.tip.parallel": { role: "help", note: "Rotating tip fragment, lower case by design. A fragment, not a sentence: no final full stop, at most 48 characters at the source locale." },
 	"mobile.home.tip.schedule": { role: "help", note: "Rotating tip fragment, lower case by design. 'prompt' is the product's word for what a wake sends. No final full stop, at most 48 characters." },
 	"mobile.home.tip.search": { role: "help", note: "Rotating tip fragment, lower case by design. No final full stop, at most 48 characters at the source locale." },
+	"mobile.home.transcript.needs_answer": { role: "status", note: "Short line above a just-started conversation on the home screen when the agent is waiting for the reader to answer a question. Sits beside an \"Answer in conversation\" button, so keep it brief (a few words)." },
 	"mobile.home.transcript.waiting": { role: "status", note: "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character." },
 	"mobile.library.action.add_tag": { role: "button", note: "Button beside the 'New tag' field that creates the typed tag and selects it for this asset. A verb used as a label, no final full stop. It adds a tag, not a file or an asset." },
 	"mobile.library.action.edit": { role: "button", note: "Header button on an asset that opens the edit-details sheet. A verb used as a label, no final full stop. Edits only the asset's name, description and tags, never the file itself." },
@@ -3906,6 +3920,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.pending_echo.earlier_went_through": { role: "status", note: "Confirmation line above the message box when an earlier message was delivered while the box holds text the user has not sent. Must not claim the text in the box is an edit, and must not say 'delivered' (the message may still be queued)." },
 	"mobile.session.pending_echo.images": { role: "meta", note: "Meta line on a just-sent message saying how many images ride with it; the images themselves are not shown until the conversation carries the message. Sentence fragment, lower case, no full stop." },
 	"mobile.session.pending_echo.not_confirmed": { role: "meta", note: "Caption, in danger colour, under a message whose delivery is uncertain (the computer did not answer); the Retry button below the message box resends it. Lower case, em dash, no full stop." },
+	"mobile.session.pending_echo.not_confirmed_plain": { role: "meta", note: "Caption, in danger colour, under the first message of a NEW conversation whose start the computer never confirmed. Unlike not_confirmed there is no Retry button on this screen (a start is never resent automatically), so it states the fact only. Lower case, no full stop." },
 	"mobile.session.pending_echo.not_sent": { role: "meta", note: "Caption, in danger colour, under a message the user sent that the computer definitively refused, kept on screen because the user had already typed something new. Tapping the message puts it back in the message box. Lower case, em dash, no full stop; same register as the other pending_echo captions." },
 	"mobile.session.pending_echo.queued_next": { role: "meta", note: "Caption under a steering message the computer accepted after the turn ended: it will ride along with the next message the user sends. Lower case, em dash, no full stop." },
 	"mobile.session.pending_echo.queued_step": { role: "meta", note: "Caption under a steering message the computer accepted while the agent is mid-step: it will be delivered when the current step finishes. Lower case, em dash, no full stop; the TUI's own wording for a queued steer." },
@@ -4325,6 +4340,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Aún sin guardar.",
 		"mobile.agent_avatar.edit_hint": "Cambia esta imagen en la aplicación de escritorio",
 		"mobile.agent_avatar.label": "Imagen del agente",
+		"mobile.chrome.clear_search": "Borrar búsqueda",
 		"mobile.chrome.close_conversations": "Cerrar conversaciones",
 		"mobile.chrome.composer.dismiss_keyboard": "Ocultar teclado",
 		"mobile.chrome.composer.more": "Más contexto",
@@ -4604,6 +4620,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "pide varios subagentes en paralelo",
 		"mobile.home.tip.schedule": "programa un prompt para que se repita",
 		"mobile.home.tip.search": "busca una conversación pasada y reábrela",
+		"mobile.home.transcript.needs_answer": "Necesita tu respuesta",
 		"mobile.home.transcript.waiting": "Esperando la conversación…",
 		"mobile.library.action.add_tag": "Añadir",
 		"mobile.library.action.edit": "Editar",
@@ -4796,6 +4813,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Tu mensaje anterior se envió. El texto de abajo aún no se ha enviado.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# imagen adjunta} other {# imágenes adjuntas}}",
 		"mobile.session.pending_echo.not_confirmed": "sin confirmar — reintenta abajo",
+		"mobile.session.pending_echo.not_confirmed_plain": "sin confirmar",
 		"mobile.session.pending_echo.not_sent": "no enviado — toca para recuperarlo",
 		"mobile.session.pending_echo.queued_next": "en cola — se envía con tu próximo mensaje",
 		"mobile.session.pending_echo.queued_step": "en cola — se envía cuando termine este paso",
@@ -5199,6 +5217,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Pas encore enregistré.",
 		"mobile.agent_avatar.edit_hint": "Modifiez cette photo dans l’application de bureau",
 		"mobile.agent_avatar.label": "Photo de l’agent",
+		"mobile.chrome.clear_search": "Effacer la recherche",
 		"mobile.chrome.close_conversations": "Fermer les conversations",
 		"mobile.chrome.composer.dismiss_keyboard": "Masquer le clavier",
 		"mobile.chrome.composer.more": "Plus de contexte",
@@ -5478,6 +5497,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "demandez plusieurs sous-agents en parallèle",
 		"mobile.home.tip.schedule": "planifiez un prompt à exécuter régulièrement",
 		"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
+		"mobile.home.transcript.needs_answer": "Attend votre réponse",
 		"mobile.home.transcript.waiting": "En attente de la conversation…",
 		"mobile.library.action.add_tag": "Ajouter",
 		"mobile.library.action.edit": "Modifier",
@@ -5670,6 +5690,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Votre message précédent est parti. Le texte ci-dessous n’a pas encore été envoyé.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# image jointe} other {# images jointes}}",
 		"mobile.session.pending_echo.not_confirmed": "non confirmé — réessayez ci-dessous",
+		"mobile.session.pending_echo.not_confirmed_plain": "non confirmé",
 		"mobile.session.pending_echo.not_sent": "non envoyé — touchez pour le récupérer",
 		"mobile.session.pending_echo.queued_next": "en file — part avec votre prochain message",
 		"mobile.session.pending_echo.queued_step": "en file — part à la fin de cette étape",
@@ -6073,6 +6094,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "अभी सहेजा नहीं गया।",
 		"mobile.agent_avatar.edit_hint": "यह तस्वीर डेस्कटॉप ऐप में बदलें",
 		"mobile.agent_avatar.label": "एजेंट की तस्वीर",
+		"mobile.chrome.clear_search": "खोज साफ़ करें",
 		"mobile.chrome.close_conversations": "बातचीत बंद करें",
 		"mobile.chrome.composer.dismiss_keyboard": "कीबोर्ड छिपाएँ",
 		"mobile.chrome.composer.more": "अधिक संदर्भ",
@@ -6352,6 +6374,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "साथ-साथ काम माँगें, तो उप-एजेंट बँट जाते हैं",
 		"mobile.home.tip.schedule": "टाइमर पर प्रॉम्प्ट चलाने के लिए शेड्यूल सेट करें",
 		"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
+		"mobile.home.transcript.needs_answer": "आपके जवाब की ज़रूरत है",
 		"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
 		"mobile.library.action.add_tag": "जोड़ें",
 		"mobile.library.action.edit": "संपादित करें",
@@ -6544,6 +6567,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "आपका पिछला संदेश भेज दिया गया। नीचे का टेक्स्ट अभी नहीं भेजा गया है।",
 		"mobile.session.pending_echo.images": "{count, plural, one {# छवि संलग्न} other {# छवियाँ संलग्न}}",
 		"mobile.session.pending_echo.not_confirmed": "पुष्टि नहीं हुई — नीचे फिर से कोशिश करें",
+		"mobile.session.pending_echo.not_confirmed_plain": "पुष्टि नहीं हुई",
 		"mobile.session.pending_echo.not_sent": "नहीं भेजा गया — वापस लाने के लिए टैप करें",
 		"mobile.session.pending_echo.queued_next": "कतार में — आपके अगले संदेश के साथ भेजा जाएगा",
 		"mobile.session.pending_echo.queued_step": "कतार में — यह चरण पूरा होने पर भेजा जाएगा",
@@ -6947,6 +6971,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Ещё не сохранено.",
 		"mobile.agent_avatar.edit_hint": "Изменить это изображение можно в приложении для компьютера",
 		"mobile.agent_avatar.label": "Изображение агента",
+		"mobile.chrome.clear_search": "Очистить поиск",
 		"mobile.chrome.close_conversations": "Закрыть список бесед",
 		"mobile.chrome.composer.dismiss_keyboard": "Скрыть клавиатуру",
 		"mobile.chrome.composer.more": "Дополнительный контекст",
@@ -7226,6 +7251,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "попросите раздать работу параллельно",
 		"mobile.home.tip.schedule": "настройте запуск промпта по расписанию",
 		"mobile.home.tip.search": "поищите сессию в прошлых беседах",
+		"mobile.home.transcript.needs_answer": "Нужен ваш ответ",
 		"mobile.home.transcript.waiting": "Ожидание беседы…",
 		"mobile.library.action.add_tag": "Добавить",
 		"mobile.library.action.edit": "Изменить",
@@ -7418,6 +7444,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Предыдущее сообщение отправлено. Текст ниже ещё не отправлен.",
 		"mobile.session.pending_echo.images": "{count, plural, one {# изображение прикреплено} few {# изображения прикреплены} many {# изображений прикреплено} other {# изображения прикреплено}}",
 		"mobile.session.pending_echo.not_confirmed": "не подтверждено — повторите ниже",
+		"mobile.session.pending_echo.not_confirmed_plain": "не подтверждено",
 		"mobile.session.pending_echo.not_sent": "не отправлено — нажмите, чтобы вернуть",
 		"mobile.session.pending_echo.queued_next": "в очереди — отправится с вашим следующим сообщением",
 		"mobile.session.pending_echo.queued_step": "в очереди — отправится после этого шага",
@@ -7821,6 +7848,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "ابھی محفوظ نہیں کیا گیا۔",
 		"mobile.agent_avatar.edit_hint": "یہ تصویر ڈیسک ٹاپ ایپ میں بدلیں",
 		"mobile.agent_avatar.label": "ایجنٹ کی تصویر",
+		"mobile.chrome.clear_search": "تلاش صاف کریں",
 		"mobile.chrome.close_conversations": "گفتگوئیں بند کریں",
 		"mobile.chrome.composer.dismiss_keyboard": "کی بورڈ بند کریں",
 		"mobile.chrome.composer.more": "مزید سیاق",
@@ -8100,6 +8128,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "ذیلی ایجنٹس کو پھیلانے کے لیے متوازی کام مانگیں",
 		"mobile.home.tip.schedule": "ٹائمر پر پرامپٹ چلانے کے لیے شیڈول بنائیں",
 		"mobile.home.tip.search": "گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں",
+		"mobile.home.transcript.needs_answer": "آپ کے جواب کی ضرورت ہے",
 		"mobile.home.transcript.waiting": "گفتگو کا انتظار…",
 		"mobile.library.action.add_tag": "شامل کریں",
 		"mobile.library.action.edit": "ترمیم کریں",
@@ -8292,6 +8321,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "آپ کا پچھلا پیغام چلا گیا۔ نیچے والا متن ابھی نہیں بھیجا گیا۔",
 		"mobile.session.pending_echo.images": "{count, plural, one {# تصویر منسلک} other {# تصاویر منسلک}}",
 		"mobile.session.pending_echo.not_confirmed": "تصدیق نہیں ہوئی — نیچے دوبارہ کوشش کریں",
+		"mobile.session.pending_echo.not_confirmed_plain": "تصدیق نہیں ہوئی",
 		"mobile.session.pending_echo.not_sent": "نہیں بھیجا گیا — واپس لانے کے لیے ٹیپ کریں",
 		"mobile.session.pending_echo.queued_next": "قطار میں — آپ کے اگلے پیغام کے ساتھ بھیجا جائے گا",
 		"mobile.session.pending_echo.queued_step": "قطار میں — یہ مرحلہ ختم ہونے پر بھیجا جائے گا",
@@ -8695,6 +8725,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "Chưa lưu.",
 		"mobile.agent_avatar.edit_hint": "Hãy đổi ảnh này trong ứng dụng máy tính",
 		"mobile.agent_avatar.label": "Ảnh của tác nhân",
+		"mobile.chrome.clear_search": "Xóa tìm kiếm",
 		"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
 		"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
 		"mobile.chrome.composer.more": "Thêm ngữ cảnh",
@@ -8974,6 +9005,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "yêu cầu chạy song song để tách tác nhân con",
 		"mobile.home.tip.schedule": "lên lịch để chạy prompt theo hẹn giờ",
 		"mobile.home.tip.search": "tìm lại cuộc trò chuyện cũ để mở lại phiên",
+		"mobile.home.transcript.needs_answer": "Cần bạn trả lời",
 		"mobile.home.transcript.waiting": "Đang chờ cuộc trò chuyện…",
 		"mobile.library.action.add_tag": "Thêm",
 		"mobile.library.action.edit": "Chỉnh sửa",
@@ -9166,6 +9198,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "Tin nhắn trước của bạn đã được gửi. Nội dung bên dưới chưa được gửi.",
 		"mobile.session.pending_echo.images": "{count, plural, other {đã đính kèm # hình ảnh}}",
 		"mobile.session.pending_echo.not_confirmed": "chưa xác nhận — thử lại bên dưới",
+		"mobile.session.pending_echo.not_confirmed_plain": "chưa xác nhận",
 		"mobile.session.pending_echo.not_sent": "chưa gửi — chạm để đưa lại",
 		"mobile.session.pending_echo.queued_next": "đang chờ — sẽ gửi cùng tin nhắn tiếp theo của bạn",
 		"mobile.session.pending_echo.queued_step": "đang chờ — sẽ gửi khi bước này xong",
@@ -9569,6 +9602,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.account_routing.unsaved": "尚未保存。",
 		"mobile.agent_avatar.edit_hint": "请在桌面应用中更改此头像",
 		"mobile.agent_avatar.label": "智能体头像",
+		"mobile.chrome.clear_search": "清除搜索",
 		"mobile.chrome.close_conversations": "关闭对话列表",
 		"mobile.chrome.composer.dismiss_keyboard": "收起键盘",
 		"mobile.chrome.composer.more": "更多上下文",
@@ -9848,6 +9882,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.home.tip.parallel": "要求并行工作以展开多个子智能体",
 		"mobile.home.tip.schedule": "设置定时任务按时运行提示词",
 		"mobile.home.tip.search": "搜索过往对话以重新打开会话",
+		"mobile.home.transcript.needs_answer": "需要你的回答",
 		"mobile.home.transcript.waiting": "正在等待对话……",
 		"mobile.library.action.add_tag": "添加",
 		"mobile.library.action.edit": "编辑",
@@ -10040,6 +10075,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.pending_echo.earlier_went_through": "你之前的消息已发出。下方的文字尚未发送。",
 		"mobile.session.pending_echo.images": "{count, plural, other {已附加 # 张图片}}",
 		"mobile.session.pending_echo.not_confirmed": "未确认——请在下方重试",
+		"mobile.session.pending_echo.not_confirmed_plain": "未确认",
 		"mobile.session.pending_echo.not_sent": "未发送——轻点放回",
 		"mobile.session.pending_echo.queued_next": "已排队——将随你的下一条消息发送",
 		"mobile.session.pending_echo.queued_step": "已排队——此步骤完成后发送",

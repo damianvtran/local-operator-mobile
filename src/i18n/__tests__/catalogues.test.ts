@@ -112,8 +112,10 @@ const NAMESPACES = [
 		 *  computer's default" for the folder and for the model): 29 before them.
 		 *  65 with the three pickers (#182): 32 for the chips' spoken labels, the
 		 *  effort names and the pickers' copy, and 2 from its round-1 remediation
-		 *  ("Default effort" on the chip, "This computer's level" in the sheet). */
-		expected: 65,
+		 *  ("Default effort" on the chip, "This computer's level" in the sheet).
+		 *  66 with the startup transcript's compact "Needs your answer" row
+		 *  (TestFlight 906, replacing two hard-coded sentences). */
+		expected: 66,
 	},
 	{
 		name: "mobile.projects",
@@ -165,7 +167,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 80, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels)
+		expected: 81, // +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -237,7 +239,9 @@ const NAMESPACES = [
 		name: "mobile.chrome",
 		messages: chrome,
 		context: chromeContext,
-		expected: 26, // +5: the More sheet's row labels (visual audit D5); +1 its Questions row (build 753)
+		// +5: the More sheet's row labels (visual audit D5); +1 its Questions row
+		// (build 753); +1 the search pill's "Clear search" (TestFlight 906).
+		expected: 27,
 	},
 	{
 		name: "relay.chrome",
@@ -341,9 +345,13 @@ describe("the English catalogues", () => {
 		/* M3 slice S2a (English-first): +36 mobile.computers (titles, discovery
 		 * banners, the "Your own tunnel" screen) + 1 mobile.signin (loopback
 		 * unavailable detail) = 37: 734 + 37 = 771, counted over the en JSON. */
+		/* TestFlight 906 mobile fixes: + mobile.home.transcript.needs_answer and
+		 * mobile.chrome.clear_search = 2: 771 + 2 = 773. */
+		/* PR #256 QA round 1, Q3: + mobile.session.pending_echo.not_confirmed_plain
+		 * (the new-conversation caption with no retry to point at) = 774. */
 		/* M3 slice S2b-1 (English-first): +27 mobile.computers (own-tunnel
 		 * commands, verdicts, remedy, password slot) + 3 mobile.common (command
-		 * block) + 11 mobile.settings (own-tunnel section) = 41: 771 + 41 = 812,
+		 * block) + 11 mobile.settings (own-tunnel section) = 41: 774 + 41 = 815,
 		 * counted over the en JSON. */
 		/* M3 slice S2b-2a (English-first): +24 mobile.computers (the refusal
 		 * surface's headlines, next lines, wait line and buttons): 812 + 24 = 836,
@@ -373,9 +381,17 @@ describe("the English catalogues", () => {
 		 * mobile.settings = 842. */
 		/* Merge of origin/main (#259, 9ef19ccd) into #258: 843 on main + 5
 		 * mobile.settings = 848. */
+		/* Merge of origin/main (#255, f8d0d8dd) into #256: 837 on main + 3
+		 * (mobile.home, mobile.chrome, mobile.session) = 840. */
+		/* Merge of origin/main (#259, 9ef19ccd) into #256: 843 on main + 3
+		 * (mobile.home, mobile.chrome, mobile.session) = 846. */
+		/* Merge of origin/main (#258, 8ca71d54) into #256: 848 on main + 3
+		 * (mobile.home, mobile.chrome, mobile.session) = 851. */
 		/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 		 * 867 + 5 (mobile.settings) = 872, counted over the en JSON. */
-		expect(total).toBe(872);
+		/* Merge of origin/main (#257, caae98bc) into #256: 872 on main + 3
+		 * (mobile.home, mobile.chrome, mobile.session) = 875. */
+		expect(total).toBe(875);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

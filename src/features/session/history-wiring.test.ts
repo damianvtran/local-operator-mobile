@@ -6,7 +6,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { HistoryResponse } from "@/contracts";
 import { Button } from "@/ui/components/button";
-import { anchoredScrollTop, historyTopReached } from "./history-scroll";
+import {
+	anchoredScrollTop,
+	HISTORY_NEAR_TOP_PT,
+	historyTopReached,
+} from "./history-scroll";
 
 // Rendering `Button` in Node: the appearance hook reads the native colour
 // scheme, which this Node host does not have (same seam as checkpoint-rail).
@@ -357,6 +361,21 @@ describe("actual top-scroll transitions", () => {
 		expect(historyTopReached(0, 0, true, false)).toBe(false);
 		expect(historyTopReached(20, 0, true, true)).toBe(false);
 	});
+	/* Operator, 2026-11-13: "improve the style of the load messages
+	 * interaction". Pages load as the reader scrolls INTO the top band (the
+	 * relay's `scrollTop < 120`), so a page is on its way before the edge, and
+	 * nothing but the reader's own upward motion can ask for one. */
+	it("loads on an upward scroll into the near-top band, before the edge", () => {
+		expect(HISTORY_NEAR_TOP_PT).toBe(120);
+		expect(historyTopReached(400, 100, true, false)).toBe(true);
+		expect(historyTopReached(130, 120, true, false)).toBe(true);
+		expect(historyTopReached(400, 121, true, false)).toBe(false);
+	});
+	it("a prepend held in place (offset moves DOWN) can never re-trigger itself", () => {
+		expect(historyTopReached(40, 900, true, false)).toBe(false);
+		expect(historyTopReached(100, 101, true, false)).toBe(false);
+		expect(historyTopReached(100, 100, true, false)).toBe(false);
+	});
 });
 
 /** A list seam executed as JavaScript: the production source with its types
@@ -585,10 +604,18 @@ describe("web prepend keeps the reader's row in place (PR #207 Q5/Q6)", () => {
 describe("history controls keep focus while loading (PR #207 U1)", () => {
 	it("the Load earlier / Try again control is never natively disabled", () => {
 		const control = seam(
-			/<Button[^<]*?testID=\{CONTROL\.transcriptLoadEarlier\}[^<]*?\/>/,
+			/<OlderHistoryEdge[^<]*?testID=\{CONTROL\.transcriptLoadEarlier\}[^<]*?\/>/,
 		);
 		expect(control).toContain("loading={loadingOlder}");
 		expect(control).not.toMatch(/\bdisabled=/);
+	});
+
+	/* Design round 1, D1 (PR #256): the edge is `self-center`, so the failure
+	 *  sentence above it centres whenever the edge is drawn. */
+	it("centres the failure sentence over the centred older edge", () => {
+		expect(list).toMatch(
+			/"text-body-sm text-ink-muted",\s*\(hasOlder \|\| olderRetry\) && "text-center",\s*\)\}\s*>\s*\{t\(\s*historyError === "stalled"/,
+		);
 	});
 
 	it("a loading Button stays focusable and ignores presses through its own guard", () => {

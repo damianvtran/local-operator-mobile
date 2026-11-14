@@ -711,3 +711,89 @@ describe("queue surgery is refused while a send is in flight", () => {
 		expect(x.admissions).toHaveLength(1);
 	});
 });
+
+/* TestFlight 906: "make sure that the user message appears smoothly in the view
+ * optimistically". The home paints the reader's message from the outbox
+ * (`startup-echoes.ts`); these pin the coordinator facts it paints from, so a
+ * delivered message is never in NEITHER list (the row would blink out between
+ * "left the queue" and "the transcript wrote it"). */
+describe("delivered stand-ins for the optimistic rows", () => {
+	it("publishes a delivered envelope before the queue drops it, in every frame", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/synthetic" });
+		x.coordinator.edit("hello", [{ data_b64: "AAAA", mime_type: "image/png" }]);
+		const frames: Array<{ queued: string[]; delivered: string[] }> = [];
+		x.coordinator.subscribe(() => {
+			const snap = x.coordinator.snapshot();
+			frames.push({
+				queued: snap.queue.map((m) => m.command_id),
+				delivered: snap.delivered.map((m) => m.command_id),
+			});
+		});
+		await x.coordinator.enqueue();
+		const id = x.coordinator.snapshot().queue[0]?.command_id;
+		expect(id).toBeDefined();
+		x.create.resolve({ session_id: "session-1" });
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().queue).toEqual([]);
+		const delivered = x.coordinator.snapshot().delivered;
+		expect(delivered.map((m) => m.command_id)).toEqual([id]);
+		// The bytes the row paints are the envelope's own, images included.
+		expect(delivered[0]?.images?.[0]?.data_b64).toBe("AAAA");
+		// From admission on, the id is in at least one list in every frame.
+		const from = frames.findIndex((f) => f.queued.includes(id as string));
+		expect(from).toBeGreaterThanOrEqual(0);
+		for (const frame of frames.slice(from))
+			expect(
+				frame.queued.includes(id as string) ||
+					frame.delivered.includes(id as string),
+			).toBe(true);
+	});
+
+	it("drops a delivered stand-in once the transcript witnesses its id, and only then", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/synthetic" });
+		x.coordinator.edit("hello", []);
+		await x.coordinator.enqueue();
+		x.create.resolve({ session_id: "session-1" });
+		await x.coordinator.settled();
+		const id = x.coordinator.snapshot().delivered[0]?.command_id as string;
+		const before = x.coordinator.snapshot();
+		x.coordinator.witness(new Set(["some-other-row"]));
+		// No change, no publish: the same snapshot object.
+		expect(x.coordinator.snapshot()).toBe(before);
+		x.coordinator.witness(new Set([id]));
+		expect(x.coordinator.snapshot().delivered).toEqual([]);
+	});
+
+	it("never marks a refused continuation delivered; the draft comes back", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/synthetic" });
+		x.send.mockRejectedValueOnce(
+			new RelayError("rejected", "No", { status: 400, detail: "No" }),
+		);
+		x.coordinator.edit("refuse me", []);
+		await x.coordinator.enqueue();
+		x.create.resolve({ session_id: "session-1" });
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().delivered).toEqual([]);
+		expect(x.coordinator.snapshot().queue).toEqual([]);
+		expect(x.coordinator.snapshot().draft.text).toBe("refuse me");
+	});
+
+	it("revocation clears delivered bytes with the queue", async () => {
+		const x = setup();
+		await x.coordinator.ready;
+		await x.coordinator.configure({ cwd: "/synthetic" });
+		x.coordinator.edit("private", []);
+		await x.coordinator.enqueue();
+		x.create.resolve({ session_id: "session-1" });
+		await x.coordinator.settled();
+		expect(x.coordinator.snapshot().delivered).toHaveLength(1);
+		x.coordinator.revoke();
+		expect(x.coordinator.snapshot().delivered).toEqual([]);
+	});
+});

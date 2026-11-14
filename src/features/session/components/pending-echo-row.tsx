@@ -1,15 +1,24 @@
 import { memo, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
 
+import { TranscriptImage } from "@/features/session/components/transcript-image";
 import { UserMessageClamp } from "@/features/session/components/user-message-clamp";
+import type { ImageLoader } from "@/features/session/image-cache";
 import {
+	LOCAL_ECHO_IMAGES,
 	type PendingEcho,
 	pendingEchoBoxClass,
 	pendingEchoCaption,
+	seedPendingEchoImages,
 } from "@/features/session/pending-echo";
 import { userBubbleFill } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
-import { pendingEchoId, ROLE, userMessageMoreId } from "@/ui/a11y";
+import {
+	pendingEchoId,
+	ROLE,
+	transcriptImageId,
+	userMessageMoreId,
+} from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { cx } from "@/ui/variants";
 
@@ -38,12 +47,28 @@ const PendingEchoRowImpl = ({
 	echo,
 	streaming,
 	onPutBack,
+	loadImage,
+	surface,
 }: {
 	echo: PendingEcho;
 	streaming: boolean;
 	onPutBack?: (commandId: string) => void;
+	/** The session's image loader, when there is a session. The echo's images
+	 *  are seeded under it so the settled row paints them on its first frame. */
+	loadImage?: ImageLoader;
+	/** Where the row is drawn; picks the failure caption (`pendingEchoCaption`). */
+	surface?: "session" | "startup";
 }) => {
-	const caption = pendingEchoCaption(echo, streaming);
+	const caption = pendingEchoCaption(echo, streaming, surface);
+	/* Seeded DURING render, before `TranscriptImage`'s lazy initialiser peeks:
+	 *  an effect would run after that first frame and show the skeleton once.
+	 *  `seed` is idempotent and never overwrites, so a re-render costs a map
+	 *  lookup. With no session yet the row paints under `LOCAL_ECHO_IMAGES`;
+	 *  once the session exists, under its loader only — the one the settled
+	 *  row asks — since a second copy under the local loader is a whole file
+	 *  of heap nothing reads (agent review round 1, M1). */
+	const imageLoader = loadImage ?? LOCAL_ECHO_IMAGES;
+	if (echo.images?.length) seedPendingEchoImages(imageLoader, echo);
 	const { active } = useTheme();
 	// The bubble `Show less` keeps in view inside the list's footer (D2).
 	const bubble = useRef<View | null>(null);
@@ -58,17 +83,6 @@ const PendingEchoRowImpl = ({
 				 *  filled like a prompt, as its settled row is. */
 				style={userBubbleFill(active)}
 			>
-				{/* Attachments ride as a count: the composer owns the image bytes,
-				 *  and the real row shows them once the transcript carries it.
-				 *  `ink-muted`, not `ink-dim`: this line sits ON the bubble, where
-				 *  `ink-dim` misses 4.5:1 in most light themes (design D2). */}
-				{echo.imageCount > 0 ? (
-					<Text className="text-meta text-ink-muted">
-						{t("mobile.session.pending_echo.images", {
-							count: echo.imageCount,
-						})}
-					</Text>
-				) : null}
 				{/* The SAME clamp as the settled row's `user`/`steer` arm: every
 				 *  message, steer or prompt, clips to eight lines with `Show more`.
 				 *  Without it a long send painted at full height
@@ -85,6 +99,34 @@ const PendingEchoRowImpl = ({
 						<Text className="text-body-read text-ink-muted">{echo.text}</Text>
 					</UserMessageClamp>
 				)}
+				{/* The reader's own images, painted from the bytes the phone holds
+				 *  (operator, TestFlight 906: the image "can look like the image didn't
+				 *  send until it loads a few seconds later"). The SAME component, frame
+				 *  and spacing as the settled user row's (`transcript-row.tsx`, the
+				 *  `user`/`steer` arm), keyed by the id that row will carry, so
+				 *  handover moves nothing. A count could only promise the image. */}
+				{echo.images?.length ? (
+					<View className="flex-row flex-wrap gap-1.5 pt-1.5">
+						{echo.images.map((image, index) => (
+							<TranscriptImage
+								// biome-ignore lint/suspicious/noArrayIndexKey: an envelope's images are immutable and their position IS their identity (the relay's image index).
+								key={index}
+								entryId={echo.commandId}
+								index={index}
+								mimeType={image.mime_type}
+								load={imageLoader}
+								onBubble
+								testID={transcriptImageId(pendingEchoId(echo.commandId), index)}
+							/>
+						))}
+					</View>
+				) : echo.imageCount > 0 ? (
+					<Text className="text-meta text-ink-muted">
+						{t("mobile.session.pending_echo.images", {
+							count: echo.imageCount,
+						})}
+					</Text>
+				) : null}
 			</View>
 			{/* The caption sits BELOW the box, on canvas (design round 1, D2):
 			 *  `ink-dim` and `danger` are contracted on canvas, and on `user-bubble`
@@ -132,12 +174,18 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 	echoes,
 	streaming,
 	onPutBack,
+	loadImage,
+	surface,
 }: {
 	echoes: readonly PendingEcho[];
 	streaming: boolean;
 	/** The composer's put-back for a refused row; must be stable (the rows are
 	 *  memoised on it). */
 	onPutBack?: (commandId: string) => void;
+	/** The session's image loader (see `PendingEchoRow`); must be stable. */
+	loadImage?: ImageLoader;
+	/** Where the rows are drawn (see `PendingEchoRow`). */
+	surface?: "session" | "startup";
 }) {
 	if (echoes.length === 0) return null;
 	return (
@@ -148,6 +196,8 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 					echo={echo}
 					streaming={streaming}
 					onPutBack={onPutBack}
+					loadImage={loadImage}
+					surface={surface}
 				/>
 			))}
 		</>

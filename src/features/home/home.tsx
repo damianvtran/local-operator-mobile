@@ -59,7 +59,11 @@ import {
 	homeFolderChip,
 } from "@/features/home/picker-model";
 import { useHomeDrawer } from "@/features/home/use-home-drawer";
-import { StartupTranscript } from "@/features/new-session/startup-transcript";
+import { startupEchoes } from "@/features/new-session/startup-echoes";
+import {
+	StartupPreview,
+	StartupTranscript,
+} from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
 import { notificationsEnabled } from "@/features/notifications/notifications-model";
 import {
@@ -332,6 +336,36 @@ export default function Home({
 	const setDraft = startup.setText;
 	const setImages = startup.setImages;
 	const starting = startup.snapshot.phase === "starting";
+	/* The reader's sent-but-not-yet-transcribed messages, as rows on screen from
+	 *  the moment the outbox holds them (`startup-echoes.ts`). Memoised on the
+	 *  three coordinator fields it reads, which change only on a real transition,
+	 *  so the memoised rows do not re-render per keystroke. */
+	const echoes = useMemo(
+		() =>
+			startupEchoes({
+				phase: startup.snapshot.phase,
+				queue: startup.snapshot.queue,
+				delivered: startup.snapshot.delivered,
+			}),
+		[
+			startup.snapshot.phase,
+			startup.snapshot.queue,
+			startup.snapshot.delivered,
+		],
+	);
+	/* A refused create's row puts the queue back in the editor — the queue
+	 *  sheet's existing "Put back in draft" (`restoreQueueToDraft`), reached
+	 *  from the row the caption points at. Stable for the memoised rows. */
+	const restoreQueueRef = useRef(startup.restoreQueueToDraft);
+	restoreQueueRef.current = startup.restoreQueueToDraft;
+	const putBackStartup = useCallback(() => {
+		void restoreQueueRef.current();
+	}, []);
+	const witnessRef = useRef(startup.witness);
+	witnessRef.current = startup.witness;
+	const witnessStartup = useCallback((ids: ReadonlySet<string>) => {
+		witnessRef.current(ids);
+	}, []);
 	const queueLine = startupQueueState(
 		startup.snapshot.phase,
 		startup.snapshot.sessionId,
@@ -788,7 +822,15 @@ export default function Home({
 					<StartupTranscript
 						sessionId={startup.snapshot.sessionId}
 						onStreaming={setRunning}
+						echoes={echoes}
+						onWitness={witnessStartup}
+						onPutBack={putBackStartup}
 					/>
+				) : echoes.length > 0 && homeRecovery === null ? (
+					/* Before the start has answered there is no session to adopt, but
+					 *  the reader has sent: show what they sent, not the splash
+					 *  (operator, TestFlight 906). */
+					<StartupPreview echoes={echoes} onPutBack={putBackStartup} />
 				) : homeRecovery === null ? (
 					<HomeSplash
 						draft={draft}

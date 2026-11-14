@@ -63,5 +63,6 @@
 	"mobile.home.tip.schedule": "planifiez un prompt à exécuter régulièrement",
 	"mobile.home.tip.search": "retrouvez une session passée pour la rouvrir",
 	"mobile.home.transcript.waiting": "En attente de la conversation…",
+	"mobile.home.transcript.needs_answer": "Attend votre réponse",
 	"mobile.home.chip.model_default_short": "Modèle par défaut"
 }

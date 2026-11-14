@@ -30,6 +30,20 @@ export type StartupRecord = {
 export type StartupSnapshot = StartupRecord & {
 	error: string | null;
 	loaded: boolean;
+	/** Envelopes the relay ACKNOWLEDGED (the continuation POST answered 2xx and
+	 *  the queue no longer holds them) that the transcript has not shown yet.
+	 *
+	 *  WHY (operator, TestFlight 906: "make sure that the user message appears
+	 *  smoothly in the view optimistically"). A message is on screen as a pending
+	 *  row from admission: first from `queue`, then — once delivered — from here,
+	 *  until the session's own row with the same id replaces it
+	 *  (`witness`). Without this list there is a gap between "left the queue"
+	 *  and "the stream wrote the row" in which the reader's message vanished.
+	 *
+	 *  Snapshot only, never persisted (the record has no such field): after a
+	 *  relaunch the transcript is the authority, as for the session screen's
+	 *  echoes (`features/session/pending-echo.ts`, "Nothing is persisted"). */
+	delivered: ContinuationEnvelope[];
 };
 export type StartupDeps = {
 	store: {
@@ -134,7 +148,7 @@ export class StartupCoordinator {
 			draft: { text: "", images: [] },
 			queue: [],
 		};
-		this.value = { ...this.record, error: null, loaded: false };
+		this.value = { ...this.record, error: null, loaded: false, delivered: [] };
 		this.ready = this.restore();
 	}
 
@@ -488,6 +502,21 @@ export class StartupCoordinator {
 				});
 				return;
 			}
+			/* Delivered BEFORE the queue drops it, so in no published frame is the
+			 * message in neither list (the row would blink out). For that instant it
+			 * is in both; the view dedupes by `command_id`, preferring this one. */
+			this.publish(
+				{
+					// A Retry replays the same id; it must not stack a second row.
+					delivered: [
+						...this.value.delivered.filter(
+							(held) => held.command_id !== message.command_id,
+						),
+						copy(message),
+					],
+				},
+				false,
+			);
 			// If this commit fails, the same immutable ID remains the retry authority.
 			if (
 				!(await this.persist((record) => ({
@@ -547,6 +576,20 @@ export class StartupCoordinator {
 		return true;
 	}
 
+	/** The transcript now carries these ids: their delivered rows are owned by
+	 *  the session's own entries, so the pending stand-ins are dropped. Keyed on
+	 *  the envelope's `command_id`, which the relay writes as the user entry's
+	 *  id (`features/session/pending-echo.ts`, "Reconciliation is by IDENTITY").
+	 *  A no-op (no publish) when nothing changes, so a caller may report every
+	 *  frame's ids. */
+	witness(ids: ReadonlySet<string>): void {
+		const kept = this.value.delivered.filter(
+			(message) => !ids.has(message.command_id),
+		);
+		if (kept.length === this.value.delivered.length) return;
+		this.publish({ delivered: kept }, false);
+	}
+
 	/** Explicit discard. Queued bytes are the reader's; they go only when said so. */
 	async discardQueue(): Promise<boolean> {
 		await this.ready;
@@ -592,7 +635,12 @@ export class StartupCoordinator {
 	revoke() {
 		this.revoked = true;
 		this.active = false;
-		this.publish({ draft: { text: "", images: [] }, queue: [], error: null });
+		this.publish({
+			draft: { text: "", images: [] },
+			queue: [],
+			delivered: [],
+			error: null,
+		});
 	}
 	async flush() {
 		await this.ready;

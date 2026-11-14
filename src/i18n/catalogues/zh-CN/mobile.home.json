@@ -63,5 +63,6 @@
 	"mobile.home.tip.schedule": "设置定时任务按时运行提示词",
 	"mobile.home.tip.search": "搜索过往对话以重新打开会话",
 	"mobile.home.transcript.waiting": "正在等待对话……",
+	"mobile.home.transcript.needs_answer": "需要你的回答",
 	"mobile.home.chip.model_default_short": "默认模型"
 }

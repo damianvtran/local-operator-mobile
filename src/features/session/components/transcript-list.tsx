@@ -21,6 +21,7 @@ import type { TranscriptEntry } from "@/contracts";
 import { anchorBottomVisible } from "@/features/session/completion-visibility";
 import { FoldBar } from "@/features/session/components/fold-bar";
 import { GroupGuides } from "@/features/session/components/group-guides";
+import { OlderHistoryEdge } from "@/features/session/components/older-history-edge";
 import { QuietGroupBar } from "@/features/session/components/quiet-group-bar";
 import {
 	SupplementBlock,
@@ -1857,7 +1858,14 @@ export const TranscriptList = ({
 						{historyError && !newestFailed ? (
 							<Text
 								accessibilityLiveRegion="polite"
-								className="text-body-sm text-ink-muted"
+								/* Centred over the centred edge below, so the sentence and
+								 *  its "Try again" read as one unit (design round 1, D1); a
+								 *  start-aligned sentence over a centred control read as two
+								 *  unrelated items. With no edge, it stays start-aligned. */
+								className={cx(
+									"text-body-sm text-ink-muted",
+									(hasOlder || olderRetry) && "text-center",
+								)}
 							>
 								{t(
 									historyError === "stalled"
@@ -1867,21 +1875,15 @@ export const TranscriptList = ({
 							</Text>
 						) : null}
 						{hasOlder || olderRetry ? (
-							/* Deliberately NOT `disabled` while loading (PR #207 U1): a native
-							 * `disabled` blurs the focused control, so keyboard and
-							 * screen-reader readers lost their place on every page. `Button`
-							 * already ignores presses while `loading` and announces busy. */
-							<Button
-								label={t(
-									loadingOlder
-										? "mobile.session.history.loading"
-										: olderRetry
-											? "mobile.common.try_again"
-											: "mobile.session.history.load",
-								)}
-								onPress={olderRetry ? requestRetry : requestOlder}
+							/* The quiet older edge: pages load as the reader scrolls up
+							 * (`historyTopReached`); this is the spinner, the
+							 * screen-reader action and the visible retry, never a
+							 * bordered button (`older-history-edge.tsx`). One control,
+							 * never natively disabled (PR #207 U1). */
+							<OlderHistoryEdge
 								loading={loadingOlder}
-								variant="outline"
+								retry={olderRetry}
+								onPress={olderRetry ? requestRetry : requestOlder}
 								testID={CONTROL.transcriptLoadEarlier}
 							/>
 						) : historyGap ? null : (

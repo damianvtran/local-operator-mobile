@@ -255,6 +255,10 @@
 		"role": "status",
 		"note": "Empty state of the transcript shown under the home composer right after a send, before the first message arrives. Keep the ellipsis character."
 	},
+	"mobile.home.transcript.needs_answer": {
+		"role": "status",
+		"note": "Short line above a just-started conversation on the home screen when the agent is waiting for the reader to answer a question. Sits beside an \"Answer in conversation\" button, so keep it brief (a few words)."
+	},
 	"mobile.home.chip.model_default_short": {
 		"role": "meta",
 		"note": "Visible text of the home's model chip when the computer's configured default applies but the app cannot name it (an older Local Operator). Says 'model' because it is the only chip on the row for both unnamed defaults: the effort chip is not drawn beside it. Keep it short: it shares one row with the folder chip and the send controls."

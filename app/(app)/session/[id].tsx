@@ -769,9 +769,12 @@ export default function Session() {
 					echoes={pendingEchoes}
 					streaming={runtime.streaming}
 					onPutBack={composer.putBack}
+					/* The echo's own images are seeded under this loader so the
+					 *  settled row paints them on its first frame (TestFlight 906). */
+					loadImage={runtime.loadImage}
 				/>
 			),
-		[pendingEchoes, runtime.streaming, composer.putBack],
+		[pendingEchoes, runtime.streaming, composer.putBack, runtime.loadImage],
 	);
 	const transcript =
 		runtime.content === "disconnected" ? (

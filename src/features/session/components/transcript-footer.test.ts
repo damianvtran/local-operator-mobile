@@ -65,6 +65,12 @@ vi.mock("@/features/session/components/supplement-block", () => ({
 vi.mock("@/ui/components/button", () => ({
 	Button: () => null,
 }));
+/* The older edge (`older-history-edge.tsx`) replaced the header's Button and
+ * reaches the same primitives; its own behaviour is
+ * `older-history-edge.test.tsx`'s. */
+vi.mock("@/features/session/components/older-history-edge", () => ({
+	OlderHistoryEdge: () => null,
+}));
 
 interface ListProps {
 	data: unknown[];

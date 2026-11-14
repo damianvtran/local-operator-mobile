@@ -36,7 +36,7 @@ import {
 	transcriptRowTestID,
 } from "@/features/session/projection";
 import {
-	USER_BUBBLE_BOX_CLASS,
+	USER_BUBBLE_FRAME_CLASS,
 	userBubbleFill,
 } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
@@ -164,7 +164,7 @@ const UserBox = ({
 	return (
 		<View
 			ref={bubble}
-			className={cx("max-w-[85%]", USER_BUBBLE_BOX_CLASS)}
+			className={USER_BUBBLE_FRAME_CLASS}
 			style={userBubbleFill(active)}
 		>
 			{children(bubble)}

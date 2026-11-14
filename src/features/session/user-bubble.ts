@@ -26,6 +26,16 @@ import type { ThemeEntry } from "@/ui/tokens.gen";
  *  WEB this class is what paints; on native see `userBubbleFill`. */
 export const USER_BUBBLE_BOX_CLASS = "rounded-md bg-user-bubble px-3 py-1.5";
 
+/** The WHOLE bubble frame, settled and in flight: the box plus its 85 % cap.
+ *  One string both rows use (`transcript-row.tsx`'s `UserBox`, and
+ *  `pendingEchoBoxClass`), so their INNER alignment cannot drift apart. It
+ *  did: the pending box kept an `items-end` from when its caption sat inside
+ *  it, and once an image strip widened the box that pushed a short text to the
+ *  right edge, 181 pt from where the settled row draws it (QA round 1, Q2,
+ *  PR #256). The row around the bubble aligns it to the end; inside, the text
+ *  starts at the start edge in both states. */
+export const USER_BUBBLE_FRAME_CLASS = `max-w-[85%] ${USER_BUBBLE_BOX_CLASS}`;
+
 /**
  * The bubble's fill as an explicit style, for native.
  *

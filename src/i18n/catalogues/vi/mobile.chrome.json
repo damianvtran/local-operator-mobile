@@ -6,6 +6,7 @@
 	"mobile.chrome.destinations": "Mục đến",
 	"mobile.chrome.new_chat": "Cuộc trò chuyện mới",
 	"mobile.chrome.close_conversations": "Đóng danh sách cuộc trò chuyện",
+	"mobile.chrome.clear_search": "Xóa tìm kiếm",
 	"mobile.chrome.composer.more": "Thêm ngữ cảnh",
 	"mobile.chrome.composer.dismiss_keyboard": "Ẩn bàn phím",
 	"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",

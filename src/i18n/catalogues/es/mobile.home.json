@@ -63,5 +63,6 @@
 	"mobile.home.tip.schedule": "programa un prompt para que se repita",
 	"mobile.home.tip.search": "busca una conversación pasada y reábrela",
 	"mobile.home.transcript.waiting": "Esperando la conversación…",
+	"mobile.home.transcript.needs_answer": "Necesita tu respuesta",
 	"mobile.home.chip.model_default_short": "Modelo predeterminado"
 }
