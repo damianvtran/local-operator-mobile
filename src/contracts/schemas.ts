@@ -1106,6 +1106,12 @@ export const sessionSummarySchema = z.looseObject({
 	mtime: epochSeconds,
 	/** Absent on an older relay; the client falls back to `mtime`. */
 	created_at: epochSeconds.optional(),
+	/** The person's own last message (local-operator #3923, v0.102.5): epoch
+	 *  SECONDS, possibly fractional. `null` = unknown — no user message yet, an
+	 *  unreadable transcript, or a row that is not running (only running rows pay
+	 *  the transcript read). Absent on an older daemon. Either way the drawer's
+	 *  `runningOrderMs` falls back to `created_at`; never read as `0`. */
+	last_user_at: epochSeconds.nullable().optional(),
 	/**
 	 * The session-health receipts (local-operator PR #1784). On the wire `false`
 	 * means "not observed to have ended" / "not observed to be degraded" — never

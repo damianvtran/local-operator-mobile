@@ -23,13 +23,13 @@
  *
  * WHERE IT DELIBERATELY DIFFERS, each for a stated reason:
  *
- *   - RUNNING rows key on their BIRTH. The desktop keys a running row by
- *     `last_user_at` (the person's last message, so a response landing in a
- *     running chat never re-sorts it) and falls back to `created_at`. The
- *     phone's relay list (`/api/sessions`, `daemon.py` `_merge_summaries`) does
- *     not publish `last_user_at`, so this is the desktop's own fallback, always.
- *     The client half is ready: `runningOrderMs` is the one place to read the
- *     field once the relay sends it and the contract declares it.
+ *   - RUNNING rows key on the person's LAST MESSAGE, as the desktop does:
+ *     `last_user_at` (so a response landing in a running chat never re-sorts
+ *     it), falling back to `created_at`. The relay's list (`/api/sessions`,
+ *     `daemon.py` `_merge_summaries`) publishes `last_user_at` from
+ *     local-operator v0.102.5 (#3923) — epoch seconds, `null` when unknown,
+ *     populated on running rows only. Older daemons omit it, so the
+ *     `created_at` fallback stays and is what those relays always get.
  *   - `groupBy` has no `agent` arrangement: the phone's row carries no binding
  *     (agent/team), so "Agent and team" would put every row in "Ungrouped".
  *   - `showEnded` is the phone's own: the desktop has no ended filter, but the
@@ -200,21 +200,23 @@ export function isStoppedOnReader(session: SessionSummary): boolean {
 
 /**
  * The instant a RUNNING row orders by, in ms, or `null`. The desktop's
- * `runningOrderMs`: the person's last message (`last_user_at`) — which this
- * relay does not publish (see the module header) — else the row's birth,
- * which does not move, so a response streaming into a running conversation
- * never reshuffles the Running section under the reader's thumb.
+ * `runningOrderMs` chain (`chat-list-sections.ts`): the person's last message
+ * (`last_user_at`, v0.102.5+) × 1000, else the row's birth, else `null`.
+ * Neither clock moves when the assistant replies, so a response streaming into
+ * a running conversation never reshuffles the Running section under the
+ * reader's thumb; only the person speaking lifts it.
  *
- * `created_at` ONLY — not `rowTimeMs(…, "created")`, whose older-relay fallback
- * is `mtime`, the very clock a streamed reply moves (review round 1, M3). A
- * relay without the field gives `null`, so the row sorts last in its lane by
- * arrival, as the desktop's chain ends in `null` too.
+ * A non-finite or `<= 0` `last_user_at` is "no claim" (the desktop's same
+ * refusal), never 1970. `created_at` ONLY as the fallback — not
+ * `rowTimeMs(…, "created")`, whose older-relay fallback is `mtime`, the very
+ * clock a streamed reply moves (review round 1 on #255, M3). A relay with
+ * neither gives `null`, so the row sorts last in its lane by arrival.
  */
 export function runningOrderMs(session: SessionSummary): number | null {
-	const born = session.created_at;
-	return typeof born === "number" && Number.isFinite(born) && born > 0
-		? born * 1000
-		: null;
+	const isClaim = (value: unknown): value is number =>
+		typeof value === "number" && Number.isFinite(value) && value > 0;
+	if (isClaim(session.last_user_at)) return session.last_user_at * 1000;
+	return isClaim(session.created_at) ? session.created_at * 1000 : null;
 }
 
 /** The lane a row occupies under `active-first`: stopped on the reader, then

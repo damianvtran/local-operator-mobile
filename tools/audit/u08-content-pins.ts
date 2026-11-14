@@ -1751,9 +1751,18 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Merge of origin/main (#259, 9ef19ccd) into #258: both comments kept,
 	 * re-derived once with --print over the merged tree. */
+	/* feat/sidebar-last-user-at: the session-row contract declares the relay's
+	 * `last_user_at` (local-operator #3923, v0.102.5) and the drawer's
+	 * `runningOrderMs` reads it before `created_at`. No rendered surface changed.
+	 * Re-derived with --print over the working tree; only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	/* Merge of origin/main (#258, 8ca71d54) into #263: both comments kept,
+	 * re-derived once with --print over the merged tree. */
 	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ef63d8dad550b79f77c32681d84de6e3b1ea8022f89c6bee0089b787517cc9e2",
+	/* Merge of origin/main (#257, caae98bc) into #263: both comment chains
+	 * kept, re-derived once with --print over the merged tree. */
+	src: "92fde1587f4957e787ecd3934090ee77acbf005837cf3e8bcdcd9b6485fbe802",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

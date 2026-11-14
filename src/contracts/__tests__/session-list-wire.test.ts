@@ -187,3 +187,45 @@ describe("the v0.101.19 session list (TestFlight 628)", () => {
 		expect(result.ok).toBe(false);
 	});
 });
+
+/*
+ * local-operator #3923 (v0.102.5) adds `last_user_at` to every `/api/sessions`
+ * row: epoch SECONDS of the person's last message, possibly fractional, `null`
+ * when unknown (and on every non-running row). Older daemons omit it.
+ */
+describe("the v0.102.5 last_user_at field", () => {
+	it("keeps a fractional value, a null and an absence distinct", () => {
+		const result = safeParsePayload(
+			"sessionListFrame",
+			liveFrame([
+				durableRow("run", {
+					section: "active",
+					streaming: true,
+					last_user_at: 1_762_500_100.375,
+				}),
+				durableRow("unknown", { last_user_at: null }),
+				durableRow("older-daemon"),
+			]),
+		);
+		expect(result.ok ? [] : result.error.issues.map((i) => i.path)).toEqual([]);
+		if (!result.ok) return;
+		const [run, unknown, older] = result.data.sessions;
+		expect(run?.last_user_at).toBe(1_762_500_100.375);
+		expect(unknown?.last_user_at).toBeNull();
+		expect(older?.last_user_at).toBeUndefined();
+	});
+
+	it("rejects a non-numeric last_user_at rather than minting a clock", () => {
+		const result = safeParsePayload(
+			"sessionListFrame",
+			liveFrame([
+				durableRow("bad", { last_user_at: "yesterday" }),
+				durableRow("ok"),
+			]),
+		);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		// Per-row tolerance drops the malformed row, keeps the rest.
+		expect(result.data.sessions.map((s) => s.session_id)).toEqual(["ok"]);
+	});
+});
