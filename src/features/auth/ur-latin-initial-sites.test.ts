@@ -83,6 +83,17 @@ const OPEN_LATIN_INITIAL_UR_KEYS = [
 	"mobile.computers.password_placeholder",
 ] as const;
 
+/** M3 S2b-2b (ur audit, rounds 1 and 2): the `CommandBlock` label on the set-up
+ *  screen is the bare acronym `TUI`, the same in every locale. A value that is ONE
+ *  strong-LTR token has nothing to reorder, and the label already aligns to the
+ *  row start under the RTL root, so the auditor asked for no direction opt-in at
+ *  `setup-computer.tsx`. Listed here only so the whole-namespace premise stays an
+ *  exact set: a NEW Latin-initial value must still fail with its key named.
+ *  (Android native rendering is the docs/i18n.md known gap, not proven here.) */
+const S2B2B_SINGLE_TOKEN_LATIN_UR_KEYS = [
+	"mobile.computers.setup.tui_label",
+] as const;
+
 /** M3 S2b-2a (ur audit UR-C1): a BUTTON label, so its channel is `Button.labelDir`
  *  (as `mobile.signin.start`), on `RefusalSurface`'s console button. */
 const S2B2A_LATIN_INITIAL_UR_KEYS = [
@@ -213,7 +224,7 @@ describe("screens: the Latin-initial values spread the composed direction", () =
 });
 
 describe("Q-02: every Latin-initial ur value in the computers and sign-in namespaces", () => {
-	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, the placeholder fixed via Input.placeholderDir, and S2b-2a's console button", () => {
+	it("the premise: the whole-namespace set is S1's four, the four fixed in S2a, the placeholder fixed via Input.placeholderDir, S2b-2a's console button, and S2b-2b's single-token TUI label", () => {
 		const catalogue = (namespace: string) =>
 			JSON.parse(
 				read(`../../i18n/catalogues/ur/mobile.${namespace}.json`),
@@ -231,6 +242,7 @@ describe("Q-02: every Latin-initial ur value in the computers and sign-in namesp
 				...LATIN_INITIAL_UR_KEYS,
 				...PRE_S1_LATIN_INITIAL_UR_KEYS,
 				...OPEN_LATIN_INITIAL_UR_KEYS,
+				...S2B2B_SINGLE_TOKEN_LATIN_UR_KEYS,
 				...S2B2A_LATIN_INITIAL_UR_KEYS,
 			].sort(),
 		);
@@ -434,8 +446,10 @@ describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens wit
 	 * premise test above strips ICU slots, so a SLOT-initial value is invisible to
 	 * it; this block is that case. The cure is the page's composed direction on the
 	 * verdict body — and only when the sentence is this one, because
-	 * `direction.tsx` forbids a blanket spread (an `invalid.reason` is pure server
-	 * text and must keep its own inferred base). */
+	 * `direction.tsx` forbids a blanket spread (a verdict that IS server text must
+	 * keep its own inferred base; since M3 S2b-2b the `invalid` verdict is catalogue
+	 * prose via `routeInvalidSentence`, which opens with an Urdu strong character
+	 * in ur, so `dir="auto"` already resolves it RTL). */
 	it("verdictOpensWithDetail: true only for an offline verdict that carries a detail", () => {
 		expect(
 			verdictOpensWithDetail({
@@ -451,9 +465,9 @@ describe("M3 S2b-1 (ur audit): the offline verdict with a relay detail opens wit
 				command: "lop mobile status",
 			}),
 		).toBe(false);
-		expect(verdictOpensWithDetail({ kind: "invalid", reason: "bad URL" })).toBe(
-			false,
-		);
+		expect(
+			verdictOpensWithDetail({ kind: "invalid", code: "not-address" }),
+		).toBe(false);
 		expect(verdictOpensWithDetail({ kind: "password" })).toBe(false);
 	});
 

@@ -1,12 +1,16 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import type { RouteInvalidCode } from "@/connection/profile";
 import {
 	classify,
+	ROUTE_INVALID_KEY,
+	routeInvalidSentence,
 	TUNNEL_TEST_TIMEOUT_MS,
 	type TunnelTestVerdict,
 	transportKind,
 	verdictSentence,
 } from "@/features/auth/tunnel-verdict";
+import computers from "@/i18n/catalogues/en/mobile.computers.json";
 import type { SentencePlatform } from "@/lib/platform";
 import { RelayError } from "@/relay";
 
@@ -166,7 +170,7 @@ describe("verdictSentence", () => {
 		// the sentence.
 		const verdicts: TunnelTestVerdict[] = [
 			{ kind: "ok", sessions: 2 },
-			{ kind: "invalid", reason: "Enter the address of your relay." },
+			{ kind: "invalid", code: "empty" },
 			{ kind: "password" },
 			{ kind: "forbidden", detail: "The edge refused a cross-origin request." },
 			{
@@ -369,6 +373,39 @@ describe("the rendered sentence, through the real classifier", () => {
 			expect(sentence).not.toContain(error.kind);
 			expect(sentence).not.toMatch(/\b[1-5]\d{2}\b/);
 		}
+	});
+});
+
+/* M3 S2b-2b: the address validator returns codes and this module owns the copy.
+ * The table is the only bridge, so it is checked against the en source itself:
+ * a key typed into the table but missing from the catalogue would throw at render
+ * time on exactly the screen that is telling the reader their address is wrong. */
+const UNFILLED_PLACEHOLDER = /[{}]/;
+
+describe("refused-address codes", () => {
+	const codes = Object.keys(ROUTE_INVALID_KEY) as RouteInvalidCode[];
+	const english = computers as Record<string, string>;
+
+	it("maps every code to a key that exists in the English catalogue", () => {
+		expect(codes).toHaveLength(9);
+		for (const code of codes) {
+			expect(english[ROUTE_INVALID_KEY[code]], code).toBeTypeOf("string");
+		}
+		expect(new Set(Object.values(ROUTE_INVALID_KEY)).size).toBe(codes.length);
+	});
+
+	it("renders every code with its values filled, never a placeholder or the key", () => {
+		for (const code of codes) {
+			const sentence = routeInvalidSentence(code);
+			expect(sentence, code).not.toMatch(UNFILLED_PLACEHOLDER);
+			expect(sentence, code).not.toContain("mobile.computers");
+		}
+		expect(routeInvalidSentence("http-public")).toBe(
+			"http:// is only allowed for a private address. Use https://, or a private host such as 192.168.x.x.",
+		);
+		expect(verdictSentence({ kind: "invalid", code: "empty" }, "ios")).toBe(
+			"Enter the address of your relay.",
+		);
 	});
 });
 

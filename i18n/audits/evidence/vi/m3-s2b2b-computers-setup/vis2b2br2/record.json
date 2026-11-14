@@ -1,0 +1,99 @@
+{
+  "locale": "vi",
+  "slice": "m3-s2b2b-computers-setup",
+  "namespace": "mobile.computers (setup.*, route_invalid.*, your_computer)",
+  "round": 2,
+  "audit_kind": "delta v1..v2",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "v1": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/vi/draft-vi.json",
+    "sha256": "1c68a37a66d0442e774bd0081314503a4d0d1c341cedada3637174536abfd359"
+  },
+  "v2": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/vi/draft-vi-v2.json",
+    "sha256": "5edfb40e9dab476a844bb7b201f32890d09e434ed7a2c98dd58244f69a8de755"
+  },
+  "notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/vi/notes-vi-v2.md",
+    "sha256": "eb79c4882668fdc031c219f809579fe5098d501e801bc9dbed95322c74fdbc00"
+  },
+  "round1_report": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/vi/report.md",
+    "sha256": "47724546fca47f1e3dd7c6853360a97062a8a4568ba648a75519e0cbc21d6b17",
+    "job": "1c42dbbe4a00"
+  },
+  "translator_jobs": [
+    "64abbc676f27",
+    "6a9c0ad96fff"
+  ],
+  "auditor": {
+    "agent": "i18n-auditor",
+    "team": "lopdev",
+    "session": "18c977d47179",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt 'Model:' line; no fallback observed",
+    "independent_from_translator_session": true,
+    "independent_from_round1_auditor_session": true
+  },
+  "verdict": "passed",
+  "current_report_verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "VI-R2-N1"
+    ]
+  },
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 1
+  },
+  "round1_resolution": {
+    "VI-N1": "resolved (as suggested)",
+    "VI-N2": "resolved (as suggested)",
+    "VI-N3": "resolved (as suggested); residual word-choice NIT VI-R2-N1",
+    "VI-N4": "resolved (as suggested)"
+  },
+  "changed_keys": [
+    "mobile.computers.setup.intro",
+    "mobile.computers.setup.address_help",
+    "mobile.computers.route_invalid.insecure_off",
+    "mobile.computers.route_invalid.no_tunnel_id"
+  ],
+  "mechanical": {
+    "changed_keys_match_notes": true,
+    "unchanged_byte_identical": 23,
+    "order_matches_brief": true,
+    "icu_parse_format_ok": 27,
+    "placeholder_mismatches": 0,
+    "bidi_controls": 0,
+    "non_nfc": 0,
+    "parser": "e0027e61:src/i18n/messages.ts blob 354697cf294fd04b42bf8eb5ef6cc5761451f942 sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0"
+  },
+  "redaction_hits": {
+    "brief": 0,
+    "v2": 0
+  },
+  "no_mt_service": true,
+  "audit_notes_not_execution_log": "report.md holds findings; audit.log holds commands actually run",
+  "write_location": {
+    "intended": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/vi-r2/",
+    "actual": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/vi-r2/"
+  },
+  "artifacts": {
+    "report": {
+      "path": "report.md",
+      "sha256": "c515578a7a08e80521e5768abd29a4e59393b70f22836446860534bebc8579bd"
+    },
+    "audit_log": {
+      "path": "audit.log",
+      "sha256": "2408580e2a962bc655e5c99c85f6fb578aef6686ba9824aa04f629b129405ecd"
+    }
+  }
+}

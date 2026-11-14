@@ -1,0 +1,148 @@
+{
+  "locale": "fr",
+  "slice": "m3-s2b2b-computers-setup",
+  "namespace": "mobile.computers (setup.*, route_invalid.*, your_computer)",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67",
+    "expected": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/fr/draft-fr.json",
+    "sha256": "8166df188a62a69a94e540c68589a8095286c8e6d483cb1c817cb5948310729a",
+    "expected": "8166df188a62a69a94e540c68589a8095286c8e6d483cb1c817cb5948310729a"
+  },
+  "translator_notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/fr/notes-fr.md",
+    "sha256": "8f9d84132ac303d5e5907cd8932787a4c8e8f8257a992d1fddf966ebbbbf5643"
+  },
+  "translator_job": "3855e519638f",
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "354214f74cea",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "harness system prompt 'Model:' line for this session; no fallback observed",
+    "fallback_used": false,
+    "independent_from_translator_session": true
+  },
+  "reference_inputs_at_e0027e61": {
+    "src/i18n/catalogues/fr/mobile.computers.json": "20a90db8b642ffeebb85d933bf50bca43f8750f5e16b4e40d2463ff1d99cddd9",
+    "src/i18n/catalogues/fr/mobile.common.json": "04f6c9d30d07e62b82bf1c7326842d970d72914b5239cfdf67e8a620063ee75e",
+    "src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0",
+    "docs/i18n.md": "eb523a83430fbf4578e0c1786a47f1f07999386ec889b8bba6c49e3e84afc6d2",
+    "src/features/auth/setup-computer.tsx": "c4f63771d80ba34344e0ec1d32f4df405e3b06314f37881d77825b9b72cae9ac",
+    "src/features/auth/connection-provider.tsx": "e2be36761010ca930cabc136c80f62a946491453d718c120a2c9bc94909da979"
+  },
+  "icu_parser_note": "parseMessage imported from the worktree's src/i18n/messages.ts (checked-out HEAD 4e3b0415); `git diff --stat e0027e61 -- src/i18n/messages.ts` was empty, so identical to e0027e61. Node v24.22.1, --max-old-space-size=256.",
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_marker_hits_in_brief": 0,
+  "mechanical": {
+    "keys_brief": 27,
+    "keys_draft": 27,
+    "added": 0,
+    "dropped": 0,
+    "placeholder_mismatches": 0,
+    "icu_parse_failures": 0,
+    "plural_messages": 0,
+    "bidi_controls": 0,
+    "ascii_apostrophes": 0,
+    "route_invalid_credentials_masked": false,
+    "credentials_codepoints_note": "plain Latin + U+2019; no masking characters"
+  },
+  "term_rulings": {
+    "Associer (attach)": "accepted — distinct from 'connecter'/'connexion' used elsewhere, short for the label row; 'Rattacher' would also be acceptable, not required.",
+    "identifiant (id)": "accepted; 'Identifiant du tunnel' (21 chars) is a full-width Input label, no overflow; 'ID du tunnel' not needed.",
+    "paramètres de requête (query string)": "accepted — standard fr web term (alongside 'chaîne de requête'); 'fragment' accepted.",
+    "renouvelée (re-mint)": "accepted — matches the context gloss 'issue a new session token'.",
+    "détection des ordinateurs (discovery)": "accepted — matches context 're-reading the account's computers'.",
+    "piloter (drive/control)": "accepted — matches existing fr usage.",
+    "switch name « Autoriser le http:// en clair »": "accepted — byte-identical to existing fr own_tunnel.insecure_allow.",
+    "la TUI (feminine)": "accepted.",
+    "C’est fait — connecter (ran_it)": "accepted; 22 chars, fits full-width 320 pt button.",
+    "En attente du tunnel… (watching)": "accepted; ellipsis matches existing in-progress labels ('Connexion…').",
+    "your_computer capitalisation": "accepted with source-side MINOR FR-4.",
+    "typography": "matches existing fr catalogue: U+2019 apostrophes only, U+202F before ':' (5/5 prose colons) and inside « » , ' — ' em dash with plain spaces, U+2026 ellipsis."
+  },
+  "findings": [
+    {
+      "id": "FR-1",
+      "severity": "MINOR",
+      "key": "mobile.computers.setup.create_title",
+      "current": "En créer un sur l’ordinateur",
+      "problem": "Elliptical 'un' has no visible antecedent: the screen title above is 'Nouvel ordinateur' (masculine), so the heading can read as 'create a computer on the computer'. The sibling attach_title already names the tunnel; make the pair parallel.",
+      "replacement": "Créer un tunnel sur l’ordinateur"
+    },
+    {
+      "id": "FR-2",
+      "severity": "MINOR",
+      "key": "mobile.computers.setup.attach_help",
+      "current": "Si vous avez créé le tunnel dans la console Radient, associez-le à l’aide de l’identifiant qu’elle affiche. Cette commande sert à un tunnel qui existe déjà — elle n’en crée pas.",
+      "problem": "'sert à un tunnel' is unidiomatic: 'servir à' takes a purpose (verb/noun of use), not the object acted on; reads as 'is useful to a tunnel'. Meaning still recoverable.",
+      "replacement": "Si vous avez créé le tunnel dans la console Radient, associez-le à l’aide de l’identifiant qu’elle affiche. Cette commande est réservée à un tunnel existant — elle n’en crée pas."
+    },
+    {
+      "id": "FR-3",
+      "severity": "MINOR",
+      "key": "mobile.computers.setup.amount_note",
+      "current": "{amount} correspond au prix affiché dans la console Radient pour ce compte — {command} refuse toute autre valeur, et l’étape 1 du guide des tunnels renvoie à la page où il apparaît.",
+      "problem": "Pronoun 'il' in 'la page où il apparaît' is ambiguous: prix, compte and guide are all masculine singular in the sentence.",
+      "replacement": "{amount} correspond au prix affiché dans la console Radient pour ce compte — {command} refuse toute autre valeur, et l’étape 1 du guide des tunnels indique où trouver ce prix."
+    },
+    {
+      "id": "FR-4",
+      "severity": "MINOR",
+      "key": "mobile.computers.your_computer",
+      "current": "Votre ordinateur",
+      "problem": "Source-structural, not a translator error: as {subject} it lands mid-sentence in 'Le relais n’est pas lancé sur {subject}.' and 'Reconnectez-vous pour accéder à {subject}.' (current fr refusal titles), giving a capital 'Votre' mid-sentence, which French typography reads as an error. No single fr form fits both positions; most frames are sentence-initial, so the capitalised form is the right choice. Ruling: keep value; fix belongs in source (sentence-initial vs embedded variants, or capitalise-at-render).",
+      "replacement": "(no change to fr value) Votre ordinateur"
+    },
+    {
+      "id": "FR-5",
+      "severity": "NIT",
+      "key": "mobile.computers.route_invalid.not_address",
+      "current": "Cela ne ressemble pas à une adresse. Elle doit commencer par {scheme}.",
+      "problem": "'Elle' points back to 'une adresse' inside a negated clause ('ne ressemble pas à une adresse'); naming the noun is cleaner.",
+      "replacement": "Cela ne ressemble pas à une adresse. L’adresse doit commencer par {scheme}."
+    },
+    {
+      "id": "FR-6",
+      "severity": "NIT",
+      "key": "mobile.computers.route_invalid.http_public",
+      "current": "{insecure} n’est autorisé que pour une adresse privée. Utilisez {scheme}, ou un hôte privé tel que {example}.",
+      "problem": "Comma before a two-term 'ou' alternative is non-standard in French.",
+      "replacement": "{insecure} n’est autorisé que pour une adresse privée. Utilisez {scheme} ou un hôte privé tel que {example}."
+    },
+    {
+      "id": "FR-7",
+      "severity": "NIT",
+      "key": "mobile.computers.setup.intro",
+      "current": "Cette app pilote les sessions de votre propre ordinateur : celui-ci doit donc exécuter un connecteur et ne pas se mettre en veille. Votre code ne le quitte jamais.",
+      "problem": "'les sessions de votre propre ordinateur' is slightly flat; the sessions run on the computer.",
+      "replacement": "Cette app pilote les sessions qui tournent sur votre propre ordinateur : celui-ci doit donc exécuter un connecteur et ne pas se mettre en veille. Votre code ne le quitte jamais."
+    }
+  ],
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 4,
+    "NIT": 3
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "FR-1",
+      "FR-2",
+      "FR-3",
+      "FR-4",
+      "FR-5",
+      "FR-6",
+      "FR-7"
+    ]
+  },
+  "audit_notes_not_execution_log": "This record and report.md are audit notes; audit.log holds the commands actually run and their outputs.",
+  "ledger_written": false,
+  "repo_writes": false
+}

@@ -1,0 +1,32 @@
+# audit.log — round 2 delta, ru, commands actually run (session 77cafd2f0293, 2026-11-13)
+# M = /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b ; S = /Users/damian/.local-operator/sessions/77cafd2f0293/scratchpad/ru-r2
+# W = /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a
+$ shasum -a 256 brief-s2b2b.json ru/draft-ru.json ru/draft-ru-v2.json ru/notes-ru-v2.md audits/ru/report.md   (cwd M)
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+28bfa56580a845402811ab27f6a2ee08ed52d94cfd665c11c46174727f1e8b6a  ru/draft-ru.json
+c3fca87183de74c51b7cff563e166fb97a7af2c71bfefe847b43f5ebf89bc9d0  ru/draft-ru-v2.json
+40111c58ca5cccd62f41d95db278f61d382e6cded2219a7e3da0d78e3e380211  ru/notes-ru-v2.md
+2292ed8c1b6faed2f7f2fd10de87233ab1edf49ecccc2123a7dafe5c76f74ec8  audits/ru/report.md
+$ grep -c '<marker>' brief-s2b2b.json -> 0 ; python count in draft-ru-v2.json -> 0
+$ python3 (json load brief/v1/v2):
+order v1==brief True v2==brief True
+changed ['mobile.computers.setup.address_help', 'mobile.computers.route_invalid.no_tunnel_id']
+bidi 0 nfc True marker 0
+non-Cyrillic non-ASCII in changed values: address_help ['0x2014'], no_tunnel_id []
+raw difflib unified_diff v1 vs v2: 29/29 lines, hunks @@ -18 +18 @@ and @@ -27 +27 @@ only
+relay code points (address_help after 'ваш '): 0x440 0x435 0x442 0x440 0x430 0x43d 0x441 0x43b 0x44f 0x442 0x43e 0x440
+$ git -C W show e0027e61:src/i18n/catalogues/ru/mobile.computers.json -> mobile.computers.refresh = 'Обновить' (en 'Refresh')
+$ git -C W grep -n "computers.refresh|no_tunnel_id" e0027e61 -- src -> computers.tsx:554 t("mobile.computers.refresh"); tunnel-verdict.ts:135 "no-tunnel-id"; catalogue.gen.ts:3352 note "re-reads the account's computers"
+$ git -C W show e0027e61:src/i18n/messages.ts > S/messages.ts ; cp <round-1 scratch>/check.ts S/check.ts
+$ cmp S/messages.ts /Users/damian/.local-operator/sessions/ca31bb01f337/scratchpad/messages.ts -> identical
+  messages.ts c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0 ; check.ts e5ef161df1c35239bb2c9f8e1f44ae044d04a40f79316b5c150cc1ea2af819da
+# guardrail refused tsx on another session's files directly; ran on byte-identical copies:
+$ cp M/brief-s2b2b.json S/brief.json ; cp M/ru/draft-ru-v2.json S/draft-ru-v2.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  S/brief.json
+c3fca87183de74c51b7cff563e166fb97a7af2c71bfefe847b43f5ebf89bc9d0  S/draft-ru-v2.json
+$ cd S && NODE_OPTIONS=--max-old-space-size=256 timeout 120 W/node_modules/.bin/tsx check.ts brief.json draft-ru-v2.json > parse-v2.out   rc=0
+27 lines "ok"; bad 0; ru plural cats 1,2,5,21,1.5: one few many one other
+ok mobile.computers.setup.address_help []  174
+ok mobile.computers.route_invalid.no_tunnel_id []  100
+parse-v2.out sha256 4999036c42b5aa94909cf9b45dd47138ca26775e269353b0e39f9923d1720bd8
+# No translation/MT service used.

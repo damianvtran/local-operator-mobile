@@ -1,0 +1,23 @@
+# audit.log — zh-CN m3-s2b2b ROUND 2 (delta) — 2026-11-13T21:31:18Z
+# Actual commands run by auditor session a7ef3ef01f5e; outputs verbatim except node's MODULE_TYPELESS warning omitted
+# Written to auditor scratchpad: guardrail refused writes to /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/audits/zh-CN-r2 (brief fallback)
+$ shasum -a 256 brief-s2b2b.json zh-CN/draft-zh-CN.json zh-CN/draft-zh-CN-v2.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+b53ea37786ad51ed7a5fa8a992eb093fc9ddddc8cd1bea553feb8425bef6b99c  zh-CN/draft-zh-CN.json
+6abc5a181d3b63a312273af4e0b4ec15dbed81abda17503655aa337299e63d23  zh-CN/draft-zh-CN-v2.json
+$ grep -o "[redacted]" brief-s2b2b.json | wc -l  -> 0
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a show e0027e61:src/i18n/messages.ts > messages.ts
+messages.ts sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0
+$ node --max-old-space-size=256 check-r2.mts   (node v24.22.1; check-r2.mts sha256 e74598a1532339b06fc32a6fbb199337663bad5ff077ad9b82508383125b23b2; in /Users/damian/.local-operator/sessions/a7ef3ef01f5e/scratchpad/zhcn-r2)
+order v2==brief true order v1==v2 true
+changed [
+  'mobile.computers.setup.watching',
+  'mobile.computers.setup.address_help'
+]
+OK   mobile.computers.setup.watching args [] en [] render=> 正在等待隧道
+OK   mobile.computers.setup.address_help args [] en [] render=> 如果你已知道可访问中继的URL，请使用中继自己的密码连接。这种方式适用于完全不使用Radient的电脑。
+all-27 failures 0
+redaction in v2 0
+$ diff <(grep -v -e setup.watching -e setup.address_help v1) <(grep -v ... v2) -> no output; "other lines byte-identical"
+$ wc -l -> v1 29, v2 29
+$ grep 正在等待 src/i18n/catalogues/zh-CN/mobile.computers.json (worktree) -> wait.host_answering, wait.answering, wait.listing use 正在等待…

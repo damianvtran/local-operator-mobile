@@ -1,0 +1,110 @@
+{
+  "locale": "vi",
+  "slice": "m3-s2b2b-computers-setup",
+  "namespace": "mobile.computers (setup.*, route_invalid.*, your_computer)",
+  "audit_date": "2026-11-13",
+  "key_count": 27,
+  "brief": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/brief-s2b2b.json",
+    "sha256": "9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67"
+  },
+  "draft": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/vi/draft-vi.json",
+    "sha256": "1c68a37a66d0442e774bd0081314503a4d0d1c341cedada3637174536abfd359"
+  },
+  "translator_notes": {
+    "path": "/Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b/vi/notes-vi.md",
+    "sha256": "4e2fc9e51a0912fae7c82615f8cda54c42a444cecb32dde58ca714375d1a85a3"
+  },
+  "translator_job": "64abbc676f27",
+  "auditor": {
+    "agent": "i18n-auditor (team lopdev)",
+    "session": "3c4d0d641ed3",
+    "model": "anthropic/claude-opus-5-5",
+    "actual_model_source": "session system prompt 'Model:' line; no fallback observed",
+    "independent_from_translator_session": true
+  },
+  "reference_tree": {
+    "worktree": "/Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a",
+    "worktree_head": "4e3b0415",
+    "source_commit": "e0027e61",
+    "catalogue": "src/i18n/catalogues/vi/mobile.computers.json, mobile.common.json"
+  },
+  "read_route": "ordinary git/scratchpad reads; read_public_copy not used (core route refuses mobile catalogue paths); context sidecars are nested JSON and not routable",
+  "redaction_marker_hits": 0,
+  "mt_service_used": false,
+  "mechanical": {
+    "keys_match": true,
+    "order_identical": true,
+    "placeholders_identical": true,
+    "icu_parse_ok": 27,
+    "plural_arms_in_slice": 0,
+    "vi_cldr_categories": [
+      "other"
+    ],
+    "bidi_controls": 0,
+    "nfc": true,
+    "tool": "tsx + src/i18n/messages.ts parseMessage/formatMessage, NODE_OPTIONS=--max-old-space-size=256"
+  },
+  "verdict": {
+    "status": "passed",
+    "unresolved_blocker_major_count": 0,
+    "finding_ids": [
+      "VI-N1",
+      "VI-N2",
+      "VI-N3",
+      "VI-N4"
+    ]
+  },
+  "counts": {
+    "BLOCKER": 0,
+    "MAJOR": 0,
+    "MINOR": 0,
+    "NIT": 4
+  },
+  "findings": [
+    {
+      "id": "VI-N1",
+      "severity": "NIT",
+      "key": "mobile.computers.route_invalid.no_tunnel_id",
+      "current": "Đường hầm này không có ID, nên không thể cấp lại phiên đăng nhập của nó. Hãy tải lại danh sách máy tính.",
+      "problem": "'tải lại' is fine, but the Computers screen's visible refresh button is 'Làm mới' (mobile.computers.refresh, computers.tsx:554); naming the same verb points the reader at the control. Reserved surface, low visibility.",
+      "suggested": "Đường hầm này không có ID, nên không thể cấp lại phiên đăng nhập của nó. Hãy làm mới danh sách máy tính."
+    },
+    {
+      "id": "VI-N2",
+      "severity": "NIT",
+      "key": "mobile.computers.setup.address_help",
+      "current": "Nếu máy chủ chuyển tiếp của bạn truy cập được qua một URL bạn đã biết, hãy kết nối tới đó bằng mật khẩu riêng của máy chủ chuyển tiếp. Đây là cách dành cho máy hoàn toàn không dùng Radient.",
+      "problem": "'máy chủ chuyển tiếp của bạn truy cập được qua' is a slightly stiff agentless construction, and 'máy chủ chuyển tiếp' repeats within one sentence.",
+      "suggested": "Nếu máy chủ chuyển tiếp của bạn có thể truy cập qua một URL mà bạn đã biết, hãy kết nối tới đó bằng mật khẩu riêng của nó. Đây là cách dành cho máy hoàn toàn không dùng Radient."
+    },
+    {
+      "id": "VI-N3",
+      "severity": "NIT",
+      "key": "mobile.computers.route_invalid.insecure_off",
+      "current": "Địa chỉ này không được mã hóa, nên mật khẩu chuyển tiếp sẽ truyền qua mạng ở dạng văn bản thường. Hãy bật “Cho phép địa chỉ http:// thường” để tiếp tục.",
+      "problem": "Quoting the on-screen label exactly is correct (matches own_tunnel.insecure_allow); adding 'công tắc' tells the reader the quoted text is a toggle to flip, as the English 'switch' does.",
+      "suggested": "Địa chỉ này không được mã hóa, nên mật khẩu chuyển tiếp sẽ truyền qua mạng ở dạng văn bản thường. Hãy bật công tắc “Cho phép địa chỉ http:// thường” để tiếp tục."
+    },
+    {
+      "id": "VI-N4",
+      "severity": "NIT",
+      "key": "mobile.computers.setup.intro",
+      "current": "Ứng dụng này điều khiển các phiên trên chính máy tính của bạn, nên máy tính đó cần chạy trình kết nối và luôn thức. Mã nguồn của bạn vẫn nằm trên máy.",
+      "problem": "'Mã nguồn của bạn vẫn nằm trên máy' is accurate but neutral; the note says the sentence reassures that code never leaves the computer.",
+      "suggested": "Ứng dụng này điều khiển các phiên trên chính máy tính của bạn, nên máy tính đó cần chạy trình kết nối và luôn thức. Mã nguồn của bạn không rời khỏi máy đó."
+    }
+  ],
+  "rulings": {
+    "terminal_label 'Terminal' / create_help 'terminal'": "ACCEPT. Standard loanword in Vietnamese developer usage; vi catalogue already keeps 'shell', 'loopback'. Label is not text-transformed (no textTransform in src), so renders 'Terminal'.",
+    "tunnel_id_label 'ID đường hầm'": "ACCEPT. 'ID' + noun is the normal Vietnamese UI pattern; 12 chars on a field label, no fit risk.",
+    "attach_label 'Gắn' / attach_title 'Gắn đường hầm có sẵn'": "ACCEPT. 'gắn' is the established rendering of attach (gắn thẻ, gắn vào); one syllable suits the label; copy hint reads 'Sao chép lệnh “Gắn”', coherent.",
+    "query 'chuỗi truy vấn (query string)' / 'phân đoạn (fragment)'": "ACCEPT. Usual vi technical terms, English gloss follows catalogue precedent 'nguồn gốc (origin)', 'đường hầm nhanh (quick tunnel)'. Help text wraps; 75 chars fine.",
+    "no_tunnel_id 'cấp lại phiên đăng nhập'": "ACCEPT. Matches the note (re-mint = issue a new session token / renew its sign-in) and the catalogue's 'phiên đăng nhập' (refusal.sign_in_title).",
+    "address_title 'Kết nối bằng địa chỉ'": "ACCEPT. Drops 'instead' but the card is the third of three routes, so the contrast is carried by layout; avoids collision with refusal.another_address 'Dùng địa chỉ khác'.",
+    "ran_it 'Tôi đã chạy lệnh — kết nối' width": "ACCEPT. 26 code points vs 24 English; at ~15-17 pt that is roughly 200-230 pt, inside a full-width 320 pt button. First person 'Tôi' matches note and catalogue 'của tôi'. Sibling 'Đang chờ đường hầm' (18) also fits.",
+    "your_computer 'Máy tính của bạn'": "ACCEPT as sentence-initial fallback (same string as list.heading). Mid-sentence capital 'M' is the known CODE item (added.fallback_name is lowercase); not failed here per brief."
+  },
+  "generated_at": "2026-11-13T21:44:12+00:00"
+}

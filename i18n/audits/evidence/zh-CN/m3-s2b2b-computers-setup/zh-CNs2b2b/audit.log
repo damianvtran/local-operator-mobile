@@ -1,0 +1,45 @@
+# audit.log — zh-CN m3-s2b2b — 2026-11-13T21:28:16+00:00
+# Actual commands run by auditor session 6877c6310b02 (outputs verbatim/abridged as marked)
+$ shasum -a 256 brief-s2b2b.json zh-CN/draft-zh-CN.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+b53ea37786ad51ed7a5fa8a992eb093fc9ddddc8cd1bea553feb8425bef6b99c  zh-CN/draft-zh-CN.json
+$ python3 count of '['+'redacted'+']' in brief -> 0
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a show e0027e61:src/i18n/messages.ts > /Users/damian/.local-operator/sessions/6877c6310b02/scratchpad/zhcn-audit/messages.ts  (sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0; identical to worktree HEAD copy per git diff --quiet)
+$ git show e0027e61:src/features/auth/setup-computer.tsx / tunnel-verdict.ts / en/mobile.computers.json (call-site and insecure_allow label reads)
+$ cd /Users/damian/.local-operator/sessions/6877c6310b02/scratchpad/zhcn-audit/ && node --max-old-space-size=256 check.mts   (node v24.22.1; check.mts sha256 a0949e282a9e8061e23faad791fc5afd3c4751597e4d2392dd14708fcdf576ed)
+keys brief 27 draft 27 missing [] extra []
+OK   mobile.computers.setup.intro args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.billing_title args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.billing_fallback args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.create_title args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.create_help args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.terminal_label args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.amount_note args [["amount","text"],["command","text"]] ph[ amount,command ] brief.ph[ amount,command ] bidi false
+OK   mobile.computers.setup.tui_help args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.tui_label args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.watching args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.ran_it args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.attach_title args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.attach_help args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.tunnel_id_label args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.attach_label args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.address_title args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.setup.address_help args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.route_invalid.empty args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.route_invalid.not_address args [["scheme","text"]] ph[ scheme ] brief.ph[ scheme ] bidi false
+OK   mobile.computers.route_invalid.scheme args [["scheme","text"]] ph[ scheme ] brief.ph[ scheme ] bidi false
+OK   mobile.computers.route_invalid.credentials args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.route_invalid.query args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.route_invalid.http_public args [["example","text"],["insecure","text"],["scheme","text"]] ph[ example,insecure,scheme ] brief.ph[ example,insecure,scheme ] bidi false
+OK   mobile.computers.route_invalid.insecure_off args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.route_invalid.not_radient args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.route_invalid.no_tunnel_id args [] ph[  ] brief.ph[  ] bidi false
+OK   mobile.computers.your_computer args [] ph[  ] brief.ph[  ] bidi false
+failures 0
+RENDER mobile.computers.setup.amount_note => <amount>是Radient控制台为此账户显示的价格——lop tunnel create不接受其他金额；隧道指南第1步提供了查看价格的链接。
+RENDER mobile.computers.route_invalid.not_address => 这看起来不像地址。地址应以https://开头。
+RENDER mobile.computers.route_invalid.scheme => 仅支持https://地址。
+RENDER mobile.computers.route_invalid.http_public => http://仅允许用于私有地址。请改用https://，或使用192.168.x.x之类的私有主机。
+CREDENTIALS codepoints U+8BF7 U+4ECE U+5730 U+5740 U+4E2D U+5220 U+9664 U+7528 U+6237 U+540D U+548C U+5BC6 U+7801 U+3002
+redaction in draft 0
+nonBMP/控制 []

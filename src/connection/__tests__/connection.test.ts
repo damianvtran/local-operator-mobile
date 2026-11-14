@@ -166,13 +166,13 @@ describe("a route is data, and it is validated rather than normalised", () => {
 	it("refuses credentials in a URL, which would end up in a log", () => {
 		const parsed = validateCustomBaseUrl("https://user:secret@relay.example");
 		expect(parsed.ok).toBe(false);
-		if (!parsed.ok) expect(parsed.reason).toMatch(/username and password/);
+		if (!parsed.ok) expect(parsed.code).toBe("credentials");
 	});
 
 	it("allows plain http only for a private host AND only with the warning acknowledged", () => {
 		const insecure = validateCustomBaseUrl("http://192.168.1.4:4098");
 		expect(insecure.ok).toBe(false);
-		if (!insecure.ok) expect(insecure.reason).toMatch(/unencrypted/);
+		if (!insecure.ok) expect(insecure.code).toBe("insecure-off");
 
 		const accepted = validateCustomBaseUrl("http://192.168.1.4:4098", {
 			allowInsecure: true,

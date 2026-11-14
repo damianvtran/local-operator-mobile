@@ -1,0 +1,19 @@
+# audit.log — commands actually run (fr, m3-s2b2b)
+$ shasum -a 256 brief-s2b2b.json fr/draft-fr.json
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+8166df188a62a69a94e540c68589a8095286c8e6d483cb1c817cb5948310729a  fr/draft-fr.json
+$ grep -c '[redacted]' brief-s2b2b.json
+0
+$ git -C <worktree> diff --stat e0027e61 -- src/i18n/messages.ts
+(empty)
+$ NODE_OPTIONS=--max-old-space-size=256 node $LOCAL_OPERATOR_SCRATCHPAD/frcheck.mts   # parseMessage on en+fr, placeholder/brief/bidi/apostrophe/spacing checks
+(node:46432) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/src/i18n/messages.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+keys brief 27 draft 27 extra [] fails 0
+$ python: code-point census of ':«»—…’ in draft; credentials code points
+colons: 5 preceded by U+202F, 1 inside 'http://'; « + U+202F, U+202F + »; 3 em dashes ' — '; 1 U+2026; all apostrophes U+2019; credentials: plain Latin + U+2019
+$ git -C <worktree> show e0027e61:src/features/auth/setup-computer.tsx | sed -n 95,200p   # call sites
+$ git -C <worktree> show e0027e61:src/features/auth/connection-provider.tsx | sed -n 2340,2370p   # your_computer -> {subject}
+reference sha256 at e0027e61: {"src/i18n/catalogues/fr/mobile.computers.json": "20a90db8b642ffeebb85d933bf50bca43f8750f5e16b4e40d2463ff1d99cddd9", "src/i18n/catalogues/fr/mobile.common.json": "04f6c9d30d07e62b82bf1c7326842d970d72914b5239cfdf67e8a620063ee75e", "src/i18n/messages.ts": "c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0", "docs/i18n.md": "eb523a83430fbf4578e0c1786a47f1f07999386ec889b8bba6c49e3e84afc6d2", "src/features/auth/setup-computer.tsx": "c4f63771d80ba34344e0ec1d32f4df405e3b06314f37881d77825b9b72cae9ac", "src/features/auth/connection-provider.tsx": "e2be36761010ca930cabc136c80f62a946491453d718c120a2c9bc94909da979"}

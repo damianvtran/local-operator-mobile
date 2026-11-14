@@ -1,0 +1,21 @@
+# audit.log — commands actually run (fr round 2, m3-s2b2b), session 4ea18dfd629a
+$ shasum -a 256 brief-s2b2b.json fr/draft-fr.json fr/draft-fr-v2.json fr/notes-fr-v2.md audits/fr/report.md
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+8166df188a62a69a94e540c68589a8095286c8e6d483cb1c817cb5948310729a  fr/draft-fr.json
+860ee7c42a4e96e2d71c5e5756c7501fd801c4850d70e6c715f2a6f19dc151b5  fr/draft-fr-v2.json
+d95e8b664caeadf782b5ad26f95194624bd0d2361912fa02412af19f7707fe2a  fr/notes-fr-v2.md
+78e18dee0f69a38390e8df0705a01b5a42489982919a21093392c42a413f5c21  audits/fr/report.md
+$ python3: brief.count('['+'redacted'+']')
+0
+$ python3: key order v1==v2 -> True, 27 keys; changed keys -> 6 (intro, create_title, amount_note, attach_help, route_invalid.not_address, route_invalid.http_public); NFC/bidi/U+0027 scan -> no hits
+$ diff fr/draft-fr.json fr/draft-fr-v2.json | grep -c '^[<>]'   -> 12 ; wc -l -> 29 / 29
+$ python3: v2 vs round-1 record replacements -> FR-1,2,3,5,6 EXACT; FR-7 differs only U+202F vs U+0020 before ':'; FR-4 unchanged by ruling
+$ git -C <worktree> diff --stat e0027e61 -- src/i18n/messages.ts  -> (empty); sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0 at HEAD and e0027e61
+$ NODE_OPTIONS=--max-old-space-size=256 node $LOCAL_OPERATOR_SCRATCHPAD/frr2check.mts   (node v24.22.1; MODULE_TYPELESS warnings filtered)
+OK  mobile.computers.setup.intro | en=  | fr=  | render: Cette app pilote les sessions qui tournent sur votre propre ordinateur : celui-ci doit donc exécuter un connecteur et ne pas se mettre en veille. Votre code ne le quitte jamais.
+OK  mobile.computers.setup.create_title | en=  | fr=  | render: Créer un tunnel sur l’ordinateur
+OK  mobile.computers.setup.amount_note | en= argument:amount,argument:command | fr= argument:amount,argument:command | render: <amount> correspond au prix affiché dans la console Radient pour ce compte — <command> refuse toute autre valeur, et l’étape 1 du guide des tunnels indique où trouver ce prix.
+OK  mobile.computers.setup.attach_help | en=  | fr=  | render: Si vous avez créé le tunnel dans la console Radient, associez-le à l’aide de l’identifiant qu’elle affiche. Cette commande est réservée à un tunnel existant — elle n’en crée pas.
+OK  mobile.computers.route_invalid.not_address | en= argument:scheme | fr= argument:scheme | render: Cela ne ressemble pas à une adresse. L’adresse doit commencer par <scheme>.
+OK  mobile.computers.route_invalid.http_public | en= argument:example,argument:insecure,argument:scheme | fr= argument:example,argument:insecure,argument:scheme | render: <insecure> n’est autorisé que pour une adresse privée. Utilisez <scheme> ou un hôte privé tel que <example>.
+changed 6 fails 0 keys 27

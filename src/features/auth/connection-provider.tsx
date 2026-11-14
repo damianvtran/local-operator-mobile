@@ -94,6 +94,7 @@ import {
 	writeStoredOauth,
 	writeStoredTunnelSession,
 } from "@/features/auth/tunnel-storage";
+import { routeInvalidSentence } from "@/features/auth/tunnel-verdict";
 import { reconnectDelay } from "@/features/session/connection-view";
 import { clearAuthorizationData } from "@/features/session/device-storage";
 import {
@@ -1193,7 +1194,7 @@ export const ConnectionProvider = ({
 					setLastError(null);
 					connectionStore.getState().noteFailure({
 						surface: "none",
-						displayableMessage: validated.reason,
+						displayableMessage: routeInvalidSentence(validated.code),
 					});
 					retryRef.current = null;
 					return outcome();
@@ -2363,7 +2364,15 @@ export const ConnectionProvider = ({
 	const computers = useConnectionState((state) => state.computers);
 	const route = useConnectionState((state) => state.route);
 	const tunnelId = useConnectionState((state) => state.tunnelId);
+	/* The refusal memo below resolves catalogue copy (the "Your computer" subject,
+	 *  and `refusalFromError`'s billing/remedy lines), so it needs the rule
+	 *  `useLocaleFrame` documents: a subscription so a language frame re-renders
+	 *  this provider, and the language in the memo's dependencies so the memo
+	 *  re-runs. Without it a mid-failure language switch kept the old subject
+	 *  inside a re-rendered headline (PR #260 design review D2). */
+	const language = useLocaleFrame();
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `language` is a TRIGGER: `t()` reads the locale live, so it must re-run the memo (see above)
 	const refusal = useMemo<RefusalView | null>(() => {
 		if (!surface || surface === "none") return null;
 		/* What the refusal's sentence calls the thing that failed. A known computer
@@ -2387,7 +2396,7 @@ export const ConnectionProvider = ({
 			: route === null
 				? "Radient"
 				: route.mode === "radient"
-					? "Your computer"
+					? t("mobile.computers.your_computer")
 					: route.baseUrl;
 		return refusalFromError({
 			error: lastError,
@@ -2406,6 +2415,8 @@ export const ConnectionProvider = ({
 		storageRefusal,
 		surface,
 		tunnelId,
+		// Read by no line above: it is the re-run trigger for the `t()` calls.
+		language,
 	]);
 
 	const connectCustomQuiet = useCallback(

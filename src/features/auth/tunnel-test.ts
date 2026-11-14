@@ -85,7 +85,7 @@ export async function runTunnelTest(
 	});
 	if (!validated.ok) {
 		return {
-			verdict: { kind: "invalid", reason: validated.reason },
+			verdict: { kind: "invalid", code: validated.code },
 			route: null,
 			password: input.password,
 		};

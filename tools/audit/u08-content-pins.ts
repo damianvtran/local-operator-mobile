@@ -1753,7 +1753,27 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * re-derived once with --print over the merged tree. */
 	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ef63d8dad550b79f77c32681d84de6e3b1ea8022f89c6bee0089b787517cc9e2",
+	/* M3 S2b-2b (feat/i18n-m3-s2b2b, English-first): the dead ConnectorWaitPanel
+	 * deleted, the set-up-a-computer screen keyed, `profile.ts` returning
+	 * refused-address codes mapped to keys in `tunnel-verdict.ts`, the
+	 * "Your computer" refusal subject keyed, and their tests (839 en keys; no
+	 * `catalogue.gen.ts` regeneration yet). Re-derived last with --print over
+	 * the committed tree (cd053eff); only `src` moved. Source identity only,
+	 * NOT rendered U-08 evidence. */
+	/* M3 S2b-2b integration: the six LTR locales' and ur's 27 audited values
+	 * (setup.*, route_invalid.*, your_computer), the regenerated
+	 * `catalogue.gen.ts` (839 keys), and the ur whole-namespace premise listing
+	 * the single-token `setup.tui_label`. Re-derived last with --print over the
+	 * committed tree (10530706); only `src` moved. Source identity
+	 * only, NOT rendered U-08 evidence. */
+	/* Convergence of #260 onto main caae98bc (#257) + round-1 remediation (D2,
+	 * Q-02, identical-by-design TUI/Terminal): both comment chains kept;
+	 * re-derived once with --print over the committed tree. */
+	/* CI remediation of #260 (d90f49d7): one new test file,
+	 * `src/connection/__tests__/route-validation-decisions.test.ts`, and nothing
+	 * else under `src`. Re-derived with --print over the committed tree; only
+	 * `src` moved. Source identity only, NOT rendered U-08 evidence. */
+	src: "e3972a5e239f735822c2dd5d19e0b29ff4bf0cb34d767726e5f8bb5d3af36e54",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

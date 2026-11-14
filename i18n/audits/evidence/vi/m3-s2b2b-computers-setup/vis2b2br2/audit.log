@@ -1,0 +1,20 @@
+# vi round-2 delta audit execution log. Session 18c977d47179, 2026-11-13. Commands actually run; output abbreviated.
+$ shasum -a 256 brief-s2b2b.json vi/draft-vi.json vi/draft-vi-v2.json vi/notes-vi-v2.md audits/vi/report.md
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief (MATCH)
+1c68a37a66d0442e774bd0081314503a4d0d1c341cedada3637174536abfd359  v1 (MATCH)
+5edfb40e9dab476a844bb7b201f32890d09e434ed7a2c98dd58244f69a8de755  v2 (MATCH)
+eb79c4882668fdc031c219f809579fe5098d501e801bc9dbed95322c74fdbc00  notes
+47724546fca47f1e3dd7c6853360a97062a8a4568ba648a75519e0cbc21d6b17  round-1 report
+$ python count of "["+"redacted"+"]": brief 0, v2 0
+$ python diff v1/v2: keys 27 27; order v1==v2 True; v2==brief order True
+changed ['mobile.computers.setup.intro', 'mobile.computers.setup.address_help', 'mobile.computers.route_invalid.insecure_off', 'mobile.computers.route_invalid.no_tunnel_id']
+raw line diff indexes (0-based) [1, 17, 24, 26]; lines 30/30; changed: placeholders [] == EN [], bidi 0, NFC True
+$ git show e0027e61:src/i18n/messages.ts -> blob 354697cf294fd04b42bf8eb5ef6cc5761451f942 sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0
+$ node --max-old-space-size=256 --experimental-strip-types check.ts   (first run without args: 4 placeholder keys threw 'missing the argument' — rig error; rerun with args)
+OK   mobile.computers.setup.intro => Ứng dụng này điều khiển các phiên trên chính máy tính của bạn, nên máy tính đó cần chạy trình kết nối và luôn thức. Mã nguồn của bạn không rời khỏi máy đó.
+OK   mobile.computers.setup.address_help => Nếu máy chủ chuyển tiếp của bạn có thể truy cập qua một URL mà bạn đã biết, hãy kết nối tới đó bằng mật khẩu riêng của nó. Đây là cách dành cho máy hoàn toàn không dùng Radient.
+OK   mobile.computers.route_invalid.insecure_off => Địa chỉ này không được mã hóa, nên mật khẩu chuyển tiếp sẽ truyền qua mạng ở dạng văn bản thường. Hãy bật công tắc “Cho phép địa chỉ http:// thường” để tiếp tục.
+OK   mobile.computers.route_invalid.no_tunnel_id => Đường hầm này không có ID, nên không thể cấp lại phiên đăng nhập của nó. Hãy làm mới danh sách máy tính.
+parsed ok 27 fail 0
+$ git show e0027e61:src/i18n/catalogues/vi/mobile.computers.json | grep: refresh "Làm mới"; own_tunnel.insecure_allow "Cho phép địa chỉ http:// thường"; insecure_off_help uses "tùy chọn này"
+$ git show e0027e61:src/features/auth/own-tunnel.tsx | sed -n 455,495p -> insecure toggle is <Button label=insecure_allow|insecure_allowed onPress=toggleInsecure>

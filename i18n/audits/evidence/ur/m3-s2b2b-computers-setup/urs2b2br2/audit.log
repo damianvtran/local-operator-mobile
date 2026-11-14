@@ -1,0 +1,38 @@
+# ur round-2 delta audit — execution log (actual commands run by i18n-auditor, session c5f4eb470a3d, 2026-11-13)
+# Scratch copies of inputs/scripts: /Users/damian/.local-operator/sessions/c5f4eb470a3d/scratchpad/ur-r2
+
+$ shasum -a 256 brief-s2b2b.json ur/draft-ur.json ur/draft-ur-v2.json   (cwd /Users/damian/.local-operator/sessions/d5aaf8ba6ba5/scratchpad/m3s2b2b)
+9b37cb3d773809276595ae41ccf1eeab8c6385e9c8d33203187e97704f196c67  brief-s2b2b.json
+aa7a5029f089a8920eb21700b64f01b8a45ee492fce87f4f845a10a1fd121c63  ur/draft-ur.json
+7c089b934b892abc62f2d02a5cfdded492fa9e16948915b387a96f5b3cdd9bb0  ur/draft-ur-v2.json
+$ grep -c '\[redacted\]' brief-s2b2b.json
+0
+
+$ diff ur/draft-ur.json ur/draft-ur-v2.json
+18c18 (mobile.computers.setup.address_help)  20c20 (route_invalid.not_address)  25c25 (route_invalid.insecure_off)  -- no other hunks
+$ cmp <(sed '18d;20d;25d' ur/draft-ur.json) <(sed '18d;20d;25d' ur/draft-ur-v2.json) && echo other-lines-byte-identical
+other-lines-byte-identical
+$ python3: v2[finding.key] == round-1 replacement for each finding in audits/ur/record.json
+UR-S2B2B-1 True / UR-S2B2B-2 True / UR-S2B2B-3 True
+
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a show e0027e61:src/i18n/messages.ts > messages.ts   (sha256 c1831406332e907c9a914b3db0ec35fc9fd2cddd44c18cd2861b77667c5bdba0)
+$ node --max-old-space-size=256 --experimental-strip-types --no-warnings check.mts   (node v24.22.1; check.mts sha256 94d6de98d6219cf85773b87e0e5bfe091cc0c9af2d65826c54c1816db01e3637)
+keys brief/v1/v2 27 27 27 order v2==brief true order v1==v2 true
+changed [
+  'mobile.computers.setup.address_help',
+  'mobile.computers.route_invalid.not_address',
+  'mobile.computers.route_invalid.insecure_off'
+]
+LATIN-INITIAL mobile.computers.setup.tui_label "TUI"
+FMT mobile.computers.setup.address_help | اگر آپ کا ریلے کسی ایسے URL پر دستیاب ہے جو آپ پہلے سے جانتے ہیں، تو ریلے کے اپنے پاس ورڈ کے ساتھ اس سے منسلک ہوں۔ یہ طریقہ ایسی مشین کے لیے ہے جو Radient پر بالکل نہیں ہے۔ | params [] | en []
+FMT mobile.computers.route_invalid.not_address | یہ کسی پتے جیسا نہیں لگتا۔ یہ https:// URL ہونا چاہیے۔ | params [["scheme","text"]] | en [["scheme","text"]]
+FMT mobile.computers.route_invalid.insecure_off | یہ پتہ خفیہ کاری کے بغیر ہے، اس لیے ریلے کا پاس ورڈ نیٹ ورک پر کھلے عام جاتا ہے۔ جاری رکھنے کے لیے سادہ http پتے کی اجازت والا اختیار آن کریں۔ | params [] | en []
+problems 0
+
+$ timeout 90 swift probe.swift   (Swift 6.4, CoreText, base direction RTL; probe.swift sha256 485244f4684d8bcb2fe7284a1b24090a7b38bd4f718caef6f793197711944bbb; compiler pointer warning elided)
+visual-order runs: R[چاہیے۔] R[ ] R[ہونا] R[ ] L[https:// URL] R[ ] R[یہ] R[ ] R[لگتا۔] R[ ] R[نہیں] R[ ] R[جیسا] R[ ] R[پتے] R[ ] R[کسی] R[ ] R[یہ]
+visual-order runs: R[چاہیے۔] R[ ] R[ہونا] R[ ] R[شروع] R[ ] R[سے] R[:// ] L[https] R[ ] R[یہ]
+# second line is the control (old-style 'https:// سے'): '://' splits into an R run → visually //:https. v2 keeps one L run 'https:// URL'.
+
+$ git -C /Users/damian/local-operator-mobile/.worktrees/i18n-m3-s2a show origin/feat/i18n-m3-s2b2:src/i18n/catalogues/ur/mobile.computers.json | grep -n 'http://'
+92: mobile.computers.own_tunnel.insecure_allow = "سادہ <U+2066>http://<U+2069> پتے کی اجازت دیں"   (visible switch label; isolates live in that out-of-slice key, not in this slice)

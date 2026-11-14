@@ -59,11 +59,31 @@ export interface CustomRoute {
 
 export type RouteProfile = RadientRoute | CustomRoute;
 
+/**
+ * Why a route was refused, as a stable CODE rather than a sentence.
+ *
+ * This module is the connection layer: it imports no i18n (nothing under
+ * `src/connection` does), and its callers include CI scripts and the mock relay,
+ * which only read `ok`. So it names the case and the render site turns the code
+ * into catalogue copy (`routeInvalidSentence` in
+ * `src/features/auth/tunnel-verdict.ts`, keys `mobile.computers.route_invalid.*`).
+ * A code also never carries the input, which can hold a credential in a
+ * copy-paste accident.
+ */
+export type RouteInvalidCode =
+	| "empty"
+	| "not-address"
+	| "scheme"
+	| "credentials"
+	| "query"
+	| "http-public"
+	| "insecure-off"
+	| "not-radient"
+	| "no-tunnel-id";
+
 export interface InvalidRoute {
 	ok: false;
-	/** A user-facing sentence. Never includes the whole input: it can carry a
-	 *  credential in a copy-paste accident. */
-	reason: string;
+	code: RouteInvalidCode;
 }
 
 export type RouteValidation = { ok: true; route: CustomRoute } | InvalidRoute;
@@ -132,51 +152,32 @@ export function validateCustomBaseUrl(
 	options: { allowInsecure?: boolean } = {},
 ): RouteValidation {
 	const trimmed = input.trim();
-	if (trimmed.length === 0)
-		return { ok: false, reason: "Enter the address of your relay." };
+	if (trimmed.length === 0) return { ok: false, code: "empty" };
 
 	let url: URL;
 	try {
 		url = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
 	} catch {
-		return {
-			ok: false,
-			reason:
-				"That does not look like an address. It should start with https://.",
-		};
+		return { ok: false, code: "not-address" };
 	}
 
 	if (url.protocol !== "https:" && url.protocol !== "http:") {
-		return { ok: false, reason: "Only https:// addresses are supported." };
+		return { ok: false, code: "scheme" };
 	}
 	if (url.username || url.password) {
 		/* Credentials in a URL end up in a log, a screenshot and a crash report. */
-		return {
-			ok: false,
-			reason: "Remove the username and password from the address.",
-		};
+		return { ok: false, code: "credentials" };
 	}
 	if (url.search || url.hash) {
-		return {
-			ok: false,
-			reason: "Remove the query string and fragment from the address.",
-		};
+		return { ok: false, code: "query" };
 	}
 
 	if (url.protocol === "http:") {
 		if (!isPrivateHost(url.hostname)) {
-			return {
-				ok: false,
-				reason:
-					"http:// is only allowed for a private address. Use https://, or a private host such as 192.168.x.x.",
-			};
+			return { ok: false, code: "http-public" };
 		}
 		if (options.allowInsecure !== true) {
-			return {
-				ok: false,
-				reason:
-					"This address is unencrypted, so the relay password crosses the network in the clear. Turn on the insecure-connection switch to continue.",
-			};
+			return { ok: false, code: "insecure-off" };
 		}
 	}
 
@@ -201,18 +202,10 @@ export function validateRadientHostname(
 ): { ok: true; route: RadientRoute } | InvalidRoute {
 	const host = hostname.trim().toLowerCase();
 	if (!RADIENT_HOST_PATTERN.test(host)) {
-		return {
-			ok: false,
-			reason:
-				"That is not a Radient tunnel address. Use the address the Radient console shows for this computer.",
-		};
+		return { ok: false, code: "not-radient" };
 	}
 	if (tunnelId.trim().length === 0) {
-		return {
-			ok: false,
-			reason:
-				"This tunnel has no id, so its session cannot be re-minted. Re-run discovery.",
-		};
+		return { ok: false, code: "no-tunnel-id" };
 	}
 	return {
 		ok: true,
