@@ -93,10 +93,19 @@ function idTokenClaims(token: unknown): Record<string, unknown> | null {
 	try {
 		const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
 		const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+		/* JWT payloads are UTF-8 JSON, but `atob` returns one Latin-1 char per BYTE:
+		 * fed straight to `JSON.parse`, "José Müller" read back as "JosÃ© MÃ¼ller"
+		 * (PR #262 review m1). Hermes ships `atob`, so devices took that branch.
+		 * The bytes go through `TextDecoder`, which the relay's SSE reader already
+		 * relies on at runtime (`relay/sse.ts`); were it ever missing, the throw is
+		 * caught below and the account is merely unlabelled, never unsigned-in. */
 		const json =
 			typeof atob === "function"
-				? atob(padded)
-				: /* Hermes without `atob`: the same fallback `pkce.ts` uses for `btoa`. */
+				? new TextDecoder("utf-8").decode(
+						Uint8Array.from(atob(padded), (char) => char.charCodeAt(0)),
+					)
+				: /* Hermes without `atob`: the same fallback `pkce.ts` uses for `btoa`;
+					 * `Buffer#toString()` already decodes UTF-8. */
 					(
 						globalThis as unknown as {
 							Buffer: {
@@ -115,6 +124,52 @@ function idTokenClaims(token: unknown): Record<string, unknown> | null {
 
 const nonBlank = (value: unknown): string | null =>
 	typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
+/** An email's maximum length (RFC 5321 path limit), so no real address is cut. */
+export const ACCOUNT_LABEL_MAX_CODE_POINTS = 254;
+
+/* Line breaks and other whitespace controls read as one space, not as a glued
+ * word: "A\nB" shows "A B" on Settings' single-identity line. */
+const LABEL_WHITESPACE = /[\s\u0085\u2028\u2029]+/gu;
+/* Every remaining C0/C1 control (`Cc`) and invisible format character (`Cf`:
+ * the bidi embeddings/overrides/isolates U+202A–202E and U+2066–2069, the
+ * LRM/RLM/ALM marks, zero-width space/non-joiner, soft hyphen, BOM, tags) —
+ * except U+200D ZERO WIDTH JOINER, which composes family/profession emoji a
+ * display name may legitimately carry. The same discipline as `displayText` in
+ * `features/session/supplements.ts`, which strips ZWJ too; that one renders
+ * model-authored text, this one the user's own IdP profile. `\p{…}` is already
+ * relied on under Hermes there. */
+const LABEL_INVISIBLE = /(?!\u200d)[\p{Cc}\p{Cf}]/gu;
+
+/**
+ * A claim made safe to SHOW and to PERSIST: invisible and control characters
+ * stripped, whitespace collapsed, trimmed, and clamped to
+ * {@link ACCOUNT_LABEL_MAX_CODE_POINTS} code points (with a trailing "…" when
+ * cut), or `null` when nothing visible is left.
+ *
+ * Why the clamp matters beyond layout (PR #262 review m2): the label is stored
+ * inside the oauth keystore item, which `SecureStorage` refuses above
+ * `MAX_SECURE_VALUE_CHARS` (2,048). An oversized `name` claim made
+ * `writeStoredOauth` report `persistent: false`, so a sign-in that looked fine
+ * silently did not survive a restart, all because of a display string. 254 code
+ * points is at most 254 UTF-16 pairs plus JSON escaping — well inside that cap
+ * beside a real access and refresh token.
+ */
+export function accountDisplayLabel(value: unknown): string | null {
+	if (typeof value !== "string") return null;
+	const visible = value
+		.replace(LABEL_WHITESPACE, " ")
+		.replace(LABEL_INVISIBLE, "")
+		.trim();
+	if (visible.length === 0) return null;
+	/* Code points, not UTF-16 units, so the cut never splits a surrogate pair. */
+	const points = Array.from(visible);
+	if (points.length <= ACCOUNT_LABEL_MAX_CODE_POINTS) return visible;
+	return `${points
+		.slice(0, ACCOUNT_LABEL_MAX_CODE_POINTS - 1)
+		.join("")
+		.trimEnd()}…`;
+}
 
 /**
  * The `sub` claim of an `id_token`, or `null` for anything that is not a readable
@@ -139,7 +194,9 @@ export function accountIdFromIdToken(token: unknown): string | null {
  */
 export function accountLabelFromIdToken(token: unknown): string | null {
 	const claims = idTokenClaims(token);
-	return nonBlank(claims?.email) ?? nonBlank(claims?.name);
+	return (
+		accountDisplayLabel(claims?.email) ?? accountDisplayLabel(claims?.name)
+	);
 }
 
 export type RadientAuthFailure =
@@ -233,8 +290,8 @@ function tokensFromResponse(
 	 * the id_token's claims, and a refresh without an id_token keeps the label the
 	 * grant already had — the same rule `account_id` follows. */
 	const labelSource =
-		nonBlank(body.email) ??
-		nonBlank(body.name) ??
+		accountDisplayLabel(body.email) ??
+		accountDisplayLabel(body.name) ??
 		accountLabelFromIdToken(body.id_token) ??
 		previousLabel;
 	return {

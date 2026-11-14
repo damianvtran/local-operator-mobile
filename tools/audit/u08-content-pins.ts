@@ -1715,7 +1715,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * title moves into `account-title.ts`. No copy or layout changed. Re-derived
 	 * with --print over the tree merged with origin/main 9ef19ccd (#259); only
 	 * `src` moved. Source identity only, NOT rendered U-08 evidence. */
-	src: "26e2b3af787a0459262e10bfec2427ae0ee1403d9e6246256e8edaf5ca431bdf",
+	/* PR #262 remediation round 1: the account label is decoded as UTF-8,
+	 * stripped of control/invisible characters and clamped, and Settings' avatar
+	 * takes its initials from an email's local part. No copy or layout changed.
+	 * Re-derived with --print; only `src` moved. Source identity only. */
+	src: "37581731a002658c5ab5b174f1de12a8f134ae18a6062f5a06604e78e6d140f6",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

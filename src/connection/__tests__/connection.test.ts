@@ -17,9 +17,10 @@
  * the ports (`fetchImpl`, `CryptoDeps`, `SecureStoreAdapter`, `AuthBrowserSession`).
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readWithDeadline } from "../../relay/platform-fetch";
 import {
+	ACCOUNT_LABEL_MAX_CODE_POINTS,
 	accessTokenNeedsRefresh,
 	accountIdFromIdToken,
 	accountLabelFromIdToken,
@@ -722,6 +723,60 @@ describe("the Radient account label comes from the id_token (PR #261 design roun
 			jwt({ email: "  " }),
 		])
 			expect(accountLabelFromIdToken(bad)).toBeNull();
+	});
+
+	it("decodes a non-ASCII name and email as UTF-8 on the atob path Hermes takes (PR #262 m1)", () => {
+		/* Node has `atob`, so this IS the branch a device runs; on fe52e380 it
+		 * returned "JosÃ© MÃ¼ller" and "zoÃ«@example.com". */
+		expect(typeof atob).toBe("function");
+		expect(accountLabelFromIdToken(jwt({ name: "José Müller" }))).toBe(
+			"José Müller",
+		);
+		expect(accountLabelFromIdToken(jwt({ email: "zoë@example.com" }))).toBe(
+			"zoë@example.com",
+		);
+		/* And the `Buffer` fallback (a runtime without `atob`) agrees. */
+		vi.stubGlobal("atob", undefined);
+		try {
+			expect(accountLabelFromIdToken(jwt({ name: "José Müller" }))).toBe(
+				"José Müller",
+			);
+		} finally {
+			vi.unstubAllGlobals();
+		}
+	});
+
+	it("strips control, bidi and invisible characters but keeps an emoji's joiner (PR #262 m2)", () => {
+		/* C0 NUL/BEL, a newline (one space, not a glued word), a C1 control, a
+		 * right-to-left override and isolate, an LRM, a zero-width space and a BOM. */
+		expect(
+			accountLabelFromIdToken(
+				jwt({
+					name: "A\u0000\u0007\nB\u0085C \u202Eevil\u202C \u2067x\u2069\u200E\u200B\uFEFF",
+				}),
+			),
+		).toBe("A B C evil x");
+		const family = "Ana \u{1F468}\u200D\u{1F469}\u200D\u{1F467}";
+		expect(accountLabelFromIdToken(jwt({ name: family }))).toBe(family);
+		/* Nothing visible left: no label, and the name is tried after the email. */
+		expect(
+			accountLabelFromIdToken(jwt({ email: "\u202E\u200B", name: "Reader" })),
+		).toBe("Reader");
+	});
+
+	it("clamps an oversized claim to an email's maximum length (PR #262 m2)", () => {
+		const label = accountLabelFromIdToken(jwt({ name: "N".repeat(1_000_000) }));
+		expect(Array.from(label ?? "")).toHaveLength(ACCOUNT_LABEL_MAX_CODE_POINTS);
+		expect(label?.endsWith("…")).toBe(true);
+		/* A maximal real address is never cut, and the cut never splits a pair. */
+		const longest = `${"a".repeat(64)}@${"b".repeat(185)}.com`;
+		expect(longest).toHaveLength(254);
+		expect(accountLabelFromIdToken(jwt({ email: longest }))).toBe(longest);
+		const emoji = accountLabelFromIdToken(
+			jwt({ name: "\u{1F600}".repeat(300) }),
+		);
+		expect(Array.from(emoji ?? "")).toHaveLength(ACCOUNT_LABEL_MAX_CODE_POINTS);
+		expect(emoji?.isWellFormed()).toBe(true);
 	});
 });
 
