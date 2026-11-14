@@ -497,7 +497,7 @@ describe("notification preferences in the register body", () => {
 		render();
 		await vi.waitFor(() => expect(seam.recorded).toHaveBeenCalledTimes(1));
 		expect(seam.register.mock.calls[0]?.[0]).not.toHaveProperty("preferences");
-		seam.capabilities = { push_preferences: true };
+		seam.capabilities = { push_preferences: { available: true } };
 		render();
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(2));
 		expect(seam.register.mock.calls[1]?.[0].preferences).toEqual({

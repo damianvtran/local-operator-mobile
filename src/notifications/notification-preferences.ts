@@ -96,27 +96,19 @@ export const parsePreferences = (
 /**
  * Whether the routed daemon accepts `preferences` (core PR C). Read from the
  * list frame's `capabilities` bag, the one the app already gates relay
- * features on. Tolerant of the three shapes that bag uses for a relay
- * capability (`true`, `{ available: true }`, or a `features` flag), because
- * the key's exact spelling was relayed rather than read from a merged core
- * change; anything else, including absence, is "not supported".
+ * features on, at ONE path: `capabilities.push_preferences.available`, the
+ * same shape as `session_tags` (agreed with the daemon owner, 2026-11-14).
+ * Anything else, including absence, is "not supported" — and an unsupported
+ * daemon is never sent the field.
  */
 export const pushPreferencesSupported = (capabilities: unknown): boolean => {
 	if (typeof capabilities !== "object" || capabilities === null) return false;
-	const bag = capabilities as Record<string, unknown>;
-	const direct = bag.push_preferences;
-	if (direct === true) return true;
-	if (
-		typeof direct === "object" &&
-		direct !== null &&
-		(direct as { available?: unknown }).available === true
-	)
-		return true;
-	const features = bag.features;
+	const capability = (capabilities as { push_preferences?: unknown })
+		.push_preferences;
 	return (
-		typeof features === "object" &&
-		features !== null &&
-		Boolean((features as Record<string, unknown>).push_preferences)
+		typeof capability === "object" &&
+		capability !== null &&
+		(capability as { available?: unknown }).available === true
 	);
 };
 

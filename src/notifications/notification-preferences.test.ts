@@ -55,18 +55,16 @@ describe("the capability gate", () => {
 		]);
 	});
 
-	it.each([
-		[{ push_preferences: true }, true],
-		[{ push_preferences: { available: true } }, true],
-		[{ features: { push_preferences: true } }, true],
-		[{ push_preferences: { available: false } }, false],
-		[{ push_preferences: false }, false],
-		[{ features: {} }, false],
-		[{}, false],
-		[null, false],
-		[undefined, false],
-	])("reads the capability from %j as %s", (capabilities, expected) => {
-		expect(pushPreferencesSupported(capabilities)).toBe(expected);
+	it("reads `capabilities.push_preferences.available === true` as supported", () => {
+		expect(
+			pushPreferencesSupported({ push_preferences: { available: true } }),
+		).toBe(true);
+	});
+
+	it("reads an absent capability as unsupported", () => {
+		expect(
+			pushPreferencesSupported({ session_tags: { available: true } }),
+		).toBe(false);
 	});
 });
 
