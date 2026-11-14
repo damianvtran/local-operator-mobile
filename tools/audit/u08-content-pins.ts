@@ -1778,7 +1778,13 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * evidence. */
 	/* Convergence of #257 onto main 8ca71d54 (#258): both comment chains kept;
 	 * re-derived once with --print over the merged tree. */
-	src: "ef63d8dad550b79f77c32681d84de6e3b1ea8022f89c6bee0089b787517cc9e2",
+	/* Merge of origin/main (#257, caae98bc) into #261: both comment blocks
+	 * kept (the keyed connection-failure surface from #257; the M1 refusal
+	 * work from #261, its kind-default buttons now on #257's keys and its
+	 * named-cause actions carrying #257's UR-C1 `labelDir`). Re-derived once
+	 * with --print over the merged tree (d0fc164b); only `src` moved. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	src: "20226f8f615c1b9bcb71c1008c2d69477ac32329844db982f863f86037ed914b",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
