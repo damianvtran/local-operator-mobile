@@ -441,8 +441,13 @@ it("keeps paste retry available after a null read, adds a second image, and reta
 	await mount(client, "image instructions");
 	const first = { mime_type: "image/png", data_b64: "iVBORw0KGgo=" };
 	const second = { mime_type: "image/jpeg", data_b64: "/9j/" };
+	/* Spied at `readImageFrom`, the hook's one entry into the attach sources since
+	 * the attach menu (PR #278) moved the source dispatch there (shared with the
+	 * home composer). `readImageFrom` reaches `pasteImage` through attach.ts's own
+	 * binding, which an export spy cannot see; the guarantee is unchanged: every
+	 * retry after a null read asks the clipboard again, as a paste. */
 	const read = vi
-		.spyOn(attachmentSources, "pasteImage")
+		.spyOn(attachmentSources, "readImageFrom")
 		.mockResolvedValueOnce(null)
 		.mockResolvedValueOnce(first)
 		.mockResolvedValueOnce(second)
@@ -456,6 +461,7 @@ it("keeps paste retry available after a null read, adds a second image, and reta
 		await settle();
 	}
 	expect(read).toHaveBeenCalledTimes(4);
+	expect(read.mock.calls).toEqual([["paste"], ["paste"], ["paste"], ["paste"]]);
 	// Existing policy: an intentional repeat is a separate removable thumbnail,
 	// never silently deduplicated. The encoded envelope size is the admission bound.
 	expect(c().images).toEqual([first, second, second]);

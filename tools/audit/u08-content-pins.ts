@@ -2061,7 +2061,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * comment chains retained; only this pin conflicted. Re-derived with
 	 * --print over the merged tree. Source identity only, NOT rendered U-08
 	 * evidence. */
-	src: "61f0b2fd903551803e5c6d048047a6e51a9cf5f297fca693a722f0dad40e4282",
+	/* #278 remediation: two src TEST files only (use-composer-echo spies the
+	 * hook's readImageFrom entry; composer-layout's title ratchet points at the
+	 * keyed AttachSheet title). No product source changed. Re-derived with
+	 * --print. Source identity only, NOT rendered U-08 evidence. */
+	src: "e11124a660f70db700154a7ab445372718da5e4a75237141dc652d5b0e53ff68",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

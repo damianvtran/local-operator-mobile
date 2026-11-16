@@ -155,9 +155,18 @@ describe("round 5 — regressions that fail if the fix is reverted", () => {
 		expect(SRC.match(/\{attachSheet\}/g) ?? []).toHaveLength(1);
 	});
 
-	it("keeps the attach title on the ratcheted literal rather than a new one", () => {
-		expect(SRC).toContain('title="attach"');
-		expect(SRC).not.toContain('title="Attach"');
+	it("keeps the attach title off any hard-coded literal (the ratchet's payoff)", () => {
+		/* This guarded the sheet title against minting a NEW literal (capitalising
+		 * the baselined "attach" failed `check-strings`). The attach menu (PR #278)
+		 * paid that debt: the title moved into `AttachSheet`, keyed through t(), and
+		 * the baseline entry was dropped. Same guarantee, pointed at where the title
+		 * lives now: keyed there, and no literal title back in either file. */
+		const SHEET = read("src/features/session/components/attach-sheet.tsx");
+		expect(SHEET).toContain('title={t("mobile.composer_input.attach.title")}');
+		for (const file of [SRC, SHEET]) {
+			expect(file).not.toMatch(/title="[Aa]ttach"/);
+		}
+		expect(SRC).toContain("<AttachSheet");
 	});
 
 	it("left no clearance margin from the removed absolute layer", () => {
