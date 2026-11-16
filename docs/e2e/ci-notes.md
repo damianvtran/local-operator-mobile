@@ -127,27 +127,26 @@ job here that tests the *instrument* rather than the app.
 `--tier ci` covers 2 of the matrix's 19 declared profiles, so until this job
 existed nothing automated covered the device variety the operator's rule asks
 for — phones in many sizes, tablets both ways. `web-audit-core` runs the `core`
-tier (5 profiles / 3780 cells) on the schedule and on demand only, so a pull
+tier (5 profiles / 3816 cells) on the schedule and on demand only, so a pull
 request does not pay for it and the `ci` step's 65-minute bound is not stretched.
 
 Both bounds are derived from the measured rate and checked against the plan the
-run prints for itself, rather than guessed. The runner's rate is 2.24 s/cell, so
-the 3780-cell `core` capture is ~134 min, and `--plan --tier core --consecutive`
-prints the 11,340 frames and derives a deadline of 11,340 s. Those two numbers agree
-because both are 3,600 x 3 — three frames per cell with `--consecutive`, and the
-budget's three seconds per cell — not because the deadline is frame-derived. The
-capture step is
-bound at 180, which is above that
-derived deadline — so the step cannot cut short the budget the run computes for
-itself — and ~1.35x the measured cost. The audit's rate is its own, not the
-capture's: its run measured 1.47 s/cell — killed at the old 70-minute bound with
-2,870 of 3,024 cells done in 70m12s = 4,212 s (run 38530472075) — so 3,780 cells x
-1.47 s = 5,557 s ≈ 93.5 min, and its step is bound at 110. The step caps sum to the
-job's own 290 on paper (`180 + 110`), while the REAL requirement is the capture
-bound plus the audit's measured need — `180 + 89 = 269`, 21 min under the cap; a
-step cap is a ceiling, not a budget. Measured, the job runs ~134 min of capture +
-~88 min of audit ≈ 222 min. Re-derive the job cap if either step's bound is raised
-again.
+run prints for itself, rather than guessed. The runner's capture rate is 2.24 s/cell,
+so the 3816-cell `core` capture is ~142 min, and
+`--plan --tier core --consecutive` prints 11,448 frames and derives a deadline of
+11,448 s (190.8 min). Both are 3,816 x 3 — three frames per cell with
+`--consecutive`, and the budget's three seconds per cell — not because the deadline
+is frame-derived. The capture step is bound at 195 minutes, above that derived
+deadline and ~1.37x the projected capture cost.
+
+The audit's rate is its own, not the capture's: its run measured 1.47 s/cell —
+killed at the old 70-minute bound with 2,870 of 3,024 cells done in 70m12s =
+4,212 s (run 38530472075) — so 3,816 cells x 1.47 s = 5,610 s ≈ 93.5 min.
+Its step is bound at 115 minutes. The step caps exceed the job's 290 on paper
+(`195 + 115 = 310`), while the REAL requirement is the capture bound plus the
+audit's measured need: ~288.5 min, still under 290. A step cap is a ceiling, not
+a budget. At the measured rates the job projects ~142.5 min of capture + ~93.5 min
+of audit ≈ 236 min. Re-derive the job cap if either step's bound is raised again.
 
 The capture states its own device coverage — which declared profiles it covered
 and which it did not, by name — in the plan block, beside the run's verdict, in

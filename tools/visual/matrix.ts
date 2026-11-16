@@ -364,11 +364,11 @@ export function describeDeviceCoverage(coverage: {
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
  * The `core` tier is 3816 cells: the whole declared cell list (106 cells) x 2 themes x
- * (3 phones x 4 scales + 2 tablets x 3 scales) — 94 x 2 x 18, the tier's 5 profiles —
- * and the CI job's capture step is bound at 60 minutes. Measured on the runner, that is
+ * (3 phones x 4 scales + 2 tablets x 3 scales) — 106 x 2 x 18, the tier's 5 profiles —
+ * and the CI job's capture step is bound at 65 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
- * run needs ~126 minutes. The `core` job's own bound is 175 (see `.github/workflows/e2e.yml`,
- * `web-audit-core`), which is above the 11340 s deadline its plan derives for itself. The
+ * run needs ~142 minutes. The `core` capture step's own bound is 195 (see `.github/workflows/e2e.yml`,
+ * `web-audit-core`), which is above the 11448 s deadline its plan derives for itself. The
  * job's first real
  * run of this path
  * was therefore cut off by the harness's own 900 s deadline with 585 cells
@@ -398,11 +398,11 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 106 cells x 2 themes x (2 profiles x 3 scales) = 1272 cells, ~45 minutes at
+ * That is 106 cells x 2 themes x (2 profiles x 3 scales) = 1272 cells, ~47.5 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` stay the
- * local and dispatched samples, so the full 3780-cell `core` matrix and the
- * 13860-cell `full` matrix remain runnable — nothing is only reachable through CI.
+ * local and dispatched samples, so the full 3816-cell `core` matrix and the
+ * 13992-cell `full` matrix remain runnable — nothing is only reachable through CI.
  */
 export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
 
@@ -420,20 +420,20 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * sweeps every scale, so nothing is lost by composing the two sets differently.
  *
  * WHAT IT COSTS, because it is NOT free and the two are one decision. Three scales on
- * both CI profiles is 1260 cells, +50 % over the two-scale 672, so the per-push capture
+ * both CI profiles is 1272 cells, +50 % over the two-scale 848, so the per-push capture
  * and audit bounds in `.github/workflows/e2e.yml` were raised with it — most recently to
- * capture 55 / audit 25 / job 85. That is this slice's ten cells (nine lifecycle surfaces
+ * capture 65 / audit 40 / job 90. That is this slice's ten cells (nine lifecycle surfaces
  * and the pane's long-press menu) on top of the base the branch was cut from, plus the
  * four cells upstream landed while it was open, the find slice's five cells (four
  * find states and the caveat), the schedules slice's five S17 cells (the armed
  * index's five states), the mesh slice's seven cells (the S15 remote rows, the
  * tap-reveal and the move sheet's five states), the checkpoint rail's four more,
  * and the supplement slice's five S5 cells (the Highlights block's states),
- * folded from main: the cell list is 105 and the sample is 1260, both re-derived from
- * this head's own `--plan` rather than scaled — and the quiet cause's sheet cell,
- * which no frame carried until review round 4's m3, is the one that moved them
- * (105 -> 106, 1260 -> 1260). Still inside the 65-minute capture bound
- * (1260 cells x 3 s = 63.0 min). A bound that fires every run stops being a signal, so
+ * folded from main: the cell list is 106 and the sample is 1272, both re-derived from
+ * this head's own `--plan` rather than scaled — including the quiet cause's sheet
+ * cell (review round 4's m3) and PR #278's `S9/attach-sheet`, which moved the
+ * registry and sample from 105 -> 106 and 1260 -> 1272 respectively. Still inside the 65-minute capture bound
+ * (1272 cells x 3 s = 63.6 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
  * wastes the budget it was sized for.

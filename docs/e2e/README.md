@@ -182,7 +182,7 @@ in `verify`'s readiness guard.
 # docs:needs mock-relay web-build
 #
 # The sample is EXPLICIT and small, for §2's reason: the default (`core`) tier plans
-# 3,780 cells, one frame each, which is ~134 minutes at the measured 2.24 s/cell and is
+# 3,816 cells, one frame each, which is ~142 minutes at the measured 2.24 s/cell and is
 # above the harness's own 120-frame confirmation threshold — so an un-narrowed run is
 # REFUSED without `--yes`, and even with it no documentation gate may spend 120 minutes
 # on one command. One phone, one theme, one scale is 94 frames, and it still proves what
@@ -662,7 +662,7 @@ node tools/visual/capture.ts --dir e2e/fixtures/audit-canary \
 # A real run against a real build. Build first — `pnpm export:web`, which writes `dist/`.
 #
 # The device/theme/scale set is EXPLICIT and small on purpose: the full `core` tier is
-# 3600 cells, which is ~134 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
+# 3600 cells, which is ~142 minutes at the measured 2.24 s/cell (403 cells in 903 s on the
 # CI runner, a plan of 403 cells then), and no documentation gate may spend that on one
 # command. So this example is the bounded sample; `--plan` above prints the full count,
 # and dropping these three flags captures the whole `core` tier. `--tier ci` is the sample
@@ -847,7 +847,7 @@ All 19 profiles above are what the harness *can* plan, and they come from
 generated from it rather than maintained beside it. A default run captures the
 `core` tier only (5 profiles: the 320 pt floor, one typical phone,
 the landscape case whose side insets the notch rules need, and a tablet in each
-orientation) — 3600 cells, one frame each unless `--consecutive` asks for the +250 ms
+orientation) — 3816 cells, one frame each unless `--consecutive` asks for the +250 ms
 and settled frames too. A run states which tier it took,
 and a cell that was not captured is reported as having no frame rather than passed.
 
@@ -855,7 +855,7 @@ Three tiers are declared in `matrix.ts`, and each says what it is:
 
 | tier | sample | cells | why |
 |---|---|---|---|
-| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 1272 | the per-push CI job's sample. The step is bound at 65 minutes — above the plan's own derived deadline (1272 × 3 s = 63.6 min) — and the measured rate is 2.24 s/cell, so a 3,780-cell `core` run cannot fit; this one lands ~45 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
+| `ci` | every declared cell × `iphone-se`, `tablet-landscape` × both themes × scales 100, 135 and 200 | 1272 | the per-push CI job's sample. The step is bound at 65 minutes — above the plan's own derived deadline (1272 × 3 s = 63.6 min) — and the measured rate is 2.24 s/cell, so a 3,816-cell `core` run cannot fit; this one lands ~47.5 minutes. It keeps the CELL axis whole — a state that is not captured is a state no review round can report on — and shrinks only the device, theme and scale axes, each to what its check needs: the narrowest and widest viewports (the two sides of the 768 breakpoint), because the theme check compares a cell's dark and light frames, and the 100 %/135 %/200 % set — the pair the text-scale guard measures plus the BOUNDARY step the footer's layout breaks at, because an axis that brackets that band cannot see a defect inside it. |
 | `core` | the 5 `core` profiles, both themes, every scale | 3816 | the default, and the local sample the operator's rule asks for. |
 | `full` | all 19 profiles | 13992 | the dispatched/nightly sample. |
 
@@ -883,9 +883,9 @@ from `ALL_DEVICES`, so it cannot drift from this table.
 
 **The device variety that is not on the per-push path has its own nightly job.**
 `.github/workflows/e2e.yml` `web-audit-core` captures and audits the `core` tier — 5 of
-the 19 profiles, 3780 cells / 10,908 frames and ~134 minutes at the measured 2.24 s/cell —
+the 19 profiles, 3816 cells / 11,448 frames and ~142 minutes at the measured 2.24 s/cell —
 on the schedule and on demand only. The `ci` sample stays the per-push one and keeps its
-own 55-minute capture bound; neither job is stretched to cover the other's tier.
+own 65-minute capture bound; neither job is stretched to cover the other's tier.
 
 ### Two cells that render byte-identically
 
