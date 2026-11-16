@@ -19,7 +19,7 @@
  */
 
 import type { PromptImage } from "@/contracts";
-import type { PasteVia } from "@/features/session/attach-rule";
+import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { healthCopy, healthResumeCopy } from "@/features/session/health-copy";
 import { t } from "@/i18n";
 import type { ContinuationOp, RelayError } from "@/relay";
@@ -148,6 +148,21 @@ export const noticeActionName = (label: string, sentence: string): string =>
 	sentence.toLocaleLowerCase().includes(label.toLocaleLowerCase())
 		? sentence
 		: `${label}, ${sentence}`;
+
+/**
+ * The error line for an attach that failed after the reader chose a source.
+ *
+ * The camera gets its own sentence because its failures are different facts: a
+ * photo library pick that fails lost an image the reader already chose ("Couldn't
+ * attach that image"), while a camera failure is usually that the camera never
+ * opened (Android with no camera app, access revoked between the permission
+ * check and the launch) — telling that reader their "image" failed to attach
+ * describes an image that never existed.
+ */
+export const attachFailureLine = (source: AttachSource): string =>
+	source === "camera"
+		? t("mobile.composer_input.attach.camera_error")
+		: composerCopy().attachError;
 
 /**
  * The line for a paste that came back with no image.

@@ -2027,7 +2027,14 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * (not --print); the same reader reproduced the previous pin from the
 	 * base tree as a control. Source identity only, NOT rendered U-08
 	 * evidence. */
-	src: "4d812c779e1676f3dafde7ec1a4f6067200f6ea7caa868b8ccdf94f1b2ea3c7a",
+	/* --print re-pin (2026-11-15, composer add-image menu + camera): the attach
+	 * sheet moved into components/attach-sheet.tsx with icon rows and a camera
+	 * row, the composer's attach glyph became a lucide ＋, the picker handoff
+	 * moved to attach-handoff.ts (Team Bridge now uses it), 11 new
+	 * mobile.composer_input.attach.* keys in 8 locales and their projection.
+	 * Printed on the staged tree after every source change. Source identity
+	 * only, NOT rendered U-08 evidence. */
+	src: "23256363e1ffe605095f0c2690af77e39f87de328cdc3280b19a510a6f4df633",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -2054,8 +2061,11 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// config, not a U-08 web layout input.
 	// --print re-pin (PR #244 remediation round 1): comment-only edits — the
 	// Android warm-only claim and the exact-set native-config guard.
+	// --print re-pin (2026-11-15, composer camera): CAMERA_USAGE, the image
+	// picker's cameraPermission and the Android CAMERA declaration — native
+	// permission config, not a U-08 web layout input.
 	"app.config.ts":
-		"c4b2be52f8a2802eda590a10971a2a624128b86e363f49bfd14ffe611a607d49",
+		"0236116ef4d644c82e604e1bef912fc7704fb4180634605fdbc8eaf41110dcb1",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	// --print re-pin (feat/background-push-clear): adds the native module

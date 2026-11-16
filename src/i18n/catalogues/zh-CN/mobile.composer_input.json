@@ -12,5 +12,16 @@
 	"mobile.composer_input.dismiss_error": "关闭错误提示",
 	"mobile.composer_input.dismiss_error_hint": "隐藏此错误，不改变草稿或发送状态",
 	"mobile.composer_input.notice_retry": "重试",
-	"mobile.composer_input.notice_dismiss": "关闭"
+	"mobile.composer_input.notice_dismiss": "关闭",
+	"mobile.composer_input.attach.button": "添加图片",
+	"mobile.composer_input.attach.title": "添加图片",
+	"mobile.composer_input.attach.library": "照片图库",
+	"mobile.composer_input.attach.camera": "拍照",
+	"mobile.composer_input.attach.files": "文件",
+	"mobile.composer_input.attach.paste": "粘贴图片",
+	"mobile.composer_input.attach.choose_image": "选择图片",
+	"mobile.composer_input.attach.camera_denied": "相机访问已关闭。请在“设置”中开启，以便拍照。",
+	"mobile.composer_input.attach.open_settings": "打开设置",
+	"mobile.composer_input.attach.camera_unavailable": "此设备上没有可用的相机。",
+	"mobile.composer_input.attach.camera_error": "无法打开相机。请重试。"
 }

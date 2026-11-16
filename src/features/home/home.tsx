@@ -69,16 +69,15 @@ import {
 } from "@/features/new-session/startup-transcript";
 import { useStartup } from "@/features/new-session/use-startup";
 import { notificationsEnabled } from "@/features/notifications/notifications-model";
-import {
-	pasteImage,
-	pickImageFromFiles,
-	pickImageFromLibrary,
-	readWebImageFile,
-} from "@/features/session/attach";
+import { readImageFrom, readWebImageFile } from "@/features/session/attach";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { Composer } from "@/features/session/components/composer";
 import type { ComposerControls } from "@/features/session/composer";
-import { composerCopy, pasteNothingLine } from "@/features/session/composer";
+import {
+	attachFailureLine,
+	composerCopy,
+	pasteNothingLine,
+} from "@/features/session/composer";
 import { heldTimer } from "@/features/session/resume-hold";
 import { deviceOnline } from "@/features/session/runtime";
 import { useHomeDictation } from "@/features/session/use-dictation";
@@ -621,12 +620,7 @@ export default function Home({
 				setAttaching(true);
 				setComposerError(null);
 				try {
-					const image =
-						source === "library"
-							? await pickImageFromLibrary()
-							: source === "paste"
-								? await pasteImage()
-								: await pickImageFromFiles();
+					const image = await readImageFrom(source);
 					if (image !== null) {
 						setImages((current) => [...current, image]);
 					} else if (source === "paste") {
@@ -636,7 +630,7 @@ export default function Home({
 					}
 				} catch {
 					/* Said, never swallowed — the composer's own error line. */
-					setComposerError(composerCopy().attachError);
+					setComposerError(attachFailureLine(source));
 				} finally {
 					setAttaching(false);
 				}

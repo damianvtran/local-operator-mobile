@@ -63,18 +63,20 @@ describe("the MIME type sniffed from the payload's own bytes", () => {
 });
 
 describe("the attach sheet's rows", () => {
-	it("offers the photo picker, the document picker and the clipboard on native", () => {
+	it("offers the photo picker, the camera, the document picker and the clipboard on native", () => {
 		expect(attachActions("native").map((action) => action.source)).toEqual([
 			"library",
+			"camera",
 			"files",
 			"paste",
 		]);
 	});
 
 	it("collapses to the file input and the clipboard on the web build", () => {
-		/* No photo library and no document picker exist for a browser tab: `library`
-		 * there is the browser's own file input (`pickImageFromLibrary`), and the
-		 * `files` row would open the same chooser under a second name. */
+		/* No photo library, no document picker and no drivable camera exist for a
+		 * browser tab: `library` there is the browser's own file input
+		 * (`pickImageFromLibrary`), and a `files` or `camera` row would open the
+		 * same chooser under a second name. */
 		expect(attachActions("web").map((action) => action.source)).toEqual([
 			"library",
 			"paste",

@@ -12,5 +12,16 @@
 	"mobile.composer_input.dismiss_error": "Скрыть ошибку",
 	"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки",
 	"mobile.composer_input.notice_retry": "Повторить",
-	"mobile.composer_input.notice_dismiss": "Скрыть"
+	"mobile.composer_input.notice_dismiss": "Скрыть",
+	"mobile.composer_input.attach.button": "Добавить изображение",
+	"mobile.composer_input.attach.title": "Добавить изображение",
+	"mobile.composer_input.attach.library": "Фотогалерея",
+	"mobile.composer_input.attach.camera": "Сделать фото",
+	"mobile.composer_input.attach.files": "Файлы",
+	"mobile.composer_input.attach.paste": "Вставить изображение",
+	"mobile.composer_input.attach.choose_image": "Выбрать изображение",
+	"mobile.composer_input.attach.camera_denied": "Доступ к камере выключен. Включите его в Настройках, чтобы сделать фото.",
+	"mobile.composer_input.attach.open_settings": "Открыть Настройки",
+	"mobile.composer_input.attach.camera_unavailable": "На этом устройстве нет доступной камеры.",
+	"mobile.composer_input.attach.camera_error": "Не удалось открыть камеру. Попробуйте ещё раз."
 }

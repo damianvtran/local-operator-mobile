@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
 import {
+	ANDROID_CAMERA_PERMISSION,
 	ANDROID_FORBIDDEN_PERMISSIONS,
 	ANDROID_LOCAL_NETWORK_PERMISSION,
 	checkAndroidBadging,
@@ -52,6 +53,8 @@ const validPlist = (): Record<string, unknown> => ({
 	CFBundleDisplayName: "Operator",
 	CFBundleName: "LocalOperator",
 	UIBackgroundModes: ["remote-notification", "fetch"],
+	NSCameraUsageDescription:
+		"Take a photo to attach to your message. The photo is sent to your own computer and not saved to your library.",
 	NSLocalNetworkUsageDescription:
 		"Connect to the relay running on your own computer when it is on the same Wi-Fi network. The app reaches only the address you enter, and does not scan your network.",
 	NSAppTransportSecurity: {
@@ -73,6 +76,7 @@ const fields = (findings: { field: string }[]): string[] =>
 const validManifest = (): string => `<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
+  <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
   <application android:name=".MainApplication" android:label="@string/app_name" android:usesCleartextTraffic="true" android:theme="@style/AppTheme">
@@ -95,6 +99,20 @@ describe("checkIosInfoPlist", () => {
 	it("passes the configuration the app asks for", () => {
 		expect(checkIosInfoPlist(validPlist())).toEqual([]);
 	});
+
+	it.each([undefined, "", "   "])(
+		"requires the camera usage string the Camera row depends on: %j",
+		(value) => {
+			/* iOS terminates an app that opens the camera without this key, so a
+			 * plugin option that drops it is a crash on first use, not a prompt. */
+			const plist = validPlist();
+			if (value === undefined) delete plist.NSCameraUsageDescription;
+			else plist.NSCameraUsageDescription = value;
+			expect(fields(checkIosInfoPlist(plist))).toEqual([
+				"NSCameraUsageDescription",
+			]);
+		},
+	);
 
 	it("pins the label the operator chose, not the app name", () => {
 		expect(LAUNCHER_LABEL).toBe("Operator");
@@ -223,7 +241,7 @@ describe("checkIosInfoPlist", () => {
 		/* The early returns must not hide it: both findings, one run. */
 		const plist = validPlist();
 		delete plist.NSLocalNetworkUsageDescription;
-		plist[IOS_FORBIDDEN_KEYS[1]] = "Allow camera";
+		plist[IOS_FORBIDDEN_KEYS[1]] = "Add to your photos";
 		expect(fields(checkIosInfoPlist(plist))).toEqual([
 			IOS_FORBIDDEN_KEYS[1],
 			"NSLocalNetworkUsageDescription",
@@ -301,18 +319,31 @@ describe("checkAndroidManifest", () => {
 		expect(fields(checkAndroidManifest("<manifest/>"))).toEqual([
 			"AndroidManifest.xml",
 			`uses-permission[${ANDROID_LOCAL_NETWORK_PERMISSION}]`,
+			`uses-permission[${ANDROID_CAMERA_PERMISSION}]`,
+		]);
+	});
+
+	it("requires CAMERA, which the Camera row asks for at use", () => {
+		/* An undeclared permission can never be granted: without the declaration
+		 * the row would answer "access is off" forever. */
+		const manifest = validManifest().replace(
+			'  <uses-permission android:name="android.permission.CAMERA"/>\n',
+			"",
+		);
+		expect(fields(checkAndroidManifest(manifest))).toEqual([
+			`uses-permission[${ANDROID_CAMERA_PERMISSION}]`,
 		]);
 	});
 
 	it("reports a library-manifest media permission the merge brought in", () => {
 		/* What expo-image-picker's own manifest would contribute without the
-		 * blockedPermissions + plugin options: CAMERA and the storage pair. */
+		 * blockedPermissions list: the storage pair (CAMERA is required now). */
 		const manifest = validManifest().replace(
 			'  <uses-permission android:name="android.permission.INTERNET"/>',
-			'  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission android:name="android.permission.CAMERA"/>\n  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>',
+			'  <uses-permission android:name="android.permission.INTERNET"/>\n  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>\n  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>',
 		);
 		expect(fields(checkAndroidManifest(manifest))).toEqual([
-			"uses-permission[android.permission.CAMERA]",
+			"uses-permission[android.permission.READ_EXTERNAL_STORAGE]",
 			"uses-permission[android.permission.READ_MEDIA_IMAGES]",
 		]);
 	});
@@ -352,10 +383,10 @@ describe("checkAndroidManifest", () => {
 	it("catches a single-quoted declaration — quote style cannot slip an absence check", () => {
 		const manifest = validManifest().replace(
 			'  <uses-permission android:name="android.permission.INTERNET"/>',
-			"  <uses-permission android:name='android.permission.CAMERA'/>",
+			"  <uses-permission android:name='android.permission.INTERNET'/>\n  <uses-permission android:name='android.permission.READ_MEDIA_IMAGES'/>",
 		);
 		expect(fields(checkAndroidManifest(manifest))).toEqual([
-			"uses-permission[android.permission.CAMERA]",
+			"uses-permission[android.permission.READ_MEDIA_IMAGES]",
 		]);
 	});
 

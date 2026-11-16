@@ -87,6 +87,17 @@ export type CatalogueKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.attach.button"
+	| "mobile.composer_input.attach.camera"
+	| "mobile.composer_input.attach.camera_denied"
+	| "mobile.composer_input.attach.camera_error"
+	| "mobile.composer_input.attach.camera_unavailable"
+	| "mobile.composer_input.attach.choose_image"
+	| "mobile.composer_input.attach.files"
+	| "mobile.composer_input.attach.library"
+	| "mobile.composer_input.attach.open_settings"
+	| "mobile.composer_input.attach.paste"
+	| "mobile.composer_input.attach.title"
 	| "mobile.composer_input.clear_draft"
 	| "mobile.composer_input.clear_draft_hint"
 	| "mobile.composer_input.dismiss_error"
@@ -1056,6 +1067,17 @@ export type NoParamKey =
 	| "mobile.common.save"
 	| "mobile.common.send"
 	| "mobile.common.try_again"
+	| "mobile.composer_input.attach.button"
+	| "mobile.composer_input.attach.camera"
+	| "mobile.composer_input.attach.camera_denied"
+	| "mobile.composer_input.attach.camera_error"
+	| "mobile.composer_input.attach.camera_unavailable"
+	| "mobile.composer_input.attach.choose_image"
+	| "mobile.composer_input.attach.files"
+	| "mobile.composer_input.attach.library"
+	| "mobile.composer_input.attach.open_settings"
+	| "mobile.composer_input.attach.paste"
+	| "mobile.composer_input.attach.title"
 	| "mobile.composer_input.clear_draft"
 	| "mobile.composer_input.clear_draft_hint"
 	| "mobile.composer_input.dismiss_error"
@@ -1890,6 +1912,17 @@ export type MessageParams = {
 	"mobile.common.save": NoParams;
 	"mobile.common.send": NoParams;
 	"mobile.common.try_again": NoParams;
+	"mobile.composer_input.attach.button": NoParams;
+	"mobile.composer_input.attach.camera": NoParams;
+	"mobile.composer_input.attach.camera_denied": NoParams;
+	"mobile.composer_input.attach.camera_error": NoParams;
+	"mobile.composer_input.attach.camera_unavailable": NoParams;
+	"mobile.composer_input.attach.choose_image": NoParams;
+	"mobile.composer_input.attach.files": NoParams;
+	"mobile.composer_input.attach.library": NoParams;
+	"mobile.composer_input.attach.open_settings": NoParams;
+	"mobile.composer_input.attach.paste": NoParams;
+	"mobile.composer_input.attach.title": NoParams;
 	"mobile.composer_input.clear_draft": NoParams;
 	"mobile.composer_input.clear_draft_hint": NoParams;
 	"mobile.composer_input.dismiss_error": NoParams;
@@ -2881,6 +2914,17 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.common.save": "Save",
 	"mobile.common.send": "Send",
 	"mobile.common.try_again": "Try again",
+	"mobile.composer_input.attach.button": "Add an image",
+	"mobile.composer_input.attach.camera": "Take Photo",
+	"mobile.composer_input.attach.camera_denied": "Camera access is off. Turn it on in Settings to take a photo.",
+	"mobile.composer_input.attach.camera_error": "Couldn’t open the camera. Try again.",
+	"mobile.composer_input.attach.camera_unavailable": "No camera is available on this device.",
+	"mobile.composer_input.attach.choose_image": "Choose Image",
+	"mobile.composer_input.attach.files": "Files",
+	"mobile.composer_input.attach.library": "Photo Library",
+	"mobile.composer_input.attach.open_settings": "Open Settings",
+	"mobile.composer_input.attach.paste": "Paste Image",
+	"mobile.composer_input.attach.title": "Add an image",
 	"mobile.composer_input.clear_draft": "Clear draft",
 	"mobile.composer_input.clear_draft_hint": "Clears only the draft text and images; keeps queued and unconfirmed messages",
 	"mobile.composer_input.dismiss_error": "Dismiss error",
@@ -3857,6 +3901,17 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.save": { role: "button", note: "Commits the edits made in the current sheet or form. A verb used as a label, no final full stop. LIMIT: says nothing about where it is saved or whether it is reversible; screens that must say so (for example a draft saved to one computer) use their own key." },
 	"mobile.common.send": { role: "button", note: "Sends the message the user has typed in the adjacent composer. A verb used as a label, no final full stop. LIMIT: a message to an agent, not a file transfer or a share; do not translate with a word meaning 'post publicly' or 'upload'." },
 	"mobile.common.try_again": { role: "button", note: "Re-runs the action that just failed, next to the error that reported it. An imperative used as a label, no final full stop. LIMIT: a retry of a failed read or write; never a reset and never a restart of the app or the connection." },
+	"mobile.composer_input.attach.button": { role: "button", note: "Accessible name of the round ＋ button at the leading edge of the composer. It opens a menu of image sources (photo library, camera, files, paste). Screen readers only; no final full stop." },
+	"mobile.composer_input.attach.camera": { role: "button", note: "Row in the composer's add-image sheet that opens the camera to take one photo, which is attached to the message. Imperative verb phrase; no final full stop." },
+	"mobile.composer_input.attach.camera_denied": { role: "status", note: "Notice inside the add-image sheet when the reader has refused camera access for this app; the only way back is the system Settings app, which the action beside it opens. Must not blame the reader. Two short sentences with final full stops." },
+	"mobile.composer_input.attach.camera_error": { role: "status", note: "Error line under the composer when the camera could not be opened or the photo could not be read after the reader chose to take one. Full sentences with final full stops." },
+	"mobile.composer_input.attach.camera_unavailable": { role: "status", note: "Notice inside the add-image sheet when the device has no usable camera (for example a simulator). Full sentence with final full stop." },
+	"mobile.composer_input.attach.choose_image": { role: "button", note: "Row in the add-image sheet on the web build, where the browser's file chooser is the only image source. No final full stop." },
+	"mobile.composer_input.attach.files": { role: "button", note: "Row in the composer's add-image sheet that opens the system document picker (the Files app on iOS), limited to images. Use the platform's own name for it where it has one. No final full stop." },
+	"mobile.composer_input.attach.library": { role: "button", note: "Row in the composer's add-image sheet that opens the system photo picker. Use the name the operating system gives its photo library on the platform (iOS: Photos library). No final full stop." },
+	"mobile.composer_input.attach.open_settings": { role: "button", note: "Text action beside the camera-access notice; opens this app's page in the system Settings app. Use the platform's name for Settings. No final full stop." },
+	"mobile.composer_input.attach.paste": { role: "button", note: "Row in the composer's add-image sheet that attaches the image currently on the clipboard. No final full stop." },
+	"mobile.composer_input.attach.title": { role: "heading", note: "Heading of the bottom sheet the composer's ＋ button opens; it lists where an image can come from. Short; no final full stop." },
 	"mobile.composer_input.clear_draft": { role: "button", note: "User-action button clears only the unsent editor, not queued messages or retained instructions with uncertain delivery. No final full stop." },
 	"mobile.composer_input.clear_draft_hint": { role: "button", note: "Screen-reader hint for Clear draft. Explicitly distinguishes editor clearing from deleting queued or unconfirmed instructions." },
 	"mobile.composer_input.dismiss_error": { role: "button", note: "Presentation-only error dismissal. Does not retry, delete or acknowledge delivery. The accessible name of the dismissal, and also its VISIBLE text action when the error line sits under a retained-instruction sentence, where a bare Dismiss would read as dismissing that sentence. Keep it short; no final full stop." },
@@ -4847,6 +4902,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Guardar",
 		"mobile.common.send": "Enviar",
 		"mobile.common.try_again": "Reintentar",
+		"mobile.composer_input.attach.button": "Añadir una imagen",
+		"mobile.composer_input.attach.camera": "Hacer foto",
+		"mobile.composer_input.attach.camera_denied": "El acceso a la cámara está desactivado. Actívalo en Ajustes para hacer una foto.",
+		"mobile.composer_input.attach.camera_error": "No se pudo abrir la cámara. Inténtalo de nuevo.",
+		"mobile.composer_input.attach.camera_unavailable": "No hay ninguna cámara disponible en este dispositivo.",
+		"mobile.composer_input.attach.choose_image": "Elegir imagen",
+		"mobile.composer_input.attach.files": "Archivos",
+		"mobile.composer_input.attach.library": "Fototeca",
+		"mobile.composer_input.attach.open_settings": "Abrir Ajustes",
+		"mobile.composer_input.attach.paste": "Pegar imagen",
+		"mobile.composer_input.attach.title": "Añadir una imagen",
 		"mobile.composer_input.clear_draft": "Borrar borrador",
 		"mobile.composer_input.clear_draft_hint": "Borra solo el texto y las imágenes del borrador; conserva los mensajes en cola y sin confirmar",
 		"mobile.composer_input.dismiss_error": "Ocultar error",
@@ -5821,6 +5887,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Enregistrer",
 		"mobile.common.send": "Envoyer",
 		"mobile.common.try_again": "Réessayer",
+		"mobile.composer_input.attach.button": "Ajouter une image",
+		"mobile.composer_input.attach.camera": "Prendre une photo",
+		"mobile.composer_input.attach.camera_denied": "L’accès à l’appareil photo est désactivé. Activez-le dans Réglages pour prendre une photo.",
+		"mobile.composer_input.attach.camera_error": "Impossible d’ouvrir l’appareil photo. Réessayez.",
+		"mobile.composer_input.attach.camera_unavailable": "Aucun appareil photo n’est disponible sur cet appareil.",
+		"mobile.composer_input.attach.choose_image": "Choisir une image",
+		"mobile.composer_input.attach.files": "Fichiers",
+		"mobile.composer_input.attach.library": "Photothèque",
+		"mobile.composer_input.attach.open_settings": "Ouvrir Réglages",
+		"mobile.composer_input.attach.paste": "Coller l’image",
+		"mobile.composer_input.attach.title": "Ajouter une image",
 		"mobile.composer_input.clear_draft": "Effacer le brouillon",
 		"mobile.composer_input.clear_draft_hint": "Efface uniquement le texte et les images du brouillon ; conserve les messages en attente et non confirmés",
 		"mobile.composer_input.dismiss_error": "Masquer l’erreur",
@@ -6795,6 +6872,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "सहेजें",
 		"mobile.common.send": "भेजें",
 		"mobile.common.try_again": "फिर से कोशिश करें",
+		"mobile.composer_input.attach.button": "चित्र जोड़ें",
+		"mobile.composer_input.attach.camera": "फ़ोटो लें",
+		"mobile.composer_input.attach.camera_denied": "कैमरा एक्सेस बंद है। फ़ोटो लेने के लिए इसे सेटिंग्स में चालू करें।",
+		"mobile.composer_input.attach.camera_error": "कैमरा नहीं खुल सका। फिर से कोशिश करें।",
+		"mobile.composer_input.attach.camera_unavailable": "इस डिवाइस पर कोई कैमरा उपलब्ध नहीं है।",
+		"mobile.composer_input.attach.choose_image": "चित्र चुनें",
+		"mobile.composer_input.attach.files": "फ़ाइलें",
+		"mobile.composer_input.attach.library": "फ़ोटो लाइब्रेरी",
+		"mobile.composer_input.attach.open_settings": "सेटिंग्स खोलें",
+		"mobile.composer_input.attach.paste": "चित्र पेस्ट करें",
+		"mobile.composer_input.attach.title": "चित्र जोड़ें",
 		"mobile.composer_input.clear_draft": "ड्राफ़्ट मिटाएँ",
 		"mobile.composer_input.clear_draft_hint": "केवल ड्राफ़्ट का टेक्स्ट और चित्र मिटाता है; कतार में और अपुष्ट संदेश रखता है",
 		"mobile.composer_input.dismiss_error": "त्रुटि छिपाएँ",
@@ -7769,6 +7857,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Сохранить",
 		"mobile.common.send": "Отправить",
 		"mobile.common.try_again": "Повторить",
+		"mobile.composer_input.attach.button": "Добавить изображение",
+		"mobile.composer_input.attach.camera": "Сделать фото",
+		"mobile.composer_input.attach.camera_denied": "Доступ к камере выключен. Включите его в Настройках, чтобы сделать фото.",
+		"mobile.composer_input.attach.camera_error": "Не удалось открыть камеру. Попробуйте ещё раз.",
+		"mobile.composer_input.attach.camera_unavailable": "На этом устройстве нет доступной камеры.",
+		"mobile.composer_input.attach.choose_image": "Выбрать изображение",
+		"mobile.composer_input.attach.files": "Файлы",
+		"mobile.composer_input.attach.library": "Фотогалерея",
+		"mobile.composer_input.attach.open_settings": "Открыть Настройки",
+		"mobile.composer_input.attach.paste": "Вставить изображение",
+		"mobile.composer_input.attach.title": "Добавить изображение",
 		"mobile.composer_input.clear_draft": "Очистить черновик",
 		"mobile.composer_input.clear_draft_hint": "Удаляет только текст и изображения черновика; сохраняет сообщения в очереди и без подтверждения",
 		"mobile.composer_input.dismiss_error": "Скрыть ошибку",
@@ -8743,6 +8842,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "محفوظ کریں",
 		"mobile.common.send": "بھیجیں",
 		"mobile.common.try_again": "دوبارہ کوشش کریں",
+		"mobile.composer_input.attach.button": "تصویر شامل کریں",
+		"mobile.composer_input.attach.camera": "تصویر کھینچیں",
+		"mobile.composer_input.attach.camera_denied": "کیمرے کی رسائی بند ہے۔ تصویر کھینچنے کے لیے اسے ترتیبات میں آن کریں۔",
+		"mobile.composer_input.attach.camera_error": "کیمرا نہیں کھل سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.composer_input.attach.camera_unavailable": "اس ڈیوائس پر کوئی کیمرا دستیاب نہیں ہے۔",
+		"mobile.composer_input.attach.choose_image": "تصویر منتخب کریں",
+		"mobile.composer_input.attach.files": "فائلیں",
+		"mobile.composer_input.attach.library": "فوٹو لائبریری",
+		"mobile.composer_input.attach.open_settings": "ترتیبات کھولیں",
+		"mobile.composer_input.attach.paste": "تصویر پیسٹ کریں",
+		"mobile.composer_input.attach.title": "تصویر شامل کریں",
 		"mobile.composer_input.clear_draft": "مسودہ صاف کریں",
 		"mobile.composer_input.clear_draft_hint": "صرف مسودے کا متن اور تصاویر مٹاتا ہے؛ قطار میں موجود اور غیر مصدقہ پیغامات برقرار رکھتا ہے",
 		"mobile.composer_input.dismiss_error": "خرابی چھپائیں",
@@ -9717,6 +9827,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "Lưu",
 		"mobile.common.send": "Gửi",
 		"mobile.common.try_again": "Thử lại",
+		"mobile.composer_input.attach.button": "Thêm hình ảnh",
+		"mobile.composer_input.attach.camera": "Chụp ảnh",
+		"mobile.composer_input.attach.camera_denied": "Quyền truy cập máy ảnh đang tắt. Hãy bật trong Cài đặt để chụp ảnh.",
+		"mobile.composer_input.attach.camera_error": "Không mở được máy ảnh. Hãy thử lại.",
+		"mobile.composer_input.attach.camera_unavailable": "Thiết bị này không có máy ảnh khả dụng.",
+		"mobile.composer_input.attach.choose_image": "Chọn hình ảnh",
+		"mobile.composer_input.attach.files": "Tệp",
+		"mobile.composer_input.attach.library": "Thư viện ảnh",
+		"mobile.composer_input.attach.open_settings": "Mở Cài đặt",
+		"mobile.composer_input.attach.paste": "Dán hình ảnh",
+		"mobile.composer_input.attach.title": "Thêm hình ảnh",
 		"mobile.composer_input.clear_draft": "Xóa bản nháp",
 		"mobile.composer_input.clear_draft_hint": "Chỉ xóa văn bản và hình ảnh trong bản nháp; giữ các tin nhắn đang chờ và chưa được xác nhận",
 		"mobile.composer_input.dismiss_error": "Ẩn lỗi",
@@ -10691,6 +10812,17 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.common.save": "保存",
 		"mobile.common.send": "发送",
 		"mobile.common.try_again": "重试",
+		"mobile.composer_input.attach.button": "添加图片",
+		"mobile.composer_input.attach.camera": "拍照",
+		"mobile.composer_input.attach.camera_denied": "相机访问已关闭。请在“设置”中开启，以便拍照。",
+		"mobile.composer_input.attach.camera_error": "无法打开相机。请重试。",
+		"mobile.composer_input.attach.camera_unavailable": "此设备上没有可用的相机。",
+		"mobile.composer_input.attach.choose_image": "选择图片",
+		"mobile.composer_input.attach.files": "文件",
+		"mobile.composer_input.attach.library": "照片图库",
+		"mobile.composer_input.attach.open_settings": "打开设置",
+		"mobile.composer_input.attach.paste": "粘贴图片",
+		"mobile.composer_input.attach.title": "添加图片",
 		"mobile.composer_input.clear_draft": "清空草稿",
 		"mobile.composer_input.clear_draft_hint": "仅清空草稿中的文字和图片；保留排队中和未确认的消息",
 		"mobile.composer_input.dismiss_error": "关闭错误提示",

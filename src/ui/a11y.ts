@@ -452,6 +452,9 @@ export const CONTROL = {
 	 *  for it that stays put while the composer's disc is Steer (a draft typed). */
 	sessionWorkingStop: "session-working-stop",
 	composerAttach: "composer-attach",
+	/** The camera-access notice's Open Settings action, inside the attach sheet:
+	 *  the only way back after a refusal the OS will not re-ask. */
+	attachCameraSettings: "attach-camera-settings",
 	composerMic: "composer-mic",
 	/** The recording bar's own cancel: DISCARDS the take and sends no request,
 	 *  unlike the mic, which stops and transcribes. Two outcomes, two controls. */
@@ -994,6 +997,9 @@ export const SURFACE = {
 	 *  actually has). Its rows are the `attach-option-` family below — the rows
 	 *  differ per build kind, the sheet does not. */
 	attachSheet: "attach-sheet",
+	/** The attach sheet's camera notice: access refused (with Open Settings) or
+	 *  no camera on this device. Present only after a press on Camera. */
+	attachCameraNotice: "attach-camera-notice",
 	sessionColumn: "session-column",
 	sessionContext: "session-context",
 	sessionLoading: "session-loading",

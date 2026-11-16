@@ -225,8 +225,13 @@ and the app requests **no media permission at all**: `READ_MEDIA_IMAGES`,
 `READ_MEDIA_VIDEO` and both storage permissions are blocked in `app.config.ts`
 (`expo-image-picker`'s own library manifest declares some of them) and asserted
 ABSENT from the release merged manifest by `scripts/ci/native-config.ts`, so the
-Play Photo and Video Permissions policy is not engaged. The camera is not a
-feature of this app and its permission is blocked the same way. The composer's
+Play Photo and Video Permissions policy is not engaged. The composer can also
+take one photo with the camera (its add-image sheet's Camera row): the manifest
+declares `CAMERA`, requested at that press and never at launch, and the photo is
+sent to the reader's own computer with the message and not saved to the device's
+library — the same sentence the iOS camera usage string carries
+(`app.config.ts`, `CAMERA_USAGE`). Camera use does not engage the Photo and Video
+Permissions policy, which governs the media-library permissions. The composer's
 voice input (STT) uses the microphone: the manifest declares `RECORD_AUDIO`,
 requested at the mic press and never at launch, and each recording is sent to
 the reader's own computer for one transcription and not kept — the same

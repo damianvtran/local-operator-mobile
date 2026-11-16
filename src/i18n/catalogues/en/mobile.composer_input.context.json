@@ -54,5 +54,49 @@
 	"mobile.composer_input.notice_dismiss": {
 		"role": "button",
 		"note": "Short text action trailing the error line of the composer's failure notice, shown when that error is the only sentence there. Hides the error line only; it does not retry, delete or acknowledge anything. One word where the language allows; no final full stop."
+	},
+	"mobile.composer_input.attach.button": {
+		"role": "button",
+		"note": "Accessible name of the round ＋ button at the leading edge of the composer. It opens a menu of image sources (photo library, camera, files, paste). Screen readers only; no final full stop."
+	},
+	"mobile.composer_input.attach.title": {
+		"role": "heading",
+		"note": "Heading of the bottom sheet the composer's ＋ button opens; it lists where an image can come from. Short; no final full stop."
+	},
+	"mobile.composer_input.attach.library": {
+		"role": "button",
+		"note": "Row in the composer's add-image sheet that opens the system photo picker. Use the name the operating system gives its photo library on the platform (iOS: Photos library). No final full stop."
+	},
+	"mobile.composer_input.attach.camera": {
+		"role": "button",
+		"note": "Row in the composer's add-image sheet that opens the camera to take one photo, which is attached to the message. Imperative verb phrase; no final full stop."
+	},
+	"mobile.composer_input.attach.files": {
+		"role": "button",
+		"note": "Row in the composer's add-image sheet that opens the system document picker (the Files app on iOS), limited to images. Use the platform's own name for it where it has one. No final full stop."
+	},
+	"mobile.composer_input.attach.paste": {
+		"role": "button",
+		"note": "Row in the composer's add-image sheet that attaches the image currently on the clipboard. No final full stop."
+	},
+	"mobile.composer_input.attach.choose_image": {
+		"role": "button",
+		"note": "Row in the add-image sheet on the web build, where the browser's file chooser is the only image source. No final full stop."
+	},
+	"mobile.composer_input.attach.camera_denied": {
+		"role": "status",
+		"note": "Notice inside the add-image sheet when the reader has refused camera access for this app; the only way back is the system Settings app, which the action beside it opens. Must not blame the reader. Two short sentences with final full stops."
+	},
+	"mobile.composer_input.attach.open_settings": {
+		"role": "button",
+		"note": "Text action beside the camera-access notice; opens this app's page in the system Settings app. Use the platform's name for Settings. No final full stop."
+	},
+	"mobile.composer_input.attach.camera_unavailable": {
+		"role": "status",
+		"note": "Notice inside the add-image sheet when the device has no usable camera (for example a simulator). Full sentence with final full stop."
+	},
+	"mobile.composer_input.attach.camera_error": {
+		"role": "status",
+		"note": "Error line under the composer when the camera could not be opened or the photo could not be read after the reader chose to take one. Full sentences with final full stops."
 	}
 }

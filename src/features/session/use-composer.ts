@@ -13,16 +13,12 @@ import {
 } from "@/connection/startup-authorization";
 
 import type { Capabilities, PromptImage, SlashCommand } from "@/contracts";
-import {
-	pasteImage,
-	pickImageFromFiles,
-	pickImageFromLibrary,
-	readWebImageFile,
-} from "@/features/session/attach";
+import { readImageFrom, readWebImageFile } from "@/features/session/attach";
 import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import {
 	acknowledgedCurrentDraft,
 	ambiguousMessage,
+	attachFailureLine,
 	chooseOp,
 	composerControls,
 	composerCopy,
@@ -857,12 +853,7 @@ export const useComposer = (input: {
 				 * R3). */
 				setError(null);
 				try {
-					const image =
-						source === "library"
-							? await pickImageFromLibrary()
-							: source === "paste"
-								? await pasteImage()
-								: await pickImageFromFiles();
+					const image = await readImageFrom(source);
 					if (image !== null) {
 						setImages((current) => [...current, image]);
 					} else if (source === "paste") {
@@ -872,7 +863,7 @@ export const useComposer = (input: {
 						setError(pasteNothingLine(via, Platform.OS));
 					}
 				} catch {
-					setError(composerCopy().attachError);
+					setError(attachFailureLine(source));
 				} finally {
 					setAttaching(false);
 				}

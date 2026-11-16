@@ -7,7 +7,7 @@ import {
 	Keyboard as KeyboardIcon,
 	Mic,
 	MoreHorizontal,
-	Paperclip,
+	Plus,
 	Square,
 	TriangleAlert,
 	X,
@@ -45,13 +45,14 @@ import Animated, {
 } from "react-native-reanimated";
 import type { PromptImage } from "@/contracts";
 import { useClipboardImageOffer } from "@/features/session/attach-clipboard";
+import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";
 import {
 	type AttachSource,
-	attachActions,
 	type PasteVia,
 	pasteOfferComposing,
 } from "@/features/session/attach-rule";
 import type { ComposerChip } from "@/features/session/chip-labels";
+import { AttachSheet } from "@/features/session/components/attach-sheet";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
 	attachmentLabel,
@@ -103,7 +104,6 @@ import { t } from "@/i18n";
 import { formatDuration } from "@/stt/dictation";
 import { MIC_HINT, micLabel } from "@/stt/dictation-machine";
 import {
-	attachOptionId,
 	CONTROL,
 	composerAttachmentId,
 	LIVE_REGION,
@@ -680,51 +680,6 @@ const ContextRow = ({
 /** The More sheet's row for a chip, in whichever of its three states it is. */
 const chipRowValue = (chip: ComposerChip): string | null =>
 	chip.kind === "loading" ? null : chip.text;
-
-/** iOS presents its picker from the current native controller, not the next
- * React state. Wait for the sheet's actual dismissal so it cannot take a newly
- * presented PHPicker down with it. Other platforms keep their immediate path.
- * The bounded fallback avoids a lost native callback hanging Attach forever.
- * Chrome branch (#163): preserved through the composer rewrite — the row still
- * closes the sheet, but the launch is deferred to `onDismiss` on iOS. */
-export function createAttachmentSheetHandoff() {
-	let pending: (() => void) | undefined;
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	let chosen = false;
-	const clearPending = () => {
-		if (timer !== undefined) clearTimeout(timer);
-		timer = undefined;
-		pending = undefined;
-	};
-	const cancel = () => {
-		clearPending();
-		chosen = false;
-	};
-	const dismissed = () => {
-		const launch = pending;
-		// Consuming a selection is NOT reopening the sheet: queued row events
-		// after onDismiss/fallback must not launch a second, different picker.
-		clearPending();
-		launch?.();
-	};
-	return {
-		choose: (launch: () => void, platform: string) => {
-			// First iOS choice wins for this open, including the native dismissal
-			// window. Attach's explicit cancel() is the only re-admission point.
-			if (platform === "ios" && chosen) return;
-			cancel();
-			if (platform !== "ios") {
-				launch();
-				return;
-			}
-			chosen = true;
-			pending = launch;
-			timer = setTimeout(dismissed, 500);
-		},
-		dismissed,
-		cancel,
-	};
-}
 
 export const Composer = ({
 	controls,
@@ -2097,7 +2052,7 @@ export const Composer = ({
 			style={{ minWidth: TOUCH_FLOOR, minHeight: TOUCH_FLOOR }}
 			className="items-center justify-center"
 			accessibilityRole={ROLE.button}
-			accessibilityLabel="Attach an image"
+			accessibilityLabel={t("mobile.composer_input.attach.button")}
 			accessibilityState={state({ busy: attaching, disabled: attaching })}
 			disabled={attaching}
 			/* Explicit reopen is the only re-admission point for a fresh choice;
@@ -2109,10 +2064,13 @@ export const Composer = ({
 			testID={CONTROL.composerAttach}
 		>
 			<View className={COMPOSER_DISC}>
-				{/* A 20 pt paperclip, the relay's glyph (D-H5): the "＋" text glyph it
-				 *  replaces read weak beside a 44 pt send disc. The label a reader hears
-				 *  is the button's own ("Attach an image"). */}
-				<Paperclip size={ATTACH_GLYPH_PT} color={attachInk} aria-hidden />
+				{/* A 20 pt lucide ＋ — a drawn glyph at the paperclip's weight, not the
+				 *  "＋" TEXT glyph D-H5 rejected as weak beside the 44 pt send disc. It
+				 *  replaced the paperclip when the menu grew a camera: this button now
+				 *  ADDS (a photo, a new picture, a file, a paste), and ＋ is the add
+				 *  control readers know from iMessage, WhatsApp and ChatGPT. The label a
+				 *  reader hears is the button's own (`attach.button`). */}
+				<Plus size={ATTACH_GLYPH_PT} color={attachInk} aria-hidden />
 			</View>
 		</Pressable>
 	);
@@ -2258,46 +2216,23 @@ export const Composer = ({
 		) : null;
 
 	/* One attach sheet instance, rendered once by the shell: the dock's two rows
-	 *  are layout, so the sheet must not be mounted twice. */
+	 *  are layout, so the sheet must not be mounted twice. The sheet itself — its
+	 *  icon rows and the camera's permission step — is `AttachSheet`; what stays
+	 *  here is the close-then-launch order. */
 	const attachSheet = (
-		<Sheet
+		<AttachSheet
 			visible={attachSheetOpen}
 			onClose={() => setAttachSheetOpen(false)}
 			onDismiss={attachmentHandoff.dismissed}
-			/* The ratchet's own entry for this file is lower-case "attach": the
-			 * title is pre-existing debt, and capitalising it minted a NEW literal
-			 * that failed `check-strings`. Keying it is the payoff, not this fix. */
-			title="attach"
-			testID={SURFACE.attachSheet}
-		>
-			<View className="py-1">
-				{attachActions(Platform.OS === "web" ? "web" : "native").map(
-					(action) => (
-						<Pressable
-							key={action.source}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={action.label}
-							onPress={() => {
-								/* Closed first: the picker opens over a dismissed sheet, never
-								 *  under one — a system picker presented from behind a modal is
-								 *  how a cancel lands back on a sheet nobody reopened. */
-								setAttachSheetOpen(false);
-								// The handoff waits for native dismissal; state alone is not that acknowledgement.
-								attachmentHandoff.choose(
-									() => onAttach(action.source),
-									Platform.OS,
-								);
-							}}
-							testID={attachOptionId(action.source)}
-						>
-							<View className="min-h-11 flex-row items-center px-3">
-								<Text className="text-body-sm text-ink">{action.label}</Text>
-							</View>
-						</Pressable>
-					),
-				)}
-			</View>
-		</Sheet>
+			onChoose={(source) => {
+				/* Closed first: the picker opens over a dismissed sheet, never
+				 *  under one — a system picker presented from behind a modal is
+				 *  how a cancel lands back on a sheet nobody reopened. */
+				setAttachSheetOpen(false);
+				// The handoff waits for native dismissal; state alone is not that acknowledgement.
+				attachmentHandoff.choose(() => onAttach(source), Platform.OS);
+			}}
+		/>
 	);
 
 	const main = (

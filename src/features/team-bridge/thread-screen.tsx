@@ -20,6 +20,7 @@ import {
 	type ViewToken,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";
 import { Markdown } from "@/features/session/components/markdown";
 import {
 	textSelectionContainerScroll,
@@ -427,6 +428,12 @@ function ThreadContent({
 	const viewerFixture = useMemo(() => teamBridgeViewerFixture(), []);
 	const [, setDraftVersion] = useState(0);
 	const [attachOpen, setAttachOpen] = useState(false);
+	/* The picker launches only after the sheet's native dismissal on iOS — the
+	 *  same rule as the composer's add-image sheet; the why is in
+	 *  `attach-handoff.ts`. This sheet used to close and open PHPicker in the
+	 *  same press, the presentation iOS silently refuses. */
+	const attachHandoff = useRef(createAttachmentSheetHandoff()).current;
+	useEffect(() => () => attachHandoff.cancel(), [attachHandoff]);
 	const [attachNotice, setAttachNotice] = useState<string | null>(null);
 	const draftImages = useRef<HeldDraft | null>(null);
 	draftImages.current = syncDraft(
@@ -1214,7 +1221,13 @@ function ThreadContent({
 												}
 												attachDisabled={!images || images.remaining() === 0}
 												onAttach={
-													images ? () => setAttachOpen(true) : undefined
+													images
+														? () => {
+																// Explicit reopen is the only re-admission point.
+																attachHandoff.cancel();
+																setAttachOpen(true);
+															}
+														: undefined
 												}
 												// "Retry send" only when pressing it can succeed: while
 												// images block the send, the control is plain "Send" (D4).
@@ -1269,6 +1282,7 @@ function ThreadContent({
 			<Sheet
 				visible={attachOpen}
 				onClose={() => setAttachOpen(false)}
+				onDismiss={attachHandoff.dismissed}
 				title={t("mobile.team_bridge.attachment.add")}
 				testID={SURFACE.teamBridgeAttachSheet}
 			>
@@ -1293,7 +1307,10 @@ function ThreadContent({
 							accessibilityLabel={text}
 							testID={teamBridgeAttachSourceId(source)}
 							onPress={() => {
-								void addImages(source);
+								setAttachOpen(false);
+								attachHandoff.choose(() => {
+									void addImages(source);
+								}, Platform.OS);
 							}}
 							style={{ minHeight: TOUCH_FLOOR }}
 						>

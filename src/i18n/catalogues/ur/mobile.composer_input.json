@@ -12,5 +12,16 @@
 	"mobile.composer_input.dismiss_error": "خرابی چھپائیں",
 	"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے",
 	"mobile.composer_input.notice_retry": "دوبارہ کوشش کریں",
-	"mobile.composer_input.notice_dismiss": "چھپائیں"
+	"mobile.composer_input.notice_dismiss": "چھپائیں",
+	"mobile.composer_input.attach.button": "تصویر شامل کریں",
+	"mobile.composer_input.attach.title": "تصویر شامل کریں",
+	"mobile.composer_input.attach.library": "فوٹو لائبریری",
+	"mobile.composer_input.attach.camera": "تصویر کھینچیں",
+	"mobile.composer_input.attach.files": "فائلیں",
+	"mobile.composer_input.attach.paste": "تصویر پیسٹ کریں",
+	"mobile.composer_input.attach.choose_image": "تصویر منتخب کریں",
+	"mobile.composer_input.attach.camera_denied": "کیمرے کی رسائی بند ہے۔ تصویر کھینچنے کے لیے اسے ترتیبات میں آن کریں۔",
+	"mobile.composer_input.attach.open_settings": "ترتیبات کھولیں",
+	"mobile.composer_input.attach.camera_unavailable": "اس ڈیوائس پر کوئی کیمرا دستیاب نہیں ہے۔",
+	"mobile.composer_input.attach.camera_error": "کیمرا نہیں کھل سکا۔ دوبارہ کوشش کریں۔"
 }

@@ -12,5 +12,16 @@
 	"mobile.composer_input.dismiss_error": "Ocultar error",
 	"mobile.composer_input.dismiss_error_hint": "Oculta este error sin cambiar el borrador ni el estado de entrega",
 	"mobile.composer_input.notice_retry": "Reintentar",
-	"mobile.composer_input.notice_dismiss": "Ocultar"
+	"mobile.composer_input.notice_dismiss": "Ocultar",
+	"mobile.composer_input.attach.button": "Añadir una imagen",
+	"mobile.composer_input.attach.title": "Añadir una imagen",
+	"mobile.composer_input.attach.library": "Fototeca",
+	"mobile.composer_input.attach.camera": "Hacer foto",
+	"mobile.composer_input.attach.files": "Archivos",
+	"mobile.composer_input.attach.paste": "Pegar imagen",
+	"mobile.composer_input.attach.choose_image": "Elegir imagen",
+	"mobile.composer_input.attach.camera_denied": "El acceso a la cámara está desactivado. Actívalo en Ajustes para hacer una foto.",
+	"mobile.composer_input.attach.open_settings": "Abrir Ajustes",
+	"mobile.composer_input.attach.camera_unavailable": "No hay ninguna cámara disponible en este dispositivo.",
+	"mobile.composer_input.attach.camera_error": "No se pudo abrir la cámara. Inténtalo de nuevo."
 }

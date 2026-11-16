@@ -12,5 +12,16 @@
 	"mobile.composer_input.dismiss_error": "Dismiss error",
 	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status",
 	"mobile.composer_input.notice_retry": "Retry",
-	"mobile.composer_input.notice_dismiss": "Dismiss"
+	"mobile.composer_input.notice_dismiss": "Dismiss",
+	"mobile.composer_input.attach.button": "Add an image",
+	"mobile.composer_input.attach.title": "Add an image",
+	"mobile.composer_input.attach.library": "Photo Library",
+	"mobile.composer_input.attach.camera": "Take Photo",
+	"mobile.composer_input.attach.files": "Files",
+	"mobile.composer_input.attach.paste": "Paste Image",
+	"mobile.composer_input.attach.choose_image": "Choose Image",
+	"mobile.composer_input.attach.camera_denied": "Camera access is off. Turn it on in Settings to take a photo.",
+	"mobile.composer_input.attach.open_settings": "Open Settings",
+	"mobile.composer_input.attach.camera_unavailable": "No camera is available on this device.",
+	"mobile.composer_input.attach.camera_error": "Couldn’t open the camera. Try again."
 }

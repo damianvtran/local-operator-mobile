@@ -12,5 +12,16 @@
 	"mobile.composer_input.dismiss_error": "Masquer l’erreur",
 	"mobile.composer_input.dismiss_error_hint": "Masque cette erreur sans modifier le brouillon ni l’état de livraison",
 	"mobile.composer_input.notice_retry": "Réessayer",
-	"mobile.composer_input.notice_dismiss": "Masquer"
+	"mobile.composer_input.notice_dismiss": "Masquer",
+	"mobile.composer_input.attach.button": "Ajouter une image",
+	"mobile.composer_input.attach.title": "Ajouter une image",
+	"mobile.composer_input.attach.library": "Photothèque",
+	"mobile.composer_input.attach.camera": "Prendre une photo",
+	"mobile.composer_input.attach.files": "Fichiers",
+	"mobile.composer_input.attach.paste": "Coller l’image",
+	"mobile.composer_input.attach.choose_image": "Choisir une image",
+	"mobile.composer_input.attach.camera_denied": "L’accès à l’appareil photo est désactivé. Activez-le dans Réglages pour prendre une photo.",
+	"mobile.composer_input.attach.open_settings": "Ouvrir Réglages",
+	"mobile.composer_input.attach.camera_unavailable": "Aucun appareil photo n’est disponible sur cet appareil.",
+	"mobile.composer_input.attach.camera_error": "Impossible d’ouvrir l’appareil photo. Réessayez."
 }
