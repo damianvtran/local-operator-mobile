@@ -51,6 +51,7 @@ on:
           - account-routing-android-proof
           - projects-create-ios-proof
           - chrome-ios-proof
+          - attachments-ios-proof
           - theme-ios-proof
       proof_stage:
         description: "Targeted iOS proof only; never a full-E2E verdict"
@@ -60,26 +61,27 @@ on:
           - preflight
           - setup
           - full
-      # Inputs of projects-create-ios-proof ONLY; ignored by every other mode. The
-      # defaults pin the artifact PR #150's native Urdu frame was requested against.
+      # Artifact inputs shared by projects-create, chrome and attachment proofs.
+      # Defaults belong ONLY to PR #150's project-create proof; chrome/attachments
+      # require an explicit source SHA and validate run metadata before macOS.
       native_run_id:
-        description: "projects-create-ios-proof: run that built the iOS simulator artifact"
+        description: "Native proof: run that built the iOS simulator artifact"
         type: string
         default: "41506698136"
       native_artifact_name:
-        description: "projects-create-ios-proof: artifact name in that run"
+        description: "Native proof: artifact name in that run"
         type: string
         default: ios-simulator
       native_artifact_sha256:
-        description: "projects-create-ios-proof: expected sha256 of the artifact zip"
+        description: "Native proof: expected sha256 of the artifact zip"
         type: string
         default: 080c27c8554638317baafbea91a163b049ead1ecdf7c3f78194d31e037c1c1fe
-      # chrome-ios-proof REQUIRES this and refuses to start without it: the
+      # Chrome and attachment proofs REQUIRE this and refuse to start without it: the
       # native_run_id/native_artifact_sha256 defaults above belong to
       # projects-create, and run 42789156345 installed exactly that unrelated
       # build. The full commit the after artifact's iOS run was built for.
       native_source_sha:
-        description: "chrome-ios-proof (required): full commit SHA the native_run_id build was built for"
+        description: "Chrome/attachment proof (required): full source SHA of native_run_id"
         type: string
         default: ""
       # Inputs of chrome-ios-proof ONLY (the optional BEFORE build). Empty run id
@@ -185,6 +187,7 @@ jobs:
             account-routing-android-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             # One fixed walk, no stages: a stage argument is an operator mistake.
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            attachments-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             chrome-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
@@ -1777,7 +1780,7 @@ jobs:
   chrome-ios-provenance:
     name: Chrome proof artifact provenance (before any simulator)
     needs: harness
-    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'chrome-ios-proof'
+    if: github.event_name == 'workflow_dispatch' && (inputs.proof_mode == 'chrome-ios-proof' || inputs.proof_mode == 'attachments-ios-proof')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -1797,6 +1800,8 @@ jobs:
       BEFORE_SOURCE_SHA: ${{ inputs.base_source_sha }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -1808,6 +1813,19 @@ jobs:
             --after-sha256 "$AFTER_SHA256" --after-source-sha "$AFTER_SOURCE_SHA" \
             --before-run-id "$BEFORE_RUN_ID" --before-sha256 "$BEFORE_SHA256" \
             --before-source-sha "$BEFORE_SOURCE_SHA"
+      # Harness paths are not shipped. Compare every other tracked byte with the
+      # named build head BEFORE scheduling macOS; a source change stops setup.
+      - name: Prove attachment artifact product compatibility
+        if: inputs.proof_mode == 'attachments-ios-proof'
+        run: |
+          set -euo pipefail
+          test "$AFTER_NAME" = ios-simulator
+          test -z "$BEFORE_RUN_ID"
+          git diff --exit-code "$AFTER_SOURCE_SHA" HEAD -- . \
+            ':!docs/**' ':!.github/workflows/e2e.yml' ':!tools/visual/matrix.ts' \
+            ':!scripts/ci/chrome-ios-proof*' ':!scripts/ci/account-routing-proof.test.ts' \
+            ':!scripts/ci/native-artifact-provenance.test.ts' \
+            ':!e2e/maestro/chrome-proof/attachments*.yaml'
       - name: Fetch run and artifact metadata (the only step holding the token)
         env:
           GH_TOKEN: ${{ github.token }}
@@ -1850,9 +1868,9 @@ jobs:
   # uploaded even on failure. See scripts/ci/chrome-ios-proof.ts for the lanes.
   # It installs ONLY the artifact ids chrome-ios-provenance validated.
   chrome-ios-proof:
-    name: Targeted native chrome proof (NOT full E2E)
+    name: Targeted native chrome or attachment proof (NOT full E2E)
     needs: [harness, chrome-ios-provenance]
-    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'chrome-ios-proof'
+    if: github.event_name == 'workflow_dispatch' && (inputs.proof_mode == 'chrome-ios-proof' || inputs.proof_mode == 'attachments-ios-proof')
     runs-on: macos-26
     # The script spends at most 90 minutes on proof operations (seven lanes, three
     # with a before build); cleanup and setup fit in the rest.
@@ -1861,7 +1879,7 @@ jobs:
       contents: read
       actions: read
     env:
-      PROOF_MODE: chrome-ios-proof
+      PROOF_MODE: ${{ inputs.proof_mode }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

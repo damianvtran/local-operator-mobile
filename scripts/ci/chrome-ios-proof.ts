@@ -9,6 +9,10 @@
  *
  *     node scripts/ci/chrome-ios-proof.ts   (hosted macOS only; see e2e.yml)
  *
+ * `attachments-ios-proof` reuses this lifecycle with ONE iPhone 17 Pro lane:
+ * first observable sheet opening, settled sheet, genuine simulator no-camera
+ * notice. It never runs the chrome matrix or pretends to exercise camera TCC.
+ *
  * WHY THIS EXISTS. The development host has no simulator (AGENTS.md "Build host
  * assumptions"), and the web export renders `expo-glass-effect`'s plain-View
  * fallback, so neither the glass material nor the real safe-area/corner
@@ -40,8 +44,8 @@ import { join } from "node:path";
 import { createRelay } from "../../tools/mock-relay/relay.ts";
 import {
 	collectChromeFrames,
-	LANES,
 	parseHierarchy,
+	proofPlan,
 	sendAboveKeyboard,
 } from "./chrome-ios-proof-contract.ts";
 import type { Provenance } from "./native-artifact-provenance.ts";
@@ -57,6 +61,8 @@ import {
 } from "./simctl-appearance.ts";
 
 const env = process.env;
+const plan = proofPlan(env.PROOF_MODE ?? "");
+const attachmentsOnly = env.PROOF_MODE === "attachments-ios-proof";
 const need = (name: string): string => {
 	const value = env[name];
 	if (!value) throw new Error(`missing ${name}`);
@@ -69,6 +75,8 @@ const ZIP = need("PROOF_ARTIFACT_ZIP");
  * the lanes marked `before` run the same flows on it first, so each changed
  * screen has a before/after pair from one runner and one simulator image. */
 const BASE_ZIP = env.PROOF_BASE_ARTIFACT_ZIP ?? "";
+if (attachmentsOnly && BASE_ZIP)
+	throw new Error("attachment proof accepts no before build");
 const PASSWORD_FILE = need("PROOF_PASSWORD_FILE");
 const BUDGET_SECONDS = 90 * 60;
 const started = Date.now();
@@ -78,7 +86,7 @@ if (
 	env.RUNNER_OS !== "macOS" ||
 	env.RUNNER_ENVIRONMENT !== "github-hosted" ||
 	env.GITHUB_EVENT_NAME !== "workflow_dispatch" ||
-	env.PROOF_MODE !== "chrome-ios-proof"
+	!["chrome-ios-proof", "attachments-ios-proof"].includes(env.PROOF_MODE ?? "")
 )
 	throw new Error("this proof runs only on a hosted macOS manual dispatch");
 
@@ -138,7 +146,7 @@ function parseProvenance(raw: string): Provenance[] {
 	return parsed;
 }
 const receipt: Record<string, unknown> = {
-	mode: "chrome-ios-proof",
+	mode: env.PROOF_MODE,
 	// The WORKFLOW head this proof ran on — not the build's source; that is
 	// `provenance[].actual.compiled`.
 	sourceSha: env.GITHUB_SHA,
@@ -149,8 +157,16 @@ const receipt: Record<string, unknown> = {
 		name: env.PROOF_NATIVE_ARTIFACT_NAME,
 		expectedSha256: env.PROOF_NATIVE_ARTIFACT_SHA256,
 	},
-	scope:
-		"native iOS SIMULATOR frames for the chrome pass; no physical device, not full E2E",
+	scope: attachmentsOnly
+		? "native iOS SIMULATOR attachment sheet and real no-camera notice; not TCC/physical-device or full E2E proof"
+		: "native iOS SIMULATOR frames for the chrome pass; no physical device, not full E2E",
+	plan,
+	limitations: attachmentsOnly
+		? [
+				"Simulator only: no physical-device, denied/refused/busy or TCC proof",
+				"Opening is the first observable post-tap frame, not animation timing proof",
+			]
+		: [],
 	lanes: [] as unknown[],
 	steps: [] as string[],
 };
@@ -532,11 +548,12 @@ try {
 	// home + sidebar are the empty/populated states.
 	const working = await startRelay("subagent-running");
 	relays.push(working);
-	const idle = await startRelay("idle");
-	relays.push(idle);
+	// The attachment plan needs only the session relay, not chrome's home world.
+	const idle = attachmentsOnly ? working : await startRelay("idle");
+	if (!attachmentsOnly) relays.push(idle);
 	note(`relays: working=${working.origin} idle=${idle.origin}`);
 
-	for (const lane of LANES) {
+	for (const lane of plan.lanes) {
 		const runtime = lane.os === 26 ? ios26 : ios18;
 		const deviceType = listing.devicetypes.find(
 			(d) => d.name === lane.device,
@@ -544,6 +561,8 @@ try {
 		const laneReceipt: Record<string, unknown> = { ...lane, runtime };
 		(receipt.lanes as unknown[]).push(laneReceipt);
 		if (!runtime || !deviceType) {
+			if (attachmentsOnly)
+				throw new Error("attachment device/runtime prerequisite missing");
 			laneReceipt.verdict = `SKIPPED: ${!runtime ? `no iOS ${lane.os} runtime` : `no device type "${lane.device}"`}`;
 			note(`${lane.id}: ${laneReceipt.verdict as string}`);
 			save();
@@ -649,12 +668,30 @@ try {
 				// Session first, then the home and the sidebar on the idle relay. The
 				// frame and the hierarchy are taken here, outside the flow, so a frame
 				// is never Maestro's own screenshot of a transition.
-				for (const [file, relay, frame, cap] of [
-					["session.yaml", working, "session", 900],
-					["session-keyboard.yaml", working, "session-keyboard", 300],
-					["home.yaml", idle, "home", 600],
-					["sidebar.yaml", idle, "sidebar", 300],
-				] as const) {
+				const captures: readonly (readonly [string, Slot, string, number])[] =
+					attachmentsOnly
+						? [
+								["attachments.yaml", working, "attachments-opening", 900],
+								[
+									"attachments-settled.yaml",
+									working,
+									"attachments-settled",
+									300,
+								],
+								[
+									"attachments-no-camera.yaml",
+									working,
+									"attachments-no-camera",
+									300,
+								],
+							]
+						: [
+								["session.yaml", working, "session", 900],
+								["session-keyboard.yaml", working, "session-keyboard", 300],
+								["home.yaml", idle, "home", 600],
+								["sidebar.yaml", idle, "sidebar", 300],
+							];
+				for (const [file, relay, frame, cap] of captures) {
 					await flow(udid, dir, build.bundleId, relay, file, cap);
 					await shot(udid, dir, frame);
 					const tree = await hierarchy(udid, dir, frame);
@@ -676,7 +713,10 @@ try {
 					120,
 				);
 			}
-			laneReceipt.frames = collectChromeFrames(join(ROOT, "frames", lane.id));
+			laneReceipt.frames = collectChromeFrames(
+				join(ROOT, "frames", lane.id),
+				plan.frames,
+			);
 			laneReceipt.verdict = "CAPTURED";
 		} catch (error) {
 			// A failed initial session flow is failed connection/setup, NOT a
@@ -702,8 +742,9 @@ try {
 	}
 	if (laneFailures.length > 0)
 		throw new Error(`lanes failed: ${laneFailures.join(",")}`);
-	receipt.verdict =
-		"CAPTURED (presence assertions only; geometry is measured from the hierarchies and the PNGs)";
+	receipt.verdict = attachmentsOnly
+		? "CAPTURED (native sheet rows and simulator no-camera presence assertions; PNGs/hierarchies still require visual review)"
+		: "CAPTURED (presence assertions only; geometry is measured from the hierarchies and the PNGs)";
 } catch (error) {
 	failure = error instanceof Error ? error.message : String(error);
 	receipt.verdict = `FAIL: ${failure}`;

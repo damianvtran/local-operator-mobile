@@ -1,0 +1,17 @@
+# Reuse the session's own-tunnel connection and mock-world session ID; never
+# source-inject camera states into the release binary under proof.
+appId: ${APP_ID}
+---
+- runFlow: session.yaml
+- tapOn:
+    id: "composer-attach"
+- assertVisible:
+    id: "attach-option-library"
+- assertVisible:
+    id: "attach-option-camera"
+- assertVisible:
+    id: "attach-option-files"
+- assertVisible:
+    id: "attach-option-paste"
+# The driver captures the first observable opening frame and hierarchy here.
+# Maestro assertions may already have outlasted the animation: not timing proof.

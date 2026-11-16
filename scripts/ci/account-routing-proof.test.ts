@@ -385,6 +385,23 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 		);
 		expect(job.body).not.toMatch(/xcodebuild|expo prebuild|pnpm install/);
 	});
+	it("attachment dispatch selects only the existing hosted artifact lifecycle", () => {
+		const selected = Object.entries(jobs(source(".github/workflows/e2e.yml")))
+			.filter(([, job]) =>
+				evaluate(
+					job.condition.replace("always()", "('yes' == 'yes')"),
+					"workflow_dispatch",
+					"attachments-ios-proof",
+				),
+			)
+			.map(([name]) => name)
+			.sort();
+		expect(selected).toEqual([
+			"chrome-ios-proof",
+			"chrome-ios-provenance",
+			"harness",
+		]);
+	});
 	it("every dispatchable proof mode has an arm in the Validate-proof-selection shell", async () => {
 		// WHY THIS EXISTS: the truth table above reads the JOB `if:` conditions, and
 		// the harness job's own `Validate proof selection` step is a SHELL `case` it
@@ -418,6 +435,9 @@ describe("staged proof source contract — mocks only, no mDNS/native/CI executi
 			// The chrome proof is one fixed plan of lanes: no stage argument either.
 			["chrome-ios-proof", "full", true],
 			["chrome-ios-proof", "setup", false],
+			["attachments-ios-proof", "full", true],
+			["attachments-ios-proof", "setup", false],
+			["attachments-ios-proof", "preflight", false],
 			// Stage arguments that must be refused rather than silently accepted.
 			["account-routing-android-proof", "setup", false],
 			["account-routing-android-proof", "preflight", false],

@@ -10,7 +10,13 @@
  * 41506698136's build of feat/i18n-project-create@91a3cbca instead.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -222,5 +228,82 @@ describe("e2e.yml wires the gate before the macOS job", () => {
 		expect(proof).toMatch(PROVENANCE_ENV);
 		// No second, unvalidated artifact lookup by run id on the macOS runner.
 		expect(proof).not.toContain("/actions/runs/");
+	});
+});
+
+describe("attachment compatibility preflight (actual workflow shell)", () => {
+	it("accepts only evidence drift; refuses product, generator and before-build drift", () => {
+		const workflow = readFileSync(
+			new URL("../../.github/workflows/e2e.yml", import.meta.url),
+			"utf8",
+		);
+		const script = workflow
+			.split("- name: Prove attachment artifact product compatibility")[1]
+			?.split("        run: |\n")[1]
+			?.split("      - name:")[0];
+		if (!script) throw new Error("missing compatibility script");
+		const dir = mkdtempSync(join(tmpdir(), "attachment-compatibility-"));
+		const env: NodeJS.ProcessEnv = {
+			NODE_ENV: "test",
+			PATH: process.env.PATH,
+			HOME: dir,
+			GIT_CONFIG_SYSTEM: "/dev/null",
+			GIT_CONFIG_GLOBAL: "/dev/null",
+			GIT_TERMINAL_PROMPT: "0",
+			GIT_ASKPASS: "/usr/bin/false",
+		};
+		const git = (...args: string[]) => {
+			const result = spawnSync(
+				"git",
+				[
+					"-c",
+					"user.name=Evidence test",
+					"-c",
+					"user.email=evidence@example.invalid",
+					...args,
+				],
+				{ cwd: dir, env, encoding: "utf8" },
+			);
+			expect(result.status, result.stderr).toBe(0);
+			return result.stdout.trim();
+		};
+		const commit = () => {
+			git("add", ".");
+			git("commit", "-qm", "test: compatibility control");
+		};
+		try {
+			git("init", "-q");
+			mkdirSync(join(dir, "src"));
+			mkdirSync(join(dir, "scripts"));
+			mkdirSync(join(dir, "docs"));
+			writeFileSync(join(dir, "src", "product.ts"), "export const value = 1;");
+			writeFileSync(join(dir, "scripts", "build-theme.ts"), "// generator v1");
+			commit();
+			const source = git("rev-parse", "HEAD");
+			const run = (before = "") =>
+				spawnSync("bash", ["-c", script], {
+					cwd: dir,
+					env: {
+						...env,
+						AFTER_NAME: "ios-simulator",
+						BEFORE_RUN_ID: before,
+						AFTER_SOURCE_SHA: source,
+					},
+					encoding: "utf8",
+				});
+			writeFileSync(join(dir, "docs", "proof.md"), "Evidence instructions");
+			commit();
+			expect(run().status).toBe(0);
+			expect(run("123").status).not.toBe(0);
+			writeFileSync(join(dir, "src", "product.ts"), "export const value = 2;");
+			commit();
+			expect(run().status).not.toBe(0);
+			writeFileSync(join(dir, "src", "product.ts"), "export const value = 1;");
+			writeFileSync(join(dir, "scripts", "build-theme.ts"), "// generator v2");
+			commit();
+			expect(run().status).not.toBe(0);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });

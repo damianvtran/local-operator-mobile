@@ -1,0 +1,15 @@
+# Continue the same app/sheet; no relaunch, reset, or mock camera injection.
+appId: ${APP_ID}
+---
+- waitForAnimationToEnd:
+    timeout: 3000
+- assertVisible:
+    id: "attach-sheet"
+- assertVisible:
+    id: "attach-option-library"
+- assertVisible:
+    id: "attach-option-camera"
+- assertVisible:
+    id: "attach-option-files"
+- assertVisible:
+    id: "attach-option-paste"

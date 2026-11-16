@@ -1,0 +1,15 @@
+# Real simulator behavior: prepareCamera detects its sandbox before TCC.
+# This is NOT denied/refused/busy, permission-prompt or physical-camera proof.
+appId: ${APP_ID}
+---
+- tapOn:
+    id: "attach-option-camera"
+- assertVisible:
+    id: "attach-camera-notice"
+- assertVisible: "No camera is available on this device."
+- assertVisible:
+    id: "attach-sheet"
+- assertNotVisible:
+    id: "attach-camera-settings"
+- waitForAnimationToEnd:
+    timeout: 3000

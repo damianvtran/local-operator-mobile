@@ -1,13 +1,21 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { HierarchyNode } from "./chrome-ios-proof-contract.ts";
 import {
+	ATTACHMENT_FRAMES,
 	collectChromeFrames,
 	LANE_FRAMES,
 	LANES,
 	parseHierarchy,
+	proofPlan,
 	sendAboveKeyboard,
 } from "./chrome-ios-proof-contract.ts";
 
@@ -193,5 +201,80 @@ describe("chrome proof plan (record §7)", () => {
 		} finally {
 			rmSync(root, { recursive: true, force: true });
 		}
+	});
+});
+
+describe("attachment-only artifact plan", () => {
+	it("selects exactly one simulator and no before build, not the chrome matrix", () => {
+		const plan = proofPlan("attachments-ios-proof");
+		expect(plan.lanes).toEqual([
+			{
+				id: "attachments-17pro-dark",
+				device: "iPhone 17 Pro",
+				os: 26,
+				theme: "dark",
+			},
+		]);
+		expect(plan.frames).toEqual([
+			"attachments-opening",
+			"attachments-settled",
+			"attachments-no-camera",
+		]);
+		expect(proofPlan("chrome-ios-proof").lanes).toBe(LANES);
+		expect(() => proofPlan("typo")).toThrow("unknown proof mode");
+	});
+	it("rejects missing native frames instead of accepting an incomplete capture", () => {
+		const dir = mkdtempSync(join(tmpdir(), "attachment-plan-"));
+		try {
+			mkdirSync(join(dir, "after"));
+			for (const frame of ATTACHMENT_FRAMES.slice(0, 2))
+				writeFileSync(join(dir, "after", `${frame}.png`), "test");
+			expect(() => collectChromeFrames(dir, ATTACHMENT_FRAMES)).toThrow(
+				"missing after/attachments-no-camera.png",
+			);
+			writeFileSync(join(dir, "after", "attachments-no-camera.png"), "test");
+			expect(collectChromeFrames(dir, ATTACHMENT_FRAMES)).toHaveLength(3);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("attachment flow contract (native execution still required)", () => {
+	const read = (name: string) =>
+		readFileSync(
+			new URL(`../../e2e/maestro/chrome-proof/${name}.yaml`, import.meta.url),
+			"utf8",
+		);
+	it("reuses the own-tunnel session route and asserts all four actual product row IDs", () => {
+		const opening = read("attachments");
+		expect(opening).toContain("- runFlow: session.yaml");
+		expect(opening).toContain('id: "composer-attach"');
+		for (const source of ["library", "camera", "files", "paste"]) {
+			expect(opening).toContain(`id: "attach-option-${source}"`);
+			expect(read("attachments-settled")).toContain(
+				`id: "attach-option-${source}"`,
+			);
+		}
+		expect(opening).not.toContain("waitForAnimationToEnd:");
+		expect(read("attachments-settled")).toContain("waitForAnimationToEnd:");
+	});
+	it("requests the real simulator camera notice, not injected TCC or picker success", () => {
+		const camera = read("attachments-no-camera");
+		expect(camera).toContain('id: "attach-option-camera"');
+		expect(camera).toContain('id: "attach-camera-notice"');
+		expect(camera).toContain(
+			'assertVisible: "No camera is available on this device."',
+		);
+		expect(camera).toContain(
+			'assertNotVisible:\n    id: "attach-camera-settings"',
+		);
+		for (const text of [
+			"launchApp:",
+			"clearState:",
+			"openLink:",
+			"setPermissions:",
+		])
+			expect(camera).not.toContain(text);
 	});
 });

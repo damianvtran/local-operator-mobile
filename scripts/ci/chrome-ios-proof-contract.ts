@@ -76,6 +76,31 @@ export const LANES: readonly Lane[] = [
 	{ id: "d7-16-ios18-dark", device: "iPhone 16", os: 18, theme: "dark" },
 ];
 
+/** A separate single-device plan: attachment evidence must never fan out into
+ * the chrome matrix or imply physical-camera/TCC coverage from a simulator. */
+export const ATTACHMENT_LANES: readonly Lane[] = [
+	{
+		id: "attachments-17pro-dark",
+		device: "iPhone 17 Pro",
+		os: 26,
+		theme: "dark",
+	},
+];
+export const ATTACHMENT_FRAMES = [
+	"attachments-opening",
+	"attachments-settled",
+	"attachments-no-camera",
+] as const;
+export function proofPlan(mode: string) {
+	assert(
+		mode === "chrome-ios-proof" || mode === "attachments-ios-proof",
+		"unknown proof mode",
+	);
+	return mode === "attachments-ios-proof"
+		? { lanes: ATTACHMENT_LANES, frames: ATTACHMENT_FRAMES }
+		: { lanes: LANES, frames: LANE_FRAMES };
+}
+
 /** The frames each build in a lane must produce, in the order taken. */
 export const LANE_FRAMES = [
 	"session",
@@ -85,12 +110,15 @@ export const LANE_FRAMES = [
 ] as const;
 
 /** Assert a lane's frame set is complete for every build it ran, and list it. */
-export function collectChromeFrames(laneDir: string): string[] {
+export function collectChromeFrames(
+	laneDir: string,
+	frames: readonly string[] = LANE_FRAMES,
+): string[] {
 	const found: string[] = [];
 	for (const build of readdirSync(laneDir, { withFileTypes: true })) {
 		if (!build.isDirectory()) continue;
 		const names = readdirSync(join(laneDir, build.name));
-		for (const frame of LANE_FRAMES)
+		for (const frame of frames)
 			assert(
 				names.includes(`${frame}.png`),
 				`missing ${build.name}/${frame}.png`,
