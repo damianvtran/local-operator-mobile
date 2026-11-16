@@ -17,6 +17,7 @@ import {
 	parseHierarchy,
 	proofPlan,
 	sendAboveKeyboard,
+	warmAttachmentDriver,
 } from "./chrome-ios-proof-contract.ts";
 
 /* A Maestro iOS hierarchy at 390x844: the composer's Send, plus (optionally)
@@ -276,5 +277,85 @@ describe("attachment flow contract (native execution still required)", () => {
 			"setPermissions:",
 		])
 			expect(camera).not.toContain(text);
+	});
+});
+
+describe("attachment cold-bootstrap regression (run 43830846017)", () => {
+	it("launches, checks drawn app hierarchy, then permits the evidence flow", async () => {
+		const calls: string[] = [];
+		await warmAttachmentDriver(
+			async () => {
+				calls.push("launch");
+			},
+			async () => {
+				calls.push("hierarchy");
+				return JSON.stringify({
+					children: [{ attributes: { "resource-id": "welcome-screen" } }],
+				});
+			},
+		);
+		calls.push("flow");
+		expect(calls).toEqual(["launch", "hierarchy", "flow"]);
+	});
+	it("rejects a successful SpringBoard hierarchy before any flow (negative control)", async () => {
+		const calls: string[] = [];
+		const sequence = async () => {
+			await warmAttachmentDriver(
+				async () => {
+					calls.push("launch");
+				},
+				async () => {
+					calls.push("hierarchy");
+					return JSON.stringify({
+						children: [
+							{
+								attributes: {
+									accessibilityText: "Operator",
+									"resource-id": "",
+								},
+							},
+							{
+								attributes: {
+									accessibilityText: "welcome-screen",
+									"resource-id": "",
+								},
+							},
+						],
+					});
+				},
+			);
+			calls.push("flow");
+		};
+		await expect(sequence()).rejects.toThrow(
+			"attachment bootstrap prerequisite failed",
+		);
+		expect(calls).toEqual(["launch", "hierarchy"]);
+	});
+	it("propagates driver startup failure without retrying or entering a flow", async () => {
+		const calls: string[] = [];
+		await expect(
+			warmAttachmentDriver(
+				async () => {
+					calls.push("launch");
+				},
+				async () => {
+					calls.push("hierarchy");
+					throw new Error("iOS driver not ready in time");
+				},
+			),
+		).rejects.toThrow("iOS driver not ready in time");
+		expect(calls).toEqual(["launch", "hierarchy"]);
+	});
+	it("wires the bootstrap after install and before the attachment capture walk", () => {
+		const driver = readFileSync(
+			new URL("./chrome-ios-proof.ts", import.meta.url),
+			"utf8",
+		);
+		const install = driver.indexOf("`install-${lane.id}-${build.tag}`");
+		const bootstrap = driver.indexOf("await warmAttachmentDriver(", install);
+		const captures = driver.indexOf("const captures:", install);
+		expect(install).toBeGreaterThan(0);
+		expect(bootstrap).toBeGreaterThan(install);
+		expect(captures).toBeGreaterThan(bootstrap);
 	});
 });

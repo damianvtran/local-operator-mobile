@@ -101,6 +101,27 @@ export function proofPlan(mode: string) {
 		: { lanes: LANES, frames: LANE_FRAMES };
 }
 
+/** Separate cold app/driver bootstrap from the attachment evidence flow. A
+ * successful hierarchy of SpringBoard is NOT readiness: attempt 43830846017's
+ * recovery hierarchy succeeded there after XCTest startup had already failed.
+ * Like account-routing-ios-proof's warmDriver, require a drawn product screen;
+ * do not retry, extend driver deadlines, or weaken the flow's clearState launch. */
+export async function warmAttachmentDriver(
+	launch: () => Promise<unknown>,
+	hierarchy: () => Promise<string>,
+): Promise<void> {
+	await launch();
+	const tree = parseHierarchy(await hierarchy());
+	const drawn = (node: HierarchyNode): boolean =>
+		["welcome-screen", "home-screen"].includes(
+			node.attributes?.["resource-id"] ?? "",
+		) || (node.children ?? []).some(drawn);
+	assert(
+		drawn(tree),
+		"attachment bootstrap prerequisite failed: no drawn welcome/home screen",
+	);
+}
+
 /** The frames each build in a lane must produce, in the order taken. */
 export const LANE_FRAMES = [
 	"session",

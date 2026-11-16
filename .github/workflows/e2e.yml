@@ -1823,6 +1823,7 @@ jobs:
           test -z "$BEFORE_RUN_ID"
           git diff --exit-code "$AFTER_SOURCE_SHA" HEAD -- . \
             ':!docs/**' ':!.github/workflows/e2e.yml' ':!tools/visual/matrix.ts' \
+            ':!tools/audit/u08-content-pins.ts' \
             ':!scripts/ci/chrome-ios-proof*' ':!scripts/ci/account-routing-proof.test.ts' \
             ':!scripts/ci/native-artifact-provenance.test.ts' \
             ':!e2e/maestro/chrome-proof/attachments*.yaml'

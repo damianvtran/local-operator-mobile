@@ -47,6 +47,7 @@ import {
 	parseHierarchy,
 	proofPlan,
 	sendAboveKeyboard,
+	warmAttachmentDriver,
 } from "./chrome-ios-proof-contract.ts";
 import type { Provenance } from "./native-artifact-provenance.ts";
 import {
@@ -665,6 +666,24 @@ try {
 					["simctl", "install", udid, build.app],
 					180,
 				);
+				if (attachmentsOnly) {
+					// Attempt 43830846017 never entered its flow: cold XCTest startup
+					// failed, then recovery saw SpringBoard. Pay app/driver bootstrap
+					// explicitly as account-routing does; retain existing operation caps
+					// and the evidence flow's independent clearState launch/assertions.
+					await warmAttachmentDriver(
+						() =>
+							run(
+								`warm-launch-${lane.id}`,
+								"xcrun",
+								["simctl", "launch", udid, build.bundleId],
+								120,
+							),
+						() => hierarchy(udid, dir, "attachment-bootstrap"),
+					);
+					laneReceipt.driverWarmUp =
+						"PASS actual launch and hierarchy showing a drawn welcome/home screen";
+				}
 				// Session first, then the home and the sidebar on the idle relay. The
 				// frame and the hierarchy are taken here, outside the flow, so a frame
 				// is never Maestro's own screenshot of a transition.

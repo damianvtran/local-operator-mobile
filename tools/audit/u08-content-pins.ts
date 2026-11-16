@@ -244,9 +244,13 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * probe, so no cell and no planned frame changes. */
 	// PR #207 CI remediation: the `m-conv-…` fixture-id rename, nothing else.
 	/* PR #278 round 1: the S9/attach-sheet cell opener and re-derived plan figures.
-	 * Re-derived with --print. */
+	 * Re-derived with --print. Follow-on 0bff4b9a corrected this module's plan-count
+	 * comments only; CI 43836962515 exposed the stale byte pin. Re-derived with
+	 * `node tools/audit/u08-content-pins.ts --print`, not a new measurement:
+	 * executable matrix bytes, other instrument/input/render and ORIGINAL_* pins
+	 * are unchanged by that comment correction. */
 	"tools/visual/matrix.ts":
-		"e24ae8d4c246288b1ff71a39a2f741888a75d51c1d60aa0cfa8845b60e8f2780",
+		"5f85ce7facf8af094e351f0b60a499dab30fac3737fbf8c6bdef84943e7bb498",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
