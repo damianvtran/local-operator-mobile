@@ -81,9 +81,11 @@ export {
 
 /** The one endpoint this module needs; a narrow seam so tests can supply it. */
 export type RegisterClient = {
-	registerDevice: (
-		request: RegisterDeviceRequest,
-	) => Promise<{ device_id: string; device_key: string }>;
+	registerDevice: (request: RegisterDeviceRequest) => Promise<{
+		device_id: string;
+		device_key: string;
+		computer_handle?: string;
+	}>;
 };
 
 /**
@@ -218,6 +220,9 @@ export type SessionPushAttempt = {
 	/** Called just before the POST goes out, so a UI can say "registering"
 	 *  only when something is actually being sent. */
 	onPosting?: () => void;
+	/** The authenticated registration is the only source of this mapping. Called
+	 * even when the optional handle is absent, which revokes an older mapping. */
+	recordComputerHandle?: (handle: string | undefined) => Promise<void>;
 	now?: () => number;
 	/** The `preferences` to send, or `undefined` to omit the field. The caller
 	 *  owns the capability gate (`notification-preferences.ts`): only a daemon
@@ -337,6 +342,8 @@ async function attemptRegistration(
 			accepted.delete(attempt.routeKey);
 			return result("stale");
 		}
+		await attempt.recordComputerHandle?.(response.computer_handle);
+		if (!isCurrent()) return result("stale");
 		await recordRegistration(response.device_id, response.device_key);
 		const at = now();
 		accepted.set(attempt.routeKey, { fingerprint, at });

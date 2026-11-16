@@ -593,8 +593,10 @@ and why §3.4's content-derived key has something to mint it.
   presence gate deferred (§2.3) is still ahead of its cursor when the daemon comes back and is
   re-considered rather than lost (round 2 M2).
 - **A cursor never advances past an unemitted item.** The pending backlog *is* the region behind the
-  cursor. It is bounded on both sides: presence-deferred items by the deferral window (5 minutes,
-  §2.3), cloud-refused items by three attempts over ~2 minutes (below); an item that exhausts either
+  cursor. It is bounded on both sides: presence-deferred items by one pending item per conversation
+  and by the deferral's three exits — a read, a local claim (any surface on this Mac) or the session on screen drops it,
+  a presence lapse releases it (§2.3, amended 2026-11-15; before that amendment, a 5-minute
+  window), cloud-refused items by three attempts over ~2 minutes (below); an item that exhausts either
   bound is dropped with one log line, so the cursor can never be blocked forever by one
   undeliverable item.
 - **Restart** is therefore a bounded catch-up: everything emitted-but-unaccepted, and everything
@@ -637,8 +639,9 @@ and why §3.4's content-derived key has something to mint it.
   exist (the machine's `BURST_LIMIT` catch-up and the cloud's hourly ceiling) and a reader must not
   have to guess which of them mints a payload: **exactly one composer, the machine**.
 - **Two retry policies, deliberately not folded into one (round 2 m1).** *(a) The presence deferral*
-  is machine-local: a timer bounded at 5 minutes and terminated early by a real read, so it never
-  leaves the machine at all. *(b) A cloud refusal or timeout* is a wire retry of the **same**
+  is machine-local: held until presence lapses and terminated early by a real read, a claim by
+  any surface on this Mac or the session being on screen (§2.3 as amended 2026-11-15; originally a
+  timer bounded at 5 minutes), so it never leaves the machine at all. *(b) A cloud refusal or timeout* is a wire retry of the **same**
   idempotency key: three attempts over ~2 minutes, then a drop with one log line
   (`docs/push-cloud-ops.md` §6). **A daemon restart interrupts (a) and abandons (b)**: (a) is
   re-considered from the cursor; (b) is given up because the accept-or-not state lives in the cloud,
@@ -745,7 +748,10 @@ banner").
   (`docs/ATTENTION.md`:148-156).
 
 **Decision 2: the presence gate is a DEFERRAL, not a suppression — and the TUI viewer record is not
-consulted (review M3).**
+consulted (review M3).** *(Amended 2026-11-15: the deferral no longer expires on a timer while the
+desktop is attended, and a deferred completion the desktop already showed or announced is dropped —
+see "Amendment (2026-11-15)" at the end of this decision. The two superseded bullets and the original
+consequence paragraph are kept below, marked, so the reasoning that produced them stays readable.)*
 
 The gate is the user's own promise in Settings ("don't notify while I'm at the computer",
 `docs/ux/flows.md`:570, and principle **P-8**, `docs/ux/principles.md:135`) — implemented from the
@@ -758,22 +764,106 @@ presences that already exist, not from a new clock:
   should be told, and consulting it is what made this ADR's own "a TUI at the terminal and a phone
   in a pocket both get told" impossible to hold. The TUI viewer record keeps its existing job — rung
   3 of the local banner ladder.
-- **A suppressed push is deferred, not dropped**: the worker re-checks after `PRESENCE_TTL_S` (45 s)
+- ***Superseded 2026-11-15 (see the amendment below).*** **A suppressed push is deferred, not
+  dropped**: the worker re-checks after `PRESENCE_TTL_S` (45 s)
   while the completion is still `unseen` and still within a bounded window (5 minutes), then emits.
   The deferral terminates early on an ack, because reading the conversation in the app is exactly
   what makes `unseen` false. There is no idle or lock signal anywhere in these modules, which is
   precisely why the gate cannot be a hard suppression: a window left focused would otherwise silence
   the phone for good — the same failure this ADR uses to reject the claim rung.
-- **The Settings toggle upgrades the deferral to a suppression.** With "don't notify while I'm at
+- ***Superseded 2026-11-15 (see the amendment below).*** **The Settings toggle upgrades the
+  deferral to a suppression.** With "don't notify while I'm at
   the computer" ON, a fresh presence suppresses **outright** (bounded by the window, then dropped).
   That is the user's own instruction, stated in their own words, and it is the only form in which
   this design silences a phone.
 
-**The user-visible consequence, stated plainly:** by default, if you are looking at the desktop app
+***Superseded 2026-11-15 (see the amendment below).*** **The user-visible consequence, stated
+plainly:** by default, if you are looking at the desktop app
 when a turn finishes, your phone buzzes **45 seconds later** unless you read the completion in the
 app first. With the toggle on, it does not buzz at all while you are there. That is the tradeoff
 between P-8 ("do not interrupt a user who is already looking at the work") and never missing a
 completion, and it is the user's switch to move.
+
+##### Amendment (2026-11-15): the phone yields to an attended desktop
+
+**The operator's decision**, 2026-11-15 17:10 EST, verbatim: *"It still seems like a lot of routine
+wakes and task completions are notifying ... I feel like I'm still seeing more notifications on
+mobile than I see pop up on desktop indicating it's flagging in more cases"*.
+
+**The evidence behind it** (audit of 2026-11-15, 16:00–17:15 EST: 196 completions, 17 pushed). Three
+defects in the rule as first written, each a way the phone said more than the desktop:
+
+1. **No "the desktop is showing this session" exclusion.** A completion in the very session on screen
+   was deferred like any other, then pushed.
+2. **The deferral expired while the desktop was still attended.** Presence only deferred for the
+   5-minute window; after it, the worker emitted even items the desktop had *deliberately* not
+   bannered — so the phone pushed exactly what the desktop had decided not to announce.
+3. **Deferred releases escaped burst folding.** N deferred completions released as N banners instead
+   of folding through the digest path.
+
+**The rule, replacing the deferral-with-expiry above.** It is implemented in local-operator PR
+[#4101](https://github.com/damianvtran/local-operator/pull/4101) (head `3f2b2c56`, *not merged when
+this amendment was written*; the two land together) — cited by PR and symbol name rather than by
+line, because this ADR's citations resolve against fixed refs and #4101 is not one of them yet:
+
+- **While the desktop is attended there is no timer release.** The 5-minute window is gone (push_worker's
+  `DEFERRAL_WINDOW_S` expiry is retired in #4101). A deferred completion leaves the deferred state
+  in exactly one of three ways:
+  - **dropped** if the attended window is showing its session — the same predicate the desktop's own
+    feed uses to skip a banner for the session on screen (`DesktopPresence.attending()`, shared by
+    push_worker's deferral and desktop_feed's focus policy in #4101);
+  - **dropped** if **any surface on this Mac has claimed** the notification — the `deliveries`
+    delivered watermark has reached its sequence, whichever rung claimed it (desktop app, TUI or
+    runtime), not only the desktop app; the read is backend-agnostic because the claim's `backend`
+    column is diagnostics only (a new read-only `AttentionStore.delivered()` in #4101). A read drops
+    it too, as before;
+  - otherwise **emitted only when presence lapses** while it is still `unseen`.
+- **Deferred releases obey the desktop's per-window cap**: at most 3 single banners plus 1 digest per
+  10 s (`BURST_LIMIT` singles per `BURST_WINDOW_S`, asserted equal to the desktop feed's item burst
+  window in #4101); the rest fold into the digest or wait for the next window.
+- **One pending item per conversation.** An older never-attempted completion in the same conversation
+  is absorbed by the newer one, so the deferred set is bounded by the number of conversations, and the
+  cursor still never advances past an unemitted item (§2.2).
+- **A content-free emit line.** Every wire attempt writes one INFO line to `mobile.log` — kind,
+  conversation, a short emit id, count, attempt, outcome, latency — and no title, body, preview,
+  idempotency key, handle, device id or token.
+
+**The invariant this states:** *while the desktop is attended, the phone never notifies more than the
+desktop for the same completion.* If the desktop showed it, or any surface on this Mac announced it, the phone stays quiet; if
+the desktop let it pass silently, the phone waits until you leave the desk.
+
+**Decision 1 still holds unchanged.** The phone is not a rung and `claim_delivery` is untouched: the
+phone **reads** the local claim (whichever surface on this Mac made it) through the `deliveries`
+watermark, it never claims. The
+seen-vs-claimed separation of §9's first risk row is preserved — the push path still writes neither
+`claim_delivery` nor `deliveries`.
+
+**Eligibility is explicitly unchanged.** Which completions are loud enough to notify at all — the
+ask-answer and job-result loudness rule in session.py — is untouched by this amendment and pending a
+separate operator decision.
+
+**The user-visible consequence, rewritten for the new rule:** if you are at the desktop when a turn
+finishes, your phone does **not** buzz while you stay there. If this Mac announces it (any surface) or you are
+looking at that session, the phone never buzzes for it. If the desktop let it pass silently, the phone
+buzzes once you step away (presence lapses) and only if you still have not read it — several such
+completions arrive as at most three banners and a digest, not one banner each. Away from the desktop,
+nothing changes.
+
+**The Settings toggle, re-examined honestly.** "Don't notify while I'm at the computer" is now
+**largely redundant while the desktop is attended**: the default already holds every push until
+presence lapses, which is what the toggle was written to promise. The only behaviour left for it to
+add is the lapse itself — dropping a deferred item rather than releasing it when you leave (its
+original "bounded by the window, then dropped" reading, without the window). That is a design
+statement, not shipped code: push_worker at #4101's head carries no toggle branch, so today the
+default rule is the whole behaviour. The bullet above stays as history rather than being deleted;
+whether the toggle survives as a separate control is a copy/UX question this amendment does not
+settle.
+
+**The risk this accepts, stated rather than hidden.** The original bullet's reason for a bound — there
+is no idle or lock signal, so a window left focused could silence the phone for good — still describes
+a real case: a desktop window left focused, visible and fresh holds its deferred items until presence
+lapses. The operator's decision accepts that in exchange for phone ≤ desktop; it is bounded by the
+one-per-conversation rule and ended by a read, a claim or a lapse. §9 lists it as the signal to watch.
 
 **Decision 3: the remaining gates**, in order, all machine-local reads:
 
@@ -2032,7 +2122,7 @@ this ADR *decides*, and the reason:
 | Risk | Why it is real | The signal to watch |
 |---|---|---|
 | **The seen-vs-claimed confusion** (the single most likely regression) | this ADR adds a second, independent notification channel next to the claim ladder; a future change that reads `deliveries` as "the phone was told" would silently break the banner arbitration | `claim_delivery` and `deliveries` are untouched by every slice; a test that the push path never writes them |
-| **The presence gate silencing a phone for good** | a focused window left behind is the failure mode that killed the claim rung (M3) | the deferral window is bounded and asserted; a test that a suppressed push is emitted after the TTL while `unseen` holds |
+| **The presence gate silencing a phone for good** | a focused window left behind is the failure mode that killed the claim rung (M3) | *(amended 2026-11-15: the timer bound is retired by operator decision — §2.3's amendment accepts this risk for phone ≤ desktop)* the deferred set is bounded at one item per conversation and asserted; a test that a deferred push is emitted on presence lapse while `unseen` holds and dropped when the attended desktop showed its session or any surface on this Mac claimed it; watch for reports of a phone that stayed silent after the user left the desk |
 | **Badge drift from the in-app count** | two implementation sites are the classic way this happens | the §1.2 equality test, on the same snapshot, is a gate not a nicety |
 | **A store-wide population creeping back in** | it is the natural way to write the read, and it is wrong by a factor of ~35 on the operator's own machine (6,392 vs the listing) | the population is one function with the listing's identity set as its input; a test with `agent/` identities and no directories present |
 | **Reordered/duplicated pushes** | APNs may reorder and coalesce; Android may drop in Doze | the badge is never carried (§1.5) — the class is removed, not defended |

@@ -135,7 +135,15 @@ vi.mock("expo-constants", () => ({
 		},
 	},
 }));
+const handleOwner = {
+	accountId: "synthetic-account",
+	routeKey: "synthetic-route",
+};
+vi.mock("@/features/session/warm-store", () => ({
+	pushComputerHandles: { record: vi.fn(async () => undefined) },
+}));
 vi.mock("@/features/auth/connection-provider", () => ({
+	currentWarmScope: () => handleOwner,
 	// A NEW accessor on every render, as the provider's `useMemo` produces on
 	// every recompute (streamHealth, busy, computers, …).
 	useConnection: () => {
@@ -188,6 +196,7 @@ vi.mock("@/notifications/install-id", () => ({
 	recordRegistration: seam.recorded,
 }));
 
+import { pushComputerHandles } from "@/features/session/warm-store";
 import {
 	DEFAULT_NOTIFICATION_PREFERENCES,
 	notificationPreferencesStore,
@@ -250,6 +259,26 @@ afterEach(async () => {
 });
 
 describe("session push registration lifecycle", () => {
+	it.each(["first-handle", "replacement-handle", undefined])(
+		"records the authenticated optional computer handle (%s), including omission",
+		async (handle) => {
+			seam.register.mockImplementation(async () => ({
+				...(await accept({})),
+				computer_handle: handle,
+			}));
+			render();
+			await vi.waitFor(() => expect(seam.recorded).toHaveBeenCalledTimes(1));
+			expect(pushComputerHandles.record).toHaveBeenCalledWith(
+				{
+					accountId: "synthetic-account",
+					routeKey: "radient:synthetic-tunnel",
+				},
+				handle,
+				expect.any(Function),
+			);
+		},
+	);
+
 	it("granted + live route: exactly one POST, with the daemon's fields only", async () => {
 		render();
 		await vi.waitFor(() => expect(seam.recorded).toHaveBeenCalledTimes(1));

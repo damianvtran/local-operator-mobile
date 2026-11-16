@@ -337,9 +337,14 @@ export function createWarmCache(
 		async saveList(
 			scope: WarmScope,
 			frame: SessionListFrame,
+			isCurrent?: () => boolean,
 		): Promise<boolean> {
-			return put(listKey(scope), "list", frame, () =>
-				JSON.stringify({ schema: SCHEMA, savedAt: now(), frame }),
+			return put(
+				listKey(scope),
+				"list",
+				frame,
+				() => JSON.stringify({ schema: SCHEMA, savedAt: now(), frame }),
+				isCurrent,
 			).catch((cause) => {
 				warn("[warm-cache] the session list could not be saved", cause);
 				return false;

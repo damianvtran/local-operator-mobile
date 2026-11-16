@@ -182,3 +182,72 @@ describe("completion prefetch", () => {
 		expect(signal?.aborted).toBe(true);
 	});
 });
+
+describe("attention warming on an admitted background route", () => {
+	it("an onscreen skip can seed after backgrounding within the list's 60 s limit", async () => {
+		const sync = createWarmSync();
+		const refreshList = vi.fn(async () => true);
+		const live = scope({
+			background: {
+				key: "account-a/route-a",
+				matches: async () => true,
+				refreshList,
+			},
+		});
+		sync.register(live);
+		const release = sync.view("last-viewed");
+		const push = { reason: "attention" as const, computer: "opaque-computer" };
+		expect(await sync.pushed(push)).toBe(true);
+		expect(live.seed).not.toHaveBeenCalled();
+		release();
+		expect(await sync.pushed(push)).toBe(true);
+		expect(refreshList).toHaveBeenCalledTimes(1);
+		expect(live.seed).toHaveBeenCalledWith(
+			"last-viewed",
+			expect.any(AbortSignal),
+		);
+		expect(await sync.pushed(push)).toBe(false);
+		expect(live.seed).toHaveBeenCalledTimes(1);
+	});
+
+	it("concurrent copies share the list/seed; a mismatched copy still fails the gate", async () => {
+		const sync = createWarmSync();
+		const held = deferred<boolean>();
+		const refreshList = vi.fn(() => held.promise);
+		const matches = vi.fn(async (computer: string) => computer === "correct");
+		const live = scope({
+			background: { key: "a/route", matches, refreshList },
+		});
+		sync.register(live);
+		sync.view("last-viewed")();
+		const first = sync.pushed({ reason: "attention", computer: "correct" });
+		await vi.waitFor(() => expect(refreshList).toHaveBeenCalledTimes(1));
+		const second = sync.pushed({ reason: "attention", computer: "correct" });
+		expect(await sync.pushed({ reason: "attention", computer: "wrong" })).toBe(
+			false,
+		);
+		held.resolve(true);
+		expect(await first).toBe(true);
+		expect(await second).toBe(true);
+		expect(matches).toHaveBeenCalledTimes(3);
+		expect(refreshList).toHaveBeenCalledTimes(1);
+		expect(live.seed).toHaveBeenCalledTimes(1);
+	});
+
+	it("a new account cannot inherit the previous account's last-viewed conversation", async () => {
+		const sync = createWarmSync();
+		const background = {
+			key: "account-a/route",
+			matches: async () => true,
+			refreshList: async () => true,
+		};
+		sync.register(scope({ background }));
+		sync.view("private-to-a")();
+		const b = scope({ background: { ...background, key: "account-b/route" } });
+		sync.register(b);
+		expect(
+			await sync.pushed({ reason: "attention", computer: "b-handle" }),
+		).toBe(true);
+		expect(b.seed).not.toHaveBeenCalled();
+	});
+});

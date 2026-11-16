@@ -16,6 +16,7 @@ import {
 } from "@/features/session/resume-hold";
 import { RelayError } from "@/relay";
 import type { ProjectionEntry } from "@/state";
+import { sessionResumeHandler } from "@/testing/session-appstate-source";
 
 /**
  * TestFlight 836: a return from the lock screen painted "The connection
@@ -245,8 +246,6 @@ const HELD_TIMER_CALL = /heldTimer\(/g;
 const DEADLINE_HELD = /heldTimer\(resumeClock\.current, RECONNECT_DEADLINE_MS/;
 const REFUSAL_DIRECT =
 	/if \(isTransient\(streamError\)\) \{[\s\S]*?return;\n\t{5}\}\n\t{5}sessions\.getState\(\)\.endStream\(sessionId\);\n\t{5}setError\(streamError\);/;
-const APPSTATE_HANDLER =
-	/AppState\.addEventListener\("change", \(state\) => \{[\s\S]*?\n\t\t\}\);/;
 
 describe("use-session wiring", () => {
 	const source = readFileSync(
@@ -260,8 +259,8 @@ describe("use-session wiring", () => {
 		// The refusal path stays direct: a typed failure is never held.
 		expect(source).toMatch(REFUSAL_DIRECT);
 	});
-	it("the AppState handler opens the window and clears the drop before reopening", () => {
-		const handler = source.match(APPSTATE_HANDLER)?.[0] ?? "";
+	function assertResumeWiring(runtimeSource: string) {
+		const handler = sessionResumeHandler(runtimeSource);
 		expect(handler).toContain('if (state === "background") {');
 		expect(handler).toContain("resumeClock.current.background();");
 		const resume = handler.indexOf("resumeClock.current.resume();");
@@ -271,6 +270,32 @@ describe("use-session wiring", () => {
 		expect(cleared).toBeGreaterThan(resume);
 		expect(reopen).toBeGreaterThan(cleared);
 		expect(handler).toContain("retries.current = 0;");
+	}
+
+	it("the AppState handler opens the window and clears the drop before reopening", () => {
+		assertResumeWiring(source);
+	});
+
+	it.each([
+		"resumeClock.current.background();",
+		"resumeClock.current.resume();",
+	])("rejects a removed resume guard: %s", (guard) => {
+		// Remove the real guard, not the ownership anchor: selection must still
+		// succeed so the original safety assertion is what rejects the mutant.
+		const mutant = source.replace(guard, "");
+		expect(mutant).not.toBe(source);
+		expect(sessionResumeHandler(mutant)).toContain("reconnectRef.current();");
+		expect(() => assertResumeWiring(mutant)).toThrow();
+	});
+
+	it("rejects missing or duplicate stream ownership instead of taking a first match", () => {
+		const handler = sessionResumeHandler(source);
+		expect(() => sessionResumeHandler(source.replace(handler, ""))).toThrow(
+			"Expected one stream-owning AppState listener, found 0",
+		);
+		expect(() => sessionResumeHandler(`${source}\n${handler}`)).toThrow(
+			"Expected one stream-owning AppState listener, found 2",
+		);
 	});
 });
 

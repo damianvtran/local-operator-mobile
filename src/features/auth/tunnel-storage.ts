@@ -26,6 +26,7 @@ import {
 } from "@/connection/secure-storage-refusal";
 import { configureStartupAuthorizationStorage } from "@/connection/startup-authorization";
 import { thisDeviceOnlyAccessibility } from "@/connection/storage";
+import { pushComputerHandles } from "@/features/session/warm-store";
 
 /**
  * Where the app keeps the reader's credentials.
@@ -183,6 +184,7 @@ export async function writeSavedTunnel(tunnel: SavedTunnel): Promise<{
 /** Forgets the saved tunnel and nothing else — the Radient grant, the tunnel
  *  session and the app's own state are other items and other concerns. */
 export async function removeSavedTunnel(): Promise<void> {
+	await pushComputerHandles.forgetCustomRoutes();
 	try {
 		const { adapter: store } = await open();
 		await store.deleteItemAsync(SECURE_KEYS.custom);
@@ -363,6 +365,8 @@ export async function readHiddenTunnelIds(): Promise<string[]> {
 export async function hideRadientComputer(
 	computer: RadientComputerInput,
 ): Promise<{ persistent: boolean }> {
+	// Removed means ineligible for push warming, even if the registry write fails.
+	await pushComputerHandles.forgetRoute(`radient:${computer.tunnelId}`);
 	try {
 		const { persistent } = await open();
 		await (await savedComputers()).hideRadient(computer);

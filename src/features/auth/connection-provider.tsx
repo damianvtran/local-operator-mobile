@@ -115,8 +115,9 @@ import {
 	insideResumeWindow,
 	shouldWakeStream,
 } from "@/features/session/resume-plan";
-import { warmCache } from "@/features/session/warm-store";
+import { pushComputerHandles, warmCache } from "@/features/session/warm-store";
 import { setLocaleSource, t } from "@/i18n";
+import { sessionPushRouteKey } from "@/notifications/session-push-registration-state";
 import {
 	type ErrorSurface,
 	type RelayEndpoints,
@@ -1589,6 +1590,20 @@ export const ConnectionProvider = ({
 						client,
 						scope: cacheScope,
 						cache: warmCache,
+						background: {
+							key: JSON.stringify([cacheScope.accountId, cacheScope.routeKey]),
+							matches: async (computer) => {
+								const route = connectionStore.getState().route;
+								if (!route) return false;
+								return (
+									computer ===
+									(await pushComputerHandles.lookup({
+										accountId: cacheScope.accountId,
+										routeKey: sessionPushRouteKey(route),
+									}))
+								);
+							},
+						},
 						isActive: () =>
 							admission.isCurrent() &&
 							startupAuthorizationLifecycle.isCurrent(
@@ -2236,6 +2251,8 @@ export const ConnectionProvider = ({
 					initial: adopted,
 					/* Every mutation of the session is written through, so a crash mid-flow
 					 *  cannot leave the store behind the manager. */
+					// The existing writer tolerates locked-keychain failures. The
+					// manager keeps the refreshed session in memory for this warm wake.
 					persist: (session) => writeStoredTunnelSession(session),
 				});
 				managerRef.current = manager;

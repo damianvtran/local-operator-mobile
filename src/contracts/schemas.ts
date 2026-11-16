@@ -1703,6 +1703,10 @@ export const pushRegisterResponseSchema = z.looseObject({
 	device_id: nonEmpty,
 	device_key: nonEmpty,
 	registered_at: z.number(),
+	/* Optional and NOT `nonEmpty`: an older daemon omits it, and an empty value
+	 * must not fail the whole registration (the device key above is the part
+	 * that cannot be lost). The reader treats "" exactly like absence. */
+	computer_handle: z.string().optional(),
 });
 
 /** One `GET /api/push/devices` row. `state` stays an open string: the four

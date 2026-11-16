@@ -34,6 +34,15 @@ const A: WarmScope = {
 const quiet = () => vi.fn();
 
 describe("warm cache", () => {
+	it("fences a background list save again when its queued private write is admitted", async () => {
+		const cache = createWarmCache(memoryWarmStore(), { warn: quiet() });
+		let active = true;
+		const pending = cache.saveList(A, listFrame(), () => active);
+		active = false;
+		expect(await pending).toBe(false);
+		expect(await cache.loadList(A)).toBeNull();
+	});
+
 	it("round-trips a conversation with its version stripped", async () => {
 		const store = memoryWarmStore();
 		const cache = createWarmCache(store, { warn: quiet(), now: () => 1234 });

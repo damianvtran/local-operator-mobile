@@ -9,10 +9,30 @@ export function relayWarmSyncScope(options: {
 	scope: WarmScope;
 	cache: ReturnType<typeof createWarmCache>;
 	isActive(): boolean;
+	background?: { key: string; matches(computer: string): Promise<boolean> };
 }): WarmSyncScope {
 	const { client, scope, cache, isActive } = options;
 	return {
 		isActive,
+		...(options.background
+			? {
+					background: {
+						...options.background,
+						async refreshList(signal: AbortSignal) {
+							const frame = await client.sessions({
+								includePeers: true,
+								signal,
+							});
+							if (signal.aborted || !isActive()) return false;
+							return cache.saveList(
+								scope,
+								frame,
+								() => !signal.aborted && isActive(),
+							);
+						},
+					},
+				}
+			: {}),
 		async resolve(handle, signal) {
 			const answer = await client.resolveConversation(handle, { signal });
 			return answer.session_id;

@@ -17,6 +17,10 @@
 
 import { Platform } from "react-native";
 import {
+	createPushHandleStore,
+	PUSH_HANDLE_KEY_PREFIX,
+} from "@/state/push-computer-handle";
+import {
 	createWarmCache,
 	memoryWarmStore,
 	utf8Bytes,
@@ -52,6 +56,12 @@ const fencedWebPort: WarmStorePort = {
 	keys: () => webPort.keys(),
 };
 
+/* Handles share the sealed family and its sign-out/owner-change purge. No
+ * keychain accessibility change: a cold locked read is still a cache miss. */
+export const pushComputerHandles = createPushHandleStore(
+	Platform.OS === "web" ? fencedWebPort : nativePort,
+);
+
 export const warmCache = createWarmCache(
 	Platform.OS === "web" ? fencedWebPort : nativePort,
 );
@@ -63,9 +73,14 @@ export const warmCache = createWarmCache(
  */
 export async function clearWarmCache(): Promise<void> {
 	warmCache.forgetSaved();
+	pushComputerHandles.forgetMemory();
 	if (Platform.OS === "web") {
 		for (const key of await webPort.keys())
-			if (key.startsWith(WARM_KEY_PREFIX)) await webPort.remove(key);
+			if (
+				key.startsWith(WARM_KEY_PREFIX) ||
+				key.startsWith(PUSH_HANDLE_KEY_PREFIX)
+			)
+				await webPort.remove(key);
 		return;
 	}
 	await sealedWarm.clear();

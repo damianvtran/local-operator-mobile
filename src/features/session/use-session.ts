@@ -358,7 +358,22 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	// while a same-session reconnect keeps its onscreen token continuously held.
 	useEffect(() => {
 		if (!hasSessionId(sessionId) || endpoints === null) return;
-		return warmSync.view(sessionId);
+		// Mounted does not mean onscreen while iOS suspends the app. Release
+		// only on background; reclaim on resume BEFORE reopening the live stream,
+		// so a push can seed the last-viewed session but never race its screen.
+		let release =
+			AppState.currentState === "background" ? null : warmSync.view(sessionId);
+		const subscription = AppState.addEventListener("change", (state) => {
+			if (state === "background") {
+				release?.();
+				release = null;
+			} else if (state === "active" && !release)
+				release = warmSync.view(sessionId);
+		});
+		return () => {
+			release?.();
+			subscription.remove();
+		};
 	}, [sessionId, endpoints]);
 	/** Cancels a held resume history read (`holdResumeRead`) on unmount. */
 	const heldHistoryRead = useRef<(() => void) | null>(null);

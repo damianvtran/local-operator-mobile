@@ -3,10 +3,11 @@ import { outbox } from "@/features/session/outbox";
 import {
 	type BackgroundClearDeps,
 	BackgroundResult,
-	runBackgroundClear,
 	waitForBackgroundUnreadScope,
 } from "@/notifications/background-clear";
 import { loadNotifications } from "@/notifications/native";
+import { warmSync } from "@/state/warm-sync";
+import { runBackgroundPushRefresh } from "./background-push-refresh";
 
 /**
  * The background notification task: the native half of `background-clear.ts`.
@@ -42,7 +43,7 @@ import { loadNotifications } from "@/notifications/native";
  * (`FirebaseMessagingDelegate.kt:107-114`), but the clear only happens WARM
  * (backgrounded, not killed): a killed app runs the task headless with no
  * Activity and no React root, so `AccountTeamBridgeProvider` never mounts, no
- * scope registers, and the task waits `SCOPE_WAIT_MS` and returns NoData (the
+ * scope registers, and the task immediately returns NoData (the
  * next foreground open corrects the badge as before). Web has neither: nothing
  * is defined.
  */
@@ -50,7 +51,9 @@ import { loadNotifications } from "@/notifications/native";
 export const BACKGROUND_NOTIFICATION_TASK = "local-operator.background-push";
 
 const nativeDeps: BackgroundClearDeps = {
-	scope: waitForBackgroundUnreadScope,
+	// A headless cold/locked launch has no mounted provider; do not wait for
+	// or restore credentials on behalf of a push. Foreground owns admission.
+	scope: () => waitForBackgroundUnreadScope(0),
 	async presented() {
 		const module = await loadNotifications();
 		if (module === null) return [];
@@ -66,27 +69,37 @@ const nativeDeps: BackgroundClearDeps = {
 	},
 };
 
+/** Export the actual registered callback so injected OS envelopes exercise the
+ * same task boundary in Node without pretending to run a native task manager. */
+export async function backgroundNotificationTask({
+	data,
+	error,
+}: {
+	data: unknown;
+	error?: unknown;
+}): Promise<BackgroundResult> {
+	// A task error is the OS's, not the push's; there is nothing to clear.
+	if (error) return BackgroundResult.NoData;
+	// `data` is the NotificationTaskPayload: `{data: {body, dataString,
+	// …}, notification, aps?}` on iOS (userInfo minus `aps`) and the
+	// serialized RemoteMessage on Android (`RemoteMessageSerializer`).
+	/* The same OS wake also carries the outbox: a send still waiting
+	 * for the computer gets this ~30 s window instead of waiting for
+	 * the next foreground (`outbox.ts`, PLATFORM LIMITS). Concurrent
+	 * with the clear, bounded by its own budget, and it never throws. */
+	const [result] = await Promise.all([
+		runBackgroundPushRefresh(data, nativeDeps, warmSync),
+		outbox.drainForBackgroundWake(),
+	]);
+	return result;
+}
+
 if (Platform.OS !== "web") {
 	try {
 		const TaskManager: typeof import("expo-task-manager") = require("expo-task-manager");
 		TaskManager.defineTask(
 			BACKGROUND_NOTIFICATION_TASK,
-			async ({ data, error }) => {
-				// A task error is the OS's, not the push's; there is nothing to clear.
-				if (error) return BackgroundResult.NoData;
-				// `data` is the NotificationTaskPayload: `{data: {body, dataString,
-				// …}, notification, aps?}` on iOS (userInfo minus `aps`) and the
-				// serialized RemoteMessage on Android (`RemoteMessageSerializer`).
-				/* The same OS wake also carries the outbox: a send still waiting
-				 * for the computer gets this ~30 s window instead of waiting for
-				 * the next foreground (`outbox.ts`, PLATFORM LIMITS). Concurrent
-				 * with the clear, bounded by its own budget, and it never throws. */
-				const [result] = await Promise.all([
-					runBackgroundClear(data, nativeDeps),
-					outbox.drainForBackgroundWake(),
-				]);
-				return result;
-			},
+			backgroundNotificationTask,
 		);
 	} catch {
 		// A binary without the task-manager module: the foreground path still

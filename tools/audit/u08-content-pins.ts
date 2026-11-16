@@ -67,6 +67,9 @@ const sha256 = (content: string | Uint8Array) =>
 
 /* --------------------------------------------------------------- the table -- */
 
+/* Background push refresh: re-derived with --print after the register fixture
+ * and warm-sync source changed. These hashes prove SOURCE IDENTITY ONLY, not
+ * rendered/native/device/battery evidence; no assertion or exemption changed. */
 export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-11-07 for PR #189 (audit fix 2) with --print: `auditCell` now
 	 *  brackets the unchanged `EXTRACT_PROBE` with `SPACING_REST_PROBE` and retakes
@@ -195,7 +198,7 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	/* Re-pinned 2026-11-15 for PR #271 with --print: the remote-conversation
 	 * mock scenarios (relay/scenarios) and the long-press S15 openers (matrix). */
 	"tools/mock-relay/relay.ts":
-		"fd8d5e9c17f3b7219024340b20934321980411f4b510c64aab0cde36ba9e8669",
+		"220c1034e2443da38d76f755eab6a0bcc3781fa50dba93d7c3d03c942b357e19",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -2100,7 +2103,17 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * epoch on close/choose, Team Bridge on the shared AttachSheet with Take Photo,
 	 * the S9/attach-sheet state marker and copy in 8 locales. Re-derived with
 	 * --print. Source identity only, NOT rendered U-08 evidence. */
-	src: "5ae47a909e01158efb77311d1e5f513c98ee22baceb6d7598426e2afdccc3467",
+	/* Push-background refresh: re-derived with --print after staging the full
+	 * mapping/coordinator/task and regression tests. SOURCE IDENTITY ONLY;
+	 * no rendered, native, device or battery proof is implied. */
+	/* PR #279 CI remediation round 3: the session AppState test-source helper
+	 * adds tracked src content. Re-derived with --print; source identity only, NOT
+	 * new rendered, native, device or battery proof. */
+	/* Convergence merge of origin/main (9e0d78d4, #279 and #277) into #278:
+	 * both source-identity comment histories retained; regenerated with --print
+	 * over the merged source tree. Source identity only, NOT new rendered or
+	 * native evidence. Background refresh and shared attach sheet unchanged. */
+	src: "83e63d8a8f9d839163b67a1647f16776758c6b80b208d977026461f0db3ce9eb",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

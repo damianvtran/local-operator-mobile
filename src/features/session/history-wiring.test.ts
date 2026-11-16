@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { HistoryResponse } from "@/contracts";
+import { sessionResumeHandler } from "@/testing/session-appstate-source";
 import { Button } from "@/ui/components/button";
 import {
 	anchoredScrollTop,
@@ -210,17 +211,14 @@ describe("history reader production wiring", () => {
 		expect(pinTail).not.toHaveBeenCalled();
 	});
 
-	it("the session screen heals automatically and resumes through one debounced gate", () => {
+	function assertHistoryResumeWiring(runtime: string) {
 		expect(runtime).toContain("{ autoHeal: true },");
 		expect(runtime).toContain(
 			'historyGap: historyWindow.hasGap && historyWindow.healState !== "healing",',
 		);
 		expect(runtime).toContain("healHistory,");
 		expect(screen).toContain("healHistory={runtime.healHistory}");
-		const foreground =
-			runtime.match(
-				/AppState\.addEventListener\("change", \(state\) => \{[\s\S]*?\n\t\t\}\);/,
-			)?.[0] ?? "";
+		const foreground = sessionResumeHandler(runtime);
 		// The gate dedupes only the history read; the stream always re-opens
 		// (PR #217 R1-4).
 		expect(foreground).toContain("const readHistory = resumeGate.current();");
@@ -245,6 +243,20 @@ describe("history reader production wiring", () => {
 		expect(runtime).toContain(
 			"if (resumeGate.current()) void historyRef.current.load(true);",
 		);
+	}
+
+	it("the session screen heals automatically and resumes through one debounced gate", () => {
+		assertHistoryResumeWiring(runtime);
+	});
+
+	it("rejects removal of the actual foreground history gate", () => {
+		const mutant = runtime.replace(
+			"const readHistory = resumeGate.current();",
+			"const readHistory = true;",
+		);
+		expect(mutant).not.toBe(runtime);
+		expect(sessionResumeHandler(mutant)).toContain("reconnectRef.current();");
+		expect(() => assertHistoryResumeWiring(mutant)).toThrow();
 	});
 
 	it("threads the actual runtime action and all states to the list, with explicit accessible fallback", () => {

@@ -70,10 +70,12 @@ import { useEffect, useRef } from "react";
 import { AppState, Platform } from "react-native";
 
 import {
+	currentWarmScope,
 	useConnection,
 	useConnectionState,
 	useListState,
 } from "@/features/auth/connection-provider";
+import { pushComputerHandles } from "@/features/session/warm-store";
 import { loadNotifications } from "@/notifications/native";
 import {
 	loadNotificationPreferences,
@@ -150,7 +152,8 @@ export const useSessionPushRegistration = (): void => {
 		let pending = false;
 		/** The queued re-run: `null` none, else whether it must be forced. */
 		let again: boolean | null = null;
-		const isCurrent = () => !stopped;
+		const owner = currentWarmScope();
+		const isCurrent = () => !stopped && currentWarmScope() === owner;
 		const trigger = (force: boolean): void => {
 			if (stopped) return;
 			if (pending) {
@@ -174,6 +177,15 @@ export const useSessionPushRegistration = (): void => {
 			void registerSessionPushDevice(client, {
 				routeKey,
 				force,
+				recordComputerHandle: (handle) =>
+					pushComputerHandles.record(
+						{
+							accountId: owner?.accountId ?? null,
+							routeKey,
+						},
+						handle,
+						isCurrent,
+					),
 				isCurrent,
 				// Rejects when the stored choice cannot be read: the attempt
 				// fails rather than sending defaults (R1 m-read); next trigger retries.

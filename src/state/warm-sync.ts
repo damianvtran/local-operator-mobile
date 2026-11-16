@@ -2,18 +2,26 @@
  * register a scope: neither a notification nor a locked/headless launch opens
  * credentials or starts a route. No native imports in this module.
  *
- * Attention warming is deliberately NOT implemented: the push's opaque computer
- * handle cannot currently be mapped to a route (see docs/completion-prefetch.md).
- * A completion is different: resolving its opaque conversation handle on the
- * selected authenticated relay proves that relay offers it; a 404 has no fallback. */
+ * Background pushes additionally prove computer ownership against the authenticated
+ * registration mapping. Only push wakes run this path: no polling or held socket. */
 export interface WarmSyncScope {
 	isActive(): boolean;
+	background?: {
+		/** Stable account/route identity; never the opaque push handle. */
+		key: string;
+		matches(computer: string): Promise<boolean>;
+		refreshList(signal: AbortSignal): Promise<boolean>;
+	};
 	seed(sessionId: string, signal: AbortSignal): Promise<boolean>;
 	resolve(handle: string, signal: AbortSignal): Promise<string>;
 }
 
 export function createWarmSync(now: () => number = Date.now) {
 	let scope: WarmSyncScope | null = null;
+	let lastViewed: string | null = null;
+	let lastOwnerKey: string | undefined;
+	let attentionFlight: Promise<boolean> | null = null;
+	let attentionAt: number | null = null;
 	const views = new Set<{ sessionId: string }>();
 	const seeds = new Map<
 		string,
@@ -98,10 +106,14 @@ export function createWarmSync(now: () => number = Date.now) {
 		for (const controller of controllers) controller.abort();
 		seeds.clear();
 		successful.clear();
+		attentionFlight = null;
+		attentionAt = null;
 	};
 	return {
 		register(next: WarmSyncScope) {
 			retire();
+			if (next.background?.key !== lastOwnerKey) lastViewed = null;
+			lastOwnerKey = next.background?.key;
 			scope = next;
 			return () => {
 				if (scope === next) {
@@ -114,6 +126,7 @@ export function createWarmSync(now: () => number = Date.now) {
 		 * survive a same-route reconnect, and each cleanup removes only its token. */
 		view(sessionId: string) {
 			const view = { sessionId };
+			lastViewed = sessionId;
 			views.add(view);
 			seeds.get(sessionId)?.controller.abort();
 			return () => {
@@ -121,6 +134,64 @@ export function createWarmSync(now: () => number = Date.now) {
 			};
 		},
 		prefetch,
+		/** A push is a hint, never route authority. The task supplies its REMAINING
+		 * budget after the badge/tray clear, so matching, list, resolve, one seed
+		 * and persistence all share the original OS wake's deadline. */
+		pushed(
+			push: {
+				reason: "attention" | "completion";
+				computer: string;
+				conversation?: string;
+			},
+			budgetMs = 25_000,
+		): Promise<boolean> {
+			const owner = scope;
+			const background = owner?.background;
+			if (!owner?.isActive() || !background || budgetMs <= 0)
+				return Promise.resolve(false);
+			const existing = push.reason === "attention" ? attentionFlight : null;
+			const deadline = now() + budgetMs;
+			const task = bounded(async (signal) => {
+				if (
+					!(await background.matches(push.computer)) ||
+					signal.aborted ||
+					scope !== owner ||
+					!owner.isActive()
+				)
+					return false;
+				if (push.reason === "attention") {
+					// Repeated acknowledgements must not spend a wake on another list
+					// or seed. This uses the coordinator's existing 60 s success limit.
+					// Even copies joining a flight must pass the mapping gate above.
+					if (existing) return existing;
+					const refreshed =
+						attentionAt === null || now() - attentionAt >= 60_000
+							? await background.refreshList(signal)
+							: false;
+					if (signal.aborted || scope !== owner || !owner.isActive())
+						return false;
+					if (refreshed) attentionAt = now();
+					// A saved list is not a successful seed: an onscreen skip or failed
+					// seed may retry on the next push even while the list is throttled.
+					const seeded = lastViewed
+						? await prefetch(lastViewed, Math.max(0, deadline - now()), signal)
+						: false;
+					return refreshed || seeded;
+				}
+				if (!push.conversation) return false;
+				const id = await owner.resolve(push.conversation, signal);
+				if (signal.aborted || scope !== owner || !owner.isActive())
+					return false;
+				return prefetch(id, Math.max(0, deadline - now()), signal);
+			}, budgetMs).promise;
+			if (push.reason === "attention" && !existing) {
+				attentionFlight = task;
+				void task.finally(() => {
+					if (attentionFlight === task) attentionFlight = null;
+				});
+			}
+			return task;
+		},
 		received(handle: string): Promise<boolean> {
 			const owner = scope;
 			if (!owner?.isActive()) return Promise.resolve(false);
