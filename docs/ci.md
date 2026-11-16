@@ -848,6 +848,89 @@ receipt records `provenance` (intended inputs vs actual run/artifact metadata).
   receipt says `pull_request-merge`, never literal-head provenance.
 - **Dispatch:** `gh workflow run e2e.yml --ref <branch> -f proof_mode=chrome-ios-proof -f native_run_id=<ios run> -f native_artifact_sha256=<sha256> -f native_source_sha=<40-char sha> [-f base_run_id=<main ios run> -f base_artifact_sha256=<sha256> -f base_source_sha=<sha>]`.
 
+## App-free hosted iOS driver readiness
+
+This is an infrastructure diagnostic, **not application acceptance**. It answers
+whether the pinned Maestro runner can enumerate SpringBoard on one fresh hosted
+simulator, without downloading, building, installing or launching Operator.
+A successful `/status` alone is insufficient: Maestro's `StatusHandler` returns
+`ok` without asking XCTest for a hierarchy. A green diagnostic does not authorize
+or replace an app proof, release, or another app-proof attempt.
+
+After independent review and QA, an authorized operator can run exactly one:
+
+```sh
+gh workflow run e2e.yml --repo damianvtran/local-operator-mobile \
+  --ref ci/ios-driver-readiness \
+  -f proof_mode=ios-driver-readiness -f proof_stage=full
+# Find that dispatch (do not run the command again to obtain its id):
+gh run list --repo damianvtran/local-operator-mobile --workflow e2e.yml \
+  --branch ci/ios-driver-readiness --event workflow_dispatch --limit 5
+# Substitute the resulting RUN_ID, then inspect/download its single evidence artifact:
+gh run view RUN_ID --repo damianvtran/local-operator-mobile --log
+gh run download RUN_ID --repo damianvtran/local-operator-mobile \
+  --name ios-driver-readiness-RUN_ID --dir ./driver-readiness-evidence
+```
+
+Only the cheap `harness` check and the separate `ios-driver-readiness` job are
+selected. The job reuses `macos-26` and the existing digest-verified Maestro
+**2.11.0** provisioning action (including its existing cache/download behavior).
+There is no product artifact dependency, app build, app installation, relay,
+Maestro app flow, local Xcode requirement, new service, or readiness retry.
+
+`scripts/ci/ios-driver-readiness.py` extracts the simulator runner already bundled
+in that distribution. It creates one simulator, assigns one unused loopback
+port, and runs `xcodebuild test-without-building` for `testHttpServer`, with
+parallel testing disabled. It records the resource jar's SHA-256, invocation,
+UDID, port and PID. Before **and after** each HTTP call, the listening PID must
+match the runner's launchctl entry in that exact simulator and its executable
+path must contain that UDID. An unrelated/stale listener fails; it is never killed.
+A Home-button request selects the system home screen, never an app warmup.
+`GET /status` must return `{"status":"ok"}` and `POST /viewHierarchy` must return
+a parseable, nonempty AXElement tree containing the SpringBoard application.
+Installed-app inventories reject non-system/non-driver additions.
+
+Deadlines are unchanged: runner startup/status stays within the installer's
+120-second startup budget (status transport at most 100 seconds); Home plus the
+hierarchy operation stays within the existing chrome proof's 120-second
+hierarchy budget. Ownership checks consume those same deadlines. The original
+outer chrome-job ceiling is retained, not used to extend a driver operation.
+There is one launch and one request per operation; no restart or second attempt.
+The socket-availability poll only waits within startup's original deadline.
+
+**Exit/artifact contract:** the helper exits **0** only after both readiness
+checks, app-inventory validation, and successful exact-owner teardown; otherwise
+**1**. `owner.json` records `result: PASS|FAIL`, `ready`, error if any, resource
+identity, requests/timings and `cleanup.ok/errors`. The always-uploaded
+`ios-driver-readiness-RUN_ID` artifact includes that receipt, `commands.jsonl`
+(actual argv, exit, error and elapsed seconds), raw `status.json`, `home.json`,
+`hierarchy.json`, `xctest.log`, app inventories and listener-provenance logs.
+Bodies are raw even on malformed/error responses; a missing body is not success.
+Both the helper's `finally` and an unconditional workflow step consume the same
+ownership receipt to reap the exact process group and shut down/delete only its
+created simulator. Cleanup errors fail visibly; no global kill/delete is used.
+Provisioning failures can leave only a cleanup receipt and workflow logs, never
+a native readiness claim. Check **both job conclusion and receipt**, including
+`ready: true` and `cleanup.ok: true`, before interpreting PASS.
+
+Local contract tests (no native tools or dependency installation):
+
+```sh
+python3 scripts/ci/ios-driver-readiness-test.py
+node_modules/.bin/vitest run scripts/ci/ios-driver-readiness.test.ts
+```
+
+The HTTP fixture covers status-OK with a hanging/malformed hierarchy, wrong
+listener/simulator provenance and cleanup failure. These are control-flow tests,
+**not native readiness evidence**. The one hosted dispatch is the native test.
+Invocation/protocol references, read 2026-11-16, are pinned to Maestro's
+[`cli-2.11.0` source commit](https://github.com/mobile-dev-inc/Maestro/tree/c8c361be1cc89b2e742f185466a302a22778be6b):
+`LocalXCTestInstaller.kt`, `IOSBuildProductsExtractor.kt`, `XCRunnerCLIUtils.kt`,
+`maestro-driver-ios-config.xctestrun`, `StatusHandler.swift`,
+`PressButtonHandler.swift`, and `ViewHierarchyHandler.swift`. The distribution's
+compiled-resource hash in the receipt, not these source reads, identifies what
+actually ran.
+
 ## Targeted native theme proof
 
 `e2e.yml` offers `proof_mode = theme-ios-proof` (dispatch only, not full E2E),

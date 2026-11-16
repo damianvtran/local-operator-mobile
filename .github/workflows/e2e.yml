@@ -52,6 +52,7 @@ on:
           - projects-create-ios-proof
           - chrome-ios-proof
           - theme-ios-proof
+          - ios-driver-readiness
       proof_stage:
         description: "Targeted iOS proof only; never a full-E2E verdict"
         type: choice
@@ -187,6 +188,7 @@ jobs:
             projects-create-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             chrome-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             theme-ios-proof) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
+            ios-driver-readiness) test "$GITHUB_EVENT_NAME" = workflow_dispatch; test "$PROOF_STAGE" = full ;;
             *) echo "::error::unknown proof mode"; exit 1 ;;
           esac
 
@@ -1930,6 +1932,49 @@ jobs:
             ${{ runner.temp }}/chrome-ios-proof/hierarchies/*.json
           retention-days: 14
           if-no-files-found: warn
+
+  # Infrastructure readiness only: no app artifacts, product build or app flow.
+  # Reuses the existing hosted image and digest-pinned Maestro provisioning.
+  ios-driver-readiness:
+    name: App-free iOS driver readiness (NOT app acceptance)
+    needs: harness
+    if: github.event_name == 'workflow_dispatch' && inputs.proof_mode == 'ios-driver-readiness'
+    runs-on: macos-26
+    # Retain the existing chrome proof's outer ceiling; operation deadlines in
+    # the driver helper remain 120 seconds and there is no second attempt.
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Provision the existing pinned Maestro driver
+        uses: ./.github/actions/install-maestro
+        with:
+          version: ${{ env.MAESTRO_VERSION }}
+      - name: One owned simulator and driver; status AND SpringBoard hierarchy
+        run: |
+          python3 scripts/ci/ios-driver-readiness.py \
+            --out "$RUNNER_TEMP/ios-driver-readiness" --maestro-dir "$HOME/.maestro"
+      # Separate fallback for failed/cancelled proof steps; the script also uses
+      # finally. Both consume the same ownership receipt, never a global kill.
+      - name: Unconditional exact-owner teardown
+        if: always()
+        run: python3 scripts/ci/ios-driver-readiness.py --out "$RUNNER_TEMP/ios-driver-readiness" --cleanup
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: ios-driver-readiness-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/ios-driver-readiness/*.json
+            ${{ runner.temp }}/ios-driver-readiness/*.jsonl
+            ${{ runner.temp }}/ios-driver-readiness/*.log
+            ${{ runner.temp }}/ios-driver-readiness/*.body
+            ${{ runner.temp }}/ios-driver-readiness/*.stderr
+          retention-days: 14
+          if-no-files-found: error
 
   theme-ios-proof:
     name: Targeted native theme picker + palette proof (NOT full E2E)
