@@ -101,12 +101,17 @@ const sha = (text: string) => createHash("sha256").update(text).digest("hex");
  *   so this emulator is the only surface where the component's appearance is
  *   observable. The condition, the trigger gating and every other job are
  *   untouched, and the truth table below still holds — which is the point of the
- *   pin: the change had to be deliberate and named, not a drift nobody noticed. */
+ *   pin: the change had to be deliberate and named, not a drift nobody noticed.
+ *
+ * Re-derived for PR #278: plan calibration changed only comments in web-audit
+ * and web-audit-core; their non-comment lines remain byte-identical to main.
+ * `jobBodySha` still includes those comments, so refresh only the current pins,
+ * retaining the historical baseline and executable --no-strict mutation probes. */
 const CURRENT_PRESERVED_BODY_SHA256: Readonly<Record<string, string>> = {
 	"web-audit":
-		"111655be72c1c6fb7b683b8b0c056d5ff4ed654123c8d38c891e71a6c7bab1a6",
+		"94e0c5acf40253f76a298f9cfe5d767cc5f6c7d95e175b5a627ee998aa5355d7",
 	"web-audit-core":
-		"25ff0a6f4dbf29ab0a136a3630bc5827e3a0d0cd45739b3c5709c9e98cddbfdd",
+		"8409959703d7d6f0f577f2c39158b945012e482b0f7abb60d33f6c6544995853",
 };
 
 /** Bodies accepted at a CURRENT head whose intended drift is NOT the web audit's
