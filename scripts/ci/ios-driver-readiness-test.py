@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import secrets
 import subprocess
 import sys
 import tempfile
@@ -189,6 +190,8 @@ class PrepareTests(unittest.TestCase):
                             proof.prepare(maestro)
                         self.assertNotIn("ready", proof.state)
                     popen.assert_called_once()
+                    self.assertEqual(popen.call_args.kwargs["env"]["LOP_READINESS_GROUP"],
+                                     proof.state["groupToken"])
                     self.assertIn("test-without-building", popen.call_args.args[0])
 
 
@@ -221,8 +224,8 @@ class CleanupTests(unittest.TestCase):
 
             def run(name, args, **_):
                 calls.append(args)
-                if name == "cleanup-owner":
-                    return "xcodebuild test-without-building -xctestrun /owned/config.xctestrun"
+                if name == "cleanup-group":
+                    return ""
                 if name.startswith("cleanup-") and name.endswith("-state"):
                     return json.dumps({"devices": {"runtime": [{"udid": UDID, "state": "Booted"}]}})
                 if name == "devices-after":
@@ -230,6 +233,8 @@ class CleanupTests(unittest.TestCase):
                 return ""
 
             with patch.object(proof, "run", side_effect=run), \
+                    patch.object(proof, "group_members", side_effect=[[PID], []]), \
+                    patch.object(proof, "group_is_owned", return_value=True), \
                     patch.object(os, "killpg", side_effect=[None, ProcessLookupError()]) as kill:
                 proof.cleanup()
                 self.assertEqual(kill.call_args_list[0].args, (PID, signal.SIGKILL))
@@ -237,11 +242,79 @@ class CleanupTests(unittest.TestCase):
             self.assertIn(["xcrun", "simctl", "delete", UDID], calls)
             self.assertTrue(proof.state["cleanup"]["ok"])
 
+    def test_exited_leader_live_child_and_repeated_fallback(self):
+        # Real host processes, not native tools: the launcher has already been
+        # reaped, so only the inherited ownership marker can anchor its group.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            proof = readiness.Proof(root / "proof")
+            token = secrets.token_hex(32)
+            env = dict(proof.env, LOP_READINESS_GROUP=token)
+            leader = subprocess.Popen([sys.executable, "-c",
+                "import subprocess,sys; p=subprocess.Popen([sys.executable,'-c',"
+                "'import time; time.sleep(300)'], stdout=subprocess.DEVNULL, "
+                "stderr=subprocess.DEVNULL); print(p.pid, flush=True)"],
+                env=env, start_new_session=True, stdout=subprocess.PIPE, text=True)
+            sentinel = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(300)"],
+                                        env=proof.env, start_new_session=True)
+            try:
+                child = int(leader.stdout.readline())
+                leader.wait(timeout=5)
+                leader.stdout.close()
+                os.kill(child, 0)
+                stale = readiness.Proof(root / "stale")
+                stale.state.update(pgid=sentinel.pid, groupToken=token,
+                                   config="/owned/config.xctestrun")
+                with self.assertRaisesRegex(RuntimeError, "unowned process"):
+                    stale.cleanup()
+                self.assertFalse(stale.state["cleanup"]["ok"])
+                self.assertIsNone(sentinel.poll())
+                print("stale group: refused; unrelated sentinel alive; cleanup.ok=false", flush=True)
+                proof.state.update(pgid=leader.pid, groupToken=token,
+                                   config="/owned/config.xctestrun", ready=False, result="FAIL")
+                proof.save()
+                for attempt in (1, 2):
+                    # Reload exactly as the workflow's --cleanup fallback does.
+                    result = subprocess.run([sys.executable, str(Path(readiness.__file__)),
+                                             "--out", str(proof.root), "--cleanup"],
+                                            env=proof.env, capture_output=True, text=True, timeout=10)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    fallback = readiness.Proof(proof.root)
+                    self.assertTrue(fallback.state["cleanup"]["ok"])
+                    self.assertFalse(fallback.state["ready"])
+                    self.assertEqual(fallback.state["result"], "FAIL")
+                    self.assertIsNone(sentinel.poll())
+                    with self.assertRaises(ProcessLookupError):
+                        os.killpg(leader.pid, 0)
+                    print(f"cleanup {attempt}: owned group absent; unrelated sentinel alive; "
+                          "cleanup.ok=true; ready=false; result=FAIL", flush=True)
+            finally:
+                # Exact groups created by this test only, even on the old-code
+                # failing control. Never leave the negative control's child up.
+                for process in (leader, sentinel):
+                    try:
+                        os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    process.wait(timeout=5)
+                deadline = time.monotonic() + 5
+                while time.monotonic() < deadline:
+                    try:
+                        os.killpg(leader.pid, 0)
+                    except ProcessLookupError:
+                        break
+                    time.sleep(0.01)
+                else:
+                    self.fail("test-owned group survived exact rig teardown")
+
     def test_reused_pid_is_never_killed(self):
         with tempfile.TemporaryDirectory() as tmp:
             proof = readiness.Proof(Path(tmp))
             proof.state.update(pgid=PID, config="/owned/config.xctestrun")
-            with patch.object(proof, "run", return_value="somebody else's process"), \
+            proof.state["groupToken"] = "original-owner-nonce"
+            with patch.object(proof, "group_members", return_value=[PID]), \
+                    patch.object(subprocess, "run", return_value=subprocess.CompletedProcess(
+                        [], 0, stdout="somebody else's process LOP_READINESS_GROUP=other-nonce")), \
                     patch.object(os, "killpg", side_effect=ProcessLookupError()) as kill, \
                     self.assertRaisesRegex(RuntimeError, "unowned process"):
                 proof.cleanup()

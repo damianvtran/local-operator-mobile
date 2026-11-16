@@ -908,7 +908,10 @@ identity, requests/timings and `cleanup.ok/errors`. The always-uploaded
 Bodies are raw even on malformed/error responses; a missing body is not success.
 Both the helper's `finally` and an unconditional workflow step consume the same
 ownership receipt to reap the exact process group and shut down/delete only its
-created simulator. Cleanup errors fail visibly; no global kill/delete is used.
+created simulator. A per-launch nonce inherited by group members anchors teardown
+when the original `xcodebuild` leader has exited. A stale PGID without a matching
+live member is refused; environment inspection is never written into command
+logs. Cleanup errors fail visibly; no global kill/delete is used.
 Provisioning failures can leave only a cleanup receipt and workflow logs, never
 a native readiness claim. Check **both job conclusion and receipt**, including
 `ready: true` and `cleanup.ok: true`, before interpreting PASS.
@@ -921,7 +924,10 @@ node_modules/.bin/vitest run scripts/ci/ios-driver-readiness.test.ts
 ```
 
 The HTTP fixture covers status-OK with a hanging/malformed hierarchy, wrong
-listener/simulator provenance and cleanup failure. These are control-flow tests,
+listener/simulator provenance and cleanup failure. A real self-owned host-process
+control exits and reaps the leader while its child lives, then runs `--cleanup`
+twice, checks the group is absent and keeps an unrelated sentinel alive. A stale
+owner targeting that sentinel is refused. These are control-flow tests,
 **not native readiness evidence**. The one hosted dispatch is the native test.
 Invocation/protocol references, read 2026-11-16, are pinned to Maestro's
 [`cli-2.11.0` source commit](https://github.com/mobile-dev-inc/Maestro/tree/c8c361be1cc89b2e742f185466a302a22778be6b):

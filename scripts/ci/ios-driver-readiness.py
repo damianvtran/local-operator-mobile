@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import secrets
 import socket
 import subprocess
 import sys
@@ -213,7 +214,13 @@ class Proof:
         args = ["xcodebuild", "test-without-building", "-xctestrun", str(config),
                 "-destination", f"id={udid}", "-derivedDataPath", str(self.root / "derived-data"),
                 "-parallel-testing-enabled", "NO", "-only-testing:maestro-driver-iosUITests/maestro_driver_iosUITests/testHttpServer"]
-        env = dict(self.env, TEST_RUNNER_PORT=str(self.state["port"]))
+        # Descendants inherit this per-launch nonce. A surviving member anchors
+        # ownership even after xcodebuild exits; a stale/reused PGID alone never
+        # authorizes a signal. Persist before launching for fallback cleanup.
+        self.state["groupToken"] = secrets.token_hex(32)
+        self.save()
+        env = dict(self.env, TEST_RUNNER_PORT=str(self.state["port"]),
+                   LOP_READINESS_GROUP=self.state["groupToken"])
         with (self.root / "xctest.log").open("wb") as log:
             self.process = subprocess.Popen(args, stdout=log, stderr=subprocess.STDOUT,
                                             env=env, start_new_session=True)
@@ -250,18 +257,46 @@ class Proof:
         self.state["ready"] = True
         self.save()
 
+    def group_members(self, pgid):
+        rows = self.run("cleanup-group", ["ps", "-axo", "pid=,pgid="])
+        return [int(pid) for pid, group in (row.split() for row in rows.splitlines())
+                if int(group) == pgid]
+
+    def group_is_owned(self, members):
+        token = self.state.get("groupToken")
+        if not token:
+            return False
+        for pid in members:
+            # ps's environment output can contain host credentials: inspect only
+            # in memory, never send it through run()'s persisted command logs.
+            result = subprocess.run(["ps", "eww", "-p", str(pid), "-o", "command="],
+                                    env=self.env, capture_output=True, text=True,
+                                    timeout=COMMAND_SECONDS)
+            require(result.returncode in (0, 1), "cannot verify process group owner")
+            if f"LOP_READINESS_GROUP={token}" in result.stdout.split():
+                return True
+        return False
+
     def cleanup(self):
         errors = []
         pgid = self.state.get("pgid")
         if pgid:
             try:
-                command = self.run("cleanup-owner", ["ps", "-p", str(pgid), "-o", "command="], accepted=(0, 1))
-                if command.strip():
-                    require(self.state["config"] in command and "xcodebuild" in command,
-                            "refusing to kill an unowned process")
-                    os.killpg(pgid, signal.SIGKILL)
+                members = self.group_members(pgid)
+                if members:
+                    require(self.group_is_owned(members), "refusing to kill an unowned process")
+                    try:
+                        os.killpg(pgid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
                 if self.process is not None:
                     self.process.wait(timeout=COMMAND_SECONDS)
+                # Orphaned children are reaped by the host, not Popen.wait().
+                # Wait within the existing command budget before certifying the
+                # group absent; this is teardown, not a readiness retry.
+                deadline = time.monotonic() + COMMAND_SECONDS
+                while self.group_members(pgid) and time.monotonic() < deadline:
+                    time.sleep(0.01)
             except Exception as error:
                 errors.append(str(error))
         udid = self.state.get("udid")
