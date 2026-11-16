@@ -232,6 +232,14 @@ export interface ComposerControlInput {
 	sending: boolean;
 	/** An instruction is retained whose delivery is unknown. */
 	envelopePending: boolean;
+	/** The phase of the durable outbox's (`outbox.ts`) earlier send on this
+	 *  session, or absent/`null` when it owns none. Any phase blocks the primary
+	 *  like `envelopePending` (one unresolved instruction per session), and the
+	 *  hint matches what the ROW says (UX round 1, U3 / review R6): still
+	 *  sending → wait; stopped (`failed`) → Retry or Discard it above; being
+	 *  discarded → a moment. Typed inline so this module stays free of the
+	 *  outbox import. */
+	outboxPhase?: "sending" | "waiting" | "failed" | "discarding" | null;
 	/** The session's health verdict is ENDED (from the dot, not just
 	 *  `projection.ended`): a send REOPENS it, so the primary is NOT disabled
 	 *  for this. Retained in the input because the placeholder and the send-
@@ -257,7 +265,8 @@ export const composerControls = (
 	/* An unresolved instruction blocks the primary: sending a second, differently
 	 * keyed instruction while the first may already be admitted is the duplicate
 	 * hazard, and the disabled control must say why (U4). */
-	const blocked = input.envelopePending;
+	const outboxPhase = input.outboxPhase ?? null;
+	const blocked = input.envelopePending || outboxPhase !== null;
 	/* A retry with an EMPTY draft is sendable on the reference client (it replays
 	 * the envelope's own bytes), and it is the reason the check below is not simply
 	 * `!hasContent`: but the primary is deliberately NOT that control. The retry
@@ -301,11 +310,17 @@ export const composerControls = (
 		 *  and no new copy is minted. Only with a draft — an empty field is the
 		 *  self-evident case, and the hint would sit under every cold open. */
 		disabledReason:
-			blocked && !input.ended
-				? composerCopy().retryDisabledHint
-				: cached && hasContent
-					? healthCopy()["relay.health.reconnecting"]
-					: null,
+			outboxPhase === "failed"
+				? t("mobile.session.outbox.composer_stopped")
+				: outboxPhase === "discarding"
+					? t("mobile.session.outbox.composer_discarding")
+					: outboxPhase !== null
+						? t("mobile.session.outbox.composer_wait")
+						: blocked && !input.ended
+							? composerCopy().retryDisabledHint
+							: cached && hasContent
+								? healthCopy()["relay.health.reconnecting"]
+								: null,
 		ended: input.ended,
 	};
 };

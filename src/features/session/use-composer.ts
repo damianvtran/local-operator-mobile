@@ -31,6 +31,7 @@ import {
 	writeDraft,
 } from "@/features/session/device-storage";
 import { envelopeStoreFor } from "@/features/session/envelope-store";
+import { outbox, useOutboxEntry } from "@/features/session/outbox";
 import {
 	type EchoDraft,
 	earlierNotSentMessage,
@@ -55,11 +56,7 @@ import {
 	useDictation,
 } from "@/features/session/use-dictation";
 import { haptic } from "@/lib/haptics";
-import {
-	type ContinuationEnvelope,
-	isRelayError,
-	sendPersistedCommand,
-} from "@/relay";
+import { type ContinuationEnvelope, isRelayError } from "@/relay";
 import {
 	annotationForSend,
 	applyEdit,
@@ -245,6 +242,20 @@ export const useComposer = (input: {
 		[],
 	);
 	const [retained, setRetained] = useState<ContinuationEnvelope | null>(null);
+	/* The outbox's send for this session, if it owns one. While it does, the
+	 * primary stays disabled (one unresolved instruction per session, as for a
+	 * retained envelope) and the row — not the composer — carries the state. */
+	const outboxEntry = useOutboxEntry(sessionId);
+	const outboxOwns = outboxEntry !== null;
+	useEffect(() => {
+		/* The host resumed a held envelope after this composer read it on mount:
+		 * drop the stale retained-retry card, the outbox is the retry now. */
+		if (!outboxOwns) return;
+		setRetained(null);
+		setError((current) =>
+			current === composerCopy().retainedError ? null : current,
+		);
+	}, [outboxOwns]);
 	const [sending, setSending] = useState(false);
 	/* The same guard as `sending`, but synchronous. React state is what DISABLES the
 	 * controls; it is not visible to a second event in the same frame, and a double
@@ -300,6 +311,13 @@ export const useComposer = (input: {
 		// reload, a reconnect or a navigation away and back.
 		envelopeStore.peek(sessionId).then((held) => {
 			if (cancelled) return;
+			/* A held envelope the outbox owns is being delivered, and its row says
+			 * so; the "retry the earlier instruction" card would be a second,
+			 * contradictory state for the same message. */
+			if (outbox.owns(sessionId)) {
+				setRetained(null);
+				return;
+			}
 			setRetained(held);
 			if (held !== null) setError(composerCopy().retainedError);
 		});
@@ -479,7 +497,11 @@ export const useComposer = (input: {
 				 * The envelope's op belongs to the envelope — `streaming` can change between
 				 * admission and acknowledgement — so the op passed in is used only when a NEW
 				 * instruction is minted. */
-				const result = await sendPersistedCommand({
+				/* Through the durable outbox (`outbox.ts`): the first attempt is this
+				 * call's, with the outbox's longer per-attempt deadline; a failure that
+				 * leaves delivery unknown hands the send to the outbox, which keeps
+				 * retrying the SAME envelope after this screen is gone. */
+				const outcome = await outbox.deliver({
 					client: endpoints,
 					envelopes: envelopeStore,
 					sessionId,
@@ -503,6 +525,31 @@ export const useComposer = (input: {
 					 * `dictated` and the path the response returned; both carries `mixed`. */
 					...annotationForSend(provenanceRef.current),
 				});
+				if (outcome.kind === "background") {
+					/* The outbox owns it now and the row reads "waiting for your
+					 * computer". The composer is released: what is left in it is the
+					 * reader's next message, and an identical copy of what went out is
+					 * cleared exactly as an acknowledgement would clear it. */
+					setRetained(null);
+					if (
+						acknowledgedCurrentDraft(
+							{
+								text: trimmed,
+								...(payloadImages ? { images: payloadImages } : {}),
+							},
+							{
+								text: draftRef.current.trim(),
+								...(payloadImages ? { images: imagesRef.current } : {}),
+							},
+						)
+					) {
+						setDraft("");
+						setImages([]);
+					}
+					onSent?.();
+					return;
+				}
+				const result = outcome.result;
 				/* The receipt is the session's admission: the row stops saying it is
 				 * still going out. A no-op when the transcript already answered it.
 				 * `result.op` is the op the command was finally DELIVERED as, so a
@@ -644,6 +691,12 @@ export const useComposer = (input: {
 			 * in-flight dictation is cancelled and its loss is said. The web client's own
 			 * retry goes through its `send()` for this reason (design §2.5/U2). */
 			cancelDictationForSend();
+			/* The outbox already owns this session's send: Retry is "try now", not
+			 * a second, parallel delivery of the same envelope. */
+			if (outbox.owns(sessionId)) {
+				outbox.retryNow(sessionId);
+				return;
+			}
 			inFlight.current = true;
 			const held = await envelopeStore.peek(sessionId);
 			if (held === null || endpoints === null || cached) {
@@ -663,7 +716,7 @@ export const useComposer = (input: {
 			try {
 				/* The retry IS the replay: `holdNew` returns the stored envelope for this
 				 * session, so this sends the bytes and the UUID it was minted with. */
-				const result = await sendPersistedCommand({
+				const outcome = await outbox.deliver({
 					client: endpoints,
 					envelopes: envelopeStore,
 					sessionId,
@@ -682,8 +735,11 @@ export const useComposer = (input: {
 						);
 					},
 				});
-				markPendingEchoAccepted(sessionId, result.commandId, result.op);
 				setRetained(null);
+				/* The outbox owns the replay now; its row carries the state. */
+				if (outcome.kind === "background") return;
+				const result = outcome.result;
+				markPendingEchoAccepted(sessionId, result.commandId, result.op);
 				/* The replayed instruction is the ENVELOPE's. When the visible draft is
 				 * BYTE-IDENTICAL to it, the draft IS what was just delivered — the
 				 * failed send left the text in the box and the reader pressed Retry
@@ -974,6 +1030,7 @@ export const useComposer = (input: {
 				hasImages: images.length > 0,
 				sending,
 				envelopePending: retained !== null,
+				outboxPhase: outboxEntry?.phase ?? null,
 				ended,
 			}),
 		[
@@ -982,6 +1039,7 @@ export const useComposer = (input: {
 			images.length,
 			sending,
 			retained,
+			outboxEntry,
 			ended,
 			endpoints,
 			cached,

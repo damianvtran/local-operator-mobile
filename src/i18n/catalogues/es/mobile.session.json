@@ -79,5 +79,13 @@
 	"mobile.session.region.label_todos": "tareas",
 	"mobile.session.region.label_strip": "estado",
 	"mobile.session.back_to": "Volver a {name}",
-	"mobile.session.back_to_session": "Volver a la sesión"
+	"mobile.session.back_to_session": "Volver a la sesión",
+	"mobile.session.pending_echo.waiting": "esperando a tu máquina — se sigue intentando",
+	"mobile.session.pending_echo.exhausted": "no se pudo entregar — se dejó de intentar",
+	"mobile.session.outbox.retry": "Reintentar",
+	"mobile.session.outbox.discard": "Descartar",
+	"mobile.session.outbox.composer_wait": "Tu mensaje anterior todavía se está enviando. Podrás enviar este cuando se entregue.",
+	"mobile.session.pending_echo.discarded": "descartado — puede que ya haya llegado · toca para recuperarlo",
+	"mobile.session.outbox.composer_stopped": "Tu mensaje anterior dejó de enviarse. Reinténtalo o descártalo arriba para enviar este.",
+	"mobile.session.outbox.composer_discarding": "Descartando tu mensaje anterior. Podrás enviar este en un momento."
 }

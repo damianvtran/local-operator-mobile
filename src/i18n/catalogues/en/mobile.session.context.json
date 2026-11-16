@@ -322,5 +322,37 @@
 	"mobile.session.back_to_session": {
 		"role": "button",
 		"note": "Back-navigation label on the video and agent-job screens when the parent session has no name of its own (replaces 'Back to {name}' in that case). Full phrase, sentence case, no full stop; free to adapt article/case/word order. Reuse the locale's 'session' term."
+	},
+	"mobile.session.pending_echo.waiting": {
+		"role": "meta",
+		"note": "Caption under a message the user sent whose first attempt timed out or could not reach their computer. The app keeps retrying the SAME message automatically in the background (no duplicate is possible). Quiet, not an error; lower case like the other pending-row captions (“sending…”)."
+	},
+	"mobile.session.pending_echo.exhausted": {
+		"role": "meta",
+		"note": "Caption under a message the app STOPPED trying to deliver by itself (it kept trying for a while, or hit a problem only the user can resolve). Retry and Discard buttons sit under it. Must say it stopped; must NOT claim the message was definitely not received, nor blame the computer specifically (the cause can also be phone storage or a certificate)."
+	},
+	"mobile.session.outbox.retry": {
+		"role": "button",
+		"note": "Small button under a message the app stopped retrying: try delivering it again now. Same message, never a duplicate."
+	},
+	"mobile.session.outbox.discard": {
+		"role": "button",
+		"note": "Small quiet button under a message the app is still trying (or stopped trying) to deliver: stop trying and remove the message from the phone. Not a delete of anything on the computer."
+	},
+	"mobile.session.outbox.composer_wait": {
+		"role": "help",
+		"note": "Shown under the disabled send button while an earlier message in the SAME conversation is still being delivered in the background. One message per conversation is delivered at a time so they never arrive twice or out of order. Other conversations are unaffected."
+	},
+	"mobile.session.pending_echo.discarded": {
+		"role": "meta",
+		"note": "Caption under a message the user just discarded (told the app to stop delivering it). An earlier attempt may already have reached the computer, so it must not promise the message was cancelled. Tapping the message puts its words back into the text box. Lower-case, like the other captions under a message."
+	},
+	"mobile.session.outbox.composer_stopped": {
+		"role": "help",
+		"note": "Shown under the disabled send button while an earlier message in the SAME conversation has stopped sending and waits for the user (Retry or Discard buttons on that message, above the text box). Must not say the earlier message was definitely not received."
+	},
+	"mobile.session.outbox.composer_discarding": {
+		"role": "help",
+		"note": "Shown under the disabled send button for the few seconds after the user discarded an earlier message while the app finishes the attempt that was already under way. Nothing for the user to do; sending unlocks by itself."
 	}
 }

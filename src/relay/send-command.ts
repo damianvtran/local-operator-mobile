@@ -160,6 +160,10 @@ export interface SendCommandInput {
 	 *  is also the id the session writes the real row under. A joiner of an
 	 *  already-running send is not called: the first caller painted it. */
 	onHeld?: (envelope: ContinuationEnvelope) => void;
+	/** Per-attempt deadline for the command POST; omitted, the transport default
+	 *  applies. Deliberately NOT part of the payload identity: two attempts of one
+	 *  instruction with different budgets are still one instruction. */
+	timeoutMs?: number;
 }
 
 /** One send's outcome as a VALUE rather than a rejection. The promise carrying it
@@ -383,8 +387,8 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 	 * typed during the first attempt. The swapped op reaches the row through
 	 * `result.op`. */
 	input.onHeld?.(envelope);
-	const deliver = (sent: ContinuationEnvelope) =>
-		client.command(sessionId, {
+	const deliver = (sent: ContinuationEnvelope) => {
+		const body = {
 			op: sent.op,
 			command_id: sent.command_id,
 			text: sent.text,
@@ -393,7 +397,13 @@ async function runSend(input: SendCommandInput): Promise<SendResult> {
 			 * annotation it was retained with, so a retry sends identical bytes. */
 			...(sent.input_mode !== undefined ? { input_mode: sent.input_mode } : {}),
 			...(sent.input_path !== undefined ? { input_path: sent.input_path } : {}),
-		});
+		};
+		/* The override is passed only when set, so every existing caller sees the
+		 * same two-argument call it always made. */
+		return input.timeoutMs !== undefined
+			? client.command(sessionId, body, { timeoutMs: input.timeoutMs })
+			: client.command(sessionId, body);
+	};
 	try {
 		let ack: Awaited<ReturnType<typeof deliver>>;
 		try {

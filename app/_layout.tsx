@@ -21,6 +21,7 @@ import {
 import { useSavedComputersHydration } from "@/features/auth/use-saved-computers-hydration";
 import { useDeepLinkResolution } from "@/features/deep-links/use-deep-link-resolution";
 import { NotificationPermissionPrimer } from "@/features/notifications/permission-primer-sheet";
+import { OutboxHost } from "@/features/session/outbox-host";
 import { WorkspaceDrawerProvider } from "@/features/sessions/workspace-drawer";
 import { useTeamBridgeDrawerAdapter } from "@/features/team-bridge/drawer-adapter";
 import { activeDirection, activeLocale } from "@/i18n";
@@ -62,6 +63,10 @@ export default function RootLayout() {
 								<SavedComputersHydration />
 								<DeepLinkResolution />
 								<NotificationTapRouting />
+								{/* The durable outbox's lifecycle (resume on launch and
+								 *  foreground): above the router so a send outlives the
+								 *  conversation screen that started it. */}
+								<OutboxHost />
 								{/* The ONE computer switcher sheet, above every route so any screen
 								 *  can open it with `useComputerSwitcher().open()` and two screens
 								 *  can never show two lists. Inside the providers it reads (the

@@ -79,5 +79,13 @@
 	"mobile.session.region.label_todos": "tasks",
 	"mobile.session.region.label_strip": "status",
 	"mobile.session.back_to": "Back to {name}",
-	"mobile.session.back_to_session": "Back to session"
+	"mobile.session.back_to_session": "Back to session",
+	"mobile.session.pending_echo.waiting": "waiting for your computer — still trying",
+	"mobile.session.pending_echo.exhausted": "couldn’t deliver — stopped trying",
+	"mobile.session.outbox.retry": "Retry",
+	"mobile.session.outbox.discard": "Discard",
+	"mobile.session.outbox.composer_wait": "Your earlier message is still sending. You can send this one once it’s delivered.",
+	"mobile.session.pending_echo.discarded": "discarded — it may already have arrived · tap to put back",
+	"mobile.session.outbox.composer_stopped": "Your earlier message stopped sending. Retry or discard it above to send this one.",
+	"mobile.session.outbox.composer_discarding": "Discarding your earlier message. You can send this one in a moment."
 }

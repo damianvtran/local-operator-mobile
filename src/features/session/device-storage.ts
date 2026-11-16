@@ -364,7 +364,14 @@ export const clearAuthorizationData = async (): Promise<void> => {
 	const privateKey = (key: string) =>
 		key.startsWith(DRAFT_KEY_PREFIX) ||
 		key.startsWith(DRAFT_RECORD_PREFIX) ||
-		key.startsWith("lo-mobile-command:");
+		key.startsWith("lo-mobile-command:") ||
+		/* The durable outbox's ownership marks (`OUTBOX_KEY_PREFIX`,
+		 * `OutboxLedger` in `outbox.ts`): session ids the signed-out identity
+		 * was still delivering to. Spelled out like the envelope family rather
+		 * than imported, so this purge never pulls the outbox (and React) into
+		 * its import graph; `authorization-cleanup.test.ts` pins the literal to
+		 * the constant. (Agent review round 1, R3 / QA Q3.) */
+		key.startsWith("lo-mobile-outbox:");
 	if (Platform.OS === "web") {
 		const storage = globalThis.localStorage;
 		if (!storage) throw new Error("private storage cannot be enumerated");

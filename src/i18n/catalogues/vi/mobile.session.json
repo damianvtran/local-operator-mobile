@@ -79,5 +79,13 @@
 	"mobile.session.region.label_todos": "tác vụ",
 	"mobile.session.region.label_strip": "trạng thái",
 	"mobile.session.back_to": "Quay lại {name}",
-	"mobile.session.back_to_session": "Quay lại phiên"
+	"mobile.session.back_to_session": "Quay lại phiên",
+	"mobile.session.pending_echo.waiting": "đang chờ máy tính của bạn — vẫn đang thử",
+	"mobile.session.pending_echo.exhausted": "không gửi đến được — đã ngừng thử",
+	"mobile.session.outbox.retry": "Thử lại",
+	"mobile.session.outbox.discard": "Bỏ",
+	"mobile.session.outbox.composer_wait": "Tin nhắn trước của bạn vẫn đang được gửi. Bạn có thể gửi tin này sau khi tin trước đến nơi.",
+	"mobile.session.pending_echo.discarded": "đã bỏ — có thể tin đã đến nơi · chạm để đưa lại",
+	"mobile.session.outbox.composer_stopped": "Tin nhắn trước của bạn đã ngừng gửi. Hãy thử lại hoặc bỏ tin đó ở trên để gửi tin này.",
+	"mobile.session.outbox.composer_discarding": "Đang bỏ tin nhắn trước của bạn. Bạn có thể gửi tin này trong giây lát."
 }

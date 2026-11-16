@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-
+import { outbox } from "@/features/session/outbox";
 import {
 	type BackgroundClearDeps,
 	BackgroundResult,
@@ -77,7 +77,15 @@ if (Platform.OS !== "web") {
 				// `data` is the NotificationTaskPayload: `{data: {body, dataString,
 				// …}, notification, aps?}` on iOS (userInfo minus `aps`) and the
 				// serialized RemoteMessage on Android (`RemoteMessageSerializer`).
-				return runBackgroundClear(data, nativeDeps);
+				/* The same OS wake also carries the outbox: a send still waiting
+				 * for the computer gets this ~30 s window instead of waiting for
+				 * the next foreground (`outbox.ts`, PLATFORM LIMITS). Concurrent
+				 * with the clear, bounded by its own budget, and it never throws. */
+				const [result] = await Promise.all([
+					runBackgroundClear(data, nativeDeps),
+					outbox.drainForBackgroundWake(),
+				]);
+				return result;
 			},
 		);
 	} catch {

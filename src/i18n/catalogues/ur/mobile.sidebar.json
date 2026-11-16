@@ -23,5 +23,7 @@
 	"mobile.sidebar.hidden_sections": "{count, plural, one {# حصہ پوشیدہ ہے} other {# حصے پوشیدہ ہیں}}",
 	"mobile.sidebar.empty_by_view.headline": "آپ کے منظر کے اختیارات تمام گفتگوئیں چھپا رہے ہیں۔",
 	"mobile.sidebar.empty_by_view.next": "حصے یا ختم شدہ سیشن دوبارہ آن کریں، یا منظر ری سیٹ کریں۔",
-	"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں"
+	"mobile.sidebar.empty_by_view.reset": "منظر ری سیٹ کریں",
+	"mobile.sidebar.outbox_sending": "پیغام بھیجا جا رہا ہے…",
+	"mobile.sidebar.outbox_failed": "پیغام بھیجنا رک گیا"
 }

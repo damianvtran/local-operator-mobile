@@ -79,5 +79,13 @@
 	"mobile.session.region.label_todos": "задачи",
 	"mobile.session.region.label_strip": "статус",
 	"mobile.session.back_to": "Назад: {name}",
-	"mobile.session.back_to_session": "Назад к сессии"
+	"mobile.session.back_to_session": "Назад к сессии",
+	"mobile.session.pending_echo.waiting": "ждём компьютер — попытки продолжаются",
+	"mobile.session.pending_echo.exhausted": "не удалось доставить — попытки остановлены",
+	"mobile.session.outbox.retry": "Повторить",
+	"mobile.session.outbox.discard": "Отбросить",
+	"mobile.session.outbox.composer_wait": "Предыдущее сообщение ещё отправляется. Это можно будет отправить, когда оно будет доставлено.",
+	"mobile.session.pending_echo.discarded": "отброшено — возможно, уже доставлено · нажмите, чтобы вернуть",
+	"mobile.session.outbox.composer_stopped": "Предыдущее сообщение перестало отправляться. Повторите или отбросьте его выше, чтобы отправить это.",
+	"mobile.session.outbox.composer_discarding": "Предыдущее сообщение отбрасывается. Это можно будет отправить через мгновение."
 }

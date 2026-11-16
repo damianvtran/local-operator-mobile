@@ -79,5 +79,13 @@
 	"mobile.session.region.label_todos": "कार्य",
 	"mobile.session.region.label_strip": "स्थिति",
 	"mobile.session.back_to": "{name} पर वापस जाएँ",
-	"mobile.session.back_to_session": "सत्र पर वापस जाएँ"
+	"mobile.session.back_to_session": "सत्र पर वापस जाएँ",
+	"mobile.session.pending_echo.waiting": "आपके कंप्यूटर का इंतज़ार — कोशिश जारी है",
+	"mobile.session.pending_echo.exhausted": "पहुँचाया नहीं जा सका — कोशिश रोक दी गई",
+	"mobile.session.outbox.retry": "दोबारा कोशिश करें",
+	"mobile.session.outbox.discard": "छोड़ें",
+	"mobile.session.outbox.composer_wait": "आपका पिछला संदेश अभी भेजा जा रहा है। उसके पहुँचने के बाद आप यह संदेश भेज सकेंगे।",
+	"mobile.session.pending_echo.discarded": "छोड़ दिया गया — हो सकता है यह पहले ही पहुँच गया हो · वापस लाने के लिए टैप करें",
+	"mobile.session.outbox.composer_stopped": "आपका पिछला संदेश भेजना रुक गया है। यह संदेश भेजने के लिए ऊपर उसे दोबारा भेजें या छोड़ें।",
+	"mobile.session.outbox.composer_discarding": "आपका पिछला संदेश छोड़ा जा रहा है। आप यह संदेश कुछ ही पल में भेज सकेंगे।"
 }

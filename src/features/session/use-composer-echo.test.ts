@@ -20,7 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PromptImage } from "@/contracts";
 import * as attachmentSources from "@/features/session/attach";
-import { composerCopy, composerFeedback } from "@/features/session/composer";
+import { outbox } from "@/features/session/outbox";
 import {
 	clearPendingEchoes,
 	type PendingEcho,
@@ -180,6 +180,9 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+	/* The outbox is process-wide: a send one test left waiting must not retry
+	 *  into the next test's session. */
+	outbox.abandonAll();
 	vi.restoreAllMocks();
 	await act(async () => root?.unmount());
 	root = null;
@@ -323,7 +326,7 @@ describe("useComposer's pending echo", () => {
 		expect(c().error).toBe("request exceeds 0.0 KiB");
 	});
 
-	it("an ambiguous 504 keeps the row as not confirmed; Retry repaints it under the same id (U3)", async () => {
+	it("an ambiguous 504 hands the send to the outbox: the row waits, Retry replays the same id (U3)", async () => {
 		const { client, open } = handClient();
 		await mount(client, "F: prefer small commits");
 		await act(async () => c().send());
@@ -339,32 +342,39 @@ describe("useComposer's pending echo", () => {
 			),
 		);
 		await settle();
-		expect(rows[0]).toMatchObject({ commandId, failure: "unconfirmed" });
+		/* Not a failure any more: the outbox owns it and keeps trying. */
+		expect(rows[0]).toMatchObject({ commandId, outbox: "waiting" });
+		expect(rows[0]?.failure).toBeUndefined();
 		expect(pendingEchoCaption(rows[0] as PendingEcho, true)).toBe(
-			"not confirmed — retry below",
+			"waiting for your computer — still trying",
 		);
-		expect(c().retained?.command_id).toBe(commandId);
-		/* Put-back is refused for an unconfirmed row: it may have been delivered. */
+		expect(c().retained).toBeNull();
+		expect(c().error).toBeNull();
+		expect(outbox.entryFor(SID)).toMatchObject({ commandId, phase: "waiting" });
+		/* One unresolved instruction per session: G waits, and the primary says why. */
+		expect(c().controls.primary.disabled).toBe(true);
+		expect(c().controls.disabledReason).toBe(
+			"Your earlier message is still sending. You can send this one once it’s delivered.",
+		);
+		/* Put-back is refused for a row whose delivery is unknown. */
 		await act(async () => c().putBack(commandId));
 		expect(rows).toHaveLength(1);
 		expect(c().draft).toBe("G: and squash at the end");
 
-		/* Retry: same id on the wire, the row goes back to live in place, G stays,
-		 *  and the ack says the earlier one went through without calling G edited. */
+		/* Retry is "try now": same id on the wire, ONE row, G untouched. */
 		await act(async () => c().retry());
 		await settle();
 		expect(open[1]?.body.command_id).toBe(commandId);
 		expect(rows).toHaveLength(1);
-		expect(rows[0]?.failure).toBeUndefined();
 		await act(async () =>
-			open[1]?.resolve({ ok: true, detail: "steer queued" }),
+			open[1]?.resolve({ ok: true, detail: "already admitted" }),
 		);
 		await settle();
 		expect(rows[0]).toMatchObject({ commandId, accepted: true });
+		expect(rows[0]?.outbox).toBeUndefined();
+		expect(outbox.entryFor(SID)).toBeNull();
+		expect(c().controls.primary.disabled).toBe(false);
 		expect(c().draft).toBe("G: and squash at the end");
-		expect(c().notice).toBe(
-			"Your earlier message went through. The text below hasn’t been sent yet.",
-		);
 	});
 
 	it("a prompt reconciled to a steer keeps ONE row, untouched by the replay, and takes the steer's box (round 2)", async () => {
@@ -535,31 +545,32 @@ it("clears only the new draft and dismisses an error without discarding uncertai
 		),
 	);
 	await settle();
-	const held = c().retained;
-	expect(held).not.toBeNull();
+	/* The uncertainty now lives in the outbox, not in the composer. */
+	const owned = outbox.entryFor(SID);
+	expect(owned?.phase).toBe("waiting");
 	await act(async () => {
 		c().setDraft("new unsent text");
 		c().addImage({ mime_type: "image/png", data_b64: "iVBORw0KGgo=" });
 	});
 	await act(async () => c().dismissError());
-	expect(c().retained).toEqual(held);
 	expect(c().draft).toBe("new unsent text");
 	await act(async () => c().clearUnsentDraft());
 	expect(c().draft).toBe("");
 	expect(c().images).toEqual([]);
 	expect(c().error).toBeNull();
-	expect(c().retained).toEqual(held);
+	expect(outbox.entryFor(SID)?.commandId).toBe(owned?.commandId);
 	expect(rows[0]).toMatchObject({
-		commandId: held?.command_id,
-		failure: "unconfirmed",
+		commandId: owned?.commandId,
+		outbox: "waiting",
 	});
 	expect(open).toHaveLength(1);
 	await act(async () => c().retry());
 	await settle();
-	expect(open[1]?.body.command_id).toBe(held?.command_id);
+	expect(open[1]?.body.command_id).toBe(owned?.commandId);
 	expect(open[1]?.body.text).toBe("earlier uncertain instruction");
 	await act(async () => open[1]?.resolve({ ok: true, detail: "queued" }));
 	await settle();
+	expect(outbox.entryFor(SID)).toBeNull();
 });
 
 it.each([false, true])(
@@ -575,34 +586,25 @@ it.each([false, true])(
 			open[0]?.reject(new RelayError("transport", "lost ack")),
 		);
 		await settle();
-		const held = c().retained;
-		expect(held?.images).toEqual([image]);
+		const commandId = outbox.entryFor(SID)?.commandId;
+		expect(commandId).toBe(open[0]?.body.command_id);
 		await act(async () => c().setDraft("next draft"));
 		await act(async () => c().clearImages());
 		const nextImage = { mime_type: "image/png" as const, data_b64: "bmV4dA==" };
 		await act(async () => c().addImage(nextImage));
 		await mount(client, "unused", !ended, ended);
-		// Retry first reads its displayed envelope, then preparation verifies the slot.
+		/* The outbox's attempt reads the held envelope (read 1), then preparation
+		 * verifies the slot (read 2) — which fails. */
 		storageFault.reads = 0;
 		storageFault.failReadAt = 2;
 		await act(async () => c().retry());
 		await settle();
 		expect(open).toHaveLength(1);
-		expect(c().retained).toEqual(held);
+		/* Stopped, not dropped: the row offers Retry/Discard, the id is kept. */
+		expect(outbox.entryFor(SID)).toMatchObject({ commandId, phase: "failed" });
+		expect(rows[0]).toMatchObject({ commandId, outbox: "exhausted" });
 		expect(c().draft).toBe("next draft");
 		expect(c().images).toEqual([nextImage]);
-		const feedback = composerFeedback({
-			ended,
-			error: c().error,
-			retainedMessage:
-				c().retained === null ? null : composerCopy().retainedError,
-		});
-		expect(feedback.retainedText).toContain(
-			"An earlier instruction may have been delivered",
-		);
-		expect(feedback.errorText).toContain("This retry attempt wasn’t sent");
-		expect(feedback.errorText).not.toContain("synthetic private file failure");
-		expect(feedback.retryLabel).toBe("Retry earlier instruction");
 		// Recovering storage does not send anything until an explicit retry. The
 		// retry still targets the original body/ID, not the newer visible draft.
 		storageFault.failReadAt = 0;
@@ -618,6 +620,7 @@ it.each([false, true])(
 		await settle();
 		expect(c().draft).toBe("next draft");
 		expect(c().images).toEqual([nextImage]);
-		expect(c().retained).toBeNull();
+		expect(outbox.entryFor(SID)).toBeNull();
+		expect(rows[0]).toMatchObject({ commandId, accepted: true });
 	},
 );

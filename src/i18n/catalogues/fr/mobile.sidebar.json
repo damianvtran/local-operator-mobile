@@ -23,5 +23,7 @@
 	"mobile.sidebar.hidden_sections": "{count, plural, one {# section masquée} many {# de sections masquées} other {# sections masquées}}",
 	"mobile.sidebar.empty_by_view.headline": "Vos options d’affichage masquent toutes les conversations.",
 	"mobile.sidebar.empty_by_view.next": "Réactivez des sections ou les sessions terminées, ou réinitialisez l’affichage.",
-	"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage"
+	"mobile.sidebar.empty_by_view.reset": "Réinitialiser l’affichage",
+	"mobile.sidebar.outbox_sending": "Envoi d’un message…",
+	"mobile.sidebar.outbox_failed": "Envoi du message arrêté"
 }

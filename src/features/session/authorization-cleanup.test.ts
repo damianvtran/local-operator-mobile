@@ -4,6 +4,7 @@ vi.mock("react-native", () => ({ Platform: { OS: "web" } }));
 
 import { reopenDispatch, runCommandOperation } from "@/relay/command-lifecycle";
 import { clearAuthorizationData } from "./device-storage";
+import { OUTBOX_KEY_PREFIX } from "./outbox";
 import {
 	type PrivateStore,
 	reopenPrivateWrites,
@@ -52,6 +53,25 @@ describe("explicit private-data retirement", () => {
 			removeItem: (key: string) => values.delete(key),
 		});
 		expect(values.get("lo-mobile-draft:legacy")).toBe("unknown owner");
+		await clearAuthorizationData();
+		expect([...values.keys()]).toEqual(["appearance"]);
+	});
+	it("purges the outbox's ownership marks at sign-out (web)", async () => {
+		/* A mark that survived sign-out would leave the old identity's session
+		 * ids on the device (agent review round 1, R3 / QA Q3). Keyed off the
+		 * outbox's own constant so the purge literal cannot drift from it. */
+		const mark = `${OUTBOX_KEY_PREFIX}6714def86197:authorization:a`;
+		const values = new Map([
+			[mark, "1"],
+			["appearance", "light"],
+		]);
+		vi.stubGlobal("localStorage", {
+			get length() {
+				return values.size;
+			},
+			key: (n: number) => [...values.keys()][n] ?? null,
+			removeItem: (key: string) => values.delete(key),
+		});
 		await clearAuthorizationData();
 		expect([...values.keys()]).toEqual(["appearance"]);
 	});

@@ -1464,6 +1464,11 @@ export class RelayEndpoints {
 	async command(
 		sessionId: string,
 		body: CommandBody,
+		/* A per-request deadline override, as `transfer` takes one. Only the
+		 * durable outbox passes it: a prompt that wakes a cold conversation can be
+		 * held by the relay for longer than the transport's 20 s default (see
+		 * `OUTBOX_POLICY.attemptTimeoutMs` in `features/session/outbox.ts`). */
+		options: { timeoutMs?: number } = {},
 	): Promise<Payload<"commandAck">> {
 		/* Validated before it is sent: the relay's own `validate_control_frame` would
 		 * refuse a malformed op with a prose `422`, and a client that can produce one
@@ -1473,6 +1478,7 @@ export class RelayEndpoints {
 			method: "POST",
 			path: `/api/sessions/${encodeURIComponent(sessionId)}/command`,
 			body: validated,
+			timeoutMs: options.timeoutMs,
 		});
 	}
 

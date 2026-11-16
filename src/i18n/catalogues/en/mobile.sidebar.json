@@ -23,5 +23,7 @@
 	"mobile.sidebar.hidden_sections": "{count, plural, one {# section hidden} other {# sections hidden}}",
 	"mobile.sidebar.empty_by_view.headline": "Your view options hide every conversation.",
 	"mobile.sidebar.empty_by_view.next": "Turn sections or ended sessions back on, or reset the view.",
-	"mobile.sidebar.empty_by_view.reset": "Reset view"
+	"mobile.sidebar.empty_by_view.reset": "Reset view",
+	"mobile.sidebar.outbox_sending": "Sending a message…",
+	"mobile.sidebar.outbox_failed": "Message stopped sending"
 }

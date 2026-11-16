@@ -79,5 +79,13 @@
 	"mobile.session.region.label_todos": "任务",
 	"mobile.session.region.label_strip": "状态",
 	"mobile.session.back_to": "返回{name}",
-	"mobile.session.back_to_session": "返回会话"
+	"mobile.session.back_to_session": "返回会话",
+	"mobile.session.pending_echo.waiting": "正在等待你的电脑——仍在重试",
+	"mobile.session.pending_echo.exhausted": "未能送达——已停止重试",
+	"mobile.session.outbox.retry": "重试",
+	"mobile.session.outbox.discard": "放弃",
+	"mobile.session.outbox.composer_wait": "上一条消息仍在发送。送达后即可发送这一条。",
+	"mobile.session.pending_echo.discarded": "已放弃——可能已经送达 · 轻点放回",
+	"mobile.session.outbox.composer_stopped": "上一条消息已停止发送。请在上方重试或放弃它，再发送这一条。",
+	"mobile.session.outbox.composer_discarding": "正在放弃上一条消息。稍后即可发送这一条。"
 }

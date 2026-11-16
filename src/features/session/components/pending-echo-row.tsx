@@ -9,17 +9,21 @@ import {
 	type PendingEcho,
 	pendingEchoBoxClass,
 	pendingEchoCaption,
+	puttable,
 	seedPendingEchoImages,
 } from "@/features/session/pending-echo";
 import { userBubbleFill } from "@/features/session/user-bubble";
 import { t } from "@/i18n";
 import {
+	pendingEchoDiscardId,
 	pendingEchoId,
+	pendingEchoRetryId,
 	ROLE,
 	transcriptImageId,
 	userMessageMoreId,
 } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
+import { Button } from "@/ui/components/button";
 import { cx } from "@/ui/variants";
 
 /**
@@ -47,12 +51,19 @@ const PendingEchoRowImpl = ({
 	echo,
 	streaming,
 	onPutBack,
+	onOutboxRetry,
+	onOutboxDiscard,
 	loadImage,
 	surface,
 }: {
 	echo: PendingEcho;
 	streaming: boolean;
 	onPutBack?: (commandId: string) => void;
+	/** The outbox's actions (`outbox.ts`): Retry on a row it stopped trying,
+	 *  Discard on any row it owns. Absent where no outbox runs (the startup
+	 *  home), which then shows the caption alone. */
+	onOutboxRetry?: (commandId: string) => void;
+	onOutboxDiscard?: (commandId: string) => void;
 	/** The session's image loader, when there is a session. The echo's images
 	 *  are seeded under it so the settled row paints them on its first frame. */
 	loadImage?: ImageLoader;
@@ -135,15 +146,48 @@ const PendingEchoRowImpl = ({
 			<Text
 				className={cx(
 					"max-w-[85%] px-1 pt-0.5 text-meta",
-					echo.failure === undefined ? "text-ink-dim" : "text-danger",
+					/* `discarded` is the reader's own choice, not a failure: dim. */
+					echo.failure === undefined && echo.outbox !== "exhausted"
+						? "text-ink-dim"
+						: "text-danger",
 				)}
 				accessibilityLiveRegion="polite"
 			>
 				{caption}
 			</Text>
+			{/* The outbox's controls sit under the caption they answer. Quiet and
+			 *  small: a waiting send is not an error, and Discard is the reader's
+			 *  way out of an automatic retry they no longer want. Retry appears
+			 *  only once the outbox stopped trying by itself. */}
+			{/* A `discarded` row has no controls: the tap is already taken (U1),
+			 * and the row itself is the put-back button. */}
+			{(echo.outbox === "waiting" || echo.outbox === "exhausted") &&
+			echo.failure === undefined &&
+			(onOutboxRetry || onOutboxDiscard) ? (
+				<View className="flex-row gap-2 pt-0.5">
+					{echo.outbox === "exhausted" && onOutboxRetry ? (
+						<Button
+							label={t("mobile.session.outbox.retry")}
+							variant="outline"
+							size="sm"
+							onPress={() => onOutboxRetry(echo.commandId)}
+							testID={pendingEchoRetryId(echo.commandId)}
+						/>
+					) : null}
+					{onOutboxDiscard ? (
+						<Button
+							label={t("mobile.session.outbox.discard")}
+							variant="quiet"
+							size="sm"
+							onPress={() => onOutboxDiscard(echo.commandId)}
+							testID={pendingEchoDiscardId(echo.commandId)}
+						/>
+					) : null}
+				</View>
+			) : null}
 		</>
 	);
-	if (echo.failure === "refused" && onPutBack) {
+	if (puttable(echo) && onPutBack) {
 		return (
 			<Pressable
 				className="items-end px-4 py-1"
@@ -174,11 +218,16 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 	echoes,
 	streaming,
 	onPutBack,
+	onOutboxRetry,
+	onOutboxDiscard,
 	loadImage,
 	surface,
 }: {
 	echoes: readonly PendingEcho[];
 	streaming: boolean;
+	/** The outbox's Retry / Discard (see `PendingEchoRow`); must be stable. */
+	onOutboxRetry?: (commandId: string) => void;
+	onOutboxDiscard?: (commandId: string) => void;
 	/** The composer's put-back for a refused row; must be stable (the rows are
 	 *  memoised on it). */
 	onPutBack?: (commandId: string) => void;
@@ -196,6 +245,8 @@ export const PendingEchoRows = memo(function PendingEchoRows({
 					echo={echo}
 					streaming={streaming}
 					onPutBack={onPutBack}
+					onOutboxRetry={onOutboxRetry}
+					onOutboxDiscard={onOutboxDiscard}
 					loadImage={loadImage}
 					surface={surface}
 				/>

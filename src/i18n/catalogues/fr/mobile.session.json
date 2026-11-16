@@ -79,5 +79,13 @@
 	"mobile.session.region.label_todos": "tâches",
 	"mobile.session.region.label_strip": "statut",
 	"mobile.session.back_to": "Retour à {name}",
-	"mobile.session.back_to_session": "Retour à la session"
+	"mobile.session.back_to_session": "Retour à la session",
+	"mobile.session.pending_echo.waiting": "en attente de votre ordinateur — nouvel essai en cours",
+	"mobile.session.pending_echo.exhausted": "impossible de le remettre — envoi arrêté",
+	"mobile.session.outbox.retry": "Réessayer",
+	"mobile.session.outbox.discard": "Abandonner",
+	"mobile.session.outbox.composer_wait": "Votre message précédent est encore en cours d’envoi. Vous pourrez envoyer celui-ci une fois qu’il sera remis.",
+	"mobile.session.pending_echo.discarded": "abandonné — il est peut-être déjà arrivé · touchez pour le récupérer",
+	"mobile.session.outbox.composer_stopped": "L’envoi de votre message précédent s’est arrêté. Réessayez-le ou abandonnez-le ci-dessus pour envoyer celui-ci.",
+	"mobile.session.outbox.composer_discarding": "Abandon de votre message précédent. Vous pourrez envoyer celui-ci dans un instant."
 }

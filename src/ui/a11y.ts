@@ -2298,6 +2298,13 @@ export const groupGuideId = (level: number): string => `group-guide-${level}`;
 export const pendingEchoId = (commandId: string): string =>
 	`pending-echo-${commandId}`;
 
+/** The outbox's Retry / Discard on a pending row (`PendingEchoRow`), derived
+ *  from the row's own id like `-more`, so they stay inside its family. */
+export const pendingEchoRetryId = (commandId: string): string =>
+	`${pendingEchoId(commandId)}-retry`;
+export const pendingEchoDiscardId = (commandId: string): string =>
+	`${pendingEchoId(commandId)}-discard`;
+
 /** A prompt's `Show more` / `Show less` toggle (`UserMessageClamp`, #235),
  *  addressed as its row's own id plus `-more` — `transcript-row-<id>-more` on
  *  a settled prompt, `pending-echo-<id>-more` on its in-flight echo. Deriving
