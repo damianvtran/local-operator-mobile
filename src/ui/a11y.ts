@@ -159,6 +159,9 @@ export const EMPTY = {
  * identifier is typed as a literal where a constant exists.
  */
 export const CONTROL = {
+	/** The remote-conversation admission gate's Back and Try again (PR #271). */
+	remoteSessionBack: "remote-session-back",
+	remoteSessionRetry: "remote-session-retry",
 	/** Explicit paging remains reachable without native-only scroll gestures. */
 	transcriptLoadEarlier: "transcript-load-earlier",
 	/** Continue filling a disconnected gap the automatic fill did not close,
@@ -812,6 +815,10 @@ export const CONTROL = {
  * a state ("the certificate was rejected") without inventing a control for it.
  */
 export const SURFACE = {
+	/** The remote-conversation admission gate, shown before readers mount (PR #271). */
+	remoteSessionUnavailable: "remote-session-unavailable",
+	/** The remote transcript's "previews not available here" footer (PR #271). */
+	remoteRetainedOnlyNotice: "remote-retained-only-notice",
 	/** The drawer's compact View options sheet (TestFlight 906). */
 	sidebarViewSheet: "sidebar-view-sheet",
 	/** Team Bridge is hub-owned: these selectors remain stable without a relay connection. */
@@ -2074,6 +2081,13 @@ export const sessionTagOptionId = (tagId: string): string =>
  */
 export const remoteSessionRowId = (sessionId: string): string =>
 	`session-remote-${sessionId}`;
+
+/** A retained document card in the transcript, keyed by its row and its
+ *  CONTENT-BLOCK index (sparse), never the array position (PR #271). */
+export const transcriptFileId = (entryId: string, index: number): string =>
+	`transcript-file-${entryId}-${index}`;
+export const transcriptFileSaveId = (entryId: string, index: number): string =>
+	`transcript-file-save-${entryId}-${index}`;
 
 /** A move-sheet destination option's identifier, keyed by the DESTINATION
  *  (a device id, or `local` for this computer) so a capture selects one without

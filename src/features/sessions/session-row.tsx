@@ -12,6 +12,7 @@ import {
 import type { SidebarBasis } from "@/features/sessions/sidebar-view";
 import { SessionTagLine } from "@/features/sessions/tag-line";
 import { tagAnnouncement } from "@/features/sessions/tags";
+import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
 import {
 	remoteSessionRowId,
@@ -131,7 +132,7 @@ export const SessionRow = memo(function SessionRow({
 			onLongPress={() => onLongPress(session)}
 			longPressAccessibilityHint={
 				remote
-					? "Move or copy"
+					? t("mobile.remote_sessions.row_long_press_hint")
 					: tagsAssignable
 						? "Pin, tag, or open"
 						: "Pin or open"

@@ -36,6 +36,8 @@ import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import refusalContext from "@/i18n/catalogues/en/mobile.refusal.context.json";
 import refusal from "@/i18n/catalogues/en/mobile.refusal.json";
+import remoteSessionsContext from "@/i18n/catalogues/en/mobile.remote_sessions.context.json";
+import remoteSessions from "@/i18n/catalogues/en/mobile.remote_sessions.json";
 import schedulesContext from "@/i18n/catalogues/en/mobile.schedules.context.json";
 import schedules from "@/i18n/catalogues/en/mobile.schedules.json";
 import sessionContext from "@/i18n/catalogues/en/mobile.session.context.json";
@@ -98,7 +100,10 @@ const NAMESPACES = [
 		name: "mobile.composer_input",
 		messages: composerInput,
 		context: composerInputContext,
-		expected: 14, // +2: the failure notice's short Retry / Dismiss actions (visual audit D6)
+		// +2: the failure notice's short Retry / Dismiss actions (visual audit D6).
+		// PR #278: +11 mobile.composer_input.attach.* (icon-led add-image menu
+		// with camera row) = 25, counted over the authored English JSON.
+		expected: 25,
 	},
 	{
 		name: "mobile.library",
@@ -272,6 +277,17 @@ const NAMESPACES = [
 		messages: relayChrome,
 		context: relayChromeContext,
 		expected: 20,
+	},
+	{
+		name: "mobile.remote_sessions",
+		messages: remoteSessions,
+		context: remoteSessionsContext,
+		/* PR #271 (remote conversations): the admission gate, per-operation
+		 *  remote refusals, retained-file save and the retained-only notice (12),
+		 *  plus round-1 remediation (10): the gate's own sentence, the header's
+		 *  owner subtitle, the owner-only control line, five owner-aware health
+		 *  sentences, the Save button's name and the row's long-press hint. */
+		expected: 22,
 	},
 ] as const;
 
@@ -458,6 +474,13 @@ describe("the English catalogues", () => {
 		/* Merge of origin/main (#265, 51debe8e) into #264: both comment chains
 		 * kept; 952 on main + the branch's 17 (889 - 872) = 969, the
 		 * generator's own count. */
+		/* PR #271: + 22 mobile.remote_sessions (new namespace) = 991,
+		 * the generator's own count. */
+		/* PR #272: +4 mobile.notifications group headings/guidance = 973,
+		 * independently counted over the authored English JSON (969 + 4). */
+		/* Merge of origin/main (#268 eaa49a3e, #272 b190244f) into #271: both
+		 * comment chains kept; #268 added no keys; 973 on main + the branch's 22
+		 * mobile.remote_sessions = 995, recounted over the merged en JSON. */
 		/* M3 S4: −1 mobile.signin (the dead `mobile.signin.diagnostics`,
 		 *  no call site) = 968, the generator's own count. */
 		/* PR #272: +4 mobile.notifications group headings/guidance = 973,
@@ -465,7 +488,15 @@ describe("the English catalogues", () => {
 		/* Merge of origin/main (#272, b190244f) into S4 (#270): both comment
 		 * chains kept; 968 + 4 = 972, derived by summing the keys of all 23
 		 * merged en catalogue files (mobile.notifications 59, mobile.signin 32). */
-		expect(total).toBe(972);
+		/* Merge of origin/main (#270, 0e32160f) into #271: both comment chains
+		 * kept; 972 on main (S4 dropped mobile.signin.diagnostics) + the branch's
+		 * 22 mobile.remote_sessions = 994, derived by summing the keys of all 24
+		 * merged en catalogue files (mobile.remote_sessions 22, mobile.signin 32). */
+		/* Merge of origin/main (#271, 57b129c8) into #278: both comment chains
+		 * kept; 994 on main + the branch's 11 mobile.composer_input.attach.* =
+		 * 1005, derived by summing the keys of all merged en catalogue files
+		 * (mobile.composer_input 25, mobile.remote_sessions 22). */
+		expect(total).toBe(1005);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -30,7 +30,9 @@
  * No React, no React Native.
  */
 
+import { t } from "@/i18n";
 import type { ErrorSurface, RelayError, StreamState } from "@/relay";
+import { isRemoteErrorCode, remoteFailureMessage } from "@/relay/remote-errors";
 import type { ConnectionPhase, ProjectionEntry } from "@/state";
 import { CONTROL, SURFACE } from "@/ui/a11y";
 
@@ -421,6 +423,18 @@ const refusalView = (
 ): ConnectionView | null => {
 	const message = relaySentence(error);
 	const name = computerName(input.computerLabel);
+	/* Peer failures retain the transcript and the phone's admitted connection.
+	 * Check again reopens reads only; it never replays an ambiguous command. */
+	if (isRemoteErrorCode(error.code) && error.kind === "rejected") {
+		return view("C6", message ?? remoteFailureMessage(error.code), "warning", {
+			action: {
+				kind: "retry",
+				label: t("mobile.common.try_again"),
+				testID: CONTROL.connectionRetry,
+			},
+			testIDs: [CONTROL.connectionRetry],
+		});
+	}
 
 	/* A typed gateway refusal is `C6` whatever its surface says, because the flows'
 	 * C6 row is "503 + a typed `RELAY_DETAIL` reason → the gateway's own sentence +

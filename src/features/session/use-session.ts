@@ -130,6 +130,7 @@ export interface SessionRuntime {
 	/** Loads one attachment's bytes as a data URI, or `null` when the relay no
 	 *  longer has them. */
 	loadImage: (entryId: string, index: number) => Promise<string | null>;
+	loadFile: (entryId: string, index: number) => Promise<ImageBytes>;
 	/** Loads one video artifact as a playable source URI (a cache file on
 	 *  native, a Blob object URL on web), or `null` when the relay no longer
 	 *  has the bytes. The caller revokes a web object URL when done with it
@@ -887,6 +888,14 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		snapshot.surface,
 	]);
 
+	const loadFile = useCallback(
+		(entryId: string, index: number) => {
+			if (endpoints === null)
+				return Promise.reject(new Error("Retained file source unavailable"));
+			return endpoints.file(sessionId, entryId, index);
+		},
+		[endpoints, sessionId],
+	);
 	const loadImage = useCallback(
 		async (entryId: string, index: number): Promise<string | null> => {
 			if (endpoints === null) return null;
@@ -1053,6 +1062,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		// session while authenticated readiness has correctly been withdrawn.
 		error: error ?? providerConnection.lastError,
 		loadImage,
+		loadFile,
 		loadVideo,
 		loadAgent,
 		supplements,

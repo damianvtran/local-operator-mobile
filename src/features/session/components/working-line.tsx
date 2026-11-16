@@ -412,7 +412,9 @@ const DOCK_MS = 180;
 export type PinnedWorkingLineProps = {
 	/** `pinnedWorkingLine(projection)`: `null` while no turn is alive. */
 	line: { activity: string; startedS: number | null } | null;
-	onStop: () => Promise<boolean>;
+	/** Absent when this conversation cannot be stopped from here (a remote
+	 *  relay that does not forward `abort`): the line shows no Stop at all. */
+	onStop?: () => Promise<boolean>;
 	/** The session's shared stop latch (`composer.stopping`). */
 	stopping: boolean;
 	/** Whether a sibling follows in the dock's `gap-2` column (the chips or the

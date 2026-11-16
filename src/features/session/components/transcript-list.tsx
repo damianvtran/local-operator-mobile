@@ -168,6 +168,10 @@ export type TranscriptListProps = {
 	turnLive?: boolean;
 	/** Resolves an attachment's bytes. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
+	loadFile?: (
+		entryId: string,
+		index: number,
+	) => Promise<import("@/relay").ImageBytes>;
 	/** Opens a subagent's own view. */
 	onOpenAgent?: (jobId: string) => void;
 	/** Opens the full-screen player for a video artifact a generation row
@@ -346,6 +350,7 @@ export const TranscriptList = ({
 	streamingRowId,
 	turnLive,
 	loadImage,
+	loadFile,
 	onOpenAgent,
 	onOpenVideo,
 	onCancelTurn,
@@ -1717,6 +1722,7 @@ export const TranscriptList = ({
 							condensed={item.condensed === true}
 							streaming={streamingRowId !== null && item.id === streamingRowId}
 							loadImage={loadImage}
+							loadFile={loadFile}
 							onOpenAgent={onOpenAgent}
 							onOpenVideo={onOpenVideo}
 							onCancelTurn={onCancelTurn}
@@ -1753,6 +1759,7 @@ export const TranscriptList = ({
 			toggleRowOpen,
 			streamingRowId,
 			loadImage,
+			loadFile,
 			onOpenAgent,
 			onOpenVideo,
 			onCancelTurn,

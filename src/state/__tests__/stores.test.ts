@@ -462,6 +462,42 @@ describe("the list store replaces wholesale and keeps stale-but-labelled", () =>
 		expect(store.getState().capabilities.features).toEqual({ auth: 1 });
 	});
 
+	it("a live frame without capabilities drops cache-seeded remote_sessions but keeps the rest (PR #271 R1-5)", () => {
+		const store = createListStore();
+		const generation = store.getState().connectionGeneration;
+		const remote = { available: true, version: 1 };
+		store.getState().applyFrame(
+			{
+				...listFrame(),
+				capabilities: { features: { auth: 1 }, remote_sessions: remote },
+			} as never,
+			500,
+			generation,
+			"cache",
+		);
+		/* A later CACHE paint without the block keeps it (still the old picture). */
+		store
+			.getState()
+			.applyFrame(
+				{ ...listFrame(), capabilities: undefined },
+				600,
+				generation,
+				"cache",
+			);
+		expect(store.getState().capabilities.remote_sessions).toEqual(remote);
+		/* A LIVE relay that omits the block cannot forward remote conversations:
+		 *  the stale flags must not admit the remote gate. */
+		store
+			.getState()
+			.applyFrame(
+				{ ...listFrame(), capabilities: undefined },
+				1_000,
+				generation,
+			);
+		expect(store.getState().capabilities.remote_sessions).toBeUndefined();
+		expect(store.getState().capabilities.features).toEqual({ auth: 1 });
+	});
+
 	it("a warm-cache paint is not a live frame: liveFrameAt waits for the computer's own (PR #264 M1 after #246)", () => {
 		const store = createListStore();
 		const generation = store.getState().connectionGeneration;

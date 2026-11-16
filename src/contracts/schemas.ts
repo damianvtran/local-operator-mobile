@@ -162,6 +162,15 @@ export const promptImageSchema = z.looseObject({
 
 export const inputModeSchema = z.enum(["typed", "dictated", "mixed"]);
 
+/** Retained DocumentContent references only. Indices are sparse block indices,
+ * never positions in this array and never original filesystem paths. */
+export const transcriptFileRefSchema = z.looseObject({
+	index: z.number().int().nonnegative(),
+	filename: nonEmpty,
+	mime_type: z.string(),
+	bytes: z.number().int().nonnegative(),
+});
+
 export const transcriptImageRefSchema = z.looseObject({
 	index: z.number().int(),
 	mime_type: z.string(),
@@ -277,6 +286,7 @@ export const transcriptEntrySchema = z.looseObject({
 	error: z.string(),
 	details: transcriptEntryDetailsSchema,
 	images: z.array(transcriptImageRefSchema),
+	files: z.array(transcriptFileRefSchema).default([]),
 	/* Additive and defaulted: a relay that predates the video phase omits the
 	 * key entirely, and the defensible reading of "omitted" is "this row
 	 * carries no video artifact" — never `undefined` reaching a screen. */
@@ -1259,6 +1269,24 @@ export const sessionStartCapabilitySchema = z.looseObject({
 
 export const capabilitiesSchema = z.looseObject({
 	features: z.record(z.string(), z.unknown()).optional(),
+	/** Versioned relay baseline, never inferred from mesh listing/transfer.
+	 * Missing or partial flags must not turn a remote read into a local start. */
+	remote_sessions: z
+		.looseObject({
+			available: z.boolean().optional(),
+			version: z.number().int().optional(),
+			view: z.boolean().optional(),
+			history: z.boolean().optional(),
+			media: z.boolean().optional(),
+			supported_command_ops: z.array(z.string()).optional(),
+			supported_media_kinds: z.array(z.string()).optional(),
+			file_sources: z.array(z.string()).optional(),
+			audio_upload: z.boolean().optional(),
+			skill_invocation: z.boolean().optional(),
+			supplements: z.boolean().optional(),
+			document_upload: z.boolean().optional(),
+		})
+		.optional(),
 	/** Absent means the relay never knew about the key, which reads exactly like
 	 *  `available: false` — the default is here so a screen can read
 	 *  `capabilities.stt.available` without a second absence check. */

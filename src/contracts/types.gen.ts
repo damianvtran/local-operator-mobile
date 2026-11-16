@@ -86,6 +86,14 @@ export type PromptImage = { data_b64: string; mime_type: string };
 
 export type InputMode = "typed" | "dictated" | "mixed";
 
+/** Owner-retained document bytes; sparse index is not an array offset. */
+export interface TranscriptFileRef {
+	index: number;
+	filename: string;
+	mime_type: string;
+	bytes: number;
+}
+
 export interface TranscriptImageRef {
 	/** Image-block index only: a text caption does not shift it. */
 	index: number;
@@ -209,6 +217,7 @@ export interface TranscriptEntry {
 	error: string;
 	details: TranscriptEntryDetails;
 	images: TranscriptImageRef[];
+	files?: TranscriptFileRef[];
 	/** The row's video-artifact references (see `TranscriptVideoRef`). Absent on
 	 *  a relay that predates the video phase; the client reads absence as `[]`. */
 	videos?: TranscriptVideoRef[];
@@ -645,6 +654,22 @@ export interface SttCapability {
 
 export interface Capabilities {
 	features?: Record<string, unknown>;
+	/** Relay-owned, versioned remote view/drive/media baseline. Absent on old
+	 * relays; mesh listing or transfer alone never implies viewer support. */
+	remote_sessions?: {
+		available?: boolean;
+		version?: number;
+		view?: boolean;
+		history?: boolean;
+		media?: boolean;
+		supported_command_ops?: string[];
+		supported_media_kinds?: string[];
+		file_sources?: string[];
+		audio_upload?: boolean;
+		skill_invocation?: boolean;
+		supplements?: boolean;
+		document_upload?: boolean;
+	};
 	/** An older relay omits this whole object; absence reads as `available:false`. */
 	stt?: SttCapability;
 	/**

@@ -82,6 +82,11 @@ vi.mock("@/features/session/components/user-message-clamp", () => ({
 	UserMessageClamp: () => null,
 }));
 
+vi.mock("@/ui/components/button", () => ({
+	Button: ({ label }: { label: string }) =>
+		createElement("button", { type: "button" }, label),
+}));
+
 import { TranscriptRow } from "./transcript-row";
 
 const assistant = (id: string, text: string): TranscriptEntry => ({
@@ -107,6 +112,31 @@ const render = (entry: TranscriptEntry, streaming = false) =>
 	renderToStaticMarkup(createElement(TranscriptRow, { entry, streaming }));
 
 describe("a blank assistant row paints nothing", () => {
+	it("keeps a file-only historical answer visible and wires its sparse Save control", () => {
+		const entry = {
+			...assistant("file-only", ""),
+			files: [
+				{
+					index: 3,
+					filename: "retained-report.pdf",
+					mime_type: "application/pdf",
+					bytes: 200,
+				},
+			],
+		};
+		const markup = renderToStaticMarkup(
+			createElement(TranscriptRow, {
+				entry,
+				loadFile: async () => ({
+					bytes: new Uint8Array(),
+					mimeType: "application/pdf",
+				}),
+			}),
+		);
+		expect(markup).toContain("retained-report.pdf");
+		expect(markup).toContain("transcript-file-file-only-3");
+		expect(markup).toContain("Save");
+	});
 	it("renders a bare box carrying its testID, with no prose padding or body", () => {
 		const entry = assistant("a1", "");
 		const markup = render(entry);

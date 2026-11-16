@@ -257,6 +257,9 @@ export interface ScenarioWorld {
 	 * contract warns about, and the wire proof asserts the flag on both.
 	 */
 	peerRows?: Json[];
+	/** Complete v1 viewer fixture only; listing/transfer scenarios stay old-relay
+	 * controls so a phone cannot infer remote support from the row alone. */
+	remoteSessions?: boolean;
 	/**
 	 * What `POST /api/sessions/{id}/transfer` answers for this state.
 	 *
@@ -3737,6 +3740,91 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 		peerRows: meshRows(),
 	});
+
+	add(
+		"remote-conversation",
+		"A remote-owned conversation through the connected relay's complete v1 viewer baseline, including historical image bytes and the ordinary composer. Synthetic owner metadata is never transport authority.",
+		[],
+		() => {
+			const projection = structuredClone(liveIdle);
+			projection.conversation_name = "Remote project notes";
+			projection.transcript = [
+				...projection.transcript,
+				{
+					...structuredClone(
+						everyKind.transcript.find(
+							(row) => row.kind === "user",
+						) as TranscriptEntry,
+					),
+					id: "remote-user-image",
+					text: "Can you check this image on the owner computer?",
+					images: [{ index: 0, mime_type: "image/png" }],
+				},
+				{
+					...structuredClone(
+						everyKind.transcript.find(
+							(row) => row.kind === "assistant",
+						) as TranscriptEntry,
+					),
+					id: "remote-owner-answer",
+					files: [
+						{
+							index: 3,
+							filename: "retained-notes.txt",
+							mime_type: "text/plain",
+							bytes: new TextEncoder().encode(
+								"Retained synthetic file bytes.\n",
+							).length,
+						},
+					],
+					text: "The conversation stays on the owner computer. You can read it and send instructions here.",
+					images: [],
+				},
+			];
+			// Negative control: an older owner's cached projection may still carry
+			// Highlights metadata. The remote phone must not expose its previews.
+			projection.supplements = {
+				"remote-owner-answer": {
+					...supplementBeat("done_populated"),
+					anchor: "remote-owner-answer",
+				},
+			};
+			return {
+				projections: { [projection.session_id]: projection },
+				rowOverridesById: {
+					[projection.session_id]: {
+						locality: "remote",
+						owner_device: "synthetic-owner",
+						owner_device_name: "Studio computer",
+						reachable: true,
+					},
+				},
+				remoteSessions: true,
+			};
+		},
+	);
+
+	add(
+		"remote-conversation-approval",
+		"A remote-owned conversation stopped on a pending approval with its turn running. The v1 relay forwards only prompt/steer, so the phone must show the wait with no Approve/Deny and no Stop, and name the owner (PR #271 R1-1/U2).",
+		[],
+		() => {
+			const projection = structuredClone(approvalFrame);
+			projection.conversation_name = "Remote deploy check";
+			return {
+				projections: { [projection.session_id]: projection },
+				rowOverridesById: {
+					[projection.session_id]: {
+						locality: "remote",
+						owner_device: "synthetic-owner",
+						owner_device_name: "Studio computer",
+						reachable: true,
+					},
+				},
+				remoteSessions: true,
+			};
+		},
+	);
 
 	add(
 		"mesh-rows",

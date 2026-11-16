@@ -6,7 +6,7 @@ import {
 	KEEPALIVE_GRACE_S,
 	reconnectDelay,
 } from "@/features/session/connection-view";
-import { RelayError } from "@/relay";
+import { RelayError, relayErrorFromResponse } from "@/relay";
 import type { ProjectionEntry } from "@/state";
 
 /**
@@ -103,6 +103,29 @@ const input = (
 /** A bare HTTP status in reader-facing copy. Hoisted: the lint wants regex
  *  literals compiled once. */
 const BARE_STATUS = /\b(4\d\d|5\d\d)\b/;
+
+describe("remote owner refusals preserve phone admission", () => {
+	it.each([
+		[403, "remote_forbidden"],
+		[503, "remote_unreachable"],
+		[409, "remote_unsupported"],
+		[409, "remote_command_ambiguous"],
+	] as const)(
+		"presents %s %s as a read retry, never sign-in",
+		(status, code) => {
+			const error = relayErrorFromResponse({
+				status,
+				header: () => null,
+				body: { error: code, code, remote: true },
+			});
+			const banner = connectionView(input({ error }));
+			expect(banner.id).toBe("C6");
+			expect(banner.action?.kind).toBe("retry");
+			expect(banner.text).toBe(error.displayableMessage);
+			expect(banner.text).not.toContain("remote_");
+		},
+	);
+});
 
 describe("C1 — a rotation is invisible", () => {
 	it("says nothing at all for a lease rotation", () => {

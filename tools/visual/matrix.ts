@@ -799,7 +799,7 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	],
 	/* --- the mesh sheet's states (S15, the sessions-and-delegation half) ---
 	 *
-	 * Every move state presses the SAME remote row (`mesh-rows` declares it),
+	 * Every move state long-presses the SAME remote row (`mesh-rows` declares it),
 	 * and the four after the pick press the sheet's own confirm — which is what
 	 * makes the in-flight, busy, receipt and unconfirmed states the app's own
 	 * renderings rather than staged ones: the wire answers differ per scenario,
@@ -807,27 +807,31 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 * IS the state under capture there; the unreachable cell presses its OWN row,
 	 * so its frame is the tap-reveal detail (device + glossed reason) and not a
 	 * second copy of the plain list. */
-	/* The unreachable row's TAP-REVEAL: the sheet names the device and the
+	/* The unreachable row's SECONDARY REVEAL: the sheet names the device and the
 	 * relay's own glossed reason ("it did not answer"), which is the detail a
 	 * list row has no room for — and it is what makes this cell a different
 	 * frame from `mesh-remote`'s plain list rather than a second copy of it. */
-	"S15/mesh-unreachable": [{ click: sessionRowId("4c5d6e7f8091") }],
-	"S15/move-pick": [{ click: sessionRowId("9f2c1a7b0d3e") }],
+	"S15/mesh-unreachable": [
+		{ hold: { testID: sessionRowId("4c5d6e7f8091"), ms: 1200 } },
+	],
+	"S15/move-pick": [
+		{ hold: { testID: sessionRowId("9f2c1a7b0d3e"), ms: 1200 } },
+	],
 
 	"S15/move-busy": [
-		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ hold: { testID: sessionRowId("9f2c1a7b0d3e"), ms: 1200 } },
 		{ click: CONTROL.sessionMoveConfirm },
 	],
 	"S15/move-progress": [
-		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ hold: { testID: sessionRowId("9f2c1a7b0d3e"), ms: 1200 } },
 		{ click: CONTROL.sessionMoveConfirm },
 	],
 	"S15/move-receipt": [
-		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ hold: { testID: sessionRowId("9f2c1a7b0d3e"), ms: 1200 } },
 		{ click: CONTROL.sessionMoveConfirm },
 	],
 	"S15/move-unconfirmed": [
-		{ click: sessionRowId("9f2c1a7b0d3e") },
+		{ hold: { testID: sessionRowId("9f2c1a7b0d3e"), ms: 1200 } },
 		{ click: CONTROL.sessionMoveConfirm },
 	],
 	/* --- the inbox's selection state (S18) ---

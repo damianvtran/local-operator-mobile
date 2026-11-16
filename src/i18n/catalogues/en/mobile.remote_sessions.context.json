@@ -1,0 +1,90 @@
+{
+	"mobile.remote_sessions.title": {
+		"role": "heading",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.loading": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.unsupported": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.unreachable": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.forbidden": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.owner_unresolved": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.session_missing": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.cursor_missing": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.command_ambiguous": {
+		"role": "status",
+		"note": "Remote conversation support or per-operation relay failure; owner means the mesh computer that holds the conversation, not the phone. Never suggest signing out or recalling the session."
+	},
+	"mobile.remote_sessions.file_saving": {
+		"role": "status",
+		"note": "Historical retained file save status, used for local and remote conversations. This is not an upload and does not read the original filesystem path."
+	},
+	"mobile.remote_sessions.file_save_failed": {
+		"role": "status",
+		"note": "Historical retained file save status, used for local and remote conversations. This is not an upload and does not read the original filesystem path."
+	},
+	"mobile.remote_sessions.retained_only": {
+		"role": "status",
+		"note": "Visible remote-only capability limit: retained input DocumentContent attachments are supported, generated supplement files and the Highlights feature are not. Highlights is a feature label, not search highlighting. Never imply uploads or local filesystem access."
+	},
+	"mobile.remote_sessions.gate_unsupported": {
+		"role": "status",
+		"note": "Shown full-screen when the phone opens a remote conversation but this computer's relay lacks remote-conversation support. Owner computer = the mesh computer holding the conversation. Never suggest signing out or recalling."
+	},
+	"mobile.remote_sessions.subtitle_owner": {
+		"role": "meta",
+		"note": "Session header subtitle for a remote conversation. {state} is the state word (Idle, Working, Not answering…); {owner} is the owner computer's display name. Keep both placeholders unchanged; no final full stop."
+	},
+	"mobile.remote_sessions.owner_only": {
+		"role": "status",
+		"note": "Shown instead of unavailable controls in a remote conversation (approve/deny, stop, model and effort pickers, typed slash commands). {owner} is the owner computer's display name; keep it unchanged. Not an error: a current limit of remote conversations."
+	},
+	"mobile.remote_sessions.health_live": {
+		"role": "status",
+		"note": "Status sheet, remote conversation, live. {owner} is the computer that runs the conversation; the phone reaches it through the connected computer. Keep {owner} unchanged."
+	},
+	"mobile.remote_sessions.health_reconnecting": {
+		"role": "status",
+		"note": "Status sheet, remote conversation, phone reconnecting. Keep {owner} unchanged."
+	},
+	"mobile.remote_sessions.health_dropped": {
+		"role": "status",
+		"note": "Status sheet, remote conversation, owner unreachable. Keep {owner} unchanged."
+	},
+	"mobile.remote_sessions.health_quiet": {
+		"role": "status",
+		"note": "Status sheet, remote conversation, not responding. Keep {owner} unchanged. 'Retrying won't send it twice' is a safety promise; keep it."
+	},
+	"mobile.remote_sessions.health_ended": {
+		"role": "status",
+		"note": "Status sheet, remote conversation, ended. Do not mention Resume (not available for remote conversations). Keep {owner} unchanged."
+	},
+	"mobile.remote_sessions.file_save_label": {
+		"role": "button",
+		"note": "Screen-reader name of the Save button on a retained file card. {name} is the file name; keep it unchanged."
+	},
+	"mobile.remote_sessions.row_long_press_hint": {
+		"role": "help",
+		"note": "Screen-reader hint on a remote conversation row in the drawer: long-press opens recall/move/copy. Recall brings the conversation to this computer."
+	}
+}

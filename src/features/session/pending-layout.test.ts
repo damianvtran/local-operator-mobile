@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { EMPTY, STATE_MARKER, SURFACE } from "@/ui/a11y";
 import { collapsePendingTranscript } from "./pending-layout";
 
+const FOOTER_DROPS_BANNER =
+	/pendingRecovery \? undefined : \(\s*<>\s*\{connectionBanner\}/;
 const COLLAPSE_CALL =
 	/collapsePendingTranscript\(\s*compact \|\| pendingRecovery,\s*pendingViewProps !== null,\s*pendingRecovery \? null : runtime\.connection\.id,?\s*\)/;
 const DUPLICATED_INSET = /marginLeft|marginRight|paddingLeft|paddingRight/;
@@ -56,7 +58,10 @@ describe("PR92/main semantic convergence", () => {
 		const source = read("../../../app/(app)/session/[id].tsx");
 		expect(source).toMatch(COLLAPSE_CALL);
 		expect(source).toContain("footer={transcriptNotice}");
-		expect(source).toContain("pendingRecovery ? undefined : connectionBanner");
+		/* The footer drops the banner while the pending card owns it; PR #271
+		 *  wrapped the banner with the remote notice in one fragment, so the
+		 *  contract is asserted on that shape rather than a bare expression. */
+		expect(source).toMatch(FOOTER_DROPS_BANNER);
 		expect(source).toContain(
 			"bodyNotice={pendingRecovery ? connectionBanner : null}",
 		);

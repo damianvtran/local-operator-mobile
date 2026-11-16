@@ -117,11 +117,13 @@ function Host({
 	initial,
 	streaming,
 	ended,
+	slashRefusal = null,
 }: {
 	client: RelayEndpoints;
 	initial: string;
 	streaming: boolean;
 	ended: boolean;
+	slashRefusal?: null | string;
 }) {
 	const [draft, setDraft] = useState(initial);
 	const [images, setImages] = useState<PromptImage[]>([]);
@@ -137,6 +139,7 @@ function Host({
 		ended,
 		capabilities: null,
 		editor: { draft, images, setDraft, setImages },
+		slashRefusal,
 	});
 	rows = usePendingEchoes(SID, []);
 	return null;
@@ -183,6 +186,48 @@ afterEach(async () => {
 	dom?.dispose();
 	dom = null;
 	clearPendingEchoes();
+});
+
+describe("useComposer's remote slash refusal (PR #271 R1-1/U2)", () => {
+	it("refuses a typed /command with the honest sentence and sends nothing", async () => {
+		const { client, open } = handClient();
+		const refusal = "Slash commands work only on Studio computer for now.";
+		await act(async () =>
+			root?.render(
+				createElement(Host, {
+					client,
+					initial: "/compact",
+					streaming: false,
+					ended: false,
+					slashRefusal: refusal,
+				}),
+			),
+		);
+		await act(async () => c().send());
+		await settle();
+		expect(open).toHaveLength(0);
+		expect(c().error).toBe(refusal);
+		expect(c().draft).toBe("/compact");
+	});
+
+	it("still sends an ordinary prompt when slash is refused", async () => {
+		const { client, open } = handClient();
+		await act(async () =>
+			root?.render(
+				createElement(Host, {
+					client,
+					initial: "summarise the notes",
+					streaming: false,
+					ended: false,
+					slashRefusal: "refused",
+				}),
+			),
+		);
+		await act(async () => c().send());
+		await settle();
+		expect(open).toHaveLength(1);
+		expect(open[0]?.body.op).toBe("prompt");
+	});
 });
 
 describe("useComposer's pending echo", () => {

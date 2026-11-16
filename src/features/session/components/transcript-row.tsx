@@ -1,6 +1,5 @@
 import { memo, type RefObject, useRef } from "react";
 import { Pressable, Text, View } from "react-native";
-
 import type { TranscriptEntry } from "@/contracts";
 import { AskResponseRow } from "@/features/session/components/ask-response-row";
 import {
@@ -44,6 +43,7 @@ import { ROLE, SURFACE, transcriptImageId, userMessageMoreId } from "@/ui/a11y";
 import { useTheme } from "@/ui/appearance";
 import { TOUCH_FLOOR } from "@/ui/layout";
 import { cx } from "@/ui/variants";
+import { TranscriptFiles } from "./transcript-files";
 
 /**
  * One transcript row, dispatched by kind (`docs/design/components.md` § 14).
@@ -84,6 +84,10 @@ export type TranscriptRowProps = {
 	streaming?: boolean;
 	/** Resolves an attachment's bytes; threaded from the screen. */
 	loadImage?: (entryId: string, index: number) => Promise<string | null>;
+	loadFile?: (
+		entryId: string,
+		index: number,
+	) => Promise<import("@/relay").ImageBytes>;
 	/** Opens a subagent's own view, for a `subagent_message` row. */
 	onOpenAgent?: (jobId: string) => void;
 	/** Opens the full-screen player for a video artifact a generation row
@@ -172,7 +176,7 @@ const UserBox = ({
 	);
 };
 
-const TranscriptRowImpl = ({
+const TranscriptRowBody = ({
 	entry,
 	streaming = false,
 	loadImage,
@@ -718,6 +722,24 @@ const TranscriptRowImpl = ({
 			{images}
 			{anchors}
 		</View>
+	);
+};
+
+/** File-only wrapping leaves every historical row without file refs on its
+ * existing layout. Sparse indices are preserved by the file component. */
+const TranscriptRowImpl = (props: TranscriptRowProps) => {
+	const body = <TranscriptRowBody {...props} />;
+	return props.entry.files?.length && props.loadFile ? (
+		<View>
+			{body}
+			<TranscriptFiles
+				entryId={props.entry.id}
+				files={props.entry.files}
+				load={props.loadFile}
+			/>
+		</View>
+	) : (
+		body
 	);
 };
 

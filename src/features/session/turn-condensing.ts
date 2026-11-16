@@ -230,7 +230,11 @@ export function staysVisibleOutsideTurnBar(entry: TranscriptEntry): boolean {
 		if (MEDIA_ARTIFACT_TOOLS.has(entry.tool_name.trim().toLowerCase())) {
 			return true;
 		}
-		if (entry.images.length > 0 || (entry.videos?.length ?? 0) > 0) {
+		if (
+			entry.images.length > 0 ||
+			(entry.videos?.length ?? 0) > 0 ||
+			(entry.files?.length ?? 0) > 0
+		) {
 			return true;
 		}
 	}
@@ -263,7 +267,9 @@ function closingAnswerIndex(
 		if (STATEMENT_KINDS.has(entry.kind)) continue;
 		if (isQuietCloseEntry(entry)) return index + 1;
 		return entry.kind === "assistant" &&
-			(entry.text.length > 0 || entry.images.length > 0) &&
+			(entry.text.length > 0 ||
+				entry.images.length > 0 ||
+				(entry.files?.length ?? 0) > 0) &&
 			entryComplete(entry) &&
 			!hasExplicitCallsTools(entry)
 			? index
@@ -931,7 +937,12 @@ const quietTriggerFamilyOf = (
 const breaksPeerRun = (entry: TranscriptEntry): boolean => {
 	// Material stays on its source row; a receipt's attachment COUNT is not
 	// an admitted image, and no envelope grants ownership of another row's media.
-	if (entry.images.length > 0 || (entry.videos?.length ?? 0) > 0) return true;
+	if (
+		entry.images.length > 0 ||
+		(entry.videos?.length ?? 0) > 0 ||
+		(entry.files?.length ?? 0) > 0
+	)
+		return true;
 	if (
 		quietTriggerFamilyOf(entry) !== null ||
 		(entry.kind === "tool" &&
@@ -940,7 +951,11 @@ const breaksPeerRun = (entry: TranscriptEntry): boolean => {
 		return false;
 	}
 	if (entry.kind === "assistant") {
-		return entry.text.length > 0 || entry.images.length > 0;
+		return (
+			entry.text.length > 0 ||
+			entry.images.length > 0 ||
+			(entry.files?.length ?? 0) > 0
+		);
 	}
 	return true;
 };
@@ -1267,6 +1282,7 @@ export function certifiedPeerCycleGroups(
 					row.text_complete === false ||
 					row.images.length > 0 ||
 					(row.videos?.length ?? 0) > 0 ||
+					(row.files?.length ?? 0) > 0 ||
 					Boolean(row.error) ||
 					(row.details as Record<string, unknown>).held === true ||
 					row.details.steer === true ||
@@ -1530,7 +1546,8 @@ export function isBlankAssistantEntry(entry: TranscriptEntry): boolean {
 		entry.kind === "assistant" &&
 		entry.text.trim() === "" &&
 		entry.images.length === 0 &&
-		(entry.videos?.length ?? 0) === 0
+		(entry.videos?.length ?? 0) === 0 &&
+		(entry.files?.length ?? 0) === 0
 	);
 }
 

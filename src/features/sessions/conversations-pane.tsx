@@ -46,6 +46,7 @@ import {
 	createSearchEscape,
 	type KeyEventTarget,
 } from "@/features/sessions/search-escape";
+import { sessionLocation } from "@/features/sessions/session-navigation";
 import {
 	degradedNote,
 	degradedShortNote,
@@ -640,19 +641,13 @@ export const ConversationsPane = ({
 		// Selecting the current chat is a dismissal, not a duplicate route that
 		// remounts its input. Other selections switch directly, without Home.
 		if (session.session_id !== currentSessionId)
-			router.navigate(`/session/${session.session_id}`);
+			router.navigate(sessionLocation(session) as `/session/${string}`);
 		onNavigate?.();
 	};
 
-	/* One tap's meaning, decided by the row's kind: a local row opens its
-	 * session; a REMOTE row opens the move sheet, because this device cannot
-	 * tail another device's conversation and the sheet is where its one verb
-	 * lives. */
+	/* Viewing does not transfer ownership. Both kinds use the ordinary relay
+	 * conversation route; remote recall stays an explicit long-press action. */
 	const activate = (session: SessionSummary) => {
-		if (isRemoteRow(session)) {
-			setMoveTarget(session);
-			return;
-		}
 		openSession(session);
 	};
 

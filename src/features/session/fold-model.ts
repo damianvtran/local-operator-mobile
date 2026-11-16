@@ -74,7 +74,12 @@ export type InternalReceiptFamily =
 export function entryReceiptFamily(
 	entry: TranscriptEntry,
 ): InternalReceiptFamily | null {
-	if (entry.images.length > 0 || (entry.videos?.length ?? 0) > 0) return null;
+	if (
+		entry.images.length > 0 ||
+		(entry.videos?.length ?? 0) > 0 ||
+		(entry.files?.length ?? 0) > 0
+	)
+		return null;
 	if (entry.kind === "peer_message") return "incoming";
 	if (isHubReceipt(entry) || isBridgeReceipt(entry)) return "incoming";
 	if (entry.kind !== "notice") return null;
@@ -110,7 +115,12 @@ export function isQuietTurnTool(entry: TranscriptEntry): boolean {
 /** True when a tool row owns a media artifact or generation card that must stay visible. */
 export function isMediaArtifactTool(entry: TranscriptEntry): boolean {
 	if (entry.kind !== "tool") return false;
-	if (entry.images.length > 0 || (entry.videos?.length ?? 0) > 0) return true;
+	if (
+		entry.images.length > 0 ||
+		(entry.videos?.length ?? 0) > 0 ||
+		(entry.files?.length ?? 0) > 0
+	)
+		return true;
 	const normalized = displayToolName(entry.tool_name).toLowerCase();
 	return (
 		MEDIA_ARTIFACT_TOOLS.has(entry.tool_name.trim().toLowerCase()) ||

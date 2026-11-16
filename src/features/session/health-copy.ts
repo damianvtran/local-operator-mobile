@@ -123,9 +123,55 @@ export const headerSubtitle = (input: {
 	/** @deprecated Accepted and IGNORED: the header shows no clock (D2). The
 	 *  session route stopped passing it; optional so older callers compile. */
 	elapsed?: string | null;
+	/** A remote conversation's DISPLAY-ONLY owner name (`remoteDeviceLabel`), or
+	 *  null/absent for a local one. Named beside the state so a deep link never
+	 *  hides that a steer runs on another computer (PR #271 D1/U1). */
+	owner?: null | string;
+}): string => {
+	const state = headerState(input);
+	return input.owner
+		? t("mobile.remote_sessions.subtitle_owner", { state, owner: input.owner })
+		: state;
+};
+
+const headerState = (input: {
+	health: "live" | "not_answering" | "reconnecting" | "ended";
+	working: boolean;
+	waiting: boolean;
 }): string => {
 	if (input.health !== "live") return healthStateWords()[input.health];
 	if (input.waiting) return t("relay.chrome.session.subtitle.waiting");
 	if (input.working) return t("relay.chrome.session.subtitle.working_plain");
 	return t("relay.chrome.session.subtitle.idle");
+};
+
+/**
+ * The health sheet's sentence for a REMOTE conversation. The relay's nine
+ * `relay.health.*` sentences are mirrored verbatim and all say "your computer"
+ * (and `ended_detail` offers a Resume into the home folder); for a conversation
+ * owned by a mesh peer that names the wrong machine and a route v1 does not
+ * carry (PR #271 U1). Each state keeps its meaning; only the owner changes. The
+ * owner is display-only text.
+ */
+export const remoteHealthDetail = (
+	key:
+		| "relay.health.live_detail"
+		| "relay.health.dropped_detail"
+		| "relay.health.quiet_detail"
+		| "relay.health.reconnecting_detail"
+		| "relay.health.ended_detail",
+	owner: string,
+): string => {
+	switch (key) {
+		case "relay.health.live_detail":
+			return t("mobile.remote_sessions.health_live", { owner });
+		case "relay.health.dropped_detail":
+			return t("mobile.remote_sessions.health_dropped", { owner });
+		case "relay.health.quiet_detail":
+			return t("mobile.remote_sessions.health_quiet", { owner });
+		case "relay.health.reconnecting_detail":
+			return t("mobile.remote_sessions.health_reconnecting", { owner });
+		case "relay.health.ended_detail":
+			return t("mobile.remote_sessions.health_ended", { owner });
+	}
 };

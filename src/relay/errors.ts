@@ -1,3 +1,9 @@
+import {
+	isRemoteFailureResponse,
+	type RemoteErrorCode,
+	remoteFailureMessage,
+} from "./remote-errors";
+
 /* Regexes hoisted to module scope: `relayErrorFromResponse` runs for every failed
  * request, and a literal inside it is re-created each time. */
 const DELTA_SECONDS = /^\d+$/;
@@ -735,6 +741,22 @@ export function relayErrorFromResponse(
 		retryAfterMs,
 		diagnostic,
 	};
+
+	/* Only the relay's marked, status-matched remote vocabulary bypasses generic
+	 * HTTP handling. In particular, 401 still belongs to phone authentication.
+	 * Keep ambiguous UUIDs, but never automatically resend them through a peer. */
+	if (isRemoteFailureResponse(status, objectBody)) {
+		const remoteCode = code as RemoteErrorCode;
+		const message = remoteFailureMessage(remoteCode);
+		return new RelayError("rejected", message, {
+			...common,
+			detail: message,
+			serverError: undefined,
+			envelope: remoteCode === "remote_command_ambiguous" ? "keep" : "clear",
+			retry: "never",
+			surface: "none",
+		});
+	}
 
 	switch (status) {
 		case 401: {

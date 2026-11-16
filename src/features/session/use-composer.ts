@@ -167,6 +167,11 @@ export const useComposer = (input: {
 	capabilities: Capabilities | null | undefined;
 	/** Bumped by the screen when a pending card needs the draft left alone. */
 	onSent?: () => void;
+	/** Non-null when this conversation cannot run slash commands from here (a
+	 *  remote relay that does not forward `slash`, PR #271 R1-1/U2): a typed
+	 *  `/command` is refused with this sentence and NOTHING is sent, instead of
+	 *  a guaranteed `409 remote_unsupported`. The draft is kept. */
+	slashRefusal?: null | string;
 	/** An adopted provisional editor keeps its identity while this host adds the
 	 * normal session actions, dictation and slash controls around it. */
 	editor?: {
@@ -182,6 +187,7 @@ export const useComposer = (input: {
 	// dependency array is a new identity every render, which makes every
 	// `useCallback` below it pointless.
 	const { sessionId, source, streaming, ended, capabilities, onSent } = input;
+	const slashRefusal = input.slashRefusal ?? null;
 	const cached = input.cached === true;
 	const endpoints = source.endpoints;
 	const authorization = useSyncExternalStore(
@@ -406,6 +412,17 @@ export const useComposer = (input: {
 	const runSend = useCallback(
 		async (op: "prompt" | "steer") => {
 			if (endpoints === null || inFlight.current) return;
+			/* Refused BEFORE the haptic and the dictation discard: nothing leaves,
+			 * so nothing is felt or dropped (same parse as the slash branch below). */
+			if (
+				slashRefusal !== null &&
+				imagesRef.current.length === 0 &&
+				parseSlashDraft(draftRef.current.trim()) !== null
+			) {
+				setNotice(null);
+				setError(slashRefusal);
+				return;
+			}
 			/* The send is felt (perf audit P16): one light tick as the message
 			 * leaves the composer — after the guard, so a refused or duplicate
 			 * press stays silent. */
@@ -609,6 +626,7 @@ export const useComposer = (input: {
 			ended,
 			cancelDictationForSend,
 			echoDraft,
+			slashRefusal,
 		],
 	);
 

@@ -253,7 +253,11 @@ export function SessionHealthControl({
 	onSheetOpenChange,
 	children,
 	controlRef,
+	detail,
 }: SessionHealthControlProps & {
+	/** Replaces the relay's sheet sentence — a remote conversation's owner-aware
+	 *  wording (`remoteHealthDetail`, PR #271 U1). Absent = the mirrored copy. */
+	detail?: string;
 	/** The sheet body's extra content (Resume and its lines while ended). */
 	children?: ReactNode;
 	/** The control, so the screen can return focus to it after a sheet. */
@@ -406,7 +410,7 @@ export function SessionHealthControl({
 			>
 				<View className="gap-3 px-4 pb-4">
 					<Text className="text-body-sm text-ink-muted">
-						{healthCopy()[healthDetailKey(health, projection)]}
+						{detail ?? healthCopy()[healthDetailKey(health, projection)]}
 					</Text>
 					{children}
 				</View>

@@ -1065,6 +1065,20 @@ export class RelayEndpoints {
 	 * route's caller applies, so an unreachable host is never painted as a
 	 * missing artifact.
 	 */
+	/** Retained DocumentContent bytes, local or remote. The owner binds entry and
+	 * sparse index; a filename is display metadata, never a requested path. */
+	async file(
+		sessionId: string,
+		entryId: string,
+		index: number,
+	): Promise<ImageBytes> {
+		const result = await this.http.bytes({
+			method: "GET",
+			path: `/api/sessions/${encodeURIComponent(sessionId)}/attachment${query({ kind: "file", entry: entryId, i: index })}`,
+		});
+		return { bytes: result.bytes, mimeType: result.mimeType };
+	}
+
 	async video(
 		sessionId: string,
 		entryId: string,
