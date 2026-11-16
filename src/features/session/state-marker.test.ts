@@ -142,13 +142,19 @@ describe("sessionStateFlags", () => {
 		 *  another. The header is where the state is painted; the row is where it is
 		 *  decided. */
 		const headerLevel = ["tags-header"];
+		/* The composer's add-image sheet (PR #278 round 1, S9/attach-sheet) is the
+		 *  fifth: its marker is the open sheet's own surface id, decided by the
+		 *  composer's local open state when the reader presses ＋ — never by a
+		 *  projection fact, so no `sessionStateFlags` entry can derive it. */
+		const composerLevel = ["attach-sheet"];
 		const derived = Object.keys(STATE_MARKER.session)
 			.filter(
 				(state) =>
 					!screenLevel.includes(state) &&
 					!findLevel.includes(state) &&
 					!railLevel.includes(state) &&
-					!headerLevel.includes(state),
+					!headerLevel.includes(state) &&
+					!composerLevel.includes(state),
 			)
 			.sort();
 		expect(

@@ -1793,6 +1793,11 @@ export const STATE_MARKER = {
 		/* The dot's sheet OPEN (S5/health-sheet): the surface itself is the marker,
 		 *  the way the status sheet and the session menu are. */
 		"health-sheet": CONTROL.sessionHealthSheet,
+		/* The composer's add-image sheet OPEN (S9/attach-sheet, PR #278 round 1):
+		 *  the surface itself is the marker, like the health sheet above. It gives
+		 *  the Sheets surface its first real cell, so CI's web frames show the
+		 *  sheet a design round has to sign off. */
+		"attach-sheet": SURFACE.attachSheet,
 		/* The dot's YELLOW "Reconnecting" reading: the phone's link dropped AFTER
 		 *  a frame (the `health-drop` world). Present only in that verdict, so a
 		 *  frame cannot pass on a green dot beside a banner (UX round 1, U4). */

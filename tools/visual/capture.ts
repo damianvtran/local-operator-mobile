@@ -123,8 +123,8 @@ let settledRetakes = 0;
  * not a size policy: it catches a plan far larger than any sample this harness
  * offers (an inflated cell registry, a cell list copied from another tree), and it
  * is why a big run is always something the caller typed `--yes` for. It sits BELOW
- * every tier on purpose — `ci` plans 1260 cells, `core` plans 3780 cells, `full` plans
- * 13860 cells — so none of them starts by accident; the CI job passes `--yes` for
+ * every tier on purpose — `ci` plans 1272 cells, `core` plans 3816 cells, `full` plans
+ * 13992 cells — so none of them starts by accident; the CI job passes `--yes` for
  * exactly that reason. It is
  * NOT tied to the default tier, so it must not be raised to "let the default run": a
  * documented invocation that plans the whole `core` tier is a ~120-minute command, and
@@ -3034,11 +3034,11 @@ if (isMain) {
 				"  --tier <name>       the sample to capture: ci | core (default) | full.",
 				"                      The matrix declares 19 device profiles; the run prints the",
 				"                      share it covered, and names the profiles it did not.",
-				"                        ci    2 of 19 profiles — 1260 cells, both themes, scales 100,",
+				"                        ci    2 of 19 profiles — 1272 cells, both themes, scales 100,",
 				"                              135 and 200 (~45 min) — the per-push CI job's sample",
-				"                        core  5 of 19 profiles — 3780 cells, both themes,",
+				"                        core  5 of 19 profiles — 3816 cells, both themes,",
 				"                              every scale — the local default",
-				"                        full  19 of 19 profiles — 13860 cells",
+				"                        full  19 of 19 profiles — 13992 cells",
 				"  --devices <names>   comma list. Default: the tier's profiles (ci 2, core 5 by",
 				"                      default, --full for all 19)",
 				"  --themes <names>    default dark,light",

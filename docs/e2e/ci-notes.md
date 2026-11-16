@@ -69,13 +69,13 @@ doc drifts from the run the first time anyone adds a check.
   with: { name: audit-frames, path: frames/ }
 ```
 
-**`--tier ci` is the sample, and it is not optional.** A default (`core`) run is 3780
+**`--tier ci` is the sample, and it is not optional.** A default (`core`) run is 3816
 cells; at the 2.24 s/cell this harness measured on the runner (403 cells in 903 s) that
 is ~126 minutes, against a step bound of 195. The tier is declared in
 `tools/visual/matrix.ts` rather than spelled here as a `--devices` list so the sample,
 the plan and the manifest all read one list a reviewer can argue with, and it captures
-every declared cell at two device profiles, both themes and scales 100/135/200 — 1260
-cells, ~45 minutes. The full `core` tier (`--tier core`) and the 13860-cell `full` tier
+every declared cell at two device profiles, both themes and scales 100/135/200 — 1272
+cells, ~45 minutes. The full `core` tier (`--tier core`) and the 13992-cell `full` tier
 (`--full`) stay runnable locally and on a dispatched run; nothing is reachable only
 through CI.
 

@@ -9,6 +9,7 @@ import {
 	ANDROID_CAMERA_PERMISSION,
 	ANDROID_FORBIDDEN_PERMISSIONS,
 	ANDROID_LOCAL_NETWORK_PERMISSION,
+	ANDROID_OPTIONAL_CAMERA_FEATURES,
 	checkAndroidBadging,
 	checkAndroidManifest,
 	checkIosInfoPlist,
@@ -79,6 +80,8 @@ const validManifest = (): string => `<?xml version="1.0" encoding="utf-8"?>
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.INTERNET"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+  <uses-feature android:name="android.hardware.camera" android:required="false"/>
+  <uses-feature android:required="false" android:name="android.hardware.camera.autofocus"/>
   <application android:name=".MainApplication" android:label="@string/app_name" android:usesCleartextTraffic="true" android:theme="@style/AppTheme">
     <activity android:name=".MainActivity" android:exported="true"/>
   </application>
@@ -320,6 +323,9 @@ describe("checkAndroidManifest", () => {
 			"AndroidManifest.xml",
 			`uses-permission[${ANDROID_LOCAL_NETWORK_PERMISSION}]`,
 			`uses-permission[${ANDROID_CAMERA_PERMISSION}]`,
+			...ANDROID_OPTIONAL_CAMERA_FEATURES.map(
+				(feature) => `uses-feature[${feature}]@android:required`,
+			),
 		]);
 	});
 
@@ -333,6 +339,39 @@ describe("checkAndroidManifest", () => {
 		expect(fields(checkAndroidManifest(manifest))).toEqual([
 			`uses-permission[${ANDROID_CAMERA_PERMISSION}]`,
 		]);
+	});
+
+	/* PR #278 round 1, R1: CAMERA implies a required back camera on Google
+	 * Play unless both implied features are declared optional. */
+	it.each(ANDROID_OPTIONAL_CAMERA_FEATURES)(
+		'requires %s declared android:required="false"',
+		(feature) => {
+			const line = validManifest()
+				.split("\n")
+				.find((item) => item.includes(`"${feature}"`));
+			if (line === undefined) throw new Error("fixture lacks the feature");
+			const missing = validManifest().replace(`${line}\n`, "");
+			const requiredTrue = validManifest().replace(
+				line,
+				line.replace('android:required="false"', 'android:required="true"'),
+			);
+			const defaulted = validManifest().replace(
+				line,
+				line.replace(' android:required="false"', ""),
+			);
+			const field = `uses-feature[${feature}]@android:required`;
+			for (const manifest of [missing, requiredTrue, defaulted]) {
+				expect(fields(checkAndroidManifest(manifest))).toEqual([field]);
+			}
+		},
+	);
+
+	it("accepts the optional camera features in single quotes", () => {
+		const manifest = validManifest().replace(
+			'<uses-feature android:name="android.hardware.camera" android:required="false"/>',
+			"<uses-feature android:name='android.hardware.camera' android:required='false'/>",
+		);
+		expect(checkAndroidManifest(manifest)).toEqual([]);
 	});
 
 	it("reports a library-manifest media permission the merge brought in", () => {
@@ -456,6 +495,9 @@ describe("summarize", () => {
 		);
 		expect(summarize("android")).toContain(
 			'android:usesCleartextTraffic="true"',
+		);
+		expect(summarize("android")).toContain(
+			'android.hardware.camera and android.hardware.camera.autofocus declared required="false"',
 		);
 	});
 });

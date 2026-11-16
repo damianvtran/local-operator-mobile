@@ -86,6 +86,29 @@ export const ANDROID_LOCAL_NETWORK_PERMISSION =
  *  in the strict (un-gated) form, like the local-network permission. */
 export const ANDROID_CAMERA_PERMISSION = "android.permission.CAMERA";
 
+/** The hardware features CAMERA implies, which must be declared OPTIONAL
+ *  (`<uses-feature android:required="false"/>`): otherwise Google Play treats a
+ *  back camera as required and hides the app from camera-less devices (PR #278
+ *  round 1, R1). Written by `plugins/with-android-optional-camera.js`. */
+export const ANDROID_OPTIONAL_CAMERA_FEATURES = [
+	"android.hardware.camera",
+	"android.hardware.camera.autofocus",
+] as const;
+
+/** Whether `<uses-feature android:name="<name>" … android:required="false">` is
+ *  declared, attributes in any order and either quote style (as
+ *  `declaresPermission` accepts). A missing `required` defaults to true on
+ *  Android, so only an explicit "false" passes. */
+const declaresOptionalFeature = (text: string, name: string): boolean => {
+	const escaped = name.replace(/\./g, "\\.");
+	const tags = text.match(/<uses-feature(?![\w-])[^>]*>/gi) ?? [];
+	return tags.some(
+		(tag) =>
+			new RegExp(`\\bandroid:name\\s*=\\s*["']${escaped}["']`, "i").test(tag) &&
+			/\bandroid:required\s*=\s*["']false["']/i.test(tag),
+	);
+};
+
 /**
  * The plist keys that may NEVER appear in the built app, however a dependency's
  * default configuration would like it: attachments are picked through the system
@@ -385,6 +408,16 @@ export function checkAndroidManifest(xml: string): Finding[] {
 		});
 	}
 
+	for (const feature of ANDROID_OPTIONAL_CAMERA_FEATURES) {
+		if (!declaresOptionalFeature(text, feature)) {
+			findings.push({
+				field: `uses-feature[${feature}]@android:required`,
+				problem:
+					'expected "false" — CAMERA implies this feature, and Google Play would hide the app from devices without it (plugins/with-android-optional-camera.js)',
+			});
+		}
+	}
+
 	/* The forbidden permissions, in BOTH spellings — see `declaresPermission`. */
 	for (const permission of ANDROID_FORBIDDEN_PERMISSIONS) {
 		if (declaresPermission(text, permission, { sdkGated: true })) {
@@ -451,7 +484,7 @@ export const summarize = (platform: Platform): string =>
 		? `built APK carries application-label=${JSON.stringify(LAUNCHER_LABEL)} with no locale override that differs`
 		: platform === "ios"
 			? `built Info.plist carries CFBundleDisplayName=${JSON.stringify(LAUNCHER_LABEL)}, ITSAppUsesNonExemptEncryption=false, UIBackgroundModes exactly ${JSON.stringify(IOS_BACKGROUND_MODES)}, NSLocalNetworkUsageDescription and the ATS local-networking configuration (NSAllowsLocalNetworking + ${IOS_EXCEPTION_DOMAINS.length} CIDR exceptions), NSCameraUsageDescription, and none of the ${IOS_FORBIDDEN_KEYS.length} photo-library permission keys`
-			: `release merged manifest carries android:usesCleartextTraffic="true" ${ANDROID_LOCAL_NETWORK_PERMISSION} and ${ANDROID_CAMERA_PERMISSION}, and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} media-library/storage permissions`;
+			: `release merged manifest carries android:usesCleartextTraffic="true" ${ANDROID_LOCAL_NETWORK_PERMISSION} and ${ANDROID_CAMERA_PERMISSION}, ${ANDROID_OPTIONAL_CAMERA_FEATURES.join(" and ")} declared required="false", and none of the ${ANDROID_FORBIDDEN_PERMISSIONS.length} media-library/storage permissions`;
 
 // ---------------------------------------------------------------------------
 // CLI

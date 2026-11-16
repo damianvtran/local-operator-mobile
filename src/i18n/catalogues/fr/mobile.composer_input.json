@@ -6,7 +6,7 @@
 	"mobile.composer_input.voice.finish": "Terminer et transcrire",
 	"mobile.composer_input.paste.image": "Coller l’image",
 	"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
-	"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez le trombone, puis Coller l’image, et choisissez « Autoriser le collage ».",
+	"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez ＋ (Ajouter une image), puis Coller l’image, et choisissez « Autoriser le collage ».",
 	"mobile.composer_input.clear_draft": "Effacer le brouillon",
 	"mobile.composer_input.clear_draft_hint": "Efface uniquement le texte et les images du brouillon ; conserve les messages en attente et non confirmés",
 	"mobile.composer_input.dismiss_error": "Masquer l’erreur",
@@ -21,6 +21,7 @@
 	"mobile.composer_input.attach.paste": "Coller l’image",
 	"mobile.composer_input.attach.choose_image": "Choisir une image",
 	"mobile.composer_input.attach.camera_denied": "L’accès à l’appareil photo est désactivé. Activez-le dans Réglages pour prendre une photo.",
+	"mobile.composer_input.attach.camera_refused": "L’accès à l’appareil photo n’a pas été autorisé.",
 	"mobile.composer_input.attach.open_settings": "Ouvrir Réglages",
 	"mobile.composer_input.attach.camera_unavailable": "Aucun appareil photo n’est disponible sur cet appareil.",
 	"mobile.composer_input.attach.camera_error": "Impossible d’ouvrir l’appareil photo. Réessayez."

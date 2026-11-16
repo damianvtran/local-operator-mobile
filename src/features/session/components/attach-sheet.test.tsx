@@ -1,4 +1,4 @@
-import { act, type ReactNode } from "react";
+import { act, type ComponentProps, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CameraReadiness } from "@/features/session/attach-rule";
@@ -19,6 +19,7 @@ const host = vi.hoisted(() => ({
 	os: "ios",
 	presses: new Map<string, () => void>(),
 	openSettings: vi.fn(async () => {}),
+	announced: [] as string[],
 }));
 
 vi.mock("react-native", () => ({
@@ -28,6 +29,11 @@ vi.mock("react-native", () => ({
 		},
 	},
 	Linking: { openSettings: () => host.openSettings() },
+	AccessibilityInfo: {
+		announceForAccessibility: (message: string) => {
+			host.announced.push(message);
+		},
+	},
 	View: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 	Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
 	ActivityIndicator: () => <span>busy</span>,
@@ -112,6 +118,7 @@ beforeEach(() => {
 	host.os = "ios";
 	host.presses.clear();
 	host.openSettings.mockClear();
+	host.announced = [];
 });
 afterEach(async () => {
 	await act(async () => root.unmount());
@@ -121,6 +128,7 @@ afterEach(async () => {
 const renderSheet = async (
 	checkCamera: () => Promise<CameraReadiness>,
 	visible = true,
+	extra: Partial<ComponentProps<typeof AttachSheet>> = {},
 ) => {
 	const onChoose = vi.fn();
 	await act(async () =>
@@ -131,6 +139,7 @@ const renderSheet = async (
 				onDismiss={() => {}}
 				onChoose={onChoose}
 				checkCamera={checkCamera}
+				{...extra}
 			/>,
 		),
 	);
@@ -216,5 +225,77 @@ describe("the add-image sheet", () => {
 		await act(async () => answer("ready"));
 		expect(onChoose).not.toHaveBeenCalled();
 		expect(reopened).not.toHaveBeenCalled();
+	});
+
+	/* PR #278 round 1, R2/U3/Q2: a refusal the OS will ask about again. */
+	it("says only that access wasn't allowed when the OS can still ask, and the next press asks again", async () => {
+		const check = vi.fn(async (): Promise<CameraReadiness> => "refused");
+		const onChoose = await renderSheet(check);
+		await press("attach-option-camera");
+		expect(onChoose).not.toHaveBeenCalled();
+		expect(shown()).toContain(t("mobile.composer_input.attach.camera_refused"));
+		expect(shown()).not.toContain(
+			t("mobile.composer_input.attach.open_settings"),
+		);
+		expect(host.presses.has(CONTROL.attachCameraSettings)).toBe(false);
+		await press("attach-option-camera");
+		expect(check).toHaveBeenCalledTimes(2);
+	});
+
+	/* U2: iOS VoiceOver ignores live regions, so the notice is posted. */
+	it("announces the camera notice to VoiceOver on iOS, and leaves Android to the live region", async () => {
+		await renderSheet(async () => "denied");
+		await press("attach-option-camera");
+		expect(host.announced).toEqual([
+			t("mobile.composer_input.attach.camera_denied"),
+		]);
+		await act(async () => root.unmount());
+		root = createRoot(dom.container as unknown as HTMLElement);
+		host.os = "android";
+		host.announced = [];
+		await renderSheet(async () => "denied");
+		await press("attach-option-camera");
+		expect(host.announced).toEqual([]);
+	});
+
+	/* U4: the epoch moves on close and on another row, not only on reopen. */
+	it("drops a camera answer that arrives after the sheet was closed (no reopen)", async () => {
+		let answer: (value: CameraReadiness) => void = () => {};
+		const check = () =>
+			new Promise<CameraReadiness>((resolve) => {
+				answer = resolve;
+			});
+		const onChoose = await renderSheet(check);
+		await press("attach-option-camera");
+		const closed = await renderSheet(check, false);
+		await act(async () => answer("ready"));
+		expect(onChoose).not.toHaveBeenCalled();
+		expect(closed).not.toHaveBeenCalled();
+	});
+
+	it("drops a late camera answer once the reader picked another row, so only that row launches", async () => {
+		let answer: (value: CameraReadiness) => void = () => {};
+		const onChoose = await renderSheet(
+			() =>
+				new Promise<CameraReadiness>((resolve) => {
+					answer = resolve;
+				}),
+		);
+		await press("attach-option-camera");
+		await press("attach-option-files");
+		await act(async () => answer("ready"));
+		expect(onChoose.mock.calls).toEqual([["files"]]);
+	});
+
+	/* U5/D1: Team Bridge renders this sheet with its own rows and test IDs. */
+	it("renders only a host's sources, under the host's test IDs", async () => {
+		const onChoose = await renderSheet(async () => "ready", true, {
+			sources: ["library", "camera", "paste"],
+			optionId: (source) => `team-bridge-attach-source-${source}`,
+		});
+		expect(shown()).not.toContain(t("mobile.composer_input.attach.files"));
+		expect(host.presses.has("team-bridge-attach-source-files")).toBe(false);
+		await press("team-bridge-attach-source-camera");
+		expect(onChoose).toHaveBeenCalledWith("camera");
 	});
 });

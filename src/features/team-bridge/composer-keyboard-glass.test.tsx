@@ -128,7 +128,7 @@ vi.mock("expo-glass-effect", async () => {
 		isLiquidGlassAvailable: () => true,
 	};
 });
-vi.mock("lucide-react-native", () => ({ Paperclip: () => null }));
+vi.mock("lucide-react-native", () => ({ Plus: () => null }));
 vi.mock("@/ui/appearance", () => ({
 	useTokenColor: () => "#000000",
 	useTheme: () => ({ isDark: false }),

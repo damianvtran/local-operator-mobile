@@ -519,6 +519,11 @@ const config: ExpoConfig = {
 		// would promise something the platform refuses. Its comment has the why of
 		// the shape (app-wide; a user-typed host cannot be narrowed at build time).
 		"./plugins/with-android-local-network.js",
+		// CAMERA (the composer's Take Photo row) implies a REQUIRED back camera on
+		// Google Play unless the feature is declared optional; this plugin declares
+		// android.hardware.camera and .autofocus with required="false" so camera-
+		// less devices keep the app. Its comment has the why; CI asserts both.
+		"./plugins/with-android-optional-camera.js",
 		// The Android half of `LAUNCHER_LABEL`: Expo has no Android label separate
 		// from `name`, so this plugin rewrites the `app_name` string the template's
 		// `<application android:label>` points at. Its comment has the ordering why.

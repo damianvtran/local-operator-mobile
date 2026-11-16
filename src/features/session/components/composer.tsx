@@ -2025,7 +2025,7 @@ export const Composer = ({
 	 *  the iOS paste prompt, a denial (`pasteNothingLine`), a failed read and the strip are one
 	 *  path. It lives on the controls row, which only paints while the field is
 	 *  focused (the expanded card), so it appears without moving the composer. */
-	/* ICON-ONLY, like the paperclip beside it (TestFlight 836: the worded
+	/* ICON-ONLY, like the ＋ beside it (TestFlight 836: the worded
 	 *  "Paste image" chip took ~100 pt of the controls row, and the model chip,
 	 *  the row's one elastic chip, was squeezed to its 44 pt floor and read
 	 *  "Cl…"). The clipboard glyph is the attach sheet's own Paste glyph, and

@@ -6,7 +6,7 @@
 	"mobile.composer_input.voice.finish": "Hoàn tất và chép lời",
 	"mobile.composer_input.paste.image": "Dán hình ảnh",
 	"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
-	"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào kẹp giấy, chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
+	"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào ＋ (Thêm hình ảnh), chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
 	"mobile.composer_input.clear_draft": "Xóa bản nháp",
 	"mobile.composer_input.clear_draft_hint": "Chỉ xóa văn bản và hình ảnh trong bản nháp; giữ các tin nhắn đang chờ và chưa được xác nhận",
 	"mobile.composer_input.dismiss_error": "Ẩn lỗi",
@@ -21,6 +21,7 @@
 	"mobile.composer_input.attach.paste": "Dán hình ảnh",
 	"mobile.composer_input.attach.choose_image": "Chọn hình ảnh",
 	"mobile.composer_input.attach.camera_denied": "Quyền truy cập máy ảnh đang tắt. Hãy bật trong Cài đặt để chụp ảnh.",
+	"mobile.composer_input.attach.camera_refused": "Không được phép truy cập máy ảnh.",
 	"mobile.composer_input.attach.open_settings": "Mở Cài đặt",
 	"mobile.composer_input.attach.camera_unavailable": "Thiết bị này không có máy ảnh khả dụng.",
 	"mobile.composer_input.attach.camera_error": "Không mở được máy ảnh. Hãy thử lại."

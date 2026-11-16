@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { CONTROL, SURFACE } from "../../src/ui/a11y.ts";
 import { CELL_OPENERS } from "../visual/matrix.ts";
 import {
 	type Affordance,
@@ -9,6 +10,7 @@ import {
 	narrowAffordances,
 	runAffordances,
 } from "./affordance.ts";
+import { requiredStateMarker } from "./readiness.ts";
 
 /**
  * The harness's press, EXECUTED rather than eyeballed.
@@ -838,4 +840,13 @@ describe("the affordance script", () => {
 			describeAffordance({ hold: { testID: "session-row-abc", ms: 600 } }),
 		).toBe("hold session-row-abc 600ms");
 	});
+});
+
+// PR #278: the CI frame must open the real sheet, not capture the same closed
+// composer under another cell name. Its affirmative marker is the sheet itself.
+it("opens the attach-sheet cell with the composer + and requires the open sheet", () => {
+	expect(CELL_OPENERS["S9/attach-sheet"]).toEqual([
+		{ click: CONTROL.composerAttach },
+	]);
+	expect(requiredStateMarker("S9", "attach-sheet")).toBe(SURFACE.attachSheet);
 });

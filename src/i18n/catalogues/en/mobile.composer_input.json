@@ -6,7 +6,7 @@
 	"mobile.composer_input.voice.finish": "Finish and transcribe",
 	"mobile.composer_input.paste.image": "Paste image",
 	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
-	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
+	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap ＋ (Add an image), then Paste Image, and choose “Allow Paste”.",
 	"mobile.composer_input.clear_draft": "Clear draft",
 	"mobile.composer_input.clear_draft_hint": "Clears only the draft text and images; keeps queued and unconfirmed messages",
 	"mobile.composer_input.dismiss_error": "Dismiss error",
@@ -21,6 +21,7 @@
 	"mobile.composer_input.attach.paste": "Paste Image",
 	"mobile.composer_input.attach.choose_image": "Choose Image",
 	"mobile.composer_input.attach.camera_denied": "Camera access is off. Turn it on in Settings to take a photo.",
+	"mobile.composer_input.attach.camera_refused": "Camera access wasn’t allowed.",
 	"mobile.composer_input.attach.open_settings": "Open Settings",
 	"mobile.composer_input.attach.camera_unavailable": "No camera is available on this device.",
 	"mobile.composer_input.attach.camera_error": "Couldn’t open the camera. Try again."

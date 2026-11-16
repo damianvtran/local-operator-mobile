@@ -53,8 +53,19 @@ vi.mock("expo-image-picker", () => ({
 	},
 }));
 
+vi.mock("expo-clipboard", () => ({
+	getImageAsync: async (options: unknown) => {
+		native.calls.push(`getImageAsync ${JSON.stringify(options)}`);
+		return null;
+	},
+}));
+
 vi.mock("expo-file-system", () => {
 	class File {
+		static async pickFileAsync(options: unknown) {
+			native.calls.push(`pickFileAsync ${JSON.stringify(options)}`);
+			return { canceled: true, result: null };
+		}
 		constructor(readonly uri: string) {}
 		info() {
 			return { exists: !native.deleted.includes(this.uri) };
@@ -117,9 +128,23 @@ describe("the camera's permission step (prepareCamera)", () => {
 		expect(native.calls).toEqual(["getCameraPermissionsAsync"]);
 	});
 
-	it("answers denied when the reader refuses the prompt", async () => {
+	it("answers denied when the reader refuses the prompt and the OS will not ask again (iOS)", async () => {
 		native.requestAnswer = { granted: false, canAskAgain: false };
 		expect(await prepareCamera()).toBe("denied");
+	});
+
+	it("answers refused, NOT denied, when the OS can still ask — and the next press prompts again (Android first refusal)", async () => {
+		/* R2/U3/Q2: Android keeps canAskAgain=true after a first "Don't allow".
+		 * Settings would be the wrong recovery; a second press re-prompts. */
+		native.requestAnswer = { granted: false, canAskAgain: true };
+		expect(await prepareCamera()).toBe("refused");
+		native.os = "android";
+		native.calls = [];
+		expect(await prepareCamera()).toBe("refused");
+		expect(native.calls).toEqual([
+			"getCameraPermissionsAsync",
+			"requestCameraPermissionsAsync",
+		]);
 	});
 
 	it("goes straight to denied, without a prompt the OS would not show, after a final refusal", async () => {
@@ -195,5 +220,17 @@ describe("the attach sheet's sources at the module boundary (readImageFrom)", ()
 		expect(native.calls).toEqual([
 			'launchImageLibraryAsync {"mediaTypes":["images"],"base64":true,"allowsMultipleSelection":false}',
 		]);
+	});
+
+	/* R4: the dispatcher's other two arms. Without these, swapping `paste` and
+	 * `files` in `readImageFrom` would pass every test. */
+	it("routes Paste Image to the clipboard read, and nothing else", async () => {
+		expect(await readImageFrom("paste")).toBeNull();
+		expect(native.calls).toEqual(['getImageAsync {"format":"png"}']);
+	});
+
+	it("routes Files to the document picker, and nothing else", async () => {
+		expect(await readImageFrom("files")).toBeNull();
+		expect(native.calls).toEqual(['pickFileAsync {"mimeTypes":["image/*"]}']);
 	});
 });

@@ -353,9 +353,11 @@ export type AttachmentDraft = ReturnType<typeof createAttachmentDraft>;
  */
 export async function addDraftImages<Raw>(
 	draft: AttachmentDraft,
-	source: "library" | "paste",
+	source: "library" | "camera" | "paste",
 	deps: {
 		pick: (limit: number) => Promise<Raw[]>;
+		/** One capture, `null` on cancel; a cancel is silent like the picker's. */
+		capture: () => Promise<Raw | null>;
 		paste: () => Promise<Raw | null>;
 		isCurrent: () => boolean;
 		release: (raw: Raw) => void;
@@ -368,10 +370,13 @@ export async function addDraftImages<Raw>(
 		return;
 	}
 	try {
+		const one = (raw: Raw | null): Raw[] => (raw === null ? [] : [raw]);
 		const sources =
 			source === "library"
 				? await deps.pick(room)
-				: await deps.paste().then((raw) => (raw === null ? [] : [raw]));
+				: source === "camera"
+					? one(await deps.capture())
+					: one(await deps.paste());
 		if (!deps.isCurrent()) {
 			for (const raw of sources) deps.release(raw);
 			return;

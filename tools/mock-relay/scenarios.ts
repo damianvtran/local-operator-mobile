@@ -3490,7 +3490,13 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 		 * affordance or an id the app declares for the open sheet), which is a change this
 		 * harness cannot make for itself. The scenario stays because the ranked catalogue is
 		 * still part of the relay's contract and `verify.ts` exercises it. */
-		[],
+		/* PR #278 round 1: the harness now CAN drive a sheet into view — a cell opener
+		 * presses the composer's ＋ (`CELL_OPENERS` in tools/visual/matrix.ts) and the
+		 * open sheet's own surface id is its marker — so the Sheets surface gets a real
+		 * cell, `S9/attach-sheet`, on this idle session. It is a different state from
+		 * `S5/populated` (the sheet is up), so it does not reintroduce the collapse
+		 * measured above. */
+		["S9/attach-sheet"],
 		() => ({
 			projections: { [liveIdle.session_id]: structuredClone(liveIdle) },
 			models: rankedModels,

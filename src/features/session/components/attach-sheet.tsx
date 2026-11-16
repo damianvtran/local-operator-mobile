@@ -7,6 +7,7 @@ import {
 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
+	AccessibilityInfo,
 	ActivityIndicator,
 	Linking,
 	Platform,
@@ -81,6 +82,32 @@ export type AttachSheetProps = {
 	onChoose: (source: AttachSource) => void;
 	/** Test seam for the camera's readiness check; the product passes nothing. */
 	checkCamera?: () => Promise<CameraReadiness>;
+	/**
+	 * The rows this host can actually read, in the sheet's own order. Team
+	 * Bridge renders this same sheet (round 1, U5/D1: one add control, one look
+	 * across the app) but its upload pipeline bounds images from a URI with known
+	 * dimensions, which the document picker does not give — so it leaves out
+	 * Files rather than showing a row that cannot work. Omitted = every row.
+	 */
+	sources?: readonly AttachSource[];
+	/** The sheet's and rows' test IDs, so a host keeps the IDs its existing
+	 *  automation and audits already address. */
+	testID?: string;
+	optionId?: (source: AttachSource) => string;
+};
+
+/** The camera notice's sentence. Only `denied` (the OS will never ask again)
+ *  carries Open Settings; `refused` is a plain statement because the next press
+ *  on Take Photo re-prompts. */
+const noticeMessage = (notice: Exclude<CameraReadiness, "ready">): string => {
+	switch (notice) {
+		case "denied":
+			return t("mobile.composer_input.attach.camera_denied");
+		case "refused":
+			return t("mobile.composer_input.attach.camera_refused");
+		case "unavailable":
+			return t("mobile.composer_input.attach.camera_unavailable");
+	}
 };
 
 export const AttachSheet = ({
@@ -89,6 +116,9 @@ export const AttachSheet = ({
 	onDismiss,
 	onChoose,
 	checkCamera = prepareCamera,
+	sources,
+	testID = SURFACE.attachSheet,
+	optionId = attachOptionId,
 }: AttachSheetProps) => {
 	const glyphInk = useTokenColor("ink-muted");
 	const pressedGround = useTokenColor("row-hover");
@@ -100,15 +130,34 @@ export const AttachSheet = ({
 	/* The open the camera check belongs to. A reader can close the sheet while the
 	 *  OS prompt is still up; the answer must not then open the camera, or a notice,
 	 *  for a sheet nobody is looking at. */
+	/* The epoch moves on EVERY way the reader leaves the pending check, not only
+	 *  on a reopen (PR #278 round 1, U4): the sheet opening, the sheet closing
+	 *  (`visible` false), and the reader picking another row. Otherwise a late
+	 *  `ready` from a slow status read could open the camera over a sheet the
+	 *  reader left, or right after the Files/Library picker already launched. */
 	const openEpoch = useRef(0);
 	useEffect(() => {
-		if (!visible) return;
 		openEpoch.current += 1;
+		if (!visible) return;
 		// A fresh open starts clean: the reader may have changed the setting in
 		// Settings since the notice was shown, and the next press re-reads it.
 		setCameraNotice(null);
 		setChecking(false);
 	}, [visible]);
+
+	/* iOS VoiceOver ignores `accessibilityLiveRegion` (Android/web only), so the
+	 *  Banner's polite live region says nothing there and the press on Take
+	 *  Photo seems to do nothing (U2). Post the notice's words on iOS, the same
+	 *  split `HealthAnnouncer` in session-health.tsx uses. */
+	useEffect(() => {
+		if (cameraNotice === null || Platform.OS !== "ios") return;
+		AccessibilityInfo.announceForAccessibility(noticeMessage(cameraNotice));
+	}, [cameraNotice]);
+
+	const choose = (source: AttachSource) => {
+		openEpoch.current += 1;
+		onChoose(source);
+	};
 
 	const chooseCamera = () => {
 		if (checking) return;
@@ -118,7 +167,7 @@ export const AttachSheet = ({
 		void checkCamera().then((readiness) => {
 			if (epoch !== openEpoch.current) return;
 			setChecking(false);
-			if (readiness === "ready") onChoose("camera");
+			if (readiness === "ready") choose("camera");
 			else setCameraNotice(readiness);
 		});
 	};
@@ -129,18 +178,14 @@ export const AttachSheet = ({
 			onClose={onClose}
 			onDismiss={onDismiss}
 			title={t("mobile.composer_input.attach.title")}
-			testID={SURFACE.attachSheet}
+			testID={testID}
 		>
 			<View className="gap-1 py-1">
 				{cameraNotice !== null ? (
 					<View className="mb-2">
 						<Banner
 							tone="warning"
-							message={
-								cameraNotice === "denied"
-									? t("mobile.composer_input.attach.camera_denied")
-									: t("mobile.composer_input.attach.camera_unavailable")
-							}
+							message={noticeMessage(cameraNotice)}
 							action={
 								cameraNotice === "denied"
 									? {
@@ -155,8 +200,9 @@ export const AttachSheet = ({
 						/>
 					</View>
 				) : null}
-				{attachActions(Platform.OS === "web" ? "web" : "native").map(
-					(action) => {
+				{attachActions(Platform.OS === "web" ? "web" : "native")
+					.filter((action) => sources?.includes(action.source) ?? true)
+					.map((action) => {
 						const Glyph = SOURCE_GLYPH[action.source];
 						const busy = action.source === "camera" && checking;
 						return (
@@ -168,9 +214,9 @@ export const AttachSheet = ({
 								onPress={() =>
 									action.source === "camera"
 										? chooseCamera()
-										: onChoose(action.source)
+										: choose(action.source)
 								}
-								testID={attachOptionId(action.source)}
+								testID={optionId(action.source)}
 								className="rounded-md"
 								style={({ pressed }) =>
 									pressed ? { backgroundColor: pressedGround } : undefined
@@ -197,8 +243,7 @@ export const AttachSheet = ({
 								</View>
 							</Pressable>
 						);
-					},
-				)}
+					})}
 			</View>
 		</Sheet>
 	);

@@ -4,6 +4,7 @@ import type { PromptImage } from "@/contracts";
 import {
 	type AttachSource,
 	type CameraReadiness,
+	cameraAnswer,
 	cameraPermissionStep,
 	fromDataUrl,
 	isIosSimulatorSandbox,
@@ -106,7 +107,9 @@ export const prepareCamera = async (): Promise<CameraReadiness> => {
 		if (step === "granted") return "ready";
 		if (step === "denied") return "denied";
 		const asked = await picker.requestCameraPermissionsAsync();
-		return asked.granted ? "ready" : "denied";
+		// `canAskAgain` decides between "ask again next press" and "only Settings
+		// can undo this" — see `cameraAnswer`.
+		return cameraAnswer(asked);
 	} catch {
 		return "unavailable";
 	}

@@ -1,11 +1,5 @@
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import {
-	Bell,
-	BellOff,
-	Check,
-	ClipboardPaste,
-	ImagePlus,
-} from "lucide-react-native";
+import { Bell, BellOff, Check } from "lucide-react-native";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	Animated,
@@ -21,6 +15,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createAttachmentSheetHandoff } from "@/features/session/attach-handoff";
+import type { AttachSource } from "@/features/session/attach-rule";
+import { AttachSheet } from "@/features/session/components/attach-sheet";
 import { Markdown } from "@/features/session/components/markdown";
 import {
 	textSelectionContainerScroll,
@@ -86,6 +82,7 @@ import {
 	pickTeamBridgeImages,
 	prepareTeamBridgeImage,
 	releaseTeamBridgeSource,
+	takeTeamBridgePhoto,
 } from "./attachment-source";
 import { ComposerAttachments, MessageAttachments } from "./attachment-views";
 import { BridgeComposerDock } from "./composer-dock";
@@ -104,6 +101,14 @@ import { parseThreadAnchor, type ThreadAnchor } from "./thread-anchor";
 import { BridgeComposerField, BridgeThreadTitle } from "./thread-chrome";
 import { createThreadViewport, type ThreadViewport } from "./thread-viewport";
 import { useThreadAnchor } from "./use-thread-anchor";
+
+/** Team Bridge's rows in the shared add-image sheet: every source its upload
+ *  pipeline can bound (no Files — see AttachSheet's `sources`). */
+const TEAM_BRIDGE_ATTACH_SOURCES: readonly AttachSource[] = [
+	"library",
+	"camera",
+	"paste",
+];
 
 const single = (value: string | string[] | undefined): string =>
 	typeof value === "string" ? value : "";
@@ -379,7 +384,6 @@ function ThreadContent({
 	const activeNow = useRef(AppState.currentState === "active");
 	const mounted = useRef(true);
 	const checkColor = useTokenColor("accent");
-	const sheetIconColor = useTokenColor("ink-muted");
 	// Derive visibility synchronously from the actual account/route identity,
 	// not a passive reset effect: even the first boundary render cannot display
 	// another account's help or return focus to its opener.
@@ -467,13 +471,14 @@ function ThreadContent({
 			? (draftImages.current?.draft ?? null)
 			: null;
 	const chips = images?.chips() ?? [];
-	const addImages = async (source: "library" | "paste") => {
+	const addImages = async (source: "library" | "camera" | "paste") => {
 		setAttachOpen(false);
 		setAttachNotice(null);
 		const draft = images;
 		if (!draft) return;
 		await addDraftImages(draft, source, {
 			pick: pickTeamBridgeImages,
+			capture: takeTeamBridgePhoto,
 			paste: pasteTeamBridgeImage,
 			// A capability/conversation replacement can happen while the screen
 			// remains mounted, so mounted ownership alone is not enough.
@@ -1279,58 +1284,29 @@ function ThreadContent({
 					{t("mobile.team_bridge.delivery.help")}
 				</Text>
 			</Sheet>
-			<Sheet
+			{/* The session composer's AttachSheet, not a Team Bridge copy (PR #278
+			 *  round 1, U5/D1): one add control and one sheet across the app, Take
+			 *  Photo included. Files is left out because this pipeline bounds images
+			 *  from a URI with known dimensions (see AttachSheet's `sources`). The
+			 *  camera permission is asked by the sheet on the press; the launch
+			 *  still waits for the iOS dismissal through the shared handoff, and
+			 *  the bytes still go through Team Bridge's own upload path. The
+			 *  existing test IDs are kept so automation keeps addressing them. */}
+			<AttachSheet
 				visible={attachOpen}
 				onClose={() => setAttachOpen(false)}
 				onDismiss={attachHandoff.dismissed}
-				title={t("mobile.team_bridge.attachment.add")}
+				sources={TEAM_BRIDGE_ATTACH_SOURCES}
 				testID={SURFACE.teamBridgeAttachSheet}
-			>
-				<View className="gap-1 pb-2">
-					{(
-						[
-							[
-								"library",
-								t("mobile.team_bridge.attachment.library"),
-								ImagePlus,
-							],
-							[
-								"paste",
-								t("mobile.team_bridge.attachment.paste"),
-								ClipboardPaste,
-							],
-						] as const
-					).map(([source, text, Icon]) => (
-						<Pressable
-							key={source}
-							accessibilityRole={ROLE.button}
-							accessibilityLabel={text}
-							testID={teamBridgeAttachSourceId(source)}
-							onPress={() => {
-								setAttachOpen(false);
-								attachHandoff.choose(() => {
-									void addImages(source);
-								}, Platform.OS);
-							}}
-							style={{ minHeight: TOUCH_FLOOR }}
-						>
-							{({ pressed }) => (
-								<View
-									className={cx(
-										"flex-1 flex-row items-center gap-3 rounded-sm px-3 py-2",
-										pressed ? "bg-row-hover" : "bg-transparent",
-									)}
-								>
-									<Icon size={18} color={sheetIconColor} aria-hidden />
-									<Text className="min-w-0 flex-1 text-body text-ink">
-										{text}
-									</Text>
-								</View>
-							)}
-						</Pressable>
-					))}
-				</View>
-			</Sheet>
+				optionId={teamBridgeAttachSourceId}
+				onChoose={(source) => {
+					if (source === "files") return;
+					setAttachOpen(false);
+					attachHandoff.choose(() => {
+						void addImages(source);
+					}, Platform.OS);
+				}}
+			/>
 			<Sheet
 				visible={notifyOpen}
 				onClose={() => setNotifyOpen(false)}

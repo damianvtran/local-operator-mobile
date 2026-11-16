@@ -363,7 +363,7 @@ export function describeDeviceCoverage(coverage: {
  * The CI tier: the bounded sample the per-push capture job takes.
  *
  * WHY A THIRD TIER, AND WHY IT IS HERE RATHER THAN A `--devices` LIST IN YAML.
- * The `core` tier is 3780 cells: the whole declared cell list (105 cells) x 2 themes x
+ * The `core` tier is 3816 cells: the whole declared cell list (106 cells) x 2 themes x
  * (3 phones x 4 scales + 2 tablets x 3 scales) — 94 x 2 x 18, the tier's 5 profiles —
  * and the CI job's capture step is bound at 60 minutes. Measured on the runner, that is
  * 2.24 s/cell: 403 cells in 903 s (run 37098393675, a plan of 403 cells then), so a core
@@ -398,7 +398,7 @@ export function describeDeviceCoverage(coverage: {
  *     `CI_SCALES` below for why the boundary earns the third slot and 150% does
  *     not. 150% stays in `core`, which sweeps every scale.
  *
- * That is 105 cells x 2 themes x (2 profiles x 3 scales) = 1260 cells, ~45 minutes at
+ * That is 106 cells x 2 themes x (2 profiles x 3 scales) = 1272 cells, ~45 minutes at
  * the measured rate: inside the step bound (raised with it, see `CI_SCALES`) with
  * the same headroom it always carried. `core` and `full` stay the
  * local and dispatched samples, so the full 3780-cell `core` matrix and the
@@ -436,7 +436,11 @@ export const CI_DEVICES: string[] = ["iphone-se", "tablet-landscape"];
  * (1260 cells x 3 s = 63.0 min). A bound that fires every run stops being a signal, so
  * this list and that bound have to move together: reverting the bounds without
  * reverting this list makes the job red, and reverting this list without the bounds
- * wastes the budget it was sized for. */
+ * wastes the budget it was sized for.
+ *
+ * PR #278 round 1 added `S9/attach-sheet` (the add-image sheet open), re-derived from
+ * this head's `--plan` with the mock relay: 106 cells, ci 1272 (deadline 3816 s =
+ * 63.6 min, still inside the 65-minute capture bound), core 3816, full 13992. */
 export const CI_SCALES: string[] = ["100", "135", "200"];
 
 export const THEMES = ["dark", "light"];
@@ -745,6 +749,17 @@ export const CELL_OPENERS: Record<string, Affordance[]> = {
 	 * block — so a sheet that stops opening fails its cell by marker rather than
 	 * by a staged overlay. */
 	"S5/health-sheet": [{ click: CONTROL.sessionHealth }],
+	/* --- the composer's add-image sheet (PR #278 round 1, design gate) ---
+	 *
+	 * The press is the reader's own: the collapsed composer's ＋. Before this the
+	 * Sheets surface had no cell at all (see `models-ranked` in the relay's
+	 * scenarios: nothing on the wire opens a sheet), so no CI frame ever showed
+	 * the attach sheet and a design round had nothing rendered to sign off. The
+	 * web build shows its two rows (Choose Image, Paste Image); the native camera
+	 * row and its permission banner cannot render on web. A sheet that stops
+	 * opening fails the cell by its marker (`STATE_MARKER.session["attach-sheet"]`
+	 * is the sheet's own surface id). */
+	"S9/attach-sheet": [{ click: CONTROL.composerAttach }],
 	/* The dropped-cause sheet is the same surface with the other yellow cause's
 	 * copy; it borrows this opener for the same reason it borrows the marker. */
 	"S5/health-dropped-sheet": [{ click: CONTROL.sessionHealth }],

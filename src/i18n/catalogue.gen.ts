@@ -91,6 +91,7 @@ export type CatalogueKey =
 	| "mobile.composer_input.attach.camera"
 	| "mobile.composer_input.attach.camera_denied"
 	| "mobile.composer_input.attach.camera_error"
+	| "mobile.composer_input.attach.camera_refused"
 	| "mobile.composer_input.attach.camera_unavailable"
 	| "mobile.composer_input.attach.choose_image"
 	| "mobile.composer_input.attach.files"
@@ -848,13 +849,11 @@ export type CatalogueKey =
 	| "mobile.team_bridge.attachment.failed"
 	| "mobile.team_bridge.attachment.image"
 	| "mobile.team_bridge.attachment.image_position"
-	| "mobile.team_bridge.attachment.library"
 	| "mobile.team_bridge.attachment.limit"
 	| "mobile.team_bridge.attachment.load_error"
 	| "mobile.team_bridge.attachment.loading_label"
 	| "mobile.team_bridge.attachment.next"
 	| "mobile.team_bridge.attachment.open_hint"
-	| "mobile.team_bridge.attachment.paste"
 	| "mobile.team_bridge.attachment.paste_empty"
 	| "mobile.team_bridge.attachment.position"
 	| "mobile.team_bridge.attachment.prepare_error"
@@ -1103,6 +1102,7 @@ export type NoParamKey =
 	| "mobile.composer_input.attach.camera"
 	| "mobile.composer_input.attach.camera_denied"
 	| "mobile.composer_input.attach.camera_error"
+	| "mobile.composer_input.attach.camera_refused"
 	| "mobile.composer_input.attach.camera_unavailable"
 	| "mobile.composer_input.attach.choose_image"
 	| "mobile.composer_input.attach.files"
@@ -1739,11 +1739,9 @@ export type NoParamKey =
 	| "mobile.team_bridge.attachment.expired_unsent"
 	| "mobile.team_bridge.attachment.failed"
 	| "mobile.team_bridge.attachment.image"
-	| "mobile.team_bridge.attachment.library"
 	| "mobile.team_bridge.attachment.load_error"
 	| "mobile.team_bridge.attachment.next"
 	| "mobile.team_bridge.attachment.open_hint"
-	| "mobile.team_bridge.attachment.paste"
 	| "mobile.team_bridge.attachment.paste_empty"
 	| "mobile.team_bridge.attachment.prepare_error"
 	| "mobile.team_bridge.attachment.preparing"
@@ -1972,6 +1970,7 @@ export type MessageParams = {
 	"mobile.composer_input.attach.camera": NoParams;
 	"mobile.composer_input.attach.camera_denied": NoParams;
 	"mobile.composer_input.attach.camera_error": NoParams;
+	"mobile.composer_input.attach.camera_refused": NoParams;
 	"mobile.composer_input.attach.camera_unavailable": NoParams;
 	"mobile.composer_input.attach.choose_image": NoParams;
 	"mobile.composer_input.attach.files": NoParams;
@@ -2729,13 +2728,11 @@ export type MessageParams = {
 	"mobile.team_bridge.attachment.failed": NoParams;
 	"mobile.team_bridge.attachment.image": NoParams;
 	"mobile.team_bridge.attachment.image_position": { count: string | number; index: string | number };
-	"mobile.team_bridge.attachment.library": NoParams;
 	"mobile.team_bridge.attachment.limit": { count: number };
 	"mobile.team_bridge.attachment.load_error": NoParams;
 	"mobile.team_bridge.attachment.loading_label": { label: string | number };
 	"mobile.team_bridge.attachment.next": NoParams;
 	"mobile.team_bridge.attachment.open_hint": NoParams;
-	"mobile.team_bridge.attachment.paste": NoParams;
 	"mobile.team_bridge.attachment.paste_empty": NoParams;
 	"mobile.team_bridge.attachment.position": { count: string | number; index: string | number };
 	"mobile.team_bridge.attachment.prepare_error": NoParams;
@@ -3006,6 +3003,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.composer_input.attach.camera": "Take Photo",
 	"mobile.composer_input.attach.camera_denied": "Camera access is off. Turn it on in Settings to take a photo.",
 	"mobile.composer_input.attach.camera_error": "Couldn’t open the camera. Try again.",
+	"mobile.composer_input.attach.camera_refused": "Camera access wasn’t allowed.",
 	"mobile.composer_input.attach.camera_unavailable": "No camera is available on this device.",
 	"mobile.composer_input.attach.choose_image": "Choose Image",
 	"mobile.composer_input.attach.files": "Files",
@@ -3019,7 +3017,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.composer_input.dismiss_error_hint": "Hides this error without changing the draft or delivery status",
 	"mobile.composer_input.notice_dismiss": "Dismiss",
 	"mobile.composer_input.notice_retry": "Retry",
-	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap the paperclip, then Paste image, and choose “Allow Paste”.",
+	"mobile.composer_input.paste.denied": "Paste wasn’t allowed. Tap ＋ (Add an image), then Paste Image, and choose “Allow Paste”.",
 	"mobile.composer_input.paste.image": "Paste image",
 	"mobile.composer_input.paste.image_hint": "Attaches the image on your clipboard",
 	"mobile.composer_input.voice.discard": "Discard voice input",
@@ -3763,13 +3761,11 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.team_bridge.attachment.failed": "Failed",
 	"mobile.team_bridge.attachment.image": "Image",
 	"mobile.team_bridge.attachment.image_position": "Image {index} of {count}",
-	"mobile.team_bridge.attachment.library": "Photo Library",
 	"mobile.team_bridge.attachment.limit": "{count, plural, one {You can attach up to # image per message.} other {You can attach up to # images per message.}}",
 	"mobile.team_bridge.attachment.load_error": "This image did not load.",
 	"mobile.team_bridge.attachment.loading_label": "{label}, loading",
 	"mobile.team_bridge.attachment.next": "Next image",
 	"mobile.team_bridge.attachment.open_hint": "Opens the image full screen",
-	"mobile.team_bridge.attachment.paste": "Paste image",
 	"mobile.team_bridge.attachment.paste_empty": "No image was pasted.",
 	"mobile.team_bridge.attachment.position": "{index} of {count}",
 	"mobile.team_bridge.attachment.prepare_error": "This image could not be prepared.",
@@ -4025,6 +4021,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.composer_input.attach.camera": { role: "button", note: "Row in the composer's add-image sheet that opens the camera to take one photo, which is attached to the message. Imperative verb phrase; no final full stop." },
 	"mobile.composer_input.attach.camera_denied": { role: "status", note: "Notice inside the add-image sheet when the reader has refused camera access for this app; the only way back is the system Settings app, which the action beside it opens. Must not blame the reader. Two short sentences with final full stops." },
 	"mobile.composer_input.attach.camera_error": { role: "status", note: "Error line under the composer when the camera could not be opened or the photo could not be read after the reader chose to take one. Full sentences with final full stops." },
+	"mobile.composer_input.attach.camera_refused": { role: "status", note: "Notice inside the add-image sheet when the reader has just declined the system camera prompt but the system will ask again on the next tap (Android after a first refusal). States only that camera access was not allowed: no Settings action, no instruction, because tapping Take Photo again shows the system prompt again. Must not blame the reader. One short sentence with final full stop." },
 	"mobile.composer_input.attach.camera_unavailable": { role: "status", note: "Notice inside the add-image sheet when the device has no usable camera (for example a simulator). Full sentence with final full stop." },
 	"mobile.composer_input.attach.choose_image": { role: "button", note: "Row in the add-image sheet on the web build, where the browser's file chooser is the only image source. No final full stop." },
 	"mobile.composer_input.attach.files": { role: "button", note: "Row in the composer's add-image sheet that opens the system document picker (the Files app on iOS), limited to images. Use the platform's own name for it where it has one. No final full stop." },
@@ -4038,7 +4035,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.composer_input.dismiss_error_hint": { role: "button", note: "Screen-reader hint for dismissing only an error message. Draft and delivery records are unchanged." },
 	"mobile.composer_input.notice_dismiss": { role: "button", note: "Short text action trailing the error line of the composer's failure notice, shown when that error is the only sentence there. Hides the error line only; it does not retry, delete or acknowledge anything. One word where the language allows; no final full stop." },
 	"mobile.composer_input.notice_retry": { role: "button", note: "Short text action inside the composer's failure notice, trailing the sentence saying an earlier instruction may not have been delivered. Sends that instruction again. One word where the language allows; no final full stop." },
-	"mobile.composer_input.paste.denied": { role: "status", note: "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the paperclip (Attach) button, then the Paste image row (use this locale's translation of mobile.composer_input.paste.image), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop." },
+	"mobile.composer_input.paste.denied": { role: "status", note: "Error line under the composer (iOS only) after the reader pressed the Paste image chip and the system paste prompt was declined (Don't Allow). Says paste was not allowed and where to try again: the ＋ button (keep the ＋ glyph as is, followed by this locale's translation of mobile.composer_input.attach.button in parentheses, which is its spoken name), then the Paste Image row of the add-image sheet (use this locale's translation of mobile.composer_input.attach.paste), then the system's Allow Paste button. The quoted button name MUST match the label iOS itself shows on its paste prompt in this locale, verbatim — the reader looks for that exact word on the system dialog, so a paraphrase or a fresh translation sends them looking for a button that does not exist. Full sentences with final full stop." },
 	"mobile.composer_input.paste.image": { role: "button", note: "Visible label of a small chip in the composer that appears when the clipboard holds an image; tapping attaches it. Keep short (two words). No final full stop." },
 	"mobile.composer_input.paste.image_hint": { role: "button", note: "Accessibility hint for the Paste image chip. No final full stop." },
 	"mobile.composer_input.voice.discard": { role: "button", note: "Accessible name of the ✕ in the recording row: throws the recording away and sends nothing. Distinct from finishing. No final full stop." },
@@ -4782,13 +4779,11 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.team_bridge.attachment.failed": { role: "status", note: "Team Bridge image attachments: failed. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.image": { role: "status", note: "Team Bridge image attachments: image. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.image_position": { role: "status", note: "Team Bridge image attachments: image_position. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
-	"mobile.team_bridge.attachment.library": { role: "button", note: "Team Bridge image attachments: library. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.limit": { role: "status", note: "Team Bridge image attachments: limit. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.load_error": { role: "status", note: "Team Bridge image attachments: load_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.loading_label": { role: "status", note: "Team Bridge image attachments: loading_label. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.next": { role: "button", note: "Team Bridge image attachments: next. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.open_hint": { role: "status", note: "Team Bridge image attachments: open_hint. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
-	"mobile.team_bridge.attachment.paste": { role: "button", note: "Team Bridge image attachments: paste. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.paste_empty": { role: "status", note: "Team Bridge image attachments: paste_empty. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.position": { role: "status", note: "Team Bridge image attachments: position. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
 	"mobile.team_bridge.attachment.prepare_error": { role: "status", note: "Team Bridge image attachments: prepare_error. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. " },
@@ -5058,6 +5053,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.attach.camera": "Hacer foto",
 		"mobile.composer_input.attach.camera_denied": "El acceso a la cámara está desactivado. Actívalo en Ajustes para hacer una foto.",
 		"mobile.composer_input.attach.camera_error": "No se pudo abrir la cámara. Inténtalo de nuevo.",
+		"mobile.composer_input.attach.camera_refused": "No se permitió el acceso a la cámara.",
 		"mobile.composer_input.attach.camera_unavailable": "No hay ninguna cámara disponible en este dispositivo.",
 		"mobile.composer_input.attach.choose_image": "Elegir imagen",
 		"mobile.composer_input.attach.files": "Archivos",
@@ -5071,7 +5067,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.dismiss_error_hint": "Oculta este error sin cambiar el borrador ni el estado de entrega",
 		"mobile.composer_input.notice_dismiss": "Ocultar",
 		"mobile.composer_input.notice_retry": "Reintentar",
-		"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar».",
+		"mobile.composer_input.paste.denied": "No se permitió pegar. Toca ＋ (Añadir una imagen), luego Pegar imagen, y elige «Permitir pegar».",
 		"mobile.composer_input.paste.image": "Pegar imagen",
 		"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
 		"mobile.composer_input.voice.discard": "Descartar la entrada de voz",
@@ -5815,13 +5811,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.failed": "Error",
 		"mobile.team_bridge.attachment.image": "Imagen",
 		"mobile.team_bridge.attachment.image_position": "Imagen {index} de {count}",
-		"mobile.team_bridge.attachment.library": "Fototeca",
 		"mobile.team_bridge.attachment.limit": "{count, plural, one {Puedes adjuntar hasta # imagen por mensaje.} other {Puedes adjuntar hasta # imágenes por mensaje.}}",
 		"mobile.team_bridge.attachment.load_error": "Esta imagen no se ha cargado.",
 		"mobile.team_bridge.attachment.loading_label": "{label}, cargando",
 		"mobile.team_bridge.attachment.next": "Imagen siguiente",
 		"mobile.team_bridge.attachment.open_hint": "Abre la imagen a pantalla completa",
-		"mobile.team_bridge.attachment.paste": "Pegar imagen",
 		"mobile.team_bridge.attachment.paste_empty": "No se ha pegado ninguna imagen.",
 		"mobile.team_bridge.attachment.position": "{index} de {count}",
 		"mobile.team_bridge.attachment.prepare_error": "No se ha podido preparar esta imagen.",
@@ -6075,6 +6069,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.attach.camera": "Prendre une photo",
 		"mobile.composer_input.attach.camera_denied": "L’accès à l’appareil photo est désactivé. Activez-le dans Réglages pour prendre une photo.",
 		"mobile.composer_input.attach.camera_error": "Impossible d’ouvrir l’appareil photo. Réessayez.",
+		"mobile.composer_input.attach.camera_refused": "L’accès à l’appareil photo n’a pas été autorisé.",
 		"mobile.composer_input.attach.camera_unavailable": "Aucun appareil photo n’est disponible sur cet appareil.",
 		"mobile.composer_input.attach.choose_image": "Choisir une image",
 		"mobile.composer_input.attach.files": "Fichiers",
@@ -6088,7 +6083,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.dismiss_error_hint": "Masque cette erreur sans modifier le brouillon ni l’état de livraison",
 		"mobile.composer_input.notice_dismiss": "Masquer",
 		"mobile.composer_input.notice_retry": "Réessayer",
-		"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez le trombone, puis Coller l’image, et choisissez « Autoriser le collage ».",
+		"mobile.composer_input.paste.denied": "Le collage n’a pas été autorisé. Touchez ＋ (Ajouter une image), puis Coller l’image, et choisissez « Autoriser le collage ».",
 		"mobile.composer_input.paste.image": "Coller l’image",
 		"mobile.composer_input.paste.image_hint": "Joint l’image du presse-papiers",
 		"mobile.composer_input.voice.discard": "Supprimer la saisie vocale",
@@ -6832,13 +6827,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.failed": "Échec",
 		"mobile.team_bridge.attachment.image": "Image",
 		"mobile.team_bridge.attachment.image_position": "Image {index} sur {count}",
-		"mobile.team_bridge.attachment.library": "Photothèque",
 		"mobile.team_bridge.attachment.limit": "{count, plural, one {Vous pouvez joindre jusqu’à # image par message.} other {Vous pouvez joindre jusqu’à # images par message.}}",
 		"mobile.team_bridge.attachment.load_error": "Cette image n’a pas été chargée.",
 		"mobile.team_bridge.attachment.loading_label": "{label}, chargement",
 		"mobile.team_bridge.attachment.next": "Image suivante",
 		"mobile.team_bridge.attachment.open_hint": "Ouvre l’image en plein écran",
-		"mobile.team_bridge.attachment.paste": "Coller une image",
 		"mobile.team_bridge.attachment.paste_empty": "Aucune image n’a été collée.",
 		"mobile.team_bridge.attachment.position": "{index} sur {count}",
 		"mobile.team_bridge.attachment.prepare_error": "Cette image n’a pas pu être préparée.",
@@ -7092,6 +7085,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.attach.camera": "फ़ोटो लें",
 		"mobile.composer_input.attach.camera_denied": "कैमरा एक्सेस बंद है। फ़ोटो लेने के लिए इसे सेटिंग्स में चालू करें।",
 		"mobile.composer_input.attach.camera_error": "कैमरा नहीं खुल सका। फिर से कोशिश करें।",
+		"mobile.composer_input.attach.camera_refused": "कैमरा एक्सेस की अनुमति नहीं मिली।",
 		"mobile.composer_input.attach.camera_unavailable": "इस डिवाइस पर कोई कैमरा उपलब्ध नहीं है।",
 		"mobile.composer_input.attach.choose_image": "चित्र चुनें",
 		"mobile.composer_input.attach.files": "फ़ाइलें",
@@ -7105,7 +7099,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.dismiss_error_hint": "ड्राफ़्ट या डिलीवरी की स्थिति बदले बिना यह त्रुटि छिपाता है",
 		"mobile.composer_input.notice_dismiss": "छिपाएँ",
 		"mobile.composer_input.notice_retry": "फिर से प्रयास करें",
-		"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। पेपरक्लिप पर टैप करें, फिर छवि चिपकाएँ, और अनुमति दें चुनें।",
+		"mobile.composer_input.paste.denied": "पेस्ट करने की अनुमति नहीं मिली। ＋ (चित्र जोड़ें) पर टैप करें, फिर चित्र पेस्ट करें, और अनुमति दें चुनें।",
 		"mobile.composer_input.paste.image": "छवि चिपकाएँ",
 		"mobile.composer_input.paste.image_hint": "क्लिपबोर्ड की छवि संलग्न करता है",
 		"mobile.composer_input.voice.discard": "वॉइस इनपुट हटाएँ",
@@ -7849,13 +7843,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.failed": "विफल",
 		"mobile.team_bridge.attachment.image": "चित्र",
 		"mobile.team_bridge.attachment.image_position": "चित्र {index}, कुल {count}",
-		"mobile.team_bridge.attachment.library": "फ़ोटो लाइब्रेरी",
 		"mobile.team_bridge.attachment.limit": "{count, plural, one {आप हर संदेश में अधिकतम # चित्र जोड़ सकते हैं।} other {आप हर संदेश में अधिकतम # चित्र जोड़ सकते हैं।}}",
 		"mobile.team_bridge.attachment.load_error": "यह चित्र लोड नहीं हुआ।",
 		"mobile.team_bridge.attachment.loading_label": "{label}, लोड हो रहा है",
 		"mobile.team_bridge.attachment.next": "अगला चित्र",
 		"mobile.team_bridge.attachment.open_hint": "चित्र को पूर्ण स्क्रीन में खोलता है",
-		"mobile.team_bridge.attachment.paste": "चित्र पेस्ट करें",
 		"mobile.team_bridge.attachment.paste_empty": "कोई चित्र पेस्ट नहीं हुआ।",
 		"mobile.team_bridge.attachment.position": "{index} / {count}",
 		"mobile.team_bridge.attachment.prepare_error": "यह चित्र तैयार नहीं हो सका।",
@@ -8109,6 +8101,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.attach.camera": "Сделать фото",
 		"mobile.composer_input.attach.camera_denied": "Доступ к камере выключен. Включите его в Настройках, чтобы сделать фото.",
 		"mobile.composer_input.attach.camera_error": "Не удалось открыть камеру. Попробуйте ещё раз.",
+		"mobile.composer_input.attach.camera_refused": "Доступ к камере не разрешён.",
 		"mobile.composer_input.attach.camera_unavailable": "На этом устройстве нет доступной камеры.",
 		"mobile.composer_input.attach.choose_image": "Выбрать изображение",
 		"mobile.composer_input.attach.files": "Файлы",
@@ -8122,7 +8115,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.dismiss_error_hint": "Скрывает ошибку, не изменяя черновик или статус доставки",
 		"mobile.composer_input.notice_dismiss": "Скрыть",
 		"mobile.composer_input.notice_retry": "Повторить",
-		"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите на скрепку, затем «Вставить изображение» и выберите «Разрешить вставку».",
+		"mobile.composer_input.paste.denied": "Вставка не разрешена. Нажмите ＋ («Добавить изображение»), затем «Вставить изображение» и выберите «Разрешить вставку».",
 		"mobile.composer_input.paste.image": "Вставить изображение",
 		"mobile.composer_input.paste.image_hint": "Прикрепляет изображение из буфера обмена",
 		"mobile.composer_input.voice.discard": "Отменить голосовой ввод",
@@ -8866,13 +8859,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.failed": "Ошибка",
 		"mobile.team_bridge.attachment.image": "Изображение",
 		"mobile.team_bridge.attachment.image_position": "Изображение {index} из {count}",
-		"mobile.team_bridge.attachment.library": "Фотогалерея",
 		"mobile.team_bridge.attachment.limit": "{count, plural, one {К сообщению можно прикрепить до # изображения.} few {К сообщению можно прикрепить до # изображений.} many {К сообщению можно прикрепить до # изображений.} other {К сообщению можно прикрепить до # изображения.}}",
 		"mobile.team_bridge.attachment.load_error": "Не удалось загрузить это изображение.",
 		"mobile.team_bridge.attachment.loading_label": "{label}, загрузка",
 		"mobile.team_bridge.attachment.next": "Следующее изображение",
 		"mobile.team_bridge.attachment.open_hint": "Открывает изображение на весь экран",
-		"mobile.team_bridge.attachment.paste": "Вставить изображение",
 		"mobile.team_bridge.attachment.paste_empty": "Изображение не вставлено.",
 		"mobile.team_bridge.attachment.position": "{index} из {count}",
 		"mobile.team_bridge.attachment.prepare_error": "Не удалось подготовить это изображение.",
@@ -9126,6 +9117,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.attach.camera": "تصویر کھینچیں",
 		"mobile.composer_input.attach.camera_denied": "کیمرے کی رسائی بند ہے۔ تصویر کھینچنے کے لیے اسے ترتیبات میں آن کریں۔",
 		"mobile.composer_input.attach.camera_error": "کیمرا نہیں کھل سکا۔ دوبارہ کوشش کریں۔",
+		"mobile.composer_input.attach.camera_refused": "کیمرے تک رسائی کی اجازت نہیں ملی۔",
 		"mobile.composer_input.attach.camera_unavailable": "اس ڈیوائس پر کوئی کیمرا دستیاب نہیں ہے۔",
 		"mobile.composer_input.attach.choose_image": "تصویر منتخب کریں",
 		"mobile.composer_input.attach.files": "فائلیں",
@@ -9139,7 +9131,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.dismiss_error_hint": "مسودہ یا ترسیل کی حیثیت بدلے بغیر یہ خرابی چھپاتا ہے",
 		"mobile.composer_input.notice_dismiss": "چھپائیں",
 		"mobile.composer_input.notice_retry": "دوبارہ کوشش کریں",
-		"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ پیپر کلپ پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔",
+		"mobile.composer_input.paste.denied": "پیسٹ کرنے کی اجازت نہیں ملی۔ ＋ (تصویر شامل کریں) پر ٹیپ کریں، پھر تصویر پیسٹ کریں، اور اجازت دیں منتخب کریں۔",
 		"mobile.composer_input.paste.image": "تصویر پیسٹ کریں",
 		"mobile.composer_input.paste.image_hint": "کلپ بورڈ کی تصویر منسلک کرتا ہے",
 		"mobile.composer_input.voice.discard": "آواز کا ان پٹ مسترد کریں",
@@ -9883,13 +9875,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.failed": "ناکام",
 		"mobile.team_bridge.attachment.image": "تصویر",
 		"mobile.team_bridge.attachment.image_position": "تصویر {index}، کل {count}",
-		"mobile.team_bridge.attachment.library": "فوٹو لائبریری",
 		"mobile.team_bridge.attachment.limit": "{count, plural, one {آپ ہر پیغام میں زیادہ سے زیادہ # تصویر شامل کر سکتے ہیں۔} other {آپ ہر پیغام میں زیادہ سے زیادہ # تصاویر شامل کر سکتے ہیں۔}}",
 		"mobile.team_bridge.attachment.load_error": "یہ تصویر لوڈ نہیں ہوئی۔",
 		"mobile.team_bridge.attachment.loading_label": "{label}، لوڈ ہو رہا ہے",
 		"mobile.team_bridge.attachment.next": "اگلی تصویر",
 		"mobile.team_bridge.attachment.open_hint": "تصویر پوری اسکرین پر کھولتا ہے",
-		"mobile.team_bridge.attachment.paste": "تصویر پیسٹ کریں",
 		"mobile.team_bridge.attachment.paste_empty": "کوئی تصویر پیسٹ نہیں ہوئی۔",
 		"mobile.team_bridge.attachment.position": "{index} / {count}",
 		"mobile.team_bridge.attachment.prepare_error": "یہ تصویر تیار نہیں ہو سکی۔",
@@ -10143,6 +10133,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.attach.camera": "Chụp ảnh",
 		"mobile.composer_input.attach.camera_denied": "Quyền truy cập máy ảnh đang tắt. Hãy bật trong Cài đặt để chụp ảnh.",
 		"mobile.composer_input.attach.camera_error": "Không mở được máy ảnh. Hãy thử lại.",
+		"mobile.composer_input.attach.camera_refused": "Không được phép truy cập máy ảnh.",
 		"mobile.composer_input.attach.camera_unavailable": "Thiết bị này không có máy ảnh khả dụng.",
 		"mobile.composer_input.attach.choose_image": "Chọn hình ảnh",
 		"mobile.composer_input.attach.files": "Tệp",
@@ -10156,7 +10147,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.dismiss_error_hint": "Ẩn lỗi này mà không thay đổi bản nháp hay trạng thái gửi",
 		"mobile.composer_input.notice_dismiss": "Ẩn",
 		"mobile.composer_input.notice_retry": "Thử lại",
-		"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào kẹp giấy, chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
+		"mobile.composer_input.paste.denied": "Không được phép dán. Chạm vào ＋ (Thêm hình ảnh), chọn Dán hình ảnh, rồi chọn “Cho phép dán”.",
 		"mobile.composer_input.paste.image": "Dán hình ảnh",
 		"mobile.composer_input.paste.image_hint": "Đính kèm hình ảnh trong bộ nhớ tạm",
 		"mobile.composer_input.voice.discard": "Hủy nhập bằng giọng nói",
@@ -10900,13 +10891,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.failed": "Thất bại",
 		"mobile.team_bridge.attachment.image": "Hình ảnh",
 		"mobile.team_bridge.attachment.image_position": "Hình {index} trên {count}",
-		"mobile.team_bridge.attachment.library": "Thư viện ảnh",
 		"mobile.team_bridge.attachment.limit": "{count, plural, other {Bạn có thể đính kèm tối đa # hình ảnh cho mỗi tin nhắn.}}",
 		"mobile.team_bridge.attachment.load_error": "Không tải được hình ảnh này.",
 		"mobile.team_bridge.attachment.loading_label": "{label}, đang tải",
 		"mobile.team_bridge.attachment.next": "Hình tiếp theo",
 		"mobile.team_bridge.attachment.open_hint": "Mở hình ảnh toàn màn hình",
-		"mobile.team_bridge.attachment.paste": "Dán hình ảnh",
 		"mobile.team_bridge.attachment.paste_empty": "Chưa dán hình ảnh nào.",
 		"mobile.team_bridge.attachment.position": "{index} trên {count}",
 		"mobile.team_bridge.attachment.prepare_error": "Không chuẩn bị được hình ảnh này.",
@@ -11160,6 +11149,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.attach.camera": "拍照",
 		"mobile.composer_input.attach.camera_denied": "相机访问已关闭。请在“设置”中开启，以便拍照。",
 		"mobile.composer_input.attach.camera_error": "无法打开相机。请重试。",
+		"mobile.composer_input.attach.camera_refused": "未允许访问相机。",
 		"mobile.composer_input.attach.camera_unavailable": "此设备上没有可用的相机。",
 		"mobile.composer_input.attach.choose_image": "选择图片",
 		"mobile.composer_input.attach.files": "文件",
@@ -11173,7 +11163,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.composer_input.dismiss_error_hint": "隐藏此错误，不改变草稿或发送状态",
 		"mobile.composer_input.notice_dismiss": "关闭",
 		"mobile.composer_input.notice_retry": "重试",
-		"mobile.composer_input.paste.denied": "未允许粘贴。请点按回形针，选择“粘贴图片”，然后选择“允许粘贴”。",
+		"mobile.composer_input.paste.denied": "未允许粘贴。请点按 ＋（添加图片），选择“粘贴图片”，然后选择“允许粘贴”。",
 		"mobile.composer_input.paste.image": "粘贴图片",
 		"mobile.composer_input.paste.image_hint": "附加剪贴板中的图片",
 		"mobile.composer_input.voice.discard": "放弃语音输入",
@@ -11917,13 +11907,11 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.team_bridge.attachment.failed": "失败",
 		"mobile.team_bridge.attachment.image": "图片",
 		"mobile.team_bridge.attachment.image_position": "第 {index} 张图片，共 {count} 张",
-		"mobile.team_bridge.attachment.library": "照片图库",
 		"mobile.team_bridge.attachment.limit": "{count, plural, other {每条消息最多可附加 # 张图片。}}",
 		"mobile.team_bridge.attachment.load_error": "此图片未能加载。",
 		"mobile.team_bridge.attachment.loading_label": "{label}，正在加载",
 		"mobile.team_bridge.attachment.next": "下一张图片",
 		"mobile.team_bridge.attachment.open_hint": "全屏打开图片",
-		"mobile.team_bridge.attachment.paste": "粘贴图片",
 		"mobile.team_bridge.attachment.paste_empty": "未粘贴图片。",
 		"mobile.team_bridge.attachment.position": "{index} / {count}",
 		"mobile.team_bridge.attachment.prepare_error": "未能处理此图片。",

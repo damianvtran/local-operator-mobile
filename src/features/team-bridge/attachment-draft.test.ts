@@ -48,7 +48,7 @@ function setup(
 }
 
 describe("deferred picker/paste authority", () => {
-	it.each(["library", "paste"] as const)(
+	it.each(["library", "camera", "paste"] as const)(
 		"a live %s still prepares and uploads the acquired source",
 		async (source) => {
 			const { draft, deps } = setup();
@@ -56,6 +56,7 @@ describe("deferred picker/paste authority", () => {
 			const release = vi.fn();
 			await addDraftImages(draft, source, {
 				pick: async () => ["raw"],
+				capture: async () => "raw",
 				paste: async () => "raw",
 				isCurrent: () => true,
 				release,
@@ -69,7 +70,7 @@ describe("deferred picker/paste authority", () => {
 			expect(release).not.toHaveBeenCalled();
 		},
 	);
-	it.each(["library", "paste"] as const)(
+	it.each(["library", "camera", "paste"] as const)(
 		"releases stale %s after draft replacement without preparing or publishing",
 		async (source) => {
 			const { draft, deps } = setup();
@@ -82,6 +83,7 @@ describe("deferred picker/paste authority", () => {
 			const notice = vi.fn();
 			const acquisition = addDraftImages(draft, source, {
 				pick: () => pending,
+				capture: async () => (await pending)[0] ?? null,
 				paste: async () => (await pending)[0] ?? null,
 				isCurrent: () => current === draft,
 				release,
@@ -102,6 +104,24 @@ describe("deferred picker/paste authority", () => {
 		},
 	);
 
+	it("a cancelled camera capture is silent: no paste-empty notice, nothing staged", async () => {
+		/* PR #278 round 1 (U5/D1): Team Bridge's Take Photo row. Backing out of
+		 * the camera is the reader's choice, like cancelling the picker. */
+		const { draft, deps } = setup();
+		const notice = vi.fn();
+		await addDraftImages(draft, "camera", {
+			pick: async () => ["wrong"],
+			capture: async () => null,
+			paste: async () => "wrong",
+			isCurrent: () => true,
+			release: vi.fn(),
+			notice,
+		});
+		expect(deps.prepare).not.toHaveBeenCalled();
+		expect(notice).not.toHaveBeenCalled();
+		expect(draft.chips()).toEqual([]);
+	});
+
 	it.each(["empty", "rejected"] as const)(
 		"does not show a late %s paste notice after disposal",
 		async (result) => {
@@ -114,6 +134,7 @@ describe("deferred picker/paste authority", () => {
 			const notice = vi.fn();
 			const acquisition = addDraftImages(draft, "paste", {
 				pick: async () => [],
+				capture: async () => null,
 				paste: async () => {
 					await pending;
 					if (result === "rejected") throw new Error("denied");

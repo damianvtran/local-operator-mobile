@@ -27,13 +27,11 @@ describe("Team Bridge copy", () => {
 				"mobile.team_bridge.attachment.failed",
 				"mobile.team_bridge.attachment.image",
 				"mobile.team_bridge.attachment.image_position",
-				"mobile.team_bridge.attachment.library",
 				"mobile.team_bridge.attachment.limit",
 				"mobile.team_bridge.attachment.load_error",
 				"mobile.team_bridge.attachment.loading_label",
 				"mobile.team_bridge.attachment.next",
 				"mobile.team_bridge.attachment.open_hint",
-				"mobile.team_bridge.attachment.paste",
 				"mobile.team_bridge.attachment.paste_empty",
 				"mobile.team_bridge.attachment.position",
 				"mobile.team_bridge.attachment.prepare_error",
@@ -89,7 +87,8 @@ describe("Team Bridge copy", () => {
 		// Exact merged attachment + consent + established key union; +2:
 		// `thread.jump_newest` and `thread.anchor_missing` (feat/bridge-last-target's
 		// anchored open).
-		expect(keys).toHaveLength(159);
+		// Shared AttachSheet retires attachment.library / attachment.paste (159 - 2).
+		expect(keys).toHaveLength(157);
 		expect(keys.sort()).toEqual(
 			Object.keys(CATALOGUES.en)
 				.filter((key) => key.startsWith("mobile.team_bridge."))

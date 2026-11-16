@@ -1,4 +1,4 @@
-import { Paperclip } from "lucide-react-native";
+import { Plus } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import {
@@ -305,7 +305,9 @@ export function BridgeComposerFieldView({
 					testID={CONTROL.teamBridgeAttach}
 				>
 					<View className={COMPOSER_DISC}>
-						<Paperclip
+						{/* The session composer's lucide ＋ (PR #278 round 1, U5): one add
+						 *  control across the app, opening the same AttachSheet. */}
+						<Plus
 							size={ATTACH_GLYPH_PT}
 							color={attachOff ? disabledInk : attachInk}
 							aria-hidden

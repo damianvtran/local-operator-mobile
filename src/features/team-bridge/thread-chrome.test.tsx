@@ -48,7 +48,7 @@ import {
  */
 
 // The Node SSR host has no native SVG loader; the glyph is aria-hidden anyway.
-vi.mock("lucide-react-native", () => ({ Paperclip: () => null }));
+vi.mock("lucide-react-native", () => ({ Plus: () => null }));
 // No native appearance provider in Node. Every token reads #000000 EXCEPT
 // `border-control`, so the edge ring's focused colour is distinguishable from
 // the shell fill and from its clear rest (design D1).

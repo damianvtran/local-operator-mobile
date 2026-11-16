@@ -43,10 +43,6 @@
 		"role": "status",
 		"note": "Team Bridge image attachments: image_position. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
 	},
-	"mobile.team_bridge.attachment.library": {
-		"role": "button",
-		"note": "Team Bridge image attachments: library. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
-	},
 	"mobile.team_bridge.attachment.limit": {
 		"role": "status",
 		"note": "Team Bridge image attachments: limit. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
@@ -66,10 +62,6 @@
 	"mobile.team_bridge.attachment.open_hint": {
 		"role": "status",
 		"note": "Team Bridge image attachments: open_hint. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
-	},
-	"mobile.team_bridge.attachment.paste": {
-		"role": "button",
-		"note": "Team Bridge image attachments: paste. Preserve all ICU arguments. Counts refer to images, never messages. No public URL, automatic resend, enrollment or guaranteed upload is implied. "
 	},
 	"mobile.team_bridge.attachment.paste_empty": {
 		"role": "status",

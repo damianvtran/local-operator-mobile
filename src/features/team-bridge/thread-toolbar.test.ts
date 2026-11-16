@@ -27,8 +27,10 @@ describe("attachment toolbar available-width layout", () => {
 		expect(composer).toContain('t("mobile.team_bridge.attachment.add")');
 		expect(composer).toContain('t("mobile.team_bridge.thread.send")');
 		expect(composer).toContain('t("mobile.team_bridge.thread.send_retry")');
-		expect(composer).toContain(
-			"images ? () => setAttachOpen(true) : undefined",
+		/* PR #278: the ＋ cancels any pending picker handoff, then reopens the
+		 * shared AttachSheet — an explicit reopen is the only re-admission point. */
+		expect(composer).toMatch(
+			/onAttach=\{\s*images\s*\?\s*\(\) => \{[^}]*attachHandoff\.cancel\(\);\s*setAttachOpen\(true\);\s*\}\s*: undefined\s*\}/,
 		);
 		expect(composer).toContain("images.remaining() === 0");
 		expect(composer).toContain("sendDisabled={!sendable}");

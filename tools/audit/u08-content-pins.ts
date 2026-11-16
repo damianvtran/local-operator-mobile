@@ -213,8 +213,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * false`. `--print`, staged. */
 	/* PR #207 round 5: omit the false head-pin flag, matching Core's wire.
 	 * Re-derived with --print from the staged tree; no capture assertion moved. */
+	/* PR #278 round 1: `models-ranked` declares S9/attach-sheet. Re-derived with
+	 * --print. */
 	"tools/mock-relay/scenarios.ts":
-		"26a2bc072de976ec16b3b0083efeb3367f2896dc573805fdd625b0b3232a8a1e",
+		"29ff52528339fb6ce434da05fa594b9601d2d7739291850433924b38df1645ed",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
@@ -241,8 +243,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * (`identical-states.ts`, `matchDeclared`), never by the plan or a readiness
 	 * probe, so no cell and no planned frame changes. */
 	// PR #207 CI remediation: the `m-conv-…` fixture-id rename, nothing else.
+	/* PR #278 round 1: the S9/attach-sheet cell opener and re-derived plan figures.
+	 * Re-derived with --print. */
 	"tools/visual/matrix.ts":
-		"c94eea1f1fbdcb18835ea3d8fa98b408ab705f66142c30f42654c993f01c25e4",
+		"e24ae8d4c246288b1ff71a39a2f741888a75d51c1d60aa0cfa8845b60e8f2780",
 	"e2e/fixtures/audit-canary/index.html":
 		"96085343f6aaa34a3162c979d536208a32f897beba9bbc3633d6f3d0e37a5403",
 };
@@ -2088,7 +2092,11 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* Merge of origin/main (b1fbb813, #275) into #278: both comment chains
 	 * retained. Re-derived with --print over the merged tree. Source identity
 	 * only, NOT rendered U-08 evidence. */
-	src: "0b6b39ab553723041b50bab746e00e8f921a54243cce00ea375e00ca6f367ba1",
+	/* PR #278 round 1 remediation: camera `refused` state, iOS notice announcement,
+	 * epoch on close/choose, Team Bridge on the shared AttachSheet with Take Photo,
+	 * the S9/attach-sheet state marker and copy in 8 locales. Re-derived with
+	 * --print. Source identity only, NOT rendered U-08 evidence. */
+	src: "5ae47a909e01158efb77311d1e5f513c98ee22baceb6d7598426e2afdccc3467",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {
@@ -2118,8 +2126,10 @@ export const RENDER_FILE_PINS: Readonly<Record<string, string>> = {
 	// --print re-pin (2026-11-15, composer camera): CAMERA_USAGE, the image
 	// picker's cameraPermission and the Android CAMERA declaration — native
 	// permission config, not a U-08 web layout input.
+	/* PR #278 round 1 (R1): registers plugins/with-android-optional-camera.js.
+	 * Re-derived with --print. Source identity only, NOT rendered U-08 evidence. */
 	"app.config.ts":
-		"0236116ef4d644c82e604e1bef912fc7704fb4180634605fdbc8eaf41110dcb1",
+		"9dd6afb79c4a0cd8125ba96041c95090aa1ef3440bde5ccfa23e67b064d844cf",
 	"metro.config.js":
 		"8969b35b1269818e746e2a8e854f94995f0adbc54b18e8e80c95e90aca1aa707",
 	// --print re-pin (feat/background-push-clear): adds the native module

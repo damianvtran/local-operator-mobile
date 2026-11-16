@@ -76,7 +76,10 @@ const NAMESPACES = [
 		messages: teamBridge,
 		context: teamBridgeContext,
 		// Current union: endpoint-profile keys plus six delivery/help keys.
-		expected: 159, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder); +2: thread.jump_newest and thread.anchor_missing (anchored opens).
+		// PR #278 round 1 (U5/D1): -2 attachment.library / attachment.paste —
+		// Team Bridge renders the shared AttachSheet, whose rows use the
+		// mobile.composer_input.attach.* labels (159 - 2 = 157).
+		expected: 157, // Exact merged Team Bridge key union (TestFlight 773 retired thread.placeholder); +2: thread.jump_newest and thread.anchor_missing (anchored opens).
 	},
 	{
 		name: "mobile.signin",
@@ -103,7 +106,8 @@ const NAMESPACES = [
 		// +2: the failure notice's short Retry / Dismiss actions (visual audit D6).
 		// PR #278: +11 mobile.composer_input.attach.* (icon-led add-image menu
 		// with camera row) = 25, counted over the authored English JSON.
-		expected: 25,
+		// PR #278 round 1 (R2/U3/Q2): +1 attach.camera_refused = 26.
+		expected: 26,
 	},
 	{
 		name: "mobile.library",
@@ -502,7 +506,10 @@ describe("the English catalogues", () => {
 		 * (mobile.composer_input 25, mobile.remote_sessions 22). */
 		/* Merge of origin/main (b1fbb813, #275) into #278: both chains kept;
 		 * 1004 on main + the branch's 11 mobile.composer_input.attach.* = 1015. */
-		expect(total).toBe(1015);
+		/* PR #278 round 1: +1 mobile.composer_input.attach.camera_refused and -2
+		 * mobile.team_bridge.attachment.library/paste (Team Bridge now renders
+		 * the shared AttachSheet) = 1014, matching i18n:generate's own count. */
+		expect(total).toBe(1014);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

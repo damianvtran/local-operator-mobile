@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createAttachmentSheetHandoff } from "./attach-handoff";
 
 const OWNER_ATTACH_FINALLY = /finally\s*\{\s*setAttaching\(false\)/;
-const CAMERA_READY_CHOOSES =
-	/if \(readiness === "ready"\) onChoose\("camera"\);/;
+// `choose` (not `onChoose`) since round 1's U4: it moves the epoch first.
+const CAMERA_READY_CHOOSES = /if \(readiness === "ready"\) choose\("camera"\);/;
 const TEAM_BRIDGE_CLOSE_THEN_CHOOSE =
 	/setAttachOpen\(false\);\s*attachHandoff\.choose\(/;
 const CANCEL_BEFORE_REOPEN =

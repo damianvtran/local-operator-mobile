@@ -6,7 +6,7 @@
 	"mobile.composer_input.voice.finish": "Terminar y transcribir",
 	"mobile.composer_input.paste.image": "Pegar imagen",
 	"mobile.composer_input.paste.image_hint": "Adjunta la imagen del portapapeles",
-	"mobile.composer_input.paste.denied": "No se permitió pegar. Toca el clip, luego Pegar imagen, y elige «Permitir pegar».",
+	"mobile.composer_input.paste.denied": "No se permitió pegar. Toca ＋ (Añadir una imagen), luego Pegar imagen, y elige «Permitir pegar».",
 	"mobile.composer_input.clear_draft": "Borrar borrador",
 	"mobile.composer_input.clear_draft_hint": "Borra solo el texto y las imágenes del borrador; conserva los mensajes en cola y sin confirmar",
 	"mobile.composer_input.dismiss_error": "Ocultar error",
@@ -21,6 +21,7 @@
 	"mobile.composer_input.attach.paste": "Pegar imagen",
 	"mobile.composer_input.attach.choose_image": "Elegir imagen",
 	"mobile.composer_input.attach.camera_denied": "El acceso a la cámara está desactivado. Actívalo en Ajustes para hacer una foto.",
+	"mobile.composer_input.attach.camera_refused": "No se permitió el acceso a la cámara.",
 	"mobile.composer_input.attach.open_settings": "Abrir Ajustes",
 	"mobile.composer_input.attach.camera_unavailable": "No hay ninguna cámara disponible en este dispositivo.",
 	"mobile.composer_input.attach.camera_error": "No se pudo abrir la cámara. Inténtalo de nuevo."

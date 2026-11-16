@@ -154,10 +154,15 @@ export interface CameraPermissionState {
  *   "Don't ask again"). The only way back is the app's page in Settings, so the
  *   sheet stays open and says so with an Open Settings action instead of a
  *   press that silently does nothing.
+ * - `refused` — the reader just said no to the OS prompt, but the OS WILL ask
+ *   again on the next press (Android after a first "Don't allow":
+ *   `canAskAgain` stays true). Sending them to Settings would be wrong — a
+ *   second press re-prompts — so the sheet says only that access wasn't
+ *   allowed, with no Settings detour (PR #278 round 1, R2/U3/Q2).
  * - `unavailable` — there is no camera to open (the iOS simulator; a device or
  *   emulator with no camera app). Said, never crashed into.
  */
-export type CameraReadiness = "ready" | "denied" | "unavailable";
+export type CameraReadiness = "ready" | "refused" | "denied" | "unavailable";
 
 /**
  * Whether to raise the OS prompt, given what the OS already knows.
@@ -171,6 +176,20 @@ export const cameraPermissionStep = (
 	state: CameraPermissionState,
 ): "granted" | "prompt" | "denied" =>
 	state.granted ? "granted" : state.canAskAgain ? "prompt" : "denied";
+
+/**
+ * What the reader's answer to the OS prompt means for the sheet.
+ *
+ * WHY `canAskAgain` IS READ HERE: iOS never re-asks after "Don't Allow", so a
+ * refusal there is final and only Settings can undo it (`denied`). Android
+ * keeps `canAskAgain: true` after a first refusal and shows the prompt again on
+ * the next request, so the same refusal there is `refused`: no Settings, and
+ * the next press on Take Photo simply asks again.
+ */
+export const cameraAnswer = (
+	asked: CameraPermissionState,
+): Exclude<CameraReadiness, "unavailable"> =>
+	asked.granted ? "ready" : asked.canAskAgain ? "refused" : "denied";
 
 /**
  * Whether this process runs in the iOS Simulator, read from its sandbox path.
