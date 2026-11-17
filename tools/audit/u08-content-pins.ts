@@ -2224,7 +2224,12 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	/* PR #298 merge of origin/main (2026-11-17): src re-derived with --print
 	 * over the merged tree, which carries both the #296 and #298 changes. Source
 	 * identity only, NOT rendered U-08 evidence. */
-	src: "9767dd818c670194e01758d16c7f05a0c2d35adbfd19ad63df028be177817559",
+	/* PR #298 round-2 remediation (R2-M1): the 429 clock-guard ceiling in
+	 * team-bridge/push.ts becomes the exact bound of the wait, plus its
+	 * regression test. No rendered component or copy changes. Re-derived with
+	 * --print over the staged tree. Source identity only, NOT rendered U-08
+	 * evidence. */
+	src: "c62cf329e6b0ca7736654266d7dc068f3d4dd4edb4516af4487c3aa12f063c82",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

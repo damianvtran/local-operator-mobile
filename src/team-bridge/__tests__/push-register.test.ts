@@ -474,12 +474,12 @@ describe("a trigger refused by a backoff is retried once when it ends (reviewer 
 });
 
 describe("a clock set backwards cannot stretch a backoff (reviewer m3)", () => {
-	it("a remaining wait beyond max(15 min, Retry-After × 1.1) counts as elapsed", async () => {
+	it("a remaining wait beyond max(15 min, Retry-After) + 10 % counts as elapsed", async () => {
 		const { hub, puts } = fakeHub([hubLimited, accepted]);
 		const memory = createRegistrationMemory();
 		const clock = clockAt(10_000_000_000);
 		await registerTeamBridgeDevice(hub, () => true, memory, clock);
-		expect(memory.maxWaitMs).toBe(BACKOFF_MAX_MS); // 42 s × 1.1 < 15 min
+		expect(memory.maxWaitMs).toBe(BACKOFF_MAX_MS + 4_200); // 15 min + 42 s × 10 %
 		expect(await registerTeamBridgeDevice(hub, () => true, memory, clock)).toBe(
 			"backoff",
 		);
@@ -514,5 +514,32 @@ describe("a clock set backwards cannot stretch a backoff (reviewer m3)", () => {
 		expect(await registerTeamBridgeDevice(hub, () => true, memory, clock)).toBe(
 			"backoff",
 		);
+	});
+
+	// Reviewer round 2, R2-M1: at failures >= 9 the exponential cap is the full
+	// 15 min, so a jittered wait near 15 min PLUS the Retry-After's 10 % jitter
+	// exceeded the old ceiling max(15 min, asked × 1.1) and the guard read a
+	// genuine backoff as a clock jump, opening the gate during a sustained 429.
+	it("a fresh 429 backoff at the 15-min cap is never read as a clock jump (R2-M1)", async () => {
+		const { hub, puts } = fakeHub([wafBlocked]);
+		const memory = createRegistrationMemory();
+		memory.failures = 8; // this refusal is the 9th consecutive failure
+		const clock = { ...clockAt(), random: () => 0.999 };
+		clock.now = () => clock.t;
+		await registerTeamBridgeDevice(hub, () => true, memory, clock);
+		const wait = memory.notBefore - clock.t;
+		expect(wait).toBeGreaterThan(BACKOFF_MAX_MS); // jitter + 10 % past the cap
+		expect(wait).toBe(
+			registrationBackoffMs(
+				9,
+				new HubError({ kind: "rate_limited", message: "x" }),
+				() => 0.999,
+			),
+		);
+		expect(backoffRemainingMs(memory, clock.t)).toBe(wait);
+		expect(await registerTeamBridgeDevice(hub, () => true, memory, clock)).toBe(
+			"backoff",
+		);
+		expect(puts).toHaveLength(1);
 	});
 });

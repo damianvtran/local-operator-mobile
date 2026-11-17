@@ -88,8 +88,8 @@ export type RegistrationOutcome =
  *  - WALL CLOCK (reviewer m3): `notBefore` is epoch ms, so a device clock set
  *    backwards after a failure would stretch the wait by the jump. A remaining
  *    wait longer than the longest wait this code can set — max(BACKOFF_MAX_MS,
- *    the last Retry-After × 1.1), kept as `maxWaitMs` — cannot be real and is
- *    treated as elapsed (`backoffRemainingMs`).
+ *    the last Retry-After) plus 10 % of that Retry-After, kept as `maxWaitMs`
+ *    — cannot be real and is treated as elapsed (`backoffRemainingMs`).
  *  - ONE RETRY AFTER A BACKOFF (reviewer m1): a trigger that lands inside a
  *    backoff (a token rotation, say) would otherwise be dropped until the next
  *    foreground, leaving the hub on a dead token. The provider arms ONE timer
@@ -164,11 +164,20 @@ export function registrationBackoffMs(
  * The ceiling on any wait `registrationBackoffMs` returns for this error: the
  * exponential cap, or a server-named wait plus its 10 % jitter. Anything longer
  * still to go can only be a clock that moved backwards.
+ *
+ * It must be an EXACT upper bound of `registrationBackoffMs`, term by term, or
+ * the guard cancels genuine waits (reviewer round 2, R2-M1): for a 429 the
+ * wait is max(asked, jittered) + floor(r·asked·0.1) with jittered <
+ * BACKOFF_MAX_MS, so its bound is max(BACKOFF_MAX_MS, asked) +
+ * ceil(asked·0.1). The earlier max(BACKOFF_MAX_MS, asked·1.1) dropped the
+ * 10 % whenever the exponential cap dominated (failures >= 9), and a 300 s
+ * WAF 429 then read as a clock jump in ~1.7 % of backoffs. Change both
+ * functions together.
  */
 export function registrationWaitCeilingMs(error: unknown): number {
 	if (isHubError(error) && error.kind === "rate_limited") {
 		const asked = error.retryAfterMs ?? RATE_LIMITED_FLOOR_MS;
-		return Math.max(BACKOFF_MAX_MS, Math.round(asked * 1.1));
+		return Math.max(BACKOFF_MAX_MS, asked) + Math.ceil(asked * 0.1);
 	}
 	return BACKOFF_MAX_MS;
 }
