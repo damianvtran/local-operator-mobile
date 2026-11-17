@@ -79,7 +79,9 @@ const hooks = vi.hoisted(() => {
 
 const seam = vi.hoisted(() => ({
 	foreground: undefined as ((state: string) => void) | undefined,
-	rotate: undefined as (() => void) | undefined,
+	rotate: undefined as ((token?: { data?: unknown }) => void) | undefined,
+	/** Every device-token read (`getDevicePushTokenAsync`), echo loop or not. */
+	reads: 0,
 	platform: "ios" as "ios" | "android",
 	phase: "live",
 	revision: 1,
@@ -177,7 +179,7 @@ vi.mock("@/notifications/notification-preferences", async (importActual) => {
 const notificationsModule = {
 	getPermissionsAsync: async () => ({ status: seam.permission }),
 	requestPermissionsAsync: seam.requestPermission,
-	addPushTokenListener: (listener: () => void) => {
+	addPushTokenListener: (listener: (token?: { data?: unknown }) => void) => {
 		seam.rotate = listener;
 		return { remove: seam.removeToken };
 	},
@@ -185,8 +187,21 @@ const notificationsModule = {
 vi.mock("@/notifications/native", () => ({
 	notificationsSupported: () => true,
 	loadNotifications: async () => notificationsModule,
-	devicePushToken: async () =>
-		seam.token === null ? null : { token: seam.token, platform: seam.platform },
+	/* As on a device: expo's native module answers a token read by resolving
+	 * the promise AND emitting `onDevicePushToken` to every token listener,
+	 * same token or not (`PushTokenModule.swift` `didRegister`). The real
+	 * `devicePushToken` notes the token it read; so does this one. */
+	devicePushToken: async () => {
+		seam.reads += 1;
+		if (seam.token === null) return null;
+		const token = seam.token;
+		const { notePushToken } = await import("./push-token-changes");
+		notePushToken(token);
+		// Capped so a regression FAILS (reads = 50) rather than spinning the
+		// microtask queue forever and hanging the run.
+		if (seam.reads < 50) queueMicrotask(() => seam.rotate?.({ data: token }));
+		return { token, platform: seam.platform };
+	},
 }));
 vi.mock("@/notifications/install-id", () => ({
 	ensureInstallRecord: async () => ({
@@ -197,6 +212,7 @@ vi.mock("@/notifications/install-id", () => ({
 }));
 
 import { pushComputerHandles } from "@/features/session/warm-store";
+import { resetPushTokenMemory } from "@/notifications/push-token-changes";
 import {
 	DEFAULT_NOTIFICATION_PREFERENCES,
 	notificationPreferencesStore,
@@ -246,6 +262,8 @@ beforeEach(() => {
 	seam.token = "synthetic-token-1";
 	seam.foreground = undefined;
 	seam.rotate = undefined;
+	seam.reads = 0;
+	resetPushTokenMemory();
 	seam.relayIdentities.clear();
 	seam.capabilities = {};
 	seam.liveFrameAt = 1;
@@ -417,12 +435,31 @@ describe("session push registration lifecycle", () => {
 		expect(sessionPushRegistrationStore.getState().status).toBe("registered");
 	});
 
+	it("a token read's own echo is not a rotation: one read, not a read loop (builds 1139/1157)", async () => {
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
+		// Give a loop every chance to spin: each read's echo would queue a re-run.
+		for (let i = 0; i < 20; i++) await settle();
+		expect(seam.reads).toBe(1);
+		expect(seam.register).toHaveBeenCalledTimes(1);
+	});
+
+	it("an echo of the token already registered never re-runs registration", async () => {
+		render();
+		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
+		const reads = seam.reads;
+		seam.rotate?.({ data: seam.token });
+		seam.rotate?.({});
+		await settle();
+		expect(seam.reads).toBe(reads);
+	});
+
 	it("token rotation re-POSTs the new token for the same install", async () => {
 		render();
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(1));
 		await vi.waitFor(() => expect(seam.rotate).toBeDefined());
 		seam.token = "synthetic-token-2";
-		seam.rotate?.();
+		seam.rotate?.({ data: seam.token });
 		await vi.waitFor(() => expect(seam.register).toHaveBeenCalledTimes(2));
 		const second = seam.register.mock.calls[1]?.[0];
 		expect(second?.token).toBe("synthetic-token-2");

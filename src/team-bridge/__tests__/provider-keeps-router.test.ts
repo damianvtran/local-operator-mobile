@@ -60,6 +60,7 @@ vi.mock("@/notifications/native", () => ({
 	loadNotifications: async () => null,
 }));
 vi.mock("@/team-bridge/push", () => ({
+	createRegistrationMemory: () => ({ accepted: null, failures: 0, notBefore: 0 }),
 	installTeamBridgeNotifications: async () => undefined,
 	registerTeamBridgeDevice: async () => undefined,
 	subscribeTeamBridgeReceived: async () => () => undefined,

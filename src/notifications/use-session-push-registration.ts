@@ -83,6 +83,7 @@ import {
 	preferencesForRegistration,
 	pushCapabilities,
 } from "@/notifications/notification-preferences";
+import { addPushTokenChangeListener } from "@/notifications/push-token-changes";
 import {
 	registerSessionPushDevice,
 	resetSessionPushRegistrationMemory,
@@ -236,7 +237,13 @@ export const useSessionPushRegistration = (): void => {
 		void loadNotifications()
 			.then((module) => {
 				if (module === null || stopped) return;
-				tokenSubscription = module.addPushTokenListener(() => trigger(false));
+				// Only a token that CHANGED: every registration reads the token,
+				// and each read fires this event, so reacting to the echo queued
+				// a re-run per read — an endless read loop that also woke Team
+				// Bridge's listener into a PUT per read (`push-token-changes.ts`).
+				tokenSubscription = addPushTokenChangeListener(module, () =>
+					trigger(false),
+				);
 			})
 			.catch(() => undefined);
 		return () => {

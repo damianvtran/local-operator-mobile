@@ -24,6 +24,7 @@ import {
 	loadNotificationPreferences,
 	teamBridgeWanted,
 } from "@/notifications/notification-preferences";
+import { addPushTokenChangeListener } from "@/notifications/push-token-changes";
 import { type AvatarCache, createAvatarCache } from "@/team-bridge/avatars";
 import {
 	backgroundUnreadScope,
@@ -33,6 +34,7 @@ import {
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import { deviceNoticeDismissals } from "@/team-bridge/notice-dismissals";
 import {
+	createRegistrationMemory,
 	installTeamBridgeNotifications,
 	registerTeamBridgeDevice,
 	subscribeTeamBridgeReceived,
@@ -130,6 +132,9 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 				}),
 			};
 		};
+		// Dedupe and backoff for THIS account's hub registration; a new account
+		// value starts clean (`push.ts`, RATE DISCIPLINE).
+		const registration = createRegistrationMemory();
 		const pushes = createPushLifecycle({
 			register: async (isCurrent) => {
 				/* The Team Bridge switch (Settings → Notifications) is app-only:
@@ -140,7 +145,7 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 				const bound = await bindAccount();
 				if (!bound || !isCurrent()) return;
 				registeredHub = bound;
-				await registerTeamBridgeDevice(bound.hub, isCurrent);
+				await registerTeamBridgeDevice(bound.hub, isCurrent, registration);
 			},
 			unregister: async () => {
 				const bound = registeredHub ?? (await bindAccount(true));
@@ -156,6 +161,9 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 					await unregisterTeamBridgeDevice(cleanup);
 				}
 				registeredHub = null;
+				// The row is gone (or going): the next register must PUT, not
+				// skip as "unchanged". A pending backoff still stands.
+				registration.accepted = null;
 			},
 		});
 		const scope = createTeamBridgeStore({
@@ -243,7 +251,10 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 		void loadNotifications()
 			.then((module) => {
 				if (!module || disposed) return;
-				tokenSubscription = module.addPushTokenListener(() => {
+				// Only a CHANGED token: every registration's own token read fires
+				// this event, and reacting to that echo is the loop that PUT
+				// ~20/s in builds 1139/1157 (`push-token-changes.ts`).
+				tokenSubscription = addPushTokenChangeListener(module, () => {
 					void value.registerPush().catch(() => undefined);
 				});
 			})

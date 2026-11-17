@@ -33,6 +33,7 @@ import { type NoParamKey, t } from "@/i18n";
 import { conversationPushFromResponse } from "@/notifications/payload";
 import type { PushAvailability } from "@/notifications/permission";
 import { availabilityFromStatus } from "@/notifications/permission";
+import { notePushToken } from "@/notifications/push-token-changes";
 import {
 	type BuiltinSoundId,
 	LEGACY_ALERT_CHANNEL_ID,
@@ -179,6 +180,9 @@ export async function devicePushToken(): Promise<{
 	if (Platform.OS !== "ios" && Platform.OS !== "android") return null;
 	try {
 		const token = await module.getDevicePushTokenAsync();
+		// The read also fires every token listener; mark this value as seen so
+		// that echo is not mistaken for a rotation (`push-token-changes.ts`).
+		notePushToken(token.data);
 		const platform = token.type === "ios" ? "ios" : "android";
 		return { token: token.data, platform };
 	} catch {
