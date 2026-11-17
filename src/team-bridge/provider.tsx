@@ -34,6 +34,7 @@ import {
 import { createHubClient, type HubClient } from "@/team-bridge/client";
 import { deviceNoticeDismissals } from "@/team-bridge/notice-dismissals";
 import {
+	createBackoffRetry,
 	createRegistrationMemory,
 	installTeamBridgeNotifications,
 	registerTeamBridgeDevice,
@@ -135,6 +136,11 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 		// Dedupe and backoff for THIS account's hub registration; a new account
 		// value starts clean (`push.ts`, RATE DISCIPLINE).
 		const registration = createRegistrationMemory();
+		// A trigger refused by the backoff gets one retry when it ends; `pushes`
+		// re-checks the preference, sign-in and lease, so a late fire is safe.
+		const backoffRetry = createBackoffRetry(registration, () => {
+			void pushes.register().catch(() => undefined);
+		});
 		const pushes = createPushLifecycle({
 			register: async (isCurrent) => {
 				/* The Team Bridge switch (Settings → Notifications) is app-only:
@@ -145,9 +151,16 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 				const bound = await bindAccount();
 				if (!bound || !isCurrent()) return;
 				registeredHub = bound;
-				await registerTeamBridgeDevice(bound.hub, isCurrent, registration);
+				const outcome = await registerTeamBridgeDevice(
+					bound.hub,
+					isCurrent,
+					registration,
+				);
+				if (outcome === "backoff" && isCurrent()) backoffRetry.arm();
 			},
 			unregister: async () => {
+				// Withdraw and sign-out: nothing may re-register this account.
+				backoffRetry.cancel();
 				const bound = registeredHub ?? (await bindAccount(true));
 				if (bound) {
 					const cleanup = createHubClient({
@@ -178,6 +191,7 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			// never reads this cache (`src/team-bridge/avatars.ts`).
 			avatars: createAvatarCache(),
 			pushes,
+			backoffRetry,
 			registerPush: () => pushes.register(),
 			/** The Team Bridge switch turned off: DELETE this phone's hub
 			 *  registration, ordered after any PUT already in flight. */
@@ -208,6 +222,8 @@ export function TeamBridgeProvider({ children }: { children: ReactNode }) {
 			// rather than waiting for the collector, and retire reads in flight.
 			value.avatars.clear();
 			remove();
+			// Synchronously, so no backoff retry can fire across the boundary.
+			value.backoffRetry.cancel();
 			void value.pushes.retire().catch(() => undefined);
 		};
 	}, [value]);

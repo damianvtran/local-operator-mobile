@@ -55,12 +55,15 @@ vi.mock("@/notifications/native", () => ({
 
 import {
 	addPushTokenChangeListener,
+	notePushToken,
 	resetPushTokenMemory,
 } from "@/notifications/push-token-changes";
 import { createHubClient, HubError } from "@/team-bridge/client";
 import {
 	BACKOFF_BASE_MS,
 	BACKOFF_MAX_MS,
+	backoffRemainingMs,
+	createBackoffRetry,
 	createRegistrationMemory,
 	RATE_LIMITED_FLOOR_MS,
 	REREGISTER_MS,
@@ -303,5 +306,213 @@ describe("the token-listener echo loop (builds 1139/1157)", () => {
 			listener({ data: "synthetic-apns-token-2" });
 		await settle(50);
 		expect(puts).toHaveLength(2);
+	});
+});
+
+describe("a rotation reaches EVERY token listener (QA round 1, Q1)", () => {
+	/* Session pushes and Team Bridge both subscribe, after independent async
+	 * module loads, so either can subscribe first. One shared "last seen" let
+	 * the first listener record a rotation and filter it out for the second. */
+	for (const order of [
+		["session", "bridge"],
+		["bridge", "session"],
+	] as const) {
+		it(`an event rotation calls both back once (${order.join(" then ")})`, async () => {
+			const calls = { session: 0, bridge: 0 };
+			for (const name of order)
+				addPushTokenChangeListener(fakeModule, () => {
+					calls[name] += 1;
+				});
+			// Launch: one path has registered token 1; a later read echoes it.
+			notePushToken("synthetic-apns-token-1");
+			notePushToken((await fakeModule.getDevicePushTokenAsync()).data);
+			await settle();
+			expect(calls).toEqual({ session: 0, bridge: 0 });
+			// APNs rotates: the event reaches every subscriber.
+			for (const listener of [...seam.listeners])
+				listener({ data: "synthetic-apns-token-2" });
+			expect(calls).toEqual({ session: 1, bridge: 1 });
+			// The re-registrations' own reads of token 2, and their echoes, are quiet.
+			seam.token = "synthetic-apns-token-2";
+			notePushToken((await fakeModule.getDevicePushTokenAsync()).data);
+			notePushToken((await fakeModule.getDevicePushTokenAsync()).data);
+			await settle();
+			expect(calls).toEqual({ session: 1, bridge: 1 });
+		});
+	}
+
+	it("a READ that discovers a new token calls back every listener once (reviewer m2)", async () => {
+		const calls = { session: 0, bridge: 0 };
+		addPushTokenChangeListener(fakeModule, () => {
+			calls.session += 1;
+		});
+		addPushTokenChangeListener(fakeModule, () => {
+			calls.bridge += 1;
+		});
+		notePushToken("synthetic-apns-token-1");
+		// The first token of the process is a launch, not a rotation.
+		expect(calls).toEqual({ session: 0, bridge: 0 });
+		// The session path's read surfaces a rotated token before any event.
+		seam.token = "synthetic-apns-token-2";
+		notePushToken((await fakeModule.getDevicePushTokenAsync()).data);
+		expect(calls).toEqual({ session: 1, bridge: 1 });
+		await settle(); // the read's echo event
+		expect(calls).toEqual({ session: 1, bridge: 1 });
+	});
+
+	it("a callback that reads the token itself cannot loop", async () => {
+		let calls = 0;
+		addPushTokenChangeListener(fakeModule, () => {
+			calls += 1;
+			void fakeModule
+				.getDevicePushTokenAsync()
+				.then((t) => notePushToken(t.data));
+		});
+		notePushToken("synthetic-apns-token-1");
+		seam.token = "synthetic-apns-token-2";
+		notePushToken("synthetic-apns-token-2");
+		await settle(50);
+		expect(calls).toBe(1);
+		expect(seam.reads).toBe(1);
+	});
+});
+
+describe("a trigger refused by a backoff is retried once when it ends (reviewer m1)", () => {
+	function fakeTimers() {
+		const pending = new Map<number, { run: () => void; ms: number }>();
+		let next = 0;
+		return {
+			pending,
+			set: (run: () => void, ms: number) => {
+				next += 1;
+				pending.set(next, { run, ms });
+				return next;
+			},
+			clear: (handle: unknown) => {
+				pending.delete(handle as number);
+			},
+			fire() {
+				const entries = [...pending.entries()];
+				pending.clear();
+				for (const [, entry] of entries) entry.run();
+			},
+		};
+	}
+
+	it("a rotation during a 429 wait re-registers at the wait's end with ONE timer", async () => {
+		const { hub, puts } = fakeHub([hubLimited, accepted]);
+		const memory = createRegistrationMemory();
+		const clock = clockAt();
+		const timers = fakeTimers();
+		const lifecycle = createPushLifecycle({
+			// The provider's wiring: arm the retry on a "backoff" outcome.
+			register: async (isCurrent) => {
+				const outcome = await registerTeamBridgeDevice(
+					hub,
+					isCurrent,
+					memory,
+					clock,
+				);
+				if (outcome === "backoff" && isCurrent()) retry.arm();
+			},
+			unregister: async () => retry.cancel(),
+		});
+		const retry = createBackoffRetry(
+			memory,
+			() => void lifecycle.register(),
+			clock,
+			timers,
+		);
+		lifecycle.activate();
+		await lifecycle.register();
+		expect(puts).toHaveLength(1); // 429
+		// Rotations land inside the wait: refused, but one retry is armed.
+		seam.token = "synthetic-apns-token-2";
+		await lifecycle.register();
+		await lifecycle.register();
+		expect(puts).toHaveLength(1);
+		expect(timers.pending.size).toBe(1);
+		expect([...timers.pending.values()][0]?.ms).toBe(
+			memory.notBefore - clock.t,
+		);
+		clock.t = memory.notBefore;
+		timers.fire();
+		await settle();
+		expect(puts).toHaveLength(2);
+		expect(puts[1]).toMatchObject({ token: "synthetic-apns-token-2" });
+		expect(timers.pending.size).toBe(0);
+	});
+
+	it("withdraw / sign-out cancels a pending retry", async () => {
+		const memory = createRegistrationMemory();
+		const clock = clockAt();
+		memory.notBefore = clock.t + 10_000;
+		memory.maxWaitMs = BACKOFF_MAX_MS;
+		const timers = fakeTimers();
+		let retried = 0;
+		const retry = createBackoffRetry(memory, () => retried++, clock, timers);
+		retry.arm();
+		retry.arm();
+		expect(timers.pending.size).toBe(1);
+		retry.cancel();
+		expect(timers.pending.size).toBe(0);
+		expect(retry.pending()).toBe(false);
+		timers.fire();
+		expect(retried).toBe(0);
+	});
+
+	it("arms nothing when no backoff remains", () => {
+		const timers = fakeTimers();
+		createBackoffRetry(
+			createRegistrationMemory(),
+			() => {},
+			clockAt(),
+			timers,
+		).arm();
+		expect(timers.pending.size).toBe(0);
+	});
+});
+
+describe("a clock set backwards cannot stretch a backoff (reviewer m3)", () => {
+	it("a remaining wait beyond max(15 min, Retry-After × 1.1) counts as elapsed", async () => {
+		const { hub, puts } = fakeHub([hubLimited, accepted]);
+		const memory = createRegistrationMemory();
+		const clock = clockAt(10_000_000_000);
+		await registerTeamBridgeDevice(hub, () => true, memory, clock);
+		expect(memory.maxWaitMs).toBe(BACKOFF_MAX_MS); // 42 s × 1.1 < 15 min
+		expect(await registerTeamBridgeDevice(hub, () => true, memory, clock)).toBe(
+			"backoff",
+		);
+		// The user sets the clock back a day: the remaining wait is now ~24 h.
+		clock.t -= 24 * 60 * 60 * 1000;
+		expect(backoffRemainingMs(memory, clock.t)).toBe(0);
+		expect(await registerTeamBridgeDevice(hub, () => true, memory, clock)).toBe(
+			"registered",
+		);
+		expect(puts).toHaveLength(2);
+	});
+
+	it("a long server-named wait is still honoured in full", async () => {
+		const longLimit: Answer = () =>
+			new Response(
+				JSON.stringify({ error: "slow down", code: "rate_limited" }),
+				{
+					status: 429,
+					headers: {
+						"content-type": "application/json",
+						"retry-after": "3600",
+					},
+				},
+			);
+		const { hub } = fakeHub([longLimit]);
+		const memory = createRegistrationMemory();
+		const clock = clockAt();
+		await registerTeamBridgeDevice(hub, () => true, memory, clock);
+		expect(memory.maxWaitMs).toBe(3_960_000);
+		clock.t += 1_000;
+		expect(backoffRemainingMs(memory, clock.t)).toBeGreaterThan(BACKOFF_MAX_MS);
+		expect(await registerTeamBridgeDevice(hub, () => true, memory, clock)).toBe(
+			"backoff",
+		);
 	});
 });

@@ -85,6 +85,16 @@ export type RegistrationOutcome =
  *    the server's own figure for a 429 (`HubError.retryAfterMs`), else
  *    exponential with FULL jitter, so a fleet of phones that failed together
  *    does not retry together.
+ *  - WALL CLOCK (reviewer m3): `notBefore` is epoch ms, so a device clock set
+ *    backwards after a failure would stretch the wait by the jump. A remaining
+ *    wait longer than the longest wait this code can set — max(BACKOFF_MAX_MS,
+ *    the last Retry-After × 1.1), kept as `maxWaitMs` — cannot be real and is
+ *    treated as elapsed (`backoffRemainingMs`).
+ *  - ONE RETRY AFTER A BACKOFF (reviewer m1): a trigger that lands inside a
+ *    backoff (a token rotation, say) would otherwise be dropped until the next
+ *    foreground, leaving the hub on a dead token. The provider arms ONE timer
+ *    for the end of the wait (`createBackoffRetry`); it never shortens the wait
+ *    and is cleared on withdraw, sign-out and account switch.
  * Coalescing concurrent callers is `push-lifecycle.ts`'s single-flight; the
  * memory here outlives one call and is held per signed-in account (the
  * provider creates one per account value), because the hub's bucket is.
@@ -109,10 +119,12 @@ export interface RegistrationMemory {
 	failures: number;
 	/** No PUT before this epoch-ms. */
 	notBefore: number;
+	/** The longest wait the last failure could have set (see WALL CLOCK). */
+	maxWaitMs: number;
 }
 
 export function createRegistrationMemory(): RegistrationMemory {
-	return { accepted: null, failures: 0, notBefore: 0 };
+	return { accepted: null, failures: 0, notBefore: 0, maxWaitMs: 0 };
 }
 
 /** The deps that make the timing testable; production uses the real clock. */
@@ -149,6 +161,73 @@ export function registrationBackoffMs(
 }
 
 /**
+ * The ceiling on any wait `registrationBackoffMs` returns for this error: the
+ * exponential cap, or a server-named wait plus its 10 % jitter. Anything longer
+ * still to go can only be a clock that moved backwards.
+ */
+export function registrationWaitCeilingMs(error: unknown): number {
+	if (isHubError(error) && error.kind === "rate_limited") {
+		const asked = error.retryAfterMs ?? RATE_LIMITED_FLOOR_MS;
+		return Math.max(BACKOFF_MAX_MS, Math.round(asked * 1.1));
+	}
+	return BACKOFF_MAX_MS;
+}
+
+/** Milliseconds of backoff still to go; 0 when none (or the clock jumped back). */
+export function backoffRemainingMs(
+	memory: RegistrationMemory,
+	now: number,
+): number {
+	const remaining = memory.notBefore - now;
+	if (remaining <= 0) return 0;
+	if (remaining > Math.max(BACKOFF_MAX_MS, memory.maxWaitMs)) return 0;
+	return remaining;
+}
+
+/** Timer seam, so the retry is testable without fake timers. */
+export interface RetryTimers {
+	set: (run: () => void, ms: number) => unknown;
+	clear: (handle: unknown) => void;
+}
+const realTimers: RetryTimers = {
+	set: (run, ms) => setTimeout(run, ms),
+	clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+};
+
+/**
+ * At most ONE pending retry at the end of the current backoff (see ONE RETRY
+ * AFTER A BACKOFF). `arm` is a no-op while a retry is already pending or when no
+ * backoff remains; `cancel` must run when the registration's owner retires
+ * (withdraw, sign-out, account switch) so a retired account never PUTs and no
+ * timer outlives its provider.
+ */
+export function createBackoffRetry(
+	memory: RegistrationMemory,
+	retry: () => void,
+	clock: Pick<RegistrationClock, "now"> = realClock,
+	timers: RetryTimers = realTimers,
+) {
+	let handle: unknown = null;
+	return {
+		arm(): void {
+			if (handle !== null) return;
+			const wait = backoffRemainingMs(memory, clock.now());
+			if (wait <= 0) return;
+			handle = timers.set(() => {
+				handle = null;
+				retry();
+			}, wait);
+		},
+		cancel(): void {
+			if (handle === null) return;
+			timers.clear(handle);
+			handle = null;
+		},
+		pending: () => handle !== null,
+	};
+}
+
+/**
  * Register this phone with the hub when everything it needs is already true.
  * Never prompts and never throws: the outcome is for diagnostics only.
  * `memory` carries dedupe and backoff across calls (see RATE DISCIPLINE);
@@ -162,7 +241,7 @@ export async function registerTeamBridgeDevice(
 ): Promise<RegistrationOutcome> {
 	if (!notificationsSupported()) return "unsupported";
 	// Before any read: a token read is itself a native round trip and an event.
-	if (clock.now() < memory.notBefore) return "backoff";
+	if (backoffRemainingMs(memory, clock.now()) > 0) return "backoff";
 	const module = await loadNotifications();
 	if (module === null) return "unsupported";
 	try {
@@ -216,11 +295,13 @@ export async function registerTeamBridgeDevice(
 			memory.notBefore =
 				clock.now() +
 				registrationBackoffMs(memory.failures, error, clock.random);
+			memory.maxWaitMs = registrationWaitCeilingMs(error);
 			return "failed";
 		}
 		memory.accepted = { key, at: clock.now() };
 		memory.failures = 0;
 		memory.notBefore = 0;
+		memory.maxWaitMs = 0;
 		return "registered";
 	} catch {
 		return "failed";
