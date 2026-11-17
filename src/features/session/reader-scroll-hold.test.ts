@@ -8,6 +8,11 @@ import {
 	WEB_IDLE_MS,
 } from "./reader-scroll-hold";
 
+const REST_THEN_END_DRAG =
+	/observeRest\(event\);\s+scrollHold\.current\.endDrag\(\);/;
+const REST_THEN_END_MOMENTUM =
+	/observeRest\(event\);\s+scrollHold\.current\.endMomentum\(\);/;
+
 /*
  * TestFlight 1139 (operator): "when trying to scroll up it anchors me back to
  * the bottom on each frame in a jitter until I apply enough scroll up force to
@@ -210,10 +215,22 @@ describe("restsAtTail: the at-rest decision uses current geometry (Q1-2)", () =>
 			}),
 		).toBe(false);
 	});
-	it("resting inside the band is the tail", () => {
+	it("resting short of the end, even inside the band, is history (TestFlight 1157)", () => {
+		// #289 pinned this reader to the end at rest: a write after the scroll
+		// had already stopped, "a different position than the smooth finish".
 		expect(
 			restsAtTail({
 				offsetY: 1000 - 400 - 30,
+				viewportPt: 400,
+				contentPt: 1000,
+				bandPt: 48,
+			}),
+		).toBe(false);
+	});
+	it("resting at the end (within a point) is the tail", () => {
+		expect(
+			restsAtTail({
+				offsetY: 1000 - 400 - 0.5,
 				viewportPt: 400,
 				contentPt: 1000,
 				bandPt: 48,
@@ -245,13 +262,19 @@ describe("transcript wiring (m3)", () => {
 		])
 			expect(source).toContain(call);
 	});
-	it("decides the tail at rest from current geometry, then pins", () => {
+	it("decides the tail at rest from current geometry and never writes (TestFlight 1157)", () => {
 		const rest = source.slice(source.indexOf("restRef.current = () => {"));
 		const body = rest.slice(0, rest.indexOf("\n\t};"));
 		expect(body).toContain("restsAtTail({");
 		expect(body).toContain("contentPt: facts.contentPt");
 		expect(body).toContain("viewportPt: viewportRef.current");
 		expect(body).toContain("atTail.current = atEnd;");
-		expect(body).toContain("pinTail();");
+		// A rest is where the reader stopped: no scroll call at rest.
+		expect(body).not.toContain("pinTail()");
+		expect(body).not.toContain("scrollToOffset");
+	});
+	it("takes the rest offset from the drag/momentum end event", () => {
+		expect(source).toMatch(REST_THEN_END_DRAG);
+		expect(source).toMatch(REST_THEN_END_MOMENTUM);
 	});
 });

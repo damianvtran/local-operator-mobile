@@ -838,16 +838,16 @@ watermark, it never claims. The
 seen-vs-claimed separation of §9's first risk row is preserved — the push path still writes neither
 `claim_delivery` nor `deliveries`.
 
-**Eligibility is explicitly unchanged.** Which completions are loud enough to notify at all — the
-ask-answer and job-result loudness rule in session.py — is untouched by this amendment and pending a
-separate operator decision.
+**Historical scope of the 2026-11-15 amendment:** eligibility was explicitly unchanged; the
+ask-answer and job-result loudness rule awaited a separate operator decision. That decision is now
+recorded in the 2026-11-16 amendment below; the presence and coalescing rules above remain unchanged.
 
-**The user-visible consequence, rewritten for the new rule:** if you are at the desktop when a turn
-finishes, your phone does **not** buzz while you stay there. If this Mac announces it (any surface) or you are
-looking at that session, the phone never buzzes for it. If the desktop let it pass silently, the phone
-buzzes once you step away (presence lapses) and only if you still have not read it — several such
-completions arrive as at most three banners and a digest, not one banner each. Away from the desktop,
-nothing changes.
+**The user-visible consequence, rewritten for the new rule (for eligible completions):** if you are
+at the desktop when a turn finishes, your phone does **not** buzz while you stay there. If this Mac
+announces it (any surface) or you are looking at that session, the phone never buzzes for it. If the
+desktop let it pass silently, the phone buzzes once you step away (presence lapses) and only if you
+still have not read it — several such completions arrive as at most three banners and a digest, not
+one banner each. Away from the desktop, nothing changes for eligible completions.
 
 **The Settings toggle, re-examined honestly.** "Don't notify while I'm at the computer" is now
 **largely redundant while the desktop is attended**: the default already holds every push until
@@ -864,6 +864,33 @@ is no idle or lock signal, so a window left focused could silence the phone for 
 a real case: a desktop window left focused, visible and fresh holds its deferred items until presence
 lapses. The operator's decision accepts that in exchange for phone ≤ desktop; it is bounded by the
 one-per-conversation rule and ended by a read, a claim or a lapse. §9 lists it as the signal to watch.
+
+##### Amendment (2026-11-16): routine successful completions stay quiet everywhere
+
+**The operator's decision**, verbatim: *"No, stay quiet everywhere unless it errors or needs me"*.
+This resolves the eligibility decision left open above; it is not a phone-only filter.
+
+**The implementation dependency** is core PR
+[#4120](https://github.com/damianvtran/local-operator/pull/4120), specifically
+`Session._finalize_attention_notify` and the policy in `docs/design/monitor-tool.md` §14.2. The PR is
+open and under review when this amendment is written, not active runtime policy. **Deployment is
+pending; #4120 must merge first.** This amendment does not lift the existing rollout **HOLD**.
+
+The proposed shared completion `notify` decision makes successful routine-only `ask_response`,
+`job_result` and explicitly enumerated system-notice turns quiet for desktop and phone alike. The
+known notices are `session_incident`, `session_model_switch`, `session_credential`,
+`session_credential_redaction`, `session_mcp_recovery`, `session_mcp_unavailable`,
+`session_credential_binding_notice.v1` and `session_send_notice`. Mixtures with peer-family inputs
+and quiet wake/monitor deliveries remain quiet too; unknown or missing input types conservatively
+keep the loud default, not a blanket `session_*` exemption.
+
+Actual turn errors, queued-but-unconsumed user input (`awaiting_user`), explicit user prompts
+(including mixed user/routine turns), and wake/monitor deliveries explicitly requesting notification
+retain their eligibility overrides within the existing policy. Open asks and explicit high-priority
+attention items retain their separate delivery paths. "Needs me" is not a new heuristic over routine
+reply text or notice names. Existing vetoes and duplicate suppression still apply; completion/unread
+visibility is unchanged. No presence, coalescing, grants or settings change is made here, and the
+2026-11-15 amendment's delivery rules apply only after this shared eligibility decision.
 
 **Decision 3: the remaining gates**, in order, all machine-local reads:
 

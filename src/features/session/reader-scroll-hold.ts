@@ -278,13 +278,24 @@ export function createReaderScrollHold(options: ReaderScrollHoldOptions) {
 
 export type ReaderScrollHold = ReturnType<typeof createReaderScrollHold>;
 
+/** Sub-point slack for "at the end": web offsets are fractional. */
+export const REST_END_SLACK_PT = 1;
+
 /**
  * The tail decision at rest, from the CURRENT geometry (PR #289 Q1-2).
  *
  * The scroll-event `atTail` is stale at rest: content that streamed in while
  * the finger was still raised no scroll event, so a reader 30 pt up with
- * 240 pt arriving underneath still read as "at the tail" and was pinned to
- * the end on release. Distance is measured against the latest content height.
+ * 240 pt arriving underneath still read as "at the tail". Distance is
+ * measured against the latest content height.
+ *
+ * ONLY THE END ITSELF IS THE TAIL AT REST (TestFlight 1157: "it jitters when
+ * the scroll finishes and ends me in a different position than the scroll
+ * smooth finish"). #289 treated a rest anywhere inside the follow band as the
+ * tail and pinned it to the end: a write after the scroll had stopped. The
+ * band still decides while content moves under a follower; it no longer
+ * decides where a reader who chose to stop belongs. `bandPt` stays in the
+ * signature so the caller names the band this deliberately does not use.
  */
 export const restsAtTail = (geometry: {
 	offsetY: number;
@@ -292,4 +303,5 @@ export const restsAtTail = (geometry: {
 	contentPt: number;
 	bandPt: number;
 }): boolean =>
-	geometry.contentPt - geometry.offsetY - geometry.viewportPt < geometry.bandPt;
+	geometry.contentPt - geometry.offsetY - geometry.viewportPt <=
+	REST_END_SLACK_PT;

@@ -2204,14 +2204,27 @@ export const RENDER_TREE_PINS: Readonly<Record<string, string>> = {
 	 * objects; it reproduced the parent's committed pin as the control, agreed
 	 * with --print, and a one-byte tamper of the moved test diverged. Source
 	 * identity only, NOT rendered U-08 evidence. */
+	/* TestFlight 1157 rest jitter: a reader's scroll that comes to rest is
+	 * never written afterwards (rest decides from the end event's offset and
+	 * only the end itself resumes following; a trailing event cannot
+	 * re-acquire a rest short of the end) in the Team Bridge viewport and the
+	 * agent transcript. Re-derived with --print over the staged tree; source
+	 * admission only, NOT rendered, native or device evidence. */
+	/* PR #296 round-1 remediation: only the end re-acquires a non-follower
+	 * (an anchoring shift is not the reader moving), shared rest slack, doc
+	 * fixes. Re-derived with --print over the staged tree; source admission
+	 * only, NOT rendered, native or device evidence. */
 	/* PR #298 (push-registration loop fix, 2026-11-17), round-1 remediation:
 	 * src moves for notifications/push-token-changes.ts, notifications/native.ts,
-	 * notifications/use-session-push-registration.ts and team-bridge/{push,
-	 * provider}.tsx — push-token bookkeeping and hub-registration rate
+	 * notifications/use-session-push-registration.ts, team-bridge/push.ts and
+	 * team-bridge/provider.tsx — push-token bookkeeping and hub-registration rate
 	 * discipline, no rendered component or copy changes. Re-derived with --print
 	 * over the staged tree; the other render roots printed unchanged. Source
 	 * identity only, NOT rendered U-08 evidence. */
-	src: "c52b260549ca337d4ced3b8fb2c33cf098ec8143a43e3162fdbb0b39adeae51a",
+	/* PR #298 merge of origin/main (2026-11-17): src re-derived with --print
+	 * over the merged tree, which carries both the #296 and #298 changes. Source
+	 * identity only, NOT rendered U-08 evidence. */
+	src: "9767dd818c670194e01758d16c7f05a0c2d35adbfd19ad63df028be177817559",
 };
 
 export const INPUT_TREE_PINS: Readonly<Record<string, string>> = {

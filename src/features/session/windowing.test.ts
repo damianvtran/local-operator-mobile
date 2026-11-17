@@ -89,9 +89,28 @@ describe("nextAtTail", () => {
 				viewportPt: 118,
 			}),
 		).toBe(false);
-		expect(nextAtTail({ ...base, wasAtTail: false, distanceToEnd: 20 })).toBe(
+		// Coming back means reaching the end itself (TestFlight 1157).
+		expect(nextAtTail({ ...base, wasAtTail: false, distanceToEnd: 0.5 })).toBe(
 			true,
 		);
+	});
+	it("a reader resting short of the end is re-acquired by nothing but the end (TestFlight 1157, #296 Q1-1)", () => {
+		// A trailing event at the same offset after the scroll stopped.
+		expect(nextAtTail({ ...base, wasAtTail: false, distanceToEnd: 20 })).toBe(
+			false,
+		);
+		// An anchoring shift: a row above grew 30 pt, so iOS
+		// maintainVisibleContentPosition moved the offset down by 30 with the
+		// distance to the end unchanged. Not the reader moving toward the end.
+		expect(
+			nextAtTail({
+				...base,
+				wasAtTail: false,
+				distanceToEnd: 20,
+				previousOffsetY: base.offsetY - 30,
+				previousContentPt: base.contentPt - 30,
+			}),
+		).toBe(false);
 	});
 });
 

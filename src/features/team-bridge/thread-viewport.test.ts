@@ -123,6 +123,15 @@ const host = ({ web }: { web: boolean }) => {
 				h.onScroll(e);
 			}
 		},
+		/**
+		 * A move whose scroll event the list's 100 ms `scrollEventThrottle`
+		 * swallowed: the host is there, the controller has not been told.
+		 */
+		silentMove(at: number) {
+			y = at;
+		},
+		/** The geometry the platform attaches to a drag/momentum end event. */
+		event,
 		/** A move with no intent callback: scrollbar, screen reader, Tab focus. */
 		scrollTo(at: number) {
 			y = at;
@@ -748,15 +757,29 @@ describe("a reader's drag is never fought (TestFlight 1139)", () => {
 		expect(r.moves).not.toHaveBeenCalled();
 		expect(r.newBelow).toHaveBeenLastCalledWith(true);
 	});
-	it("resting within the threshold by the reader's own scroll resumes follow", () => {
+	it("resting short of the end stays put; resting at the end resumes follow", () => {
+		// TestFlight 1157 superseded #289's "inside the band resumes follow":
+		// that settled the last points with a write AFTER the scroll ended.
 		const r = openLong(false);
 		dragUp(r, 20);
 		r.h.onScrollEndDrag?.();
 		r.runTimers(); // no momentum began: the drag is over
-		expect(r.v.following).toBe(true);
+		expect(r.v.following).toBe(false);
 		r.moves.mockClear();
+		r.newest = 81;
 		r.grow(2800);
-		expect(r.moves).toHaveBeenCalledWith(2201);
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.newBelow).toHaveBeenLastCalledWith(true);
+		// The reader drags back to the end themselves: following resumes.
+		r.h.onScrollBeginDrag();
+		r.scrollTo(2201);
+		r.h.onScrollEndDrag?.();
+		r.runTimers();
+		expect(r.v.following).toBe(true);
+		expect(r.moves).not.toHaveBeenCalled();
+		r.newest = 82;
+		r.grow(2880);
+		expect(r.moves).toHaveBeenCalledWith(2281);
 	});
 	it("resting above the threshold leaves the reader in history", () => {
 		const r = openLong(false);
@@ -853,9 +876,132 @@ describe("a reader's drag is never fought (TestFlight 1139)", () => {
 		r.scrollTo(r.y - 10);
 		r.grow(2730);
 		expect(r.moves).not.toHaveBeenCalled();
-		r.runTimers(); // idle: rested inside the band, so follow resumes
+		r.runTimers(); // idle: rested 10 px short of the end, so it stays put
 		r.grow(2800);
-		expect(r.moves).toHaveBeenCalled();
+		expect(r.moves).not.toHaveBeenCalled();
+		// A wheel back to the end resumes following once it idles.
+		r.h.onWheel?.();
+		r.scrollTo(2201);
+		r.runTimers();
+		r.grow(2860);
+		expect(r.moves).toHaveBeenCalledWith(2261);
+	});
+});
+
+/*
+ * TestFlight 1157 (operator, #general): "it jitters when the scroll finishes
+ * and ends me in a different position than the scroll smooth finish ...
+ * there shouldn't be something that is updating the scroll position after
+ * scroll completion, it should smoothly stop". After #289 a reader's scroll is
+ * never fought WHILE it moves; these pin that nothing moves it AFTER it rests
+ * either: not the rest decision, not a late scroll event, not a re-measure.
+ */
+describe("a scroll that comes to rest stays where it stopped (TestFlight 1157)", () => {
+	/** Every trigger that can arrive after rest, in a burst. */
+	const lateBurst = (r: ReturnType<typeof openLong>, grownTo: number) => {
+		r.scrollTo(r.y); // the platform's trailing scroll event at the same y
+		r.grow(grownTo); // a row re-measures (avatar, image, markdown)
+		r.layout(599);
+		r.v.dataChanged(); // the admission recheck / an unchanged poll
+		r.runTimers(); // any pending re-check
+		r.scrollTo(r.y);
+		r.grow(grownTo + 6);
+	};
+	it("momentum ending mid-history is followed by zero writes", () => {
+		const r = openLong(false);
+		r.moves.mockClear();
+		r.h.onScrollBeginDrag();
+		r.scrollTo(1700);
+		r.h.onScrollEndDrag?.(r.event());
+		r.h.onMomentumScrollBegin?.();
+		r.scrollTo(1200);
+		r.h.onMomentumScrollEnd?.(r.event());
+		r.runTimers();
+		lateBurst(r, 2760);
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.y).toBe(1200);
+	});
+	it("a rest a few points short of the end is not snapped to it", () => {
+		const r = openLong(false);
+		r.moves.mockClear();
+		r.h.onScrollBeginDrag();
+		r.scrollTo(2119 - 30); // inside the 44 pt follow band
+		r.h.onScrollEndDrag?.(r.event());
+		r.runTimers(); // no glide: the drag is over
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.y).toBe(2089);
+	});
+	it("a late scroll event and re-measure after that rest do not re-acquire it", () => {
+		const r = openLong(false);
+		r.h.onScrollBeginDrag();
+		r.scrollTo(2119 - 30);
+		r.h.onScrollEndDrag?.(r.event());
+		r.runTimers();
+		r.moves.mockClear();
+		lateBurst(r, 2760);
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.y).toBe(2089);
+	});
+	it("decides from the rest event's own geometry, not a throttled scroll event", () => {
+		const r = openLong(false);
+		r.moves.mockClear();
+		r.h.onScrollBeginDrag();
+		// The last event the throttle let through was AT the end (#296 R1-m1:
+		// an in-band reading would be history either way, proving nothing).
+		r.scrollTo(2119);
+		r.h.onScrollEndDrag?.(r.event());
+		r.h.onMomentumScrollBegin?.();
+		r.silentMove(1800); // the glide carried on, unreported
+		r.h.onMomentumScrollEnd?.(r.event());
+		expect(r.v.following).toBe(false);
+		r.grow(2760);
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.y).toBe(1800);
+	});
+	it("a rest AT the end resumes following without a write at rest", () => {
+		const r = openLong(false);
+		r.moves.mockClear();
+		r.h.onScrollBeginDrag();
+		r.scrollTo(2000);
+		r.h.onScrollEndDrag?.(r.event());
+		r.h.onMomentumScrollBegin?.();
+		r.scrollTo(2119); // the glide ends at the end itself
+		r.h.onMomentumScrollEnd?.(r.event());
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.v.following).toBe(true);
+		// The next new message is still followed.
+		r.newest = 81;
+		r.grow(2800);
+		expect(r.moves).toHaveBeenCalledWith(2201);
+	});
+	it("an anchoring shift after a rest short of the end re-acquires nothing (#296 Q1-1)", () => {
+		const r = openLong(false);
+		r.h.onScrollBeginDrag();
+		r.scrollTo(2119 - 20);
+		r.h.onScrollEndDrag?.(r.event());
+		r.runTimers();
+		r.moves.mockClear();
+		// A row ABOVE the first visible one grows 30 pt: iOS
+		// maintainVisibleContentPosition moves the offset by the same 30 and
+		// forces a scroll event. The reader did not move toward the end.
+		r.grow(2748);
+		r.scrollTo(2099 + 30);
+		// Then the newest row re-measures, and the admission recheck runs.
+		r.grow(2760);
+		r.v.dataChanged();
+		r.runTimers();
+		expect(r.moves).not.toHaveBeenCalled();
+		expect(r.v.following).toBe(false);
+	});
+	it("a reader who scrolls back down to the end by hand still re-acquires", () => {
+		const r = openLong(false);
+		r.h.onScrollBeginDrag();
+		r.scrollTo(1500);
+		r.h.onScrollEndDrag?.(r.event());
+		r.runTimers();
+		// A screen reader (no gesture callback) moves them down to the end.
+		r.scrollTo(2119);
+		expect(r.v.following).toBe(true);
 	});
 });
 
