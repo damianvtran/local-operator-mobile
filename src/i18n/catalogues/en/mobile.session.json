@@ -54,6 +54,7 @@
 	"mobile.session.subagent.result_label": "result",
 	"mobile.session.subagent.unavailable_headline": "This subagent is no longer available.",
 	"mobile.session.subagent.unavailable_next": "Its transcript was not kept, or the computer is not answering.",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
 	"mobile.session.not_connected.headline": "This session is not connected yet.",
 	"mobile.session.not_connected.next": "Open it from the session list once a computer is connected.",

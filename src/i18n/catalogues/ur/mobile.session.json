@@ -54,6 +54,7 @@
 	"mobile.session.subagent.result_label": "نتیجہ",
 	"mobile.session.subagent.unavailable_headline": "یہ ذیلی ایجنٹ اب دستیاب نہیں ہے۔",
 	"mobile.session.subagent.unavailable_next": "اس کا ٹرانسکرپٹ محفوظ نہیں رکھا گیا، یا کمپیوٹر جواب نہیں دے رہا۔",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
 	"mobile.session.not_connected.headline": "یہ سیشن ابھی منسلک نہیں ہے۔",
 	"mobile.session.not_connected.next": "کمپیوٹر منسلک ہونے کے بعد اسے سیشن کی فہرست سے کھولیں۔",

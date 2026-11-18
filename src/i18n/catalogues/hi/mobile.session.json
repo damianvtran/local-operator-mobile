@@ -54,6 +54,7 @@
 	"mobile.session.subagent.result_label": "परिणाम",
 	"mobile.session.subagent.unavailable_headline": "यह उप-एजेंट अब उपलब्ध नहीं है।",
 	"mobile.session.subagent.unavailable_next": "इसका ट्रांसक्रिप्ट सहेजा नहीं गया था, या कंप्यूटर जवाब नहीं दे रहा है।",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
 	"mobile.session.not_connected.headline": "यह सत्र अभी कनेक्ट नहीं है।",
 	"mobile.session.not_connected.next": "कंप्यूटर कनेक्ट होने पर इसे सत्रों की सूची से खोलें।",

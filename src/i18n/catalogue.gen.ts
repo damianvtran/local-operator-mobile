@@ -722,6 +722,7 @@ export type CatalogueKey =
 	| "mobile.session.subagent.prompt_label"
 	| "mobile.session.subagent.result_label"
 	| "mobile.session.subagent.screen_title"
+	| "mobile.session.subagent.status"
 	| "mobile.session.subagent.unavailable_headline"
 	| "mobile.session.subagent.unavailable_next"
 	| "mobile.session.subagent_open"
@@ -2748,6 +2749,7 @@ export type MessageParams = {
 	"mobile.session.subagent.prompt_label": NoParams;
 	"mobile.session.subagent.result_label": NoParams;
 	"mobile.session.subagent.screen_title": NoParams;
+	"mobile.session.subagent.status": { status: string };
 	"mobile.session.subagent.unavailable_headline": NoParams;
 	"mobile.session.subagent.unavailable_next": NoParams;
 	"mobile.session.subagent_open": { agent: string | number };
@@ -3868,6 +3870,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "result",
 	"mobile.session.subagent.screen_title": "Subagent",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.unavailable_headline": "This subagent is no longer available.",
 	"mobile.session.subagent.unavailable_next": "Its transcript was not kept, or the computer is not answering.",
 	"mobile.session.subagent_open": "Open {agent}",
@@ -4973,6 +4976,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.subagent.prompt_label": { role: "meta", note: "Lower-case label above the instruction the subagent was given. One word, lower case to match its sibling label." },
 	"mobile.session.subagent.result_label": { role: "meta", note: "Lower-case label above the text the subagent returned. One word, lower case to match its sibling label." },
 	"mobile.session.subagent.screen_title": { role: "heading", note: "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent." },
+	"mobile.session.subagent.status": { role: "status", note: "The status badge beside a subagent's name on its own screen. {status} selects the arm and is never shown itself. queued: waiting to start; running: working now; completed: finished successfully; failed: finished with an error; parked: paused, can resume later; cancelled: stopped by someone before it finished; loading: this phone is still fetching the subagent's details; unavailable: the fetch finished and the computer has no record of this subagent (the screen's body says so too); other: a state this app does not know yet. Each arm is one short lower-case word (no full stop) that fits a small pill beside a title on a 320 pt phone." },
 	"mobile.session.subagent.unavailable_headline": { role: "status", note: "Empty-state headline on the subagent screen when the computer has no record of it. Sentence with a final full stop." },
 	"mobile.session.subagent.unavailable_next": { role: "help", note: "Empty-state follow-up giving the two possible reasons the subagent cannot be shown. One sentence." },
 	"mobile.session.subagent_open": { role: "button", note: "Accessibility label of the small `open` control on a subagent's message in the transcript; activating it opens that subagent's own view. {agent} is the subagent's label or job ID exactly as the app shows it, never translated. An imperative verb, no final full stop." },
@@ -6092,6 +6096,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent.prompt_label": "prompt",
 		"mobile.session.subagent.result_label": "resultado",
 		"mobile.session.subagent.screen_title": "Subagente",
+		"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 		"mobile.session.subagent.unavailable_headline": "Este subagente ya no está disponible.",
 		"mobile.session.subagent.unavailable_next": "Su transcripción no se conservó o la máquina no responde.",
 		"mobile.session.subagent_open": "Abrir {agent}",
@@ -7195,6 +7200,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent.prompt_label": "prompt",
 		"mobile.session.subagent.result_label": "résultat",
 		"mobile.session.subagent.screen_title": "Sous-agent",
+		"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 		"mobile.session.subagent.unavailable_headline": "Ce sous-agent n’est plus disponible.",
 		"mobile.session.subagent.unavailable_next": "Sa transcription n’a pas été conservée, ou l’ordinateur ne répond pas.",
 		"mobile.session.subagent_open": "Ouvrir {agent}",
@@ -8298,6 +8304,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent.prompt_label": "प्रॉम्प्ट",
 		"mobile.session.subagent.result_label": "परिणाम",
 		"mobile.session.subagent.screen_title": "उप-एजेंट",
+		"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 		"mobile.session.subagent.unavailable_headline": "यह उप-एजेंट अब उपलब्ध नहीं है।",
 		"mobile.session.subagent.unavailable_next": "इसका ट्रांसक्रिप्ट सहेजा नहीं गया था, या कंप्यूटर जवाब नहीं दे रहा है।",
 		"mobile.session.subagent_open": "{agent} खोलें",
@@ -9401,6 +9408,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent.prompt_label": "промпт",
 		"mobile.session.subagent.result_label": "результат",
 		"mobile.session.subagent.screen_title": "Субагент",
+		"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 		"mobile.session.subagent.unavailable_headline": "Этот субагент больше недоступен.",
 		"mobile.session.subagent.unavailable_next": "Его транскрипт не сохранён или компьютер не отвечает.",
 		"mobile.session.subagent_open": "Открыть {agent}",
@@ -10504,6 +10512,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent.prompt_label": "پرامپٹ",
 		"mobile.session.subagent.result_label": "نتیجہ",
 		"mobile.session.subagent.screen_title": "ذیلی ایجنٹ",
+		"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 		"mobile.session.subagent.unavailable_headline": "یہ ذیلی ایجنٹ اب دستیاب نہیں ہے۔",
 		"mobile.session.subagent.unavailable_next": "اس کا ٹرانسکرپٹ محفوظ نہیں رکھا گیا، یا کمپیوٹر جواب نہیں دے رہا۔",
 		"mobile.session.subagent_open": "{agent} کھولیں",
@@ -11607,6 +11616,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent.prompt_label": "prompt",
 		"mobile.session.subagent.result_label": "kết quả",
 		"mobile.session.subagent.screen_title": "Tác nhân con",
+		"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 		"mobile.session.subagent.unavailable_headline": "Tác nhân con này không còn khả dụng.",
 		"mobile.session.subagent.unavailable_next": "Bản ghi không được lưu giữ hoặc máy tính không phản hồi.",
 		"mobile.session.subagent_open": "Mở {agent}",
@@ -12710,6 +12720,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.subagent.prompt_label": "提示词",
 		"mobile.session.subagent.result_label": "结果",
 		"mobile.session.subagent.screen_title": "子智能体",
+		"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 		"mobile.session.subagent.unavailable_headline": "此子智能体已不可用。",
 		"mobile.session.subagent.unavailable_next": "其会话记录未保留，或电脑没有响应。",
 		"mobile.session.subagent_open": "打开{agent}",

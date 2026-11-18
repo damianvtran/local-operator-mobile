@@ -54,6 +54,7 @@
 	"mobile.session.subagent.result_label": "结果",
 	"mobile.session.subagent.unavailable_headline": "此子智能体已不可用。",
 	"mobile.session.subagent.unavailable_next": "其会话记录未保留，或电脑没有响应。",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",
 	"mobile.session.not_connected.headline": "此会话尚未连接。",
 	"mobile.session.not_connected.next": "连接电脑后，从会话列表中打开此会话。",

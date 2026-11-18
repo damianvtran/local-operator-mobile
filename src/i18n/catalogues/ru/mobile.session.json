@@ -54,6 +54,7 @@
 	"mobile.session.subagent.result_label": "результат",
 	"mobile.session.subagent.unavailable_headline": "Этот субагент больше недоступен.",
 	"mobile.session.subagent.unavailable_next": "Его транскрипт не сохранён или компьютер не отвечает.",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
 	"mobile.session.not_connected.headline": "Эта сессия пока не подключена.",
 	"mobile.session.not_connected.next": "После подключения компьютера откройте её в списке сессий.",

@@ -54,6 +54,7 @@
 	"mobile.session.subagent.result_label": "kết quả",
 	"mobile.session.subagent.unavailable_headline": "Tác nhân con này không còn khả dụng.",
 	"mobile.session.subagent.unavailable_next": "Bản ghi không được lưu giữ hoặc máy tính không phản hồi.",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
 	"mobile.session.not_connected.headline": "Phiên này chưa được kết nối.",
 	"mobile.session.not_connected.next": "Sau khi kết nối máy tính, mở lại từ danh sách phiên.",

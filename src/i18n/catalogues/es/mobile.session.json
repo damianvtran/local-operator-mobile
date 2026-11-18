@@ -54,6 +54,7 @@
 	"mobile.session.subagent.result_label": "resultado",
 	"mobile.session.subagent.unavailable_headline": "Este subagente ya no está disponible.",
 	"mobile.session.subagent.unavailable_next": "Su transcripción no se conservó o la máquina no responde.",
+	"mobile.session.subagent.status": "{status, select, queued {queued} running {running} completed {completed} failed {failed} parked {parked} cancelled {cancelled} loading {loading} unavailable {unavailable} other {unknown}}",
 	"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
 	"mobile.session.not_connected.headline": "Esta sesión aún no está conectada.",
 	"mobile.session.not_connected.next": "Ábrela desde la lista de sesiones cuando haya una máquina conectada.",

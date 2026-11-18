@@ -219,6 +219,10 @@
 		"role": "help",
 		"note": "Empty-state follow-up giving the two possible reasons the subagent cannot be shown. One sentence."
 	},
+	"mobile.session.subagent.status": {
+		"role": "status",
+		"note": "The status badge beside a subagent's name on its own screen. {status} selects the arm and is never shown itself. queued: waiting to start; running: working now; completed: finished successfully; failed: finished with an error; parked: paused, can resume later; cancelled: stopped by someone before it finished; loading: this phone is still fetching the subagent's details; unavailable: the fetch finished and the computer has no record of this subagent (the screen's body says so too); other: a state this app does not know yet. Each arm is one short lower-case word (no full stop) that fits a small pill beside a title on a 320 pt phone."
+	},
 	"mobile.session.subagent.no_rows": {
 		"role": "status",
 		"note": "Muted line shown when a subagent's transcript is empty. One sentence."
