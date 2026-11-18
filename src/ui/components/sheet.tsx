@@ -355,7 +355,8 @@ export const Sheet = ({
 	 * same press: the pane's focused node unmounts and the trap re-enters at the
 	 * scrim, so a reader heard "Close" instead of the title they just opened (QA
 	 * round 2, Q7). Focus that lands on the scrim is forwarded to the title when the
-	 * sheet focuses its title, otherwise to its Close (`scrimFocusRedirect`).
+	 * sheet focuses its title, otherwise — when a KEY moved it there — to its Close
+	 * (`scrimFocusRedirect`); a pointer-opened sheet's quiet open-time focus stays.
 	 *
 	 * WHY A LISTENER ON THE SCRIM AND NOT A RE-FOCUS. The guard fires only when the
 	 * SCRIM ITSELF is focused, so a control that is still on screen — the persistent
@@ -379,12 +380,16 @@ export const Sheet = ({
 		if (!scrim) return;
 		const onFocusIn = (event: Event) => {
 			if (event.target !== scrim) return;
+			const keyed = scrim.matches(":focus-visible");
+			const to = scrimFocusRedirect(focusTitle, keyed);
 			const target =
-				scrimFocusRedirect(focusTitle) === "title"
+				to === "title"
 					? title
-					: header?.querySelector<HTMLElement>(
-							`[data-testid="${CONTROL.sheetClose}"]`,
-						);
+					: to === "close"
+						? header?.querySelector<HTMLElement>(
+								`[data-testid="${CONTROL.sheetClose}"]`,
+							)
+						: null;
 			target?.focus({ preventScroll: true });
 		};
 		const onTitleBlur = () => setTitleBlurred(true);

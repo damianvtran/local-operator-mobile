@@ -33,6 +33,7 @@ import { exitPointerEvents, useModalExit } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import {
 	PROGRAMMATIC_FOCUS_CLASS,
+	scrimFocusRedirect,
 	webPointerOnly,
 } from "@/ui/programmatic-focus";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
@@ -231,6 +232,9 @@ export const ConversationsDrawer = ({
 		if (!scrim) return;
 		const onFocusIn = (event: Event) => {
 			if (event.target !== scrim) return;
+			/* Keyboard focus only: a pointer-opened drawer keeps the ringless
+			 *  open-time focus on the scrim (`scrimFocusRedirect`). */
+			if (!scrimFocusRedirect(false, scrim.matches(":focus-visible"))) return;
 			/* THIS modal's Close: the search is scoped to the dialog the scrim
 			 *  sits in, so a sheet stacked over the drawer is never searched. */
 			scrim

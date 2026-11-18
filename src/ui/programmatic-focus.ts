@@ -39,9 +39,21 @@ export const webPointerOnly = (platform: string): { tabIndex?: -1 } =>
  * (the drawer forwards to its own Close, `CONTROL.sidebarClose`). A Shift+Tab
  * wrap still reaches the LAST control: the trap compares the re-landed node
  * with the one it left and walks from the end when they match.
+ *
+ * Only KEYBOARD focus is forwarded to Close (`focusVisible`: the browser's own
+ * `:focus-visible` heuristic on the scrim). The trap also lands on the scrim
+ * when a sheet opens; opened by touch or mouse (the row menu's long-press), that
+ * focus stays on the ringless scrim, so no ring appears around Close on a sheet
+ * the reader never touched a key in. A title-focusing sheet always forwards to
+ * its title, whose open-time ring is quiet anyway (`titleRingQuiet`).
  */
-export const scrimFocusRedirect = (focusTitle: boolean): "title" | "close" =>
-	focusTitle ? "title" : "close";
+export const scrimFocusRedirect = (
+	focusTitle: boolean,
+	focusVisible: boolean,
+): "title" | "close" | null => {
+	if (focusTitle) return "title";
+	return focusVisible ? "close" : null;
+};
 
 /**
  * Whether a title that the overlay focuses on open hides its browser ring.

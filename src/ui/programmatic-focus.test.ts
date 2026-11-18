@@ -39,17 +39,22 @@ const TRAP = read(
  * of the library, so an upgrade that changes it fails here first.
  */
 type Stop = { id: string; acceptsFocus: boolean };
+type Modality = "keyboard" | "pointer";
 const trapWrap = (domOrder: Stop[]): Stop | undefined =>
 	domOrder.find((stop) => stop.acceptsFocus);
 
 /** Where a keyboard reader ends up after the wrap, and whether they can see it. */
 const afterWrap = (
 	domOrder: Stop[],
-	redirect: Record<string, string>,
+	redirect: (focusVisible: boolean) => string | null,
 	ringQuiet: (id: string) => boolean,
+	modality: Modality = "keyboard",
 ): { id: string; ring: boolean } => {
 	const landed = trapWrap(domOrder)?.id ?? "body";
-	const id = redirect[landed] ?? landed;
+	/* The browser's own heuristic: focus that a key moved matches
+	 *  `:focus-visible`; focus placed while the reader used a pointer does not. */
+	const id =
+		landed === "scrim" ? (redirect(modality === "keyboard") ?? landed) : landed;
 	return { id, ring: !ringQuiet(id) };
 };
 
@@ -62,9 +67,17 @@ describe("Tab wrap inside a web overlay lands on a control with a ring", () => {
 		expect(TRAP).toContain("return document.activeElement === element;");
 	});
 
-	it("sends focus that lands on a sheet's scrim to its Close, or to its title", () => {
-		expect(scrimFocusRedirect(false)).toBe("close");
-		expect(scrimFocusRedirect(true)).toBe("title");
+	it("sends KEYBOARD focus that lands on a sheet's scrim to its Close", () => {
+		expect(scrimFocusRedirect(false, true)).toBe("close");
+		/* Pointer-opened: the scrim keeps the quiet open-time focus, so no ring
+		 *  appears around Close on a sheet the reader opened by touch. */
+		expect(scrimFocusRedirect(false, false)).toBeNull();
+	});
+
+	it("always sends focus that lands on a title-focusing sheet's scrim to its title", () => {
+		/* QA round 2, Q7: opening from the drawer re-entered at the scrim. */
+		expect(scrimFocusRedirect(true, true)).toBe("title");
+		expect(scrimFocusRedirect(true, false)).toBe("title");
 	});
 
 	it("keeps the title's ring hidden only for the focus placed while opening", () => {
@@ -81,7 +94,7 @@ describe("Tab wrap inside a web overlay lands on a control with a ring", () => {
 				{ id: "close", acceptsFocus: true },
 				{ id: "pin", acceptsFocus: true },
 			],
-			{ scrim: scrimFocusRedirect(false) },
+			(fv: boolean) => scrimFocusRedirect(false, fv),
 		],
 		[
 			"Switch computer (a sheet that focuses its title)",
@@ -90,7 +103,7 @@ describe("Tab wrap inside a web overlay lands on a control with a ring", () => {
 				{ id: "title", acceptsFocus: true },
 				{ id: "close", acceptsFocus: true },
 			],
-			{ scrim: scrimFocusRedirect(true) },
+			(fv: boolean) => scrimFocusRedirect(true, fv),
 		],
 		[
 			"conversations drawer",
@@ -99,20 +112,35 @@ describe("Tab wrap inside a web overlay lands on a control with a ring", () => {
 				{ id: "agents", acceptsFocus: true },
 				{ id: "sidebar-close", acceptsFocus: true },
 			],
-			{ scrim: "sidebar-close" },
+			(fv: boolean) =>
+				scrimFocusRedirect(false, fv) === "close" ? "sidebar-close" : null,
 		],
 	] as const)("%s", (_name, order, redirect) => {
 		/* A wrap means the reader has tabbed AWAY from whatever opening focused,
 		 *  so the title has been blurred since the overlay opened. */
 		const ringQuiet = (id: string) =>
 			id === "scrim" || (id === "title" && titleRingQuiet(true));
-		const after = afterWrap([...order], { ...redirect }, ringQuiet);
+		const after = afterWrap([...order], redirect, ringQuiet);
 		expect(after.id).not.toBe("scrim");
 		expect(after.ring).toBe(true);
 	});
 
+	it("leaves a pointer-opened row menu's open-time focus quiet", () => {
+		const opened = afterWrap(
+			[
+				{ id: "scrim", acceptsFocus: true },
+				{ id: "close", acceptsFocus: true },
+			],
+			(fv) => scrimFocusRedirect(false, fv),
+			(id) => id === "scrim",
+			"pointer",
+		);
+		expect(opened).toEqual({ id: "scrim", ring: false });
+	});
+
 	it("wires the redirect into every web sheet, not only title-focusing ones", () => {
-		expect(SHEET).toContain("scrimFocusRedirect(focusTitle)");
+		expect(SHEET).toContain('const keyed = scrim.matches(":focus-visible");');
+		expect(SHEET).toContain("scrimFocusRedirect(focusTitle, keyed)");
 		expect(SHEET).not.toContain(
 			'if (!shown || !focusTitle || Platform.OS !== "web") return;',
 		);
@@ -121,6 +149,9 @@ describe("Tab wrap inside a web overlay lands on a control with a ring", () => {
 
 	it("wires the drawer's scrim to the panel's Close", () => {
 		expect(DRAWER).toContain('addEventListener("focusin"');
+		expect(DRAWER).toContain(
+			'scrimFocusRedirect(false, scrim.matches(":focus-visible"))',
+		);
 		expect(DRAWER).toContain("CONTROL.sidebarClose");
 	});
 });
