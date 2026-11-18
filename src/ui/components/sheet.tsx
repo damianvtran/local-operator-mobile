@@ -35,6 +35,7 @@ import {
 	useModalExit,
 } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
+import { PROGRAMMATIC_FOCUS_CLASS } from "@/ui/programmatic-focus";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
@@ -537,7 +538,13 @@ export const Sheet = ({
 									ref={titleRef}
 									tabIndex={focusTitle ? -1 : undefined}
 									level={2}
-									className="flex-1 text-title text-ink"
+									/* The title is focused by CODE on open (never a Tab stop),
+									 *  so the browser's default ring around it marked no key the
+									 *  reader pressed (`@/ui/programmatic-focus`). */
+									className={cx(
+										"flex-1 text-title text-ink",
+										focusTitle ? PROGRAMMATIC_FOCUS_CLASS : undefined,
+									)}
 									/* ONE LINE, the app's truncation idiom (36 call sites, the rows
 									 * themselves included): at 200 % on a 320 pt phone the WRAPPED
 									 * title was the sheet's single biggest chrome block — 81 pt of a

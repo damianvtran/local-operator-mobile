@@ -31,8 +31,13 @@ import { useShadow } from "@/ui/elevation";
 import { sidebarWidthFor, TOUCH_FLOOR } from "@/ui/layout";
 import { exitPointerEvents, useModalExit } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
+import {
+	PROGRAMMATIC_FOCUS_CLASS,
+	webPointerOnly,
+} from "@/ui/programmatic-focus";
 import { TextScaleProvider } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
+import { cx } from "@/ui/variants";
 
 /**
  * The conversations drawer: the temporary variant of Material's navigation
@@ -281,11 +286,17 @@ export const ConversationsDrawer = ({
 							/* The dim, with no claim to a press this layer cannot receive. */
 							<View style={{ flex: 1, backgroundColor: scrimColour }} />
 						) : (
+							/* Pointer-only on the web: the pane's own labelled Close is the
+							 *  keyboard route, and react-native-web's focus trap lands on
+							 *  this first focusable node on open — its browser ring drew a
+							 *  1 px line down the drawer's edge (`@/ui/programmatic-focus`).
+							 *  Native keeps the scrim exactly as it was. */
 							<Pressable
-								className="flex-1"
+								className={cx("flex-1", PROGRAMMATIC_FOCUS_CLASS)}
 								style={{ backgroundColor: scrimColour }}
 								accessibilityRole={ROLE.button}
 								accessibilityLabel={t("mobile.chrome.close_conversations")}
+								{...webPointerOnly(Platform.OS)}
 								onPress={close}
 							/>
 						)}
