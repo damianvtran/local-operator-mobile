@@ -39,6 +39,7 @@
  */
 
 import type { AskQuestion, PendingAsk, SessionSummary } from "@/contracts";
+import { t } from "@/i18n";
 import { isRelayError, isRelayMissing, TRANSPORT_SENTENCE } from "@/relay";
 
 /** The statuses the wire carries (design §4's frozen `PendingAsk.status`; a
@@ -694,9 +695,9 @@ export function questionsCountLabel(questions: number): string {
 	return questions === 1 ? "1 question" : `${questions} questions`;
 }
 
-/** The sheet title's and the More row's sentence for a queue with nothing
- *  waiting and only lapsed asks —
- *  the desktop chip's own words (`askChipCountClause`), in the quiet register. */
+/** The More row's sentence for a queue with nothing waiting and only lapsed
+ *  asks — the desktop chip's own words (`askChipCountClause`), in the quiet
+ *  register. */
 export function questionsTimedOutLabel(questions: number): string {
 	return questions === 1
 		? "1 question timed out"
@@ -721,8 +722,10 @@ export function questionTally(rows: PendingAsk[] | undefined | null): {
 	return { waiting, lapsed };
 }
 
-/** The bar's (and the sheet title's) count sentence, or `null` when the queue
- *  holds nothing to show: waiting outranks lapsed, as on the desktop chip. */
+/** The bar's (and the More row's) count sentence, or `null` when the queue
+ *  holds nothing to show: waiting outranks lapsed, as on the desktop chip. Not
+ *  the sheet's title: the sheet also lists settled asks this never counts
+ *  (`asksSheetTitle`, issue #326). */
 export function askBarLabel(
 	rows: PendingAsk[] | undefined | null,
 ): { text: string; quiet: boolean } | null {
@@ -790,3 +793,83 @@ export const asksReadFailureLine = (failure: unknown): string => {
 	}
 	return refusalText(failure);
 };
+
+/* ------------------------------------------------- the sheet's sections */
+
+/** The groups the asks sheet lists its rows under (issue #326). */
+export type AskSectionKind = "waiting" | "timed_out" | "closed" | "other";
+
+/** Every status the queue SETTLES on: the ask is over, whatever the outcome. */
+const CLOSED_STATUSES = new Set([
+	"answered",
+	"late",
+	"declined",
+	"dismissed",
+	"withdrawn",
+	"expired",
+]);
+
+const sectionOf = (status: string): AskSectionKind => {
+	if (isOutstanding(status)) return "waiting";
+	if (isLapsed(status)) return "timed_out";
+	if (CLOSED_STATUSES.has(status)) return "closed";
+	/* A newer runtime's status: neither waiting nor finished as far as this
+	 *  build knows, so it is not filed under a group that would claim either
+	 *  (the state line's own unknown-arm rule). */
+	return "other";
+};
+
+const SECTION_ORDER: readonly AskSectionKind[] = [
+	"waiting",
+	"timed_out",
+	"closed",
+	"other",
+];
+
+const sectionLabel = (kind: AskSectionKind): string => {
+	switch (kind) {
+		case "waiting":
+			/* The inbox's own heading for the same asks: one vocabulary (P-10). */
+			return t("mobile.notifications.section.waiting");
+		case "timed_out":
+			return t("mobile.session.asks.section_timed_out");
+		case "closed":
+			return t("mobile.session.asks.section_closed");
+		default:
+			return t("mobile.session.asks.section_other");
+	}
+};
+
+/** The asks sheet's rows, grouped by state under a heading each.
+ *
+ *  WHY GROUPS. The aggregate read returns every ask the index holds — answered
+ *  and declined ones too — while the old title counted only the open and
+ *  timed-out ones, so a sheet titled "8 questions timed out" listed rows that
+ *  said "Answered — the agent was told" (issue #326). A heading over each
+ *  state makes the list say what it holds, and a neutral title
+ *  (`asksSheetTitle`) can then never claim a state over rows it does not
+ *  describe.
+ *
+ *  Order: the waiting asks (the only ones the reader can still answer), then
+ *  the timed-out ones (Dismiss is still offered), then the settled ones.
+ *  Inside a group the rows keep `orderedForDisplay`'s order, so the ask the
+ *  bar names still leads the list. Empty groups are omitted. */
+export function askSections(
+	rows: PendingAsk[] | undefined | null,
+): { kind: AskSectionKind; label: string; rows: PendingAsk[] }[] {
+	const listed = orderedForDisplay(rows);
+	return SECTION_ORDER.map((kind) => ({
+		kind,
+		label: sectionLabel(kind),
+		rows: listed.filter(
+			(row) => sectionOf(String(row.status || "open")) === kind,
+		),
+	})).filter((section) => section.rows.length > 0);
+}
+
+/** The asks sheet's title: one noun, the word of the composer row that opens
+ *  it, in the Title case of its sibling sheets (Model, Effort, Commands). It
+ *  used to be the bar's count sentence over a list that also holds settled
+ *  rows; the section headings now state each state instead. */
+export const asksSheetTitle = (): string =>
+	t("mobile.chrome.composer.row_questions");
