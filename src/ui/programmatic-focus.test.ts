@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
 	createInputModality,
@@ -237,6 +237,28 @@ describe("Tab wrap inside a web overlay lands on a control with a ring", () => {
 		expect(modality.keyboard()).toBe(true);
 		modality.record("pointer");
 		expect(modality.keyboard()).toBe(false);
+	});
+
+	it("sees the key that OPENED the overlay, pressed before anything asked", async () => {
+		/* The key that opens the drawer (Enter on the menu button) is pressed before
+		 *  the guard first asks, so the page's listeners must already be there. */
+		const listeners = new Map<string, Array<() => void>>();
+		const fakeDocument = {
+			addEventListener: (type: string, listener: () => void) =>
+				listeners.set(type, [...(listeners.get(type) ?? []), listener]),
+		};
+		vi.stubGlobal("document", fakeDocument);
+		vi.resetModules();
+		try {
+			const fresh = await import("@/ui/programmatic-focus");
+			for (const listener of listeners.get("keydown") ?? []) listener();
+			expect(fresh.keyboardInput()).toBe(true);
+			for (const listener of listeners.get("pointerdown") ?? []) listener();
+			expect(fresh.keyboardInput()).toBe(false);
+		} finally {
+			vi.unstubAllGlobals();
+			vi.resetModules();
+		}
 	});
 
 	it("installs the guard on every web sheet's scrim and on the drawer's", () => {

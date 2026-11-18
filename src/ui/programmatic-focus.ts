@@ -101,30 +101,26 @@ export const createInputModality = () => {
 	};
 };
 
-let webModality: ReturnType<typeof createInputModality> | null = null;
-
 /**
- * Whether the last input on the page was a key. Web only: the document-level
- * listeners are installed on first call, in the capture phase so a handler that
- * stops propagation cannot hide an input. Off the web there is no trap and no
- * caller, and this answers false.
+ * The page's input modality, recorded from the moment this module loads on the
+ * web — EAGERLY, because the key that opens an overlay (Enter on the menu
+ * button) is pressed before the guard first asks; listeners installed on that
+ * first ask missed it and kept a keyboard-opened drawer on its scrim. Capture
+ * phase, so a handler that stops propagation cannot hide an input. Off the web
+ * (`document` undefined) nothing is installed and `keyboardInput` answers false.
  */
-export const keyboardInput = (): boolean => {
-	if (typeof document === "undefined") return false;
-	if (!webModality) {
-		const modality = createInputModality();
-		document.addEventListener(
-			"keydown",
-			() => modality.record("keyboard"),
-			true,
-		);
-		for (const type of ["pointerdown", "mousedown", "touchstart"]) {
-			document.addEventListener(type, () => modality.record("pointer"), true);
-		}
-		webModality = modality;
+const webModality: ReturnType<typeof createInputModality> | null = (() => {
+	if (typeof document === "undefined") return null;
+	const modality = createInputModality();
+	document.addEventListener("keydown", () => modality.record("keyboard"), true);
+	for (const type of ["pointerdown", "mousedown", "touchstart"]) {
+		document.addEventListener(type, () => modality.record("pointer"), true);
 	}
-	return webModality.keyboard();
-};
+	return modality;
+})();
+
+/** Whether the last input on the page was a key (web; false elsewhere). */
+export const keyboardInput = (): boolean => webModality?.keyboard() ?? false;
 
 /**
  * Whether a title that the overlay focuses on open hides its browser ring.
