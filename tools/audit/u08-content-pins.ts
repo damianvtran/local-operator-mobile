@@ -213,8 +213,10 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 *  This is sha256 of relay.ts exactly as committed in 24d93a0d, unchanged at
 	 *  this head; the tool's own reader (snapshotContent) reports the same value.
 	 *  The fixture moved, the U-08 scene did not. Not rendered evidence. */
+	/* Re-pinned for issue #326 with --print: `GET /api/asks` serves a scenario's
+	 *  own `asks` body when it declares one, else the same corpus as before. */
 	"tools/mock-relay/relay.ts":
-		"1bcbec5c8e80d2a5eb39eeecba8f19bb0fee10dd992941f50624cd1aba0ecfba",
+		"b57e0931c65a513f6b7f1548f9344941c55e0cdef1f16b9b854369bccf347da4",
 	/* Re-pinned 2026-10-29 after merging main's session-health work into the French
 	 * wave: `src` and `app` carry that surface plus the French catalogues and the
 	 * per-render copy modules, and the readiness/matrix/scenario helpers moved with
@@ -232,8 +234,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * false`. `--print`, staged. */
 	/* PR #207 round 5: omit the false head-pin flag, matching Core's wire.
 	 * Re-derived with --print from the staged tree; no capture assertion moved. */
+	/* Re-pinned for issue #326 with --print: two new cell-less worlds
+	 *  (`asks-settled`, `asks-mixed`) and the optional `asks` world field; no
+	 *  existing scenario's world changed. */
 	"tools/mock-relay/scenarios.ts":
-		"5b8c61f4d6763d968d9f1b78337b700c7f016a500836a33617efba06c3dbe133",
+		"49d5d77fbf5924f71e509247c81818ba2935174337513f561be6f7a16c81c1e8",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by

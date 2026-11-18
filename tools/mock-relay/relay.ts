@@ -3214,7 +3214,7 @@ export function createRelay(options: RelayOptions = {}) {
 			 *  PRODUCER's shape — options as `{label, description?}` mappings, one of
 			 *  them without a description — so the sheet is exercised against what
 			 *  `asks/queue.py::_question_shape` actually emits. */
-			sendJson(res, 200, inboxFixture("asks-populated"));
+			sendJson(res, 200, world.asks ?? inboxFixture("asks-populated"));
 			return;
 		}
 

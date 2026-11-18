@@ -156,6 +156,9 @@ export interface ScenarioWorld {
 	/** `GET /api/directories`'s body. `undefined` serves the corpus capture
 	 *  (home `~`, no recents, no default), which every existing scenario reads. */
 	directories?: Json;
+	/** `GET /api/asks`'s body (the asks sheet's aggregate read). Absent, the
+	 *  synthetic `asks-populated` corpus (one open ask) is served. */
+	asks?: Json;
 	/**
 	 * The projects surface this state pins (S16, the read path).
 	 *
@@ -2842,6 +2845,135 @@ export function buildScenarios(fix: FixtureCorpus): ScenarioRegistry {
 			});
 			return { projections: { [projection.session_id]: projection } };
 		},
+	);
+
+	/* The asks sheet over SEVERAL conversations in mixed states (issue #326):
+	 *  the aggregate holds answered, declined and timed-out asks beside each
+	 *  other, which is the list the sheet's sections and row anatomy are for.
+	 *  The current conversation carries one timed-out ask in its own frame, so
+	 *  More's Questions row opens the sheet without the auto-open expanding a
+	 *  head ask. `asks-settled` has nothing open (the reported title); `asks-mixed`
+	 *  adds open asks elsewhere. NO CELL, for `home-pickers`' reason: the sheet
+	 *  is opened from the composer, which nothing on the wire does. */
+	const asksWorld = (withOpen: boolean): ScenarioWorld => {
+		const now = Date.now();
+		const minute = 60_000;
+		const others = [
+			["asks-release", "Draft the release notes", "/synthetic/release"],
+			[
+				"asks-payments",
+				"Reconcile the payments ledger after the provider migration",
+				"/synthetic/payments/reconciliation/jobs",
+			],
+			["asks-catalogue", "Index the vendor catalogue", "/synthetic/catalogue"],
+			["asks-staging", "Clean up the staging bucket", "/synthetic/infra"],
+			[
+				"asks-retries",
+				"Audit every service for retries",
+				"/synthetic/services",
+			],
+		] as const;
+		const projections: Record<string, SessionProjection> = {};
+		const idle = projectionFrom(liveIdle, {});
+		const row = (
+			id: string,
+			seed: string | null,
+			status: string,
+			ageMin: number,
+			questions: string[],
+			extra: Record<string, Json> = {},
+		): Record<string, Json> => {
+			const at = others.find(([key]) => key === seed);
+			return {
+				ask_id: id,
+				...(at ? { session_id: syntheticSessionId(at[0]), cwd: at[2] } : {}),
+				created_at: now - ageMin * minute,
+				expires_at: now - ageMin * minute + 30 * minute,
+				timeout_s: 1800,
+				urgent: false,
+				status,
+				delivered: true,
+				questions: questions.map((question, index) => ({
+					id: `q${index + 1}`,
+					question,
+					options: [],
+					multi: false,
+					secret: false,
+					persist: false,
+				})),
+				...extra,
+			};
+		};
+		const here = row("ask-here", null, "timed_out", 50, [
+			"Should the changelog include internal fixes?",
+		]);
+		idle.asks = [here] as unknown as SessionProjection["asks"];
+		idle.asks_open = 0;
+		projections[idle.session_id] = idle;
+		for (const [seed, name, cwd] of others) {
+			const id = syntheticSessionId(seed);
+			projections[id] = projectionFrom(liveIdle, {
+				session_id: id,
+				conversation_name: name,
+				cwd,
+			});
+		}
+		const asks = [
+			...(withOpen
+				? [
+						row(
+							"ask-retries",
+							"asks-retries",
+							"open",
+							2,
+							["Retry on 429 too?"],
+							{ urgent: true },
+						),
+						row("ask-release-open", "asks-release", "open", 4, [
+							"Ship the notes today?",
+						]),
+					]
+				: []),
+			{
+				...here,
+				session_id: idle.session_id,
+				cwd: idle.cwd ?? "/synthetic/app",
+			},
+			row("ask-payments", "asks-payments", "timed_out", 70, [
+				"Which provider?",
+				"Keep the old ledger?",
+			]),
+			row("ask-staging", "asks-staging", "timed_out", 90, [
+				"Delete the stale exports?",
+			]),
+			row("ask-release", "asks-release", "answered", 120, [
+				"Use the short form?",
+			]),
+			row(
+				"ask-catalogue",
+				"asks-catalogue",
+				"answered",
+				150,
+				["Skip archived vendors?"],
+				{ delivered: false },
+			),
+			row("ask-retries-old", "asks-retries", "declined", 200, [
+				"Cap the backoff?",
+			]),
+		];
+		return { projections, asks: { asks } };
+	};
+	add(
+		"asks-settled",
+		"The asks sheet over several conversations with timed-out and answered asks and nothing open (issue #326's reported list).",
+		[],
+		() => asksWorld(false),
+	);
+	add(
+		"asks-mixed",
+		"The asks sheet over several conversations with open, timed-out, answered and declined asks.",
+		[],
+		() => asksWorld(true),
 	);
 
 	add(
