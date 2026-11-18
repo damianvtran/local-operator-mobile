@@ -29,7 +29,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-installed-app-proof-${{ github.event_name }}-${{ inputs.app_sha }}
+  # Same key shape as android-oauth-callback-proof.yml (event + ref), which
+  # scripts/workflow-concurrency.test.ts can model; reusable workflows inherit
+  # the caller's github.workflow, so the literal suffix keeps this lane distinct.
+  group: ${{ github.workflow }}-installed-app-proof-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
