@@ -1,0 +1,25 @@
+# Code owners for local-operator-mobile.
+#
+# THERE ARE NO PATTERNS IN THIS FILE, ON PURPOSE. It mirrors local-operator and
+# local-operator-ui. GitHub requests a review from every handle on a pattern
+# that matches a pull request's changed files, the moment the PR opens, so a
+# pattern here would notify every maintainer on every PR, including ones still
+# moving through review rounds. Matching a pattern IS the request; there is no
+# setting that keeps the map and drops the notification.
+#
+# Maintainers (2026-11-18, operator decision): @damianvtran (owner), @bbqben,
+# @SanaKetabchi, @sherman-tsui, @olafagbemi. Ask any of them to review; add a
+# reviewer by hand when a review is wanted.
+#
+# Access matches the other two repositories:
+#   * The four maintainers above hold write access. This repository belongs to a
+#     personal account, which has only two permission levels (owner and
+#     collaborator), so GitHub refuses `admin` or `maintain` for a collaborator.
+#     Transferring the repository to an organization is what would create them.
+#   * The `Main Protection` ruleset (id 27516811), copied from local-operator-ui
+#     (23841604), blocks force-pushes to main and requires one approving review.
+#     The owner role bypasses it always; each maintainer bypasses it with
+#     `pull_request` mode, so they can merge a PR without waiting for an
+#     approval but cannot push to main directly.
+#   * `require_code_owner_review` is false. With no patterns it would never
+#     require anyone's approval, so the review count carries the protection.
