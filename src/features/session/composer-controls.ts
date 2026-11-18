@@ -22,6 +22,7 @@
  * empty More was a control that opened nothing (the U-24 dead end).
  */
 import { t } from "@/i18n";
+import type { CommandBody } from "@/relay/endpoints";
 import { type ComposerChip, UNAVAILABLE_TEXT } from "./chip-labels";
 
 export type ControlsPlan = {
@@ -195,4 +196,132 @@ export const settingLock = (chip: ComposerChip): RunSettingLock | null => {
 		reason: chip.accessibilityHint,
 		value: chip.text === UNAVAILABLE_TEXT ? null : chip.text,
 	};
+};
+
+/** One section of the run-settings sheet: the choices, a read-only value with
+ *  its reason, or the plain fact that the model has no effort control. */
+export type RunSettingSection =
+	| { kind: "list" }
+	| { kind: "ladder"; rungs: readonly string[] }
+	| { kind: "none" }
+	| { kind: "locked"; lock: RunSettingLock };
+
+/**
+ * The sheet's current-value line ("Opus 5 · High") and More's run-settings row
+ * value: the names the chips used to paint. `null` only while the model is
+ * loading (More paints its skeleton); an unavailable model keeps its dash. An effort that says nothing — loading, the
+ * rungless dash, the home's unnamed default — is left off.
+ */
+export const runSettingsSummary = (
+	model: ComposerChip,
+	effort: ComposerChip | null,
+): string | null => {
+	if (model.kind === "loading") return null;
+	const rung =
+		effort === null ||
+		effort.kind === "loading" ||
+		(effort.kind === "value" && effort.rowHidden) ||
+		effort.text === UNAVAILABLE_TEXT
+			? null
+			: effort.text;
+	return rung === null ? model.text : `${model.text} · ${rung}`;
+};
+
+/**
+ * What the SESSION's run-settings sheet shows (round 1 R1/R3).
+ *
+ * A LOCKED effort is offered as a read-only value, never as "This model has no
+ * effort setting": an ended session's durable fold carries `effort_ladder: []`
+ * while the journal still names its rung, and before the first frame the
+ * ladder is `[]` while the effort is loading. Only a LIVE session whose model
+ * reports no effort (the chip hidden, `null`) has none. An ended session with
+ * no recorded effort says to resume — the one thing that could change it.
+ */
+export const sessionRunSettings = (input: {
+	chips: { model: ComposerChip; effort: ComposerChip | null };
+	ladder: readonly string[];
+	ended: boolean;
+}): {
+	model: RunSettingSection;
+	effort: RunSettingSection;
+	summary: string | null;
+} => {
+	const modelLock = settingLock(input.chips.model);
+	const effortChip = input.chips.effort;
+	const effortLock =
+		effortChip === null
+			? input.ended
+				? {
+						reason: t("mobile.session.chip.effort_resume_hint"),
+						value: null,
+					}
+				: null
+			: settingLock(effortChip);
+	return {
+		model:
+			modelLock === null
+				? { kind: "list" }
+				: { kind: "locked", lock: modelLock },
+		effort:
+			effortLock !== null
+				? { kind: "locked", lock: effortLock }
+				: input.ladder.length > 0
+					? { kind: "ladder", rungs: input.ladder }
+					: { kind: "none" },
+		summary: runSettingsSummary(input.chips.model, effortChip),
+	};
+};
+
+/**
+ * The session's folder control: the folder's own name, never editable — the
+ * relay accepts a folder only when a conversation starts
+ * (`StartSessionRequest.cwd`); no in-session op changes it. The name is the
+ * last path segment, as `folderName` reads it with no home to shorten against
+ * (kept local: `picker-model` imports this module).
+ */
+export const sessionFolderControl = (
+	cwd: string,
+): {
+	name: string;
+	path: string;
+	source: FolderSource;
+	editable: boolean;
+} | null => {
+	if (cwd.length === 0) return null;
+	const trimmed = cwd.length > 1 ? cwd.replace(/[/\\]+$/, "") : cwd;
+	const at = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+	const name = at < 0 || trimmed === "/" ? trimmed : trimmed.slice(at + 1);
+	return { name, path: cwd, source: null, editable: false };
+};
+
+/** The command route `applyRunSetting` needs: the relay endpoints' own shape,
+ *  narrowed so a test can fake it. */
+type CommandRoute = {
+	command: (sessionId: string, body: CommandBody) => Promise<unknown>;
+};
+
+/**
+ * Apply a run setting to a live session (`set_model` / `set_effort`) and report
+ * a refusal in the caller's words (round 1 R2). The previous error is cleared
+ * first; a refusal (409 on a session that ended under the sheet, a dropped
+ * route) or a missing route sets it. The run-settings sheet shows the error
+ * while it stays open, so a refused tap is never silent.
+ */
+export const applyRunSetting = async (input: {
+	endpoints: CommandRoute | null | undefined;
+	sessionId: string;
+	body: CommandBody;
+	failure: string;
+	onError: (error: string | null) => void;
+}): Promise<void> => {
+	input.onError(null);
+	if (!input.endpoints) {
+		input.onError(input.failure);
+		return;
+	}
+	try {
+		await input.endpoints.command(input.sessionId, input.body);
+	} catch {
+		input.onError(input.failure);
+	}
 };

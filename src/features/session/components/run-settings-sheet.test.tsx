@@ -58,6 +58,9 @@ vi.mock("@/ui/components/sheet", () => ({ Sheet: sheet }));
 vi.mock("@/ui/components/badge", () => ({
 	Badge: (props: Props) => createElement("i", null, props.label as string),
 }));
+vi.mock("@/ui/components/alert", () => ({
+	Alert: (props: Props) => createElement("p", null, kids(props)),
+}));
 vi.mock("@/ui/components/section-header", () => ({
 	SectionHeader: (props: Props) =>
 		createElement("h3", null, props.label as string),
@@ -85,11 +88,11 @@ const draw = (over: Partial<Parameters<typeof SessionRunSettingsSheet>[0]>) =>
 			onClose: () => undefined,
 			models: MODELS,
 			selectedModel: "anthropic/claude-opus-5",
-			modelLock: null,
-			ladder: ["low", "medium", "high"],
 			selectedEffort: "high",
-			effortLock: null,
-			effortOffered: true,
+			model: { kind: "list" },
+			effort: { kind: "ladder", rungs: ["low", "medium", "high"] },
+			summary: "Opus 5 · High",
+			error: null,
 			onPickModel: () => undefined,
 			onPickEffort: () => undefined,
 			...over,
@@ -97,45 +100,69 @@ const draw = (over: Partial<Parameters<typeof SessionRunSettingsSheet>[0]>) =>
 	);
 
 describe("the session's run-settings sheet (issue #325)", () => {
-	it("is one sheet: the model list, then the effort rungs", () => {
+	it("is one sheet: the current values, the effort rungs, then the model list (D1)", () => {
 		const html = draw({});
 		expect(html).toContain(`data-testid="${SURFACE.runSettingsSheet}"`);
 		expect(html).toContain("<h2>Model and effort</h2>");
-		const models = html.indexOf(`data-testid="${SURFACE.modelSheet}"`);
+		/* The current values lead, so effort is never below the fold: the
+		 *  model list is 1400 pt tall on a real catalogue (design D1). */
+		const summary = html.indexOf(`data-testid="${SURFACE.runSettingsSummary}"`);
 		const efforts = html.indexOf(`data-testid="${SURFACE.effortSheet}"`);
-		expect(models).toBeGreaterThan(-1);
-		expect(efforts).toBeGreaterThan(models);
+		const models = html.indexOf(`data-testid="${SURFACE.modelSheet}"`);
+		expect(summary).toBeGreaterThan(-1);
+		expect(html).toContain("Opus 5 · High");
+		expect(efforts).toBeGreaterThan(summary);
+		expect(models).toBeGreaterThan(efforts);
 		expect(html).toContain(`data-testid="${modelOptionId("claude-opus-5")}"`);
 		expect(html).toContain(
 			`data-testid="${modelOptionId("claude-haiku-4-5")}"`,
 		);
 		for (const rung of ["low", "medium", "high"])
 			expect(html).toContain(`data-testid="${effortRungId(rung)}"`);
+		/* Compact: the rungs wrap side by side rather than one full row each. */
+		expect(html).toContain(`data-testid="${SURFACE.effortRungs}"`);
 	});
 
-	it("says, in the kit's words, that a model has no effort setting", () => {
-		const html = draw({ effortOffered: false, ladder: [] });
+	it("says, in the kit's words, that a live model has no effort setting", () => {
+		const html = draw({ effort: { kind: "none" } });
 		expect(html).toContain("This model has no effort setting.");
 		expect(html).not.toContain(effortRungId("high"));
 	});
 
-	it("shows a value that cannot change read-only, with the reason, instead of dead rows", () => {
+	it("shows a value that cannot change read-only, with the reason, instead of dead rows (R1)", () => {
 		const html = draw({
-			modelLock: {
-				reason: "Resume this session to change the model",
-				value: "Opus 5",
+			model: {
+				kind: "locked",
+				lock: {
+					reason: "Resume this session to change the model",
+					value: "Opus 5",
+				},
 			},
-			effortLock: {
-				reason: "Resume this session to change the effort",
-				value: "High",
+			effort: {
+				kind: "locked",
+				lock: {
+					reason: "Resume this session to change the effort",
+					value: "High",
+				},
 			},
 		});
 		expect(html).toContain("Resume this session to change the model");
 		expect(html).toContain("<span>Opus 5</span>");
 		expect(html).toContain("Resume this session to change the effort");
 		expect(html).toContain("<span>High</span>");
+		expect(html).not.toContain("This model has no effort setting.");
 		expect(html).not.toContain(modelOptionId("claude-opus-5"));
 		expect(html).not.toContain(effortRungId("high"));
+	});
+
+	it("shows a refused change INSIDE the open sheet, above both sections (R2/D2)", () => {
+		const html = draw({ error: "Could not change the model." });
+		const alert = html.indexOf("<p>Could not change the model.</p>");
+		expect(alert).toBeGreaterThan(-1);
+		expect(alert).toBeLessThan(
+			html.indexOf(`data-testid="${SURFACE.effortSheet}"`),
+		);
+		expect(draw({})).not.toContain("<p>");
 	});
 
 	it("keys the list's loading and empty lines", () => {

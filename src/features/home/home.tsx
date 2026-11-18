@@ -76,6 +76,7 @@ import type { AttachSource, PasteVia } from "@/features/session/attach-rule";
 import { Composer } from "@/features/session/components/composer";
 import type { ComposerControls } from "@/features/session/composer";
 import { composerCopy, pasteNothingLine } from "@/features/session/composer";
+import { runSettingsSummary } from "@/features/session/composer-controls";
 import { heldTimer } from "@/features/session/resume-hold";
 import { deviceOnline } from "@/features/session/runtime";
 import { useHomeDictation } from "@/features/session/use-dictation";
@@ -1216,6 +1217,7 @@ export default function Home({
 				visible={picker === "run"}
 				onClose={() => setPicker(null)}
 				editable={selectionEditable}
+				summary={runSettingsSummary(chips.model, chips.effort ?? null)}
 				model={{
 					models,
 					rows: modelRows,

@@ -15,6 +15,7 @@ import {
 	typedFolder,
 } from "@/features/home/picker-model";
 import {
+	EffortRungGroup,
 	EffortRungRow,
 	groupByProvider,
 	ModelOptionRow,
@@ -556,7 +557,7 @@ const EffortChoices = ({
 							{t("mobile.home.picker.effort_unknown")}
 						</Text>
 					) : null}
-					<View accessibilityRole={ROLE.radiogroup} className="py-1">
+					<EffortRungGroup>
 						{/* No rung is the computer's KNOWN default for this model
 						 *  (`default.effort` describes the default model only), so no
 						 *  rung maps a tap back to "send no effort". Without this row a
@@ -567,6 +568,7 @@ const EffortChoices = ({
 							<EffortRungRow
 								rung=""
 								label={t("mobile.home.picker.effort_use_default")}
+								compact
 								selected={chosen === null}
 								disabled={!editable}
 								onPress={() => onPick(null)}
@@ -580,6 +582,7 @@ const EffortChoices = ({
 									key={rung}
 									rung={rung}
 									label={effortLabel(rung)}
+									compact
 									selected={rung === selected}
 									disabled={!editable}
 									badge={
@@ -593,7 +596,7 @@ const EffortChoices = ({
 								/>
 							);
 						})}
-					</View>
+					</EffortRungGroup>
 				</>
 			)}
 		</>
@@ -615,12 +618,16 @@ export const RunSettingsPicker = ({
 	visible,
 	onClose,
 	editable,
+	summary,
 	model,
 	effort,
 }: {
 	visible: boolean;
 	onClose: () => void;
 	editable: boolean;
+	/** The current model and effort, as the chips name them
+	 *  (`runSettingsSummary`), so both are visible when the sheet opens. */
+	summary: string | null;
 	model: ModelChoicesProps;
 	effort: EffortChoicesProps;
 }) => {
@@ -636,6 +643,7 @@ export const RunSettingsPicker = ({
 				model: t("mobile.home.picker.model_title"),
 				effort: t("mobile.home.picker.effort_title"),
 			}}
+			summary={summary}
 			preface={editable ? null : <FixedLine />}
 			modelTestID={CONTROL.homeModelPicker}
 			effortTestID={CONTROL.homeEffortPicker}

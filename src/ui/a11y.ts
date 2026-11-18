@@ -1100,6 +1100,11 @@ export const SURFACE = {
 	 *  (issue #325). `modelSheet` and `effortSheet` now name its two sections, so
 	 *  a flow that asked for "the model sheet" still finds the model list. */
 	runSettingsSheet: "run-settings-sheet",
+	/** The sheet's current-value line ("Opus 5 · High") and the compact rung
+	 *  group: both lead the sheet, so effort is visible when it opens (design
+	 *  round 1, D1). */
+	runSettingsSummary: "run-settings-summary",
+	effortRungs: "effort-rungs",
 	modelSheet: "model-sheet",
 	effortSheet: "effort-sheet",
 	slashSheet: "slash-sheet",

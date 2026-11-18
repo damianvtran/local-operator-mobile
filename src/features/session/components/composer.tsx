@@ -53,10 +53,7 @@ import {
 	type PasteVia,
 	pasteOfferComposing,
 } from "@/features/session/attach-rule";
-import {
-	type ComposerChip,
-	UNAVAILABLE_TEXT,
-} from "@/features/session/chip-labels";
+import type { ComposerChip } from "@/features/session/chip-labels";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
 	attachmentLabel,
@@ -70,6 +67,7 @@ import {
 	type FolderSource,
 	folderControlLabel,
 	runSettingsControl,
+	runSettingsSummary,
 } from "@/features/session/composer-controls";
 import {
 	ATTACH_GLYPH_PT,
@@ -610,25 +608,6 @@ const ContextRow = ({
 			{body}
 		</Pressable>
 	);
-};
-
-/** More's run-settings row value, when the icon is not on the row: the model
- *  and the effort the chips used to paint, or `null` (the skeleton) while the
- *  model is still loading. An effort that says nothing (still loading, the
- *  rungless dash, the home's unnamed default) is left off. */
-const runSettingsRowValue = (
-	model: ComposerChip,
-	effort: ComposerChip | null,
-): string | null => {
-	if (model.kind === "loading") return null;
-	const rung =
-		effort === null ||
-		effort.kind === "loading" ||
-		(effort.kind === "value" && effort.rowHidden) ||
-		effort.text === UNAVAILABLE_TEXT
-			? null
-			: effort.text;
-	return rung === null ? model.text : `${model.text} · ${rung}`;
 };
 
 export const Composer = ({
@@ -2494,7 +2473,7 @@ export const Composer = ({
 				{!onRow.settings ? (
 					<ContextRow
 						label={t("mobile.chrome.composer.row_model")}
-						value={runSettingsRowValue(modelChip, effortChip ?? null)}
+						value={runSettingsSummary(modelChip, effortChip ?? null)}
 						accessibilityLabel={runSettings.accessibilityLabel}
 						accessibilityHint={runSettings.accessibilityHint}
 						disabled={runSettings.disabled}

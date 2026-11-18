@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import type { ComposerChip } from "./chip-labels";
 import {
+	applyRunSetting,
 	composerControlsPlan,
 	folderControlLabel,
 	folderSource,
 	runSettingsControl,
+	runSettingsSummary,
+	sessionFolderControl,
+	sessionRunSettings,
 	settingLock,
 } from "./composer-controls";
 
@@ -295,5 +299,245 @@ describe("settingLock: a run setting the sheet can show but not change", () => {
 		expect(
 			settingLock({ kind: "loading", accessibilityLabel: "Effort, loading" }),
 		).toStrictEqual({ reason: "Loading…", value: null });
+	});
+});
+
+/* Round 1 R1/Q1/R3: the session screen's sheet wiring, as one pure decision,
+ *  so an ended, loading, rungless or remote session cannot drift. */
+describe("sessionRunSettings: what the session's run-settings sheet shows", () => {
+	const unavailable = (
+		text: string,
+		label: string,
+		hint: string,
+	): ComposerChip => ({
+		kind: "unavailable",
+		text,
+		accessibilityLabel: label,
+		accessibilityHint: hint,
+	});
+
+	it("shows an ENDED session's recorded effort read-only, with the resume reason (R1)", () => {
+		/* The durable fold carries `effort_ladder: []`; the journal's rung is the
+		 *  chip's last-known value. It used to read "no effort setting". */
+		const state = sessionRunSettings({
+			chips: {
+				model: unavailable(
+					"claude-opus-5",
+					"Model, claude-opus-5",
+					"Resume this session to change the model",
+				),
+				effort: unavailable(
+					"High",
+					"Effort, High",
+					"Resume this session to change the effort",
+				),
+			},
+			ladder: [],
+			ended: true,
+		});
+		expect(state.effort).toStrictEqual({
+			kind: "locked",
+			lock: {
+				reason: "Resume this session to change the effort",
+				value: "High",
+			},
+		});
+		expect(state.model).toStrictEqual({
+			kind: "locked",
+			lock: {
+				reason: "Resume this session to change the model",
+				value: "claude-opus-5",
+			},
+		});
+		expect(state.summary).toBe("claude-opus-5 · High");
+	});
+
+	it("says an ended session with no recorded effort is resumable, never 'no effort setting'", () => {
+		const state = sessionRunSettings({
+			chips: { model: value("Opus 5", "Model, Opus 5"), effort: null },
+			ladder: [],
+			ended: true,
+		});
+		expect(state.effort).toStrictEqual({
+			kind: "locked",
+			lock: { reason: "Resume this session to change the effort", value: null },
+		});
+	});
+
+	it("says a value still loading is loading, before the first frame", () => {
+		const state = sessionRunSettings({
+			chips: {
+				model: { kind: "loading", accessibilityLabel: "Model, loading" },
+				effort: { kind: "loading", accessibilityLabel: "Effort, loading" },
+			},
+			ladder: [],
+			ended: false,
+		});
+		expect(state.effort).toStrictEqual({
+			kind: "locked",
+			lock: { reason: "Loading…", value: null },
+		});
+		expect(state.summary).toBeNull();
+	});
+
+	it("says a LIVE model with no effort control has none", () => {
+		expect(
+			sessionRunSettings({
+				chips: { model: value("Haiku", "Model, Haiku"), effort: null },
+				ladder: [],
+				ended: false,
+			}).effort,
+		).toStrictEqual({ kind: "none" });
+	});
+
+	it("offers the live ladder when the effort can change", () => {
+		const state = sessionRunSettings({
+			chips: {
+				model: value("Opus 5", "Model, Opus 5"),
+				effort: value("High", "Effort, High"),
+			},
+			ladder: ["low", "high"],
+			ended: false,
+		});
+		expect(state.effort).toStrictEqual({
+			kind: "ladder",
+			rungs: ["low", "high"],
+		});
+		expect(state.model).toStrictEqual({ kind: "list" });
+		expect(state.summary).toBe("Opus 5 · High");
+	});
+
+	it("locks both for a remote owner's session the relay will not change", () => {
+		const owner = "Only the computer that owns this conversation can change it";
+		const state = sessionRunSettings({
+			chips: {
+				model: unavailable("Opus 5", "Model, Opus 5", owner),
+				effort: unavailable("High", "Effort, High", owner),
+			},
+			ladder: ["low", "high"],
+			ended: false,
+		});
+		expect(state.model).toStrictEqual({
+			kind: "locked",
+			lock: { reason: owner, value: "Opus 5" },
+		});
+		expect(state.effort).toStrictEqual({
+			kind: "locked",
+			lock: { reason: owner, value: "High" },
+		});
+	});
+});
+
+describe("runSettingsSummary: the sheet's current-value line and More's row value", () => {
+	it("joins the model and a named effort", () => {
+		expect(runSettingsSummary(value("Opus 5", "m"), value("High", "e"))).toBe(
+			"Opus 5 · High",
+		);
+	});
+	it("names the model alone when the effort says nothing", () => {
+		expect(runSettingsSummary(value("Opus 5", "m"), null)).toBe("Opus 5");
+		expect(
+			runSettingsSummary(value("Opus 5", "m"), {
+				kind: "loading",
+				accessibilityLabel: "e",
+			}),
+		).toBe("Opus 5");
+		expect(
+			runSettingsSummary(value("Opus 5", "m"), {
+				kind: "unavailable",
+				text: "\u2014",
+				accessibilityLabel: "e",
+				accessibilityHint: "h",
+			}),
+		).toBe("Opus 5");
+		expect(
+			runSettingsSummary(value("Opus 5", "m"), {
+				...value("Default", "e"),
+				rowHidden: true,
+			} as ComposerChip),
+		).toBe("Opus 5");
+	});
+	it("is null only while the model is loading (More paints its skeleton then)", () => {
+		expect(
+			runSettingsSummary({ kind: "loading", accessibilityLabel: "m" }, null),
+		).toBeNull();
+		/* An unavailable model keeps its dash: More's row must not fall back to
+		 *  the loading skeleton for a fact that is settled. */
+		expect(
+			runSettingsSummary(
+				{
+					kind: "unavailable",
+					text: "\u2014",
+					accessibilityLabel: "m",
+					accessibilityHint: "h",
+				},
+				null,
+			),
+		).toBe("\u2014");
+	});
+});
+
+describe("sessionFolderControl: the session's folder is read-only (the relay takes cwd only at start)", () => {
+	it("names the folder and is never editable", () => {
+		expect(sessionFolderControl("/Users/demo/code/app")).toStrictEqual({
+			name: "app",
+			path: "/Users/demo/code/app",
+			source: null,
+			editable: false,
+		});
+	});
+	it("offers no control without a folder", () => {
+		expect(sessionFolderControl("")).toBeNull();
+	});
+});
+
+describe("applyRunSetting: a refused change is reported, not swallowed (R2)", () => {
+	it("sends the command to the session and clears the last error first", async () => {
+		const sent: unknown[] = [];
+		const errors: Array<string | null> = [];
+		await applyRunSetting({
+			endpoints: {
+				command: async (id: string, body: unknown) => {
+					sent.push([id, body]);
+					return {};
+				},
+			},
+			sessionId: "s1",
+			body: { op: "set_effort", effort: "high" },
+			failure: "Could not change the effort.",
+			onError: (e) => errors.push(e),
+		});
+		expect(sent).toStrictEqual([["s1", { op: "set_effort", effort: "high" }]]);
+		expect(errors).toStrictEqual([null]);
+	});
+	it("reports the refusal in the caller's words", async () => {
+		const errors: Array<string | null> = [];
+		await applyRunSetting({
+			endpoints: {
+				command: async () => {
+					throw new Error("409");
+				},
+			},
+			sessionId: "s1",
+			body: {
+				op: "set_model",
+				provider: "anthropic",
+				model_id: "claude-opus-5",
+			},
+			failure: "Could not change the model.",
+			onError: (e) => errors.push(e),
+		});
+		expect(errors).toStrictEqual([null, "Could not change the model."]);
+	});
+	it("reports a missing route rather than doing nothing", async () => {
+		const errors: Array<string | null> = [];
+		await applyRunSetting({
+			endpoints: null,
+			sessionId: "s1",
+			body: { op: "set_effort", effort: "low" },
+			failure: "Could not change the effort.",
+			onError: (e) => errors.push(e),
+		});
+		expect(errors).toStrictEqual([null, "Could not change the effort."]);
 	});
 });

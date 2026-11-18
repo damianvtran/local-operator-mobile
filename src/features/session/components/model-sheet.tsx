@@ -2,10 +2,14 @@ import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
-import type { RunSettingLock } from "@/features/session/composer-controls";
+import type {
+	RunSettingLock,
+	RunSettingSection,
+} from "@/features/session/composer-controls";
 import { t } from "@/i18n";
 import { effortRungId, modelOptionId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
+import { Alert } from "@/ui/components/alert";
 import { Badge } from "@/ui/components/badge";
 import { SectionHeader } from "@/ui/components/section-header";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
@@ -144,6 +148,7 @@ export const EffortRungRow = ({
 	onPress,
 	badge = null,
 	disabled = false,
+	compact = false,
 	testID,
 }: {
 	rung: string;
@@ -155,6 +160,9 @@ export const EffortRungRow = ({
 	testID?: string;
 	badge?: string | null;
 	disabled?: boolean;
+	/** Hug the label instead of filling the row, so the rungs wrap side by side
+	 *  in `EffortRungGroup` (design round 1, D1). The 44 pt touch floor stays. */
+	compact?: boolean;
 }) => (
 	<Pressable
 		accessibilityRole={ROLE.radio}
@@ -186,7 +194,9 @@ export const EffortRungRow = ({
 			/>
 			<Text
 				className={cx(
-					"min-w-0 flex-1 font-mono text-mono",
+					compact
+						? "shrink font-mono text-mono"
+						: "min-w-0 flex-1 font-mono text-mono",
 					disabled ? CONTROL_DISABLED_INK : "text-ink",
 				)}
 			>
@@ -195,6 +205,22 @@ export const EffortRungRow = ({
 			{badge !== null ? <Badge label={badge} align="center" /> : null}
 		</View>
 	</Pressable>
+);
+
+/**
+ * The effort rungs as ONE compact radio group: each rung hugs its label and the
+ * group wraps, so five rungs take two 44 pt lines at 390 pt instead of five
+ * full rows, and the group sits near the top of the run-settings sheet (design
+ * round 1, D1). Each rung keeps its row's dot, `aria-checked` and badge.
+ */
+export const EffortRungGroup = ({ children }: { children: ReactNode }) => (
+	<View
+		accessibilityRole={ROLE.radiogroup}
+		className="flex-row flex-wrap py-1"
+		testID={SURFACE.effortRungs}
+	>
+		{children}
+	</View>
 );
 
 /**
@@ -207,17 +233,24 @@ export const EffortRungRow = ({
  * MODEL's, so they are one question answered in two parts. The two chips that
  * opened two sheets were cut to `Claude` on iOS.
  *
- * MODEL FIRST, as in the control's spoken name and the dependency: picking a
- * model changes which rungs the effort section offers. A pick COMMITS and the
- * sheet stays open — the ✓ moves under the thumb that pressed it — so a model
- * and its effort can be set in one visit; the sheet's Close (or the scrim)
- * dismisses it. Each section keeps the old sheet's id (`modelTestID`,
- * `effortTestID`), so a flow that asked for the model sheet finds the list.
+ * WHAT IS ABOVE THE FOLD (design round 1, D1). The current values ("Opus 5 ·
+ * High") lead, then the effort rungs as one compact wrapping group, then the
+ * model list, which is a screen or more tall on a real catalogue. Effort first
+ * because it is short and frequent; a model picked below visibly changes the
+ * rungs above. A refused change shows here, above both sections, while the
+ * sheet stays open (round 1 R2/D2).
+ *
+ * A pick COMMITS and the sheet stays open, so a model and its effort can be
+ * set in one visit; the sheet's Close (or the scrim) dismisses it. Each section
+ * keeps the old sheet's id (`modelTestID`, `effortTestID`), so a flow that asked
+ * for the model sheet finds the list.
  */
 export const RunSettingsSheet = ({
 	visible,
 	onClose,
 	headings,
+	summary = null,
+	error = null,
 	preface = null,
 	model,
 	effort,
@@ -228,6 +261,10 @@ export const RunSettingsSheet = ({
 	onClose: () => void;
 	/** The two section headings, in the host's own catalogue words. */
 	headings: { model: string; effort: string };
+	/** The current model and effort, as the chips named them (`runSettingsSummary`). */
+	summary?: string | null;
+	/** A refused change, in the kit's own words. */
+	error?: string | null;
 	/** A line that applies to both sections (the home's "options are fixed"). */
 	preface?: ReactNode;
 	model: ReactNode;
@@ -244,20 +281,30 @@ export const RunSettingsSheet = ({
 		titleLines={2}
 		testID={SURFACE.runSettingsSheet}
 	>
+		{summary !== null ? (
+			<View className="px-3 pb-2" testID={SURFACE.runSettingsSummary}>
+				<Text className="font-mono text-mono text-ink">{summary}</Text>
+			</View>
+		) : null}
+		{error !== null ? (
+			<View className="px-3 pb-2">
+				<Alert severity="error">{error}</Alert>
+			</View>
+		) : null}
 		{preface}
-		<View testID={modelTestID}>
+		<View testID={effortTestID}>
 			{/* On the rows' own 12 pt inset, so a heading and its rows share one
 			 *  leading edge. */}
-			<View className="px-3">
-				<SectionHeader label={headings.model} />
-			</View>
-			{model}
-		</View>
-		<View testID={effortTestID}>
 			<View className="px-3">
 				<SectionHeader label={headings.effort} />
 			</View>
 			{effort}
+		</View>
+		<View testID={modelTestID}>
+			<View className="px-3">
+				<SectionHeader label={headings.model} />
+			</View>
+			{model}
 		</View>
 	</Sheet>
 );
@@ -275,24 +322,26 @@ const LockedSetting = ({ lock }: { lock: RunSettingLock }) => (
 
 /**
  * The SESSION's run-settings sheet: the projection's model and ladder, applied
- * with `set_model` / `set_effort` as the old two sheets did.
+ * with `set_model` / `set_effort`. What each section shows is decided once, in
+ * `sessionRunSettings` (pure, tested); this only draws it.
  *
  * **The array's order IS the ranking** (`contract.md` §3.9): models render as
  * given, grouped by provider in first-seen order. Discrete rungs from the
  * projection's own ladder, not a slider: a slider would invent values between
- * two rungs no provider accepts.
+ * two rungs no provider accepts. The ✓ and the dot follow the PROJECTION — the
+ * value the relay applied — so a refused tap never moves them.
  */
 export const SessionRunSettingsSheet = ({
 	visible,
 	onClose,
 	models,
 	selectedModel,
-	loading = false,
-	modelLock,
-	ladder,
 	selectedEffort,
-	effortLock,
-	effortOffered,
+	loading = false,
+	model,
+	effort,
+	summary,
+	error,
 	onPickModel,
 	onPickEffort,
 }: {
@@ -301,15 +350,12 @@ export const SessionRunSettingsSheet = ({
 	models: ModelEntry[];
 	/** The projection's `model_selector` (`provider/model_id`). */
 	selectedModel: string;
-	loading?: boolean;
-	/** Set when the model cannot change here; the section is then read-only. */
-	modelLock: RunSettingLock | null;
-	ladder: string[];
 	selectedEffort: string;
-	effortLock: RunSettingLock | null;
-	/** `false` when the model has no effort control at all (an empty ladder on a
-	 *  live session): the section says so rather than drawing nothing. */
-	effortOffered: boolean;
+	loading?: boolean;
+	model: RunSettingSection;
+	effort: RunSettingSection;
+	summary: string | null;
+	error: string | null;
 	onPickModel: (model: ModelEntry) => void;
 	onPickEffort: (effort: string) => void;
 }) => {
@@ -322,11 +368,35 @@ export const SessionRunSettingsSheet = ({
 				model: t("mobile.session.sheet_title.model"),
 				effort: t("mobile.session.sheet_title.effort"),
 			}}
+			summary={summary}
+			error={error}
 			modelTestID={SURFACE.modelSheet}
 			effortTestID={SURFACE.effortSheet}
+			effort={
+				effort.kind === "locked" ? (
+					<LockedSetting lock={effort.lock} />
+				) : effort.kind === "ladder" ? (
+					<EffortRungGroup>
+						{effort.rungs.map((rung) => (
+							<EffortRungRow
+								key={rung}
+								rung={rung}
+								label={rung}
+								compact
+								selected={rung === selectedEffort}
+								onPress={() => onPickEffort(rung)}
+							/>
+						))}
+					</EffortRungGroup>
+				) : (
+					<Text className="px-3 pb-2 text-body-sm text-ink-muted">
+						{t("mobile.home.picker.effort_none")}
+					</Text>
+				)
+			}
 			model={
-				modelLock !== null ? (
-					<LockedSetting lock={modelLock} />
+				model.kind === "locked" ? (
+					<LockedSetting lock={model.lock} />
 				) : (
 					<>
 						{groups.map((group) => (
@@ -334,12 +404,12 @@ export const SessionRunSettingsSheet = ({
 								<Text className="px-3 pt-2 pb-1 text-meta text-ink-dim">
 									{group.provider}
 								</Text>
-								{group.models.map((model) => (
+								{group.models.map((entry) => (
 									<ModelOptionRow
-										key={selectorOf(model)}
-										model={model}
-										selected={selectorOf(model) === selectedModel}
-										onPress={() => onPickModel(model)}
+										key={selectorOf(entry)}
+										model={entry}
+										selected={selectorOf(entry) === selectedModel}
+										onPress={() => onPickModel(entry)}
 									/>
 								))}
 							</View>
@@ -354,27 +424,6 @@ export const SessionRunSettingsSheet = ({
 							</Text>
 						) : null}
 					</>
-				)
-			}
-			effort={
-				!effortOffered ? (
-					<Text className="px-3 pb-2 text-body-sm text-ink-muted">
-						{t("mobile.home.picker.effort_none")}
-					</Text>
-				) : effortLock !== null ? (
-					<LockedSetting lock={effortLock} />
-				) : (
-					<View accessibilityRole={ROLE.radiogroup} className="py-1">
-						{ladder.map((rung) => (
-							<EffortRungRow
-								key={rung}
-								rung={rung}
-								label={rung}
-								selected={rung === selectedEffort}
-								onPress={() => onPickEffort(rung)}
-							/>
-						))}
-					</View>
 				)
 			}
 		/>

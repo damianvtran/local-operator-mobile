@@ -191,6 +191,7 @@ const runSettings = (
 			visible: true,
 			onClose: () => undefined,
 			editable: true,
+			summary: "Opus 5 · High",
 			model: {
 				models: [opus],
 				rows: [{ model: opus, selected: true, isDefault: true, kind: "model" }],
@@ -216,14 +217,18 @@ const runSettings = (
 	);
 
 describe("the home's run-settings sheet (issue #325)", () => {
-	it("is ONE sheet — the model list, then the effort rungs — in place of two", () => {
+	it("is ONE sheet — the current values, the effort rungs, then the model list (D1)", () => {
 		const html = runSettings();
 		expect(html).toContain(`data-testid="${SURFACE.runSettingsSheet}"`);
 		expect(html).toContain("<h2>Model and effort</h2>");
+		const summary = html.indexOf(`data-testid="${SURFACE.runSettingsSummary}"`);
 		const model = html.indexOf(`data-testid="${CONTROL.homeModelPicker}"`);
 		const effort = html.indexOf(`data-testid="${CONTROL.homeEffortPicker}"`);
-		expect(model).toBeGreaterThan(-1);
-		expect(effort).toBeGreaterThan(model);
+		expect(summary).toBeGreaterThan(-1);
+		expect(html).toContain("Opus 5 · High");
+		expect(effort).toBeGreaterThan(summary);
+		expect(model).toBeGreaterThan(effort);
+		expect(html).toContain(`data-testid="${SURFACE.effortRungs}"`);
 		expect(html).toContain(`data-testid="${modelOptionId("claude-opus-5")}"`);
 		for (const rung of ["low", "medium", "high"])
 			expect(html).toContain(`data-testid="${effortRungId(rung)}"`);

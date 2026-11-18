@@ -15,7 +15,6 @@ import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
 import { FolderPicker } from "@/features/home/home-pickers";
-import { folderName } from "@/features/home/picker-model";
 import { useStartup } from "@/features/new-session/use-startup";
 import {
 	activityCounts,
@@ -66,7 +65,11 @@ import {
 	PinnedWorkingLine,
 	WorkingLine,
 } from "@/features/session/components/working-line";
-import { settingLock } from "@/features/session/composer-controls";
+import {
+	applyRunSetting,
+	sessionFolderControl,
+	sessionRunSettings,
+} from "@/features/session/composer-controls";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth, healthDetailKey } from "@/features/session/health";
 import {
@@ -555,7 +558,16 @@ function Session() {
 	/* The folder this conversation runs in, for the composer's read-only folder
 	 *  control: the projection's, else the list row's (a durable fold carries an
 	 *  empty one — TestFlight 578, as the pending card's risk line reads it). */
-	const sessionCwd = projection?.cwd || listRow?.cwd || "";
+	const sessionFolder = sessionFolderControl(
+		projection?.cwd || listRow?.cwd || "",
+	);
+	/* What the run-settings sheet shows, from the same chips the composer's
+	 *  control is named from (round 1 R1/R3; pure and tested). */
+	const runSettings = sessionRunSettings({
+		chips: chipLabels,
+		ladder: effortLadder,
+		ended: headerHealth(projection, runtime.link) === "ended",
+	});
 
 	/* The strip exists when it has something true to say: a context read, or a
 	 * roster. Not before — an empty band on every session is noise, and a band
@@ -1888,15 +1900,13 @@ function Session() {
 						 *  relay takes a folder only at start (issue #325). The
 						 *  row's cwd backs a durable fold's empty one, as above. */
 						folder={
-							sessionCwd.length > 0
-								? {
-										name: folderName(sessionCwd, null).name,
-										source: null,
-										editable: false,
+							sessionFolder === null
+								? null
+								: {
+										...sessionFolder,
 										onPress: () => setFolderOpen(true),
 										testID: CONTROL.composerFolder,
 									}
-								: null
 						}
 						/* Any ask, waiting or timed out: a lapsed-only queue paints no
 						 *  ask bar (build 753), so this row is its door to Dismiss. */
@@ -1963,59 +1973,45 @@ function Session() {
 				onClose={() => setRunSettingsOpen(false)}
 				models={runtime.models}
 				selectedModel={projection?.model_selector ?? ""}
-				modelLock={settingLock(chipLabels.model)}
-				ladder={effortLadder}
 				selectedEffort={projection?.effort ?? ""}
-				/* No effort chip: a live model without a ladder says so; an ended
-				 *  session that recorded none says to resume, which is the truth
-				 *  about the one thing that could change it. */
-				effortLock={
-					chipLabels.effort === null
-						? ended
-							? {
-									reason: t("mobile.session.chip.effort_resume_hint"),
-									value: null,
-								}
-							: null
-						: settingLock(chipLabels.effort)
-				}
-				effortOffered={
-					chipLabels.effort === null ? ended : effortLadder.length > 0
-				}
-				onPickModel={(model) => {
-					setChipError(null);
-					void runtime.source.endpoints
-						?.command(sessionId, {
+				/* Locked, ladder or none — decided once in `sessionRunSettings`
+				 *  (an ended session's recorded effort is shown, round 1 R1). */
+				{...runSettings}
+				/* A refused change shows inside the open sheet (round 1 R2). */
+				error={chipError}
+				onPickModel={(model) =>
+					void applyRunSetting({
+						endpoints: runtime.source.endpoints,
+						sessionId,
+						body: {
 							op: "set_model",
 							provider: model.provider,
 							model_id: model.model_id,
-						})
-						.catch(() =>
-							setChipError(t("mobile.session.chip.model_change_failed")),
-						);
-				}}
-				onPickEffort={(effort) => {
-					setChipError(null);
-					void runtime.source.endpoints
-						?.command(sessionId, {
-							op: "set_effort",
-							effort,
-						})
-						.catch(() =>
-							setChipError(t("mobile.session.chip.effort_change_failed")),
-						);
-				}}
+						},
+						failure: t("mobile.session.chip.model_change_failed"),
+						onError: setChipError,
+					})
+				}
+				onPickEffort={(effort) =>
+					void applyRunSetting({
+						endpoints: runtime.source.endpoints,
+						sessionId,
+						body: { op: "set_effort", effort },
+						failure: t("mobile.session.chip.effort_change_failed"),
+						onError: setChipError,
+					})
+				}
 			/>
 
 			<FolderPicker
 				visible={folderOpen}
 				onClose={() => setFolderOpen(false)}
 				folders={null}
-				current={sessionCwd.length > 0 ? sessionCwd : null}
+				current={sessionFolder?.path ?? null}
 				failure={null}
 				onRetry={() => undefined}
 				retrying={false}
-				editable={false}
+				editable={sessionFolder?.editable ?? false}
 				onPick={() => undefined}
 			/>
 
