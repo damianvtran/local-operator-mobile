@@ -61,6 +61,22 @@ bundle (no fixture) and a driver targeting another package must each be refused.
   Arabic, silhouette) with per-row crops in light and after a theme switch;
   the lock row posts one fresh Bridge message onto a cleared shade and names
   its notification key, then expands the row to show the placeholder line.
+- Rows changed for #304 QA round 4 (run 44284677520):
+  - Photos: the proof bundle's `hubOrigin()` answers the loopback hub (the
+    app's JS re-registers its origin on every start, which had replaced the
+    driver's seed, so every photo was refused as cross-origin). Photo rows
+    assert the `/push-avatar/*` GETs and record the registered origin.
+  - Night mode on API < 30: the image locks day/night for the shell, so the
+    switch is retried as root (`su 0`); `applied` needs `Night mode: yes|no`
+    AND the probe luma. A dark switch that still fails is a separate `N/A`
+    row (counted neither PASS nor failure), never a captured dark frame.
+  - Heads-up and lock rows assert the system's own state (`dumpsys
+    notification` record by tag; SystemUI's `HeadsUpEntry`), polled through a
+    10 s capture window; uiautomator node hits are recorded, not required.
+  - The channel handoff button is scrolled fully on screen before the tap; a
+    channel left off is switched back on (recorded) so later rows still run.
+  - The cold row saves the whole logcat before it clears it.
+  - The two-sender channel also expands each sender's row and crops it.
 - `pngtools.py`: stdlib PNG decode/crop/encode (no Pillow on the runner).
 
 ## Limits

@@ -140,7 +140,10 @@ class InstalledAppProofRunner : Instrumentation() {
     // receipts disclose this seed.
     "origin" -> {
       val prefs = ctx.getSharedPreferences("dev.localoperator.teambridge.hub", Context.MODE_PRIVATE)
-      prefs.edit().putString("origin", c.getString("origin")).commit()
+      // No `origin` field = read back only: the app's JS re-registers its
+      // origin on every start, so each photo row records what the native
+      // fetcher will actually compare against (#304 QA R4 Q3).
+      if (c.has("origin")) prefs.edit().putString("origin", c.getString("origin")).commit()
       prefs.getString("origin", null)
     }
     "post" -> post(c)

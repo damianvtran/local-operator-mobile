@@ -113,6 +113,7 @@ def ui() -> list[dict]:
                 nodes.append({"text": n.get("text", ""), "desc": n.get("content-desc", ""),
                               "id": n.get("resource-id", ""), "cls": n.get("class", ""),
                               "checked": n.get("checked"), "pkg": n.get("package", ""),
+                              "scrollable": n.get("scrollable") == "true",
                               "x": (b[0] + b[2]) // 2, "y": (b[1] + b[3]) // 2, "b": b})
             return nodes
         time.sleep(1)
@@ -143,6 +144,81 @@ def wait_for(pred, timeout=30.0, step=1.0):
 
 def tap(n) -> None:
     sh(f"input tap {n['x']} {n['y']}")
+
+
+def screen_height() -> int:
+    # `wm size` prints "Physical size" and, when set, an "Override size"
+    # after it; the override is what apps lay out against.
+    sizes = re.findall(r"(\d+)x(\d+)", sh("wm size"))
+    return int(sizes[-1][1]) if sizes else 2400
+
+
+def scroll_into_view(text: str, tries: int = 6):
+    """Find `text` and scroll until its WHOLE node sits inside the screen's
+    safe band, so a tap at its centre lands on it.
+
+    #304 QA R4 Q4 (run 44284677520, API 36): the handoff button was in the
+    dump but below the fold (under the edge-to-edge gesture inset), the tap
+    stayed in MainActivity and the channel stayed off for every later row.
+    Swipes run inside the app's own scrollable container when the dump names
+    one. Returns (node | None, swipes taken)."""
+    h = screen_height()
+    top, bottom = int(h * 0.08), int(h * 0.85)
+    for i in range(tries):
+        nodes = ui()
+        hit = find(nodes, text=text) or find(nodes, contains=text[:40])
+        if hit and hit["b"][1] >= top and top < hit["b"][3] <= bottom:
+            return hit, i
+        area = next((n for n in nodes if n["scrollable"] and n["pkg"] == PKG), None)
+        lo, hi = (max(area["b"][1], top), min(area["b"][3], bottom)) if area else (top, bottom)
+        x = area["x"] if area else 540
+        # Content above the fold when the hit sits too high: scroll the other way.
+        down = not (hit and hit["b"][1] < top)
+        a, b = lo + (hi - lo) * 3 // 4, lo + (hi - lo) // 4
+        sh(f"input swipe {x} {a if down else b} {x} {b if down else a} 500")
+        time.sleep(1)
+    return None, tries
+
+
+def hub_requests() -> list[dict]:
+    return json.loads(subprocess.run(["curl", "-s", f"{HUB}/__proof/requests"], capture_output=True, text=True).stdout or "[]")
+
+
+def photo_gets(*names: str) -> dict:
+    """How many times the app fetched each synthetic face from the loopback
+    hub. A photo row is only meaningful when this is non-zero (#304 QA R4 Q3:
+    `face_px` was 0 everywhere because no photo was ever requested)."""
+    paths = [h["path"] for h in hub_requests()]
+    return {n: paths.count(f"/push-avatar/{n}") for n in names}
+
+
+def notification_record(dump: str, tag: str) -> dict | None:
+    """The `dumpsys notification` record for the app's notification `tag`:
+    the header's visibility facts plus the record's own `name=value` lines
+    (mImportance, mIntercept, mInterruptionTimeMs, mVisibleSinceMs, ...).
+    Matched by tag so the caller does not depend on the key's format."""
+    for block in dump.split("NotificationRecord(")[1:]:
+        header = block.split("\n", 1)[0]
+        if f"pkg={PKG} " not in header or not re.search(rf"\btag={re.escape(tag)} ", header):
+            continue
+        fields = dict(re.findall(r"^ {4,8}(m\w+|seen|flags|stats)=?=(.*)$", block, re.M))
+        return {"vis": next(iter(re.findall(r" vis=(\w+)", header)), None),
+                "has_public_version": "publicVersion=Notification(" in header,
+                "fields": {k: v.strip()[:200] for k, v in fields.items()}}
+    return None
+
+
+def systemui_heads_up() -> dict:
+    """SystemUI's own heads-up state: HeadsUpManager(Phone).dump prints a
+    `HeadsUpManager... state:` header and one `HeadsUpEntry=` line per banner
+    on screen (AOSP android10/android12 HeadsUpManager.dumpInternal). The
+    banner is SystemUI's window, which uiautomator does not reliably expose
+    (#304 QA R4 Q6: API 31's frame showed it, the node lookup missed it)."""
+    out = sh("dumpsys activity service com.android.systemui/.SystemUIService "
+             "| grep -E 'HeadsUpManager.*state:|HeadsUpEntry='", timeout=60)
+    lines = [l.strip() for l in out.splitlines() if l.strip()]
+    return {"section_found": any("state:" in l for l in lines),
+            "entries": [l for l in lines if l.startswith("HeadsUpEntry=")][:6]}
 
 
 def focus() -> str:
@@ -221,13 +297,30 @@ def set_theme(dark: bool, label: str) -> dict:
     When the probe frame disagrees with the request on API < 30, SystemUI is
     restarted (`am force-stop`; it is persistent, so the system relaunches it)
     so it inflates under the new configuration. Every step taken and the
-    measured luma are returned for the receipt; nothing is assumed."""
+    measured luma are returned for the receipt; nothing is assumed.
+
+    #304 QA R4 Q5 (run 44284677520): on API 29 the request never reached the
+    configuration at all — logcat shows `UiModeManager: Night mode locked,
+    requires MODIFY_DAY_NIGHT_MODE permission` for every shell call (the
+    image locks day/night; Android 10 UiModeManagerService.setNightMode
+    returns early). Root holds every permission and google_apis images are
+    userdebug with `su`, so the same command is retried as uid 0. `applied`
+    needs BOTH the service's own answer (`Night mode: yes|no`) and the probe
+    frame's luma; a caller treats an unapplied dark switch on API < 30 as N/A,
+    never as a captured dark row."""
     want = "dark" if dark else "light"
+    word = "yes" if dark else "no"
     out: dict = {"want": want, "steps": []}
-    sh(f"cmd uimode night {'yes' if dark else 'no'}")
-    out["steps"].append(f"cmd uimode night {'yes' if dark else 'no'}")
+    sh(f"cmd uimode night {word}")
+    out["steps"].append(f"cmd uimode night {word}")
     time.sleep(2)
     out["uimode"] = sh("cmd uimode night").strip()
+    if f"Night mode: {word}" not in out["uimode"] and API < 30:
+        res = sh(f"su 0 cmd uimode night {word} 2>&1").strip()
+        out["steps"].append(f"su 0 cmd uimode night {word} -> {res[:200]!r}")
+        time.sleep(2)
+        out["uimode"] = sh("cmd uimode night").strip()
+    out["uimode_ok"] = f"Night mode: {word}" in out["uimode"]
 
     def probe(n: int) -> float:
         open_shade()
@@ -240,13 +333,34 @@ def set_theme(dark: bool, label: str) -> dict:
         sh("am force-stop com.android.systemui")
         after = wait_for(lambda: (lambda p: p if p and p != before else None)(sh("pidof com.android.systemui").strip()),
                          timeout=60, step=2)
-        time.sleep(6)
         out["steps"].append("am force-stop com.android.systemui (restart under new uiMode)")
+        if not after and before:
+            # Run 44284677520: the shell's force-stop left SystemUI's pid
+            # unchanged for the whole 60 s; root can end the persistent
+            # process, which the system then relaunches.
+            sh(f"su 0 kill {before}")
+            out["steps"].append(f"su 0 kill {before} (force-stop did not restart SystemUI)")
+            after = wait_for(lambda: (lambda p: p if p and p != before else None)(sh("pidof com.android.systemui").strip()),
+                             timeout=60, step=2)
+        time.sleep(6)
         out["systemui_pid"] = [before, after]
         luma = probe(2)
     out["probe_luma"] = luma
-    out["applied"] = (luma < DARK_MAX_LUMA) == dark
+    out["applied"] = out["uimode_ok"] and (luma < DARK_MAX_LUMA) == dark
     return out
+
+
+def dark_unavailable(t: dict) -> bool:
+    """API < 30 only: night mode could not be applied (Q5). Those dark rows
+    are recorded N/A with the steps tried, never PASS and never captured as
+    if they were dark."""
+    return t["want"] == "dark" and not t["applied"] and API < 30
+
+
+def record_dark_na(row_name: str, t: dict) -> None:
+    record(f"{row_name} — dark", "N/A",
+           {"reason": f"night mode could not be applied on API {API}", "uimode": t.get("uimode"),
+            "steps": t.get("steps"), "probe_luma": t.get("probe_luma")})
 
 
 def row_crops(frame: str, markers: list[str], nodes: list[dict], label: str) -> list[dict]:
@@ -300,6 +414,30 @@ def expand_first(nodes: list[dict], near: str | None = None) -> bool:
     anchor = find(nodes, contains=near) if near else None
     pick = min(controls, key=lambda n: abs(n["y"] - anchor["y"])) if anchor else controls[0]
     tap(pick)
+    time.sleep(1.5)
+    return True
+
+
+def expand_row(nodes: list[dict], marker: str) -> bool:
+    """Expand the ONE notification row holding `marker`: the expand control
+    inside the smallest row node around it, never the group header's (that
+    would collapse the group again). An expanded MessagingStyle row draws
+    each message's Person face, which a collapsed child row does not (#304
+    QA R4: no frame showed the per-sender face on API 31+)."""
+    hit = find(nodes, contains=marker)
+    if not hit:
+        return False
+    rows = [n["b"] for n in nodes if (n["id"].endswith(":id/expandableNotificationRow")
+                                      or n["id"].endswith(":id/backgroundNormal"))
+            and n["b"][0] <= hit["x"] <= n["b"][2] and n["b"][1] <= hit["y"] <= n["b"][3]]
+    if not rows:
+        return False
+    b = min(rows, key=lambda r: (r[2] - r[0]) * (r[3] - r[1]))
+    inside = [n for n in nodes if (n["id"].endswith(":id/expand_button") or n["id"].endswith("expand_button_touch_container"))
+              and b[0] <= n["x"] <= b[2] and b[1] <= n["y"] <= b[3]]
+    if not inside:
+        return False
+    tap(inside[0])
     time.sleep(1.5)
     return True
 
@@ -429,10 +567,13 @@ def rows_posts():
     adorn = [{k: a.get(k) for k in ("tag", "template", "messages", "hasLargeIcon", "shortcutId", "number", "channel")}
              for a in bridge_records(active)]
     styled = [a for a in adorn if (a["template"] or "").endswith("MessagingStyle")]
-    hub_avatar = [h for h in json.loads(subprocess.run(["curl", "-s", f"{HUB}/__proof/requests"], capture_output=True, text=True).stdout)
-                  if h["path"] == "/push-avatar/ada"]
+    # The photo GET is asserted, not just counted: R4's rows passed with no
+    # photo ever fetched (#304 QA R4 Q3). `registered_origin` is what the
+    # native fetcher compares each photo URL against at this moment.
+    gets = photo_gets("ada")
     record("avatar/initials adornment (MessagingStyle children; avatar fetch on loopback)",
-           "PASS" if styled else "FAIL", {"children": adorn, "avatar_requests": len(hub_avatar)})
+           "PASS" if styled and gets["ada"] >= 1 else "FAIL",
+           {"children": adorn, "avatar_requests": gets["ada"], "registered_origin": driver("origin")})
 
 
 @row("shade collapsed/expanded light/dark")
@@ -443,6 +584,8 @@ def rows_shade():
     for dark in (False, True):
         theme = "dark" if dark else "light"
         themes[theme] = set_theme(dark, "shade")
+        if dark_unavailable(themes[theme]):
+            continue
         open_shade()
         files.append(shot(f"shade-collapsed-{theme}"))
         themes[theme]["collapsed_luma"] = frame_luma(files[-1])
@@ -460,10 +603,15 @@ def rows_shade():
     # "expanded" would be a second copy of the collapsed frame. AND each
     # frame's measured luma matches its theme (design R3 D4.4: API 29's "dark"
     # frames were light).
-    luma_ok = (themes["light"]["collapsed_luma"] >= DARK_MAX_LUMA and themes["dark"]["collapsed_luma"] < DARK_MAX_LUMA)
+    dark_na = dark_unavailable(themes["dark"])
+    luma_ok = (themes["light"]["collapsed_luma"] >= DARK_MAX_LUMA
+               and (dark_na or themes["dark"]["collapsed_luma"] < DARK_MAX_LUMA))
     record("shade collapsed/expanded light/dark",
-           "PASS" if len(files) == 4 and all(expand_found.values()) and luma_ok else "FAIL",
-           {"expand_control_found": expand_found, "themes": themes, "dark_max_luma": DARK_MAX_LUMA}, files)
+           "PASS" if len(files) == (2 if dark_na else 4) and all(expand_found.values()) and luma_ok else "FAIL",
+           {"expand_control_found": expand_found, "themes": themes, "dark_max_luma": DARK_MAX_LUMA,
+            "dark_captured": not dark_na}, files)
+    if dark_na:
+        record_dark_na("shade collapsed/expanded light/dark", themes["dark"])
     # Launcher app badge: the channel must allow a badge and the app must hold
     # active Bridge notifications; the home frame shows the launcher's dot.
     home()
@@ -512,15 +660,30 @@ def rows_lock():
     labels_after = " | ".join(n["text"] or n["desc"] for n in after)
     leaked = SECRET_PREVIEW in labels or SECRET_PREVIEW in labels_after
     placeholder = PLACEHOLDER in labels or PLACEHOLDER in labels_after
+    # Read back while still locked: the system's own record of the post and
+    # the lock-screen policy it is judged under.
+    rec = notification_record(dump, tag)
+    policy = {k: sh(f"settings get secure {k}").strip()
+              for k in ("lock_screen_show_notifications", "lock_screen_allow_private_notifications")}
     sh("locksettings clear --old 1234")
     sh("wm dismiss-keyguard")
     time.sleep(2)
-    # The placeholder string is recorded, not asserted: the OS may draw its own
-    # redaction for a PRIVATE notification (API 29, run 44233625482).
-    ok = lock["present"] and not others and bool(key) and app_rows >= 1 and not leaked
+    # #304 QA R4 Q6: SystemUI's lock-screen rows are not reliably exposed as
+    # uiautomator nodes (API 31 dumped 109 nodes, none labelled "Operator",
+    # while the frame showed the row). The assertion is therefore the
+    # system's: keyguard showing, the record present and PRIVATE with a
+    # public version, under show-notifications=1 / allow-private=0, and the
+    # secret absent from every node SystemUI did expose. Node counts and the
+    # placeholder line are recorded; the frames are the visual evidence.
+    keyguard_up = bool(re.search(r"(showing|isKeyguardShowing|mShowingLockscreen|mIsShowing)=true", keyguard))
+    private = bool(rec) and rec["vis"] == "PRIVATE" and rec["has_public_version"]
+    policy_ok = policy == {"lock_screen_show_notifications": "1", "lock_screen_allow_private_notifications": "0"}
+    ok = lock["present"] and not others and keyguard_up and private and policy_ok and not leaked
     record("lock screen hides sensitive content", "PASS" if ok else "FAIL",
            {"lock_post": lock, "notification_key": key, "other_app_notifications": others,
-            "keyguard": keyguard, "app_rows_on_lockscreen": app_rows, "secret_preview_visible": leaked,
+            "keyguard": keyguard, "keyguard_showing": keyguard_up, "dumpsys_record": rec,
+            "record_private_with_public_version": private, "lock_policy": policy,
+            "secret_preview_visible": leaked, "app_rows_on_lockscreen_nodes": app_rows,
             "row_expanded": expanded, "placeholder_text_visible": placeholder, "ui_nodes": len(nodes)}, files)
 
 
@@ -594,11 +757,25 @@ def rows_channel():
     notice = scroll_find(NOTICE)
     detail["notice_shown"] = bool(notice)
     files.append(shot("settings-notice-shown"))
-    button = scroll_find(NOTICE_OPEN, tries=2) if notice else None
-    detail["handoff_button"] = bool(button)
-    if button:
+    # Two attempts: scroll the button fully on screen, tap, and confirm
+    # Settings took focus; a tap that stayed in the app is recorded, not
+    # silently retried (#304 QA R4 Q4).
+    attempts = []
+    button = None
+    for _ in range(2 if notice else 0):
+        button, swipes = scroll_into_view(NOTICE_OPEN)
+        if not button:
+            attempts.append({"found": False, "swipes": swipes})
+            break
         tap(button)
         time.sleep(3)
+        where = focus()
+        attempts.append({"found": True, "swipes": swipes, "bounds": button["b"], "focus": where})
+        if "com.android.settings" in where:
+            break
+    detail["handoff_attempts"] = attempts
+    detail["handoff_button"] = bool(button)
+    if button:
         detail["handoff_focus"] = focus()
         page = ui()
         detail["handoff_page_mentions_channel"] = bool(find(page, text="Team Bridge"))
@@ -615,6 +792,16 @@ def rows_channel():
     ok = (detail.get("importance_after_off") == 0 and detail["notice_shown"] and detail.get("handoff_is_settings")
           and detail.get("handoff_page_mentions_channel") and (detail.get("importance_after_on") or 0) > 0
           and PKG in detail.get("back_focus", "") and detail.get("notice_after_back") is False)
+    if not (channel_importance() or 0):
+        # Containment only (the row stays FAIL): R4's API 36 left the channel
+        # off and blocked 7 later rows. Turn it back on from its own page so
+        # later rows still measure something; the step is in the receipt.
+        sh(f"am start -a android.settings.CHANNEL_NOTIFICATION_SETTINGS --es android.provider.extra.APP_PACKAGE {PKG} "
+           "--es android.provider.extra.CHANNEL_ID team-bridge")
+        time.sleep(3)
+        detail["recovery_switch_tapped"] = toggle_channel_switch()
+        detail["recovery_importance"] = channel_importance()
+        home()
     record("channel off → in-app notice → exact channel page → on → Back clears notice", "PASS" if ok else "FAIL", detail, files)
 
 
@@ -717,6 +904,9 @@ def cold_tap():
     if not (dead and target):
         record("cold tap opens thread", "FAIL", {"process_dead": bool(dead), "row_found": bool(target)}, files)
         return
+    # #304 QA R4 Q7: this clear erased the warm-tap evidence (U9's root cause
+    # could not be read). Everything logged so far goes to the artifact first.
+    files.append(save("logcat-before-cold.txt", adb("logcat", "-d", timeout=120)))
     adb("logcat", "-c")
     tap(target)
     opened = wait_for(lambda: find(ui(), contains="Launch planning") and PKG in focus(), timeout=40, step=2)
@@ -764,22 +954,64 @@ def rows_heads_up():
     close_shade()
     text = "Proof heads-up banner"
     res = driver("post", data=bridge("bcv_dm_heads", "m_proof_heads", "Mia Sato", text, MIA, False, 2), waitMs=8000)
-    frame = shot("heads-up")
+    # #304 QA R4 Q2/Q6: one frame right after the post missed the banner on
+    # API 29/36, and the uiautomator lookup missed it on 31 where the frame
+    # showed it. Now a capture window: a frame plus SystemUI's heads-up state
+    # every pass until SystemUI reports a banner (then one more frame), for at
+    # most 10 s after the post settled — past AOSP's 5 s default banner decay
+    # (config heads_up_notification_decay), so a late banner still lands.
+    files, polls = [], []
+    end = time.time() + 10
+    while time.time() < end and len(files) < 5:
+        frame = shot(f"heads-up-{len(files) + 1}")
+        files.append(frame)
+        hun = systemui_heads_up()
+        polls.append({"frame": frame, "t": round(time.time() - (end - 10), 1), **hun})
+        if hun["entries"]:
+            files.append(shot(f"heads-up-{len(files) + 1}"))
+            break
     nodes = ui()
     shown = find(nodes, contains=text)
-    files = [frame, save("heads-up-ui.json", json.dumps(nodes))]
+    files.append(save("heads-up-ui.json", json.dumps(nodes)))
     if shown:
-        files += [c["file"] for c in row_crops(frame, [text], nodes, "heads-up") if c.get("file")]
-    record("heads-up banner from home (every API)", "PASS" if res["present"] and shown else "FAIL",
-           {"posted": res, "banner_text_on_screen_with_shade_closed": bool(shown)}, files)
+        files += [c["file"] for c in row_crops(files[0], [text], nodes, "heads-up") if c.get("file")]
+    dump = sh("dumpsys notification --noredact", timeout=120)
+    files.append(save("heads-up-dumpsys-notification.txt", dump))
+    rec = notification_record(dump, res["identifier"])
+    f = (rec or {}).get("fields", {})
+    # The system's verdict on whether this post may peek: HIGH importance, not
+    # intercepted by DND, no suppressed visual effects, and an interruption
+    # time stamped. SystemUI's HeadsUpEntry is required wherever SystemUI
+    # dumps its HeadsUpManager section at all; the frames are the pixels.
+    nms_ok = (bool(rec) and f.get("mImportance") == "HIGH" and f.get("mIntercept") == "false"
+              and f.get("mSuppressedVisualEffects", "").strip() == "0"
+              and f.get("mInterruptionTimeMs", "0").strip() not in ("", "0"))
+    section = any(p["section_found"] for p in polls)
+    hun_seen = any(p["entries"] for p in polls)
+    ok = res["present"] and nms_ok and (hun_seen or not section)
+    record("heads-up banner from home (every API)", "PASS" if ok else "FAIL",
+           {"posted": res, "dumpsys_record": rec, "nms_allows_heads_up": nms_ok,
+            "systemui_heads_up_section_found": section, "systemui_heads_up_seen": hun_seen, "polls": polls,
+            "heads_up_setting": sh("settings get global heads_up_notifications_enabled").strip(),
+            "banner_text_node_found": bool(shown)}, files)
 
 
-def scenario_frames(label: str, markers: list[str], expand_near: str | None) -> dict:
-    """Light, then dark: shade frame (+expanded if asked), per-row crops."""
+def scenario_frames(label: str, markers: list[str], expand_near: str | None, expand_rows: bool = False) -> dict:
+    """Light, then dark: shade frame (+expanded if asked), per-row crops.
+
+    `expand_rows`: after the group frame, expand each marker's own row and
+    capture again, so every row's MessagingStyle sender face is in a frame
+    (and a crop), not only the collapsed rows' conversation icon. A dark
+    theme that could not be applied (API < 30, Q5) is skipped and marked
+    `na`, never captured as a light frame labelled dark."""
     out: dict = {}
     for dark in (False, True):
         theme = "dark" if dark else "light"
         t = set_theme(dark, label)
+        if dark_unavailable(t):
+            t["na"] = True
+            out[theme] = t
+            continue
         open_shade()
         nodes = ui()
         if expand_near:
@@ -790,6 +1022,15 @@ def scenario_frames(label: str, markers: list[str], expand_near: str | None) -> 
         t["frame"] = frame
         t["frame_luma"] = frame_luma(frame)
         t["rows"] = row_crops(frame, markers, nodes, f"{label}-{theme}")
+        if expand_rows:
+            tapped = []
+            for m in markers:
+                tapped.append(expand_row(ui(), m))
+            nodes = ui()
+            rows_frame = shot(f"{label}-{theme}-rows-expanded")
+            save(f"{label}-{theme}-rows-expanded-ui.json", json.dumps(nodes))
+            t["rows_expanded"] = {"tapped": tapped, "frame": rows_frame,
+                                  "rows": row_crops(rows_frame, markers, nodes, f"{label}-{theme}-expanded")}
         close_shade()
         out[theme] = t
     out["restore"] = set_theme(False, f"{label}-restore")
@@ -799,9 +1040,19 @@ def scenario_frames(label: str, markers: list[str], expand_near: str | None) -> 
 def frames_files(frames: dict) -> list[str]:
     files = []
     for theme in ("light", "dark"):
-        files.append(frames[theme]["frame"])
-        files += [r["file"] for r in frames[theme]["rows"] if r.get("file")]
+        t = frames[theme]
+        if t.get("na"):
+            continue
+        files.append(t["frame"])
+        files += [r["file"] for r in t["rows"] if r.get("file")]
+        if "rows_expanded" in t:
+            files.append(t["rows_expanded"]["frame"])
+            files += [r["file"] for r in t["rows_expanded"]["rows"] if r.get("file")]
     return files
+
+
+def captured_themes(frames: dict) -> list[str]:
+    return [t for t in ("light", "dark") if not frames[t].get("na")]
 
 
 @row("multi-sender channel: each row shows its own sender (light + after theme switch)")
@@ -816,6 +1067,9 @@ def rows_multi_sender():
     home()
     driver("cancelAll")
     subtitle = "#design · Example Org"
+    # What the native fetcher compares photo URLs against right now (Q3: the
+    # app's JS had replaced the loopback seed with the production origin).
+    origin_before = driver("origin")
     posts = [("m_ms_mia", "Mia Sato", MIA, "Proof multi from Mia", "mia"),
              ("m_ms_kenji", "Kenji Sato", KENJI, "Proof multi from Kenji", "kenji")]
     posted = [driver("post", data=bridge("bcv_design", mid, name, text, who, True, 5, subtitle), waitMs=10000)
@@ -825,23 +1079,39 @@ def rows_multi_sender():
     time.sleep(12)
     active = driver("active")
     markers = [p[3] for p in posts]
-    frames = scenario_frames("multi-sender", markers, expand_near=markers[0])
-    wrong = []
-    for theme in ("light", "dark"):
-        for (_, _, _, text, own), r in zip(posts, frames[theme]["rows"]):
-            other = "kenji" if own == "mia" else "mia"
-            if not r.get("found"):
-                wrong.append({"theme": theme, "row": text, "problem": "row not found"})
-            elif r["face_px"][other] > r["face_px"][own] and r["face_px"][other] >= 200:
-                wrong.append({"theme": theme, "row": text, "problem": f"shows {other}'s face", "face_px": r["face_px"]})
-    themes_ok = all(frames[t]["applied"] for t in ("light", "dark"))
-    ok = all(p["present"] for p in posted) and themes_ok and not wrong
-    record("multi-sender channel: each row shows its own sender (light + after theme switch)", "PASS" if ok else "FAIL",
-           {"posted": posted, "wrong_rows": wrong, "themes_applied": themes_ok, "frames": frames,
+    frames = scenario_frames("multi-sender", markers, expand_near=markers[0], expand_rows=True)
+    themes = captured_themes(frames)
+    wrong, own_face = [], {}
+    for theme in themes:
+        sets = [("collapsed", frames[theme]["rows"])]
+        if "rows_expanded" in frames[theme]:
+            sets.append(("rows-expanded", frames[theme]["rows_expanded"]["rows"]))
+        for view, crops in sets:
+            for (_, _, _, text, own), r in zip(posts, crops):
+                other = "kenji" if own == "mia" else "mia"
+                if not r.get("found"):
+                    wrong.append({"theme": theme, "view": view, "row": text, "problem": "row not found"})
+                    continue
+                own_face[f"{theme}/{view}/{own}"] = r["face_px"][own]
+                if r["face_px"][other] > r["face_px"][own] and r["face_px"][other] >= 200:
+                    wrong.append({"theme": theme, "view": view, "row": text, "problem": f"shows {other}'s face",
+                                  "face_px": r["face_px"]})
+    themes_ok = all(frames[t]["applied"] for t in themes)
+    # Q3: without both photo GETs, "no row shows the other face" is vacuous.
+    gets = photo_gets("mia", "kenji")
+    photos_ok = gets["mia"] >= 1 and gets["kenji"] >= 1
+    ok = all(p["present"] for p in posted) and themes_ok and photos_ok and not wrong
+    name = "multi-sender channel: each row shows its own sender (light + after theme switch)"
+    record(name, "PASS" if ok else "FAIL",
+           {"posted": posted, "wrong_rows": wrong, "themes_applied": themes_ok, "themes_captured": themes,
+            "registered_origin_before_posts": origin_before, "photo_gets": gets,
+            "own_face_px": own_face, "frames": frames,
             "bridge_records": [{k: a.get(k) for k in ("tag", "shortcutId", "conversationTitle", "title", "messages",
                                                        "hasLargeIcon", "isGroupSummary")} for a in bridge_records(active)],
             "shortcuts": [s for s in driver("shortcuts") if s["id"] == "tb:bcv_design"]},
            frames_files(frames))
+    if "dark" not in themes:
+        record_dark_na(name, frames["dark"])
 
 
 @row("initials senders: wide, CJK, Arabic, silhouette (light + dark)")
@@ -855,12 +1125,17 @@ def rows_initials():
     time.sleep(8)
     markers = [s[3] for s in INITIALS_SENDERS]
     frames = scenario_frames("initials", markers, expand_near=None)
-    found = all(r.get("found") for t in ("light", "dark") for r in frames[t]["rows"])
-    themes_ok = all(frames[t]["applied"] for t in ("light", "dark"))
+    themes = captured_themes(frames)
+    found = all(r.get("found") for t in themes for r in frames[t]["rows"])
+    themes_ok = all(frames[t]["applied"] for t in themes)
     ok = all(p["present"] for p in posted) and found and themes_ok
-    record("initials senders: wide, CJK, Arabic, silhouette (light + dark)", "PASS" if ok else "FAIL",
+    name = "initials senders: wide, CJK, Arabic, silhouette (light + dark)"
+    record(name, "PASS" if ok else "FAIL",
            {"posted": posted, "senders": [{"title": s[1], "initials": s[2].get("initials")} for s in INITIALS_SENDERS],
-            "all_rows_cropped": found, "themes_applied": themes_ok, "frames": frames}, frames_files(frames))
+            "all_rows_cropped": found, "themes_applied": themes_ok, "themes_captured": themes, "frames": frames},
+           frames_files(frames))
+    if "dark" not in themes:
+        record_dark_na(name, frames["dark"])
 
 
 if __name__ == "__main__":
@@ -872,8 +1147,12 @@ if __name__ == "__main__":
     finally:
         save("logcat.txt", adb("logcat", "-d", timeout=120))
         json.dump(receipts, open(os.path.join(EVIDENCE, f"receipts-api{API}.json"), "w"), indent=2)
-        failed = [r for r in receipts if r["result"] != "PASS"]
-        print(f"api{API}: {len(receipts) - len(failed)}/{len(receipts)} rows PASS")
+        # N/A is an explicit "not provable on this API" (dark rows when night
+        # mode cannot be applied, Q5): neither PASS nor a failure, and listed.
+        failed = [r for r in receipts if r["result"] not in ("PASS", "N/A")]
+        na = [r["row"] for r in receipts if r["result"] == "N/A"]
+        print(f"api{API}: {sum(r['result'] == 'PASS' for r in receipts)}/{len(receipts)} rows PASS, "
+              f"{len(na)} N/A {na}")
         try:
             driver("finish")
         except Exception:

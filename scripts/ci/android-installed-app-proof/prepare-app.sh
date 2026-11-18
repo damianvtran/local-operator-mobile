@@ -23,6 +23,7 @@ cp "$HOST" "$EVIDENCE/MainApplication.generated.kt"
 
 restore() {
   [[ -f "$EVIDENCE/team-bridge-fixture.original.ts" ]] && cp "$EVIDENCE/team-bridge-fixture.original.ts" "$ROOT/src/testing/team-bridge-fixture.ts"
+  [[ -f "$EVIDENCE/android-presentation.original.ts" ]] && cp "$EVIDENCE/android-presentation.original.ts" "$ROOT/src/team-bridge/android-presentation.ts"
   [[ -f "$EVIDENCE/package.original.json" ]] && cp "$EVIDENCE/package.original.json" "$ROOT/package.json"
   rm -f "$ROOT/installed-proof-entry.js"
 }
@@ -56,6 +57,9 @@ test ! -e installed-proof-entry.js
 BUNDLE=android/app/src/debug/assets/index.android.bundle
 grep -q "$MARKER" "$BUNDLE" || { echo 'Proof bundle lacks the fixture seam'; exit 1; }
 grep -q '127.0.0.1:54832/mock-hub/populated' "$BUNDLE"
+# The photo origin the proof app registers (#304 QA R4 Q3); the closing quote
+# tells it apart from the mock-hub base URL above.
+grep -q '"http://127.0.0.1:54832"' "$BUNDLE" || { echo 'Proof bundle lacks the loopback photo origin'; exit 1; }
 python3 - "$BUNDLE" <<'PY'
 import pathlib, re, sys
 head = pathlib.Path(sys.argv[1]).read_text()[:512]

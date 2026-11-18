@@ -2,9 +2,17 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFINE, MARKER, patchSeam, proofEntry } from "./prepare.ts";
+import {
+	DEFINE,
+	LOOPBACK_ORIGIN,
+	MARKER,
+	patchOrigin,
+	patchSeam,
+	proofEntry,
+} from "./prepare.ts";
 
 const UNEXPECTED = /Unexpected/;
+const PLATFORM_MOVED = /Platform import moved/;
 const INSERTED = /\t\/\/ LOP_INSTALLED[\s\S]*?\t\t};\n/;
 const seam = readFileSync(
 	join(__dirname, "../../../src/testing/team-bridge-fixture.ts"),
@@ -46,6 +54,42 @@ describe("installed-app proof: job-local candidate edits", () => {
 				),
 			),
 		).toThrow(UNEXPECTED);
+	});
+
+	// The candidate's lines (#304 @ 942ec9e7, src/team-bridge/android-presentation.ts):
+	// main does not carry that file yet, so the anchor is pinned here verbatim.
+	const presentation = [
+		'import { Platform } from "react-native";',
+		'import { RADIENT_API_BASE } from "@/connection/discovery";',
+		"",
+		"export const hubOrigin = (): string => new URL(RADIENT_API_BASE).origin;",
+		"",
+	].join("\n");
+
+	it("points only the proof bundle's photo origin at the loopback hub", () => {
+		const out = patchOrigin(presentation);
+		expect(out).toContain(
+			`process.env.${DEFINE} === "54832" && Platform.OS === "android"`,
+		);
+		expect(out).toContain(`? "${LOOPBACK_ORIGIN}"`);
+		expect(LOOPBACK_ORIGIN).toBe("http://127.0.0.1:54832");
+		// Production keeps its own origin as the fallback branch.
+		expect(out).toContain(": new URL(RADIENT_API_BASE).origin;");
+		expect(out.split(MARKER)).toHaveLength(2);
+	});
+
+	it("fails closed on a moved or already-patched origin seam", () => {
+		expect(() => patchOrigin(patchOrigin(presentation))).toThrow(UNEXPECTED);
+		expect(() =>
+			patchOrigin(
+				presentation.replace("RADIENT_API_BASE).origin", "BASE).origin"),
+			),
+		).toThrow(UNEXPECTED);
+		expect(() =>
+			patchOrigin(
+				presentation.replace('import { Platform } from "react-native";\n', ""),
+			),
+		).toThrow(PLATFORM_MOVED);
 	});
 
 	it("generates an entry that only adds the define-gated marker", () => {
