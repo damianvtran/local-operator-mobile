@@ -36,21 +36,14 @@ describe("a shrinkable chip is capped on its own flex item", () => {
 		expect(chip).toContain("numberOfLines={shrink ? 1 : undefined}");
 	});
 
-	it("is the mode the composer's folder, model and effort chips use", () => {
-		/* The folder chip joined the composer's meta line in the 2026-11-04
-		 *  restructure (it was the home's own leading element before). Since the
-		 *  pickers' round-1 remediation it is drawn by `ComposerChipButton` like
-		 *  the model and effort chips, and More no longer repeats it (UX U5): the
-		 *  two `shrink` sites are that button's unavailable and value chips, and
-		 *  they are the only ones. The clipboard's Paste image control used to be
-		 *  a third (a labelled `Chip … shrink` that had to yield to the send
-		 *  cluster at large text); PR #230 made it a fixed 44 pt `IconButton`,
-		 *  which cannot squeeze the send cluster, so it no longer needs `shrink`. */
-		expect(composer.match(/\n\s+shrink\n/g) ?? []).toHaveLength(2);
-		const button = composer.slice(
-			composer.indexOf("const ComposerChipButton"),
-			composer.indexOf("const stripChipSurface"),
-		);
-		expect(button.match(/\n\s+shrink\n/g) ?? []).toHaveLength(2);
+	it("is no longer a mode the composer needs: its controls are rigid icons", () => {
+		/* The folder, model and effort chips were this mode's last users on the
+		 *  composer row: two min-floored shrinkers that RN 0.86's Yoga clipped to
+		 *  `loc` / `Claude` with no ellipsis on iOS (yoga#2006; issue #325). They
+		 *  are now fixed touch-floor `IconButton`s that cannot paint over the send
+		 *  cluster, so the U-08 overlap this file guards has no chip left to come
+		 *  from there; the cap above stays for any chip in a narrow toolbar. */
+		expect(composer.match(/\n\s+shrink\n/g) ?? []).toHaveLength(0);
+		expect(composer).not.toContain("<Chip");
 	});
 });

@@ -8,6 +8,7 @@ import {
 	Mic,
 	MoreHorizontal,
 	Paperclip,
+	Sparkles,
 	Square,
 	TriangleAlert,
 	X,
@@ -52,7 +53,10 @@ import {
 	type PasteVia,
 	pasteOfferComposing,
 } from "@/features/session/attach-rule";
-import type { ComposerChip } from "@/features/session/chip-labels";
+import {
+	type ComposerChip,
+	UNAVAILABLE_TEXT,
+} from "@/features/session/chip-labels";
 import { ComposerStateMarkers } from "@/features/session/components/state-markers";
 import {
 	attachmentLabel,
@@ -62,22 +66,23 @@ import {
 	noticeActionName,
 } from "@/features/session/composer";
 import {
+	composerControlsPlan,
+	type FolderSource,
+	folderControlLabel,
+	runSettingsControl,
+} from "@/features/session/composer-controls";
+import {
 	ATTACH_GLYPH_PT,
 	COMPOSER_ACTION_CLUSTER,
-	COMPOSER_CHIP_CAPSULE_ALIGN,
 	COMPOSER_CHIP_TRAILING,
 	COMPOSER_CHIP_ZONE,
 	COMPOSER_CONTROLS_ROW,
 	COMPOSER_DISC,
 	COMPOSER_META_GAP_PT,
 	COMPOSER_META_ROW,
-	composerChipPlan,
-	FOLDER_CHIP_MAX_PT,
-	folderChipText,
-	HOME_STRIP_SHRINK,
-	MODEL_FLOOR_PT,
 	NOTICE_GLYPH_COLUMN_PT,
 	noticeActionPlan,
+	queuedChipWidthEstimate,
 } from "@/features/session/composer-layout";
 import {
 	COMPOSER_CONTROLS_GAP,
@@ -115,7 +120,6 @@ import {
 import { useTokenColor } from "@/ui/appearance";
 import {
 	Button,
-	Chip,
 	DictationMeter,
 	IconButton,
 	Sheet,
@@ -318,16 +322,21 @@ export type ComposerProps = {
 	questions?: { value: string; onOpen: () => void } | null;
 	onEditingChange?: (editing: boolean) => void;
 	suppressDisabledHint?: boolean;
-	/** The working-folder chip on the meta line. The composer home passes its
-	 *  target folder (`homeTargetFolder`); the session view passes nothing. Data
-	 *  rather than an element, because the meta line's fit decides how it paints:
-	 *  the full path, or the folder glyph alone when the line is short (record
-	 *  §2.2 yield order). */
-	folderChip?: {
-		label: string;
+	/** The folder control: an icon on the controls row that opens the host's
+	 *  folder sheet (the full path, and the choices while it can still change).
+	 *  Data rather than an element, because the row's fit decides where it goes:
+	 *  on the row, or a row in More when the zone is short (issue #325). The
+	 *  home passes the folder the next start names; the session view passes
+	 *  its own, read-only. `null`/absent: no folder control. */
+	folder?: {
+		/** The folder's own name (`folderName(...).name`), spoken and shown in
+		 *  More; the full path is the sheet's. */
+		name: string;
+		/** Where it comes from; `chosen` also marks the icon (non-default). */
+		source: FolderSource;
+		/** The folder can still change (home, before the start). */
+		editable: boolean;
 		onPress: () => void;
-		accessibilityLabel: string;
-		accessibilityHint: string;
 		testID: string;
 	} | null;
 	/** The context-window reading ("21% context") and the spend ("$0.42"), on
@@ -359,8 +368,14 @@ export type ComposerProps = {
 	 *  whose label disagrees with what it can do is the U-24 dead end. */
 	modelChip: ComposerChip;
 	effortChip?: ComposerChip | null;
-	onOpenModels: () => void;
-	onOpenEffort: () => void;
+	/** Opens the host's ONE run-settings sheet — the model list and the effort
+	 *  rungs (issue #325). The chips' states above name the control and decide
+	 *  whether it can open (`runSettingsControl`). */
+	onOpenRunSettings: () => void;
+	/** The reader chose a model or an effort that differs from the computer's
+	 *  default: the control wears the non-default mark. The home knows this; a
+	 *  running session has no default to compare with and passes nothing. */
+	runSettingsCustom?: boolean;
 	/** A leading `/` opens the sheet; `null` keeps it shut. */
 	slashQuery: string | null;
 	slashSheet: React.ReactNode;
@@ -406,151 +421,70 @@ export type ComposerProps = {
 	testID: string;
 };
 
+/** The non-default mark's diameter, pt: the list row's 6 pt dot (components.md
+ *  § 7), the kit's existing small mark. */
+const CUSTOM_MARK_PT = 6;
+
 /**
- * The chip's box while its label is unknown: the same pill, with the kit's
- * skeleton bar inside it (§ 19 — `elevated`, pulsing, and never a bare spinner).
+ * One of the composer's icon controls — the folder, the run settings (issue
+ * #325): the kit's `IconButton` (44 pt box, 48 dp on Android, `ink-muted`
+ * glyph, the spoken name carrying the value the chip used to paint).
  *
- * It carries the chip's own testID, so a flow that addresses the lever keeps
- * working the moment the label arrives, and it announces itself as BUSY rather
- * than as a disabled control with a name — a screen reader hears that the value is
- * still coming, which is the truth, instead of hearing a control called "model".
+ * THE NON-DEFAULT MARK. A value the reader chose that differs from the
+ * computer's default wears a 6 pt `accent` dot at the glyph's top-end corner —
+ * a SHAPE that is present or absent, so the cue never rests on colour alone,
+ * and its meaning is also in the spoken name ("…, chosen for this
+ * conversation"). Not `IconButton`'s `active` fill: `row-selected` on the
+ * composer's `elevated` shell is #372f24 on #322d22 in dark, about 1.05:1 —
+ * no visible edge at all. `accent` clears 3:1 against every ground the
+ * contract checks (it is the focus ring's colour). The dot never takes a press:
+ * it is `pointerEvents="none"` and sits inside the button's own box.
  */
-const ChipPlaceholder = ({
-	label,
-	widthClassName,
+const ComposerIconControl = ({
+	accessibilityLabel,
+	accessibilityHint,
+	disabled = false,
+	marked = false,
+	icon,
+	onPress,
 	testID,
 }: {
-	label: string;
-	/** The bar's width, sized to the label it stands in for so the swap does not
-	 *  shift the chip sideways (measured: a 26 pt pill jumped to 119.6 pt when the
-	 *  model arrived). */
-	widthClassName: string;
+	accessibilityLabel: string;
+	accessibilityHint?: string;
+	disabled?: boolean;
+	marked?: boolean;
+	icon: (props: { color: string; size: number }) => ReactElement;
+	onPress: () => void;
 	testID: string;
 }) => (
-	/* A `Pressable`, not a `View`, and `disabled` rather than `accessibilityState`
-	 * alone — the two facts this PR's own probes established the hard way: RN-web
-	 * ignores `accessibilityState` on BOTH View and Pressable, so the disabled flag
-	 * and the removal from the tab order come from the `disabled` prop, and there is
-	 * no `aria-busy` unless it is passed directly (review round 4 R5, QA Q3). Busy is
-	 * therefore passed both ways: `accessibilityState` for native, `aria-busy` for
-	 * the web build. */
-	<Pressable
-		accessibilityRole={ROLE.button}
-		accessibilityLabel={label}
-		accessibilityState={state({ disabled: true, busy: true })}
-		aria-busy
-		// A border and no fill: the skeleton's `elevated` bar measured 1.07:1 against
-		// the disabled chip's own fill at rest (design round 2, D13), and the kit's
-		// § 19 rule is that the resting tone stands out without the pulse. Every
-		// other skeleton in this app sits on the page ground for exactly that reason,
-		// so the placeholder takes the same ground rather than inventing a tone; the
-		// resting ratio on that ground is confirmed in the next capture run.
-		className="min-h-11 items-center justify-center rounded-full border border-hairline px-3"
-		disabled
-		testID={testID}
-	>
-		<Skeleton lines={1} barClassName="h-3" widthClassName={widthClassName} />
-	</Pressable>
-);
-
-/**
- * One of the composer's two chips, rendered from whatever state the wire reports.
- *
- * The three cases are deliberately in one place: a value chip is a control, an
- * unavailable one is disabled with the reason in its hint, and a loading one is
- * the placeholder. Spread across the JSX they drifted — the defect this replaces
- * had a rungless model pulsing forever because "no ladder" and "not yet known"
- * were the same expression.
- */
-const ComposerChipButton = ({
-	chip,
-	onPress,
-	chooseHint,
-	loadingWidthClassName,
-	testID,
-	glass = false,
-	leadingIcon,
-}: {
-	/** The strip's glass branch: the chip gets its own capsule of material. */
-	glass?: boolean;
-	/** A glyph before the value chip's text (the home's folder chip). */
-	leadingIcon?: ReactElement;
-	chip: ComposerChip;
-	onPress: () => void;
-	/** The hint on the value chip, which is the only case that opens a sheet. */
-	chooseHint: string;
-	loadingWidthClassName: string;
-	testID: string;
-}) => {
-	if (chip.kind === "loading") {
-		/* In its capsule too (design D5b): an unwrapped placeholder made the
-		 *  strip change material the moment the model list resolved. */
-		return stripChipSurface(
-			glass,
-			<ChipPlaceholder
-				label={chip.accessibilityLabel}
-				widthClassName={loadingWidthClassName}
-				testID={testID}
-			/>,
-		);
-	}
-	if (chip.kind === "unavailable") {
-		return stripChipSurface(
-			glass,
-			<Chip
-				label={chip.text}
-				// Never dispatched: `Chip` requires the prop and a disabled Pressable
-				// does not fire it. Passing it keeps one component for all three states
-				// instead of a second, divergent chip shape.
-				onPress={() => undefined}
-				disabled
-				quiet
-				shrink
-				accessibilityLabel={chip.accessibilityLabel}
-				accessibilityHint={chip.accessibilityHint}
-				testID={testID}
-			/>,
-		);
-	}
-	return stripChipSurface(
-		glass,
-		<Chip
-			label={chip.text}
-			shrink
+	<View>
+		<IconButton
+			accessibilityLabel={accessibilityLabel}
+			accessibilityHint={accessibilityHint}
+			disabled={disabled}
 			onPress={onPress}
-			quiet
-			leadingIcon={leadingIcon}
-			accessibilityLabel={chip.accessibilityLabel}
-			accessibilityHint={chooseHint}
+			icon={icon}
+			size={ATTACH_GLYPH_PT}
 			testID={testID}
-		/>,
-	);
-};
-
-/** A strip chip's own capsule of glass (design spec §12), or the chip as it
- *  always was. Solid is NOT wrapped: a `ChromeSurface` paints `bg-elevated`
- *  in its solid branch, which would turn today's quiet, fill-less chip into a
- *  box — the fallback must stay byte-for-byte what ships. The capsule's radius
- *  is half the chip's touch-floor height: `radius.full` in spirit, as a number
- *  because the glass view takes its corners as props. `min-w-0`/`maxWidth` keep the chip's own shrink rule
- *  working through the extra box, so a long model name still ellipsizes. */
-const stripChipSurface = (glass: boolean, chip: ReactElement) =>
-	glass ? (
-		<ChromeSurface
-			glass
-			radii={{ top: TOUCH_FLOOR / 2, bottom: TOUCH_FLOOR / 2 }}
-			style={{
-				maxWidth: "100%",
-				minWidth: 0,
-				alignSelf: COMPOSER_CHIP_CAPSULE_ALIGN,
-			}}
-			className="min-w-0"
-		>
-			{chip}
-		</ChromeSurface>
-	) : (
-		chip
-	);
+		/>
+		{marked ? (
+			<View
+				pointerEvents="none"
+				aria-hidden
+				className="absolute rounded-full bg-accent"
+				style={{
+					width: CUSTOM_MARK_PT,
+					height: CUSTOM_MARK_PT,
+					/* The 20 pt glyph is centred in the 44 pt box (12..32); the
+					 *  dot's box is 7..13 from the top and the trailing edge, so
+					 *  it rides the glyph's corner without covering its stroke. */
+					top: 7,
+					end: 7,
+				}}
+			/>
+		) : null}
+	</View>
+);
 
 /** The failure notice's row floor: one touch target, because each row holds a
  * sentence AND its action, and the action's box is the taller of the two. */
@@ -678,9 +612,24 @@ const ContextRow = ({
 	);
 };
 
-/** The More sheet's row for a chip, in whichever of its three states it is. */
-const chipRowValue = (chip: ComposerChip): string | null =>
-	chip.kind === "loading" ? null : chip.text;
+/** More's run-settings row value, when the icon is not on the row: the model
+ *  and the effort the chips used to paint, or `null` (the skeleton) while the
+ *  model is still loading. An effort that says nothing (still loading, the
+ *  rungless dash, the home's unnamed default) is left off. */
+const runSettingsRowValue = (
+	model: ComposerChip,
+	effort: ComposerChip | null,
+): string | null => {
+	if (model.kind === "loading") return null;
+	const rung =
+		effort === null ||
+		effort.kind === "loading" ||
+		(effort.kind === "value" && effort.rowHidden) ||
+		effort.text === UNAVAILABLE_TEXT
+			? null
+			: effort.text;
+	return rung === null ? model.text : `${model.text} · ${rung}`;
+};
 
 export const Composer = ({
 	controls,
@@ -710,15 +659,15 @@ export const Composer = ({
 	questions = null,
 	onEditingChange,
 	suppressDisabledHint = false,
-	folderChip = null,
+	folder = null,
 	contextLabel = null,
 	costLabel = null,
 	bottomInset,
 	glass = false,
 	modelChip,
 	effortChip,
-	onOpenModels,
-	onOpenEffort,
+	onOpenRunSettings,
+	runSettingsCustom = false,
 	slashQuery,
 	slashSheet,
 	fieldRef,
@@ -984,8 +933,9 @@ export const Composer = ({
 	const [receiptHeight, setReceiptHeight] = useState(48);
 	/* Measure this dock's width (not the whole window) for compact split fit. */
 	const [metaWidth, setMetaWidth] = useState(0);
-	/* The card's chip zone, measured: what `composerChipPlan` fits chips into. */
-	const [chipZoneWidth, setChipZoneWidth] = useState(0);
+	/* The card's control zone, measured: what `composerControlsPlan` fits the
+	 *  folder and run-settings icons into (issue #325). */
+	const [zoneWidth, setZoneWidth] = useState(0);
 	const _window = useWindowDimensions();
 	const [focused, setFocused] = useState(false);
 	/* Offered while COMPOSING, not only while focused (`pasteOfferComposing`,
@@ -1254,8 +1204,6 @@ export const Composer = ({
 
 	const dangerInk = useTokenColor("danger");
 	const attachInk = useTokenColor("ink-muted");
-	/* The folder glyph's ink: `ink-dim`, as on the folder sheet's rows. */
-	const folderInk = useTokenColor("ink-dim");
 	/* The extras' natural height, from the scroller's own content size, so the budget can
 	 *  give them what they need and no more. */
 
@@ -1760,148 +1708,127 @@ export const Composer = ({
 		) : null;
 	const queuedChip = queuedChipFor(dictationLargeText, null);
 
-	/* WHAT FITS ON THE CARD'S CONTROLS ROW (visual audit D5). The zone between
-	 *  attach and the mic/send cluster is measured, and effort leaves the row
-	 *  before the model's name is cut: `claude-op… High` told the reader less
-	 *  than `claude-opus-5` alone, and a dropped effort is still one tap away in
-	 *  More. The zone is `flex-1` between fixed-width siblings, so its width does
-	 *  not depend on which chips it holds — the measurement cannot feed itself. */
-	const moreSlot = 1;
-	const chipPlan = composerChipPlan({
-		width: chipZoneWidth,
-		scale: effectiveScale,
-		modelChars: modelChip.kind === "loading" ? 12 : modelChip.text.length,
-		effortChars:
-			!effortChip || (effortChip.kind === "value" && effortChip.rowHidden)
-				? null
-				: effortChip.kind === "loading"
-					? 4
-					: effortChip.text.length,
-		folder: !!folderChip,
-		trailing: moreSlot,
+	/* WHAT FITS ON THE CARD'S CONTROLS ROW (issue #325). The zone between
+	 *  attach and the mic/send cluster holds the folder and run-settings ICONS
+	 *  and the trailing slot; every member is a rigid touch-floor square, so no
+	 *  member shrinks and yoga#2006 (a floored shrinker freezing the next one's
+	 *  share, which clipped the chips to `loc` / `Claude` and threw More off the
+	 *  row) has no shape to take. `composerControlsPlan` decides who fits from
+	 *  the zone's width, which is `flex-1` between fixed siblings and so cannot
+	 *  feed itself; what does not fit becomes a row in More. */
+	const moreRows =
+		!!contextLabel || !!costLabel || queuedCount > 0 || questions !== null;
+	const queuedOnCard = queueOnCard && queuedCount > 0;
+	const controlsPlan = composerControlsPlan({
+		width: zoneWidth,
 		touchFloor: TOUCH_FLOOR,
+		gap: COMPOSER_META_GAP_PT,
+		folder: folder !== null,
+		dismiss: keyboardVisible || focused,
+		moreRows,
 		/* Large text shows the bare number in either form (UX round 5, U2), so
 		 *  the sentence is charged at the number's width there. */
-		queued:
-			queueOnCard && queuedCount > 0
-				? {
-						labelChars: dictationLargeText
+		queued: queuedOnCard
+			? {
+					label: queuedChipWidthEstimate(
+						dictationLargeText
 							? String(queuedCount).length
 							: queuedLabel.length,
-						countChars: String(queuedCount).length,
-					}
-				: null,
+						effectiveScale,
+						TOUCH_FLOOR,
+					),
+					count: queuedChipWidthEstimate(
+						String(queuedCount).length,
+						effectiveScale,
+						TOUCH_FLOOR,
+					),
+				}
+			: null,
 	});
+	/* Where each control is: on the card's row, or in More. Short landscape's
+	 *  compact strip carries no zone at all, so there both live in More, which
+	 *  that strip always shows (U3). */
+	const onRow = restsAsCard
+		? { folder: controlsPlan.folder, settings: controlsPlan.settings }
+		: { folder: false, settings: false };
 	/* The count on the card (review round 1, M1). Before this the chip mounted
 	 *  only on the compact strip and the count otherwise rode the host's
 	 *  activity line — which a tablet and a narrow short-landscape split do not
 	 *  have, so a queued message was announced (More's name) and never shown. */
-	const cardQueuedChip = chipPlan.queued
+	const cardQueuedChip = controlsPlan.queued
 		? queuedChipFor(
-				dictationLargeText || chipPlan.queued.form === "count",
-				chipPlan.queued,
+				dictationLargeText || controlsPlan.queued.form === "count",
+				controlsPlan.queued,
 			)
 		: null;
-	const chipZone = (
+	const runSettings = runSettingsControl(modelChip, effortChip ?? null);
+	const folderLabel =
+		folder === null ? "" : folderControlLabel(folder.name, folder.source);
+	const folderHint =
+		folder === null
+			? ""
+			: folder.editable
+				? t("mobile.chrome.composer.folder_hint")
+				: t("mobile.chrome.composer.folder_hint_fixed");
+	const moreLabel =
+		queuedCount > 0
+			? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
+			: t("mobile.chrome.composer.more");
+	const controlZone = (
 		<View
 			className={COMPOSER_CHIP_ZONE}
-			/* Never narrower than what it must always show: its one trailing
-			 *  control (More / dismiss) and, where the card carries it, the queued
-			 *  count beside it — so the zone's clip can cut a chip but never those. */
+			/* Never narrower than what it must always show: one square (More,
+			 *  dismiss, or an icon) and, where the card carries it, the queued
+			 *  count beside it — the plan's own floor. */
 			style={{
 				minWidth:
 					TOUCH_FLOOR +
-					(chipPlan.queued ? chipPlan.queued.width + COMPOSER_META_GAP_PT : 0),
+					(controlsPlan.queued
+						? controlsPlan.queued.width + COMPOSER_META_GAP_PT
+						: 0),
 			}}
 			testID={SURFACE.composerMeta}
 			onLayout={(event) =>
-				setChipZoneWidth(Math.floor(event.nativeEvent.layout.width))
+				setZoneWidth(Math.floor(event.nativeEvent.layout.width))
 			}
 		>
-			{/* The home's folder chip leads: where, then with what model, then how
-			 *  hard — one chip per picker (the operator: "a separate dialog to
-			 *  handle directory vs model vs effort selection"). Glyph + the folder's
-			 *  name, capped, glyph only at large text; it yields first
-			 *  (`HOME_STRIP_SHRINK`, design D2). The session view passes none. */}
-			{/* TODO(native, O1): a min-floored shrinker (folder) FIRST, then another
-			 *  shrinker (model), is the yoga#2006 shape. Effort is rigid here and
-			 *  leaves the row by plan rather than by shrinking, which removes one of
-			 *  the three shrinkers the old strip had; still needs a device check. */}
-			{folderChip ? (
-				<View
-					style={{
-						flexShrink: HOME_STRIP_SHRINK.folder,
-						minWidth: MODEL_FLOOR_PT,
-						maxWidth: FOLDER_CHIP_MAX_PT,
-					}}
-				>
-					<ComposerChipButton
-						chip={{
-							kind: "value",
-							text: folderChipText(folderChip.label, effectiveScale),
-							accessibilityLabel: folderChip.accessibilityLabel,
-						}}
-						leadingIcon={<Folder color={folderInk} size={16} aria-hidden />}
-						onPress={folderChip.onPress}
-						chooseHint={folderChip.accessibilityHint}
-						loadingWidthClassName="w-16"
-						testID={CONTROL.homeFolderChip}
-					/>
-				</View>
+			{/* Where, then with what: the folder leads, as the chips did (the
+			 *  operator: "a separate dialog to handle directory vs model vs effort
+			 *  selection"), and it is the first to move into More. */}
+			{folder !== null && onRow.folder ? (
+				<ComposerIconControl
+					accessibilityLabel={folderLabel}
+					accessibilityHint={folderHint}
+					marked={folder.source === "chosen"}
+					onPress={folder.onPress}
+					icon={({ color, size }) => <Folder color={color} size={size} />}
+					testID={folder.testID}
+				/>
 			) : null}
-			{chipPlan.model ? (
-				<View
-					/* The model keeps its NATURAL width and never grows (operator,
-					 *  TestFlight 578: "left justify the effort selector with the other
-					 *  selectors on that row"), so the chips pack at the leading edge
-					 *  beside attach. It is the row's one elastic chip: it shrinks to
-					 *  its floor and ellipsizes only after effort has left. */
-					className="min-w-0 shrink"
-					style={{
-						minWidth: MODEL_FLOOR_PT,
-						flexBasis: "auto",
-						flexShrink: HOME_STRIP_SHRINK.model,
-					}}
-				>
-					<ComposerChipButton
-						chip={modelChip}
-						onPress={onOpenModels}
-						chooseHint="Choose the model"
-						loadingWidthClassName="w-24"
-						testID={CONTROL.composerModelChip}
-					/>
-				</View>
+			{onRow.settings ? (
+				<ComposerIconControl
+					accessibilityLabel={runSettings.accessibilityLabel}
+					accessibilityHint={runSettings.accessibilityHint}
+					disabled={runSettings.disabled}
+					marked={runSettingsCustom}
+					onPress={onOpenRunSettings}
+					icon={({ color, size }) => <Sparkles color={color} size={size} />}
+					testID={CONTROL.composerModelChip}
+				/>
 			) : null}
-			{effortChip && chipPlan.effort ? (
-				/* Rigid: an effort that shrank was the `Hi…` the audit saw. It is
-				 *  either whole or in More. */
-				<View style={{ flexShrink: 0 }}>
-					<ComposerChipButton
-						chip={effortChip}
-						onPress={onOpenEffort}
-						chooseHint="Choose the effort"
-						loadingWidthClassName="w-7"
-						testID={CONTROL.composerEffortChip}
-					/>
-				</View>
-			) : null}
-			{/* `ms-auto`: the slot holds the zone's trailing edge whether or not
-			 *  effort is on the row, so More does not slide left when effort
-			 *  leaves; the chips still pack left (TestFlight 578). */}
-			{/* ONE trailing slot, two occupants. While the field has the keyboard
-			 *  the slot is the way to put it down; otherwise it is More. Both in one
-			 *  slot because a second 44 pt control here costs the model its name at
-			 *  390 pt, and a sheet opened over a raised keyboard is the wrong order
-			 *  anyway — More is one blur away. */}
-			{/* The queued count rides the SAME trailing slot, ahead of More: one
-			 *  auto margin still absorbs the zone's free width, so neither moves
-			 *  when effort leaves the row. */}
+			{/* ONE trailing slot, two occupants, and `ms-auto` so it holds the
+			 *  zone's trailing edge. While the field has the keyboard the slot is
+			 *  the way to put it down; otherwise it is More, shown only when More
+			 *  has something to hold — its own rows, or a control that did not
+			 *  fit. A sheet opened over a raised keyboard is the wrong order
+			 *  anyway: More is one blur away. The queued count rides the same
+			 *  slot, ahead of it. */}
 			<View
 				className={COMPOSER_CHIP_TRAILING}
 				testID={SURFACE.composerStripTrailing}
 			>
 				{cardQueuedChip}
-				{keyboardVisible || focused ? (
+				{controlsPlan.trailing === "dismiss" ? (
 					<IconButton
 						accessibilityLabel={t("mobile.chrome.composer.dismiss_keyboard")}
 						onPress={() => {
@@ -1913,20 +1840,16 @@ export const Composer = ({
 						)}
 						testID={CONTROL.composerDismissKeyboard}
 					/>
-				) : (
+				) : controlsPlan.trailing === "more" ? (
 					<IconButton
-						accessibilityLabel={
-							queuedCount > 0
-								? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
-								: t("mobile.chrome.composer.more")
-						}
+						accessibilityLabel={moreLabel}
 						onPress={() => setContextOpen(true)}
 						icon={({ color, size }) => (
 							<MoreHorizontal color={color} size={size} />
 						)}
 						testID={CONTROL.composerContext}
 					/>
-				)}
+				) : null}
 			</View>
 		</View>
 	);
@@ -1972,11 +1895,7 @@ export const Composer = ({
 		>
 			{queuedChip}
 			<IconButton
-				accessibilityLabel={
-					queuedCount > 0
-						? `${t("mobile.chrome.composer.more")}, ${t("mobile.chrome.composer.queued", { count: queuedCount })}`
-						: t("mobile.chrome.composer.more")
-				}
+				accessibilityLabel={moreLabel}
 				onPress={() => setContextOpen(true)}
 				icon={({ color, size }) => <MoreHorizontal color={color} size={size} />}
 				testID={CONTROL.composerContext}
@@ -2339,7 +2258,7 @@ export const Composer = ({
 							 *  the thing the offer pushes off the row; the chips yield by
 							 *  plan, as they do for any narrow zone. */}
 							{pasteChip}
-							{chipZone}
+							{controlZone}
 							{/* ONE slot for the mic, whatever the card is open for. The
 							 *  card no longer expands out of a pill under the finger that
 							 *  pressed the mic, so nothing slides: the mic stays here,
@@ -2554,42 +2473,38 @@ export const Composer = ({
 				title={t("mobile.chrome.composer.more")}
 				testID={CONTROL.composerContextSheet}
 			>
-				<ContextRow
-					label={t("mobile.chrome.composer.row_model")}
-					value={chipRowValue(modelChip)}
-					accessibilityLabel={modelChip.accessibilityLabel}
-					accessibilityHint={
-						modelChip.kind === "unavailable"
-							? modelChip.accessibilityHint
-							: "Choose the model"
-					}
-					disabled={modelChip.kind !== "value"}
-					onPress={() => {
-						setContextOpen(false);
-						onOpenModels();
-					}}
-					testID={CONTROL.composerContextModel}
-				/>
-				{effortChip ? (
+				{/* The folder and run-settings controls are icons on the card's row
+				 *  (issue #325); each is a row HERE only while it is not on the row —
+				 *  the zone was too short, or short landscape's strip has no zone — so
+				 *  there is always exactly one way in, never two (UX U5). Each row
+				 *  closes More and opens that control's own sheet. */}
+				{folder !== null && !onRow.folder ? (
 					<ContextRow
-						label={t("mobile.chrome.composer.row_effort")}
-						value={chipRowValue(effortChip)}
-						accessibilityLabel={effortChip.accessibilityLabel}
-						accessibilityHint={
-							effortChip.kind === "unavailable"
-								? effortChip.accessibilityHint
-								: "Choose the effort"
-						}
-						disabled={effortChip.kind !== "value"}
+						label={t("mobile.chrome.composer.row_folder")}
+						value={folder.name}
+						accessibilityLabel={folderLabel}
+						accessibilityHint={folderHint}
 						onPress={() => {
 							setContextOpen(false);
-							onOpenEffort();
+							folder.onPress();
 						}}
-						testID={CONTROL.composerContextEffort}
+						testID={CONTROL.composerContextFolder}
 					/>
 				) : null}
-				{/* No folder row here: the card leads with the chip, and a second copy
-				 *  in More was two entry points for one setting (UX U5). */}
+				{!onRow.settings ? (
+					<ContextRow
+						label={t("mobile.chrome.composer.row_model")}
+						value={runSettingsRowValue(modelChip, effortChip ?? null)}
+						accessibilityLabel={runSettings.accessibilityLabel}
+						accessibilityHint={runSettings.accessibilityHint}
+						disabled={runSettings.disabled}
+						onPress={() => {
+							setContextOpen(false);
+							onOpenRunSettings();
+						}}
+						testID={CONTROL.composerContextModel}
+					/>
+				) : null}
 				{contextLabel ? (
 					<ContextRow
 						label={t("mobile.chrome.composer.row_usage")}

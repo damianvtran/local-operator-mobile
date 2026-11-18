@@ -172,24 +172,24 @@ describe("the composer's glass wiring", () => {
 		expect(SESSION.slice(at, at + 200)).toContain("glass={chromeGlass}");
 	});
 
-	it("routes the shell's fill through ChromeSurface and keeps the card's chips plain", () => {
+	it("routes the shell's fill through ChromeSurface and keeps the card's controls plain", () => {
 		expect(COMPOSER).toContain(
 			'backgroundColor: glass ? "transparent" : elevated',
 		);
 		expect(COMPOSER).toMatch(/\{glass \? \(\s*<View\s+pointerEvents="none"/);
-		/* The chips ride INSIDE the shell now (visual audit D5), so they sit on
+		/* The controls ride INSIDE the shell (visual audit D5), so they sit on
 		 *  the shell's one material and take no capsule of their own: a glass
-		 *  group around them would be glass on glass. */
+		 *  group around them would be glass on glass. Since issue #325 they are
+		 *  transparent icon buttons, like attach and the mic beside them, so
+		 *  there is no chip capsule left to wrap in either branch. */
 		expect(COMPOSER).not.toContain("<ChromeGroup");
 		const zone = COMPOSER.slice(
-			COMPOSER.indexOf("const chipZone = ("),
+			COMPOSER.indexOf("const controlZone = ("),
 			COMPOSER.indexOf("const clearDraft ="),
 		);
 		expect(zone).not.toMatch(/glass=\{glass\}/);
-		// Solid chips are NOT wrapped: the fallback stays the quiet, fill-less chip.
-		expect(COMPOSER).toMatch(
-			/glass \? \(\s*<ChromeSurface[\s\S]*?\) : \(\s*chip\s*\)/,
-		);
+		expect(zone).not.toContain("<ChromeSurface");
+		expect(COMPOSER).not.toContain("stripChipSurface");
 	});
 
 	it("keeps attach and send opaque in both branches", () => {

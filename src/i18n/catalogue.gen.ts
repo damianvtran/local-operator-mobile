@@ -57,7 +57,6 @@ export type CatalogueKey =
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.queued"
 	| "mobile.chrome.composer.row_cost"
-	| "mobile.chrome.composer.row_effort"
 	| "mobile.chrome.composer.row_folder"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
@@ -1196,7 +1195,6 @@ export type NoParamKey =
 	| "mobile.chrome.composer.more"
 	| "mobile.chrome.composer.open_queue"
 	| "mobile.chrome.composer.row_cost"
-	| "mobile.chrome.composer.row_effort"
 	| "mobile.chrome.composer.row_folder"
 	| "mobile.chrome.composer.row_model"
 	| "mobile.chrome.composer.row_questions"
@@ -2144,7 +2142,6 @@ export type MessageParams = {
 	"mobile.chrome.composer.open_queue": NoParams;
 	"mobile.chrome.composer.queued": { count: number };
 	"mobile.chrome.composer.row_cost": NoParams;
-	"mobile.chrome.composer.row_effort": NoParams;
 	"mobile.chrome.composer.row_folder": NoParams;
 	"mobile.chrome.composer.row_model": NoParams;
 	"mobile.chrome.composer.row_questions": NoParams;
@@ -3301,7 +3298,6 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.chrome.composer.open_queue": "Open the queue",
 	"mobile.chrome.composer.queued": "{count, plural, one {# queued message} other {# queued messages}}",
 	"mobile.chrome.composer.row_cost": "Cost",
-	"mobile.chrome.composer.row_effort": "Effort",
 	"mobile.chrome.composer.row_folder": "Folder",
 	"mobile.chrome.composer.row_model": "Model",
 	"mobile.chrome.composer.row_questions": "Questions",
@@ -4443,7 +4439,6 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.composer.open_queue": { role: "button", note: "Opens the queued-messages surface from the composer context sheet. Only rendered where the screen can open that surface; never a disabled control." },
 	"mobile.chrome.composer.queued": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.row_cost": { role: "meta", note: "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon." },
-	"mobile.chrome.composer.row_effort": { role: "meta", note: "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_folder": { role: "meta", note: "Row label in the composer's More sheet, shown only when the folder button does not fit on a narrow phone; the folder's name is shown at the other end of the same row and tapping the row opens the folder sheet. A noun, no colon." },
 	"mobile.chrome.composer.row_model": { role: "meta", note: "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_questions": { role: "meta", note: "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon." },
@@ -5599,7 +5594,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.open_queue": "Abrir la cola",
 		"mobile.chrome.composer.queued": "{count, plural, one {# mensaje en cola} other {# mensajes en cola}}",
 		"mobile.chrome.composer.row_cost": "Costo",
-		"mobile.chrome.composer.row_effort": "Esfuerzo",
 		"mobile.chrome.composer.row_folder": "Carpeta",
 		"mobile.chrome.composer.row_model": "Modelo",
 		"mobile.chrome.composer.row_questions": "Preguntas",
@@ -6739,7 +6733,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.open_queue": "Ouvrir la file",
 		"mobile.chrome.composer.queued": "{count, plural, one {# message en attente} other {# messages en attente}}",
 		"mobile.chrome.composer.row_cost": "Coût",
-		"mobile.chrome.composer.row_effort": "Effort",
 		"mobile.chrome.composer.row_folder": "Dossier",
 		"mobile.chrome.composer.row_model": "Modèle",
 		"mobile.chrome.composer.row_questions": "Questions",
@@ -7879,7 +7872,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.open_queue": "कतार खोलें",
 		"mobile.chrome.composer.queued": "{count, plural, one {# संदेश कतार में} other {# संदेश कतार में}}",
 		"mobile.chrome.composer.row_cost": "लागत",
-		"mobile.chrome.composer.row_effort": "प्रयास",
 		"mobile.chrome.composer.row_folder": "फ़ोल्डर",
 		"mobile.chrome.composer.row_model": "मॉडल",
 		"mobile.chrome.composer.row_questions": "प्रश्न",
@@ -9019,7 +9011,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.open_queue": "Открыть очередь",
 		"mobile.chrome.composer.queued": "{count, plural, one {# сообщение в очереди} few {# сообщения в очереди} many {# сообщений в очереди} other {# сообщения в очереди}}",
 		"mobile.chrome.composer.row_cost": "Стоимость",
-		"mobile.chrome.composer.row_effort": "Усилие",
 		"mobile.chrome.composer.row_folder": "Папка",
 		"mobile.chrome.composer.row_model": "Модель",
 		"mobile.chrome.composer.row_questions": "Вопросы",
@@ -10159,7 +10150,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.open_queue": "قطار کھولیں",
 		"mobile.chrome.composer.queued": "{count, plural, one {# پیغام قطار میں} other {# پیغامات قطار میں}}",
 		"mobile.chrome.composer.row_cost": "لاگت",
-		"mobile.chrome.composer.row_effort": "شدت",
 		"mobile.chrome.composer.row_folder": "فولڈر",
 		"mobile.chrome.composer.row_model": "ماڈل",
 		"mobile.chrome.composer.row_questions": "سوالات",
@@ -11299,7 +11289,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.open_queue": "Mở hàng đợi",
 		"mobile.chrome.composer.queued": "{count, plural, other {# tin nhắn trong hàng đợi}}",
 		"mobile.chrome.composer.row_cost": "Chi phí",
-		"mobile.chrome.composer.row_effort": "Mức suy luận",
 		"mobile.chrome.composer.row_folder": "Thư mục",
 		"mobile.chrome.composer.row_model": "Mô hình",
 		"mobile.chrome.composer.row_questions": "Câu hỏi",
@@ -12439,7 +12428,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.open_queue": "打开队列",
 		"mobile.chrome.composer.queued": "{count, plural, other {# 条排队消息}}",
 		"mobile.chrome.composer.row_cost": "费用",
-		"mobile.chrome.composer.row_effort": "推理强度",
 		"mobile.chrome.composer.row_folder": "文件夹",
 		"mobile.chrome.composer.row_model": "模型",
 		"mobile.chrome.composer.row_questions": "问题",

@@ -87,10 +87,6 @@
 		"role": "meta",
 		"note": "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon."
 	},
-	"mobile.chrome.composer.row_effort": {
-		"role": "meta",
-		"note": "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon."
-	},
 	"mobile.chrome.composer.row_usage": {
 		"role": "meta",
 		"note": "Row label in the composer's More sheet for how much of the model's context window is used; the reading is shown at the other end of the same row. A noun, no colon."

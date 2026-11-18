@@ -23,6 +23,10 @@ import {
 	composerChipLabels,
 	type ModelReading,
 } from "@/features/session/chip-labels";
+import {
+	type FolderSource,
+	folderSource,
+} from "@/features/session/composer-controls";
 import { t } from "@/i18n";
 import { homeShortened } from "@/lib/format";
 import {
@@ -464,23 +468,35 @@ export const folderName = (path: string, home: string | null): FolderName => {
 };
 
 /**
- * The home strip's folder chip: what it paints and what it says.
+ * The home's folder control: the name it speaks and where the folder comes from
+ * (issue #325; UX U1, design D2).
  *
- * Both come from the ONE folder the next start names, so the text and the spoken
- * label cannot disagree — they did: the text was shortened against that same
- * folder (always `~`) while the label read the real path (UX U1). The text is the
- * folder's own name, shortened against the computer's `home`; the composer adds
- * the glyph and decides when even the name yields (design D2).
- *
- * The spoken path is the SAME `~`-shortened spelling the sheet's rows speak
- * (`folderName(...).short`, against the same `home`): a reader who heard
- * `~/code/app` on the row they picked must hear that path back on the chip, not
- * `/Users/demo/code/app` (UX U11 / review N1).
+ * The name is the folder's own, shortened against the computer's `home` — it was
+ * once shortened against the start folder itself, so every pick said `~` (UX U1).
+ * The source compares the folder the next start names with the computer's own
+ * default: `chosen` marks the icon as non-default, and both are spoken
+ * (`folderControlLabel`). Before the folder read answers there is no default to
+ * compare with, so the source is unknown rather than guessed.
  */
-export const homeFolderChip = (
+export const homeFolderControl = (
 	startFolder: string,
-	home: string | null,
-): Readonly<{ label: string; accessibilityLabel: string }> => {
-	const { name, short } = folderName(startFolder, home);
-	return { label: name, accessibilityLabel: `Working in ${short}` };
-};
+	folders: HomeFolders | null,
+): Readonly<{ name: string; source: FolderSource }> => ({
+	name: folderName(startFolder, folders?.home ?? null).name,
+	source: folderSource(startFolder, folders?.default ?? null),
+});
+
+/**
+ * The run-settings control's non-default mark: the reader chose a model or an
+ * effort for this conversation, so the start will not run the computer's own.
+ * An effort a relay too old to accept one would drop is not counted — the chip
+ * logic's rule (`homeEffortChip`): the mark must not claim a value the start
+ * body will not carry.
+ */
+export const homeRunSettingsCustom = (input: {
+	chosenModel: ModelEntry | null;
+	chosenEffort: string | null;
+	offer: EffortOffer;
+}): boolean =>
+	input.chosenModel !== null ||
+	(input.offer.kind !== "unsupported" && input.chosenEffort !== null);

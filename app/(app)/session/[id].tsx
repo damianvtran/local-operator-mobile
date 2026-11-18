@@ -14,6 +14,8 @@ import type { PromptImage } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
 import { HeaderAgentAvatar } from "@/features/agent-avatar/agent-avatar-view";
 import { useListState } from "@/features/auth/connection-provider";
+import { FolderPicker } from "@/features/home/home-pickers";
+import { folderName } from "@/features/home/picker-model";
 import { useStartup } from "@/features/new-session/use-startup";
 import {
 	activityCounts,
@@ -36,10 +38,7 @@ import { Composer } from "@/features/session/components/composer";
 import { ConnectionBanner } from "@/features/session/components/connection-banner";
 import { FindBar } from "@/features/session/components/find-bar";
 import { FindSheet } from "@/features/session/components/find-sheet";
-import {
-	EffortSheet,
-	ModelSheet,
-} from "@/features/session/components/model-sheet";
+import { SessionRunSettingsSheet } from "@/features/session/components/model-sheet";
 import { PendingCard } from "@/features/session/components/pending-card";
 import { PendingEchoRows } from "@/features/session/components/pending-echo-row";
 import { RemoteFeatureNotice } from "@/features/session/components/remote-feature-notice";
@@ -67,6 +66,7 @@ import {
 	PinnedWorkingLine,
 	WorkingLine,
 } from "@/features/session/components/working-line";
+import { settingLock } from "@/features/session/composer-controls";
 import { isRouteRefused } from "@/features/session/connection-view";
 import { headerHealth, healthDetailKey } from "@/features/session/health";
 import {
@@ -359,8 +359,10 @@ function Session() {
 	 *  the panels stay inline, so this is never true there. */
 	const [statusSheetOpen, setStatusSheetOpen] = useState(false);
 
-	const [modelsOpen, setModelsOpen] = useState(false);
-	const [effortOpen, setEffortOpen] = useState(false);
+	/** The run-settings sheet (model and effort, one sheet since issue #325)
+	 *  and the read-only folder sheet behind the composer's two icons. */
+	const [runSettingsOpen, setRunSettingsOpen] = useState(false);
+	const [folderOpen, setFolderOpen] = useState(false);
 	/* A refused `set_model`/`set_effort` (409 on a session that ended under the
 	 *  sheet, a dropped route) was a silent `void` (review round 1, m1): the
 	 *  chip kept its old value and nothing said why. It rides the composer's
@@ -380,7 +382,7 @@ function Session() {
 		draftReady: composer.draftReady,
 		attachments: composer.images.length,
 		dictating: composer.voice.phase !== "idle",
-		otherSheetOpen: modelsOpen || effortOpen,
+		otherSheetOpen: runSettingsOpen || folderOpen,
 	});
 	/* The asks sheet auto-opens on a conversation opened with questions waiting;
 	 *  a remote relay that forwards no ask op must not open a sheet of answer
@@ -449,8 +451,8 @@ function Session() {
 		projection: runtime.projection,
 		anchorVisible: completionVisible,
 		blocked: overlaysBlocked({
-			models: modelsOpen,
-			effort: effortOpen,
+			runSettings: runSettingsOpen,
+			folder: folderOpen,
 			panel: openPanel !== null,
 			asks: asksOpen,
 			slash: slash !== null,
@@ -549,6 +551,11 @@ function Session() {
 									ownerLabel,
 								),
 				};
+
+	/* The folder this conversation runs in, for the composer's read-only folder
+	 *  control: the projection's, else the list row's (a durable fold carries an
+	 *  empty one — TestFlight 578, as the pending card's risk line reads it). */
+	const sessionCwd = projection?.cwd || listRow?.cwd || "";
 
 	/* The strip exists when it has something true to say: a context read, or a
 	 * roster. Not before — an empty band on every session is noise, and a band
@@ -1876,8 +1883,21 @@ function Session() {
 						bottomInset={insets.bottom}
 						modelChip={chipLabels.model}
 						effortChip={chipLabels.effort}
-						onOpenModels={() => setModelsOpen(true)}
-						onOpenEffort={() => setEffortOpen(true)}
+						onOpenRunSettings={() => setRunSettingsOpen(true)}
+						/* The folder a running conversation is in, read-only: the
+						 *  relay takes a folder only at start (issue #325). The
+						 *  row's cwd backs a durable fold's empty one, as above. */
+						folder={
+							sessionCwd.length > 0
+								? {
+										name: folderName(sessionCwd, null).name,
+										source: null,
+										editable: false,
+										onPress: () => setFolderOpen(true),
+										testID: CONTROL.composerFolder,
+									}
+								: null
+						}
 						/* Any ask, waiting or timed out: a lapsed-only queue paints no
 						 *  ask bar (build 753), so this row is its door to Dismiss. */
 						questions={(() => {
@@ -1938,12 +1958,31 @@ function Session() {
 				</View>
 			</Sheet>
 
-			<ModelSheet
-				visible={modelsOpen}
-				onClose={() => setModelsOpen(false)}
+			<SessionRunSettingsSheet
+				visible={runSettingsOpen}
+				onClose={() => setRunSettingsOpen(false)}
 				models={runtime.models}
-				selected={projection?.model_selector ?? ""}
-				onPick={(model) => {
+				selectedModel={projection?.model_selector ?? ""}
+				modelLock={settingLock(chipLabels.model)}
+				ladder={effortLadder}
+				selectedEffort={projection?.effort ?? ""}
+				/* No effort chip: a live model without a ladder says so; an ended
+				 *  session that recorded none says to resume, which is the truth
+				 *  about the one thing that could change it. */
+				effortLock={
+					chipLabels.effort === null
+						? ended
+							? {
+									reason: t("mobile.session.chip.effort_resume_hint"),
+									value: null,
+								}
+							: null
+						: settingLock(chipLabels.effort)
+				}
+				effortOffered={
+					chipLabels.effort === null ? ended : effortLadder.length > 0
+				}
+				onPickModel={(model) => {
 					setChipError(null);
 					void runtime.source.endpoints
 						?.command(sessionId, {
@@ -1955,14 +1994,7 @@ function Session() {
 							setChipError(t("mobile.session.chip.model_change_failed")),
 						);
 				}}
-			/>
-
-			<EffortSheet
-				visible={effortOpen && effortLadder.length > 0}
-				onClose={() => setEffortOpen(false)}
-				ladder={effortLadder}
-				selected={projection?.effort ?? ""}
-				onPick={(effort) => {
+				onPickEffort={(effort) => {
 					setChipError(null);
 					void runtime.source.endpoints
 						?.command(sessionId, {
@@ -1973,6 +2005,18 @@ function Session() {
 							setChipError(t("mobile.session.chip.effort_change_failed")),
 						);
 				}}
+			/>
+
+			<FolderPicker
+				visible={folderOpen}
+				onClose={() => setFolderOpen(false)}
+				folders={null}
+				current={sessionCwd.length > 0 ? sessionCwd : null}
+				failure={null}
+				onRetry={() => undefined}
+				retrying={false}
+				editable={false}
+				onPick={() => undefined}
 			/>
 
 			<FindSheet

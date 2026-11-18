@@ -47,11 +47,7 @@ import {
 	restoredSupersede,
 } from "@/features/home/home-defaults";
 import { HomeStateMarkers } from "@/features/home/home-markers";
-import {
-	EffortPicker,
-	FolderPicker,
-	ModelPicker,
-} from "@/features/home/home-pickers";
+import { FolderPicker, RunSettingsPicker } from "@/features/home/home-pickers";
 import { HomeRecovery, HomeSplash } from "@/features/home/home-splash";
 import {
 	type CatalogueDefault,
@@ -59,7 +55,8 @@ import {
 	effortAfterModelChange,
 	effortOffer,
 	homeChips,
-	homeFolderChip,
+	homeFolderControl,
+	homeRunSettingsCustom,
 } from "@/features/home/picker-model";
 import { useHomeDrawer } from "@/features/home/use-home-drawer";
 import { startupEchoes } from "@/features/new-session/startup-echoes";
@@ -207,10 +204,9 @@ export default function Home({
 	const workspaceDrawer = useWorkspaceDrawer();
 	const { close: closeDrawer, newChatRequest } = workspaceDrawer;
 	useHomeDrawer(forcePanelOpen, split);
-	/** Which of the three pickers is open — one at a time, each its own sheet. */
-	const [picker, setPicker] = useState<"folder" | "model" | "effort" | null>(
-		null,
-	);
+	/** Which picker is open — the folder sheet or the one run-settings sheet
+	 *  (model and effort, issue #325) — one at a time. */
+	const [picker, setPicker] = useState<"folder" | "run" | null>(null);
 	const [queueOpen, setQueueOpen] = useState(false);
 	const [running, setRunning] = useState(false);
 	const [models, setModels] = useState<ModelEntry[]>([]);
@@ -1074,31 +1070,28 @@ export default function Home({
 						: undefined
 				}
 				queuedCount={startup.snapshot.queue.length}
-				/* The folder is data, not an element: the composer's meta line
-				 *  decides whether it paints the path or only the folder glyph
-				 *  (record §2.2 yield order). Paint, target, hint and the options
-				 *  sheet behind it are unchanged (final audit, D2). */
-				folderChip={
+				/* The folder is data, not an element: the composer's row decides
+				 *  whether its icon fits or it waits in More (issue #325). Its
+				 *  sheet shows the full path, and the choices while they apply. */
+				folder={
 					startFolder !== null
 						? {
-								/* The folder's own name, shortened against the COMPUTER's home
-								 *  (`folders.home`). It was shortened against `homeDirectory` —
-								 *  the folder the next start names, i.e. itself — so every pick
-								 *  painted `~` while the spoken label named the real path (UX
-								 *  U1). The composer adds the glyph and decides when the name
-								 *  yields (design D2). */
-								...homeFolderChip(startFolder, folders?.home ?? null),
+								...homeFolderControl(startFolder, folders),
+								editable: selectionEditable,
 								onPress: () => setPicker("folder"),
-								accessibilityHint: "Choose another folder",
-								testID: CONTROL.homeTargetFolder,
+								testID: CONTROL.homeFolderChip,
 							}
 						: null
 				}
 				bottomInset={insets.bottom}
 				modelChip={chips.model}
 				effortChip={chips.effort}
-				onOpenModels={() => setPicker("model")}
-				onOpenEffort={() => setPicker("effort")}
+				onOpenRunSettings={() => setPicker("run")}
+				runSettingsCustom={homeRunSettingsCustom({
+					chosenModel,
+					chosenEffort,
+					offer,
+				})}
 				slashQuery={null}
 				slashSheet={null}
 				fieldRef={fieldRef}
@@ -1197,10 +1190,10 @@ export default function Home({
 				)}
 			</Screen>
 
-			{/* The three pickers, each its own sheet (the operator: "a separate dialog to
-			 *  handle directory vs model vs effort selection instead of having one
-			 *  overloaded popup"). Each opens on what will actually be sent — the folder
-			 *  the start names, the model and effort THE READER chose (`null` when they
+			{/* The folder sheet and the run-settings sheet (issue #325: the folder,
+			 *  then the model and effort together — the relay's two kinds of run
+			 *  parameter). Each opens on what will actually be sent — the folder the
+			 *  start names, the model and effort THE READER chose (`null` when they
 			 *  chose none, so nothing is marked as theirs on their behalf). */}
 			<FolderPicker
 				visible={picker === "folder"}
@@ -1219,43 +1212,41 @@ export default function Home({
 				editable={selectionEditable}
 				onPick={(cwd) => commit({ cwd })}
 			/>
-			<ModelPicker
-				visible={picker === "model"}
+			<RunSettingsPicker
+				visible={picker === "run"}
 				onClose={() => setPicker(null)}
-				models={models}
-				rows={modelRows}
-				chosen={chosenModel !== null}
-				loading={modelsRead === "loading"}
-				failure={modelsRead === "failed" ? modelsReadFailed() : null}
-				onRetry={retryModels}
-				retrying={modelsSettled !== modelsAttempt}
 				editable={selectionEditable}
-				onPick={(model) =>
-					commit({
-						model,
-						/* A new model keeps the reader's effort only while its ladder
-						 *  still offers it; otherwise the start names none and the
-						 *  computer applies its configured level, clamped (spec item 5). */
-						effort: effortAfterModelChange(
-							chosenEffort,
-							effortOffer({
-								supported: effortSupported,
-								chosenModel: model,
-								models,
-								catalogueDefault,
-							}),
-						),
-					})
-				}
-			/>
-			<EffortPicker
-				visible={picker === "effort"}
-				onClose={() => setPicker(null)}
-				offer={offer}
-				chosen={chosenEffort}
-				defaultEffort={defaultEffort}
-				editable={selectionEditable}
-				onPick={(effort) => commit({ effort })}
+				model={{
+					models,
+					rows: modelRows,
+					chosen: chosenModel !== null,
+					loading: modelsRead === "loading",
+					failure: modelsRead === "failed" ? modelsReadFailed() : null,
+					onRetry: retryModels,
+					retrying: modelsSettled !== modelsAttempt,
+					onPick: (model) =>
+						commit({
+							model,
+							/* A new model keeps the reader's effort only while its ladder
+							 *  still offers it; otherwise the start names none and the
+							 *  computer applies its configured level, clamped (spec item 5). */
+							effort: effortAfterModelChange(
+								chosenEffort,
+								effortOffer({
+									supported: effortSupported,
+									chosenModel: model,
+									models,
+									catalogueDefault,
+								}),
+							),
+						}),
+				}}
+				effort={{
+					offer,
+					chosen: chosenEffort,
+					defaultEffort,
+					onPick: (effort) => commit({ effort }),
+				}}
 			/>
 
 			<Sheet

@@ -1,14 +1,18 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import type { ReactNode } from "react";
+import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
+import type { RunSettingLock } from "@/features/session/composer-controls";
 import { t } from "@/i18n";
 import { effortRungId, modelOptionId, ROLE, SURFACE, state } from "@/ui/a11y";
 import { Sheet } from "@/ui/components";
 import { Badge } from "@/ui/components/badge";
+import { SectionHeader } from "@/ui/components/section-header";
 import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
 
 /**
- * The model and effort sheets (`docs/ux/flows.md` F-6.7).
+ * The run-settings sheet: the model list and the effort rungs, together
+ * (`docs/ux/flows.md` F-6.7; issue #325).
  *
  * **The array's order IS the ranking** (`contract.md` §3.9): the daemon ranks the
  * catalogue, so this renders it as given and never re-sorts. Grouping by provider
@@ -20,16 +24,6 @@ import { CONTROL_DISABLED_INK, cx } from "@/ui/variants";
  * "why is my model missing", and hiding it turns a diagnosable state into an
  * absence.
  */
-export type ModelSheetProps = {
-	visible: boolean;
-	onClose: () => void;
-	models: ModelEntry[];
-	/** The projection's `model_selector` (`provider/model_id`). */
-	selected: string;
-	loading?: boolean;
-	onPick: (model: ModelEntry) => void;
-};
-
 interface ProviderGroup {
 	provider: string;
 	models: ModelEntry[];
@@ -137,69 +131,6 @@ export const ModelOptionRow = ({
 	);
 };
 
-export const ModelSheet = ({
-	visible,
-	onClose,
-	models,
-	selected,
-	loading = false,
-	onPick,
-}: ModelSheetProps) => {
-	const groups = groupByProvider(models);
-	return (
-		<Sheet
-			visible={visible}
-			onClose={onClose}
-			title={t("mobile.session.sheet_title.model")}
-			testID={SURFACE.modelSheet}
-		>
-			<ScrollView className="max-h-96">
-				{groups.map((group) => (
-					<View key={group.provider}>
-						<Text className="px-3 pt-2 pb-1 text-meta text-ink-dim">
-							{group.provider}
-						</Text>
-						{group.models.map((model) => (
-							<ModelOptionRow
-								key={selectorOf(model)}
-								model={model}
-								selected={selectorOf(model) === selected}
-								onPress={() => {
-									onPick(model);
-									onClose();
-								}}
-							/>
-						))}
-					</View>
-				))}
-				{loading ? (
-					<Text className="px-3 py-2 text-body-sm text-ink-dim">loading…</Text>
-				) : models.length === 0 ? (
-					<Text className="px-3 py-2 text-body-sm text-ink-dim">
-						no models available
-					</Text>
-				) : null}
-			</ScrollView>
-		</Sheet>
-	);
-};
-
-/**
- * The effort rungs.
- *
- * Discrete rungs from the projection's own ladder, not a slider: the ladder is the
- * daemon's vocabulary and a slider would invent values between two rungs that no
- * provider accepts. An empty ladder means the selected model has no effort control,
- * which the caller must handle rather than opening an empty sheet.
- */
-export type EffortSheetProps = {
-	visible: boolean;
-	onClose: () => void;
-	ladder: string[];
-	selected: string;
-	onPick: (effort: string) => void;
-};
-
 /**
  * One effort rung: a radio dot and the rung's name. Shared by the session's effort
  * sheet (which shows the daemon's word, `label === rung`) and the home's effort
@@ -266,32 +197,186 @@ export const EffortRungRow = ({
 	</Pressable>
 );
 
-export const EffortSheet = ({
+/**
+ * The ONE sheet behind the composer's model-and-effort control (issue #325),
+ * shared by the home and the session so the two read as one surface.
+ *
+ * WHY ONE SHEET. The relay accepts exactly two run parameters besides the
+ * folder — the model and the effort (`provider`/`model_id`/`effort` at start,
+ * `set_model`/`set_effort` in a session) — and the effort's ladder is the
+ * MODEL's, so they are one question answered in two parts. The two chips that
+ * opened two sheets were cut to `Claude` on iOS.
+ *
+ * MODEL FIRST, as in the control's spoken name and the dependency: picking a
+ * model changes which rungs the effort section offers. A pick COMMITS and the
+ * sheet stays open — the ✓ moves under the thumb that pressed it — so a model
+ * and its effort can be set in one visit; the sheet's Close (or the scrim)
+ * dismisses it. Each section keeps the old sheet's id (`modelTestID`,
+ * `effortTestID`), so a flow that asked for the model sheet finds the list.
+ */
+export const RunSettingsSheet = ({
 	visible,
 	onClose,
-	ladder,
-	selected,
-	onPick,
-}: EffortSheetProps) => (
+	headings,
+	preface = null,
+	model,
+	effort,
+	modelTestID,
+	effortTestID,
+}: {
+	visible: boolean;
+	onClose: () => void;
+	/** The two section headings, in the host's own catalogue words. */
+	headings: { model: string; effort: string };
+	/** A line that applies to both sections (the home's "options are fixed"). */
+	preface?: ReactNode;
+	model: ReactNode;
+	effort: ReactNode;
+	modelTestID: string;
+	effortTestID: string;
+}) => (
 	<Sheet
 		visible={visible}
 		onClose={onClose}
-		title={t("mobile.session.sheet_title.effort")}
-		testID={SURFACE.effortSheet}
+		title={t("mobile.chrome.composer.run_settings_title")}
+		/* Two lines, not an ellipsis, at 320 pt and 200 % text (the sidebar
+		 *  view sheet's rule, QA round 1 Q2). */
+		titleLines={2}
+		testID={SURFACE.runSettingsSheet}
 	>
-		<View className="py-1">
-			{ladder.map((rung) => (
-				<EffortRungRow
-					key={rung}
-					rung={rung}
-					label={rung}
-					selected={rung === selected}
-					onPress={() => {
-						onPick(rung);
-						onClose();
-					}}
-				/>
-			))}
+		{preface}
+		<View testID={modelTestID}>
+			{/* On the rows' own 12 pt inset, so a heading and its rows share one
+			 *  leading edge. */}
+			<View className="px-3">
+				<SectionHeader label={headings.model} />
+			</View>
+			{model}
+		</View>
+		<View testID={effortTestID}>
+			<View className="px-3">
+				<SectionHeader label={headings.effort} />
+			</View>
+			{effort}
 		</View>
 	</Sheet>
 );
+
+/** The read-only form of a section: the reason, then the value, never a list of
+ *  rows that are all disabled. */
+const LockedSetting = ({ lock }: { lock: RunSettingLock }) => (
+	<View className="gap-1 px-3 pb-2">
+		<Text className="text-body-sm text-ink-muted">{lock.reason}</Text>
+		{lock.value !== null ? (
+			<Text className="text-body text-ink">{lock.value}</Text>
+		) : null}
+	</View>
+);
+
+/**
+ * The SESSION's run-settings sheet: the projection's model and ladder, applied
+ * with `set_model` / `set_effort` as the old two sheets did.
+ *
+ * **The array's order IS the ranking** (`contract.md` §3.9): models render as
+ * given, grouped by provider in first-seen order. Discrete rungs from the
+ * projection's own ladder, not a slider: a slider would invent values between
+ * two rungs no provider accepts.
+ */
+export const SessionRunSettingsSheet = ({
+	visible,
+	onClose,
+	models,
+	selectedModel,
+	loading = false,
+	modelLock,
+	ladder,
+	selectedEffort,
+	effortLock,
+	effortOffered,
+	onPickModel,
+	onPickEffort,
+}: {
+	visible: boolean;
+	onClose: () => void;
+	models: ModelEntry[];
+	/** The projection's `model_selector` (`provider/model_id`). */
+	selectedModel: string;
+	loading?: boolean;
+	/** Set when the model cannot change here; the section is then read-only. */
+	modelLock: RunSettingLock | null;
+	ladder: string[];
+	selectedEffort: string;
+	effortLock: RunSettingLock | null;
+	/** `false` when the model has no effort control at all (an empty ladder on a
+	 *  live session): the section says so rather than drawing nothing. */
+	effortOffered: boolean;
+	onPickModel: (model: ModelEntry) => void;
+	onPickEffort: (effort: string) => void;
+}) => {
+	const groups = groupByProvider(models);
+	return (
+		<RunSettingsSheet
+			visible={visible}
+			onClose={onClose}
+			headings={{
+				model: t("mobile.session.sheet_title.model"),
+				effort: t("mobile.session.sheet_title.effort"),
+			}}
+			modelTestID={SURFACE.modelSheet}
+			effortTestID={SURFACE.effortSheet}
+			model={
+				modelLock !== null ? (
+					<LockedSetting lock={modelLock} />
+				) : (
+					<>
+						{groups.map((group) => (
+							<View key={group.provider}>
+								<Text className="px-3 pt-2 pb-1 text-meta text-ink-dim">
+									{group.provider}
+								</Text>
+								{group.models.map((model) => (
+									<ModelOptionRow
+										key={selectorOf(model)}
+										model={model}
+										selected={selectorOf(model) === selectedModel}
+										onPress={() => onPickModel(model)}
+									/>
+								))}
+							</View>
+						))}
+						{loading ? (
+							<Text className="px-3 py-2 text-body-sm text-ink-dim">
+								{t("mobile.home.picker.loading")}
+							</Text>
+						) : models.length === 0 ? (
+							<Text className="px-3 py-2 text-body-sm text-ink-dim">
+								{t("mobile.home.picker.model_empty")}
+							</Text>
+						) : null}
+					</>
+				)
+			}
+			effort={
+				!effortOffered ? (
+					<Text className="px-3 pb-2 text-body-sm text-ink-muted">
+						{t("mobile.home.picker.effort_none")}
+					</Text>
+				) : effortLock !== null ? (
+					<LockedSetting lock={effortLock} />
+				) : (
+					<View accessibilityRole={ROLE.radiogroup} className="py-1">
+						{ladder.map((rung) => (
+							<EffortRungRow
+								key={rung}
+								rung={rung}
+								label={rung}
+								selected={rung === selectedEffort}
+								onPress={() => onPickEffort(rung)}
+							/>
+						))}
+					</View>
+				)
+			}
+		/>
+	);
+};

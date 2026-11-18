@@ -292,8 +292,8 @@ const NAMESPACES = [
 		// (build 753); +1 the search pill's "Clear search" (TestFlight 906).
 		// Issue #325: +7 the folder and run-settings icon controls (two spoken
 		// names, two hints, the run-settings sheet title, More's Folder row and
-		// the folder's read-only hint) = 34.
-		expected: 34,
+		// the folder's read-only hint) = 34; -1 More's retired Effort row = 33.
+		expected: 33,
 	},
 	{
 		/* The shared date/time words (O3-a): inbox and Team Bridge day buckets,
@@ -570,8 +570,10 @@ describe("the English catalogues", () => {
 		// generate.ts over the merged tree.
 		// Issue #325 (composer icon controls): +7 mobile.chrome, +3 mobile.home
 		// (the folder sheet's header label, its spoken form and the read-only
-		// line) on 1128 = 1138, re-derived with generate.ts.
-		expect(total).toBe(1138);
+		// line) on 1128 = 1138, re-derived with generate.ts; -1 the retired
+		// mobile.chrome.composer.row_effort (effort lives in the run-settings
+		// sheet now) = 1137.
+		expect(total).toBe(1137);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -721,8 +723,6 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Mirrored from the core relay's French catalogue, which keeps « Tags » (the app's own tag vocabulary in French).",
 		"mobile.chrome.destinations":
 			"« Destinations » is the French word for the same set of places.",
-		"mobile.chrome.composer.row_effort":
-			"« Effort » is the French word, and the one the French effort chip already uses (« Effort par défaut »).",
 		"mobile.chrome.composer.row_questions":
 			"« Questions » is the French plural of « question », spelled as in English.",
 		"mobile.session.sheet_title.effort":

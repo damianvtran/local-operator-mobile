@@ -67,15 +67,15 @@ describe("native conversation chrome", () => {
 });
 
 describe("final design audit wiring", () => {
-	it("gives the home folder chip the same quiet treatment as the model chip", () => {
+	it("draws the home's folder and the run settings as the same icon control", () => {
 		const source = readFileSync(
 			new URL("../../features/home/home.tsx", import.meta.url),
 			"utf8",
 		);
-		/* The home passes its folder as DATA since the 2026-11-04 composer
-		 *  restructure (the meta line decides glyph-only vs path); the chip itself
-		 *  is drawn by the composer, so its paint is asserted there. */
-		expect(source).toContain("testID: CONTROL.homeTargetFolder");
+		/* The home passes its folder as DATA (the composer's plan decides whether
+		 *  the icon is on the row or a row in More, issue #325), under the id the
+		 *  folder chip had. */
+		expect(source).toContain("testID: CONTROL.homeFolderChip");
 		const composer = readFileSync(
 			new URL(
 				"../../features/session/components/composer.tsx",
@@ -83,22 +83,30 @@ describe("final design audit wiring", () => {
 			),
 			"utf8",
 		);
-		/* Since the pickers' round-1 remediation the folder chip lives in the strip
-		 *  only (UX U5 dropped More's copy), drawn by `ComposerChipButton` — the
-		 *  same quiet chip as the model's. D2: one row of disclosures must not mix
-		 *  a filled bordered chip with flat text. */
-		expect(composer).not.toContain("testID={folderChip.testID}");
-		const at = composer.indexOf("testID={CONTROL.homeFolderChip}");
-		const chip = composer.slice(
-			composer.lastIndexOf("<ComposerChipButton", at),
-			at,
+		/* D2's rule survives the chips: one row of disclosures does not mix two
+		 *  treatments. Both are `ComposerIconControl` — the kit's `IconButton` —
+		 *  the folder under its host's id, the run settings under the model
+		 *  chip's id. */
+		const zone = composer.slice(
+			composer.indexOf("const controlZone = ("),
+			composer.indexOf("const clearDraft ="),
 		);
-		expect(chip).toContain("onPress={folderChip.onPress}");
-		const button = composer.slice(
-			composer.indexOf("const ComposerChipButton"),
-			composer.indexOf("const stripChipSurface"),
+		const folder = zone.indexOf("testID={folder.testID}");
+		const settings = zone.indexOf("testID={CONTROL.composerModelChip}");
+		expect(folder).toBeGreaterThan(-1);
+		expect(settings).toBeGreaterThan(folder);
+		expect(zone.lastIndexOf("<ComposerIconControl", folder)).toBeGreaterThan(
+			-1,
 		);
-		expect(button.slice(button.lastIndexOf("<Chip"))).toContain("quiet");
+		expect(
+			zone.slice(zone.lastIndexOf("<ComposerIconControl", settings), settings),
+		).toContain("onPress={onOpenRunSettings}");
+		const control = composer.slice(
+			composer.indexOf("const ComposerIconControl"),
+			composer.indexOf("/** The failure notice's row floor:"),
+		);
+		expect(control).toContain("<IconButton");
+		expect(control).not.toContain("<Chip");
 	});
 
 	it("keeps the home header's computer on ONE fitted line", () => {
