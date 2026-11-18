@@ -840,7 +840,7 @@ export const ConversationsPane = ({
 				 *    blurs, and only an Escape on an empty, unfocused field closes the
 				 *    drawer (`search-escape.ts`, Q1). Blurring KEEPS the query: the
 				 *    filtered list is what they were looking for, and `×` or the empty
-				 *    state's "Clear the search" undoes it.
+				 *    state's Clear search action undoes it.
 				 *  - The empty field states the page's direction (`useComposedDir`) so
 				 *    an RTL locale's placeholder sits on the right, as `Input` does. */}
 				<Pressable
@@ -1344,10 +1344,10 @@ const PaneEmpty = ({
 	if (query.trim().length > 0) {
 		return (
 			<EmptyState
-				headline="Nothing matches that."
-				next="Search covers the loaded sessions' names, ids and folders."
+				headline={t("mobile.common.no_matches")}
+				next={t("mobile.sidebar.empty.search_next")}
 				action={{
-					label: "Clear the search",
+					label: t("mobile.chrome.clear_search"),
 					/* A control that renders and does nothing when pressed is the defect this
 					 *  replaces: this shipped as `onPress: () => undefined`. The predicate is
 					 *  the one this branch renders on, passed through so the button's enabled
@@ -1363,10 +1363,10 @@ const PaneEmpty = ({
 	if (!hasRoute) {
 		return (
 			<EmptyState
-				headline="No computer is connected yet."
-				next="This app drives the sessions on your own computer, so it needs one first."
+				headline={t("mobile.sidebar.empty.no_route_headline")}
+				next={t("mobile.sidebar.empty.no_route_next")}
 				action={{
-					label: "Connect a computer",
+					label: t("mobile.chrome.home.connect"),
 					onPress: onConnect,
 					testID: CONTROL.sessionsConnectAction,
 				}}
@@ -1376,10 +1376,10 @@ const PaneEmpty = ({
 	}
 	return (
 		<EmptyState
-			headline="No sessions yet."
-			next="A session is one conversation with the agent on your machine. Start one and it will appear here."
+			headline={t("mobile.sidebar.empty.none_headline")}
+			next={t("mobile.sidebar.empty.none_next")}
 			action={{
-				label: "New chat",
+				label: t("mobile.chrome.new_chat"),
 				onPress: onNew,
 				testID: CONTROL.sessionsNewAction,
 			}}
