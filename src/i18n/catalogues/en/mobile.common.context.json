@@ -37,7 +37,7 @@
 	},
 	"mobile.common.not_found.action": {
 		"role": "button",
-		"note": "Button on the not-found screen that goes to the session list. Short, no final full stop."
+		"note": "Button that goes back to the session list. Used on the not-found screen and as the action of the Past sessions screen's empty state ('No past conversations yet.'). Short, no final full stop."
 	},
 	"mobile.common.copy": {
 		"role": "button",
@@ -58,5 +58,9 @@
 	"mobile.common.loading": {
 		"role": "status",
 		"note": "Screen-reader name announced for a loading skeleton placeholder on any screen. Status word, no trailing ellipsis; keep under ~16 characters. No placeholders."
+	},
+	"mobile.common.no_matches": {
+		"role": "heading",
+		"note": "Headline of the empty state shown when a search finds nothing (the sidebar's conversation search and the Past sessions search). Plain statement, keep the final full stop. No placeholders."
 	}
 }

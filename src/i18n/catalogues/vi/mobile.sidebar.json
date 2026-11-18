@@ -40,5 +40,15 @@
 	"mobile.sidebar.row.asks": "{count, plural, other {# câu hỏi}}",
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, tác nhân vẫn chạy tiếp",
 	"mobile.sidebar.row.agents": "{count, plural, other {# tác nhân}}",
-	"mobile.sidebar.row.todos": "{count, plural, other {# tác vụ}}"
+	"mobile.sidebar.row.todos": "{count, plural, other {# tác vụ}}",
+	"mobile.sidebar.menu.pin": "Ghim lên đầu",
+	"mobile.sidebar.menu.unpin": "Bỏ ghim",
+	"mobile.sidebar.menu.move": "Di chuyển hoặc sao chép…",
+	"mobile.sidebar.menu.tags": "Nhãn…",
+	"mobile.sidebar.menu.open": "Mở",
+	"mobile.sidebar.empty.search_next": "Tìm kiếm trong tên, ID và thư mục của các phiên đã tải.",
+	"mobile.sidebar.empty.no_route_headline": "Chưa có máy tính nào được kết nối.",
+	"mobile.sidebar.empty.no_route_next": "Ứng dụng này điều khiển các phiên trên máy tính của chính bạn, nên trước tiên cần có một máy tính.",
+	"mobile.sidebar.empty.none_headline": "Chưa có phiên nào.",
+	"mobile.sidebar.empty.none_next": "Mỗi phiên là một cuộc trò chuyện với tác nhân trên máy tính của bạn. Hãy bắt đầu một phiên và phiên đó sẽ xuất hiện ở đây."
 }

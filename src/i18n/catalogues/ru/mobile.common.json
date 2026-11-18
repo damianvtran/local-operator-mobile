@@ -13,5 +13,6 @@
 	"mobile.common.copied": "Скопировано",
 	"mobile.common.copy_command_hint": "Копирует команду «{label}»",
 	"mobile.common.close": "Закрыть",
-	"mobile.common.loading": "Загрузка"
+	"mobile.common.loading": "Загрузка",
+	"mobile.common.no_matches": "Ничего не найдено."
 }

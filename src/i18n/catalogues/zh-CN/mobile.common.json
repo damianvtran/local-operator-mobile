@@ -13,5 +13,6 @@
 	"mobile.common.copied": "已复制",
 	"mobile.common.copy_command_hint": "复制“{label}”命令",
 	"mobile.common.close": "关闭",
-	"mobile.common.loading": "正在加载"
+	"mobile.common.loading": "正在加载",
+	"mobile.common.no_matches": "没有匹配的结果。"
 }

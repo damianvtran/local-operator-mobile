@@ -157,8 +157,12 @@ describe("D8: the row owns the gutter in the conversations pane", () => {
 		expect(pane).not.toContain("marginHorizontal: -16");
 	});
 	it("pads section headers, the stale line and the empty state themselves", () => {
+		/* The gutter, then the title column (`section-indent.test.ts`). */
 		expect(pane).toContain(
-			'<View className="px-4"> <SectionHeader label={item.label} testID={item.testID} /> </View>',
+			'<View className="px-4"> <View style={{ paddingStart:',
+		);
+		expect(pane).toContain(
+			"<SectionHeader label={item.label} testID={item.testID} /> </View> </View>",
 		);
 		expect(pane).toContain('<View className="px-4 pt-2">');
 		expect(pane).toContain('"flex-none px-4" : "flex-1 px-4"');

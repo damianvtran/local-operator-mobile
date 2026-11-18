@@ -40,5 +40,15 @@
 	"mobile.sidebar.row.asks": "{count, plural, one {# सवाल} other {# सवाल}}",
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, एजेंट रुका नहीं है",
 	"mobile.sidebar.row.agents": "{count, plural, one {# एजेंट} other {# एजेंट}}",
-	"mobile.sidebar.row.todos": "{count, plural, one {# कार्य} other {# कार्य}}"
+	"mobile.sidebar.row.todos": "{count, plural, one {# कार्य} other {# कार्य}}",
+	"mobile.sidebar.menu.pin": "सबसे ऊपर पिन करें",
+	"mobile.sidebar.menu.unpin": "पिन हटाएँ",
+	"mobile.sidebar.menu.move": "ले जाएँ या कॉपी करें…",
+	"mobile.sidebar.menu.tags": "टैग…",
+	"mobile.sidebar.menu.open": "खोलें",
+	"mobile.sidebar.empty.search_next": "खोज लोड किए गए सत्रों के नाम, आईडी और फ़ोल्डर में होती है।",
+	"mobile.sidebar.empty.no_route_headline": "अभी कोई कंप्यूटर कनेक्ट नहीं है।",
+	"mobile.sidebar.empty.no_route_next": "यह ऐप आपके अपने कंप्यूटर के सत्र चलाता है, इसलिए पहले उसे एक कंप्यूटर चाहिए।",
+	"mobile.sidebar.empty.none_headline": "अभी कोई सत्र नहीं।",
+	"mobile.sidebar.empty.none_next": "सत्र आपके कंप्यूटर पर एजेंट के साथ एक बातचीत है। एक शुरू करें, वह यहाँ दिखेगा।"
 }
