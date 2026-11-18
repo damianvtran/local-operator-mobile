@@ -25,5 +25,12 @@
 	"mobile.chrome.composer.row_usage": "سیاق",
 	"mobile.chrome.composer.row_cost": "لاگت",
 	"mobile.chrome.composer.row_queue": "قطار",
-	"mobile.chrome.composer.row_questions": "سوالات"
+	"mobile.chrome.composer.row_questions": "سوالات",
+	"mobile.chrome.composer.folder": "{source, select, chosen {فولڈر، {folder}، اس گفتگو کے لیے منتخب} default {فولڈر، {folder}، اس کمپیوٹر کا ڈیفالٹ} other {فولڈر، {folder}}}",
+	"mobile.chrome.composer.folder_hint": "دوسرا فولڈر منتخب کریں",
+	"mobile.chrome.composer.folder_hint_fixed": "اس گفتگو کے فولڈر کا پورا پاتھ دکھاتا ہے",
+	"mobile.chrome.composer.run_settings": "{model}، {effort}",
+	"mobile.chrome.composer.run_settings_hint": "ماڈل اور استدلال کی شدت منتخب کریں",
+	"mobile.chrome.composer.run_settings_title": "ماڈل اور استدلال کی شدت",
+	"mobile.chrome.composer.row_folder": "فولڈر"
 }

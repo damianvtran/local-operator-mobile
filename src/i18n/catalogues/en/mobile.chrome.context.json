@@ -106,5 +106,33 @@
 	"mobile.chrome.composer.row_questions": {
 		"role": "meta",
 		"note": "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon."
+	},
+	"mobile.chrome.composer.folder": {
+		"role": "button",
+		"note": "Spoken name of the composer's icon-only folder button (screen readers; never painted). {folder} is the folder's own name, a file-system path segment such as local-operator or ~, copied verbatim and never translated. {source} is a fixed selector: chosen = the reader picked this folder for the next conversation, default = it is the connected computer's own default folder, other = unknown (a running conversation). Keep the three arms' shape and the comma-separated, list-like reading of the model button (mobile.home.chip.model_chosen)."
+	},
+	"mobile.chrome.composer.folder_hint": {
+		"role": "help",
+		"note": "Screen-reader hint on the composer's folder button where the folder can still change: the button opens a sheet listing the computer's folders. Imperative, no final full stop."
+	},
+	"mobile.chrome.composer.folder_hint_fixed": {
+		"role": "help",
+		"note": "Screen-reader hint on the composer's folder button once the conversation has started and its folder can no longer change: the button opens a read-only sheet with the full path. Describes what the button does; no final full stop."
+	},
+	"mobile.chrome.composer.run_settings": {
+		"role": "button",
+		"note": "Spoken name of the composer's icon-only model-and-effort button (screen readers; never painted). {model} and {effort} are two already-translated phrases, for example 'Model, Opus 5, chosen for this conversation' and 'Effort, High'. Only the joining punctuation and order are translatable: keep model first, use the list separator natural in your language."
+	},
+	"mobile.chrome.composer.run_settings_hint": {
+		"role": "help",
+		"note": "Screen-reader hint on the composer's model-and-effort button: it opens one sheet listing the models and the reasoning-effort levels. 'Effort' is the same term as mobile.home.picker.effort_title. Imperative, no final full stop."
+	},
+	"mobile.chrome.composer.run_settings_title": {
+		"role": "heading",
+		"note": "Title of the sheet that holds both the model list and the reasoning-effort levels for a conversation. Use the same words as mobile.home.picker.model_title and mobile.home.picker.effort_title. Short: it is one line on a 320 pt phone."
+	},
+	"mobile.chrome.composer.row_folder": {
+		"role": "meta",
+		"note": "Row label in the composer's More sheet, shown only when the folder button does not fit on a narrow phone; the folder's name is shown at the other end of the same row and tapping the row opens the folder sheet. A noun, no colon."
 	}
 }

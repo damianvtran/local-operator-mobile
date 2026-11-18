@@ -25,5 +25,12 @@
 	"mobile.chrome.composer.row_usage": "Contexto",
 	"mobile.chrome.composer.row_cost": "Costo",
 	"mobile.chrome.composer.row_queue": "Cola",
-	"mobile.chrome.composer.row_questions": "Preguntas"
+	"mobile.chrome.composer.row_questions": "Preguntas",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Carpeta, {folder}, elegida para esta conversación} default {Carpeta, {folder}, predeterminada de esta máquina} other {Carpeta, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Elige otra carpeta",
+	"mobile.chrome.composer.folder_hint_fixed": "Muestra la ruta completa de la carpeta de esta conversación",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Elige el modelo y el esfuerzo",
+	"mobile.chrome.composer.run_settings_title": "Modelo y esfuerzo",
+	"mobile.chrome.composer.row_folder": "Carpeta"
 }

@@ -64,5 +64,8 @@
 	"mobile.home.tip.search": "گزشتہ گفتگو تلاش کر کے سیشن دوبارہ کھولیں",
 	"mobile.home.transcript.waiting": "گفتگو کا انتظار…",
 	"mobile.home.transcript.needs_answer": "آپ کے جواب کی ضرورت ہے",
-	"mobile.home.chip.model_default_short": "ڈیفالٹ ماڈل"
+	"mobile.home.chip.model_default_short": "ڈیفالٹ ماڈل",
+	"mobile.home.picker.folder_current": "موجودہ فولڈر",
+	"mobile.home.picker.folder_fixed": "گفتگو اسی فولڈر میں رہتی ہے جس میں وہ شروع ہوئی تھی۔ دوسرا فولڈر استعمال کرنے کے لیے نئی چیٹ شروع کریں۔",
+	"mobile.home.picker.folder_current_label": "موجودہ فولڈر، {path}"
 }

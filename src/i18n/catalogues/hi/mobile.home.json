@@ -64,5 +64,8 @@
 	"mobile.home.tip.search": "पुरानी बातचीत खोजकर सत्र फिर खोलें",
 	"mobile.home.transcript.waiting": "बातचीत का इंतज़ार…",
 	"mobile.home.transcript.needs_answer": "आपके जवाब की ज़रूरत है",
-	"mobile.home.chip.model_default_short": "डिफ़ॉल्ट मॉडल"
+	"mobile.home.chip.model_default_short": "डिफ़ॉल्ट मॉडल",
+	"mobile.home.picker.folder_current": "मौजूदा फ़ोल्डर",
+	"mobile.home.picker.folder_fixed": "बातचीत उसी फ़ोल्डर में रहती है जिसमें वह शुरू हुई थी। दूसरा फ़ोल्डर इस्तेमाल करने के लिए नई चैट शुरू करें।",
+	"mobile.home.picker.folder_current_label": "मौजूदा फ़ोल्डर, {path}"
 }

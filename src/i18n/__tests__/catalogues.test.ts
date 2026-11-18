@@ -120,8 +120,10 @@ const NAMESPACES = [
 		 *  effort names and the pickers' copy, and 2 from its round-1 remediation
 		 *  ("Default effort" on the chip, "This computer's level" in the sheet).
 		 *  66 with the startup transcript's compact "Needs your answer" row
-		 *  (TestFlight 906, replacing two hard-coded sentences). */
-		expected: 66,
+		 *  (TestFlight 906, replacing two hard-coded sentences). 69 with the
+		 *  folder sheet's full-path header label, its spoken form and its
+		 *  read-only line (issue #325). */
+		expected: 69,
 	},
 	{
 		name: "mobile.projects",
@@ -288,7 +290,10 @@ const NAMESPACES = [
 		context: chromeContext,
 		// +5: the More sheet's row labels (visual audit D5); +1 its Questions row
 		// (build 753); +1 the search pill's "Clear search" (TestFlight 906).
-		expected: 27,
+		// Issue #325: +7 the folder and run-settings icon controls (two spoken
+		// names, two hints, the run-settings sheet title, More's Folder row and
+		// the folder's read-only hint) = 34.
+		expected: 34,
 	},
 	{
 		/* The shared date/time words (O3-a): inbox and Team Bridge day buckets,
@@ -563,7 +568,10 @@ describe("the English catalogues", () => {
 		// Merge of main into #305 (feat/bridge-mention-suggestions): +9
 		// mobile.team_bridge.mentions.* on main's 1119 = 1128, re-derived with
 		// generate.ts over the merged tree.
-		expect(total).toBe(1128);
+		// Issue #325 (composer icon controls): +7 mobile.chrome, +3 mobile.home
+		// (the folder sheet's header label, its spoken form and the read-only
+		// line) on 1128 = 1138, re-derived with generate.ts.
+		expect(total).toBe(1138);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
@@ -687,6 +695,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		...PROJECT_TAG_EXAMPLE,
 		"mobile.projects.create.description":
 			"Description is the same French word for the project description field, not English fallback.",
@@ -762,6 +772,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,
 		...PROJECT_TAG_EXAMPLE,
 		"mobile.schedules.head.overdue":
@@ -811,6 +823,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,
 		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
@@ -841,6 +855,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,
 		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */
@@ -873,6 +889,8 @@ const IDENTICAL_BY_DESIGN_JUDGED: Readonly<
 			"Radient is the product's name, and every shipped catalogue already keeps it in Latin script inside translated sentences (e.g. the switcher's own section heading); there is no word to translate.",
 		"mobile.session.highlights.withheld_reasons_join":
 			"Placeholder-only list separator, `{first}, {second}` — this locale enumerates with the Latin comma; there is no prose to translate.",
+		"mobile.chrome.composer.run_settings":
+			"Placeholder-only screen-reader name, `{model}, {effort}`: both parts are already-translated phrases and the separator is this locale's Latin comma; there is no prose to translate.",
 		...PROJECT_NAME_EXAMPLE,
 		...PROJECT_TAG_EXAMPLE,
 		/* ASCII example, not an untranslated value */

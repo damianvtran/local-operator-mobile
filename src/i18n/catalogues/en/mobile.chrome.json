@@ -25,5 +25,12 @@
 	"mobile.chrome.composer.row_usage": "Context",
 	"mobile.chrome.composer.row_cost": "Cost",
 	"mobile.chrome.composer.row_queue": "Queue",
-	"mobile.chrome.composer.row_questions": "Questions"
+	"mobile.chrome.composer.row_questions": "Questions",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Folder, {folder}, chosen for this conversation} default {Folder, {folder}, this computer's default} other {Folder, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Choose another folder",
+	"mobile.chrome.composer.folder_hint_fixed": "Shows this conversation's full folder path",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Choose the model and effort",
+	"mobile.chrome.composer.run_settings_title": "Model and effort",
+	"mobile.chrome.composer.row_folder": "Folder"
 }

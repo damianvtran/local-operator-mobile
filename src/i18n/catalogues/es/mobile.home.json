@@ -64,5 +64,8 @@
 	"mobile.home.tip.search": "busca una conversación pasada y reábrela",
 	"mobile.home.transcript.waiting": "Esperando la conversación…",
 	"mobile.home.transcript.needs_answer": "Necesita tu respuesta",
-	"mobile.home.chip.model_default_short": "Modelo predeterminado"
+	"mobile.home.chip.model_default_short": "Modelo predeterminado",
+	"mobile.home.picker.folder_current": "Carpeta actual",
+	"mobile.home.picker.folder_fixed": "Una conversación conserva la carpeta en la que empezó. Para usar otra carpeta, inicia un nuevo chat.",
+	"mobile.home.picker.folder_current_label": "Carpeta actual, {path}"
 }

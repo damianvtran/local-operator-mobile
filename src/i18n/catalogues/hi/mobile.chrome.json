@@ -25,5 +25,12 @@
 	"mobile.chrome.composer.row_usage": "संदर्भ",
 	"mobile.chrome.composer.row_cost": "लागत",
 	"mobile.chrome.composer.row_queue": "कतार",
-	"mobile.chrome.composer.row_questions": "प्रश्न"
+	"mobile.chrome.composer.row_questions": "प्रश्न",
+	"mobile.chrome.composer.folder": "{source, select, chosen {फ़ोल्डर, {folder}, इस बातचीत के लिए चुना गया} default {फ़ोल्डर, {folder}, इस कंप्यूटर का डिफ़ॉल्ट} other {फ़ोल्डर, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "दूसरा फ़ोल्डर चुनें",
+	"mobile.chrome.composer.folder_hint_fixed": "इस बातचीत के फ़ोल्डर का पूरा पाथ दिखाता है",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "मॉडल और प्रयास चुनें",
+	"mobile.chrome.composer.run_settings_title": "मॉडल और प्रयास",
+	"mobile.chrome.composer.row_folder": "फ़ोल्डर"
 }

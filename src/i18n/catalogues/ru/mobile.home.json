@@ -64,5 +64,8 @@
 	"mobile.home.tip.search": "поищите сессию в прошлых беседах",
 	"mobile.home.transcript.waiting": "Ожидание беседы…",
 	"mobile.home.transcript.needs_answer": "Нужен ваш ответ",
-	"mobile.home.chip.model_default_short": "Модель по умолчанию"
+	"mobile.home.chip.model_default_short": "Модель по умолчанию",
+	"mobile.home.picker.folder_current": "Текущая папка",
+	"mobile.home.picker.folder_fixed": "Беседа остаётся в той папке, в которой началась. Чтобы использовать другую папку, начните новый чат.",
+	"mobile.home.picker.folder_current_label": "Текущая папка, {path}"
 }

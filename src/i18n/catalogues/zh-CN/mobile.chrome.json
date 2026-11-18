@@ -25,5 +25,12 @@
 	"mobile.chrome.composer.row_usage": "上下文",
 	"mobile.chrome.composer.row_cost": "费用",
 	"mobile.chrome.composer.row_queue": "队列",
-	"mobile.chrome.composer.row_questions": "问题"
+	"mobile.chrome.composer.row_questions": "问题",
+	"mobile.chrome.composer.folder": "{source, select, chosen {文件夹，{folder}，已为此对话选择} default {文件夹，{folder}，此电脑的默认设置} other {文件夹，{folder}}}",
+	"mobile.chrome.composer.folder_hint": "选择其他文件夹",
+	"mobile.chrome.composer.folder_hint_fixed": "显示此对话文件夹的完整路径",
+	"mobile.chrome.composer.run_settings": "{model}，{effort}",
+	"mobile.chrome.composer.run_settings_hint": "选择模型和推理强度",
+	"mobile.chrome.composer.run_settings_title": "模型和推理强度",
+	"mobile.chrome.composer.row_folder": "文件夹"
 }

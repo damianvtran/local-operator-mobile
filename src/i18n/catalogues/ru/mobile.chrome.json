@@ -25,5 +25,12 @@
 	"mobile.chrome.composer.row_usage": "Контекст",
 	"mobile.chrome.composer.row_cost": "Стоимость",
 	"mobile.chrome.composer.row_queue": "Очередь",
-	"mobile.chrome.composer.row_questions": "Вопросы"
+	"mobile.chrome.composer.row_questions": "Вопросы",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Папка, {folder}, выбрана для этой беседы} default {Папка, {folder}, по умолчанию на этом компьютере} other {Папка, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Выберите другую папку",
+	"mobile.chrome.composer.folder_hint_fixed": "Показывает полный путь к папке этой беседы",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Выберите модель и усилие",
+	"mobile.chrome.composer.run_settings_title": "Модель и усилие",
+	"mobile.chrome.composer.row_folder": "Папка"
 }

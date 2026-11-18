@@ -64,5 +64,8 @@
 	"mobile.home.tip.search": "搜索过往对话以重新打开会话",
 	"mobile.home.transcript.waiting": "正在等待对话……",
 	"mobile.home.transcript.needs_answer": "需要你的回答",
-	"mobile.home.chip.model_default_short": "默认模型"
+	"mobile.home.chip.model_default_short": "默认模型",
+	"mobile.home.picker.folder_current": "当前文件夹",
+	"mobile.home.picker.folder_fixed": "对话会一直使用开始时所在的文件夹。如需使用其他文件夹，请开始新聊天。",
+	"mobile.home.picker.folder_current_label": "当前文件夹，{path}"
 }

@@ -25,5 +25,12 @@
 	"mobile.chrome.composer.row_usage": "Contexte",
 	"mobile.chrome.composer.row_cost": "Coût",
 	"mobile.chrome.composer.row_queue": "File d’attente",
-	"mobile.chrome.composer.row_questions": "Questions"
+	"mobile.chrome.composer.row_questions": "Questions",
+	"mobile.chrome.composer.folder": "{source, select, chosen {Dossier, {folder}, choisi pour cette conversation} default {Dossier, {folder}, par défaut sur cet ordinateur} other {Dossier, {folder}}}",
+	"mobile.chrome.composer.folder_hint": "Choisir un autre dossier",
+	"mobile.chrome.composer.folder_hint_fixed": "Affiche le chemin complet du dossier de cette conversation",
+	"mobile.chrome.composer.run_settings": "{model}, {effort}",
+	"mobile.chrome.composer.run_settings_hint": "Choisir le modèle et l’effort",
+	"mobile.chrome.composer.run_settings_title": "Modèle et effort",
+	"mobile.chrome.composer.row_folder": "Dossier"
 }

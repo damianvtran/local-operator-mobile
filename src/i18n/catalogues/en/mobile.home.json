@@ -64,5 +64,8 @@
 	"mobile.home.tip.search": "search past conversations to reopen a session",
 	"mobile.home.transcript.waiting": "Waiting for the conversation…",
 	"mobile.home.transcript.needs_answer": "Needs your answer",
-	"mobile.home.chip.model_default_short": "Default model"
+	"mobile.home.chip.model_default_short": "Default model",
+	"mobile.home.picker.folder_current": "Current folder",
+	"mobile.home.picker.folder_fixed": "A conversation keeps the folder it started in. To use another folder, start a new chat.",
+	"mobile.home.picker.folder_current_label": "Current folder, {path}"
 }
