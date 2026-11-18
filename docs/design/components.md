@@ -481,11 +481,15 @@ were two such shrinkers. Both are now icon controls — rigid touch-floor square
 - **The non-default mark is a shape.** `IconButton`'s `active` fill
   (`row-selected`) has no visible edge on the composer's `elevated` shell
   (about 1.05:1 in dark), so the mark is the list row's 6 pt `accent` dot. The
-  meaning is also spoken. The dot is centred on the glyph's top-end corner at the
-  platform floor (`customMarkInset`): 9 pt in the 44 pt box, 11 dp in the 48 dp one.
+  meaning is also spoken. The dot is centred on the glyph's top-end corner
+  (`customMarkInset`). `IconButton` draws its 44 pt visual box at the top-start of
+  the touch-floor pressable, so the dot's top inset is 9 on every floor and its
+  trailing inset is 9 on 44 pt and 13 on 48 dp.
 - **The run-settings sheet leads with effort.** It opens on the current values
   (`Opus 5 · High`), then the effort rungs as one compact wrapping group, then
-  the model list. A real catalogue's model list is more than a screen tall, so
+  the model list. A compact rung is capped at the line and wraps its label and
+  badge inside itself. A pick never adds a badge, so the rungs do not move under
+  the thumb; "Chosen for this conversation" is said once, under the heading. A real catalogue's model list is more than a screen tall, so
   effort below it was out of reach when the sheet opened. A pick commits and the
   sheet stays open; a refused change shows as an error alert at the top of the
   sheet, and the check mark keeps following the value the relay applied. A value
