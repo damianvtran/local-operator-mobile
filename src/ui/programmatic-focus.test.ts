@@ -45,6 +45,18 @@ describe("programmatic focus", () => {
 		expect(SHEET).toMatch(SHEET_TITLE_CLASS);
 	});
 
+	it("is applied to every sheet's scrim, which leaves the web tab order", () => {
+		/* The row long-press menu's scrim (a sheet that does not focus its title)
+		 *  drew the same full-viewport ring as the drawer's. The sheet's Close
+		 *  button and Escape are the keyboard routes; native keeps its tab stop. */
+		const start = SHEET.indexOf("testID={CONTROL.sheetScrim}");
+		const scrim = SHEET.slice(SHEET.lastIndexOf("<Pressable", start), start);
+		expect(scrim).toContain("PROGRAMMATIC_FOCUS_CLASS");
+		expect(scrim).toContain(
+			'tabIndex={focusTitle || Platform.OS === "web" ? -1 : 0}',
+		);
+	});
+
 	it("is applied to the drawer's scrim, which leaves the web tab order", () => {
 		const start = DRAWER.indexOf(
 			'accessibilityLabel={t("mobile.chrome.close_conversations")}',

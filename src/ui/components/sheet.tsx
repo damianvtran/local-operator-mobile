@@ -471,7 +471,7 @@ export const Sheet = ({
 						>
 							<Pressable
 								ref={scrimRef}
-								className="flex-1"
+								className={cx("flex-1", PROGRAMMATIC_FOCUS_CLASS)}
 								style={{
 									backgroundColor: drawsDim ? scrimColour : "transparent",
 								}}
@@ -479,12 +479,17 @@ export const Sheet = ({
 								accessibilityLabel={t("mobile.common.close")}
 								// The labelled close button remains available; a picker's scrim is
 								// pointer-only so initial focus never starts on a duplicate Close.
+								// On the WEB every sheet's scrim is pointer-only for the keyboard:
+								// react-native-web's focus trap lands on this first focusable
+								// node, and its browser ring outlined the whole viewport over the
+								// row menu (`@/ui/programmatic-focus`). Close and Escape are the
+								// keyboard routes; native keeps its tab stop.
 								accessible={!focusTitle}
 								accessibilityElementsHidden={focusTitle}
 								importantForAccessibility={
 									focusTitle ? "no-hide-descendants" : "auto"
 								}
-								tabIndex={focusTitle ? -1 : 0}
+								tabIndex={focusTitle || Platform.OS === "web" ? -1 : 0}
 								testID={CONTROL.sheetScrim}
 								onPress={onClose}
 							/>
