@@ -12,14 +12,16 @@
 # reviewer by hand when a review is wanted.
 #
 # Access matches the other two repositories:
-#   * The four maintainers above hold write access. This repository belongs to a
-#     personal account, which has only two permission levels (owner and
+#   * The four maintainers above were invited at write access on 2026-11-18;
+#     each grant is pending until that person accepts. This repository is a
+#     personal-account repository, which has only two permission levels (owner and
 #     collaborator), so GitHub refuses `admin` or `maintain` for a collaborator.
 #     Transferring the repository to an organization is what would create them.
 #   * The `Main Protection` ruleset (id 27516811), copied from local-operator-ui
 #     (23841604), blocks force-pushes to main and requires one approving review.
-#     The owner role bypasses it always; each maintainer bypasses it with
+#     The repository Admin role (id 5, held only by the owner) bypasses it
+#     always; each maintainer bypasses it with
 #     `pull_request` mode, so they can merge a PR without waiting for an
-#     approval but cannot push to main directly.
+#     approval (once their invitation is accepted) but cannot push to main.
 #   * `require_code_owner_review` is false. With no patterns it would never
 #     require anyone's approval, so the review count carries the protection.
