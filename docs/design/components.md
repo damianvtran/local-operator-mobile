@@ -325,7 +325,7 @@ shimmer still says "working" on that row, which is enough, and costs no geometry
 ## 8. Sheet (bottom sheet)
 
 **Existing implementation:** `components/ui/sheet.tsx` — used by the run-settings
-sheet (the model list and the effort rungs), the folder sheet, the slash sheet,
+sheet (the effort rungs and the model list), the folder sheet, the slash sheet,
 and the subagent detail.
 
 **Bottom-anchored, not centred.** A centred dialog on a phone is under neither
@@ -452,7 +452,7 @@ primitive in the app, and the one that carries the most information.
 | Stop | 44 circle, transparent fill, `danger-border`, `danger` `■` at 13pt |
 | Queued count | `mono-sm` `ink-dim`, left; the count is the only thing on that line that changes |
 | Folder control | `IconButton` (folder glyph, 20), opens the folder sheet: the full path, then the choices while the folder can change; read-only once the conversation has started |
-| Run-settings control | `IconButton` (sparkles glyph, 20), opens ONE sheet with the model list and the effort rungs |
+| Run-settings control | `IconButton` (sliders glyph, 20), opens ONE sheet: current values, the effort rungs, then the model list |
 | Attachments | 64 thumbs with a remove control; each image capped at **1568 px** on its long edge before upload |
 | Slash sheet | the same sheet in § 8, filtered as the draft starts with `/` |
 | Non-default mark | a 6 pt `accent` dot at the glyph's top-end corner when the reader chose a value that differs from the computer's default (§ 7's dot), also spoken |
@@ -481,7 +481,16 @@ were two such shrinkers. Both are now icon controls — rigid touch-floor square
 - **The non-default mark is a shape.** `IconButton`'s `active` fill
   (`row-selected`) has no visible edge on the composer's `elevated` shell
   (about 1.05:1 in dark), so the mark is the list row's 6 pt `accent` dot. The
-  meaning is also spoken.
+  meaning is also spoken. The dot is centred on the glyph's top-end corner at the
+  platform floor (`customMarkInset`): 9 pt in the 44 pt box, 11 dp in the 48 dp one.
+- **The run-settings sheet leads with effort.** It opens on the current values
+  (`Opus 5 · High`), then the effort rungs as one compact wrapping group, then
+  the model list. A real catalogue's model list is more than a screen tall, so
+  effort below it was out of reach when the sheet opened. A pick commits and the
+  sheet stays open; a refused change shows as an error alert at the top of the
+  sheet, and the check mark keeps following the value the relay applied. A value
+  that cannot change, such as an ended session's recorded effort, is shown
+  read-only with its reason.
 
 ### The shell's edge, and why it is a child
 
