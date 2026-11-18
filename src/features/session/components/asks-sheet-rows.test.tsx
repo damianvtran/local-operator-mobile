@@ -416,23 +416,25 @@ describe("the asks sheet's list (issue #326)", () => {
 		 *  timed-out row; out of flow it takes no gap. */
 		expect(anchor.attrs["data-cls"]).toMatch(OUT_OF_FLOW);
 	});
-	/* Agent review round 2 (design D1, QA Q5): the round-1 touch box reserved
-	 *  its spare height between an OPENED row's status line and its answer
-	 *  form — a 33-46 pt blank band that pushed the field below the fold. */
-	it("keeps the 44 pt box on a collapsed status control", () => {
+	/* Rounds 2-3 (design D1, QA Q5/Q9, review R3-1): the status control keeps
+	 *  the 44 pt touch floor in BOTH states. Round 2 dropped it on the opened
+	 *  row and leaned on `hitSlop`, which react-native-web ignores and the kit
+	 *  forbids as a floor (16.8 pt measured). What changes with the state is
+	 *  only where the text sits inside the floor. */
+	it("keeps the 44 pt floor on a collapsed status control, its text at the top", () => {
 		const toggle = byTestId(draw(), askRowId("timed-payments"));
 		expect(toggle.attrs["data-min-height"]).toBe("44");
 		expect(toggle.attrs["data-cls"]).toMatch(TOP_ALIGNED);
 	});
 
-	it("lets an opened row's form follow its status line: no reserved box, slop instead (round 2 D1 / Q5)", () => {
+	it("keeps the 44 pt floor on an opened status control, its text centred, and the form next (round 3)", () => {
 		const tree = draw("timed-payments");
 		const toggle = byTestId(tree, askRowId("timed-payments"));
-		expect(toggle.attrs["data-min-height"]).toBeUndefined();
-		/* The target keeps reach on native through slop that stays inside the
-		 *  row's own 4 pt gaps, so it never overlaps the open button above or
-		 *  the form's controls below. */
-		expect(toggle.attrs["data-slop"]).toBe("4/4");
+		expect(toggle.attrs["data-min-height"], "the touch floor").toBe("44");
+		expect(toggle.attrs["data-cls"]).toMatch(CENTRED);
+		expect(toggle.attrs["data-cls"]).not.toMatch(TOP_ALIGNED);
+		/* No slop-only reach: the floor is the target. */
+		expect(toggle.attrs["data-slop"]).toBeUndefined();
 		/* The form is the next in-flow part after the toggle, in the same row
 		 *  block (the timed-out anchor between them is out of flow). */
 		const row = toggle.parent as El;

@@ -1112,22 +1112,18 @@ export const AsksSheet = ({
 												dispatchExpansion({ type: "toggle", ask: row.ask_id })
 											}
 											testID={askRowId(row.ask_id)}
-											/* COLLAPSED: the 44 pt box, its content TOP-aligned.
-											 *  Centred, a one-line status floated midway between its
-											 *  header and the next row (design r1 D1, ~30 pt each
-											 *  side); top-aligned, the spare height falls toward the
-											 *  gap that separates rows.
-											 *  OPENED: no reserved box. Reserved, that spare height
-											 *  became a 33-46 pt blank band between the status and
-											 *  the form it opens, pushing the answer field below the
-											 *  fold (design r2 D1 / QA Q5). The collapse target keeps
-											 *  4 pt of slop each way on native (the row's own gaps,
-											 *  so it overlaps neither the open button above nor the
-											 *  form's controls below); the form's pinned footer and
-											 *  another row's press remain the other ways out. */
-											style={expanded ? undefined : { minHeight: TOUCH_FLOOR }}
-											hitSlop={expanded ? { top: 4, bottom: 4 } : undefined}
-											className="justify-start"
+											/* THE 44 pt FLOOR IN BOTH STATES; only the text's place in
+											 *  it changes. COLLAPSED: top-aligned — centred, a one-line
+											 *  status floated midway between its header and the next row
+											 *  (design r1 D1), so the spare height falls toward the gap
+											 *  between rows. OPENED: centred — top-aligned, the spare
+											 *  height became a blank band between the status and the
+											 *  form it opens (design r2 D1 / QA Q5). Dropping the floor
+											 *  on the opened row and leaning on `hitSlop` left a 16.8 pt
+											 *  target: react-native-web ignores slop and the kit allows
+											 *  no slop-only floor (round 3, R3-1 / D1 / Q9). */
+											style={{ minHeight: TOUCH_FLOOR }}
+											className={expanded ? "justify-center" : "justify-start"}
 										>
 											{/* NOT `flex-wrap`: the sentence is the flexible child and the
 											 *  caret never wraps away from it (see the caret's note). */}
