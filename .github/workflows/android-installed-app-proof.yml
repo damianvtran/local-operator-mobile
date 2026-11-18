@@ -1,0 +1,181 @@
+name: Android installed-app notification proof
+
+# Manual only, secret-free. Builds a CANDIDATE commit (any SHA, e.g. an open PR's
+# frozen head) into a debug proof APK + same-signer app-targeted driver APK, then
+# exercises the INSTALLED app's notification surfaces on API 29, 31 and 36,
+# serially. Harness: scripts/ci/android-installed-app-proof/README.md.
+#
+# WHY the harness and the candidate are two checkouts: the harness lives on its
+# own branch ("split the harness out when it outgrows the product", AGENTS.md),
+# so the product PR's frozen head is built byte-for-byte as committed and only
+# the job-local, restored, preflight-checked edits in prepare-app.sh touch it.
+#
+# android.yml's dispatch calls this (workflow_call) so the branch-local workflow
+# runs before it exists on the default branch, same as the OAuth callback proof.
+on:
+  workflow_dispatch:
+    inputs:
+      app_sha:
+        description: Full 40-hex candidate commit to build and prove
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      app_sha:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-installed-app-proof-${{ github.event_name }}-${{ inputs.app_sha }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build proof APK + driver at the candidate SHA (no emulator)
+    runs-on: ubuntu-latest
+    # Same split as the OAuth proof: Gradle/NDK intermediates stay off the VM
+    # that unpacks system images. That proof's build compiles in <25 min.
+    timeout-minutes: 35
+    steps:
+      - name: Refuse a short or symbolic candidate ref
+        env:
+          APP_SHA: ${{ inputs.app_sha }}
+        run: |
+          [[ "$APP_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::app_sha must be a full 40-hex commit"; exit 1; }
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.app_sha }}
+          fetch-depth: 1
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: proof-harness
+          sparse-checkout: |
+            scripts/ci/android-installed-app-proof
+            scripts/ci/await-emulator-ready.sh
+          sparse-checkout-cone-mode: false
+      - name: Candidate identity
+        env:
+          APP_SHA: ${{ inputs.app_sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$APP_SHA"
+          mkdir -p "$RUNNER_TEMP/installed-proof/evidence"
+          git rev-parse HEAD > "$RUNNER_TEMP/installed-proof/source-head.txt"
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@b9bee63ef481cc545e4517ec730544a4d8b1dfa0
+      - name: Install locked dependencies, prebuild, prepare the proof app
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm exec expo prebuild --platform android --clean --no-install
+          bash proof-harness/scripts/ci/android-installed-app-proof/prepare-app.sh proof-harness/scripts/ci/android-installed-app-proof
+      - name: Compile proof APK + driver; prove the driver is absent from Release
+        run: |
+          set -euo pipefail
+          cd android
+          ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:processReleaseMainManifest \
+            --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx3g
+          python3 - <<'PY'
+          import pathlib
+          rel = [p for p in pathlib.Path('app/build/intermediates').rglob('AndroidManifest.xml')
+                 if 'release' in p.parts and any(s.startswith('merged_manifest') for s in p.parts)]
+          assert rel, 'Release merged manifest must exist; source-only absence is not proof'
+          for p in rel:
+              t = p.read_text()
+              assert 'installedproof' not in t and '<instrumentation' not in t, p
+              assert 'dev.localoperator.teambridge.LoNotificationsService' in t, p
+          print('Release manifest: LoNotificationsService present; no proof driver/instrumentation')
+          PY
+      - name: Stage APKs, normal bundle and manifest
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/installed-proof"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$OUT/"
+          cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk "$OUT/"
+          python3 proof-harness/scripts/ci/android-installed-app-proof/preflight.py manifest "$OUT" "$(cat "$OUT/source-head.txt")" \
+            | tee "$OUT/evidence/build/manifest.txt"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installed-proof-build-${{ inputs.app_sha }}
+          path: ${{ runner.temp }}/installed-proof/
+          if-no-files-found: error
+
+  device:
+    name: Installed app on API ${{ matrix.api }}
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      # Serial: one emulator at a time, every row reported even if one fails.
+      max-parallel: 1
+      fail-fast: false
+      matrix:
+        api: [29, 31, 36]
+    # Boot <=6m + installs 1m + rows ~12m (each row bounded in run.py) + upload.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.app_sha }}
+          fetch-depth: 1
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+          path: proof-harness
+          sparse-checkout: |
+            scripts/ci/android-installed-app-proof
+            scripts/ci/await-emulator-ready.sh
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - uses: actions/download-artifact@v8
+        with:
+          name: installed-proof-build-${{ inputs.app_sha }}
+          path: ${{ runner.temp }}/installed-proof
+      - name: Preflight (before boot) and its negative controls
+        env:
+          APP_SHA: ${{ inputs.app_sha }}
+        run: |
+          set -euo pipefail
+          H=proof-harness/scripts/ci/android-installed-app-proof
+          OUT="$RUNNER_TEMP/installed-proof"
+          mkdir -p "$OUT/evidence/device"
+          python3 "$H/preflight.py" check "$OUT" "$APP_SHA" | tee "$OUT/evidence/device/api${{ matrix.api }}-preflight.txt"
+          python3 "$H/preflight.py" selftest "$OUT" "$APP_SHA" | tee "$OUT/evidence/device/api${{ matrix.api }}-preflight-negative.txt"
+      - name: Enable KVM and await permission-rule completion
+        run: |
+          set -euxo pipefail
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          sudo udevadm settle --timeout=10
+          test -r /dev/kvm && test -w /dev/kvm || { echo "::error title=KVM unavailable::runner user cannot use /dev/kvm"; exit 1; }
+      - name: Exercise the installed app
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: true
+          emulator-options: -accel on -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
+          disable-animations: true
+          script: bash proof-harness/scripts/ci/android-installed-app-proof/device.sh "$PWD/proof-harness/scripts/ci/android-installed-app-proof" "$PWD" "$RUNNER_TEMP/installed-proof" "$RUNNER_TEMP/installed-proof/evidence/device"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: installed-proof-api${{ matrix.api }}-${{ inputs.app_sha }}
+          path: ${{ runner.temp }}/installed-proof/evidence/
+          if-no-files-found: warn
