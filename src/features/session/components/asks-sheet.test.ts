@@ -33,6 +33,9 @@ const DOOR_BINDING = /const (\w+) = hasOtherDoor\(/;
 /** The door field's writer: `onChangeText={(text) => onOtherChange(`. */
 const FIELD_WRITER = /onChangeText=\{\(\w+\) => onOtherChange\(/;
 
+/** A rows-keyed cache of the translated section headings (R4). */
+const MEMOISED_SECTIONS = /useMemo\(\s*\(\) => askSections\(/;
+
 /** The dead class: `border-control` without its `border-` prefix — a token name
  *  the web export never generates (only `border-border-control` exists), so it
  *  left every ask border at full ink instead of the control token's. */
@@ -133,5 +136,16 @@ describe("the asks sheet's walk after a settle (UX r1 U1)", () => {
 		expect(SOURCE).toMatch(
 			/const next = nextActionableAsk\(shownRows, row\.ask_id\)/,
 		);
+	});
+});
+
+describe("the asks sheet's state headings (agent review round 1, R4)", () => {
+	it("resolves the headings on every render, never from a rows-keyed cache", () => {
+		/* `askSections` returns each heading through `t()`; cached on the rows
+		 *  alone, the headings stayed in the old language after a language
+		 *  change until the next read, while the title (resolved per render)
+		 *  followed it. */
+		expect(SOURCE).toContain("askSections(shownRows)");
+		expect(SOURCE).not.toMatch(MEMOISED_SECTIONS);
 	});
 });

@@ -30,14 +30,20 @@ vi.mock("react-native", async () => {
 			children,
 			className,
 			testID,
+			numberOfLines,
 		}: {
 			children?: React.ReactNode;
 			className?: string;
 			testID?: string;
+			numberOfLines?: number;
 		}) =>
 			React.createElement(
 				tag,
-				{ "data-cls": className ?? "", "data-testid": testID },
+				{
+					"data-cls": className ?? "",
+					"data-testid": testID,
+					"data-lines": numberOfLines,
+				},
 				children ?? null,
 			);
 	return {
@@ -112,7 +118,7 @@ vi.mock("@/ui/components/icon-button", async () => {
 });
 
 const { AsksSheet } = await import("@/features/session/components/asks-sheet");
-const { CONTROL, askRowId } = await import("@/ui/a11y");
+const { CONTROL, askRowId, timedOutAskRowId } = await import("@/ui/a11y");
 
 /* ------------------------------------------------- a static-markup tree */
 
@@ -204,8 +210,13 @@ const childOf = (container: El, el: El): El => {
 
 /* ------------------------------------------------------------- the list */
 
-/** The spacing BETWEEN rows (12 pt); a row's own parts keep `gap-1`. */
-const BETWEEN_ROWS_GAP = /\bgap-3\b/;
+/** The spacing BETWEEN rows (16 pt); a row's own parts keep `gap-1` (4 pt). */
+const BETWEEN_ROWS_GAP = /\bgap-4\b/;
+const INSIDE_ROW_GAP = /\bgap-1\b/;
+const TOP_ALIGNED = /\bjustify-start\b/;
+const CENTRED = /\bjustify-center\b/;
+const ONE_LINE = /\btruncate\b/;
+const OUT_OF_FLOW = /\babsolute\b/;
 
 const NOW = Date.now();
 const MINUTE = 60_000;
@@ -337,27 +348,25 @@ describe("the asks sheet's list (issue #326)", () => {
 		);
 	});
 
-	it("separates rows with a divider and a wider gap than inside a row", () => {
+	it("separates rows by spacing alone: a wider gap between rows than inside one, and no rule (review R1)", () => {
+		/* `native-interaction-guidelines.md` asks for spacing, not a rule around
+		 *  every ordinary row. With the status top-aligned (D1) the 16 pt gap
+		 *  plus the touch floor's spare height groups each row on its own. */
 		const tree = draw();
 		const first = byTestId(tree, askRowId("answered-release"));
 		const second = byTestId(tree, askRowId("answered-catalogue"));
 		const list = commonAncestor(first, second);
 		const a = childOf(list, first);
 		const b = childOf(list, second);
-		const between = list.children.slice(
-			list.children.indexOf(a) + 1,
-			list.children.indexOf(b),
-		);
+		expect(list.children.indexOf(b) - list.children.indexOf(a)).toBe(1);
 		expect(
-			between.some(
-				(node) =>
-					typeof node !== "string" &&
-					(node.attrs["data-cls"] ?? "").includes("bg-hairline"),
+			all(list).some((el) =>
+				(el.attrs["data-cls"] ?? "").includes("bg-hairline"),
 			),
-			"a hairline divider between two rows",
-		).toBe(true);
+			"no hairline between rows",
+		).toBe(false);
 		expect(list.attrs["data-cls"]).toMatch(BETWEEN_ROWS_GAP);
-		expect(a.attrs["data-cls"]).not.toMatch(BETWEEN_ROWS_GAP);
+		expect(a.attrs["data-cls"]).toMatch(INSIDE_ROW_GAP);
 	});
 
 	it("draws the reader's own conversation's row without a name header", () => {
@@ -369,5 +378,30 @@ describe("the asks sheet's list (issue #326)", () => {
 				(el) => el.attrs["data-testid"] === CONTROL.askOpenConversation,
 			),
 		).toBe(false);
+	});
+	/* Agent review round 1 (design D1-D3, QA Q2): the measured spacing did not
+	 *  group a row — the status line floated midway between its header and the
+	 *  next hairline, long names were cut to one line, and timed-out rows carried
+	 *  4 pt more than the rest. */
+	it("puts the status line at the top of its touch floor, so the spare height falls below it (D1)", () => {
+		const toggle = byTestId(draw(), askRowId("timed-payments"));
+		expect(toggle.attrs["data-cls"]).toMatch(TOP_ALIGNED);
+		expect(toggle.attrs["data-cls"]).not.toMatch(CENTRED);
+	});
+
+	it("lets a conversation name wrap to two lines and keeps the folder on one (D2)", () => {
+		const row = byTestId(draw(), askRowId("timed-payments")).parent as El;
+		const name = byText(row, "Reconcile the payments ledger");
+		const folder = byText(row, "/synthetic/payments");
+		expect(name.attrs["data-lines"]).toBe("2");
+		expect(name.attrs["data-cls"]).not.toMatch(ONE_LINE);
+		expect(folder.attrs["data-cls"]).toMatch(ONE_LINE);
+	});
+
+	it("keeps the timed-out anchor out of the row's gapped column (D3 / Q2)", () => {
+		const anchor = byTestId(draw(), timedOutAskRowId("timed-payments"));
+		/* An in-flow child of the `gap-1` column added 4 pt under every
+		 *  timed-out row; out of flow it takes no gap. */
+		expect(anchor.attrs["data-cls"]).toMatch(OUT_OF_FLOW);
 	});
 });

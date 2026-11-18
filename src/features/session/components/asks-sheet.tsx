@@ -1,7 +1,6 @@
 // biome-ignore-all lint/suspicious/noArrayIndexKey: the settled record's question list is regenerated whole on every render — a parsed detail, not an editable collection — so position IS the identity, the case React's own key docs exempt. A content-derived key would be recomputed every frame to produce the same value.
 import { ArrowUpRight } from "lucide-react-native";
 import {
-	Fragment,
 	useCallback,
 	useEffect,
 	useMemo,
@@ -58,7 +57,6 @@ import {
 } from "@/ui/a11y";
 import { useTokenColor } from "@/ui/appearance";
 import { Button } from "@/ui/components/button";
-import { Divider } from "@/ui/components/divider";
 import { IconButton } from "@/ui/components/icon-button";
 import { SectionHeader } from "@/ui/components/section-header";
 import { Sheet } from "@/ui/components/sheet";
@@ -818,7 +816,10 @@ export const AsksSheet = ({
 	 *  counted, so "8 questions timed out" titled rows that said "Answered"
 	 *  (issue #326). The state headings below carry each state instead. */
 	const title = asksSheetTitle();
-	const sections = useMemo(() => askSections(shownRows), [shownRows]);
+	/* Not memoised: each heading comes from `t()`, and a cache keyed on the rows
+	 *  alone kept the old language's headings after a language change until the
+	 *  next read (agent review round 1, R4). Grouping a few dozen rows is cheap. */
+	const sections = askSections(shownRows);
 
 	/** Settle one ask, then advance the walk and re-read. On success the
 	 *  expansion moves to the next outstanding ask; on refusal the sentence
@@ -1022,15 +1023,19 @@ export const AsksSheet = ({
 				{/* THE LIST IS GROUPED BY STATE (issue #326). The aggregate read returns
 				 *  settled asks too, so a heading per state says what each run of
 				 *  rows is — the title used to be the bar's "N questions timed out"
-				 *  over rows that said "Answered" — and a hairline plus a 12 pt gap
-				 *  between rows (4 pt inside one) keeps each row's parts together.
+				 *  over rows that said "Answered" — and SPACING groups each row: 4 pt
+				 *  between a row's parts, 16 pt plus the touch floor's spare height
+				 *  between rows. No hairline: the native guidelines ask for spacing
+				 *  rather than a rule around every ordinary row, and with the status
+				 *  line top-aligned (design D1) spacing alone groups them (agent
+				 *  review round 1, R1, decided from rendered frames).
 				 *  With one 4 pt gap everywhere, a scrolled list read every folder
 				 *  and open button as the header of the row BELOW it. */}
 				{sections.map((section) => (
 					<View key={section.kind}>
 						<SectionHeader label={section.label} />
-						<View className="gap-3">
-							{section.rows.map((row, index) => {
+						<View className="gap-4">
+							{section.rows.map((row) => {
 								const status = String(row.status || "open");
 								const sessionId = String(
 									row.session_id || currentSessionId || "",
@@ -1042,148 +1047,158 @@ export const AsksSheet = ({
 								const urgent = row.urgent && isAnswerable(status);
 								const expanded = openAsk === row.ask_id;
 								return (
-									<Fragment key={row.ask_id}>
-										{index > 0 ? <Divider /> : null}
-										<View className="gap-1">
-											{/* THE ROW'S HEADER: which conversation, and where — the
-											 *  name with its folder beneath, and the route there as
-											 *  the block's trailing control, centred on BOTH lines.
-											 *  The open button used to trail the folder on a meta
-											 *  line under the status, which put it at the foot of
-											 *  one row and the head of the next. It stays an outlined
-											 *  icon button named "Open conversation" (design D3), and
-											 *  it is a sibling of
-											 *  the row's toggle, not inside it, so a press on it can
-											 *  never also expand the row. The parent owns the
-											 *  transition (clear the sheet, then navigate) so the
-											 *  sheet cannot outlive the row it opened. */}
-											{foreign ? (
-												<View className="flex-row items-center gap-x-3">
-													<View className="min-w-0 flex-1">
-														<Text className="min-w-0 truncate text-body-sm font-medium text-ink">
-															{names.get(sessionId) ?? sessionId}
+									<View key={row.ask_id} className="gap-1">
+										{/* THE ROW'S HEADER: which conversation, and where — the
+										 *  name with its folder beneath, and the route there as
+										 *  the block's trailing control, centred on BOTH lines.
+										 *  The open button used to trail the folder on a meta
+										 *  line under the status, which put it at the foot of
+										 *  one row and the head of the next. It stays an outlined
+										 *  icon button named "Open conversation" (design D3), and
+										 *  it is a sibling of
+										 *  the row's toggle, not inside it, so a press on it can
+										 *  never also expand the row. The parent owns the
+										 *  transition (clear the sheet, then navigate) so the
+										 *  sheet cannot outlive the row it opened. */}
+										{foreign ? (
+											<View className="flex-row items-center gap-x-3">
+												<View className="min-w-0 flex-1">
+													{/* Two lines, not one: beside the 44 pt button a
+													 *  one-line cut made long names that share a prefix
+													 *  read as the same conversation (design D2). */}
+													<Text
+														numberOfLines={2}
+														className="min-w-0 text-body-sm font-medium text-ink"
+													>
+														{names.get(sessionId) ?? sessionId}
+													</Text>
+													{row.cwd ? (
+														<Text className="min-w-0 truncate text-mono-sm text-ink-dim">
+															{row.cwd}
 														</Text>
-														{row.cwd ? (
-															<Text className="min-w-0 truncate text-mono-sm text-ink-dim">
-																{row.cwd}
-															</Text>
-														) : null}
-													</View>
-													{onOpenConversation ? (
-														<IconButton
-															accessibilityLabel="Open conversation"
-															outlined
-															onPress={() =>
-																onOpenConversation(
-																	sessionId,
-																	/* The destination's asks the reader is looking at
-																	 *  now: what a dismissal there is recorded against. */
-																	outstandingAsks(shownRows)
-																		.filter(
-																			(candidate) =>
-																				String(candidate.session_id || "") ===
-																				sessionId,
-																		)
-																		.map((candidate) => candidate.ask_id),
-																)
-															}
-															icon={({ color, size }) => (
-																<ArrowUpRight color={color} size={size} />
-															)}
-															testID={CONTROL.askOpenConversation}
-														/>
 													) : null}
 												</View>
-											) : null}
-											<Pressable
-												accessibilityRole={ROLE.button}
-												accessibilityLabel={stateLine.text}
-												accessibilityState={state({ expanded })}
-												onPress={() =>
-													dispatchExpansion({ type: "toggle", ask: row.ask_id })
-												}
-												testID={askRowId(row.ask_id)}
-												style={{ minHeight: TOUCH_FLOOR }}
-												className="justify-center"
-											>
-												{/* NOT `flex-wrap`: the sentence is the flexible child and the
-												 *  caret never wraps away from it (see the caret's note). */}
-												<View className="flex-row items-baseline gap-x-2">
-													<Text
-														className={cx(
-															"min-w-0 flex-1 text-meta",
-															askToneInk(stateLine.tone),
+												{onOpenConversation ? (
+													<IconButton
+														accessibilityLabel="Open conversation"
+														outlined
+														onPress={() =>
+															onOpenConversation(
+																sessionId,
+																/* The destination's asks the reader is looking at
+																 *  now: what a dismissal there is recorded against. */
+																outstandingAsks(shownRows)
+																	.filter(
+																		(candidate) =>
+																			String(candidate.session_id || "") ===
+																			sessionId,
+																	)
+																	.map((candidate) => candidate.ask_id),
+															)
+														}
+														icon={({ color, size }) => (
+															<ArrowUpRight color={color} size={size} />
 														)}
-													>
-														{stateLine.text}
-													</Text>
-													{urgent ? (
-														<Text className="shrink-0 text-meta text-ink-dim">
-															· urgent
-														</Text>
-													) : null}
-													{/* THE DISCLOSURE CARET LIVES ON THE FIRST LINE, trailing (design
-													 *  D2 / rubric U-41: its centre within ±4 pt of the FIRST line's).
-													 *  It used to sit on the meta line below, which for a row of THIS
-													 *  conversation has nothing else on it - so it rendered as a stray
-													 *  6x17 glyph 17 px under the sentence, alone on its own line,
-													 *  and an auto-opened sheet shows exactly such rows first. */}
-													<Text
-														className="shrink-0 text-meta text-ink-dim"
-														aria-hidden
-													>
-														{expanded ? "▾" : "▸"}
-													</Text>
-												</View>
-												{left <= 0 ? (
-													<Text className="font-mono text-meta text-ink-dim">
-														deadline {durationLabel(-left)} ago
+														testID={CONTROL.askOpenConversation}
+													/>
+												) : null}
+											</View>
+										) : null}
+										<Pressable
+											accessibilityRole={ROLE.button}
+											accessibilityLabel={stateLine.text}
+											accessibilityState={state({ expanded })}
+											onPress={() =>
+												dispatchExpansion({ type: "toggle", ask: row.ask_id })
+											}
+											testID={askRowId(row.ask_id)}
+											style={{ minHeight: TOUCH_FLOOR }}
+											/* TOP-aligned inside the touch floor: centred, a
+											 *  one-line status floated midway between its header
+											 *  and the next row (design D1, ~30 pt each side), so
+											 *  the spare height now falls below it, toward the
+											 *  gap that separates rows. */
+											className="justify-start"
+										>
+											{/* NOT `flex-wrap`: the sentence is the flexible child and the
+											 *  caret never wraps away from it (see the caret's note). */}
+											<View className="flex-row items-baseline gap-x-2">
+												<Text
+													className={cx(
+														"min-w-0 flex-1 text-meta",
+														askToneInk(stateLine.tone),
+													)}
+												>
+													{stateLine.text}
+												</Text>
+												{urgent ? (
+													<Text className="shrink-0 text-meta text-ink-dim">
+														· urgent
 													</Text>
 												) : null}
-											</Pressable>
-											{/* The audit's `timed-out-mixed` cell proves the state from
-											 *  this zero-size anchor — an EXTRA id on the row, the
-											 *  `transcript-streaming` shape, so the row's own id stays
-											 *  stable as the ask changes hands with time. */}
-											{status === "timed_out" ? (
-												<View
-													testID={timedOutAskRowId(row.ask_id)}
+												{/* THE DISCLOSURE CARET LIVES ON THE FIRST LINE, trailing (design
+												 *  D2 / rubric U-41: its centre within ±4 pt of the FIRST line's).
+												 *  It used to sit on the meta line below, which for a row of THIS
+												 *  conversation has nothing else on it - so it rendered as a stray
+												 *  6x17 glyph 17 px under the sentence, alone on its own line,
+												 *  and an auto-opened sheet shows exactly such rows first. */}
+												<Text
+													className="shrink-0 text-meta text-ink-dim"
 													aria-hidden
-												/>
+												>
+													{expanded ? "▾" : "▸"}
+												</Text>
+											</View>
+											{left <= 0 ? (
+												<Text className="font-mono text-meta text-ink-dim">
+													deadline {durationLabel(-left)} ago
+												</Text>
 											) : null}
-											{expanded ? (
-												<AskDetail
-													row={row}
-													questions={openAllQuestions}
-													fields={openFields}
-													draft={draft}
-													disabled={openDisabled}
-													onAnswer={(id, next) =>
-														setDraft((current) => ({
-															...current,
-															answers: { ...current.answers, [id]: next },
-														}))
-													}
-													onOtherChange={(id, next) =>
-														setDraft((current) => ({
-															...current,
-															others: { ...current.others, [id]: next },
-														}))
-													}
-													onToggleSkip={(id) =>
-														setDraft((current) => ({
-															...current,
-															skipped: current.skipped.includes(id)
-																? current.skipped.filter(
-																		(value) => value !== id,
-																	)
-																: [...current.skipped, id],
-														}))
-													}
-												/>
-											) : null}
-										</View>
-									</Fragment>
+										</Pressable>
+										{/* The audit's `timed-out-mixed` cell proves the state from
+										 *  this zero-size anchor — an EXTRA id on the row, the
+										 *  `transcript-streaming` shape, so the row's own id stays
+										 *  stable as the ask changes hands with time. Out of flow
+										 *  (`absolute`): as an in-flow child of this `gap-1`
+										 *  column it added 4 pt under every timed-out row
+										 *  (design D3 / QA Q2). */}
+										{status === "timed_out" ? (
+											<View
+												className="absolute"
+												testID={timedOutAskRowId(row.ask_id)}
+												aria-hidden
+											/>
+										) : null}
+										{expanded ? (
+											<AskDetail
+												row={row}
+												questions={openAllQuestions}
+												fields={openFields}
+												draft={draft}
+												disabled={openDisabled}
+												onAnswer={(id, next) =>
+													setDraft((current) => ({
+														...current,
+														answers: { ...current.answers, [id]: next },
+													}))
+												}
+												onOtherChange={(id, next) =>
+													setDraft((current) => ({
+														...current,
+														others: { ...current.others, [id]: next },
+													}))
+												}
+												onToggleSkip={(id) =>
+													setDraft((current) => ({
+														...current,
+														skipped: current.skipped.includes(id)
+															? current.skipped.filter((value) => value !== id)
+															: [...current.skipped, id],
+													}))
+												}
+											/>
+										) : null}
+									</View>
 								);
 							})}
 						</View>
