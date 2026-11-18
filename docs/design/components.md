@@ -285,6 +285,11 @@ sheet, and the row state belongs to the row.
 Every state occupies the **same 12×12 box**, so every title starts at the same x
 forever. Indicators change colour, never geometry.
 
+A section header in the list starts on the **title column**, not at the row
+gutter: the indicator hangs in the gutter beside the title, so a section where no
+row carries a mark still lines its titles up under its heading
+(`sectionHeaderIndentPt`).
+
 The ladder, first match wins:
 
 1. **A pending decision** — a 6px `danger` dot, pulsing (`lo-pulse`). This is the

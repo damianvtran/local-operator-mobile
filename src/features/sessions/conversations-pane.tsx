@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import type { SessionSummary } from "@/contracts";
 import { avatarRefOf } from "@/features/agent-avatar/agent-avatar";
+import { ROW_AVATAR_PT } from "@/features/agent-avatar/agent-avatar-view";
 import {
 	DrawerComputerRow,
 	switcherFocusReturn,
@@ -60,6 +61,7 @@ import {
 	staleShortNote,
 	visiblePeers,
 } from "@/features/sessions/session-projection";
+import { sectionHeaderIndentPt } from "@/features/sessions/section-indent";
 import { SessionRow } from "@/features/sessions/session-row";
 import {
 	arrangeSidebar,
@@ -687,9 +689,19 @@ export const ConversationsPane = ({
 		({ item }: { item: Item }) =>
 			item.kind === "header" ? (
 				/* The ROW owns the gutter (design D8): the list has no padding of its
-				 *  own, so a header carries the same 16 pt the rows' `px-4` does. */
+				 *  own, so a header carries the same 16 pt the rows' `px-4` does —
+				 *  and then the rows' indicator slot, so the heading starts on the
+				 *  title column and the dots hang in the gutter beside it. */
 				<View className="px-4">
-					<SectionHeader label={item.label} testID={item.testID} />
+					<View
+						style={{
+							paddingStart: sectionHeaderIndentPt(
+								anyRowPictured ? ROW_AVATAR_PT : undefined,
+							),
+						}}
+					>
+						<SectionHeader label={item.label} testID={item.testID} />
+					</View>
 				</View>
 			) : item.kind === "divider" ? (
 				/* A hairline inside the row gutter, not a heading: `In one list` stays one
