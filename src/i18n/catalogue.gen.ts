@@ -5928,7 +5928,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.oauth.received": "Respuesta de inicio de sesión recibida. Vuelve a la aplicación.",
 		"mobile.oauth.return": "Volver a Local Operator",
 		"mobile.past.empty_headline": "Aún no hay conversaciones anteriores.",
-		"mobile.past.empty_next": "Aquí aparecerán las conversaciones que hayas terminado, y podrás retomar cualquiera de ellas.",
+		"mobile.past.empty_next": "Aquí aparecerán las conversaciones que hayas terminado, y podrás reanudar cualquiera de ellas.",
 		"mobile.past.no_matches_next": "La búsqueda abarca lo que se dijo y los títulos, así que una palabra más corta puede dar resultado.",
 		"mobile.past.search_label": "Buscar sesiones anteriores",
 		"mobile.past.search_placeholder": "Texto o título",
