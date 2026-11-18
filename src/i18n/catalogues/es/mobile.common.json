@@ -13,5 +13,6 @@
 	"mobile.common.copied": "Copiado",
 	"mobile.common.copy_command_hint": "Copia el comando “{label}”",
 	"mobile.common.close": "Cerrar",
-	"mobile.common.loading": "Cargando"
+	"mobile.common.loading": "Cargando",
+	"mobile.common.no_matches": "No hay coincidencias."
 }

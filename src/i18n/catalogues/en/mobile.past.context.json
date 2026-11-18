@@ -1,0 +1,22 @@
+{
+	"mobile.past.search_label": {
+		"role": "meta",
+		"note": "Accessible name of the search field on the Past sessions screen. Screen readers announce it; it is not drawn on screen (the placeholder is the visible hint). No final full stop."
+	},
+	"mobile.past.search_placeholder": {
+		"role": "help",
+		"note": "Placeholder inside the Past sessions search field: the search matches words from what was said, or the conversation's title. Must fit about 14 characters at the narrowest phone; shorter is better."
+	},
+	"mobile.past.empty_headline": {
+		"role": "heading",
+		"note": "Headline of the Past sessions screen when the computer has no finished conversations. Plain statement, not an error."
+	},
+	"mobile.past.empty_next": {
+		"role": "help",
+		"note": "Second line under 'No past conversations yet.': what will appear on this screen and that a conversation can be resumed from it."
+	},
+	"mobile.past.no_matches_next": {
+		"role": "help",
+		"note": "Second line under 'Nothing matches that.' on the Past sessions screen: the search looks at the conversation text and titles, so trying a shorter word may find a match."
+	}
+}

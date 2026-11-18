@@ -1,0 +1,7 @@
+{
+	"mobile.past.search_label": "Tìm kiếm phiên trước",
+	"mobile.past.search_placeholder": "Từ hoặc tiêu đề",
+	"mobile.past.empty_headline": "Chưa có cuộc trò chuyện cũ nào.",
+	"mobile.past.empty_next": "Các cuộc trò chuyện bạn đã kết thúc sẽ hiện ở đây, và bạn có thể mở lại bất kỳ cuộc nào.",
+	"mobile.past.no_matches_next": "Tìm kiếm bao gồm cả nội dung trò chuyện lẫn tiêu đề, nên một từ ngắn hơn có thể sẽ khớp."
+}

@@ -32,6 +32,8 @@ import notificationsContext from "@/i18n/catalogues/en/mobile.notifications.cont
 import notifications from "@/i18n/catalogues/en/mobile.notifications.json";
 import oauthContext from "@/i18n/catalogues/en/mobile.oauth.context.json";
 import oauth from "@/i18n/catalogues/en/mobile.oauth.json";
+import pastContext from "@/i18n/catalogues/en/mobile.past.context.json";
+import past from "@/i18n/catalogues/en/mobile.past.json";
 import projectsContext from "@/i18n/catalogues/en/mobile.projects.context.json";
 import projects from "@/i18n/catalogues/en/mobile.projects.json";
 import refusalContext from "@/i18n/catalogues/en/mobile.refusal.context.json";
@@ -96,7 +98,7 @@ const NAMESPACES = [
 		name: "mobile.common",
 		messages: common,
 		context: commonContext,
-		expected: 15, // O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan)
+		expected: 16, // fix/session-list-nav-polish +1: the shared search empty-state headline "Nothing matches that." (15 + 1 = 16, counted over the en JSON). O3-b +2: the shared sheet Close and skeleton Loading labels (13 + 2 = 15, counted over the en JSON). M3 S2b-1 +3: the command block's Copy / Copied / copy hint (10 + 3 = 13); +4: the not-found screen (app/ scan)
 	},
 	{
 		name: "mobile.composer_input",
@@ -122,6 +124,14 @@ const NAMESPACES = [
 		 *  66 with the startup transcript's compact "Needs your answer" row
 		 *  (TestFlight 906, replacing two hard-coded sentences). */
 		expected: 66,
+	},
+	{
+		/* The Past sessions screen: its search field's accessible name and
+		 *  placeholder, and its empty states (fix/session-list-nav-polish). */
+		name: "mobile.past",
+		messages: past,
+		context: pastContext,
+		expected: 5,
 	},
 	{
 		name: "mobile.projects",
@@ -275,7 +285,7 @@ const NAMESPACES = [
 		name: "mobile.sidebar",
 		messages: sidebar,
 		context: sidebarContext,
-		expected: 42, // O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
+		expected: 52, // fix/session-list-nav-polish +10: the row long-press menu (5) and the drawer's empty states (5) (42 + 10 = 52, counted over the en JSON). O3-b +15: the Tags sheet and row tag announcement (10) and the row's new marker and plural counts (5) (27 + 15 = 42, counted over the en JSON). PR #275 +2: the conversation row's outbox lines, sending and stopped (25 + 2 = 27)
 	},
 	{
 		/* This app's own short chrome words the relay has no key for: the sidebar
@@ -551,7 +561,10 @@ describe("the English catalogues", () => {
 		 * all 25 merged en catalogue files (mobile.common 15, mobile.projects 59,
 		 * mobile.sidebar 42, mobile.team_bridge 160); every shipped locale also
 		 * sums to 1101. */
-		expect(total).toBe(1101);
+		/* fix/session-list-nav-polish: +1 mobile.common, +10 mobile.sidebar and
+		 * the new mobile.past (5) = 16: 1101 + 16 = 1117, counted over the en
+		 * JSON (the generator reports 1117 keys). */
+		expect(total).toBe(1117);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

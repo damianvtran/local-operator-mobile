@@ -58,5 +58,9 @@
 	"mobile.common.loading": {
 		"role": "status",
 		"note": "Screen-reader name announced for a loading skeleton placeholder on any screen. Status word, no trailing ellipsis; keep under ~16 characters. No placeholders."
+	},
+	"mobile.common.no_matches": {
+		"role": "heading",
+		"note": "Headline of the empty state shown when a search finds nothing (the sidebar's conversation search and the Past sessions search). Plain statement, keep the final full stop. No placeholders."
 	}
 }

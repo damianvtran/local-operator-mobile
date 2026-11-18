@@ -13,5 +13,6 @@
 	"mobile.common.copied": "Đã sao chép",
 	"mobile.common.copy_command_hint": "Sao chép lệnh “{label}”",
 	"mobile.common.close": "Đóng",
-	"mobile.common.loading": "Đang tải"
+	"mobile.common.loading": "Đang tải",
+	"mobile.common.no_matches": "Không có kết quả phù hợp."
 }

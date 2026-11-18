@@ -166,5 +166,45 @@
 	"mobile.sidebar.row.todos": {
 		"role": "meta",
 		"note": "Count chip on a conversation row: open todo items in the conversation's task list. Monospace meta strip that yields at large text; keep each arm under ~10 characters. ICU plural with `#` for the number; keep the `one` and `other` arms and add the locale's own CLDR arms (few/many) where it has them."
+	},
+	"mobile.sidebar.menu.pin": {
+		"role": "button",
+		"note": "Row in the long-press menu of a conversation in the sidebar: keeps this conversation at the top of the list. Short action, no final full stop."
+	},
+	"mobile.sidebar.menu.unpin": {
+		"role": "button",
+		"note": "Row in the long-press menu of a conversation that is already pinned: removes it from the top of the list. Short action, no final full stop."
+	},
+	"mobile.sidebar.menu.move": {
+		"role": "button",
+		"note": "Row in the long-press menu of a conversation: opens a sheet to move or copy the conversation to another computer. The ellipsis says another step follows; keep it."
+	},
+	"mobile.sidebar.menu.tags": {
+		"role": "button",
+		"note": "Row in the long-press menu of a conversation: opens a sheet to assign the conversation's tags (categories created on desktop). The ellipsis says another step follows; keep it."
+	},
+	"mobile.sidebar.menu.open": {
+		"role": "button",
+		"note": "Last row in the long-press menu of a conversation: opens the conversation, the same as tapping its row. Verb, no final full stop."
+	},
+	"mobile.sidebar.empty.search_next": {
+		"role": "help",
+		"note": "Second line under 'Nothing matches that.' when the sidebar search finds no conversation. Explains what the search looks at: the names, ids and folders of the sessions already on screen. 'ids' are session identifiers."
+	},
+	"mobile.sidebar.empty.no_route_headline": {
+		"role": "heading",
+		"note": "Headline of the sidebar's empty state when the phone is not connected to any computer. Plain statement, not an error."
+	},
+	"mobile.sidebar.empty.no_route_next": {
+		"role": "help",
+		"note": "Second line under 'No computer is connected yet.': why a computer is needed. The button below it connects one."
+	},
+	"mobile.sidebar.empty.none_headline": {
+		"role": "heading",
+		"note": "Headline of the sidebar's empty state when the connected computer has no conversations. A session is one conversation with the agent. Plain statement, not an error."
+	},
+	"mobile.sidebar.empty.none_next": {
+		"role": "help",
+		"note": "Second line under 'No sessions yet.': what a session is and what to do next. The 'New chat' button below it starts one."
 	}
 }

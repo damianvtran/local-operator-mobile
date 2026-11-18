@@ -40,5 +40,15 @@
 	"mobile.sidebar.row.asks": "{count, plural, one {# вопрос} few {# вопроса} many {# вопросов} other {# вопроса}}",
 	"mobile.sidebar.row.asks_not_blocker": "{asks}, агент продолжает работу",
 	"mobile.sidebar.row.agents": "{count, plural, one {# агент} few {# агента} many {# агентов} other {# агента}}",
-	"mobile.sidebar.row.todos": "{count, plural, one {# задача} few {# задачи} many {# задач} other {# задачи}}"
+	"mobile.sidebar.row.todos": "{count, plural, one {# задача} few {# задачи} many {# задач} other {# задачи}}",
+	"mobile.sidebar.menu.pin": "Закрепить вверху",
+	"mobile.sidebar.menu.unpin": "Открепить",
+	"mobile.sidebar.menu.move": "Переместить или скопировать…",
+	"mobile.sidebar.menu.tags": "Теги…",
+	"mobile.sidebar.menu.open": "Открыть",
+	"mobile.sidebar.empty.search_next": "Поиск идёт по названиям, ID и папкам загруженных сессий.",
+	"mobile.sidebar.empty.no_route_headline": "Компьютер пока не подключён.",
+	"mobile.sidebar.empty.no_route_next": "Приложение управляет сессиями на вашем собственном компьютере, поэтому сначала его нужно подключить.",
+	"mobile.sidebar.empty.none_headline": "Сессий пока нет.",
+	"mobile.sidebar.empty.none_next": "Сессия — это одна беседа с агентом на вашем компьютере. Начните новую, и она появится здесь."
 }
