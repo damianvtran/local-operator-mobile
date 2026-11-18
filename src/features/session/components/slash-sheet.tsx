@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, Text, TextInput, View } from "react-native";
 
 import type { SlashCommand } from "@/contracts";
 import { argumentHint, filterCommands } from "@/features/session/slash";
@@ -74,16 +74,24 @@ export const SlashSheet = ({
 				className="mx-2 mb-1 min-h-11 rounded-sm border border-control bg-surface px-3 text-body text-ink"
 				value={filter}
 				onChangeText={setFilter}
-				placeholder="filter commands"
+				placeholder={t("mobile.session.slash.filter")}
 				// A phone keyboard would otherwise capitalise and autocorrect a command
 				// name into something the relay does not have.
 				autoCapitalize="none"
 				autoCorrect={false}
 				style={{ fontSize: 16 }}
 				testID={CONTROL.slashFilter}
-				accessibilityLabel="Filter commands"
+				accessibilityLabel={t("mobile.session.slash.filter")}
 			/>
-			<ScrollView className="max-h-72">
+			{/* The rows sit directly in the Sheet's own body, which already scrolls
+			    and is capped at the detent. The nested `max-h-72` ScrollView they
+			    used to sit in was a second scroll region on the same axis: it cut
+			    the list to 288 pt inside a taller sheet, drew no edge cue of its
+			    own, and on Android a vertical ScrollView inside another does not
+			    scroll without `nestedScrollEnabled`. The cost is that the filter
+			    scrolls away with the list; it is the first thing in the body, so
+			    it is back at the top. */}
+			<View>
 				{rows.map(({ command }) => {
 					const hint = argumentHint(command);
 					return (
@@ -99,16 +107,23 @@ export const SlashSheet = ({
 							}}
 							testID={slashCommandId(command.name)}
 						>
-							<View className="min-h-11 flex-row items-center gap-2 px-3">
+							{/* Baseline-aligned, not centred: a description can now run to
+							    three lines, and the command name belongs beside its first. */}
+							<View className="min-h-11 flex-row items-baseline gap-2 px-3 py-3">
 								<Text className="shrink-0 font-mono text-mono-sm text-ink">
 									/{command.name}
 									{hint !== null ? (
 										<Text className="text-ink-dim">{hint}</Text>
 									) : null}
 								</Text>
+								{/* Up to three lines: one line cut most descriptions to a
+								    fragment ("Summarise the conversation so…") at 390 pt,
+								    and the description is the only explanation of what a
+								    tap will run. Three keeps a long one from turning a row
+								    into a paragraph. */}
 								<Text
 									className="min-w-0 flex-1 text-body-sm text-ink-dim"
-									numberOfLines={1}
+									numberOfLines={3}
 								>
 									{command.description}
 								</Text>
@@ -117,13 +132,15 @@ export const SlashSheet = ({
 					);
 				})}
 				{loading ? (
-					<Text className="px-3 py-2 text-body-sm text-ink-dim">loading…</Text>
+					<Text className="px-3 py-2 text-body-sm text-ink-dim">
+						{t("mobile.common.loading")}
+					</Text>
 				) : rows.length === 0 ? (
 					<Text className="px-3 py-2 text-body-sm text-ink-dim">
-						no matching commands
+						{t("mobile.session.slash.no_matches")}
 					</Text>
 				) : null}
-			</ScrollView>
+			</View>
 		</Sheet>
 	);
 };

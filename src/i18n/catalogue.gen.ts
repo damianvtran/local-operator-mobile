@@ -718,6 +718,8 @@ export type CatalogueKey =
 	| "mobile.session.sheet_title.model"
 	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
+	| "mobile.session.slash.filter"
+	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
 	| "mobile.session.subagent.prompt_label"
@@ -1713,6 +1715,8 @@ export type NoParamKey =
 	| "mobile.session.sheet_title.model"
 	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
+	| "mobile.session.slash.filter"
+	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
 	| "mobile.session.subagent.prompt_label"
@@ -2747,6 +2751,8 @@ export type MessageParams = {
 	"mobile.session.sheet_title.model": NoParams;
 	"mobile.session.sheet_title.search": NoParams;
 	"mobile.session.sheet_title.status": NoParams;
+	"mobile.session.slash.filter": NoParams;
+	"mobile.session.slash.no_matches": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session.subagent.no_rows": NoParams;
 	"mobile.session.subagent.prompt_label": NoParams;
@@ -3869,6 +3875,8 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.sheet_title.model": "Model",
 	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.sheet_title.status": "Tasks and agents",
+	"mobile.session.slash.filter": "Filter commands",
+	"mobile.session.slash.no_matches": "No matching commands",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
 	"mobile.session.subagent.prompt_label": "prompt",
@@ -4976,6 +4984,8 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.sheet_title.model": { role: "heading", note: "Title of the sheet that lists the models to choose from. Title case in English." },
 	"mobile.session.sheet_title.search": { role: "heading", note: "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders." },
 	"mobile.session.sheet_title.status": { role: "heading", note: "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English." },
+	"mobile.session.slash.filter": { role: "meta", note: "The commands sheet's text field: both its placeholder and its accessible name. Typing narrows the list of slash commands (such as /compact) to those whose name matches. An instruction-like label, sentence case, no final full stop. Keep it short: the field is one line on a 320 pt phone." },
+	"mobile.session.slash.no_matches": { role: "status", note: "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session.subagent.no_rows": { role: "status", note: "Muted line shown when a subagent's transcript is empty. One sentence." },
 	"mobile.session.subagent.prompt_label": { role: "meta", note: "Lower-case label above the instruction the subagent was given. One word, lower case to match its sibling label." },
@@ -6097,6 +6107,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Modelo",
 		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Tareas y agentes",
+		"mobile.session.slash.filter": "Filter commands",
+		"mobile.session.slash.no_matches": "No matching commands",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 		"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
 		"mobile.session.subagent.prompt_label": "prompt",
@@ -7202,6 +7214,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Modèle",
 		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Tâches et agents",
+		"mobile.session.slash.filter": "Filter commands",
+		"mobile.session.slash.no_matches": "No matching commands",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 		"mobile.session.subagent.no_rows": "Ce sous-agent n’a aucune ligne de transcription qui lui soit propre.",
 		"mobile.session.subagent.prompt_label": "prompt",
@@ -8307,6 +8321,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "मॉडल",
 		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "कार्य और एजेंट",
+		"mobile.session.slash.filter": "Filter commands",
+		"mobile.session.slash.no_matches": "No matching commands",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 		"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
 		"mobile.session.subagent.prompt_label": "प्रॉम्प्ट",
@@ -9412,6 +9428,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Модель",
 		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Задачи и агенты",
+		"mobile.session.slash.filter": "Filter commands",
+		"mobile.session.slash.no_matches": "No matching commands",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 		"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
 		"mobile.session.subagent.prompt_label": "промпт",
@@ -10517,6 +10535,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "ماڈل",
 		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "کام اور ایجنٹس",
+		"mobile.session.slash.filter": "Filter commands",
+		"mobile.session.slash.no_matches": "No matching commands",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 		"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
 		"mobile.session.subagent.prompt_label": "پرامپٹ",
@@ -11622,6 +11642,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "Mô hình",
 		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
+		"mobile.session.slash.filter": "Filter commands",
+		"mobile.session.slash.no_matches": "No matching commands",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
 		"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
 		"mobile.session.subagent.prompt_label": "prompt",
@@ -12727,6 +12749,8 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.model": "模型",
 		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "任务和智能体",
+		"mobile.session.slash.filter": "Filter commands",
+		"mobile.session.slash.no_matches": "No matching commands",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 		"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",
 		"mobile.session.subagent.prompt_label": "提示词",

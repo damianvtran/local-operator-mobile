@@ -50,6 +50,8 @@
 	"mobile.session.sheet_title.effort": "Esfuerzo",
 	"mobile.session.sheet_title.status": "Tareas y agentes",
 	"mobile.session.sheet_title.search": "Search",
+	"mobile.session.slash.filter": "Filter commands",
+	"mobile.session.slash.no_matches": "No matching commands",
 	"mobile.session.subagent.screen_title": "Subagente",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "resultado",

@@ -50,6 +50,8 @@
 	"mobile.session.sheet_title.effort": "Mức suy luận",
 	"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
 	"mobile.session.sheet_title.search": "Search",
+	"mobile.session.slash.filter": "Filter commands",
+	"mobile.session.slash.no_matches": "No matching commands",
 	"mobile.session.subagent.screen_title": "Tác nhân con",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "kết quả",

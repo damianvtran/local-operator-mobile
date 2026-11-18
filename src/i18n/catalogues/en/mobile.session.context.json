@@ -203,6 +203,14 @@
 		"role": "heading",
 		"note": "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders."
 	},
+	"mobile.session.slash.filter": {
+		"role": "meta",
+		"note": "The commands sheet's text field: both its placeholder and its accessible name. Typing narrows the list of slash commands (such as /compact) to those whose name matches. An instruction-like label, sentence case, no final full stop. Keep it short: the field is one line on a 320 pt phone."
+	},
+	"mobile.session.slash.no_matches": {
+		"role": "status",
+		"note": "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop."
+	},
 	"mobile.session.subagent.screen_title": {
 		"role": "heading",
 		"note": "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent."
