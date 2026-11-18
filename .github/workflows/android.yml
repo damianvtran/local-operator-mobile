@@ -41,6 +41,14 @@ on:
         description: Secret-free device callback proof only (run after the iOS proof settles)
         type: boolean
         default: false
+      installed_app_proof:
+        description: Secret-free installed-app notification proof only (scripts/ci/android-installed-app-proof)
+        type: boolean
+        default: false
+      installed_app_sha:
+        description: Full 40-hex candidate commit for installed_app_proof
+        type: string
+        default: ""
 
 # THE TRIGGER IS PART OF THE KEY. The mechanism is the one e2e.yml spells out at
 # length and has the measurement for: GitHub keeps one pending run per concurrency
@@ -84,6 +92,15 @@ jobs:
     # without first merging its workflow. No signing environment/secrets inherited.
     if: github.event_name == 'workflow_dispatch' && inputs.oauth_callback_proof == true
     uses: ./.github/workflows/android-oauth-callback-proof.yml
+
+  installed-app-proof:
+    # Same default-branch dispatch seam as the OAuth proof above: lets a branch
+    # carrying the reusable workflow run it before it is merged. No signing
+    # environment or secrets are inherited.
+    if: github.event_name == 'workflow_dispatch' && inputs.installed_app_proof == true
+    uses: ./.github/workflows/android-installed-app-proof.yml
+    with:
+      app_sha: ${{ inputs.installed_app_sha }}
 
   changes:
     name: Does this change touch anything native?
@@ -153,7 +170,7 @@ jobs:
   android:
     name: Android (debug APK)
     needs: changes
-    if: needs.changes.outputs.native == 'true' && inputs.oauth_callback_proof != true
+    if: needs.changes.outputs.native == 'true' && inputs.oauth_callback_proof != true && inputs.installed_app_proof != true
     runs-on: ubuntu-latest
     # Bounded so a wedged Gradle invocation cannot hold a runner for GitHub's
     # 360-minute default. A cold run is 8-14 minutes.
@@ -610,7 +627,8 @@ jobs:
   sound-ios:
     name: iOS sound persistence XCTest
     needs: changes
-    if: needs.changes.outputs.sound_native == 'true'
+    # A proof-only dispatch (installed_app_proof) skips it: no change is under test.
+    if: needs.changes.outputs.sound_native == 'true' && inputs.installed_app_proof != true
     runs-on: macos-26
     timeout-minutes: 25
     steps:
