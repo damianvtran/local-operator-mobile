@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "Mở sơ đồ toàn màn hình",
 	"mobile.session.diagram.copy": "Sao chép nguồn của sơ đồ",
 	"mobile.session.diagram.close": "Đóng sơ đồ",
-	"mobile.session.diagram.viewer": "Trình xem sơ đồ"
+	"mobile.session.diagram.viewer": "Trình xem sơ đồ",
+	"mobile.session.asks.section_timed_out": "Hết thời gian chờ",
+	"mobile.session.asks.section_closed": "Đã đóng",
+	"mobile.session.asks.section_other": "Khác"
 }

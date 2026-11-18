@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "Abre el diagrama a pantalla completa",
 	"mobile.session.diagram.copy": "Copiar el código fuente del diagrama",
 	"mobile.session.diagram.close": "Cerrar el diagrama",
-	"mobile.session.diagram.viewer": "Visor de diagramas"
+	"mobile.session.diagram.viewer": "Visor de diagramas",
+	"mobile.session.asks.section_timed_out": "Tiempo agotado",
+	"mobile.session.asks.section_closed": "Cerradas",
+	"mobile.session.asks.section_other": "Otras"
 }

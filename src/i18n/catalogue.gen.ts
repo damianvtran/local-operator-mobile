@@ -643,6 +643,9 @@ export type CatalogueKey =
 	| "mobile.schedules.supervisor.unverifiable"
 	| "mobile.schedules.tail.failed"
 	| "mobile.schedules.truncated"
+	| "mobile.session.asks.section_closed"
+	| "mobile.session.asks.section_other"
+	| "mobile.session.asks.section_timed_out"
 	| "mobile.session.back_to"
 	| "mobile.session.back_to_session"
 	| "mobile.session.chip.effort_change_failed"
@@ -1674,6 +1677,9 @@ export type NoParamKey =
 	| "mobile.schedules.supervisor.not_running"
 	| "mobile.schedules.supervisor.unsupported"
 	| "mobile.schedules.supervisor.unverifiable"
+	| "mobile.session.asks.section_closed"
+	| "mobile.session.asks.section_other"
+	| "mobile.session.asks.section_timed_out"
 	| "mobile.session.back_to_session"
 	| "mobile.session.chip.effort_change_failed"
 	| "mobile.session.chip.effort_resume_hint"
@@ -2713,6 +2719,9 @@ export type MessageParams = {
 	"mobile.schedules.supervisor.unverifiable": NoParams;
 	"mobile.schedules.tail.failed": { count: number };
 	"mobile.schedules.truncated": { shown: number; total: number; family: string };
+	"mobile.session.asks.section_closed": NoParams;
+	"mobile.session.asks.section_other": NoParams;
+	"mobile.session.asks.section_timed_out": NoParams;
 	"mobile.session.back_to": { name: string | number };
 	"mobile.session.back_to_session": NoParams;
 	"mobile.session.chip.effort_change_failed": NoParams;
@@ -3860,6 +3869,9 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.schedules.supervisor.unverifiable": "Nothing supervises the wakes below, so they only fire while their conversation is running.",
 	"mobile.schedules.tail.failed": "{count} failed",
 	"mobile.schedules.truncated": "Showing {shown} of {total} conversations with {family, select, wakes {wakes} other {monitors}}.",
+	"mobile.session.asks.section_closed": "Closed",
+	"mobile.session.asks.section_other": "Other",
+	"mobile.session.asks.section_timed_out": "Timed out",
 	"mobile.session.back_to": "Back to {name}",
 	"mobile.session.back_to_session": "Back to session",
 	"mobile.session.chip.effort_change_failed": "Could not change the effort.",
@@ -4405,7 +4417,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.chrome.composer.row_cost": { role: "meta", note: "Row label in the composer's More sheet for the conversation's spend; the amount is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_effort": { role: "meta", note: "Row label in the composer's More sheet; the reasoning-effort level is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_model": { role: "meta", note: "Row label in the composer's More sheet; the model's name is shown at the other end of the same row. A noun, no colon." },
-	"mobile.chrome.composer.row_questions": { role: "meta", note: "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. A plural noun, no colon." },
+	"mobile.chrome.composer.row_questions": { role: "meta", note: "Row label in the composer's More sheet for the agent's questions to the user (including ones that timed out); the count is shown at the other end of the same row and tapping the row opens the questions sheet. The same word is that sheet's title, so it must also read as a title on its own. A plural noun, no colon." },
 	"mobile.chrome.composer.row_queue": { role: "meta", note: "Row label in the composer's More sheet for messages waiting to be sent; the count is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.composer.row_usage": { role: "meta", note: "Row label in the composer's More sheet for how much of the model's context window is used; the reading is shown at the other end of the same row. A noun, no colon." },
 	"mobile.chrome.destination.inbox": { role: "button", note: "Label under the inbox icon in the sidebar's destinations strip (five equal slots, ~52 pt each, label at 11-12 pt). One short word; the slot truncates anything longer. Opens the notifications inbox." },
@@ -4817,7 +4829,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.notifications.primer.not_now": { role: "button", note: "Secondary button of the first-run notifications sheet: declines for now. The sheet may be offered once more later. Short." },
 	"mobile.notifications.primer.title": { role: "heading", note: "Title of the first-run sheet that asks the reader to turn on notifications. Shown once on Home after a computer is first reached. \"Agents\" are the AI agents running on the reader's computer." },
 	"mobile.notifications.priority_high": { role: "status", note: "Badge on a notification the sender marked high priority. One word." },
-	"mobile.notifications.section.waiting": { role: "heading", note: "Pinned section heading at the top of the notifications inbox: the asks that are blocked on the reader. Short heading, ~20 characters. No placeholders." },
+	"mobile.notifications.section.waiting": { role: "heading", note: "Pinned section heading at the top of the notifications inbox: the asks that are blocked on the reader. Also the heading of the same group in the questions sheet (the agent's questions still open for an answer), above the Timed out and Closed groups. Short heading, ~20 characters. No placeholders." },
 	"mobile.notifications.section.waiting_count": { role: "heading", note: "The same pinned section heading with the number of items in it, e.g. 'Waiting on you · 3'. {count} is an integer shown as digits; no noun follows it, so no plural arms. Keep the middle dot separator." },
 	"mobile.notifications.title": { role: "heading", note: "Title of the notifications inbox screen." },
 	"mobile.notifications.turn_on": { role: "button", note: "The one label of every control that turns this phone's notifications on: the first-run sheet's primary button (raises the phone's permission dialog), the Settings › Notifications button, and the 'Notifications are off' row's button (opens this app's page in the system settings). Use the same words in all three places." },
@@ -4992,6 +5004,9 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.schedules.supervisor.unverifiable": { role: "status", note: "The probe cannot speak for this store (sandbox or foreign store). Must not claim the supervisor is 'not running', which the probe never checked." },
 	"mobile.schedules.tail.failed": { role: "status", note: "Failure count appended to a monitor row. {count} is a positive integer. Sits after the monitor's own health sentence." },
 	"mobile.schedules.truncated": { role: "status", note: "The listing was capped. {shown} entries of {total} are rendered; the family select picks the noun so the sentence stays grammatical in locales where the noun inflects." },
+	"mobile.session.asks.section_closed": { role: "heading", note: "Section heading in the questions sheet over questions that are finished: answered, answered late, declined, dismissed, withdrawn by the agent, or too old to answer. Each row beneath states which. Must not mean 'answered' only, and must not suggest an error. Shown upper-case in Latin scripts by the layout; one word if possible, no final full stop." },
+	"mobile.session.asks.section_other": { role: "heading", note: "Section heading in the questions sheet over questions in a status this app version does not recognise (sent by a newer computer). Rare. Must not claim the questions are waiting or finished. Shown upper-case in Latin scripts by the layout; one word, no final full stop." },
+	"mobile.session.asks.section_timed_out": { role: "heading", note: "Section heading in the questions sheet over questions whose deadline passed without an answer; the agent went ahead without one and they can only be dismissed. Sibling headings: \"Waiting on you\" (questions still open) and \"Closed\". Same wording as the row status \"Timed out — the agent goes ahead without your answer\". Shown upper-case in Latin scripts by the layout; short, no final full stop." },
 	"mobile.session.back_to": { role: "button", note: "Back-navigation label on the video and agent-job screens; {name} is the parent session's own name or the noun phrase from mobile.session.fallback_name ('session') when unknown. Must read grammatically with BOTH (mind case/article: e.g. ru dative). Sentence case, no full stop." },
 	"mobile.session.back_to_session": { role: "button", note: "Back-navigation label on the video and agent-job screens when the parent session has no name of its own (replaces 'Back to {name}' in that case). Full phrase, sentence case, no full stop; free to adapt article/case/word order. Reuse the locale's 'session' term." },
 	"mobile.session.chip.effort_change_failed": { role: "status", note: "Inline error under the composer when changing the session's effort level failed. 'Effort' is the product's word for how hard the model works." },
@@ -6138,6 +6153,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Nada supervisa los despertares de abajo, así que solo se disparan mientras su conversación está en marcha.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# fallo} many {# de fallos} other {# fallos}}",
 		"mobile.schedules.truncated": "Mostrando {shown} de {total} conversaciones con {family, select, wakes {despertares} other {monitorizaciones}}.",
+		"mobile.session.asks.section_closed": "Cerradas",
+		"mobile.session.asks.section_other": "Otras",
+		"mobile.session.asks.section_timed_out": "Tiempo agotado",
 		"mobile.session.back_to": "Volver a {name}",
 		"mobile.session.back_to_session": "Volver a la sesión",
 		"mobile.session.chip.effort_change_failed": "No se pudo cambiar el esfuerzo.",
@@ -7268,6 +7286,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Rien ne supervise les réveils ci-dessous : ils ne se déclenchent que lorsque leur conversation s’exécute.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# échec} many {# d’échecs} other {# échecs}}",
 		"mobile.schedules.truncated": "Affichage de {shown, plural, one {# conversation} many {# de conversations} other {# conversations}} sur {total} avec {family, select, wakes {des réveils} other {des surveillances}}.",
+		"mobile.session.asks.section_closed": "Clôturées",
+		"mobile.session.asks.section_other": "Autres",
+		"mobile.session.asks.section_timed_out": "Délai dépassé",
 		"mobile.session.back_to": "Retour à {name}",
 		"mobile.session.back_to_session": "Retour à la session",
 		"mobile.session.chip.effort_change_failed": "Impossible de changer le niveau d’effort.",
@@ -7811,7 +7832,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.chrome.composer.row_cost": "लागत",
 		"mobile.chrome.composer.row_effort": "प्रयास",
 		"mobile.chrome.composer.row_model": "मॉडल",
-		"mobile.chrome.composer.row_questions": "प्रश्न",
+		"mobile.chrome.composer.row_questions": "सवाल",
 		"mobile.chrome.composer.row_queue": "कतार",
 		"mobile.chrome.composer.row_usage": "संदर्भ",
 		"mobile.chrome.destination.inbox": "इनबॉक्स",
@@ -8398,6 +8419,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "इन जागृतियों पर कोई निगरानी नहीं — ये केवल तब जागेंगी जब इनकी बातचीत चल रही हो।",
 		"mobile.schedules.tail.failed": "{count} विफल",
 		"mobile.schedules.truncated": "{family, select, wakes {जागृतियों} other {मॉनिटरों}} वाली कुल {total, plural, one {# बातचीत} other {# बातचीतों}} में से {shown} दिखा रहे हैं।",
+		"mobile.session.asks.section_closed": "बंद",
+		"mobile.session.asks.section_other": "अन्य",
+		"mobile.session.asks.section_timed_out": "समय-सीमा पार",
 		"mobile.session.back_to": "{name} पर वापस जाएँ",
 		"mobile.session.back_to_session": "सत्र पर वापस जाएँ",
 		"mobile.session.chip.effort_change_failed": "प्रयास नहीं बदला जा सका।",
@@ -9528,6 +9552,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "У пробуждений ниже нет супервизора, поэтому они срабатывают, только пока идёт их беседа.",
 		"mobile.schedules.tail.failed": "{count, plural, one {# сбой} few {# сбоя} many {# сбоев} other {# сбоя}}",
 		"mobile.schedules.truncated": "Беседы с {family, select, wakes {пробуждениями} other {мониторами}}: показано {shown} из {total}.",
+		"mobile.session.asks.section_closed": "Закрытые",
+		"mobile.session.asks.section_other": "Другие",
+		"mobile.session.asks.section_timed_out": "Время вышло",
 		"mobile.session.back_to": "Назад: {name}",
 		"mobile.session.back_to_session": "Назад к сессии",
 		"mobile.session.chip.effort_change_failed": "Не удалось изменить усилие.",
@@ -10658,6 +10685,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "نیچے دی گئی بیداریوں کی نگرانی کوئی نہیں کرتا، اس لیے یہ صرف تب چلتی ہیں جب ان کی گفتگو چل رہی ہو۔",
 		"mobile.schedules.tail.failed": "{count} ناکام",
 		"mobile.schedules.truncated": "{family, select, wakes {بیداریوں} other {نگرانیوں}} والی کل {total, plural, one {# گفتگو} other {# گفتگوؤں}} میں سے {shown, plural, one {# دکھائی جا رہی ہے} other {# دکھائی جا رہی ہیں}}۔",
+		"mobile.session.asks.section_closed": "بند",
+		"mobile.session.asks.section_other": "دیگر",
+		"mobile.session.asks.section_timed_out": "وقت ختم ہو گیا",
 		"mobile.session.back_to": "{name} پر واپس جائیں",
 		"mobile.session.back_to_session": "سیشن پر واپس جائیں",
 		"mobile.session.chip.effort_change_failed": "استدلال کی شدت تبدیل نہیں ہو سکی۔",
@@ -11788,6 +11818,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "Không có gì giám sát các lần thức dậy bên dưới, nên chúng chỉ chạy khi cuộc trò chuyện của chúng đang chạy.",
 		"mobile.schedules.tail.failed": "{count} thất bại",
 		"mobile.schedules.truncated": "Đang hiện {shown} trên {total} cuộc trò chuyện có {family, select, wakes {lần thức dậy} other {giám sát}}.",
+		"mobile.session.asks.section_closed": "Đã đóng",
+		"mobile.session.asks.section_other": "Khác",
+		"mobile.session.asks.section_timed_out": "Hết thời gian chờ",
 		"mobile.session.back_to": "Quay lại {name}",
 		"mobile.session.back_to_session": "Quay lại phiên",
 		"mobile.session.chip.effort_change_failed": "Không thể đổi mức suy luận.",
@@ -12918,6 +12951,9 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.schedules.supervisor.unverifiable": "以下唤醒没有监督者，因此仅在其对话运行时触发。",
 		"mobile.schedules.tail.failed": "{count}次失败",
 		"mobile.schedules.truncated": "显示{shown}/{total}个含{family, select, wakes {唤醒} other {监控}}的对话。",
+		"mobile.session.asks.section_closed": "已关闭",
+		"mobile.session.asks.section_other": "其他",
+		"mobile.session.asks.section_timed_out": "已超时",
 		"mobile.session.back_to": "返回{name}",
 		"mobile.session.back_to_session": "返回会话",
 		"mobile.session.chip.effort_change_failed": "无法更改推理强度。",

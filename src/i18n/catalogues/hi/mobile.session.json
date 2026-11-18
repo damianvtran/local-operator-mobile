@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "आरेख को पूर्ण स्क्रीन पर खोलता है",
 	"mobile.session.diagram.copy": "आरेख का स्रोत कॉपी करें",
 	"mobile.session.diagram.close": "आरेख बंद करें",
-	"mobile.session.diagram.viewer": "आरेख व्यूअर"
+	"mobile.session.diagram.viewer": "आरेख व्यूअर",
+	"mobile.session.asks.section_timed_out": "समय-सीमा पार",
+	"mobile.session.asks.section_closed": "बंद",
+	"mobile.session.asks.section_other": "अन्य"
 }

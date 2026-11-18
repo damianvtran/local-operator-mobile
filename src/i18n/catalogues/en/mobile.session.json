@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "Opens the diagram full screen",
 	"mobile.session.diagram.copy": "Copy diagram source",
 	"mobile.session.diagram.close": "Close diagram",
-	"mobile.session.diagram.viewer": "Diagram viewer"
+	"mobile.session.diagram.viewer": "Diagram viewer",
+	"mobile.session.asks.section_timed_out": "Timed out",
+	"mobile.session.asks.section_closed": "Closed",
+	"mobile.session.asks.section_other": "Other"
 }

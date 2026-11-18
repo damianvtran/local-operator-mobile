@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "全屏打开图表",
 	"mobile.session.diagram.copy": "复制图表源码",
 	"mobile.session.diagram.close": "关闭图表",
-	"mobile.session.diagram.viewer": "图表查看器"
+	"mobile.session.diagram.viewer": "图表查看器",
+	"mobile.session.asks.section_timed_out": "已超时",
+	"mobile.session.asks.section_closed": "已关闭",
+	"mobile.session.asks.section_other": "其他"
 }

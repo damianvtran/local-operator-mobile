@@ -214,7 +214,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 99, // feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
+		expected: 102, // issue #326 +3: the questions sheet's Timed out / Closed / Other section headings (99 + 3 = 102); feat/pele-diagrams +8: the mermaid diagram block (label, titled label, open hint, copy, copied marker, could-not-draw notice, viewer name, viewer close) (91 + 8 = 99); O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -562,8 +562,9 @@ describe("the English catalogues", () => {
 		// re-derived with generate.ts over the merged tree.
 		// Merge of main into #305 (feat/bridge-mention-suggestions): +9
 		// mobile.team_bridge.mentions.* on main's 1119 = 1128, re-derived with
-		// generate.ts over the merged tree.
-		expect(total).toBe(1128);
+		// generate.ts over the merged tree. Issue #326: +3 mobile.session.asks.*
+		// section headings = 1131.
+		expect(total).toBe(1131);
 	});
 
 	it("lists every catalogue file this suite checks", () => {
