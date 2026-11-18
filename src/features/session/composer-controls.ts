@@ -330,13 +330,21 @@ export const applyRunSetting = async (input: {
 };
 
 /**
- * The non-default dot's inset from the control box's top and trailing edges,
- * pt: centred on the glyph box's top-end corner. The glyph is centred in the
- * touch-floor box, so the inset follows the PLATFORM floor (44 pt iOS, 48 dp
- * Android/web) rather than a fixed 44 pt box (design round 1, D4).
+ * The non-default dot's insets from the control's top and trailing edges, pt:
+ * centred on the glyph's top-end corner. `IconButton` draws its visual box
+ * (`h-11 w-11`, 44 pt) at the TOP-START of a touch-floor pressable and centres
+ * the glyph in THAT box, so the glyph sits at `(box − glyph) / 2` from the top
+ * and the start on every floor; only the trailing inset grows with the floor
+ * (design round 2, D3: on 48 dp a centred-in-the-floor inset left the dot 2 pt
+ * off the corner).
  */
-export const customMarkInset = (
-	touchFloor: number,
-	glyph: number,
-	mark: number,
-): number => (touchFloor - glyph) / 2 - mark / 2;
+export const customMarkInset = (input: {
+	floor: number;
+	box: number;
+	glyph: number;
+	mark: number;
+}): { top: number; end: number } => {
+	const glyphInset = (input.box - input.glyph) / 2;
+	const top = glyphInset - input.mark / 2;
+	return { top, end: input.floor - input.box + top };
+};

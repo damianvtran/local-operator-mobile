@@ -423,11 +423,15 @@ export type ComposerProps = {
 /** The non-default mark's diameter, pt: the list row's 6 pt dot (components.md
  *  § 7), the kit's existing small mark. */
 const CUSTOM_MARK_PT = 6;
-const MARK_INSET = customMarkInset(
-	TOUCH_FLOOR,
-	ATTACH_GLYPH_PT,
-	CUSTOM_MARK_PT,
-);
+/** `IconButton`'s visual box (`iconButtonClasses`' `h-11 w-11`), drawn at the
+ *  top-start of its touch-floor pressable. */
+const ICON_BUTTON_BOX_PT = 44;
+const MARK_INSET = customMarkInset({
+	floor: TOUCH_FLOOR,
+	box: ICON_BUTTON_BOX_PT,
+	glyph: ATTACH_GLYPH_PT,
+	mark: CUSTOM_MARK_PT,
+});
 
 /**
  * One of the composer's icon controls — the folder, the run settings (issue
@@ -479,11 +483,11 @@ const ComposerIconControl = ({
 				style={{
 					width: CUSTOM_MARK_PT,
 					height: CUSTOM_MARK_PT,
-					/* Centred on the glyph box's top-end corner at the PLATFORM
-					 *  floor: 9 pt in the 44 pt box, 11 in the 48 dp one (design
-					 *  round 1, D4 — a fixed 7 floated off the glyph at 48). */
-					top: MARK_INSET,
-					end: MARK_INSET,
+					/* Centred on the glyph's top-end corner: top 9 on every
+					 *  floor, end 9 on 44 pt and 13 on 48 dp (design rounds 1
+					 *  and 2, D4/D3). */
+					top: MARK_INSET.top,
+					end: MARK_INSET.end,
 				}}
 			/>
 		) : null}

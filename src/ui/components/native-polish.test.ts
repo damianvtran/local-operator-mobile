@@ -109,6 +109,42 @@ describe("final design audit wiring", () => {
 		expect(control).not.toContain("<Chip");
 	});
 
+	it("pins the run-settings sheet's wiring on both hosts (round 2 F2/Q6)", () => {
+		const read = (path: string) =>
+			readFileSync(new URL(path, import.meta.url), "utf8");
+		const session = read("../../../app/(app)/session/[id].tsx");
+		/* An ended session with no recorded effort says to resume, never "no
+		 *  effort setting" — only if the screen tells the helper it ended. */
+		const wiring = session.slice(
+			session.indexOf("sessionRunSettings({"),
+			session.indexOf("});", session.indexOf("sessionRunSettings({")),
+		);
+		expect(wiring).toContain(
+			'ended: headerHealth(projection, runtime.link) === "ended",',
+		);
+		// A refused change shows inside the open sheet (round 1 R2).
+		expect(session).toContain("error={chipError}");
+		const home = read("../../features/home/home.tsx");
+		expect(home).toContain(
+			"summary={runSettingsSummary(chips.model, chips.effort ?? null)}",
+		);
+		const sheet = read("../../features/session/components/model-sheet.tsx");
+		const sessionSheet = sheet.slice(
+			sheet.indexOf("export const SessionRunSettingsSheet"),
+		);
+		expect(sessionSheet).toMatch(
+			/<EffortRungGroup>[\s\S]*?<EffortRungRow[^>]*?^\s*compact$/m,
+		);
+		const pickers = read("../../features/home/home-pickers.tsx");
+		const choices = pickers.slice(
+			pickers.indexOf("const EffortChoices"),
+			pickers.indexOf("export const RunSettingsPicker"),
+		);
+		expect(choices).toContain("<EffortRungGroup>");
+		// Both of the home's rungs (the default row and the ladder) are compact.
+		expect(choices.match(/^\s*compact$/gm)?.length).toBe(2);
+	});
+
 	it("draws run settings with a settings glyph and pins the dot to the glyph (D4, D5)", () => {
 		const composer = readFileSync(
 			new URL(
@@ -126,9 +162,10 @@ describe("final design audit wiring", () => {
 		/* The non-default dot's inset is computed from the platform floor, not a
 		 *  fixed 7 that only fit the 44 pt box (D4). */
 		expect(composer).toContain(
-			"customMarkInset(\n\tTOUCH_FLOOR,\n\tATTACH_GLYPH_PT,\n\tCUSTOM_MARK_PT,\n)",
+			"customMarkInset({\n\tfloor: TOUCH_FLOOR,\n\tbox: ICON_BUTTON_BOX_PT,\n\tglyph: ATTACH_GLYPH_PT,\n\tmark: CUSTOM_MARK_PT,\n})",
 		);
-		expect(composer).toContain("top: MARK_INSET,");
+		expect(composer).toContain("top: MARK_INSET.top,");
+		expect(composer).toContain("end: MARK_INSET.end,");
 		expect(composer).not.toContain("top: 7,");
 	});
 

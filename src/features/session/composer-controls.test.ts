@@ -544,8 +544,21 @@ describe("applyRunSetting: a refused change is reported, not swallowed (R2)", ()
 });
 
 describe("customMarkInset: the non-default dot sits on the glyph's corner at either floor (D4)", () => {
-	it("centres the dot on the glyph box's top-end corner", () => {
-		expect(customMarkInset(44, 20, 6)).toBe(9);
-		expect(customMarkInset(48, 20, 6)).toBe(11);
+	it("centres the dot on the glyph's top-end corner, in the kit's 44 pt visual box", () => {
+		/* `IconButton` draws a 44 pt box (`h-11 w-11`) at the TOP-START of its
+		 *  touch-floor pressable, so on the 48 dp floor the glyph is at 12, not
+		 *  14 (design round 2, D3: the dot measured 2 pt off the corner). */
+		expect(
+			customMarkInset({ floor: 44, box: 44, glyph: 20, mark: 6 }),
+		).toStrictEqual({
+			top: 9,
+			end: 9,
+		});
+		expect(
+			customMarkInset({ floor: 48, box: 44, glyph: 20, mark: 6 }),
+		).toStrictEqual({
+			top: 9,
+			end: 13,
+		});
 	});
 });
