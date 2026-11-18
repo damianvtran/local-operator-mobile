@@ -272,6 +272,9 @@ export const sessionRunSettings = (input: {
 	};
 };
 
+/** Trailing path separators, hoisted so the pattern compiles once. */
+const TRAILING_SEPARATORS = /[/\\]+$/;
+
 /**
  * The session's folder control: the folder's own name, never editable — the
  * relay accepts a folder only when a conversation starts
@@ -288,7 +291,7 @@ export const sessionFolderControl = (
 	editable: boolean;
 } | null => {
 	if (cwd.length === 0) return null;
-	const trimmed = cwd.length > 1 ? cwd.replace(/[/\\]+$/, "") : cwd;
+	const trimmed = cwd.length > 1 ? cwd.replace(TRAILING_SEPARATORS, "") : cwd;
 	const at = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
 	const name = at < 0 || trimmed === "/" ? trimmed : trimmed.slice(at + 1);
 	return { name, path: cwd, source: null, editable: false };
