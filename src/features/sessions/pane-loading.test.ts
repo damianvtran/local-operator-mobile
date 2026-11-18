@@ -12,15 +12,14 @@ import { layoutFor } from "@/ui/size-class";
  * The conversations pane's loading state has a COMPACT form for short panes
  * (docs/ux/audits/2026-10-11-full-surface-pass.md, D3 loading variant).
  *
- * Three skeleton rows are 96 pt of a pane that, on a phone on its side or at
- * large text on a short phone, has the pill, the header and the scrolling
- * footer to fit as well: the bars ended up past the fold and the frame read as
- * an EMPTY list — the symptom the skeleton exists to prevent. A short pane draws
- * one bar instead, so the loading cue stays on screen.
+ * At large text on a pane whose routes footer scrolls with the list (a phone on
+ * its side), the three skeleton rows and the footer compete for one short
+ * viewport: the audit saw the bars clipped away, and on the f5498d3c export the
+ * bars pushed the footer's last row off the bottom instead. One bar keeps both
+ * the loading cue and the footer on screen. Everywhere else the three rows fit
+ * and stay — the kit's form, and the stronger cue.
  *
- * "Short" is the pane's own existing definition: the panes whose routes footer
- * cannot stay pinned (`sidebarFooterScrolls`), decided before measuring so the
- * first paint is the one the reader keeps.
+ * Decided before measuring, so the first paint is the one the reader keeps.
  */
 const ROUTES = 3;
 
@@ -33,7 +32,10 @@ describe("paneLoadingVariant", () => {
 		 *  header and one row need (`PINNED_ROUTES_BASE_FLOOR`), and three bars
 		 *  are 96 pt: they fit, so the pane keeps the kit's form. */
 		["iPhone SE, 200 % → full", 320, 568, true, "full"],
-		["iPhone 15 landscape, 100 % → compact", 844, 390, false, "compact"],
+		/* Measured on the f5498d3c export at 844 × 390: at 100 % the three bars
+		 *  and the whole scrolling footer fit; only at 200 % did they push the
+		 *  footer's last row (More) off the bottom. */
+		["iPhone 15 landscape, 100 % → full", 844, 390, false, "full"],
 		["iPhone 15 landscape, 200 % → compact", 844, 390, true, "compact"],
 		["tablet split, 200 % → full", 1112, 834, true, "full"],
 	] as const)("%s", (_label, width, height, largeText, expected) => {

@@ -1296,8 +1296,8 @@ function buildItems(groups: readonly SidebarGroup[]): Item[] {
  * `waiting` renders the skeleton rows and carries the `sidebar/loading`
  * marker, so the state is distinguishable from empty BY MACHINE as well as by
  * eye (R-2: the two frames were byte-identical, both markerless, and nothing
- * could tell them apart). Three rows, or ONE on a short pane (`pane-loading.ts`):
- * three were pushed past the fold there and the state read as empty.
+ * could tell them apart). Three rows, or ONE on a short pane at large text
+ * (`pane-loading.ts`), where three and the scrolling footer did not both fit.
  */
 /** Stable keys for the loading rows; the variant takes a prefix. */
 const LOADING_ROW_KEYS = ["loading-0", "loading-1", "loading-2"] as const;
