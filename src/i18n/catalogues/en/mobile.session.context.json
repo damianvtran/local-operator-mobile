@@ -199,6 +199,22 @@
 		"role": "heading",
 		"note": "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English."
 	},
+	"mobile.session.sheet_title.search": {
+		"role": "heading",
+		"note": "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders."
+	},
+	"mobile.session.slash.filter": {
+		"role": "meta",
+		"note": "The commands sheet's text field: both its placeholder and its accessible name. Typing narrows the list of slash commands (such as /compact) to those whose name matches. An instruction-like label, sentence case, no final full stop. Keep it short: the field is one line on a 320 pt phone."
+	},
+	"mobile.session.slash.no_matches": {
+		"role": "status",
+		"note": "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop."
+	},
+	"mobile.session.slash.load_failed": {
+		"role": "status",
+		"note": "Muted line in the commands sheet when this phone could not read the list of slash commands from the reader's computer and holds none. It replaces the list, so it must not suggest that nothing matched. The second sentence is the remedy: leaving and reopening the conversation reads the list again. Two short sentences with final full stops; the apostrophe is a typographic ’."
+	},
 	"mobile.session.subagent.screen_title": {
 		"role": "heading",
 		"note": "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent."
@@ -218,6 +234,10 @@
 	"mobile.session.subagent.unavailable_next": {
 		"role": "help",
 		"note": "Empty-state follow-up giving the two possible reasons the subagent cannot be shown. One sentence."
+	},
+	"mobile.session.subagent.status": {
+		"role": "status",
+		"note": "The status badge beside a subagent's name on its own screen. {status} selects the arm and is never shown itself. queued: waiting to start; running: working now; completed: finished successfully; failed: finished with an error; parked: paused, can resume later; cancelled: stopped by someone before it finished; loading: this phone is still fetching the subagent's details; unavailable: the fetch finished and the computer has no record of this subagent (the screen's body says so too); other: a state this app does not know yet. Each arm is one short lower-case word (no full stop) that fits a small pill beside a title on a 320 pt phone."
 	},
 	"mobile.session.subagent.no_rows": {
 		"role": "status",
@@ -357,7 +377,7 @@
 	},
 	"mobile.session.sheet_title.commands": {
 		"role": "heading",
-		"note": "Title of the bottom sheet listing slash commands the reader can run in a conversation. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision) — use your language's natural form. ~16 characters. No placeholders."
+		"note": "Title of the bottom sheet listing slash commands the reader can run in a conversation. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Search); use your language's natural capitalisation for a title. ~16 characters. No placeholders."
 	},
 	"mobile.session.sheet_title.attach": {
 		"role": "heading",

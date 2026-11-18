@@ -8,6 +8,7 @@ import {
 	filterCommands,
 	parseSlashDraft,
 	slashQuery,
+	slashSheetStatus,
 	slashTap,
 	slashTapRequest,
 	tapFillsOnly,
@@ -239,5 +240,42 @@ describe("the slash tap takes the composer as a send does", () => {
 			hold,
 			"a return before the send would leak inFlight",
 		).toBeGreaterThan(guard);
+	});
+});
+
+describe("slashSheetStatus (the line under the rows)", () => {
+	/* QA round 1, Q1: the sheet said "No matching commands" over an empty filter
+	 *  while the catalogue was still being read, and again when the read failed —
+	 *  a false statement about a list that had not arrived. */
+	it("says loading while the first read is in flight and nothing is held", () => {
+		expect(
+			slashSheetStatus({ held: 0, shown: 0, loading: true, failed: false }),
+		).toBe("loading");
+	});
+
+	it("says the read failed, not that nothing matched, when nothing is held", () => {
+		expect(
+			slashSheetStatus({ held: 0, shown: 0, loading: false, failed: true }),
+		).toBe("failed");
+	});
+
+	it("keeps showing held rows through a re-read or a failed re-read", () => {
+		expect(
+			slashSheetStatus({ held: 5, shown: 5, loading: true, failed: false }),
+		).toBeNull();
+		expect(
+			slashSheetStatus({ held: 5, shown: 5, loading: false, failed: true }),
+		).toBeNull();
+	});
+
+	it("says no match only when a held catalogue matched nothing", () => {
+		expect(
+			slashSheetStatus({ held: 5, shown: 0, loading: false, failed: false }),
+		).toBe("no_matches");
+		/* A filter that matches nothing in a held catalogue is a fact even while a
+		 *  re-read runs. */
+		expect(
+			slashSheetStatus({ held: 5, shown: 0, loading: true, failed: false }),
+		).toBe("no_matches");
 	});
 });

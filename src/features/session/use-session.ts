@@ -119,6 +119,12 @@ export interface SessionRuntime {
 	 *  client has given up — fed by the same facts as the connection banner. */
 	link: HealthLink;
 	commands: SlashCommand[];
+	/** The last `GET /api/commands` read failed. The slash sheet says so rather
+	 *  than "No matching commands" when it holds none (QA round 1, Q1). */
+	commandsFailed: boolean;
+	/** A `GET /api/commands` read is in flight. Not `loading`, which the first
+	 *  stream frame clears while the catalogue read may still be running. */
+	commandsLoading: boolean;
 	models: ModelEntry[];
 	loading: boolean;
 	/** Whether the conversation provably runs deeper than the rows this device
@@ -321,6 +327,13 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 	);
 	const healHistory = useCallback(() => historyWindow.heal(), [historyWindow]);
 	const [commands, setCommands] = useSessionValue<SlashCommand[]>(identity, []);
+	const [commandsFailed, setCommandsFailed] = useSessionValue(identity, false);
+	/* Starts false, not true: the read below is what sets it, and a read that
+	 *  never starts (no relay yet) must not leave the sheet saying "Loading". */
+	const [commandsLoading, setCommandsLoading] = useSessionValue(
+		identity,
+		false,
+	);
 	const [models, setModels] = useSessionValue<ModelEntry[]>(identity, []);
 	const [error, setError] = useSessionValue<RelayError | null>(identity, null);
 	const [loading, setLoading] = useSessionValue(identity, true);
@@ -675,6 +688,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				return;
 			let cancelled = false;
 			setLoading(true);
+			setCommandsLoading(true);
 			const readHistory = history
 				? historyWindow.load(true)
 				: Promise.resolve();
@@ -687,6 +701,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				.then(([, commandList, modelList]) => {
 					if (cancelled) return;
 					if (commandList) setCommands(commandList.commands);
+					setCommandsFailed(commandList === null);
 					if (modelList) setModels(modelList.models);
 					/* A failed catalogue read is the one reason a RETURN re-reads
 					 * them (the AppState handler above); a good read waits for a
@@ -695,6 +710,7 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 				})
 				.finally(() => {
 					if (!cancelled) setLoading(false);
+					if (!cancelled) setCommandsLoading(false);
 				});
 			return () => {
 				cancelled = true;
@@ -712,6 +728,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		setLoading,
 		historyWindow,
 		setCommands,
+		setCommandsFailed,
+		setCommandsLoading,
 		setModels,
 	]);
 
@@ -1064,6 +1082,8 @@ export const useSessionRuntime = (sessionId: string): SessionRuntime => {
 		connected: entry.connected,
 		link,
 		commands: ownsProjection ? commands : [],
+		commandsFailed: ownsProjection ? commandsFailed : false,
+		commandsLoading: ownsProjection ? commandsLoading : false,
 		models: ownsProjection ? models : [],
 		loading,
 		olderThanLoaded: olderRowClaim,

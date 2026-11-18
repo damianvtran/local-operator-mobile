@@ -82,6 +82,7 @@ import type {
 	TranscriptItem,
 	TurnView,
 } from "@/features/session/turn-condensing";
+import { t } from "@/i18n";
 
 /* ----------------------------------------------------------------- constants */
 
@@ -582,14 +583,16 @@ export const splitRanges = (
 
 /* ------------------------------------------------------------------- the copy */
 
-/** The sheet's title: one word — the single-noun idiom of its sibling sheets
- *  (`model`, `effort`, `commands`) — for the desktop panel's same gesture.
- *  The desktop's full phrase ("Search this conversation") truncated to
- *  `Search this…` at 200 % on a 320 pt phone; a shorter title that renders
- *  whole is the fix (design D63-7). The scope the phrase carried is stated
- *  where it is a fact — the footer's "Searched N messages on this device" —
- *  not in a header that clips. */
-export const FIND_TITLE = "search";
+/** The sheet's title: one noun in the Title case of its sibling sheets
+ *  (`Model`, `Effort`, `Commands`; visual audit D7) — for the desktop panel's
+ *  same gesture. The desktop's full phrase ("Search this conversation")
+ *  truncated to `Search this…` at 200 % on a 320 pt phone; a shorter title that
+ *  renders whole is the fix (design D63-7). The scope the phrase carried is
+ *  stated where it is a fact — the footer's "Searched N messages on this
+ *  device" — not in a header that clips. A function, not a constant: a
+ *  module-level `t()` would freeze the language this module was first imported
+ *  in (`src/i18n/runtime.ts`). */
+export const findTitle = (): string => t("mobile.session.sheet_title.search");
 /** The field's visible label — never the placeholder alone (components.md §4). */
 export const FIND_FIELD_LABEL = "Find a message";
 export const FIND_FIELD_PLACEHOLDER = "Type a word or phrase";

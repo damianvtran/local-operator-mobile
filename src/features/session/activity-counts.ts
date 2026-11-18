@@ -72,6 +72,8 @@ const PAIR_GAP_PT = 4;
 const ITEM_GAP_PT = 12;
 /** `text-mono-sm`'s advance at 100 % (12 pt × 0.6 em), as in the chip plan. */
 const CHAR_PT = 7.2;
+/** The characters of intent the shared line must keep (`activityCountsStack`). */
+const INTENT_CHARS = 20;
 
 /** The counts' estimated width at a text scale. An estimate for the same
  *  reason `composerChipPlan` uses one: the decision is needed before layout. */
@@ -91,11 +93,19 @@ export const activityCountsWidth = (
 
 /**
  * Whether the counts take their own line under the status instead of sharing
- * it. They share whenever the status keeps room for its spinner, a short
+ * it. They share whenever the status keeps room for its spinner, a readable
  * intent, the clock's reserved `59m 59s` and the Stop; at 320 pt or 200 % text
  * they do not, and squeezing them in is how a label ends up painted over its
  * neighbour (the web audit's U-08) or cut mid-word (U-07). A second line there
  * still costs less than the capsule band it replaces.
+ *
+ * The intent's share is `INTENT_CHARS`, and it is the line's priority: the
+ * activity is what the line exists to say, and the counts are one tap from the
+ * same sheet on either line. Ten characters let all three counts share a
+ * 390 pt line and left the intent at "reading the…" (A-session-tool-cards,
+ * iphone-15) — a fragment that says nothing. Twenty is three or four words of
+ * a daemon intent ("reading the relay so…"); the cost is that three counts
+ * take the second line at phone widths, while one still shares it.
  */
 export const activityCountsStack = (input: {
 	/** The dock's width, pt (the window on a phone). */
@@ -105,8 +115,8 @@ export const activityCountsStack = (input: {
 	touchFloor: number;
 }): boolean => {
 	if (input.counts.length === 0) return false;
-	/* spinner (2) + a 10-character intent + the clock's 7, in mono. */
-	const status = Math.ceil((2 + 10 + 7) * CHAR_PT * input.scale);
+	/* spinner (2) + the intent's share + the clock's 7, in mono. */
+	const status = Math.ceil((2 + INTENT_CHARS + 7) * CHAR_PT * input.scale);
 	const stop = Math.max(
 		input.touchFloor,
 		Math.ceil(4 * CHAR_PT * input.scale) + 16,

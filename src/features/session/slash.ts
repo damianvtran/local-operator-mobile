@@ -201,3 +201,31 @@ export const filterCommands = (
 	}
 	return scored.sort((a, b) => b.score - a.score);
 };
+
+/**
+ * The one status line under the slash sheet's rows, or `null` for none.
+ *
+ * "No matching commands" is a claim about a catalogue this phone HOLDS, so it
+ * is made only then (QA round 1, Q1: it used to appear over an empty filter
+ * while `GET /api/commands` was still in flight, and when it had failed). With
+ * nothing held, the line says why: still loading, or the read failed. Held
+ * rows stay on screen through a re-read or a failed re-read — they are the
+ * last good answer — so neither state replaces them.
+ */
+export const slashSheetStatus = (input: {
+	/** Commands the phone holds, before the filter. */
+	held: number;
+	/** Rows the filter leaves. */
+	shown: number;
+	/** The catalogue read is in flight. */
+	loading: boolean;
+	/** The last catalogue read failed. */
+	failed: boolean;
+}): "loading" | "failed" | "no_matches" | null => {
+	if (input.held === 0) {
+		if (input.loading) return "loading";
+		if (input.failed) return "failed";
+		return "no_matches";
+	}
+	return input.shown === 0 ? "no_matches" : null;
+};
