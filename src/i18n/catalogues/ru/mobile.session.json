@@ -52,6 +52,7 @@
 	"mobile.session.sheet_title.search": "Поиск",
 	"mobile.session.slash.filter": "Фильтровать команды",
 	"mobile.session.slash.no_matches": "Нет подходящих команд",
+	"mobile.session.slash.load_failed": "Не удалось загрузить команды с вашего компьютера. Откройте эту беседу снова, чтобы повторить попытку.",
 	"mobile.session.subagent.screen_title": "Субагент",
 	"mobile.session.subagent.prompt_label": "промпт",
 	"mobile.session.subagent.result_label": "результат",

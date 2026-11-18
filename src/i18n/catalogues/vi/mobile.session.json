@@ -52,6 +52,7 @@
 	"mobile.session.sheet_title.search": "Tìm kiếm",
 	"mobile.session.slash.filter": "Lọc lệnh",
 	"mobile.session.slash.no_matches": "Không có lệnh phù hợp",
+	"mobile.session.slash.load_failed": "Không thể tải lệnh từ máy tính của bạn. Hãy mở lại cuộc trò chuyện này để thử lại.",
 	"mobile.session.subagent.screen_title": "Tác nhân con",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "kết quả",

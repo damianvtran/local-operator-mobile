@@ -214,7 +214,7 @@ const NAMESPACES = [
 		name: "mobile.session",
 		messages: session,
 		context: sessionContext,
-		expected: 95, // fix/session-view-polish +4: the subagent badge words (subagent.status), the find sheet title (sheet_title.search) and the slash sheet filter / no-match lines (91 + 4 = 95). O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
+		expected: 96, // #312 round-1 remediation +1: slash.load_failed, the slash sheet's failed-read line (95 + 1 = 96). fix/session-view-polish +4: the subagent badge words (subagent.status), the find sheet title (sheet_title.search) and the slash sheet filter / no-match lines (91 + 4 = 95). O3-a +2: the commands and attach sheet titles; PR #275 +8: background sending (outbox) — waiting / exhausted / discarded captions, Retry, Discard, and three composer hints (wait, stopped, discarding) (81 + 2 + 8 = 91); +3: Title-case sheet titles (visual audit D14); +1: newest-edge gap notice; +1: reload hint; +1: newest-refresh failure copy; +1: explicit history reload; +7: lazy history states; +1: default-closed reasoning disclosure; +1: retry-attempt storage receipt; +1: definitely-not-sent storage receipt; +3: the ended-session chip hints (TestFlight 578); +9: the pending echo; +16: session route literals keyed by the app/ scan (subagent screen, empty states, find, chip errors, retained notice); +2: the user message's Show more / Show less (iOS build 836); +15: scanner-blind expression literals (context tray, scroll cues, video title, fallback names, region labels, back-to labels); +1: the new-conversation "not confirmed" caption (PR #256 Q3)
 	},
 	{
 		/* The relay's own two namespaces, under its own keys. They are here rather
@@ -554,8 +554,10 @@ describe("the English catalogues", () => {
 		/* fix/session-view-polish: + mobile.session.subagent.status (the subagent
 		 * badge's words, visual audit D6), sheet_title.search (the find sheet's
 		 * title, D7) and slash.filter / slash.no_matches (the slash sheet's keyed
-		 * copy): 1101 + 4 = 1105, the generator's own count. */
-		expect(total).toBe(1105);
+		 * copy): 1101 + 4 = 1105, the generator's own count. Round-1 remediation
+		 * (#312 QA Q1): + slash.load_failed, the slash sheet's failed-read line:
+		 * 1105 + 1 = 1106. */
+		expect(total).toBe(1106);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

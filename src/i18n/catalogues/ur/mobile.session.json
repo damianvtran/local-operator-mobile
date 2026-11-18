@@ -52,6 +52,7 @@
 	"mobile.session.sheet_title.search": "تلاش",
 	"mobile.session.slash.filter": "کمانڈز فلٹر کریں",
 	"mobile.session.slash.no_matches": "کوئی کمانڈ مماثل نہیں",
+	"mobile.session.slash.load_failed": "آپ کے کمپیوٹر سے کمانڈز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کے لیے یہ گفتگو پھر سے کھولیں۔",
 	"mobile.session.subagent.screen_title": "ذیلی ایجنٹ",
 	"mobile.session.subagent.prompt_label": "پرامپٹ",
 	"mobile.session.subagent.result_label": "نتیجہ",

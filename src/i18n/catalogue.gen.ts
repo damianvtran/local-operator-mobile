@@ -719,6 +719,7 @@ export type CatalogueKey =
 	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
 	| "mobile.session.slash.filter"
+	| "mobile.session.slash.load_failed"
 	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
@@ -1716,6 +1717,7 @@ export type NoParamKey =
 	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
 	| "mobile.session.slash.filter"
+	| "mobile.session.slash.load_failed"
 	| "mobile.session.slash.no_matches"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
@@ -2752,6 +2754,7 @@ export type MessageParams = {
 	"mobile.session.sheet_title.search": NoParams;
 	"mobile.session.sheet_title.status": NoParams;
 	"mobile.session.slash.filter": NoParams;
+	"mobile.session.slash.load_failed": NoParams;
 	"mobile.session.slash.no_matches": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session.subagent.no_rows": NoParams;
@@ -3876,6 +3879,7 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.sheet_title.status": "Tasks and agents",
 	"mobile.session.slash.filter": "Filter commands",
+	"mobile.session.slash.load_failed": "Couldn’t load commands from your computer. Reopen this conversation to try again.",
 	"mobile.session.slash.no_matches": "No matching commands",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
@@ -4985,6 +4989,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.sheet_title.search": { role: "heading", note: "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders." },
 	"mobile.session.sheet_title.status": { role: "heading", note: "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English." },
 	"mobile.session.slash.filter": { role: "meta", note: "The commands sheet's text field: both its placeholder and its accessible name. Typing narrows the list of slash commands (such as /compact) to those whose name matches. An instruction-like label, sentence case, no final full stop. Keep it short: the field is one line on a 320 pt phone." },
+	"mobile.session.slash.load_failed": { role: "status", note: "Muted line in the commands sheet when this phone could not read the list of slash commands from the reader's computer and holds none. It replaces the list, so it must not suggest that nothing matched. The second sentence is the remedy: leaving and reopening the conversation reads the list again. Two short sentences with final full stops; the apostrophe is a typographic ’." },
 	"mobile.session.slash.no_matches": { role: "status", note: "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session.subagent.no_rows": { role: "status", note: "Muted line shown when a subagent's transcript is empty. One sentence." },
@@ -6108,6 +6113,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.search": "Búsqueda",
 		"mobile.session.sheet_title.status": "Tareas y agentes",
 		"mobile.session.slash.filter": "Filtrar comandos",
+		"mobile.session.slash.load_failed": "No se pudieron cargar los comandos desde tu máquina. Vuelve a abrir esta conversación para intentarlo de nuevo.",
 		"mobile.session.slash.no_matches": "Ningún comando coincide",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 		"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
@@ -7215,6 +7221,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.search": "Recherche",
 		"mobile.session.sheet_title.status": "Tâches et agents",
 		"mobile.session.slash.filter": "Filtrer les commandes",
+		"mobile.session.slash.load_failed": "Impossible de charger les commandes depuis votre ordinateur. Rouvrez cette conversation pour réessayer.",
 		"mobile.session.slash.no_matches": "Aucune commande ne correspond",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 		"mobile.session.subagent.no_rows": "Ce sous-agent n’a aucune ligne de transcription qui lui soit propre.",
@@ -8322,6 +8329,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.search": "खोज",
 		"mobile.session.sheet_title.status": "कार्य और एजेंट",
 		"mobile.session.slash.filter": "कमांड फ़िल्टर करें",
+		"mobile.session.slash.load_failed": "आपके कंप्यूटर से कमांड लोड नहीं हो सकीं। फिर से कोशिश करने के लिए यह बातचीत दोबारा खोलें।",
 		"mobile.session.slash.no_matches": "कोई कमांड मेल नहीं खाती",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 		"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
@@ -9429,6 +9437,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.search": "Поиск",
 		"mobile.session.sheet_title.status": "Задачи и агенты",
 		"mobile.session.slash.filter": "Фильтровать команды",
+		"mobile.session.slash.load_failed": "Не удалось загрузить команды с вашего компьютера. Откройте эту беседу снова, чтобы повторить попытку.",
 		"mobile.session.slash.no_matches": "Нет подходящих команд",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 		"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
@@ -10536,6 +10545,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.search": "تلاش",
 		"mobile.session.sheet_title.status": "کام اور ایجنٹس",
 		"mobile.session.slash.filter": "کمانڈز فلٹر کریں",
+		"mobile.session.slash.load_failed": "آپ کے کمپیوٹر سے کمانڈز لوڈ نہیں ہو سکیں۔ دوبارہ کوشش کے لیے یہ گفتگو پھر سے کھولیں۔",
 		"mobile.session.slash.no_matches": "کوئی کمانڈ مماثل نہیں",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 		"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
@@ -11643,6 +11653,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.search": "Tìm kiếm",
 		"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
 		"mobile.session.slash.filter": "Lọc lệnh",
+		"mobile.session.slash.load_failed": "Không thể tải lệnh từ máy tính của bạn. Hãy mở lại cuộc trò chuyện này để thử lại.",
 		"mobile.session.slash.no_matches": "Không có lệnh phù hợp",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
 		"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
@@ -12750,6 +12761,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.search": "搜索",
 		"mobile.session.sheet_title.status": "任务和智能体",
 		"mobile.session.slash.filter": "筛选命令",
+		"mobile.session.slash.load_failed": "无法从你的电脑加载命令。请重新打开此对话以重试。",
 		"mobile.session.slash.no_matches": "没有匹配的命令",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 		"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",

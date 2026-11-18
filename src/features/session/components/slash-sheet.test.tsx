@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -51,6 +53,11 @@ const rowOf = (html: string, name: string): string => {
 	return html.slice(start, html.indexOf("data-testid=", start + 12));
 };
 
+/** The class list of the View that directly wraps the mono command name. */
+const ROW_AROUND_NAME =
+	/<View className="([^"]*)">\s*<Text className="[^"]*font-mono/;
+const FLEX_ROW = /(^|\s)flex-row(\s|$)/;
+
 beforeEach(() => setLocaleSource(() => "en"));
 afterEach(() => resetLocaleSource());
 
@@ -75,6 +82,36 @@ describe("SlashSheet", () => {
 	it("states loading and no-match in sentence case from the catalogue", () => {
 		expect(render({ loading: true, commands: [] })).toContain(">Loading<");
 		expect(render({ query: "zzz" })).toContain(">No matching commands<");
+	});
+
+	it("says the read failed instead of claiming nothing matched", () => {
+		const html = render({ commands: [], failed: true });
+		expect(html).toContain(
+			">Couldn’t load commands from your computer. Reopen this conversation to try again.<",
+		);
+		expect(html).not.toContain("No matching commands");
+	});
+
+	it("keeps held rows on screen while the catalogue is re-read", () => {
+		const html = render({ loading: true });
+		expect(html).toContain('data-testid="slash-command-compact"');
+		expect(html).not.toContain(">Loading<");
+	});
+
+	it("puts the description on its own line under the command name", () => {
+		/* Design review round 1, D1: beside the name, a wrapped description hung
+		 *  at whatever x the name ended (11 different indents at 390 pt), and at
+		 *  320 pt / 200 % a long name left it a 52 pt column (QA Q2). Stacked,
+		 *  every description shares the name's leading edge and the full width.
+		 *  The server renderer drops the layout classes, so this reads the row's
+		 *  own class list from source. */
+		const source = readFileSync(
+			fileURLToPath(new URL("./slash-sheet.tsx", import.meta.url)),
+			"utf8",
+		);
+		const row = source.match(ROW_AROUND_NAME);
+		expect(row?.[1]).toBeDefined();
+		expect(row?.[1]).not.toMatch(FLEX_ROW);
 	});
 
 	it("names the filter field in sentence case for both its label and placeholder", () => {

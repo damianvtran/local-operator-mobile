@@ -14,9 +14,12 @@ import { renderFor, resetLocaleSource, setLocaleSource } from "@/i18n";
  */
 describe("subagentBadge", () => {
 	it("says unavailable, not loading, once the fetch settled with nothing", () => {
+		/* `warning`, not `neutral`: neutral paints the brand accent, the green
+		 *  family of live and finished states, and a child the computer no longer
+		 *  has is neither (design review round 1, D2). */
 		expect(subagentBadge(null, true)).toEqual({
 			label: "unavailable",
-			tone: "neutral",
+			tone: "warning",
 		});
 	});
 
@@ -54,6 +57,13 @@ describe("subagentBadge", () => {
 		expect(subagentBadge({ status: "parked" }, false).label).toBe(
 			renderFor("mobile.session.subagent.status", { status: "parked" }, "fr"),
 		);
+	});
+
+	it("says unknown, not the raw wire word, for a status this app does not know", () => {
+		/* The ICU `other` arm: before, the badge printed whatever the relay sent. */
+		expect(
+			subagentBadge({ status: "rebased" as SubagentStatus }, false),
+		).toEqual({ label: "unknown", tone: "neutral" });
 	});
 
 	it("lets a loaded detail win over a stale missing flag", () => {

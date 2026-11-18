@@ -52,6 +52,7 @@
 	"mobile.session.sheet_title.search": "खोज",
 	"mobile.session.slash.filter": "कमांड फ़िल्टर करें",
 	"mobile.session.slash.no_matches": "कोई कमांड मेल नहीं खाती",
+	"mobile.session.slash.load_failed": "आपके कंप्यूटर से कमांड लोड नहीं हो सकीं। फिर से कोशिश करने के लिए यह बातचीत दोबारा खोलें।",
 	"mobile.session.subagent.screen_title": "उप-एजेंट",
 	"mobile.session.subagent.prompt_label": "प्रॉम्प्ट",
 	"mobile.session.subagent.result_label": "परिणाम",

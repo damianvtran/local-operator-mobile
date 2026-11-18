@@ -211,6 +211,10 @@
 		"role": "status",
 		"note": "Muted line in the commands sheet when the filter text matches none of the slash commands the computer offers. A short status in sentence case, no final full stop."
 	},
+	"mobile.session.slash.load_failed": {
+		"role": "status",
+		"note": "Muted line in the commands sheet when this phone could not read the list of slash commands from the reader's computer and holds none. It replaces the list, so it must not suggest that nothing matched. The second sentence is the remedy: leaving and reopening the conversation reads the list again. Two short sentences with final full stops; the apostrophe is a typographic ’."
+	},
 	"mobile.session.subagent.screen_title": {
 		"role": "heading",
 		"note": "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent."

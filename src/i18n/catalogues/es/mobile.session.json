@@ -52,6 +52,7 @@
 	"mobile.session.sheet_title.search": "Búsqueda",
 	"mobile.session.slash.filter": "Filtrar comandos",
 	"mobile.session.slash.no_matches": "Ningún comando coincide",
+	"mobile.session.slash.load_failed": "No se pudieron cargar los comandos desde tu máquina. Vuelve a abrir esta conversación para intentarlo de nuevo.",
 	"mobile.session.subagent.screen_title": "Subagente",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "resultado",

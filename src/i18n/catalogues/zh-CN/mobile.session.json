@@ -52,6 +52,7 @@
 	"mobile.session.sheet_title.search": "搜索",
 	"mobile.session.slash.filter": "筛选命令",
 	"mobile.session.slash.no_matches": "没有匹配的命令",
+	"mobile.session.slash.load_failed": "无法从你的电脑加载命令。请重新打开此对话以重试。",
 	"mobile.session.subagent.screen_title": "子智能体",
 	"mobile.session.subagent.prompt_label": "提示词",
 	"mobile.session.subagent.result_label": "结果",

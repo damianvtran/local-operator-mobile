@@ -1895,6 +1895,8 @@ function Session() {
 								onClose={() => undefined}
 								commands={runtime.commands}
 								query={slash ?? ""}
+								loading={runtime.commandsLoading}
+								failed={runtime.commandsFailed}
 								busy={composer.sending}
 								onPick={composer.slash}
 							/>

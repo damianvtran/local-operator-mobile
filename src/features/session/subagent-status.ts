@@ -14,7 +14,8 @@ import type { SemanticTone } from "@/ui/variants";
  * a `loading` badge (visual audit D6, 2026-10-11). The badge states the same fact
  * as the body (P-9): `loading` only while the request is in flight, `unavailable`
  * once it has answered with nothing. A loaded detail always wins, so a stale flag
- * from an earlier child cannot hide a live status.
+ * from an earlier child cannot hide a live status. `unavailable` is a
+ * `warning`, matching the body's "no longer available".
  */
 export const subagentBadge = (
 	detail: { status: SubagentStatus } | null,
@@ -30,6 +31,11 @@ export const subagentBadge = (
 					? "success"
 					: status === "running" || status === "queued"
 						? "info"
-						: "neutral",
+						: /* Not `neutral`: that tone paints the brand accent, the green
+							 *  of live and finished states, and a child the computer no
+							 *  longer has is neither (design review round 1, D2). */
+							status === "unavailable"
+							? "warning"
+							: "neutral",
 	};
 };
