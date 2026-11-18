@@ -32,7 +32,9 @@ export const rowMenuActions = ({
 }): RowMenuAction[] => [
 	{
 		key: "pin",
-		label: pinned ? t("mobile.sidebar.menu.unpin") : t("mobile.sidebar.menu.pin"),
+		label: pinned
+			? t("mobile.sidebar.menu.unpin")
+			: t("mobile.sidebar.menu.pin"),
 		testID: CONTROL.sessionOpenCurrent,
 	},
 	{

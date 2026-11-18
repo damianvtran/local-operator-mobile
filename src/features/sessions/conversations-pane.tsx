@@ -59,9 +59,14 @@ import {
 	showInListStale,
 } from "@/features/sessions/pill-state";
 import {
+	type RowMenuActionKey,
+	rowMenuActions,
+} from "@/features/sessions/row-menu";
+import {
 	createSearchEscape,
 	type KeyEventTarget,
 } from "@/features/sessions/search-escape";
+import { sectionHeaderIndentPt } from "@/features/sessions/section-indent";
 import { sessionLocation } from "@/features/sessions/session-navigation";
 import {
 	degradedNote,
@@ -72,11 +77,6 @@ import {
 	staleShortNote,
 	visiblePeers,
 } from "@/features/sessions/session-projection";
-import {
-	type RowMenuActionKey,
-	rowMenuActions,
-} from "@/features/sessions/row-menu";
-import { sectionHeaderIndentPt } from "@/features/sessions/section-indent";
 import { SessionRow } from "@/features/sessions/session-row";
 import {
 	arrangeSidebar,

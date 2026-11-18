@@ -27,7 +27,11 @@ const DRAWER = read("../features/sessions/conversations-drawer.tsx");
 
 describe("programmatic focus", () => {
 	it("is a web-only class, so native styling cannot change", () => {
-		expect(PROGRAMMATIC_FOCUS_CLASS.split(/\s+/).every((c) => c.startsWith("web:"))).toBe(true);
+		expect(
+			PROGRAMMATIC_FOCUS_CLASS.split(WHITESPACE).every((c) =>
+				c.startsWith("web:"),
+			),
+		).toBe(true);
 		expect(PROGRAMMATIC_FOCUS_CLASS).toContain("outline-none");
 	});
 
@@ -42,13 +46,19 @@ describe("programmatic focus", () => {
 	});
 
 	it("is applied to the drawer's scrim, which leaves the web tab order", () => {
-		const start = DRAWER.indexOf("accessibilityLabel={t(\"mobile.chrome.close_conversations\")}");
-		const scrim = DRAWER.slice(DRAWER.lastIndexOf("<Pressable", start), DRAWER.indexOf("/>", start));
+		const start = DRAWER.indexOf(
+			'accessibilityLabel={t("mobile.chrome.close_conversations")}',
+		);
+		const scrim = DRAWER.slice(
+			DRAWER.lastIndexOf("<Pressable", start),
+			DRAWER.indexOf("/>", start),
+		);
 		expect(scrim).toContain("{...webPointerOnly(Platform.OS)}");
 		expect(scrim).toContain("PROGRAMMATIC_FOCUS_CLASS");
 	});
 });
 
 /* Top-level for biome's useTopLevelRegex. */
+const WHITESPACE = /\s+/;
 const SHEET_TITLE_CLASS =
 	/className=\{cx\(\s*"flex-1 text-title text-ink",\s*focusTitle \? PROGRAMMATIC_FOCUS_CLASS : undefined,?\s*\)\}/;
