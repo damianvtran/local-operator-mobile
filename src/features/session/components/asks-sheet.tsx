@@ -1112,12 +1112,21 @@ export const AsksSheet = ({
 												dispatchExpansion({ type: "toggle", ask: row.ask_id })
 											}
 											testID={askRowId(row.ask_id)}
-											style={{ minHeight: TOUCH_FLOOR }}
-											/* TOP-aligned inside the touch floor: centred, a
-											 *  one-line status floated midway between its header
-											 *  and the next row (design D1, ~30 pt each side), so
-											 *  the spare height now falls below it, toward the
-											 *  gap that separates rows. */
+											/* COLLAPSED: the 44 pt box, its content TOP-aligned.
+											 *  Centred, a one-line status floated midway between its
+											 *  header and the next row (design r1 D1, ~30 pt each
+											 *  side); top-aligned, the spare height falls toward the
+											 *  gap that separates rows.
+											 *  OPENED: no reserved box. Reserved, that spare height
+											 *  became a 33-46 pt blank band between the status and
+											 *  the form it opens, pushing the answer field below the
+											 *  fold (design r2 D1 / QA Q5). The collapse target keeps
+											 *  4 pt of slop each way on native (the row's own gaps,
+											 *  so it overlaps neither the open button above nor the
+											 *  form's controls below); the form's pinned footer and
+											 *  another row's press remain the other ways out. */
+											style={expanded ? undefined : { minHeight: TOUCH_FLOOR }}
+											hitSlop={expanded ? { top: 4, bottom: 4 } : undefined}
 											className="justify-start"
 										>
 											{/* NOT `flex-wrap`: the sentence is the flexible child and the

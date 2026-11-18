@@ -54,16 +54,27 @@ vi.mock("react-native", async () => {
 			children,
 			className,
 			testID,
+			style,
+			hitSlop,
 		}: {
 			children?:
 				| React.ReactNode
 				| ((state: { pressed: boolean }) => React.ReactNode);
 			className?: string;
 			testID?: string;
+			style?: { minHeight?: number };
+			hitSlop?: { top?: number; bottom?: number };
 		}) =>
 			React.createElement(
 				"div",
-				{ "data-cls": className ?? "", "data-testid": testID },
+				{
+					"data-cls": className ?? "",
+					"data-testid": testID,
+					"data-min-height": style?.minHeight,
+					"data-slop": hitSlop
+						? `${hitSlop.top ?? 0}/${hitSlop.bottom ?? 0}`
+						: undefined,
+				},
 				typeof children === "function"
 					? children({ pressed: false })
 					: (children ?? null),
@@ -271,7 +282,7 @@ const ROWS = [
 	ask("answered-catalogue", "answered", "catalogue", { delivered: false }),
 ];
 
-const draw = () =>
+const draw = (initialOpenAsk: string | null = null) =>
 	parse(
 		renderToStaticMarkup(
 			createElement(AsksSheet, {
@@ -282,6 +293,7 @@ const draw = () =>
 				onOpenConversation: () => undefined,
 				sessions: SESSIONS,
 				seedRows: ROWS,
+				initialOpenAsk,
 			}),
 		),
 	);
@@ -403,5 +415,38 @@ describe("the asks sheet's list (issue #326)", () => {
 		/* An in-flow child of the `gap-1` column added 4 pt under every
 		 *  timed-out row; out of flow it takes no gap. */
 		expect(anchor.attrs["data-cls"]).toMatch(OUT_OF_FLOW);
+	});
+	/* Agent review round 2 (design D1, QA Q5): the round-1 touch box reserved
+	 *  its spare height between an OPENED row's status line and its answer
+	 *  form — a 33-46 pt blank band that pushed the field below the fold. */
+	it("keeps the 44 pt box on a collapsed status control", () => {
+		const toggle = byTestId(draw(), askRowId("timed-payments"));
+		expect(toggle.attrs["data-min-height"]).toBe("44");
+		expect(toggle.attrs["data-cls"]).toMatch(TOP_ALIGNED);
+	});
+
+	it("lets an opened row's form follow its status line: no reserved box, slop instead (round 2 D1 / Q5)", () => {
+		const tree = draw("timed-payments");
+		const toggle = byTestId(tree, askRowId("timed-payments"));
+		expect(toggle.attrs["data-min-height"]).toBeUndefined();
+		/* The target keeps reach on native through slop that stays inside the
+		 *  row's own 4 pt gaps, so it never overlaps the open button above or
+		 *  the form's controls below. */
+		expect(toggle.attrs["data-slop"]).toBe("4/4");
+		/* The form is the next in-flow part after the toggle, in the same row
+		 *  block (the timed-out anchor between them is out of flow). */
+		const row = toggle.parent as El;
+		const parts = row.children.filter(
+			(child): child is El =>
+				typeof child !== "string" &&
+				!OUT_OF_FLOW.test(child.attrs["data-cls"] ?? ""),
+		);
+		const next = parts[parts.indexOf(toggle) + 1];
+		expect(next, "something follows the opened status").toBeDefined();
+		expect(textOf(next as El)).toContain("question timed-payments");
+		/* Other rows stay collapsed with their box. */
+		expect(
+			byTestId(tree, askRowId("answered-release")).attrs["data-min-height"],
+		).toBe("44");
 	});
 });
