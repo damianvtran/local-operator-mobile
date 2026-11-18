@@ -24,6 +24,13 @@ import { type FieldState, fieldClasses } from "@/ui/variants";
 export type InputProps = {
 	/** The field's accessible name. Required: a placeholder cannot be one. */
 	label: string;
+	/** Keep `label` as the accessible name but do not paint it above the field.
+	 *  Only for a field whose placeholder and neighbouring control already say
+	 *  what it is (the Past screen's search beside its Search button): there the
+	 *  painted label repeated the placeholder and pushed the field below the
+	 *  button's line. The accessible name stays, so the field is never
+	 *  placeholder-only for a screen reader. */
+	labelHidden?: boolean;
 	value: string;
 	onChangeText: (value: string) => void;
 	placeholder?: string;
@@ -65,6 +72,7 @@ export type InputProps = {
 
 export const Input = ({
 	label,
+	labelHidden = false,
 	value,
 	onChangeText,
 	placeholder,
@@ -109,7 +117,9 @@ export const Input = ({
 			{/* Visible label as well as the accessible name: a reader who can see the
 			 * field needs to know what it wants without reading the placeholder,
 			 * which disappears the moment they type. */}
-			<Text className="text-body-sm text-ink-muted">{label}</Text>
+			{labelHidden ? null : (
+				<Text className="text-body-sm text-ink-muted">{label}</Text>
+			)}
 			<TextInput
 				ref={resolvedRef}
 				className={fieldClasses(fieldState)}

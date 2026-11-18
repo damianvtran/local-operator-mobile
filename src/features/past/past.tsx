@@ -137,8 +137,12 @@ export default function PastSessions() {
 							 *  Past list's first row ended 20.16 pt below a 568 pt viewport (design round 4,
 							 *  D24; measured 470.56 → 588.16 before, 429.97 → 547.56 after). This copy breaks at the SPACE instead, in two lines, at both sizes,
 							 *  and it mirrors the sessions screen's own field ("Search sessions"); it is
-							 *  also the field's accessible name. */
-							label="Search past sessions"
+							 *  also the field's accessible name. It is NOT painted: the placeholder
+							 *  and the Search button beside it already say what the field is, and
+							 *  the painted copy repeated the placeholder and pushed the field below
+							 *  the button's line. The accessible name stays (`labelHidden`). */
+							label={t("mobile.past.search_label")}
+							labelHidden
 							value={query}
 							onChangeText={setQuery}
 							/* Short enough for the narrowest phone: the field shares its row with the
@@ -150,17 +154,20 @@ export default function PastSessions() {
 							 *  "Name or folder", which the harness measured as fitting, and it keeps
 							 *  both facts the search actually covers: words from the transcript AND
 							 *  the title. */
-							placeholder="Words or title"
+							placeholder={t("mobile.past.search_placeholder")}
 							returnKeyType="search"
 							onSubmitEditing={() => void onSearch()}
 						/>
 					</View>
 					<Button
 						testID={CONTROL.pastSearch}
-						label="Search"
+						label={t("relay.chrome.list.search_open")}
 						onPress={() => void onSearch()}
 						loading={searching}
 						variant="outline"
+						/* The field's box is the touch floor; without this the button was
+						 *  4 pt shorter than the field on Android and the web. */
+						fillFloor
 					/>
 				</View>
 
@@ -199,17 +206,19 @@ export default function PastSessions() {
 				<EmptyState
 					headline={
 						query.trim()
-							? "Nothing matches that."
-							: "No past conversations yet."
+							? t("mobile.common.no_matches")
+							: t("mobile.past.empty_headline")
 					}
 					next={
 						query.trim()
-							? "Search covers what was said as well as the titles, so a shorter word may match."
-							: "Conversations you have finished will be listed here, and you can pick one up again."
+							? t("mobile.past.no_matches_next")
+							: t("mobile.past.empty_next")
 					}
 					action={{
 						testID: CONTROL.pastSearchClear,
-						label: query.trim() ? "Clear the search" : "Back to sessions",
+						label: query.trim()
+							? t("mobile.chrome.clear_search")
+							: t("mobile.common.not_found.action"),
 						onPress: () => {
 							if (query.trim()) {
 								setQuery("");
