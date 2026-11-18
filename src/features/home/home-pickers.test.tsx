@@ -217,6 +217,33 @@ const runSettings = (
 	);
 
 describe("the home's run-settings sheet (issue #325)", () => {
+	it("keeps a picked rung's width: no 'This conversation' badge in the compact group (round 2 D1/Q4)", () => {
+		/* A badge added on pick made the group wrap again under the thumb, so a
+		 *  second tap at the same point hit another rung. The source line under
+		 *  the heading already says "Chosen for this conversation". */
+		const html = runSettings({
+			effort: {
+				offer: {
+					kind: "ladder",
+					rungs: ["low", "medium", "high"],
+					exact: true,
+				},
+				chosen: "low",
+				defaultEffort: "high",
+				onPick: () => undefined,
+			},
+		});
+		const group = html.slice(
+			html.indexOf(`data-testid="${SURFACE.effortRungs}"`),
+			html.indexOf(`data-testid="${CONTROL.homeModelPicker}"`),
+		);
+		expect(html).toContain("Chosen for this conversation");
+		expect(group).toContain(`aria-label="Low"`);
+		expect(group).not.toContain("This conversation");
+		// The default's badge is static (it never moves on a pick), so it stays.
+		expect(group).toContain(`aria-label="High, Default"`);
+	});
+
 	it("is ONE sheet — the current values, the effort rungs, then the model list (D1)", () => {
 		const html = runSettings();
 		expect(html).toContain(`data-testid="${SURFACE.runSettingsSheet}"`);

@@ -585,12 +585,14 @@ const EffortChoices = ({
 									compact
 									selected={rung === selected}
 									disabled={!editable}
+									/* Only the default's badge, which never moves. A
+									 *  "This conversation" badge added on a pick made the
+									 *  compact group wrap again under the thumb, so a second
+									 *  tap at the same point hit another rung (design round
+									 *  2 D1, QA Q4). The source line above already says
+									 *  "Chosen for this conversation". */
 									badge={
-										isDefault
-											? t("mobile.home.picker.badge_default")
-											: rung === chosen
-												? t("mobile.home.picker.badge_this_chat")
-												: null
+										isDefault ? t("mobile.home.picker.badge_default") : null
 									}
 									onPress={() => onPick(isDefault ? null : rung)}
 								/>

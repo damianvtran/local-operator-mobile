@@ -123,6 +123,15 @@ describe("the session's run-settings sheet (issue #325)", () => {
 		expect(html).toContain(`data-testid="${SURFACE.effortRungs}"`);
 	});
 
+	it("labels the session's rungs in the summary's words, not the daemon's (round 2 D2)", () => {
+		const html = draw({
+			effort: { kind: "ladder", rungs: ["low", "high", "xhigh"] },
+		});
+		expect(html).toContain(`aria-label="High"`);
+		expect(html).toContain(`aria-label="Extra high"`);
+		expect(html).not.toContain(`aria-label="xhigh"`);
+	});
+
 	it("says, in the kit's words, that a live model has no effort setting", () => {
 		const html = draw({ effort: { kind: "none" } });
 		expect(html).toContain("This model has no effort setting.");

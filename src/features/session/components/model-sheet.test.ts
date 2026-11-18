@@ -109,6 +109,17 @@ describe("the shared picker rows (pickers round 1)", () => {
 		expect(rungRow()).toContain("h-2 w-2 rounded-full");
 	});
 
+	it("caps a compact rung at the line and wraps its label and badge inside it (round 2 F1/Q5)", () => {
+		/* A hugging rung kept RN's default `flexShrink: 0`, so `Среднее · По
+		 *  умолчанию` at 320 pt / 200 % ran to x=358 in a 303 pt group and the
+		 *  badge was clipped — the #325 failure again. */
+		expect(rungRow()).toContain(
+			'className={compact ? "max-w-full shrink" : undefined}',
+		);
+		expect(rungRow()).toContain('compact ? "flex-wrap" : null');
+		expect(SOURCE).toContain('className="flex-row flex-wrap py-1"');
+	});
+
 	it("announces the rung as checked, not only selected (U9)", () => {
 		expect(rungRow()).toContain("checked: selected");
 		// The native state never reaches react-native-web; the web build reads

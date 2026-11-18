@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import type { ModelEntry } from "@/contracts";
+import { effortLabel } from "@/features/home/picker-model";
 import type {
 	RunSettingLock,
 	RunSettingSection,
@@ -178,8 +179,18 @@ export const EffortRungRow = ({
 		disabled={disabled}
 		onPress={onPress}
 		testID={testID ?? effortRungId(rung)}
+		/* A compact rung is capped at the line and may shrink: RN's default
+		 *  `flexShrink: 0` let `Среднее · По умолчанию` run to x=358 in a 303 pt
+		 *  group at 320 pt / 200 % and clip its badge, the #325 failure again
+		 *  (round 2 F1/Q5). Its label and badge then wrap inside the rung. */
+		className={compact ? "max-w-full shrink" : undefined}
 	>
-		<View className="min-h-11 flex-row items-center gap-2 px-3">
+		<View
+			className={cx(
+				"min-h-11 flex-row items-center gap-2 px-3",
+				compact ? "flex-wrap" : null,
+			)}
+		>
 			{/* Only the selected rung paints its dot; the others keep the 8 pt slot
 			 *  so labels do not shift. An unselected `bg-hairline` dot measured
 			 *  1.23:1 dark / 1.44:1 light on `elevated` — under the 3:1 non-text
@@ -381,7 +392,9 @@ export const SessionRunSettingsSheet = ({
 							<EffortRungRow
 								key={rung}
 								rung={rung}
-								label={rung}
+								/* The summary's words (`effortLabel`), not the
+								 *  daemon's `xhigh` (design round 2, D2). */
+								label={effortLabel(rung)}
 								compact
 								selected={rung === selectedEffort}
 								onPress={() => onPickEffort(rung)}
