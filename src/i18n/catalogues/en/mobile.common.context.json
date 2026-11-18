@@ -37,7 +37,7 @@
 	},
 	"mobile.common.not_found.action": {
 		"role": "button",
-		"note": "Button on the not-found screen that goes to the session list. Short, no final full stop."
+		"note": "Button that goes back to the session list. Used on the not-found screen and as the action of the Past sessions screen's empty state ('No past conversations yet.'). Short, no final full stop."
 	},
 	"mobile.common.copy": {
 		"role": "button",
