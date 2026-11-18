@@ -126,12 +126,12 @@ const NAMESPACES = [
 		expected: 66,
 	},
 	{
-		/* The Past sessions screen: its search field's accessible name and
-		 *  placeholder, and its empty states (fix/session-list-nav-polish). */
+		/* The Past sessions screen: its search field's label and its empty
+		 *  states (fix/session-list-nav-polish). */
 		name: "mobile.past",
 		messages: past,
 		context: pastContext,
-		expected: 5,
+		expected: 4, // review round 1: −1, the search placeholder dropped (operator ruling: the visible label stays, no duplicate hint) (5 − 1 = 4)
 	},
 	{
 		name: "mobile.projects",
@@ -564,7 +564,9 @@ describe("the English catalogues", () => {
 		/* fix/session-list-nav-polish: +1 mobile.common, +10 mobile.sidebar and
 		 * the new mobile.past (5) = 16: 1101 + 16 = 1117, counted over the en
 		 * JSON (the generator reports 1117 keys). */
-		expect(total).toBe(1117);
+		/* Review round 1: −1 mobile.past.search_placeholder (the Past field keeps
+		 * its visible label and drops the duplicate hint): 1117 − 1 = 1116. */
+		expect(total).toBe(1116);
 	});
 
 	it("lists every catalogue file this suite checks", () => {

@@ -111,6 +111,13 @@ The one action affordance. Anything that **navigates** is a link, not a button.
 | `icon` | 44 square | 0 | 20 | — | Standard icon-only control |
 | `fab` | 56 square | 0 | 24 | — | The composer's send (§ 12) |
 
+**Fill.** `fill` lets a button take the height its container gives it: the
+target and the visible box grow into it instead of keeping the size's own
+height. Use it only where a button must match a neighbour whose height follows
+the reader's type — the Past screen's Search beside its field, whose caller sizes
+the container to the measured field so the pair match at 100 % and 200 %. It
+never shrinks a button below its size or the touch floor.
+
 ### Variants and their states
 
 | Variant | rest | pressed | disabled |

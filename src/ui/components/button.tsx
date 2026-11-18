@@ -61,15 +61,20 @@ export type ButtonProps = {
 	 *  selected row is never told by colour alone (`Chip` does the same). Omitted
 	 *  for ordinary action buttons, which carry no selection. */
 	selected?: boolean;
-	/** Grow the VISIBLE box to the platform touch floor, not just the target.
-	 *  For a button sharing a row with a text field, whose own box is the floor:
-	 *  on Android and the web a `md` button (44) beside a 48 pt field read as
-	 *  the shorter of the two. A no-op where the box already reaches the floor. */
-	fillFloor?: boolean;
+	/** Take the height the CONTAINER gives: the target and the visible box grow
+	 *  into it instead of keeping this size's own height. For a button that must
+	 *  match a neighbour whose height follows the reader's type — the Past
+	 *  screen's Search beside its field, whose caller sizes the container to the
+	 *  measured field (design review round 1, D2). `docs/design/components.md`
+	 *  § 2, "Fill". */
+	fill?: boolean;
 	/** Required: a control with no identifier cannot be reached by an E2E flow,
 	 * and a shared default would put the same one on every button of a screen. */
 	testID: string;
 };
+
+/** `fill`: grow along the container's main axis (a column, so its height). */
+const FILL = { flexGrow: 1 } as const;
 
 const ICON_SIZE: Record<ButtonSize, number> = {
 	sm: 14,
@@ -94,7 +99,7 @@ export const Button = ({
 	accessibilityHint,
 	expanded,
 	selected,
-	fillFloor = false,
+	fill = false,
 	testID,
 }: ButtonProps) => {
 	const iconColor = useTokenColor(
@@ -137,8 +142,14 @@ export const Button = ({
 			 *  hit areas must not overlap (`docs/design/components.md` § 0.1). */
 			style={
 				visualHeight < TOUCH_FLOOR
-					? { minHeight: TOUCH_FLOOR, justifyContent: "center" }
-					: undefined
+					? {
+							minHeight: TOUCH_FLOOR,
+							justifyContent: "center",
+							...(fill ? FILL : undefined),
+						}
+					: fill
+						? FILL
+						: undefined
 			}
 			testID={testID}
 			disabled={disabled}
@@ -153,11 +164,7 @@ export const Button = ({
 			{({ pressed }) => (
 				<View
 					className={buttonClasses(variant, size, { pressed, disabled })}
-					style={
-						fillFloor && visualHeight < TOUCH_FLOOR
-							? { minHeight: TOUCH_FLOOR }
-							: undefined
-					}
+					style={fill ? FILL : undefined}
 				>
 					{loading ? (
 						<ActivityIndicator

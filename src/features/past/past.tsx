@@ -1,6 +1,13 @@
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	FlatList,
+	Pressable,
+	RefreshControl,
+	Text,
+	type TextInput,
+	View,
+} from "react-native";
 
 import type { PastSession } from "@/contracts";
 import { useConnection } from "@/features/auth/connection-provider";
@@ -116,6 +123,18 @@ export default function PastSessions() {
 
 	const items = useMemo(() => rows, [rows]);
 
+	/** The search field's own height, read after layout so the Search button
+	 *  beside it can match it at any text size (the label above the field is
+	 *  in the same column, so the row's height is not the field's). */
+	const searchFieldRef = useRef<TextInput | null>(null);
+	const [searchFieldHeight, setSearchFieldHeight] = useState<number | null>(
+		null,
+	);
+	const measureSearchField = () =>
+		searchFieldRef.current?.measure((_x, _y, _width, height) => {
+			if (height > 0) setSearchFieldHeight(height);
+		});
+
 	return (
 		<Screen
 			title="Past sessions"
@@ -126,9 +145,10 @@ export default function PastSessions() {
 		>
 			<View className="gap-3 pt-2">
 				<View className="flex-row items-end gap-2">
-					<View className="flex-1">
+					<View className="flex-1" onLayout={measureSearchField}>
 						<Input
 							testID={CONTROL.pastSearchField}
+							fieldRef={searchFieldRef}
 							/* The field shares its row with the "Search" button, so this label's box is
 							 *  the field's column and NOT the pane: 150 pt at 320 pt. At 200 % text
 							 *  "conversations" is 173 pt in that box, so the old label ("Search past
@@ -137,38 +157,41 @@ export default function PastSessions() {
 							 *  Past list's first row ended 20.16 pt below a 568 pt viewport (design round 4,
 							 *  D24; measured 470.56 → 588.16 before, 429.97 → 547.56 after). This copy breaks at the SPACE instead, in two lines, at both sizes,
 							 *  and it mirrors the sessions screen's own field ("Search sessions"); it is
-							 *  also the field's accessible name. It is NOT painted: the placeholder
-							 *  and the Search button beside it already say what the field is, and
-							 *  the painted copy repeated the placeholder and pushed the field below
-							 *  the button's line. The accessible name stays (`labelHidden`). */
+							 *  also the field's accessible name.
+							 *
+							 *  NO PLACEHOLDER (review round 1, operator ruling): the label already
+							 *  says what the field is for, the old "Words or title" hint repeated it
+							 *  in a box too narrow to paint it whole at 200 % ("Words or"), and the
+							 *  no-match state says what the search covers. A placeholder never stands
+							 *  in for this label (docs/design/components.md § 4, § 23). */
 							label={t("mobile.past.search_label")}
-							labelHidden
 							value={query}
 							onChangeText={setQuery}
-							/* Short enough for the narrowest phone: the field shares its row with the
-							 *  "Search" button, so at 320 pt with the button beside it the previous
-							 *  copy ("What was said, or the title", 28 characters) painted as
-							 *  "What was said, or the tit" — a placeholder that truncates
-							 *  mid-word reads as a rendering fault rather than as a hint (QA F-2).
-							 *  Fourteen characters is the same length as the sessions field's
-							 *  "Name or folder", which the harness measured as fitting, and it keeps
-							 *  both facts the search actually covers: words from the transcript AND
-							 *  the title. */
-							placeholder={t("mobile.past.search_placeholder")}
 							returnKeyType="search"
 							onSubmitEditing={() => void onSearch()}
 						/>
 					</View>
-					<Button
-						testID={CONTROL.pastSearch}
-						label={t("relay.chrome.list.search_open")}
-						onPress={() => void onSearch()}
-						loading={searching}
-						variant="outline"
-						/* The field's box is the touch floor; without this the button was
-						 *  4 pt shorter than the field on Android and the web. */
-						fillFloor
-					/>
+					{/* As tall as the FIELD at every text size (design round 1, D2): the
+					 *  field grows with the reader's type (48 pt at 100 %, 66 pt at 200 %)
+					 *  and a `md` button does not, so the container takes the field's
+					 *  measured height and the button fills it. Until the first
+					 *  measurement the button keeps its own height. */}
+					<View
+						style={
+							searchFieldHeight === null
+								? undefined
+								: { height: searchFieldHeight }
+						}
+					>
+						<Button
+							testID={CONTROL.pastSearch}
+							label={t("relay.chrome.list.search_open")}
+							onPress={() => void onSearch()}
+							loading={searching}
+							variant="outline"
+							fill
+						/>
+					</View>
 				</View>
 
 				{refusal ? (

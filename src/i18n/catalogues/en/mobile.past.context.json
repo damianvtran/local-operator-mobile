@@ -1,11 +1,7 @@
 {
 	"mobile.past.search_label": {
 		"role": "meta",
-		"note": "Accessible name of the search field on the Past sessions screen. Screen readers announce it; it is not drawn on screen (the placeholder is the visible hint). No final full stop."
-	},
-	"mobile.past.search_placeholder": {
-		"role": "help",
-		"note": "Placeholder inside the Past sessions search field: the search matches words from what was said, or the conversation's title. Must fit about 14 characters at the narrowest phone; shorter is better."
+		"note": "Visible label above the search field on the Past sessions screen, and the field's accessible name. The field has no placeholder, so this label alone says what it is for. It sits in a narrow column beside the Search button and may break onto two lines at large text: keep it short and breakable at a space. No final full stop."
 	},
 	"mobile.past.empty_headline": {
 		"role": "heading",

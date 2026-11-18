@@ -1,6 +1,5 @@
 {
 	"mobile.past.search_label": "Search past sessions",
-	"mobile.past.search_placeholder": "Words or title",
 	"mobile.past.empty_headline": "No past conversations yet.",
 	"mobile.past.empty_next": "Conversations you have finished will be listed here, and you can pick one up again.",
 	"mobile.past.no_matches_next": "Search covers what was said as well as the titles, so a shorter word may match."

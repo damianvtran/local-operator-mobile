@@ -481,7 +481,6 @@ export type CatalogueKey =
 	| "mobile.past.empty_next"
 	| "mobile.past.no_matches_next"
 	| "mobile.past.search_label"
-	| "mobile.past.search_placeholder"
 	| "mobile.projects.create.description"
 	| "mobile.projects.create.description_placeholder"
 	| "mobile.projects.create.name"
@@ -1548,7 +1547,6 @@ export type NoParamKey =
 	| "mobile.past.empty_next"
 	| "mobile.past.no_matches_next"
 	| "mobile.past.search_label"
-	| "mobile.past.search_placeholder"
 	| "mobile.projects.create.description"
 	| "mobile.projects.create.description_placeholder"
 	| "mobile.projects.create.name"
@@ -2539,7 +2537,6 @@ export type MessageParams = {
 	"mobile.past.empty_next": NoParams;
 	"mobile.past.no_matches_next": NoParams;
 	"mobile.past.search_label": NoParams;
-	"mobile.past.search_placeholder": NoParams;
 	"mobile.projects.create.description": NoParams;
 	"mobile.projects.create.description_placeholder": NoParams;
 	"mobile.projects.create.name": NoParams;
@@ -3675,7 +3672,6 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.past.empty_next": "Conversations you have finished will be listed here, and you can pick one up again.",
 	"mobile.past.no_matches_next": "Search covers what was said as well as the titles, so a shorter word may match.",
 	"mobile.past.search_label": "Search past sessions",
-	"mobile.past.search_placeholder": "Words or title",
 	"mobile.projects.create.description": "Description",
 	"mobile.projects.create.description_placeholder": "What this project is for",
 	"mobile.projects.create.name": "Name",
@@ -4362,7 +4358,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.account_routing.unsaved": { role: "status", note: "A selected draft differs from the backend value; changing radio alone does not persist." },
 	"mobile.agent_avatar.edit_hint": { role: "help", note: "Shown as a toast when the reader taps or long-presses the agent's picture in a conversation header, and read as that control's accessibility hint. The phone app cannot edit agent pictures; the Local Operator desktop app can. Keep \"desktop app\" generic (no product name). No final full stop." },
 	"mobile.agent_avatar.label": { role: "button", note: "Accessible name of the agent's profile picture in a conversation header (a decorative picture that is also a button explaining where to change it). A noun phrase, not an action. \"Agent\" is the product term for the AI assistant the conversation runs. No final full stop." },
-	"mobile.chrome.clear_search": { role: "button", note: "Accessible name of the small × inside the sidebar's search field; it empties the search text. Shown only while the field has text. No final full stop." },
+	"mobile.chrome.clear_search": { role: "button", note: "Empties the search text. Used in three places: the accessible name of the small × inside the sidebar's search field (shown only while the field has text), and the visible button label under 'Nothing matches that.' in the sidebar's no-match empty state and on the Past sessions screen. Short imperative, no final full stop." },
 	"mobile.chrome.close_conversations": { role: "button", note: "Accessible name (screen readers only, never shown) of two controls that both dismiss the conversations sidebar: the ✕ in the sidebar header and the dimmed page strip beside the open sidebar. 'Conversations' is the sidebar's list of chat sessions, not one conversation. Imperative, no final full stop." },
 	"mobile.chrome.composer.dismiss_keyboard": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
 	"mobile.chrome.composer.more": { role: "button", note: "Build389 shared composer context strip / exclusive home presentation. Preserve {count} plural and {host} parameters where present." },
@@ -4398,7 +4394,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.common.done": { role: "button", note: "Closes a sheet whose choices already applied as the user made them; nothing is submitted by pressing it. A verb used as a label, no final full stop. LIMIT: not a save or submit action, which is 'Save'." },
 	"mobile.common.loading": { role: "status", note: "Screen-reader name announced for a loading skeleton placeholder on any screen. Status word, no trailing ellipsis; keep under ~16 characters. No placeholders." },
 	"mobile.common.no_matches": { role: "heading", note: "Headline of the empty state shown when a search finds nothing (the sidebar's conversation search and the Past sessions search). Plain statement, keep the final full stop. No placeholders." },
-	"mobile.common.not_found.action": { role: "button", note: "Button on the not-found screen that goes to the session list. Short, no final full stop." },
+	"mobile.common.not_found.action": { role: "button", note: "Button that goes back to the session list. Used on the not-found screen and as the action of the Past sessions screen's empty state ('No past conversations yet.'). Short, no final full stop." },
 	"mobile.common.not_found.headline": { role: "status", note: "Empty-state headline on the not-found screen. Sentence with a final full stop." },
 	"mobile.common.not_found.next": { role: "help", note: "Empty-state follow-up on the not-found screen, pointing to the session list. One sentence." },
 	"mobile.common.not_found.title": { role: "heading", note: "Header title of the screen shown for a route that does not exist. No final full stop." },
@@ -4795,8 +4791,7 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.past.empty_headline": { role: "heading", note: "Headline of the Past sessions screen when the computer has no finished conversations. Plain statement, not an error." },
 	"mobile.past.empty_next": { role: "help", note: "Second line under 'No past conversations yet.': what will appear on this screen and that a conversation can be resumed from it." },
 	"mobile.past.no_matches_next": { role: "help", note: "Second line under 'Nothing matches that.' on the Past sessions screen: the search looks at the conversation text and titles, so trying a shorter word may find a match." },
-	"mobile.past.search_label": { role: "meta", note: "Accessible name of the search field on the Past sessions screen. Screen readers announce it; it is not drawn on screen (the placeholder is the visible hint). No final full stop." },
-	"mobile.past.search_placeholder": { role: "help", note: "Placeholder inside the Past sessions search field: the search matches words from what was said, or the conversation's title. Must fit about 14 characters at the narrowest phone; shorter is better." },
+	"mobile.past.search_label": { role: "meta", note: "Visible label above the search field on the Past sessions screen, and the field's accessible name. The field has no placeholder, so this label alone says what it is for. It sits in a narrow column beside the Search button and may break onto two lines at large text: keep it short and breakable at a space. No final full stop." },
 	"mobile.projects.create.description": { role: "meta", note: "Label for an optional project description." },
 	"mobile.projects.create.description_placeholder": { role: "help", note: "Placeholder prompting an optional project description." },
 	"mobile.projects.create.name": { role: "meta", note: "Label for the project identifier field; the nearby help states its grammar." },
@@ -5931,7 +5926,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.past.empty_next": "Aquí aparecerán las conversaciones que hayas terminado, y podrás reanudar cualquiera de ellas.",
 		"mobile.past.no_matches_next": "La búsqueda abarca lo que se dijo y los títulos, así que una palabra más corta puede dar resultado.",
 		"mobile.past.search_label": "Buscar sesiones anteriores",
-		"mobile.past.search_placeholder": "Texto o título",
 		"mobile.projects.create.description": "Descripción",
 		"mobile.projects.create.description_placeholder": "Para qué es este proyecto",
 		"mobile.projects.create.name": "Nombre",
@@ -7050,7 +7044,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.past.empty_next": "Les conversations que vous avez terminées apparaîtront ici, et vous pourrez en reprendre une.",
 		"mobile.past.no_matches_next": "La recherche porte sur ce qui a été dit et sur les titres, un mot plus court peut donc correspondre.",
 		"mobile.past.search_label": "Rechercher dans les sessions passées",
-		"mobile.past.search_placeholder": "Mots ou titre",
 		"mobile.projects.create.description": "Description",
 		"mobile.projects.create.description_placeholder": "À quoi sert ce projet",
 		"mobile.projects.create.name": "Nom",
@@ -8169,7 +8162,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.past.empty_next": "आपकी पूरी की गई बातचीत यहाँ दिखेंगी, और आप उनमें से किसी को भी फिर से जारी रख सकते हैं।",
 		"mobile.past.no_matches_next": "खोज बातचीत के शब्दों और शीर्षकों, दोनों में होती है, इसलिए छोटा शब्द आज़माने पर नतीजा मिल सकता है।",
 		"mobile.past.search_label": "पिछले सत्र खोजें",
-		"mobile.past.search_placeholder": "शब्द या शीर्षक",
 		"mobile.projects.create.description": "विवरण",
 		"mobile.projects.create.description_placeholder": "यह प्रोजेक्ट किस लिए है",
 		"mobile.projects.create.name": "नाम",
@@ -9288,7 +9280,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.past.empty_next": "Здесь появятся завершённые вами беседы, и любую из них можно будет возобновить.",
 		"mobile.past.no_matches_next": "Поиск идёт по тексту бесед и их названиям, поэтому может помочь слово покороче.",
 		"mobile.past.search_label": "Поиск по прошлым сессиям",
-		"mobile.past.search_placeholder": "Текст, название",
 		"mobile.projects.create.description": "Описание",
 		"mobile.projects.create.description_placeholder": "Для чего этот проект",
 		"mobile.projects.create.name": "Имя",
@@ -10407,7 +10398,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.past.empty_next": "آپ کی ختم کی ہوئی گفتگوئیں یہاں نظر آئیں گی، اور آپ ان میں سے کسی کو بھی دوبارہ جاری رکھ سکتے ہیں۔",
 		"mobile.past.no_matches_next": "تلاش گفتگو کے متن اور عنوانات دونوں میں ہوتی ہے، اس لیے چھوٹا لفظ آزمانے سے نتیجہ مل سکتا ہے۔",
 		"mobile.past.search_label": "گزشتہ سیشنز تلاش کریں",
-		"mobile.past.search_placeholder": "الفاظ یا عنوان",
 		"mobile.projects.create.description": "تفصیل",
 		"mobile.projects.create.description_placeholder": "یہ پروجیکٹ کس لیے ہے",
 		"mobile.projects.create.name": "نام",
@@ -11526,7 +11516,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.past.empty_next": "Các cuộc trò chuyện bạn đã kết thúc sẽ hiện ở đây, và bạn có thể mở lại bất kỳ cuộc nào.",
 		"mobile.past.no_matches_next": "Tìm kiếm bao gồm cả nội dung trò chuyện lẫn tiêu đề, nên một từ ngắn hơn có thể sẽ khớp.",
 		"mobile.past.search_label": "Tìm kiếm phiên trước",
-		"mobile.past.search_placeholder": "Từ hoặc tiêu đề",
 		"mobile.projects.create.description": "Mô tả",
 		"mobile.projects.create.description_placeholder": "Mục đích của dự án này",
 		"mobile.projects.create.name": "Tên",
@@ -12645,7 +12634,6 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.past.empty_next": "你结束的对话会列在这里，之后可以随时恢复其中任意一个。",
 		"mobile.past.no_matches_next": "搜索范围包括对话内容和标题，换个更短的词可能就能找到。",
 		"mobile.past.search_label": "搜索历史会话",
-		"mobile.past.search_placeholder": "关键词或标题",
 		"mobile.projects.create.description": "描述",
 		"mobile.projects.create.description_placeholder": "此项目的用途",
 		"mobile.projects.create.name": "名称",

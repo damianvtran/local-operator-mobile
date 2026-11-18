@@ -1,6 +1,5 @@
 {
 	"mobile.past.search_label": "搜索历史会话",
-	"mobile.past.search_placeholder": "关键词或标题",
 	"mobile.past.empty_headline": "还没有历史对话。",
 	"mobile.past.empty_next": "你结束的对话会列在这里，之后可以随时恢复其中任意一个。",
 	"mobile.past.no_matches_next": "搜索范围包括对话内容和标题，换个更短的词可能就能找到。"

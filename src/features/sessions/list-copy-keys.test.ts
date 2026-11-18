@@ -18,6 +18,11 @@ const read = (path: string) =>
 const PANE = read("./conversations-pane.tsx");
 const PAST = read("../past/past.tsx");
 
+/* Top-level for biome's useTopLevelRegex: the Search button's container takes
+ *  the field's measured height and the button fills it. */
+const SEARCH_BUTTON_BOX =
+	/style=\{\s*searchFieldHeight === null\s*\?\s*undefined\s*:\s*\{ height: searchFieldHeight \}\s*\}\s*>\s*<Button(?:(?!\/>)[\s\S])*?\bfill\b/;
+
 describe("list copy is keyed", () => {
 	it.each([
 		"Nothing matches that.",
@@ -47,9 +52,20 @@ describe("list copy is keyed", () => {
 		expect(PAST).not.toContain(literal);
 	});
 
-	it("the Past search row shows one label and a field-height button", () => {
+	it("the Past search row paints its label once, with no placeholder repeating it", () => {
+		/* Operator ruling on review round 1 (R2/D3): the kit forbids a
+		 *  placeholder standing in for a label (components.md § 4, § 23 #14), so
+		 *  the visible label stays and the duplicate hint goes. */
 		expect(PAST).toContain('label={t("mobile.past.search_label")}');
-		expect(PAST).toContain("labelHidden");
-		expect(PAST).toContain("fillFloor");
+		expect(PAST).not.toContain("labelHidden");
+		expect(PAST).not.toContain("placeholder=");
+		expect(PAST).not.toContain("mobile.past.search_placeholder");
+	});
+
+	it("the Past Search button is sized to the measured field, at every text size", () => {
+		/* Design round 1, D2: a fixed floor matched the field at 100 % only. */
+		expect(PAST).toContain("fieldRef={searchFieldRef}");
+		expect(PAST).toMatch(SEARCH_BUTTON_BOX);
+		expect(PAST).not.toContain("fillFloor");
 	});
 });

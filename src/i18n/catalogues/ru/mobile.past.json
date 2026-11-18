@@ -1,6 +1,5 @@
 {
 	"mobile.past.search_label": "Поиск по прошлым сессиям",
-	"mobile.past.search_placeholder": "Текст, название",
 	"mobile.past.empty_headline": "Прошлых бесед пока нет.",
 	"mobile.past.empty_next": "Здесь появятся завершённые вами беседы, и любую из них можно будет возобновить.",
 	"mobile.past.no_matches_next": "Поиск идёт по тексту бесед и их названиям, поэтому может помочь слово покороче."
