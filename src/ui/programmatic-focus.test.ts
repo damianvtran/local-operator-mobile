@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+	createInputModality,
+	guardScrimFocus,
 	PROGRAMMATIC_FOCUS_CLASS,
 	scrimFocusRedirect,
 	titleRingQuiet,
@@ -31,128 +33,220 @@ const TRAP = read(
 );
 
 /**
- * react-native-web's modal focus trap, reduced to the decision it makes when Tab
- * wraps past the last (or first) control: it calls `focus()` on each node in
- * DOM order and keeps the first that ACCEPTS focus — and a `tabIndex={-1}` node
- * does, so a scrim that is "out of the tab order" still receives the wrap
- * (review round 1: R1 / D1 / Q1). The source assertion below pins that reading
- * of the library, so an upgrade that changes it fails here first.
+ * A BEHAVIOURAL check of the web focus guard, run through react-native-web's own
+ * trap code. The trap's `attemptFocus` / `focusFirstDescendant` /
+ * `focusLastDescendant` are lifted verbatim from the installed library (so an
+ * upgrade that changes them changes this test) and run over a small fake DOM in
+ * the overlay's real order: scrim first, then the panel. The guard under test is
+ * the one `Sheet` and `ConversationsDrawer` install (`guardScrimFocus`).
+ *
+ * What the trap does with the guard (review round 2, R2-1 / Q5): a wrap calls
+ * `focus()` on each node in DOM order and keeps the first where focus STAYS. The
+ * guard moves keyboard focus off the scrim at once, so the trap's check on the
+ * scrim fails and the walk continues to the panel's first control — the drawer's
+ * Agents segment, the row menu's Close, the switcher's title. Without the guard
+ * the walk stops on the scrim: an unmarked stop named "Close".
  */
-type Stop = { id: string; acceptsFocus: boolean };
-type Modality = "keyboard" | "pointer";
-const trapWrap = (domOrder: Stop[]): Stop | undefined =>
-	domOrder.find((stop) => stop.acceptsFocus);
+const TRAP_FUNCTIONS = [
+	"attemptFocus",
+	"focusFirstDescendant",
+	"focusLastDescendant",
+];
+const trapSource = TRAP_FUNCTIONS.map((name) => {
+	const at = TRAP.indexOf(`function ${name}(`);
+	const next = TRAP.indexOf("\n}\n", at);
+	return TRAP.slice(at, next + 2);
+}).join("\n");
 
-/** Where a keyboard reader ends up after the wrap, and whether they can see it. */
-const afterWrap = (
-	domOrder: Stop[],
-	redirect: (focusVisible: boolean) => string | null,
-	ringQuiet: (id: string) => boolean,
-	modality: Modality = "keyboard",
-): { id: string; ring: boolean } => {
-	const landed = trapWrap(domOrder)?.id ?? "body";
-	/* The browser's own heuristic: focus that a key moved matches
-	 *  `:focus-visible`; focus placed while the reader used a pointer does not. */
-	const id =
-		landed === "scrim" ? (redirect(modality === "keyboard") ?? landed) : landed;
-	return { id, ring: !ringQuiet(id) };
+type FakeNode = {
+	id: string;
+	childNodes: FakeNode[];
+	focus: (options?: unknown) => void;
+	addEventListener: (
+		type: string,
+		listener: (event: { target: unknown }) => void,
+	) => void;
+	removeEventListener: (
+		type: string,
+		listener: (event: { target: unknown }) => void,
+	) => void;
 };
 
+const fakeDom = () => {
+	const doc: { activeElement: FakeNode | null } = { activeElement: null };
+	const node = (
+		id: string,
+		focusable: boolean,
+		children: FakeNode[] = [],
+	): FakeNode => {
+		const listeners = new Set<(event: { target: unknown }) => void>();
+		const self: FakeNode = {
+			id,
+			childNodes: children,
+			focus: () => {
+				if (!focusable) return;
+				doc.activeElement = self;
+				for (const listener of [...listeners]) listener({ target: self });
+			},
+			addEventListener: (type, listener) => {
+				if (type === "focusin") listeners.add(listener);
+			},
+			removeEventListener: (_type, listener) => listeners.delete(listener),
+		};
+		return self;
+	};
+	const trap = new Function(
+		"document",
+		"canUseDOM",
+		`${trapSource}\nreturn { focusFirstDescendant, focusLastDescendant };`,
+	)(doc, true) as {
+		focusFirstDescendant: (root: FakeNode) => boolean;
+		focusLastDescendant: (root: FakeNode) => boolean;
+	};
+	return { doc, node, trap };
+};
+
+/** One overlay in DOM order, with the guard installed exactly as the app does. */
+const overlay = (
+	kind: "row-menu" | "switcher" | "drawer",
+	{ keyboard, guarded = true }: { keyboard: boolean; guarded?: boolean },
+) => {
+	const { doc, node, trap } = fakeDom();
+	const scrim = node("scrim", true);
+	const panel =
+		kind === "drawer"
+			? [
+					node("workspace-drawer-agents", true),
+					node("workspace-drawer-team-bridge", true),
+					node("sidebar-close", true),
+					node("sidebar-library", true),
+				]
+			: kind === "switcher"
+				? [
+						node("title", true),
+						node("sheet-close", true),
+						node("switcher-add-computer", true),
+					]
+				: [
+						node("title", false),
+						node("sheet-close", true),
+						node("session-open-current", true),
+						node("session-open-previous", true),
+					];
+	const root = node("root", false, [scrim, node("panel", false, panel)]);
+	const byId = (id: string) => panel.find((n) => n.id === id) ?? null;
+	if (guarded) {
+		const modality = createInputModality();
+		modality.record(keyboard ? "keyboard" : "pointer");
+		guardScrimFocus(scrim as unknown as HTMLElement, () => {
+			const to = scrimFocusRedirect(kind === "switcher", modality.keyboard());
+			const id =
+				to === "title"
+					? "title"
+					: to === "close"
+						? kind === "drawer"
+							? "sidebar-close"
+							: "sheet-close"
+						: null;
+			return id ? (byId(id) as unknown as HTMLElement) : null;
+		});
+	}
+	return { doc, root, trap };
+};
+
+/** The title shows its ring once blurred, and every wrap follows a blur. */
+const ringed = (id: string | undefined) =>
+	id !== undefined &&
+	id !== "scrim" &&
+	!(id === "title" && titleRingQuiet(true));
+
 describe("Tab wrap inside a web overlay lands on a control with a ring", () => {
-	it("reads the trap as the model above does", () => {
-		expect(TRAP).toContain("function focusFirstDescendant(element)");
-		expect(TRAP).toContain(
-			"if (attemptFocus(child) || focusFirstDescendant(child))",
-		);
-		expect(TRAP).toContain("return document.activeElement === element;");
-	});
-
-	it("sends KEYBOARD focus that lands on a sheet's scrim to its Close", () => {
-		expect(scrimFocusRedirect(false, true)).toBe("close");
-		/* Pointer-opened: the scrim keeps the quiet open-time focus, so no ring
-		 *  appears around Close on a sheet the reader opened by touch. */
-		expect(scrimFocusRedirect(false, false)).toBeNull();
-	});
-
-	it("always sends focus that lands on a title-focusing sheet's scrim to its title", () => {
-		/* QA round 2, Q7: opening from the drawer re-entered at the scrim. */
-		expect(scrimFocusRedirect(true, true)).toBe("title");
-		expect(scrimFocusRedirect(true, false)).toBe("title");
-	});
-
-	it("keeps the title's ring hidden only for the focus placed while opening", () => {
-		expect(titleRingQuiet(false)).toBe(true);
-		expect(titleRingQuiet(true)).toBe(false);
+	it("reads the library's trap source", () => {
+		expect(trapSource).toContain("function focusFirstDescendant(element)");
+		expect(trapSource).toContain("return document.activeElement === element;");
 	});
 
 	it.each([
-		[
-			"row menu (a sheet that does not focus its title)",
-			[
-				{ id: "scrim", acceptsFocus: true },
-				{ id: "title", acceptsFocus: false },
-				{ id: "close", acceptsFocus: true },
-				{ id: "pin", acceptsFocus: true },
-			],
-			(fv: boolean) => scrimFocusRedirect(false, fv),
-		],
-		[
-			"Switch computer (a sheet that focuses its title)",
-			[
-				{ id: "scrim", acceptsFocus: true },
-				{ id: "title", acceptsFocus: true },
-				{ id: "close", acceptsFocus: true },
-			],
-			(fv: boolean) => scrimFocusRedirect(true, fv),
-		],
-		[
-			"conversations drawer",
-			[
-				{ id: "scrim", acceptsFocus: true },
-				{ id: "agents", acceptsFocus: true },
-				{ id: "sidebar-close", acceptsFocus: true },
-			],
-			(fv: boolean) =>
-				scrimFocusRedirect(false, fv) === "close" ? "sidebar-close" : null,
-		],
-	] as const)("%s", (_name, order, redirect) => {
-		/* A wrap means the reader has tabbed AWAY from whatever opening focused,
-		 *  so the title has been blurred since the overlay opened. */
-		const ringQuiet = (id: string) =>
-			id === "scrim" || (id === "title" && titleRingQuiet(true));
-		const after = afterWrap([...order], redirect, ringQuiet);
-		expect(after.id).not.toBe("scrim");
-		expect(after.ring).toBe(true);
+		["row menu", "row-menu", "sheet-close"],
+		["Switch computer", "switcher", "title"],
+		/* NOT `sidebar-close`: the trap walks on past the guard's own target. */
+		["conversations drawer", "drawer", "workspace-drawer-agents"],
+	] as const)(
+		"%s: a forward wrap lands on the panel's first control",
+		(_name, kind, landing) => {
+			const { doc, root, trap } = overlay(kind, { keyboard: true });
+			trap.focusFirstDescendant(root);
+			expect(doc.activeElement?.id).toBe(landing);
+			expect(ringed(doc.activeElement?.id)).toBe(true);
+		},
+	);
+
+	it.each([
+		["row menu", "row-menu", "session-open-previous"],
+		["Switch computer", "switcher", "switcher-add-computer"],
+		["conversations drawer", "drawer", "sidebar-library"],
+	] as const)(
+		"%s: a backward wrap lands on the last control",
+		(_name, kind, landing) => {
+			const { doc, root, trap } = overlay(kind, { keyboard: true });
+			trap.focusLastDescendant(root);
+			expect(doc.activeElement?.id).toBe(landing);
+		},
+	);
+
+	it.each([
+		["row menu", "row-menu"],
+		["conversations drawer", "drawer"],
+	] as const)(
+		"%s: without the guard, the wrap stops on the scrim (the round 1 defect)",
+		(_name, kind) => {
+			const { doc, root, trap } = overlay(kind, {
+				keyboard: true,
+				guarded: false,
+			});
+			trap.focusFirstDescendant(root);
+			expect(doc.activeElement?.id).toBe("scrim");
+		},
+	);
+
+	it.each([
+		["row menu opened by a long-press", "row-menu"],
+		/* Review round 2, Q6: a deep link or reload of /conversations opens the
+		 *  drawer with no input at all — code-only focus, so no ring. */
+		["drawer opened by a tap or with no input", "drawer"],
+	] as const)(
+		"%s: the open-time focus stays quiet on the scrim",
+		(_name, kind) => {
+			const { doc, root, trap } = overlay(kind, { keyboard: false });
+			trap.focusFirstDescendant(root);
+			expect(doc.activeElement?.id).toBe("scrim");
+			expect(ringed(doc.activeElement?.id)).toBe(false);
+		},
+	);
+
+	it("a title-focusing sheet always lands on its title", () => {
+		const { doc, root, trap } = overlay("switcher", { keyboard: false });
+		trap.focusFirstDescendant(root);
+		expect(doc.activeElement?.id).toBe("title");
 	});
 
-	it("leaves a pointer-opened row menu's open-time focus quiet", () => {
-		const opened = afterWrap(
-			[
-				{ id: "scrim", acceptsFocus: true },
-				{ id: "close", acceptsFocus: true },
-			],
-			(fv) => scrimFocusRedirect(false, fv),
-			(id) => id === "scrim",
-			"pointer",
-		);
-		expect(opened).toEqual({ id: "scrim", ring: false });
+	it("counts input as keyboard only after a key, and as pointer after a press", () => {
+		const modality = createInputModality();
+		expect(modality.keyboard()).toBe(false);
+		modality.record("keyboard");
+		expect(modality.keyboard()).toBe(true);
+		modality.record("pointer");
+		expect(modality.keyboard()).toBe(false);
 	});
 
-	it("wires the redirect into every web sheet, not only title-focusing ones", () => {
-		expect(SHEET).toContain('const keyed = scrim.matches(":focus-visible");');
-		expect(SHEET).toContain("scrimFocusRedirect(focusTitle, keyed)");
-		expect(SHEET).not.toContain(
-			'if (!shown || !focusTitle || Platform.OS !== "web") return;',
-		);
+	it("installs the guard on every web sheet's scrim and on the drawer's", () => {
+		/* The behaviour above is the helper's; these pin that both overlays call
+		 *  it (review round 2, Q4: deleting the sheet's listener left CI green). */
+		expect(SHEET).toMatch(GUARD_CALL);
+		expect(DRAWER).toMatch(GUARD_CALL);
+		expect(SHEET).toContain("scrimFocusRedirect(focusTitle, keyboardInput())");
+		expect(DRAWER).toContain("scrimFocusRedirect(false, keyboardInput())");
 		expect(SHEET).toContain("titleRingQuiet(titleBlurred)");
-	});
-
-	it("wires the drawer's scrim to the panel's Close", () => {
-		expect(DRAWER).toContain('addEventListener("focusin"');
-		expect(DRAWER).toContain(
-			'scrimFocusRedirect(false, scrim.matches(":focus-visible"))',
-		);
-		expect(DRAWER).toContain("CONTROL.sidebarClose");
 	});
 });
 
@@ -203,5 +297,6 @@ describe("programmatic focus", () => {
 
 /* Top-level for biome's useTopLevelRegex. */
 const WHITESPACE = /\s+/;
+const GUARD_CALL = /guardScrimFocus\(scrim, \(\) =>/;
 const SHEET_TITLE_CLASS =
 	/className=\{cx\(\s*"flex-1 text-title text-ink",\s*focusTitle && titleRingQuiet\(titleBlurred\)\s*\?\s*PROGRAMMATIC_FOCUS_CLASS\s*:\s*undefined,?\s*\)\}/;

@@ -32,6 +32,8 @@ import { sidebarWidthFor, TOUCH_FLOOR } from "@/ui/layout";
 import { exitPointerEvents, useModalExit } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import {
+	guardScrimFocus,
+	keyboardInput,
 	PROGRAMMATIC_FOCUS_CLASS,
 	scrimFocusRedirect,
 	webPointerOnly,
@@ -221,29 +223,29 @@ export const ConversationsDrawer = ({
 	 *  and the scrim is first in DOM order. `tabIndex={-1}` keeps it out of the
 	 *  browser's Tab sequence but not out of the trap's reach, so each wrap landed
 	 *  on an unmarked stop named "Close conversations" that Enter would act on
-	 *  (review round 1: R1 / D1 / Q1). Focus that lands on the scrim is forwarded
-	 *  to the panel's own Close, which draws its ring; a Shift+Tab wrap still
-	 *  reaches the last control (the trap walks from the end when the re-landed
-	 *  node is the one it left). Native has no `<div>` and no trap. */
+	 *  (review round 1: R1 / D1 / Q1). The guard (`guardScrimFocus`) moves
+	 *  KEYBOARD focus off the scrim, so the trap's walk continues to the panel's
+	 *  first control — the Agents segment, ringed — on open and on every forward
+	 *  wrap; a backward wrap reaches the last control (review round 2, R2-1). A
+	 *  tap, or no input at all (a deep link to /conversations, Q6), leaves the
+	 *  open-time focus on the ringless scrim. Native has no `<div>` and no trap. */
 	const scrimRef = useRef<View>(null);
 	useEffect(() => {
 		if (!visible || nested || Platform.OS !== "web") return;
 		const scrim = scrimRef.current as unknown as HTMLElement | null;
 		if (!scrim) return;
-		const onFocusIn = (event: Event) => {
-			if (event.target !== scrim) return;
-			/* Keyboard focus only: a pointer-opened drawer keeps the ringless
-			 *  open-time focus on the scrim (`scrimFocusRedirect`). */
-			if (!scrimFocusRedirect(false, scrim.matches(":focus-visible"))) return;
-			/* THIS modal's Close: the search is scoped to the dialog the scrim
-			 *  sits in, so a sheet stacked over the drawer is never searched. */
-			scrim
-				.closest<HTMLElement>('[aria-modal="true"]')
-				?.querySelector<HTMLElement>(`[data-testid="${CONTROL.sidebarClose}"]`)
-				?.focus({ preventScroll: true });
-		};
-		scrim.addEventListener("focusin", onFocusIn);
-		return () => scrim.removeEventListener("focusin", onFocusIn);
+		return guardScrimFocus(scrim, () =>
+			scrimFocusRedirect(false, keyboardInput())
+				? /* THIS modal's Close, scoped to the dialog the scrim sits in. A
+					 *  trap walk does not stop here: it moves on to the panel's first
+					 *  control (the Agents segment), which is where a wrap lands. */
+					scrim
+						.closest<HTMLElement>('[aria-modal="true"]')
+						?.querySelector<HTMLElement>(
+							`[data-testid="${CONTROL.sidebarClose}"]`,
+						)
+				: null,
+		);
 	}, [visible, nested]);
 
 	return (

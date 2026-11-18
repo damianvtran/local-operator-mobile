@@ -36,6 +36,8 @@ import {
 } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
 import {
+	guardScrimFocus,
+	keyboardInput,
 	PROGRAMMATIC_FOCUS_CLASS,
 	scrimFocusRedirect,
 	titleRingQuiet,
@@ -354,9 +356,13 @@ export const Sheet = ({
 	 * title-focusing sheet from the drawer's workspace row closes the drawer in the
 	 * same press: the pane's focused node unmounts and the trap re-enters at the
 	 * scrim, so a reader heard "Close" instead of the title they just opened (QA
-	 * round 2, Q7). Focus that lands on the scrim is forwarded to the title when the
-	 * sheet focuses its title, otherwise — when a KEY moved it there — to its Close
-	 * (`scrimFocusRedirect`); a pointer-opened sheet's quiet open-time focus stays.
+	 * round 2, Q7). The guard (`guardScrimFocus`) moves focus off the scrim — to
+	 * the title when the sheet focuses its title, otherwise to its Close when the
+	 * last input was a KEY (`scrimFocusRedirect`, `keyboardInput`). Inside a trap
+	 * walk the trap then continues to the panel's first control (the title, or
+	 * Close), which is where a wrap lands. A sheet opened by touch, mouse or with
+	 * no input keeps its quiet open-time focus on the scrim; from there Shift+Tab
+	 * goes to the first control, and Enter dismisses (review round 2, Q7).
 	 *
 	 * WHY A LISTENER ON THE SCRIM AND NOT A RE-FOCUS. The guard fires only when the
 	 * SCRIM ITSELF is focused, so a control that is still on screen — the persistent
@@ -378,25 +384,19 @@ export const Sheet = ({
 		const title = titleRef.current as unknown as HTMLElement | null;
 		const header = headerRef.current as unknown as HTMLElement | null;
 		if (!scrim) return;
-		const onFocusIn = (event: Event) => {
-			if (event.target !== scrim) return;
-			const keyed = scrim.matches(":focus-visible");
-			const to = scrimFocusRedirect(focusTitle, keyed);
-			const target =
-				to === "title"
-					? title
-					: to === "close"
-						? header?.querySelector<HTMLElement>(
-								`[data-testid="${CONTROL.sheetClose}"]`,
-							)
-						: null;
-			target?.focus({ preventScroll: true });
-		};
 		const onTitleBlur = () => setTitleBlurred(true);
-		scrim.addEventListener("focusin", onFocusIn);
 		title?.addEventListener("blur", onTitleBlur);
+		const unguard = guardScrimFocus(scrim, () => {
+			const to = scrimFocusRedirect(focusTitle, keyboardInput());
+			if (to === "title") return title;
+			if (to === "close")
+				return header?.querySelector<HTMLElement>(
+					`[data-testid="${CONTROL.sheetClose}"]`,
+				);
+			return null;
+		});
 		return () => {
-			scrim.removeEventListener("focusin", onFocusIn);
+			unguard();
 			title?.removeEventListener("blur", onTitleBlur);
 		};
 	}, [shown, focusTitle]);
