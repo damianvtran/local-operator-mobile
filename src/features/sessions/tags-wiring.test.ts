@@ -29,7 +29,11 @@ const PAST = source("../../features/past/past.tsx");
 const HEALTH = source("../session/components/session-health.tsx");
 /* Source-assertion regexes live at the top level so each literal is compiled
  *  once (biome's useTopLevelRegex); they scan the source text, not a frame. */
-const TAGS_PANE_GATE = /\{tagsAssignable \? \(/;
+/* The menu's entries are `row-menu.ts`'s answer: the pane hands it the tested
+ *  capability and the module includes Tags only behind it. */
+const TAGS_PANE_GATE = /rowMenuActions\(\{[^}]*\btagsAssignable,/;
+const TAGS_MENU_GATE = /\.\.\.\(tagsAssignable\s*\?/;
+const ROW_MENU = source("./row-menu.ts");
 const NO_AVAILABLE_GATE = /session_tags\?\.available ===/;
 /* The visible disclosure word renders the row key, not a literal (O3-b). */
 const TAGS_LABEL = />\s*\{t\("relay\.chrome\.row\.tags"\)\}\s*<\/Text>/;
@@ -39,6 +43,7 @@ describe("the conversations pane", () => {
 	it("gates the Tags action on the tested capability, not a second comparison", () => {
 		expect(PANE).toContain("const tagsAssignable = canAssignSessionTags(");
 		expect(PANE).toMatch(TAGS_PANE_GATE);
+		expect(ROW_MENU).toMatch(TAGS_MENU_GATE);
 		expect(PANE).not.toMatch(NO_AVAILABLE_GATE);
 	});
 
