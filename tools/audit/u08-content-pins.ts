@@ -232,8 +232,11 @@ export const INSTRUMENT_PINS: Readonly<Record<string, string>> = {
 	 * false`. `--print`, staged. */
 	/* PR #207 round 5: omit the false head-pin flag, matching Core's wire.
 	 * Re-derived with --print from the staged tree; no capture assertion moved. */
+	/* Re-pinned 2026-11-18 for issue #325 with --print: two NEW scenarios
+	 *  (`run-settings`, `run-settings-streaming`) with no cell; no existing
+	 *  scenario's world moved. */
 	"tools/mock-relay/scenarios.ts":
-		"5b8c61f4d6763d968d9f1b78337b700c7f016a500836a33617efba06c3dbe133",
+		"86ef7c314e6fd21b32d7481200083502ded72b3937c669338ed13b6631f9ed1d",
 	"tools/mock-relay/shape.ts":
 		"0ef0c342578ffaf4a7067d4427f10a999740152d6a56ec2da63d75697f08fb5b",
 	/* The startup evidence helper the fixture's relay imports. It has been loaded by
