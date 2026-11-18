@@ -23,14 +23,20 @@
  * mock's own avatar route needs `?v=<hash>`, which the native fetcher rightly
  * refuses (no query strings), so the proxy serves the mock's synthetic PNG on a
  * query-free path and only for the one synthetic nonce the run posts.
+ *
+ * `GET /push-avatar/mia|kenji` (same nonce gate) serve the committed synthetic
+ * ILLUSTRATED faces in `fixtures/` (make_faces.py; not a photo of anyone). The
+ * mock's photo is one flat colour, so design review could not judge a face's
+ * circular crop, nor tell two senders apart (#304 design R3 D3/D4.3).
  */
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { createServer, request } from "node:http";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PORT = 54832;
 const UNREAD_PATH = /\/v1\/messaging\/(unread|conversations)$/;
+const FACE_PATH = /^\/push-avatar\/(mia|kenji)$/;
 const [root, log] = process.argv.slice(2);
 if (!root || !log)
 	throw new Error("usage: node hub.ts <candidate-root> <requests-log>");
@@ -43,6 +49,11 @@ const upstream = await createTeamBridgeFixture({}).listen({ port: 0 });
 let zero = false;
 export const PUSH_NONCE = "proofnonce0123456789AB";
 const seen: { at: string; method: string; path: string }[] = [];
+const FIXTURES = join(fileURLToPath(new URL(".", import.meta.url)), "fixtures");
+const FACES: Record<string, Buffer> = {
+	mia: readFileSync(join(FIXTURES, "face-mia.png")),
+	kenji: readFileSync(join(FIXTURES, "face-kenji.png")),
+};
 
 /** Every unread figure the hub contract carries, zeroed in place. */
 function zeroUnread(value: unknown): unknown {
@@ -85,6 +96,17 @@ const server = createServer((req, res) => {
 	};
 	seen.push(entry);
 	appendFileSync(log, `${JSON.stringify(entry)}\n`);
+	const face = FACE_PATH.exec(url.pathname)?.[1];
+	if (face) {
+		if (req.headers.authorization !== `PushAvatar ${PUSH_NONCE}`) {
+			res.statusCode = 401;
+			res.end();
+			return;
+		}
+		res.writeHead(200, { "content-type": "image/png" });
+		res.end(FACES[face]);
+		return;
+	}
 	if (url.pathname === "/push-avatar/ada") {
 		if (req.headers.authorization !== `PushAvatar ${PUSH_NONCE}`) {
 			res.statusCode = 401;

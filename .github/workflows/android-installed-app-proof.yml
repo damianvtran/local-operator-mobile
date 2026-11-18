@@ -125,7 +125,9 @@ jobs:
       fail-fast: false
       matrix:
         api: [29, 31, 36]
-    # Boot <=6m + installs 1m + rows ~12m (each row bounded in run.py) + upload.
+    # Whole job 4.7-5.4 min per API in run 44267910444. The theme-proof,
+    # scenario and lock rows add bounded waits (worst case ~10 min, mostly the
+    # API 29 SystemUI restart waits), still well inside 40.
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7

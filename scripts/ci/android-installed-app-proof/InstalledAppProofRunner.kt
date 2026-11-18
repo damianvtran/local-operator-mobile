@@ -147,6 +147,11 @@ class InstalledAppProofRunner : Instrumentation() {
     "active" -> active()
     "channels" -> channels()
     "shortcuts" -> shortcuts()
+    // Clears the app's own notifications (same uid, so the app's records) so a
+    // scenario frame holds only that scenario's rows, and the lock-screen row
+    // can name the ONE notification it shows (#304 UX R3 U8). Returns how many
+    // remain, which must be 0.
+    "cancelAll" -> { manager().cancelAll(); SystemClock.sleep(500); manager().activeNotifications.size }
     "finish", "die" -> "bye"
     else -> error("unknown op $op")
   }
