@@ -1,0 +1,104 @@
+name: Merge Gate
+
+# The terminal heavy gate for pull requests (`Merge gate (full suite)`), matching
+# `local-operator` and `local-operator-ui`.
+#
+# WHY TWO TIERS. Per-push PR runs execute `ci.yml` (`CI Gate` — fast Linux lint,
+# format, typechecks, unit tests, web export, and path-gated design checks) on
+# every push, while narrowing per-push `ios.yml` and `android.yml` builds to
+# native-affecting inputs and dropping per-push `e2e.yml` runs during review
+# churn. Once review rounds are clean and `CI Gate` is green on the final head,
+# `pnpm merge-gate <pr>` re-arms the `ready-to-merge` label, triggering this
+# workflow to run the full iOS Release simulator build+launch, Android APK +
+# manifest + determinism gate, and E2E mock-relay contract together on the PR
+# merge ref (`refs/pull/<n>/merge`).
+#
+# INVARIANTS:
+#   1. NO LABEL CONDITION ANYWHERE IN THIS FILE. GitHub counts a `skipped` job
+#      with the required check's name as SATISFYING a ruleset status check.
+#      Every `labeled` event on an open PR runs the full gate unconditionally.
+#   2. NO EVENT GUARD ON `merge-gate`. `if: always()` ensures every run of this
+#      workflow — `pull_request` (`labeled`) or `workflow_dispatch` — publishes
+#      a real verdict computed from `needs`, never a skipped pass.
+#   3. FAIL CLOSED (`needs.<job>.result == 'success'`). None of `ios`, `android`,
+#      or `e2e` may conclude `skipped`, `failure`, or `cancelled`: all three are
+#      invoked unconditionally (`full: true` for the native workflows) and must
+#      succeed.
+#   4. CONCURRENCY GROUP DISTINCTNESS. Inside a reusable workflow called via
+#      `workflow_call`, GitHub sets `github.workflow` to THIS caller's name
+#      ("Merge Gate") and `github.event_name` to THIS caller's event
+#      (`pull_request` or `workflow_dispatch`). Therefore this caller uses the
+#      literal prefix `merge-gate-...` while the callees use literal prefixes
+#      `ios-...`, `android-...`, and `e2e-...` — preventing both caller-callee
+#      deadlocks and sibling-callee cancellations. `cancel-in-progress: false`
+#      keeps an in-flight merge gate alive to completion.
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ format('merge-gate-{0}-{1}', github.event_name, github.ref) }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    name: iOS native gate
+    uses: ./.github/workflows/ios.yml
+    with:
+      full: true
+
+  android:
+    name: Android native gate
+    uses: ./.github/workflows/android.yml
+    with:
+      full: true
+
+  e2e:
+    name: E2E relay contract
+    uses: ./.github/workflows/e2e.yml
+
+  merge-gate:
+    name: Merge gate (full suite)
+    needs: [ios, android, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify iOS, Android, and E2E gates all succeeded (fail closed)
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          node --input-type=module <<'NODE'
+          const needs = JSON.parse(process.env.NEEDS ?? "{}");
+          const required = ["ios", "android", "e2e"];
+          const bad = [];
+
+          for (const job of required) {
+            const result = needs[job]?.result ?? "missing";
+            console.log(`${job}: ${result}`);
+            // Fail closed: `skipped`, `failure`, `cancelled`, and `missing` all fail.
+            // Because `ios` and `android` are called with `full: true` and `e2e` runs
+            // `harness` + `mock-relay-contract` unconditionally, a `skipped` result
+            // is never legitimate here.
+            if (result !== "success") {
+              bad.push(`${job}=${result}`);
+            }
+          }
+
+          for (const [job, entry] of Object.entries(needs)) {
+            if (!required.includes(job) && entry?.result !== "success") {
+              bad.push(`${job}=${entry?.result ?? "unknown"}`);
+            }
+          }
+
+          if (bad.length > 0) {
+            console.log(`::error title=Merge gate::${bad.join(", ")}`);
+            process.exit(1);
+          }
+          console.log("Merge gate (full suite) green on this head.");
+          NODE

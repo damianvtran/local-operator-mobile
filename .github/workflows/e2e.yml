@@ -103,7 +103,10 @@ on:
   push:
     branches:
       - main
-  pull_request:
+  # Callable by merge-gate.yml on `ready-to-merge` (`pull_request: [labeled]`),
+  # replacing the per-push `pull_request` trigger so `mock-relay-contract` runs
+  # once on the final head before merge instead of on every review iteration.
+  workflow_call:
 
 # THE CONCURRENCY KEY CARRIES THE TRIGGER, and a manual run also carries its
 # proof. It has to. GitHub keeps ONE pending run per group: when a second run
@@ -138,9 +141,15 @@ on:
 # dispatch of one proof waits behind the first). That is not immunity from every
 # cancel — GitHub keeps ONE pending run per group, so a third run in one lane
 # still replaces whichever predecessor was only waiting. The account-routing
-# proofs are dispatch-only, so this rule never cancels them either.
+# LITERAL WORKFLOW PREFIX (`e2e-...`) KEEPS CALLER AND SIBLINGS APART. When
+# `merge-gate.yml` calls this workflow via `workflow_call`, `github.workflow`
+# inside the callee evaluates to the CALLER's name ("Merge Gate"). Keying on
+# `'e2e'` instead of `github.workflow` prevents `e2e` from colliding with
+# `merge-gate` or with sibling callees `ios.yml` and `android.yml` on the same
+# merge ref. The account-routing proofs remain dispatch-only, so this rule never
+# cancels them either.
 concurrency:
-  group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || inputs.proof_mode == 'account-routing-android-proof' && format('account-routing-android-{0}', github.ref) || github.event_name == 'workflow_dispatch' && format('{0}-{1}-{2}-{3}', github.workflow, github.event_name, github.ref, inputs.proof_mode || 'full') || format('{0}-{1}-{2}', github.workflow, github.event_name, github.ref) }}
+  group: ${{ inputs.proof_mode == 'account-routing-ios-proof' && format('account-routing-ios-{0}', github.ref) || inputs.proof_mode == 'account-routing-android-proof' && format('account-routing-android-{0}', github.ref) || github.event_name == 'workflow_dispatch' && format('e2e-{0}-{1}-{2}', github.event_name, github.ref, inputs.proof_mode || 'full') || format('e2e-{0}-{1}', github.event_name, github.ref) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
 permissions:
