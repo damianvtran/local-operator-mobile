@@ -4,6 +4,7 @@ import type { ComposerChip } from "./chip-labels";
 import {
 	applyRunSetting,
 	composerControlsPlan,
+	customMarkInset,
 	folderControlLabel,
 	folderSource,
 	runSettingsControl,
@@ -539,5 +540,12 @@ describe("applyRunSetting: a refused change is reported, not swallowed (R2)", ()
 			onError: (e) => errors.push(e),
 		});
 		expect(errors).toStrictEqual([null, "Could not change the effort."]);
+	});
+});
+
+describe("customMarkInset: the non-default dot sits on the glyph's corner at either floor (D4)", () => {
+	it("centres the dot on the glyph box's top-end corner", () => {
+		expect(customMarkInset(44, 20, 6)).toBe(9);
+		expect(customMarkInset(48, 20, 6)).toBe(11);
 	});
 });

@@ -109,6 +109,29 @@ describe("final design audit wiring", () => {
 		expect(control).not.toContain("<Chip");
 	});
 
+	it("draws run settings with a settings glyph and pins the dot to the glyph (D4, D5)", () => {
+		const composer = readFileSync(
+			new URL(
+				"../../features/session/components/composer.tsx",
+				import.meta.url,
+			),
+			"utf8",
+		);
+		/* Sparkles reads as "AI feature" beside a message field (design round 1
+		 *  D5); the control changes run SETTINGS, so it is a sliders glyph. */
+		expect(composer).toContain(
+			"<SlidersHorizontal color={color} size={size} />",
+		);
+		expect(composer).not.toContain("Sparkles");
+		/* The non-default dot's inset is computed from the platform floor, not a
+		 *  fixed 7 that only fit the 44 pt box (D4). */
+		expect(composer).toContain(
+			"customMarkInset(\n\tTOUCH_FLOOR,\n\tATTACH_GLYPH_PT,\n\tCUSTOM_MARK_PT,\n)",
+		);
+		expect(composer).toContain("top: MARK_INSET,");
+		expect(composer).not.toContain("top: 7,");
+	});
+
 	it("keeps the home header's computer on ONE fitted line", () => {
 		/* Since M2b the header's computer is `HeaderComputerChip`, mounted in the
 		 *  same slot, so the D3 rule is asserted where its Text now lives. */

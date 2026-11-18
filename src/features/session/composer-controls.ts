@@ -325,3 +325,15 @@ export const applyRunSetting = async (input: {
 		input.onError(input.failure);
 	}
 };
+
+/**
+ * The non-default dot's inset from the control box's top and trailing edges,
+ * pt: centred on the glyph box's top-end corner. The glyph is centred in the
+ * touch-floor box, so the inset follows the PLATFORM floor (44 pt iOS, 48 dp
+ * Android/web) rather than a fixed 44 pt box (design round 1, D4).
+ */
+export const customMarkInset = (
+	touchFloor: number,
+	glyph: number,
+	mark: number,
+): number => (touchFloor - glyph) / 2 - mark / 2;

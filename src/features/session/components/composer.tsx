@@ -8,7 +8,7 @@ import {
 	Mic,
 	MoreHorizontal,
 	Paperclip,
-	Sparkles,
+	SlidersHorizontal,
 	Square,
 	TriangleAlert,
 	X,
@@ -64,6 +64,7 @@ import {
 } from "@/features/session/composer";
 import {
 	composerControlsPlan,
+	customMarkInset,
 	type FolderSource,
 	folderControlLabel,
 	runSettingsControl,
@@ -422,6 +423,11 @@ export type ComposerProps = {
 /** The non-default mark's diameter, pt: the list row's 6 pt dot (components.md
  *  § 7), the kit's existing small mark. */
 const CUSTOM_MARK_PT = 6;
+const MARK_INSET = customMarkInset(
+	TOUCH_FLOOR,
+	ATTACH_GLYPH_PT,
+	CUSTOM_MARK_PT,
+);
 
 /**
  * One of the composer's icon controls — the folder, the run settings (issue
@@ -473,11 +479,11 @@ const ComposerIconControl = ({
 				style={{
 					width: CUSTOM_MARK_PT,
 					height: CUSTOM_MARK_PT,
-					/* The 20 pt glyph is centred in the 44 pt box (12..32); the
-					 *  dot's box is 7..13 from the top and the trailing edge, so
-					 *  it rides the glyph's corner without covering its stroke. */
-					top: 7,
-					end: 7,
+					/* Centred on the glyph box's top-end corner at the PLATFORM
+					 *  floor: 9 pt in the 44 pt box, 11 in the 48 dp one (design
+					 *  round 1, D4 — a fixed 7 floated off the glyph at 48). */
+					top: MARK_INSET,
+					end: MARK_INSET,
 				}}
 			/>
 		) : null}
@@ -1791,7 +1797,9 @@ export const Composer = ({
 					disabled={runSettings.disabled}
 					marked={runSettingsCustom}
 					onPress={onOpenRunSettings}
-					icon={({ color, size }) => <Sparkles color={color} size={size} />}
+					icon={({ color, size }) => (
+						<SlidersHorizontal color={color} size={size} />
+					)}
 					testID={CONTROL.composerModelChip}
 				/>
 			) : null}
