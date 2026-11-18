@@ -199,6 +199,10 @@
 		"role": "heading",
 		"note": "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English."
 	},
+	"mobile.session.sheet_title.search": {
+		"role": "heading",
+		"note": "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders."
+	},
 	"mobile.session.subagent.screen_title": {
 		"role": "heading",
 		"note": "Title of the screen that shows one subagent's run. One word; 'subagent' is the product's word for a helper agent started by the main agent."
@@ -361,7 +365,7 @@
 	},
 	"mobile.session.sheet_title.commands": {
 		"role": "heading",
-		"note": "Title of the bottom sheet listing slash commands the reader can run in a conversation. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision) — use your language's natural form. ~16 characters. No placeholders."
+		"note": "Title of the bottom sheet listing slash commands the reader can run in a conversation. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Search); use your language's natural capitalisation for a title. ~16 characters. No placeholders."
 	},
 	"mobile.session.sheet_title.attach": {
 		"role": "heading",

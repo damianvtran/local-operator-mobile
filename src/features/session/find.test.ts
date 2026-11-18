@@ -8,6 +8,7 @@ import {
 	findCountLabel,
 	findCursorMove,
 	findScopeLines,
+	findTitle,
 	findTruncatedLabel,
 	revealTarget,
 	searchConversation,
@@ -672,5 +673,14 @@ describe("findActiveIndex — the landing is an identity, resolved per render", 
 		expect(findActiveIndex([hit("x"), hit("y")], "c")).toBe(-1);
 		expect(findActiveIndex([hit("x")], null)).toBe(-1);
 		expect(findActiveIndex([], "c")).toBe(-1);
+	});
+});
+
+describe("the find sheet's title", () => {
+	it("is a catalogue word in the sibling sheets' Title case (visual audit D7)", () => {
+		/* One noun, as before (D63-7: a phrase truncated at 200 % on 320 pt), but
+		 *  `Search` beside `Model` / `Effort` / `Commands`, and rendered from the
+		 *  catalogue rather than a hard-coded English constant. */
+		expect(findTitle()).toBe("Search");
 	});
 });

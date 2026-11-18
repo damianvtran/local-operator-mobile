@@ -49,6 +49,7 @@
 	"mobile.session.sheet_title.model": "模型",
 	"mobile.session.sheet_title.effort": "推理强度",
 	"mobile.session.sheet_title.status": "任务和智能体",
+	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.subagent.screen_title": "子智能体",
 	"mobile.session.subagent.prompt_label": "提示词",
 	"mobile.session.subagent.result_label": "结果",

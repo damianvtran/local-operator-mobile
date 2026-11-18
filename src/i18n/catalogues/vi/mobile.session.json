@@ -49,6 +49,7 @@
 	"mobile.session.sheet_title.model": "Mô hình",
 	"mobile.session.sheet_title.effort": "Mức suy luận",
 	"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
+	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.subagent.screen_title": "Tác nhân con",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "kết quả",

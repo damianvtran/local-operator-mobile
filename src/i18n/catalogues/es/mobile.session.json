@@ -49,6 +49,7 @@
 	"mobile.session.sheet_title.model": "Modelo",
 	"mobile.session.sheet_title.effort": "Esfuerzo",
 	"mobile.session.sheet_title.status": "Tareas y agentes",
+	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.subagent.screen_title": "Subagente",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "resultado",

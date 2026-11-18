@@ -49,6 +49,7 @@
 	"mobile.session.sheet_title.model": "Model",
 	"mobile.session.sheet_title.effort": "Effort",
 	"mobile.session.sheet_title.status": "Tasks and agents",
+	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.subagent.screen_title": "Subagent",
 	"mobile.session.subagent.prompt_label": "prompt",
 	"mobile.session.subagent.result_label": "result",
@@ -89,6 +90,6 @@
 	"mobile.session.pending_echo.discarded": "discarded — it may already have arrived · tap to put back",
 	"mobile.session.outbox.composer_stopped": "Your earlier message stopped sending. Retry or discard it above to send this one.",
 	"mobile.session.outbox.composer_discarding": "Discarding your earlier message. You can send this one in a moment.",
-	"mobile.session.sheet_title.commands": "commands",
+	"mobile.session.sheet_title.commands": "Commands",
 	"mobile.session.sheet_title.attach": "attach"
 }

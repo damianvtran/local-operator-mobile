@@ -716,6 +716,7 @@ export type CatalogueKey =
 	| "mobile.session.sheet_title.commands"
 	| "mobile.session.sheet_title.effort"
 	| "mobile.session.sheet_title.model"
+	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
@@ -1710,6 +1711,7 @@ export type NoParamKey =
 	| "mobile.session.sheet_title.commands"
 	| "mobile.session.sheet_title.effort"
 	| "mobile.session.sheet_title.model"
+	| "mobile.session.sheet_title.search"
 	| "mobile.session.sheet_title.status"
 	| "mobile.session.status_tray.hint"
 	| "mobile.session.subagent.no_rows"
@@ -2743,6 +2745,7 @@ export type MessageParams = {
 	"mobile.session.sheet_title.commands": NoParams;
 	"mobile.session.sheet_title.effort": NoParams;
 	"mobile.session.sheet_title.model": NoParams;
+	"mobile.session.sheet_title.search": NoParams;
 	"mobile.session.sheet_title.status": NoParams;
 	"mobile.session.status_tray.hint": NoParams;
 	"mobile.session.subagent.no_rows": NoParams;
@@ -3861,9 +3864,10 @@ export const ENGLISH_MESSAGES: Readonly<Record<CatalogueKey, string>> = {
 	"mobile.session.region.label_working": "activity",
 	"mobile.session.region.more_below": "more below · scroll ↓",
 	"mobile.session.sheet_title.attach": "attach",
-	"mobile.session.sheet_title.commands": "commands",
+	"mobile.session.sheet_title.commands": "Commands",
 	"mobile.session.sheet_title.effort": "Effort",
 	"mobile.session.sheet_title.model": "Model",
+	"mobile.session.sheet_title.search": "Search",
 	"mobile.session.sheet_title.status": "Tasks and agents",
 	"mobile.session.status_tray.hint": "Opens the working line, tasks and subagents",
 	"mobile.session.subagent.no_rows": "This subagent has no transcript rows of its own.",
@@ -4967,9 +4971,10 @@ export const ENGLISH_CONTEXT: Readonly<Record<CatalogueKey, CatalogueContext>> =
 	"mobile.session.region.label_working": { role: "meta", note: "Lower-case noun spliced into mobile.session.region.below_labels {labels} (joined with ' · '): names the 'activity' band that is scrolled out of view. Must read inside 'X below'. Lower case, one word if possible." },
 	"mobile.session.region.more_below": { role: "meta", note: "Cue under the capped activity region when more rows are hidden below and there are no region names to list. Keep the middle dot and the down arrow; lower case." },
 	"mobile.session.sheet_title.attach": { role: "heading", note: "Title of the bottom sheet offering attachment sources (photo, file, camera) in the composer: the verb 'attach' used as a title. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision). ~16 characters. No placeholders." },
-	"mobile.session.sheet_title.commands": { role: "heading", note: "Title of the bottom sheet listing slash commands the reader can run in a conversation. Lower case as currently shipped (other sheet titles are Title case; a casing change is a separate design decision) — use your language's natural form. ~16 characters. No placeholders." },
+	"mobile.session.sheet_title.commands": { role: "heading", note: "Title of the bottom sheet listing slash commands the reader can run in a conversation. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Search); use your language's natural capitalisation for a title. ~16 characters. No placeholders." },
 	"mobile.session.sheet_title.effort": { role: "heading", note: "Title of the sheet that lists the reasoning-effort levels to choose from. Title case in English." },
 	"mobile.session.sheet_title.model": { role: "heading", note: "Title of the sheet that lists the models to choose from. Title case in English." },
+	"mobile.session.sheet_title.search": { role: "heading", note: "Title of the bottom sheet that searches the messages of the open conversation on this phone. One noun in Title case in English, like its sibling sheet titles (Model, Effort, Commands). Keep it one short word: a longer phrase was cut off at large text on a 320 pt phone. No placeholders." },
 	"mobile.session.sheet_title.status": { role: "heading", note: "Title of the sheet opened from the counts on the activity line above the composer; it lists the conversation's tasks and its sub-agents. Sentence-style capitalisation after the first word in English." },
 	"mobile.session.status_tray.hint": { role: "help", note: "Accessibility hint read after the status tray's label. Describes what activating the tray opens; no final full stop. \"Subagents\" is a product term." },
 	"mobile.session.subagent.no_rows": { role: "status", note: "Muted line shown when a subagent's transcript is empty. One sentence." },
@@ -6090,6 +6095,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "comandos",
 		"mobile.session.sheet_title.effort": "Esfuerzo",
 		"mobile.session.sheet_title.model": "Modelo",
+		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Tareas y agentes",
 		"mobile.session.status_tray.hint": "Abre la línea de trabajo, las tareas y los subagentes",
 		"mobile.session.subagent.no_rows": "Este subagente no tiene entradas propias en la transcripción.",
@@ -7194,6 +7200,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "commandes",
 		"mobile.session.sheet_title.effort": "Effort",
 		"mobile.session.sheet_title.model": "Modèle",
+		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Tâches et agents",
 		"mobile.session.status_tray.hint": "Ouvre la ligne d’activité, les tâches et les sous-agents",
 		"mobile.session.subagent.no_rows": "Ce sous-agent n’a aucune ligne de transcription qui lui soit propre.",
@@ -8298,6 +8305,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "कमांड",
 		"mobile.session.sheet_title.effort": "प्रयास",
 		"mobile.session.sheet_title.model": "मॉडल",
+		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "कार्य और एजेंट",
 		"mobile.session.status_tray.hint": "कार्यरत पंक्ति, कार्य और उप-एजेंट खोलता है",
 		"mobile.session.subagent.no_rows": "इस उप-एजेंट की ट्रांसक्रिप्ट में अपनी कोई पंक्ति नहीं है।",
@@ -9402,6 +9410,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "слэш-команды",
 		"mobile.session.sheet_title.effort": "Усилие",
 		"mobile.session.sheet_title.model": "Модель",
+		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Задачи и агенты",
 		"mobile.session.status_tray.hint": "Открывает строку текущей работы, задачи и субагентов",
 		"mobile.session.subagent.no_rows": "У этого субагента нет собственных строк транскрипта.",
@@ -10506,6 +10515,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "کمانڈز",
 		"mobile.session.sheet_title.effort": "شدت",
 		"mobile.session.sheet_title.model": "ماڈل",
+		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "کام اور ایجنٹس",
 		"mobile.session.status_tray.hint": "جاری سرگرمی کی لائن، کام اور ذیلی ایجنٹس کھولتا ہے",
 		"mobile.session.subagent.no_rows": "اس ذیلی ایجنٹ کے اپنے ٹرانسکرپٹ میں کوئی سطر نہیں۔",
@@ -11610,6 +11620,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "lệnh",
 		"mobile.session.sheet_title.effort": "Mức suy luận",
 		"mobile.session.sheet_title.model": "Mô hình",
+		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "Tác vụ và tác nhân",
 		"mobile.session.status_tray.hint": "Mở dòng làm việc, tác vụ và tác nhân con",
 		"mobile.session.subagent.no_rows": "Tác nhân con này không có dòng bản ghi riêng nào.",
@@ -12714,6 +12725,7 @@ export const LOCALISED_MESSAGES: Readonly<
 		"mobile.session.sheet_title.commands": "命令",
 		"mobile.session.sheet_title.effort": "推理强度",
 		"mobile.session.sheet_title.model": "模型",
+		"mobile.session.sheet_title.search": "Search",
 		"mobile.session.sheet_title.status": "任务和智能体",
 		"mobile.session.status_tray.hint": "打开工作状态行、任务和子智能体",
 		"mobile.session.subagent.no_rows": "此子智能体没有自己的会话记录条目。",
