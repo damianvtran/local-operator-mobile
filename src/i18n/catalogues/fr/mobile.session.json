@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "Ouvre le diagramme en plein écran",
 	"mobile.session.diagram.copy": "Copier la source du diagramme",
 	"mobile.session.diagram.close": "Fermer le diagramme",
-	"mobile.session.diagram.viewer": "Visionneuse de diagramme"
+	"mobile.session.diagram.viewer": "Visionneuse de diagramme",
+	"mobile.session.asks.section_timed_out": "Délai dépassé",
+	"mobile.session.asks.section_closed": "Clôturées",
+	"mobile.session.asks.section_other": "Autres"
 }

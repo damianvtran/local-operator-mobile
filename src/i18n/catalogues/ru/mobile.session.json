@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "Открывает диаграмму на весь экран",
 	"mobile.session.diagram.copy": "Скопировать исходный код диаграммы",
 	"mobile.session.diagram.close": "Закрыть диаграмму",
-	"mobile.session.diagram.viewer": "Просмотр диаграммы"
+	"mobile.session.diagram.viewer": "Просмотр диаграммы",
+	"mobile.session.asks.section_timed_out": "Время вышло",
+	"mobile.session.asks.section_closed": "Закрытые",
+	"mobile.session.asks.section_other": "Другие"
 }

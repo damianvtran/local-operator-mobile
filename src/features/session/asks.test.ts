@@ -8,9 +8,11 @@ import {
 	askBarLabel,
 	askBarRows,
 	askResponseBody,
+	askSections,
 	askStateLine,
 	asksPopulationSignature,
 	asksReadFailureLine,
+	asksSheetTitle,
 	askToneInk,
 	blockingPending,
 	composedAnswer,
@@ -404,7 +406,7 @@ describe("the bar's question count (the unit split)", () => {
 		});
 	});
 
-	it("says a lapsed-only queue TIMED OUT, quietly — never waiting (the Aida repro; the sheet title and More row, not a bar)", () => {
+	it("says a lapsed-only queue TIMED OUT, quietly — never waiting (the Aida repro; the More row, not a bar)", () => {
 		/* The reported state: one day-old timed-out ask, nothing open. The
 		   desktop shows nothing pending; the bar used to say "1 question
 		   waiting" in accent. */
@@ -432,6 +434,95 @@ describe("the bar's question count (the unit split)", () => {
 		expect(questionsCountLabel(1)).toBe("1 question");
 		expect(questionsCountLabel(3)).toBe("3 questions");
 		expect(questionsWaitingLabel(3)).toBe("3 questions waiting");
+	});
+});
+
+/** A title that states a status: what #326's sheet did over answered rows. */
+const STATE_CLAIM = /timed out|waiting/i;
+
+describe("the asks sheet's sections and title (issue #326)", () => {
+	/* The reported sheet: titled "8 questions timed out" while the rows on screen
+	 *  said "Answered — the agent was told". The title counted timed-out asks
+	 *  only; the list drew every row the aggregate returned. */
+	const reported = [
+		ask({ ask_id: "t1", status: "timed_out", created_at: 5 }),
+		ask({ ask_id: "a1", status: "answered", delivered: true, created_at: 4 }),
+		ask({ ask_id: "t2", status: "timed_out", created_at: 3 }),
+		ask({ ask_id: "a2", status: "answered", created_at: 2 }),
+	];
+	const ids = (rows: readonly PendingAsk[]) => rows.map((row) => row.ask_id);
+
+	it("splits a mixed list by state: waiting, then timed out, then closed", () => {
+		const rows = [
+			...reported,
+			ask({ ask_id: "o2", status: "open", created_at: 9 }),
+			ask({ ask_id: "o1", status: "open", created_at: 1 }),
+			ask({ ask_id: "d1", status: "declined" }),
+		];
+		const sections = askSections(rows);
+		expect(sections.map((section) => section.kind)).toEqual([
+			"waiting",
+			"timed_out",
+			"closed",
+		]);
+		/* Display order inside a section: the head (oldest open) ask the bar names
+		 *  leads, then the wire's own order. */
+		expect(ids(sections[0]?.rows ?? [])).toEqual(["o1", "o2"]);
+		expect(ids(sections[1]?.rows ?? [])).toEqual(["t1", "t2"]);
+		expect(ids(sections[2]?.rows ?? [])).toEqual(["a1", "a2", "d1"]);
+		expect(sections.map((section) => section.label)).toEqual([
+			"Waiting on you",
+			"Timed out",
+			"Closed",
+		]);
+	});
+
+	it("never files an answered row under timed out — the reported list", () => {
+		const sections = askSections(reported);
+		const timedOut = sections.find((section) => section.kind === "timed_out");
+		expect(ids(timedOut?.rows ?? [])).toEqual(["t1", "t2"]);
+		const closed = sections.find((section) => section.kind === "closed");
+		expect(ids(closed?.rows ?? [])).toEqual(["a1", "a2"]);
+	});
+
+	it("files every settled status under closed and an unknown one under other", () => {
+		const settled = [
+			"answered",
+			"late",
+			"declined",
+			"dismissed",
+			"withdrawn",
+			"expired",
+		];
+		const rows = [
+			...settled.map((status) => ask({ ask_id: status, status })),
+			ask({ ask_id: "future", status: "paused_by_owner" }),
+		];
+		const sections = askSections(rows);
+		expect(sections.map((section) => section.kind)).toEqual([
+			"closed",
+			"other",
+		]);
+		expect(ids(sections[0]?.rows ?? [])).toEqual(settled);
+		/* A newer runtime's state must not be drawn as a known one (the state
+		 *  line's own rule): not waiting, not closed. */
+		expect(ids(sections[1]?.rows ?? [])).toEqual(["future"]);
+		expect(sections[1]?.label).toBe("Other");
+	});
+
+	it("omits an empty section and draws none for an empty list", () => {
+		expect(askSections([ask({ status: "open" })]).map((s) => s.kind)).toEqual([
+			"waiting",
+		]);
+		expect(askSections([])).toEqual([]);
+		expect(askSections(undefined)).toEqual([]);
+	});
+
+	it("titles the sheet with one neutral noun — never a state claim over its rows", () => {
+		/* The sections carry each state, so the title names what the sheet IS, in
+		 *  the Title case of its sibling sheets (Model, Effort, Commands). */
+		expect(asksSheetTitle()).toBe("Questions");
+		expect(asksSheetTitle()).not.toMatch(STATE_CLAIM);
 	});
 });
 

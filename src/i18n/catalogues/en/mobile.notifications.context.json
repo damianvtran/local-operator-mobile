@@ -293,7 +293,7 @@
 	},
 	"mobile.notifications.section.waiting": {
 		"role": "heading",
-		"note": "Pinned section heading at the top of the notifications inbox: the asks that are blocked on the reader. Short heading, ~20 characters. No placeholders."
+		"note": "Pinned section heading at the top of the notifications inbox: the asks that are blocked on the reader. Also the heading of the same group in the questions sheet (the agent's questions still open for an answer), above the Timed out and Closed groups. Short heading, ~20 characters. No placeholders."
 	},
 	"mobile.notifications.section.waiting_count": {
 		"role": "heading",

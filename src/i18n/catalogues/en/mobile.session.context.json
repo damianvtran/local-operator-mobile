@@ -394,5 +394,17 @@
 	"mobile.session.diagram.viewer": {
 		"role": "heading",
 		"note": "Accessible name of the full-screen diagram viewer dialog. A short noun phrase, sentence case, no final full stop."
+	},
+	"mobile.session.asks.section_timed_out": {
+		"role": "heading",
+		"note": "Section heading in the questions sheet over questions whose deadline passed without an answer; the agent went ahead without one and they can only be dismissed. Sibling headings: \"Waiting on you\" (questions still open) and \"Closed\". Same wording as the row status \"Timed out — the agent goes ahead without your answer\". Shown upper-case in Latin scripts by the layout; short, no final full stop."
+	},
+	"mobile.session.asks.section_closed": {
+		"role": "heading",
+		"note": "Section heading in the questions sheet over questions that are finished: answered, answered late, declined, dismissed, withdrawn by the agent, or too old to answer. Each row beneath states which. Must not mean 'answered' only, and must not suggest an error. Shown upper-case in Latin scripts by the layout; one word if possible, no final full stop."
+	},
+	"mobile.session.asks.section_other": {
+		"role": "heading",
+		"note": "Section heading in the questions sheet over questions in a status this app version does not recognise (sent by a newer computer). Rare. Must not claim the questions are waiting or finished. Shown upper-case in Latin scripts by the layout; one word, no final full stop."
 	}
 }

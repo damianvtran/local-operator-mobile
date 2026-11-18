@@ -97,5 +97,8 @@
 	"mobile.session.diagram.open_hint": "ڈایاگرام کو پوری اسکرین پر کھولتا ہے",
 	"mobile.session.diagram.copy": "ڈایاگرام کا ماخذ کاپی کریں",
 	"mobile.session.diagram.close": "ڈایاگرام بند کریں",
-	"mobile.session.diagram.viewer": "ڈایاگرام ویوور"
+	"mobile.session.diagram.viewer": "ڈایاگرام ویوور",
+	"mobile.session.asks.section_timed_out": "وقت ختم ہو گیا",
+	"mobile.session.asks.section_closed": "بند",
+	"mobile.session.asks.section_other": "دیگر"
 }
