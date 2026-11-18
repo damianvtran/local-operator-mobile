@@ -27,9 +27,16 @@ export const MARKER = "LOP_INSTALLED_PROOF_FIXTURE_54832";
 const SEAM_ANCHOR =
 	'export function teamBridgeFixture() {\n\tif (process.env.EXPO_PUBLIC_TEAM_BRIDGE_FIXTURES !== "1") return null;';
 
+/* The viewer seam reads `location.search` once teamBridgeFixture() is
+ * non-null, which only web could satisfy before this job's Android branch:
+ * opening a thread crashed the proof app (run 44233625482, API 36,
+ * "Property 'location' doesn't exist"). Keep it web-only. */
+const VIEWER_ANCHOR = "\tif (!teamBridgeFixture()) return null;";
 export function patchSeam(source: string): string {
 	if (source.split(SEAM_ANCHOR).length !== 2 || source.includes(DEFINE))
 		throw new Error("Unexpected Team Bridge fixture seam; stop before export");
+	if (source.split(VIEWER_ANCHOR).length !== 2)
+		throw new Error("Unexpected viewer fixture gate; stop before export");
 	if (!source.includes("import { TEAM_BRIDGE_FIXTURE_TOKEN }"))
 		throw new Error("Fixture token import moved; stop before export");
 	const branch = `export function teamBridgeFixture() {
@@ -45,7 +52,12 @@ export function patchSeam(source: string): string {
 			marker: "${MARKER}",
 		};
 	if (process.env.EXPO_PUBLIC_TEAM_BRIDGE_FIXTURES !== "1") return null;`;
-	return source.replace(SEAM_ANCHOR, branch);
+	return source
+		.replace(
+			VIEWER_ANCHOR,
+			'\tif (!teamBridgeFixture() || typeof location === "undefined") return null;',
+		)
+		.replace(SEAM_ANCHOR, branch);
 }
 
 export function proofEntry(main: string): string {

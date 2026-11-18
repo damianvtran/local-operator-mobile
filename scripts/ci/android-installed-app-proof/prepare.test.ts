@@ -21,8 +21,19 @@ describe("installed-app proof: job-local candidate edits", () => {
 		expect(out).toContain(
 			'baseUrl: "http://127.0.0.1:54832/mock-hub/populated"',
 		);
-		// The original web seam is kept verbatim after the inserted branch.
-		expect(out.replace(INSERTED, "")).toBe(seam);
+		// The viewer stays web-only (a thread render crashed without this).
+		expect(out).toContain(
+			'if (!teamBridgeFixture() || typeof location === "undefined") return null;',
+		);
+		// Everything else in the original web seam is kept verbatim.
+		expect(
+			out
+				.replace(INSERTED, "")
+				.replace(
+					' || typeof location === "undefined") return null;\n\tconst match',
+					") return null;\n\tconst match",
+				),
+		).toBe(seam);
 	});
 
 	it("fails closed on an already-patched or moved seam", () => {

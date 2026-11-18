@@ -193,6 +193,18 @@ def start_driver() -> subprocess.Popen:
 def row(name):
     def deco(fn):
         def wrapped(*a, **kw):
+            # One app crash must not take out every later row (API 36, run
+            # 44233625482): re-establish the driver and record that it was needed.
+            try:
+                driver("ping")
+            except Exception:
+                try:
+                    start_driver()
+                    record(f"driver restarted before: {name}", "FAIL",
+                           {"cause": "app process gone (see logcat for FATAL EXCEPTION)"})
+                except Exception as e:
+                    record(name, "FAIL", {"error": f"driver restart failed: {e}"})
+                    return None
             try:
                 return fn(*a, **kw)
             except Exception as e:  # one row's failure never hides the others
@@ -238,12 +250,14 @@ def main() -> int:
 
     rows_posts()
     rows_shade()
-    rows_lock()
     rows_dumpsys()
     rows_channel()
     rows_warm_and_foreground()
     rows_unread_zero()
     rows_cold()
+    # LAST: setting a PIN leaves a keyguard/bouncer that covered every later UI
+    # row in run 44233625482 (API 29); nothing runs after it.
+    rows_lock()
     return 0
 
 
@@ -256,12 +270,18 @@ def rows_posts():
         driver("post", data={"title": "Agent finished", "message": "Session proof alert",
                              "tag": "s-proof-1", "body": json.dumps({"type": "session_complete", "sessionId": "s_proof"})}),
     ]
-    time.sleep(3)
-    active = driver("active")
+    # Presence is judged on the settled shade, not each post's own 8 s wait:
+    # API 31 (run 44233625482) showed the first post (the one fetching a photo)
+    # after its wait expired, then present in the shade. 45 s bounds that.
+    tags = {o["identifier"] for o in out}
+    active = wait_for(lambda: (lambda a: a if tags <= {x.get("tag") for x in a} else None)(driver("active")),
+                      timeout=45, step=1) or driver("active")
+    for o in out:
+        o["present_after_settle"] = any(a.get("tag") == o["identifier"] for a in active)
     save("active-after-posts.json", json.dumps(active, indent=2))
     groups = sorted({a["group"] for a in bridge_records(active) if a.get("group")})
     session = [a for a in active if a.get("tag") == "s-proof-1"]
-    ok = all(o["present"] for o in out) and len(groups) == 2 and bool(session)
+    ok = all(o["present_after_settle"] for o in out) and len(groups) == 2 and bool(session)
     record("posts: 2 same-thread + 1 other-thread + session alert → two Bridge groups", "PASS" if ok else "FAIL",
            {"posted": out, "bridge_groups": groups, "session_present": bool(session)}, ["active-after-posts.json"])
     adorn = [{k: a.get(k) for k in ("tag", "template", "messages", "hasLargeIcon", "shortcutId", "number", "channel")}
@@ -322,13 +342,19 @@ def rows_lock():
     labels = " | ".join(n["text"] or n["desc"] for n in nodes)
     leaked = SECRET_PREVIEW in labels
     placeholder = PLACEHOLDER in labels
+    app_rows = sum(1 for n in nodes if (n["text"] or n["desc"]) == "Operator")
     sh("locksettings clear --old 1234")
     sh("wm dismiss-keyguard")
     time.sleep(2)
     # PASS needs the hidden placeholder ON the lock screen, not just absence of
     # the preview: an empty lock screen would otherwise pass vacuously.
-    record("lock screen hides sensitive content", "PASS" if nodes and not leaked and placeholder else "FAIL",
-           {"secret_preview_visible": leaked, "placeholder_visible": placeholder, "ui_nodes": len(nodes)}, [frame])
+    # PASS = the app's rows ARE on the lock screen and the known synthetic
+    # preview is NOT. The placeholder string is recorded as a fact only: the
+    # OS draws its own redaction for a PRIVATE notification (API 29, run
+    # 44233625482: app header + redaction glyphs, no placeholder text).
+    record("lock screen hides sensitive content", "PASS" if app_rows and not leaked else "FAIL",
+           {"secret_preview_visible": leaked, "app_rows_on_lockscreen": app_rows,
+            "placeholder_text_visible": placeholder, "ui_nodes": len(nodes)}, [frame])
 
 
 @row("dumpsys notification shortcuts/channels")
@@ -339,9 +365,16 @@ def rows_dumpsys():
     shortcuts = driver("shortcuts")
     files += [save("channels.json", json.dumps(channels, indent=2)), save("shortcuts.json", json.dumps(shortcuts, indent=2))]
     tb = next((c for c in channels if c["id"] == "team-bridge"), None)
-    ok = tb is not None and tb["importance"] >= 4 and tb["lockscreenVisibility"] == 0
+    # Redaction is per notification: children must be VISIBILITY_PRIVATE (0)
+    # with a publicVersion. The channel's own lockscreenVisibility is recorded,
+    # not asserted: API 29 reported -1000 (no override) although the app asks
+    # for PRIVATE (run 44233625482).
+    children = [a for a in bridge_records(driver("active")) if not a.get("isGroupSummary")]
+    private = bool(children) and all(a.get("visibility") == 0 and a.get("hasPublicVersion") for a in children)
+    ok = tb is not None and tb["importance"] >= 4 and private
     record("dumpsys notification shortcuts/channels", "PASS" if ok else "FAIL",
-           {"team_bridge_channel": tb, "shortcut_ids": [s["id"] for s in shortcuts]}, files)
+           {"team_bridge_channel": tb, "children_private_with_public_version": private,
+            "children": len(children), "shortcut_ids": [s["id"] for s in shortcuts]}, files)
     conv = [s for s in shortcuts if s["id"].startswith("tb:")]
     # Published = a tb: shortcut exists AND a live notification names it as its
     # shortcutId (what makes Android 11+ treat it as a conversation).
@@ -382,6 +415,7 @@ def scroll_find(text: str, tries: int = 8):
 def rows_channel():
     detail: dict = {}
     files = []
+    home()
     sh(f"am start -a android.settings.CHANNEL_NOTIFICATION_SETTINGS --es android.provider.extra.APP_PACKAGE {PKG} "
        "--es android.provider.extra.CHANNEL_ID team-bridge")
     time.sleep(3)
