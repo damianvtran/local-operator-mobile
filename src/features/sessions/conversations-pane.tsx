@@ -49,6 +49,11 @@ import {
 import { NotificationsOffRow } from "@/features/notifications/notifications-off-row";
 import { SessionMoveSheet } from "@/features/sessions/move-sheet";
 import {
+	PANE_LOADING_BARS,
+	type PaneLoadingVariant,
+	paneLoadingVariant,
+} from "@/features/sessions/pane-loading";
+import {
 	pillCarriesStaleNote,
 	pillState,
 	showInListStale,
@@ -1044,6 +1049,10 @@ export const ConversationsPane = ({
 							emptiedByView={emptiedByView}
 							onResetView={() => setSidebarView(DEFAULT_SIDEBAR_VIEW)}
 							waiting={routed && waiting}
+							loadingVariant={paneLoadingVariant(layout, {
+								largeText,
+								routes: pinnedRoutes,
+							})}
 							hasRoute={hasRoute}
 							query={query}
 							onClearSearch={() => setQuery("")}
@@ -1284,15 +1293,20 @@ function buildItems(groups: readonly SidebarGroup[]): Item[] {
  * The three pane states that are not a list: loading, no route, and no sessions
  * — plus a search with no matches, which is its own state and says so.
  *
- * `waiting` renders three skeleton rows and carries the `sidebar/loading`
+ * `waiting` renders the skeleton rows and carries the `sidebar/loading`
  * marker, so the state is distinguishable from empty BY MACHINE as well as by
  * eye (R-2: the two frames were byte-identical, both markerless, and nothing
- * could tell them apart).
+ * could tell them apart). Three rows, or ONE on a short pane (`pane-loading.ts`):
+ * three were pushed past the fold there and the state read as empty.
  */
+/** Stable keys for the loading rows; the variant takes a prefix. */
+const LOADING_ROW_KEYS = ["loading-0", "loading-1", "loading-2"] as const;
+
 const PaneEmpty = ({
 	emptiedByView,
 	onResetView,
 	waiting,
+	loadingVariant,
 	hasRoute,
 	query,
 	onClearSearch,
@@ -1302,6 +1316,7 @@ const PaneEmpty = ({
 	emptiedByView: boolean;
 	onResetView: () => void;
 	waiting: boolean;
+	loadingVariant: PaneLoadingVariant;
 	hasRoute: boolean;
 	query: string;
 	onClearSearch: () => void;
@@ -1315,9 +1330,11 @@ const PaneEmpty = ({
 				aria-hidden
 				testID={STATE_MARKER.sidebar.loading}
 			>
-				<Skeleton lines={1} ground="raised" />
-				<Skeleton lines={1} ground="raised" />
-				<Skeleton lines={1} ground="raised" />
+				{LOADING_ROW_KEYS.slice(0, PANE_LOADING_BARS[loadingVariant]).map(
+					(key) => (
+						<Skeleton key={key} lines={1} ground="raised" />
+					),
+				)}
 			</View>
 		);
 	}
