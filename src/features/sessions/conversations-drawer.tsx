@@ -21,7 +21,7 @@ import {
 	requestDrawerNewChat,
 } from "@/features/sessions/drawer-focus";
 import { t } from "@/i18n";
-import { ROLE, SURFACE } from "@/ui/a11y";
+import { CONTROL, ROLE, SURFACE } from "@/ui/a11y";
 import { useReducedMotion, useTokenColor } from "@/ui/appearance";
 import {
 	ModalScopeContext,
@@ -215,6 +215,33 @@ export const ConversationsDrawer = ({
 		scrim: true,
 	});
 
+	/* Web only: react-native-web's modal trap focuses the first node that ACCEPTS
+	 *  focus — on open, and whenever Tab wraps past the last or first control —
+	 *  and the scrim is first in DOM order. `tabIndex={-1}` keeps it out of the
+	 *  browser's Tab sequence but not out of the trap's reach, so each wrap landed
+	 *  on an unmarked stop named "Close conversations" that Enter would act on
+	 *  (review round 1: R1 / D1 / Q1). Focus that lands on the scrim is forwarded
+	 *  to the panel's own Close, which draws its ring; a Shift+Tab wrap still
+	 *  reaches the last control (the trap walks from the end when the re-landed
+	 *  node is the one it left). Native has no `<div>` and no trap. */
+	const scrimRef = useRef<View>(null);
+	useEffect(() => {
+		if (!visible || nested || Platform.OS !== "web") return;
+		const scrim = scrimRef.current as unknown as HTMLElement | null;
+		if (!scrim) return;
+		const onFocusIn = (event: Event) => {
+			if (event.target !== scrim) return;
+			/* THIS modal's Close: the search is scoped to the dialog the scrim
+			 *  sits in, so a sheet stacked over the drawer is never searched. */
+			scrim
+				.closest<HTMLElement>('[aria-modal="true"]')
+				?.querySelector<HTMLElement>(`[data-testid="${CONTROL.sidebarClose}"]`)
+				?.focus({ preventScroll: true });
+		};
+		scrim.addEventListener("focusin", onFocusIn);
+		return () => scrim.removeEventListener("focusin", onFocusIn);
+	}, [visible, nested]);
+
 	return (
 		/* The scope is what keeps this fix and R13's together: the pane's long-press
 		 *  menu is a `Sheet` rendered INSIDE this `Modal`, so the scope tells the
@@ -292,6 +319,7 @@ export const ConversationsDrawer = ({
 							 *  1 px line down the drawer's edge (`@/ui/programmatic-focus`).
 							 *  Native keeps the scrim exactly as it was. */
 							<Pressable
+								ref={scrimRef}
 								className={cx("flex-1", PROGRAMMATIC_FOCUS_CLASS)}
 								style={{ backgroundColor: scrimColour }}
 								accessibilityRole={ROLE.button}

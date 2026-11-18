@@ -35,7 +35,11 @@ import {
 	useModalExit,
 } from "@/ui/modal-exit";
 import { effectiveDuration, parseCubicBezier } from "@/ui/motion";
-import { PROGRAMMATIC_FOCUS_CLASS } from "@/ui/programmatic-focus";
+import {
+	PROGRAMMATIC_FOCUS_CLASS,
+	scrimFocusRedirect,
+	titleRingQuiet,
+} from "@/ui/programmatic-focus";
 import { useTextScale } from "@/ui/text-scale-provider";
 import { DURATIONS, EASINGS } from "@/ui/tokens.gen";
 import {
@@ -164,6 +168,9 @@ export const Sheet = ({
 	const titleRef = useRef<Text>(null);
 	/* The scrim's DOM node, read only by the web focus guard below. */
 	const scrimRef = useRef<View>(null);
+	/* The header row, read only by the web focus guard below to find this sheet's
+	 *  own Close (a nested sheet has its own, so the search is scoped). */
+	const headerRef = useRef<View>(null);
 	const reduceMotion = useReducedMotion();
 	const shadow = useShadow("overlay");
 	const scrimColour = useTokenColor("scrim");
@@ -337,33 +344,56 @@ export const Sheet = ({
 	);
 
 	/**
-	 * Keep the pointer-only scrim from taking focus from the sheet's title.
+	 * Keep the pointer-only scrim from holding focus, on every web sheet.
 	 *
-	 * `focusTitle` already removes the scrim from the accessibility tree and gives it
-	 * `tabIndex={-1}`, so nothing TABS to it — but focus can still be PLACED on it,
-	 * and one path does exactly that. Opening this sheet from the drawer's workspace
-	 * row closes the drawer in the same press: the pane's focused node unmounts, and
-	 * the modal's own trap re-enters at the first node it can focus, which is this
-	 * scrim. A keyboard or screen-reader reader then hears "Close" instead of the
-	 * title they just opened (QA round 2, Q7 — 3/3 reps at 390/100 and 320/200, while
-	 * the chip and Settings openers landed on the heading).
+	 * The scrim is `tabIndex={-1}` on the web, so nothing TABS to it — but focus can
+	 * still be PLACED on it, and two paths do. react-native-web's modal trap focuses
+	 * the first node that accepts focus whenever Tab wraps past the last control
+	 * (and when the sheet opens), and that is this scrim: an unmarked stop named
+	 * "Close" that Enter would act on (review round 1: R1 / D1 / Q1). And opening a
+	 * title-focusing sheet from the drawer's workspace row closes the drawer in the
+	 * same press: the pane's focused node unmounts and the trap re-enters at the
+	 * scrim, so a reader heard "Close" instead of the title they just opened (QA
+	 * round 2, Q7). Focus that lands on the scrim is forwarded to the title when the
+	 * sheet focuses its title, otherwise to its Close (`scrimFocusRedirect`).
 	 *
 	 * WHY A LISTENER ON THE SCRIM AND NOT A RE-FOCUS. The guard fires only when the
 	 * SCRIM ITSELF is focused, so a control that is still on screen — the persistent
 	 * pane header in split layout, which is `returnFocusTestID`'s `activeElement ===
 	 * body` guard for the same reason — is never robbed of focus by a blanket
 	 * refocus. The listener is web-only: native has no `<div>` and no focus trap.
+	 *
+	 * The title's ring is hidden only for the focus the sheet places on it while
+	 * opening (`titleRingQuiet`): once it has been blurred, a wrap that forwards
+	 * focus back to it shows the ring like any other stop.
 	 */
+	const [titleBlurred, setTitleBlurred] = useState(false);
 	useEffect(() => {
-		if (!shown || !focusTitle || Platform.OS !== "web") return;
+		if (shown) setTitleBlurred(false);
+	}, [shown]);
+	useEffect(() => {
+		if (!shown || Platform.OS !== "web") return;
 		const scrim = scrimRef.current as unknown as HTMLElement | null;
 		const title = titleRef.current as unknown as HTMLElement | null;
-		if (!scrim || !title) return;
+		const header = headerRef.current as unknown as HTMLElement | null;
+		if (!scrim) return;
 		const onFocusIn = (event: Event) => {
-			if (event.target === scrim) title.focus({ preventScroll: true });
+			if (event.target !== scrim) return;
+			const target =
+				scrimFocusRedirect(focusTitle) === "title"
+					? title
+					: header?.querySelector<HTMLElement>(
+							`[data-testid="${CONTROL.sheetClose}"]`,
+						);
+			target?.focus({ preventScroll: true });
 		};
+		const onTitleBlur = () => setTitleBlurred(true);
 		scrim.addEventListener("focusin", onFocusIn);
-		return () => scrim.removeEventListener("focusin", onFocusIn);
+		title?.addEventListener("blur", onTitleBlur);
+		return () => {
+			scrim.removeEventListener("focusin", onFocusIn);
+			title?.removeEventListener("blur", onTitleBlur);
+		};
 	}, [shown, focusTitle]);
 
 	return (
@@ -534,6 +564,7 @@ export const Sheet = ({
 							}}
 						>
 							<View
+								ref={headerRef}
 								className="flex-row items-center gap-2 px-4 py-3"
 								onLayout={(event) =>
 									setHeaderHeight(event.nativeEvent.layout.height)
@@ -545,10 +576,13 @@ export const Sheet = ({
 									level={2}
 									/* The title is focused by CODE on open (never a Tab stop),
 									 *  so the browser's default ring around it marked no key the
-									 *  reader pressed (`@/ui/programmatic-focus`). */
+									 *  reader pressed. Only that first focus is quiet: a Tab wrap
+									 *  forwarded back here shows the ring (`@/ui/programmatic-focus`). */
 									className={cx(
 										"flex-1 text-title text-ink",
-										focusTitle ? PROGRAMMATIC_FOCUS_CLASS : undefined,
+										focusTitle && titleRingQuiet(titleBlurred)
+											? PROGRAMMATIC_FOCUS_CLASS
+											: undefined,
 									)}
 									/* ONE LINE, the app's truncation idiom (36 call sites, the rows
 									 * themselves included): at 200 % on a 320 pt phone the WRAPPED
