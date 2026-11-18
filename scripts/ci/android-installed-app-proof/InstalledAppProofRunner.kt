@@ -131,10 +131,18 @@ class InstalledAppProofRunner : Instrumentation() {
     ctx.startActivity(launch)
   }
 
-  private fun handle(op: String, c: JSONObject): Any = when (op) {
+  private fun handle(op: String, c: JSONObject): Any? = when (op) {
     "ping" -> identity()
     "lease" -> { invokeObject("BridgePresentationScope", "enable", c.getString("account")); current() }
-    "origin" -> { invokeObject("HubOrigin", "save", c.getString("origin")); c.getString("origin") }
+    // HubOrigin.save refuses non-https (production is always https), while
+    // PushAvatarFetcher.target admits a loopback http hub. Write the same
+    // preference file directly so the photo path runs against the loopback hub;
+    // receipts disclose this seed.
+    "origin" -> {
+      val prefs = ctx.getSharedPreferences("dev.localoperator.teambridge.hub", Context.MODE_PRIVATE)
+      prefs.edit().putString("origin", c.getString("origin")).commit()
+      prefs.getString("origin", null)
+    }
     "post" -> post(c)
     "active" -> active()
     "channels" -> channels()
@@ -236,10 +244,10 @@ class InstalledAppProofRunner : Instrumentation() {
     } else sm.dynamicShortcuts
     for (s in all) {
       out.put(JSONObject().put("id", s.id).put("shortLabel", s.shortLabel?.toString())
-        .put("longLived", if (Build.VERSION.SDK_INT >= 30) s.isLongLived else null)
         .put("cached", if (Build.VERSION.SDK_INT >= 30) s.isCached else null)
+        // ShortcutInfo exposes no public long-lived/persons getters; the
+        // `dumpsys shortcut` capture beside this JSON carries those flags.
         .put("dynamic", s.isDynamic)
-        .put("persons", if (Build.VERSION.SDK_INT >= 29) (s.persons?.size ?: 0) else null)
         .put("locusId", if (Build.VERSION.SDK_INT >= 29) s.locusId?.id else null))
     }
     return out

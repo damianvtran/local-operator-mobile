@@ -231,8 +231,9 @@ def main() -> int:
         return 1
 
     lease = driver("lease", account=ACCOUNT)
-    driver("origin", origin=HUB)
-    log(f"presentation lease seeded (registration has no FCM token here): {lease}")
+    origin = driver("origin", origin=HUB)
+    record("harness seeds (disclosed: no FCM token, so registration never sets these)", "PASS" if lease and origin == HUB else "FAIL",
+           {"presentation_lease_current": lease, "hub_origin": origin})
     home()
 
     rows_posts()
@@ -342,10 +343,14 @@ def rows_dumpsys():
     record("dumpsys notification shortcuts/channels", "PASS" if ok else "FAIL",
            {"team_bridge_channel": tb, "shortcut_ids": [s["id"] for s in shortcuts]}, files)
     conv = [s for s in shortcuts if s["id"].startswith("tb:")]
+    # Published = a tb: shortcut exists AND a live notification names it as its
+    # shortcutId (what makes Android 11+ treat it as a conversation).
+    linked = sorted({a.get("shortcutId") for a in driver("active") if a.get("shortcutId")} & {s["id"] for s in conv})
+    detail = {"shortcuts": conv, "notification_linked": linked}
     if API == 31:
-        record("API 31 conversation shortcut published", "PASS" if any(s["longLived"] for s in conv) else "FAIL", {"shortcuts": conv})
+        record("API 31 conversation shortcut published", "PASS" if linked else "FAIL", detail)
     else:
-        record(f"conversation shortcuts on API {API} (informational)", "PASS" if API < 30 or conv else "FAIL", {"shortcuts": conv})
+        record(f"conversation shortcuts on API {API} (informational)", "PASS" if API < 30 or linked else "FAIL", detail)
 
 
 def channel_importance() -> int | None:

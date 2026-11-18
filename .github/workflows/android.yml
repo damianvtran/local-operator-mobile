@@ -622,7 +622,8 @@ jobs:
   sound-ios:
     name: iOS sound persistence XCTest
     needs: changes
-    if: needs.changes.outputs.sound_native == 'true'
+    # A proof-only dispatch (installed_app_proof) skips it: no change is under test.
+    if: needs.changes.outputs.sound_native == 'true' && inputs.installed_app_proof != true
     runs-on: macos-26
     timeout-minutes: 25
     steps:
