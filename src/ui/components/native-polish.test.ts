@@ -3,6 +3,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { fieldClasses } from "../variants";
 
+/** A rung row whose JSX carries the `compact` prop on its own line, after the
+ *  session sheet's group opens (round 2 F2). */
+const COMPACT_SESSION_RUNG =
+	/<EffortRungGroup>[\s\S]*?<EffortRungRow[^>]*?^\s*compact$/m;
+const COMPACT_PROP = /^\s*compact$/gm;
+
 const source = (path: string) =>
 	readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
 
@@ -132,9 +138,7 @@ describe("final design audit wiring", () => {
 		const sessionSheet = sheet.slice(
 			sheet.indexOf("export const SessionRunSettingsSheet"),
 		);
-		expect(sessionSheet).toMatch(
-			/<EffortRungGroup>[\s\S]*?<EffortRungRow[^>]*?^\s*compact$/m,
-		);
+		expect(sessionSheet).toMatch(COMPACT_SESSION_RUNG);
 		const pickers = read("../../features/home/home-pickers.tsx");
 		const choices = pickers.slice(
 			pickers.indexOf("const EffortChoices"),
@@ -142,7 +146,7 @@ describe("final design audit wiring", () => {
 		);
 		expect(choices).toContain("<EffortRungGroup>");
 		// Both of the home's rungs (the default row and the ladder) are compact.
-		expect(choices.match(/^\s*compact$/gm)?.length).toBe(2);
+		expect(choices.match(COMPACT_PROP)?.length).toBe(2);
 	});
 
 	it("draws run settings with a settings glyph and pins the dot to the glyph (D4, D5)", () => {
