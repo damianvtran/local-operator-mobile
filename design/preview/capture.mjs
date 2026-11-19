@@ -93,6 +93,15 @@ const keepScratch = process.argv.includes("--keep-scratch");
 const explicitTarget = arg("target", null);
 const target = explicitTarget ?? (check ? "all" : "preview");
 
+/* Observation is deliberately opt-in and check-only. It filters comparisons,
+ * NOT page visits or screenshots: rasterizer history is the variable under test.
+ * Lazy import keeps the normal gate and its standalone stale-frame probe intact. */
+const diagnosticDir = arg("diagnostic-dir", null);
+if (diagnosticDir && (!check || !["all", "frames"].includes(target) || typeof diagnosticDir !== "string")) {
+	throw new Error("--diagnostic-dir requires --check and target all or frames");
+}
+const diagnostic = diagnosticDir ? await import("./capture-diagnostic.mjs") : null;
+
 /* ---- Chrome ------------------------------------------------------------ */
 
 const CHROME_CANDIDATES = [
@@ -467,9 +476,17 @@ const save = (pngBuffer, outPath, { reencode = null, fuzz = 0 } = {}) => {
 		if (reencode) reencode(outPath);
 		return;
 	}
+	// All warmup renders still happen, but only the representative pair is
+	// compared. In particular, do not turn the early preview mismatch into a skip.
+	if (diagnostic && !diagnostic.selected(outPath)) return;
+	const evidence = diagnostic ? diagnostic.retainRaw(diagnosticDir, outPath, pngBuffer) : null;
 	const fresh = `${scratchVerify}/${outPath.split("/").pop()}`;
 	writeFileSync(fresh, pngBuffer);
 	if (reencode) reencode(fresh);
+	if (evidence && existsSync(outPath)) {
+		const measured = diagnostic.retainComparison(evidence, fresh, outPath, fuzz, alphaTool());
+		console.log(`diagnostic: ${outPath} ${JSON.stringify(measured)}`);
+	}
 	if (!existsSync(outPath)) return stale(outPath, "missing");
 	if (readFileSync(fresh).equals(readFileSync(outPath))) {
 		console.log(`  ${outPath.split("/").pop()}: byte-identical`);
