@@ -1,0 +1,486 @@
+{
+ "label": "ur",
+ "relay": "http://127.0.0.1:4397",
+ "runs": [
+  {
+   "pass": "states",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "ur-states-light-fold-collapsed.png",
+    "ur-states-light-e_admit.png",
+    "ur-states-light-e_long.png",
+    "ur-states-light-e_long-expanded.png",
+    "ur-states-light-e_long-expanded-end.png",
+    "ur-states-light-e_held.png",
+    "ur-states-light-e_heldt.png",
+    "ur-states-light-e_refused.png",
+    "ur-states-light-e_deleted.png",
+    "ur-states-light-e_offline.png",
+    "ur-states-light-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      168
+     ],
+     "text": "↔\nOla · DM\nبیرونی پیغام · ناقابلِ اعتماد مواد\nHello from Ola — can you check the release notes before Friday?\n•\nconfirm the v0.108 changelog\n•\nlink: release board",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      287
+     ],
+     "text": "↔\nOla · DM\nبیرونی پیغام · ناقابلِ اعتماد مواد\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks item 2.\n3.\nL",
+     "body": true,
+     "toggle": {
+      "text": "مزید دکھائیں",
+      "expanded": null,
+      "h": 48
+     },
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_long_expanded": {
+     "rowH": 1566,
+     "toggle": {
+      "text": "کم دکھائیں",
+      "expanded": null
+     },
+     "tail": "lazy dog, then checks item 29.\n30.\nLine 30: the quick brown fox jumps over the lazy dog, then checks item 30.\nکم دکھائیں"
+    },
+    "e_long_recollapsed": {
+     "text": "مزید دکھائیں",
+     "expanded": null,
+     "rowH": 287
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nماڈریشن نے روک رکھا ہے۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nاسکریننگ کا انتظار ہے — ابھی آپ کے ایجنٹ کو نہیں دکھایا گیا۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nماڈریشن نے مسترد کر دیا۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nیہ پیغام حذف کر دیا گیا۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nRadient سے رابطہ نہیں ہوا — دوبارہ کوشش کے لیے گفتگو دوبارہ کھولیں۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      76,
+      390,
+      596
+     ],
+     "text": "↔\nOla · DM\nبیرونی پیغام · ناقابلِ اعتماد مواد\nCoalesced message 1 of 23.\nCoalesced message 2 of 23.\nCoalesced message 3 of 23.\nCoalesced message 4 of 23.\nCoalesced message 5 of 23.\nCoalesced message 6 of 23.\nCoalesced me",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8346&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/commands",
+    "200 /api/config/events",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "rtl"
+  },
+  {
+   "pass": "states",
+   "theme": "dark",
+   "ready": true,
+   "frames": [
+    "ur-states-dark-fold-collapsed.png",
+    "ur-states-dark-e_admit.png",
+    "ur-states-dark-e_long.png",
+    "ur-states-dark-e_long-expanded.png",
+    "ur-states-dark-e_long-expanded-end.png",
+    "ur-states-dark-e_held.png",
+    "ur-states-dark-e_heldt.png",
+    "ur-states-dark-e_refused.png",
+    "ur-states-dark-e_deleted.png",
+    "ur-states-dark-e_offline.png",
+    "ur-states-dark-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      168
+     ],
+     "text": "↔\nOla · DM\nبیرونی پیغام · ناقابلِ اعتماد مواد\nHello from Ola — can you check the release notes before Friday?\n•\nconfirm the v0.108 changelog\n•\nlink: release board",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      287
+     ],
+     "text": "↔\nOla · DM\nبیرونی پیغام · ناقابلِ اعتماد مواد\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks item 2.\n3.\nL",
+     "body": true,
+     "toggle": {
+      "text": "مزید دکھائیں",
+      "expanded": null,
+      "h": 48
+     },
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_long_expanded": {
+     "rowH": 1566,
+     "toggle": {
+      "text": "کم دکھائیں",
+      "expanded": null
+     },
+     "tail": "lazy dog, then checks item 29.\n30.\nLine 30: the quick brown fox jumps over the lazy dog, then checks item 30.\nکم دکھائیں"
+    },
+    "e_long_recollapsed": {
+     "text": "مزید دکھائیں",
+     "expanded": null,
+     "rowH": 287
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nماڈریشن نے روک رکھا ہے۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nاسکریننگ کا انتظار ہے — ابھی آپ کے ایجنٹ کو نہیں دکھایا گیا۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nماڈریشن نے مسترد کر دیا۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nیہ پیغام حذف کر دیا گیا۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nRadient سے رابطہ نہیں ہوا — دوبارہ کوشش کے لیے گفتگو دوبارہ کھولیں۔",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      76,
+      390,
+      596
+     ],
+     "text": "↔\nOla · DM\nبیرونی پیغام · ناقابلِ اعتماد مواد\nCoalesced message 1 of 23.\nCoalesced message 2 of 23.\nCoalesced message 3 of 23.\nCoalesced message 4 of 23.\nCoalesced message 5 of 23.\nCoalesced message 6 of 23.\nCoalesced me",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "rtl"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8346&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "rtl"
+  }
+ ]
+}

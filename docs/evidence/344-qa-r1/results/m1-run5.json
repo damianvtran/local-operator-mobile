@@ -1,0 +1,68 @@
+[
+ {
+  "t_ms": 56.7,
+  "kind": "login",
+  "status": 303
+ },
+ {
+  "t_ms": 95.7,
+  "kind": "warm",
+  "outcome": "EngageOutcome(session_id='abcdef012345', detail='runtime ready', spawned=False, duplicate=False)"
+ },
+ {
+  "t_ms": 3100.3,
+  "kind": "sse_open",
+  "status": 200
+ },
+ {
+  "t_ms": 5111.0,
+  "kind": "display_body_recorded",
+  "ok": true
+ },
+ {
+  "t_ms": 5111.6,
+  "kind": "deliver_start",
+  "journal_ids": []
+ },
+ {
+  "t_ms": 5169.7,
+  "kind": "deliver_done",
+  "result": "delivered and woke the session",
+  "journal_ids": []
+ },
+ {
+  "t_ms": 5254.8,
+  "kind": "sse_row_seen",
+  "entry_id": "peer-ea5a4df761e3404db17e2b3042b19dfe",
+  "journal_ids": [
+   "peer-ea5a4df761e3404db17e2b3042b19dfe"
+  ]
+ },
+ {
+  "t_ms": 5298.7,
+  "kind": "body_on_mount",
+  "status": 200,
+  "body": "{\"v\":1,\"items\":[{\"message_id\":\"bcmsg_live0005\",\"conversation_id\":\"bcv_abcdefgh\",\"state\":\"admitted\",\"body\":\"**Live** card from Ola \u2014 delivered while the session ",
+  "journal_ids": [
+   "peer-ea5a4df761e3404db17e2b3042b19dfe"
+  ]
+ },
+ {
+  "t_ms": 6268.6,
+  "kind": "body_after_1s",
+  "status": 200,
+  "body": "{\"v\":1,\"items\":[{\"message_id\":\"bcmsg_live0005\",\"conversation_id\":\"bcv_abcdefgh\",\"state\":\"admitted\",\"body\":\"**Live** card from Ola \u2014 delivered while the session ",
+  "journal_ids": [
+   "peer-ea5a4df761e3404db17e2b3042b19dfe"
+  ]
+ },
+ {
+  "t_ms": 11282.0,
+  "kind": "body_after_5s",
+  "status": 200,
+  "body": "{\"v\":1,\"items\":[{\"message_id\":\"bcmsg_live0005\",\"conversation_id\":\"bcv_abcdefgh\",\"state\":\"admitted\",\"body\":\"**Live** card from Ola \u2014 delivered while the session ",
+  "journal_ids": [
+   "peer-ea5a4df761e3404db17e2b3042b19dfe"
+  ]
+ }
+]

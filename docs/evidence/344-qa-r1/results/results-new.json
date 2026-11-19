@@ -1,0 +1,1776 @@
+{
+ "label": "new",
+ "relay": "http://127.0.0.1:4398",
+ "runs": [
+  {
+   "pass": "states",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "new-states-light-fold-collapsed.png",
+    "new-states-light-e_admit.png",
+    "new-states-light-e_long.png",
+    "new-states-light-e_long-expanded.png",
+    "new-states-light-e_long-expanded-end.png",
+    "new-states-light-e_held.png",
+    "new-states-light-e_heldt.png",
+    "new-states-light-e_refused.png",
+    "new-states-light-e_deleted.png",
+    "new-states-light-e_offline.png",
+    "new-states-light-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      168
+     ],
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nHello from Ola — can you check the release notes before Friday?\n•\nconfirm the v0.108 changelog\n•\nlink: release board",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      287
+     ],
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks item 2.\n3.",
+     "body": true,
+     "toggle": {
+      "text": "Show more",
+      "expanded": null,
+      "h": 48
+     },
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long_expanded": {
+     "rowH": 1566,
+     "toggle": {
+      "text": "Show less",
+      "expanded": null
+     },
+     "tail": " lazy dog, then checks item 29.\n30.\nLine 30: the quick brown fox jumps over the lazy dog, then checks item 30.\nShow less"
+    },
+    "e_long_recollapsed": {
+     "text": "Show more",
+     "expanded": null,
+     "rowH": 287
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nHeld by moderation.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nWaiting for screening — not shown to your agent yet.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nRefused by moderation.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nThis message was deleted.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nCouldn't reach Radient — reopen the conversation to retry.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      76,
+      390,
+      596
+     ],
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nCoalesced message 1 of 23.\nCoalesced message 2 of 23.\nCoalesced message 3 of 23.\nCoalesced message 4 of 23.\nCoalesced message 5 of 23.\nCoalesced message 6 of 23.\nCoalesced ",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/commands",
+    "200 /api/config/events",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  },
+  {
+   "pass": "states",
+   "theme": "dark",
+   "ready": true,
+   "frames": [
+    "new-states-dark-fold-collapsed.png",
+    "new-states-dark-e_admit.png",
+    "new-states-dark-e_long.png",
+    "new-states-dark-e_long-expanded.png",
+    "new-states-dark-e_long-expanded-end.png",
+    "new-states-dark-e_held.png",
+    "new-states-dark-e_heldt.png",
+    "new-states-dark-e_refused.png",
+    "new-states-dark-e_deleted.png",
+    "new-states-dark-e_offline.png",
+    "new-states-dark-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      168
+     ],
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nHello from Ola — can you check the release notes before Friday?\n•\nconfirm the v0.108 changelog\n•\nlink: release board",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      287
+     ],
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nRelease checklist\n1.\nLine 1: the quick brown fox jumps over the lazy dog, then checks item 1.\n2.\nLine 2: the quick brown fox jumps over the lazy dog, then checks item 2.\n3.",
+     "body": true,
+     "toggle": {
+      "text": "Show more",
+      "expanded": null,
+      "h": 48
+     },
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long_expanded": {
+     "rowH": 1566,
+     "toggle": {
+      "text": "Show less",
+      "expanded": null
+     },
+     "tail": " lazy dog, then checks item 29.\n30.\nLine 30: the quick brown fox jumps over the lazy dog, then checks item 30.\nShow less"
+    },
+    "e_long_recollapsed": {
+     "text": "Show more",
+     "expanded": null,
+     "rowH": 287
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nHeld by moderation.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nWaiting for screening — not shown to your agent yet.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nRefused by moderation.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nThis message was deleted.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      64,
+      390,
+      85
+     ],
+     "text": "↔\nOla · DM\nCouldn't reach Radient — reopen the conversation to retry.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      76,
+      390,
+      596
+     ],
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nCoalesced message 1 of 23.\nCoalesced message 2 of 23.\nCoalesced message 3 of 23.\nCoalesced message 4 of 23.\nCoalesced message 5 of 23.\nCoalesced message 6 of 23.\nCoalesced ",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  },
+  {
+   "pass": "loading",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "new-loading-light-fold-collapsed.png",
+    "new-loading-light-loading.png",
+    "new-loading-light-after-release.png"
+   ],
+   "probes": {
+    "loading": [
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…"
+    ]
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "held": 8
+  },
+  {
+   "pass": "loading",
+   "theme": "dark",
+   "ready": true,
+   "frames": [
+    "new-loading-dark-fold-collapsed.png",
+    "new-loading-dark-loading.png",
+    "new-loading-dark-after-release.png"
+   ],
+   "probes": {
+    "loading": [
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…",
+     "Loading message…"
+    ]
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "held": 8
+  },
+  {
+   "pass": "error",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "new-error-light-fold-collapsed.png",
+    "new-error-light-e_admit.png",
+    "new-error-light-e_long.png",
+    "new-error-light-e_held.png",
+    "new-error-light-e_heldt.png",
+    "new-error-light-e_refused.png",
+    "new-error-light-e_deleted.png",
+    "new-error-light-e_offline.png",
+    "new-error-light-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      152,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      217,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      282,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      347,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      412,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      477,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      542,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      607,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 503,
+     "cache": null
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/commands",
+    "200 /api/config/events",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/events?include_peers=true",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  },
+  {
+   "pass": "error",
+   "theme": "dark",
+   "ready": true,
+   "frames": [
+    "new-error-dark-fold-collapsed.png",
+    "new-error-dark-e_admit.png",
+    "new-error-dark-e_long.png",
+    "new-error-dark-e_held.png",
+    "new-error-dark-e_heldt.png",
+    "new-error-dark-e_refused.png",
+    "new-error-dark-e_deleted.png",
+    "new-error-dark-e_offline.png",
+    "new-error-dark-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      152,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      217,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      282,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      347,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      412,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      477,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      542,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      607,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 503,
+     "injected": true
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 503,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 503,
+     "cache": null
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/events?include_peers=true",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "503 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  },
+  {
+   "pass": "empty",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "new-empty-light-fold-collapsed.png",
+    "new-empty-light-e_admit.png",
+    "new-empty-light-e_long.png",
+    "new-empty-light-e_held.png",
+    "new-empty-light-e_heldt.png",
+    "new-empty-light-e_refused.png",
+    "new-empty-light-e_deleted.png",
+    "new-empty-light-e_offline.png",
+    "new-empty-light-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      152,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      217,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      282,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      347,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      412,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      477,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      542,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      607,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": null
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  },
+  {
+   "pass": "empty",
+   "theme": "dark",
+   "ready": true,
+   "frames": [
+    "new-empty-dark-fold-collapsed.png",
+    "new-empty-dark-e_admit.png",
+    "new-empty-dark-e_long.png",
+    "new-empty-dark-e_held.png",
+    "new-empty-dark-e_heldt.png",
+    "new-empty-dark-e_refused.png",
+    "new-empty-dark-e_deleted.png",
+    "new-empty-dark-e_offline.png",
+    "new-empty-dark-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      152,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      217,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      282,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      347,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      412,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      477,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      542,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      607,
+      390,
+      65
+     ],
+     "text": "↔\nOla · DM\nMessage body unavailable.",
+     "body": true,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "injected": "items:[]"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_admit/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_long/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_held/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_refused/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_offline/body",
+     "status": 200,
+     "cache": null
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/e_coal/body",
+     "status": 200,
+     "cache": null
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_admit/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_long/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_held/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_heldt/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_refused/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_deleted/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_offline/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/e_coal/body"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  },
+  {
+   "pass": "remote",
+   "theme": "light",
+   "ready": false,
+   "frames": [
+    "new-remote-light-not-ready.png",
+    "new-remote-light-not-ready-details.png"
+   ],
+   "probes": {},
+   "net": [],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/history",
+    "FAILED net::ERR_ABORTED /api/sessions/events?include_peers=true",
+    "FAILED net::ERR_ABORTED /api/sessions/abcdef012345/events",
+    "200 /api/sessions?include_peers=true",
+    "FAILED net::ERR_ABORTED /api/sessions/abcdef012345/events",
+    "FAILED net::ERR_ABORTED /api/sessions/events?include_peers=true"
+   ],
+   "bodyText": "session\n◌\nThe connection dropped. Reconnecting…\nMessage…\n—\n—\n↑"
+  },
+  {
+   "pass": "remote",
+   "theme": "dark",
+   "ready": false,
+   "frames": [
+    "new-remote-dark-not-ready.png",
+    "new-remote-dark-not-ready-details.png"
+   ],
+   "probes": {},
+   "net": [],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8344&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/abcdef012345/history",
+    "FAILED net::ERR_ABORTED /api/sessions/events?include_peers=true",
+    "FAILED net::ERR_ABORTED /api/sessions/abcdef012345/events",
+    "200 /api/sessions?include_peers=true"
+   ],
+   "bodyText": "session\n◌\nThe connection dropped. Reconnecting…\nMessage…\n—\n—\n↑"
+  }
+ ]
+}

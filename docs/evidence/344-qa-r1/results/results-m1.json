@@ -1,0 +1,122 @@
+{
+ "label": "m1",
+ "relay": "http://127.0.0.1:4396",
+ "runs": [
+  {
+   "pass": "live",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "m1-live-light-fold-collapsed.png",
+    "m1-live-light-live-delivered.png"
+   ],
+   "probes": {},
+   "net": [
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/peer-7b7f62885f074e82872d2ecd13864b36/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/peer-b6501fcb68f1451f83a9d5ec3d20271c/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/peer-622a0ffffc8347559431e0adfd5023da/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/peer-ea5a4df761e3404db17e2b3042b19dfe/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/peer-49ce9e3768114ff8b909d3c6d80d9c6e/body",
+     "status": 200,
+     "cache": "private, no-store"
+    },
+    {
+     "url": "/api/sessions/abcdef012345/bridge-cards/peer-7113205d161c483988663e1cc7b19627/body",
+     "status": 200,
+     "cache": "private, no-store"
+    }
+   ],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8347&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/commands",
+    "200 /api/config/events",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/bridge-cards/peer-7b7f62885f074e82872d2ecd13864b36/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/peer-b6501fcb68f1451f83a9d5ec3d20271c/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/peer-622a0ffffc8347559431e0adfd5023da/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/peer-ea5a4df761e3404db17e2b3042b19dfe/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/peer-49ce9e3768114ff8b909d3c6d80d9c6e/body",
+    "200 /api/sessions/abcdef012345/bridge-cards/peer-7113205d161c483988663e1cc7b19627/body",
+    "200 /api/sessions/abcdef012345/seen"
+   ],
+   "netBeforeFold": 6,
+   "foldClick": null,
+   "rowsAfterFold": [],
+   "liveDriver": {
+    "status": 0,
+    "out": [
+     "{\"t_ms\": 4859.9, \"kind\": \"sse_open\", \"status\": 200}",
+     "{\"t_ms\": 6867.2, \"kind\": \"display_body_recorded\", \"ok\": true}",
+     "{\"t_ms\": 6867.8, \"kind\": \"deliver_start\", \"journal_ids\": []}",
+     "{\"t_ms\": 6901.9, \"kind\": \"deliver_done\", \"result\": \"delivered and woke the session\", \"journal_ids\": []}",
+     "{\"t_ms\": 6985.6, \"kind\": \"sse_row_seen\", \"entry_id\": \"peer-918a4c3fa3c04fb3b951fe44bad97a18\", \"journal_ids\": [\"peer-918a4c3fa3c04fb3b951fe44bad97a18\"]}",
+     "{\"t_ms\": 6999.4, \"kind\": \"body_on_mount\", \"status\": 200, \"body\": \"{\\\"v\\\":1,\\\"items\\\":[{\\\"message_id\\\":\\\"bcmsg_livebr16841\\\",\\\"conversation_id\\\":\\\"bcv_abcdefgh\\\",\\\"state\\\":\\\"admitted\\\",\\\"body\\\":\\\"**Live** card from Ola \\u2014 delivered while the sessi\", \"journal_ids\": [\"peer-918a4c3fa3c04fb3b951fe44bad97a18\"]}",
+     "{\"t_ms\": 7999.2, \"kind\": \"body_after_1s\", \"status\": 200, \"body\": \"{\\\"v\\\":1,\\\"items\\\":[{\\\"message_id\\\":\\\"bcmsg_livebr16841\\\",\\\"conversation_id\\\":\\\"bcv_abcdefgh\\\",\\\"state\\\":\\\"admitted\\\",\\\"body\\\":\\\"**Live** card from Ola \\u2014 delivered while the sessi\", \"journal_ids\": [\"peer-918a4c3fa3c04fb3b951fe44bad97a18\"]}",
+     "{\"t_ms\": 13011.3, \"kind\": \"body_after_5s\", \"status\": 200, \"body\": \"{\\\"v\\\":1,\\\"items\\\":[{\\\"message_id\\\":\\\"bcmsg_livebr16841\\\",\\\"conversation_id\\\":\\\"bcv_abcdefgh\\\",\\\"state\\\":\\\"admitted\\\",\\\"body\\\":\\\"**Live** card from Ola \\u2014 delivered while the sessi\", \"journal_ids\": [\"peer-918a4c3fa3c04fb3b951fe44bad97a18\"]}"
+    ]
+   },
+   "liveNet": [],
+   "liveRows": [
+    {
+     "id": "transcript-row-peer-b6501fcb68f1451f83a9d5ec3d20271c",
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-b6501fcb68f1451f83a9d5ec3d20271c-bridge-body",
+     "text": "External message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-ea5a4df761e3404db17e2b3042b19dfe",
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-ea5a4df761e3404db17e2b3042b19dfe-bridge-body",
+     "text": "External message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-49ce9e3768114ff8b909d3c6d80d9c6e",
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-49ce9e3768114ff8b909d3c6d80d9c6e-bridge-body",
+     "text": "External message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-7113205d161c483988663e1cc7b19627",
+     "text": "↔\nOla · DM\nExternal message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-7113205d161c483988663e1cc7b19627-bridge-body",
+     "text": "External message · untrusted content\nLive card from Ola — delivered while the session was idle."
+    },
+    {
+     "id": "transcript-row-peer-918a4c3fa3c04fb3b951fe44bad97a18",
+     "text": "↔\nanother session\n<team-bridge>\n▸"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,350 @@
+{
+ "label": "old",
+ "relay": "http://127.0.0.1:4399",
+ "runs": [
+  {
+   "pass": "states",
+   "theme": "light",
+   "ready": true,
+   "frames": [
+    "old-states-light-fold-collapsed.png",
+    "old-states-light-e_admit.png",
+    "old-states-light-e_long.png",
+    "old-states-light-e_held.png",
+    "old-states-light-e_heldt.png",
+    "old-states-light-e_refused.png",
+    "old-states-light-e_deleted.png",
+    "old-states-light-e_offline.png",
+    "old-states-light-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      184,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      245,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      306,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      367,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      428,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      489,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      550,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      611,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8345&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/commands",
+    "200 /api/config/events",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/history",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/checkpoints"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  },
+  {
+   "pass": "states",
+   "theme": "dark",
+   "ready": true,
+   "frames": [
+    "old-states-dark-fold-collapsed.png",
+    "old-states-dark-e_admit.png",
+    "old-states-dark-e_long.png",
+    "old-states-dark-e_held.png",
+    "old-states-dark-e_heldt.png",
+    "old-states-dark-e_refused.png",
+    "old-states-dark-e_deleted.png",
+    "old-states-dark-e_offline.png",
+    "old-states-dark-e_coal.png"
+   ],
+   "probes": {
+    "e_admit": {
+     "present": true,
+     "row": [
+      0,
+      184,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_long": {
+     "present": true,
+     "row": [
+      0,
+      245,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_held": {
+     "present": true,
+     "row": [
+      0,
+      306,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_heldt": {
+     "present": true,
+     "row": [
+      0,
+      367,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_refused": {
+     "present": true,
+     "row": [
+      0,
+      428,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_deleted": {
+     "present": true,
+     "row": [
+      0,
+      489,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_offline": {
+     "present": true,
+     "row": [
+      0,
+      550,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    },
+    "e_coal": {
+     "present": true,
+     "row": [
+      0,
+      611,
+      390,
+      61
+     ],
+     "text": "↔\nOla · DM\nOla · a DM",
+     "body": false,
+     "toggle": null,
+     "hOverflowEls": 0,
+     "rowScrollW": 390,
+     "rowClientW": 390,
+     "dir": "ltr"
+    }
+   },
+   "net": [],
+   "api": [
+    "200 /session/abcdef012345?lo-relay=http%3A%2F%2F127.0.0.1%3A8345&lo-relay-password=REDACTED&lo-relay-insecur",
+    "FAILED net::ERR_ABORTED /",
+    "200 /api/models",
+    "200 /api/config/events",
+    "200 /api/commands",
+    "200 /api/models",
+    "200 /api/sessions/abcdef012345/events",
+    "200 /api/sessions/abcdef012345/checkpoints",
+    "200 /api/sessions/events?include_peers=true",
+    "200 /api/sessions/abcdef012345/history"
+   ],
+   "netBeforeFold": 0,
+   "foldClick": "Peer messages · 8\n▸",
+   "rowsAfterFold": [
+    "transcript-row-e_admit",
+    "transcript-row-e_long",
+    "transcript-row-e_held",
+    "transcript-row-e_heldt",
+    "transcript-row-e_refused",
+    "transcript-row-e_deleted",
+    "transcript-row-e_offline",
+    "transcript-row-e_coal"
+   ],
+   "htmlDir": "ltr"
+  }
+ ]
+}
