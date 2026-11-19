@@ -6,7 +6,7 @@ name: iOS
 # which is what makes it the right first native gate for a public repository: a
 # fork pull request, a contributor with no Apple Developer membership and a
 # maintainer who has not configured the secrets all get the same answer, and it
-# is a real one — the app compiles for the iOS 26 SDK on the Xcode 26 runner, it
+# is a real one — the app compiles for the iOS 27 SDK on the Xcode 27 runner, it
 # LAUNCHES and its process is still running thirty seconds later, and the frame
 # it renders is captured.
 #
@@ -84,6 +84,16 @@ env:
   # this name against what the runner actually has, prints what it chose, and
   # warns rather than failing when the image has moved on.
   IOS_SIMULATOR_DEVICE: iPhone 17
+  # The iOS SDK major every job that BUILDS the app must be on. App Store
+  # Connect warned on TestFlight build 1264 (ITMS-90725): "built with the iOS
+  # 26.5 SDK. Starting April 2027, iOS and iPadOS apps must be built with the
+  # iOS 27 SDK or later, included in Xcode 27 or later." The `macos-26` image
+  # only carries Xcode 26.x, so those jobs run on the `xcode-27` image, and
+  # `scripts/ci/ios-sdk-floor.ts` fails a job whose active SDK is below this
+  # instead of letting it quietly produce an upload Apple will refuse. The
+  # simulator resolver gets the same number so the gate launches an iOS 27
+  # runtime, not an older one that happens to list the preferred device name.
+  IOS_SDK_MIN_MAJOR: "27"
 
 jobs:
   signin-app-proof:
@@ -141,9 +151,13 @@ jobs:
     name: iOS (simulator build, launch and frame)
     needs: changes
     if: needs.changes.outputs.native == 'true' && inputs.signin_app_proof != true
-    # `macos-26` is the image that carries Xcode 26.x, which is what Apple's
-    # upload requirement is written against (ADR 0004).
-    runs-on: macos-26
+    # `xcode-27` is the Xcode-major image label (one Xcode major per image,
+    # generally available since 2026-10-15:
+    # https://github.blog/changelog/2026-10-15-xcode-27-runner-image-generally-available/).
+    # Apple requires the iOS 27 SDK for uploads from April 2027 (ITMS-90725,
+    # see IOS_SDK_MIN_MAJOR above), and this secret-free gate must compile with
+    # the same toolchain the signed job ships with (ADR 0004 pins the image).
+    runs-on: xcode-27
     # macOS minutes are the pipeline's bottleneck. A cold run is 12-20 minutes;
     # the bound is the diagnosis for a wedged one, not the budget.
     timeout-minutes: 60
@@ -179,12 +193,16 @@ jobs:
         run: node scripts/ci/version.ts --write
 
       - name: Record the hosted native toolchain
-        # Capture actual image inputs rather than treating macos-26 as a fixed
-        # Xcode patch version. This secret-free job cannot prove signing identity.
+        # Capture actual image inputs rather than treating xcode-27 as a fixed
+        # Xcode patch version (the image rolls minors forward). This secret-free
+        # job cannot prove signing identity. The floor check FAILS the job when
+        # the active SDK major is below IOS_SDK_MIN_MAJOR, so a label regression
+        # is a red build rather than a TestFlight warning months later.
         run: |
           set -euo pipefail
           xcodebuild -version
           xcrun --sdk iphonesimulator --show-sdk-version
+          node scripts/ci/ios-sdk-floor.ts --min "$IOS_SDK_MIN_MAJOR"
           pod --version
           xcodebuild -help > "$RUNNER_TEMP/xcodebuild-help.txt" 2>&1
           if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
@@ -219,7 +237,7 @@ jobs:
         id: simulator
         env:
           DEVICE: ${{ env.IOS_SIMULATOR_DEVICE }}
-        run: node scripts/ci/ios-simulator.ts --prefer "$DEVICE"
+        run: node scripts/ci/ios-simulator.ts --prefer "$DEVICE" --min-os "$IOS_SDK_MIN_MAJOR"
 
       - name: Resolve the workspace and scheme
         id: project
@@ -712,7 +730,10 @@ jobs:
     if: >-
       needs.changes.outputs.native == 'true' && needs.credentials.outputs.all_present == 'true' &&
       github.ref == 'refs/heads/main' && ((github.event_name == 'workflow_dispatch' && (inputs.signed_export_only == true || inputs.testflight_upload == true)) || (github.event_name == 'push' && vars.IOS_INTERNAL_UPLOAD == 'true'))
-    runs-on: macos-26
+    # The image whose SDK ends up in the uploaded binary: it must be the iOS 27
+    # SDK from April 2027 (ITMS-90725, IOS_SDK_MIN_MAJOR above). Kept on the
+    # same label as the simulator gate so the PR proves this toolchain.
+    runs-on: xcode-27
     timeout-minutes: 90
     # Where the Apple credentials live, and where required reviewers can be
     # configured once there is more than one maintainer (ADR 0004). The
@@ -745,6 +766,11 @@ jobs:
         # number: both stores compare the build number, and the placeholder is
         # what a non-release build is allowed to be. See docs/ci.md.
         run: node scripts/ci/version.ts --write
+
+      - name: Refuse an iOS SDK older than the App Store floor
+        # Before any signing material is touched: a binary built on an older
+        # SDK draws ITMS-90725 now and is refused from April 2027.
+        run: node scripts/ci/ios-sdk-floor.ts --min "$IOS_SDK_MIN_MAJOR"
 
       - name: Generate the native project
         env:

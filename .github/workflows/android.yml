@@ -710,7 +710,10 @@ jobs:
     name: iOS sound persistence XCTest
     needs: changes
     if: needs.changes.outputs.sound_native == 'true'
-    runs-on: macos-26
+    # XCTest of native code that ships in the app: run it on the Xcode/SDK the
+    # app is built with (`xcode-27`, iOS 27 SDK; ITMS-90725, ios.yml's
+    # IOS_SDK_MIN_MAJOR), so it tests the same compiler and runtime.
+    runs-on: xcode-27
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
@@ -719,7 +722,8 @@ jobs:
           node-version: '24'
       - name: Resolve the existing simulator
         id: simulator
-        run: node scripts/ci/ios-simulator.ts --prefer 'iPhone 17'
+        # --min-os 27 keeps the XCTest on an iOS 27 runtime (see ios-simulator.ts).
+        run: node scripts/ci/ios-simulator.ts --prefer 'iPhone 17' --min-os 27
       - name: Native barrier faults and separate-process persistence
         env:
           SOUND_SIMULATOR: ${{ steps.simulator.outputs.udid }}

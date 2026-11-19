@@ -66,9 +66,14 @@ env:
   # is a pinned property of the runner rather than a `gem install` racing the
   # network at release time. The consequence to know: upgrading fastlane means
   # moving the runner image label, which is also where Xcode and the Android SDK
-  # are pinned — one place, not three.
+  # are pinned — one place, not three. The iOS job's image is `xcode-27`, which
+  # carries Fastlane 2.241.2 (xcode-27-arm64 image 20261104.0337.1 readme).
   FASTLANE_DISABLE_COLORS: "1"
   FASTLANE_SKIP_UPDATE_CHECK: "1"
+  # App Store Connect requires the iOS 27 SDK (Xcode 27+) for uploads from April
+  # 2027 (ITMS-90725, first seen on TestFlight build 1264, which the macos-26
+  # image built with the iOS 26.5 SDK). See ios.yml's IOS_SDK_MIN_MAJOR.
+  IOS_SDK_MIN_MAJOR: "27"
 
 jobs:
   version:
@@ -343,7 +348,10 @@ jobs:
     name: iOS (signed IPA)
     needs: [version, credentials, gate]
     if: ${{ inputs.dry_run != true && contains(needs.credentials.outputs.platforms, 'ios') }}
-    runs-on: macos-26
+    # The SDK of this image is the SDK in the shipped binary: `xcode-27`, the
+    # same label ios.yml's PR gate proves, because `macos-26` only has Xcode
+    # 26.x and Apple refuses pre-iOS-27-SDK uploads from April 2027.
+    runs-on: xcode-27
     timeout-minutes: 120
     environment: release
     steps:
@@ -373,6 +381,11 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TAG: ${{ needs.version.outputs.tag }}
         run: node scripts/ci/version.ts --write --ref-type tag --ref-name "$TAG"
+
+      - name: Refuse an iOS SDK older than the App Store floor
+        # Prints `xcodebuild -version` and fails below IOS_SDK_MIN_MAJOR, before
+        # signing, so a regressed image label cannot ship an old-SDK release.
+        run: node scripts/ci/ios-sdk-floor.ts --min "$IOS_SDK_MIN_MAJOR"
 
       - name: Generate the native project
         env:
